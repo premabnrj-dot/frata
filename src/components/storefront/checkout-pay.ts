@@ -26,7 +26,14 @@ export async function openRazorpay(ref: OrderRef, pay: Pay, on: { done: () => vo
       await api('/api/shop/orders/pay', { ...ref, paymentId: resp.razorpay_payment_id, signature: resp.razorpay_signature })
       on.done()
     },
-    modal: { ondismiss: () => on.failed('Payment did not go through. Nothing was charged. Try again, or pay on delivery instead: your details are kept.') },
+    // Closed without paying: the hold ends now, so the size is on sale again (a retry renews it). Awaited before the
+    // shopper can tap Try again, so the release never lands after the retry's renewed hold. Razorpay is asked first:
+    // a payment that went through after all is the order's.
+    modal: { ondismiss: async () => {
+      const r = await api<{ paid?: boolean }>('/api/shop/orders/pay', { ...ref, dismissed: true })
+      if (r.ok && r.data.paid) { on.done(); return }
+      on.failed('Payment did not go through. Nothing was charged. Try again, or pay on delivery instead: your details are kept.')
+    } },
   })
   rzp.on('payment.failed', () => { void api('/api/shop/orders/pay', { ...ref, failed: true }) })
   rzp.open()

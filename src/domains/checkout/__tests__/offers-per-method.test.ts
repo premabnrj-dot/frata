@@ -33,7 +33,7 @@ describe('the best offer per way of paying', () => {
     const q = quote([{ variantId: 'a', qty: 1 }], [bag999], rules, now, null, { offers: [five, online] })
     expect(q.prepaid.total).toBe(89900) // was ₹949.05: 5% and no saving
     expect(classes(q.prepaid.applied)).toEqual([['payment', 'd-online']])
-    expect(q.cod.total).toBe(99900 - 4995 + 4900)
+    expect(q.cod.total).toBe(99900 - 4900 + 4900) // 5% of ₹999 is ₹49.95, given as ₹49 (whole rupees, down)
     expect(classes(q.cod.applied)).toEqual([['order', 'd-five']])
     // Each card names what it gets: the 5% on delivery, the saving online.
     expect(q.offers.listed).toEqual([
@@ -67,19 +67,19 @@ describe('the best offer per way of paying', () => {
     expect(q.offers.code).toBe('applied') // never "this code doesn't work here"
     expect(classes(q.prepaid.applied)).toEqual([['payment', 'd-online']])
     expect(classes(q.cod.applied)).toEqual([['order', 'd-code']])
-    // No Pay on delivery for this bag: the code helps nowhere, and says so.
+    // No Pay on delivery for this bag: the code helps nowhere; the saving online is better, and the shopper is told so.
     const noCod = quote([{ variantId: 'a', qty: 1 }], [bag999], { ...rules, codOn: false }, now, null, { offers: [code, online], code: 'INSTA5' })
-    expect(noCod.offers.code).toBe('not_applied')
+    expect(noCod.offers.code).toBe('beaten')
     expect(noCod.offers.listed.map((l) => l.title)).toEqual(['Pay online'])
   })
   it('a product offer stays on its line for both; the choice is made on what is left', () => {
     const sale = t({ id: 'd-sale', title: 'Sale', style: 'product_off', percentBps: 1000, targets: 'all' })
     const q = quote([{ variantId: 'a', qty: 1 }], [bag999], rules, now, null, { offers: [sale, five, online] })
-    // 999 − 99.90 = 899.10; 5% of that is 44.95 < ₹100.
-    expect(q.prepaid.total).toBe(99900 - 9990 - 10000)
+    // 999 − 99 (10%, whole rupees) = 900; 5% of that is ₹45 < ₹100.
+    expect(q.prepaid.total).toBe(99900 - 9900 - 10000)
     expect(classes(q.prepaid.applied)).toEqual([['product', 'd-sale'], ['payment', 'd-online']])
     expect(classes(q.cod.applied)).toEqual([['product', 'd-sale'], ['order', 'd-five']])
-    expect(q.cod.total).toBe(99900 - 9990 - 4495 + 4900)
+    expect(q.cod.total).toBe(99900 - 9900 - 4500 + 4900)
     expect(q.prepaid.lines[0]!.productDiscount).toBe(q.cod.lines[0]!.productDiscount)
   })
   it('placement keeps both ways: the order offer online only, the one it replaced on delivery only', () => {

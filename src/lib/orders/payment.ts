@@ -103,6 +103,48 @@ export async function paymentFailed(tenantId: string, hash: string): Promise<voi
   })
 }
 
+/**
+ * The shopper closed Razorpay's sheet without paying (shopper batch 2026-11-12): the hold ends now (pay_by := now), so
+ * its pieces and its offers' uses are free for the next shopper at once instead of for 20 minutes. Razorpay is asked
+ * first, as a switch to COD does: a capture is recorded (markPaid), and a payment authorized or still open — or
+ * Razorpay not answering — keeps the hold to its end. Nothing else changes: a retry renews the hold when the order can
+ * still be sold (retryPayment, with its own payment check), the payment check queued for the old hold end still asks
+ * Razorpay, and a capture after the release is still recorded (markPaid takes the stock, or shows a refund due).
+ */
+export async function releaseHold(tenantId: string, hash: string, now = new Date()): Promise<'released' | 'paid' | 'kept'> {
+  const pre = await withTenant(tenantId, async (tx) => ({ o: await byHash(tx, tenantId, hash), keys: await keysFor(tx, tenantId) }))
+  const o = pre.o
+  if (!o || o.method !== 'prepaid' || o.paidAt || o.switchedAt || o.cancelledAt || !o.payBy || o.payBy <= now) return o?.paidAt ? 'paid' : 'kept'
+  if (o.rzp && pre.keys) {
+    const asked = await orderPayments(pre.keys, o.rzp)
+    await noteKeysAnswer(tenantId, pre.keys, asked)
+    if (!asked.ok) return 'kept'
+    const pays = asked.items
+    const captured = pays.find((p) => p.status === 'captured' && capturedAsAsked(p, o.checkout, p.currency))
+    if (captured) {
+      const soldOut: string[] = []
+      await withTenant(tenantId, (tx) => markPaid(tx, { id: o.id, tenantId }, { paymentId: captured.id, fee: captured.fee, tax: captured.tax }, soldOut))
+      if (soldOut.length) await refreshSoldOut(tenantId)
+      return 'paid'
+    }
+    if (pays.some((p) => p.status === 'authorized' || p.status === 'created')) return 'kept'
+  }
+  const back = await withTenant(tenantId, async (tx) => {
+    const r = await tx.update(orders).set({ payBy: now })
+      .where(and(eq(orders.tenantId, tenantId), eq(orders.id, o.id), isNull(orders.paidAt), isNull(orders.switchedToCodAt), isNull(orders.cancelledAt), sql`${orders.payBy} > ${now.toISOString()}::timestamptz`))
+      .returning({ id: orders.id })
+    if (!r.length) return null
+    // A piece the hold kept off sale (the product page said sold out: stock − held − owed) is on sale again.
+    const lines = await tx.select({ variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
+      .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id), eq(orderLines.kind, 'in_stock'), isNull(orderLines.stockTakenAt)))
+    const rows = await variantRows(tx, tenantId, lines.flatMap((l) => (l.variantId ? [l.variantId] : [])), now)
+    return lines.some((l) => { const v = rows.find((x) => x.variantId === l.variantId); return v !== undefined && v.stock - v.held - v.owed <= l.qty })
+  })
+  if (back === null) return 'kept'
+  if (back) await refreshSoldOut(tenantId)
+  return 'released'
+}
+
 export type SwitchResult = { kind: 'switched'; total: number } | { kind: 'paid' } | { kind: 'changed'; quote: Quote }
   | { kind: 'refused'; status: 404 | 409 | 422; error: string; codTotal?: number }
 

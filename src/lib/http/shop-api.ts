@@ -2,6 +2,7 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import type { Quote } from '@/domains/checkout/quote'
+import type { CodeResult } from '@/domains/checkout/discounts'
 import { requireShop } from '@/lib/auth/require-shop'
 import { clientIp } from '@/lib/http/client-ip'
 import { LIMITS, overLimit, withinLimit, type Limit } from '@/lib/db/rate-limit'
@@ -47,8 +48,9 @@ export async function codeToTry(tenantId: string, ip: string, code: string | nul
   if (!code) return null
   return (await overLimit(LIMITS.codeIp, `${tenantId}:${ip}`, new Date(), true)) ? null : code
 }
-export async function codeTried(tenantId: string, ip: string, typed: string | null | undefined, result: 'applied' | 'not_applied' | null) {
-  if (!typed || result === 'applied') return
+export async function codeTried(tenantId: string, ip: string, typed: string | null | undefined, result: CodeResult | null) {
+  // A real code a better offer beat is no wrong guess (it can only be learnt by a code that would save).
+  if (!typed || result === 'applied' || result === 'beaten') return
   // Distinct codes, not calls: a code already counted in this window (the bag re-pricing) is not counted again.
   if (await withinLimit(LIMITS.codeSeen, `${tenantId}:${ip}:${typed.trim().toUpperCase()}`, new Date(), true)) await withinLimit(LIMITS.codeIp, `${tenantId}:${ip}`, new Date(), true)
 }

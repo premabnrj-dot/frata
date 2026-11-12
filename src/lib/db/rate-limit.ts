@@ -99,6 +99,9 @@ export const LIMITS = {
   // A sell-out's catalogue purge, once per shop in 30 s across every server instance (speed review 2026-11-11: the
   // per-instance debounce let 10 instances purge 10 times at a drop). Fails open: a missed debounce only purges.
   soldOutPurge: { action: 'sold_out_purge:shop', max: 1, windowSeconds: 30 },
+  // A sell-out inside a window already purged queues ONE trailing purge at the window's end, across every instance
+  // (shopper batch 2026-11-12: a second sell-out within 30 s was dropped until the 60 s backstop). Fails open too.
+  soldOutTrail: { action: 'sold_out_trail:shop', max: 1, windowSeconds: 30 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */

@@ -115,7 +115,7 @@ for (const file of walk('src')) {
   }
   // 6. A MERCHANT'S COST NEVER REACHES A SHOPPER (ADR-0003): storefront code never names it.
   // Shopper-facing code: pages, views, shop API routes and their reads (checkout review 2026-11-07 adds the API and checkout reads).
-  const shopperRead = /^src\/lib\/queries\/(storefront|checkout)/.test(file)
+  const shopperRead = /^src\/lib\/(queries\/(storefront|checkout)|storefront\/)/.test(file) // lib/storefront: the shop's cached reads' helpers (showcase)
   const shopper = file.startsWith('src/app/s/') || shopperRead || file.startsWith('src/components/shop-preview/')
     || file.startsWith('src/components/storefront/') || file.startsWith('src/app/(console)/console/preview/') || file.startsWith('src/app/api/shop/') || file === 'src/lib/http/shop-api.ts'
   if (shopper) {

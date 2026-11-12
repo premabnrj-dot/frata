@@ -172,6 +172,9 @@ export default {
       await toCheckout('Rust', 'M'); await p.evaluate(() => { window.__rzpMode = 'dismiss' })
       await p.getByText('Pay online', { exact: true }).click(); await p.getByRole('button', { name: /^Pay · / }).click()
       await p.getByText(/Payment did not go through/).waitFor()
+      // Closing the sheet ends the hold at once (shopper batch 2026-11-12): the size is on sale again, not for 20 minutes.
+      const released = await lastOrder()
+      assert.ok(released.pay_by && new Date(released.pay_by) <= new Date(), 'the dismissed sheet released the hold')
       await p.getByText('Pay on delivery', { exact: true }).click(); await p.getByRole('button', { name: /Pay on delivery · ₹2,539/ }).click()
       await p.waitForURL(/\/orders(#t=|$)/); await p.getByText('Keep ₹2,539 ready').waitFor()
       // The page can show the order a moment before the switch's transaction is visible to this connection (seen

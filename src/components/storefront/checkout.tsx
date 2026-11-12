@@ -296,7 +296,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       </> : null}
       {q && <OfferProgress q={q} />}
       {q && (code ? (
-        <p className="mt-2 text-sm" aria-live="polite">Code <b className="font-mono">{code}</b>{q.offers.code === 'applied' ? ' applied.' : <span className="text-store-bad"> — this code doesn’t work here.</span>}
+        <p className="mt-2 text-sm" aria-live="polite">Code <b className="font-mono">{code}</b>{q.offers.code === 'applied' ? ' applied.' : q.offers.code === 'beaten' ? ' — a better offer is already applied.' : <span className="text-store-bad"> — this code doesn’t work here.</span>}
           {' '}<button type="button" className="min-h-11 underline" onClick={() => { offerCode.set(''); setDraftCode('') }}>Remove</button></p>
       ) : typing ? (
         <div className="mt-2 flex gap-2">

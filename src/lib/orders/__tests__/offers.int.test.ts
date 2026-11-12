@@ -162,7 +162,7 @@ describe.skipIf(!host)('offers at placement and after', () => {
       const row = { variantId: 'v', productId: 'p', handle: 'h', title: 'Bag', status: 'active', publishAt: null, options: [], values: [], sku: null, price: 99900, compareAt: null,
         stock: 5, whenOut: 'stop' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderCap: null, held: 0, preordered: 0, owed: 0, hsn: '6211', image: null }
       const q = quote([{ variantId: 'v', qty: 1 }], [row], rules, now, null, { offers })
-      expect([q.prepaid.total, q.cod.total]).toEqual([89900, 99900 - 4995 + 4900])
+      expect([q.prepaid.total, q.cod.total]).toEqual([89900, 99900 - 4900 + 4900]) // 5% of ₹999 in whole rupees: ₹49
       // Placed online, written as placeOrder writes it: the order, its line, and keptOffers.
       const m = q.prepaid
       const [o] = await tx.insert(orders).values({ tenantId: A, number: 930_201, paymentMethod: 'prepaid', placedAt: now, payBy: new Date(now.getTime() + 600_000),
@@ -173,7 +173,7 @@ describe.skipIf(!host)('offers at placement and after', () => {
       await tx.insert(orderDiscounts).values(keptOffers(q, 'prepaid').map((a) => ({ tenantId: A, orderId: o!.id, discountId: a.discountId, class: a.class, method: a.method, amount: a.amount,
         title: a.title, style: a.terms.style, percentBps: a.terms.percentBps, amountOff: a.terms.amountOff, minSubtotal: 0 })))
       const rows = await tx.select({ cls: orderDiscounts.class, method: orderDiscounts.method, amount: orderDiscounts.amount }).from(orderDiscounts).where(eq(orderDiscounts.orderId, o!.id)).orderBy(asc(orderDiscounts.class))
-      expect(rows.map((r) => [r.cls, r.method, Number(r.amount)])).toEqual([['order', 'cod', 4995], ['payment', null, 10000]])
+      expect(rows.map((r) => [r.cls, r.method, Number(r.amount)])).toEqual([['order', 'cod', 4900], ['payment', null, 10000]])
       // A row of one way only can only be an order offer's.
       await expect(tx.transaction((sp) => sp.insert(orderDiscounts).values({ tenantId: A, orderId: o!.id, discountId: save!.id, class: 'payment', method: 'cod', amount: 1, title: 'x', style: 'pay_online', minSubtotal: 0 })))
         .rejects.toThrow()
@@ -196,9 +196,9 @@ describe.skipIf(!host)('offers at placement and after', () => {
       expect(cod.lines).toEqual(q.cod.lines)
       await tx.update(orders).set({ switchedToCodAt: now, payBy: null }).where(eq(orders.id, o!.id))
       await writeReprice(tx, A, o!.id, sp.lineIds, cod)
-      expect(await read()).toMatchObject({ total: 99900 - 4995 + 4900, discount: 4995, cod: 4900 })
+      expect(await read()).toMatchObject({ total: 99900 - 4900 + 4900, discount: 4900, cod: 4900 })
       expect(await inUse()).toEqual(['order'])
-      expect(await given()).toEqual([4995, 0])
+      expect(await given()).toEqual([4900, 0])
 
       // A capture after the switch: the saving alone again, the 5% given back.
       expect(await markPaid(tx, { id: o!.id, tenantId: A }, { paymentId: 'pay_int_ways' })).toBe('paid')

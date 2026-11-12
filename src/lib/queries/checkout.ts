@@ -11,7 +11,7 @@ import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { pausedAt, shopPauseIn } from './trial-pause'
 import { documentsFor } from '@/lib/orders/documents'
-import { holdingSql, momentColumns, owedSql, standingSql } from '@/lib/db/order-predicates'
+import { heldSql, holdingSql, momentColumns, owedSql, standingSql } from '@/lib/db/order-predicates'
 import { discountUses, liveDiscountSql } from '@/lib/db/discount-predicates'
 import { discountCodes, discountTargets, discountTiers, discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { collectionMembers, collectionMembersIn } from './storefront'
@@ -36,8 +36,7 @@ export async function variantRows(tx: Tx, tenantId: string, ids: string[], now: 
     variantId: variants.id, productId: products.id, handle: products.handle, title: products.title, status: products.status, publishAt: products.publishAt,
     options: products.options, values: variants.optionValues, sku: variants.sku, price: variants.price, compareAt: variants.compareAt, stock: variants.stock,
     whenOut: variants.whenOut, shipsBy: variants.shipsBy, leadMinDays: variants.leadMinDays, leadMaxDays: variants.leadMaxDays, preorderCap: variants.preorderCap, hsn: products.hsn, ownBps: products.gstBps, uqc: products.uqc,
-    held: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
-      where l.tenant_id = ${tenantId} and l.variant_id = "variants"."id" and l.kind = 'in_stock' and ${holdingSql(now, 'o')})`,
+    held: heldSql(tenantId, now),
     // Units owed to pre-orders not yet packed: stock that arrives for them is not for sale (plan review 2026-11-07).
     owed: owedSql(tenantId, now),
     preordered: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id

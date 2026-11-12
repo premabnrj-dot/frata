@@ -17,7 +17,7 @@ export type PublicQuote = {
   /** What paying online saves on the items against paying on delivery (0: nothing). */
   savesOnline: number
   cod: { total: number; charge: number; gst: number; discount: number; applied: PublicApplied[] } | null; codWhyNot: CodWhyNot | null
-  offers: { listed: PublicListed[]; code: 'applied' | 'not_applied' | null }
+  offers: { listed: PublicListed[]; code: 'applied' | 'beaten' | 'not_applied' | null }
   arrives: { from: string; to: string } | null; empty: boolean; missing: string[]
 }
 export type Pay = { keyId: string; razorpayOrderId: string; amount: number; name: string; phone: string; shop: string }

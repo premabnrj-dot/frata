@@ -143,6 +143,25 @@ export const owedSql = (tenantId: string, now: Date, variantCol = '"variants"."i
     and (${standingSql('o')} or ${holdingSql(now, 'o')}))`
 
 /**
+ * Units of the variant at `variantCol` held by unpaid online orders inside their pay_by (isHolding): not for sale while
+ * held. Read by checkout (variantRows) and the product page (storefront), so "Only N left" and "Sold out" are the
+ * stock checkout sells: stock − held − owed (shopper batch 2026-11-12).
+ */
+export const heldSql = (tenantId: string, now: Date, variantCol = '"variants"."id"'): SQL<number> => sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
+  where l.tenant_id = ${tenantId} and l.variant_id = ${sql.raw(variantCol)} and l.kind = 'in_stock' and ${holdingSql(now, 'o')})`
+
+/**
+ * heldSql for a whole shop at once: units held per variant (only variants something holds). The shop's cached pages
+ * read this, one statement from the holds index, instead of heldSql per variant: 3,000 variants at the 10× seed cost
+ * 265 ms that way (every variant walked every hold), this one well under 10 ms. Same rule (holdingSql, in-stock lines).
+ */
+export async function heldByVariant(tx: { execute: (q: SQL) => PromiseLike<unknown> }, tenantId: string, now: Date): Promise<Map<string, number>> {
+  const rows = await tx.execute(sql`select l.variant_id v, sum(l.qty)::int n from ${orders} o join ${orderLines} l on l.tenant_id = o.tenant_id and l.order_id = o.id
+    where o.tenant_id = ${tenantId} and ${holdingSql(now, 'o')} and l.kind = 'in_stock' and l.variant_id is not null group by l.variant_id`) as { v: string; n: number }[]
+  return new Map(rows.map((r) => [r.v, Number(r.n)]))
+}
+
+/**
  * Where a standing or holding order stands for Analytics (A·1): its outcome, on the way, or not sent yet. Straight
  * from the outcome timestamps, in stateSql's ranking (a return outranks delivered, delivered outranks lost; shipped or a
  * failed attempt is on the way): the full state expression, with its refund-due subquery, cost four evaluations per

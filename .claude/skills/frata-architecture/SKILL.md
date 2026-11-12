@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.44.0
+  version: 2.45.0
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -589,11 +589,17 @@ Rules:
   identity, so `requireMember(CAN_BUILD)` misses the layout's entry (P7).
 - A shopper's write invalidates the narrowest tag it can: the product, not
   the shop. A sell-out's catalogue purge runs at most once per shop per 30 s across every instance (`refreshSoldOut`,
-  limiter `soldOutPurge`).
+  limiter `soldOutPurge`); one inside a purged window queues ONE trailing purge at its end (`soldOutTrail`, in
+  `after()`), never dropped. A sell-out is the last piece by stock OR hold (stock − held − owed), and an offer an order
+  uses up (`usedUp`) purges the same way: the bar (`shopAnnouncement`) is tagged catalogue with the showcase.
+- **Shop pages read holds once per entry** (`heldByVariant`, grouped from the holds index): `heldSql` per variant over a
+  3,000-variant catalogue cost 265 ms at 10× (1 ms grouped). Checkout's ≤ 20 variants keep `heldSql`; one rule.
 - A flash drop (2026-11-11): placing an order waits at most 2 s for a lock (`set local lock_timeout`) and a shop places
   at most `PLACE_SLOTS` (8) orders at once, as transaction advisory locks shared by every instance
   (`src/lib/orders/place.ts`); past either, 503 "busy, try again", `Retry-After: 2`, nothing written, and the try is
-  given back to the phone and IP limits (`uncount`). A try whose order was already placed finds it before any slot.
+  given back to the IP limit (`uncount`). A try whose order was already placed finds it before any slot. **The phone
+  limit counts orders** (2026-11-12): counted before placement, given back unless the try wrote a new order
+  (`Placed.fresh`).
 - A cached loader (`shopCached`) never runs inside a `withTenant`: it opens a second connection while the first is
   held, and at a drop the pool deadlocks (P4). Read it before the transaction, or after it closes (`quoteData`
   resolves offer collections after its transaction).
@@ -666,12 +672,16 @@ Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
 - **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
   `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`
   (parity-tested). Placement locks every offer the bag could get that has a limit, in id order,
-  before counting; an offer over a limit drops out and the shopper gets `changed`.
+  before counting; an offer over a limit drops out and the shopper gets `changed`. The cached pages (bar, cards,
+  product lines) leave out an offer `usedUp` for everyone (`usedUpIds`: total limit or budget; never per phone).
+- **A percentage saving is whole rupees, rounded down, once per offer** (`wholeRupees` in discounts.ts; 100% exact):
+  never a ₹949.05 total, never ₹1 or more short. Stored amounts are what reprice() reads, so placed orders keep theirs.
 - **The shopper's read** of offers is `liveOffers()` in `queries/checkout.ts` (terms only);
   `publicQuote` maps offers to named fields (a test proves no id, term, limit or budget leaks).
   Codes: one per order, unique per shop forever, fail-closed per-IP guess limit, one answer for
-  every failure. A creator code is a labelled code: matched only when typed (`codeFor`), never
-  in the bar (`isNull(label)`), recorded with `via` (link or typed).
+  every failure but `'beaten'` (a real code a better offer of its class beat: told so, not a wrong guess). A creator
+  code is a labelled code: matched only when typed (`codeFor`), never in the bar (`isNull(label)`), recorded with `via`
+  (link or typed) — only when it applies: a beaten code is not on the order (no column for it yet).
 - **First order** is decided at placement under a per-phone advisory lock (standing or holding
   order from that phone), and again on a payment retry.
 - **Did it make money?** `offerStats` (queries/discounts.ts) is the ONE computation of an offer's results:

@@ -18,7 +18,7 @@ import { availability, visibility, type Status, type WhenOut } from '@/domains/c
 import type { ChargeShare } from '@/domains/tax/gst'
 import { hasRate } from '@/domains/tax/rates'
 import { codFor, shippingFor, type Cod, type DeliveryRules } from './delivery'
-import { planOffers, priceMethod, type Applied, type DiscountTerms, type Listed, type MethodLine, type TypedCode } from './discounts'
+import { planOffers, priceMethod, type Applied, type CodeResult, type DiscountTerms, type Listed, type MethodLine, type TypedCode } from './discounts'
 
 export const MAX_QTY = 10
 export const MAX_LINES = 20
@@ -88,7 +88,7 @@ export type Quote = {
   /** Bag ids that are no longer this shop's variants (deleted, or never were): the bag drops them and says so. */
   missing: string[]
   /** Listed offers (applied, or what they need) and what the typed code did. */
-  offers: { listed: Listed[]; code: 'applied' | 'not_applied' | null }
+  offers: { listed: Listed[]; code: CodeResult | null }
 }
 
 const DAY = 86_400_000

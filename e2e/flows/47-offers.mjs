@@ -143,6 +143,17 @@ export default {
         await p.getByText(/applied\./).waitFor(); await p.getByText('−₹498').first().waitFor()
         await p.screenshot({ path: t.out('checkout-code'), fullPage: true })
       })
+      await t.step('a real code an automatic offer beats: "a better offer is already applied", never "doesn’t work here"', async () => {
+        // 5% (₹124) under the automatic 10% Festive (₹249): the code is real, the shopper keeps the better offer.
+        const [d] = await db`insert into discounts (tenant_id, title, style, percent_bps, starts_at, started_at, started_by, created_by, listed)
+          select tenant_id, 'Small', 'order_off', 500, now() - interval '1 minute', now(), created_by, created_by, false from discounts limit 1 returning id, tenant_id`
+        await db`insert into discount_codes (tenant_id, discount_id, code) values (${d.tenant_id}, ${d.id}, 'SMALL5')`
+        await p.getByRole('button', { name: 'Remove' }).click()
+        await p.fill('#offer-code', 'small5'); await p.getByRole('button', { name: 'Apply' }).click()
+        await p.getByText(/a better offer is already applied/).waitFor()
+        assert.equal(await p.getByText(/this code doesn’t work here/).count(), 0)
+        await p.getByRole('button', { name: 'Remove' }).click()
+      })
       await t.step('O·3: the list shows the last 30 days; an offer page its own numbers, "too few to judge"', async () => {
         // What offerStats counts: Kesar's orders of the last 30 days using an offer now (discountUseSql's rule: a payment
         // saving or an online-only order offer on a paid, uncancelled order; a COD-only one on a standing order not paid

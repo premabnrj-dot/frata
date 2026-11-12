@@ -97,12 +97,18 @@ const orderValue = (t: Pick<DiscountTerms, 'percentBps' | 'amountOff' | 'minSubt
   return reached ? { percentBps: reached.percentBps, amountOff: reached.amountOff } : null
 }
 
+/**
+ * A percentage saving in whole rupees, rounded down (shopper batch 2026-11-12: 5% off ₹999 made a ₹949.05 total). One
+ * rounding per offer, so the shopper never gets ₹1 or more below what the % says; 100% stays exact (free is free).
+ */
+export const wholeRupees = (exact: number, bps: number) => (bps >= 10_000 ? exact : Math.floor(exact / 100) * 100)
+
 /** The discount an order-class or payment-class offer gives on `base` paise: 0 below its minimum. */
 export function amountFor(t: Pick<DiscountTerms, 'style' | 'percentBps' | 'amountOff' | 'cap' | 'minSubtotal'> & Pick<DiscountTerms, 'tiers'>, base: number): number {
   if (t.style === 'free_shipping' || classOf(t.style) === 'product' || base <= 0) return 0
   const v = orderValue(t, base)
   if (!v) return 0
-  const raw = v.percentBps != null ? Math.floor((base * v.percentBps) / 10_000) : v.amountOff ?? 0
+  const raw = v.percentBps != null ? wholeRupees(Math.floor((base * v.percentBps) / 10_000), v.percentBps) : v.amountOff ?? 0
   return Math.max(0, Math.min(raw, t.cap ?? Number.POSITIVE_INFINITY, base))
 }
 
@@ -138,27 +144,35 @@ export function productOffer(t: DiscountTerms, lines: PlanLine[], free: boolean[
     const groups = Math.floor(pieces.length / (x + y))
     if (!groups) return { per, need: pieces.length ? { kind: 'add_items', n: x + y - pieces.length } : null }
     const inGroups = pieces.slice(0, groups * (x + y))
-    let total = 0
-    for (let g = 0; g < groups; g++) for (const p of inGroups.slice(g * (x + y) + x, (g + 1) * (x + y))) total += Math.floor((p.price * bps) / 10_000)
+    let exact = 0
+    for (let g = 0; g < groups; g++) for (const p of inGroups.slice(g * (x + y) + x, (g + 1) * (x + y))) exact += Math.floor((p.price * bps) / 10_000)
+    const total = wholeRupees(exact, bps)
     // The group's saving spread over its pieces by value (decision 5), then summed per line.
     const share = apportion(total, inGroups.map((p) => p.price))
     inGroups.forEach((p, k) => { per[p.i]! += share[k]! })
     return { per, need: null }
   }
-  // % or ₹ off each covered line (₹ per piece), the cap on the offer's whole saving.
+  // % or ₹ off each covered line (₹ per piece), the cap on the offer's whole saving. A percentage is rounded once, on
+  // the offer's whole saving (wholeRupees), and spread back over its lines.
   for (const i of idx) {
     const l = lines[i]!, gross = l.unitPrice * l.qty
     per[i] = t.percentBps != null ? Math.floor((gross * t.percentBps) / 10_000) : Math.min((t.amountOff ?? 0) * l.qty, gross)
   }
   const sum = per.reduce((a, b) => a + b, 0)
-  if (t.cap != null && sum > t.cap) { const capped = apportion(t.cap, per); capped.forEach((v, i) => { per[i] = v }) }
+  const whole = Math.min(t.percentBps != null ? wholeRupees(sum, t.percentBps) : sum, t.cap ?? Number.POSITIVE_INFINITY)
+  if (whole < sum) { const spread = apportion(whole, per); spread.forEach((v, i) => { per[i] = v }) }
   return { per, need: null }
 }
 
+/**
+ * What a typed code did. 'beaten': the code is real and would save on this bag, but a better offer of its class is
+ * applied (a creator's code beside an automatic sale): the shopper is told so, and it is no wrong guess. Every other
+ * failure reads the same (no "exists but"): spec § Rules, rule 47.
+ */
+export type CodeResult = 'applied' | 'beaten' | 'not_applied'
 /** What the shopper is told: each listed offer (applied, or what it needs) and what the typed code did. */
 export type OfferWords = {
-  /** What the typed code did. Every failure reads the same (no "exists but"): spec § Rules. */
-  code: 'applied' | 'not_applied' | null
+  code: CodeResult | null
   listed: Listed[]
 }
 export type OfferPlan = OfferWords & {
@@ -226,6 +240,16 @@ export function planOffers(linesIn: PlanLine[] | number, offers: DiscountTerms[]
   const altOrder = alone ? asApplied('order', best(of('order').filter((t) => t.combinesWithPayment), afterProduct)) : null
   const altPayment = alone ? asApplied('payment', best(of('payment'), afterProduct - (altOrder?.amount ?? 0))) : null
 
+  // The typed code's offer would save on this bag by itself (its class's base, every line free): when it is not chosen,
+  // a better offer of its class was (or one it does not combine with), so it was beaten, not refused.
+  const mine = typed?.discountId ? cands.find((t) => t.id === typed.discountId) ?? null : null
+  const beaten = mine !== null && (() => {
+    const cls = classOf(mine.style)
+    if (cls === 'product') return productOffer(mine, lines, lines.map(() => true), subtotal).per.some((v) => v > 0)
+    if (cls === 'shipping') return afterOrder > 0 && afterOrder >= mine.minSubtotal
+    return amountFor(mine, cls === 'order' ? afterProduct : afterOrder) > 0
+  })()
+
   /** The words for what each way of paying gets: an offer only one way gets says which way. */
   const words = (cod: (Applied | null)[], prepaid: (Applied | null)[]): OfferWords => {
     const ids = (xs: (Applied | null)[]) => new Set(xs.flatMap((x) => (x ? [x.discountId] : [])))
@@ -251,7 +275,7 @@ export function planOffers(linesIn: PlanLine[] | number, offers: DiscountTerms[]
     })
       // A listed offer beaten by a better one of its class is not shown: only what applies or what is within reach.
       .filter((l) => l.applied || l.need)
-    return { code: typed === null ? null : usedCode ? 'applied' : 'not_applied', listed }
+    return { code: typed === null ? null : usedCode ? 'applied' : beaten ? 'beaten' : 'not_applied', listed }
   }
   // No Pay on delivery for this bag: what only it would get is not the shopper's.
   const codOrder = ways.codOffered?.(afterOrder) === false ? null : order

@@ -2,8 +2,8 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.18.0
-  verified: 2026-11-11
+  version: 5.19.0
+  verified: 2026-11-12
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
 
@@ -464,7 +464,9 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 46. **The best offer is applied for the shopper.** Checkout lists the shop's offers (applied, or
     what each needs: "Add ₹300 more"); "Have a code?" stays behind a link (Baymard, Jun 2026).
 47. **One answer for a code that does not apply**, whether it exists or not: "this code doesn't
-    work here". Unlisted codes never appear in a list.
+    work here". Unlisted codes never appear in a list. One exception (shopper batch 2026-11-12, owner to confirm): a
+    real code that would save on this bag but is beaten by a better offer of its class reads "a better offer is
+    already applied" (`'beaten'`), and is no wrong guess.
 48. **Real ends only.** The bar shows "till 30 Nov" only when the offer has an end; never a
     countdown, never one that restarts per visit (CCPA dark-pattern rules).
 49. **Each saving is named** in the bag, checkout, the order page and the invoice; the invoice
