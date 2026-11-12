@@ -1,5 +1,5 @@
 # Studio: brand intake and partner teams
-Status: proposed (research, mockup and three reviews done; awaiting the owner) · Date: 2026-11-12 ·
+Status: teams T1a built 2026-11-12 (owner: "build now"); intake waits for Studio V3 · Date: 2026-11-12 ·
 Mockup: https://claude.ai/artifact/KiqKqrFCx4enB8KUrnh5Du (`docs/mockups/2026-11-13-studio-v2.html` v2.2: Intake, Team,
 Design system) · Parent: `docs/specs/2026-11-11-frrata-studio.md` (V3) · Reviews: security and tenancy (both FIX
 BEFORE MERGE, folded in below), integration-researcher (Instagram, `frata-integrations` 1.29.0)

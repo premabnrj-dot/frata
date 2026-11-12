@@ -7,7 +7,7 @@ Mockups: https://claude.ai/artifact/KiqKqrFCx4enB8KUrnh5Du, https://claude.ai/ar
 ## Order (each phase ships alone, push to `main` after its gates)
 | Phase | What a partner can do after it | Needs first |
 |---|---|---|
-| **T1a Teams** | An agency owner invites Leads, gives each the brands they work on, removes them; Admin sees a partner's team and can suspend a partner | nothing (this plan) |
+| **T1a Teams** (built 2026-11-12) | An agency owner invites Leads, gives each the brands they work on, removes them; Admin sees a partner's team and can suspend a partner | nothing (this plan) |
 | T1b Partner passkeys | Every partner person signs in with a passkey; publish and hand over ask again | T1a |
 | T1c Builders (ADR-0015) | Invite Builders who never see orders, shoppers or costs | T1a, T1b; ADR-0015 accepted |
 | P2 Clients | Clients view: stage, next, the partner's own billing records, share | T1a |
@@ -22,6 +22,10 @@ Studio itself (V3) cannot be built before V1 and V2: a site has nothing to read 
 it are real work a partner uses today.
 
 ## T1a · Teams: Owner and Leads
+As built: migrations 0120 (tables) and 0121 (access), proof §76, e2e `78-partner-team`. Review changes folded in before
+code: handover stays owner-only until T1b; suspend deletes partner people's shop rows and reinstate rebuilds them from
+assignments; the applicant is the owner member from apply; 7-day invites, ≤ 50 people, 20 invites an hour; a
+colleague never accepts a handover; create-shop locks per partner.
 Spec: intake-and-team § Partner teams (reviews folded in). Builders wait for T1c; passkeys for T1b.
 
 ### Regression net (before the change)
