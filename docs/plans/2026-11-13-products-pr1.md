@@ -39,8 +39,39 @@ archived/deleted/duplicated per shop per week; support asks "how do I delete a p
 6. **e2e** `79-products-list`: search by tag, Low stock filter, select 2 → Archive → Undo → back; Duplicate → copy opens as
    draft; Delete a draft (dialog) → gone; Delete an ordered one → offered Archive.
 
+## Review findings and what the plan does (architecture-reviewer, tenancy-auditor, 2026-11-13)
+- **Duplicate copies no photos** (blocker: `product_images_tenant_base` is unique and `photosInUse` doesn't look at other
+  products' photos, so shared files would be deleted with the copy). A copy is a new colourway with its own photos.
+  Swatches keep hex and family, not the crop. Stories (which `photosInUse` does guard) are copied. The copy's handle comes
+  from `freeHandle` ("<handle>-copy"), its options and values as they are, SKUs and barcodes blank (made on save), status draft,
+  tenant from the member, never the source row.
+- **One status function**: `setStatusIn(tx, tenantId, ids, status, when)` in `src/lib/catalogue/status.ts`, rows locked in
+  id order. `setStatus`, `bulkStatus`, `bulkArchive` and Undo all call it. Live needs readiness for each row. The ones not ready
+  are named and left as they were.
+- **Undo of Archive** restores `{ status, publishAt }` (a schedule still in the future stays scheduled), Zod-checked
+  (enum, ISO date, ≤ 50), through `setStatusIn`: never more than Set status would allow.
+- **Delete files once**: `removePhotoFiles(tenantId, photos)` (`src/lib/catalogue/photo-files.ts`) keeps only bases
+  inside this shop's folder (`acceptedBase`), calls Blob `del` with a 10 s timeout, logs a failure. Both import and list
+  deletes call it after commit. `deleteProducts` re-checks draft and never-published in its `where`.
+- **Add to collection**: manual collections of this shop only (`tenant_id` and `kind = 'manual'`, else "not in your
+  shop"), `on conflict do nothing`.
+- **refreshShop(tenant, 'catalogue')** after every bulk commit; audit `detail` keeps the ids (≤ 50).
+- **Low stock counts on-hand stock** (`variants.stock`, as the list's Stock column does): a merchant restocks the shelf.
+  Held carts expire in minutes. The rule (`when_out = 'stop'`, 1–`LOW_STOCK_AT`) is one SQL fragment in
+  `src/lib/queries/catalogue.ts`, beside the list that reads it.
+- **Speed**: tag search is an exact, case-blind tag match (`exists (select 1 from unnest(tags) …)`), not a substring.
+  Counts run in the list's own `withTenant`. Budget: < 150 ms at 10k products for a stock sort with a term (speed-reviewer
+  on the built SQL).
+- **Who may**: any member, as in the editor today (each can already archive or publish one product there).
+- **Words**: the status chips keep "Active" (`statusLabel`, used across the console); the mockup's "Live" is not
+  introduced in one place only.
+- **States**: a partial bulk result says "Archived 3. 2 weren't changed: …"; selection clears on any filter or page change;
+  Low stock with none: "No products are low on stock"; `ProductTable` gets row ids and display fields only.
+
 ## Decision taken without the owner (they asked me to decide, 2026-11-13)
-- **Delete has no Undo; it is confirmed by a dialog.** A delete removes the rows and their photo files, so an 8 s Undo
+- **Delete happens on the server, with no definer** (spec § Security said a definer): `frata_app` already holds delete on
+  `products` under RLS (the import deletes drafts this way), and the rule lives in one module (task 3).
+- **Delete has no Undo; it is confirmed by a dialog** (5 or more: type the number). A delete removes the rows and their photo files, so an 8 s Undo
   would need a soft-delete column and a sweeper for a rare action. Archive, status changes and Duplicate keep Undo, as
   the mockup draws. Revisit if merchants ask for a delete Undo.
 

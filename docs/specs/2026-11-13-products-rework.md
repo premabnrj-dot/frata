@@ -52,7 +52,8 @@ forms (validate on blur, error at the field, never reset input).
 7. **List that scales:** search, sort, filters (status, stock, type), numbered pages, checkboxes with Set status,
    Archive, Delete, Add to collection, Duplicate; Import in the header; thumbnails; availability from the one rule.
 8. **Delete that can't hurt:** a product never live and never ordered can be deleted (typed name for 5+); any other is
-   archived (orders keep their snapshot). Archive and delete give Undo for 8 s; an Archived filter restores.
+   archived (orders keep their snapshot). Archive gives Undo for 8 s; delete is confirmed in a dialog, no Undo (PR·1 plan,
+   decided while the owner was away, 2026-11-13: an Undo for delete needs a soft-delete column and a sweeper); an Archived filter restores.
 9. **Permalinks:** the address follows the title until first live, then stays; editing it later writes the redirect
    automatically (as today) and collapses chains; the field is shown under the title, never hidden.
 10. **Link preview as a full-website card:** 1200×630 with the product photo, name, ₹ price, the shop's logo and address
@@ -80,7 +81,8 @@ forms (validate on blur, error at the field, never reset input).
   three regex copies), share card (`render-card.tsx` used by both the shop and the editor preview).
 - **Speed:** list paged at 50 with an index on (tenant, status, updated); editor reads in one `Promise.all`; memoised
   panels; no router.refresh on photo edits.
-- **Security:** delete only via a definer; typed confirmation; audit rows.
+- **Security:** delete through one server module under RLS (`frata_app` already deletes import drafts this way), not a
+  definer (PR·1 plan); typed confirmation for 5+; audit rows with the ids.
 - **Blast radius:** e2e flows that create products (10, 47-offers, 76-import, 05-shop-look baselines), Import's drafts,
   True Profit's product names, share cards.
 
