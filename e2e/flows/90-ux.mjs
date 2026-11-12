@@ -11,7 +11,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { CONSOLE, SHOP, USERS, signedIn, until } from '../lib.mjs'
+import { CONSOLE, SHOP, USERS, expectToast, signedIn, until } from '../lib.mjs'
 import { FOCUS, LONGEST_MOTION, MEASURE, OVERLAP, TEXT_SPACING } from '../ux-measure.mjs'
 import { KNOWN } from '../ux-known.mjs'
 
@@ -338,7 +338,7 @@ export default {
         // Setup (and closing the shop) is reached from Home, by a tap, not by typing its address (impact review U·4).
         const h = await hc.newPage(); await h.goto(CONSOLE + '/console')
         await h.getByRole('link', { name: 'Setup, or close the shop for now' }).click(); await h.waitForURL(/\/console\/setup$/)
-        const closeShop = async () => { await h.getByRole('button', { name: 'Close the shop for now' }).click(); await h.getByRole('button', { name: 'Close shop' }).click(); await h.getByText('Closed. Shoppers see “Opening soon”.').waitFor() }
+        const closeShop = async () => { await h.getByRole('button', { name: 'Close the shop for now' }).click(); await h.getByRole('button', { name: 'Close shop' }).click(); await expectToast(h, 'Closed. Shoppers see “Opening soon”.', 'ok') }
         const openShop = async () => { await h.getByRole('button', { name: 'Open my shop' }).click(); await h.getByRole('button', { name: 'Open it' }).click() }
         await closeShop(); await openShop()
         await h.locator('svg .animate-draw-circle').waitFor()
@@ -346,6 +346,8 @@ export default {
         await h.getByText('Your shop is open', { exact: true }).waitFor()
         // Closing straight after: the check gives way to what just happened, it does not linger.
         await closeShop()
+        // The first close's toast may still be up (8 s), so wait for the check itself to go.
+        await h.locator('svg .animate-draw-circle').waitFor({ state: 'detached' })
         assert.equal(await h.locator('svg .animate-draw-circle').count(), 0, 'the check goes when the shop closes')
         // From Home: the checklist (the shop is closed), then Today with the check above it.
         await h.goto(CONSOLE + '/console'); await h.getByRole('heading', { level: 2, name: 'Get your shop ready to sell' }).waitFor()

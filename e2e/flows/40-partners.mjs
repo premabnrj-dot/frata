@@ -95,7 +95,7 @@ export default {
     await t.step('while building, the partner sets the shop\'s shipping costs (seesCosts, owner 2026-11-08)', async () => {
       await pia.goto(CONSOLE + '/console/settings/shipping-costs')
       await pia.getByRole('button', { name: 'Confirm these costs' }).click()
-      await pia.getByText('Shipping costs confirmed.').waitFor()
+      await expectToast(pia, 'Shipping costs confirmed.', 'ok')
       const [c] = await db`select ship_costs_confirmed_at from shop_settings where tenant_id = ${T}`
       assert.ok(c.ship_costs_confirmed_at, 'confirmed by the partner')
     })

@@ -52,7 +52,7 @@ export default {
         await riya.getByText(/registered in state 27/).waitFor()
         await riya.getByLabel('State').selectOption('27')
         await riya.getByRole('button', { name: 'Save billing details' }).click()
-        await riya.getByText('Saved.', { exact: true }).waitFor()
+        await expectToast(riya, 'Saved.', 'ok')
         const [a] = await db`select legal_name, gstin, state_code, email from billing_accounts where tenant_id = ${KESAR}`
         assert.deepEqual([a.legal_name, a.gstin, a.state_code, a.email], ['Kesar Studio LLP', '27AAPFU0939F1ZV', '27', 'accounts@kesarstudio.in'])
         const audit = await db`select detail from audit_events where tenant_id = ${KESAR} and action = 'billing.details' order by at desc limit 1`
@@ -95,7 +95,7 @@ export default {
         await meera.getByLabel(/Type ISSUE/).fill('ISSUE 999')
         await issue.click()
         // A wrong confirmation is marked at its field (the summary toast is quiet); nothing is issued.
-        await meera.locator('#confirm-error').getByText(`Type ISSUE ${n} to issue.`).waitFor()
+        await meera.locator('[id$="-confirm-error"]').getByText(`Type ISSUE ${n} to issue.`).waitFor()
         await expectToast(meera, '1 field needs fixing.', 'error', { quiet: true })
         await meera.getByLabel(/Type ISSUE/).fill(`ISSUE ${n}`)
         await meera.getByRole('button', { name: /^Issue \d+ invoices?$/ }).click()
@@ -167,14 +167,14 @@ export default {
         await riya.getByRole('button', { name: 'Upgrade to Growth' }).click()
         await riya.getByRole('dialog').getByText(/\+ GST on your next bill/).waitFor()
         await riya.getByRole('button', { name: 'Upgrade now' }).click()
-        await riya.getByText('You are on Growth now.').waitFor()
+        await expectToast(riya, 'You are on Growth now.', 'ok')
         await riya.locator('strong', { hasText: 'Growth' }).first().waitFor()
         await riya.getByRole('button', { name: /^Switch to Launch on / }).click()
         await riya.getByRole('button', { name: 'Switch on the 1st' }).click()
         await riya.getByText(/^Moving to/).waitFor()
         await riya.screenshot({ path: t.out('plan-change'), fullPage: true })
         await riya.getByRole('button', { name: 'Keep my plan' }).click()
-        await riya.getByText('The change is cancelled.').waitFor()
+        await expectToast(riya, 'The change is cancelled.', 'ok')
         await until(async () => (await db`select count(*)::int n from tenant_plans where tenant_id = ${KESAR} and starts_at > now()`)[0].n === 0)
       })
       await t.step('TR0: Admin sets the trial terms for new sign-ups (with a reason); gives a live shop a 14-day trial, sees it on Merchants, then ends it', async () => {

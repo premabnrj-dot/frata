@@ -72,6 +72,8 @@ export default {
       // AD·0: giving one writes one row on the action's own transaction (under its lock), then it can be ended.
       await meera.getByRole('button', { name: 'Give a 30-day trial of GST' }).click()
       await expectToast(meera, 'GST: 30-day trial started.', 'ok')
+      // The form refreshes the page after its toast (ActionForm; it used to be a whole new page): wait for it.
+      await meera.getByRole('button', { name: 'End trial' }).waitFor()
       assert.equal((await db`select count(*)::int n from tenant_addons where tenant_id = ${KESAR} and module = 'gst' and ends_at is null`)[0].n, 1)
       assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 1) // Delivery Zones still offered
       await meera.getByRole('button', { name: 'End trial' }).click()
@@ -153,7 +155,7 @@ export default {
         await own.waitForURL(/\/console\/settings\/billing\?from=featured$/)
         await own.getByRole('button', { name: 'Upgrade to Growth' }).click()
         await own.getByRole('button', { name: 'Upgrade now' }).click()
-        await own.getByText('You are on Growth now.').waitFor()
+        await expectToast(own, 'You are on Growth now.', 'ok')
         const src = await db`select detail->>'source' s from audit_events where tenant_id = ${KESAR} and action = 'billing.plan.source'`
         assert.deepEqual(src.map((r) => r.s), ['featured'])
         // On Growth now: no card. Back on Launch for the dismiss check.
