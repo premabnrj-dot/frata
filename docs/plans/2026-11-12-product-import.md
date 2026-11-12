@@ -54,9 +54,15 @@ and `impact-reviewer` on its diff; tasks touching `drizzle/` also run `npm run v
 7. UI per the mockup (File, Check, Done, history, "Publish the N ready"). Verify: `npm run e2e -- --only import` (new
    flow 75: the stress test's sheet, phone and desktop), screenshots read.
 
-**PI·2 · photos by file name** (ships with PI·1)
+**PI·2 · photos by file name** (ships with PI·1) — built 2026-11-12
 8. Bulk photos matched by file name, resized in the browser as today, an import upload bucket. Verify: e2e flow 75
    adds 12 photos; `security-reviewer`.
+   As built: `/console/products/photos` (from Done's Need photos and from Products); matching in
+   `domains/catalogue/import/photos.ts`; rows only through `attachIn` (≤ 10 a product, a base it has skipped); the
+   import token route `/api/console/upload/import` with `importToken` (a photo counts once at its 400: 500 an hour,
+   2,000 a day a shop); each size's token capped by width and valid 5 minutes; both token routes same-origin only;
+   `photosAreMade` refuses a size it cannot read; `RESERVED_HANDLES`. Flow 76 (the plan's "75") adds the 12 photos;
+   security review: safe (four LOWs, fixed); impact review's findings fixed.
 
 **PI·3 · photos by URL, updates**
 9. Browser fetch for CORS hosts; `src/lib/http/public-fetch.ts` (resolve and pin the IP, refuse non-public ranges,
@@ -71,5 +77,9 @@ and `impact-reviewer` on its diff; tasks touching `drizzle/` also run `npm run v
 ## Accepted / deferred (with the signal that brings each back)
 - Unattended import runner: when a shop asks to import > 600 products or leave the page mid-import.
 - More than 600 products: SQL-paged lists first (speed H4).
+- Files uploaded but never attached (a page closed mid-send, a photo held for its product's failed one, an attach
+  refused): no sweep yet; the import bucket bounds them (500 photos an hour, 2,000 a day a shop, ≤ 3 MB a size).
+  Signal: Blob storage for `tenants/*/products/` growing past what `product_images` (with `photosInUse`) accounts
+  for by more than 10 % in a month, or any shop past 2 GB — then a daily sweep of files older than a day with no row.
 - Remembered mapping per source: stored on `import_jobs.mapping` and read back from the shop's last job of that source;
   no separate table (tenancy MED 7).

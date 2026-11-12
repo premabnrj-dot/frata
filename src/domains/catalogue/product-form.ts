@@ -8,7 +8,7 @@
 
 import { istDayKey } from '../time/day'
 import { cleanGtin } from './gtin'
-import { cleanOptions, combinations, handleFor, keyOf, type Option } from './variants'
+import { cleanOptions, combinations, handleFor, keyOf, RESERVED_HANDLES, type Option } from './variants'
 import { parseRupees, priceRefusal } from '../money/rupees'
 
 export type WhenOutInput = 'stop' | 'preorder' | 'made_to_order'
@@ -129,6 +129,7 @@ export function cleanProduct(p: ProductInput, now: Date, hsnDigits = 4): { ok: t
   }
   const handle = (p.handle ?? '').trim().toLowerCase() || handleFor(title)
   if (!HANDLE_SHAPE.test(handle) || handle.includes('--')) errors.handle = 'Lowercase letters, digits and hyphens, like linen-kurta-set.'
+  else if ((p.handle ?? '').trim() && RESERVED_HANDLES.includes(handle)) errors.handle = 'Frrata uses that address. Choose another.'
   const seoTitle = (p.seoTitle ?? '').trim(), seoDescription = (p.seoDescription ?? '').trim()
   if (seoTitle.length > 200) errors.seoTitle = 'Up to 200 characters.'
   if (seoDescription.length > 400) errors.seoDescription = 'Up to 400 characters.'

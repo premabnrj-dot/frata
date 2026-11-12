@@ -1,7 +1,7 @@
 'use client'
 
 import { upload } from '@vercel/blob/client'
-import { baseFromUpload, blobPath, contentTypeOf, MAX_SOURCE_BYTES, MAX_UPLOAD_BYTES, type PhotoFormat, widthsFor } from '@/domains/media/sizes'
+import { baseFromUpload, blobPath, contentTypeOf, MAX_SOURCE_BYTES, maxBytesFor, type PhotoFormat, widthsFor } from '@/domains/media/sizes'
 
 // A phone photo (often 4–20 MB) is resized HERE, once, into the size ladder,
 // and each size is uploaded straight to the shop's folder in Blob — so the
@@ -28,7 +28,7 @@ async function sized(bitmap: ImageBitmap, width: number, format: PhotoFormat | n
     // The blob's own type, not just a blob: Safari returns a PNG for 'image/webp'.
     const probe = await encode(canvas, 'webp', QUALITIES[0]!)
     f = probe?.type === 'image/webp' ? 'webp' : 'jpeg'
-    if (probe && f === 'webp' && probe.size <= MAX_UPLOAD_BYTES) return { blob: probe, format: f }
+    if (probe && f === 'webp' && probe.size <= maxBytesFor(width)) return { blob: probe, format: f }
   }
   // JPEG has no transparency: the browser would put a transparent logo on black. White goes behind it instead
   // (impact review 2026-11-12: Safari logos came out as a black box).
@@ -36,13 +36,13 @@ async function sized(bitmap: ImageBitmap, width: number, format: PhotoFormat | n
   for (const q of QUALITIES) {
     const blob = await encode(canvas, f, q)
     if (!blob || blob.type !== contentTypeOf(f)) throw new Error('This browser could not make the photo. Try another browser.')
-    if (blob.size <= MAX_UPLOAD_BYTES) return { blob, format: f }
+    if (blob.size <= maxBytesFor(width)) return { blob, format: f }
   }
-  throw new Error('That photo is too detailed to shrink under 3 MB.')
+  throw new Error(`That photo is too detailed to shrink under ${Math.round(maxBytesFor(width) / 1024)} kB at ${width} px wide.`)
 }
 
-/** Resizes and uploads one photo; calls onProgress with 0–1. */
-export async function uploadPhoto(file: File, tenantId: string, onProgress: (p: number) => void, folder: 'products' | 'theme' | 'brand' = 'products'): Promise<Uploaded> {
+/** Resizes and uploads one photo; calls onProgress with 0–1. `via`: the token route (the Photos page: the import bucket). */
+export async function uploadPhoto(file: File, tenantId: string, onProgress: (p: number) => void, folder: 'products' | 'theme' | 'brand' = 'products', via = '/api/console/upload'): Promise<Uploaded> {
   if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(file.type) && !/\.(jpe?g|png|webp|heic)$/i.test(file.name)) throw new Error(`${file.name} is not a photo.`)
   if (file.size > MAX_SOURCE_BYTES) throw new Error(`${file.name} is over 25 MB.`)
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => { throw new Error(`${file.name} could not be read. Save it as JPEG and try again.`) })
@@ -54,7 +54,7 @@ export async function uploadPhoto(file: File, tenantId: string, onProgress: (p: 
   for (const [i, w] of widths.entries()) {
     const made = await sized(bitmap, w, format)
     format = made.format
-    const res = await upload(blobPath(tenantId, folder, id, w, format), made.blob, { access: 'public', handleUploadUrl: '/api/console/upload', contentType: contentTypeOf(format) })
+    const res = await upload(blobPath(tenantId, folder, id, w, format), made.blob, { access: 'public', handleUploadUrl: via, contentType: contentTypeOf(format) })
     base = baseFromUpload(res.url, format)
     onProgress((i + 1) / widths.length)
   }

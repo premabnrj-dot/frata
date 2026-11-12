@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.52.0
+  version: 2.52.2
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -672,7 +672,8 @@ Rules:
   the shop. A sell-out's catalogue purge runs at most once per shop per 30 s across every instance (`refreshSoldOut`,
   limiter `soldOutPurge`); one inside a purged window queues ONE trailing purge at its end (`soldOutTrail`, in
   `after()`), never dropped. A sell-out is the last piece by stock OR hold (stock − held − owed), and an offer an order
-  uses up (`usedUp`) purges the same way: the bar (`shopAnnouncement`) is tagged catalogue with the showcase.
+  uses up (`usedUp`) purges the same way: the bar (`shopAnnouncement`) is tagged catalogue with the showcase. So do a
+  live product's new photos from the Photos page (`addPhotos`, PI·2): many products' photos, one purge per 30 s.
 - **Shop pages read holds once per entry** (`heldByVariant`, grouped from the holds index): `heldSql` per variant over a
   3,000-variant catalogue cost 265 ms at 10× (1 ms grouped). Checkout's ≤ 20 variants keep `heldSql`; one rule.
 - A flash drop (2026-11-11): placing an order waits at most 2 s for a lock (`set local lock_timeout`) and a shop places
@@ -747,8 +748,28 @@ Rules:
 - **One format per photo, said by its stored base** (`src/domains/media/sizes.ts`): WebP (`<id>` → `<id>-<w>.webp`, every
   photo before this date) or JPEG where the browser makes no WebP (Safari: a `.jpg` base, `<id>.jpg` → `<id>-<w>.jpg`).
   No column: `formatOf(base)`. A file's URL is built only by `urlFor` (never `${base}-${w}.webp` by hand); the upload
-  path by `blobPath`; the token allows exactly the type the path's extension says; `photosAreMade` reads each file's
-  first bytes against its base's format (`headIs`).
+  path by `blobPath`; the token allows exactly the type the path's extension says, at most `maxBytesFor(width)` (512 kB
+  at 400 … 3 MB; the browser lowers quality to fit), for `UPLOAD_TOKEN_MS` (5 minutes); `photosAreMade` reads EVERY
+  size's first bytes against its base's format (`headIs`) and refuses a size it cannot read (404, 5xx, no answer).
+- **Both token routes answer only the console's own origin** (`fromConsole`, `src/lib/http/same-origin.ts`: Origin's
+  host:port is the request's Host, and that host serves the console). A new cookie-authenticated POST route uses it.
+- **A product photo's row is written only by `attachIn`** (`src/lib/catalogue/photos.ts`, in the caller's `asMember`
+  transaction; the editor's `attachPhotos` and the Photos page's `addPhotos`): the base rebuilt by `acceptedBase(…,
+  'products')`, the ladder's widths only, the product looked up in the member's shop and locked FOR NO KEY UPDATE while
+  placed (FOR UPDATE would hold up a review or an order line that points at it), a base the product has already
+  skipped (Try again never adds a photo twice), a colour kept only if it is the product's own, a `max` counting the
+  photos it has (the Photos page: 10). Never insert into `product_images` from an action.
+- **Many photos at once go through the import's token route** (`/api/console/upload/import`, PI·2): product paths only,
+  counted by `importToken` (`src/lib/media/import-bucket.ts`): a photo's 400 (every photo has one, uploaded first)
+  alone writes its start (`importPhotoStart`) and counts once against `importPhotoShop` (500 an hour) and
+  `importPhotoShopDay` (2,000); its larger sizes only within the start's window or the next, 3 at most; all failing
+  closed. The editor, the look and the logo stay on `/api/console/upload` (`uploadShop`).
+- **Frrata's pages under /products/ keep their addresses**: `RESERVED_HANDLES` (`domains/catalogue/variants.ts`):
+  `freeHandles` skips them ("photos-2"), `cleanProduct` refuses one typed. A new static folder beside `[handle]` in the
+  console or the shop goes on the list (`reserved-handles.test.ts` reads the folders).
+- **Photos by file name are matched in the browser** (`src/domains/catalogue/import/photos.ts`, pure); the server
+  trusts nothing of the match but the product id, which `attachIn` looks up in the member's shop. A live product's new
+  photos purge the catalogue through `refreshSoldOut` (once per 30 s, a trailing one after), never once per product.
 
 ## Razorpay keys that stop working (2026-11-12)
 
