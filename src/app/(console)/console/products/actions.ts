@@ -2,13 +2,12 @@
 
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { del } from '@vercel/blob'
 import { keyOf } from '@/domains/catalogue/variants'
 import { cleanProduct, cleanTax, type ProductInput } from '@/domains/catalogue/product-form'
 import { sellsSized } from '@/domains/catalogue/sell-keys'
 import type { Status } from '@/domains/catalogue/availability'
 import { attributesFor, categoryById, cleanAttributes, COLOUR_FAMILIES, searchCategories } from '@/domains/catalogue/taxonomy'
-import { acceptedBase, storeHost, urlFor } from '@/domains/media/sizes'
+import { storeHost } from '@/domains/media/sizes'
 import { photosAreMade } from '@/lib/media/uploaded'
 import { checkStoryPhotos, savePairs } from '@/lib/catalogue/extras'
 import { cleanPairIds, UUID, type Piece } from '@/domains/catalogue/stories'
@@ -18,14 +17,15 @@ import { asMember } from '@/lib/auth/as-member'
 import { memberAudit } from '@/lib/auth/member-audit'
 import { costsVisibleIn, hsnDigitsIn } from '@/lib/queries/settings'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
-import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
+import { BLOB_STORE_ID } from '@/lib/env'
 import { shopSettings } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { skuTaken, writeProducts } from '@/lib/catalogue/write'
 import { kindOf, startSizes, typeFor } from '@/domains/catalogue/kind'
 import { arrayParam } from '@/lib/db/sql-array'
-import { goLive, readinessIn } from '@/lib/catalogue/readiness'
+import { setStatusIn } from '@/lib/catalogue/status'
 import { photosInUse } from '@/lib/catalogue/photos-in-use'
+import { removePhotoFiles } from '@/lib/catalogue/photo-files'
 import { attachIn, type NewPhoto } from '@/lib/catalogue/photos'
 import { lockTimedOut } from '@/lib/orders/place'
 import { ensureTypes, freeHandle, handleFree } from '@/lib/catalogue/handles'
@@ -193,19 +193,12 @@ export async function setStatus(productId: string, status: Status, publishAt: st
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.status', target: productId, detail: { status } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
-      const [p] = await tx.select().from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId))).for('update') // with saveProduct's lock
+      const out = await setStatusIn(tx, tenantId, [productId], status, when, new Date())
+      const p = out.changed[0], no = out.refused[0]
+      // What it still needs (readiness.ts): a shop that charges GST can't sell a piece with no known rate (quote()
+      // refuses it), so it can't go live without one.
+      if (no) throw new Stop({ ok: false, error: `Before shoppers can see it: ${no.needs.join(', ')}.` })
       if (!p) throw new Stop({ ok: false, error: 'This product is not in your shop.' })
-      const live = status === 'active' || status === 'unlisted'
-      if (live) {
-        // What it still needs (readiness.ts): a shop that charges GST can't sell a piece with no known rate (quote()
-        // refuses it), so it can't go live without one.
-        const missing = (await readinessIn(tx, tenantId, [productId], new Date())).get(productId)!.readiness.filter((x) => !x.ok)
-        if (missing.length) throw new Stop({ ok: false, error: `Before shoppers can see it: ${missing.map((m) => m.label.toLowerCase()).join(', ')}.` })
-      }
-      const now = new Date()
-      if (live) await goLive(tx, tenantId, [productId], now, { status, at: when })
-      else await tx.update(products).set({ status, publishAt: null, archivedAt: status === 'archived' ? now : null, updatedAt: now })
-        .where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
       await memberAudit(tx, auth, `product.status.${status}`, p.title)
     })
     if (!r.ok) return { ok: false, error: r.error }
@@ -295,10 +288,7 @@ export async function editPhoto(imageId: string, change: { move?: -1 | 1; option
     if (!r.ok) return { ok: false, error: r.error }
     refreshShop(r.tenantId, 'catalogue')
     // Delete the files only if the stored base is still exactly inside this shop's folder.
-    const host = storeHost(BLOB_STORE_ID)
-    if (r.value && !r.value.inLook && BLOB_READ_WRITE_TOKEN && host && acceptedBase(r.value.base, host, r.value.tenantId, 'products') === r.value.base) {
-      await del(r.value.widths.map((w) => urlFor(r.value!.base, w)), { token: BLOB_READ_WRITE_TOKEN }).catch((e) => console.error('[editPhoto] blob delete', errName(e)))
-    }
+    if (r.value && !r.value.inLook) await removePhotoFiles(r.value.tenantId, [r.value], 'editPhoto')
     revalidatePath('/console/products', 'layout')
     return { ok: true }
   } catch (err) {
