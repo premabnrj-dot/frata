@@ -173,6 +173,7 @@ export function ImageField({ label, value, tenantId, onChange, library = [], sug
           )}
         </>
       )}
+      {/* feedback-ok: a photo failure that says what to do, with its Try again, is pinned at the photo (rule 5) */}
       {error && <div role="alert" className="space-y-2 rounded-xl border border-danger-text/40 bg-danger p-3 text-sm text-danger-text"><p>{error.text}</p><button type="button" onClick={() => void pick(error.file)} className="font-medium underline underline-offset-4">Try again</button></div>}
     </div>
   )

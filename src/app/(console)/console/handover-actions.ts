@@ -17,13 +17,14 @@ const SENTENCES: Record<string, string> = {
   member_email: 'Use the brand owner’s email, not one already on this store.',
 }
 
-export async function handOverAction(input: { email: string }): Promise<{ ok: true; email: string; emailed: boolean } | { ok: false; error: string }> {
+/** `field`: the mistake is the email typed (shown under the field); otherwise the hand-over itself was refused. */
+export async function handOverAction(input: { email: string }): Promise<{ ok: true; email: string; emailed: boolean } | { ok: false; error: string; field?: 'email' }> {
   const email = z.email().max(200).safeParse(String(input?.email ?? '').trim().toLowerCase())
-  if (!email.success) return { ok: false, error: SENTENCES.bad_email! }
+  if (!email.success) return { ok: false, error: SENTENCES.bad_email!, field: 'email' }
   try {
     const r = await asMember(['partner'], { action: 'shop.handover_invited' }, async (tx, auth) => sendHandover(tx, auth.membership.tenantId, auth.userId, email.data))
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value.ok) return { ok: false, error: SENTENCES[r.value.error] ?? 'We could not send the invite. Nothing was changed.' }
+    if (!r.value.ok) return { ok: false, error: SENTENCES[r.value.error] ?? 'We could not send the invite. Nothing was changed.', ...(r.value.error === 'member_email' ? { field: 'email' as const } : {}) }
     // The invite stands without the email: the owner sees the store whenever they sign in with this address.
     const mail = await sendSignInLink(email.data).catch(() => ({ sent: false as const }))
     revalidatePath('/console', 'layout')

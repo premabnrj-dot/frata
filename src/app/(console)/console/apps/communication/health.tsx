@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button, button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Menu } from '@/components/ui/menu'
+import { useToast } from '@/components/ui/toast'
 import { limitWords, qualityWords, WA_MANAGER, type Need } from '@/domains/communication/health'
 import { checkWhatsAppAction, disconnectWhatsAppAction } from './actions'
 import { settle } from '@/lib/settle'
@@ -20,12 +21,14 @@ const TONE = { danger: 'danger', warn: 'warn', info: 'info' } as const
 export function NumberHealth({ c, needs, canManage }: { c: View; needs: Need[]; canManage: boolean }) {
   const router = useRouter()
   const [pending, start] = useTransition()
+  const toast = useToast()
+  /** The confirm's refusal, in its Dialog (§ Feedback 4); Check again's is a toast. */
   const [error, setError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<false | 'disconnect' | 'reconnect'>(false)
-  const run = (f: () => Promise<{ ok: boolean; error?: string }>) => start(async () => {
+  const run = (f: () => Promise<{ ok: boolean; error?: string }>, inDialog = false) => start(async () => {
     setError(null)
     const r = await f()
-    if (!r.ok) { setError(r.error ?? 'Something went wrong.'); return }
+    if (!r.ok) { if (inDialog) setError(r.error ?? 'Something went wrong.'); else toast.error(r.error ?? 'Something went wrong.'); return }
     setConfirm(false); settle(router)
   })
   const limit = limitWords(c.limitTier)
@@ -68,13 +71,10 @@ export function NumberHealth({ c, needs, canManage }: { c: View; needs: Need[]; 
         </section>
       ) : <p className="text-sm text-muted-foreground">Nothing needs you. Order messages come next.</p>}
       <p className="text-sm text-muted-foreground">Chats that arrive now are kept for the team inbox, coming next.</p>
-      {error && !confirm ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
 
-      <Dialog open={!!confirm} onClose={() => setConfirm(false)} title={confirm === 'reconnect' ? `Reconnect ${c.displayPhone}` : `Disconnect ${c.displayPhone}?`}
+      <Dialog open={!!confirm} onClose={() => { setConfirm(false); setError(null) }} error={error} title={confirm === 'reconnect' ? `Reconnect ${c.displayPhone}` : `Disconnect ${c.displayPhone}?`}
         description={confirm === 'reconnect' ? 'Frrata lost access to this number. Disconnect it here, then connect it again in Meta’s window.' : 'Frrata stops sending and receiving on this number. The number stays yours; connect it again any time.'}
-        actions={<><Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setConfirm(false)}>{confirm === 'reconnect' ? 'Not now' : 'Keep it connected'}</Button><Button variant={confirm === 'reconnect' ? 'primary' : 'destructive'} disabled={pending} onClick={() => run(disconnectWhatsAppAction)}>{confirm === 'reconnect' ? 'Disconnect and start again' : 'Disconnect'}</Button></>}>
-        {error ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
-      </Dialog>
+        actions={<><Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setConfirm(false)}>{confirm === 'reconnect' ? 'Not now' : 'Keep it connected'}</Button><Button variant={confirm === 'reconnect' ? 'primary' : 'destructive'} disabled={pending} onClick={() => run(disconnectWhatsAppAction, true)}>{confirm === 'reconnect' ? 'Disconnect and start again' : 'Disconnect'}</Button></>} />
     </div>
   )
 }
@@ -83,11 +83,10 @@ export function NumberHealth({ c, needs, canManage }: { c: View; needs: Need[]; 
 export function DisconnectOnly({ displayPhone }: { displayPhone: string }) {
   const router = useRouter()
   const [pending, start] = useTransition()
-  const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button variant="secondary" disabled={pending} onClick={() => start(async () => { const r = await disconnectWhatsAppAction(); if (!r.ok) setError(r.error); else router.refresh() })}>Disconnect {displayPhone}</Button>
-      {error ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
+      <Button variant="secondary" disabled={pending} onClick={() => start(async () => { const r = await disconnectWhatsAppAction(); if (!r.ok) toast.error(r.error); else router.refresh() })}>Disconnect {displayPhone}</Button>
     </div>
   )
 }
