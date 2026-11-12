@@ -1,5 +1,5 @@
 import type { NextConfig } from 'next'
-import { FRAMEABLE_HEADERS, HSTS_PLATFORM, hostValue, platformHostPattern, SECURITY_HEADERS } from './src/lib/security-headers'
+import { ADMIN_PASSKEY_HEADERS, FRAMEABLE_HEADERS, HSTS_PLATFORM, hostValue, platformHostPattern, SECURITY_HEADERS } from './src/lib/security-headers'
 import { shopRewrites } from './src/domains/tenancy/host'
 import { CONSOLE_HOST, EKCODE_HOST, SHOP_DOMAIN } from './src/lib/public-env'
 
@@ -25,6 +25,9 @@ const config: NextConfig = {
       { source: '/:path((?!console/theme-preview/).*)', headers: SECURITY_HEADERS },
       { source: '/console/theme-preview/:path*', has: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: FRAMEABLE_HEADERS },
       { source: '/console/theme-preview/:path*', missing: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: SECURITY_HEADERS },
+      // Admin on the console host may ask for a passkey (a later entry replaces the same header key).
+      { source: '/admin/:path*', has: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: ADMIN_PASSKEY_HEADERS },
+      { source: '/admin', has: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: ADMIN_PASSKEY_HEADERS },
       // The visit beacon: its URL carries its content hash (?v=, scripts/build-beacon.mjs), so it is cached for good.
       { source: '/fe.js', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
       // Last, so it replaces the own-domain HSTS above on our own hosts (D2·1).

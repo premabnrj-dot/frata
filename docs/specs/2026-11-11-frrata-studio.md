@@ -36,7 +36,7 @@ points (Shopify India, Shiprocket, GoKwik, 2026).
 9. **Brand brain**: brand.md (read every session), skills stacked Frrata → starter → agency, reviewers, learned facts a
    person keeps.
 10. **Environment**: preview data (catalogue read-only; never orders or customers), outbound allow-list, packages
-    (allow-list, a day's wait, no install scripts), keys added by a proxy, domains, who publishes.
+    (allow-list, a 7-day wait for outside packages — kit-and-fleet spec 2026-11-12 § 4, no install scripts), keys added by a proxy, domains, who publishes.
 11. **Developer**: clone, `npx frrata dev` with the test key, pull a session, push; every push gets a preview and the
     same checks; a branch can be handed to the agent.
 12. **Credits**: by client and session, reserved per turn and returned on failure, caps, the client's invoice option.
@@ -93,7 +93,8 @@ Status: findings recorded, not yet folded into a revised design; the owner decid
     membership re-check.
   - A law change would need 1,000 publishes: legal block and content served at runtime; a "Frrata patch" lane
     (ADR-0014 exception).
-  - Hosting undecided: a hosting ADR amending ADR-0005 (separate account, adapter, edge router, repos by site id).
+  - Hosting undecided: a hosting ADR amending ADR-0005 (a separate account Frrata owns and runs, brands need none;
+    adapter, edge router, repos by site id; ADR-0014 amendment 4, wording 2026-11-12).
 - **High:**
   - Studio resolves the shop from the session, never the shop cookie.
   - The proxy pins the session's key.

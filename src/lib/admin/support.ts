@@ -2,7 +2,7 @@ import 'server-only'
 import { and, desc, eq, isNull, sql } from 'drizzle-orm'
 import { adminDb } from '@/lib/db/admin'
 import { supportSessions, tenants } from '@/lib/db/schema'
-import type { StaffOk } from '@/lib/auth/require-staff'
+import type { StaffIdentity, StaffOk } from '@/lib/auth/require-staff'
 import { expiresAt, type SupportLength, type SupportReason } from '@/domains/support/session'
 import { auditStaff } from './audit'
 
@@ -29,8 +29,9 @@ export async function startSupport(
   })
 }
 
-/** Ends the staffer's open visit, if any. */
-export async function endSupport(staff: StaffOk, now: Date, why?: { by: 'sign-out' }): Promise<string | null> {
+/** Ends the staffer's open visits. A StaffIdentity (no passkey check on this session) may only do this at sign-out:
+ *  ending access never needs the check (security review L3). */
+export async function endSupport(staff: StaffOk | StaffIdentity, now: Date, why?: { by: 'sign-out' }): Promise<string | null> {
   return adminDb().transaction(async (tx) => {
     const ended = await tx.update(supportSessions).set({ endedAt: now })
       .where(and(eq(supportSessions.staffUserId, staff.userId), isNull(supportSessions.endedAt)))

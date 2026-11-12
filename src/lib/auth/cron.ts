@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
+import { SECRETS_ALLOWED } from '@/lib/env'
 
 // =============================================================================
 // FILE: lib/auth/cron.ts
@@ -15,7 +16,8 @@ const digest = (s: string) => createHash('sha256').update(s).digest()
 
 /** The request's own check: reads CRON_SECRET here, so no route reads it. */
 export function isCronRequest(request: Request): boolean {
-  return isCronCall(request.headers.get('authorization'), process.env.CRON_SECRET)
+  // A secret, so Production only on Vercel (previews off production, 2026-11-12; src/lib/env.ts).
+  return isCronCall(request.headers.get('authorization'), SECRETS_ALLOWED ? process.env.CRON_SECRET : undefined)
 }
 
 export function isCronCall(authorization: string | null, secret: string | undefined): boolean {

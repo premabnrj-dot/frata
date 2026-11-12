@@ -3,6 +3,7 @@ import { isCronRequest } from '@/lib/auth/cron'
 import { drainOutbox, eachLimited } from '@/lib/outbox/drain'
 import { shopsWithPendingEvents } from '@/lib/db/platform'
 import { processEvents } from '@/lib/orders/payment'
+import { sendStaffNotices } from '@/lib/admin/staff-notices'
 import { errName } from '@/lib/log'
 
 // ENTRY POINT credential: CRON_SECRET via isCronRequest (scripts/check-actions.mjs).
@@ -28,9 +29,11 @@ export async function GET(request: Request) {
       events += n // read after the await: four shops run at once
     })
   } catch (e) { console.error('[cron] drain events list', errName(e)) }
+  // Staff security emails (staff passkeys): a handful a day; their own queue, outside the shops' outbox.
+  const staffMail = await sendStaffNotices().catch((e) => { console.error('[cron] staff notices', errName(e)); return 0 })
   try {
     const r = await drainOutbox(started + 50_000)
-    return NextResponse.json({ ...r, events })
+    return NextResponse.json({ ...r, events, staffMail })
   } catch (e) {
     console.error('[cron] drain', errName(e))
     return NextResponse.json({ error: 'drain' }, { status: 500 })

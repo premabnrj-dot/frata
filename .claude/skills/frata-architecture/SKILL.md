@@ -113,6 +113,17 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   (`signedInUser`, `accessOf`, React `cache`), shared by `requireMember`, `requireStaff` and `requireUser`; Admin's
   layout used to ask each twice. `cache` does not memoize inside a server action or route handler: there each call is
   its own lookup (and each `adminDb()` its own connection), so pass the transaction down instead of reading again.
+- **Staff passkeys** (ADR-0007 amended 2026-11-12; `docs/specs/2026-11-12-staff-passkeys.md`): staff access and every
+  support visit need a live passkey step-up on this browser session. `app_access_for(user, session, stepup hash)`
+  answers `staffConfirmedAt` and drops support visits without one, in the query every signed-in request already runs.
+  `requireStaff` returns `StaffOk` (with `sessionId`, `confirmedAt`) or `needs_passkey` with a `StaffIdentity` — a
+  different type that only `src/lib/admin/passkeys.ts` accepts; Admin's layout renders the check in place of any
+  page. Adding or removing staff, approving a request and removing a passkey need `confirmedRecently` (5 minutes).
+  The `staff_*` tables have no grant to any role (definers only, `check:tenant`); the session id comes from
+  `getClaims()` with `sub` matched; the cookie is `__Host-frrata_staff` (plain `frrata_staff` on the local e2e stack).
+- **Secrets only in Production** (previews off production, 2026-11-12): every secret in `src/lib/env.ts` is read through
+  `secret()` (`src/domains/infra/stage.ts`): on Vercel, Production only; off Vercel, as given. `check:config` fails an
+  unwrapped read. Sign-in is off in the browser on a preview.
 - Signing in grants nothing; a `members` row does. Roles: owner, admin, staff,
   partner (`MEMBER_ROLES`); tuples `ANY_MEMBER` (everyone, partner included:
   orders, and products and collections — staff edit the catalogue, owner
@@ -157,8 +168,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - **A tuple means what its comment says.** An action whose tuple's comment
   excludes the role it lets through is a finding, not a judgement call (S6,
   settled by the owner 2026-11-08: staff edit products and collections).
-- Staff sign-in needs a second factor (aal2 in `requireStaff`) before outside
-  merchants go live; a support visit acts as owner (S5, ADR-0007).
+- Staff access and every support visit need a passkey step-up on that browser session (S5 closed 2026-11-12, ADR-0007
+  amended; § Auth "Staff passkeys"); a support visit acts as owner.
 
 ## Time in client components (2026-11-07, `check:clock`)
 
@@ -796,3 +807,25 @@ Vercel `bom1` + Supabase ap-south-1. Storefront routes set `revalidate`;
 console routes are dynamic. Cron schedules in `vercel.json`: legacy `crons` are daily on Hobby,
 per minute on Pro; Vercel Schedules (public beta 2026-11-05) allow every 15 min on Hobby within 5,000 runs a billing
 period (frata-integrations § Domains). Build for daily; a beta schedule is an option, not a dependency. Migrations: see CLAUDE.md § Deploying.
+
+## Shop websites as code: kit and fleet rules (owner-approved 2026-11-12; spec docs/specs/2026-11-12-kit-and-fleet.md)
+Nothing here is built yet; these bind every spec and plan for Sites, Studio and the kit.
+- **Domains.** Partner or agent code runs only on its own registrable domain on the Public Suffix List (placeholder
+  `frrata.site`), previews on another. Never on `frrata.shop` (checkout, sign-in), never on the console's, Admin's or
+  Studio's domain. A spec that puts site code beside checkout's origin is a blocker.
+- **Build mode.** A shop that has never had an owner (`clientStage`: building or invited) publishes without approval,
+  to the signed preview only; its public address stays "Opening soon" with `noindex` until the owner opens it. Handover
+  re-runs the checks and binds the owner's accept to a deployment id; a shop that ever had an owner never returns.
+- **One record.** Publish, patch, rollback and handover all write `site_deployments`; live, held and drift are derived
+  from it. Requests out through the outbox (`site.build`, `site.promote`); results back through `webhook_events`.
+- **No fleet key.** Each site builds with its own storefront key; no key, role or token reaches every shop's data.
+  The fleet service is deterministic code in the hosting account, never an AI agent with deploy rights.
+- **Controls apart from code.** Policies live in their own repository, served as signed JSON by version; the publish
+  gate runs Frrata's pinned checks on the build output, never the site's copy; a hard floor (no `unsafe-eval`,
+  `connect-src` Frrata only, `form-action` checkout only, no route handlers or server actions in site code) is tested
+  in this repo and no policy can lower it.
+- **Facts stay in the API.** Money, offers, prior prices, JSON-LD, brand tokens and the legal block's words are served
+  by the API, never re-implemented in a kit package.
+- **Agents never approve** a release, a policy, a takedown or a publish.
+- **Checkout stays home.** Checkout, sign-in and order pages stay on Frrata's own host in Mumbai; a site's router
+  carries page requests only.

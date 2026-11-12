@@ -1,7 +1,7 @@
 # ADR-0014: Frrata is the commerce backend; a shop's website is code
 
 Status: accepted (owner, 2026-11-11: "Accept the north-star wording; partners get the builder first; we'll remove the
-look/themes concept") · proposal `docs/specs/2026-11-11-agentic-storefront.md` (mockup
+look/themes concept"; 2026-11-12, after the hosting wording was clarified: "I'm comfortable with the new approach") · proposal `docs/specs/2026-11-11-agentic-storefront.md` (mockup
 https://claude.ai/artifact/K8QusFghYyKYsYtU678huQ) · supersedes, at V5, ADR-0012 (manifests as data)
 
 ## Context
@@ -36,10 +36,26 @@ Claude builder was skipped "Claude never runs on Frrata's servers" (2026-11-11).
    major) deploy to every site when the checks pass and nothing visibly changes; target 24 h to every hosted site.
 3. **Content stays data:** pages' words, FAQ, policies, menus and announcements are edited in the console and served by
    the API; a site's code owns layout. The legal block is runtime data, never compiled in.
-4. **Hosting** is off Frrata's own Vercel team, behind a hosting adapter, with a Frrata-owned router in front of every
-   domain (checkout, orders, policies, share images stay Frrata's; headers and outbound limits set by Frrata). A
-   hosting decision record amending ADR-0005 comes before V2.
+4. **Hosting** (wording clarified by the owner, 2026-11-12): shop websites run in a separate hosting account that
+   Frrata owns, pays for and runs — never in the Vercel team that runs the console and checkout. Brands need no
+   hosting account and deal with no host: they connect a domain in the console, and hosting is in their plan
+   (allowances, then overage at 3× cost). Frrata reaches the host through a hosting adapter (the host can change), and
+   a Frrata-owned router stands in front of every domain (checkout, orders, policies, share images stay Frrata's;
+   headers and outbound limits set by Frrata). Before Frrata hosting exists (V1), a brand's own developer may host a
+   site anywhere on the Storefront API; that is a choice, not a requirement. A hosting decision record amending
+   ADR-0005 comes before V2.
 5. **Checkout fixes first** (shipped separately, 2026-11-11).
 6. **Partners are verified** (PAN or GSTIN, two-factor) before free credits or publishing; the brand owner grants each
    partner's scope per shop (build, preview, publish after approval), approves the exact version, and removing a
    partner stops its sessions and routines and revokes its keys and code access in one step.
+   **Before handover** (owner, 2026-11-12: "if the store isn't handed over, there is no need of owner approval during
+   that time for partners"): while a partner-built shop has never had an owner, the partner publishes its website once
+   the checks pass, with no approval step. The published version shows on a signed preview; the shop's public address
+   keeps "Opening soon" (out of search) until the owner opens it, and the shop cannot open for orders until a brand
+   owner claims it with a verified email (`drizzle/0066`, `app_shop_publish_needs_owner`). At handover the checks run
+   again and the owner accepts that exact version and the partner's scopes; from then on the approval rule above
+   applies. Details: `docs/specs/2026-11-12-kit-and-fleet.md`.
+7. **Kit and fleet** (owner, 2026-11-12: "plan approved"; "yes, preview only guard before handover"):
+   `docs/specs/2026-11-12-kit-and-fleet.md` is the plan for how Frrata's staff, fleet service and agents build the kit
+   and starters, set controls, release updates (three lanes) and keep every site safe. Code sites live on their own
+   registrable domain, never checkout's; its name is a placeholder (`frrata.site`) until chosen.

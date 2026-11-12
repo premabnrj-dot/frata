@@ -2,7 +2,7 @@
 name: frata-verify
 description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, run the end-to-end browser flows (npm run e2e), check a mockup, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
 metadata:
-  version: 1.8.0
+  version: 1.9.0
   verified: 2026-11-11
   covers: ["scripts/verify/**", "e2e/**", "scripts/check-mockup.mjs"]
 ---
@@ -87,6 +87,9 @@ Razorpay, production build): `e2e/README.md`. CI runs them too. Rules:
 - Assert on the database as well as the screen when money, stock or state moves.
 - Wait on what the page shows, never a sleep; a flaky step is fixed at once
   (2026-11-07: reading a code block before it rendered made one step flaky).
+- Staff passkeys (2026-11-12): `signedIn` seeds a passkey step-up for anyone already in `platform_staff` (test data
+  in the throwaway database; the app has no switch). `75-staff-passkeys` drives the real check with Chromium's virtual
+  authenticator (`WebAuthn.addVirtualAuthenticator` over CDP) — the way to test any passkey change.
 - The `e2e-runner` agent runs it and reads the screenshots (phone and desktop).
 - Before publishing a mockup: `node scripts/check-mockup.mjs <file>`.
 

@@ -6,41 +6,51 @@ import 'server-only'
 // THE ONE PLACE a server secret is read. `scripts/check-config.mjs` fails any
 // other `process.env.X` outside its owner module, and any name missing from
 // .env.example. Public values (NEXT_PUBLIC_*) live in src/lib/public-env.ts.
+//
+// SECRETS are read through `secret()`: on Vercel, in Production only (previews off production, spec 2026-11-12;
+// src/domains/infra/stage.ts). check:config fails a variable read here without it unless it is listed there as plain
+// configuration.
 // =============================================================================
 
-export const DATABASE_URL = process.env.DATABASE_URL ?? ''
+import { secretsAllowed } from '@/domains/infra/stage'
+
+/** True where secrets are read: Production on Vercel, or anywhere off Vercel. */
+export const SECRETS_ALLOWED = secretsAllowed(process.env.VERCEL, process.env.VERCEL_ENV)
+function secret(value: string | undefined): string { return SECRETS_ALLOWED ? value ?? '' : '' }
+
+export const DATABASE_URL = secret(process.env.DATABASE_URL)
 /** Trials (TR1): the key of the one-trial-per-business HMACs (src/lib/trials/claims.ts). Production only. Without it a
  *  sign-up gets no trial (fail closed). Never change it once set: earlier claims would no longer match (bump
  *  TRIAL_CLAIM_KEY_VERSION with a new key instead). */
-export const TRIAL_CLAIM_SECRET = process.env.TRIAL_CLAIM_SECRET ?? ''
+export const TRIAL_CLAIM_SECRET = secret(process.env.TRIAL_CLAIM_SECRET)
 /** frata_admin — cross-tenant (ADR-0007). Set for Production only; previews say "not connected". */
-export const ADMIN_DATABASE_URL = process.env.ADMIN_DATABASE_URL ?? ''
+export const ADMIN_DATABASE_URL = secret(process.env.ADMIN_DATABASE_URL)
 /** The analytics database (A·2, its own Supabase project), as frata_app: the visit beacon's inserts and the console's
  *  Traffic reads (both from A2·2). Production only. */
-export const ANALYTICS_DATABASE_URL = process.env.ANALYTICS_DATABASE_URL ?? ''
+export const ANALYTICS_DATABASE_URL = secret(process.env.ANALYTICS_DATABASE_URL)
 /** Counting visits on (A·2): '1' mounts the beacon on shop pages and opens /api/shop/e; anything else, the route answers
  *  404 before reading a byte (security review 2026-11-11 HIGH-1). Production only, set by the owner after the Firewall
  *  rate rule on /api/shop/e and the privacy sentence. */
-export const ANALYTICS_INGEST_ON = process.env.ANALYTICS_INGEST_ON === '1'
+export const ANALYTICS_INGEST_ON = secret(process.env.ANALYTICS_INGEST_ON) === '1'
 /** Encrypts each shop's Razorpay secrets and signs order links (src/lib/crypto/secret-box.ts). Production only.
  *  Changing it makes saved Razorpay secrets unreadable: those shops must reconnect. */
-export const PAYMENT_KEYS_SECRET = process.env.PAYMENT_KEYS_SECRET ?? ''
+export const PAYMENT_KEYS_SECRET = secret(process.env.PAYMENT_KEYS_SECRET)
 /** Razorpay's API base. Unset in Vercel (the real API); set only by the local end-to-end test to its stand-in. */
 export const RAZORPAY_API_BASE = process.env.RAZORPAY_API_BASE || 'https://api.razorpay.com'
 /** Vercel Blob store frata-blob (ADR-0005): product photos and logos. Set by connecting the store in Vercel. */
-export const BLOB_READ_WRITE_TOKEN = process.env.BLOB_READ_WRITE_TOKEN ?? ''
+export const BLOB_READ_WRITE_TOKEN = secret(process.env.BLOB_READ_WRITE_TOKEN)
 
 /** Messages (WhatsApp, docs/specs/2026-11-07-communication.md). Frrata's Meta app secret: signs every webhook and
  *  exchanges a merchant's signup code. Production only. */
-export const META_APP_SECRET = process.env.META_APP_SECRET ?? ''
+export const META_APP_SECRET = secret(process.env.META_APP_SECRET)
 /** The string Meta echoes back when the webhook URL is added in the app dashboard. Any random value. */
-export const WA_VERIFY_TOKEN = process.env.WA_VERIFY_TOKEN ?? ''
+export const WA_VERIFY_TOKEN = secret(process.env.WA_VERIFY_TOKEN)
 /** Graph API base. Unset in Vercel (the real one); set only by the local end-to-end test to its stand-in. */
 export const META_GRAPH_BASE = process.env.META_GRAPH_BASE || 'https://graph.facebook.com'
 /** Frrata's OWN WhatsApp number (not a merchant's) for sign-up codes (trials TR1; frata-integrations § Sign-up code).
  *  These three and TRIAL_CLAIM_SECRET set = the WhatsApp code step is on at /start; any unset = off (sign-up uses the verified email only). */
-export const FRRATA_WA_PHONE_NUMBER_ID = process.env.FRRATA_WA_PHONE_NUMBER_ID ?? ''
-export const FRRATA_WA_TOKEN = process.env.FRRATA_WA_TOKEN ?? ''
+export const FRRATA_WA_PHONE_NUMBER_ID = secret(process.env.FRRATA_WA_PHONE_NUMBER_ID)
+export const FRRATA_WA_TOKEN = secret(process.env.FRRATA_WA_TOKEN)
 /** The approved copy-code authentication template's name and language. */
 export const FRRATA_WA_SIGNUP_TEMPLATE = process.env.FRRATA_WA_SIGNUP_TEMPLATE ?? ''
 export const FRRATA_WA_TEMPLATE_LANG = process.env.FRRATA_WA_TEMPLATE_LANG || 'en'
@@ -50,14 +60,14 @@ export const FRRATA_WA_TEMPLATE_LANG = process.env.FRRATA_WA_TEMPLATE_LANG || 'e
 /** EkCode (ADR-0009, P1): its own WhatsApp number and Meta app (in EkCode's own portfolio, ADR-0010), and two key rings
  *  ("id:secret,id:secret", newest first; rotate by putting a new entry in front — never by replacing one). All of
  *  them set (and NEXT_PUBLIC_EKCODE_HOST) = EkCode can be switched on; any unset = the button never shows. */
-export const EKCODE_WA_PHONE_NUMBER_ID = process.env.EKCODE_WA_PHONE_NUMBER_ID ?? ''
-export const EKCODE_WA_TOKEN = process.env.EKCODE_WA_TOKEN ?? ''
+export const EKCODE_WA_PHONE_NUMBER_ID = secret(process.env.EKCODE_WA_PHONE_NUMBER_ID)
+export const EKCODE_WA_TOKEN = secret(process.env.EKCODE_WA_TOKEN)
 export const EKCODE_WA_AUTH_TEMPLATE = process.env.EKCODE_WA_AUTH_TEMPLATE ?? ''
 export const EKCODE_WA_TEMPLATE_LANG = process.env.EKCODE_WA_TEMPLATE_LANG || 'en'
-export const EKCODE_WA_VERIFY_TOKEN = process.env.EKCODE_WA_VERIFY_TOKEN ?? ''
-export const EKCODE_META_APP_SECRET = process.env.EKCODE_META_APP_SECRET ?? ''
-export const EKCODE_PHONE_PEPPERS = process.env.EKCODE_PHONE_PEPPERS ?? ''
-export const EKCODE_SEAL_KEYS = process.env.EKCODE_SEAL_KEYS ?? ''
+export const EKCODE_WA_VERIFY_TOKEN = secret(process.env.EKCODE_WA_VERIFY_TOKEN)
+export const EKCODE_META_APP_SECRET = secret(process.env.EKCODE_META_APP_SECRET)
+export const EKCODE_PHONE_PEPPERS = secret(process.env.EKCODE_PHONE_PEPPERS)
+export const EKCODE_SEAL_KEYS = secret(process.env.EKCODE_SEAL_KEYS)
 
 export const FRRATA_GSTIN = process.env.FRRATA_GSTIN ?? ''
 export const FRRATA_LEGAL_NAME = process.env.FRRATA_LEGAL_NAME ?? ''
@@ -65,14 +75,14 @@ export const FRRATA_ADDRESS = process.env.FRRATA_ADDRESS ?? ''
 export const FRRATA_SAC = process.env.FRRATA_SAC ?? ''
 /** Test databases only (e2e, int tests): lets Admin issue a month in test mode. NEVER in Production or a preview on
  *  the production database: a test-mode issue freezes the real drafts and their orders' fees for good. */
-export const BILLING_TEST_ISSUE = process.env.BILLING_TEST_ISSUE ?? ''
+export const BILLING_TEST_ISSUE = secret(process.env.BILLING_TEST_ISSUE)
 
 /** Frrata's OWN Razorpay account, for billing merchants (billing B3; plan finding 15): Production only, Sensitive, read
  *  only by src/lib/billing/gateway.ts. Never a shop's keys. The webhook secret has a previous value during a rotation. */
-export const RAZORPAY_BILLING_KEY_ID = process.env.RAZORPAY_BILLING_KEY_ID ?? ''
-export const RAZORPAY_BILLING_KEY_SECRET = process.env.RAZORPAY_BILLING_KEY_SECRET ?? ''
-export const RAZORPAY_BILLING_WEBHOOK_SECRET = process.env.RAZORPAY_BILLING_WEBHOOK_SECRET ?? ''
-export const RAZORPAY_BILLING_WEBHOOK_SECRET_PREVIOUS = process.env.RAZORPAY_BILLING_WEBHOOK_SECRET_PREVIOUS ?? ''
+export const RAZORPAY_BILLING_KEY_ID = secret(process.env.RAZORPAY_BILLING_KEY_ID)
+export const RAZORPAY_BILLING_KEY_SECRET = secret(process.env.RAZORPAY_BILLING_KEY_SECRET)
+export const RAZORPAY_BILLING_WEBHOOK_SECRET = secret(process.env.RAZORPAY_BILLING_WEBHOOK_SECRET)
+export const RAZORPAY_BILLING_WEBHOOK_SECRET_PREVIOUS = secret(process.env.RAZORPAY_BILLING_WEBHOOK_SECRET_PREVIOUS)
 
 /** False on a fresh Vercel project with no variables yet: pages say so instead of crashing. */
 export const isDatabaseConfigured = () => DATABASE_URL !== ''
@@ -80,7 +90,7 @@ export const isAdminDatabaseConfigured = () => ADMIN_DATABASE_URL !== ''
 export const isAnalyticsConfigured = () => ANALYTICS_DATABASE_URL !== ''
 export const isCountingVisits = () => ANALYTICS_INGEST_ON && isAnalyticsConfigured()
 /** frata-blob's id (store_…): pins which Blob host a photo may come from. Set by connecting the store. */
-export const BLOB_STORE_ID = process.env.BLOB_STORE_ID ?? ''
+export const BLOB_STORE_ID = secret(process.env.BLOB_STORE_ID)
 export const isBlobConfigured = () => BLOB_READ_WRITE_TOKEN !== '' && BLOB_STORE_ID !== ''
 export const isPaymentsConfigured = () => PAYMENT_KEYS_SECRET !== ''
 /** Tokens are sealed with PAYMENT_KEYS_SECRET's key family, so Messages needs it too. */
@@ -97,7 +107,7 @@ export const VERCEL_ENV = process.env.VERCEL_ENV ?? ''
 
 // ── Own domains (shop addresses D2·4, D2·5) ──
 /** Vercel's API token (Production only, Sensitive) and the project it manages domains on. Unset: own domains are off. */
-export const VERCEL_API_TOKEN = process.env.VERCEL_API_TOKEN ?? ''
+export const VERCEL_API_TOKEN = secret(process.env.VERCEL_API_TOKEN)
 export const VERCEL_PROJECT_ID = process.env.VERCEL_PROJECT_ID ?? ''
 export const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID ?? ''
 /** A local fake for e2e only: honoured off Vercel and only on 127.0.0.1 (src/lib/connectors/vercel). */
@@ -105,7 +115,7 @@ export const VERCEL_API_BASE = process.env.VERCEL_API_BASE ?? ''
 /** Admin › Infrastructure (plan 2026-11-11 I·1): a TEAM token minted by the team's Billing-role member (or a Developer),
  *  Production only, Sensitive, 90-day expiry. It reads /v1/billing/charges; the puller refuses it if it can read the
  *  project's env (security review HIGH-1). Never the domains token above. Unset: the Vercel tab says what connects it. */
-export const VERCEL_BILLING_TOKEN = process.env.VERCEL_BILLING_TOKEN ?? ''
+export const VERCEL_BILLING_TOKEN = secret(process.env.VERCEL_BILLING_TOKEN)
 export const isVercelBillingConfigured = () => VERCEL_BILLING_TOKEN !== '' && VERCEL_TEAM_ID !== '' && VERCEL_PROJECT_ID !== ''
 /** DNS-over-HTTPS fakes for e2e (both resolvers, same rule): honoured off Vercel and only on 127.0.0.1. */
 export const DOH_BASE = process.env.DOH_BASE ?? ''
@@ -116,10 +126,10 @@ export const isOwnDomainsConfigured = () => VERCEL_API_TOKEN !== '' && VERCEL_PR
  *  database). The token pair is Basic auth; the webhook secret signs Mux's events, the PREVIOUS one is accepted while
  *  a new webhook replaces the old (rotation = recreate). MUX_ENVIRONMENT_ID is the environment the token belongs to
  *  (not a secret): every video row records it, and an event from another environment is refused. */
-export const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID ?? ''
-export const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET ?? ''
-export const MUX_WEBHOOK_SECRET = process.env.MUX_WEBHOOK_SECRET ?? ''
-export const MUX_WEBHOOK_SECRET_PREVIOUS = process.env.MUX_WEBHOOK_SECRET_PREVIOUS ?? ''
+export const MUX_TOKEN_ID = secret(process.env.MUX_TOKEN_ID)
+export const MUX_TOKEN_SECRET = secret(process.env.MUX_TOKEN_SECRET)
+export const MUX_WEBHOOK_SECRET = secret(process.env.MUX_WEBHOOK_SECRET)
+export const MUX_WEBHOOK_SECRET_PREVIOUS = secret(process.env.MUX_WEBHOOK_SECRET_PREVIOUS)
 export const MUX_ENVIRONMENT_ID = process.env.MUX_ENVIRONMENT_ID ?? ''
 /** e2e only (the fake Mux): in Production only Mux's own hosts are used, whatever these say (security review L6). */
 export const MUX_API_BASE = VERCEL_ENV === 'production' ? 'https://api.mux.com' : process.env.MUX_API_BASE || 'https://api.mux.com'
@@ -131,26 +141,26 @@ export const MUX_IMAGE_BASE = VERCEL_ENV === 'production' ? 'https://image.mux.c
  *  are accepted. EMAIL_SHOP_DOMAIN: shops send as <slug>@this (frratamail.app). EMAIL_NOTICES_FROM: Frrata's notices
  *  sender ("Frrata <notices@notify.…>"); unset = notices stay in the console. SEND_EMAIL_HOOK_SECRET: Supabase's Send
  *  Email Hook ("v1,whsec_…"). EMAIL_KEYS: the ring for suppression hashes and email link tokens ("e1:<secret>"). */
-export const SES_ROLE_ARN = process.env.SES_ROLE_ARN ?? ''
+export const SES_ROLE_ARN = secret(process.env.SES_ROLE_ARN)
 export const SES_ACCOUNT_ID = process.env.SES_ACCOUNT_ID ?? ''
 export const SES_CONFIG_SHOPS = process.env.SES_CONFIG_SHOPS || 'shops'
 export const SES_CONFIG_NOTICES = process.env.SES_CONFIG_NOTICES || 'notices'
 export const SES_SNS_TOPIC_ARN = process.env.SES_SNS_TOPIC_ARN ?? ''
 export const EMAIL_SHOP_DOMAIN = process.env.EMAIL_SHOP_DOMAIN ?? ''
 export const EMAIL_NOTICES_FROM = process.env.EMAIL_NOTICES_FROM ?? ''
-export const SEND_EMAIL_HOOK_SECRET = process.env.SEND_EMAIL_HOOK_SECRET ?? ''
-export const EMAIL_KEYS = process.env.EMAIL_KEYS ?? ''
+export const SEND_EMAIL_HOOK_SECRET = secret(process.env.SEND_EMAIL_HOOK_SECRET)
+export const EMAIL_KEYS = secret(process.env.EMAIL_KEYS)
 /** e2e only (the fake SES/STS): honoured off Vercel and only on 127.0.0.1 (fakeBase); SES_TEST_KEY "id:secret" replaces
  *  OIDC there. On Vercel neither is ever read: the endpoints are AWS's and the credentials come from the role. */
 export const SES_API_BASE = process.env.SES_API_BASE ?? ''
-export const SES_TEST_KEY = process.env.SES_TEST_KEY ?? ''
-export const SES_SNS_TEST_CERT = process.env.SES_SNS_TEST_CERT ?? ''
+export const SES_TEST_KEY = secret(process.env.SES_TEST_KEY)
+export const SES_SNS_TEST_CERT = secret(process.env.SES_SNS_TEST_CERT)
 export const isEmailConfigured = () => /^arn:aws:iam::\d{12}:role\/[\w+=,.@\/-]{1,128}$/.test(SES_ROLE_ARN) && /^\d{12}$/.test(SES_ACCOUNT_ID) && EMAIL_KEYS !== ''
 /** Admin › Infrastructure (plan 2026-11-11 I·1): an optional separate READ-ONLY Mux token (Video Read only) for delivery
  *  usage. Unset, the video token above is used for this GET (owner 2026-11-11: both live in the same Vercel env, so a
  *  second token would add no separation). Neither set: the Mux tab says what connects it. */
-export const MUX_READ_TOKEN_ID = process.env.MUX_READ_TOKEN_ID ?? ''
-export const MUX_READ_TOKEN_SECRET = process.env.MUX_READ_TOKEN_SECRET ?? ''
+export const MUX_READ_TOKEN_ID = secret(process.env.MUX_READ_TOKEN_ID)
+export const MUX_READ_TOKEN_SECRET = secret(process.env.MUX_READ_TOKEN_SECRET)
 export const muxUsageToken = () => MUX_READ_TOKEN_ID && MUX_READ_TOKEN_SECRET ? { id: MUX_READ_TOKEN_ID, secret: MUX_READ_TOKEN_SECRET } : MUX_TOKEN_ID && MUX_TOKEN_SECRET ? { id: MUX_TOKEN_ID, secret: MUX_TOKEN_SECRET } : null
 export const isMuxUsageConfigured = () => muxUsageToken() !== null
 export const isVideoConfigured = () => MUX_TOKEN_ID !== '' && MUX_TOKEN_SECRET !== '' && MUX_WEBHOOK_SECRET !== '' && /^[A-Za-z0-9_-]{1,40}$/.test(MUX_ENVIRONMENT_ID)
