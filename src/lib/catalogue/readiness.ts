@@ -27,7 +27,7 @@ export async function readinessIn(tx: Tx, tenantId: string, ids: readonly string
   if (!ids.length) return new Map()
   const list = arrayParam([...ids], 'uuid')
   const [rows, vs, photos, [shop]] = await Promise.all([
-    tx.select({ id: products.id, title: products.title, options: products.options, hsn: products.hsn, gstBps: products.gstBps, label: products.label, chart: productTypes.sizeChart })
+    tx.select({ id: products.id, title: products.title, options: products.options, optionValues: products.optionValues, hsn: products.hsn, gstBps: products.gstBps, label: products.label, chart: productTypes.sizeChart })
       .from(products).leftJoin(productTypes, and(eq(productTypes.tenantId, tenantId), eq(productTypes.id, products.typeId)))
       .where(and(eq(products.tenantId, tenantId), sql`${products.id} = any(${list})`)),
     tx.select({ productId: variants.productId, price: variants.price, stock: variants.stock, whenOut: variants.whenOut, shipsBy: variants.shipsBy,
@@ -47,8 +47,8 @@ export async function readinessIn(tx: Tx, tenantId: string, ids: readonly string
     out.set(p.id, {
       photos: n.get(p.id) ?? 0, taxReady,
       readiness: readiness({
-        title: p.title, photos: n.get(p.id) ?? 0, prices: mine.map((v) => Number(v.price)), hasSizes: p.options.some(isSizeOption),
-        chartRows: p.chart?.rows.length ?? 0, taxReady, labelMissing: asksLabel ? labelMissing(readLabel(p.label)) : undefined,
+        title: p.title, photos: n.get(p.id) ?? 0, prices: mine.map((v) => Number(v.price)),
+        sizes: p.optionValues[p.options.findIndex(isSizeOption)] ?? [], chartSizes: (p.chart?.rows ?? []).map((r) => r.size), taxReady, labelMissing: asksLabel ? labelMissing(readLabel(p.label)) : undefined,
         anyBuyable: mine.some((v) => availability({ stock: v.stock, whenOut: v.whenOut as WhenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap }, now).canBuy),
       }),
     })

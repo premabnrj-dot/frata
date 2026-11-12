@@ -50,8 +50,8 @@ describe.skipIf(!host)('writing new products in one batch', () => {
 
       // Refused before anything is written: a SKU typed on two of the batch, one another product has (any case), a barcode twice.
       const count = async () => (await tx.select({ n: sql<number>`count(*)::int` }).from(products).where(and(eq(products.tenantId, A), like(products.handle, `${b}%`))))[0]!.n
-      expect(await writeProducts(tx, A, [sized('X', b, [{ sku: 'INT-W-1' }]), sized('Y', b, [{ sku: 'int-w-1' }])], { costs: true })).toEqual({ ok: false, draft: 1, error: 'SKU int-w-1 is on two of these products.' })
-      expect(await writeProducts(tx, A, [sized('X', b), sized('Y', b, [{ sku: 'int-w-typed' }])], { costs: true })).toEqual({ ok: false, draft: 1, error: 'SKU int-w-typed is already used by another product in your shop.' })
+      expect(await writeProducts(tx, A, [sized('X', b, [{ sku: 'INT-W-1' }]), sized('Y', b, [{ sku: 'int-w-1' }])], { costs: true })).toEqual({ ok: false, draft: 1, error: 'SKU int-w-1 is on two of these products.', at: { values: ['S'], field: 'sku' } })
+      expect(await writeProducts(tx, A, [sized('X', b), sized('Y', b, [{ sku: 'int-w-typed' }])], { costs: true })).toEqual({ ok: false, draft: 1, error: 'SKU int-w-typed is already used by another product in your shop.', at: { values: ['S'], field: 'sku' } })
       expect(await writeProducts(tx, A, [sized('X', b, [{ gtin: '4006381333931' }]), sized('Y', b, [{ gtin: '4006381333931' }])], { costs: true })).toMatchObject({ ok: false, draft: 1 })
       expect(await count()).toBe(4)
 

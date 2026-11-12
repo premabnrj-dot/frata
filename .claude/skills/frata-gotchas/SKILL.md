@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a PDF download that saves as pdf.txt, MODULE_NOT_FOUND in production only, a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.22.0
+  version: 1.22.1
   verified: 2026-11-08
 ---
 
@@ -36,7 +36,7 @@ metadata:
 | A new definer function is callable over Supabase RPC | Postgres grants PUBLIC EXECUTE by default; drop+create resets grants | `revoke all on function … from public, anon, authenticated` every time (proof check 13) |
 | A gate flags the comment explaining it | The gate matched its own documentation | Gates skip comment lines; test a new gate on its own docs |
 | A count subquery returns 0 (or the wrong rows) | In a ONE-table select, drizzle prints `${table.id}` inside `sql` as a bare `"id"`; inside `(select … from other o where o.x = "id")` that is `o.id` | Write the outer column out in full: `"product_types"."id"` (`src/lib/queries/catalogue.ts`) |
-| "Set every price" fills only the last row | Many `onChange` calls in one event each spread the SAME stale state | Update with a function: `setD((x) => …)` |
+| A bulk "Apply" fills only the last row | Many `onChange` calls in one event each spread the SAME stale state | Update with a function: `setD((x) => …)` |
 | Phone page scrolls sideways though every table sits in `overflow-x-auto` | `sr-only` labels are `position: absolute` and escape a scroll box that is not positioned | Every scroll box is `relative overflow-x-auto` |
 | React #418 "text" in production, now and then | A client component read `Date.now()`/`new Date()` while rendering; server and browser got different minutes ("just now" vs "1 min ago") | Render from `useNow()` (the page's time); `check:clock`; e2e with `page.clock.install` ahead of the server |
 | An Undo toast vanishes the moment the action succeeds | The `<Toaster>` lived inside the row list or panel that `router.refresh()` removed (the tab emptied; the order left the panel's state) | The Toaster is AppShell's now, above every page (feedback F0, 2026-11-12): never mount another inside a panel or list. An ok toast's Undo therefore outlives its row, its panel and a move to another page; an error toast leaves on a page change |

@@ -3,7 +3,7 @@ import { costsVisibleIn } from './settings'
 import type { MemberRole } from '@/domains/tenancy/roles'
 import { cache } from 'react'
 import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
-import { availability, type WhenOut } from '@/domains/catalogue/availability'
+import { availability, type VariantFacts, type WhenOut } from '@/domains/catalogue/availability'
 import { withoutRate, type Unrated } from '@/domains/tax/rates'
 import { matches, type ProductFacts, type Rule } from '@/domains/catalogue/collection-rules'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
@@ -18,27 +18,49 @@ import { manifestsFor } from '@/lib/themes/manifests'
 // explicit tenant where. These include the merchant's own unit cost: they are
 // for the CONSOLE only — the storefront has its own queries that never select it.
 
-/** The product list: one row each, with its cover, variant count, price range and stock. 50 a page. */
-export async function listProducts(tenantId: string, page = 0, status: 'draft' | 'active' | 'unlisted' | 'archived' | null = null) {
-  return withTenant(tenantId, (tx) =>
-    tx.select({
-      id: products.id, title: products.title, handle: products.handle, status: products.status, publishAt: products.publishAt, publishedAt: products.publishedAt, updatedAt: products.updatedAt,
-      typeName: productTypes.name,
-      variantCount: sql<number>`(select count(*)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
-      stock: sql<number>`(select coalesce(sum(v.stock), 0)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
-      minPrice: sql<number | null>`(select min(v.price)::bigint from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
-      maxPrice: sql<number | null>`(select max(v.price)::bigint from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
-      cover: sql<{ base: string; widths: number[] } | null>`(select json_build_object('base', i.base, 'widths', i.widths) from ${productImages} i where i.product_id = "products"."id" and i.tenant_id = ${tenantId} order by i.position limit 1)`,
-    })
-      .from(products)
-      .leftJoin(productTypes, and(eq(productTypes.id, products.typeId), eq(productTypes.tenantId, tenantId)))
-      .where(and(eq(products.tenantId, tenantId), status ? eq(products.status, status) : sql`${products.status} <> 'archived'`))
-      .orderBy(desc(products.updatedAt))
-      .limit(50).offset(page * 50),
-  ).then((rows) => rows.map((r) => ({ ...r, minPrice: r.minPrice === null ? null : Number(r.minPrice), maxPrice: r.maxPrice === null ? null : Number(r.maxPrice) })))
+export const PRODUCTS_PAGE = 50
+
+/** The product list: one row each, with its cover, variant count, price range, stock and what each variant offers
+ * (availability is derived from these, never read from stock alone: made to order and pre-order sell at 0). 50 a page,
+ * searched by name or SKU (PR·0: the list stopped at 50 with no pager or search), with the matching count. */
+export async function listProducts(tenantId: string, page = 0, status: 'draft' | 'active' | 'unlisted' | 'archived' | null = null, q = '') {
+  const term = q.trim().slice(0, 80)
+  const like = `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+  const where = and(
+    eq(products.tenantId, tenantId),
+    status ? eq(products.status, status) : sql`${products.status} <> 'archived'`,
+    term ? sql`(${products.title} ilike ${like} or exists (select 1 from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.sku ilike ${like}))` : undefined,
+  )
+  return withTenant(tenantId, async (tx) => {
+    const [rows, [n]] = await Promise.all([
+      tx.select({
+        id: products.id, title: products.title, handle: products.handle, status: products.status, publishAt: products.publishAt, publishedAt: products.publishedAt, updatedAt: products.updatedAt,
+        typeName: productTypes.name,
+        variantCount: sql<number>`(select count(*)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
+        stock: sql<number>`(select coalesce(sum(v.stock), 0)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
+        minPrice: sql<number | null>`(select min(v.price)::bigint from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price > 0)`,
+        maxPrice: sql<number | null>`(select max(v.price)::bigint from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price > 0)`,
+        unpriced: sql<number>`(select count(*)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price <= 0)`,
+        offers: sql<VariantFacts[]>`(select coalesce(json_agg(json_build_object(
+          'stock', v.stock, 'whenOut', v.when_out, 'shipsBy', v.ships_by, 'leadMinDays', v.lead_min_days, 'leadMaxDays', v.lead_max_days, 'preorderCap', v.preorder_cap)), '[]'::json)
+          from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
+        cover: sql<{ base: string; widths: number[] } | null>`(select json_build_object('base', i.base, 'widths', i.widths) from ${productImages} i where i.product_id = "products"."id" and i.tenant_id = ${tenantId} order by i.position limit 1)`,
+      })
+        .from(products)
+        .leftJoin(productTypes, and(eq(productTypes.id, products.typeId), eq(productTypes.tenantId, tenantId)))
+        .where(where)
+        .orderBy(desc(products.updatedAt))
+        .limit(PRODUCTS_PAGE).offset(page * PRODUCTS_PAGE),
+      tx.select({ n: count() }).from(products).where(where),
+    ])
+    return {
+      total: n?.n ?? 0,
+      rows: rows.map((r) => ({ ...r, minPrice: r.minPrice === null ? null : Number(r.minPrice), maxPrice: r.maxPrice === null ? null : Number(r.maxPrice) })),
+    }
+  })
 }
 
-export type ProductListRow = Awaited<ReturnType<typeof listProducts>>[number]
+export type ProductListRow = Awaited<ReturnType<typeof listProducts>>['rows'][number]
 
 /** Every product's tax (Products › HSN codes): its code, unit, own rate and lowest price; the shop's GST facts. Up to 2,000. */
 export async function productsTax(tenantId: string) {

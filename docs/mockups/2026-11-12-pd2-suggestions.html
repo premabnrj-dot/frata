@@ -1,0 +1,264 @@
+<title>Delivery Zones suggestions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the console as it would be — a gallery, an app's page in its states, the app's home once on, and phone views. Frrata console tokens. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--thread:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--ok-mark:#2E9E6A;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;
+  --tile:#F2F1EF;--haldi-soft:#FBEFD2;--indigo-soft:#E7EAF8;--rani-soft:#FBE3EE;--shot:#F7F5F2;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--display:"Bricolage Grotesque","Inter",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;
+  --tile:#262320;--haldi-soft:#3A2E14;--indigo-soft:#1E2340;--rani-soft:#3A1828;--shot:#211F1C;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;
+  --tile:#262320;--haldi-soft:#3A2E14;--indigo-soft:#1E2340;--rani-soft:#3A1828;--shot:#211F1C;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);font-weight:600}
+h1{font:700 30px/1.15 var(--display);margin:4px 0 6px;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:19px;margin:56px 0 12px;display:flex;gap:10px;align-items:center;text-wrap:balance;scroll-margin-top:16px}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+p{margin:0 0 10px;max-width:74ch}
+.sub{color:var(--sub)}.mono{font-family:var(--mono)}.k{font-size:12px;color:var(--sub)}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 0}
+nav.toc a{font-size:12.5px;color:var(--fg);text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:3px 10px;background:var(--card)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:7px 14px;font:500 13.5px var(--sans);min-height:36px;white-space:nowrap;cursor:pointer;position:relative}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.primary::after{content:"";position:absolute;left:33%;right:33%;bottom:0;height:2px;background:var(--thread);border-radius:2px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn[disabled]{opacity:1;background:var(--muted);color:var(--sub);border-color:var(--border);cursor:default}
+.btn:focus-visible,.chipf:focus-visible,.acard:focus-visible,summary:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:500;white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-info{background:var(--info);color:var(--info-text)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok-mark);display:inline-block}
+/* Console frame */
+.console{border:1px solid var(--border);border-radius:10px;background:var(--bg);overflow:hidden}
+.cbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:18px 20px 8px}
+.cbar h3{font:700 22px var(--display);margin:0}
+.cbody{padding:8px 20px 22px}
+.search{display:flex;align-items:center;gap:8px;border:1px solid var(--input);border-radius:6px;padding:0 10px;background:var(--card);min-height:36px;min-width:0;flex:1;max-width:320px}
+.search input{border:0;background:transparent;color:var(--fg);font:14px var(--sans);outline:none;width:100%;min-width:0}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+.chipf{border:1px solid var(--border);background:var(--card);color:var(--fg);border-radius:999px;padding:4px 12px;font:500 13px var(--sans);cursor:pointer;min-height:30px}
+.chipf[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chipf b{font:500 12px var(--mono);margin-left:4px;opacity:.75}
+.sect{margin-top:22px}
+.sect h4{font-size:13px;margin:0 0 10px;color:var(--sub);font-weight:600;display:flex;justify-content:space-between}
+/* Your apps strip */
+.mine{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.mcard{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;min-width:0}
+.mcard .t{min-width:0;flex:1}
+.mcard b{display:block;font-size:14px}
+.mcard .k{display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Gallery grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.acard{display:flex;flex-direction:column;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:left;color:var(--fg);font:inherit;cursor:pointer;min-width:0;transition:border-color .12s}
+.acard:hover{border-color:var(--input)}
+.acard .top{display:flex;gap:12px;align-items:flex-start}
+.acard b{display:block;font-size:15px;margin-top:2px}
+.acard .job{color:var(--sub);font-size:13px;line-height:1.45;min-height:38px}
+.acard .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--border);padding-top:10px;margin-top:auto;font-size:12.5px}
+.acard.next{background:var(--bg)}
+.acard.next .icon{opacity:.75}
+.price{font:500 12.5px var(--mono)}
+.lock{display:inline-flex;align-items:center;gap:4px;color:var(--sub)}
+/* Icon tiles */
+.icon{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--tile)}
+.icon.lg{width:64px;height:64px;border-radius:14px}
+.icon svg{width:22px;height:22px}.icon.lg svg{width:30px;height:30px}
+.icon .b{stroke:var(--fg)}.icon .t{stroke:var(--brand)}
+/* Featured */
+.feature{display:grid;grid-template-columns:1.1fr 1fr;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);margin-top:16px}
+.feature .l{padding:20px;display:flex;flex-direction:column;gap:10px;justify-content:center;min-width:0}
+.feature .r{background:var(--haldi-soft);padding:18px;display:grid;place-items:center;min-width:0}
+.feature h5{font:600 20px/1.2 var(--display);margin:0;text-wrap:balance}
+.feature .x{align-self:flex-start}
+@media (max-width:760px){.feature{grid-template-columns:1fr}}
+/* Drawn product shots */
+.shot{width:100%;aspect-ratio:16/10;border-radius:8px;background:var(--card);border:1px solid var(--border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:hidden;font-size:11.5px;max-width:100%}
+.shot .ln{height:7px;border-radius:3px;background:var(--muted)}
+.shot .row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.stars{color:var(--warn-text);letter-spacing:1px;font-size:12px}
+.ph{background:linear-gradient(160deg,#D9B99B,#B07A52);border-radius:4px}
+.wa{background:#E7F7EE;color:#1C1917;border-radius:8px 8px 8px 2px;padding:6px 8px;max-width:85%;font-size:11.5px}
+.wa.me{background:#D9FDD3;align-self:flex-end;border-radius:8px 8px 2px 8px}
+/* Detail page */
+.detail{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}
+@media (max-width:900px){.detail{grid-template-columns:1fr}}
+.dhead{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.dhead .t{flex:1;min-width:220px}
+.dhead h3{font:700 26px/1.15 var(--display);margin:0}
+.dhead .by{font-size:12.5px;color:var(--sub)}
+.headline{font-size:16px;margin:6px 0 0;max-width:52ch}
+.feats{display:grid;gap:18px;margin-top:22px}
+.feat{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:center}
+.feat:nth-child(even) .fx{order:2}
+@media (max-width:700px){.feat{grid-template-columns:1fr}.feat:nth-child(even) .fx{order:0}}
+.feat h5{font-size:15px;margin:0 0 4px}
+.side{display:grid;gap:12px}
+.box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.box h6{font-size:12px;color:var(--sub);font-weight:600;margin:0 0 8px;letter-spacing:.02em}
+.big{font:600 24px var(--mono);letter-spacing:-.02em}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}.kv dt{color:var(--sub)}.kv dd{margin:0;min-width:0}
+.ul{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13px}
+.ul li{display:flex;gap:8px;align-items:flex-start}
+.ul li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--sub);margin-top:7px;flex:none}
+details{border-top:1px solid var(--border);padding:10px 0}
+details:last-child{border-bottom:1px solid var(--border)}
+summary{cursor:pointer;font-weight:500;list-style:none;display:flex;justify-content:space-between}
+summary::after{content:"+";color:var(--sub)}details[open] summary::after{content:"–"}
+details p{margin:6px 0 0;color:var(--sub);font-size:13px}
+.states{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+/* App home (installed) */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin:14px 0 16px;overflow-x:auto}
+.tab{border:0;background:none;padding:8px 12px;font:500 13px var(--sans);color:var(--sub);border-bottom:2px solid transparent;white-space:nowrap}
+.tab.on{color:var(--fg);border-bottom-color:var(--thread);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card)}
+.kpi{padding:14px 16px;border-right:1px solid var(--border);min-width:0}
+.kpi:last-child{border-right:0}
+.kpi b{display:block;font:500 22px var(--mono);margin-top:2px}
+.meter{height:8px;background:var(--muted);border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.meter i{display:block;height:100%;background:var(--fg);transform-origin:left}
+.danger{color:var(--danger-text);border-color:var(--danger-text)}
+/* Phone */
+.phones{display:flex;gap:24px;flex-wrap:wrap}
+.phone{width:100%;max-width:340px;border:1px solid var(--border);border-radius:26px;padding:10px;background:var(--card)}
+.phone .scr{border-radius:18px;overflow:hidden;border:1px solid var(--border);background:var(--bg)}
+.phone .bar{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--card);font-weight:600}
+.phone .pb{padding:12px;display:grid;gap:10px}
+.prow{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px}
+.prow .t{flex:1;min-width:0}.prow b{display:block;font-size:14px}
+.stick{border-top:1px solid var(--border);background:var(--card);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+/* Dialog */
+.dialog{max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:0 12px 32px rgb(0 0 0 / .12)}
+.dialog h5{font-size:17px;margin:0 0 10px}
+.calls{padding-left:20px;max-width:82ch}.calls li{margin-bottom:6px}
+@media (prefers-reduced-motion:reduce){.acard{transition:none}}
+/* True Profit additions */
+table.t{width:100%;border-collapse:collapse;font-size:13px;background:var(--card)}
+table.t th{font-size:11.5px;color:var(--sub);font-weight:600;text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.t td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.t tr:last-child td{border-bottom:0}
+table.t .r{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);white-space:nowrap}
+table.t tr.sub td{background:var(--muted);font-size:12.5px}
+table.t tr.sub td:first-child{padding-left:32px}
+.neg{color:var(--danger-text)}.pos{color:var(--ok-text)}
+.tablewrap{border:1px solid var(--border);border-radius:10px;overflow-x:auto}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:14px}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:13.5px}
+.list li:first-child{border-top:0}
+.list .r{font-family:var(--mono);white-space:nowrap}
+.foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end}
+.note{background:var(--warn);color:var(--warn-text);border-radius:6px;padding:8px 12px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.stack{display:grid;gap:14px}
+.calls li{margin-bottom:8px}
+/* Delivery Zones additions */
+.shop{border:1px solid var(--border);border-radius:12px;background:#FFFDF8;color:#2A2420;padding:16px;font-family:var(--sans)}
+.shop .ttl{font:600 18px var(--display);margin:0}
+.shop .price{font:600 16px var(--sans)}
+.pin{display:flex;gap:8px;margin-top:10px}
+.pin input{flex:1;min-width:0;border:1px solid #CFC6BC;border-radius:6px;padding:9px 10px;font:500 15px var(--mono);background:#fff;color:#2A2420}
+.pin button{border:1px solid #2A2420;background:#2A2420;color:#fff;border-radius:6px;padding:0 14px;font:500 14px var(--sans)}
+.ans{margin-top:10px;border-top:1px dashed #E2D8CD;padding-top:10px;display:grid;gap:4px;font-size:13.5px}
+.ans .ok{color:#1E7B52}.ans .warn{color:#8A5000}.ans .no{color:#C02A2F}
+.lines{display:grid;gap:4px;font-size:13.5px}.lines div{display:flex;justify-content:space-between}
+.field{display:grid;gap:4px;font-size:13px}.field input,.field select{border:1px solid var(--input);border-radius:6px;padding:8px 10px;font:14px var(--sans);background:var(--card);color:var(--fg);min-width:0}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:13.5px}
+.switch i{width:34px;height:20px;border-radius:999px;background:var(--fg);position:relative;display:inline-block}
+.switch i::after{content:"";position:absolute;right:3px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--bg)}
+.switch.off i{background:var(--border)}.switch.off i::after{right:auto;left:3px}
+
+/* PD·2 additions */
+.sugg{display:grid;gap:8px;margin-bottom:16px}
+.srow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.srow .t{flex:1;min-width:200px}
+.srow b{font-family:var(--mono);font-weight:500}
+.srow .acts{display:flex;gap:6px;flex-wrap:wrap}
+.figs{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--sub);margin-top:2px}
+.figs .r{font-family:var(--mono)}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:14px}
+.tab{padding:8px 12px;font-size:13.5px;color:var(--sub)}
+.tab.on{color:var(--fg);font-weight:600;box-shadow:inset 0 -2px 0 var(--thread)}
+.box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-width:0}
+.box h6{font-size:11px;letter-spacing:.08em;color:var(--sub);margin:0 0 8px;font-weight:600}
+</style>
+<div class="wrap">
+  <div class="eyebrow">Mockup · for the owner's sign-off · 12 Nov 2026</div>
+  <h1>Delivery Zones: suggestions and numbers by zone (PD·2)</h1>
+  <p class="sub">What the shop's own orders say, inside Delivery Zones: which PIN codes should pay online, and how each zone does. Numbers are from the last 90 days, worked out the same way as True Profit (₹ kept after returns, freight, fees and COD charges, before ads and packaging). Example shop: Kesar Studio, Jaipur.</p>
+  <nav class="toc" aria-label="Sections"><a href="#rules">Suggested rules</a><a href="#zones">Numbers by zone</a><a href="#staff">Without costs</a><a href="#phone">Phone</a><a href="#calls">Your calls</a></nav>
+
+  <h2 id="rules">PIN code rules · suggested</h2>
+  <div class="console"><div class="cbody" style="padding-top:18px">
+    <div class="tabs" role="tablist"><span class="tab">Zones</span><span class="tab on">PIN code rules</span><span class="tab">Delivery dates</span><span class="tab">Usage and billing</span></div>
+    <div class="sect" style="margin-top:0"><h4><span>Suggested · 3</span><span class="k" style="font-weight:400">Last 90 days</span></h4>
+      <div class="sugg">
+        <div class="srow"><div class="t"><b>110094</b> · North East Delhi<div class="figs"><span>11 COD orders</span><span>7 came back</span><span>COD kept <span class="r neg">−₹2,140</span></span><span>Prepaid kept <span class="r pos">₹1,880</span></span></div></div>
+          <div class="acts"><button class="btn primary">Pay online only</button><button class="btn ghost">Not now</button></div></div>
+        <div class="srow"><div class="t"><b>400070</b> · Mumbai Suburban<div class="figs"><span>9 COD orders</span><span>5 came back</span><span>COD kept <span class="r neg">−₹1,310</span></span><span>Prepaid kept <span class="r pos">₹2,460</span></span></div></div>
+          <div class="acts"><button class="btn primary">Pay online only</button><button class="btn ghost">Not now</button></div></div>
+        <div class="srow"><div class="t"><b>302012</b> · Jaipur<div class="figs"><span>6 COD orders</span><span>4 came back</span><span>COD kept <span class="r neg">−₹960</span></span><span>No prepaid orders</span></div></div>
+          <div class="acts"><button class="btn primary">Pay online only</button><button class="btn ghost">Not now</button></div></div>
+      </div>
+    </div>
+    <div class="tablewrap"><table class="t">
+      <thead><tr><th>PIN code</th><th>Place</th><th>Rule</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">110094</td><td>North East Delhi</td><td><span class="chip c-warn">Pay online only</span></td><td class="k">Suggested 12 Nov: COD kept −₹2,140 over 11 orders</td></tr>
+        <tr><td class="mono">744101</td><td>South Andaman</td><td><span class="chip c-n">Don't deliver</span></td><td class="k">Courier doesn't reach</td></tr>
+      </tbody></table></div>
+    <p class="k" style="margin-top:8px">After "Pay online only" on 110094: the suggestion becomes a rule with its numbers as the reason, and leaves the list.</p>
+  </div></div>
+
+  <h2 id="zones">Zones · numbers by zone</h2>
+  <div class="console"><div class="cbody" style="padding-top:18px">
+    <div class="tabs" role="tablist"><span class="tab on">Zones</span><span class="tab">PIN code rules</span><span class="tab">Delivery dates</span><span class="tab">Usage and billing</span></div>
+    <div class="tablewrap"><table class="t">
+      <thead><tr><th>Zone</th><th class="r">Delivery</th><th class="r">Days</th><th>Pay on delivery</th><th class="r">Orders · 90 days</th><th class="r">Came back</th><th class="r">₹ kept per order</th></tr></thead>
+      <tbody>
+        <tr><td><b>Metro</b><div class="k">Delhi NCR, Mumbai, Bengaluru…</div></td><td class="r">₹59</td><td class="r">2–3</td><td>On · ₹49</td><td class="r">412</td><td class="r">9%</td><td class="r pos">₹612</td></tr>
+        <tr><td><b>Tier 2</b><div class="k">State capitals and the larger cities</div></td><td class="r">₹79</td><td class="r">3–5</td><td>On · ₹49</td><td class="r">288</td><td class="r">14%</td><td class="r pos">₹488</td></tr>
+        <tr><td><b>Rest of India</b><div class="k">Everywhere else</div></td><td class="r">₹99</td><td class="r">4–7</td><td>Up to ₹3,000 · ₹69</td><td class="r">196</td><td class="r">22%</td><td class="r pos">₹301</td></tr>
+        <tr><td><b>Special</b><div class="k">North East, J&amp;K, Ladakh, islands</div></td><td class="r">₹149</td><td class="r">6–10</td><td>On · ₹69</td><td class="r">31</td><td class="r">35%</td><td class="r neg">−₹42</td></tr>
+        <tr><td><b>Jaipur same city</b><div class="k">Yours: 302001, 302012, 303…</div></td><td class="r">₹39</td><td class="r">1–2</td><td>On · free</td><td class="r">74</td><td class="r">5%</td><td class="r pos">₹702</td></tr>
+      </tbody></table></div>
+    <div class="note" style="margin-top:12px"><span>Special: COD kept −₹2,880 over 22 COD orders.</span><button class="btn">Make Special pay online only</button></div>
+    <p class="k">Orders are counted in the zone their PIN code is in today, so a zone's numbers follow its edits. "Came back" includes returns after delivery.</p>
+  </div></div>
+
+  <h2 id="staff">Staff and the accountant</h2>
+  <div class="two" style="margin-top:0">
+    <div class="box"><h6>STAFF</h6><p class="k" style="margin:0">See the zone table with Orders and Came back, and the PIN codes in Suggested without any ₹. They can't add rules (owners and admins only, as today).</p></div>
+    <div class="box"><h6>ACCOUNTANT</h6><p class="k" style="margin:0">Doesn't see Delivery Zones (as today).</p></div>
+  </div>
+
+  <h2 id="phone">On a phone</h2>
+  <div class="phones">
+    <div class="phone"><div class="scr">
+      <div class="bar"><span>Delivery Zones</span><span class="chip c-ok">Working</span></div>
+      <div class="pb">
+        <div class="k" style="font-weight:600">SUGGESTED · 3</div>
+        <div class="prow"><div class="t"><b class="mono">110094</b><span class="k">North East Delhi · 11 COD, 7 back · <span class="neg">−₹2,140</span></span></div></div>
+        <div style="display:flex;gap:6px"><button class="btn primary" style="flex:1">Pay online only</button><button class="btn ghost">Not now</button></div>
+        <div class="prow"><div class="t"><b>Special</b><span class="k">31 orders · 35% back · <span class="neg">−₹42</span>/order</span></div></div>
+      </div>
+    </div></div>
+  </div>
+
+  <h2 id="calls">Your calls</h2>
+  <ol class="calls">
+    <li><b>The rule for a suggestion:</b> COD kept below zero at a PIN code over at least 5 COD orders in the last 90 days, the same rule as True Profit's "COD loses money". Recommended. The alternative is a return-rate threshold (e.g. 40%), which ignores what each order earns.</li>
+    <li><b>Every shop with Delivery Zones gets them</b>, with or without True Profit: only the PIN codes to act on, never the full by-PIN or by-product tables, which stay True Profit's. Recommended.</li>
+    <li><b>A suggestion never applies itself.</b> One click adds a "Pay online only" rule, with the numbers as its reason. Recommended.</li>
+    <li><b>"Not now" hides a suggestion for 30 days</b> (one small table). It comes back if the numbers still say so. Recommended; without it, a brand that disagrees sees the same row every day.</li>
+    <li><b>Numbers by zone count orders in the zone their PIN code is in today</b>, so they follow the brand's edits. Recommended.</li>
+    <li><b>Zone advice:</b> when a whole zone's COD loses money (same rule, over its COD orders), a line under the table offers "Make <zone> pay online only", which edits that zone. Recommended.</li>
+    <li>Figures refresh every 15 minutes, as True Profit's do.</li>
+  </ol>
+</div>

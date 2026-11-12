@@ -3,6 +3,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { del } from '@vercel/blob'
+import { keyOf } from '@/domains/catalogue/variants'
 import { cleanProduct, cleanTax, type ProductInput } from '@/domains/catalogue/product-form'
 import { sellsSized } from '@/domains/catalogue/sell-keys'
 import type { Status } from '@/domains/catalogue/availability'
@@ -21,6 +22,8 @@ import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import { shopSettings } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { skuTaken, writeProducts } from '@/lib/catalogue/write'
+import { kindOf, startSizes, typeFor } from '@/domains/catalogue/kind'
+import { arrayParam } from '@/lib/db/sql-array'
 import { goLive, readinessIn } from '@/lib/catalogue/readiness'
 import { photosInUse } from '@/lib/catalogue/photos-in-use'
 import { attachIn, type NewPhoto } from '@/lib/catalogue/photos'
@@ -42,16 +45,19 @@ export async function createProduct(input: { title: string }): Promise<Result<{ 
     const r = await asMember(ANY_MEMBER, { action: 'product.create', target: title }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
       await ensureTypes(tx, tenantId)
-      const [first] = await tx.select({ id: productTypes.id }).from(productTypes).where(eq(productTypes.tenantId, tenantId)).orderBy(productTypes.name).limit(1)
-      // A new product starts with the shop's starting HSN (Settings › Taxes), and with sizes only when the shop sells
-      // sized things (clothing, footwear); a jewellery or beauty shop starts with one variant (all-categories § 2).
+      const types = await tx.select({ id: productTypes.id, name: productTypes.name }).from(productTypes).where(eq(productTypes.tenantId, tenantId))
+      // A new product starts with the shop's starting HSN (Settings › Taxes). Its name picks its kind and type (kind.ts):
+      // a kids' kurta gets the Kids type and its sizes, a saree one variant and no chart; no matching type, none (PR·0:
+      // the shop's first type went to everything). Sizes only when the shop sells sized things (all-categories § 2).
       const [shop] = await tx.select({ hsn: shopSettings.defaultHsn, sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
-      const sized = sellsSized(shop?.sells ?? [])
+      const kind = kindOf(title)
+      const sizes = sellsSized(shop?.sells ?? []) ? startSizes[kind] : []
+      const typeId = sizes.length || kind === 'one_size' ? typeFor(title, types) : null
       const [p] = await tx.insert(products).values({
-        tenantId, title, handle: await freeHandle(tx, tenantId, title), typeId: sized ? first?.id ?? null : null, hsn: shop?.hsn ?? null,
-        ...(sized ? { options: ['Size'], optionValues: [['S', 'M', 'L']] } : {}),
+        tenantId, title, handle: await freeHandle(tx, tenantId, title), typeId, hsn: shop?.hsn ?? null,
+        ...(sizes.length ? { options: ['Size'], optionValues: [sizes] } : {}),
       }).returning({ id: products.id, handle: products.handle })
-      await tx.insert(variants).values((sized ? [['S'], ['M'], ['L']] : [[]]).map((v, i) => ({ tenantId, productId: p!.id, optionValues: v, price: 0, position: i })))
+      await tx.insert(variants).values((sizes.length ? sizes.map((x) => [x]) : [[]]).map((v, i) => ({ tenantId, productId: p!.id, optionValues: v, price: 0, position: i })))
       await memberAudit(tx, auth, 'product.create', title)
       return p!
     })
@@ -65,8 +71,8 @@ export async function createProduct(input: { title: string }): Promise<Result<{ 
   }
 }
 
-export async function saveProduct(productId: string, version: number, input: ProductInput, manualCollections: string[] = []): Promise<Result<{ version: number; handle: string }>> {
-  const parsed = cleanProduct(input, new Date())
+export async function saveProduct(productId: string, version: number, input: ProductInput, manualCollections: string[] = [], renames: { from: string; to: string }[] = []): Promise<Result<{ version: number; handle: string }>> {
+  const parsed = cleanProduct(input, new Date(), 4, { blankPrices: true })
   if (!parsed.ok) return { ok: false, error: 'Some fields need a look before saving.', errors: parsed.errors }
   const p = parsed.product
   // Signal S3: a story photo is one we made, WebP or JPEG (read outside the transaction), then this shop's own, rebuilt inside it.
@@ -85,8 +91,15 @@ export async function saveProduct(productId: string, version: number, input: Pro
         const [t] = await tx.select({ id: productTypes.id }).from(productTypes).where(and(eq(productTypes.tenantId, tenantId), eq(productTypes.id, p.typeId)))
         if (!t) throw new Stop({ ok: false, error: 'That product type is not in your shop.' })
       }
-      const [cur] = await tx.select({ handle: products.handle, publishedAt: products.publishedAt }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
+      // Locked: Publish (setStatus) locks it too, so a draft's blank prices can't land after Publish read the priced rows.
+      const [cur] = await tx.select({ handle: products.handle, publishedAt: products.publishedAt, status: products.status }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId))).for('update')
       if (!cur) throw new Stop({ ok: false, error: 'This product is not in your shop.' })
+      // A draft saves before every size is priced (PR·0); a live product keeps a price on every size it sells.
+      if (cur.status === 'active' || cur.status === 'unlisted') {
+        const unpriced = p.variants.filter((v) => v.price <= 0)
+        if (unpriced.length) throw new Stop({ ok: false, error: 'Some fields need a look before saving.',
+          errors: Object.fromEntries(unpriced.map((v) => [`v:${keyOf(v.values)}:price`, 'A price, while it’s live.'])) })
+      }
       if (p.handle !== cur.handle) {
         if (!(await handleFree(tx, tenantId, p.handle, productId))) throw new Stop({ ok: false, error: 'Another product uses that address.', errors: { handle: 'Another product uses (or used) this address.' } })
         // Once it has been live, the old address keeps working: it redirects here (seo.handleChange).
@@ -114,7 +127,14 @@ export async function saveProduct(productId: string, version: number, input: Pro
       // (seesCosts) — the one writer the import shares (src/lib/catalogue/write.ts).
       const costs = await costsVisibleIn(tx, tenantId, auth.membership.role)
       const written = await writeProducts(tx, tenantId, [{ productId, handle: p.handle, title: p.title, options: p.options, variants: p.variants }], { costs })
-      if (!written.ok) throw new Stop({ ok: false, error: written.error })
+      if (!written.ok) throw new Stop({ ok: false, error: written.error, ...(written.at ? { errors: { [`v:${keyOf(written.at.values)}:${written.at.field}`]: written.at.field === 'sku' ? 'Used by another product.' : 'On another product.' } } : {}) })
+      // A colour renamed in the editor keeps its photos: their tags follow it before stale tags are cleared (PR·0).
+      // One statement, so a swap made through a spare name (Indigo→Rust, Rust→Indigo) moves each photo once.
+      const moves = (Array.isArray(renames) ? renames : []).slice(0, 60).map((r) => [String(r?.from ?? '').slice(0, 40), String(r?.to ?? '').slice(0, 40)] as const).filter(([f, t]) => f && t && f !== t)
+      const firstOf = new Map<string, string>()
+      for (const [f, t] of moves) if (!firstOf.has(f)) firstOf.set(f, t)
+      if (firstOf.size) await tx.update(productImages).set({ optionValue: sql`case ${sql.join([...firstOf].map(([f, t]) => sql`when ${productImages.optionValue} = ${f} then ${t}`), sql` `)} else ${productImages.optionValue} end` })
+        .where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId), sql`${productImages.optionValue} = any(${arrayParam([...firstOf.keys()], 'text')})`))
       // A photo tagged with a colour that no longer exists shows for every colour.
       const values = new Set(p.options.flatMap((o) => o.values))
       const imgs = await tx.select({ id: productImages.id, optionValue: productImages.optionValue }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId)))
@@ -173,7 +193,7 @@ export async function setStatus(productId: string, status: Status, publishAt: st
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.status', target: productId, detail: { status } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
-      const [p] = await tx.select().from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
+      const [p] = await tx.select().from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId))).for('update') // with saveProduct's lock
       if (!p) throw new Stop({ ok: false, error: 'This product is not in your shop.' })
       const live = status === 'active' || status === 'unlisted'
       if (live) {

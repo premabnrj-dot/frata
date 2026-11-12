@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanChart, inches, presetsFor, PRESETS } from '../size-charts'
+import { cleanChart, inches, presetsFor, PRESETS, chartFromText, sizeKey } from '../size-charts'
 
 describe('size charts', () => {
   it('starting charts follow what the shop sells; One size always there', () => {
@@ -15,3 +15,15 @@ describe('size charts', () => {
     expect(inches(86)).toBe('33.9')
   })
 })
+
+describe('a chart edited as text (PR·0: 23.5 became 235)', () => {
+  const d = (values: string[]) => ({ columns: ['Foot length'], howToMeasure: '', rows: [{ size: 'UK 6', values }] })
+  it('keeps decimals, blanks are none, anything else is named', () => {
+    expect(chartFromText(d(['23.5']))).toMatchObject({ rows: [{ size: 'UK 6', values: [23.5] }] })
+    expect(chartFromText(d(['']))).toMatchObject({ rows: [{ values: [null] }] })
+    expect(chartFromText(d(['23.'])) ).toBe('UK 6: 23. is not a number of cm.')
+    expect(chartFromText(d(['23.555']))).toBe('UK 6: 23.555 is not a number of cm.')
+  })
+  it('a size however it is typed', () => expect(sizeKey('2-3 y')).toBe(sizeKey('2–3 Y')))
+})
+

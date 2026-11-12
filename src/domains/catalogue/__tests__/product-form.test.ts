@@ -42,7 +42,7 @@ describe('cleanProduct', () => {
 
 describe('readiness', () => {
   it('lists what is missing', () => {
-    const r = readiness({ title: 'X', photos: 0, prices: [249000, 0], hasSizes: true, chartRows: 0, anyBuyable: true })
+    const r = readiness({ title: 'X', photos: 0, prices: [249000, 0], sizes: ['S'], chartSizes: [], anyBuyable: true })
     expect(r.filter((x) => !x.ok).map((x) => x.label)).toEqual(['At least one photo', 'A price on every size and colour', 'A size chart for its type'])
   })
 })
@@ -65,3 +65,25 @@ describe('when it runs out', () => {
     expect(c.ok && c.product.colours).toEqual([{ value: 'Indigo', family: '2', hex: '#2e3a63', crop: null }])
   })
 })
+
+describe('a draft saves before every size is priced (PR·0)', () => {
+  it('an empty price is none yet with blankPrices; refused without it; a typed bad price is refused either way', () => {
+    const empty = { ...base, variants: [{ ...base.variants[0]!, price: '' }, base.variants[1]!] }
+    expect(cleanProduct(empty, new Date()).ok).toBe(false)
+    const r = cleanProduct(empty, new Date(), 4, { blankPrices: true })
+    expect(r.ok && r.product.variants[0]!.price).toBe(0)
+    expect(cleanProduct({ ...base, variants: [{ ...base.variants[0]!, price: 'abc' }, base.variants[1]!] }, new Date(), 4, { blankPrices: true }).ok).toBe(false)
+  })
+})
+
+describe('the size chart covers every size the product sells (PR·0)', () => {
+  const r = (sizes: string[], chartSizes: string[]) => readiness({ title: 'X', photos: 1, prices: [100], anyBuyable: true, sizes, chartSizes }).find((x) => /size chart/i.test(x.label))!
+  it('asks for the missing rows by name; dashes, spaces and case do not count', () => {
+    expect(r([], [])).toEqual({ label: 'A size chart for its type', ok: true })
+    expect(r(['S'], []).ok).toBe(false)
+    expect(r(['2–3 Y', '3–4 Y'], ['XS', 'S', 'M'])).toEqual({ label: 'Size chart rows for 2–3 Y, 3–4 Y', ok: false })
+    expect(r(['2-3 y', 'M'], ['2–3 Y', 'm']).ok).toBe(true)
+    expect(r(['A', 'B', 'C', 'D', 'E', 'F'], ['Z']).label).toBe('Size chart rows for A, B, C, D and 2 more')
+  })
+})
+

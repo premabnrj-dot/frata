@@ -52,6 +52,7 @@ async function rows() {
       leadMin: variants.leadMinDays, leadMax: variants.leadMaxDays, cap: variants.preorderCap, gtin: variants.gtin,
     }).from(variants).where(and(eq(variants.tenantId, t), eq(variants.productId, productId), isNull(variants.archivedAt))).orderBy(asc(variants.position)))
       .map(({ compareAt, ...v }) => ({ ...v, compareAt: compareAt === null ? null : Number(compareAt) }))),
+    setStatus: (t: string, productId: string, status: 'active' | 'draft') => withTenant(t, (tx) => tx.update(products).set({ status }).where(and(eq(products.tenantId, t), eq(products.id, productId)))),
     versionOf: (t: string, productId: string) => withTenant(t, async (tx) => (await tx.select({ v: products.version }).from(products).where(and(eq(products.tenantId, t), eq(products.id, productId))))[0]!.v),
     /** One order for the size: from then on it is archived, never deleted. A pre-order still to pack: it can't go at all. */
     orderLineFor: (t: string, variantId: string, kind: 'in_stock' | 'preorder' = 'in_stock') => withTenant(t, async (tx) => {
@@ -94,7 +95,7 @@ describe.skipIf(!host)('saving a product (the editor)', () => {
     expect((await m.db.variantsOf(state.tenantId, b)).map((v) => v.sku)).toEqual(['KS-LINKUR-M-2'])
 
     // Another product's SKU, typed in lower case: refused, nothing changed.
-    expect(await m.save(b, 2, input('linen-kurta-2', ['M'], [cell(['M'], { sku: 'ks-linkur-l' })]))).toEqual({ ok: false, error: 'SKU ks-linkur-l is already used by another product in your shop.' })
+    expect(await m.save(b, 2, input('linen-kurta-2', ['M'], [cell(['M'], { sku: 'ks-linkur-l' })]))).toEqual({ ok: false, error: 'SKU ks-linkur-l is already used by another product in your shop.', errors: { 'v:M:sku': 'Used by another product.' } })
     expect((await m.db.variantsOf(state.tenantId, b)).map((v) => v.sku)).toEqual(['KS-LINKUR-M-2'])
     // Its own SKUs swapped in one save; a typed SKU is kept as typed.
     expect(await m.save(a, 2, input('linen-kurta', ['M', 'L'], [cell(['M'], { sku: 'KS-LINKUR-L' }), cell(['L'], { sku: 'KS-LINKUR-M' })]))).toMatchObject({ ok: true, version: 3 })
@@ -105,6 +106,16 @@ describe.skipIf(!host)('saving a product (the editor)', () => {
     expect(await m.save(b, 2, input('linen-kurta-2', ['M'], [cell(['M'])]))).toMatchObject({ ok: false, conflict: true })
   })
 
+  it('a draft saves sizes still unpriced; a live product refuses one at its cell (PR·0)', async () => {
+    state.role = 'owner'
+    const a = await m.db.product(state.tenantId, 'pr0-kurta', [['S'], ['M']])
+    expect(await m.save(a, 1, input('pr0-kurta', ['S', 'M'], [cell(['S'], { price: '899' }), cell(['M'], { price: '' })]))).toMatchObject({ ok: true })
+    expect((await m.db.variantsOf(state.tenantId, a)).map((v) => v.price)).toEqual([89900, 0])
+    await m.db.setStatus(state.tenantId, a, 'active')
+    expect(await m.save(a, 2, input('pr0-kurta', ['S', 'M'], [cell(['S'], { price: '899' }), cell(['M'], { price: '' })]))).toMatchObject({ ok: false, errors: { 'v:M:price': 'A price, while it’s live.' } })
+    await m.db.setStatus(state.tenantId, a, 'draft')
+  })
+
   it('refuses a barcode another product has; keeps its own on a second save', async () => {
     state.role = 'owner'
     const a = await m.db.product(state.tenantId, 'cotton-dupatta', [[]])
@@ -112,7 +123,7 @@ describe.skipIf(!host)('saving a product (the editor)', () => {
     expect(await m.save(a, 1, input('cotton-dupatta', [], [cell([], { gtin: EAN })]))).toMatchObject({ ok: true })
     expect(await m.save(a, 2, input('cotton-dupatta', [], [cell([], { gtin: EAN, price: '1499' })]))).toMatchObject({ ok: true })
     expect((await m.db.variantsOf(state.tenantId, a)).map((v) => [v.gtin, v.price])).toEqual([[EAN, 149900]])
-    expect(await m.save(b, 1, input('silk-dupatta', [], [cell([], { gtin: EAN })]))).toEqual({ ok: false, error: `Barcode ${EAN} is already on another product in your shop.` })
+    expect(await m.save(b, 1, input('silk-dupatta', [], [cell([], { gtin: EAN })]))).toEqual({ ok: false, error: `Barcode ${EAN} is already on another product in your shop.`, errors: { 'v::gtin': 'On another product.' } })
     expect((await m.db.variantsOf(state.tenantId, b)).map((v) => v.gtin)).toEqual([null])
   })
 

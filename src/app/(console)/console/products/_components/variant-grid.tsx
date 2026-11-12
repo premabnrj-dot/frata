@@ -42,7 +42,17 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [every, setEvery] = useState({ price: '', stock: '', whenOut: '' as WhenOut | '' })
   const collapse = combos.length > 12
-  const fill = (field: 'price' | 'stock' | 'whenOut', value: string, rows: string[][]) => rows.forEach((c) => onChange(keyOf(c), { [field]: value }))
+  // Fill a colour (or every row) — and by default only what's empty, so a size priced on its own keeps its price
+  // (PR·0: "Set every price" overwrote XXL's ₹2,890).
+  const [scope, setScope] = useState('')
+  const [emptyOnly, setEmptyOnly] = useState(true)
+  const scoped = scope ? groups.find((x) => x.label === scope)?.rows ?? [] : combos
+  const blank = (c: string[], field: 'price' | 'stock' | 'whenOut') => {
+    const v = (cells[keyOf(c)] ?? EMPTY_CELL)[field] ?? ''
+    return field === 'price' ? !String(v).trim() || Number(String(v).replace(/[₹,\s]/g, '')) === 0 : field === 'stock' ? !String(v).trim() || String(v).trim() === '0' : !v || v === 'stop'
+  }
+  const target = (field: 'price' | 'stock' | 'whenOut') => (emptyOnly ? scoped.filter((c) => blank(c, field)) : scoped)
+  const fill = (field: 'price' | 'stock' | 'whenOut', value: string) => target(field).forEach((c) => onChange(keyOf(c), { [field]: value }))
   // A cell's mistake is keyed `v:<values>:<field>` (cleanProduct); each input carries that key's marks, so the form's
   // summary focuses the first and every line below its row names it (§ Feedback 3).
   const err = (k: string, f: string) => errors[`v:${k}:${f}`]
@@ -62,18 +72,24 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-3 rounded-md bg-muted/60 p-3">
-        <div className="space-y-1"><label htmlFor="every-price" className="block text-xs font-medium">Set every price, ₹</label>
+      {combos.length > 1 && <div className="flex flex-wrap items-end gap-3 rounded-md bg-muted/60 p-3">
+        {g >= 0 && (
+          <div className="space-y-1"><label htmlFor="every-scope" className="block text-xs font-medium">Set for</label>
+            <select id="every-scope" value={scope} onChange={(e) => setScope(e.target.value)} className="h-10 md:h-9 rounded-md border border-input bg-card px-2 text-sm">
+              <option value="">Every {options[g]!.name.toLowerCase() || 'row'}</option>{groups.map((x) => <option key={x.label} value={x.label}>{x.label}</option>)}</select></div>
+        )}
+        <div className="space-y-1"><label htmlFor="every-price" className="block text-xs font-medium">Price, ₹</label>
           <div className="flex gap-1.5"><input id="every-price" inputMode="decimal" value={every.price} onChange={(e) => setEvery({ ...every, price: e.target.value })} className="h-10 md:h-9 w-24 rounded-md border border-input bg-card px-2 font-mono text-sm" />
-            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.price} onClick={() => fill('price', every.price, combos)}>Apply to {combos.length}</button></div></div>
-        <div className="space-y-1"><label htmlFor="every-stock" className="block text-xs font-medium">Set every stock</label>
+            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.price || !target('price').length} onClick={() => fill('price', every.price)}>Apply to {target('price').length}</button></div></div>
+        <div className="space-y-1"><label htmlFor="every-stock" className="block text-xs font-medium">Stock</label>
           <div className="flex gap-1.5"><input id="every-stock" inputMode="numeric" value={every.stock} onChange={(e) => setEvery({ ...every, stock: e.target.value })} className="h-10 md:h-9 w-20 rounded-md border border-input bg-card px-2 font-mono text-sm" />
-            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.stock} onClick={() => fill('stock', every.stock, combos)}>Apply</button></div></div>
+            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.stock || !target('stock').length} onClick={() => fill('stock', every.stock)}>Apply to {target('stock').length}</button></div></div>
         <div className="space-y-1"><label htmlFor="every-out" className="block text-xs font-medium">When any runs out</label>
           <div className="flex gap-1.5"><select id="every-out" value={every.whenOut} onChange={(e) => setEvery({ ...every, whenOut: e.target.value as WhenOut })} className="h-10 md:h-9 rounded-md border border-input bg-card px-2 text-sm">
             <option value="">Choose…</option>{WHEN_OUT.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.whenOut} onClick={() => fill('whenOut', every.whenOut, combos)}>Apply</button></div></div>
-      </div>
+            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.whenOut || !target('whenOut').length} onClick={() => fill('whenOut', every.whenOut)}>Apply to {target('whenOut').length}</button></div></div>
+        <label className="flex min-h-10 items-center gap-2 text-sm md:min-h-9"><input type="checkbox" checked={emptyOnly} onChange={(e) => setEmptyOnly(e.target.checked)} />Empty only</label>
+      </div>}
       <div className="relative overflow-x-auto rounded-md border border-border">
         {/* On a phone each size and colour becomes a card of labelled fields (data-rows="form", rule 15). */}
         <table data-rows="form" role="table" aria-label="Sizes, colours and stock" className="w-full text-sm">
