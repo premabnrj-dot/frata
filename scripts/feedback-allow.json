@@ -125,9 +125,6 @@
   "src/app/(console)/console/apps/gst/file-panel.tsx": {
     "count": 3
   },
-  "src/app/(console)/console/collections/_components/collection-editor.tsx": {
-    "count": 5
-  },
   "src/app/(console)/console/look/_components/gallery.tsx": {
     "count": 2
   },
@@ -135,57 +132,6 @@
     "count": 2
   },
   "src/app/(console)/console/look/_components/restore.tsx": {
-    "count": 1
-  },
-  "src/app/(console)/console/orders/_components/contact-and-notes.tsx": {
-    "count": 4
-  },
-  "src/app/(console)/console/orders/_components/emails-card.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/orders/_components/order-actions.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/orders/print/page.tsx": {
-    "count": 1
-  },
-  "src/app/(console)/console/products/_components/extras-panel.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/products/_components/label-panel.tsx": {
-    "count": 1
-  },
-  "src/app/(console)/console/products/_components/options-editor.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/products/_components/photos.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/products/_components/product-editor.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/products/_components/seo-panel.tsx": {
-    "count": 1
-  },
-  "src/app/(console)/console/products/_components/size-chart.tsx": {
-    "count": 4
-  },
-  "src/app/(console)/console/products/_components/status-card.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/products/_components/tax-panel.tsx": {
-    "count": 3
-  },
-  "src/app/(console)/console/products/_components/video-panel.tsx": {
-    "count": 3
-  },
-  "src/app/(console)/console/products/new/new-product-form.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/products/tax/hsn-table.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/search/_components/home-on-google.tsx": {
     "count": 1
   },
   "src/app/(lookeditor)/console/look/customize/controls.tsx": {

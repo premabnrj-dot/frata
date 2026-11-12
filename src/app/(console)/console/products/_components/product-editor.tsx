@@ -5,7 +5,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
-import { LeaveDialog, Message, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
+import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
+import { FieldError, fieldProps, useErrorSummary } from '@/components/ui/field-error'
+import { useToast } from '@/components/ui/toast'
 import { Money } from '@/components/data/numeric'
 import type { Status } from '@/domains/catalogue/availability'
 import { readiness, type ColourInput } from '@/domains/catalogue/product-form'
@@ -79,13 +81,22 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   const [saved, setSaved] = useState<Draft>(start0)
   const [d, setD] = useState<Draft>(start0)
   const [version, setVersion] = useState(v0)
+  const toast = useToast()
+  // The save's mistakes stay at their fields (keys as cleanProduct gives them: "title", "v:<values>:price", "tax.hsn",
+  // "label.net", …); one summary toast counts them down as each is fixed, and focus goes to the first (§ Feedback 3).
+  const root = useRef<HTMLDivElement>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [msg, setMsg] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
-  const [conflict, setConflict] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  const [refusal, setRefusal] = useState<string | undefined>(undefined)
+  useErrorSummary(errors, { attempt, scope: root, sub: refusal })
+  const fix = (...keys: string[]) => setErrors((e) => (keys.some((k) => k in e) ? Object.fromEntries(Object.entries(e).filter(([k]) => !keys.includes(k))) : e))
   const [pending, start] = useTransition()
   const dirty = JSON.stringify(d) !== JSON.stringify(saved)
   const guard = useLeaveGuard(dirty)
-  const set = (patch: Partial<Draft>) => { setD((x) => ({ ...x, ...patch })); setMsg(null) }
+  // A change to a field takes its mistake away (the patch's keys are the error keys for the top-level fields).
+  const set = (patch: Partial<Draft>) => { setD((x) => ({ ...x, ...patch })); fix(...Object.keys(patch)) }
+  /** The keys of an object panel (tax, label) that changed, as error keys ("tax.hsn"). */
+  const changed = <T extends object>(prefix: string, a: T, b: T) => (Object.keys(b) as (keyof T & string)[]).filter((k) => a[k] !== b[k]).map((k) => `${prefix}.${k}`)
 
   const opts = d.options.filter((o) => o.name.trim() && o.values.length)
   const combos = useMemo(() => combinations(opts), [d.options]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -120,13 +131,22 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
         ...(d.stories ? { stories: d.stories } : {}), ...(d.pairs ? { pairs: d.pairs.map((p) => p.id) } : {}),
       }, d.collections)
       if (r.ok) {
-        setSaved(d); setVersion(r.version); setErrors({}); setConflict(false)
-        setMsg({ tone: 'ok', text: status === 'active' || status === 'unlisted' ? 'Saved. Your shop shows it now.' : 'Saved.' })
+        setSaved(d); setVersion(r.version); setErrors({})
+        toast.ok(status === 'active' || status === 'unlisted' ? 'Saved. Your shop shows it now.' : 'Saved.')
         if (r.handle !== initial.handle) router.replace(`/console/products/${r.handle}`)
         else router.refresh()
         return
       }
-      setErrors(r.errors ?? {}); setConflict(!!r.conflict); setMsg({ tone: 'error', text: r.error })
+      const marked = r.errors ?? {}
+      if (Object.keys(marked).length) {
+        // The summary says the count; a refusal beyond "fix these" is its second line.
+        setRefusal(r.error === 'Some fields need a look before saving.' ? undefined : r.error)
+        setErrors(marked); setAttempt((a) => a + 1); return
+      }
+      setErrors({})
+      // Someone else saved first: Reload is the one way on (nothing typed here is cleared until they choose it).
+      if (r.conflict) toast.error(r.error, { action: { label: 'Reload', run: () => window.location.reload() } })
+      else toast.error(r.error)
     })
   }
   /** Grows the title field to its text where the browser lacks `field-sizing: content` (it then sizes itself), and
@@ -144,8 +164,8 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
     return () => window.removeEventListener('resize', again)
   }, [])
   return (
-    <div>
-      {dirty && <SaveBar pending={pending} onSave={save} onDiscard={() => { setD(saved); setErrors({}); setMsg(null) }} />}
+    <div ref={root}>
+      {dirty && <SaveBar pending={pending} onSave={save} onDiscard={() => { setD(saved); setErrors({}) }} />}
       {/* PageHeader (rule 13) with the title as a field: the h1 names the product for a screen reader, the field
           shows and edits it. A textarea, so a long title wraps to the next line instead of being cut mid-word
           (stress test S7). One line of text: Enter does nothing, unless an input method is still composing a word. */}
@@ -154,18 +174,18 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
         actions={share}
         titleSlot={<div className="min-w-0 flex-1">
           <label htmlFor="title" className="sr-only">Product title</label>
-          <textarea id="title" rows={1} value={d.title} maxLength={140} aria-invalid={!!errors.title || undefined} placeholder="Product title"
+          <textarea id="title" rows={1} value={d.title} maxLength={140} {...fieldProps('title', errors.title)} placeholder="Product title"
             onChange={(e) => set({ title: e.target.value.replace(/\s*\n\s*/g, ' ') })}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) e.preventDefault() }} ref={titleRef}
             className="-mx-2 w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-2xl font-bold tracking-tight transition-colors duration-fast hover:border-input focus:border-input focus:bg-card aria-invalid:border-danger-text block resize-none overflow-hidden [field-sizing:content] [overflow-wrap:anywhere]" />
         </div>} />
-      {errors.title && <p className="text-sm text-danger-text">{errors.title}</p>}
-      <Message m={msg} onReload={conflict ? () => window.location.reload() : undefined} />
+      <FieldError name="title" message={errors.title} />
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4">
           <Section>
             <label htmlFor="desc" className="block font-semibold">Description <span className="text-sm font-normal text-muted-foreground">(optional)</span></label>
-            <textarea id="desc" rows={4} maxLength={5000} value={d.description} onChange={(e) => set({ description: e.target.value })} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" placeholder="Fabric, fit, care. Shoppers read this before the size chart." />
+            <textarea id="desc" rows={4} maxLength={5000} value={d.description} onChange={(e) => set({ description: e.target.value })} {...fieldProps('description', errors.description)} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm aria-invalid:border-danger-text" placeholder="Fabric, fit, care. Shoppers read this before the size chart." />
+            <FieldError name="description" message={errors.description} />
           </Section>
           <Section><h2 className="flex items-center text-section font-semibold">Photos<InfoTip about="photos">The first is the cover: show the piece on a person. A large photo is fine; it is resized before it uploads.</InfoTip></h2><Photos productId={id} tenantId={tenantId} photos={photos} colours={colourOpt?.values ?? []} enabled={blobReady} title={d.title} /></Section>
           {video}
@@ -174,11 +194,11 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
             <OptionsEditor options={d.options} onChange={(options) => set({ options })} error={errors.options} />
             {colourOpt && colourOpt.values.length > 0 && <ColoursPanel values={colourOpt.values} colours={d.colours} onChange={(colours) => set({ colours })} photos={photos} families={families} />}
             {combos.length > 0 && <VariantGrid options={opts} cells={d.cells} errors={errors} costs={shop.costs} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
-              onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); setMsg(null) }} />}
+              onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); fix(...Object.keys(patch).map((f) => `v:${k}:${f === 'leadMin' || f === 'leadMax' ? 'lead' : f}`)) }} />}
           </Section>
           <Section>
             <h2 className="text-section font-semibold">Tax</h2>
-            <TaxPanel tax={d.tax} onChange={(tax) => set({ tax })} price={prices.length ? Math.min(...prices) : null} inclusive={shop.gst.inclusive} charges={shop.gst.charges} now={now} errors={errors}
+            <TaxPanel tax={d.tax} onChange={(tax) => { fix(...changed('tax', d.tax, tax)); set({ tax }) }} price={prices.length ? Math.min(...prices) : null} inclusive={shop.gst.inclusive} charges={shop.gst.charges} now={now} errors={errors}
               onReprice={(to) => setD((x) => ({ ...x, cells: Object.fromEntries(Object.entries(x.cells).map(([k, c]) => {
                 const p = parseRupees(c.price)
                 return [k, p !== null && inGap(x.tax.hsn, p, shop.gst.inclusive, now) ? { ...c, price: String(to / 100) } : c]
@@ -188,7 +208,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
             <h2 className="flex items-center text-section font-semibold">Details<InfoTip about="details">Asked for by the product’s category. Shoppers filter by them, and Google and Meta read them. Values marked · are Frrata’s, for Indian crafts and fabrics; each is sent to Google as its nearest standard value.</InfoTip></h2>
             <DetailsPanel attributes={d.category?.attributes ?? []} values={d.attributes} onChange={(attributes) => set({ attributes })} />
           </Section>
-          {shop.label && <Section><h2 className="text-section font-semibold">On the pack</h2><LabelPanel label={d.label} onChange={(label) => set({ label })} errors={errors} maker={shop.maker} /></Section>}
+          {shop.label && <Section><h2 className="text-section font-semibold">On the pack</h2><LabelPanel label={d.label} onChange={(label) => { fix(...changed('label', d.label, label)); set({ label }) }} errors={errors} maker={shop.maker} /></Section>}
           {shop.sized && <Section><h2 className="text-section font-semibold">Size chart</h2><SizeChartPanel types={types} typeId={d.typeId} onType={(typeId) => set({ typeId })} /></Section>}
           {shop.sized && <Section>
             <h2 className="text-section font-semibold">The model in the photos</h2>

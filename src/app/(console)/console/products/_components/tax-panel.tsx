@@ -5,6 +5,7 @@ import type { TaxInput } from '@/domains/catalogue/product-form'
 import { hsnEntry, inGap, OWN_RATES, rateOn, ruleOn, ruleWords, searchHsn } from '@/domains/tax/rates'
 import { UQCS, UQC_NAMES } from '@/domains/tax/units'
 import { InfoTip } from '@/components/ui/info-tip'
+import { FieldError, fieldProps } from '@/components/ui/field-error'
 
 // =============================================================================
 // A product's tax (plan 2026-11-09-gst-core-and-categories § 2; approved mockup "A product's tax"): its HSN code found by
@@ -47,7 +48,7 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
           <input id={`${id}-hsn`} value={open ? q : tax.hsn ? `${tax.hsn}${entry ? ` · ${entry.name}` : ''}` : ''} placeholder="Search by name or code"
             onFocus={() => { setOpen(true); setQ('') }} onBlur={() => setTimeout(() => setOpen(false), 150)}
             onChange={(e) => { setQ(e.target.value); const d = e.target.value.replace(/\s/g, ''); if (/^\d{4}(\d{2})?(\d{2})?$/.test(d)) onChange({ ...tax, hsn: d }) }}
-            aria-invalid={!!errors['tax.hsn'] || undefined} aria-describedby={errors['tax.hsn'] ? `${id}-he` : undefined}
+            {...fieldProps('tax.hsn', errors['tax.hsn'])}
             className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text md:h-9" role="combobox" aria-expanded={open} aria-controls={`${id}-list`} />
           {open && results.length > 0 && (
             <ul id={`${id}-list`} role="listbox" className="absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-md border border-border bg-card py-1 shadow-lg">
@@ -62,7 +63,7 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
             </ul>
           )}
         </div>
-        {errors['tax.hsn'] && <p id={`${id}-he`} className="text-xs text-danger-text">{errors['tax.hsn']}</p>}
+        <FieldError name="tax.hsn" message={errors['tax.hsn']} />
       </div>
 
       {charges && valid && known && (
@@ -97,27 +98,29 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
           <span id={`${id}-own`} className="block text-sm font-medium">GST rate for {tax.hsn}</span>
           <div role="radiogroup" aria-labelledby={`${id}-own`} className="inline-flex flex-wrap gap-0.5 rounded-lg bg-muted p-0.5">
             {OWN_RATES.map((r) => (
-              <button key={r} type="button" role="radio" aria-checked={tax.ownBps === String(r)} onClick={() => onChange({ ...tax, ownBps: String(r) })}
+              <button key={r} type="button" role="radio" aria-checked={tax.ownBps === String(r)} {...fieldProps('tax.ownBps', errors['tax.ownBps'])} onClick={() => onChange({ ...tax, ownBps: String(r) })}
                 className={`min-h-9 rounded-md px-3 text-sm font-medium ${tax.ownBps === String(r) ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{r / 100}%</button>
             ))}
           </div>
-          <p className={`text-xs ${errors['tax.ownBps'] ? 'text-danger-text' : 'text-muted-foreground'}`}>{errors['tax.ownBps'] ?? 'Frrata doesn’t list this code: use the rate your CA gives.'}</p>
+          {errors['tax.ownBps'] ? <FieldError name="tax.ownBps" message={errors['tax.ownBps']} />
+            : <p className="text-xs text-muted-foreground">Frrata doesn’t list this code: use the rate your CA gives.</p>}
         </div>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <label htmlFor={`${id}-uqc`} className="block text-sm font-medium">Sold by</label>
-          <select id={`${id}-uqc`} value={tax.uqc} onChange={(e) => onChange({ ...tax, uqc: e.target.value })} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9">
+          <select id={`${id}-uqc`} value={tax.uqc} onChange={(e) => onChange({ ...tax, uqc: e.target.value })} {...fieldProps('tax.uqc', errors['tax.uqc'])} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text md:h-9">
             {UQCS.map((u) => <option key={u} value={u}>{UQC_NAMES[u]} ({u})</option>)}
           </select>
+          <FieldError name="tax.uqc" message={errors['tax.uqc']} />
         </div>
         <div className="space-y-1">
           <label htmlFor={`${id}-origin`} className="block text-sm font-medium">Made in</label>
           <input id={`${id}-origin`} list={`${id}-countries`} value={tax.origin} maxLength={60} onChange={(e) => onChange({ ...tax, origin: e.target.value })} placeholder="India"
-            className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+            {...fieldProps('tax.origin', errors['tax.origin'])} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text md:h-9" />
           <datalist id={`${id}-countries`}>{['India', 'Bangladesh', 'China', 'Nepal', 'Sri Lanka', 'Vietnam', 'Thailand', 'Indonesia', 'Turkey', 'Italy'].map((c) => <option key={c} value={c} />)}</datalist>
-          {errors['tax.origin'] && <p className="text-xs text-danger-text">{errors['tax.origin']}</p>}
+          <FieldError name="tax.origin" message={errors['tax.origin']} />
         </div>
       </div>
     </div>
