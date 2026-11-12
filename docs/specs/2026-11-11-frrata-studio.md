@@ -75,7 +75,7 @@ partners.
 Seat prices; who carries a client's credits; routines that publish; client approval on every publish; brands' own
 developers; the model's host (Frrata's API account, proposed).
 
-## Credits: who pays (proposal 2026-11-12, awaiting the owner; mockup v2.1 § Credits)
+## Credits: who pays (proposal 2026-11-12; after-handover rule decided by the owner 2026-11-12; mockup § Credits)
 Unit-economics review 2026-11-12 folded in. Replaces "the client's invoice option" in screen 12.
 - **Before handover the partner pays**, prepaid from seat and packs, as used. There is no owner to bill yet, and a
   deferred bill would make Frrata a lender. Estimate first; each turn reserves its **ceiling** (a turn costs ₹5–150,
@@ -86,8 +86,9 @@ Unit-economics review 2026-11-12 folded in. Replaces "the client's invoice optio
 - **Per-client budgets** (alert 80%, stop 100%, draft kept) and a quote builder, so partners can quote fixed fees.
 - **Frrata pays for Frrata's work:** kit updates, the patch lane, law-change blocks, fixes for what a kit release broke.
   Needs a budget line per site per month (open).
-- **After handover:** until brands have Studio (later phase), a routine or retainer stays on the partner's wallet, or
-  stops. Chosen per routine at handover; never billed to anyone silently.
+- **After handover (owner, 2026-11-12):** while the brand is linked, the partner's work on its site (maintenance,
+  routines, changes) is paid from the partner's wallet; the brand never needs credits and pays the partner outside
+  Frrata. Unlinking stops the partner's routines and access. Detail: `docs/specs/2026-11-12-studio-intake-and-team.md`.
 - **No rebate by default:** the 20% partner share repays a site's credits. A typical 8-page site is 143–398 credits,
   ₹2,717–7,562 ex GST (Frrata cost ₹905–2,519); share payback Launch 3.9–10.7 months, Growth 0.7–2.0 (steady state;
   longer with ramp-up, and Launch 4.5–12.7 for a partner without GST input credit). Option for the owner: 50 credits

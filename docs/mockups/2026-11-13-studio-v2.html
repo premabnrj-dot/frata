@@ -594,6 +594,72 @@ button.pill:hover { background: var(--line) }
 .routine-pick { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px }
 .routine-pick .seg button { font-size: 12px; padding: 5px 9px }
 
+/* ── Intake: the brand's phone ── */
+.peek-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; max-width: 460px; margin: 0 auto 12px; flex-wrap: wrap }
+.intake { max-width: 460px; margin: 0 auto; overflow: hidden; display: grid }
+.in-head { display: flex; gap: 10px; align-items: center; padding: 16px 18px 12px }
+.in-head > div { display: grid; font-size: 13px }
+.in-prog { height: 4px; background: var(--muted); margin: 0 18px; border-radius: 99px; overflow: hidden }
+.in-prog i { display: block; height: 100%; background: var(--rani); border-radius: inherit; transform-origin: left; transition: transform var(--slow) var(--e-std) }
+.in-step { padding: 18px; display: grid; gap: 14px; animation: view-in var(--slow) var(--e-in) both; min-height: 300px; align-content: start }
+.in-step.back { animation-name: view-in-back }
+.in-step h2 { font: 600 22px/1.2 var(--f-display); margin: 0 }
+.drop { border: 1.5px dashed var(--input); border-radius: 12px; padding: 18px; display: grid; justify-items: center; gap: 4px; text-align: center; background: var(--bg); cursor: pointer; color: var(--sub); font-size: 12.5px; width: 100%; transition: border-color var(--fast) var(--e-std), background var(--fast) var(--e-std) }
+.drop b { color: var(--fg); font-size: 13.5px }
+.drop:hover { border-color: var(--fg); background: var(--muted) }
+.file { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; animation: chip-pop var(--slow) var(--e-spring) both; position: relative; overflow: hidden }
+.file .th { width: 40px; height: 40px; border-radius: 8px; flex: none; display: grid; place-items: center; background: var(--muted); overflow: hidden }
+.file .up { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--ok-t); animation: up 900ms var(--e-std) forwards }
+@keyframes up { from { width: 0 } to { width: 100% } }
+.thumbs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px }
+.thumbs i { aspect-ratio: 1; border-radius: 6px; display: block; animation: chip-pop var(--slow) var(--e-spring) both }
+.in-foot { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--line) }
+.in-foot .grow { flex: 1; text-align: center }
+.in-legal { padding: 0 18px 14px; font-size: 11.5px; color: var(--sub); text-align: center }
+.prefix { display: flex; align-items: stretch; border: 1px solid var(--input); border-radius: 8px; overflow: hidden; background: var(--card) }
+.prefix span { padding: 0 10px; background: var(--muted); color: var(--sub); font: 12.5px var(--f-mono); display: grid; place-items: center }
+.prefix input { border: 0; outline: 0; flex: 1; min-width: 0; padding: 9px 11px; background: transparent }
+.prefix:focus-within { border-color: var(--fg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--rani) 18%, transparent) }
+.ig-btn, .ig-btn:hover { background: linear-gradient(45deg, #F58529, #DD2A7B 50%, #8134AF); color: #fff; border: 0 }
+.ig-btn:hover { filter: brightness(1.08) }
+
+/* Sources and questions in the design chat */
+.srcs { display: grid; font-size: 12.5px }
+.srcs > div { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 12px; border-top: 1px solid var(--line); animation: msg-in var(--base) var(--e-in) both }
+.srcs .sw2 { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--line); display: block }
+.srcs .from { display: inline-flex; gap: 4px; align-items: center; color: var(--sub); font: 11px var(--f-mono); white-space: nowrap }
+.conflict .opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px }
+.conflict .opt { border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 6px; justify-items: start; background: var(--card); cursor: pointer; text-align: left; transition: border-color var(--fast) var(--e-std), transform var(--fast) var(--e-std) }
+.conflict .opt:hover { transform: translateY(-1px); border-color: var(--input) }
+.conflict .opt[aria-pressed="true"] { border-color: var(--fg); box-shadow: 0 0 0 1px var(--fg) }
+.conflict .opt small { color: var(--sub); font: 11px var(--f-mono) }
+.sw .src { font: 10px var(--f-mono); color: var(--rani-text) }
+
+/* Team */
+.team-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start }
+@media (max-width: 980px) { .team-grid { grid-template-columns: minmax(0, 1fr) } }
+.mem { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 14px 16px; border-bottom: 1px solid var(--line); animation: msg-in var(--slow) var(--e-in) both; transition: opacity var(--base) var(--e-std), transform var(--base) var(--e-std) }
+.mem:last-child { border-bottom: 0 }
+.mem.out { opacity: 0; transform: translateX(-12px) }
+.mem > .ava { width: 34px; height: 34px; border-radius: 99px; font-size: 13px }
+.mem .nm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-weight: 600; font-size: 14px }
+.mem .meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px }
+.mem .cap { display: grid; gap: 4px; margin-top: 8px; width: min(260px, 100%); font-size: 12px; cursor: pointer; background: none; border: 0; padding: 0; text-align: left; color: var(--fg) }
+.mem .acts { display: flex; gap: 6px; align-items: center }
+.mem select.input { min-height: 32px; padding: 4px 8px; width: auto; font-size: 12.5px }
+.matrix { width: 100%; border-collapse: collapse; font-size: 12.5px }
+.matrix th, .matrix td { padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: center }
+.matrix th:first-child, .matrix td:first-child { text-align: left }
+.matrix .y { color: var(--ok-t) } .matrix .no { color: var(--input) }
+.matrix tr.hl td { background: color-mix(in srgb, var(--rani) 7%, transparent) }
+.err-line { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--bad-t); animation: drop var(--base) var(--e-in) both }
+.input[aria-invalid="true"] { border-color: var(--bad-t) }
+.btn.danger { background: var(--bad-t); border-color: var(--bad-t); color: #fff }
+.btn.danger:hover { background: var(--bad-t); filter: brightness(1.1) }
+.can-list { display: grid; gap: 4px; font-size: 12.5px }
+.can-list span { display: flex; gap: 6px; align-items: center; animation: msg-in var(--base) var(--e-in) both }
+@media (max-width: 560px) { .mem { grid-template-columns: auto minmax(0, 1fr) } .mem .acts { grid-column: 2 } .conflict .opts { grid-template-columns: minmax(0, 1fr) } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important }
   .modal, .toast, .modal-wrap { transform: none !important }
@@ -610,6 +676,8 @@ button.pill:hover { background: var(--line) }
       <a href="#design" data-step="design"><span class="n">2</span><span class="t">Design system</span></a>
       <a href="#pages" data-step="pages"><span class="n">3</span><span class="t">Pages and brief</span></a>
       <a href="#build" data-step="build"><span class="n">4</span><span class="t">Build</span></a>
+      <span class="sep">·</span>
+      <a href="#team" data-step="team"><span class="n"><i data-lucide="users" class="i i-sm"></i></span><span class="t">Team</span></a>
     </nav>
     <span class="grow"></span>
     <button class="pill tip" id="credits-btn" data-tip="Credits · who pays" aria-label="Credits"><i data-lucide="coins" class="i i-sm"></i><b id="credits-top" class="mono">142</b><span class="credits-txt sub">credits</span></button>
@@ -626,6 +694,7 @@ button.pill:hover { background: var(--line) }
       <div class="home-grid">
         <div class="lanes">
           <div class="lane"><h3><i data-lucide="hand" class="i i-sm"></i>Needs you<span class="cnt">2</span></h3>
+            <div id="intake-card"></div>
             <div class="card task" data-go="build"><div class="who"><span class="ava" style="background:#7A1F2B">K</span>Kesar Studio</div><p>Plan ready: Home, Collection, Product · 38 credits</p><span class="badge warn">Approve plan</span></div>
             <div class="card task"><div class="who"><span class="ava" style="background:#2F5D50">N</span>Noor Threads</div><p>Client left 3 pins on the preview</p><span class="badge info">3 pins</span></div>
           </div>
@@ -660,7 +729,7 @@ button.pill:hover { background: var(--line) }
     <section class="view" data-view="brand" hidden>
       <div class="vhead">
         <div><div class="eyebrow"><i data-lucide="message-square-quote" class="i i-sm"></i>Kesar Studio · step 1 of 4</div><h1>How Kesar Studio speaks</h1></div>
-        <span class="badge ok" style="white-space:normal"><i data-lucide="check" class="i i-sm"></i>Read from the console: 212 products, policies</span>
+        <span class="badge ok" style="white-space:normal" id="brand-src"><i data-lucide="check" class="i i-sm"></i>Read from the console: 212 products, policies</span>
       </div>
       <div class="two">
         <div class="card pane">
@@ -880,6 +949,30 @@ button.pill:hover { background: var(--line) }
         </section>
       </div>
     </section>
+    <!-- ═══ INTAKE · what the brand sees on her phone ═══ -->
+    <section class="view" data-view="intake" hidden>
+      <div class="peek-bar"><span class="badge info"><i data-lucide="smartphone" class="i i-sm"></i>Riya’s view of the link</span><a class="btn sm" href="#home"><i data-lucide="arrow-left" class="i i-sm"></i>Studio</a></div>
+      <div class="card intake">
+        <div class="in-head"><span class="ava" style="background:#23307A;width:36px;height:36px;border-radius:10px">P</span><div><b>Pixel &amp; Thread</b><span class="sub">is building Kesar Studio’s new site</span></div></div>
+        <div class="in-prog"><i id="in-bar"></i></div>
+        <div id="in-steps"></div>
+        <div class="in-foot"><button class="btn ghost" id="in-back"><i data-lucide="arrow-left" class="i i-sm"></i>Back</button><span class="grow sub mono" id="in-count" style="font-size:12px"></span><button class="btn primary" id="in-next"></button></div>
+        <div class="in-legal">Link for Kesar Studio only · valid to 26 Nov · Frrata</div>
+      </div>
+    </section>
+
+    <!-- ═══ TEAM · the partner's people ═══ -->
+    <section class="view" data-view="team" hidden>
+      <div class="vhead">
+        <div><div class="eyebrow"><i data-lucide="users" class="i i-sm"></i>Pixel &amp; Thread</div><h1>Team</h1></div>
+        <button class="btn primary" id="t-invite"><i data-lucide="user-plus" class="i"></i>Invite</button>
+      </div>
+      <div class="team-grid">
+        <div class="card" id="t-list"></div>
+        <aside class="card" style="padding:16px;display:grid;gap:10px"><h2>Roles</h2><div id="t-matrix"></div><div class="chips"><span class="chip"><i data-lucide="key-round" class="i i-sm"></i>Passkey for everyone</span><span class="chip">Again on publish</span><span class="chip">One wallet</span></div></aside>
+      </div>
+    </section>
+
   </main>
   <div id="modal-root"></div>
   <div class="toasts" id="toasts" aria-live="polite"></div>
@@ -1031,7 +1124,7 @@ function renderLogos() {
   $('#logos').innerHTML = LOGOS.map((l, i) => `<button class="logo-opt" aria-pressed="${S.logo === i}" data-logo="${i}" aria-label="${l.name} logo">${l.svg(l.pal)}</button>`).join('')
 }
 function renderSwatches(pop) {
-  $('#swatches').innerHTML = S.palette.map((c, i) => `<div class="sw"><label style="background:${c}" class="${pop ? 'popin' : ''}"><input type="color" value="${c}" data-sw="${i}" aria-label="${SW_NAMES[i]}"></label><span>${SW_NAMES[i]}</span><span class="hex">${c.toUpperCase()}</span></div>`).join('')
+  $('#swatches').innerHTML = S.palette.map((c, i) => `<div class="sw"><label style="background:${c}" class="${pop ? 'popin' : ''}"><input type="color" value="${c}" data-sw="${i}" aria-label="${SW_NAMES[i]}"></label><span>${SW_NAMES[i]}</span><span class="hex">${c.toUpperCase()}</span>${S.sources ? `<span class="src">${S.sources[i] || ''}</span>` : ''}</div>`).join('')
   if (pop) $$('#swatches label').forEach((l, i) => { l.style.animationDelay = i * 70 + 'ms' })
 }
 function renderContrast() {
@@ -1076,7 +1169,7 @@ $('#logos').addEventListener('click', (e) => {
   renderLogos(); renderSwatches(true); applyTokens(true)
   toast(`${SW_NAMES.length} colours taken from the ${LOGOS[S.logo].name} logo.`)
 })
-$('#swatches').addEventListener('input', (e) => { const i = e.target.dataset.sw; if (i == null) return; S.palette[+i] = e.target.value; e.target.parentElement.style.background = e.target.value; e.target.closest('.sw').querySelector('.hex').textContent = e.target.value.toUpperCase(); applyTokens(true) })
+$('#swatches').addEventListener('input', (e) => { const i = e.target.dataset.sw; if (i == null) return; S.palette[+i] = e.target.value; if (S.sources) S.sources[+i] = 'edited'; e.target.parentElement.style.background = e.target.value; e.target.closest('.sw').querySelector('.hex').textContent = e.target.value.toUpperCase(); applyTokens(true) })
 $('#fonts').addEventListener('click', (e) => { const b = e.target.closest('[data-font]'); if (!b) return; S.font = +b.dataset.font; renderFonts(); applyTokens(true) })
 $('#radius').addEventListener('input', (e) => { S.radius = +e.target.value; applyTokens(true) })
 segPlacers.push(seg($('#density'), (b) => { S.density = +b.dataset.d; applyTokens(true) }))
@@ -1403,7 +1496,7 @@ function openNewSite() {
       <div class="field"><label for="ns-budget">Budget for this site</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="ns-budget" class="input mono" value="300" inputmode="numeric" style="max-width:110px"><span class="sub" style="font-size:12.5px">credits · ≈ ₹5,700 + GST, from your wallet</span></div></div><label style="display:flex;gap:10px;align-items:center;font-size:13px"><span class="switch"><input type="checkbox" checked aria-label="Send a brand intake link"><span></span></span>Send Riya a brand intake: logo, photos, words</label><div class="card" style="padding:12px;display:grid;gap:8px;background:var(--bg)"><b style="font-size:13px">Studio starts from the brand</b><div class="todos" style="border:0;padding:0">${['Brand language', 'Design system', 'Pages and brief', 'Build with the agent'].map((t, i) => `<div class="todo"><span class="bx" style="border-radius:99px;font:600 9px var(--f-body)">${i + 1}</span>${t}</div>`).join('')}</div></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="badge ok">${ico('badge-check', 'i i-sm')}Partner verified</span><span class="badge info">${ico('key-round', 'i i-sm')}Scope: build · preview</span></div>`,
     foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="ns-go" data-autofocus>Start${ico('arrow-right')}</button>`,
-    onOpen: (m, close) => { m.querySelector('#ns-go').onclick = () => { close(); location.hash = '#brand' } } })
+    onOpen: (m, close) => { m.querySelector('#ns-go').onclick = () => { const intake = m.querySelector('.switch input').checked; close(); if (intake) { S.intakeSent = true; location.hash = '#home'; renderInbox(); toast('Intake sent to Riya on WhatsApp.', 'ok', { label: 'See her view', run: () => { location.hash = '#intake' } }) } else location.hash = '#brand' } } })
 }
 function openRoutines() {
   modal({ title: 'Routines', pic: picEl('repeat', 'var(--muted)', 'var(--fg)'),
@@ -1531,7 +1624,7 @@ function renderBytes() {
   el.innerHTML = `<span class="bar"><i style="transform:scaleX(${Math.min(1, kb / max)})"></i></span>${kb} / ${max} kB`
 }
 function renderDs(draw) { renderScale(); renderBrandIcons(draw); renderMotifs(); renderComponents(); renderVoiceSec(); renderSeasons(); renderBytes(); $('#ds-ver').textContent = 'v' + S.dsVer }
-const snap = () => JSON.parse(JSON.stringify({ palette: S.palette, font: S.font, radius: S.radius, density: S.density, iconW: S.iconW, motion: S.motion, brandIcons: S.brandIcons, motifs: S.motifs, season: S.season, seasonOn: S.seasonOn, aaa: S.aaa, hindiHeads: S.hindiHeads, dsVer: S.dsVer, logo: S.logo }))
+const snap = () => JSON.parse(JSON.stringify({ palette: S.palette, font: S.font, radius: S.radius, density: S.density, iconW: S.iconW, motion: S.motion, brandIcons: S.brandIcons, motifs: S.motifs, season: S.season, seasonOn: S.seasonOn, aaa: S.aaa, hindiHeads: S.hindiHeads, dsVer: S.dsVer, logo: S.logo, sources: S.sources }))
 function afterDs(sec, draw) {
   renderLogos(); renderSwatches(false); renderFonts(); renderIconWeights(); renderMotionOpts(); $('#radius').value = S.radius
   $$('#density button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.d === S.density)))
@@ -1631,6 +1724,7 @@ $('#d-attach').addEventListener('click', () => toast('Logo, photos or a referenc
 let dsIntroDone = false
 async function dsIntro() {
   if (dsIntroDone) return; dsIntroDone = true
+  if (S.intakeIn) return dsIntroIntake()
   const a = addMsg('agent', '', '', dmsgs); a.querySelector('.agent-ava').classList.add('think')
   const box = toolBox(a)
   await tool(box, 'image', 'Read', 'logo.svg', 420); await tool(box, 'images', 'Read', '212 product photos · 24 sampled', 620); await tool(box, 'book-open', 'Read', 'brand.md', 380); await tool(box, 'file-json', 'Wrote', 'tokens.json · v1', 420)
@@ -1639,6 +1733,7 @@ async function dsIntro() {
   const s = document.createElement('div'); s.className = 'change'; s.style.marginTop = '8px'
   s.innerHTML = `<div class="ch-ba site" style="background:var(--s-bg);grid-template-columns:repeat(2,minmax(0,1fr))"><div class="ba"><small style="color:var(--s-sub)">Colour</small>${sw5(S.palette)}</div><div class="ba"><small style="color:var(--s-sub)">Type</small><span style="font:600 17px var(--s-display)">${FONTS[S.font].dn}</span></div><div class="ba"><small style="color:var(--s-sub)">Icons</small><span style="display:flex;gap:6px"><i data-lucide="shopping-bag"></i><i data-lucide="heart"></i><i data-lucide="truck"></i></span></div><div class="ba"><small style="color:var(--s-sub)">Motion</small><span style="font-size:13px">${MOTION[S.motion].name} · ${MOTION[S.motion].dur} ms</span></div></div>`
   a.querySelector('.bubble').append(s); icons(s); renderDsSuggest()
+  const rq = document.createElement('div'); rq.className = 'chips'; rq.style.marginTop = '8px'; rq.innerHTML = `<button class="chip" data-req-intake>${ico('inbox', 'i i-sm')}Ask Riya for her branding instead</button>`; a.querySelector('.bubble').append(rq); icons(rq)
 }
 function paneTab(panes, t) { $$(':scope > section', panes).forEach((s) => s.classList.toggle('on', s.dataset.pane === t)); segPlacers.forEach((p) => p()) }
 segPlacers.push(seg($('#dtab'), (b) => paneTab($('#dpanes'), b.dataset.t)))
@@ -1668,7 +1763,7 @@ function wTab(m, t) {
     const used = 150 - Math.min(150, S.credits - 50)
     body.innerHTML = `<div class="wallet-top"><svg class="ring" viewBox="0 0 92 92"><circle cx="46" cy="46" r="38" fill="none" stroke="var(--muted)" stroke-width="10"/><circle cx="46" cy="46" r="38" fill="none" stroke="var(--ink)" stroke-width="10" stroke-linecap="round" stroke-dasharray="239" stroke-dashoffset="239" transform="rotate(-90 46 46)" id="w-arc" style="transition:stroke-dashoffset 900ms var(--e-std)"/></svg>
       <div style="display:grid;gap:6px"><div><span class="big-n" id="w-n">0</span> <span class="sub">credits</span></div><span class="sub" style="font-size:12.5px">Studio seat 150 a month · renews 1 Dec · pack 50 left, valid to Oct 2027</span><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm primary" id="w-buy">${ico('plus', 'i i-sm')}100 credits · ₹1,900 + GST</button><span class="badge ok">${ico('receipt', 'i i-sm')}GST invoice to Pixel &amp; Thread · input credit</span></div></div></div>
-      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>When</th><th>Site</th><th>What</th><th class="n">Credits</th><th>Status</th></tr></thead><tbody>${[['Today', 'Kesar Studio', 'Build · design system', -S.siteCredits || -14, 'ok', 'Charged'], ['Today', 'Noor Threads', 'Client’s 3 pins', -6, 'ok', 'Charged'], ['11 Nov', 'Bandhej Co.', 'Turn failed on Frrata’s side', +4, 'info', 'Returned'], ['11 Nov', 'Mitti Ceramics', 'Kit 2.3 update', 0, 'info', 'Frrata paid'], ['1 Nov', '—', 'Studio seat', +150, 'ok', 'Added']].map(([w, s, x, n, k, st], i) => `<tr style="animation-delay:${i * 50}ms"><td>${w}</td><td>${s}</td><td>${x}</td><td class="n">${n > 0 ? '+' + n : n}</td><td><span class="badge ${k}">${st}</span></td></tr>`).join('')}</tbody></table></div>`
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>When</th><th>Site</th><th>What</th><th class="n">Credits</th><th>Status</th></tr></thead><tbody>${[['Today', 'Kesar Studio', 'Meera · build, design system', -S.siteCredits || -14, 'ok', 'Charged'], ['Today', 'Noor Threads', 'Rohan · client’s 3 pins', -6, 'ok', 'Charged'], ['11 Nov', 'Bandhej Co.', 'Turn failed on Frrata’s side', +4, 'info', 'Returned'], ['11 Nov', 'Mitti Ceramics', 'Kit 2.3 update', 0, 'info', 'Frrata paid'], ['1 Nov', '—', 'Ananya · Studio seat', +150, 'ok', 'Added']].map(([w, s, x, n, k, st], i) => `<tr style="animation-delay:${i * 50}ms"><td>${w}</td><td>${s}</td><td>${x}</td><td class="n">${n > 0 ? '+' + n : n}</td><td><span class="badge ${k}">${st}</span></td></tr>`).join('')}</tbody></table></div>`
     icons(body)
     requestAnimationFrame(() => { const arc = $('#w-arc', body); if (arc) arc.style.strokeDashoffset = 239 - 239 * Math.min(1, S.credits / 200); let k = 0; const n = $('#w-n', body), t = setInterval(() => { k = Math.min(S.credits, k + Math.ceil(S.credits / 20)); n.textContent = k; if (k >= S.credits) clearInterval(t) }, 24) })
     $('#w-buy', body).onclick = () => { bumpCredits(-100); toast('100 credits added. Invoice FR-PT-0142 sent with GST.'); setTimeout(() => wTab(m, 'wallet'), 600) }
@@ -1705,7 +1800,8 @@ function wTab(m, t) {
     const S2 = [['pencil-ruler', 'var(--info)', 'var(--info-t)', 'Build', 'Prepaid from your seat and packs, as used. Estimate first; a turn reserves its ceiling.', 'You', 'info'],
       ['message-circle', 'var(--info)', 'var(--info-t)', 'Client review', 'Riya’s pins are free. Acting on them is a turn.', 'You', 'info'],
       ['key-round', 'var(--ok)', 'var(--ok-t)', 'Handover', 'Riya accepts this version. Nothing is owed; she never sees your costs.', 'Nothing due', 'ok'],
-      ['repeat', 'var(--warn)', 'var(--warn-t)', 'After launch', 'Changes and routines you run stay on your credits (your retainer). Brands get their own credits in a later phase.', 'You, or stop', 'warn'],
+      ['repeat', 'var(--info)', 'var(--info-t)', 'After launch', 'Maintenance, changes and routines stay on your credits while Kesar keeps you as its partner. Kesar never needs credits.', 'You', 'info'],
+      ['unlink', 'var(--warn)', 'var(--warn-t)', 'If Kesar unlinks you', 'Your team’s access ends and your routines stop. The site keeps running.', 'Nothing', 'warn'],
       ['shield-check', 'var(--muted)', 'var(--fg)', 'Frrata’s own work', 'Kit updates, law changes, fixes for what Frrata broke, turns that failed on Frrata’s side.', 'Frrata', '']]
     body.innerHTML = `<div class="tl">${S2.map(([ic, bg, fg, t, p, who, k], i) => `<div class="stp" style="animation-delay:${i * 80}ms"><span class="node" style="background:${bg};color:${fg}">${ico(ic, 'i')}</span><div><b>${t}</b><p>${p}</p><span class="payer badge ${k}">${ico('wallet', 'i i-sm')}${who}</span></div></div>`).join('')}</div>`
     icons(body)
@@ -1715,7 +1811,7 @@ $('#credits-btn').addEventListener('click', () => openWallet())
 
 function openHandover() {
   modal({ title: 'Hand over to Riya · Kesar Studio', pic: picEl('key-round', 'var(--ok)', 'var(--ok-t)'),
-    body: `<div style="display:grid;gap:8px" id="ho-checks">${['Checks run again on version 7f3a', 'Riya sees this exact version, then accepts', 'Your access ends unless she keeps it'].map((t) => `<div class="check-row"><span class="ic">${ico('loader-circle', 'i i-sm')}</span><span class="grow">${t}</span></div>`).join('')}</div>
+    body: `<div style="display:grid;gap:8px" id="ho-checks">${['Checks run again on version 7f3a', 'Riya sees this exact version, then accepts', 'Pixel & Thread stays linked to maintain it'].map((t) => `<div class="check-row"><span class="ic">${ico('loader-circle', 'i i-sm')}</span><span class="grow">${t}</span></div>`).join('')}</div>
       <div class="card" style="padding:12px;display:grid;gap:4px;background:var(--bg)"><div style="display:flex;justify-content:space-between;font-size:13px"><span>This site used</span><b class="mono">${46 + S.siteCredits} credits</b></div><span class="sub" style="font-size:12px">Paid as used · nothing due at handover</span></div>
       <span class="lbl">Routines</span>
       <div class="routine-pick"><span style="font-size:13px">Every Monday: refresh New in</span><div class="seg rp"><span class="thumb"></span><button aria-pressed="true">On my credits</button><button aria-pressed="false">Stop</button></div></div>
@@ -1729,10 +1825,175 @@ function openHandover() {
 }
 $('#b-handover').addEventListener('click', openHandover)
 
+/* ════════ INTAKE · the brand's link ════════ */
+S.in = { step: 1, logo: false, site: 'kesarstudio.in', ig: false, guide: false, photos: 0, line: 'Handwoven Chanderi and Maheshwari, made with weavers in Madhya Pradesh', use: ['handwoven', 'slow', 'heritage'], never: ['cheap', 'sale!!!', 'trendy'], lang: ['English', 'हिन्दी'] }
+const IN_N = 4
+const IG_TILES = ['#7B1E2C', '#E29A2D', '#C7AFA0', '#2A1712', '#F6E8DA', '#B5523B']
+const fileRow = (th, name, size, badge) => `<div class="file"><span class="th">${th}</span><div style="flex:1;min-width:0"><b>${name}</b><div class="sub" style="font-size:12px">${size}</div></div><span class="badge ok">${ico('check', 'i i-sm')}${badge}</span><span class="up"></span></div>`
+const inChip = (kind, w) => `<button class="chip" aria-pressed="${S.in[kind].includes(w)}" data-in-w="${kind}:${w}">${w}</button>`
+function inEmpty(st) { const x = S.in; return st === 1 ? !x.logo : st === 2 ? !x.ig && !x.site.trim() : st === 3 ? !x.guide && !x.photos : false }
+function renderIntake(back) {
+  const st = S.in.step, el = $('#in-steps')
+  $('#in-bar').style.transform = `scaleX(${Math.min(1, st / IN_N)})`
+  $('#in-count').textContent = st > IN_N ? '' : `${st} of ${IN_N}`
+  $('#in-back').style.visibility = st > 1 && st <= IN_N ? 'visible' : 'hidden'
+  $('#in-next').hidden = st > IN_N
+  $('#in-next').innerHTML = st === IN_N ? `${ico('send', 'i i-sm')}Send` : inEmpty(st) ? `Skip${ico('arrow-right', 'i i-sm')}` : `Next${ico('arrow-right', 'i i-sm')}`
+  const x = S.in; let h = ''
+  if (st === 1) h = `<h2>Your logo</h2>${x.logo ? fileRow(LOGOS[0].svg(LOGOS[0].pal), 'kesar-logo.svg', '6 kB', 'Cleaned') : `<button class="drop" data-in-act="logo">${ico('upload', 'i i-lg')}<b>Add your logo</b><span>SVG, PNG or PDF</span></button>`}`
+  else if (st === 2) h = `<h2>Where Kesar lives now</h2><div class="field"><label for="in-site">Website</label><div class="prefix"><span>https://</span><input id="in-site" value="${esc(x.site)}" inputmode="url" autocomplete="url"></div></div>
+    <div class="field"><span class="lbl">Instagram</span>${x.ig ? `<div class="file"><span class="th" style="background:linear-gradient(45deg,#F58529,#DD2A7B,#8134AF);color:#fff">${ico('camera', 'i')}</span><div style="flex:1;min-width:0"><b>@kesar.studio</b><div class="sub" style="font-size:12px">24 recent posts · read only</div></div><span class="badge ok">Connected</span></div><div class="thumbs">${IG_TILES.map((c, i) => `<i style="background:linear-gradient(135deg,${c},color-mix(in srgb,${c} 55%,white));animation-delay:${i * 60}ms"></i>`).join('')}</div>` : `<button class="btn ig-btn" data-in-act="ig">${ico('camera', 'i i-sm')}Connect Instagram</button>`}</div>`
+  else if (st === 3) h = `<h2>Brand guide and photos</h2>${x.guide ? fileRow(`<span style="color:var(--bad-t)">${ico('file-text', 'i')}</span>`, 'Kesar brand guide 2024.pdf', '12 pages · 4.1 MB', 'Read') : `<button class="drop" data-in-act="guide">${ico('file-up', 'i i-lg')}<b>Brand guide</b><span>PDF, if you have one</span></button>`}
+    ${x.photos ? `<div class="thumbs">${Array.from({ length: x.photos }, (_, i) => `<i style="background:linear-gradient(135deg,${IG_TILES[i % 6]},color-mix(in srgb,${IG_TILES[(i + 2) % 6]} 50%,white));animation-delay:${(i % 3) * 70}ms"></i>`).join('')}</div>` : ''}
+    <button class="drop" data-in-act="photos">${ico('images', 'i i-lg')}<b>${x.photos ? 'Add more photos' : 'Photos'}</b><span>Packaging, shoots, your store · ${x.photos} of 20</span></button>`
+  else if (st === 4) h = `<h2>In your words</h2><div class="field"><label for="in-line">Kesar in one line</label><input id="in-line" class="input" value="${esc(x.line)}"></div>
+    <div class="field"><span class="lbl">Words you use</span><div class="chips">${['handwoven', 'slow', 'heritage', 'festive', 'made to last', 'modern', 'playful', 'minimal'].map((w) => inChip('use', w)).join('')}</div></div>
+    <div class="field"><span class="lbl">Words you never use</span><div class="chips">${['cheap', 'sale!!!', 'trendy', 'hurry', 'luxury'].map((w) => inChip('never', w)).join('')}</div></div>
+    <div class="field"><span class="lbl">Languages</span><div class="chips">${['English', 'हिन्दी', 'Hinglish'].map((w) => inChip('lang', w)).join('')}</div></div>`
+  else h = `<div style="display:grid;justify-items:center;gap:10px;text-align:center;padding-top:10px;position:relative"><div class="done-burst">${Array.from({ length: 12 }, (_, i) => `<i style="--r:${i * 30}deg;animation-delay:${i * 20}ms"></i>`).join('')}</div><svg class="big-check" viewBox="0 0 84 84" fill="none" stroke="var(--ok-t)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="42" cy="42" r="38"/><path d="M27 43l10 10 21-22"/></svg><h2>Sent to Pixel &amp; Thread</h2>
+    <div class="chips" style="justify-content:center">${[x.logo && 'Logo', x.site && 'Website', x.ig && 'Instagram', x.guide && 'Brand guide', x.photos && `${x.photos} photos`, 'Your words'].filter(Boolean).map((t) => `<span class="chip">${ico('check', 'i i-sm')}${t}</span>`).join('')}</div><span class="sub" style="font-size:13px">The preview comes to you on WhatsApp.</span></div>`
+  el.innerHTML = `<div class="in-step ${back ? 'back' : ''}">${h}</div>`; icons(el)
+}
+$('#in-steps').addEventListener('click', (e) => {
+  const a = e.target.closest('[data-in-act]'), w = e.target.closest('[data-in-w]')
+  if (a) {
+    const k = a.dataset.inAct
+    if (k === 'logo') S.in.logo = true
+    if (k === 'guide') S.in.guide = true
+    if (k === 'photos') { if (S.in.photos >= 18) { toast('Up to 20 photos.', 'bad'); return } S.in.photos += 6 }
+    if (k === 'ig') { igConsent(); return }
+    renderIntake()
+  }
+  if (w) { const [kind, v] = w.dataset.inW.split(':'); const arr = S.in[kind]; const i = arr.indexOf(v); i >= 0 ? arr.splice(i, 1) : arr.push(v); w.setAttribute('aria-pressed', String(i < 0)) }
+})
+$('#in-steps').addEventListener('input', (e) => { if (e.target.id === 'in-site') { S.in.site = e.target.value; $('#in-next').innerHTML = inEmpty(2) ? `Skip${ico('arrow-right', 'i i-sm')}` : `Next${ico('arrow-right', 'i i-sm')}`; icons($('#in-next')) } if (e.target.id === 'in-line') S.in.line = e.target.value })
+function igConsent() {
+  modal({ title: 'Instagram', pic: `<span class="pic" style="background:linear-gradient(45deg,#F58529,#DD2A7B,#8134AF);color:#fff">${ico('camera', 'i i-lg')}</span>`,
+    body: `<b style="font-size:13.5px">Frrata, for Pixel &amp; Thread, wants to</b><div class="check-row pass"><span class="ic">${ico('check', 'i i-sm')}</span><span class="grow">See your profile and recent posts</span></div><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="badge info">Read only</span><span class="badge info">Disconnect any time</span></div>`,
+    foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="ig-ok" data-autofocus>Allow</button>`,
+    onOpen: (m, close) => { $('#ig-ok', m).onclick = () => { close(); S.in.ig = true; setTimeout(() => renderIntake(), 260) } } })
+}
+$('#in-next').addEventListener('click', () => {
+  if (S.in.step === IN_N) {
+    S.in.step++; renderIntake()
+    S.intakeIn = true; S.use = [...S.in.use]; S.avoid = [...S.in.never]; $('#b-line').value = S.in.line; renderChips(); renderVoice(); renderInbox()
+    dmsgs.innerHTML = ''; dsIntroDone = false; S.dsVer = 1
+    setTimeout(() => toast('Riya sent her intake. Kesar is ready for a design system.', 'info', { label: 'Open', run: () => { location.hash = '#design' } }), 1600)
+    return
+  }
+  S.in.step++; renderIntake()
+})
+$('#in-back').addEventListener('click', () => { if (S.in.step > 1) { S.in.step--; renderIntake(true) } })
+function renderInbox() {
+  const el = $('#intake-card'); if (!el) return
+  el.innerHTML = S.intakeIn
+    ? `<div class="card task" data-go="design" style="animation:rise 320ms var(--e-spring) both"><div class="who"><span class="ava" style="background:#7A1F2B">K</span>Kesar Studio</div><p>Intake in: ${[S.in.logo && 'logo', S.in.site && 'site', S.in.ig && 'Instagram', S.in.guide && 'guide', S.in.photos && S.in.photos + ' photos'].filter(Boolean).join(', ') || 'words only'}</p><span class="badge ok" style="justify-self:start">${ico('swatch-book', 'i i-sm')}Build the design system</span></div>`
+    : S.intakeSent ? `<div class="card task" data-go="intake"><div class="who"><span class="ava" style="background:#7A1F2B">K</span>Kesar Studio</div><p>Waiting for Riya’s intake · sent just now</p><span class="badge info" style="justify-self:start">${ico('smartphone', 'i i-sm')}See her view</span></div>` : ''
+  icons(el)
+}
+
+/* Design system v1 from the intake: every token says where it came from; disagreements are questions */
+const FROM_IC = { guide: 'file-text', site: 'globe', logo: 'image', posts: 'camera', photos: 'images', words: 'message-square-quote', agent: 'sparkles' }
+async function dsIntroIntake() {
+  S.palette = ['#7B1E2C', '#E29A2D', '#FFF8F1', '#2A1712', '#F6E8DA']; S.font = 0; S.sources = ['guide p.4', 'logo · posts', 'site CSS', 'guide p.4', 'posts']; S.questions = 2
+  afterDs(null); $('#ds-status').className = 'status'; $('#ds-status').textContent = 'Reading the intake'
+  const a = addMsg('agent', '', '', dmsgs); a.querySelector('.agent-ava').classList.add('think')
+  const box = toolBox(a)
+  const steps = [['image', 'Read', 'kesar-logo.svg · cleaned', S.in.logo], ['globe', 'Fetched', `${S.in.site || 'site'} · 1 page, 3 stylesheets`, !!S.in.site], ['camera', 'Read', '@kesar.studio · 24 posts · palette, mood', S.in.ig], ['file-text', 'Read', 'brand guide 2024.pdf · 12 pages', S.in.guide], ['images', 'Read', `${S.in.photos} photos`, S.in.photos], ['message-square-quote', 'Read', 'Riya’s words', true]]
+  for (const [ic, l, f, on] of steps) if (on) await tool(box, ic, l, f, 420)
+  await tool(box, 'file-json', 'Wrote', 'tokens.json · v1 · 31 tokens, each with its source', 420)
+  a.querySelector('.agent-ava').classList.remove('think')
+  await stream(a, 'Version 1 from Kesar’s own branding. 29 tokens agree across the guide, the site, the logo and Instagram. 2 don’t, so I’m asking. The guide wins unless you say otherwise.')
+  const rows = [[`<i class="sw2" style="background:#7B1E2C"></i>`, 'Primary', 'guide', 'guide p.4'], [`<i class="sw2" style="background:#E29A2D"></i>`, 'Accent', 'logo', 'logo + 18 posts'], [`<i class="sw2" style="background:#FFF8F1"></i>`, 'Paper', 'site', 'site CSS'], ['<b style="font:600 13px var(--s-display)">Aa</b>', 'Cormorant Garamond', 'guide', 'guide p.6'], ['<b style="font-size:12px">Aa</b>', 'Manrope (body)', 'agent', 'site uses a system font'], [ico('message-square-quote', 'i i-sm'), 'Warm, steady, rich', 'words', 'Riya’s words · you accept'], [ico('image', 'i i-sm'), 'Daylight, ivory wall', 'photos', '6 photos · 2 busy']]
+  const s = document.createElement('div'); s.className = 'change'
+  s.innerHTML = `<div class="ch-h">${ico('list-tree', 'i i-sm')}Where each token came from</div><div class="srcs">${rows.map(([sw, n, k, f], i) => `<div style="animation-delay:${i * 60}ms">${sw}<span>${n}</span><span class="from">${ico(FROM_IC[k], 'i i-sm')}${f}</span></div>`).join('')}</div>`
+  a.querySelector('.bubble').append(s); icons(s)
+  question(a, 1, 'Primary colour', [['The guide · p.4', `<span class="mini-sw"><i style="background:#7B1E2C"></i></span><small>#7B1E2C</small>`, () => { S.palette[0] = '#7B1E2C'; S.sources[0] = 'guide p.4' }, true], ['The site · CSS', `<span class="mini-sw"><i style="background:#7A1F2B"></i></span><small>#7A1F2B</small>`, () => { S.palette[0] = '#7A1F2B'; S.sources[0] = 'site CSS' }]])
+  question(a, 2, 'Headline font', [['The guide · p.6', '<span style="font:600 18px Cormorant Garamond">Diwali Edit</span>', () => { S.font = 0 }, true], ['The site', '<span style="font:18px \'DM Serif Display\'">Diwali Edit</span>', () => { S.font = 4 }]])
+  $('#ds-status').textContent = '2 questions'
+}
+function question(a, n, title, opts) {
+  const c = document.createElement('div'); c.className = 'change conflict'
+  c.innerHTML = `<div class="ch-h">${ico('git-compare', 'i i-sm')}Question ${n} of 2 · ${title}</div><div class="opts">${opts.map(([l, v, , rec], i) => `<button class="opt" data-o="${i}">${v}<span style="font-size:12.5px;font-weight:600">${l}</span>${rec ? '<span class="badge info">Guide wins ties</span>' : ''}</button>`).join('')}</div><div class="ch-f"><span class="sub" style="font-size:12px">Not settled</span></div>`
+  a.querySelector('.bubble').append(c); icons(c); dmsgs.scrollTop = dmsgs.scrollHeight
+  c.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-o]'); if (!b) return
+    const first = !c.classList.contains('applied')
+    $$('.opt', c).forEach((x) => x.setAttribute('aria-pressed', String(x === b))); opts[+b.dataset.o][2](); afterDs(null)
+    c.classList.add('applied'); c.querySelector('.ch-f').innerHTML = `<span class="badge ok">${ico('check', 'i i-sm')}Settled · ${opts[+b.dataset.o][0].split(' ·')[0].toLowerCase()}</span>`; icons(c)
+    if (first && --S.questions === 0) { $('#ds-status').className = 'status ready'; $('#ds-status').textContent = 'Proposed'; toast('Design system v1 is ready. Both questions settled.'); renderDsSuggest() } else if (first) $('#ds-status').textContent = `${S.questions} question`
+  })
+}
+
+/* ════════ TEAM ════════ */
+const TEAM = [
+  { n: 'Ananya Rao', r: 'owner', c: ['All brands'], cap: null, used: 58, pk: 2, col: '#D61F69' },
+  { n: 'Rohan Mehta', r: 'lead', c: ['Kesar Studio', 'Noor Threads'], cap: 200, used: 84, pk: 1, col: '#23307A', routines: 2 },
+  { n: 'Meera Iyer', r: 'builder', c: ['Kesar Studio'], cap: 100, used: 46, pk: 1, col: '#2F5D50' },
+  { n: 'Dev Shah', r: 'builder', c: ['Bandhej Co.'], cap: 80, used: 0, pk: 0, col: '#B7791F', invited: true },
+]
+const BRANDS = ['Kesar Studio', 'Noor Threads', 'Bandhej Co.', 'Mitti Ceramics']
+const CAPS = [['Build, preview, design system', 1, 1, 1], ['Send to the client, ask for an intake', 1, 1, 0], ['Publish, hand over', 1, 1, 0], ['Client budgets', 1, 1, 0], ['Buy credits, invoices, partner share', 1, 0, 0], ['Team', 1, 0, 0]]
+const ROLE = { owner: 'Owner', lead: 'Lead', builder: 'Builder' }
+function renderMatrix(hl) {
+  $('#t-matrix').innerHTML = `<table class="matrix"><thead><tr><th></th><th>Owner</th><th>Lead</th><th>Builder</th></tr></thead><tbody>${CAPS.map(([t, ...v]) => `<tr>${[`<td>${t}</td>`, ...v.map((x) => `<td>${x ? `<span class="y">${ico('check', 'i i-sm')}</span>` : `<span class="no">${ico('minus', 'i i-sm')}</span>`}</td>`)].join('')}</tr>`).join('')}</tbody></table>`
+  icons($('#t-matrix'))
+}
+function renderTeam() {
+  $('#t-list').innerHTML = TEAM.map((m, i) => `<div class="mem" data-m="${i}" style="animation-delay:${i * 50}ms"><span class="ava" style="background:${m.col}">${m.n.split(' ').map((p) => p[0]).join('')}</span>
+    <div style="min-width:0"><div class="nm">${esc(m.n)}<span class="badge ${m.r === 'owner' ? 'info' : m.r === 'lead' ? 'ok' : 'warn'}">${ROLE[m.r]}</span>${m.invited ? '<span class="badge info">Invited</span>' : ''}</div>
+      <div class="meta">${m.c.map((c) => `<span class="chip" style="cursor:default">${esc(c)}</span>`).join('')}<span class="chip" style="cursor:default">${ico('key-round', 'i i-sm')}${m.pk ? m.pk + ' passkey' + (m.pk > 1 ? 's' : '') : 'No passkey yet'}</span></div>
+      ${m.cap ? `<button class="cap" data-cap="${i}" aria-label="Monthly cap for ${esc(m.n)}"><span style="display:flex;justify-content:space-between"><span class="sub">This month</span><span class="mono">${m.used} / ${m.cap}</span></span><span class="bar ${m.used / m.cap >= .8 ? 'warn' : ''}"><i style="transform:scaleX(${Math.min(1, m.used / m.cap)})"></i></span></button>` : `<div class="sub" style="font-size:12px;margin-top:8px">${m.used} credits this month · no cap</div>`}</div>
+    <div class="acts">${m.r === 'owner' ? '' : `<select class="input" data-role="${i}" aria-label="Role for ${esc(m.n)}"><option value="lead" ${m.r === 'lead' ? 'selected' : ''}>Lead</option><option value="builder" ${m.r === 'builder' ? 'selected' : ''}>Builder</option></select><button class="btn sm icon ghost tip" data-tip="Remove" data-rm="${i}" aria-label="Remove ${esc(m.n)}">${ico('user-minus', 'i i-sm')}</button>`}</div></div>`).join('')
+  icons($('#t-list'))
+}
+$('#t-list').addEventListener('change', (e) => { const s = e.target.closest('[data-role]'); if (!s) return; const m = TEAM[+s.dataset.role]; m.r = s.value; renderTeam(); toast(`${m.n.split(' ')[0]} is now a ${ROLE[m.r]}.${m.r === 'builder' ? ' They can’t publish or message clients.' : ''}`) })
+$('#t-list').addEventListener('click', (e) => {
+  const c = e.target.closest('[data-cap]'), r = e.target.closest('[data-rm]')
+  if (c) { const m = TEAM[+c.dataset.cap]; modal({ title: `Monthly cap · ${esc(m.n.split(' ')[0])}`, pic: picEl('gauge', 'var(--muted)', 'var(--fg)'),
+    body: `<div class="slider-row"><span class="lbl" style="display:flex;justify-content:space-between">Credits a month<span class="mono" id="cap-v">${m.cap}</span></span><input type="range" class="range" min="20" max="400" step="10" value="${m.cap}" id="cap-r" aria-label="Credits a month"></div><span class="sub mono" style="font-size:12px" id="cap-rs">≈ ₹${(m.cap * 19).toLocaleString('en-IN')} + GST</span>`,
+    foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="cap-ok">Save</button>`,
+    onOpen: (md, close) => { const r2 = $('#cap-r', md); r2.oninput = () => { $('#cap-v', md).textContent = r2.value; $('#cap-rs', md).textContent = `≈ ₹${(r2.value * 19).toLocaleString('en-IN')} + GST` }; $('#cap-ok', md).onclick = () => { m.cap = +r2.value; close(); renderTeam(); toast(`${m.n.split(' ')[0]}: ${m.cap} credits a month.`) } } }) }
+  if (r) { const i = +r.dataset.rm, m = TEAM[i], first = m.n.split(' ')[0]
+    modal({ title: `Remove ${esc(m.n)}?`, pic: picEl('user-minus', 'var(--bad)', 'var(--bad-t)'),
+      body: `<div style="display:grid;gap:8px">${[`Access to ${m.c.join(' and ')} ends now`, m.routines ? `${m.routines} routines move to you` : 'No routines to move', 'Open turns stop; passkeys and keys stop working'].map((t) => `<div class="check-row"><span class="ic">${ico('arrow-right', 'i i-sm')}</span><span class="grow">${t}</span></div>`).join('')}</div>`,
+      foot: `<button class="btn" data-x>Keep ${esc(first)}</button><button class="btn danger" id="rm-ok">${ico('user-minus', 'i i-sm')}Remove ${esc(first)}</button>`,
+      onOpen: (md, close) => { $('#rm-ok', md).onclick = () => { close(); const row = $(`#t-list [data-m="${i}"]`); row && row.classList.add('out'); setTimeout(() => { TEAM.splice(i, 1); renderTeam() }, 220); toast(`${first} removed.${m.routines ? ` ${m.routines} routines are now yours.` : ''}`) } } }) }
+})
+$('#t-invite').addEventListener('click', () => {
+  let role = 'builder'; const picked = new Set(['Kesar Studio'])
+  const can = () => CAPS.map(([t, , l, b]) => [t, role === 'lead' ? l : b])
+  modal({ title: 'Invite to Pixel & Thread', pic: picEl('user-plus', 'var(--muted)', 'var(--fg)'),
+    body: `<div class="field"><label for="iv-who">Work email</label><input id="iv-who" class="input" type="email" autocomplete="off" placeholder="name@pixelthread.in" aria-describedby="iv-who-err"><span id="iv-who-err"></span></div>
+      <div class="field"><span class="lbl">Role</span><div class="seg" id="iv-role"><span class="thumb"></span><button aria-pressed="false" data-r="lead">Lead</button><button aria-pressed="true" data-r="builder">Builder</button></div><div class="can-list" id="iv-can"></div></div>
+      <div class="field"><span class="lbl" id="iv-b-l">Brands</span><div class="chips" id="iv-brands" role="group" aria-labelledby="iv-b-l" aria-describedby="iv-b-err">${BRANDS.map((b) => `<button class="chip" aria-pressed="${picked.has(b)}" data-b="${b}">${b}</button>`).join('')}</div><span id="iv-b-err"></span></div>
+      <div class="slider-row"><span class="lbl" style="display:flex;justify-content:space-between">Monthly cap<span class="mono" id="iv-cap-v">100 credits</span></span><input type="range" class="range" min="20" max="400" step="10" value="100" id="iv-cap" aria-label="Monthly cap"></div>
+      <span class="badge info" style="justify-self:start">${ico('key-round', 'i i-sm')}Adds a passkey before seeing any brand</span>`,
+    foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="iv-go">${ico('send', 'i i-sm')}Send invite</button>`,
+    onOpen: (m, close) => {
+      const drawCan = () => { $('#iv-can', m).innerHTML = can().map(([t, ok], i) => `<span style="animation-delay:${i * 30}ms;color:${ok ? 'var(--fg)' : 'var(--sub)'}">${ok ? `<span class="y" style="color:var(--ok-t)">${ico('check', 'i i-sm')}</span>` : `<span style="color:var(--input)">${ico('minus', 'i i-sm')}</span>`}${t}</span>`).join(''); icons($('#iv-can', m)) }
+      const place = seg($('#iv-role', m), (b) => { role = b.dataset.r; drawCan() }); setTimeout(place, 40); drawCan()
+      $('#iv-brands', m).addEventListener('click', (e) => { const b = e.target.closest('[data-b]'); if (!b) return; picked.has(b.dataset.b) ? picked.delete(b.dataset.b) : picked.add(b.dataset.b); b.setAttribute('aria-pressed', String(picked.has(b.dataset.b))); if (picked.size) $('#iv-b-err', m).innerHTML = '' })
+      $('#iv-cap', m).oninput = (e) => { $('#iv-cap-v', m).textContent = e.target.value + ' credits' }
+      const who = $('#iv-who', m); who.addEventListener('input', () => { if (/^\S+@\S+\.\S+$/.test(who.value)) { who.removeAttribute('aria-invalid'); $('#iv-who-err', m).innerHTML = '' } })
+      $('#iv-go', m).onclick = () => {
+        const v = who.value.trim(), okWho = /^\S+@\S+\.\S+$/.test(v)
+        // Inside a Dialog: marks and focus say it, no toast (§ Feedback 4).
+        $('#iv-who-err', m).innerHTML = okWho ? '' : `<span class="err-line">${ico('alert-circle', 'i i-sm')}${v ? 'That email doesn’t look right' : 'Enter their work email'}</span>`
+        okWho ? who.removeAttribute('aria-invalid') : who.setAttribute('aria-invalid', 'true')
+        $('#iv-b-err', m).innerHTML = picked.size ? '' : `<span class="err-line">${ico('alert-circle', 'i i-sm')}Pick at least one brand</span>`
+        icons(m); if (!okWho) { who.focus(); return } if (!picked.size) return
+        TEAM.push({ n: v.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()), r: role, c: [...picked], cap: +$('#iv-cap', m).value, used: 0, pk: 0, col: '#5B4636', invited: true })
+        close(); renderTeam(); toast(`Invite sent to ${v}. It works once, for that email.`)
+      }
+    } })
+})
+
+document.addEventListener('click', (e) => { if (e.target.closest('[data-req-intake]')) { S.intakeSent = true; renderInbox(); toast('Intake sent to Riya on WhatsApp.', 'ok', { label: 'See her view', run: () => { location.hash = '#intake' } }) } })
 document.addEventListener('click', (e) => { if (e.target.closest('[data-handover]')) setTimeout(openHandover, 360) })
 
 /* ── Routing between steps, with direction ── */
-const ORDER = ['home', 'brand', 'design', 'pages', 'build']
+const ORDER = ['home', 'intake', 'brand', 'design', 'pages', 'build', 'team']
 const doneSteps = new Set()
 function markDone(s) { if (s === 'design') doneSteps.add('brand').add('design'); if (s === 'pages') doneSteps.add('brand').add('design').add('pages'); paintSteps() }
 function paintSteps() { const cur = (location.hash || '#home').slice(1); $$('.steps a').forEach((a) => { a.toggleAttribute('aria-current', a.dataset.step === cur); if (a.dataset.step === cur) a.setAttribute('aria-current', 'step'); a.classList.toggle('done', doneSteps.has(a.dataset.step) && a.dataset.step !== cur) }) }
@@ -1744,6 +2005,10 @@ function show() {
   if (v !== 'home' && last === 'home' && v !== 'brand') {}
   if (v === 'build' && !$('#device').innerHTML) { renderDevice('ghost'); renderRail('checks', true); renderSuggest(); if (!msgs.children.length) addMsg('agent', `<p>The plan is ready: Home, Collection and Product on Starter 0, about ${$('#est').textContent} credits. Approve it from Pages and brief, or start here.</p><div class="chips" style="margin-top:6px"><button class="chip" data-sg="Start the build">${ico('play', 'i i-sm')}Start the build</button></div>`) }
   if (v === 'design') { renderKit(); renderDs(); setTimeout(dsIntro, 300) }
+  if (v === 'intake') renderIntake()
+  if (v === 'team') { renderTeam(); renderMatrix() }
+  if (v === 'home') renderInbox()
+  if (v === 'brand') { const b = $('#brand-src'); b.innerHTML = S.intakeIn ? `${ico('check', 'i i-sm')}From Riya’s intake: check before it goes into brand.md` : `${ico('check', 'i i-sm')}Read from the console: 212 products, policies`; icons(b) }
   last = v; paintSteps(); requestAnimationFrame(() => segPlacers.forEach((p) => p())); scrollTo(0, 0)
 }
 msgs.addEventListener('click', (e) => { const b = e.target.closest('[data-sg]'); if (b && b.dataset.sg === 'Start the build') startBuild() })

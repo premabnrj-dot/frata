@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.28.0
+  version: 1.29.0
   verified: 2026-11-12
   decisions: [ADR-0006]
 ---
@@ -361,6 +361,23 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
   shop eligibility uneven; commerce review up to 4 weeks [V/S]. DMs → assisted
   order creation, not automatic. Reels creator affiliate links launched in
   India in 2026 (3–15% commission) [S].
+- **Instagram media for a brand intake (checked 2026-11-12, integration-researcher; Meta pages undated, terms 2026-02-03):**
+  - Instagram Login (graph.instagram.com), scope `instagram_business_basic`, business and creator accounts, no
+    Facebook Page needed [V developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login].
+  - `caption` on a post is documented "Available for Instagram API with Facebook Login only" [V reference/instagram-media];
+    whether Instagram Login returns it is [U]. Test `/me/media?fields=caption,media_url,permalink,media_type,timestamp`
+    on an account we own (Standard Access) before designing around captions.
+  - `media_url` may be missing (copyrighted audio): fall back to `thumbnail_url` or `permalink` [V]. Media URLs expire;
+    no lifetime stated [V]. Up to 10K newest posts; no stories [V].
+  - Accounts we don't own need Advanced Access → App Review → Business Verification (in the Pvt Ltd's name) [V
+    instagram-platform/overview]. Rate: 4,800 × impressions per 24 h per app and account [V].
+  - Reading a public account by handle (Business Discovery) needs Facebook Login, a Page and more scopes [V]: don't
+    offer "type your handle".
+  - Platform terms §6.2: don't import or back up User Content without Meta's permission [V devpolicy 2026-02-03]. Rule:
+    read posts once, keep only the derived palette and permalinks; never store or republish an Instagram image unless
+    the merchant uploads it. Delete on the user's request (terms §3.d) [V]. No rule names deriving a palette [V absence].
+  - Repo: no Instagram connection is built; `shop_settings.instagram` is a plain handle; the communication spec plans
+    `instagram_business_manage_messages` for DMs (separate connection).
 
 ## Google — checked 2026-11-06 (Ads and GA4 rechecked 2026-11-08; OAuth verification, Search Console and Merchant API rechecked 2026-11-09)
 
