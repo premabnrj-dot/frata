@@ -23,6 +23,7 @@ import { shopSettings } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { skuTaken, writeProducts } from '@/lib/catalogue/write'
 import { kindOf, startSizes, typeFor } from '@/domains/catalogue/kind'
+import { arrayParam } from '@/lib/db/sql-array'
 import { goLive, readinessIn } from '@/lib/catalogue/readiness'
 import { photosInUse } from '@/lib/catalogue/photos-in-use'
 import { attachIn, type NewPhoto } from '@/lib/catalogue/photos'
@@ -50,7 +51,7 @@ export async function createProduct(input: { title: string }): Promise<Result<{ 
       // the shop's first type went to everything). Sizes only when the shop sells sized things (all-categories § 2).
       const [shop] = await tx.select({ hsn: shopSettings.defaultHsn, sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
       const kind = kindOf(title)
-      const sizes = kind === 'one_size' || (kind === 'sized' && !sellsSized(shop?.sells ?? [])) ? [] : startSizes[kind]
+      const sizes = sellsSized(shop?.sells ?? []) ? startSizes[kind] : []
       const typeId = sizes.length || kind === 'one_size' ? typeFor(title, types) : null
       const [p] = await tx.insert(products).values({
         tenantId, title, handle: await freeHandle(tx, tenantId, title), typeId, hsn: shop?.hsn ?? null,
@@ -90,7 +91,8 @@ export async function saveProduct(productId: string, version: number, input: Pro
         const [t] = await tx.select({ id: productTypes.id }).from(productTypes).where(and(eq(productTypes.tenantId, tenantId), eq(productTypes.id, p.typeId)))
         if (!t) throw new Stop({ ok: false, error: 'That product type is not in your shop.' })
       }
-      const [cur] = await tx.select({ handle: products.handle, publishedAt: products.publishedAt, status: products.status }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
+      // Locked: Publish (setStatus) locks it too, so a draft's blank prices can't land after Publish read the priced rows.
+      const [cur] = await tx.select({ handle: products.handle, publishedAt: products.publishedAt, status: products.status }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId))).for('update')
       if (!cur) throw new Stop({ ok: false, error: 'This product is not in your shop.' })
       // A draft saves before every size is priced (PR·0); a live product keeps a price on every size it sells.
       if (cur.status === 'active' || cur.status === 'unlisted') {
@@ -127,11 +129,12 @@ export async function saveProduct(productId: string, version: number, input: Pro
       const written = await writeProducts(tx, tenantId, [{ productId, handle: p.handle, title: p.title, options: p.options, variants: p.variants }], { costs })
       if (!written.ok) throw new Stop({ ok: false, error: written.error, ...(written.at ? { errors: { [`v:${keyOf(written.at.values)}:${written.at.field}`]: written.at.field === 'sku' ? 'Used by another product.' : 'On another product.' } } : {}) })
       // A colour renamed in the editor keeps its photos: their tags follow it before stale tags are cleared (PR·0).
-      for (const r of renames.slice(0, 60)) {
-        const from = String(r?.from ?? '').slice(0, 40), to = String(r?.to ?? '').slice(0, 40)
-        if (from && to && from !== to) await tx.update(productImages).set({ optionValue: to })
-          .where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId), eq(productImages.optionValue, from)))
-      }
+      // One statement, so a swap made through a spare name (Indigo→Rust, Rust→Indigo) moves each photo once.
+      const moves = (Array.isArray(renames) ? renames : []).slice(0, 60).map((r) => [String(r?.from ?? '').slice(0, 40), String(r?.to ?? '').slice(0, 40)] as const).filter(([f, t]) => f && t && f !== t)
+      const firstOf = new Map<string, string>()
+      for (const [f, t] of moves) if (!firstOf.has(f)) firstOf.set(f, t)
+      if (firstOf.size) await tx.update(productImages).set({ optionValue: sql`case ${sql.join([...firstOf].map(([f, t]) => sql`when ${productImages.optionValue} = ${f} then ${t}`), sql` `)} else ${productImages.optionValue} end` })
+        .where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId), sql`${productImages.optionValue} = any(${arrayParam([...firstOf.keys()], 'text')})`))
       // A photo tagged with a colour that no longer exists shows for every colour.
       const values = new Set(p.options.flatMap((o) => o.values))
       const imgs = await tx.select({ id: productImages.id, optionValue: productImages.optionValue }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId)))
@@ -190,7 +193,7 @@ export async function setStatus(productId: string, status: Status, publishAt: st
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.status', target: productId, detail: { status } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
-      const [p] = await tx.select().from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
+      const [p] = await tx.select().from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId))).for('update') // with saveProduct's lock
       if (!p) throw new Stop({ ok: false, error: 'This product is not in your shop.' })
       const live = status === 'active' || status === 'unlisted'
       if (live) {

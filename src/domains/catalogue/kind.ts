@@ -8,6 +8,8 @@
 // "What are you selling?" step; this stays as its default.
 // =============================================================================
 
+import { PRESETS, sizeKey } from './size-charts'
+
 export type Kind = 'kids' | 'footwear' | 'one_size' | 'sized'
 
 const KIDS = ['kid', 'kids', 'girl', 'girls', 'boy', 'boys', 'baby', 'babies', 'toddler', 'infant', 'children', 'child']
@@ -16,7 +18,9 @@ const FOOTWEAR = ['shoe', 'shoes', 'sandal', 'sandals', 'jutti', 'juttis', 'moja
 const ONE_SIZE = ['saree', 'sarees', 'sari', 'saris', 'dupatta', 'dupattas', 'stole', 'stoles', 'scarf', 'scarves', 'shawl', 'shawls',
   'earring', 'earrings', 'jhumka', 'jhumkas', 'necklace', 'necklaces', 'bangle', 'bangles', 'ring', 'rings', 'anklet', 'anklets',
   'bracelet', 'bracelets', 'pendant', 'jewellery', 'jewelry', 'bag', 'bags', 'clutch', 'clutches', 'potli', 'tote', 'wallet',
-  'belt', 'cap', 'fabric', 'unstitched', 'serum', 'cream', 'oil', 'soap', 'lipstick', 'candle', 'perfume', 'attar']
+  'belt', 'fabric', 'unstitched', 'serum', 'moisturiser', 'moisturizer', 'soap', 'lipstick', 'candle', 'perfume', 'attar']
+// Not here: colour words (cream, ivory), "cap" (cap sleeve), "oil" (oil print). A shop that sells nothing sized gets no sizes
+// whatever the name says (createProduct, sellsSized).
 
 /** Lower-case words of a name, Latin letters and digits only (an Indian-script name gives none: no guess). */
 const words = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)
@@ -31,16 +35,25 @@ export function kindOf(title: string): Kind {
   return 'sized'
 }
 
-/** The sizes a new product of this kind starts with (the starting charts' own, size-charts.ts). */
-export const startSizes: Record<Kind, string[]> = { kids: ['2–3 Y', '3–4 Y', '4–5 Y'], footwear: ['UK 6', 'UK 7', 'UK 8'], one_size: [], sized: ['S', 'M', 'L'] }
+const first3 = (k: string, from = 0) => PRESETS[k]!.chart.rows.slice(from, from + 3).map((r) => r.size)
+/** The sizes a new product of this kind starts with: three of the starting chart's own rows (size-charts.ts). */
+export const startSizes: Record<Kind, string[]> = { kids: first3('kids'), footwear: first3('footwear', 2), one_size: [], sized: first3('womens_kurta', 1) }
 
 /** Words that say nothing about the type ("Kurta set · Women": "set" and "women" match too much). */
 const WEAK = new Set(['set', 'sets', 'women', 'woman', 'womens', 'men', 'mens', 'man', 'the', 'and', 'with', 'for', 'of', 'size', 'one'])
 const KIND_WORD: Record<Kind, string | null> = { kids: 'kids', footwear: 'footwear', one_size: null, sized: null }
 
 /** The type whose name shares the most telling words with the title (singular or plural); the kind's own type
- *  ("Kids", "Footwear") when the title names the kind; else null. Ties go to the first type by name. */
-export function typeFor(title: string, types: readonly { id: string; name: string }[]): string | null {
+ *  ("Kids", "Footwear") when the title names the kind; else, given `sizes`, the first type by name whose chart has a
+ *  row for each (an import's "Wrap dress" in S–XL); else null. Ties go to the first type by name. */
+export function typeFor(title: string, types: readonly { id: string; name: string; chartSizes?: readonly string[] }[], sizes?: readonly string[]): string | null {
+  const named = byName(title, types)
+  if (named || !sizes?.length) return named
+  const want = sizes.map(sizeKey)
+  return [...types].sort((a, b) => a.name.localeCompare(b.name)).find((t) => t.chartSizes?.length && want.every((w) => t.chartSizes!.some((c) => sizeKey(c) === w)))?.id ?? null
+}
+
+function byName(title: string, types: readonly { id: string; name: string }[]): string | null {
   const kind = kindOf(title)
   if (kind === 'one_size') return types.find((t) => words(t.name).includes('one') && words(t.name).includes('size'))?.id ?? null
   const stem = (x: string) => x.replace(/(es|s)$/, '')

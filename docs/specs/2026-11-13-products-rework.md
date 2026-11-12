@@ -1,5 +1,5 @@
 # Products rework — list, editor, variants, swatches, delete, links
-Status: draft · Date: 2026-11-13 · Mockup: https://claude.ai/artifact/NW8BozPHgfXQcUge2wKyv4 · Approved: — (awaiting the owner)
+Status: active (PR·0 built) · Date: 2026-11-13 · Mockup: https://claude.ai/artifact/NW8BozPHgfXQcUge2wKyv4 · Approved: owner, 2026-11-13 ("go ahead": all 7 calls and the phases)
 
 ## Goal
 Ranked problem 3 (catalogue operations) and 5 (a premium-looking storefront): a brand adds a sellable product in under

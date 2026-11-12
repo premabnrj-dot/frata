@@ -131,7 +131,9 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
       const options = x.options.map((o, i) => (i === option ? { ...o, values: o.values.map((v) => (v === from ? to : v)) } : o))
       const live = x.options.filter((o) => o.name.trim() && o.values.length)
       const at = live.indexOf(x.options[option]!)
-      const cells = at < 0 ? x.cells : Object.fromEntries(Object.entries(x.cells).map(([k, c]) => {
+      // A cell already under the new name is left from a value removed earlier (`to` is not a live value: the chip
+      // refuses duplicates); it goes, so it can't overwrite the renamed one's.
+      const cells = at < 0 ? x.cells : Object.fromEntries(Object.entries(x.cells).filter(([k]) => k.split('\u0000')[at] !== to).map(([k, c]) => {
         const parts = k.split('\u0000')
         if (parts[at] === from) parts[at] = to
         return [parts.join('\u0000'), c]

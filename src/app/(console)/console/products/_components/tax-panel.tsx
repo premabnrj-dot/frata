@@ -40,7 +40,7 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
   const gap = price !== null ? inGap(tax.hsn, price, inclusive, now) : null
   const known = !!rule
   const valid = /^\d{4}(\d{2})?(\d{2})?$/.test(tax.hsn)
-  const leftError = left === null ? undefined : /^\d+$/.test(left.replace(/\s/g, '')) ? `${left.trim()} is not an HSN code: 4, 6 or 8 digits.` : `Pick a code from the list for “${left.trim()}”.`
+  const leftError = left === null ? undefined : `${/^\d+$/.test(left.replace(/\s/g, '')) ? `${left.trim()} is not an HSN code: 4, 6 or 8 digits.` : `Pick a code from the list for “${left.trim()}”.`}${tax.hsn ? ` Saving keeps ${tax.hsn}.` : ''}`
   const pick = (code: string) => { onChange({ ...tax, hsn: code, ownBps: '' }); setQ(''); setLeft(null); setOpen(false) }
 
   return (

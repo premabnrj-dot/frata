@@ -65,3 +65,10 @@ export function statusLabel(status: Status, publishAt: Date | null, now: Date): 
   if (visibility(status, publishAt, now).scheduled) return 'Scheduled'
   return { draft: 'Draft', active: 'Active', unlisted: 'Unlisted', archived: 'Archived' }[status]
 }
+
+/** What a product offers shoppers, the best of its sizes: one in stock, else one that sells at 0 (pre-order, made to
+ *  order), else the first (sold out). Null for none. Products' list badge (PR·0: it said Sold out for made to order). */
+export function bestOffer(vs: readonly VariantFacts[], now: Date): Availability | null {
+  const all = vs.map((v) => availability(v, now))
+  return all.find((a) => a.kind === 'in_stock' || a.kind === 'low_stock') ?? all.find((a) => a.canBuy) ?? all[0] ?? null
+}

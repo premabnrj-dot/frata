@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
-import { inches, type Chart } from '@/domains/catalogue/size-charts'
+import { chartFromText, inches, type Chart } from '@/domains/catalogue/size-charts'
 import { createType, saveSizeChart } from '../type-actions'
 import { Icon } from '@/components/icons/icon'
 
@@ -19,11 +19,6 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
   type Draft = Omit<Chart, 'rows'> & { rows: { size: string; values: string[] }[] }
   const [edit, setEdit] = useState<Draft | null>(null)
   const toDraft = (c: Chart): Draft => ({ ...c, rows: c.rows.map((r) => ({ size: r.size, values: c.columns.map((_, i) => r.values[i] == null ? '' : String(r.values[i])) })) })
-  const fromDraft = (d: Draft): Chart | string => {
-    const bad = d.rows.flatMap((r) => r.values.filter((v) => v.trim() && !/^\d+(\.\d{1,2})?$/.test(v.trim())).map((v) => `${r.size || 'A size'}: ${v} is not a number of cm.`))
-    if (bad.length) return bad[0]!
-    return { ...d, rows: d.rows.map((r) => ({ size: r.size, values: r.values.map((v) => (v.trim() ? Number(v) : null)) })) }
-  }
   // A refused create or save is an error toast (§ Feedback 1); what was typed stays.
   const toast = useToast()
   const [pending, start] = useTransition()
@@ -92,7 +87,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
           <textarea id="how" rows={2} value={edit.howToMeasure} onChange={(e) => setEdit({ ...edit, howToMeasure: e.target.value })} className="w-full rounded-md border border-input px-2 py-1 text-sm" />
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={() => setEdit(null)} disabled={pending}>Keep the chart as it was</Button>
-            <Button type="button" disabled={pending} onClick={() => start(async () => { const c = fromDraft(edit); if (typeof c === 'string') return toast.error(c); const r = await saveSizeChart(type.id, c); if (!r.ok) return toast.error(r.error); setEdit(null); router.refresh() })}>
+            <Button type="button" disabled={pending} onClick={() => start(async () => { const c = chartFromText(edit); if (typeof c === 'string') return toast.error(c); const r = await saveSizeChart(type.id, c); if (!r.ok) return toast.error(r.error); setEdit(null); router.refresh() })}>
               {pending ? 'Saving…' : `Save for all ${type.name}`}
             </Button>
           </div>

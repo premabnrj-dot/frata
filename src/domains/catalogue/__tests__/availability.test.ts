@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { availability, statusLabel, visibility, type VariantFacts } from '../availability'
+import { availability, bestOffer, statusLabel, visibility, type VariantFacts } from '../availability'
 
 const now = new Date('2026-11-06T12:00:00+05:30')
 const v = (p: Partial<VariantFacts>): VariantFacts => ({ stock: 0, whenOut: 'stop', shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderCap: null, ...p })
@@ -34,3 +34,15 @@ describe('visibility', () => {
     expect(statusLabel('active', at, now)).toBe('Scheduled')
   })
 })
+
+describe('bestOffer: the list badge is what shoppers see (PR·0)', () => {
+  const now = new Date('2026-11-13T06:00:00Z')
+  const v = (x: Partial<VariantFacts>): VariantFacts => ({ stock: 0, whenOut: 'stop', shipsBy: null, leadMinDays: null, leadMaxDays: null, preorderCap: null, ...x })
+  it('in stock first, then what sells at 0, then sold out; none is null', () => {
+    expect(bestOffer([v({}), v({ stock: 5 })], now)?.kind).toBe('in_stock')
+    expect(bestOffer([v({}), v({ whenOut: 'made_to_order', leadMinDays: 7, leadMaxDays: 10 })], now)?.kind).toBe('made_to_order')
+    expect(bestOffer([v({})], now)?.canBuy).toBe(false)
+    expect(bestOffer([], now)).toBeNull()
+  })
+})
+

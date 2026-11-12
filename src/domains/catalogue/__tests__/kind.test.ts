@@ -15,6 +15,10 @@ describe('a new product takes its kind and type from its name (PR·0: the first 
     expect(kindOf('Oxidised jhumka earrings')).toBe('one_size')
     expect(kindOf('Handmade leather mojari')).toBe('footwear')
     expect(kindOf('कुर्ता सेट')).toBe('sized')
+    expect(kindOf('Cream linen kurta')).toBe('sized')
+    expect(kindOf('Cap sleeve top')).toBe('sized')
+    expect(startSizes.sized).toEqual(['S', 'M', 'L'])
+    expect(startSizes.footwear).toEqual(['UK 6', 'UK 7', 'UK 8'])
     expect(startSizes.kids[0]).toBe('2–3 Y')
   })
   it('picks the type that shares a telling word, the kind’s own, or none', () => {
@@ -26,5 +30,11 @@ describe('a new product takes its kind and type from its name (PR·0: the first 
     expect(typeFor('Wrap dress', types)).toBeNull()
     expect(typeFor("Women's co-ord set", types)).toBeNull()
     expect(typeFor('Kids frock', [{ id: 'k', name: 'Kurta set · Women' }])).toBeNull()
+  })
+  it('an import with sizes falls back to the first type whose chart has them all', () => {
+    const charts = [{ id: 'kids', name: 'Kids', chartSizes: ['2–3 Y'] }, { id: 'k', name: 'Kurta set · Women', chartSizes: ['XS', 'S', 'M', 'L', 'XL'] }]
+    expect(typeFor('Wrap dress', charts, ['S', 'M', 'XL'])).toBe('k')
+    expect(typeFor('Wrap dress', charts, ['S', '3XL'])).toBeNull()
+    expect(typeFor('Wrap dress', charts)).toBeNull()
   })
 })

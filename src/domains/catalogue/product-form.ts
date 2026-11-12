@@ -8,6 +8,7 @@
 
 import { istDayKey } from '../time/day'
 import { cleanGtin } from './gtin'
+import { sizeKey } from './size-charts'
 import { cleanOptions, combinations, handleFor, keyOf, RESERVED_HANDLES, type Option } from './variants'
 import { parseRupees, priceRefusal } from '../money/rupees'
 
@@ -162,9 +163,8 @@ export type Readiness = { label: string; ok: boolean }[]
 function chartLine(sizes: readonly string[], chart: readonly string[]): Readiness[number] {
   if (!sizes.length) return { label: 'A size chart for its type', ok: true }
   if (!chart.length) return { label: 'A size chart for its type', ok: false }
-  const norm = (x: string) => x.toLowerCase().replace(/[\s–—-]+/g, '')
-  const has = new Set(chart.map(norm))
-  const missing = sizes.filter((x) => !has.has(norm(x)))
+  const has = new Set(chart.map(sizeKey))
+  const missing = sizes.filter((x) => !has.has(sizeKey(x)))
   return missing.length ? { label: `Size chart rows for ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? ` and ${missing.length - 4} more` : ''}`, ok: false } : { label: 'A size chart for its type', ok: true }
 }
 

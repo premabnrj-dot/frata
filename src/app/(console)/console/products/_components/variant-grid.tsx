@@ -80,14 +80,14 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
         )}
         <div className="space-y-1"><label htmlFor="every-price" className="block text-xs font-medium">Price, ₹</label>
           <div className="flex gap-1.5"><input id="every-price" inputMode="decimal" value={every.price} onChange={(e) => setEvery({ ...every, price: e.target.value })} className="h-10 md:h-9 w-24 rounded-md border border-input bg-card px-2 font-mono text-sm" />
-            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.price} onClick={() => fill('price', every.price)}>Apply to {target('price').length}</button></div></div>
+            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.price || !target('price').length} onClick={() => fill('price', every.price)}>Apply to {target('price').length}</button></div></div>
         <div className="space-y-1"><label htmlFor="every-stock" className="block text-xs font-medium">Stock</label>
           <div className="flex gap-1.5"><input id="every-stock" inputMode="numeric" value={every.stock} onChange={(e) => setEvery({ ...every, stock: e.target.value })} className="h-10 md:h-9 w-20 rounded-md border border-input bg-card px-2 font-mono text-sm" />
-            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.stock} onClick={() => fill('stock', every.stock)}>Apply to {target('stock').length}</button></div></div>
+            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.stock || !target('stock').length} onClick={() => fill('stock', every.stock)}>Apply to {target('stock').length}</button></div></div>
         <div className="space-y-1"><label htmlFor="every-out" className="block text-xs font-medium">When any runs out</label>
           <div className="flex gap-1.5"><select id="every-out" value={every.whenOut} onChange={(e) => setEvery({ ...every, whenOut: e.target.value as WhenOut })} className="h-10 md:h-9 rounded-md border border-input bg-card px-2 text-sm">
             <option value="">Choose…</option>{WHEN_OUT.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.whenOut} onClick={() => fill('whenOut', every.whenOut)}>Apply to {target('whenOut').length}</button></div></div>
+            <button type="button" className={button({ variant: 'secondary' })} disabled={!every.whenOut || !target('whenOut').length} onClick={() => fill('whenOut', every.whenOut)}>Apply to {target('whenOut').length}</button></div></div>
         <label className="flex min-h-10 items-center gap-2 text-sm md:min-h-9"><input type="checkbox" checked={emptyOnly} onChange={(e) => setEmptyOnly(e.target.checked)} />Empty only</label>
       </div>}
       <div className="relative overflow-x-auto rounded-md border border-border">

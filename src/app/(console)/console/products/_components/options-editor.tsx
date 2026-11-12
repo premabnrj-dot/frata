@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { MAX_OPTIONS, type Option } from '@/domains/catalogue/variants'
 import { Icon } from '@/components/icons/icon'
+import { isSizeOption } from '@/domains/storefront/picker'
 import { FieldError, fieldProps } from '@/components/ui/field-error'
 
 const SUGGEST: Record<string, string[]> = {
@@ -97,7 +98,7 @@ export function OptionsEditor({ options, onChange, onRename, error }: { options:
       <FieldError name="options" message={error} />
       {options.length < MAX_OPTIONS && (
         <div className="flex flex-wrap gap-2">
-          {!options.some((o) => /^sizes?$/i.test(o.name)) && <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => { onChange([...options, { name: 'Size', values: ['S', 'M', 'L'] }]); setDrafts((d) => [...d, '']) }}>Add sizes</button>}
+          {!options.some((o) => isSizeOption(o.name)) && <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => { onChange([...options, { name: 'Size', values: ['S', 'M', 'L'] }]); setDrafts((d) => [...d, '']) }}>Add sizes</button>}
           {!options.some((o) => /^colou?rs?$/i.test(o.name)) && <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => { onChange([...options, { name: 'Colour', values: [] }]); setDrafts((d) => [...d, '']) }}>Add colours</button>}
           <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => { onChange([...options, { name: '', values: [] }]); setDrafts((d) => [...d, '']) }}>Add another option</button>
         </div>

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { PageHeader } from '@/components/layout/page-header'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { Name } from '@/components/data/name'
@@ -11,7 +12,8 @@ import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
-import { listProducts, offerOf, PRODUCTS_PAGE, statusCounts, type ProductListRow } from '@/lib/queries/catalogue'
+import { bestOffer } from '@/domains/catalogue/availability'
+import { listProducts, PRODUCTS_PAGE, statusCounts, type ProductListRow } from '@/lib/queries/catalogue'
 import { formatCount } from '@/lib/format'
 import { StatusBadge } from './_components/status-badge'
 
@@ -40,13 +42,15 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       </>
     )
   }
-  const rows = list.rows
-  const pages = Math.max(1, Math.ceil(list.total / PRODUCTS_PAGE))
   const href = (o: { page?: number }) => {
     const p = new URLSearchParams({ ...(status ? { status } : {}), ...(term ? { q: term } : {}), ...(o.page && o.page > 1 ? { page: String(o.page) } : {}) })
     const qs = p.toString()
     return `/console/products${qs ? `?${qs}` : ''}`
   }
+  const pages = Math.max(1, Math.ceil(list.total / PRODUCTS_PAGE))
+  // Past the last page (a bookmark, a product deleted): back to the last one.
+  if (page > pages) redirect(href({ page: pages }))
+  const rows = list.rows
   return (
     <>
       <PageHeader title="Products" actions={<><Menu items={[{ label: 'HSN codes', href: '/console/products/tax' }, { label: 'Collections', href: '/console/collections' }]} /><Link href="/console/products/photos" className={button({ variant: 'secondary' })}>Add photos</Link>{importLink}{add}</>} />
@@ -95,7 +99,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 /** In stock as a number; otherwise what shoppers see (availability.ts): pre-order and made to order sell at 0. */
 function StockCell({ r, now }: { r: ProductListRow; now: Date }) {
   if (r.stock > 0) return <><Numeric>{r.stock}</Numeric><span className="md:hidden"> in stock</span></>
-  const o = offerOf(r.offers, now)
+  const o = bestOffer(r.offers, now)
   if (!o || !r.variantCount) return <span className="text-muted-foreground">—</span>
   if (o.kind === 'preorder') return <Badge tone="info">Pre-order</Badge>
   if (o.kind === 'made_to_order') return <Badge tone="neutral">Made to order</Badge>

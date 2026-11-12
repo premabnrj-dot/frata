@@ -3,7 +3,7 @@ import { costsVisibleIn } from './settings'
 import type { MemberRole } from '@/domains/tenancy/roles'
 import { cache } from 'react'
 import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
-import { availability, type WhenOut } from '@/domains/catalogue/availability'
+import { availability, type VariantFacts, type WhenOut } from '@/domains/catalogue/availability'
 import { withoutRate, type Unrated } from '@/domains/tax/rates'
 import { matches, type ProductFacts, type Rule } from '@/domains/catalogue/collection-rules'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
@@ -41,7 +41,7 @@ export async function listProducts(tenantId: string, page = 0, status: 'draft' |
         minPrice: sql<number | null>`(select min(v.price)::bigint from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price > 0)`,
         maxPrice: sql<number | null>`(select max(v.price)::bigint from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price > 0)`,
         unpriced: sql<number>`(select count(*)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price <= 0)`,
-        offers: sql<{ stock: number; whenOut: WhenOut; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderCap: number | null }[]>`(select coalesce(json_agg(json_build_object(
+        offers: sql<VariantFacts[]>`(select coalesce(json_agg(json_build_object(
           'stock', v.stock, 'whenOut', v.when_out, 'shipsBy', v.ships_by, 'leadMinDays', v.lead_min_days, 'leadMaxDays', v.lead_max_days, 'preorderCap', v.preorder_cap)), '[]'::json)
           from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
         cover: sql<{ base: string; widths: number[] } | null>`(select json_build_object('base', i.base, 'widths', i.widths) from ${productImages} i where i.product_id = "products"."id" and i.tenant_id = ${tenantId} order by i.position limit 1)`,
@@ -58,12 +58,6 @@ export async function listProducts(tenantId: string, page = 0, status: 'draft' |
       rows: rows.map((r) => ({ ...r, minPrice: r.minPrice === null ? null : Number(r.minPrice), maxPrice: r.maxPrice === null ? null : Number(r.maxPrice) })),
     }
   })
-}
-
-/** What a product offers shoppers, from its variants (availability.ts): the best of them. */
-export function offerOf(offers: { stock: number; whenOut: WhenOut; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderCap: number | null }[], now: Date) {
-  const all = offers.map((v) => availability(v, now))
-  return all.find((a) => a.kind === 'in_stock' || a.kind === 'low_stock') ?? all.find((a) => a.canBuy) ?? all[0] ?? null
 }
 
 export type ProductListRow = Awaited<ReturnType<typeof listProducts>>['rows'][number]
