@@ -137,21 +137,6 @@
   "src/app/(console)/console/look/_components/restore.tsx": {
     "count": 1
   },
-  "src/app/(console)/console/offers/_components/offer-codes.tsx": {
-    "count": 1
-  },
-  "src/app/(console)/console/offers/_components/offer-editor.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/offers/_components/offer-more.tsx": {
-    "count": 1
-  },
-  "src/app/(console)/console/offers/_components/offer-steps.tsx": {
-    "count": 1
-  },
-  "src/app/(console)/console/offers/[id]/page.tsx": {
-    "count": 1
-  },
   "src/app/(console)/console/orders/_components/contact-and-notes.tsx": {
     "count": 4
   },
@@ -202,60 +187,6 @@
   },
   "src/app/(console)/console/search/_components/home-on-google.tsx": {
     "count": 1
-  },
-  "src/app/(console)/console/settings/_components/doc-logo.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/settings/_components/policy-pages.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/settings/_components/settings-form.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/settings/_components/shop-logo.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/settings/_components/unrated.tsx": {
-    "count": 1
-  },
-  "src/app/(console)/console/settings/address/address-form.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/settings/address/domains.tsx": {
-    "count": 4
-  },
-  "src/app/(console)/console/settings/billing/autopay.tsx": {
-    "count": 4
-  },
-  "src/app/(console)/console/settings/billing/details-form.tsx": {
-    "count": 3
-  },
-  "src/app/(console)/console/settings/billing/plan-choice.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/settings/billing/take-more-days.tsx": {
-    "count": 1
-  },
-  "src/app/(console)/console/settings/emails/[kind]/editor.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/settings/emails/switches.tsx": {
-    "count": 1
-  },
-  "src/app/(console)/console/settings/notifications/prefs.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/settings/online-payments/online-payments.tsx": {
-    "count": 4
-  },
-  "src/app/(console)/console/settings/people/accountant.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/settings/people/remove-partner.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/settings/shipping-costs/ship-costs-form.tsx": {
-    "count": 3
   },
   "src/app/(lookeditor)/console/look/customize/controls.tsx": {
     "count": 1

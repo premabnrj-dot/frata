@@ -3,18 +3,18 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { inviteShopAccountant, removeShopAccountant, revokeShopAccountantInvite } from './actions'
 
 /** Settings › People › Accountant (GST plan phase 3): invite your CA by email; they see GST and documents only. */
 export function AccountantCard({ member, invites, consoleUrl }: { member: { userId: string; email: string | null } | null; invites: { id: string; email: string; expires: string }[]; consoleUrl: string }) {
   const router = useRouter()
   const [email, setEmail] = useState('')
-  const [msg, setMsg] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
+  const toast = useToast()
   const [pending, start] = useTransition()
   const act = (fn: () => Promise<{ ok: boolean; error?: string }>, done: string) => start(async () => {
     const r = await fn()
-    setMsg(r.ok ? { tone: 'ok', text: done } : { tone: 'error', text: r.error ?? 'Nothing was changed.' })
-    if (r.ok) { setEmail(''); router.refresh() }
+    if (r.ok) { toast.ok(done); setEmail(''); router.refresh() } else toast.error(r.error ?? 'Nothing was changed.')
   })
   return (
     <div className="space-y-3 px-4 py-3">
@@ -41,7 +41,6 @@ export function AccountantCard({ member, invites, consoleUrl }: { member: { user
           ))}
         </ul>
       )}
-      {msg && <p role={msg.tone === 'error' ? 'alert' : 'status'} className={`text-sm ${msg.tone === 'error' ? 'text-danger-text' : 'text-ok-text'}`}>{msg.text}</p>}
     </div>
   )
 }

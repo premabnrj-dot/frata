@@ -5,7 +5,7 @@
 // Guards: a renamed shop losing its links; another shop taking an old name; the rename limit.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, signedIn } from '../lib.mjs'
+import { CONSOLE, expectToast, signedIn } from '../lib.mjs'
 import { SHOP_DOMAIN, USERS } from '../constants.mjs'
 
 const at = (name) => `http://${name}.${SHOP_DOMAIN}`
@@ -25,7 +25,7 @@ export default {
       await p.getByRole('button', { name: `Add ${to}` }).click()
       const dlg = p.getByRole('dialog', { name: `Add ${to}.${SHOP_DOMAIN}?` }); await dlg.waitFor()
       await dlg.getByRole('button', { name: `Add ${to}` }).click()
-      await p.getByRole('status').filter({ hasText: `Added ${to}.${SHOP_DOMAIN}` }).waitFor()
+      await expectToast(p, `Added ${to}.${SHOP_DOMAIN}`, 'ok')
       const row = p.getByRole('listitem').filter({ hasText: `${to}.${SHOP_DOMAIN}` })
       await row.getByText('Razorpay not approved').waitFor()
       assert.equal(await p.locator('#slug').isDisabled(), true, 'one added name at a time')
@@ -74,7 +74,7 @@ export default {
         await p.goto(CONSOLE + '/console/settings/address')
         await p.fill('#slug', 'kesar-studio'); await p.getByText('Available', { exact: true }).waitFor()
         await p.getByRole('button', { name: 'Change to kesar-studio' }).click()
-        await p.getByRole('status').filter({ hasText: `Moved to kesar-studio.${SHOP_DOMAIN}` }).waitFor()
+        await expectToast(p, `Moved to kesar-studio.${SHOP_DOMAIN}`, 'ok')
       })
       await t.step('Frrata renames the shop: the old address serves nothing; Admin › Names releases it; the shop takes it back', async () => {
         const F = USERS.frata
@@ -109,7 +109,7 @@ export default {
         await p.goto(CONSOLE + '/console/settings/address')
         await p.fill('#slug', 'kesar-studio'); await p.getByText('Available', { exact: true }).waitFor()
         await p.getByRole('button', { name: 'Change to kesar-studio' }).click()
-        await p.getByRole('status').filter({ hasText: `Moved to kesar-studio.${SHOP_DOMAIN}` }).waitFor()
+        await expectToast(p, `Moved to kesar-studio.${SHOP_DOMAIN}`, 'ok')
       })
     } finally {
       await owner.close()
