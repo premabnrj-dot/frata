@@ -44,6 +44,13 @@ Brand-facing (no shell): the intake link; the client preview link
 | Developer | Settings › Developer | CLI, test key, GitHub; out of everyday work |
 | Credits | Credits & billing (page) | Below |
 
+## One session (owner, 2026-11-12: "bring all these in a single chat system vs preview")
+Brand language, the design system, pages and the build are one session: one chat on the left; the preview on the right
+follows it through Brand → Design system → Pages → Site, and its tabs stay open to go back and edit. The agent asks
+at each step ("looks right?") and moves on when the partner agrees; chips under the box suggest the next things to
+say; every edit by hand on the right is mirrored in the chat. The old routes `#brand`, `#design`, `#pages` open the
+session on that tab. The plan is still approved in its popup; the design system is still locked with its card.
+
 ## Clients
 Columns: client (and its Frrata plan), stage (Onboarding, Live, Unlinked), next (who acts: you, the client, the
 agent, nobody), your billing (project or retainer; paid, due, overdue), Studio credits (used / budget), your share.
@@ -59,14 +66,14 @@ Totals: retainers a month, unpaid, share a month.
 |---|---|
 | Plans | Partner free: 10 credits once; Studio ₹2,999 + GST a month, 150 credits; Studio Plus ₹9,999 + GST, 500 (Studio spec) |
 | Packs | 100 credits for ₹1,900 + GST, 12 months (Studio spec, credits proposal) |
-| Rollover | Seat credits roll over one month; soonest to expire is spent first (credits proposal; Q1 open) |
+| Rollover | Seat credits roll over two months; soonest to expire is spent first (owner, 2026-11-12) |
 | Reserve and release | A turn reserves its ceiling, keeps what it used; Frrata-side failures come back (credits proposal) |
 | Budgets | Per client; warn at 80%, pause at 100%, drafts kept (credits proposal) |
 | Refunds | Credits aren't refunded as money; Frrata-side failures return credits (credits proposal) |
 | GST | 18% on every purchase; invoices carry the partner's GSTIN for input credit |
 | Pays by | UPI first (AutoPay mandate for the seat only); card; netbanking. Packs are bought when the partner chooses |
-| Failed payment | Credits already held keep working; the month's seat credits arrive once paid (Q2 grace) |
-| Upgrade | From the next renewal (nothing today) or today (a new month starts today) (Q3) |
+| Failed payment | Credits already held keep working; seat credits arrive once paid; 7 days' grace, then Partner (free) (2026-11-12) |
+| Upgrade | At the next renewal; mid-month needs are a top-up (packs, or a typed number at ₹19 + GST each) (owner, 2026-11-12) |
 | Cancel | Studio ends at the period's end; credits stay until expiry; clients' shops, sites and plans unaffected; the share continues |
 | Share | 20% of what Frrata collects, 24 months from opening, 90 days after unlinking (`PARTNER_TERMS`); statements on the 5th, paid after 30 days, ₹1,000 minimum, self-billed GST, TDS (payout research 2026-11-07; Phase 6) |
 | Separation | Studio credits are what the partner pays Frrata; a brand's Launch/Growth/Scale plan is the brand's; the brand never buys credits and never sees the partner's costs |
@@ -109,8 +116,24 @@ pending (Inbox "Waiting on client", Clients filter).
 7. Developer and environment controls live in Settings and the drawer's Advanced, not in the build flow.
 8. Apps are read, never switched, from Studio.
 
+## Owner decisions (2026-11-12, on Q1–Q6)
+- **Q1 Seat credits roll over two months** (was one). Soonest to expire is still spent first.
+- **Q2 Grace after a failed seat renewal (owner: "you decide"): 7 days.** Credits already held keep working; the
+  month's seat credits arrive once paid; after 7 days unpaid the partner moves to Partner (free) and keeps any pack
+  credits; sites, clients and the share are untouched.
+- **Q3 No mid-month plan change: a top-up instead.** Packs of 100 (₹1,900 + GST), or a typed number of credits at the
+  pack rate (₹19 + GST each; minimum 20). Plan changes take effect at the next renewal. Typing an amount is offered only
+  for top-ups.
+- **Q4 Yes:** a partner sees a brand's Frrata trial ending or a past-due plan, with the brand's consent at linking.
+- **Q5 WhatsApp alerts:** no Frrata number is connected yet. Alerts go by email and in Studio; WhatsApp is a pinned
+  placeholder ("coming").
+- **Q6 Tax on the share:** TDS at the market standard, 2% on commission above ₹20,000 a year (Income-tax Act 2025
+  s.393(1) Table Sl. 1(ii), formerly s.194H; Form 26Q code 1006; from 1 Apr 2026; secondary sources checked
+  2026-11-12, the CA confirms before payouts). GST 18% is added for GST-registered partners and agencies (self-billed
+  invoice); unregistered partners are paid without GST.
+
 ## Open questions for the owner
-- **Q1** Seat rollover (1 month vs 2) and the seat costing more per credit than a pack (credits proposal).
+- **Q1** decided above; the seat still costs more per credit than a pack (₹19.99 vs ₹19.00): open.
 - **Q2** Grace period after a failed seat renewal.
 - **Q3** Upgrading mid-month: new month from today (shown), or prorate.
 - **Q4** May a partner see a brand's Frrata trial ending or a past-due plan (the "At risk" signal)? Recommended: only

@@ -691,7 +691,7 @@ button.pill:hover { background: var(--line) }
 }
 .proto { position: fixed; left: 12px; bottom: 12px; z-index: 35; display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px dashed var(--rani); border-radius: 99px; padding: 4px 6px 4px 10px; font-size: 11.5px; color: var(--rani-text); box-shadow: 0 6px 18px -10px rgb(0 0 0 / .4) }
 .proto select { border: 0; background: transparent; font-size: 12px; color: var(--fg); padding: 2px; max-width: 150px }
-@media (max-width: 900px) { .proto { bottom: calc(70px + env(safe-area-inset-bottom, 0px)) } .app.ws ~ .proto, .app.bare ~ .proto { bottom: 12px } }
+@media (max-width: 900px) { .proto { bottom: calc(70px + env(safe-area-inset-bottom, 0px)) } .app.bare .proto { bottom: 12px } .app.ws .proto { display: none } }
 .inbox-empty { display: none }
 main[data-proto="empty"] .lanes { display: none }
 main[data-proto="empty"] .inbox-empty { display: grid }
@@ -843,6 +843,32 @@ details.more[open] { padding-bottom: 12px }
 #credits-btn.low { background: var(--warn); color: var(--warn-t) }
 .rtabs { overflow-x: auto; scrollbar-width: none }
 .rtabs button { flex: none; padding: 7px 8px }
+/* One session: the preview's steps */
+.top .steps { display: none !important }
+.ptabs { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--card) }
+.ptabs-list { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; flex: 1 }
+.ptabs-list button { flex: none; display: inline-flex; gap: 7px; align-items: center; border: 0; background: transparent; padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--sub); cursor: pointer; transition: background var(--fast) var(--e-std), color var(--fast) var(--e-std) }
+.ptabs-list button .n { width: 18px; height: 18px; border-radius: 99px; border: 1px solid var(--line); display: grid; place-items: center; font-size: 11px; font-weight: 600; transition: background var(--base) var(--e-std) }
+.ptabs-list button.done .n { background: var(--ok); color: var(--ok-t); border-color: transparent }
+.ptabs-list button.cur .n { background: var(--ink); color: var(--on-ink); border-color: var(--ink); animation: chip-pop var(--slow) var(--e-spring) both }
+.ptabs-list button[aria-selected="true"] { background: var(--muted); color: var(--fg) }
+.ppanel { flex: 1; min-height: 0; display: flex; flex-direction: column; container-type: inline-size; animation: fade var(--base) var(--e-std) both }
+.ppanel[data-p="brand"], .ppanel[data-p="pages"] { overflow: auto; padding: 16px; display: block }
+.ppanel[data-p="brand"] > *, .ppanel[data-p="pages"] > * { margin-bottom: 14px }
+.ppanel .voice-out { position: static }
+.ppanel .bbar { padding-left: 12px; padding-right: 12px }
+@container (max-width: 820px) { .ppanel .two { grid-template-columns: minmax(0, 1fr) } }
+@container (max-width: 720px) {
+  .ppanel .page-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) } .ppanel .starters { grid-template-columns: minmax(0, 1fr) }
+  .ppanel .cbody { grid-template-columns: minmax(0, 1fr) }
+  .ppanel .ds-index { position: sticky; z-index: 3; display: flex; overflow-x: auto; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--bg) } .ppanel .ds-index button { white-space: nowrap }
+}
+@media (min-width: 761px) {
+  .panes:not([data-p="site"]) { grid-template-columns: 360px minmax(0, 1fr) }
+  .panes.no-chat:not([data-p="site"]), .panes.full:not([data-p="site"]) { grid-template-columns: 0 minmax(0, 1fr) }
+}
+.panes:not([data-p="site"]) > .rail { display: none }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important }
   .modal, .toast, .modal-wrap { transform: none !important }
@@ -872,7 +898,7 @@ details.more[open] { padding-bottom: 12px }
     <a href="#team" data-nav="team"><i data-lucide="users" class="i"></i><span class="t">Team</span></a>
     <a href="#settings" data-nav="settings"><i data-lucide="settings" class="i"></i><span class="t">Settings</span></a>
     <span class="grp">Working on</span>
-    <a href="#brand" data-nav="site"><span class="ava" style="background:#7A1F2B;width:20px;height:20px;font-size:10px">K</span><span class="t">Kesar Studio</span></a>
+    <a href="#build" data-nav="site"><span class="ava" style="background:#7A1F2B;width:20px;height:20px;font-size:10px">K</span><span class="t">Kesar Studio</span></a>
     <a href="#clients" data-nav="x" data-proto-client="noor"><span class="ava" style="background:#2F5D50;width:20px;height:20px;font-size:10px">N</span><span class="t">Noor Threads</span></a>
   </nav>
   <main id="main">
@@ -1101,7 +1127,7 @@ details.more[open] { padding-bottom: 12px }
         <button class="btn sm" id="b-handover" aria-disabled="true"><i data-lucide="key-round" class="i i-sm"></i>Hand over</button>
         <button class="btn sm icon" id="b-rail" aria-label="Checks"><i data-lucide="panel-right" class="i i-sm"></i></button>
       </div>
-      <div class="mtabs"><div class="seg" id="mtab"><span class="thumb"></span><button aria-pressed="true" data-t="chat">Chat</button><button aria-pressed="false" data-t="stage">Site</button><button aria-pressed="false" data-t="rail">Checks</button></div></div>
+      <div class="mtabs"><div class="seg" id="mtab"><span class="thumb"></span><button aria-pressed="true" data-t="chat">Chat</button><button aria-pressed="false" data-t="stage">Preview</button><button aria-pressed="false" data-t="rail">Checks</button></div></div>
       <div class="panes" id="panes">
         <section class="chat on" data-pane="chat">
           <div class="msgs" id="msgs"></div>
@@ -1122,8 +1148,9 @@ details.more[open] { padding-bottom: 12px }
           </div>
         </section>
         <section class="stage" data-pane="stage">
+          <div class="ptabs"><button class="btn sm icon ghost chat-toggle tip" data-tip="Hide chat  [" aria-label="Hide chat" aria-pressed="true"><i data-lucide="panel-left-close" class="i i-sm"></i></button><div class="ptabs-list" id="ptabs-list" role="tablist" aria-label="Preview"></div></div>
+          <div class="ppanel" data-p="site">
           <div class="sbar">
-            <button class="btn sm icon ghost chat-toggle tip" data-tip="Hide chat  [" aria-label="Hide chat" aria-pressed="true"><i data-lucide="panel-left-close" class="i i-sm"></i></button>
             <div class="seg" id="device-seg"><span class="thumb"></span><button aria-pressed="true" data-dev="desk" aria-label="Desktop"><i data-lucide="monitor" class="i i-sm"></i></button><button aria-pressed="false" data-dev="phone" aria-label="Phone"><i data-lucide="smartphone" class="i i-sm"></i></button></div>
             <div class="urlbar"><i data-lucide="lock" class="i i-sm lock"></i><span id="url">preview-7f3a.kesar.frrata.site</span><span style="flex:1"></span><span>/</span></div>
             <div class="seg" id="route-seg"><span class="thumb"></span><button aria-pressed="true" data-r="home">Home</button><button aria-pressed="false" data-r="collection">Collection</button><button aria-pressed="false" data-r="product">Product</button></div>
@@ -1132,6 +1159,10 @@ details.more[open] { padding-bottom: 12px }
           </div>
           <div class="cmp-bar" id="cmp-bar" hidden><span class="badge">v6 · live</span><input type="range" id="cmp-range" min="0" max="100" value="50" aria-label="Compare live and draft"><span class="badge info">v7 · draft</span></div>
           <div class="viewport"><div class="device" id="device"></div></div>
+          </div>
+          <div class="ppanel" data-p="brand" hidden></div>
+          <div class="ppanel" data-p="design" hidden></div>
+          <div class="ppanel" data-p="pages" hidden></div>
           <form class="float-ask" data-for="ask"><i data-lucide="sparkles" class="i i-sm" style="color:var(--rani)"></i><input placeholder="Ask for a change…" aria-label="Ask for a change"><button class="btn sm primary icon" aria-label="Send"><i data-lucide="arrow-up" class="i i-sm"></i></button></form>
           <div class="peek" hidden></div>
         </section>
@@ -1448,7 +1479,7 @@ async function lockDesignSystem() {
   if (reduced) pre.innerHTML = paint(json)
   else { for (let i = 0; i <= json.length; i += 6) { pre.innerHTML = paint(json.slice(0, i)) + '<span class="caret"></span>'; await wait(12) } pre.innerHTML = paint(json) }
   const go = stage.querySelector('#ds-go'); go.setAttribute('aria-disabled', 'false'); go.focus()
-  const done = (to) => { stage.style.transition = 'opacity 200ms'; stage.style.opacity = '0'; setTimeout(() => stage.remove(), 200); if (to) { markDone('design'); location.hash = to } }
+  const done = (to) => { stage.style.transition = 'opacity 200ms'; stage.style.opacity = '0'; setTimeout(() => stage.remove(), 200); if (to) { markDone('design'); setStage('pages') } }
   stage.querySelector('#ds-back').onclick = () => done()
   go.onclick = () => done('#pages')
   stage.addEventListener('keydown', (e) => { if (e.key === 'Escape') done() })
@@ -1491,7 +1522,7 @@ $('#make-plan').addEventListener('click', () => {
     foot: `<button class="btn" data-x>Keep planning</button><button class="btn primary" id="approve-plan" data-autofocus>${ico('play')}Approve and build</button>`,
     onOpen: (m, close) => {
       m.addEventListener('click', (e) => { const a = e.target.closest('[data-ans]'); if (!a) return; $$('[data-ans]', m).forEach((x) => x.setAttribute('aria-pressed', String(x === a))) })
-      m.querySelector('#approve-plan').onclick = () => { close(); markDone('pages'); location.hash = '#build'; setTimeout(startBuild, 450) }
+      m.querySelector('#approve-plan').onclick = () => { close(); markDone('pages'); setStage('build'); setTimeout(startBuild, 300) }
     },
   })
 })
@@ -1510,7 +1541,7 @@ async function stream(el, text) {
   if (reduced) { p.textContent = text; peek(el, text); return }
   p.classList.add('caret')
   for (let i = 0; i <= text.length; i += 3) { p.textContent = text.slice(0, i); ms.scrollTop = ms.scrollHeight; await wait(14) }
-  p.classList.remove('caret'); peek(el, text)
+  p.textContent = text; p.classList.remove('caret'); peek(el, text)
 }
 function toolBox(el) { const t = document.createElement('div'); t.className = 'tools'; el.querySelector('.bubble').append(t); return t }
 async function tool(box, icon, label, file, ms = 700) {
@@ -1634,14 +1665,17 @@ $('#b-rail').addEventListener('click', () => $('#panes').classList.toggle('show-
 
 /* Composer, suggestions, pins */
 function renderSuggest() {
+  if (S.stage === 'design') { renderDsSuggest(); return }
+  if (S.stage === 'brand' || S.stage === 'pages') { $('#suggest').innerHTML = (S.stage === 'brand' ? ['Warmer', 'More formal', 'Hinglish headlines', 'Looks right'] : ['Add a Lookbook page', 'Only Home for now', 'Try 3 heroes', 'Show me the plan']).map((t) => `<button class="chip" data-sg="${t}">${t}</button>`).join(''); return }
   const s = S.built ? ['Set the hero in Hindi', 'Make the weavers story longer', 'What can I build with Kesar’s apps?', 'Try 3 heroes'] : ['Start the build']
   $('#suggest').innerHTML = s.map((t) => `<button class="chip" data-sg="${t}">${t}</button>`).join('')
 }
-$('#suggest').addEventListener('click', (e) => { const b = e.target.closest('[data-sg]'); if (!b) return; if (b.dataset.sg === 'Start the build') { startBuild(); return } $('#ask').value = b.dataset.sg; $('#ask').focus() })
+$('#suggest').addEventListener('click', (e) => { const b = e.target.closest('[data-sg]'); if (!b) return; if (b.dataset.sg === 'Start the build') { startBuild(); return } $('#ask').value = b.dataset.sg; if (S.stage && S.stage !== 'build') send(); else $('#ask').focus() })
 msgs.addEventListener('click', (e) => { const q = e.target.closest('[data-quick]'); if (!q) return; if (q.dataset.quick === 'hindi') { $('#ask').value = 'Set the hero in Hindi'; send() } else if (q.dataset.quick === 'variants') openVariants(); else openClient() })
 const refs = []
 async function send() {
   const v = $('#ask').value.trim(); if (!v && !refs.length) return
+  if (S.stage && S.stage !== 'build') return sessionTurn(v)
   if (!S.built) { toast('The build starts from the plan first.', 'info'); return }
   if (capCheck()) return
   addMsg('me', `${refs.length ? `<div class="refs" style="margin-bottom:6px">${refs.map((r) => `<span class="ref">${ico('map-pin', 'i i-sm')}${r}</span>`).join('')}</div>` : ''}<p>${esc(v || 'See the pins.')}</p>`)
@@ -1794,7 +1828,7 @@ $$('.float-ask').forEach((f) => f.addEventListener('submit', (e) => {
 }))
 
 /* ════════ DESIGN SYSTEM IN CHAT ════════ */
-const dmsgs = $('#dmsgs')
+const dmsgs = $('#msgs')
 const SECS = [['preview', 'Preview', 'eye'], ['colour', 'Colour', 'palette'], ['type', 'Type', 'type'], ['icons', 'Icons', 'shapes'], ['graphics', 'Graphics', 'sparkle'], ['imagery', 'Imagery', 'image'], ['components', 'Components', 'component'], ['layout', 'Space and motion', 'move'], ['voice', 'Voice', 'message-square-quote'], ['seasons', 'Seasons', 'calendar-heart']]
 $('#ds-index').innerHTML = SECS.map(([k, n, ic], i) => `<button data-sec="${k}" aria-current="${i === 0}">${ico(ic, 'i i-sm')}${n}</button>`).join('')
 function showSec(k) {
@@ -1916,6 +1950,7 @@ const DS_ORDER = ['icons', 'motif', 'season', 'hindi', 'warm', 'aaa', 'round', '
 function renderDsSuggest() {
   const done = new Set([S.brandIcons && 'icons', S.motifs.length && 'motif', S.season && 'season', S.hindiHeads && 'hindi', S.aaa && 'aaa'].filter(Boolean))
   $('#dsuggest').innerHTML = DS_ORDER.filter((k) => !done.has(k)).map((k) => `<button class="chip" data-ds-ask="${k}">${DS_ACT[k].chip}</button>`).join('')
+  if (S.stage === 'design') { $('#suggest').innerHTML = `<button class="chip" data-sg="Use this design system">${ico('lock', 'i i-sm')}Use this design system</button>` + $('#dsuggest').innerHTML; icons($('#suggest')) }
 }
 let dsBusy = false
 async function dsRun(text, key) {
@@ -2123,7 +2158,7 @@ $('#in-next').addEventListener('click', () => {
   if (S.in.step === IN_N) {
     S.in.step++; renderIntake()
     S.intakeIn = true; S.use = [...S.in.use]; S.avoid = [...S.in.never]; $('#b-line').value = S.in.line; renderChips(); renderVoice(); renderInbox()
-    dmsgs.innerHTML = ''; dsIntroDone = false; S.dsVer = 1
+    dsIntroDone = false; S.dsVer = 1
     setTimeout(() => toast('Riya sent her intake. Kesar is ready for a design system.', 'info', { label: 'Open', run: () => { location.hash = '#design' } }), 1600)
     return
   }
@@ -2133,7 +2168,7 @@ $('#in-back').addEventListener('click', () => { if (S.in.step > 1) { S.in.step--
 function renderInbox() {
   const el = $('#intake-card'); if (!el) return
   el.innerHTML = S.intakeIn
-    ? `<div class="card task" data-go="design" style="animation:rise 320ms var(--e-spring) both"><div class="who"><span class="ava" style="background:#7A1F2B">K</span>Kesar Studio</div><p>Intake in: ${[S.in.logo && 'logo', S.in.site && 'site', S.in.ig && 'Instagram', S.in.guide && 'guide', S.in.photos && S.in.photos + ' photos'].filter(Boolean).join(', ') || 'words only'}</p><span class="badge ok" style="justify-self:start">${ico('swatch-book', 'i i-sm')}Build the design system</span></div>`
+    ? `<div class="card task" data-go="build" style="animation:rise 320ms var(--e-spring) both"><div class="who"><span class="ava" style="background:#7A1F2B">K</span>Kesar Studio</div><p>Intake in: ${[S.in.logo && 'logo', S.in.site && 'site', S.in.ig && 'Instagram', S.in.guide && 'guide', S.in.photos && S.in.photos + ' photos'].filter(Boolean).join(', ') || 'words only'}</p><span class="badge ok" style="justify-self:start">${ico('play', 'i i-sm')}Start the session</span></div>`
     : S.intakeSent ? `<div class="card task" data-go="intake"><div class="who"><span class="ava" style="background:#7A1F2B">K</span>Kesar Studio</div><p>Waiting for Riya’s intake · sent just now</p><span class="badge info" style="justify-self:start">${ico('smartphone', 'i i-sm')}See her view</span></div>` : ''
   icons(el)
 }
@@ -2358,7 +2393,7 @@ function addInvoice(c, closeDrawer) {
 }
 
 /* ════════ CREDITS & BILLING ════════ */
-const PLANS = [['free', 'Partner', 0, '10 credits, once', ['For trying Studio']], ['studio', 'Studio', 2999, '150 credits every month', ['Seat credits roll over one month', 'Packs on top: 100 for ₹1,900 + GST']], ['plus', 'Studio Plus', 9999, '500 credits every month', ['Seat credits roll over one month', 'Packs on top: 100 for ₹1,900 + GST']]]
+const PLANS = [['free', 'Partner', 0, '10 credits, once', ['For trying Studio']], ['studio', 'Studio', 2999, '150 credits every month', ['Seat credits roll over two months', 'Top up any time: ₹19 + GST a credit']], ['plus', 'Studio Plus', 9999, '500 credits every month', ['Seat credits roll over two months', 'Top up any time: ₹19 + GST a credit']]]
 const BILL = { plan: 'studio', renews: '1 Dec 2026', autopay: 'UPI AutoPay · pixelthread@okhdfc', cancels: false, reserved: 18, used: 108, seatLeft: 42, packLeft: 100, packs: 1, pay: [['1 Nov', 'Studio · November', 3538.82, 'paid', 'FRR/26-27/00131'], ['3 Oct', 'Credit pack · 100', 2242, 'paid', 'FRR/26-27/00118'], ['1 Oct', 'Studio · October', 3538.82, 'failed', '—'], ['2 Oct', 'Studio · October (retried)', 3538.82, 'paid', 'FRR/26-27/00112']] }
 const USAGE = [['Kesar Studio', 'Design system v1–v3', 'Meera', [8, 15], 12, 'Charged'], ['Kesar Studio', 'Diwali home · build', 'Meera', [34, 42], () => 31 + S.siteCredits, 'Charged'], ['Noor Threads', 'Sana’s 3 notes', 'Rohan', [6, 10], 6, 'Charged'], ['Bandhej Co.', 'Lookbook page', 'Meera', [10, 14], 12, 'Running · reserved'], ['Bandhej Co.', 'Lookbook · first try', 'Meera', [10, 14], 4, 'Returned · Frrata’s fault'], ['Vastra Loom', 'Routine: New in', 'Rohan', [4, 6], 6, 'Running · reserved'], ['Mitti Ceramics', 'Kit 2.3 update', 'Frrata', [0, 0], 0, 'Frrata paid'], ['Haldi House', 'Festive banner · 3 variants', 'Rohan', [12, 18], 14, 'Charged']]
 let bTab = 'overview'
@@ -2368,7 +2403,7 @@ function renderBilling() {
   $('#b-tabs').innerHTML = B_TABS.map(([k, n]) => `<button role="tab" aria-selected="${bTab === k}" data-bt="${k}">${n}</button>`).join('')
   const ban = $('#b-banner')
   ban.innerHTML = S.proto === 'low' ? `<div class="banner warn">${ico('battery-low', 'i')}<span class="grow"><b>8 credits left.</b> Turns that need more will wait; nothing is lost.</span><button class="btn sm primary" data-buy>Buy credits</button></div>`
-    : S.proto === 'payfail' || BILL.failed ? `<div class="banner bad">${ico('credit-card', 'i')}<span class="grow"><b>The 1 Dec renewal didn’t go through.</b> Your credits still work; December’s 150 arrive once it’s paid.</span><button class="btn sm primary" data-pay-renewal>Pay ₹3,538.82</button></div>`
+    : S.proto === 'payfail' || BILL.failed ? `<div class="banner bad">${ico('credit-card', 'i')}<span class="grow"><b>The 1 Dec renewal didn’t go through.</b> Your credits still work. December’s 150 arrive once it’s paid; after 7 days Studio pauses to Partner (free) and top-ups stay.</span><button class="btn sm primary" data-pay-renewal>Pay ₹3,538.82</button></div>`
     : BILL.cancels ? `<div class="banner info">${ico('calendar-x', 'i')}<span class="grow"><b>Studio ends on 30 Nov.</b> Credits you have stay usable until they expire.</span><button class="btn sm" data-resume>Keep Studio</button></div>` : ''
   icons(ban)
   const body = $('#b-body')
@@ -2384,17 +2419,17 @@ function renderBilling() {
         <span class="sub" style="font-size:12.5px">A turn reserves its most, then keeps only what it used. Turns that fail on Frrata’s side come back.</span></div>
       <div class="card" style="padding:16px;display:grid;gap:10px"><div class="sec-h"><h2>Where your credits sit</h2><span class="sub" style="font-size:12px">Soonest to expire is used first</span></div>
         <div class="tbl-wrap" style="border:0"><table class="tbl" style="min-width:0"><tbody>
-          <tr><td>November seat</td><td class="n">${Math.min(BILL.seatLeft, av)} of 150</td><td class="n sub">use by 31 Dec</td></tr>
+          <tr><td>November seat</td><td class="n">${Math.min(BILL.seatLeft, av)} of 150</td><td class="n sub">use by 31 Jan</td></tr>
           <tr><td>Pack · bought 3 Oct</td><td class="n">${Math.max(0, av - Math.min(BILL.seatLeft, av))} of ${BILL.packs * 100}</td><td class="n sub">use by 3 Oct 2027</td></tr></tbody></table></div>
-        <span class="sub" style="font-size:12px">Seat credits roll over one month. Packs last 12 months. Credits aren’t refunded as money.</span></div>
+        <span class="sub" style="font-size:12px">Seat credits roll over two months. Top-ups last 12 months. Credits aren’t refunded as money.</span></div>
       <div class="card" style="padding:16px;display:grid;gap:8px"><div class="sec-h"><h2>Recent</h2><button class="btn sm ghost" data-bt="usage">See all usage</button></div>
         ${S.proto === 'empty' ? `<div class="panel-msg" style="padding:18px">${ico('receipt', 'i i-lg')}<b>No usage yet</b><span>Start a site and each turn shows here with its estimate.</span></div>` : USAGE.slice(0, 4).map((r) => usageLine(r)).join('')}</div></div>
       <div style="display:grid;gap:18px;align-content:start">${buyCard()}
-      <div class="card" style="padding:16px;display:grid;gap:10px"><div class="sec-h"><h2>Plan</h2><button class="btn sm ghost" data-bt="plan">Change</button></div><div class="kv"><span>Studio</span><b>₹2,999 + GST a month</b></div><div class="kv"><span>${BILL.cancels ? 'Ends' : 'Renews'}</span><b>${BILL.cancels ? '30 Nov' : BILL.renews}</b></div><div class="kv"><span>Pays by</span><b>${BILL.autopay}</b></div></div>
+      <div class="card" style="padding:16px;display:grid;gap:10px"><div class="sec-h"><h2>Plan</h2><button class="btn sm ghost" data-bt="plan">Change</button></div><div class="kv"><span>Studio</span><b>₹2,999 + GST a month</b></div><div class="kv"><span>${BILL.cancels ? 'Ends' : 'Renews'}</span><b>${BILL.cancels ? '30 Nov' : BILL.renews}${BILL.next === 'plus' ? ' · as Studio Plus' : ''}</b></div><div class="kv"><span>Pays by</span><b>${BILL.autopay}</b></div></div>
       <div class="card" style="padding:16px;display:grid;gap:10px"><h2 style="font:600 15px var(--f-display);margin:0">Alerts</h2>
         <label style="display:flex;gap:10px;align-items:center;font-size:13px"><span class="switch"><input type="checkbox" checked aria-label="Below 50 credits"><span></span></span>When I’m below 50 credits</label>
         <label style="display:flex;gap:10px;align-items:center;font-size:13px"><span class="switch"><input type="checkbox" checked aria-label="Client at 80%"><span></span></span>When a client reaches 80%</label>
-        <span class="sub" style="font-size:12px">By email and in Studio, to the owner and the client’s lead.</span></div></div></div>`
+        <label style="display:flex;gap:10px;align-items:center;font-size:13px;color:var(--sub)"><span class="switch"><input type="checkbox" disabled aria-label="WhatsApp alerts"><span></span></span>On WhatsApp <span class="badge">Coming</span></label><span class="sub" style="font-size:12px">By email and in Studio, to the owner and the client’s lead.</span></div></div></div>`
     icons(body); bindBuy(body)
   } else if (bTab === 'usage') {
     const rows = S.proto === 'empty' ? [] : USAGE
@@ -2422,11 +2457,11 @@ function renderBilling() {
   } else if (bTab === 'share') {
     const rows = PORT.filter((c) => c.share)
     const g = rows.reduce((a, c) => a + c.share, 0), tds = Math.round(g * 2) / 100
-    body.innerHTML = `<div class="bgrid"><div style="display:grid;gap:18px"><div class="card bal"><div class="bal-n"><span class="big-n" style="font-size:36px">${inr(g)}</span><span class="sub">for October · pays 5 Dec</span></div><div class="sum"><div class="kv"><span>Your 20% of what Frrata collected</span><b>${inr(g)}</b></div><div class="kv"><span>+ GST 18% (self-billed invoice)</span><b>${inr(gst(g))}</b></div><div class="kv"><span>− TDS</span><b>−${inr(tds)}</b></div><div class="kv"><span>To HDFC ••4421</span><b>${inr(g + gst(g) - tds)}</b></div></div>
+    body.innerHTML = `<div class="bgrid"><div style="display:grid;gap:18px"><div class="card bal"><div class="bal-n"><span class="big-n" style="font-size:36px">${inr(g)}</span><span class="sub">for October · pays 5 Dec</span></div><div class="sum"><div class="kv"><span>Your 20% of what Frrata collected</span><b>${inr(g)}</b></div><div class="kv"><span>+ GST 18% (self-billed invoice)</span><b>${inr(gst(g))}</b></div><div class="kv"><span>− TDS 2% (s.393, was 194H)</span><b>−${inr(tds)}</b></div><div class="kv"><span>To HDFC ••4421</span><b>${inr(g + gst(g) - tds)}</b></div></div>
         <span class="sub" style="font-size:12px">Frrata pays this to you. It’s separate from the credits you buy.</span></div>
       <div class="card"><div class="tbl-wrap" style="border:0"><table class="tbl"><thead><tr><th>Client</th><th>Their plan</th><th class="n">Your 20%</th><th>Window</th></tr></thead><tbody>${rows.map((c) => `<tr><td>${c.n}</td><td>${c.plan}</td><td class="n">${inr(c.share)}</td><td class="sub">${typeof c.sm === 'number' ? `month ${c.sm} of 24` : c.sm}</td></tr>`).join('')}</tbody></table></div></div></div>
       <div style="display:grid;gap:18px;align-content:start"><div class="card" style="padding:16px;display:grid;gap:8px"><h2 style="font:600 15px var(--f-display);margin:0">Statements</h2>${[['October', g, 'Pays 5 Dec', 'info'], ['September', 9169.2, 'Paid 5 Nov · UTR ••8842', 'ok'], ['August', 5289.4, 'Paid 5 Oct', 'ok'], ['July', 704.8, 'Carried to August · under ₹1,000', '']].map(([m, a, s, k]) => `<div class="inv"><span><b>${m}</b><small>${s}</small></span><span class="money">${inr(a)}</span><button class="btn sm icon ghost" aria-label="${m} statement" data-inv="${m} statement">${ico('file-down', 'i i-sm')}</button></div>`).join('')}</div>
-        <div class="card" style="padding:16px;display:grid;gap:8px"><h2 style="font:600 15px var(--f-display);margin:0">Payout details</h2><div class="kv"><span>PAN</span><b>${ico('check', 'i i-sm')} AAACP••••R</b></div><div class="kv"><span>Bank</span><b>${ico('check', 'i i-sm')} HDFC ••4421</b></div><div class="kv"><span>GSTIN</span><b>${ico('check', 'i i-sm')} on file</b></div><span class="sub" style="font-size:12px">Paid on the 5th for the month before last, once it’s over ₹1,000.</span></div></div></div>`
+        <div class="card" style="padding:16px;display:grid;gap:8px"><h2 style="font:600 15px var(--f-display);margin:0">Payout details</h2><div class="kv"><span>PAN</span><b>${ico('check', 'i i-sm')} AAACP••••R</b></div><div class="kv"><span>Bank</span><b>${ico('check', 'i i-sm')} HDFC ••4421</b></div><div class="kv"><span>GSTIN</span><b>${ico('check', 'i i-sm')} on file</b></div><span class="sub" style="font-size:12px">Paid on the 5th for the month before last, once it’s over ₹1,000. TDS applies above ₹20,000 a year; GST is added only with a GSTIN.</span></div></div></div>`
     icons(body)
   }
 }
@@ -2436,15 +2471,27 @@ function usageRow(r, i) {
   const k = /Charged/.test(r[5]) ? 'ok' : /Running/.test(r[5]) ? 'warn' : 'info'
   return `<tr data-client="${r[0]}" style="animation-delay:${i * 40}ms"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="n">${hi ? `<span class="est"><span>${lo}–${hi} → <b style="color:var(--fg)">${a}</b></span><span class="rng"><i style="left:${lo / max * 100}%;width:${(hi - lo) / max * 100}%"></i><b style="left:${Math.min(98, a / max * 100)}%"></b></span></span>` : '—'}</td><td><span class="badge ${k}">${r[5]}</span></td></tr>`
 }
-let packs = 1
+let packs = 1, topMode = 'packs', customN = 250
+function topSum(n) { const amt = n * 19; return `<div class="kv"><span>${n} credits × ₹19</span><b>${inr(amt)}</b></div><div class="kv"><span>GST 18%</span><b>${inr(gst(amt))}</b></div><div class="kv"><span>You pay</span><b>${inr(amt + gst(amt))}</b></div>` }
 function buyCard() {
-  const amt = packs * 1900
-  return `<div class="card" style="padding:16px;display:grid;gap:12px" id="buy"><div class="sec-h"><h2>Buy credits</h2><span class="badge info">100 credits a pack</span></div>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="stepper"><button data-pk="-1" aria-label="One fewer pack">${ico('minus', 'i i-sm')}</button><output id="pk-n">${packs}</output><button data-pk="1" aria-label="One more pack">${ico('plus', 'i i-sm')}</button></span><span><b class="mono">${packs * 100}</b> <span class="sub">credits · last 12 months</span></span></div>
-    <div class="sum"><div class="kv"><span>${packs} × ₹1,900</span><b>${inr(amt)}</b></div><div class="kv"><span>GST 18%</span><b>${inr(gst(amt))}</b></div><div class="kv"><span>You pay</span><b>${inr(amt + gst(amt))}</b></div></div>
-    <button class="btn primary" data-buy>${ico('smartphone', 'i i-sm')}Pay ${inr(amt + gst(amt))} by UPI</button></div>`
+  const n = topMode === 'packs' ? packs * 100 : customN, amt = n * 19
+  return `<div class="card" style="padding:16px;display:grid;gap:12px" id="buy"><div class="sec-h"><h2>Top up</h2><div class="seg" id="tm"><span class="thumb"></span><button aria-pressed="${topMode === 'packs'}" data-tm="packs">Packs</button><button aria-pressed="${topMode === 'custom'}" data-tm="custom">Any amount</button></div></div>
+    ${topMode === 'packs' ? `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="stepper"><button data-pk="-1" aria-label="One fewer pack">${ico('minus', 'i i-sm')}</button><output id="pk-n">${packs}</output><button data-pk="1" aria-label="One more pack">${ico('plus', 'i i-sm')}</button></span><span><b class="mono">${packs * 100}</b> <span class="sub">credits · 100 a pack</span></span></div>`
+    : `<div class="field"><label for="tu-n">Credits</label><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input id="tu-n" class="input mono" inputmode="numeric" value="${customN}" style="max-width:120px" aria-describedby="tu-err"><span class="sub" style="font-size:12.5px">20 to 5,000 · ₹19 each</span></div><span id="tu-err"></span></div>`}
+    <div class="sum" id="tu-sum">${topSum(n)}</div><span class="sub" style="font-size:12px">Top-ups last 12 months. A plan change starts at your next renewal.</span>
+    <button class="btn primary" data-buy id="tu-pay">${ico('smartphone', 'i i-sm')}Pay ${inr(amt + gst(amt))} by UPI</button></div>`
 }
-function bindBuy(root) { root.querySelectorAll('[data-pk]').forEach((b) => b.onclick = () => { packs = Math.min(10, Math.max(1, packs + +b.dataset.pk)); const card = $('#buy'); card.outerHTML = buyCard(); icons($('#buy')); bindBuy($('#buy')) }) }
+function bindBuy(root) {
+  const redraw = () => { $('#buy').outerHTML = buyCard(); icons($('#buy')); bindBuy($('#buy')) }
+  root.querySelectorAll('[data-pk]').forEach((b) => { b.onclick = () => { packs = Math.min(10, Math.max(1, packs + +b.dataset.pk)); redraw() } })
+  const tm = root.querySelector('#tm'); if (tm) { const p = seg(tm, (b) => { topMode = b.dataset.tm; redraw(); if (topMode === 'custom') $('#tu-n')?.focus() }); setTimeout(p, 30) }
+  const inp = root.querySelector('#tu-n'); if (inp) inp.addEventListener('input', () => { customN = +inp.value.replace(/\D/g, '') || 0; inp.removeAttribute('aria-invalid'); $('#tu-err').innerHTML = ''; $('#tu-sum').innerHTML = topSum(customN); $('#tu-pay').innerHTML = `${ico('smartphone', 'i i-sm')}Pay ${inr(customN * 19 + gst(customN * 19))} by UPI`; icons($('#tu-pay')) })
+}
+function topUp() {
+  const n = topMode === 'packs' ? packs * 100 : customN
+  if (topMode === 'custom' && !(n >= 20 && n <= 5000)) { const i = $('#tu-n'); if (i) { i.setAttribute('aria-invalid', 'true'); $('#tu-err').innerHTML = `<span class="err-line">${ico('alert-circle', 'i i-sm')}${n < 20 ? 'At least 20 credits' : 'Up to 5,000 at a time'}</span>`; icons($('#tu-err')); i.focus() } return }
+  checkout({ what: topMode === 'packs' ? `${packs} credit pack${packs > 1 ? 's' : ''} · ${n} credits` : `Top-up · ${n} credits`, amt: n * 19, credits: n, onPaid: () => { if (topMode === 'packs') BILL.packs += packs; if (S.proto === 'low') { S.proto = 'normal'; $('#proto').value = 'normal' } } })
+}
 function checkout({ what, amt, credits, onPaid }) {
   const total = amt + gst(amt); let fail = S.proto === 'payfail'
   modal({ title: what, pic: picEl('smartphone', 'var(--muted)', 'var(--fg)'),
@@ -2473,8 +2520,8 @@ $('#b-tabs').addEventListener('click', (e) => { const b = e.target.closest('[dat
 $('#b-recharge').addEventListener('click', () => { bTab = 'overview'; renderBilling(); setTimeout(() => $('#buy')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' }), 50) })
 document.addEventListener('click', (e) => {
   if (!e.target.closest('#b-body, #b-banner, .modal')) return
-  const t = e.target.closest('[data-bt]'); if (t && t.closest('#b-body')) { bTab = t.dataset.bt; renderBilling(); return }
-  if (e.target.closest('[data-buy]')) checkout({ what: `${packs} credit pack${packs > 1 ? 's' : ''} · ${packs * 100} credits`, amt: packs * 1900, credits: packs * 100, onPaid: () => { BILL.packs += packs; if (S.proto === 'low') { S.proto = 'normal'; $('#proto').value = 'normal' } } })
+  const t = e.target.closest('[data-bt]'); if (t && (t.closest('#b-body') || t.closest('.modal'))) { bTab = t.dataset.bt; renderBilling(); if (t.closest('.modal')) setTimeout(() => $('#buy')?.scrollIntoView({ block: 'center' }), 360); return }
+  if (e.target.closest('[data-buy]')) topUp()
   if (e.target.closest('[data-pay-renewal]')) checkout({ what: 'Studio · December', amt: 2999, credits: 150, onPaid: () => { BILL.failed = false; if (S.proto === 'payfail') { S.proto = 'normal'; $('#proto').value = 'normal' } } })
   const iv = e.target.closest('[data-inv]'); if (iv) toast(`${iv.dataset.inv}.pdf downloaded.`)
   if (e.target.closest('[data-csv]')) toast('usage-nov-2026.csv downloaded: one row per turn, with GST.')
@@ -2482,9 +2529,9 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('[data-resume]')) { BILL.cancels = false; renderBilling(); toast('Studio continues. Renews 1 Dec.') }
   if (e.target.closest('[data-change-pm]')) toast('Opens a new UPI AutoPay mandate in your UPI app.', 'info')
   if (e.target.closest('[data-upgrade]')) modal({ title: 'Move to Studio Plus?', pic: picEl('arrow-up-circle', 'var(--info)', 'var(--info-t)'),
-    body: `<div class="sum"><div class="kv"><span>Studio Plus</span><b>₹9,999 + GST a month</b></div><div class="kv"><span>Credits each month</span><b>500</b></div></div><div class="seg" id="up-when"><span class="thumb"></span><button aria-pressed="true">From 1 Dec</button><button aria-pressed="false">Today</button></div><span class="sub" style="font-size:12.5px" id="up-note">Nothing to pay today. Your Studio credits stay.</span>`,
-    foot: `<button class="btn" data-x>Stay on Studio</button><button class="btn primary" id="up-ok">Move to Plus</button>`,
-    onOpen: (m, close) => { let now = false; const p = seg($('#up-when', m), (b) => { now = b.textContent === 'Today'; $('#up-note', m).textContent = now ? 'A new month starts today: you pay ₹11,798.82 now and get 500 credits. Your Studio credits stay.' : 'Nothing to pay today. Your Studio credits stay.' }); setTimeout(p, 40); $('#up-ok', m).onclick = () => { close(); if (now) checkout({ what: 'Studio Plus', amt: 9999, credits: 500, onPaid: () => { BILL.plan = 'plus' } }); else { BILL.plan = 'studio'; toast('Studio Plus from 1 Dec.') ; renderBilling() } } } })
+    body: `<div class="sum"><div class="kv"><span>Studio Plus</span><b>₹9,999 + GST a month</b></div><div class="kv"><span>Credits each month</span><b>500</b></div><div class="kv"><span>Starts</span><b>1 Dec, at your renewal</b></div></div><span class="sub" style="font-size:12.5px">Nothing to pay today. Need credits before then? Top up.</span>`,
+    foot: `<button class="btn" data-x>Stay on Studio</button><button class="btn" data-x data-bt="overview">Top up instead</button><button class="btn primary" id="up-ok">Move on 1 Dec</button>`,
+    onOpen: (m, close) => { $('#up-ok', m).onclick = () => { close(); BILL.next = 'plus'; renderBilling(); toast('Studio Plus from 1 Dec.', 'ok', { label: 'Undo', run: () => { BILL.next = null; renderBilling() } }) } } })
   if (e.target.closest('[data-cancel-plan]')) modal({ title: 'Cancel Studio?', pic: picEl('calendar-x', 'var(--bad)', 'var(--bad-t)'),
     body: `<div style="display:grid;gap:8px">${['Studio works until 30 Nov', `Credits you have stay usable until they expire (${S.credits} now)`, 'Your clients’ shops, sites and Frrata plans keep running', 'Your 20% share keeps coming: it doesn’t depend on Studio', 'Routines stop on 30 Nov'].map((t) => `<div class="check-row"><span class="ic">${ico('arrow-right', 'i i-sm')}</span><span class="grow">${t}</span></div>`).join('')}</div>`,
     foot: `<button class="btn" data-x>Keep Studio</button><button class="btn danger" id="cx-ok">Cancel at 30 Nov</button>`,
@@ -2541,6 +2588,77 @@ document.addEventListener('click', (e) => { const q = e.target.closest('[data-as
 document.addEventListener('click', (e) => { if (e.target.closest('[data-req-intake]')) { S.intakeSent = true; renderInbox(); toast('Intake sent to Riya on WhatsApp.', 'ok', { label: 'See her view', run: () => { location.hash = '#intake' } }) } })
 document.addEventListener('click', (e) => { if (e.target.closest('[data-handover]')) setTimeout(openHandover, 360) })
 
+/* ════════ ONE SESSION: a single chat; the preview follows Brand → Design system → Pages → Site ════════ */
+const SSTEPS = [['brand', 'Brand', 'message-square-quote'], ['design', 'Design system', 'swatch-book'], ['pages', 'Pages', 'files'], ['site', 'Site', 'monitor']]
+const STAGES = ['brand', 'design', 'pages', 'build']
+const stIdx = (s) => STAGES.indexOf(s)
+function mountSession() {
+  const P = (k) => $(`.ppanel[data-p="${k}"]`)
+  P('brand').append($('section[data-view="brand"] .two'))
+  const dbar = $('section[data-view="design"] .bbar'); dbar.querySelector('a[href="#brand"]')?.remove(); P('design').append(dbar, $('section[data-view="design"] .cbody'), $('#ds-strip'))
+  const pg = $$('section[data-view="pages"] > div'); const foot = $('section[data-view="pages"] .foot'); foot.querySelector('a[href="#design"]')?.remove(); P('pages').append(pg[1], foot)
+}
+function paintPtabs() {
+  $('#ptabs-list').innerHTML = SSTEPS.map(([k, n], i) => { const done = stIdx(S.stage) > i, cur = stIdx(S.stage) === i; return `<button role="tab" data-p="${k}" aria-selected="${S.p === k}" class="${done ? 'done' : ''} ${cur ? 'cur' : ''}"><span class="n">${done ? ico('check', 'i i-sm') : i + 1}</span>${n}</button>` }).join('')
+  icons($('#ptabs-list'))
+}
+function setP(p) {
+  S.p = p; $$('.ppanel').forEach((x) => { x.hidden = x.dataset.p !== p }); $('#panes').dataset.p = p; paintPtabs()
+  if (p === 'design') { renderKit(); renderDs() }
+  if (p === 'site' && !$('#device').innerHTML) { renderDevice('ghost'); renderRail('checks', true) }
+  S._lastP = p; requestAnimationFrame(() => segPlacers.forEach((f) => f()))
+}
+function setStage(st) {
+  S.stage = st; if (st !== 'build') setStatus('', { brand: 'Brand', design: 'Design system', pages: 'Planning' }[st]); setP(st === 'build' ? 'site' : st); if (matchMedia('(max-width: 760px)').matches) mtab('chat'); renderSuggest()
+  if (st === 'brand') brandIntro(); if (st === 'design') dsIntro(); if (st === 'pages') pagesIntro()
+}
+$('#ptabs-list').addEventListener('click', (e) => { const b = e.target.closest('[data-p]'); if (b) setP(b.dataset.p) })
+function sessionStart() { if (!S.stage) setStage('brand') }
+async function brandIntro() {
+  const a = addMsg('agent', ''); a.querySelector('.agent-ava').classList.add('think'); const box = toolBox(a)
+  await tool(box, 'message-square-quote', 'Read', S.intakeIn ? 'Riya’s words · site copy' : '212 product descriptions', 420); await tool(box, 'book-open', 'Read', 'policies · about page', 360); await tool(box, 'file-pen-line', 'Wrote', 'brand.md · draft', 380)
+  a.querySelector('.agent-ava').classList.remove('think')
+  await stream(a, `First, how Kesar speaks. I drafted it from ${S.intakeIn ? 'Riya’s intake' : 'the catalogue and policies'}: warm, steady, rich, English first. It’s on the right. Change anything there or here, then say “looks right”.`)
+}
+async function pagesIntro() {
+  const a = addMsg('agent', ''); a.querySelector('.agent-ava').classList.add('think'); const box = toolBox(a)
+  await tool(box, 'database', 'Read', 'preview catalogue · 32 products, 4 collections', 420)
+  a.querySelector('.agent-ava').classList.remove('think')
+  await stream(a, `Now what to build first. From the catalogue I’d start with Home, Collection, Product and Size help on Starter 0: about ${$('#est').textContent} credits. Tick pages on the right, add to the brief, then ask for the plan.`)
+}
+function setRange(id, val) { const r = $(id); r.value = val; r.dispatchEvent(new Event('input')) }
+async function sessionTurn(v) {
+  $('#ask').value = ''
+  if (S.stage === 'design') {
+    const key = Object.keys(DS_ACT).find((k) => DS_ACT[k].re.test(v))
+    if (!key && /use this|lock|looks right|next|done/i.test(v)) { addMsg('me', `<p>${esc(v)}</p>`); lockDesignSystem(); return }
+    dsRun(v, key); return
+  }
+  addMsg('me', `<p>${esc(v)}</p>`)
+  const a = addMsg('agent', ''); a.querySelector('.agent-ava').classList.add('think'); await wait(reduced ? 30 : 450); a.querySelector('.agent-ava').classList.remove('think')
+  if (S.stage === 'brand') {
+    if (/looks right|good|next|^ok|yes|done/i.test(v)) { await stream(a, 'Saved as brand.md v1; every session reads it. Next, the look: a design system from the logo and photos.'); bumpCredits(1); markDone('brand'); setStage('design'); return }
+    let say
+    if (/formal/i.test(v)) { setRange('#v-warm', 2); say = 'More formal: fuller sentences, no exclamation marks.' }
+    else if (/warm/i.test(v)) { setRange('#v-warm', 0); say = 'Warmer: shorter sentences, “you” more than “we”.' }
+    else if (/hinglish/i.test(v)) { $('#lang-seg [data-lang="hn"]').click(); say = 'Headlines in Hinglish. Prices and sizes stay in English numerals.' }
+    else if (/hindi/i.test(v)) { $('#lang-seg [data-lang="hi"]').click(); say = 'Headlines in Hindi.' }
+    else say = 'Added to brand.md. Say “looks right” when it reads like Kesar.'
+    setP('brand'); await stream(a, say); bumpCredits(1); return
+  }
+  if (S.stage === 'pages') {
+    if (/plan|approve|build|^go/i.test(v)) { await stream(a, 'Here’s the plan to approve.'); $('#make-plan').click(); return }
+    let say
+    if (/lookbook/i.test(v)) { S.pages.lookbook = true; say = 'Added a Lookbook page: about 8–10 more credits.' }
+    else if (/only home/i.test(v)) { Object.keys(S.pages).forEach((k) => { S.pages[k] = k === 'home' }); say = 'Just Home for now. Collection and Product can follow.' }
+    else if (/variant|3 hero/i.test(v)) { $('#var-seg [data-v="3"]').click(); say = 'Three heroes to choose from: the estimate goes up about 2.4×.' }
+    else say = 'Added to the brief. The estimate on the right follows the pages.'
+    renderPages(); setP('pages'); await stream(a, say); bumpCredits(1)
+  }
+}
+
+mountSession()
+
 /* ── Routing between steps, with direction ── */
 const ORDER = ['home', 'clients', 'intake', 'brand', 'design', 'pages', 'build', 'billing', 'team', 'settings']
 const doneSteps = new Set()
@@ -2549,10 +2667,11 @@ function paintSteps() { const cur = (location.hash || '#home').slice(1); $$('.st
 let last = 'home'
 function show() {
   let v = (location.hash || '#home').slice(1); if (!ORDER.includes(v)) v = 'home'
+  if (['brand', 'design', 'pages'].includes(v)) { location.replace('#build'); setTimeout(() => { if (stIdx(v) > stIdx(S.stage || 'brand')) { for (const st of STAGES.slice(0, stIdx(v))) markDone(st); setStage(v) } else setP(v) }, 30); return }
   const back = ORDER.indexOf(v) < ORDER.indexOf(last)
   $$('section[data-view]').forEach((s) => { const on = s.dataset.view === v; s.hidden = !on; if (on) { s.classList.toggle('back', back); s.style.animation = 'none'; void s.offsetWidth; s.style.animation = '' } })
   if (v !== 'home' && last === 'home' && v !== 'brand') {}
-  if (v === 'build' && !$('#device').innerHTML) { renderDevice('ghost'); renderRail('checks', true); renderSuggest(); if (!msgs.children.length) addMsg('agent', `<p>The plan is ready: Home, Collection and Product on Starter 0, about ${$('#est').textContent} credits. Approve it from Pages and brief, or start here.</p><div class="chips" style="margin-top:6px"><button class="chip" data-sg="Start the build">${ico('play', 'i i-sm')}Start the build</button></div>`) }
+  if (v === 'build' && !$('#device').innerHTML) { renderDevice('ghost'); renderRail('checks', true); renderSuggest(); if (!msgs.children.length) sessionStart() }
   if (v === 'design') { renderKit(); renderDs(); setTimeout(dsIntro, 300) }
   if (v === 'intake') renderIntake()
   if (v === 'team') { renderTeam(); renderMatrix() }
