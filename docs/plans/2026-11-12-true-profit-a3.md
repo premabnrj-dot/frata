@@ -110,3 +110,11 @@ for this scope and are corrected.
 | UE7: trial→paid counts inertia | Measure also: still paid at day 60; an action within 30 days (product hidden, price changed, COD off once RTO Shield ships) |
 | **UE2 (owner): store B (₹4,500 × 80) pays more than Shopify's free profit apps** | **Owner call** — see below |
 | **UE (owner): test demand before building A3** | **Owner call** — see below |
+
+## Owner calls (2026-11-12)
+- **Placement:** Scale includes True Profit (`plan_versions.features` for a new Scale version — an Admin step, not a
+  migration of prices); Launch and Growth buy it at ₹999/month + GST with a 14-day self-serve trial (`addOnFor`:
+  launch, growth). Recommended by the unit-economics review (store B pays more than Shopify's free apps on Growth;
+  Scale shops pay ₹11k–22k elsewhere).
+- **Order:** True Profit and A3 are built together now, with every fix above; demand is measured from real trials
+  (kept past day 14, still paid at day 60, an action within 30 days). The 10-partner Admin-trial test was declined.
