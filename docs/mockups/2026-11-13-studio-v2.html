@@ -279,7 +279,7 @@ main { min-width: 0; position: relative; overflow-x: clip }
 .estimate b { font: 600 20px var(--f-display); font-variant-numeric: tabular-nums }
 
 /* ── Modal / popover / toast ── */
-.modal-wrap { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: var(--scrim); opacity: 0; transition: opacity var(--base) var(--e-std) }
+.modal-wrap { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; padding: 16px; background: var(--scrim); opacity: 0; transition: opacity var(--base) var(--e-std) }
 .modal-wrap.open { opacity: 1 }
 .modal { width: min(560px, 100%); max-height: min(86vh, 760px); overflow: auto; background: var(--card); border: 1px solid var(--line); border-radius: 14px; transform: scale(.97); opacity: 0; transition: transform var(--base) var(--e-out), opacity var(--base) var(--e-out); display: grid }
 .modal-wrap.open .modal { transform: none; opacity: 1; transition-timing-function: var(--e-in) }
@@ -660,6 +660,189 @@ button.pill:hover { background: var(--line) }
 .can-list span { display: flex; gap: 6px; align-items: center; animation: msg-in var(--base) var(--e-in) both }
 @media (max-width: 560px) { .mem { grid-template-columns: auto minmax(0, 1fr) } .mem .acts { grid-column: 2 } .conflict .opts { grid-template-columns: minmax(0, 1fr) } }
 
+/* ── App shell: sidebar on desktop, tab bar on a phone; a site's workspace folds the sidebar to icons ── */
+.body { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 0; transition: grid-template-columns var(--slow) var(--e-std) }
+.side { position: sticky; top: 57px; height: calc(100vh - 57px); border-right: 1px solid var(--line); background: var(--card); padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; overflow: hidden auto }
+.side a { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 8px; color: var(--sub); text-decoration: none; font-weight: 500; font-size: 13.5px; white-space: nowrap; position: relative; transition: background var(--fast) var(--e-std), color var(--fast) var(--e-std) }
+.side a:hover { background: var(--muted); color: var(--fg) }
+.side a[aria-current="page"] { background: var(--muted); color: var(--fg) }
+.side a[aria-current="page"]::before { content: ""; position: absolute; left: -10px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--rani) }
+.side .cnt { margin-left: auto; font: 600 11px var(--f-mono); background: var(--rani); color: #fff; border-radius: 99px; padding: 1px 7px }
+.side .cnt.soft { background: var(--muted); color: var(--sub) }
+.side .grp { font: 600 11px var(--f-body); letter-spacing: .07em; text-transform: uppercase; color: var(--sub); padding: 16px 10px 6px; white-space: nowrap }
+.app.ws .body { grid-template-columns: 60px minmax(0, 1fr) }
+.app.ws .side .t, .app.ws .side .cnt, .app.ws .side .grp { display: none }
+.app.ws .side a { justify-content: center; padding: 9px 0 }
+.app.bare .body { grid-template-columns: minmax(0, 1fr) } .app.bare .side, .app.bare .tabbar { display: none }
+.app:not(.ws) .top .steps { display: none }
+.crumb { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--sub); text-decoration: none; white-space: nowrap; font-weight: 500 }
+.crumb:hover { color: var(--fg) }
+.app:not(.ws) .crumb { display: none }
+.tabbar { display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--card); border-top: 1px solid var(--line); padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px)); justify-content: space-around }
+.tabbar a { display: grid; justify-items: center; gap: 2px; font-size: 10.5px; font-weight: 500; color: var(--sub); text-decoration: none; padding: 4px 6px; border-radius: 8px; min-width: 58px }
+.tabbar a .i { width: 20px; height: 20px }
+.tabbar a[aria-current="page"] { color: var(--fg) }
+.tabbar a[aria-current="page"] .i { color: var(--rani) }
+@media (max-width: 900px) {
+  .body, .app.ws .body { grid-template-columns: minmax(0, 1fr) } .side { display: none }
+  .app:not(.ws):not(.bare) .tabbar { display: flex }
+  .app:not(.ws):not(.bare) main { padding-bottom: 64px }
+  body:has(.app:not(.ws):not(.bare)) .toasts { bottom: calc(76px + env(safe-area-inset-bottom, 0px)) }
+}
+.proto { position: fixed; left: 12px; bottom: 12px; z-index: 35; display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px dashed var(--rani); border-radius: 99px; padding: 4px 6px 4px 10px; font-size: 11.5px; color: var(--rani-text); box-shadow: 0 6px 18px -10px rgb(0 0 0 / .4) }
+.proto select { border: 0; background: transparent; font-size: 12px; color: var(--fg); padding: 2px; max-width: 150px }
+@media (max-width: 900px) { .proto { bottom: calc(70px + env(safe-area-inset-bottom, 0px)) } .app.ws ~ .proto, .app.bare ~ .proto { bottom: 12px } }
+.inbox-empty { display: none }
+main[data-proto="empty"] .lanes { display: none }
+main[data-proto="empty"] .inbox-empty { display: grid }
+
+/* ── Clients ── */
+.search { display: flex; align-items: center; gap: 6px; border: 1px solid var(--input); border-radius: 8px; padding: 0 10px; background: var(--card); min-height: 38px; color: var(--sub) }
+.search input { border: 0; outline: 0; background: transparent; min-width: 0; width: 180px; color: var(--fg) }
+.search:focus-within { border-color: var(--fg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--rani) 18%, transparent) }
+.filters { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-bottom: 12px; padding-bottom: 2px }
+.filters button { flex: none; display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line); background: var(--card); border-radius: 99px; padding: 5px 11px; font-size: 12.5px; font-weight: 500; cursor: pointer; color: var(--fg); transition: background var(--fast) var(--e-std), border-color var(--fast) var(--e-std) }
+.filters button b { font: 600 11px var(--f-mono); color: var(--sub) }
+.filters button[aria-selected="true"] { background: var(--ink); color: var(--on-ink); border-color: var(--ink) }
+.filters button[aria-selected="true"] b { color: var(--on-ink); opacity: .75 }
+.filters button.alert b { color: var(--bad-t) }
+.chead, .crow { display: grid; grid-template-columns: minmax(180px, 1.3fr) 112px minmax(200px, 1.7fr) 150px 120px 92px; gap: 14px; align-items: center; padding: 11px 16px }
+.chead { font-size: 11.5px; font-weight: 600; color: var(--sub); border-bottom: 1px solid var(--line); background: var(--bg); border-radius: 12px 12px 0 0 }
+.chead span:nth-child(n+4), .crow > :nth-child(n+4) { text-align: right; justify-self: end }
+.crow { border-bottom: 1px solid var(--line); cursor: pointer; width: 100%; background: none; border-left: 0; border-right: 0; border-top: 0; text-align: left; font-size: 13px; color: var(--fg); animation: msg-in var(--base) var(--e-in) both; transition: background var(--fast) var(--e-std) }
+.crow:last-child { border-bottom: 0 }
+.crow:hover { background: var(--bg) }
+.crow .nm { display: flex; gap: 10px; align-items: center; min-width: 0 }
+.crow .nm b { display: block; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.crow .nm small { display: block; color: var(--sub); font-size: 11.5px }
+.next { display: flex; gap: 7px; align-items: flex-start; min-width: 0; color: var(--fg) }
+.next .i { margin-top: 2px }
+.next.you .i { color: var(--rani) } .next.client .i { color: var(--warn-t) } .next.agent .i { color: var(--info-t) } .next.none { color: var(--sub) }
+.money { font-variant-numeric: tabular-nums; font-weight: 600 }
+.money small { display: block; font-weight: 500; font-size: 11.5px }
+.money small.overdue { color: var(--bad-t) } .money small.due { color: var(--warn-t) } .money small.paid { color: var(--ok-t) } .money small.mute { color: var(--sub) }
+.mini-bar { display: grid; gap: 4px; font: 500 11.5px var(--f-mono); justify-items: end; width: 100% }
+.mini-bar .bar { width: 100%; height: 5px }
+.mini-bar .bar.warn > i { background: var(--warn-t) } .mini-bar .bar.full > i { background: var(--bad-t) }
+.totals { display: flex; gap: 18px; flex-wrap: wrap; padding: 12px 4px; font-size: 12.5px; color: var(--sub) }
+.totals b { color: var(--fg); font-variant-numeric: tabular-nums }
+@media (max-width: 900px) {
+  .chead { display: none }
+  .crow { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; padding: 13px 14px }
+  .crow .nm { grid-column: 1 } .crow > :nth-child(2) { grid-column: 2; grid-row: 1 }
+  .crow .next { grid-column: 1 / -1 }
+  .crow > :nth-child(4) { grid-column: 1; justify-self: start; text-align: left }
+  .crow > :nth-child(5) { grid-column: 2; grid-row: 3 }
+  .crow > :nth-child(6) { display: none }
+  .crow .money small { display: inline; margin-left: 6px }
+}
+.skel { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--muted) 0%, color-mix(in srgb, var(--muted) 40%, var(--card)) 50%, var(--muted) 100%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite }
+.load-row { display: grid; grid-template-columns: 34px 1fr 90px; gap: 12px; align-items: center; padding: 16px }
+.panel-msg { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 40px 18px; color: var(--sub); font-size: 13px }
+.panel-msg b { color: var(--fg); font-size: 15px }
+
+/* Drawer: a client's detail, beside the list (a sheet on a phone) */
+.drawer-wrap { position: fixed; inset: 0; z-index: 50; background: var(--scrim); opacity: 0; transition: opacity var(--base) var(--e-std) }
+.drawer-wrap.open { opacity: 1 }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: min(480px, 100%); background: var(--card); border-left: 1px solid var(--line); display: flex; flex-direction: column; transform: translateX(100%); transition: transform var(--slow) var(--e-std) }
+.drawer-wrap.open .drawer { transform: none; transition-timing-function: var(--e-spring) }
+.drawer .dh { padding: 16px 18px; display: flex; gap: 12px; align-items: center; border-bottom: 1px solid var(--line) }
+.drawer .dh h2 { font: 600 19px var(--f-display); margin: 0 }
+.drawer .db { flex: 1; overflow: auto; padding: 4px 18px 24px }
+.dsec { padding: 14px 0; border-bottom: 1px solid var(--line); display: grid; gap: 10px }
+.dsec:last-child { border-bottom: 0 }
+.dsec > h3 { margin: 0; font: 600 12px var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--sub); display: flex; gap: 8px; align-items: center }
+.dsec > h3 .badge { text-transform: none; letter-spacing: 0 }
+.kv { display: flex; justify-content: space-between; gap: 12px; font-size: 13px }
+.kv span:first-child { color: var(--sub) }
+.kv b { font-variant-numeric: tabular-nums; text-align: right }
+.timeline { display: grid; gap: 0; font-size: 12.5px }
+.timeline div { display: grid; grid-template-columns: 14px 1fr auto; gap: 10px; align-items: center; padding: 4px 0; position: relative }
+.timeline div::before { content: ""; position: absolute; left: 6px; top: 16px; bottom: -6px; width: 2px; background: var(--line) }
+.timeline div:last-child::before { display: none }
+.timeline .dot { width: 14px; height: 14px; border-radius: 99px; background: var(--ok-t); position: relative; z-index: 1; box-shadow: 0 0 0 3px var(--card) }
+.timeline .dot.now { background: var(--rani); animation: pulse 1.6s var(--e-std) infinite }
+.timeline .dot.todo { background: var(--card); border: 2px solid var(--line) }
+.timeline time { font: 11px var(--f-mono); color: var(--sub) }
+.inv { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; font-size: 13px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px }
+.inv small { display: block; color: var(--sub); font-size: 11.5px }
+.private { display: inline-flex; gap: 5px; align-items: center; font-size: 11.5px; color: var(--sub) }
+@media (max-width: 760px) { .drawer { top: 8vh; width: 100%; border-radius: 16px 16px 0 0; border-left: 0; transform: translateY(100%) } }
+
+/* ── Credits & billing ── */
+.subnav { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 18px; overflow-x: auto; scrollbar-width: none }
+.subnav button { flex: none; border: 0; background: none; padding: 10px 12px; font-size: 13.5px; font-weight: 500; color: var(--sub); cursor: pointer; position: relative; white-space: nowrap }
+.subnav button[aria-selected="true"] { color: var(--fg) }
+.subnav button[aria-selected="true"]::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; background: var(--ink); border-radius: 2px; animation: grow-x var(--base) var(--e-std) both }
+@keyframes grow-x { from { transform: scaleX(.3) } to { transform: none } }
+.bgrid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 18px; align-items: start }
+@media (max-width: 980px) { .bgrid { grid-template-columns: minmax(0, 1fr) } }
+.bal { padding: 18px; display: grid; gap: 14px }
+.bal-n { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap }
+.bal-n .big-n { font-size: 44px }
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px }
+.three > div { display: grid; gap: 2px; font-size: 12px; color: var(--sub) }
+.three b { font: 700 20px var(--f-display); color: var(--fg); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 6px }
+.three i.k { width: 10px; height: 10px; border-radius: 3px; display: inline-block }
+.stack { display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: var(--muted) }
+.stack i { display: block; height: 100%; transition: flex-grow var(--slow) var(--e-std) }
+.stack .av { background: var(--ink) } .stack .rs { background: repeating-linear-gradient(45deg, var(--warn-t) 0 4px, color-mix(in srgb, var(--warn-t) 55%, transparent) 4px 8px) } .stack .us { background: color-mix(in srgb, var(--sub) 35%, transparent) }
+.sec-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0 0 8px }
+.sec-h h2 { font: 600 15px var(--f-display); margin: 0 }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--input); border-radius: 8px; overflow: hidden }
+.stepper button { border: 0; background: var(--card); width: 38px; height: 38px; cursor: pointer; display: grid; place-items: center; color: var(--fg) }
+.stepper button:hover { background: var(--muted) }
+.stepper output { min-width: 46px; text-align: center; font: 600 15px var(--f-mono) }
+.sum { display: grid; gap: 4px; font-size: 13px }
+.sum .kv:last-child { border-top: 1px solid var(--line); padding-top: 6px; margin-top: 2px; font-size: 14px }
+.est { display: grid; gap: 3px; justify-items: end; font: 500 11.5px var(--f-mono); color: var(--sub) }
+.est .rng { position: relative; width: 90px; height: 6px; background: var(--muted); border-radius: 99px }
+.est .rng i { position: absolute; top: 0; bottom: 0; border-radius: 99px; background: color-mix(in srgb, var(--info-t) 35%, transparent) }
+.est .rng b { position: absolute; top: -3px; width: 3px; height: 12px; border-radius: 2px; background: var(--ink) }
+.budget-row { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(160px, 1.4fr) auto; gap: 14px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: 13px }
+.budget-row:last-child { border-bottom: 0 }
+.budget-row .bar { height: 8px; position: relative; overflow: visible }
+.budget-row .bar::after { content: ""; position: absolute; left: 80%; top: -3px; bottom: -3px; width: 2px; background: var(--warn-t); border-radius: 2px }
+.budget-row .bar > i { border-radius: 99px }
+.budget-row .bar.warn > i { background: var(--warn-t) } .budget-row .bar.full > i { background: var(--bad-t) }
+.budget-row .edit { display: flex; gap: 6px; align-items: center }
+.budget-row .edit input { width: 76px; min-height: 32px; padding: 4px 8px; text-align: right }
+@media (max-width: 760px) { .budget-row { grid-template-columns: minmax(0, 1fr) } }
+.plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+@media (max-width: 860px) { .plans { grid-template-columns: minmax(0, 1fr) } }
+.plan { padding: 16px; display: grid; gap: 8px; align-content: start; position: relative }
+.plan.cur { border-color: var(--fg); box-shadow: 0 0 0 1px var(--fg) }
+.plan .pr { font: 700 24px var(--f-display); font-variant-numeric: tabular-nums }
+.plan .pr small { font: 500 12px var(--f-body); color: var(--sub) }
+.plan ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 12.5px }
+.plan li { display: flex; gap: 6px; align-items: flex-start }
+.banner { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 14px; flex-wrap: wrap; animation: drop var(--base) var(--e-in) both }
+.banner.warn { background: var(--warn); color: var(--warn-t) } .banner.bad { background: var(--bad); color: var(--bad-t) } .banner.info { background: var(--info); color: var(--info-t) }
+.banner .grow { flex: 1; min-width: 160px; color: var(--fg) }
+.pay-methods { display: grid; gap: 8px }
+.pm { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-size: 13.5px }
+.pm:has(input:checked) { border-color: var(--fg); box-shadow: 0 0 0 1px var(--fg) }
+.pm input { accent-color: var(--ink) }
+.upi-wait { display: grid; justify-items: center; gap: 10px; padding: 14px; text-align: center }
+.upi-wait .ring2 { width: 54px; height: 54px; border-radius: 99px; border: 4px solid var(--muted); border-top-color: var(--rani); animation: spin .9s linear infinite }
+.cap-banner { display: grid; gap: 8px; padding: 10px 12px; border-radius: 10px; background: var(--bad); color: var(--bad-t); font-size: 12.5px; animation: drop var(--base) var(--e-in) both }
+.cap-banner.low { background: var(--warn); color: var(--warn-t) }
+.cap-banner b { color: var(--fg) }
+.cap-banner .row2 { display: flex; gap: 6px; flex-wrap: wrap }
+details.more { border: 1px solid var(--line); border-radius: 10px; padding: 0 12px }
+details.more summary { cursor: pointer; list-style: none; padding: 10px 0; font-size: 13px; font-weight: 600; display: flex; gap: 6px; align-items: center; color: var(--sub) }
+details.more summary::-webkit-details-marker { display: none }
+details.more[open] { padding-bottom: 12px }
+.code { font: 12.5px/1.6 var(--f-mono); background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; justify-content: space-between; gap: 10px; align-items: center; overflow-x: auto; white-space: nowrap }
+/* Review: compare the live version with the draft */
+.device .old { position: absolute; inset: 0; z-index: 4; background: var(--s-bg); pointer-events: none; overflow: hidden }
+.cmp-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--rani); z-index: 5; pointer-events: none }
+.cmp-bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--card); font-size: 12px }
+.cmp-bar input { flex: 1; accent-color: var(--rani) }
+
+#credits-btn.low { background: var(--warn); color: var(--warn-t) }
+.rtabs { overflow-x: auto; scrollbar-width: none }
+.rtabs button { flex: none; padding: 7px 8px }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important }
   .modal, .toast, .modal-wrap { transform: none !important }
@@ -669,21 +852,29 @@ button.pill:hover { background: var(--line) }
 <div class="app">
   <header class="top">
     <div class="mark"><b>f</b>Frrata <small>Studio</small></div>
+    <a class="crumb" href="#clients" id="crumb"><i data-lucide="chevron-left" class="i i-sm"></i>Kesar Studio</a>
     <nav class="steps" aria-label="Steps">
-      <a href="#home" data-step="home"><span class="n"><i data-lucide="inbox" class="i i-sm"></i></span><span class="t">Inbox</span></a>
-      <span class="sep">/</span>
       <a href="#brand" data-step="brand"><span class="n">1</span><span class="t">Brand language</span></a>
       <a href="#design" data-step="design"><span class="n">2</span><span class="t">Design system</span></a>
       <a href="#pages" data-step="pages"><span class="n">3</span><span class="t">Pages and brief</span></a>
       <a href="#build" data-step="build"><span class="n">4</span><span class="t">Build</span></a>
-      <span class="sep">·</span>
-      <a href="#team" data-step="team"><span class="n"><i data-lucide="users" class="i i-sm"></i></span><span class="t">Team</span></a>
     </nav>
     <span class="grow"></span>
     <button class="pill tip" id="credits-btn" data-tip="Credits · who pays" aria-label="Credits"><i data-lucide="coins" class="i i-sm"></i><b id="credits-top" class="mono">142</b><span class="credits-txt sub">credits</span></button>
     <button class="btn icon ghost tip" data-tip="Theme" id="theme-btn" aria-label="Switch theme"><i data-lucide="sun-moon" class="i"></i></button>
   </header>
 
+  <div class="body">
+  <nav class="side" aria-label="Studio">
+    <a href="#home" data-nav="home"><i data-lucide="inbox" class="i"></i><span class="t">Inbox</span><span class="cnt">4</span></a>
+    <a href="#clients" data-nav="clients"><i data-lucide="building-2" class="i"></i><span class="t">Clients</span></a>
+    <a href="#billing" data-nav="billing"><i data-lucide="wallet" class="i"></i><span class="t">Credits &amp; billing</span><span class="cnt mono soft" id="side-credits">142</span></a>
+    <a href="#team" data-nav="team"><i data-lucide="users" class="i"></i><span class="t">Team</span></a>
+    <a href="#settings" data-nav="settings"><i data-lucide="settings" class="i"></i><span class="t">Settings</span></a>
+    <span class="grp">Working on</span>
+    <a href="#brand" data-nav="site"><span class="ava" style="background:#7A1F2B;width:20px;height:20px;font-size:10px">K</span><span class="t">Kesar Studio</span></a>
+    <a href="#clients" data-nav="x" data-proto-client="noor"><span class="ava" style="background:#2F5D50;width:20px;height:20px;font-size:10px">N</span><span class="t">Noor Threads</span></a>
+  </nav>
   <main id="main">
     <!-- ═══ HOME / INBOX ═══ -->
     <section class="view" data-view="home" hidden>
@@ -704,10 +895,12 @@ button.pill:hover { background: var(--line) }
           <div class="lane"><h3><i data-lucide="eye" class="i i-sm"></i>Ready to review<span class="cnt">1</span></h3>
             <div class="card task"><div class="who"><span class="ava" style="background:#B7791F">H</span>Haldi House</div><p>Festive banner · 3 variants</p><span class="badge ok">Checks passed</span></div>
           </div>
-          <div class="lane"><h3><i data-lucide="circle-check" class="i i-sm"></i>Live<span class="cnt">4</span></h3>
-            <div class="card task"><div class="who"><span class="ava" style="background:#5B4636">M</span>Mitti Ceramics</div><p>Published 2 days ago · 96 speed</p></div>
+          <div class="lane"><h3><i data-lucide="hourglass" class="i i-sm"></i>Waiting on client<span class="cnt">2</span></h3>
+            <div class="card task"><div class="who"><span class="ava" style="background:#B7791F">H</span>Haldi House</div><p>v3a sent to Meher for approval · 2 days</p><button class="btn sm" data-remind="haldi"><i data-lucide="message-circle" class="i i-sm"></i>Remind</button></div>
+            <div class="card task"><div class="who"><span class="ava" style="background:#8A5A44">S</span>Saanjh Candles</div><p>Intake link not opened · 4 days</p><button class="btn sm" data-remind="saanjh"><i data-lucide="message-circle" class="i i-sm"></i>Remind</button></div>
           </div>
         </div>
+        <div class="inbox-empty empty-ask" style="padding:40px 18px"><svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="10" y="18" width="44" height="32" rx="6"/><path d="M10 38h12l4 6h12l4-6h12"/><path d="M26 10l6 6 6-6" stroke="var(--rani)"/></svg><b style="color:var(--fg);font-size:15px">Nothing needs you</b><span>Work that needs a decision lands here.</span><a class="btn sm" href="#clients">See clients</a></div>
         <aside style="display:grid;gap:12px;align-content:start">
           <div class="card new-card">
             <svg class="weave" viewBox="0 0 100 100" aria-hidden="true"><defs><pattern id="wv" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M0 5h10M5 0v10" stroke="currentColor" stroke-width="1.2"/></pattern></defs><circle cx="50" cy="50" r="48" fill="url(#wv)"/></svg>
@@ -913,6 +1106,7 @@ button.pill:hover { background: var(--line) }
         <section class="chat on" data-pane="chat">
           <div class="msgs" id="msgs"></div>
           <div class="composer">
+            <div id="cap-slot"></div>
             <div class="suggest" id="suggest"></div>
             <div class="box">
               <div class="refs" id="refs"></div>
@@ -933,8 +1127,10 @@ button.pill:hover { background: var(--line) }
             <div class="seg" id="device-seg"><span class="thumb"></span><button aria-pressed="true" data-dev="desk" aria-label="Desktop"><i data-lucide="monitor" class="i i-sm"></i></button><button aria-pressed="false" data-dev="phone" aria-label="Phone"><i data-lucide="smartphone" class="i i-sm"></i></button></div>
             <div class="urlbar"><i data-lucide="lock" class="i i-sm lock"></i><span id="url">preview-7f3a.kesar.frrata.site</span><span style="flex:1"></span><span>/</span></div>
             <div class="seg" id="route-seg"><span class="thumb"></span><button aria-pressed="true" data-r="home">Home</button><button aria-pressed="false" data-r="collection">Collection</button><button aria-pressed="false" data-r="product">Product</button></div>
+            <button class="btn sm icon ghost tip" data-tip="Compare with live" id="cmp-btn" aria-pressed="false" aria-label="Compare with the live version"><i data-lucide="columns-2" class="i i-sm"></i></button>
             <button class="btn sm icon ghost full-toggle tip" data-tip="Full site  F" aria-label="Full site" aria-pressed="false"><i data-lucide="maximize-2" class="i i-sm"></i></button>
           </div>
+          <div class="cmp-bar" id="cmp-bar" hidden><span class="badge">v6 · live</span><input type="range" id="cmp-range" min="0" max="100" value="50" aria-label="Compare live and draft"><span class="badge info">v7 · draft</span></div>
           <div class="viewport"><div class="device" id="device"></div></div>
           <form class="float-ask" data-for="ask"><i data-lucide="sparkles" class="i i-sm" style="color:var(--rani)"></i><input placeholder="Ask for a change…" aria-label="Ask for a change"><button class="btn sm primary icon" aria-label="Send"><i data-lucide="arrow-up" class="i i-sm"></i></button></form>
           <div class="peek" hidden></div>
@@ -944,6 +1140,8 @@ button.pill:hover { background: var(--line) }
             <button role="tab" aria-selected="true" data-rt="checks"><i data-lucide="shield-check" class="i i-sm"></i>Checks</button>
             <button role="tab" aria-selected="false" data-rt="files"><i data-lucide="file-code" class="i i-sm"></i>Files</button>
             <button role="tab" aria-selected="false" data-rt="system"><i data-lucide="swatch-book" class="i i-sm"></i>System</button>
+            <button role="tab" aria-selected="false" data-rt="apps"><i data-lucide="blocks" class="i i-sm"></i>Apps</button>
+            <button role="tab" aria-selected="false" data-rt="data"><i data-lucide="database" class="i i-sm"></i>Data</button>
           </div>
           <div class="rbody" id="rbody"></div>
         </section>
@@ -973,7 +1171,46 @@ button.pill:hover { background: var(--line) }
       </div>
     </section>
 
+    <!-- ═══ CLIENTS · the state of the business ═══ -->
+    <section class="view" data-view="clients" hidden>
+      <div class="vhead">
+        <div><div class="eyebrow"><i data-lucide="building-2" class="i i-sm"></i>Pixel &amp; Thread</div><h1>Clients</h1></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="search"><i data-lucide="search" class="i i-sm"></i><input id="c-q" placeholder="Search clients" aria-label="Search clients"></div><button class="btn primary" data-open="new-site"><i data-lucide="plus" class="i"></i>New site</button></div>
+      </div>
+      <div class="filters" id="c-filters" role="tablist" aria-label="Filter clients"></div>
+      <div class="card" id="c-list"></div>
+      <div class="totals" id="c-totals"></div>
+    </section>
+
+    <!-- ═══ CREDITS & BILLING ═══ -->
+    <section class="view" data-view="billing" hidden>
+      <div class="vhead">
+        <div><div class="eyebrow"><i data-lucide="wallet" class="i i-sm"></i>Pixel &amp; Thread · GSTIN 27AAACP••••1Z5</div><h1>Credits &amp; billing</h1></div>
+        <button class="btn primary" id="b-recharge"><i data-lucide="plus" class="i"></i>Buy credits</button>
+      </div>
+      <div id="b-banner"></div>
+      <div class="subnav" id="b-tabs" role="tablist" aria-label="Credits and billing"></div>
+      <div id="b-body"></div>
+    </section>
+
+    <!-- ═══ SETTINGS ═══ -->
+    <section class="view" data-view="settings" hidden>
+      <div class="vhead"><div><div class="eyebrow"><i data-lucide="settings" class="i i-sm"></i>Pixel &amp; Thread</div><h1>Settings</h1></div></div>
+      <div class="subnav" id="s-tabs" role="tablist" aria-label="Settings"></div>
+      <div id="s-body"></div>
+    </section>
+
   </main>
+  </div>
+  <nav class="tabbar" aria-label="Studio">
+    <a href="#home" data-nav="home"><i data-lucide="inbox" class="i"></i>Inbox</a>
+    <a href="#clients" data-nav="clients"><i data-lucide="building-2" class="i"></i>Clients</a>
+    <a href="#billing" data-nav="billing"><i data-lucide="wallet" class="i"></i>Credits</a>
+    <a href="#team" data-nav="team"><i data-lucide="users" class="i"></i>Team</a>
+    <a href="#settings" data-nav="settings"><i data-lucide="settings" class="i"></i>Settings</a>
+  </nav>
+  <label class="proto"><i data-lucide="flask-conical" class="i i-sm"></i><span>State</span><select id="proto" aria-label="Prototype state"><option value="normal">Normal</option><option value="empty">Empty</option><option value="loading">Loading</option><option value="error">Couldn’t load</option><option value="low">Low balance</option><option value="payfail">Payment fails</option><option value="cap">Kesar budget used up</option></select></label>
+
   <div id="modal-root"></div>
   <div class="toasts" id="toasts" aria-live="polite"></div>
 </div>
@@ -1250,7 +1487,7 @@ $('#make-plan').addEventListener('click', () => {
     title: 'The plan', pic: picEl('list-checks', 'var(--info)', 'var(--info-t)'), wide: false,
     body: `<div class="todos">${chosen.map(([k, n], i) => `<div class="todo"><span class="bx"></span><b>${n}</b><span class="sub" style="margin-left:auto;font-size:12px" class="mono">${['app/page.tsx', 'app/collections/[handle]/page.tsx', 'app/products/[handle]/page.tsx', 'app/size/page.tsx', 'app/weavers/page.tsx', 'app/lookbook/page.tsx', 'app/contact/page.tsx', 'app/questions/page.tsx'][PAGES.findIndex((p) => p[0] === k)]}</span></div>`).join('')}<div class="todo"><span class="bx"></span>Run the checks: speed, accessibility, budget, brand voice</div></div>
       <div class="card" style="padding:12px;display:grid;gap:8px;background:var(--bg)"><b style="font-size:13px;display:flex;gap:6px;align-items:center">${ico('circle-help', 'i i-sm')}One question</b><span style="font-size:13px">Show prices in the hero, or only on the cards?</span><div class="chips"><button class="chip" aria-pressed="true" data-ans>Only on the cards</button><button class="chip" aria-pressed="false" data-ans>In the hero too</button></div></div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="badge info">${ico('coins', 'i i-sm')}${$('#est').textContent} credits</span><span class="badge ok">${ico('shield-check', 'i i-sm')}Preview data only</span><span class="badge ok">${ico('lock', 'i i-sm')}Prices, stock and orders: never touched</span></div>`,
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="badge info">${ico('coins', 'i i-sm')}${$('#est').textContent} credits · holds the top, keeps what it uses</span><span class="badge ok">${ico('wallet', 'i i-sm')}Kesar’s budget: ${300 - kesarUsed()} of 300 left</span><span class="badge ok">${ico('shield-check', 'i i-sm')}Preview data only</span><span class="badge ok">${ico('lock', 'i i-sm')}Prices, stock and orders: never touched</span></div>`,
     foot: `<button class="btn" data-x>Keep planning</button><button class="btn primary" id="approve-plan" data-autofocus>${ico('play')}Approve and build</button>`,
     onOpen: (m, close) => {
       m.addEventListener('click', (e) => { const a = e.target.closest('[data-ans]'); if (!a) return; $$('[data-ans]', m).forEach((x) => x.setAttribute('aria-pressed', String(x === a))) })
@@ -1286,6 +1523,7 @@ async function tool(box, icon, label, file, ms = 700) {
 }
 function setStatus(kind, text) { const s = $('#b-status'); s.className = 'status ' + kind; s.textContent = text }
 function renderDevice(state = 'built') {
+  $('#cmp-bar').hidden = true; $('#cmp-btn').setAttribute('aria-pressed', 'false')
   const d = $('#device'); d.innerHTML = siteMarkup(S.route, { full: true })
   d.dataset.mode = 'light'; d.classList.add('site'); icons(d); $$('#device svg').forEach((s) => s.setAttribute('stroke-width', WEIGHTS[S.iconW].w)); applyTokens(false)
   if (state === 'ghost') $$('#device .blk').forEach((b) => b.classList.add('ghost'))
@@ -1340,7 +1578,7 @@ function bumpCredits(n) {
   const pill = $('#credits-btn'); pill.classList.remove('bump'); void pill.offsetWidth; pill.classList.add('bump')
   const from = S.credits, to = Math.max(0, S.credits - n); S.credits = to
   const el = $('#credits-top'); const t0 = performance.now()
-  const step = (t) => { const k = Math.min(1, (t - t0) / 500); el.textContent = Math.round(from + (to - from) * k); if (k < 1) requestAnimationFrame(step) }; requestAnimationFrame(step)
+  const step = (t) => { const k = Math.min(1, (t - t0) / 500); el.textContent = Math.round(from + (to - from) * k); $('#side-credits').textContent = el.textContent; if (k < 1) requestAnimationFrame(step) }; requestAnimationFrame(step)
 }
 
 /* Rail: checks · files · system */
@@ -1359,6 +1597,12 @@ function renderRail(tab, fresh) {
     body.innerHTML = `<div class="tree"><div>${ico('folder-open', 'i i-sm')}app</div><div style="padding-left:20px">${ico('file-code', 'i i-sm')}page.tsx<span class="chg m">M</span></div><div style="padding-left:20px">${ico('file-code', 'i i-sm')}collections/[handle]/page.tsx<span class="chg a">A</span></div><div style="padding-left:20px">${ico('file-code', 'i i-sm')}products/[handle]/page.tsx<span class="chg a">A</span></div><div>${ico('folder-open', 'i i-sm')}components</div><div style="padding-left:20px">${ico('file-code', 'i i-sm')}edit-row.tsx<span class="chg a">A</span></div><div>${ico('file-json', 'i i-sm')}tokens.json</div><div>${ico('file-text', 'i i-sm')}brand.md</div></div>
       <div class="diff" aria-label="app/page.tsx diff"><div class="d">-  &lt;Hero title="Welcome" /&gt;</div><div class="a">+  &lt;Hero</div><div class="a">+    eyebrow={t('edit.diwali')}</div><div class="a">+    title={voice.hero}</div><div class="a">+    product={edit[0]}</div><div class="a">+  /&gt;</div><div>   &lt;EditRow products={edit} /&gt;</div><div class="a">+  &lt;Weavers count={40} /&gt;</div></div>
       <button class="btn sm"><i data-lucide="git-branch" class="i i-sm"></i>Open in a branch</button>`
+  } else if (tab === 'apps') {
+    const A = [['map-pin', 'Delivery Zones', 'on', 'PIN check on the product page; zone charge at checkout', 'Add the PIN check'], ['video', 'Product video', 'on', 'Video on the product page', 'Use on product pages'], ['message-circle', 'Messages', 'on', 'WhatsApp opt-in, inside Frrata’s checkout', null], ['fingerprint', 'EkCode', 'on', 'Sign-in, inside Frrata’s checkout', null], ['star', 'Reviews', 'off', 'Ratings and reviews on product pages', 'ask'], ['indian-rupee', 'True Profit', 'on', 'Console only: nothing on the site', null], ['shield', 'RTO Shield', 'next', 'COD rules at checkout', null], ['ruler', 'Size and fit', 'next', 'A fit widget', null]]
+    body.innerHTML = `<span class="sub" style="font-size:12px">Kesar’s apps, read live. Riya turns them on in her console; Studio never does.</span>${A.map(([ic, n, st, s, act]) => `<div class="check-row ${st === 'on' ? 'pass' : ''}"><span class="ic">${ico(ic, 'i i-sm')}</span><span class="grow">${n} <span class="badge ${st === 'on' ? 'ok' : st === 'off' ? 'warn' : ''}">${st === 'on' ? 'On' : st === 'off' ? 'Off' : 'Coming'}</span><small>${s}</small>${act === 'ask' ? `<button class="btn sm" style="margin-top:6px" data-ask-app="${n}">${ico('send', 'i i-sm')}Ask Riya to turn it on</button>` : act ? `<button class="btn sm ghost" style="margin-top:6px" data-app-build="${act}">${ico('sparkles', 'i i-sm')}${act}</button>` : ''}</small></span></div>`).join('')}`
+  } else if (tab === 'data') {
+    const G = [['Your site can read', 'ok', ['Shop: policies, legal block, COD on/off, delivery promises', 'Products: variants, price, M.R.P., earlier price, availability (a count only at 3 or fewer), size chart, offer lines', 'Collections, search, offers']], ['Through apps that are on', 'info', ['Delivery Zones: the PIN check', 'Product video']], ['Handed to Frrata’s checkout', '', ['The bag (a link), payment, sign-in, WhatsApp opt-in']], ['Never', 'bad', ['Orders, shoppers, costs, stock counts above 3', 'Writing anything: prices, stock and products are changed in the console']]]
+    body.innerHTML = `<span class="badge info" style="justify-self:start">Storefront API 2026-12 · specified, built in V1</span>${G.map(([t, k, items]) => `<div style="display:grid;gap:6px"><span class="lbl" style="display:flex;gap:6px;align-items:center"><span class="badge ${k}">${t}</span></span>${items.map((x) => `<span style="font-size:12.5px;display:flex;gap:6px">${ico(k === 'bad' ? 'x' : 'check', 'i i-sm')}${x}</span>`).join('')}</div>`).join('')}<span class="sub" style="font-size:12px">Builders design with a preview copy of this, without costs.</span>`
   } else {
     const p = S.palette, f = FONTS[S.font]
     body.innerHTML = `<div class="tok-list">${SW_NAMES.map((n, i) => `<div class="t"><span style="display:flex;gap:8px;align-items:center"><span class="sw2" style="background:${p[i]}"></span>${n}</span><span class="mono sub">${p[i]}</span></div>`).join('')}<div class="t"><span>Display</span><span class="mono sub">${f.dn}</span></div><div class="t"><span>Body</span><span class="mono sub">${f.bn}</span></div><div class="t"><span>Corners</span><span class="mono sub">${S.radius}px</span></div><div class="t"><span>Motion</span><span class="mono sub">${MOTION[S.motion].name} · ${MOTION[S.motion].dur}ms</span></div></div>
@@ -1390,7 +1634,7 @@ $('#b-rail').addEventListener('click', () => $('#panes').classList.toggle('show-
 
 /* Composer, suggestions, pins */
 function renderSuggest() {
-  const s = S.built ? ['Set the hero in Hindi', 'Make the weavers story longer', 'Show COD on the product page', 'Try 3 heroes'] : ['Start the build']
+  const s = S.built ? ['Set the hero in Hindi', 'Make the weavers story longer', 'What can I build with Kesar’s apps?', 'Try 3 heroes'] : ['Start the build']
   $('#suggest').innerHTML = s.map((t) => `<button class="chip" data-sg="${t}">${t}</button>`).join('')
 }
 $('#suggest').addEventListener('click', (e) => { const b = e.target.closest('[data-sg]'); if (!b) return; if (b.dataset.sg === 'Start the build') { startBuild(); return } $('#ask').value = b.dataset.sg; $('#ask').focus() })
@@ -1399,11 +1643,13 @@ const refs = []
 async function send() {
   const v = $('#ask').value.trim(); if (!v && !refs.length) return
   if (!S.built) { toast('The build starts from the plan first.', 'info'); return }
+  if (capCheck()) return
   addMsg('me', `${refs.length ? `<div class="refs" style="margin-bottom:6px">${refs.map((r) => `<span class="ref">${ico('map-pin', 'i i-sm')}${r}</span>`).join('')}</div>` : ''}<p>${esc(v || 'See the pins.')}</p>`)
   $('#ask').value = ''; refs.length = 0; $('#refs').innerHTML = ''
   setStatus('work', 'Working'); const a = addMsg('agent', ''); a.querySelector('.agent-ava').classList.add('think')
   const box = toolBox(a)
   const hindi = /hindi/i.test(v)
+  if (/\bapps?\b/i.test(v)) { await tool(box, 'blocks', 'Read', 'Kesar’s apps · 5 on, 1 off, 2 coming', 520); a.querySelector('.agent-ava').classList.remove('think'); await stream(a, 'Delivery Zones is on, so I can add a PIN check under Add to bag. Product video is on for the product page. Reviews is off: I can’t build it until Riya turns it on in her console. Messages and EkCode live inside Frrata’s checkout, not in this site’s code.'); renderRail('apps'); setStatus('ready', 'Ready to review'); bumpCredits(1); return }
   await tool(box, 'file-pen-line', 'Edited', 'app/page.tsx', 650)
   if (hindi) { S.voice.lang = 'hi'; renderDevice(); await paintBlock('hero', 'Hero · हिन्दी') } else { await paintBlock('hero', 'Hero'); await paintBlock('story', 'Weavers') }
   await tool(box, 'shield-check', 'Checks', 'all passed', 600)
@@ -1493,7 +1739,7 @@ $('#b-publish').addEventListener('click', openPublish)
 function openNewSite() {
   modal({ title: 'New site', pic: picEl('wand-sparkles', 'var(--muted)', 'var(--fg)'),
     body: `<div class="field"><label for="ns-client">Client</label><select id="ns-client" class="input"><option>Kesar Studio · kesar-studio</option><option>Noor Threads · noor-threads</option><option>Bandhej Co. · bandhej</option></select></div>
-      <div class="field"><label for="ns-budget">Budget for this site</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="ns-budget" class="input mono" value="300" inputmode="numeric" style="max-width:110px"><span class="sub" style="font-size:12.5px">credits · ≈ ₹5,700 + GST, from your wallet</span></div></div><label style="display:flex;gap:10px;align-items:center;font-size:13px"><span class="switch"><input type="checkbox" checked aria-label="Send a brand intake link"><span></span></span>Send Riya a brand intake: logo, photos, words</label><div class="card" style="padding:12px;display:grid;gap:8px;background:var(--bg)"><b style="font-size:13px">Studio starts from the brand</b><div class="todos" style="border:0;padding:0">${['Brand language', 'Design system', 'Pages and brief', 'Build with the agent'].map((t, i) => `<div class="todo"><span class="bx" style="border-radius:99px;font:600 9px var(--f-body)">${i + 1}</span>${t}</div>`).join('')}</div></div>
+      <details class="more"><summary>${ico('sliders-horizontal', 'i i-sm')}Budget · 300 credits</summary><div class="field"><label for="ns-budget">Budget for this site</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="ns-budget" class="input mono" value="300" inputmode="numeric" style="max-width:110px"><span class="sub" style="font-size:12.5px">credits · ≈ ₹5,700 + GST, from your wallet</span></div></div></details><label style="display:flex;gap:10px;align-items:center;font-size:13px"><span class="switch"><input type="checkbox" checked aria-label="Send a brand intake link"><span></span></span>Send Riya a brand intake: logo, photos, words</label><div class="card" style="padding:12px;display:grid;gap:8px;background:var(--bg)"><b style="font-size:13px">Studio starts from the brand</b><div class="todos" style="border:0;padding:0">${['Brand language', 'Design system', 'Pages and brief', 'Build with the agent'].map((t, i) => `<div class="todo"><span class="bx" style="border-radius:99px;font:600 9px var(--f-body)">${i + 1}</span>${t}</div>`).join('')}</div></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="badge ok">${ico('badge-check', 'i i-sm')}Partner verified</span><span class="badge info">${ico('key-round', 'i i-sm')}Scope: build · preview</span></div>`,
     foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="ns-go" data-autofocus>Start${ico('arrow-right')}</button>`,
     onOpen: (m, close) => { m.querySelector('#ns-go').onclick = () => { const intake = m.querySelector('.switch input').checked; close(); if (intake) { S.intakeSent = true; location.hash = '#home'; renderInbox(); toast('Intake sent to Riya on WhatsApp.', 'ok', { label: 'See her view', run: () => { location.hash = '#intake' } }) } else location.hash = '#brand' } } })
@@ -1807,7 +2053,7 @@ function wTab(m, t) {
     icons(body)
   }
 }
-$('#credits-btn').addEventListener('click', () => openWallet())
+$('#credits-btn').addEventListener('click', () => { location.hash = '#billing' })
 
 function openHandover() {
   modal({ title: 'Hand over to Riya · Kesar Studio', pic: picEl('key-round', 'var(--ok)', 'var(--ok-t)'),
@@ -1989,14 +2235,317 @@ $('#t-invite').addEventListener('click', () => {
     } })
 })
 
+/* ════════ PROTOTYPE STATES (a dashed control, not part of the product) ════════ */
+S.proto = 'normal'
+$('#proto').addEventListener('change', (e) => {
+  S.proto = e.target.value; $('#main').dataset.proto = S.proto
+  S.credits = S.proto === 'low' ? 8 : Math.max(S.credits, S.proto === 'normal' && S.credits === 8 ? 142 : S.credits)
+  $('#credits-top').textContent = S.credits; $('#side-credits').textContent = S.credits
+  $('#credits-btn').classList.toggle('low', S.proto === 'low')
+  const v = (location.hash || '#home').slice(1)
+  if (v === 'clients') renderClients(); if (v === 'billing') renderBilling(); if (v === 'build') capCheck()
+  toast({ normal: 'Normal state.', empty: 'Empty: a new partner with no clients yet.', loading: 'Loading: lists show their skeletons.', error: 'Couldn’t load: lists say so in place, with Try again.', low: 'Low balance: 8 credits left.', payfail: 'The next payment will fail.', cap: 'Kesar’s budget is used up: turns pause, the draft stays.' }[S.proto], 'info')
+})
+
+/* ════════ CLIENTS · the state of the business ════════ */
+const kesarUsed = () => S.proto === 'cap' ? 300 : 46 + S.siteCredits
+const PORT = [
+  { id: 'kesar', n: 'Kesar Studio', col: '#7A1F2B', who: 'Riya', stage: 'onboarding', plan: 'Opens at handover', next: ['you', 'list-checks', 'Approve the plan · about 38 credits'], go: '#build', flags: [], bill: { type: 'Project', amt: 60000, inv: [['PT-0418', 30000, '14 Oct', 'paid', 'Advance 50%'], ['PT-—', 30000, 'At handover', 'upcoming', 'Balance 50%']] }, renews: null, cr: () => [kesarUsed(), 300, 'project'], share: null, since: '12 Oct' },
+  { id: 'noor', n: 'Noor Threads', col: '#2F5D50', who: 'Sana', stage: 'live', plan: 'Launch', next: ['you', 'map-pin', '3 notes from Sana on the preview'], go: null, flags: ['maintenance', 'unpaid', 'cap'], bill: { type: 'Retainer', amt: 12000, inv: [['PT-0412', 12000, '5 Nov', 'overdue', 'November']] }, renews: '1 Mar 2027', cr: () => [200, 200, 'month'], share: 704.8, sm: 7, since: 'Apr' },
+  { id: 'bandhej', n: 'Bandhej Co.', col: '#23307A', who: 'Arjun', stage: 'onboarding', plan: 'Opens at handover', next: ['agent', 'loader-circle', 'The agent is writing the Lookbook page'], go: null, flags: [], bill: { type: 'Project', amt: 45000, inv: [['PT-0420', 22500, '1 Nov', 'paid', 'Advance 50%']] }, renews: null, cr: () => [96, 250, 'project'], share: null, since: '28 Oct' },
+  { id: 'haldi', n: 'Haldi House', col: '#B7791F', who: 'Meher', stage: 'live', plan: 'Launch', next: ['client', 'hourglass', 'Meher hasn’t approved v3a · 2 days'], go: null, flags: ['awaiting'], bill: { type: 'Retainer', amt: 8000, inv: [['PT-0409', 8000, '1 Nov', 'paid', 'November']] }, renews: '15 Jan', cr: () => [40, 150, 'month'], share: 704.8, sm: 11, since: 'Dec 2025' },
+  { id: 'mitti', n: 'Mitti Ceramics', col: '#5B4636', who: 'Kavya', stage: 'live', plan: 'Growth', next: ['none', 'circle-check', 'Nothing pending'], go: null, flags: ['renewal'], bill: { type: 'Retainer', amt: 15000, inv: [['PT-0410', 15000, '1 Nov', 'paid', 'November']] }, renews: '1 Dec · 19 days', cr: () => [12, 80, 'month'], share: 3879.8, sm: 4, since: 'Jul' },
+  { id: 'saanjh', n: 'Saanjh Candles', col: '#8A5A44', who: 'Ishita', stage: 'onboarding', plan: 'Opens at handover', next: ['client', 'hourglass', 'Intake link not opened · 4 days'], go: null, flags: ['awaiting', 'unpaid'], bill: { type: 'Project', amt: 35000, inv: [['PT-0421', 17500, '10 Nov', 'overdue', 'Advance 50%']] }, renews: null, cr: () => [0, 200, 'project'], share: null, since: '8 Nov' },
+  { id: 'rangrez', n: 'Rangrez Prints', col: '#3E6D9C', who: 'Farhan', stage: 'live', plan: 'Launch · trial', next: ['client', 'alert-triangle', 'Frrata trial ends 15 Nov'], go: null, flags: ['risk', 'renewal'], bill: { type: 'Retainer', amt: 10000, inv: [['PT-0411', 10000, '1 Nov', 'paid', 'November']] }, renews: '20 Nov · 8 days', cr: () => [30, 100, 'month'], share: null, since: 'Oct' },
+  { id: 'vastra', n: 'Vastra Loom', col: '#6B4E9B', who: 'Neel', stage: 'live', plan: 'Growth', next: ['agent', 'repeat', 'Monday routine: refresh New in'], go: null, flags: ['maintenance'], bill: { type: 'Retainer', amt: 20000, inv: [['PT-0408', 20000, '1 Nov', 'paid', 'November']] }, renews: '1 Apr 2027', cr: () => [64, 120, 'month'], share: 3879.8, sm: 15, since: 'Aug 2025' },
+  { id: 'pahadi', n: 'Pahadi Pantry', col: '#7C8B5A', who: 'Tara', stage: 'unlinked', plan: 'Launch', next: ['none', 'unlink', 'Unlinked by Tara on 2 Oct · access ended'], go: null, flags: ['unpaid'], bill: { type: 'Final', amt: 6000, inv: [['PT-0401', 6000, '2 Oct', 'overdue', 'Final month']] }, renews: null, cr: () => [0, 0, 'none'], share: 704.8, sm: 'notice to 31 Dec', since: 'Jan' },
+]
+const STAGE = { onboarding: ['Onboarding', 'info'], live: ['Live', 'ok'], unlinked: ['Unlinked', ''] }
+const FILTERS = [['all', 'All'], ['live', 'Live'], ['onboarding', 'Onboarding'], ['awaiting', 'Waiting on client'], ['maintenance', 'Maintenance'], ['unpaid', 'Unpaid', 1], ['renewal', 'Renewing soon'], ['risk', 'At risk', 1], ['unlinked', 'Unlinked']]
+let cFilter = 'all'
+const inr = (n) => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })
+const match = (c, f) => f === 'all' || c.stage === f || c.flags.includes(f) || (f === 'unpaid' && c.bill.inv.some((i) => i[3] === 'overdue' || i[3] === 'due'))
+const billState = (c) => { const o = c.bill.inv.find((i) => i[3] === 'overdue'); const d = c.bill.inv.find((i) => i[3] === 'due'); return o ? ['overdue', `${inr(o[1])} overdue`] : d ? ['due', `${inr(d[1])} due`] : c.bill.inv.some((i) => i[3] === 'upcoming') ? ['mute', 'Balance at handover'] : ['paid', 'Paid'] }
+function renderClients() {
+  const list = $('#c-list'), fl = $('#c-filters')
+  if (S.proto === 'loading') { fl.innerHTML = ''; list.innerHTML = Array.from({ length: 5 }, () => `<div class="load-row"><span class="skel" style="height:34px;border-radius:99px"></span><span style="display:grid;gap:6px"><span class="skel" style="width:40%"></span><span class="skel" style="width:70%"></span></span><span class="skel"></span></div>`).join(''); $('#c-totals').innerHTML = ''; return }
+  if (S.proto === 'error') { fl.innerHTML = ''; list.innerHTML = `<div class="panel-msg">${ico('cloud-off', 'i i-lg')}<b>Couldn’t load your clients</b><span>Nothing is lost. Studio will try again in a moment.</span><button class="btn sm" data-retry>${ico('refresh-cw', 'i i-sm')}Try again</button></div>`; $('#c-totals').innerHTML = ''; icons(list); return }
+  if (S.proto === 'empty') { fl.innerHTML = ''; list.innerHTML = `<div class="panel-msg"><svg width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="12" y="20" width="48" height="36" rx="6"/><path d="M24 20v-6h24v6"/><path d="M36 32v12M30 38h12" stroke="var(--rani)"/></svg><b>No clients yet</b><span>Start a site for a brand, or bring a brand you already work with.</span><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button class="btn primary sm" data-open="new-site">${ico('plus', 'i i-sm')}New site</button><button class="btn sm" data-link-brand>${ico('link', 'i i-sm')}Link an existing brand</button></div></div>`; $('#c-totals').innerHTML = ''; icons(list); return }
+  fl.innerHTML = FILTERS.map(([k, n, al]) => { const cnt = k === 'all' ? PORT.length : PORT.filter((c) => match(c, k)).length; return `<button role="tab" aria-selected="${cFilter === k}" data-f="${k}" class="${al && cnt ? 'alert' : ''}">${n}<b>${cnt}</b></button>` }).join('')
+  const q = ($('#c-q').value || '').trim().toLowerCase()
+  const rows = PORT.filter((c) => match(c, cFilter) && (!q || c.n.toLowerCase().includes(q)))
+  list.innerHTML = `<div class="chead"><span>Client</span><span>Stage</span><span>Next</span><span>Your billing</span><span>Studio credits</span><span>Your share</span></div>` + (rows.length ? rows.map((c, i) => {
+    const [u, b, k] = c.cr(), [bs, bt] = billState(c), pct = b ? u / b : 0
+    return `<button class="crow" data-c="${c.id}" style="animation-delay:${i * 35}ms"><span class="nm"><span class="ava" style="background:${c.col}">${c.n[0]}</span><span style="min-width:0"><b>${c.n}</b><small>${c.plan}</small></span></span>
+      <span><span class="badge ${STAGE[c.stage][1]}">${STAGE[c.stage][0]}</span></span>
+      <span class="next ${c.next[0]}">${ico(c.next[1], 'i i-sm')}<span>${c.next[2]}</span></span>
+      <span class="money">${inr(c.bill.amt)}${c.bill.type === 'Retainer' ? '<span class="sub" style="font-weight:500">/mo</span>' : ''}<small class="${bs}">${bt}</small></span>
+      <span class="mini-bar">${b ? `${u} / ${b}<span class="bar ${pct >= 1 ? 'full' : pct >= .8 ? 'warn' : ''}"><i style="transform:scaleX(${Math.min(1, pct)})"></i></span>` : '—'}</span>
+      <span class="money">${c.share ? inr(c.share) + '<small class="mute">a month</small>' : '<span class="sub" style="font-weight:500">—</span>'}</span></button>` }).join('') : `<div class="panel-msg">${ico('filter-x', 'i i-lg')}<b>No clients match</b><button class="btn sm" data-clear>Show all</button></div>`)
+  icons(list)
+  const live = PORT.filter((c) => c.stage === 'live'), unpaid = PORT.flatMap((c) => c.bill.inv.filter((i) => i[3] === 'overdue' || i[3] === 'due')).reduce((a, i) => a + i[1], 0)
+  $('#c-totals').innerHTML = `<span>Retainers <b>${inr(live.filter((c) => c.bill.type === 'Retainer').reduce((a, c) => a + c.bill.amt, 0))}</b> a month</span><span>Unpaid <b style="color:var(--bad-t)">${inr(unpaid)}</b></span><span>Your share from Frrata <b>${inr(PORT.reduce((a, c) => a + (c.share || 0), 0))}</b> a month</span><span class="private">${ico('eye-off', 'i i-sm')}Only your team sees your billing</span>`
+  icons($('#c-totals'))
+}
+$('#c-filters').addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { cFilter = b.dataset.f; renderClients() } })
+$('#c-q').addEventListener('input', renderClients)
+$('#c-list').addEventListener('click', (e) => {
+  if (e.target.closest('[data-retry]')) { S.proto = 'loading'; renderClients(); setTimeout(() => { S.proto = 'normal'; $('#proto').value = 'normal'; $('#main').dataset.proto = 'normal'; renderClients(); toast('Clients loaded.') }, 900); return }
+  if (e.target.closest('[data-clear]')) { cFilter = 'all'; $('#c-q').value = ''; renderClients(); return }
+  if (e.target.closest('[data-link-brand]')) { toast('The brand’s owner gets a link to add you as their partner.', 'info'); return }
+  const r = e.target.closest('[data-c]'); if (r) openClient(r.dataset.c)
+})
+document.addEventListener('click', (e) => { const r = e.target.closest('[data-remind]'); if (r) remind(PORT.find((c) => c.id === r.dataset.remind)) })
+function remind(c, inv) {
+  const text = inv ? `Hi ${c.who}, a gentle reminder for invoice ${inv[0]}: ${inr(inv[1])}, due ${inv[2]}. UPI: pixelthread@okhdfc. Thank you! — Rohan, Pixel & Thread`
+    : c.id === 'haldi' ? `Hi ${c.who}, the new festive banner (v3a) is ready for you. Tap the link to approve or leave a note.` : `Hi ${c.who}, a 5-minute form for your new site: logo, photos and a few words. The link is in my last message.`
+  modal({ title: `Remind ${c.who}`, pic: picEl('message-circle', '#D9FDD3', '#1E7B52'),
+    body: `<div class="wa"><div class="b me">${esc(text)}<small>from your WhatsApp</small></div></div><span class="private">${ico('smartphone', 'i i-sm')}Opens WhatsApp on your phone with this message. Frrata sends nothing.</span>`,
+    foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="rm-wa" data-autofocus>${ico('send', 'i i-sm')}Open WhatsApp</button>`,
+    onOpen: (m, close) => { $('#rm-wa', m).onclick = () => { close(); toast(`WhatsApp opened for ${c.who}.`) } } })
+}
+
+/* Client drawer */
+function drawer(html, onOpen) {
+  const w = document.createElement('div'); w.className = 'drawer-wrap'; w.innerHTML = `<aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-t">${html}</aside>`
+  document.body.append(w); icons(w); const prev = document.activeElement
+  requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('open')))
+  const close = () => { w.classList.remove('open'); setTimeout(() => { w.remove(); prev?.focus?.() }, 320); document.removeEventListener('keydown', esc2) }
+  const esc2 = (e) => { if (e.key === 'Escape' && !$('.modal-wrap')) close() }
+  document.addEventListener('keydown', esc2)
+  w.addEventListener('click', (e) => { if (e.target === w || e.target.closest('[data-dx]')) close() })
+  setTimeout(() => w.querySelector('.drawer button')?.focus(), 60); onOpen && onOpen(w.querySelector('.drawer'), close); return close
+}
+function openClient(id) {
+  const c = PORT.find((x) => x.id === id), [u, b, k] = c.cr(), pct = b ? u / b : 0
+  const steps = c.stage === 'unlinked' ? [['Linked', 'Jan', 1], ['Shop opened', 'Feb', 1], ['Unlinked by Tara', '2 Oct', 1], ['Your share ends', '31 Dec', 0]]
+    : c.stage === 'live' ? [['Linked', c.since, 1], ['Handed over', '', 1], ['Shop opened', '', 1], ['Maintaining', 'now', 2]]
+    : [['Linked', c.since, 1], ['Intake', c.id === 'saanjh' ? 'sent' : 'in', c.id === 'saanjh' ? 2 : 1], ['Design system', '', c.id === 'kesar' ? 1 : c.id === 'bandhej' ? 1 : 0], ['Build', '', c.id === 'kesar' || c.id === 'bandhej' ? 2 : 0], ['Hand over', '', 0], ['Shop opens', '', 0]]
+  drawer(`<div class="dh"><span class="ava" style="background:${c.col};width:40px;height:40px;border-radius:12px;font-size:16px">${c.n[0]}</span><div style="flex:1;min-width:0"><h2 id="dr-t">${c.n}</h2><span class="badge ${STAGE[c.stage][1]}">${STAGE[c.stage][0]}</span> <span class="sub" style="font-size:12px">${c.who} · since ${c.since}</span></div><button class="btn icon ghost sm" data-dx aria-label="Close">${ico('x', 'i i-sm')}</button></div>
+    <div class="db">
+      <div class="dsec"><div class="next ${c.next[0]}" style="font-size:13.5px">${ico(c.next[1], 'i i-sm')}<b style="font-weight:600">${c.next[2]}</b></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">${c.stage !== 'unlinked' ? `<button class="btn sm primary" data-site="${c.id}">${ico('layout-template', 'i i-sm')}Open site</button>` : ''}<button class="btn sm" data-wa>${ico('message-circle', 'i i-sm')}WhatsApp ${c.who}</button>${c.flags.includes('awaiting') ? `<button class="btn sm" data-remind="${c.id}">${ico('bell', 'i i-sm')}Remind</button>` : ''}</div></div>
+      <div class="dsec"><h3>Progress</h3><div class="timeline">${steps.map(([t, d, s]) => `<div><span class="dot ${s === 2 ? 'now' : s ? '' : 'todo'}"></span><span>${t}</span><time>${d}</time></div>`).join('')}</div></div>
+      <div class="dsec"><h3>Your billing <span class="private">${ico('eye-off', 'i i-sm')}Only your team sees this</span></h3>
+        <div class="kv"><span>${c.bill.type}</span><b>${inr(c.bill.amt)}${c.bill.type === 'Retainer' ? ' a month' : ''}</b></div>${c.renews ? `<div class="kv"><span>Renews</span><b>${c.renews}</b></div>` : ''}
+        <div style="display:grid;gap:6px" id="dr-inv">${c.bill.inv.map((iv, i) => `<div class="inv"><span><b>${iv[4]}</b><small>${iv[0]} · ${iv[2]}</small></span><span class="money">${inr(iv[1])}</span>${iv[3] === 'paid' ? `<span class="badge ok">Paid</span>` : iv[3] === 'upcoming' ? `<span class="badge">Upcoming</span>` : `<span style="display:flex;gap:4px"><button class="btn sm" data-paid="${i}">Mark paid</button><button class="btn sm icon ghost tip" data-tip="Remind" data-rinv="${i}" aria-label="Remind">${ico('bell', 'i i-sm')}</button></span>`}</div>`).join('')}</div>
+        <button class="btn sm ghost" data-addinv style="justify-self:start">${ico('plus', 'i i-sm')}Record an invoice</button></div>
+      <div class="dsec"><h3>Studio credits <span class="private">${ico('eye-off', 'i i-sm')}${c.who} never sees these</span></h3>
+        ${b ? `<div class="mini-bar" style="justify-items:start;font-size:12.5px">${u} of ${b} ${k === 'month' ? 'this month' : 'for the build'}<span class="bar ${pct >= 1 ? 'full' : pct >= .8 ? 'warn' : ''}" style="height:8px"><i style="transform:scaleX(${Math.min(1, pct)})"></i></span></div>
+        ${pct >= 1 ? `<div class="cap-banner"><b>Budget used up.</b><span>New turns for ${c.n} are paused; drafts are kept.</span><div class="row2"><button class="btn sm" data-raise="50">Raise by 50</button></div></div>` : ''}
+        <div class="kv"><span>≈ in rupees</span><b>${inr(u * 19)} of ${inr(b * 19)} + GST</b></div>` : '<span class="sub" style="font-size:13px">No Studio budget: access ended.</span>'}</div>
+      <div class="dsec"><h3>Frrata and ${c.who}</h3>
+        <div class="kv"><span>${c.n}’s Frrata plan</span><b>${c.plan}</b></div><span class="sub" style="font-size:12px">${c.who} pays Frrata for the shop. That’s separate from your credits.</span>
+        ${c.share ? `<div class="kv"><span>Your share (20%)</span><b>${inr(c.share)} a month</b></div><div class="kv"><span>Window</span><b>${typeof c.sm === 'number' ? `month ${c.sm} of 24` : c.sm}</b></div>` : `<div class="kv"><span>Your share</span><b>${c.stage === 'onboarding' ? 'Starts when the shop opens' : 'Starts at the first payment'}</b></div>`}</div>
+      <details class="more" style="margin-top:14px"><summary>${ico('sliders-horizontal', 'i i-sm')}Advanced: environment and apps</summary>
+        <div style="display:grid;gap:8px;font-size:12.5px"><div class="kv"><span>Preview data</span><b>Catalogue, read-only</b></div><div class="kv"><span>Outbound</span><b>Frrata, media, Google Fonts</b></div><div class="kv"><span>Packages</span><b>Kit allow-list · outside ones wait 7 days</b></div><div class="kv"><span>Who publishes</span><b>Owner and Leads</b></div><div class="kv"><span>Apps the site can use</span><b>See Build › Apps</b></div></div></details>
+    </div>`, (d, close) => {
+    d.addEventListener('click', (e) => {
+      if (e.target.closest('[data-site]')) { close(); if (c.id === 'kesar') location.hash = '#build'; else toast('In this prototype only Kesar Studio’s site opens.', 'info') }
+      if (e.target.closest('[data-wa]')) toast(`WhatsApp opened for ${c.who}.`)
+      const p = e.target.closest('[data-paid]'); if (p) { const iv = c.bill.inv[+p.dataset.paid]; const prev = iv[3]; iv[3] = 'paid'; close(); renderClients(); toast(`${iv[0]} marked paid: ${inr(iv[1])}.`, 'ok', { label: 'Undo', run: () => { iv[3] = prev; renderClients() } }) }
+      const ri = e.target.closest('[data-rinv]'); if (ri) remind(c, c.bill.inv[+ri.dataset.rinv])
+      if (e.target.closest('[data-raise]')) { close(); if (c.id === 'noor') c.cr = () => [200, 250, 'month']; renderClients(); toast(`${c.n}: budget raised to ${c.id === 'noor' ? 250 : b + 50}.`) }
+      if (e.target.closest('[data-addinv]')) addInvoice(c, close)
+    })
+  })
+}
+function addInvoice(c, closeDrawer) {
+  modal({ title: `Record an invoice · ${c.n}`, pic: picEl('receipt', 'var(--muted)', 'var(--fg)'),
+    body: `<div class="field"><label for="ai-for">For</label><input id="ai-for" class="input" value="December retainer"></div><div class="field"><label for="ai-amt">Amount (₹)</label><input id="ai-amt" class="input mono" inputmode="numeric" placeholder="12,000" aria-describedby="ai-err"><span id="ai-err"></span></div><div class="field"><label for="ai-due">Due</label><input id="ai-due" class="input" value="5 Dec"></div><span class="private">${ico('info', 'i i-sm')}A record for your team. Frrata doesn’t send or collect it.</span>`,
+    foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="ai-ok">Save</button>`,
+    onOpen: (m, close) => { $('#ai-ok', m).onclick = () => { const a = +$('#ai-amt', m).value.replace(/\D/g, ''); if (!a) { $('#ai-amt', m).setAttribute('aria-invalid', 'true'); $('#ai-err', m).innerHTML = `<span class="err-line">${ico('alert-circle', 'i i-sm')}Enter the amount</span>`; icons(m); $('#ai-amt', m).focus(); return } c.bill.inv.push(['PT-04' + (22 + c.bill.inv.length), a, $('#ai-due', m).value, 'due', $('#ai-for', m).value]); close(); closeDrawer(); renderClients(); toast(`Recorded ${inr(a)} for ${c.n}.`) } } })
+}
+
+/* ════════ CREDITS & BILLING ════════ */
+const PLANS = [['free', 'Partner', 0, '10 credits, once', ['For trying Studio']], ['studio', 'Studio', 2999, '150 credits every month', ['Seat credits roll over one month', 'Packs on top: 100 for ₹1,900 + GST']], ['plus', 'Studio Plus', 9999, '500 credits every month', ['Seat credits roll over one month', 'Packs on top: 100 for ₹1,900 + GST']]]
+const BILL = { plan: 'studio', renews: '1 Dec 2026', autopay: 'UPI AutoPay · pixelthread@okhdfc', cancels: false, reserved: 18, used: 108, seatLeft: 42, packLeft: 100, packs: 1, pay: [['1 Nov', 'Studio · November', 3538.82, 'paid', 'FRR/26-27/00131'], ['3 Oct', 'Credit pack · 100', 2242, 'paid', 'FRR/26-27/00118'], ['1 Oct', 'Studio · October', 3538.82, 'failed', '—'], ['2 Oct', 'Studio · October (retried)', 3538.82, 'paid', 'FRR/26-27/00112']] }
+const USAGE = [['Kesar Studio', 'Design system v1–v3', 'Meera', [8, 15], 12, 'Charged'], ['Kesar Studio', 'Diwali home · build', 'Meera', [34, 42], () => 31 + S.siteCredits, 'Charged'], ['Noor Threads', 'Sana’s 3 notes', 'Rohan', [6, 10], 6, 'Charged'], ['Bandhej Co.', 'Lookbook page', 'Meera', [10, 14], 12, 'Running · reserved'], ['Bandhej Co.', 'Lookbook · first try', 'Meera', [10, 14], 4, 'Returned · Frrata’s fault'], ['Vastra Loom', 'Routine: New in', 'Rohan', [4, 6], 6, 'Running · reserved'], ['Mitti Ceramics', 'Kit 2.3 update', 'Frrata', [0, 0], 0, 'Frrata paid'], ['Haldi House', 'Festive banner · 3 variants', 'Rohan', [12, 18], 14, 'Charged']]
+let bTab = 'overview'
+const B_TABS = [['overview', 'Overview'], ['usage', 'Usage'], ['budgets', 'Client budgets'], ['payments', 'Payments and invoices'], ['plan', 'Plan'], ['share', 'Your share']]
+const gst = (x) => Math.round(x * 18) / 100
+function renderBilling() {
+  $('#b-tabs').innerHTML = B_TABS.map(([k, n]) => `<button role="tab" aria-selected="${bTab === k}" data-bt="${k}">${n}</button>`).join('')
+  const ban = $('#b-banner')
+  ban.innerHTML = S.proto === 'low' ? `<div class="banner warn">${ico('battery-low', 'i')}<span class="grow"><b>8 credits left.</b> Turns that need more will wait; nothing is lost.</span><button class="btn sm primary" data-buy>Buy credits</button></div>`
+    : S.proto === 'payfail' || BILL.failed ? `<div class="banner bad">${ico('credit-card', 'i')}<span class="grow"><b>The 1 Dec renewal didn’t go through.</b> Your credits still work; December’s 150 arrive once it’s paid.</span><button class="btn sm primary" data-pay-renewal>Pay ₹3,538.82</button></div>`
+    : BILL.cancels ? `<div class="banner info">${ico('calendar-x', 'i')}<span class="grow"><b>Studio ends on 30 Nov.</b> Credits you have stay usable until they expire.</span><button class="btn sm" data-resume>Keep Studio</button></div>` : ''
+  icons(ban)
+  const body = $('#b-body')
+  if (S.proto === 'loading') { body.innerHTML = `<div class="card bal">${'<span class="skel" style="height:40px;width:40%"></span><span class="skel" style="width:90%"></span><span class="skel" style="width:70%"></span>'}</div>`; return }
+  if (S.proto === 'error') { body.innerHTML = `<div class="card panel-msg">${ico('cloud-off', 'i i-lg')}<b>Couldn’t load billing</b><span>Your balance and payments are safe.</span><button class="btn sm" data-bretry>${ico('refresh-cw', 'i i-sm')}Try again</button></div>`; icons(body); return }
+  const av = S.credits, rs = S.proto === 'empty' ? 0 : BILL.reserved, us = S.proto === 'empty' ? 0 : BILL.used
+  if (bTab === 'overview') {
+    const tot = av + rs + us
+    body.innerHTML = `<div class="bgrid"><div style="display:grid;gap:18px">
+      <div class="card bal"><div class="bal-n"><span class="big-n" id="bal-n">${av}</span><span class="sub">credits available · ≈ ${inr(av * 19)}</span></div>
+        <div class="stack" aria-hidden="true"><i class="av" style="flex-grow:${av}"></i><i class="rs" style="flex-grow:${rs}"></i><i class="us" style="flex-grow:${us}"></i></div>
+        <div class="three"><div><b><i class="k" style="background:var(--ink)"></i>${av}</b>Available</div><div><b><i class="k" style="background:var(--warn-t)"></i>${rs}</b>Reserved by ${rs ? '2 running turns' : 'nothing'}</div><div><b><i class="k" style="background:color-mix(in srgb,var(--sub) 35%,transparent)"></i>${us}</b>Used since 1 Nov</div></div>
+        <span class="sub" style="font-size:12.5px">A turn reserves its most, then keeps only what it used. Turns that fail on Frrata’s side come back.</span></div>
+      <div class="card" style="padding:16px;display:grid;gap:10px"><div class="sec-h"><h2>Where your credits sit</h2><span class="sub" style="font-size:12px">Soonest to expire is used first</span></div>
+        <div class="tbl-wrap" style="border:0"><table class="tbl" style="min-width:0"><tbody>
+          <tr><td>November seat</td><td class="n">${Math.min(BILL.seatLeft, av)} of 150</td><td class="n sub">use by 31 Dec</td></tr>
+          <tr><td>Pack · bought 3 Oct</td><td class="n">${Math.max(0, av - Math.min(BILL.seatLeft, av))} of ${BILL.packs * 100}</td><td class="n sub">use by 3 Oct 2027</td></tr></tbody></table></div>
+        <span class="sub" style="font-size:12px">Seat credits roll over one month. Packs last 12 months. Credits aren’t refunded as money.</span></div>
+      <div class="card" style="padding:16px;display:grid;gap:8px"><div class="sec-h"><h2>Recent</h2><button class="btn sm ghost" data-bt="usage">See all usage</button></div>
+        ${S.proto === 'empty' ? `<div class="panel-msg" style="padding:18px">${ico('receipt', 'i i-lg')}<b>No usage yet</b><span>Start a site and each turn shows here with its estimate.</span></div>` : USAGE.slice(0, 4).map((r) => usageLine(r)).join('')}</div></div>
+      <div style="display:grid;gap:18px;align-content:start">${buyCard()}
+      <div class="card" style="padding:16px;display:grid;gap:10px"><div class="sec-h"><h2>Plan</h2><button class="btn sm ghost" data-bt="plan">Change</button></div><div class="kv"><span>Studio</span><b>₹2,999 + GST a month</b></div><div class="kv"><span>${BILL.cancels ? 'Ends' : 'Renews'}</span><b>${BILL.cancels ? '30 Nov' : BILL.renews}</b></div><div class="kv"><span>Pays by</span><b>${BILL.autopay}</b></div></div>
+      <div class="card" style="padding:16px;display:grid;gap:10px"><h2 style="font:600 15px var(--f-display);margin:0">Alerts</h2>
+        <label style="display:flex;gap:10px;align-items:center;font-size:13px"><span class="switch"><input type="checkbox" checked aria-label="Below 50 credits"><span></span></span>When I’m below 50 credits</label>
+        <label style="display:flex;gap:10px;align-items:center;font-size:13px"><span class="switch"><input type="checkbox" checked aria-label="Client at 80%"><span></span></span>When a client reaches 80%</label>
+        <span class="sub" style="font-size:12px">By email and in Studio, to the owner and the client’s lead.</span></div></div></div>`
+    icons(body); bindBuy(body)
+  } else if (bTab === 'usage') {
+    const rows = S.proto === 'empty' ? [] : USAGE
+    const sumA = rows.reduce((a, r) => a + (/Charged|Running/.test(r[5]) ? (typeof r[4] === 'function' ? r[4]() : r[4]) : 0), 0)
+    body.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center"><div class="seg" id="u-per"><span class="thumb"></span><button aria-pressed="true">November</button><button aria-pressed="false">October</button></div><select class="input" style="width:auto;min-height:36px" id="u-client" aria-label="Client"><option>All clients</option>${PORT.map((c) => `<option>${c.n}</option>`).join('')}</select><span style="flex:1"></span><button class="btn sm" data-csv>${ico('download', 'i i-sm')}CSV for your CA</button></div>
+      ${rows.length ? `<div class="tbl-wrap"><table class="tbl" id="u-tbl"><thead><tr><th>Client</th><th>Session</th><th>Who</th><th class="n">Estimate → used</th><th>Status</th></tr></thead><tbody>${rows.map((r, i) => usageRow(r, i)).join('')}</tbody><tfoot><tr><td colspan="3"><b>Charged and reserved</b></td><td class="n"><b>${sumA} credits · ${inr(sumA * 19)}</b></td><td></td></tr></tfoot></table></div>` : `<div class="card panel-msg">${ico('receipt', 'i i-lg')}<b>No usage this month</b></div>`}`
+    icons(body); const pl = seg($('#u-per', body)); setTimeout(pl, 40)
+    $('#u-client', body).onchange = (e) => { const v = e.target.value; $$('#u-tbl tbody tr', body).forEach((tr) => { tr.hidden = v !== 'All clients' && tr.dataset.client !== v }) }
+  } else if (bTab === 'budgets') {
+    body.innerHTML = `<div class="card">${PORT.filter((c) => c.stage !== 'unlinked').map((c) => { const [u, b, k] = c.cr(), p = b ? u / b : 0; return `<div class="budget-row" data-bc="${c.id}"><span class="nm" style="display:flex;gap:10px;align-items:center"><span class="ava" style="background:${c.col}">${c.n[0]}</span><span><b>${c.n}</b><br><span class="sub" style="font-size:12px">${k === 'month' ? 'Each month' : 'For the build'}</span></span></span>
+      <span style="display:grid;gap:6px"><span style="display:flex;justify-content:space-between;font-size:12.5px"><span class="mono">${u} / ${b}</span><span class="${p >= 1 ? '' : 'sub'}" style="${p >= 1 ? 'color:var(--bad-t);font-weight:600' : p >= .8 ? 'color:var(--warn-t);font-weight:600' : ''}">${p >= 1 ? 'Paused at 100%' : p >= .8 ? Math.round(p * 100) + '% · warned' : Math.round(p * 100) + '%'}</span></span><span class="bar ${p >= 1 ? 'full' : p >= .8 ? 'warn' : ''}"><i style="transform:scaleX(${Math.min(1, p)})"></i></span></span>
+      <span class="edit"><input class="input mono" value="${b}" inputmode="numeric" aria-label="${c.n} budget"><button class="btn sm" data-save-b="${c.id}">Save</button></span></div>` }).join('')}</div>
+      <div class="chips" style="margin-top:12px"><span class="chip">Warns at 80%</span><span class="chip">Pauses at 100%, drafts kept</span><span class="chip">New sites start at 300</span></div>`
+    icons(body)
+    body.addEventListener('click', (e) => { const s = e.target.closest('[data-save-b]'); if (!s) return; const c = PORT.find((x) => x.id === s.dataset.saveB), inp = s.previousElementSibling, v = +inp.value.replace(/\D/g, ''), [u] = c.cr(); if (!v || v < u) { inp.setAttribute('aria-invalid', 'true'); toast(v < u ? `${c.n} has already used ${u}; the budget can’t go below that.` : 'Enter a number of credits.', 'bad'); return } inp.removeAttribute('aria-invalid'); const k = c.cr()[2]; c.cr = () => [c.id === 'kesar' ? kesarUsed() : u, v, k]; if (c.id === 'kesar' && S.proto === 'cap') { S.proto = 'normal'; $('#proto').value = 'normal' } renderBilling(); toast(`${c.n}: ${v} credits.`) }, { once: true })
+  } else if (bTab === 'payments') {
+    body.innerHTML = `<div class="bgrid"><div class="card"><div class="tbl-wrap" style="border:0"><table class="tbl"><thead><tr><th>Date</th><th>What</th><th class="n">Paid (with GST)</th><th>Status</th><th>Invoice</th></tr></thead><tbody>${BILL.pay.map(([d, w, a, s, no]) => `<tr><td>${d}</td><td>${w}</td><td class="n">${inr(a)}</td><td>${s === 'paid' ? '<span class="badge ok">Paid</span>' : '<span class="badge bad">Failed · retried</span>'}</td><td>${no !== '—' ? `<button class="btn sm ghost" data-inv="${no}">${ico('file-down', 'i i-sm')}${no}</button>` : '<span class="sub">—</span>'}</td></tr>`).join('')}</tbody></table></div></div>
+      <div style="display:grid;gap:18px;align-content:start"><div class="card" style="padding:16px;display:grid;gap:8px"><div class="sec-h"><h2>Invoices go to</h2><button class="btn sm ghost" data-edit-gst>${ico('pencil', 'i i-sm')}Edit</button></div><div class="kv"><span>Name</span><b>Pixel &amp; Thread LLP</b></div><div class="kv"><span>GSTIN</span><b class="mono" id="gstin-v">27AAACP1234R1Z5</b></div><div class="kv"><span>State</span><b>Maharashtra</b></div><span class="sub" style="font-size:12px">Every invoice carries your GSTIN, so you can claim the 18% back as input credit.</span></div>
+        <div class="card" style="padding:16px;display:grid;gap:8px"><h2 style="font:600 15px var(--f-display);margin:0">Pays by</h2><div class="kv"><span>${ico('smartphone', 'i i-sm')} UPI AutoPay</span><b>pixelthread@okhdfc</b></div><span class="sub" style="font-size:12px">Only the seat renews by itself, up to ₹3,600 a debit. Packs are bought when you choose.</span><button class="btn sm" style="justify-self:start" data-change-pm>Change</button></div></div></div>`
+    icons(body)
+  } else if (bTab === 'plan') {
+    body.innerHTML = `<div class="plans">${PLANS.map(([k, n, p, cr, f]) => `<div class="card plan ${BILL.plan === k ? 'cur' : ''}">${BILL.plan === k ? '<span class="badge info" style="justify-self:start">Your plan</span>' : ''}<b style="font-size:15px">${n}</b><span class="pr">${p ? inr(p) : 'Free'}<small>${p ? ' + GST a month' : ''}</small></span><span style="font-size:13px;font-weight:600">${cr}</span><ul>${f.map((x) => `<li>${ico('check', 'i i-sm')}${x}</li>`).join('')}</ul>${BILL.plan === k ? (BILL.cancels ? '<button class="btn sm" data-resume>Keep Studio</button>' : '<button class="btn sm ghost" data-cancel-plan style="color:var(--bad-t)">Cancel Studio</button>') : k === 'plus' ? '<button class="btn sm primary" data-upgrade>Move to Studio Plus</button>' : '<span class="sub" style="font-size:12px">Where every partner starts</span>'}</div>`).join('')}</div>
+      <div class="banner info" style="margin-top:16px">${ico('info', 'i')}<span class="grow">Studio is what you pay Frrata to build. Your clients’ Frrata plans (Launch, Growth, Scale) are theirs, and they never buy Studio credits.</span></div>`
+    icons(body)
+  } else if (bTab === 'share') {
+    const rows = PORT.filter((c) => c.share)
+    const g = rows.reduce((a, c) => a + c.share, 0), tds = Math.round(g * 2) / 100
+    body.innerHTML = `<div class="bgrid"><div style="display:grid;gap:18px"><div class="card bal"><div class="bal-n"><span class="big-n" style="font-size:36px">${inr(g)}</span><span class="sub">for October · pays 5 Dec</span></div><div class="sum"><div class="kv"><span>Your 20% of what Frrata collected</span><b>${inr(g)}</b></div><div class="kv"><span>+ GST 18% (self-billed invoice)</span><b>${inr(gst(g))}</b></div><div class="kv"><span>− TDS</span><b>−${inr(tds)}</b></div><div class="kv"><span>To HDFC ••4421</span><b>${inr(g + gst(g) - tds)}</b></div></div>
+        <span class="sub" style="font-size:12px">Frrata pays this to you. It’s separate from the credits you buy.</span></div>
+      <div class="card"><div class="tbl-wrap" style="border:0"><table class="tbl"><thead><tr><th>Client</th><th>Their plan</th><th class="n">Your 20%</th><th>Window</th></tr></thead><tbody>${rows.map((c) => `<tr><td>${c.n}</td><td>${c.plan}</td><td class="n">${inr(c.share)}</td><td class="sub">${typeof c.sm === 'number' ? `month ${c.sm} of 24` : c.sm}</td></tr>`).join('')}</tbody></table></div></div></div>
+      <div style="display:grid;gap:18px;align-content:start"><div class="card" style="padding:16px;display:grid;gap:8px"><h2 style="font:600 15px var(--f-display);margin:0">Statements</h2>${[['October', g, 'Pays 5 Dec', 'info'], ['September', 9169.2, 'Paid 5 Nov · UTR ••8842', 'ok'], ['August', 5289.4, 'Paid 5 Oct', 'ok'], ['July', 704.8, 'Carried to August · under ₹1,000', '']].map(([m, a, s, k]) => `<div class="inv"><span><b>${m}</b><small>${s}</small></span><span class="money">${inr(a)}</span><button class="btn sm icon ghost" aria-label="${m} statement" data-inv="${m} statement">${ico('file-down', 'i i-sm')}</button></div>`).join('')}</div>
+        <div class="card" style="padding:16px;display:grid;gap:8px"><h2 style="font:600 15px var(--f-display);margin:0">Payout details</h2><div class="kv"><span>PAN</span><b>${ico('check', 'i i-sm')} AAACP••••R</b></div><div class="kv"><span>Bank</span><b>${ico('check', 'i i-sm')} HDFC ••4421</b></div><div class="kv"><span>GSTIN</span><b>${ico('check', 'i i-sm')} on file</b></div><span class="sub" style="font-size:12px">Paid on the 5th for the month before last, once it’s over ₹1,000.</span></div></div></div>`
+    icons(body)
+  }
+}
+function usageLine(r) { const a = typeof r[4] === 'function' ? r[4]() : r[4]; return `<div class="kv" style="align-items:center"><span><b style="color:var(--fg);font-weight:600">${r[0]}</b> · ${r[1]}</span><b class="mono">${/Returned|Frrata/.test(r[5]) ? '0' : '−' + a}</b></div>` }
+function usageRow(r, i) {
+  const a = typeof r[4] === 'function' ? r[4]() : r[4], [lo, hi] = r[3], max = 50
+  const k = /Charged/.test(r[5]) ? 'ok' : /Running/.test(r[5]) ? 'warn' : 'info'
+  return `<tr data-client="${r[0]}" style="animation-delay:${i * 40}ms"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="n">${hi ? `<span class="est"><span>${lo}–${hi} → <b style="color:var(--fg)">${a}</b></span><span class="rng"><i style="left:${lo / max * 100}%;width:${(hi - lo) / max * 100}%"></i><b style="left:${Math.min(98, a / max * 100)}%"></b></span></span>` : '—'}</td><td><span class="badge ${k}">${r[5]}</span></td></tr>`
+}
+let packs = 1
+function buyCard() {
+  const amt = packs * 1900
+  return `<div class="card" style="padding:16px;display:grid;gap:12px" id="buy"><div class="sec-h"><h2>Buy credits</h2><span class="badge info">100 credits a pack</span></div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="stepper"><button data-pk="-1" aria-label="One fewer pack">${ico('minus', 'i i-sm')}</button><output id="pk-n">${packs}</output><button data-pk="1" aria-label="One more pack">${ico('plus', 'i i-sm')}</button></span><span><b class="mono">${packs * 100}</b> <span class="sub">credits · last 12 months</span></span></div>
+    <div class="sum"><div class="kv"><span>${packs} × ₹1,900</span><b>${inr(amt)}</b></div><div class="kv"><span>GST 18%</span><b>${inr(gst(amt))}</b></div><div class="kv"><span>You pay</span><b>${inr(amt + gst(amt))}</b></div></div>
+    <button class="btn primary" data-buy>${ico('smartphone', 'i i-sm')}Pay ${inr(amt + gst(amt))} by UPI</button></div>`
+}
+function bindBuy(root) { root.querySelectorAll('[data-pk]').forEach((b) => b.onclick = () => { packs = Math.min(10, Math.max(1, packs + +b.dataset.pk)); const card = $('#buy'); card.outerHTML = buyCard(); icons($('#buy')); bindBuy($('#buy')) }) }
+function checkout({ what, amt, credits, onPaid }) {
+  const total = amt + gst(amt); let fail = S.proto === 'payfail'
+  modal({ title: what, pic: picEl('smartphone', 'var(--muted)', 'var(--fg)'),
+    body: `<div id="co"><div class="sum"><div class="kv"><span>${what}</span><b>${inr(amt)}</b></div><div class="kv"><span>GST 18%</span><b>${inr(gst(amt))}</b></div><div class="kv"><span>Total</span><b>${inr(total)}</b></div></div>
+      <div class="pay-methods" style="margin-top:12px"><label class="pm"><input type="radio" name="pm" checked> ${ico('smartphone', 'i i-sm')}UPI · any app</label><label class="pm"><input type="radio" name="pm"> ${ico('credit-card', 'i i-sm')}Card</label><label class="pm"><input type="radio" name="pm"> ${ico('landmark', 'i i-sm')}Netbanking</label></div></div>`,
+    foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="co-go" data-autofocus>Pay ${inr(total)}</button>`,
+    onOpen: (m, close) => {
+      const go = async () => {
+        $('#co', m).innerHTML = `<div class="upi-wait"><span class="ring2"></span><b>Approve ${inr(total)} in your UPI app</b><span class="sub" style="font-size:12.5px">Waiting up to 5 minutes. Don’t close this.</span></div>`
+        $('#co-go', m).setAttribute('aria-disabled', 'true'); await wait(reduced ? 200 : 1800)
+        if (fail) { fail = false; $('#co', m).innerHTML = `<div class="dlg-err" role="alert" style="display:flex;gap:10px;padding:12px;border-radius:10px;background:var(--bad);color:var(--bad-t)">${ico('alert-circle', 'i')}<span><b>The payment didn’t go through.</b><br><span style="color:var(--fg)">Your bank declined it. Nothing was charged.</span></span></div>`; icons(m); const b = $('#co-go', m); b.setAttribute('aria-disabled', 'false'); b.textContent = 'Try again'; b.onclick = go; return }
+        close(); onPaid && onPaid(); if (credits) bumpCredits(-credits)
+        setTimeout(() => published2(what, total, credits), 340)
+      }
+      $('#co-go', m).onclick = go
+    } })
+}
+function published2(what, total, credits) {
+  const no = 'FRR/26-27/00' + (142 + BILL.pay.length)
+  BILL.pay.unshift([new Date().getDate() + ' Nov', what, total, 'paid', no])
+  modal({ title: 'Paid', body: `<div style="position:relative;display:grid;justify-items:center;gap:8px;text-align:center"><div class="done-burst">${Array.from({ length: 12 }, (_, i) => `<i style="--r:${i * 30}deg;animation-delay:${i * 18}ms"></i>`).join('')}</div><svg class="big-check" viewBox="0 0 84 84" fill="none" stroke="var(--ok-t)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="42" cy="42" r="38"/><path d="M27 43l10 10 21-22"/></svg><b>${credits ? `+${credits} credits` : what}</b><span class="sub">${inr(total)} · GST invoice ${no}</span></div>`,
+    foot: `<button class="btn" data-x data-inv="${no}">${ico('file-down', 'i i-sm')}Invoice</button><button class="btn primary" data-x>Done</button>` })
+  $('#side-credits').textContent = S.credits; if ((location.hash || '').slice(1) === 'billing') setTimeout(renderBilling, 600)
+}
+$('#b-tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-bt]'); if (b) { bTab = b.dataset.bt; renderBilling() } })
+$('#b-recharge').addEventListener('click', () => { bTab = 'overview'; renderBilling(); setTimeout(() => $('#buy')?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' }), 50) })
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#b-body, #b-banner, .modal')) return
+  const t = e.target.closest('[data-bt]'); if (t && t.closest('#b-body')) { bTab = t.dataset.bt; renderBilling(); return }
+  if (e.target.closest('[data-buy]')) checkout({ what: `${packs} credit pack${packs > 1 ? 's' : ''} · ${packs * 100} credits`, amt: packs * 1900, credits: packs * 100, onPaid: () => { BILL.packs += packs; if (S.proto === 'low') { S.proto = 'normal'; $('#proto').value = 'normal' } } })
+  if (e.target.closest('[data-pay-renewal]')) checkout({ what: 'Studio · December', amt: 2999, credits: 150, onPaid: () => { BILL.failed = false; if (S.proto === 'payfail') { S.proto = 'normal'; $('#proto').value = 'normal' } } })
+  const iv = e.target.closest('[data-inv]'); if (iv) toast(`${iv.dataset.inv}.pdf downloaded.`)
+  if (e.target.closest('[data-csv]')) toast('usage-nov-2026.csv downloaded: one row per turn, with GST.')
+  if (e.target.closest('[data-bretry]')) { S.proto = 'normal'; $('#proto').value = 'normal'; renderBilling() }
+  if (e.target.closest('[data-resume]')) { BILL.cancels = false; renderBilling(); toast('Studio continues. Renews 1 Dec.') }
+  if (e.target.closest('[data-change-pm]')) toast('Opens a new UPI AutoPay mandate in your UPI app.', 'info')
+  if (e.target.closest('[data-upgrade]')) modal({ title: 'Move to Studio Plus?', pic: picEl('arrow-up-circle', 'var(--info)', 'var(--info-t)'),
+    body: `<div class="sum"><div class="kv"><span>Studio Plus</span><b>₹9,999 + GST a month</b></div><div class="kv"><span>Credits each month</span><b>500</b></div></div><div class="seg" id="up-when"><span class="thumb"></span><button aria-pressed="true">From 1 Dec</button><button aria-pressed="false">Today</button></div><span class="sub" style="font-size:12.5px" id="up-note">Nothing to pay today. Your Studio credits stay.</span>`,
+    foot: `<button class="btn" data-x>Stay on Studio</button><button class="btn primary" id="up-ok">Move to Plus</button>`,
+    onOpen: (m, close) => { let now = false; const p = seg($('#up-when', m), (b) => { now = b.textContent === 'Today'; $('#up-note', m).textContent = now ? 'A new month starts today: you pay ₹11,798.82 now and get 500 credits. Your Studio credits stay.' : 'Nothing to pay today. Your Studio credits stay.' }); setTimeout(p, 40); $('#up-ok', m).onclick = () => { close(); if (now) checkout({ what: 'Studio Plus', amt: 9999, credits: 500, onPaid: () => { BILL.plan = 'plus' } }); else { BILL.plan = 'studio'; toast('Studio Plus from 1 Dec.') ; renderBilling() } } } })
+  if (e.target.closest('[data-cancel-plan]')) modal({ title: 'Cancel Studio?', pic: picEl('calendar-x', 'var(--bad)', 'var(--bad-t)'),
+    body: `<div style="display:grid;gap:8px">${['Studio works until 30 Nov', `Credits you have stay usable until they expire (${S.credits} now)`, 'Your clients’ shops, sites and Frrata plans keep running', 'Your 20% share keeps coming: it doesn’t depend on Studio', 'Routines stop on 30 Nov'].map((t) => `<div class="check-row"><span class="ic">${ico('arrow-right', 'i i-sm')}</span><span class="grow">${t}</span></div>`).join('')}</div>`,
+    foot: `<button class="btn" data-x>Keep Studio</button><button class="btn danger" id="cx-ok">Cancel at 30 Nov</button>`,
+    onOpen: (m, close) => { $('#cx-ok', m).onclick = () => { close(); BILL.cancels = true; renderBilling(); toast('Studio ends on 30 Nov.', 'ok', { label: 'Undo', run: () => { BILL.cancels = false; renderBilling() } }) } } })
+  if (e.target.closest('[data-edit-gst]')) modal({ title: 'Invoice details', pic: picEl('receipt', 'var(--muted)', 'var(--fg)'),
+    body: `<div class="field"><label for="g-name">Legal name</label><input id="g-name" class="input" value="Pixel & Thread LLP"></div><div class="field"><label for="g-in">GSTIN</label><input id="g-in" class="input mono" value="27AAACP1234R1Z5" maxlength="15" aria-describedby="g-err" style="text-transform:uppercase"><span id="g-err"></span></div>`,
+    foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="g-ok">Save</button>`,
+    onOpen: (m, close) => { $('#g-ok', m).onclick = () => { const v = $('#g-in', m).value.trim().toUpperCase(); if (v && !/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(v)) { $('#g-in', m).setAttribute('aria-invalid', 'true'); $('#g-err', m).innerHTML = `<span class="err-line">${ico('alert-circle', 'i i-sm')}A GSTIN is 15 characters, like 27AAACP1234R1Z5</span>`; icons(m); $('#g-in', m).focus(); return } close(); toast(v ? 'Saved. Next invoices carry this GSTIN.' : 'Saved without a GSTIN: invoices go to your name.') } } })
+})
+
+/* ════════ SETTINGS (developer and security controls, away from everyday work) ════════ */
+let sTab = 'business'
+function renderSettings() {
+  const T = [['business', 'Business'], ['security', 'Security'], ['developer', 'Developer'], ['environment', 'Environment']]
+  $('#s-tabs').innerHTML = T.map(([k, n]) => `<button role="tab" aria-selected="${sTab === k}" data-st2="${k}">${n}</button>`).join('')
+  const b = $('#s-body')
+  b.innerHTML = `<div class="card" style="padding:18px;display:grid;gap:12px;max-width:720px">` + ({
+    business: `<div class="kv"><span>Name</span><b>Pixel &amp; Thread LLP</b></div><div class="kv"><span>GSTIN</span><b class="mono">27AAACP1234R1Z5</b></div><div class="kv"><span>City</span><b>Pune</b></div><div class="kv"><span>Payouts</span><b>HDFC ••4421 · PAN on file</b></div><button class="btn sm" style="justify-self:start" data-go="billing">Billing and invoices</button>`,
+    security: `${[['Ananya · MacBook', 'Today'], ['Ananya · Pixel 8', '3 days ago']].map(([d, t]) => `<div class="kv"><span>${ico('key-round', 'i i-sm')} ${d}</span><b>${t}</b></div>`).join('')}<label style="display:flex;gap:10px;align-items:center;font-size:13px"><span class="switch"><input type="checkbox" checked disabled aria-label="Passkey again on publish"><span></span></span>Passkey again to publish or hand over (always on)</label><button class="btn sm" style="justify-self:start">${ico('plus', 'i i-sm')}Add a passkey</button>`,
+    developer: `<span class="lbl">Work on a site from your laptop</span><div class="code"><span>npx frrata dev --site kesar-studio</span><button class="btn sm ghost" data-copy>${ico('copy', 'i i-sm')}Copy</button></div><div class="kv"><span>Test key</span><b class="mono">pk_test_••••7f3a</b></div><div class="kv"><span>Live keys</span><b>Never leave Frrata’s proxy</b></div><div class="kv"><span>Every push</span><b>Gets a preview and the same checks</b></div><button class="btn sm" style="justify-self:start">${ico('git-branch', 'i i-sm')}Connect GitHub</button>`,
+    environment: `<div class="kv"><span>Preview data</span><b>Catalogue, read-only. Never orders or shoppers</b></div><div class="kv"><span>Outbound</span><b>Frrata, its media, Google Fonts</b></div><div class="kv"><span>Packages</span><b>Kit allow-list; others wait 7 days</b></div><div class="kv"><span>Builders</span><b>Never see orders, shoppers or costs</b></div><span class="sub" style="font-size:12px">These are Frrata’s rules for every site. A client’s own settings are in its drawer under Advanced.</span>`,
+  })[sTab] + `</div>`
+  icons(b)
+}
+$('#s-tabs').addEventListener('click', (e) => { const t = e.target.closest('[data-st2]'); if (t) { sTab = t.dataset.st2; renderSettings() } })
+$('#s-body').addEventListener('click', (e) => { if (e.target.closest('[data-copy]')) toast('Copied.') })
+
+/* ════════ BUILD: budget and balance guards, compare ════════ */
+function capCheck() {
+  const box = $('#cap-slot'); if (!box) return false
+  if (S.proto === 'cap') { box.innerHTML = `<div class="cap-banner"><span><b>Kesar’s budget is used up · 300 of 300.</b> New turns are paused; the draft is kept.</span><div class="row2"><button class="btn sm" data-kraise>Raise by 50</button><a class="btn sm ghost" href="#billing">Credits &amp; billing</a></div></div>`; icons(box); return true }
+  if (S.credits < 14) { box.innerHTML = `<div class="cap-banner low"><span><b>${S.credits} credits left.</b> A change like this can take up to 14.</span><div class="row2"><button class="btn sm" data-qbuy>Buy 100 · ₹2,242</button></div></div>`; icons(box); return true }
+  box.innerHTML = ''; return false
+}
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-kraise]')) { S.proto = 'normal'; $('#proto').value = 'normal'; const k = PORT.find((c) => c.id === 'kesar'); k.cr = () => [kesarUsed(), 350, 'project']; capCheck(); toast('Kesar’s budget: 350. Turns resume.') }
+  if (e.target.closest('[data-qbuy]')) checkout({ what: '1 credit pack · 100 credits', amt: 1900, credits: 100, onPaid: () => { if (S.proto === 'low') { S.proto = 'normal'; $('#proto').value = 'normal' } setTimeout(capCheck, 900) } })
+})
+$('#cmp-btn').addEventListener('click', () => {
+  const d = $('#device'), on = !d.querySelector('.old')
+  if (on && !S.built) { toast('Compare needs a built version.', 'info'); return }
+  $('#cmp-btn').setAttribute('aria-pressed', String(on)); $('#cmp-bar').hidden = !on
+  if (!on) { d.querySelector('.old')?.remove(); d.querySelector('.cmp-line')?.remove(); return }
+  const keep = { v: S.voice.variant, l: S.voice.lang, h: S.hindiHeads, m: S.motifs, b: S.brandIcons, s: S.seasonOn }
+  Object.assign(S, { hindiHeads: false, motifs: [], brandIcons: false, seasonOn: false }); S.voice.variant = 1; S.voice.lang = 'en'
+  const html = siteMarkup(S.route, {})
+  S.voice.variant = keep.v; S.voice.lang = keep.l; Object.assign(S, { hindiHeads: keep.h, motifs: keep.m, brandIcons: keep.b, seasonOn: keep.s })
+  const old = document.createElement('div'); old.className = 'old site'; old.dataset.mode = 'light'; old.innerHTML = html; d.append(old); icons(old)
+  const line = document.createElement('i'); line.className = 'cmp-line'; d.append(line); applyTokens(false)
+  const r = $('#cmp-range'); r.value = 50; const set = () => { old.style.clipPath = `inset(0 ${100 - r.value}% 0 0)`; line.style.left = r.value + '%' }; r.oninput = set; set()
+})
+
+document.addEventListener('click', (e) => { const q = e.target.closest('[data-ask-app]'); if (q) modal({ title: `Ask Riya to turn on ${q.dataset.askApp}?`, pic: picEl('send', 'var(--muted)', 'var(--fg)'), body: `<span style="font-size:13.5px">Riya gets a request in her console with what it adds to the site. She decides; any price is on her Frrata plan, never on your credits.</span>`, foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" data-x data-ask-ok>Send request</button>` }); if (e.target.closest('[data-ask-ok]')) toast('Request sent to Riya’s console.'); const ab = e.target.closest('[data-app-build]'); if (ab) { $('#ask').value = ab.dataset.appBuild; $('#ask').focus() } })
 document.addEventListener('click', (e) => { if (e.target.closest('[data-req-intake]')) { S.intakeSent = true; renderInbox(); toast('Intake sent to Riya on WhatsApp.', 'ok', { label: 'See her view', run: () => { location.hash = '#intake' } }) } })
 document.addEventListener('click', (e) => { if (e.target.closest('[data-handover]')) setTimeout(openHandover, 360) })
 
 /* ── Routing between steps, with direction ── */
-const ORDER = ['home', 'intake', 'brand', 'design', 'pages', 'build', 'team']
+const ORDER = ['home', 'clients', 'intake', 'brand', 'design', 'pages', 'build', 'billing', 'team', 'settings']
 const doneSteps = new Set()
 function markDone(s) { if (s === 'design') doneSteps.add('brand').add('design'); if (s === 'pages') doneSteps.add('brand').add('design').add('pages'); paintSteps() }
-function paintSteps() { const cur = (location.hash || '#home').slice(1); $$('.steps a').forEach((a) => { a.toggleAttribute('aria-current', a.dataset.step === cur); if (a.dataset.step === cur) a.setAttribute('aria-current', 'step'); a.classList.toggle('done', doneSteps.has(a.dataset.step) && a.dataset.step !== cur) }) }
+function paintSteps() { const cur = (location.hash || '#home').slice(1); $$('.steps a').forEach((a) => { a.toggleAttribute('aria-current', a.dataset.step === cur); if (a.dataset.step === cur) a.setAttribute('aria-current', 'step'); a.classList.toggle('done', doneSteps.has(a.dataset.step) && a.dataset.step !== cur) }); const cur2 = ['brand', 'design', 'pages', 'build'].includes(cur) ? 'site' : cur; $$('.side a, .tabbar a').forEach((a) => a.dataset.nav === cur2 ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')) }
 let last = 'home'
 function show() {
   let v = (location.hash || '#home').slice(1); if (!ORDER.includes(v)) v = 'home'
@@ -2008,6 +2557,8 @@ function show() {
   if (v === 'intake') renderIntake()
   if (v === 'team') { renderTeam(); renderMatrix() }
   if (v === 'home') renderInbox()
+  if (v === 'clients') renderClients(); if (v === 'billing') renderBilling(); if (v === 'settings') renderSettings(); if (v === 'build') setTimeout(capCheck, 50)
+  $('.app').classList.toggle('ws', ['brand', 'design', 'pages', 'build'].includes(v)); $('.app').classList.toggle('bare', v === 'intake')
   if (v === 'brand') { const b = $('#brand-src'); b.innerHTML = S.intakeIn ? `${ico('check', 'i i-sm')}From Riya’s intake: check before it goes into brand.md` : `${ico('check', 'i i-sm')}Read from the console: 212 products, policies`; icons(b) }
   last = v; paintSteps(); requestAnimationFrame(() => segPlacers.forEach((p) => p())); scrollTo(0, 0)
 }

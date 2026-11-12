@@ -17,11 +17,10 @@ BEFORE MERGE, folded in below), integration-researcher (Instagram, `frata-integr
    proposal: there is no "brand wallet".)
 
 ## Open for the owner
-- **Q1 What a Builder sees in the console.** Today a partner is a full shop member: orders, shoppers' details, costs
-  before handover, tax and delivery settings (`ANY_MEMBER`, `CAN_BUILD`). Both reviews rank this a blocker if
-  Builders inherit it. **Recommended:** Owner and Lead keep today's `partner` powers; a Builder gets a new shop role,
-  `builder`, outside `ANY_MEMBER`: Studio, the catalogue read-only and preview data only; never orders, shoppers or
-  costs.
+- **Q1 decided (owner, 2026-11-12): a Builder never sees orders, shoppers or costs.** A new shop role `builder`
+  (Studio, the catalogue read-only, preview data); three locks (Postgres policies, query asserts, entry-point
+  capability checks), default deny, and the gates and proofs in ADR-0015 (proposed:
+  `docs/decisions/0015-capabilities-and-the-builder-role.md`).
 - **Q2 A person who is already the brand's own staff** can't also hold a partner membership there (members are keyed
   by shop and person). **Recommended:** refuse the assignment and say why.
 - **Q3 Instagram needs Meta App Review and Business Verification** in the Pvt Ltd's name before brands we don't own
@@ -127,8 +126,9 @@ approved.
   scope like `partners`: RLS on, no `frata_app` grant, revoked from `anon`, `authenticated` and `service_role`,
   `frata_admin` grants stated; unique `user_id` where `removed_at is null`. `partners.user_id` is backfilled as the
   first `owner` member. `partner_invites` likewise; `partner` stays out of the `invites_role` CHECK.
-- Shop access stays a `members` row with role `partner` (Owner, Lead), one per assigned person, with
-  `partner_member_id`. CHECK `(role = 'partner') = (partner_member_id is not null)`; existing rows backfilled.
+- Shop access stays a `members` row, one per assigned person, with `partner_member_id`: role `partner` for Owner and
+  Lead, role `builder` for a Builder (ADR-0015). CHECK `(role in ('partner','builder')) = (partner_member_id is not
+  null)`; existing rows backfilled.
 - `app_access_for` counts a partner row only while its partner member is active, the partner is approved, the link
   to that shop is active and a passkey exists.
 - **Rewritten on `partner_members`** (each keyed on `partners.user_id` today):
@@ -155,7 +155,7 @@ approved.
   - a cross-partner assignment is refused;
   - a token from one shop can't write another;
   - no member of the linked partner can accept the handover;
-  - a Builder can't read orders or shoppers (after Q1).
+  - a Builder reads nothing from orders, shoppers or costs (ADR-0015 guardrails).
 
 ## Credits after handover (owner decision 8)
 While a brand is linked, everything the partner does on its site (maintenance, routines, changes the brand asks for)
