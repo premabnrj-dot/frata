@@ -1,12 +1,13 @@
 import 'server-only'
 import { enqueueOrderEmail } from '@/lib/email/enqueue'
+import { enqueuePaymentCheck } from './payment-check'
 import { WA_OPT_IN_NOTICE } from '@/domains/checkout/opt-in'
 import { randomUUID } from 'node:crypto'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { CleanAddress } from '@/domains/checkout/address'
-import { amountFor, candidates, classOf, normalCode, stepReached, type DiscountTerms, type TypedCode } from '@/domains/checkout/discounts'
+import { amountFor, candidates, classOf, normalCode, stepReached, type CodeResult, type DiscountTerms, type TypedCode } from '@/domains/checkout/discounts'
 import { priorOrderSql } from '@/lib/db/order-predicates'
-import { quote, totalFor, type BagLine, type Quote } from '@/domains/checkout/quote'
+import { keptOffers, quote, totalFor, type BagLine, type KeptOffer, type Quote } from '@/domains/checkout/quote'
 import { gstinState } from '@/domains/tax/gst'
 import { b2bProblem, cleanGstin, stateName } from '@/domains/tax/gstin'
 import { stateCode } from '@/domains/checkout/states'
@@ -18,12 +19,13 @@ import { withTenant } from '@/lib/db/tenant'
 import { orderToken, sha256, tokenHash } from '@/lib/crypto/secret-box'
 import { deliveryIn } from '@/lib/queries/delivery'
 import { checkoutShop, codeFor, liveOffers, variantRows } from '@/lib/queries/checkout'
-import { discountUses, fits } from '@/lib/db/discount-predicates'
+import { discountUses, fits, usedUp } from '@/lib/db/discount-predicates'
 import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
-import { keysFor } from '@/lib/payments/keys'
+import { keysFor, noteKeysAnswer } from '@/lib/payments/keys'
 import { createOrder } from '@/lib/payments/razorpay'
 import { refreshSoldOut } from '@/lib/queries/storefront'
 import { linkCustomer } from '@/lib/queries/customers'
+import { freeStock } from '@/domains/catalogue/availability'
 
 // =============================================================================
 // FILE: src/lib/orders/place.ts
@@ -66,7 +68,10 @@ export type PlaceInput = {
 export type Pay = { keyId: string; razorpayOrderId: string; amount: number; name: string; phone: string; shop: string }
 export type Placed = { kind: 'placed'; token: string; number: number; method: 'cod' | 'prepaid'; total: number; pay: Pay | null; payError?: string
   /** What the typed code did (for the guess limit); null on a retry of a placed order or with no code. */
-  code?: 'applied' | 'not_applied' | null }
+  code?: CodeResult | null
+  /** This call wrote the order (false: a retry found the order an earlier try placed). Only a new order counts toward
+   *  the phone's limit (shopper batch 2026-11-12). */
+  fresh: boolean }
 export type PlaceResult =
   | Placed
   | { kind: 'changed'; quote: Quote }
@@ -81,11 +86,23 @@ export type PlaceResult =
  */
 export const PLACE_SLOTS = 8
 const BUSY = 'So many orders right now. Nothing was charged. Try again in a moment.'
-const lockTimedOut = (e: unknown) => { const c = (e as { code?: string; cause?: { code?: string } }); return (c.cause?.code ?? c.code) === '55P03' }
+/** A Postgres lock not had within the transaction's lock_timeout (drizzle 0.45 wraps the driver's error: `cause`). */
+export const lockTimedOut = (e: unknown) => { const c = (e as { code?: string; cause?: { code?: string } }); return (c.cause?.code ?? c.code) === '55P03' }
+
+/**
+ * Everything that takes a shop's stock (placing, a payment landing, a switch to pay on delivery) shares the shop's
+ * PLACE_SLOTS and waits at most 2 s for any lock after this. False: every slot is taken (busy). Call it first in the
+ * transaction, before any lock.
+ */
+export async function takeSlot(tx: Tx, tenantId: string): Promise<boolean> {
+  await tx.execute(sql`set local lock_timeout = '2s'`)
+  const [slot] = await tx.execute<{ s: number }>(sql`select s from generate_series(0, ${PLACE_SLOTS - 1}) s where pg_try_advisory_xact_lock(hashtextextended(${tenantId + ':place'}, s)) limit 1`)
+  return !!slot
+}
 
 const requestHashOf = (i: PlaceInput) => sha256(JSON.stringify([i.address.phone, i.method, [...i.bag].map((b) => [b.variantId, b.qty]).sort(), ...(i.code ? [normalCode(i.code)] : []), ...(i.b2b ? [cleanGstin(i.b2b.gstin)] : [])]))
 
-type Written = { kind: 'new'; id: string; number: number; method: 'cod' | 'prepaid'; total: number; code?: 'applied' | 'not_applied' | null }
+type Written = { kind: 'new'; id: string; number: number; method: 'cod' | 'prepaid'; total: number; code?: CodeResult | null; fresh: boolean }
 
 /** The order an earlier try with this key placed, if any; the same key with a different bag is not the same attempt. */
 async function priorOf(tx: Tx, tenantId: string, input: PlaceInput): Promise<PlaceResult | Written | null> {
@@ -93,19 +110,19 @@ async function priorOf(tx: Tx, tenantId: string, input: PlaceInput): Promise<Pla
     .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.idempotencyKey, input.idempotencyKey)))
   if (!prior) return null
   if (prior.requestHash !== requestHashOf(input)) return { kind: 'refused', status: 409, error: 'This checkout was already used for a different order. Reload the page.' }
-  return { kind: 'new', id: prior.id, number: prior.number, method: prior.method as 'cod' | 'prepaid', total: Number(prior.total) }
+  return { kind: 'new', id: prior.id, number: prior.number, method: prior.method as 'cod' | 'prepaid', total: Number(prior.total), fresh: false }
 }
 
 export async function placeOrder(tenantId: string, input: PlaceInput, now = new Date()): Promise<PlaceResult> {
   const soldOut: string[] = []
+  let offerFilled = false
   let placed: PlaceResult | Written
   try { placed = await withTenant(tenantId, async (tx): Promise<PlaceResult | Written> => {
-    await tx.execute(sql`set local lock_timeout = '2s'`)
     // A retry whose order was placed (the response lost) finds it before any slot: never "busy, nothing was charged".
+    // A plain read: it waits on no lock.
     const earlier = await priorOf(tx, tenantId, input)
     if (earlier) return earlier
-    const [slot] = await tx.execute<{ s: number }>(sql`select s from generate_series(0, ${PLACE_SLOTS - 1}) s where pg_try_advisory_xact_lock(hashtextextended(${tenantId + ':place'}, s)) limit 1`)
-    if (!slot) return { kind: 'refused', status: 503, error: BUSY }
+    if (!(await takeSlot(tx, tenantId))) return { kind: 'refused', status: 503, error: BUSY }
     // Under the key's lock, again: two tries of the same attempt at once place one order.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${tenantId + ':' + input.idempotencyKey}, 0))`)
     const prior = await priorOf(tx, tenantId, input)
@@ -129,8 +146,8 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     const rows = await variantRows(tx, tenantId, input.bag.map((b) => b.variantId), now, { lock: true })
     // Delivery Zones, read now in this transaction: the PIN code's place from the directory, never the address typed.
     const [typed, delivery] = await Promise.all([codeFor(tx, tenantId, input.code, now), deliveryIn(tx, tenantId, input.address.pincode, now)])
-    const offers = await fitOffers(tx, tenantId, await liveOffers(tx, tenantId, now), (o) => quote(input.bag, rows, shop, now, input.address.pincode, { offers: o, code: typed }, delivery), input, typed, now)
-    const q = quote(input.bag, rows, shop, now, input.address.pincode, { offers, code: typed }, delivery)
+    const fit = await fitOffers(tx, tenantId, await liveOffers(tx, tenantId, now), (o) => quote(input.bag, rows, shop, now, input.address.pincode, { offers: o, code: typed }, delivery), input, typed, now)
+    const q = quote(input.bag, rows, shop, now, input.address.pincode, { offers: fit.offers, code: typed }, delivery)
     if (q.empty) return { kind: 'refused', status: 422, error: 'Nothing in your bag can be bought right now.', quote: q }
     if (!q.deliverable) return { kind: 'refused', status: 422, error: 'This shop does not deliver to this PIN code yet.', quote: q }
     if (q.missing.length || q.lines.some((l) => l.problem) || totalFor(q, input.method) !== input.expectedTotal) return { kind: 'changed', quote: q }
@@ -170,6 +187,8 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     if (input.session) await linkCustomer(tx, tenantId, id, input.session, input.address.phone)
     // Email E·2: COD is confirmed at once; an online order gets "Finish paying" only if still unpaid after its hold.
     await enqueueOrderEmail(tx, tenantId, id, cod ? 'confirmed' : 'finish_paying', null, now)
+    // An online order asks Razorpay itself when its hold ends: a lost webhook never leaves a paid order unpaid.
+    if (!cod) await enqueuePaymentCheck(tx, tenantId, id, new Date(now.getTime() + HOLD_MINUTES * 60_000))
     await tx.insert(orderLines).values(live.map((l, position) => ({
       ...m.shares[position]!,
       lineDiscount: m.lines[position]!.discount, productDiscount: m.lines[position]!.productDiscount, taxableValue: m.lines[position]!.taxable, gstBps: m.lines[position]!.gstBps, gst: m.lines[position]!.gst,
@@ -180,21 +199,34 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     })))
     // What the order got, with its value terms copied (a tier: the step reached). Buy X get Y, gift and target terms are
     // not copied: what they gave is fixed on each line (order_lines.product_discount), which is what a reprice keeps.
-    if (m.applied.length) await tx.insert(orderDiscounts).values(m.applied.map((a) => ({
-      tenantId, orderId: id, discountId: a.discountId, class: a.class, amount: a.amount, title: a.title, style: a.terms.style,
+    // Placed online with an order offer other than paying on delivery's, both are kept, each marked with its way
+    // (keptOffers, shop stress test 2026-11-11): a switch to COD reprices to the one paying on delivery gets.
+    const kept = keptOffers(q, input.method)
+    if (kept.length) await tx.insert(orderDiscounts).values(kept.map((a) => ({
+      tenantId, orderId: id, discountId: a.discountId, class: a.class, amount: a.amount, title: a.title, style: a.terms.style, method: a.method,
       ...termsCopy(a.terms, q.subtotal - m.lines.reduce((s, l) => s + l.productDiscount, 0)), via: typed?.discountId === a.discountId ? (input.via ?? 'typed') : 'auto',
       codeId: typed?.discountId === a.discountId ? typed.codeId : a.codeId,
     })))
     if (cod) await takeStock(tx, tenantId, id, 'in_stock', soldOut)
-    return { kind: 'new', id, number, method: input.method, total: m.total, code: q.offers.code }
+    // The last piece a shopper can take went, by this order's stock OR its hold (online: pay_by), against what is already
+    // held and owed — the product page's rule (storefront variantCols): its cached pages must say so too.
+    for (const l of live) {
+      const r = l.kind === 'in_stock' ? rows.find((x) => x.variantId === l.variantId) : undefined
+      if (r && freeStock(r) - l.qty <= 0 && !soldOut.includes(l.variantId)) soldOut.push(l.variantId)
+    }
+    // An offer this order filled up (its total limit or budget) leaves the bar, the cards and the product pages.
+    if (fit.fills(kept)) offerFilled = true
+    return { kind: 'new', id, number, method: input.method, total: m.total, code: q.offers.code, fresh: true }
   }) } catch (e) {
     if (lockTimedOut(e)) return { kind: 'refused', status: 503, error: BUSY }
     throw e
   }
   if (placed.kind !== 'new') return placed
-  // The last piece went: the cached pages say sold out within the 60 s backstop at most (refreshSoldOut, once per 30 s; checkout reads live stock).
-  if (soldOut.length) await refreshSoldOut(tenantId)
-  const out: Placed = { kind: 'placed', token: orderToken(placed.id), number: placed.number, method: placed.method, total: placed.total, pay: null, code: placed.code ?? null }
+  // The last piece went, or an offer filled up: the cached pages catch up at once (refreshSoldOut: one purge per shop
+  // per 30 s, a later one in that window trailing it; checkout reads live stock and live uses either way).
+  // The order is committed: a purge that fails never turns it into "we could not place the order" (the 60 s backstop).
+  if (soldOut.length || offerFilled) await refreshSoldOut(tenantId).catch((e: unknown) => console.error('[placeOrder] purge', e instanceof Error ? e.name : 'error'))
+  const out: Placed = { kind: 'placed', token: orderToken(placed.id), number: placed.number, method: placed.method, total: placed.total, pay: null, code: placed.code ?? null, fresh: placed.fresh }
   if (placed.method === 'cod') return out
   const pay = await startPayment(tenantId, placed.id)
   return pay.ok ? { ...out, pay: pay.pay } : { ...out, payError: pay.error }
@@ -212,7 +244,12 @@ function termsCopy(t: DiscountTerms, subtotal: number) {
  * nothing, so a sitewide offer never queues a festive checkout. Then: an offer at its total or per-phone limit drops
  * out; the bag is priced; an applied offer whose amount would cross its budget drops out and the bag is priced again.
  */
-async function fitOffers(tx: Tx, tenantId: string, offers: DiscountTerms[], price: (o: DiscountTerms[]) => Quote, input: PlaceInput, typed: TypedCode | null, now: Date): Promise<DiscountTerms[]> {
+type Fit = { offers: DiscountTerms[]
+  /** Whether placing with `kept` uses up one of the offers (its total limit or budget): the shop's cached pages then stop
+   *  showing it (usedUp, the same rule they read). */
+  fills: (kept: KeptOffer[]) => boolean }
+const noneFill = (offers: DiscountTerms[]): Fit => ({ offers, fills: () => false })
+async function fitOffers(tx: Tx, tenantId: string, offers: DiscountTerms[], price: (o: DiscountTerms[]) => Quote, input: PlaceInput, typed: TypedCode | null, now: Date): Promise<Fit> {
   const subtotal = price([]).subtotal
   // First order: one phone at a time in this shop (two at once cannot both be first); a phone with a standing or
   // holding order here does not get it. The shopper reads the usual "changed" (it does reveal, slowly, that the
@@ -223,22 +260,27 @@ async function fitOffers(tx: Tx, tenantId: string, offers: DiscountTerms[], pric
     if (had?.yes) offers = offers.filter((t) => !t.firstOrder)
   }
   const could = candidates(offers, typed).filter((t) => t.style === 'free_shipping' || classOf(t.style) === 'product' || amountFor(t, subtotal) > 0).map((t) => t.id)
-  if (!could.length) return offers
+  if (!could.length) return noneFill(offers)
   const limited = (await tx.execute<{ id: string; limit_total: number | null; limit_per_phone: number | null; budget: string | null }>(sql`
     select id, limit_total, limit_per_phone, budget from ${discounts} where tenant_id = ${tenantId} and id in ${could}
       and (limit_total is not null or limit_per_phone is not null or budget is not null) order by id for update`))
     .map((l) => ({ id: l.id, limitTotal: l.limit_total, limitPerPhone: l.limit_per_phone, budget: l.budget === null ? null : Number(l.budget) }))
-  if (!limited.length) return offers
+  if (!limited.length) return noneFill(offers)
   const used = await discountUses(tx, tenantId, limited.map((l) => l.id), now, { phone: input.address.phone })
   // Uses and per-phone first (budget 0 here: the amount is not known until priced); then budgets on the priced bag.
   const out = new Set(limited.filter((l) => !fits({ ...l, budget: null }, used.get(l.id), 0)).map((l) => l.id))
   for (let pass = 0; pass <= limited.length; pass++) {
     const q = price(offers.filter((t) => !out.has(t.id)))
-    const over = (input.method === 'cod' ? q.cod : q.prepaid).applied.filter((a) => { const l = limited.find((x) => x.id === a.discountId); return l && !fits(l, used.get(l.id), a.amount) })
+    // Every offer the order will keep — online, also the one paying on delivery would get (it is held for a switch).
+    const over = keptOffers(q, input.method).filter((a) => { const l = limited.find((x) => x.id === a.discountId); return l && !fits(l, used.get(l.id), a.amount) })
     if (!over.length) break
     for (const a of over) out.add(a.discountId)
   }
-  return offers.filter((t) => !out.has(t.id))
+  const fills = (kept: KeptOffer[]) => kept.some((a) => {
+    const l = limited.find((x) => x.id === a.discountId), u = used.get(a.discountId)
+    return l !== undefined && usedUp(l, { n: (u?.n ?? 0) + 1, given: (u?.given ?? 0) + a.amount, phone: 0 })
+  })
+  return { offers: offers.filter((t) => !out.has(t.id)), fills }
 }
 
 /**
@@ -284,6 +326,8 @@ export async function startPayment(tenantId: string, orderId: string): Promise<{
   let rzp = o.rzp
   if (!rzp) {
     const made = await createOrder(o.keys, { amount, receipt: `${o.number}-${orderId.slice(0, 8)}`, notes: { frata_order: orderId } })
+    // 401/403: Settings shows "Needs attention" until a call with these keys works again.
+    await noteKeysAnswer(tenantId, o.keys, made)
     if (!made.ok) {
       console.error('[startPayment] razorpay order', made.status)
       return { ok: false, error: 'Online payment is not working right now.' }

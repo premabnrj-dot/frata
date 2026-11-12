@@ -316,7 +316,8 @@ export const shopSettings = pgTable('shop_settings', {
   check('shop_settings_doc_logo', sql`${t.docLogo} is null or ${t.docLogo} ~ ('^https://[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com/tenants/' || ${t.tenantId}::text || '/documents/[0-9a-f-]{36}\\.png$')`),
 ])
 
-export const COUNTER_KINDS = ['order', 'invoice', 'bill', 'credit'] as const
+/** 'goodwill': goodwill credit notes' own G series (GST phase 2; issueCredit). */
+export const COUNTER_KINDS = ['order', 'invoice', 'bill', 'credit', 'goodwill'] as const
 
 /** Order numbers and invoice series: `update … returning` in the transaction that uses the number. */
 export const tenantCounters = pgTable('tenant_counters', {

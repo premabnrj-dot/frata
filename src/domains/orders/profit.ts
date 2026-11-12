@@ -9,7 +9,9 @@
 //   - `ifDelivered`: what the order earns when the customer accepts it
 //   - `ifRto`: what it costs when it comes back (forward + return freight, the
 //     COD fee where the courier charges it anyway, the ad spend already gone, and
-//     on a prepaid order the gateway's fee, which a refund does not return)
+//     on a prepaid order the gateway's fee, which a refund does not return); the
+//     goods' cost too when they were NOT put back in stock (`restocked`, the
+//     came-back event's own record): they are not on sale again (2026-11-12)
 //   - `ifLost`: what it costs when the courier loses it (Ship S·0's "Lost by the courier"; unit-economics review
 //     2026-11-08): the forward freight and the goods are gone, the gateway kept its fee; no return leg, no COD fee,
 //     no platform fee. A courier's claim is not counted until something records it.
@@ -40,6 +42,9 @@ export type OrderCosts = {
   adCost: Paise
   /** The platform's own fee on a delivered order. */
   platformFee: Paise
+  /** Whether a return's pieces went back on sale (its came-back event put the stock back). When not, `ifRto` loses
+   * `cogs` as well. A caller asking before any outcome says what it assumes; there is no default. */
+  restocked: boolean
 }
 
 export type OrderProfit = { ifDelivered: Paise; ifRto: Paise; ifLost: Paise; expected: Paise }
@@ -52,10 +57,10 @@ export function orderProfit(c: OrderCosts, deliveryProbability: number): OrderPr
   const ifDelivered = paise(
     c.netRevenue - c.cogs - sunk - c.codFee - c.gatewayFee - c.platformFee,
   )
-  // The goods come back, so COGS is not lost; a fashion return is often not
-  // resaleable at full value, which is the caller's to model in `cogs` later. A prepaid return is refunded and the
-  // gateway keeps its fee (unit-economics review 2026-11-08, as `ifLost`).
-  const ifRto = paise(-(sunk + c.rtoShipping + c.codFee + c.gatewayFee))
+  // Goods put back in stock are on sale again, so their cost is not lost (hypothesis H-resale: at full cost); goods
+  // that came back and were not put back are lost like a lost parcel's. A prepaid return is refunded and the gateway
+  // keeps its fee (unit-economics review 2026-11-08, as `ifLost`).
+  const ifRto = paise(-(sunk + c.rtoShipping + c.codFee + c.gatewayFee + (c.restocked ? 0 : c.cogs)))
   const ifLost = paise(-(sunk + c.cogs + c.gatewayFee))
   const expected = paise(Math.round(ifDelivered * deliveryProbability + ifRto * (1 - deliveryProbability)))
   return { ifDelivered, ifRto, ifLost, expected }

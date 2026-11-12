@@ -2,6 +2,7 @@
 
 import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { uploadPhoto } from '@/app/(console)/console/products/_components/upload-photos'
+import { urlFor } from '@/domains/media/sizes'
 import type { SourceSchema, ThemeImage } from '@/domains/themes/sections'
 import type { z } from 'zod'
 import { Switch as Toggle } from '@/components/ui/switch'
@@ -115,7 +116,7 @@ export function ImageField({ label, value, tenantId, onChange, library = [], sug
     } catch (e) { setError({ text: uploadWhy(f, e), file: f }) } finally { setProgress(null); URL.revokeObjectURL(url); setLocal(null) }
   }
   const fromPaste = (e: React.ClipboardEvent) => { const f = [...e.clipboardData.files].find((x) => x.type.startsWith('image/')); if (f) { e.preventDefault(); void pick(f) } }
-  const thumb = (b: { base: string; widths: number[] }) => `${b.base}-${b.widths[0]}.webp`
+  const thumb = (b: { base: string; widths: number[] }) => urlFor(b.base, b.widths[0]!)
   const words = [...new Set(suggest.filter(Boolean))].slice(0, 3)
   const input = <input id={id} type="file" accept="image/*" className="sr-only" onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = '' }} />
   return (
@@ -134,7 +135,7 @@ export function ImageField({ label, value, tenantId, onChange, library = [], sug
           <div className="group relative aspect-[16/10] overflow-hidden rounded-xl bg-muted">
             <button type="button" aria-label="Set the point the photo keeps in view" className="absolute inset-0 cursor-crosshair"
               onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); onChange({ ...value, focus: { x: Math.round(((e.clientX - r.left) / r.width) * 100), y: Math.round(((e.clientY - r.top) / r.height) * 100) } }) }}>
-              <img src={`${value.base}-${value.widths.at(-1)}.webp`} alt="" className="size-full object-cover" style={{ objectPosition: value.focus ? `${value.focus.x}% ${value.focus.y}%` : undefined }} />
+              <img src={urlFor(value.base, value.widths.at(-1)!)} alt="" className="size-full object-cover" style={{ objectPosition: value.focus ? `${value.focus.x}% ${value.focus.y}%` : undefined }} />
             </button>
             {value.focus && <span aria-hidden="true" className="pointer-events-none absolute size-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card ring-1 ring-foreground/40 transition-[left,top] duration-base ease-standard" style={{ left: `${value.focus.x}%`, top: `${value.focus.y}%` }} />}
             <span className="absolute right-2 top-2 flex gap-1">

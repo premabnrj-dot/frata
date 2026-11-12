@@ -8,13 +8,15 @@ export type PublicQuoteLine = {
 }
 export type PublicApplied = { title: string; amount: number; class: 'product' | 'order' | 'shipping' | 'payment' }
 export type PublicListed = { title: string; code: string | null; style: 'order_off' | 'free_shipping' | 'pay_online' | 'product_off' | 'bxgy' | 'free_gift'; applied: boolean
-  need: { kind: 'add'; amount: number } | { kind: 'add_items'; n: number } | { kind: 'gift'; variantId: string } | { kind: 'pay_online' } | { kind: 'first_order' } | null }
+  need: { kind: 'add'; amount: number } | { kind: 'add_items'; n: number } | { kind: 'gift'; variantId: string } | { kind: 'pay_online' } | { kind: 'pay_on_delivery' } | { kind: 'first_order' } | null }
 export type PublicQuote = {
   lines: PublicQuoteLine[]; subtotal: number; shipping: number; prepaid: number; gstPrepaid: number
   /** Offers (server-named fields only: shop-api publicQuote). */
   discountPrepaid: number; appliedPrepaid: PublicApplied[]
+  /** What paying online saves on the items against paying on delivery (0: nothing). */
+  savesOnline: number
   cod: { total: number; charge: number; gst: number; discount: number; applied: PublicApplied[] } | null; codWhy: string | null; deliverable: boolean
-  offers: { listed: PublicListed[]; code: 'applied' | 'not_applied' | null }
+  offers: { listed: PublicListed[]; code: 'applied' | 'beaten' | 'not_applied' | null }
   arrives: { from: string; to: string } | null; empty: boolean; missing: string[]
 }
 export type Pay = { keyId: string; razorpayOrderId: string; amount: number; name: string; phone: string; shop: string }

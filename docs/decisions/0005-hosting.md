@@ -18,10 +18,11 @@ Status: accepted · 2026-11-06 · amended 2026-11-06 (files: Vercel Blob) · ame
   would need either a service-role key (absent on purpose) or storage policies
   for `authenticated` that repeat `app_access_for` in a second place, and the
   photo copy behind a file import runs with no user session at all. Photos are
-  resized once in the browser (400/800/1200/1600 WebP) and served as they are,
+  resized once in the browser (400/800/1200/1600 WebP; JPEG where the browser
+  can't make WebP, as Safari on an iPhone, one format per photo, 2026-11-12) and served as they are,
   with no per-view image transforms. `BLOB_READ_WRITE_TOKEN` is read only in
   `src/lib/env.ts`.
-- **Share images are the one exception to "WebP only"** (owner, 2026-11-09; spec
+- **Share images are the other exception to "WebP only"** (owner, 2026-11-09; spec
   `docs/specs/2026-11-09-seo-and-sharing.md`): link-preview cards (1200×630) and shop icons are rendered on the
   server as JPEG/PNG, because WhatsApp, Facebook and LinkedIn document JPEG and PNG only. Each is made once per
   content version (a hashed URL), stored in Blob under the shop's own path and served from there — still no

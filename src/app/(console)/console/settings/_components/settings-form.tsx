@@ -16,6 +16,8 @@ import { saveSection } from '../actions'
 import { PolicyPages } from './policy-pages'
 import { ShopLogo } from './shop-logo'
 import { DocLogo } from './doc-logo'
+import { UnratedNotice } from './unrated'
+import type { Unrated } from '@/domains/tax/rates'
 import { Section } from '@/components/layout/section'
 import { PageHeader } from '@/components/layout/page-header'
 import { Switch } from '@/components/ui/switch'
@@ -26,7 +28,7 @@ import { STATES, STATE_CODE } from '@/domains/checkout/states'
  * "Unsaved changes" bar on the first edit, a guard on leaving, and the shop
  * beside it as shoppers will see it (frata-design-language § Phase 1).
  */
-export function SettingsForm({ sectionKey, initial, version: startVersion, facts, fiscalYear, overrides, tenantId, held = [] }: {
+export function SettingsForm({ sectionKey, initial, version: startVersion, facts, fiscalYear, overrides, tenantId, unrated = null, held = [] }: {
   sectionKey: string
   initial: Values
   version: number
@@ -35,6 +37,8 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
   overrides: Record<string, string>
   /** For an upload's path (Settings › Documents' logo). */
   tenantId: string
+  /** Taxes: live products checkout refuses for want of a GST rate (null: the shop charges no GST). */
+  unrated?: Unrated | null
   /** Fields another app sets now (Delivery Zones while usable): left out here, with one link to where they are set. */
   held?: readonly string[]
 }) {
@@ -48,6 +52,8 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
   const [conflict, setConflict] = useState(false)
   const [pending, start] = useTransition()
   const [policyPage, setPolicyPage] = useState<PolicyPage>('returns')
+  // The save's own answer wins over the page's until the page is loaded again.
+  const [unratedNow, setUnratedNow] = useState<Unrated | null | undefined>(undefined)
 
   const dirty = JSON.stringify(values) !== JSON.stringify(saved)
   const preview: ShopFacts = useMemo(() => {
@@ -62,7 +68,7 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
   function save() {
     start(async () => {
       const r = await saveSection(section.key, values, version)
-      if (r.ok) { setSaved(values); setVersion(r.version); setErrors({}); setMessage({ tone: 'ok', text: section.key === 'documents' ? 'Saved. New slips and invoices use it; issued invoices keep theirs.' : 'Saved. Your shop shows it now.' }); router.refresh(); return }
+      if (r.ok) { setSaved(values); setVersion(r.version); setErrors({}); if (section.key === 'taxes') setUnratedNow(r.unrated ?? null); setMessage({ tone: 'ok', text: section.key === 'documents' ? 'Saved. New slips and invoices use it; issued invoices keep theirs.' : 'Saved. Your shop shows it now.' }); router.refresh(); return }
       setErrors(r.errors ?? {}); setConflict(!!r.conflict); setMessage({ tone: 'error', text: r.error })
       const first = r.errors && Object.keys(r.errors)[0]
       if (first) document.getElementById(`f-${first}`)?.focus()
@@ -82,6 +88,7 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
       <PageHeader title={section.title} back={{ href: '/console/settings', label: 'Settings' }} />
       <p className="text-sm text-muted-foreground">{section.intro}</p>
       <Message m={message} onReload={conflict ? () => window.location.reload() : undefined} />
+      {section.key === 'taxes' && <UnratedNotice u={unratedNow !== undefined ? unratedNow : unrated} />}
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); if (dirty) save() }}>
           {section.key === 'brand' && <ShopLogo tenantId={tenantId} current={facts.logoUrl ?? null} />}

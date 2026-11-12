@@ -90,7 +90,8 @@ Status: findings recorded, not yet folded into a revised design; the owner decid
     membership re-check.
   - A law change would need 1,000 publishes: legal block and content served at runtime; a "Frrata patch" lane
     (ADR-0014 exception).
-  - Hosting undecided: a hosting ADR amending ADR-0005 (separate account, adapter, edge router, repos by site id).
+  - Hosting undecided: a hosting ADR amending ADR-0005 (a separate account Frrata owns and runs, brands need none;
+    adapter, edge router, repos by site id; ADR-0014 amendment 4, wording 2026-11-12).
 - **High:**
   - Studio resolves the shop from the session, never the shop cookie.
   - The proxy pins the session's key.
@@ -109,7 +110,7 @@ Status: findings recorded, not yet folded into a revised design; the owner decid
   after the host is chosen, with images on storage with no egress fee.
 - **In today's code (separate from Studio):** fixed 2026-11-11: placement waits ≤ 2 s for a lock and a shop places ≤ 8
   orders at once (busy → 503, the try given back to the limits); the sold-out purge debounced across instances; the
-  quote's reads together, its cached collection members read after its transaction. Open: confirming a payment and
-  switching to pay on delivery take stock with no slot and the 10 s wait (a timeout in `processEvents` must leave the
-  event unprocessed first, or the payment is lost); previews hold production data (S1); staff sign in with an email
-  code only.
+  quote's reads together, its cached collection members read after its transaction. Fixed 2026-11-12: a payment
+  landing, a switch to pay on delivery and a retried payment share the slots and the 2 s wait; a capture is recorded
+  before it can be busy and keeps its hold; a passing error leaves the event for the 5-minute drain; the order page
+  says "confirming". Open: previews hold production data (S1); staff sign in with an email code only.

@@ -113,7 +113,7 @@ export default {
         await p.fill('#pincode', '302001'); await p.fill('#city', 'Jaipur')
         await p.fill('#addressLine', 'B-14, Tilak Marg'); await p.fill('#area', 'C-Scheme'); await p.selectOption('#state', 'Rajasthan')
         await p.getByText('Pay on delivery', { exact: true }).click()
-        await p.getByRole('button', { name: /Place order/ }).click(); await p.waitForURL(/\/orders#t=/)
+        await p.getByRole('button', { name: /Place order/ }).click(); await p.waitForURL(/\/orders(#t=|$)/)
         const [o] = await db`select id, number from orders where tenant_id = ${shop.id} order by placed_at desc limit 1`
         return o
       }

@@ -1,6 +1,6 @@
 // Billing B0: computeBill reproduces the unit-economics review's worked months to the paisa (2026-11-08).
 import { describe, expect, it } from 'vitest'
-import { computeBill, planChangeAdds, planChangeOwed, type BillInput, type PlanRow } from '../bill'
+import { computeBill, returnCreditDue, planChangeAdds, planChangeOwed, type BillInput, type PlanRow } from '../bill'
 import { billableAt, billableDelivered } from '@/domains/orders/outcomes'
 import { feeForOrder } from '@/domains/plans/entitlements'
 import { paise } from '@/domains/money/paise'
@@ -81,6 +81,18 @@ describe('computeBill (billing B0, golden months)', () => {
   it('a negative month carries forward and is never refunded', () => {
     const b = computeBill(base(12, { plans: [{ ...launch, trialEndsAt: ist(2027, 1) }], credits: [{ orderId: 'x', number: 'KS-1', fee: paise(5000), invoiceNumber: null }] }))
     expect([b.total, b.carryOut]).toEqual([0, -5000])
+  })
+  it('a returned item is not billable (owner, 2026-11-12): returns after billing give back the fee on what came back', () => {
+    // Billed 2% of ₹2,000 = ₹40; ₹500 of it came back: the fee on ₹1,500 is ₹30, so ₹10 comes back, once.
+    expect(returnCreditDue({ billedFee: 4000, feeBps: 200, merchandiseNet: 200000, returned: 50000, given: 0 })).toBe(1000)
+    expect(returnCreditDue({ billedFee: 4000, feeBps: 200, merchandiseNet: 200000, returned: 50000, given: 1000 })).toBe(0)
+    // A second return later: the rest of what came back.
+    expect(returnCreditDue({ billedFee: 4000, feeBps: 200, merchandiseNet: 200000, returned: 150000, given: 1000 })).toBe(2000)
+    // Everything back: the whole fee, never more.
+    expect(returnCreditDue({ billedFee: 4000, feeBps: 200, merchandiseNet: 200000, returned: 250000, given: 0 })).toBe(4000)
+    const b = computeBill(base(12, { returnCredits: [{ orderId: 'y', number: '#7', fee: paise(1000), invoiceNumber: 'FR/26-27/12' }, { orderId: 'z', number: '#8', fee: paise(0), invoiceNumber: null }] }))
+    expect(b.lines.filter((l) => l.kind === 'credit')).toEqual([expect.objectContaining({ description: '#7: items returned after billing (invoice FR/26-27/12)', taxable: -1000 })])
+    expect(b.credited).toEqual([{ orderId: 'y', fee: 1000, kind: 'return' }])
   })
   it('the fee follows the plan in force when the order became billable', () => {
     const history = [launch, { ...growth, startsAt: ist(2026, 11, 20) }]

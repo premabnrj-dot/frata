@@ -23,12 +23,12 @@ export async function storedPricing(tx: Tx, tenantId: string, orderId: string, o
   const [ord] = await tx.select({ sellerScheme: orders.sellerScheme, placedAt: orders.placedAt }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId)))
   const lines = await tx.select({ id: orderLines.id, unitPrice: orderLines.unitPrice, qty: orderLines.qty, hsn: orderLines.hsn, productDiscount: orderLines.productDiscount, gstBps: orderLines.gstBps }).from(orderLines)
     .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId))).orderBy(orderLines.position)
-  const applied = await tx.select({ class: orderDiscounts.class, amount: orderDiscounts.amount }).from(orderDiscounts)
+  const applied = await tx.select({ class: orderDiscounts.class, amount: orderDiscounts.amount, method: orderDiscounts.method }).from(orderDiscounts)
     .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, orderId)))
   return {
     lineIds: lines.map((l) => l.id),
     lines: lines.map((l) => ({ unitPrice: Number(l.unitPrice), qty: l.qty, hsn: l.hsn, productDiscount: Number(l.productDiscount), gstBps: l.gstBps })),
-    applied: applied.map((a) => ({ class: a.class as 'product' | 'order' | 'shipping' | 'payment', amount: Number(a.amount) })),
+    applied: applied.map((a) => ({ class: a.class as 'product' | 'order' | 'shipping' | 'payment', amount: Number(a.amount), method: a.method as 'cod' | 'prepaid' | null })),
     shipping: o.shipping, registered: chargesGst({ gstin: o.sellerGstin, scheme: (ord?.sellerScheme ?? 'regular') as Scheme }), pricesIncludeGst: o.pricesIncludeGst,
     placedAt: ord!.placedAt,
   }

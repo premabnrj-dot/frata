@@ -23,7 +23,10 @@ import { docImage } from '@/lib/documents/images'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { acceptedBase, storeHost, urlFor } from '@/domains/media/sizes'
 import { BLOB_STORE_ID } from '@/lib/env'
-import { photosAreWebp } from '@/lib/media/uploaded'
+import { photosAreMade } from '@/lib/media/uploaded'
+import { liveWithoutRateIn } from '@/lib/queries/catalogue'
+import type { Unrated } from '@/domains/tax/rates'
+import { chargesGst, type Scheme } from '@/domains/tax/gst'
 
 // Each section says who may save it (`editors`: owners, admins and the store's partner for the shop's own
 // settings); the shop's address stays CAN_MANAGE. Each save checks the
@@ -43,7 +46,8 @@ class NeededWhenOpen extends Error { constructor(readonly errors: Record<string,
 const dbReason = errName
 
 export type SaveResult =
-  | { ok: true; version: number }
+  /** `unrated`: Taxes only, once the shop charges GST: live products quote() now refuses for want of a rate (never blocks the save). */
+  | { ok: true; version: number; unrated?: Unrated }
   | { ok: false; error: string; errors?: Record<string, string>; conflict?: boolean }
 
 export async function saveSection(sectionKey: string, values: Values, version: number): Promise<SaveResult> {
@@ -76,12 +80,14 @@ export async function saveSection(sectionKey: string, values: Values, version: n
       if (!auth.membership.supportSessionId) {
         await tx.insert(auditEvents).values({ tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: `settings.${section.key}`, detail: { fields: Object.keys(parsed.patch) } })
       }
-      return row.version
+      // A GSTIN saved: every live product without a rate is now 'gone' at checkout (quote). Said in the reply, not refused.
+      const registered = section.key === 'taxes' && chargesGst({ gstin: (columns.gstin as string | null) ?? null, scheme: columns.gstScheme as Scheme })
+      return { version: row.version, unrated: registered ? await liveWithoutRateIn(tx, tenantId, new Date()) : undefined }
     })
     if (!r.ok) return { ok: false, error: r.error }
     refreshShop(r.tenantId, 'shop')
     revalidatePath('/console', 'layout')
-    return { ok: true, version: r.value }
+    return { ok: true, version: r.value.version, ...(r.value.unrated ? { unrated: r.value.unrated } : {}) }
   } catch (err) {
     if (err instanceof NeededWhenOpen) return { ok: false, error: 'Some fields need a look before saving.', errors: err.errors }
     if (err instanceof VersionConflict) return { ok: false, conflict: true, error: 'Someone saved this page while you were editing. Reload to see their changes, then make yours again.' }
@@ -215,7 +221,7 @@ export async function setDocLogo(url: string | null): Promise<{ ok: true } | { o
 
 /**
  * The shop's logo (search and sharing S1·6): shown in the shop's header, its icon and its markup. Accepted only as this
- * shop's own brand photo (`acceptedBase`, the exact stored shape) whose bytes are WebP; null goes back to the name.
+ * shop's own brand photo (`acceptedBase`, the exact stored shape) whose bytes are WebP or JPEG; null goes back to the name.
  * Never by a Frrata support visit.
  */
 export async function setShopLogo(base: string | null): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -228,7 +234,7 @@ export async function setShopLogo(base: string | null): Promise<{ ok: true } | {
   if (base !== null) {
     const host = storeHost(BLOB_STORE_ID)
     const accepted = host && typeof base === 'string' ? acceptedBase(base, host, me.membership.tenantId, 'brand') : null
-    if (!accepted || !(await photosAreWebp([{ base: accepted, widths: [400] }]))) return { ok: false, error: 'That logo could not be used. Choose a PNG, JPEG or WebP image.' }
+    if (!accepted || !(await photosAreMade([{ base: accepted, widths: [400] }]))) return { ok: false, error: 'That logo could not be used. Choose a PNG, JPEG or WebP image.' }
     url = urlFor(accepted, 400)
   }
   try {

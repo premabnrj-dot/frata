@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { PROMISES, sectionName, type SectionInstance, type SectionOf, type VideoKey } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, SourcePicker, Switch, Text, WhenIST, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
 import { Icon } from '@/components/icons/icon'
+import { urlFor } from '@/domains/media/sizes'
 import { VideoField } from './video-field'
 import dynamic from 'next/dynamic'
 import type { Design } from '@/domains/themes/blocks'
@@ -207,7 +208,7 @@ function Look({ s, set, c }: { s: SectionOf<'shop_the_look'>; set: Set<SectionOf
     {s.image && (
       <div className="space-y-1">
         <button type="button" onClick={place} disabled={!piece} aria-label={piece ? `Put piece ${at + 1}’s dot where you tap` : 'Add a piece first'} className="relative block w-full overflow-hidden rounded-md">
-          <img src={`${s.image.base}-${s.image.widths[0]}.webp`} alt="" className="aspect-[4/5] w-full object-cover" />
+          <img src={urlFor(s.image.base, s.image.widths[0]!)} alt="" className="aspect-[4/5] w-full object-cover" />
           {s.pieces.map((p, i) => <span key={p.handle} aria-hidden="true" style={{ left: `${p.x}%`, top: `${p.y}%` }} className={`absolute grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-card text-xs font-semibold text-foreground ${i === at ? 'ring-2 ring-foreground' : ''}`}>{i + 1}</span>)}
         </button>
         <p className="text-xs text-muted-foreground">Tap the photo to place the selected piece’s dot.</p>

@@ -15,6 +15,10 @@ export type WhenOut = 'stop' | 'preorder' | 'made_to_order'
 /** "Only N left" shows at or below this. Real stock only (CCPA false-urgency rule). */
 export const LOW_STOCK_AT = 3
 
+/** Pieces a shopper can still take: stock less what unpaid online orders hold and what placed orders still owe. One
+ * rule for the product page, checkout's sold-out signal and a released hold (impact review 2026-11-12). */
+export const freeStock = (v: { stock: number; held: number; owed: number }) => v.stock - v.held - v.owed
+
 export type VariantFacts = { stock: number; whenOut: WhenOut; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; preorderCap: number | null; preordered?: number }
 export type Availability =
   | { kind: 'in_stock'; canBuy: true; label: string; google: 'in_stock' }

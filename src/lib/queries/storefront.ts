@@ -1,31 +1,29 @@
 import 'server-only'
 import type { PublicZone } from '@/domains/delivery/public'
-import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { coreShop } from './store-shop'
 import { coreAnnouncement } from './announcement'
 import { cache } from 'react'
-import { LOW_STOCK_AT } from '@/domains/catalogue/availability'
+import { freeStock, LOW_STOCK_AT } from '@/domains/catalogue/availability'
 import type { Chart } from '@/domains/catalogue/size-charts'
 import { readStories, type Story } from '@/domains/catalogue/stories'
 import type { PolicyFacts } from '@/domains/policies/render'
 import type { DeliveryRules } from '@/domains/checkout/delivery'
 import { allPincodes, tenantForHost, themeVersionRows } from '@/lib/db/platform'
 import { collectionHandleHistory, collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, productPairs, products, productTypes, variants } from '@/lib/db/schema-catalogue'
-import { owedSql } from '@/lib/db/order-predicates'
+import { heldByVariant, owedSql } from '@/lib/db/order-predicates'
 import { priorPriceSql } from '@/lib/db/price-predicates'
 import { publishCandidates, revisionBody, UUID } from '@/lib/themes/look'
 import { coreBestSellers } from './best-sellers'
 import { collectionMembersIn } from '@/lib/catalogue/collection-members'
 import { liveFromEntry, withdrawnKeys } from '@/domains/themes/release'
 import { withTenant } from '@/lib/db/tenant'
-import { discountCodes, discountTargets, discountTiers, discounts } from '@/lib/db/schema-discounts'
-import { barText, bxgyText, offOf, offerTerms } from '@/domains/checkout/offer-text'
-import type { ShowOffer } from '@/domains/checkout/offer-showcase'
-import type { Tx } from '@/lib/db'
 import { shopHost } from '@/lib/public-env'
 import { playableVideosFor } from './videos'
 import { compactCard, expand, photoPrefixOf, type CatalogueEntry } from '@/lib/storefront/catalogue-entry'
+import type { ShowOffer } from '@/domains/checkout/offer-showcase'
+import { showcase } from '@/lib/storefront/showcase'
 
 // =============================================================================
 // WHAT A SHOPPER'S PAGE READS (storefront spec 2026-11-07, § Review findings).
@@ -120,9 +118,10 @@ export type StoreCatalogue = { products: StoreCard[]; collections: StoreCollecti
 const MAX_LISTED = 600
 
 /**
- * A variant as the shop shows it; `owed` from the same SQL checkout reads, so the two agree. Read when the cache
- * fills: a pre-order cancelled or packed shows on the product page at the next 60 s revalidate (checkout is always
- * current, so nothing is ever sold twice).
+ * A variant as the shop shows it; `held` and `owed` from the same SQL checkout reads (stock − held − owed), so the two
+ * agree. Read when the cache fills: placing an order whose hold or stock takes the last piece purges the pages
+ * (place.ts → refreshSoldOut); a hold that lapses or is released, or a pre-order cancelled or packed, shows at the next
+ * 60 s revalidate (checkout is always current, so nothing is ever sold twice).
  */
 const variantCols = (tenantId: string) => ({
   owed: owedSql(tenantId, new Date()),
@@ -139,58 +138,15 @@ const variantCols = (tenantId: string) => ({
 const imageCols = { id: productImages.id, productId: productImages.productId, base: productImages.base, widths: productImages.widths, width: productImages.width, height: productImages.height, optionValue: productImages.optionValue, alt: productImages.alt }
 const colourCols = { productId: productColours.productId, value: productColours.value, family: productColours.family, hex: productColours.hex, cropImageId: productColours.cropImageId, crop: productColours.crop }
 
-const toVariant = (v: { id: string; values: string[]; sku: string | null; gtin: string | null; price: number; compareAt: string | number | null; mrp: number | null; stock: number; owed: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null; restockedAt: Date | null }): StoreVariant => ({
+const toVariant = (v: { id: string; values: string[]; sku: string | null; gtin: string | null; price: number; compareAt: string | number | null; mrp: number | null; stock: number; owed: number; whenOut: string; shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; cap: number | null; restockedAt: Date | null }, held: Map<string, number>): StoreVariant => ({
   id: v.id, values: v.values, sku: v.sku, gtin: v.gtin, price: Number(v.price), compareAt: v.compareAt !== null && Number(v.compareAt) > Number(v.price) ? Number(v.compareAt) : null,
   mrp: v.mrp === null ? null : Number(v.mrp),
   // Shoppers learn "only N left" at LOW_STOCK_AT or below; above it, the count is not theirs to see.
-  stock: Math.min(Math.max(0, v.stock - v.owed), LOW_STOCK_AT + 1), whenOut: v.whenOut as StoreVariant['whenOut'], shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays,
+  stock: Math.min(Math.max(0, freeStock({ stock: v.stock, held: held.get(v.id) ?? 0, owed: v.owed })), LOW_STOCK_AT + 1), whenOut: v.whenOut as StoreVariant['whenOut'], shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays,
   // No orders before 1C, so pre-orders are full only at a cap of 0; 1C counts them.
   preorderFull: v.cap !== null && v.cap <= 0,
   restockedAt: v.restockedAt ? v.restockedAt.toISOString() : null,
 })
-
-/**
- * The shop's started, unended, listed offers as the showcase reads them (offers O·2): words and timestamps only, never
- * a limit, budget or count (ADR-0003). Product offers carry the products they cover (collections resolved now).
- */
-type Showcase = { shop: ShowOffer[]; byProduct: (id: string) => ShowOffer[]; product: ShowOffer[]; indexFor: (id: string) => number[] }
-async function showcase(tx: Tx, tenantId: string): Promise<Showcase> {
-  const rows = await tx.select({
-    id: discounts.id, title: discounts.title, style: discounts.style, percentBps: discounts.percentBps, amountOff: discounts.amountOff, minSubtotal: discounts.minSubtotal,
-    targets: discounts.targets, buyQty: discounts.buyQty, getQty: discounts.getQty, getBps: discounts.getBps, firstOrder: discounts.firstOrder, code: discountCodes.code,
-    startsAt: discounts.startsAt, endsAt: discounts.endsAt, startedAt: discounts.startedAt, pausedAt: discounts.pausedAt, endedAt: discounts.endedAt, stoppedAt: discounts.stoppedAt,
-  }).from(discounts).leftJoin(discountCodes, and(eq(discountCodes.tenantId, discounts.tenantId), eq(discountCodes.discountId, discounts.id), isNull(discountCodes.label)))
-    .where(and(eq(discounts.tenantId, tenantId), sql`${discounts.startedAt} is not null and ${discounts.endedAt} is null and ${discounts.listed}`))
-  if (!rows.length) return { shop: [], byProduct: () => [], product: [], indexFor: () => [] }
-  const tiers = await tx.select({ discountId: discountTiers.discountId, min: discountTiers.minSubtotal, percentBps: discountTiers.percentBps, amountOff: discountTiers.amountOff }).from(discountTiers)
-    .where(and(eq(discountTiers.tenantId, tenantId), inArray(discountTiers.discountId, rows.map((r) => r.id)))).orderBy(asc(discountTiers.minSubtotal))
-  const narrowed = rows.filter((r) => r.targets !== 'all').map((r) => r.id)
-  const targets = narrowed.length ? await tx.select({ discountId: discountTargets.discountId, productId: discountTargets.productId, collectionId: discountTargets.collectionId }).from(discountTargets)
-    .where(and(eq(discountTargets.tenantId, tenantId), inArray(discountTargets.discountId, narrowed))) : []
-  // In THIS transaction (speed review P4): a cached loader here opened a second connection mid-transaction.
-  const members = targets.some((t) => t.collectionId) ? await collectionMembersIn(tx, tenantId) : {}
-  const iso = (x: Date | null) => (x ? x.toISOString() : null)
-  const all = rows.map((r) => {
-    const words = { title: r.title, style: r.style, percentBps: r.percentBps, amountOff: r.amountOff === null ? null : Number(r.amountOff), minSubtotal: Number(r.minSubtotal),
-      targets: r.targets, buyQty: r.buyQty, getQty: r.getQty, getBps: r.getBps, firstOrder: r.firstOrder,
-      tiers: tiers.filter((x) => x.discountId === r.id).map((x) => ({ min: Number(x.min), percentBps: x.percentBps, amountOff: x.amountOff === null ? null : Number(x.amountOff) })) }
-    const product = r.style === 'product_off' || r.style === 'bxgy'
-    const label = (r.style === 'pay_online' ? barText(words, { code: null, endsAt: null }) : offerTerms(words)) + (r.code && !product ? ` · code ${r.code.toUpperCase()}` : '')
-    return {
-      offer: { label: product ? `${r.title}: ${offerTerms({ ...words, targets: 'all' })}` : label, badge: r.style === 'bxgy' ? bxgyText(words) : r.style === 'product_off' ? offOf(words, false) : null, product,
-        startsAt: r.startsAt.toISOString(), endsAt: iso(r.endsAt), startedAt: iso(r.startedAt), pausedAt: iso(r.pausedAt), endedAt: iso(r.endedAt), stoppedAt: iso(r.stoppedAt) } satisfies ShowOffer,
-      covers: !product ? null : r.targets === 'all' ? 'all' as const : new Set(targets.filter((t) => t.discountId === r.id).flatMap((t) => (t.productId ? [t.productId] : members[t.collectionId!] ?? []))),
-    }
-  })
-  const productOffers = all.filter((a) => a.covers !== null)
-  const indexFor = (id: string) => productOffers.flatMap((a, i) => (a.covers === 'all' || (a.covers instanceof Set && a.covers.has(id)) ? [i] : []))
-  return {
-    shop: all.filter((a) => a.covers === null).map((a) => a.offer),
-    byProduct: (id) => indexFor(id).map((i) => productOffers[i]!.offer),
-    product: productOffers.map((a) => a.offer),
-    indexFor,
-  }
-}
 
 async function coreCatalogue(tenantId: string, drafts: boolean): Promise<CatalogueEntry> {
   return withTenant(tenantId, async (tx) => {
@@ -202,14 +158,15 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<Catalog
       .where(and(eq(products.tenantId, tenantId), drafts ? ne(products.status, 'archived') : eq(products.status, 'active')))
       .orderBy(desc(sql`coalesce(${products.publishAt}, ${products.publishedAt}, ${products.createdAt})`)).limit(MAX_LISTED)
     const ids = ps.map((p) => p.id)
-    const [vs, imgs, cols, attrs, colls, members] = ids.length ? await Promise.all([
+    const [vs, imgs, cols, attrs, colls, members, held] = ids.length ? await Promise.all([
       tx.select(variantCols(tenantId)).from(variants).where(and(eq(variants.tenantId, tenantId), inArray(variants.productId, ids), sql`${variants.archivedAt} is null`)).orderBy(asc(variants.position)),
       tx.select(imageCols).from(productImages).where(and(eq(productImages.tenantId, tenantId), inArray(productImages.productId, ids))).orderBy(asc(productImages.position)),
       tx.select(colourCols).from(productColours).where(and(eq(productColours.tenantId, tenantId), inArray(productColours.productId, ids))),
       tx.select({ productId: productAttributes.productId, attribute: productAttributes.attribute, values: productAttributes.values }).from(productAttributes).where(and(eq(productAttributes.tenantId, tenantId), inArray(productAttributes.productId, ids))),
       tx.select({ id: collections.id, handle: collections.handle, title: collections.title, description: collections.description, seoTitle: collections.seoTitle, seoDescription: collections.seoDescription, kind: collections.kind, matchAll: collections.matchAll, rules: collections.rules, sort: collections.sort }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)),
       tx.select({ collectionId: collectionProducts.collectionId, productId: collectionProducts.productId }).from(collectionProducts).where(eq(collectionProducts.tenantId, tenantId)).orderBy(asc(collectionProducts.position)),
-    ]) : [[], [], [], [], [], []] as const
+      heldByVariant(tx, tenantId, new Date()),
+    ]) : [[], [], [], [], [], [], new Map<string, number>()] as const
     const moved = await tx.select({ old: collectionHandleHistory.handle, to: collections.handle }).from(collectionHandleHistory)
       .innerJoin(collections, and(eq(collections.id, collectionHandleHistory.collectionId), eq(collections.tenantId, tenantId))).where(eq(collectionHandleHistory.tenantId, tenantId))
     const show = await showcase(tx, tenantId)
@@ -221,7 +178,7 @@ async function coreCatalogue(tenantId: string, drafts: boolean): Promise<Catalog
         id: p.id, handle: p.handle, title: p.title, status: p.status, publishAt: p.publishAt ? p.publishAt.toISOString() : null, since: new Date(p.since).toISOString(), options: p.options,
         categoryId: p.categoryId, tags: p.tags,
         images: imgs.filter((i) => i.productId === p.id).map(({ productId: _, ...i }) => i),
-        variants: vs.filter((v) => v.productId === p.id).map(toVariant),
+        variants: vs.filter((v) => v.productId === p.id).map((v) => toVariant(v, held)),
         colours: cols.filter((c) => c.productId === p.id).map(({ productId: _, ...c }) => c),
         attributes: Object.fromEntries(attrs.filter((a) => a.productId === p.id).map((a) => [a.attribute, a.values])),
       }, show.indexFor(p.id), photoPrefix)),
@@ -268,7 +225,7 @@ async function coreProduct(tenantId: string, handle: string, drafts: boolean): P
     const mine = <T extends { tenantId: unknown; productId: unknown }>(t: T) => and(eq(t.tenantId as never, tenantId), eq(t.productId as never, p.id))
     // Signal S3: the paired pieces (≤ 2, never a draft, even in the preview), their variants and first photo, in the same round.
     const paired = sql`(select pp.paired_id from ${productPairs} pp where pp.tenant_id = ${tenantId} and pp.product_id = ${p.id})`
-    const [vs, imgs, cols, attrs, pps, pvs, pimgs, sh] = await Promise.all([
+    const [vs, imgs, cols, attrs, pps, pvs, pimgs, sh, held] = await Promise.all([
       tx.select(variantCols(tenantId)).from(variants).where(and(mine(variants), sql`${variants.archivedAt} is null`)).orderBy(asc(variants.position)),
       tx.select(imageCols).from(productImages).where(mine(productImages)).orderBy(asc(productImages.position)),
       tx.select(colourCols).from(productColours).where(mine(productColours)),
@@ -280,15 +237,16 @@ async function coreProduct(tenantId: string, handle: string, drafts: boolean): P
       tx.select(variantCols(tenantId)).from(variants).where(and(eq(variants.tenantId, tenantId), sql`${variants.productId} in ${paired}`, sql`${variants.archivedAt} is null`)).orderBy(asc(variants.position)),
       tx.select(imageCols).from(productImages).where(and(eq(productImages.tenantId, tenantId), sql`${productImages.productId} in ${paired}`, eq(productImages.position, 0))),
       showcase(tx, tenantId),
+      heldByVariant(tx, tenantId, new Date()),
     ])
     const pairs: StoreCard[] = pps.map((q) => ({
       ...q, publishAt: q.publishAt ? q.publishAt.toISOString() : null, since: new Date(q.since).toISOString(),
-      images: pimgs.filter((i) => i.productId === q.id).map(({ productId: _, ...i }) => i), variants: pvs.filter((v) => v.productId === q.id).map(toVariant),
+      images: pimgs.filter((i) => i.productId === q.id).map(({ productId: _, ...i }) => i), variants: pvs.filter((v) => v.productId === q.id).map((v) => toVariant(v, held)),
       colours: [], attributes: {}, // no offers: a pair row shows its plain price (speed review: no dead bytes per pair)
     }))
     return {
       ...p, publishAt: p.publishAt ? p.publishAt.toISOString() : null, since: new Date(p.since).toISOString(),
-      images: imgs.map(({ productId: _, ...i }) => i), variants: vs.map(toVariant), colours: cols.map(({ productId: _, ...c }) => c),
+      images: imgs.map(({ productId: _, ...i }) => i), variants: vs.map((v) => toVariant(v, held)), colours: cols.map(({ productId: _, ...c }) => c),
       attributes: Object.fromEntries(attrs.map((a) => [a.attribute, a.values])), sizeChart: p.sizeChart ?? null, typeName: p.typeName ?? null,
       // Its own product offers, then the shop's (raw; live decided at render).
       offers: [...sh.byProduct(p.id), ...sh.shop], stories: readStories(p.stories), pairs,
@@ -365,8 +323,10 @@ export const shopSettingsFor = shopCached('shop-v2', 'shop', (t) => coreShop(t))
 /**
  * The offer in the shop's announcement bar (one at most), as RAW terms and timestamps: whether it is live is decided
  * when the page renders (offerStatus) — pages regenerate every 60 s, so up to a minute late. Shopper-safe fields only — never a limit, budget or count (ADR-0003).
+ * Tagged catalogue, like the showcase it agrees with: an order that uses an offer up purges both at once (refreshSoldOut);
+ * an offer's own change purges the whole shop (offers actions), this included. v2: a new key for the new tags.
  */
-export const shopAnnouncement = shopCached('announce', 'shop', coreAnnouncement)
+export const shopAnnouncement = shopCached('announce-v2', 'catalogue', coreAnnouncement)
 // A new key: the entry's shape changed (offers by index), and a cache that survives a deploy must not meet the old one.
 // v3: collections gained seoTitle/seoDescription and the entry movedCollections (S2·2).
 const shopCatalogueEntry = shopCached('catalogue-v3', 'catalogue', (t) => coreCatalogue(t, false))

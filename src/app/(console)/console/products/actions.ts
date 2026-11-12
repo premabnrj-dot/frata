@@ -4,7 +4,7 @@ import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { del } from '@vercel/blob'
 import { cleanProduct, readiness, type ProductInput } from '@/domains/catalogue/product-form'
-import { hsnDigitsFor, ruleOn, type TurnoverBand } from '@/domains/tax/rates'
+import { hasRate, hsnDigitsFor, type TurnoverBand } from '@/domains/tax/rates'
 import { chargesGst, type Scheme } from '@/domains/tax/gst'
 import { sellsSized } from '@/domains/catalogue/sell-keys'
 import { labelAsked, labelMissing, readLabel } from '@/domains/catalogue/label'
@@ -13,7 +13,7 @@ import { attributesFor, categoryById, cleanAttributes, COLOUR_FAMILIES, searchCa
 import { keyOf, reconcile, skuFor, uniqueSku } from '@/domains/catalogue/variants'
 import { orderPrefix } from '@/domains/signup/slug'
 import { acceptedBase, storeHost, WIDTHS, urlFor } from '@/domains/media/sizes'
-import { photosAreWebp } from '@/lib/media/uploaded'
+import { photosAreMade } from '@/lib/media/uploaded'
 import { checkStoryPhotos, savePairs } from '@/lib/catalogue/extras'
 import { cleanPairIds, UUID, type Piece } from '@/domains/catalogue/stories'
 import { refreshShop } from '@/lib/queries/storefront'
@@ -71,8 +71,8 @@ export async function saveProduct(productId: string, version: number, input: Pro
   const parsed = cleanProduct(input, new Date())
   if (!parsed.ok) return { ok: false, error: 'Some fields need a look before saving.', errors: parsed.errors }
   const p = parsed.product
-  // Signal S3: a story photo is WebP (read outside the transaction), then this shop's own, rebuilt inside it.
-  if (!(await photosAreWebp((p.stories ?? []).flatMap((s) => (s.image ? [s.image] : []))))) return { ok: false, error: 'That file is not a photo we made. Upload it again.' }
+  // Signal S3: a story photo is one we made, WebP or JPEG (read outside the transaction), then this shop's own, rebuilt inside it.
+  if (!(await photosAreMade((p.stories ?? []).flatMap((s) => (s.image ? [s.image] : []))))) return { ok: false, error: 'That file is not a photo we made. Upload it again.' }
   // Category, details and colour families are checked against the standard lists here, on the server.
   const category = categoryById(p.categoryId)
   const attrs = cleanAttributes(category?.id ?? null, p.attributes)
@@ -217,7 +217,7 @@ export async function setStatus(productId: string, status: Status, publishAt: st
         const anyBuyable = vs.some((v) => availability({ stock: v.stock, whenOut: v.whenOut as WhenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap }, now).canBuy)
         // A shop that charges GST can't sell a piece with no known rate (quote() refuses it): so it can't go live without one.
         const [tax] = await tx.select({ gstin: shopSettings.gstin, scheme: shopSettings.gstScheme, sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
-        const taxReady = tax && chargesGst({ gstin: tax.gstin, scheme: tax.scheme as Scheme }) ? !!p.hsn && (ruleOn(p.hsn, now) !== null || p.gstBps !== null) : undefined
+        const taxReady = tax && chargesGst({ gstin: tax.gstin, scheme: tax.scheme as Scheme }) ? !!p.hsn && hasRate(p.hsn, now, p.gstBps) : undefined
         const missing = readiness({ title: p.title, photos: n, prices: vs.map((v) => v.price), hasSizes: p.options.some((o) => /^sizes?$/i.test(o)), chartRows: chart?.rows.length ?? 0, anyBuyable, taxReady,
           labelMissing: tax && labelAsked(tax.sells) ? labelMissing(readLabel(p.label)) : undefined }).filter((x) => !x.ok)
         if (missing.length) throw new Stop({ ok: false, error: `Before shoppers can see it: ${missing.map((m) => m.label.toLowerCase()).join(', ')}.` })
@@ -265,7 +265,7 @@ export async function categoryDetails(id: string) {
 /** Photos the browser has uploaded (every width) — attached only if they are inside THIS shop's folder. */
 export async function attachPhotos(productId: string, photos: { base: string; widths: number[]; width: number; height: number }[]): Promise<Result> {
   if (!Array.isArray(photos) || !photos.length || photos.length > 12) return { ok: false, error: 'Up to 12 photos at a time.' }
-  if (!(await photosAreWebp(photos))) return { ok: false, error: 'That file is not a photo we made. Upload it again.' }
+  if (!(await photosAreMade(photos))) return { ok: false, error: 'That file is not a photo we made. Upload it again.' }
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.photos', target: productId, detail: { added: photos.length } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId

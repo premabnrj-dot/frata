@@ -17,8 +17,8 @@ describe.skipIf(!host)('shop names', () => {
     const { renamesLeft } = await import('@/domains/addresses/names')
     const { shopHost } = await import('@/lib/public-env')
     const postgres = (await import('postgres')).default
-    const su = postgres(`postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
-    const staff = { ok: true as const, userId: 'aaaaaaaa-0000-0000-0000-0000000000ff', email: 'int@frata.test', role: 'admin' as const }
+    const su = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    const staff = { ok: true as const, userId: 'aaaaaaaa-0000-0000-0000-0000000000ff', email: 'int@frata.test', role: 'admin' as const, sessionId: '00000000-0000-4000-8000-000000000000', confirmedAt: new Date() }
     const base = `nm${Date.now() % 1_000_000}`
     const { id } = await admin.createMerchant(staff, { name: 'Names', slug: base, ownerEmail: 'o@names.test', planCode: 'launch', trialEndsAt: null, now: new Date() })
     const uid = '99999999-0000-0000-0000-00000000aa01'

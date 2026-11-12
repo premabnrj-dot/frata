@@ -4,8 +4,9 @@
 //
 // One invoice a month per shop, drafted by the billing run as frata_app inside the shop (withTenant) and issued later
 // by an Admin definer (B2), which numbers it from platform_counters. Every order billed has ONE fee row (order_id
-// unique) and every order credited ONE credit row (order_id unique): a run bills billable orders with no fee row and
-// credits fee rows whose order is no longer billable, so it is idempotent by construction. State is derived from
+// unique) and every order no longer billable ONE `outcome` credit (once per order); items returned after billing give
+// their fee back as `return` credits, one per order per invoice (owner, 2026-11-12). A run bills billable orders with no
+// fee row and credits what is due and not given yet, so it is idempotent by construction. State is derived from
 // timestamps (issued_at); once issued, triggers refuse any change to the invoice or its lines, fees and credits.
 // Money is integer paise. The word "bill" is the shop's own bill of supply, so these tables say "frrata_invoice".
 // =============================================================================
@@ -125,15 +126,23 @@ export const frrataInvoiceFees = pgTable('frrata_invoice_fees', {
   check('frrata_invoice_fees_money', sql`${t.base} >= 0 and ${t.fee} >= 0 and ${t.feeBps} between 0 and 10000`),
 ])
 
-/** THE record that a billed order's fee was reversed (it came back or was lost later): one per order, ever. */
+/**
+ * A billed order's fee given back on a later invoice. `outcome`: it came back or was lost (the whole fee, less what
+ * returns already gave back): once per order, ever. `return` (owner, 2026-11-12: "a returned item shouldn't be
+ * billable"): items returned on a credit note after the fee was billed: the fee on their value, at most once per
+ * order per invoice (a later invoice can give back a later return).
+ */
 export const frrataFeeCredits = pgTable('frrata_fee_credits', {
   tenantId: uuid('tenant_id').notNull(),
   /** The invoice the credit is applied on (the next month's). */
   invoiceId: uuid('invoice_id').notNull(),
   orderId: uuid('order_id').notNull(),
+  kind: text('kind').notNull().default('outcome'),
   fee: money('fee').notNull(),
 }, (t) => [
-  primaryKey({ name: 'frrata_fee_credits_order', columns: [t.orderId] }),
+  primaryKey({ name: 'frrata_fee_credits_pk', columns: [t.invoiceId, t.orderId, t.kind] }),
+  uniqueIndex('frrata_fee_credits_outcome_once').on(t.orderId).where(sql`${t.kind} = 'outcome'`),
+  check('frrata_fee_credits_kind', sql`${t.kind} in ('outcome', 'return')`),
   foreignKey({ name: 'frrata_fee_credits_invoice_fk', columns: [t.tenantId, t.invoiceId], foreignColumns: [frrataInvoices.tenantId, frrataInvoices.id] }).onDelete('cascade'),
   // Only an order that was billed can be credited.
   foreignKey({ name: 'frrata_fee_credits_fee_fk', columns: [t.tenantId, t.orderId], foreignColumns: [frrataInvoiceFees.tenantId, frrataInvoiceFees.orderId] }).onDelete('restrict'),

@@ -81,6 +81,33 @@ create your tenant and owner membership (it is a plain insert; no secret).
    on. Invites are claimed only by confirmed emails.
 4. Redeploy. You are already in `platform_staff` as Admin.
 
+### 6b. Staff passkeys — the first time (ADR-0007 amended 2026-11-12; spec `docs/specs/2026-11-12-staff-passkeys.md`)
+
+**Deploy order (agents):** apply `drizzle/0109_staff_passkeys.sql` to production FIRST, in one transaction (it drops
+and recreates `app_access_for`), and record its row; THEN push the code to `main`. New code calls
+`app_access_for(uuid, uuid, text)`, which exists only after the migration (before it, every signed-in request fails).
+Old code calling `app_access_for(uuid)` keeps working through the new function's defaults; in that gap support visits
+stop counting and Admin opens without a passkey, so push the code straight after.
+
+From this release Admin, and every support visit into a shop, opens only after a passkey check on that browser. Nobody
+has a passkey on the first day, so the owner lets themself in once (about two minutes):
+
+1. Sign in and open Admin. It shows **Add a passkey**. Click **Ask to add a passkey**; a 6-digit code appears. Keep
+   that page open (the code is shown once).
+2. Supabase → SQL Editor, within 15 minutes: `select app_staff_bootstrap('<your staff email>', '<the 6-digit code>');`
+   — it answers "approved for 10 minutes" and writes an audit row. The code makes sure it approves the request on your
+   screen, not one someone else made with your sign-in. No app role can call this function; only the SQL Editor.
+3. Back in Admin (it refreshes by itself): name the passkey, **Add passkey**, confirm with your fingerprint, face or
+   device PIN. Admin opens.
+4. Admin › Staff → **Add a passkey** on a second device (your phone), so losing one device never locks you out.
+5. Other staff: they open Admin and ask; they read you their code by voice or video; you type it in Admin › Staff →
+   **Approve** (your own passkey confirms first). Never approve a code you did not hear from the person.
+6. Lost every device, or the only admin: repeat steps 1–3. The same SQL is the break-glass, so keep multi-factor sign-in
+   on the Supabase account (anyone who can run SQL there can do this).
+
+Passkeys belong to the console's host (`NEXT_PUBLIC_CONSOLE_HOST`). When the console moves to `app.frrata.com`, everyone
+adds passkeys again through steps 1–5.
+
 ### Rename day: Frrata (brand spec 2026-11-07)
 
 1. Supabase → Authentication → Emails: set the **sender name** to "Frrata" and the sign-in email's **subject** to
@@ -193,8 +220,19 @@ business once the company exists to lift that.
      5 minutes (`vercel.json`); a sender also drains straight after its commit (`drainSoon`).
   2. ~~The outbox claim moves to a definer~~ — done 2026-11-11 (drizzle/0096): `app_outbox_claim` / `app_outbox_settle`,
      and the `outbox` policies lost their no-shop branch; `outbox` is off check:tenant's OPEN_FOR_APP.
-- **Preview deployments must not hold the production database** (review S1): in Vercel, take `DATABASE_URL` off
-  Preview (or point Preview at a Supabase branch) and turn on Deployment Protection for previews.
+- **Previews off production** (review S1; spec `docs/specs/2026-11-12-previews-off-production.md`):
+  - Done 2026-11-12 (through the Vercel connection): `BLOB_READ_WRITE_TOKEN`, `BLOB_STORE_ID`, `BLOB_WEBHOOK_PUBLIC_KEY`
+    are Production only; `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are Production and Development.
+    The database URLs were already Production only (checked 2026-11-09). Vercel Authentication covers every deployment
+    except custom domains. The app reads every secret through `secret()` (Production only on Vercel; `check:config`).
+  - **Owner, still to do:**
+    1. Vercel → Storage → frata-blob: rotate the read-write token (past preview builds were made with it), then make
+       sure the new `BLOB_READ_WRITE_TOKEN` is Production only.
+    2. Vercel → frata → Deployments: delete old preview deployments (each keeps the values it was built with).
+    3. Supabase → Authentication → URL Configuration: remove `https://*-premabnrj-dots-projects.vercel.app/auth/callback`.
+    4. Vercel → frata → Settings → Environment Variables: "Automatically expose System Environment Variables" on.
+    5. Multi-factor sign-in on the Supabase and Vercel accounts (anyone with Supabase SQL access can bypass app checks).
+    6. Meta: the app's OAuth redirect list holds production URLs only.
 
 ### Frrata's Google app (Search Console and Google Shopping for merchants — search and sharing S·4)
 
@@ -266,8 +304,9 @@ it to `100000` after moving to Pro. Never Preview: a preview build must not add 
 **4. Check:** Settings › Shop address in the console shows **Connect a domain**. If it doesn't, the token or project id
 is missing or not in Production.
 
-On Vercel Pro later: the background check's schedule in `vercel.json` moves to every 10 minutes (one line), and the
-frrata name starts redirecting to a main domain (D2·9 follow-up).
+On Vercel Pro (2026-11-12): the background check runs every 10 minutes (`vercel.json`); **owner step:** set
+`DOMAIN_CAPACITY` to `100000` in Vercel (Production). Still to come: the frrata name redirecting to a main domain
+(D2·9 follow-up).
 
 ### Video for shops: Frrata's Mux (V1, 2026-11-09)
 
@@ -344,8 +383,8 @@ plan will use; the plan may rename one, and this list follows it.
 **C. Before EkCode reaches a real shopper**
 1. Counsel's answers on A4 (a)–(c), and the notice text final.
 2. **Supabase Pro** (backups, point-in-time recovery: the vault holds shoppers' phones and addresses).
-3. **Preview deployments off production's database** (Vercel: take `DATABASE_URL` off Preview or point it at a Supabase
-   branch) and Deployment Protection on previews.
+3. **Preview deployments off production** — see § Previews off production above (Vercel part done 2026-11-12; owner
+   steps listed there).
 4. **Meta business verification** done (A2) and the number past 2,000 a day; Admin › EkCode › WhatsApp shows the step.
 5. Your approval of the P1 build on a demo shop.
 

@@ -47,14 +47,20 @@ export type Membership = {
   supportSessionId: string | null
 }
 
-export type Access = { staffRole: StaffRole | null; memberships: Membership[] }
+/** `staffConfirmedAt`: when this browser session's live passkey step-up was made (null without one). */
+export type Access = { staffRole: StaffRole | null; staffConfirmedAt: string | null; memberships: Membership[] }
 
-export async function accessFor(userId: string): Promise<Access> {
+export async function accessFor(userId: string, sessionId: string | null = null, stepupHash: string | null = null): Promise<Access> {
   // The first query of every signed-in request: if its pooled connection is lost, a fresh pool answers instead of the
   // request waiting to Vercel's 60 s (src/lib/db/index.ts withFreshPool; 2026-11-11).
-  const rows = await withFreshPool(() => db().execute<{ a: Access }>(sql`select app_access_for(${userId}::uuid) as a`))
+  const rows = await withFreshPool(() => db().execute<{ a: Access }>(sql`select app_access_for(${userId}::uuid, ${sessionId}::uuid, ${stepupHash}::text) as a`))
   const a = rows[0]?.a
-  return { staffRole: a?.staffRole ?? null, memberships: a?.memberships ?? [] }
+  return { staffRole: a?.staffRole ?? null, staffConfirmedAt: a?.staffConfirmedAt ?? null, memberships: a?.memberships ?? [] }
+}
+
+/** Sign-out ends this browser's staff step-up first (by its cookie's hash). */
+export async function endStaffStepup(hash: string): Promise<void> {
+  await db().execute(sql`select app_staff_signout(${hash})`)
 }
 
 /** Turns this user's open invites into memberships. Returns how many. */

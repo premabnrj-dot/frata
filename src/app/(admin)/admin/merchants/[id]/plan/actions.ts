@@ -26,7 +26,7 @@ export async function changePlanAction(form: FormData) {
   const tid = z.uuid().safeParse(form.get('tenantId'))
   if (!tid.success) redirect(`/admin/merchants?error=${encodeURIComponent('That form was incomplete. Nothing was changed.')}`)
   const id = tid.data
-  if (!staff.ok) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent(staff.reason === 'signed_out' ? 'Sign in again.' : 'Only an admin can change a plan.')}`)
+  if (!staff.ok) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent(staff.reason === 'signed_out' ? 'Sign in again.' : staff.reason === 'needs_passkey' ? 'Confirm it\'s you with your passkey first.' : 'Only an admin can change a plan.')}`)
   const p = Change.safeParse(Object.fromEntries(form))
   if (!p.success) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent('Check the plan and the custom price')}`)
   if (p.data.customPrice !== null && !p.data.reason) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent('A custom price needs a reason')}`)
@@ -56,7 +56,7 @@ async function trialAction(form: FormData, schema: typeof TrialBase | typeof Tri
   const tid = z.uuid().safeParse(form.get('tenantId'))
   if (!tid.success) redirect(`/admin/merchants?error=${encodeURIComponent('That form was incomplete. Nothing was changed.')}`)
   const back = `/admin/merchants/${tid.data}/plan`
-  if (!staff.ok) redirect(`${back}?error=${encodeURIComponent(staff.reason === 'signed_out' ? 'Sign in again.' : 'Only an admin can change a trial.')}`)
+  if (!staff.ok) redirect(`${back}?error=${encodeURIComponent(staff.reason === 'signed_out' ? 'Sign in again.' : staff.reason === 'needs_passkey' ? 'Confirm it\'s you with your passkey first.' : 'Only an admin can change a trial.')}`)
   const p = schema.safeParse(Object.fromEntries(form))
   if (!p.success) redirect(`${back}?error=${encodeURIComponent('A trial is 7 to 90 days for one shop, and needs a reason.')}`)
   try { await run(staff, p.data) } catch (e) {

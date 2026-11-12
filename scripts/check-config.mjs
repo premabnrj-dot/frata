@@ -52,6 +52,23 @@ for (const [name, files] of readers) {
   if (!listed.has(name)) failures.push(`${name}  read in ${[...files][0]} but not listed in .env.example — add the name, with where its value comes from`)
 }
 
+// Previews off production (spec 2026-11-12): in src/lib/env.ts every variable is read through secret() unless it is
+// plain configuration listed here; CRON_SECRET only beside SECRETS_ALLOWED. Adding a name here says "this is not a
+// secret" — a reviewer checks that claim.
+const PLAIN = new Set(['VERCEL', 'VERCEL_ENV', 'RAZORPAY_API_BASE', 'META_GRAPH_BASE', 'FRRATA_WA_SIGNUP_TEMPLATE', 'FRRATA_WA_TEMPLATE_LANG',
+  'EKCODE_WA_AUTH_TEMPLATE', 'EKCODE_WA_TEMPLATE_LANG', 'FRRATA_GSTIN', 'FRRATA_LEGAL_NAME', 'FRRATA_ADDRESS', 'FRRATA_SAC', 'E2E_FIXTURES',
+  'GSP_PROVIDER', 'VERCEL_PROJECT_ID', 'VERCEL_TEAM_ID', 'VERCEL_API_BASE', 'DOH_BASE', 'DOMAIN_CAPACITY', 'MUX_ENVIRONMENT_ID', 'MUX_API_BASE',
+  'MUX_STREAM_BASE', 'MUX_IMAGE_BASE', 'SES_ACCOUNT_ID', 'SES_CONFIG_SHOPS', 'SES_CONFIG_NOTICES', 'SES_SNS_TOPIC_ARN', 'EMAIL_SHOP_DOMAIN',
+  'EMAIL_NOTICES_FROM', 'SES_API_BASE'])
+{
+  const env = readFileSync('src/lib/env.ts', 'utf8').split(/\r?\n/).map(l => l.replace(/\/\/.*$/, '').replace(/^\s*\*.*$/, '').replace(/\/\*.*?\*\//g, '')).join('\n')
+  for (const m of env.matchAll(/(secret\()?process\.env\.([A-Z0-9_]+)/g)) {
+    if (!m[1] && !PLAIN.has(m[2])) failures.push(`${m[2]}  read in src/lib/env.ts without secret() — wrap it (previews off production), or list it in PLAIN if it is not a secret`)
+  }
+  const cron = readFileSync('src/lib/auth/cron.ts', 'utf8')
+  if (!/SECRETS_ALLOWED \? process\.env\.CRON_SECRET/.test(cron)) failures.push('CRON_SECRET  read in src/lib/auth/cron.ts without SECRETS_ALLOWED — Production only on Vercel')
+}
+
 if (failures.length) {
   for (const f of failures) console.error(f)
   console.error(`check:config — ${failures.length} problem(s)`)

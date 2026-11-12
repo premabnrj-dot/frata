@@ -144,7 +144,7 @@ export const productImages = pgTable('product_images', {
   id: id(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   productId: uuid('product_id').notNull(),
-  /** Blob URL without the width suffix: `${base}-${w}.webp` is each size. Always under tenants/<tenant_id>/. */
+  /** Blob URL without the width suffix: `urlFor(base, w)` is each size (`${base}-${w}.webp`; a base ending `.jpg` is a JPEG photo, domains/media/sizes.ts). Always under tenants/<tenant_id>/. */
   base: text('base').notNull(),
   widths: integer('widths').array().notNull(),
   width: integer('width').notNull(),

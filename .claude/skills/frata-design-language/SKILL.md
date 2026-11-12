@@ -2,8 +2,8 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.18.0
-  verified: 2026-11-11
+  version: 5.20.0
+  verified: 2026-11-12
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
 
@@ -301,6 +301,9 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 - **Lists**: `DataTable` shares chrome, not columns. Default view is a WORK
   QUEUE (to confirm, delivery failed), not history. Filters live in the URL,
   the server filters; 50 rows a page, numbered, never infinite scroll.
+  View tabs (`ViewTabs`) show an exception tab (couldn't deliver, coming back) only while it holds orders; on a phone
+  they may scroll sideways inside the page gutter (`scroll`, 2026-11-12) — tabs over a list, not navigation, so
+  UX rule 10's "never a sideways strip" (the bottom bar) doesn't apply.
 - **Order row**: number (mono link) · placed · payment badge · status badge ·
   value · COD risk badge (Medium/High in words, never a bare score; Low shows
   nothing). Profit per order waits for Phase 3, and staff never see cost.
@@ -449,6 +452,21 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   any) with a live "N products match now" count; a product shows the
   hand-picked ones as toggles and the rule-based ones it is in, in words.
 
+## Import and order edit (owner-approved 2026-11-12; specs `docs/specs/2026-11-11-product-import.md`, `docs/specs/2026-11-11-order-edit.md`, mockup https://claude.ai/artifact/76HjNBCo2xdJyf6Qvwxutx)
+
+- **A bulk write is file → check → write.** Steps in a strip (File, Check, Import); counts first (new, already
+  there, left out); every problem as row · column · what to fix, with "Download rows to fix"; a preview of the first
+  few as they will look; one primary action naming the count ("Import 58 as drafts"); the safe one names what stays
+  ("Keep my shop as it is"). Imported products arrive as drafts. Done lists what each still needs, each with its button.
+- **Photos in bulk are matched by file name** (SKU, address or name, a trailing number for order); an unmatched photo
+  asks "Which product?" in place.
+- **Editing a placed order is in place, until packed.** Per line: the product's other sizes and colours as chips with
+  what is left ("L · 2 left"; the original dashed; sold out crossed through), quantity − / +, Remove with a reason.
+  "What changes" beside it, live: each change in words, an offer that now gives less, and the money (COD "Collect
+  ₹6,016 → ₹5,207"; paid online: "Refund ₹1,899" with its timing and that the gateway keeps its fee, or "Collect ₹499 on
+  delivery"). Save names the order and the money ("Save and refund ₹1,899"); the safe button keeps the order as it was.
+  After: a toast with Undo, "Was M" on the line, the change in Activity.
+
 ## Offers (owner-approved 2026-11-08; spec `docs/specs/2026-11-08-coupons.md`, mockup https://claude.ai/artifact/HVFMBJzJoH9tTUh9d1zxHT)
 
 45. **Save, never surcharge.** "Pay online, save ₹50" on the pay-online card and "No ₹50 online
@@ -456,7 +474,9 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 46. **The best offer is applied for the shopper.** Checkout lists the shop's offers (applied, or
     what each needs: "Add ₹300 more"); "Have a code?" stays behind a link (Baymard, Jun 2026).
 47. **One answer for a code that does not apply**, whether it exists or not: "this code doesn't
-    work here". Unlisted codes never appear in a list.
+    work here". Unlisted codes never appear in a list. One exception (shopper batch 2026-11-12, owner to confirm): a
+    real code that would save on this bag but is beaten by a better offer of its class reads "a better offer is
+    already applied" (`'beaten'`), and is no wrong guess.
 48. **Real ends only.** The bar shows "till 30 Nov" only when the offer has an end; never a
     countdown, never one that restarts per visit (CCPA dark-pattern rules).
 49. **Each saving is named** in the bag, checkout, the order page and the invoice; the invoice

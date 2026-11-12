@@ -5,6 +5,8 @@ import { formValues, sectionFor } from '@/domains/settings/sections'
 import { CAN_BUILD, requireMember } from '@/lib/auth/require-member'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { policyOverrides, shopWithSettings } from '@/lib/queries/settings'
+import { liveWithoutRate } from '@/lib/queries/catalogue'
+import { chargesGst, type Scheme } from '@/domains/tax/gst'
 import { previewLook } from '@/lib/queries/storefront'
 import { resolveStored, schemeVars } from '@/domains/themes/resolve'
 import { codeSource } from '@/domains/themes/source'
@@ -38,6 +40,10 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
   ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null, codeSource, null] as const })
   if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   // The brand and footer previews wear the shop's published look (Look owns colours and type now).
+  // Taxes: a shop that charges GST can't sell a live product with no rate (quote); say which, never block (best effort).
+  const unrated = section.key === 'taxes' && chargesGst({ gstin: shop.settings.gstin, scheme: shop.settings.gstScheme as Scheme })
+    ? await liveWithoutRate(tenantId, new Date()).catch((err) => { console.error('[settings taxes] unrated', errName(err)); return null })
+    : null
   const theme = resolveStored(live, shop.settings, src)
   const facts = { ...shopFacts(shop, SHOP_DOMAIN), look: { vars: schemeVars(theme, 'paper'), display: displayFamily(theme.settings.pairing) } }
   return (
@@ -50,6 +56,7 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
       overrides={overrides}
       tenantId={tenantId}
       held={mods?.access.delivery_zones.usable ? HELD_BY_ZONES : []}
+      unrated={unrated}
     />
   )
 }

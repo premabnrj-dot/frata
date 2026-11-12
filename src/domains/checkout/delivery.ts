@@ -20,6 +20,9 @@ export function shippingFor(amount: number, r: Pick<DeliveryRules, 'shippingFlat
 
 export type { Cod } from '@/domains/delivery/floor'
 
+/** The shop turned Pay on delivery off for this pincode (checkout, and an address edit on a COD order alike). */
+export const codBlockedFor = (pincode: string | null | undefined, blocked: readonly string[] | null | undefined): boolean => !!pincode && !!blocked?.includes(pincode)
+
 /** Pay on delivery on the FLOOR (today's Settings) for a bag of `amount` paise — the buy box and Settings' preview.
  *  Checkout reads `codOn(amount, resolveDelivery(pin, floor, zones))` (src/domains/delivery/resolve.ts), the one rule;
  *  this is its floor (floor.ts), so the browser never ships the zone presets. */

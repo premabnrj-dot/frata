@@ -1,6 +1,6 @@
 import 'server-only'
 import { and, asc, eq, isNull, lt, sql } from 'drizzle-orm'
-import { computeBill, type AddonRow, type Bill, type FeeCredit, type FeeOrder, type PlanRow } from '@/domains/billing/bill'
+import { computeBill, returnCreditDue, type AddonRow, type Bill, type FeeCredit, type FeeOrder, type PlanRow } from '@/domains/billing/bill'
 import { MODULES, type ModuleKey } from '@/domains/modules/registry'
 import { paise } from '@/domains/money/paise'
 import { currentPlan, type PlanCode } from '@/domains/plans/entitlements'
@@ -12,7 +12,7 @@ import { shopPauseIn } from '@/lib/queries/trial-pause'
 const TRIAL_PAUSE_LIVE = true
 import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
 import type { Tx } from '@/lib/db'
-import { billableAtSql, feeRateAtSql } from '@/lib/db/order-predicates'
+import { billableAtSql, feeRateAtSql, returnedSql } from '@/lib/db/order-predicates'
 import { planVersions, plans, tenantPlans } from '@/lib/db/schema'
 import { billingAccounts, frrataFeeCredits, frrataInvoiceFees, frrataInvoiceLines, frrataInvoices } from '@/lib/db/schema-billing'
 import { addonPrices, tenantAddons } from '@/lib/db/schema-modules'
@@ -73,7 +73,9 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
   }
 
   const at = billableAtSql('o')
-  const [planRows, addonRows, feeRows, creditRows, prev, planBilled, account] = await Promise.all([
+  // What returns already gave back of each billed fee (on any invoice still standing: this draft's own were deleted above).
+  const returnsGiven = sql`(select coalesce(sum(rc.fee), 0) from ${frrataFeeCredits} rc where rc.tenant_id = f.tenant_id and rc.order_id = f.order_id and rc.kind = 'return')`
+  const [planRows, addonRows, feeRows, creditRows, returnRows, prev, planBilled, account] = await Promise.all([
     tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, customMonthlyPrice: tenantPlans.customMonthlyPrice,
       planCode: plans.code, name: plans.name, version: planVersions.version, features: planVersions.features, monthlyPrice: planVersions.monthlyPrice, includedOrders: planVersions.includedOrders, feeBps: planVersions.feeBps })
       .from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
@@ -83,17 +85,27 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
       .where(and(eq(tenantAddons.tenantId, tenantId), lt(tenantAddons.startsAt, nextMonthStart))),
     // Billable before the 1st (and by now), at most one month late, never billed (no fee row on any invoice).
     tx.execute<{ id: string; number: number; at: string | Date; rate_at: string | Date; net: string }>(sql`
-      select o.id, o.number, ${at} at, ${feeRateAtSql('o')} rate_at, o.merchandise_net net from ${orders} o
+      select o.id, o.number, ${at} at, ${feeRateAtSql('o')} rate_at, greatest(o.merchandise_net - ${returnedSql('o', upTo)}, 0) net from ${orders} o
        where o.tenant_id = ${tenantId} and o.shipped_at is not null and ${at} >= ${oldest.toISOString()}::timestamptz and ${at} < ${upTo.toISOString()}::timestamptz
          and not exists (select 1 from ${frrataInvoiceFees} f where f.order_id = o.id)`),
     // Billed on an ISSUED invoice, no longer billable (came back or lost since), never credited. An unissued draft
     // simply drops such an order when it is redrafted, so a credit never points at a fee a redraft removes.
     tx.execute<{ id: string; number: number; fee: string; invoice: string | null }>(sql`
-      select o.id, o.number, f.fee, i.number invoice from ${frrataInvoiceFees} f
+      select o.id, o.number, greatest(f.fee - ${returnsGiven}, 0) fee, i.number invoice from ${frrataInvoiceFees} f
         join ${orders} o on o.tenant_id = f.tenant_id and o.id = f.order_id
         join ${frrataInvoices} i on i.tenant_id = f.tenant_id and i.id = f.invoice_id
        where f.tenant_id = ${tenantId} and i.issued_at is not null and i.period_start < ${monthStart.toISOString()}::timestamptz and ${at} is null
-         and not exists (select 1 from ${frrataFeeCredits} c where c.order_id = f.order_id)`),
+         and not exists (select 1 from ${frrataFeeCredits} c where c.order_id = f.order_id and c.kind = 'outcome')`),
+    // Owner, 2026-11-12: a returned item isn't billable. Billed on an ISSUED invoice and still billable, with items
+    // returned on a credit note since: the fee now due on what was kept (deliveredFee, the one rounding) is what the
+    // fee should have been; what was billed less that, less what returns already gave back, is given back now.
+    tx.execute<{ id: string; number: number; fee: string; fee_bps: number; net: string; returned: string; given: string; invoice: string | null }>(sql`
+      select o.id, o.number, f.fee, f.fee_bps, o.merchandise_net net, ${returnedSql('o', upTo)} returned, ${returnsGiven} given, i.number invoice from ${frrataInvoiceFees} f
+        join ${orders} o on o.tenant_id = f.tenant_id and o.id = f.order_id
+        join ${frrataInvoices} i on i.tenant_id = f.tenant_id and i.id = f.invoice_id
+       where f.tenant_id = ${tenantId} and i.issued_at is not null and i.period_start < ${monthStart.toISOString()}::timestamptz and ${at} is not null
+         and exists (select 1 from credit_notes cn where cn.tenant_id = o.tenant_id and cn.order_id = o.id and cn.kind = 'return')
+         and not exists (select 1 from ${frrataFeeCredits} c where c.order_id = f.order_id and c.kind = 'outcome')`),
     tx.select({ id: frrataInvoices.id, carryOut: frrataInvoices.carryOut, rolled: frrataInvoices.rolled }).from(frrataInvoices)
       .where(and(eq(frrataInvoices.tenantId, tenantId), eq(frrataInvoices.periodStart, prevMonthStart))),
     planBilledIn(tx, tenantId, prevMonthStart),
@@ -107,9 +119,13 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
   const addons: AddonRow[] = addonRows.filter((a) => addOnBillable(a.module as ModuleKey, atStart?.planCode ?? null, atStart?.features ?? [])).map((a) => ({ module: a.module, name: MODULES[a.module as ModuleKey]?.name ?? a.module, monthlyPrice: paise(a.monthlyPrice), startsAt: a.startsAt, endsAt: a.endsAt, trialEndsAt: a.trialEndsAt }))
   const feeOrders: FeeOrder[] = feeRows.map((o) => ({ orderId: o.id, number: `#${o.number}`, billableAt: new Date(o.at), rateAt: new Date(o.rate_at), merchandiseNet: Number(o.net) }))
   const credits: FeeCredit[] = creditRows.map((c) => ({ orderId: c.id, number: `#${c.number}`, fee: paise(Number(c.fee)), invoiceNumber: c.invoice }))
+  const returnCredits: FeeCredit[] = returnRows.flatMap((r) => {
+    const due = returnCreditDue({ billedFee: Number(r.fee), feeBps: r.fee_bps, merchandiseNet: Number(r.net), returned: Number(r.returned), given: Number(r.given) })
+    return due > 0 ? [{ orderId: r.id, number: `#${r.number}`, fee: due, invoiceNumber: r.invoice }] : []
+  })
   const acc = account[0]
   const bill = computeBill({
-    monthStart, nextMonthStart, prevMonthStart, plans: planHistory, addons, feeOrders, credits,
+    monthStart, nextMonthStart, prevMonthStart, plans: planHistory, addons, feeOrders, credits, returnCredits,
     carry: prev[0]?.carryOut ?? 0, rolledLastMonth: prev[0]?.rolled ?? false, prevPlanBilled: planBilled,
     // The billing pause turns on WITH the storefront pause (TR1 task 9; impact review TR0): a shop that still sells
     // pays its plan. pauseWindow (src/domains/plans/trial.ts) is ready for it.
@@ -129,7 +145,7 @@ export async function draftInvoiceIn(tx: Tx, tenantId: string, monthStart: Date,
   if (bill.lines.length) await tx.insert(frrataInvoiceLines).values(bill.lines.map((l, k) => ({ tenantId, invoiceId, position: k + 1, ...l })))
   if (bill.fees.length) await tx.insert(frrataInvoiceFees).values(bill.fees.map((f) => ({ tenantId, invoiceId, ...f })))
   if (bill.credited.length) await tx.insert(frrataFeeCredits).values(bill.credited.map((c) => ({ tenantId, invoiceId, ...c })))
-  const numbers = new Map<string, number>([...feeRows.map((o) => [o.id, Number(o.number)] as const), ...creditRows.map((c) => [c.id, Number(c.number)] as const)])
+  const numbers = new Map<string, number>([...feeRows.map((o) => [o.id, Number(o.number)] as const), ...creditRows.map((c) => [c.id, Number(c.number)] as const), ...returnRows.map((r) => [r.id, Number(r.number)] as const)])
   return { invoiceId, bill, numbers }
 }
 

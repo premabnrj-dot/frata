@@ -18,7 +18,7 @@ describe.skipIf(!host)('own domains', () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
     process.env.VERCEL_API_TOKEN = 't'; process.env.VERCEL_PROJECT_ID = 'prj_1'; delete process.env.VERCEL
     const postgres = (await import('postgres')).default
-    const su = postgres(`postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    const su = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
     const A = '11111111-1111-1111-1111-111111111111', owner = '99999999-9999-9999-9999-999999999999'
     const dom = `own${Date.now() % 1_000_000}.in`
     let token = '', txtLive = false

@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { adminDb } from '@/lib/db/admin'
 import { invites, members, shopSettings, supportSessions, tenantPlans, tenants } from '@/lib/db/schema'
 import { shopHost } from '@/lib/public-env'
@@ -11,6 +11,8 @@ import { auditStaff } from './audit'
 import { latestVersion, tenantPlanHistory } from './plans'
 
 export const PAGE_SIZE = 50
+/** Merchant names in the order a person reads them: numbers by value, case ignored. */
+const NATURAL = new Intl.Collator('en-IN', { numeric: true, sensitivity: 'base' })
 
 type Directory = Map<string, { email: string; lastSignInAt: Date | null }>
 
@@ -56,11 +58,17 @@ export async function listMerchants(staff: StaffOk, opts: { page: number; q?: st
   void staff
   const db = adminDb()
   const where = opts.q ? sql`(${tenants.name} ilike ${'%' + opts.q + '%'} or ${tenants.slug} ilike ${'%' + opts.q + '%'})` : undefined
-  const [{ total } = { total: 0 }] = await db.select({ total: count() }).from(tenants).where(where)
-  const ts = await db.select().from(tenants).where(where).orderBy(asc(tenants.name))
-    .limit(PAGE_SIZE).offset((Math.max(1, opts.page) - 1) * PAGE_SIZE)
-  const ids = ts.map((t) => t.id)
+  // Names sort naturally ("Brand 2" before "Brand 12", UX foundation rule 16): Postgres's text order can't, so every
+  // matching name is read (ids and names only), sorted with a numeric collator, and the page's rows read by id. The
+  // count is that whole list's (rule 17).
+  const all = await db.select({ id: tenants.id, name: tenants.name }).from(tenants).where(where)
+  all.sort((a, b) => NATURAL.compare(a.name, b.name) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+  const total = all.length
+  const from = (Math.max(1, opts.page) - 1) * PAGE_SIZE
+  const ids = all.slice(from, from + PAGE_SIZE).map((t) => t.id)
   if (ids.length === 0) return { rows: [], total }
+  const at = new Map(ids.map((x, i) => [x, i]))
+  const ts = (await db.select().from(tenants).where(inArray(tenants.id, ids))).sort((a, b) => at.get(a.id)! - at.get(b.id)!)
 
   const [ms, inv, history, counts] = await Promise.all([
     db.select().from(members).where(inArray(members.tenantId, ids)),

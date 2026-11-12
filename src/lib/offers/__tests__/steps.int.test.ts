@@ -74,6 +74,22 @@ describe.skipIf(!host)('offer steps and a retry', () => {
       expect(await offersStillFit(tx, A, O2, '9829333002', now)).toBe(true)
       await tx.update(discounts).set({ pausedAt: now }).where(eq(discounts.id, T))
       expect(await offersStillFit(tx, A, O2, '9829333002', now)).toBe(false)
+      // Each way of paying checks only its own offers (offers per method, 0106; security review 2026-11-11 MED-1: a
+      // switch to COD after the hold now checks too): a COD-only order offer stopped meanwhile refuses Pay on delivery,
+      // never a retry online; a pay-online saving stopped meanwhile refuses a retry online, never Pay on delivery.
+      const C = await offer({ ...started }), P = await offer({ ...started })
+      const O3 = await order('9829333003')
+      await tx.insert(orderDiscounts).values([
+        { tenantId: A, orderId: O3, discountId: C, class: 'order', method: 'cod', amount: 10000, title: 'x', style: 'order_off', percentBps: 1000, minSubtotal: 0 },
+        { tenantId: A, orderId: O3, discountId: P, class: 'payment', amount: 5000, title: 'y', style: 'pay_online', amountOff: 5000, minSubtotal: 0 },
+      ])
+      await tx.update(discounts).set({ pausedAt: now }).where(eq(discounts.id, C))
+      expect(await offersStillFit(tx, A, O3, '9829333003', now, 'prepaid')).toBe(true)
+      expect(await offersStillFit(tx, A, O3, '9829333003', now, 'cod')).toBe(false)
+      await tx.update(discounts).set({ pausedAt: null }).where(eq(discounts.id, C))
+      await tx.update(discounts).set({ pausedAt: now }).where(eq(discounts.id, P))
+      expect(await offersStillFit(tx, A, O3, '9829333003', now, 'cod')).toBe(true)
+      expect(await offersStillFit(tx, A, O3, '9829333003', now, 'prepaid')).toBe(false)
       throw ROLLBACK
     }).catch((e) => { if (e !== ROLLBACK) throw e })
   })

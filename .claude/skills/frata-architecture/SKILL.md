@@ -2,8 +2,8 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.42.0
-  verified: 2026-11-11
+  version: 2.47.0
+  verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
 ---
@@ -113,6 +113,17 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   (`signedInUser`, `accessOf`, React `cache`), shared by `requireMember`, `requireStaff` and `requireUser`; Admin's
   layout used to ask each twice. `cache` does not memoize inside a server action or route handler: there each call is
   its own lookup (and each `adminDb()` its own connection), so pass the transaction down instead of reading again.
+- **Staff passkeys** (ADR-0007 amended 2026-11-12; `docs/specs/2026-11-12-staff-passkeys.md`): staff access and every
+  support visit need a live passkey step-up on this browser session. `app_access_for(user, session, stepup hash)`
+  answers `staffConfirmedAt` and drops support visits without one, in the query every signed-in request already runs.
+  `requireStaff` returns `StaffOk` (with `sessionId`, `confirmedAt`) or `needs_passkey` with a `StaffIdentity` — a
+  different type that only `src/lib/admin/passkeys.ts` accepts; Admin's layout renders the check in place of any
+  page. Adding or removing staff, approving a request and removing a passkey need `confirmedRecently` (5 minutes).
+  The `staff_*` tables have no grant to any role (definers only, `check:tenant`); the session id comes from
+  `getClaims()` with `sub` matched; the cookie is `__Host-frrata_staff` (plain `frrata_staff` on the local e2e stack).
+- **Secrets only in Production** (previews off production, 2026-11-12): every secret in `src/lib/env.ts` is read through
+  `secret()` (`src/domains/infra/stage.ts`): on Vercel, Production only; off Vercel, as given. `check:config` fails an
+  unwrapped read. Sign-in is off in the browser on a preview.
 - Signing in grants nothing; a `members` row does. Roles: owner, admin, staff,
   partner (`MEMBER_ROLES`); tuples `ANY_MEMBER` (everyone, partner included:
   orders, and products and collections — staff edit the catalogue, owner
@@ -157,8 +168,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - **A tuple means what its comment says.** An action whose tuple's comment
   excludes the role it lets through is a finding, not a judgement call (S6,
   settled by the owner 2026-11-08: staff edit products and collections).
-- Staff sign-in needs a second factor (aal2 in `requireStaff`) before outside
-  merchants go live; a support visit acts as owner (S5, ADR-0007).
+- Staff access and every support visit need a passkey step-up on that browser session (S5 closed 2026-11-12, ADR-0007
+  amended; § Auth "Staff passkeys"); a support visit acts as owner.
 
 ## Time in client components (2026-11-07, `check:clock`)
 
@@ -498,7 +509,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   buy at now, with that size's availability; `compareAt` is the struck before-cut price.
 - **Share cards** `src/app/s/[host]/og/[...card]/route.ts`: canonical paths only (`parseCardPath`), the host's shop,
   ids found in its cached catalogue (listed products only — a random id costs no query), drawing budgeted per caller
-  then per shop, photos only from our store and this shop's folder (PATH_SHAPE), read capped at 1 MB, WebP checked by
+  then per shop, photos only from our store and this shop's folder (PATH_SHAPE), read capped at 1 MB, WebP or JPEG checked by
   sharp, reaching Satori only as data URIs. CDN a day; a stale address shows the current card for 5 minutes. No Blob
   storage (a deleted photo would outlive the product).
 - **Old addresses are history rows, append-only** (`product_handle_history`, `collection_handle_history`: select +
@@ -537,7 +548,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
 - Inbound: `src/app/api/webhooks/<provider>/route.ts` — read `request.text()`,
   verify the signature on that text, compute OUR key, insert with
   `onConflictDoNothing`, answer 200. Processing reads `webhook_events where
-  processed_at is null`. List the route in `scripts/check-actions.mjs` ENTRY_POINTS.
+  processed_at is null`; Razorpay's are retried every 5 minutes by `/api/cron/drain`, the rest by the daily cron. List the route in `scripts/check-actions.mjs` ENTRY_POINTS.
 - Per-merchant credentials (Shiprocket tokens, Meta system user tokens) are
   never in env; they go in a tenant table, encrypted — the design is a spec.
 - A webhook caps its body before parsing (`raw.length > N` → 413) and checks the
@@ -593,11 +604,25 @@ Rules:
   identity, so `requireMember(CAN_BUILD)` misses the layout's entry (P7).
 - A shopper's write invalidates the narrowest tag it can: the product, not
   the shop. A sell-out's catalogue purge runs at most once per shop per 30 s across every instance (`refreshSoldOut`,
-  limiter `soldOutPurge`).
+  limiter `soldOutPurge`); one inside a purged window queues ONE trailing purge at its end (`soldOutTrail`, in
+  `after()`), never dropped. A sell-out is the last piece by stock OR hold (stock − held − owed), and an offer an order
+  uses up (`usedUp`) purges the same way: the bar (`shopAnnouncement`) is tagged catalogue with the showcase.
+- **Shop pages read holds once per entry** (`heldByVariant`, grouped from the holds index): `heldSql` per variant over a
+  3,000-variant catalogue cost 265 ms at 10× (1 ms grouped). Checkout's ≤ 20 variants keep `heldSql`; one rule.
 - A flash drop (2026-11-11): placing an order waits at most 2 s for a lock (`set local lock_timeout`) and a shop places
   at most `PLACE_SLOTS` (8) orders at once, as transaction advisory locks shared by every instance
   (`src/lib/orders/place.ts`); past either, 503 "busy, try again", `Retry-After: 2`, nothing written, and the try is
-  given back to the phone and IP limits (`uncount`). A try whose order was already placed finds it before any slot.
+  given back to the IP limit (`uncount`). A try whose order was already placed finds it before any slot. **The phone
+  limit counts orders** (2026-11-12): counted before placement, given back unless the try wrote a new order
+  (`Placed.fresh`).
+  Everything else that takes stock shares the slots and the wait (`takeSlot`): a payment landing, a switch to pay on
+  delivery, a retried payment (`src/lib/orders/payment.ts`). A captured payment is recorded FIRST where nothing waits
+  (a Razorpay-shaped `webhook_events` row; storing a capture keeps the order's hold ≥ 15 min while it still runs),
+  then applied if there is room — the browser's reply, a switch or a released hold that finds a capture, alike.
+  `processEvents` takes a slot only when something waits; a lock wait, deadlock, serialization failure or statement
+  timeout inside an event LEAVES it unprocessed (marking it would lose the payment); the 5-minute drain
+  (`/api/cron/drain`) is the next pass; the order page says "Payment received · confirming" and looks again
+  (`paymentWaiting`).
 - A cached loader (`shopCached`) never runs inside a `withTenant`: it opens a second connection while the first is
   held, and at a drop the pool deadlocks (P4). Read it before the transaction, or after it closes (`quoteData`
   resolves offer collections after its transaction).
@@ -627,6 +652,22 @@ Rules:
   own origin.
 - Erasing an abandoned order strips the click ids (`ERASED_KEYS`); the utm tags stay (owner: keep everything else).
 
+## Photos (2026-11-12)
+
+- **One format per photo, said by its stored base** (`src/domains/media/sizes.ts`): WebP (`<id>` → `<id>-<w>.webp`, every
+  photo before this date) or JPEG where the browser makes no WebP (Safari: a `.jpg` base, `<id>.jpg` → `<id>-<w>.jpg`).
+  No column: `formatOf(base)`. A file's URL is built only by `urlFor` (never `${base}-${w}.webp` by hand); the upload
+  path by `blobPath`; the token allows exactly the type the path's extension says; `photosAreMade` reads each file's
+  first bytes against its base's format (`headIs`).
+
+## Razorpay keys that stop working (2026-11-12)
+
+- A call with a shop's keys (`createOrder`, `orderPayments`) that Razorpay answers 401/403 sets
+  `payment_keys.problem` to `KEYS_REFUSED` (Settings: "Needs attention"); a call that works clears that problem only.
+  `noteKeysAnswer` (src/lib/payments/keys.ts) runs after the call, with no transaction open, and writes only when the
+  problem changes, matching the key id the call used. No needs-you notice yet: `notices.source_kind` has no kind for it
+  and `notice_write` is not granted to frata_app.
+
 ## Money (ADR-0004)
 
 Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
@@ -641,6 +682,12 @@ Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
   payment, prepaid only), `priceMethod` (the stored `productDiscount` first, then the rest) (spread by value to the
   paise; each line's GST rate on its own discounted piece, **per way of paying**: line tax lives in
   `MethodTotal`, never on `QuoteLine`).
+- **Each way of paying gets its best** (shop stress test 2026-11-11): when the best order offer does not combine,
+  online also tries the best one that does (or none) with the saving (`plan.online`), taken by `quote()` only at a
+  LOWER prepaid total (a tie keeps the order offer); on delivery always keeps the best order offer; one delivery charge
+  for both. Placement stores `keptOffers(q, method)`: placed online with two order offers, `order_discounts.method`
+  marks them 'prepaid' and 'cod', so `reprice()` prices either way, and uses follow the row's way (`offerWay`;
+  `discountUseSql(now, 'both' | 'prepaid' | 'cod')`; a hold holds both).
 - **One repricer and one writer:** a placed order is priced again only by `amounts.reprice()` from
   its stored lines and `order_discounts` (never today's offers), and written only by
   `lib/orders/reprice.ts writeReprice()` — every money column of the order and its lines together.
@@ -648,12 +695,16 @@ Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
 - **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
   `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`
   (parity-tested). Placement locks every offer the bag could get that has a limit, in id order,
-  before counting; an offer over a limit drops out and the shopper gets `changed`.
+  before counting; an offer over a limit drops out and the shopper gets `changed`. The cached pages (bar, cards,
+  product lines) leave out an offer `usedUp` for everyone (`usedUpIds`: total limit or budget; never per phone).
+- **A percentage saving is whole rupees, rounded down, once per offer** (`wholeRupees` in discounts.ts; 100% exact):
+  never a ₹949.05 total, never ₹1 or more short. Stored amounts are what reprice() reads, so placed orders keep theirs.
 - **The shopper's read** of offers is `liveOffers()` in `queries/checkout.ts` (terms only);
   `publicQuote` maps offers to named fields (a test proves no id, term, limit or budget leaks).
   Codes: one per order, unique per shop forever, fail-closed per-IP guess limit, one answer for
-  every failure. A creator code is a labelled code: matched only when typed (`codeFor`), never
-  in the bar (`isNull(label)`), recorded with `via` (link or typed).
+  every failure but `'beaten'` (a real code a better offer of its class beat: told so, not a wrong guess). A creator
+  code is a labelled code: matched only when typed (`codeFor`), never in the bar (`isNull(label)`), recorded with `via`
+  (link or typed) — only when it applies: a beaten code is not on the order (no column for it yet).
 - **First order** is decided at placement under a per-phone advisory lock (standing or holding
   order from that phone), and again on a payment retry.
 - **Did it make money?** `offerStats` (queries/discounts.ts) is the ONE computation of an offer's results:
@@ -687,7 +738,11 @@ through `asModule('gst', …)`, the Accountant's invite too (removing one works 
   (`app_buyer_fixed` trigger); off at ₹5 crore and above until e-invoicing.
 - **Credit notes:** `domains/orders/credits.ts` (what is left of each line; return pro rata by quantity, discount by value
   at each line's rate, goodwill no GST in its own G series, reversal takes the rest), lines in `credit_note_lines`
-  (final). ₹ kept: `keptSql` takes off credited taxable and returned goods' cost.
+  (final). ₹ kept: `keptSql` takes off credited taxable (`creditedSql`) and the cost of pieces a return put back in
+  stock (`cogsSql`). A return restocks only when ticked: `issueCredit`, same transaction, `restockOf` (never past what
+  the line sold less earlier restocks), recorded once in `credit_note_lines.restocked_qty`. A return that CAME BACK
+  (RTO) loses its COGS unless its came-back event put the stock back (`rtoRestockedSql`, grouped by keptSql and
+  Analytics alike; frata-unit-economics).
 - **GSTR-1:** `domains/tax/gstr1.ts` from the documents; files in `gstr1-files.ts`; the period read is
   `queries/gst.ts gstPeriod(In)`, never cached. Filing (G2): `lib/gst/gsp.ts` (`gsp()` null = off; the fake never in
   Production), the actions in `console/gst/actions.ts` write a `gst_attempts` row before each call (ADR-0008, accepted 2026-11-09),
@@ -723,3 +778,25 @@ Vercel `bom1` + Supabase ap-south-1. Storefront routes set `revalidate`;
 console routes are dynamic. Cron schedules in `vercel.json`: legacy `crons` are daily on Hobby,
 per minute on Pro; Vercel Schedules (public beta 2026-11-05) allow every 15 min on Hobby within 5,000 runs a billing
 period (frata-integrations § Domains). Build for daily; a beta schedule is an option, not a dependency. Migrations: see CLAUDE.md § Deploying.
+
+## Shop websites as code: kit and fleet rules (owner-approved 2026-11-12; spec docs/specs/2026-11-12-kit-and-fleet.md)
+Nothing here is built yet; these bind every spec and plan for Sites, Studio and the kit.
+- **Domains.** Partner or agent code runs only on its own registrable domain on the Public Suffix List (placeholder
+  `frrata.site`), previews on another. Never on `frrata.shop` (checkout, sign-in), never on the console's, Admin's or
+  Studio's domain. A spec that puts site code beside checkout's origin is a blocker.
+- **Build mode.** A shop that has never had an owner (`clientStage`: building or invited) publishes without approval,
+  to the signed preview only; its public address stays "Opening soon" with `noindex` until the owner opens it. Handover
+  re-runs the checks and binds the owner's accept to a deployment id; a shop that ever had an owner never returns.
+- **One record.** Publish, patch, rollback and handover all write `site_deployments`; live, held and drift are derived
+  from it. Requests out through the outbox (`site.build`, `site.promote`); results back through `webhook_events`.
+- **No fleet key.** Each site builds with its own storefront key; no key, role or token reaches every shop's data.
+  The fleet service is deterministic code in the hosting account, never an AI agent with deploy rights.
+- **Controls apart from code.** Policies live in their own repository, served as signed JSON by version; the publish
+  gate runs Frrata's pinned checks on the build output, never the site's copy; a hard floor (no `unsafe-eval`,
+  `connect-src` Frrata only, `form-action` checkout only, no route handlers or server actions in site code) is tested
+  in this repo and no policy can lower it.
+- **Facts stay in the API.** Money, offers, prior prices, JSON-LD, brand tokens and the legal block's words are served
+  by the API, never re-implemented in a kit package.
+- **Agents never approve** a release, a policy, a takedown or a publish.
+- **Checkout stays home.** Checkout, sign-in and order pages stay on Frrata's own host in Mumbai; a site's router
+  carries page requests only.

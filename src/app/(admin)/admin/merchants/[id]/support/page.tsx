@@ -8,6 +8,7 @@ import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { startSupportAction } from './actions'
 import { Section } from '@/components/layout/section'
 import { Submit } from '@/components/ui/submit'
+import { InfoTip } from '@/components/ui/info-tip'
 
 export const metadata = { title: 'Open a console as support' }
 
@@ -41,13 +42,13 @@ export default async function SupportStartPage({ params }: { params: Promise<{ i
         <p className="text-xs text-muted-foreground">{m.tenant.name} can read this note. Keep staff-only remarks out of it.</p>
       </fieldset>
       <fieldset className="space-y-2">
-        <legend className="mb-2 text-sm font-medium">For how long</legend>
+        <legend className="mb-2 flex items-center text-sm font-medium">For how long<InfoTip about="how a visit ends">It ends by itself. You can end it sooner from the banner.</InfoTip></legend>
         <div className="flex gap-2">
           {SUPPORT_LENGTHS_MIN.map((n) => (
             <label key={n} className={chip}><input type="radio" name="minutes" value={n} defaultChecked={n === DEFAULT_SUPPORT_MIN} />{LEN_LABEL[n]}</label>
           ))}
         </div>
-        <p className="text-xs text-muted-foreground">It ends by itself. You can end it sooner from the banner. Starting this ends any other visit you have open.</p>
+        <p className="text-xs text-muted-foreground">Starting this ends any other visit you have open.</p>
       </fieldset>
       <div className="flex justify-end gap-2 border-t border-border pt-4">
         <Link href={`/admin/merchants/${id}`} className={button({ variant: 'secondary' })}>Stay in Admin</Link>

@@ -35,9 +35,10 @@ export async function runningOffers(tx: { execute: Tx['execute'] }, tenantId: st
   return r?.n ?? 0
 }
 
-/** Whether the order at `o` is using the order_discounts row at `od` (its class decides the rule). */
+/** Whether the order at `o` is using the order_discounts row at `od` (its way decides the rule: offerWay of class and method). */
 export const useOfRowSql = (now: Date, od = 'od', o = 'o'): SQL =>
-  sql`(case when ${c(od, 'class')} = 'payment' then ${discountUseSql(now, 'payment', o)} else ${discountUseSql(now, 'order', o)} end)`
+  sql`(case when ${c(od, 'class')} = 'payment' or ${c(od, 'method')} = 'prepaid' then ${discountUseSql(now, 'prepaid', o)}
+    when ${c(od, 'method')} = 'cod' then ${discountUseSql(now, 'cod', o)} else ${discountUseSql(now, 'both', o)} end)`
 
 /**
  * The creator code an order (alias `o`) uses now, as `dc.label` and `dc.code` (null when none): a labelled code joined
@@ -71,3 +72,19 @@ export async function discountUses(tx: Tx, tenantId: string, ids: string[], now:
 export const fits = (l: { limitTotal: number | null; limitPerPhone: number | null; budget: number | null }, u: DiscountUses | undefined, amount: number) =>
   !((l.limitTotal !== null && (u?.n ?? 0) + 1 > l.limitTotal) || (l.limitPerPhone !== null && (u?.phone ?? 0) + 1 > l.limitPerPhone)
     || (l.budget !== null && (u?.given ?? 0) + amount > l.budget))
+
+/**
+ * Used up for everyone: no order can get it any more — its total limit is reached, or its budget has not a paisa left
+ * (`fits` for any phone and the smallest saving). What a shop's cached pages leave out (shopper batch 2026-11-12); a
+ * per-phone limit is a shopper's own, so it never hides an offer there.
+ */
+export const usedUp = (l: { limitTotal: number | null; budget: number | null }, u: DiscountUses | undefined) =>
+  !fits({ limitTotal: l.limitTotal, limitPerPhone: null, budget: l.budget }, u, 1)
+
+/** The offers among `rows` that are used up now (discountUses, all time: what placement counts), in the caller's transaction. */
+export async function usedUpIds(tx: Tx, tenantId: string, rows: { id: string; limitTotal: number | null; budget: number | string | null }[], now: Date): Promise<Set<string>> {
+  const limited = rows.filter((r) => r.limitTotal !== null || r.budget !== null)
+  if (!limited.length) return new Set()
+  const used = await discountUses(tx, tenantId, limited.map((r) => r.id), now)
+  return new Set(limited.filter((r) => usedUp({ limitTotal: r.limitTotal, budget: r.budget === null ? null : Number(r.budget) }, used.get(r.id))).map((r) => r.id))
+}

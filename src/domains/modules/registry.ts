@@ -83,7 +83,7 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
     usage: 'Up to a minute each, one per product',
   },  delivery_zones: {
     key: 'delivery_zones', name: 'Delivery Zones', job: 'Delivery charges, dates and COD by PIN code.', group: 'deliver', billing: 'add_on', status: 'now',
-    // In Growth and Scale through their plan features (0105); an add-on on Launch at ₹999/month (owner, 2026-11-12).
+    // In Growth and Scale through their plan features (0111); an add-on on Launch at ₹999/month (owner, 2026-11-12).
     addOnFor: ['launch'], dependsOn: [], outboxKinds: [], setup: '/console/apps/delivery_zones',
   },
 

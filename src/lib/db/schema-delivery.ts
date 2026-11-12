@@ -1,6 +1,6 @@
 // =============================================================================
 // FILE: src/lib/db/schema-delivery.ts — Delivery Zones (plan docs/plans/2026-11-12-delivery-zones.md; access and the
-// starting rows: drizzle/0106_delivery_zones_access.sql). The shop's zones (≤ 50), the PIN codes or 3-digit prefixes its
+// starting rows: drizzle/0111_delivery_zones_access.sql). The shop's zones (≤ 50), the PIN codes or 3-digit prefixes its
 // own zones list (≤ 5,000 a shop, one row each so checkout reads ONE by key), its PIN code rules (≤ 5,000) and holidays
 // (≤ 60). Starting zones keep no PIN codes: they match by prefix in code (src/domains/delivery/presets.ts). Money paise.
 // =============================================================================

@@ -11,6 +11,7 @@ import { sendReviewAsk } from '@/lib/modules/reviews/sender'
 import { sendAssetDelete, sendRenditionCreate, sendUploadCancel } from '@/lib/video/senders'
 import { sendNoticeEmail } from '@/lib/email/notice-sender'
 import { sendOrderEmail, sendTenantSetup } from '@/lib/email/order-sender'
+import { sendPaymentCheck } from '@/lib/orders/payment-check'
 import { E2E_FIXTURES, VERCEL_ENV } from '@/lib/env'
 
 // =============================================================================
@@ -42,6 +43,8 @@ export const SENDERS: Record<string, (row: OutboxRow) => Promise<void>> = {
   // Email E·2: an order email to the shopper in the shop's brand; and a shop's SES tenant, set up once, paced.
   'email.order': sendOrderEmail,
   'email.tenant': sendTenantSetup,
+  // Shop stress test 2026-11-11: an online order asks Razorpay when its hold ends, so a lost webhook never leaves it unpaid.
+  'payment.check': sendPaymentCheck,
 }
 const BATCH = 25
 

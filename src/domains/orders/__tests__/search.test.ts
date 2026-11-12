@@ -10,7 +10,7 @@ describe('order search', () => {
   })
   it('phones match on digits typed alone, never on an order number with letters', () => {
     expect(parseOrderSearch('43210')?.phoneDigits).toBe('43210')
-    expect(parseOrderSearch('+91 98290 43210')?.phoneDigits).toBe('919829043210')
+    expect(parseOrderSearch('+91 98290 43210')?.phoneDigits).toBe('9829043210') // as stored (cleanMobile)
     expect(parseOrderSearch('KS-1004')?.phoneDigits).toBe(null)
     expect(parseOrderSearch('123')?.phoneDigits).toBe(null)
   })
@@ -21,5 +21,17 @@ describe('order search', () => {
   it('empty is no search; long input is cut', () => {
     expect(parseOrderSearch('   ')).toBe(null)
     expect(parseOrderSearch('x'.repeat(200))!.like.length).toBe(MAX_SEARCH + 2)
+  })
+})
+
+describe('a phone pasted from WhatsApp (shop stress test 2026-11-11)', () => {
+  it('drops +91, 91 or a leading 0 in front of a full number, as phones are stored', () => {
+    for (const q of ['+91 98765 43210', '919876543210', '098765 43210', '(+91) 98765-43210', '98765 43210']) {
+      expect(parseOrderSearch(q)?.phoneDigits, q).toBe('9876543210')
+    }
+  })
+  it('a part of a number is searched as typed', () => {
+    expect(parseOrderSearch('43210')?.phoneDigits).toBe('43210')
+    expect(parseOrderSearch('0987')?.phoneDigits).toBe('0987')
   })
 })

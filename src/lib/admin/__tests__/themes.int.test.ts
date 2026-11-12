@@ -7,7 +7,7 @@ const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
 const pass = process.env.INT_DB_PASSWORD ?? 'x'
 const A = '22222222-2222-2222-2222-222222222222' // shop B of the proof: the look int test works on A in parallel
 const who = { userId: '22222222-2222-2222-2222-222222222222', email: 'riya@example.in' }
-const staff = { ok: true as const, userId: 'aaaaaaaa-0000-0000-0000-0000000000ff', email: 'int@frata.test', role: 'admin' as const }
+const staff = { ok: true as const, userId: 'aaaaaaaa-0000-0000-0000-0000000000ff', email: 'int@frata.test', role: 'admin' as const, sessionId: '00000000-0000-4000-8000-000000000000', confirmedAt: new Date() }
 const baseline = () => ({ themeKey: 'classic', themeVersion: '1.0.0', styleKey: 'oxide', settings: { settings: {} } })
 
 describe.skipIf(!host)('Admin › Themes and what shops see', () => {

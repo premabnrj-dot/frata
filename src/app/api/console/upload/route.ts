@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client'
-import { DOC_LOGO_SHAPE, MAX_DOC_IMAGE_BYTES, MAX_UPLOAD_BYTES, PATH_SHAPE } from '@/domains/media/sizes'
+import { contentTypeOf, DOC_LOGO_SHAPE, formatOfPath, MAX_DOC_IMAGE_BYTES, MAX_UPLOAD_BYTES, PATH_SHAPE } from '@/domains/media/sizes'
 import { ANY_MEMBER, CAN_BUILD, requireMember } from '@/lib/auth/require-member'
 import { sectionFor } from '@/domains/settings/sections'
 import { BLOB_READ_WRITE_TOKEN, isBlobConfigured } from '@/lib/env'
@@ -12,7 +12,7 @@ export const maxDuration = 30
 
 // Photo uploads (ADR-0005). The browser asks for a one-time token for ONE
 // path; we give it only to a signed-in member, only for a path inside that
-// member's own shop folder (tenants/<tenantId>/…), only WebP, only up to 3 MB,
+// member's own shop folder (tenants/<tenantId>/…), only WebP (or JPEG for a .jpg path: Safari can't make WebP), up to 3 MB,
 // never overwriting. The database row is written by attachPhotos (our action,
 // which checks the folder again) — not by an upload callback, which would be a
 // third place a tenant id comes from (tenancy audit, 2026-11-06).
@@ -41,7 +41,8 @@ export async function POST(request: Request) {
         // A look's photos: whoever may edit the look, never a Frrata support visit (themes plan, tenancy review).
         if (m[2] === 'theme' && (!(CAN_BUILD as readonly string[]).includes(auth.membership.role) || auth.membership.supportSessionId)) throw new Error('theme needs a look editor')
         if (!(await withinLimit(LIMITS.uploadShop, auth.membership.tenantId, new Date(), true))) throw new Error('upload limit') // fails closed (security review 2026-11-08)
-        return { allowedContentTypes: ['image/webp'], maximumSizeInBytes: MAX_UPLOAD_BYTES, addRandomSuffix: false, allowOverwrite: false, cacheControlMaxAge: 31536000 }
+        // The type the path's extension says, and only that one: a photo is one format (domains/media/sizes.ts).
+        return { allowedContentTypes: [contentTypeOf(formatOfPath(m[5]!))], maximumSizeInBytes: MAX_UPLOAD_BYTES, addRandomSuffix: false, allowOverwrite: false, cacheControlMaxAge: 31536000 }
       },
     })
     return NextResponse.json(result)

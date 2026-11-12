@@ -14,6 +14,7 @@ import { AppHome } from '../_components/app-home'
 import { dateTimeIN } from '@/lib/format-date'
 import { ConnectChoices } from './connect'
 import { DisconnectOnly, NumberHealth } from './health'
+import { InfoTip } from '@/components/ui/info-tip'
 
 export const metadata = { title: 'Messages' }
 
@@ -61,6 +62,6 @@ export default async function MessagesSetupPage({ searchParams }: { searchParams
   }
   return (
     <AppHome k="communication" tab={tab} offer={about.offer} worksWith={about.worksWith} billing canTurnOff={mayTurnOff(auth.membership)} badge={badge}
-      meta={c ? undefined : 'Your own business number. Meta bills messages to you.'}>{body}</AppHome>
+      meta={c ? undefined : <span className="inline-flex items-center gap-1">Your own business number<InfoTip about="cost and time">Meta bills messages to you. Connecting takes about 3 minutes.</InfoTip></span>}>{body}</AppHome>
   )
 }

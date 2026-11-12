@@ -2,8 +2,8 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.12.0
-  verified: 2026-11-11
+  version: 2.14.0
+  verified: 2026-11-12
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
 
@@ -18,6 +18,13 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
 
 - **A prepaid return** (`ifRto`) also loses the gateway's fee: the payment is refunded and the gateway keeps it
   (unit-economics review 2026-11-08).
+- **A return NOT put back in stock loses its goods** (2026-11-12): `orderProfit` takes `restocked`, and `ifRto` adds
+  COGS when it is false. The fact is the came-back event's own record (`order_events` kind `rto`, reason `restocked`,
+  written only by `markCameBack`, never undone), read in SQL by `rtoRestockedSql` (`src/lib/db/order-predicates.ts`),
+  the one rule for ₹ kept in Offers (`keptSql`) and Analytics (`windowSql`) alike; `kept.ts` groups by it. Nothing is
+  stored twice. A return not restocked with unknown COGS is left out (counted), never ₹0; a restocked one needs no COGS.
+  A return started but not yet back (Shiprocket's RTO in transit, when S·1 writes it) has no came-back event yet, so
+  it counts as not restocked until the event says so. A restocked piece at full cost is hypothesis H-resale (below).
 - **A courier line not arrived yet** (Shiprocket): the shop's confirmed estimate stands in for that line, labelled
   estimated; only with no estimate is the order pending and left out (never ₹0).
 - **Lost by the courier** (`ifLost`, unit-economics review 2026-11-08): −(forward freight + packaging + ads + COGS +
@@ -32,11 +39,22 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
 - **Credit notes after delivery** (GST phase 2, 2026-11-09): a return, a discount agreed before the sale or goodwill
   takes its **taxable** value off what the order earned (`creditedSql`, read by keptSql and Analytics alike; the GST on a
   credit was never the merchant's money; goodwill carries none, so all of it comes off). Goodwill is capped at what is
-  left on the invoice. Returned goods' cost is **not** added back: nothing restocks on a credit — hypothesis **H-resale**
-  ("a returned piece is worth its full cost"), test: grade returns at 2–3 design partners for 4 weeks. Not yet counted:
+  left on the invoice. **Returned pieces put back in stock** (2026-11-11: the return's "Put these pieces back in stock"
+  tick, on by default; `credit_note_lines.restocked_qty`) are back on sale, so their cost comes off the order's COGS:
+  `restocked_qty × order_lines.unit_cost` as stored at placement (`cogsSql`, keptSql and Analytics alike; a line with no
+  unit cost adds nothing back, never a guessed cost). A return **not** restocked keeps its cost, and a discount or
+  goodwill never restocks. Counting a restocked piece at its full cost is hypothesis **H-resale** ("a returned piece
+  is worth its full cost"), test: grade returns at 2–3 design partners for 4 weeks. Not yet counted:
   the reverse-pickup freight on a return (~₹70; label figures "before return pickup" until a column records it).
-  **Owner, 2026-11-09:** Frrata's fee stays on the order as delivered (`merchandise_net`, billed in full): a later
-  return or credit note does not reduce it (Launch: ₹8.57 on a returned ₹450 piece). Say so where the fee is explained.
+  **Owner, 2026-11-12 (replaces 2026-11-09):** a returned item isn't billable. Frrata's fee is on what the shopper
+  kept: `merchandise_net` less the taxable value of `return` credit notes (`returnedSql`). Before the fee is billed, the
+  billing draft charges it on that; a return after billing gives back the fee on the returned value on the next
+  invoice (`returnCreditDue`, a `frrata_fee_credits` row of kind `return`; a later came-back or lost credit gives back
+  only what is left). ₹ kept counts the fee the same way. Discount and goodwill notes don't change the fee. Only a note
+  issued within the return window + 15 days of delivery moves the fee (nothing ties a note to goods coming back).
+  Cost (unit-economics review 2026-11-12, illustrative): at a 20% return rate, −11.5% (Launch) to −14.8% (Growth) of
+  Frrata's revenue per tenant; break-even moves from ~471 to ~546 tenants. Watch: returned value ÷ delivered value per
+  shop (flag above 2× the cohort median or 35%); test at 3 design partners over 8 weeks.
 - **The inclusive-price gap** (rates.ts, ₹2,625.01–₹2,950 with GST): one paisa above ₹2,625 moves a piece from 5% to 18%
   (₹269.91 less kept on a ₹900-COGS piece); there, a discount down to ₹2,625 RAISES kept. "A blanket % off is a giveaway"
   holds only below the gap; the console warns on prices in it.

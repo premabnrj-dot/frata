@@ -90,7 +90,7 @@ export function AddNote({ orderId }: { orderId: string }) {
   return (
     <form onSubmit={add} className="grid gap-2">
       <label htmlFor="note" className="sr-only">A note for your team</label>
-      <textarea id="note" value={body} onChange={(e) => setBody(e.target.value)} maxLength={2000} rows={2} placeholder="A note for your team (the customer never sees it)"
+      <textarea id="note" value={body} onChange={(e) => setBody(e.target.value)} maxLength={2000} rows={2} placeholder="Private note"
         className="rounded-md border border-input bg-card px-3 py-2 text-sm" />
       {error ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
       <div><Button type="submit" variant="secondary" aria-disabled={busy}>Add note</Button></div>

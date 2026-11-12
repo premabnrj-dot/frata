@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
+import { InfoTip } from '@/components/ui/info-tip'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dayMonthIN } from '@/lib/format-date'
 import { PRESETS, type Preset } from '@/domains/analytics/link'
@@ -64,7 +65,13 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const make = <MakeLink origin={`https://${shop.host ?? ''}`} open={shop.open && !!shop.slug} products={targets.products} collections={targets.collections} showsAs={showsAs} />
   const dayBefore = new Date(a.start.getTime() - 86_400_000)
   const tabs = <ViewTabs label="Period" tabs={PERIODS.map((p) => ({ href: `/console/analytics?period=${p}`, label: `${p} days`, current: p === period }))} />
-  const meta = `${dayMonthIN(a.start)} – today (so far), against ${dayMonthIN(a.prevStart)} – ${dayMonthIN(dayBefore)}. Orders by the day they were placed (IST); today's numbers still change.`
+  // The two periods stay in the line (design language 61); how they are counted is the (i) tip (Rule 0).
+  const range = `${dayMonthIN(a.start)} – today (so far), against ${dayMonthIN(a.prevStart)} – ${dayMonthIN(dayBefore)}`
+  const metaLine = (visitsSince: Date | null) => (
+    <span className="inline-flex flex-wrap items-center gap-x-1">{range}
+      <InfoTip about="these dates">Orders count on the day they were placed (IST); today&apos;s numbers still change.{visitsSince ? ` Visits counted since ${dayMonthIN(visitsSince)}.` : ''}</InfoTip>
+    </span>
+  )
 
   if (a.cur.orders === 0 && a.prev.orders === 0 && !traffic?.cur.visitors) {
     return (
@@ -92,10 +99,9 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const f = t ? funnel(t.cur, cov.cur ? a.cur.orders : null, cov.cur ? a.cur.delivered : null) : null
   // Only the shop's own product pages compete for slowest (a forged slow id must not hide the real one: tenancy audit).
   const slow = t && names ? slowestPage(t.productLcp.filter((r) => names.products.has(r.productId))) : null
-  const metaVisits = cov.since && cov.since > a.start ? `${meta} Visits counted since ${dayMonthIN(cov.since)}.` : meta
   return (
     <>
-      <PageHeader title="Analytics" actions={make} meta={on ? metaVisits : meta} />
+      <PageHeader title="Analytics" actions={make} meta={metaLine(on && cov.since && cov.since > a.start ? cov.since : null)} />
       {tabs}
       <Summary a={a} />
       <Strip a={a} visits={on && !failed ? { cur: t?.cur ?? emptyTotals(), prev: t?.prev ?? emptyTotals(), since: cov.since, rates, prevRates, fullFrom: cov.fullFrom } : undefined} />

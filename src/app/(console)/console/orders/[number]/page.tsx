@@ -23,6 +23,7 @@ import { eventLabel, PAYMENT, pdfHref, printHref, STATE } from '../_components/l
 import { OrderActions } from '../_components/order-actions'
 import { ShipPanel } from '../_components/ship-panel'
 import { Icon } from '@/components/icons/icon'
+import { saysOnline } from '@/domains/checkout/offer-text'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/[number]/page.tsx
@@ -88,7 +89,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
           print={{ slip: may('print', state, role) ? printHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? printHref('invoice', [o.number]) : null }}
           pdf={{ slip: may('print', state, role) ? pdfHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? pdfHref('invoice', [o.number]) : null, credit: d.credits.length ? pdfHref('credit', [o.number]) : null }}
           credit={{ may: !d.credit && !!o.invoiceNumber && may('credit', state, role), number: d.credit?.number ?? null }}
-          part={o.invoiceNumber && may('part_credit', state, role) ? { inclusive: o.pricesIncludeGst, lines: lines.map((l) => ({ id: l.id, title: [l.title, ...l.optionValues].join(' · '), qty: l.qty,
+          part={o.invoiceNumber && may('part_credit', state, role) ? { inclusive: o.pricesIncludeGst, lines: lines.map((l) => ({ id: l.id, title: [l.title, ...l.optionValues].join(' · '), qty: l.qty, stocked: !!l.stockTakenAt,
             left: l.qty - d.credits.reduce((a, c) => a + c.lines.filter((x) => x.lineId === l.id).reduce((b, x) => b + x.qty, 0), 0) })) } : null} riskWarning={riskWarning} heldPaid={state === 'held' && !!o.paidAt}
           may={{ hold: can.hold, unhold: can.unhold, cancel: can.cancel, pack: can.pack, confirm: can.confirm }}
           refund={refund} refundLabel={formatInr(paise(refund))} stockTaken={lines.some((l) => l.stockTakenAt)} />} />
@@ -119,10 +120,11 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
             shipment={shipment ? { courierName: shipment.courierName, trackingNumber: shipment.trackingNumber, byCourier: shipment.provider === 'shiprocket' } : null} /> : null}
 
           <Section id="items" title="Items">
-            <ul className="divide-y divide-border">
+            {lines.length === 0 ? <p className="text-sm text-muted-foreground">No items on this order.</p> : null}
+            <ul className="divide-y divide-border empty:hidden">
               {lines.map((l) => (
                 <li key={l.id} className="flex items-center gap-3 py-3 text-sm first:pt-0">
-                  {l.imageBase && l.imageWidths ? <img src={urlFor(l.imageBase, pick(l.imageWidths, 160))} alt="" width={48} height={60} className="h-[60px] w-12 rounded-sm object-cover" /> : <span aria-hidden className="h-[60px] w-12 rounded-sm bg-muted" />}
+                  {l.imageBase && l.imageWidths ? <img src={urlFor(l.imageBase, pick(l.imageWidths, 160))} alt="" width={48} height={60} data-photo className="h-[60px] w-12 rounded-sm object-cover" /> : <span aria-hidden className="h-[60px] w-12 rounded-sm bg-muted" />}
                   <span className="min-w-0 flex-1"><span className="font-medium">{l.title}</span>
                     <span className="block text-muted-foreground">{[...l.optionValues, l.sku].filter(Boolean).join(' · ')}</span>
                     {l.kind === 'preorder' ? <span className="block text-xs text-warn-text">Pre-order{l.shipsBy ? ` · ships by ${dayMonthIN(new Date(`${l.shipsBy}T00:00:00+05:30`))}` : ''}</span> : null}
@@ -134,11 +136,11 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
             </ul>
             <dl className="space-y-1 border-t border-border pt-3 text-sm">
               {savingsAsPaid(offers, currentMethod(o)).map((x, i) => (
-                <div key={`${x.class}-${i}`} className="flex justify-between text-ok-text"><dt>{x.class === 'payment' ? `${x.title} (paid online)` : `Offer · ${x.title}`}</dt><dd>−<Money paise={paise(x.amount)} /></dd></div>
+                <div key={`${x.class}-${i}`} className="flex justify-between text-ok-text"><dt>{x.class === 'payment' ? (saysOnline(x.title) ? x.title : `${x.title} (paid online)`) : `Offer · ${x.title}`}</dt><dd>−<Money paise={paise(x.amount)} /></dd></div>
               ))}
               <div className="flex justify-between"><dt>Delivery{offers.some((x) => x.class === 'shipping') ? ' (offer)' : ''}</dt><dd>{o.shipping ? <Money paise={paise(o.shipping)} /> : 'Free'}</dd></div>
               {o.codCharge ? <div className="flex justify-between"><dt>Pay on delivery fee</dt><dd><Money paise={paise(o.codCharge)} /></dd></div> : null}
-              <div className="flex justify-between text-muted-foreground"><dt>GST {o.pricesIncludeGst ? '(included)' : ''}</dt><dd><Money paise={paise(o.gstTotal)} /></dd></div>
+              {Number(o.gstTotal) !== 0 ? <div className="flex justify-between text-muted-foreground"><dt>GST {o.pricesIncludeGst ? '(included)' : ''}</dt><dd><Money paise={paise(o.gstTotal)} /></dd></div> : null}
               <div className="flex justify-between pt-1 font-medium"><dt>Total</dt><dd><Money paise={paise(o.total)} /></dd></div>
             </dl>
             {/* The line the courier and the packer need, in words: never only a colour. */}

@@ -24,5 +24,7 @@ describe('credit notes in the timeline (Documents D3)', () => {
   it('says why the credit note was issued', () => {
     expect(say('credit_noted', 'cancelled')).toBe('Credit note issued · cancelled after packing')
     expect(say('credit_noted', 'came_back')).toBe('Credit note issued · it came back')
+    expect(say('credit_noted', 'returned')).toBe('Credit note issued · items returned')
+    expect(say('credit_noted', 'goodwill')).toBe('Credit note issued · goodwill')
   })
 })

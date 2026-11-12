@@ -29,7 +29,6 @@ export function NewProductForm() {
           className="h-10 w-full rounded-md border border-input bg-card px-3 text-base aria-invalid:border-danger-text" />
         <p role="alert" className="min-h-5 text-sm text-danger-text">{error}</p>
       </div>
-      <p className="text-sm text-muted-foreground">Next: photos, sizes and colours, prices and its size chart. It stays hidden until you show it.</p>
       <Button type="submit" disabled={pending || !title.trim()}>{pending ? 'Creating…' : 'Continue'}</Button>
     </form>
   )

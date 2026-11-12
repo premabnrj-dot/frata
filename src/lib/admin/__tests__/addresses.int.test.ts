@@ -8,7 +8,7 @@ const pass = process.env.INT_DB_PASSWORD ?? 'x'
 describe.skipIf(!host)('Admin addresses on a real database', () => {
   let lib: typeof import('../addresses')
   let merchants: typeof import('../merchants')
-  const staff = { ok: true as const, userId: 'aaaaaaaa-0000-0000-0000-0000000000fd', email: 'names@frata.test', role: 'admin' as const }
+  const staff = { ok: true as const, userId: 'aaaaaaaa-0000-0000-0000-0000000000fd', email: 'names@frata.test', role: 'admin' as const, sessionId: '00000000-0000-4000-8000-000000000000', confirmedAt: new Date() }
   const support = { ...staff, userId: 'aaaaaaaa-0000-0000-0000-0000000000fc', email: 'help@frata.test', role: 'support' as const }
   let n = 0
   const shop = async () => {

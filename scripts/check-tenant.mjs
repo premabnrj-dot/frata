@@ -61,6 +61,7 @@ const TENANT_IN_APP = {
 const DATA_MODULE = /(?:from\s+|import\(\s*)['"]@\/lib\/(?:queries|db|admin|auth)(?:\/[^'"]*)?['"]/
 /** App files outside Admin that may import src/lib/admin, with why (each checks its own credential). */
 const ADMIN_LIB_IN_APP = {
+  'src/app/api/cron/drain/route.ts': 'The 5-minute drain sends the staff security emails through frata_admin (CRON_SECRET via isCronRequest; staff passkeys, security re-review F2)',
   'src/app/api/cron/infra/route.ts': 'Admin › Infrastructure\'s hourly pull of vendor usage (CRON_SECRET via isCronRequest; writes platform rows only, plan 2026-11-11 I·1)',
 }
 /** Actions the shell may import from src/app (they are endpoints, not reads), with why. */
@@ -115,7 +116,7 @@ for (const file of walk('src')) {
   }
   // 6. A MERCHANT'S COST NEVER REACHES A SHOPPER (ADR-0003): storefront code never names it.
   // Shopper-facing code: pages, views, shop API routes and their reads (checkout review 2026-11-07 adds the API and checkout reads).
-  const shopperRead = /^src\/lib\/queries\/(storefront|checkout)/.test(file)
+  const shopperRead = /^src\/lib\/(queries\/(storefront|checkout)|storefront\/)/.test(file) // lib/storefront: the shop's cached reads' helpers (showcase)
   const shopper = file.startsWith('src/app/s/') || shopperRead || file.startsWith('src/components/shop-preview/')
     || file.startsWith('src/components/storefront/') || file.startsWith('src/app/(console)/console/preview/') || file.startsWith('src/app/api/shop/') || file === 'src/lib/http/shop-api.ts'
   if (shopper) {
@@ -198,6 +199,10 @@ for (const { name, table, body, forApp } of finalPolicies.values()) {
 // EkCode's vault (ADR-0009, drizzle/0088): no app role is ever granted a table; definers are the only door.
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?"?(ekcode_[a-z_]+)/g)) {
   failures.push(`grant on ${m[1]}  — the EkCode vault has no table grants; add a definer instead (ADR-0009)`)
+}
+// Staff passkeys (ADR-0007 amended 2026-11-12, drizzle/0109): the same — no app role, not even frata_admin, holds a grant.
+for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?"?(staff_(?:passkeys|enrolment_requests|webauthn_challenges|stepups|passkey_tries))\b/g)) {
+  failures.push(`grant on ${m[1]}  — staff passkey tables have no table grants; the app_staff_* definers are the only door (ADR-0007)`)
 }
 // 8. The analytics database (A·2): its own folder, the same rules, and no open tables at all.
 const aSql = readdirSync('drizzle-analytics').filter(f => f.endsWith('.sql'))

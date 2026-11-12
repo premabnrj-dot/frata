@@ -90,6 +90,10 @@ describe.skipIf(!host)('order work', () => {
       expect(await w.editContact(tx, A, riya, d, { addressLine: 'B-14, Tilak Marg', city: 'Jaipur' }, later(17))).toMatchObject({ ok: true, fields: ['addressLine', 'city'] })
       const [ev] = await tx.select().from(orderEvents).where(and(eq(orderEvents.orderId, d), eq(orderEvents.kind, 'edited')))
       expect(JSON.stringify(ev)).not.toContain('Tilak')
+      // Shop stress test 2026-11-11: an unpaid pay-on-delivery order may not move to a pincode pay on delivery is off for.
+      await tx.update(shopSettings).set({ codBlockedPincodes: ['793001'] }).where(eq(shopSettings.tenantId, A))
+      expect(await w.editContact(tx, A, riya, d, { pincode: '793001', city: 'Shillong' }, later(17.5))).toMatchObject({ ok: false, error: expect.stringContaining('Pay on delivery is off for 793001') })
+      await tx.update(shopSettings).set({ codBlockedPincodes: [] }).where(eq(shopSettings.tenantId, A))
 
       // Cancel: a reason; "other" needs words; stock back exactly once, and the variant is reported back from 0.
       expect(await w.cancel(tx, A, riya, d, { reason: 'other', restock: true }, later(18))).toMatchObject({ ok: false, error: 'Say why in a few words.' })

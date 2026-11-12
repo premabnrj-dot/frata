@@ -57,6 +57,8 @@ export const RISK_LABEL = { medium: 'Medium', high: 'High' } as const
 const FIELD_LABEL: Record<string, string> = {
   customerName: 'name', phone: 'phone', addressLine: 'address', area: 'area', landmark: 'landmark', pincode: 'pincode', city: 'city', state: 'state',
 }
+/** Why a credit note was issued (credit_notes.reason, recorded on its event). */
+const CREDIT_WHY: Record<string, string> = { cancelled: 'cancelled after packing', came_back: 'it came back', returned: 'items returned', discount: 'discount after the sale', goodwill: 'goodwill' }
 export function eventLabel(e: { kind: string; reason: string | null; fields: string[] | null }, cancelLabel: (r: string) => string): string {
   switch (e.kind) {
     case 'confirmed': return e.reason === 'from_hold' ? 'Confirmed (was on hold)' : 'Confirmed'
@@ -72,7 +74,7 @@ export function eventLabel(e: { kind: string; reason: string | null; fields: str
     case 'packed': return 'Packed · invoice issued'
     case 'cancelled': return `Cancelled · ${e.reason ? cancelLabel(e.reason) : 'no reason given'}`
     case 'note_added': return 'Added a note'
-    case 'credit_noted': return `Credit note issued · ${e.reason === 'came_back' ? 'it came back' : 'cancelled after packing'}`
+    case 'credit_noted': return `Credit note issued · ${CREDIT_WHY[e.reason ?? ''] ?? 'cancelled after packing'}`
     default: return e.kind.replace(/_/g, ' ')
   }
 }

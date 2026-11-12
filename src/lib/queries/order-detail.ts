@@ -58,7 +58,7 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
     tx.select({ id: orderNotes.id, body: orderNotes.body, authorEmail: orderNotes.authorEmail, at: orderNotes.at })
       .from(orderNotes).where(and(eq(orderNotes.tenantId, tenantId), eq(orderNotes.orderId, o.id))).orderBy(desc(orderNotes.at)).limit(100),
     // The offers it got, as recorded at placement (the pay-online saving is shown only while it is paid online).
-    tx.select({ title: orderDiscounts.title, class: orderDiscounts.class, amount: orderDiscounts.amount }).from(orderDiscounts)
+    tx.select({ title: orderDiscounts.title, class: orderDiscounts.class, amount: orderDiscounts.amount, method: orderDiscounts.method }).from(orderDiscounts)
       .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, o.id))),
     // The parcel on its way (Ship): who carries it and how to follow it; none before it shipped.
     tx.select({ provider: shipments.provider, courierName: shipments.courierName, trackingNumber: shipments.trackingNumber })

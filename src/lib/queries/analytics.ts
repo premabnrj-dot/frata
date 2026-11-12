@@ -14,7 +14,7 @@ import { orders, shipments } from '@/lib/db/schema-orders'
 import { collections, products } from '@/lib/db/schema-catalogue'
 import { attributionInputsSql } from '@/lib/db/attribution-sql'
 import { creatorCodeJoinSql } from '@/lib/db/discount-predicates'
-import { creditedSql, currentMethodSql, feeBucketSql, holdingSql, stageSql, standingSql } from '@/lib/db/order-predicates'
+import { cogsSql, creditedSql, currentMethodSql, feeBaseSql, feeBucketSql, holdingSql, rtoRestockedSql, stageSql, standingSql } from '@/lib/db/order-predicates'
 import { withTenant } from '@/lib/db/tenant'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { orderPrefix } from '@/domains/signup/slug'
@@ -57,7 +57,7 @@ export type Analytics = {
 
 type Row = {
   cur: boolean; us: string | null; um: string | null; uc: string | null; rh: string | null; gads: boolean; srs: boolean; fb: boolean
-  cl: string | null; cc: string | null; stage: Stage; cod: boolean; provider: 'self' | 'shiprocket' | null; bucket: number
+  cl: string | null; cc: string | null; stage: Stage; cod: boolean; provider: 'self' | 'shiprocket' | null; bucket: number; restocked: boolean
   n: number; sales: string; net: string; cogs: string | null; fwd: string | null; rto: string | null; codfee: string | null; gw: string; base: string
 }
 
@@ -76,16 +76,16 @@ function windowSql(tenantId: string, now: Date, start: Date, prevStart: Date, fe
     select ${cur} cur,
            ${i.us} us, ${i.um} um, case when ${cur} then ${i.uc} end uc, ${i.rh} rh, ${i.gads} gads, ${i.srs} srs, ${i.fb} fb,
            dc.label cl, dc.code cc, ${stageSql('o')} stage, (${currentMethodSql('o')} = 'cod') cod, case when ${outcome} then s.provider end provider,
-           ${feeBucketSql('o', feeChanges)} bucket,
-           count(*)::int n, coalesce(sum(o.total), 0)::bigint sales, coalesce(sum(o.net_revenue - ${creditedSql('o')}), 0)::bigint net, sum(o.cogs)::bigint cogs,
+           ${feeBucketSql('o', feeChanges)} bucket, ${rtoRestockedSql('o')} restocked,
+           count(*)::int n, coalesce(sum(o.total), 0)::bigint sales, coalesce(sum(o.net_revenue - ${creditedSql('o')}), 0)::bigint net, sum(${cogsSql('o')})::bigint cogs,
            sum(o.forward_shipping)::bigint fwd, sum(o.rto_shipping)::bigint rto, sum(o.courier_cod_fee)::bigint codfee,
-           coalesce(sum(o.gateway_fee), 0)::bigint gw, coalesce(sum(o.merchandise_net), 0)::bigint base
+           coalesce(sum(o.gateway_fee), 0)::bigint gw, coalesce(sum(${feeBaseSql('o', now)}), 0)::bigint base
       from ${orders} o
       left join ${shipments} s on s.tenant_id = o.tenant_id and s.order_id = o.id and s.ended_at is null
       ${creatorCodeJoinSql(now)}
      where o.tenant_id = ${tenantId} and o.placed_at >= ${prevStart.toISOString()}::timestamptz and o.placed_at < ${now.toISOString()}::timestamptz
        and (${standingSql('o')} or ${holdingSql(now, 'o')}) ${only ? sql`and ${only}` : sql``}
-     group by 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, (${outcome} and o.cogs is null), (${outcome} and o.forward_shipping is null),
+     group by 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, (${outcome} and o.cogs is null), (${outcome} and o.forward_shipping is null),
               (${outcome} and o.rto_shipping is null), (${outcome} and o.courier_cod_fee is null)`
 }
 
@@ -138,7 +138,7 @@ async function windowIn(tx: Tx, tenantId: string, role: MemberRole, period: Peri
       }
       if (r.cur && src.channel !== 'direct') known += r.n
       const group: KeptGroup | null = r.stage === 'delivered' || r.stage === 'rto' || r.stage === 'lost' ? {
-        outcome: r.stage, n: r.n, provider: r.provider, cod: !!r.cod, net: Number(r.net), cogs: num(r.cogs), forward: num(r.fwd), rto: num(r.rto),
+        outcome: r.stage, n: r.n, provider: r.provider, cod: !!r.cod, restocked: !!r.restocked, net: Number(r.net), cogs: num(r.cogs), forward: num(r.fwd), rto: num(r.rto),
         courierCodFee: num(r.codfee), gateway: Number(r.gw), base: Number(r.base), feeBps: r.bucket > 0 ? history[r.bucket - 1]?.feeBps ?? null : null,
       } : null
       for (const t of targets) {

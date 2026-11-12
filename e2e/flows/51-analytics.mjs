@@ -44,7 +44,7 @@ export default {
           await p.fill('#addressLine', '5, MI Road'); await p.fill('#area', 'C Scheme'); await p.selectOption('#state', 'Rajasthan')
           await p.getByText('Pay on delivery', { exact: true }).click()
           await p.getByRole('button', { name: /^Place order/ }).click()
-          await p.waitForURL(/\/orders#t=/)
+          await p.waitForURL(/\/orders(#t=|$)/)
           const [o] = await db`select id, checkout from orders where tenant_id = ${T} and phone like '%9829051001%' order by placed_at desc limit 1`
           assert.ok(o, 'the order was placed')
           placed = o

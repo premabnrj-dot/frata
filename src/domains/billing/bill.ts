@@ -13,7 +13,7 @@
 // =============================================================================
 
 import { applyBps, type Paise } from '@/domains/money/paise'
-import { currentPlan, feeForOrder, monthlyPrice, usage as planUsage, type PlanVersion } from '@/domains/plans/entitlements'
+import { currentPlan, deliveredFee, feeForOrder, monthlyPrice, usage as planUsage, type PlanVersion } from '@/domains/plans/entitlements'
 import { supplyKind } from '@/domains/tax/gst'
 
 export const GST_BPS = 1800
@@ -25,6 +25,16 @@ export type AddonRow = { module: string; name: string; monthlyPrice: Paise; star
 /** `rateAt`: when the order shipped (its rate's moment); `billableAt`: when it is billed. */
 export type FeeOrder = { orderId: string; number: string; billableAt: Date; rateAt: Date; merchandiseNet: number }
 export type FeeCredit = { orderId: string; number: string; fee: Paise; invoiceNumber: string | null }
+
+/**
+ * What a billed order's fee gives back for items returned since it was billed (owner, 2026-11-12: a returned item
+ * isn't billable): what was billed, less the fee on what was kept (the same rounding as any fee: deliveredFee), less
+ * what returns already gave back. Never negative; never more than what is left of the billed fee.
+ */
+export function returnCreditDue(r: { billedFee: number; feeBps: number; merchandiseNet: number; returned: number; given: number }): Paise {
+  const kept = deliveredFee(Math.max(0, r.merchandiseNet - r.returned) as Paise, r.feeBps)
+  return Math.max(0, Math.min(r.billedFee - r.given, r.billedFee - kept - r.given)) as Paise
+}
 
 export const LINE_KINDS = ['plan', 'addon', 'fee', 'over', 'credit', 'carry', 'change'] as const
 export type LineKind = (typeof LINE_KINDS)[number]
@@ -42,8 +52,11 @@ export type BillInput = {
   addons: AddonRow[]
   /** Orders that became billable before monthStart and were never billed. */
   feeOrders: FeeOrder[]
-  /** Orders billed before that are no longer billable, never credited. */
+  /** Orders billed before that are no longer billable, never credited (the fee left after any return credits). */
   credits: FeeCredit[]
+  /** Billed orders whose items came back on a credit note since (owner, 2026-11-12: a returned item isn't billable):
+   * the fee on the returned value not given back yet. Optional: none before the rule. */
+  returnCredits?: FeeCredit[]
   /** Paise carried in: a rolled bill's taxable value (positive) or a negative balance. */
   carry: number
   /** Whether last month's bill was itself rolled (a bill rolls at most once in a row). */
@@ -63,7 +76,7 @@ export type BillInput = {
 export type Bill = {
   lines: BillLine[]
   fees: BilledFee[]
-  credited: { orderId: string; fee: Paise }[]
+  credited: { orderId: string; fee: Paise; kind: 'outcome' | 'return' }[]
   taxable: Paise; cgst: Paise; sgst: Paise; igst: Paise; total: Paise
   /** Rolled: nothing is invoiced this month; `taxable` carries into the next. */
   rolled: boolean
@@ -199,10 +212,12 @@ export function computeBill(i: BillInput): Bill {
   if (usage.over) lines.push({ kind: 'over', description: `Orders over the plan · ${lastMonth - included}`, periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: lastMonth - included, rateBps: null, taxable: 0 as Paise })
   // Credits: each reverses exactly what its order was billed.
   for (const c of i.credits) lines.push({ kind: 'credit', description: `${c.number} came back or was lost after billing${c.invoiceNumber ? ` (invoice ${c.invoiceNumber})` : ''}`, periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: 1, rateBps: null, taxable: -c.fee as Paise })
+  for (const c of i.returnCredits ?? []) if (c.fee > 0) lines.push({ kind: 'credit', description: `${c.number}: items returned after billing${c.invoiceNumber ? ` (invoice ${c.invoiceNumber})` : ''}`, periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: 1, rateBps: null, taxable: -c.fee as Paise })
   if (i.carry) lines.push({ kind: 'carry', description: i.carry > 0 ? 'Carried from last month' : 'Balance from last month', periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: 1, rateBps: null, taxable: i.carry as Paise })
 
   const sum = lines.reduce((t, l) => t + l.taxable, 0)
-  const credited = i.credits.map((c) => ({ orderId: c.orderId, fee: c.fee }))
+  const credited = [...i.credits.map((c) => ({ orderId: c.orderId, fee: c.fee, kind: 'outcome' as const })),
+    ...(i.returnCredits ?? []).filter((c) => c.fee > 0).map((c) => ({ orderId: c.orderId, fee: c.fee, kind: 'return' as const }))]
   if (sum < 0) return { lines, fees, credited, taxable: 0 as Paise, cgst: 0 as Paise, sgst: 0 as Paise, igst: 0 as Paise, total: 0 as Paise, rolled: false, carryOut: sum, usage }
   if (sum < ROLL_BELOW && !i.rolledLastMonth) return { lines, fees, credited, taxable: sum as Paise, cgst: 0 as Paise, sgst: 0 as Paise, igst: 0 as Paise, total: 0 as Paise, rolled: true, carryOut: sum, usage }
   // Each head on the taxable value (plan finding 20), not one derived from another; the kind from supplyKind (gst.ts).
