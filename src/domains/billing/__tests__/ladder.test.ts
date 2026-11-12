@@ -81,4 +81,7 @@ it('counts an add-on the target plan includes', () => {
   const g = { ...growth, includes: ['Delivery Zones'] }
   expect(cheapestPlan([withAddon('dec', dec), withAddon('nov', nov)], launch, [growth, scale])).toBeNull()
   expect(cheapestPlan([withAddon('dec', dec), withAddon('nov', nov)], launch, [g, scale])).toMatchObject({ plan: { code: 'growth' }, saving: rs(100 + 999) })
+  // The add-on's first month made up by days ("Delivery Zones, last month by days") is the same add-on.
+  const madeUp = (id: string, at: Date) => { const i = withAddon(id, at); return { ...i, lines: i.lines.map((l) => (l.kind === 'addon' ? { ...l, name: 'Delivery Zones, last month by days' } : l)) } }
+  expect(cheapestPlan([madeUp('dec', dec), madeUp('nov', nov)], launch, [g, scale])).toMatchObject({ plan: { code: 'growth' }, saving: rs(100 + 999) })
 })

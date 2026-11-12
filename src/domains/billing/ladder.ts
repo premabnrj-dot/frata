@@ -41,7 +41,7 @@ function billedOn(inv: LadderInvoice, launch: LadderPlan): number | null {
 /** The same lines on another plan: its price, its fee on each order's base, its credits, minus the add-ons it
  *  includes (Delivery Zones on Growth: unit-economics review 2026-11-12). Carry and over are equal. */
 function wouldBeOn(inv: LadderInvoice, plan: LadderPlan): number {
-  const included = sum(inv.lines.filter((l) => l.kind === 'addon' && !!l.name && (plan.includes ?? []).includes(l.name)).map((l) => l.taxable))
+  const included = sum(inv.lines.filter((l) => l.kind === 'addon' && !!l.name && (plan.includes ?? []).some((n) => l.name === n || l.name!.startsWith(`${n},`))).map((l) => l.taxable))
   return plan.monthlyPrice + sum(inv.fees.map((f) => deliveredFee(f.base, plan.feeBps))) - sum(inv.credits.map((c) => deliveredFee(c.base, plan.feeBps))) - included
 }
 

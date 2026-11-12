@@ -161,13 +161,22 @@ export function computeBill(i: BillInput): Bill {
   const prevTrial = trialRunsAt(starts, i.prevMonthStart) || starts.some((p) => !!p.trialEndsAt && p.trialEndsAt > i.prevMonthStart && p.trialEndsAt < i.monthStart)
   const owed = planChangeOwed(starts, i.prevMonthStart, i.monthStart, i.prevPlanBilled ?? (prevTrial ? 0 : null), i.pause ?? null)
   if (owed > 0) lines.push({ kind: 'change', description: prevTrial ? 'Your plan after the trial last month, by days' : 'Plan change last month: the difference, by days', periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: 1, rateBps: null, taxable: owed })
-  // Add-on modules for M, in advance, by their days.
+  // Add-ons, the plan's twin (A3 review Arch B1): a row in force on M's 1st is billed for M in advance; a row that
+  // began during M−1 (after M−1's invoice, e.g. a self-serve trial's paid row from the trial's end) is made up by its
+  // days on M's invoice. A row starting later in M is billed on M+1's. A trial row carries no price.
   for (const a of i.addons) {
-    const from = new Date(Math.max(a.startsAt.getTime(), i.monthStart.getTime(), a.trialEndsAt?.getTime() ?? 0))
-    const to = new Date(Math.min(a.endsAt?.getTime() ?? Infinity, i.nextMonthStart.getTime()))
-    if (to <= from) continue
-    const price = byDays(a.monthlyPrice, from, to, i.monthStart, i.nextMonthStart)
-    if (price > 0) lines.push({ kind: 'addon', description: a.name, periodStart: from, periodEnd: to, quantity: 1, rateBps: null, taxable: price })
+    const start = new Date(Math.max(a.startsAt.getTime(), a.trialEndsAt?.getTime() ?? 0))
+    const end = a.endsAt?.getTime() ?? Infinity
+    if (start > i.prevMonthStart && start < i.monthStart) {
+      const to = new Date(Math.min(end, i.monthStart.getTime()))
+      const price = to > start ? byDays(a.monthlyPrice, start, to, i.prevMonthStart, i.monthStart) : 0
+      if (price > 0) lines.push({ kind: 'addon', description: `${a.name}, last month by days`, periodStart: start, periodEnd: to, quantity: 1, rateBps: null, taxable: price as Paise })
+    }
+    if (start <= i.monthStart) {
+      const to = new Date(Math.min(end, i.nextMonthStart.getTime()))
+      const price = to > i.monthStart ? byDays(a.monthlyPrice, i.monthStart, to, i.monthStart, i.nextMonthStart) : 0
+      if (price > 0) lines.push({ kind: 'addon', description: a.name, periodStart: i.monthStart, periodEnd: to, quantity: 1, rateBps: null, taxable: price as Paise })
+    }
   }
   // The fee on each newly billable order, rounded per order, grouped into one line per rate.
   const fees: BilledFee[] = i.feeOrders.flatMap((o) => {

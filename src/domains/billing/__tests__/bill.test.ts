@@ -53,11 +53,30 @@ describe('computeBill (billing B0, golden months)', () => {
     // Growth from 16 December (Launch before it): each by its days of 31.
     const b = computeBill(base(12, { plans: [launch, { ...growth, startsAt: ist(2026, 12, 16) }] }))
     expect(b.lines.filter((l) => l.kind === 'plan').map((l) => l.taxable)).toEqual([Math.round(149900 * 15 / 31), Math.round(499900 * 16 / 31)])
-    const a = computeBill(base(12, { addons: [{ module: 'size_fit', name: 'Size and fit', monthlyPrice: paise(99900), startsAt: ist(2026, 12, 11), endsAt: null, trialEndsAt: null }] }))
-    expect(a.lines.find((l) => l.kind === 'addon')!.taxable).toBe(Math.round(99900 * 21 / 31))
+    // An add-on from 11 December: nothing on December's invoice (made before it began), then January's makes up its
+    // 21 days of 31 and bills January in advance (A3 Arch B1).
+    const row = { module: 'size_fit', name: 'Size and fit', monthlyPrice: paise(99900), startsAt: ist(2026, 12, 11), endsAt: null, trialEndsAt: null }
+    expect(computeBill(base(12, { addons: [row] })).lines.filter((l) => l.kind === 'addon')).toEqual([])
+    const jan = computeBill({ ...base(12, { addons: [row] }), monthStart: ist(2027, 1), nextMonthStart: ist(2027, 2), prevMonthStart: ist(2026, 12) })
+    expect(jan.lines.filter((l) => l.kind === 'addon').map((l) => [l.description, l.taxable])).toEqual([['Size and fit, last month by days', Math.round(99900 * 21 / 31)], ['Size and fit', 99900]])
     const c = computeBill(base(12, { carry: 8570, rolledLastMonth: true }))
     expect(c.lines.find((l) => l.kind === 'carry')!.taxable).toBe(8570)
     expect(c.taxable).toBe(149900 + 8570)
+  })
+  it('add-ons: in force on the 1st in advance; ended mid-month stops; a self-serve trial’s paid row from its end', () => {
+    const r = (o: object) => ({ module: 'delivery_zones', name: 'Delivery Zones', monthlyPrice: paise(99900), startsAt: ist(2026, 10, 1), endsAt: null, trialEndsAt: null, ...o })
+    const lines = (b: ReturnType<typeof computeBill>) => b.lines.filter((l) => l.kind === 'addon').map((l) => l.taxable)
+    expect(lines(computeBill(base(12, { addons: [r({})] })))).toEqual([99900])
+    expect(lines(computeBill(base(12, { addons: [r({ endsAt: ist(2026, 12, 11) })] })))).toEqual([Math.round(99900 * 10 / 31)])
+    // A trial from 20 Nov to 4 Dec: its paid row starts 4 Dec. December's invoice (1 Dec, the trial running): nothing.
+    const paid = r({ startsAt: ist(2026, 12, 4) })
+    const trial = r({ monthlyPrice: paise(0), startsAt: ist(2026, 11, 20), endsAt: ist(2026, 12, 4), trialEndsAt: ist(2026, 12, 4) })
+    expect(lines(computeBill(base(12, { addons: [trial, paid] })))).toEqual([])
+    const jan = computeBill({ ...base(12, { addons: [trial, paid] }), monthStart: ist(2027, 1), nextMonthStart: ist(2027, 2), prevMonthStart: ist(2026, 12) })
+    expect(lines(jan)).toEqual([Math.round(99900 * 28 / 31), 99900])
+    // Ended during the trial: nothing, ever.
+    const ended = r({ startsAt: ist(2026, 12, 4), endsAt: ist(2026, 11, 25) })
+    expect(lines(computeBill({ ...base(12, { addons: [ended] }), monthStart: ist(2027, 1), nextMonthStart: ist(2027, 2), prevMonthStart: ist(2026, 12) }))).toEqual([])
   })
   it('a negative month carries forward and is never refunded', () => {
     const b = computeBill(base(12, { plans: [{ ...launch, trialEndsAt: ist(2027, 1) }], credits: [{ orderId: 'x', number: 'KS-1', fee: paise(5000), invoiceNumber: null }] }))
