@@ -40,7 +40,11 @@ as before. Reviewed by architecture-reviewer and tenancy-auditor (2026-11-06).
 Not required for now (owner, 2026-11-06). `requireStaff` is the one place an aal2
 check is added when it is.
 
-**Amended (owner, 2026-11-12):** staff move from email codes to passkeys (an authenticator app as the fallback).
+**Amended (owner, 2026-11-12):** staff move from email codes to passkeys. **No authenticator app** (owner, 2026-11-12:
+"drop the authenticator app"): each person keeps two passkeys, and a lost device is replaced through a request whose
+code another admin approves. Frrata checks the passkey itself (Supabase's passkeys are experimental); the check is
+inside `app_access_for`, so support visits need it too; `frata_admin` has no reach into the `staff_*` tables (definers
+only). Spec: `docs/specs/2026-11-12-staff-passkeys.md`.
 Order: GitHub and the package registry before the first kit release; Admin before Frrata hosts shop websites (V2).
-`requireStaff` then requires aal2, with no branch-protection bypass for staff accounts. Source:
+`requireStaff` then requires a live passkey step-up, with no branch-protection bypass for staff accounts. Source:
 `docs/specs/2026-11-12-kit-and-fleet.md` § 7 (security review H3).

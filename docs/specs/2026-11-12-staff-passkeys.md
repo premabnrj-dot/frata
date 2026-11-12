@@ -1,6 +1,6 @@
 # Staff passkeys for Admin
-Status: draft for the owner (security and tenancy reviews folded in) · Date: 2026-11-12 · Mockup:
-https://claude.ai/artifact/Xng3BV15YZpDQi9MoYLGsZ (docs/mockups/2026-11-12-staff-passkeys.html) · Approved: —
+Status: active (approved 2026-11-12: "approved all three, drop the authenticator app") · Date: 2026-11-12 · Mockup:
+https://claude.ai/artifact/Xng3BV15YZpDQi9MoYLGsZ (docs/mockups/2026-11-12-staff-passkeys.html) · Approved: owner, 2026-11-12
 Owner, 2026-11-12: "agreed staff will move from email codes to passkeys"; "start with staff passkeys". ADR-0007
 § Staff 2FA (amended 2026-11-12). Security review S5 and kit-and-fleet H3.
 

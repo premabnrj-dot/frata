@@ -193,8 +193,19 @@ business once the company exists to lift that.
      5 minutes (`vercel.json`); a sender also drains straight after its commit (`drainSoon`).
   2. ~~The outbox claim moves to a definer~~ — done 2026-11-11 (drizzle/0096): `app_outbox_claim` / `app_outbox_settle`,
      and the `outbox` policies lost their no-shop branch; `outbox` is off check:tenant's OPEN_FOR_APP.
-- **Preview deployments must not hold the production database** (review S1): in Vercel, take `DATABASE_URL` off
-  Preview (or point Preview at a Supabase branch) and turn on Deployment Protection for previews.
+- **Previews off production** (review S1; spec `docs/specs/2026-11-12-previews-off-production.md`):
+  - Done 2026-11-12 (through the Vercel connection): `BLOB_READ_WRITE_TOKEN`, `BLOB_STORE_ID`, `BLOB_WEBHOOK_PUBLIC_KEY`
+    are Production only; `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are Production and Development.
+    The database URLs were already Production only (checked 2026-11-09). Vercel Authentication covers every deployment
+    except custom domains. The app reads every secret through `secret()` (Production only on Vercel; `check:config`).
+  - **Owner, still to do:**
+    1. Vercel → Storage → frata-blob: rotate the read-write token (past preview builds were made with it), then make
+       sure the new `BLOB_READ_WRITE_TOKEN` is Production only.
+    2. Vercel → frata → Deployments: delete old preview deployments (each keeps the values it was built with).
+    3. Supabase → Authentication → URL Configuration: remove `https://*-premabnrj-dots-projects.vercel.app/auth/callback`.
+    4. Vercel → frata → Settings → Environment Variables: "Automatically expose System Environment Variables" on.
+    5. Multi-factor sign-in on the Supabase and Vercel accounts (anyone with Supabase SQL access can bypass app checks).
+    6. Meta: the app's OAuth redirect list holds production URLs only.
 
 ### Frrata's Google app (Search Console and Google Shopping for merchants — search and sharing S·4)
 
@@ -344,8 +355,8 @@ plan will use; the plan may rename one, and this list follows it.
 **C. Before EkCode reaches a real shopper**
 1. Counsel's answers on A4 (a)–(c), and the notice text final.
 2. **Supabase Pro** (backups, point-in-time recovery: the vault holds shoppers' phones and addresses).
-3. **Preview deployments off production's database** (Vercel: take `DATABASE_URL` off Preview or point it at a Supabase
-   branch) and Deployment Protection on previews.
+3. **Preview deployments off production** — see § Previews off production above (Vercel part done 2026-11-12; owner
+   steps listed there).
 4. **Meta business verification** done (A2) and the number past 2,000 a day; Admin › EkCode › WhatsApp shows the step.
 5. Your approval of the P1 build on a demo shop.
 

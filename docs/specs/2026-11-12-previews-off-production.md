@@ -1,5 +1,5 @@
 # Previews off production
-Status: draft for the owner (security review folded in) · Date: 2026-11-12 · Mockup: none (no screen changes) · Approved: —
+Status: active (approved 2026-11-12) · Vercel scoping done; guard built · Date: 2026-11-12 · Mockup: none (no screen changes) · Approved: —
 Owner, 2026-11-12: "start with … previews off production data". Security review S1 (2026-11-08) and kit-and-fleet S1.
 
 ## Goal
