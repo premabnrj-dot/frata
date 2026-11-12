@@ -1,5 +1,5 @@
 # Products PR·2 — the editor
-Status: built · Date: 2026-11-13 · Spec: `docs/specs/2026-11-13-products-rework.md` · Mockup: https://claude.ai/artifact/NW8BozPHgfXQcUge2wKyv4 (§ Add a product, § The editor, § On a phone) · Approved: owner, 2026-11-13
+Status: parity FAILED (owner, 2026-11-13: the editor kept its old status, summary and form cards; the mockup's side panel, name-price-description card, drag photos and one-line folded sections were not built) · redo with the reworked design language · Date: 2026-11-13 · Spec: `docs/specs/2026-11-13-products-rework.md` · Mockup: https://claude.ai/artifact/NW8BozPHgfXQcUge2wKyv4 (§ Add a product, § The editor, § On a phone) · Approved: owner, 2026-11-13
 
 ## Goal
 Ranked problem 3: a one-colour kurta from "Add product" to Live in under two minutes on a phone. Measure: time from

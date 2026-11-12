@@ -39,7 +39,8 @@ Agents: `tenancy-auditor`, `architecture-reviewer`, `integration-researcher`,
 `unit-economics-reviewer`, `impact-reviewer` (every task's diff: callers, test
 gaps, debt), `speed-reviewer` (a plan or diff that touches a page, a query,
 a cache or background work), `security-reviewer` (an action, route, webhook,
-header, cookie or merchant content), `e2e-runner` (the browser flows in `e2e/`).
+header, cookie or merchant content), `e2e-runner` (the browser flows in `e2e/`), `mockup-parity-reviewer` (a built screen against its approved mockup,
+before a phase closes).
 
 ## Rules that apply to everything
 
@@ -86,6 +87,11 @@ and its source; older than 90 days, recheck before building on it.
 the phase's mockup, and nothing is executed before the review agents have run
 on the plan** (ADR-0001, owner 2026-11-06). Research before UX; approved rules
 go into `frata-design-language`. The loop is `frata-planning`.
+
+**BUILT AS DRAWN** (owner, 2026-11-13). A screen in an approved mockup is built element for element: its layout,
+components, words, colours and states. Reusing an old component that looks different is a deviation, not a shortcut.
+A deviation needs a reason (a law, a broken flow, a fact the mockup got wrong). Write it in the plan's Deviations
+table and show it to the owner before it ships. A phase is not built until `mockup-parity-reviewer` passes.
 
 **A gate must not match its own documentation.** Gates skip comment lines;
 run a new gate against the file that describes it.
