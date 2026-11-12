@@ -1,0 +1,296 @@
+<title>Delivery Zones</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the console as it would be — a gallery, an app's page in its states, the app's home once on, and phone views. Frrata console tokens. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--thread:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--ok-mark:#2E9E6A;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;
+  --tile:#F2F1EF;--haldi-soft:#FBEFD2;--indigo-soft:#E7EAF8;--rani-soft:#FBE3EE;--shot:#F7F5F2;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--display:"Bricolage Grotesque","Inter",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;
+  --tile:#262320;--haldi-soft:#3A2E14;--indigo-soft:#1E2340;--rani-soft:#3A1828;--shot:#211F1C;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;
+  --tile:#262320;--haldi-soft:#3A2E14;--indigo-soft:#1E2340;--rani-soft:#3A1828;--shot:#211F1C;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);font-weight:600}
+h1{font:700 30px/1.15 var(--display);margin:4px 0 6px;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:19px;margin:56px 0 12px;display:flex;gap:10px;align-items:center;text-wrap:balance;scroll-margin-top:16px}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+p{margin:0 0 10px;max-width:74ch}
+.sub{color:var(--sub)}.mono{font-family:var(--mono)}.k{font-size:12px;color:var(--sub)}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 0}
+nav.toc a{font-size:12.5px;color:var(--fg);text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:3px 10px;background:var(--card)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:7px 14px;font:500 13.5px var(--sans);min-height:36px;white-space:nowrap;cursor:pointer;position:relative}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.primary::after{content:"";position:absolute;left:33%;right:33%;bottom:0;height:2px;background:var(--thread);border-radius:2px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn[disabled]{opacity:1;background:var(--muted);color:var(--sub);border-color:var(--border);cursor:default}
+.btn:focus-visible,.chipf:focus-visible,.acard:focus-visible,summary:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:500;white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-info{background:var(--info);color:var(--info-text)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok-mark);display:inline-block}
+/* Console frame */
+.console{border:1px solid var(--border);border-radius:10px;background:var(--bg);overflow:hidden}
+.cbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:18px 20px 8px}
+.cbar h3{font:700 22px var(--display);margin:0}
+.cbody{padding:8px 20px 22px}
+.search{display:flex;align-items:center;gap:8px;border:1px solid var(--input);border-radius:6px;padding:0 10px;background:var(--card);min-height:36px;min-width:0;flex:1;max-width:320px}
+.search input{border:0;background:transparent;color:var(--fg);font:14px var(--sans);outline:none;width:100%;min-width:0}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+.chipf{border:1px solid var(--border);background:var(--card);color:var(--fg);border-radius:999px;padding:4px 12px;font:500 13px var(--sans);cursor:pointer;min-height:30px}
+.chipf[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chipf b{font:500 12px var(--mono);margin-left:4px;opacity:.75}
+.sect{margin-top:22px}
+.sect h4{font-size:13px;margin:0 0 10px;color:var(--sub);font-weight:600;display:flex;justify-content:space-between}
+/* Your apps strip */
+.mine{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.mcard{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;min-width:0}
+.mcard .t{min-width:0;flex:1}
+.mcard b{display:block;font-size:14px}
+.mcard .k{display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Gallery grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.acard{display:flex;flex-direction:column;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:left;color:var(--fg);font:inherit;cursor:pointer;min-width:0;transition:border-color .12s}
+.acard:hover{border-color:var(--input)}
+.acard .top{display:flex;gap:12px;align-items:flex-start}
+.acard b{display:block;font-size:15px;margin-top:2px}
+.acard .job{color:var(--sub);font-size:13px;line-height:1.45;min-height:38px}
+.acard .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--border);padding-top:10px;margin-top:auto;font-size:12.5px}
+.acard.next{background:var(--bg)}
+.acard.next .icon{opacity:.75}
+.price{font:500 12.5px var(--mono)}
+.lock{display:inline-flex;align-items:center;gap:4px;color:var(--sub)}
+/* Icon tiles */
+.icon{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--tile)}
+.icon.lg{width:64px;height:64px;border-radius:14px}
+.icon svg{width:22px;height:22px}.icon.lg svg{width:30px;height:30px}
+.icon .b{stroke:var(--fg)}.icon .t{stroke:var(--brand)}
+/* Featured */
+.feature{display:grid;grid-template-columns:1.1fr 1fr;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);margin-top:16px}
+.feature .l{padding:20px;display:flex;flex-direction:column;gap:10px;justify-content:center;min-width:0}
+.feature .r{background:var(--haldi-soft);padding:18px;display:grid;place-items:center;min-width:0}
+.feature h5{font:600 20px/1.2 var(--display);margin:0;text-wrap:balance}
+.feature .x{align-self:flex-start}
+@media (max-width:760px){.feature{grid-template-columns:1fr}}
+/* Drawn product shots */
+.shot{width:100%;aspect-ratio:16/10;border-radius:8px;background:var(--card);border:1px solid var(--border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:hidden;font-size:11.5px;max-width:100%}
+.shot .ln{height:7px;border-radius:3px;background:var(--muted)}
+.shot .row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.stars{color:var(--warn-text);letter-spacing:1px;font-size:12px}
+.ph{background:linear-gradient(160deg,#D9B99B,#B07A52);border-radius:4px}
+.wa{background:#E7F7EE;color:#1C1917;border-radius:8px 8px 8px 2px;padding:6px 8px;max-width:85%;font-size:11.5px}
+.wa.me{background:#D9FDD3;align-self:flex-end;border-radius:8px 8px 2px 8px}
+/* Detail page */
+.detail{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}
+@media (max-width:900px){.detail{grid-template-columns:1fr}}
+.dhead{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.dhead .t{flex:1;min-width:220px}
+.dhead h3{font:700 26px/1.15 var(--display);margin:0}
+.dhead .by{font-size:12.5px;color:var(--sub)}
+.headline{font-size:16px;margin:6px 0 0;max-width:52ch}
+.feats{display:grid;gap:18px;margin-top:22px}
+.feat{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:center}
+.feat:nth-child(even) .fx{order:2}
+@media (max-width:700px){.feat{grid-template-columns:1fr}.feat:nth-child(even) .fx{order:0}}
+.feat h5{font-size:15px;margin:0 0 4px}
+.side{display:grid;gap:12px}
+.box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.box h6{font-size:12px;color:var(--sub);font-weight:600;margin:0 0 8px;letter-spacing:.02em}
+.big{font:600 24px var(--mono);letter-spacing:-.02em}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}.kv dt{color:var(--sub)}.kv dd{margin:0;min-width:0}
+.ul{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13px}
+.ul li{display:flex;gap:8px;align-items:flex-start}
+.ul li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--sub);margin-top:7px;flex:none}
+details{border-top:1px solid var(--border);padding:10px 0}
+details:last-child{border-bottom:1px solid var(--border)}
+summary{cursor:pointer;font-weight:500;list-style:none;display:flex;justify-content:space-between}
+summary::after{content:"+";color:var(--sub)}details[open] summary::after{content:"–"}
+details p{margin:6px 0 0;color:var(--sub);font-size:13px}
+.states{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+/* App home (installed) */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin:14px 0 16px;overflow-x:auto}
+.tab{border:0;background:none;padding:8px 12px;font:500 13px var(--sans);color:var(--sub);border-bottom:2px solid transparent;white-space:nowrap}
+.tab.on{color:var(--fg);border-bottom-color:var(--thread);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card)}
+.kpi{padding:14px 16px;border-right:1px solid var(--border);min-width:0}
+.kpi:last-child{border-right:0}
+.kpi b{display:block;font:500 22px var(--mono);margin-top:2px}
+.meter{height:8px;background:var(--muted);border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.meter i{display:block;height:100%;background:var(--fg);transform-origin:left}
+.danger{color:var(--danger-text);border-color:var(--danger-text)}
+/* Phone */
+.phones{display:flex;gap:24px;flex-wrap:wrap}
+.phone{width:100%;max-width:340px;border:1px solid var(--border);border-radius:26px;padding:10px;background:var(--card)}
+.phone .scr{border-radius:18px;overflow:hidden;border:1px solid var(--border);background:var(--bg)}
+.phone .bar{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--card);font-weight:600}
+.phone .pb{padding:12px;display:grid;gap:10px}
+.prow{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px}
+.prow .t{flex:1;min-width:0}.prow b{display:block;font-size:14px}
+.stick{border-top:1px solid var(--border);background:var(--card);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+/* Dialog */
+.dialog{max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:0 12px 32px rgb(0 0 0 / .12)}
+.dialog h5{font-size:17px;margin:0 0 10px}
+.calls{padding-left:20px;max-width:82ch}.calls li{margin-bottom:6px}
+@media (prefers-reduced-motion:reduce){.acard{transition:none}}
+/* True Profit additions */
+table.t{width:100%;border-collapse:collapse;font-size:13px;background:var(--card)}
+table.t th{font-size:11.5px;color:var(--sub);font-weight:600;text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.t td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.t tr:last-child td{border-bottom:0}
+table.t .r{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);white-space:nowrap}
+table.t tr.sub td{background:var(--muted);font-size:12.5px}
+table.t tr.sub td:first-child{padding-left:32px}
+.neg{color:var(--danger-text)}.pos{color:var(--ok-text)}
+.tablewrap{border:1px solid var(--border);border-radius:10px;overflow-x:auto}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:14px}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:13.5px}
+.list li:first-child{border-top:0}
+.list .r{font-family:var(--mono);white-space:nowrap}
+.foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end}
+.note{background:var(--warn);color:var(--warn-text);border-radius:6px;padding:8px 12px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.stack{display:grid;gap:14px}
+.calls li{margin-bottom:8px}
+/* Delivery Zones additions */
+.shop{border:1px solid var(--border);border-radius:12px;background:#FFFDF8;color:#2A2420;padding:16px;font-family:var(--sans)}
+.shop .ttl{font:600 18px var(--display);margin:0}
+.shop .price{font:600 16px var(--sans)}
+.pin{display:flex;gap:8px;margin-top:10px}
+.pin input{flex:1;min-width:0;border:1px solid #CFC6BC;border-radius:6px;padding:9px 10px;font:500 15px var(--mono);background:#fff;color:#2A2420}
+.pin button{border:1px solid #2A2420;background:#2A2420;color:#fff;border-radius:6px;padding:0 14px;font:500 14px var(--sans)}
+.ans{margin-top:10px;border-top:1px dashed #E2D8CD;padding-top:10px;display:grid;gap:4px;font-size:13.5px}
+.ans .ok{color:#1E7B52}.ans .warn{color:#8A5000}.ans .no{color:#C02A2F}
+.lines{display:grid;gap:4px;font-size:13.5px}.lines div{display:flex;justify-content:space-between}
+.field{display:grid;gap:4px;font-size:13px}.field input,.field select{border:1px solid var(--input);border-radius:6px;padding:8px 10px;font:14px var(--sans);background:var(--card);color:var(--fg);min-width:0}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:13.5px}
+.switch i{width:34px;height:20px;border-radius:999px;background:var(--fg);position:relative;display:inline-block}
+.switch i::after{content:"";position:absolute;right:3px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--bg)}
+.switch.off i{background:var(--border)}.switch.off i::after{right:auto;left:3px}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-zones" viewBox="0 0 24 24"><path class="b" d="M12 21s-6-5.6-6-10a6 6 0 0 1 12 0c0 4.4-6 10-6 10Z" fill="none" stroke-width="1.6" stroke-linejoin="round"/><circle class="t" cx="12" cy="11" r="2.2" fill="none" stroke-width="1.6"/></symbol>
+</svg>
+<div class="wrap">
+  <p class="eyebrow">Mockup · for the owner's sign-off · 12 Nov 2026</p>
+  <h1>Delivery Zones</h1>
+  <p class="sub">PD·0, in every plan: a shopper checks their PIN code on the product page and sees the delivery charge and COD fee before checkout. PD·1, the app (in Growth and Scale; ₹499/month on Launch): zones, PIN code rules and delivery dates. Ship stays parked, so everything runs on the brand's own settings. Example shop: Kesar Studio, Jaipur.</p>
+  <nav class="toc" aria-label="Screens">
+    <a href="#check">PIN code check</a><a href="#bag">Before checkout</a><a href="#zones">Zones</a><a href="#zone">Edit a zone</a><a href="#rules">PIN code rules</a><a href="#dates">Delivery dates</a><a href="#launch">On Launch</a><a href="#calls">Your calls</a>
+  </nav>
+
+  <h2 id="check">PD·0 · The PIN code check on the product page (every plan)</h2>
+  <div class="two" style="margin-top:0">
+    <div class="shop">
+      <p class="ttl">Sabz chanderi kurta</p><p class="price" style="margin:4px 0 0">₹2,490</p>
+      <div class="pin"><label class="sr-only" for="pin1" style="position:absolute;left:-9999px">PIN code</label><input id="pin1" value="302012" inputmode="numeric" aria-label="PIN code"><button>Check</button></div>
+      <div class="ans"><span class="ok">✓ Delivers to Jaipur by Fri, 21 Nov</span><span>Pay on delivery available · ₹49 fee</span><span>Delivery ₹79 · free above ₹1,999</span></div>
+    </div>
+    <div class="stack">
+      <div class="shop"><div class="pin"><input value="799001" aria-label="PIN code"><button>Check</button></div><div class="ans"><span class="warn">Delivers to Agartala by Thu, 27 Nov</span><span>Pay online for this PIN code</span></div></div>
+      <div class="shop"><div class="pin"><input value="744101" aria-label="PIN code"><button>Check</button></div><div class="ans"><span class="no">We don't deliver to Port Blair yet</span></div></div>
+    </div>
+  </div>
+  <p class="k" style="margin-top:8px">The page stays cached; the check is one small call that answers only deliverable, pay on delivery and the date. The brand's costs never reach it. The PIN code is remembered on this phone for the next product.</p>
+
+  <h2 id="bag">PD·0 · The charges, before checkout (every plan)</h2>
+  <div class="two" style="margin-top:0">
+    <div class="shop"><p class="ttl" style="font-size:15px">Your bag · 302012</p>
+      <div class="lines" style="margin-top:10px"><div><span>Sabz chanderi kurta</span><span>₹2,490</span></div><div><span>Delivery</span><span>Free</span></div><div><span>Pay on delivery fee</span><span>₹49 if you choose it</span></div><div style="border-top:1px solid #E2D8CD;padding-top:6px;font-weight:600"><span>Total</span><span>₹2,490 online · ₹2,539 on delivery</span></div></div>
+      <p style="margin:8px 0 0;font-size:13px;color:#1E7B52">Arrives by Fri, 21 Nov</p></div>
+    <div class="box"><h6>WHY</h6><p class="k" style="margin:0">The E-Commerce Rules want the total with its break-up, delivery included, before the shopper pays; from 1 Jan 2027 "delivery and shipment, cost of return shipping, mode of payments". Charges added at the last step have been fined (₹7 lakh, Aug 2026).</p></div>
+  </div>
+
+  <h2 id="zones">PD·1 · Delivery Zones · Zones</h2>
+  <div class="console"><div class="cbody" style="padding-top:18px">
+    <p class="k" style="margin:0 0 12px">‹ Apps</p>
+    <div class="dhead" style="align-items:center">
+      <span class="icon lg"><svg aria-hidden="true"><use href="#i-zones"/></svg></span>
+      <div class="t"><h3>Delivery Zones</h3><div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap"><span class="chip c-ok"><span class="dot"></span>Working</span><span class="chip c-n">From Jaipur 302012</span></div></div>
+      <button class="btn primary">Add a zone</button>
+    </div>
+    <div class="tabs" role="tablist"><span class="tab on">Zones</span><span class="tab">PIN code rules</span><span class="tab">Delivery dates</span><span class="tab">Usage and billing</span></div>
+    <div class="tablewrap"><table class="t">
+      <thead><tr><th>Zone</th><th class="r">PIN codes</th><th class="r">Delivery</th><th class="r">Free above</th><th class="r">Days</th><th>Pay on delivery</th></tr></thead>
+      <tbody>
+        <tr><td><b>Metro</b><div class="k">Delhi NCR, Mumbai, Bengaluru, Chennai, Kolkata, Hyderabad, Pune, Ahmedabad</div></td><td class="r">1,892</td><td class="r">₹59</td><td class="r">₹1,499</td><td class="r">2–3</td><td><span class="chip c-ok">On · ₹49</span></td></tr>
+        <tr><td><b>Tier 2</b><div class="k">State capitals and 40 more cities</div></td><td class="r">6,410</td><td class="r">₹79</td><td class="r">₹1,999</td><td class="r">3–5</td><td><span class="chip c-ok">On · ₹49</span></td></tr>
+        <tr><td><b>Rest of India</b></td><td class="r">9,812</td><td class="r">₹99</td><td class="r">₹1,999</td><td class="r">4–7</td><td><span class="chip c-ok">Up to ₹3,000 · ₹69</span></td></tr>
+        <tr><td><b>Special</b><div class="k">North East, J&amp;K, Ladakh, Andaman &amp; Nicobar, Lakshadweep</div></td><td class="r">1,231</td><td class="r">₹149</td><td class="r">—</td><td class="r">6–10</td><td><span class="chip c-warn">Pay online only</span></td></tr>
+        <tr><td><b>Jaipur same city</b><div class="k">Yours: 3020…, 3030…</div></td><td class="r">74</td><td class="r">₹39</td><td class="r">₹999</td><td class="r">1–2</td><td><span class="chip c-ok">On · free</span></td></tr>
+      </tbody></table></div>
+    <p class="k" style="margin-top:8px">A PIN code in two zones takes the first one in this list. Drag to reorder.</p>
+    <div class="foot"><button class="btn">Turn off Delivery Zones</button></div>
+  </div></div>
+
+  <h2 id="zone">Edit a zone</h2>
+  <div class="dialog" role="dialog" aria-label="Edit Rest of India" style="max-width:620px">
+    <h5>Rest of India</h5>
+    <div class="form">
+      <label class="field">Delivery charge<input value="₹99"></label>
+      <label class="field">Free delivery above<input value="₹1,999"></label>
+      <label class="field">Delivery days<input value="4–7"></label>
+    </div>
+    <div class="form" style="margin-top:12px">
+      <span class="switch"><i></i>Pay on delivery</span>
+      <label class="field">Pay on delivery fee<input value="₹69"></label>
+      <label class="field">Only up to<input value="₹3,000"></label>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px"><button class="btn">Cancel</button><button class="btn primary">Save zone</button></div>
+  </div>
+
+  <h2 id="rules">PIN code rules</h2>
+  <div class="console"><div class="cbody" style="padding-top:18px">
+    <div class="tabs" role="tablist"><span class="tab">Zones</span><span class="tab on">PIN code rules</span><span class="tab">Delivery dates</span><span class="tab">Usage and billing</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="search"><input value="" placeholder="Find a PIN code" aria-label="Find a PIN code"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn">Import CSV</button><button class="btn">Export</button><button class="btn primary">Add a rule</button></div>
+    </div>
+    <div class="tablewrap"><table class="t">
+      <thead><tr><th>PIN code</th><th>Place</th><th>Rule</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">110094</td><td>North East Delhi</td><td><span class="chip c-warn">Pay online only</span></td><td class="k">7 of 11 COD orders came back</td></tr>
+        <tr><td class="mono">744101</td><td>South Andaman</td><td><span class="chip c-n">Don't deliver</span></td><td class="k">Courier doesn't reach</td></tr>
+        <tr><td class="mono">400070</td><td>Mumbai Suburban</td><td><span class="chip c-warn">Pay on delivery up to ₹1,500</span></td><td class="k">—</td></tr>
+      </tbody></table></div>
+    <p class="k" style="margin-top:8px">A rule beats its zone. Today's "No pay on delivery" list moves here as "Pay online only" rules.</p>
+  </div></div>
+
+  <h2 id="dates">Delivery dates</h2>
+  <div class="console"><div class="cbody" style="padding-top:18px">
+    <div class="tabs" role="tablist"><span class="tab">Zones</span><span class="tab">PIN code rules</span><span class="tab on">Delivery dates</span><span class="tab">Usage and billing</span></div>
+    <div class="two" style="margin-top:0">
+      <div class="box"><h6>DISPATCH</h6>
+        <div class="form"><label class="field">Ships within<input value="1 working day"></label><label class="field">Orders by<input value="2:00 pm"></label><label class="field">Ship on<input value="Mon–Sat"></label></div>
+        <h6 style="margin-top:14px">HOLIDAYS</h6>
+        <ul class="list"><li><span>Diwali</span><span class="r">1–3 Nov</span></li><li><span>Christmas</span><span class="r">25 Dec</span></li></ul>
+        <button class="btn" style="margin-top:8px">Add a holiday</button>
+      </div>
+      <div class="box"><h6>WHAT A SHOPPER SEES · ORDERED NOW (WED, 12 NOV, 11 AM)</h6>
+        <ul class="list"><li><span>Jaipur same city</span><span class="r">Fri, 14 Nov</span></li><li><span>Metro</span><span class="r">Sat, 15 Nov</span></li><li><span>Rest of India</span><span class="r">Tue, 18 Nov</span></li><li><span>Special</span><span class="r">Sat, 22 Nov</span></li></ul>
+        <p class="k" style="margin:8px 0 0">The latest day of each zone's range. Shown on the product page, the bag, checkout, the order page and order emails. No countdown timers.</p>
+      </div>
+    </div>
+  </div></div>
+
+  <h2 id="launch">On Launch: the app's page</h2>
+  <div class="two" style="margin-top:0">
+    <div class="box"><h6>ADD-ON</h6><div style="font:500 20px var(--mono)">₹499<span class="k" style="font-family:var(--sans)"> /month + GST</span></div><p class="k" style="margin:4px 0 12px">14 days free · in Growth and Scale</p><button class="btn primary" style="width:100%">Start free trial</button></div>
+    <div class="box"><h6>WITHOUT IT</h6><p class="k" style="margin:0">Every shop keeps the PIN code check, the charges before checkout, one delivery charge, one COD fee and its "pay online only" PIN codes.</p></div>
+  </div>
+
+  <h2 id="calls">Your calls</h2>
+  <ol class="calls">
+    <li><b>The four starting zones</b> are Metro (8 metros), Tier 2 (state capitals and 40 more cities), Rest of India and Special (North East, J&amp;K, Ladakh, the islands), filled in from India Post's directory. The brand edits them and adds its own. Recommended.</li>
+    <li><b>Today's settings become the Rest of India zone</b> when the app is turned on, so nothing changes for shoppers until the brand edits a zone. Recommended.</li>
+    <li><b>The date shown is the latest day of the zone's range</b> ("by Tue, 18 Nov"), never the earliest. Recommended: a promise kept beats a promise early.</li>
+    <li><b>The PIN code is remembered on the shopper's phone</b> for the next product (their own browser only). Recommended.</li>
+    <li><b>Prepaid-only suggestions and numbers by zone</b> come in PD·2 with True Profit; courier serviceability in PD·3 with Ship.</li>
+  </ol>
+</div>

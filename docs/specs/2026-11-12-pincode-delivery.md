@@ -2,7 +2,7 @@
 Status: active (owner calls 2026-11-12 below; mockup next) · Date: 2026-11-12 · Asked by the owner: "we need a PIN code based system,
 delivery system before we plan [True Profit] more effectively … what should we call it, what all are the features"
 Research: code map (Explore, 2026-11-12) and market/API facts in `frata-integrations` § PIN code delivery and
-§ Shiprocket (integration-researcher, 2026-11-12). Mockup: after the owner picks the name and the scope.
+§ Shiprocket (integration-researcher, 2026-11-12). Mockup: `docs/mockups/2026-11-12-delivery-zones.html` (https://claude.ai/artifact/67kHoVDaRX5AFS5vWcWAgR), PD·0 and PD·1, for sign-off.
 
 ## Goal
 Ranked problems 1 (COD/RTO losses) and 4 (mobile checkout conversion): a shopper knows on the product page whether
