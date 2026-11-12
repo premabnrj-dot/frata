@@ -93,7 +93,8 @@ Status: findings recorded, not yet folded into a revised design; the owner decid
     membership re-check.
   - A law change would need 1,000 publishes: legal block and content served at runtime; a "Frrata patch" lane
     (ADR-0014 exception).
-  - Hosting undecided: a hosting ADR amending ADR-0005 (separate account, adapter, edge router, repos by site id).
+  - Hosting undecided: a hosting ADR amending ADR-0005 (a separate account Frrata owns and runs, brands need none;
+    adapter, edge router, repos by site id; ADR-0014 amendment 4, wording 2026-11-12).
 - **High:**
   - Studio resolves the shop from the session, never the shop cookie.
   - The proxy pins the session's key.
