@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.43.0
+  version: 2.44.0
   verified: 2026-11-11
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -730,3 +730,25 @@ Vercel `bom1` + Supabase ap-south-1. Storefront routes set `revalidate`;
 console routes are dynamic. Cron schedules in `vercel.json`: legacy `crons` are daily on Hobby,
 per minute on Pro; Vercel Schedules (public beta 2026-11-05) allow every 15 min on Hobby within 5,000 runs a billing
 period (frata-integrations § Domains). Build for daily; a beta schedule is an option, not a dependency. Migrations: see CLAUDE.md § Deploying.
+
+## Shop websites as code: kit and fleet rules (owner-approved 2026-11-12; spec docs/specs/2026-11-12-kit-and-fleet.md)
+Nothing here is built yet; these bind every spec and plan for Sites, Studio and the kit.
+- **Domains.** Partner or agent code runs only on its own registrable domain on the Public Suffix List (placeholder
+  `frrata.site`), previews on another. Never on `frrata.shop` (checkout, sign-in), never on the console's, Admin's or
+  Studio's domain. A spec that puts site code beside checkout's origin is a blocker.
+- **Build mode.** A shop that has never had an owner (`clientStage`: building or invited) publishes without approval,
+  to the signed preview only; its public address stays "Opening soon" with `noindex` until the owner opens it. Handover
+  re-runs the checks and binds the owner's accept to a deployment id; a shop that ever had an owner never returns.
+- **One record.** Publish, patch, rollback and handover all write `site_deployments`; live, held and drift are derived
+  from it. Requests out through the outbox (`site.build`, `site.promote`); results back through `webhook_events`.
+- **No fleet key.** Each site builds with its own storefront key; no key, role or token reaches every shop's data.
+  The fleet service is deterministic code in the hosting account, never an AI agent with deploy rights.
+- **Controls apart from code.** Policies live in their own repository, served as signed JSON by version; the publish
+  gate runs Frrata's pinned checks on the build output, never the site's copy; a hard floor (no `unsafe-eval`,
+  `connect-src` Frrata only, `form-action` checkout only, no route handlers or server actions in site code) is tested
+  in this repo and no policy can lower it.
+- **Facts stay in the API.** Money, offers, prior prices, JSON-LD, brand tokens and the legal block's words are served
+  by the API, never re-implemented in a kit package.
+- **Agents never approve** a release, a policy, a takedown or a publish.
+- **Checkout stays home.** Checkout, sign-in and order pages stay on Frrata's own host in Mumbai; a site's router
+  carries page requests only.

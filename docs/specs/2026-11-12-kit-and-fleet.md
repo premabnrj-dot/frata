@@ -1,6 +1,7 @@
 # Kit and fleet: how Frrata builds, guards and keeps every site
-Status: draft for the owner (reviews folded in) · Date: 2026-11-12 · Mockup:
-https://claude.ai/artifact/NfBB7SwJk8chukgJZVhDFr (docs/mockups/2026-11-12-kit-and-fleet.html) · Approved: —
+Status: active (approved)  · Date: 2026-11-12 · Mockup:
+https://claude.ai/artifact/NfBB7SwJk8chukgJZVhDFr (docs/mockups/2026-11-12-kit-and-fleet.html) · Approved: owner, 2026-11-12 ("plan approved"; the preview-only guard before handover; staff passkeys;
+the site domain stays the placeholder `frrata.site` for now)
 Direction: ADR-0014 and its amendment. Parents: `docs/specs/2026-11-11-agentic-storefront.md` (V0–V5),
 `docs/specs/2026-11-11-frrata-studio.md` (Studio, V3), `docs/specs/2026-11-11-storefront-api.md` (SA0–SA2).
 Owner, 2026-11-12: "you haven't planned how the staff/agent would build start kits, set up controls, safety, security,

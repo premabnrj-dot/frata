@@ -55,3 +55,7 @@ Claude builder was skipped "Claude never runs on Frrata's servers" (2026-11-11).
    owner claims it with a verified email (`drizzle/0066`, `app_shop_publish_needs_owner`). At handover the checks run
    again and the owner accepts that exact version and the partner's scopes; from then on the approval rule above
    applies. Details: `docs/specs/2026-11-12-kit-and-fleet.md`.
+7. **Kit and fleet** (owner, 2026-11-12: "plan approved"; "yes, preview only guard before handover"):
+   `docs/specs/2026-11-12-kit-and-fleet.md` is the plan for how Frrata's staff, fleet service and agents build the kit
+   and starters, set controls, release updates (three lanes) and keep every site safe. Code sites live on their own
+   registrable domain, never checkout's; its name is a placeholder (`frrata.site`) until chosen.

@@ -39,3 +39,8 @@ as before. Reviewed by architecture-reviewer and tenancy-auditor (2026-11-06).
 ## Staff 2FA
 Not required for now (owner, 2026-11-06). `requireStaff` is the one place an aal2
 check is added when it is.
+
+**Amended (owner, 2026-11-12):** staff move from email codes to passkeys (an authenticator app as the fallback).
+Order: GitHub and the package registry before the first kit release; Admin before Frrata hosts shop websites (V2).
+`requireStaff` then requires aal2, with no branch-protection bypass for staff accounts. Source:
+`docs/specs/2026-11-12-kit-and-fleet.md` § 7 (security review H3).
