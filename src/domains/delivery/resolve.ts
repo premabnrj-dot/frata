@@ -84,3 +84,26 @@ export function chargeOn(amount: number, t: Pick<DeliveryTerms, 'charge' | 'free
   if (!t.charge) return 0
   return t.freeAbove && amount >= t.freeAbove ? 0 : t.charge
 }
+
+/** Pay on delivery for a bag of `amount` paise (after order offers, before delivery) on these terms — the existing
+ *  `Cod` answer checkout reads: the floor's order of checks (off, the PIN code, the minimum, then the maximum counted
+ *  with delivery and the fee). */
+export function codOn(amount: number, t: DeliveryTerms, pincode?: string | null): Cod {
+  if (!t.deliverable) return { offered: false, reason: 'not_delivered' }
+  if (!t.cod.on) {
+    if (t.cod.why === 'off') return { offered: false, reason: 'off' }
+    return { offered: false, reason: t.cod.why === 'prepaid_only' ? 'prepaid_only' : 'blocked_pincode', pincode: pincode ?? '' }
+  }
+  if (amount < t.cod.min) return { offered: false, reason: 'below_min', min: t.cod.min }
+  const total = amount + chargeOn(amount, t) + t.cod.fee
+  if (t.cod.max && total > t.cod.max) return { offered: false, reason: 'above_max', max: t.cod.max }
+  return { offered: true, total, charge: t.cod.fee }
+}
+
+export type Cod =
+  | { offered: false; reason: 'off' }
+  | { offered: false; reason: 'not_delivered' }
+  | { offered: false; reason: 'below_min'; min: number }
+  | { offered: false; reason: 'above_max'; max: number }
+  | { offered: false; reason: 'blocked_pincode' | 'prepaid_only'; pincode: string }
+  | { offered: true; total: number; charge: number }
