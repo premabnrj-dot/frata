@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.19.1
+  version: 5.20.0
   verified: 2026-11-12
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -105,7 +105,10 @@ from it).
 - **Your apps first** (compact cards: state "Working" or a meter at 80%, Open), then the gallery grouped by the
   merchant's job: Talk to shoppers · Get paid and ship · Sell more · Run the books. Search and filters with counts.
 - **At most one featured card**, chosen from the shop's own numbers (the pricing ladder's nudge), dismissible, staying
-  dismissed. Never a pop-up, timer or animated upgrade button; no promised outcome.
+  dismissed. Never a pop-up, timer or animated upgrade button; no promised outcome. As built (A2): owners and admins
+  only, never a support visit; it names the shop's own invoice ("On Growth your 1 Dec invoice would have been ₹X
+  less"), both totals and "both + 18% GST", one link (See <plan>) and Not now; hidden until the browser has read the
+  dismissal (no flash); `FeaturedCard` in `src/components/modules/`, the words rendered on the server.
 - **An app's page, not a dialog**: a benefit headline, ≤ 3 features each with a drawn 16:10 picture of the app working
   (console tokens, no real shopper), ≤ 3 questions; a side column with the price box (GST, trial, first charge date),
   Works with, What it uses, Billed by others. On a phone the price and button sit in a bar at the bottom.
@@ -113,8 +116,12 @@ from it).
   shop's own rupees · Open · Tell me when it's ready. A higher-plan app is shown locked, never a button that fails.
   An app that needs another one off offers "Turn on <that app> first" (a link to its page); one that is on while what
   it needs is off says "Waiting for <that app>" in warn and stays in Your apps.
-- **Once on, one home for every app** (A2): state chip with the last activity, tabs, ≤ 4 numbers, a meter where there is
-  a limit, What it uses, Turn off at the foot with a confirm.
+- **Once on, one home for every app** (A2, `AppHome`): ONE state chip ("Working", `homeState()`, the same one Your apps
+  shows) and the app's own condition as a second badge (Not live yet, Connected, Needs attention, Ready); tabs
+  Overview · the app's own · Usage and billing (`AppFacts`, the app page's side column without its button; never for
+  the accountant); ≤ 4 numbers; a meter only once an app has an allowance; **Turn off <app> alone at the foot**, no
+  explanation on the page (Rule 0) — what it does is listed in the confirm (`OFF` in `src/domains/modules/showcase.ts`).
+  Owners and admins only, never a support visit (`mayTurnOff`, the same rule as `setModuleAction`).
 
 ## Shop themes (approved mockups 2026-11-08, T0–T2 built)
 

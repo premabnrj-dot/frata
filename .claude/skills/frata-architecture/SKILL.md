@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.45.0
+  version: 2.46.0
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -260,6 +260,10 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   switched on; not paused; dependencies usable). Badges and buttons come from
   `offerFor()` (the gallery card's footer, state and filter, the price box and the ONE action: switch, needs, ask,
   plans, interest). Never test a plan feature or an add-on row anywhere else.
+- **A money read outside Plan and billing** (Apps A2): it runs inside the page's one transaction (`featuredBillWith`
+  in `appsPage`), refuses outside CAN_MANAGE itself (`mayReadMoney`) and on a support visit, fails closed, and its
+  importer is named in `scripts/check-billing-read.mjs` with the reason. Type imports count: take a type from the
+  caller's return, never from `@/lib/queries/billing`.
 - **Every app has a page** (Apps gallery, 2026-11-11): `/console/apps/[app]` renders `AppAbout` (features drawn from
   `src/domains/modules/showcase.ts`, no screenshots); an app with a home of its own is a static folder that renders the
   same `AppAbout` while not usable (static folders win over `[app]`; `app-pages.test.ts` holds it). The gallery and an
@@ -533,7 +537,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
 - Inbound: `src/app/api/webhooks/<provider>/route.ts` — read `request.text()`,
   verify the signature on that text, compute OUR key, insert with
   `onConflictDoNothing`, answer 200. Processing reads `webhook_events where
-  processed_at is null`. List the route in `scripts/check-actions.mjs` ENTRY_POINTS.
+  processed_at is null`; Razorpay's are retried every 5 minutes by `/api/cron/drain`, the rest by the daily cron. List the route in `scripts/check-actions.mjs` ENTRY_POINTS.
 - Per-merchant credentials (Shiprocket tokens, Meta system user tokens) are
   never in env; they go in a tenant table, encrypted — the design is a spec.
 - A webhook caps its body before parsing (`raw.length > N` → 413) and checks the
@@ -600,6 +604,14 @@ Rules:
   given back to the IP limit (`uncount`). A try whose order was already placed finds it before any slot. **The phone
   limit counts orders** (2026-11-12): counted before placement, given back unless the try wrote a new order
   (`Placed.fresh`).
+  Everything else that takes stock shares the slots and the wait (`takeSlot`): a payment landing, a switch to pay on
+  delivery, a retried payment (`src/lib/orders/payment.ts`). A captured payment is recorded FIRST where nothing waits
+  (a Razorpay-shaped `webhook_events` row; storing a capture keeps the order's hold ≥ 15 min while it still runs),
+  then applied if there is room — the browser's reply, a switch or a released hold that finds a capture, alike.
+  `processEvents` takes a slot only when something waits; a lock wait, deadlock, serialization failure or statement
+  timeout inside an event LEAVES it unprocessed (marking it would lose the payment); the 5-minute drain
+  (`/api/cron/drain`) is the next pass; the order page says "Payment received · confirming" and looks again
+  (`paymentWaiting`).
 - A cached loader (`shopCached`) never runs inside a `withTenant`: it opens a second connection while the first is
   held, and at a drop the pool deadlocks (P4). Read it before the transaction, or after it closes (`quoteData`
   resolves offer collections after its transaction).

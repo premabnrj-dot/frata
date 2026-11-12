@@ -182,15 +182,21 @@ export async function completePayNow(input: Checkout): Promise<{ ok: true } | { 
 // charged by days on the next invoice; downgrade on the 1st. The definer is bound to this shop and refuses a price agreed
 // with Frrata or a change Frrata scheduled. ──
 const PlanCode = z.enum(PLAN_CODES)
-export async function changePlan(code: string): Promise<{ ok: true; startsAt: string; upgrade: boolean } | { ok: false; error: string }> {
+const From = z.enum(['featured']).optional()
+
+export async function changePlan(code: string, from?: unknown): Promise<{ ok: true; startsAt: string; upgrade: boolean } | { ok: false; error: string }> {
   const me = await requireMember(CAN_MANAGE)
   if (!me.ok) return { ok: false, error: me.message }
   if (me.membership.supportSessionId) return { ok: false, error: 'A Frrata support visit cannot change the shop’s plan.' }
   const p = PlanCode.safeParse(code)
   if (!p.success) return { ok: false, error: 'Choose a plan.' }
+  // Apps A2's measure: a change that came from the featured card. Only this one value is ever stored.
+  const source = From.safeParse(from).data
   try {
     const r = await asMember(CAN_MANAGE, { action: 'billing.plan.change', target: p.data }, async (tx, auth) => {
       const [x] = await tx.execute<{ starts_at: string; upgrade: boolean }>(sql`select * from app_change_plan(${p.data}, ${auth.userId}::uuid)`)
+      // The definer audits the change itself; the card's source is its own row, in the same transaction.
+      if (source) await tx.insert(auditEvents).values({ tenantId: auth.membership.tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: 'billing.plan.source', target: p.data, detail: { source } })
       return x!
     })
     if (!r.ok) return { ok: false, error: r.error }

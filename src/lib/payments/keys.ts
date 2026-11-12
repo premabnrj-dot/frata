@@ -106,7 +106,10 @@ export async function noteKeysAnswer(tenantId: string, keys: { keyId: string; pr
  * before a switch to live keys (a test one, processed later) must not (impact review 2026-11-11). */
 export async function markEvent(tx: Tx, tenantId: string, receivedAt: Date = new Date()) {
   await tx.update(paymentKeys).set({ lastEventAt: new Date(), webhookSeenAt: sql`coalesce(${paymentKeys.webhookSeenAt}, now())` })
-    .where(and(eq(paymentKeys.tenantId, tenantId), lte(paymentKeys.connectedAt, receivedAt)))
+    // Skipped while another pass holds the row (it is stamping the same moment): at a drop every payment's pass would
+    // otherwise queue on this one row per shop (impact review 2026-11-11).
+    .where(and(eq(paymentKeys.tenantId, tenantId), lte(paymentKeys.connectedAt, receivedAt),
+      sql`${paymentKeys.tenantId} in (select tenant_id from payment_keys where tenant_id = ${tenantId} for update skip locked)`))
 }
 
 /** A webhook's shop and its secret, from the key in its URL (before any tenant is known: app_payment_webhook_for). */

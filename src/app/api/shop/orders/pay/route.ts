@@ -31,5 +31,6 @@ export async function POST(request: Request) {
   const out = await confirmPayment(r.tenantId, hash, { paymentId: r.body.paymentId, signature: r.body.signature })
   await processEvents(r.tenantId).catch(() => 0)
   if (out.ok) drainSoon() // "Order confirmed" (email E·2)
-  return out.ok ? reply({ ok: true }) : reply({ error: out.error }, out.status)
+  // Busy (a drop): the payment is safe; the stored webhook event marks the order paid on a later pass.
+  return out.ok ? reply({ ok: true }) : reply({ error: out.error }, out.status, out.status === 503 ? { 'Retry-After': '2' } : {})
 }

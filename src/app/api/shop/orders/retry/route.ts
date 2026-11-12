@@ -15,5 +15,5 @@ export async function POST(request: Request) {
   const hash = await orderRefHash(r.tenantId, r.body)
   if (!hash) return reply({ error: 'Not found' }, 404)
   const out = await retryPayment(r.tenantId, hash)
-  return out.ok ? reply({ pay: out.pay }) : reply({ error: out.error }, out.status)
+  return out.ok ? reply({ pay: out.pay }) : reply({ error: out.error }, out.status, out.status === 503 ? { 'Retry-After': '2' } : {})
 }

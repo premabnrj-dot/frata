@@ -6,15 +6,16 @@ import type { Tx } from '@/lib/db'
 import { enqueue, GiveUp, Later, type OutboxRow } from '@/lib/outbox'
 import { keysFor, noteKeysAnswer } from '@/lib/payments/keys'
 import { orderPayments } from '@/lib/payments/razorpay'
+import { capturedAsAsked } from '@/domains/orders/captured'
+import { markPaid, storeRazorpayEvent, withSlot } from './payment'
 import { refreshSoldOut } from '@/lib/queries/storefront'
-import { capturedAsAsked, markPaid } from './payment'
 
 // =============================================================================
 // FILE: src/lib/orders/payment-check.ts — ASK RAZORPAY, DON'T WAIT TO BE TOLD (shop stress test 2026-11-11). An online
 // order became paid only by the browser's reply or Razorpay's webhook. With the tab closed after paying and the webhook
 // lost (or late), the order stayed unpaid for good, and a minute after its hold "Finish paying… nothing was charged"
 // went to a shopper who had paid. Now, when the hold ends, an outbox row asks Razorpay for the order's payments (a GET,
-// safe to repeat) and records a capture exactly as the webhook would (markPaid: once, paid_at is null). The Finish
+// safe to repeat) and records a capture exactly as the webhook would (stored as its event, then applied: markPaid, once). The Finish
 // paying email asks the same question before it sends.
 // =============================================================================
 
@@ -43,9 +44,14 @@ export async function settleWithRazorpay(tenantId: string, orderId: string): Pro
   const pays = asked.items
   const captured = pays.find((p) => p.status === 'captured' && capturedAsAsked(p, o.checkout, p.currency))
   if (captured) {
+    // As every capture now (a flash drop, 2026-11-11): stored first under the key Razorpay's own webhook uses (the two
+    // are one event), then applied when the shop has room — here, or by the next pass (the 5-minute drain).
+    await storeRazorpayEvent(tenantId, `razorpay:payment.captured:${captured.id}`, { event: 'payment.captured',
+      payload: { payment: { entity: { id: captured.id, order_id: o.rzp, amount: captured.amount, currency: 'INR', status: 'captured', fee: captured.fee, tax: captured.tax } } } })
+    // Busy: the stored event is the record; the next pass applies it. Applied here, that event later finds it paid.
     const soldOut: string[] = []
-    await withTenant(tenantId, (tx) => markPaid(tx, { id: orderId, tenantId }, { paymentId: captured.id, fee: captured.fee, tax: captured.tax }, soldOut))
-    if (soldOut.length) refreshSoldOut(tenantId)
+    const paid = await withSlot(tenantId, (tx) => markPaid(tx, { id: orderId, tenantId }, { paymentId: captured.id, fee: captured.fee, tax: captured.tax }, soldOut))
+    if (paid !== null && soldOut.length) await refreshSoldOut(tenantId).catch(() => {})
     return 'paid'
   }
   return pays.some((p) => p.status === 'authorized' || p.status === 'created') ? 'pending' : 'unpaid'

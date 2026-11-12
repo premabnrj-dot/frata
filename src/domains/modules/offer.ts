@@ -60,7 +60,7 @@ export function offerFor(key: ModuleKey, a: ModuleAccess, addonPrice: number | n
   }
   if (a.granted) {
     const state = a.why === 'needs' && a.needs ? { label: `Waiting for ${MODULES[a.needs].name}`, tone: 'warn' as const }
-      : a.usable ? { label: 'On', tone: 'ok' as const } : a.how === 'trial' ? { label: trialBadge(a, now), tone: 'warn' as const } : null
+      : a.usable ? homeState() : a.how === 'trial' ? { label: trialBadge(a, now), tone: 'warn' as const } : null
     const action: OfferAction = !a.on && a.needs ? { kind: 'needs', module: a.needs, name: MODULES[a.needs].name } : { kind: 'switch', on: a.on }
     return { price: priceLine(a, monthly, now), footer: footerOf(a, monthly, now), locked: false, state, filter: filterOf(a), action }
   }
@@ -71,6 +71,10 @@ export function offerFor(key: ModuleKey, a: ModuleAccess, addonPrice: number | n
   return { price: 'In Growth and up', footer: 'On Growth', locked: true, state: null, filter: 'plan',
     action: { kind: 'plans', label: 'See Growth' } }
 }
+
+/** The state of an app that is in use, read by Your apps and by the app's home alike (A2): one chip, one source. An
+ *  app's own condition (EkCode not live, Messages needing attention) is a second badge on its home only. */
+export const homeState = (): { label: string; tone: 'ok' } => ({ label: 'Working', tone: 'ok' })
 
 /** Does this offer pass the gallery's filter? */
 export const passes = (o: Pick<Offer, 'filter'>, f: OfferFilter | 'all') => f === 'all' || o.filter === f

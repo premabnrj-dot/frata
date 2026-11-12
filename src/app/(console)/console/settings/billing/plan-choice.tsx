@@ -9,13 +9,13 @@ import { cancelPlanChange, changePlan } from './actions'
 // a downgrade starts on the 1st. Each asks first, with the figure in words. The actions revalidate; no router.refresh() (frata-gotchas).
 type Option = { code: string; name: string; price: string; included: string; fee: string; upgrade: boolean; difference: string | null; afterTrial: string | null }
 
-export function PlanChoice({ options, downgradeOn, scheduled }: { options: Option[]; downgradeOn: string; scheduled: { name: string; on: string; byShop: boolean } | null }) {
+export function PlanChoice({ options, downgradeOn, scheduled, fromFeatured = false }: { options: Option[]; downgradeOn: string; scheduled: { name: string; on: string; byShop: boolean } | null; fromFeatured?: boolean }) {
   const [pick, setPick] = useState<Option | null>(null)
   const [busy, start] = useTransition()
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const go = () => start(async () => {
     if (!pick) return
-    const r = await changePlan(pick.code)
+    const r = await changePlan(pick.code, fromFeatured ? 'featured' : undefined)
     setPick(null)
     setMsg(r.ok ? { ok: true, text: r.upgrade ? (pick.afterTrial ? `You move to ${pick.name} when your trial ends, on ${pick.afterTrial}.` : `You are on ${pick.name} now.`) : `You move to ${pick.name} on ${downgradeOn}.` } : { ok: false, text: r.error })
   })

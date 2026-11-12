@@ -7,6 +7,7 @@ import { Button, button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import type { OfferAction } from '@/domains/modules/offer'
 import type { ModuleKey } from '@/domains/modules/registry'
+import { OFF } from '@/domains/modules/showcase'
 import { setInterestAction, setModuleAction } from '../actions'
 import { settle } from '@/lib/settle'
 
@@ -62,7 +63,7 @@ export function AppAction({ k, name, action, canManage, askHref, block = false }
       <Button variant="secondary" className={`${wide} after:hidden`} disabled={busy} onClick={() => { setError(null); setConfirmOff(true) }}>Turn off {name}</Button>
       {!confirmOff ? err : null}
       <Dialog open={confirmOff} onClose={() => setConfirmOff(false)} title={`Turn off ${name}?`}
-        description={<ul className="list-disc space-y-1 pl-5"><li>{name} stops for your shop.</li><li>Anything it had queued is cancelled.</li><li>What it made stays. Turn it back on any time.</li></ul>}
+        description={<ul className="list-disc space-y-1 pl-5">{OFF[k].map((l) => <li key={l}>{l}</li>)}<li>Turn it back on any time.</li></ul>}
         actions={<><Button variant="secondary" data-autofocus onClick={() => setConfirmOff(false)}>Keep {name}</Button><Button variant="destructive" disabled={busy} onClick={() => run(() => setModuleAction({ module: k, on: false }))}>Turn off {name}</Button></>}>
         {error ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
       </Dialog>

@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   if (!hash) return reply({ error: 'Not found' }, 404)
   const out = await switchToCod(r.tenantId, hash, r.body.expectedTotal)
   if (out.kind === 'changed') return reply({ changed: true, quote: publicQuote(out.quote) }, 409)
-  if (out.kind === 'refused') return reply({ error: out.error, ...(out.codTotal !== undefined ? { codTotal: out.codTotal } : {}) }, out.status)
+  if (out.kind === 'refused') return reply({ error: out.error, ...(out.codTotal !== undefined ? { codTotal: out.codTotal } : {}) }, out.status, out.status === 503 ? { 'Retry-After': '2' } : {})
   drainSoon() // "Order confirmed" for the switch to COD (email E·2)
   return reply(out)
 }

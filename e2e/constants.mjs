@@ -29,6 +29,8 @@ export const USERS = {
   brand: { id: 'cccccccc-0000-0000-0000-000000000011', email: 'neha@brandco.test' },
   // A brand owner signing up on their own (63-signup, trials TR1): no shop until the flow makes one.
   founder: { id: 'cccccccc-0000-0000-0000-000000000012', email: 'aanya@noorthreads.test' },
+  // The shop's CA (role accountant: GST and documents only). Added by the flows that need it (64-gst).
+  accountant: { id: 'cccccccc-0000-0000-0000-000000000013', email: 'ca@ledger.test' },
 }
 export const RZP_KEYS = { id: 'rzp_live_FrataTest01', secret: 'testsecret12345678abcd' }
 /** Frrata's own billing account (billing B3), test keys: they may collect only test-mode invoices. */
