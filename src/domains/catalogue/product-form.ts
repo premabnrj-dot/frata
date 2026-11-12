@@ -2,28 +2,14 @@
 // FILE: src/domains/catalogue/product-form.ts
 //
 // WHAT THE PRODUCT EDITOR SENDS, CHECKED. The editor types rupees; the shop
-// stores paise (ADR-0004). One check for the editor and the save action.
+// stores paise (ADR-0004), read by money/rupees.ts. One check for the editor and the save action.
 // Also: whether a product is ready to show, in the merchant's words.
 // =============================================================================
 
 import { istDayKey } from '../time/day'
 import { cleanGtin } from './gtin'
 import { cleanOptions, combinations, handleFor, keyOf, type Option } from './variants'
-
-/** "2,490" or "2490.50" → 249050 paise; null when it is not a price. */
-export function parseRupees(text: string): number | null {
-  const t = text.replace(/[,₹\s]/g, '')
-  if (!/^\d{1,7}(\.\d{1,2})?$/.test(t)) return null
-  const [r, p = ''] = t.split('.')
-  return Number(r) * 100 + Number(p.padEnd(2, '0'))
-}
-
-/** 249050 → "2490.50", 249000 → "2490": what the editor shows in a price box. */
-export function rupeesText(paise: number | null): string {
-  if (paise === null) return ''
-  const r = Math.floor(paise / 100), p = paise % 100
-  return p ? `${r}.${String(p).padStart(2, '0')}` : String(r)
-}
+import { parseRupees } from '../money/rupees'
 
 export type WhenOutInput = 'stop' | 'preorder' | 'made_to_order'
 export type VariantInput = {
@@ -109,7 +95,7 @@ export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: C
       const compareAt = v?.compareAt.trim() ? parseRupees(v.compareAt) : null
       if (v?.compareAt.trim() && compareAt === null) errors[cell('compareAt')] = 'A price in rupees.'
       else if (compareAt !== null && price !== null && compareAt < price) errors[cell('compareAt')] = 'The M.R.P. can’t be below the price: never sell above M.R.P.'
-      const unitCost = v?.cost.trim() ? parseRupees(v.cost) : null
+      const unitCost = v?.cost.trim() ? parseRupees(v.cost, { zero: true }) : null
       if (v?.cost.trim() && unitCost === null) errors[cell('cost')] = 'A cost in rupees, or empty.'
       const stockText = (v?.stock ?? '0').trim() || '0'
       if (!/^\d{1,6}$/.test(stockText)) errors[cell('stock')] = 'A whole number.'

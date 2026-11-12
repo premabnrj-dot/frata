@@ -55,9 +55,10 @@ describe.skipIf(!host)('writing new products in one batch', () => {
       expect(await writeProducts(tx, A, [sized('X', b, [{ gtin: '4006381333931' }]), sized('Y', b, [{ gtin: '4006381333931' }])], { costs: true })).toMatchObject({ ok: false, draft: 1 })
       expect(await count()).toBe(4)
 
-      // Seen costs are written.
-      const seen = await writeProducts(tx, A, [sized('Int write', b, [{}])], { costs: true })
+      // Seen costs are written; a Hindi name has an address in Latin letters.
+      const seen = await writeProducts(tx, A, [sized(`लिनन कुर्ता ${b}`, '', [{}])], { costs: true })
       if (!seen.ok) throw new Error(seen.error)
+      expect(seen.products[0]!.handle).toBe(`linan-kurta-${b}`)
       expect((await tx.select({ cost: variants.unitCost }).from(variants).where(and(eq(variants.tenantId, A), eq(variants.productId, seen.products[0]!.id)))).map((r) => r.cost)).toEqual([45000])
       throw ROLLBACK
     }).catch((e) => { if (e !== ROLLBACK) throw e })
