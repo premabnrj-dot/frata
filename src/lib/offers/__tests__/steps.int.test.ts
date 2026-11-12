@@ -1,5 +1,5 @@
 // What may happen to an offer, on a real Postgres (offers O·4 impact review): every refusal of lib/offers/steps.ts,
-// the 20-running limit, and a payment retry's re-check of its offers (payment.ts offersStillFit: still live, still the
+// the 20-running limit, and a payment retry's re-check of its offers (offers-fit.ts offersStillFit: still live, still the
 // phone's first order). Tenant A of the proof; skipped unless INT_DB_HOST is set. One transaction, rolled back.
 import { describe, expect, it } from 'vitest'
 
@@ -18,7 +18,7 @@ describe.skipIf(!host)('offer steps and a retry', () => {
     const S = await import('@/lib/offers/steps')
     const { runningOffers } = await import('@/lib/db/discount-predicates')
     const { MAX_RUNNING_OFFERS, RUNNING_FULL } = await import('@/domains/checkout/offer-form')
-    const { offersStillFit } = await import('@/lib/orders/payment')
+    const { offersStillFit } = await import('@/lib/orders/offers-fit')
     const { eq } = await import('drizzle-orm')
     const now = new Date()
     const ago = (m: number) => new Date(now.getTime() - m * 60_000)

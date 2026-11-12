@@ -19,6 +19,10 @@ type View = {
   shop: { name: string; whatsapp: string }
   /** An invoice exists (the order was packed): the shopper may download it (Documents D2). */
   invoice?: boolean
+  /** A change the shop made that waits for this payment (order edit OE·2): what it asks, the total it makes, each change. */
+  change?: { asked: number; total: number; changes: string[] } | null
+  /** Refunds on their way (an edit lowered a paid total). */
+  refunds?: { amount: number }[]
 }
 
 const REF_KEY = 'frrata.order.ref.v1'
@@ -59,6 +63,14 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
     if (!r.ok) return failed(r.data.error ?? 'Online payment could not open. Try again.')
     const { openRazorpay } = await import('./checkout-pay')
     await openRazorpay(tokenRef.current!, r.data.pay, { done: () => { setPay((x) => ({ ...x, busy: false })); void load() }, failed })
+  }
+  // Paying for a change the shop made (OE·2): the change's own Razorpay order; the page looks again once it is paid.
+  async function payChange() {
+    setPay((x) => ({ ...x, busy: true })); toast.dismiss()
+    const r = await api<{ pay: Pay }>('/api/shop/orders/change', { ...tokenRef.current!, start: true })
+    if (!r.ok) return failed(r.data.error ?? 'Online payment could not open. Try again.')
+    const { openChangePayment } = await import('./checkout-pay')
+    await openChangePayment(tokenRef.current!, r.data.pay, { done: () => { setPay((x) => ({ ...x, busy: false })); void load() }, failed })
   }
   async function payOnDelivery() {
     setPay((x) => ({ ...x, busy: true })); toast.dismiss()
@@ -120,6 +132,14 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
         <div className="flex justify-between gap-4"><dt>Status</dt><dd className="text-right">{v.paymentWaiting ? 'Payment received · confirming your order' : STATE[v.state]}</dd></div>
         {v.arrives && placed && <div className="flex justify-between gap-4"><dt>Arrives</dt><dd>{dayRange(v.arrives)}</dd></div>}
       </dl>
+      {v.change && (
+        <section aria-labelledby="change-pay" className="space-y-3 rounded-[var(--store-radius)] border border-store-ink p-4">
+          <h2 id="change-pay" className="text-lg font-medium">Pay {inr(v.change.asked)} for the changes</h2>
+          <ul className="space-y-1 text-sm">{v.change.changes.map((c, i) => <li key={i}>{c}</li>)}</ul>
+          <div className="flex justify-between text-sm"><span>New total</span><span className="tabular-nums">{inr(v.change.total)}</span></div>
+          <button type="button" onClick={() => void payChange()} disabled={pay.busy} className="store-btn store-buy grid h-12 w-full place-items-center rounded-[var(--store-radius)] bg-store-button font-medium text-store-on-button disabled:opacity-60">{pay.busy ? 'One moment…' : `Pay ${inr(v.change.asked)}`}</button>
+        </section>
+      )}
       <ul className="divide-y divide-store-line border-y border-store-line">
         {v.lines.map((l, i) => (
           <li key={i} className="flex items-center gap-3 py-3 text-sm">
@@ -136,6 +156,7 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
         <div className="flex justify-between pt-1 text-base"><dt className="font-medium">{v.collect > 0 && cashAtDoor(v.state) ? `Keep ${inr(v.collect)} ready` : v.collect > 0 && v.state === 'delivered' ? 'Paid on delivery' : v.method === 'prepaid' && placed ? 'Paid online' : 'Total'}</dt>
           <dd className="tabular-nums">{v.method === 'cod' ? 'cash or UPI' : inr(v.total)}</dd></div>
         {v.paidAfterSwitch && <p className="text-store-good">Your online payment went through: nothing to pay on delivery.</p>}
+        {(v.refunds ?? []).map((x, i) => <div key={`refund-${i}`} className="flex justify-between gap-4 text-store-good"><dt>Refund on its way · 5–10 working days</dt><dd className="tabular-nums">{inr(x.amount)}</dd></div>)}
         <div className="flex justify-between text-store-sub"><dt>To</dt><dd>{v.to}{v.phone ? ` · phone ${v.phone}` : ''}</dd></div>
         {v.email ? <div className="flex justify-between gap-4 text-store-sub"><dt>Updates to</dt><dd className="break-all text-right">{v.email}</dd></div> : null}
       </dl>

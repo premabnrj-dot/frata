@@ -520,10 +520,32 @@ Rules every products screen keeps (PR·0 built; PR·1–4 follow the mockup):
   back"; a piece added in the edit comes out without a reason. A line whose product was deleted says "No longer sold":
   no chips, no − / +, Remove only. A size already on the order is not offered again. A refusal (over the COD maximum,
   sold out, a reason missing) is one line in "What changes", in the error colour, and Save waits. The email tick shows
-  only when the order has an email ("Email Ananya the new total"). Who sees "Edit items": owners and admins, on an order
-  paid on delivery, until packed — never staff, a support visit, a paid order or one that started as an online payment.
+  only when the order has an email ("Email Ananya the new total"). Who sees "Edit items": owners and admins, until
+  packed — never staff or a support visit; paid online too since OE·2, never while a change waits for the shopper.
   Activity says "emailed" only once the email went ("email waiting" while it is held for the Undo window). Phone: one column, the two buttons
   fixed above the bottom bar.
+  As built (OE·2, paid online, 2026-11-12; `_components/edit/what-changes.tsx`, `paid-online.tsx`): "What changes" shows
+  "Paid online ₹X" and "New total ₹Y" instead of "Collect on delivery"; lower → a warn callout "Refund ₹1,899 / Razorpay ·
+  back in 5–10 working days · its fee isn't returned", Save "Save and refund ₹1,899", tick "Email Meera the refund", the
+  toast "KS-1051 saved · refund ₹1,899 in 10 minutes" with Undo; higher → "Ask for ₹499 / The shopper pays first ·
+  nothing changes until then", Save "Save and ask for ₹499", tick "… the payment link", the toast "KS-1051: waiting for
+  ₹499 from the shopper" with no Undo (nothing changed). "Paid over 6 months ago: Razorpay can't refund it." is the
+  refusal line, Save waits. While a change waits: the header's "Mark packed" becomes the status "Waiting for ₹499 from
+  the shopper" (not a button), and the Items card holds one warn block — the changes, "New total", "Copy payment link"
+  (the order's own page, for WhatsApp) and "Ship without the change". Refunds sit as rows under the money: "₹1,899 refund
+  · sends at 10:52", "… · with Razorpay", "refunded · 5–10 working days to reach the shopper", or "Refund ₹1,899 not sent"
+  with the cause on the next line and Try again (a failure after it is toast.error). Activity: "Asked for ₹499 · …", then
+  "Paid ₹499 for the change · items changed" (Customer) or "Shipped without the change". The shopper's order page: a
+  boxed "Pay ₹499 for the changes" with each change ("Linen co-ord: M → L"), "New total" and "Pay ₹499" (Razorpay on
+  the shop's key); a refund is a line "Refund on its way · 5–10 working days" — never "refunded" (processed is not
+  in their account yet).
+  Rupees, never "a fee" (unit-economics review 2026-11-12), and a fee to the paisa: the refund callout says "Back in 5–10
+  working days · Razorpay keeps its ₹70.80 fee" once the payment's fee is known (else "its fee isn't returned"; never a
+  share of it, which would suggest part comes back); the cancel toast names the refund ("KS-1051 cancelled · refund ₹2,381
+  in Razorpay"); the waiting box says
+  "If they pay later, it's refunded and Razorpay keeps about ₹11.78."; a payment refunded in full says "· Razorpay kept
+  ₹11.80" on its line. Try again shows only where it can work (never too old, already refunded, or settled by a later
+  change). The cancel dialog names what the payments still hold, and what is already refunded or on its way.
 
 ## Offers (owner-approved 2026-11-08; spec `docs/specs/2026-11-08-coupons.md`, mockup https://claude.ai/artifact/HVFMBJzJoH9tTUh9d1zxHT)
 

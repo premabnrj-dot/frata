@@ -90,7 +90,7 @@ archived/deleted/duplicated per shop per week; support asks "how do I delete a p
 ## As built (2026-11-13; impact and speed reviews on the diff)
 - Speed at 10k products: the page's ids are read first and the row facts are worked out for those 50 only (page 100:
   286 → 6 ms); JIT off for the list's transaction (stock sort with a term: 167 → ~90 ms); a partial index for Low stock
-  (`variants_tenant_product_low`, migration 0120, its 3 tied to `LOW_STOCK_AT` by a test). SKU search keeps its scan
+  (`variants_tenant_product_low`, migration 0122, its 3 tied to `LOW_STOCK_AT` by a test). SKU search keeps its scan
   (RLS keeps `ilike` off an index); a prefix search on `variants_tenant_sku_upper` is the next step if shops grow.
 - On a phone the list has no selection (design language § Work queues 7). Checkboxes are 24 px.
 

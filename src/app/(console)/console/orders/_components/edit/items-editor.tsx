@@ -8,6 +8,7 @@ import { Panel } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { paise } from '@/domains/money/paise'
 import { inOrder, planEdit, type Choice, type EditReason, type Want } from '@/domains/orders/edit'
+import { dueOf, feeKept, settleOf } from '@/domains/orders/refunds'
 import { formatInr } from '@/lib/format'
 import type { AddResult, EditorData } from '@/lib/queries/order-edit'
 import { loadItemsEditor, saveItemsEdit, undoItemsEdit } from '../../edit-actions'
@@ -70,12 +71,14 @@ export default function ItemsEditor({ orderId, number, onClose }: { orderId: str
   }
   const plan = result.r.ok ? result.r.plan : null
   const problem = result.r.ok ? null : result.r.problem
+  // Paid online (OE·2): a refund of the difference, or a payment asked for first — as the save will work it out.
+  const settle = plan && data.facts.paid ? settleOf(plan.total.after, data.facts.paid, data.facts.paid.now) : null
 
   async function save() {
     if (!plan || busy) return
     setBusy(true)
     try {
-      const r = await saveItemsEdit(orderId, { want: result!.want, reasons: result!.reasons, notify: !!data!.to && notify, expectedTotal: plan.total.after })
+      const r = await saveItemsEdit(orderId, { want: result!.want, reasons: result!.reasons, notify: !!data!.to && notify, expectedTotal: plan.total.after, ...(settle ? { expectedDue: dueOf(settle) } : {}) })
       if (!r.ok) {
         toast.error(r.error)
         // The facts moved under the panel (stock, an offer, a price): read them again, keeping the merchant's choices.
@@ -83,7 +86,10 @@ export default function ItemsEditor({ orderId, number, onClose }: { orderId: str
         return
       }
       const eventId = r.eventId
-      toast({ text: `${number} saved · collect ${formatInr(paise(r.total))}`, undo: async () => { const u = await undoItemsEdit(eventId); router.refresh(); return u.ok ? { ok: true } : { ok: false, error: u.error } } })
+      // A change asking the shopper to pay changed nothing yet: no Undo (its way out is "Ship without the change").
+      if (r.asked) { toast({ text: `${number}: waiting for ${formatInr(paise(r.asked))} from the shopper` }); onClose(); router.refresh(); return }
+      const said = r.refund ? `refund ${formatInr(paise(r.refund))} in 10 minutes` : data!.facts.order.way === 'prepaid' ? `new total ${formatInr(paise(r.total))}` : `collect ${formatInr(paise(r.total))}`
+      toast({ text: `${number} saved · ${said}`, undo: async () => { const u = await undoItemsEdit(eventId); router.refresh(); return u.ok ? { ok: true } : { ok: false, error: u.error } } })
       onClose()
       router.refresh()
     } catch {
@@ -109,7 +115,8 @@ export default function ItemsEditor({ orderId, number, onClose }: { orderId: str
           setRows((rs) => [...rs, { key: `add-${variantId}-${rs.length}`, line: null, variantId, qty: 1, removed: null, added: found }])
         }} />
       </Section>
-      <WhatChanges number={number} plan={plan} problem={problem} before={data.facts.order.total} to={data.to} notify={notify} onNotify={setNotify}
+      <WhatChanges number={number} plan={plan} problem={problem} before={data.facts.order.total} to={data.to} notify={notify} onNotify={setNotify} settle={settle}
+        kept={settle?.kind === 'refund' && data.facts.paid ? feeKept(settle.parts, data.facts.paid.payments) : null}
         onKeep={onClose} onSave={() => void save()} busy={busy} />
     </div>
   )

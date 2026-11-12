@@ -28,13 +28,18 @@ export type ComposeInput = {
   own: Words | null | undefined
   to: string
   replyTo: string
+  /** An `edited` email of a paid order (OE·2): the refund on its way, or the payment asked for and the total it makes. */
+  edit?: { refund: number | null; ask: number | null; total: number } | null
 }
 
 export function composeOrderEmail(c: ComposeInput): { mail: Rendered; subject: string; words: EmailWords } {
   const { kind, shop, order: o } = c
   const number = `${orderPrefix(shop.orderPrefix ?? '', shop.shopName)}-${o.number}`
   const cod = currentMethod(o) === 'cod'
-  const total = formatInr(Number(o.total) as Paise)
+  const ask = c.edit?.ask ? formatInr(c.edit.ask as Paise) : null
+  // A change waiting for payment has not changed the order yet: its total is the one it makes once paid.
+  const total = formatInr((ask ? c.edit!.total : Number(o.total)) as Paise)
+  const refund = c.edit?.refund ? formatInr(c.edit.refund as Paise) : null
   const values: Values = {
     'First name': firstName(o.customerName), 'Order number': number, Total: total, 'Shop name': shop.shopName,
     'Pay on delivery': cod ? total : undefined, Courier: c.ship?.courier ?? undefined, 'Tracking number': c.ship?.tracking ?? undefined,
@@ -49,9 +54,10 @@ export function composeOrderEmail(c: ComposeInput): { mail: Rendered; subject: s
     preview: words.preview,
     shop: { name: shop.shopName, logoUrl: shop.logoUrl ?? null, accent: c.accent },
     heading: words.heading, message: words.message,
-    button: words.button ? { label: words.button, href: orderLink } : null,
+    button: ask ? { label: `Pay ${ask} for the changes`, href: orderLink } : words.button ? { label: words.button, href: orderLink } : null,
     order: { number, date: dayMonthIN(o.placedAt), items: c.lines.map((l) => ({ title: l.title, detail: [...(l.values ?? []), `Qty ${l.qty}`].join(' · ') })), total,
-      payLine: o.cancelledAt ? null : cod ? `Pay ${total} on delivery, in cash or UPI` : o.paidAt ? 'Paid online' : null },
+      payLine: o.cancelledAt ? null : ask ? `Pay ${ask} for the changes · nothing changes until then` : refund ? `Refund of ${refund} on its way · 5–10 working days`
+        : cod ? `Pay ${total} on delivery, in cash or UPI` : o.paidAt ? 'Paid online' : null },
     footer: { legalName: shop.legalName || shop.shopName, address: shop.address || '', supportEmail: c.replyTo,
       grievance: shop.grievanceName ? [shop.grievanceName, shop.grievanceEmail].filter(Boolean).join(', ') : null,
       newDropsHref: drops ? `${origin}/email/drops#o=${o.id}&t=${encodeURIComponent(drops)}` : null },

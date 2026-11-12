@@ -3,7 +3,10 @@ import { and, desc, eq, inArray, notExists, sql } from 'drizzle-orm'
 import { withTenant } from '@/lib/db/tenant'
 import { noticePrefs, noticeReads, notices } from '@/lib/db/schema-email'
 import { billingNotices, frrataInvoices } from '@/lib/db/schema-billing'
-import { supportSessions } from '@/lib/db/schema'
+import { shopSettings, supportSessions } from '@/lib/db/schema'
+import { orderPrefix } from '@/domains/signup/slug'
+import { orderEdits } from '@/lib/db/schema-edits'
+import { orders } from '@/lib/db/schema-orders'
 import { addonPrices, tenantAddons } from '@/lib/db/schema-modules'
 import { isModuleKey, MODULES } from '@/domains/modules/registry'
 import { noticeFallback, noticeWords, OPTIONAL_TYPES, DEFAULT_EMAIL, type NoticeSource, type NoticeType, type OptionalType } from '@/domains/email/notices'
@@ -39,6 +42,12 @@ export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string): 
         order by abs(extract(epoch from a.starts_at - t.trial_ends_at)) limit 1) as monthly
       from ${tenantAddons} t where t.tenant_id = ${rows[0]!.tenantId} and t.id in (select jsonb_array_elements_text(${JSON.stringify(trialIds)}::jsonb)::uuid)`) : Promise.resolve([]),
   ])
+  // OE·2: a change still waiting for the shopper's payment, by its order's number and what it asks.
+  const editIds = rows.filter((n) => n.sourceKind === 'edit_payment' && n.sourceId).map((n) => n.sourceId!)
+  const edits = editIds.length ? await tx.select({ id: orderEdits.id, asked: orderEdits.asked, number: orders.number, prefix: shopSettings.orderPrefix }).from(orderEdits)
+    .innerJoin(orders, and(eq(orders.tenantId, orderEdits.tenantId), eq(orders.id, orderEdits.orderId)))
+    .leftJoin(shopSettings, eq(shopSettings.tenantId, orderEdits.tenantId)).where(and(eq(orderEdits.tenantId, rows[0]!.tenantId), inArray(orderEdits.id, editIds))) : []
+  const edit = new Map(edits.map((e) => [e.id, e]))
   const trial = new Map(trials.map((t) => [t.id, t]))
   const bill = new Map(bills.map((b) => [b.id, b])), visit = new Map(visits.map((v) => [v.id, v]))
   const out = new Map<string, { title: string; body: string }>()
@@ -53,6 +62,9 @@ export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string): 
     } else if (n.sourceKind === 'addon_trial') {
       const t = n.sourceId ? trial.get(n.sourceId) : undefined
       if (t && t.monthly !== null && isModuleKey(t.module)) src = { kind: 'addon_trial', name: MODULES[t.module].name, monthly: formatInr(Number(t.monthly) as Paise), day: dayMonthIN(new Date(t.ends)) }
+    } else if (n.sourceKind === 'edit_payment') {
+      const e = n.sourceId ? edit.get(n.sourceId) : undefined
+      if (e) src = { kind: 'edit_payment', number: `${orderPrefix(e.prefix ?? '', shopName)}-${e.number}`, amount: formatInr(Number(e.asked) as Paise) }
     } else if (n.title) src = { kind: 'admin', title: n.title, body: n.body }
     out.set(n.id, src ? noticeWords(src, shopName) : noticeFallback(n))
   }

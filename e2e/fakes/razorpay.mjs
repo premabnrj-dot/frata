@@ -3,7 +3,8 @@ import http from "node:http"
 import crypto from "node:crypto"
 import { BILLING_KEYS, RZP_KEYS } from '../constants.mjs'
 const KEY = RZP_KEYS.id, SECRET = RZP_KEYS.secret
-const orders = new Map(), payments = new Map(), byId = new Map()
+const orders = new Map(), payments = new Map(), byId = new Map(), refunds = []
+let refundNext = null
 let failNext = false
 const basic = (id, secret) => 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64')
 // A shop's keys (checkout) or Frrata's billing keys (billing B3): each signs with its own secret.
@@ -19,7 +20,7 @@ http.createServer((req, res) => {
       if (u.pathname === '/_test/pay') {
         const o = orders.get(body.order_id); if (!o) return send(res, 404, {})
         const id = 'pay_' + crypto.randomBytes(7).toString('hex')
-        const p = { id, entity: 'payment', status: body.status ?? 'captured', amount: o.amount, currency: 'INR', order_id: o.id, fee: Math.round(o.amount * 0.0236), tax: Math.round(o.amount * 0.0036), method: o.method ?? 'upi',
+        const p = { id, entity: 'payment', status: body.status ?? 'captured', amount: o.amount, currency: 'INR', order_id: o.id, created_at: Math.floor(Date.now() / 1000), fee: Math.round(o.amount * 0.0236), tax: Math.round(o.amount * 0.0036), method: o.method ?? 'upi',
           ...(o.token ? { token_id: 'token_' + crypto.randomBytes(7).toString('hex'), customer_id: o.customer_id } : {}) }
         payments.set(o.id, [...(payments.get(o.id) ?? []), p]); byId.set(id, p)
         // Signed with the key of the account that made the order (a shop's, or Frrata's billing account).
@@ -28,6 +29,8 @@ http.createServer((req, res) => {
       if (u.pathname === '/_test/orders') return send(res, 200, [...orders.values()])
       if (u.pathname === '/_test/fail-next') { failNext = true; return send(res, 200, {}) }
       if (u.pathname === '/_test/payments') return send(res, 200, [...byId.values()])
+      if (u.pathname === '/_test/refunds') return send(res, 200, refunds)
+      if (u.pathname === '/_test/refund-next') { refundNext = body.what ?? null; return send(res, 200, {}) }
       return send(res, 404, {})
     }
     if (!authOk(req)) return send(res, 401, { error: { code: 'BAD_REQUEST_ERROR', description: 'Authentication failed' } })
@@ -39,6 +42,22 @@ http.createServer((req, res) => {
     }
     if (req.method === 'GET' && u.pathname === '/v1/orders') return send(res, 200, { entity: 'collection', items: [...orders.values()].filter((o) => o.receipt === u.searchParams.get('receipt')) })
     if (req.method === 'POST' && u.pathname === '/v1/customers') return send(res, 200, { id: 'cust_' + crypto.createHash('sha256').update(String(body.email)).digest('hex').slice(0, 14), entity: 'customer' })
+    // Refunds (order edit OE·2): listed, created (normal speed only; /_test/refund-next makes the next one refuse for low
+    // balance) and read back. Receipts unique per payment, as Razorpay says.
+    const rl = u.pathname.match(/^\/v1\/payments\/(pay_[a-z0-9]+)\/refunds$/)
+    if (req.method === 'GET' && rl) return send(res, 200, { entity: 'collection', items: refunds.filter((r) => r.payment_id === rl[1]) })
+    const rf = u.pathname.match(/^\/v1\/payments\/(pay_[a-z0-9]+)\/refunds\/(rfnd_[a-z0-9]+)$/)
+    if (req.method === 'GET' && rf) { const r = refunds.find((x) => x.id === rf[2]); return r ? send(res, 200, r) : send(res, 404, {}) }
+    const rc = u.pathname.match(/^\/v1\/payments\/(pay_[a-z0-9]+)\/refund$/)
+    if (req.method === 'POST' && rc) {
+      const p = byId.get(rc[1]); if (!p) return send(res, 400, { error: { code: 'BAD_REQUEST_ERROR', description: 'The id provided does not exist' } })
+      if (refundNext === 'balance') { refundNext = null; return send(res, 400, { error: { code: 'BAD_REQUEST_ERROR', description: 'The merchant does not have enough balance to process the refund' } }) }
+      const given = refunds.filter((r) => r.payment_id === p.id && r.status !== 'failed').reduce((a, r) => a + r.amount, 0)
+      if (body.amount > p.amount - given) return send(res, 400, { error: { code: 'BAD_REQUEST_ERROR', description: 'The refund amount provided is greater than amount captured' } })
+      const r = { id: 'rfnd_' + crypto.randomBytes(7).toString('hex'), entity: 'refund', amount: body.amount, receipt: body.receipt, notes: body.notes, payment_id: p.id, status: 'processed',
+        speed_requested: body.speed, idempotency_key: req.headers['x-refund-idempotency'] ?? null }
+      refunds.push(r); return send(res, 200, r)
+    }
     const pm = u.pathname.match(/^\/v1\/payments\/(pay_[a-z0-9]+)$/)
     if (req.method === 'GET' && pm) return byId.has(pm[1]) ? send(res, 200, byId.get(pm[1])) : send(res, 404, { error: { description: 'no such payment' } })
     // A recurring debit on a token: captured, or failed once after /_test/fail-next.
