@@ -1,5 +1,5 @@
 {
-  "id": "4bdcd1f7-29fe-4600-9443-b553f1d7366e",
+  "id": "77dc8278-1adf-4fc8-b925-befeba431f10",
   "prevId": "d3d4bea8-6f7a-451f-92ac-b16163c88966",
   "version": "7",
   "dialect": "postgresql",
@@ -316,12 +316,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "partner_member_id": {
-          "name": "partner_member_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -330,21 +324,6 @@
           "columns": [
             {
               "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "members_partner_member": {
-          "name": "members_partner_member",
-          "columns": [
-            {
-              "expression": "partner_member_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3731,6 +3710,28 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "variants_tenant_product_low": {
+          "name": "variants_tenant_product_low",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "product_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"variants\".\"archived_at\" is null and \"variants\".\"when_out\" = 'stop' and \"variants\".\"stock\" between 1 and 3",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -6731,89 +6732,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.partner_assignments": {
-      "name": "partner_assignments",
-      "schema": "",
-      "columns": {
-        "partner_member_id": {
-          "name": "partner_member_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "partner_assignments_tenant": {
-          "name": "partner_assignments_tenant",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "partner_assignments_partner_member_id_partner_members_id_fk": {
-          "name": "partner_assignments_partner_member_id_partner_members_id_fk",
-          "tableFrom": "partner_assignments",
-          "tableTo": "partner_members",
-          "columnsFrom": [
-            "partner_member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "partner_assignments_tenant_id_tenants_id_fk": {
-          "name": "partner_assignments_tenant_id_tenants_id_fk",
-          "tableFrom": "partner_assignments",
-          "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "partner_assignments_partner_member_id_tenant_id_pk": {
-          "name": "partner_assignments_partner_member_id_tenant_id_pk",
-          "columns": [
-            "partner_member_id",
-            "tenant_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.partner_links": {
       "name": "partner_links",
       "schema": "",
@@ -6968,168 +6886,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.partner_members": {
-      "name": "partner_members",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "partner_id": {
-          "name": "partner_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "role": {
-          "name": "role",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "invited_by": {
-          "name": "invited_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "invited_at": {
-          "name": "invited_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "invite_expires_at": {
-          "name": "invite_expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "accepted_at": {
-          "name": "accepted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "removed_at": {
-          "name": "removed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "removed_by": {
-          "name": "removed_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "partner_members_one_partner": {
-          "name": "partner_members_one_partner",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"partner_members\".\"removed_at\" is null and \"partner_members\".\"user_id\" is not null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "partner_members_email": {
-          "name": "partner_members_email",
-          "columns": [
-            {
-              "expression": "partner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "email",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"partner_members\".\"removed_at\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "partner_members_partner": {
-          "name": "partner_members_partner",
-          "columns": [
-            {
-              "expression": "partner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "partner_members_partner_id_partners_id_fk": {
-          "name": "partner_members_partner_id_partners_id_fk",
-          "tableFrom": "partner_members",
-          "tableTo": "partners",
-          "columnsFrom": [
-            "partner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "partner_members_role": {
-          "name": "partner_members_role",
-          "value": "\"partner_members\".\"role\" in ('owner','lead','builder')"
-        },
-        "partner_members_email_lower": {
-          "name": "partner_members_email_lower",
-          "value": "\"partner_members\".\"email\" = lower(\"partner_members\".\"email\")"
-        },
-        "partner_members_accepted_user": {
-          "name": "partner_members_accepted_user",
-          "value": "(\"partner_members\".\"accepted_at\" is null) = (\"partner_members\".\"user_id\" is null)"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.partners": {
       "name": "partners",
       "schema": "",
@@ -7243,24 +6999,6 @@
         },
         "decline_reason": {
           "name": "decline_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "suspended_at": {
-          "name": "suspended_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "suspended_by": {
-          "name": "suspended_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "suspend_reason": {
-          "name": "suspend_reason",
           "type": "text",
           "primaryKey": false,
           "notNull": false

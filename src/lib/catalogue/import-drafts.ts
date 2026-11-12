@@ -1,11 +1,10 @@
 import 'server-only'
-import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
-import { productImages, products, productVideos, variants } from '@/lib/db/schema-catalogue'
+import { products } from '@/lib/db/schema-catalogue'
 import { importJobs, importRows } from '@/lib/db/schema-imports'
-import { orderLines } from '@/lib/db/schema-orders'
 import { arrayParam } from '@/lib/db/sql-array'
-import { photosInUse } from './photos-in-use'
+import { deleteProducts } from './delete-products'
 import { goLive, readinessIn } from './readiness'
 
 // =============================================================================
@@ -35,28 +34,12 @@ export async function deleteDrafts(tx: Tx, tenantId: string, jobId: string, now:
   const [job] = await tx.select({ finishedAt: importJobs.finishedAt }).from(importJobs).where(and(eq(importJobs.tenantId, tenantId), eq(importJobs.id, jobId))).for('update')
   if (!job) return null
   const mine = await jobProducts(tx, tenantId, jobId)
-  const drafts = mine.filter((p) => p.status === 'draft' && !p.publishedAt && !p.publishAt).map((p) => p.id)
-  const list = arrayParam(drafts, 'uuid')
-  const [sold, filmed] = drafts.length ? await Promise.all([
-    tx.selectDistinct({ id: variants.productId }).from(orderLines).innerJoin(variants, and(eq(variants.tenantId, orderLines.tenantId), eq(variants.id, orderLines.variantId)))
-      .where(and(eq(orderLines.tenantId, tenantId), sql`${variants.productId} = any(${list})`)),
-    tx.select({ id: productVideos.productId }).from(productVideos).where(and(eq(productVideos.tenantId, tenantId), sql`${productVideos.productId} = any(${list})`)),
-  ]) : [[], []]
-  const keep = new Set([...sold, ...filmed].map((r) => r.id))
-  const gone = drafts.filter((id) => !keep.has(id))
-  let photos: { base: string; widths: number[] }[] = []
-  if (gone.length) {
-    const goneList = arrayParam(gone, 'uuid')
-    const imgs = await tx.select({ base: productImages.base, widths: productImages.widths }).from(productImages)
-      .where(and(eq(productImages.tenantId, tenantId), sql`${productImages.productId} = any(${goneList})`))
-    const used = await photosInUse(tx, tenantId, imgs.map((i) => i.base), gone)
-    photos = imgs.filter((i) => !used.has(i.base))
-    await tx.delete(products).where(and(eq(products.tenantId, tenantId), sql`${products.id} = any(${goneList})`, eq(products.status, 'draft'), isNull(products.publishedAt)))
-  }
+  // The one delete rule (delete-products.ts): what was live, ordered or filmed stays and is counted.
+  const out = await deleteProducts(tx, tenantId, mine.map((p) => p.id))
   await tx.update(importJobs).set({ fileHash: null, draftsDeletedAt: now, updatedAt: now, ...(job.finishedAt ? {} : { finishedAt: now }) })
     .where(and(eq(importJobs.tenantId, tenantId), eq(importJobs.id, jobId)))
   if (!job.finishedAt) await tx.update(importRows).set({ cells: null }).where(and(eq(importRows.tenantId, tenantId), eq(importRows.jobId, jobId)))
-  return { deleted: gone.length, kept: mine.length - gone.length, photos }
+  return { deleted: out.deleted.length, kept: mine.length - out.deleted.length, photos: out.photos }
 }
 
 export type Outcome = { drafts: number; needPhotos: number; needGst: number; ready: string[] }

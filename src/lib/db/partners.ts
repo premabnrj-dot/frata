@@ -136,7 +136,7 @@ export async function shopPeople(tenantId: string): Promise<Person[]> {
   })
 }
 
-// ════════ The team (T1a; drizzle/0123). Every function re-checks the caller is the partner's owner (or the invitee). ════════
+// ════════ The team (T1a; drizzle/0124). Every function re-checks the caller is the partner's owner (or the invitee). ════════
 
 export type TeamStore = { tenantId: string; name: string }
 export type TeamPerson = {

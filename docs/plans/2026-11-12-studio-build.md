@@ -22,7 +22,7 @@ Studio itself (V3) cannot be built before V1 and V2: a site has nothing to read 
 it are real work a partner uses today.
 
 ## T1a · Teams: Owner and Leads
-As built: migrations 0122 (tables) and 0123 (access), proof §77, e2e `79-partner-team`. Review changes folded in before
+As built: migrations 0123 (tables) and 0124 (access), proof §77, e2e `80-partner-team`. Review changes folded in before
 code: handover stays owner-only until T1b; suspend deletes partner people's shop rows and reinstate rebuilds them from
 assignments; the applicant is the owner member from apply; 7-day invites, ≤ 50 people, 20 invites an hour; a
 colleague never accepts a handover; create-shop locks per partner.

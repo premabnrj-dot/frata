@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.23.1
+  version: 5.24.0
   verified: 2026-11-13
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -481,6 +481,13 @@ Rules every products screen keeps (PR·0 built; PR·1–4 follow the mockup):
 8. **The list scales.** Search by name or SKU, 50 a page, "Showing 1–50 of N"; past the last page goes to the last page.
 9. **Duplicates are refused where they are made**: the field that holds the clash (a SKU, a barcode, a chip) is marked,
    not a toast alone.
+10. **The list acts on many (PR·1).** Filters are tabs with counts (All, Active, Draft, Unlisted, Archived, Low stock),
+    search covers name, SKU or a whole tag, Sort is a select, and every one of them is in the address. Selecting rows
+    shows the bulk bar above the table: Set status ▾, Add to collection ▾, Duplicate (one), Archive, Delete. As in Work
+    queues 7, bulk is a desktop tool, so a phone shows no checkboxes. Menus leave the bar while an action runs.
+11. **Undo where it can be undone; ask where it can't.** Status changes, Archive and Duplicate show Undo for 8 s, and an
+    Undo that can't put one back names it. Delete asks in a dialog (type the count for 5 or more). It deletes only what
+    was never live, ordered or filmed. The rest is named, and Archive is offered for what isn't archived already.
 
 ## Import and order edit (owner-approved 2026-11-12; specs `docs/specs/2026-11-11-product-import.md`, `docs/specs/2026-11-11-order-edit.md`, mockup https://claude.ai/artifact/76HjNBCo2xdJyf6Qvwxutx)
 
@@ -491,7 +498,7 @@ Rules every products screen keeps (PR·0 built; PR·1–4 follow the mockup):
 - **Photos in bulk are matched by file name** (SKU, address or name, a trailing number for order); an unmatched photo
   asks "Which product?" in place.
   As built (PI·2, 2026-11-12; `src/app/(console)/console/products/photos/`): "Add photos" from Done's Need photos tile
-  (back: Import) and from Products' header (back: Products); meta "N products need photos", one primary "Choose
+  (back: Import) and from Products' header, under More (back: Products); meta "N products need photos", one primary "Choose
   photos", the info callout with two example names from the shop's own products; empty: a drop area with the formats
   and "up to 500 at a time". One card: "126 photos · 37 products" + a warn "4 not matched"; cards as drawn (the file
   name on the photo; the product, then "Photo 2 of 3" or its colour; "Change"); a card that asks has a warn edge, its

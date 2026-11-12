@@ -1,6 +1,6 @@
 // =============================================================================
 // FILE: src/domains/partners/team.ts — a partner's people (T1a, docs/plans/2026-11-12-studio-build.md).
-// Pure: who may do what in the partner workspace. The definers in drizzle/0123 hold the same rules in SQL and
+// Pure: who may do what in the partner workspace. The definers in drizzle/0124 hold the same rules in SQL and
 // refuse first; these decide what a page offers. The partner_members role CHECK is built from PARTNER_ROLES.
 // =============================================================================
 
@@ -13,7 +13,7 @@ export const PARTNER_ROLE_LABEL: Record<PartnerRole, string> = { owner: 'Owner',
 
 /**
  * What each role may do in the workspace (spec § Roles), read by the partner layout, the Team and Your details pages,
- * the team actions and the console's building banner. The definers in drizzle/0123 refuse the same on their own.
+ * the team actions and the console's building banner. The definers in drizzle/0124 refuse the same on their own.
  * Hand over stays owner-only until T1b (partner passkeys).
  */
 export const PARTNER_CAN = {

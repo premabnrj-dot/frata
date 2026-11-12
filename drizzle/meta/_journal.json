@@ -859,15 +859,22 @@
     {
       "idx": 122,
       "version": "7",
-      "when": 1794513445653,
-      "tag": "0122_partner_teams",
+      "when": 1794513446121,
+      "tag": "0122_products_low_stock",
       "breakpoints": true
     },
     {
       "idx": 123,
       "version": "7",
+      "when": 1794513445653,
+      "tag": "0123_partner_teams",
+      "breakpoints": true
+    },
+    {
+      "idx": 124,
+      "version": "7",
       "when": 1794513452730,
-      "tag": "0123_partner_teams_access",
+      "tag": "0124_partner_teams_access",
       "breakpoints": true
     }
   ]

@@ -151,7 +151,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   new owner's verified email for the shop's trial or ends it (one trial per business). A partner shop's trial starts at
   creation and it cannot be published until it has an owner (trigger in 0066). A partner's cap counts its
   shops not yet handed over, and a shop with no owner is never billed (`app_shops_to_bill`).
-- **Partner teams** (T1a, 2026-11-12; plan `docs/plans/2026-11-12-studio-build.md`, drizzle/0122–0123): a partner is a
+- **Partner teams** (T1a, 2026-11-12; plan `docs/plans/2026-11-12-studio-build.md`, drizzle/0123–0124): a partner is a
   team in `partner_members` (owner | lead; `builder` waits for ADR-0015) with `partner_assignments` (which stores a lead
   works on). Both tables are definers-only for `frata_app` (check:tenant fails any grant but Admin's select). A partner
   person's shop access is still a `members` row with role `partner`, now pointing at its person

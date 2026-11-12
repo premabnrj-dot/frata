@@ -1,20 +1,18 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { del } from '@vercel/blob'
 import { z } from 'zod'
 import { CELL_MAX } from '@/domains/catalogue/import/cells'
 import { FIELDS, SOURCES, type Field, type Mapping } from '@/domains/catalogue/import/fields'
 import { CHUNK_BYTES, MAX_COLUMNS, MAX_ROWS } from '@/domains/catalogue/import/limits'
-import { acceptedBase, storeHost, urlFor } from '@/domains/media/sizes'
 import { asMember } from '@/lib/auth/as-member'
 import { memberAudit } from '@/lib/auth/member-audit'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { deleteDrafts, publishReady } from '@/lib/catalogue/import-drafts'
+import { removePhotoFiles } from '@/lib/catalogue/photo-files'
 import { skuTaken } from '@/lib/catalogue/write'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { Refused, startJob, stopJob, writeChunk, type ChunkResult } from '@/lib/catalogue/imports'
-import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import { errName } from '@/lib/log'
 import { checkRows } from '@/lib/queries/imports'
 import type { Checked } from '@/domains/catalogue/import/plan'
@@ -160,9 +158,7 @@ export async function deleteImportDrafts(jobId: unknown): Promise<{ ok: true; de
     if (!r.ok) return { ok: false, error: r.error }
     if (!r.value) return { ok: false, error: 'That import is not in your shop.' }
     // The files go after the commit, only those exactly inside this shop's folder.
-    const host = storeHost(BLOB_STORE_ID)
-    const files = host ? r.value.photos.filter((ph) => acceptedBase(ph.base, host, r.tenantId, 'products') === ph.base).flatMap((ph) => ph.widths.map((w) => urlFor(ph.base, w))) : []
-    if (files.length && BLOB_READ_WRITE_TOKEN) await del(files, { token: BLOB_READ_WRITE_TOKEN }).catch((e) => console.error('[deleteImportDrafts] blob delete', errName(e)))
+    await removePhotoFiles(r.tenantId, r.value.photos, 'deleteImportDrafts')
     revalidatePath('/console/products', 'layout')
     return { ok: true, deleted: r.value.deleted, kept: r.value.kept }
   } catch (err) {

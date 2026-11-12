@@ -3,11 +3,13 @@ import { costsVisibleIn } from './settings'
 import type { MemberRole } from '@/domains/tenancy/roles'
 import { cache } from 'react'
 import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
-import { availability, type VariantFacts, type WhenOut } from '@/domains/catalogue/availability'
+import { availability, LOW_STOCK_AT, type VariantFacts, type WhenOut } from '@/domains/catalogue/availability'
+import type { ListQuery } from '@/domains/catalogue/list-query'
 import { withoutRate, type Unrated } from '@/domains/tax/rates'
 import { matches, type ProductFacts, type Rule } from '@/domains/catalogue/collection-rules'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { withTenant } from '@/lib/db/tenant'
+import { arrayParam } from '@/lib/db/sql-array'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { productPairs } from '@/lib/db/schema-catalogue'
@@ -20,41 +22,67 @@ import { manifestsFor } from '@/lib/themes/manifests'
 
 export const PRODUCTS_PAGE = 50
 
-/** The product list: one row each, with its cover, variant count, price range, stock and what each variant offers
- * (availability is derived from these, never read from stock alone: made to order and pre-order sell at 0). 50 a page,
- * searched by name or SKU (PR·0: the list stopped at 50 with no pager or search), with the matching count. */
-export async function listProducts(tenantId: string, page = 0, status: 'draft' | 'active' | 'unlisted' | 'archived' | null = null, q = '') {
-  const term = q.trim().slice(0, 80)
+/** Low stock, one rule (products PR·1): a size sold from stock (not pre-order or made to order) with 1 to LOW_STOCK_AT
+ *  left on the shelf. On-hand stock, as the Stock column shows: carts hold stock for minutes, the merchant restocks
+ *  the shelf. Read by the list's filter and its count. */
+const lowStock = (tenantId: string) => sql`exists (select 1 from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId}
+  and v.archived_at is null and v.when_out = 'stop' and v.stock between 1 and ${sql.raw(String(LOW_STOCK_AT))})`
+
+/** The product list (products PR·1): one row each, with its cover, sizes, colours' swatches, price range, stock and what
+ * each variant offers (availability is derived from these, never read from stock alone). 50 a page; filtered by status
+ * or Low stock; searched by name, SKU or a whole tag; sorted by last edit, name or stock; with the counts of every chip,
+ * read in the same transaction so they agree with the rows. */
+export async function listProducts(tenantId: string, query: ListQuery) {
+  const term = query.q
   const like = `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
-  const where = and(
-    eq(products.tenantId, tenantId),
-    status ? eq(products.status, status) : sql`${products.status} <> 'archived'`,
-    term ? sql`(${products.title} ilike ${like} or exists (select 1 from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.sku ilike ${like}))` : undefined,
-  )
+  const searched = term ? sql`(${products.title} ilike ${like}
+    or exists (select 1 from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.sku ilike ${like})
+    or exists (select 1 from unnest(${products.tags}) t where lower(t) = lower(${term})))` : undefined
+  const filtered = query.filter === 'all' ? sql`${products.status} <> 'archived'`
+    : query.filter === 'low' ? and(sql`${products.status} <> 'archived'`, lowStock(tenantId))!
+    : eq(products.status, query.filter)
+  const where = and(eq(products.tenantId, tenantId), filtered, searched)
+  const stockSum = sql<number>`(select coalesce(sum(v.stock), 0)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`
+  const order = query.sort === 'name' ? [asc(sql`lower(${products.title})`), asc(products.id)]
+    : query.sort === 'stock' ? [asc(stockSum), desc(products.updatedAt), asc(products.id)] : [desc(products.updatedAt), asc(products.id)]
   return withTenant(tenantId, async (tx) => {
-    const [rows, [n]] = await Promise.all([
-      tx.select({
+    // Speed review 2026-11-13: the stock sort with a term crossed the JIT threshold (~80 ms compiling for a 50-row page);
+    // off for this transaction only.
+    await tx.execute(sql`select set_config('jit', 'off', true)`)
+    // The page's ids first, then the per-row facts for those 50 only: an OFFSET over the full select worked out every
+    // skipped row's subqueries (page 100: 286 ms → 6 ms).
+    const page = await tx.select({ id: products.id }).from(products).where(where).orderBy(...order).limit(PRODUCTS_PAGE).offset((query.page - 1) * PRODUCTS_PAGE)
+    const ids = page.map((r) => r.id)
+    const [found, [n], counts, [low]] = await Promise.all([
+      ids.length ? tx.select({
         id: products.id, title: products.title, handle: products.handle, status: products.status, publishAt: products.publishAt, publishedAt: products.publishedAt, updatedAt: products.updatedAt,
-        typeName: productTypes.name,
+        typeName: productTypes.name, options: products.options, optionValues: products.optionValues,
         variantCount: sql<number>`(select count(*)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
-        stock: sql<number>`(select coalesce(sum(v.stock), 0)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
+        stock: stockSum,
         minPrice: sql<number | null>`(select min(v.price)::bigint from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price > 0)`,
         maxPrice: sql<number | null>`(select max(v.price)::bigint from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price > 0)`,
         unpriced: sql<number>`(select count(*)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price <= 0)`,
         offers: sql<VariantFacts[]>`(select coalesce(json_agg(json_build_object(
           'stock', v.stock, 'whenOut', v.when_out, 'shipsBy', v.ships_by, 'leadMinDays', v.lead_min_days, 'leadMaxDays', v.lead_max_days, 'preorderCap', v.preorder_cap)), '[]'::json)
           from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
+        swatches: sql<string[]>`(select coalesce(array_agg(c.hex order by c.value), '{}') from (select hex, value from ${productColours} c
+          where c.product_id = "products"."id" and c.tenant_id = ${tenantId} and c.hex is not null order by c.value limit 6) c)`,
         cover: sql<{ base: string; widths: number[] } | null>`(select json_build_object('base', i.base, 'widths', i.widths) from ${productImages} i where i.product_id = "products"."id" and i.tenant_id = ${tenantId} order by i.position limit 1)`,
       })
         .from(products)
         .leftJoin(productTypes, and(eq(productTypes.id, products.typeId), eq(productTypes.tenantId, tenantId)))
-        .where(where)
-        .orderBy(desc(products.updatedAt))
-        .limit(PRODUCTS_PAGE).offset(page * PRODUCTS_PAGE),
+        .where(and(eq(products.tenantId, tenantId), sql`${products.id} = any(${arrayParam(ids, 'uuid')})`)) : Promise.resolve([]),
       tx.select({ n: count() }).from(products).where(where),
+      tx.select({ status: products.status, n: count() }).from(products).where(eq(products.tenantId, tenantId)).groupBy(products.status),
+      tx.select({ n: count() }).from(products).where(and(eq(products.tenantId, tenantId), sql`${products.status} <> 'archived'`, lowStock(tenantId))),
     ])
+    const at = new Map(ids.map((id, i) => [id, i]))
+    const rows = [...found].sort((a, b) => at.get(a.id)! - at.get(b.id)!)
+    const by = Object.fromEntries(counts.map((r) => [r.status, r.n])) as Record<string, number>
+    const all = Object.values(by).reduce((a, b) => a + b, 0)
     return {
       total: n?.n ?? 0,
+      counts: { all: all - (by.archived ?? 0), active: by.active ?? 0, draft: by.draft ?? 0, unlisted: by.unlisted ?? 0, archived: by.archived ?? 0, low: low?.n ?? 0, any: all },
       rows: rows.map((r) => ({ ...r, minPrice: r.minPrice === null ? null : Number(r.minPrice), maxPrice: r.maxPrice === null ? null : Number(r.maxPrice) })),
     }
   })
@@ -90,12 +118,7 @@ export async function liveWithoutRateIn(tx: Tx, tenantId: string, now: Date): Pr
 
 export const liveWithoutRate = (tenantId: string, now: Date) => withTenant(tenantId, (tx) => liveWithoutRateIn(tx, tenantId, now))
 
-/** How many products have each status (the list's tabs). */
-export async function statusCounts(tenantId: string): Promise<Record<string, number>> {
-  const rows = await withTenant(tenantId, (tx) => tx.select({ status: products.status, n: count() }).from(products).where(eq(products.tenantId, tenantId)).groupBy(products.status))
-  return Object.fromEntries(rows.map((r) => [r.status, r.n]))
-}
-
+/** How many products the shop has that aren't archived. */
 export async function productCount(tenantId: string): Promise<number> {
   const [row] = await withTenant(tenantId, (tx) =>
     tx.select({ n: count() }).from(products).where(and(eq(products.tenantId, tenantId), isNull(products.archivedAt))))
@@ -193,6 +216,12 @@ export async function productFactsIn(tx: Tx, tenantId: string, now = new Date())
 
 export async function productFacts(tenantId: string, now = new Date()): Promise<FactsRow[]> {
   return withTenant(tenantId, (tx) => productFactsIn(tx, tenantId, now))
+}
+
+/** This shop's hand-picked collections, for the list's "Add to collection" (an automatic one picks by its rules). */
+export async function manualCollections(tenantId: string) {
+  return withTenant(tenantId, (tx) => tx.select({ id: collections.id, title: collections.title }).from(collections)
+    .where(and(eq(collections.tenantId, tenantId), eq(collections.kind, 'manual'))).orderBy(asc(collections.title)).limit(200))
 }
 
 /** The collections list, each with how many products are in it now. */

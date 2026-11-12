@@ -212,8 +212,9 @@ export default {
         await s.waitForURL(/\/console\/products$/)
       })
 
-      await t.step('Phone, staff: Products leads to Add photos; a matched photo and one that asks, with no sideways scroll', async () => {
-        await s.getByRole('link', { name: 'Add photos' }).click()
+      await t.step('Phone, staff: Products leads to Add photos (under More, PR·1); a matched photo and one that asks, with no sideways scroll', async () => {
+        await s.getByRole('main').getByRole('button', { name: 'More' }).click()
+        await s.getByRole('menuitem', { name: 'Add photos' }).click()
         await s.waitForURL(/\/console\/products\/photos$/)
         const files = await makePhotos(s, [{ name: 'KS-PHK-1.jpg', w: 600, type: 'image/jpeg' }, { name: 'IMG_0007.jpg', w: 600, type: 'image/jpeg' }])
         await s.locator('input[type=file][aria-label="Choose photos"]').setInputFiles(files)

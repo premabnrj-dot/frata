@@ -3206,7 +3206,7 @@ do $$ declare n int; begin
 end $$;
 rollback;
 
--- 77. Partner teams T1a (0122–0123; plan docs/plans/2026-11-12-studio-build.md § T1a). O owns partner P, L is invited as a
+-- 77. Partner teams T1a (0123–0124; plan docs/plans/2026-11-12-studio-build.md § T1a). O owns partner P, L is invited as a
 -- lead, Z owns another partner, B is a brand owner, X anyone else, S an admin and U a support person. Tables: definers only.
 insert into auth.users (id, email, email_confirmed_at) values
   ('aaaaaaaa-0000-0000-0000-000000000030', 'own@team.test', now()), ('aaaaaaaa-0000-0000-0000-000000000031', 'lead@team.test', now()),
