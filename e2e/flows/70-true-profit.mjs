@@ -45,6 +45,10 @@ export default {
         await o.getByText(/orders with an outcome$/).waitFor()
         await o.getByText('Returns cost you').waitFor()
         await o.getByRole('heading', { name: 'Earns most' }).waitFor()
+        // Cached 15 minutes per shop and period (owner, 2026-11-12): a reload shows the same moment.
+        const at = await o.getByText(/^Updated /).innerText()
+        await o.reload({ waitUntil: 'domcontentloaded' })
+        assert.equal(await o.getByText(/^Updated /).innerText(), at)
         await o.screenshot({ path: t.out('overview'), fullPage: true })
       })
 

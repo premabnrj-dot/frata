@@ -9,6 +9,7 @@ import type { Paise } from '@/domains/money/paise'
 import { CONSOLE_ROLES } from '@/domains/tenancy/roles'
 import { requireMember } from '@/lib/auth/require-member'
 import { formatCount, formatPercent } from '@/lib/format'
+import { timeIN } from '@/lib/format-date'
 import { errName } from '@/lib/log'
 import { appsPage } from '@/lib/queries/modules'
 import { isTpPeriod, rateOf, TP_PERIODS, trueProfitPage, variantsFor, type Line, type TpPeriod } from '@/lib/queries/true-profit'
@@ -62,7 +63,7 @@ export default async function TrueProfitPage({ searchParams }: { searchParams: P
   )
   if (tab === 'billing') return home()
   const [d, variants] = await Promise.all([
-    trueProfitPage(auth.membership.tenantId, role, period, now),
+    trueProfitPage(auth.membership.tenantId, role, period),
     tab === 'products' && open ? variantsFor(auth.membership.tenantId, role, period, open, now) : Promise.resolve(null),
   ]).catch((err) => { console.error('[tp]', errName(err)); return [undefined, null] as const })
   if (d === undefined) return home(<Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>)
@@ -74,7 +75,13 @@ export default async function TrueProfitPage({ searchParams }: { searchParams: P
     const s = p.toString()
     return `/console/apps/true_profit${s ? `?${s}` : ''}`
   }
-  const periods = <ViewTabs label="Period" tabs={TP_PERIODS.map((p) => ({ href: q({ days: p === 30 ? null : p }), label: `${p} days`, current: p === period }))} />
+  // The figures are cached up to 15 minutes (owner, 2026-11-12): when they were worked out sits beside the period.
+  const periods = (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <ViewTabs label="Period" tabs={TP_PERIODS.map((p) => ({ href: q({ days: p === 30 ? null : p }), label: `${p} days`, current: p === period }))} />
+      <span className="text-xs text-muted-foreground">Updated {timeIN(new Date(d.at))}</span>
+    </div>
+  )
   const leftOut = d.total.leftOut > 0 && (
     <p role="status" className="flex flex-wrap items-center gap-2 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">
       {formatCount(d.total.leftOut)} orders left out{d.noCost ? `: ${d.noCost} ${d.noCost === 1 ? 'product has' : 'products have'} no cost price` : ''}.

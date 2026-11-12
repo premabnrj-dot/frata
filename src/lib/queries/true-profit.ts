@@ -10,6 +10,7 @@ import { orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { groupsOf } from './discounts'
 import { costsVisibleIn, planHistoryIn, shipCostsIn } from './settings'
+import { shopCached } from './storefront'
 
 // =============================================================================
 // FILE: src/lib/queries/true-profit.ts — TRUE PROFIT (plan docs/plans/2026-11-12-true-profit-a3.md; approved mockup
@@ -35,6 +36,8 @@ export type Line = { id: string; name: string; delivered: number; returned: numb
 export type PinRow = { pincode: string; place: string | null; codOrders: number; codReturned: number; codKept: number | null; prepaidKept: number | null; codLoses: boolean }
 export type TrueProfit = {
   period: TpPeriod
+  /** When these figures were worked out (ISO): the page is cached up to 15 minutes and says so. */
+  at: string
   total: Kept
   /** Orders delivered (returns after delivery included), came back, lost; returns after delivery and what they credited. */
   returned: number; lost: number; delivered: number; afterReturns: number; afterCredited: number
@@ -49,8 +52,17 @@ export type TrueProfit = {
 export const rateOf = (part: number, of: number) => (of > 0 ? part / of : null)
 
 /** Everything the page shows, in ONE tenant transaction. Null when this member may not see costs. */
-export function trueProfitPage(tenantId: string, role: MemberRole, period: TpPeriod, now = new Date()) {
-  return withTenant(tenantId, (tx) => trueProfitIn(tx, tenantId, role, period, now))
+/** The shop's figures for a period, cached 15 minutes per shop and period (owner, 2026-11-12: at festive volume 90 days
+ *  costs ~2.5 s to work out). Worked out as the owner sees them; who may see them is checked per viewer, never cached.
+ *  Tagged shop:<tenant> by shopCached, so a shop purge refreshes them too. Server-side data only (no cost reaches a browser
+ *  except through this owner-gated page). */
+const cachedFigures = shopCached('true-profit-v1', 'shop', async (tenantId: string, period: number) =>
+  withTenant(tenantId, (tx) => trueProfitIn(tx, tenantId, 'owner', period as TpPeriod, new Date())), 900)
+
+export async function trueProfitPage(tenantId: string, role: MemberRole, period: TpPeriod): Promise<TrueProfit | null> {
+  const sees = await withTenant(tenantId, (tx) => costsVisibleIn(tx, tenantId, role))
+  if (!sees) return null
+  return cachedFigures(tenantId, period)
 }
 
 export async function trueProfitIn(tx: Tx, tenantId: string, role: MemberRole, period: TpPeriod, now: Date): Promise<TrueProfit | null> {
@@ -112,7 +124,7 @@ export async function trueProfitIn(tx: Tx, tenantId: string, role: MemberRole, p
   }).sort((a, b) => (a.codKept ?? 0) - (b.codKept ?? 0))
 
   return {
-    period, total, delivered: total.delivered.n, returned: total.rto.n + afterOf(true) + afterOf(false), lost: total.lost.n,
+    period, at: now.toISOString(), total, delivered: total.delivered.n, returned: total.rto.n + afterOf(true) + afterOf(false), lost: total.lost.n,
     afterReturns: afterOf(true) + afterOf(false), afterCredited: after.reduce((a, r) => a + Number(r.credited), 0),
     // Came back or returned after delivery, of delivered and came back.
     codRate: rateOf(cod.rto.n + afterOf(true), cod.delivered.n + cod.rto.n), prepaidRate: rateOf(pre.rto.n + afterOf(false), pre.delivered.n + pre.rto.n),

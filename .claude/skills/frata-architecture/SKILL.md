@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.49.0
+  version: 2.50.0
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -682,6 +682,9 @@ Rules:
   (`share`, which scales a per-parcel estimate) and its own COGS; a credit note that names a line comes off that line,
   one that names none is spread by share; a line's cost counts only when its order's COGS is known (so products add up
   to the order total). PIN codes group orders, with a figure only from 5 orders of that payment kind.
+  Its figures are CACHED 15 minutes per shop and period (owner, 2026-11-12; `shopCached`, tag `shop:<tenant>`), worked
+  out as the owner sees them; who may see them (`costsVisibleIn`) is checked per viewer outside the cache, and the page
+  says when they were worked out ("Updated 10:42"). A product's sizes and colours stay live (one product, ≤ 60 ms).
 - **Links with tags** come from `shopLink` (`src/domains/analytics/link.ts`) only: URL + URLSearchParams, the shop's
   own origin.
 - Erasing an abandoned order strips the click ids (`ERASED_KEYS`); the utm tags stay (owner: keep everything else).
