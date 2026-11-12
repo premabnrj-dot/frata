@@ -25,12 +25,13 @@ and the edit is applied only when that payment is captured. Built as:
   changed, through Razorpay Checkout on the shop's own keys (a second Razorpay order for the difference; money to the
   shop, no SMS, the fee as any online payment). Sent by the "edited" email when the order has one; the merchant also
   gets "Copy payment link" to send on WhatsApp.
+- **While the request is open the order cannot be packed** (owner, 2026-11-12): "Mark packed" is replaced by "Waiting
+  for ₹499 from the shopper", and the new pieces are **held** for the shopper (owner, 2026-11-12), taken from sale like
+  an online order's hold. The merchant's ways out, on the order: "Ship without the change" (drops the request, frees
+  the held pieces, the order packs as it was) or Cancel. A reminder goes to the merchant after 24 hours (Notices).
 - Captured (webhook or the payment check, as any payment: stored first, then applied): the edit is applied under the
-  order lock if the order is still before packing and the new pieces are still free; if not, the difference is
-  refunded at once (refund ledger) and the merchant sees why.
-- Proposed defaults, **owner to confirm**: the request waits **24 hours**, then lapses (the order ships as it was; the
-  merchant is told); the new pieces are **not** held while it waits (checked again when paid); packing the order
-  cancels a waiting request.
+  order lock; the held pieces become the order's. A capture that arrives after the merchant dropped the request or
+  cancelled is refunded at once (refund ledger) and the merchant sees why.
 - Tasks: an `edit.payment` kind beside `payment.check`; the order page's payment block reads a waiting edit; e2e: pay
   the difference, and a request that lapses.
 
