@@ -74,6 +74,9 @@ export function eventLabel(e: { kind: string; reason: string | null; fields: str
     case 'edited': return `Changed the ${(e.fields ?? []).map((f) => FIELD_LABEL[f] ?? f).join(', ')}`
     // The order page words an items edit from its record (activityWords); this is the fallback without it.
     case 'items_edited': return 'Items changed'
+    // OE·2: a paid order's change that asked the shopper to pay first (worded from its record too), and its way out.
+    case 'edit_requested': return 'Asked the shopper to pay for a change'
+    case 'edit_dropped': return 'Shipped without the change'
     case 'packed': return 'Packed · invoice issued'
     case 'cancelled': return `Cancelled · ${e.reason ? cancelLabel(e.reason) : 'no reason given'}`
     case 'note_added': return 'Added a note'

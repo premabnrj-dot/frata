@@ -13,7 +13,7 @@ import { undoItemsEdit } from '../../edit-actions'
 // THE ITEMS CARD, EDITED IN PLACE (OE·1; mockup docs/mockups/2026-11-11-import-and-order-edit.html, views COD and
 // Saved). The server renders the card; "Edit items" swaps it for the editor, whose code and pricing load only then
 // (next/dynamic), so an order page that is only read carries none of it. The server decides who sees the button
-// (owners and admins, until packed, never paid online or on a support visit) and checks again on Save. While an edit
+// (owners and admins, until packed, never on a support visit; paid online too since OE·2) and checks again on Save. While an edit
 // can still be undone, the card keeps its Undo beside "Edit items".
 // =============================================================================
 
@@ -28,7 +28,8 @@ function Area({ orderId, number, undoEvent, children }: { orderId: string; numbe
   const [editing, setEditing] = useState(false)
   const undo = undoEvent ? async () => {
     const r = await undoItemsEdit(undoEvent)
-    toast({ text: r.ok ? `${number}: change undone.` : `${r.error}` })
+    // A refusal (a refund already with Razorpay, the window passed) is an error toast (§ Feedback 1).
+    if (r.ok) toast({ text: `${number}: change undone.` }); else toast.error(r.error)
     router.refresh()
   } : null
   return (

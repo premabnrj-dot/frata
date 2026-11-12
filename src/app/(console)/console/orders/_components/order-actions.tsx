@@ -26,6 +26,8 @@ import { PartCreditDialog, type PartLine } from './part-credit'
 export type OrderActionsProps = {
   orderId: string; number: string
   primary: 'confirm' | 'pack' | 'print_slip' | 'cancel' | null
+  /** A change waiting for the shopper's payment (order edit OE·2): said in place of Mark packed, which waits for it. */
+  waiting?: string | null
   /** The print pages this order has now: a slip once it is placed, an invoice once packed. */
   print: { slip: string | null; invoice: string | null }
   /** The same documents as PDF downloads (Documents D1). */
@@ -43,6 +45,8 @@ export type OrderActionsProps = {
   /** Paise to refund in Razorpay if cancelled (paid online), else 0. */
   refund: number
   refundLabel: string
+  /** Already refunded, or on its way, for its edits (OE·2), formatted; null when none. */
+  refunded?: string | null
   /** Whether any line's stock was taken (so "Put stock back" means something). */
   stockTaken: boolean
 }
@@ -85,7 +89,7 @@ function Actions(p: OrderActionsProps) {
   const confirm = () => run(p.heldPaid ? 'released from hold' : 'confirmed', () => confirmOrder(p.orderId), true)
   // The primary button only when this person may do it (the action checks again): the role table can change.
   const primary = p.primary === 'confirm' && p.may.confirm ? { label: p.heldPaid ? 'Release from hold' : 'Confirm', go: () => (p.riskWarning ? setRiskOpen(true) : void confirm()) }
-    : p.primary === 'pack' && p.may.pack ? { label: 'Mark packed', go: () => void run('packed', async () => { const r = await packOrder(p.orderId); return r.ok ? { ...r, ok: true } : r }) }
+    : p.primary === 'pack' && p.may.pack && !p.waiting ? { label: 'Mark packed', go: () => void run('packed', async () => { const r = await packOrder(p.orderId); return r.ok ? { ...r, ok: true } : r }) }
     : p.primary === 'cancel' && p.may.cancel ? { label: 'Cancel and refund…', go: () => setCancelOpen(true) } : null
   // Packed: the next thing is the slip in the parcel — a link (a page to print), not an action.
   const printPrimary = p.primary === 'print_slip' && p.print.slip ? p.print.slip : null
@@ -113,6 +117,7 @@ function Actions(p: OrderActionsProps) {
   }
 
   const primaryButton = primary ? <Button onClick={primary.go} aria-disabled={busy}>{primary.label}</Button>
+    : p.waiting && p.primary === 'pack' ? <span role="status" className="inline-flex min-h-10 items-center rounded-md border border-border px-3 text-sm font-medium md:min-h-9" data-waiting>{p.waiting}</span>
     : printPrimary ? <Link prefetch={false} href={printPrimary} className={button()}>Print packing slip</Link> : null
   return (
     <>
@@ -138,7 +143,7 @@ function Actions(p: OrderActionsProps) {
         actions={<><Button variant="secondary" data-autofocus onClick={() => { setCreditOpen(false); setCreditError(null) }}>Not now</Button><Button onClick={() => { setCreditError(null); void run('credited', async () => { const r = await issueCreditNote(p.orderId); return r.ok ? { ...r, ok: true } : r }, false, setCreditError).then((r) => { if (r) setCreditOpen(false) }) }} aria-disabled={busy}>Issue credit note</Button></>} />
 
       <Dialog open={cancelOpen} onClose={closeCancel} title={`Cancel ${p.number}?`} error={cancelError}
-        description={p.refund ? <>It was paid online: refund <strong>{p.refundLabel}</strong> in your Razorpay dashboard after cancelling (Frrata does not move the money). We email the customer only if they gave an email: tell them on WhatsApp or by phone.</> : 'We email the customer only if they gave an email: tell them on WhatsApp or by phone.'}
+        description={p.refund ? <>It was paid online: refund <strong>{p.refundLabel}</strong> in your Razorpay dashboard after cancelling (cancelling sends no refund).{p.refunded ? <> {p.refunded} is already refunded or on its way.</> : null} We email the customer only if they gave an email: tell them on WhatsApp or by phone.</> : 'We email the customer only if they gave an email: tell them on WhatsApp or by phone.'}
         actions={<><Button variant="secondary" data-autofocus onClick={closeCancel}>Keep the order</Button><Button variant="destructive" onClick={doCancel} aria-disabled={busy}>Cancel order</Button></>}>
         <div ref={cancelFields} className="grid gap-4">
           <fieldset className="grid gap-2">

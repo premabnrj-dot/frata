@@ -832,13 +832,60 @@ Look's controls, Settings' shipping costs and sections, and Admin's custom plan 
   (`undoEdit`) puts back the edit's record (`order_edits`, `order_edit_lines` before/after with `replaces`) within
   `UNDO_MINUTES` and before packing, only while the order still has the edit's lines and offers, re-checking any offer
   the edit freed. The `edited` email waits `UNDO_MINUTES` and is skipped when undone or a later edit supersedes it.
-  Refused (`cannotEdit`, the one rule for the button and the save): a support visit, paid online, and an order switched
-  to pay on delivery that has a Razorpay order — it could still be paid at the old online total — until OE·2. The
+  Refused (`cannotEdit`, the one rule for the button and the save): a support visit, and (OE·2) an order whose earlier
+  change still waits for the shopper's payment; paid online and switched orders are OE·2's (below). The
   arrival dates are made again from the live lines (`arrivalRange`) after an edit and an Undo; an Undo whose price
   differs from the one before the edit is refused, never written. A removed line holds no stock (CHECK
   `order_lines_removed_stock`: its pieces go back first). Readers by product use `order_lines_product_live` (0118).
   **Deploy order:** 0117 and 0118 before the code (every reader selects `removed_at`; `writeReprice` needs the
   `product_discount` grant).
+- **A paid-online order's edit** (OE·2, 2026-11-12; plan § Increase on a paid order, § Razorpay facts): priced the way it
+  is paid (`EditFacts.order.way`: the online order offer and the pay-online saving, no COD fee). What the new total means
+  for the money already paid is ONE pure rule, `settleOf` (`src/domains/orders/refunds.ts`), run by the panel and again
+  by the save, which compares the panel's `expectedDue`: a ledger per Razorpay payment (captured − the attempts that
+  count: queued, sending, sent, processed), the net paid against the new total. Lower by ₹1 or more → applied at once and
+  the refund queued in the edit's transaction (`queueRefund`: an `order_refunds` attempt row + its `refund.send` outbox
+  row, `notBefore` = the Undo window's end), split over the payments newest first, never on one 6 months old (refused
+  before Save). Undo cancels the unclaimed attempt in its own transaction (`cancelEditRefunds`); once the sender has
+  claimed it (`sending_at`, committed before Razorpay is called) the edit has no Undo. Higher by ₹1 or more → the edit
+  WAITS (`order_edits.asked`; `requestPayment`, `src/lib/orders/edit-paid.ts`): nothing on the order changes, its new
+  in-stock pieces are held (`order_edit_lines.held`, counted by `heldSql`/`heldByVariant` through `editWaitingSql`),
+  `pack` is refused and no other edit is allowed while it waits (one waiting edit per order: a partial unique index).
+  Within ₹1 → applied, nothing asked or sent. **A second Razorpay order** per waiting edit (receipt `${number}-e${id8}`,
+  found again by receipt) is made when the shopper first taps Pay; its capture is stored first as an event and applied
+  by `processEvents` → `applyEditCapture` (`edit-capture.ts`, when no order owns that Razorpay order id): planned again
+  from the saved lines at the saved prices (its held pieces counted as its own), written by the same `applyPlan` as a
+  save (`edit-write.ts`), the record filled in once (a trigger: each settle column is written once). A capture after the
+  request was dropped ("Ship without the change", `dropRequest`) or the order cancelled, or one that can no longer apply,
+  is refunded at once in full (cause `after_drop`). **A payment on an order's FIRST Razorpay order after an edit took
+  effect** never marks it paid at the old total: `markPaid` asks `strayCapture` first and refunds it in full (cause
+  `old_order`); that is what lets an order switched from online to pay on delivery be edited.
+- **Refunds** (`src/lib/payments/refunds.ts`; frata-integrations § Razorpay, refunds 2026-11-12): one `order_refunds` row
+  per ATTEMPT; its stage is derived from its moments (`refundStage`), never a status column; only its moments are
+  updatable, each once (trigger). The sender lists the payment's refunds first (a matching receipt is this attempt),
+  checks the payment's age and what it has left, then creates it with `speed: "normal"` always, receipt and
+  `X-Refund-Idempotency` = the attempt id. 409 / "another operation in progress" → `Later`; unreachable → counted and
+  retried (the list finds it); a refusal (balance, 6 months, refunds off, keys, more than is left) → failed with OUR
+  code (`FAILURE_WORDS`), "Refund ₹X not sent" with Try again (`retryRefund`: a NEW attempt, `retry_of`); Razorpay
+  failing it later (`refund.check`, which reads a pending refund back every hour for 15 days) → a new attempt by itself,
+  `AUTO_RETRIES` times. `refund.*` webhooks are not relied on (an unmatched event is processed as nothing).
+  `edit.payment` asks Razorpay for a waiting edit's second order's payments (a lost reply and webhook), `edit.remind`
+  writes the 24-hour Notice (definer `app_edit_payment_notice`, source `edit_payment`, once per edit).
+  Reviews 2026-11-12 folded in: **a later change settles a failed edit refund** nobody tried again (`supersedeFailed`:
+  `superseded_by`, set by an applied edit and by a change when its payment applies, never by one only waiting); Try again
+  refuses a superseded attempt, `too_old` and `over`, and any `edit` refund larger than the payments' net minus the
+  order's total (or a waiting change's total); an edit that superseded one has no Undo. An attempt still unresolved on its
+  outbox row's last try is settled by one more list (receipt there → recorded; absent → `refused`, Try again). Save
+  refuses a refund or ask without the panel's `expectedDue`. At capture, a saving that grew must still `stillFit`
+  (else `cannot_apply`). Another payment on a change already paid is refunded (`after_drop`). **Razorpay's fee on a
+  payment refunded in full** is written once on its first attempt (`order_refunds.gateway_fee`) and added to the order's
+  `gateway_fee` (`addOrderFee`; `editFeesSql` sums edits' and these when the order's own fee arrives).
+  A cancel names what the payments still hold (`paidLeft(o, ledgerIn)`, amounts.ts), never the placement's online
+  total, and frees a waiting change's held pieces (`held` goes back to 0 whenever a change is paid, dropped, refunded or
+  cancelled: the partial index stays small). `order_refunds` names an edit of its own order (FK on (tenant, order, edit)),
+  and an edit line names only lines of its own order (trigger, 23503). `orderDetail` reads the waiting change by
+  `editWaitingSql` and the ledger.
+  **Deploy order:** 0120 and 0121 before the code (the readers select `order_edits.asked` and `held`).
 - **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
   `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`
   (parity-tested). Placement locks every offer the bag could get that has a limit, in id order,

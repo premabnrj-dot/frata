@@ -16,6 +16,9 @@ import { type Cod, type DeliveryRules } from '@/domains/checkout/delivery'
 import { codOn, resolveDelivery, type ZoneSetup } from '@/domains/delivery/resolve'
 import { shareCharges, type ChargeShare } from '@/domains/tax/gst'
 import { currentMethod, offerWay, type OrderMoments } from './order-state'
+import { paidNet, type Paid, type RefundRow } from './refunds'
+
+type Ledger = { payments: Paid[]; refunds: Pick<RefundRow, 'razorpayPaymentId' | 'amount' | 'cancelledAt' | 'sendingAt' | 'sentAt' | 'processedAt' | 'failedAt'>[] }
 
 export type StoredLine = { taxableValue: number; gst: number; gstBps: number; chargeTaxable: number | null; chargeGst: number | null }
 export type StoredOrder = Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'switchedToCodAt' | 'cancelledAt'> & {
@@ -96,5 +99,12 @@ export const collect = (o: StoredOrder) => (o.cancelledAt || currentMethod(o) !=
  */
 export const paidOnline = (o: StoredOrder) => (o.paidAt ? o.onlineTotal ?? o.total : 0)
 
-/** What the merchant must send back in Razorpay when a paid order is cancelled (Frrata refunds nothing itself). */
-export const refundDue = (o: StoredOrder) => (o.cancelledAt ? paidOnline(o) : 0)
+/**
+ * What the shopper's payments still hold for this order: with its ledger (order edit OE·2: every payment that paid it, net
+ * of the refunds Frrata sent or queued through the shop's Razorpay), that; without one, what reached Razorpay at placement.
+ * Cancelling sends no refund: this is what the merchant refunds in Razorpay themselves (impact review 2026-11-12).
+ */
+export const paidLeft = (o: StoredOrder, ledger: Ledger | null = null) => (!o.paidAt ? 0 : ledger ? paidNet(ledger.payments, ledger.refunds) : paidOnline(o))
+
+/** What the merchant must send back in Razorpay when a paid order is cancelled (cancelling sends no refund itself). */
+export const refundDue = (o: StoredOrder, ledger: Ledger | null = null) => (o.cancelledAt ? paidLeft(o, ledger) : 0)
