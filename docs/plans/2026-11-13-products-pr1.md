@@ -1,5 +1,5 @@
 # Products PR·1 — the list
-Status: active · Date: 2026-11-13 · Spec: `docs/specs/2026-11-13-products-rework.md` · Mockup: https://claude.ai/artifact/NW8BozPHgfXQcUge2wKyv4 (§ Products list, § Delete and archive) · Approved: owner, 2026-11-13
+Status: built · Date: 2026-11-13 · Spec: `docs/specs/2026-11-13-products-rework.md` · Mockup: https://claude.ai/artifact/NW8BozPHgfXQcUge2wKyv4 (§ Products list, § Delete and archive) · Approved: owner, 2026-11-13
 
 ## Goal
 Ranked problem 3 (catalogue operations): find any product in two taps and act on many at once. Measure: products
@@ -9,8 +9,8 @@ archived/deleted/duplicated per shop per week; support asks "how do I delete a p
 - e2e `78-products-pr0` (PR·0) stays green; `90-ux` screenshots the list.
 - Unit: the list's filter/sort parsing (`listQuery`, pure), `deletable` rule.
 - Int: `products-bulk.int.test.ts`: delete refuses a live, published, scheduled, ordered or filmed product and deletes the rest;
-  another shop's id is a no-op; duplicate copies options, prices, photos, colours and collections but not SKUs, barcodes,
-  handle history or status; set status refuses what isn't ready and names it.
+  another shop's id is a no-op; duplicate copies options, prices, colours and collections but not photos, stock, SKUs,
+  barcodes, handle history or status; Undo that can't restore names it; set status refuses what isn't ready and names it.
 
 ## Tasks
 1. **Pure query parsing** — `src/domains/catalogue/list-query.ts`: `listQuery(searchParams)` → `{ status, low, sort, q, page }`
@@ -86,6 +86,13 @@ archived/deleted/duplicated per shop per week; support asks "how do I delete a p
 - **Performance:** list ≤ 3 statements; `Low stock` an `exists` on variants (tenant, product) index; bulk ≤ 50 ids.
 - **Security:** Zod on ids, cap 50, ANY_MEMBER (as the editor); delete only via the shared rule; audit rows.
 - **Blast radius:** import's delete (now the shared rule, its int tests stay), `90-ux` list screenshot, `listProducts` caller.
+
+## As built (2026-11-13; impact and speed reviews on the diff)
+- Speed at 10k products: the page's ids are read first and the row facts are worked out for those 50 only (page 100:
+  286 → 6 ms); JIT off for the list's transaction (stock sort with a term: 167 → ~90 ms); a partial index for Low stock
+  (`variants_tenant_product_low`, migration 0120, its 3 tied to `LOW_STOCK_AT` by a test). SKU search keeps its scan
+  (RLS keeps `ilike` off an index); a prefix search on `variants_tenant_sku_upper` is the next step if shops grow.
+- On a phone the list has no selection (design language § Work queues 7). Checkboxes are 24 px.
 
 ## Practices recorded in skills
 - frata-design-language § Products rework: bulk bar shape, delete confirmed vs undo rule.

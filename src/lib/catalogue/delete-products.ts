@@ -18,13 +18,13 @@ import { photosInUse } from './photos-in-use'
 //   removePhotoFiles after the commit.
 // =============================================================================
 
-export type Kept = { id: string; why: 'live' | 'ordered' | 'video' }
+export type Kept = { id: string; why: 'archived' | 'live' | 'ordered' | 'video' }
 
 export async function deleteProducts(tx: Tx, tenantId: string, ids: readonly string[]): Promise<{ deleted: string[]; kept: Kept[]; photos: { base: string; widths: number[] }[] }> {
   if (!ids.length) return { deleted: [], kept: [], photos: [] }
   const rows = await tx.select({ id: products.id, status: products.status, publishedAt: products.publishedAt, publishAt: products.publishAt }).from(products)
     .where(and(eq(products.tenantId, tenantId), sql`${products.id} = any(${arrayParam([...ids], 'uuid')})`)).orderBy(products.id).for('update')
-  const kept: Kept[] = rows.filter((p) => p.status !== 'draft' || p.publishedAt || p.publishAt).map((p) => ({ id: p.id, why: 'live' }))
+  const kept: Kept[] = rows.filter((p) => p.status !== 'draft' || p.publishedAt || p.publishAt).map((p) => ({ id: p.id, why: p.status === 'archived' ? 'archived' : 'live' }))
   const drafts = rows.filter((p) => !kept.some((k) => k.id === p.id)).map((p) => p.id)
   const list = arrayParam(drafts, 'uuid')
   const [sold, filmed] = drafts.length ? await Promise.all([

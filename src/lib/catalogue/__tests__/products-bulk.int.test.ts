@@ -86,10 +86,31 @@ describe.skipIf(!host)('the products list acting on many', () => {
     if (!r.ok) return
     // Undo goes through the same rule as Publish, which asks for a photo: give it one.
     await su!`insert into product_images (tenant_id, product_id, base, widths, width, height) values (${t}, ${drop}, ${'https://x.blob/t/' + drop}, ${[400]}, 400, 500)`
-    expect(await a.restoreStatus(r.before)).toMatchObject({ ok: true, restored: 2 })
+    expect(await a.restoreStatus(r.before)).toMatchObject({ ok: true, restored: 2, refused: [] })
     const back = await statusOf(drop)
     expect(back.status).toBe('active'); expect(back.publish_at?.toISOString()).toBe(at.toISOString())
     expect((await statusOf(plain)).status).toBe('draft')
+  })
+
+  it('keeps a scheduled draft and an archived one; Delete says which is archived already', async () => {
+    const t = state.tenantId
+    const soon = await product(t, 'del-scheduled', { publishAt: new Date(Date.now() + 86400_000) })
+    const old = await product(t, 'del-archived', { status: 'archived', publishedAt: new Date() })
+    const r = await a.bulkDelete([soon, old])
+    expect(r).toMatchObject({ ok: true, deleted: 0 })
+    if (r.ok) expect(Object.fromEntries(r.kept.map((k) => [k.title, k.why]))).toEqual({ 'Int del-scheduled': 'live', 'Int del-archived': 'archived' })
+    // Archiving what is archived already changes nothing (its archived date stays).
+    expect(await a.bulkStatus([old], 'archived')).toMatchObject({ ok: true, changed: 0, refused: [] })
+  })
+
+  it('an Undo that can’t put one back names it, and leaves it as it is', async () => {
+    const t = state.tenantId
+    const bare = await product(t, 'undo-bare', { status: 'active', publishedAt: new Date(), price: 99900 })
+    const r = await a.bulkStatus([bare], 'archived')
+    expect(r).toMatchObject({ ok: true, changed: 1 })
+    if (!r.ok) return
+    expect(await a.restoreStatus(r.before)).toMatchObject({ ok: true, restored: 0, refused: [{ title: 'Int undo-bare' }] })
+    expect((await statusOf(bare)).status).toBe('archived')
   })
 
   it('leaves a product that isn’t ready as it was, and names what it needs', async () => {
@@ -130,7 +151,7 @@ describe.skipIf(!host)('the products list acting on many', () => {
     const theirs = await product(other, 'theirs', { status: 'active', publishedAt: new Date(), price: 100 })
     expect(await a.bulkDelete([theirs])).toEqual({ ok: true, deleted: 0, kept: [] })
     expect(await a.bulkStatus([theirs], 'archived')).toMatchObject({ ok: true, changed: 0 })
-    expect(await a.restoreStatus([{ id: theirs, status: 'draft', publishAt: null }])).toEqual({ ok: true, restored: 0 })
+    expect(await a.restoreStatus([{ id: theirs, status: 'draft', publishAt: null }])).toEqual({ ok: true, restored: 0, refused: [] })
     expect(await a.duplicateProduct(theirs)).toEqual({ ok: false, error: 'That product is not in your shop.' })
     const [mine] = await su!<[{ id: string }]>`insert into collections (tenant_id, handle, title, kind) values (${state.tenantId}, 'int-mine', 'Mine', 'manual') returning id`
     expect(await a.addToCollection([theirs], mine.id)).toEqual({ ok: true, added: 0, name: 'Mine' })

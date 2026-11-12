@@ -1,0 +1,1 @@
+CREATE INDEX "variants_tenant_product_low" ON "variants" USING btree ("tenant_id","product_id") WHERE "variants"."archived_at" is null and "variants"."when_out" = 'stop' and "variants"."stock" between 1 and 3;

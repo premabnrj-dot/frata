@@ -10,7 +10,7 @@ export function SortSelect({ value, hrefs }: { value: ListSort; hrefs: Record<Li
   const router = useRouter()
   return (
     <span className="flex items-center gap-2">
-      <label htmlFor="product-sort" className="text-sm text-muted-foreground">Sort</label>
+      <label htmlFor="product-sort" className="sr-only text-sm text-muted-foreground md:not-sr-only">Sort</label>
       <select id="product-sort" value={value} onChange={(e) => router.push(hrefs[e.target.value as ListSort])}
         className="h-10 rounded-md border border-input bg-card px-2 text-sm md:h-9">
         {(Object.keys(LABELS) as ListSort[]).map((k) => <option key={k} value={k}>{LABELS[k]}</option>)}

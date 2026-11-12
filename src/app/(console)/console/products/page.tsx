@@ -43,7 +43,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   // Past the last page (a bookmark, products deleted): back to the last one.
   if (query.page > pages) redirect(hrefFor(query, { page: pages }))
   const rows = list.rows.map((r) => row(r, now))
-  const empty = query.q ? `No product matches “${query.q}”` : query.filter === 'low' ? 'No products are low on stock' : `No ${FILTERS.find(([k]) => k === query.filter)![1].toLowerCase()} products`
+  const empty = query.q ? `No product matches “${query.q}”` : query.filter === 'low' ? 'No products are low on stock' : query.filter === 'all' ? 'Every product is archived' : `No ${FILTERS.find(([k]) => k === query.filter)![1].toLowerCase()} products`
   return (
     <>
       <PageHeader title="Products" actions={<><Menu items={[{ label: 'Add photos', href: '/console/products/photos' }, { label: 'HSN codes', href: '/console/products/tax' }, { label: 'Collections', href: '/console/collections' }]} />{importLink}{add}</>} />

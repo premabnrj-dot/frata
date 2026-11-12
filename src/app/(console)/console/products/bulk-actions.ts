@@ -58,13 +58,14 @@ const Undo = z.array(z.object({ id: z.string().uuid(), status: StatusZ, publishA
 
 /** Undo of Archive or Set status: each back to what it was — a schedule still to come stays scheduled; going live
  *  again is checked as Set status checks it (never more than it would allow). */
-export async function restoreStatus(input: unknown): Promise<{ ok: true; restored: number } | Fail> {
+export async function restoreStatus(input: unknown): Promise<{ ok: true; restored: number; refused: { title: string; needs: string[] }[] } | Fail> {
   const pairs = Undo.safeParse(input)
   if (!pairs.success) return { ok: false, error: 'There is nothing to undo.' }
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.bulk_restore', target: `${pairs.data.length} products`, detail: { ids: pairs.data.map((p) => p.id) } }, async (tx, auth) => {
       const now = new Date()
       let restored = 0
+      const refused: { title: string; needs: string[] }[] = []
       // Grouped by what each goes back to, so each group is one setStatusIn (rows locked in id order within it).
       const groups = new Map<string, { status: (typeof PRODUCT_STATUSES)[number]; at: Date | null; ids: string[] }>()
       for (const p of pairs.data) {
@@ -73,13 +74,17 @@ export async function restoreStatus(input: unknown): Promise<{ ok: true; restore
         const g = groups.get(key) ?? { status: p.status, at: p.status === 'active' ? at : null, ids: [] }
         g.ids.push(p.id.toLowerCase()); groups.set(key, g)
       }
-      for (const g of groups.values()) restored += (await setStatusIn(tx, auth.membership.tenantId, g.ids, g.status, g.at, now)).changed.length
+      for (const g of groups.values()) {
+        const out = await setStatusIn(tx, auth.membership.tenantId, g.ids, g.status, g.at, now)
+        restored += out.changed.length
+        refused.push(...out.refused.map((x) => ({ title: x.title, needs: x.needs })))
+      }
       if (restored) await memberAudit(tx, auth, 'product.bulk_restore', `${restored} products`)
-      return restored
+      return { restored, refused }
     })
     if (!r.ok) return { ok: false, error: r.error }
     done(r.tenantId)
-    return { ok: true, restored: r.value }
+    return { ok: true, ...r.value }
   } catch (err) {
     return failed('restoreStatus', err, 'We could not undo that. Nothing was changed.')
   }

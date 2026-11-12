@@ -50,7 +50,8 @@ export function ProductTable({ rows, collections }: { rows: Row[]; collections: 
   const undoOf = (out: BulkStatus) => out.before.length ? async () => {
     const r = await restoreStatus(out.before)
     if (r.ok) router.refresh()
-    return r.ok ? { ok: true } : { ok: false, error: r.error }
+    if (!r.ok) return { ok: false, error: r.error }
+    return r.refused.length ? { ok: false, error: `${n(r.refused.length, 'product')} couldn’t go back: ${r.refused.slice(0, 3).map((x) => `${x.title} (${x.needs.join(', ')})`).join('; ')}.` } : { ok: true }
   } : undefined
 
   const setStatus = (status: Status, which = ids) => start(async () => {
@@ -88,17 +89,19 @@ export function ProductTable({ rows, collections }: { rows: Row[]; collections: 
   const close = () => { setAsking(null); setTyped(''); setDialogError(null) }
   const mustType = ids.length >= 5
   const kept = asking?.step === 'kept' ? asking.out.kept : []
+  const toArchive = kept.filter((k) => k.why !== 'archived')
 
   return (
     <>
       {ids.length > 0 && (
-        // The bulk bar: sticky at the foot on a phone (thumb reach), above the table on a wider screen.
-        <div role="region" aria-label="Selected products" className="sticky bottom-2 z-20 mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2 shadow-md md:static md:shadow-none">
+        // The bulk bar, above the table. Bulk is a desktop tool (design language § Work queues 7): on a phone a row is
+        // one target, so its checkbox cell is hidden and the bar never shows.
+        <div role="region" aria-label="Selected products" className="mb-3 hidden flex-wrap items-center gap-2 rounded-lg border border-border bg-muted p-2 md:flex">
           <b className="px-1 text-sm">{n(ids.length, 'selected', 'selected')}</b>
           <button type="button" className="min-h-6 text-sm text-muted-foreground underline" onClick={() => setPicked(new Set())}>Clear</button>
           <span className="flex-1" />
-          <Menu label="Set status" align="end" items={(['active', 'draft', 'unlisted'] as const).map((s) => ({ label: { active: 'Active', draft: 'Draft', unlisted: 'Unlisted' }[s], onSelect: () => setStatus(s) }))} />
-          {collections.length > 0 && <Menu label="Add to collection" align="end" items={collections.map((c) => ({ label: c.title, onSelect: () => collect(c) }))} />}
+          {!pending && <Menu label="Set status" align="end" items={(['active', 'draft', 'unlisted'] as const).map((s) => ({ label: { active: 'Active', draft: 'Draft', unlisted: 'Unlisted' }[s], onSelect: () => setStatus(s) }))} />}
+          {!pending && collections.length > 0 && <Menu label="Add to collection" align="end" items={collections.map((c) => ({ label: c.title, onSelect: () => collect(c) }))} />}
           {ids.length === 1 && <Button variant="secondary" disabled={pending} onClick={duplicate}>Duplicate</Button>}
           <Button variant="secondary" disabled={pending} onClick={() => setStatus('archived')}>Archive</Button>
           <Button variant="destructive" disabled={pending} onClick={() => setAsking({ step: 'confirm' })}>Delete</Button>
@@ -107,24 +110,19 @@ export function ProductTable({ rows, collections }: { rows: Row[]; collections: 
       <DataTable label="Products">
         <DataTableHead>
           <th className="w-10"><input type="checkbox" aria-label="Select all on this page" checked={all} ref={(el) => { if (el) el.indeterminate = ids.length > 0 && !all }}
-            onChange={() => setPicked(all ? new Set() : new Set(rows.map((r) => r.id)))} className="size-4" /></th>
+            onChange={() => setPicked(all ? new Set() : new Set(rows.map((r) => r.id)))} className="size-6 accent-primary" /></th>
           <th className="w-14"><span className="sr-only">Photo</span></th><th>Product</th><th>Status</th><th className="text-right">Price</th><th className="text-right">Stock</th><th>Sizes and colours</th>
         </DataTableHead>
         <DataTableBody>
           {rows.map((r) => (
             <DataTableRow key={r.id}>
-              <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.title}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)} className="size-4" /></Td>
+              <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.title}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)} className="size-6 accent-primary" /></Td>
               <Td cell="hide">{r.thumb
                 ? <img src={r.thumb} alt="" width={40} height={50} loading="lazy" className="h-[50px] w-10 rounded-sm object-cover" />
                 : <span className="block h-[50px] w-10 rounded-sm bg-muted" aria-hidden="true" />}</Td>
               <Td cell="a">
-                <span className="flex items-start gap-2">
-                  <input type="checkbox" aria-label={`Select ${r.title}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)} className="mt-1 size-4 md:hidden" />
-                  <span className="min-w-0">
-                    <Link href={r.href} data-row-link prefetch={false} className="line-clamp-2 min-h-6 py-0.5 font-medium [overflow-wrap:anywhere] hover:underline"><Name>{r.title}</Name></Link>
-                    <span className="block text-xs text-muted-foreground">{r.sub}</span>
-                  </span>
-                </span>
+                <Link href={r.href} data-row-link prefetch={false} className="line-clamp-2 min-h-6 py-0.5 font-medium [overflow-wrap:anywhere] hover:underline"><Name>{r.title}</Name></Link>
+                <span className="block text-xs text-muted-foreground">{r.sub}</span>
               </Td>
               <Td cell="d"><LabelBadge label={r.status} /></Td>
               <Td cell="b" className="whitespace-nowrap text-right">{r.minPrice === null ? <span className="text-muted-foreground">No price</span>
@@ -154,10 +152,11 @@ export function ProductTable({ rows, collections }: { rows: Row[]; collections: 
 
       <Dialog open={asking?.step === 'kept'} onClose={() => { close(); after() }} error={dialogError}
         title={asking?.step === 'kept' && asking.out.deleted ? `Deleted ${n(asking.out.deleted, 'product')}. ${n(kept.length, 'wasn’t', 'weren’t')} deleted` : `${n(kept.length, 'product')} can’t be deleted`}
-        description={<>{names(kept)} {kept.length === 1 ? 'has' : 'have'} been live, ordered or filmed. Archive keeps {kept.length === 1 ? 'its' : 'their'} orders as they are and takes {kept.length === 1 ? 'it' : 'them'} out of the shop.</>}
+        description={toArchive.length ? <>{names(toArchive)} {toArchive.length === 1 ? 'has' : 'have'} been live, ordered or filmed. Archive keeps {toArchive.length === 1 ? 'its' : 'their'} orders as they are and takes {toArchive.length === 1 ? 'it' : 'them'} out of the shop.</>
+          : <>{names(kept)} {kept.length === 1 ? 'is' : 'are'} archived already: out of the shop, with {kept.length === 1 ? 'its' : 'their'} orders kept.</>}
         actions={<>
-          <Button variant="secondary" data-autofocus onClick={() => { close(); after() }}>Cancel</Button>
-          <Button disabled={pending} onClick={() => { const which = kept.map((k) => k.id); close(); setStatus('archived', which) }}>{`Archive ${n(kept.length, 'product')}`}</Button>
+          <Button variant="secondary" data-autofocus onClick={() => { close(); after() }}>{toArchive.length ? 'Cancel' : 'Close'}</Button>
+          {toArchive.length > 0 && <Button disabled={pending} onClick={() => { const which = toArchive.map((k) => k.id); close(); setStatus('archived', which) }}>{`Archive ${n(toArchive.length, 'product')}`}</Button>}
         </>} />
     </>
   )

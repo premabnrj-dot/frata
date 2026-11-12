@@ -23,12 +23,14 @@ export async function setStatusIn(tx: Tx, tenantId: string, ids: readonly string
   if (!ids.length) return { changed: [], refused: [], before: [] }
   const rows = await tx.select({ id: products.id, title: products.title, status: products.status, publishAt: products.publishAt }).from(products)
     .where(and(eq(products.tenantId, tenantId), sql`${products.id} = any(${arrayParam([...ids], 'uuid')})`)).orderBy(products.id).for('update')
+  // A row already as asked (same status, same moment) is left alone: re-archiving would move its archived date.
+  const same = (r: (typeof rows)[number]) => r.status === status && (r.publishAt?.getTime() ?? null) === (when?.getTime() ?? null)
   const live = status === 'active' || status === 'unlisted'
   const refused: StatusResult['refused'] = []
-  let ok = rows
-  if (live) {
-    const facts = await readinessIn(tx, tenantId, rows.map((r) => r.id), now)
-    ok = rows.filter((r) => {
+  let ok = rows.filter((r) => !same(r))
+  if (live && ok.length) {
+    const facts = await readinessIn(tx, tenantId, ok.map((r) => r.id), now)
+    ok = ok.filter((r) => {
       const needs = facts.get(r.id)?.readiness.filter((x) => !x.ok).map((x) => x.label.toLowerCase()) ?? []
       if (needs.length) refused.push({ id: r.id, title: r.title, needs })
       return !needs.length

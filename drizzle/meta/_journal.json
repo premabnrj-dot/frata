@@ -841,6 +841,13 @@
       "when": 1794495228643,
       "tag": "0119_product_import",
       "breakpoints": true
+    },
+    {
+      "idx": 120,
+      "version": "7",
+      "when": 1794512861432,
+      "tag": "0120_products_low_stock",
+      "breakpoints": true
     }
   ]
 }

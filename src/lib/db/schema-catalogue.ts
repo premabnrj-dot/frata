@@ -134,6 +134,9 @@ export const variants = pgTable('variants', {
   // One barcode names one size in a shop (Google refuses duplicates; impact review S2·3).
   uniqueIndex('variants_tenant_gtin').on(t.tenantId, t.gtin).where(sql`${t.gtin} is not null`),
   index('variants_tenant_product').on(t.tenantId, t.productId),
+  // The products list's Low stock (products PR·1, speed review): its count runs on every list load. The 3 is
+  // LOW_STOCK_AT (src/domains/catalogue/availability.ts); change one, change both, or the index stops matching.
+  index('variants_tenant_product_low').on(t.tenantId, t.productId).where(sql`${t.archivedAt} is null and ${t.whenOut} = 'stop' and ${t.stock} between 1 and 3`),
   check('variants_money', sql`${t.price} >= 0 and (${t.compareAt} is null or ${t.compareAt} >= 0) and (${t.unitCost} is null or ${t.unitCost} >= 0)`),
   check('variants_stock', sql`${t.stock} >= 0`),
   check('variants_when_out', sql`${t.whenOut} in ('stop','preorder','made_to_order')`),
