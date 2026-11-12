@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils'
 // activation since the last one) still reaches onClose through `close`.
 // =============================================================================
 
-export function Dialog({ open, onClose, title, description, children, actions, className }: {
+export function Dialog({ open, onClose, title, description, children, actions, error, className }: {
   open: boolean
   /** Esc, Android's Back, the backdrop and the safe button all call this. It must set `open` to false: the browser may already have closed the dialog. */
   onClose: () => void
@@ -32,6 +32,8 @@ export function Dialog({ open, onClose, title, description, children, actions, c
    * something. (React's autoFocus does nothing here: the dialog's content mounts while it is closed.)
    */
   actions: React.ReactNode
+  /** What went wrong when its action failed: shown here, above the buttons, never a second popup (§ Feedback 4). */
+  error?: string | null
   className?: string
 }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -53,6 +55,14 @@ export function Dialog({ open, onClose, title, description, children, actions, c
         <h2 id={titleId} className="text-section font-semibold">{title}</h2>
         {description ? <div id={descId} className="text-sm text-muted-foreground">{description}</div> : null}
         {children}
+        {error ? (
+          <p role="alert" className="flex animate-err-in items-start gap-2 rounded-md bg-danger px-3 py-2.5 text-sm text-danger-text">
+            <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true" className="mt-px shrink-0">
+              <circle cx="8" cy="8" r="7.5" fill="currentColor" /><path d="M8 4.4v4.6M8 11.6v.2" stroke="var(--danger)" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+            <span>{error}</span>
+          </p>
+        ) : null}
         <div className="flex flex-wrap justify-end gap-2">{actions}</div>
       </div>
     </dialog>

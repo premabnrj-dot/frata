@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from './button'
+import { Dialog } from './dialog'
 import { startNavigation } from '@/components/shell/nav-progress'
 
 // =============================================================================
@@ -51,18 +52,15 @@ export function SaveBar({ onSave, onDiscard, pending }: { onSave: () => void; on
   )
 }
 
-export function LeaveDialog({ what, onStay, onLeave }: { what: string; onStay: () => void; onLeave: () => void }) {
+/** Leaving with changes: the one Dialog (a sheet on a phone), "Keep editing" the safe, focused button (§ Feedback 4). */
+export function LeaveDialog({ open, what, onStay, onLeave }: { open: boolean; what: string; onStay: () => void; onLeave: () => void }) {
+  // Kept mounted and opened/closed (never mounted open): closing returns focus to what had it.
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-(--scrim) p-4" onKeyDown={(e) => { if (e.key === 'Escape') onStay() }}>
-      <div role="alertdialog" aria-modal="true" aria-labelledby="leave-h" className="w-full max-w-sm animate-pop rounded-md border border-border bg-card p-5">
-        <h2 id="leave-h" className="font-semibold">Leave without saving?</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Your changes to {what} are not saved and will be lost.</p>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="secondary" autoFocus onClick={onStay}>Keep editing</Button>
-          <Button variant="destructive" onClick={onLeave}>Leave</Button>
-        </div>
-      </div>
-    </div>
+    <Dialog open={open} onClose={onStay} title="Leave without saving?" description={<>Your changes to {what} are not saved and will be lost.</>}
+      actions={<>
+        <Button variant="secondary" data-autofocus onClick={onStay}>Keep editing</Button>
+        <Button variant="destructive" onClick={onLeave}>Leave</Button>
+      </>} />
   )
 }
 

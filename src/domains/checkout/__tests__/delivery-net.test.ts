@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { arrivalRange } from '../quote'
-import { codFor, codWhyNot, shippingFor, type DeliveryRules } from '../delivery'
+import { codFor, shippingFor, type DeliveryRules } from '../delivery'
+import { codWhyNot } from '../cod-words'
 
 // Delivery Zones task 1 (plan docs/plans/2026-11-12-delivery-zones.md): the regression net. Today's delivery charge,
 // pay on delivery and arrival dates, pinned branch by branch BEFORE resolveDelivery replaces their insides. Without

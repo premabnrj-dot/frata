@@ -5,7 +5,7 @@
 // desktop: nothing scrolls the page sideways.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, signedIn } from '../lib.mjs'
+import { CONSOLE, expectToast, signedIn } from '../lib.mjs'
 
 export default {
   name: 'primitives',
@@ -80,12 +80,87 @@ export default {
     await t.step('toast: a failed undo says why; an undo that finishes after a newer toast leaves the newer one alone', async () => {
       await p.getByRole('button', { name: 'Confirm slowly' }).click(); await p.getByText('KS-1002 confirmed.').waitFor()
       await p.getByRole('button', { name: 'Undo' }).click()
-      await p.locator('[data-toast]', { hasText: 'Already packed — cancel it instead.' }).waitFor()
+      await expectToast(p, 'Already packed — cancel it instead.', 'error')
       await p.getByRole('button', { name: 'Confirm slowly' }).click(); await p.getByRole('button', { name: 'Undo' }).click()
       await p.getByRole('button', { name: 'Hold', exact: true }).click() // a newer toast while the undo still runs
       await p.locator('[data-toast]', { hasText: 'KS-1003 on hold.' }).waitFor()
       await p.waitForFunction(() => document.querySelectorAll('[data-testid="log"] li').length && [...document.querySelectorAll('[data-testid="log"] li')].filter((l) => l.textContent === 'slow undo').length === 2, null, { timeout: 3000 })
       assert.equal(await p.locator('[data-toast]').textContent(), 'KS-1003 on hold.')
+    })
+
+    await t.step('error toast (§ Feedback 1): role=alert, stays past the 8 s window, its action runs once, × and Esc close it', async () => {
+      await p.getByRole('button', { name: 'Save fails' }).click()
+      const err = await expectToast(p, 'Not saved.', 'error')
+      assert.match(await err.textContent(), /Nothing was changed\./)
+      await p.waitForTimeout(9000)
+      assert.equal(await err.isVisible(), true, 'an error toast never leaves by itself')
+      await err.getByRole('button', { name: 'Try again' }).click()
+      await err.waitFor({ state: 'detached' })
+      assert.ok((await log()).includes('retried'))
+      await p.getByRole('button', { name: 'Save fails' }).click()
+      await (await expectToast(p, 'Not saved.')).getByRole('button', { name: 'Close' }).click()
+      await p.locator('[data-toast]').waitFor({ state: 'detached' })
+      await p.getByRole('button', { name: 'Save fails' }).click(); await expectToast(p, 'Not saved.')
+      await p.keyboard.press('Escape'); await p.locator('[data-toast]').waitFor({ state: 'detached' })
+    })
+
+    await t.step('field errors (§ Feedback 3): marked at the field, focus on the first, one toast counts down and leaves', async () => {
+      await p.getByRole('button', { name: 'Save product' }).click()
+      await expectToast(p, '2 fields need fixing.', 'error', { quiet: true })
+      await p.waitForFunction(() => document.activeElement?.getAttribute('name') === 'price')
+      assert.equal(await p.getByLabel('Price').getAttribute('aria-invalid'), 'true')
+      assert.equal(await p.locator('#price-error').textContent(), 'More than ₹0.')
+      await p.getByLabel('Price').fill('2490')
+      await expectToast(p, '1 field needs fixing.', 'error', { quiet: true })
+      assert.equal(await p.getByLabel('HSN code').inputValue(), '62', 'nothing typed is cleared')
+      await p.getByLabel('HSN code').fill('6204')
+      await p.locator('[data-toast]').waitFor({ state: 'detached' })
+      await p.getByRole('button', { name: 'Save product' }).click()
+      assert.equal(await p.locator('[data-toast="error"]').count(), 0, 'a clean form shows no summary')
+    })
+
+    await t.step('ActionForm (§ Feedback F0·5): the browser rules as field errors, the action\'s fields, error and ok as toasts; nothing typed cleared', async () => {
+      const f = p.getByRole('form', { name: 'Rename shop' })
+      const name = f.getByLabel('Shop name')
+      await f.getByRole('button', { name: 'Rename' }).click()
+      await expectToast(p, '1 field needs fixing.', 'error', { quiet: true })
+      assert.equal(await p.locator('#shop-error').textContent(), 'At least 3 letters.')
+      await name.fill('taken'); await f.getByRole('button', { name: 'Rename' }).click()
+      await p.locator('#shop-error', { hasText: 'That name is taken.' }).waitFor()
+      assert.equal(await name.inputValue(), 'taken', 'nothing typed is cleared')
+      await name.fill('refuse'); await f.getByRole('button', { name: 'Rename' }).click()
+      await expectToast(p, 'Only an admin can rename a shop.')
+      assert.equal(await name.inputValue(), 'refuse')
+      await name.fill('Kesar Studio'); await f.getByRole('button', { name: 'Rename' }).click()
+      await expectToast(p, 'Renamed to Kesar Studio.', 'ok')
+    })
+
+    await t.step('leaving with unsaved changes asks in the one Dialog; Keep editing keeps the words; Leave goes', async () => {
+      await p.goto(CONSOLE + '/console/settings/store')
+      const name = p.getByLabel('Shop name')
+      await name.fill('Kesar Studio Test')
+      await p.getByRole('link', { name: 'Orders' }).first().click()
+      const d = p.getByRole('dialog', { name: 'Leave without saving?' })
+      await d.waitFor()
+      assert.equal(await d.getByRole('button', { name: 'Keep editing' }).evaluate((b) => b === document.activeElement), true, 'the safe button has focus')
+      await d.getByRole('button', { name: 'Keep editing' }).click()
+      await d.waitFor({ state: 'hidden' })
+      assert.equal(await name.inputValue(), 'Kesar Studio Test')
+      assert.match(p.url(), /\/console\/settings\/store/)
+      await p.getByRole('link', { name: 'Orders' }).first().click()
+      await d.getByRole('button', { name: 'Leave' }).click()
+      await p.waitForURL(/\/console\/orders/)
+      await p.goto(CONSOLE + '/console/fixtures/ui')
+    })
+
+    await t.step('a failure inside a popup stays in it (§ Feedback 4)', async () => {
+      await p.getByRole('button', { name: 'Publish…' }).click()
+      const d = p.getByRole('dialog', { name: 'Publish your look?' })
+      await d.getByRole('button', { name: 'Publish' }).click()
+      await d.getByRole('alert').filter({ hasText: "Couldn't publish. Your draft is safe." }).waitFor()
+      assert.equal(await p.locator('[data-toast="error"]').count(), 0, 'no second popup or toast behind it')
+      await d.getByRole('button', { name: 'Try again' }).click()
+      await expectToast(p, 'Published.', 'ok')
     })
 
     await t.step('keys: j moves; never while typing; ? shows the list; off means off, but ? still works', async () => {
