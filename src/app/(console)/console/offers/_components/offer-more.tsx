@@ -73,7 +73,7 @@ export function OfferMore({ v, set, errors, pickers }: { v: OfferValues; set: (p
           {tiers.map((t, i) => (
             <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2">
               <div className="space-y-1"><label htmlFor={`o-tmin-${i}`} className="text-xs">From ₹</label>
-                <input id={`o-tmin-${i}`} inputMode="decimal" value={t.min} {...fp(`tier${i}`)} onChange={(e) => set({ tiers: tiers.map((x, j) => (j === i ? { ...x, min: e.target.value } : x)) })} className={field} /></div>
+                <input id={`o-tmin-${i}`} inputMode="decimal" value={t.min} {...(i === 0 && errors.tiers && !errors[`tier${i}`] ? fp('tiers') : fp(`tier${i}`))} onChange={(e) => set({ tiers: tiers.map((x, j) => (j === i ? { ...x, min: e.target.value } : x)) })} className={field} /></div>
               <div className="space-y-1"><label htmlFor={`o-tval-${i}`} className="text-xs">{v.kind === 'percent' ? '% off' : '₹ off'}</label>
                 <input id={`o-tval-${i}`} inputMode="decimal" value={t.value} {...fp(`tier${i}`)} onChange={(e) => set({ tiers: tiers.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) })} className={field} /></div>
               <button type="button" className="min-h-9 px-2 text-sm underline" onClick={() => set({ tiers: tiers.filter((_, j) => j !== i) })}>Remove</button>

@@ -27,6 +27,7 @@ export function CodeInput({ value, onChange, disabled, invalid }: {
           maxLength={1}
           aria-label={`Digit ${i + 1}`}
           aria-invalid={invalid || undefined}
+          aria-describedby={invalid ? 'code-error' : undefined}
           disabled={disabled}
           value={d}
           className="h-13 w-11 rounded-md border border-input bg-card text-center font-mono text-xl transition-colors duration-fast aria-invalid:border-danger-text"

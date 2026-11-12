@@ -87,7 +87,8 @@ export function useFieldErrors(opts: { noun?: string; scope: React.RefObject<HTM
 export function fieldProps(name: string, error: string | null | undefined | false) {
   return error ? { 'aria-invalid': true as const, 'aria-describedby': errorId(name) } : { 'aria-invalid': undefined }
 }
-export const errorId = (name: string) => `${name.replace(/[^A-Za-z0-9_-]/g, '-')}-error`
+// Letters of any script stay (a Devanagari option value must not collapse to dashes: impact review F1–F3).
+export const errorId = (name: string) => `${name.replace(/[^\p{L}\p{N}_-]/gu, '-')}-error`
 
 /** The line under a field. Empty: renders nothing (a form that reserves the line passes `reserve`). */
 export function FieldError({ name, id, message, reserve, className }: { name?: string; id?: string; message?: string | null | false; reserve?: boolean; className?: string }) {

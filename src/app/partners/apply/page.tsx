@@ -11,7 +11,6 @@ import { dateTimeIN } from '@/lib/format-date'
 import { frataWhatsappLink } from '@/lib/site'
 import { SignInFlow } from '../../login/sign-in-flow'
 import { ApplyForm } from './apply-form'
-import { Toaster } from '@/components/ui/toast'
 import { Wordmark } from '@/components/brand/wordmark'
 
 export const metadata = { title: 'Apply · Frrata Partners' }
@@ -33,7 +32,7 @@ export default async function ApplyPage() {
       <h1 className="font-display text-2xl font-semibold tracking-tight">Apply to be a partner</h1>
       <p className="flex items-center text-sm text-muted-foreground">Signed in as <span className="ml-1 font-mono">{auth.email}</span>
         <InfoTip about="what we ask later">PAN, bank account and GSTIN (if you have one) are asked when your first share is due.</InfoTip></p>
-      <Toaster><ApplyForm /></Toaster>
+      <ApplyForm />
     </>)
   } else if (partner.approvedAt) {
     body = (<>
@@ -57,7 +56,7 @@ export default async function ApplyPage() {
       <details className="rounded-md border border-border p-3 text-sm">
         <summary className="cursor-pointer font-medium">Change my application</summary>
         <div className="pt-4">
-          <Toaster><ApplyForm initial={{ name: partner.name, businessName: partner.businessName, phone: partner.phone.replace(/^91/, ''), city: partner.city, services: partner.services, workUrl: partner.workUrl, brandsNow: partner.brandsNow }} /></Toaster>
+          <ApplyForm initial={{ name: partner.name, businessName: partner.businessName, phone: partner.phone.replace(/^91/, ''), city: partner.city, services: partner.services, workUrl: partner.workUrl, brandsNow: partner.brandsNow }} />
         </div>
       </details>
     </>)

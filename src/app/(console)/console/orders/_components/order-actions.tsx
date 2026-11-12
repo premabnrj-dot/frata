@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 import { Button, button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
-import { FieldError, useFieldErrors } from '@/components/ui/field-error'
+import { FieldError, useFieldErrors, fieldProps } from '@/components/ui/field-error'
 import { Menu, type MenuItem } from '@/components/ui/menu'
 import { useToast } from '@/components/ui/toast'
 import { CANCEL_LABEL, CANCEL_REASONS, type CancelReason } from '@/domains/orders/work'
@@ -152,8 +152,9 @@ function Actions(p: OrderActionsProps) {
           </fieldset>
           <label className="grid gap-1 text-sm">
             <span>Note {reason === 'other' ? '' : <span className="text-muted-foreground">(optional)</span>}</span>
-            <textarea name="note" value={note} onChange={(e) => { setNote(e.target.value); fields.clear('note') }} maxLength={500} rows={2} {...fields.props('note')} className="rounded-md border border-input bg-card px-3 py-2 aria-invalid:border-danger-mark" />
-            <FieldError name="note" message={fields.errors.note} />
+            <textarea name="note" value={note} onChange={(e) => { setNote(e.target.value); fields.clear('note') }} maxLength={500} rows={2} {...fieldProps('cancel-note', fields.errors.note)} className="rounded-md border border-input bg-card px-3 py-2 aria-invalid:border-danger-mark" />
+            {/* Its own id: the page's private-notes form has a `note` too (impact review F1–F3). */}
+            <FieldError name="cancel-note" message={fields.errors.note} />
           </label>
         </div>
         {p.stockTaken ? (

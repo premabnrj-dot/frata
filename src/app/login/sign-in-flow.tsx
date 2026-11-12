@@ -51,7 +51,7 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
     setError(null)
     start(async () => {
       const r = await sendCode({ email: v })
-      if (!r.sent) return r.error === 'That does not look like an email address.' ? fieldError(r.error) : toast.error(r.error)
+      if (!r.sent) return r.field ? fieldError(r.error) : toast.error(r.error)
       setEmail(r.email); setCode(''); setSentAt(Date.now()); setNow(Date.now()); setBack(false); setStep('code') // clock-ok: in the send handler
     })
   }
@@ -64,7 +64,7 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
       const r = await verifyCode({ email, code: c })
       if (!r.ok) {
         setCode('')
-        if (r.error.startsWith('The code is') || r.error.startsWith('That code is wrong')) fieldError(r.error)
+        if (r.field) fieldError(r.error)
         else toast.error(r.error)
         return
       }
