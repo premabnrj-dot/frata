@@ -188,8 +188,8 @@ main { padding: 20px; display: grid; gap: 16px; align-content: start; min-width:
 
 <div class="mock">
   <nav class="views" aria-label="Mockup views">
-    <b>Sign in</b><a href="#check">Confirm it's you</a><a href="#waiting">Waiting for device</a><a href="#refused">Not confirmed</a><a href="#blocked">No passkey yet</a><a href="#add">Add a passkey</a>
-    <b>Admin</b><a href="#staff">Staff</a><a href="#allow">Allowance made</a><a href="#remove">Remove a passkey</a><a href="#activity">Activity</a>
+    <b>Sign in</b><a href="#check">Confirm it's you</a><a href="#waiting">Waiting for device</a><a href="#refused">Not confirmed</a><a href="#blocked">Ask to add a passkey</a><a href="#add">Add a passkey</a>
+    <b>Admin</b><a href="#staff">Staff</a><a href="#allow">Approve a request</a><a href="#remove">Remove a passkey</a><a href="#activity">Activity</a>
   </nav>
 
   <!-- CHECK -->
@@ -226,9 +226,11 @@ main { padding: 20px; display: grid; gap: 16px; align-content: start; min-width:
   <main class="view solo" id="v-blocked" data-nav="none" hidden>
     <div class="card">
       <span class="key"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M21 12v2"/></svg></span>
-      <h1>No passkey yet</h1>
+      <h1>Add a passkey</h1>
       <div class="who">ravi@frrata.com</div>
-      <p class="sub" style="margin:0">Ask another admin to allow a passkey for you.</p>
+      <span class="sub small">Read this code to an admin</span>
+      <div class="num" style="font-size:30px;font-weight:600;letter-spacing:.18em">472 918</div>
+      <button class="btn primary full busy" type="button" aria-disabled="true"><span class="spin" aria-hidden="true"></span>Waiting for approval</button>
       <a class="link small" href="#check">Sign out</a>
     </div>
   </main>
@@ -237,7 +239,7 @@ main { padding: 20px; display: grid; gap: 16px; align-content: start; min-width:
     <div class="card">
       <span class="key"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M21 12v2"/></svg></span>
       <h1>Add a passkey</h1>
-      <div class="pk"><span class="who">ravi@frrata.com</span><span class="badge b-info">Allowed by Asha · 24 min left</span></div>
+      <div class="pk"><span class="who">ravi@frrata.com</span><span class="badge b-ok">Approved by Asha · 9 min left</span></div>
       <div class="field"><label for="pkname">Name</label><input id="pkname" value="Ravi's phone"></div>
       <button class="btn primary full" type="button">Add passkey</button>
     </div>
@@ -259,12 +261,16 @@ main { padding: 20px; display: grid; gap: 16px; align-content: start; min-width:
       <main class="view" id="v-staff" data-nav="staff" hidden>
         <div class="ph"><h1>Staff</h1></div>
         <section class="card">
+          <div class="ch"><h2>Asking to add a passkey</h2><span class="badge b-warn">1</span></div>
+          <div class="needs"><div class="need"><span class="badge b-n">2 min ago</span><span class="num">ravi@frrata.com</span><a class="btn primary" href="#allow">Approve</a></div></div>
+        </section>
+        <section class="card">
           <div class="scroll"><table class="tbl stack">
             <thead><tr><th>Email</th><th>Role</th><th>Passkeys</th><th>Last confirmed</th><th class="r"></th></tr></thead>
             <tbody>
               <tr><td class="num full">asha@frrata.com</td><td data-l="Role"><span class="badge b-info">Admin</span></td><td data-l="Passkeys"><span class="badge b-ok">2</span></td><td data-l="Last" class="sub">Today 09:14</td><td class="r"><a class="btn" href="#remove">Passkeys</a></td></tr>
-              <tr><td class="num full">meera@frrata.com</td><td data-l="Role"><span class="badge b-info">Admin</span></td><td data-l="Passkeys"><span class="badge b-warn">1</span></td><td data-l="Last" class="sub">Yesterday</td><td class="r"><a class="btn" href="#allow">Allow a new passkey</a></td></tr>
-              <tr><td class="num full">ravi@frrata.com</td><td data-l="Role"><span class="badge b-n">Support</span></td><td data-l="Passkeys"><span class="badge b-bad">0</span></td><td data-l="Last" class="sub">—</td><td class="r"><a class="btn" href="#allow">Allow a new passkey</a></td></tr>
+              <tr><td class="num full">meera@frrata.com</td><td data-l="Role"><span class="badge b-info">Admin</span></td><td data-l="Passkeys"><span class="badge b-warn">1</span></td><td data-l="Last" class="sub">Yesterday</td><td class="r"><a class="btn" href="#remove">Passkeys</a></td></tr>
+              <tr><td class="num full">ravi@frrata.com</td><td data-l="Role"><span class="badge b-n">Support</span></td><td data-l="Passkeys"><span class="badge b-bad">0</span></td><td data-l="Last" class="sub">—</td><td class="r"><span class="badge b-warn">Asking</span></td></tr>
             </tbody>
           </table></div>
         </section>
@@ -272,21 +278,17 @@ main { padding: 20px; display: grid; gap: 16px; align-content: start; min-width:
 
       <main class="view" id="v-allow" data-nav="staff" hidden>
         <div class="ph"><h1>Staff</h1></div>
-        <div class="toast">Ravi can add a passkey until 10:44. <a href="#staff">Withdraw</a></div>
-        <section class="card">
-          <div class="scroll"><table class="tbl stack">
-            <thead><tr><th>Email</th><th>Role</th><th>Passkeys</th><th>Last confirmed</th><th class="r"></th></tr></thead>
-            <tbody>
-              <tr><td class="num full">asha@frrata.com</td><td data-l="Role"><span class="badge b-info">Admin</span></td><td data-l="Passkeys"><span class="badge b-ok">2</span></td><td data-l="Last" class="sub">Today 09:14</td><td class="r"><a class="btn" href="#remove">Passkeys</a></td></tr>
-              <tr><td class="num full">ravi@frrata.com</td><td data-l="Role"><span class="badge b-n">Support</span></td><td data-l="Passkeys"><span class="badge b-bad">0</span></td><td data-l="Last" class="sub">—</td><td class="r"><span class="badge b-info">Allowed · 30 min</span></td></tr>
-            </tbody>
-          </table></div>
-        </section>
+        <div class="dlg" role="dialog" aria-label="Approve ravi@frrata.com">
+          <b>Approve ravi@frrata.com</b>
+          <div class="field"><label for="code">Code Ravi reads to you</label><input id="code" class="num" inputmode="numeric" value="472 918"></div>
+          <div class="acts"><a class="btn" href="#staff">Cancel</a><button class="btn primary" type="button">Confirm with passkey and approve</button></div>
+        </div>
+        <div class="toast">Approved. Ravi can add a passkey on that browser until 10:26. Every admin has been emailed.</div>
       </main>
 
       <main class="view" id="v-remove" data-nav="staff" hidden>
         <a class="back" href="#staff">← Staff</a>
-        <div class="ph"><h1>asha@frrata.com</h1><div class="acts"><a class="btn" href="#allow">Allow a new passkey</a></div></div>
+        <div class="ph"><h1>asha@frrata.com</h1></div>
         <section class="card">
           <div class="scroll"><table class="tbl stack">
             <thead><tr><th>Passkey</th><th>Added</th><th>Last used</th><th class="r"></th></tr></thead>
@@ -299,7 +301,7 @@ main { padding: 20px; display: grid; gap: 16px; align-content: start; min-width:
         <div class="dlg" role="dialog" aria-label="Remove passkey">
           <b>Remove Asha's phone?</b>
           <span class="sub">Asha keeps 1 passkey.</span>
-          <div class="acts"><button class="btn" type="button">Keep</button><button class="btn danger" type="button">Remove</button></div>
+          <div class="acts"><button class="btn" type="button">Keep</button><button class="btn danger" type="button">Confirm with passkey and remove</button></div>
         </div>
       </main>
 
@@ -309,8 +311,9 @@ main { padding: 20px; display: grid; gap: 16px; align-content: start; min-width:
           <div class="scroll"><table class="tbl stack">
             <thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead>
             <tbody>
-              <tr><td class="sub num">10:16</td><td class="num">ravi@frrata.com</td><td class="full">Added passkey "Ravi's phone" · allowed by asha@frrata.com</td></tr>
-              <tr><td class="sub num">10:14</td><td class="num">asha@frrata.com</td><td class="full">Allowed a new passkey for ravi@frrata.com</td></tr>
+              <tr><td class="sub num">10:18</td><td class="num">ravi@frrata.com</td><td class="full">Added passkey "Ravi's phone" · emailed to all admins</td></tr>
+              <tr><td class="sub num">10:16</td><td class="num">asha@frrata.com</td><td class="full">Approved ravi@frrata.com's request · emailed to all admins</td></tr>
+              <tr><td class="sub num">10:14</td><td class="num">ravi@frrata.com</td><td class="full">Asked to add a passkey</td></tr>
               <tr><td class="sub num">09:14</td><td class="num">asha@frrata.com</td><td class="full">Confirmed with passkey "Asha's MacBook"</td></tr>
               <tr><td class="sub num">09:02</td><td class="num">meera@frrata.com</td><td class="full"><span class="badge b-bad">Not confirmed</span> 3 tries</td></tr>
             </tbody>
