@@ -1278,6 +1278,8 @@ do $$ declare n int; begin
   begin delete from discounts; raise exception 'FAIL: app deleted an offer'; exception when insufficient_privilege then null; end;
   begin update discount_codes set code = 'NEW1'; raise exception 'FAIL: app changed a code'; exception when insufficient_privilege then null; end;
   begin update order_discounts set amount = 1; raise exception 'FAIL: app changed a use'; exception when insufficient_privilege then null; end;
+  -- The terms a use keeps (0109: tiers, Buy X get Y, the products covered) are written with it and never changed after.
+  begin update order_discounts set target_products = null, tier_mins = null; raise exception 'FAIL: app changed the terms an order kept'; exception when insufficient_privilege then null; end;
   begin update price_history set price = 1; raise exception 'FAIL: app changed price history'; exception when insufficient_privilege then null; end;
   begin update discounts set tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: app moved an offer'; exception when insufficient_privilege then null; end;
   -- The price trigger, as the app: A's price change writes one row for A; A cannot write history for B.

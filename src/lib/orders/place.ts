@@ -3,9 +3,10 @@ import { enqueueOrderEmail } from '@/lib/email/enqueue'
 import { enqueuePaymentCheck } from './payment-check'
 import { WA_OPT_IN_NOTICE } from '@/domains/checkout/opt-in'
 import { randomUUID } from 'node:crypto'
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import type { CleanAddress } from '@/domains/checkout/address'
-import { amountFor, candidates, classOf, normalCode, stepReached, type CodeResult, type DiscountTerms, type TypedCode } from '@/domains/checkout/discounts'
+import { amountFor, candidates, classOf, normalCode, type CodeResult, type DiscountTerms, type TypedCode } from '@/domains/checkout/discounts'
+import { termsCopy } from '@/domains/checkout/kept-terms'
 import { priorOrderSql } from '@/lib/db/order-predicates'
 import { keptOffers, quote, totalFor, type BagLine, type KeptOffer, type Quote } from '@/domains/checkout/quote'
 import { gstinState } from '@/domains/tax/gst'
@@ -13,7 +14,6 @@ import { b2bProblem, cleanGstin, stateName } from '@/domains/tax/gstin'
 import { stateCode } from '@/domains/checkout/states'
 import type { Tx } from '@/lib/db'
 import { tenantCounters } from '@/lib/db/schema'
-import { variants } from '@/lib/db/schema-catalogue'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { orderToken, sha256, tokenHash } from '@/lib/crypto/secret-box'
@@ -25,14 +25,16 @@ import { createOrder } from '@/lib/payments/razorpay'
 import { refreshSoldOut } from '@/lib/queries/storefront'
 import { linkCustomer } from '@/lib/queries/customers'
 import { freeStock } from '@/domains/catalogue/availability'
+import { cogsOf, lineSnapshot, unitCosts } from './lines'
+import { takeStock } from './stock'
 
 // =============================================================================
 // FILE: src/lib/orders/place.ts
 //
 // PLACING AN ORDER (checkout spec § Routes, architecture review 2026-11-07).
-// The one module that writes an order and its lines — and so the one place a
-// line's cost is read (for profit; never returned). Everything it returns is
-// named, shopper-safe fields.
+// The one module that places an order; its lines are written as sold
+// (lines.ts, the one place a line's cost is read: for profit, never returned).
+// Everything it returns is named, shopper-safe fields.
 //
 // One transaction: a placement slot (at most PLACE_SLOTS per shop at once), the
 // idempotency key (advisory lock), the shop open, the
@@ -159,10 +161,9 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     const cod = input.method === 'cod'
     const m = cod ? q.cod : q.prepaid
     // Costs for profit: read here, stored on the lines, never returned.
-    const costs = new Map((await tx.select({ id: variants.id, cost: variants.unitCost }).from(variants)
-      .where(and(eq(variants.tenantId, tenantId), inArray(variants.id, q.lines.map((l) => l.variantId))))).map((r) => [r.id, r.cost === null ? null : Number(r.cost)]))
+    const costs = await unitCosts(tx, tenantId, q.lines.map((l) => l.variantId))
     const live = q.lines.filter((l) => l.qty > 0)
-    const cogs = live.every((l) => costs.get(l.variantId) != null) ? live.reduce((a, l) => a + costs.get(l.variantId)! * l.qty, 0) : null
+    const cogs = cogsOf(live, costs)
 
     await tx.insert(orders).values({
       id, tenantId, number, paymentMethod: input.method,
@@ -186,16 +187,10 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     await enqueueOrderEmail(tx, tenantId, id, cod ? 'confirmed' : 'finish_paying', null, now)
     // An online order asks Razorpay itself when its hold ends: a lost webhook never leaves a paid order unpaid.
     if (!cod) await enqueuePaymentCheck(tx, tenantId, id, new Date(now.getTime() + HOLD_MINUTES * 60_000))
-    await tx.insert(orderLines).values(live.map((l, position) => ({
-      ...m.shares[position]!,
-      lineDiscount: m.lines[position]!.discount, productDiscount: m.lines[position]!.productDiscount, taxableValue: m.lines[position]!.taxable, gstBps: m.lines[position]!.gstBps, gst: m.lines[position]!.gst,
-      tenantId, orderId: id, variantId: l.variantId, productId: l.productId, title: l.title, optionValues: l.values, sku: l.sku,
-      imageBase: l.image?.base ?? null, imageWidths: l.image?.widths ?? null, qty: l.qty, unitPrice: l.unitPrice, compareAt: l.compareAt,
-      hsn: l.hsn, uqc: l.uqc, unitCost: costs.get(l.variantId) ?? null,
-      kind: l.kind, shipsBy: l.shipsBy, leadMinDays: l.leadMinDays, leadMaxDays: l.leadMaxDays, position,
-    })))
-    // What the order got, with its value terms copied (a tier: the step reached). Buy X get Y, gift and target terms are
-    // not copied: what they gave is fixed on each line (order_lines.product_discount), which is what a reprice keeps.
+    await tx.insert(orderLines).values(live.map((l, position) => lineSnapshot(l, m.lines[position]!, m.shares[position]!, { tenantId, orderId: id, position, unitCost: costs.get(l.variantId) ?? null })))
+    // What the order got, with its terms copied (kept-terms.ts: the value given — a tier's step reached — and every tier,
+    // Buy X get Y, the gift and the products covered), so the order's own offers can be re-planned on new lines
+    // (replanKept) whatever the offer becomes. A reprice keeps each line's stored product discount.
     // Placed online with an order offer other than paying on delivery's, both are kept, each marked with its way
     // (keptOffers, shop stress test 2026-11-11): a switch to COD reprices to the one paying on delivery gets.
     const kept = keptOffers(q, input.method)
@@ -227,12 +222,6 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
   if (placed.method === 'cod') return out
   const pay = await startPayment(tenantId, placed.id)
   return pay.ok ? { ...out, pay: pay.pay } : { ...out, payError: pay.error }
-}
-
-/** The terms an order keeps (copied, typed columns): a tier copies the step it reached. */
-function termsCopy(t: DiscountTerms, subtotal: number) {
-  const step = stepReached(t.tiers, subtotal)
-  return step ? { percentBps: step.percentBps, amountOff: step.amountOff, cap: t.cap, minSubtotal: step.min } : { percentBps: t.percentBps, amountOff: t.amountOff, cap: t.cap, minSubtotal: t.minSubtotal }
 }
 
 /**
@@ -278,31 +267,6 @@ async function fitOffers(tx: Tx, tenantId: string, offers: DiscountTerms[], pric
     return l !== undefined && usedUp(l, { n: (u?.n ?? 0) + 1, given: (u?.given ?? 0) + a.amount, phone: 0 })
   })
   return { offers: offers.filter((t) => !out.has(t.id)), fills }
-}
-
-/**
- * Take the stock of an order's lines of `kind` whose stock is not taken yet (in_stock: COD at placement or
- * switch, online at capture; preorder: at packing). Each line is stamped when its stock leaves the shelf —
- * only the lines actually taken — so a second call takes nothing and a cancel puts back exactly what was taken.
- * Returns the lines that could not be covered (a capture after its hold expired and the piece sold: refund due).
- * Variants it took to 0 are pushed onto `soldOut`, so the caller refreshes the cached shop pages after its commit.
- */
-export async function takeStock(tx: Tx, tenantId: string, orderId: string, kind: 'in_stock' | 'preorder' = 'in_stock', soldOut: string[] = []): Promise<{ short: number; taken: number }> {
-  const lines = await tx.select({ id: orderLines.id, variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
-    .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), eq(orderLines.kind, kind), isNull(orderLines.stockTakenAt)))
-  let short = 0, taken = 0
-  // Variants in id order, as variantRows locks them: no deadlock between two orders sharing pieces.
-  for (const l of [...lines].sort((a, b) => String(a.variantId).localeCompare(String(b.variantId)))) {
-    if (!l.variantId) { short++; continue }
-    const r = await tx.update(variants).set({ stock: sql`${variants.stock} - ${l.qty}` })
-      .where(and(eq(variants.tenantId, tenantId), eq(variants.id, l.variantId), sql`${variants.stock} >= ${l.qty}`)).returning({ id: variants.id, stock: variants.stock })
-    if (!r.length) { short++; continue }
-    taken++
-    if (r[0]!.stock === 0) soldOut.push(l.variantId)
-    await tx.update(orderLines).set({ stockTakenAt: sql`now()` })
-      .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.id, l.id), isNull(orderLines.stockTakenAt)))
-  }
-  return { short, taken }
 }
 
 /**

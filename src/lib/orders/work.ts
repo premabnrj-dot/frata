@@ -10,9 +10,8 @@ import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
 import { momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
 import { shopSettings, tenantCounters, tenants } from '@/lib/db/schema'
-import { variants } from '@/lib/db/schema-catalogue'
-import { orderEvents, orderLines, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
-import { takeStock } from './place'
+import { orderEvents, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
+import { putStockBack, takeStock } from './stock'
 
 // =============================================================================
 // FILE: src/lib/orders/work.ts
@@ -220,22 +219,4 @@ export async function cancel(tx: Tx, tenantId: string, actor: Actor, orderId: st
   const eventId = await record(tx, tenantId, orderId, actor, 'cancelled', at, { reason: c0.reason })
   await enqueueOrderEmail(tx, tenantId, orderId, 'cancelled', null, now)
   return { ok: true, eventId, refund: refundDue(after), backInStock }
-}
-
-/**
- * Put back exactly the lines whose stock was taken (per line, once), in variant order; says which variants came back
- * from 0 so the caller refreshes the shop. Cancel and a return that came back (outcomes.ts) both use it.
- */
-export async function putStockBack(tx: Tx, tenantId: string, orderId: string): Promise<string[]> {
-  const backInStock: string[] = []
-  const taken = await tx.select({ id: orderLines.id, variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
-    .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), isNotNull(orderLines.stockTakenAt)))
-  for (const l of [...taken].sort((a, b) => String(a.variantId).localeCompare(String(b.variantId)))) {
-    await tx.update(orderLines).set({ stockTakenAt: null }).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.id, l.id)))
-    if (!l.variantId) continue
-    const [v] = await tx.update(variants).set({ stock: sql`${variants.stock} + ${l.qty}` })
-      .where(and(eq(variants.tenantId, tenantId), eq(variants.id, l.variantId))).returning({ stock: variants.stock })
-    if (v && v.stock - l.qty <= 0) backInStock.push(l.variantId)
-  }
-  return backInStock
 }
