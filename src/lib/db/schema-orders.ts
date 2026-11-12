@@ -265,7 +265,7 @@ export const orderEvents = pgTable('order_events', {
   // An undo points at an event on the same order (FK in drizzle/0020).
   unique('order_events_order_id_key').on(t.tenantId, t.orderId, t.id),
   index('order_events_order').on(t.tenantId, t.orderId, t.at),
-  check('order_events_kind', sql`${t.kind} in ('confirmed','held','unheld','undone','edited','packed','cancelled','note_added','printed_slip','printed_invoice','shipped','delivered','rto','lost','ndr','shipment_cancelled','credit_noted','items_edited')`),
+  check('order_events_kind', sql`${t.kind} in ('confirmed','held','unheld','undone','edited','packed','cancelled','note_added','printed_slip','printed_invoice','shipped','delivered','rto','lost','ndr','shipment_cancelled','credit_noted','items_edited','edit_requested','edit_dropped')`),
   check('order_events_actor', sql`${t.actorKind} in ('member','support','system')`),
   // A person is named exactly when one acted.
   check('order_events_who', sql`(${t.actorKind} = 'system') = (${t.actorUserId} is null) and (${t.actorUserId} is null) = (${t.actorEmail} is null)`),

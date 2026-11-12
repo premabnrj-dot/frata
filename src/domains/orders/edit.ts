@@ -2,7 +2,8 @@
 // FILE: src/domains/orders/edit.ts
 //
 // EDITING A PLACED ORDER'S ITEMS (spec docs/specs/2026-11-11-order-edit.md; plan docs/plans/2026-11-12-order-edit.md,
-// OE·1: pay on delivery and unpaid). "These lines now" → the order priced again, one way, everywhere: the order page's
+// OE·1: pay on delivery and unpaid; OE·2: paid online, priced as paid online — what that does with the money is
+// refunds.ts). "These lines now" → the order priced again, one way, everywhere: the order page's
 // panel runs this in the browser as the merchant taps, and the save runs it again on the server under the order's lock
 // (src/lib/orders/edit.ts) and refuses a total that moved. Pure; paise; bps; no clock.
 //
@@ -18,13 +19,15 @@
 //   `freeShippingAbove`): below it a bag that went free pays today's flat charge, at it a bag that paid goes free, as
 //   checkout would charge it. Free delivery from an offer waives that charge while the bag reaches its minimum.
 // - Paying on delivery: the order's own COD fee; the new total is what the courier collects. Today's COD maximum
-//   refuses a higher total above it (with the limit), never the minimum.
+//   refuses a higher total above it (with the limit), never the minimum. Paid online: the online order offer and the
+//   pay-online saving, no COD fee (the order is priced the way it is paid: `way`).
 // =============================================================================
 
 import { classOf, priceMethod, type MethodPrice, type PlanLine } from '@/domains/checkout/discounts'
 import { MAX_LINES, MAX_QTY } from '@/domains/checkout/quote'
 import { replanKept, type Kept } from '@/domains/checkout/replan'
-import { currentMethod, type OrderMoments, type OrderState } from './order-state'
+import { type OrderState } from './order-state'
+import type { Paid, RefundRow } from './refunds'
 import { applies } from './work'
 
 export const EDIT_REASONS = ['out_of_stock', 'customer_asked', 'other'] as const
@@ -33,14 +36,14 @@ export const REASON_LABEL: Record<EditReason, string> = { out_of_stock: 'Out of 
 
 /**
  * Why this order's items can't change now (null: they can), roles aside: the one rule for the order page's button and
- * the save. Until packed (applies('edit')); never paid online, nor an order that started as an online payment and was
- * switched to pay on delivery — its Razorpay order can still be paid at the old total (security review 2026-11-12):
- * both wait for online-paid editing (OE·2).
+ * the save. Until packed (applies('edit')), and never while an earlier change waits for the shopper's payment (OE·2).
+ * Paid online (OE·2): a lower total refunds the difference, a higher one asks for it first (refunds.ts). An order that
+ * started as an online payment and was switched to pay on delivery: a payment on its first Razorpay order after an edit
+ * is refunded in full and never marks it paid at the old total (lib/orders/edit-paid.ts strayCapture).
  */
-export function cannotEdit(state: OrderState, o: Pick<OrderMoments, 'paidAt' | 'paymentMethod' | 'switchedToCodAt'> & { razorpayOrderId: string | null }): string | null {
+export function cannotEdit(state: OrderState, o: { waiting: boolean }): string | null {
   if (!applies('edit', state)) return state === 'packed' || state === 'shipped' ? 'Already packed: its slip and invoice keep these items.' : `This order is ${state.replace('_', ' ')}.`
-  if (o.paidAt || currentMethod(o) !== 'cod') return 'Paid online: its items can\'t be changed here yet.'
-  if (o.switchedToCodAt && o.razorpayOrderId) return 'This order started as an online payment. Its items can be changed once online-paid editing arrives.'
+  if (o.waiting) return 'Waiting for the shopper to pay for the last change. Wait, or ship without the change.'
   return null
 }
 
@@ -68,7 +71,12 @@ export type EditFacts = {
   choices: Choice[]
   /** Null: an offer's terms were not kept (a product offer placed before 0110), so it cannot be re-planned. */
   offers: KeptRow[] | null
-  order: { shipping: number; codCharge: number; total: number; pricesIncludeGst: boolean; registered: boolean; placedAt: Date }
+  order: { shipping: number; codCharge: number; total: number; pricesIncludeGst: boolean; registered: boolean; placedAt: Date
+    /** How it is paid now: priced that way. */
+    way: 'cod' | 'prepaid' }
+  /** Paid online: its payments and the refunds against them (refunds.ts settleOf), as of `now`. Null: not paid online. */
+  paid: { payments: Paid[]; refunds: (Pick<RefundRow, 'razorpayPaymentId' | 'amount' | 'cancelledAt' | 'sendingAt' | 'sentAt' | 'processedAt' | 'failedAt'>
+    & Partial<Pick<RefundRow, 'id' | 'retryOf' | 'supersededBy'>>)[]; now: Date } | null
   rules: { shippingFlat: number; freeShippingAbove: number; codMax: number }
   /** Pieces of a variant the order may hold on a new or changed line (today's free stock, its own pieces back). */
   room: Record<string, number>
@@ -102,7 +110,7 @@ export type EditProblem =
   | { kind: 'nothing' } | { kind: 'empty' } | { kind: 'too_many' } | { kind: 'unknown' } | { kind: 'qty' }
   | { kind: 'twice'; title: string } | { kind: 'other_product'; title: string } | { kind: 'gone'; title: string }
   | { kind: 'no_room'; title: string; values: string[]; left: number } | { kind: 'no_reason'; title: string }
-  | { kind: 'offers_unknown' } | { kind: 'cod_max'; max: number }
+  | { kind: 'offers_unknown' } | { kind: 'cod_max'; max: number } | { kind: 'payment_unknown' }
 
 const cls = (k: Kept) => classOf(k.terms.style)
 const onCod = (k: Kept) => cls(k) === 'order' && (k.method === null || k.method === 'cod')
@@ -117,8 +125,9 @@ export function inOrder<T extends { line: string | null }>(lines: { id: string }
   return [...want].sort((a, b) => rank(a) - rank(b))
 }
 
-/** Whether an order offer row counts as a use while the order pays on delivery (limits and budgets). */
-export const usesOnCod = (r: { class: string; method: string | null }) => r.class !== 'payment' && r.method !== 'prepaid'
+/** Whether an order offer row counts as a use while the order is paid this way (limits and budgets). */
+export const usesOn = (way: 'cod' | 'prepaid') => (r: { class: string; method: string | null }) => (way === 'cod' ? r.class !== 'payment' && r.method !== 'prepaid' : r.method !== 'cod')
+export const usesOnCod = usesOn('cod')
 
 /**
  * The order with these lines (in `inOrder` order), priced paying on delivery, or why not. `reasons` names why each line that comes out does
@@ -129,6 +138,8 @@ export function planEdit(f: EditFacts, want: Want[], reasons: Record<string, Edi
   if (!want.length) return fail({ kind: 'empty' })
   if (want.length > MAX_LINES) return fail({ kind: 'too_many' })
   if (f.offers === null) return fail({ kind: 'offers_unknown' })
+  // Paid online, its payment must be known (what it captured and refunded since) before the money can move.
+  if (f.order.way === 'prepaid' && f.paid === null) return fail({ kind: 'payment_unknown' })
   const byId = new Map(f.lines.map((l) => [l.id, l]))
   const choice = new Map(f.choices.map((c) => [c.variantId, c]))
   const seenLine = new Set<string>(), seenVariant = new Set<string>()
@@ -179,11 +190,13 @@ export function planEdit(f: EditFacts, want: Want[], reasons: Record<string, Edi
   const after = new Map(r.kept.map((k) => [k.terms, k.amount]))
   const amounts = offers.flatMap((o) => (after.has(o.kept.terms) ? [{ rowId: o.rowId, amount: after.get(o.kept.terms)! }] : []))
   const changed = offers.map((o) => ({ rowId: o.rowId, title: o.kept.terms.title, before: o.kept.amount, after: after.get(o.kept.terms) ?? 0 })).filter((x) => x.before !== x.after)
-  const orderAmount = r.kept.filter(onCod).reduce((a, k) => a + k.amount, 0)
-  const price = priceMethod(lines.map((l, i) => ({ gross: l.unitPrice * l.qty, qty: l.qty, hsn: l.hsn, productDiscount: r.productDisc[i]!, own: l.own })), orderAmount, 0,
-    r.shipping + f.order.codCharge, { registered: f.order.registered, pricesIncludeGst: f.order.pricesIncludeGst, date: f.order.placedAt })
+  const way = f.order.way
+  const orderAmount = r.kept.filter((k) => cls(k) === 'order' && (k.method === null || k.method === way)).reduce((a, k) => a + k.amount, 0)
+  const payAmount = way === 'prepaid' ? r.kept.filter((k) => cls(k) === 'payment').reduce((a, k) => a + k.amount, 0) : 0
+  const price = priceMethod(lines.map((l, i) => ({ gross: l.unitPrice * l.qty, qty: l.qty, hsn: l.hsn, productDiscount: r.productDisc[i]!, own: l.own })), orderAmount, payAmount,
+    r.shipping + (way === 'cod' ? f.order.codCharge : 0), { registered: f.order.registered, pricesIncludeGst: f.order.pricesIncludeGst, date: f.order.placedAt })
   const total = price.total
-  if (f.rules.codMax > 0 && total > f.rules.codMax && total > f.order.total) return fail({ kind: 'cod_max', max: f.rules.codMax })
+  if (way === 'cod' && f.rules.codMax > 0 && total > f.rules.codMax && total > f.order.total) return fail({ kind: 'cod_max', max: f.rules.codMax })
   return { ok: true, plan: {
     lines, removed, offers: changed, amounts, productDisc: r.productDisc, subtotal: plan.reduce((a, l) => a + l.unitPrice * l.qty, 0),
     shipping: { before: f.order.shipping, after: r.shipping }, price, total: { before: f.order.total, after: total },
@@ -195,10 +208,11 @@ export function planEdit(f: EditFacts, want: Want[], reasons: Record<string, Edi
  * the order offer paying on delivery gets, the delivery charge and COD fee as they were — the price they had.
  */
 export function priceAsKept(lines: { unitPrice: number; qty: number; hsn: string | null; gstBps: number; productDiscount: number }[], offers: { class: string; method: string | null; amount: number }[],
-  charges: { shipping: number; codCharge: number }, o: { registered: boolean; pricesIncludeGst: boolean; placedAt: Date }): MethodPrice {
-  const order = offers.filter((x) => x.class === 'order' && (x.method === null || x.method === 'cod')).reduce((a, x) => a + x.amount, 0)
-  return priceMethod(lines.map((l) => ({ gross: l.unitPrice * l.qty, qty: l.qty, hsn: l.hsn, productDiscount: l.productDiscount, own: l.gstBps })), order, 0,
-    charges.shipping + charges.codCharge, { registered: o.registered, pricesIncludeGst: o.pricesIncludeGst, date: o.placedAt })
+  charges: { shipping: number; codCharge: number }, o: { registered: boolean; pricesIncludeGst: boolean; placedAt: Date }, way: 'cod' | 'prepaid' = 'cod'): MethodPrice {
+  const order = offers.filter((x) => x.class === 'order' && (x.method === null || x.method === way)).reduce((a, x) => a + x.amount, 0)
+  const pay = way === 'prepaid' ? offers.filter((x) => x.class === 'payment').reduce((a, x) => a + x.amount, 0) : 0
+  return priceMethod(lines.map((l) => ({ gross: l.unitPrice * l.qty, qty: l.qty, hsn: l.hsn, productDiscount: l.productDiscount, own: l.gstBps })), order, pay,
+    charges.shipping + (way === 'cod' ? charges.codCharge : 0), { registered: o.registered, pricesIncludeGst: o.pricesIncludeGst, date: o.placedAt })
 }
 
 /** The option values that changed between two pieces of one product ("M" → "L"; a colour and a size both, joined). */
@@ -276,5 +290,6 @@ export function problemWords(p: EditProblem, inr: (paise: number) => string): st
     case 'no_reason': return `Say why ${p.title} comes out.`
     case 'offers_unknown': return 'This order was placed before offers could be worked out again. Cancel it and place it again to change its items.'
     case 'cod_max': return `Pay on delivery is for orders up to ${inr(p.max)}. Ask them to pay online, or keep the order as it was.`
+    case 'payment_unknown': return 'Its online payment can\'t be read here, so the money can\'t follow. Keep the order as it was.'
   }
 }

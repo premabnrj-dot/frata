@@ -9,8 +9,7 @@
 //  3. a race with packing: an edit waiting on the order's lock sees it packed and changes nothing;
 //  4. an offer's use is freed by an edit, taken by another order, and Undo is then refused; a tier steps down; free
 //     delivery from an offer comes off below its minimum, and the shop's own threshold brings the charge back;
-//  5. refused: paid online, packed, a support visit, an order that started as an online payment, over the COD maximum,
-//     a total that moved;
+//  5. refused: packed, a support visit, over the COD maximum, a total that moved (paid online: edit-paid.int.test.ts);
 //  6. two lines on one variant with too little for both: the line with the lower id is taken, whatever the call order;
 //  7. after an edit, every reader reads the live lines: packing's invoice, a cancel that restocks, pre-orders owed, the
 //     list's item counts;
@@ -306,7 +305,7 @@ describe.skipIf(!host)('editing an order\'s items', () => {
     void ship
   }, 90_000)
 
-  it('refused: paid online, packed, a support visit, an order that started online, the COD maximum, a moved total', async () => {
+  it('refused: packed, a support visit, the COD maximum, a moved total', async () => {
     const s = await shop({ codMax: 600000 })
     const t = await tools(s.A, s.stamp)
     const { orders } = await import('@/lib/db/schema-orders')
@@ -317,13 +316,8 @@ describe.skipIf(!host)('editing an order\'s items', () => {
     expect(await t.edit(o.id, swap, {}, { actor: { kind: 'support', userId: ME, email: 'support@frata.test' } })).toEqual({ ok: false, error: 'A support visit can\'t change an order\'s items.' })
     expect(await t.edit(o.id, swap, {}, { expectedTotal: 1 })).toEqual({ ok: false, error: 'The new total is ₹2,598. Check it, then save again.', total: 259800 })
     expect(await t.edit(o.id, [{ line: m.id, variantId: s.m, qty: 3 }])).toEqual({ ok: false, error: 'Pay on delivery is for orders up to ₹6,000. Ask them to pay online, or keep the order as it was.' })
-    // Switched to pay on delivery from an online payment: its Razorpay order could still be paid at the old total.
-    await t.withTenant(s.A, (tx) => tx.update(orders).set({ paymentMethod: 'prepaid', switchedToCodAt: new Date(), razorpayOrderId: `order_INTEDSW${s.stamp}` }).where(and(eq(orders.tenantId, s.A), eq(orders.id, o.id))))
-    expect(await t.edit(o.id, swap, {}, { expectedTotal: 0 })).toEqual({ ok: false, error: 'This order started as an online payment. Its items can be changed once online-paid editing arrives.' })
+    // OE·2 lifted the refusals of a paid-online order and of one switched from an online payment: edit-paid.int.test.ts.
     expect((await t.live(o.id)).map((l) => l.id)).toEqual([m.id])
-    // Paid online (OE·2), and packed.
-    await t.withTenant(s.A, (tx) => tx.update(orders).set({ paidAt: new Date() }).where(and(eq(orders.tenantId, s.A), eq(orders.id, o.id))))
-    expect(await t.edit(o.id, swap, {}, { expectedTotal: 0 })).toEqual({ ok: false, error: 'Paid online: its items can\'t be changed here yet.' })
     const p = await t.place([{ variantId: s.coord, qty: 1 }])
     await t.withTenant(s.A, (tx) => tx.update(orders).set({ confirmedAt: new Date(), packedAt: new Date(), invoiceNumber: `ED/${String(s.stamp).slice(-6)}` }).where(and(eq(orders.tenantId, s.A), eq(orders.id, p.id))))
     expect(await t.edit(p.id, [{ line: (await t.lineOf(p.id, s.coord)).id, variantId: s.coord, qty: 2 }], {}, { expectedTotal: 0 })).toEqual({ ok: false, error: 'Already packed: its slip and invoice keep these items.' })

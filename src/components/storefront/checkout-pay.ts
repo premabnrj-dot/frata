@@ -38,3 +38,18 @@ export async function openRazorpay(ref: OrderRef, pay: Pay, on: { done: () => vo
   rzp.on('payment.failed', () => { void api('/api/shop/orders/pay', { ...ref, failed: true }) })
   rzp.open()
 }
+
+/** Paying for a change to a paid order (OE·2): the same sheet on the shop's key, its reply to /change. Closing it changes nothing. */
+export async function openChangePayment(ref: OrderRef, pay: Pay, on: { done: () => void; failed: (text: string) => void }) {
+  if (!(await loadRazorpay()) || !window.Razorpay) { on.failed('Online payment could not open. Check your connection and try again.'); return }
+  const rzp = new window.Razorpay({
+    key: pay.keyId, amount: pay.amount, currency: 'INR', order_id: pay.razorpayOrderId, name: pay.shop,
+    prefill: { name: pay.name, contact: `+91${pay.phone}` },
+    handler: async (resp: { razorpay_payment_id: string; razorpay_signature: string }) => {
+      const r = await api('/api/shop/orders/change', { ...ref, paymentId: resp.razorpay_payment_id, signature: resp.razorpay_signature })
+      if (r.ok) on.done(); else on.failed(r.data.error ?? 'We could not confirm this payment. If money left your account, the shop will see it within minutes.')
+    },
+    modal: { ondismiss: () => on.failed('Payment did not go through. Nothing was charged. Try again.') },
+  })
+  rzp.open()
+}

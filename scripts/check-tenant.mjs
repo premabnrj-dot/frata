@@ -204,7 +204,7 @@ for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|referen
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?"?(staff_(?:passkeys|enrolment_requests|webauthn_challenges|stepups|passkey_tries))\b/g)) {
   failures.push(`grant on ${m[1]}  — staff passkey tables have no table grants; the app_staff_* definers are the only door (ADR-0007)`)
 }
-// Partner teams (T1a, drizzle/0121): definers are the only door for the app; frata_admin may only read.
+// Partner teams (T1a, drizzle/0123): definers are the only door for the app; frata_admin may only read.
 for (const m of sql.matchAll(/grant\s+((?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?)\bon\s+(?:table\s+)?"?(partner_(?:members|assignments))\b([^;]*);/g)) {
   if (!/^select\s+$/.test(m[1]) || !/\bto\s+frata_admin\s*$/.test(m[3].replace(/,\s*partner_(?:members|assignments)/, ''))) failures.push(`grant on ${m[2]}  — partner team tables: only "grant select … to frata_admin"; the app_partner_* definers are the only door`)
 }

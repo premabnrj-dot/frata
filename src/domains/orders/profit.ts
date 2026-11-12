@@ -72,6 +72,9 @@ export function contributionPer100(profit: Paise, netRevenue: Paise): number {
   return Math.round((profit / netRevenue) * 100 * 100) / 100
 }
 
+/** Razorpay's standard rate on a payment, before GST (frata-unit-economics: 2% on prepaid). */
+export const RAZORPAY_STANDARD_BPS = 200
+
 /** Until the payment lands, an estimate of the gateway's fee: `bps` of the gross total, plus 18% GST on the fee. */
 export function estimateGatewayFee(grossTotal: Paise, bps: number): Paise {
   const fee = applyBps(grossTotal, bps)

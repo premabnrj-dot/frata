@@ -102,7 +102,7 @@ export const notices = pgTable('notices', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   type: text('type').notNull(),
   /** Where it came from (worded when rendered): billing_notice, support_session, handover, admin, addon_trial (A3: a
-   *  self-serve trial's row, 3 days before it ends). */
+   *  self-serve trial's row, 3 days before it ends), edit_payment (OE·2: an edit waiting 24 hours for the shopper's payment). */
   sourceKind: text('source_kind').notNull(),
   sourceId: uuid('source_id'),
   /** Admin's own words (plain text); null for a source-worded notice. */
@@ -118,7 +118,7 @@ export const notices = pgTable('notices', {
 }, (t) => [
   index('notices_tenant_created').on(t.tenantId, t.createdAt.desc()),
   check('notices_type', sql`${t.type} in ('billing','security','frrata_action','needs_you','product_update')`),
-  check('notices_source', sql`${t.sourceKind} in ('billing_notice','support_session','handover','admin','addon_trial')`),
+  check('notices_source', sql`${t.sourceKind} in ('billing_notice','support_session','handover','admin','addon_trial','edit_payment')`),
   check('notices_href', sql`${t.href} is null or ${t.href} ~ '^/console(/[A-Za-z0-9/_?=&.-]*)?$'`),
   check('notices_words', sql`coalesce(length(${t.title}),0) <= 120 and coalesce(length(${t.body}),0) <= 1000`),
   check('notices_required', sql`not ${t.required} or ${t.type} in ('billing','security','frrata_action')`),

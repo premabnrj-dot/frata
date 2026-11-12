@@ -143,21 +143,39 @@ export const owedSql = (tenantId: string, now: Date, variantCol = '"variants"."i
     and (${standingSql('o')} or ${holdingSql(now, 'o')}))`
 
 /**
- * Units of the variant at `variantCol` held by unpaid online orders inside their pay_by (isHolding): not for sale while
- * held. Read by checkout (variantRows) and the product page (storefront), so "Only N left" and "Sold out" are the
- * stock checkout sells: stock − held − owed (shopper batch 2026-11-12).
+ * An items edit waiting for the shopper's payment (order edit OE·2): asked, not paid, not dropped, its order not
+ * cancelled. Its new in-stock pieces are held meanwhile (order_edit_lines.held). `e` is order_edits' alias, `o` the
+ * order's.
  */
-export const heldSql = (tenantId: string, now: Date, variantCol = '"variants"."id"'): SQL<number> => sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
-  where l.tenant_id = ${tenantId} and l.variant_id = ${sql.raw(variantCol)} and l.kind = 'in_stock' and l.removed_at is null and ${holdingSql(now, 'o')})`
+export const editWaitingSql = (e: string, o: string): SQL => sql.raw(`(${e}.asked is not null and ${e}.paid_at is null and ${e}.dropped_at is null and ${o}.cancelled_at is null)`)
+
+/** Units of the variant at `variantCol` held by edits waiting for payment (from the held-pieces index). */
+const editHeldSql = (tenantId: string, variantCol: string): SQL => sql`(select coalesce(sum(h.held), 0)::int from order_edit_lines h
+  join order_edits e on e.tenant_id = h.tenant_id and e.id = h.edit_id join ${orders} eo on eo.tenant_id = e.tenant_id and eo.id = e.order_id
+  where h.tenant_id = ${tenantId} and h.variant_id = ${sql.raw(variantCol)} and h.held > 0 and ${editWaitingSql('e', 'eo')})`
+
+/**
+ * Units of the variant at `variantCol` held by unpaid online orders inside their pay_by (isHolding), and by items edits
+ * waiting for the shopper's payment (OE·2): not for sale while held. Read by checkout (variantRows) and the product page
+ * (storefront), so "Only N left" and "Sold out" are the stock checkout sells: stock − held − owed (shopper batch
+ * 2026-11-12).
+ */
+export const heldSql = (tenantId: string, now: Date, variantCol = '"variants"."id"'): SQL<number> => sql<number>`((select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
+  where l.tenant_id = ${tenantId} and l.variant_id = ${sql.raw(variantCol)} and l.kind = 'in_stock' and l.removed_at is null and ${holdingSql(now, 'o')}) + ${editHeldSql(tenantId, variantCol)})`
 
 /**
  * heldSql for a whole shop at once: units held per variant (only variants something holds). The shop's cached pages
  * read this, one statement from the holds index, instead of heldSql per variant: 3,000 variants at the 10× seed cost
- * 265 ms that way (every variant walked every hold), this one well under 10 ms. Same rule (holdingSql, in-stock lines).
+ * 265 ms that way (every variant walked every hold), this one well under 10 ms. Same rule (holdingSql, in-stock lines;
+ * and the pieces edits waiting for payment hold, from their own partial index).
  */
 export async function heldByVariant(tx: { execute: (q: SQL) => PromiseLike<unknown> }, tenantId: string, now: Date): Promise<Map<string, number>> {
-  const rows = await tx.execute(sql`select l.variant_id v, sum(l.qty)::int n from ${orders} o join ${orderLines} l on l.tenant_id = o.tenant_id and l.order_id = o.id
-    where o.tenant_id = ${tenantId} and ${holdingSql(now, 'o')} and l.kind = 'in_stock' and l.removed_at is null and l.variant_id is not null group by l.variant_id`) as { v: string; n: number }[]
+  const rows = await tx.execute(sql`select v, sum(n)::int n from (
+    select l.variant_id v, l.qty n from ${orders} o join ${orderLines} l on l.tenant_id = o.tenant_id and l.order_id = o.id
+     where o.tenant_id = ${tenantId} and ${holdingSql(now, 'o')} and l.kind = 'in_stock' and l.removed_at is null and l.variant_id is not null
+    union all
+    select h.variant_id v, h.held n from order_edit_lines h join order_edits e on e.tenant_id = h.tenant_id and e.id = h.edit_id join ${orders} eo on eo.tenant_id = e.tenant_id and eo.id = e.order_id
+     where h.tenant_id = ${tenantId} and h.held > 0 and h.variant_id is not null and ${editWaitingSql('e', 'eo')}) x group by v`) as { v: string; n: number }[]
   return new Map(rows.map((r) => [r.v, Number(r.n)]))
 }
 

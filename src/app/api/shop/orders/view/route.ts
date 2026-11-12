@@ -8,6 +8,7 @@ import { reply, shopRequest } from '@/lib/http/shop-api'
 import { OrderRef, orderRefHash } from '@/lib/http/order-ref'
 import { checkoutShop, orderPage } from '@/lib/queries/checkout'
 import { paymentWaiting, processEvents } from '@/lib/orders/payment'
+import { shopperChange } from '@/lib/queries/order-change'
 
 // Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.
 export const maxDuration = 30
@@ -30,6 +31,8 @@ export async function POST(request: Request) {
   })
   if (!data.o || !data.shop) return reply({ error: 'Not found' }, 404)
   const o = data.o
+  // A paid order's edit (OE·2): a change waiting for the shopper's payment, and refunds on their way.
+  const paid = await shopperChange(r.tenantId, o.id)
   return reply({
     // Never the internal state (held, refund due) or why an order was cancelled: shopperState() only.
     number: o.number, state: shopperState(orderState(o, new Date())), collect: collect(o), method: currentMethod(o), paidAfterSwitch: paidAfterSwitch(o), canSwitchToCod: o.paymentMethod === 'prepaid' && !o.paidAt && !o.switchedToCodAt && !o.cancelledAt && !data.waiting, paymentWaiting: data.waiting,
@@ -39,5 +42,6 @@ export async function POST(request: Request) {
     lines: o.lines, shop: { name: data.shop.name, whatsapp: data.shop.whatsapp }, invoice: !!o.packedAt,
     // What the offers saved on the items, as the order is paid now (the pay-online saving only while paid online).
     savings: savingsAsPaid(o.offers, currentMethod(o)).map((d) => ({ title: d.title, amount: d.amount })),
+    change: paid.change, refunds: paid.refunds,
   })
 }

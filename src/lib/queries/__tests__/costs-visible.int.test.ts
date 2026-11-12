@@ -23,7 +23,7 @@ describe.skipIf(!host)('costs visible', () => {
 
   it('a partner before handover only; owners and admins always; staff never; no tenant means no ₹', async () => {
     await admin!`insert into tenants (id, slug, name) values (${NEW}, 'costs-visible-int', 'Being built') on conflict (id) do nothing`
-    // A partner shop row points at its partner person (members CHECK, partner teams T1a, drizzle/0121).
+    // A partner shop row points at its partner person (members CHECK, partner teams T1a, drizzle/0123).
     const [p] = await admin!`insert into partners (user_id, email, name, phone, city, brands_now, terms_version, agreed_at, approved_at)
       values (${PARTNER}, 'costs-int@partner.test', 'P', '919845012345', 'Jaipur', '1-4', 1, now(), now())
       on conflict (user_id) do update set approved_at = coalesce(partners.approved_at, now()) returning id`

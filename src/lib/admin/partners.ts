@@ -48,7 +48,7 @@ export async function decidePartner(staff: StaffOk, id: string, d: { approve: tr
   })
 }
 
-// ════════ Teams and suspension (T1a; drizzle/0121). frata_admin reads the team; suspend and reinstate only through the
+// ════════ Teams and suspension (T1a; drizzle/0123). frata_admin reads the team; suspend and reinstate only through the
 // admin_* definers, which re-check the admin, end or rebuild every partner person's access, audit and tell the shops. ════════
 
 export type AdminTeamPerson = { id: string; email: string; role: string; acceptedAt: Date | null; inviteExpiresAt: Date | null; stores: number }

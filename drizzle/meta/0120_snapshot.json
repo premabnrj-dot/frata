@@ -1,5 +1,5 @@
 {
-  "id": "ac395ef3-63fa-4330-8053-16ae891a814c",
+  "id": "fc81841c-e1a2-46a0-8743-7d0dad7436a6",
   "prevId": "24183a42-5190-4e8d-8f96-b0740e2ffac5",
   "version": "7",
   "dialect": "postgresql",
@@ -316,12 +316,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "partner_member_id": {
-          "name": "partner_member_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -330,21 +324,6 @@
           "columns": [
             {
               "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "members_partner_member": {
-          "name": "members_partner_member",
-          "columns": [
-            {
-              "expression": "partner_member_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4347,7 +4326,7 @@
       "checkConstraints": {
         "order_events_kind": {
           "name": "order_events_kind",
-          "value": "\"order_events\".\"kind\" in ('confirmed','held','unheld','undone','edited','packed','cancelled','note_added','printed_slip','printed_invoice','shipped','delivered','rto','lost','ndr','shipment_cancelled','credit_noted','items_edited')"
+          "value": "\"order_events\".\"kind\" in ('confirmed','held','unheld','undone','edited','packed','cancelled','note_added','printed_slip','printed_invoice','shipped','delivered','rto','lost','ndr','shipment_cancelled','credit_noted','items_edited','edit_requested','edit_dropped')"
         },
         "order_events_actor": {
           "name": "order_events_actor",
@@ -5906,7 +5885,7 @@
           "name": "order_line_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "variant_id": {
           "name": "variant_id",
@@ -5949,6 +5928,13 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
+        },
+        "held": {
+          "name": "held",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         }
       },
       "indexes": {
@@ -5969,6 +5955,28 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "order_edit_lines_held_variant": {
+          "name": "order_edit_lines_held_variant",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "variant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"order_edit_lines\".\"held\" > 0",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -6064,6 +6072,10 @@
         "order_edit_lines_money": {
           "name": "order_edit_lines_money",
           "value": "\"order_edit_lines\".\"qty\" between 1 and 10 and \"order_edit_lines\".\"unit_price\" >= 0 and \"order_edit_lines\".\"product_discount\" >= 0 and \"order_edit_lines\".\"line_discount\" >= \"order_edit_lines\".\"product_discount\""
+        },
+        "order_edit_lines_held": {
+          "name": "order_edit_lines_held",
+          "value": "\"order_edit_lines\".\"held\" between 0 and \"order_edit_lines\".\"qty\" and (\"order_edit_lines\".\"held\" = 0 or \"order_edit_lines\".\"side\" = 'after') and (\"order_edit_lines\".\"order_line_id\" is not null or \"order_edit_lines\".\"side\" = 'after')"
         }
       },
       "isRLSEnabled": false
@@ -6141,6 +6153,54 @@
           "notNull": true,
           "default": "'{}'::uuid[]"
         },
+        "asked": {
+          "name": "asked",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "razorpay_order_id": {
+          "name": "razorpay_order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "razorpay_payment_id": {
+          "name": "razorpay_payment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paid_at": {
+          "name": "paid_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dropped_at": {
+          "name": "dropped_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dropped_reason": {
+          "name": "dropped_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gateway_fee": {
+          "name": "gateway_fee",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gateway_tax": {
+          "name": "gateway_tax",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -6167,6 +6227,50 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "order_edits_razorpay": {
+          "name": "order_edits_razorpay",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "razorpay_order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"order_edits\".\"razorpay_order_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "order_edits_one_waiting": {
+          "name": "order_edits_one_waiting",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"order_edits\".\"asked\" is not null and \"order_edits\".\"paid_at\" is null and \"order_edits\".\"dropped_at\" is null",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -6229,6 +6333,15 @@
             "id"
           ]
         },
+        "order_edits_order_id_key": {
+          "name": "order_edits_order_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "order_id",
+            "id"
+          ]
+        },
         "order_edits_event": {
           "name": "order_edits_event",
           "nullsNotDistinct": false,
@@ -6247,25 +6360,136 @@
         "order_edits_offers": {
           "name": "order_edits_offers",
           "value": "cardinality(\"order_edits\".\"offers_removed\") <= 40 and cardinality(\"order_edits\".\"offers_added\") <= 40"
+        },
+        "order_edits_asked": {
+          "name": "order_edits_asked",
+          "value": "\"order_edits\".\"asked\" is null or \"order_edits\".\"asked\" >= 100"
+        },
+        "order_edits_settled": {
+          "name": "order_edits_settled",
+          "value": "(\"order_edits\".\"paid_at\" is null or (\"order_edits\".\"asked\" is not null and \"order_edits\".\"razorpay_payment_id\" is not null and \"order_edits\".\"dropped_at\" is null))\n    and (\"order_edits\".\"dropped_at\" is null or (\"order_edits\".\"asked\" is not null and \"order_edits\".\"dropped_reason\" in ('ship_without','cannot_apply')))\n    and (\"order_edits\".\"razorpay_order_id\" is null or \"order_edits\".\"asked\" is not null) and (\"order_edits\".\"gateway_fee\" is null or \"order_edits\".\"gateway_fee\" >= 0)"
         }
       },
       "isRLSEnabled": false
     },
-    "public.partner_assignments": {
-      "name": "partner_assignments",
+    "public.order_refunds": {
+      "name": "order_refunds",
       "schema": "",
       "columns": {
-        "partner_member_id": {
-          "name": "partner_member_id",
+        "id": {
+          "name": "id",
           "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
         "tenant_id": {
           "name": "tenant_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "edit_id": {
+          "name": "edit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cause": {
+          "name": "cause",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "razorpay_payment_id": {
+          "name": "razorpay_payment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount": {
+          "name": "amount",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "retry_of": {
+          "name": "retry_of",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "not_before": {
+          "name": "not_before",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sending_at": {
+          "name": "sending_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "razorpay_refund_id": {
+          "name": "razorpay_refund_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sent_at": {
+          "name": "sent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "processed_at": {
+          "name": "processed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "failed_at": {
+          "name": "failed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "failure": {
+          "name": "failure",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_by": {
+          "name": "superseded_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gateway_fee": {
+          "name": "gateway_fee",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gateway_tax": {
+          "name": "gateway_tax",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -6276,11 +6500,17 @@
         }
       },
       "indexes": {
-        "partner_assignments_tenant": {
-          "name": "partner_assignments_tenant",
+        "order_refunds_order": {
+          "name": "order_refunds_order",
           "columns": [
             {
               "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "order_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -6290,25 +6520,77 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "order_refunds_payment": {
+          "name": "order_refunds_payment",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "razorpay_payment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "order_refunds_razorpay": {
+          "name": "order_refunds_razorpay",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "razorpay_refund_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"order_refunds\".\"razorpay_refund_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "order_refunds_retry": {
+          "name": "order_refunds_retry",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "retry_of",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"order_refunds\".\"retry_of\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "partner_assignments_partner_member_id_partner_members_id_fk": {
-          "name": "partner_assignments_partner_member_id_partner_members_id_fk",
-          "tableFrom": "partner_assignments",
-          "tableTo": "partner_members",
-          "columnsFrom": [
-            "partner_member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "partner_assignments_tenant_id_tenants_id_fk": {
-          "name": "partner_assignments_tenant_id_tenants_id_fk",
-          "tableFrom": "partner_assignments",
+        "order_refunds_tenant_id_tenants_id_fk": {
+          "name": "order_refunds_tenant_id_tenants_id_fk",
+          "tableFrom": "order_refunds",
           "tableTo": "tenants",
           "columnsFrom": [
             "tenant_id"
@@ -6316,22 +6598,116 @@
           "columnsTo": [
             "id"
           ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "order_refunds_order_fk": {
+          "name": "order_refunds_order_fk",
+          "tableFrom": "order_refunds",
+          "tableTo": "orders",
+          "columnsFrom": [
+            "tenant_id",
+            "order_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "order_refunds_retry_fk": {
+          "name": "order_refunds_retry_fk",
+          "tableFrom": "order_refunds",
+          "tableTo": "order_refunds",
+          "columnsFrom": [
+            "tenant_id",
+            "retry_of"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "order_refunds_edit_fk": {
+          "name": "order_refunds_edit_fk",
+          "tableFrom": "order_refunds",
+          "tableTo": "order_edits",
+          "columnsFrom": [
+            "tenant_id",
+            "order_id",
+            "edit_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "order_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "order_refunds_superseded_fk": {
+          "name": "order_refunds_superseded_fk",
+          "tableFrom": "order_refunds",
+          "tableTo": "order_edits",
+          "columnsFrom": [
+            "tenant_id",
+            "order_id",
+            "superseded_by"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "order_id",
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "partner_assignments_partner_member_id_tenant_id_pk": {
-          "name": "partner_assignments_partner_member_id_tenant_id_pk",
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "order_refunds_tenant_id_key": {
+          "name": "order_refunds_tenant_id_key",
+          "nullsNotDistinct": false,
           "columns": [
-            "partner_member_id",
-            "tenant_id"
+            "tenant_id",
+            "id"
           ]
         }
       },
-      "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "order_refunds_cause": {
+          "name": "order_refunds_cause",
+          "value": "\"order_refunds\".\"cause\" in ('edit','after_drop','old_order') and (\"order_refunds\".\"edit_id\" is not null or \"order_refunds\".\"cause\" = 'old_order')"
+        },
+        "order_refunds_amount": {
+          "name": "order_refunds_amount",
+          "value": "\"order_refunds\".\"amount\" >= 100"
+        },
+        "order_refunds_payment_id": {
+          "name": "order_refunds_payment_id",
+          "value": "\"order_refunds\".\"razorpay_payment_id\" ~ '^pay_[A-Za-z0-9]{6,40}$'"
+        },
+        "order_refunds_failure": {
+          "name": "order_refunds_failure",
+          "value": "(\"order_refunds\".\"failure\" is null) = (\"order_refunds\".\"failed_at\" is null) and (\"order_refunds\".\"failure\" is null or \"order_refunds\".\"failure\" in ('balance','too_old','disabled','over','keys','refused','failed'))"
+        },
+        "order_refunds_moments": {
+          "name": "order_refunds_moments",
+          "value": "(\"order_refunds\".\"cancelled_at\" is null or (\"order_refunds\".\"sending_at\" is null and \"order_refunds\".\"sent_at\" is null))\n    and (\"order_refunds\".\"sent_at\" is null or (\"order_refunds\".\"sending_at\" is not null and \"order_refunds\".\"razorpay_refund_id\" is not null))\n    and (\"order_refunds\".\"processed_at\" is null or \"order_refunds\".\"sent_at\" is not null) and (\"order_refunds\".\"processed_at\" is null or \"order_refunds\".\"failed_at\" is null)"
+        },
+        "order_refunds_superseded": {
+          "name": "order_refunds_superseded",
+          "value": "\"order_refunds\".\"superseded_by\" is null or (\"order_refunds\".\"failed_at\" is not null and \"order_refunds\".\"cause\" = 'edit')"
+        },
+        "order_refunds_fee": {
+          "name": "order_refunds_fee",
+          "value": "(\"order_refunds\".\"gateway_fee\" is null or (\"order_refunds\".\"gateway_fee\" >= 0 and \"order_refunds\".\"retry_of\" is null and \"order_refunds\".\"cause\" <> 'edit')) and (\"order_refunds\".\"gateway_tax\" is null or \"order_refunds\".\"gateway_tax\" >= 0)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.partner_links": {
@@ -6488,168 +6864,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.partner_members": {
-      "name": "partner_members",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "partner_id": {
-          "name": "partner_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "role": {
-          "name": "role",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "invited_by": {
-          "name": "invited_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "invited_at": {
-          "name": "invited_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "invite_expires_at": {
-          "name": "invite_expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "accepted_at": {
-          "name": "accepted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "removed_at": {
-          "name": "removed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "removed_by": {
-          "name": "removed_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "partner_members_one_partner": {
-          "name": "partner_members_one_partner",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"partner_members\".\"removed_at\" is null and \"partner_members\".\"user_id\" is not null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "partner_members_email": {
-          "name": "partner_members_email",
-          "columns": [
-            {
-              "expression": "partner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "email",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"partner_members\".\"removed_at\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "partner_members_partner": {
-          "name": "partner_members_partner",
-          "columns": [
-            {
-              "expression": "partner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "partner_members_partner_id_partners_id_fk": {
-          "name": "partner_members_partner_id_partners_id_fk",
-          "tableFrom": "partner_members",
-          "tableTo": "partners",
-          "columnsFrom": [
-            "partner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "partner_members_role": {
-          "name": "partner_members_role",
-          "value": "\"partner_members\".\"role\" in ('owner','lead','builder')"
-        },
-        "partner_members_email_lower": {
-          "name": "partner_members_email_lower",
-          "value": "\"partner_members\".\"email\" = lower(\"partner_members\".\"email\")"
-        },
-        "partner_members_accepted_user": {
-          "name": "partner_members_accepted_user",
-          "value": "(\"partner_members\".\"accepted_at\" is null) = (\"partner_members\".\"user_id\" is null)"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.partners": {
       "name": "partners",
       "schema": "",
@@ -6763,24 +6977,6 @@
         },
         "decline_reason": {
           "name": "decline_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "suspended_at": {
-          "name": "suspended_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "suspended_by": {
-          "name": "suspended_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "suspend_reason": {
-          "name": "suspend_reason",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -15109,7 +15305,7 @@
         },
         "notices_source": {
           "name": "notices_source",
-          "value": "\"notices\".\"source_kind\" in ('billing_notice','support_session','handover','admin','addon_trial')"
+          "value": "\"notices\".\"source_kind\" in ('billing_notice','support_session','handover','admin','addon_trial','edit_payment')"
         },
         "notices_href": {
           "name": "notices_href",

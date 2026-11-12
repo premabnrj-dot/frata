@@ -97,7 +97,7 @@ export async function expectToast(page, text, kind = 'error', { quiet = false, t
 }
 
 /**
- * Make `user` a live partner on `tenantId` (partner teams T1a, drizzle/0121): an approved partner with its owner member,
+ * Make `user` a live partner on `tenantId` (partner teams T1a, drizzle/0123): an approved partner with its owner member,
  * an active link to the shop, and the shop row pointing at the member. A partner shop row without its person is refused
  * by the members CHECK, and access counts only while the member, the partner and the link are live.
  */

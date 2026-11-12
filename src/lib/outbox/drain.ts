@@ -11,7 +11,9 @@ import { sendReviewAsk } from '@/lib/modules/reviews/sender'
 import { sendAssetDelete, sendRenditionCreate, sendUploadCancel } from '@/lib/video/senders'
 import { sendNoticeEmail } from '@/lib/email/notice-sender'
 import { sendOrderEmail, sendTenantSetup } from '@/lib/email/order-sender'
-import { sendPaymentCheck } from '@/lib/orders/payment-check'
+import { sendEditPaymentCheck, sendPaymentCheck } from '@/lib/orders/payment-check'
+import { sendRefund, sendRefundCheck } from '@/lib/payments/refunds'
+import { sendEditReminder } from '@/lib/orders/edit-paid'
 import { E2E_FIXTURES, VERCEL_ENV } from '@/lib/env'
 
 // =============================================================================
@@ -45,6 +47,12 @@ export const SENDERS: Record<string, (row: OutboxRow) => Promise<void>> = {
   'email.tenant': sendTenantSetup,
   // Shop stress test 2026-11-11: an online order asks Razorpay when its hold ends, so a lost webhook never leaves it unpaid.
   'payment.check': sendPaymentCheck,
+  // Order edit OE·2: a refund through the shop's own Razorpay (one attempt a row), its status read back, and a change
+  // still waiting for the shopper's payment after 24 hours (a Notice to the shop).
+  'refund.send': sendRefund,
+  'refund.check': sendRefundCheck,
+  'edit.remind': sendEditReminder,
+  'edit.payment': sendEditPaymentCheck,
 }
 const BATCH = 25
 

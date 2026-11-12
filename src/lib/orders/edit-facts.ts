@@ -11,6 +11,8 @@ import { variants } from '@/lib/db/schema-catalogue'
 import { orderDiscounts } from '@/lib/db/schema-discounts'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { variantRows } from '@/lib/queries/checkout'
+import { ledgerIn } from '@/lib/payments/refunds'
+import { currentMethod } from '@/domains/orders/order-state'
 
 // =============================================================================
 // FILE: src/lib/orders/edit-facts.ts
@@ -65,12 +67,14 @@ export function sellsAs(r: VariantRow, live: Own[], qty: number, now: Date) {
  * size and colour of the order's products (the panel). Variants are read as checkout reads them (variantRows: no cost).
  */
 export async function editFactsIn(tx: Tx, tenantId: string, orderId: string, now: Date, variantIds: string[] | 'products'): Promise<EditRead | null> {
-  const [[o], live, offers, [shop]] = await Promise.all([
+  const [[o], live, offers, [shop], paid] = await Promise.all([
     tx.select({ shipping: orders.shipping, codCharge: orders.codCharge, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst, sellerGstin: orders.sellerGstin,
-      sellerScheme: orders.sellerScheme, placedAt: orders.placedAt }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId))),
+      sellerScheme: orders.sellerScheme, placedAt: orders.placedAt, paidAt: orders.paidAt, paymentMethod: orders.paymentMethod, switchedToCodAt: orders.switchedToCodAt })
+      .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId))),
     tx.select().from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), isNull(orderLines.removedAt))).orderBy(asc(orderLines.position), asc(orderLines.id)),
     keptRowsIn(tx, tenantId, orderId),
     tx.select({ shippingFlat: shopSettings.shippingFlat, freeShippingAbove: shopSettings.freeShippingAbove, codMax: shopSettings.codMax }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
+    ledgerIn(tx, tenantId, orderId),
   ])
   if (!o) return null
   const products = [...new Set(live.flatMap((l) => (l.productId ? [l.productId] : [])))]
@@ -89,7 +93,9 @@ export async function editFactsIn(tx: Tx, tenantId: string, orderId: string, now
       lines, offers, room: roomOf(rows, live, now),
       choices: rows.map((r) => ({ variantId: r.variantId, productId: r.productId, title: r.title, values: r.values, price: r.price, hsn: r.hsn, ownBps: r.ownBps ?? null })),
       order: { shipping: Number(o.shipping), codCharge: Number(o.codCharge), total: Number(o.total), pricesIncludeGst: o.pricesIncludeGst,
-        registered: chargesGst({ gstin: o.sellerGstin, scheme: (o.sellerScheme ?? 'regular') as Scheme }), placedAt: o.placedAt },
+        registered: chargesGst({ gstin: o.sellerGstin, scheme: (o.sellerScheme ?? 'regular') as Scheme }), placedAt: o.placedAt, way: currentMethod(o) },
+      // Paid online (OE·2): what the shopper paid and what was refunded since, read under the same lock as the plan.
+      paid: currentMethod(o) === 'prepaid' && paid ? { payments: paid.payments, refunds: paid.refunds, now } : null,
       rules: { shippingFlat: Number(shop?.shippingFlat ?? 0), freeShippingAbove: Number(shop?.freeShippingAbove ?? 0), codMax: Number(shop?.codMax ?? 0) },
     },
   }

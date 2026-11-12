@@ -31,7 +31,7 @@ export const USERS = {
   founder: { id: 'cccccccc-0000-0000-0000-000000000012', email: 'aanya@noorthreads.test' },
   // The shop's CA (role accountant: GST and documents only). Added by the flows that need it (64-gst).
   accountant: { id: 'cccccccc-0000-0000-0000-000000000013', email: 'ca@ledger.test' },
-  // A partner's lead (partner teams T1a): invited by the partner's owner. Added by 78-partner-team.
+  // A partner's lead (partner teams T1a): invited by the partner's owner. Added by 79-partner-team.
   lead: { id: 'cccccccc-0000-0000-0000-000000000014', email: 'lead@studio.test' },
 }
 export const RZP_KEYS = { id: 'rzp_live_FrataTest01', secret: 'testsecret12345678abcd' }

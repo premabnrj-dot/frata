@@ -2918,8 +2918,8 @@ do $$ declare got text; begin
   then raise exception 'FAIL: an order edit table without its tenant policy'; end if;
   if exists (select 1 from unnest(array['order_edits', 'order_edit_lines']) t, unnest(array['update', 'delete', 'truncate', 'references', 'trigger']) p where has_table_privilege('frata_app', t, p))
      or exists (select 1 from unnest(array['order_edits', 'order_edit_lines']) t, unnest(array['select', 'insert']) p where not has_table_privilege('frata_app', t, p))
-     or exists (select 1 from unnest(array['order_edits', 'order_edit_lines']) t where has_any_column_privilege('frata_app', t, 'update'))
   then raise exception 'FAIL: frata_app holds other than select and insert on an order edit'; end if;
+  -- (OE·2, 0121: the exact columns a paid order's edit settles later are check 76's.)
   if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['order_edits', 'order_edit_lines']) t,
              unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p where has_table_privilege(r, t, p) or has_any_column_privilege(r, t, 'select'))
   then raise exception 'FAIL: another role reaches order edits'; end if;
@@ -3076,7 +3076,137 @@ do $$ begin
     raise exception 'FAIL: two SKUs that differ only in case'; exception when unique_violation then null; end;
 end $$;
 
--- 76. Partner teams T1a (0120–0121; plan docs/plans/2026-11-12-studio-build.md § T1a). O owns partner P, L is invited as a
+-- 76. Paid-online edits (OE·2, 0120–0121): a refund attempt is the shop's own both ways; it never names another shop's
+-- order, edit or attempt, nor an edit of another of the shop's orders; it is never deleted; only its moments, the change
+-- that settled it and the fee of a payment refunded in full change, each once; a waiting edit is settled once and only in
+-- its own columns; an edit line names a line of its own order only, and its held pieces only go back to 0; the 24-hour
+-- reminder notices only the shop's own waiting edit; no other role holds any of it.
+insert into order_refunds (id, tenant_id, order_id, edit_id, cause, razorpay_payment_id, amount, not_before) values
+  ('7ef00000-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'ed170000-0000-0000-0000-00000000000b', 'edit', 'pay_B0000001', 10000, now());
+insert into order_events (id, tenant_id, order_id, kind, actor_kind) values
+  ('ed1e0e00-0000-0000-0000-0000000000b2', '22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'edit_requested', 'system');
+insert into order_edits (id, tenant_id, order_id, event_id, total_before, total_after, shipping_before, shipping_after, notify, asked, created_at) values
+  ('ed170000-0000-0000-0000-0000000000b2', '22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'ed1e0e00-0000-0000-0000-0000000000b2', 100000, 150000, 0, 0, false, 50000, now() - interval '25 hours');
+do $$ declare got text; begin
+  if exists (select 1 from pg_tables where tablename = 'order_refunds' and not rowsecurity) then raise exception 'FAIL: order_refunds without RLS'; end if;
+  if (select count(*) from pg_policies where tablename = 'order_refunds' and policyname = 'tenant_rows' and qual like '%app_current_tenant()%' and with_check like '%app_current_tenant()%') <> 1
+  then raise exception 'FAIL: order_refunds without its tenant policy'; end if;
+  if not has_table_privilege('frata_app', 'order_refunds', 'select') or not has_table_privilege('frata_app', 'order_refunds', 'insert')
+     or exists (select 1 from unnest(array['update', 'delete', 'truncate', 'references', 'trigger']) p where has_table_privilege('frata_app', 'order_refunds', p))
+  then raise exception 'FAIL: frata_app holds other than select, insert and its moments on order_refunds'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p
+             where has_table_privilege(r, 'order_refunds', p) or has_any_column_privilege(r, 'order_refunds', 'select') or has_any_column_privilege(r, 'order_refunds', 'update'))
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['order_edits', 'order_edit_lines']) t where has_any_column_privilege(r, t, 'update'))
+  then raise exception 'FAIL: another role reaches refunds or settles an edit'; end if;
+  -- The exact columns frata_app may update, each table (a new grant must be added here on purpose).
+  select string_agg(column_name, ',' order by column_name) into got from information_schema.column_privileges where grantee = 'frata_app' and table_name = 'order_refunds' and privilege_type = 'UPDATE';
+  if got is distinct from 'cancelled_at,failed_at,failure,gateway_fee,gateway_tax,processed_at,razorpay_refund_id,sending_at,sent_at,superseded_by' then raise exception 'FAIL: frata_app updates order_refunds columns %', got; end if;
+  select string_agg(column_name, ',' order by column_name) into got from information_schema.column_privileges where grantee = 'frata_app' and table_name = 'order_edits' and privilege_type = 'UPDATE';
+  if got is distinct from 'dropped_at,dropped_reason,gateway_fee,gateway_tax,offers_added,offers_removed,paid_at,razorpay_order_id,razorpay_payment_id' then raise exception 'FAIL: frata_app updates order_edits columns %', got; end if;
+  select string_agg(column_name, ',' order by column_name) into got from information_schema.column_privileges where grantee = 'frata_app' and table_name = 'order_edit_lines' and privilege_type = 'UPDATE';
+  if got is distinct from 'held,order_line_id' then raise exception 'FAIL: frata_app updates order_edit_lines columns %', got; end if;
+  -- The reminder: a definer with an empty search path, the shop's app only.
+  if not (select prosecdef from pg_proc where proname = 'app_edit_payment_notice') then raise exception 'FAIL: the edit reminder is not a definer'; end if;
+  if not has_function_privilege('frata_app', 'public.app_edit_payment_notice(uuid)', 'execute')
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'public.app_edit_payment_notice(uuid)', 'execute'))
+  then raise exception 'FAIL: the edit reminder runs for the wrong roles'; end if;
+  -- The write-once triggers are not definers (they run as the writer, under its policy).
+  if exists (select 1 from pg_proc where proname in ('app_refund_moments_once', 'app_edit_settled_once', 'app_edit_line_once') and prosecdef) then raise exception 'FAIL: a write-once trigger is a definer'; end if;
+end $$;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; r uuid; e uuid; l uuid; o2 uuid; begin
+  if exists (select 1 from order_refunds) then raise exception 'FAIL: A reads B refunds'; end if;
+  -- A waiting edit of A's order, a line of A's other order: neither a refund nor an edit line crosses between them.
+  insert into order_edits (tenant_id, order_id, event_id, total_before, total_after, shipping_before, shipping_after, notify, asked)
+    values ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'ed1e0e00-0000-0000-0000-00000000000a', 100000, 150000, 0, 0, false, 50000) returning id into e;
+  insert into orders (id, tenant_id, number, payment_method, subtotal, total, placed_at) values
+    ('ed0d0000-0000-0000-0000-0000000000a2', '11111111-1111-1111-1111-111111111111', 9073, 'cod', 100000, 100000, now());
+  insert into order_lines (tenant_id, order_id, title, qty, unit_price, taxable_value) values
+    ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-0000000000a2', 'Other order''s kurta', 1, 100000, 95238) returning id into o2;
+  insert into order_edit_lines (tenant_id, edit_id, side, order_line_id, qty, unit_price, product_discount, line_discount, held)
+    values ('11111111-1111-1111-1111-111111111111', e, 'after', null, 1, 100000, 0, 0, 1) returning id into l;
+  begin update order_edit_lines set order_line_id = 'ed11ed11-0000-0000-0000-00000000000b' where id = l; raise exception 'FAIL: A''s edit line named B''s line';
+  exception when foreign_key_violation then null; end;
+  begin update order_edit_lines set order_line_id = o2 where id = l; raise exception 'FAIL: an edit line named a line of another order';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_edit_lines (tenant_id, edit_id, side, order_line_id, qty, unit_price, product_discount, line_discount)
+    values ('11111111-1111-1111-1111-111111111111', e, 'before', o2, 1, 100000, 0, 0); raise exception 'FAIL: an edit saw a line of another order';
+  exception when foreign_key_violation then null; end;
+  begin update order_edit_lines set held = 2 where id = l; raise exception 'FAIL: an edit line held more';
+  exception when check_violation then null; end;
+  update order_edit_lines set held = 0 where id = l; get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FAIL: A could not let its held pieces go'; end if;
+  update order_edit_lines set order_line_id = 'ed11ed11-0000-0000-0000-00000000000a' where id = l; get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FAIL: A could not name its own order''s line'; end if;
+  begin insert into order_refunds (tenant_id, order_id, edit_id, cause, razorpay_payment_id, amount, not_before) values
+    ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-0000000000a2', e, 'edit', 'pay_A0000007', 10000, now()); raise exception 'FAIL: a refund named an edit of another order';
+  exception when foreign_key_violation then null; end;
+  -- A's own attempt, on A's order.
+  insert into order_refunds (tenant_id, order_id, cause, razorpay_payment_id, amount, not_before) values
+    ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'old_order', 'pay_A0000001', 10000, now()) returning id into r;
+  -- Never into B: B's order, B's edit, B's attempt as the one it retries, under B's tenant.
+  begin insert into order_refunds (tenant_id, order_id, cause, razorpay_payment_id, amount, not_before) values
+    ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-00000000000b', 'old_order', 'pay_A0000002', 10000, now()); raise exception 'FAIL: A refunded on B''s order';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_refunds (tenant_id, order_id, edit_id, cause, razorpay_payment_id, amount, not_before) values
+    ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'ed170000-0000-0000-0000-00000000000b', 'edit', 'pay_A0000003', 10000, now()); raise exception 'FAIL: A''s refund names B''s edit';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_refunds (tenant_id, order_id, cause, razorpay_payment_id, amount, not_before, retry_of) values
+    ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'old_order', 'pay_A0000004', 10000, now(), '7ef00000-0000-0000-0000-00000000000b'); raise exception 'FAIL: A''s refund retries B''s';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_refunds (tenant_id, order_id, cause, razorpay_payment_id, amount, not_before) values
+    ('22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'old_order', 'pay_A0000005', 10000, now()); raise exception 'FAIL: A wrote a refund under B';
+  exception when insufficient_privilege then null; end;
+  -- A refund under ₹1, or an edit refund with no edit, is refused.
+  begin insert into order_refunds (tenant_id, order_id, cause, razorpay_payment_id, amount, not_before) values
+    ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'edit', 'pay_A0000006', 10000, now()); raise exception 'FAIL: an edit refund with no edit';
+  exception when check_violation then null; end;
+  -- Only its moments change, each once; its money, payment and order never; never deleted.
+  update order_refunds set sending_at = now() where id = r; get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FAIL: A could not claim its own refund'; end if;
+  begin update order_refunds set sending_at = now() + interval '1 minute' where id = r; raise exception 'FAIL: a refund was claimed twice';
+  exception when check_violation then null; end;
+  begin update order_refunds set cancelled_at = now() where id = r; raise exception 'FAIL: a claimed refund was cancelled';
+  exception when check_violation then null; end;
+  begin update order_refunds set amount = 1 where id = r; raise exception 'FAIL: a refund''s amount was changed'; exception when insufficient_privilege then null; end;
+  begin update order_refunds set razorpay_payment_id = 'pay_B0000001' where id = r; raise exception 'FAIL: a refund was moved to another payment'; exception when insufficient_privilege then null; end;
+  begin delete from order_refunds where id = r; raise exception 'FAIL: a refund was deleted'; exception when insufficient_privilege then null; end;
+  -- Only a failed edit refund is settled by a later change; a fee once written stays.
+  begin update order_refunds set superseded_by = e where id = r; raise exception 'FAIL: a refund that is not a failed edit refund was superseded';
+  exception when check_violation then null; end;
+  update order_refunds set gateway_fee = 236, gateway_tax = 36 where id = r; get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FAIL: A could not record the fee on its own refunded payment'; end if;
+  begin update order_refunds set gateway_fee = 1 where id = r; raise exception 'FAIL: a refunded payment''s fee was rewritten';
+  exception when check_violation then null; end;
+  update order_refunds set failed_at = now(), failure = 'balance' where id = '7ef00000-0000-0000-0000-00000000000b'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A marked B''s refund'; end if;
+  -- B's waiting edit: A can't settle it, and the reminder writes nothing for it.
+  update order_edits set dropped_at = now(), dropped_reason = 'ship_without' where id = 'ed170000-0000-0000-0000-0000000000b2'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A dropped B''s change'; end if;
+  if app_edit_payment_notice('ed170000-0000-0000-0000-0000000000b2') then raise exception 'FAIL: A noticed B''s change'; end if;
+  begin update order_edits set asked = 1; raise exception 'FAIL: an edit''s amount asked was changed'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+do $$ declare n int; begin
+  -- B's own reminder, once; the waiting edit settled once.
+  if not app_edit_payment_notice('ed170000-0000-0000-0000-0000000000b2') then raise exception 'FAIL: B''s own reminder was not written'; end if;
+  if app_edit_payment_notice('ed170000-0000-0000-0000-0000000000b2') then raise exception 'FAIL: the reminder was written twice'; end if;
+  if (select count(*) from notices where source_kind = 'edit_payment') <> 1 then raise exception 'FAIL: the reminder is not one notice'; end if;
+  update order_edits set dropped_at = now(), dropped_reason = 'ship_without' where id = 'ed170000-0000-0000-0000-0000000000b2'; get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FAIL: B could not drop its own change'; end if;
+  begin update order_edits set dropped_reason = 'cannot_apply' where id = 'ed170000-0000-0000-0000-0000000000b2'; raise exception 'FAIL: a dropped change was changed';
+  exception when check_violation then null; end;
+  -- An edit that applied at once never takes offers or a payment later.
+  begin update order_edits set offers_removed = '{}' , offers_added = '{0d0d0d0d-0000-0000-0000-00000000000a}' where id = 'ed170000-0000-0000-0000-00000000000b'; raise exception 'FAIL: an applied edit took offers later';
+  exception when check_violation then null; end;
+  if app_edit_payment_notice('ed170000-0000-0000-0000-0000000000b2') then raise exception 'FAIL: a dropped change was noticed'; end if;
+end $$;
+rollback;
+
+-- 77. Partner teams T1a (0122–0123; plan docs/plans/2026-11-12-studio-build.md § T1a). O owns partner P, L is invited as a
 -- lead, Z owns another partner, B is a brand owner, X anyone else, S an admin and U a support person. Tables: definers only.
 insert into auth.users (id, email, email_confirmed_at) values
   ('aaaaaaaa-0000-0000-0000-000000000030', 'own@team.test', now()), ('aaaaaaaa-0000-0000-0000-000000000031', 'lead@team.test', now()),
@@ -3214,4 +3344,4 @@ do $$ begin
   if exists (select 1 from pg_policies where tablename in ('partner_members', 'partner_assignments') and 'frata_app' = any(roles)) then raise exception 'FAIL: frata_app policy on team tables'; end if;
 end $$;
 
-\echo 'tenancy proof — all 76 checks passed'
+\echo 'tenancy proof — all 77 checks passed'

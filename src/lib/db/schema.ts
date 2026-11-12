@@ -41,7 +41,7 @@ export const members = pgTable('members', {
   userId: uuid('user_id').notNull(),
   role: text('role').notNull(),
   createdAt: createdAt(),
-  /** A partner person's row points at their partner_members row (T1a; FK and CHECK in drizzle/0121). */
+  /** A partner person's row points at their partner_members row (T1a; FK and CHECK in drizzle/0123). */
   partnerMemberId: uuid('partner_member_id'),
 }, (t) => [
   primaryKey({ columns: [t.tenantId, t.userId] }),
