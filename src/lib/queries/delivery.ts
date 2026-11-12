@@ -27,7 +27,7 @@ export async function deliveryIn(tx: Tx, tenantId: string, pin: string | null | 
   const p = pin && PIN.test(pin) ? pin : null
   const [zones, own, rule, holidays, [s], [place]] = await Promise.all([
     tx.select({ id: deliveryZones.id, name: deliveryZones.name, position: deliveryZones.position, preset: deliveryZones.preset, charge: deliveryZones.charge,
-      freeAbove: deliveryZones.freeAbove, daysMin: deliveryZones.daysMin, daysMax: deliveryZones.daysMax, codOn: deliveryZones.codOn, codFee: deliveryZones.codFee,
+      freeAbove: deliveryZones.freeAbove, daysMin: deliveryZones.daysMin, daysMax: deliveryZones.daysMax, codOn: deliveryZones.codOn, codCharge: deliveryZones.codCharge,
       codMin: deliveryZones.codMin, codMax: deliveryZones.codMax }).from(deliveryZones).where(eq(deliveryZones.tenantId, tenantId)),
     p ? tx.select({ zoneId: deliveryZonePins.zoneId }).from(deliveryZonePins).where(and(eq(deliveryZonePins.tenantId, tenantId), inArray(deliveryZonePins.pin, [p, p.slice(0, 3)]))) : Promise.resolve([]),
     p ? tx.select({ rule: deliveryRules.rule, codMax: deliveryRules.codMax }).from(deliveryRules).where(and(eq(deliveryRules.tenantId, tenantId), eq(deliveryRules.pincode, p))) : Promise.resolve([]),
@@ -45,7 +45,7 @@ export async function deliveryIn(tx: Tx, tenantId: string, pin: string | null | 
     : r.rule === 'no_delivery' ? { rule: 'no_delivery' } : r.rule === 'prepaid_only' ? { rule: 'prepaid_only' } : null
   const setup: ZoneSetup = {
     zones: zones.map((z): Zone => ({ ...z, preset: (z.preset as PresetKey | null), charge: Number(z.charge), freeAbove: z.freeAbove === null ? null : Number(z.freeAbove),
-      codFee: Number(z.codFee), codMin: Number(z.codMin), codMax: z.codMax === null ? null : Number(z.codMax) })),
+      codCharge: Number(z.codCharge), codMin: Number(z.codMin), codMax: z.codMax === null ? null : Number(z.codMax) })),
     ownZoneIds: own.map((o) => o.zoneId), rule: pinRule,
   }
   const dispatch: Dispatch = { days: s?.days ?? 1, cutoff: s?.cutoff ?? null, shipDays: s?.shipDays ?? MON_TO_SAT, holidays: holidays.map((h) => String(h.day)) }

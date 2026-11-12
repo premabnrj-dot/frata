@@ -4,13 +4,13 @@ import { chargeOn, resolveDelivery, zoneFor, type Floor, type Zone, type ZoneSet
 
 const floor: Floor = { shippingFlat: 7900, freeShippingAbove: 199900, codOn: true, codMin: 0, codMax: 0, codCharge: 4900, codBlockedPincodes: ['110094'], dispatchDays: 1, metroDays: 2, restDays: 5 }
 const z = (id: string, position: number, preset: Zone['preset'], over: Partial<Zone> = {}): Zone =>
-  ({ id, name: id, position, preset, charge: 7900, freeAbove: 199900, daysMin: 3, daysMax: 5, codOn: true, codFee: 4900, codMin: 0, codMax: null, ...over })
+  ({ id, name: id, position, preset, charge: 7900, freeAbove: 199900, daysMin: 3, daysMax: 5, codOn: true, codCharge: 4900, codMin: 0, codMax: null, ...over })
 const zones = [
   z('Metro', 0, 'metro', { charge: 5900, freeAbove: 149900, daysMin: 2, daysMax: 3 }),
   z('Tier 2', 1, 'tier2'),
-  z('Rest of India', 2, 'rest', { charge: 9900, daysMin: 4, daysMax: 7, codFee: 6900, codMax: 300000 }),
+  z('Rest of India', 2, 'rest', { charge: 9900, daysMin: 4, daysMax: 7, codCharge: 6900, codMax: 300000 }),
   z('Special', 3, 'special', { charge: 14900, freeAbove: null, daysMin: 6, daysMax: 10, codOn: false }),
-  z('Jaipur same city', 4, null, { charge: 3900, freeAbove: 99900, daysMin: 1, daysMax: 2, codFee: 0 }),
+  z('Jaipur same city', 4, null, { charge: 3900, freeAbove: 99900, daysMin: 1, daysMax: 2, codCharge: 0 }),
 ]
 const setup = (over: Partial<ZoneSetup> = {}): ZoneSetup => ({ zones, ownZoneIds: [], rule: null, ...over })
 
@@ -36,7 +36,7 @@ describe('presets by prefix', () => {
 
 describe('resolveDelivery: the floor (no app) answers exactly as today', () => {
   it('one charge, free-above, COD with its fee and limits, metro…rest days', () => {
-    expect(resolveDelivery('302012', floor, null)).toEqual({ deliverable: true, zone: null, charge: 7900, freeAbove: 199900, cod: { on: true, fee: 4900, min: 0, max: null }, days: [2, 5] })
+    expect(resolveDelivery('302012', floor, null)).toEqual({ deliverable: true, zone: null, charge: 7900, freeAbove: 199900, cod: { on: true, charge: 4900, min: 0, max: null }, days: [2, 5] })
   })
   it('the no-COD list; COD off; no PIN code yet', () => {
     expect(resolveDelivery('110094', floor, null).cod).toEqual({ on: false, why: 'blocked_pincode' })
@@ -49,7 +49,7 @@ describe('resolveDelivery: zones', () => {
   it('a preset zone by prefix; a metro beats tier 2; rest catches the rest; special', () => {
     expect(resolveDelivery('400070', floor, setup())).toMatchObject({ zone: 'Metro', charge: 5900, freeAbove: 149900, days: [2, 3] })
     expect(resolveDelivery('302012', floor, setup())).toMatchObject({ zone: 'Tier 2' })
-    expect(resolveDelivery('845401', floor, setup())).toMatchObject({ zone: 'Rest of India', charge: 9900, cod: { on: true, fee: 6900, max: 300000 } })
+    expect(resolveDelivery('845401', floor, setup())).toMatchObject({ zone: 'Rest of India', charge: 9900, cod: { on: true, charge: 6900, max: 300000 } })
     expect(resolveDelivery('799001', floor, setup())).toMatchObject({ zone: 'Special', freeAbove: null, cod: { on: false, why: 'off' } })
   })
   it("the brand's own zone that lists the PIN code beats every preset", () => {

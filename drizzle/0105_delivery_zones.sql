@@ -31,7 +31,7 @@ CREATE TABLE "delivery_zones" (
 	"days_min" integer NOT NULL,
 	"days_max" integer NOT NULL,
 	"cod_on" boolean NOT NULL,
-	"cod_fee" bigint DEFAULT 0 NOT NULL,
+	"cod_charge" bigint DEFAULT 0 NOT NULL,
 	"cod_min" bigint DEFAULT 0 NOT NULL,
 	"cod_max" bigint,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE "delivery_zones" (
 	CONSTRAINT "delivery_zones_name" CHECK (length("delivery_zones"."name") between 1 and 40),
 	CONSTRAINT "delivery_zones_preset" CHECK ("delivery_zones"."preset" is null or "delivery_zones"."preset" in ('metro','tier2','special','rest')),
 	CONSTRAINT "delivery_zones_days" CHECK ("delivery_zones"."days_min" between 0 and 60 and "delivery_zones"."days_max" between "delivery_zones"."days_min" and 60),
-	CONSTRAINT "delivery_zones_money" CHECK ("delivery_zones"."charge" >= 0 and "delivery_zones"."cod_fee" >= 0 and "delivery_zones"."cod_min" >= 0 and ("delivery_zones"."free_above" is null or "delivery_zones"."free_above" > 0) and ("delivery_zones"."cod_max" is null or "delivery_zones"."cod_max" > 0)),
+	CONSTRAINT "delivery_zones_money" CHECK ("delivery_zones"."charge" >= 0 and "delivery_zones"."cod_charge" >= 0 and "delivery_zones"."cod_min" >= 0 and ("delivery_zones"."free_above" is null or "delivery_zones"."free_above" > 0) and ("delivery_zones"."cod_max" is null or "delivery_zones"."cod_max" > 0)),
 	CONSTRAINT "delivery_zones_position" CHECK ("delivery_zones"."position" between 0 and 49)
 );
 --> statement-breakpoint

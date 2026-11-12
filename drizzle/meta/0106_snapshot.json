@@ -1,6 +1,6 @@
 {
-  "id": "2ffcfbc8-8267-47ef-b82d-cbc0f9b36dec",
-  "prevId": "13c55cea-db38-4b68-961c-20dfa154cc00",
+  "id": "c17d8764-9cb7-45b7-a4b8-ea1a0db7ad9a",
+  "prevId": "f460f2d6-6b24-40df-8c9c-ba7c9a8744c3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -14749,8 +14749,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "cod_fee": {
-          "name": "cod_fee",
+        "cod_charge": {
+          "name": "cod_charge",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,
@@ -14836,7 +14836,7 @@
         },
         "delivery_zones_money": {
           "name": "delivery_zones_money",
-          "value": "\"delivery_zones\".\"charge\" >= 0 and \"delivery_zones\".\"cod_fee\" >= 0 and \"delivery_zones\".\"cod_min\" >= 0 and (\"delivery_zones\".\"free_above\" is null or \"delivery_zones\".\"free_above\" > 0) and (\"delivery_zones\".\"cod_max\" is null or \"delivery_zones\".\"cod_max\" > 0)"
+          "value": "\"delivery_zones\".\"charge\" >= 0 and \"delivery_zones\".\"cod_charge\" >= 0 and \"delivery_zones\".\"cod_min\" >= 0 and (\"delivery_zones\".\"free_above\" is null or \"delivery_zones\".\"free_above\" > 0) and (\"delivery_zones\".\"cod_max\" is null or \"delivery_zones\".\"cod_max\" > 0)"
         },
         "delivery_zones_position": {
           "name": "delivery_zones_position",

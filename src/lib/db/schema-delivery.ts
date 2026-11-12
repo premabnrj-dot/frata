@@ -24,7 +24,7 @@ export const deliveryZones = pgTable('delivery_zones', {
   daysMin: integer('days_min').notNull(),
   daysMax: integer('days_max').notNull(),
   codOn: boolean('cod_on').notNull(),
-  codFee: money('cod_fee').notNull().default(0),
+  codCharge: money('cod_charge').notNull().default(0),
   codMin: money('cod_min').notNull().default(0),
   codMax: money('cod_max'),
   updatedAt: at('updated_at').notNull().defaultNow(),
@@ -35,7 +35,7 @@ export const deliveryZones = pgTable('delivery_zones', {
   check('delivery_zones_name', sql`length(${t.name}) between 1 and 40`),
   check('delivery_zones_preset', sql`${t.preset} is null or ${t.preset} in (${sql.raw(sqlList(PRESET_KEYS))})`),
   check('delivery_zones_days', sql`${t.daysMin} between 0 and 60 and ${t.daysMax} between ${t.daysMin} and 60`),
-  check('delivery_zones_money', sql`${t.charge} >= 0 and ${t.codFee} >= 0 and ${t.codMin} >= 0 and (${t.freeAbove} is null or ${t.freeAbove} > 0) and (${t.codMax} is null or ${t.codMax} > 0)`),
+  check('delivery_zones_money', sql`${t.charge} >= 0 and ${t.codCharge} >= 0 and ${t.codMin} >= 0 and (${t.freeAbove} is null or ${t.freeAbove} > 0) and (${t.codMax} is null or ${t.codMax} > 0)`),
   check('delivery_zones_position', sql`${t.position} between 0 and 49`),
 ])
 

@@ -8,7 +8,7 @@
 // known (checkout); courier serviceability is deferred (owner). Pure.
 // =============================================================================
 
-import { codOn, resolveDelivery, type Cod } from '@/domains/delivery/resolve'
+import { codOn, floorTerms, type Cod } from '@/domains/delivery/floor'
 
 export type DeliveryRules = { shippingFlat: number; freeShippingAbove: number; codOn: boolean; codMin: number; codMax: number; codCharge: number; codBlockedPincodes?: readonly string[] }
 
@@ -18,12 +18,13 @@ export function shippingFor(amount: number, r: Pick<DeliveryRules, 'shippingFlat
   return r.freeShippingAbove && amount >= r.freeShippingAbove ? 0 : r.shippingFlat
 }
 
-export type { Cod } from '@/domains/delivery/resolve'
+export type { Cod } from '@/domains/delivery/floor'
 
 /** Pay on delivery on the FLOOR (today's Settings) for a bag of `amount` paise — the buy box and Settings' preview.
- *  Checkout reads `codOn(amount, resolveDelivery(pin, floor, zones))` (src/domains/delivery/resolve.ts), the one rule. */
+ *  Checkout reads `codOn(amount, resolveDelivery(pin, floor, zones))` (src/domains/delivery/resolve.ts), the one rule;
+ *  this is its floor (floor.ts), so the browser never ships the zone presets. */
 export function codFor(amount: number, r: DeliveryRules, pincode?: string | null): Cod {
-  return codOn(amount, resolveDelivery(pincode ?? null, { ...r, dispatchDays: 0, metroDays: 0, restDays: 0 }, null), pincode)
+  return codOn(amount, floorTerms(pincode ?? null, { ...r, dispatchDays: 0, metroDays: 0, restDays: 0 }), pincode)
 }
 
 /** Why Pay on delivery is not offered, in the shopper's words. */
