@@ -10,8 +10,8 @@ import { refreshHosts } from '@/lib/storefront/refresh'
 
 // ENTRY POINT credential: CRON_SECRET via isCronRequest (scripts/check-actions.mjs).
 // Own domains D2·8: the background check. The database decides which rows are due (app_domains_due: every 10 min the
-// first day, hourly after); the schedule only wakes this. On Hobby it wakes once a day (vercel.json), so a main domain
-// turns on no 307 (plan § D·2); on Pro the schedule line changes and nothing else.
+// first day, hourly after); the schedule only wakes this. On Pro it wakes every 10 minutes (vercel.json, 2026-11-12); a main domain
+// turns on no 307 (plan § D·2).
 
 export const maxDuration = 60
 const AT_ONCE = 4

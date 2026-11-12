@@ -266,8 +266,9 @@ it to `100000` after moving to Pro. Never Preview: a preview build must not add 
 **4. Check:** Settings › Shop address in the console shows **Connect a domain**. If it doesn't, the token or project id
 is missing or not in Production.
 
-On Vercel Pro later: the background check's schedule in `vercel.json` moves to every 10 minutes (one line), and the
-frrata name starts redirecting to a main domain (D2·9 follow-up).
+On Vercel Pro (2026-11-12): the background check runs every 10 minutes (`vercel.json`); **owner step:** set
+`DOMAIN_CAPACITY` to `100000` in Vercel (Production). Still to come: the frrata name redirecting to a main domain
+(D2·9 follow-up).
 
 ### Video for shops: Frrata's Mux (V1, 2026-11-09)
 
