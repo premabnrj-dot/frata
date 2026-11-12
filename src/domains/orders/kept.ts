@@ -23,8 +23,11 @@ import { orderProfit } from './profit'
 
 export type KeptGroup = {
   outcome: Outcome
-  /** Orders in the group. */
+  /** Orders in the group (True Profit: lines). */
   n: number
+  /** True Profit: how much of their orders these lines are (Σ taxable share), which scales a per-parcel shipping
+   *  estimate; absent, `n` (whole orders). */
+  share?: number
   provider: 'self' | 'shiprocket' | null
   cod: boolean
   /** A return whose came-back event put its stock back (`rtoRestockedSql`); false for every other outcome. */
@@ -73,7 +76,9 @@ export function keptOf(groups: readonly KeptGroup[], est: ShipCostEstimate): Kep
     if (!restocked && g.cogs === null) { out.leftOut += g.n; continue }
     // Actual lines are already the group's sums; an estimate is per parcel, so it is scaled to the group first (a
     // Shiprocket group can mix both: its missing lines take the estimate).
-    const groupEst = est ? { delivery: est.delivery * g.n, ret: est.ret * g.n, codFee: est.codFee * g.n } : null
+    // A share of parcels (True Profit's lines) scales the estimate, rounded to the paisa.
+    const parcels = g.share ?? g.n
+    const groupEst = est ? { delivery: Math.round(est.delivery * parcels), ret: Math.round(est.ret * parcels), codFee: Math.round(est.codFee * parcels) } : null
     const f = freightOf(g.provider, { forwardShipping: g.forward, rtoShipping: g.rto, courierCodFee: g.courierCodFee }, groupEst, { cod: g.cod, outcome: g.outcome })
     if (f.source === 'pending') { out.leftOut += g.n; continue }
     const p = orderProfit({

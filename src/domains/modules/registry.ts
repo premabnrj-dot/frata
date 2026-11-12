@@ -53,7 +53,9 @@ export const MODULES: Record<ModuleKey, ModuleDef> = {
     key: 'ship', name: 'Ship', job: 'Shiprocket labels, tracking, failed deliveries.', group: 'deliver', billing: 'core', status: 'next', usage: 'Shiprocket bills freight', dependsOn: [], outboxKinds: [],
   },
   true_profit: {
-    key: 'true_profit', name: 'True Profit', job: 'Profit by product, pincode and campaign.', group: 'run', billing: 'add_on', status: 'next', dependsOn: [], outboxKinds: [],
+    key: 'true_profit', name: 'True Profit', job: 'What each product, size and PIN code kept after returns.', group: 'run', billing: 'add_on', status: 'now',
+    // In Scale through its plan features (0116); an add-on on Launch and Growth at ₹999/month (owner, 2026-11-12).
+    addOnFor: ['launch', 'growth'], dependsOn: [], outboxKinds: [], setup: '/console/apps/true_profit',
   },
   reviews: {
     key: 'reviews', name: 'Reviews', job: 'Photo reviews after delivery, on the product page.', group: 'grow', billing: 'add_on', status: 'next', dependsOn: ['communication'], outboxKinds: ['review:ask'], addOnFor: ['growth', 'scale'],

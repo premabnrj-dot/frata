@@ -1,5 +1,5 @@
 # True Profit (the first add-on) and A3 — self-serve add-on trials
-Status: draft · Date: 2026-11-12 · Owner: "Build True Profit + A3" (2026-11-12, over A3 alone or waiting) · Mockups:
+Status: built (True Profit and A3, 2026-11-12; DZ shipped A3 first) · Date: 2026-11-12 · Owner: "Build True Profit + A3" (2026-11-12, over A3 alone or waiting) · Mockups:
 A3's trial screens are in the approved Apps gallery mockup v1 (2026-11-11: "Start free trial", its confirm, "In
 trial"); True Profit's home is new — `docs/mockups/2026-11-12-true-profit.html` (https://claude.ai/artifact/XsfTjzmh8nYqFpbFBCLSth), for the owner's sign-off before
 any of TP is built.
@@ -23,6 +23,9 @@ The showcase's "By campaign" feature, and the OFF line "Profit per order leaves 
 for this scope and are corrected.
 
 ## How the numbers are made (one engine, no second copy)
+- **As built (review fixes 2026-11-12):** no separate `allocate.ts`; the line share is in SQL (`true-profit.ts`) and
+  `keptOf` takes it as `share`; a partner before handover sees costs as everywhere (`costsVisibleIn`); "Per order" is per
+  order counted, not per delivered order. Scale's features gain True Profit by migration 0116, as 0113 did for Delivery Zones.
 - `kept.ts` stays THE rule. Its SQL twin groups by what decides the figure; True Profit adds a grouping key:
   `pincode` (order level, exact) and `variant` (line level).
 - **A line's share of an order's costs:** freight, the gateway's fee, the COD fee and Frrata's fee are order-level;
