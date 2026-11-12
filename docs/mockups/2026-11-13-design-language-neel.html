@@ -1,0 +1,644 @@
+<title>Frrata Neel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap">
+<style>
+/* Layout: a reference page (foundations → components → screens), each screen drawn at its real width inside a frame. */
+:root {
+  /* Neutral: warm grey, each step has one job (backgrounds 0–100, borders 200–500, text 600–950) */
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  /* Neel: the one action colour (buttons, links, focus, selection, charts) */
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n300:#9AA3EE; --n400:#6E79E3; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3; --n800:#272D82;
+  /* Rani: the brand mark and the loading line only */
+  --rani:#D61F69;
+  /* Status: pale tint · text · dot */
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62;
+  --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B;
+  --info-bg:#E8F1FD; --info-fg:#1F5BA8; --info-dot:#3B82E0;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  /* Roles */
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --hover:var(--g50); --sunk:var(--g50);
+  --line:var(--g200); --line-soft:var(--g100); --field:var(--g500);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-hover:var(--n700); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --bar:var(--g950); --bar-text:#fff;
+  --font: 'Inter', 'Noto Sans Devanagari', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--text); font: 400 14px/20px var(--font); font-feature-settings: 'cv11','ss01'; -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 64px; margin: 0 }
+.num { font-variant-numeric: tabular-nums }
+.code { font-family: var(--mono); font-size: 12px; letter-spacing: 0 }
+h1, h2, h3 { text-wrap: balance; margin: 0 }
+
+/* The reference page itself */
+.doc { max-width: 1320px; margin: 0 auto }
+.doc-top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--page); border-bottom: 1px solid var(--line); display: flex; gap: 16px; align-items: center; padding: 12px 0; flex-wrap: wrap }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--page) }
+.doc-top b { font-weight: 600; display: flex; align-items: center; gap: 8px }
+.doc-top nav { display: flex; gap: 4px; flex-wrap: wrap }
+.doc-top nav a { color: var(--text-2); text-decoration: none; padding: 6px 10px; border-radius: 8px; font-weight: 500 }
+.doc-top nav a:hover { background: var(--hover); color: var(--text) }
+.mark { width: 22px; height: 22px; border-radius: 6px; background: var(--g950); display: inline-grid; place-items: center; color: #fff; font-weight: 600; font-size: 12px; position: relative }
+.mark::after { content: ""; position: absolute; left: 5px; right: 5px; bottom: 4px; height: 2px; background: var(--rani); border-radius: 2px }
+.part { padding-top: 48px }
+.part > h2 { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.015em }
+.part > p.lead { color: var(--text-2); margin: 6px 0 20px; max-width: 70ch }
+.grid { display: grid; gap: 16px }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)) }
+.g3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) }
+.box { border: 1px solid var(--line); border-radius: 12px; padding: 20px; background: var(--surface); min-width: 0 }
+.box h3 { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 12px }
+.cap { font-size: 12px; line-height: 16px; color: var(--text-2) }
+.rule { font-size: 13px; line-height: 18px; color: var(--text-2); margin: 10px 0 0; padding-left: 16px }
+.rule li { margin: 3px 0 }
+
+/* Swatches */
+.ramp { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px }
+.sw { border-radius: 8px; height: 52px; border: 1px solid var(--line-soft); display: flex; align-items: flex-end; padding: 6px; font-size: 11px; line-height: 14px }
+.sw.d { color: #fff } .sw.l { color: #171615 }
+.pairs { display: grid; gap: 8px }
+
+/* Type specimens */
+.spec { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 6px 16px; align-items: baseline }
+.spec .cap { white-space: nowrap } .spec > * { min-width: 0; overflow-wrap: anywhere }
+.t-display { font-size: 30px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em }
+.t-title { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.015em }
+.t-heading { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em }
+.t-sub { font-size: 14px; line-height: 20px; font-weight: 600 }
+.t-body { font-size: 14px; line-height: 20px }
+.t-label { font-size: 13px; line-height: 18px; font-weight: 500 }
+.t-small { font-size: 12px; line-height: 16px; color: var(--text-2) }
+
+/* ---------- Components (the console's own) ---------- */
+.btn { height: 36px; padding: 0 14px; border-radius: 8px; font: 500 14px/1 var(--font); border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap }
+.btn:focus-visible, .inp:focus-visible, .chipbtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px }
+.btn-p { background: var(--action); color: var(--action-text) } .btn-p:hover { background: var(--action-hover) }
+.btn:disabled { opacity: .45; cursor: not-allowed }
+.btn-s { background: var(--surface); color: var(--text); border-color: var(--g300); box-shadow: var(--e1) } .btn-s:hover { background: var(--hover) }
+.btn-g { background: transparent; color: var(--text-2) } .btn-g:hover { background: var(--hover); color: var(--text) }
+.btn-d { background: var(--bad-dot); color: #fff }
+.btn-sm { height: 30px; padding: 0 10px; font-size: 13px }
+.lnk { color: var(--link); text-decoration: none; font-weight: 500 } .lnk:hover { text-decoration: underline }
+.kbd { font: 500 11px/1 var(--font); padding: 3px 5px; border-radius: 4px; background: rgba(255,255,255,.14); margin-left: 4px }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 999px; font: 500 12px/1 var(--font); white-space: nowrap }
+.chip::before { content: ""; width: 6px; height: 6px; border-radius: 50% }
+.c-ok { background: var(--ok-bg); color: var(--ok-fg) } .c-ok::before { background: var(--ok-dot) }
+.c-warn { background: var(--warn-bg); color: var(--warn-fg) } .c-warn::before { background: var(--warn-dot) }
+.c-bad { background: var(--bad-bg); color: var(--bad-fg) } .c-bad::before { background: var(--bad-dot) }
+.c-info { background: var(--info-bg); color: var(--info-fg) } .c-info::before { background: var(--info-dot) }
+.c-neu { background: var(--neu-bg); color: var(--neu-fg) } .c-neu::before { background: var(--neu-dot) }
+.tag { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border-radius: 6px; border: 1px solid var(--line); font: 500 12px/1 var(--font); color: var(--text-2); background: var(--surface) }
+
+.fld { display: grid; gap: 6px; min-width: 0 }
+.fld > span { font: 500 13px/18px var(--font) }
+.inp { height: 36px; border: 1px solid var(--field); border-radius: 8px; padding: 0 10px; font: 400 14px/20px var(--font); background: var(--surface); color: var(--text); width: 100%; min-width: 0 }
+.inp:focus { border-color: var(--focus); box-shadow: 0 0 0 3px var(--n100); outline: none }
+.inp.bad { border-color: var(--bad-dot); box-shadow: 0 0 0 3px var(--bad-bg) }
+.err { font: 400 13px/18px var(--font); color: var(--bad-fg); display: flex; gap: 6px }
+.pre { position: relative } .pre > i { position: absolute; left: 10px; top: 8px; font-style: normal; color: var(--text-3) } .pre .inp { padding-left: 24px }
+textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
+
+.seg { display: inline-flex; padding: 3px; gap: 2px; background: var(--sunk); border-radius: 10px; border: 1px solid var(--line-soft) }
+.seg button { border: 0; background: transparent; height: 30px; padding: 0 12px; border-radius: 7px; font: 500 13px/1 var(--font); color: var(--text-2); cursor: pointer }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--e1) }
+.sw-t { width: 34px; height: 20px; border-radius: 999px; background: var(--g300); position: relative; display: inline-block }
+.sw-t::after { content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 2px; left: 2px; box-shadow: var(--e1) }
+.sw-t.on { background: var(--action) } .sw-t.on::after { left: 16px }
+.cb { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--field); display: inline-grid; place-items: center; background: var(--surface); vertical-align: middle }
+.cb.on { background: var(--action); border-color: var(--action) } .cb.on::after { content: ""; width: 8px; height: 4px; border: 2px solid #fff; border-top: 0; border-right: 0; transform: rotate(-45deg) translateY(-1px) }
+.cbt { display: inline-grid; place-items: center; width: 24px; height: 24px } /* 24 px target round a 16 px box */
+
+.tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--line); overflow-x: auto }
+.tabs a { padding: 10px 0; font-weight: 500; color: var(--text-2); text-decoration: none; display: flex; gap: 6px; align-items: center; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap }
+.tabs a[aria-current] { color: var(--text); border-color: var(--action) }
+.cnt { font: 500 12px/1 var(--font); padding: 3px 6px; border-radius: 999px; background: var(--g100); color: var(--text-2) }
+.tabs a[aria-current] .cnt { background: var(--n50); color: var(--n700) }
+
+.toast { display: inline-flex; gap: 12px; align-items: center; background: var(--bar); color: var(--bar-text); border-radius: 10px; padding: 10px 14px; box-shadow: var(--e3); font-weight: 500 }
+.toast .lnk { color: var(--n300) }
+.savebar { display: flex; align-items: center; gap: 12px; background: var(--bar); color: var(--bar-text); border-radius: 12px; padding: 10px 10px 10px 16px; box-shadow: var(--e3) }
+.savebar .btn-s { background: transparent; color: var(--bar-text); border-color: rgba(255,255,255,.28); box-shadow: none }
+.savebar .btn-p { background: #fff; color: var(--g950) }
+:root[data-theme="dark"] .savebar .btn-p { background: var(--g950); color: var(--g0) }
+.menu { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--e2); padding: 6px; width: 220px }
+.menu a { display: flex; justify-content: space-between; padding: 8px 10px; border-radius: 8px; color: var(--text); text-decoration: none }
+.menu a:hover { background: var(--hover) } .menu hr { border: 0; border-top: 1px solid var(--line-soft); margin: 6px 0 } .menu a.danger { color: var(--bad-fg) }
+.money .r { color: var(--text-2); margin-right: 1px } .money .p { color: var(--text-2); font-size: .85em }
+
+/* ---------- The console frame ---------- */
+.frame { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--page); box-shadow: var(--e2) }
+.frame-wrap { overflow-x: auto; padding: 4px 4px 24px }
+.frame-label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 28px 0 10px; flex-wrap: wrap }
+.frame-label h3 { font-size: 16px; line-height: 24px; font-weight: 600 }
+.app { display: grid; grid-template-columns: 232px 1fr; width: 1280px; min-height: 760px }
+.side { background: var(--side); border-right: 1px solid var(--line); padding: 14px 10px; display: flex; flex-direction: column; gap: 2px }
+.shop { display: flex; gap: 10px; align-items: center; padding: 6px 8px 14px; font-weight: 600 }
+.shop small { display: block; font-weight: 400; color: var(--text-2); font-size: 12px }
+.grp { font: 500 11px/16px var(--font); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; padding: 14px 10px 4px }
+.nav { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: var(--text-2); font-weight: 500; text-decoration: none }
+.nav svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.6 }
+.nav:hover { background: var(--hover); color: var(--text) }
+.nav[aria-current] { background: var(--surface); color: var(--text); box-shadow: var(--e1); outline: 1px solid var(--line) }
+.nav[aria-current] svg { stroke: var(--action) }
+.nav .cnt { margin-left: auto }
+.nav .cnt.w { background: var(--warn-bg); color: var(--warn-fg) }
+.main { padding: 28px 32px 96px; min-width: 0; position: relative }
+.ph { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px }
+.ph .back { font: 500 13px/18px var(--font); color: var(--text-2); text-decoration: none; display: inline-flex; gap: 4px; margin-bottom: 6px }
+.ph h1 { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.015em; display: flex; gap: 10px; align-items: center }
+.ph .meta { color: var(--text-2); margin-top: 2px }
+.ph .acts { margin-left: auto; display: flex; gap: 8px; align-items: center }
+.sec { border: 1px solid var(--line); border-radius: 12px; background: var(--surface) }
+.sec-h { display: flex; align-items: center; gap: 8px; padding: 16px 20px 0 }
+.sec-h h2 { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em }
+.sec-h .x { margin-left: auto; display: flex; gap: 8px; align-items: center }
+.sec-b { padding: 16px 20px 20px; display: grid; gap: 16px }
+.fold { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-top: 1px solid var(--line-soft) }
+.fold:first-child { border-top: 0 }
+.fold b { font-weight: 600; min-width: 120px } .fold span { color: var(--text-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap } .fold .lnk { margin-left: auto }
+.stack { display: grid; gap: 16px; align-content: start; min-width: 0 }
+
+/* Tables */
+.tbl { width: 100%; border-collapse: separate; border-spacing: 0 }
+.tbl th { text-align: left; font: 500 12px/16px var(--font); color: var(--text-2); padding: 10px 12px; background: var(--sunk); border-bottom: 1px solid var(--line) }
+.tbl th:first-child { border-top-left-radius: 11px } .tbl th:last-child { border-top-right-radius: 11px }
+.tbl td { padding: 0 12px; height: 48px; border-bottom: 1px solid var(--line-soft); vertical-align: middle }
+.tbl tr:last-child td { border-bottom: 0 }
+.sec > .tbl td:first-child, .sec > .tbl th:first-child { padding-left: 20px } .sec > .tbl td:last-child, .sec > .tbl th:last-child { padding-right: 20px }
+.tbl tbody tr:hover td { background: var(--g25) }
+.tbl tr.sel td { background: var(--select) }
+.tbl .r { text-align: right }
+.ord { font-weight: 600 } .sub { color: var(--text-2); font-size: 12px; line-height: 16px }
+.thumb { width: 36px; height: 44px; border-radius: 6px; background: linear-gradient(160deg, var(--g200), var(--g100)); display: block }
+.th2 { background: linear-gradient(160deg, #E5C8B5, #F3E3D7) } .th3 { background: linear-gradient(160deg, #BFD3C4, #E3EDE5) } .th4 { background: linear-gradient(160deg, #C9CCE8, #E7E8F6) }
+.dots { display: inline-flex; gap: 3px } .dots i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,.08) }
+.bulk { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; border-radius: 10px; background: var(--n50); border: 1px solid var(--n100); margin-bottom: 12px }
+.bulk b { color: var(--n800) }
+
+/* KPI strip */
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr) }
+.kpi { padding: 18px 20px; border-left: 1px solid var(--line-soft) } .kpi:first-child { border-left: 0 }
+.kpi .k { font: 500 13px/18px var(--font); color: var(--text-2) }
+.kpi .v { font-size: 30px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0 6px }
+.bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; align-items: end; height: 150px; padding-top: 10px }
+.bars div { display: grid; gap: 6px; justify-items: center; font-size: 12px; color: var(--text-2) }
+.bars i { width: 100%; border-radius: 6px 6px 2px 2px; background: var(--n200) } .bars .today i { background: var(--action) }
+
+/* Editor */
+.ed { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start }
+.aside { position: sticky; top: 16px; display: grid; gap: 16px }
+.photos { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end }
+.ph-i { width: 104px; height: 130px; flex: none; border-radius: 10px; position: relative; background: linear-gradient(160deg, #E8C6CF, #F6E6EA) }
+.ph-i:nth-child(2) { background: linear-gradient(160deg, #EED9C7, #F8EEE5) } .ph-i:nth-child(3) { background: linear-gradient(160deg, #D9D4EA, #EEEBF6) }
+.ph-i:first-child { width: 148px; height: 185px }
+.ph-i .badge { position: absolute; left: 8px; top: 8px; background: rgba(23,22,21,.75); color: #fff; font: 500 11px/1 var(--font); padding: 4px 6px; border-radius: 6px }
+.ph-add { width: 104px; height: 130px; flex: none; border-radius: 10px; border: 1.5px dashed var(--g300); display: grid; place-items: center; text-align: center; color: var(--text-2); font-weight: 500 }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px }
+.addr { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--text-2); padding: 8px 10px; background: var(--sunk); border-radius: 8px; min-width: 0 }
+.addr b { color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.opt { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--g25) }
+.opt-h { display: flex; justify-content: space-between; align-items: center; font: 500 13px/18px var(--font) }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+.chipbtn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); font: 500 13px/1 var(--font); color: var(--text) }
+.chipbtn .h { color: var(--text-3); letter-spacing: -2px; font-size: 12px }
+.chipbtn .sq { width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(0,0,0,.1) }
+.chipadd { height: 30px; padding: 0 10px; border-radius: 8px; border: 1px dashed var(--g300); color: var(--text-2); font: 500 13px/1 var(--font); display: inline-flex; align-items: center }
+.cell { height: 32px; border: 1px solid var(--line); border-radius: 6px; padding: 0 8px; display: flex; align-items: center; background: var(--surface) }
+.cell.e { color: var(--text-3) }
+.status-card { display: grid; gap: 12px }
+.need { display: flex; gap: 8px; font-size: 13px; line-height: 18px; color: var(--warn-fg); background: var(--warn-bg); border-radius: 8px; padding: 8px 10px }
+.share { border: 1px solid var(--line); border-radius: 12px; overflow: hidden }
+.share .img { height: 140px; background: linear-gradient(160deg, #E8C6CF 0 55%, #F6E6EA 55%); position: relative }
+.share .img .logo { position: absolute; left: 12px; bottom: 10px; background: #fff; color: #171615; border-radius: 6px; padding: 4px 8px; font: 600 12px/1 var(--font) }
+.share .txt { padding: 10px 12px; background: var(--sunk); display: grid; gap: 2px; font-size: 13px }
+.floatbar { position: absolute; left: 32px; right: 32px; bottom: 20px }
+
+/* Settings */
+.list a { display: grid; grid-template-columns: 20px 1fr auto 16px; gap: 14px; align-items: center; padding: 14px 20px; border-top: 1px solid var(--line-soft); color: var(--text); text-decoration: none }
+.list a:first-child { border-top: 0 } .list a:hover { background: var(--g25) }
+.list svg { width: 20px; height: 20px; stroke: var(--text-2); fill: none; stroke-width: 1.6 }
+.list .v { color: var(--text-2); font-size: 13px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px }
+
+/* Phone */
+.phones { display: flex; gap: 28px; flex-wrap: wrap }
+.phone { width: 390px; max-width: 100%; border: 1px solid var(--line); border-radius: 28px; overflow: hidden; background: var(--page); box-shadow: var(--e2); position: relative; font-size: 15px; line-height: 22px }
+.p-top { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line-soft) }
+.p-body { padding: 16px; display: grid; gap: 14px; padding-bottom: 150px }
+.p-nav { position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); background: var(--surface); padding: 8px 0 14px; font: 500 11px/14px var(--font); color: var(--text-2); text-align: center }
+.p-nav span[aria-current] { color: var(--action) }
+.p-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 0; border-top: 1px solid var(--line-soft) }
+.p-save { position: absolute; left: 12px; right: 12px; bottom: 72px }
+.phone .inp, .phone .btn { height: 44px; font-size: 15px }
+.phone .seg button { height: 36px }
+.ba { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden }
+.ba > div { background: var(--surface); padding: 12px 14px; font-size: 14px; line-height: 20px }
+.ba .h { font: 500 12px/16px var(--font); color: var(--text-2); background: var(--sunk) }
+.ba .was { color: var(--text-2); text-decoration: line-through; text-decoration-color: var(--bad-dot); text-decoration-thickness: 1px }
+.ba .now { color: var(--text); font-weight: 500 }
+.words { display: grid; gap: 10px; counter-reset: w; margin: 0; padding: 0; list-style: none }
+.words li { counter-increment: w; display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 10px }
+.words li::before { content: counter(w); font: 600 12px/22px var(--font); width: 22px; height: 22px; border-radius: 6px; background: var(--n50); color: var(--n700); text-align: center }
+.words b { font-weight: 600 } .words span { color: var(--text-2) }
+.swap { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px }
+.swap div { font-size: 13px; padding: 6px 10px; border-radius: 8px; background: var(--sunk) } .swap s { color: var(--text-3) }
+@media (max-width: 720px) { .ba { grid-template-columns: 1fr } .ba .h:nth-child(2) { display: none } }
+.note { font-size: 13px; color: var(--text-2); margin-top: 8px }
+@media (max-width: 720px) { .spec { grid-template-columns: 1fr } }
+@media (prefers-reduced-motion: no-preference) { .btn, .nav, .seg button { transition: background-color .12s cubic-bezier(.3,0,.2,1), color .12s } }
+</style>
+
+<div class="doc">
+  <div class="doc-top">
+    <b><span class="mark">rr</span>Neel · the console's design language</b>
+    <nav aria-label="Parts"><a href="#foundations">Foundations</a><a href="#components">Components</a><a href="#home">Home</a><a href="#orders">Orders</a><a href="#products">Products</a><a href="#editor">Product</a><a href="#settings">Settings</a><a href="#phone">Phone</a><a href="#words">Words</a></nav>
+  </div>
+
+  <!-- ===================== FOUNDATIONS ===================== -->
+  <section class="part" id="foundations">
+    <h2>Foundations</h2>
+    <p class="lead">A white page, one warm grey, one action colour. Colour means something: neel is what you can press, a tinted chip is a state, rani is only the brand.</p>
+    <div class="grid g2">
+      <div class="box">
+        <h3>Neutral · warm grey</h3>
+        <div class="ramp">
+          <div class="sw l" style="background:#FFFFFF">0 page</div><div class="sw l" style="background:#FBFAF9">25 sidebar</div><div class="sw l" style="background:#F6F5F3">50 hover</div><div class="sw l" style="background:#EEEDEA">100 divider</div>
+          <div class="sw l" style="background:#E3E1DD">200 border</div><div class="sw l" style="background:#CFCCC7">300 button edge</div><div class="sw d" style="background:#8F8A84">500 field edge</div><div class="sw d" style="background:#67625C">600 text 2</div>
+          <div class="sw d" style="background:#34312E">800</div><div class="sw d" style="background:#171615">950 text</div>
+        </div>
+        <ul class="rule"><li>Steps have jobs: 0–100 backgrounds, 200–500 lines, 600–950 text. Never swapped.</li><li>Field edge 500 is 3.4:1 on white; text 2 (600) is 6.0:1.</li></ul>
+      </div>
+      <div class="box">
+        <h3>Neel · the action colour</h3>
+        <div class="ramp">
+          <div class="sw l" style="background:#EEF0FD">50 selected</div><div class="sw l" style="background:#E0E3FB">100 focus halo</div><div class="sw l" style="background:#C3C9F6">200 chart</div><div class="sw d" style="background:#6E79E3">400</div>
+          <div class="sw d" style="background:#4C57D6">500 focus</div><div class="sw d" style="background:#3A44C2">600 button</div><div class="sw d" style="background:#2F37A3">700 link</div><div class="sw d" style="background:#D61F69">Rani · brand only</div>
+        </div>
+        <ul class="rule"><li>Neel is the only colour that means "you can press this": primary buttons, links, focus, the selected row and tab, chart bars.</li><li>White on 600 is 6.9:1. Rani never fills a button, a number or a state.</li></ul>
+      </div>
+      <div class="box">
+        <h3>States · tint, dot, word</h3>
+        <div class="chips" style="gap:8px">
+          <span class="chip c-ok">Active</span><span class="chip c-ok">Delivered</span><span class="chip c-warn">To confirm</span><span class="chip c-warn">Low stock</span>
+          <span class="chip c-bad">Couldn't deliver</span><span class="chip c-bad">High risk</span><span class="chip c-info">Unlisted</span><span class="chip c-info">Scheduled</span>
+          <span class="chip c-neu">Draft</span><span class="chip c-neu">Archived</span><span class="tag">COD</span><span class="tag">Prepaid</span>
+        </div>
+        <ul class="rule"><li>A state is a pill: pale tint, a 6 px dot, a word. Never a dot or colour alone.</li><li>A fact that isn't a state (COD, Prepaid) is a plain tag: outlined, no colour.</li></ul>
+      </div>
+      <div class="box">
+        <h3>Type · Inter 400 / 500 / 600</h3>
+        <div class="spec">
+          <span class="cap">Display 30/36</span><span class="t-display num">₹2,30,28,200</span>
+          <span class="cap">Title 22/28</span><span class="t-title">Chanderi kurta set</span>
+          <span class="cap">Heading 16/24</span><span class="t-heading">Sizes and colours</span>
+          <span class="cap">Subhead 14/20</span><span class="t-sub">Stock and prices</span>
+          <span class="cap">Body 14/20</span><span class="t-body">Handwoven linen, block printed in Jaipur.</span>
+          <span class="cap">Label 13/18</span><span class="t-label">Price, ₹</span>
+          <span class="cap">Small 12/16</span><span class="t-small">edited 2 h ago · कुर्ता सेट</span>
+          <span class="cap">Code 12 mono</span><span class="code">KS-LINKUR-M · AWB 1490023381</span>
+        </div>
+        <ul class="rule"><li>Numbers are Inter with tabular figures, never monospace. Mono is only for codes people copy: SKU, AWB, GSTIN.</li><li>Phone body is 15/22. Hindi falls back to Noto Sans Devanagari.</li></ul>
+      </div>
+      <div class="box">
+        <h3>Space, radius, depth</h3>
+        <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:10px;align-items:end">
+          <div style="display:grid;gap:6px"><div style="height:36px;border:1px solid var(--line);border-radius:6px"></div><span class="cap">6 · chip, cell</span></div>
+          <div style="display:grid;gap:6px"><div style="height:36px;border:1px solid var(--line);border-radius:8px"></div><span class="cap">8 · button, field</span></div>
+          <div style="display:grid;gap:6px"><div style="height:36px;border:1px solid var(--line);border-radius:12px"></div><span class="cap">12 · section</span></div>
+          <div style="display:grid;gap:6px"><div style="height:36px;border-radius:16px;box-shadow:var(--e3);border:1px solid var(--line)"></div><span class="cap">16 · dialog</span></div>
+        </div>
+        <ul class="rule"><li>Spacing 4 · 8 · 12 · 16 · 20 · 24 · 32 · 48. Sections pad 20; fields stack 16 apart.</li><li>Lines, not shadows, for anything on the page. Shadows only for what floats: menus, dialogs, the save bar, toasts.</li></ul>
+      </div>
+      <div class="box">
+        <h3>Money</h3>
+        <div style="display:grid;gap:10px">
+          <div class="t-display num money"><span class="r">₹</span>2,490</div>
+          <div class="num money" style="font-size:14px"><span class="r">₹</span>1,178<span class="p">.82</span> · <span style="color:var(--bad-fg)">−₹430</span> · <span class="r">₹</span>2,30,28,200</div>
+        </div>
+        <ul class="rule"><li>Indian grouping (2,30,28,200), the ₹ and paise a step quieter, a loss in red with a real minus.</li><li>Right-aligned in columns; paise only where money is settled (invoices, fees).</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== COMPONENTS ===================== -->
+  <section class="part" id="components">
+    <h2>Components</h2>
+    <p class="lead">One of each. Every screen below is made only of these.</p>
+    <div class="grid g2">
+      <div class="box"><h3>Buttons</h3>
+        <div class="chips" style="gap:8px"><button class="btn btn-p">Add product</button><button class="btn btn-s">Import</button><button class="btn btn-g">More</button><button class="btn btn-d">Delete 2 drafts</button><a class="lnk" href="#components">View in shop</a></div>
+        <ul class="rule"><li>One primary per view. Secondary is white with a 300 edge. A link is neel text, underlined only on hover.</li><li>36 px tall on a desktop, 44 px on a phone.</li></ul>
+      </div>
+      <div class="box"><h3>Fields</h3>
+        <div class="row2"><label class="fld"><span>Price, ₹</span><input class="inp num" value="2,490" aria-label="Price"></label><label class="fld"><span>M.R.P., ₹</span><input class="inp num" value="2,990" aria-label="MRP"></label></div>
+        <label class="fld" style="margin-top:12px"><span>SKU</span><input class="inp bad code" value="KS-LINKUR-S" aria-label="SKU"><span class="err">Also used by Linen kurta · S. Pick another.</span></label>
+        <ul class="rule"><li>Label above, always visible. Checked when you leave the field; the mistake under it; what you typed is kept.</li></ul>
+      </div>
+      <div class="box"><h3>Choices</h3>
+        <div style="display:grid;gap:14px">
+          <div class="seg" role="group" aria-label="Status"><button aria-pressed="false">Draft</button><button aria-pressed="true">Active</button><button aria-pressed="false">Unlisted</button></div>
+          <div style="display:flex;gap:10px;align-items:center"><span class="sw-t on"></span>Pay on delivery</div>
+          <div style="display:flex;gap:10px;align-items:center"><span class="cbt"><span class="cb on"></span></span>Empty only</div>
+        </div>
+        <ul class="rule"><li>2–4 exclusive choices: segmented. On/off: a switch. Many from a list: checkboxes with 24 px targets.</li></ul>
+      </div>
+      <div class="box"><h3>Tabs, menus, feedback</h3>
+        <nav class="tabs" aria-label="Example"><a href="#components" aria-current="page">To confirm <span class="cnt">43</span></a><a href="#components">To pack <span class="cnt">96</span></a><a href="#components">All <span class="cnt">300</span></a></nav>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;align-items:flex-start">
+          <div class="menu"><a href="#components">Duplicate</a><a href="#components">View in shop</a><hr><a class="danger" href="#components">Delete draft</a></div>
+          <div style="display:grid;gap:10px"><span class="toast">Archived 2 products <a class="lnk" href="#components">Undo</a></span>
+            <div class="savebar" style="min-width:300px"><b style="font-weight:500">3 unsaved changes</b><span style="flex:1"></span><button class="btn btn-s btn-sm">Discard</button><button class="btn btn-p btn-sm">Save <span class="kbd">⌘S</span></button></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SCREENS ===================== -->
+  <section class="part" id="home">
+    <h2>Screens</h2>
+    <p class="lead">The same five screens, drawn in Neel at 1280 wide. Built as drawn.</p>
+    <div class="frame-label"><h3>Home</h3><span class="cap">Today's work first; numbers you act on, not a report.</span></div>
+    <div class="frame-wrap"><div class="frame"><div class="app">
+      <aside class="side" aria-label="Console">
+        <div class="shop"><span class="mark">rr</span><span>Kesar Studio<small>kesarstudio.in</small></span></div>
+        <div class="grp">Today</div>
+        <a class="nav" aria-current="page" href="#home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/></svg>Home</a>
+        <a class="nav" href="#orders"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6zM9 7a3 3 0 016 0"/></svg>Orders<span class="cnt w">43</span></a>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4zM10 21h4"/></svg>Notices</a>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M4 18l5-6 4 3 7-8"/></svg>Analytics</a>
+        <div class="grp">Catalogue</div>
+        <a class="nav" href="#products"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg>Products</a>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>Collections</a>
+        <div class="grp">Store</div>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M4 12l8-8h8v8l-8 8z"/></svg>Offers</a>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M4 8h16v12H4zM4 8l2-4h12l2 4"/></svg>Look</a>
+        <a class="nav" href="#settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</a>
+      </aside>
+      <main class="main">
+        <div class="ph"><div><h1>Today</h1><div class="meta">Friday, 13 November</div></div><div class="acts"><span class="chip c-ok">Shop open</span><button class="btn btn-s">Share shop</button></div></div>
+        <div class="stack">
+          <div class="sec"><div class="kpis">
+            <div class="kpi"><div class="k">To confirm</div><div class="v num">43</div><span class="chip c-warn">Oldest 8 d</span></div>
+            <div class="kpi"><div class="k">To pack</div><div class="v num">96</div><span class="chip c-warn">Oldest 8 d</span></div>
+            <div class="kpi"><div class="k">On hold</div><div class="v num" style="color:var(--text-3)">0</div><span class="chip c-ok">Nothing waiting</span></div>
+          </div></div>
+          <div class="sec"><div class="sec-h"><h2>Next to confirm</h2><div class="x"><a class="lnk" href="#orders">All 43</a></div></div>
+            <table class="tbl" style="margin-top:12px"><tbody>
+              <tr><td style="width:110px"><span class="ord num">KS-5300</span></td><td>Venkatanarasimharajuvaripeta S.<div class="sub">Jaipur · 2 items</div></td><td><span class="tag">COD</span> <span class="chip c-bad">High risk</span></td><td class="r num money"><span class="r">₹</span>6,790</td><td class="sub" style="width:80px">8 d</td><td style="width:110px"><button class="btn btn-p btn-sm">Confirm</button></td></tr>
+              <tr><td><span class="ord num">KS-5298</span></td><td>Ananya Bandyopadhyay<div class="sub">Kolkata · 1 item</div></td><td><span class="tag">COD</span></td><td class="r num money"><span class="r">₹</span>2,490</td><td class="sub">7 d</td><td><button class="btn btn-s btn-sm">Confirm</button></td></tr>
+            </tbody></table></div>
+          <div class="sec"><div class="sec-h"><h2>Last 7 days</h2><div class="x"><span class="cap">177 orders · <span class="num">₹2,30,28,200</span></span></div></div>
+            <div class="sec-b"><div class="bars">
+              <div><span class="num">29</span><i style="height:90px"></i>Sat</div><div><span class="num">29</span><i style="height:90px"></i>Sun</div><div><span class="num">29</span><i style="height:90px"></i>Mon</div><div><span class="num">29</span><i style="height:90px"></i>Tue</div><div><span class="num">30</span><i style="height:94px"></i>Wed</div><div><span class="num">29</span><i style="height:90px"></i>Thu</div><div class="today"><span class="num">2</span><i style="height:8px"></i>Today</div>
+            </div></div></div>
+        </div>
+      </main>
+    </div></div></div>
+  </section>
+
+  <section class="part" id="orders" style="padding-top:8px">
+    <div class="frame-label"><h3>Orders</h3><span class="cap">A work queue: tabs with counts, one search, 48 px rows, states as chips.</span></div>
+    <div class="frame-wrap"><div class="frame"><div class="app">
+      <aside class="side" aria-label="Console">
+        <div class="shop"><span class="mark">rr</span><span>Kesar Studio<small>kesarstudio.in</small></span></div>
+        <div class="grp">Today</div>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/></svg>Home</a>
+        <a class="nav" aria-current="page" href="#orders"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6zM9 7a3 3 0 016 0"/></svg>Orders<span class="cnt w">43</span></a>
+        <div class="grp">Catalogue</div>
+        <a class="nav" href="#products"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg>Products</a>
+        <div class="grp">Store</div>
+        <a class="nav" href="#settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</a>
+      </aside>
+      <main class="main">
+        <div class="ph"><div><h1>Orders</h1></div><div class="acts"><button class="btn btn-s">Download</button><button class="btn btn-p">Create order</button></div></div>
+        <nav class="tabs" aria-label="Queues"><a href="#orders">Couldn't deliver <span class="cnt">15</span></a><a href="#orders" aria-current="page">To confirm <span class="cnt">43</span></a><a href="#orders">To pack <span class="cnt">96</span></a><a href="#orders">To ship <span class="cnt">0</span></a><a href="#orders">On the way <span class="cnt">43</span></a><a href="#orders">Coming back <span class="cnt">3</span></a><a href="#orders">All <span class="cnt">300</span></a></nav>
+        <div style="display:flex;gap:8px;margin:16px 0 12px"><input class="inp" style="max-width:360px" placeholder="Search number, name or phone" aria-label="Search orders"><button class="btn btn-s">Payment</button><button class="btn btn-s">Risk</button></div>
+        <div class="bulk"><b>2 selected</b><span style="flex:1"></span><button class="btn btn-p btn-sm">Confirm 2</button><button class="btn btn-s btn-sm">Put on hold</button><button class="btn btn-g btn-sm">Clear</button></div>
+        <div class="sec"><table class="tbl"><thead><tr><th style="width:44px"><span class="cbt"><span class="cb"></span></span></th><th>Order</th><th>Customer</th><th>Payment</th><th>Status</th><th class="r">Total</th><th>Placed</th></tr></thead><tbody>
+          <tr class="sel"><td><span class="cbt"><span class="cb on"></span></span></td><td class="ord num">KS-5006</td><td>Sneha<div class="sub">Thiruvananthapuram · 3 items</div></td><td><span class="tag">COD</span></td><td><span class="chip c-warn">To confirm</span></td><td class="r num money"><span class="r">₹</span>1,508</td><td class="sub">Today, 10:06 pm</td></tr>
+          <tr class="sel"><td><span class="cbt"><span class="cb on"></span></span></td><td class="ord num">KS-5012</td><td>முத்துலட்சுமி<div class="sub">Madurai · 3 items</div></td><td><span class="tag">COD</span></td><td><span class="chip c-warn">To confirm</span> <span class="chip c-bad">High risk</span></td><td class="r num money"><span class="r">₹</span>1,983</td><td class="sub">Today, 6:00 pm</td></tr>
+          <tr><td><span class="cbt"><span class="cb"></span></span></td><td class="ord num">KS-5018</td><td>অনন্যা বন্দ্যোপাধ্যায়<div class="sub">Kolkata · 3 items</div></td><td><span class="tag">Prepaid</span></td><td><span class="chip c-warn">To confirm</span></td><td class="r num money"><span class="r">₹</span>2,458</td><td class="sub">Today, 1:54 pm</td></tr>
+          <tr><td><span class="cbt"><span class="cb"></span></span></td><td class="ord num">KS-5024</td><td>Mohammed Irfan Qureshi<div class="sub">Lucknow · 3 items</div></td><td><span class="tag">COD</span></td><td><span class="chip c-warn">To confirm</span></td><td class="r num money"><span class="r">₹</span>2,934</td><td class="sub">Today, 9:48 am</td></tr>
+          <tr><td><span class="cbt"><span class="cb"></span></span></td><td class="ord num">KS-5030</td><td>Venkatanarasimharajuvaripeta S.<div class="sub">Tirupati · 3 items</div></td><td><span class="tag">COD</span></td><td><span class="chip c-warn">To confirm</span></td><td class="r num money"><span class="r">₹</span>3,409</td><td class="sub">Today, 5:42 am</td></tr>
+          <tr><td><span class="cbt"><span class="cb"></span></span></td><td class="ord num">KS-5036</td><td>Sneha<div class="sub">Kochi · 3 items</div></td><td><span class="tag">Prepaid</span></td><td><span class="chip c-warn">To confirm</span></td><td class="r num money"><span class="r">₹</span>3,884</td><td class="sub">Yesterday, 1:36 am</td></tr>
+        </tbody></table></div>
+        <div style="display:flex;justify-content:space-between;margin-top:12px;color:var(--text-2)"><span>Showing 1–50 of 43</span><span style="display:flex;gap:8px"><button class="btn btn-s btn-sm">Previous</button><button class="btn btn-s btn-sm">Next</button></span></div>
+      </main>
+    </div></div></div>
+  </section>
+
+  <section class="part" id="products" style="padding-top:8px">
+    <div class="frame-label"><h3>Products</h3><span class="cap">Photo-forward rows; status in colour; the bulk bar in neel when rows are picked.</span></div>
+    <div class="frame-wrap"><div class="frame"><div class="app">
+      <aside class="side" aria-label="Console">
+        <div class="shop"><span class="mark">rr</span><span>Kesar Studio<small>kesarstudio.in</small></span></div>
+        <div class="grp">Today</div>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/></svg>Home</a>
+        <a class="nav" href="#orders"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6zM9 7a3 3 0 016 0"/></svg>Orders<span class="cnt w">43</span></a>
+        <div class="grp">Catalogue</div>
+        <a class="nav" aria-current="page" href="#products"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg>Products</a>
+        <a class="nav" href="#products"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>Collections</a>
+        <div class="grp">Store</div>
+        <a class="nav" href="#settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</a>
+      </aside>
+      <main class="main">
+        <div class="ph"><div><h1>Products</h1></div><div class="acts"><button class="btn btn-g">More</button><button class="btn btn-s">Import</button><button class="btn btn-p">Add product</button></div></div>
+        <nav class="tabs" aria-label="Filter"><a href="#products" aria-current="page">All <span class="cnt">68</span></a><a href="#products">Active <span class="cnt">51</span></a><a href="#products">Draft <span class="cnt">12</span></a><a href="#products">Unlisted <span class="cnt">2</span></a><a href="#products">Archived <span class="cnt">3</span></a><a href="#products">Low stock <span class="cnt">6</span></a></nav>
+        <div style="display:flex;gap:8px;margin:16px 0 12px;align-items:center"><input class="inp" style="max-width:360px" placeholder="Search name, SKU or tag" aria-label="Search products"><span style="flex:1"></span><span class="cap">Sort</span><select class="inp" style="width:170px" aria-label="Sort"><option>Recently edited</option></select></div>
+        <div class="bulk"><b>2 selected</b><span style="flex:1"></span><button class="btn btn-s btn-sm">Set status</button><button class="btn btn-s btn-sm">Add to collection</button><button class="btn btn-s btn-sm">Archive</button><button class="btn btn-s btn-sm" style="color:var(--bad-fg)">Delete</button></div>
+        <div class="sec"><table class="tbl"><thead><tr><th style="width:44px"><span class="cbt"><span class="cb"></span></span></th><th>Product</th><th>Status</th><th class="r">Price</th><th class="r">Stock</th><th>Sizes and colours</th></tr></thead><tbody>
+          <tr class="sel"><td><span class="cbt"><span class="cb on"></span></span></td><td><div style="display:flex;gap:12px;align-items:center"><i class="thumb th2"></i><div><b style="font-weight:500">Sabz chanderi kurta set</b><div class="sub">Kurta set · edited 2 h ago</div></div></div></td><td><span class="chip c-ok">Active</span></td><td class="r num money"><span class="r">₹</span>2,490</td><td class="r num">48</td><td class="sub">6 sizes <span class="dots"><i style="background:#2F6B4F"></i><i style="background:#B5452E"></i><i style="background:#2B3A67"></i></span></td></tr>
+          <tr class="sel"><td><span class="cbt"><span class="cb on"></span></span></td><td><div style="display:flex;gap:12px;align-items:center"><i class="thumb th4"></i><div><b style="font-weight:500">Banarasi silk saree</b><div class="sub">Saree · edited yesterday</div></div></div></td><td><span class="chip c-neu">Draft</span></td><td class="r num money"><span class="r">₹</span>8,900</td><td class="r num">3</td><td class="sub">One size</td></tr>
+          <tr><td><span class="cbt"><span class="cb"></span></span></td><td><div style="display:flex;gap:12px;align-items:center"><i class="thumb th3"></i><div><b style="font-weight:500">Gulnar jhumka earrings</b><div class="sub">Jewellery · 4 days ago</div></div></div></td><td><span class="chip c-info">Unlisted</span></td><td class="r num money"><span class="r">₹</span>1,290</td><td class="r"><span class="chip c-warn">Low · 2</span></td><td class="sub">One size <span class="dots"><i style="background:#C9A227"></i><i style="background:#B8B8B8"></i></span></td></tr>
+          <tr><td><span class="cbt"><span class="cb"></span></span></td><td><div style="display:flex;gap:12px;align-items:center"><i class="thumb"></i><div><b style="font-weight:500">Mehr lehenga</b><div class="sub">Lehenga · 2 weeks ago</div></div></div></td><td><span class="chip c-ok">Active</span></td><td class="r num money"><span class="r">₹</span>14,500</td><td class="r"><span class="chip c-neu">Made to order</span></td><td class="sub">4 sizes</td></tr>
+        </tbody></table></div>
+      </main>
+    </div></div></div>
+  </section>
+
+  <section class="part" id="editor" style="padding-top:8px">
+    <div class="frame-label"><h3>Product</h3><span class="cap">What the approved products mockup drew, now in Neel: content left, a sticky panel right, finished sections as one line, the save bar at the foot.</span></div>
+    <div class="frame-wrap"><div class="frame"><div class="app">
+      <aside class="side" aria-label="Console">
+        <div class="shop"><span class="mark">rr</span><span>Kesar Studio<small>kesarstudio.in</small></span></div>
+        <div class="grp">Catalogue</div>
+        <a class="nav" aria-current="page" href="#products"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg>Products</a>
+        <a class="nav" href="#products"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>Collections</a>
+      </aside>
+      <main class="main">
+        <div class="ph"><div><a class="back" href="#products">‹ Products</a><h1>Gulabi chikankari kurta <span class="chip c-neu">Draft</span></h1></div><div class="acts"><button class="btn btn-s">Preview</button><button class="btn btn-g">More</button></div></div>
+        <div class="ed">
+          <div class="stack">
+            <div class="sec"><div class="sec-h"><h2>Photos</h2><div class="x"><span class="cap">Drag to order · the first is the cover</span></div></div>
+              <div class="sec-b"><div class="photos"><div class="ph-i"><span class="badge">Cover</span></div><div class="ph-i"></div><div class="ph-i"></div><div class="ph-add">+ Add<br><span class="cap">JPEG, PNG, WebP</span></div></div></div></div>
+            <div class="sec"><div class="sec-h"><h2>Name, price, description</h2></div>
+              <div class="sec-b">
+                <label class="fld"><span>Name</span><input class="inp" value="Gulabi chikankari kurta" aria-label="Name"></label>
+                <div class="row2"><label class="fld"><span>Price, ₹</span><input class="inp num" value="2,490" aria-label="Price"></label><label class="fld"><span>M.R.P., ₹</span><input class="inp num" value="2,990" aria-label="MRP"></label></div>
+                <label class="fld"><span>Description</span><textarea class="inp" rows="3" aria-label="Description">Hand-embroidered chikankari on soft mul cotton. Straight cut, three-quarter sleeves.</textarea></label>
+                <div class="addr"><span>kesarstudio.in/products/</span><b>gulabi-chikankari-kurta</b><span style="margin-left:auto" class="chip c-neu">Follows the name until live</span></div>
+              </div></div>
+            <div class="sec"><div class="sec-h"><h2>Sizes and colours</h2><div class="x"><span class="cap num">12 of 100</span></div></div>
+              <div class="sec-b">
+                <div class="opt"><div class="opt-h">Size<a class="lnk" href="#editor" style="font-size:13px">Remove</a></div><div class="chips">
+                  <span class="chipbtn"><span class="h">⋮⋮</span>XS</span><span class="chipbtn"><span class="h">⋮⋮</span>S</span><span class="chipbtn"><span class="h">⋮⋮</span>M</span><span class="chipbtn"><span class="h">⋮⋮</span>L</span><span class="chipbtn"><span class="h">⋮⋮</span>XL</span><span class="chipbtn"><span class="h">⋮⋮</span>XXL</span><span class="chipadd">+ Add</span></div></div>
+                <div class="opt"><div class="opt-h">Colour<a class="lnk" href="#editor" style="font-size:13px">Remove</a></div><div class="chips">
+                  <span class="chipbtn"><span class="h">⋮⋮</span><span class="sq" style="background:#E7A3B5"></span>Gulabi</span><span class="chipbtn"><span class="h">⋮⋮</span><span class="sq" style="background:#F2EBDD"></span>Ivory</span><span class="chipadd">+ Add</span></div></div>
+              </div></div>
+            <div class="sec"><div class="sec-h"><h2>Stock and prices</h2><div class="x"><div class="seg" role="group" aria-label="View"><button aria-pressed="true">Price and stock</button><button aria-pressed="false">SKU and barcode</button></div></div></div>
+              <div class="sec-b" style="gap:12px">
+                <div class="bulk" style="margin:0"><b>Gulabi · 6 sizes</b><span style="flex:1"></span><input class="inp num" style="width:110px;height:30px" placeholder="Price" aria-label="Price for selected"><input class="inp num" style="width:90px;height:30px" placeholder="Stock" aria-label="Stock for selected"><span style="display:flex;gap:6px;align-items:center;font-size:13px"><span class="cb on"></span>Empty only</span><button class="btn btn-p btn-sm">Set</button></div>
+                <table class="tbl"><thead><tr><th style="width:36px"><span class="cbt"><span class="cb on"></span></span></th><th>Variant</th><th>Price, ₹</th><th>Stock</th><th>Shoppers see</th></tr></thead><tbody>
+                  <tr class="sel"><td><span class="cbt"><span class="cb on"></span></span></td><td>Gulabi · XS</td><td><span class="cell num">2,490</span></td><td><span class="cell num">4</span></td><td><span class="chip c-ok">In stock</span></td></tr>
+                  <tr class="sel"><td><span class="cbt"><span class="cb on"></span></span></td><td>Gulabi · XXL</td><td><span class="cell num">2,890</span></td><td><span class="cell num">0</span></td><td><span class="chip c-warn">Sold out</span></td></tr>
+                  <tr><td><span class="cbt"><span class="cb"></span></span></td><td>Ivory · M</td><td><span class="cell e">—</span></td><td><span class="cell e">—</span></td><td><span class="chip c-neu">No price yet</span></td></tr>
+                </tbody></table>
+              </div></div>
+            <div class="sec">
+              <div class="fold"><b>Details</b><span>Fabric, work, occasion</span><a class="lnk" href="#editor">Add</a></div>
+              <div class="fold"><b>Size chart</b><span>Women's kurta · XS–XXL · Bust, Waist, Hip</span><a class="lnk" href="#editor">Edit</a></div>
+              <div class="fold"><b>Search and sharing</b><span>Gulabi chikankari kurta · ₹2,490 · Kesar Studio</span><a class="lnk" href="#editor">Edit</a></div>
+              <div class="fold"><b>Tax</b><span>HSN 6211 · 5% under ₹2,500</span><a class="lnk" href="#editor">Edit</a></div>
+            </div>
+          </div>
+          <div class="aside">
+            <div class="sec"><div class="sec-b status-card">
+              <div class="seg" role="group" aria-label="Status" style="width:100%;display:grid;grid-template-columns:repeat(3,1fr)"><button aria-pressed="true">Draft</button><button aria-pressed="false">Active</button><button aria-pressed="false">Unlisted</button></div>
+              <div class="need"><span aria-hidden="true">●</span>Missing: a price for Ivory (6 sizes)</div>
+              <button class="btn btn-p" style="width:100%;justify-content:center" disabled aria-disabled="true">Publish</button>
+            </div></div>
+            <div class="sec"><div class="sec-h"><h2>Shared on WhatsApp</h2></div><div class="sec-b">
+              <div class="share"><div class="img"><span class="logo">Kesar Studio</span></div><div class="txt"><b style="font-weight:600">Gulabi chikankari kurta · ₹2,490</b><span class="cap">Hand-embroidered chikankari on soft mul cotton. Pay on delivery.</span><span class="cap">kesarstudio.in</span></div></div>
+            </div></div>
+            <div class="sec"><div class="sec-b" style="gap:10px">
+              <label class="fld"><span>Category</span><input class="inp" value="Kurtas › Kurta sets" aria-label="Category"></label>
+              <label class="fld"><span>Collections</span><div class="chips"><span class="tag">Festive edit ×</span><span class="chipadd">+ Add</span></div></label>
+            </div></div>
+          </div>
+        </div>
+        <div class="floatbar"><div class="savebar" style="max-width:680px;margin:0 auto"><b style="font-weight:500">3 unsaved changes</b><span style="flex:1"></span><button class="btn btn-s btn-sm">Discard</button><button class="btn btn-p btn-sm">Save <span class="kbd">⌘S</span></button></div></div>
+      </main>
+    </div></div></div>
+  </section>
+
+  <section class="part" id="settings" style="padding-top:8px">
+    <div class="frame-label"><h3>Settings</h3><span class="cap">One list, each row its current value; no icon tiles.</span></div>
+    <div class="frame-wrap"><div class="frame"><div class="app" style="min-height:560px">
+      <aside class="side" aria-label="Console">
+        <div class="shop"><span class="mark">rr</span><span>Kesar Studio<small>kesarstudio.in</small></span></div>
+        <div class="grp">Store</div>
+        <a class="nav" aria-current="page" href="#settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</a>
+      </aside>
+      <main class="main">
+        <div class="ph"><div><h1>Settings</h1></div><div class="acts"><span class="chip c-ok">Ready for live payments</span></div></div>
+        <div class="sec list" style="max-width:860px">
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M4 9l2-5h12l2 5M5 9v11h14V9"/></svg><span>Store details</span><span class="v">Kesar Studio LLP · Jaipur</span><span aria-hidden="true">›</span></a>
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg><span>Contact and grievance officer</span><span class="v">riya@kesarstudio.in · Riya Mehta</span><span aria-hidden="true">›</span></a>
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M3 7h18v10H3zM7 12h2"/></svg><span>Pay on delivery</span><span class="v">On · up to ₹3,000 · fee ₹49</span><span aria-hidden="true">›</span></a>
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg><span>Shipping and delivery</span><span class="v">₹85 · free above ₹1,999 · 2 days</span><span aria-hidden="true">›</span></a>
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/></svg><span>Taxes and invoices</span><span class="v code">08AAAAA0000A1Z2</span><span aria-hidden="true">›</span></a>
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM3 10h18"/></svg><span>Online payments</span><span class="v"><span class="chip c-warn">Not connected</span></span><span aria-hidden="true">›</span></a>
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM7 14h4"/></svg><span>Plan and billing</span><span class="v">Growth · ₹4,999 a month</span><span aria-hidden="true">›</span></a>
+        </div>
+      </main>
+    </div></div></div>
+  </section>
+
+  <section class="part" id="phone" style="padding-top:8px">
+    <div class="frame-label"><h3>On a phone</h3><span class="cap">Body 15/22, 44 px controls, the save bar above the bottom nav.</span></div>
+    <div class="phones">
+      <div class="phone" aria-label="Orders on a phone">
+        <div class="p-top"><b style="font-size:20px;line-height:26px;font-weight:600">Orders</b><span style="margin-left:auto" class="chip c-warn">43 to confirm</span></div>
+        <div class="p-body">
+          <nav class="tabs" aria-label="Queues"><a href="#phone" aria-current="page">To confirm <span class="cnt">43</span></a><a href="#phone">To pack <span class="cnt">96</span></a><a href="#phone">All <span class="cnt">300</span></a></nav>
+          <input class="inp" placeholder="Search number, name or phone" aria-label="Search orders">
+          <div>
+            <div class="p-row" style="border-top:0"><span><b class="num" style="font-weight:600">KS-5006</b> · Sneha</span><span class="num money"><span class="r">₹</span>1,508</span><span class="sub">Thiruvananthapuram · 3 items</span><span><span class="chip c-warn">To confirm</span></span></div>
+            <div class="p-row"><span><b class="num" style="font-weight:600">KS-5012</b> · முத்துலட்சுமி</span><span class="num money"><span class="r">₹</span>1,983</span><span class="sub">Madurai · COD</span><span><span class="chip c-bad">High risk</span></span></div>
+            <div class="p-row"><span><b class="num" style="font-weight:600">KS-5018</b> · Ananya</span><span class="num money"><span class="r">₹</span>2,458</span><span class="sub">Kolkata · Prepaid</span><span><span class="chip c-warn">To confirm</span></span></div>
+          </div>
+        </div>
+        <div class="p-nav"><span>Home</span><span aria-current="page">Orders</span><span>Products</span><span>More</span></div>
+      </div>
+      <div class="phone" aria-label="A product on a phone">
+        <div class="p-top"><span style="color:var(--text-2)">‹</span><b style="font-weight:600">Gulabi chikankari kurta</b><span style="margin-left:auto" class="chip c-neu">Draft</span></div>
+        <div class="p-body">
+          <div class="seg" role="group" aria-label="Status" style="display:grid;grid-template-columns:repeat(3,1fr)"><button aria-pressed="true">Draft</button><button aria-pressed="false">Active</button><button aria-pressed="false">Unlisted</button></div>
+          <div class="need"><span aria-hidden="true">●</span>Missing: a price for Ivory</div>
+          <div class="photos"><div class="ph-i"><span class="badge">Cover</span></div><div class="ph-i"></div><div class="ph-add">+</div></div>
+          <label class="fld"><span>Name</span><input class="inp" value="Gulabi chikankari kurta" aria-label="Name"></label>
+          <div class="row2"><label class="fld"><span>Price, ₹</span><input class="inp num" value="2,490" aria-label="Price"></label><label class="fld"><span>M.R.P., ₹</span><input class="inp num" value="2,990" aria-label="MRP"></label></div>
+          <div class="sec"><div class="fold"><b>Sizes and colours</b><span>6 sizes · 2 colours</span><a class="lnk" href="#phone">Edit</a></div><div class="fold"><b>Size chart</b><span>Women's kurta</span><a class="lnk" href="#phone">Edit</a></div></div>
+        </div>
+        <div class="p-save"><div class="savebar"><b style="font-weight:500">3 unsaved</b><span style="flex:1"></span><button class="btn btn-s btn-sm">Discard</button><button class="btn btn-p btn-sm">Save</button></div></div>
+        <div class="p-nav"><span>Home</span><span>Orders</span><span aria-current="page">Products</span><span>More</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== WORDS ===================== -->
+  <section class="part" id="words">
+    <h2>Words</h2>
+    <p class="lead">A shop owner reads the console on a phone, between orders. Every line should be clear in one read.</p>
+    <div class="grid g2">
+      <div class="box"><h3>The rulebook</h3>
+        <ol class="words">
+          <li><div><b>One idea, one sentence.</b> <span>Up to 12 words. Two ideas are two sentences, or one is cut.</span></div></li>
+          <li><div><b>No joining marks.</b> <span>No colon, semicolon or dash to glue two thoughts together in a sentence.</span></div></li>
+          <li><div><b>Everyday words.</b> <span>The words a shop owner says out loud. Never ours: tenant, sync, server, token, webhook, variant, readiness.</span></div></li>
+          <li><div><b>Say what to do, or what happened.</b> <span>Start with it. "Add a price for Ivory." "Saved."</span></div></li>
+          <li><div><b>Buttons are a verb and a thing.</b> <span>"Confirm 2 orders", "Save price". Never "OK", "Submit" or "Proceed".</span></div></li>
+          <li><div><b>Errors: what's wrong, then the fix.</b> <span>Next to the field. No "invalid", no "error occurred", no blame.</span></div></li>
+          <li><div><b>Numbers, not adjectives.</b> <span>₹2,490, 8 days, 3 sizes. Dates as "Today, 10:06 pm" or "12 Nov".</span></div></li>
+          <li><div><b>Confirm with the consequence only.</b> <span>Title asks with the thing ("Delete 2 drafts?"). Buttons name both outcomes ("Keep them", "Delete 2 drafts").</span></div></li>
+          <li><div><b>Law and tax words only where the law needs them.</b> <span>Then an (i) says it plainly.</span></div></li>
+          <li><div><b>Calm and direct.</b> <span>"You" for the merchant, "we" for Frrata. No please, kindly, sorry, oops, emoji or exclamation marks.</span></div></li>
+          <li><div><b>Easy to translate.</b> <span>No idioms or wordplay. Short sentences carry into Hindi.</span></div></li>
+        </ol>
+      </div>
+      <div class="box"><h3>Swap these</h3>
+        <div class="swap">
+          <div><s>in order to</s> → to</div><div><s>prior to</s> → before</div><div><s>utilise</s> → use</div><div><s>via</s> → through, by</div>
+          <div><s>e.g.</s> → like</div><div><s>commence</s> → start</div><div><s>issue (a bill)</s> → send</div><div><s>respective</s> → (cut)</div>
+          <div><s>variant</s> → size or colour</div><div><s>SKU limit exceeded</s> → up to 100</div><div><s>invalid</s> → say what's wrong</div><div><s>successfully</s> → (cut)</div>
+          <div><s>is not able to</s> → can't</div><div><s>please note</s> → (cut)</div><div><s>at this time</s> → now</div><div><s>in case of</s> → if</div>
+        </div>
+        <ul class="rule"><li>Merchants' own trade words stay: COD, RTO, SKU, AWB, GST, HSN, M.R.P.</li></ul>
+      </div>
+    </div>
+    <div class="frame-label"><h3>Rewritten from today's console</h3><span class="cap">The left column is live copy now.</span></div>
+    <div class="ba">
+      <div class="h">Now</div><div class="h">Neel</div>
+      <div class="was">Only drafts that were never live or ordered can be deleted. The rest stay, and can be archived instead.</div><div class="now">You can delete drafts that never sold. Archive the rest.</div>
+      <div class="was">Opens from its link only: not in menus, search or Google. For a private drop or a DM.</div><div class="now">Only people with the link can see it.</div>
+      <div class="was">Gone from your shop. Its page says it is no longer available, with your newest pieces below.</div><div class="now">Hidden from your shop. Its orders stay.</div>
+      <div class="was">Checked with Razorpay before saving: wrong keys are refused and nothing changes. Saved keys are encrypted and never shown again.</div><div class="now">We check the keys with Razorpay before saving them.</div>
+      <div class="was">Frrata lost access to this number. Disconnect it here, then connect it again in Meta's window.</div><div class="now">This number is disconnected. Connect it again.</div>
+      <div class="was">Most orders came without a source. A link from Make a link tells an Instagram bio from a WhatsApp broadcast.</div><div class="now">Most orders have no source yet. Share your links from Make a link.</div>
+      <div class="was">Not confirmed yet: profit on those orders says "before shipping costs".</div><div class="now">Shipping costs aren't confirmed yet. Profit leaves them out for now.</div>
+      <div class="was">Shoppers add it themselves when the rest of the bag reaches the amount below. It is billed at ₹0; your CA may ask you to reverse input credit on gifted stock.</div><div class="now">Free when the bag reaches this amount. <span class="cap">(i) holds the tax note.</span></div>
+      <div class="was">Before shoppers can see it: a price on every size and colour, a size chart for its type.</div><div class="now">Add a price for Ivory (6 sizes).</div>
+      <div class="was">Some fields need a look before saving.</div><div class="now">2 things to fix: Price, SKU.</div>
+    </div>
+  </section>
+</div>
