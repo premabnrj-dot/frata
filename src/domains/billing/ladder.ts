@@ -7,7 +7,9 @@
 import type { Paise } from '@/domains/money/paise'
 import { deliveredFee, type PlanCode } from '@/domains/plans/entitlements'
 
-export type LadderPlan = { code: PlanCode; name: string; monthlyPrice: Paise; feeBps: number }
+export type LadderPlan = { code: PlanCode; name: string; monthlyPrice: Paise; feeBps: number
+  /** The add-ons this plan includes, by their bill-line name (MODULES[k].name): billed on Launch, nothing here. */
+  includes?: readonly string[] }
 
 /** One issued invoice as the ladder reads it (the caller reads only issued, non-test invoices). */
 export type LadderInvoice = {
@@ -15,7 +17,7 @@ export type LadderInvoice = {
   periodStart: Date
   /** The invoice's taxable total (what the shop was billed before GST). */
   taxable: Paise
-  lines: readonly { kind: string; periodStart: Date; taxable: Paise }[]
+  lines: readonly { kind: string; periodStart: Date; taxable: Paise; name?: string }[]
   /** One row per billed order: its stored base and the fee billed on it. */
   fees: readonly { base: Paise; fee: Paise }[]
   /** One row per credited order: the base its fee was billed on, and the fee credited. */
@@ -36,9 +38,11 @@ function billedOn(inv: LadderInvoice, launch: LadderPlan): number | null {
   return p.taxable + sum(inv.fees.map((f) => f.fee)) - sum(inv.credits.map((c) => c.fee))
 }
 
-/** The same lines on another plan: its price, its fee on each order's base, its credits. Add-ons, carry and over are equal. */
+/** The same lines on another plan: its price, its fee on each order's base, its credits, minus the add-ons it
+ *  includes (Delivery Zones on Growth: unit-economics review 2026-11-12). Carry and over are equal. */
 function wouldBeOn(inv: LadderInvoice, plan: LadderPlan): number {
-  return plan.monthlyPrice + sum(inv.fees.map((f) => deliveredFee(f.base, plan.feeBps))) - sum(inv.credits.map((c) => deliveredFee(c.base, plan.feeBps)))
+  const included = sum(inv.lines.filter((l) => l.kind === 'addon' && !!l.name && (plan.includes ?? []).some((n) => l.name === n || l.name!.startsWith(`${n},`))).map((l) => l.taxable))
+  return plan.monthlyPrice + sum(inv.fees.map((f) => deliveredFee(f.base, plan.feeBps))) - sum(inv.credits.map((c) => deliveredFee(c.base, plan.feeBps))) - included
 }
 
 export type Nudge = { plan: LadderPlan; invoiceId: string; periodStart: Date; saving: Paise; billed: Paise; would: Paise }

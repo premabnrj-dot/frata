@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { moduleAccess, type ModuleFacts } from '../access'
-import { offerFor, passes } from '../offer'
+import { selfTrialEnds, offerFor, passes } from '../offer'
 import { MODULE_KEYS, MODULES } from '../registry'
 
 const now = new Date('2026-11-07T10:00:00Z')
@@ -62,5 +62,33 @@ describe('offerFor', () => {
   it('filters: All passes everything; each filter only its own', () => {
     const o = offerFor('reviews', moduleAccess(none, now).reviews, 49900, now)
     expect(passes(o, 'all')).toBe(true); expect(passes(o, 'next')).toBe(true); expect(passes(o, 'addon')).toBe(false)
+  })
+})
+
+describe('A3 self-serve trials (Delivery Zones on Launch)', () => {
+  const launch: ModuleFacts = { ...none, planCode: 'launch' }
+  it('never tried: Start free trial at the price shown, ending 23:59:59 IST on day 14', () => {
+    const o = offerFor('delivery_zones', moduleAccess(launch, now).delivery_zones, 99900, now, true, false, 'p1')
+    expect(o.action).toEqual({ kind: 'trial', priceId: 'p1', monthly: 99900, ends: new Date('2026-11-21T18:29:59Z') })
+    expect(selfTrialEnds(new Date('2026-11-07T20:00:00Z'))).toEqual(new Date('2026-11-22T18:29:59Z')) // 1:30 am IST on the 8th
+  })
+  it('tried before (by the shop or by Frrata): ask Frrata, no second trial', () => {
+    const ended = { module: 'delivery_zones' as const, startsAt: day(-40), endsAt: day(-20), trialEndsAt: day(-26) }
+    expect(offerFor('delivery_zones', moduleAccess({ ...launch, addons: [ended] }, now).delivery_zones, 99900, now, true, false, 'p1').action.kind).toBe('ask')
+  })
+  it('in its own trial: the badge, and when paying starts (End trial on its home)', () => {
+    const ends = day(9)
+    const a = moduleAccess({ ...launch, switchedOn: ['delivery_zones'], addons: [
+      { module: 'delivery_zones', startsAt: day(-5), endsAt: null, trialEndsAt: ends, byShop: true },
+      { module: 'delivery_zones', startsAt: ends, endsAt: null, trialEndsAt: null, byShop: true },
+    ] }, now).delivery_zones
+    expect([a.usable, a.trialled, a.paidFrom]).toEqual([true, true, ends])
+    // Started today: "14 days left", whatever the hour (ends 23:59:59 IST on day 14).
+    const fresh = moduleAccess({ ...launch, switchedOn: ['delivery_zones'], addons: [{ module: 'delivery_zones', startsAt: now, endsAt: null, trialEndsAt: selfTrialEnds(now), byShop: true }] }, now).delivery_zones
+    expect(offerFor('delivery_zones', fresh, 99900, now).state?.label).toBe('Trial · 14 days left')
+    expect(offerFor('delivery_zones', a, 99900, now)).toMatchObject({ state: { label: 'Trial · 9 days left' }, selfTrial: { paidFrom: ends, monthly: 99900 } })
+    // Frrata's trial: no End trial of the shop's own (Admin ends it).
+    const admin = moduleAccess({ ...launch, switchedOn: ['delivery_zones'], addons: [{ module: 'delivery_zones', startsAt: day(-5), endsAt: null, trialEndsAt: ends }] }, now).delivery_zones
+    expect(offerFor('delivery_zones', admin, 99900, now).selfTrial).toBeNull()
   })
 })

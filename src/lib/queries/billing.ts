@@ -15,6 +15,7 @@ import type { Membership } from '@/lib/db/platform'
 import { planVersions, plans, shopSettings, tenantPlans } from '@/lib/db/schema'
 import { billingAccounts, billingNotices, frrataCreditNotes, frrataFeeCredits, frrataInvoiceFees, frrataInvoiceLines, frrataInvoices, frrataPayments } from '@/lib/db/schema-billing'
 import { cheapestPlan, type LadderInvoice, type LadderPlan } from '@/domains/billing/ladder'
+import { isModuleKey, MODULES } from '@/domains/modules/registry'
 import type { PlanCode } from '@/domains/plans/entitlements'
 import { invoiceState, type InvoiceState } from '@/domains/billing/status'
 import { frrataCreditNoteDoc, frrataInvoiceDoc, type FrrataDoc } from '@/domains/billing/document'
@@ -213,8 +214,8 @@ export async function featuredBillWith(tx: Tx, m: Pick<Membership, 'tenantId' | 
     tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, custom: tenantPlans.customMonthlyPrice, code: plans.code })
       .from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
       .where(eq(tenantPlans.tenantId, t)),
-    tx.execute<{ code: string; name: string; monthly_price: string; fee_bps: number }>(sql`
-      select distinct on (p.code) p.code, p.name, v.monthly_price, v.fee_bps from ${planVersions} v join ${plans} p on p.id = v.plan_id
+    tx.execute<{ code: string; name: string; monthly_price: string; fee_bps: number; features: string[] }>(sql`
+      select distinct on (p.code) p.code, p.name, v.monthly_price, v.fee_bps, v.features from ${planVersions} v join ${plans} p on p.id = v.plan_id
        order by p.code, v.version desc`),
     tx.select({ id: frrataInvoices.id, periodStart: frrataInvoices.periodStart, taxable: frrataInvoices.taxable }).from(frrataInvoices)
       .where(and(eq(frrataInvoices.tenantId, t), isNotNull(frrataInvoices.issuedAt), eq(frrataInvoices.testMode, false)))
@@ -227,14 +228,16 @@ export async function featuredBillWith(tx: Tx, m: Pick<Membership, 'tenantId' | 
   if (invoices.length < 2) return null
   const plan = (code: PlanCode): LadderPlan | null => {
     const r = latest.find((x) => x.code === code)
-    return r ? { code, name: r.name, monthlyPrice: paise(Number(r.monthly_price)), feeBps: r.fee_bps } : null
+    // The add-ons this plan includes, by the name their bill line carries (computeBill writes MODULES[k].name).
+    return r ? { code, name: r.name, monthlyPrice: paise(Number(r.monthly_price)), feeBps: r.fee_bps,
+      includes: r.features.filter(isModuleKey).map((k) => MODULES[k].name) } : null
   }
   const launch = plan('launch')
   const others = (['growth', 'scale'] as const).map(plan).filter((p): p is LadderPlan => p !== null)
   if (!launch || !others.length) return null
   const ids = invoices.map((i) => i.id)
   const [lines, fees, credits] = await Promise.all([
-    tx.select({ invoiceId: frrataInvoiceLines.invoiceId, kind: frrataInvoiceLines.kind, periodStart: frrataInvoiceLines.periodStart, taxable: frrataInvoiceLines.taxable })
+    tx.select({ invoiceId: frrataInvoiceLines.invoiceId, kind: frrataInvoiceLines.kind, periodStart: frrataInvoiceLines.periodStart, taxable: frrataInvoiceLines.taxable, name: frrataInvoiceLines.description })
       .from(frrataInvoiceLines).where(and(eq(frrataInvoiceLines.tenantId, t), inArray(frrataInvoiceLines.invoiceId, ids))),
     tx.select({ invoiceId: frrataInvoiceFees.invoiceId, base: frrataInvoiceFees.base, fee: frrataInvoiceFees.fee })
       .from(frrataInvoiceFees).where(and(eq(frrataInvoiceFees.tenantId, t), inArray(frrataInvoiceFees.invoiceId, ids))),
@@ -245,7 +248,7 @@ export async function featuredBillWith(tx: Tx, m: Pick<Membership, 'tenantId' | 
   const of = <R extends { invoiceId: string }>(rows: R[], id: string) => rows.filter((r) => r.invoiceId === id)
   const ladder: LadderInvoice[] = invoices.map((i) => ({
     id: i.id, periodStart: i.periodStart, taxable: paise(i.taxable),
-    lines: of(lines, i.id).map((l) => ({ kind: l.kind, periodStart: l.periodStart, taxable: paise(l.taxable) })),
+    lines: of(lines, i.id).map((l) => ({ kind: l.kind, periodStart: l.periodStart, taxable: paise(l.taxable), name: l.name })),
     fees: of(fees, i.id).map((f) => ({ base: paise(f.base), fee: paise(f.fee) })),
     credits: of(credits, i.id).map((c) => ({ base: paise(c.base), fee: paise(c.fee) })),
   }))

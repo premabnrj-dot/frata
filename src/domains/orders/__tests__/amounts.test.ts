@@ -59,6 +59,16 @@ describe('reprice (offers)', () => {
     expect(reprice(o, 'cod', { ...rules, codMin: 240000 }, null).cod.offered).toBe(false) // 2,650 − 300 = 2,350 < 2,400
     expect(reprice(o, 'cod', { ...rules, codMin: 230000 }, null).price!.discount).toBe(30000)
   })
+  it('with Delivery Zones usable, a switch to COD reads the zone and its PIN code rule (DZ7)', () => {
+    const z = { id: 'z', name: 'Special', position: 0, preset: 'special' as const, charge: 14900, freeAbove: null, daysMin: 6, daysMax: 10, codOn: false, codCharge: 0, codMin: 0, codMax: null }
+    const rest = { ...z, id: 'r', name: 'Rest', position: 1, preset: 'rest' as const, codOn: true, codCharge: 6900, codMax: 200000 }
+    const full = { ...rules, dispatchDays: 1, metroDays: 2, restDays: 5, codBlockedPincodes: [] }
+    const setup = { zones: [z, rest], ownZoneIds: [], rule: null }
+    expect(reprice(s, 'cod', full, '799001', setup).cod).toMatchObject({ offered: false, reason: 'prepaid_only' }) // Agartala: Special
+    expect(reprice(s, 'cod', full, '845401', setup).cod).toMatchObject({ offered: false, reason: 'above_max', max: 200000 }) // Rest: ₹2,000 cap
+    expect(reprice(s, 'cod', full, '845401', { ...setup, zones: [z, { ...rest, codMax: null }] }).price).toMatchObject({ codCharge: 6900 })
+    expect(reprice(s, 'cod', full, '845401', { ...setup, zones: [z, { ...rest, codMax: null }], rule: { rule: 'no_delivery' } }).cod).toMatchObject({ offered: false, reason: 'not_delivered' })
+  })
   it('savings as paid: an order offer kept for one way shows only while paid that way (shop stress test 2026-11-11)', () => {
     const kept = [{ title: '5% off', class: 'order', method: 'cod' }, { title: 'Pay online', class: 'payment', method: null }, { title: 'Sale', class: 'product', method: null }, { title: 'Free', class: 'shipping', method: null }]
     expect(savingsAsPaid(kept, 'prepaid').map((x) => x.title)).toEqual(['Pay online', 'Sale'])

@@ -300,9 +300,13 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   cached per request. Admin reads the same facts through `merchantModules()`
   (`src/lib/admin/modules.ts`) and still derives through `moduleAccess()`.
 - **Tables**: `tenant_modules` (the merchant's switch; app inserts and closes),
-  `tenant_addons` (granted by Frata only; app reads; admin inserts and may only
-  set `ends_at`), `addon_prices` (versions), `module_pauses` (platform-wide; one
-  open per module). Proof: tenancy check 29.
+  `tenant_addons` (app reads; admin inserts and may only set `ends_at`; the shop writes ONLY through the A3 definers
+  `app_start_addon_trial` / `app_end_addon_trial` / `app_stop_addon` in `drizzle/0114_addon_trials_access.sql`:
+  shop from `app_current_tenant()`, the caller an owner or admin, price the newest and the one shown, times from
+  `now()`; `by_shop` marks a self-serve trial and its paid row, one trial per shop and add-on ever), `addon_prices`
+  (versions; `(id, module)` keyed so a row's price is its own add-on's), `module_pauses` (platform-wide; one open per
+  module). Turn off on a paid add-on stops it (`app_stop_addon`: works to the month's end, never billed after); in the
+  shop's own trial it ends both rows. Proof: tenancy checks 29 and 73.
 - **A module's server action** goes through `asModule(module, roles, what, work)`
   (a chokepoint in `check:actions`): it refuses in words, then runs as `asMember`.
 - **A module's outbox kinds** are listed in its `outboxKinds`. The cron asks
@@ -677,6 +681,23 @@ Rules:
 - **Links with tags** come from `shopLink` (`src/domains/analytics/link.ts`) only: URL + URLSearchParams, the shop's
   own origin.
 - Erasing an abandoned order strips the click ids (`ERASED_KEYS`); the utm tags stay (owner: keep everything else).
+
+## Delivery (Delivery Zones, built 2026-11-12; plan docs/plans/2026-11-12-delivery-zones.md)
+
+- **`resolveDelivery(pin, floor, setup)` (`src/domains/delivery/resolve.ts`) is THE delivery rule**: the charge, free
+  above, pay on delivery and the days for a PIN code. Checkout's quote, placement, the switch to COD (`reprice`), an
+  address change on a COD order (`src/lib/orders/work.ts` editContact) and the storefront PIN check all read it; nobody
+  re-decides COD or a charge. Pay on delivery for a bag is `codOn(amount, terms)`, the charge `chargeOn` (`floor.ts`).
+- **The floor** (Settings' one charge, COD rules, no-COD list) always applies; zones and PIN code rules apply only while
+  the app is usable. `deliveryIn(tx, tenant, pin, now)` (`src/lib/queries/delivery.ts`) reads them INSIDE the caller's
+  transaction and returns `setup: null` when there are no zones or the app isn't usable.
+- **Browser code imports `floor.ts`, never `resolve.ts` or `presets.ts`** (the presets stay on the server).
+- **Presets match by 3-digit PIN prefix**, never by India Post's district names (`presets.ts`, versioned).
+- **Tables** `delivery_zones`, `delivery_zone_pins` (key `(tenant_id, zone_id)` → zones: a foreign-key check skips row
+  policies), `delivery_rules`, `shop_holidays`: tenant rows for `frata_app` only (0112–0113, proof 72). ≤ 50 zones,
+  ≤ 5,000 PIN codes and ≤ 5,000 rules a shop, counted under the shop's `tenant:delivery` lock.
+- **While the app is usable Settings leaves its fields to it** (`HELD_BY_ZONES`, `src/domains/delivery/lists.ts`):
+  the form hides them and `saveSection` drops them. Only zone and dispatch writes purge the shop's cache.
 
 ## Photos (2026-11-12)
 

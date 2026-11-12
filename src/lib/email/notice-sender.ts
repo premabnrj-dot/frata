@@ -32,6 +32,11 @@ export async function sendNoticeEmail(row: OutboxRow): Promise<void> {
   const plan = await withTenant(tenantId, async (tx) => {
     const [n] = await tx.select().from(notices).where(and(eq(notices.tenantId, tenantId), eq(notices.id, noticeId))).limit(1)
     if (!n || !n.email) return null
+    // A3: a trial ended (or stopped) since the reminder was written is not emailed about.
+    if (n.sourceKind === 'addon_trial') {
+      const live = await tx.execute(sql`select 1 from tenant_addons where tenant_id = ${tenantId} and id = ${n.sourceId} and ends_at is null and trial_ends_at > now()`)
+      if (!live.length) return null
+    }
     const required = (REQUIRED_TYPES as readonly string[]).includes(n.type)
     const members = await tx.execute<{ user_id: string; role: string }>(sql`select user_id, role from app_notice_members()`)
     const [prefs, reads, done, words] = await Promise.all([

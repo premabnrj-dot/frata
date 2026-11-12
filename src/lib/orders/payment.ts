@@ -10,6 +10,7 @@ import type { Tx } from '@/lib/db'
 import { webhookEvents } from '@/lib/db/schema'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
+import { deliveryIn } from '@/lib/queries/delivery'
 import { checkoutShop, variantRows } from '@/lib/queries/checkout'
 import { keysFor, markEvent, noteKeysAnswer } from '@/lib/payments/keys'
 import { checkoutSignatureOk, orderPayments, toPayment } from '@/lib/payments/razorpay'
@@ -231,8 +232,9 @@ export async function switchToCod(tenantId: string, hash: string, expectedTotal:
     // Today's rows decide only whether every piece can still be sold at its price; the money is the stored order's.
     const q = quote(bag, rows, shop, now, o.pincode)
     if (q.lines.some((l) => l.problem) || q.subtotal !== Number(o.subtotal)) return { kind: 'changed', quote: q }
-    const sp = await storedPricing(tx, tenantId, o.id, { shipping: Number(o.shipping), sellerGstin: o.sellerGstin, pricesIncludeGst: o.pricesIncludeGst })
-    const { price: r } = reprice(sp, 'cod', shop, o.pincode)
+    // With Delivery Zones: today's zone and rule for the order's PIN code, read alongside (deliveryIn).
+    const [sp, { setup }] = await Promise.all([storedPricing(tx, tenantId, o.id, { shipping: Number(o.shipping), sellerGstin: o.sellerGstin, pricesIncludeGst: o.pricesIncludeGst }), deliveryIn(tx, tenantId, o.pincode, now)])
+    const { price: r } = reprice(sp, 'cod', shop, o.pincode, setup)
     if (!r) return { kind: 'refused', status: 422, error: 'Pay on delivery is not offered for this order.' }
     if (r.total !== expectedTotal) return { kind: 'refused', status: 409, error: 'The Pay on delivery total is different. Check it and try again.', codTotal: r.total }
     const switched = await tx.update(orders).set({ switchedToCodAt: sql`now()`, payBy: null })

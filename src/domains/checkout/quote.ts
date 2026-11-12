@@ -13,11 +13,12 @@
 // says so on the line.
 // =============================================================================
 
-import { istDayKey } from '../time/day'
 import { availability, visibility, type Status, type WhenOut } from '@/domains/catalogue/availability'
 import type { ChargeShare } from '@/domains/tax/gst'
 import { hasRate } from '@/domains/tax/rates'
-import { codFor, shippingFor, type Cod, type DeliveryRules } from './delivery'
+import { type Cod, type DeliveryRules } from './delivery'
+import { chargeOn, codOn, resolveDelivery, type ZoneSetup } from '@/domains/delivery/resolve'
+import { arrival, type Dispatch } from '@/domains/delivery/dates'
 import { planOffers, priceMethod, type Applied, type CodeResult, type DiscountTerms, type Listed, type MethodLine, type TypedCode } from './discounts'
 
 export const MAX_QTY = 10
@@ -83,6 +84,10 @@ export type Quote = {
   prepaid: MethodTotal
   cod: MethodTotal & { offer: Cod }
   arrives: { from: string; to: string } | null
+  /** Delivery Zones: false when the brand does not deliver to this PIN code (no way of paying is offered). */
+  deliverable: boolean
+  /** The zone's name, or null on the floor. */
+  zone: string | null
   /** Nothing to buy (every line gone or sold out). */
   empty: boolean
   /** Bag ids that are no longer this shop's variants (deleted, or never were): the bag drops them and says so. */
@@ -91,8 +96,6 @@ export type Quote = {
   offers: { listed: Listed[]; code: CodeResult | null }
 }
 
-const DAY = 86_400_000
-const addDays = (iso: string, n: number) => istDayKey(new Date(new Date(`${iso}T00:00:00+05:30`).getTime() + n * DAY))
 
 /** How many of `want` can be sold of this variant now, and as what. */
 export function sellable(v: VariantRow, want: number, now: Date): { qty: number; kind: LineKind; problem: LineProblem | null } {
@@ -111,23 +114,19 @@ export function sellable(v: VariantRow, want: number, now: Date): { qty: number;
 
 /** The arrival range for a set of lines: the latest line decides (dispatch + metro…rest days; pre-orders from their date). */
 export function arrivalRange(lines: Pick<QuoteLine, 'kind' | 'shipsBy' | 'leadMinDays' | 'leadMaxDays'>[], r: Pick<ShopRules, 'dispatchDays' | 'metroDays' | 'restDays'>, now: Date): { from: string; to: string } | null {
-  if (!lines.length) return null
-  const today = istDayKey(now)
-  let from = today, to = today
-  for (const l of lines) {
-    const start = l.kind === 'preorder' && l.shipsBy ? l.shipsBy : today
-    const makeMin = l.kind === 'made_to_order' ? l.leadMinDays ?? 0 : 0, makeMax = l.kind === 'made_to_order' ? l.leadMaxDays ?? makeMin : 0
-    const f = addDays(start, makeMin + r.dispatchDays + r.metroDays), t = addDays(start, makeMax + r.dispatchDays + r.restDays)
-    if (f > from) from = f
-    if (t > to) to = t
-  }
-  return { from, to }
+  return arrival(lines, [r.metroDays, r.restDays], { calendarDays: r.dispatchDays }, now)
 }
 
 export type QuoteOffers = { offers?: DiscountTerms[]; code?: TypedCode | string | null }
 
 /** Price a bag. Unknown variant ids come back as `gone` lines; quantities are clamped to 1…MAX_QTY. */
-export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Date, pincode?: string | null, o: QuoteOffers = {}): Quote {
+/** Delivery Zones: the app's part for this PIN code (deliveryIn), or nulls on the floor (every plan without the app). */
+export type QuoteDelivery = { setup: ZoneSetup | null; dispatch: Dispatch | null }
+const FLOOR: QuoteDelivery = { setup: null, dispatch: null }
+
+export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Date, pincode?: string | null, o: QuoteOffers = {}, dz: QuoteDelivery = FLOOR): Quote {
+  // THE delivery rule (src/domains/delivery/resolve.ts): the zone, its charge, pay on delivery, the days.
+  const terms = resolveDelivery(pincode ?? null, r, dz.setup)
   const byId = new Map(rows.map((v) => [v.variantId, v]))
   const seen = new Set<string>()
   const missing: string[] = []
@@ -147,13 +146,13 @@ export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Dat
   const subtotal = live.reduce((a, d) => a + d.v.price * d.qty, 0)
   // Offers (discounts.ts): product, then the order class, then the thresholds on what is left, then the payment class.
   const plan = planOffers(live.map((d) => ({ productId: d.v.productId, variantId: d.v.variantId, unitPrice: d.v.price, qty: d.qty })), live.length ? o.offers ?? [] : [], o.code ?? null,
-    { codOffered: (base) => codFor(base, r, pincode).offered })
+    { codOffered: (base) => codOn(base, terms, pincode).offered })
   const afterOrder = subtotal - plan.productDisc.reduce((a, b) => a + b, 0) - (plan.order?.amount ?? 0)
-  const charged = live.length ? shippingFor(afterOrder, r) : 0
+  const charged = live.length ? chargeOn(afterOrder, terms) : 0
   const waived = plan.freeShipping && charged > 0 ? charged : 0
   const shipping = charged - waived
   const shipApplied: Applied | null = waived ? { discountId: plan.freeShipping!.id, codeId: plan.freeShipping!.codeId, class: 'shipping', title: plan.freeShipping!.title, amount: waived, terms: plan.freeShipping! } : null
-  const offer = codFor(afterOrder, r, pincode)
+  const offer = codOn(afterOrder, terms, pincode)
   const codCharge = offer.offered ? offer.charge : 0
   const priced = live.map((d, i) => ({ gross: d.v.price * d.qty, qty: d.qty, hsn: d.v.hsn, productDiscount: plan.productDisc[i]!, own: d.v.ownBps ?? null }))
   const tax = { registered: r.registered, pricesIncludeGst: r.pricesIncludeGst, date: now }
@@ -178,7 +177,8 @@ export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Dat
     prepaid: { codCharge: 0, gst: pre.gst, total: pre.total, shares: shares(pre), discount: pre.discount, lines: pre.lines, merchandiseNet: pre.merchandiseNet,
       applied: online ? appliedFor(...plan.products, online.order, shipApplied, online.payment) : appliedFor(...plan.products, plan.order, shipApplied, plan.payment) },
     cod: { offer, codCharge, gst: cod.gst, total: offer.offered ? cod.total : 0, shares: shares(cod), discount: cod.discount, lines: cod.lines, merchandiseNet: cod.merchandiseNet, applied: appliedFor(...plan.products, plan.order, shipApplied) },
-    arrives: arrivalRange(lines.filter((l) => l.qty > 0), r, now),
+    arrives: arrival(lines.filter((l) => l.qty > 0), terms.days, dz.setup && dz.dispatch ? dz.dispatch : { calendarDays: r.dispatchDays }, now),
+    deliverable: terms.deliverable, zone: terms.zone,
     empty: live.length === 0, missing,
     offers: online ? { listed: online.listed, code: online.code } : { listed: plan.listed, code: plan.code },
   }

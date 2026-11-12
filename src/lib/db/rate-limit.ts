@@ -24,6 +24,8 @@ export const LIMITS = {
   checkAddressUser: { action: 'check_address:user', max: 120, windowSeconds: 600 },
   // Checkout (1C). Subjects are "<tenant>:<ip>" or "<tenant>:<phone>" (hashed with the action below). Mobile networks share IPs: generous per IP.
   quoteIp: { action: 'shop_quote:ip', max: 300, windowSeconds: 600 },
+  // Delivery Zones: the product page's PIN code check, apart from checkout's quote budget (security review L1).
+  deliveryIp: { action: 'shop_delivery:ip', max: 120, windowSeconds: 600 },
   placeOrderIp: { action: 'shop_place:ip', max: 30, windowSeconds: 3600 },
   placeOrderPhone: { action: 'shop_place:phone', max: 5, windowSeconds: 3600 },
   payIp: { action: 'shop_pay:ip', max: 60, windowSeconds: 600 },
@@ -54,6 +56,7 @@ export const LIMITS = {
   pdfShop: { action: 'pdf:shop', max: 120, windowSeconds: 600 },
   // GST exports (GST app G1): a period's documents rendered whole; per member, fail closed.
   gstExportMember: { action: 'gst_export:member', max: 30, windowSeconds: 600 },
+  deliveryExportMember: { action: 'delivery_export:member', max: 30, windowSeconds: 600 },
   // Email (E·2; security review H4/M5), all failing closed. An address given at checkout: per shop and across shops,
   // so nobody can use shops to bomb an inbox (over the limit, the order is placed without the email). Test sends per
   // member; Send again and Email the invoice per order and kind (once in 10 minutes, three a day).

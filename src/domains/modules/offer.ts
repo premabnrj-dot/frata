@@ -19,7 +19,10 @@ export type OfferAction =
   | { kind: 'switch'; on: boolean }
   /** Granted and off, but another app must be on first: a link to that app, never a switch that fails. */
   | { kind: 'needs'; module: ModuleKey; name: string }
-  /** An add-on this plan may buy: today a WhatsApp ask to Frrata (self-serve trials are A3). */
+  /** An add-on this plan may buy and the shop never tried: a 14-day trial it starts itself (A3). `ends`: the trial's
+   *  last moment (23:59:59 IST on day 14), when the paid row begins; `priceId`: the price shown, the price agreed. */
+  | { kind: 'trial'; priceId: string; monthly: number; ends: Date }
+  /** An add-on this plan may buy, already tried once: a WhatsApp ask to Frrata. */
   | { kind: 'ask'; label: string }
   /** On a higher plan: Plan and billing. */
   | { kind: 'plans'; label: string }
@@ -37,39 +40,55 @@ export type Offer = {
   state: { label: string; tone: 'ok' | 'warn' | 'neutral' | 'info' } | null
   filter: OfferFilter
   action: OfferAction
+  /** In a trial the shop started (A3): when it becomes paid. Its home offers End trial in place of Turn off. */
+  selfTrial: { paidFrom: Date; monthly: number } | null
+  /** A paid add-on in force: Turn off also stops its billing (at the month's end; security review DZ7 H1). */
+  paid?: boolean
 }
+
+/** A self-serve trial started at `now` ends at 23:59:59 IST on its 14th day (A3 review Sec L1: one date everywhere;
+ *  the definer app_start_addon_trial computes the same). */
+export function selfTrialEnds(now: Date): Date {
+  const ist = new Date(now.getTime() + 330 * 60_000)
+  const startOfDay = Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate()) - 330 * 60_000
+  return new Date(startOfDay + 15 * 86_400_000 - 1000)
+}
+
 
 /**
  * `canAdd`: whether this shop's plan may buy it as an add-on (addOnAllowed); false offers the plans instead.
  * `asked`: whether this member asked to be told when a coming-next app is ready. An app that is off and needs another
  * links to it (access.needs); one that is on while what it needs is off says it is waiting.
  */
-export function offerFor(key: ModuleKey, a: ModuleAccess, addonPrice: number | null, now: Date, canAdd = true, asked = false): Offer {
+export function offerFor(key: ModuleKey, a: ModuleAccess, addonPrice: number | null, now: Date, canAdd = true, asked = false, priceId: string | null = null): Offer {
   const def = MODULES[key]
   const monthly = addonPrice !== null ? `${formatInr(paise(addonPrice))}/mo` : null
   if (def.status === 'next') {
     const footer = def.billing === 'add_on' && monthly ? monthly : def.billing === 'core' ? 'Included' : 'On Growth'
     return {
       price: def.billing === 'add_on' && monthly ? `Add-on · ${monthly}` : def.billing === 'core' ? 'In every plan' : 'In Growth and up',
-      footer, locked: false, state: { label: 'Coming next', tone: 'neutral' }, filter: 'next', action: { kind: 'interest', asked },
+      footer, locked: false, state: { label: 'Coming next', tone: 'neutral' }, filter: 'next', action: { kind: 'interest', asked }, selfTrial: null,
     }
   }
   if (a.paused) {
     return { price: priceLine(a, monthly, now), footer: footerOf(a, monthly, now), locked: false,
-      state: { label: 'Paused by Frrata', tone: 'warn' }, filter: filterOf(a), action: { kind: 'switch', on: a.on } }
+      state: { label: 'Paused by Frrata', tone: 'warn' }, filter: filterOf(a), action: { kind: 'switch', on: a.on }, selfTrial: null }
   }
   if (a.granted) {
     const state = a.why === 'needs' && a.needs ? { label: `Waiting for ${MODULES[a.needs].name}`, tone: 'warn' as const }
-      : a.usable ? homeState() : a.how === 'trial' ? { label: trialBadge(a, now), tone: 'warn' as const } : null
+      : a.how === 'trial' ? { label: trialBadge(a, now), tone: 'warn' as const } : a.usable ? homeState() : null
     const action: OfferAction = !a.on && a.needs ? { kind: 'needs', module: a.needs, name: MODULES[a.needs].name } : { kind: 'switch', on: a.on }
-    return { price: priceLine(a, monthly, now), footer: footerOf(a, monthly, now), locked: false, state, filter: filterOf(a), action }
+    return { price: priceLine(a, monthly, now), footer: footerOf(a, monthly, now), locked: false, state, filter: filterOf(a), action,
+      selfTrial: a.paidFrom && addonPrice !== null ? { paidFrom: a.paidFrom, monthly: addonPrice } : null, paid: a.how === 'add_on' }
   }
   if (def.billing === 'add_on' && monthly && canAdd) {
-    return { price: `${monthly} + 18% GST`, footer: monthly, locked: false, state: null, filter: 'addon',
-      action: { kind: 'ask', label: `Ask Frrata to add ${def.name}` } }
+    const action: OfferAction = !a.trialled && priceId && addonPrice !== null
+      ? { kind: 'trial', priceId, monthly: addonPrice, ends: selfTrialEnds(now) }
+      : { kind: 'ask', label: `Ask Frrata to add ${def.name}` }
+    return { price: `${monthly} + 18% GST`, footer: monthly, locked: false, state: null, filter: 'addon', action, selfTrial: null }
   }
   return { price: 'In Growth and up', footer: 'On Growth', locked: true, state: null, filter: 'plan',
-    action: { kind: 'plans', label: 'See Growth' } }
+    action: { kind: 'plans', label: 'See Growth' }, selfTrial: null }
 }
 
 /** The state of an app that is in use, read by Your apps and by the app's home alike (A2): one chip, one source. An
@@ -90,7 +109,9 @@ function footerOf(a: ModuleAccess, monthly: string | null, now: Date): string {
 }
 
 function trialBadge(a: ModuleAccess, now: Date): string {
-  const days = a.trialEndsAt ? Math.max(1, Math.ceil((a.trialEndsAt.getTime() - now.getTime()) / 86_400_000)) : 0
+  // IST calendar days to the day it ends (a self-serve trial ends 23:59:59 IST on day 14: "14 days left" on day 0).
+  const istDay = (d: Date) => Math.floor((d.getTime() + 330 * 60_000) / 86_400_000)
+  const days = a.trialEndsAt ? Math.max(1, istDay(new Date(a.trialEndsAt.getTime() - 1)) - istDay(now)) : 0
   return `Trial · ${days} ${days === 1 ? 'day' : 'days'} left`
 }
 

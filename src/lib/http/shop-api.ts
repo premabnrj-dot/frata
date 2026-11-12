@@ -1,4 +1,7 @@
 import 'server-only'
+import { codWhyNot } from '@/domains/checkout/delivery'
+import { formatInr } from '@/lib/format'
+import { paise } from '@/domains/money/paise'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import type { Quote } from '@/domains/checkout/quote'
@@ -73,7 +76,9 @@ export function publicQuote(q: Quote) {
     savesOnline: Math.max(0, q.prepaid.discount - q.cod.discount),
     cod: q.cod.offer.offered ? { total: q.cod.total, charge: q.cod.codCharge, gst: q.cod.gst, discount: q.cod.discount, applied: publicApplied(q.cod.applied) } : null,
     offers: { listed: q.offers.listed.map((l) => ({ title: l.title, code: l.code, style: l.style, applied: l.applied, need: l.need })), code: q.offers.code },
-    codWhyNot: q.cod.offer.offered ? null : q.cod.offer, arrives: q.arrives, empty: q.empty, missing: q.missing,
+    // Why pay on delivery isn't offered, in words written on the server (one copy: codWhyNot), and whether the shop
+    // delivers to this PIN code at all (Delivery Zones).
+    codWhy: codWhyNot(q.cod.offer, (p) => formatInr(paise(p))), deliverable: q.deliverable, arrives: q.arrives, empty: q.empty, missing: q.missing,
   }
 }
 export type PublicQuote = ReturnType<typeof publicQuote>

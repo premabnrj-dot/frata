@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.21.1
+  version: 5.22.0
   verified: 2026-11-12
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -112,7 +112,8 @@ from it).
 - **An app's page, not a dialog**: a benefit headline, ≤ 3 features each with a drawn 16:10 picture of the app working
   (console tokens, no real shopper), ≤ 3 questions; a side column with the price box (GST, trial, first charge date),
   Works with, What it uses, Billed by others. On a phone the price and button sit in a bar at the bottom.
-- **One button that matches the state**: Turn on · Ask Frrata to add (until self-serve add-ons) · See Growth with the
+- **One button that matches the state**: Turn on · Start free trial (an add-on never tried, A3) · Ask Frrata to add (tried
+  before) · See Growth with the
   shop's own rupees · Open · Tell me when it's ready. A higher-plan app is shown locked, never a button that fails.
   An app that needs another one off offers "Turn on <that app> first" (a link to its page); one that is on while what
   it needs is off says "Waiting for <that app>" in warn and stays in Your apps.
@@ -122,6 +123,16 @@ from it).
   the accountant); ≤ 4 numbers; a meter only once an app has an allowance; **Turn off <app> alone at the foot**, no
   explanation on the page (Rule 0) — what it does is listed in the confirm (`OFF` in `src/domains/modules/showcase.ts`).
   Owners and admins only, never a support visit (`mayTurnOff`, the same rule as `setModuleAction`).
+- **Add-on trials (A3, 2026-11-12)**: the confirm lists, as bullets, "Free until <date>", the monthly price + 18% GST
+  with the GST-inclusive figure and on which invoice the first part-month comes, and "End the trial before <date> and
+  nothing is charged" (CCPA 2023: no drip pricing, no subscription trap). In a trial the state chip is "Trial · N days
+  left" (IST days), Usage and billing says "Then ₹X/month + GST from <date>", and the foot shows **End trial** in place of
+  Turn off; a paid add-on's Turn off confirm says billing stops at the month's end. No retention screen anywhere.
+- **Delivery Zones** (approved mockup https://claude.ai/artifact/67kHoVDaRX5AFS5vWcWAgR): tabs Zones · PIN code rules ·
+  Delivery dates · Usage and billing. Zones is a DataTable (rows on a phone: name + charge, then days · pay on delivery),
+  ↑ ↓ to reorder (in place of drag: keyboard first), Edit in a dialog. Rules: search, Import CSV (preview of counts and
+  line errors), Export, Add a rule; Settings' no-COD list shows dimmed "From Settings". Dates: dispatch, ship-day
+  toggles, holidays, and "Ordered now" with each zone's LATEST day.
 
 ## Shop themes (approved mockups 2026-11-08, T0–T2 built)
 

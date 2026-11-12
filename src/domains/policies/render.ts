@@ -17,6 +17,8 @@ export const POLICY_PAGES = [
 ] as const
 export type PolicyPage = (typeof POLICY_PAGES)[number][0]
 
+import type { PublicZone } from '@/domains/delivery/public'
+
 export type PolicyFacts = {
   shopName: string
   legalName: string
@@ -43,6 +45,8 @@ export type PolicyFacts = {
   /** Frrata counts this shop's visits (A·2, while ANALYTICS_INGEST_ON): the privacy policy then says so, never "nothing
    *  else" (security review 2026-11-11 MED-A). The wording awaits the owner and the lawyer before counting goes live. */
   countsVisits?: boolean
+  /** Delivery Zones, while the app is usable: the zones in order; the shipping policy states them (architecture M2). */
+  zones?: readonly PublicZone[] | null
 }
 
 /** A run of text, or a fact from settings — `value` null when the merchant has not filled it in. */
@@ -77,6 +81,15 @@ export function renderPolicy(page: PolicyPage, f: PolicyFacts, inr: (paise: numb
         [t('Damaged, faulty or wrong items are always taken back, whatever the window.')],
       ]
     case 'shipping':
+      if (f.zones?.length) return [
+        [t('We dispatch within '), fact('dispatch time', `${f.dispatchDays} working day${f.dispatchDays === 1 ? '' : 's'}`), t('. What delivery costs and how long it takes depend on your PIN code:')],
+        ...f.zones.map((z) => [fact('delivery zone', z.name), t(': delivery '), fact('shipping charge', z.charge ? inr(z.charge) : 'free'),
+          ...(z.charge && z.freeAbove ? [t(', free on orders above '), fact('free shipping above', inr(z.freeAbove))] : []),
+          t(', in '), fact('delivery time', `${z.daysMin}–${z.daysMax} days`), t('; '),
+          ...(f.codOn && z.codOn ? [t('Pay on delivery available'), ...(z.codMax ? [t(' on orders up to '), fact('Pay on delivery limit', inr(z.codMax))] : []),
+            ...(z.codCharge ? [t(', with a '), fact('Pay on delivery fee', inr(z.codCharge)), t(' fee')] : [])] : [t('pay online')]), t('.')]),
+        [t('The product page and checkout show the charge, the fee and the date for your PIN code before you order.')],
+      ]
       return [
         [t('We dispatch within '), fact('dispatch time', `${f.dispatchDays} day${f.dispatchDays === 1 ? '' : 's'}`), t('. Delivery takes up to '), fact('metro delivery time', `${f.metroDays} days`), t(' to metro cities and up to '), fact('delivery time elsewhere', `${f.restDays} days`), t(' elsewhere.')],
         [t('Shipping costs '), fact('shipping charge', f.shippingFlat ? inr(f.shippingFlat) : 'nothing'),

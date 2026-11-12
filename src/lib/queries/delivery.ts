@@ -1,0 +1,108 @@
+import 'server-only'
+import { and, asc, eq, gte, inArray, like, sql } from 'drizzle-orm'
+import { MON_TO_SAT, type Dispatch } from '@/domains/delivery/dates'
+import type { PinRule, Zone, ZoneSetup } from '@/domains/delivery/resolve'
+import type { PresetKey } from '@/domains/delivery/presets'
+import { istDayKey } from '@/domains/time/day'
+import type { Tx } from '@/lib/db'
+import { pincodes, shopSettings } from '@/lib/db/schema'
+import { deliveryRules, deliveryZonePins, deliveryZones, shopHolidays } from '@/lib/db/schema-delivery'
+import { withTenant } from '@/lib/db/tenant'
+import { pausedAt, shopPauseIn } from './trial-pause'
+import { moduleAccessIn } from './modules'
+
+// =============================================================================
+// FILE: src/lib/queries/delivery.ts — what Delivery Zones knows about ONE PIN code, read inside the caller's transaction
+// (plan docs/plans/2026-11-12-delivery-zones.md; speed review H2, security review H1). Checkout's quote, placement and
+// the switch to COD call it inside their own withTenant (never a cached loader there: P4). It reads ≤ 50 zones (no PIN
+// lists), the brand's zone that lists this PIN code or its prefix (by key), this PIN code's rule (by key), holidays
+// from today, the shop's dispatch settings and the directory's place for the PIN code — the place comes from the
+// directory, never from the address typed. Most shops have no zones: then nothing more is read and the floor answers.
+// =============================================================================
+
+export type DeliveryRead = { setup: ZoneSetup | null; dispatch: Dispatch | null; place: { city: string; state: string } | null }
+
+const PIN = /^[1-9][0-9]{5}$/
+
+export async function deliveryIn(tx: Tx, tenantId: string, pin: string | null | undefined, now: Date): Promise<DeliveryRead> {
+  const p = pin && PIN.test(pin) ? pin : null
+  const [zones, own, rule, holidays, [s], [place]] = await Promise.all([
+    tx.select({ id: deliveryZones.id, name: deliveryZones.name, position: deliveryZones.position, preset: deliveryZones.preset, charge: deliveryZones.charge,
+      freeAbove: deliveryZones.freeAbove, daysMin: deliveryZones.daysMin, daysMax: deliveryZones.daysMax, codOn: deliveryZones.codOn, codCharge: deliveryZones.codCharge,
+      codMin: deliveryZones.codMin, codMax: deliveryZones.codMax }).from(deliveryZones).where(eq(deliveryZones.tenantId, tenantId)),
+    p ? tx.select({ zoneId: deliveryZonePins.zoneId }).from(deliveryZonePins).where(and(eq(deliveryZonePins.tenantId, tenantId), inArray(deliveryZonePins.pin, [p, p.slice(0, 3)]))) : Promise.resolve([]),
+    p ? tx.select({ rule: deliveryRules.rule, codMax: deliveryRules.codMax }).from(deliveryRules).where(and(eq(deliveryRules.tenantId, tenantId), eq(deliveryRules.pincode, p))) : Promise.resolve([]),
+    tx.select({ day: shopHolidays.day }).from(shopHolidays).where(and(eq(shopHolidays.tenantId, tenantId), gte(shopHolidays.day, istDayKey(now)))),
+    tx.select({ days: shopSettings.dispatchDays, cutoff: shopSettings.dispatchCutoff, shipDays: shopSettings.shipDays }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
+    p ? tx.select({ city: pincodes.city, state: pincodes.state }).from(pincodes).where(eq(pincodes.pincode, p)) : Promise.resolve([]),
+  ])
+  const placeOf = place ?? null
+  if (!zones.length) return { setup: null, dispatch: null, place: placeOf }
+  // Zones exist: they apply only while the app is usable (on, granted, not paused); otherwise the floor (plan, Arch M3).
+  const access = await moduleAccessIn(tx, tenantId, now)
+  if (!access.delivery_zones.usable) return { setup: null, dispatch: null, place: placeOf }
+  const r = rule[0]
+  const pinRule: PinRule | null = !r ? null : r.rule === 'cod_max' && r.codMax !== null ? { rule: 'cod_max', codMax: Number(r.codMax) }
+    : r.rule === 'no_delivery' ? { rule: 'no_delivery' } : r.rule === 'prepaid_only' ? { rule: 'prepaid_only' } : null
+  const setup: ZoneSetup = {
+    zones: zones.map((z): Zone => ({ ...z, preset: (z.preset as PresetKey | null), charge: Number(z.charge), freeAbove: z.freeAbove === null ? null : Number(z.freeAbove),
+      codCharge: Number(z.codCharge), codMin: Number(z.codMin), codMax: z.codMax === null ? null : Number(z.codMax) })),
+    ownZoneIds: own.map((o) => o.zoneId), rule: pinRule,
+  }
+  const dispatch: Dispatch = { days: s?.days ?? 1, cutoff: s?.cutoff ?? null, shipDays: s?.shipDays ?? MON_TO_SAT, holidays: holidays.map((h) => String(h.day)) }
+  return { setup, dispatch, place: placeOf }
+}
+
+/** The product page's PIN code check (the storefront delivery endpoint): the shop's floor and open state, and the same
+ *  read, in one transaction of its own. */
+export function deliveryFor(tenantId: string, pin: string, now: Date) {
+  return withTenant(tenantId, async (tx) => {
+    // The shop's public floor and whether it is open: never checkoutShop, which reads Razorpay keys this public check
+    // never needs (speed review DZ7 M1).
+    const [[s], pause, read] = await Promise.all([
+      tx.select({ publishedAt: shopSettings.publishedAt, shippingFlat: shopSettings.shippingFlat, freeShippingAbove: shopSettings.freeShippingAbove, codOn: shopSettings.codOn,
+        codMin: shopSettings.codMin, codMax: shopSettings.codMax, codCharge: shopSettings.codCharge, codBlockedPincodes: shopSettings.codBlockedPincodes,
+        dispatchDays: shopSettings.dispatchDays, metroDays: shopSettings.metroDays, restDays: shopSettings.restDays }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
+      shopPauseIn(tx, tenantId),
+      deliveryIn(tx, tenantId, pin, now),
+    ])
+    const shop = s ? { ...s, open: s.publishedAt !== null && !pausedAt(pause, now), shippingFlat: Number(s.shippingFlat), freeShippingAbove: Number(s.freeShippingAbove),
+      codMin: Number(s.codMin), codMax: Number(s.codMax), codCharge: Number(s.codCharge) } : null
+    return { shop, ...read }
+  })
+}
+
+// ── Console › Apps › Delivery Zones (PD·1): what the brand sees and edits, in one transaction. ──
+export type ConsoleZone = { id: string; position: number; name: string; preset: PresetKey | null; pins: string[]; charge: number; freeAbove: number | null
+  daysMin: number; daysMax: number; codOn: boolean; codCharge: number; codMin: number; codMax: number | null }
+export type ConsoleRule = { pincode: string; rule: 'no_delivery' | 'prepaid_only' | 'cod_max'; codMax: number | null; note: string | null; place: string | null }
+export const RULES_PAGE = 100
+
+export function deliveryConsole(tenantId: string, q: string, page: number) {
+  return withTenant(tenantId, async (tx) => {
+    const search = /^[0-9]{1,6}$/.test(q) ? q : ''
+    const ruleWhere = search ? and(eq(deliveryRules.tenantId, tenantId), like(deliveryRules.pincode, `${search}%`)) : eq(deliveryRules.tenantId, tenantId)
+    const [zones, pins, rules, [count], holidays, [s]] = await Promise.all([
+      tx.select({ id: deliveryZones.id, position: deliveryZones.position, name: deliveryZones.name, preset: deliveryZones.preset, charge: deliveryZones.charge, freeAbove: deliveryZones.freeAbove,
+        daysMin: deliveryZones.daysMin, daysMax: deliveryZones.daysMax, codOn: deliveryZones.codOn, codCharge: deliveryZones.codCharge, codMin: deliveryZones.codMin, codMax: deliveryZones.codMax })
+        .from(deliveryZones).where(eq(deliveryZones.tenantId, tenantId)).orderBy(asc(deliveryZones.position)),
+      tx.select({ zoneId: deliveryZonePins.zoneId, pin: deliveryZonePins.pin }).from(deliveryZonePins).where(eq(deliveryZonePins.tenantId, tenantId)).orderBy(asc(deliveryZonePins.pin)),
+      tx.select({ pincode: deliveryRules.pincode, rule: deliveryRules.rule, codMax: deliveryRules.codMax, note: deliveryRules.note, city: pincodes.city })
+        .from(deliveryRules).leftJoin(pincodes, eq(pincodes.pincode, deliveryRules.pincode)).where(ruleWhere)
+        .orderBy(asc(deliveryRules.pincode)).limit(RULES_PAGE).offset((Math.max(1, page) - 1) * RULES_PAGE),
+      tx.select({ n: sql<number>`count(*)::int` }).from(deliveryRules).where(ruleWhere),
+      tx.select({ day: shopHolidays.day, name: shopHolidays.name }).from(shopHolidays).where(eq(shopHolidays.tenantId, tenantId)).orderBy(asc(shopHolidays.day)),
+      tx.select({ dispatchDays: shopSettings.dispatchDays, cutoff: shopSettings.dispatchCutoff, shipDays: shopSettings.shipDays, shippingFlat: shopSettings.shippingFlat,
+        freeShippingAbove: shopSettings.freeShippingAbove, codOn: shopSettings.codOn, codMin: shopSettings.codMin, codMax: shopSettings.codMax, codCharge: shopSettings.codCharge,
+        metroDays: shopSettings.metroDays, restDays: shopSettings.restDays, blocked: shopSettings.codBlockedPincodes, pickup: shopSettings.pickupPincode }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
+    ])
+    const n2 = (v: number | string | null) => (v === null ? null : Number(v))
+    return {
+      zones: zones.map((z): ConsoleZone => ({ ...z, preset: z.preset as PresetKey | null, pins: pins.filter((p) => p.zoneId === z.id).map((p) => p.pin), charge: Number(z.charge),
+        freeAbove: n2(z.freeAbove), codCharge: Number(z.codCharge), codMin: Number(z.codMin), codMax: n2(z.codMax) })),
+      rules: rules.map((r): ConsoleRule => ({ pincode: r.pincode, rule: r.rule as ConsoleRule['rule'], codMax: n2(r.codMax), note: r.note, place: r.city })),
+      ruleCount: count?.n ?? 0, holidays: holidays.map((h) => ({ day: String(h.day), name: h.name })),
+      settings: s ? { ...s, shippingFlat: Number(s.shippingFlat), freeShippingAbove: Number(s.freeShippingAbove), codMin: Number(s.codMin), codMax: Number(s.codMax), codCharge: Number(s.codCharge) } : null,
+    }
+  })
+}

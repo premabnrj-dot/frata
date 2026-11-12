@@ -785,6 +785,34 @@
       "when": 1794475131635,
       "tag": "0111_staff_passkey_credentials",
       "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1794477437471,
+      "tag": "0112_delivery_zones_addon_trials",
+      "breakpoints": true
+    },
+    {
+      "idx": 113,
+      "version": "7",
+      "when": 1794477444905,
+      "tag": "0113_delivery_zones_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 114,
+      "version": "7",
+      "when": 1794477446866,
+      "tag": "0114_addon_trials_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 115,
+      "version": "7",
+      "when": 1794477448978,
+      "tag": "0115_addon_trial_notices_sweep",
+      "breakpoints": true
     }
   ]
 }

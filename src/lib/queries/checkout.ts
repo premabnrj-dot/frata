@@ -9,6 +9,7 @@ import { shopSettings, tenants } from '@/lib/db/schema'
 import { productImages, products, variants } from '@/lib/db/schema-catalogue'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
+import { deliveryIn } from './delivery'
 import { pausedAt, shopPauseIn } from './trial-pause'
 import { documentsFor } from '@/lib/orders/documents'
 import { heldSql, holdingSql, momentColumns, owedSql, standingSql } from '@/lib/db/order-predicates'
@@ -149,14 +150,15 @@ export async function codeFor(tx: Tx, tenantId: string, text: string | null | un
 
 /** The quote's four reads, independent, issued together inside one transaction (speed review 2026-11-11, P8: the path
  *  every bag and cart link lands on; they ran one after another). */
-export async function quoteData(tenantId: string, ids: string[], now: Date, code: string | null, host: string) {
-  const { shop, rows, raw, typed } = await withTenant(tenantId, async (tx) => {
-    const [shop, rows, raw, typed] = await Promise.all([checkoutShop(tx, tenantId, host), variantRows(tx, tenantId, ids, now), liveOfferRows(tx, tenantId, now), codeFor(tx, tenantId, code, now)])
-    return { shop, rows, raw, typed }
+export async function quoteData(tenantId: string, ids: string[], now: Date, code: string | null, host: string, pin: string | null = null) {
+  const { shop, rows, raw, typed, delivery } = await withTenant(tenantId, async (tx) => {
+    // Delivery Zones: this PIN code's zone, rule and dispatch, in the same transaction (deliveryIn; speed review H2).
+    const [shop, rows, raw, typed, delivery] = await Promise.all([checkoutShop(tx, tenantId, host), variantRows(tx, tenantId, ids, now), liveOfferRows(tx, tenantId, now), codeFor(tx, tenantId, code, now), deliveryIn(tx, tenantId, pin, now)])
+    return { shop, rows, raw, typed, delivery }
   })
   // Collections resolved from the shop's cached members AFTER the transaction has closed: a cached loader inside it would
   // open a second connection while holding one (speed finding P4: the pool deadlocks at a drop).
-  return { shop, rows, offers: offerTerms(raw, needsMembers(raw) ? await collectionMembers(tenantId) : {}), typed }
+  return { shop, rows, offers: offerTerms(raw, needsMembers(raw) ? await collectionMembers(tenantId) : {}), typed, delivery }
 }
 
 /** What the shopper's order page shows — masked address and phone (owner call 4). Found by the link token's hash only. */

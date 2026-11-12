@@ -9,7 +9,7 @@
 
 import { MODULE_KEYS, MODULES, type ModuleKey } from './registry'
 
-export type AddonFact = { id?: string; module: ModuleKey; startsAt: Date; endsAt: Date | null; trialEndsAt: Date | null }
+export type AddonFact = { id?: string; module: ModuleKey; startsAt: Date; endsAt: Date | null; trialEndsAt: Date | null; byShop?: boolean }
 export type ModuleFacts = {
   /** The plan in force ('launch' | 'growth' | 'scale'), or null with none: an add-on's `addOnFor` reads it. */
   planCode: string | null
@@ -37,6 +37,10 @@ export type ModuleAccess = {
   needs: ModuleKey | null
   /** Held back by a Frrata pause, its own or a dependency's: its messages wait, nothing is dropped. */
   held: boolean
+  /** Ever trialled (by the shop or by Frrata): no self-serve trial again (A3, one per shop and add-on). */
+  trialled: boolean
+  /** In a trial the shop started itself: when its paid row begins (End trial is the shop's), else null. */
+  paidFrom: Date | null
 }
 
 /** The add-on row in force for a module: a paid one before a trial. The one rule, read by access and by Admin. */
@@ -85,7 +89,11 @@ export function moduleAccess(f: ModuleFacts, now: Date): Record<ModuleKey, Modul
     else if (!g) why = 'not_granted'
     else if (!on) why = 'off'
     else if (paused) why = 'paused'
-    return { key, granted: !!g, how: g?.how ?? null, trialEndsAt: g?.trialEndsAt ?? null, on, paused, usable: why === 'usable', why, needs: null, held: why === 'paused' }
+    const mine = f.addons.filter((a) => a.module === key)
+    const selfTrial = g?.how === 'trial' && mine.some((a) => a.byShop && a.trialEndsAt && a.trialEndsAt.getTime() > now.getTime() && a.startsAt.getTime() <= now.getTime())
+    const paid = selfTrial ? mine.find((a) => a.byShop && !a.trialEndsAt && a.startsAt.getTime() > now.getTime() && (!a.endsAt || a.endsAt > a.startsAt)) : undefined
+    return { key, granted: !!g, how: g?.how ?? null, trialEndsAt: g?.trialEndsAt ?? null, on, paused, usable: why === 'usable', why, needs: null, held: why === 'paused',
+      trialled: mine.some((a) => !!a.trialEndsAt), paidFrom: paid?.startsAt ?? null }
   }
   for (const k of MODULE_KEYS) out[k] = base(k)
   // A dependency that is not usable makes the module not usable (one level is all the registry has; loop for safety).

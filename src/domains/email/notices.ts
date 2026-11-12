@@ -23,6 +23,8 @@ export type NoticeSource =
   | { kind: 'billing_notice'; billingKind: string; amount: string; debitAt: string | null; invoiceNumber: string | null }
   | { kind: 'support_session'; reason: string; minutes: number | null }
   | { kind: 'admin'; title: string; body: string | null }
+  /** A3: 3 days before a trial the shop started ends (required: it is about money). */
+  | { kind: 'addon_trial'; name: string; monthly: string; day: string }
 
 export type NoticeWords = { title: string; body: string }
 
@@ -39,6 +41,8 @@ export function noticeWords(s: NoticeSource, shopName: string): NoticeWords {
     }
     case 'admin':
       return { title: s.title, body: s.body ?? '' }
+    case 'addon_trial':
+      return { title: `${s.name} starts at ${s.monthly}/month + GST on ${s.day}`, body: `End the trial before ${s.day} and nothing is charged.` }
   }
 }
 
@@ -49,6 +53,7 @@ export function noticeWords(s: NoticeSource, shopName: string): NoticeWords {
 export function noticeFallback(n: { sourceKind: string; type: string; title: string | null; body: string | null }): NoticeWords {
   if (n.title) return { title: n.title, body: n.body ?? '' }
   if (n.sourceKind === 'billing_notice') return { title: 'Your Frrata bill', body: 'See it in Plan and billing.' }
+  if (n.sourceKind === 'addon_trial') return { title: 'Your app trial ends soon', body: 'See it in Apps.' }
   if (n.sourceKind === 'support_session') return { title: 'Frrata support opened your shop', body: 'Every change they made is in Activity.' }
   return { title: TYPE_LABEL[n.type as NoticeType] ?? 'Frrata update', body: n.body ?? '' }
 }

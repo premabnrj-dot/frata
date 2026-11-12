@@ -4,6 +4,8 @@ import { withTenant } from '@/lib/db/tenant'
 import { noticePrefs, noticeReads, notices } from '@/lib/db/schema-email'
 import { billingNotices, frrataInvoices } from '@/lib/db/schema-billing'
 import { supportSessions } from '@/lib/db/schema'
+import { addonPrices, tenantAddons } from '@/lib/db/schema-modules'
+import { isModuleKey, MODULES } from '@/domains/modules/registry'
 import { noticeFallback, noticeWords, OPTIONAL_TYPES, DEFAULT_EMAIL, type NoticeSource, type NoticeType, type OptionalType } from '@/domains/email/notices'
 import { formatInr } from '@/lib/format'
 import { dayMonthIN } from '@/lib/format-date'
@@ -23,13 +25,21 @@ export type ShownNotice = { id: string; type: NoticeType; title: string; body: s
 export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string): Promise<Map<string, { title: string; body: string }>> {
   const billIds = rows.filter((n) => n.sourceKind === 'billing_notice' && n.sourceId).map((n) => n.sourceId!)
   const visitIds = rows.filter((n) => n.sourceKind === 'support_session' && n.sourceId).map((n) => n.sourceId!)
-  const [bills, visits] = await Promise.all([
+  const trialIds = rows.filter((n) => n.sourceKind === 'addon_trial' && n.sourceId).map((n) => n.sourceId!)
+  const [bills, visits, trials] = await Promise.all([
     billIds.length ? tx.select({ id: billingNotices.id, kind: billingNotices.kind, amount: billingNotices.amount, debitAt: billingNotices.debitAt, number: frrataInvoices.number })
       .from(billingNotices).leftJoin(frrataInvoices, and(eq(frrataInvoices.tenantId, billingNotices.tenantId), eq(frrataInvoices.id, billingNotices.invoiceId)))
       .where(inArray(billingNotices.id, billIds)) : Promise.resolve([]),
     visitIds.length ? tx.select({ id: supportSessions.id, reason: supportSessions.reason, startedAt: supportSessions.startedAt, expiresAt: supportSessions.expiresAt })
       .from(supportSessions).where(inArray(supportSessions.id, visitIds)) : Promise.resolve([]),
+    // A3: the trial row, and the price of the paid row that starts when it ends.
+    trialIds.length ? tx.execute<{ id: string; module: string; ends: Date; monthly: string | null }>(sql`
+      select t.id, t.module, t.trial_ends_at as ends, (select p.monthly_price from ${tenantAddons} a join ${addonPrices} p on p.id = a.addon_price_id
+        where a.tenant_id = t.tenant_id and a.module = t.module and a.by_shop and a.addon_price_id is not null
+        order by abs(extract(epoch from a.starts_at - t.trial_ends_at)) limit 1) as monthly
+      from ${tenantAddons} t where t.tenant_id = ${rows[0]!.tenantId} and t.id in (select jsonb_array_elements_text(${JSON.stringify(trialIds)}::jsonb)::uuid)`) : Promise.resolve([]),
   ])
+  const trial = new Map(trials.map((t) => [t.id, t]))
   const bill = new Map(bills.map((b) => [b.id, b])), visit = new Map(visits.map((v) => [v.id, v]))
   const out = new Map<string, { title: string; body: string }>()
   for (const n of rows) {
@@ -40,6 +50,9 @@ export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string): 
     } else if (n.sourceKind === 'support_session') {
       const v = n.sourceId ? visit.get(n.sourceId) : undefined
       if (v) src = { kind: 'support_session', reason: v.reason, minutes: Math.round((v.expiresAt.getTime() - v.startedAt.getTime()) / 60_000) }
+    } else if (n.sourceKind === 'addon_trial') {
+      const t = n.sourceId ? trial.get(n.sourceId) : undefined
+      if (t && t.monthly !== null && isModuleKey(t.module)) src = { kind: 'addon_trial', name: MODULES[t.module].name, monthly: formatInr(Number(t.monthly) as Paise), day: dayMonthIN(new Date(t.ends)) }
     } else if (n.title) src = { kind: 'admin', title: n.title, body: n.body }
     out.set(n.id, src ? noticeWords(src, shopName) : noticeFallback(n))
   }

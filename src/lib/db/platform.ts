@@ -83,6 +83,12 @@ export async function placeForPincode(pincode: string): Promise<{ city: string; 
   return rows[0] ?? null
 }
 
+/** Every PIN code in India Post's directory, the same for every shop (cached once a day: storefront.ts directoryPins). */
+export async function allPincodes(): Promise<string[]> {
+  const rows = await db().execute<{ pincode: string }>(sql`select pincode from pincodes order by pincode`)
+  return rows.map((r) => r.pincode)
+}
+
 export type CreateShopError = 'email_unconfirmed' | 'has_shop' | 'bad_name' | 'bad_slug' | 'bad_pincode' | 'slug_taken' | 'no_launch_plan' | 'bad_plan' | 'bad_code'
 const CREATE_SHOP_ERRORS: readonly string[] = ['email_unconfirmed', 'has_shop', 'bad_name', 'bad_slug', 'bad_pincode', 'slug_taken', 'no_launch_plan', 'bad_plan', 'bad_code']
 
@@ -297,4 +303,10 @@ export async function signupCodeVerify(uid: string, id: string, codeHmac: string
     const [r] = await db().execute<{ ok: boolean }>(sql`select app_signup_code_verify(${uid}::uuid, ${id}::uuid, ${codeHmac}) as ok`)
     return !!r?.ok
   } catch (err) { console.error('[signupCodeVerify]', errName(err)); return false }
+}
+
+/** A3: the daily reminder 3 days before each self-serve add-on trial ends (one per trial; the definer finds them). */
+export async function addonTrialNotices(): Promise<number> {
+  const rows = await db().execute<{ n: number }>(sql`select app_addon_trial_notices() as n`)
+  return Number(rows[0]?.n ?? 0)
 }

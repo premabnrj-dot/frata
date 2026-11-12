@@ -23,15 +23,17 @@ export type ShopModules = { facts: ModuleFacts; access: Record<ModuleKey, Module
 /** The facts, read in a transaction already set to this shop (an action's own, or withTenant's). */
 export async function readFactsIn(tx: Tx, tenantId: string, now: Date): Promise<ModuleFacts> {
   {
-    const plans = await tx.select({ features: planVersions.features, code: planRows.code, startsAt: tenantPlans.startsAt }).from(tenantPlans)
-      .innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(planRows, eq(planRows.id, planVersions.planId))
-      .where(eq(tenantPlans.tenantId, tenantId))
+    // Four reads sent together (speed review DZ7 M2: this now runs on the checkout path).
+    const [plans, addons, switches, pauses] = await Promise.all([
+      tx.select({ features: planVersions.features, code: planRows.code, startsAt: tenantPlans.startsAt }).from(tenantPlans)
+        .innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(planRows, eq(planRows.id, planVersions.planId))
+        .where(eq(tenantPlans.tenantId, tenantId)),
+      tx.select({ module: tenantAddons.module, startsAt: tenantAddons.startsAt, endsAt: tenantAddons.endsAt, trialEndsAt: tenantAddons.trialEndsAt, byShop: tenantAddons.byShop })
+        .from(tenantAddons).where(eq(tenantAddons.tenantId, tenantId)),
+      tx.select({ module: tenantModules.module }).from(tenantModules).where(and(eq(tenantModules.tenantId, tenantId), isNull(tenantModules.disabledAt))),
+      tx.select({ module: modulePauses.module }).from(modulePauses).where(isNull(modulePauses.resumedAt)),
+    ])
     const plan = currentPlan(plans, now)
-    const addons = await tx.select({ module: tenantAddons.module, startsAt: tenantAddons.startsAt, endsAt: tenantAddons.endsAt, trialEndsAt: tenantAddons.trialEndsAt })
-      .from(tenantAddons).where(eq(tenantAddons.tenantId, tenantId))
-    const switches = await tx.select({ module: tenantModules.module }).from(tenantModules)
-      .where(and(eq(tenantModules.tenantId, tenantId), isNull(tenantModules.disabledAt)))
-    const pauses = await tx.select({ module: modulePauses.module }).from(modulePauses).where(isNull(modulePauses.resumedAt))
     return {
       planCode: plan?.code ?? null,
       planFeatures: plan?.features ?? [],

@@ -5,7 +5,7 @@ import { processMux } from '@/lib/video/process'
 import { NextResponse } from 'next/server'
 import { isCronRequest } from '@/lib/auth/cron'
 import { drainOutbox, eachLimited } from '@/lib/outbox/drain'
-import { shopsToErase, shopsWithPendingEvents } from '@/lib/db/platform'
+import { addonTrialNotices, shopsToErase, shopsWithPendingEvents } from '@/lib/db/platform'
 import { processEvents } from '@/lib/orders/payment'
 import { ERASE_AFTER_DAYS, eraseAbandoned } from '@/lib/orders/erase'
 import { errName } from '@/lib/log'
@@ -40,6 +40,8 @@ export async function GET(request: Request) {
   // Billing B3: notices, debit attempts (queued in the outbox below), the day-14 note; settles a lost webhook's attempts.
   let collection = null
   try { collection = await collectDue(new Date(), started + 25_000) } catch (e) { console.error('[cron] collection', errName(e)) }
+  // A3: trial reminders are written before the drain, so their emails go out in this run.
+  try { await addonTrialNotices() } catch (e) { console.error('[cron] addon trials', errName(e)) }
   const { claimed, sent } = await drainOutbox(started + 45_000)
   // Razorpay and WhatsApp events not yet processed (each is processed at once on arrival; this is only the safety net).
   let events = 0

@@ -111,13 +111,16 @@
     "count": 2
   },
   "src/app/(console)/console/apps/_components/app-action.tsx": {
-    "count": 4
+    "count": 8
   },
   "src/app/(console)/console/apps/communication/connect.tsx": {
     "count": 2
   },
   "src/app/(console)/console/apps/communication/health.tsx": {
     "count": 6
+  },
+  "src/app/(console)/console/apps/delivery_zones/rules.tsx": {
+    "count": 4
   },
   "src/app/(console)/console/apps/gst/file-panel.tsx": {
     "count": 3
@@ -134,6 +137,9 @@
   "src/app/(console)/console/look/_components/restore.tsx": {
     "count": 1
   },
+  "src/app/(console)/console/offers/[id]/page.tsx": {
+    "count": 1
+  },
   "src/app/(console)/console/offers/_components/offer-codes.tsx": {
     "count": 1
   },
@@ -144,9 +150,6 @@
     "count": 1
   },
   "src/app/(console)/console/offers/_components/offer-steps.tsx": {
-    "count": 1
-  },
-  "src/app/(console)/console/offers/[id]/page.tsx": {
     "count": 1
   },
   "src/app/(console)/console/orders/_components/contact-and-notes.tsx": {
@@ -309,7 +312,10 @@
     "count": 1
   },
   "src/components/storefront/checkout.tsx": {
-    "count": 6
+    "count": 8
+  },
+  "src/components/storefront/delivery-check.tsx": {
+    "count": 2
   },
   "src/components/storefront/drops-consent.tsx": {
     "count": 1

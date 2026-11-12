@@ -1207,7 +1207,8 @@ do $$ declare n int; begin
   exception when insufficient_privilege then null; end;
   begin insert into module_pauses (module, paused_by, reason) values ('communication', '99999999-9999-9999-9999-999999999999', 'x'); raise exception 'FAIL: app paused a module';
   exception when insufficient_privilege then null; end;
-  if (select count(*) from addon_prices) <> 3 then raise exception 'FAIL: app cannot read add-on prices'; end if;
+  if (select count(*) from addon_prices) <> 4 then -- reviews, true_profit, marketplace_export, delivery_zones (0113)
+   raise exception 'FAIL: app cannot read add-on prices'; end if;
 end $$;
 commit;
 -- Frata admin grants a trial to B; A cannot see it; admin may only end it
@@ -2804,4 +2805,92 @@ do $$ begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 71 checks passed'
+-- 72. Delivery Zones (0112–0113): four tables, own shop both ways, no other role; a PIN code row can never name another
+-- shop's zone (the key holds the shop, since a foreign key check skips row policies).
+insert into delivery_zones (id, tenant_id, position, name, preset, charge, days_min, days_max, cod_on)
+  values ('d2000000-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', 0, 'B metro', 'metro', 5900, 2, 3, true);
+insert into delivery_zone_pins (tenant_id, pin, zone_id) values ('22222222-2222-2222-2222-222222222222', '302', 'd2000000-0000-0000-0000-000000000002');
+insert into delivery_rules (tenant_id, pincode, rule) values ('22222222-2222-2222-2222-222222222222', '110094', 'prepaid_only');
+insert into shop_holidays (tenant_id, day, name) values ('22222222-2222-2222-2222-222222222222', '2026-12-25', 'Christmas');
+do $$ declare t text; begin
+  foreach t in array array['delivery_zones', 'delivery_zone_pins', 'delivery_rules', 'shop_holidays'] loop
+    if exists (select 1 from pg_tables where tablename = t and not rowsecurity) then raise exception 'FAIL: % without RLS', t; end if;
+    if not exists (select 1 from pg_policies where tablename = t and policyname = 'tenant_rows') then raise exception 'FAIL: % without its policy', t; end if;
+    if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r(role)
+               where has_table_privilege(r.role, t, 'select') or has_table_privilege(r.role, t, 'insert') or has_table_privilege(r.role, t, 'update') or has_table_privilege(r.role, t, 'delete'))
+    then raise exception 'FAIL: another role holds %', t; end if;
+  end loop;
+end $$;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from delivery_zones) or exists (select 1 from delivery_zone_pins) or exists (select 1 from delivery_rules) or exists (select 1 from shop_holidays)
+  then raise exception 'FAIL: A reads B delivery'; end if;
+  update delivery_zones set charge = 0; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed B zones'; end if;
+  delete from delivery_rules; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A deleted B rules'; end if;
+  begin insert into delivery_rules (tenant_id, pincode, rule) values ('22222222-2222-2222-2222-222222222222', '400070', 'no_delivery'); raise exception 'FAIL: A wrote B rules'; exception when insufficient_privilege then null; end;
+  delete from delivery_zone_pins; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A deleted B pins'; end if;
+  update shop_holidays set name = 'x'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed B holidays'; end if;
+  -- A's own row moved to B: refused by the policy's check.
+  insert into delivery_rules (tenant_id, pincode, rule) values ('11111111-1111-1111-1111-111111111111', '560001', 'prepaid_only');
+  begin update delivery_rules set tenant_id = '22222222-2222-2222-2222-222222222222' where pincode = '560001'; raise exception 'FAIL: A moved a rule to B'; exception when insufficient_privilege then null; end;
+  insert into shop_holidays (tenant_id, day, name) values ('11111111-1111-1111-1111-111111111111', '2026-12-31', 'NYE');
+  begin update shop_holidays set tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: A moved a holiday to B'; exception when insufficient_privilege then null; end;
+  -- A's own pin row naming B's zone: refused by the key, not only the policy.
+  begin insert into delivery_zone_pins (tenant_id, pin, zone_id) values ('11111111-1111-1111-1111-111111111111', '110', 'd2000000-0000-0000-0000-000000000002'); raise exception 'FAIL: A pointed at B zone'; exception when foreign_key_violation then null; end;
+end $$;
+rollback;
+
+-- 73. A3 self-serve add-on trials (0112, 0114–0115): the shop's only writes to tenant_addons are three definers; the shop is
+-- the session's, the caller its owner or admin, the price the newest and the one shown; one trial per shop and add-on.
+do $$ begin
+  if has_function_privilege('frata_admin', 'app_start_addon_trial(uuid, text, uuid)', 'execute') or has_function_privilege('authenticated', 'app_start_addon_trial(uuid, text, uuid)', 'execute')
+     or has_function_privilege('anon', 'app_end_addon_trial(uuid, text)', 'execute') or has_function_privilege('service_role', 'app_stop_addon(uuid, text)', 'execute')
+     or has_function_privilege('frata_admin', 'app_addon_trial_notices()', 'execute') or has_function_privilege('authenticated', 'app_addon_trial_notices()', 'execute')
+  then raise exception 'FAIL: another role runs the trial definers'; end if;
+  if has_table_privilege('frata_app', 'tenant_addons', 'insert') or has_table_privilege('frata_app', 'tenant_addons', 'update') then raise exception 'FAIL: frata_app writes add-ons'; end if;
+end $$;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare p uuid; e timestamptz; n int; begin
+  select id into p from addon_prices where module = 'delivery_zones' order by version desc limit 1;
+  -- Not the shop's owner or admin (B's staff member), a stale price, no shop at all: refused.
+  begin perform app_start_addon_trial('aaaaaaaa-0000-0000-0000-000000000001', 'delivery_zones', p); raise exception 'FAIL: a stranger started a trial'; exception when sqlstate 'P0001' then null; end;
+  begin perform app_start_addon_trial('99999999-9999-9999-9999-999999999999', 'delivery_zones', gen_random_uuid()); raise exception 'FAIL: a price never shown'; exception when sqlstate 'P0001' then null; end;
+  e := app_start_addon_trial('99999999-9999-9999-9999-999999999999', 'delivery_zones', p);
+  if e < now() + interval '13 days' or e > now() + interval '15 days' then raise exception 'FAIL: trial length %', e - now(); end if;
+  select count(*) into n from tenant_addons where module = 'delivery_zones' and by_shop and tenant_id = '11111111-1111-1111-1111-111111111111';
+  if n <> 2 then raise exception 'FAIL: a trial writes its trial and its paid row, got %', n; end if;
+  if (select starts_at from tenant_addons where addon_price_id = p and by_shop) <> e then raise exception 'FAIL: the paid row starts when the trial ends'; end if;
+  -- A second trial: refused, now and after ending it.
+  begin perform app_start_addon_trial('99999999-9999-9999-9999-999999999999', 'delivery_zones', p); raise exception 'FAIL: two trials'; exception when sqlstate 'P0001' then null; end;
+  if not app_end_addon_trial('99999999-9999-9999-9999-999999999999', 'delivery_zones') then raise exception 'FAIL: End trial'; end if;
+  if exists (select 1 from tenant_addons where module = 'delivery_zones' and (ends_at is null or ends_at > starts_at)) then raise exception 'FAIL: End trial left a row live'; end if;
+  begin perform app_start_addon_trial('99999999-9999-9999-9999-999999999999', 'delivery_zones', p); raise exception 'FAIL: a trial after a trial'; exception when sqlstate 'P0001' then null; end;
+  -- Another shop's rows: never touched (B's Admin trial of reviews stays open).
+  perform app_end_addon_trial('99999999-9999-9999-9999-999999999999', 'reviews');
+  perform app_stop_addon('99999999-9999-9999-9999-999999999999', 'reviews');
+end $$;
+rollback;
+do $$ begin
+  if not exists (select 1 from tenant_addons where tenant_id = '22222222-2222-2222-2222-222222222222' and module = 'reviews' and reason = 'proof') then raise exception 'FAIL: B add-on changed'; end if;
+end $$;
+-- Stop on a paid add-on (Turn off, security review DZ7 H1): it works to the month's end (IST) and is never billed after.
+insert into tenant_addons (tenant_id, module, addon_price_id, starts_at, created_by, reason)
+  select '11111111-1111-1111-1111-111111111111', 'delivery_zones', id, now() - interval '40 days', '99999999-9999-9999-9999-999999999999', 'proof stop' from addon_prices where module = 'delivery_zones' limit 1;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare e timestamptz; begin
+  e := app_stop_addon('99999999-9999-9999-9999-999999999999', 'delivery_zones');
+  if e is null or e <> ((date_trunc('month', now() at time zone 'Asia/Kolkata') + interval '1 month') at time zone 'Asia/Kolkata') then raise exception 'FAIL: Stop ends at the month end, got %', e; end if;
+  if (select ends_at from tenant_addons where reason = 'proof stop') <> e then raise exception 'FAIL: Stop did not end the paid row'; end if;
+end $$;
+rollback;
+delete from tenant_addons where reason = 'proof stop';
+-- A paid row whose price is another add-on's: refused by the key.
+do $$ begin
+  insert into tenant_addons (tenant_id, module, addon_price_id, created_by) select '22222222-2222-2222-2222-222222222222', 'reviews', id, 'aaaaaaaa-0000-0000-0000-000000000001' from addon_prices where module = 'delivery_zones' limit 1;
+  raise exception 'FAIL: a price of another add-on';
+exception when foreign_key_violation then null; end $$;
+
+\echo 'tenancy proof — all 73 checks passed'

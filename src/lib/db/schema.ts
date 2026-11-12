@@ -251,6 +251,10 @@ export const shopSettings = pgTable('shop_settings', {
   dispatchDays: integer('dispatch_days').notNull().default(2),
   metroDays: integer('metro_days').notNull().default(4),
   restDays: integer('rest_days').notNull().default(7),
+  /** Delivery Zones: the daily dispatch cutoff ("14:00", IST) or null, and ship days as a Mon..Sun bitmask (bit 0 =
+   *  Monday; 63 = Mon–Sat). Read only while the app is usable. */
+  dispatchCutoff: text('dispatch_cutoff'),
+  shipDays: integer('ship_days').notNull().default(63),
   pricesIncludeGst: boolean('prices_include_gst').notNull().default(true),
   gstin: text('gstin'),
   /** The HSN a new product starts with (sign-up sets it from what the shop sells); never a fallback at checkout. */
@@ -298,6 +302,7 @@ export const shopSettings = pgTable('shop_settings', {
   check('shop_settings_gst_filing', sql`${t.gstFiling} in ('monthly','quarterly')`),
   check('shop_settings_hsn', sql`${t.defaultHsn} ~ '^[0-9]{4}([0-9]{2}){0,2}$'`),
   check('shop_settings_money', sql`${t.codMin} >= 0 and ${t.codMax} >= 0 and ${t.codCharge} >= 0 and ${t.shippingFlat} >= 0 and ${t.freeShippingAbove} >= 0`),
+  check('shop_settings_dispatch', sql`(${t.dispatchCutoff} is null or ${t.dispatchCutoff} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$') and ${t.shipDays} between 0 and 127`),
   check('shop_settings_days', sql`${t.returnDays} between 0 and 60 and ${t.dispatchDays} between 0 and 30 and ${t.metroDays} between 0 and 30 and ${t.restDays} between 0 and 30`),
   check('shop_settings_gstin', sql`${t.gstin} is null or ${t.gstin} ~ '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$'`),
   check('shop_settings_pickup', sql`${t.pickupPincode} is null or ${t.pickupPincode} ~ '^[1-9][0-9]{5}$'`),

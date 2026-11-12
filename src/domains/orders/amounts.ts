@@ -12,7 +12,8 @@
 // =============================================================================
 
 import { priceMethod, type MethodPrice } from '@/domains/checkout/discounts'
-import { codFor, type Cod, type DeliveryRules } from '@/domains/checkout/delivery'
+import { type Cod, type DeliveryRules } from '@/domains/checkout/delivery'
+import { codOn, resolveDelivery, type ZoneSetup } from '@/domains/delivery/resolve'
 import { shareCharges, type ChargeShare } from '@/domains/tax/gst'
 import { currentMethod, offerWay, type OrderMoments } from './order-state'
 
@@ -56,15 +57,18 @@ export type Repriced = MethodPrice & { codCharge: number }
  * order offer — the same test as checkout's (quote.ts) — or `cod.offered` false and no price.
  */
 export function reprice(s: StoredPricing, method: 'prepaid'): Repriced
-export function reprice(s: StoredPricing, method: 'cod', rules: DeliveryRules, pincode: string | null): { cod: Cod; price: Repriced | null }
-export function reprice(s: StoredPricing, method: 'cod' | 'prepaid', rules?: DeliveryRules, pincode?: string | null): Repriced | { cod: Cod; price: Repriced | null } {
+export function reprice(s: StoredPricing, method: 'cod', rules: DeliveryRules, pincode: string | null, zones?: ZoneSetup | null): { cod: Cod; price: Repriced | null }
+export function reprice(s: StoredPricing, method: 'cod' | 'prepaid', rules?: DeliveryRules, pincode?: string | null, zones: ZoneSetup | null = null): Repriced | { cod: Cod; price: Repriced | null } {
   // Placed online with an order offer that went with the saving, the one it replaced is kept for a switch to COD
   // (shop stress test 2026-11-11): each way reads its own, never both.
   const order = s.applied.find((a) => a.class === 'order' && (a.method == null || a.method === method))?.amount ?? 0
   const lines = s.lines.map((l) => ({ gross: l.unitPrice * l.qty, qty: l.qty, hsn: l.hsn, productDiscount: l.productDiscount, own: l.gstBps ?? null }))
   const tax = { registered: s.registered, pricesIncludeGst: s.pricesIncludeGst, date: s.placedAt }
   if (method === 'prepaid') return { ...priceMethod(lines, order, s.applied.find((a) => a.class === 'payment')?.amount ?? 0, s.shipping, tax), codCharge: 0 }
-  const cod = codFor(lines.reduce((a, l) => a + l.gross - l.productDiscount, 0) - order, rules!, pincode)
+  // THE delivery rule for this PIN code today (Delivery Zones when usable), with the order's STORED delivery in the COD
+  // limit test: the order keeps the delivery it was sold with (architecture review Delivery Zones M4).
+  const terms = resolveDelivery(pincode ?? null, { ...rules!, dispatchDays: 0, metroDays: 0, restDays: 0 }, zones)
+  const cod = codOn(lines.reduce((a, l) => a + l.gross - l.productDiscount, 0) - order, { ...terms, charge: s.shipping, freeAbove: null }, pincode)
   return { cod, price: cod.offered ? { ...priceMethod(lines, order, 0, s.shipping + cod.charge, tax), codCharge: cod.charge } : null }
 }
 

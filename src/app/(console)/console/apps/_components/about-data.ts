@@ -10,7 +10,7 @@ type Page = Awaited<ReturnType<typeof appsPage>>
 
 /** The one offer for an app, from the page's one read (the card, the filters and the page all read this). */
 export function offerOf(k: ModuleKey, d: Page, now: Date): Offer {
-  return offerFor(k, d.access[k], d.prices[k]?.monthlyPrice ?? null, now, addOnAllowed(k, d.facts.planCode), d.asked.has(k))
+  return offerFor(k, d.access[k], d.prices[k]?.monthlyPrice ?? null, now, addOnAllowed(k, d.facts.planCode), d.asked.has(k), d.prices[k]?.id ?? null)
 }
 
 export function aboutProps(k: ModuleKey, d: Page, now: Date, canManage: boolean, shopName: string) {

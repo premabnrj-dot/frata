@@ -4,7 +4,8 @@ import { and, desc, eq, gt, inArray, isNotNull, isNull, notInArray, sql } from '
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { refundDue, type StoredOrder } from '@/domains/orders/amounts'
 import { currentMethod, orderState, type OrderState } from '@/domains/orders/order-state'
-import { codBlockedFor } from '@/domains/checkout/delivery'
+import { resolveDelivery } from '@/domains/delivery/resolve'
+import { deliveryIn } from '@/lib/queries/delivery'
 import { applies, invoiceNumber, seriesFits, type CancelReason, type OrderAction } from '@/domains/orders/work'
 import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
@@ -185,9 +186,18 @@ export async function editContact(tx: Tx, tenantId: string, actor: Actor, orderI
   if (!fields.length) return { ok: false, error: 'Nothing changed.' }
   // An unpaid pay-on-delivery order may not move to a pincode the shop turned pay on delivery off for: checkout refuses
   // that pincode, and "change my address" to one is how a refusal at the door is set up (shop stress test 2026-11-11).
+  // The same rule as checkout (resolveDelivery: the floor's no-COD list, and with Delivery Zones usable its zones and
+  // PIN code rules; impact review DZ7).
   if (currentMethod(c.o) === 'cod' && edit.pincode) {
-    const [st] = await tx.select({ blocked: shopSettings.codBlockedPincodes }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
-    if (codBlockedFor(edit.pincode, st?.blocked)) return { ok: false, error: `Pay on delivery is off for ${edit.pincode} in your settings. Ask them to pay online first, or cancel.` }
+    const [st] = await tx.select({ shippingFlat: shopSettings.shippingFlat, freeShippingAbove: shopSettings.freeShippingAbove, codOn: shopSettings.codOn, codMin: shopSettings.codMin,
+      codMax: shopSettings.codMax, codCharge: shopSettings.codCharge, codBlockedPincodes: shopSettings.codBlockedPincodes, dispatchDays: shopSettings.dispatchDays,
+      metroDays: shopSettings.metroDays, restDays: shopSettings.restDays }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
+    if (st) {
+      const floor = { ...st, shippingFlat: Number(st.shippingFlat), freeShippingAbove: Number(st.freeShippingAbove), codMin: Number(st.codMin), codMax: Number(st.codMax), codCharge: Number(st.codCharge) }
+      const t = resolveDelivery(edit.pincode, floor, (await deliveryIn(tx, tenantId, edit.pincode, now)).setup)
+      if (!t.deliverable) return { ok: false, error: `You don't deliver to ${edit.pincode}. Keep the address, or cancel.` }
+      if (!t.cod.on) return { ok: false, error: `Pay on delivery is off for ${edit.pincode}. Ask them to pay online first, or cancel.` }
+    }
   }
   // A change to the delivery state moves the place of supply with it (GST).
   await tx.update(orders).set({ ...edit, ...(edit.state ? { supplyState: edit.state } : {}) })
