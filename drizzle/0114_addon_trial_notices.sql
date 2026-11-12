@@ -1,0 +1,2 @@
+ALTER TABLE "notices" DROP CONSTRAINT "notices_source";--> statement-breakpoint
+ALTER TABLE "notices" ADD CONSTRAINT "notices_source" CHECK ("notices"."source_kind" in ('billing_notice','support_session','handover','admin','addon_trial'));

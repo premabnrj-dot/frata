@@ -3,7 +3,11 @@ import { Badge } from '@/components/ui/badge'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { homeState, type Offer } from '@/domains/modules/offer'
 import { MODULES, type ModuleKey } from '@/domains/modules/registry'
-import { AppAction } from './app-action'
+import { AppAction, EndTrial } from './app-action'
+import { Section } from '@/components/layout/section'
+import { formatInr } from '@/lib/format'
+import { dayMonthLongIN } from '@/lib/format-date'
+import { paise } from '@/domains/money/paise'
 import { AppFacts } from './app-facts'
 
 /**
@@ -30,7 +34,7 @@ export function AppHome({ k, tab, tabs = [], first = 'Overview', badge, meta, pr
   canTurnOff: boolean
   children?: React.ReactNode
 }) {
-  const def = MODULES[k], base = `/console/apps/${k}`, state = homeState()
+  const def = MODULES[k], base = `/console/apps/${k}`, state = offer.state ?? homeState()
   const all = [{ key: 'overview', label: first }, ...tabs, ...(billing ? [{ key: 'billing', label: 'Usage and billing' }] : [])]
   return (
     <>
@@ -38,11 +42,19 @@ export function AppHome({ k, tab, tabs = [], first = 'Overview', badge, meta, pr
         badges={<><Badge tone={state.tone}>{state.label}</Badge>{badge}</>} />
       <ViewTabs label={def.name} tabs={all.map((t) => ({ href: t.key === 'overview' ? base : `${base}?tab=${t.key}`, label: t.label, current: t.key === tab }))} />
       {tab === 'billing' && billing ? (
-        <div className="grid max-w-3xl gap-3 sm:grid-cols-2"><AppFacts k={k} offer={offer} worksWith={worksWith} /></div>
+        <div className="grid max-w-3xl gap-3 sm:grid-cols-2">
+          {offer.selfTrial && (
+            <Section className="sm:col-span-2">
+              <p className="text-sm">Then <b className="font-mono">{formatInr(paise(offer.selfTrial.monthly))}</b>/month + GST from {dayMonthLongIN(offer.selfTrial.paidFrom)}</p>
+            </Section>
+          )}
+          <AppFacts k={k} offer={offer} worksWith={worksWith} />
+        </div>
       ) : children}
       {canTurnOff ? (
         <div className="mt-8 flex justify-end border-t border-border pt-4">
-          <AppAction k={k} name={def.name} action={{ kind: 'switch', on: true }} canManage askHref="" />
+          {offer.selfTrial ? <EndTrial k={k} name={def.name} paidFrom={offer.selfTrial.paidFrom} />
+            : <AppAction k={k} name={def.name} action={{ kind: 'switch', on: true }} canManage askHref="" />}
         </div>
       ) : null}
     </>

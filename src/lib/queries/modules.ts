@@ -27,7 +27,7 @@ export async function readFactsIn(tx: Tx, tenantId: string, now: Date): Promise<
       .innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(planRows, eq(planRows.id, planVersions.planId))
       .where(eq(tenantPlans.tenantId, tenantId))
     const plan = currentPlan(plans, now)
-    const addons = await tx.select({ module: tenantAddons.module, startsAt: tenantAddons.startsAt, endsAt: tenantAddons.endsAt, trialEndsAt: tenantAddons.trialEndsAt })
+    const addons = await tx.select({ module: tenantAddons.module, startsAt: tenantAddons.startsAt, endsAt: tenantAddons.endsAt, trialEndsAt: tenantAddons.trialEndsAt, byShop: tenantAddons.byShop })
       .from(tenantAddons).where(eq(tenantAddons.tenantId, tenantId))
     const switches = await tx.select({ module: tenantModules.module }).from(tenantModules)
       .where(and(eq(tenantModules.tenantId, tenantId), isNull(tenantModules.disabledAt)))

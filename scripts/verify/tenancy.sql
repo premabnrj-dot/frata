@@ -2833,6 +2833,7 @@ rollback;
 do $$ begin
   if has_function_privilege('frata_admin', 'app_start_addon_trial(uuid, text, uuid)', 'execute') or has_function_privilege('authenticated', 'app_start_addon_trial(uuid, text, uuid)', 'execute')
      or has_function_privilege('anon', 'app_end_addon_trial(uuid, text)', 'execute') or has_function_privilege('service_role', 'app_stop_addon(uuid, text)', 'execute')
+     or has_function_privilege('frata_admin', 'app_addon_trial_notices()', 'execute') or has_function_privilege('authenticated', 'app_addon_trial_notices()', 'execute')
   then raise exception 'FAIL: another role runs the trial definers'; end if;
   if has_table_privilege('frata_app', 'tenant_addons', 'insert') or has_table_privilege('frata_app', 'tenant_addons', 'update') then raise exception 'FAIL: frata_app writes add-ons'; end if;
 end $$;

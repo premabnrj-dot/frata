@@ -304,3 +304,9 @@ export async function signupCodeVerify(uid: string, id: string, codeHmac: string
     return !!r?.ok
   } catch (err) { console.error('[signupCodeVerify]', errName(err)); return false }
 }
+
+/** A3: the daily reminder 3 days before each self-serve add-on trial ends (one per trial; the definer finds them). */
+export async function addonTrialNotices(): Promise<number> {
+  const rows = await db().execute<{ n: number }>(sql`select app_addon_trial_notices() as n`)
+  return Number(rows[0]?.n ?? 0)
+}

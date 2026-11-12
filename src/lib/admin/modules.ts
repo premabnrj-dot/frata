@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, eq, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm'
 import { adminDb, type AdminDb, type AdminTx } from '@/lib/db/admin'
 import { modulePauses, tenantAddons, tenantModules } from '@/lib/db/schema-modules'
 import type { StaffOk } from '@/lib/auth/require-staff'
@@ -80,8 +80,15 @@ export async function endAddon(staff: StaffOk, tenantId: string, addonId: string
   return adminDb().transaction(async (tx) => {
     const [row] = await tx.update(tenantAddons).set({ endsAt: now })
       .where(and(eq(tenantAddons.id, addonId), eq(tenantAddons.tenantId, tenantId), isNull(tenantAddons.endsAt)))
-      .returning({ module: tenantAddons.module })
+      .returning({ module: tenantAddons.module, byShop: tenantAddons.byShop, trialEndsAt: tenantAddons.trialEndsAt })
     if (!row) return false
+    // A trial the shop started has its paid row waiting from the trial's end (A3): ending the trial ends both, so
+    // nothing is ever billed (review Sec H2 / Arch M5).
+    if (row.byShop && row.trialEndsAt) {
+      await tx.update(tenantAddons).set({ endsAt: sql`${tenantAddons.startsAt}` })
+        .where(and(eq(tenantAddons.tenantId, tenantId), eq(tenantAddons.module, row.module), eq(tenantAddons.byShop, true), isNotNull(tenantAddons.addonPriceId),
+          isNull(tenantAddons.endsAt), gte(tenantAddons.startsAt, row.trialEndsAt)))
+    }
     await auditStaff(tx, staff, { tenantId, action: 'module.end', target: row.module })
     return true
   })
