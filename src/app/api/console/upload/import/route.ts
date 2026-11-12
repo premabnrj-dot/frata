@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client'
-import { contentTypeOf, formatOfPath, maxBytesFor, PATH_SHAPE, UPLOAD_TOKEN_MS } from '@/domains/media/sizes'
+import { contentTypeOf, formatOfPath, PATH_SHAPE } from '@/domains/media/sizes'
+import { maxBytesFor, UPLOAD_TOKEN_MS } from '@/domains/media/upload-limits'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { BLOB_READ_WRITE_TOKEN, isBlobConfigured } from '@/lib/env'
 import { errName } from '@/lib/log'
