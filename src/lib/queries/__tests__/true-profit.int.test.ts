@@ -35,7 +35,7 @@ describe.skipIf(!host)('True Profit: by product and by PIN code, through keptOf'
       const order = async (outcome: 'delivered' | 'rto', pincode: string) => {
         const [o] = await tx.insert(orders).values({ tenantId: A, number: n++, paymentMethod: 'cod', placedAt: at(48), confirmedAt: at(47), packedAt: at(46), shippedAt: at(40),
           deliveredAt: outcome === 'delivered' ? at(10) : null, rtoInitiatedAt: outcome === 'rto' ? at(10) : null, pincode,
-          invoiceNumber: `TP/${n % 1e5}/${Date.now() % 1e5}`, subtotal: 279000, total: 279000, merchandiseNet: 265714, netRevenue: 265714, cogs: 120000 }).returning({ id: orders.id })
+          invoiceNumber: `TP/${n % 1e5}/${Date.now() % 1e5}`, subtotal: 279000, total: 279000, merchandiseNet: 265714, cogs: 120000 }).returning({ id: orders.id })
         await tx.insert(orderLines).values([
           { tenantId: A, orderId: o!.id, variantId: kurta.v, productId: kurta.p, title: 'Int kurta', qty: 1, unitPrice: 249000, taxableValue: 237143, unitCost: 100000, kind: 'in_stock', stockTakenAt: at(48) },
           { tenantId: A, orderId: o!.id, variantId: dupatta.v, productId: dupatta.p, title: 'Int dupatta', qty: 1, unitPrice: 30000, taxableValue: 28571, unitCost: 20000, kind: 'in_stock', stockTakenAt: at(48), position: 1 },
