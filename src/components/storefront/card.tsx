@@ -1,9 +1,9 @@
+import { colourIndex } from '@/domains/catalogue/option-kind'
 import { cardBadge } from '@/domains/checkout/offer-showcase'
 import Link from 'next/link'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { cardTag, priceOf, type ListProduct } from '@/domains/storefront/listing'
-import { isColourOption } from '@/domains/storefront/picker'
 import { Photo, type PhotoData } from './photo'
 import type { Href } from './shell'
 import { fill, wordsFor, type Lang } from './words'
@@ -30,7 +30,7 @@ export function ProductCard({ p, href, now, priority = false, badge = null, lang
   // A sample piece (the customizer's preview only) says so before anything else.
   const tag = p.sample ? 'Sample' : (t ? w.tag[t] : null) ?? (badge ?? cardBadge(p.offers, now))?.label ?? null
   const [cover, second] = p.images
-  const ci = p.options.findIndex(isColourOption)
+  const ci = colourIndex(p.options)
   const colours = ci >= 0 ? [...new Set(p.variants.map((v) => v.values[ci]!))] : []
   return (
     <li className="store-card group min-w-0">

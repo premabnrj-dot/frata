@@ -24,6 +24,21 @@ Measure: support asks about sizes or colours; products with a Shade/Print option
 5. **Two views of the table** — tabs "Price and stock" | "SKU and barcode" above the grid; the second shows the SKU and
    barcode columns only, so neither sits off-screen on a laptop. A mistake in a hidden column switches to its tab.
 
+## Review findings and what the plan does (architecture-reviewer, 2026-11-13)
+- **Which option is the colour has one answer, with precedence** — `colourIndex(names)`: Colour/Color first, then
+  Shade, then रंग; first among equals. Every `findIndex(isColourOption)` and `find(/colou?r/)` uses it, so a product with
+  "Print, Colour" keeps its Colour swatches on the next save (a test pins it).
+- **Print is a pattern, not a colour** (Google and schema.org name it `pattern`): no swatches, no `color` in structured data;
+  nothing is emitted for it until a dated fact in `frata-integrations` says how. Shade and रंग are colours.
+- **Names compared as typed in any form:** NFC, trimmed, case-blind (साइज़ with ज़ as one character or as ज + nukta).
+- **Reorder:** Alt+←/→ is taken only while a chip has focus; focus stays on the moved chip; each move is announced
+  ("M moved to 2 of 5").
+- **"Set for"** lists each value of the grouped option and of the first option once.
+- **Blast radius** (added): the listing card, photo-per-colour (`lib/catalogue/photos.ts`, `lib/queries/photos.ts`), readiness
+  (a साइज़ option asks for a chart), import typing. Variant links keep their option's own name (`?shade=`), on purpose.
+- **Two table views (task 5) moves out:** a fourth hand-written tablist is the wrong way; a shared tablist primitive made
+  from the three existing ones comes first. Signal: SKU and barcode columns reported off-screen on a laptop.
+
 ## Deliberately not in PR·3
 - **A per-option "this is a colour" switch** (spec: "any option the brand marks as colour"): the names above cover the
   words brands use; a switch needs a stored flag per option. Signal: a shop names its colours something else.

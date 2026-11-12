@@ -1,7 +1,7 @@
+import { colourIndex } from '@/domains/catalogue/option-kind'
 import 'server-only'
 import { and, asc, eq, isNotNull, isNull, ne, sql } from 'drizzle-orm'
 import type { PhotoTarget } from '@/domains/catalogue/import/photos'
-import { isColourOption } from '@/domains/storefront/picker'
 import { productImages, products, variants } from '@/lib/db/schema-catalogue'
 import { withTenant } from '@/lib/db/tenant'
 
@@ -30,7 +30,7 @@ export async function photoTargets(tenantId: string): Promise<PhotoTarget[]> {
     const skus = new Map<string, { sku: string; values: string[] }[]>()
     for (const s of sizes) if (s.sku) skus.set(s.productId, [...(skus.get(s.productId) ?? []), { sku: s.sku, values: s.values }])
     return rows.map((p) => {
-      const at = p.options.findIndex(isColourOption)
+      const at = colourIndex(p.options)
       return {
         id: p.id, title: p.title, handle: p.handle, photos: have.get(p.id) ?? 0,
         colours: at >= 0 ? (p.optionValues[at] ?? []) : [],

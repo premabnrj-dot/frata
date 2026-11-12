@@ -6,6 +6,7 @@
 // Also: whether a product is ready to show, in the merchant's words.
 // =============================================================================
 
+import { colourIndex } from './option-kind'
 import { istDayKey } from '../time/day'
 import { cleanGtin } from './gtin'
 import { sizeKey } from './size-charts'
@@ -140,7 +141,7 @@ export function cleanProduct(p: ProductInput, now: Date, hsnDigits = 4, how: { b
   const tags = [...new Set((p.tags ?? []).map((t) => t.trim().replace(/\s+/g, ' ')).filter(Boolean))]
   if (tags.length > 20 || tags.some((t) => t.length > 40)) errors.tags = 'Up to 20 tags of up to 40 characters.'
   // Colours: only values the colour option has; a family from the standard list (checked by the caller), #rrggbb, or a crop inside the photo.
-  const colourOpt = opts.ok ? opts.options.find((o) => /^colou?rs?$/i.test(o.name)) : undefined
+  const colourOpt = opts.ok ? opts.options[colourIndex(opts.options.map((o) => o.name))] : undefined
   const colours = (p.colours ?? []).filter((c) => colourOpt?.values.includes(c.value)).map((c) => ({
     value: c.value, family: c.family || null, hex: c.hex && /^#[0-9a-f]{6}$/i.test(c.hex) ? c.hex.toLowerCase() : null,
     crop: c.crop && /^[0-9a-f-]{36}$/.test(c.crop.imageId) && [c.crop.x, c.crop.y].every((n) => n >= 0 && n <= 1) && c.crop.r >= 0.03 && c.crop.r <= 0.5 ? c.crop : null,

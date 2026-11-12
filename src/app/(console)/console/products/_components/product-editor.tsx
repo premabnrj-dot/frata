@@ -1,6 +1,7 @@
 'use client'
 
 import { isSizeOption } from '@/domains/storefront/picker'
+import { colourIndex } from '@/domains/catalogue/option-kind'
 import { InfoTip } from '@/components/ui/info-tip'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
@@ -62,7 +63,6 @@ export type EditorShop = { name: string; address: string; skuPrefix: string; cod
   maker: string }
 
 type Draft = Omit<EditorProduct, 'id' | 'version' | 'status' | 'publishAt' | 'everLive'>
-const isColour = (name: string) => /^colou?rs?$/i.test(name)
 
 /**
  * One product. Main column in the order a merchant fills it (approved mockup,
@@ -107,7 +107,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   const combos = useMemo(() => combinations(opts), [d.options]) // eslint-disable-line react-hooks/exhaustive-deps
   const cells = combos.map((c) => d.cells[keyOf(c)] ?? EMPTY_CELL)
   const type = types.find((t) => t.id === d.typeId)
-  const colourOpt = d.options.find((o) => isColour(o.name))
+  const colourOpt = d.options[colourIndex(d.options.map((o) => o.name))]
   // The size chart and the model belong to a product with sizes (a saree has neither); a chart already picked stays.
   const showSizes = shop.sized && (d.options.some((o) => isSizeOption(o.name)) || !!d.typeId || !!(d.modelHeight || d.modelSize))
   const prices = cells.map((c) => parseRupees(c.price)).filter((x): x is number => x !== null && x > 0)
@@ -142,10 +142,10 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
         if (parts[at] === from) parts[at] = to
         return [parts.join('\u0000'), c]
       }))
-      const colours = isColour(x.options[option]!.name) ? x.colours.map((c) => (c.value === from ? { ...c, value: to } : c)) : x.colours
+      const colours = option === colourIndex(x.options.map((o) => o.name)) ? x.colours.map((c) => (c.value === from ? { ...c, value: to } : c)) : x.colours
       return { ...x, options, cells, colours }
     })
-    if (isColour(d.options[option]!.name)) setRenames((r) => [...r.map((x) => (x.to === from ? { ...x, to } : x)), ...(r.some((x) => x.to === from) ? [] : [{ from, to }])])
+    if (option === colourIndex(d.options.map((o) => o.name))) setRenames((r) => [...r.map((x) => (x.to === from ? { ...x, to } : x)), ...(r.some((x) => x.to === from) ? [] : [{ from, to }])])
     fix('options')
   }
 
@@ -295,7 +295,7 @@ function Summary({ d, cells, photos, typeName, status, publishAt, address }: { d
   const soldOut = sees.filter((s) => !s.canBuy).length
   const later = sees.filter((s) => s.kind === 'preorder' || s.kind === 'made_to_order').length
   const cover = photos[0]
-  const colourOpt = d.options.find((o) => isColour(o.name))
+  const colourOpt = d.options[colourIndex(d.options.map((o) => o.name))]
   return (
     <Section flush ariaLabel="Summary">
       <div className="flex gap-3 p-4">
@@ -334,7 +334,7 @@ function ReadyFor({ d, photos, priced }: { d: Draft; photos: number; priced: boo
     { label: 'Age group', ok: !asks('age-group') || has('age-group') },
     { label: 'A photo', ok: photos > 0 },
     { label: 'Prices', ok: priced },
-    { label: 'A colour family for each colour', ok: !d.options.some((o) => isColour(o.name)) || (d.options.find((o) => isColour(o.name))!.values.every((v) => d.colours.some((c) => c.value === v && c.family))) },
+    { label: 'A colour family for each colour', ok: (() => { const c = d.options[colourIndex(d.options.map((o) => o.name))]; return !c || c.values.every((v) => d.colours.some((x) => x.value === v && x.family)) })() },
   ]
   const missing = needs.filter((n) => !n.ok)
   return (

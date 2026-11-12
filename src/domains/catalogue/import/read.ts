@@ -21,6 +21,7 @@
 // - A product with any problem is left out whole (design language: "Imports check before they write").
 // =============================================================================
 
+import { optionKind } from '../option-kind'
 import { cleanProduct, type CleanVariant, type ProductInput, type VariantInput } from '../product-form'
 import { combinations, handleFor, keyOf, type Option } from '../variants'
 import { OWN_RATES, ownRatesText, ruleOn } from '../../tax/rates'
@@ -95,7 +96,7 @@ export function readImport(m: Mapping, rows: readonly SheetRow[], ctx: ReadConte
       opts.push({ name, field, split: 'none' })
     }
     if (has('size') && !opts.some((o) => isSizeOption(o.name))) opts.push({ name: 'Size', field: 'size', split: 'size' })
-    if (has('colour') && !opts.some((o) => /^colou?rs?$/i.test(o.name))) opts.push({ name: 'Colour', field: 'colour', split: 'other' })
+    if (has('colour') && !opts.some((o) => optionKind(o.name) === 'colour')) opts.push({ name: 'Colour', field: 'colour', split: 'other' })
     // The options this product has: those some row gives a value. A row that only lists values (WooCommerce's
     // variable row) sets their order.
     const lists = g.variantRows.map((r) => opts.map((o) => { const v = get(r, o.field); return o.split === 'none' ? (v ? [v] : []) : splitValues(v, o.split) }))
