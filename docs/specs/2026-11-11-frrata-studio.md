@@ -39,7 +39,7 @@ points (Shopify India, Shiprocket, GoKwik, 2026).
     (allow-list, a 7-day wait for outside packages — kit-and-fleet spec 2026-11-12 § 4, no install scripts), keys added by a proxy, domains, who publishes.
 11. **Developer**: clone, `npx frrata dev` with the test key, pull a session, push; every push gets a preview and the
     same checks; a branch can be handed to the agent.
-12. **Credits**: by client and session, reserved per turn and returned on failure, caps, the client's invoice option.
+12. **Credits**: by client and session, a turn reserves its ceiling, returned when Frrata failed, budgets, quote (§ Credits: who pays).
 
 ## Possibilities and limits
 In the mockup, with the reason and what would lift each limit. By design (stay): no database or server of the site's
@@ -74,6 +74,29 @@ partners.
 ## Open questions (in the mockup)
 Seat prices; who carries a client's credits; routines that publish; client approval on every publish; brands' own
 developers; the model's host (Frrata's API account, proposed).
+
+## Credits: who pays (proposal 2026-11-12, awaiting the owner; mockup v2.1 § Credits)
+Unit-economics review 2026-11-12 folded in. Replaces "the client's invoice option" in screen 12.
+- **Before handover the partner pays**, prepaid from seat and packs, as used. There is no owner to bill yet, and a
+  deferred bill would make Frrata a lender. Estimate first; each turn reserves its **ceiling** (a turn costs ₹5–150,
+  0.8–23.7 credits), so a budget stop holds; actuals are charged.
+- **Returned credits:** only turns that failed on Frrata's side (returning every failure takes 3× to 2.85× at 5%).
+- **No pass-through:** Frrata never invoices the brand for the partner's build and never shows the brand its credit
+  cost. Frrata invoices the partner with GST; the partner prices the client as they like.
+- **Per-client budgets** (alert 80%, stop 100%, draft kept) and a quote builder, so partners can quote fixed fees.
+- **Frrata pays for Frrata's work:** kit updates, the patch lane, law-change blocks, fixes for what a kit release broke.
+  Needs a budget line per site per month (open).
+- **After handover:** until brands have Studio (later phase), a routine or retainer stays on the partner's wallet, or
+  stops. Chosen per routine at handover; never billed to anyone silently.
+- **No rebate by default:** the 20% partner share repays a site's credits. A typical 8-page site is 143–398 credits,
+  ₹2,717–7,562 ex GST (Frrata cost ₹905–2,519); share payback Launch 3.9–10.7 months, Growth 0.7–2.0 (steady state;
+  longer with ramp-up, and Launch 4.5–12.7 for a partner without GST input credit). Option for the owner: 50 credits
+  back (₹316.50 cost) on a partner's first handover, paid only after the shop's first paid invoice.
+- **Anti-farming:** free credits once per verified partner (PAN/GSTIN), device and payout account (cost ₹63.30);
+  active pre-handover sites capped per seat; drafts idle 90 days archived.
+- **Open for the owner:** seats are dearer per credit than packs (₹19.99–20.00 vs ₹19.00) with 1 month rollover vs
+  12; fix by lowering cost first or giving seats 2 months' rollover (more credits per seat breaks 3×). Test: the
+  20-task cost proof on one 8-page site (credits per page, Frrata-side failure rate, reserve overrun).
 
 ## Out of scope
 The agent editing catalogue or money; image generation; brands using Studio before partners; Studio inside the
