@@ -68,7 +68,7 @@ export async function gateState(identity: StaffIdentity): Promise<GateState | nu
   return one<GateState | null>(sql`select app_staff_state(${w.userId}::uuid, ${w.sessionId}::uuid) as r`)
 }
 
-/** Options for "Use passkey", naming this person's own passkeys (drizzle/0110): a passkey left on the device by an
+/** Options for "Use passkey", naming this person's own passkeys (drizzle/0111): a passkey left on the device by an
  *  earlier, unrecorded try must not be the one the browser offers. The definer still accepts only this person's. */
 export async function confirmOptions(identity: StaffIdentity | StaffOk, site: PasskeySite): Promise<Result<unknown>> {
   const w = who(identity)

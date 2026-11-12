@@ -6,7 +6,8 @@ import { applies, ROLES, type OrderAction } from '@/domains/orders/work'
 import type { MemberRole } from '@/domains/tenancy/roles'
 import type { Tx } from '@/lib/db'
 import { orderEvents, orders, shipments } from '@/lib/db/schema-orders'
-import { current, moment, putStockBack, record, type Actor, type Done } from './work'
+import { current, moment, record, type Actor, type Done } from './work'
+import { putStockBack } from './stock'
 
 // =============================================================================
 // FILE: src/lib/orders/outcomes.ts

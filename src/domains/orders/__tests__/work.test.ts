@@ -22,6 +22,10 @@ describe('who may do what to an order', () => {
     expect(applies('print', 'cancelled')).toBe(false) // never a slip for a parcel that must not go
     expect(applies('print', 'shipped')).toBe(true) // a reprint while it is with the courier
   })
+  it('an edit (the address, and the items: order edit OE·0) is the owner\'s or an admin\'s, in exactly the states before packing', () => {
+    expect([...ROLES.edit].sort()).toEqual(['admin', 'owner'])
+    expect(ORDER_STATES.filter((s) => applies('edit', s)).sort()).toEqual(['confirmed', 'held', 'paid', 'unconfirmed'])
+  })
   it('every state has at most one primary action, and it always applies', () => {
     for (const s of ORDER_STATES) {
       const p = primaryAction(s)

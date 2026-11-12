@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.47.0
+  version: 2.47.1
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -233,6 +233,13 @@ export async function confirmOrder(input: unknown): Promise<{ ok: boolean; error
 - **Stock is per line.** `order_lines.stock_taken_at` says which lines took
   stock; a writer stamps only the lines it took (`where stock_taken_at is
   null`), so a retry, a late capture or a cancel never takes or returns twice.
+  Stock moves only through `src/lib/orders/stock.ts`: `takeStockLines` / `putStockBackLines` (named lines), which the
+  order-wide `takeStock` / `putStockBack` call, and `putBackPieces` (a credit note's returned pieces, by quantity).
+  Each moves its variants in id order, so two writers never wait on each other in a cycle; a transaction that moves
+  stock both ways (an edit's swap) calls `lockVariants` on every variant it touches first. Never an `update variants
+  set stock` of your own in an order writer.
+- **A sold line is written in one shape** (`lineSnapshot`, `src/lib/orders/lines.ts`), the one place a line's cost is
+  read (`unitCosts`; `cogsOf` for the order): placement now, an added or swapped line in an order edit.
 - **Additive migrations deploy in this order:** every new column nullable or
   defaulted (the old code keeps writing between apply and push) → apply →
   push → re-run the idempotent backfill (`where … is null`) for rows placed in
@@ -484,6 +491,17 @@ after it. A class a shop page uses from outside the shop's folders must be added
   regenerates them in the same commit: `UPDATE_BASELINES=1 npm run e2e -- --only shop-look`. Look's state changes:
   `look.int.test.ts` (real Postgres) and e2e `47-look`.
 
+## Writing products (PI·0, 2026-11-12; plan docs/plans/2026-11-12-product-import.md)
+
+- **The editor and the import write a product's sizes through `writeProducts`** (`src/lib/catalogue/write.ts`, inside
+  the caller's transaction: the editor one draft, the import a chunk): prices, SKUs, barcodes, cost of goods, and
+  sizes removed or returning. Its rules live there, set-based (one read each of handles, SKUs and barcodes; one insert
+  per table), never a per-product loop; a new rule for those goes into it, pinned by `save-product.int.test.ts` and
+  `write.int.test.ts`. (Other writers keep their own narrow writes: `createProduct`'s starting sizes, stock moved by
+  orders.) A lock not had in its 1 s is told as "Someone is buying this product right now" (`lockTimedOut`).
+- New products' addresses come from `freeHandles` (`src/lib/catalogue/handles.ts`, one read for the batch);
+  `handleFor` writes Indian scripts in Latin letters (`src/domains/catalogue/indic.ts`).
+
 ## Catalogue links (Signal S3, 2026-11-09; plan docs/plans/2026-11-09-signal-s3.md)
 
 - **A link between two products is a table with composite FKs**, never an id array: `product_pairs` (tenant_id,
@@ -672,7 +690,10 @@ Rules:
 
 Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
 `<Money paise>` to render; `formatInr` groups in lakh/crore. Profit is
-`orderProfit()` — never a margin computed inline.
+`orderProfit()` — never a margin computed inline. A price typed in the catalogue (the product editor, collection rules), a part credit
+note's amount and a price in an import are read by `parseRupees` (`src/domains/money/rupees.ts`): a misplaced comma, a
+third decimal, zero or a negative is null (an error), never guessed and never 0. A new rupee input uses it too; the
+Look's controls, Settings' shipping costs and sections, and Admin's custom plan price still strip ₹ themselves.
 
 **Offers (O·1, docs/plans/2026-11-08-offers.md).** Core checkout pricing, not a module
 (`check:modules` forbids core importing module code).
@@ -692,6 +713,14 @@ Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
   its stored lines and `order_discounts` (never today's offers), and written only by
   `lib/orders/reprice.ts writeReprice()` — every money column of the order and its lines together.
   Switch to COD, a capture after a switch and a retry go through them; a retry never reprices.
+- **An order's own offers on new lines** (an order edit): only `replanKept()` (`src/domains/checkout/replan.ts`), from the terms
+  `order_discounts` kept (0110: every tier step, Buy X get Y, the gift, the products covered; `termsCopy` writes them at
+  placement and `storedTerms` reads them, `src/domains/checkout/kept-terms.ts`). Never `planOffers` with today's
+  offers, never a new offer; one that gives nothing comes off; free delivery that comes off adds back what it waived.
+  A product offer on a row placed before 0110 (`targets` null) has no known terms: `storedTerms` gives null, and the
+  caller must not re-plan that order. A new term on an offer is copied in `termsCopy` (a typed column) the same day.
+  `storedTerms` takes the row's `code_id` as `code`: a tie between product offers goes to the automatic one, as at
+  placement (`productPass`, shared with `planOffers`).
 - **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
   `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`
   (parity-tested). Placement locks every offer the bag could get that has a limit, in id order,

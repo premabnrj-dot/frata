@@ -233,7 +233,7 @@ begin
   perform app_staff_request(B, sB, encode(sha256(convert_to('staff-enrol:123456', 'UTF8')), 'hex'));
   begin perform app_staff_bootstrap('pk-b@proof.test', '654321'); raise exception 'FAIL: bootstrap approved without the code'; exception when raise_exception then if sqlerrm <> 'no_request_with_that_code' then raise; end if; end;
   if app_staff_bootstrap('pk-b@proof.test', '123 456') <> 'approved for 10 minutes' then raise exception 'FAIL: bootstrap with the code refused'; end if;
-  -- The passkey check names the person's own credentials: ids and transports only, never a key or counter (drizzle/0110).
+  -- The passkey check names the person's own credentials: ids and transports only, never a key or counter (drizzle/0111).
   if has_function_privilege('frata_app', 'public.app_staff_credentials(uuid)', 'execute') or not has_function_privilege('frata_admin', 'public.app_staff_credentials(uuid)', 'execute') then raise exception 'FAIL: wrong role may list passkey ids'; end if;
   if app_staff_credentials(B)::text ~ '(publicKey|public_key|counter|key-b)' or app_staff_credentials(B)::text !~ 'cred-b' then raise exception 'FAIL: credential list wrong (%)', app_staff_credentials(B); end if;
   if app_staff_credentials('99999999-9999-9999-9999-999999999999') <> '[]'::jsonb then raise exception 'FAIL: a non-staff id listed passkeys'; end if;
@@ -1404,6 +1404,8 @@ do $$ declare n int; begin
   begin delete from discounts; raise exception 'FAIL: app deleted an offer'; exception when insufficient_privilege then null; end;
   begin update discount_codes set code = 'NEW1'; raise exception 'FAIL: app changed a code'; exception when insufficient_privilege then null; end;
   begin update order_discounts set amount = 1; raise exception 'FAIL: app changed a use'; exception when insufficient_privilege then null; end;
+  -- The terms a use keeps (0109: tiers, Buy X get Y, the products covered) are written with it and never changed after.
+  begin update order_discounts set target_products = null, tier_mins = null; raise exception 'FAIL: app changed the terms an order kept'; exception when insufficient_privilege then null; end;
   begin update price_history set price = 1; raise exception 'FAIL: app changed price history'; exception when insufficient_privilege then null; end;
   begin update discounts set tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: app moved an offer'; exception when insufficient_privilege then null; end;
   -- The price trigger, as the app: A's price change writes one row for A; A cannot write history for B.

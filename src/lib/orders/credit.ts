@@ -11,9 +11,9 @@ export const CREDIT_SERIES_FULL = `This year's credit notes are used up (${MAX_I
 import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenantCounters, tenants } from '@/lib/db/schema'
-import { variants } from '@/lib/db/schema-catalogue'
 import { creditNoteLines, creditNotes, orderLines } from '@/lib/db/schema-orders'
 import { documentsFor } from './documents'
+import { putBackPieces } from './stock'
 import { current, record, type Actor, type Done } from './work'
 
 // =============================================================================
@@ -99,7 +99,7 @@ export async function issueCredit(tx: Tx, tenantId: string, actor: Actor, orderI
 
 /**
  * A return's pieces back on their variants (restockOf: lines whose stock was taken, never above what the line sold less
- * earlier notes' restocks), in variant order as putStockBack. Says what each line actually put back (a variant gone
+ * earlier notes' restocks), through stock.ts putBackPieces. Says what each line actually put back (a variant gone
  * meanwhile puts back nothing, so its cost is never added back) and which variants came back from 0.
  */
 async function restockReturn(tx: Tx, tenantId: string, orderId: string, lines: CreditLine[]): Promise<{ restocked: Record<string, number>; backInStock: string[] }> {
@@ -109,15 +109,6 @@ async function restockReturn(tx: Tx, tenantId: string, orderId: string, lines: C
     .innerJoin(creditNotes, and(eq(creditNotes.tenantId, creditNoteLines.tenantId), eq(creditNotes.id, creditNoteLines.creditNoteId)))
     .where(and(eq(creditNoteLines.tenantId, tenantId), eq(creditNotes.orderId, orderId), gt(creditNoteLines.restockedQty, 0)))
   const ask = restockOf(lines, sold.map((l) => ({ lineId: l.id, qty: l.qty, stocked: !!l.variantId && !!l.takenAt })), prior)
-  const restocked: Record<string, number> = {}
-  const backInStock: string[] = []
-  for (const l of sold.filter((x) => x.variantId && ask[x.id]).sort((a, b) => String(a.variantId).localeCompare(String(b.variantId)))) {
-    const n = ask[l.id]!
-    const [v] = await tx.update(variants).set({ stock: sql`${variants.stock} + ${n}` })
-      .where(and(eq(variants.tenantId, tenantId), eq(variants.id, l.variantId!))).returning({ stock: variants.stock })
-    if (!v) continue
-    restocked[l.id] = n
-    if (v.stock - n <= 0 && !backInStock.includes(l.variantId!)) backInStock.push(l.variantId!)
-  }
-  return { restocked, backInStock }
+  const { put, backInStock } = await putBackPieces(tx, tenantId, sold.flatMap((l) => (l.variantId && ask[l.id] ? [{ key: l.id, variantId: l.variantId, qty: ask[l.id]! }] : [])))
+  return { restocked: put, backInStock }
 }

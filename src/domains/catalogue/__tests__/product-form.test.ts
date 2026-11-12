@@ -1,18 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { cleanProduct, parseRupees, readiness, rupeesText, type ProductInput } from '../product-form'
+import { cleanProduct, readiness, type ProductInput } from '../product-form'
 
 const base: ProductInput = { title: 'Linen kurta set', description: '', typeId: null, modelHeight: '5 ft 6 in', modelSize: 'S',
   options: [{ name: 'Size', values: ['S', 'M'] }], variants: [
     { values: ['S'], price: '2,490', compareAt: '2990', cost: '980', stock: '6', sku: 'KS-LK-S' },
     { values: ['M'], price: '2490', compareAt: '', cost: '', stock: '', sku: '' }] }
-
-describe('rupees', () => {
-  it('reads what people type, refuses what is not a price', () => {
-    expect(parseRupees('2,490')).toBe(249000); expect(parseRupees('₹2490.5')).toBe(249050)
-    expect(parseRupees('Rs 999')).toBeNull(); expect(parseRupees('999.999')).toBeNull()
-    expect(rupeesText(249050)).toBe('2490.50'); expect(rupeesText(249000)).toBe('2490')
-  })
-})
 
 describe('cleanProduct', () => {
   it('turns the grid into paise, unknown cost stays null (not 0)', () => {
@@ -39,6 +31,12 @@ describe('cleanProduct', () => {
   it('a combination the grid never sent still needs a price', () => {
     const r = cleanProduct({ ...base, options: [{ name: 'Size', values: ['S', 'M', 'L'] }] }, new Date())
     expect(!r.ok && r.errors['v:L:price']).toBe('A price in rupees.')
+  })
+  it('a zero price is refused in its own words; a zero cost is a cost', () => {
+    const r = cleanProduct({ ...base, variants: [{ ...base.variants[0]!, price: '₹0', compareAt: '0.00', cost: '0' }, { ...base.variants[1]!, price: '1,2,99' }] }, new Date())
+    expect(!r.ok && r.errors).toEqual({ 'v:S:price': 'More than ₹0.', 'v:S:compareAt': 'More than ₹0.', 'v:M:price': 'A price in rupees.' })
+    const ok = cleanProduct({ ...base, variants: [{ ...base.variants[0]!, cost: '0' }, base.variants[1]!] }, new Date())
+    expect(ok.ok && ok.product.variants[0]!.unitCost).toBe(0)
   })
 })
 

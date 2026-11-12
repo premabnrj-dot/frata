@@ -160,6 +160,19 @@ export const orderDiscounts = pgTable('order_discounts', {
    * after it reprice from the order alone. Null: as its class says (the saving online, everything else both ways).
    */
   method: text('method'),
+  /**
+   * The rest of the terms it was sold on (src/domains/checkout/kept-terms.ts), so an order edit re-plans the order's own
+   * offers (replanKept) whatever the offer becomes. Null where the style has none, and on rows placed before 0110 (a
+   * product offer's then: not known). A tiered order offer: its every step's minimum, and each step's % or each step's ₹
+   * (the offer's kind: one of the two lists, of the same length; never a null inside a list).
+   */
+  tierMins: money('tier_mins').array(), tierPercentBps: integer('tier_percent_bps').array(), tierAmountsOff: money('tier_amounts_off').array(),
+  /** A product offer: 'all' products, or 'products' and their ids (a collection as its products at placement). */
+  targets: text('targets'), targetProducts: uuid('target_products').array(),
+  /** Buy X get Y: X, Y and the % off the Y pieces in bps. */
+  buyQty: integer('buy_qty'), getQty: integer('get_qty'), getBps: integer('get_bps'),
+  /** A free gift: the piece made free (a copy of the term, not a link: the variant may go). */
+  giftVariantId: uuid('gift_variant_id'),
   createdAt: createdAt(),
 }, (t) => [
   foreignKey({ name: 'order_discounts_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
@@ -171,6 +184,16 @@ export const orderDiscounts = pgTable('order_discounts', {
   check('order_discounts_via', sql`${t.via} in ('auto','typed','link')`),
   check('order_discounts_amount', sql`${t.amount} > 0`),
   check('order_discounts_method', sql`${t.method} is null or (${t.class} = 'order' and ${t.method} in ('cod','prepaid'))`),
+  check('order_discounts_tiers', sql`case when ${t.tierMins} is null then ${t.tierPercentBps} is null and ${t.tierAmountsOff} is null
+    else ${t.class} = 'order' and cardinality(${t.tierMins}) >= 1 and array_position(${t.tierMins}, null) is null
+      and (${t.tierPercentBps} is null) <> (${t.tierAmountsOff} is null)
+      and coalesce(cardinality(${t.tierPercentBps}), cardinality(${t.tierAmountsOff})) = cardinality(${t.tierMins})
+      and array_position(coalesce(${t.tierPercentBps}, '{}'), null) is null and array_position(coalesce(${t.tierAmountsOff}, '{}'), null) is null end`),
+  check('order_discounts_targets', sql`(${t.targets} is null or (${t.class} = 'product' and ${t.targets} in ('all','products')))
+    and coalesce(${t.targets} = 'products', false) = (${t.targetProducts} is not null)`),
+  check('order_discounts_bxgy', sql`(${t.buyQty} is null) = (${t.getQty} is null) and (${t.buyQty} is null) = (${t.getBps} is null)
+    and (${t.buyQty} is null or (${t.style} = 'bxgy' and ${t.buyQty} between 1 and 10 and ${t.getQty} between 1 and 10 and ${t.getBps} between 1 and 10000))`),
+  check('order_discounts_gift', sql`${t.giftVariantId} is null or ${t.style} = 'free_gift'`),
 ])
 
 /**

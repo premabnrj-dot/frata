@@ -16,11 +16,32 @@ Every task ends with `npm test`, `npm run typecheck` and `impact-reviewer`; `dri
 | Refund = old total − new total | Refund = captured − refunded − pending − new total (a ledger); the amount Save showed is sent and refused if it changed under the lock | Earlier refunds ignored (security H1, architecture BLOCKER) |
 | Pricing on the server per tap | Pricing in the browser with the same pure code (4.7 kB gz), loaded with the panel (`next/dynamic`) when "Edit items" opens: one action, one `withTenant`, three reads in `Promise.all`; the server re-plans the same way on Save | A server action per tap, serialized (speed MED 8) |
 
+## Increase on a paid order (owner, 2026-11-12)
+COD: the new total is collected at the door; nothing else changes. Paid online: **the shopper pays the difference first**,
+and the edit is applied only when that payment is captured. Built as:
+- Save on a paid order with a higher total stores the edit as **waiting for payment** (its lines in `order_edit_lines`,
+  `order_edits.waiting_since`), and changes nothing on the order yet: lines, totals, stock and the courier booking stay.
+- The request is a page of ours, not a Razorpay Payment Link: the order page shows "Pay ₹499 for the changes" with what
+  changed, through Razorpay Checkout on the shop's own keys (a second Razorpay order for the difference; money to the
+  shop, no SMS, the fee as any online payment). Sent by the "edited" email when the order has one; the merchant also
+  gets "Copy payment link" to send on WhatsApp.
+- **While the request is open the order cannot be packed** (owner, 2026-11-12): "Mark packed" is replaced by "Waiting
+  for ₹499 from the shopper", and the new pieces are **held** for the shopper (owner, 2026-11-12), taken from sale like
+  an online order's hold. The merchant's ways out, on the order: "Ship without the change" (drops the request, frees
+  the held pieces, the order packs as it was) or Cancel. A reminder goes to the merchant after 24 hours (Notices).
+- Captured (webhook or the payment check, as any payment: stored first, then applied): the edit is applied under the
+  order lock; the held pieces become the order's. A capture that arrives after the merchant dropped the request or
+  cancelled is refunded at once (refund ledger) and the merchant sees why.
+- Tasks: an `edit.payment` kind beside `payment.check`; the order page's payment block reads a waiting edit; e2e: pay
+  the difference, and a request that lapses.
+
 ## Open (owner)
-- **A paid order whose total goes up.** As specced ("collect the difference on delivery") it fails three ways: the
-  courier booking knows only COD or prepaid, many shoppers can't be told, and COD-blocked pincodes can't collect
-  (unit-economics, architecture). Recommendation: **refuse an increase on a paid order in OE·2** (the merchant cancels;
-  the shopper re-orders), and add a Razorpay payment link later (cheaper than a COD fee below ₹1,271; no door risk).
+- **An offer that now gives less** (a tier steps down, a % on a smaller bag, a product offer on fewer lines). Uses and
+  budgets read `order_discounts.amount`. Leaning (coordinator, 2026-11-12): mark the old row `removed_at` and insert a
+  new one with the new amount — history kept, no update grant on `amount`.
+- **An edit that drops the bag below the shop's own free-delivery threshold** (`freeShippingAbove`, not an offer):
+  `replanKept` brings back only what a free-delivery offer waived. Leaning: the delivery charge comes back, as checkout
+  would charge it.
 
 ## Tasks
 **OE·0 · lock today's behaviour, pull out the shared parts**
@@ -30,6 +51,11 @@ Every task ends with `npm test`, `npm run typecheck` and `impact-reviewer`; `dri
    per-line `takeStockLines` / `putStockBackLines` (every touched variant locked once, in id order; the order-wide ones
    call them), `edit` in `WHEN`/`ROLES` (owner/admin). Migration adding offer tiers/scope to `order_discounts`.
    Verify: vitest; `verify:tenancy`.
+   As built: `replanKept` lives in `src/domains/checkout/replan.ts` (discounts.ts stays under the size gate). The terms
+   are copied as sold, so a collection's products are copied onto each order offer row (`target_products`): at most the
+   live catalogue limit (`MAX_LISTED`, 600 products), about 10 kB per row (16 bytes a uuid, plus the array header).
+   Signal to store one copy per version of an offer's terms instead (a `discount_terms` row the order points to): order
+   offer rows over 2 kB on average, or `order_discounts` over 1 GB in any shop.
 
 **OE·1 · COD and unpaid orders**
 3. Migration: `order_edits`, `order_edit_lines`, `order_lines.removed_at/replaced_by` (column grant), `order_discounts
@@ -41,10 +67,13 @@ Every task ends with `npm test`, `npm run typecheck` and `impact-reviewer`; `dri
    never double counts: a `draft.int` case); `refreshSoldOut` on sell-out or back-in-stock; `undoEdit`; an email kind
    `edited` held for the Undo window. Refused in a support visit. Verify: `edit.int.test.ts` (swap, remove, add, a race
    with packing, Undo, offers re-planned, an offer's use freed and re-checked on Undo).
+   Note for OE·1: an edit that moves stock both ways (a swap) locks every variant it touches first (`lockVariants`,
+   stock.ts) — two lines on one variant (a removed line and its replacement) then share one lock; when too little stock
+   is left for both, which line is taken must not depend on row order (take the kept line first, or refuse the edit).
 5. UI per the mockup, plus the states it didn't draw (over the COD limit, phone). Verify: `npm run e2e -- --only
    order-edit` (new flow) and `50-order-page`.
 
-**OE·2 · paid online** (after the owner decides the increase case)
+**OE·2 · paid online** (increase decided 2026-11-12: pay the difference first)
 6. `refund()` in `src/lib/payments/razorpay.ts` (normal speed; before each create, list the payment's refunds and match
    `receipt`/`notes.edit_id`; amount capped at what Razorpay reports refundable; payment age < 6 months checked before
    Save), `order_refunds`, a `refund.check` sender reading refund status back (no `refund.*` webhook assumed);
