@@ -42,6 +42,8 @@ export type Offer = {
   action: OfferAction
   /** In a trial the shop started (A3): when it becomes paid. Its home offers End trial in place of Turn off. */
   selfTrial: { paidFrom: Date; monthly: number } | null
+  /** A paid add-on in force: Turn off also stops its billing (at the month's end; security review DZ7 H1). */
+  paid?: boolean
 }
 
 /** A self-serve trial started at `now` ends at 23:59:59 IST on its 14th day (A3 review Sec L1: one date everywhere;
@@ -52,7 +54,6 @@ export function selfTrialEnds(now: Date): Date {
   return new Date(startOfDay + 15 * 86_400_000 - 1000)
 }
 
-export const TRIAL_DAYS_SELF = 14
 
 /**
  * `canAdd`: whether this shop's plan may buy it as an add-on (addOnAllowed); false offers the plans instead.
@@ -78,7 +79,7 @@ export function offerFor(key: ModuleKey, a: ModuleAccess, addonPrice: number | n
       : a.how === 'trial' ? { label: trialBadge(a, now), tone: 'warn' as const } : a.usable ? homeState() : null
     const action: OfferAction = !a.on && a.needs ? { kind: 'needs', module: a.needs, name: MODULES[a.needs].name } : { kind: 'switch', on: a.on }
     return { price: priceLine(a, monthly, now), footer: footerOf(a, monthly, now), locked: false, state, filter: filterOf(a), action,
-      selfTrial: a.paidFrom && addonPrice !== null ? { paidFrom: a.paidFrom, monthly: addonPrice } : null }
+      selfTrial: a.paidFrom && addonPrice !== null ? { paidFrom: a.paidFrom, monthly: addonPrice } : null, paid: a.how === 'add_on' }
   }
   if (def.billing === 'add_on' && monthly && canAdd) {
     const action: OfferAction = !a.trialled && priceId && addonPrice !== null

@@ -44,6 +44,11 @@ export async function setModuleAction(input: unknown): Promise<{ ok: true } | { 
         if (a.on) return 'done'
         await tx.insert(tenantModules).values({ tenantId, module, enabledBy: auth.userId }).onConflictDoNothing()
       } else {
+        // An add-on stops being paid for when it is turned off (A3 security review H1: no subscription trap): in the
+        // shop's own trial, both rows close now; paid, it works to the month's end (billed in advance) and no further.
+        const a = (await moduleAccessIn(tx, tenantId, new Date()))[module]
+        if (a.paidFrom) await tx.execute(sql`select app_end_addon_trial(${auth.userId}::uuid, ${module})`)
+        else if (a.how === 'add_on') await tx.execute(sql`select app_stop_addon(${auth.userId}::uuid, ${module})`)
         const closed = await tx.update(tenantModules).set({ disabledAt: new Date(), disabledBy: auth.userId })
           .where(and(eq(tenantModules.tenantId, tenantId), eq(tenantModules.module, module), isNull(tenantModules.disabledAt)))
           .returning({ id: tenantModules.id })
@@ -100,6 +105,9 @@ export async function setInterestAction(input: unknown): Promise<{ ok: true } | 
 // support visit: it agrees to a price). The definers write the rows (the shop from the session, the price checked
 // against the one shown); here the plan's right to buy it, and the app turned on in the same transaction. ──
 
+/** The confirm's wording the owner agreed to (app-action.tsx, "Try … free for 14 days?"); bump when it changes. */
+const TRIAL_CONFIRM_VERSION = 1
+
 const TRIAL_ERRORS: Record<string, string> = {
   trialled: 'This shop has tried it before. Ask Frrata to add it.',
   has_it: 'Your shop has it already.',
@@ -120,10 +128,11 @@ export async function startAddonTrialAction(input: unknown): Promise<{ ok: true 
       const now = new Date()
       const facts = await readFactsIn(tx, tenantId, now)
       if (def.billing !== 'add_on' || def.status !== 'now' || !addOnAllowed(module, facts.planCode)) return 'not_offered'
+      const [price] = await tx.execute<{ monthly: string }>(sql`select monthly_price as monthly from addon_prices where id = ${priceId}`)
       const [row] = await tx.execute<{ ends: Date }>(sql`select app_start_addon_trial(${auth.userId}::uuid, ${module}, ${priceId}::uuid) as ends`)
       await tx.insert(tenantModules).values({ tenantId, module, enabledBy: auth.userId }).onConflictDoNothing()
       await tx.insert(auditEvents).values({ tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: 'addon.trial.start', target: module,
-        detail: { priceId, firstCharge: new Date(row!.ends).toISOString() } })
+        detail: { priceId, monthly: price ? Number(price.monthly) : null, firstCharge: new Date(row!.ends).toISOString(), confirm: TRIAL_CONFIRM_VERSION } })
       return 'done'
     })
     if (!r.ok) return { ok: false, error: r.error }
@@ -164,6 +173,8 @@ export async function endAddonTrialAction(input: unknown): Promise<{ ok: true } 
     revalidatePath('/console', 'layout')
     return { ok: true }
   } catch (err) {
+    const code = definerError(err)
+    if (code && TRIAL_ERRORS[code]) return { ok: false, error: TRIAL_ERRORS[code] }
     console.error('[endAddonTrialAction]', err instanceof Error ? err.name : 'error')
     return { ok: false, error: 'We could not end the trial. Nothing was changed.' }
   }

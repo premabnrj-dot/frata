@@ -8,7 +8,7 @@ import type { Tx } from '@/lib/db'
 import { pincodes, shopSettings } from '@/lib/db/schema'
 import { deliveryRules, deliveryZonePins, deliveryZones, shopHolidays } from '@/lib/db/schema-delivery'
 import { withTenant } from '@/lib/db/tenant'
-import { checkoutShop } from './checkout'
+import { pausedAt, shopPauseIn } from './trial-pause'
 import { moduleAccessIn } from './modules'
 
 // =============================================================================
@@ -57,7 +57,17 @@ export async function deliveryIn(tx: Tx, tenantId: string, pin: string | null | 
  *  read, in one transaction of its own. */
 export function deliveryFor(tenantId: string, pin: string, now: Date) {
   return withTenant(tenantId, async (tx) => {
-    const [shop, read] = await Promise.all([checkoutShop(tx, tenantId, null), deliveryIn(tx, tenantId, pin, now)])
+    // The shop's public floor and whether it is open: never checkoutShop, which reads Razorpay keys this public check
+    // never needs (speed review DZ7 M1).
+    const [[s], pause, read] = await Promise.all([
+      tx.select({ publishedAt: shopSettings.publishedAt, shippingFlat: shopSettings.shippingFlat, freeShippingAbove: shopSettings.freeShippingAbove, codOn: shopSettings.codOn,
+        codMin: shopSettings.codMin, codMax: shopSettings.codMax, codCharge: shopSettings.codCharge, codBlockedPincodes: shopSettings.codBlockedPincodes,
+        dispatchDays: shopSettings.dispatchDays, metroDays: shopSettings.metroDays, restDays: shopSettings.restDays }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
+      shopPauseIn(tx, tenantId),
+      deliveryIn(tx, tenantId, pin, now),
+    ])
+    const shop = s ? { ...s, open: s.publishedAt !== null && !pausedAt(pause, now), shippingFlat: Number(s.shippingFlat), freeShippingAbove: Number(s.freeShippingAbove),
+      codMin: Number(s.codMin), codMax: Number(s.codMax), codCharge: Number(s.codCharge) } : null
     return { shop, ...read }
   })
 }

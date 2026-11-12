@@ -11,6 +11,7 @@ import type { Tx } from '@/lib/db'
 import { auditEvents, shopSettings } from '@/lib/db/schema'
 import { deliveryRules, deliveryZonePins, deliveryZones, shopHolidays } from '@/lib/db/schema-delivery'
 import { refreshShop } from '@/lib/storefront/refresh'
+import { shopModules } from '@/lib/queries/modules'
 import { errName } from '@/lib/log'
 
 // =============================================================================
@@ -38,7 +39,8 @@ async function write(action: string, detail: object, work: (tx: Tx, tenantId: st
     })
     if (!r.ok) return { ok: false, error: r.error }
     if (r.value) return { ok: false, error: r.value }
-    refreshShop(r.tenantId, 'shop')
+    // Only zones and dispatch reach a cached page (coreShop); rules and holidays are read per check (speed review DZ7 M3).
+    if (!/^delivery\.(rule|rules|holiday)\./.test(action)) refreshShop(r.tenantId, 'shop')
     revalidatePath('/console/apps/delivery_zones')
     return { ok: true }
   } catch (err) {
@@ -167,6 +169,8 @@ export async function removeRuleAction(pincode: unknown): Promise<Result> {
 export async function previewRulesAction(text: unknown): Promise<{ ok: true; rows: number; errors: string[] } | { ok: false; error: string }> {
   const auth = await requireMember(CAN_BUILD)
   if (!auth.ok) return { ok: false, error: auth.message }
+  const mods = await shopModules(auth.membership.tenantId, new Date().toISOString())
+  if (!mods.access.delivery_zones.usable) return { ok: false, error: 'Delivery Zones is off.' }
   const p = z.string().max(300_000).safeParse(text)
   if (!p.success) return { ok: false, error: 'The file is over 256 KB. Split it into smaller files.' }
   const { rows, errors } = readRulesCsv(p.data)
@@ -175,6 +179,9 @@ export async function previewRulesAction(text: unknown): Promise<{ ok: true; row
 
 /** Import: the file is read again here (never the preview's rows back from the browser), then one statement (the rows as one JSON parameter: drizzle spreads a JS array into a list). */
 export async function importRulesAction(text: unknown): Promise<Result & { added?: number; errors?: string[] }> {
+  // Who may import, before the file is read (security review DZ7 L3); write() checks again with the app usable.
+  const me = await requireMember(CAN_BUILD)
+  if (!me.ok) return { ok: false, error: me.message }
   const p = z.string().max(300_000).safeParse(text)
   if (!p.success) return { ok: false, error: 'The file is over 256 KB. Split it into smaller files.' }
   const { rows, errors } = readRulesCsv(p.data)

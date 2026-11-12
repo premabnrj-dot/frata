@@ -16,7 +16,8 @@ import { applyBps, type Paise } from '@/domains/money/paise'
 import { currentPlan, deliveredFee, feeForOrder, monthlyPrice, usage as planUsage, type PlanVersion } from '@/domains/plans/entitlements'
 import { supplyKind } from '@/domains/tax/gst'
 
-export const GST_BPS = 1800
+export { GST_BPS } from './gst-rate'
+import { GST_BPS } from './gst-rate'
 /** Under this taxable value (₹100) a bill rolls to the next month, once in a row (unit-economics review). */
 export const ROLL_BELOW = 10_000
 

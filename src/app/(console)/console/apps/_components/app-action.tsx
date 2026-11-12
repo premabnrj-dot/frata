@@ -11,7 +11,8 @@ import { OFF } from '@/domains/modules/showcase'
 import { endAddonTrialAction, setInterestAction, setModuleAction, startAddonTrialAction } from '../actions'
 import { dayMonthLongIN } from '@/lib/format-date'
 import { formatInr } from '@/lib/format'
-import { paise } from '@/domains/money/paise'
+import { applyBps, paise } from '@/domains/money/paise'
+import { GST_BPS } from '@/domains/billing/gst-rate'
 import { settle } from '@/lib/settle'
 
 /**
@@ -19,8 +20,10 @@ import { settle } from '@/lib/settle'
  * Turn on <the app it needs> first, Ask Frrata to add, See Growth, Tell me when it's ready. No button that fails:
  * who may not act sees why instead. Plain pending state and a refresh after the write (frata-gotchas).
  */
-export function AppAction({ k, name, action, canManage, askHref, block = false }: {
+export function AppAction({ k, name, action, canManage, askHref, block = false, paid = false }: {
   k: ModuleKey; name: string; action: OfferAction; canManage: boolean; askHref: string; block?: boolean
+  /** A paid add-on: turning it off also stops its billing at the month's end. */
+  paid?: boolean
 }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
@@ -59,7 +62,7 @@ export function AppAction({ k, name, action, canManage, askHref, block = false }
     const day = dayMonthLongIN(action.ends)
     const ist = new Date(action.ends.getTime() + 330 * 60_000)
     const firstInvoice = dayMonthLongIN(new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth() + 1, 1, 6)))
-    const withGst = Math.round(action.monthly * 1.18)
+    const withGst = action.monthly + applyBps(paise(action.monthly), GST_BPS) // billing's own GST (bill.ts)
     return (
       <div>
         <Button className={wide} disabled={busy} onClick={() => { setError(null); setConfirmTrial(true) }}>Start free trial</Button>
@@ -92,7 +95,7 @@ export function AppAction({ k, name, action, canManage, askHref, block = false }
       <Button variant="secondary" className={`${wide} after:hidden`} disabled={busy} onClick={() => { setError(null); setConfirmOff(true) }}>Turn off {name}</Button>
       {!confirmOff ? err : null}
       <Dialog open={confirmOff} onClose={() => setConfirmOff(false)} title={`Turn off ${name}?`}
-        description={<ul className="list-disc space-y-1 pl-5">{OFF[k].map((l) => <li key={l}>{l}</li>)}<li>Turn it back on any time.</li></ul>}
+        description={<ul className="list-disc space-y-1 pl-5">{OFF[k].map((l) => <li key={l}>{l}</li>)}{paid ? <li>Billing stops: it works to the end of this month and isn’t billed again.</li> : <li>Turn it back on any time.</li>}</ul>}
         actions={<><Button variant="secondary" data-autofocus onClick={() => setConfirmOff(false)}>Keep {name}</Button><Button variant="destructive" disabled={busy} onClick={() => run(() => setModuleAction({ module: k, on: false }))}>Turn off {name}</Button></>}>
         {error ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
       </Dialog>

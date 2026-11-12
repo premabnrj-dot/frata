@@ -127,7 +127,9 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${tenantId + ':' + input.idempotencyKey}, 0))`)
     const prior = await priorOf(tx, tenantId, input)
     if (prior) return prior
-    const shop = await checkoutShop(tx, tenantId, input.host)
+    // Delivery Zones beside the shop, before any row is locked (speed review DZ7 M2); the PIN code's place comes from the
+    // directory, never the address typed.
+    const [shop, delivery] = await Promise.all([checkoutShop(tx, tenantId, input.host), deliveryIn(tx, tenantId, input.address.pincode, now)])
     if (!shop || !shop.open) return { kind: 'refused', status: 404, error: 'This shop is not taking orders right now.' }
     // Abandoned online orders lose the shopper's details after 90 days: the daily cron (src/lib/orders/erase.ts).
     if (input.method === 'prepaid' && !shop.online) return { kind: 'refused', status: 422, error: 'Online payment is not available at this shop right now. Pay on delivery instead.' }
@@ -144,8 +146,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     }
 
     const rows = await variantRows(tx, tenantId, input.bag.map((b) => b.variantId), now, { lock: true })
-    // Delivery Zones, read now in this transaction: the PIN code's place from the directory, never the address typed.
-    const [typed, delivery] = await Promise.all([codeFor(tx, tenantId, input.code, now), deliveryIn(tx, tenantId, input.address.pincode, now)])
+    const typed = await codeFor(tx, tenantId, input.code, now)
     const fit = await fitOffers(tx, tenantId, await liveOffers(tx, tenantId, now), (o) => quote(input.bag, rows, shop, now, input.address.pincode, { offers: o, code: typed }, delivery), input, typed, now)
     const q = quote(input.bag, rows, shop, now, input.address.pincode, { offers: fit.offers, code: typed }, delivery)
     if (q.empty) return { kind: 'refused', status: 422, error: 'Nothing in your bag can be bought right now.', quote: q }

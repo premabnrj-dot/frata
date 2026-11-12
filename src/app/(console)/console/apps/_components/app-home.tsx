@@ -54,7 +54,7 @@ export function AppHome({ k, tab, tabs = [], first = 'Overview', badge, meta, pr
       {canTurnOff ? (
         <div className="mt-8 flex justify-end border-t border-border pt-4">
           {offer.selfTrial ? <EndTrial k={k} name={def.name} paidFrom={offer.selfTrial.paidFrom} />
-            : <AppAction k={k} name={def.name} action={{ kind: 'switch', on: true }} canManage askHref="" />}
+            : <AppAction k={k} name={def.name} action={{ kind: 'switch', on: true }} canManage askHref="" paid={offer.paid} />}
         </div>
       ) : null}
     </>

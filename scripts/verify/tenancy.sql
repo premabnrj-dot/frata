@@ -2869,6 +2869,18 @@ rollback;
 do $$ begin
   if not exists (select 1 from tenant_addons where tenant_id = '22222222-2222-2222-2222-222222222222' and module = 'reviews' and reason = 'proof') then raise exception 'FAIL: B add-on changed'; end if;
 end $$;
+-- Stop on a paid add-on (Turn off, security review DZ7 H1): it works to the month's end (IST) and is never billed after.
+insert into tenant_addons (tenant_id, module, addon_price_id, starts_at, created_by, reason)
+  select '11111111-1111-1111-1111-111111111111', 'delivery_zones', id, now() - interval '40 days', '99999999-9999-9999-9999-999999999999', 'proof stop' from addon_prices where module = 'delivery_zones' limit 1;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare e timestamptz; begin
+  e := app_stop_addon('99999999-9999-9999-9999-999999999999', 'delivery_zones');
+  if e is null or e <> ((date_trunc('month', now() at time zone 'Asia/Kolkata') + interval '1 month') at time zone 'Asia/Kolkata') then raise exception 'FAIL: Stop ends at the month end, got %', e; end if;
+  if (select ends_at from tenant_addons where reason = 'proof stop') <> e then raise exception 'FAIL: Stop did not end the paid row'; end if;
+end $$;
+rollback;
+delete from tenant_addons where reason = 'proof stop';
 -- A paid row whose price is another add-on's: refused by the key.
 do $$ begin
   insert into tenant_addons (tenant_id, module, addon_price_id, created_by) select '22222222-2222-2222-2222-222222222222', 'reviews', id, 'aaaaaaaa-0000-0000-0000-000000000001' from addon_prices where module = 'delivery_zones' limit 1;

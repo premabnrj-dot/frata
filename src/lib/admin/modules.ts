@@ -84,7 +84,8 @@ export async function endAddon(staff: StaffOk, tenantId: string, addonId: string
     if (!row) return false
     // A trial the shop started has its paid row waiting from the trial's end (A3): ending the trial ends both, so
     // nothing is ever billed (review Sec H2 / Arch M5).
-    if (row.byShop && row.trialEndsAt) {
+    // Only while the trial runs: a converted trial's paid row is the shop's, ended by Stop (security review DZ7 L1).
+    if (row.byShop && row.trialEndsAt && row.trialEndsAt > now) {
       await tx.update(tenantAddons).set({ endsAt: sql`${tenantAddons.startsAt}` })
         .where(and(eq(tenantAddons.tenantId, tenantId), eq(tenantAddons.module, row.module), eq(tenantAddons.byShop, true), isNotNull(tenantAddons.addonPriceId),
           isNull(tenantAddons.endsAt), gte(tenantAddons.startsAt, row.trialEndsAt)))

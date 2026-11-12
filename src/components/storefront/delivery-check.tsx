@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api, inr } from './shop-client'
 import { fill } from './fill'
 import type { BuyWords } from './words'
+import { chargeOn, codOn, type DeliveryTerms } from '@/domains/delivery/floor'
 
 // Delivery Zones PD·0 (plan docs/plans/2026-11-12-delivery-zones.md; approved mockup "PIN code check"): under the buy
 // box, every plan. Asks /api/shop/delivery for this PIN code's public terms and applies them to the piece's price here
@@ -54,14 +55,16 @@ export function DeliveryCheck({ price, w }: { price: number | null; w: BuyWords 
   if (t && !t.deliverable) lines.push({ text: fill(w.pinNo, { place }), tone: 'bad' })
   if (t && t.deliverable) {
     if (t.by) lines.push({ text: fill(w.pinBy, { place, date: day(t.by) }), tone: 'ok' })
-    if (t.cod.on) {
-      const over = price !== null && t.cod.max !== null && price > t.cod.max
-      const under = price !== null && price < t.cod.min
-      if (over) lines.push({ text: fill(w.pinCodUpTo, { max: inr(t.cod.max!) }), tone: 'warn' })
-      else if (!under) lines.push({ text: w.cod + (t.cod.charge > 0 ? fill(w.codExtra, { fee: inr(t.cod.charge) }) : ''), tone: 'plain' })
-    } else if (t.cod.why === 'prepaid_only') lines.push({ text: w.pinOnline, tone: 'warn' })
-    const free = !t.charge || (t.freeAbove !== null && price !== null && price >= t.freeAbove)
-    lines.push({ text: free ? w.freeAll : fill(w.delivery, { flat: inr(t.charge) }) + (t.freeAbove ? fill(w.deliveryFreeAbove, { above: inr(t.freeAbove) }) : ''), tone: 'plain' })
+    // THE rule's own pay-on-delivery and charge (floor.ts: pure, no presets), for this piece as a bag of one: the
+    // limit counts delivery and the fee, as checkout does (impact review DZ7).
+    const terms: DeliveryTerms = { deliverable: true, zone: null, charge: t.charge, freeAbove: t.freeAbove, days: [0, 0],
+      cod: t.cod.on ? { on: true, charge: t.cod.charge, min: t.cod.min, max: t.cod.max } : { on: false, why: t.cod.why } }
+    const cod = price === null ? null : codOn(price, terms)
+    if (cod?.offered) lines.push({ text: w.cod + (cod.charge > 0 ? fill(w.codExtra, { fee: inr(cod.charge) }) : ''), tone: 'plain' })
+    else if (cod?.reason === 'above_max') lines.push({ text: fill(w.pinCodUpTo, { max: inr(cod.max) }), tone: 'warn' })
+    else if (cod?.reason === 'prepaid_only' || (price === null && !t.cod.on && t.cod.why === 'prepaid_only')) lines.push({ text: w.pinOnline, tone: 'warn' })
+    const charged = price === null ? t.charge : chargeOn(price, terms)
+    lines.push({ text: !charged ? w.freeAll : fill(w.delivery, { flat: inr(t.charge) }) + (t.freeAbove ? fill(w.deliveryFreeAbove, { above: inr(t.freeAbove) }) : ''), tone: 'plain' })
   }
   const tone = { ok: 'text-store-good', warn: 'font-medium', bad: 'text-store-bad', plain: '' } as const
 

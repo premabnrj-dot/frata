@@ -31,6 +31,8 @@ export default async function DeliveryZonesPage({ searchParams }: { searchParams
   const now = new Date()
   const apps = await appsPage(auth.membership.tenantId, auth.userId, now.toISOString()).catch((err) => { console.error('[zones apps]', errName(err)); return null })
   if (!apps) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  // The accountant's console is GST and documents (roles): PIN code rules carry the brand's own notes (security DZ7 M1).
+  if (auth.membership.role === 'accountant') return <Panel title="Only the owner, an admin or staff see Delivery Zones" />
   const gate = apps.access.delivery_zones
   const about = aboutProps('delivery_zones', apps, now, mayTurnOff(auth.membership), auth.membership.tenantName)
   if (!gate.usable) {
@@ -38,14 +40,13 @@ export default async function DeliveryZonesPage({ searchParams }: { searchParams
       notice={gate.why === 'paused' ? <p role="status" className="mb-4 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">Delivery Zones is paused by Frrata. Your Settings apply until it’s back.</p> : undefined} />
   }
   const sp = await searchParams
-  const accountant = auth.membership.role === 'accountant'
-  const tab = sp.tab === 'rules' || sp.tab === 'dates' ? sp.tab : sp.tab === 'billing' && !accountant ? 'billing' : 'overview'
+  const tab = sp.tab === 'rules' || sp.tab === 'dates' ? sp.tab : sp.tab === 'billing' ? 'billing' : 'overview'
   const canEdit = (CAN_BUILD as readonly string[]).includes(auth.membership.role)
   const q = /^[0-9]{1,6}$/.test(sp.q ?? '') ? sp.q! : ''
   const page = Math.max(1, Math.min(50, Number(sp.page) || 1))
   const d = tab === 'billing' ? null : await deliveryConsole(auth.membership.tenantId, q, page).catch((err) => { console.error('[zones]', errName(err)); return undefined })
   const home = (body?: React.ReactNode) => (
-    <AppHome k="delivery_zones" tab={tab} first="Zones" tabs={TABS} offer={about.offer} worksWith={about.worksWith} billing={!accountant}
+    <AppHome k="delivery_zones" tab={tab} first="Zones" tabs={TABS} offer={about.offer} worksWith={about.worksWith} billing
       canTurnOff={mayTurnOff(auth.membership)} meta={d?.settings?.pickup ? <>From <span className="font-mono">{d.settings.pickup}</span></> : undefined}
       badge={d && d.zones.length ? <Badge tone="neutral">{d.zones.length} zones</Badge> : undefined}>{body}</AppHome>
   )
@@ -69,7 +70,7 @@ export default async function DeliveryZonesPage({ searchParams }: { searchParams
     <>
       <ZonesTab canEdit={canEdit} zones={d.zones.map((z) => ({ ...z, count: dir.length ? counts.get(z.id) ?? 0 : null }))}
         floor={{ charge: d.settings.shippingFlat, freeAbove: d.settings.freeShippingAbove || null, codOn: d.settings.codOn, codCharge: d.settings.codCharge }} />
-      {!canEdit && <p className="mt-3 text-sm text-muted-foreground">Only the owner or an admin changes zones.</p>}
+      {!canEdit && <p className="mt-3 text-sm text-muted-foreground">Only the owner, an admin or the shop’s partner changes zones.</p>}
     </>,
   )
 }

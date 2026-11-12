@@ -63,3 +63,20 @@ describe('quote', () => {
     expect(arrivalRange([{ kind: 'preorder', shipsBy: '2026-12-15', leadMinDays: null, leadMaxDays: null }], rules, now)).toEqual({ from: '2026-12-21', to: '2026-12-24' })
   })
 })
+
+describe('quote with Delivery Zones usable (DZ7: the one rule at checkout)', () => {
+  const z = (id: string, position: number, preset: 'metro' | 'rest' | 'special' | null, over = {}) =>
+    ({ id, name: id, position, preset, charge: 7900, freeAbove: 199900, daysMin: 3, daysMax: 5, codOn: true, codCharge: 4900, codMin: 0, codMax: null, ...over })
+  const setup = { zones: [z('Metro', 0, 'metro', { charge: 5900, freeAbove: 149900, daysMin: 1, daysMax: 2 }), z('Special', 1, 'special', { charge: 14900, freeAbove: null, codOn: false }), z('Rest', 2, 'rest')], ownZoneIds: [], rule: null }
+  const dispatch = { days: 1, cutoff: null, shipDays: 0b0111111, holidays: [] }
+  it('the zone’s charge and free-above, its pay on delivery, its days; a rule that refuses the PIN code', () => {
+    const metro = quote([{ variantId: 'a', qty: 1 }], [v('a', { price: 99900 })], rules, now, '400070', {}, { setup, dispatch })
+    expect([metro.zone, metro.shipping, metro.deliverable, metro.cod.offer.offered]).toEqual(['Metro', 5900, true, true])
+    const special = quote([{ variantId: 'a', qty: 1 }], [v('a', { price: 249000 })], rules, now, '799001', {}, { setup, dispatch })
+    expect([special.zone, special.shipping, special.cod.offer]).toEqual(['Special', 14900, { offered: false, reason: 'prepaid_only', pincode: '799001' }])
+    const no = quote([{ variantId: 'a', qty: 1 }], [v('a')], rules, now, '744101', {}, { setup: { ...setup, rule: { rule: 'no_delivery' } }, dispatch })
+    expect([no.deliverable, no.cod.offer.offered]).toEqual([false, false])
+    // No zones (lapsed or never set up): exactly the floor.
+    expect(quote([{ variantId: 'a', qty: 1 }], [v('a', { price: 99900 })], rules, now, '400070').shipping).toBe(7900)
+  })
+})
