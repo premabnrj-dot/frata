@@ -25,6 +25,7 @@ import { shopSettings } from '@/lib/db/schema'
 import { shopPages, shopThemeRevisions } from '@/lib/db/schema-themes'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { writeProducts } from '@/lib/catalogue/write'
+import { lockTimedOut } from '@/lib/orders/place'
 import { ensureTypes, freeHandle, handleFree } from '@/lib/catalogue/handles'
 import { errName } from '@/lib/log'
 
@@ -155,6 +156,8 @@ export async function saveProduct(productId: string, version: number, input: Pro
     const why = reason(err)
     if (why.includes('variants_tenant_sku')) return { ok: false, error: 'A SKU is already used by another product in your shop.' }
     if (why.includes('products_tenant_handle')) return { ok: false, error: 'Another product uses that address.', errors: { handle: 'Another product uses this address.' } }
+    // A drop's checkout holds its sizes' rows for longer than writeProducts waits (1 s): expected, not an error.
+    if (lockTimedOut(err)) return { ok: false, error: 'Someone is buying this product right now. Save again in a moment.' }
     console.error('[saveProduct]', why)
     return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
   }

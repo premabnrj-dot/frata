@@ -18,7 +18,8 @@ import { retireVariants } from './retire-variants'
 //
 // Rules, the editor's as they were:
 // - An existing product's variants are locked first, in id order (as checkout locks them: no deadlock), and the
-//   writer waits at most 1 s for a lock; the caller's lock_timeout is put back after.
+//   writer waits at most 1 s for a lock (a drop's checkout holds them): past it the statement throws 55P03, which the
+//   caller tells the merchant in words (lockTimedOut); otherwise the caller's lock_timeout is put back after.
 // - A size or colour still wanted keeps its row; one dropped is archived if ever ordered, deleted if not, refused with
 //   pre-orders to pack (retire-variants.ts); one added back that was archived returns as the same row.
 // - A SKU is unique in the shop in any case. A typed one on another product is refused; a blank one is made from the
@@ -64,9 +65,16 @@ export const takenSkus = (tx: Tx, tenantId: string, own: string[], keys: string[
 export async function writeProducts(tx: Tx, tenantId: string, drafts: readonly ProductDraft[], opts: { costs: boolean }): Promise<Written> {
   if (!drafts.length) return { ok: true, products: [] }
   const [was] = await tx.execute<{ prev: string }>(sql`select current_setting('lock_timeout') as prev, set_config('lock_timeout', '1s', true)`)
-  const result = await write(tx, tenantId, drafts, opts)
-  await tx.execute(sql`select set_config('lock_timeout', ${was!.prev}, true)`)
-  return result
+  let thrown = true
+  try {
+    const result = await write(tx, tenantId, drafts, opts)
+    thrown = false
+    return result
+  } finally {
+    // After a throw (a lock not had in 1 s: 55P03, lockTimedOut) the transaction is aborted and its rollback takes the
+    // setting with it; a statement now would fail and hide the real error.
+    if (!thrown) await tx.execute(sql`select set_config('lock_timeout', ${was!.prev}, true)`)
+  }
 }
 
 async function write(tx: Tx, tenantId: string, drafts: readonly ProductDraft[], { costs }: { costs: boolean }): Promise<Written> {
