@@ -250,6 +250,10 @@ export const cogsSql = (a: string) => sql`(${c(a, 'cogs')} - ${restockedCostSql(
  * moment (when it shipped) (`feeChanges`: the plan versions' start times, oldest first; bucket k means the k-th version, 0 none, as
  * `feeForOrder`). Offers and Analytics both read it, so their ₹ kept agree.
  */
+/** Frrata's fee base for ₹ kept: what the shopper kept (merchandise less returns within the window), never below 0.
+ * keptSql and Analytics alike (impact review 2026-11-12: Analytics charged the fee on returned pieces). */
+export const feeBaseSql = (a: string, now: Date) => sql`greatest(${c(a, 'merchandise_net')} - ${returnedSql(a, now)}, 0)`
+
 export function keptSql(now: Date, a: string, feeChanges: readonly Date[], providerCol?: SQL) {
   const st = stateSql(now, a)
   const outcome = sql<'delivered' | 'rto' | 'lost'>`(case when ${st} = 'delivered' then 'delivered' when ${st} in ('rto', 'rto_received') then 'rto' else 'lost' end)`
@@ -265,7 +269,7 @@ export function keptSql(now: Date, a: string, feeChanges: readonly Date[], provi
     columns: sql`${outcome} outcome, ${provider} provider, ${cod} cod, ${bucket} bucket, ${rtoRestockedSql(a)} restocked, count(*)::int n,
       coalesce(sum(${c(a, 'net_revenue')} - ${credited}), 0)::bigint net, sum(${cogsSql(a)})::bigint cogs, sum(${c(a, 'forward_shipping')})::bigint fwd,
       sum(${c(a, 'rto_shipping')})::bigint rto, sum(${c(a, 'courier_cod_fee')})::bigint codfee, coalesce(sum(${c(a, 'gateway_fee')}), 0)::bigint gw,
-      coalesce(sum(greatest(${c(a, 'merchandise_net')} - ${returnedSql(a, now)}, 0)), 0)::bigint base`,
+      coalesce(sum(${feeBaseSql(a, now)}), 0)::bigint base`,
     /** Group by these, after `lead` key columns of the caller's own placed first: the five group columns by position,
      * and known costs apart from unknown, so a sum is null only when all of its orders lack it. */
     groupBy: (lead = 0) => sql.raw(`${[1, 2, 3, 4, 5].map((i) => i + lead).join(', ')}, (${a}.cogs is null), (${a}.forward_shipping is null), (${a}.rto_shipping is null), (${a}.courier_cod_fee is null)`),

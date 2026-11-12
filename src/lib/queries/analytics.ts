@@ -14,7 +14,7 @@ import { orders, shipments } from '@/lib/db/schema-orders'
 import { collections, products } from '@/lib/db/schema-catalogue'
 import { attributionInputsSql } from '@/lib/db/attribution-sql'
 import { creatorCodeJoinSql } from '@/lib/db/discount-predicates'
-import { cogsSql, creditedSql, currentMethodSql, feeBucketSql, holdingSql, rtoRestockedSql, stageSql, standingSql } from '@/lib/db/order-predicates'
+import { cogsSql, creditedSql, currentMethodSql, feeBaseSql, feeBucketSql, holdingSql, rtoRestockedSql, stageSql, standingSql } from '@/lib/db/order-predicates'
 import { withTenant } from '@/lib/db/tenant'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { orderPrefix } from '@/domains/signup/slug'
@@ -79,7 +79,7 @@ function windowSql(tenantId: string, now: Date, start: Date, prevStart: Date, fe
            ${feeBucketSql('o', feeChanges)} bucket, ${rtoRestockedSql('o')} restocked,
            count(*)::int n, coalesce(sum(o.total), 0)::bigint sales, coalesce(sum(o.net_revenue - ${creditedSql('o')}), 0)::bigint net, sum(${cogsSql('o')})::bigint cogs,
            sum(o.forward_shipping)::bigint fwd, sum(o.rto_shipping)::bigint rto, sum(o.courier_cod_fee)::bigint codfee,
-           coalesce(sum(o.gateway_fee), 0)::bigint gw, coalesce(sum(o.merchandise_net), 0)::bigint base
+           coalesce(sum(o.gateway_fee), 0)::bigint gw, coalesce(sum(${feeBaseSql('o', now)}), 0)::bigint base
       from ${orders} o
       left join ${shipments} s on s.tenant_id = o.tenant_id and s.order_id = o.id and s.ended_at is null
       ${creatorCodeJoinSql(now)}

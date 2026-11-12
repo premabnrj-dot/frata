@@ -38,7 +38,7 @@ export async function riskFactsWith(tx: Tx, tenantId: string, scope: { ids: stri
   const hasPhone = sql`"orders"."phone" <> ''`
   const rows = await tx.select({
     id: orders.id, total: orders.total, customerName: orders.customerName, addressLine: orders.addressLine, area: orders.area, city: orders.city, phone: orders.phone,
-    paidAt: orders.paidAt, method: orders.paymentMethod, switchedAt: orders.switchedToCodAt, pincodeCity: pincodes.city,
+    paidAt: orders.paidAt, method: orders.paymentMethod, switchedAt: orders.switchedToCodAt, pincodeCity: pincodes.city, pincodeDistrict: pincodes.district,
     sameItems: sql<number>`(select count(*)::int from orders o2 where ${hasPhone} and o2.tenant_id = ${tenantId} and o2.phone = "orders"."phone" and o2.id <> "orders"."id"
       and ${standingSql('o2')} and o2.placed_at between "orders"."placed_at" - interval '24 hours' and "orders"."placed_at" and ${same('o2')} = ${same('"orders"')})`,
     codToday: sql<number>`(select count(*)::int from orders o2 where ${hasPhone} and o2.tenant_id = ${tenantId} and o2.phone = "orders"."phone" and o2.paid_at is null
@@ -54,7 +54,7 @@ export async function riskFactsWith(tx: Tx, tenantId: string, scope: { ids: stri
     return [r.id, {
       cod: !r.paidAt && (r.method === 'cod' || !!r.switchedAt), total: Number(r.total), customerName: r.customerName,
       // Before 1D the area was joined onto the line: the rule then reads the whole line (more lenient, never stricter).
-      addressLine: r.addressLine, city: r.city, pincodeCity: r.pincodeCity ?? null,
+      addressLine: r.addressLine, city: r.city, pincodeCity: r.pincodeCity ?? null, pincodeDistrict: r.pincodeDistrict ?? null,
       sameItemsWithin24h: known ? r.sameItems : 0, codFromPhoneToday: known ? r.codToday : 1, cancelledAsFake: known ? r.fake : 0, cameBack: known ? r.cameBack : 0, earlierOrders: known ? r.earlier : 1,
       medianCod,
     } satisfies RiskFacts]

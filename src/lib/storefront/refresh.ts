@@ -25,24 +25,38 @@ const realTiming: Timing = {
  * every 30 s — from this instance (no database read), and across every instance (one limiter row; speed review
  * 2026-11-11: 10 instances purged 10 times). A sell-out inside a window already purged is not dropped (shopper batch
  * 2026-11-12): it queues ONE trailing purge at the window's end, per shop, on one instance (limiter `soldOutTrail`), which
- * runs only if nobody purged in the new window first. If the instance is stopped before it fires, the 60 s backstop
- * covers it. Checkout always reads live stock and live uses, so a card that still shows the last piece sells nothing twice.
+ * runs only if nobody purged in the new window first, and only when it can fire within the route's time (else, and if
+ * the instance is stopped before it fires, the 60 s backstop covers it). Checkout always reads live stock and live uses, so a card that still shows the last piece sells nothing twice.
  * Returns what happened: purged `now`, a `trailing` purge queued, or `covered` by one already queued.
  */
 const WINDOW_MS = LIMITS.soldOutPurge.windowSeconds * 1000
+/** The longest a trailer may wait: the routes that sell run for at most 30 s (maxDuration) and after() counts in it, so a
+ * longer wait would be cut off while its limiter row still told every other instance a trailer was coming (impact
+ * review 2026-11-12). A sell-out that would need longer is left to the 60 s backstop. */
+const TRAIL_BUDGET_MS = 25_000
 const lastSoldOut = new Map<string, number>()
+/** Until when this instance knows the shared window is used (by another instance) or a trailer is queued: no limiter
+ * write before then (impact review 2026-11-12: every sell-out wrote both rows while another instance held the window). */
+const usedUntil = new Map<string, number>()
+const coveredUntil = new Map<string, number>()
 const trailing = new Set<string>()
 export async function refreshSoldOut(tenantId: string, now = Date.now(), t: Timing = realTiming): Promise<'now' | 'trailing' | 'covered'> { // clock-ok: server
   const last = lastSoldOut.get(tenantId) ?? Number.NEGATIVE_INFINITY
-  if (now - last >= WINDOW_MS && await withinLimit(LIMITS.soldOutPurge, tenantId, new Date(now))) {
-    lastSoldOut.set(tenantId, now)
-    refreshShop(tenantId, 'catalogue')
-    return 'now'
+  const windowEnd = (Math.floor(now / WINDOW_MS) + 1) * WINDOW_MS
+  if (now - last >= WINDOW_MS && now >= (usedUntil.get(tenantId) ?? 0)) {
+    if (await withinLimit(LIMITS.soldOutPurge, tenantId, new Date(now))) {
+      lastSoldOut.set(tenantId, now)
+      refreshShop(tenantId, 'catalogue')
+      return 'now'
+    }
+    usedUntil.set(tenantId, windowEnd)
   }
-  if (trailing.has(tenantId) || !(await withinLimit(LIMITS.soldOutTrail, tenantId, new Date(now)))) return 'covered'
-  trailing.add(tenantId)
+  if (trailing.has(tenantId) || now < (coveredUntil.get(tenantId) ?? 0)) return 'covered'
   // The later of this instance's 30 s and the shared window's end: both let a purge through then.
-  const at = Math.max(last + WINDOW_MS, (Math.floor(now / WINDOW_MS) + 1) * WINDOW_MS)
+  const at = Math.max(last + WINDOW_MS, windowEnd)
+  if (at - now > TRAIL_BUDGET_MS) return 'covered'
+  if (!(await withinLimit(LIMITS.soldOutTrail, tenantId, new Date(now)))) { coveredUntil.set(tenantId, windowEnd); return 'covered' }
+  trailing.add(tenantId)
   t.later(async () => {
     try {
       await t.wait(Math.max(0, at - t.clock()))

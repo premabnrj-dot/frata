@@ -24,6 +24,7 @@ import { keysFor, noteKeysAnswer } from '@/lib/payments/keys'
 import { createOrder } from '@/lib/payments/razorpay'
 import { refreshSoldOut } from '@/lib/queries/storefront'
 import { linkCustomer } from '@/lib/queries/customers'
+import { freeStock } from '@/domains/catalogue/availability'
 
 // =============================================================================
 // FILE: src/lib/orders/place.ts
@@ -197,7 +198,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     // held and owed — the product page's rule (storefront variantCols): its cached pages must say so too.
     for (const l of live) {
       const r = l.kind === 'in_stock' ? rows.find((x) => x.variantId === l.variantId) : undefined
-      if (r && r.stock - r.held - r.owed - l.qty <= 0 && !soldOut.includes(l.variantId)) soldOut.push(l.variantId)
+      if (r && freeStock(r) - l.qty <= 0 && !soldOut.includes(l.variantId)) soldOut.push(l.variantId)
     }
     // An offer this order filled up (its total limit or budget) leaves the bar, the cards and the product pages.
     if (fit.fills(kept)) offerFilled = true

@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.19.0
+  version: 5.19.1
   verified: 2026-11-12
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -294,6 +294,9 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 - **Lists**: `DataTable` shares chrome, not columns. Default view is a WORK
   QUEUE (to confirm, delivery failed), not history. Filters live in the URL,
   the server filters; 50 rows a page, numbered, never infinite scroll.
+  View tabs (`ViewTabs`) show an exception tab (couldn't deliver, coming back) only while it holds orders; on a phone
+  they may scroll sideways inside the page gutter (`scroll`, 2026-11-12) — tabs over a list, not navigation, so
+  UX rule 10's "never a sideways strip" (the bottom bar) doesn't apply.
 - **Order row**: number (mono link) · placed · payment badge · status badge ·
   value · COD risk badge (Medium/High in words, never a bare score; Low shows
   nothing). Profit per order waits for Phase 3, and staff never see cost.

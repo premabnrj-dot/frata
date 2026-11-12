@@ -30,6 +30,9 @@ async function sized(bitmap: ImageBitmap, width: number, format: PhotoFormat | n
     f = probe?.type === 'image/webp' ? 'webp' : 'jpeg'
     if (probe && f === 'webp' && probe.size <= MAX_UPLOAD_BYTES) return { blob: probe, format: f }
   }
+  // JPEG has no transparency: the browser would put a transparent logo on black. White goes behind it instead
+  // (impact review 2026-11-12: Safari logos came out as a black box).
+  if (f === 'jpeg') { ctx.globalCompositeOperation = 'destination-over'; ctx.fillStyle = 'white'; ctx.fillRect(0, 0, width, height) }
   for (const q of QUALITIES) {
     const blob = await encode(canvas, f, q)
     if (!blob || blob.type !== contentTypeOf(f)) throw new Error('This browser could not make the photo. Try another browser.')

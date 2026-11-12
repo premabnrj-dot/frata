@@ -1,7 +1,7 @@
 // A return that was NOT put back in stock loses its goods' cost in ₹ kept (2026-11-12), on a real Postgres: two
 // orders come back by hand (markCameBack), one with its stock put back and one without; keptSql (Offers) and
 // Analytics read the came-back event the same way (rtoRestockedSql) and agree. Tenant A of the proof, rolled back.
-// Skipped unless INT_DB_HOST is set (CI).
+// A delivered order with pieces returned: the fee follows what was kept in both. Skipped unless INT_DB_HOST is set (CI).
 import { describe, expect, it } from 'vitest'
 
 const host = process.env.INT_DB_HOST
@@ -66,6 +66,43 @@ describe.skipIf(!host)('₹ kept: a return keeps its cost only when its stock we
       const after = await q.analyticsIn(tx, A, 'owner', 30, now)
       expect(after.cur.kept!.rto.kept - (base.cur.kept?.rto.kept ?? 0)).toBe(kept.rto.kept)
       expect(after.cur.kept!.leftOut - (base.cur.kept?.leftOut ?? 0)).toBe(1)
+      throw ROLLBACK
+    }).catch((err) => { if (err !== ROLLBACK) throw err })
+  })
+
+  it('a delivered order with pieces returned: Frrata\'s fee is on what was kept, in Analytics as in Offers (impact review 2026-11-12)', async () => {
+    process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { orders, creditNotes } = await import('@/lib/db/schema-orders')
+    const { keptSql } = await import('@/lib/db/order-predicates')
+    const q = await import('@/lib/queries/analytics')
+    const { sql } = await import('drizzle-orm')
+    const ROLLBACK = new Error('rollback')
+    const now = new Date('2032-07-01T10:00:00Z')
+    const at = (h: number) => new Date(now.getTime() - 48 * 3_600_000 + h * 3_600_000)
+    const n = 950_000 + Math.floor(Math.random() * 9_000)
+    await withTenant(A, async (tx) => {
+      const [o] = await tx.insert(orders).values({ tenantId: A, number: n, paymentMethod: 'cod', placedAt: at(0), confirmedAt: at(0), packedAt: at(0), shippedAt: at(1), deliveredAt: at(2),
+        invoiceNumber: `KR/${n}`, subtotal: 100000, total: 100000, gstTotal: 4762, merchandiseNet: 95238, cogs: 40000 }).returning({ id: orders.id })
+      const base = async () => {
+        const k = keptSql(now, 'o', [])
+        const [r] = await tx.execute<{ base: string }>(sql`select ${k.columns} from orders o where o.tenant_id = ${A} and o.id = ${o!.id} and ${k.where} group by ${k.groupBy()}`)
+        return Number(r!.base)
+      }
+      const before = await q.analyticsIn(tx, A, 'owner', 30, now)
+      expect(await base()).toBe(95238)
+      // Half came back on a return note, inside the window.
+      await tx.insert(creditNotes).values({ tenantId: A, orderId: o!.id, number: `KR/CN/${n}`, againstInvoice: `KR/${n}`, reason: 'returned', kind: 'return',
+        taxable: 47619, cgst: 0, sgst: 0, igst: 0, total: 47619, issuedAt: at(3), issuedBy: riya.userId })
+      expect(await base()).toBe(47619)
+      const after = await q.analyticsIn(tx, A, 'owner', 30, now)
+      // ₹ kept fell by the ₹476.19 credited, less the fee no longer charged on it: 2% of ₹952.38 → 2% of ₹476.19 (₹9.52
+      // back). Before the fix Analytics kept charging the fee on the returned half: the drop was the whole ₹476.19.
+      // Tenant A of the proof is on a 2% plan.
+      const { deliveredFee } = await import('@/domains/plans/entitlements')
+      const { paise } = await import('@/domains/money/paise')
+      const delta = after.cur.kept!.delivered.kept - (before.cur.kept?.delivered.kept ?? 0)
+      expect(delta).toBe(-47619 + Number(deliveredFee(paise(95238), 200)) - Number(deliveredFee(paise(47619), 200)))
       throw ROLLBACK
     }).catch((err) => { if (err !== ROLLBACK) throw err })
   })

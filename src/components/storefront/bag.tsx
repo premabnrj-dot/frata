@@ -5,6 +5,7 @@ import { pick, urlFor } from '@/domains/media/sizes'
 import { api, codWhyNotText, inr, type PublicQuote } from './shop-client'
 import { bag, useBag, useOfferCode } from './bag-store'
 import { CloseMark } from './close-mark'
+import { saysOnline } from '@/domains/checkout/offer-text'
 
 /** Re-price the bag on the server whenever it changes; the bag follows what can be bought. */
 export function useQuote(pincode?: string) {
@@ -116,7 +117,7 @@ export function OfferRows({ applied }: { applied: PublicQuote['appliedPrepaid'] 
 
 /** An offer's name with what it is, said once: "Pay online, save" already says online, so no "(paying online)" after it. */
 function savingName(a: { class: string; title: string }): string {
-  if (a.class === 'payment') return /online/i.test(a.title) ? a.title : `${a.title} (paying online)`
+  if (a.class === 'payment') return saysOnline(a.title) ? a.title : `${a.title} (paying online)`
   if (a.class === 'shipping') return /free (delivery|shipping)/i.test(a.title) ? a.title : `${a.title}: free delivery`
   return a.title
 }

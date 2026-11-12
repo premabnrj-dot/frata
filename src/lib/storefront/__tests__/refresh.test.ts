@@ -56,4 +56,19 @@ describe('refreshSoldOut (speed review P11, 2026-11-11; trailing purge 2026-11-1
     await f.run()
     expect(revalidateTag).not.toHaveBeenCalled()
   })
+  it('a window known used writes no limiter row again before its end; a trailer past the route time is left to the backstop', async () => {
+    revalidateTag.mockClear()
+    const { withinLimit } = await import('@/lib/db/rate-limit')
+    const f = timing(3_000_000)
+    const w = Math.floor(3_000_000 / 30_000)
+    windows.add(`sold_out_purge:shop:e:${w}`); windows.add(`sold_out_trail:shop:e:${w}`) // another instance purged and trails
+    expect(await refreshSoldOut('e', 3_006_000, f.t)).toBe('covered')
+    vi.mocked(withinLimit).mockClear()
+    expect(await refreshSoldOut('e', 3_010_000, f.t)).toBe('covered')
+    expect(withinLimit).not.toHaveBeenCalled()
+    // A sell-out 2 s into a fresh window (purged elsewhere) would wait 28 s: past the 25 s budget, no trailer row taken.
+    windows.add(`sold_out_purge:shop:g:${Math.floor(3_062_000 / 30_000)}`)
+    expect(await refreshSoldOut('g', 3_062_000, f.t)).toBe('covered')
+    expect(windows.has(`sold_out_trail:shop:g:${Math.floor(3_062_000 / 30_000)}`)).toBe(false)
+  })
 })

@@ -23,6 +23,7 @@ import { eventLabel, PAYMENT, pdfHref, printHref, STATE } from '../_components/l
 import { OrderActions } from '../_components/order-actions'
 import { ShipPanel } from '../_components/ship-panel'
 import { Icon } from '@/components/icons/icon'
+import { saysOnline } from '@/domains/checkout/offer-text'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/[number]/page.tsx
@@ -135,7 +136,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
             </ul>
             <dl className="space-y-1 border-t border-border pt-3 text-sm">
               {savingsAsPaid(offers, currentMethod(o)).map((x, i) => (
-                <div key={`${x.class}-${i}`} className="flex justify-between text-ok-text"><dt>{x.class === 'payment' ? (/online/i.test(x.title) ? x.title : `${x.title} (paid online)`) : `Offer · ${x.title}`}</dt><dd>−<Money paise={paise(x.amount)} /></dd></div>
+                <div key={`${x.class}-${i}`} className="flex justify-between text-ok-text"><dt>{x.class === 'payment' ? (saysOnline(x.title) ? x.title : `${x.title} (paid online)`) : `Offer · ${x.title}`}</dt><dd>−<Money paise={paise(x.amount)} /></dd></div>
               ))}
               <div className="flex justify-between"><dt>Delivery{offers.some((x) => x.class === 'shipping') ? ' (offer)' : ''}</dt><dd>{o.shipping ? <Money paise={paise(o.shipping)} /> : 'Free'}</dd></div>
               {o.codCharge ? <div className="flex justify-between"><dt>Pay on delivery fee</dt><dd><Money paise={paise(o.codCharge)} /></dd></div> : null}

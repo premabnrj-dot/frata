@@ -34,6 +34,16 @@ describe('COD risk', () => {
     expect(risk({ ...ok, earlierOrders: 0, city: 'Jodhpur' }).level).toBe('medium')
     expect(risk({ ...ok, earlierOrders: 0, city: ' jaipur ' }).level).toBe('low')
   })
+  it('a city the directory names otherwise is not a mismatch (impact review 2026-11-12)', () => {
+    const first = { ...ok, earlierOrders: 0 }
+    expect(risk({ ...first, city: 'Bangalore', pincodeCity: 'Bengaluru', pincodeDistrict: 'Bengaluru Urban' }).level).toBe('low')
+    expect(risk({ ...first, city: 'Ahmedabad', pincodeCity: 'Ahmadabad' }).level).toBe('low')
+    expect(risk({ ...first, city: 'Delhi', pincodeCity: 'New Delhi' }).level).toBe('low')
+    expect(risk({ ...first, city: 'Gurgaon', pincodeCity: 'Gurugram' }).level).toBe('low')
+    expect(risk({ ...first, city: 'Greater Noida', pincodeCity: 'Noida', pincodeDistrict: 'Gautam Buddha Nagar' }).level).toBe('low')
+    expect(risk({ ...first, city: 'Kalyan', pincodeCity: 'Thane', pincodeDistrict: 'Thane' }).level).toBe('medium')
+    expect(risk({ ...first, city: 'Jodhpur', pincodeCity: 'Jaipur', pincodeDistrict: 'Jaipur' }).level).toBe('medium')
+  })
   it('the median rule is off until the shop has enough orders', () => {
     expect(risk({ ...ok, earlierOrders: 0, total: 900000, medianCod: null }).level).toBe('low')
   })

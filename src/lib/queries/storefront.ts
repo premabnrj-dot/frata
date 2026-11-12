@@ -4,7 +4,7 @@ import { revalidateTag, unstable_cache } from 'next/cache'
 import { coreShop } from './store-shop'
 import { coreAnnouncement } from './announcement'
 import { cache } from 'react'
-import { LOW_STOCK_AT } from '@/domains/catalogue/availability'
+import { freeStock, LOW_STOCK_AT } from '@/domains/catalogue/availability'
 import type { Chart } from '@/domains/catalogue/size-charts'
 import { readStories, type Story } from '@/domains/catalogue/stories'
 import type { PolicyFacts } from '@/domains/policies/render'
@@ -139,7 +139,7 @@ const toVariant = (v: { id: string; values: string[]; sku: string | null; gtin: 
   id: v.id, values: v.values, sku: v.sku, gtin: v.gtin, price: Number(v.price), compareAt: v.compareAt !== null && Number(v.compareAt) > Number(v.price) ? Number(v.compareAt) : null,
   mrp: v.mrp === null ? null : Number(v.mrp),
   // Shoppers learn "only N left" at LOW_STOCK_AT or below; above it, the count is not theirs to see.
-  stock: Math.min(Math.max(0, v.stock - (held.get(v.id) ?? 0) - v.owed), LOW_STOCK_AT + 1), whenOut: v.whenOut as StoreVariant['whenOut'], shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays,
+  stock: Math.min(Math.max(0, freeStock({ stock: v.stock, held: held.get(v.id) ?? 0, owed: v.owed })), LOW_STOCK_AT + 1), whenOut: v.whenOut as StoreVariant['whenOut'], shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays,
   // No orders before 1C, so pre-orders are full only at a cap of 0; 1C counts them.
   preorderFull: v.cap !== null && v.cap <= 0,
   restockedAt: v.restockedAt ? v.restockedAt.toISOString() : null,

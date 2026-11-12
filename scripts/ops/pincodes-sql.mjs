@@ -5,7 +5,7 @@
 // Directory" CSV (data.gov.in, Government Open Data Licence – India). Production's table was empty (checked
 // 2026-11-12): checkout's city and state autofill, sign-up's pickup city and the COD risk rule "the city typed is not the
 // pincode's city" were all off. One row per pincode: the most common district and state among its post offices; city is
-// the district, as the directory has no city column. Writes idempotent SQL (insert … on conflict do update), in batches
+// the district (the directory has no city column) or the name shoppers write for it (CITY). Writes idempotent SQL (insert … on conflict do update), in batches
 // of 1,000, ready to paste into the Supabase SQL editor or apply through the Supabase API. Reads the file only.
 // Headers are matched case-insensitively: pincode, districtname (or district), statename (or state).
 // =============================================================================
@@ -44,6 +44,17 @@ const byKey = new Map(STATES.map((n) => [key(n), n]))
 const stateOf = (raw) => byKey.get(key(raw)) ?? ALIAS[key(raw)] ?? null
 /** A post office whose state is "NA": the state of its postal circle, when the circle is one state ("Bihar Circle"). */
 const circleState = (circle) => stateOf(circle.replace(/\s*circle\s*$/i, ''))
+/** The city a shopper writes for a district the directory names otherwise (checkout autofills it; the COD risk rule
+ * compares with it). Delhi's eleven districts are "Central", "South West"…: every one is Delhi but New Delhi. */
+const CITY = {
+  'Ahmadabad': 'Ahmedabad', 'Bengaluru Urban': 'Bengaluru', 'Bengaluru Rural': 'Bengaluru', 'Mumbai Suburban': 'Mumbai',
+  'Gautam Buddha Nagar': 'Noida', 'Kanpur Nagar': 'Kanpur', 'Kanpur Dehat': 'Kanpur', 'Kamrup Metro': 'Guwahati',
+  'Medchal Malkajgiri': 'Hyderabad', 'Ranga Reddy': 'Hyderabad', 'Visakhapatanam': 'Visakhapatnam', 'S.A.S Nagar': 'Mohali',
+  'Pondicherry': 'Puducherry', 'Spsr Nellore': 'Nellore', 'Y.S.R.': 'Kadapa', 'Ntr': 'Vijayawada', 'Leh Ladakh': 'Leh',
+  'Lakshadweep District': 'Lakshadweep', 'Kaimur (Bhabua)': 'Bhabua', 'Udam Singh Nagar': 'Udham Singh Nagar',
+  '24 Paraganas North': 'North 24 Parganas', '24 Paraganas South': 'South 24 Parganas', 'East District': 'Gangtok',
+}
+const cityOf = (district, state) => state === 'Delhi' ? (district === 'New Delhi' ? 'New Delhi' : 'Delhi') : (CITY[district] ?? district)
 const sqlText = (s) => `'${s.replace(/'/g, "''")}'`
 
 const lines = readFileSync(file, 'utf8').replace(/^﻿/, '').split(/\r?\n/).filter(Boolean)
@@ -69,7 +80,7 @@ for (const line of lines.slice(1)) {
 if (unknown.size) { console.error(`states not in the app's list: ${[...unknown].join(', ')}`); process.exit(1) }
 const rows = [...seen].sort(([a], [b]) => a.localeCompare(b)).map(([pin, m]) => {
   const [district, state] = [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0].split('|')
-  return `(${sqlText(pin)}, ${sqlText(district)}, ${sqlText(district)}, ${sqlText(state)})`
+  return `(${sqlText(pin)}, ${sqlText(cityOf(district, state))}, ${sqlText(district)}, ${sqlText(state)})`
 })
 console.log(`-- ${rows.length} pincodes from ${lines.length - 1} post offices (${skipped} rows skipped). Idempotent.`)
 for (let i = 0; i < rows.length; i += 1000) {

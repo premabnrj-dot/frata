@@ -19,6 +19,8 @@ export type RiskFacts = {
   city: string
   /** The pincode's city from the directory; null when the pincode is not in it (the rule is then off). */
   pincodeCity: string | null
+  /** The pincode's district from the directory: a town typed inside it is never a mismatch. */
+  pincodeDistrict?: string | null
   /** Other open orders from this phone with the same items, placed within 24 h before this one. */
   sameItemsWithin24h: number
   /** COD orders from this phone on this order's IST day, this one included. */
@@ -42,6 +44,35 @@ const normal = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '')
 /** A city with no Latin letter can't be compared with the directory's English one (shop stress test 2026-11-11: a
  * genuine Hindi address read "the city typed is not the pincode's city"); one with any Latin letter still is. */
 const comparable = (s: string) => /\p{Script=Latin}/u.test(s)
+/** Old and new names of the same city, and a district's common city name (all `normal`ised). */
+const SAME_AS: Record<string, string> = {
+  bangalore: 'bengaluru', bengaluruurban: 'bengaluru', bengalururural: 'bengaluru', bombay: 'mumbai', mumbaisuburban: 'mumbai',
+  calcutta: 'kolkata', madras: 'chennai', gurgaon: 'gurugram', ahmadabad: 'ahmedabad', pondicherry: 'puducherry', poona: 'pune',
+  baroda: 'vadodara', trivandrum: 'thiruvananthapuram', cochin: 'kochi', ernakulam: 'kochi', mysore: 'mysuru',
+  mangalore: 'mangaluru', belgaum: 'belagavi', gulbarga: 'kalaburagi', allahabad: 'prayagraj', benares: 'varanasi',
+  banaras: 'varanasi', vizag: 'visakhapatnam', visakhapatanam: 'visakhapatnam', noida: 'gautambuddhanagar',
+  greaternoida: 'gautambuddhanagar', mohali: 'sasnagar', secunderabad: 'hyderabad', thoothukudi: 'tuticorin',
+}
+const canon = (s: string) => { const n = normal(s); return SAME_AS[n] ?? n }
+/** Edits needed to turn a into b (spellings: "ahmadabad"/"ahmedabad", "gurugaon"). */
+function edits(a: string, b: string): number {
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j)
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i]
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min((prev[j] ?? 0) + 1, (cur[j - 1] ?? 0) + 1, (prev[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1))
+    prev = cur
+  }
+  return prev[b.length] ?? 0
+}
+/** Whether the city typed can be the directory's place: same name or an old one, one inside the other ("Delhi" in
+ * "New Delhi"), or a spelling two letters off. Shop stress test 2026-11-12: an exact match flagged "Bangalore". */
+export function sameCity(typed: string, place: string): boolean {
+  const a = canon(typed), b = canon(place)
+  if (!a || !b || a === b) return true
+  if (Math.min(a.length, b.length) >= 4 && (a.includes(b) || b.includes(a))) return true
+  return Math.min(a.length, b.length) >= 6 && edits(a, b) <= 2
+}
+
 /** A house or building number in any script's digits (Devanagari ०–९, Bengali, Gurmukhi, Gujarati, Tamil…). */
 const HAS_NUMBER = /\p{Nd}/u
 
@@ -60,7 +91,7 @@ export function risk(f: RiskFacts): Risk {
   if (f.earlierOrders === 0) medium.push('First order from this phone')
   const line = f.addressLine.trim()
   if (!HAS_NUMBER.test(line) || line.length < 15) medium.push('The address has no house or building number, or is very short')
-  if (f.pincodeCity && f.city && comparable(f.city) && normal(f.pincodeCity) !== normal(f.city)) medium.push(`The city typed is not the pincode's city (${f.pincodeCity})`)
+  if (f.pincodeCity && f.city && comparable(f.city) && !sameCity(f.city, f.pincodeCity) && !(f.pincodeDistrict && sameCity(f.city, f.pincodeDistrict))) medium.push(`The city typed is not the pincode's city (${f.pincodeCity})`)
   if (f.medianCod !== null && f.total > 2 * f.medianCod) medium.push('Over twice your usual pay-on-delivery order')
   if (TEST_NAME.test(f.customerName.trim())) medium.push('The name looks like a test')
   if (medium.length >= 2) return { level: 'medium', reasons: medium.slice(0, 3), next: 'Call or WhatsApp to confirm.' }

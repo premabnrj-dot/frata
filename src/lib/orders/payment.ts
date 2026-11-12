@@ -18,6 +18,7 @@ import { refreshSoldOut } from '@/lib/queries/storefront'
 import { HOLD_MINUTES, startPayment, takeStock, type Pay } from './place'
 import { storedPricing, writeReprice } from './reprice'
 import { enqueuePaymentCheck } from './payment-check'
+import { freeStock } from '@/domains/catalogue/availability'
 
 // =============================================================================
 // FILE: src/lib/orders/payment.ts
@@ -138,10 +139,10 @@ export async function releaseHold(tenantId: string, hash: string, now = new Date
     const lines = await tx.select({ variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
       .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id), eq(orderLines.kind, 'in_stock'), isNull(orderLines.stockTakenAt)))
     const rows = await variantRows(tx, tenantId, lines.flatMap((l) => (l.variantId ? [l.variantId] : [])), now)
-    return lines.some((l) => { const v = rows.find((x) => x.variantId === l.variantId); return v !== undefined && v.stock - v.held - v.owed <= l.qty })
+    return lines.some((l) => { const v = rows.find((x) => x.variantId === l.variantId); return v !== undefined && freeStock(v) <= l.qty })
   })
   if (back === null) return 'kept'
-  if (back) await refreshSoldOut(tenantId)
+  if (back) await refreshSoldOut(tenantId).catch((e: unknown) => console.error('[releaseHold] purge', e instanceof Error ? e.name : 'error'))
   return 'released'
 }
 
