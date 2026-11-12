@@ -8,7 +8,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import { generateKeyPairSync, randomBytes } from 'node:crypto'
-import { CONSOLE, SHOP, USERS, signedIn, until } from '../lib.mjs'
+import { CONSOLE, SHOP, USERS, expectToast, signedIn, until } from '../lib.mjs'
 
 /** A page with its own virtual platform authenticator (user verification on, resident keys, auto presence). */
 async function withAuthenticator(t, who, opts = {}) {
@@ -80,7 +80,7 @@ export default {
         await meera.p.getByRole('button', { name: 'Approve' }).click()
         await meera.p.getByLabel(/Code .* reads to you/).fill('000000' === code ? '111111' : '000000')
         await meera.p.getByRole('button', { name: 'Confirm with passkey and approve' }).click()
-        await meera.p.getByRole('alert').filter({ hasText: 'doesn\'t match' }).waitFor()
+        await expectToast(meera.p, 'doesn\'t match')
         await meera.p.getByLabel(/Code .* reads to you/).fill(code)
         await meera.p.getByRole('button', { name: 'Confirm with passkey and approve' }).click()
         await until(async () => (await db`select 1 from staff_enrolment_requests where user_id = ${O.id} and approved_by = ${F.id}`).length > 0, 10_000)

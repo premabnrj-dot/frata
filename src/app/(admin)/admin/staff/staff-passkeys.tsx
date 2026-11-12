@@ -1,25 +1,26 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { ActionForm, type ActionResult } from '@/components/ui/action-form'
+import { useToast } from '@/components/ui/toast'
 import { addPasskey, approve, confirmPasskey, removeOne } from '../_components/passkey-client'
 
 // =============================================================================
 // FILE: src/app/(admin)/admin/staff/staff-passkeys.tsx — Admin › Staff's passkey controls (staff passkeys spec;
 // mockup https://claude.ai/artifact/Xng3BV15YZpDQi9MoYLGsZ). Each one confirms with the admin's own passkey first:
-// approving, removing, and adding or removing staff need a check in the last 5 minutes.
+// approving, removing, and adding or removing staff need a check in the last 5 minutes. A failure is an error toast
+// (§ Feedback 1), the words passkey-client gives.
 // =============================================================================
-
-const Err = ({ text }: { text: string | null }) => (text ? <p role="alert" className="text-sm text-destructive">{text}</p> : null)
 
 /** Approve a person's request with the code they read out. */
 export function ApproveRequest({ email }: { email: string }) {
   const router = useRouter()
+  const toast = useToast()
   const [open, setOpen] = useState(false)
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   if (!open) return <Button onClick={() => setOpen(true)}>Approve</Button>
   return (
     <div className="grid w-full max-w-sm gap-2">
@@ -28,15 +29,14 @@ export function ApproveRequest({ email }: { email: string }) {
           className="h-10 rounded-md border border-input bg-card px-3 font-mono text-sm tracking-widest md:h-9" />
       </label>
       <div className="flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={() => { setOpen(false); setCode(''); setError(null) }}>Cancel</Button>
+        <Button variant="secondary" onClick={() => { setOpen(false); setCode('') }}>Cancel</Button>
         <Button disabled={busy || code.replace(/\D/g, '').length !== 6} onClick={async () => {
-          setBusy(true); setError(null)
+          setBusy(true); toast.dismiss()
           const r = await approve(email, code)
           setBusy(false)
-          if (r.ok) { setOpen(false); router.refresh() } else setError(r.error)
+          if (r.ok) { setOpen(false); router.refresh() } else toast.error(r.error)
         }}>{busy ? 'Waiting for your device…' : 'Confirm with passkey and approve'}</Button>
       </div>
-      <Err text={error} />
     </div>
   )
 }
@@ -44,9 +44,9 @@ export function ApproveRequest({ email }: { email: string }) {
 /** One passkey's Remove, with its confirmation. */
 export function RemovePasskey({ id, name, owner, left }: { id: string; name: string; owner: string; left: number }) {
   const router = useRouter()
+  const toast = useToast()
   const [ask, setAsk] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   if (!ask) return <Button variant="ghost" onClick={() => setAsk(true)}>Remove {name}</Button>
   return (
     <div role="group" aria-label={`Remove ${name}`} className="grid gap-2 rounded-md border border-destructive/30 p-3">
@@ -55,13 +55,12 @@ export function RemovePasskey({ id, name, owner, left }: { id: string; name: str
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" onClick={() => setAsk(false)}>Keep</Button>
         <Button variant="destructive" disabled={busy} onClick={async () => {
-          setBusy(true); setError(null)
+          setBusy(true); toast.dismiss()
           const r = await removeOne(id)
           setBusy(false)
-          if (r.ok) { setAsk(false); router.refresh() } else setError(r.error)
+          if (r.ok) { setAsk(false); router.refresh() } else toast.error(r.error)
         }}>{busy ? 'Waiting for your device…' : 'Confirm with passkey and remove'}</Button>
       </div>
-      <Err text={error} />
     </div>
   )
 }
@@ -69,10 +68,10 @@ export function RemovePasskey({ id, name, owner, left }: { id: string; name: str
 /** Your own second device: add another passkey (this session is already confirmed). */
 export function AddOwnPasskey() {
   const router = useRouter()
+  const toast = useToast()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   if (!open) return <Button variant="secondary" onClick={() => setOpen(true)}>Add a passkey</Button>
   return (
     <div className="grid w-full max-w-sm gap-2">
@@ -83,33 +82,22 @@ export function AddOwnPasskey() {
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
         <Button disabled={busy || !name.trim()} onClick={async () => {
-          setBusy(true); setError(null)
+          setBusy(true); toast.dismiss()
           const r = await addPasskey(name.trim(), true)
           setBusy(false)
-          if (r.ok) { setOpen(false); setName(''); router.refresh() } else setError(r.error)
+          if (r.ok) { setOpen(false); setName(''); router.refresh() } else toast.error(r.error)
         }}>{busy ? 'Waiting for your device…' : 'Confirm with passkey and add'}</Button>
       </div>
-      <Err text={error} />
     </div>
   )
 }
 
-/** A server-action form that confirms with a passkey before it submits (adding or removing staff). */
-export function ConfirmFirst({ action, children, className }: { action: (form: FormData) => void | Promise<void>; children: React.ReactNode; className?: string }) {
-  const ref = useRef<HTMLFormElement>(null)
-  const through = useRef(false)
-  const [error, setError] = useState<string | null>(null)
-  return (
-    <form ref={ref} action={action} className={className} onSubmit={async (e) => {
-      if (through.current) { through.current = false; return }
-      e.preventDefault(); setError(null)
-      const r = await confirmPasskey()
-      if (!r.ok) { setError(r.error); return }
-      through.current = true
-      ref.current?.requestSubmit()
-    }}>
-      {children}
-      <Err text={error} />
-    </form>
-  )
+/** A server-action form that confirms with a passkey before it posts (adding or removing staff). An <ActionForm>: the
+ *  browser's rules first, then the passkey, then the action; a refusal from either is its error toast. */
+export function ConfirmFirst({ action, children, className }: { action: (form: FormData) => Promise<ActionResult>; children: React.ReactNode; className?: string }) {
+  const confirmed = async (form: FormData): Promise<ActionResult> => {
+    const r = await confirmPasskey()
+    return r.ok ? action(form) : { error: r.error }
+  }
+  return <ActionForm action={confirmed} className={className}>{children}</ActionForm>
 }

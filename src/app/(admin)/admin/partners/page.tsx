@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
-import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { BRANDS_NOW, PARTNER_SERVICES } from '@/domains/partners/terms'
@@ -12,13 +11,14 @@ import { formatPhone } from '@/lib/format'
 import { dateTimeIN, sinceIN } from '@/lib/format-date'
 import { decidePartnerAction } from './actions'
 import { Submit } from '@/components/ui/submit'
+import { ActionForm, FieldMessage } from '@/components/ui/action-form'
 
 export const metadata = { title: 'Partners' }
 
 const VIEWS: [PartnerView, string][] = [['review', 'To review'], ['approved', 'Approved'], ['declined', 'Declined']]
 
 /** Admin › Partners (approved mockup screen 4): the queue on the left, one application on the right. */
-export default async function PartnersPage({ searchParams }: { searchParams: Promise<{ view?: string; id?: string; ok?: string; error?: string }> }) {
+export default async function PartnersPage({ searchParams }: { searchParams: Promise<{ view?: string; id?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
   const sp = await searchParams
@@ -29,7 +29,6 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader title="Partners" />
-      <Notice ok={sp.ok} error={sp.error} />
       <ViewTabs label="Partner views" tabs={VIEWS.map(([k, label]) => ({ href: k === 'review' ? '/admin/partners' : `/admin/partners?view=${k}`, label, count: counts[k], current: k === view }))} />
       {rows.length === 0 ? <Panel title={view === 'review' ? 'Nothing to review' : `No ${view} partners`} /> : (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -61,16 +60,17 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
               </dl>
               {view === 'review' && staff.role !== 'admin' ? <p className="text-sm text-muted-foreground">A Frrata admin decides applications.</p> : view === 'review' ? (
                 <div className="space-y-3 border-t border-border pt-4">
-                  <form action={decidePartnerAction}>
+                  <ActionForm action={decidePartnerAction}>
                     <input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="approve" />
                     <Submit size="wrap" className="w-full justify-center text-center">Approve {open.businessName || open.name}</Submit>
-                  </form>
-                  <form action={decidePartnerAction} className="space-y-2">
+                  </ActionForm>
+                  <ActionForm action={decidePartnerAction} className="space-y-2">
                     <input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="decline" />
                     <label htmlFor="reason" className="block text-sm font-medium">Reason to decline</label>
-                    <input id="reason" name="reason" maxLength={300} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+                    <input id="reason" name="reason" maxLength={300} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9" />
+                    <FieldMessage name="reason" />
                     <Submit variant="secondary" className="w-full">Decline</Submit>
-                  </form>
+                  </ActionForm>
                 </div>
               ) : <Badge tone={open.approvedAt ? 'ok' : 'neutral'}>{open.approvedAt ? 'Approved' : 'Declined'}</Badge>}
             </Section>

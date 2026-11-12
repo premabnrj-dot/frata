@@ -5,7 +5,7 @@
 // Guards: a renamed shop losing its links; another shop taking an old name; the rename limit.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, signedIn } from '../lib.mjs'
+import { CONSOLE, expectToast, signedIn } from '../lib.mjs'
 import { SHOP_DOMAIN, USERS } from '../constants.mjs'
 
 const at = (name) => `http://${name}.${SHOP_DOMAIN}`
@@ -87,7 +87,7 @@ export default {
           await a.locator('input[name="slug"]').fill('kesar-frrata')
           await a.locator('form').filter({ has: a.locator('input[name="slug"]') }).locator('input[name="reason"]').fill('Copies another brand')
           await a.getByRole('button', { name: `Rename ${name}'s address` }).click()
-          await a.getByRole('status').filter({ hasText: `Renamed to kesar-frrata.${SHOP_DOMAIN}` }).waitFor()
+          await expectToast(a, `Renamed to kesar-frrata.${SHOP_DOMAIN}`, 'ok')
           await a.getByText('Old · no redirect').waitFor()
           const s = await t.browser.newContext(); const q = await s.newPage()
           const res = await q.goto(at('kesar-studio') + '/?utm_source=instagram')
@@ -103,7 +103,7 @@ export default {
           await a.goto(CONSOLE + '/admin/names')
           await a.getByLabel('Why release kesar-studio').fill('Trademark cleared')
           await a.getByRole('button', { name: 'Release kesar-studio' }).click()
-          await a.getByRole('status').filter({ hasText: 'kesar-studio released.' }).waitFor()
+          await expectToast(a, 'kesar-studio released.', 'ok')
         } finally { await staff.close() }
         // Not opened (the step before lifted it), so the change needs no confirm.
         await p.goto(CONSOLE + '/console/settings/address')

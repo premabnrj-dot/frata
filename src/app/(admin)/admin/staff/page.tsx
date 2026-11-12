@@ -1,7 +1,6 @@
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
-import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { staffWithPasskeys } from '@/lib/admin/passkeys'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
@@ -10,23 +9,22 @@ import { dayIN } from '@/lib/format-date'
 import { addStaffAction, removeStaffAction } from './actions'
 import { Section } from '@/components/layout/section'
 import { Submit } from '@/components/ui/submit'
+import { FieldMessage } from '@/components/ui/action-form'
 import { AddOwnPasskey, ApproveRequest, ConfirmFirst, RemovePasskey } from './staff-passkeys'
 
 export const metadata = { title: 'Staff' }
 
-export default async function StaffPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
+export default async function StaffPage() {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
   const proof = await staffProof(staff.userId)
   if (!proof) return <Panel title="Confirm it's you" />
   const rows = await staffWithPasskeys(staff, proof)
-  const sp = await searchParams
   const isAdmin = staff.role === 'admin'
   const asking = isAdmin ? rows.filter((r) => r.request && !r.request.approved && r.userId !== staff.userId) : []
   return (
     <>
       <PageHeader title="Staff" />
-      <Notice ok={sp.ok} error={sp.error} />
       {asking.length > 0 && (
         <Section title={<span className="flex items-center gap-2">Asking to add a passkey <Badge tone="warn">{asking.length}</Badge></span>}>
           {asking.map((r) => (
@@ -71,7 +69,8 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
         <Section className="max-w-xl"><ConfirmFirst action={addStaffAction} className="flex flex-wrap items-end gap-2">
           <div className="flex flex-1 flex-col gap-1.5">
             <label htmlFor="email" className="text-sm font-medium">Add by email</label>
-            <input id="email" name="email" type="email" required className="h-10 md:h-9 rounded-md border border-input bg-card px-3 font-mono text-sm" />
+            <input id="email" name="email" type="email" required data-error="Enter an email." className="h-10 md:h-9 rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-mark" />
+            <FieldMessage name="email" />
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="role" className="text-sm font-medium">Role</label>

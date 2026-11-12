@@ -1,7 +1,6 @@
 import { Money, Numeric } from '@/components/data/numeric'
 import { PageHeader } from '@/components/layout/page-header'
 import { button } from '@/components/ui/button'
-import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
 import { monthOfYM, monthStartIST, ymOf } from '@/domains/time/month'
@@ -14,15 +13,16 @@ import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN } from '@/lib/format-date'
 import { collectAction, issueAction, runDraftsAction } from './actions'
 import { Submit } from '@/components/ui/submit'
+import { ActionForm, FieldMessage } from '@/components/ui/action-form'
 
 export const metadata = { title: 'Billing' }
 
 // Admin › Billing (billing B0): each shop's invoice for a month, read-only. Drafts are redrafted daily by the cron and
 // on "Run drafts"; nothing is issued, charged or sent until B2/B3 (test mode until Frrata's GSTIN and gateway exist).
-export default async function BillingPage({ searchParams }: { searchParams: Promise<{ month?: string; ok?: string; error?: string }> }) {
+export default async function BillingPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   const staff = await requireStaff(ADMIN_ONLY)
   if (!staff.ok) return <Panel title={staff.message} />
-  const { month, ok, error } = await searchParams
+  const { month } = await searchParams
   const start = (month && monthOfYM(month)) || monthStartIST(new Date())
   const ym = ymOf(start)
   const rows = await billingMonth(staff, start)
@@ -30,36 +30,35 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const begun = start.getTime() <= Date.now()
   const sum = (k: 'taxable' | 'gst' | 'total') => rows.reduce((t, r) => t + r[k], 0)
   const label = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(start)
-  const field = 'h-10 rounded-md border border-border bg-background px-3 text-sm md:h-9'
+  const field = 'h-10 rounded-md border border-border bg-background px-3 text-sm aria-invalid:border-danger-mark md:h-9'
   return (
     <>
       <PageHeader title="Billing" meta={`Invoices dated 1 ${label}: the plan for ${label} in advance, the fee on last month's delivered orders. Without Frrata's GSTIN set, issuing is test mode: a TEST series, never collected.`} />
-      <Notice ok={ok} error={error} />
       <div className="flex flex-wrap items-end gap-2">
         <form className="flex items-end gap-2">
           <label className="flex flex-col gap-1.5 text-sm font-medium">Month<input type="month" name="month" defaultValue={ym} className={field} /></label>
           <button className={button({ variant: 'secondary' })}>Show</button>
         </form>
         {draftableMonths(new Date()).some((m) => m.getTime() === start.getTime()) && (
-          <form action={runDraftsAction}>
+          <ActionForm action={runDraftsAction}>
             <input type="hidden" name="month" value={ym} />
             <Submit>Run drafts for {label}</Submit>
-          </form>
+          </ActionForm>
         )}
       </div>
       {begun && ready.open > 0 && (
         <Panel title={`Issue ${label}`}>
           <p className="text-sm">{ready.count} invoice{ready.count === 1 ? '' : 's'} to issue, totalling <Money paise={paise(ready.total)} decimals /> with GST{ready.open > ready.count ? `; ${ready.open - ready.count} with nothing to pay will close` : ''}. Numbers are given now, in order; an issued invoice never changes (a correction is a credit note).</p>
           {ready.stale > 0 ? <p className="text-sm text-warn-text">{ready.stale} draft{ready.stale === 1 ? ' was' : 's were'} made before the 1st: run drafts for {label} again first.</p> : ready.count > 0 && (
-            <form action={issueAction} className="mt-2 flex flex-wrap items-end gap-2">
+            <ActionForm action={issueAction} className="mt-2 flex flex-wrap items-end gap-2">
               <input type="hidden" name="month" value={ym} /><input type="hidden" name="count" value={ready.count} /><input type="hidden" name="total" value={ready.total} />
-              <label className="flex flex-col gap-1.5 text-sm font-medium">Type ISSUE {ready.count} to confirm<input name="confirm" autoComplete="off" className={field} /></label>
+              <label className="flex flex-col gap-1.5 text-sm font-medium">Type ISSUE {ready.count} to confirm<input name="confirm" autoComplete="off" className={field} /><FieldMessage name="confirm" /></label>
               <Submit variant="destructive">Issue {ready.count} invoice{ready.count === 1 ? '' : 's'}</Submit>
-            </form>
+            </ActionForm>
           )}
         </Panel>
       )}
-      <form action={collectAction}><input type="hidden" name="month" value={ym} /><Submit variant="secondary">Run collection now</Submit></form>
+      <ActionForm action={collectAction}><input type="hidden" name="month" value={ym} /><Submit variant="secondary">Run collection now</Submit></ActionForm>
       {rows.some((r) => r.number) && <p className="text-sm"><a href={`/admin/billing/export?month=${ym}`} className="underline">Download the GST export for {label} (CSV)</a></p>}
       {rows.length === 0 ? (
         <Panel title={`No invoices for ${label} yet`}>The daily run drafts this month and next for every shop on a plan. Run drafts to make them now.</Panel>

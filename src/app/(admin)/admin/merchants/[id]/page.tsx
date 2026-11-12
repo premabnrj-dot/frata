@@ -5,7 +5,6 @@ import { Money, Numeric } from '@/components/data/numeric'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
-import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
 import { usage, type Feature } from '@/domains/plans/entitlements'
@@ -19,6 +18,7 @@ import { resendOwnerLinkAction } from './actions'
 import { Section } from '@/components/layout/section'
 import { MerchantTabs } from './tabs'
 import { Submit } from '@/components/ui/submit'
+import { ActionForm } from '@/components/ui/action-form'
 import { InfoTip } from '@/components/ui/info-tip'
 
 /** The tab names the merchant ("Kesar Studio · Frrata Admin"). */
@@ -29,11 +29,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return { title: (await merchantName(staff, id).catch(() => null)) ?? 'Merchant' }
 }
 
-export default async function MerchantPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; error?: string }> }) {
+export default async function MerchantPage({ params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
   const { id } = await params
-  const sp = await searchParams
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound()
   const now = new Date()
   const m = await getMerchant(staff, id, now)
@@ -54,7 +53,6 @@ export default async function MerchantPage({ params, searchParams }: { params: P
           <Link href={`/admin/merchants/${id}/support`} className={button({ size: 'wrap' })}>Open {m.tenant.name}&apos;s console</Link>
         </>} />
       <MerchantTabs id={id} on="overview" />
-      <Notice ok={sp.ok} error={sp.error} />
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1 space-y-4">
@@ -67,11 +65,11 @@ export default async function MerchantPage({ params, searchParams }: { params: P
               </div>
             ))}
             {openInvite && (
-              <form action={resendOwnerLinkAction} className="flex items-center justify-between border-t border-border pt-3 text-sm">
+              <ActionForm action={resendOwnerLinkAction} className="flex items-center justify-between border-t border-border pt-3 text-sm">
                 <span>Invited: <span className="font-mono">{openInvite.email}</span> <span className="text-muted-foreground">· until {dayIN(openInvite.expiresAt)}</span></span>
                 <input type="hidden" name="tenantId" value={id} />
                 <Submit variant="secondary">Resend sign-in link</Submit>
-              </form>
+              </ActionForm>
             )}
           </Section>
 
@@ -110,6 +108,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
                 <p className="text-muted-foreground">On this plan since {dayIN(cur.tp.startsAt)}. Billed monthly (Admin › Billing).</p>
                 {(() => { const next = m.history.filter((h) => h.tp.startsAt > now).at(-1); return next ? <p className="text-warn-text">Moves to {next.name} on {dayIN(next.tp.startsAt)}{next.tp.byShop ? ', the shop’s own change' : ''}. A change here replaces it.</p> : null })()}
               </>
+            // feedback-ok: the shop's state (it has no plan) with what to do, not the result of a button
             ) : <p className="text-danger-text">No plan. Choose one with Change plan.</p>}
           </Section>
         </aside>
