@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { paidLeft, refundDue } from '../amounts'
-import { canRetry, chainLength, dueOf, feeAbout, feeKept, paidNet, refundable, refundChains, refundLine, refundStage, settleOf, tooOldToRefund, type RefundRow } from '../refunds'
+import { canRetry, chainLength, refundedOf, dueOf, feeAbout, feeKept, paidNet, refundable, refundChains, refundLine, refundStage, settleOf, tooOldToRefund, type RefundRow } from '../refunds'
 
 const now = new Date('2026-11-12T10:00:00Z')
 const at = (days: number) => new Date(now.getTime() - days * 86_400_000)
@@ -59,10 +59,10 @@ describe('a paid order\'s money after an edit (OE·2)', () => {
   })
 
   it('words a refund on the order page', () => {
-    expect(refundLine({ ...none, cause: 'edit', failure: null }, 'at 10:52')).toEqual({ words: 'refund · sends at 10:52', failed: null })
-    expect(refundLine({ ...none, sendingAt: now, cause: 'edit', failure: null }, '').words).toBe('refund · with Razorpay')
-    expect(refundLine({ ...none, sendingAt: now, sentAt: now, processedAt: now, cause: 'after_drop', failure: null }, '').words).toBe('refunded · 5–10 working days to reach the shopper · paid after the change was dropped')
-    expect(refundLine({ ...none, failedAt: now, cause: 'edit', failure: 'balance' }, '')).toEqual({ words: 'not sent', failed: 'Not enough balance in Razorpay: add funds, then try again.' })
+    expect(refundLine({ ...none, cause: 'edit', failure: null }, 'at 10:52', String)).toEqual({ words: 'refund · sends at 10:52', failed: null })
+    expect(refundLine({ ...none, sendingAt: now, cause: 'edit', failure: null }, '', String).words).toBe('refund · with Razorpay')
+    expect(refundLine({ ...none, sendingAt: now, sentAt: now, processedAt: now, cause: 'after_drop', failure: null }, '', String).words).toBe('refunded · 5–10 working days to reach the shopper · paid after the change was dropped')
+    expect(refundLine({ ...none, failedAt: now, cause: 'edit', failure: 'balance' }, '', String)).toEqual({ words: 'not sent', failed: 'Not enough balance in Razorpay: add funds, then try again.' })
   })
 
   it('Try again: never for one a later change settled, a payment too old or one already refunded elsewhere', () => {
@@ -92,5 +92,12 @@ describe('a paid order\'s money after an edit (OE·2)', () => {
     expect(paidLeft(o, ledger)).toBe(243100)
     expect(refundDue(o, ledger)).toBe(243100)
     expect(refundDue({ ...o, cancelledAt: null } as typeof o, ledger)).toBe(0)
+  })
+
+  it('what has gone back, or is on its way, from the order\'s own payments (the cancel dialog)', () => {
+    const pays = [{ id: 'pay_A', amount: 481200, at: now }]
+    expect(refundedOf(null)).toBe(0)
+    expect(refundedOf({ payments: pays, refunds: [row({ amount: 238100 }), row({ amount: 100, failedAt: now, failure: 'balance' }), row({ amount: 500, cancelledAt: now }),
+      row({ razorpayPaymentId: 'pay_OTHER', amount: 49900 })] })).toBe(238100)
   })
 })

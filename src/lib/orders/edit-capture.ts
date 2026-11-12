@@ -1,14 +1,13 @@
 import 'server-only'
 import { and, eq, isNull } from 'drizzle-orm'
 import { capturedAsAsked } from '@/domains/orders/captured'
-import { usesOn, type EditFacts, type EditReason, type Want } from '@/domains/orders/edit'
-import { classOf } from '@/domains/checkout/discounts'
+import type { EditFacts, EditReason, Want } from '@/domains/orders/edit'
 import type { Tx } from '@/lib/db'
 import { orderEditLines, orderEdits, orderRefunds } from '@/lib/db/schema-edits'
 import type { RzpPayment } from '@/lib/payments/razorpay'
 import { addOrderFee, queueRefund, recordRefundedFee, supersedeFailed } from '@/lib/payments/refunds'
-import { applyPlan, planLocked, Refused, stillFit } from './edit-write'
-import { releaseHeld } from './edit-paid'
+import { applyPlan, grownUses, planLocked, Refused, stillFit } from './edit-write'
+import { releaseHeld } from './edit-held'
 import { current, moment } from './work'
 
 // =============================================================================
@@ -79,10 +78,7 @@ async function applyWaiting(sp: Tx, tenantId: string, e: typeof orderEdits.$infe
   if (plan.total.after !== Number(e.totalAfter)) throw new Refused('moved')
   // Hours can pass between Save and the payment: a saving that grew must still fit its offer's limits now, as at Save
   // (impact review 2026-11-12).
-  const way = read.facts.order.way
-  const grew = plan.offers.flatMap((x) => { const o = read.facts.offers!.find((k) => k.rowId === x.rowId)!.kept
-    return x.after > x.before && usesOn(way)({ class: classOf(o.terms.style), method: o.method }) ? [{ discountId: o.terms.id, amount: x.after, title: x.title }] : [] })
-  if (await stillFit(sp, tenantId, e.orderId, grew, now)) throw new Refused('offer')
+  if (await stillFit(sp, tenantId, e.orderId, grownUses(plan, read.facts), now)) throw new Refused('offer')
   // Stock is taken for the held pieces now (from the shelf); paid_at, written with the rest below, ends their hold.
   const w = await applyPlan(sp, tenantId, e.orderId, plan, read, now)
   soldOut.push(...w.soldOut, ...w.backInStock)
@@ -95,8 +91,9 @@ async function applyWaiting(sp: Tx, tenantId: string, e: typeof orderEdits.$infe
     .where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.id, e.id), isNull(orderEdits.paidAt), isNull(orderEdits.droppedAt))).returning({ id: orderEdits.id })
   if (!done.length) throw new Refused('moved')
   await releaseHeld(sp, tenantId, e.id)
-  // Its total was worked out with any failed edit refund's money as the shop's: those are settled by it (H1).
-  await supersedeFailed(sp, tenantId, e.orderId, e.id)
+  // What it asked was worked out with the edit refunds that had failed by then as the shop's money: those, and only those,
+  // are settled by it (H1; one failing after it was saved was counted as on its way and is still owed).
+  await supersedeFailed(sp, tenantId, e.orderId, e.id, { failedBefore: e.createdAt })
   if (p.fee != null) await feeNews(sp, tenantId, e.orderId, e.id, p.fee, p.tax)
 }
 

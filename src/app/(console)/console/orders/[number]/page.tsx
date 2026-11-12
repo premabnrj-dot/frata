@@ -28,7 +28,7 @@ import { activityWords, cannotEdit, recordChanges, undoUntil, valuesChanged } fr
 import { EditItemsButton, ItemsArea } from '../_components/edit/items-area'
 import { RefundRows, WaitingChange } from '../_components/edit/paid-online'
 import { changeWords } from '@/domains/orders/edit'
-import { canRetry, counts, feeAbout, refundChains, refundLine } from '@/domains/orders/refunds'
+import { canRetry, feeAbout, refundChains, refundedOf, refundLine } from '@/domains/orders/refunds'
 import { orderToken } from '@/lib/crypto/secret-box'
 import { scheme } from '@/lib/ekcode/cookie-name'
 import { shopSettingsFor } from '@/lib/queries/storefront'
@@ -90,10 +90,12 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const itemsEditable = can.edit && cannotEdit(state, { waiting: !!waiting }) === null && !o.erasedAt && !auth.membership.supportSessionId
   const payLink = waiting ? await shopSettingsFor(tenantId).then((x) => (x ? `${scheme()}://${x.host}/orders#t=${orderToken(o.id)}` : '')).catch(() => '') : ''
   const inr = (x: number) => formatInr(paise(x))
-  const refundRows = refundChains(d.refunds).map((x) => ({ id: x.id, amount: x.amount, retry: canRetry(x), ...refundLine(x, dateTimeIN(x.notBefore), inr) }))
+  // A fee is said to the paisa (₹11.80, not ₹12): it is what Razorpay keeps.
+  const inrFee = (x: number) => formatInr(paise(x), { decimals: true })
+  const refundRows = refundChains(d.refunds).map((x) => ({ id: x.id, amount: x.amount, retry: canRetry(x), ...refundLine(x, dateTimeIN(x.notBefore), inrFee) }))
   // Already refunded or on its way for its edits (the cancel dialog says so), and about what Razorpay keeps if a change's
   // payment comes after "Ship without the change" (refunded in full: unit-economics review 2026-11-12).
-  const refunded = d.ledger ? d.ledger.refunds.filter((x) => counts(x) && d.ledger!.payments.some((p) => p.id === x.razorpayPaymentId)).reduce((a, x) => a + x.amount, 0) : 0
+  const refunded = refundedOf(d.ledger)
   const lateFee = waiting ? feeAbout(waiting.asked, d.ledger?.payments[0] ?? null) : 0
   const lastEdit = events.find((e) => e.kind === 'items_edited')
   const undoEvent = itemsEditable && lastEdit && !events.some((e) => e.undoes === lastEdit.id) && now <= undoUntil(lastEdit.at) ? lastEdit.id : null
@@ -182,7 +184,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
               {Number(o.gstTotal) !== 0 ? <div className="flex justify-between text-muted-foreground"><dt>GST {o.pricesIncludeGst ? '(included)' : ''}</dt><dd><Money paise={paise(o.gstTotal)} /></dd></div> : null}
               <div className="flex justify-between pt-1 font-medium"><dt>Total</dt><dd><Money paise={paise(o.total)} /></dd></div>
             </dl>
-            {waiting ? <WaitingChange orderId={o.id} asked={waiting.asked} total={waiting.totalAfter} link={payLink} canAct={can.edit && !auth.membership.supportSessionId} lateFee={inr(lateFee)}
+            {waiting ? <WaitingChange orderId={o.id} asked={waiting.asked} total={waiting.totalAfter} link={payLink} canAct={can.edit && !auth.membership.supportSessionId} lateFee={inrFee(lateFee)}
               changes={recordChanges(waiting.before, waiting.after).map((c) => `${c.title}: ${changeWords(c)}`)} /> : null}
             <RefundRows rows={refundRows} canAct={can.edit && !auth.membership.supportSessionId} />
             {/* The line the courier and the packer need, in words: never only a colour. */}

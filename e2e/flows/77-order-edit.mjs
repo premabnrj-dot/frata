@@ -29,6 +29,8 @@ const seal = (plain, tenantId, field) => {
   return `v1.${iv.toString('base64url')}.${Buffer.concat([c.update(plain, 'utf8'), c.final(), c.getAuthTag()]).toString('base64url')}`
 }
 const RZP_AUTH = 'Basic ' + Buffer.from(`${RZP_KEYS.id}:${RZP_KEYS.secret}`).toString('base64')
+/** A fee as the console writes it: to the paisa (₹117.53). */
+const inrE = (p) => '₹' + (p / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export default {
   name: 'order-edit',
@@ -166,7 +168,8 @@ export default {
       if (!had) await db`insert into payment_keys (tenant_id, key_id, key_secret_enc, webhook_secret_enc, webhook_key, mode) values
         (${T}, ${RZP_KEYS.id}, ${seal(RZP_KEYS.secret, T, 'key_secret')}, ${seal('whsec_e2e77', T, 'webhook_secret')}, ${'k_e2e77' + Date.now()}, 'live')`
       addedKeys = !had
-      const paidOnline = async (n, lines, minutesAgo) => {
+      // `fee`: Razorpay's fee on the payment is known (the webhook brought it), so the screens can say it in rupees.
+      const paidOnline = async (n, lines, minutesAgo, { fee = false } = {}) => {
         const amount = lines.reduce((a, l) => a + 249000 * l.qty, 0)
         const ro = await (await fetch(`${RZP}/v1/orders`, { method: 'POST', headers: { authorization: RZP_AUTH, 'content-type': 'application/json' }, body: JSON.stringify({ amount, currency: 'INR', receipt: `e2e77-${n}` }) })).json()
         const { payment } = await (await fetch(`${RZP}/_test/pay`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ order_id: ro.id }) })).json()
@@ -174,7 +177,7 @@ export default {
           values (${T}, ${n}, 'prepaid', ${todayAgo(minutesAgo)}, ${todayAgo(minutesAgo - 1)}, 'Page Meera', '9822200014', 'meera@example.com', 'Flat 3, Civil Lines', 'Jaipur', '302006', 'Rajasthan',
             ${amount}, ${amount}, ${amount}, ${db.json({ onlineTotal: amount })}, ${ro.id}, ${payment.id})`
         const o = await id(n)
-        await db`update orders set token_hash = ${createHash('sha256').update(orderToken(o)).digest('hex')} where id = ${o}`
+        await db`update orders set token_hash = ${createHash('sha256').update(orderToken(o)).digest('hex')}, gateway_fee = ${fee ? payment.fee : null}, gateway_tax = ${fee ? payment.tax : null} where id = ${o}`
         for (const [i, l] of lines.entries()) {
           await db`insert into order_lines (tenant_id, order_id, variant_id, product_id, title, option_values, qty, unit_price, taxable_value, kind, position, stock_taken_at, charge_taxable, charge_gst)
             values (${T}, ${o}, ${v[l.key].id}, ${v[l.key].product_id}, 'Chanderi kurta set', ${v[l.key].option_values}, ${l.qty}, 249000, ${249000 * l.qty}, 'in_stock', ${i}, now(), 0, 0)`
@@ -186,7 +189,7 @@ export default {
       let H, J, K
 
       await t.step('paid online, lower: "Refund ₹2,490" with its timing, and "Save and refund ₹2,490"', async () => {
-        H = await paidOnline(top + 4, [{ key: 'M,Rust', qty: 1 }, { key: 'M,Indigo', qty: 1 }], 30)
+        H = await paidOnline(top + 4, [{ key: 'M,Rust', qty: 1 }, { key: 'M,Indigo', qty: 1 }], 30, { fee: true })
         await p.goto(CONSOLE + `/console/orders/${top + 4}`)
         await p.getByRole('region', { name: 'Items' }).getByRole('button', { name: 'Edit items' }).click()
         const ed = p.getByRole('region', { name: 'Edit items' }); await ed.waitFor()
@@ -194,7 +197,8 @@ export default {
         await ed.getByRole('group', { name: /comes out/ }).getByRole('button', { name: 'Customer asked' }).click()
         const wc = p.getByRole('region', { name: 'What changes' })
         await wc.getByText('Paid online').waitFor()
-        await wc.locator('[data-settle="refund"]').filter({ hasText: 'Refund ₹2,490' }).filter({ hasText: 'its fee isn’t returned' }).waitFor()
+        // Its fee in rupees: Razorpay keeps all of it (unit-economics review 2026-11-12).
+        await wc.locator('[data-settle="refund"]').filter({ hasText: 'Refund ₹2,490' }).filter({ hasText: `Razorpay keeps its ${inrE(H.payment.fee)} fee` }).waitFor()
         assert.ok(await wc.getByLabel(/Email Page the refund/).isChecked())
         await wc.getByRole('button', { name: 'Save and refund ₹2,490' }).waitFor()
         await p.screenshot({ path: t.out('paid-lower'), fullPage: true })
@@ -218,6 +222,12 @@ export default {
         assert.deepEqual([sent.amount, sent.speed_requested, sent.idempotency_key, sent.payment_id], [249000, 'normal', r.id, H.payment.id])
         await p.reload()
         await p.locator('[data-refunds]').getByText(/refunded · 5–10 working days/).waitFor()
+        // Cancelling now: the dialog names what the payments still hold and what has gone back already.
+        await p.getByRole('button', { name: 'More' }).click(); await p.getByRole('menuitem', { name: 'Cancel order…' }).click()
+        const dlg = p.getByRole("dialog").filter({ hasText: `Cancel ${label(top + 4)}?` })
+        await dlg.getByText('refund ₹2,490 in your Razorpay dashboard').waitFor()
+        await dlg.getByText('₹2,490 is already refunded or on its way.').waitFor()
+        await dlg.getByRole('button', { name: 'Keep the order' }).click()
         await p.getByRole('region', { name: 'Items' }).getByRole('button', { name: 'Undo the change' }).click()
         await expectToast(p, 'The refund has gone to Razorpay: this change can\'t be undone.')
         assert.equal(await total(H.id), 249000)
@@ -228,7 +238,7 @@ export default {
       })
 
       await t.step('paid online, higher: "Save and ask for ₹2,490"; nothing changes, Mark packed waits, the shopper pays on our page, it applies', async () => {
-        J = await paidOnline(top + 5, [{ key: 'M,Indigo', qty: 1 }], 25)
+        J = await paidOnline(top + 5, [{ key: 'M,Indigo', qty: 1 }], 25, { fee: true })
         await p.goto(CONSOLE + `/console/orders/${top + 5}`)
         await p.getByRole('button', { name: 'Mark packed' }).first().waitFor()
         await p.getByRole('region', { name: 'Items' }).getByRole('button', { name: 'Edit items' }).click()
@@ -242,6 +252,8 @@ export default {
         assert.equal(await p.getByRole('button', { name: 'Mark packed' }).count(), 0)
         const box = p.locator('[data-waiting-change]')
         await box.getByRole('button', { name: 'Copy payment link' }).waitFor(); await box.getByRole('button', { name: 'Ship without the change' }).waitFor()
+        // What a late payment would cost if the change is dropped: Razorpay's fee at this order's own rate.
+        await box.getByText(`Razorpay keeps about ${inrE(J.payment.fee)}.`).waitFor()
         assert.equal(await total(J.id), 249000)
         const [w] = await db`select asked, paid_at from order_edits where order_id = ${J.id}`
         assert.deepEqual([Number(w.asked), w.paid_at], [249000, null])
@@ -280,6 +292,15 @@ export default {
         const [w] = await db`select dropped_reason from order_edits where order_id = ${K.id}`
         assert.equal(w.dropped_reason, 'ship_without')
         assert.deepEqual((await live(K.id)).map((l) => l.qty), [1])
+        // A refund Razorpay refused because part of the payment was already refunded elsewhere: its words say what to do,
+        // and no Try again is offered (it can't work).
+        const [ke] = await db`select id from order_edits where order_id = ${K.id}`
+        await db`insert into order_refunds (tenant_id, order_id, edit_id, cause, razorpay_payment_id, amount, not_before, sending_at, failed_at, failure)
+          values (${T}, ${K.id}, ${ke.id}, 'edit', ${K.payment.id}, 10000, now(), now(), now(), 'over')`
+        await p.reload()
+        const rows = p.locator('[data-refunds]')
+        await rows.getByText("Refund what's left from your Razorpay dashboard.").waitFor()
+        assert.equal(await rows.getByRole('button', { name: 'Try again' }).count(), 0)
       })
 
       await t.step('phone: stacked, Save fixed above the bottom bar, nothing scrolls sideways', async () => {

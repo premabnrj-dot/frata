@@ -14,6 +14,7 @@ import { queueRefund, recordRefundedFee } from '@/lib/payments/refunds'
 import { checkoutShop } from '@/lib/queries/checkout'
 import { editWaitingSql } from '@/lib/db/order-predicates'
 import { sellsAs, type EditRead } from './edit-facts'
+import { releaseHeld } from './edit-held'
 import type { Pay } from './place'
 import { current, moment, record, type Actor, type Done } from './work'
 
@@ -50,14 +51,6 @@ export const editFeesSql = (tenantId: string, orderId: string, part: 'fee' | 'ta
   sql`((select coalesce(sum(${part === 'fee' ? orderEdits.gatewayFee : orderEdits.gatewayTax}), 0) from ${orderEdits} where ${orderEdits.tenantId} = ${tenantId} and ${orderEdits.orderId} = ${orderId})
     + (select coalesce(sum(${part === 'fee' ? orderRefunds.gatewayFee : orderRefunds.gatewayTax}), 0) from ${orderRefunds} where ${orderRefunds.tenantId} = ${tenantId} and ${orderRefunds.orderId} = ${orderId} and ${orderRefunds.retryOf} is null))`
 
-/** A change's held pieces go back on sale (paid, dropped, refunded or cancelled): `held` to 0, so the partial index stays
- * small. The variants it held, for the caller's sold-out refresh. */
-export async function releaseHeld(tx: Tx, tenantId: string, editId: string): Promise<string[]> {
-  const rows = await tx.update(orderEditLines).set({ held: 0 }).where(and(eq(orderEditLines.tenantId, tenantId), eq(orderEditLines.editId, editId), sql`${orderEditLines.held} > 0`))
-    .returning({ v: orderEditLines.variantId })
-  return rows.flatMap((r) => (r.v ? [r.v] : []))
-}
-
 /**
  * Save a higher total on a paid order as a request: the record and its lines (the `after` lines that are new carry no
  * order line yet, and hold their in-stock pieces), one `edit_requested` event, the email at once (no Undo: nothing
@@ -67,7 +60,10 @@ export async function requestPayment(sp: Tx, tenantId: string, actor: Actor, ord
   const stamp = moment(now)
   const eventId = await record(sp, tenantId, orderId, actor, 'edit_requested', stamp)
   const [edit] = await sp.insert(orderEdits).values({ tenantId, orderId, eventId, totalBefore: p.total.before, totalAfter: p.total.after, shippingBefore: p.shipping.before,
-    shippingAfter: p.shipping.after, notify: input.notify, asked }).returning({ id: orderEdits.id })
+    shippingAfter: p.shipping.after, notify: input.notify, asked,
+    // Stamped after its plan was read under the order's lock: the refunds that had failed by then are the ones it counted
+    // as not going back (edit-capture.ts settles exactly those; a failure stamps under the same lock: refunds.ts fail).
+    createdAt: sql`clock_timestamp()` }).returning({ id: orderEdits.id })
   const reasonOf = new Map(p.removed.map((x) => [x.line.id, x.reason]))
   // The pieces it holds: the new in-stock ones (a swap's or an added line's, or the extra pieces of a line).
   const held = (l: EditPlan['lines'][number]) => {
@@ -112,13 +108,17 @@ export async function strayCapture(tx: Tx, o: { id: string; tenantId: string }, 
   const [ord] = await tx.select({ paidAt: orders.paidAt, online: sql<number | null>`(${orders.checkout}->>'onlineTotal')::bigint`.mapWith((v) => (v == null ? null : Number(v))) })
     .from(orders).where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id))).for('update')
   if (!ord || ord.paidAt || !ord.online) return false
-  // An edit that took effect (applied at once, or paid) and was not undone.
-  const [edited] = await tx.select({ id: orderEdits.id }).from(orderEdits)
-    .where(and(eq(orderEdits.tenantId, o.tenantId), eq(orderEdits.orderId, o.id), sql`(${orderEdits.asked} is null or ${orderEdits.paidAt} is not null)`,
-      sql`not exists (select 1 from ${orderEvents} u where u.tenant_id = ${orderEdits.tenantId} and u.undoes = ${orderEdits.eventId})`)).limit(1)
-  if (!edited) return false
-  const [had] = await tx.select({ id: orderRefunds.id }).from(orderRefunds).where(and(eq(orderRefunds.tenantId, o.tenantId), eq(orderRefunds.razorpayPaymentId, paymentId), eq(orderRefunds.cause, 'old_order'))).limit(1)
-  if (!had) await queueRefund(tx, o.tenantId, { orderId: o.id, editId: null, cause: 'old_order', paymentId, amount: ord.online, notBefore: new Date() })
+  // A payment already being refunded in full stays refunded, whatever happened to the edit since (an Undo, then a late
+  // webhook for the same payment: security re-review 2026-11-12 M2) — never also the order's payment.
+  const [had] = await tx.select({ id: orderRefunds.id }).from(orderRefunds).where(and(eq(orderRefunds.tenantId, o.tenantId), eq(orderRefunds.orderId, o.id), eq(orderRefunds.razorpayPaymentId, paymentId), eq(orderRefunds.cause, 'old_order'))).limit(1)
+  if (!had) {
+    // An edit that took effect (applied at once, or paid) and was not undone.
+    const [edited] = await tx.select({ id: orderEdits.id }).from(orderEdits)
+      .where(and(eq(orderEdits.tenantId, o.tenantId), eq(orderEdits.orderId, o.id), sql`(${orderEdits.asked} is null or ${orderEdits.paidAt} is not null)`,
+        sql`not exists (select 1 from ${orderEvents} u where u.tenant_id = ${orderEdits.tenantId} and u.undoes = ${orderEdits.eventId})`)).limit(1)
+    if (!edited) return false
+    await queueRefund(tx, o.tenantId, { orderId: o.id, editId: null, cause: 'old_order', paymentId, amount: ord.online, notBefore: new Date() })
+  }
   // Razorpay keeps its fee on it: once, when known (the webhook after the browser's reply brings it).
   await recordRefundedFee(tx, o.tenantId, o.id, paymentId, pay.fee, pay.tax)
   return true

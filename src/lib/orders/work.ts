@@ -10,7 +10,8 @@ import { applies, invoiceNumber, seriesFits, type CancelReason, type OrderAction
 import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
 import { editWaitingSql, momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
-import { orderEditLines, orderEdits } from '@/lib/db/schema-edits'
+import { orderEdits } from '@/lib/db/schema-edits'
+import { releaseHeld } from './edit-held'
 import { ledgerIn } from '@/lib/payments/refunds'
 import { formatInr } from '@/lib/format'
 import type { Paise } from '@/domains/money/paise'
@@ -236,9 +237,8 @@ export async function cancel(tx: Tx, tenantId: string, actor: Actor, orderId: st
   const r = await tx.update(orders).set({ cancelledAt: at, cancelReason: c0.reason, cancelNote: note })
     .where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId), isNull(orders.cancelledAt), isNull(orders.shippedAt))).returning({ id: orders.id })
   if (!r.length) return refuse(tx, tenantId, orderId, 'cancel', (await current(tx, tenantId, orderId, now))!.state)
-  const freed = waiting.length ? await tx.update(orderEditLines).set({ held: 0 }).where(and(eq(orderEditLines.tenantId, tenantId), inArray(orderEditLines.editId, waiting.map((w) => w.id)),
-    gt(orderEditLines.held, 0))).returning({ v: orderEditLines.variantId }) : []
-  const backInStock = [...(c0.restock ? await putStockBack(tx, tenantId, orderId) : []), ...freed.flatMap((f) => (f.v ? [f.v] : []))]
+  const freed = await releaseHeld(tx, tenantId, waiting.map((w) => w.id))
+  const backInStock = [...(c0.restock ? await putStockBack(tx, tenantId, orderId) : []), ...freed]
   const after: StoredOrder = { ...c.o, cancelledAt: at }
   const eventId = await record(tx, tenantId, orderId, actor, 'cancelled', at, { reason: c0.reason })
   await enqueueOrderEmail(tx, tenantId, orderId, 'cancelled', null, now)

@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.52.2
+  version: 2.52.4
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -853,8 +853,17 @@ Look's controls, Settings' shipping costs and sections, and Admin's custom plan 
   Reviews 2026-11-12 folded in: **a later change settles a failed edit refund** nobody tried again (`supersedeFailed`:
   `superseded_by`, set by an applied edit and by a change when its payment applies, never by one only waiting); Try again
   refuses a superseded attempt, `too_old` and `over`, and any `edit` refund larger than the payments' net minus the
-  order's total (or a waiting change's total); an edit that superseded one has no Undo. An attempt still unresolved on its
-  outbox row's last try is settled by one more list (receipt there → recorded; absent → `refused`, Try again). Save
+  order's total (or a waiting change's total less what it asks); an edit that superseded one has no Undo. A change
+  settles ONLY the failed attempts its own plan counted as not going back: an applied edit the ids in its facts
+  (`failedUnretried`), a paid change those failed before it was saved (`created_at` = clock_timestamp() after its plan;
+  `fail()` stamps under the order's lock), so one failing after the plan is still owed (security re-review H1). An
+  attempt the sender leaves unresolved (no answer on its last try, or its outbox row dead) is never failed by the
+  sender: it stays on its way (counted, no Try again, never superseded) until the `refund.settle:<id>` check queued with
+  its claim reads Razorpay's list once the sender is done — its receipt, or an earlier attempt's in its chain, there →
+  recorded; absent → `refused` (re-review M3, L4); a new attempt also takes an earlier chain receipt it finds as its own.
+  A payment at the old total refunded once stays refunded after an Undo (`strayCapture` checks the refund first, M2). On
+  the last try after an unanswered one, no create is made again (it may be in flight). "A saving that grew" is one rule
+  (`grownUses`, edit-write.ts) for Save and capture; held pieces go back through one leaf (`releaseHeld`, edit-held.ts). Save
   refuses a refund or ask without the panel's `expectedDue`. At capture, a saving that grew must still `stillFit`
   (else `cannot_apply`). Another payment on a change already paid is refunded (`after_drop`). **Razorpay's fee on a
   payment refunded in full** is written once on its first attempt (`order_refunds.gateway_fee`) and added to the order's
