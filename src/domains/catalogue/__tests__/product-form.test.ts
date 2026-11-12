@@ -1,18 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { cleanProduct, parseRupees, readiness, rupeesText, type ProductInput } from '../product-form'
+import { cleanProduct, readiness, type ProductInput } from '../product-form'
 
 const base: ProductInput = { title: 'Linen kurta set', description: '', typeId: null, modelHeight: '5 ft 6 in', modelSize: 'S',
   options: [{ name: 'Size', values: ['S', 'M'] }], variants: [
     { values: ['S'], price: '2,490', compareAt: '2990', cost: '980', stock: '6', sku: 'KS-LK-S' },
     { values: ['M'], price: '2490', compareAt: '', cost: '', stock: '', sku: '' }] }
-
-describe('rupees', () => {
-  it('reads what people type, refuses what is not a price', () => {
-    expect(parseRupees('2,490')).toBe(249000); expect(parseRupees('₹2490.5')).toBe(249050)
-    expect(parseRupees('Rs 999')).toBeNull(); expect(parseRupees('999.999')).toBeNull()
-    expect(rupeesText(249050)).toBe('2490.50'); expect(rupeesText(249000)).toBe('2490')
-  })
-})
 
 describe('cleanProduct', () => {
   it('turns the grid into paise, unknown cost stays null (not 0)', () => {

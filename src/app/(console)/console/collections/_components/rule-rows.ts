@@ -1,5 +1,5 @@
 import type { Rule } from '@/domains/catalogue/collection-rules'
-import { parseRupees, rupeesText } from '@/domains/catalogue/product-form'
+import { parseRupees, rupeesText } from '@/domains/money/rupees'
 
 // =============================================================================
 // FILE: src/app/(console)/console/collections/_components/rule-rows.ts

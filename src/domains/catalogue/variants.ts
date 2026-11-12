@@ -7,6 +7,8 @@
 // with it, and both agree on what a variant is.
 // =============================================================================
 
+import { latinOf } from './indic'
+
 export const MAX_OPTIONS = 3
 export const MAX_VALUES = 30
 export const MAX_VARIANTS = 100
@@ -69,9 +71,12 @@ export function groupOption(options: readonly Option[]): number {
   return i >= 0 ? i : options.length - 1
 }
 
-/** A product's address in the shop: "Linen Kurta Set" → "linen-kurta-set". Up to 100 characters. */
+/**
+ * A product's address in the shop: "Linen Kurta Set" → "linen-kurta-set", "लिनन कुर्ता" → "linan-kurta" (Indian
+ * scripts in Latin letters, indic.ts). Up to 100 characters.
+ */
 export function handleFor(title: string): string {
-  return title.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/&/g, ' and ')
+  return latinOf(title).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/&/g, ' and ')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 100).replace(/-+$/, '')
 }
 
