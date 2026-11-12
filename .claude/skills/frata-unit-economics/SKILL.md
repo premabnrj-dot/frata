@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.11.0
+  version: 2.12.0
   verified: 2026-11-11
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
@@ -39,8 +39,11 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
   goodwill never restocks. Counting a restocked piece at its full cost is hypothesis **H-resale** ("a returned piece
   is worth its full cost"), test: grade returns at 2–3 design partners for 4 weeks. Not yet counted:
   the reverse-pickup freight on a return (~₹70; label figures "before return pickup" until a column records it).
-  **Owner, 2026-11-09:** Frrata's fee stays on the order as delivered (`merchandise_net`, billed in full): a later
-  return or credit note does not reduce it (Launch: ₹8.57 on a returned ₹450 piece). Say so where the fee is explained.
+  **Owner, 2026-11-12 (replaces 2026-11-09):** a returned item isn't billable. Frrata's fee is on what the shopper
+  kept: `merchandise_net` less the taxable value of `return` credit notes (`returnedSql`). Before the fee is billed, the
+  billing draft charges it on that; a return after billing gives back the fee on the returned value on the next
+  invoice (`returnCreditDue`, a `frrata_fee_credits` row of kind `return`; a later came-back or lost credit gives back
+  only what is left). ₹ kept counts the fee the same way. Discount and goodwill notes don't change the fee.
 - **The inclusive-price gap** (rates.ts, ₹2,625.01–₹2,950 with GST): one paisa above ₹2,625 moves a piece from 5% to 18%
   (₹269.91 less kept on a ₹900-COGS piece); there, a discount down to ₹2,625 RAISES kept. "A blanket % off is a giveaway"
   holds only below the gap; the console warns on prices in it.

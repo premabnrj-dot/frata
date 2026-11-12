@@ -189,6 +189,14 @@ export const creditedSql = (a: string) =>
   sql`(select coalesce(sum(cn.taxable), 0) from credit_notes cn where cn.tenant_id = ${c(a, 'tenant_id')} and cn.order_id = ${c(a, 'id')} and cn.kind in ('return', 'discount', 'goodwill'))`
 
 /**
+ * The taxable value of the order's items returned on credit notes issued before `before` (kind 'return' only: a discount
+ * or goodwill note is not a return). Owner, 2026-11-12: a returned item isn't billable, so Frrata's fee base is the
+ * order's merchandise net less this (billing draft), and a return after billing gives its fee back.
+ */
+export const returnedSql = (a: string, before: Date) =>
+  sql`(select coalesce(sum(cn.taxable), 0) from credit_notes cn where cn.tenant_id = ${c(a, 'tenant_id')} and cn.order_id = ${c(a, 'id')} and cn.kind = 'return' and cn.issued_at < ${before.toISOString()}::timestamptz)`
+
+/**
  * The goods' cost of the pieces a return put back in stock (credit_note_lines.restocked_qty × the line's own unit cost,
  * as stored at placement): back on sale, so no longer a cost of this order. A line with no unit cost adds nothing back
  * (never a guessed cost; its order's COGS is unknown anyway). Only `return` notes restock (issueCredit).
@@ -224,7 +232,7 @@ export function keptSql(now: Date, a: string, feeChanges: readonly Date[], provi
     columns: sql`${outcome} outcome, ${provider} provider, ${cod} cod, ${bucket} bucket, count(*)::int n,
       coalesce(sum(${c(a, 'net_revenue')} - ${credited}), 0)::bigint net, sum(${cogsSql(a)})::bigint cogs, sum(${c(a, 'forward_shipping')})::bigint fwd,
       sum(${c(a, 'rto_shipping')})::bigint rto, sum(${c(a, 'courier_cod_fee')})::bigint codfee, coalesce(sum(${c(a, 'gateway_fee')}), 0)::bigint gw,
-      coalesce(sum(${c(a, 'merchandise_net')}), 0)::bigint base`,
+      coalesce(sum(greatest(${c(a, 'merchandise_net')} - ${returnedSql(a, now)}, 0)), 0)::bigint base`,
     /** Group by these, after `lead` key columns of the caller's own placed first: the four group columns by position,
      * and known costs apart from unknown, so a sum is null only when all of its orders lack it. */
     groupBy: (lead = 0) => sql.raw(`${[1, 2, 3, 4].map((i) => i + lead).join(', ')}, (${a}.cogs is null), (${a}.forward_shipping is null), (${a}.rto_shipping is null), (${a}.courier_cod_fee is null)`),
