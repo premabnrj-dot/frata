@@ -7,7 +7,7 @@ import { cleanProduct, cleanTax, type ProductInput } from '@/domains/catalogue/p
 import { sellsSized } from '@/domains/catalogue/sell-keys'
 import type { Status } from '@/domains/catalogue/availability'
 import { attributesFor, categoryById, cleanAttributes, COLOUR_FAMILIES, searchCategories } from '@/domains/catalogue/taxonomy'
-import { acceptedBase, storeHost, WIDTHS, urlFor } from '@/domains/media/sizes'
+import { acceptedBase, storeHost, urlFor } from '@/domains/media/sizes'
 import { photosAreMade } from '@/lib/media/uploaded'
 import { checkStoryPhotos, savePairs } from '@/lib/catalogue/extras'
 import { cleanPairIds, UUID, type Piece } from '@/domains/catalogue/stories'
@@ -23,6 +23,7 @@ import { collectionProducts, collections, productAttributes, productColours, pro
 import { skuTaken, writeProducts } from '@/lib/catalogue/write'
 import { goLive, readinessIn } from '@/lib/catalogue/readiness'
 import { photosInUse } from '@/lib/catalogue/photos-in-use'
+import { attachIn, type NewPhoto } from '@/lib/catalogue/photos'
 import { lockTimedOut } from '@/lib/orders/place'
 import { ensureTypes, freeHandle, handleFree } from '@/lib/catalogue/handles'
 import { errName } from '@/lib/log'
@@ -219,27 +220,14 @@ export async function categoryDetails(id: string) {
   return c ? { id: c.id, name: c.name, path: c.path, attributes: attributesFor(c.id) } : null
 }
 
-/** Photos the browser has uploaded (every width) — attached only if they are inside THIS shop's folder. */
-export async function attachPhotos(productId: string, photos: { base: string; widths: number[]; width: number; height: number }[]): Promise<Result> {
+/** Photos the browser has uploaded (every width) — attached only if they are inside THIS shop's folder (attachIn). */
+export async function attachPhotos(productId: string, photos: NewPhoto[]): Promise<Result> {
   if (!Array.isArray(photos) || !photos.length || photos.length > 12) return { ok: false, error: 'Up to 12 photos at a time.' }
   if (!(await photosAreMade(photos))) return { ok: false, error: 'That file is not a photo we made. Upload it again.' }
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.photos', target: productId, detail: { added: photos.length } }, async (tx, auth) => {
-      const tenantId = auth.membership.tenantId
-      const host = storeHost(BLOB_STORE_ID)
-      if (!host) throw new Stop({ ok: false, error: 'Photo storage is not connected.' })
-      // The stored URL is the REBUILT one from acceptedBase, never the browser's string (tenancy audit).
-      const clean = photos.map((ph) => {
-        const base = acceptedBase(ph.base, host, tenantId, 'products')
-        if (!base) throw new Stop({ ok: false, error: 'That photo is not in your shop’s folder.' })
-        if (!ph.widths.length || ph.widths.some((w) => !(WIDTHS as readonly number[]).includes(w)) || !(ph.width > 0 && ph.height > 0)) throw new Stop({ ok: false, error: 'That photo’s sizes are not ones we make.' })
-        return { ...ph, base }
-      })
-      const [p] = await tx.select({ id: products.id }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
-      if (!p) throw new Stop({ ok: false, error: 'This product is not in your shop.' })
-      const last = (await tx.select({ last: sql<number>`coalesce(max(position), -1)::int` }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId))))[0]?.last ?? -1
-      await tx.insert(productImages).values(clean.map((ph, i) => ({ tenantId, productId, base: ph.base, widths: [...ph.widths].sort((a, b) => a - b), width: Math.round(ph.width), height: Math.round(ph.height), position: last + 1 + i })))
-      await tx.update(products).set({ updatedAt: new Date() }).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
+      const done = await attachIn(tx, auth.membership.tenantId, productId, photos)
+      if (!done.ok) throw new Stop(done)
       await memberAudit(tx, auth, 'product.photos', productId)
     })
     if (!r.ok) return { ok: false, error: r.error }
