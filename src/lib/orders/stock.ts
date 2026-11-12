@@ -13,14 +13,22 @@ import { orderLines } from '@/lib/db/schema-orders'
 // (credit notes) come back by quantity. Each call moves its variants in id order — as variantRows locks them — so a
 // variant is locked by its first update and two writers never wait on each other in a cycle. A transaction that moves
 // stock BOTH ways (an order edit's swap: one size back, another taken) locks every variant it touches first, once, in id
-// order (lockVariants). Each runs inside the caller's tenant transaction, under the order's lock.
+// order (lockVariants). Only a live line takes stock (an order edit's removed line never does); putting back returns
+// whatever a line took. Each runs inside the caller's tenant transaction, under the order's lock.
 // =============================================================================
 
 type Line = { id: string; variantId: string | null; qty: number }
 
-/** In variant id order (uuid order, as Postgres sorts them); a line without a variant (deleted) last. */
-const byVariant = <T extends { variantId: string | null }>(xs: T[]) =>
-  [...xs].sort((a, b) => (a.variantId === b.variantId ? 0 : a.variantId === null ? 1 : b.variantId === null ? -1 : a.variantId < b.variantId ? -1 : 1))
+const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
+/**
+ * In variant id order (uuid order, as Postgres sorts them); a line without a variant (deleted) last; lines on one variant
+ * by their own id (a line's `id`, a piece's `key`), so which of them is taken when too little is left never depends on
+ * the order rows came back in.
+ */
+const byVariant = <T extends { variantId: string | null } & ({ id: string } | { key: string })>(xs: T[]) => {
+  const own = (x: T) => ('id' in x ? x.id : x.key)
+  return [...xs].sort((a, b) => a.variantId === b.variantId ? cmp(own(a), own(b)) : a.variantId === null ? 1 : b.variantId === null ? -1 : cmp(a.variantId, b.variantId))
+}
 
 /** Lock these variants, once each, in id order: first in a transaction that moves stock both ways. */
 export async function lockVariants(tx: Tx, tenantId: string, variantIds: (string | null)[]) {
@@ -67,7 +75,7 @@ async function putBack(tx: Tx, tenantId: string, lines: Line[]): Promise<string[
 export async function takeStockLines(tx: Tx, tenantId: string, lineIds: string[], soldOut: string[] = []): Promise<{ short: number; taken: number }> {
   if (!lineIds.length) return { short: 0, taken: 0 }
   return take(tx, tenantId, await tx.select({ id: orderLines.id, variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
-    .where(and(eq(orderLines.tenantId, tenantId), inArray(orderLines.id, lineIds), isNull(orderLines.stockTakenAt))), soldOut)
+    .where(and(eq(orderLines.tenantId, tenantId), inArray(orderLines.id, lineIds), isNull(orderLines.stockTakenAt), isNull(orderLines.removedAt))), soldOut)
 }
 
 /**
@@ -87,7 +95,7 @@ export async function putStockBackLines(tx: Tx, tenantId: string, lineIds: strin
  */
 export async function takeStock(tx: Tx, tenantId: string, orderId: string, kind: 'in_stock' | 'preorder' = 'in_stock', soldOut: string[] = []): Promise<{ short: number; taken: number }> {
   return take(tx, tenantId, await tx.select({ id: orderLines.id, variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
-    .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), eq(orderLines.kind, kind), isNull(orderLines.stockTakenAt))), soldOut)
+    .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), eq(orderLines.kind, kind), isNull(orderLines.stockTakenAt), isNull(orderLines.removedAt))), soldOut)
 }
 
 /** Put back every line of an order whose stock was taken. Cancel and a return that came back (outcomes.ts) both use it. */

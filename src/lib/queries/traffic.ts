@@ -90,7 +90,7 @@ export async function trafficNames(tenantId: string, productIds: readonly string
       ids.length ? tx.execute<{ id: string; title: string; handle: string; ordered: number }>(sql`
         with w as (select o.id from ${orders} o where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and ${standingSql('o')}),
              n as (select ol.product_id, count(distinct ol.order_id)::int ordered from ${orderLines} ol join w on w.id = ol.order_id
-                    where ol.tenant_id = ${tenantId} and ol.product_id = any(${`{${ids.join(',')}}`}::uuid[]) group by ol.product_id)
+                    where ol.tenant_id = ${tenantId} and ol.removed_at is null and ol.product_id = any(${`{${ids.join(',')}}`}::uuid[]) group by ol.product_id)
         select p.id, p.title, p.handle, coalesce(n.ordered, 0) ordered
           from ${products} p left join n on n.product_id = p.id
          where p.tenant_id = ${tenantId} and p.id = any(${`{${ids.join(',')}}`}::uuid[])`) : Promise.resolve([]),

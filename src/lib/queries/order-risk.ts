@@ -33,7 +33,7 @@ export async function riskFactsWith(tx: Tx, tenantId: string, scope: { ids: stri
   const [m] = await tx.execute<{ median: string | null; n: number }>(sql`select percentile_cont(0.5) within group (order by total) as median, count(*)::int as n
     from orders where tenant_id = ${tenantId} and payment_method = 'cod' and cancelled_at is null and placed_at >= ${since}::timestamptz`)
   const medianCod = m && m.n >= MIN_FOR_MEDIAN && m.median !== null ? Number(m.median) : null
-  const same = (a: string) => sql.raw(`(select array_agg(l.variant_id order by l.variant_id) from order_lines l where l.tenant_id = ${a}.tenant_id and l.order_id = ${a}.id)`)
+  const same = (a: string) => sql.raw(`(select array_agg(l.variant_id order by l.variant_id) from order_lines l where l.tenant_id = ${a}.tenant_id and l.order_id = ${a}.id and l.removed_at is null)`)
   // An erased order (phone '') has no history; without this its subqueries would scan every other erased order.
   const hasPhone = sql`"orders"."phone" <> ''`
   const rows = await tx.select({

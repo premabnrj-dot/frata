@@ -21,5 +21,7 @@ export function stillTrue(kind: OrderMessage, o: OrderMoments, now: Date, undone
       return o.deliveredAt || o.lostAt || o.rtoInitiatedAt ? 'superseded' : 'ok'
     case 'delivered': return !o.deliveredAt ? 'not_due' : o.rtoInitiatedAt ? 'superseded' : 'ok'
     case 'cancelled': return o.cancelledAt ? 'ok' : 'not_due'
+    // The items changed (an Undo is `undone`); a cancel since says it instead.
+    case 'edited': return o.cancelledAt ? 'cancelled' : 'ok'
   }
 }

@@ -31,7 +31,7 @@ const ts = (d: Date) => sql`${d.toISOString()}::timestamptz`
 /** Paid, but an in-stock line's stock was never taken (it sold out before the capture). */
 export function stockShortSql(a = '"orders"'): SQL {
   return sql`(${c(a, 'paid_at')} is not null and exists (
-  select 1 from order_lines sl where sl.tenant_id = ${c(a, 'tenant_id')} and sl.order_id = ${c(a, 'id')} and sl.kind = 'in_stock' and sl.stock_taken_at is null))`
+  select 1 from order_lines sl where sl.tenant_id = ${c(a, 'tenant_id')} and sl.order_id = ${c(a, 'id')} and sl.kind = 'in_stock' and sl.stock_taken_at is null and sl.removed_at is null))`
 }
 
 /** orderState() in SQL. */
@@ -139,7 +139,7 @@ export const discountUseSql = (now: Date, way: OfferWay, a = '"orders"'): SQL =>
  * sale. Read by checkout (variantRows) and the product page (storefront), so the two agree (impact review 2026-11-07).
  */
 export const owedSql = (tenantId: string, now: Date, variantCol = '"variants"."id"'): SQL<number> => sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
-  where l.tenant_id = ${tenantId} and l.variant_id = ${sql.raw(variantCol)} and l.kind = 'preorder' and l.stock_taken_at is null and o.packed_at is null and o.shipped_at is null
+  where l.tenant_id = ${tenantId} and l.variant_id = ${sql.raw(variantCol)} and l.kind = 'preorder' and l.stock_taken_at is null and l.removed_at is null and o.packed_at is null and o.shipped_at is null
     and (${standingSql('o')} or ${holdingSql(now, 'o')}))`
 
 /**
@@ -148,7 +148,7 @@ export const owedSql = (tenantId: string, now: Date, variantCol = '"variants"."i
  * stock checkout sells: stock − held − owed (shopper batch 2026-11-12).
  */
 export const heldSql = (tenantId: string, now: Date, variantCol = '"variants"."id"'): SQL<number> => sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
-  where l.tenant_id = ${tenantId} and l.variant_id = ${sql.raw(variantCol)} and l.kind = 'in_stock' and ${holdingSql(now, 'o')})`
+  where l.tenant_id = ${tenantId} and l.variant_id = ${sql.raw(variantCol)} and l.kind = 'in_stock' and l.removed_at is null and ${holdingSql(now, 'o')})`
 
 /**
  * heldSql for a whole shop at once: units held per variant (only variants something holds). The shop's cached pages
@@ -157,7 +157,7 @@ export const heldSql = (tenantId: string, now: Date, variantCol = '"variants"."i
  */
 export async function heldByVariant(tx: { execute: (q: SQL) => PromiseLike<unknown> }, tenantId: string, now: Date): Promise<Map<string, number>> {
   const rows = await tx.execute(sql`select l.variant_id v, sum(l.qty)::int n from ${orders} o join ${orderLines} l on l.tenant_id = o.tenant_id and l.order_id = o.id
-    where o.tenant_id = ${tenantId} and ${holdingSql(now, 'o')} and l.kind = 'in_stock' and l.variant_id is not null group by l.variant_id`) as { v: string; n: number }[]
+    where o.tenant_id = ${tenantId} and ${holdingSql(now, 'o')} and l.kind = 'in_stock' and l.removed_at is null and l.variant_id is not null group by l.variant_id`) as { v: string; n: number }[]
   return new Map(rows.map((r) => [r.v, Number(r.n)]))
 }
 
