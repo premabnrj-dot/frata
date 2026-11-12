@@ -1,5 +1,7 @@
 'use server'
 
+import { HELD_BY_ZONES } from '@/domains/delivery/lists'
+import { moduleAccessIn } from '@/lib/queries/modules'
 import { and, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { openShopErrors, parseSection, sectionFor, type Values } from '@/domains/settings/sections'
@@ -60,6 +62,10 @@ export async function saveSection(sectionKey: string, values: Values, version: n
           .from(shopSettings).where(eq(shopSettings.tenantId, tenantId)).for('update')
         const needed = shop?.publishedAt ? openShopErrors(section, parsed.patch, shop) : {}
         if (Object.keys(needed).length) throw new NeededWhenOpen(needed)
+      }
+      // While Delivery Zones is usable it alone sets the delivery charges, days and pay-on-delivery limits (one editor).
+      if ((section.key === 'shipping' || section.key === 'payments') && (await moduleAccessIn(tx, tenantId, new Date())).delivery_zones.usable) {
+        for (const k of HELD_BY_ZONES) delete (columns as Record<string, unknown>)[k]
       }
       const [row] = await tx.update(shopSettings)
         .set({ ...(columns as Partial<typeof shopSettings.$inferInsert>), version: sql`${shopSettings.version} + 1`, updatedAt: new Date() })

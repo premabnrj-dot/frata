@@ -10,7 +10,7 @@ import type { Chart } from '@/domains/catalogue/size-charts'
 import { readStories, type Story } from '@/domains/catalogue/stories'
 import type { PolicyFacts } from '@/domains/policies/render'
 import type { DeliveryRules } from '@/domains/checkout/delivery'
-import { tenantForHost, themeVersionRows } from '@/lib/db/platform'
+import { allPincodes, tenantForHost, themeVersionRows } from '@/lib/db/platform'
 import { collectionHandleHistory, collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, productPairs, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { owedSql } from '@/lib/db/order-predicates'
 import { priorPriceSql } from '@/lib/db/price-predicates'
@@ -318,6 +318,9 @@ const coreLook = (tenantId: string): Promise<LookEntry> => withTenant(tenantId, 
   return { candidates: cands.map((c) => ({ revisionId: c.revisionId, themeKey: c.themeKey, themeVersion: c.themeVersion })), first }
 })
 // Withdrawn versions only (all withdrawnKeys used), as a string[]: the cache hands back JSON, and a Set comes back as {}.
+/** India Post's PIN codes (≈19,500, the same for every shop): Delivery Zones' per-zone counts. Once a day. */
+export const directoryPins = unstable_cache(allPincodes, ['pincodes-all'], { revalidate: 86_400 })
+
 const withdrawnList = unstable_cache(async () => [...withdrawnKeys(await themeVersionRows())], ['sf-theme-withdrawn'], { tags: ['themes'], revalidate: 300 })
 const withdrawnNow = cache(async () => new Set(await withdrawnList()))
 /** A published revision's body (frozen: app_theme_revision_frozen), cached by tenant and id; a miss is never cached. */

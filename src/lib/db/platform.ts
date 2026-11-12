@@ -77,6 +77,12 @@ export async function placeForPincode(pincode: string): Promise<{ city: string; 
   return rows[0] ?? null
 }
 
+/** Every PIN code in India Post's directory, the same for every shop (cached once a day: storefront.ts directoryPins). */
+export async function allPincodes(): Promise<string[]> {
+  const rows = await db().execute<{ pincode: string }>(sql`select pincode from pincodes order by pincode`)
+  return rows.map((r) => r.pincode)
+}
+
 export type CreateShopError = 'email_unconfirmed' | 'has_shop' | 'bad_name' | 'bad_slug' | 'bad_pincode' | 'slug_taken' | 'no_launch_plan' | 'bad_plan' | 'bad_code'
 const CREATE_SHOP_ERRORS: readonly string[] = ['email_unconfirmed', 'has_shop', 'bad_name', 'bad_slug', 'bad_pincode', 'slug_taken', 'no_launch_plan', 'bad_plan', 'bad_code']
 

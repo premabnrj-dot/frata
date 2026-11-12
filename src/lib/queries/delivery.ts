@@ -84,7 +84,7 @@ export function deliveryConsole(tenantId: string, q: string, page: number) {
       tx.select({ day: shopHolidays.day, name: shopHolidays.name }).from(shopHolidays).where(eq(shopHolidays.tenantId, tenantId)).orderBy(asc(shopHolidays.day)),
       tx.select({ dispatchDays: shopSettings.dispatchDays, cutoff: shopSettings.dispatchCutoff, shipDays: shopSettings.shipDays, shippingFlat: shopSettings.shippingFlat,
         freeShippingAbove: shopSettings.freeShippingAbove, codOn: shopSettings.codOn, codMin: shopSettings.codMin, codMax: shopSettings.codMax, codCharge: shopSettings.codCharge,
-        metroDays: shopSettings.metroDays, restDays: shopSettings.restDays, blocked: shopSettings.codBlockedPincodes }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
+        metroDays: shopSettings.metroDays, restDays: shopSettings.restDays, blocked: shopSettings.codBlockedPincodes, pickup: shopSettings.pickupPincode }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
     ])
     const n2 = (v: number | string | null) => (v === null ? null : Number(v))
     return {

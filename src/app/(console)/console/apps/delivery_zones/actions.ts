@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { PRESET_NAMES } from '@/domains/delivery/presets'
 import { MAX_HOLIDAYS, MAX_PINS, MAX_RULES, MAX_ZONES, readPins, readRulesCsv, RULES } from '@/domains/delivery/lists'
 import { asModule } from '@/lib/auth/as-module'
-import { CAN_BUILD } from '@/lib/auth/require-member'
+import { CAN_BUILD, requireMember } from '@/lib/auth/require-member'
 import type { Tx } from '@/lib/db'
 import { auditEvents, shopSettings } from '@/lib/db/schema'
 import { deliveryRules, deliveryZonePins, deliveryZones, shopHolidays } from '@/lib/db/schema-delivery'
@@ -161,6 +161,16 @@ export async function removeRuleAction(pincode: unknown): Promise<Result> {
     await tx.delete(deliveryRules).where(and(eq(deliveryRules.tenantId, t), eq(deliveryRules.pincode, p.data)))
     return null
   })
+}
+
+/** The import's preview: counts and line errors only, never the rows (security review M3). */
+export async function previewRulesAction(text: unknown): Promise<{ ok: true; rows: number; errors: string[] } | { ok: false; error: string }> {
+  const auth = await requireMember(CAN_BUILD)
+  if (!auth.ok) return { ok: false, error: auth.message }
+  const p = z.string().max(300_000).safeParse(text)
+  if (!p.success) return { ok: false, error: 'The file is over 256 KB. Split it into smaller files.' }
+  const { rows, errors } = readRulesCsv(p.data)
+  return { ok: true, rows: rows.length, errors }
 }
 
 /** Import: the file is read again here (never the preview's rows back from the browser), then one statement. */

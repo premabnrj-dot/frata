@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { button } from '@/components/ui/button'
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { InfoTip } from '@/components/ui/info-tip'
@@ -24,7 +26,7 @@ import { STATES, STATE_CODE } from '@/domains/checkout/states'
  * "Unsaved changes" bar on the first edit, a guard on leaving, and the shop
  * beside it as shoppers will see it (frata-design-language § Phase 1).
  */
-export function SettingsForm({ sectionKey, initial, version: startVersion, facts, fiscalYear, overrides, tenantId }: {
+export function SettingsForm({ sectionKey, initial, version: startVersion, facts, fiscalYear, overrides, tenantId, held = [] }: {
   sectionKey: string
   initial: Values
   version: number
@@ -33,6 +35,8 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
   overrides: Record<string, string>
   /** For an upload's path (Settings › Documents' logo). */
   tenantId: string
+  /** Fields another app sets now (Delivery Zones while usable): left out here, with one link to where they are set. */
+  held?: readonly string[]
 }) {
   const section = sectionFor(sectionKey)!
   const router = useRouter()
@@ -82,7 +86,10 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
         <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); if (dirty) save() }}>
           {section.key === 'brand' && <ShopLogo tenantId={tenantId} current={facts.logoUrl ?? null} />}
           {section.key === 'documents' && <DocLogo tenantId={tenantId} current={facts.docLogo} />}
-          {section.blocks.map((b) => ({ b, shown: b.fields.filter((f) => !f.showIf || f.showIf.in.includes(String(values[f.showIf.key] ?? ''))) })).filter(({ shown }) => shown.length).map(({ b, shown }) => (
+          {section.blocks.some((b) => b.fields.some((f) => held.includes(f.key))) && (
+            <Section title="Set in Delivery Zones" action={<Link href="/console/apps/delivery_zones" className={button({ variant: 'secondary' })}>Open Delivery Zones</Link>} />
+          )}
+          {section.blocks.map((b) => ({ b, shown: b.fields.filter((f) => !held.includes(f.key)).filter((f) => !f.showIf || f.showIf.in.includes(String(values[f.showIf.key] ?? ''))) })).filter(({ shown }) => shown.length).map(({ b, shown }) => (
             <Section key={b.title}>
               <h2 className="flex items-center text-section font-semibold">{b.title}{b.tip ? <InfoTip about={b.title.toLowerCase()}>{b.tip}</InfoTip> : null}</h2>
               {b.hint && <p className="-mt-1 text-sm text-muted-foreground">{b.hint}</p>}

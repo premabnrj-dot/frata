@@ -12,11 +12,13 @@ import { AppFacts } from './app-facts'
  * app's own, Usage and billing (AppFacts, not for the accountant); the body; and Turn off alone at the foot (owners and
  * admins outside a support visit; its consequences live in the confirm, never on the page).
  */
-export function AppHome({ k, tab, tabs = [], badge, meta, primary, offer, worksWith, billing, canTurnOff, children }: {
+export function AppHome({ k, tab, tabs = [], first = 'Overview', badge, meta, primary, offer, worksWith, billing, canTurnOff, children }: {
   k: ModuleKey
   /** The current tab key: 'overview', one of `tabs`, or 'billing'. */
   tab: string
   tabs?: { key: string; label: string }[]
+  /** The first tab's name (Delivery Zones: Zones). */
+  first?: string
   badge?: React.ReactNode
   /** A line under the name (GST: the GSTIN, how often, when due). */
   meta?: React.ReactNode
@@ -29,7 +31,7 @@ export function AppHome({ k, tab, tabs = [], badge, meta, primary, offer, worksW
   children?: React.ReactNode
 }) {
   const def = MODULES[k], base = `/console/apps/${k}`, state = homeState()
-  const all = [{ key: 'overview', label: 'Overview' }, ...tabs, ...(billing ? [{ key: 'billing', label: 'Usage and billing' }] : [])]
+  const all = [{ key: 'overview', label: first }, ...tabs, ...(billing ? [{ key: 'billing', label: 'Usage and billing' }] : [])]
   return (
     <>
       <PageHeader title={def.name} back={{ href: '/console/apps', label: 'Apps' }} actions={primary} meta={meta}

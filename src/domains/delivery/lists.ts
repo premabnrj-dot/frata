@@ -12,6 +12,9 @@ export const MAX_RULES = 5000
 export const MAX_ZONES = 50
 export const MAX_HOLIDAYS = 60
 export const MAX_CSV_BYTES = 256 * 1024
+/** Settings fields Delivery Zones sets while it is usable (one editor: the plan's Sec M2). The shop-wide pay-on-delivery
+ *  switch and its no-COD list stay in Settings: they still apply inside every zone. */
+export const HELD_BY_ZONES = ['shippingFlat', 'freeShippingAbove', 'dispatchDays', 'metroDays', 'restDays', 'codMin', 'codMax', 'codCharge'] as const
 export const RULES = ['no_delivery', 'prepaid_only', 'cod_max'] as const
 export type RuleKind = (typeof RULES)[number]
 export const RULE_WORDS: Record<RuleKind, string> = { no_delivery: "Don't deliver", prepaid_only: 'Pay online only', cod_max: 'Pay on delivery up to' }

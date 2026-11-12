@@ -53,6 +53,7 @@ export const LIMITS = {
   pdfShop: { action: 'pdf:shop', max: 120, windowSeconds: 600 },
   // GST exports (GST app G1): a period's documents rendered whole; per member, fail closed.
   gstExportMember: { action: 'gst_export:member', max: 30, windowSeconds: 600 },
+  deliveryExportMember: { action: 'delivery_export:member', max: 30, windowSeconds: 600 },
   // Email (E·2; security review H4/M5), all failing closed. An address given at checkout: per shop and across shops,
   // so nobody can use shops to bomb an inbox (over the limit, the order is placed without the email). Test sends per
   // member; Send again and Email the invoice per order and kind (once in 10 minutes, three a day).

@@ -13,6 +13,8 @@ import { displayFamily } from '@/components/shop-preview/fonts'
 import { shopFacts, storedValues } from '../_components/facts'
 import { SettingsForm } from '../_components/settings-form'
 import { errName } from '@/lib/log'
+import { HELD_BY_ZONES } from '@/domains/delivery/lists'
+import { shopModules } from '@/lib/queries/modules'
 
 export async function generateMetadata({ params }: { params: Promise<{ section: string }> }) {
   return { title: sectionFor((await params).section)?.title ?? 'Settings' }
@@ -26,12 +28,14 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
   if (!section) notFound()
   if (!section.editors.includes(auth.membership.role)) return <Panel title="Only the owner or an admin can change this" />
   const tenantId = auth.membership.tenantId
-  const [shop, overrides, live, src] = await Promise.all([
+  const zoned = section.key === 'shipping' || section.key === 'payments'
+  const [shop, overrides, live, src, mods] = await Promise.all([
     shopWithSettings(tenantId),
     section.key === 'policies' ? policyOverrides(tenantId) : Promise.resolve({}),
     section.preview === 'brand' || section.preview === 'footer' ? previewLook(tenantId) : Promise.resolve(null),
     manifestsFor(tenantId),
-  ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null, codeSource] as const })
+    zoned ? shopModules(tenantId, new Date().toISOString()) : Promise.resolve(null),
+  ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null, codeSource, null] as const })
   if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   // The brand and footer previews wear the shop's published look (Look owns colours and type now).
   const theme = resolveStored(live, shop.settings, src)
@@ -45,6 +49,7 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
       fiscalYear={fiscalYear(new Date())}
       overrides={overrides}
       tenantId={tenantId}
+      held={mods?.access.delivery_zones.usable ? HELD_BY_ZONES : []}
     />
   )
 }
