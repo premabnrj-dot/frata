@@ -1,7 +1,7 @@
 # True Profit (the first add-on) and A3 — self-serve add-on trials
 Status: draft · Date: 2026-11-12 · Owner: "Build True Profit + A3" (2026-11-12, over A3 alone or waiting) · Mockups:
 A3's trial screens are in the approved Apps gallery mockup v1 (2026-11-11: "Start free trial", its confirm, "In
-trial"); True Profit's home is new — `docs/mockups/2026-11-12-true-profit.html`, for the owner's sign-off before
+trial"); True Profit's home is new — `docs/mockups/2026-11-12-true-profit.html` (https://claude.ai/artifact/XsfTjzmh8nYqFpbFBCLSth), for the owner's sign-off before
 any of TP is built.
 
 ## Goal

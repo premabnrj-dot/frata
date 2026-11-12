@@ -1,0 +1,277 @@
+<title>True Profit and add-on trials</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the console as it would be — a gallery, an app's page in its states, the app's home once on, and phone views. Frrata console tokens. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--thread:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--ok-mark:#2E9E6A;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;
+  --tile:#F2F1EF;--haldi-soft:#FBEFD2;--indigo-soft:#E7EAF8;--rani-soft:#FBE3EE;--shot:#F7F5F2;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--display:"Bricolage Grotesque","Inter",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;
+  --tile:#262320;--haldi-soft:#3A2E14;--indigo-soft:#1E2340;--rani-soft:#3A1828;--shot:#211F1C;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;
+  --tile:#262320;--haldi-soft:#3A2E14;--indigo-soft:#1E2340;--rani-soft:#3A1828;--shot:#211F1C;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);font-weight:600}
+h1{font:700 30px/1.15 var(--display);margin:4px 0 6px;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:19px;margin:56px 0 12px;display:flex;gap:10px;align-items:center;text-wrap:balance;scroll-margin-top:16px}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+p{margin:0 0 10px;max-width:74ch}
+.sub{color:var(--sub)}.mono{font-family:var(--mono)}.k{font-size:12px;color:var(--sub)}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 0}
+nav.toc a{font-size:12.5px;color:var(--fg);text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:3px 10px;background:var(--card)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:7px 14px;font:500 13.5px var(--sans);min-height:36px;white-space:nowrap;cursor:pointer;position:relative}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.primary::after{content:"";position:absolute;left:33%;right:33%;bottom:0;height:2px;background:var(--thread);border-radius:2px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn[disabled]{opacity:1;background:var(--muted);color:var(--sub);border-color:var(--border);cursor:default}
+.btn:focus-visible,.chipf:focus-visible,.acard:focus-visible,summary:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:500;white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-info{background:var(--info);color:var(--info-text)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok-mark);display:inline-block}
+/* Console frame */
+.console{border:1px solid var(--border);border-radius:10px;background:var(--bg);overflow:hidden}
+.cbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:18px 20px 8px}
+.cbar h3{font:700 22px var(--display);margin:0}
+.cbody{padding:8px 20px 22px}
+.search{display:flex;align-items:center;gap:8px;border:1px solid var(--input);border-radius:6px;padding:0 10px;background:var(--card);min-height:36px;min-width:0;flex:1;max-width:320px}
+.search input{border:0;background:transparent;color:var(--fg);font:14px var(--sans);outline:none;width:100%;min-width:0}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+.chipf{border:1px solid var(--border);background:var(--card);color:var(--fg);border-radius:999px;padding:4px 12px;font:500 13px var(--sans);cursor:pointer;min-height:30px}
+.chipf[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chipf b{font:500 12px var(--mono);margin-left:4px;opacity:.75}
+.sect{margin-top:22px}
+.sect h4{font-size:13px;margin:0 0 10px;color:var(--sub);font-weight:600;display:flex;justify-content:space-between}
+/* Your apps strip */
+.mine{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.mcard{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;min-width:0}
+.mcard .t{min-width:0;flex:1}
+.mcard b{display:block;font-size:14px}
+.mcard .k{display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Gallery grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.acard{display:flex;flex-direction:column;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:left;color:var(--fg);font:inherit;cursor:pointer;min-width:0;transition:border-color .12s}
+.acard:hover{border-color:var(--input)}
+.acard .top{display:flex;gap:12px;align-items:flex-start}
+.acard b{display:block;font-size:15px;margin-top:2px}
+.acard .job{color:var(--sub);font-size:13px;line-height:1.45;min-height:38px}
+.acard .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--border);padding-top:10px;margin-top:auto;font-size:12.5px}
+.acard.next{background:var(--bg)}
+.acard.next .icon{opacity:.75}
+.price{font:500 12.5px var(--mono)}
+.lock{display:inline-flex;align-items:center;gap:4px;color:var(--sub)}
+/* Icon tiles */
+.icon{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--tile)}
+.icon.lg{width:64px;height:64px;border-radius:14px}
+.icon svg{width:22px;height:22px}.icon.lg svg{width:30px;height:30px}
+.icon .b{stroke:var(--fg)}.icon .t{stroke:var(--brand)}
+/* Featured */
+.feature{display:grid;grid-template-columns:1.1fr 1fr;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);margin-top:16px}
+.feature .l{padding:20px;display:flex;flex-direction:column;gap:10px;justify-content:center;min-width:0}
+.feature .r{background:var(--haldi-soft);padding:18px;display:grid;place-items:center;min-width:0}
+.feature h5{font:600 20px/1.2 var(--display);margin:0;text-wrap:balance}
+.feature .x{align-self:flex-start}
+@media (max-width:760px){.feature{grid-template-columns:1fr}}
+/* Drawn product shots */
+.shot{width:100%;aspect-ratio:16/10;border-radius:8px;background:var(--card);border:1px solid var(--border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:hidden;font-size:11.5px;max-width:100%}
+.shot .ln{height:7px;border-radius:3px;background:var(--muted)}
+.shot .row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.stars{color:var(--warn-text);letter-spacing:1px;font-size:12px}
+.ph{background:linear-gradient(160deg,#D9B99B,#B07A52);border-radius:4px}
+.wa{background:#E7F7EE;color:#1C1917;border-radius:8px 8px 8px 2px;padding:6px 8px;max-width:85%;font-size:11.5px}
+.wa.me{background:#D9FDD3;align-self:flex-end;border-radius:8px 8px 2px 8px}
+/* Detail page */
+.detail{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}
+@media (max-width:900px){.detail{grid-template-columns:1fr}}
+.dhead{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.dhead .t{flex:1;min-width:220px}
+.dhead h3{font:700 26px/1.15 var(--display);margin:0}
+.dhead .by{font-size:12.5px;color:var(--sub)}
+.headline{font-size:16px;margin:6px 0 0;max-width:52ch}
+.feats{display:grid;gap:18px;margin-top:22px}
+.feat{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:center}
+.feat:nth-child(even) .fx{order:2}
+@media (max-width:700px){.feat{grid-template-columns:1fr}.feat:nth-child(even) .fx{order:0}}
+.feat h5{font-size:15px;margin:0 0 4px}
+.side{display:grid;gap:12px}
+.box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.box h6{font-size:12px;color:var(--sub);font-weight:600;margin:0 0 8px;letter-spacing:.02em}
+.big{font:600 24px var(--mono);letter-spacing:-.02em}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}.kv dt{color:var(--sub)}.kv dd{margin:0;min-width:0}
+.ul{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13px}
+.ul li{display:flex;gap:8px;align-items:flex-start}
+.ul li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--sub);margin-top:7px;flex:none}
+details{border-top:1px solid var(--border);padding:10px 0}
+details:last-child{border-bottom:1px solid var(--border)}
+summary{cursor:pointer;font-weight:500;list-style:none;display:flex;justify-content:space-between}
+summary::after{content:"+";color:var(--sub)}details[open] summary::after{content:"–"}
+details p{margin:6px 0 0;color:var(--sub);font-size:13px}
+.states{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+/* App home (installed) */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin:14px 0 16px;overflow-x:auto}
+.tab{border:0;background:none;padding:8px 12px;font:500 13px var(--sans);color:var(--sub);border-bottom:2px solid transparent;white-space:nowrap}
+.tab.on{color:var(--fg);border-bottom-color:var(--thread);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card)}
+.kpi{padding:14px 16px;border-right:1px solid var(--border);min-width:0}
+.kpi:last-child{border-right:0}
+.kpi b{display:block;font:500 22px var(--mono);margin-top:2px}
+.meter{height:8px;background:var(--muted);border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.meter i{display:block;height:100%;background:var(--fg);transform-origin:left}
+.danger{color:var(--danger-text);border-color:var(--danger-text)}
+/* Phone */
+.phones{display:flex;gap:24px;flex-wrap:wrap}
+.phone{width:100%;max-width:340px;border:1px solid var(--border);border-radius:26px;padding:10px;background:var(--card)}
+.phone .scr{border-radius:18px;overflow:hidden;border:1px solid var(--border);background:var(--bg)}
+.phone .bar{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--card);font-weight:600}
+.phone .pb{padding:12px;display:grid;gap:10px}
+.prow{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px}
+.prow .t{flex:1;min-width:0}.prow b{display:block;font-size:14px}
+.stick{border-top:1px solid var(--border);background:var(--card);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+/* Dialog */
+.dialog{max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:0 12px 32px rgb(0 0 0 / .12)}
+.dialog h5{font-size:17px;margin:0 0 10px}
+.calls{padding-left:20px;max-width:82ch}.calls li{margin-bottom:6px}
+@media (prefers-reduced-motion:reduce){.acard{transition:none}}
+/* True Profit additions */
+table.t{width:100%;border-collapse:collapse;font-size:13px;background:var(--card)}
+table.t th{font-size:11.5px;color:var(--sub);font-weight:600;text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.t td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.t tr:last-child td{border-bottom:0}
+table.t .r{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);white-space:nowrap}
+table.t tr.sub td{background:var(--muted);font-size:12.5px}
+table.t tr.sub td:first-child{padding-left:32px}
+.neg{color:var(--danger-text)}.pos{color:var(--ok-text)}
+.tablewrap{border:1px solid var(--border);border-radius:10px;overflow-x:auto}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:14px}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:13.5px}
+.list li:first-child{border-top:0}
+.list .r{font-family:var(--mono);white-space:nowrap}
+.foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end}
+.note{background:var(--warn);color:var(--warn-text);border-radius:6px;padding:8px 12px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.stack{display:grid;gap:14px}
+.calls li{margin-bottom:8px}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-profit" viewBox="0 0 24 24"><path class="b" d="M4 19h16M6 16V9M11 16V5M16 16v-5" fill="none" stroke-width="1.6" stroke-linecap="round"/><path class="t" d="M14.5 7.5 17 5l2.5 2.5" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+<div class="wrap">
+  <p class="eyebrow">Mockup · for the owner's sign-off · 12 Nov 2026</p>
+  <h1>True Profit and add-on trials</h1>
+  <p class="sub">The first add-on, on the app home you approved for A2, and self-serve trials as drawn in the Apps gallery mockup. Numbers are a made-up Kesar Studio month. ₹ kept is after returns, freight, fees and COD charges, before ads and packaging, as in Orders and Analytics.</p>
+  <nav class="toc" aria-label="Screens">
+    <a href="#overview">Overview</a><a href="#products">Products</a><a href="#pincodes">Pincodes</a><a href="#trial">Trial</a><a href="#billing">Usage and billing</a><a href="#phone">Phone</a><a href="#calls">Your calls</a>
+  </nav>
+
+  <h2 id="overview">True Profit · Overview</h2>
+  <div class="console"><div class="cbody" style="padding-top:18px">
+    <p class="k" style="margin:0 0 12px">‹ Apps</p>
+    <div class="dhead" style="align-items:center">
+      <span class="icon lg"><svg aria-hidden="true"><use href="#i-profit"/></svg></span>
+      <div class="t"><h3>True Profit</h3><div style="display:flex;gap:8px;align-items:center;margin-top:4px;flex-wrap:wrap"><span class="chip c-ok"><span class="dot"></span>Working</span><span class="chip c-warn">Trial · 9 days left</span></div></div>
+      <div class="filters" role="group" aria-label="Period" style="margin:0"><button class="chipf" aria-pressed="false">7 days</button><button class="chipf" aria-pressed="true">30 days</button><button class="chipf" aria-pressed="false">90 days</button></div>
+    </div>
+    <div class="tabs" role="tablist"><span class="tab on">Overview</span><span class="tab">Products</span><span class="tab">Pincodes</span><span class="tab">Usage and billing</span></div>
+    <div class="note"><span>14 orders left out: 3 products have no cost price.</span><button class="btn">Add costs</button></div>
+    <div class="kpis">
+      <div class="kpi"><span class="k">₹ kept · 30 days</span><b>₹1,84,320</b><span class="k">312 orders with an outcome</span></div>
+      <div class="kpi"><span class="k">Per delivered order</span><b>₹712</b></div>
+      <div class="kpi"><span class="k">Returns cost you</span><b class="neg">₹38,940</b><span class="k">58 returned · 4 lost</span></div>
+      <div class="kpi"><span class="k">Return rate</span><b>18.6%</b><span class="k">COD 24% · prepaid 7%</span></div>
+    </div>
+    <div class="two">
+      <div class="box"><h6>EARNS MOST</h6><ul class="list">
+        <li><span>Sabz chanderi kurta</span><span class="r pos">₹42,180</span></li>
+        <li><span>Indigo block-print set</span><span class="r pos">₹31,560</span></li>
+        <li><span>Kesar cotton dupatta</span><span class="r pos">₹12,940</span></li></ul></div>
+      <div class="box"><h6>LOSES MOST</h6><ul class="list">
+        <li><span>Gulnar tissue set</span><span class="r neg">−₹6,210</span></li>
+        <li><span>Mehr lehenga · XS</span><span class="r neg">−₹2,880</span></li>
+        <li><span>Pincode 110094 · COD</span><span class="r neg">−₹2,140</span></li></ul></div>
+    </div>
+    <div class="foot"><button class="btn">Turn off True Profit</button></div>
+  </div></div>
+
+  <h2 id="products">Products, then sizes and colours</h2>
+  <div class="console"><div class="cbody" style="padding-top:18px">
+    <div class="tabs" role="tablist"><span class="tab">Overview</span><span class="tab on">Products</span><span class="tab">Pincodes</span><span class="tab">Usage and billing</span></div>
+    <div class="filters" role="group" aria-label="Sort"><button class="chipf" aria-pressed="true">Loses most</button><button class="chipf" aria-pressed="false">Earns most</button><button class="chipf" aria-pressed="false">Returns most</button></div>
+    <div class="tablewrap"><table class="t">
+      <thead><tr><th>Product</th><th class="r">Delivered</th><th class="r">Returned</th><th class="r">Return rate</th><th class="r">₹ kept</th><th class="r">Per order</th></tr></thead>
+      <tbody>
+        <tr><td><b>Gulnar tissue set</b> ▾</td><td class="r">21</td><td class="r">17</td><td class="r neg">45%</td><td class="r neg">−₹6,210</td><td class="r neg">−₹163</td></tr>
+        <tr class="sub"><td>Size S · Rust</td><td class="r">9</td><td class="r">2</td><td class="r">18%</td><td class="r pos">₹3,420</td><td class="r">₹311</td></tr>
+        <tr class="sub"><td>Size M · Rust</td><td class="r">8</td><td class="r">6</td><td class="r neg">43%</td><td class="r neg">−₹1,980</td><td class="r neg">−₹141</td></tr>
+        <tr class="sub"><td>Size L · Rust</td><td class="r">4</td><td class="r">9</td><td class="r neg">69%</td><td class="r neg">−₹7,650</td><td class="r neg">−₹588</td></tr>
+        <tr><td><b>Mehr lehenga</b> ▸</td><td class="r">12</td><td class="r">5</td><td class="r">29%</td><td class="r">₹1,140</td><td class="r">₹67</td></tr>
+        <tr><td><b>Kesar cotton dupatta</b> ▸</td><td class="r">46</td><td class="r">3</td><td class="r">6%</td><td class="r pos">₹12,940</td><td class="r">₹264</td></tr>
+        <tr><td><b>Sabz chanderi kurta</b> ▸</td><td class="r">58</td><td class="r">6</td><td class="r">9%</td><td class="r pos">₹42,180</td><td class="r">₹659</td></tr>
+      </tbody></table></div>
+    <p class="k" style="margin-top:8px">An order's freight and fees are shared across its pieces by their price.</p>
+  </div></div>
+
+  <h2 id="pincodes">Pincodes</h2>
+  <div class="console"><div class="cbody" style="padding-top:18px">
+    <div class="tabs" role="tablist"><span class="tab">Overview</span><span class="tab">Products</span><span class="tab on">Pincodes</span><span class="tab">Usage and billing</span></div>
+    <div class="filters" role="group" aria-label="Show"><button class="chipf" aria-pressed="true">COD loses money <b>6</b></button><button class="chipf" aria-pressed="false">All <b>214</b></button></div>
+    <div class="tablewrap"><table class="t">
+      <thead><tr><th>Pincode</th><th>Place</th><th class="r">COD orders</th><th class="r">Returned</th><th class="r">₹ kept · COD</th><th class="r">₹ kept · prepaid</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">110094</td><td>Delhi</td><td class="r">11</td><td class="r neg">7</td><td class="r neg">−₹2,140</td><td class="r pos">₹1,880</td></tr>
+        <tr><td class="mono">400070</td><td>Mumbai</td><td class="r">9</td><td class="r neg">5</td><td class="r neg">−₹1,310</td><td class="r pos">₹2,460</td></tr>
+        <tr><td class="mono">302012</td><td>Jaipur</td><td class="r">6</td><td class="r neg">4</td><td class="r neg">−₹960</td><td class="r">—</td></tr>
+        <tr><td class="mono">560068</td><td>Bengaluru</td><td class="r">5</td><td class="r neg">3</td><td class="r neg">−₹540</td><td class="r pos">₹3,120</td></tr>
+      </tbody></table></div>
+  </div></div>
+
+  <h2 id="trial">Trying an add-on (as in the approved gallery mockup)</h2>
+  <div class="two" style="margin-top:0">
+    <div class="box"><h6>ADD-ON</h6><div style="font:500 20px var(--mono)">₹999<span class="k" style="font-family:var(--sans)"> /month + GST</span></div><p class="k" style="margin:4px 0 12px">14 days free · stop any time</p><button class="btn primary" style="width:100%">Start free trial</button></div>
+    <div class="dialog" role="dialog" aria-label="Start your True Profit trial">
+      <h5>Start your True Profit trial?</h5>
+      <ul style="margin:0 0 12px;padding-left:18px;font-size:13.5px"><li>Free until 26 Nov.</li><li>Then ₹999/month + 18% GST, on your Frrata bill.</li><li>End it before 26 Nov and nothing is charged.</li></ul>
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn">Not now</button><button class="btn primary">Start free trial</button></div>
+    </div>
+  </div>
+
+  <h2 id="billing">Usage and billing: in trial, then paid</h2>
+  <div class="two" style="margin-top:0">
+    <div class="box"><h6>IN TRIAL</h6><div style="font:500 20px var(--mono)">9 days left</div><p class="k" style="margin:4px 0 12px">Then ₹999/month + GST from 26 Nov</p><button class="btn" style="width:100%">End trial</button></div>
+    <div class="box"><h6>ADD-ON</h6><div style="font:500 20px var(--mono)">₹999<span class="k" style="font-family:var(--sans)"> /month + GST</span></div><p class="k" style="margin:4px 0 12px">On your Frrata bill since 26 Nov</p><button class="btn" style="width:100%">Stop True Profit</button></div>
+    <div class="dialog" role="dialog" aria-label="End the trial">
+      <h5>End your True Profit trial?</h5>
+      <ul style="margin:0 0 12px;padding-left:18px;font-size:13.5px"><li>True Profit stops now. Nothing is charged.</li><li>Nothing it read is deleted.</li></ul>
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn">Keep the trial</button><button class="btn" style="border-color:var(--danger-text);color:var(--danger-text)">End trial</button></div>
+    </div>
+  </div>
+  <p class="k" style="margin-top:10px">3 days before the trial ends, a Notice and an email: "True Profit starts at ₹999/month + GST on 26 Nov."</p>
+
+  <h2 id="phone">On a phone</h2>
+  <div class="phones">
+    <div class="phone"><div class="scr"><div class="bar"><span>True Profit</span><span class="chip c-warn">Trial · 9 days</span></div><div class="pb">
+      <div class="tabs" style="margin:0;flex-wrap:wrap"><span class="tab">Overview</span><span class="tab on">Products</span><span class="tab">Pincodes</span><span class="tab">Usage and billing</span></div>
+      <div class="box" style="padding:12px"><div style="display:flex;justify-content:space-between;gap:8px"><b>Gulnar tissue set</b><span class="mono neg">−₹6,210</span></div><span class="k">21 delivered · 17 returned · 45%</span></div>
+      <div class="box" style="padding:12px"><div style="display:flex;justify-content:space-between;gap:8px"><b>Mehr lehenga</b><span class="mono">₹1,140</span></div><span class="k">12 delivered · 5 returned · 29%</span></div>
+      <div class="box" style="padding:12px"><div style="display:flex;justify-content:space-between;gap:8px"><b>Sabz chanderi kurta</b><span class="mono pos">₹42,180</span></div><span class="k">58 delivered · 6 returned · 9%</span></div>
+    </div></div></div>
+    <div class="phone"><div class="scr"><div class="bar"><span>True Profit</span><span></span></div><div class="pb">
+      <p class="k" style="margin:0">Staff see the app's page; costs are for owners and admins.</p>
+      <div class="box" style="padding:12px"><b>What each product, pincode and size kept after returns.</b><p class="k" style="margin:6px 0 0">Ask the shop's owner to start it.</p></div>
+    </div></div></div>
+  </div>
+
+  <h2 id="calls">Your calls</h2>
+  <ol class="calls">
+    <li><b>True Profit adds only what is new</b>: by product, by size and colour, by pincode. ₹ kept per order and by campaign stay in every plan (Orders, Analytics). Recommended.</li>
+    <li><b>An order's freight and fees are shared across its pieces by their price</b> (a ₹2,490 kurta and a ₹300 dupatta in one parcel: the kurta carries 89%). Recommended; the alternative splits them equally.</li>
+    <li><b>The trial becomes the add-on on its own</b> at the price shown at the start, unless ended; a Notice and an email 3 days before. Recommended (as in the gallery mockup).</li>
+    <li><b>Pincodes name where COD loses money</b>, with no switch yet; turning COD off for a pincode comes with RTO Shield.</li>
+    <li><b>₹999/month + GST on every plan</b> — pending the unit-economics review (it may say Growth and Scale include it).</li>
+  </ol>
+</div>
