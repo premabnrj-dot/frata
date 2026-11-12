@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.47.1
+  version: 2.47.2
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -721,6 +721,25 @@ Look's controls, Settings' shipping costs and sections, and Admin's custom plan 
   caller must not re-plan that order. A new term on an offer is copied in `termsCopy` (a typed column) the same day.
   `storedTerms` takes the row's `code_id` as `code`: a tie between product offers goes to the automatic one, as at
   placement (`productPass`, shared with `planOffers`).
+- **Editing an order's items** (OE·1, 2026-11-12; plan `docs/plans/2026-11-12-order-edit.md`): planned only by
+  `planEdit` (`src/domains/orders/edit.ts`, pure) — the order page's panel prices each tap with it in the browser, and
+  `editItems` (`src/lib/orders/edit.ts`, under `current()`) plans again from facts read after every touched variant is
+  locked (`editFactsIn`, `src/lib/orders/edit-facts.ts`, the panel's read too) and refuses a total that moved. Lines and
+  offers are never rewritten: a line comes out (`removed_at`; `replaced_by` names what a swap or new quantity made) and
+  its successor is inserted (`lineSnapshot`); an offer that comes off or gives another amount gets `removed_at`, and a
+  new amount is a new row with the old row's `created_at` (one live use per order and offer: a partial unique index).
+  **Every reader of an order's lines or offers reads the live rows** (`removed_at is null`; uses through `useOfRowSql`,
+  which says it; Admin's `app_admin_offer_totals` too, 0112): a new reader adds it. Stock: the pieces coming out go back
+  first, then the new ones are taken; room for a new piece is checkout's `sellable` with the order's own pieces back
+  (`roomOf`/`sellsAs`). Money: `writeReprice` (one `update … from (values)`) writes `product_discount` too, and an
+  edit's subtotal, delivery and COGS; Frrata's fee follows `merchandise_net` (an edit issues no credit note, so
+  `returnedSql` never counts it). Delivery stays the order's own unless the bag crosses today's `freeShippingAbove`;
+  the COD fee is the order's own; today's COD maximum refuses a higher total above it, never the minimum. Undo
+  (`undoEdit`) puts back the edit's record (`order_edits`, `order_edit_lines` before/after with `replaces`) within
+  `UNDO_MINUTES` and before packing, only while the order still has the edit's lines and offers, re-checking any offer
+  the edit freed. The `edited` email waits `UNDO_MINUTES` and is skipped when undone or a later edit supersedes it.
+  Refused: a support visit, paid online (OE·2), and a switched order whose Razorpay payment is created or authorized
+  (`paymentStillOpen`, asked before the transaction).
 - **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
   `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`
   (parity-tested). Placement locks every offer the bag could get that has a limit, in id order,

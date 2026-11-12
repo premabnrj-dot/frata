@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.20.0
+  version: 5.20.1
   verified: 2026-11-12
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -466,6 +466,16 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   ₹6,016 → ₹5,207"; paid online: "Refund ₹1,899" with its timing and that the gateway keeps its fee, or "Collect ₹499 on
   delivery"). Save names the order and the money ("Save and refund ₹1,899"); the safe button keeps the order as it was.
   After: a toast with Undo, "Was M" on the line, the change in Activity.
+  As built (OE·1, 2026-11-12; `src/app/(console)/console/orders/_components/edit/`): the editor replaces the Items card
+  in place and loads its code only then; "Edit items" sits in the card's header, with "Undo the change" beside it while
+  the edit can still be undone (10 minutes, before packing). Remove asks its reason as three chips on the line (Out of
+  stock, Customer asked, Other; "Keep it"); a removed line is struck through with "Removed · out of stock" and "Put it
+  back"; a piece added in the edit comes out without a reason. A line whose product was deleted says "No longer sold":
+  no chips, no − / +, Remove only. A size already on the order is not offered again. A refusal (over the COD maximum,
+  sold out, a reason missing) is one line in "What changes", in the error colour, and Save waits. The email tick shows
+  only when the order has an email ("Email Ananya the new total"). Who sees "Edit items": owners and admins, on an order
+  paid on delivery, until packed — never staff, a support visit or a paid order. Phone: one column, the two buttons
+  fixed above the bottom bar.
 
 ## Offers (owner-approved 2026-11-08; spec `docs/specs/2026-11-08-coupons.md`, mockup https://claude.ai/artifact/HVFMBJzJoH9tTUh9d1zxHT)
 

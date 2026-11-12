@@ -72,6 +72,14 @@ and the edit is applied only when that payment is captured. Built as:
    is left for both, which line is taken must not depend on row order (take the kept line first, or refuse the edit).
 5. UI per the mockup, plus the states it didn't draw (over the COD limit, phone). Verify: `npm run e2e -- --only
    order-edit` (new flow) and `50-order-page`.
+   As built (2026-11-12): 0111 (drizzle-kit) and 0112 (access), proof check 72. `order_edits` keeps the offer rows an
+   edit took off and added (`offers_removed`, `offers_added`, uuid arrays) and `order_edit_lines` an after line's
+   `replaces`, so Undo and Activity need nothing else. Who and when are the edit's `items_edited` event, and an undone
+   edit is that event's undo: no `undone_at` (derived, never stored twice). The reason is per removed line
+   (`order_edit_lines.reason`, asked on the line as drawn), not one per edit. `product_discount` joins `order_lines`'
+   update grant: a re-plan moves the product offers' part of a kept line's discount. A COD order keeps its own COD fee
+   (the stored one, as its delivery and offers; only the maximum is today's). The panel's room and the save's are one
+   rule (`roomOf`/`sellsAs`: checkout's `sellable` with the order's own pieces back). E2e: `77-order-edit`.
 
 **OE·2 · paid online** (increase decided 2026-11-12: pay the difference first)
 6. `refund()` in `src/lib/payments/razorpay.ts` (normal speed; before each create, list the payment's refunds and match

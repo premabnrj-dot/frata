@@ -24,6 +24,8 @@ import { OrderActions } from '../_components/order-actions'
 import { ShipPanel } from '../_components/ship-panel'
 import { Icon } from '@/components/icons/icon'
 import { saysOnline } from '@/domains/checkout/offer-text'
+import { activityWords, recordChanges, undoUntil, valuesChanged } from '@/domains/orders/edit'
+import { EditItemsButton, ItemsArea } from '../_components/edit/items-area'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/[number]/page.tsx
@@ -40,6 +42,10 @@ import { saysOnline } from '@/domains/checkout/offer-text'
 export async function generateMetadata({ params }: { params: Promise<{ number: string }> }) {
   return { title: `Order ${(await params).number}` }
 }
+
+/** "Was M" (another size or colour) or "Was 2" (another quantity), for a line an items edit made. */
+const wasOf = (was: { values: string[]; qty: number }, now: { optionValues: string[]; qty: number }) =>
+  was.values.join('\u0000') !== now.optionValues.join('\u0000') ? valuesChanged(was.values, now.optionValues).from : `${was.qty}`
 
 const wa = (phone: string, text: string) => `https://wa.me/91${phone}?text=${encodeURIComponent(text)}`
 
@@ -71,10 +77,19 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const shipStage = tab === 'to_ship' ? 'to_ship' as const : tab === 'on_the_way' || tab === 'couldnt_deliver' ? 'on_the_way' as const
     : state === 'delivered' || state === 'rto' || state === 'rto_received' || state === 'lost' ? 'done' as const : null
   const can = { confirm: may('confirm', state, role), hold: may('hold', state, role), unhold: may('unhold', state, role), cancel: may('cancel', state, role), pack: may('pack', state, role), edit: may('edit', state, role), note: may('note', state, role) }
+  // Items (OE·1): owners and admins, until packed, paying on delivery, never on a support visit; Undo for 10 minutes.
+  const itemsEditable = can.edit && !o.paidAt && method === 'cod' && !o.erasedAt && !auth.membership.supportSessionId
+  const lastEdit = events.find((e) => e.kind === 'items_edited')
+  const undoEvent = itemsEditable && lastEdit && !events.some((e) => e.undoes === lastEdit.id) && now <= undoUntil(lastEdit.at) ? lastEdit.id : null
+  const inr = (x: number) => formatInr(paise(x))
   const why = (r?.reasons.join('; ') || r?.next || '').replace(/\.$/, '')
   const riskWarning = r && (r.level === 'high' || r.level === 'unknown') ? `${r.level === 'high' ? 'High risk' : 'Risk unavailable'}: ${why}. Confirm only once you have spoken to the customer.` : null
   const history = [
-    ...events.map((e) => ({ at: e.at, text: eventLabel(e, (x) => CANCEL_LABEL[x as CancelReason] ?? x), who: e.actorKind === 'support' ? `${e.actorEmail ?? ''} · Frrata support` : e.actorEmail ?? 'Frrata' })),
+    ...events.map((e) => {
+      const edit = e.kind === 'items_edited' ? d.edits.get(e.id) : undefined
+      const text = edit ? activityWords(recordChanges(edit.before, edit.after), { before: edit.totalBefore, after: edit.totalAfter }, edit.notify, inr) : eventLabel(e, (x) => CANCEL_LABEL[x as CancelReason] ?? x)
+      return { at: e.at, text, who: e.actorKind === 'support' ? `${e.actorEmail ?? ''} · Frrata support` : e.actorEmail ?? 'Frrata' }
+    }),
     { at: o.placedAt, text: method === 'cod' && !o.switchedToCodAt ? 'Placed · pay on delivery' : 'Placed · online', who: 'Customer' },
     ...(o.paidAt ? [{ at: o.paidAt, text: 'Paid online', who: 'Razorpay' }] : []),
     ...(o.switchedToCodAt ? [{ at: o.switchedToCodAt, text: 'Switched to pay on delivery', who: 'Customer' }] : []),
@@ -119,7 +134,8 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
             may={{ ship: may('ship_self', state, role), outcome: may('deliver', state, role) }}
             shipment={shipment ? { courierName: shipment.courierName, trackingNumber: shipment.trackingNumber, byCourier: shipment.provider === 'shiprocket' } : null} /> : null}
 
-          <Section id="items" title="Items">
+          <ItemsArea orderId={o.id} number={label} undoEvent={undoEvent}>
+          <Section id="items" title="Items" action={itemsEditable || undoEvent ? <EditItemsButton canEdit={itemsEditable} /> : undefined}>
             {lines.length === 0 ? <p className="text-sm text-muted-foreground">No items on this order.</p> : null}
             <ul className="divide-y divide-border empty:hidden">
               {lines.map((l) => (
@@ -127,6 +143,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
                   {l.imageBase && l.imageWidths ? <img src={urlFor(l.imageBase, pick(l.imageWidths, 160))} alt="" width={48} height={60} data-photo className="h-[60px] w-12 rounded-sm object-cover" /> : <span aria-hidden className="h-[60px] w-12 rounded-sm bg-muted" />}
                   <span className="min-w-0 flex-1"><span className="font-medium">{l.title}</span>
                     <span className="block text-muted-foreground">{[...l.optionValues, l.sku].filter(Boolean).join(' · ')}</span>
+                    {l.was ? <span className="block text-xs text-muted-foreground">Was {wasOf(l.was, l)}</span> : null}
                     {l.kind === 'preorder' ? <span className="block text-xs text-warn-text">Pre-order{l.shipsBy ? ` · ships by ${dayMonthIN(new Date(`${l.shipsBy}T00:00:00+05:30`))}` : ''}</span> : null}
                     {l.kind === 'made_to_order' ? <span className="block text-xs text-muted-foreground">Made to order · {l.leadMinDays}–{l.leadMaxDays} days</span> : null}
                   </span>
@@ -157,6 +174,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
                 : owed ? <>Collect <Money paise={paise(owed)} /> on delivery.</> : o.paidAt ? 'Paid online — collect nothing.' : 'Not paid yet.'}
             </p>
           </Section>
+          </ItemsArea>
         </div>
 
         <div className="min-w-0 space-y-6">
