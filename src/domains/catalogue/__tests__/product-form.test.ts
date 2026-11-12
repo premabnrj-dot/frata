@@ -32,6 +32,12 @@ describe('cleanProduct', () => {
     const r = cleanProduct({ ...base, options: [{ name: 'Size', values: ['S', 'M', 'L'] }] }, new Date())
     expect(!r.ok && r.errors['v:L:price']).toBe('A price in rupees.')
   })
+  it('a zero price is refused in its own words; a zero cost is a cost', () => {
+    const r = cleanProduct({ ...base, variants: [{ ...base.variants[0]!, price: '₹0', compareAt: '0.00', cost: '0' }, { ...base.variants[1]!, price: '1,2,99' }] }, new Date())
+    expect(!r.ok && r.errors).toEqual({ 'v:S:price': 'More than ₹0.', 'v:S:compareAt': 'More than ₹0.', 'v:M:price': 'A price in rupees.' })
+    const ok = cleanProduct({ ...base, variants: [{ ...base.variants[0]!, cost: '0' }, base.variants[1]!] }, new Date())
+    expect(ok.ok && ok.product.variants[0]!.unitCost).toBe(0)
+  })
 })
 
 describe('readiness', () => {
