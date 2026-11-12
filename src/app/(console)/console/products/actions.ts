@@ -226,7 +226,8 @@ export async function attachPhotos(productId: string, photos: NewPhoto[]): Promi
   if (!(await photosAreMade(photos))) return { ok: false, error: 'That file is not a photo we made. Upload it again.' }
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.photos', target: productId, detail: { added: photos.length } }, async (tx, auth) => {
-      const done = await attachIn(tx, auth.membership.tenantId, productId, photos)
+      // The editor tags a colour afterwards (editPhoto): a photo arrives with none.
+      const done = await attachIn(tx, auth.membership.tenantId, productId, photos.map((ph) => ({ ...ph, colour: null })))
       if (!done.ok) throw new Stop(done)
       await memberAudit(tx, auth, 'product.photos', productId)
     })

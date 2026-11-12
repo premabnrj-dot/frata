@@ -9,14 +9,19 @@
 //   " (2)") is the photo's place among that product's photos; the stem without it is tried first, then the whole stem
 //   (a SKU or an address may end in a number).
 // - In this order, the first rule that names exactly ONE product wins:
-//   1. a SKU (any case): the product, and the size's colour when it has one;
+//   1. a SKU (any case; "_" and spaces read as "-": KS_ANR_M is KS-ANR-M): the product, and the size's colour when it
+//      has one — the shortened stem, then the whole one (KS-JNS-32 is that size's SKU, not size KS-JNS's photo 32);
 //   2. the start of a product's SKUs up to a dash ("KS-ANR" of KS-ANR-S, KS-ANR-M), when no other product's SKU
 //      starts so;
 //   3. the address (handle), then the name (as `handleFor` writes it: Hindi and other Indian scripts in Latin letters);
-//   4. the same after taking out one of the product's colours ("linen-kurta-red" → Linen kurta, its Red photo);
-//   5. every word of the stem (its colour taken out) is a word of exactly one product's address or name.
+//   4. the same after taking out one of the product's colours, each colour tried ("linen-kurta-red" → Linen kurta, its
+//      Red photo; "red-sari-blue" → Red sari, its Blue photo, even when Blue sari has a Red);
+//   5. every word of the stem (a colour taken out) is a word of exactly one product's address or name.
+//   An exact hit (4) always wins over a loose one (5).
 // - A rule that names two or more products asks "Which product?" with them (a SKU's start may still give way to a
-//   whole SKU or a name; a name never gives way); no rule at all asks with none.
+//   name; a name never gives way); no rule at all asks with none.
+// - A product found by the shortened stem while the WHOLE stem is another product's exact address or SKU asks with
+//   both ("kurta-2.jpg": Kurta's photo 2, or the product at kurta-2, which freeHandles makes for a second Kurta).
 // - A product holds at most MAX_PHOTOS_PER_PRODUCT photos; past that a photo is left out (`over`).
 // =============================================================================
 
@@ -43,7 +48,7 @@ export type PhotoIndex = {
   entries: Entry[]
 }
 
-const skuKey = (s: string) => s.trim().toUpperCase()
+const skuKey = (s: string) => s.trim().toUpperCase().replace(/[\s_]+/g, '-')
 const add = <K, V>(m: Map<K, Set<V>>, k: K, v: V) => { const s = m.get(k); if (s) s.add(v); else m.set(k, new Set([v])) }
 
 /** The shop's products made ready to match many files against. */
@@ -101,17 +106,22 @@ function byName(idx: PhotoIndex, stem: string): Found | null {
   if (h) return { ids: [h], by: 'address' }
   if (named) return { ids: [...named], by: 'name' }
   const words = key.split('-')
-  // 4. A product's own colour taken out leaves its address or name exactly.
+  // 4. One of the product's own colours taken out leaves its address or name exactly (every colour is tried).
   const exact = new Map<string, string | null>()
   // 5. Every word left is one of the product's words.
   const loose = new Map<string, string | null>()
   for (const e of idx.entries) {
-    let rest = words, colour: string | null = null
-    for (const c of e.colours) { const r = without(words, c.key); if (r) { rest = r; colour = c.value; break } }
-    if (!rest.length) continue
-    const joined = rest.join('-')
-    if (colour && (joined === e.t.handle || joined === handleFor(e.t.title))) exact.set(e.t.id, colour)
-    else if (rest.some((w) => w.length >= 3 && !/^\d+$/.test(w)) && rest.every((w) => e.words.has(w))) loose.set(e.t.id, colour)
+    const title = handleFor(e.t.title)
+    const tries: [string[], string | null][] = [[words, null]]
+    for (const c of e.colours) { const r = without(words, c.key); if (r) tries.push([r, c.value]) }
+    for (const [rest, colour] of tries) {
+      if (!rest.length) continue
+      const joined = rest.join('-')
+      if (colour && (joined === e.t.handle || joined === title)) { exact.set(e.t.id, colour); break }
+      if (!loose.has(e.t.id) || (colour && !loose.get(e.t.id))) {
+        if (rest.some((w) => w.length >= 3 && !/^\d+$/.test(w)) && rest.every((w) => e.words.has(w))) loose.set(e.t.id, colour)
+      }
+    }
   }
   if (exact.size) return { ids: [...exact.keys()], colour: exact, by: 'name' }
   if (loose.size) return { ids: [...loose.keys()], colour: loose, by: 'name' }
@@ -119,32 +129,44 @@ function byName(idx: PhotoIndex, stem: string): Found | null {
 }
 
 function bySku(idx: PhotoIndex, stem: string): Found | null {
-  const k = skuKey(stem)
-  const one = idx.sku.get(k)
-  if (one) return { ids: [one.id], colour: new Map([[one.id, one.colour]]), by: 'sku' }
-  const s = idx.stems.get(k)
+  const one = idx.sku.get(skuKey(stem))
+  return one ? { ids: [one.id], colour: new Map([[one.id, one.colour]]), by: 'sku' } : null
+}
+
+function bySkuStart(idx: PhotoIndex, stem: string): Found | null {
+  const s = idx.stems.get(skuKey(stem))
   if (!s) return null
   const ids = [...s.ids]
   return { ids, colour: ids.length === 1 && s.colours.size === 1 ? new Map([[ids[0]!, [...s.colours][0]!]]) : undefined, by: 'sku' }
 }
 
+/** The product whose exact address or SKU the stem is, if any. */
+const exactly = (idx: PhotoIndex, stem: string) => idx.handles.get(handleFor(stem)) ?? idx.sku.get(skuKey(stem))?.id ?? null
+
 /** Which product a photo's file name names (see the header's rules). */
 export function matchPhoto(fileName: string, idx: PhotoIndex): PhotoMatch {
   const { whole, base, n } = stemOf(fileName)
   const tries: [string, number | null][] = n === null ? [[whole, null]] : [[base, n], [whole, null]]
+  const ask = (ids: string[]): PhotoMatch => ({ productId: null, n, colour: null, by: null, candidates: ids.length <= SUGGESTED ? ids : [] })
   let asked: string[] = []
-  for (const rule of [bySku, byName]) {
+  for (const rule of [bySku, bySkuStart, byName]) {
     for (const [stem, place] of tries) {
       const f = rule(idx, stem)
       if (!f) continue
-      if (f.ids.length === 1) return { productId: f.ids[0]!, n: place, colour: f.colour?.get(f.ids[0]!) ?? null, by: f.by }
+      if (f.ids.length === 1) {
+        const id = f.ids[0]!
+        // The number may be part of another product's address or SKU: then it is that product's photo, or this one's.
+        const other = place === null ? null : exactly(idx, whole)
+        if (other && other !== id) return ask([id, other])
+        return { productId: id, n: place, colour: f.colour?.get(id) ?? null, by: f.by }
+      }
       // A name that fits two products asks, even if the whole stem is another's address ("ajrakh-stole-2").
-      if (rule === byName) return { productId: null, n, colour: null, by: null, candidates: f.ids.length <= SUGGESTED ? f.ids : asked }
+      if (rule === byName) return ask(f.ids.length <= SUGGESTED ? f.ids : asked)
       // Too many to choose between is no suggestion at all (a shop's SKU prefix names every product).
       if (!asked.length && f.ids.length <= SUGGESTED) asked = f.ids
     }
   }
-  return { productId: null, n, colour: null, by: null, candidates: asked }
+  return ask(asked)
 }
 
 export type Placed = { i: number; of: number; over: boolean }

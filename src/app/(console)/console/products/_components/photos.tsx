@@ -6,7 +6,7 @@ import { pick, srcSet, urlFor } from '@/domains/media/sizes'
 import { useToast } from '@/components/ui/toast'
 import { attachPhotos, editPhoto } from '../actions'
 import type { Uploaded } from './upload-photos'
-import { uploadProblem } from './upload-problem'
+import { photoUploadProblem } from './upload-problem'
 
 export type Photo = { id: string; base: string; widths: number[]; optionValue: string | null; width: number; height: number; alt?: string }
 
@@ -29,7 +29,7 @@ export function Photos({ productId, tenantId, photos, colours, enabled, title = 
     for (const [i, f] of list.entries()) {
       try { done.push(await uploadPhoto(f, tenantId, (p) => setBusy((b) => b.map((x, j) => (j === i ? { ...x, p } : x))))) }
       catch (e) {
-        toast.error(uploadProblem(f.name, e))
+        toast.error(photoUploadProblem(f.name, e))
         console.error('[photos] upload', e instanceof Error ? e.message : '')
       }
     }

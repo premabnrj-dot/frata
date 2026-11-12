@@ -60,6 +60,23 @@ describe('matching a photo to a product', () => {
   it('a number that is part of the address stays part of it', () => {
     expect(m('KS-CHD-FS.jpg')).toMatchObject({ productId: 'chanderi', n: null })
   })
+  it('every colour is tried, and a name exact once its colour is out wins over a loose fit', () => {
+    const saris = photoIndex([P('red', 'Red Sari', 'red-sari', [], ['Red', 'Blue']), P('blue', 'Blue Sari', 'blue-sari', [], ['Red', 'Blue'])])
+    expect(matchPhoto('red-sari-blue.jpg', saris)).toEqual({ productId: 'red', n: null, colour: 'Blue', by: 'name' })
+    expect(matchPhoto('blue sari red 2.jpg', saris)).toEqual({ productId: 'blue', n: 2, colour: 'Red', by: 'name' })
+  })
+  it('a whole SKU before a SKU\'s start; "_" and spaces read as "-"', () => {
+    const jeans = photoIndex([P('jeans', 'Slim jeans', 'slim-jeans', [['KS-JNS-32', null], ['KS-JNS-34', null]]), ...SHOP])
+    expect(matchPhoto('KS-JNS-32.jpg', jeans)).toEqual({ productId: 'jeans', n: null, colour: null, by: 'sku' })
+    expect(matchPhoto('KS_ANR_M.jpg', jeans)).toEqual({ productId: 'anr', n: null, colour: null, by: 'sku' })
+    expect(matchPhoto('ks linkur s red 2.jpg', jeans)).toEqual({ productId: 'linen', n: 2, colour: 'Red', by: 'sku' })
+  })
+  it('a number that makes the whole stem another product\'s address or SKU asks with both', () => {
+    const two = photoIndex([P('k1', 'Kurta', 'kurta', [['KS-1', null]]), P('k2', 'Kurta', 'kurta-2', [['KS-1-2', null]]), P('dup', 'Dupatta', 'dupatta')])
+    expect(matchPhoto('kurta-2.jpg', two)).toMatchObject({ productId: null, n: 2, candidates: ['k1', 'k2'] })
+    expect(matchPhoto('KS-1-2.jpg', two)).toMatchObject({ productId: null, n: 2, candidates: ['k1', 'k2'] })
+    expect(matchPhoto('dupatta-2.jpg', two)).toEqual({ productId: 'dup', n: 2, colour: null, by: 'address' })
+  })
   it('no match asks with nothing to suggest', () => {
     expect(m('IMG_4021.jpg')).toEqual({ productId: null, n: null, colour: null, by: null, candidates: [] })
     expect(m('2.jpg')).toMatchObject({ productId: null })

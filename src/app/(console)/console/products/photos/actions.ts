@@ -47,7 +47,7 @@ export async function addPhotos(input: unknown): Promise<{ ok: true; added: numb
     })
     if (!r.ok) return { ok: false, error: r.error }
     if (!r.value.ok) return r.value
-    if (r.value.live) await refreshSoldOut(r.tenantId)
+    if (r.value.live && r.value.added) await refreshSoldOut(r.tenantId)
     revalidatePath('/console/products', 'layout')
     return { ok: true, added: r.value.added }
   } catch (err) {
