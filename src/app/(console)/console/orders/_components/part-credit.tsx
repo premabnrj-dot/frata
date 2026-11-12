@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { parseRupees } from '@/domains/money/rupees'
 
 // =============================================================================
 // A credit note for a delivered order (GST phase 2; approved mockup "Part credit note"): items that came back, by line
@@ -25,9 +26,10 @@ export function PartCreditDialog({ open, number, lines, inclusive, busy, onClose
   const [restock, setRestock] = useState(true)
   const stocked = lines.some((l) => l.stocked && l.left > 0)
   const [amount, setAmount] = useState('')
-  const rupees = Number(amount.replace(/[₹,\s]/g, ''))
-  const can = kind === 'return' ? Object.values(qty).some((n) => n > 0) : Number.isFinite(rupees) && rupees >= 1
-  const issue = () => onIssue(kind === 'return' ? { kind, lines: Object.fromEntries(Object.entries(qty).filter(([, n]) => n > 0)), restock: stocked && restock } : { kind, amount: Math.round(rupees * 100), agreed })
+  // Read as the editor reads a price (exact paise, a misplaced comma refused): at least ₹1.
+  const paise = parseRupees(amount)
+  const can = kind === 'return' ? Object.values(qty).some((n) => n > 0) : paise !== null && paise >= 100
+  const issue = () => onIssue(kind === 'return' ? { kind, lines: Object.fromEntries(Object.entries(qty).filter(([, n]) => n > 0)), restock: stocked && restock } : { kind, amount: paise ?? 0, agreed })
   const seg = (k: 'return' | 'discount', label: string) => (
     <button type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)}
       className={`min-h-9 flex-1 rounded-md px-3 text-sm font-medium transition-[background-color,color] duration-fast ${kind === k ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{label}</button>

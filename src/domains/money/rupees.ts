@@ -1,9 +1,10 @@
 // =============================================================================
 // FILE: src/domains/money/rupees.ts
 //
-// A PRICE AS A PERSON WRITES IT → INTEGER PAISE (ADR-0004). The one reader of a typed or imported rupee amount: the
-// product editor, collection rules and the import (plan 2026-11-12-product-import PI·0 · 3) all come here, so a cell
-// reads the same in the grid and in a sheet.
+// A PRICE AS A PERSON WRITES IT → INTEGER PAISE (ADR-0004). Read here: the product editor (price, M.R.P., cost),
+// collection rules' prices, a part credit note's amount, and the import (plan 2026-11-12-product-import PI·0 · 3), so
+// a cell reads the same in the grid and in a sheet. Not yet: the Look's controls, Settings' shipping costs and
+// sections, Admin's custom plan price (each strips ₹ and commas itself).
 //
 // Forgiving about the dress, strict about the number:
 // - "₹", "Rs", "Rs.", "INR" before or after it; "/-" after it; spaces around it.
@@ -32,6 +33,9 @@ export function parseRupees(text: string, opts: { zero?: boolean } = {}): number
   const paise = Number(digits) * 100 + Number((m[2] ?? '').padEnd(2, '0'))
   return paise > 0 || (paise === 0 && opts.zero) ? paise : null
 }
+
+/** Why a price box was refused, in the merchant's words: a zero is a number, just not a price a shop sells at. */
+export const priceRefusal = (text: string) => (parseRupees(text, { zero: true }) === 0 ? 'More than ₹0.' : 'A price in rupees.')
 
 /** 249050 → "2490.50", 249000 → "2490": what a price box shows. */
 export function rupeesText(paise: number | null): string {

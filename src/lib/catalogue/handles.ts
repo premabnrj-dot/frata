@@ -3,6 +3,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { presetsFor } from '@/domains/catalogue/size-charts'
 import { handleFor } from '@/domains/catalogue/variants'
 import type { Tx } from '@/lib/db'
+import { arrayParam } from '@/lib/db/sql-array'
 import { shopSettings } from '@/lib/db/schema'
 import { productHandleHistory, products, productTypes } from '@/lib/db/schema-catalogue'
 
@@ -25,8 +26,6 @@ export async function freeHandle(tx: Tx, tenantId: string, title: string): Promi
 
 /** Room left for a "-N" suffix inside the 100 characters a handle may have. */
 const stemOf = (base: string) => base.slice(0, 94).replace(/-+$/, '')
-/** Handle-safe strings as one Postgres text[] parameter (one statement, whatever the count). */
-const handleList = (xs: string[]) => sql`${`{${xs.join(',')}}`}::text[]`
 
 /** What a handle or SKU is without its trailing digits: "kurta-12" → "kurta-", "kurta" → "kurta". */
 export const undigit = (s: string) => s.replace(/[0-9]+$/, '')
@@ -37,7 +36,7 @@ export const undigit = (s: string) => s.replace(/[0-9]+$/, '')
  * cheap rtrim per row, no regex: the 10× read stays under 10 ms (write.int.test.ts, SPEED=1).
  */
 export const takenHandles = (tx: Tx, tenantId: string, keys: string[]) => {
-  const of = (col: typeof products.handle | typeof productHandleHistory.handle) => sql`rtrim(${col}, '0123456789') = any(${handleList(keys)})`
+  const of = (col: typeof products.handle | typeof productHandleHistory.handle) => sql`rtrim(${col}, '0123456789') = any(${arrayParam(keys, 'text')})`
   return tx.select({ handle: products.handle }).from(products).where(and(eq(products.tenantId, tenantId), of(products.handle)))
     .union(tx.select({ handle: productHandleHistory.handle }).from(productHandleHistory).where(and(eq(productHandleHistory.tenantId, tenantId), of(productHandleHistory.handle))))
 }

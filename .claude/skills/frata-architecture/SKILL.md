@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.46.1
+  version: 2.46.2
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -480,11 +480,12 @@ after it. A class a shop page uses from outside the shop's folders must be added
 
 ## Writing products (PI·0, 2026-11-12; plan docs/plans/2026-11-12-product-import.md)
 
-- **A product's variants are written only by `writeProducts`** (`src/lib/catalogue/write.ts`, inside the caller's
-  transaction): the editor's save passes one draft, the import a chunk. SKU, barcode, removed and returning sizes and
-  cost-of-goods rules live there, set-based (one read each of handles, SKUs and barcodes; one insert per table).
-  Never a per-product loop of its statements; a new rule for variants goes into it, pinned by
-  `save-product.int.test.ts` and `write.int.test.ts`.
+- **The editor and the import write a product's sizes through `writeProducts`** (`src/lib/catalogue/write.ts`, inside
+  the caller's transaction: the editor one draft, the import a chunk): prices, SKUs, barcodes, cost of goods, and
+  sizes removed or returning. Its rules live there, set-based (one read each of handles, SKUs and barcodes; one insert
+  per table), never a per-product loop; a new rule for those goes into it, pinned by `save-product.int.test.ts` and
+  `write.int.test.ts`. (Other writers keep their own narrow writes: `createProduct`'s starting sizes, stock moved by
+  orders.) A lock not had in its 1 s is told as "Someone is buying this product right now" (`lockTimedOut`).
 - New products' addresses come from `freeHandles` (`src/lib/catalogue/handles.ts`, one read for the batch);
   `handleFor` writes Indian scripts in Latin letters (`src/domains/catalogue/indic.ts`).
 
@@ -676,9 +677,10 @@ Rules:
 
 Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
 `<Money paise>` to render; `formatInr` groups in lakh/crore. Profit is
-`orderProfit()` — never a margin computed inline. A rupee amount a person types or a sheet holds is read only by
-`parseRupees` (`src/domains/money/rupees.ts`): a misplaced comma, a third decimal, zero or a negative is null (an
-error), never guessed and never 0.
+`orderProfit()` — never a margin computed inline. A price typed in the catalogue (the product editor, collection rules), a part credit
+note's amount and a price in an import are read by `parseRupees` (`src/domains/money/rupees.ts`): a misplaced comma, a
+third decimal, zero or a negative is null (an error), never guessed and never 0. A new rupee input uses it too; the
+Look's controls, Settings' shipping costs and sections, and Admin's custom plan price still strip ₹ themselves.
 
 **Offers (O·1, docs/plans/2026-11-08-offers.md).** Core checkout pricing, not a module
 (`check:modules` forbids core importing module code).

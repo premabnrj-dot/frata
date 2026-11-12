@@ -55,6 +55,15 @@ describe.skipIf(!host)('writing new products in one batch', () => {
       expect(await writeProducts(tx, A, [sized('X', b, [{ gtin: '4006381333931' }]), sized('Y', b, [{ gtin: '4006381333931' }])], { costs: true })).toMatchObject({ ok: false, draft: 1 })
       expect(await count()).toBe(4)
 
+      // Sizes dropped from two products, one with a pre-order to pack: refused, naming that product's draft.
+      const { orders, orderLines } = await import('@/lib/db/schema-orders')
+      const s1 = rows.find((r) => r.p === w.products[1]!.id)!
+      const [s1v] = await tx.select({ id: variants.id }).from(variants).where(and(eq(variants.tenantId, A), eq(variants.productId, s1.p)))
+      const [o] = await tx.insert(orders).values({ tenantId: A, number: 960_000 + Math.floor(Math.random() * 30_000), paymentMethod: 'cod', placedAt: new Date() }).returning({ id: orders.id })
+      await tx.insert(orderLines).values({ tenantId: A, orderId: o!.id, variantId: s1v!.id, title: 'S', qty: 1, unitPrice: 129900, taxableValue: 123714, kind: 'preorder' })
+      const drop = (i: number) => ({ productId: w.products[i]!.id, handle: w.products[i]!.handle, title: 'Int write', options: [], variants: [size([])] })
+      expect(await writeProducts(tx, A, [drop(0), drop(1)], { costs: true })).toEqual({ ok: false, draft: 1, error: 'S has pre-orders still to pack. Pack or cancel them first.' })
+
       // Seen costs are written; a Hindi name has an address in Latin letters.
       const seen = await writeProducts(tx, A, [sized(`लिनन कुर्ता ${b}`, '', [{}])], { costs: true })
       if (!seen.ok) throw new Error(seen.error)

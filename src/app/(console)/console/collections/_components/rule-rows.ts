@@ -1,5 +1,5 @@
 import type { Rule } from '@/domains/catalogue/collection-rules'
-import { parseRupees, rupeesText } from '@/domains/money/rupees'
+import { parseRupees, priceRefusal, rupeesText } from '@/domains/money/rupees'
 
 // =============================================================================
 // FILE: src/app/(console)/console/collections/_components/rule-rows.ts
@@ -14,11 +14,18 @@ import { parseRupees, rupeesText } from '@/domains/money/rupees'
 
 export type Row = { field: Rule['field']; value: string; handle?: string; label?: string }
 
-/** Rows as the server takes them: money as paise, empty rows dropped. */
+const isPrice = (f: Row['field']) => f === 'price_below' || f === 'price_at_least'
+
+/** A price row whose box holds something that is not a price, keyed `rule:<row>`: the save waits until it is fixed. */
+export function ruleErrors(rows: Row[]): Record<string, string> {
+  return Object.fromEntries(rows.flatMap((r, i) => (isPrice(r.field) && r.value.trim() && parseRupees(r.value) === null ? [[`rule:${i}`, priceRefusal(r.value)]] : [])))
+}
+
+/** Rows as the server takes them: money as paise, empty rows dropped (a price that doesn't read is ruleErrors'). */
 export function toRules(rows: Row[]): Rule[] {
   return rows.flatMap((r): Rule[] => {
     if (r.field === 'in_stock') return [{ field: 'in_stock' }]
-    if (r.field === 'price_below' || r.field === 'price_at_least') { const p = parseRupees(r.value); return p ? [{ field: r.field, value: p }] : [] }
+    if (isPrice(r.field)) { const p = parseRupees(r.value); return p ? [{ field: r.field, value: p }] : [] }
     if (!r.value) return []
     if (r.field === 'attribute') return r.handle ? [{ field: 'attribute', handle: r.handle, value: r.value }] : []
     return [{ field: r.field, value: r.value }]

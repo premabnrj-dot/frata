@@ -18,11 +18,24 @@ describe('Indian scripts in a product address', () => {
       ['Kurta कुर्ता & Co.', 'kurta-kurta-and-co'], ['साड़ी।', 'sari'],
     ] as const) expect(handleFor(title), title).toBe(handle)
   })
-  it('the same letters typed precomposed or decomposed read the same', () => {
-    expect(latinOf('ज़री')).toBe(latinOf('ज़री')) // ज़री, one code point or two
+  it('reads a two-part vowel sign (o, ai, au) as one vowel in every script that has one', () => {
+    for (const [title, handle] of [
+      ['সোনা', 'sona'], ['সৌরভ', 'saurabh'], // Bengali o, au
+      ['କୋଣାର୍କ', 'konarka'], ['ପୈଠଣୀ', 'paithani'], ['ମୌସୁମୀ', 'mausumi'], // Odia o, ai, au
+      ['கொலுசு', 'koluchu'], ['கோவை', 'kovai'], ['பௌர்ணமி', 'paurnami'], // Tamil o, oo, au
+      ['కైలాస', 'kailasa'], ['కొండపల్లి', 'kondapalli'], // Telugu ai, o
+      ['ಕೊಡಗು', 'kodagu'], ['ಕೈಮಗ್ಗ', 'kaimagga'], ['ಕೌದಿ', 'kaudi'], // Kannada o, ai, au
+      ['കൊച്ചി', 'kochchi'], ['കൈത്തറി', 'kaittari'], ['കൌശല', 'kaushala'], // Malayalam o, ai, au
+    ] as const) expect(handleFor(title), title).toBe(handle)
+  })
+  it('the same letters typed composed or in parts read the same', () => {
+    expect(latinOf('\u095b\u0930\u0940')).toBe(latinOf('\u091c\u093c\u0930\u0940')) // ज़री, one code point or two
+    expect(latinOf('\u09b8\u09cb\u09a8\u09be')).toBe(latinOf('\u09b8\u09c7\u09be\u09a8\u09be')) // সোনা, ো or ে + া
+    expect(latinOf('\u0b95\u0bca')).toBe('ko') // கொ typed as one sign
+    expect(latinOf('\u0b95\u0bc6\u0bbe')).toBe('ko') // … or as its two parts
   })
   it('leaves other text alone; a name with no letters still has no address', () => {
-    expect(latinOf('Linen kurta, ₹1,299')).toBe('Linen kurta, ₹1,299')
+    expect(latinOf('Linen kurta, \u20b91,299')).toBe('Linen kurta, \u20b91,299')
     expect(handleFor('🌸')).toBe('')
     expect(handleFor('Crème brûlée')).toBe('creme-brulee')
   })

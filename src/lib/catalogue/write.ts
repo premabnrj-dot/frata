@@ -6,6 +6,7 @@ import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { products, variants } from '@/lib/db/schema-catalogue'
+import { arrayParam } from '@/lib/db/sql-array'
 import { freeHandles, undigit } from './handles'
 import { retireVariants } from './retire-variants'
 
@@ -18,7 +19,8 @@ import { retireVariants } from './retire-variants'
 //
 // Rules, the editor's as they were:
 // - An existing product's variants are locked first, in id order (as checkout locks them: no deadlock), and the
-//   writer waits at most 1 s for a lock; the caller's lock_timeout is put back after.
+//   writer waits at most 1 s for a lock (a drop's checkout holds them): past it the statement throws 55P03, which the
+//   caller tells the merchant in words (lockTimedOut); otherwise the caller's lock_timeout is put back after.
 // - A size or colour still wanted keeps its row; one dropped is archived if ever ordered, deleted if not, refused with
 //   pre-orders to pack (retire-variants.ts); one added back that was archived returns as the same row.
 // - A SKU is unique in the shop in any case. A typed one on another product is refused; a blank one is made from the
@@ -46,33 +48,37 @@ export type ProductDraft = {
 }
 export type Written = { ok: true; products: { id: string; handle: string }[] } | { ok: false; draft: number; error: string }
 
-/** Strings as ONE Postgres array parameter, quoted, so a read is one statement whatever the count. */
-const list = (xs: readonly string[], type: 'text' | 'uuid') =>
-  sql`${`{${xs.map((x) => `"${x.replace(/["\\]/g, '\\$&')}"`).join(',')}}`}::${sql.raw(type)}[]`
-
 /**
  * SKUs on OTHER products (upper case, as compared) whose form without trailing digits is one of `keys` (undigit of
  * each wanted SKU, and a stem + "-" for its "-N" forms): a superset of the clashes, each a real taken SKU. One rtrim
- * per row, no regex (the 10× read: write.int.test.ts, SPEED=1).
+ * and a byte-wise upper per row, no regex (the 10× read: write.int.test.ts, SPEED=1). `collate "C"` is exact because a
+ * SKU is ASCII (letters, digits and - _ . /: cleanProduct), and skips the locale's case tables.
  */
 export const takenSkus = (tx: Tx, tenantId: string, own: string[], keys: string[]) =>
   tx.select({ sku: sql<string>`upper(${variants.sku})` }).from(variants).where(and(
-    eq(variants.tenantId, tenantId), sql`${variants.sku} is not null`, sql`${variants.productId} <> all(${list(own, 'uuid')})`,
-    sql`upper(rtrim(${variants.sku}, '0123456789')) = any(${list(keys, 'text')})`,
+    eq(variants.tenantId, tenantId), sql`${variants.sku} is not null`, sql`${variants.productId} <> all(${arrayParam(own, 'uuid')})`,
+    sql`upper(rtrim(${variants.sku} collate "C", '0123456789')) = any(${arrayParam(keys, 'text')})`,
   ))
 
 export async function writeProducts(tx: Tx, tenantId: string, drafts: readonly ProductDraft[], opts: { costs: boolean }): Promise<Written> {
   if (!drafts.length) return { ok: true, products: [] }
   const [was] = await tx.execute<{ prev: string }>(sql`select current_setting('lock_timeout') as prev, set_config('lock_timeout', '1s', true)`)
-  const result = await write(tx, tenantId, drafts, opts)
-  await tx.execute(sql`select set_config('lock_timeout', ${was!.prev}, true)`)
-  return result
+  let thrown = true
+  try {
+    const result = await write(tx, tenantId, drafts, opts)
+    thrown = false
+    return result
+  } finally {
+    // After a throw (a lock not had in 1 s: 55P03, lockTimedOut) the transaction is aborted and its rollback takes the
+    // setting with it; a statement now would fail and hide the real error.
+    if (!thrown) await tx.execute(sql`select set_config('lock_timeout', ${was!.prev}, true)`)
+  }
 }
 
 async function write(tx: Tx, tenantId: string, drafts: readonly ProductDraft[], { costs }: { costs: boolean }): Promise<Written> {
   const fail = (draft: number, error: string): Written => ({ ok: false, draft, error })
   const own = drafts.flatMap((d) => (d.productId ? [d.productId] : []))
-  const ownList = list(own, 'uuid')
+  const ownList = arrayParam(own, 'uuid')
 
   // Existing products' variants, live and archived, locked in id order: from here no order line can land on them.
   const locked = own.length ? await tx.select({ id: variants.id, productId: variants.productId, optionValues: variants.optionValues, archivedAt: variants.archivedAt })
@@ -97,7 +103,7 @@ async function write(tx: Tx, tenantId: string, drafts: readonly ProductDraft[], 
   }
   if (gtinAt.size) {
     const [clash] = await tx.select({ gtin: variants.gtin }).from(variants)
-      .where(and(eq(variants.tenantId, tenantId), sql`${variants.productId} <> all(${ownList})`, sql`${variants.gtin} = any(${list([...gtinAt.keys()], 'text')})`)).limit(1)
+      .where(and(eq(variants.tenantId, tenantId), sql`${variants.productId} <> all(${ownList})`, sql`${variants.gtin} = any(${arrayParam([...gtinAt.keys()], 'text')})`)).limit(1)
     if (clash) return fail(gtinAt.get(clash.gtin!)!, `Barcode ${clash.gtin} is already on another product in your shop.`)
   }
 
@@ -126,7 +132,7 @@ async function write(tx: Tx, tenantId: string, drafts: readonly ProductDraft[], 
 
   // Removed sizes and colours (refused before it writes, with pre-orders to pack).
   const retired = await retireVariants(tx, tenantId, plans.flatMap((p) => p.remove.map((v) => v.id)))
-  if (!retired.ok) return fail(Math.max(0, plans.findIndex((p) => p.remove.length)), retired.error)
+  if (!retired.ok) return fail(Math.max(0, plans.findIndex((p) => p.remove.some((v) => retired.refused.includes(v.id)))), retired.error)
 
   // New products: one insert.
   const inserted = fresh.length ? await tx.insert(products).values(fresh.map((i) => ({

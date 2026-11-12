@@ -1,8 +1,9 @@
 // The editor's save (saveProduct, src/app/(console)/console/products/actions.ts) on a real Postgres, pinned before the
 // import's chunk writer shares its rules (plan 2026-11-12-product-import PI·0 · 1): SKUs unique in the shop (any case,
 // a default made and suffixed when blank, two sizes may swap theirs), a barcode on another product refused, a size
-// removed and added back is the same row (archived while ordered), and the cost of goods written only by whoever sees
-// it. The sign-in is faked (the member is the test's); the shop is a throwaway one made through ADMIN_URL and removed
+// removed and added back is the same row (archived while ordered, refused with pre-orders to pack), every field of a
+// kept size written, the cost of goods written only by whoever sees it, and a drop's checkout holding the sizes told
+// in words with nothing written. The sign-in is faked (the member is the test's); the shop is a throwaway one made through ADMIN_URL and removed
 // after. Skipped unless INT_DB_HOST is set.
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import postgres from 'postgres'
@@ -20,7 +21,7 @@ const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
 const pass = process.env.INT_DB_PASSWORD ?? 'x'
 const PROOF_A = '11111111-1111-1111-1111-111111111111'
-const EAN = '4006381333931' // a real check digit
+const EAN = '4006381333931', EAN2 = '8901234567890' // real check digits
 
 const cell = (values: string[], v: Partial<VariantInput> = {}): VariantInput => ({ values, price: '1299', compareAt: '', cost: '', stock: '5', sku: '', gtin: '', ...v })
 const input = (handle: string, sizes: string[], cells: VariantInput[]): ProductInput => ({
@@ -45,10 +46,17 @@ async function rows() {
       id: variants.id, values: variants.optionValues, sku: variants.sku, gtin: variants.gtin, price: variants.price, unitCost: variants.unitCost, position: variants.position, archivedAt: variants.archivedAt,
     }).from(variants).where(and(eq(variants.tenantId, t), eq(variants.productId, productId), withArchived ? undefined : isNull(variants.archivedAt))).orderBy(asc(variants.position), asc(variants.createdAt)))
       .map(({ archivedAt, price, unitCost, ...v }) => ({ ...v, price: Number(price), unitCost: unitCost === null ? null : Number(unitCost), archived: archivedAt !== null }))),
-    /** One order for the size: from then on it is archived, never deleted. */
-    orderLineFor: (t: string, variantId: string) => withTenant(t, async (tx) => {
+    /** Everything a size's row holds that the editor writes, besides its SKU and price. */
+    detailsOf: (t: string, productId: string) => withTenant(t, async (tx) => (await tx.select({
+      values: variants.optionValues, stock: variants.stock, compareAt: variants.compareAt, whenOut: variants.whenOut, shipsBy: variants.shipsBy,
+      leadMin: variants.leadMinDays, leadMax: variants.leadMaxDays, cap: variants.preorderCap, gtin: variants.gtin,
+    }).from(variants).where(and(eq(variants.tenantId, t), eq(variants.productId, productId), isNull(variants.archivedAt))).orderBy(asc(variants.position)))
+      .map(({ compareAt, ...v }) => ({ ...v, compareAt: compareAt === null ? null : Number(compareAt) }))),
+    versionOf: (t: string, productId: string) => withTenant(t, async (tx) => (await tx.select({ v: products.version }).from(products).where(and(eq(products.tenantId, t), eq(products.id, productId))))[0]!.v),
+    /** One order for the size: from then on it is archived, never deleted. A pre-order still to pack: it can't go at all. */
+    orderLineFor: (t: string, variantId: string, kind: 'in_stock' | 'preorder' = 'in_stock') => withTenant(t, async (tx) => {
       const [o] = await tx.insert(orders).values({ tenantId: t, number: 1 + Math.floor(Math.random() * 900_000), paymentMethod: 'cod', placedAt: new Date() }).returning({ id: orders.id })
-      await tx.insert(orderLines).values({ tenantId: t, orderId: o!.id, variantId, title: 'L', qty: 1, unitPrice: 129900, taxableValue: 123714, kind: 'in_stock', stockTakenAt: new Date() })
+      await tx.insert(orderLines).values({ tenantId: t, orderId: o!.id, variantId, title: 'L', qty: 1, unitPrice: 129900, taxableValue: 123714, kind, stockTakenAt: kind === 'in_stock' ? new Date() : null })
     }),
   }
 }
@@ -137,5 +145,64 @@ describe.skipIf(!host)('saving a product (the editor)', () => {
     state.role = 'staff'
     expect(await m.save(p, 2, input('chikan-kurti', ['S', 'M'], [cell(['S'], { cost: '999', price: '1399' }), cell(['M'], { cost: '999' })]))).toMatchObject({ ok: true })
     expect((await m.db.variantsOf(state.tenantId, p)).map((v) => [v.values[0], v.price, v.unitCost])).toEqual([['S', 139900, 45000], ['M', 129900, null]])
+  })
+
+  it('writes every field of a kept size: stock, M.R.P., what happens when it runs out', async () => {
+    state.role = 'owner'
+    const p = await m.db.product(state.tenantId, 'mul-saree', [['S'], ['M']])
+    const shipsBy = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
+    expect(await m.save(p, 1, input('mul-saree', ['S', 'M'], [
+      cell(['S'], { stock: '7', compareAt: '1599', whenOut: 'preorder', shipsBy, cap: '20' }),
+      cell(['M'], { stock: '0', whenOut: 'made_to_order', leadMin: '3', leadMax: '7' }),
+    ]))).toMatchObject({ ok: true })
+    expect(await m.db.detailsOf(state.tenantId, p)).toEqual([
+      { values: ['S'], stock: 7, compareAt: 159900, whenOut: 'preorder', shipsBy, leadMin: null, leadMax: null, cap: 20, gtin: null },
+      { values: ['M'], stock: 0, compareAt: null, whenOut: 'made_to_order', shipsBy: null, leadMin: 3, leadMax: 7, cap: null, gtin: null },
+    ])
+    // Back to "stop selling": the pre-order and lead-time fields go with it.
+    expect(await m.save(p, 2, input('mul-saree', ['S', 'M'], [cell(['S'], { stock: '2' }), cell(['M'], { stock: '4', compareAt: '1300' })]))).toMatchObject({ ok: true })
+    expect(await m.db.detailsOf(state.tenantId, p)).toEqual([
+      { values: ['S'], stock: 2, compareAt: null, whenOut: 'stop', shipsBy: null, leadMin: null, leadMax: null, cap: null, gtin: null },
+      { values: ['M'], stock: 4, compareAt: 130000, whenOut: 'stop', shipsBy: null, leadMin: null, leadMax: null, cap: null, gtin: null },
+    ])
+  })
+
+  it('lets two sizes swap their barcodes in one save', async () => {
+    state.role = 'owner'
+    const p = await m.db.product(state.tenantId, 'ikat-dupatta', [['S'], ['M']])
+    expect(await m.save(p, 1, input('ikat-dupatta', ['S', 'M'], [cell(['S'], { gtin: EAN2 }), cell(['M'], { gtin: '8901234567883' })]))).toMatchObject({ ok: true })
+    expect(await m.save(p, 2, input('ikat-dupatta', ['S', 'M'], [cell(['S'], { gtin: '8901234567883' }), cell(['M'], { gtin: EAN2 })]))).toMatchObject({ ok: true })
+    expect((await m.db.detailsOf(state.tenantId, p)).map((v) => v.gtin)).toEqual(['8901234567883', EAN2])
+  })
+
+  it('refuses to drop a size with pre-orders still to pack, and changes nothing', async () => {
+    state.role = 'owner'
+    const p = await m.db.product(state.tenantId, 'bandhani-saree', [['S'], ['M']])
+    expect(await m.save(p, 1, input('bandhani-saree', ['S', 'M'], [cell(['S']), cell(['M'], { stock: '0', price: '2100' })]))).toMatchObject({ ok: true })
+    const M = (await m.db.variantsOf(state.tenantId, p)).find((v) => v.values[0] === 'M')!
+    await m.db.orderLineFor(state.tenantId, M.id, 'preorder')
+    expect(await m.save(p, 2, input('bandhani-saree', ['S'], [cell(['S'], { price: '999' })]))).toEqual({ ok: false, error: 'M has pre-orders still to pack. Pack or cancel them first.' })
+    expect(await m.db.versionOf(state.tenantId, p)).toBe(2)
+    expect((await m.db.variantsOf(state.tenantId, p)).map((v) => [v.values[0], v.price])).toEqual([['S', 129900], ['M', 210000]])
+  })
+
+  it('says so when a checkout holds the sizes past the writer\'s 1 s, and writes nothing', async () => {
+    state.role = 'owner'
+    const p = await m.db.product(state.tenantId, 'drop-tee', [['M']])
+    expect(await m.save(p, 1, input('drop-tee', ['M'], [cell(['M'])]))).toMatchObject({ ok: true })
+    const checkout = await su!.reserve()
+    try {
+      await checkout`begin`
+      await checkout`select id from variants where tenant_id = ${state.tenantId} and product_id = ${p} order by id for update`
+      const t0 = Date.now()
+      expect(await m.save(p, 2, input('drop-tee', ['M'], [cell(['M'], { price: '1599' })]))).toEqual({ ok: false, error: 'Someone is buying this product right now. Save again in a moment.' })
+      expect(Date.now() - t0).toBeLessThan(3000)
+    } finally {
+      await checkout`rollback`
+      checkout.release()
+    }
+    expect(await m.db.versionOf(state.tenantId, p)).toBe(2)
+    expect((await m.db.variantsOf(state.tenantId, p)).map((v) => v.price)).toEqual([129900])
+    expect(await m.save(p, 2, input('drop-tee', ['M'], [cell(['M'], { price: '1599' })]))).toMatchObject({ ok: true, version: 3 })
   })
 })
