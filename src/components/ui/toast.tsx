@@ -19,8 +19,9 @@ import { cn } from '@/lib/utils'
 // One toast at a time: a new one replaces the last. Every timer is held in a ref and cleared when a newer toast
 // arrives, so a leaving or an earlier undo's result never overwrites the toast on screen (impact review 2026-11-07).
 // ONE Toaster per surface: AppShell mounts it for the console, Admin and partner (inside [data-shell], outside
-// main#content: the shell's font and focus ring, never under main's aria-busy); the look editor and the signed-in
-// public pages (login, start, choose, handover) mount it in their layout; never a public marketing page (rule 44). The
+// main#content: the shell's font and focus ring, never under main's aria-busy); the signed-in public pages (login,
+// start, choose, handover) mount it in their layout, the look editor in F1 (its byte budget: it drops its own toast
+// then); never a public marketing page (rule 44). The
 // shop's is its own small component (F3). A page without the shell gets this Toaster's own polite region (`region`).
 // While a modal Dialog is open the rest of the page is inert and hidden from screen readers, so a toast raised then is
 // drawn INSIDE that dialog (a portal); it moves back out when the dialog closes. An error toast leaves when the page
