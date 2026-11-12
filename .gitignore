@@ -9,3 +9,6 @@ next-env.d.ts
 .DS_Store
 e2e/.out/
 e2e/.out.prev/
+
+# Agent worktrees (isolated copies of this repo)
+.claude/worktrees/
