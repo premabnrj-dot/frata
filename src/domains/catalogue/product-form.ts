@@ -73,8 +73,8 @@ import { cleanPairIds, cleanStories, type Story } from './stories'
 export const HANDLE_SHAPE = /^[a-z0-9]([a-z0-9-]{0,98}[a-z0-9])?$/
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
-/** Errors keyed "title", "options", or "v:<values>:<field>" for one grid cell. */
-export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: CleanProduct } | { ok: false; errors: Record<string, string> } {
+/** Errors keyed "title", "options", or "v:<values>:<field>" for one grid cell. `hsnDigits`: the shop's, by its turnover (rates.ts hsnDigitsFor). */
+export function cleanProduct(p: ProductInput, now: Date, hsnDigits = 4): { ok: true; product: CleanProduct } | { ok: false; errors: Record<string, string> } {
   const errors: Record<string, string> = {}
   const title = p.title.trim().replace(/\s+/g, ' ')
   if (!title) errors.title = 'Your product needs a name.'
@@ -140,7 +140,7 @@ export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: C
     value: c.value, family: c.family || null, hex: c.hex && /^#[0-9a-f]{6}$/i.test(c.hex) ? c.hex.toLowerCase() : null,
     crop: c.crop && /^[0-9a-f-]{36}$/.test(c.crop.imageId) && [c.crop.x, c.crop.y].every((n) => n >= 0 && n <= 1) && c.crop.r >= 0.03 && c.crop.r <= 0.5 ? c.crop : null,
   }))
-  const tax = p.tax ? cleanTax(p.tax, now) : null
+  const tax = p.tax ? cleanTax(p.tax, now, hsnDigits) : null
   if (tax && !tax.ok) Object.assign(errors, Object.fromEntries(Object.entries(tax.errors).map(([k, v]) => [`tax.${k}`, v])))
   const label = p.label ? cleanLabel(p.label) : null
   if (label && !label.ok) Object.assign(errors, Object.fromEntries(Object.entries(label.errors).map(([k, v]) => [`label.${k}`, v])))

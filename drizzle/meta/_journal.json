@@ -827,6 +827,13 @@
       "when": 1794478337824,
       "tag": "0117_order_edits_access",
       "breakpoints": true
+    },
+    {
+      "idx": 118,
+      "version": "7",
+      "when": 1794489982501,
+      "tag": "0118_product_import",
+      "breakpoints": true
     }
   ]
 }
