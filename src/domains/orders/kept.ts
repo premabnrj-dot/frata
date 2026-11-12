@@ -73,7 +73,8 @@ export function keptOf(groups: readonly KeptGroup[], est: ShipCostEstimate): Kep
     if (!restocked && g.cogs === null) { out.leftOut += g.n; continue }
     // Actual lines are already the group's sums; an estimate is per parcel, so it is scaled to the group first (a
     // Shiprocket group can mix both: its missing lines take the estimate).
-    const groupEst = est ? { delivery: est.delivery * g.n, ret: est.ret * g.n, codFee: est.codFee * g.n } : null
+    // `n` may be a weight (True Profit's line shares of their orders): the scaled estimate rounds to the paisa.
+    const groupEst = est ? { delivery: Math.round(est.delivery * g.n), ret: Math.round(est.ret * g.n), codFee: Math.round(est.codFee * g.n) } : null
     const f = freightOf(g.provider, { forwardShipping: g.forward, rtoShipping: g.rto, courierCodFee: g.courierCodFee }, groupEst, { cod: g.cod, outcome: g.outcome })
     if (f.source === 'pending') { out.leftOut += g.n; continue }
     const p = orderProfit({
