@@ -1,5 +1,5 @@
 # Edit a placed order
-Status: draft · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/76HjNBCo2xdJyf6Qvwxutx (views COD, Paid online, Saved) · Approved: —
+Status: active · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/76HjNBCo2xdJyf6Qvwxutx (views COD, Paid online, Saved) · Approved: owner, 2026-11-12
 
 ## Goal
 North star (1) COD/RTO losses and (2) size returns. Today a "change my size" WhatsApp or a piece out of stock after
@@ -10,6 +10,11 @@ Measure: orders cancelled with reason "out of stock" or "customer asked", before
 ## Job
 Before a parcel is packed, the merchant changes what is in it (size or colour, quantity, a piece removed or added),
 and the amount to collect or refund follows, with the shopper told.
+
+**Owner decisions (2026-11-12, with the mockup's approval, as drawn):** owners and admins edit orders (as address
+edits); a paid-online order whose total goes down refunds the difference automatically through the shop's own Razorpay
+(refunds API, normal speed; OE·2); one whose total goes up collects the difference on delivery (on the slip), no payment
+link in v1.
 
 ## Research
 | Product | Taken | Not taken |

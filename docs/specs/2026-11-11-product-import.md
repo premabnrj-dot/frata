@@ -1,5 +1,5 @@
 # Product import
-Status: draft · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/76HjNBCo2xdJyf6Qvwxutx (views 1 · File, 2 · Check, 3 · Done, Photos) · Approved: —
+Status: active · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/76HjNBCo2xdJyf6Qvwxutx (views 1 · File, 2 · Check, 3 · Done, Photos) · Approved: owner, 2026-11-12
 
 Supersedes the import half of phase-1 § 1A·3 (deferred by the owner on 2026-11-06 until Vercel Pro; Pro is on).
 
