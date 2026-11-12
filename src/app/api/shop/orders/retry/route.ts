@@ -13,5 +13,5 @@ export async function POST(request: Request) {
   const r = await shopRequest(request, Body, LIMITS.payIp)
   if (!r.ok) return r.response
   const out = await retryPayment(r.tenantId, r.body.token)
-  return out.ok ? reply({ pay: out.pay }) : reply({ error: out.error }, out.status)
+  return out.ok ? reply({ pay: out.pay }) : reply({ error: out.error }, out.status, out.status === 503 ? { 'Retry-After': '2' } : {})
 }

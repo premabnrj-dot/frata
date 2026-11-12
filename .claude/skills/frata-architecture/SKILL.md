@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.42.0
+  version: 2.43.0
   verified: 2026-11-11
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -537,7 +537,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
 - Inbound: `src/app/api/webhooks/<provider>/route.ts` — read `request.text()`,
   verify the signature on that text, compute OUR key, insert with
   `onConflictDoNothing`, answer 200. Processing reads `webhook_events where
-  processed_at is null`. List the route in `scripts/check-actions.mjs` ENTRY_POINTS.
+  processed_at is null`; Razorpay's are retried every 5 minutes by `/api/cron/drain`, the rest by the daily cron. List the route in `scripts/check-actions.mjs` ENTRY_POINTS.
 - Per-merchant credentials (Shiprocket tokens, Meta system user tokens) are
   never in env; they go in a tenant table, encrypted — the design is a spec.
 - A webhook caps its body before parsing (`raw.length > N` → 413) and checks the
@@ -598,6 +598,13 @@ Rules:
   at most `PLACE_SLOTS` (8) orders at once, as transaction advisory locks shared by every instance
   (`src/lib/orders/place.ts`); past either, 503 "busy, try again", `Retry-After: 2`, nothing written, and the try is
   given back to the phone and IP limits (`uncount`). A try whose order was already placed finds it before any slot.
+  Everything else that takes stock shares the slots and the wait (`takeSlot`): a payment landing, a switch to pay on
+  delivery, a retried payment (`src/lib/orders/payment.ts`). A captured payment is recorded FIRST where nothing waits
+  (a Razorpay-shaped `webhook_events` row; storing a capture keeps the order's hold ≥ 15 min while it still runs),
+  then applied if there is room. `processEvents` takes a slot only when something waits; a lock wait, deadlock,
+  serialization failure or statement timeout inside an event LEAVES it unprocessed (marking it would lose the
+  payment); the 5-minute drain (`/api/cron/drain`) is the next pass; the order page says "Payment received ·
+  confirming" and looks again (`paymentWaiting`).
 - A cached loader (`shopCached`) never runs inside a `withTenant`: it opens a second connection while the first is
   held, and at a drop the pool deadlocks (P4). Read it before the transaction, or after it closes (`quoteData`
   resolves offer collections after its transaction).

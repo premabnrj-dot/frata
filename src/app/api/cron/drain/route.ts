@@ -23,7 +23,8 @@ export async function GET(request: Request) {
     const shops = await shopsWithPendingEvents()
     await eachLimited(shops, 4, async (tenantId) => {
       if (Date.now() > started + 15_000) return
-      const n = await processEvents(tenantId, 50).catch((e) => { console.error('[cron] drain events', tenantId, errName(e)); return 0 })
+      // The same deadline inside: no event starts after it (each may wait 2 s on a lock).
+      const n = await processEvents(tenantId, 50, started + 15_000).catch((e) => { console.error('[cron] drain events', tenantId, errName(e)); return 0 })
       events += n // read after the await: four shops run at once
     })
   } catch (e) { console.error('[cron] drain events list', errName(e)) }

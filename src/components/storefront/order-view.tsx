@@ -8,6 +8,8 @@ import { api, dayRange, downloadInvoice, inr, type OrderRef } from './shop-clien
 
 type View = {
   number: number; state: ShopperState; collect: number; method: 'cod' | 'prepaid'; paidAfterSwitch: boolean; canSwitchToCod: boolean
+  /** Paid at Razorpay, being applied (a busy moment at the shop): shown as received, and looked at again. */
+  paymentWaiting?: boolean
   subtotal: number; shipping: number; codCharge: number; total: number; firstName: string; to: string; phone: string; email: string | null
   /** Offers that saved on the items (title and ₹ only). */
   savings?: { title: string; amount: number }[]
@@ -47,11 +49,21 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
     tokenRef.current = ref
     void api<View>('/api/shop/orders/view', ref).then((r) => (r.ok ? setV(r.data) : setError(r.status === 404 ? 'We could not find this order. Check the link, or message the shop.' : r.data.error ?? 'Could not load your order.')))
   }, [])
+  // A payment being applied: look again every 5 s for two minutes (each look also applies waiting payments).
+  const looks = useRef(0)
+  useEffect(() => {
+    if (!v?.paymentWaiting || !tokenRef.current || looks.current >= 24) return
+    const t = setTimeout(() => {
+      looks.current++
+      void api<View>('/api/shop/orders/view', tokenRef.current!).then((r) => { if (r.ok) setV(r.data) })
+    }, 5000)
+    return () => clearTimeout(t)
+  }, [v])
   if (error) return <p role="alert" className="mx-auto max-w-lg px-4 py-16 text-center">{error}</p>
   if (!v) return <p className="mx-auto max-w-lg px-4 py-16 text-center text-store-sub">Loading your order…</p>
   const num = `${prefix}-${v.number}`
   const wa = waLink(v.shop.whatsapp, `Order ${num}`)
-  const placed = v.state !== 'not_paid' && v.state !== 'awaiting_payment'
+  const placed = v.paymentWaiting || (v.state !== 'not_paid' && v.state !== 'awaiting_payment')
   const copy = () => navigator.clipboard?.writeText(window.location.href).then(() => setCopied(true), () => setCopied(false))
   return (
     <article className="mx-auto max-w-lg space-y-4 px-4 py-8">
@@ -59,7 +71,7 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
       <h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{placed ? `Thank you${v.firstName ? `, ${v.firstName}` : ''}` : 'Your order'}</h1>
       <dl className="space-y-1 text-sm">
         <div className="flex justify-between gap-4"><dt>Order</dt><dd className="font-mono font-medium">{num}</dd></div>
-        <div className="flex justify-between gap-4"><dt>Status</dt><dd className="text-right">{STATE[v.state]}</dd></div>
+        <div className="flex justify-between gap-4"><dt>Status</dt><dd className="text-right">{v.paymentWaiting ? 'Payment received · confirming your order' : STATE[v.state]}</dd></div>
         {v.arrives && placed && <div className="flex justify-between gap-4"><dt>Arrives</dt><dd>{dayRange(v.arrives)}</dd></div>}
       </dl>
       <ul className="divide-y divide-store-line border-y border-store-line">
@@ -75,7 +87,7 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
         {(v.savings ?? []).map((s, i) => <div key={`${s.title}-${i}`} className="flex justify-between text-store-good"><dt>{s.title}</dt><dd className="tabular-nums">−{inr(s.amount)}</dd></div>)}
         <div className="flex justify-between"><dt>Delivery</dt><dd>{v.shipping ? inr(v.shipping) : 'Free'}</dd></div>
         {v.method === 'cod' && v.codCharge > 0 && <div className="flex justify-between"><dt>Pay on delivery fee</dt><dd>{inr(v.codCharge)}</dd></div>}
-        <div className="flex justify-between pt-1 text-base"><dt className="font-medium">{v.collect > 0 && cashAtDoor(v.state) ? `Keep ${inr(v.collect)} ready` : v.collect > 0 && v.state === 'delivered' ? 'Paid on delivery' : v.method === 'prepaid' && v.state !== 'not_paid' && v.state !== 'awaiting_payment' ? 'Paid online' : 'Total'}</dt>
+        <div className="flex justify-between pt-1 text-base"><dt className="font-medium">{v.collect > 0 && cashAtDoor(v.state) ? `Keep ${inr(v.collect)} ready` : v.collect > 0 && v.state === 'delivered' ? 'Paid on delivery' : v.method === 'prepaid' && placed ? 'Paid online' : 'Total'}</dt>
           <dd className="tabular-nums">{v.method === 'cod' ? 'cash or UPI' : inr(v.total)}</dd></div>
         {v.paidAfterSwitch && <p className="text-store-good">Your online payment went through: nothing to pay on delivery.</p>}
         <div className="flex justify-between text-store-sub"><dt>To</dt><dd>{v.to}{v.phone ? ` · phone ${v.phone}` : ''}</dd></div>

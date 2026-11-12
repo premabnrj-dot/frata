@@ -112,7 +112,7 @@ Status: findings recorded, not yet folded into a revised design; the owner decid
   after the host is chosen, with images on storage with no egress fee.
 - **In today's code (separate from Studio):** fixed 2026-11-11: placement waits ≤ 2 s for a lock and a shop places ≤ 8
   orders at once (busy → 503, the try given back to the limits); the sold-out purge debounced across instances; the
-  quote's reads together, its cached collection members read after its transaction. Open: confirming a payment and
-  switching to pay on delivery take stock with no slot and the 10 s wait (a timeout in `processEvents` must leave the
-  event unprocessed first, or the payment is lost); previews hold production data (S1); staff sign in with an email
-  code only.
+  quote's reads together, its cached collection members read after its transaction. Fixed 2026-11-12: a payment
+  landing, a switch to pay on delivery and a retried payment share the slots and the 2 s wait; a capture is recorded
+  before it can be busy and keeps its hold; a passing error leaves the event for the 5-minute drain; the order page
+  says "confirming". Open: previews hold production data (S1); staff sign in with an email code only.
