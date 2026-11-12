@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.27.0
+  version: 1.28.0
   verified: 2026-11-12
   decisions: [ADR-0006]
 ---
@@ -893,4 +893,22 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   addresses, a landline beside the mobile for customer care and the grievance officer, and the grievance officer's designation
   required; the Contact policy shows the website's name and address; the contact form (with M·2) gives a copy of the complaint
   and a ticket number; counsel answers who is "the e-commerce entity" on a hosted shop and who joins the National Consumer Helpline.
+
+## Shopify (competitor reference: Hydrogen, Oxygen, India) — checked 2026-11-12 (integration-researcher)
+[V] read on the vendor's page, dated; [V-u] read that day, page undated; [U] no current source.
+- Hydrogen 2026-10 (GA 2026-10-14): "a framework-agnostic JavaScript library to add Shopify commerce to your existing
+  stack"; React Router 7 (on Oxygen) and Next.js 16 (Vercel Shop, on Vercel) starters; "host it anywhere, including
+  Oxygen, which is still free"; 20 skills for coding agents; WebMCP for a browser agent [V, shopify.dev changelog
+  2026-10-14; shopify.com/news/fall-26-edition-developer 2026-10-28].
+- Oxygen: no extra charge on paid plans, not on the Agentic plan; public environments Plus 25, others 1, dev/trial 0;
+  production + preview per branch; GitHub Actions deploy on push; shareable previews Basic+ [V-u, shopify.dev].
+- Checkout stays on Shopify (`cart.checkoutUrl`, a checkout subdomain); information/shipping/payment UI extensions
+  Plus only [V-u]. Customer Account API: buyers, OAuth 2.0 + PKCE [V-u].
+- AI: Canvas (Sidekick edits a Liquid theme's code), early access 2026-10-01 [V]; AI Toolkit / Dev MCP for coding
+  agents [V-u]; Storefront MCP catalog/cart replaced by UCP `/api/ucp/mcp` [V-u]. No Shopify agent that builds a
+  Hydrogen site for the brand [V-u, as of 2026-11-12].
+- India: Basic ₹1,994 / Grow ₹7,447 / Advanced ₹30,164 a month (monthly billing), Plus from ₹175,000; third-party
+  gateway fee 2 / 1 / 0.6 / 0.2% on top of the gateway's own; COD exempt [V, shopify.com/in/pricing as of 2026-11-09].
+  No Shopify Payments in India [V-u]. "Shopify doesn't create a GST-compliant bill" [U, guide 2025-09-22].
+- Agency price signal for a Hydrogen build: $50k–$250k+, 3–6 months; a Liquid theme under $10k [secondary, 2026-10-27].
 
