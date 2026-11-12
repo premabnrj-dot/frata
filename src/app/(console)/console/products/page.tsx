@@ -6,6 +6,7 @@ import { ViewTabs } from '@/components/ui/view-tabs'
 import { Money, Numeric } from '@/components/data/numeric'
 import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
+import { Menu } from '@/components/ui/menu'
 import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
 import { pick, urlFor } from '@/domains/media/sizes'
@@ -38,7 +39,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   }
   return (
     <>
-      <PageHeader title="Products" actions={<><Link href="/console/products/tax" className={button({ variant: 'secondary' })}>HSN codes</Link><Link href="/console/collections" className={button({ variant: 'secondary' })}>Collections</Link><Link href="/console/products/photos" className={button({ variant: 'secondary' })}>Add photos</Link>{importLink}{add}</>} />
+      <PageHeader title="Products" actions={<><Menu items={[{ label: 'HSN codes', href: '/console/products/tax' }, { label: 'Collections', href: '/console/collections' }]} /><Link href="/console/products/photos" className={button({ variant: 'secondary' })}>Add photos</Link>{importLink}{add}</>} />
       <ViewTabs label="Filter by status" tabs={TABS.map(([k, label]) => ({
         href: k ? `/console/products?status=${k}` : '/console/products', label, current: (status ?? '') === k,
         count: k ? counts[k] ?? 0 : total - (counts.archived ?? 0),
