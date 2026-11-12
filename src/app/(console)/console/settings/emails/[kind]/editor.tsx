@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { PLACEHOLDERS } from '@/domains/messaging/placeholders'
 import { WORD_LIMITS, type EmailWords } from '@/domains/email/words'
 import { saveEmailAction, sendTestAction } from '../actions'
@@ -16,7 +17,7 @@ const FIELDS: { key: keyof EmailWords; label: string; area?: boolean; max: numbe
 export function Editor({ kind, words, defaults, on, readOnly }: { kind: string; words: EmailWords; defaults: EmailWords; on: boolean; readOnly: boolean }) {
   const [w, setW] = useState(words)
   const [focus, setFocus] = useState<keyof EmailWords>('message')
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const toast = useToast()
   const [pending, start] = useTransition()
   const router = useRouter()
   const refs = useRef<Partial<Record<keyof EmailWords, HTMLInputElement | HTMLTextAreaElement | null>>>({})
@@ -27,10 +28,8 @@ export function Editor({ kind, words, defaults, on, readOnly }: { kind: string; 
     setW((x) => ({ ...x, [focus]: x[focus].slice(0, at) + token + x[focus].slice(el?.selectionEnd ?? at) }))
   }
   const act = (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>, done: string) => start(async () => {
-    setMsg(null)
     const r = await fn()
-    setMsg(r.ok ? { ok: true, text: r.message ?? done } : { ok: false, text: r.error ?? 'Something went wrong.' })
-    if (r.ok) router.refresh()
+    if (r.ok) { toast.ok(r.message ?? done); router.refresh() } else toast.error(r.error ?? 'Something went wrong.')
   })
   return (
     <div className="grid gap-3 text-sm">
@@ -46,7 +45,6 @@ export function Editor({ kind, words, defaults, on, readOnly }: { kind: string; 
           {PLACEHOLDERS.map((p) => <button key={p} type="button" onClick={() => insert(p)} className="rounded-sm border border-border bg-muted px-1.5 py-0.5 font-mono text-foreground hover:bg-accent">{p}</button>)}
         </p>
       ) : null}
-      {msg ? <p role={msg.ok ? 'status' : 'alert'} className={msg.ok ? 'text-ok-text' : 'text-danger-text'}>{msg.text}</p> : null}
       {!readOnly ? (
         <div className="flex flex-wrap gap-2">
           <Button type="button" disabled={pending} onClick={() => act(() => saveEmailAction(kind, w, on), 'Saved.')}>Save</Button>

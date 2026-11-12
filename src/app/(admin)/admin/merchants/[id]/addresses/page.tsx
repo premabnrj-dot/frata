@@ -3,7 +3,6 @@ import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/com
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
-import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { RENAMES_AFTER_OPENING } from '@/domains/addresses/names'
 import { merchantAddresses, merchantDomains, type NameView } from '@/lib/admin/addresses'
@@ -15,10 +14,11 @@ import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import { MerchantTabs } from '../tabs'
 import { adminRenameAction, disconnectDomainAction, freezeAddressAction } from './actions'
 import { Submit } from '@/components/ui/submit'
+import { ActionForm, FieldMessage } from '@/components/ui/action-form'
 
 export const metadata = { title: 'Addresses' }
 
-const field = 'h-10 rounded-md border border-input bg-card px-3 text-sm'
+const field = 'h-10 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark'
 
 function state(n: NameView) {
   // D1·9: a name added beside the current one (block it in Names to take it down).
@@ -28,12 +28,12 @@ function state(n: NameView) {
 }
 
 /** Shop addresses D1·7 (mockup § 8): the shop's names, Frrata's rename and the freeze. Writes: admin role only. */
-export default async function MerchantAddressesPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; error?: string }> }) {
+export default async function MerchantAddressesPage({ params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
   const { id } = await params
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound()
-  const [name, a, sp, admin, domains] = await Promise.all([merchantName(staff, id), merchantAddresses(staff, id), searchParams, requireStaff(ADMIN_ONLY), merchantDomains(staff, id)])
+  const [name, a, admin, domains] = await Promise.all([merchantName(staff, id), merchantAddresses(staff, id), requireStaff(ADMIN_ONLY), merchantDomains(staff, id)])
   if (!name || !a) notFound()
   const frozen = !!a.frozenAt
 
@@ -42,7 +42,6 @@ export default async function MerchantAddressesPage({ params, searchParams }: { 
       <PageHeader title={name} back={{ href: '/admin/merchants', label: 'Merchants' }}
         badges={frozen ? <Badge tone="warn">Address frozen</Badge> : undefined} />
       <MerchantTabs id={id} on="addresses" />
-      <Notice ok={sp.ok} error={sp.error} />
       <DataTable label={`${name}'s names`}>
         <DataTableHead><th>Name</th><th>State</th><th>Since</th></DataTableHead>
         <DataTableBody>
@@ -72,11 +71,12 @@ export default async function MerchantAddressesPage({ params, searchParams }: { 
                   {admin.ok && (
                     <Td cell="f">
                       {!d.removedAt && (
-                        <form action={disconnectDomainAction} className="flex flex-wrap items-center gap-2">
+                        <ActionForm action={disconnectDomainAction} className="flex flex-wrap items-center gap-2">
                           <input type="hidden" name="tenantId" value={id} /><input type="hidden" name="id" value={d.id} />
-                          <input name="reason" required minLength={3} maxLength={500} aria-label={`Why disconnect ${d.host}`} placeholder="Reason" className={`${field} min-w-0 flex-1`} />
+                          <input name="reason" required minLength={3} maxLength={500} aria-label={`Why disconnect ${d.host}`} placeholder="Reason" data-error="Add a reason, 3 to 500 characters." className={`${field} min-w-0 flex-1`} />
                           <Submit variant="secondary" size="wrap">Disconnect {d.host}</Submit>
-                        </form>
+                          <span className="basis-full empty:hidden"><FieldMessage name="reason" /></span>
+                        </ActionForm>
                       )}
                     </Td>
                   )}
@@ -89,32 +89,35 @@ export default async function MerchantAddressesPage({ params, searchParams }: { 
       {admin.ok && (
         <div className="grid gap-4 md:grid-cols-2 [&>*]:min-w-0">
           <Section title="Rename" className="text-sm">
-            <form action={adminRenameAction} className="space-y-3">
+            <ActionForm action={adminRenameAction} className="space-y-3">
               <input type="hidden" name="tenantId" value={id} />
               <label className="flex flex-col gap-1">
                 <span className="font-medium">New address</span>
-                <span className="flex items-center gap-1 rounded-md border border-input bg-card px-3 font-mono focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
-                  <input name="slug" required minLength={3} maxLength={30} pattern="[a-z0-9][a-z0-9\-]{1,28}[a-z0-9]" autoComplete="off" className="h-10 min-w-0 flex-1 bg-transparent outline-none" />
+                <span className="flex items-center gap-1 rounded-md border border-input bg-card px-3 font-mono has-[[aria-invalid=true]]:border-danger-mark focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
+                  <input name="slug" required minLength={3} maxLength={30} pattern="[a-z0-9][a-z0-9\-]{1,28}[a-z0-9]" autoComplete="off" data-error="Use 3–30 letters, digits and single hyphens." className="h-10 min-w-0 flex-1 bg-transparent outline-none" />
                   <span className="text-muted-foreground">.{SHOP_DOMAIN}</span>
                 </span>
+                <FieldMessage name="slug" />
               </label>
               <label className="flex flex-col gap-1">
                 <span className="font-medium">Reason</span>
-                <input name="reason" required minLength={3} maxLength={500} className={field} />
+                <input name="reason" required minLength={3} maxLength={500} data-error="Add a reason, 3 to 500 characters." className={field} />
+                <FieldMessage name="reason" />
               </label>
               <Submit variant="secondary" size="wrap">Rename {name}&apos;s address</Submit>
-            </form>
+            </ActionForm>
           </Section>
           <Section title={frozen ? `Frozen since ${dayIN(a.frozenAt!)}` : 'Freeze address changes'} className="text-sm">
-            <form action={freezeAddressAction} className="space-y-3">
+            <ActionForm action={freezeAddressAction} className="space-y-3">
               <input type="hidden" name="tenantId" value={id} />
               <input type="hidden" name="frozen" value={frozen ? 'no' : 'yes'} />
               <label className="flex flex-col gap-1">
                 <span className="font-medium">Reason</span>
-                <input name="reason" required minLength={3} maxLength={500} className={field} />
+                <input name="reason" required minLength={3} maxLength={500} data-error="Add a reason, 3 to 500 characters." className={field} />
+                <FieldMessage name="reason" />
               </label>
               <Submit variant="secondary" size="wrap">{frozen ? `Allow ${name}'s address changes` : `Freeze ${name}'s address`}</Submit>
-            </form>
+            </ActionForm>
           </Section>
         </div>
       )}

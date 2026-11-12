@@ -140,6 +140,25 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
 - **No credit for plan days already billed in advance** when Admin gives a live, paid shop a trial mid-month or extends
   after a 1st was invoiced: the trial's effect starts with the next invoice (impact review TR0; revisit if a shop asks).
 
+## True Profit (built 2026-11-12; owner: ₹999/month + GST on Launch and Growth with a 14-day trial, included in Scale)
+
+- **What it adds** over every plan's ₹ kept per order and by source: ₹ kept by product, by size and colour, by PIN code.
+  Per product or variant it is judged per order counted (`keptPerOrder` rule), never per delivered order alone.
+- **"COD loses money" at a PIN code**: COD's ₹ kept there is below zero over at least 5 COD orders (one order is one
+  shopper; one return no pattern).
+- **Hypotheses** (figure · source · date · test):
+  - H-TP1: a Launch/Growth trial converts ≥ 25% and leads to an action · plan · 2026-11-12 · kept past day 14, paid at day
+    60, a product or PIN code acted on within 30 days.
+  - H-TP2: shops pay ₹999 where Shopify's profit apps are free (on Launch ₹999 is ~2% of what a ₹48k-kept shop keeps) ·
+    unit-economics review · 2026-11-12 · win/loss notes from the first 20 trials.
+  - H-TP3: freight and fees shared by taxable value are fair enough (freight follows weight, not price) · review ·
+    2026-11-12 · Shiprocket weight per SKU against its taxable share at 2–3 partners.
+  - H-TP4: the COD flag (negative over ≥ 5 COD orders) names PIN codes worth changing · review · 2026-11-12 · flagged
+    PIN codes against the next 30 days' orders there.
+  - H-TP5: including it in Scale costs nothing billable (Scale never bought it) and keeps Scale shops · review ·
+    2026-11-12 · Scale usage and churn over 90 days.
+  - H-TP6: its cost to compute is small · review · 2026-11-12 · EXPLAIN over 90 days at 10× (speed review).
+
 ## Add-ons and self-serve trials (A3 + Delivery Zones, 2026-11-12; owner: Delivery Zones ₹999/month on Launch, in Growth and Scale)
 
 - **Add-ons bill like the plan** (`computeBill`, `src/domains/billing/bill.ts`): a row in force on the 1st is billed for

@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/components/ui/toast'
 import { InfoTip } from '@/components/ui/info-tip'
 import { Icon } from '@/components/icons/icon'
 import { visibility, type Status } from '@/domains/catalogue/availability'
@@ -29,7 +30,7 @@ export function StatusCard({ productId, status, publishAt, ready, dirty }: { pro
   const [pick, setPick] = useState<Status>(status)
   const [when, setWhen] = useState(toLocal(publishAt))
   const [later, setLater] = useState(!!publishAt)
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const toast = useToast()
   const [pending, start] = useTransition()
   const allReady = ready.every((r) => r.ok)
   const needsReady = pick === 'active' || pick === 'unlisted'
@@ -40,9 +41,10 @@ export function StatusCard({ productId, status, publishAt, ready, dirty }: { pro
   const blocked = (needsReady && !allReady) || (pick === 'active' && later && !when)
 
   const apply = () => start(async () => {
+    // The result is a toast (§ Feedback 1, 2).
     const r = await setStatus(productId, pick, at)
-    setMsg(r.ok ? { ok: true, text: 'Done.' } : { ok: false, text: r.error })
-    if (r.ok) router.refresh()
+    if (!r.ok) { toast.error(r.error); return }
+    toast.ok('Done.'); router.refresh()
   })
 
   return (
@@ -54,7 +56,7 @@ export function StatusCard({ productId, status, publishAt, ready, dirty }: { pro
         {CHOICES.map((c) => (
           <div key={c.v} className={`flex items-center rounded-md border pr-1 text-sm transition-colors duration-fast ${pick === c.v ? 'border-ring bg-accent' : 'border-border hover:bg-accent'}`}>
             <label className="flex min-h-9 flex-1 cursor-pointer items-center gap-2 px-2">
-              <input type="radio" name="status" value={c.v} checked={pick === c.v} onChange={() => { setPick(c.v); setMsg(null) }} />
+              <input type="radio" name="status" value={c.v} checked={pick === c.v} onChange={() => setPick(c.v)} />
               <span className="font-medium">{c.label}</span>
             </label>
             <InfoTip about={`${c.label.toLowerCase()} products`}>{c.says}</InfoTip>
@@ -84,7 +86,6 @@ export function StatusCard({ productId, status, publishAt, ready, dirty }: { pro
       <p className="text-xs text-muted-foreground">{v.scheduled ? 'Shoppers get "page not found" until it goes live.' : v.listed ? 'Shoppers can find it and buy it.' : v.reachable ? 'Shoppers with the link can buy it.' : pick === 'archived' ? 'Shoppers read that it is no longer available.' : 'Shoppers get "page not found".'}</p>
       {changed && <Button className="w-full" disabled={pending || blocked || dirty} onClick={apply}>{pick === 'active' && !later ? 'Make it active' : pick === 'active' ? 'Schedule it' : `Set to ${CHOICES.find((c) => c.v === pick)!.label.toLowerCase()}`}</Button>}
       {changed && dirty && <p className="text-xs text-muted-foreground">Save your changes first.</p>}
-      {msg && <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-ok-text' : 'text-danger-text'}`}>{msg.text}</p>}
     </Section>
   )
 }

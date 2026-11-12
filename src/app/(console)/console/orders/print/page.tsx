@@ -88,6 +88,7 @@ function Invoice({ o, lines, shop, frozen }: { o: DocOrder; lines: DocLine[]; sh
   const offs = inv.totals.discount > 0
   return (
     <article className="relative space-y-5 break-after-page bg-background p-6 text-sm text-foreground print:p-0">
+      {/* feedback-ok: the CANCELLED stamp printed on the invoice itself (a mark on the document), not an error after an action */}
       {inv.cancelled ? <p className="absolute right-6 top-6 rotate-[-8deg] border-4 border-danger-text px-3 py-1 text-2xl font-bold text-danger-text print:right-0 print:top-0">CANCELLED</p> : null}
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">{inv.kind === 'tax_invoice' ? 'Tax invoice' : 'Bill of supply'}</h1>

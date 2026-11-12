@@ -134,7 +134,7 @@ export function Continue({ shop, back, notice, age }: { shop: string; back: stri
             <input id="ek-phone" className="min-w-0 flex-1 px-3 tabular-nums text-base outline-none" inputMode="numeric" autoComplete="tel-national" maxLength={14}
               value={phone} onChange={(e) => setPhone(e.target.value.replace(/[^\d ]/g, ''))} placeholder="98450 12345" autoFocus />
           </div>
-          {say && <p className={`text-sm ${say.bad ? 'text-[var(--ek-cursor)]' : ''}`} role="alert">{say.text}</p>}
+          {say && <p className={`text-sm ${say.bad ? 'text-[var(--ek-cursor)]' : ''}`} role="alert">{say.text}</p>} {/* feedback-ok: EkCode's own brand (fixed palette, every shop); its one line beside the field until an EkCode toast is designed */}
           <button className={primary} type="submit" disabled={!valid || busy}>{EK.phone.send}</button>
           <a className={`${ghost} grid place-items-center`} href={back}>{EK.phone.back(shop)}</a>
         </form>
@@ -149,7 +149,7 @@ export function Continue({ shop, back, notice, age }: { shop: string; back: stri
           </div>
           <input ref={codeRef} aria-labelledby="ek-code-h" className={`${field} font-mono tracking-[0.5em] text-center text-xl`} inputMode="numeric" autoComplete="one-time-code" maxLength={6}
             value={code} disabled={busy} onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 6); setCode(v); if (v.length === 6) void check(v) }} />
-          {say && <p className="text-sm text-[var(--ek-cursor)]" role="alert">{say.text}</p>}
+          {say && <p className="text-sm text-[var(--ek-cursor)]" role="alert">{say.text}</p>} {/* feedback-ok: EkCode's own brand (fixed palette, every shop); its one line beside the field until an EkCode toast is designed */}
           <a className={`${ghost} grid place-items-center border border-[var(--ek-sub)] sm:hidden`} href="whatsapp://">{EK.code.openWhatsApp}</a>
           {notArrived && <p className="text-sm font-medium">{EK.code.notArrived}</p>}
           <div className="flex items-center justify-between gap-3 text-sm">
@@ -162,7 +162,7 @@ export function Continue({ shop, back, notice, age }: { shop: string; back: stri
       {step === 'locked' && (
         <div className="grid gap-4">
           <h1 className="text-xl font-semibold">{EK.locked.title}</h1>
-          {say && <p className="text-sm text-[var(--ek-cursor)]">{say.text}</p>}
+          {say && <p className="text-sm text-[var(--ek-cursor)]" role="alert">{say.text}</p>} {/* feedback-ok: EkCode's locked line, now announced (scan 2026-11-12); its own brand */}
           <a className={`${primary} grid place-items-center`} href={back}>{EK.code.guest}</a>
         </div>
       )}
@@ -174,7 +174,7 @@ export function Continue({ shop, back, notice, age }: { shop: string; back: stri
           </label>
           <ul className="grid gap-2 text-sm">{notice.map((l) => <li key={l} className="flex gap-2"><span aria-hidden="true">·</span>{l}</li>)}</ul>
           <p className="text-xs text-[var(--ek-sub)]">{age}</p>
-          {say && <p className="text-sm text-[var(--ek-cursor)]" role="alert">{say.text}</p>}
+          {say && <p className="text-sm text-[var(--ek-cursor)]" role="alert">{say.text}</p>} {/* feedback-ok: EkCode's own brand (fixed palette, every shop); its one line beside the field until an EkCode toast is designed */}
           <button className={primary} type="submit" disabled={name.trim().length < 2 || busy}>{EK.create.action}</button>
           <a className={`${ghost} grid place-items-center`} href={back}>{EK.create.notNow}</a>
         </form>
@@ -196,7 +196,7 @@ export function Continue({ shop, back, notice, age }: { shop: string; back: stri
             ))}
           </fieldset>}
           <p className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--ek-sub)]">{EK.confirm.gets(shop)} {chips.map((c) => <span key={c} className="rounded-full bg-[var(--ek-line)] px-2 py-0.5 text-[var(--ek-ink)]">{c}</span>)}</p>
-          {say && <p className="text-sm text-[var(--ek-cursor)]" role="alert">{say.text}</p>}
+          {say && <p className="text-sm text-[var(--ek-cursor)]" role="alert">{say.text}</p>} {/* feedback-ok: EkCode's own brand (fixed palette, every shop); its one line beside the field until an EkCode toast is designed */}
           <button className={primary} type="button" disabled={busy} onClick={() => void go()}>{EK.confirm.action}</button>
           <a className={`${ghost} grid place-items-center`} href={back}>{EK.confirm.notYou}</a>
         </div>

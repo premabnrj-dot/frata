@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { upload } from '@vercel/blob/client'
 import { Section } from '@/components/layout/section'
 import { button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { DOC_LOGO_PX, MAX_DOC_IMAGE_BYTES, MAX_SOURCE_BYTES } from '@/domains/media/sizes'
 import { setDocLogo } from '../actions'
 
@@ -32,27 +33,24 @@ async function toPng(file: File): Promise<Blob> {
 export function DocLogo({ tenantId, current }: { tenantId: string; current: string | null }) {
   const router = useRouter()
   const [busy, start] = useTransition()
-  const [error, setError] = useState<string | null>(null)
-  const [note, setNote] = useState<string | null>(null)
+  const toast = useToast()
 
   const choose = (file: File | undefined) => {
     if (!file) return
-    setError(null); setNote(null)
     start(async () => {
       try {
         const png = await toPng(file)
         const res = await upload(`tenants/${tenantId}/documents/${crypto.randomUUID()}.png`, png, { access: 'public', handleUploadUrl: '/api/console/upload', contentType: 'image/png' })
         const r = await setDocLogo(res.url)
-        if (!r.ok) { setError(r.error); return }
-        setNote('Logo saved. New slips and invoices use it.'); router.refresh()
-      } catch (e) { setError(e instanceof Error ? e.message : 'That upload was refused.') }
+        if (!r.ok) { toast.error(r.error); return }
+        toast.ok('Logo saved. New slips and invoices use it.'); router.refresh()
+      } catch (e) { toast.error(e instanceof Error ? e.message : 'That upload was refused.') }
     })
   }
   const remove = () => start(async () => {
-    setError(null)
     const r = await setDocLogo(null)
-    if (!r.ok) setError(r.error)
-    else { setNote('Logo removed. Documents show your shop’s initial.'); router.refresh() }
+    if (!r.ok) toast.error(r.error)
+    else { toast.ok('Logo removed. Documents show your shop’s initial.'); router.refresh() }
   })
 
   return (
@@ -70,8 +68,6 @@ export function DocLogo({ tenantId, current }: { tenantId: string; current: stri
         </label>
         {current && <button type="button" className={button({ variant: 'ghost' })} disabled={busy} onClick={remove}>Remove</button>}
       </div>
-      {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
-      {note && <p role="status" className="text-sm text-ok-text">{note}</p>}
     </Section>
   )
 }

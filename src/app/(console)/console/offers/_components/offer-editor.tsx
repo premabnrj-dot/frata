@@ -4,7 +4,9 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { Button } from '@/components/ui/button'
-import { LeaveDialog, Message, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
+import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
+import { FieldError, errorId, fieldProps, useErrorSummary } from '@/components/ui/field-error'
+import { useToast } from '@/components/ui/toast'
 import { STYLE_LABEL, parseOffer, type OfferValues } from '@/domains/checkout/offer-form'
 import { barText } from '@/domains/checkout/offer-text'
 import type { DiscountStyle } from '@/domains/checkout/discounts'
@@ -38,12 +40,24 @@ export function OfferEditor({ id, initial, locked, pickers }: { id: string | nul
   const [saved, setSaved] = useState(initial)
   const [v, setV] = useState(initial)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [msg, setMsg] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
+  const toast = useToast()
+  const form = useRef<HTMLDivElement>(null)
+  // Field mistakes stay at their fields; one summary toast counts them (a refusal said with them is its second line).
+  const [attempt, setAttempt] = useState(0)
+  const [also, setAlso] = useState<string | undefined>(undefined)
+  useErrorSummary(errors, { attempt, scope: form, sub: also })
   const [pending, start] = useTransition()
   const [qualify, setQualify] = useState<{ orders: number; qualify: number; would: number } | null>(null)
   const dirty = JSON.stringify(v) !== JSON.stringify(saved)
   const guard = useLeaveGuard(dirty && !!id)
-  const set = (patch: Partial<OfferValues>) => { setV((x) => ({ ...x, ...patch })); setMsg(null) }
+  // A field's mistake goes the moment it changes (a step's or a pick's with it); nothing typed is cleared.
+  const set = (patch: Partial<OfferValues>) => {
+    setV((x) => ({ ...x, ...patch }))
+    const gone = new Set<string>(Object.keys(patch))
+    if ('tiers' in patch) for (const k of Object.keys(errors)) if (k.startsWith('tier')) gone.add(k)
+    if ('targetIds' in patch) gone.add('targets')
+    if ([...gone].some((k) => errors[k])) setErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !gone.has(k))))
+  }
   const style = v.style as DiscountStyle
   const p = preview(v)
 
@@ -59,19 +73,25 @@ export function OfferEditor({ id, initial, locked, pickers }: { id: string | nul
 
   const save = () => start(async () => {
     const r = await saveOffer(id, v)
-    if (!r.ok) { setErrors(r.errors ?? {}); setMsg({ tone: 'error', text: r.error }); return }
-    setSaved(v); setErrors({}); setMsg({ tone: 'ok', text: 'Saved.' })
+    if (!r.ok) {
+      const fields = r.errors ?? {}
+      const bad = Object.keys(fields).length > 0
+      setAlso(bad ? r.error : undefined); setErrors(fields)
+      if (bad) setAttempt((a) => a + 1); else toast.error(r.error)
+      return
+    }
+    setSaved(v); setErrors({}); toast.ok('Saved.')
     if (!id) router.replace(`/console/offers/${r.id}`)
     else router.refresh()
   })
-  const err = (k: string) => (errors[k] ? <p id={`o-${k}-err`} className="text-xs text-danger-text">{errors[k]}</p> : null)
+  const err = (k: string) => <FieldError name={`o-${k}`} message={errors[k]} />
+  const fp = (k: string) => fieldProps(`o-${k}`, errors[k])
   const lab = 'block text-sm font-medium'
   const share = qualify && qualify.orders >= 5 ? Math.round((qualify.qualify / qualify.orders) * 100) : null
 
   return (
-    <div className="space-y-4">
+    <div ref={form} className="space-y-4">
       {dirty && id && <SaveBar pending={pending} onSave={save} onDiscard={() => { setV(saved); setErrors({}) }} />}
-      <Message m={msg} />
       {!locked.style && (
         <Section title="Style">
           <fieldset><legend className="sr-only">Offer style</legend>
@@ -89,27 +109,27 @@ export function OfferEditor({ id, initial, locked, pickers }: { id: string | nul
 
       <Section title={STYLE_LABEL[style]?.name ?? 'Offer'}>
         <div className="space-y-1"><label htmlFor="o-title" className={lab}>Name <span className="font-normal text-muted-foreground">(shown to shoppers)</span></label>
-          <input id="o-title" value={v.title} maxLength={60} placeholder="Diwali sale" aria-invalid={!!errors.title || undefined} aria-describedby={errors.title ? 'o-title-err' : undefined} onChange={(e) => set({ title: e.target.value })} className={field} />{err('title')}</div>
+          <input id="o-title" value={v.title} maxLength={60} placeholder="Diwali sale" {...fp('title')} onChange={(e) => set({ title: e.target.value })} className={field} />{err('title')}</div>
         {(style === 'order_off' || style === 'product_off' || style === 'pay_online') && (
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1"><label htmlFor="o-kind" className={lab}>Off</label>
               <select id="o-kind" value={v.kind} onChange={(e) => set({ kind: e.target.value })} className={field}><option value="percent">a percentage</option><option value="amount">an amount (₹)</option></select></div>
             <div className="space-y-1"><label htmlFor="o-value" className={lab}>{v.kind === 'percent' ? 'Percent' : 'Rupees'}</label>
-              <input id="o-value" inputMode="decimal" value={v.value} placeholder={v.kind === 'percent' ? '10' : '50'} aria-invalid={!!errors.value || undefined} aria-describedby={errors.value ? 'o-value-err' : undefined} onChange={(e) => set({ value: e.target.value })} className={field} />{err('value')}</div>
+              <input id="o-value" inputMode="decimal" value={v.value} placeholder={v.kind === 'percent' ? '10' : '50'} {...fp('value')} onChange={(e) => set({ value: e.target.value })} className={field} />{err('value')}</div>
             {v.kind === 'percent' && <div className="space-y-1"><label htmlFor="o-cap" className={lab}>At most ₹ <span className="font-normal text-muted-foreground">(optional)</span></label>
-              <input id="o-cap" inputMode="decimal" value={v.cap} aria-invalid={!!errors.cap || undefined} aria-describedby={errors.cap ? 'o-cap-err' : undefined} onChange={(e) => set({ cap: e.target.value })} className={field} />{err('cap')}</div>}
+              <input id="o-cap" inputMode="decimal" value={v.cap} {...fp('cap')} onChange={(e) => set({ cap: e.target.value })} className={field} />{err('cap')}</div>}
           </div>
         )}
         <OfferMore v={v} set={set} errors={errors} pickers={pickers} />
         <div className="space-y-1"><label htmlFor="o-min" className={lab}>{style === 'free_gift' ? 'Free when the rest of the bag reaches ₹' : 'Bag at least ₹'} <span className="font-normal text-muted-foreground">(optional)</span></label>
-          <input id="o-min" inputMode="decimal" value={v.min} placeholder="1999" aria-invalid={!!errors.min || undefined} aria-describedby={errors.min ? 'o-min-err' : undefined} onChange={(e) => set({ min: e.target.value })} className={`${field} sm:max-w-48`} />{err('min')}</div>
+          <input id="o-min" inputMode="decimal" value={v.min} placeholder="1999" {...fp('min')} onChange={(e) => set({ min: e.target.value })} className={`${field} sm:max-w-48`} />{err('min')}</div>
         {share !== null && share >= 40 && qualify && (
           <p role="status" className="rounded-md bg-warn px-3 py-2 text-sm text-warn-text">
             <b>{share}% of last month’s orders were already at this amount.</b> About {inr(qualify.would)} would go to them. A higher minimum rewards bigger bags instead.
           </p>
         )}
         <div className="space-y-1"><div className="flex items-center"><label htmlFor="o-code" className={lab}>Code <span className="font-normal text-muted-foreground">(optional)</span></label><InfoTip about="the code">Without a code the offer applies by itself.</InfoTip></div>
-          <input id="o-code" value={v.code} maxLength={20} disabled={locked.code} placeholder="DIWALI15" autoCapitalize="characters" aria-invalid={!!errors.code || undefined} aria-describedby={errors.code ? 'o-code-err' : 'o-code-hint'}
+          <input id="o-code" value={v.code} maxLength={20} disabled={locked.code} placeholder="DIWALI15" autoCapitalize="characters" {...fp('code')} aria-describedby={errors.code ? errorId('o-code') : 'o-code-hint'}
             onChange={(e) => set({ code: e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase() })} className={`${field} font-mono sm:max-w-60`} />
           {errors.code ? err('code') : <p id="o-code-hint" className="text-xs text-muted-foreground">{locked.code ? 'A code never changes. End this offer and make a new one to use another.' : 'Codes are never reused in your shop.'}</p>}</div>
         {v.code && <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="size-5 shrink-0 accent-primary" checked={v.listed} onChange={(e) => set({ listed: e.target.checked })} />Show it at checkout (unticked: only shoppers who type the code get it)</label>}
@@ -119,17 +139,17 @@ export function OfferEditor({ id, initial, locked, pickers }: { id: string | nul
       <Section title="When and how much">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1"><label htmlFor="o-starts" className={lab}>Starts</label>
-            <input id="o-starts" type="datetime-local" value={v.startsAt} aria-invalid={!!errors.startsAt || undefined} aria-describedby={errors.startsAt ? 'o-startsAt-err' : undefined} onChange={(e) => set({ startsAt: e.target.value })} className={field} />{err('startsAt')}</div>
+            <input id="o-starts" type="datetime-local" value={v.startsAt} {...fp('startsAt')} onChange={(e) => set({ startsAt: e.target.value })} className={field} />{err('startsAt')}</div>
           <div className="space-y-1"><label htmlFor="o-ends" className={lab}>Ends <span className="font-normal text-muted-foreground">(optional)</span></label>
-            <input id="o-ends" type="datetime-local" value={v.endsAt} aria-invalid={!!errors.endsAt || undefined} aria-describedby={errors.endsAt ? 'o-endsAt-err' : undefined} onChange={(e) => set({ endsAt: e.target.value })} className={field} />{err('endsAt')}</div>
+            <input id="o-ends" type="datetime-local" value={v.endsAt} {...fp('endsAt')} onChange={(e) => set({ endsAt: e.target.value })} className={field} />{err('endsAt')}</div>
           <div className="space-y-1"><label htmlFor="o-total" className={lab}>Total uses <span className="font-normal text-muted-foreground">(optional)</span></label>
-            <input id="o-total" inputMode="numeric" value={v.limitTotal} aria-invalid={!!errors.limitTotal || undefined} aria-describedby={errors.limitTotal ? 'o-limitTotal-err' : undefined} onChange={(e) => set({ limitTotal: e.target.value })} className={field} />{err('limitTotal')}</div>
+            <input id="o-total" inputMode="numeric" value={v.limitTotal} {...fp('limitTotal')} onChange={(e) => set({ limitTotal: e.target.value })} className={field} />{err('limitTotal')}</div>
           <div className="space-y-1"><label htmlFor="o-phone" className={lab}>Uses per phone <span className="font-normal text-muted-foreground">(optional)</span></label>
-            <input id="o-phone" inputMode="numeric" value={v.limitPerPhone} aria-invalid={!!errors.limitPerPhone || undefined} aria-describedby={errors.limitPerPhone ? 'o-limitPerPhone-err' : undefined} onChange={(e) => set({ limitPerPhone: e.target.value })} className={field} />{err('limitPerPhone')}</div>
+            <input id="o-phone" inputMode="numeric" value={v.limitPerPhone} {...fp('limitPerPhone')} onChange={(e) => set({ limitPerPhone: e.target.value })} className={field} />{err('limitPerPhone')}</div>
           <div className="space-y-1 sm:col-span-2"><div className="flex items-center"><label htmlFor="o-budget" className={lab}>Budget ₹ <span className="font-normal text-muted-foreground">(optional)</span></label><InfoTip about="the budget">The offer stops giving once this much has been given.</InfoTip></div>
-            <input id="o-budget" inputMode="decimal" value={v.budget} aria-invalid={!!errors.budget || undefined} aria-describedby={errors.budget ? 'o-budget-err' : undefined} onChange={(e) => set({ budget: e.target.value })} className={`${field} sm:max-w-48`} />{err('budget')}</div>
+            <input id="o-budget" inputMode="decimal" value={v.budget} {...fp('budget')} onChange={(e) => set({ budget: e.target.value })} className={`${field} sm:max-w-48`} />{err('budget')}</div>
         </div>
-        <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="size-5 shrink-0 accent-primary" checked={v.announce} aria-describedby={errors.announce ? 'o-announce-err' : undefined} onChange={(e) => set({ announce: e.target.checked })} />Show it in the bar at the top of your shop (one offer at a time; a draft takes the bar when it starts)</label>{err('announce')}
+        <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="size-5 shrink-0 accent-primary" checked={v.announce} {...fp('announce')} onChange={(e) => set({ announce: e.target.checked })} />Show it in the bar at the top of your shop (one offer at a time; a draft takes the bar when it starts)</label>{err('announce')}
         <p className="text-xs text-muted-foreground">Times are India time. Shoppers see an end date only if you set one.</p>
       </Section>
 

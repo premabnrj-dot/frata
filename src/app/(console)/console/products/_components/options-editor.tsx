@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { MAX_OPTIONS, type Option } from '@/domains/catalogue/variants'
 import { Icon } from '@/components/icons/icon'
+import { FieldError, fieldProps } from '@/components/ui/field-error'
 
 const SUGGEST: Record<string, string[]> = {
   size: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
@@ -30,7 +31,7 @@ export function OptionsEditor({ options, onChange, error }: { options: Option[];
             <div className="flex items-center gap-2">
               <label htmlFor={`opt-${i}`} className="sr-only">Option name</label>
               <input id={`opt-${i}`} value={o.name} maxLength={30} placeholder="Size" onChange={(e) => set(i, { ...o, name: e.target.value })}
-                className="h-8 w-40 rounded-md border border-input bg-card px-2 text-sm font-medium" />
+                {...fieldProps('options', error)} className="h-8 w-40 rounded-md border border-input bg-card px-2 text-sm font-medium aria-invalid:border-danger-text" />
               <span className="flex-1" />
               <button type="button" className="inline-flex min-h-6 items-center text-sm text-muted-foreground underline" onClick={() => { onChange(options.filter((_, j) => j !== i)); setDrafts((d) => d.filter((_, j) => j !== i)) }}>Remove {o.name || 'option'}</button>
             </div>
@@ -56,7 +57,8 @@ export function OptionsEditor({ options, onChange, error }: { options: Option[];
           </div>
         )
       })}
-      {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
+      {/* The save's mistake in the options (key "options"): every option's name is marked, focus lands on the first. */}
+      <FieldError name="options" message={error} />
       {options.length < MAX_OPTIONS && (
         <div className="flex flex-wrap gap-2">
           {!options.some((o) => /^sizes?$/i.test(o.name)) && <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => { onChange([...options, { name: 'Size', values: ['S', 'M', 'L'] }]); setDrafts((d) => [...d, '']) }}>Add sizes</button>}

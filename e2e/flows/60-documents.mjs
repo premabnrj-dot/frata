@@ -10,7 +10,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { CONSOLE, SHOP, signedIn, until } from '../lib.mjs'
+import { CONSOLE, SHOP, signedIn, until, expectToast } from '../lib.mjs'
 
 export default {
   name: 'documents',
@@ -131,7 +131,7 @@ export default {
         await p.getByRole('textbox', { name: /^Note at the foot/ }).fill('Exchanges within 7 days.')
         await p.getByRole('combobox', { name: /^Slip size/ }).selectOption('label')
         await p.getByRole('button', { name: 'Save' }).first().click()
-        await p.getByText('Saved. New slips and invoices use it').waitFor()
+        await expectToast(p, 'Saved. New slips and invoices use it', 'ok')
         const [s] = await db`select doc_signatory, doc_note, slip_size from shop_settings where tenant_id = ${T}`
         assert.deepEqual([s.doc_signatory, s.doc_note, s.slip_size], ['Riya Mehta', 'Exchanges within 7 days.', 'label'])
         await p.evaluate(() => localStorage.removeItem('frrata:slip-size'))

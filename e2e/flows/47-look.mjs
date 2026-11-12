@@ -7,7 +7,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import http from 'node:http'
-import { CONSOLE, PORTS, USERS, signedIn, until } from '../lib.mjs'
+import { CONSOLE, PORTS, USERS, signedIn, until, expectToast } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const shopHtml = (path = '/') => new Promise((res, rej) => http.get(`http://localhost:${PORTS.app}${path}`, { headers: { host: 'kesar-studio.frata.test' } }, (r) => { let b = ''; r.on('data', (c) => (b += c)); r.on('end', () => res(b)) }).on('error', rej))
@@ -195,7 +195,7 @@ export default {
       await riya.goto(CONSOLE + '/console/settings/brand')
       await riya.getByLabel('Show them in').selectOption('hi')
       await riya.getByRole('button', { name: 'Save', exact: true }).click()
-      await riya.getByText('Saved. Your shop shows it now.').waitFor()
+      await expectToast(riya, 'Saved. Your shop shows it now.', 'ok')
       const page = await riya.context().newPage()
       await page.goto(CONSOLE + '/console/preview/products/chanderi-kurta-set')
       await page.locator('[data-store-theme][lang="hi"]').first().waitFor()
@@ -205,7 +205,7 @@ export default {
       await shopSays(/बैग/)
       await riya.getByLabel('Show them in').selectOption('en')
       await riya.getByRole('button', { name: 'Save', exact: true }).click()
-      await riya.getByText('Saved. Your shop shows it now.').waitFor()
+      await expectToast(riya, 'Saved. Your shop shows it now.', 'ok')
       await shopSays(/बैग/, false)
       await page.close()
     })

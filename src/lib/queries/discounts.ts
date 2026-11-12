@@ -134,7 +134,7 @@ export type OfferStats = {
 const DAY = 86_400_000
 const num = (v: string | null) => (v === null ? null : Number(v))
 /** keptSql's rows as keptOf's groups (the fee bucket read against the shop's plan history, as feeForOrder). */
-const groupsOf = (rows: readonly KeptRow[], history: readonly { feeBps: number }[]): KeptGroup[] => rows.map((r) => ({
+export const groupsOf = (rows: readonly KeptRow[], history: readonly { feeBps: number }[]): KeptGroup[] => rows.map((r) => ({
   outcome: r.outcome, n: r.n, provider: r.provider, cod: !!r.cod, restocked: !!r.restocked, net: Number(r.net), cogs: num(r.cogs), forward: num(r.fwd), rto: num(r.rto),
   courierCodFee: num(r.codfee), gateway: Number(r.gw), base: Number(r.base), feeBps: r.bucket > 0 ? history[r.bucket - 1]?.feeBps ?? null : null,
 }))

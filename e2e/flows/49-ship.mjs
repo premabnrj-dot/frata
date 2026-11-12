@@ -7,7 +7,7 @@
 // order unable to ship again.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { todayAgo, until, CONSOLE, USERS, signedIn } from '../lib.mjs'
+import { todayAgo, until, CONSOLE, USERS, signedIn, expectToast } from '../lib.mjs'
 
 export default {
   name: 'ship',
@@ -123,7 +123,7 @@ export default {
         await p.waitForURL(/\/console\/settings\/shipping-costs$/)
         await p.getByLabel('A delivery').fill('65')
         await p.getByRole('button', { name: 'Confirm these costs' }).click()
-        await p.getByText('Shipping costs confirmed.').waitFor()
+        await expectToast(p, 'Shipping costs confirmed.', 'ok')
         await p.getByText(/^Confirmed on /).waitFor()
         await p.goto(CONSOLE + '/console/settings')
         await p.getByRole('link', { name: /Shipping costs/ }).filter({ hasText: 'Delivery ₹65' }).waitFor()

@@ -14,20 +14,19 @@ export function RemovePartner({ name, shop }: { name: string; shop: string }) {
   const [pending, start] = useTransition()
   const remove = () => start(async () => {
     const r = await removeShopPartner()
+    // The dialog's own refusal is said in it (§ Feedback 4).
     if (!r.ok) return setError(r.error)
-    setOpen(false); router.refresh()
+    setOpen(false); setError(null); router.refresh()
   })
   return (
     <>
       <Button variant="secondary" onClick={() => { setError(null); setOpen(true) }}>Remove</Button>
-      <Dialog open={open} onClose={() => setOpen(false)} title={`Remove ${name} from ${shop}?`}
+      <Dialog open={open} onClose={() => setOpen(false)} error={error} title={`Remove ${name} from ${shop}?`}
         description={<ul className="list-disc space-y-1 pl-5"><li>Their access ends now.</li><li>Your products, orders and settings stay.</li><li>Your price stays the same.</li></ul>}
         actions={<>
           <Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Keep {name}</Button>
           <Button variant="destructive" disabled={pending} onClick={remove}>{pending ? 'Removing…' : `Remove ${name}`}</Button>
-        </>}>
-        {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
-      </Dialog>
+        </>} />
     </>
   )
 }

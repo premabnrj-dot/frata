@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import type { ShopFacts } from '@/components/shop-preview/previews'
 import { missingFacts, POLICY_PAGES, renderPolicy, type PolicyPage } from '@/domains/policies/render'
 import { formatInr } from '@/lib/format'
@@ -31,13 +32,14 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
   const router = useRouter()
   const [editing, setEditing] = useState<PolicyPage | null>(null)
   const [text, setText] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
   const [pending, start] = useTransition()
 
   const save = (page: PolicyPage, body: string | null) => start(async () => {
     const r = await savePolicyText(page, body)
-    if (!r.ok) { setError(r.error); return }
-    setEditing(null); setError(null); router.refresh()
+    // A refusal is a toast: "Follow my settings again" has no editor open to hold a line (§ Feedback 1).
+    if (!r.ok) { toast.error(r.error); return }
+    setEditing(null); router.refresh()
   })
 
   return (
@@ -58,7 +60,7 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
               {editing !== k && (
                 <button type="button" className="inline-flex min-h-6 items-center text-sm underline" disabled={pagesDirty}
                   title={pagesDirty ? 'Save or discard your other changes first' : undefined}
-                  onClick={() => { onSelect(k); setEditing(k); setText(own ?? asText(k, facts)); setError(null) }}>
+                  onClick={() => { onSelect(k); setEditing(k); setText(own ?? asText(k, facts)) }}>
                   {own ? 'Edit' : 'Rewrite'}
                 </button>
               )}
@@ -73,7 +75,6 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
                 <textarea id={`pol-${k}`} rows={8} value={text} maxLength={20000} onChange={(e) => setText(e.target.value)}
                   className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm leading-relaxed" />
                 <p className="text-xs text-muted-foreground">Leave a blank line between paragraphs. This page will no longer change when your settings do.</p>
-                {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
                 <div className="flex gap-2">
                   <Button type="button" variant="secondary" onClick={() => setEditing(null)} disabled={pending}>Keep the page as it was</Button>
                   <Button type="button" onClick={() => save(k, text)} disabled={pending || !text.trim()}>{pending ? 'Saving…' : 'Save this page'}</Button>

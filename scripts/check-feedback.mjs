@@ -23,7 +23,7 @@ const ROOT = process.cwd()
 const ALLOW = join(ROOT, 'scripts/feedback-allow.json')
 const DIRS = ['src/app', 'src/components']
 /** The primitives themselves draw these lines. */
-const PRIMITIVES = new Set(['src/components/ui/toast.tsx', 'src/components/ui/field-error.tsx', 'src/components/ui/dialog.tsx', 'src/components/ui/notice.tsx',
+const PRIMITIVES = new Set(['src/components/ui/toast.tsx', 'src/components/ui/field-error.tsx', 'src/components/ui/dialog.tsx',
   'src/components/ui/unsaved.tsx', 'src/components/ui/action-form.tsx'])
 /** Each rule runs on the whole file (JSX spans lines); a hit is reported at the line where it starts. */
 const RULES = [

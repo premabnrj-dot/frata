@@ -6,7 +6,7 @@
 // a trial or pause that leaves no row or no audit, a phone that scrolls sideways.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, USERS, signedIn } from '../lib.mjs'
+import { CONSOLE, USERS, expectToast, signedIn } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 
@@ -64,25 +64,28 @@ export default {
     await t.step('Admin: no trial of a module not built yet; a trial shows and can be ended', async () => {
       await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/modules`)
       await meera.getByRole('link', { name: 'Modules', exact: true }).first().waitFor()
-      // Only a built module a plan or add-on grants can be trialled — GST and Delivery Zones today; none for a module not built yet
-      // (its days would run out unused) nor one off its plans (Reviews: Growth and Scale).
-      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 2)
+      // Only a built module a plan or add-on grants can be trialled — GST, Delivery Zones and True Profit today; none for a
+      // module not built yet (its days would run out unused) nor one off its plans (Reviews: Growth and Scale).
+      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 3)
       await meera.getByRole('button', { name: 'Give a 30-day trial of Delivery Zones' }).waitFor()
-      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial of (Reviews|True Profit)/ }).count(), 0)
+      await meera.getByRole('button', { name: 'Give a 30-day trial of True Profit' }).waitFor()
+      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial of Reviews/ }).count(), 0)
       // AD·0: giving one writes one row on the action's own transaction (under its lock), then it can be ended.
       await meera.getByRole('button', { name: 'Give a 30-day trial of GST' }).click()
-      await meera.getByText('GST: 30-day trial started.').waitFor()
+      await expectToast(meera, 'GST: 30-day trial started.', 'ok')
+      // The form refreshes the page after its toast (ActionForm; it used to be a whole new page): wait for it.
+      await meera.getByRole('button', { name: 'End trial' }).waitFor()
       assert.equal((await db`select count(*)::int n from tenant_addons where tenant_id = ${KESAR} and module = 'gst' and ends_at is null`)[0].n, 1)
-      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 1) // Delivery Zones still offered
+      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 2) // Delivery Zones and True Profit still offered
       await meera.getByRole('button', { name: 'End trial' }).click()
-      await meera.getByText('GST ended.').waitFor()
+      await expectToast(meera, 'GST ended.', 'ok')
       // A trial granted before (the row Admin writes when a module ships) shows its end and can be ended.
       await db`insert into tenant_addons (tenant_id, module, trial_ends_at, reason, created_by) values (${KESAR}, 'true_profit', now() + interval '30 days', '30-day trial', ${F.id})`
       await meera.reload()
       await meera.getByText(/Trial until/).waitFor()
       await meera.screenshot({ path: t.out('admin-trial') })
       await meera.getByRole('button', { name: 'End trial' }).click()
-      await meera.getByText('True Profit ended.').waitFor()
+      await expectToast(meera, 'True Profit ended.', 'ok')
       const [b] = await db`select ends_at from tenant_addons where tenant_id = ${KESAR} and module = 'true_profit'`
       assert.ok(b.ends_at)
       const audit = await db`select action from audit_events where tenant_id = ${KESAR} and action like 'module.%' order by at`
@@ -95,14 +98,23 @@ export default {
       await meera.getByText('1 shop asked').first().waitFor()
       await meera.getByLabel('Why pause Messages').fill('Meta outage')
       await meera.getByRole('button', { name: 'Pause Messages for everyone' }).click()
-      await meera.getByText('Messages paused for every shop.').waitFor()
+      await expectToast(meera, 'Messages paused for every shop.', 'ok')
       const [p] = await db`select reason, resumed_at from module_pauses where module = 'communication'`
       assert.equal(p.reason, 'Meta outage'); assert.equal(p.resumed_at, null)
       await meera.screenshot({ path: t.out('admin-pause') })
       await meera.getByRole('button', { name: 'Resume Messages' }).click()
-      await meera.getByText(/Messages running again/).waitFor()
+      await expectToast(meera, /Messages running again/, 'ok')
       const [r] = await db`select resumed_at from module_pauses where module = 'communication'`
       assert.ok(r.resumed_at)
+    })
+
+    await t.step('A result never comes from the URL: words in ?error= / ?ok= show nowhere on an Admin page (security review 2026-11-12)', async () => {
+      for (const [path, heading] of [['/admin/modules?error=Call+us+on+999', 'Modules'], [`/admin/merchants/${KESAR}?ok=Call+us+on+999`, 'Kesar Studio'], [`/admin/merchants/${KESAR}/modules?error=Call+us+on+999`, 'Kesar Studio']]) {
+        await meera.goto(CONSOLE + path)
+        await meera.getByRole('heading', { level: 1, name: heading }).waitFor()
+        assert.ok(!(await meera.evaluate(() => document.body.innerText)).includes('Call us on 999'), `${path} shows the URL's words`)
+        assert.equal(await meera.locator('[data-toast]').count(), 0, `${path} raised a toast from the URL`)
+      }
     })
 
     await t.step('A2 featured card: two issued Launch invoices that Growth beats; the owner sees it in rupees, staff never; Not now sticks; See Growth carries the source', async () => {
@@ -144,7 +156,7 @@ export default {
         await own.waitForURL(/\/console\/settings\/billing\?from=featured$/)
         await own.getByRole('button', { name: 'Upgrade to Growth' }).click()
         await own.getByRole('button', { name: 'Upgrade now' }).click()
-        await own.getByText('You are on Growth now.').waitFor()
+        await expectToast(own, 'You are on Growth now.', 'ok')
         const src = await db`select detail->>'source' s from audit_events where tenant_id = ${KESAR} and action = 'billing.plan.source'`
         assert.deepEqual(src.map((r) => r.s), ['featured'])
         // On Growth now: no card. Back on Launch for the dismiss check.

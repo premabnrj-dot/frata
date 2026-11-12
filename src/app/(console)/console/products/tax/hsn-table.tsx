@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useNow } from '@/components/time/now'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { inGap, OWN_RATES, rateOn, ruleOn, searchHsn } from '@/domains/tax/rates'
 import { UQCS, UQC_NAMES } from '@/domains/tax/units'
 import { setProductsTax } from './actions'
@@ -23,7 +24,7 @@ export function HsnTable({ rows, charges, inclusive }: { rows: Row[]; charges: b
   const [hsn, setHsn] = useState('')
   const [uqc, setUqc] = useState('NOS')
   const [own, setOwn] = useState('')
-  const [msg, setMsg] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
+  const toast = useToast()
   const [pending, start] = useTransition()
   const rateOf = (r: Row) => (r.minPrice !== null ? rateOn(r.hsn, r.minPrice, inclusive, now, r.gstBps) : null)
   const missing = rows.filter((r) => !r.hsn || (charges && rateOf(r) === null))
@@ -37,8 +38,9 @@ export function HsnTable({ rows, charges, inclusive }: { rows: Row[]; charges: b
   function apply() {
     start(async () => {
       const r = await setProductsTax([...picked], { hsn, uqc, ownBps: known ? '' : own })
-      if (!r.ok) { setMsg({ tone: 'error', text: r.error }); return }
-      setMsg({ tone: 'ok', text: `HSN ${hsn} on ${r.changed} product${r.changed === 1 ? '' : 's'}.` })
+      // The result is a toast (§ Feedback 1, 2); a refusal keeps the sheet open with what was picked.
+      if (!r.ok) { toast.error(r.error); return }
+      toast.ok(`HSN ${hsn} on ${r.changed} product${r.changed === 1 ? '' : 's'}.`)
       setSheet(false); setPicked(new Set()); router.refresh()
     })
   }
@@ -52,7 +54,6 @@ export function HsnTable({ rows, charges, inclusive }: { rows: Row[]; charges: b
       <div className="flex flex-wrap items-center gap-2">
         {chip('missing', 'Needs HSN', missing.length, true)}{charges ? chip('gap', 'Price in the 5% / 18% gap', gaps.length, true) : null}{chip('all', 'All', rows.length)}
       </div>
-      {msg && <p role={msg.tone === 'error' ? 'alert' : 'status'} className={`rounded-md px-3 py-2 text-sm ${msg.tone === 'error' ? 'bg-danger text-danger-text' : 'bg-ok text-ok-text'}`}>{msg.text}</p>}
       {picked.size > 0 && (
         <div className="sticky top-14 z-10 flex flex-wrap items-center gap-3 rounded-lg bg-foreground px-3 py-2 text-background">
           <span className="text-sm">{picked.size} selected</span><span className="flex-1" />

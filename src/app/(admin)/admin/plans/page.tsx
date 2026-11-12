@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { Money, Numeric } from '@/components/data/numeric'
 import { PageHeader } from '@/components/layout/page-header'
 import { button } from '@/components/ui/button'
-import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
 import { PLAN_GRANTABLE as FEATURES } from '@/domains/modules/registry'
@@ -15,19 +14,18 @@ import { Section } from '@/components/layout/section'
 import { trialTerms } from '@/lib/admin/trials'
 import { setTrialTermsAction } from './trial-actions'
 import { Submit } from '@/components/ui/submit'
+import { ActionForm, FieldMessage } from '@/components/ui/action-form'
 
 export const metadata = { title: 'Plans' }
 
-export default async function PlansPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
+export default async function PlansPage() {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
   const [ps, counts, terms] = await Promise.all([listPlans(staff), storesPerVersion(staff, new Date()), trialTerms(staff)])
-  const { ok, error } = await searchParams
   const cell = 'border-l border-border px-4 py-3'
   return (
     <>
       <PageHeader title="Plans" actions={<span className="text-sm text-muted-foreground">Prices exclude GST · not charged until billing arrives</span>} />
-      <Notice ok={ok} error={error} />
       {/* A plan matrix does not reflow into rows: on a phone each plan is its own card (rule 15). */}
       <div className="space-y-3 md:hidden">
         {ps.map((p, i) => {
@@ -83,15 +81,15 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
       <Section title="Free trials" className="max-w-2xl text-sm" id="trials">
         <p><strong>{terms.days} days</strong> from going live · <strong>{terms.openWindowDays} days</strong> to go live{terms.reason && <span className="text-muted-foreground"> · {terms.reason}, {dayIN(terms.updatedAt)}</span>}</p>
         {staff.role === 'admin' && (
-          <form action={setTrialTermsAction} className="mt-3 grid gap-3 sm:grid-cols-2">
+          <ActionForm action={setTrialTermsAction} className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5"><span className="font-medium">Length for new sign-ups, 7 to 45 days</span>
-              <input name="days" type="number" min={7} max={45} required defaultValue={terms.days} className="h-10 rounded-md border border-input bg-card px-3 font-mono" /></label>
+              <input name="days" type="number" min={7} max={45} required data-error="7 to 45 days." defaultValue={terms.days} className="h-10 rounded-md border border-input bg-card px-3 font-mono aria-invalid:border-danger-mark" /><FieldMessage name="days" /></label>
             <label className="flex flex-col gap-1.5"><span className="font-medium">Days to go live, 0 to 30</span>
-              <input name="openWindowDays" type="number" min={0} max={30} required defaultValue={terms.openWindowDays} className="h-10 rounded-md border border-input bg-card px-3 font-mono" /></label>
+              <input name="openWindowDays" type="number" min={0} max={30} required data-error="0 to 30 days." defaultValue={terms.openWindowDays} className="h-10 rounded-md border border-input bg-card px-3 font-mono aria-invalid:border-danger-mark" /><FieldMessage name="openWindowDays" /></label>
             <label className="flex flex-col gap-1.5 sm:col-span-2"><span className="font-medium">Why</span>
-              <input name="reason" required minLength={3} maxLength={240} className="h-10 rounded-md border border-input bg-card px-3" /></label>
+              <input name="reason" required minLength={3} maxLength={240} data-error="Say why, in a few words." className="h-10 rounded-md border border-input bg-card px-3 aria-invalid:border-danger-mark" /><FieldMessage name="reason" /></label>
             <div className="sm:col-span-2"><Submit>Save trial terms</Submit></div>
-          </form>
+          </ActionForm>
         )}
       </Section>
       <Section title="Changing a plan" className="max-w-2xl text-sm">

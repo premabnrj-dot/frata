@@ -18,6 +18,7 @@ export async function BillingBanner({ membership }: { membership: Pick<Membershi
   // One banner, in order: a failed payment, paused or about to pause, a trial ending, the day-14 note, the trial line.
   if (b?.kind === 'failed') return <Due kind="failed" amount={b.amount} number={b.number} />
   if (w && (paused || soon)) return (
+    // feedback-ok: the billing banner is pinned in place (rule 5), a state of the shop, not a button's result
     <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-danger-text/30 bg-danger px-3 py-2 text-sm text-danger-text">
       <span>{paused ? 'Shop paused · no new orders' : `${t?.state === 'grace' ? 'Trial ended' : 'Autopay stopped'} · shop pauses ${dayMonthIN(w.from)}`}</span>
       <Link href="/console/settings/billing#paying" className="font-medium underline">Set up autopay</Link>

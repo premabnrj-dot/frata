@@ -50,10 +50,11 @@ export const SHOWCASE: Record<ModuleKey, Showcase> = {
     uses: ['Orders, the delivery address and phone, sent to Shiprocket'],
   },
   true_profit: {
-    headline: 'What each product, pincode and campaign kept after returns.',
+    headline: 'What each product, size and PIN code kept after returns.',
     features: [
-      { title: 'Profit per delivered order', line: 'After returns, freight, fees and COD charges.', shot: { kind: 'stats', items: [{ label: '₹ kept · 30 days', value: '₹38,420' }, { label: 'Per delivered order', value: '₹941' }] } },
-      { title: 'By product, size and colour', line: 'Which pieces earn, and which come back.', shot: { kind: 'rows', title: 'Products', rows: [{ text: 'Sabz chanderi kurta', chip: '₹1,120', tone: 'ok' }, { text: 'Gulnar tissue set', chip: '−₹210', tone: 'warn' }] } },
+      { title: 'By product', line: 'After returns, freight, fees and COD charges.', shot: { kind: 'rows', title: 'Products · 30 days', rows: [{ text: 'Sabz chanderi kurta', chip: '₹42,180', tone: 'ok' }, { text: 'Gulnar tissue set', chip: '−₹6,210', tone: 'warn' }] } },
+      { title: 'By size and colour', line: 'Which size comes back, which colour earns.', shot: { kind: 'rows', title: 'Gulnar tissue set', rows: [{ text: 'Size S · Rust', chip: '18% returned', tone: 'ok' }, { text: 'Size L · Rust', chip: '69% returned', tone: 'warn' }] } },
+      { title: 'By PIN code', line: 'Where pay on delivery loses money.', shot: { kind: 'rows', title: 'COD loses money', rows: [{ text: '110094 · Delhi', chip: '−₹2,140', tone: 'warn' }, { text: '400070 · Mumbai', chip: '−₹1,310', tone: 'warn' }] } },
     ],
     questions: [{ q: 'Who can see it?', a: 'Owners and admins. Staff never see costs.' }],
     uses: ['Orders, costs you entered, and courier charges'],
@@ -123,7 +124,8 @@ export const SHOWCASE: Record<ModuleKey, Showcase> = {
     ],
     questions: [{ q: 'How long can a video be?', a: 'Up to a minute, one per product.' }],
     uses: ['The videos you upload'],
-  },  delivery_zones: {
+  },
+  delivery_zones: {
     headline: 'Charge, promise and take pay on delivery by PIN code, the way couriers really work.',
     features: [
       { title: 'Zones filled in for you', line: 'Metro, Tier 2, Rest of India and Special, each with its own charge, days and COD.', shot: { kind: 'rows', title: 'Zones', rows: [{ text: 'Metro · ₹59 · 2–3 days', chip: 'COD ₹49', tone: 'ok' }, { text: 'Rest of India · ₹99 · 4–7 days', chip: 'COD up to ₹3,000', tone: 'ok' }, { text: 'Special · ₹149 · 6–10 days', chip: 'Pay online', tone: 'warn' }] } },
@@ -145,7 +147,7 @@ export const OFF: Record<ModuleKey, readonly string[]> = {
   communication: ['Messages stops for your shop.', 'Your number stays connected to Meta; chats wait here.'],
   rto_shield: ['COD orders go to To pack without a confirm.'],
   ship: ['Labels and tracking stop from the Pack button.', 'Labels already made stay with Shiprocket.'],
-  true_profit: ['Profit per order leaves Orders and Analytics.', 'Nothing it read is deleted.'],
+  true_profit: ['Profit by product, size and PIN code leaves the console.', '₹ kept per order stays in Orders and Analytics.', 'Nothing it read is deleted.'],
   reviews: ['Review asks stop.', 'Reviews already on your products stay.'],
   marketplace_export: ['Exports stop.', 'Files you downloaded stay yours.'],
   size_fit: ['The size finder leaves your product pages.'],

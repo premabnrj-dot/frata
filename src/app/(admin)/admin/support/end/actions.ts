@@ -6,11 +6,12 @@ import { endSupport } from '@/lib/admin/support'
 import { TENANT_COOKIE } from '@/lib/auth/require-member'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 
-/** "End now" on the support banner: ends the visit, clears the store selection, back to Admin. */
+/** "End now" on the support banner: ends the visit, clears the store selection, back to Admin (a navigation out of
+ *  the console, like sign-out: no result travels with it — the merchant's page shows the visit in its activity). */
 export async function endSupportAction() {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) redirect('/console')
   const tenantId = await endSupport(staff, new Date())
   ;(await cookies()).delete(TENANT_COOKIE)
-  redirect(tenantId ? `/admin/merchants/${tenantId}?ok=${encodeURIComponent('Support visit ended.')}` : '/admin/merchants')
+  redirect(tenantId ? `/admin/merchants/${tenantId}` : '/admin/merchants')
 }

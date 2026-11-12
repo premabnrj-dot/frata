@@ -5,7 +5,7 @@
 // Guards: a renamed shop losing its links; another shop taking an old name; the rename limit.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, signedIn } from '../lib.mjs'
+import { CONSOLE, expectToast, signedIn } from '../lib.mjs'
 import { SHOP_DOMAIN, USERS } from '../constants.mjs'
 
 const at = (name) => `http://${name}.${SHOP_DOMAIN}`
@@ -25,7 +25,7 @@ export default {
       await p.getByRole('button', { name: `Add ${to}` }).click()
       const dlg = p.getByRole('dialog', { name: `Add ${to}.${SHOP_DOMAIN}?` }); await dlg.waitFor()
       await dlg.getByRole('button', { name: `Add ${to}` }).click()
-      await p.getByRole('status').filter({ hasText: `Added ${to}.${SHOP_DOMAIN}` }).waitFor()
+      await expectToast(p, `Added ${to}.${SHOP_DOMAIN}`, 'ok')
       const row = p.getByRole('listitem').filter({ hasText: `${to}.${SHOP_DOMAIN}` })
       await row.getByText('Razorpay not approved').waitFor()
       assert.equal(await p.locator('#slug').isDisabled(), true, 'one added name at a time')
@@ -74,7 +74,7 @@ export default {
         await p.goto(CONSOLE + '/console/settings/address')
         await p.fill('#slug', 'kesar-studio'); await p.getByText('Available', { exact: true }).waitFor()
         await p.getByRole('button', { name: 'Change to kesar-studio' }).click()
-        await p.getByRole('status').filter({ hasText: `Moved to kesar-studio.${SHOP_DOMAIN}` }).waitFor()
+        await expectToast(p, `Moved to kesar-studio.${SHOP_DOMAIN}`, 'ok')
       })
       await t.step('Frrata renames the shop: the old address serves nothing; Admin › Names releases it; the shop takes it back', async () => {
         const F = USERS.frata
@@ -87,7 +87,7 @@ export default {
           await a.locator('input[name="slug"]').fill('kesar-frrata')
           await a.locator('form').filter({ has: a.locator('input[name="slug"]') }).locator('input[name="reason"]').fill('Copies another brand')
           await a.getByRole('button', { name: `Rename ${name}'s address` }).click()
-          await a.getByRole('status').filter({ hasText: `Renamed to kesar-frrata.${SHOP_DOMAIN}` }).waitFor()
+          await expectToast(a, `Renamed to kesar-frrata.${SHOP_DOMAIN}`, 'ok')
           await a.getByText('Old · no redirect').waitFor()
           const s = await t.browser.newContext(); const q = await s.newPage()
           const res = await q.goto(at('kesar-studio') + '/?utm_source=instagram')
@@ -103,13 +103,13 @@ export default {
           await a.goto(CONSOLE + '/admin/names')
           await a.getByLabel('Why release kesar-studio').fill('Trademark cleared')
           await a.getByRole('button', { name: 'Release kesar-studio' }).click()
-          await a.getByRole('status').filter({ hasText: 'kesar-studio released.' }).waitFor()
+          await expectToast(a, 'kesar-studio released.', 'ok')
         } finally { await staff.close() }
         // Not opened (the step before lifted it), so the change needs no confirm.
         await p.goto(CONSOLE + '/console/settings/address')
         await p.fill('#slug', 'kesar-studio'); await p.getByText('Available', { exact: true }).waitFor()
         await p.getByRole('button', { name: 'Change to kesar-studio' }).click()
-        await p.getByRole('status').filter({ hasText: `Moved to kesar-studio.${SHOP_DOMAIN}` }).waitFor()
+        await expectToast(p, `Moved to kesar-studio.${SHOP_DOMAIN}`, 'ok')
       })
     } finally {
       await owner.close()

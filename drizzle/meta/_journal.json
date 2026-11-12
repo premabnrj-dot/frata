@@ -813,6 +813,13 @@
       "when": 1794477448978,
       "tag": "0115_addon_trial_notices_sweep",
       "breakpoints": true
+    },
+    {
+      "idx": 116,
+      "version": "7",
+      "when": 1794492328427,
+      "tag": "0116_true_profit_in_scale",
+      "breakpoints": true
     }
   ]
 }

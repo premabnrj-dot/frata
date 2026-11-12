@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { LeaveDialog, Message, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
+import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
+import { FieldError, fieldProps, useErrorSummary } from '@/components/ui/field-error'
+import { useToast } from '@/components/ui/toast'
 import type { Rule } from '@/domains/catalogue/collection-rules'
 import { MAX_RULES } from '@/domains/catalogue/collection-rules'
 import { type Row, ruleErrors, toRules } from './rule-rows'
@@ -28,16 +30,24 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
   const router = useRouter()
   const [saved, setSaved] = useState(initial)
   const [d, setD] = useState(initial)
+  const toast = useToast()
+  // Mistakes at their fields (keys "title", "handle", "rules", "rule:<row>" …), one summary toast (§ Feedback 3); a
+  // failed save or delete is an error toast, a save an ok one (§ Feedback 1, 2).
+  const root = useRef<HTMLDivElement>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [msg, setMsg] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  const [refusal, setRefusal] = useState<string | undefined>(undefined)
+  useErrorSummary(errors, { attempt, scope: root, sub: refusal })
+  const fix = (...keys: string[]) => setErrors((e) => (keys.some((k) => k in e) ? Object.fromEntries(Object.entries(e).filter(([k]) => !keys.includes(k))) : e))
   const [pending, start] = useTransition()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [q, setQ] = useState('')
   const [preview, setPreview] = useState<{ count: number; sample: string[] } | null>(null)
   const dirty = JSON.stringify(d) !== JSON.stringify(saved)
   const guard = useLeaveGuard(dirty && !!initial.id)
-  const set = (patch: Partial<EditorCollection>) => { setD((x) => ({ ...x, ...patch })); setMsg(null) }
-  const setRow = (i: number, patch: Partial<Row>) => set({ rules: d.rules.map((r, j) => (j === i ? { ...r, ...patch } : r)) })
+  const set = (patch: Partial<EditorCollection>) => { setD((x) => ({ ...x, ...patch })); fix(...Object.keys(patch)) }
+  const setRow = (i: number, patch: Partial<Row>) => { fix(`rule:${i}`); set({ rules: d.rules.map((r, j) => (j === i ? { ...r, ...patch } : r)) }) }
+  const mark = (name: string) => fieldProps(name, errors[name])
 
   // Live count for rules (debounced; the newest answer wins).
   const seq = useRef(0)
@@ -51,16 +61,22 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
 
   const save = () => start(async () => {
     const bad = ruleErrors(d.rules)
-    if (Object.keys(bad).length) { setErrors(bad); setMsg({ tone: 'error', text: 'Some fields need a look before saving.' }); return }
+    if (Object.keys(bad).length) { setRefusal(undefined); setErrors(bad); setAttempt((a) => a + 1); return }
     const r = await saveCollection(d.id, { ...d, rules: toRules(d.rules) })
-    if (!r.ok) { setErrors(r.errors ?? {}); setMsg({ tone: 'error', text: r.error }); return }
-    setSaved(d); setErrors({}); setMsg({ tone: 'ok', text: 'Saved.' })
+    if (!r.ok) {
+      const marked = r.errors ?? {}
+      if (!Object.keys(marked).length) { setErrors({}); toast.error(r.error); return }
+      // The summary says the count; a refusal beyond "fix these" is its second line.
+      setRefusal(r.error === 'Some fields need a look before saving.' ? undefined : r.error)
+      setErrors(marked); setAttempt((a) => a + 1); return
+    }
+    setSaved(d); setErrors({}); toast.ok('Saved.')
     if (!d.id || r.handle !== initial.handle) router.replace(`/console/collections/${r.handle}`)
     else router.refresh()
   })
   const remove = () => start(async () => {
     const r = await deleteCollection(d.id!)
-    if (!r.ok) return setMsg({ tone: 'error', text: r.error })
+    if (!r.ok) return toast.error(r.error)
     setSaved(d); router.replace('/console/collections')
   })
 
@@ -69,22 +85,22 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
   const field = 'h-9 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text'
 
   return (
-    <div className="max-w-3xl">
+    <div ref={root} className="max-w-3xl">
       {dirty && initial.id && <SaveBar pending={pending} onSave={save} onDiscard={() => { setD(saved); setErrors({}) }} />}
       <PageHeader title={initial.id ? saved.title : 'New collection'} back={{ href: '/console/collections', label: 'Collections' }} actions={share} />
-      <Message m={msg} />
       <div className="mt-4 space-y-4">
         <Section>
           <div className="space-y-1"><label htmlFor="c-title" className="block text-sm font-medium">Name</label>
-            <input id="c-title" value={d.title} maxLength={80} placeholder="Festive edit" aria-invalid={!!errors.title || undefined} onChange={(e) => set({ title: e.target.value })} className={field} />
-            {errors.title && <p className="text-xs text-danger-text">{errors.title}</p>}</div>
+            <input id="c-title" value={d.title} maxLength={80} placeholder="Festive edit" {...mark('title')} onChange={(e) => set({ title: e.target.value })} className={field} />
+            <FieldError name="title" message={errors.title} /></div>
           <div className="space-y-1"><label htmlFor="c-handle" className="block text-sm font-medium">Address</label>
-            <div className="flex items-center rounded-md border border-input bg-card text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring"><span className="pl-3 font-mono text-xs text-muted-foreground">…/collections/</span>
-              <input id="c-handle" value={d.handle} maxLength={80} placeholder={handleFor(d.title) || 'festive-edit'} onChange={(e) => set({ handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className="h-10 md:h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" /></div>
-            {errors.handle ? <p className="text-xs text-danger-text">{errors.handle}</p>
+            <div className={`flex items-center rounded-md border bg-card text-sm ${errors.handle ? 'border-danger-text' : 'border-input'} focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring`}><span className="pl-3 font-mono text-xs text-muted-foreground">…/collections/</span>
+              <input id="c-handle" value={d.handle} maxLength={80} placeholder={handleFor(d.title) || 'festive-edit'} {...mark('handle')} onChange={(e) => set({ handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className="h-10 md:h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" /></div>
+            {errors.handle ? <FieldError name="handle" message={errors.handle} />
               : initial.id && d.handle && d.handle !== initial.handle ? <p className="text-xs text-muted-foreground">The old address will send shoppers here.</p> : null}</div>
           <div className="space-y-1"><label htmlFor="c-desc" className="block text-sm font-medium">Description <span className="font-normal text-muted-foreground">(optional, shown at the top of its page)</span></label>
-            <textarea id="c-desc" rows={2} maxLength={2000} value={d.description} onChange={(e) => set({ description: e.target.value })} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" /></div>
+            <textarea id="c-desc" rows={2} maxLength={2000} value={d.description} onChange={(e) => set({ description: e.target.value })} {...mark('description')} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm aria-invalid:border-danger-text" />
+            <FieldError name="description" message={errors.description} /></div>
         </Section>
 
         <Section>
@@ -136,22 +152,23 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
                           <option value="">Choose…</option>{attrOptions.map((o) => <option key={`${o.handle}|${o.value}`} value={`${o.handle}|${o.value}`}>{o.label}</option>)}
                         </select>) : <p className="py-2 text-xs text-muted-foreground">Add details (fabric, occasion…) to products first.</p>)}
                       {r.field === 'colour_family' && <select aria-label={`Colour family for rule ${i + 1}`} value={r.value} onChange={(e) => setRow(i, { value: e.target.value })} className={field}><option value="">Choose…</option>{families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select>}
-                      {(r.field === 'price_below' || r.field === 'price_at_least') && <input aria-label={`Price for rule ${i + 1}`} inputMode="decimal" value={r.value} placeholder="2000" aria-invalid={!!errors[`rule:${i}`] || undefined} onChange={(e) => setRow(i, { value: e.target.value })} className={`${field} font-mono`} />}
-                      {errors[`rule:${i}`] && <p className="text-xs text-danger-text">{errors[`rule:${i}`]}</p>}
+                      {(r.field === 'price_below' || r.field === 'price_at_least') && <input aria-label={`Price for rule ${i + 1}`} inputMode="decimal" value={r.value} placeholder="2000" {...mark(`rule:${i}`)} onChange={(e) => setRow(i, { value: e.target.value })} className={`${field} font-mono`} />}
+                      <FieldError name={`rule:${i}`} message={errors[`rule:${i}`]} />
                       {r.field === 'tag' && <input aria-label={`Tag for rule ${i + 1}`} value={r.value} maxLength={40} placeholder="Diwali 2026" onChange={(e) => setRow(i, { value: e.target.value })} className={field} />}
                       {r.field === 'in_stock' && <p className="py-2 text-xs text-muted-foreground">In stock, or taking pre-orders or made to order.</p>}
                     </div>
-                    <button type="button" aria-label={`Remove rule ${i + 1}`} className="h-9 px-2 text-muted-foreground hover:text-foreground" onClick={() => set({ rules: d.rules.filter((_, j) => j !== i) })}><Icon name="close" className="size-3.5" /></button>
+                    <button type="button" aria-label={`Remove rule ${i + 1}`} className="h-9 px-2 text-muted-foreground hover:text-foreground" onClick={() => { setErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !k.startsWith('rule:')))); set({ rules: d.rules.filter((_, j) => j !== i) }) }}><Icon name="close" className="size-3.5" /></button>
                   </li>
                 ))}
               </ul>
-              {d.rules.length < MAX_RULES && <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => set({ rules: [...d.rules, { field: 'category', value: '' }] })}>+ Add a rule</button>}
-              {errors.rules && <p className="text-xs text-danger-text">{errors.rules}</p>}
+              {d.rules.length < MAX_RULES && <button type="button" {...mark('rules')} className="inline-flex min-h-6 items-center text-sm underline" onClick={() => set({ rules: [...d.rules, { field: 'category', value: '' }] })}>+ Add a rule</button>}
+              <FieldError name="rules" message={errors.rules} />
               <p role="status" className="rounded-md bg-accent px-3 py-2 text-sm">{preview ? <><span className="font-mono font-semibold">{preview.count}</span> product{preview.count === 1 ? '' : 's'} match now{preview.sample.length ? `: ${preview.sample.join(', ')}${preview.count > preview.sample.length ? '…' : ''}` : ''}</> : 'Counting…'}</p>
             </div>
           )}
           <div className="space-y-1"><label htmlFor="c-sort" className="block text-sm font-medium">Order on your shop</label>
-            <select id="c-sort" value={d.sort} onChange={(e) => set({ sort: e.target.value })} className={field}>{SORTS.filter(([k]) => d.kind === 'manual' || k !== 'manual').map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+            <select id="c-sort" value={d.sort} onChange={(e) => set({ sort: e.target.value })} {...mark('sort')} className={field}>{SORTS.filter(([k]) => d.kind === 'manual' || k !== 'manual').map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+            <FieldError name="sort" message={errors.sort} /></div>
         </Section>
         <SeoPanel folder="collections" handle={d.handle} seoTitle={d.seoTitle} onSeoTitle={(seoTitle) => set({ seoTitle })} seoDescription={d.seoDescription} onSeoDescription={(seoDescription) => set({ seoDescription })}
           defaults={{ ...collectionSeo({ ...d, title: d.title || 'Collection', seoTitle: '', seoDescription: '' }, shop.name), handle: handleFor(d.title) || 'collection' }} address={shop.address} cover={undefined} errors={errors} />

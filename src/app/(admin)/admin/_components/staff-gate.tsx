@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Section } from '@/components/layout/section'
 import type { GateState } from '@/lib/admin/passkeys'
+import { useToast } from '@/components/ui/toast'
 import { addPasskey, confirmPasskey, requestCode } from './passkey-client'
 
 // =============================================================================
 // FILE: src/app/(admin)/admin/_components/staff-gate.tsx — what Admin shows instead of any page until this browser
 // session has passed a passkey check (mockup https://claude.ai/artifact/Xng3BV15YZpDQi9MoYLGsZ). Confirm with a
 // passkey; with none, ask for one (a code another admin types to approve) and, once approved, add it on this browser.
+// A failure is an error toast (§ Feedback 1): the layout wraps the gate in its own calm Toaster.
 // =============================================================================
 
 function Key() {
@@ -23,8 +25,8 @@ function Key() {
 
 export function StaffGate({ email, state, signOut }: { email: string; state: GateState | null; signOut: React.ReactNode }) {
   const router = useRouter()
+  const toast = useToast()
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [code, setCode] = useState<string | null>(null)
   const [asking, setAsking] = useState(false)
   const [name, setName] = useState('')
@@ -38,10 +40,10 @@ export function StaffGate({ email, state, signOut }: { email: string; state: Gat
   }, [waiting, router])
 
   const run = async (fn: () => Promise<{ ok: boolean; error?: string }>) => {
-    setBusy(true); setError(null)
+    setBusy(true); toast.dismiss()
     const r = await fn()
     setBusy(false)
-    if (!r.ok) setError(r.error ?? null); else router.refresh()
+    if (!r.ok) toast.error(r.error ?? 'Something went wrong. Try again.'); else router.refresh()
   }
 
   let body: React.ReactNode
@@ -92,7 +94,6 @@ export function StaffGate({ email, state, signOut }: { email: string; state: Gat
         <Key />
         {body}
         <p className="font-mono text-sm text-muted-foreground">{email}</p>
-        {error && <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
         {signOut}
       </Section>
     </main>

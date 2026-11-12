@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PINCODE_SHAPE, slugFor, slugProblem } from '@/domains/signup/slug'
 import { checkAddress, createMyShop, lookupPincode, sendSignupCode, verifySignupCode, type AddressCheck } from './actions'
+import { FieldError, errorId, useErrorSummary } from '@/components/ui/field-error'
+import { useToast } from '@/components/ui/toast'
 
 type Step = 'name' | 'pickup' | 'plan' | 'phone' | 'sells'
 /** A plan card as the sign-up shows it (prices with GST from the server; never a cost). */
@@ -33,7 +35,17 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
   const [codeId, setCodeId] = useState<string | null>(null)
   const [verified, setVerified] = useState(false)
   const [plan, setPlan] = useState(plans.some((p) => p.code === 'growth') ? 'growth' : plans[0]?.code ?? 'launch')
+  // A mistake in a field stays at it (§ Feedback 3: its line, focus, one quiet summary); a refusal that names no field
+  // is a toast (§ Feedback 1).
   const [error, setError] = useState<{ field?: string; text: string } | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  const toast = useToast()
+  const root = useRef<HTMLDivElement>(null)
+  useErrorSummary(error?.field ? { [error.field]: error.text } : {}, { attempt, scope: root })
+  const fail = (e: { field?: string; text: string }) => {
+    if (e.field && ['name', 'slug', 'pickup', 'phone', 'code'].includes(e.field)) { setError(e); setAttempt((a) => a + 1) }
+    else { setError(null); toast.error(e.text) }
+  }
   const [pending, start] = useTransition()
   const flashKey = useRef(0)
 
@@ -60,7 +72,7 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
     start(async () => {
       const r = await createMyShop({ name, slug, pickup, sells, plan, codeId: verified ? codeId : null })
       if (r.ok || r.hasShop) { router.replace('/console'); router.refresh(); return }
-      setError({ field: r.field, text: r.error })
+      fail({ field: r.field, text: r.error })
       if (r.field === 'slug' || r.field === 'name') go('name', 'back')
       if (r.field === 'pickup') go('pickup', 'back')
       // A code verified too long ago: ask for a new one.
@@ -73,7 +85,7 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
   const stepNo = { name: 1, pickup: 2, plan: 3, phone: 4, sells: steps }[step]
 
   return (
-    <div className="space-y-5">
+    <div ref={root} className="space-y-5">
       <div className="h-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
         <div className="h-full w-full origin-left bg-thread transition-transform duration-slow ease-standard" style={{ transform: `scaleX(${stepNo / steps})` }} />
       </div>
@@ -82,22 +94,22 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
       {step === 'name' && (
         <form key="name" className={`space-y-4 ${anim}`} noValidate onSubmit={(e) => {
           e.preventDefault()
-          if (!name.trim()) return setError({ field: 'name', text: 'Your shop needs a name. You can change it later.' })
-          if (address?.state !== 'ok') return setError({ field: 'slug', text: address ? ADDRESS_WORDS[address.state] : 'Choose an address.' })
+          if (!name.trim()) return fail({ field: 'name', text: 'Your shop needs a name. You can change it later.' })
+          if (address?.state !== 'ok') return fail({ field: 'slug', text: address ? ADDRESS_WORDS[address.state] : 'Choose an address.' })
           go('pickup')
         }}>
           <h1 className="text-2xl font-semibold tracking-tight">What is your shop called?</h1>
           <div className="space-y-1.5">
             <label htmlFor="name" className="block text-sm font-medium">Shop name</label>
             <input id="name" autoFocus autoComplete="organization" maxLength={60} value={name} placeholder="Kesar Studio"
-              aria-invalid={error?.field === 'name' || undefined}
+              aria-invalid={error?.field === 'name' || undefined} aria-describedby={error?.field === 'name' ? errorId('name') : undefined}
               onChange={(e) => { setName(e.target.value); setError(null); if (!slugEdited) setSlug(slugFor(e.target.value)) }}
               className="h-11 w-full rounded-md border border-input bg-card px-3 text-base aria-invalid:border-danger-text" />
           </div>
           <div className="space-y-1.5">
             <label htmlFor="slug" className="block text-sm font-medium">Shop address</label>
             <div className="flex items-center gap-1 rounded-md bg-muted px-3 py-2.5 font-mono text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
-              <input id="slug" value={slug} aria-describedby="slug-state" aria-invalid={error?.field === 'slug' || undefined}
+              <input id="slug" value={slug} aria-describedby={error?.field === 'slug' ? `slug-state ${errorId('slug')}` : 'slug-state'} aria-invalid={error?.field === 'slug' || undefined}
                 onChange={(e) => { setSlugEdited(true); setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 30)); setError(null) }}
                 className="min-w-0 flex-1 bg-transparent outline-none" style={{ maxWidth: `${Math.max(4, slug.length + 1)}ch` }} />
               <span className="text-muted-foreground">.{shopDomain}</span>
@@ -106,7 +118,7 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
               {address ? ADDRESS_WORDS[address.state] : 'Made from the name. You can edit it.'}
             </p>
           </div>
-          {error && <p role="alert" className="text-sm text-danger-text">{error.text}</p>}
+          {error?.field && <FieldError name={error.field} message={error.text} className="text-sm" />}
           <Button type="submit" size="lg" className="w-full">Continue</Button>
         </form>
       )}
@@ -114,7 +126,7 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
       {step === 'pickup' && (
         <form key="pickup" className={`space-y-4 ${anim}`} noValidate onSubmit={(e) => {
           e.preventDefault()
-          if (!PINCODE_SHAPE.test(pickup)) return setError({ field: 'pickup', text: 'A pincode is 6 digits and starts with 1 to 9.' })
+          if (!PINCODE_SHAPE.test(pickup)) return fail({ field: 'pickup', text: 'A pincode is 6 digits and starts with 1 to 9.' })
           go('plan')
         }}>
           <h1 className="text-2xl font-semibold tracking-tight">Where do parcels leave from?</h1>
@@ -122,14 +134,14 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
           <div className="space-y-1.5">
             <label htmlFor="pickup" className="block text-sm font-medium">Pincode</label>
             <input id="pickup" autoFocus inputMode="numeric" autoComplete="postal-code" maxLength={6} value={pickup}
-              aria-invalid={error?.field === 'pickup' || undefined} aria-describedby="pickup-place"
+              aria-invalid={error?.field === 'pickup' || undefined} aria-describedby={error?.field === 'pickup' ? `pickup-place ${errorId('pickup')}` : 'pickup-place'}
               onChange={(e) => { setPickup(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(null) }}
               className="h-11 w-40 rounded-md border border-input bg-card px-3 font-mono text-base aria-invalid:border-danger-text" />
             <p id="pickup-place" aria-live="polite" key={flashKey.current} className={`min-h-5 rounded px-1 -mx-1 text-sm ${place && place !== 'unknown' ? 'animate-value-flash' : ''} ${place === 'unknown' ? 'text-warn-text' : 'text-muted-foreground'}`}>
               {place === 'unknown' ? 'Not in our list yet. Continue, and add the city in Settings.' : place ? `${place.city}, ${place.state}` : ''}
             </p>
           </div>
-          {error && <p role="alert" className="text-sm text-danger-text">{error.text}</p>}
+          {error?.field && <FieldError name={error.field} message={error.text} className="text-sm" />}
           <div className="flex gap-2">
             <Button type="button" variant="secondary" size="lg" onClick={() => go('name', 'back')}>Back</Button>
             <Button type="submit" size="lg" className="flex-1">Continue</Button>
@@ -167,11 +179,11 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
           start(async () => {
             if (!codeId) {
               const r = await sendSignupCode(phone)
-              if (!r.ok) return setError({ field: 'phone', text: r.error })
+              if (!r.ok) return fail({ field: 'phone', text: r.error })
               setCodeId(r.codeId)
             } else {
               const r = await verifySignupCode(codeId, code)
-              if (!r.ok) return setError({ field: 'code', text: r.error ?? 'Try again.' })
+              if (!r.ok) return fail({ field: 'code', text: r.error ?? 'Try again.' })
               setVerified(true); go('sells')
             }
           })
@@ -182,7 +194,7 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
             <div className="flex gap-2">
               <span className="flex h-11 items-center rounded-md border border-input bg-muted px-3 font-mono text-sm">+91</span>
               <input id="phone" autoFocus inputMode="tel" autoComplete="tel-national" maxLength={10} value={phone} disabled={!!codeId}
-                aria-invalid={error?.field === 'phone' || undefined}
+                aria-invalid={error?.field === 'phone' || undefined} aria-describedby={error?.field === 'phone' ? errorId('phone') : undefined}
                 onChange={(e) => { setPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setError(null) }}
                 className="h-11 w-44 rounded-md border border-input bg-card px-3 font-mono text-base aria-invalid:border-danger-text" />
             </div>
@@ -191,12 +203,12 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
             <div className="space-y-1.5">
               <label htmlFor="code" className="block text-sm font-medium">Code from WhatsApp</label>
               <input id="code" autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code}
-                aria-invalid={error?.field === 'code' || undefined}
+                aria-invalid={error?.field === 'code' || undefined} aria-describedby={error?.field === 'code' ? errorId('code') : undefined}
                 onChange={(e) => { setCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(null) }}
                 className="h-11 w-32 rounded-md border border-input bg-card px-3 font-mono text-base tracking-widest aria-invalid:border-danger-text" />
             </div>
           )}
-          {error && <p role="alert" className="text-sm text-danger-text">{error.text}</p>}
+          {error?.field && <FieldError name={error.field} message={error.text} className="text-sm" />}
           <div className="flex gap-2">
             <Button type="button" variant="secondary" size="lg" onClick={() => go('plan', 'back')} disabled={pending}>Back</Button>
             <Button type="submit" size="lg" className="flex-1" disabled={pending}>{!codeId ? 'Send code' : verified ? 'Continue' : 'Verify'}</Button>
@@ -220,7 +232,7 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
               )
             })}
           </div>
-          {error && <p role="alert" className="text-sm text-danger-text">{error.text}</p>}
+          {error?.field && <FieldError name={error.field} message={error.text} className="text-sm" />}
           <div className="flex gap-2">
             <Button type="button" variant="secondary" size="lg" onClick={() => go(codeOn ? 'phone' : 'plan', 'back')} disabled={pending}>Back</Button>
             <Button type="button" size="lg" className="flex-1" onClick={submit} disabled={pending}>

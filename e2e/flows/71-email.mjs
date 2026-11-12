@@ -7,7 +7,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
-import { CONSOLE, PORTS, SES, SHOP, USERS, signedIn, until } from '../lib.mjs'
+import { CONSOLE, PORTS, SES, SHOP, USERS, signedIn, until, expectToast } from '../lib.mjs'
 
 const FAKE = `http://127.0.0.1:${PORTS.ses}`
 const sent = async () => (await (await fetch(`${FAKE}/_test/sent`)).json())
@@ -61,7 +61,7 @@ export default {
         await admin.p.getByLabel('Title').fill('We changed how support visits work')
         await admin.p.getByLabel('Required (billing, security, Frrata acted)').check()
         await admin.p.getByRole('button', { name: 'Send' }).click()
-        await admin.p.getByText('Sent to 1 shop.').waitFor()
+        await expectToast(admin.p, 'Sent to 1 shop.', 'ok')
         await admin.p.getByRole('cell', { name: 'We changed how support visits work' }).waitFor()
       } finally { await admin.ctx.close() }
       // Earlier flows leave their own notices (support visits, billing): the owner has read those, so the pill counts this one.

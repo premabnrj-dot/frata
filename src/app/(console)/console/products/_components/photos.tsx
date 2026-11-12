@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { pick, srcSet, urlFor } from '@/domains/media/sizes'
+import { useToast } from '@/components/ui/toast'
 import { attachPhotos, editPhoto } from '../actions'
 import type { Uploaded } from './upload-photos'
 
@@ -12,13 +13,13 @@ export type Photo = { id: string; base: string; widths: number[]; optionValue: s
 export function Photos({ productId, tenantId, photos, colours, enabled, title = '' }: { productId: string; tenantId: string; photos: Photo[]; colours: string[]; enabled: boolean; title?: string }) {
   const router = useRouter()
   const [busy, setBusy] = useState<{ name: string; p: number }[]>([])
-  const [error, setError] = useState<string | null>(null)
+  // An upload refused or a change that failed is an error toast (§ Feedback 1); the last one stays until closed.
+  const toast = useToast()
   const [pending, start] = useTransition()
   const [confirm, setConfirm] = useState<string | null>(null)
 
   async function add(files: FileList | null) {
     if (!files?.length) return
-    setError(null)
     const list = [...files].slice(0, 12)
     setBusy(list.map((f) => ({ name: f.name, p: 0 })))
     // The resizer and uploader load only when someone adds photos (they are most of this page's script).
@@ -29,7 +30,7 @@ export function Photos({ productId, tenantId, photos, colours, enabled, title = 
       catch (e) {
         const m = e instanceof Error ? e.message : ''
         // Say what is wrong in words; the storage service's own messages are for us, not the merchant.
-        setError(/private/i.test(m) ? 'Photo storage is set to private, so shoppers could not see these photos. Frrata support needs to switch it to a public store.'
+        toast.error(/private/i.test(m) ? 'Photo storage is set to private, so shoppers could not see these photos. Frrata support needs to switch it to a public store.'
           : /network|fetch|failed to fetch/i.test(m) ? `${f.name} did not upload: the connection dropped. Try again.`
           : m.startsWith('Vercel Blob') ? `${f.name} was refused by photo storage. Try again, or send us this: ${m.replace(/^Vercel Blob:\s*/, '').slice(0, 120)}`
           : m || `${f.name} could not be uploaded.`)
@@ -38,12 +39,12 @@ export function Photos({ productId, tenantId, photos, colours, enabled, title = 
     }
     if (done.length) {
       const r = await attachPhotos(productId, done)
-      if (!r.ok) setError(r.error)
+      if (!r.ok) toast.error(r.error)
     }
     setBusy([])
     router.refresh()
   }
-  const act = (id: string, change: Parameters<typeof editPhoto>[1]) => start(async () => { const r = await editPhoto(id, change); if (!r.ok) setError(r.error); setConfirm(null); router.refresh() })
+  const act = (id: string, change: Parameters<typeof editPhoto>[1]) => start(async () => { const r = await editPhoto(id, change); if (!r.ok) toast.error(r.error); setConfirm(null); router.refresh() })
 
   return (
     <div id="photos" className="scroll-mt-20 space-y-3">
@@ -86,7 +87,6 @@ export function Photos({ productId, tenantId, photos, colours, enabled, title = 
           </label>
         ) : <p className="text-sm text-muted-foreground">Photo storage is not connected on this deployment.</p>}
       </div>
-      {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
     </div>
   )
 }
