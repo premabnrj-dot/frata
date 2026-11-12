@@ -137,9 +137,6 @@
   "src/app/(console)/console/look/_components/restore.tsx": {
     "count": 1
   },
-  "src/app/(console)/console/offers/[id]/page.tsx": {
-    "count": 1
-  },
   "src/app/(console)/console/offers/_components/offer-codes.tsx": {
     "count": 1
   },
@@ -150,6 +147,9 @@
     "count": 1
   },
   "src/app/(console)/console/offers/_components/offer-steps.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/offers/[id]/page.tsx": {
     "count": 1
   },
   "src/app/(console)/console/orders/_components/contact-and-notes.tsx": {
@@ -280,27 +280,6 @@
   },
   "src/app/(lookeditor)/console/look/customize/video-field.tsx": {
     "count": 3
-  },
-  "src/app/(partner)/partner/new/new-store-form.tsx": {
-    "count": 4
-  },
-  "src/app/handover/actions.ts": {
-    "count": 1
-  },
-  "src/app/handover/page.tsx": {
-    "count": 4
-  },
-  "src/app/login/sign-in-flow.tsx": {
-    "count": 4
-  },
-  "src/app/partners/apply/apply-form.tsx": {
-    "count": 4
-  },
-  "src/app/start/create-shop-form.tsx": {
-    "count": 8
-  },
-  "src/components/ekcode/continue.tsx": {
-    "count": 4
   },
   "src/components/nav/building-banner.tsx": {
     "count": 2
