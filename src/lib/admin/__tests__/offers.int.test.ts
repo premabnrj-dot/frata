@@ -75,8 +75,14 @@ describe.skipIf(!host)('Admin › Offers: the kill switch and the totals', () =>
         const at = (m: number) => new Date(Date.now() + m * 60_000)
         const order = async (o: Partial<typeof orders.$inferInsert>) => (await tx.insert(orders).values({ tenantId: B, number: 990_000 + Math.floor(Math.random() * 9_000), paymentMethod: 'prepaid',
           placedAt: at(-30), phone: '9829444000', subtotal: 100000, discount: 0, total: 100000, pricesIncludeGst: true, ...o }).returning({ id: orders.id }))[0]!.id
-        const use = (orderId: string, discountId: string, cls: 'order' | 'payment', amount: number) =>
-          tx.insert(orderDiscounts).values({ tenantId: B, orderId, discountId, class: cls, amount, title: 'x', style: 'order_off', minSubtotal: 0 })
+        const use = (orderId: string, discountId: string, cls: 'order' | 'payment', amount: number, method: 'cod' | 'prepaid' | null = null) =>
+          tx.insert(orderDiscounts).values({ tenantId: B, orderId, discountId, class: cls, amount, title: 'x', style: 'order_off', minSubtotal: 0, method })
+        // An order offer kept for one way only (shop stress test 2026-11-11): on delivery counts once switched, not once
+        // paid; online counts once paid, not once switched.
+        await use(await order({ switchedToCodAt: at(-20) }), D, 'order', 1100, 'cod')
+        await use(await order({ paidAt: at(-20) }), D, 'order', 1300, 'cod')
+        await use(await order({ switchedToCodAt: at(-20) }), D, 'order', 1700, 'prepaid')
+        await use(await order({ paidAt: at(-20) }), D, 'order', 1900, 'prepaid')
         await use(await order({ paidAt: at(-20) }), P, 'payment', 5000)
         await use(await order({ switchedToCodAt: at(-20) }), P, 'payment', 5000)
         await use(await order({ paymentMethod: 'cod', cancelledAt: at(-10) }), D, 'order', 7000)

@@ -130,7 +130,7 @@ function Actions(p: OrderActionsProps) {
         actions={<><Button variant="secondary" data-autofocus onClick={() => setCreditOpen(false)}>Not now</Button><Button onClick={() => void run('credited', async () => { const r = await issueCreditNote(p.orderId); return r.ok ? { ...r, ok: true } : r }).then((r) => { if (r) setCreditOpen(false) })} aria-disabled={busy}>Issue credit note</Button></>} />
 
       <Dialog open={cancelOpen} onClose={() => { setCancelOpen(false); setError(null) }} title={`Cancel ${p.number}?`}
-        description={p.refund ? <>It was paid online: refund <strong>{p.refundLabel}</strong> in your Razorpay dashboard after cancelling (Frrata does not move the money). Frrata does not tell the customer: tell them on WhatsApp or by phone.</> : 'Frrata does not tell the customer: tell them on WhatsApp or by phone.'}
+        description={p.refund ? <>It was paid online: refund <strong>{p.refundLabel}</strong> in your Razorpay dashboard after cancelling (Frrata does not move the money). We email the customer only if they gave an email: tell them on WhatsApp or by phone.</> : 'We email the customer only if they gave an email: tell them on WhatsApp or by phone.'}
         actions={<><Button variant="secondary" data-autofocus onClick={() => { setCancelOpen(false); setError(null) }}>Keep the order</Button><Button variant="destructive" onClick={doCancel} aria-disabled={busy}>Cancel order</Button></>}>
         <fieldset className="grid gap-2">
           <legend className="mb-1 text-sm font-medium">Why?</legend>

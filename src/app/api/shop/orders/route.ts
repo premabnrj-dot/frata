@@ -35,8 +35,17 @@ export async function POST(request: Request) {
   const inbox = address.data.email ? inboxLimitKey(address.data.email) : null
   if (inbox && !(await withinLimit(LIMITS.orderEmailShop, `${r.tenantId}:${inbox}`, new Date(), true)
     && await withinLimit(LIMITS.orderEmailGlobal, inbox, new Date(), true))) address.data.email = null
+  // The phone's limit counts ORDERS (shopper batch 2026-11-12): a try is counted here, before placement, so two at once
+  // can't both slip under it, and given back below unless it wrote a new order — a "changed" (409), a refusal, a busy
+  // (503), a network retry that found its order, a failure. The per-IP cap (shopRequest) counts every try, first.
   const phoneKey = `${r.tenantId}:${address.data.phone}`
-  if (!(await withinLimit(LIMITS.placeOrderPhone, phoneKey, new Date(), true))) return reply({ error: 'Too many orders from this phone in the last hour. Message the shop on WhatsApp if you need help.' }, 429)
+  const counted = new Date()
+  let settled = false
+  const giveBack = async () => { if (!settled) { settled = true; await uncount(LIMITS.placeOrderPhone, phoneKey, counted) } }
+  if (!(await withinLimit(LIMITS.placeOrderPhone, phoneKey, counted, true))) {
+    await giveBack()
+    return reply({ error: 'Too many orders from this phone in the last hour. Message the shop on WhatsApp if you need help.' }, 429)
+  }
   // The one cleaner (domains/analytics): listed keys only, each cleaned; the referring site reduced to a hostname that is
   // not this shop (the request's own host), any shop on the shop domain, the console, a payment page or an IP.
   const host = (request.headers.get('host') ?? '').toLowerCase().replace(/:\d+$/, '')
@@ -44,13 +53,15 @@ export async function POST(request: Request) {
   try {
     const code = await codeToTry(r.tenantId, r.ip, r.body.code)
     const out = await placeOrder(r.tenantId, { host: r.host, idempotencyKey: r.body.idempotencyKey, bag: r.body.bag, address: address.data, method: r.body.method, expectedTotal: r.body.expectedTotal, code, via: r.body.via, b2b: r.body.b2b ?? null, waOptIn: r.body.waOptIn === true, facts: { firstMethod: r.body.facts?.firstMethod ?? null, attribution, ekcode: r.body.facts?.ekcode ?? null }, session: await customerSessionToken() })
+    if (out.kind === 'placed' && out.fresh) settled = true // an order: the count stays, whatever happens below
+    else await giveBack()
     // A code that did not apply counts against the guess limit here as on /quote (one rule: codeTried).
     await codeTried(r.tenantId, r.ip, r.body.code, !code ? 'not_applied' : out.kind === 'changed' ? out.quote.offers.code : out.kind === 'placed' ? out.code ?? 'applied' : 'applied')
     if (out.kind === 'changed') return reply({ changed: true, quote: publicQuote(out.quote) }, 409)
-    // Busy (a flash drop) is not the shopper's doing: the try is given back to the phone and IP limits, and the shop's
-    // checkout is told when to try again.
+    // Busy (a flash drop) is not the shopper's doing: the try is given back to the IP limit too (the phone's above), and
+    // the shop's checkout is told when to try again.
     if (out.kind === 'refused' && out.status === 503) {
-      await Promise.all([uncount(LIMITS.placeOrderPhone, phoneKey), uncount(LIMITS.placeOrderIp, `${r.tenantId}:${r.ip}`)])
+      await uncount(LIMITS.placeOrderIp, `${r.tenantId}:${r.ip}`)
       return reply({ error: out.error }, 503, { 'Retry-After': '2' })
     }
     if (out.kind === 'refused') return reply({ error: out.error, ...(out.quote ? { quote: publicQuote(out.quote) } : {}) }, out.status)
@@ -58,6 +69,7 @@ export async function POST(request: Request) {
     return reply({ token: out.token, number: out.number, method: out.method, total: out.total, pay: out.pay, payError: out.payError ?? null })
   } catch (err) {
     console.error('[shop/orders] place', r.tenantId, err instanceof Error ? err.name : 'error')
+    await giveBack()
     return reply({ error: 'We could not place the order. Nothing was charged. Try again.' }, 500)
   }
 }

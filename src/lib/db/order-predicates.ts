@@ -1,6 +1,6 @@
 import 'server-only'
 import { sql, type SQL } from 'drizzle-orm'
-import { SHIP_TABS, type OrderState, type QueueTab } from '@/domains/orders/order-state'
+import { SHIP_TABS, type OfferWay, type OrderState, type QueueTab } from '@/domains/orders/order-state'
 import { ASSUME_DELIVERED_DAYS } from '@/domains/orders/outcomes'
 import { orderLines, orders, shipments } from '@/lib/db/schema-orders'
 
@@ -124,13 +124,15 @@ export const priorOrderSql = (now: Date, tenantId: string, phone: SQL | string, 
 export const onlineTotalCol = sql<number | null>`(${orders.checkout}->>'onlineTotal')::bigint`.mapWith((v) => (v == null ? null : Number(v)))
 
 /**
- * usesDiscount() in SQL: whether the order at `a` is using an offer of `cls` (limits, budgets, ₹ given).
- * KNOWN COPY: app_admin_offer_totals (drizzle/0042) restates it; its int test holds it to discountUses.
+ * usesDiscount() in SQL: whether the order at `a` is using an offer row of `way` (limits, budgets, ₹ given).
+ * KNOWN COPY: app_admin_offer_totals (drizzle/0107) restates it; its int test holds it to discountUses.
  */
-export const discountUseSql = (now: Date, cls: 'product' | 'order' | 'shipping' | 'payment', a = '"orders"'): SQL =>
-  cls === 'payment'
+export const discountUseSql = (now: Date, way: OfferWay, a = '"orders"'): SQL =>
+  way === 'prepaid'
     ? sql`((${c(a, 'paid_at')} is not null and ${c(a, 'cancelled_at')} is null) or ${holdingSql(now, a)})`
-    : sql`(${standingSql(a)} or ${holdingSql(now, a)})`
+    : way === 'cod'
+      ? sql`((${standingSql(a)} and ${c(a, 'paid_at')} is null) or ${holdingSql(now, a)})`
+      : sql`(${standingSql(a)} or ${holdingSql(now, a)})`
 
 /**
  * Units of the variant at `variantCol` owed to pre-orders not yet packed: stock that arrives for them is not for
@@ -139,6 +141,25 @@ export const discountUseSql = (now: Date, cls: 'product' | 'order' | 'shipping' 
 export const owedSql = (tenantId: string, now: Date, variantCol = '"variants"."id"'): SQL<number> => sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
   where l.tenant_id = ${tenantId} and l.variant_id = ${sql.raw(variantCol)} and l.kind = 'preorder' and l.stock_taken_at is null and o.packed_at is null and o.shipped_at is null
     and (${standingSql('o')} or ${holdingSql(now, 'o')}))`
+
+/**
+ * Units of the variant at `variantCol` held by unpaid online orders inside their pay_by (isHolding): not for sale while
+ * held. Read by checkout (variantRows) and the product page (storefront), so "Only N left" and "Sold out" are the
+ * stock checkout sells: stock − held − owed (shopper batch 2026-11-12).
+ */
+export const heldSql = (tenantId: string, now: Date, variantCol = '"variants"."id"'): SQL<number> => sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
+  where l.tenant_id = ${tenantId} and l.variant_id = ${sql.raw(variantCol)} and l.kind = 'in_stock' and ${holdingSql(now, 'o')})`
+
+/**
+ * heldSql for a whole shop at once: units held per variant (only variants something holds). The shop's cached pages
+ * read this, one statement from the holds index, instead of heldSql per variant: 3,000 variants at the 10× seed cost
+ * 265 ms that way (every variant walked every hold), this one well under 10 ms. Same rule (holdingSql, in-stock lines).
+ */
+export async function heldByVariant(tx: { execute: (q: SQL) => PromiseLike<unknown> }, tenantId: string, now: Date): Promise<Map<string, number>> {
+  const rows = await tx.execute(sql`select l.variant_id v, sum(l.qty)::int n from ${orders} o join ${orderLines} l on l.tenant_id = o.tenant_id and l.order_id = o.id
+    where o.tenant_id = ${tenantId} and ${holdingSql(now, 'o')} and l.kind = 'in_stock' and l.variant_id is not null group by l.variant_id`) as { v: string; n: number }[]
+  return new Map(rows.map((r) => [r.v, Number(r.n)]))
+}
 
 /**
  * Where a standing or holding order stands for Analytics (A·1): its outcome, on the way, or not sent yet. Straight
@@ -180,11 +201,47 @@ export function feeBucketSql(a: string, feeChanges: readonly Date[]): SQL<number
 /**
  * What credit notes after delivery gave back (returned items, a discount agreed before the sale, goodwill), taxable
  * value: it comes off what the order earned, in ₹ kept everywhere (keptSql, Analytics' windowSql). A reversal is the
- * outcome itself. Returned goods' cost is NOT taken off COGS: nothing restocks on a credit, and a returned piece is
- * often not sellable (hypothesis H-resale in frata-unit-economics; unit-economics review 2026-11-09).
+ * outcome itself. A returned piece's cost comes back only when it was put back in stock (`cogsSql`); a return not
+ * restocked keeps its cost (hypothesis H-resale in frata-unit-economics; unit-economics review 2026-11-09).
  */
 export const creditedSql = (a: string) =>
   sql`(select coalesce(sum(cn.taxable), 0) from credit_notes cn where cn.tenant_id = ${c(a, 'tenant_id')} and cn.order_id = ${c(a, 'id')} and cn.kind in ('return', 'discount', 'goodwill'))`
+
+/**
+ * The taxable value of the order's items returned on credit notes issued before `before` (kind 'return' only: a discount
+ * or goodwill note is not a return). Owner, 2026-11-12: a returned item isn't billable, so Frrata's fee base is the
+ * order's merchandise net less this (billing draft), and a return after billing gives its fee back.
+ * Only a note issued within the shop's return window plus 15 days of delivery (delivered, or assumed delivered 30 days
+ * after shipping) moves the fee: nothing ties a return note to goods coming back, and a later note is still a valid GST
+ * document but no longer a return for the fee (unit-economics review 2026-11-12, the abuse path).
+ */
+export const returnedSql = (a: string, before: Date) =>
+  sql`(select coalesce(sum(cn.taxable), 0) from credit_notes cn where cn.tenant_id = ${c(a, 'tenant_id')} and cn.order_id = ${c(a, 'id')} and cn.kind = 'return' and cn.issued_at < ${before.toISOString()}::timestamptz
+    and cn.issued_at <= coalesce(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + interval '30 days') + make_interval(days => coalesce(${c(a, 'return_days')}, 0) + 15))`
+
+/**
+ * The goods' cost of the pieces a return put back in stock (credit_note_lines.restocked_qty × the line's own unit cost,
+ * as stored at placement): back on sale, so no longer a cost of this order. A line with no unit cost adds nothing back
+ * (never a guessed cost; its order's COGS is unknown anyway). Only `return` notes restock (issueCredit).
+ */
+export const restockedCostSql = (a: string) =>
+  sql`(select coalesce(sum(l.restocked_qty * ol.unit_cost), 0) from credit_notes cn
+    join credit_note_lines l on l.tenant_id = cn.tenant_id and l.credit_note_id = cn.id
+    join order_lines ol on ol.tenant_id = l.tenant_id and ol.id = l.order_line_id
+   where cn.tenant_id = ${c(a, 'tenant_id')} and cn.order_id = ${c(a, 'id')} and cn.kind = 'return' and l.restocked_qty > 0)`
+
+/**
+ * A return whose stock was put back: its came-back event recorded it (`reason = 'restocked'`, markCameBack in
+ * src/lib/orders/outcomes.ts, the one writer) and was not undone. The ONE SQL for it: profit.ts loses a return's COGS
+ * only when this is false (keptSql and Analytics alike). Asked only of an order whose return started (cheap elsewhere);
+ * reads order_events by (tenant_id, order_id).
+ */
+export const rtoRestockedSql = (a: string): SQL<boolean> => sql<boolean>`(${c(a, 'rto_initiated_at')} is not null and exists (
+  select 1 from order_events re where re.tenant_id = ${c(a, 'tenant_id')} and re.order_id = ${c(a, 'id')} and re.kind = 'rto' and re.reason = 'restocked'
+     and not exists (select 1 from order_events ru where ru.tenant_id = re.tenant_id and ru.order_id = re.order_id and ru.undoes = re.id)))`
+
+/** The order's COGS for ₹ kept: as placed, less what returns put back in stock; null while unknown. keptSql and Analytics alike. */
+export const cogsSql = (a: string) => sql`(${c(a, 'cogs')} - ${restockedCostSql(a)})`
 
 /**
  * ₹ KEPT, GROUPED (Analytics A·1; speed review: never one row per order). The expressions `keptOf`
@@ -193,6 +250,10 @@ export const creditedSql = (a: string) =>
  * moment (when it shipped) (`feeChanges`: the plan versions' start times, oldest first; bucket k means the k-th version, 0 none, as
  * `feeForOrder`). Offers and Analytics both read it, so their ₹ kept agree.
  */
+/** Frrata's fee base for ₹ kept: what the shopper kept (merchandise less returns within the window), never below 0.
+ * keptSql and Analytics alike (impact review 2026-11-12: Analytics charged the fee on returned pieces). */
+export const feeBaseSql = (a: string, now: Date) => sql`greatest(${c(a, 'merchandise_net')} - ${returnedSql(a, now)}, 0)`
+
 export function keptSql(now: Date, a: string, feeChanges: readonly Date[], providerCol?: SQL) {
   const st = stateSql(now, a)
   const outcome = sql<'delivered' | 'rto' | 'lost'>`(case when ${st} = 'delivered' then 'delivered' when ${st} in ('rto', 'rto_received') then 'rto' else 'lost' end)`
@@ -204,18 +265,18 @@ export function keptSql(now: Date, a: string, feeChanges: readonly Date[], provi
   return {
     /** Only orders with an outcome. */
     where: sql`${st} in ('delivered', 'rto', 'rto_received', 'lost')`,
-    /** The group's columns: outcome, provider, cod, bucket, then the sums. */
-    columns: sql`${outcome} outcome, ${provider} provider, ${cod} cod, ${bucket} bucket, count(*)::int n,
-      coalesce(sum(${c(a, 'net_revenue')} - ${credited}), 0)::bigint net, sum(${c(a, 'cogs')})::bigint cogs, sum(${c(a, 'forward_shipping')})::bigint fwd,
+    /** The group's columns: outcome, provider, cod, bucket, restocked, then the sums. */
+    columns: sql`${outcome} outcome, ${provider} provider, ${cod} cod, ${bucket} bucket, ${rtoRestockedSql(a)} restocked, count(*)::int n,
+      coalesce(sum(${c(a, 'net_revenue')} - ${credited}), 0)::bigint net, sum(${cogsSql(a)})::bigint cogs, sum(${c(a, 'forward_shipping')})::bigint fwd,
       sum(${c(a, 'rto_shipping')})::bigint rto, sum(${c(a, 'courier_cod_fee')})::bigint codfee, coalesce(sum(${c(a, 'gateway_fee')}), 0)::bigint gw,
-      coalesce(sum(${c(a, 'merchandise_net')}), 0)::bigint base`,
-    /** Group by these, after `lead` key columns of the caller's own placed first: the four group columns by position,
+      coalesce(sum(${feeBaseSql(a, now)}), 0)::bigint base`,
+    /** Group by these, after `lead` key columns of the caller's own placed first: the five group columns by position,
      * and known costs apart from unknown, so a sum is null only when all of its orders lack it. */
-    groupBy: (lead = 0) => sql.raw(`${[1, 2, 3, 4].map((i) => i + lead).join(', ')}, (${a}.cogs is null), (${a}.forward_shipping is null), (${a}.rto_shipping is null), (${a}.courier_cod_fee is null)`),
+    groupBy: (lead = 0) => sql.raw(`${[1, 2, 3, 4, 5].map((i) => i + lead).join(', ')}, (${a}.cogs is null), (${a}.forward_shipping is null), (${a}.rto_shipping is null), (${a}.courier_cod_fee is null)`),
   }
 }
 /** A row of keptSql, as postgres returns it. */
-export type KeptRow = { outcome: 'delivered' | 'rto' | 'lost'; provider: 'self' | 'shiprocket' | null; cod: boolean; bucket: number; n: number; net: string; cogs: string | null; fwd: string | null; rto: string | null; codfee: string | null; gw: string; base: string }
+export type KeptRow = { outcome: 'delivered' | 'rto' | 'lost'; provider: 'self' | 'shiprocket' | null; cod: boolean; bucket: number; restocked: boolean; n: number; net: string; cogs: string | null; fwd: string | null; rto: string | null; codfee: string | null; gw: string; base: string }
 /**
  * billableAt() in SQL (src/domains/orders/outcomes.ts): when an order became a delivered order for Frrata's fee —
  * delivered, or shipped + 30 days, whichever came first; null after a return started, when lost without delivery,

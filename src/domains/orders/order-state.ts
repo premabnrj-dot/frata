@@ -101,12 +101,24 @@ export const isHolding = (o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'sw
   o.paymentMethod === 'prepaid' && !o.paidAt && !o.switchedToCodAt && !o.cancelledAt && !!o.payBy && o.payBy > now
 
 /**
- * Whether an order is using an offer of `cls` right now (offers: limits, budgets, ₹ given). Order and shipping
- * offers: standing or holding (an abandoned online order gives its use back). The pay-online saving: paid online,
- * or still holding — a switch to COD gives it back (docs/plans/2026-11-08-offers.md, plan review 7).
+ * Which way of paying an order's offer row is for: the pay-online saving online; an order offer marked at placement
+ * (order_discounts.method, shop stress test 2026-11-11: the order offer that went with the saving online, and the one
+ * it replaced on delivery); every other row both ways.
  */
-export const usesDiscount = (o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'switchedToCodAt' | 'cancelledAt' | 'payBy'>, cls: 'product' | 'order' | 'shipping' | 'payment', now: Date) =>
-  cls === 'payment' ? (!!o.paidAt && !o.cancelledAt) || isHolding(o, now) : isStanding(o) || isHolding(o, now)
+export type OfferWay = 'both' | 'prepaid' | 'cod'
+export const offerWay = (cls: string, method: string | null | undefined): OfferWay =>
+  cls === 'payment' || method === 'prepaid' ? 'prepaid' : method === 'cod' ? 'cod' : 'both'
+
+/**
+ * Whether an order is using an offer row of `way` right now (offers: limits, budgets, ₹ given). Both ways: standing or
+ * holding (an abandoned online order gives its use back). Online only: paid online, or still holding — a switch to COD
+ * gives it back (docs/plans/2026-11-08-offers.md, plan review 7). On delivery only: standing and not paid online, or
+ * still holding (held for a switch until the hold ends) — a capture gives it back.
+ */
+export const usesDiscount = (o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'switchedToCodAt' | 'cancelledAt' | 'payBy'>, way: OfferWay, now: Date) =>
+  way === 'prepaid' ? (!!o.paidAt && !o.cancelledAt) || isHolding(o, now)
+    : way === 'cod' ? (isStanding(o) && !o.paidAt) || isHolding(o, now)
+    : isStanding(o) || isHolding(o, now)
 
 /** States a merchant must act on today. */
 export const needsAction = (s: OrderState) => s === 'unconfirmed' || s === 'held' || s === 'refund_due' || s === 'ndr'

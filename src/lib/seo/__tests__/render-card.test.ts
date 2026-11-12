@@ -27,7 +27,9 @@ describe('share cards (S1·3–S1·4)', () => {
       expect((await sharp(jpg!).metadata()).format).toBe('jpeg')
     }
   }, 30_000)
-  it('photos: only a sane WebP is drawn (not a PNG, not a giant)', async () => {
+  it('photos: only a sane WebP or JPEG is drawn (not a PNG, not a giant)', async () => {
+    // A JPEG photo (Safari makes no WebP, 2026-11-12).
+    expect(await photoUri(await sharp({ create: { width: 800, height: 1000, channels: 3, background: '#b45f3c' } }).jpeg().toBuffer(), 100, 100)).toMatch(/^data:image\/jpeg;base64,/)
     expect(await photoUri(await sharp({ create: { width: 10, height: 10, channels: 3, background: '#000' } }).png().toBuffer(), 100, 100)).toBeNull()
     expect(await photoUri(Buffer.from('not an image'), 100, 100)).toBeNull()
     expect(await photoUri(await webp(3000, 3000), 100, 100)).toBeNull()

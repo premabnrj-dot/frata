@@ -70,4 +70,27 @@ describe.skipIf(!host)('draftInvoice on a real database', () => {
     expect(d.fees).toHaveLength(2)
     expect(d.lines.filter((l) => l.kind === 'fee')).toEqual([{ kind: 'fee', taxable: 1714, quantity: 1 }, { kind: 'fee', taxable: 1714, quantity: 1 }])
   })
+
+  it('a returned item is not billable (owner, 2026-11-12): the fee is on what was kept', async () => {
+    const { draftInvoice } = await import('../draft')
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { frrataInvoiceFees } = await import('@/lib/db/schema-billing')
+    const { orders, creditNotes } = await import('@/lib/db/schema-orders')
+    const { eq } = await import('drizzle-orm')
+    // Order 5, delivered in November; half its value (₹428.57 of ₹857.14) came back on a return credit note before the draft.
+    const id = await withTenant(tenantId, async (tx) => {
+      const [o] = await tx.insert(orders).values({ tenantId, number: 5, paymentMethod: 'cod', placedAt: ist('2026-10-15T10:00:00'), confirmedAt: ist('2026-10-15T11:00:00'), packedAt: ist('2026-10-16T10:00:00'),
+        merchandiseNet: 85714, invoiceNumber: 'BS/26-27/5', shippedAt: ist('2026-11-05T10:00:00'), deliveredAt: ist('2026-11-10T10:00:00') }).returning({ id: orders.id })
+      await tx.insert(creditNotes).values({ tenantId, orderId: o!.id, number: 'BS/CN/26-27/9', againstInvoice: 'BS/26-27/5', reason: 'returned', kind: 'return',
+        taxable: 42857, cgst: 0, sgst: 0, igst: 0, total: 42857, issuedAt: ist('2026-11-20T10:00:00'), issuedBy: 'aaaaaaaa-0000-0000-0000-0000000000ff' })
+      return o!.id
+    })
+    // A second "return" note long after the return window (none set: 0 + 15 days from delivery) doesn't move the fee.
+    await withTenant(tenantId, (tx) => tx.insert(creditNotes).values({ tenantId, orderId: id, number: 'BS/CN/26-27/10', againstInvoice: 'BS/26-27/5', reason: 'returned', kind: 'return',
+      taxable: 20000, cgst: 0, sgst: 0, igst: 0, total: 20000, issuedAt: ist('2026-11-29T10:00:00'), issuedBy: 'aaaaaaaa-0000-0000-0000-0000000000ff' }))
+    await draftInvoice(tenantId, ist('2026-12-01T00:00:00'), ist('2026-12-02T09:00:00'))
+    const [fee] = await withTenant(tenantId, (tx) => tx.select({ base: frrataInvoiceFees.base, fee: frrataInvoiceFees.fee }).from(frrataInvoiceFees).where(eq(frrataInvoiceFees.orderId, id)))
+    // 2% of ₹428.57 kept = ₹8.57, never 2% of the ₹857.14 placed (and the late note left out).
+    expect(fee).toEqual({ base: 42857, fee: 857 })
+  })
 })

@@ -2,8 +2,8 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.45.0
-  verified: 2026-11-11
+  version: 2.47.0
+  verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
 ---
@@ -509,7 +509,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   buy at now, with that size's availability; `compareAt` is the struck before-cut price.
 - **Share cards** `src/app/s/[host]/og/[...card]/route.ts`: canonical paths only (`parseCardPath`), the host's shop,
   ids found in its cached catalogue (listed products only — a random id costs no query), drawing budgeted per caller
-  then per shop, photos only from our store and this shop's folder (PATH_SHAPE), read capped at 1 MB, WebP checked by
+  then per shop, photos only from our store and this shop's folder (PATH_SHAPE), read capped at 1 MB, WebP or JPEG checked by
   sharp, reaching Satori only as data URIs. CDN a day; a stale address shows the current card for 5 minutes. No Blob
   storage (a deleted photo would outlive the product).
 - **Old addresses are history rows, append-only** (`product_handle_history`, `collection_handle_history`: select +
@@ -604,18 +604,25 @@ Rules:
   identity, so `requireMember(CAN_BUILD)` misses the layout's entry (P7).
 - A shopper's write invalidates the narrowest tag it can: the product, not
   the shop. A sell-out's catalogue purge runs at most once per shop per 30 s across every instance (`refreshSoldOut`,
-  limiter `soldOutPurge`).
+  limiter `soldOutPurge`); one inside a purged window queues ONE trailing purge at its end (`soldOutTrail`, in
+  `after()`), never dropped. A sell-out is the last piece by stock OR hold (stock − held − owed), and an offer an order
+  uses up (`usedUp`) purges the same way: the bar (`shopAnnouncement`) is tagged catalogue with the showcase.
+- **Shop pages read holds once per entry** (`heldByVariant`, grouped from the holds index): `heldSql` per variant over a
+  3,000-variant catalogue cost 265 ms at 10× (1 ms grouped). Checkout's ≤ 20 variants keep `heldSql`; one rule.
 - A flash drop (2026-11-11): placing an order waits at most 2 s for a lock (`set local lock_timeout`) and a shop places
   at most `PLACE_SLOTS` (8) orders at once, as transaction advisory locks shared by every instance
   (`src/lib/orders/place.ts`); past either, 503 "busy, try again", `Retry-After: 2`, nothing written, and the try is
-  given back to the phone and IP limits (`uncount`). A try whose order was already placed finds it before any slot.
+  given back to the IP limit (`uncount`). A try whose order was already placed finds it before any slot. **The phone
+  limit counts orders** (2026-11-12): counted before placement, given back unless the try wrote a new order
+  (`Placed.fresh`).
   Everything else that takes stock shares the slots and the wait (`takeSlot`): a payment landing, a switch to pay on
   delivery, a retried payment (`src/lib/orders/payment.ts`). A captured payment is recorded FIRST where nothing waits
   (a Razorpay-shaped `webhook_events` row; storing a capture keeps the order's hold ≥ 15 min while it still runs),
-  then applied if there is room. `processEvents` takes a slot only when something waits; a lock wait, deadlock,
-  serialization failure or statement timeout inside an event LEAVES it unprocessed (marking it would lose the
-  payment); the 5-minute drain (`/api/cron/drain`) is the next pass; the order page says "Payment received ·
-  confirming" and looks again (`paymentWaiting`).
+  then applied if there is room — the browser's reply, a switch or a released hold that finds a capture, alike.
+  `processEvents` takes a slot only when something waits; a lock wait, deadlock, serialization failure or statement
+  timeout inside an event LEAVES it unprocessed (marking it would lose the payment); the 5-minute drain
+  (`/api/cron/drain`) is the next pass; the order page says "Payment received · confirming" and looks again
+  (`paymentWaiting`).
 - A cached loader (`shopCached`) never runs inside a `withTenant`: it opens a second connection while the first is
   held, and at a drop the pool deadlocks (P4). Read it before the transaction, or after it closes (`quoteData`
   resolves offer collections after its transaction).
@@ -645,6 +652,22 @@ Rules:
   own origin.
 - Erasing an abandoned order strips the click ids (`ERASED_KEYS`); the utm tags stay (owner: keep everything else).
 
+## Photos (2026-11-12)
+
+- **One format per photo, said by its stored base** (`src/domains/media/sizes.ts`): WebP (`<id>` → `<id>-<w>.webp`, every
+  photo before this date) or JPEG where the browser makes no WebP (Safari: a `.jpg` base, `<id>.jpg` → `<id>-<w>.jpg`).
+  No column: `formatOf(base)`. A file's URL is built only by `urlFor` (never `${base}-${w}.webp` by hand); the upload
+  path by `blobPath`; the token allows exactly the type the path's extension says; `photosAreMade` reads each file's
+  first bytes against its base's format (`headIs`).
+
+## Razorpay keys that stop working (2026-11-12)
+
+- A call with a shop's keys (`createOrder`, `orderPayments`) that Razorpay answers 401/403 sets
+  `payment_keys.problem` to `KEYS_REFUSED` (Settings: "Needs attention"); a call that works clears that problem only.
+  `noteKeysAnswer` (src/lib/payments/keys.ts) runs after the call, with no transaction open, and writes only when the
+  problem changes, matching the key id the call used. No needs-you notice yet: `notices.source_kind` has no kind for it
+  and `notice_write` is not granted to frata_app.
+
 ## Money (ADR-0004)
 
 Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
@@ -659,6 +682,12 @@ Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
   payment, prepaid only), `priceMethod` (the stored `productDiscount` first, then the rest) (spread by value to the
   paise; each line's GST rate on its own discounted piece, **per way of paying**: line tax lives in
   `MethodTotal`, never on `QuoteLine`).
+- **Each way of paying gets its best** (shop stress test 2026-11-11): when the best order offer does not combine,
+  online also tries the best one that does (or none) with the saving (`plan.online`), taken by `quote()` only at a
+  LOWER prepaid total (a tie keeps the order offer); on delivery always keeps the best order offer; one delivery charge
+  for both. Placement stores `keptOffers(q, method)`: placed online with two order offers, `order_discounts.method`
+  marks them 'prepaid' and 'cod', so `reprice()` prices either way, and uses follow the row's way (`offerWay`;
+  `discountUseSql(now, 'both' | 'prepaid' | 'cod')`; a hold holds both).
 - **One repricer and one writer:** a placed order is priced again only by `amounts.reprice()` from
   its stored lines and `order_discounts` (never today's offers), and written only by
   `lib/orders/reprice.ts writeReprice()` — every money column of the order and its lines together.
@@ -666,12 +695,16 @@ Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
 - **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
   `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`
   (parity-tested). Placement locks every offer the bag could get that has a limit, in id order,
-  before counting; an offer over a limit drops out and the shopper gets `changed`.
+  before counting; an offer over a limit drops out and the shopper gets `changed`. The cached pages (bar, cards,
+  product lines) leave out an offer `usedUp` for everyone (`usedUpIds`: total limit or budget; never per phone).
+- **A percentage saving is whole rupees, rounded down, once per offer** (`wholeRupees` in discounts.ts; 100% exact):
+  never a ₹949.05 total, never ₹1 or more short. Stored amounts are what reprice() reads, so placed orders keep theirs.
 - **The shopper's read** of offers is `liveOffers()` in `queries/checkout.ts` (terms only);
   `publicQuote` maps offers to named fields (a test proves no id, term, limit or budget leaks).
   Codes: one per order, unique per shop forever, fail-closed per-IP guess limit, one answer for
-  every failure. A creator code is a labelled code: matched only when typed (`codeFor`), never
-  in the bar (`isNull(label)`), recorded with `via` (link or typed).
+  every failure but `'beaten'` (a real code a better offer of its class beat: told so, not a wrong guess). A creator
+  code is a labelled code: matched only when typed (`codeFor`), never in the bar (`isNull(label)`), recorded with `via`
+  (link or typed) — only when it applies: a beaten code is not on the order (no column for it yet).
 - **First order** is decided at placement under a per-phone advisory lock (standing or holding
   order from that phone), and again on a payment retry.
 - **Did it make money?** `offerStats` (queries/discounts.ts) is the ONE computation of an offer's results:
@@ -705,7 +738,11 @@ through `asModule('gst', …)`, the Accountant's invite too (removing one works 
   (`app_buyer_fixed` trigger); off at ₹5 crore and above until e-invoicing.
 - **Credit notes:** `domains/orders/credits.ts` (what is left of each line; return pro rata by quantity, discount by value
   at each line's rate, goodwill no GST in its own G series, reversal takes the rest), lines in `credit_note_lines`
-  (final). ₹ kept: `keptSql` takes off credited taxable and returned goods' cost.
+  (final). ₹ kept: `keptSql` takes off credited taxable (`creditedSql`) and the cost of pieces a return put back in
+  stock (`cogsSql`). A return restocks only when ticked: `issueCredit`, same transaction, `restockOf` (never past what
+  the line sold less earlier restocks), recorded once in `credit_note_lines.restocked_qty`. A return that CAME BACK
+  (RTO) loses its COGS unless its came-back event put the stock back (`rtoRestockedSql`, grouped by keptSql and
+  Analytics alike; frata-unit-economics).
 - **GSTR-1:** `domains/tax/gstr1.ts` from the documents; files in `gstr1-files.ts`; the period read is
   `queries/gst.ts gstPeriod(In)`, never cached. Filing (G2): `lib/gst/gsp.ts` (`gsp()` null = off; the fake never in
   Production), the actions in `console/gst/actions.ts` write a `gst_attempts` row before each call (ADR-0008, accepted 2026-11-09),

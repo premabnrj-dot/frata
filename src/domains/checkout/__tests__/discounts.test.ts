@@ -19,11 +19,22 @@ const online = t({ id: 'd-online', title: 'Pay online', style: 'pay_online', amo
 
 describe('amountFor', () => {
   it('percent with a cap, amount, and the minimum', () => {
-    expect(amountFor(t({ percentBps: 1000 }), 199900)).toBe(19990)
+    expect(amountFor(t({ percentBps: 1000 }), 199900)).toBe(19900) // ₹199.90 off, rounded down to whole rupees
     expect(amountFor(t({ percentBps: 1000, cap: 15000 }), 199900)).toBe(15000)
     expect(amountFor(t({ amountOff: 50000 }), 30000)).toBe(30000) // never more than the base
     expect(amountFor(t({ percentBps: 1000, minSubtotal: 200000 }), 199900)).toBe(0)
     expect(amountFor(t({ style: 'free_shipping' }), 199900)).toBe(0)
+  })
+  it('a percentage gives whole rupees, rounded down: never a paise total, never ₹1 or more short (100% stays exact)', () => {
+    expect(amountFor(t({ percentBps: 500 }), 99900)).toBe(4900) // 5% of ₹999 = ₹49.95 → ₹49: ₹950, not ₹949.05
+    expect(amountFor(t({ style: 'pay_online', percentBps: 250 }), 100000)).toBe(2500) // exact stays exact
+    expect(amountFor(t({ percentBps: 10_000 }), 99950)).toBe(99950)
+    for (const base of [99900, 123456, 249900, 7]) for (const bps of [1, 333, 500, 1250, 9999]) {
+      const got = amountFor(t({ percentBps: bps }), base), exact = Math.floor((base * bps) / 10_000)
+      expect(got % 100).toBe(0)
+      expect(exact - got).toBeGreaterThanOrEqual(0)
+      expect(exact - got).toBeLessThan(100)
+    }
   })
 })
 
@@ -31,9 +42,12 @@ describe('planOffers', () => {
   it('best per class; a typed code applies only when it is the best of its class; one answer when it does not', () => {
     const auto = t({ id: 'd-auto', percentBps: 1000, listed: false })
     const code = t({ id: 'd-code', percentBps: 500, code: 'SMALL5', listed: false })
-    expect(planOffers(300000, [auto, code], 'small5')).toMatchObject({ order: { discountId: 'd-auto', amount: 30000 }, code: 'not_applied' })
+    // A real code an automatic offer beats is told so (not "doesn't work here"), and is not a wrong guess.
+    expect(planOffers(300000, [auto, code], 'small5')).toMatchObject({ order: { discountId: 'd-auto', amount: 30000 }, code: 'beaten' })
     expect(planOffers(300000, [auto, t({ ...code, percentBps: 2000 })], 'SMALL5')).toMatchObject({ order: { discountId: 'd-code', amount: 60000 }, code: 'applied' })
     expect(planOffers(300000, [auto], 'NOPE')).toMatchObject({ code: 'not_applied' })
+    // A real code that gives this bag nothing reads like any other that does not apply (rule 47).
+    expect(planOffers(300000, [auto, t({ ...code, minSubtotal: 500000 })], 'SMALL5')).toMatchObject({ code: 'not_applied' })
     // An unlisted code offer never applies untyped.
     expect(planOffers(300000, [code], null).order).toBeNull()
   })
@@ -47,7 +61,7 @@ describe('planOffers', () => {
     ])
     expect(planOffers(380000, [diwali, t({ id: 'd-small', percentBps: 500 })], null).listed.map((l) => l.title)).toEqual(['Diwali'])
   })
-  it('withholds the payment saving for both ways of paying when the order offer does not combine', () => {
+  it('withholds the payment saving beside an order offer that does not combine (online then tries it alone: offers-per-method)', () => {
     expect(planOffers(370000, [t({ ...diwali, combinesWithPayment: false }), online], null).payment).toBeNull()
     expect(planOffers(370000, [diwali, online], null).payment?.amount).toBe(5000)
   })
@@ -164,6 +178,30 @@ describe('O·2: product offers, Buy X get Y, gift, tiers, typed codes', () => {
     expect([p.productDisc[0], p.order?.amount, p.code]).toEqual([150000, 10000, 'applied'])
     expect(planOffers([line('a', 300000)], [sale, vip], { text: 'NOPE', discountId: null, codeId: null }).code).toBe('not_applied')
   })
+  it('a creator code beaten by an automatic offer of its class says "beaten", in every class', () => {
+    const riya = { text: 'RIYA10', discountId: 'd-riya', codeId: 'c-riya' }
+    const creator = (over: Partial<DiscountTerms>) => t({ id: 'd-riya', title: 'Riya', listed: false, code: 'VIP', codeId: 'c-pub', ...over })
+    // Order class: 10% automatic beats the creator's ₹100.
+    expect(planOffers([line('a', 300000)], [t({ id: 'd-auto', percentBps: 1000 }), creator({ amountOff: 10000 })], riya).code).toBe('beaten')
+    // Product class: a 30% sale on the piece beats the creator's 10% on it.
+    const sale = t({ id: 'd-sale', style: 'product_off', percentBps: 3000, targets: 'all' })
+    expect(planOffers([line('a', 300000)], [sale, creator({ style: 'product_off', percentBps: 1000, targets: 'all' })], riya).code).toBe('beaten')
+    // Payment class: withheld beside an order offer that does not combine (and the order offer is better online too).
+    expect(planOffers([line('a', 300000)], [t({ id: 'd-auto', percentBps: 2000, combinesWithPayment: false }), creator({ style: 'pay_online', amountOff: 5000 })], riya).code).toBe('beaten')
+    // When it wins, it applies; when it gives this bag nothing, it does not apply.
+    expect(planOffers([line('a', 300000)], [t({ id: 'd-auto', percentBps: 100 }), creator({ amountOff: 10000 })], riya).code).toBe('applied')
+    expect(planOffers([line('a', 300000)], [t({ id: 'd-auto', percentBps: 1000 }), creator({ amountOff: 10000, minSubtotal: 400000 })], riya).code).toBe('not_applied')
+  })
+  it('product and Buy X get Y percentages give whole rupees per offer, spread back over the lines', () => {
+    const sale = t({ id: 'd-sale', style: 'product_off', percentBps: 1500, targets: 'all' })
+    const p = planOffers([line('a', 99900), line('b', 49900)], [sale], null) // 149.85 + 74.85 = ₹224.70 → ₹224
+    expect(p.products[0]!.amount).toBe(22400)
+    expect(p.productDisc.reduce((a, b) => a + b, 0)).toBe(22400)
+    const half = t({ id: 'd-half', title: 'Buy 1 get 1 half', style: 'bxgy', buyQty: 1, getQty: 1, getBps: 5000, targets: 'all' })
+    expect(planOffers([line('a', 79900), line('b', 69900)], [half], null).products[0]!.amount).toBe(34900) // ₹349.50 → ₹349
+    const free = t({ ...half, getBps: 10_000 })
+    expect(planOffers([line('a', 79900), line('b', 69950)], [free], null).products[0]!.amount).toBe(69950) // free is free
+  })
   it('the quote: product discounts stay on their lines; the order offer and the saving spread on what is left; GST per piece', () => {
     const sale = t({ id: 'd-sale', title: 'Kurta sale', style: 'product_off', percentBps: 2000, targets: ['pa'] })
     const q = quote(bag, [kurta, dupatta], rules, now, null, { offers: [sale, online] })
@@ -172,5 +210,23 @@ describe('O·2: product offers, Buy X get Y, gift, tiers, typed codes', () => {
     expect(q.prepaid.total).toBe(370000 - 56000 - 5000)
     expect(q.prepaid.applied.map((a) => a.class)).toEqual(['product', 'payment'])
     void tee
+  })
+  it('whole-rupee percentages: totals in rupees, and the GST spread still adds up to the paisa', () => {
+    const sale = t({ id: 'd-sale', title: 'Sale', style: 'product_off', percentBps: 1500, targets: 'all' })
+    const five = t({ id: 'd-five', title: '5%', percentBps: 500 })
+    const pay = t({ id: 'd-pay', title: 'Pay online', style: 'pay_online', percentBps: 250 })
+    for (const registered of [true, false]) for (const inc of [true, false]) {
+      const q = quote([{ variantId: 'a', qty: 1 }, { variantId: 'b', qty: 2 }], [v('a', 99900), v('b', 64900, { hsn: '6109' })], { ...rules, registered, pricesIncludeGst: inc }, now, null, { offers: [sale, five, pay] })
+      for (const m of [q.prepaid, q.cod]) {
+        expect(m.discount % 100).toBe(0)
+        expect(m.lines.reduce((a, l) => a + l.discount, 0)).toBe(m.discount)
+        expect(m.applied.every((a) => a.amount % 100 === 0)).toBe(true)
+        const gst = m.lines.reduce((a, l) => a + l.gst + l.chargeGst, 0)
+        expect(gst).toBe(m.gst)
+        const taxable = m.lines.reduce((a, l) => a + l.taxable + l.chargeTaxable, 0)
+        expect(taxable + gst).toBe(m.total) // every rupee charged is a line's taxable value or its GST
+        if (inc) expect(m.total % 100).toBe(0)
+      }
+    }
   })
 })

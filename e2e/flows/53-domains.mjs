@@ -4,6 +4,7 @@
 // Make main is a one-line confirm, the shop's canonical moves to the domain and the domain opens the shop; Undo puts
 // the name back; Remove takes the row away. Vercel and DNS are e2e/fakes/domains.mjs. Restores the seed.
 // Guards: a domain that never connects; Make main that doesn't move canonical; a removed domain still listed.
+// Run after `checkout` (it connects Razorpay; Make main reads "Razorpay not approved" from that connection).
 // =============================================================================
 import assert from 'node:assert/strict'
 import { CONSOLE, SHOP, signedIn } from '../lib.mjs'

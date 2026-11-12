@@ -1,7 +1,8 @@
 'use client'
 
 import { InfoTip } from '@/components/ui/info-tip'
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
+import { settle } from '@/lib/settle'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,19 +26,23 @@ export function OnlinePayments({ status, support, available, now }: { status: St
   const [err, setErr] = useState<{ field?: string; text: string } | null>(null)
   const [done, setDone] = useState<string | null>(null)
   const [confirm, setConfirm] = useState(false)
-  const [pending, start] = useTransition()
+  // Plain pending state and a refresh after the action resolves, outside any transition (frata-gotchas, Next 15.5): a
+  // transition around connect once never settled, leaving "Checking with Razorpay…" with the old error AND the new
+  // "Connected" on screen (full e2e 2026-11-11).
+  const [pending, setPending] = useState(false)
+  const start = (work: () => Promise<void>) => { setPending(true); void work().finally(() => setPending(false)) }
   const badge = !status ? <Badge>Not connected</Badge> : status.problem ? <Badge tone="danger">Needs attention</Badge> : !status.webhookSeenAt ? <Badge tone="warn">Needs one step</Badge> : status.mode === 'test' ? <Badge tone="info">Test mode</Badge> : <Badge tone="ok">Live</Badge>
 
   const connect = () => start(async () => {
     setErr(null); setDone(null)
     const r = await connectRazorpay({ keyId, keySecret: secret })
-    if (!r.ok) { setErr({ field: r.field, text: r.error }); return }
-    setSecret(''); setDone('Connected. Razorpay accepted the keys.'); router.refresh()
+    if (!r.ok) { setDone(null); setErr({ field: r.field, text: r.error }); return }
+    setErr(null); setSecret(''); setDone('Connected. Razorpay accepted the keys.'); settle(router)
   })
   const disconnect = () => start(async () => {
     const r = await disconnectRazorpay()
     if (!r.ok) { setErr({ text: r.error }); return }
-    setConfirm(false); setKeyId(''); setDone('Disconnected. Shoppers can pay on delivery only.'); router.refresh()
+    setErr(null); setConfirm(false); setKeyId(''); setDone('Disconnected. Shoppers can pay on delivery only.'); settle(router)
   })
   const copy = (t: string) => navigator.clipboard?.writeText(t).catch(() => {})
 
@@ -57,7 +62,7 @@ export function OnlinePayments({ status, support, available, now }: { status: St
               <input id="key-id" value={keyId} onChange={(e) => setKeyId(e.target.value)} autoComplete="off" spellCheck={false} placeholder="rzp_live_…" aria-invalid={err?.field === 'keyId' || undefined}
                 className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /></div>
             <div className="space-y-1"><div className="flex items-center"><label htmlFor="key-secret" className="text-sm font-medium">Key secret</label><InfoTip about="the key secret">Checked with Razorpay before saving: wrong keys are refused and nothing changes. Saved keys are encrypted and never shown again.</InfoTip></div>
-              <input id="key-secret" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} autoComplete="off" placeholder={status ? 'Saved — paste a new one to change it' : ''} aria-invalid={err?.field === 'keySecret' || undefined}
+              <input id="key-secret" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} autoComplete="off" placeholder={status ? 'Saved · paste a new one' : ''} aria-invalid={err?.field === 'keySecret' || undefined}
                 className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /></div>
             <p className="text-xs text-muted-foreground">Razorpay → Account &amp; Settings → API keys. The secret is shown there once: generate a new pair if you do not have it.</p>
             <div className="flex flex-wrap items-center gap-3">
@@ -119,7 +124,8 @@ function MoneyFlow() {
       </ol>
       <figcaption className="flex items-center gap-2 text-xs text-muted-foreground">
         <span aria-hidden="true" className="inline-block w-10 border-t-2 border-dashed border-thread" />
-        Razorpay tells Frrata, so the order is marked paid. Frrata never holds your money.
+        Razorpay tells your shop it&apos;s paid
+        <InfoTip about="how a payment reaches you">Razorpay tells Frrata, so the order is marked paid. Frrata never holds your money.</InfoTip>
       </figcaption>
     </figure>
   )

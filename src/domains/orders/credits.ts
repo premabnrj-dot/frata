@@ -9,6 +9,7 @@
 //               only): shared over the lines by what is left of them, taxed at each line's rate.
 //   - goodwill: money back with no GST effect (no lines, no tax heads; never in GSTR-1).
 //   - reversal: the invoice undone (cancelled after packing, came back): whatever is left, delivery's share included.
+//   - restock:  a return's pieces back on the shelf (restockOf), never more than the line sold less earlier restocks.
 // A credit note can't credit more than the invoice left: every function reads what earlier notes already took.
 // =============================================================================
 
@@ -69,6 +70,26 @@ export function discountCredit(lines: InvoicedLine[], taken: Taken[], amount: nu
 export function reversalCredit(lines: InvoicedLine[], taken: Taken[]): CreditLine[] {
   return leftOf(lines, taken).filter((l) => l.taxableLeft > 0 || l.gstLeft > 0 || l.qtyLeft > 0)
     .map((l) => ({ lineId: l.lineId, qty: Math.max(0, l.qtyLeft), taxable: Math.max(0, l.taxableLeft), gst: Math.max(0, l.gstLeft), bps: l.bps }))
+}
+
+/** A sold line, for restocking: its quantity, and whether its pieces came off a variant's stock (a variant still there, stock taken). */
+export type SoldLine = { lineId: string; qty: number; stocked: boolean }
+
+/**
+ * What a return puts back in stock, line id → pieces: each credited line's quantity, never above what was sold on the
+ * line less what earlier notes already put back, and only for a line whose stock was taken. Empty for any credit that
+ * is not a return of pieces (discount lines carry qty 0). Lines with nothing to put back are left out.
+ */
+export function restockOf(lines: CreditLine[], sold: SoldLine[], prior: { lineId: string; restockedQty: number }[]): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const l of lines) {
+    const s = sold.find((x) => x.lineId === l.lineId)
+    if (!s?.stocked || l.qty <= 0) continue
+    const before = prior.filter((x) => x.lineId === l.lineId).reduce((a, x) => a + x.restockedQty, 0) + (out[l.lineId] ?? 0)
+    const n = Math.min(l.qty, Math.max(0, s.qty - before))
+    if (n > 0) out[l.lineId] = (out[l.lineId] ?? 0) + n
+  }
+  return out
 }
 
 /**

@@ -33,7 +33,7 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
       <PageHeader title="Merchants" actions={<Link href="/admin/merchants/new" className={button()}>Add merchant</Link>} />
       <Notice error={sp.error} />
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <SearchField label="Search merchants" placeholder="Search by brand or shop address" value={sp.q} clearHref="/admin/merchants" />
+        <SearchField label="Search merchants" placeholder="Brand or address" value={sp.q} clearHref="/admin/merchants" />
         <span className="text-sm text-muted-foreground"><Numeric>{total.toLocaleString('en-IN')}</Numeric> {sp.q ? 'found' : 'merchants'}</span>
       </div>
       {rows.length === 0 ? (
@@ -65,11 +65,11 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
                   })()}
                 </Td>
                 <Td cell="c" className="text-xs md:text-sm">
-                  {m.owner ? (m.owner.lastSignInAt ? <span className="text-muted-foreground">Signed in {sinceIN(m.owner.lastSignInAt, new Date())}</span> : <span className="text-warn-text">Never signed in</span>)
+                  {m.owner ? (m.owner.lastSignInAt ? <span className="whitespace-nowrap text-muted-foreground">Signed in {sinceIN(m.owner.lastSignInAt, new Date())}</span> : <span className="whitespace-nowrap text-warn-text">Never signed in</span>)
                     : m.pendingInvite ? <span className="text-warn-text">Owner not signed in yet</span> : <span className="text-muted-foreground">No owner</span>}
                 </Td>
                 <Td cell="b" className="text-right">
-                  {m.ordersThisMonth === null ? <span className="text-muted-foreground" title="Not drafted yet">—</span> : <span title={m.countedAt ? `Counted ${dateTimeIN(m.countedAt)}` : undefined}><Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric></span>}<span className="text-xs text-muted-foreground md:hidden"> delivered</span>
+                  {m.ordersThisMonth === null ? <span className="hidden text-muted-foreground md:inline" title="Not drafted yet">—</span> : <span title={m.countedAt ? `Counted ${dateTimeIN(m.countedAt)}` : undefined}><Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric><span className="text-xs text-muted-foreground md:hidden"> delivered</span></span>}
                   {m.over && <div className="text-xs text-warn-text">Over the plan&apos;s {m.plan?.includedOrders.toLocaleString('en-IN')}</div>}
                 </Td>
                 <Td cell="e" className="md:text-right"><Link href={`/admin/merchants/${m.id}/support`} className="inline-flex min-h-6 items-center whitespace-nowrap text-sm underline-offset-2 hover:underline">Open console</Link></Td>

@@ -1,0 +1,2 @@
+ALTER TABLE "order_discounts" ADD COLUMN "method" text;--> statement-breakpoint
+ALTER TABLE "order_discounts" ADD CONSTRAINT "order_discounts_method" CHECK ("order_discounts"."method" is null or ("order_discounts"."class" = 'order' and "order_discounts"."method" in ('cod','prepaid')));

@@ -50,7 +50,8 @@ export function monthlyPrice(row: { planVersion: Pick<PlanVersion, 'monthlyPrice
   return row.customMonthlyPrice ?? row.planVersion.monthlyPrice
 }
 
-/** Frrata's fee on one delivered order. A returned order is never charged. */
+/** Frrata's fee on one delivered order, on what the shopper kept: a returned order is never charged, nor the value of
+ * items returned on a credit note (owner, 2026-11-12; billing draft and ₹ kept take the returned value off first). */
 export function deliveredFee(netRevenue: Paise, feeBps: number): Paise {
   return applyBps(netRevenue, feeBps)
 }

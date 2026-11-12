@@ -5,7 +5,7 @@ import { at, createdAt, id, platformStaff } from './schema'
 // =============================================================================
 // FILE: src/lib/db/schema-staff.ts — STAFF PASSKEYS (docs/specs/2026-11-12-staff-passkeys.md; ADR-0007 amended).
 // Platform rows, no tenant. NO grant to any app role: every read and write goes through the app_staff_* definers
-// (drizzle/0105), and app_access_for reads the step-ups. Every row belongs to a staff member and goes when they do
+// (drizzle/0109), and app_access_for reads the step-ups. Every row belongs to a staff member and goes when they do
 // (on delete cascade from platform_staff). Credential ids, public keys and challenges are base64url text; tokens and
 // codes are stored only as SHA-256 hex.
 // =============================================================================

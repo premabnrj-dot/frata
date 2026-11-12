@@ -9,7 +9,7 @@
     },
     {
       "path": "/api/cron/domains",
-      "schedule": "43 4 * * *"
+      "schedule": "*/10 * * * *"
     },
     {
       "path": "/api/cron/drain",

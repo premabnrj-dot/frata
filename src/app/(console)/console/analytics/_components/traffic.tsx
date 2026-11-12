@@ -66,7 +66,7 @@ export function Funnel({ steps, drop, fullFrom }: { steps: FunnelStep[]; drop: {
         {steps.map((s) => (
           <li key={s.name} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-center gap-3 text-sm">
             <span className="min-w-0">{s.name}{s.fromOrders ? <span className="block text-xs text-muted-foreground">from your orders</span> : null}</span>
-            <span className="grid gap-1">{s.n === null ? <span className="text-xs text-muted-foreground">{fullFrom ? `from ${dayMonthIN(fullFrom)}` : '—'}</span> : <><Numeric className="font-semibold">{formatCount(s.n)}</Numeric>{bar(s.n / max)}</>}</span>
+            <span className="grid gap-1">{s.n === null ? <span className="text-xs text-muted-foreground">{fullFrom ? `Shows from ${dayMonthIN(fullFrom)}` : '—'}</span> : <><Numeric className="font-semibold">{formatCount(s.n)}</Numeric>{bar(s.n / max)}</>}</span>
             <span className="text-right text-xs text-muted-foreground">{s.ofAbove === null ? '' : formatPercent(Math.min(1, s.ofAbove), 0)}</span>
           </li>
         ))}

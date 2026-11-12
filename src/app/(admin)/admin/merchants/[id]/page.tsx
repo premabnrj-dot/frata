@@ -19,6 +19,7 @@ import { resendOwnerLinkAction } from './actions'
 import { Section } from '@/components/layout/section'
 import { MerchantTabs } from './tabs'
 import { Submit } from '@/components/ui/submit'
+import { InfoTip } from '@/components/ui/info-tip'
 
 /** The tab names the merchant ("Kesar Studio · Frrata Admin"). */
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -74,8 +75,7 @@ export default async function MerchantPage({ params, searchParams }: { params: P
             )}
           </Section>
 
-          <Section title="Support visits">
-            <p className="text-sm text-muted-foreground">{m.tenant.name} sees the same list in their console&apos;s Activity.</p>
+          <Section title={<span className="inline-flex items-center gap-1">Support visits<InfoTip about="support visits">{m.tenant.name} sees the same list in their console&apos;s Activity.</InfoTip></span>}>
             {m.sessions.length === 0 ? <p className="text-sm text-muted-foreground">None yet.</p> : (
               <div className="divide-y divide-border text-sm">
                 {m.sessions.map((s) => (

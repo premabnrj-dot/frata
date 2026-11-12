@@ -12,13 +12,13 @@ const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
 const pass = process.env.INT_DB_PASSWORD ?? 'x'
 const PROOF_A = '11111111-1111-1111-1111-111111111111'
 // What Razorpay says the order's payments are, when switchToCod asks.
-const razorpay = { pays: [] as { id: string; status: string; amount: number; fee: number | null; tax: number | null; method: string | null }[] }
+const razorpay = { pays: [] as { id: string; status: string; amount: number; fee: number | null; tax: number | null; method: string | null; currency?: string }[] }
 
 describe.skipIf(!host)('payments at a prepaid drop', () => {
   it('a captured payment is recorded before busy, keeps its hold, and the next pass marks the order paid', async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
     process.env.PAYMENT_KEYS_SECRET ??= 'int-test-only'
-    vi.doMock('@/lib/payments/razorpay', async (orig) => ({ ...(await orig<typeof import('@/lib/payments/razorpay')>()), orderPayments: async () => razorpay.pays }))
+    vi.doMock('@/lib/payments/razorpay', async (orig) => ({ ...(await orig<typeof import('@/lib/payments/razorpay')>()), orderPayments: async () => ({ ok: true as const, items: razorpay.pays.map((x) => ({ currency: 'INR', ...x })) }) }))
     const { default: postgres } = await import('postgres')
     const { withTenant } = await import('@/lib/db/tenant')
     const { products, variants } = await import('@/lib/db/schema-catalogue')
@@ -49,7 +49,7 @@ describe.skipIf(!host)('payments at a prepaid drop', () => {
         const [o] = await tx.insert(orders).values({ tenantId: A, number: 1000 + n, paymentMethod: 'prepaid', placedAt: new Date(), payBy, tokenHash: tokenHash(token),
           razorpayOrderId: rzp, checkout: { onlineTotal: 99900 }, subtotal: 99900, total: 99900, pincode: '302021' }).returning({ id: orders.id })
         await tx.insert(orderLines).values({ tenantId: A, orderId: o!.id, variantId: v!.id, title: 'Int drop tee', qty: 1, unitPrice: 99900, taxableValue: 99900, gst: 0, gstBps: 0, kind: 'in_stock', position: 0 })
-        return { id: o!.id, token, rzp, pay: `pay_int${n}${stamp}` }
+        return { id: o!.id, token, hash: tokenHash(token), rzp, pay: `pay_int${n}${stamp}` }
       }
       const soon = new Date(Date.now() + 5 * 60_000)
       return { variant: v!.id, o1: await order(1, soon), o2: await order(2, soon), o3: await order(3, new Date(Date.now() - 60_000)) }
@@ -73,7 +73,7 @@ describe.skipIf(!host)('payments at a prepaid drop', () => {
 
       // 1. Every slot taken. The browser's signed reply: recorded, the hold kept, busy; the order not yet paid.
       let t0 = Date.now()
-      expect(await confirmPayment(A, made.o1.token, signed(made.o1))).toMatchObject({ ok: false, status: 503 })
+      expect(await confirmPayment(A, made.o1.hash, signed(made.o1))).toMatchObject({ ok: false, status: 503 })
       expect(Date.now() - t0).toBeLessThan(1500)
       expect(await pending()).toBe(1)
       expect(await waiting(made.o1.rzp)).toBe(true)
@@ -81,15 +81,15 @@ describe.skipIf(!host)('payments at a prepaid drop', () => {
       expect(o1.paidAt).toBeNull()
       expect(o1.payBy!.getTime()).toBeGreaterThan(Date.now() + 14 * 60_000) // held 15 minutes from now, not the 5 left
       // A forged reply is refused before anything is recorded.
-      expect(await confirmPayment(A, made.o1.token, { ...signed(made.o1), signature: 'f'.repeat(64) })).toMatchObject({ ok: false, status: 400 })
+      expect(await confirmPayment(A, made.o1.hash, { ...signed(made.o1), signature: 'f'.repeat(64) })).toMatchObject({ ok: false, status: 400 })
       // A switch that finds the payment captured at Razorpay: recorded under Razorpay's own key, busy.
       razorpay.pays = [{ id: made.o2.pay, status: 'captured', amount: 99900, fee: 2000, tax: 360, method: 'upi' }]
-      expect(await switchToCod(A, made.o2.token, 99900)).toMatchObject({ kind: 'refused', status: 503 })
+      expect(await switchToCod(A, made.o2.hash, 99900)).toMatchObject({ kind: 'refused', status: 503 })
       expect(await waiting(made.o2.rzp)).toBe(true)
       // A plain switch, and a retried payment: busy, nothing changed.
       razorpay.pays = []
-      expect(await switchToCod(A, made.o3.token, 99900)).toMatchObject({ kind: 'refused', status: 503 })
-      expect(await retryPayment(A, made.o3.token)).toMatchObject({ ok: false, status: 503 })
+      expect(await switchToCod(A, made.o3.hash, 99900)).toMatchObject({ kind: 'refused', status: 503 })
+      expect(await retryPayment(A, made.o3.hash)).toMatchObject({ ok: false, status: 503 })
       expect(await processEvents(A)).toBe(0)
       expect(await pending()).toBe(2)
       // A capture for an order whose hold already ran out never holds its pieces again.

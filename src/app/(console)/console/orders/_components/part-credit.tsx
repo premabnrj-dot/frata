@@ -7,11 +7,13 @@ import { Dialog } from '@/components/ui/dialog'
 // =============================================================================
 // A credit note for a delivered order (GST phase 2; approved mockup "Part credit note"): items that came back, by line
 // and quantity, or a discount after the sale — agreed before the sale (reduces GST) or goodwill (GST unchanged). Each
-// is final once issued; the dialog says so in its title.
+// is final once issued; the dialog says so in its title. Returned pieces go back in stock when ticked (ticked by
+// default, as Came back's "Put the stock back"), offered only when a line's stock was taken.
 // =============================================================================
 
-export type PartLine = { id: string; title: string; qty: number; left: number }
-export type PartRequest = { kind: 'return'; lines: Record<string, number> } | { kind: 'discount'; amount: number; agreed: boolean }
+/** `stocked`: its stock was taken, so its pieces can go back in stock. */
+export type PartLine = { id: string; title: string; qty: number; left: number; stocked: boolean }
+export type PartRequest = { kind: 'return'; lines: Record<string, number>; restock: boolean } | { kind: 'discount'; amount: number; agreed: boolean }
 
 export function PartCreditDialog({ open, number, lines, inclusive, busy, onClose, onIssue }: {
   open: boolean; number: string; lines: PartLine[]; inclusive: boolean; busy: boolean
@@ -20,10 +22,12 @@ export function PartCreditDialog({ open, number, lines, inclusive, busy, onClose
   const [kind, setKind] = useState<'return' | 'discount'>('return')
   const [qty, setQty] = useState<Record<string, number>>({})
   const [agreed, setAgreed] = useState(true)
+  const [restock, setRestock] = useState(true)
+  const stocked = lines.some((l) => l.stocked && l.left > 0)
   const [amount, setAmount] = useState('')
   const rupees = Number(amount.replace(/[₹,\s]/g, ''))
   const can = kind === 'return' ? Object.values(qty).some((n) => n > 0) : Number.isFinite(rupees) && rupees >= 1
-  const issue = () => onIssue(kind === 'return' ? { kind, lines: Object.fromEntries(Object.entries(qty).filter(([, n]) => n > 0)) } : { kind, amount: Math.round(rupees * 100), agreed })
+  const issue = () => onIssue(kind === 'return' ? { kind, lines: Object.fromEntries(Object.entries(qty).filter(([, n]) => n > 0)), restock: stocked && restock } : { kind, amount: Math.round(rupees * 100), agreed })
   const seg = (k: 'return' | 'discount', label: string) => (
     <button type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)}
       className={`min-h-9 flex-1 rounded-md px-3 text-sm font-medium transition-[background-color,color] duration-fast ${kind === k ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{label}</button>
@@ -33,7 +37,7 @@ export function PartCreditDialog({ open, number, lines, inclusive, busy, onClose
       actions={<><Button variant="secondary" data-autofocus onClick={onClose}>Not now</Button><Button onClick={issue} disabled={!can || busy}>{busy ? 'Issuing…' : 'Issue credit note'}</Button></>}>
       <div className="space-y-4">
         <div role="radiogroup" aria-label="What it credits" className="flex gap-0.5 rounded-lg bg-muted p-0.5">{seg('return', 'Returned items')}{seg('discount', 'Discount after the sale')}</div>
-        {kind === 'return' ? (
+        {kind === 'return' ? <>
           <ul className="space-y-2">
             {lines.map((l) => {
               const n = qty[l.id] ?? 0
@@ -53,7 +57,12 @@ export function PartCreditDialog({ open, number, lines, inclusive, busy, onClose
               )
             })}
           </ul>
-        ) : (
+          {stocked ? (
+            <label className="flex min-h-10 items-center gap-3 text-sm">
+              <input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} className="size-5 accent-primary" />Put these pieces back in stock
+            </label>
+          ) : null}
+        </> : (
           <div className="space-y-3">
             <div role="radiogroup" aria-label="Kind of discount" className="grid gap-2 sm:grid-cols-2">
               {([[true, 'Agreed before the sale', 'Reduces GST'], [false, 'Goodwill', 'GST unchanged']] as const).map(([v, label, note]) => (

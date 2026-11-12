@@ -19,6 +19,6 @@ describe('razorpay', () => {
     expect(modeOf('pk_live_abc123')).toBeNull()
   })
   it('reads a payment entity defensively', () => {
-    expect(toPayment({ id: 'pay_1', status: 'captured', amount: 249000, fee: 5876, tax: 896 })).toEqual({ id: 'pay_1', status: 'captured', amount: 249000, fee: 5876, tax: 896, method: null })
+    expect(toPayment({ id: 'pay_1', status: 'captured', amount: 249000, fee: 5876, tax: 896 })).toEqual({ id: 'pay_1', status: 'captured', amount: 249000, currency: null, fee: 5876, tax: 896, method: null })
   })
 })

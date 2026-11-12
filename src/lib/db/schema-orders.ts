@@ -357,10 +357,17 @@ export const creditNoteLines = pgTable('credit_note_lines', {
   taxable: money('taxable').notNull(),
   gst: money('gst').notNull(),
   gstBps: integer('gst_bps').notNull(),
+  /**
+   * Pieces of this line put back in stock when the note was issued (a return after delivery, "Put these pieces back in
+   * stock"): written once with the line, never after (final). Their cost comes back off the order's COGS in ₹ kept
+   * (`restockedCostSql`). 0 for a discount, goodwill, a reversal, or a return not restocked.
+   */
+  restockedQty: integer('restocked_qty').notNull().default(0),
 }, (t) => [
   foreignKey({ name: 'credit_note_lines_note_fk', columns: [t.tenantId, t.creditNoteId], foreignColumns: [creditNotes.tenantId, creditNotes.id] }).onDelete('restrict'),
   foreignKey({ name: 'credit_note_lines_line_fk', columns: [t.tenantId, t.orderLineId], foreignColumns: [orderLines.tenantId, orderLines.id] }).onDelete('restrict'),
   index('credit_note_lines_note').on(t.tenantId, t.creditNoteId),
   index('credit_note_lines_line').on(t.tenantId, t.orderLineId),
   check('credit_note_lines_money', sql`${t.qty} >= 0 and ${t.taxable} >= 0 and ${t.gst} >= 0 and ${t.gstBps} >= 0`),
+  check('credit_note_lines_restocked', sql`${t.restockedQty} >= 0 and ${t.restockedQty} <= ${t.qty}`),
 ])

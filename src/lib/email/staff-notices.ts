@@ -10,7 +10,7 @@ import { sendEmail } from './ses'
 
 // =============================================================================
 // FILE: src/lib/email/staff-notices.ts — sends the staff security emails the passkey definers queued
-// (drizzle/0105 staff_notices; staff passkeys spec § Design 5). Claimed and settled through definers (frata_app has no
+// (drizzle/0109 staff_notices; staff passkeys spec § Design 5). Claimed and settled through definers (frata_app has no
 // grant on the table); 5 tries each; a throttled SES leaves the row for the next pass (every 5 minutes, and right after
 // each passkey action). No notices sender configured: the rows wait, and Admin › Activity still shows every change.
 // =============================================================================

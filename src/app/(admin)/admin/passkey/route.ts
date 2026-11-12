@@ -14,7 +14,7 @@ import {
 // (docs/specs/2026-11-12-staff-passkeys.md). Each request: the console host and its exact origin only (this path would
 // otherwise answer on every shop domain), 16 kB at most, Zod before anything is read. requireStaff decides who: a
 // StaffIdentity (signed in, on staff, no check yet) may only confirm, ask and add; approving and removing need a
-// StaffOk checked within 5 minutes. The database holds every other rule (drizzle/0105).
+// StaffOk checked within 5 minutes. The database holds every other rule (drizzle/0109).
 // =============================================================================
 
 // Cost guardrails G·1 (scripts/check-duration.mjs): a route stops at its limit, never Vercel's 300 s.

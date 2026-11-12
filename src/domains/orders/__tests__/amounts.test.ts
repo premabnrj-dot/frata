@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { taxOrder } from '@/domains/tax/gst'
-import { charged, collect, paidOnline, refundDue, reprice, sharesOf, type StoredLine, type StoredOrder } from '../amounts'
+import { charged, collect, paidOnline, refundDue, reprice, savingsAsPaid, sharesOf, type StoredLine, type StoredOrder } from '../amounts'
 
 // Two kurtas (₹2,490 at 5%, ₹3,200 at 18%), ₹79 delivery, ₹49 COD fee, prices include GST — as checkout stores them.
 const gross = [{ gross: 249000, unitPrice: 249000, hsn: '6211' }, { gross: 320000, unitPrice: 320000, hsn: '6211' }]
@@ -58,6 +58,12 @@ describe('reprice (offers)', () => {
     const o = { ...s, applied: [{ class: 'order' as const, amount: 30000 }, { class: 'payment' as const, amount: 10000 }] }
     expect(reprice(o, 'cod', { ...rules, codMin: 240000 }, null).cod.offered).toBe(false) // 2,650 − 300 = 2,350 < 2,400
     expect(reprice(o, 'cod', { ...rules, codMin: 230000 }, null).price!.discount).toBe(30000)
+  })
+  it('savings as paid: an order offer kept for one way shows only while paid that way (shop stress test 2026-11-11)', () => {
+    const kept = [{ title: '5% off', class: 'order', method: 'cod' }, { title: 'Pay online', class: 'payment', method: null }, { title: 'Sale', class: 'product', method: null }, { title: 'Free', class: 'shipping', method: null }]
+    expect(savingsAsPaid(kept, 'prepaid').map((x) => x.title)).toEqual(['Pay online', 'Sale'])
+    expect(savingsAsPaid(kept, 'cod').map((x) => x.title)).toEqual(['5% off', 'Sale'])
+    expect(savingsAsPaid([{ title: 'Diwali', class: 'order' }], 'cod').map((x) => x.title)).toEqual(['Diwali']) // no method: both ways
   })
   it('paidOnline is what Razorpay was asked for', () => {
     const base = { paymentMethod: 'prepaid' as const, paidAt: new Date(), switchedToCodAt: new Date(), cancelledAt: null, subtotal: 265000, shipping: 0, codCharge: 4900, gstTotal: 0, total: 269900, pricesIncludeGst: true }

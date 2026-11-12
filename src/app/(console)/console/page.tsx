@@ -1,7 +1,7 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Panel } from '@/components/ui/panel'
 import { redirect } from 'next/navigation'
-import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
+import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { todayLongIN } from '@/lib/format-date'
 import { setupFor } from '@/lib/queries/settings'
 import { todaySummary } from '@/lib/queries/today'
@@ -31,7 +31,7 @@ export default async function ConsoleHome() {
   if (who.ok) redirect('/console/apps/gst')
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
-  const tenantId = auth.membership.tenantId, canManage = auth.membership.role !== 'staff'
+  const tenantId = auth.membership.tenantId, canManage = (CAN_MANAGE as readonly string[]).includes(auth.membership.role) // openShop's own tuple
   const now = new Date()
   const setup = await setupFor(tenantId).catch((err) => { console.error('[console home]', err instanceof Error ? err.name : 'error'); return null })
   if (!setup) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>

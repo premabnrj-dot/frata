@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { creditDeadline, creditOpen, discountCredit, leftOf, returnCredit, reversalCredit, type InvoicedLine, type Taken } from '../credits'
+import { creditDeadline, creditOpen, discountCredit, leftOf, restockOf, returnCredit, reversalCredit, type InvoicedLine, type SoldLine, type Taken } from '../credits'
 
 // Two kurtas at ₹2,490 incl. 5% (₹4,980: taxable 4742.86, GST 237.14) and a jhumka at ₹690 incl. 3%; ₹79 delivery shared.
 const L: InvoicedLine[] = [
@@ -74,5 +74,26 @@ describe('credit notes: what is left, never more', () => {
     expect(creditDeadline(new Date('2027-03-31T18:31:00Z')).toISOString()).toBe('2028-11-30T18:29:59.999Z') // 1 Apr 00:01 IST: FY 27-28
     expect(creditOpen(new Date('2026-11-04T06:00:00Z'), new Date('2027-11-30T18:00:00Z'))).toBe(true)
     expect(creditOpen(new Date('2026-11-04T06:00:00Z'), new Date('2027-11-30T18:30:00Z'))).toBe(false)
+  })
+})
+
+describe('a return back in stock (restockOf): each piece once, never more than sold', () => {
+  const sold: SoldLine[] = [{ lineId: 'a', qty: 2, stocked: true }, { lineId: 'b', qty: 1, stocked: true }]
+  it('puts back the credited quantity of each line', () => {
+    const r = returnCredit(L, [], { a: 1, b: 1 }); if (!r.ok) throw new Error()
+    expect(restockOf(r.lines, sold, [])).toEqual({ a: 1, b: 1 })
+  })
+  it('counts what earlier notes put back: never above the line sold', () => {
+    const one = returnCredit(L, [], { a: 1 }); if (!one.ok) throw new Error()
+    expect(restockOf(one.lines, sold, [{ lineId: 'a', restockedQty: 1 }])).toEqual({ a: 1 })
+    // A line that earlier notes already put back in full: nothing more, whatever is asked.
+    expect(restockOf([{ lineId: 'a', qty: 2, taxable: 1, gst: 0, bps: 500 }], sold, [{ lineId: 'a', restockedQty: 2 }])).toEqual({})
+    expect(restockOf([{ lineId: 'a', qty: 2, taxable: 1, gst: 0, bps: 500 }], sold, [{ lineId: 'a', restockedQty: 1 }])).toEqual({ a: 1 })
+  })
+  it('nothing for a discount (no pieces), a line whose stock was never taken, or one not on the order', () => {
+    const d = discountCredit(L, [], 50000, true); if (!d.ok) throw new Error()
+    expect(restockOf(d.lines, sold, [])).toEqual({})
+    expect(restockOf([{ lineId: 'a', qty: 1, taxable: 1, gst: 0, bps: 500 }], [{ lineId: 'a', qty: 2, stocked: false }], [])).toEqual({})
+    expect(restockOf([{ lineId: 'z', qty: 1, taxable: 1, gst: 0, bps: 500 }], sold, [])).toEqual({})
   })
 })

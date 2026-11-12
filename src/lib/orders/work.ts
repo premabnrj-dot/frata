@@ -3,7 +3,8 @@ import { enqueueOrderEmail } from '@/lib/email/enqueue'
 import { and, desc, eq, gt, inArray, isNotNull, isNull, notInArray, sql } from 'drizzle-orm'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { refundDue, type StoredOrder } from '@/domains/orders/amounts'
-import { orderState, type OrderState } from '@/domains/orders/order-state'
+import { currentMethod, orderState, type OrderState } from '@/domains/orders/order-state'
+import { codBlockedFor } from '@/domains/checkout/delivery'
 import { applies, invoiceNumber, seriesFits, type CancelReason, type OrderAction } from '@/domains/orders/work'
 import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
@@ -180,9 +181,15 @@ export type ContactEdit = Partial<{ customerName: string; phone: string; address
 export async function editContact(tx: Tx, tenantId: string, actor: Actor, orderId: string, edit: ContactEdit, now = new Date()): Promise<Done<{ fields: string[] }>> {
   const c = await current(tx, tenantId, orderId, now)
   if (!c) return { ok: false, error: 'Order not found.' }
-  if (!applies('edit', c.state)) return { ok: false, error: c.state === 'packed' ? 'Already packed: the slip has the old address. Unpacking comes with shipping (Phase 2).' : `This order is ${c.state.replace('_', ' ')}.` }
+  if (!applies('edit', c.state)) return { ok: false, error: c.state === 'packed' ? 'Already packed: its slip and invoice keep this address.' : `This order is ${c.state.replace('_', ' ')}.` }
   const fields = Object.keys(edit).filter((k) => edit[k as keyof ContactEdit] !== undefined)
   if (!fields.length) return { ok: false, error: 'Nothing changed.' }
+  // An unpaid pay-on-delivery order may not move to a pincode the shop turned pay on delivery off for: checkout refuses
+  // that pincode, and "change my address" to one is how a refusal at the door is set up (shop stress test 2026-11-11).
+  if (currentMethod(c.o) === 'cod' && edit.pincode) {
+    const [st] = await tx.select({ blocked: shopSettings.codBlockedPincodes }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
+    if (codBlockedFor(edit.pincode, st?.blocked)) return { ok: false, error: `Pay on delivery is off for ${edit.pincode} in your settings. Ask them to pay online first, or cancel.` }
+  }
   // A change to the delivery state moves the place of supply with it (GST).
   await tx.update(orders).set({ ...edit, ...(edit.state ? { supplyState: edit.state } : {}) })
     .where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId), isNull(orders.packedAt), isNull(orders.cancelledAt)))
@@ -198,7 +205,7 @@ export async function cancel(tx: Tx, tenantId: string, actor: Actor, orderId: st
   Promise<Done<{ refund: number; backInStock: string[] }>> {
   const c = await current(tx, tenantId, orderId, now)
   if (!c) return { ok: false, error: 'Order not found.' }
-  if (!applies('cancel', c.state)) return c.state === 'cancelled' ? refuse(tx, tenantId, orderId, 'cancel', c.state) : { ok: false, error: 'It has left the shop: that is a return (Phase 2).' }
+  if (!applies('cancel', c.state)) return c.state === 'cancelled' ? refuse(tx, tenantId, orderId, 'cancel', c.state) : { ok: false, error: applies('came_back', c.state) ? 'It has left the shop: when it comes back, mark it Came back.' : `This order is ${c.state.replace('_', ' ')}: it can no longer be cancelled.` }
   const note = c0.note?.trim().slice(0, 500) || null
   if (c0.reason === 'other' && !note) return { ok: false, error: 'Say why in a few words.' }
   // A shipment booked with the courier but not yet picked up (Ship S·1) is cancelled with the courier first.

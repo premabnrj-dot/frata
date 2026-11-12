@@ -23,10 +23,13 @@ export type Cod =
   | { offered: false; reason: 'blocked_pincode'; pincode: string }
   | { offered: true; total: number; charge: number }
 
+/** The shop turned Pay on delivery off for this pincode (checkout, and an address edit on a COD order alike). */
+export const codBlockedFor = (pincode: string | null | undefined, blocked: readonly string[] | null | undefined): boolean => !!pincode && !!blocked?.includes(pincode)
+
 /** Pay on delivery for a bag of `amount` paise (before shipping): offered, with the total the shopper pays, or why not. */
 export function codFor(amount: number, r: DeliveryRules, pincode?: string | null): Cod {
   if (!r.codOn) return { offered: false, reason: 'off' }
-  if (pincode && r.codBlockedPincodes?.includes(pincode)) return { offered: false, reason: 'blocked_pincode', pincode }
+  if (pincode && codBlockedFor(pincode, r.codBlockedPincodes)) return { offered: false, reason: 'blocked_pincode', pincode }
   if (amount < r.codMin) return { offered: false, reason: 'below_min', min: r.codMin }
   const total = amount + shippingFor(amount, r) + r.codCharge
   if (r.codMax && total > r.codMax) return { offered: false, reason: 'above_max', max: r.codMax }

@@ -299,7 +299,7 @@ export async function signupCodeVerify(uid: string, id: string, codeHmac: string
   } catch (err) { console.error('[signupCodeVerify]', errName(err)); return false }
 }
 
-// ── Staff security emails (staff passkeys, drizzle/0105): claimed and settled through definers ─────────────────
+// ── Staff security emails (staff passkeys, drizzle/0109): claimed and settled through definers ─────────────────
 export type StaffNoticeRow = { id: string; to_email: string; kind: 'staff_added' | 'staff_removed' | 'request_approved' | 'passkey_added' | 'passkey_removed'; about: string; by_email: string | null; detail: string | null }
 export async function claimStaffNotices(limit: number): Promise<StaffNoticeRow[]> {
   return [...await db().execute<StaffNoticeRow>(sql`select * from app_staff_notices_claim(${limit})`)]

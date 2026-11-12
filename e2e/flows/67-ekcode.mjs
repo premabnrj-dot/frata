@@ -82,7 +82,7 @@ export default {
         await p.fill('#addressLine', 'B-14, Tilak Marg'); await p.fill('#area', 'C-Scheme'); await p.selectOption('#state', 'Rajasthan')
         await p.getByLabel(/Save this address to/).waitFor()
         await p.getByText('Pay on delivery', { exact: true }).click()
-        await p.getByRole('button', { name: /Place order/ }).click(); await p.waitForURL(/\/orders#t=/)
+        await p.getByRole('button', { name: /Place order/ }).click(); await p.waitForURL(/\/orders(#t=|$)/)
         const [o] = await db`select o.customer_id, o.checkout->>'ekcode' as arm, c.phone from orders o left join shop_customers c on c.tenant_id = o.tenant_id and c.id = o.customer_id
           where o.tenant_id = ${shop.id} order by o.placed_at desc limit 1`
         assert.equal(o.phone, PHONE, 'the order is linked to the signed-in shopper (same phone)')

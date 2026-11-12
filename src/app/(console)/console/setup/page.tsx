@@ -1,6 +1,6 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Panel } from '@/components/ui/panel'
-import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
+import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { setupFor } from '@/lib/queries/settings'
 import { Checklist } from '../_components/checklist'
 import { OpenMoment } from '../_components/open-moment'
@@ -15,7 +15,7 @@ export default async function SetupPage() {
   if (!setup) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   return (
     <OpenMoment key={auth.membership.tenantId} address={setup.address} header={<PageHeader title="Setup" back={{ href: '/console', label: 'Home' }} meta={<>{setup.name} · <span className="font-mono">{setup.address}</span></>} />}>
-      <Checklist setup={setup} canManage={auth.membership.role !== 'staff'} />
+      <Checklist setup={setup} canManage={(CAN_MANAGE as readonly string[]).includes(auth.membership.role)} />
     </OpenMoment>
   )
 }

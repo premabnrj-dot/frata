@@ -14,11 +14,15 @@
 //                      Stored per line at placement and never re-spread (O·2 plan review 1).
 //   2. order class   — % or ₹ off the bag after product offers, or the step of a tier reached;
 //                      first-order offers are decided at placement (the quote has no phone).
-//                      The SAME for both ways of paying.
 //   3. thresholds    — free shipping (the shop's own and free-shipping offers) and the COD
-//                      minimum/maximum, on the bag AFTER product and order offers.
-//   4. payment class — "pay online, save": prepaid only, on what is left. Withheld for both
-//                      methods when the applied order offer does not combine.
+//                      minimum/maximum, on the bag AFTER product offers and the best order offer.
+//   4. payment class — "pay online, save": prepaid only, on what is left. Withheld when the
+//                      order offer does not combine — and then paying online also tries the
+//                      best order offer that DOES combine (or none) with the saving, and takes
+//                      whichever costs the shopper less (`online`; quote.ts compares the totals,
+//                      a tie keeps the order offer). Paying on delivery always keeps the best
+//                      order offer (shop stress test 2026-11-11: a 5% that did not combine made a
+//                      ₹999 bag ₹949.05 online where ₹100 off alone was ₹899 — rule 46).
 // Each line's GST rate is decided on its own value after its share of the discount, per way of
 // paying (CGST s.15(3)(a); decisions 1 and 5): a piece can be 18% on COD and 5% online, and a
 // Buy X get Y saving is spread over the group's pieces by value (Circular 92: one price, two supplies).
@@ -79,7 +83,7 @@ export type Applied = { discountId: string; codeId: string | null; class: Discou
 /** What a listed offer the bag misses needs (or, applied, what to say about it). */
 export type Need =
   | { kind: 'add'; amount: number } | { kind: 'add_items'; n: number } | { kind: 'gift'; variantId: string }
-  | { kind: 'pay_online' } | { kind: 'first_order' } | null
+  | { kind: 'pay_online' } | { kind: 'pay_on_delivery' } | { kind: 'first_order' } | null
 export type Listed = { title: string; code: string | null; style: DiscountStyle; applied: boolean; need: Need }
 
 /** The highest step of a tiered offer that `base` reaches (null below the first, or with no steps). */
@@ -93,12 +97,18 @@ const orderValue = (t: Pick<DiscountTerms, 'percentBps' | 'amountOff' | 'minSubt
   return reached ? { percentBps: reached.percentBps, amountOff: reached.amountOff } : null
 }
 
+/**
+ * A percentage saving in whole rupees, rounded down (shopper batch 2026-11-12: 5% off ₹999 made a ₹949.05 total). One
+ * rounding per offer, so the shopper never gets ₹1 or more below what the % says; 100% stays exact (free is free).
+ */
+export const wholeRupees = (exact: number, bps: number) => (bps >= 10_000 ? exact : Math.floor(exact / 100) * 100)
+
 /** The discount an order-class or payment-class offer gives on `base` paise: 0 below its minimum. */
 export function amountFor(t: Pick<DiscountTerms, 'style' | 'percentBps' | 'amountOff' | 'cap' | 'minSubtotal'> & Pick<DiscountTerms, 'tiers'>, base: number): number {
   if (t.style === 'free_shipping' || classOf(t.style) === 'product' || base <= 0) return 0
   const v = orderValue(t, base)
   if (!v) return 0
-  const raw = v.percentBps != null ? Math.floor((base * v.percentBps) / 10_000) : v.amountOff ?? 0
+  const raw = v.percentBps != null ? wholeRupees(Math.floor((base * v.percentBps) / 10_000), v.percentBps) : v.amountOff ?? 0
   return Math.max(0, Math.min(raw, t.cap ?? Number.POSITIVE_INFINITY, base))
 }
 
@@ -134,44 +144,64 @@ export function productOffer(t: DiscountTerms, lines: PlanLine[], free: boolean[
     const groups = Math.floor(pieces.length / (x + y))
     if (!groups) return { per, need: pieces.length ? { kind: 'add_items', n: x + y - pieces.length } : null }
     const inGroups = pieces.slice(0, groups * (x + y))
-    let total = 0
-    for (let g = 0; g < groups; g++) for (const p of inGroups.slice(g * (x + y) + x, (g + 1) * (x + y))) total += Math.floor((p.price * bps) / 10_000)
+    let exact = 0
+    for (let g = 0; g < groups; g++) for (const p of inGroups.slice(g * (x + y) + x, (g + 1) * (x + y))) exact += Math.floor((p.price * bps) / 10_000)
+    const total = wholeRupees(exact, bps)
     // The group's saving spread over its pieces by value (decision 5), then summed per line.
     const share = apportion(total, inGroups.map((p) => p.price))
     inGroups.forEach((p, k) => { per[p.i]! += share[k]! })
     return { per, need: null }
   }
-  // % or ₹ off each covered line (₹ per piece), the cap on the offer's whole saving.
+  // % or ₹ off each covered line (₹ per piece), the cap on the offer's whole saving. A percentage is rounded once, on
+  // the offer's whole saving (wholeRupees), and spread back over its lines.
   for (const i of idx) {
     const l = lines[i]!, gross = l.unitPrice * l.qty
     per[i] = t.percentBps != null ? Math.floor((gross * t.percentBps) / 10_000) : Math.min((t.amountOff ?? 0) * l.qty, gross)
   }
   const sum = per.reduce((a, b) => a + b, 0)
-  if (t.cap != null && sum > t.cap) { const capped = apportion(t.cap, per); capped.forEach((v, i) => { per[i] = v }) }
+  const whole = Math.min(t.percentBps != null ? wholeRupees(sum, t.percentBps) : sum, t.cap ?? Number.POSITIVE_INFINITY)
+  if (whole < sum) { const spread = apportion(whole, per); spread.forEach((v, i) => { per[i] = v }) }
   return { per, need: null }
 }
 
-export type OfferPlan = {
+/**
+ * What a typed code did. 'beaten': the code is real and would save on this bag, but a better offer of its class is
+ * applied (a creator's code beside an automatic sale): the shopper is told so, and it is no wrong guess. Every other
+ * failure reads the same (no "exists but"): spec § Rules, rule 47.
+ */
+export type CodeResult = 'applied' | 'beaten' | 'not_applied'
+/** What the shopper is told: each listed offer (applied, or what it needs) and what the typed code did. */
+export type OfferWords = {
+  code: CodeResult | null
+  listed: Listed[]
+}
+export type OfferPlan = OfferWords & {
   /** Each sold line's product-offer discount (in `lines` order). */
   productDisc: number[]
   /** The product offers applied, with their totals. */
   products: Applied[]
+  /** The best order offer: paying on delivery always, online too unless `online` is taken. Thresholds are on the bag after it. */
   order: Applied | null
   /** A free-shipping offer whose minimum the bag meets; it applies only when shipping is charged. */
   freeShipping: DiscountTerms | null
-  /** The pay-online saving, for prepaid only; null when none applies or it is withheld. */
+  /** The pay-online saving with `order`, for prepaid only; null when none applies or `order` does not combine. */
   payment: Applied | null
-  /** What the typed code did. Every failure reads the same (no "exists but"): spec § Rules. */
-  code: 'applied' | 'not_applied' | null
-  listed: Listed[]
+  /**
+   * Paying online the other way (shop stress test 2026-11-11): when `order` does not combine and a saving applies
+   * without it, the best order offer that combines (or none) with that saving. The caller takes it only when its
+   * prepaid total is LOWER (a tie keeps `order`), and then tells the shopper these words instead of the plan's.
+   */
+  online: (OfferWords & { order: Applied | null; payment: Applied }) | null
 }
 
 /**
  * Which offers apply to a bag. Candidates: automatic and listed offers, and the offer of the code the shopper typed
  * (matched by the read: its public code or a creator code). One code per order; a code applies only when its offer
- * is the best of its class. `lines` may be a bare subtotal (one line, no product): order, shipping and payment only.
+ * is the best of its class for a way of paying. `lines` may be a bare subtotal (one line, no product): order, shipping
+ * and payment only. `codOffered` (quote: codFor on the bag after the order offer): whether paying on delivery is there
+ * at all — when it is not, an order offer only paying on delivery would get is neither applied nor its code's answer.
  */
-export function planOffers(linesIn: PlanLine[] | number, offers: DiscountTerms[], typedIn: TypedCode | string | null): OfferPlan {
+export function planOffers(linesIn: PlanLine[] | number, offers: DiscountTerms[], typedIn: TypedCode | string | null, ways: { codOffered?: (afterOrder: number) => boolean } = {}): OfferPlan {
   const lines: PlanLine[] = typeof linesIn === 'number' ? (linesIn > 0 ? [{ productId: null, variantId: null, unitPrice: linesIn, qty: 1 }] : []) : linesIn
   const typed = asTyped(typedIn, offers)
   const cands = candidates(offers, typed)
@@ -197,35 +227,60 @@ export function planOffers(linesIn: PlanLine[] | number, offers: DiscountTerms[]
   const afterProduct = subtotal - productDisc.reduce((a, b) => a + b, 0)
 
   // 2–4. Order, shipping, payment, as in O·1, on what is left.
-  const o = best(of('order'), afterProduct)
-  const order: Applied | null = o ? { discountId: o.t.id, codeId: o.t.codeId, class: 'order', title: o.t.title, amount: o.amount, terms: o.t } : null
+  const asApplied = (cls: 'order' | 'payment', x: { t: DiscountTerms; amount: number } | null): Applied | null =>
+    x ? { discountId: x.t.id, codeId: x.t.codeId, class: cls, title: x.t.title, amount: x.amount, terms: x.t } : null
+  const order = asApplied('order', best(of('order'), afterProduct))
   const afterOrder = afterProduct - (order?.amount ?? 0)
   const ship = of('shipping').filter((t) => afterOrder > 0 && afterOrder >= t.minSubtotal)
     .sort((a, b) => Number(a.code !== null) - Number(b.code !== null) || (a.id < b.id ? -1 : 1))[0] ?? null
-  const p = order && !order.terms.combinesWithPayment ? null : best(of('payment'), afterOrder)
-  const payment: Applied | null = p ? { discountId: p.t.id, codeId: p.t.codeId, class: 'payment', title: p.t.title, amount: p.amount, terms: p.t } : null
+  const alone = order !== null && !order.terms.combinesWithPayment
+  const payment = alone ? null : asApplied('payment', best(of('payment'), afterOrder))
+  // The other way online (shop stress test 2026-11-11): the best order offer that combines, or none, then the saving
+  // on what that leaves. Thresholds stay on the bag after `order`: one delivery charge for both ways of paying.
+  const altOrder = alone ? asApplied('order', best(of('order').filter((t) => t.combinesWithPayment), afterProduct)) : null
+  const altPayment = alone ? asApplied('payment', best(of('payment'), afterProduct - (altOrder?.amount ?? 0))) : null
 
-  const chosen = new Set([...products.map((x) => x.discountId), order?.discountId, ship?.id, payment?.discountId].filter(Boolean))
-  const usedCode = typed !== null && typed.discountId !== null && chosen.has(typed.discountId)
-  const listed: Listed[] = offers.filter((t) => t.listed).map((t) => {
-    const applied = chosen.has(t.id)
-    const cls = classOf(t.style)
-    let need: Need = null
-    if (cls === 'product') need = applied ? null : needs.get(t.id) ?? null
-    else if (applied) {
-      if (cls === 'payment') need = { kind: 'pay_online' }
-      else if (t.firstOrder) need = { kind: 'first_order' }
-      else if (t.tiers?.length) { const next = [...t.tiers].sort((a, b) => a.min - b.min).find((x) => x.min > afterProduct); need = next ? { kind: 'add', amount: next.min - afterProduct } : null }
-    } else {
-      const base = cls === 'order' ? afterProduct : afterOrder
-      const min = t.tiers?.length ? Math.min(...t.tiers.map((x) => x.min)) : t.minSubtotal
-      need = base < min ? { kind: 'add', amount: min - base } : null
-    }
-    return { title: t.title, code: t.code, style: t.style, applied, need }
-  })
-    // A listed offer beaten by a better one of its class is not shown: only what applies or what is within reach.
-    .filter((l) => l.applied || l.need)
-  return { productDisc, products, order, freeShipping: ship, payment, code: typed === null ? null : usedCode ? 'applied' : 'not_applied', listed }
+  // The typed code's offer would save on this bag by itself (its class's base, every line free): when it is not chosen,
+  // a better offer of its class was (or one it does not combine with), so it was beaten, not refused.
+  const mine = typed?.discountId ? cands.find((t) => t.id === typed.discountId) ?? null : null
+  const beaten = mine !== null && (() => {
+    const cls = classOf(mine.style)
+    if (cls === 'product') return productOffer(mine, lines, lines.map(() => true), subtotal).per.some((v) => v > 0)
+    if (cls === 'shipping') return afterOrder > 0 && afterOrder >= mine.minSubtotal
+    return amountFor(mine, cls === 'order' ? afterProduct : afterOrder) > 0
+  })()
+
+  /** The words for what each way of paying gets: an offer only one way gets says which way. */
+  const words = (cod: (Applied | null)[], prepaid: (Applied | null)[]): OfferWords => {
+    const ids = (xs: (Applied | null)[]) => new Set(xs.flatMap((x) => (x ? [x.discountId] : [])))
+    const onCod = ids(cod), online = ids(prepaid)
+    const chosen = new Set([...onCod, ...online, ...(ship ? [ship.id] : [])])
+    const usedCode = typed !== null && typed.discountId !== null && chosen.has(typed.discountId)
+    const listed: Listed[] = offers.filter((t) => t.listed).map((t) => {
+      const applied = chosen.has(t.id)
+      const cls = classOf(t.style)
+      let need: Need = null
+      if (cls === 'product') need = applied ? null : needs.get(t.id) ?? null
+      else if (applied) {
+        if (cls === 'payment' || (cls === 'order' && !onCod.has(t.id))) need = { kind: 'pay_online' }
+        else if (cls === 'order' && !online.has(t.id)) need = { kind: 'pay_on_delivery' }
+        else if (t.firstOrder) need = { kind: 'first_order' }
+        else if (t.tiers?.length) { const next = [...t.tiers].sort((a, b) => a.min - b.min).find((x) => x.min > afterProduct); need = next ? { kind: 'add', amount: next.min - afterProduct } : null }
+      } else {
+        const base = cls === 'order' ? afterProduct : afterOrder
+        const min = t.tiers?.length ? Math.min(...t.tiers.map((x) => x.min)) : t.minSubtotal
+        need = base < min ? { kind: 'add', amount: min - base } : null
+      }
+      return { title: t.title, code: t.code, style: t.style, applied, need }
+    })
+      // A listed offer beaten by a better one of its class is not shown: only what applies or what is within reach.
+      .filter((l) => l.applied || l.need)
+    return { code: typed === null ? null : usedCode ? 'applied' : beaten ? 'beaten' : 'not_applied', listed }
+  }
+  // No Pay on delivery for this bag: what only it would get is not the shopper's.
+  const codOrder = ways.codOffered?.(afterOrder) === false ? null : order
+  const online = altPayment ? { order: altOrder, payment: altPayment, ...words([...products, codOrder], [...products, altOrder, altPayment]) } : null
+  return { productDisc, products, order, freeShipping: ship, payment, online, ...words([...products, order], [...products, order, payment]) }
 }
 
 export type PriceLine = { gross: number; qty: number; hsn: string | null; productDiscount: number

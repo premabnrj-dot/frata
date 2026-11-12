@@ -30,6 +30,14 @@ describe('the rate table (GST 2.0)', () => {
     expect(rateOn(null, 49900, true, D)).toBeNull()
     expect(rateOn('62', 49900, true, D)).toBeNull() // fewer than 4 digits is not a code
   })
+  it('hasRate is rateOn(…) !== null at every price; withoutRate lists what a registered shop can’t sell', async () => {
+    const { hasRate, withoutRate } = await import('../rates')
+    for (const [hsn, own] of [['6109', null], ['2106', null], ['2106', 500], ['2106', 0], [null, null], [null, 1800], ['62', null]] as const) {
+      for (const price of [19900, 262600, 500000]) expect(hasRate(hsn, D, own), `${hsn} ${own}`).toBe(rateOn(hsn, price, true, D, own) !== null)
+    }
+    const rows = [{ id: 'a', hsn: '6109', gstBps: null }, { id: 'b', hsn: '2106', gstBps: null }, { id: 'c', hsn: null, gstBps: null }, { id: 'd', hsn: '2106', gstBps: 500 }]
+    expect(withoutRate(rows, D).map((r) => r.id)).toEqual(['b', 'c'])
+  })
   it('the inclusive-price gap: ₹2,625.01–₹2,950 fits no slab rate, and the console can say so', () => {
     expect(inGap('6204', 262500, true, D)).toBeNull()
     expect(inGap('6204', 279000, true, D)).toEqual({ below: 262500, above: 295100 })

@@ -29,10 +29,12 @@ export async function listOrders(tenantId: string, { tab = 'all', page = 1, q = 
       items: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l where l.order_id = "orders"."id" and l.tenant_id = ${tenantId})`,
       // Shipped with a courier through Frrata: its tracking sets the outcome, so the row offers no Delivered (Ship S·0).
       byCourier: sql<boolean>`coalesce(${openShipmentProviderSql()} = 'shiprocket', false)`,
-      // How many match (this tab and search), in the same query: the pager's "of N" — only when a search is on.
+      // How many match the search, in the same query: the pager's "of N" — only when a search is on.
       // Without one the page reads queueCounts, and a window count would stop LIMIT from cutting the scan short.
       matching: search ? sql<number>`(count(*) over ())::int` : sql<number>`0`,
-    }).from(orders).where(and(eq(orders.tenantId, tenantId), inTabSql(tab, now), ...(search ? [search] : [])))
+      // A search looks through EVERY order, whatever tab is open (2026-11-12: it found only the current tab's), the
+      // not-paid ones too; each row shows where it is by its own state badge. Without one, the tab's orders.
+    }).from(orders).where(and(eq(orders.tenantId, tenantId), search ?? inTabSql(tab, now)))
       .orderBy(desc(orders.placedAt), desc(orders.number)).limit(ORDERS_PAGE).offset((page - 1) * ORDERS_PAGE),
   )
 }

@@ -18,7 +18,7 @@ export const metadata = { title: 'Modules' }
 
 function grantedBy(a: ModuleAccess, planName: string | null) {
   if (a.how === 'trial') return `Trial until ${dayIN(a.trialEndsAt!)}`
-  if (MODULES[a.key].status === 'next') return 'Next'
+  if (MODULES[a.key].status === 'next') return 'Coming next'
   switch (a.how) {
     case 'core': return 'Every plan'
     case 'plan': return `${planName ?? 'Their'} plan`

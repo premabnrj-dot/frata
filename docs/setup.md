@@ -83,7 +83,7 @@ create your tenant and owner membership (it is a plain insert; no secret).
 
 ### 6b. Staff passkeys — the first time (ADR-0007 amended 2026-11-12; spec `docs/specs/2026-11-12-staff-passkeys.md`)
 
-**Deploy order (agents):** apply `drizzle/0105_staff_passkeys.sql` to production FIRST, in one transaction (it drops
+**Deploy order (agents):** apply `drizzle/0109_staff_passkeys.sql` to production FIRST, in one transaction (it drops
 and recreates `app_access_for`), and record its row; THEN push the code to `main`. New code calls
 `app_access_for(uuid, uuid, text)`, which exists only after the migration (before it, every signed-in request fails).
 Old code calling `app_access_for(uuid)` keeps working through the new function's defaults; in that gap support visits
@@ -303,8 +303,9 @@ it to `100000` after moving to Pro. Never Preview: a preview build must not add 
 **4. Check:** Settings › Shop address in the console shows **Connect a domain**. If it doesn't, the token or project id
 is missing or not in Production.
 
-On Vercel Pro later: the background check's schedule in `vercel.json` moves to every 10 minutes (one line), and the
-frrata name starts redirecting to a main domain (D2·9 follow-up).
+On Vercel Pro (2026-11-12): the background check runs every 10 minutes (`vercel.json`); **owner step:** set
+`DOMAIN_CAPACITY` to `100000` in Vercel (Production). Still to come: the frrata name redirecting to a main domain
+(D2·9 follow-up).
 
 ### Video for shops: Frrata's Mux (V1, 2026-11-09)
 

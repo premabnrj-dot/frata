@@ -14,6 +14,7 @@ describe.skipIf(!host)('risk facts', () => {
     const { withTenant } = await import('@/lib/db/tenant')
     const { orders, orderLines } = await import('@/lib/db/schema-orders')
     const { riskFactsFor } = await import('@/lib/queries/order-risk')
+    const { eq } = await import('drizzle-orm')
     const { risk } = await import('@/domains/orders/risk')
     const phone = `9${String(Math.floor(Math.random() * 1e9)).padStart(9, '0')}`
     const t0 = new Date('2026-11-07T04:00:00Z') // 09:30 IST
@@ -29,16 +30,22 @@ describe.skipIf(!host)('risk facts', () => {
       await tx.insert(orderLines).values({ tenantId: tenant, orderId: r!.id, variantId, title: 'Kurta', qty: 1, unitPrice: 249000, taxableValue: 237143 })
       return r!.id
     })
-    // The same phone in shop B must never count for shop A.
+    // The same phone in shop B must never count for shop A — a fake order there, nor a parcel that came back there.
     await place(B, 0, { cancelledAt: at(0), cancelReason: 'fake' })
+    await place(B, 10, { placedAt: at(0.5), rtoInitiatedAt: at(0.6) })
     const first = await place(A, 1, {}, vm!.id)
     const second = await place(A, 2, {}, vl!.id)   // other items: not a duplicate
     const third = await place(A, 3, {}, vm!.id)    // the same items as the first, 2 hours later: a duplicate
     const f = await riskFactsFor(A, [first, second, third], at(4))
-    expect(f.get(first)).toMatchObject({ earlierOrders: 0, cancelledAsFake: 0, codFromPhoneToday: 1, sameItemsWithin24h: 0 })
+    expect(f.get(first)).toMatchObject({ earlierOrders: 0, cancelledAsFake: 0, cameBack: 0, codFromPhoneToday: 1, sameItemsWithin24h: 0 })
     expect(f.get(second)).toMatchObject({ earlierOrders: 1, codFromPhoneToday: 2, sameItemsWithin24h: 0 })
     expect(f.get(third)).toMatchObject({ codFromPhoneToday: 3, sameItemsWithin24h: 1 })
     expect(risk(f.get(third)!).level).toBe('high')
     expect(risk(f.get(first)!).level).toBe('low') // first order alone is one signal
+    // Shop stress test 2026-11-11: a parcel to this phone that came back in THIS shop makes the next order High.
+    await withTenant(A, (tx) => tx.update(orders).set({ rtoInitiatedAt: at(2.5) }).where(eq(orders.id, second)))
+    const g = await riskFactsFor(A, [first, third], at(4))
+    expect(g.get(first)).toMatchObject({ cameBack: 0 }) // placed before it came back
+    expect(g.get(third)).toMatchObject({ cameBack: 1 })
   })
 })

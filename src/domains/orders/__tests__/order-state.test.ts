@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cashAtDoor, currentMethod, enteredAt, isHolding, isPlaced, isStanding, needsAction, ORDER_STATES, orderState, paidAfterPacking, paidAfterSwitch, queueTab, shopperState, SHOPPER_STATES, type OrderMoments } from '../order-state'
+import { cashAtDoor, currentMethod, enteredAt, isHolding, isPlaced, isStanding, needsAction, offerWay, ORDER_STATES, orderState, paidAfterPacking, paidAfterSwitch, queueTab, shopperState, SHOPPER_STATES, usesDiscount, type OrderMoments } from '../order-state'
 
 const t = (n: number) => new Date(2026, 10, n)
 /** A COD order placed on day 1, nothing else happened yet; override what did. */
@@ -50,6 +50,21 @@ describe('paying online', () => {
     expect(isHolding(online({ placedAt: t(10), payBy: t(11) }), now)).toBe(true)
     expect(isHolding(online({ placedAt: t(10), payBy: t(11), cancelledAt: t(10) }), now)).toBe(false)
     expect(isStanding(moments({ cancelledAt: t(2), deliveredAt: t(3) }))).toBe(false)
+  })
+  it('an offer row is used by the way it is for: online only, on delivery only, or both (shop stress test 2026-11-11)', () => {
+    const holding = online({ placedAt: t(10), payBy: t(11) }), switched = online({ switchedToCodAt: t(9) }), paid = online({ paidAt: t(9) })
+    expect(offerWay('payment', null)).toBe('prepaid')
+    expect(offerWay('order', 'prepaid')).toBe('prepaid')
+    expect(offerWay('order', 'cod')).toBe('cod')
+    expect(offerWay('order', null)).toBe('both')
+    // Holding: every row is held (it may still be paid, or switched).
+    expect([usesDiscount(holding, 'prepaid', now), usesDiscount(holding, 'cod', now), usesDiscount(holding, 'both', now)]).toEqual([true, true, true])
+    // A switch gives back what was online only; a capture gives back what was on delivery only.
+    expect([usesDiscount(switched, 'prepaid', now), usesDiscount(switched, 'cod', now), usesDiscount(switched, 'both', now)]).toEqual([false, true, true])
+    expect([usesDiscount(paid, 'prepaid', now), usesDiscount(paid, 'cod', now), usesDiscount(paid, 'both', now)]).toEqual([true, false, true])
+    // Abandoned: nothing.
+    expect([usesDiscount(online({}), 'prepaid', now), usesDiscount(online({}), 'cod', now), usesDiscount(online({}), 'both', now)]).toEqual([false, false, false])
+    expect(usesDiscount(moments(), 'cod', now)).toBe(true)
   })
   it('paid beats a switch to COD, and says so', () => {
     const o = online({ switchedToCodAt: t(9), paidAt: t(10) })

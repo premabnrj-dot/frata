@@ -27,7 +27,8 @@ import { drainSoon } from '@/lib/outbox/drain'
 //   edit address or phone, cancel                 — owner, admin
 //   mark shipped another way                      — owner, admin, staff (never a partner)
 //   delivered, came back, lost; undo those        — owner, admin (Ship S·0; undo by the undone action's roles)
-//   issue a credit note                           — owner, admin, never a support visit (Documents D3)
+//   issue a credit note                           — owner, admin, never a support visit (Documents D3); a return's
+//                                                   pieces back in stock only when its tick asks
 // A support visit acts as the owner and is audited: the audit row carries the
 // order id and the NAMES of fields changed, never shopper data.
 // =============================================================================
@@ -102,14 +103,16 @@ export async function issueCreditNote(orderId: string) {
 
 // GST phase 2: items returned, or a discount, after delivery. Capped here; checked again against the invoice there.
 const PartCredit = z.union([
-  z.object({ kind: z.literal('return'), lines: z.record(z.uuid(), z.number().int().min(0).max(99)).refine((r) => Object.keys(r).length <= 20) }),
+  z.object({ kind: z.literal('return'), lines: z.record(z.uuid(), z.number().int().min(0).max(99)).refine((r) => Object.keys(r).length <= 20), restock: z.boolean() }),
   z.object({ kind: z.literal('discount'), amount: z.number().int().min(100).max(10_000_000_00), agreed: z.boolean() }),
 ])
-/** A credit note for a delivered order: returned items, a discount agreed before the sale, or goodwill (owners and admins). */
+/** A credit note for a delivered order: returned items (their pieces back in stock when asked), a discount agreed before the sale, or goodwill (owners and admins). */
 export async function issuePartCreditNote(orderId: string, input: unknown) {
   const p = PartCredit.safeParse(input)
   if (!Id.safeParse(orderId).success || !p.success) return notFound
-  return run('part_credit', orderId, {}, (tx, t, a) => issueCredit(tx, t, a, orderId, new Date(), p.data))
+  return run('part_credit', orderId, p.data.kind === 'return' ? { restock: p.data.restock } : {}, (tx, t, a) => issueCredit(tx, t, a, orderId, new Date(), p.data),
+    // A piece back from 0 is buyable again: the cached shop pages show it at once (as Cancel and Came back).
+    (tenantId, v) => { if (v.backInStock.length) refreshShop(tenantId, 'catalogue') })
 }
 
 // Who it goes to: checkout's own rules (src/domains/checkout/address.ts), so an edited address is held to what a

@@ -37,7 +37,7 @@ export default async function ModulesPage({ searchParams }: { searchParams: Prom
               <DataTableRow key={k} dimmed={def.status === 'next'}>
                 <Td cell="a" className="font-medium">{def.name}</Td>
                 <Td cell="c">{BILLING[def.billing]}{def.status === 'next' && interest ? <span className="ml-2 text-muted-foreground">{asked(k)}</span> : null}</Td>
-                <Td cell="d">{p ? <Badge tone="warn">Paused {sinceIN(p.pausedAt, now)}</Badge> : def.status === 'next' ? <Badge>Next</Badge> : <Badge tone="ok">Running</Badge>}{p && <span className="ml-2 text-muted-foreground">{p.reason}</span>}</Td>
+                <Td cell="d">{p ? <Badge tone="warn">Paused {sinceIN(p.pausedAt, now)}</Badge> : def.status === 'next' ? <Badge>Coming next</Badge> : <Badge tone="ok">Running</Badge>}{p && <span className="ml-2 text-muted-foreground">{p.reason}</span>}</Td>
                 <Td cell="f" className="text-right">
                   {admin.ok && (p ? (
                     <form action={resumeModuleAction}>

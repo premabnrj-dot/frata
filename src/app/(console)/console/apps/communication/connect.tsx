@@ -117,7 +117,6 @@ export function ConnectChoices({ ready, canManage, appId, configId, graphVersion
           { icon: 'merchants', title: 'Pick your business', next: true },
           { icon: 'messages', title: 'Pick your number', next: true },
         ]} />
-        <p className="text-muted-foreground">Takes about 3 minutes.</p>
       </section>
     </div>
   )

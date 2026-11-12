@@ -13,6 +13,7 @@ const cod: OrderCosts = {
   packaging: fromRupees(20),
   adCost: fromRupees(250),
   platformFee: fromRupees(10),
+  restocked: true,
 }
 
 describe('orderProfit', () => {
@@ -21,6 +22,11 @@ describe('orderProfit', () => {
   })
   it('loses freight both ways, the COD fee and the sunk ad spend on an RTO', () => {
     expect(orderProfit(cod, 0).ifRto).toBe(fromRupees(-430))
+  })
+  it('a return NOT put back in stock loses the goods as well (they are not on sale again)', () => {
+    expect(orderProfit({ ...cod, restocked: false }, 0).ifRto).toBe(fromRupees(-780)) // −(430 + 350 goods)
+    // Expected weights the same figure: 0.8 × 270 + 0.2 × −780 = 60
+    expect(orderProfit({ ...cod, restocked: false }, 0.8).expected).toBe(fromRupees(60))
   })
   it('a prepaid return is refunded and the gateway keeps its fee', () => {
     expect(orderProfit({ ...cod, codFee: paise(0), gatewayFee: fromRupees(20) }, 0).ifRto).toBe(fromRupees(-420)) // −(340 sunk + 60 return + 20 gateway)

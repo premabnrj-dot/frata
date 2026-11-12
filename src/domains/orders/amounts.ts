@@ -14,7 +14,7 @@
 import { priceMethod, type MethodPrice } from '@/domains/checkout/discounts'
 import { codFor, type Cod, type DeliveryRules } from '@/domains/checkout/delivery'
 import { shareCharges, type ChargeShare } from '@/domains/tax/gst'
-import { currentMethod, type OrderMoments } from './order-state'
+import { currentMethod, offerWay, type OrderMoments } from './order-state'
 
 export type StoredLine = { taxableValue: number; gst: number; gstBps: number; chargeTaxable: number | null; chargeGst: number | null }
 export type StoredOrder = Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'switchedToCodAt' | 'cancelledAt'> & {
@@ -40,7 +40,8 @@ export type StoredPricing = {
   lines: { unitPrice: number; qty: number; hsn: string | null; productDiscount: number
     /** The line's stored rate: kept for a code the rate table lacks (the merchant's own rate at placement). */
     gstBps?: number | null }[]
-  applied: { class: 'product' | 'order' | 'shipping' | 'payment'; amount: number }[]
+  /** `method`: the one way of paying an order offer is for, when the two ways took different ones (quote.ts keptOffers). */
+  applied: { class: 'product' | 'order' | 'shipping' | 'payment'; amount: number; method?: 'cod' | 'prepaid' | null }[]
   shipping: number; registered: boolean; pricesIncludeGst: boolean
   /** When the order was placed: its rates are the table's on that day (the tax the shopper saw), never today's. */
   placedAt: Date
@@ -49,7 +50,7 @@ export type StoredPricing = {
 export type Repriced = MethodPrice & { codCharge: number }
 
 /**
- * An order priced again for a way of paying: the order offer's stored amount, and (prepaid only) the pay-online
+ * An order priced again for a way of paying: that way's order offer's stored amount, and (prepaid only) the pay-online
  * saving's stored amount, spread exactly as at placement, on the stored delivery. Never today's offers: the order
  * keeps the terms it was sold on. Paying on delivery: offered (and its fee) by today's rules on the bag after the
  * order offer — the same test as checkout's (quote.ts) — or `cod.offered` false and no price.
@@ -57,7 +58,9 @@ export type Repriced = MethodPrice & { codCharge: number }
 export function reprice(s: StoredPricing, method: 'prepaid'): Repriced
 export function reprice(s: StoredPricing, method: 'cod', rules: DeliveryRules, pincode: string | null): { cod: Cod; price: Repriced | null }
 export function reprice(s: StoredPricing, method: 'cod' | 'prepaid', rules?: DeliveryRules, pincode?: string | null): Repriced | { cod: Cod; price: Repriced | null } {
-  const order = s.applied.find((a) => a.class === 'order')?.amount ?? 0
+  // Placed online with an order offer that went with the saving, the one it replaced is kept for a switch to COD
+  // (shop stress test 2026-11-11): each way reads its own, never both.
+  const order = s.applied.find((a) => a.class === 'order' && (a.method == null || a.method === method))?.amount ?? 0
   const lines = s.lines.map((l) => ({ gross: l.unitPrice * l.qty, qty: l.qty, hsn: l.hsn, productDiscount: l.productDiscount, own: l.gstBps ?? null }))
   const tax = { registered: s.registered, pricesIncludeGst: s.pricesIncludeGst, date: s.placedAt }
   if (method === 'prepaid') return { ...priceMethod(lines, order, s.applied.find((a) => a.class === 'payment')?.amount ?? 0, s.shipping, tax), codCharge: 0 }
@@ -66,11 +69,12 @@ export function reprice(s: StoredPricing, method: 'cod' | 'prepaid', rules?: Del
 }
 
 /**
- * The offers that saved on an order's items, as it is paid now: product and order offers always, the pay-online
- * saving only while it is paid online; never free delivery (that reads "Free"). One rule for the console and the shopper.
+ * The offers that saved on an order's items, as it is paid now: product offers always, the order offer for that way of
+ * paying (offerWay), the pay-online saving only while it is paid online; never free delivery (that reads "Free"). One
+ * rule for the console and the shopper.
  */
-export const savingsAsPaid = <T extends { class: string }>(offers: T[], method: 'cod' | 'prepaid') =>
-  offers.filter((x) => x.class === 'product' || x.class === 'order' || (x.class === 'payment' && method === 'prepaid'))
+export const savingsAsPaid = <T extends { class: string; method?: string | null }>(offers: T[], method: 'cod' | 'prepaid') =>
+  offers.filter((x) => x.class !== 'shipping' && (offerWay(x.class, x.method) === 'both' || offerWay(x.class, x.method) === method))
 
 /** Each line's share as stored, or (an order placed before 1D) worked out from the stored rates. */
 export function sharesOf(lines: StoredLine[], o: StoredOrder): ChargeShare[] {

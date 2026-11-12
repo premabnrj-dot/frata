@@ -12,7 +12,7 @@ import { errName } from '@/lib/log'
 
 // =============================================================================
 // FILE: src/lib/admin/passkeys.ts — STAFF PASSKEYS (docs/specs/2026-11-12-staff-passkeys.md; ADR-0007 amended).
-// The one module that calls the app_staff_* definers (drizzle/0105). Frrata checks the passkey itself with
+// The one module that calls the app_staff_* definers (drizzle/0109). Frrata checks the passkey itself with
 // SimpleWebAuthn; the database holds the rules (who, which session, which purpose, once, how long). A check that
 // passes returns a random token for the step-up cookie; the database keeps only its hash.
 // Before a step-up the caller holds a StaffIdentity (never a StaffOk); after it, a StaffOk and its step-up proof.

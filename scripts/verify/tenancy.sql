@@ -1736,7 +1736,8 @@ end $$;
 insert into orders (id, tenant_id, number, payment_method, placed_at) values ('acacacac-0000-0000-0000-0000000b111a', '11111111-1111-1111-1111-111111111111', 9201, 'cod', now()), ('acacacac-0000-0000-0000-0000000b111b', '22222222-2222-2222-2222-222222222222', 9201, 'cod', now());
 insert into frrata_invoices (id, tenant_id, period_start, period_end, taxable, cgst, sgst, igst, total) values
   ('b1110000-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', '2026-10-31T18:30:00Z', '2026-11-30T18:30:00Z', 100, 9, 9, 0, 118),
-  ('b1110000-0000-0000-0000-0000000000a1', '11111111-1111-1111-1111-111111111111', '2026-09-30T18:30:00Z', '2026-10-31T18:30:00Z', 100, 9, 9, 0, 118);
+  ('b1110000-0000-0000-0000-0000000000a1', '11111111-1111-1111-1111-111111111111', '2026-09-30T18:30:00Z', '2026-10-31T18:30:00Z', 100, 9, 9, 0, 118),
+  ('b1110000-0000-0000-0000-0000000000a2', '11111111-1111-1111-1111-111111111111', '2026-10-31T18:30:00Z', '2026-11-30T18:30:00Z', 0, 0, 0, 0, 0);
 insert into billing_accounts (tenant_id, legal_name, gateway_customer_id) values ('22222222-2222-2222-2222-222222222222', 'B Pvt Ltd', 'cust_b');
 insert into frrata_invoice_fees (tenant_id, invoice_id, order_id, billable_at, base, fee_bps, fee) values ('22222222-2222-2222-2222-222222222222', 'b1110000-0000-0000-0000-00000000000b', 'acacacac-0000-0000-0000-0000000b111b', now(), 85714, 200, 1714);
 begin; set local role frata_app;
@@ -1759,6 +1760,17 @@ do $$ declare n int; begin
   insert into frrata_invoice_fees (tenant_id, invoice_id, order_id, billable_at, base, fee_bps, fee) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 'acacacac-0000-0000-0000-0000000b111a', now(), 85714, 200, 1714);
   begin insert into frrata_invoice_fees (tenant_id, invoice_id, order_id, billable_at, base, fee_bps, fee) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 'acacacac-0000-0000-0000-0000000b111a', now(), 85714, 200, 1714); raise exception 'FAIL: an order billed twice';
   exception when unique_violation then null; end;
+  -- 0108 (owner, 2026-11-12: a returned item isn't billable): an order's fee comes back as 'outcome' once ever and as
+  -- 'return' once per invoice; no other kind; never on B's order.
+  insert into frrata_fee_credits (tenant_id, invoice_id, order_id, kind, fee) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 'acacacac-0000-0000-0000-0000000b111a', 'return', 857);
+  insert into frrata_fee_credits (tenant_id, invoice_id, order_id, kind, fee) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a1', 'acacacac-0000-0000-0000-0000000b111a', 'outcome', 857);
+  begin insert into frrata_fee_credits (tenant_id, invoice_id, order_id, kind, fee) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a2', 'acacacac-0000-0000-0000-0000000b111a', 'outcome', 857); raise exception 'FAIL: an outcome credit given twice';
+  exception when unique_violation then null; end;
+  begin insert into frrata_fee_credits (tenant_id, invoice_id, order_id, kind, fee) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a2', 'acacacac-0000-0000-0000-0000000b111a', 'goodwill', 1); raise exception 'FAIL: a fee credit of another kind';
+  exception when check_violation then null; end;
+  begin insert into frrata_fee_credits (tenant_id, invoice_id, order_id, kind, fee) values ('11111111-1111-1111-1111-111111111111', 'b1110000-0000-0000-0000-0000000000a2', 'acacacac-0000-0000-0000-0000000b111b', 'return', 857); raise exception 'FAIL: A gave a return credit on a B order';
+  exception when foreign_key_violation then null; end;
+  delete from frrata_fee_credits where tenant_id = '11111111-1111-1111-1111-111111111111';
   update frrata_invoices set total = 118, drafted_at = now() where id = 'b1110000-0000-0000-0000-0000000000a1';
   begin update frrata_invoices set number = 'FRR/26-27/1' where id = 'b1110000-0000-0000-0000-0000000000a1'; raise exception 'FAIL: the app numbered an invoice';
   exception when insufficient_privilege then null; end;
