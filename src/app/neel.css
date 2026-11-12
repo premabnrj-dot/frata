@@ -1,0 +1,68 @@
+/* The console's tokens (Neel N0). Imported by globals.css only, never by shop.css: a store never carries them (the
+   shop's CSS budget, check-storefront-build). Hex lives here and in base.css only (check:hex); check:contrast reads
+   this block as the Neel theme. */
+
+/* NEEL — the console, Frrata Admin, the partner workspace and the look editor ([data-neel], Neel N0; mockup
+   docs/mockups/2026-11-13-design-language-neel.html § Foundations). Warm grey g0–g950, one action colour (neel 600),
+   rani for the mark and the loading line only. The store preview inside resets to :root (the selector above).
+   Tokens below the line exist only here; check:contrast reads this block as a third theme. */
+[data-neel] {
+  --background: #FFFFFF;          /* g0, the page */
+  --foreground: #171615;          /* g950 */
+  --card: #FFFFFF;
+  --card-foreground: #171615;
+  --popover: #FFFFFF;
+  --popover-foreground: #171615;
+  --primary: #3A44C2;             /* neel 600: the one action colour */
+  --primary-foreground: #FFFFFF;
+  --bar: #171615;
+  --bar-foreground: #FFFFFF;
+  --secondary: #F6F5F3;
+  --secondary-foreground: #171615;
+  --muted: #F6F5F3;
+  --muted-foreground: #67625C;    /* text 2 */
+  --accent: #F6F5F3;              /* hover */
+  --accent-foreground: #171615;
+  --destructive: #C42F2F;         /* the danger fill, and danger words in a menu */
+  --destructive-foreground: #FFFFFF;
+  --border: #E3E1DD;              /* g200 line */
+  --input: #8F8A84;               /* g500 field edge */
+  --ring: #4C57D6;                /* neel 500 focus */
+  --ok: #E7F5EC;      --ok-text: #1A6B43;
+  --warn: #FDF3DC;    --warn-text: #85500B;
+  --danger: #FDECEC;  --danger-text: #A82828;
+  --info: #E8F1FD;    --info-text: #1F5BA8;
+  --neutral: #F1F0EE; --neutral-text: #57524D;
+  /* warn dot #C98318, not the mockup's #D98E1A (2.68:1): a mark needs 3:1 (N0 Deviations). */
+  --ok-mark: #2F9E62; --warn-mark: #C98318; --danger-mark: #DC3B3B; --info-mark: #3B82E0;
+  /* ── Neel only ── */
+  --primary-hover: #2F37A3;       /* neel 700 */
+  --link: #2F37A3;                /* neel 700 */
+  --select: #EEF0FD;              /* neel 50: a selected row, chip or segment */
+  --select-foreground: #272D82;   /* neel 800 */
+  --halo: #E0E3FB;                /* neel 100: the 3 px ring around a focused or wrong field */
+  --side: #FBFAF9;                /* g25 sidebar */
+  --sunk: #F6F5F3;                /* g50 table header, read-only field */
+  --line-soft: #EEEDEA;           /* g100 */
+  --edge: #CFCCC7;                /* g300 secondary button edge */
+  --text-3: #8F8A84;              /* g500 icons and placeholders' hint colour, never a sentence */
+  --off: #8F8A84;                 /* g500 a switch that is off */
+  --neutral-mark: #8F8A84;
+  --chart: #6E79E3;               /* neel 400 */
+  --chart-now: #C3C9F6;           /* neel 200: the period still running */
+  --bar-btn: #FFFFFF;
+  --bar-btn-text: #171615;
+  --bar-link: #A3ABF5;
+  /* Radius by role: 4 checkbox and kbd · 6 chip and tag · 8 button and field · 10 toast, banner, segmented · 12 card,
+     menu · 16 dialog. Depth: e1 rests (secondary button, segment), e2 floats (menu, popover), e3 overlays (dialog, toast). */
+  --r-xs: 4px; --r-sm: 6px; --r-md: 8px; --r-mid: 10px; --r-lg: 12px; --r-xl: 16px;
+  --sh-1: 0 1px 2px rgb(23 22 21 / 0.06);
+  --sh-2: 0 8px 24px -6px rgb(23 22 21 / 0.14);
+  --sh-3: 0 24px 48px -12px rgb(23 22 21 / 0.24);
+  --sh-4: var(--sh-3);
+  /* Type: display 30/36 · title 22/28 (a page's name) · section 16/24 (a card's name) · body 14/20 · label 13/18 ·
+     small 12/16. Weights 400, 500, 600 only. */
+  --t-section: 16px; --t-section-lh: 24px; --t-title: 22px; --t-title-lh: 28px; --t-display: 30px; --t-display-lh: 36px;
+  --t-label: 13px; --t-label-lh: 18px; --t-small: 12px; --t-small-lh: 16px;
+  --font-num: var(--font-inter), system-ui, sans-serif;
+}

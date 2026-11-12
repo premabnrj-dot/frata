@@ -106,7 +106,7 @@ function Account({ email, ink }: { email: string | null; ink: boolean }) {
 export function AppShell({ ink = false, title, tag, places = [], navLabel, groups, tabs, more, foot, email, tenantId, banner, children }: ShellProps) {
   const surface = ink ? 'ink' : undefined
   return (
-    <div data-shell data-tenant={tenantId} style={{ '--shell-top': banner ? '2.75rem' : '0px' } as CSSProperties /* the banner's own height reads this too */} className={`min-h-dvh bg-background [--toast-lift:3.5rem] md:[--toast-lift:0px] ${SHELL_FONT_VARS}`}>
+    <div data-shell data-neel="" data-tenant={tenantId} style={{ '--shell-top': banner ? '2.75rem' : '0px' } as CSSProperties /* the banner's own height reads this too */} className={`min-h-dvh bg-background [--toast-lift:3.5rem] md:[--toast-lift:0px] ${SHELL_FONT_VARS}`}>
       {/* The surface's ONE Toaster (§ Feedback): inside [data-shell] (its font and focus ring), outside main (never under
           its aria-busy); Admin's is calm (no snap). The shell's own polite region below serves its announce(). */}
       <Toaster region={false} calm={ink}>

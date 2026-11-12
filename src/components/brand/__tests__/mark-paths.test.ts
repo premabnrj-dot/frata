@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { HEX, STITCH, THREAD, WORD, threadPath } from '../mark-paths'
 
 const css = readFileSync('src/app/base.css', 'utf8')
-const light = css.slice(css.indexOf(':root {'), css.indexOf('}', css.indexOf(':root {')))
+const LIGHT = ':root, [data-neel] [data-store-theme] {'
+const light = css.slice(css.indexOf(LIGHT), css.indexOf('}', css.indexOf(LIGHT)))
 const token = (name: string) => light.match(new RegExp(`--${name}:\\s*(#[0-9A-Fa-f]{6})`))?.[1]?.toUpperCase()
 
 describe('the frrata mark', () => {

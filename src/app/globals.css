@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./base.css";
+@import "./neel.css";
 
 /* The console's own rules (Signal S2-0, speed review: they never reach a shop): the shell's fonts and focus, tables
    that become rows on a phone, the calculator, the busy list, the tinge. Same layer as before, so nothing reorders. */
@@ -13,6 +14,9 @@
   [data-shell] { --font-shell: var(--font-inter), var(--font-noto-deva), var(--font-noto-beng), var(--font-noto-guru), var(--font-noto-taml), system-ui, sans-serif; font-family: var(--font-shell); }
   /* The display face (page titles, the brand moment): Bricolage, then the same Indic fallbacks, since a title can be a name. */
   [data-shell] { --font-display-stack: var(--font-bricolage), var(--font-noto-deva), var(--font-noto-beng), var(--font-noto-guru), var(--font-noto-taml), var(--font-inter), system-ui, sans-serif; }
+  /* Neel (owner call 5, 2026-11-13): Inter throughout the console, Frrata Admin and the partner workspace; Bricolage
+     stays for the website and sign-in. The store preview inside keeps the store's own faces (it sets its own). */
+  [data-neel] { --font-display-stack: var(--font-inter), var(--font-noto-deva), var(--font-noto-beng), var(--font-noto-guru), var(--font-noto-taml), system-ui, sans-serif; }
   /* TABLES ON A PHONE BECOME ROWS (rule 15; src/components/data/data-table.tsx): one DOM, reflowed. */
   @media (max-width: 767px) {
     table[data-rows] { display: block; }

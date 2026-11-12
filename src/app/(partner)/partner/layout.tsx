@@ -20,7 +20,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   const auth = await requirePartner()
   if (!auth.ok) {
     return (
-      <main data-shell className="p-6">
+      <main data-shell data-neel="" className="p-6">
         <Panel title={auth.reason === 'in_review' ? 'Your application is in review' : auth.reason === 'signed_out' ? 'Sign in to continue' : auth.reason === 'suspended' ? auth.message : 'This email is not a Frrata partner'}
           action={<Link href={auth.reason === 'signed_out' ? '/login' : '/partners/apply'} className={button({ variant: 'secondary' })}>{auth.reason === 'signed_out' ? 'Sign in' : 'See your application'}</Link>} />
       </main>

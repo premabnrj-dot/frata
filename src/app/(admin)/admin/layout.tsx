@@ -23,13 +23,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Staff passkeys (ADR-0007 amended 2026-11-12): no page renders until this browser session has passed the check.
   if (!staff.ok && staff.reason === 'needs_passkey') {
     const state = await gateState(staff.identity).catch(() => 'error' as const)
-    if (state === 'error') return <main data-shell className="p-6"><Panel title="Admin cannot reach the database">Try again in a minute.</Panel></main>
+    if (state === 'error') return <main data-shell data-neel="" className="p-6"><Panel title="Admin cannot reach the database">Try again in a minute.</Panel></main>
     return <Toaster calm><StaffGate email={staff.identity.email} state={state}
       signOut={<form action={signOutAction}><button type="submit" className="text-sm underline underline-offset-4">Sign out</button></form>} /></Toaster>
   }
   if (!staff.ok) {
     return (
-      <main data-shell className="p-6">
+      <main data-shell data-neel="" className="p-6">
         <Panel title={staff.reason === 'not_configured' ? staff.message : 'Frrata Admin is for Frrata staff'}
           action={<Link href="/console" className={button({ variant: 'secondary' })}>Go to your console</Link>}>
           {staff.reason === 'not_configured' && <>Set <code>ADMIN_DATABASE_URL</code> in Vercel (Production), then redeploy.</>}
@@ -40,7 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const health = await adminHealth(staff)
   if (!health.ok) {
     return (
-      <main data-shell className="p-6">
+      <main data-shell data-neel="" className="p-6">
         <Panel title={health.why === 'login_refused' ? 'Admin cannot sign in to the database' : 'Admin cannot reach the database'}>
           {health.why === 'login_refused'
             ? <>Supabase refused the <code>frata_admin</code> login. Set its password in the SQL Editor (<code>alter role frata_admin with password &apos;…&apos;</code>), use the same value in <code>ADMIN_DATABASE_URL</code> in Vercel, then redeploy. See docs/setup.md § 6.</>

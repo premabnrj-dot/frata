@@ -226,7 +226,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           <textarea id="title" rows={1} value={d.title} maxLength={140} {...fieldProps('title', errors.title)} placeholder="Product title"
             onChange={(e) => set({ title: e.target.value.replace(/\s*\n\s*/g, ' ') })}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) e.preventDefault() }} ref={titleRef}
-            className="-mx-2 w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-2xl font-bold tracking-tight transition-colors duration-fast hover:border-input focus:border-input focus:bg-card aria-invalid:border-danger-text block resize-none overflow-hidden [field-sizing:content] [overflow-wrap:anywhere]" />
+            className="-mx-2 w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-2xl font-semibold tracking-tight transition-colors duration-fast hover:border-input focus:border-input focus:bg-card aria-invalid:border-danger-text block resize-none overflow-hidden [field-sizing:content] [overflow-wrap:anywhere]" />
         </div>} />
       <FieldError name="title" message={errors.title} />
       {/* The main column in the order a brand works (products PR·2, spec § 4): photos, words, sizes and stock, then what

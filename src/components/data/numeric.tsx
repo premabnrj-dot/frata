@@ -4,18 +4,18 @@ import { formatInr } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 /**
- * Numbers that must line up: mono, tabular, right-aligned by the caller.
+ * Numbers that must line up: tabular figures (font-num: Inter in the console, mono outside it), right-aligned by the caller.
  * Every ₹ and every order number goes through these, so the rule cannot be
  * forgotten at a call site.
  */
 export function Money({ paise, decimals, className }: { paise: Paise; decimals?: boolean; className?: string }) {
   return (
-    <span className={cn('font-mono tabular-nums', paise < 0 && 'text-danger-text', className)}>
+    <span className={cn('font-num', paise < 0 && 'text-danger-text', className)}>
       {formatInr(paise, { decimals })}
     </span>
   )
 }
 
 export function Numeric({ children, className }: { children: ReactNode; className?: string }) {
-  return <span className={cn('font-mono tabular-nums', className)}>{children}</span>
+  return <span className={cn('font-num', className)}>{children}</span>
 }

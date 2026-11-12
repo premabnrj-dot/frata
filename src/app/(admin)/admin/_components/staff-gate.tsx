@@ -89,7 +89,7 @@ export function StaffGate({ email, state, signOut }: { email: string; state: Gat
     )
   }
   return (
-    <main data-shell className="grid min-h-dvh place-items-center p-6">
+    <main data-shell data-neel="" className="grid min-h-dvh place-items-center p-6">
       <Section className="grid w-full max-w-sm gap-4">
         <Key />
         {body}

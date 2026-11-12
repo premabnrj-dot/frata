@@ -50,7 +50,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const auth = await requireMember(CONSOLE_ROLES)
   if (!auth.ok && auth.reason === 'not_configured') {
     return (
-      <main data-shell className="p-6">
+      <main data-shell data-neel="" className="p-6">
         <Panel title={auth.message}>
           Set the Supabase and database variables listed in <code>.env.example</code> in Vercel, then redeploy.
         </Panel>
@@ -59,7 +59,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   }
   if (!auth.ok) {
     return (
-      <main data-shell className="p-6">
+      <main data-shell data-neel="" className="p-6">
         <Panel title={auth.reason === 'signed_out' ? 'Sign in to continue' : 'No store on this account'}
           action={auth.reason === 'no_access'
             ? <div className="flex flex-wrap justify-center gap-2"><Link href="/start" className={button()}>Start your shop</Link><Link href="/login" className={button({ variant: 'secondary' })}>Sign in with another email</Link></div>
