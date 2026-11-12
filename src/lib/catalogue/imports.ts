@@ -84,7 +84,7 @@ export async function startJob(tx: Tx, who: Who, input: StartInput, now: Date): 
   if (cap) throw new Refused(cap)
   const [job] = await tx.insert(importJobs).values({
     tenantId, fileName: input.fileName, fileHash: input.hash, source: input.mapping.source, mapping: input.mapping, chunks: input.chunks,
-    planned: input.products, startedBy: who.userId, startedByEmail: who.email, supportSessionId: who.supportSessionId,
+    planned: input.products, startedBy: who.userId, startedByEmail: who.supportSessionId ? null : who.email, supportSessionId: who.supportSessionId,
   }).returning()
   return { job: job!, resumed: false }
 }

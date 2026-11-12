@@ -12,7 +12,7 @@
 // =============================================================================
 
 import type { SheetRow } from './group'
-import type { ImportProduct, Problem } from './read'
+import type { Problem } from './read'
 
 /** One CSV cell: formula-looking text made inert, quoted where needed. */
 export const csvCell = (v: string) => {
@@ -20,7 +20,7 @@ export const csvCell = (v: string) => {
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
-export function rowsToFix(headers: readonly string[], rows: readonly SheetRow[], leftOut: readonly ImportProduct[], problems: readonly Problem[]): string {
+export function rowsToFix(headers: readonly string[], rows: readonly SheetRow[], leftOut: readonly { rows: readonly number[] }[], problems: readonly Problem[]): string {
   const wanted = new Set(leftOut.flatMap((p) => p.rows))
   const why = new Map<number, string[]>()
   for (const p of problems) if (wanted.has(p.row)) why.set(p.row, [...(why.get(p.row) ?? []), `${p.column}: ${p.message}`])

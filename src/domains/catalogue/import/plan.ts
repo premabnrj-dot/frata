@@ -8,13 +8,16 @@
 // - The shop's caps count what it holds now plus what is new (limits.ts): over either, nothing is imported.
 // - Chunks: products in the file's order, whole, packed up to CHUNK_BYTES (every product, the ones in the shop and
 //   the ones left out too: the server reads them all again and records each row). The same file and mapping always
-//   make the same chunks, so a paused import resumes at its chunk.
+//   make the same chunks, so a paused import resumes at its chunk. Chunking needs only the grouping (group.ts), so
+//   the browser makes them without the rules.
+// - What the Check step shows (checkedOf) is the server's reading of a chunk, product by product: never a cost,
+//   never a cell, so the rules that read costs stay on the server (ADR-0003, check:client-bundle).
 // =============================================================================
 
 import type { Mapping } from './fields'
-import type { SheetRow } from './group'
+import { groupRows, type SheetRow } from './group'
 import { CHUNK_BYTES, CHUNK_ROOM, compactRow, MAX_PRODUCTS, MAX_VARIANTS, rowBytes } from './limits'
-import type { ImportProduct } from './read'
+import type { ImportProduct, Problem, Read } from './read'
 
 export type Existing = { handles: ReadonlySet<string>; skus: ReadonlySet<string> }
 export type Planned = { fresh: ImportProduct[]; inShop: ImportProduct[]; leftOut: ImportProduct[]; variants: number }
@@ -35,7 +38,7 @@ export function capRefusal(adds: { products: number; variants: number }, shop: {
 }
 
 /** The rows each chunk carries (mapped cells only), whole products each, in the file's order. */
-export function chunkRows(m: Mapping, rows: readonly SheetRow[], products: readonly ImportProduct[]): SheetRow[][] {
+export function chunkRows(m: Mapping, rows: readonly SheetRow[], products: readonly { rows: readonly number[] }[]): SheetRow[][] {
   const byN = new Map(rows.map((r) => [r.n, r]))
   const chunks: SheetRow[][] = []
   let cur: SheetRow[] = [], size = 2
@@ -50,13 +53,26 @@ export function chunkRows(m: Mapping, rows: readonly SheetRow[], products: reado
   return chunks
 }
 
-/** A product's line in the preview: its sizes and colours in words, its lowest price, its stock. */
-export function previewOf(p: ImportProduct) {
-  const d = p.draft!
+/** A whole file's chunks, from its grouping alone (the browser's: no rules needed). */
+export const fileChunks = (m: Mapping, rows: readonly SheetRow[]) => chunkRows(m, rows, groupRows(m, rows).map((g) => ({ rows: g.rows.map((r) => r.n) })))
+
+export type Checked = {
+  products: { key: string; rows: number[]; title: string; handle: string; state: 'new' | 'in_shop' | 'left_out'; variants: number; values: string; price: number | null; stock: number }[]
+  /** What to fix, for products left out only. */
+  problems: Problem[]
+}
+
+/** The Check step's reading of some rows: each product's state and preview line, and what to fix. */
+export function checkedOf(read: Read, existing: Existing): Checked {
+  const plan = planImport(read.products, existing)
+  const state = (p: ImportProduct) => (plan.inShop.includes(p) ? 'in_shop' as const : p.draft ? 'new' as const : 'left_out' as const)
+  const out = new Set(plan.leftOut.flatMap((p) => p.rows))
   return {
-    title: d.title, handle: d.handle,
-    values: d.options.map((o) => o.values.join(', ')).join(' · '),
-    price: Math.min(...d.variants.map((v) => v.price)),
-    stock: d.variants.reduce((n, v) => n + v.stock, 0),
+    products: read.products.map((p) => ({
+      key: p.key, rows: p.rows, title: p.title, handle: p.handle, state: state(p), variants: p.draft?.variants.length ?? 0,
+      values: p.draft?.options.map((o) => o.values.join(', ')).join(' · ') ?? '',
+      price: p.draft ? Math.min(...p.draft.variants.map((v) => v.price)) : null, stock: p.draft?.variants.reduce((n, v) => n + v.stock, 0) ?? 0,
+    })),
+    problems: read.problems.filter((x) => out.has(x.row)),
   }
 }

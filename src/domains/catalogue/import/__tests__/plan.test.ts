@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { matchColumns } from '../fields'
 import { csvCell, rowsToFix } from '../fix-file'
 import { CHUNK_BYTES, compactMapping, MAX_PRODUCTS } from '../limits'
-import { capRefusal, chunkRows, planImport } from '../plan'
+import { capRefusal, checkedOf, chunkRows, fileChunks, planImport } from '../plan'
 import { readImport } from '../read'
 import { sheetOf } from '../sheet'
 import { csvSheet } from './fixtures'
@@ -32,6 +32,22 @@ describe('planning the stress sheet', () => {
     const again = readImport(compactMapping(m), chunks[0]!, ctx)
     expect(again.products.map((p) => p.draft)).toEqual(r.products.map((p) => p.draft))
     expect(again.problems).toEqual(r.problems)
+    // The browser chunks from the grouping alone, to the same chunks.
+    expect(fileChunks(m, s.rows)).toEqual(chunks)
+  })
+  it('the Check step\'s reading: each product\'s state and preview, problems only for what is left out, no cost', () => {
+    const c = checkedOf(r, { handles: new Set(), skus: new Set(['KS-ANR-M']) })
+    expect(c.products.map((p) => p.state)).toEqual(['in_shop', 'new', 'new', 'new', 'left_out', 'new', 'new', 'new', 'left_out', 'new', 'new'])
+    expect(c.products[1]).toEqual({ key: 't:चंदेरी दुपट्टा', rows: [3], title: 'चंदेरी दुपट्टा', handle: 'chanderi-dupatta', state: 'new', variants: 1, values: 'Free size', price: 89900, stock: 20 })
+    expect(c.problems.map((p) => p.row)).toEqual([7, 11])
+    expect(JSON.stringify(c)).not.toMatch(/cost|110000/i)
+  })
+  it('a SKU met in an earlier chunk is named on the later row (seen carried across)', () => {
+    const seen = { skus: new Map<string, number>(), gtins: new Map<string, number>() }
+    const head = readImport(compactMapping(m), fileChunks(m, s.rows)[0]!.slice(0, 4), ctx, seen)
+    expect(head.problems).toEqual([])
+    const tail = readImport(compactMapping(m), fileChunks(m, s.rows)[0]!.slice(4), ctx, seen)
+    expect(tail.problems).toContainEqual({ row: 11, column: 'SKU', message: 'KS-BPK-M is also on row 5' })
   })
   it('packs many products into chunks under the limit, never splitting one', () => {
     const big = Array.from({ length: 900 }, (_, i) => [`Kurta ${Math.floor(i / 3)}`, ['S', 'M', 'L'][i % 3]!, '1299', '4', `K-${i}`, 'x'.repeat(800)])

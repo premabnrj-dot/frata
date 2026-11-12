@@ -11,6 +11,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import Papa from 'papaparse'
 import postgres from 'postgres'
 import { matchColumns } from '@/domains/catalogue/import/fields'
+import { compactMapping } from '@/domains/catalogue/import/limits'
 import { chunkRows } from '@/domains/catalogue/import/plan'
 import { readImport } from '@/domains/catalogue/import/read'
 import { sheetOf } from '@/domains/catalogue/import/sheet'
@@ -134,6 +135,11 @@ describe.skipIf(!host)('importing a file (actions)', () => {
     const [p] = await su!`insert into products (tenant_id, handle, title) values (${state.tenantId}, 'old-kurta', 'Old kurta') returning id`
     await su!`insert into variants (tenant_id, product_id, option_values, price, sku) values (${state.tenantId}, ${p!.id}, '{}', 999, 'imp-1-m')`
     const f = file(HEAD + rowsOf(3) + '\nBroken,S,"Rs 1,2,99",1,BRK,1', { costs: false })
+    // The Check step's reading, from the server: the same states, the problem by row and column, nothing written.
+    const checked = await a.checkImport({ mapping: compactMapping(f.mapping), rows: f.chunks[0], seen: { skus: [], gtins: [] } })
+    expect(checked).toMatchObject({ ok: true, products: [{ state: 'new' }, { state: 'in_shop' }, { state: 'new' }, { state: 'left_out' }],
+      problems: [{ row: 5, column: 'Price', message: '"Rs 1,2,99" isn\'t a price' }] })
+    expect((await su!`select count(*)::int n from import_jobs where tenant_id = ${state.tenantId}`)[0]!.n).toBe(0)
     const r = await run(f)
     expect(r).toMatchObject({ ok: true, last: { added: 2, inShop: 1, leftOut: 1 } })
     expect((await su!`select price::int from variants where product_id = ${p!.id}`).map((v) => v.price)).toEqual([999])

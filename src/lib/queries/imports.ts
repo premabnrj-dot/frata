@@ -1,6 +1,9 @@
 import 'server-only'
 import { desc, eq } from 'drizzle-orm'
 import { SOURCES, type Mapping, type Source } from '@/domains/catalogue/import/fields'
+import type { SheetRow } from '@/domains/catalogue/import/group'
+import { checkedOf, type Checked } from '@/domains/catalogue/import/plan'
+import { readImport, type Seen } from '@/domains/catalogue/import/read'
 import type { MemberRole } from '@/domains/tenancy/roles'
 import { outcomeIn, type Outcome } from '@/lib/catalogue/import-drafts'
 import { existingIn, hsnDigitsIn, shopCounts } from '@/lib/catalogue/imports'
@@ -51,9 +54,15 @@ export async function importPage(tenantId: string, role: MemberRole, now: Date):
   }, { snapshot: true })
 }
 
-/** Which of a file's addresses and SKUs the shop already has (the Check step's "Already in your shop"). */
-export async function alreadyInShop(tenantId: string, handles: string[], skus: string[]) {
-  const e = await withTenant(tenantId, (tx) => existingIn(tx, tenantId, handles, skus))
-  return { handles: [...e.handles], skus: [...e.skus] }
+/**
+ * The Check step's reading of one chunk (plan.ts checkedOf): the pure rules with the shop's HSN digits and this
+ * member's cost rule, and which products the shop already has. `seen` carries SKUs and barcodes from the file's
+ * earlier chunks and comes back added to. Nothing is written.
+ */
+export async function checkRows(tenantId: string, role: MemberRole, mapping: Mapping, rows: SheetRow[], seen: Seen, now: Date): Promise<Checked> {
+  return withTenant(tenantId, async (tx) => {
+    const [costs, hsnDigits] = await Promise.all([costsVisibleIn(tx, tenantId, role), hsnDigitsIn(tx, tenantId)])
+    const read = readImport(mapping, rows, { now, hsnDigits, costs }, seen)
+    return checkedOf(read, await existingIn(tx, tenantId, read.products.map((p) => p.handle), read.products.flatMap((p) => p.skus)))
+  }, { snapshot: true })
 }
-

@@ -36,7 +36,7 @@ export const importJobs = pgTable('import_jobs', {
   leftOut: integer('left_out').notNull().default(0),
   inShop: integer('in_shop').notNull().default(0),
   startedBy: uuid('started_by').notNull(),
-  /** The email as it was at sign-in (as order_events): history needs no name lookup. */
+  /** The member's email as it was at sign-in (as order_events): history needs no name lookup. Null on a support visit: history says Frrata support. */
   startedByEmail: text('started_by_email'),
   supportSessionId: uuid('support_session_id').references(() => supportSessions.id, { onDelete: 'restrict' }),
   createdAt: createdAt(),

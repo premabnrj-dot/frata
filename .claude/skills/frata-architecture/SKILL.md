@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.47.1
+  version: 2.47.2
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -501,6 +501,33 @@ after it. A class a shop page uses from outside the shop's folders must be added
   orders.) A lock not had in its 1 s is told as "Someone is buying this product right now" (`lockTimedOut`).
 - New products' addresses come from `freeHandles` (`src/lib/catalogue/handles.ts`, one read for the batch);
   `handleFor` writes Indian scripts in Latin letters (`src/domains/catalogue/indic.ts`).
+- **A SKU is one in a shop in any case at the database too** (`variants_tenant_sku_upper`, drizzle/0111): a unique
+  violation on either SKU index means another product took it meanwhile.
+- **What a product still needs before it goes live, for one or many, is `readinessIn`** (`src/lib/catalogue/readiness.ts`:
+  one read per table, the rule `readiness` in product-form.ts): Publish (`setStatus`) and the import's Done step both ask
+  it. **Before deleting a product photo's files, ask `photosInUse`** (`photos-in-use.ts`: a look, a story or a page may show it).
+
+## Importing products (PI·1, 2026-11-12; plan docs/plans/2026-11-12-product-import.md § Tasks 4–7)
+
+- **The browser reads and groups; the server rules.** The page reads the file (read-excel-file's `universal` build for
+  .xlsx — no worker, so the console's CSP is unchanged — and papaparse, both `import()`ed on pick), groups rows into whole
+  products and chunks (`group.ts`, `plan.ts fileChunks`: mapped cells only, ≤ 512 kB, a product never split). The rules
+  (`domains/catalogue/import/read.ts` → the editor's `cleanProduct`) run only on the server: once per chunk for the
+  Check (`checkImport`, writes nothing; SKUs and barcodes carried across chunks in `seen`) and again for the write
+  (`importChunk`). Never import `read.ts` or `cleanProduct` into a client component: they name `unitCost`, and
+  `check:client-bundle` fails the build. The Check gets `checkedOf` (states and preview lines, never a cost).
+- **A job is driven only by its open page, through `asMember`**: no unattended runner (it would have no session, no
+  support audit, and outlive a removed member). One running job a shop (`import_jobs_one_running`); the server takes
+  only `next_chunk` (an earlier one is a no-op retry, a later one refused); the same file (hash) resumes a running job,
+  is refused once imported, and comes again only after its drafts are deleted (the hash is cleared). At most
+  `IMPORTS_PER_DAY` starts in 24 h, counted in the transaction. Every chunk re-reads with the job's STORED mapping,
+  re-checks the caps (600 products, 1,800 sizes: `limits.ts`) and the shop's matches, then `writeProducts` as drafts with
+  costs only if `costsVisibleIn` says so.
+- **`import_rows` hold cells only while the job runs** (they carry costs): ending or stopping a job nulls them
+  (`forgetCells`). A job's products are exactly its rows' `product_id` (composite FK, SET NULL on delete): deleting drafts
+  and "Publish the N ready" read nothing else. Drafts never reach shoppers, so a chunk revalidates `/console/products`
+  only; only a publish purges the catalogue. `import_jobs`/`import_rows`: no frata_admin grant, no delete for anyone,
+  column-level updates (tenancy.sql § 72).
 
 ## Catalogue links (Signal S3, 2026-11-09; plan docs/plans/2026-11-09-signal-s3.md)
 

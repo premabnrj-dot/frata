@@ -14,7 +14,8 @@ import { deleteDrafts, publishReady } from '@/lib/catalogue/import-drafts'
 import { Refused, startJob, stopJob, writeChunk, type ChunkResult } from '@/lib/catalogue/imports'
 import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import { errName } from '@/lib/log'
-import { alreadyInShop } from '@/lib/queries/imports'
+import { checkRows } from '@/lib/queries/imports'
+import type { Checked } from '@/domains/catalogue/import/plan'
 import { costsVisibleIn } from '@/lib/queries/settings'
 import { refreshShop } from '@/lib/queries/storefront'
 
@@ -27,7 +28,7 @@ import { refreshShop } from '@/lib/queries/storefront'
 //
 // | Action              | Who        | Does                                                                     |
 // |---------------------|------------|--------------------------------------------------------------------------|
-// | checkAgainstShop    | ANY_MEMBER | which of the file's addresses and SKUs the shop already has (a read)    |
+// | checkImport         | ANY_MEMBER | one chunk read by the rules for the Check step; the shop's matches (a read) |
 // | startImport         | ANY_MEMBER | a job for this file, or the running one resumed                          |
 // | importChunk         | ANY_MEMBER | the job's next chunk, read again and written as drafts                   |
 // | stopImport          | ANY_MEMBER | ends a paused job where it is                                            |
@@ -42,16 +43,22 @@ const MappingSchema = z.object({
   headers: z.array(z.string().max(200)).max(MAX_COLUMNS),
   fields: z.array(FIELD.nullable()).max(MAX_COLUMNS),
 }).strict().refine((m) => m.headers.length === m.fields.length && new Set(m.fields.filter(Boolean)).size === m.fields.filter(Boolean).length)
+const Rows = z.array(z.object({ n: z.number().int().min(2).max(100_000), cells: z.array(z.string().max(CELL_MAX)).max(MAX_COLUMNS) }).strict()).min(1).max(MAX_ROWS)
 const Start = z.object({
   fileName: z.string().trim().min(1).max(200), hash: z.string().regex(/^[0-9a-f]{64}$/), mapping: MappingSchema,
   chunks: z.number().int().min(1).max(1000), products: z.number().int().min(0).max(100_000), variants: z.number().int().min(0).max(1_000_000),
 }).strict()
 const Chunk = z.object({
   jobId: z.uuid(), n: z.number().int().min(0).max(999),
-  rows: z.array(z.object({ n: z.number().int().min(2).max(100_000), cells: z.array(z.string().max(CELL_MAX)).max(MAX_COLUMNS) }).strict()).min(1).max(MAX_ROWS),
+  rows: Rows,
 }).strict()
-const Lookup = z.object({ handles: z.array(z.string().max(100)).max(MAX_ROWS), skus: z.array(z.string().max(60)).max(MAX_ROWS * 10) }).strict()
+const Pairs = z.array(z.tuple([z.string().max(60), z.number().int().min(2).max(100_000)])).max(20_000)
+/** A chunk to check: its compact mapping (mapped columns only), its rows, and the SKUs and barcodes met before it. */
+const Check = z.object({ mapping: MappingSchema, rows: Rows, seen: z.object({ skus: Pairs, gtins: Pairs }).strict() }).strict()
+  .refine((c) => c.mapping.fields.every((f) => f !== null) && c.rows.every((r) => r.cells.length === c.mapping.fields.length))
+export type SeenList = { skus: [string, number][]; gtins: [string, number][] }
 const JobId = z.uuid()
+const encoder = new TextEncoder()
 
 const said = (where: string, err: unknown, fallback: string): Fail => {
   if (err instanceof Refused) return { ok: false, error: err.reason }
@@ -63,15 +70,19 @@ const said = (where: string, err: unknown, fallback: string): Fail => {
   return { ok: false, error: fallback }
 }
 
-export async function checkAgainstShop(input: unknown): Promise<{ ok: true; handles: string[]; skus: string[] } | Fail> {
+export async function checkImport(input: unknown): Promise<({ ok: true; seen: SeenList } & Checked) | Fail> {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return { ok: false, error: auth.message }
-  const p = Lookup.safeParse(input)
-  if (!p.success) return { ok: false, error: 'This file is too large to check.' }
+  let size = Infinity
+  try { size = encoder.encode(JSON.stringify(input)).length } catch { /* not JSON: refused below */ }
+  const p = Check.safeParse(input)
+  if (size > CHUNK_BYTES * 2 || !p.success) return { ok: false, error: 'This file’s rows did not come through. Choose the file again.' }
   try {
-    return { ok: true, ...(await alreadyInShop(auth.membership.tenantId, p.data.handles, p.data.skus.map((s) => s.toUpperCase()))) }
+    const seen = { skus: new Map(p.data.seen.skus), gtins: new Map(p.data.seen.gtins) }
+    const checked = await checkRows(auth.membership.tenantId, auth.membership.role, p.data.mapping, p.data.rows, seen, new Date())
+    return { ok: true, ...checked, seen: { skus: [...seen.skus], gtins: [...seen.gtins] } }
   } catch (err) {
-    return said('checkAgainstShop', err, 'We could not check your shop. Try again in a minute.')
+    return said('checkImport', err, 'We could not check your file. Try again in a minute.')
   }
 }
 
@@ -93,7 +104,6 @@ export async function startImport(input: unknown): Promise<{ ok: true; jobId: st
   }
 }
 
-const encoder = new TextEncoder()
 export async function importChunk(input: unknown): Promise<({ ok: true } & ChunkResult) | Fail> {
   // A chunk is at most 512 kB (the browser packs them so); a bigger call is refused before it is read.
   let size = Infinity

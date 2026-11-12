@@ -43,16 +43,19 @@ export type ImportProduct = {
   draft: ImportDraft | null
 }
 export type Read = { products: ImportProduct[]; problems: Problem[] }
+/** SKUs (upper case) and barcodes already met, with their row: the earlier chunks' when a file is checked in parts. */
+export type Seen = { skus: Map<string, number>; gtins: Map<string, number> }
 
 const fail = (problems: Problem[], row: number, column: string, message: string) => problems.push({ row, column, message })
 const code = (v: string) => v.toUpperCase().normalize('NFKD').replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'X'
 
-export function readImport(m: Mapping, rows: readonly SheetRow[], ctx: ReadContext): Read {
+/** `seen` carries SKUs and barcodes across a file read in parts; it is added to as rows are read. */
+export function readImport(m: Mapping, rows: readonly SheetRow[], ctx: ReadContext, seen: Seen = { skus: new Map(), gtins: new Map() }): Read {
   const { get, has } = reader(m)
   const header = (f: Field) => { const i = m.fields.indexOf(f); return i >= 0 ? m.headers[i]! : FIELDS[f] }
   const problems: Problem[] = []
   const products: ImportProduct[] = []
-  const skuAt = new Map<string, number>(), gtinAt = new Map<string, number>()
+  const { skus: skuAt, gtins: gtinAt } = seen
 
   for (const g of groupRows(m, rows)) {
     const mine: Problem[] = []
