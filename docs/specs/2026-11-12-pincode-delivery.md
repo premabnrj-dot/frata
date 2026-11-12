@@ -83,8 +83,10 @@ API and rate limit [P/U]; GoKwik, Razorpay, Pindrop, Fastrr prices and features 
 ## Owner calls (2026-11-12)
 - **Name: Delivery Zones.**
 - **Placement:** included in Growth and Scale (a plan feature, the pricing ladder's reason to move up); on Launch an
-  add-on at ₹499/month + GST with a 14-day trial (A3) — as proposed; the unit-economics review checks the ₹499.
+  add-on at **₹999/month + GST** with a 14-day trial (A3) — owner, 2026-11-12: "keep the price as 999, not 499".
 - **Ship stays parked:** PD·0–PD·2 run on the brand's own settings; PD·3 waits for Ship.
 - **Split with the other session** (Admin/console UX, branch `claude/elegant-carson-8jygm1`): it owns loading the India
   Post directory into `pincodes` (`scripts/ops/pincodes-sql.mjs`, b16baed) with the CSV the owner has; this plan owns
   everything built on it. Note sent to that session 2026-11-12.
+
+- **Mockup approved** (owner, 2026-11-12), Launch at ₹999/month. Plan: `docs/plans/2026-11-12-delivery-zones.md`.
