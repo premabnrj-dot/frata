@@ -6,7 +6,9 @@
 //
 // One engine, two callers: quote() for a bag, and reprice() for an order already placed
 // (switch to COD, a capture after a switch). Both price each way of paying through
-// priceMethod(), so a stored order and a fresh quote can never disagree. Pure; paise; bps.
+// priceMethod(), so a stored order and a fresh quote can never disagree. An order whose lines change
+// (an order edit) re-plans only its own offers from the terms it kept: replanKept() (replan.ts), the
+// same steps through productPass() and amountFor(). Pure; paise; bps.
 //
 // The order of application:
 //   1. product class — product/collection % or ₹ off, Buy X get Y, a free gift: per line, greedy
@@ -121,10 +123,15 @@ function best(cands: DiscountTerms[], base: number): { t: DiscountTerms; amount:
 
 /** A bag line as the engine reads it (sold lines only). */
 export type PlanLine = { productId: string | null; variantId: string | null; unitPrice: number; qty: number }
-const covers = (t: DiscountTerms, l: PlanLine) => !t.targets || t.targets === 'all' || (l.productId !== null && t.targets.includes(l.productId))
+/**
+ * What a product offer's saving reads: its value, its minimum and what it covers; `code` only for whether it has one (an
+ * automatic offer goes first on a tie).
+ */
+export type ProductTerms = Pick<DiscountTerms, 'id' | 'style' | 'percentBps' | 'amountOff' | 'cap' | 'minSubtotal' | 'targets' | 'buyQty' | 'getQty' | 'getBps' | 'giftVariantId'> & { code?: string | null }
+const covers = (t: ProductTerms, l: PlanLine) => !t.targets || t.targets === 'all' || (l.productId !== null && t.targets.includes(l.productId))
 
 /** One product offer over the lines still free: its discount per line, and what it needs when it gives nothing. */
-export function productOffer(t: DiscountTerms, lines: PlanLine[], free: boolean[], subtotal: number): { per: number[]; need: Need } {
+export function productOffer(t: ProductTerms, lines: PlanLine[], free: boolean[], subtotal: number): { per: number[]; need: Need } {
   const per = lines.map(() => 0)
   if (t.style === 'free_gift') {
     const at = lines.findIndex((l, i) => free[i] && l.variantId === t.giftVariantId)
@@ -162,6 +169,30 @@ export function productOffer(t: DiscountTerms, lines: PlanLine[], free: boolean[
   const whole = Math.min(t.percentBps != null ? wholeRupees(sum, t.percentBps) : sum, t.cap ?? Number.POSITIVE_INFINITY)
   if (whole < sum) { const spread = apportion(whole, per); spread.forEach((v, i) => { per[i] = v }) }
   return { per, need: null }
+}
+
+/**
+ * Product offers over the lines, greedy by total saving (ties: automatic first, then id), each taking its lines (a line
+ * takes one). Each line's product discount, the offers that gave something in the order taken, and what each that gave
+ * nothing needs.
+ */
+export function productPass<T extends ProductTerms>(lines: PlanLine[], offers: T[], subtotal: number) {
+  const free = lines.map(() => true)
+  const productDisc = lines.map(() => 0)
+  const taken: { t: T; total: number }[] = []
+  const needs = new Map<string, Need>()
+  let left = offers
+  for (;;) {
+    const scored = left.map((t) => { const r = productOffer(t, lines, free, subtotal); return { t, r, total: r.per.reduce((a, b) => a + b, 0) } })
+    for (const s of scored) if (s.total === 0) needs.set(s.t.id, s.r.need)
+    const top = scored.filter((s) => s.total > 0).sort((a, b) => b.total - a.total || Number(a.t.code != null) - Number(b.t.code != null) || (a.t.id < b.t.id ? -1 : 1))[0]
+    if (!top) break
+    top.r.per.forEach((v, i) => { if (v > 0) { productDisc[i]! += v; free[i] = false } })
+    taken.push({ t: top.t, total: top.total })
+    needs.delete(top.t.id)
+    left = left.filter((t) => t.id !== top.t.id)
+  }
+  return { productDisc, taken, needs }
 }
 
 /**
@@ -208,22 +239,9 @@ export function planOffers(linesIn: PlanLine[] | number, offers: DiscountTerms[]
   const of = (c: DiscountClass) => cands.filter((t) => classOf(t.style) === c)
   const subtotal = lines.reduce((a, l) => a + l.unitPrice * l.qty, 0)
 
-  // 1. Product offers, greedy by total saving (ties: automatic first, then id), each taking its lines.
-  const free = lines.map(() => true)
-  const productDisc = lines.map(() => 0)
-  const products: Applied[] = []
-  const needs = new Map<string, Need>()
-  let left = of('product')
-  for (;;) {
-    const scored = left.map((t) => { const r = productOffer(t, lines, free, subtotal); return { t, r, total: r.per.reduce((a, b) => a + b, 0) } })
-    for (const s of scored) if (s.total === 0) needs.set(s.t.id, s.r.need)
-    const top = scored.filter((s) => s.total > 0).sort((a, b) => b.total - a.total || Number(a.t.code !== null) - Number(b.t.code !== null) || (a.t.id < b.t.id ? -1 : 1))[0]
-    if (!top) break
-    top.r.per.forEach((v, i) => { if (v > 0) { productDisc[i]! += v; free[i] = false } })
-    products.push({ discountId: top.t.id, codeId: top.t.codeId, class: 'product', title: top.t.title, amount: top.total, terms: top.t })
-    needs.delete(top.t.id)
-    left = left.filter((t) => t.id !== top.t.id)
-  }
+  // 1. Product offers, greedy by total saving, each taking its lines.
+  const { productDisc, taken, needs } = productPass(lines, of('product'), subtotal)
+  const products: Applied[] = taken.map(({ t, total }) => ({ discountId: t.id, codeId: t.codeId, class: 'product', title: t.title, amount: total, terms: t }))
   const afterProduct = subtotal - productDisc.reduce((a, b) => a + b, 0)
 
   // 2–4. Order, shipping, payment, as in O·1, on what is left.

@@ -10,8 +10,6 @@ import { sellsSized } from '@/domains/catalogue/sell-keys'
 import { labelAsked, labelMissing, readLabel } from '@/domains/catalogue/label'
 import { availability, type Status, type WhenOut } from '@/domains/catalogue/availability'
 import { attributesFor, categoryById, cleanAttributes, COLOUR_FAMILIES, searchCategories } from '@/domains/catalogue/taxonomy'
-import { keyOf, reconcile, skuFor, uniqueSku } from '@/domains/catalogue/variants'
-import { orderPrefix } from '@/domains/signup/slug'
 import { acceptedBase, storeHost, WIDTHS, urlFor } from '@/domains/media/sizes'
 import { photosAreMade } from '@/lib/media/uploaded'
 import { checkStoryPhotos, savePairs } from '@/lib/catalogue/extras'
@@ -23,10 +21,11 @@ import { memberAudit } from '@/lib/auth/member-audit'
 import { costsVisibleIn } from '@/lib/queries/settings'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
-import { shopSettings, tenants } from '@/lib/db/schema'
+import { shopSettings } from '@/lib/db/schema'
 import { shopPages, shopThemeRevisions } from '@/lib/db/schema-themes'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
-import { archivedVariants, retireVariants } from '@/lib/catalogue/retire-variants'
+import { writeProducts } from '@/lib/catalogue/write'
+import { lockTimedOut } from '@/lib/orders/place'
 import { ensureTypes, freeHandle, handleFree } from '@/lib/catalogue/handles'
 import { errName } from '@/lib/log'
 
@@ -113,43 +112,11 @@ export async function saveProduct(productId: string, version: number, input: Pro
       // Signal S3: pairings are this shop's products only (and the FKs agree), saved under the same version check.
       if (p.pairs !== undefined && !(await savePairs(tx, tenantId, productId, cleanPairIds(p.pairs, productId)))) throw new Stop({ ok: false, error: 'A piece to pair isn’t in your shop. Pick it again.' })
 
-      const existing = await tx.select({ id: variants.id, optionValues: variants.optionValues }).from(variants)
-        .where(and(eq(variants.tenantId, tenantId), eq(variants.productId, productId), isNull(variants.archivedAt)))
-      const plan = reconcile(existing, p.options)
-      // Removed sizes and colours: archived if ever ordered, deleted if not, refused with pre-orders to pack.
-      const retired = await retireVariants(tx, tenantId, plan.remove.map((v) => v.id))
-      if (!retired.ok) throw new Stop({ ok: false, error: retired.error })
-      const archived = await archivedVariants(tx, tenantId, productId)
-      // Empty SKUs get a default (skuFor), unique against every other SKU in this shop.
-      const [shop] = await tx.select({ prefix: shopSettings.orderPrefix, name: tenants.name }).from(shopSettings).innerJoin(tenants, eq(tenants.id, shopSettings.tenantId)).where(eq(shopSettings.tenantId, tenantId))
-      const others = await tx.select({ sku: variants.sku }).from(variants).where(and(eq(variants.tenantId, tenantId), sql`${variants.productId} <> ${productId}`, sql`${variants.sku} is not null`))
-      const codes = p.variants.flatMap((v) => (v.gtin ? [v.gtin] : [])), [clash] = codes.length ? await tx.select({ gtin: variants.gtin }).from(variants).where(and(eq(variants.tenantId, tenantId), sql`${variants.productId} <> ${productId}`, inArray(variants.gtin, codes))).limit(1) : []
-      if (clash) throw new Stop({ ok: false, error: `Barcode ${clash.gtin} is already on another product in your shop.` })
-      const taken = new Set(others.map((o) => o.sku!.toUpperCase()))
-      p.variants.forEach((v) => { if (v.sku) taken.add(v.sku.toUpperCase()) })
-      const prefix = orderPrefix(shop?.prefix ?? '', shop?.name ?? '')
-      for (const v of p.variants) {
-        if (v.sku) { if (others.some((o) => o.sku!.toUpperCase() === v.sku!.toUpperCase())) throw new Stop({ ok: false, error: `SKU ${v.sku} is already used by another product in your shop.` }); continue }
-        v.sku = uniqueSku(skuFor(prefix, p.handle, v.values), taken)
-        taken.add(v.sku.toUpperCase())
-      }
-      const byKey = new Map(p.variants.map((v) => [keyOf(v.values), v]))
-      // The cost of goods only from whoever sees it (seesCosts); otherwise the stored cost stays as it was.
+      // Its sizes and colours: SKUs, barcodes, removed and returning sizes, the cost of goods only from whoever sees it
+      // (seesCosts) — the one writer the import shares (src/lib/catalogue/write.ts).
       const costs = await costsVisibleIn(tx, tenantId, auth.membership.role)
-      // SKUs cleared first so two variants can swap SKUs in one save.
-      await tx.update(variants).set({ sku: null, gtin: null }).where(and(eq(variants.tenantId, tenantId), eq(variants.productId, productId)))
-      for (const [i, values] of plan.wanted.entries()) {
-        const v = byKey.get(keyOf(values))!
-        const data = {
-          price: v.price, compareAt: v.compareAt, ...(costs ? { unitCost: v.unitCost } : {}), stock: v.stock, sku: v.sku, gtin: v.gtin, position: i,
-          whenOut: v.whenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap,
-        }
-        const kept = plan.keep.find((k) => keyOf(k.optionValues) === keyOf(values))
-        const back = kept ? null : archived.find((a) => keyOf(a.optionValues) === keyOf(values))
-        if (kept) await tx.update(variants).set(data).where(and(eq(variants.tenantId, tenantId), eq(variants.id, kept.id)))
-        else if (back) await tx.update(variants).set({ ...data, archivedAt: null }).where(and(eq(variants.tenantId, tenantId), eq(variants.id, back.id)))
-        else await tx.insert(variants).values({ tenantId, productId, optionValues: values, ...data })
-      }
+      const written = await writeProducts(tx, tenantId, [{ productId, handle: p.handle, title: p.title, options: p.options, variants: p.variants }], { costs })
+      if (!written.ok) throw new Stop({ ok: false, error: written.error })
       // A photo tagged with a colour that no longer exists shows for every colour.
       const values = new Set(p.options.flatMap((o) => o.values))
       const imgs = await tx.select({ id: productImages.id, optionValue: productImages.optionValue }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId)))
@@ -189,6 +156,8 @@ export async function saveProduct(productId: string, version: number, input: Pro
     const why = reason(err)
     if (why.includes('variants_tenant_sku')) return { ok: false, error: 'A SKU is already used by another product in your shop.' }
     if (why.includes('products_tenant_handle')) return { ok: false, error: 'Another product uses that address.', errors: { handle: 'Another product uses this address.' } }
+    // A drop's checkout holds its sizes' rows for longer than writeProducts waits (1 s): expected, not an error.
+    if (lockTimedOut(err)) return { ok: false, error: 'Someone is buying this product right now. Save again in a moment.' }
     console.error('[saveProduct]', why)
     return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
   }

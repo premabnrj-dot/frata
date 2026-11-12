@@ -15,8 +15,9 @@ and the amount to collect or refund follows, with the shopper told.
 
 **Owner decisions (2026-11-12, with the mockup's approval, as drawn):** owners and admins edit orders (as address
 edits); a paid-online order whose total goes down refunds the difference automatically through the shop's own Razorpay
-(refunds API, normal speed; OE·2); one whose total goes up collects the difference on delivery (on the slip), no payment
-link in v1.
+(refunds API, normal speed; OE·2). **A total that goes up (owner, 2026-11-12, replacing "collect on delivery"):** a COD
+order simply collects the new total at the door; a paid-online order asks the shopper to pay the difference FIRST — the
+edit takes effect only once it is paid (see the plan § Increase on a paid order).
 
 ## Research
 | Product | Taken | Not taken |
@@ -39,7 +40,7 @@ including that Razorpay keeps its fee on a refund; one message to the shopper pe
   "Put it back". "Add an item" searches the shop's products.
 - **What changes**, live beside it: each line's change in words, an offer that now gives less or no longer applies
   (named), and the money: COD "Collect on delivery ₹6,016 → ₹5,207"; paid online and lower → "Refund ₹1,899" (Razorpay,
-  5–10 working days; Razorpay keeps its fee); paid online and higher → "Collect ₹499 on delivery" on the slip.
+  5–10 working days; Razorpay keeps its fee); paid online and higher → "Ask for ₹499" (the shopper pays first; nothing changes until then).
 - An edit's reason (out of stock, customer asked, other) is the merchant's, never shown to the shopper.
 - **Save** names the order ("Save KS-1042" / "Save and refund ₹1,899"); the safe button keeps the order. A tick, on by
   default when the order has an email: email the new total (or the refund).
@@ -62,7 +63,7 @@ including that Razorpay keeps its fee on a refund; one message to the shopper pe
 | Phase | What |
 |---|---|
 | OE·1 | COD and unpaid orders: swap, quantity, remove, add; collect amount; email; Activity; Undo |
-| OE·2 | Paid online: a lower total refunds the difference through the shop's own Razorpay (refunds API); a higher one collects the difference on delivery |
+| OE·2 | Paid online: a lower total refunds the difference through the shop's own Razorpay (refunds API); a higher one asks the shopper to pay the difference first, then applies |
 
 ## Design review
 - **UI/UX:** recognition over recall (the other sizes shown, with stock); feedback (the money before Save); the safe
@@ -73,8 +74,9 @@ including that Razorpay keeps its fee on a refund; one message to the shopper pe
   never addresses); tenant from `requireMember`.
 - **Modularity:** pure planning in `src/domains/orders/edit.ts` (reusing `reprice`, `planOffers`); the write in
   `src/lib/orders/edit.ts` under the order lock (`current()`), as every order write.
-- **SSOT / DRY:** one pricing path (`reprice`) for placement, switch, capture and edit; stock through `takeStock` /
-  `putStockBack` per line.
+- **SSOT / DRY:** one pricing path (`reprice`) for placement, switch, capture and edit; stock through
+  `takeStockLines` / `putStockBackLines` (`src/lib/orders/stock.ts`), per line, a swap's variants locked first
+  (`lockVariants`); offers re-planned by `replanKept` (`src/domains/checkout/replan.ts`).
 - **YAGNI:** no edit after packing (credit note instead), no shopper-side edit, no payment link for a higher prepaid
   total in v1 (collect on delivery instead; signal: shops asking).
 - **KISS:** an edit is "these lines now" → reprice → one transaction.

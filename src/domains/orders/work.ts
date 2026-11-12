@@ -39,6 +39,8 @@ const WHEN: Record<Exclude<OrderAction, 'undo'>, readonly OrderState[]> = {
   unhold: ['held'],
   note: ['unconfirmed', 'held', 'confirmed', 'paid', 'refund_due', 'packed', 'cancelled', 'shipped', 'ndr', 'delivered', 'rto', 'rto_received', 'lost'],
   pack: ['confirmed', 'paid'],
+  // Who it goes to and what is in it (an address edit; an item edit, docs/plans/2026-11-12-order-edit.md): until packed
+  // (the slip and the invoice carry both), and only an order: never awaiting payment, refund due or cancelled.
   edit: ['unconfirmed', 'held', 'confirmed', 'paid'],
   cancel: ['unconfirmed', 'held', 'confirmed', 'paid', 'refund_due', 'packed'],
   // The packing slip: to pick and pack, and to reprint while it is with the courier. Never once cancelled, returned

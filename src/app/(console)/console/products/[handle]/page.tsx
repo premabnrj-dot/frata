@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { Panel } from '@/components/ui/panel'
 import { matches, type Rule } from '@/domains/catalogue/collection-rules'
-import { rupeesText } from '@/domains/catalogue/product-form'
+import { rupeesText } from '@/domains/money/rupees'
 import { attributesFor, categoryById, COLOUR_FAMILIES } from '@/domains/catalogue/taxonomy'
 import { keyOf } from '@/domains/catalogue/variants'
 import { availability, type WhenOut } from '@/domains/catalogue/availability'

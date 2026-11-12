@@ -16,7 +16,8 @@ import { keysFor, markEvent, noteKeysAnswer } from '@/lib/payments/keys'
 import { checkoutSignatureOk, orderPayments, toPayment } from '@/lib/payments/razorpay'
 import { trimRazorpayEvent } from '@/lib/webhooks/razorpay'
 import { refreshSoldOut } from '@/lib/queries/storefront'
-import { HOLD_MINUTES, startPayment, takeSlot, takeStock, type Pay } from './place'
+import { HOLD_MINUTES, startPayment, takeSlot, type Pay } from './place'
+import { takeStock } from './stock'
 import { storedPricing, writeReprice } from './reprice'
 import { enqueuePaymentCheck } from './payment-check'
 import { freeStock } from '@/domains/catalogue/availability'
@@ -96,8 +97,7 @@ const byHash = async (tx: Tx, tenantId: string, hash: string) => {
   if (!/^[0-9a-f]{64}$/.test(hash)) return null
   const [o] = await tx.select({ id: orders.id, method: orders.paymentMethod, rzp: orders.razorpayOrderId, paidAt: orders.paidAt, cancelledAt: orders.cancelledAt, switchedAt: orders.switchedToCodAt,
     payBy: orders.payBy, subtotal: orders.subtotal, total: orders.total, pincode: orders.pincode, phone: orders.phone, shipping: orders.shipping, sellerGstin: orders.sellerGstin, pricesIncludeGst: orders.pricesIncludeGst,
-    checkout: orders.checkout })
-    .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.tokenHash, hash)))
+    checkout: orders.checkout }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.tokenHash, hash)))
   return o ?? null
 }
 

@@ -233,6 +233,10 @@ begin
   perform app_staff_request(B, sB, encode(sha256(convert_to('staff-enrol:123456', 'UTF8')), 'hex'));
   begin perform app_staff_bootstrap('pk-b@proof.test', '654321'); raise exception 'FAIL: bootstrap approved without the code'; exception when raise_exception then if sqlerrm <> 'no_request_with_that_code' then raise; end if; end;
   if app_staff_bootstrap('pk-b@proof.test', '123 456') <> 'approved for 10 minutes' then raise exception 'FAIL: bootstrap with the code refused'; end if;
+  -- The passkey check names the person's own credentials: ids and transports only, never a key or counter (drizzle/0111).
+  if has_function_privilege('frata_app', 'public.app_staff_credentials(uuid)', 'execute') or not has_function_privilege('frata_admin', 'public.app_staff_credentials(uuid)', 'execute') then raise exception 'FAIL: wrong role may list passkey ids'; end if;
+  if app_staff_credentials(B)::text ~ '(publicKey|public_key|counter|key-b)' or app_staff_credentials(B)::text !~ 'cred-b' then raise exception 'FAIL: credential list wrong (%)', app_staff_credentials(B); end if;
+  if app_staff_credentials('99999999-9999-9999-9999-999999999999') <> '[]'::jsonb then raise exception 'FAIL: a non-staff id listed passkeys'; end if;
   -- A claim holds its rows: a second sender straight after gets none of them (security re-review F4).
   select count(*) into n from app_staff_notices_claim(50);
   select count(*) into m from app_staff_notices_claim(50);
@@ -1203,7 +1207,7 @@ do $$ declare n int; begin
   exception when insufficient_privilege then null; end;
   begin insert into module_pauses (module, paused_by, reason) values ('communication', '99999999-9999-9999-9999-999999999999', 'x'); raise exception 'FAIL: app paused a module';
   exception when insufficient_privilege then null; end;
-  if (select count(*) from addon_prices) <> 4 then -- reviews, true_profit, marketplace_export, delivery_zones (0111)
+  if (select count(*) from addon_prices) <> 4 then -- reviews, true_profit, marketplace_export, delivery_zones (0113)
    raise exception 'FAIL: app cannot read add-on prices'; end if;
 end $$;
 commit;
@@ -1401,6 +1405,8 @@ do $$ declare n int; begin
   begin delete from discounts; raise exception 'FAIL: app deleted an offer'; exception when insufficient_privilege then null; end;
   begin update discount_codes set code = 'NEW1'; raise exception 'FAIL: app changed a code'; exception when insufficient_privilege then null; end;
   begin update order_discounts set amount = 1; raise exception 'FAIL: app changed a use'; exception when insufficient_privilege then null; end;
+  -- The terms a use keeps (0109: tiers, Buy X get Y, the products covered) are written with it and never changed after.
+  begin update order_discounts set target_products = null, tier_mins = null; raise exception 'FAIL: app changed the terms an order kept'; exception when insufficient_privilege then null; end;
   begin update price_history set price = 1; raise exception 'FAIL: app changed price history'; exception when insufficient_privilege then null; end;
   begin update discounts set tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: app moved an offer'; exception when insufficient_privilege then null; end;
   -- The price trigger, as the app: A's price change writes one row for A; A cannot write history for B.
@@ -2799,7 +2805,7 @@ do $$ begin
 end $$;
 rollback;
 
--- 72. Delivery Zones (0110–0111): four tables, own shop both ways, no other role; a PIN code row can never name another
+-- 72. Delivery Zones (0112–0113): four tables, own shop both ways, no other role; a PIN code row can never name another
 -- shop's zone (the key holds the shop, since a foreign key check skips row policies).
 insert into delivery_zones (id, tenant_id, position, name, preset, charge, days_min, days_max, cod_on)
   values ('d2000000-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', 0, 'B metro', 'metro', 5900, 2, 3, true);
@@ -2835,7 +2841,7 @@ do $$ declare n int; begin
 end $$;
 rollback;
 
--- 73. A3 self-serve add-on trials (0112–0113): the shop's only writes to tenant_addons are three definers; the shop is
+-- 73. A3 self-serve add-on trials (0112, 0114–0115): the shop's only writes to tenant_addons are three definers; the shop is
 -- the session's, the caller its owner or admin, the price the newest and the one shown; one trial per shop and add-on.
 do $$ begin
   if has_function_privilege('frata_admin', 'app_start_addon_trial(uuid, text, uuid)', 'execute') or has_function_privilege('authenticated', 'app_start_addon_trial(uuid, text, uuid)', 'execute')

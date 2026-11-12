@@ -68,13 +68,15 @@ export async function gateState(identity: StaffIdentity): Promise<GateState | nu
   return one<GateState | null>(sql`select app_staff_state(${w.userId}::uuid, ${w.sessionId}::uuid) as r`)
 }
 
-/** Options for "Use passkey". No credential list: the browser offers this site's passkeys; the definer then accepts
- *  only this person's. */
+/** Options for "Use passkey", naming this person's own passkeys (drizzle/0111): a passkey left on the device by an
+ *  earlier, unrecorded try must not be the one the browser offers. The definer still accepts only this person's. */
 export async function confirmOptions(identity: StaffIdentity | StaffOk, site: PasskeySite): Promise<Result<unknown>> {
   const w = who(identity)
   if (!w) return { ok: false, error: 'Sign in again.' }
   return run('confirm options', async () => {
-    const options = await generateAuthenticationOptions({ rpID: site.rpID, userVerification: 'required', timeout: 120_000 })
+    const mine = await one<{ id: string; transports: string[] }[]>(sql`select app_staff_credentials(${w.userId}::uuid) as r`)
+    const options = await generateAuthenticationOptions({ rpID: site.rpID, userVerification: 'required', timeout: 120_000,
+      allowCredentials: mine.map((c) => ({ id: c.id, transports: c.transports as never })) })
     await adminDb().execute(sql`select app_staff_challenge(${w.userId}::uuid, ${w.sessionId}::uuid, 'confirm', null, ${options.challenge})`)
     return options
   })
