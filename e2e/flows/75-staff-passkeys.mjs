@@ -29,7 +29,7 @@ export default {
     const F = USERS.frata, O = USERS.owner
     await db`insert into platform_staff (user_id, email, role) values (${F.id}, ${F.email}, 'admin') on conflict (user_id) do update set role = 'admin'`
     await db`delete from staff_passkeys where user_id in (${F.id}, ${O.id})`
-    let riya
+    let riya, meeraCode
     try {
       const meera = await withAuthenticator(t, 'frata')
 
@@ -38,12 +38,15 @@ export default {
         await meera.p.getByRole('heading', { name: 'Add a passkey' }).waitFor()
         assert.equal(await meera.p.getByRole('link', { name: 'Merchants' }).count(), 0, 'no Admin page behind the gate')
         await meera.p.getByRole('button', { name: 'Ask to add a passkey' }).click()
-        assert.match(await codeOn(meera.p), /^\d{6}$/)
+        meeraCode = await codeOn(meera.p)
+        assert.match(meeraCode, /^\d{6}$/)
         await meera.p.screenshot({ path: t.out('ask') })
       })
 
       await t.step('The owner\'s break-glass approves; she adds a passkey on this browser and Admin opens', async () => {
-        const [{ r }] = await db`select app_staff_bootstrap(${F.email}) as r`
+        // Without the code on her screen the break-glass refuses (someone else holding her sign-in could have asked).
+        await assert.rejects(db`select app_staff_bootstrap(${F.email}, ${meeraCode === '000000' ? '111111' : '000000'}) as r`, /no_request_with_that_code/)
+        const [{ r }] = await db`select app_staff_bootstrap(${F.email}, ${meeraCode}) as r`
         assert.match(r, /approved/)
         await meera.p.getByRole('heading', { name: 'Add a passkey' }).waitFor()
         await meera.p.getByLabel('Name').waitFor({ timeout: 15_000 })

@@ -97,6 +97,7 @@ export const staffNotices = pgTable('staff_notices', {
   createdAt: createdAt(),
   attempts: integer('attempts').notNull().default(0),
   sentAt: at('sent_at'),
+  claimedAt: at('claimed_at'), // a 2-minute lease while one sender has the row (security re-review F4)
   lastError: text('last_error'),
 }, (t) => [
   index('staff_notices_due').on(t.createdAt).where(sql`${t.sentAt} is null`),

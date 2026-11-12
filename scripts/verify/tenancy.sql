@@ -145,9 +145,11 @@ do $$ declare t text; r text; begin
   end loop;
   if has_function_privilege('frata_app', 'public.app_staff_challenge(uuid,uuid,text,text,text)', 'execute') then raise exception 'FAIL: frata_app may start a passkey check'; end if;
   if not has_function_privilege('frata_admin', 'public.app_staff_challenge(uuid,uuid,text,text,text)', 'execute') then raise exception 'FAIL: frata_admin may not start a passkey check'; end if;
-  if has_function_privilege('frata_admin', 'public.app_staff_bootstrap(text)', 'execute') or has_function_privilege('frata_app', 'public.app_staff_bootstrap(text)', 'execute') then raise exception 'FAIL: an app role may bootstrap'; end if;
+  if has_function_privilege('frata_admin', 'public.app_staff_bootstrap(text,text)', 'execute') or has_function_privilege('frata_app', 'public.app_staff_bootstrap(text,text)', 'execute') then raise exception 'FAIL: an app role may bootstrap'; end if;
   if has_function_privilege('frata_admin', 'public.app_staff_notify(text,text,text,text)', 'execute') or has_function_privilege('frata_app', 'public.app_staff_notify(text,text,text,text)', 'execute') then raise exception 'FAIL: an app role may write a staff email'; end if;
-  if not has_function_privilege('frata_app', 'public.app_staff_notices_claim(integer)', 'execute') or has_function_privilege('frata_admin', 'public.app_staff_notices_claim(integer)', 'execute') then raise exception 'FAIL: staff emails claimed by the wrong role'; end if;
+  -- Only Admin's role reads or settles the staff security emails; the shops' role can neither read nor silence them.
+  if has_function_privilege('frata_app', 'public.app_staff_notices_claim(integer)', 'execute') or not has_function_privilege('frata_admin', 'public.app_staff_notices_claim(integer)', 'execute')
+     or has_function_privilege('frata_app', 'public.app_staff_notices_settle(uuid,boolean,text)', 'execute') then raise exception 'FAIL: staff emails claimed by the wrong role'; end if;
 end $$;
 begin;
 insert into platform_staff (user_id, email, role) values
@@ -223,6 +225,18 @@ do $$ begin
   if not exists (select 1 from staff_notices where kind = 'passkey_added' and about = 'pk-s@proof.test' and to_email = 'pk-a@proof.test') then raise exception 'FAIL: a new passkey not emailed to the admins'; end if;
   if app_staff_live_stepup('aaaaaaaa-0000-0000-0000-0000000000a1', 'eeeeeeee-0000-0000-0000-0000000000a1', 'hash-a') is null then raise exception 'FAIL: step-up not made'; end if;
   if app_staff_live_stepup('aaaaaaaa-0000-0000-0000-0000000000a1', 'eeeeeeee-0000-0000-0000-0000000000ff', 'hash-a') is not null then raise exception 'FAIL: a step-up counts on another session'; end if;
+end $$;
+do $$
+declare B uuid := 'aaaaaaaa-0000-0000-0000-0000000000a2'; sB uuid := 'eeeeeeee-0000-0000-0000-0000000000a2'; n int; m int;
+begin
+  -- The owner's break-glass approves only the request whose code is on the person's screen (security re-review F5).
+  perform app_staff_request(B, sB, encode(sha256(convert_to('staff-enrol:123456', 'UTF8')), 'hex'));
+  begin perform app_staff_bootstrap('pk-b@proof.test', '654321'); raise exception 'FAIL: bootstrap approved without the code'; exception when raise_exception then if sqlerrm <> 'no_request_with_that_code' then raise; end if; end;
+  if app_staff_bootstrap('pk-b@proof.test', '123 456') <> 'approved for 10 minutes' then raise exception 'FAIL: bootstrap with the code refused'; end if;
+  -- A claim holds its rows: a second sender straight after gets none of them (security re-review F4).
+  select count(*) into n from app_staff_notices_claim(50);
+  select count(*) into m from app_staff_notices_claim(50);
+  if n = 0 or m <> 0 then raise exception 'FAIL: a staff email could be claimed twice (% then %)', n, m; end if;
 end $$;
 -- Removing a staff member ends their step-ups at once.
 delete from platform_staff where user_id = 'aaaaaaaa-0000-0000-0000-0000000000a1';

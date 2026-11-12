@@ -21,7 +21,7 @@ import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { TENANT_COOKIE } from '@/lib/auth/require-member'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { endStaffStepup } from '@/lib/db/platform'
-import { staffCookieName, tokenHash } from '@/lib/auth/staff-cookie'
+import { staffCookieName, staffCookieSecure, tokenHash } from '@/lib/auth/staff-cookie'
 
 export async function signOutAction() {
   const user = await requireUser()
@@ -39,7 +39,8 @@ export async function signOutAction() {
   // The staff passkey step-up ends with the sign-out (after the visit is ended, which needs it), its row first.
   const stepup = jar.get(staffCookieName())?.value
   if (stepup) await endStaffStepup(tokenHash(stepup)).catch((err) => console.error('[sign-out] step-up', err instanceof Error ? err.name : err))
-  jar.delete(staffCookieName())
+  // Cleared with the same flags it was set with: a browser ignores a bare delete of a __Host- cookie (security re-review F1).
+  jar.set(staffCookieName(), '', { path: '/', secure: staffCookieSecure(), httpOnly: true, sameSite: 'strict', maxAge: 0 })
   jar.delete(TENANT_COOKIE)
   // This device only: signing out of a shared shop phone must not sign the person out everywhere.
   await (await createServerSupabase()).auth.signOut({ scope: 'local' }).catch((err) => console.error('[sign-out]', err instanceof Error ? err.name : err))

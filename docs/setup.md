@@ -92,10 +92,11 @@ stop counting and Admin opens without a passkey, so push the code straight after
 From this release Admin, and every support visit into a shop, opens only after a passkey check on that browser. Nobody
 has a passkey on the first day, so the owner lets themself in once (about two minutes):
 
-1. Sign in and open Admin. It shows **Add a passkey**. Click **Ask to add a passkey** (a 6-digit code appears; you need
-   not read it to anyone this once).
-2. Supabase → SQL Editor, within 15 minutes: `select app_staff_bootstrap('<your staff email>');` — it answers
-   "approved for 10 minutes" and writes an audit row. No app role can call this function; only the SQL Editor.
+1. Sign in and open Admin. It shows **Add a passkey**. Click **Ask to add a passkey**; a 6-digit code appears. Keep
+   that page open (the code is shown once).
+2. Supabase → SQL Editor, within 15 minutes: `select app_staff_bootstrap('<your staff email>', '<the 6-digit code>');`
+   — it answers "approved for 10 minutes" and writes an audit row. The code makes sure it approves the request on your
+   screen, not one someone else made with your sign-in. No app role can call this function; only the SQL Editor.
 3. Back in Admin (it refreshes by itself): name the passkey, **Add passkey**, confirm with your fingerprint, face or
    device PIN. Admin opens.
 4. Admin › Staff → **Add a passkey** on a second device (your phone), so losing one device never locks you out.

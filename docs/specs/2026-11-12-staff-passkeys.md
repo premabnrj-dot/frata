@@ -44,8 +44,9 @@ visit opens, so a stolen or phished email code is not enough.
 5. **Every** staff added, request approved, passkey added or removed sends an email (SES, ADR-0011) to the person and to
    every admin, and is in Admin › Activity.
 6. **The very first admin, or an only admin with no device left:** the owner calls one definer in Supabase's SQL editor,
-   `app_staff_bootstrap(...)`, which refuses anyone not in `platform_staff`, writes the audit row, and creates an approved
-   request for that person's waiting code. Not a raw insert.
+   `app_staff_bootstrap(email, code)`, which refuses anyone not in `platform_staff`, approves only the waiting request
+   whose 6-digit code the owner reads on that person's screen (without it, whoever holds their sign-in could ask first;
+   security re-review F5), and writes the audit row. Not a raw insert.
 7. **No authenticator app:** ADR-0007's amendment named one as the fallback; this plan replaces it with two passkeys plus
    another admin's approval of a code (an app code can be phished, a passkey cannot). ADR-0007 is amended with the
    owner's sign-off.

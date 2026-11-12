@@ -298,12 +298,3 @@ export async function signupCodeVerify(uid: string, id: string, codeHmac: string
     return !!r?.ok
   } catch (err) { console.error('[signupCodeVerify]', errName(err)); return false }
 }
-
-// ── Staff security emails (staff passkeys, drizzle/0109): claimed and settled through definers ─────────────────
-export type StaffNoticeRow = { id: string; to_email: string; kind: 'staff_added' | 'staff_removed' | 'request_approved' | 'passkey_added' | 'passkey_removed'; about: string; by_email: string | null; detail: string | null }
-export async function claimStaffNotices(limit: number): Promise<StaffNoticeRow[]> {
-  return [...await db().execute<StaffNoticeRow>(sql`select * from app_staff_notices_claim(${limit})`)]
-}
-export async function settleStaffNotice(id: string, ok: boolean, error: string | null): Promise<void> {
-  await db().execute(sql`select app_staff_notices_settle(${id}::uuid, ${ok}, ${error})`)
-}

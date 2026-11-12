@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { after, NextResponse } from 'next/server'
-import { sendStaffNotices } from '@/lib/email/staff-notices'
+import { sendStaffNotices } from '@/lib/admin/staff-notices'
 import { z } from 'zod'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { staffProof } from '@/lib/auth/session'

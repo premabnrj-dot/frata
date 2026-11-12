@@ -20,6 +20,7 @@ CREATE TABLE "staff_notices" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"attempts" integer DEFAULT 0 NOT NULL,
 	"sent_at" timestamp with time zone,
+	"claimed_at" timestamp with time zone,
 	"last_error" text,
 	CONSTRAINT "staff_notices_kind" CHECK ("staff_notices"."kind" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed'))
 );
@@ -126,6 +127,8 @@ create or replace function app_staff_try(p_uid uuid, p_session uuid, p_kind text
   language plpgsql security definer set search_path = '' as $$
 declare v_session int := case when p_kind = 'check' then 20 else 5 end; v_person int := case when p_kind = 'check' then 60 else 10 end;
 begin
+  -- One count at a time per person and kind: parallel calls must not all read the same count (security re-review F3).
+  perform pg_advisory_xact_lock(hashtextextended(p_uid::text || ':staff-try:' || p_kind, 0));
   delete from public.staff_passkey_tries where at < now() - interval '1 day';
   if (select count(*) from public.staff_passkey_tries t where t.user_id = p_uid and t.kind = p_kind and t.session_id = p_session and t.at > now() - interval '10 minutes') >= v_session
      or (select count(*) from public.staff_passkey_tries t where t.user_id = p_uid and t.kind = p_kind and t.at > now() - interval '1 hour') >= v_person then
@@ -288,6 +291,7 @@ begin
   if v_email is null then raise exception 'not_staff' using errcode = 'P0001'; end if;
   perform public.app_staff_try(p_uid, p_session, 'request');
   delete from public.staff_enrolment_requests r where r.user_id = p_uid and r.used_at is null and r.approved_at is null;
+  delete from public.staff_enrolment_requests r where r.expires_at < now() - interval '90 days'; -- kept 90 days (F6)
   insert into public.staff_enrolment_requests (user_id, session_id, code_hash, expires_at)
     values (p_uid, p_session, p_code_hash, now() + interval '15 minutes') returning expires_at into v_exp;
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
@@ -371,19 +375,21 @@ create or replace function app_staff_signout(p_token_hash text) returns void
   delete from public.staff_stepups where token_hash = p_token_hash
 $$;--> statement-breakpoint
 
--- The owner's break-glass, run in Supabase's SQL editor (no app role may call it): approves the newest open request
--- of a staff member, for the very first admin or an only admin with no device left. Audited.
-create or replace function app_staff_bootstrap(p_email text) returns text
+-- The owner's break-glass, run in Supabase's SQL editor (no app role may call it): approves the open request of a
+-- staff member whose 6-digit code the owner reads on their own screen, for the very first admin or an only admin with
+-- no device left. The code matters: without it, whoever holds that person's sign-in could ask just before the owner
+-- runs this and be approved instead (security re-review F5). Audited.
+create or replace function app_staff_bootstrap(p_email text, p_code text) returns text
   language plpgsql security definer set search_path = '' as $$
 declare v_uid uuid; v_req uuid;
+  v_hash text := encode(sha256(convert_to('staff-enrol:' || regexp_replace(coalesce(p_code, ''), '\D', '', 'g'), 'UTF8')), 'hex');
 begin
   select ps.user_id into v_uid from public.platform_staff ps where ps.email = lower(btrim(p_email));
   if v_uid is null then raise exception 'not_staff' using errcode = 'P0001'; end if;
   update public.staff_enrolment_requests r set approved_at = now()
-   where r.id = (select r2.id from public.staff_enrolment_requests r2 where r2.user_id = v_uid and r2.used_at is null
-                   and r2.approved_at is null and r2.expires_at > now() order by r2.created_at desc limit 1)
+   where r.user_id = v_uid and r.used_at is null and r.approved_at is null and r.expires_at > now() and r.code_hash = v_hash
   returning r.id into v_req;
-  if v_req is null then raise exception 'no_request' using errcode = 'P0001'; end if;
+  if v_req is null then raise exception 'no_request_with_that_code' using errcode = 'P0001'; end if;
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
     values (null, v_uid, lower(btrim(p_email)), 'staff', 'staff.passkey.bootstrap', lower(btrim(p_email)), jsonb_build_object('by', 'owner (SQL)'));
   perform public.app_staff_notify('request_approved', lower(btrim(p_email)), 'owner (SQL)', null);
@@ -401,11 +407,15 @@ begin
   perform public.app_staff_notify(p_kind, p_about, v_by, null);
 end $$;--> statement-breakpoint
 
--- The 5-minute drain: claim up to p_limit unsent emails (5 tries each), then settle each.
+-- The 5-minute drain and the send right after a change: claim up to p_limit unsent emails (5 tries each), then settle
+-- each. A claim holds its rows for 2 minutes, so the two senders never send one email twice (security re-review F4).
+-- Sent and given-up rows are kept 90 days (F6).
 create or replace function app_staff_notices_claim(p_limit int) returns table (id uuid, to_email text, kind text, about text, by_email text, detail text, created_at timestamptz)
   language sql security definer set search_path = '' as $$
-  update public.staff_notices n set attempts = n.attempts + 1
+  with gone as (delete from public.staff_notices o where o.created_at < now() - interval '90 days' and (o.sent_at is not null or o.attempts >= 5))
+  update public.staff_notices n set attempts = n.attempts + 1, claimed_at = now()
    where n.id in (select n2.id from public.staff_notices n2 where n2.sent_at is null and n2.attempts < 5
+                   and (n2.claimed_at is null or n2.claimed_at < now() - interval '2 minutes')
                    order by n2.created_at limit least(greatest(p_limit, 1), 50) for update skip locked)
   returning n.id, n.to_email, n.kind, n.about, n.by_email, n.detail, n.created_at
 $$;--> statement-breakpoint
@@ -419,11 +429,13 @@ revoke all on function app_access_for(uuid, uuid, text), app_staff_live_stepup(u
   app_staff_state(uuid, uuid), app_staff_challenge(uuid, uuid, text, text, text), app_staff_take_challenge(uuid, uuid, text, text, text),
   app_staff_confirm(uuid, uuid, text, uuid, bigint, text), app_staff_add_passkey(uuid, uuid, text, text, text, bigint, text[], text),
   app_staff_request(uuid, uuid, text), app_staff_approve(uuid, uuid, text, text, text), app_staff_remove_passkey(uuid, uuid, text, uuid),
-  app_staff_list(uuid, uuid, text), app_staff_signout(text), app_staff_bootstrap(text), app_staff_notify(text, text, text, text),
+  app_staff_list(uuid, uuid, text), app_staff_signout(text), app_staff_bootstrap(text, text), app_staff_notify(text, text, text, text),
   app_staff_changed(uuid, text, text), app_staff_notices_claim(int), app_staff_notices_settle(uuid, boolean, text)
   from public, anon, authenticated, service_role, frata_app, frata_admin;--> statement-breakpoint
-grant execute on function app_access_for(uuid, uuid, text), app_staff_signout(text), app_staff_notices_claim(int), app_staff_notices_settle(uuid, boolean, text) to frata_app;--> statement-breakpoint
+grant execute on function app_access_for(uuid, uuid, text), app_staff_signout(text) to frata_app;--> statement-breakpoint
 grant execute on function app_staff_state(uuid, uuid), app_staff_challenge(uuid, uuid, text, text, text), app_staff_take_challenge(uuid, uuid, text, text, text),
   app_staff_confirm(uuid, uuid, text, uuid, bigint, text), app_staff_add_passkey(uuid, uuid, text, text, text, bigint, text[], text),
   app_staff_request(uuid, uuid, text), app_staff_approve(uuid, uuid, text, text, text), app_staff_remove_passkey(uuid, uuid, text, uuid),
-  app_staff_list(uuid, uuid, text), app_staff_changed(uuid, text, text) to frata_admin;
+  app_staff_list(uuid, uuid, text), app_staff_changed(uuid, text, text),
+  -- Only Admin's role reads and settles the staff security emails: they are how a takeover gets noticed (security re-review F2).
+  app_staff_notices_claim(int), app_staff_notices_settle(uuid, boolean, text) to frata_admin;

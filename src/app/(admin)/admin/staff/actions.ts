@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { after } from 'next/server'
-import { sendStaffNotices } from '@/lib/email/staff-notices'
+import { sendStaffNotices } from '@/lib/admin/staff-notices'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { STAFF_ROLES } from '@/lib/db/schema'

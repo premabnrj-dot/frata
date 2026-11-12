@@ -3,7 +3,7 @@ import { isCronRequest } from '@/lib/auth/cron'
 import { drainOutbox, eachLimited } from '@/lib/outbox/drain'
 import { shopsWithPendingEvents } from '@/lib/db/platform'
 import { processEvents } from '@/lib/orders/payment'
-import { sendStaffNotices } from '@/lib/email/staff-notices'
+import { sendStaffNotices } from '@/lib/admin/staff-notices'
 import { errName } from '@/lib/log'
 
 // ENTRY POINT credential: CRON_SECRET via isCronRequest (scripts/check-actions.mjs).
