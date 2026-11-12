@@ -5,7 +5,7 @@ import { estimateOf } from '@/domains/settings/ship-costs'
 import type { MemberRole } from '@/domains/tenancy/roles'
 import { istDayStart } from '@/domains/time/day'
 import type { Tx } from '@/lib/db'
-import { creditedSql, currentMethodSql, feeBucketSql, keptSql, rtoRestockedSql, stateSql, type KeptRow } from '@/lib/db/order-predicates'
+import { currentMethodSql, feeBucketSql, keptSql, rtoRestockedSql, stateSql, type KeptRow } from '@/lib/db/order-predicates'
 import { orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { groupsOf } from './discounts'
@@ -28,6 +28,8 @@ export const TP_PERIODS = [7, 30, 90] as const
 export type TpPeriod = (typeof TP_PERIODS)[number]
 export const isTpPeriod = (n: number): n is TpPeriod => (TP_PERIODS as readonly number[]).includes(n)
 const MIN_PIN_ORDERS = 5
+/** Orders with an outcome by their own timestamps: what the state test keeps, cheap and well estimated (speed review). */
+const HAS_OUTCOME = sql`(o.delivered_at is not null or o.rto_initiated_at is not null or o.rto_delivered_at is not null or o.lost_at is not null)`
 
 export type Line = { id: string; name: string; delivered: number; returned: number; lost: number; kept: number; counted: number }
 export type PinRow = { pincode: string; place: string | null; codOrders: number; codReturned: number; codKept: number | null; prepaidKept: number | null; codLoses: boolean }
@@ -53,24 +55,29 @@ export function trueProfitPage(tenantId: string, role: MemberRole, period: TpPer
 
 export async function trueProfitIn(tx: Tx, tenantId: string, role: MemberRole, period: TpPeriod, now: Date): Promise<TrueProfit | null> {
   await tx.execute(sql`set local jit = off`)
-  await tx.execute(sql`set local statement_timeout = '3s'`)
+  // 90 days at 10× festive volume measured ~2.5 s over the four reads (speed review 2026-11-12): 8 s so the view loads
+  // slowly rather than not at all; a per-shop cache is the owner's call (the plan's 300 ms is not reachable by tuning).
+  await tx.execute(sql`set local statement_timeout = '8s'`)
+  await tx.execute(sql`set local work_mem = '32MB'`)
   const [costs, history, shipCosts] = await Promise.all([costsVisibleIn(tx, tenantId, role), planHistoryIn(tx, tenantId), shipCostsIn(tx, tenantId)])
   if (!costs) return null
   const est = estimateOf(shipCosts)
   const fees = history.map((h) => h.startsAt)
   const since = istDayStart(now, -(period - 1))
-  const win = sql`o.tenant_id = ${tenantId} and o.placed_at >= ${since.toISOString()}::timestamptz and o.placed_at < ${now.toISOString()}::timestamptz`
-  const kept = keptSql(now, 'o', fees)
+  const win = sql`o.tenant_id = ${tenantId} and o.placed_at >= ${since.toISOString()}::timestamptz and o.placed_at < ${now.toISOString()}::timestamptz and ${HAS_OUTCOME}`
+  // The open shipment's provider joined once (speed review DZ·TP M3: never looked up per order).
+  const kept = keptSql(now, 'o', fees, sql`s.provider`)
+  const ship = sql`left join shipments s on s.tenant_id = o.tenant_id and s.order_id = o.id and s.ended_at is null`
 
   const [all, lines, pins, noCost, after] = await Promise.all([
-    tx.execute<KeptRow>(sql`select ${kept.columns} from ${orders} o where ${win} and ${kept.where} group by ${kept.groupBy(0)}`),
-    tx.execute<LineRow>(lineSql(win, now, fees, sql`ol.product_id`, sql`coalesce(p.title, min(ol.title))`)),
+    tx.execute<KeptRow>(sql`select ${kept.columns} from ${orders} o ${ship} where ${win} and ${kept.where} group by ${kept.groupBy(0)}`),
+    tx.execute<LineRow>(lineSql(tenantId, since, now, fees, sql`ol.product_id`, sql`coalesce(p.title, min(ol.title))`)),
     tx.execute<KeptRow & { pincode: string; place: string | null }>(sql`
       with busy as (
         select o.pincode from ${orders} o where ${win} and ${kept.where} and o.pincode ~ '^[1-9][0-9]{5}$'
          group by o.pincode having count(*) >= ${MIN_PIN_ORDERS} order by count(*) desc limit 50)
       select o.pincode, (select pc.city from pincodes pc where pc.pincode = o.pincode) place, ${kept.columns}
-        from ${orders} o join busy b on b.pincode = o.pincode
+        from ${orders} o join busy b on b.pincode = o.pincode ${ship}
        where ${win} and ${kept.where}
        group by 1, ${kept.groupBy(2)}`),
     tx.execute<{ n: number }>(sql`
@@ -122,8 +129,7 @@ export async function variantsIn(tx: Tx, tenantId: string, role: MemberRole, per
   const [costs, history, shipCosts] = await Promise.all([costsVisibleIn(tx, tenantId, role), planHistoryIn(tx, tenantId), shipCostsIn(tx, tenantId)])
   if (!costs) return null
   const since = istDayStart(now, -(period - 1))
-  const win = sql`o.tenant_id = ${tenantId} and o.placed_at >= ${since.toISOString()}::timestamptz and o.placed_at < ${now.toISOString()}::timestamptz and ol.product_id = ${productId}`
-  const rows = await tx.execute<LineRow>(lineSql(win, now, history.map((h) => h.startsAt), sql`ol.variant_id`, sql`array_to_string(min(ol.option_values), ' · ')`))
+  const rows = await tx.execute<LineRow>(lineSql(tenantId, since, now, history.map((h) => h.startsAt), sql`ol.variant_id`, sql`array_to_string(min(ol.option_values), ' · ')`, sql`and ol.product_id = ${productId}`))
   return linesOf(rows, history, estimateOf(shipCosts))
 }
 
@@ -137,37 +143,45 @@ type LineRow = KeptRow & { key: string | null; name: string; w: number; dl: numb
  * Lines grouped by `key` and by what decides ₹ kept (as keptSql), each carrying its weight of its order's money. The
  * outcome counts are lines: delivered and not returned on a credit note, returned (came back or credited), lost.
  */
-function lineSql(win: SQL, now: Date, fees: readonly Date[], key: SQL, name: SQL) {
+function lineSql(tenantId: string, since: Date, now: Date, fees: readonly Date[], key: SQL, name: SQL, only: SQL = sql``) {
   const st = stateSql(now, 'o')
   const outcome = sql`(case when ${st} = 'delivered' then 'delivered' when ${st} in ('rto', 'rto_received') then 'rto' else 'lost' end)`
   const w = sql`(case when o.merchandise_net > 0 then ol.taxable_value::numeric / o.merchandise_net else 0 end)`
-  const credited = sql`exists (select 1 from credit_note_lines l join credit_notes cn on cn.tenant_id = l.tenant_id and cn.id = l.credit_note_id
-    where l.tenant_id = ol.tenant_id and l.order_line_id = ol.id and cn.kind = 'return')`
-  // A credit note that names a line comes off that line; one that names none is spread by weight (review UE4).
-  const lineCredit = sql`(select coalesce(sum(l.taxable), 0) from credit_note_lines l join credit_notes cn on cn.tenant_id = l.tenant_id and cn.id = l.credit_note_id
-    where l.tenant_id = ol.tenant_id and l.order_line_id = ol.id and cn.kind in ('return', 'discount', 'goodwill'))`
-  const orderLinedCredit = sql`(select coalesce(sum(l.taxable), 0) from credit_note_lines l join credit_notes cn on cn.tenant_id = l.tenant_id and cn.id = l.credit_note_id
-    where cn.tenant_id = o.tenant_id and cn.order_id = o.id and cn.kind in ('return', 'discount', 'goodwill'))`
-  // Frrata's fee base for the line: what the shopper kept of it (its returned pieces off), as feeBaseSql for the order.
-  const lineReturned = sql`(select coalesce(sum(l.taxable), 0) from credit_note_lines l join credit_notes cn on cn.tenant_id = l.tenant_id and cn.id = l.credit_note_id
-    where l.tenant_id = ol.tenant_id and l.order_line_id = ol.id and cn.kind = 'return')`
-  const restockedCost = sql`(select coalesce(sum(l.restocked_qty), 0) from credit_note_lines l join credit_notes cn on cn.tenant_id = l.tenant_id and cn.id = l.credit_note_id
-    where l.tenant_id = ol.tenant_id and l.order_line_id = ol.id and cn.kind = 'return') * ol.unit_cost`
+  const win = sql`o.tenant_id = ${tenantId} and o.placed_at >= ${since.toISOString()}::timestamptz and o.placed_at < ${now.toISOString()}::timestamptz`
+  // Credit notes grouped once for the window (speed review: never a subquery per line). A note that names a line comes off
+  // that line; one that names none is spread by weight (review UE4): the order's credited less what its lines carry.
   return sql`
+    with lc as (
+      select cn.order_id, l.order_line_id, sum(l.taxable)::bigint credited, (sum(l.taxable) filter (where cn.kind = 'return'))::bigint returned,
+             (sum(l.restocked_qty) filter (where cn.kind = 'return'))::int restocked, bool_or(cn.kind = 'return') has_return
+        from credit_note_lines l join credit_notes cn on cn.tenant_id = l.tenant_id and cn.id = l.credit_note_id
+        join ${orders} o on o.tenant_id = cn.tenant_id and o.id = cn.order_id
+       where cn.tenant_id = ${tenantId} and cn.kind in ('return', 'discount', 'goodwill') and ${win}
+       group by 1, 2),
+    olc as (select order_id, sum(credited)::bigint lined from lc group by 1),
+    oc as (
+      select cn.order_id, sum(cn.taxable)::bigint credited from credit_notes cn join ${orders} o on o.tenant_id = cn.tenant_id and o.id = cn.order_id
+       where cn.tenant_id = ${tenantId} and cn.kind in ('return', 'discount', 'goodwill') and ${win}
+       group by 1)
     select ${key} key, ${name} name, ${outcome} outcome, s.provider provider, (${currentMethodSql('o')} = 'cod') cod, ${feeBucketSql('o', fees)} bucket,
            ${rtoRestockedSql('o')} restocked, sum(${w})::float8 w, count(*)::int n,
-           (count(*) filter (where ${st} = 'delivered' and not ${credited}))::int dl,
-           (count(*) filter (where ${st} in ('rto', 'rto_received') or ${credited}))::int rl,
+           (count(*) filter (where ${st} = 'delivered' and lc.has_return is not true))::int dl,
+           (count(*) filter (where ${st} in ('rto', 'rto_received') or lc.has_return))::int rl,
            (count(*) filter (where ${st} = 'lost'))::int ll,
-           round(coalesce(sum(${w} * (o.net_revenue - ${creditedSql('o')} + ${orderLinedCredit}) - ${lineCredit}), 0))::bigint net,
-           sum(case when o.cogs is null then null else ol.unit_cost * ol.qty - ${restockedCost} end)::bigint cogs,
+           round(coalesce(sum(${w} * (o.net_revenue - coalesce(oc.credited, 0) + coalesce(olc.lined, 0)) - coalesce(lc.credited, 0)), 0))::bigint net,
+           sum(case when o.cogs is null then null else ol.unit_cost * ol.qty - coalesce(lc.restocked, 0) * ol.unit_cost end)::bigint cogs,
            round(sum(${w} * o.forward_shipping))::bigint fwd, round(sum(${w} * o.rto_shipping))::bigint rto, round(sum(${w} * o.courier_cod_fee))::bigint codfee,
-           round(coalesce(sum(${w} * o.gateway_fee), 0))::bigint gw, coalesce(sum(greatest(ol.taxable_value - ${lineReturned}, 0)), 0)::bigint base
+           round(coalesce(sum(${w} * o.gateway_fee), 0))::bigint gw,
+           -- Frrata's fee base for the line: what the shopper kept of it (its returned pieces off), as feeBaseSql for the order.
+           coalesce(sum(greatest(ol.taxable_value - coalesce(lc.returned, 0), 0)), 0)::bigint base
       from order_lines ol
       join ${orders} o on o.tenant_id = ol.tenant_id and o.id = ol.order_id
+      left join lc on lc.order_line_id = ol.id
+      left join olc on olc.order_id = o.id
+      left join oc on oc.order_id = o.id
       left join products p on p.tenant_id = ol.tenant_id and p.id = ol.product_id
       left join shipments s on s.tenant_id = o.tenant_id and s.order_id = o.id and s.ended_at is null
-     where ${win} and ${st} in ('delivered', 'rto', 'rto_received', 'lost')
+     where ol.tenant_id = ${tenantId} and ${win} and ${HAS_OUTCOME} and ${st} in ('delivered', 'rto', 'rto_received', 'lost') ${only}
      group by ${key}, p.title, 3, 4, 5, 6, 7, (o.cogs is null or ol.unit_cost is null), (o.forward_shipping is null), (o.rto_shipping is null), (o.courier_cod_fee is null)`
 }
 
