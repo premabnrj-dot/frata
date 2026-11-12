@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq, gte, inArray } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray, like, sql } from 'drizzle-orm'
 import { MON_TO_SAT, type Dispatch } from '@/domains/delivery/dates'
 import type { PinRule, Zone, ZoneSetup } from '@/domains/delivery/resolve'
 import type { PresetKey } from '@/domains/delivery/presets'
@@ -59,5 +59,40 @@ export function deliveryFor(tenantId: string, pin: string, now: Date) {
   return withTenant(tenantId, async (tx) => {
     const [shop, read] = await Promise.all([checkoutShop(tx, tenantId, null), deliveryIn(tx, tenantId, pin, now)])
     return { shop, ...read }
+  })
+}
+
+// ── Console › Apps › Delivery Zones (PD·1): what the brand sees and edits, in one transaction. ──
+export type ConsoleZone = { id: string; position: number; name: string; preset: PresetKey | null; pins: string[]; charge: number; freeAbove: number | null
+  daysMin: number; daysMax: number; codOn: boolean; codCharge: number; codMin: number; codMax: number | null }
+export type ConsoleRule = { pincode: string; rule: 'no_delivery' | 'prepaid_only' | 'cod_max'; codMax: number | null; note: string | null; place: string | null }
+export const RULES_PAGE = 100
+
+export function deliveryConsole(tenantId: string, q: string, page: number) {
+  return withTenant(tenantId, async (tx) => {
+    const search = /^[0-9]{1,6}$/.test(q) ? q : ''
+    const ruleWhere = search ? and(eq(deliveryRules.tenantId, tenantId), like(deliveryRules.pincode, `${search}%`)) : eq(deliveryRules.tenantId, tenantId)
+    const [zones, pins, rules, [count], holidays, [s]] = await Promise.all([
+      tx.select({ id: deliveryZones.id, position: deliveryZones.position, name: deliveryZones.name, preset: deliveryZones.preset, charge: deliveryZones.charge, freeAbove: deliveryZones.freeAbove,
+        daysMin: deliveryZones.daysMin, daysMax: deliveryZones.daysMax, codOn: deliveryZones.codOn, codCharge: deliveryZones.codCharge, codMin: deliveryZones.codMin, codMax: deliveryZones.codMax })
+        .from(deliveryZones).where(eq(deliveryZones.tenantId, tenantId)).orderBy(asc(deliveryZones.position)),
+      tx.select({ zoneId: deliveryZonePins.zoneId, pin: deliveryZonePins.pin }).from(deliveryZonePins).where(eq(deliveryZonePins.tenantId, tenantId)).orderBy(asc(deliveryZonePins.pin)),
+      tx.select({ pincode: deliveryRules.pincode, rule: deliveryRules.rule, codMax: deliveryRules.codMax, note: deliveryRules.note, city: pincodes.city })
+        .from(deliveryRules).leftJoin(pincodes, eq(pincodes.pincode, deliveryRules.pincode)).where(ruleWhere)
+        .orderBy(asc(deliveryRules.pincode)).limit(RULES_PAGE).offset((Math.max(1, page) - 1) * RULES_PAGE),
+      tx.select({ n: sql<number>`count(*)::int` }).from(deliveryRules).where(ruleWhere),
+      tx.select({ day: shopHolidays.day, name: shopHolidays.name }).from(shopHolidays).where(eq(shopHolidays.tenantId, tenantId)).orderBy(asc(shopHolidays.day)),
+      tx.select({ dispatchDays: shopSettings.dispatchDays, cutoff: shopSettings.dispatchCutoff, shipDays: shopSettings.shipDays, shippingFlat: shopSettings.shippingFlat,
+        freeShippingAbove: shopSettings.freeShippingAbove, codOn: shopSettings.codOn, codMin: shopSettings.codMin, codMax: shopSettings.codMax, codCharge: shopSettings.codCharge,
+        metroDays: shopSettings.metroDays, restDays: shopSettings.restDays, blocked: shopSettings.codBlockedPincodes }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)),
+    ])
+    const n2 = (v: number | string | null) => (v === null ? null : Number(v))
+    return {
+      zones: zones.map((z): ConsoleZone => ({ ...z, preset: z.preset as PresetKey | null, pins: pins.filter((p) => p.zoneId === z.id).map((p) => p.pin), charge: Number(z.charge),
+        freeAbove: n2(z.freeAbove), codCharge: Number(z.codCharge), codMin: Number(z.codMin), codMax: n2(z.codMax) })),
+      rules: rules.map((r): ConsoleRule => ({ pincode: r.pincode, rule: r.rule as ConsoleRule['rule'], codMax: n2(r.codMax), note: r.note, place: r.city })),
+      ruleCount: count?.n ?? 0, holidays: holidays.map((h) => ({ day: String(h.day), name: h.name })),
+      settings: s ? { ...s, shippingFlat: Number(s.shippingFlat), freeShippingAbove: Number(s.freeShippingAbove), codMin: Number(s.codMin), codMax: Number(s.codMax), codCharge: Number(s.codCharge) } : null,
+    }
   })
 }

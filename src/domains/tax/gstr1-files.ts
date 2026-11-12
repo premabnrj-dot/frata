@@ -47,11 +47,11 @@ export function gstr1Json(g: Gstr1, gstin: string, fp: string, hsnDesc: (hsn: st
 
 /** A CSV cell. A text cell that starts like a formula (= + - @, tab, CR) gets a leading ' so a spreadsheet shows it as text:
  *  a shopper's name is theirs to type (security review 2026-11-09, H1). Numbers stay numbers. */
-const cell = (v: string | number) => {
+export const csvCell = (v: string | number) => {
   const s = typeof v === 'string' && /^[=+\-@\t\r]/.test(v) ? `'${v}` : String(v)
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
-const csv = (head: string[], rows: (string | number)[][]) => [head, ...rows].map((r) => r.map(cell).join(',')).join('\n') + '\n'
+export const csv = (head: string[], rows: (string | number)[][]) => [head, ...rows].map((r) => r.map(csvCell).join(',')).join('\n') + '\n'
 const money = (h: Heads) => [r2(h.taxable), r2(h.igst), r2(h.cgst), r2(h.sgst)]
 
 /** One CSV per GSTR-1 table, by its name. */
