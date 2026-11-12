@@ -16,11 +16,23 @@ Every task ends with `npm test`, `npm run typecheck` and `impact-reviewer`; `dri
 | Refund = old total − new total | Refund = captured − refunded − pending − new total (a ledger); the amount Save showed is sent and refused if it changed under the lock | Earlier refunds ignored (security H1, architecture BLOCKER) |
 | Pricing on the server per tap | Pricing in the browser with the same pure code (4.7 kB gz), loaded with the panel (`next/dynamic`) when "Edit items" opens: one action, one `withTenant`, three reads in `Promise.all`; the server re-plans the same way on Save | A server action per tap, serialized (speed MED 8) |
 
-## Open (owner)
-- **A paid order whose total goes up.** As specced ("collect the difference on delivery") it fails three ways: the
-  courier booking knows only COD or prepaid, many shoppers can't be told, and COD-blocked pincodes can't collect
-  (unit-economics, architecture). Recommendation: **refuse an increase on a paid order in OE·2** (the merchant cancels;
-  the shopper re-orders), and add a Razorpay payment link later (cheaper than a COD fee below ₹1,271; no door risk).
+## Increase on a paid order (owner, 2026-11-12)
+COD: the new total is collected at the door; nothing else changes. Paid online: **the shopper pays the difference first**,
+and the edit is applied only when that payment is captured. Built as:
+- Save on a paid order with a higher total stores the edit as **waiting for payment** (its lines in `order_edit_lines`,
+  `order_edits.waiting_since`), and changes nothing on the order yet: lines, totals, stock and the courier booking stay.
+- The request is a page of ours, not a Razorpay Payment Link: the order page shows "Pay ₹499 for the changes" with what
+  changed, through Razorpay Checkout on the shop's own keys (a second Razorpay order for the difference; money to the
+  shop, no SMS, the fee as any online payment). Sent by the "edited" email when the order has one; the merchant also
+  gets "Copy payment link" to send on WhatsApp.
+- Captured (webhook or the payment check, as any payment: stored first, then applied): the edit is applied under the
+  order lock if the order is still before packing and the new pieces are still free; if not, the difference is
+  refunded at once (refund ledger) and the merchant sees why.
+- Proposed defaults, **owner to confirm**: the request waits **24 hours**, then lapses (the order ships as it was; the
+  merchant is told); the new pieces are **not** held while it waits (checked again when paid); packing the order
+  cancels a waiting request.
+- Tasks: an `edit.payment` kind beside `payment.check`; the order page's payment block reads a waiting edit; e2e: pay
+  the difference, and a request that lapses.
 
 ## Tasks
 **OE·0 · lock today's behaviour, pull out the shared parts**
@@ -44,7 +56,7 @@ Every task ends with `npm test`, `npm run typecheck` and `impact-reviewer`; `dri
 5. UI per the mockup, plus the states it didn't draw (over the COD limit, phone). Verify: `npm run e2e -- --only
    order-edit` (new flow) and `50-order-page`.
 
-**OE·2 · paid online** (after the owner decides the increase case)
+**OE·2 · paid online** (increase decided 2026-11-12: pay the difference first)
 6. `refund()` in `src/lib/payments/razorpay.ts` (normal speed; before each create, list the payment's refunds and match
    `receipt`/`notes.edit_id`; amount capped at what Razorpay reports refundable; payment age < 6 months checked before
    Save), `order_refunds`, a `refund.check` sender reading refund status back (no `refund.*` webhook assumed);
