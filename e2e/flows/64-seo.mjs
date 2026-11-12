@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict'
 import http from 'node:http'
 import { writeFileSync } from 'node:fs'
-import { CONSOLE, PORTS, SHOP_DOMAIN, signedIn } from '../lib.mjs'
+import { CONSOLE, PORTS, SHOP_DOMAIN, expectToast, signedIn } from '../lib.mjs'
 
 const HOST = `kesar-studio.${SHOP_DOMAIN}`
 const CRAWLERS = {
@@ -263,7 +263,7 @@ export default {
       for (const a of await p.locator('#fixes a').all()) assert.match(await a.getAttribute('href'), /^\/console\/(products|collections)\//)
       await p.getByLabel('Page title').fill('Kesar Studio — handwoven kurtas')
       await p.getByRole('button', { name: 'Save', exact: true }).click()
-      await p.getByText('Saved.').waitFor()
+      await expectToast(p, 'Saved.', 'ok') // the save's result is a toast (design-language § Feedback)
       await p.screenshot({ path: t.out('search-page') })
       const deadline = Date.now() + 70_000
       let title
@@ -271,7 +271,7 @@ export default {
       assert.equal(title, 'Kesar Studio — handwoven kurtas')
       await p.getByLabel('Page title').fill('')
       await p.getByRole('button', { name: 'Save', exact: true }).click()
-      await p.getByText('Saved.').waitFor()
+      await expectToast(p, 'Saved.', 'ok')
       await ctx.close()
     })
 

@@ -7,6 +7,7 @@ import { combinations, groupOption, keyOf, type Option } from '@/domains/catalog
 import { button } from '@/components/ui/button'
 import { useNow } from '@/components/time/now'
 import { Icon } from '@/components/icons/icon'
+import { FieldError, fieldProps } from '@/components/ui/field-error'
 
 export type Cell = Omit<VariantInput, 'values'>
 export const EMPTY_CELL: Cell = { price: '', compareAt: '', cost: '', stock: '0', sku: '', gtin: '', whenOut: 'stop', shipsBy: '', leadMin: '', leadMax: '', cap: '' }
@@ -42,13 +43,18 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
   const [every, setEvery] = useState({ price: '', stock: '', whenOut: '' as WhenOut | '' })
   const collapse = combos.length > 12
   const fill = (field: 'price' | 'stock' | 'whenOut', value: string, rows: string[][]) => rows.forEach((c) => onChange(keyOf(c), { [field]: value }))
+  // A cell's mistake is keyed `v:<values>:<field>` (cleanProduct); each input carries that key's marks, so the form's
+  // summary focuses the first and every line below its row names it (§ Feedback 3).
   const err = (k: string, f: string) => errors[`v:${k}:${f}`]
+  const marks = (k: string, f: string) => fieldProps(`v:${k}:${f}`, err(k, f))
+  const FIELDS = ['price', 'compareAt', 'cost', 'stock', 'sku', 'gtin', 'shipsBy', 'cap', 'lead'] as const
+  const rowHasErr = (c: string[]) => FIELDS.some((f) => err(keyOf(c), f))
 
   const rowId = new Map(combos.map((c, i) => [keyOf(c), i]))
   const input = (k: string, f: keyof Cell, label: string, mono = true, w = 'w-24', placeholder?: string) => (
     <div>
       <label htmlFor={`${f}-${rowId.get(k)}`} className="sr-only">{label}</label>
-      <input id={`${f}-${rowId.get(k)}`} value={(cells[k] ?? EMPTY_CELL)[f] ?? ''} inputMode={f === 'sku' ? undefined : f === 'gtin' ? 'numeric' : 'decimal'} aria-invalid={!!err(k, f) || undefined}
+      <input id={`${f}-${rowId.get(k)}`} value={(cells[k] ?? EMPTY_CELL)[f] ?? ''} inputMode={f === 'sku' ? undefined : f === 'gtin' ? 'numeric' : 'decimal'} {...marks(k, f)}
         title={err(k, f)} placeholder={placeholder} onChange={(e) => onChange(k, { [f]: e.target.value })}
         className={`h-8 ${w} rounded-md border border-input bg-card px-2 text-sm ${mono ? 'font-mono' : ''} aria-invalid:border-danger-text aria-invalid:bg-danger`} />
     </div>
@@ -74,7 +80,8 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
           <thead role="rowgroup" className="bg-muted/50 text-left text-xs text-muted-foreground"><tr role="row" className="[&>th]:px-2 [&>th]:py-2">
             <th role="columnheader">{options.map((o) => o.name).join(' / ') || 'Product'}</th><th role="columnheader">Price, ₹</th><th role="columnheader" title="The maximum retail price printed on the tag. Shown on the product page as M.R.P. incl. taxes; never sell above it. A struck “was” price comes only from a real price cut in the last 30 days.">M.R.P., ₹</th>{costs ? <th role="columnheader">Your cost, ₹</th> : null}<th role="columnheader">Stock</th><th role="columnheader">When it runs out</th><th role="columnheader">Shoppers see</th><th role="columnheader">SKU</th><th role="columnheader">Barcode</th></tr></thead>
           {groups.map((grp) => {
-            const shut = collapse && grp.label && !open[grp.label]
+            // A group with a mistake in it stays open: its marked fields must be there to focus.
+            const shut = collapse && grp.label && !open[grp.label] && !grp.rows.some(rowHasErr)
             const sold = grp.rows.filter((c) => !shopperSees(cells[keyOf(c)] ?? EMPTY_CELL, now).canBuy).length
             return (
               <tbody role="rowgroup" key={grp.label || 'all'} className="border-t border-border">
@@ -89,13 +96,13 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
                 {!shut && grp.rows.map((c) => {
                   const k = keyOf(c)
                   const label = c.filter((_, i) => i !== g).join(' / ') || 'This product'
-                  const rowErr = ['price', 'compareAt', 'cost', 'stock', 'sku', 'gtin', 'shipsBy', 'cap', 'lead'].map((f) => err(k, f)).find(Boolean)
+                  const rowErrs = FIELDS.filter((f) => err(k, f))
                   const cell = cells[k] ?? EMPTY_CELL
                   const sees = shopperSees(cell, now)
                   const i = rowId.get(k)
                   return (
                     <tr role="row" key={k} className="border-t border-border/60 [&>td]:px-2 [&>td]:py-1.5">
-                      <td role="cell" data-cell="full" className="font-medium md:whitespace-nowrap md:font-normal">{label}{rowErr && <span className="block text-xs text-danger-text">{rowErr}</span>}</td>
+                      <td role="cell" data-cell="full" className="font-medium md:whitespace-nowrap md:font-normal">{label}{rowErrs.map((f) => <FieldError key={f} name={`v:${k}:${f}`} message={err(k, f)} />)}</td>
                       <td role="cell" data-label="Price, ₹">{input(k, 'price', `Price for ${c.join(' ')}`)}</td>
                       <td role="cell" data-label="M.R.P., ₹">{input(k, 'compareAt', `M.R.P. for ${c.join(' ')}`)}</td>
                       {costs ? <td role="cell" data-label="Your cost, ₹">{input(k, 'cost', `Your cost for ${c.join(' ')}`)}</td> : null}
@@ -108,18 +115,18 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
                         {cell.whenOut === 'preorder' && (
                           <div className="mt-1 flex gap-1">
                             <label className="sr-only" htmlFor={`ships-${i}`}>Ships by, for {c.join(' ')}</label>
-                            <input id={`ships-${i}`} type="date" value={cell.shipsBy ?? ''} aria-invalid={!!err(k, 'shipsBy') || undefined} onChange={(e) => onChange(k, { shipsBy: e.target.value })} className="h-8 w-36 rounded-md border border-input bg-card px-1.5 text-xs aria-invalid:border-danger-text" />
+                            <input id={`ships-${i}`} type="date" value={cell.shipsBy ?? ''} {...marks(k, 'shipsBy')} onChange={(e) => onChange(k, { shipsBy: e.target.value })} className="h-8 w-36 rounded-md border border-input bg-card px-1.5 text-xs aria-invalid:border-danger-text" />
                             <label className="sr-only" htmlFor={`cap-${i}`}>Most pre-orders, for {c.join(' ')}</label>
-                            <input id={`cap-${i}`} inputMode="numeric" placeholder="No limit" title="Most pre-orders to take" value={cell.cap ?? ''} aria-invalid={!!err(k, 'cap') || undefined} onChange={(e) => onChange(k, { cap: e.target.value })} className="h-8 w-20 rounded-md border border-input bg-card px-1.5 font-mono text-xs aria-invalid:border-danger-text" />
+                            <input id={`cap-${i}`} inputMode="numeric" placeholder="No limit" title="Most pre-orders to take" value={cell.cap ?? ''} {...marks(k, 'cap')} onChange={(e) => onChange(k, { cap: e.target.value })} className="h-8 w-20 rounded-md border border-input bg-card px-1.5 font-mono text-xs aria-invalid:border-danger-text" />
                           </div>
                         )}
                         {cell.whenOut === 'made_to_order' && (
                           <div className="mt-1 flex items-center gap-1 text-xs">
                             <label className="sr-only" htmlFor={`lmin-${i}`}>Fewest days to make, for {c.join(' ')}</label>
-                            <input id={`lmin-${i}`} inputMode="numeric" placeholder="7" value={cell.leadMin ?? ''} aria-invalid={!!err(k, 'lead') || undefined} onChange={(e) => onChange(k, { leadMin: e.target.value })} className="h-8 w-12 rounded-md border border-input bg-card px-1.5 font-mono aria-invalid:border-danger-text" />
+                            <input id={`lmin-${i}`} inputMode="numeric" placeholder="7" value={cell.leadMin ?? ''} {...marks(k, 'lead')} onChange={(e) => onChange(k, { leadMin: e.target.value })} className="h-8 w-12 rounded-md border border-input bg-card px-1.5 font-mono aria-invalid:border-danger-text" />
                             <span aria-hidden="true">–</span>
                             <label className="sr-only" htmlFor={`lmax-${i}`}>Most days to make, for {c.join(' ')}</label>
-                            <input id={`lmax-${i}`} inputMode="numeric" placeholder="10" value={cell.leadMax ?? ''} aria-invalid={!!err(k, 'lead') || undefined} onChange={(e) => onChange(k, { leadMax: e.target.value })} className="h-8 w-12 rounded-md border border-input bg-card px-1.5 font-mono aria-invalid:border-danger-text" />
+                            <input id={`lmax-${i}`} inputMode="numeric" placeholder="10" value={cell.leadMax ?? ''} {...marks(k, 'lead')} onChange={(e) => onChange(k, { leadMax: e.target.value })} className="h-8 w-12 rounded-md border border-input bg-card px-1.5 font-mono aria-invalid:border-danger-text" />
                             <span className="text-muted-foreground">days</span>
                           </div>
                         )}

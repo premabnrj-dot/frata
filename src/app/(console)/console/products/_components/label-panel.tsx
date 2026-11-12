@@ -2,6 +2,7 @@
 
 import { useId } from 'react'
 import { NET_UNITS, NET_UNIT_WORDS, SHELF_MONTHS, type LabelInput } from '@/domains/catalogue/label'
+import { FieldError, fieldProps } from '@/components/ui/field-error'
 
 // =============================================================================
 // What the pack says (Beauty and wellness W1, domains/catalogue/label.ts): net quantity with its unit, best before,
@@ -11,11 +12,13 @@ import { NET_UNITS, NET_UNIT_WORDS, SHELF_MONTHS, type LabelInput } from '@/doma
 
 const field = 'w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text'
 
-function Segmented<T extends string>({ label, value, options, onPick }: { label: string; value: T; options: readonly (readonly [T, string])[]; onPick: (v: T) => void }) {
+function Segmented<T extends string>({ label, value, options, onPick, invalid }: { label: string; value: T; options: readonly (readonly [T, string])[]; onPick: (v: T) => void
+  /** The field's mistake marks (fieldProps): on each choice, so focus can land on the first. */
+  invalid?: ReturnType<typeof fieldProps> }) {
   return (
     <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap gap-0.5 rounded-lg bg-muted p-0.5">
       {options.map(([v, words]) => (
-        <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => onPick(v)}
+        <button key={v} type="button" role="radio" aria-checked={value === v} {...invalid} onClick={() => onPick(v)}
           className={`min-h-9 rounded-md px-3 text-sm font-medium ${value === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{words}</button>
       ))}
     </div>
@@ -29,22 +32,24 @@ export function LabelPanel({ label, onChange, errors, maker }: {
 }) {
   const id = useId()
   const set = (patch: Partial<LabelInput>) => onChange({ ...label, ...patch })
-  const err = (k: string) => errors[`label.${k}`] ? <p id={`${id}-${k}e`} className="text-sm text-danger-text">{errors[`label.${k}`]}</p> : null
-  const inv = (k: string) => ({ 'aria-invalid': !!errors[`label.${k}`] || undefined, 'aria-describedby': errors[`label.${k}`] ? `${id}-${k}e` : undefined })
+  // Keys and names match the save's error keys ("label.net"), so the form's summary finds them.
+  const err = (k: string) => <FieldError name={`label.${k}`} message={errors[`label.${k}`]} />
+  const inv = (k: string) => fieldProps(`label.${k}`, errors[`label.${k}`])
   return (
     <div className="space-y-4">
       <div className="space-y-1">
         <label htmlFor={`${id}-net`} className="block text-sm font-medium">Net quantity</label>
         <div className="flex flex-wrap items-center gap-2">
           <input id={`${id}-net`} value={label.net} inputMode="decimal" placeholder="50" maxLength={12} onChange={(e) => set({ net: e.target.value })} {...inv('net')} className={`${field} h-10 w-28 md:h-9`} />
-          <Segmented label="Unit" value={label.unit as (typeof NET_UNITS)[number]} options={NET_UNITS.map((u) => [u, NET_UNIT_WORDS[u]] as const)} onPick={(unit) => set({ unit })} />
+          <Segmented label="Unit" value={label.unit as (typeof NET_UNITS)[number]} options={NET_UNITS.map((u) => [u, NET_UNIT_WORDS[u]] as const)} onPick={(unit) => set({ unit })} invalid={inv('unit')} />
         </div>
         {err('net')}
+        {err('unit')}
       </div>
       <div className="space-y-1">
         <span id={`${id}-shelf`} className="block text-sm font-medium">Best before</span>
         <div className="flex flex-wrap items-center gap-2">
-          <Segmented label="Best before, months from manufacture" value={label.shelf} options={SHELF_MONTHS.map((m) => [String(m), `${m} mo`] as const)} onPick={(shelf) => set({ shelf })} />
+          <Segmented label="Best before, months from manufacture" value={label.shelf} options={SHELF_MONTHS.map((m) => [String(m), `${m} mo`] as const)} onPick={(shelf) => set({ shelf })} invalid={inv('shelf')} />
           <span className="text-sm text-muted-foreground">from manufacture</span>
         </div>
         {err('shelf')}

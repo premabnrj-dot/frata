@@ -1,6 +1,7 @@
 'use client'
 
 import { InfoTip } from '@/components/ui/info-tip'
+import { FieldError, fieldProps } from '@/components/ui/field-error'
 import { DESCRIPTION_WARN_AT, shareCard, TITLE_WARN_AT } from '@/domains/seo/defaults'
 import { pick, urlFor } from '@/domains/media/sizes'
 import type { Photo } from './photos'
@@ -49,21 +50,24 @@ export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescriptio
         </div>
         <div className="space-y-1">
           <label htmlFor="seo-title" className="block text-sm font-medium">Page title</label>
-          <input id="seo-title" value={seoTitle} maxLength={200} placeholder={defaults.title} aria-invalid={!!errors.seoTitle || undefined} onChange={(e) => onSeoTitle(e.target.value)} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" />
+          <input id="seo-title" value={seoTitle} maxLength={200} placeholder={defaults.title} {...fieldProps('seoTitle', errors.seoTitle)} onChange={(e) => onSeoTitle(e.target.value)} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text" />
+          <FieldError name="seoTitle" message={errors.seoTitle} />
           <p className="text-xs text-muted-foreground">{count(title.length, TITLE_WARN_AT)} characters. Empty uses the one shown.</p>
         </div>
         <div className="space-y-1">
           <div className="flex items-center"><label htmlFor="seo-desc" className="text-sm font-medium">Description</label><InfoTip about="the description">Made from the product’s own facts. Google may show its own words instead.</InfoTip></div>
-          <textarea id="seo-desc" rows={3} value={seoDescription} maxLength={400} placeholder={defaults.description} aria-invalid={!!errors.seoDescription || undefined} onChange={(e) => onSeoDescription(e.target.value)} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" />
+          <textarea id="seo-desc" rows={3} value={seoDescription} maxLength={400} placeholder={defaults.description} {...fieldProps('seoDescription', errors.seoDescription)} onChange={(e) => onSeoDescription(e.target.value)} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm aria-invalid:border-danger-text" />
+          <FieldError name="seoDescription" message={errors.seoDescription} />
           <p className="text-xs text-muted-foreground">{count(description.length, DESCRIPTION_WARN_AT)} characters.</p>
         </div>
         {onHandle && <div className="space-y-1">
           <label htmlFor="handle" className="block text-sm font-medium">Address</label>
-          <div className="flex min-w-0 items-center rounded-md border border-input bg-card text-sm aria-invalid:border-danger-text focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring" aria-invalid={!!errors.handle || undefined}>
+          {/* The input carries the mark (focus lands on it); its frame draws the red edge. */}
+          <div className={`flex min-w-0 items-center rounded-md border bg-card text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring ${errors.handle ? 'border-danger-text' : 'border-input'}`}>
             <span className="shrink-0 truncate pl-3 font-mono text-xs text-muted-foreground">…/products/</span>
-            <input id="handle" value={handle} maxLength={100} placeholder={defaults.handle} onChange={(e) => onHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} className="h-10 md:h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" />
+            <input id="handle" value={handle} maxLength={100} placeholder={defaults.handle} {...fieldProps('handle', errors.handle)} onChange={(e) => onHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} className="h-10 md:h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" />
           </div>
-          {errors.handle ? <p className="text-xs text-danger-text">{errors.handle}</p>
+          {errors.handle ? <FieldError name="handle" message={errors.handle} />
             : <p className="text-xs text-muted-foreground">{everLive ? 'It has been live: if you change it, the old address keeps working and sends shoppers here.' : 'Short words shoppers can read. Fixed once it has been live (a change then redirects).'}</p>}
         </div>}
       </div>
