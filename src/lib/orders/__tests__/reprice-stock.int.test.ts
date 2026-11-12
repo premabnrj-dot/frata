@@ -9,11 +9,15 @@
 //  2. stock per order: a COD placement takes each line's stock and stamps it; a cancel that restocks puts back exactly
 //     what was taken, says which variants came back from 0, and a second put-back returns nothing; a cancel that does not
 //     restock leaves it taken; an online order that never paid has nothing to put back; per line, only the lines named
-//     move, each once, every variant they touch locked once;
-//  3. placement copies each offer's terms onto order_discounts (0109: tiers, Buy X get Y, the products covered); read
-//     back, they re-plan (replanKept) to exactly what placement kept, and a line taken out re-plans them.
-// The throwaway shop and its rows are left in the proof database (frata_app deletes no orders).
-import { describe, expect, it, vi } from 'vitest'
+//     move, each once, a line taken whole or not at all;
+//  3. placement copies each offer's terms onto order_discounts (0109: tiers, Buy X get Y, a collection as its products);
+//     read back, they re-plan (replanKept) to exactly what placement kept, and a line taken out re-plans them; the
+//     table's CHECKs accept what termsCopy writes for every style (and refuse a malformed copy);
+//  4. two transactions taking stock on the same variants at once, their lines in opposite order: neither oversells,
+//     neither deadlocks.
+// The throwaway shops and their rows are left in the proof database (frata_app deletes no orders); their outbox rows
+// (emails, payment checks) are marked dead at the end, so no other test's claimDue meets them.
+import { afterAll, describe, expect, it, vi } from 'vitest'
 
 const HOST = 'kesar-studio.frata.test'
 const host = process.env.INT_DB_HOST
@@ -31,7 +35,18 @@ vi.mock('@/lib/payments/razorpay', async (orig) => ({ ...(await orig<typeof impo
 // Online payment is offered: live keys that have seen a webhook, on an approved host (D1·8).
 vi.mock('@/lib/payments/keys', async (orig) => ({ ...(await orig<typeof import('@/lib/payments/keys')>()), canTakeOnline: (k: unknown) => !!k }))
 vi.mock('@/lib/queries/addresses', async (orig) => ({ ...(await orig<typeof import('@/lib/queries/addresses')>()), hostApprovedIn: async () => true }))
-vi.mock('@/lib/queries/storefront', async (orig) => ({ ...(await orig<typeof import('@/lib/queries/storefront')>()), refreshSoldOut: async () => 'now' as const }))
+// The cached collection read (Next's cache is not there in a test) as its uncached self.
+vi.mock('@/lib/queries/storefront', async (orig) => ({ ...(await orig<typeof import('@/lib/queries/storefront')>()), refreshSoldOut: async () => 'now' as const,
+  collectionMembers: async (t: string) => (await import('@/lib/db/tenant')).withTenant(t, async (tx) => (await import('@/lib/catalogue/collection-members')).collectionMembersIn(tx, t)) }))
+
+const shops: string[] = []
+afterAll(async () => {
+  if (!host || !shops.length) return
+  const { default: postgres } = await import('postgres')
+  const su = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+  await su`update outbox set dead_at = now(), last_error = 'int test shop' where tenant_id in ${su(shops)} and sent_at is null and dead_at is null`
+  await su.end()
+})
 
 async function setup() {
   process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
@@ -45,6 +60,7 @@ async function setup() {
     cod_blocked_pincodes = '{}', prices_include_gst = true, gstin = '08ABCDE1234F1Z5', gst_scheme = 'regular'`
   await su`insert into shop_settings select * from rs_shop`
   await su.end()
+  shops.push(A)
   return { A, stamp }
 }
 
@@ -249,14 +265,15 @@ describe.skipIf(!host)('repricing and stock as they are today', () => {
   it('placement copies each offer\'s terms onto the order; read back, they re-plan to what placement kept', async () => {
     const { A, stamp } = await setup()
     const { withTenant } = await import('@/lib/db/tenant')
-    const { products, variants } = await import('@/lib/db/schema-catalogue')
+    const { collectionProducts, collections, products, variants } = await import('@/lib/db/schema-catalogue')
     const { orders, orderLines } = await import('@/lib/db/schema-orders')
     const { discounts, discountTargets, discountTiers, orderDiscounts } = await import('@/lib/db/schema-discounts')
     const { placeOrder } = await import('@/lib/orders/place')
     const { quoteData } = await import('@/lib/queries/checkout')
     const { quote } = await import('@/domains/checkout/quote')
-    const { storedTerms } = await import('@/domains/checkout/kept-terms')
-    const { replanKept } = await import('@/domains/checkout/discounts')
+    const { storedTerms, termsCopy } = await import('@/domains/checkout/kept-terms')
+    const { classOf } = await import('@/domains/checkout/discounts')
+    const { replanKept } = await import('@/domains/checkout/replan')
     const { and, eq } = await import('drizzle-orm')
 
     const made = await withTenant(A, async (tx) => {
@@ -270,13 +287,16 @@ describe.skipIf(!host)('repricing and stock as they are today', () => {
       ]).returning({ id: variants.id })
       const started = { startsAt: new Date(Date.now() - 60_000), startedAt: new Date(), startedBy: ME, createdBy: ME }
       const [kOff, bxgy, steps] = await tx.insert(discounts).values([
-        { tenantId: A, title: 'Kurtas 10%', style: 'product_off', percentBps: 1000, targets: 'products', ...started },
+        { tenantId: A, title: 'Kurtas 10%', style: 'product_off', percentBps: 1000, targets: 'collections', ...started },
         { tenantId: A, title: 'Dupattas 1+1', style: 'bxgy', buyQty: 1, getQty: 1, getBps: 5000, targets: 'products', ...started },
         { tenantId: A, title: 'Steps', style: 'order_off', ...started },
       ]).returning({ id: discounts.id })
-      await tx.insert(discountTargets).values([{ tenantId: A, discountId: kOff!.id, productId: kurta!.id }, { tenantId: A, discountId: bxgy!.id, productId: dupatta!.id }])
+      // The kurta offer covers a collection: the order keeps its products as they were then.
+      const [kurtas] = await tx.insert(collections).values({ tenantId: A, handle: `int-rs-kurtas-${stamp}`, title: 'Kurtas', kind: 'manual' }).returning({ id: collections.id })
+      await tx.insert(collectionProducts).values({ tenantId: A, collectionId: kurtas!.id, productId: kurta!.id })
+      await tx.insert(discountTargets).values([{ tenantId: A, discountId: kOff!.id, collectionId: kurtas!.id }, { tenantId: A, discountId: bxgy!.id, productId: dupatta!.id }])
       await tx.insert(discountTiers).values([{ tenantId: A, discountId: steps!.id, minSubtotal: 200000, amountOff: 10000 }, { tenantId: A, discountId: steps!.id, minSubtotal: 300000, amountOff: 25000 }])
-      return { kurta: kurta!.id, dupatta: dupatta!.id, k: k!.id, dp: dp!.id }
+      return { kurta: kurta!.id, dupatta: dupatta!.id, k: k!.id, dp: dp!.id, steps: steps!.id }
     })
     const bag = [{ variantId: made.k, qty: 1 }, { variantId: made.dp, qty: 2 }]
     const now = new Date(), d = await quoteData(A, bag.map((b) => b.variantId), now, null, HOST)
@@ -297,6 +317,7 @@ describe.skipIf(!host)('repricing and stock as they are today', () => {
     expect(by('Steps')).toMatchObject({ amount: 25000, amountOff: 25000, minSubtotal: 300000, tierMins: [200000, 300000], tierAmountsOff: [10000, 25000], tierPercentBps: null, targets: null })
     // Read back and re-planned on the same lines: exactly what placement kept, line by line.
     const kept = rows.ks.map((x) => ({ terms: storedTerms({ ...x, style: x.style as 'order_off', targets: x.targets as 'all' | 'products' | null })!, method: x.method as 'cod' | 'prepaid' | null, amount: x.amount }))
+    expect(kept.every((k) => k.terms.code === null)).toBe(true) // automatic offers: no code on the order
     const lines = rows.ls.map((l) => ({ productId: l.productId, variantId: l.variantId, unitPrice: l.unitPrice, qty: l.qty }))
     const again = replanKept(lines, kept, rows.o.shipping)
     expect(again.removed).toEqual([])
@@ -308,5 +329,91 @@ describe.skipIf(!host)('repricing and stock as they are today', () => {
     expect(less.kept.find((k) => k.terms.title === 'Steps')!.amount).toBe(25000)
     // The kurta taken out: its offer comes off, and ₹1,200 − ₹300 is under every step.
     expect(replanKept([lines[1]!], kept, rows.o.shipping).removed.map((k) => k.terms.title).sort()).toEqual(['Kurtas 10%', 'Steps'])
+
+    // The table's CHECKs against what termsCopy writes for every style, each read back as written (rolled back).
+    const base = { combinesWithPayment: true, listed: true, code: null, codeId: null, percentBps: null, amountOff: null, cap: null, minSubtotal: 0 }
+    const cases = [
+      { ...base, id: 'gift', title: 'Free dupatta', style: 'free_gift' as const, giftVariantId: made.dp, minSubtotal: 200000 },
+      { ...base, id: 'pct-steps', title: '% steps', style: 'order_off' as const, tiers: [{ min: 200000, percentBps: 500, amountOff: null }, { min: 300000, percentBps: 1000, amountOff: null }] },
+      { ...base, id: 'rs-steps', title: '₹ steps', style: 'order_off' as const, tiers: [{ min: 200000, percentBps: null, amountOff: 10000 }] },
+      { ...base, id: 'mixed', title: 'Mixed steps', style: 'order_off' as const, tiers: [{ min: 200000, percentBps: 500, amountOff: null }, { min: 300000, percentBps: null, amountOff: 25000 }] },
+      { ...base, id: 'all', title: 'Everything 10%', style: 'product_off' as const, percentBps: 1000, targets: 'all' as const },
+      { ...base, id: 'some', title: 'Kurtas ₹100', style: 'product_off' as const, amountOff: 10000, targets: [made.kurta] },
+      { ...base, id: 'b1g1', title: 'Buy 1 get 1', style: 'bxgy' as const, buyQty: 1, getQty: 1, getBps: 10_000, targets: [made.dupatta] },
+      { ...base, id: 'ship', title: 'Free delivery', style: 'free_shipping' as const, minSubtotal: 250000 },
+      { ...base, id: 'online', title: 'Pay online', style: 'pay_online' as const, percentBps: 500, cap: 20000 },
+    ]
+    const ROLLBACK = new Error('rollback')
+    await withTenant(A, async (tx) => {
+      const ids = await tx.insert(discounts).values(cases.map((c) => ({ tenantId: A, title: c.title, style: 'order_off', amountOff: 100, startsAt: now, createdBy: ME }))).returning({ id: discounts.id })
+      const written = cases.map((c, i) => ({ tenantId: A, orderId: rows.o.id, discountId: ids[i]!.id, class: classOf(c.style), amount: 100, title: c.title, style: c.style, ...termsCopy(c, 250000) }))
+      await tx.insert(orderDiscounts).values(written)
+      const back = await tx.select().from(orderDiscounts).where(and(eq(orderDiscounts.tenantId, A), eq(orderDiscounts.orderId, rows.o.id)))
+      for (const w of written) expect(back.find((b) => b.discountId === w.discountId)).toMatchObject(w)
+      const mixed = back.find((b) => b.title === 'Mixed steps')!
+      expect([mixed.tierMins, mixed.percentBps, mixed.minSubtotal]).toEqual([null, 500, 200000]) // not kept: the step reached is
+      // A malformed copy is refused: lists of two lengths, a null inside one, both kinds, scope on an order offer.
+      const bad = [{ tierMins: [1, 2], tierAmountsOff: [5] }, { tierMins: [1], tierAmountsOff: [null as unknown as number] }, { tierMins: [1], tierPercentBps: [5], tierAmountsOff: [5] }, { targets: 'all' }]
+      for (const b of bad) {
+        await expect(tx.transaction((sp) => sp.insert(orderDiscounts).values({ tenantId: A, orderId: rows.o.id, discountId: made.steps, class: 'order', amount: 1, title: 'x', style: 'order_off', minSubtotal: 0, ...b }))).rejects.toThrow()
+      }
+      throw ROLLBACK
+    }).catch((e) => { if (e !== ROLLBACK) throw e })
+  }, 30_000)
+
+  it('two transactions taking the same variants at once, lines in opposite order: neither oversells, neither deadlocks', async () => {
+    const { A, stamp } = await setup()
+    const { default: postgres } = await import('postgres')
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { products, variants } = await import('@/lib/db/schema-catalogue')
+    const { orders, orderLines } = await import('@/lib/db/schema-orders')
+    const { takeStock } = await import('@/lib/orders/stock')
+    const { and, eq, inArray } = await import('drizzle-orm')
+    const made = await withTenant(A, async (tx) => {
+      const [p] = await tx.insert(products).values({ tenantId: A, handle: `int-rs-race-${stamp}`, title: 'Int race', options: ['Size'], status: 'active', hsn: '6211' }).returning({ id: products.id })
+      const vs = await tx.insert(variants).values([
+        { tenantId: A, productId: p!.id, optionValues: ['S'], price: 99900, stock: 1 },
+        { tenantId: A, productId: p!.id, optionValues: ['M'], price: 99900, stock: 1 },
+      ]).returning({ id: variants.id })
+      const [lo, hi] = vs.map((v) => v.id).sort() as [string, string]
+      const order = async (n: number, first: string, second: string) => {
+        const [o] = await tx.insert(orders).values({ tenantId: A, number: 800_000 + n, paymentMethod: 'cod', placedAt: new Date() }).returning({ id: orders.id })
+        await tx.insert(orderLines).values([
+          { tenantId: A, orderId: o!.id, variantId: first, title: 'a', qty: 1, unitPrice: 99900, taxableValue: 95143, kind: 'in_stock', position: 0 },
+          { tenantId: A, orderId: o!.id, variantId: second, title: 'b', qty: 1, unitPrice: 99900, taxableValue: 95143, kind: 'in_stock', position: 1 },
+        ])
+        return o!.id
+      }
+      return { lo, hi, o1: await order(1, lo, hi), o2: await order(2, hi, lo) }
+    })
+    // Another writer holds the higher variant. The order listing it first starts, then the other (which takes the lower
+    // one and waits); then the holder lets go. Taken in line order, the first would now hold the higher and wait on the
+    // lower while the second holds the lower and waits on the higher: a deadlock (40P01). In id order there is none.
+    const other = postgres(process.env.DATABASE_URL!, { max: 1, onnotice: () => {} })
+    const hold = { release: () => {} }
+    const held = new Promise<void>((ready) => {
+      void other.begin(async (sql) => {
+        await sql`select set_config('app.tenant_id', ${A}, true)`
+        await sql`select id from variants where tenant_id = ${A} and id = ${made.hi} for update`
+        ready()
+        await new Promise<void>((r) => { hold.release = r })
+      })
+    })
+    await held
+    const pause = (ms: number) => new Promise((r) => setTimeout(r, ms))
+    try {
+      const second = withTenant(A, (tx) => takeStock(tx, A, made.o2))
+      await pause(200)
+      const first = withTenant(A, (tx) => takeStock(tx, A, made.o1))
+      await pause(200)
+      hold.release()
+      const [r2, r1] = await Promise.all([second, first])
+      expect([r1.taken + r2.taken, r1.short + r2.short]).toEqual([2, 2]) // two pieces on the shelf: two taken, none twice
+      const left = await withTenant(A, (tx) => tx.select({ s: variants.stock }).from(variants).where(and(eq(variants.tenantId, A), inArray(variants.id, [made.lo, made.hi]))))
+      expect(left.map((v) => v.s)).toEqual([0, 0])
+    } finally {
+      hold.release()
+      await other.end()
+    }
   }, 30_000)
 })

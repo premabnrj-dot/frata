@@ -17,6 +17,12 @@ Every task ends with `npm test`, `npm run typecheck` and `impact-reviewer`; `dri
 | Pricing on the server per tap | Pricing in the browser with the same pure code (4.7 kB gz), loaded with the panel (`next/dynamic`) when "Edit items" opens: one action, one `withTenant`, three reads in `Promise.all`; the server re-plans the same way on Save | A server action per tap, serialized (speed MED 8) |
 
 ## Open (owner)
+- **An offer that now gives less** (a tier steps down, a % on a smaller bag, a product offer on fewer lines). Uses and
+  budgets read `order_discounts.amount`. Leaning (coordinator, 2026-11-12): mark the old row `removed_at` and insert a
+  new one with the new amount — history kept, no update grant on `amount`.
+- **An edit that drops the bag below the shop's own free-delivery threshold** (`freeShippingAbove`, not an offer):
+  `replanKept` brings back only what a free-delivery offer waived. Leaning: the delivery charge comes back, as checkout
+  would charge it.
 - **A paid order whose total goes up.** As specced ("collect the difference on delivery") it fails three ways: the
   courier booking knows only COD or prepaid, many shoppers can't be told, and COD-blocked pincodes can't collect
   (unit-economics, architecture). Recommendation: **refuse an increase on a paid order in OE·2** (the merchant cancels;
@@ -30,6 +36,11 @@ Every task ends with `npm test`, `npm run typecheck` and `impact-reviewer`; `dri
    per-line `takeStockLines` / `putStockBackLines` (every touched variant locked once, in id order; the order-wide ones
    call them), `edit` in `WHEN`/`ROLES` (owner/admin). Migration adding offer tiers/scope to `order_discounts`.
    Verify: vitest; `verify:tenancy`.
+   As built: `replanKept` lives in `src/domains/checkout/replan.ts` (discounts.ts stays under the size gate). The terms
+   are copied as sold, so a collection's products are copied onto each order offer row (`target_products`): at most the
+   live catalogue limit (`MAX_LISTED`, 600 products), about 10 kB per row (16 bytes a uuid, plus the array header).
+   Signal to store one copy per version of an offer's terms instead (a `discount_terms` row the order points to): order
+   offer rows over 2 kB on average, or `order_discounts` over 1 GB in any shop.
 
 **OE·1 · COD and unpaid orders**
 3. Migration: `order_edits`, `order_edit_lines`, `order_lines.removed_at/replaced_by` (column grant), `order_discounts
@@ -41,6 +52,9 @@ Every task ends with `npm test`, `npm run typecheck` and `impact-reviewer`; `dri
    never double counts: a `draft.int` case); `refreshSoldOut` on sell-out or back-in-stock; `undoEdit`; an email kind
    `edited` held for the Undo window. Refused in a support visit. Verify: `edit.int.test.ts` (swap, remove, add, a race
    with packing, Undo, offers re-planned, an offer's use freed and re-checked on Undo).
+   Note for OE·1: an edit that moves stock both ways (a swap) locks every variant it touches first (`lockVariants`,
+   stock.ts) — two lines on one variant (a removed line and its replacement) then share one lock; when too little stock
+   is left for both, which line is taken must not depend on row order (take the kept line first, or refuse the edit).
 5. UI per the mockup, plus the states it didn't draw (over the COD limit, phone). Verify: `npm run e2e -- --only
    order-edit` (new flow) and `50-order-page`.
 
