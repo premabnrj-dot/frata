@@ -77,6 +77,7 @@ export function DeliveryCheck({ price, w }: { price: number | null; w: BuyWords 
           className="h-11 min-w-0 flex-1 rounded-sm border border-store-line bg-transparent px-3 font-mono text-base" />
         <button type="submit" disabled={busy} className="h-11 shrink-0 rounded-sm border border-store-ink px-4 text-sm font-medium disabled:opacity-60">{busy ? w.pinChecking : w.pinCheck}</button>
       </form>
+      {/* feedback-ok: PIN check's answer beside its field */}
       {error && <p role="alert" className="text-sm text-store-bad">{error}</p>}
       {lines.length > 0 && (
         <ul className="space-y-1 text-sm" aria-live="polite">

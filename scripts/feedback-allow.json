@@ -1,26 +1,5 @@
 {
   "src/app/(console)/console/apps/delivery_zones/rules.tsx": {
     "count": 4
-  },
-  "src/components/storefront/bag.tsx": {
-    "count": 3
-  },
-  "src/components/storefront/buy-box.tsx": {
-    "count": 1
-  },
-  "src/components/storefront/checkout.tsx": {
-    "count": 8
-  },
-  "src/components/storefront/delivery-check.tsx": {
-    "count": 2
-  },
-  "src/components/storefront/drops-consent.tsx": {
-    "count": 1
-  },
-  "src/components/storefront/order-view.tsx": {
-    "count": 5
-  },
-  "src/components/storefront/pair-add.tsx": {
-    "count": 1
   }
 }

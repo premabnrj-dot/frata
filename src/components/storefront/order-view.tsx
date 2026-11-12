@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { cashAtDoor, type ShopperState } from '@/domains/orders/order-state'
 import { api, dayRange, downloadInvoice, inr, type OrderRef, type Pay } from './shop-client'
+import { useStoreToast } from './store-toast'
 
 type View = {
   number: number; state: ShopperState; collect: number; method: 'cod' | 'prepaid'; paidAfterSwitch: boolean; canSwitchToCod: boolean
@@ -38,31 +39,36 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const tokenRef = useRef<OrderRef | null>(null)
-  const [invoiceState, setInvoiceState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
+  // A failure after a button here (an invoice, a payment) is the shop's error toast (§ Feedback 1): never the shopper's
+  // phone or address in its words.
+  const toast = useStoreToast()
+  const [invoiceBusy, setInvoiceBusy] = useState(false)
   const getInvoice = () => {
-    setInvoiceState({ busy: true, error: null })
-    void downloadInvoice(tokenRef.current!).then((r) => setInvoiceState({ busy: false, error: r.ok ? null : r.error }))
+    setInvoiceBusy(true); toast.dismiss()
+    void downloadInvoice(tokenRef.current!).then((r) => { setInvoiceBusy(false); if (!r.ok) toast.error(r.error) })
   }
   // Finish paying, on this page (shop stress test 2026-11-11: the "Finish paying" email links here and promised both,
   // but the page offered neither). Online again on the same order, or Pay on delivery at the total the server prices
   // (shown on the button before it is agreed to).
-  const [pay, setPay] = useState<{ busy: boolean; error: string | null; codTotal: number | null }>({ busy: false, error: null, codTotal: null })
+  const [pay, setPay] = useState<{ busy: boolean; codTotal: number | null }>({ busy: false, codTotal: null })
+  const failed = (text: string) => { setPay((x) => ({ ...x, busy: false })); toast.error(text) }
   const load = () => api<View>('/api/shop/orders/view', tokenRef.current!).then((r) => { if (r.ok) setV(r.data); return r.ok ? r.data : null })
   async function payOnline() {
-    setPay((x) => ({ ...x, busy: true, error: null }))
+    setPay((x) => ({ ...x, busy: true })); toast.dismiss()
     const r = await api<{ pay: Pay }>('/api/shop/orders/retry', tokenRef.current!)
-    if (!r.ok) { setPay((x) => ({ ...x, busy: false, error: r.data.error ?? 'Online payment could not open. Try again.' })); return }
+    if (!r.ok) return failed(r.data.error ?? 'Online payment could not open. Try again.')
     const { openRazorpay } = await import('./checkout-pay')
-    await openRazorpay(tokenRef.current!, r.data.pay, { done: () => { setPay((x) => ({ ...x, busy: false })); void load() }, failed: (text) => setPay((x) => ({ ...x, busy: false, error: text })) })
+    await openRazorpay(tokenRef.current!, r.data.pay, { done: () => { setPay((x) => ({ ...x, busy: false })); void load() }, failed })
   }
   async function payOnDelivery() {
-    setPay((x) => ({ ...x, busy: true, error: null }))
+    setPay((x) => ({ ...x, busy: true })); toast.dismiss()
     const r = await api<{ kind: 'switched' | 'paid' }>('/api/shop/orders/cod', { ...tokenRef.current!, expectedTotal: pay.codTotal ?? 0 })
-    if (r.ok) { setPay({ busy: false, error: null, codTotal: null }); void load(); return }
+    if (r.ok) { setPay({ busy: false, codTotal: null }); void load(); return }
     const codTotal = (r.data as { codTotal?: number }).codTotal
-    // The first tap asks the total; the button then shows it, and the next tap agrees to it.
-    if (typeof codTotal === 'number') { setPay({ busy: false, error: pay.codTotal === null ? null : r.data.error ?? null, codTotal }); return }
-    setPay((x) => ({ ...x, busy: false, error: r.data.error ?? 'We could not switch to Pay on delivery. Try again.' }))
+    // The first tap asks the total; the button then shows it, and the next tap agrees to it (a total that moved again
+    // between the taps says why, with the new total on the button).
+    if (typeof codTotal === 'number') { setPay({ busy: false, codTotal }); if (pay.codTotal !== null && r.data.error) toast.error(r.data.error); return }
+    failed(r.data.error ?? 'We could not switch to Pay on delivery. Try again.')
   }
   // While a payment is being confirmed, the page checks again (a reply lost on the way back from Razorpay no longer
   // leaves "Waiting for your payment" on screen for good): every 8 s, for 2 minutes.
@@ -96,6 +102,7 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
     }, 5000)
     return () => clearTimeout(t)
   }, [v])
+  // feedback-ok: the whole page's state (an incomplete link, an order not found), not a failure after a button
   if (error) return <p role="alert" className="mx-auto max-w-lg px-4 py-16 text-center">{error}</p>
   if (!v) return <p className="mx-auto max-w-lg px-4 py-16 text-center text-store-sub">Loading your order…</p>
   const num = `${prefix}-${v.number}`
@@ -136,14 +143,12 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
         <div className="space-y-2">
           <button type="button" onClick={() => void payOnline()} disabled={pay.busy} className="store-btn store-buy grid h-12 w-full place-items-center rounded-[var(--store-radius)] bg-store-button font-medium text-store-on-button disabled:opacity-60">{pay.busy ? 'One moment…' : `Pay ${inr(v.total)} online`}</button>
           <button type="button" onClick={() => void payOnDelivery()} disabled={pay.busy} className="grid h-12 w-full place-items-center rounded-sm border border-store-ink disabled:opacity-60">{pay.codTotal === null ? 'Pay on delivery instead' : `Pay ${inr(pay.codTotal)} on delivery`}</button>
-          {pay.error && <p role="alert" className="text-sm text-store-bad">{pay.error}</p>}
         </div>
       )}
       {wa && <a href={wa} rel="noopener" className="grid h-12 place-items-center rounded-sm bg-store-ink text-store-paper">Message {v.shop.name} on WhatsApp</a>}
       {v.invoice && (
         <div>
-          <button type="button" onClick={getInvoice} disabled={invoiceState.busy} className="grid h-12 w-full place-items-center rounded-sm border border-store-ink">{invoiceState.busy ? 'Making your invoice…' : 'Download invoice (PDF)'}</button>
-          {invoiceState.error && <p role="alert" className="mt-1 text-sm text-store-bad">{invoiceState.error}</p>}
+          <button type="button" onClick={getInvoice} disabled={invoiceBusy} className="grid h-12 w-full place-items-center rounded-sm border border-store-ink">{invoiceBusy ? 'Making your invoice…' : 'Download invoice (PDF)'}</button>
         </div>
       )}
       <p className="text-sm text-store-sub">Save this page: it is your receipt. <button type="button" onClick={copy} className="underline">{copied ? 'Link copied' : 'Copy link'}</button></p>

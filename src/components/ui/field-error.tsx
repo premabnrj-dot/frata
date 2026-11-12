@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useToast } from './toast'
+import { useToast } from './toast-context'
 
 // =============================================================================
 // FILE: src/components/ui/field-error.tsx — FIELD MISTAKES STAY AT THE FIELD (frata-design-language § Feedback 3).

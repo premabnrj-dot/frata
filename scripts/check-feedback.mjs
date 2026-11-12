@@ -24,7 +24,7 @@ const ALLOW = join(ROOT, 'scripts/feedback-allow.json')
 const DIRS = ['src/app', 'src/components']
 /** The primitives themselves draw these lines. */
 const PRIMITIVES = new Set(['src/components/ui/toast.tsx', 'src/components/ui/field-error.tsx', 'src/components/ui/dialog.tsx',
-  'src/components/ui/unsaved.tsx', 'src/components/ui/action-form.tsx'])
+  'src/components/ui/unsaved.tsx', 'src/components/ui/action-form.tsx', 'src/components/storefront/store-toast-view.tsx'])
 /** Each rule runs on the whole file (JSX spans lines); a hit is reported at the line where it starts. */
 const RULES = [
   ['notice', new RegExp('<' + 'Notice\\b', 'g')], // built from parts, so this source line does not match itself

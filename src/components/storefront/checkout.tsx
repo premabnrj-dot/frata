@@ -11,6 +11,8 @@ import { OfferProgress, OfferRows, useQuote } from './bag'
 import { ATTR_KEY, bag, offerCode, useBag, useOfferCode } from './bag-store'
 import { fitKey, shownQuote } from '@/domains/checkout/fitted'
 import { api, dayRange, inr, type Pay, type PublicListed, type PublicQuote } from './shop-client'
+import { PayBar, useQuoteToast } from './checkout-feedback'
+import { useStoreToast } from './store-toast'
 
 // =============================================================================
 // ONE-PAGE CHECKOUT (checkout spec § Design, mockup approved 2026-11-07).
@@ -28,6 +30,10 @@ const randomKey = () => { const b = new Uint8Array(16); crypto.getRandomValues(b
 
 // Its own chunk: only a shop that offers GST invoices shows it (checkout's first-load budget).
 const CheckoutBiz = lazy(() => import('./checkout-biz'))
+// Its own chunk too: the field summary is needed only after a submit with mistakes (loaded once the page settles).
+// A chunk that cannot load (no connection) draws nothing, never the page's error: the lines under the fields still say it.
+const summary = () => import('./checkout-summary').catch(() => ({ default: () => null }))
+const CheckoutSummary = lazy(summary)
 
 /** What a listed offer says it needs, in the shopper's words (the server decides; this only phrases it). */
 function needText(n: PublicListed['need']): string {
@@ -52,6 +58,10 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   const registerBiz = useCallback((c: BizCheck) => { bizCheck.current = c }, [])
   const [f, setF] = useState<Form>(EMPTY)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // Each submit with mistakes (the browser's check or the server's) shows the summary again; `sub` is a refusal's words.
+  const [tries, setTries] = useState<{ n: number; sub?: string }>({ n: 0 })
+  const formRef = useRef<HTMLFormElement>(null)
+  const toast = useStoreToast()
   const [method, setMethod] = useState<'cod' | 'prepaid' | null>(null)
   const firstMethod = useRef<'cod' | 'prepaid' | null>(null)
   const [landmark, setLandmark] = useState(false)
@@ -71,6 +81,8 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   const q = shownQuote(fitted, fitKey(items, f.phone, f.pincode, code), live)
   const seen = useRef<PublicQuote | null>(null)
   const attempt = useRef<{ sig: string; key: string } | null>(null)
+  useQuoteToast(toast, quoteError, refresh)
+  useEffect(() => { const t = setTimeout(() => void summary().catch(() => {}), 3000); return () => clearTimeout(t) }, [])
 
   // Restore what was typed (this tab only); a pending online order goes to its own page. It never did (the key was
   // written and never read): a reload in Instagram's browser after the switch to the UPI app, or Back then Forward,
@@ -144,7 +156,8 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
     const { formErrors } = await import('./checkout-place')
     const e = formErrors(f, gst.deliversWithin, biz.on ? bizCheck.current?.(biz, f.state) ?? null : null)
     setErrors(e)
-    if (Object.keys(e).length) { document.getElementById(Object.keys(e)[0]!)?.focus(); return false }
+    // The summary moves focus to the first wrong field and says how many.
+    if (Object.keys(e).length) { setTries((t) => ({ n: t.n + 1 })); return false }
     return true
   }
 
@@ -180,7 +193,13 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
         seen.current = r.data.quote; await refresh()
         return
       }
-      if (r.data.fields) setErrors(Object.fromEntries(Object.entries(r.data.fields).map(([k, v]) => [k.replace(/^address\./, ''), v])))
+      // Field mistakes the server found go to their fields (`address.phone` → `phone`), its refusal as the summary's
+      // second line; any other refusal is the line above the form.
+      if (r.data.fields) {
+        setErrors(Object.fromEntries(Object.entries(r.data.fields).map(([k, v]) => [k.replace(/^address\./, ''), v])))
+        setTries((t) => ({ n: t.n + 1, sub: r.data.error }))
+        return
+      }
       setMsg({ tone: 'error', text: r.data.error ?? 'We could not place the order. Nothing was charged. Try again.' })
       return
     }
@@ -225,6 +244,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   }
 
   const field = 'store-field h-11 w-full rounded-[var(--store-radius)] border border-store-sub/45 bg-store-paper px-3 text-base aria-invalid:border-store-bad'
+  // feedback-ok: shop field line (§ Feedback 3), shop colours
   const Err = ({ k }: { k: string }) => (errors[k] ? <p id={`${k}-err`} className="mt-1 text-sm text-store-bad">{errors[k]}</p> : null)
   const label = 'mb-1 block text-sm font-medium'
   const sect = 'mb-2 mt-6 text-xs font-semibold uppercase tracking-[0.1em] text-store-sub'
@@ -238,10 +258,11 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   if (q && q.empty && !lines.length) return <p className="py-10 text-center">Your bag is empty. <a href="/products" className="underline">See what is new</a></p>
 
   return (
-    <form noValidate onSubmit={(e) => { e.preventDefault(); if (failed) return method === 'cod' ? void switchToCod() : void retry(); void place() }} className="mx-auto max-w-lg px-4 pb-40 pt-4 sm:px-0">
+    <form ref={formRef} noValidate onSubmit={(e) => { e.preventDefault(); if (failed) return method === 'cod' ? void switchToCod() : void retry(); void place() }} className="mx-auto max-w-lg px-4 pb-40 pt-4 sm:px-0">
       <h1 className="text-2xl" style={{ fontFamily: 'var(--store-display)' }}>Checkout</h1>
+      {tries.n > 0 && <Suspense fallback={null}><CheckoutSummary toast={toast} errors={errors} attempt={tries.n} sub={tries.sub} scope={formRef} /></Suspense>}
+      {/* feedback-ok: rule 5 — a failed payment's line with its filled form, a refused placement (nothing charged), a changed price */}
       {msg && <p role="alert" className={`mt-4 border-l-2 px-3 py-2 text-sm ${msg.tone === 'changed' ? 'border-store-accent bg-store-chip' : 'border-store-bad bg-store-chip'}`}>{msg.text}</p>}
-      {quoteError && <p role="alert" className="mt-4 text-sm text-store-bad">{quoteError}</p>}
       {identity && <div className="mt-4 grid gap-3">{identity}</div>}
 
       <fieldset disabled={!!failed} className="disabled:opacity-60">
@@ -271,6 +292,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
 
             <Err k="state" /></div>
         </div>
+        {/* feedback-ok: the state field's own rule (a shop without a regular GSTIN), said beside it */}
         {gst.deliversWithin && f.state && f.state !== gst.deliversWithin && !errors.state ? <p className="text-sm text-store-bad">This shop delivers within {gst.deliversWithin} only.</p> : null}
       </fieldset>
 
@@ -295,7 +317,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
         </ul>
       </> : null}
       {q && <OfferProgress q={q} />}
-      {q && (code ? (
+      {q && (code ? ( // feedback-ok: rule 5 — a code that doesn't apply stays on its line
         <p className="mt-2 text-sm" aria-live="polite">Code <b className="font-mono">{code}</b>{q.offers.code === 'applied' ? ' applied.' : q.offers.code === 'beaten' ? ' — a better offer is already applied.' : <span className="text-store-bad"> — this code doesn’t work here.</span>}
           {' '}<button type="button" className="min-h-11 underline" onClick={() => { offerCode.set(''); setDraftCode('') }}>Remove</button></p>
       ) : typing ? (
@@ -328,6 +350,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
             <span className="ml-6 block text-sm text-store-sub">{q.cod!.charge ? `Includes a ${inr(q.cod!.charge)} Pay on delivery fee. ` : ''}Cash or UPI to the courier.{saving ? ` No ${inr(saving.amount)} online saving.` : ''}</span>
           </label>
         ) : (
+          // feedback-ok: rule 5 — why Pay on delivery is not offered, on its own card
           <div className="rounded-sm border border-store-line p-3 opacity-70"><b className="font-medium">Pay on delivery</b><p className="text-sm text-store-bad">{q.codWhy}</p></div>
         ))}
       </div>
@@ -348,6 +371,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
           <p className="flex justify-between"><span>Delivery</span><span>{q.shipping ? inr(q.shipping) : 'Free'}</span></p>
           {method === 'cod' && q.cod?.charge ? <p className="flex justify-between"><span>Pay on delivery fee</span><span>{inr(q.cod.charge)}</span></p> : null}
           {q.arrives && q.deliverable && <p className="flex justify-between text-store-sub"><span>Arrives</span><span>{dayRange(q.arrives)}</span></p>}
+          {/* feedback-ok: the address's answer beside the total it stops (a state of this PIN code, not a failure after a button) */}
           {!q.deliverable && <p role="alert" className="text-sm text-store-bad">This shop does not deliver to this PIN code yet.</p>}
           {returnLine && <p className="flex justify-between text-store-sub"><span>Returns</span><span>{returnLine}</span></p>}
         </div>
@@ -356,12 +380,12 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
         {legalName || shopName} uses your name, phone and address only to deliver this order and to contact you about it. <a href={privacyHref} className="underline">Your data and how to ask for it to be deleted</a>.
       </p>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-store-line bg-store-paper px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3 shadow-store-bar">
+      <PayBar>
         <div className="mx-auto max-w-lg">
           <p className="flex justify-between text-sm"><span className="text-store-sub">{method === 'cod' ? 'Pay on delivery' : method === 'prepaid' ? 'Pay online' : 'Choose how to pay'}</span><b className="tabular-nums">{q ? inr(failed && method !== 'cod' ? failed.total : total) : '…'}</b></p>
           <button type="submit" disabled={busy || !q || q.empty || !q.deliverable || (!method && !failed)} className="store-btn store-buy mt-2 h-12 w-full rounded-[var(--store-radius)] bg-store-button text-base font-medium text-store-on-button disabled:opacity-60">{busy ? 'Placing your order…' : button}</button>
         </div>
-      </div>
+      </PayBar>
     </form>
   )
 }
