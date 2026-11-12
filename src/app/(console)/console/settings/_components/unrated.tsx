@@ -6,6 +6,7 @@ export function UnratedNotice({ u }: { u: Unrated | null }) {
   if (!u || u.count === 0) return null
   const more = u.count - u.products.length
   return (
+    // feedback-ok: a state of the catalogue (live products checkout refuses), not a failure after a button; it stays until rates are set
     <p role="alert" className="mt-3 rounded-md border border-warn-text/30 bg-warn px-3 py-2 text-sm text-warn-text">
       {u.count === 1 ? '1 product' : `${u.count} products`} can’t be bought until {u.count === 1 ? 'it has' : 'they have'} a GST rate:{' '}
       {u.products.map((p, i) => (

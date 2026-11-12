@@ -39,6 +39,7 @@ export default async function OfferPage({ params }: { params: Promise<{ id: stri
     <div className="max-w-3xl space-y-4">
       <PageHeader title={o.title} back={{ href: '/console/offers', label: 'Offers' }} badges={<Badge tone={st.tone}>{st.label}</Badge>} actions={manager ? <OfferSteps id={o.id} status={o.status} title={o.title} /> : undefined} />
       <p className="text-sm text-muted-foreground">{terms(o)}{o.code ? ` · code ${o.code}` : ' · applies by itself'}{o.endsAt ? ` · ends ${dayMonthIN(o.endsAt)}` : ''}</p>
+      {/* feedback-ok: an offer stopped by Frrata is the offer's state, not a failure after a button (§ Feedback 5) */}
       {o.status === 'stopped' ? <p role="status" className="rounded-md bg-danger px-3 py-2 text-sm text-danger-text">Frrata stopped this offer{o.stoppedAt ? ` on ${dayMonthIN(o.stoppedAt)}` : ''}: {o.stopReason}. Shoppers don’t get it. You can end it; to run it again, ask Frrata support.</p> : null}
       {o.status === 'draft' && !manager ? <p className="rounded-md bg-info px-3 py-2 text-sm text-info-text">A draft. The shop’s owner or an admin starts it.</p> : null}
       <Section title="So far">

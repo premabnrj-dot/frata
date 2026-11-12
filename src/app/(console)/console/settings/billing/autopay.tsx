@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { completeAutopay, completePayNow, startAutopay, startPayNow, stopAutopay } from './actions'
 
 // Autopay and Pay now (billing B3): Razorpay Checkout opens with an order the SERVER made; its answer goes back to the
@@ -24,31 +25,29 @@ type Answer = { razorpay_order_id: string; razorpay_payment_id: string; razorpay
 function useCheckout() {
   const router = useRouter()
   const [busy, start] = useTransition()
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const toast = useToast()
   const run = (begin: () => ReturnType<typeof startAutopay>, finish: (a: { order: string; payment: string; signature: string }) => Promise<{ ok: boolean; error?: string }>, done: string, extra: object = {}) => start(async () => {
-    setMsg(null)
     const s = await begin()
-    if (!s.ok) { setMsg({ ok: false, text: s.error }); return }
-    if (!(await loadRazorpay()) || !window.Razorpay) { setMsg({ ok: false, text: 'The payment page could not load. Check your connection.' }); return }
+    if (!s.ok) { toast.error(s.error); return }
+    if (!(await loadRazorpay()) || !window.Razorpay) { toast.error('The payment page could not load. Check your connection.'); return }
     await new Promise<void>((resolve) => {
       const rz = new window.Razorpay!({
         key: s.key, order_id: s.order, ...(s.customer ? { customer_id: s.customer, recurring: '1' } : {}), name: 'Frrata', ...extra,
         handler: async (a: Answer) => {
           const r = await finish({ order: a.razorpay_order_id, payment: a.razorpay_payment_id, signature: a.razorpay_signature })
-          setMsg(r.ok ? { ok: true, text: done } : { ok: false, text: r.error ?? 'Something went wrong.' })
-          if (r.ok) router.refresh()
+          if (r.ok) { toast.ok(done); router.refresh() } else toast.error(r.error ?? 'Something went wrong.')
           resolve()
         },
-        modal: { ondismiss: () => { setMsg({ ok: false, text: 'Closed before finishing. Nothing was set up or paid.' }); resolve() } },
+        modal: { ondismiss: () => { toast.error('Closed before finishing.', { sub: 'Nothing was set up or paid.' }); resolve() } },
       })
       rz.open()
     })
   })
-  return { busy, msg, run }
+  return { busy, run }
 }
 
 export function SetUpAutopay() {
-  const { busy, msg, run } = useCheckout()
+  const { busy, run } = useCheckout()
   const go = (method: 'upi' | 'card' | 'emandate') => run(() => startAutopay(method), completeAutopay, 'Autopay is on. Frrata tells you each amount a day before it is taken.', { description: 'Autopay for Frrata bills' })
   return (
     <div className="space-y-2">
@@ -58,7 +57,6 @@ export function SetUpAutopay() {
         <Button variant="secondary" onClick={() => go('emandate')} aria-disabled={busy}>Bank mandate (eNACH)</Button>
       </div>
       <p className="text-xs text-muted-foreground">UPI, card: up to ₹15,000 · eNACH: above</p>
-      {msg && <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-ok-text' : 'text-danger-text'}`}>{msg.text}</p>}
     </div>
   )
 }
@@ -66,21 +64,19 @@ export function SetUpAutopay() {
 export function StopAutopay() {
   const router = useRouter()
   const [busy, start] = useTransition()
-  const [err, setErr] = useState<string | null>(null)
+  const toast = useToast()
   return (
     <span>
-      <Button variant="ghost" aria-disabled={busy} onClick={() => start(async () => { const r = await stopAutopay(); if (r.ok) router.refresh(); else setErr(r.error) })}>Turn off autopay</Button>
-      {err && <span role="alert" className="ml-2 text-sm text-danger-text">{err}</span>}
+      <Button variant="ghost" aria-disabled={busy} onClick={() => start(async () => { const r = await stopAutopay(); if (r.ok) router.refresh(); else toast.error(r.error) })}>Turn off autopay</Button>
     </span>
   )
 }
 
 export function PayNow({ invoiceId }: { invoiceId: string }) {
-  const { busy, msg, run } = useCheckout()
+  const { busy, run } = useCheckout()
   return (
     <span className="inline-flex flex-col items-end gap-1">
       <Button variant="secondary" aria-disabled={busy} onClick={() => run(() => startPayNow(invoiceId), completePayNow, 'Paid. Thank you.', { description: 'Frrata invoice' })}>Pay now</Button>
-      {msg && <span role={msg.ok ? 'status' : 'alert'} className={`text-xs ${msg.ok ? 'text-ok-text' : 'text-danger-text'}`}>{msg.text}</span>}
     </span>
   )
 }

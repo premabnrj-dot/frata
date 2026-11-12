@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
-import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { addOnAllowed, type ModuleAccess } from '@/domains/modules/access'
 import { MODULE_KEYS, MODULES, PLAN_GRANTABLE } from '@/domains/modules/registry'
@@ -13,6 +12,7 @@ import { dayIN } from '@/lib/format-date'
 import { MerchantTabs } from '../tabs'
 import { endAddonAction, giveTrialAction } from './actions'
 import { Submit } from '@/components/ui/submit'
+import { ActionForm } from '@/components/ui/action-form'
 
 export const metadata = { title: 'Modules' }
 
@@ -35,7 +35,7 @@ function usable(a: ModuleAccess) {
   return <span className="text-muted-foreground">No</span>
 }
 
-export default async function MerchantModulesPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; error?: string }> }) {
+export default async function MerchantModulesPage({ params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
   const { id } = await params
@@ -43,14 +43,13 @@ export default async function MerchantModulesPage({ params, searchParams }: { pa
   const name = await merchantName(staff, id)
   if (!name) notFound()
   const now = new Date()
-  const [m, sp, admin] = await Promise.all([merchantModules(staff, id, now), searchParams, requireStaff(ADMIN_ONLY)])
+  const [m, admin] = await Promise.all([merchantModules(staff, id, now), requireStaff(ADMIN_ONLY)])
   const canChange = admin.ok
 
   return (
     <>
       <PageHeader title={name} back={{ href: '/admin/merchants', label: 'Merchants' }} />
       <MerchantTabs id={id} on="modules" />
-      <Notice ok={sp.ok} error={sp.error} />
       <DataTable label={`${name}'s modules`}>
         <DataTableHead><th>Module</th><th>Granted by</th><th>Merchant</th><th>Usable</th><th><span className="sr-only">Action</span></th></DataTableHead>
         <DataTableBody>
@@ -67,16 +66,16 @@ export default async function MerchantModulesPage({ params, searchParams }: { pa
                 <Td cell="d">{usable(a)}</Td>
                 <Td cell="f" className="text-right">
                   {trialable && (
-                    <form action={giveTrialAction}>
+                    <ActionForm action={giveTrialAction}>
                       <input type="hidden" name="tenantId" value={id} /><input type="hidden" name="module" value={k} />
                       <Submit variant="secondary">Give a {TRIAL_DAYS}-day trial of {MODULES[k].name}</Submit>
-                    </form>
+                    </ActionForm>
                   )}
                   {canChange && addon && (a.how === 'trial' || a.how === 'add_on') && (
-                    <form action={endAddonAction}>
+                    <ActionForm action={endAddonAction}>
                       <input type="hidden" name="tenantId" value={id} /><input type="hidden" name="module" value={k} /><input type="hidden" name="addonId" value={addon} />
                       <Submit variant="secondary" className="after:hidden">End {a.how === 'trial' ? 'trial' : 'add-on'}</Submit>
-                    </form>
+                    </ActionForm>
                   )}
                 </Td>
               </DataTableRow>

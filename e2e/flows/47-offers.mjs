@@ -9,7 +9,7 @@
 // stops an offer with a reason; the shop's console says so and the bag loses it; the shop can only end it.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, FAKE_CHECKOUT, SHOP, USERS, playwright, signedIn, until } from '../lib.mjs'
+import { CONSOLE, FAKE_CHECKOUT, SHOP, USERS, expectToast, playwright, signedIn, until } from '../lib.mjs'
 const { devices } = playwright
 
 export default {
@@ -232,7 +232,7 @@ export default {
         const card = a.getByRole('region', { name: 'Buy 2, get 1 free' })
         await card.getByLabel(/Why stop it/).fill('Buy 2 get 1 is not allowed on sale stock')
         await card.getByRole('button', { name: 'Stop Buy 2, get 1 free' }).click()
-        await a.getByText(/Stopped\. Shoppers no longer get it/).waitFor()
+        await expectToast(a, /Stopped\. Shoppers no longer get it/, 'ok')
         await a.getByRole('region', { name: 'Buy 2, get 1 free' }).getByText('Stopped by Frrata').waitFor()
         await a.screenshot({ path: t.out('admin-stop'), fullPage: true })
         const [d] = await db`select id, stopped_at, stop_reason from discounts where title = 'Buy 2, get 1 free' and ended_at is null`

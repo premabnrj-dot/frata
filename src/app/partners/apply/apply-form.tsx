@@ -1,9 +1,11 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { InfoTip } from '@/components/ui/info-tip'
+import { FieldError, useErrorSummary } from '@/components/ui/field-error'
+import { useToast } from '@/components/ui/toast'
 import { BRANDS_NOW, PARTNER_SERVICES, PARTNER_TERMS } from '@/domains/partners/terms'
 import { applyAction } from './actions'
 
@@ -14,19 +16,23 @@ export function ApplyForm({ initial }: { initial?: Partial<Values> }) {
   const router = useRouter()
   const [v, setV] = useState<Values>({ name: '', businessName: '', phone: '', city: '', services: [], workUrl: '', brandsNow: '', agree: false, ...initial })
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [error, setError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  const toast = useToast()
+  const formRef = useRef<HTMLFormElement>(null)
+  useErrorSummary(errors, { attempt, scope: formRef })
   const [pending, start] = useTransition()
   const set = <K extends keyof Values>(k: K, x: Values[K]) => { setV((o) => ({ ...o, [k]: x })); setErrors((e) => ({ ...e, [k]: '' })) }
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     start(async () => {
       const r = await applyAction(v)
-      if (!r.ok) { setErrors(r.errors ?? {}); setError(r.error); return }
+      // Field mistakes at their fields with one quiet summary; a refusal with none is a toast (§ Feedback).
+      if (!r.ok) { const e = r.errors ?? {}; setErrors(e); if (Object.values(e).some(Boolean)) setAttempt((a) => a + 1); else if (r.error) toast.error(r.error); return }
       router.refresh()
     })
   }
   const input = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text md:h-9'
-  const err = (k: string) => errors[k] ? <p id={`${k}-msg`} role="alert" className="text-sm text-danger-text">{errors[k]}</p> : null
+  const err = (k: string) => <FieldError id={`${k}-msg`} message={errors[k]} className="text-sm" />
   const text = (k: 'name' | 'businessName' | 'phone' | 'city' | 'workUrl', label: React.ReactNode, extra?: React.InputHTMLAttributes<HTMLInputElement>, tip?: React.ReactNode) => (
     <div className="space-y-1.5">
       <div className="flex items-center"><label htmlFor={k} className="text-sm font-medium">{label}</label>{tip}</div>
@@ -36,7 +42,7 @@ export function ApplyForm({ initial }: { initial?: Partial<Values> }) {
   )
   const chip = (on: boolean) => `inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-3 text-sm md:min-h-9 ${on ? 'border-2 border-primary font-medium' : 'border border-input'}`
   return (
-    <form onSubmit={submit} noValidate className="space-y-5">
+    <form ref={formRef} onSubmit={submit} noValidate className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2">
         {text('name', 'Your name', { autoComplete: 'name', autoFocus: true })}
         {text('businessName', <>Studio name<span className="ml-1 font-normal text-muted-foreground">(optional)</span></>, { autoComplete: 'organization' })}
@@ -72,7 +78,6 @@ export function ApplyForm({ initial }: { initial?: Partial<Values> }) {
         </div>
         {err('agree')}
       </div>
-      {error && !Object.values(errors).some(Boolean) && <p role="alert" className="text-sm text-danger-text">{error}</p>}
       <Button type="submit" size="lg" disabled={pending}>{pending ? 'Sending…' : 'Send application'}</Button>
     </form>
   )

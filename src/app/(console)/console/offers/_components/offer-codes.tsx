@@ -1,12 +1,13 @@
 'use client'
 
 import { shopLink } from '@/domains/analytics/link'
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Message } from '@/components/ui/unsaved'
+import { FieldError, fieldProps, useErrorSummary } from '@/components/ui/field-error'
+import { useToast } from '@/components/ui/toast'
 import { addCreatorCode } from '../actions'
 
 /** The creator's link (the one builder, shopLink); with no address yet, the code alone. */
@@ -22,12 +23,22 @@ export function OfferCodes({ id, address, creators, canAdd, publicCode }: {
   const [pending, start] = useTransition()
   const [label, setLabel] = useState(''), [code, setCode] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [msg, setMsg] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
+  const toast = useToast()
+  const box = useRef<HTMLDivElement>(null)
+  const [attempt, setAttempt] = useState(0)
+  const [also, setAlso] = useState<string | undefined>(undefined)
+  useErrorSummary(errors, { attempt, scope: box, sub: also })
   const field = 'h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text'
   const add = () => start(async () => {
     const r = await addCreatorCode(id, label, code)
-    if (!r.ok) { setErrors(r.errors ?? {}); setMsg({ tone: 'error', text: r.error }); return }
-    setLabel(''); setCode(''); setErrors({}); setMsg({ tone: 'ok', text: 'Added. Share its link.' }); router.refresh()
+    if (!r.ok) {
+      const fields = r.errors ?? {}
+      const bad = Object.keys(fields).length > 0
+      setAlso(bad ? r.error : undefined); setErrors(fields)
+      if (bad) setAttempt((a) => a + 1); else toast.error(r.error)
+      return
+    }
+    setLabel(''); setCode(''); setErrors({}); toast.ok('Added. Share its link.'); router.refresh()
   })
   return (
     <Section title="Codes">
@@ -45,15 +56,14 @@ export function OfferCodes({ id, address, creators, canAdd, publicCode }: {
         </ul>
       )}
       {canAdd ? (
-        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+        <div ref={box} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
           <div className="space-y-1"><label htmlFor="c-label" className="block text-sm font-medium">Creator</label>
-            <input id="c-label" value={label} maxLength={40} placeholder="Riya" aria-invalid={!!errors.label || undefined} onChange={(e) => setLabel(e.target.value)} className={field} /></div>
+            <input id="c-label" value={label} maxLength={40} placeholder="Riya" {...fieldProps('c-label', errors.label)} onChange={(e) => { setLabel(e.target.value); setErrors(({ label: _gone, ...rest }) => rest) }} className={field} /><FieldError name="c-label" message={errors.label} /></div>
           <div className="space-y-1"><label htmlFor="c-code" className="block text-sm font-medium">Their code</label>
-            <input id="c-code" value={code} maxLength={20} placeholder="RIYA10" aria-invalid={!!errors.code || undefined} onChange={(e) => setCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase())} className={`${field} font-mono`} /></div>
+            <input id="c-code" value={code} maxLength={20} placeholder="RIYA10" {...fieldProps('c-code', errors.code)} onChange={(e) => { setCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase()); setErrors(({ code: _gone, ...rest }) => rest) }} className={`${field} font-mono`} /><FieldError name="c-code" message={errors.code} /></div>
           <Button variant="secondary" onClick={add} disabled={pending || !label || !code}>Add code</Button>
         </div>
       ) : null}
-      <Message m={msg} />
     </Section>
   )
 }

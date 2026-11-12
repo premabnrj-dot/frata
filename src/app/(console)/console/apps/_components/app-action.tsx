@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button, button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
 import type { OfferAction } from '@/domains/modules/offer'
 import type { ModuleKey } from '@/domains/modules/registry'
 import { OFF } from '@/domains/modules/showcase'
@@ -18,7 +19,8 @@ import { settle } from '@/lib/settle'
 /**
  * An app's ONE button, matching its state (Apps gallery; offerFor decides which): Turn on / Turn off (with a confirm),
  * Turn on <the app it needs> first, Ask Frrata to add, See Growth, Tell me when it's ready. No button that fails:
- * who may not act sees why instead. Plain pending state and a refresh after the write (frata-gotchas).
+ * who may not act sees why instead. Plain pending state and a refresh after the write (frata-gotchas). A refusal is an
+ * error toast; inside a confirm it is the Dialog's own error line (frata-design-language § Feedback 1, 4).
  */
 export function AppAction({ k, name, action, canManage, askHref, block = false, paid = false }: {
   k: ModuleKey; name: string; action: OfferAction; canManage: boolean; askHref: string; block?: boolean
@@ -26,19 +28,25 @@ export function AppAction({ k, name, action, canManage, askHref, block = false, 
   paid?: boolean
 }) {
   const router = useRouter()
+  const toast = useToast()
   const [busy, setBusy] = useState(false)
+  /** The open confirm's refusal (its Dialog's error slot). */
   const [error, setError] = useState<string | null>(null)
   const [confirmOff, setConfirmOff] = useState(false)
   const [confirmTrial, setConfirmTrial] = useState(false)
   const wide = block ? 'w-full' : ''
-  const run = async (fn: () => Promise<{ ok: boolean; error?: string }>) => {
+  const run = async (fn: () => Promise<{ ok: boolean; error?: string }>, inDialog = false) => {
     setBusy(true); setError(null)
-    const r = await fn().catch(() => ({ ok: false, error: 'We could not change it. Nothing was changed.' }))
+    const r = await fn().catch(() => ({ ok: false, error: undefined }))
     setBusy(false)
-    if (!r.ok) { setError(r.error ?? 'We could not change it. Nothing was changed.'); return false }
+    if (!r.ok) {
+      if (inDialog) setError(r.error ?? 'We could not change it. Nothing was changed.')
+      else if (r.error) toast.error(r.error)
+      else toast.error('We could not change it.', { sub: 'Nothing was changed.' })
+      return false
+    }
     setConfirmOff(false); setConfirmTrial(false); settle(router); return true
   }
-  const err = error ? <p role="alert" className="mt-2 text-sm text-danger-text">{error}</p> : null
   const owner = <p className="text-sm text-muted-foreground">Ask the shop’s owner to change this.</p>
 
   if (action.kind === 'interest') {
@@ -48,7 +56,6 @@ export function AppAction({ k, name, action, canManage, askHref, block = false, 
           onClick={() => run(() => setInterestAction({ module: k, on: !action.asked }))}>
           {action.asked ? 'We’ll tell you when it’s ready' : 'Tell me when it’s ready'}
         </Button>
-        {err}
       </div>
     )
   }
@@ -66,17 +73,14 @@ export function AppAction({ k, name, action, canManage, askHref, block = false, 
     return (
       <div>
         <Button className={wide} disabled={busy} onClick={() => { setError(null); setConfirmTrial(true) }}>Start free trial</Button>
-        {!confirmTrial ? err : null}
-        <Dialog open={confirmTrial} onClose={() => setConfirmTrial(false)} title={`Try ${name} free for 14 days?`}
+        <Dialog open={confirmTrial} onClose={() => setConfirmTrial(false)} title={`Try ${name} free for 14 days?`} error={error}
           description={<ul className="list-disc space-y-1 pl-5">
             <li>Free until {day}.</li>
             <li>Then {formatInr(paise(action.monthly))}/month + 18% GST ({formatInr(paise(withGst), { decimals: true })}). The rest of that month is billed by days on your {firstInvoice} invoice.</li>
             <li>End the trial before {day} and nothing is charged.</li>
           </ul>}
           actions={<><Button variant="secondary" data-autofocus onClick={() => setConfirmTrial(false)}>Not now</Button>
-            <Button disabled={busy} onClick={() => run(() => startAddonTrialAction({ module: k, priceId: action.priceId }))}>Start free trial</Button></>}>
-          {error ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
-        </Dialog>
+            <Button disabled={busy} onClick={() => run(() => startAddonTrialAction({ module: k, priceId: action.priceId }), true)}>Start free trial</Button></>} />
       </div>
     )
   }
@@ -88,17 +92,14 @@ export function AppAction({ k, name, action, canManage, askHref, block = false, 
   }
   if (!canManage) return <p className="text-sm text-muted-foreground">{action.on ? 'On' : 'Off'} · ask the shop’s owner to change it.</p>
   if (!action.on) {
-    return <div><Button className={wide} disabled={busy} onClick={() => run(() => setModuleAction({ module: k, on: true }))}>Turn on {name}</Button>{err}</div>
+    return <div><Button className={wide} disabled={busy} onClick={() => run(() => setModuleAction({ module: k, on: true }))}>Turn on {name}</Button></div>
   }
   return (
     <div>
       <Button variant="secondary" className={`${wide} after:hidden`} disabled={busy} onClick={() => { setError(null); setConfirmOff(true) }}>Turn off {name}</Button>
-      {!confirmOff ? err : null}
-      <Dialog open={confirmOff} onClose={() => setConfirmOff(false)} title={`Turn off ${name}?`}
+      <Dialog open={confirmOff} onClose={() => setConfirmOff(false)} title={`Turn off ${name}?`} error={error}
         description={<ul className="list-disc space-y-1 pl-5">{OFF[k].map((l) => <li key={l}>{l}</li>)}{paid ? <li>Billing stops: it works to the end of this month and isn’t billed again.</li> : <li>Turn it back on any time.</li>}</ul>}
-        actions={<><Button variant="secondary" data-autofocus onClick={() => setConfirmOff(false)}>Keep {name}</Button><Button variant="destructive" disabled={busy} onClick={() => run(() => setModuleAction({ module: k, on: false }))}>Turn off {name}</Button></>}>
-        {error ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
-      </Dialog>
+        actions={<><Button variant="secondary" data-autofocus onClick={() => setConfirmOff(false)}>Keep {name}</Button><Button variant="destructive" disabled={busy} onClick={() => run(() => setModuleAction({ module: k, on: false }), true)}>Turn off {name}</Button></>} />
     </div>
   )
 }
@@ -119,11 +120,9 @@ export function EndTrial({ k, name, paidFrom }: { k: ModuleKey; name: string; pa
   return (
     <div>
       <Button variant="secondary" className="after:hidden" onClick={() => { setError(null); setOpen(true) }}>End trial</Button>
-      <Dialog open={open} onClose={() => setOpen(false)} title={`End the ${name} trial?`}
+      <Dialog open={open} onClose={() => setOpen(false)} title={`End the ${name} trial?`} error={error}
         description={<ul className="list-disc space-y-1 pl-5">{OFF[k].map((l) => <li key={l}>{l}</li>)}<li>Nothing is charged. Billing would have started {dayMonthLongIN(paidFrom)}.</li></ul>}
-        actions={<><Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Keep the trial</Button><Button variant="destructive" disabled={busy} onClick={end}>End trial</Button></>}>
-        {error ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
-      </Dialog>
+        actions={<><Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Keep the trial</Button><Button variant="destructive" disabled={busy} onClick={end}>End trial</Button></>} />
     </div>
   )
 }

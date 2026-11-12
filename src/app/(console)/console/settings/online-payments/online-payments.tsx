@@ -1,11 +1,13 @@
 'use client'
 
 import { InfoTip } from '@/components/ui/info-tip'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { settle } from '@/lib/settle'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { FieldError, fieldProps, useErrorSummary } from '@/components/ui/field-error'
+import { useToast } from '@/components/ui/toast'
 import { connectRazorpay, disconnectRazorpay } from './actions'
 import { Section } from '@/components/layout/section'
 import { sinceIN } from '@/lib/format-date'
@@ -23,8 +25,12 @@ export function OnlinePayments({ status, support, available, now }: { status: St
   const router = useRouter()
   const [keyId, setKeyId] = useState(status?.keyId ?? '')
   const [secret, setSecret] = useState('')
-  const [err, setErr] = useState<{ field?: string; text: string } | null>(null)
-  const [done, setDone] = useState<string | null>(null)
+  const toast = useToast()
+  // A key the action names as wrong is marked at its field; any other refusal is a toast (§ Feedback 1, 3).
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [attempt, setAttempt] = useState(0)
+  const keys = useRef<HTMLDivElement>(null)
+  useErrorSummary(errors, { attempt, scope: keys })
   const [confirm, setConfirm] = useState(false)
   // Plain pending state and a refresh after the action resolves, outside any transition (frata-gotchas, Next 15.5): a
   // transition around connect once never settled, leaving "Checking with Razorpay…" with the old error AND the new
@@ -34,15 +40,17 @@ export function OnlinePayments({ status, support, available, now }: { status: St
   const badge = !status ? <Badge>Not connected</Badge> : status.problem ? <Badge tone="danger">Needs attention</Badge> : !status.webhookSeenAt ? <Badge tone="warn">Needs one step</Badge> : status.mode === 'test' ? <Badge tone="info">Test mode</Badge> : <Badge tone="ok">Live</Badge>
 
   const connect = () => start(async () => {
-    setErr(null); setDone(null)
     const r = await connectRazorpay({ keyId, keySecret: secret })
-    if (!r.ok) { setDone(null); setErr({ field: r.field, text: r.error }); return }
-    setErr(null); setSecret(''); setDone('Connected. Razorpay accepted the keys.'); settle(router)
+    if (!r.ok) {
+      if (r.field) { setErrors({ [r.field]: r.error }); setAttempt((n) => n + 1) } else { setErrors({}); toast.error(r.error) }
+      return
+    }
+    setErrors({}); setSecret(''); toast.ok('Connected. Razorpay accepted the keys.'); settle(router)
   })
   const disconnect = () => start(async () => {
     const r = await disconnectRazorpay()
-    if (!r.ok) { setErr({ text: r.error }); return }
-    setErr(null); setConfirm(false); setKeyId(''); setDone('Disconnected. Shoppers can pay on delivery only.'); settle(router)
+    if (!r.ok) { toast.error(r.error); return }
+    setConfirm(false); setKeyId(''); toast.ok('Disconnected. Shoppers can pay on delivery only.'); settle(router)
   })
   const copy = (t: string) => navigator.clipboard?.writeText(t).catch(() => {})
 
@@ -51,28 +59,27 @@ export function OnlinePayments({ status, support, available, now }: { status: St
       <Section>
         <div className="flex items-center justify-between gap-3"><h2 className="text-section font-semibold">Razorpay</h2>{badge}</div>
         <MoneyFlow />
+        {/* feedback-ok: the connector's problem is its state (Needs attention), not a failure after a button (§ Feedback 5) */}
         {status?.problem && <p role="alert" className="rounded-md bg-danger p-3 text-sm text-danger-text">{status.problem}</p>}
       </Section>
 
       <Section>
         <h2 className="text-section font-semibold">1 · Your keys</h2>
         {support ? <p className="text-sm text-muted-foreground">Only the shop’s owner can connect or change Razorpay keys — not Frrata support.</p> : !available ? <p className="text-sm text-muted-foreground">Online payments are not switched on for Frrata yet.</p> : (
-          <>
+          <div ref={keys} className="space-y-3">
             <div className="space-y-1"><label htmlFor="key-id" className="block text-sm font-medium">Key ID</label>
-              <input id="key-id" value={keyId} onChange={(e) => setKeyId(e.target.value)} autoComplete="off" spellCheck={false} placeholder="rzp_live_…" aria-invalid={err?.field === 'keyId' || undefined}
-                className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /></div>
+              <input id="key-id" value={keyId} onChange={(e) => { setKeyId(e.target.value); setErrors(({ keyId: _gone, ...rest }) => rest) }} autoComplete="off" spellCheck={false} placeholder="rzp_live_…" {...fieldProps('key-id', errors.keyId)}
+                className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /><FieldError name="key-id" message={errors.keyId} /></div>
             <div className="space-y-1"><div className="flex items-center"><label htmlFor="key-secret" className="text-sm font-medium">Key secret</label><InfoTip about="the key secret">Checked with Razorpay before saving: wrong keys are refused and nothing changes. Saved keys are encrypted and never shown again.</InfoTip></div>
-              <input id="key-secret" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} autoComplete="off" placeholder={status ? 'Saved · paste a new one' : ''} aria-invalid={err?.field === 'keySecret' || undefined}
-                className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /></div>
+              <input id="key-secret" type="password" value={secret} onChange={(e) => { setSecret(e.target.value); setErrors(({ keySecret: _gone, ...rest }) => rest) }} autoComplete="off" placeholder={status ? 'Saved · paste a new one' : ''} {...fieldProps('key-secret', errors.keySecret)}
+                className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /><FieldError name="key-secret" message={errors.keySecret} /></div>
             <p className="text-xs text-muted-foreground">Razorpay → Account &amp; Settings → API keys. The secret is shown there once: generate a new pair if you do not have it.</p>
             <div className="flex flex-wrap items-center gap-3">
               <Button disabled={pending || !keyId || !secret} onClick={connect}>{pending ? 'Checking with Razorpay…' : status ? 'Test and save new keys' : 'Test and connect'}</Button>
               {status && <span className="text-sm text-muted-foreground">Connected: <span className="font-mono">{status.keyId}</span></span>}
             </div>
-          </>
+          </div>
         )}
-        {err && <p role="alert" className="text-sm text-danger-text">{err.text}</p>}
-        {done && <p role="status" className="text-sm text-ok-text">{done}</p>}
       </Section>
 
       {status && (

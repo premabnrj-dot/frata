@@ -143,6 +143,7 @@ function Row({ host, chip, extra, line, children }: { host: string; chip: { tone
     <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-2.5">
       <span className="flex min-w-0 flex-wrap items-center gap-2 font-mono text-sm [overflow-wrap:anywhere]">{host}{chip && <Badge tone={chip.tone}>{chip.words}</Badge>}{extra}</span>
       <span className="flex flex-wrap justify-end gap-1.5">{children}</span>
+      {/* feedback-ok: a domain's row problem is the row's state, said where the row is (§ Feedback 5) */}
       {line && <span className="col-span-2 text-xs text-danger-text">{line}</span>}
     </li>
   )
@@ -236,7 +237,8 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
       : <Button variant="secondary" data-autofocus onClick={onClose}>{secure >= 1 ? 'Done' : 'Close'}</Button>
 
   return (
-    <Dialog open onClose={onClose} title="Connect a domain" actions={footer} >
+    // The dialog's own refusals (a domain it cannot take, one in use by another shop) are its error slot (§ Feedback 4).
+    <Dialog open onClose={onClose} title="Connect a domain" actions={footer} error={step < 3 ? error : null}>
       <div className="mb-3 flex gap-1.5" aria-hidden>{[1, 2, 3].map((n) => <span key={n} className={`h-0.5 w-6 rounded-full transition-colors duration-base ease-standard ${n <= step ? 'bg-foreground' : 'bg-border'}`} />)}</div>
       <div key={step} className={back ? 'animate-step-back' : 'animate-step-forward'}>
         {step === 1 && (
@@ -246,12 +248,10 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
                 className="h-10 rounded-md border border-input bg-card px-3 font-mono text-sm md:h-9" onKeyDown={(e) => { if (e.key === 'Enter' && shown) connect() }} />
             </label>
             {shown && shown !== raw.trim() && !error && <p className="font-mono text-xs text-muted-foreground">{shown}</p>}
-            {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
           </div>
         )}
         {step === 2 && (
           <div className="grid gap-3">
-            {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Badge tone={claim && done === claim.records.length ? 'ok' : 'neutral'}>{claim ? `${done} of ${claim.records.length} found` : '…'}</Badge>
               <span role="status" className="text-xs text-muted-foreground">{checked}</span>

@@ -6,7 +6,7 @@
 // partner keeping access, the worked example drifting from the plan prices.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, USERS, signedIn } from '../lib.mjs'
+import { CONSOLE, USERS, expectToast, signedIn } from '../lib.mjs'
 
 export default {
   name: 'partners',
@@ -59,7 +59,7 @@ export default {
       const meera = await open('frata')
       await meera.goto(CONSOLE + '/admin/partners')
       await meera.getByRole('button', { name: 'Approve Pia Studio' }).click()
-      await meera.getByText('Approved.').waitFor()
+      await expectToast(meera, 'Approved.', 'ok')
       const [row] = await db`select approved_at from partners where user_id = ${P.id}`
       assert.ok(row.approved_at)
       await meera.screenshot({ path: t.out('admin') })
@@ -95,7 +95,7 @@ export default {
     await t.step('while building, the partner sets the shop\'s shipping costs (seesCosts, owner 2026-11-08)', async () => {
       await pia.goto(CONSOLE + '/console/settings/shipping-costs')
       await pia.getByRole('button', { name: 'Confirm these costs' }).click()
-      await pia.getByText('Shipping costs confirmed.').waitFor()
+      await expectToast(pia, 'Shipping costs confirmed.', 'ok')
       const [c] = await db`select ship_costs_confirmed_at from shop_settings where tenant_id = ${T}`
       assert.ok(c.ship_costs_confirmed_at, 'confirmed by the partner')
     })

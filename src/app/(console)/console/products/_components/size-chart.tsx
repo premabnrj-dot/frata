@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { inches, type Chart } from '@/domains/catalogue/size-charts'
 import { createType, saveSizeChart } from '../type-actions'
 import { Icon } from '@/components/icons/icon'
@@ -15,7 +16,8 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
   const type = types.find((t) => t.id === typeId) ?? null
   const [unit, setUnit] = useState<'cm' | 'in'>('cm')
   const [edit, setEdit] = useState<Chart | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // A refused create or save is an error toast (§ Feedback 1); what was typed stays.
+  const toast = useToast()
   const [pending, start] = useTransition()
   const [newName, setNewName] = useState<string | null>(null)
 
@@ -32,7 +34,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
         </div>
         {newName === null
           ? <button type="button" className="h-9 text-sm underline" onClick={() => setNewName('')}>New type</button>
-          : <form className="flex items-end gap-1.5" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await createType(newName, typeId); if (!r.ok) return setError(r.error); setNewName(null); router.refresh(); onType(r.id) }) }}>
+          : <form className="flex items-end gap-1.5" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await createType(newName, typeId); if (!r.ok) return toast.error(r.error); setNewName(null); router.refresh(); onType(r.id) }) }}>
               <input aria-label="New type name" autoFocus value={newName} placeholder="Saree" onChange={(e) => setNewName(e.target.value)} className="h-10 md:h-9 w-36 rounded-md border border-input bg-card px-2 text-sm" />
               <Button type="submit" variant="secondary" disabled={pending || !newName.trim()}>{typeId ? 'Create from this chart' : 'Create'}</Button>
               <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => setNewName(null)}>Cancel</button>
@@ -77,16 +79,14 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
           <button type="button" className="inline-flex min-h-6 items-center text-xs underline" onClick={() => setEdit({ ...edit, rows: [...edit.rows, { size: '', values: edit.columns.map(() => null) }] })}>+ size</button>
           <label htmlFor="how" className="block text-xs font-medium">How to measure</label>
           <textarea id="how" rows={2} value={edit.howToMeasure} onChange={(e) => setEdit({ ...edit, howToMeasure: e.target.value })} className="w-full rounded-md border border-input px-2 py-1 text-sm" />
-          {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
           <div className="flex gap-2">
-            <Button type="button" variant="secondary" onClick={() => { setEdit(null); setError(null) }} disabled={pending}>Keep the chart as it was</Button>
-            <Button type="button" disabled={pending} onClick={() => start(async () => { const r = await saveSizeChart(type.id, edit); if (!r.ok) return setError(r.error); setEdit(null); setError(null); router.refresh() })}>
+            <Button type="button" variant="secondary" onClick={() => setEdit(null)} disabled={pending}>Keep the chart as it was</Button>
+            <Button type="button" disabled={pending} onClick={() => start(async () => { const r = await saveSizeChart(type.id, edit); if (!r.ok) return toast.error(r.error); setEdit(null); router.refresh() })}>
               {pending ? 'Saving…' : `Save for all ${type.name}`}
             </Button>
           </div>
         </div>
       )}
-      {error && !edit && <p role="alert" className="text-sm text-danger-text">{error}</p>}
     </div>
   )
 }

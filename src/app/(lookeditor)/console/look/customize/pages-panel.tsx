@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Dialog } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
 import { Icon } from '@/components/icons/icon'
 import { BOUND_QUESTION, type Bound } from '@/domains/policies/answers'
 import { FAQ_DEFAULT, FAQ_ID, MAX_FAQ, TEMPLATES, TEMPLATE_NAMES, handleOf, type FaqItem, type PageDraft, type PageFill, type PageTemplate } from '@/domains/pages/templates'
@@ -84,7 +85,10 @@ export function PagePanel({ page, c, answers, address, onSaved, onRemoved, regis
   registerFlush: (f: (() => Promise<void>) | null) => void
 }) {
   const [draft, setDraft] = useState<PageDraft>(page.draft)
-  const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
+  // A refused save or removal is an error toast (§ Feedback 1); the next save that works takes it away.
+  const shown = useRef<number | null>(null)
+  const refused = (text: string) => { shown.current = toast.next(); toast.error(text) }
   const version = useRef(page.version)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latest = useRef(draft)
@@ -94,8 +98,9 @@ export function PagePanel({ page, c, answers, address, onSaved, onRemoved, regis
     // An address with a dash at either end is saved without it (typing "our-" mid-word never errors).
     const d = latest.current, handle = d.handle.replace(/^-+|-+$/g, '') || 'page'
     const r = await savePageAction({ id: page.id, version: version.current, draft: { ...d, handle } })
-    if (!r.ok) { setError(r.error); return }
-    setError(null); version.current = r.version
+    if (!r.ok) { refused(r.error); return }
+    if (shown.current !== null) { toast.dismiss(shown.current); shown.current = null }
+    version.current = r.version
     onSaved({ ...page, version: r.version, draft: { ...d, handle }, dirty: true })
   }
   const flush = async () => { if (timer.current) { clearTimeout(timer.current); await save() } }
@@ -112,7 +117,7 @@ export function PagePanel({ page, c, answers, address, onSaved, onRemoved, regis
   const remove = async () => {
     if (timer.current) { clearTimeout(timer.current); await save() }
     const r = await removePageAction({ id: page.id, version: version.current })
-    if (!r.ok) { setError(r.error); return }
+    if (!r.ok) { refused(r.error); return }
     onRemoved(page.id, r.gone ? null : r.version ?? null)
   }
   return (
@@ -127,7 +132,6 @@ export function PagePanel({ page, c, answers, address, onSaved, onRemoved, regis
       <Switch label="Hide from the shop" on={draft.hidden} onChange={(hidden) => set({ ...draft, hidden })} />
       <DesignForm s={asSection} c={{ ...c, labels: false }} d={TEMPLATES[t]} set={(s) => set({ ...draft, fill: { ...(s.fill as Record<string, PageFill>), ...(t === 'faq' ? { [FAQ_ID]: { kind: 'faq' as const, items: faq } } : {}) } })} />
       {t === 'faq' && <Questions items={faq} answers={answers} set={(items) => set({ ...draft, fill: { ...draft.fill, [FAQ_ID]: { kind: 'faq', items } } })} />}
-      {error && <p role="alert" className="rounded-md bg-danger px-3 py-2 text-sm text-danger-text">{error}</p>}
       <button type="button" onClick={remove} className="min-h-9 text-sm text-danger-text underline underline-offset-4">Remove page</button>
     </div>
   )
@@ -143,7 +147,7 @@ export function AddPage({ open, onClose, onAdded, hasFaq, count, thumbs }: { ope
   }
   const full = count >= 20
   return (
-    <Dialog open={open} onClose={onClose} title="Add a page" actions={<><span className="mr-auto self-center font-mono text-xs text-muted-foreground">{count} of 20</span><button type="button" data-autofocus onClick={onClose} className="min-h-10 rounded-md border border-input px-4 text-sm">Close</button></>}>
+    <Dialog open={open} onClose={onClose} title="Add a page" error={error} actions={<><span className="mr-auto self-center font-mono text-xs text-muted-foreground">{count} of 20</span><button type="button" data-autofocus onClick={onClose} className="min-h-10 rounded-md border border-input px-4 text-sm">Close</button></>}>
       <ul className="grid gap-3 sm:grid-cols-2">
         {(['about', 'faq'] as const).map((t) => {
           const off = full || (t === 'faq' && hasFaq)
@@ -156,7 +160,6 @@ export function AddPage({ open, onClose, onAdded, hasFaq, count, thumbs }: { ope
           )
         })}
       </ul>
-      {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
     </Dialog>
   )
 }

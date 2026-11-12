@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useId, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from './toast'
 import { FieldError, errorId, useErrorSummary } from './field-error'
@@ -27,7 +27,8 @@ import { settle } from '@/lib/settle'
 export type ActionResult = { ok?: string; error?: string; fields?: Record<string, string>; go?: string } | undefined | void
 
 const Pending = createContext(false)
-const Fields = createContext<Record<string, string>>({})
+// The form's mistakes, and its id prefix: two forms on one page may both have a `reason` (impact review F1–F3).
+const Fields = createContext<{ errors: Record<string, string>; prefix: string }>({ errors: {}, prefix: '' })
 /** True while the ActionForm around it is posting (read by <Submit>). */
 export const useActionPending = () => useContext(Pending)
 
@@ -46,6 +47,7 @@ export function ActionForm({ action, children, className, noun, refresh = true, 
   const router = useRouter()
   const ref = useRef<HTMLFormElement>(null)
   const [pending, setPending] = useState(false)
+  const prefix = `f${useId().replace(/[^A-Za-z0-9]/g, '')}-`
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [attempt, setAttempt] = useState(0)
   // A refusal that came with field mistakes is said as the summary's second line (one toast, not two).
@@ -59,14 +61,14 @@ export function ActionForm({ action, children, className, noun, refresh = true, 
     // A field's own description (an info tip) is kept: the error's id is added to it, and taken off again.
     for (const el of Array.from(form.elements) as HTMLInputElement[]) {
       if (!el.name) continue
-      const own = (el.getAttribute('aria-describedby') ?? '').split(' ').filter((t) => t && t !== errorId(el.name))
-      if (errors[el.name]) { el.setAttribute('aria-invalid', 'true'); el.setAttribute('aria-describedby', [...own, errorId(el.name)].join(' ')); el.dataset.marked = '' }
+      const own = (el.getAttribute('aria-describedby') ?? '').split(' ').filter((t) => t && t !== errorId(prefix + el.name))
+      if (errors[el.name]) { el.setAttribute('aria-invalid', 'true'); el.setAttribute('aria-describedby', [...own, errorId(prefix + el.name)].join(' ')); el.dataset.marked = '' }
       else if ('marked' in el.dataset) {
         el.removeAttribute('aria-invalid'); delete el.dataset.marked
         if (own.length) el.setAttribute('aria-describedby', own.join(' ')); else el.removeAttribute('aria-describedby')
       }
     }
-  }, [errors])
+  }, [errors, prefix])
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -109,7 +111,7 @@ export function ActionForm({ action, children, className, noun, refresh = true, 
   return (
     <form ref={ref} id={id} aria-label={ariaLabel} noValidate onSubmit={onSubmit} onInput={onInput} onChange={onInput} className={className} aria-busy={pending || undefined}>
       <Pending.Provider value={pending}>
-        <Fields.Provider value={errors}>{children}</Fields.Provider>
+        <Fields.Provider value={{ errors, prefix }}>{children}</Fields.Provider>
       </Pending.Provider>
     </form>
   )
@@ -117,6 +119,6 @@ export function ActionForm({ action, children, className, noun, refresh = true, 
 
 /** The line under a field inside an ActionForm: shows that field's mistake, if any. */
 export function FieldMessage({ name, reserve }: { name: string; reserve?: boolean }) {
-  const errors = useContext(Fields)
-  return <FieldError name={name} message={errors[name]} reserve={reserve} />
+  const { errors, prefix } = useContext(Fields)
+  return <FieldError name={prefix + name} message={errors[name]} reserve={reserve} />
 }

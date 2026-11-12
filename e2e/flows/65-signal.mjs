@@ -5,7 +5,7 @@
 // bags. Removes its draft, its release row and puts the shop's categories back.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, signedIn } from '../lib.mjs'
+import { CONSOLE, expectToast, signedIn } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const FRAME = 'iframe[title="Your shop with this look"]'
@@ -158,7 +158,7 @@ export default {
           assert.equal(await p.locator('#pair-find').count(), 0, '2 of 2: the search closes')
           await p.screenshot({ path: t.out('signal-s3-editor'), fullPage: true })
           await p.getByRole('button', { name: 'Save', exact: true }).first().click()
-          await p.getByText(/^Saved/).waitFor()
+          await expectToast(p, /^Saved/, 'ok') // the save's result is a toast (design-language § Feedback)
           const [row] = await db`select stories from products where id = ${a.id}`
           assert.equal(row.stories.length, 1); assert.deepEqual(row.stories[0].notes, ['Opens flat like a suitcase'])
           const pairs = await db`select paired_id from product_pairs where product_id = ${a.id} order by position`

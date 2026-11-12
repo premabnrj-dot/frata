@@ -2,10 +2,12 @@
 
 import Link from 'next/link'
 import { button } from '@/components/ui/button'
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { InfoTip } from '@/components/ui/info-tip'
-import { LeaveDialog, Message, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
+import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
+import { FieldError, errorId, useErrorSummary } from '@/components/ui/field-error'
+import { useToast } from '@/components/ui/toast'
 import {
   BrandPreview, CheckoutPreview, ContactPreview, FooterPreview, InvoicePreview, PolicyPreview, type ShopFacts,
 } from '@/components/shop-preview/previews'
@@ -48,8 +50,11 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
   const [values, setValues] = useState(initial)
   const [version, setVersion] = useState(startVersion)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
-  const [conflict, setConflict] = useState(false)
+  const toast = useToast()
+  const formRef = useRef<HTMLFormElement>(null)
+  // Field mistakes stay at their fields; one summary toast counts them and moves focus to the first (§ Feedback 3).
+  const [attempt, setAttempt] = useState(0)
+  useErrorSummary(errors, { attempt, scope: formRef })
   const [pending, start] = useTransition()
   const [policyPage, setPolicyPage] = useState<PolicyPage>('returns')
   // The save's own answer wins over the page's until the page is loaded again.
@@ -63,15 +68,17 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
 
   const guard = useLeaveGuard(dirty)
 
-  const set = (k: string, v: string | boolean) => { setValues((x) => ({ ...x, [k]: v })); setErrors((e) => { const { [k]: _, ...rest } = e; return rest }); setMessage(null) }
+  const set = (k: string, v: string | boolean) => { setValues((x) => ({ ...x, [k]: v })); setErrors((e) => { const { [k]: _, ...rest } = e; return rest }) }
 
   function save() {
     start(async () => {
       const r = await saveSection(section.key, values, version)
-      if (r.ok) { setSaved(values); setVersion(r.version); setErrors({}); if (section.key === 'taxes') setUnratedNow(r.unrated ?? null); setMessage({ tone: 'ok', text: section.key === 'documents' ? 'Saved. New slips and invoices use it; issued invoices keep theirs.' : 'Saved. Your shop shows it now.' }); router.refresh(); return }
-      setErrors(r.errors ?? {}); setConflict(!!r.conflict); setMessage({ tone: 'error', text: r.error })
-      const first = r.errors && Object.keys(r.errors)[0]
-      if (first) document.getElementById(`f-${first}`)?.focus()
+      if (r.ok) { setSaved(values); setVersion(r.version); setErrors({}); if (section.key === 'taxes') setUnratedNow(r.unrated ?? null); toast.ok(section.key === 'documents' ? 'Saved. New slips and invoices use it; issued invoices keep theirs.' : 'Saved. Your shop shows it now.'); router.refresh(); return }
+      const fields = r.errors ?? {}
+      setErrors(fields)
+      if (Object.keys(fields).length) { setAttempt((a) => a + 1); return }
+      // A conflict offers its one action: Reload (what is typed here is theirs to make again, the words say so).
+      toast.error(r.error, r.conflict ? { action: { label: 'Reload', run: () => window.location.reload() } } : undefined)
     })
   }
 
@@ -84,13 +91,12 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
 
   return (
     <div className={STORE_FONT_VARS}>
-      {dirty && <SaveBar pending={pending} onSave={save} onDiscard={() => { setValues(saved); setErrors({}); setMessage(null) }} />}
+      {dirty && <SaveBar pending={pending} onSave={save} onDiscard={() => { setValues(saved); setErrors({}) }} />}
       <PageHeader title={section.title} back={{ href: '/console/settings', label: 'Settings' }} />
       <p className="text-sm text-muted-foreground">{section.intro}</p>
-      <Message m={message} onReload={conflict ? () => window.location.reload() : undefined} />
       {section.key === 'taxes' && <UnratedNotice u={unratedNow !== undefined ? unratedNow : unrated} />}
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <form className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); if (dirty) save() }}>
+        <form ref={formRef} className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); if (dirty) save() }}>
           {section.key === 'brand' && <ShopLogo tenantId={tenantId} current={facts.logoUrl ?? null} />}
           {section.key === 'documents' && <DocLogo tenantId={tenantId} current={facts.docLogo} />}
           {section.blocks.some((b) => b.fields.some((f) => held.includes(f.key))) && (
@@ -136,9 +142,10 @@ function FieldInput({ f, value, error, onChange, locked }: { f: Field; value: Va
   const id = `f-${f.key}`
   const described = `${id}-h`
   const base = 'w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text'
-  // Only an error or a limit/money/legal line is said under the field; detail is behind the (i).
-  const line = error ?? f.hint
-  const help = line ? <p id={described} className={`text-xs ${error ? 'text-danger-text' : 'text-muted-foreground'}`}>{line}</p> : null
+  // Only an error or a limit/money/legal line is said under the field; detail is behind the (i). The error takes the
+  // hint's place (its own <FieldError>, the mark and the words).
+  const help = error ? <FieldError name={id} message={error} /> : f.hint ? <p id={described} className="text-xs text-muted-foreground">{f.hint}</p> : null
+  const marks = { 'aria-invalid': !!error || undefined, 'aria-describedby': error ? errorId(id) : f.hint ? described : undefined }
   const tip = f.tip ? <InfoTip about={f.label.toLowerCase()}>{f.tip}</InfoTip> : null
   if (f.kind === 'switch') {
     return (
@@ -155,7 +162,7 @@ function FieldInput({ f, value, error, onChange, locked }: { f: Field; value: Va
     return (
       <fieldset className="space-y-1.5 sm:col-span-2">
         <legend className="sr-only">{f.label}</legend>
-        <div role="radiogroup" aria-label={f.label} className="grid gap-2 sm:grid-cols-3">
+        <div role="radiogroup" aria-label={f.label} {...marks} tabIndex={error ? -1 : undefined} className="grid gap-2 sm:grid-cols-3">
           {f.options!.map(([o, l]) => {
             const on = value === o
             return (
@@ -175,7 +182,7 @@ function FieldInput({ f, value, error, onChange, locked }: { f: Field; value: Va
     return (
       <div className={`space-y-1 ${f.wide ? 'sm:col-span-2' : ''}`}>
         <div className="flex items-center"><span id={`${id}-l`} className="text-sm font-medium">{f.label}</span>{tip}</div>
-        <div role="radiogroup" aria-labelledby={`${id}-l`} className="inline-flex max-w-full flex-wrap gap-0.5 rounded-lg bg-muted p-0.5">
+        <div role="radiogroup" aria-labelledby={`${id}-l`} {...marks} tabIndex={error ? -1 : undefined} className="inline-flex max-w-full flex-wrap gap-0.5 rounded-lg bg-muted p-0.5">
           {f.options!.map(([o, l]) => (
             <button key={o} id={value === o ? id : undefined} type="button" role="radio" aria-checked={value === o} onClick={() => onChange(o)}
               className={`min-h-9 rounded-md px-3 text-sm font-medium transition-[background-color,color] duration-fast ${value === o ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{l}</button>
@@ -185,7 +192,7 @@ function FieldInput({ f, value, error, onChange, locked }: { f: Field; value: Va
       </div>
     )
   }
-  const common = { id, 'aria-invalid': !!error || undefined, 'aria-describedby': line ? described : undefined }
+  const common = { id, ...marks }
   const v = typeof value === 'string' ? value : ''
   let input: React.ReactNode
   if (f.kind === 'textarea' || f.kind === 'pincodes') input = <textarea {...common} rows={3} maxLength={f.max} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} py-2 ${f.kind === 'pincodes' ? 'font-mono' : ''}`} />

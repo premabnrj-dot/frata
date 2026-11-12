@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { Icon } from '@/components/icons/icon'
 import { Money } from '@/components/data/numeric'
+import { FieldError, fieldProps } from '@/components/ui/field-error'
+import { useToast } from '@/components/ui/toast'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { paise } from '@/domains/money/paise'
 import { MAX_NOTES, MAX_PAIRS, MAX_STORIES, pairAction, STORY_LIMITS, type Piece, type Story } from '@/domains/catalogue/stories'
@@ -23,29 +25,30 @@ const Count = ({ n, of }: { n: number; of: number }) => <span className="ml-2 te
 export function StoriesPanel({ stories, onChange, photos, tenantId, enabled, error }: { stories: Story[]; onChange: (s: Story[]) => void; photos: Photo[]; tenantId: string; enabled: boolean; error?: string }) {
   const [open, setOpen] = useState<number | null>(null)
   const [busy, setBusy] = useState<number | null>(null)
-  const [upErr, setUpErr] = useState<string | null>(null)
+  const toast = useToast()
   const put = (i: number, patch: Partial<Story>) => onChange(stories.map((s, j) => (j === i ? { ...s, ...patch } : s)))
   const move = (i: number, by: -1 | 1) => { const a = [...stories]; [a[i], a[i + by]] = [a[i + by]!, a[i]!]; onChange(a); setOpen(open === i ? i + by : open) }
   async function upload(i: number, file: File | undefined) {
     if (!file) return
-    setUpErr(null); setBusy(i)
+    setBusy(i)
     try {
       const { uploadPhoto } = await import('./upload-photos')
       const u = await uploadPhoto(file, tenantId, () => {})
       put(i, { image: { ...u, alt: '', decorative: false } })
-    } catch (e) { setUpErr(e instanceof Error ? e.message : 'That photo did not upload. Try again.') }
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'That photo did not upload. Try again.') } // an upload refused: a toast (§ Feedback 1)
     setBusy(null)
   }
   return (
     <div className="space-y-2">
       <h2 className="text-section font-semibold">Stories{stories.length > 0 && <Count n={stories.length} of={MAX_STORIES} />}</h2>
       {stories.length === 0 && <p className="text-sm text-muted-foreground">Add a story: a photo, a title, a few words, up to 3 numbered notes.</p>}
-      {(error || upErr) && <p role="alert" className="rounded-md border border-danger-text/40 px-3 py-2 text-sm font-medium text-danger-text">{error || upErr}</p>}
+      {/* The save's mistake in the stories: at the stories, each story's row marked so the summary's focus lands on one. */}
+      <FieldError name="stories" message={error} />
       <ul className="space-y-2">
         {stories.map((s, i) => (
           <li key={i} className="rounded-md border border-border">
             <div className="flex items-center gap-3 p-2">
-              <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-expanded={open === i} onClick={() => setOpen(open === i ? null : i)}>
+              <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-expanded={open === i} {...fieldProps('stories', error)} onClick={() => setOpen(open === i ? null : i)}>
                 <Thumb base={s.image?.base ?? null} widths={s.image?.widths ?? null} />
                 <span className="min-w-0"><b className="block truncate text-sm">{s.title || `Story ${i + 1}`}</b>
                   <small className="block truncate text-xs text-muted-foreground">{[s.notes.length ? `${s.notes.length} note${s.notes.length > 1 ? 's' : ''}` : '', s.notes.join(', ')].filter(Boolean).join(' · ') || s.text || 'No text yet'}</small></span>

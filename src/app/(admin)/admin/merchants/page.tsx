@@ -7,7 +7,6 @@ import { Name } from '@/components/data/name'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
-import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { listMerchants, PAGE_SIZE } from '@/lib/admin/merchants'
 import { shopTrialsFor } from '@/lib/admin/trials'
@@ -16,7 +15,7 @@ import { dateTimeIN, dayMonthIN, sinceIN } from '@/lib/format-date'
 
 export const metadata = { title: 'Merchants' }
 
-export default async function MerchantsPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string; error?: string }> }) {
+export default async function MerchantsPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
   const sp = await searchParams
@@ -31,7 +30,6 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader title="Merchants" actions={<Link href="/admin/merchants/new" className={button()}>Add merchant</Link>} />
-      <Notice error={sp.error} />
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <SearchField label="Search merchants" placeholder="Brand or address" value={sp.q} clearHref="/admin/merchants" />
         <span className="text-sm text-muted-foreground"><Numeric>{total.toLocaleString('en-IN')}</Numeric> {sp.q ? 'found' : 'merchants'}</span>

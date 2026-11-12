@@ -3,7 +3,6 @@ import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/com
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
-import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { MODULE_KEYS, MODULES } from '@/domains/modules/registry'
 import { appInterest, openPauses } from '@/lib/admin/modules'
@@ -11,22 +10,22 @@ import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN, sinceIN } from '@/lib/format-date'
 import { pauseModuleAction, resumeModuleAction } from './actions'
 import { Submit } from '@/components/ui/submit'
+import { ActionForm, FieldMessage } from '@/components/ui/action-form'
 
 export const metadata = { title: 'Modules' }
 
 const BILLING = { core: 'Every plan', plan: 'In plans', add_on: 'Add-on' } as const
 
-export default async function ModulesPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
+export default async function ModulesPage() {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
-  const [pauses, sp, admin, interest] = await Promise.all([openPauses(), searchParams, requireStaff(ADMIN_ONLY), appInterest(staff).catch((err) => { console.error('[admin modules interest]', err instanceof Error ? err.name : 'error'); return null })])
+  const [pauses, admin, interest] = await Promise.all([openPauses(), requireStaff(ADMIN_ONLY), appInterest(staff).catch((err) => { console.error('[admin modules interest]', err instanceof Error ? err.name : 'error'); return null })])
   const now = new Date()
   const paused = new Map(pauses.map((p) => [p.module, p]))
   const asked = (k: string) => { const rows = (interest ?? []).filter((r) => r.module === k); return rows.length ? `${rows.length} ${rows.length === 1 ? 'shop' : 'shops'} asked` : '' }
   return (
     <>
       <PageHeader title="Modules" meta="Pausing holds a module back for every shop. Its messages wait; nothing is lost." />
-      <Notice ok={sp.ok} error={sp.error} />
       <DataTable label="Modules">
         <DataTableHead><th>Module</th><th>Sold as</th><th>State</th><th><span className="sr-only">Action</span></th></DataTableHead>
         <DataTableBody>
@@ -40,17 +39,18 @@ export default async function ModulesPage({ searchParams }: { searchParams: Prom
                 <Td cell="d">{p ? <Badge tone="warn">Paused {sinceIN(p.pausedAt, now)}</Badge> : def.status === 'next' ? <Badge>Coming next</Badge> : <Badge tone="ok">Running</Badge>}{p && <span className="ml-2 text-muted-foreground">{p.reason}</span>}</Td>
                 <Td cell="f" className="text-right">
                   {admin.ok && (p ? (
-                    <form action={resumeModuleAction}>
+                    <ActionForm action={resumeModuleAction}>
                       <input type="hidden" name="module" value={k} />
                       <Submit>Resume {def.name}</Submit>
-                    </form>
+                    </ActionForm>
                   ) : (
-                    <form action={pauseModuleAction} className="flex justify-end gap-2">
+                    <ActionForm action={pauseModuleAction} className="flex flex-wrap justify-end gap-2">
                       <input type="hidden" name="module" value={k} />
                       <label className="sr-only" htmlFor={`reason-${k}`}>Why pause {def.name}</label>
-                      <input id={`reason-${k}`} name="reason" required minLength={3} maxLength={200} placeholder="Why" className="h-10 w-40 rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+                      <input id={`reason-${k}`} name="reason" required minLength={3} maxLength={200} placeholder="Why" data-error="Say why, in a few words." className="h-10 w-40 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9" />
                       <Submit variant="secondary">Pause {def.name} for everyone</Submit>
-                    </form>
+                      <span className="basis-full text-left empty:hidden"><FieldMessage name="reason" /></span>
+                    </ActionForm>
                   ))}
                 </Td>
               </DataTableRow>

@@ -5,6 +5,7 @@ import { settle } from '@/lib/settle'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
 import { InfoTip } from '@/components/ui/info-tip'
 import { slugProblem } from '@/domains/signup/slug'
 import { RENAMES_AFTER_OPENING } from '@/domains/addresses/names'
@@ -33,17 +34,22 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
   const [seen, setSeen] = useState(facts)
   if (seen !== facts) { setSeen(facts); setFacts({ current: first, left: firstLeft, old: firstOld }); setSlug(first) }
   const [state, setState] = useState<AddressCheck | null>(null)
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const toast = useToast()
   const [confirming, setConfirming] = useState(false)
+  // A refusal of the confirm dialog's own button stays in that dialog (§ Feedback 4); without the dialog, a toast.
+  const [refused, setRefused] = useState<string | null>(null)
+  const closeConfirm = () => { setConfirming(false); setRefused(null) }
   const router = useRouter()
   // Plain pending, not useTransition, and the page fetched afresh once the write has finished: the update a server action
   // carries back now and then never applied, and a transition around it then stayed pending ("Adding…"; frata-gotchas).
   const [pending, setPending] = useState(false)
-  const run = async (fn: () => Promise<boolean>) => {
+  const run = async (fn: () => Promise<{ ok: true; text: string } | { ok: false; error: string }>) => {
     setPending(true)
-    let ok = false
-    try { ok = await fn() } catch { setMsg({ ok: false, text: 'We could not change it. Nothing was changed.' }) } finally { setPending(false) }
-    if (ok) settle(router)
+    let r: { ok: true; text: string } | { ok: false; error: string }
+    try { r = await fn() } catch { r = { ok: false, error: 'We could not change it. Nothing was changed.' } } finally { setPending(false) }
+    if (!r.ok) { if (confirming) setRefused(r.error); else toast.error(r.error); return }
+    closeConfirm(); toast.ok(r.text)
+    settle(router)
   }
   const changed = slug !== current
   const locked = support || frozen || left === 0 || (twoStep && !!adding)
@@ -58,22 +64,19 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
 
   const add = () => run(async () => {
     const r = await addShopNameAction(slug)
-    setConfirming(false)
-    setMsg(r.ok ? { ok: true, text: `Added ${slug}.${shopDomain}` } : { ok: false, text: r.error })
-    if (r.ok) setSlug(current)
-    return r.ok
+    if (!r.ok) return r
+    setSlug(current)
+    return { ok: true, text: `Added ${slug}.${shopDomain}` }
   })
   const change = () => run(async () => {
     const r = await changeAddress(slug)
-    setConfirming(false)
-    setMsg(r.ok ? { ok: true, text: `Moved to ${slug}.${shopDomain}` } : { ok: false, text: r.error })
-    if (!r.ok) return false
+    if (!r.ok) return r
     setFacts((f) => ({
       current: slug,
       left: f.left === null ? null : Math.max(0, f.left - 1),
       old: f.left === null ? f.old.filter((n) => n !== slug) : [f.current, ...f.old.filter((n) => n !== slug)],
     }))
-    return true
+    return { ok: true, text: `Moved to ${slug}.${shopDomain}` }
   })
   const line = frozen ? 'Address changes paused by Frrata'
     : twoStep && adding ? 'One new address at a time'
@@ -89,19 +92,18 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
         </label>
         <div className="flex items-center gap-1 rounded-md border border-input bg-card px-3 font-mono text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
           <input id="slug" value={slug} disabled={locked || pending} aria-describedby="slug-h"
-            onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 30)); setMsg(null) }}
+            onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 30)) }}
             className="h-10 min-w-0 flex-1 bg-transparent outline-none disabled:opacity-70 md:h-9" />
           <span className="text-muted-foreground">.{shopDomain}</span>
         </div>
         {line && <p id="slug-h" aria-live="polite" className={`text-sm ${state?.state === 'ok' ? 'text-ok-text' : state || frozen || left === 0 ? 'text-warn-text' : 'text-muted-foreground'}`}>{line}</p>}
         {!changed && (
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" onClick={() => { void navigator.clipboard?.writeText(`https://${current}.${shopDomain}`).then(() => setMsg({ ok: true, text: 'Copied' })).catch(() => {}) }}>Copy</Button>
+            <Button type="button" variant="secondary" onClick={() => { void navigator.clipboard?.writeText(`https://${current}.${shopDomain}`).then(() => toast.ok('Copied')).catch(() => {}) }}>Copy</Button>
             <a href={`https://${current}.${shopDomain}`} target="_blank" rel="noopener" className="inline-flex min-h-10 items-center rounded-md border border-input px-3 text-sm md:min-h-9">Open</a>
           </div>
         )}
         {old.length > 0 && <p className="text-sm text-muted-foreground">Old: <span className="font-mono">{old.map((n) => `${n}.${shopDomain}`).join(', ')}</span></p>}
-        {msg && <p role={msg.ok ? 'status' : 'alert'} className={`text-sm ${msg.ok ? 'text-ok-text' : 'text-danger-text'}`}>{msg.text}</p>}
         {!locked && (
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="secondary" disabled={!changed || pending} onClick={() => setSlug(current)}>Keep {current}</Button>
@@ -110,9 +112,9 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
           </div>
         )}
       </Section>
-      <Dialog open={confirming} onClose={() => setConfirming(false)} title={`${twoStep ? 'Add' : 'Change to'} ${slug}.${shopDomain}?`}
+      <Dialog open={confirming} onClose={closeConfirm} error={refused} title={`${twoStep ? 'Add' : 'Change to'} ${slug}.${shopDomain}?`}
         actions={<>
-          <Button type="button" variant="secondary" data-autofocus onClick={() => setConfirming(false)}>Keep {current}</Button>
+          <Button type="button" variant="secondary" data-autofocus onClick={closeConfirm}>Keep {current}</Button>
           <Button type="button" disabled={pending} onClick={twoStep ? add : change}>{pending ? (twoStep ? 'Adding…' : 'Changing…') : `${twoStep ? 'Add' : 'Change to'} ${slug}`}</Button>
         </>}>
         <p className="text-sm">{twoStep ? 'Make it main once Razorpay approves it' : left !== null && `${RENAMES_AFTER_OPENING - left + 1} of ${RENAMES_AFTER_OPENING} changes`}</p>

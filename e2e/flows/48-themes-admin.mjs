@@ -8,7 +8,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import http from 'node:http'
-import { CONSOLE, PORTS, USERS, signedIn, until } from '../lib.mjs'
+import { CONSOLE, PORTS, USERS, expectToast, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const shopHtml = () => new Promise((res, rej) => http.get(`http://localhost:${PORTS.app}/`, { headers: { host: 'kesar-studio.frata.test' } }, (r) => { let b = ''; r.on('data', (c) => (b += c)); r.on('end', () => res(b.replace(/<script[\s\S]*?<\/script>/g, ''))) }).on('error', rej))
@@ -47,10 +47,10 @@ export default {
       await meera.getByLabel('Find a shop').fill('Kesar')
       await meera.getByRole('button', { name: 'Find' }).click()
       await meera.getByRole('button', { name: /^Stage to Kesar/ }).click()
-      await meera.getByText('Staged: that shop can try this version now.').waitFor()
+      await expectToast(meera, 'Staged: that shop can try this version now.', 'ok')
       assert.equal(await editorialVersion(), '1.1.0')
       await meera.getByRole('button', { name: 'Release to everyone' }).click()
-      await meera.getByText(/^Released: every shop can try it/).waitFor()
+      await expectToast(meera, /Released: every shop can try it/, 'ok')
       const audit = await db`select action from audit_events where action in ('theme.stage', 'theme.release') and target = 'editorial@1.1.0'`
       assert.deepEqual(audit.map((a) => a.action).sort(), ['theme.release', 'theme.stage'])
       await meera.screenshot({ path: t.out('admin-version'), fullPage: true })
@@ -59,7 +59,7 @@ export default {
     await t.step('Recalled (with a reason): shops start on the version before', async () => {
       await meera.getByLabel('Why recall it').fill('Shop the look dots overlap on small phones')
       await meera.getByRole('button', { name: 'Recall Editorial 1.1.0' }).click()
-      await meera.getByText(/^Recalled\. No new looks on it/).waitFor()
+      await expectToast(meera, /Recalled\. No new looks on it/, 'ok')
       assert.equal(await editorialVersion(), '1.0.0')
       const [r] = await db`select recalled_reason from theme_versions where theme_key = 'editorial' and version = '1.1.0'`
       assert.equal(r.recalled_reason, 'Shop the look dots overlap on small phones')
@@ -82,7 +82,7 @@ export default {
       await meera.goto(CONSOLE + '/admin/themes/bazaar/1.0.0')
       await meera.getByLabel('Why withdraw it').fill('Prices unreadable on the tint scheme')
       await meera.getByRole('button', { name: 'Withdraw Bazaar 1.0.0' }).click()
-      await meera.getByText('Withdrawn. Shops on it show their previous look now.').waitFor()
+      await expectToast(meera, 'Withdrawn. Shops on it show their previous look now.', 'ok')
       await until(async () => !/Shop tabs/.test(await shopHtml()), 15_000)
       await riya.goto(CONSOLE + '/console/look')
       await riya.getByText('Frrata withdrew Bazaar 1.0.0 for a problem. Your previous look is live; nothing is lost.').waitFor()

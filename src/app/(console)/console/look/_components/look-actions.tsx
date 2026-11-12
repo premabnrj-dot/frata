@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react'
 import { Button, button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Menu } from '@/components/ui/menu'
+import { useToast } from '@/components/ui/toast'
 import { discardDraftAction, editLookAction, undoPublishAction } from '../actions'
 
 /** Customize (primary), Preview, More: what a merchant does with the published look and the draft. */
@@ -15,18 +16,18 @@ export function LookActions({ canEdit, canPublish, hasDraft, undoFrom, restore =
   restore?: boolean; support: boolean }) {
   const router = useRouter()
   const [pending, start] = useTransition()
-  const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
   const run = (f: () => Promise<{ ok: boolean; error?: string }>, then?: () => void) => start(async () => {
-    setError(null); const r = await f()
-    if (!r.ok) { setError(r.error ?? 'Something went wrong.'); return }
+    const r = await f()
+    if (!r.ok) { toast.error(r.error ?? 'Something went wrong.'); return }
     then ? then() : router.refresh()
   })
   const [lost, setLost] = useState<string[]>([])
   // Look v3 § Confirmations: discarding loses work; Undo changes what shoppers see. Each asks first.
   const [confirm, setConfirm] = useState<null | 'discard' | 'undo'>(null)
   const customize = () => start(async () => {
-    setError(null); const r = await editLookAction()
-    if (!r.ok) { setError(r.error); return }
+    const r = await editLookAction()
+    if (!r.ok) { toast.error(r.error); return }
     // Moved to the version Frrata offers now: say what didn't come across before opening the draft.
     if (r.lost.length) { setLost(r.lost); return }
     router.push('/console/look/customize')
@@ -47,7 +48,6 @@ export function LookActions({ canEdit, canPublish, hasDraft, undoFrom, restore =
       </div>
       {!canPublish && <p className="text-sm text-muted-foreground">You can edit the draft; the owner or an admin publishes it.</p>}
       {lost.length > 0 && <div role="status" className="space-y-1 rounded-md bg-warn px-3 py-2 text-sm text-warn-text"><p>Your draft is on the version Frrata offers now. Not in it:</p><ul className="list-disc pl-5">{lost.map((x) => <li key={x}>{x}</li>)}</ul><a href="/console/look/customize" className="underline underline-offset-4">Open the draft</a></div>}
-      {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
       <Dialog open={confirm === 'discard'} onClose={() => setConfirm(null)} title="Discard your draft?" description="Your changes since the last publish are lost. Your shop doesn’t change."
         actions={<><Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setConfirm(null)}>Keep it</Button><Button variant="destructive" disabled={pending} onClick={() => { setConfirm(null); run(discardDraftAction) }}>Discard</Button></>} />
       <Dialog open={confirm === 'undo'} onClose={() => setConfirm(null)} title={previousName ? `Put ${previousName} back on your shop?` : 'Put your previous look back?'} description="Shoppers see it on their next visit. This look stays in History."

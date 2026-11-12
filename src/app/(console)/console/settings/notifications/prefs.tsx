@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useToast } from '@/components/ui/toast'
 import { Switch } from '@/components/ui/switch'
 import { setNoticePrefAction } from '../../notices/actions'
 
@@ -9,13 +10,12 @@ export type PrefRow = { type: string; label: string; email: boolean | 'always' }
 /** One row per kind of notice: in the console always; email locked on for required kinds, a switch for the rest. */
 export function Prefs({ rows, readOnly }: { rows: PrefRow[]; readOnly: boolean }) {
   const [state, setState] = useState(rows)
-  const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
   const [pending, start] = useTransition()
   const flip = (type: string, email: boolean) => start(async () => {
-    setError(null)
     const r = await setNoticePrefAction({ type, email })
     if (r.ok) setState((s) => s.map((x) => (x.type === type ? { ...x, email } : x)))
-    else setError(r.error)
+    else toast.error(r.error)
   })
   return (
     <>
@@ -29,7 +29,6 @@ export function Prefs({ rows, readOnly }: { rows: PrefRow[]; readOnly: boolean }
           </li>
         ))}
       </ul>
-      {error ? <p role="alert" className="px-4 pb-3 text-sm text-danger-text">{error}</p> : null}
     </>
   )
 }

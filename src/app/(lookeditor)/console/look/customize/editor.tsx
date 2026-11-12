@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
 import type { Choices } from '@/domains/themes/choices'
 import { readinessOf, type ShopFacts } from '@/domains/themes/readiness'
 import { MAX_LOOPS, sectionName, type SectionInstance, type SectionKey } from '@/domains/themes/sections'
@@ -19,10 +20,8 @@ import type { ContactRow } from './pages-panel'
 import type { EditorPage } from '@/lib/queries/pages'
 import type { PageTemplate } from '@/domains/pages/templates'
 import type { Bound } from '@/domains/policies/answers'
-import { PageForm } from './page-form'
 import type { StyleOption } from './theme-form'
 import { Icon } from '@/components/icons/icon'
-import { PublishConfirm } from './publish-confirm'
 import { Segmented } from './controls'
 import { menusOf, siteIsDefault, type Menus, type Palette, type SiteSettings } from '@/domains/themes/site'
 import type { IconPreviews } from './site-form'
@@ -38,6 +37,10 @@ const ThemeForm = dynamic(() => import('./theme-form').then((m) => m.ThemeForm))
 const ContactPanel = dynamic(() => import('./pages-panel').then((m) => m.ContactPanel))
 const PagePanel = dynamic(() => import('./pages-panel').then((m) => m.PagePanel))
 const AddPage = dynamic(() => import('./pages-panel').then((m) => m.AddPage))
+// Feedback F1 (2026-11-12): the toast joined the editor's first load (+3 kB); a page's own form and Publish's confirm
+// load when opened to pay for it.
+const PageForm = dynamic(() => import('./page-form').then((m) => m.PageForm))
+const PublishConfirm = dynamic(() => import('./publish-confirm').then((m) => m.PublishConfirm))
 
 // =============================================================================
 // The customizer (approved mockup "Customizer", "Customizer on a phone", "Publish"). One draft revision:
@@ -108,7 +111,9 @@ export function Editor(p: EditorProps) {
   const shown = page.startsWith('page:') ? pages.find((x) => `page:${x.id}` === page) ?? null : null
   const pageName = page === 'contact' ? 'Contact' : shown ? shown.draft.title : PAGE_NAMES[page as EditPage]
   const [status, setStatus] = useState<Status>('saved')
-  const [pubError, setPubError] = useState<string | null>(null)
+  const toast = useToast()
+  /** The removal toast on screen (its Undo is for that removal only). */
+  const removal = useRef<number | null>(null)
   const [pending, start] = useTransition()
   const version = useRef(p.version)
   const frame = useRef<HTMLIFrameElement>(null)
@@ -139,9 +144,12 @@ export function Editor(p: EditorProps) {
     setPast((h) => [...h.slice(-49), { layer, style }]); setFuture([])
     setLayer(next); setStyle(nextStyle); schedule()
     // A removal's Undo is for that removal only: the next change ends it (impact review 2026-11-09).
-    setToast(null)
+    if (removal.current !== null) { toast.dismiss(removal.current); removal.current = null }
   }
-  const undo = () => { const prev = past.at(-1); if (!prev || stuck) return; setPast((h) => h.slice(0, -1)); setFuture((f) => [{ layer, style }, ...f]); setLayer(prev.layer); setStyle(prev.style); schedule() }
+  const undo = () => { const prev = past.at(-1); if (!prev || stuck) return false; setPast((h) => h.slice(0, -1)); setFuture((f) => [{ layer, style }, ...f]); setLayer(prev.layer); setStyle(prev.style); schedule(); return true }
+  // The toast's Undo runs after this render: it reads the history as it is then.
+  const undoNow = useRef(undo)
+  undoNow.current = undo
   const redo = () => { const nxt = future[0]; if (!nxt || stuck) return; setFuture((f) => f.slice(1)); setPast((h) => [...h, { layer, style }]); setLayer(nxt.layer); setStyle(nxt.style); schedule() }
 
   useEffect(() => {
@@ -181,10 +189,11 @@ export function Editor(p: EditorProps) {
     return () => window.removeEventListener('beforeunload', warn)
   }, [unsaved])
   const [leaving, setLeaving] = useState(false)
-  // A removal says so with Undo for 8 s (Look v3: a toast, not a dialog: it is undone in one tap).
-  const [toast, setToast] = useState<string | null>(null)
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const say = (t: string) => { setToast(t); if (toastTimer.current) clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 8000) }
+  // A section's removal says so with Undo for 8 s (Look v3: a toast, not a dialog: it is undone in one tap).
+  const removed = (text: string) => {
+    removal.current = toast.next()
+    toast({ text, undo: async () => { removal.current = null; return undoNow.current() ? { ok: true } : { ok: false } } })
+  }
 
   const issues = useMemo(() => readinessOf(layer.home, p.facts, now, p.formCtx.designs), [layer.home, p.facts, now, p.formCtx.designs])
   // TS1b: the loops this Home plays (shown sections where the theme offers video); at MAX_LOOPS no field offers another.
@@ -208,7 +217,7 @@ export function Editor(p: EditorProps) {
   // draft and shows the success popup over the live shop (published.tsx).
   const publish = () => {
     // Shown at once: state set inside the transition would wait for it to end.
-    setPubError(null); setAsk(false); setGoing(true)
+    setAsk(false); setGoing(true)
     go()
   }
   const go = () => start(async () => {
@@ -216,8 +225,8 @@ export function Editor(p: EditorProps) {
       if (timer.current) { clearTimeout(timer.current); timer.current = null; await save() }
       await flushPage.current?.()
       const [r] = await Promise.all([publishLookAction({ revisionId: p.revisionId, version: version.current, pages: Object.fromEntries(pagesNow.current.map((x) => [x.id, x.version])) }), new Promise((ok) => setTimeout(ok, GOING_LIVE_MS))])
-      if (!r.ok) { setGoing(false); setPubError(r.error); setAsk(true) }
-    } catch { setGoing(false); setPubError('We couldn’t publish. Your draft is safe; try again.'); setAsk(true) }
+      if (!r.ok) { setGoing(false); toast.error(r.error) }
+    } catch { setGoing(false); toast.error('We couldn’t publish.', { sub: 'Your draft is safe; try again.' }) }
   })
 
   const setSettings = (s: Partial<ThemeSettings>) => change({ ...layer, settings: { ...layer.settings, ...s } })
@@ -241,14 +250,14 @@ export function Editor(p: EditorProps) {
       {tab === 'sections' && shown && <PagePanel key={shown.id} page={shown} c={p.formCtx} answers={p.answers} address={p.address}
         registerFlush={(f) => { flushPage.current = f }}
         onSaved={(x) => { pagesNow.current = pagesNow.current.map((y) => (y.id === x.id ? x : y)); setPages(pagesNow.current); post({ type: 'refresh' }) }}
-        onRemoved={(id, v) => { setPages((ps) => (v === null ? ps.filter((y) => y.id !== id) : ps.map((y) => (y.id === id ? { ...y, version: v, draft: { ...y.draft, removed: true } } : y)))); setPage('home'); say('Page removed') }} />}
+        onRemoved={(id, v) => { setPages((ps) => (v === null ? ps.filter((y) => y.id !== id) : ps.map((y) => (y.id === id ? { ...y, version: v, draft: { ...y.draft, removed: true } } : y)))); setPage('home'); toast.ok('Page removed') }} />}
       {tab === 'menus' && <MenusForm menus={menus} own={layer.menus ?? {}} rowLimit={layer.settings.header === 'split' ? 5 : null} targets={p.targets} icons={icons} set={(m) => change({ ...layer, menus: m })} />}
       {tab === 'sections' && page === 'home' && (sel ? (
         <div className="space-y-4">
           <button type="button" onClick={() => setSelected(null)} className="text-sm text-muted-foreground">‹ Sections</button>
           <SectionForm s={sel} c={{ ...p.formCtx, loopsFull }} set={(s) => change({ ...layer, home: layer.home.map((x) => (x.id === s.id ? s : x)) })} />
           {issueMap.has(sel.id) && <p role="status" className="rounded-md bg-warn px-3 py-2 text-sm text-warn-text">{issueMap.get(sel.id)}</p>}
-          <button type="button" onClick={() => { change({ ...layer, home: layer.home.filter((x) => x.id !== sel.id) }); setSelected(null); say(`${sectionName(sel, p.formCtx.designs)} removed`) }} className="min-h-9 text-sm text-danger-text underline underline-offset-4">Remove this section</button>
+          <button type="button" onClick={() => { change({ ...layer, home: layer.home.filter((x) => x.id !== sel.id) }); setSelected(null); removed(`${sectionName(sel, p.formCtx.designs)} removed`) }} className="min-h-9 text-sm text-danger-text underline underline-offset-4">Remove this section</button>
         </div>
       ) : (
         <SectionsPanel home={layer.home} selected={selected} allowed={p.allowed.sections} made={p.made.sections ?? []} themeName={p.themeName} issues={issueMap} now={now} designs={p.designs}
@@ -271,13 +280,14 @@ export function Editor(p: EditorProps) {
         <a href={`/console/theme-preview/${p.revisionId}${path}`} target="_blank" rel="noopener" className="hidden min-h-9 content-center rounded-md border border-input px-3 text-sm sm:block">Full preview</a>
         {p.canPublish ? (
           <span className="relative">
-            <Button data-publish onClick={() => { setPubError(null); setAsk((a) => !a) }} disabled={stuck || going} aria-expanded={ask}>{going ? 'Publishing…' : 'Publish'}</Button>
-            {ask && <PublishConfirm themeName={p.themeName} shopOpen={p.shopOpen} blocking={blocking.map((b) => b.text)} error={pubError} pending={pending}
+            <Button data-publish onClick={() => setAsk((a) => !a)} disabled={stuck || going} aria-expanded={ask}>{going ? 'Publishing…' : 'Publish'}</Button>
+            {ask && <PublishConfirm themeName={p.themeName} shopOpen={p.shopOpen} blocking={blocking.map((b) => b.text)} pending={pending}
               onCancel={() => setAsk(false)} onPublish={publish} onFix={(text) => { const i = issues.find((x) => x.text === text); setAsk(false); setTab('sections'); setPage('home'); if (i) setSelected(i.sectionId) }} />}
           </span>
         ) : <span className="text-sm text-muted-foreground">Ask the owner to publish</span>}
         {going && <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 origin-left animate-going-live bg-brand" />}
       </header>
+      {/* feedback-ok: autosave's "Not saved" band with Reload is pinned in place (rule 5) */}
       {typeof status === 'object' && <p role="alert" className="bg-danger px-4 py-2 text-sm text-danger-text">{status.error} {stuck && <button type="button" onClick={() => router.refresh()} className="underline">Reload</button>}</p>}
 
       <div className="flex min-h-0 flex-1 flex-col-reverse md:flex-row">
@@ -330,8 +340,6 @@ export function Editor(p: EditorProps) {
         </section>
       </div>
 
-      {toast && <div data-toast role="status" className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-xl bg-foreground px-4 py-2.5 text-sm text-background shadow-lg">
-        <span>{toast}</span><button type="button" onClick={() => { undo(); setToast(null) }} className="font-semibold underline underline-offset-4">Undo</button></div>}
       <Dialog open={leaving} onClose={() => setLeaving(false)} title="Leave before it saves?" description="Your last change hasn’t reached the draft."
         actions={<><Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setLeaving(false)}>Stay</Button><Button variant="destructive" onClick={() => { setLeaving(false); router.push('/console/look') }}>Leave</Button></>} />
     </div>

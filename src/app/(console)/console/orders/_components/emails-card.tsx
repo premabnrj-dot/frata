@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { resendOrderEmailAction, setOrderEmailAction } from '../email-actions'
 
 export type CardEmail = { id: string; name: string; kind: string; at: string; state: string; words: string }
@@ -13,14 +14,15 @@ const TONE: Record<string, 'ok' | 'warn' | 'danger' | 'neutral' | 'info'> = { de
 export function EmailsCard({ orderId, email, emails, canAct }: { orderId: string; email: string | null; emails: CardEmail[]; canAct: boolean }) {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(email ?? '')
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [pending, start] = useTransition()
   const router = useRouter()
+  const toast = useToast()
   const last = emails[0]
+  // The result is a toast (design-language § Feedback): ok after the save or the resend, the refusal as an error.
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>, done: string) => start(async () => {
-    setMsg(null); const r = await fn()
-    setMsg(r.ok ? { ok: true, text: done } : { ok: false, text: r.error ?? 'Something went wrong.' })
-    if (r.ok) { setEditing(false); router.refresh() }
+    const r = await fn().catch(() => ({ ok: false, error: 'We could not reach Frrata. Nothing was changed.' }))
+    if (!r.ok) { toast.error(r.error ?? 'Something went wrong.'); return }
+    toast.ok(done); setEditing(false); router.refresh()
   })
   return (
     <div className="space-y-2 text-sm">
@@ -41,7 +43,6 @@ export function EmailsCard({ orderId, email, emails, canAct }: { orderId: string
         </ul>
       ) : null}
       {canAct && last && email ? <Button variant="secondary" disabled={pending} onClick={() => run(() => resendOrderEmailAction(orderId, last.kind), 'Sending again.')}>Send “{last.name}” again</Button> : null}
-      {msg ? <p role={msg.ok ? 'status' : 'alert'} className={msg.ok ? 'text-ok-text' : 'text-danger-text'}>{msg.text}</p> : null}
     </div>
   )
 }

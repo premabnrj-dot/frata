@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
 import http from 'node:http'
-import { CONSOLE, FAKE_CHECKOUT, PORTS, RZP, RZP_KEYS, SHOP, playwright, signedIn, until } from '../lib.mjs'
+import { CONSOLE, FAKE_CHECKOUT, PORTS, RZP, RZP_KEYS, SHOP, playwright, signedIn, until, expectToast } from '../lib.mjs'
 const { devices } = playwright
 
 export default {
@@ -30,7 +30,7 @@ export default {
     })
     await t.step('right keys connect, sealed', async () => {
       await c.fill('#key-secret', RZP_KEYS.secret); await c.getByRole('button', { name: 'Test and connect' }).click()
-      await c.getByText('Connected. Razorpay accepted the keys.').waitFor()
+      await expectToast(c, 'Connected. Razorpay accepted the keys.', 'ok')
       await c.locator('code', { hasText: '/api/webhooks/razorpay/' }).waitFor(); await c.locator('code', { hasText: 'whsec_' }).waitFor()
       const codes = await c.locator('code').allTextContents()
       hookUrl = codes.find((x) => x.includes('/api/webhooks/razorpay/')); hookSecret = codes.find((x) => x.startsWith('whsec_'))

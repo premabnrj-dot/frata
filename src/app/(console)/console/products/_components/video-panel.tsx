@@ -6,6 +6,7 @@ import { Icon } from '@/components/icons/icon'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
 import { Section } from '@/components/layout/section'
 import { failedWords, uploadProblem, USE_LIMITS } from '@/domains/video/state'
 import type { ProductVideoView } from '@/lib/video/product-view'
@@ -15,7 +16,8 @@ import { productVideoStatusAction, removeProductVideoAction, setProductVideoActi
 // FILE: video-panel.tsx — a product's video (PV·1; mockup docs/mockups/2026-11-09-product-video.html, Console view):
 // Add a video → Uploading (progress, Cancel) → Getting it ready → Ready (the frame, shape and length, where it shows,
 // the cover-frame strip, the button's words, Replace, Remove); Didn't work (why, Choose another). The file goes from
-// the browser straight to Mux. Saves as it changes (it is a file, not a form field), like Photos.
+// the browser straight to Mux. Saves as it changes (it is a file, not a form field), like Photos. A file refused, an
+// upload or a change that failed is an error toast; Remove's own failure stays in its dialog (§ Feedback 1, 4).
 // =============================================================================
 
 const BUTTON_WORDS = [['model', 'See it on a model'], ['wear', 'How to wear'], ['none', 'None']] as const
@@ -44,8 +46,9 @@ export function VideoPanel({ productId, initial, blocked, title, onShop }: { pro
   const input = useRef<HTMLInputElement>(null)
   const [video, setVideo] = useState(initial)
   const [progress, setProgress] = useState<number | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
   const [ask, setAsk] = useState<'replace' | 'remove' | null>(null)
+  const [removeError, setRemoveError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const xhr = useRef<XMLHttpRequest | null>(null)
 
@@ -68,41 +71,44 @@ export function VideoPanel({ productId, initial, blocked, title, onShop }: { pro
 
   const pick = async (f: File | undefined) => {
     if (!f) return
-    setError(null)
     const why = uploadProblem(f.type, f.size, 'product')
-    if (why) { setError(why); return }
+    if (why) { toast.error(why); return }
     // Too long is refused before a byte leaves the phone (the cost is in the file); too short is cheap, the server checks.
     const ms = await lengthOf(f)
-    if (ms !== null && ms > LIMIT.maxMs + 500) { setError(failedWords('too_long', ms, null, null)); return }
+    if (ms !== null && ms > LIMIT.maxMs + 500) { toast.error(failedWords('too_long', ms, null, null)); return }
     setBusy(true)
     const r = await startProductVideoAction({ productId, contentType: f.type, size: f.size, ...(video ? { replaces: video.id } : {}) }).catch(() => null)
     setBusy(false)
-    if (!r?.ok) { setError(r?.error ?? 'Video didn’t start. Try again in a minute.'); return }
+    if (!r?.ok) { toast.error(r?.error ?? 'Video didn’t start. Try again in a minute.'); return }
     setVideo({ id: r.videoId, kind: 'uploading', failed: null, shape: null, size: null, length: null, posterMs: 1000, button: 'model', poster: null, frames: [] })
     setProgress(0)
     const x = new XMLHttpRequest(); xhr.current = x
     x.upload.onprogress = (e) => { if (e.lengthComputable) setProgress(e.loaded / e.total) }
-    x.onload = () => { xhr.current = null; setProgress(null); if (x.status >= 300) setError('The video didn’t upload. Try again.') }
-    x.onerror = () => { xhr.current = null; setProgress(null); setError('The video didn’t upload. Check your connection and try again.') }
+    x.onload = () => { xhr.current = null; setProgress(null); if (x.status >= 300) toast.error('The video didn’t upload. Try again.') }
+    x.onerror = () => { xhr.current = null; setProgress(null); toast.error('The video didn’t upload. Check your connection and try again.') }
     x.open('PUT', r.url); x.setRequestHeader('content-type', f.type); x.send(f)
   }
 
   const remove = async () => {
     xhr.current?.abort(); xhr.current = null; setProgress(null)
-    setBusy(true)
+    const inDialog = ask === 'remove'
+    setBusy(true); setRemoveError(null)
     const r = await removeProductVideoAction({ productId }).catch(() => null)
-    setBusy(false); setAsk(null)
-    if (!r?.ok) { setError(r?.error ?? 'The video wasn’t removed. Try again.'); return }
-    setVideo(null)
+    setBusy(false)
+    if (!r?.ok) {
+      const why = r?.error ?? 'The video wasn’t removed. Try again.'
+      if (inDialog) setRemoveError(why); else toast.error(why)
+      return
+    }
+    setAsk(null); setVideo(null)
   }
 
   const set = async (change: { posterMs?: number; button?: 'model' | 'wear' | 'none' }) => {
     if (!video) return
     const before = video
-    setError(null)
     setVideo({ ...video, ...change, poster: change.posterMs !== undefined ? video.frames.find((f) => f.ms === change.posterMs)?.poster ?? video.poster : video.poster })
     const r = await setProductVideoAction({ productId, ...change }).catch(() => null)
-    if (!r?.ok) { setVideo(before); setError(r?.error ?? 'Not saved. Try again.') }
+    if (!r?.ok) { setVideo(before); toast.error(r?.error ?? 'Not saved. Try again.') }
   }
 
   const k = progress !== null ? 'sending' : video?.kind ?? 'none'
@@ -138,6 +144,7 @@ export function VideoPanel({ productId, initial, blocked, title, onShop }: { pro
           <button type="button" disabled={busy} onClick={() => void remove()} className="font-medium underline underline-offset-4">Cancel</button>
         </div>
       ) : k === 'failed' ? (
+        // feedback-ok: the video's Didn't work STATE (found by polling), with what to do (Choose another, Remove) — rule 5
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-md border border-danger-text/40 bg-danger p-3 text-sm text-danger-text">
           <span className="flex-1">{video?.failed}</span>
           {blocked ? null : <button type="button" disabled={busy} onClick={() => input.current?.click()} className="font-medium underline underline-offset-4">Choose another</button>}
@@ -186,9 +193,8 @@ export function VideoPanel({ productId, initial, blocked, title, onShop }: { pro
       {/* Opened by the buttons above (Add a video, Choose another, Replace), so it is not a control of its own. */}
       <input ref={input} type="file" accept="video/mp4,video/quicktime" className="sr-only" tabIndex={-1} aria-hidden="true" disabled={busy || (!!blocked && !video)}
         onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = '' }} />
-      {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
-      <Dialog open={ask === 'remove'} onClose={() => setAsk(null)} title="Remove the video?" description={`It comes off ${title} at once and is deleted.`}
-        actions={<><Button variant="secondary" data-autofocus onClick={() => setAsk(null)}>Keep the video</Button><Button variant="destructive" disabled={busy} onClick={() => void remove()}>Remove video</Button></>} />
+      <Dialog open={ask === 'remove'} onClose={() => { setAsk(null); setRemoveError(null) }} title="Remove the video?" description={`It comes off ${title} at once and is deleted.`} error={removeError}
+        actions={<><Button variant="secondary" data-autofocus onClick={() => { setAsk(null); setRemoveError(null) }}>Keep the video</Button><Button variant="destructive" disabled={busy} onClick={() => void remove()}>Remove video</Button></>} />
       <Dialog open={ask === 'replace'} onClose={() => setAsk(null)} title="Replace the video?" description="The one on the product now is deleted when the new one starts uploading."
         actions={<><Button variant="secondary" data-autofocus onClick={() => setAsk(null)}>Keep the video</Button><Button onClick={() => { setAsk(null); input.current?.click() }}>Choose a video</Button></>} />
     </Section>

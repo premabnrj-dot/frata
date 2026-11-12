@@ -6,9 +6,11 @@ import { PROMISES, sectionName, type SectionInstance, type SectionOf, type Video
 import { Choice, Field, ImageField, LinkPicker, SourcePicker, Switch, Text, WhenIST, paiseToRupees, rupeesToPaise, type LibraryPhoto, type LinkTarget } from './controls'
 import { Icon } from '@/components/icons/icon'
 import { urlFor } from '@/domains/media/sizes'
-import { VideoField } from './video-field'
 import dynamic from 'next/dynamic'
 import type { Design } from '@/domains/themes/blocks'
+
+// Only a video section shows it: it loads when one is edited (feedback F1, the editor's budget).
+const VideoField = dynamic(() => import('./video-field').then((m) => m.VideoField))
 
 // Signal 1.2's story forms load only when one is opened (speed review: the customizer is over its script budget).
 const StoryFanForm = dynamic(() => import('./story-forms').then((m) => m.StoryFanForm))

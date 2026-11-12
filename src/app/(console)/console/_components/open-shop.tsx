@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { closeShop, openShop } from '../shop-actions'
 import { useOpenMoment } from './open-moment'
 
 /** Open my shop (asks once), or, when open, close it again. Orders are kept either way. */
 export function OpenShop({ address, open, ready, canManage }: { address: string; open: boolean; ready: boolean; canManage: boolean }) {
   const [ask, setAsk] = useState(false)
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const toast = useToast()
   /** The one brand moment (rule 26) is drawn by the page's OpenMoment, which outlives this checklist. */
   const moment = useOpenMoment()
   // Busy is this button's own, for the action's round trip only — never a React transition. A transition stays
@@ -26,12 +27,13 @@ export function OpenShop({ address, open, ready, canManage }: { address: string;
     setPending(true)
     try {
       const r = await fn()
-      // Opening says so through the moment; closing (and any failure) says so here.
-      setMsg(r.ok ? (fn === openShop && moment ? null : { ok: true, text: done }) : { ok: false, text: r.error })
+      // Opening says so through the moment; closing (and any failure) says so in a toast.
+      if (!r.ok) toast.error(r.error)
+      else if (!(fn === openShop && moment)) toast.ok(done)
       setAsk(false)
       if (r.ok) { setKnown(fn === openShop); if (fn === openShop) moment?.opened(); else moment?.closed() }
     } catch {
-      setMsg({ ok: false, text: 'We could not reach Frrata. Nothing was changed; try again.' })
+      toast.error('We could not reach Frrata.', { sub: 'Nothing was changed. Try again.' })
     } finally {
       setPending(false)
     }
@@ -49,9 +51,6 @@ export function OpenShop({ address, open, ready, canManage }: { address: string;
         // Just closed here: it was open a moment ago, so it is ready, whatever a late render still says (e2e 90-ux).
         <Button disabled={!(ready || known === false || open) || pending} onClick={() => setAsk(true)}>Open my shop</Button>
       )}
-      {msg && !msg.ok && <p role="alert" className="text-sm text-danger-text">{msg.text}</p>}
-      {/* One status region that is always there, so a screen reader hears what lands in it. */}
-      <div role="status">{msg?.ok && <p className="text-sm text-ok-text">{msg.text}</p>}</div>
     </div>
   )
 }
