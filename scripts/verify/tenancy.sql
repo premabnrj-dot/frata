@@ -3076,4 +3076,117 @@ do $$ begin
     raise exception 'FAIL: two SKUs that differ only in case'; exception when unique_violation then null; end;
 end $$;
 
-\echo 'tenancy proof — all 75 checks passed'
+-- 76. Partner teams T1a (0120–0121; plan docs/plans/2026-11-12-studio-build.md § T1a). O owns partner P, L is invited as a
+-- lead, Z owns another partner, B is a brand owner, X anyone else, S an admin and U a support person. Tables: definers only.
+insert into auth.users (id, email, email_confirmed_at) values
+  ('aaaaaaaa-0000-0000-0000-000000000030', 'own@team.test', now()), ('aaaaaaaa-0000-0000-0000-000000000031', 'lead@team.test', now()),
+  ('aaaaaaaa-0000-0000-0000-000000000032', 'zed@other.test', now()), ('aaaaaaaa-0000-0000-0000-000000000033', 'brand@team.test', now()),
+  ('aaaaaaaa-0000-0000-0000-000000000034', 'x2@else.test', now()), ('aaaaaaaa-0000-0000-0000-000000000035', 'admin2@frata.test', now()),
+  ('aaaaaaaa-0000-0000-0000-000000000036', 'help2@frata.test', now());
+insert into platform_staff (user_id, email, role) values ('aaaaaaaa-0000-0000-0000-000000000035', 'admin2@frata.test', 'admin'),
+  ('aaaaaaaa-0000-0000-0000-000000000036', 'help2@frata.test', 'support');
+begin; set local role frata_app;
+select app_partner_apply('aaaaaaaa-0000-0000-0000-000000000030', 'Om', 'Om Studio', '919845012340', 'Pune', '{}', '', '1-4', 1),
+       app_partner_apply('aaaaaaaa-0000-0000-0000-000000000032', 'Zed', '', '919845012341', 'Surat', '{}', '', '1-4', 1);
+commit;
+update partners set approved_at = now() where user_id in ('aaaaaaaa-0000-0000-0000-000000000030', 'aaaaaaaa-0000-0000-0000-000000000032');
+begin; set local role frata_app;
+do $$ declare O uuid := 'aaaaaaaa-0000-0000-0000-000000000030'; L uuid := 'aaaaaaaa-0000-0000-0000-000000000031'; Z uuid := 'aaaaaaaa-0000-0000-0000-000000000032';
+  B uuid := 'aaaaaaaa-0000-0000-0000-000000000033'; X uuid := 'aaaaaaaa-0000-0000-0000-000000000034';
+  t1 uuid; t2 uuid; tz uuid; tl uuid; inv uuid; inv2 uuid; own uuid; h uuid; m jsonb; r jsonb;
+begin
+  begin perform 1 from partner_members; raise exception 'FAIL: app reads partner_members'; exception when insufficient_privilege then null; end;
+  begin perform 1 from partner_assignments; raise exception 'FAIL: app reads partner_assignments'; exception when insufficient_privilege then null; end;
+  begin perform admin_end_partner(O, gen_random_uuid(), 'x'); raise exception 'FAIL: app suspends a partner'; exception when insufficient_privilege then null; end;
+  t1 := app_partner_create_shop(O, 'Team A', 'proof-team-a', '411001', 2000, 24, 90, 10);
+  t2 := app_partner_create_shop(O, 'Team B', 'proof-team-b', '411001', 2000, 24, 90, 10);
+  tz := app_partner_create_shop(Z, 'Zed shop', 'proof-zed', '395001', 2000, 24, 90, 10);
+  select member_id into own from app_my_partner(O);
+  if (select member_role from app_my_partner(O)) <> 'owner' or (select count(*) from app_partner_team(O)) <> 1 then raise exception 'FAIL: the founder is the owner member'; end if;
+  begin perform app_partner_team(X); raise exception 'FAIL: a stranger read a team'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  -- invites: owner only, a lead, the partner's own live stores only
+  begin perform app_partner_invite(Z, 'x@else.test', 'lead', array[t1]); raise exception 'FAIL: another partner invited into P store'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_store' then raise; end if; end;
+  begin perform app_partner_invite(O, 'lead@team.test', 'builder', array[t1]); raise exception 'FAIL: a builder before T1c'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_role' then raise; end if; end;
+  begin perform app_partner_invite(O, 'lead@team.test', 'owner', array[t1]); raise exception 'FAIL: a second owner'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_role' then raise; end if; end;
+  inv := app_partner_invite(O, 'Lead@Team.test', 'lead', array[t1]);
+  begin perform app_partner_invite(O, 'lead@team.test', 'lead', '{}'); raise exception 'FAIL: the same email twice'; exception when sqlstate 'P0001' then if sqlerrm <> 'already_invited' then raise; end if; end;
+  if (select count(*) from app_partner_my_invites(L)) <> 1 or exists (select 1 from app_partner_my_invites(X)) then raise exception 'FAIL: who sees the invite'; end if;
+  -- accept: only the invited, confirmed email; never someone in another partner
+  begin perform app_partner_accept(X, inv); raise exception 'FAIL: a stranger accepted'; exception when sqlstate 'P0001' then if sqlerrm <> 'no_invite' then raise; end if; end;
+  inv2 := app_partner_invite(O, 'zed@other.test', 'lead', '{}');
+  begin perform app_partner_accept(Z, inv2); raise exception 'FAIL: a person joined two partners'; exception when sqlstate 'P0001' then if sqlerrm <> 'in_team' then raise; end if; end;
+  begin perform app_partner_invite(L, 'x2@else.test', 'lead', '{}'); raise exception 'FAIL: invited before accepting'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  r := app_partner_accept(L, inv);
+  m := app_access_for(L);
+  if jsonb_array_length(m->'memberships') <> 1 or (m->'memberships'->0->>'tenantId')::uuid <> t1 or m->'memberships'->0->>'role' <> 'partner' then raise exception 'FAIL: the lead works on A only (%)', m; end if;
+  if (select count(*) from app_partner_clients(L)) <> 1 or (select count(*) from app_partner_clients(O)) <> 2 then raise exception 'FAIL: clients by role'; end if;
+  if (select member_role from app_my_partner(L)) <> 'lead' then raise exception 'FAIL: the lead''s role'; end if;
+  -- a lead can't run the team or hand over (until T1b); a lead can make a store, and the owner works on it too
+  begin perform app_partner_invite(L, 'x2@else.test', 'lead', '{}'); raise exception 'FAIL: a lead invited'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_partner_remove_member(L, own); raise exception 'FAIL: a lead removed someone'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_partner_assign(L, inv, t2, true); raise exception 'FAIL: a lead assigned'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_handover_invite(t1, L, 'someone@brand.test'); raise exception 'FAIL: a lead handed over'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
+  tl := app_partner_create_shop(L, 'Lead shop', 'proof-team-l', '411001', 2000, 24, 90, 10);
+  if (select count(*) from app_partner_clients(O)) <> 3 or (select count(*) from app_partner_clients(L)) <> 2 then raise exception 'FAIL: a lead''s new store'; end if;
+  -- assignment: the owner, the partner's own store, the partner's own person
+  begin perform app_partner_assign(O, inv, tz, true); raise exception 'FAIL: assigned another partner''s store'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_store' then raise; end if; end;
+  begin perform app_partner_assign(Z, inv, tz, true); raise exception 'FAIL: another partner assigned P''s lead'; exception when sqlstate 'P0001' then if sqlerrm <> 'no_person' then raise; end if; end;
+  perform app_partner_assign(O, inv, t2, true);
+  if jsonb_array_length(app_access_for(L)->'memberships') <> 3 then raise exception 'FAIL: assign'; end if;
+  perform app_partner_assign(O, inv, t2, false);
+  if jsonb_array_length(app_access_for(L)->'memberships') <> 2 then raise exception 'FAIL: unassign'; end if;
+  -- a colleague never takes a handover
+  h := app_handover_invite(t2, O, 'lead@team.test');
+  if exists (select 1 from app_my_handovers(L)) then raise exception 'FAIL: a colleague sees the handover'; end if;
+  begin perform app_accept_handover_v2(L, h, null, 1::smallint); raise exception 'FAIL: a colleague took the store'; exception when sqlstate 'P0001' then if sqlerrm <> 'partner_member' then raise; end if; end;
+  -- removal: never the owner; a removed lead has nothing
+  begin perform app_partner_remove_member(O, own); raise exception 'FAIL: the owner removed'; exception when sqlstate 'P0001' then if sqlerrm <> 'is_owner' then raise; end if; end;
+  perform app_partner_remove_member(O, inv);
+  if jsonb_array_length(app_access_for(L)->'memberships') <> 0 or exists (select 1 from app_my_partner(L)) or exists (select 1 from app_partner_clients(L))
+  then raise exception 'FAIL: a removed lead keeps access'; end if;
+  -- the brand unlinks the partner: every partner person's access to that store ends
+  inv := app_partner_invite(O, 'x2@else.test', 'lead', array[t1]);
+  perform app_partner_accept(X, inv);
+  h := app_handover_invite(t1, O, 'brand@team.test');
+  perform app_accept_handover_v2(B, h, null, 1::smallint);
+  perform app_remove_partner(t1, B);
+  if exists (select 1 from jsonb_array_elements(app_access_for(X)->'memberships') e where (e->>'tenantId')::uuid = t1)
+     or exists (select 1 from jsonb_array_elements(app_access_for(O)->'memberships') e where (e->>'tenantId')::uuid = t1)
+  then raise exception 'FAIL: unlinking left a partner person in the store'; end if;
+  perform set_config('proof.partner_o', (select id::text from app_my_partner(O)), false);
+  perform set_config('proof.t2', t2::text, false);
+end $$;
+commit;
+-- suspend: admins only; every partner person's access ends; reinstate gives it back
+begin; set local role frata_admin;
+do $$ declare O uuid := 'aaaaaaaa-0000-0000-0000-000000000030'; p uuid := current_setting('proof.partner_o')::uuid; n int; begin
+  begin perform admin_end_partner('aaaaaaaa-0000-0000-0000-000000000036', p, 'proof'); raise exception 'FAIL: support suspended a partner'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_admin' then raise; end if; end;
+  begin perform admin_end_partner('aaaaaaaa-0000-0000-0000-000000000035', p, ''); raise exception 'FAIL: a suspension with no reason'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_reason' then raise; end if; end;
+  n := admin_end_partner('aaaaaaaa-0000-0000-0000-000000000035', p, 'proof');
+  if n <> 2 then raise exception 'FAIL: suspension told % shops', n; end if;
+  begin update partners set suspended_at = null where id = p; raise exception 'FAIL: Admin writes partners.suspended_at directly'; exception when insufficient_privilege then null; end;
+end $$;
+commit;
+begin; set local role frata_app;
+do $$ declare O uuid := 'aaaaaaaa-0000-0000-0000-000000000030'; X uuid := 'aaaaaaaa-0000-0000-0000-000000000034'; begin
+  if jsonb_array_length(app_access_for(O)->'memberships') <> 0 or jsonb_array_length(app_access_for(X)->'memberships') <> 0 then raise exception 'FAIL: a suspended partner keeps access'; end if;
+  if (select suspended_at from app_my_partner(O)) is null then raise exception 'FAIL: the workspace can''t tell it is suspended'; end if;
+  begin perform app_partner_create_shop(O, 'Late', 'proof-late', '411001', 2000, 24, 90, 10); raise exception 'FAIL: a suspended partner made a store'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
+end $$;
+commit;
+begin; set local role frata_admin;
+select admin_reinstate_partner('aaaaaaaa-0000-0000-0000-000000000035', current_setting('proof.partner_o')::uuid);
+commit;
+begin; set local role frata_app;
+do $$ declare O uuid := 'aaaaaaaa-0000-0000-0000-000000000030'; begin
+  if not exists (select 1 from jsonb_array_elements(app_access_for(O)->'memberships') e where (e->>'tenantId')::uuid = current_setting('proof.t2')::uuid)
+  then raise exception 'FAIL: reinstate did not give the owner back the store'; end if;
+end $$;
+commit;
+-- every partner shop row points at a partner person (the CHECK), and no frata_app policy on the team tables
+do $$ begin
+  if exists (select 1 from members where (role = 'partner') <> (partner_member_id is not null)) then raise exception 'FAIL: a partner row without its person'; end if;
+  if exists (select 1 from pg_policies where tablename in ('partner_members', 'partner_assignments') and 'frata_app' = any(roles)) then raise exception 'FAIL: frata_app policy on team tables'; end if;
+end $$;
+
+\echo 'tenancy proof — all 76 checks passed'

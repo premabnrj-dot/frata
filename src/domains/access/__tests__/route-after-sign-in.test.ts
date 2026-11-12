@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { routeAfterSignIn } from '../route-after-sign-in'
 
 describe('routeAfterSignIn', () => {
+  it('sends a person invited to a partner team to Accept, after a waiting store', () => {
+    expect(routeAfterSignIn({ isStaff: false, storeCount: 0, teamInvites: 1 })).toBe('/join')
+    expect(routeAfterSignIn({ isStaff: false, storeCount: 2, teamInvites: 1, partner: 'approved' })).toBe('/join')
+    expect(routeAfterSignIn({ isStaff: false, storeCount: 0, handovers: 1, teamInvites: 1 })).toBe('/handover')
+  })
   it('lets staff who also own a store choose', () => {
     expect(routeAfterSignIn({ isStaff: true, storeCount: 1 })).toBe('/choose')
   })

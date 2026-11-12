@@ -5,8 +5,9 @@
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
-import { check, index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { check, index, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { BRANDS_NOW, PARTNER_SERVICES } from '@/domains/partners/terms'
+import { PARTNER_ROLES } from '@/domains/partners/team'
 import { sqlList } from '@/domains/tenancy/roles'
 import { at, createdAt, id, tenants } from './schema'
 
@@ -35,6 +36,10 @@ export const partners = pgTable('partners', {
   declinedAt: at('declined_at'),
   declinedBy: uuid('declined_by'),
   declineReason: text('decline_reason'),
+  /** Frrata paused this partner (Admin, admin_end_partner): every partner person's access ends; links and the share stay. */
+  suspendedAt: at('suspended_at'),
+  suspendedBy: uuid('suspended_by'),
+  suspendReason: text('suspend_reason'),
 }, (t) => [
   check('partners_services', sql`${t.services} <@ array[${sql.raw(sqlList(PARTNER_SERVICES.map(([k]) => k)))}]::text[]`),
   check('partners_brands_now', sql`${t.brandsNow} in (${sql.raw(sqlList(BRANDS_NOW.map(([k]) => k)))})`),
@@ -63,4 +68,40 @@ export const partnerLinks = pgTable('partner_links', {
   index('partner_links_partner').on(t.partnerId),
   index('partner_links_tenant').on(t.tenantId),
   check('partner_links_terms', sql`${t.shareBps} between 0 and 10000 and ${t.shareMonths} > 0 and ${t.noticeDays} >= 0`),
+])
+
+/**
+ * The people of a partner (T1a). An invite is a row with no user yet (`user_id` null), claimed only by the invited,
+ * confirmed email on an explicit Accept. Platform scope like `partners`: frata_app has no grant (definers only);
+ * frata_admin reads. One active partner per person; one active row per email within a partner.
+ */
+export const partnerMembers = pgTable('partner_members', {
+  id: id(),
+  partnerId: uuid('partner_id').notNull().references(() => partners.id, { onDelete: 'restrict' }),
+  userId: uuid('user_id'),
+  email: text('email').notNull(),
+  role: text('role').notNull(),
+  invitedBy: uuid('invited_by'),
+  invitedAt: at('invited_at').notNull().defaultNow(),
+  inviteExpiresAt: at('invite_expires_at'),
+  acceptedAt: at('accepted_at'),
+  removedAt: at('removed_at'),
+  removedBy: uuid('removed_by'),
+}, (t) => [
+  uniqueIndex('partner_members_one_partner').on(t.userId).where(sql`${t.removedAt} is null and ${t.userId} is not null`),
+  uniqueIndex('partner_members_email').on(t.partnerId, t.email).where(sql`${t.removedAt} is null`),
+  index('partner_members_partner').on(t.partnerId),
+  check('partner_members_role', sql`${t.role} in (${sql.raw(sqlList(PARTNER_ROLES))})`),
+  check('partner_members_email_lower', sql`${t.email} = lower(${t.email})`),
+  check('partner_members_accepted_user', sql`(${t.acceptedAt} is null) = (${t.userId} is null)`),
+])
+
+/** Which client stores a Lead (or, later, a Builder) works on. The owner works on every store of the partner. */
+export const partnerAssignments = pgTable('partner_assignments', {
+  partnerMemberId: uuid('partner_member_id').notNull().references(() => partnerMembers.id, { onDelete: 'cascade' }),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  createdAt: createdAt(),
+}, (t) => [
+  primaryKey({ columns: [t.partnerMemberId, t.tenantId] }),
+  index('partner_assignments_tenant').on(t.tenantId),
 ])

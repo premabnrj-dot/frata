@@ -841,6 +841,20 @@
       "when": 1794495228643,
       "tag": "0119_product_import",
       "breakpoints": true
+    },
+    {
+      "idx": 120,
+      "version": "7",
+      "when": 1794511522639,
+      "tag": "0120_partner_teams",
+      "breakpoints": true
+    },
+    {
+      "idx": 121,
+      "version": "7",
+      "when": 1794511588750,
+      "tag": "0121_partner_teams_access",
+      "breakpoints": true
     }
   ]
 }

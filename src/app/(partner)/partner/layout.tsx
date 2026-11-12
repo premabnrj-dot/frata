@@ -20,7 +20,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   if (!auth.ok) {
     return (
       <main data-shell className="p-6">
-        <Panel title={auth.reason === 'in_review' ? 'Your application is in review' : auth.reason === 'signed_out' ? 'Sign in to continue' : 'This email is not a Frrata partner'}
+        <Panel title={auth.reason === 'in_review' ? 'Your application is in review' : auth.reason === 'signed_out' ? 'Sign in to continue' : auth.reason === 'suspended' ? auth.message : 'This email is not a Frrata partner'}
           action={<Link href={auth.reason === 'signed_out' ? '/login' : '/partners/apply'} className={button({ variant: 'secondary' })}>{auth.reason === 'signed_out' ? 'Sign in' : 'See your application'}</Link>} />
       </main>
     )
@@ -32,9 +32,12 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   ]
   const clients: NavItem = { href: '/partner', label: 'Clients', icon: 'merchants', exact: true }
   const details: NavItem = { href: '/partner/details', label: 'Your details', icon: 'details' }
+  // The team is the owner's (T1a); a lead sees Clients and their details only.
+  const team: NavItem = { href: '/partner/team', label: 'Team', icon: 'staff' }
+  const items = auth.partner.memberRole === 'owner' ? [clients, team, details] : [clients, details]
   const name = auth.partner.businessName || auth.partner.name
   return (
-    <AppShell title={name} tag="PARTNER" navLabel="Partner" groups={[{ label: '', items: [clients, details] }]} tabs={[clients, details]} more={[]} foot={[]}
+    <AppShell title={name} tag="PARTNER" navLabel="Partner" groups={[{ label: '', items }]} tabs={items} more={[]} foot={[]}
       email={auth.email} places={places}>
       {children}
     </AppShell>

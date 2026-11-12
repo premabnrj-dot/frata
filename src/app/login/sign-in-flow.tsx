@@ -69,7 +69,7 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
         return
       }
       // Applying as a partner: stay on the application unless a workspace or a waiting store comes first.
-      if (intent === 'partner' && r.to !== '/partner' && r.to !== '/handover' && r.to !== '/admin' && r.to !== '/choose') { router.refresh(); return }
+      if (intent === 'partner' && r.to !== '/partner' && r.to !== '/handover' && r.to !== '/join' && r.to !== '/admin' && r.to !== '/choose') { router.refresh(); return }
       router.replace(r.to)
       router.refresh()
     })
