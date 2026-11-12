@@ -32,7 +32,7 @@ Spec: intake-and-team § Partner teams (reviews folded in). Builders wait for T1
 - `npm run verify:tenancy` § 28 (partners) passes as is; e2e `40-partners` passes as is. Both stay green after every task.
 
 ### Tasks
-1. **Migration 0117 (tables, generated + custom):**
+1. **Migration 0123 (tables, generated) and 0124 (custom; planned as 0117):**
    - `partner_members (id, partner_id → partners, user_id null until accepted, email lowercased, role ∈
      owner|lead|builder (builder refused by every definer until T1c), invited_by, invited_at, accepted_at, removed_at,
      removed_by)`. Unique active `user_id`; unique active `(partner_id, email)`.
@@ -68,7 +68,7 @@ Spec: intake-and-team § Partner teams (reviews folded in). Builders wait for T1
    with its consequences); the invite waiting on the invitee's own `/partner` (Accept); nav item "Team" for owners;
    leads see "Clients" only. Admin › Partners detail: Team section and Suspend / Reinstate (`ADMIN_ONLY`, fresh
    passkey, typed name).
-5. **e2e `76-partner-team`:** owner invites lead@ to shop A only → lead signs in, accepts, sees A not B, opens A;
+5. **e2e `80-partner-team` (planned as 76):** owner invites lead@ to shop A only → lead signs in, accepts, sees A not B, opens A;
    owner removes lead → lead's `/console` for A refuses; Admin suspends → owner's workspace refuses; reinstate.
 6. **Docs:** `frata-architecture` § Partners (teams, the CHECK, who may call each definer), spec statuses.
 
@@ -191,6 +191,86 @@ staff passkeys (docs/specs/2026-11-12-staff-passkeys.md, ADR-0007 amended), the 
 - **Blast radius:** every signed-in request (`app_access_for`), every partner page and partner console visit, the
   hand-over flow, Admin's passkey screens (shared code), e2e flows using partners (40, 47, 49, 80) and staff (75).
   Rollout: the one live partner owner asks Frrata for approval on first visit after deploy.
+
+### Reviews folded in (2026-11-12: security, tenancy, architecture on this plan). These override the text above.
+1. **One access function, not a v2.** `drop function app_access_for(uuid, uuid, text)` and create
+   `app_access_for(uuid, uuid default null, text default null, text default null)` (partner hash last) in the same
+   transaction, grants re-run. Old code's 3-argument call lands on it with no partner hash: partner rows are withheld
+   (fails closed). It also answers `partnerConfirmedAt` and **`partnerHeld`** (tenant ids withheld for want of a
+   check), so `requireMember` returns `needs_partner_check` when the wanted store is held or nothing else is visible,
+   and the console layout and `/start` show the panel linking to `/partner` instead of "Start your shop" or the wrong
+   store.
+2. **A passkey belongs to one membership.** Every lookup (live check, challenge, take, confirm, add, request,
+   approve, list) is bound to `partner_member_id = (app_pm_live(uid)).member_id`, and `app_access_for` also requires
+   the members row's `partner_member_id` to equal the step-up's. Every path that ends a membership (remove; accept's
+   clean-up of a declined applicant's row) deletes that person's passkeys, requests, challenges and step-ups. Suspend
+   keeps them (reinstating resumes within the 12 hours; said here on purpose).
+3. **The database checks the passkey on every workspace call.** `app_partner_clients`, `app_partner_team`,
+   `app_partner_invite`, `app_partner_assign`, `app_partner_remove_member`, `app_partner_create_shop` take
+   `(session, hash)` and refuse without a live check; invite, assign, remove and every approve or remove-passkey need
+   one within 5 minutes. Old signatures are dropped (old code fails closed for the minutes between apply and push).
+   `requirePartner` reads the check from the same cached `accessOf` and returns `needs_passkey` otherwise.
+4. **Hand over:** one `HandOverDialog` on the Clients row (owner only); `handOverAction` and the banner's dialog are
+   deleted; the banner links to `/partner` for owners only. `app_handover_invite(uuid, uuid, text)` is dropped; the new
+   one takes `(tenant, uid, email, session, hash)` and needs a check within 5 minutes. **Named exception:** its tenant
+   id comes from the form, like assign's; the definer re-checks the active link, the owner's members row and the check.
+   `frata-design-language` § Partner workspace updated (version bump).
+5. **Approvals:** `app_partner_pk_approve` (a live owner checked within 5 minutes; the target a live Lead of the same
+   partner, not the caller; matched by member id; the try counted first; a wrong code returns null so the count
+   stays). `admin_partner_pk_state(staff, session, staff_hash, partner)` (`createdAt`, `approved`, `waitUntil` only;
+   never the code hash) and `admin_partner_pk_approve(staff, session, staff_hash, partner, code_hash)` (admin, staff
+   check within 5 minutes, the target that partner's owner, not the admin; tries in `staff_passkey_tries`).
+   **Owner recovery can't be talked out of Frrata:** Admin calls back the phone on the partner's record, never the
+   caller (shown with the owner's passkey count and last use); when the owner already has a passkey, the request
+   lives 48 hours and can be approved only after 24, and the owner is emailed when it is made; every admin is emailed
+   on approval. Code hashes use the prefix `partner-enrol:`; step-up tokens are hashed with `partner:`.
+6. **A lost device:** **Remove passkeys** on a Lead's Team row (owner, check within 5 minutes) and on the owner in
+   Admin › Partners (ADMIN_ONLY, staff check within 5 minutes): deletes their passkeys and step-ups; emails.
+7. **EXECUTE:** none for `app_partner_live_stepup`, `app_partner_try`, `app_partner_notify` (the addresses come from
+   `partner_members`, never an argument); `frata_admin` for `admin_partner_pk_*` and the email drain; `frata_app`
+   for the rest. One `audit_events` row per change (never a hash, code or challenge).
+8. **Shared code at the right seam:** `src/lib/auth/webauthn.ts` holds the ceremony (options, user verification,
+   origin and site, take-before-verify, counter, transports as a `text[]` parameter, never `sql.raw`) with `rpName`,
+   the code prefix and a store of five SQL calls per side; `GateState` and the gate move to `src/components/passkeys/`
+   with Admin's exact words as defaults. Shipped as its own commit with flow 75 green before and after. The WebAuthn
+   `userID` for a partner is sha256(`partner:` + member id), so one device never overwrites a staff passkey.
+9. **Emails** wait for the 5-minute drain (a partner route can't import `src/lib/admin`); the drain picks the button
+   and footer by kind; passkey names allow letters, digits, spaces and `-'` only (they are emailed to the owner).
+10. **Headers and sign-out:** the passkey Permissions-Policy on `/partner` and `/partner/:path*`, console host only
+    (`/partners` untouched); nothing under `/partner` renders or frames merchant HTML (framing test). Sign-out deletes
+    the partner step-up by its cookie hash before Supabase's sign-out and clears both cookies.
+11. **Gate:** rendered bare like Admin's (no shell, no store list); the owner's request screen says how to reach
+    Frrata (WhatsApp); Admin › Partners marks an open request. Leads can't be approved until the owner has a passkey
+    (Team sits behind the gate): the rollout says so.
+12. **Gates:** `check:tenant`'s no-grant list covers the five new tables; a `proof_` function in `drizzle/` fails it.
+13. **Proof § 78 adds:** privileges on the five tables for every role and the EXECUTE matrix; `prosecdef` and
+    `search_path=''` on every new function; another person's credential id returns null; the list never carries
+    `publicKey`, `credentialId` or `counter`; another user's or an old membership's step-up counts for nothing; decline,
+    unlink, unassign, suspend end it; a staff hash as partner hash and the reverse count for nothing; a non-partner row
+    still counts without one; only the 5-argument hand over exists; removal deletes passkeys, step-ups, requests,
+    challenges; partner B's owner can't approve partner A's Lead. **§ 77** moves to a proof-only helper that inserts
+    only the passkey row (the real challenge, take and confirm run as `frata_app`), shows each removal, suspend and
+    unlink check passing first, and is dropped (asserted gone).
+14. **e2e:** an explicit `seedPartnerStepup(ctx, who)` after `partnerOn` or approval (not inside `signedIn`); flow 75's
+    virtual authenticator moves to `lib.mjs` with a real key, so hand over (which asks again) works in flows 40 and
+    80; flow 40's hand over moves to the Clients row; `routeAfterSignIn` tests for an approved partner with no visible
+    store (→ `/partner`) and staff who are partners (→ `/choose`).
+15. **Not changed, recorded:** console notice emails still reach partner people (`app_notice_members`); partners
+    re-enrol when the console host moves, as staff do.
+
+### Tasks (T1b)
+1. Shared WebAuthn module and gate component; Admin on them (flow 75 green before and after). Commit.
+2. Migration 0125 (tables, generated) + 0126 (custom: access, definers, rewritten partner definers, hand over,
+   emails), proof § 78 and § 77 helper, `check:tenant` rules. `verify:tenancy`.
+3. Partner side: cookie, `session.ts`, `requireMember`/`requirePartner`, route, gate, Team (approve, remove passkeys),
+   `/partner/passkeys`, Clients hand over, console and `/start` panels, sign-out, headers. Admin › Partners approve and
+   remove. Emails' words.
+4. e2e helpers and flows 40, 75, 80; unit tests. `impact-reviewer` and `security-reviewer` on the diff.
+5. Apply 0125/0126 to production and push at once; an admin approves the live owner's code.
+
+### Regression net and verify
+Before: flows 40, 75, 80 and `verify:tenancy` green on main. Each task: `npm test`, `npm run typecheck`,
+`verify:tenancy` (task 2 on), `npm run e2e -- --only partners,staff-passkeys,partner-team,look,offers,ship`.
 
 ## Repetitive work → agents and scripts
 | Chore | Becomes |
