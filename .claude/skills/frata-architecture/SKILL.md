@@ -513,7 +513,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   orders.) A lock not had in its 1 s is told as "Someone is buying this product right now" (`lockTimedOut`).
 - New products' addresses come from `freeHandles` (`src/lib/catalogue/handles.ts`, one read for the batch);
   `handleFor` writes Indian scripts in Latin letters (`src/domains/catalogue/indic.ts`).
-- **A SKU is one in a shop in any case at the database too** (`variants_tenant_sku_upper`, drizzle/0118): a unique
+- **A SKU is one in a shop in any case at the database too** (`variants_tenant_sku_upper`, drizzle/0119): a unique
   violation on either SKU index means another product took it meanwhile (`skuTaken`, write.ts: the editor and the import
   tell it in words). **A product goes live only through `goLive`** (readiness.ts: Publish and "Publish the N ready").
   **HSN digits for the turnover are `hsnDigitsIn`** (queries/settings.ts) passed to `cleanTax` / `cleanProduct`.
@@ -799,7 +799,7 @@ Look's controls, Settings' shipping costs and sections, and Admin's custom plan 
   its successor is inserted (`lineSnapshot`); an offer that comes off or gives another amount gets `removed_at`, and a
   new amount is a new row with the old row's `created_at` (one live use per order and offer: a partial unique index).
   **Every reader of an order's lines or offers reads the live rows** (`removed_at is null`; uses through `useOfRowSql`,
-  which says it; Admin's `app_admin_offer_totals` too, 0117): a new reader adds it. Stock: the pieces coming out go back
+  which says it; Admin's `app_admin_offer_totals` too, 0118): a new reader adds it. Stock: the pieces coming out go back
   first, then the new ones are taken; room for a new piece is checkout's `sellable` with the order's own pieces back
   (`roomOf`/`sellsAs`). Money: `writeReprice` (one `update … from (values)`) writes `product_discount` too, and an
   edit's subtotal, delivery and COGS; Frrata's fee follows `merchandise_net` (an edit issues no credit note, so
@@ -812,8 +812,8 @@ Look's controls, Settings' shipping costs and sections, and Admin's custom plan 
   to pay on delivery that has a Razorpay order — it could still be paid at the old online total — until OE·2. The
   arrival dates are made again from the live lines (`arrivalRange`) after an edit and an Undo; an Undo whose price
   differs from the one before the edit is refused, never written. A removed line holds no stock (CHECK
-  `order_lines_removed_stock`: its pieces go back first). Readers by product use `order_lines_product_live` (0117).
-  **Deploy order:** 0116 and 0117 before the code (every reader selects `removed_at`; `writeReprice` needs the
+  `order_lines_removed_stock`: its pieces go back first). Readers by product use `order_lines_product_live` (0118).
+  **Deploy order:** 0117 and 0118 before the code (every reader selects `removed_at`; `writeReprice` needs the
   `product_discount` grant).
 - **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
   `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`

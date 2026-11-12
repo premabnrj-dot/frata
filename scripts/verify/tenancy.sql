@@ -2893,7 +2893,7 @@ do $$ begin
   raise exception 'FAIL: a price of another add-on';
 exception when foreign_key_violation then null; end $$;
 
--- 74. Order edits (OE·1, 0116–0117): an edit's record is the shop's own, appended and never changed or removed; a line is
+-- 74. Order edits (OE·1, 0117–0118): an edit's record is the shop's own, appended and never changed or removed; a line is
 -- taken out (removed_at, replaced_by) and an offer taken off (removed_at), never rewritten: frata_app's update columns
 -- on both are exactly these and the money writeReprice sets; no edit, line or replacement points into another shop; one
 -- live use of an offer per order; no other role holds any of it.
@@ -3002,7 +3002,7 @@ do $$ declare n int; e uuid; begin
 end $$;
 rollback;
 
--- 75. Product import PI·1 (0118; plan docs/plans/2026-11-12-product-import.md § Tasks 5): jobs and rows are the shop's
+-- 75. Product import PI·1 (0119; plan docs/plans/2026-11-12-product-import.md § Tasks 5): jobs and rows are the shop's
 -- own both ways; a row can never name another shop's job or product (composite keys); the app never deletes either,
 -- never moves one to another shop, and never rewrites a job's file, mapping or who started it; one running job a shop;
 -- a deleted draft leaves its row with no product; no other role holds anything.

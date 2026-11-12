@@ -2,7 +2,7 @@
 // FILE: src/lib/db/schema-imports.ts
 //
 // PRODUCT IMPORTS (plan 2026-11-12-product-import PI·1 · 5). Same conventions as schema.ts. RLS, grants and the
-// composite keys an FK can't say in drizzle: drizzle/0118_product_import.sql.
+// composite keys an FK can't say in drizzle: drizzle/0119_product_import.sql.
 //
 // - A job is one file: who started it (and the support visit, if any), the mapping its chunks are read with, how
 //   far it got. It is running while finished_at is null; one running job per shop (import_jobs_one_running).
@@ -72,7 +72,7 @@ export const importRows = pgTable('import_rows', {
   productId: uuid('product_id'),
 }, (t) => [
   primaryKey({ columns: [t.tenantId, t.jobId, t.n] }),
-  // ON DELETE SET NULL (product_id) — the column list drizzle can't say — is in 0118.
+  // ON DELETE SET NULL (product_id) — the column list drizzle can't say — is in 0119.
   foreignKey({ name: 'import_rows_job_fk', columns: [t.tenantId, t.jobId], foreignColumns: [importJobs.tenantId, importJobs.id] }).onDelete('cascade'),
   index('import_rows_key').on(t.tenantId, t.jobId, t.key),
   index('import_rows_product').on(t.tenantId, t.productId).where(sql`${t.productId} is not null`),

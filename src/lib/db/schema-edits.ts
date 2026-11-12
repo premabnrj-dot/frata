@@ -5,7 +5,7 @@
 // lines it saw before and left after, with their prices — what Undo puts back and what "Was M" and Activity read. The
 // order's lines themselves are never rewritten (order_lines.removed_at / replaced_by). Who and when are the edit's
 // items_edited event (order_events); an undone edit is that event's undo, never a column here. Append-only.
-// Access: drizzle/0117_order_edits_access.sql. Money in paise (ADR-0004).
+// Access: drizzle/0118_order_edits_access.sql. Money in paise (ADR-0004).
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
@@ -54,7 +54,7 @@ export const orderEditLines = pgTable('order_edit_lines', {
   editId: uuid('edit_id').notNull(),
   side: text('side').notNull(),
   orderLineId: uuid('order_line_id').notNull(),
-  /** The variant then (FK to this shop's variants, set null when one is deleted: 0117, as order_lines'). */
+  /** The variant then (FK to this shop's variants, set null when one is deleted: 0118, as order_lines'). */
   variantId: uuid('variant_id'),
   qty: integer('qty').notNull(),
   unitPrice: money('unit_price').notNull(),

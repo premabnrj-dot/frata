@@ -72,7 +72,7 @@ and the edit is applied only when that payment is captured. Built as:
    is left for both, which line is taken must not depend on row order (take the kept line first, or refuse the edit).
 5. UI per the mockup, plus the states it didn't draw (over the COD limit, phone). Verify: `npm run e2e -- --only
    order-edit` (new flow) and `50-order-page`.
-   As built (2026-11-12): 0116 (drizzle-kit) and 0117 (access), proof check 74. `order_edits` keeps the offer rows an
+   As built (2026-11-12): 0117 (drizzle-kit) and 0118 (access), proof check 74. `order_edits` keeps the offer rows an
    edit took off and added (`offers_removed`, `offers_added`, uuid arrays) and `order_edit_lines` an after line's
    `replaces`, so Undo and Activity need nothing else. Who and when are the edit's `items_edited` event, and an undone
    edit is that event's undo: no `undone_at` (derived, never stored twice). The reason is per removed line
@@ -85,7 +85,7 @@ and the edit is applied only when that payment is captured. Built as:
    limited per member; `order_edit_lines.variant_id` is a same-shop FK; a removed line holds no stock (CHECK); the
    arrival dates follow the live lines; only a later edit that emails supersedes an earlier edit's email; Activity
    says "emailed" once it went; `order_lines_product` became `order_lines_product_live` (live lines only).
-   **Deploy:** apply 0116 and 0117 before pushing the code: every reader selects `removed_at`, and `writeReprice` needs
+   **Deploy:** apply 0117 and 0118 before pushing the code: every reader selects `removed_at`, and `writeReprice` needs
    the `product_discount` grant. Both are additive (nullable columns, new tables, a new index built before the old one
    is dropped), so the code running before the push keeps working.
 

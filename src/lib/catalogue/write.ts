@@ -47,7 +47,7 @@ export type ProductDraft = {
   /** A new product's other columns (the column defaults otherwise: a draft). */
   row?: NewRow
 }
-/** A SKU another save took between the check and the write: either SKU index (exact, or any case: 0118) refused it. */
+/** A SKU another save took between the check and the write: either SKU index (exact, or any case: 0119) refused it. */
 export const skuTaken = (err: unknown) => errName(err).includes('variants_tenant_sku')
 
 export type Written = { ok: true; products: { id: string; handle: string }[] } | { ok: false; draft: number; error: string }
