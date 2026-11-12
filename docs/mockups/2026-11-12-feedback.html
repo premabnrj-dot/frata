@@ -119,6 +119,7 @@ main { padding: 20px; display: grid; gap: 16px; align-content: start; min-width:
 .dlg p { margin: 0; color: var(--sub) }
 .dlg .row { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap }
 .dlg .pic { width: 40px; height: 40px }
+.dlg-err { display: flex; gap: 10px; align-items: flex-start; background: var(--danger); color: var(--danger-text); border-radius: 6px; padding: 10px 12px; font-size: 13px; animation: err-in var(--base) var(--e-in) }
 @media (max-width: 767px) {
   .dlg-wrap { place-items: end stretch; padding: 0 }
   .dlg { width: 100%; border-radius: 16px 16px 0 0; transform: translateY(100%); opacity: 1; transition-duration: var(--slow); padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) }
@@ -271,7 +272,7 @@ main { padding: 20px; display: grid; gap: 16px; align-content: start; min-width:
   <!-- ═══ 5. POPUPS ═══ -->
   <section data-view="dialogs" aria-label="Popups" hidden>
     <div class="play"><b>Play</b>
-      <button class="btn" data-demo="dlg-publish">Publish fails</button>
+      <button class="btn" data-demo="dlg-publish">Publish (fails once)</button>
       <button class="btn" data-demo="dlg-leave">Leave with unsaved changes</button>
       <button class="btn" data-demo="dlg-cancel">Cancel an order</button>
     </div>
@@ -317,13 +318,15 @@ function dialog(frame, { pic, title, body, actions }) {
   const wrap = frame.querySelector('.dlg-wrap'), d = wrap.querySelector('.dlg');
   d.innerHTML = `<h3 id="dlg-h">${pic || ''}${title}</h3>${body ? `<p>${body}</p>` : ''}<div class="row"></div>`;
   const row = d.querySelector('.row');
-  for (const a of actions) { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + (a.kind || ''); b.textContent = a.label; b.onclick = () => { close(); a.run && a.run() }; row.append(b) }
+  for (const a of actions) { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + (a.kind || ''); b.textContent = a.label; b.onclick = () => { if (!a.keep) close(); a.run && a.run(d) }; row.append(b) }
   wrap.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('open')));
   row.querySelector('button')?.focus();
   function close() { wrap.classList.remove('open'); setTimeout(() => { wrap.hidden = true }, 320) }
   wrap.onclick = (e) => { if (e.target === wrap) close() };
 }
 const PIC_CLOUD = '<svg class="pic" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" fill="var(--danger)"/><path d="M12 25h15a5 5 0 0 0 .5-10 7 7 0 0 0-13.4 1.6A4.3 4.3 0 0 0 12 25z" fill="none" stroke="var(--danger-text)" stroke-width="1.8" stroke-linejoin="round"/><path d="M20 17.5v4M20 24v.2" stroke="var(--danger-text)" stroke-width="1.8" stroke-linecap="round"/></svg>';
+const PIC_SHOP = '<svg class="pic" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" fill="var(--ok)"/><path d="M11 17l2-5h14l2 5M11 17v11h18V17M11 17h18M17 28v-6h6v6" fill="none" stroke="var(--ok-text)" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+const PIC_CLOUD_SM = '<svg width="22" height="22" viewBox="0 0 40 40" aria-hidden="true" style="flex:none"><circle cx="20" cy="20" r="19" fill="var(--danger-text)"/><path d="M20 12v10M20 27v.4" stroke="var(--card)" stroke-width="3.4" stroke-linecap="round"/></svg>';
 const PIC_DOC = '<svg class="pic" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" fill="var(--warn)"/><path d="M14 11h9l4 4v14H14z" fill="none" stroke="var(--warn-text)" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 20h6M17 24h4" stroke="var(--warn-text)" stroke-width="1.8" stroke-linecap="round"/></svg>';
 const PIC_BOX = '<svg class="pic" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" fill="var(--danger)"/><path d="M12 15l8-4 8 4v10l-8 4-8-4z M12 15l8 4 8-4 M20 19v10" fill="none" stroke="var(--danger-text)" stroke-width="1.8" stroke-linejoin="round"/></svg>';
 
@@ -333,23 +336,42 @@ const demos = {
   offline: (f) => toast(f, { kind: 'offline', text: 'No connection.', sub: 'Nothing was changed.', acts: [{ label: 'Try again', run: (t) => leave(t) }] }),
   fields: (f) => toast(f, { kind: 'error', text: '2 fields need fixing.', acts: [{ label: 'Show', run: (t) => leave(t) }] }),
   conflict: (f) => toast(f, { kind: 'error', text: 'Already confirmed by Riya at 10:42.', acts: [{ label: 'Reload', run: (t) => leave(t) }] }),
-  'save-bad': (f) => { setBad('f-price', true); setBad('f-hsn', true); toast(f, { kind: 'error', text: '2 fields need fixing.', acts: [{ label: 'Show', run: (t) => { leave(t); document.getElementById('i-price').focus() } }] }); document.getElementById('i-price').focus({ preventScroll: true }) },
+  'save-bad': (f) => { setBad('f-price', true); setBad('f-hsn', true); summary(f, 2, 'field', 'i-price') },
   'save-fail': (f) => { setBad('f-price', false); setBad('f-hsn', false); toast(f, { kind: 'error', text: 'Not saved: this product changed since you opened it.', acts: [{ label: 'Reload', run: (t) => leave(t) }] }) },
   'save-ok': (f) => { setBad('f-price', false); setBad('f-hsn', false); toast(f, { kind: 'ok', text: 'Saved.' }) },
   reset: (f) => { setBad('f-price', false); setBad('f-hsn', false); f.querySelector('.toast')?.remove() },
-  'admin-error': (f) => { setBad('f-why', true); toast(f, { kind: 'error', text: 'Say why, in a few words.', acts: [{ label: 'Show', run: (t) => { leave(t); document.getElementById('i-why').focus() } }] }); document.getElementById('i-why').focus({ preventScroll: true }) },
+  'admin-error': (f) => { setBad('f-why', true); const t = summary(f, 1, 'field', 'i-why'); t.querySelector('.txt').firstChild.textContent = '1 field needs fixing.' },
   'admin-ok': (f) => { setBad('f-why', false); toast(f, { kind: 'ok', text: 'GST app paused for Kesar Studio.' }) },
-  'co-fields': (f) => { setBad('c-pin', true); setBad('c-phone', true); toast(f, { kind: 'error', text: '2 details need fixing.', acts: [{ label: 'Show', run: (t) => { leave(t); document.getElementById('ci-pin').focus() } }] }); document.getElementById('ci-pin').focus({ preventScroll: true }) },
+  'co-fields': (f) => { setBad('c-pin', true); setBad('c-phone', true); summary(f, 2, 'detail', 'ci-pin') },
   'co-offline': (f) => { setBad('c-pin', false); setBad('c-phone', false); toast(f, { kind: 'offline', text: 'No connection.', sub: 'Your order was not placed. Nothing was charged.', acts: [{ label: 'Try again', run: (t) => leave(t) }] }) },
   'co-reset': (f) => { setBad('c-pin', false); setBad('c-phone', false); f.querySelector('.toast')?.remove() },
-  'dlg-publish': (f) => dialog(f, { pic: PIC_CLOUD, title: "Couldn't publish", body: 'Your draft is safe.', actions: [{ label: 'Close' }, { label: 'Try again', kind: 'primary', run: () => toast(f, { kind: 'ok', text: 'Published.' }) }] }),
+  'dlg-publish': (f) => dialog(f, { pic: PIC_SHOP, title: 'Publish your look?', body: 'Shoppers see it at once.', keep: true, actions: [{ label: 'Not now' }, { label: 'Publish', kind: 'primary', keep: true, run: (d) => {
+    const err = document.createElement('div'); err.className = 'dlg-err'; err.setAttribute('role', 'alert');
+    err.innerHTML = PIC_CLOUD_SM + '<span><b>Couldn\'t publish.</b> Your draft is safe.</span>';
+    d.querySelector('.dlg-err')?.remove(); d.querySelector('.row').before(err);
+    const b = d.querySelector('.row .primary'); b.textContent = 'Try again';
+    b.onclick = () => { d.closest('.dlg-wrap').classList.remove('open'); setTimeout(() => { d.closest('.dlg-wrap').hidden = true }, 320); toast(f, { kind: 'ok', text: 'Published.' }) };
+  } }] }),
   'dlg-leave': (f) => dialog(f, { pic: PIC_DOC, title: 'Leave without saving?', actions: [{ label: 'Leave' }, { label: 'Keep editing', kind: 'primary' }] }),
   'dlg-cancel': (f) => dialog(f, { pic: PIC_BOX, title: 'Cancel #1042?', body: '2 pieces go back to stock. Ananya is told on WhatsApp.', actions: [{ label: 'Keep order' }, { label: 'Cancel order', kind: 'danger', run: () => toast(f, { kind: 'ok', text: '#1042 cancelled.', undo: true, acts: [{ label: 'Undo', run: (t) => leave(t) }] }) }] }),
 };
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-demo]'); if (!b) return; demos[b.dataset.demo]?.(frameOf(b)) });
 
-// Fields clear their error as soon as they are fixed.
-document.addEventListener('input', (e) => { const f = e.target.closest('.field.bad'); if (f) setBad(f.id, false) });
+// Fields clear their error as soon as they are fixed; the summary counts down and leaves at zero.
+document.addEventListener('input', (e) => {
+  const f = e.target.closest('.field.bad'); if (!f) return;
+  setBad(f.id, false);
+  const frame = f.closest('[data-frame]'), t = frame.querySelector('.toast[data-summary]');
+  if (!t) return;
+  const n = frame.querySelectorAll('.field.bad').length, noun = t.dataset.summary;
+  if (n === 0) leave(t); else t.querySelector('.txt').firstChild.textContent = `${n} ${noun}${n === 1 ? ' needs' : 's need'} fixing.`;
+});
+function summary(frame, n, noun, first) {
+  const t = toast(frame, { kind: 'error', text: `${n} ${noun}s need fixing.`, acts: [{ label: 'Show', run: () => document.getElementById(first).focus() }] });
+  t.dataset.summary = noun; t.setAttribute('role', 'alert');
+  document.getElementById(first).focus({ preventScroll: false });
+  return t;
+}
 
 function show() {
   const v = (location.hash || '#toasts').slice(1);
