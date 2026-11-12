@@ -22,6 +22,7 @@ import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import { shopSettings } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { skuTaken, writeProducts } from '@/lib/catalogue/write'
+import { kindOf, startSizes, typeFor } from '@/domains/catalogue/kind'
 import { goLive, readinessIn } from '@/lib/catalogue/readiness'
 import { photosInUse } from '@/lib/catalogue/photos-in-use'
 import { attachIn, type NewPhoto } from '@/lib/catalogue/photos'
@@ -43,16 +44,19 @@ export async function createProduct(input: { title: string }): Promise<Result<{ 
     const r = await asMember(ANY_MEMBER, { action: 'product.create', target: title }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
       await ensureTypes(tx, tenantId)
-      const [first] = await tx.select({ id: productTypes.id }).from(productTypes).where(eq(productTypes.tenantId, tenantId)).orderBy(productTypes.name).limit(1)
-      // A new product starts with the shop's starting HSN (Settings › Taxes), and with sizes only when the shop sells
-      // sized things (clothing, footwear); a jewellery or beauty shop starts with one variant (all-categories § 2).
+      const types = await tx.select({ id: productTypes.id, name: productTypes.name }).from(productTypes).where(eq(productTypes.tenantId, tenantId))
+      // A new product starts with the shop's starting HSN (Settings › Taxes). Its name picks its kind and type (kind.ts):
+      // a kids' kurta gets the Kids type and its sizes, a saree one variant and no chart; no matching type, none (PR·0:
+      // the shop's first type went to everything). Sizes only when the shop sells sized things (all-categories § 2).
       const [shop] = await tx.select({ hsn: shopSettings.defaultHsn, sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
-      const sized = sellsSized(shop?.sells ?? [])
+      const kind = kindOf(title)
+      const sizes = kind === 'one_size' || (kind === 'sized' && !sellsSized(shop?.sells ?? [])) ? [] : startSizes[kind]
+      const typeId = sizes.length || kind === 'one_size' ? typeFor(title, types) : null
       const [p] = await tx.insert(products).values({
-        tenantId, title, handle: await freeHandle(tx, tenantId, title), typeId: sized ? first?.id ?? null : null, hsn: shop?.hsn ?? null,
-        ...(sized ? { options: ['Size'], optionValues: [['S', 'M', 'L']] } : {}),
+        tenantId, title, handle: await freeHandle(tx, tenantId, title), typeId, hsn: shop?.hsn ?? null,
+        ...(sizes.length ? { options: ['Size'], optionValues: [sizes] } : {}),
       }).returning({ id: products.id, handle: products.handle })
-      await tx.insert(variants).values((sized ? [['S'], ['M'], ['L']] : [[]]).map((v, i) => ({ tenantId, productId: p!.id, optionValues: v, price: 0, position: i })))
+      await tx.insert(variants).values((sizes.length ? sizes.map((x) => [x]) : [[]]).map((v, i) => ({ tenantId, productId: p!.id, optionValues: v, price: 0, position: i })))
       await memberAudit(tx, auth, 'product.create', title)
       return p!
     })
@@ -121,7 +125,7 @@ export async function saveProduct(productId: string, version: number, input: Pro
       // (seesCosts) — the one writer the import shares (src/lib/catalogue/write.ts).
       const costs = await costsVisibleIn(tx, tenantId, auth.membership.role)
       const written = await writeProducts(tx, tenantId, [{ productId, handle: p.handle, title: p.title, options: p.options, variants: p.variants }], { costs })
-      if (!written.ok) throw new Stop({ ok: false, error: written.error })
+      if (!written.ok) throw new Stop({ ok: false, error: written.error, ...(written.at ? { errors: { [`v:${keyOf(written.at.values)}:${written.at.field}`]: written.at.field === 'sku' ? 'Used by another product.' : 'On another product.' } } : {}) })
       // A colour renamed in the editor keeps its photos: their tags follow it before stale tags are cleared (PR·0).
       for (const r of renames.slice(0, 60)) {
         const from = String(r?.from ?? '').slice(0, 40), to = String(r?.to ?? '').slice(0, 40)

@@ -15,11 +15,20 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
   const router = useRouter()
   const type = types.find((t) => t.id === typeId) ?? null
   const [unit, setUnit] = useState<'cm' | 'in'>('cm')
-  const [edit, setEdit] = useState<Chart | null>(null)
+  // While editing, a cell is the text typed ("23." survives the keystroke; PR·0: 23.5 became 235); numbers on Save.
+  type Draft = Omit<Chart, 'rows'> & { rows: { size: string; values: string[] }[] }
+  const [edit, setEdit] = useState<Draft | null>(null)
+  const toDraft = (c: Chart): Draft => ({ ...c, rows: c.rows.map((r) => ({ size: r.size, values: c.columns.map((_, i) => r.values[i] == null ? '' : String(r.values[i])) })) })
+  const fromDraft = (d: Draft): Chart | string => {
+    const bad = d.rows.flatMap((r) => r.values.filter((v) => v.trim() && !/^\d+(\.\d{1,2})?$/.test(v.trim())).map((v) => `${r.size || 'A size'}: ${v} is not a number of cm.`))
+    if (bad.length) return bad[0]!
+    return { ...d, rows: d.rows.map((r) => ({ size: r.size, values: r.values.map((v) => (v.trim() ? Number(v) : null)) })) }
+  }
   // A refused create or save is an error toast (§ Feedback 1); what was typed stays.
   const toast = useToast()
   const [pending, start] = useTransition()
   const [newName, setNewName] = useState<string | null>(null)
+  const [copy, setCopy] = useState(false)
 
   const show = (v: number | null) => (v === null ? '—' : unit === 'cm' ? String(v) : inches(v))
   return (
@@ -34,9 +43,10 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
         </div>
         {newName === null
           ? <button type="button" className="h-9 text-sm underline" onClick={() => setNewName('')}>New type</button>
-          : <form className="flex items-end gap-1.5" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await createType(newName, typeId); if (!r.ok) return toast.error(r.error); setNewName(null); router.refresh(); onType(r.id) }) }}>
+          : <form className="flex flex-wrap items-end gap-1.5" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await createType(newName, copy ? typeId : null); if (!r.ok) return toast.error(r.error); setNewName(null); setCopy(false); router.refresh(); onType(r.id) }) }}>
               <input aria-label="New type name" autoFocus value={newName} placeholder="Saree" onChange={(e) => setNewName(e.target.value)} className="h-10 md:h-9 w-36 rounded-md border border-input bg-card px-2 text-sm" />
-              <Button type="submit" variant="secondary" disabled={pending || !newName.trim()}>{typeId ? 'Create from this chart' : 'Create'}</Button>
+              {type && type.sizeChart.rows.length > 0 && <label className="inline-flex min-h-6 items-center gap-1.5 text-sm"><input type="checkbox" checked={copy} onChange={(e) => setCopy(e.target.checked)} />Copy the {type.name} chart</label>}
+              <Button type="submit" variant="secondary" disabled={pending || !newName.trim()}>Create</Button>
               <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => setNewName(null)}>Cancel</button>
             </form>}
       </div>
@@ -56,7 +66,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
             </div>
           ) : <p className="text-sm text-muted-foreground">This type has no size chart.</p>}
           {type.sizeChart.howToMeasure && <p className="text-xs text-muted-foreground">{type.sizeChart.howToMeasure}</p>}
-          <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => setEdit(structuredClone(type.sizeChart))}>Edit the {type.name} chart</button>
+          <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => setEdit(toDraft(type.sizeChart))}>Edit the {type.name} chart</button>
         </>
       )}
       {type && edit && (
@@ -64,24 +74,25 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
           <p className="text-sm">Editing the chart for every <b>{type.name}</b> ({type.uses} product{type.uses === 1 ? '' : 's'}). In cm.</p>
           <div className="relative overflow-x-auto"><table className="text-sm"><thead><tr className="[&>th]:px-1 [&>th]:py-1">
             <th className="text-left text-xs text-muted-foreground">Size</th>
-            {edit.columns.map((c, i) => <th key={i}><input aria-label={`Column ${i + 1} name`} value={c} onChange={(e) => setEdit({ ...edit, columns: edit.columns.map((x, j) => (j === i ? e.target.value : x)) })} className="h-7 w-20 rounded border border-input px-1 text-xs" /></th>)}
-            <th><button type="button" className="inline-flex min-h-6 items-center text-xs underline" onClick={() => setEdit({ ...edit, columns: [...edit.columns, ''], rows: edit.rows.map((r) => ({ ...r, values: [...r.values, null] })) })}>+ column</button></th></tr></thead>
+            {edit.columns.map((c, i) => <th key={i}><span className="inline-flex items-center"><input aria-label={`Column ${i + 1} name`} value={c} onChange={(e) => setEdit({ ...edit, columns: edit.columns.map((x, j) => (j === i ? e.target.value : x)) })} className="h-7 w-20 rounded border border-input px-1 text-xs" />
+              <button type="button" aria-label={`Remove ${c || `column ${i + 1}`}`} className="inline-grid min-h-6 min-w-6 place-items-center text-muted-foreground hover:text-foreground" onClick={() => setEdit({ ...edit, columns: edit.columns.filter((_, j) => j !== i), rows: edit.rows.map((r) => ({ ...r, values: r.values.filter((_, j) => j !== i) })) })}><Icon name="close" className="size-3.5" /></button></span></th>)}
+            <th><button type="button" className="inline-flex min-h-6 items-center text-xs underline" onClick={() => setEdit({ ...edit, columns: [...edit.columns, ''], rows: edit.rows.map((r) => ({ ...r, values: [...r.values, ''] })) })}>+ column</button></th></tr></thead>
             <tbody>{edit.rows.map((r, ri) => (
               <tr key={ri} className="[&>td]:px-1 [&>td]:py-0.5">
                 <td><input aria-label={`Row ${ri + 1} size`} value={r.size} onChange={(e) => setEdit({ ...edit, rows: edit.rows.map((x, j) => (j === ri ? { ...x, size: e.target.value } : x)) })} className="h-7 w-16 rounded border border-input px-1 text-xs" /></td>
-                {edit.columns.map((_, ci) => <td key={ci}><input aria-label={`${r.size} ${edit.columns[ci]}`} inputMode="decimal" value={r.values[ci] ?? ''} onChange={(e) => {
-                  const v = e.target.value.trim() === '' ? null : Number(e.target.value)
-                  setEdit({ ...edit, rows: edit.rows.map((x, j) => (j === ri ? { ...x, values: x.values.map((y, k) => (k === ci ? (Number.isNaN(v as number) ? y : v) : y)) } : x)) })
+                {edit.columns.map((_, ci) => <td key={ci}><input aria-label={`${r.size} ${edit.columns[ci]}`} inputMode="decimal" maxLength={6} value={r.values[ci] ?? ''} onChange={(e) => {
+                  const v = e.target.value.replace(',', '.')
+                  setEdit({ ...edit, rows: edit.rows.map((x, j) => (j === ri ? { ...x, values: x.values.map((y, k) => (k === ci ? v : y)) } : x)) })
                 }} className="h-7 w-20 rounded border border-input px-1 font-mono text-xs" /></td>)}
                 <td><button type="button" aria-label={`Remove ${r.size}`} className="inline-grid min-h-6 min-w-6 place-items-center text-xs text-muted-foreground" onClick={() => setEdit({ ...edit, rows: edit.rows.filter((_, j) => j !== ri) })}><Icon name="close" className="size-3.5" /></button></td>
               </tr>
             ))}</tbody></table></div>
-          <button type="button" className="inline-flex min-h-6 items-center text-xs underline" onClick={() => setEdit({ ...edit, rows: [...edit.rows, { size: '', values: edit.columns.map(() => null) }] })}>+ size</button>
+          <button type="button" className="inline-flex min-h-6 items-center text-xs underline" onClick={() => setEdit({ ...edit, rows: [...edit.rows, { size: '', values: edit.columns.map(() => '') }] })}>+ size</button>
           <label htmlFor="how" className="block text-xs font-medium">How to measure</label>
           <textarea id="how" rows={2} value={edit.howToMeasure} onChange={(e) => setEdit({ ...edit, howToMeasure: e.target.value })} className="w-full rounded-md border border-input px-2 py-1 text-sm" />
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={() => setEdit(null)} disabled={pending}>Keep the chart as it was</Button>
-            <Button type="button" disabled={pending} onClick={() => start(async () => { const r = await saveSizeChart(type.id, edit); if (!r.ok) return toast.error(r.error); setEdit(null); router.refresh() })}>
+            <Button type="button" disabled={pending} onClick={() => start(async () => { const c = fromDraft(edit); if (typeof c === 'string') return toast.error(c); const r = await saveSizeChart(type.id, c); if (!r.ok) return toast.error(r.error); setEdit(null); router.refresh() })}>
               {pending ? 'Saving…' : `Save for all ${type.name}`}
             </Button>
           </div>

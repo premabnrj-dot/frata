@@ -50,7 +50,9 @@ export type ProductDraft = {
 /** A SKU another save took between the check and the write: either SKU index (exact, or any case: 0119) refused it. */
 export const skuTaken = (err: unknown) => errName(err).includes('variants_tenant_sku')
 
-export type Written = { ok: true; products: { id: string; handle: string }[] } | { ok: false; draft: number; error: string }
+export type Written = { ok: true; products: { id: string; handle: string }[] } | { ok: false; draft: number; error: string
+  /** Which of that draft's sizes, and which field, so the editor marks the cell (PR·0: a toast only). */
+  at?: { values: string[]; field: 'sku' | 'gtin' } }
 
 /**
  * SKUs on OTHER products (upper case, as compared) whose form without trailing digits is one of `keys` (undigit of
@@ -80,7 +82,7 @@ export async function writeProducts(tx: Tx, tenantId: string, drafts: readonly P
 }
 
 async function write(tx: Tx, tenantId: string, drafts: readonly ProductDraft[], { costs }: { costs: boolean }): Promise<Written> {
-  const fail = (draft: number, error: string): Written => ({ ok: false, draft, error })
+  const fail = (draft: number, error: string, at?: { values: string[]; field: 'sku' | 'gtin' }): Written => ({ ok: false, draft, error, ...(at ? { at } : {}) })
   const own = drafts.flatMap((d) => (d.productId ? [d.productId] : []))
   const ownList = arrayParam(own, 'uuid')
 
@@ -102,20 +104,20 @@ async function write(tx: Tx, tenantId: string, drafts: readonly ProductDraft[], 
   const gtinAt = new Map<string, number>()
   for (const [i, d] of drafts.entries()) for (const v of d.variants) {
     if (!v.gtin) continue
-    if ((gtinAt.get(v.gtin) ?? i) !== i) return fail(i, `Barcode ${v.gtin} is on two of these products.`)
+    if ((gtinAt.get(v.gtin) ?? i) !== i) return fail(i, `Barcode ${v.gtin} is on two of these products.`, { values: v.values, field: 'gtin' })
     gtinAt.set(v.gtin, i)
   }
   if (gtinAt.size) {
     const [clash] = await tx.select({ gtin: variants.gtin }).from(variants)
       .where(and(eq(variants.tenantId, tenantId), sql`${variants.productId} <> all(${ownList})`, sql`${variants.gtin} = any(${arrayParam([...gtinAt.keys()], 'text')})`)).limit(1)
-    if (clash) return fail(gtinAt.get(clash.gtin!)!, `Barcode ${clash.gtin} is already on another product in your shop.`)
+    if (clash) { const i = gtinAt.get(clash.gtin!)!; return fail(i, `Barcode ${clash.gtin} is already on another product in your shop.`, { values: drafts[i]!.variants.find((v) => v.gtin === clash.gtin)!.values, field: 'gtin' }) }
   }
 
   // SKUs: typed ones checked, blank ones made, all unique in the shop in any case.
   const typedAt = new Map<string, number>()
   for (const [i, d] of drafts.entries()) for (const v of d.variants) {
     if (!v.sku) continue
-    if ((typedAt.get(v.sku.toUpperCase()) ?? i) !== i) return fail(i, `SKU ${v.sku} is on two of these products.`)
+    if ((typedAt.get(v.sku.toUpperCase()) ?? i) !== i) return fail(i, `SKU ${v.sku} is on two of these products.`, { values: v.values, field: 'sku' })
     typedAt.set(v.sku.toUpperCase(), i)
   }
   const prefix = drafts.some((d) => d.variants.some((v) => !v.sku)) ? await shopPrefix(tx, tenantId) : ''
@@ -124,7 +126,7 @@ async function write(tx: Tx, tenantId: string, drafts: readonly ProductDraft[], 
   const keys = [...new Set([...typedAt.keys(), ...made.map((b) => b.toUpperCase())].map(undigit).concat(made.map((b) => `${b.slice(0, 32).toUpperCase()}-`)))]
   const others = new Set(keys.length ? (await takenSkus(tx, tenantId, own, keys)).map((r) => r.sku) : [])
   for (const [i, d] of drafts.entries()) for (const v of d.variants) {
-    if (v.sku && others.has(v.sku.toUpperCase())) return fail(i, `SKU ${v.sku} is already used by another product in your shop.`)
+    if (v.sku && others.has(v.sku.toUpperCase())) return fail(i, `SKU ${v.sku} is already used by another product in your shop.`, { values: v.values, field: 'sku' })
   }
   const taken = new Set([...others, ...typedAt.keys()])
   const skus = drafts.map((d, i) => d.variants.map((v, j) => {

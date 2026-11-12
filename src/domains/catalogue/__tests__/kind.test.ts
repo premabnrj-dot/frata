@@ -1,0 +1,30 @@
+import { describe, expect, it } from 'vitest'
+import { kindOf, startSizes, typeFor } from '../kind'
+
+const types = [
+  { id: 'k', name: 'Kurta set · Women' }, { id: 's', name: 'Shirt · Men' }, { id: 'kids', name: 'Kids' },
+  { id: 'f', name: 'Footwear' }, { id: 'o', name: 'One size' },
+]
+
+describe('a new product takes its kind and type from its name (PR·0: the first type went to everything)', () => {
+  it('reads the kind, kids before one size before footwear', () => {
+    expect(kindOf('Linen kurta set')).toBe('sized')
+    expect(kindOf("Girls' cotton kurta")).toBe('kids')
+    expect(kindOf('Kids jutti')).toBe('kids')
+    expect(kindOf('Banarasi silk saree')).toBe('one_size')
+    expect(kindOf('Oxidised jhumka earrings')).toBe('one_size')
+    expect(kindOf('Handmade leather mojari')).toBe('footwear')
+    expect(kindOf('कुर्ता सेट')).toBe('sized')
+    expect(startSizes.kids[0]).toBe('2–3 Y')
+  })
+  it('picks the type that shares a telling word, the kind’s own, or none', () => {
+    expect(typeFor('Linen kurta set', types)).toBe('k')
+    expect(typeFor("Men's oxford shirts", types)).toBe('s')
+    expect(typeFor("Girls' cotton kurta", types)).toBe('kids')
+    expect(typeFor('Kolhapuri chappal', types)).toBe('f')
+    expect(typeFor('Banarasi silk saree', types)).toBe('o')
+    expect(typeFor('Wrap dress', types)).toBeNull()
+    expect(typeFor("Women's co-ord set", types)).toBeNull()
+    expect(typeFor('Kids frock', [{ id: 'k', name: 'Kurta set · Women' }])).toBeNull()
+  })
+})

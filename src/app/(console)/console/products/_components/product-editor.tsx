@@ -1,5 +1,6 @@
 'use client'
 
+import { isSizeOption } from '@/domains/storefront/picker'
 import { InfoTip } from '@/components/ui/info-tip'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
@@ -108,7 +109,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   const prices = cells.map((c) => parseRupees(c.price)).filter((x): x is number => x !== null && x > 0)
   const ready = readiness({
     title: d.title, photos: photos.length, prices: cells.map((c) => parseRupees(c.price) ?? 0),
-    hasSizes: d.options.some((o) => /^sizes?$/i.test(o.name)), chartRows: type?.sizeChart.rows.length ?? 0,
+    sizes: d.options.find((o) => isSizeOption(o.name))?.values ?? [], chartSizes: (type?.sizeChart.rows ?? []).map((r) => r.size),
     anyBuyable: cells.some((c) => shopperSees(c, now).canBuy),
     taxReady: shop.gst.charges ? /^\d{4}(\d{2})?(\d{2})?$/.test(d.tax.hsn) && (ruleOn(d.tax.hsn, now) !== null || !!d.tax.ownBps) : undefined,
     labelMissing: shop.label ? labelMissing(readLabel({ ...d.label, maker: d.label.maker.trim(), shelfMonths: Number(d.label.shelf) || null })) : undefined,
