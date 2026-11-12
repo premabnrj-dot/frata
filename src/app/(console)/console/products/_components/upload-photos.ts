@@ -1,7 +1,8 @@
 'use client'
 
 import { upload } from '@vercel/blob/client'
-import { baseFromUpload, blobPath, contentTypeOf, MAX_SOURCE_BYTES, maxBytesFor, type PhotoFormat, widthsFor } from '@/domains/media/sizes'
+import { baseFromUpload, blobPath, contentTypeOf, MAX_SOURCE_BYTES, type PhotoFormat, widthsFor } from '@/domains/media/sizes'
+import { maxBytesFor } from '@/domains/media/upload-limits'
 
 // A phone photo (often 4–20 MB) is resized HERE, once, into the size ladder,
 // and each size is uploaded straight to the shop's folder in Blob — so the
