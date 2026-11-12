@@ -6,7 +6,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import { createHmac } from 'node:crypto'
-import { BILLING_KEYS, CONSOLE, FAKE_CHECKOUT, RZP, USERS, signedIn, until } from '../lib.mjs'
+import { BILLING_KEYS, CONSOLE, FAKE_CHECKOUT, RZP, USERS, expectToast, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 // The IST month after the one `d` falls in, as "YYYY-MM" (month ends are IST, not UTC).
@@ -73,7 +73,7 @@ export default {
         const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
         await meera.goto(CONSOLE + `/admin/billing?month=${nextYm(new Date())}`)
         await meera.getByRole('button', { name: /^Run drafts for/ }).click()
-        await meera.getByText(/drafted/).first().waitFor()
+        await expectToast(meera, /drafted/, 'ok')
         const [d] = await until(async () => { const r = await db`select orders_billed from frrata_invoices where tenant_id = ${KESAR} order by period_start desc limit 1`; return r.length && r })
         assert.ok(d.orders_billed >= 1, 'the delivered order is counted')
         await meera.goto(CONSOLE + '/admin/merchants')
@@ -88,16 +88,18 @@ export default {
         const thisYm = `${i.getUTCFullYear()}-${String(i.getUTCMonth() + 1).padStart(2, '0')}`
         await meera.goto(CONSOLE + `/admin/billing?month=${thisYm}`)
         await meera.getByRole('button', { name: /^Run drafts for/ }).click()
-        await meera.getByText(/drafted/).first().waitFor()
+        await expectToast(meera, /drafted/, 'ok')
         const issue = meera.getByRole('button', { name: /^Issue \d+ invoices?$/ })
         await issue.waitFor()
         const n = Number((await issue.textContent()).match(/\d+/)[0])
         await meera.getByLabel(/Type ISSUE/).fill('ISSUE 999')
         await issue.click()
-        await meera.getByText(`Type ISSUE ${n} to issue.`).waitFor()
+        // A wrong confirmation is marked at its field (the summary toast is quiet); nothing is issued.
+        await meera.locator('#confirm-error').getByText(`Type ISSUE ${n} to issue.`).waitFor()
+        await expectToast(meera, '1 field needs fixing.', 'error', { quiet: true })
         await meera.getByLabel(/Type ISSUE/).fill(`ISSUE ${n}`)
         await meera.getByRole('button', { name: /^Issue \d+ invoices?$/ }).click()
-        await meera.getByText(/issued.*test mode/).waitFor()
+        await expectToast(meera, /issued.*test mode/, 'ok')
         const [inv] = await db`select id, number, total from frrata_invoices where tenant_id = ${KESAR} and number is not null order by issued_at desc limit 1`
         assert.match(inv.number, /^FRR\/T\d\d-\d\d\/\d{6}$/)
         // The shop: the test invoice says so, with its PDF (named TEST).
@@ -114,7 +116,7 @@ export default {
         await meera.getByLabel(/Taxable value to credit/).fill('10')
         await meera.getByLabel(/Reason/).fill('Goodwill for a slow week')
         await meera.getByRole('button', { name: 'Issue credit note' }).click()
-        await meera.getByText(/Credit note FRR\/T\d\d-\d\d\/C\d{5} issued/).waitFor()
+        await expectToast(meera, /Credit note FRR\/T\d\d-\d\d\/C\d{5} issued/, 'ok')
         await riya.reload(); await riya.getByText(/^Credit note FRR\/T/).first().waitFor()
         assert.equal(await riya.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'the invoices table fits a 390 px phone')
         await riya.screenshot({ path: t.out('invoices-test'), fullPage: true })
@@ -130,7 +132,7 @@ export default {
         await riya.getByRole('button', { name: 'UPI Autopay' }).click()
         await riya.getByText('Active', { exact: true }).waitFor()
         const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
-        const run = async () => { await meera.goto(CONSOLE + '/admin/billing'); await meera.getByRole('button', { name: 'Run collection now' }).click(); await meera.getByText(/notices?, \d+ debits? started/).waitFor() }
+        const run = async () => { await meera.goto(CONSOLE + '/admin/billing'); await meera.getByRole('button', { name: 'Run collection now' }).click(); await expectToast(meera, /notices?, \d+ debits? started/, 'ok') }
         const [inv] = await db`select id from frrata_invoices where tenant_id = ${KESAR} and number is not null order by issued_at desc limit 1`
         // 26 hours pass: notices and failures move back together, so their order (a fresh notice after a failure) holds.
         const age = async () => {
@@ -181,7 +183,7 @@ export default {
         await meera.getByLabel(/^Length for new sign-ups/).fill('45')
         await meera.locator('#trials').getByLabel(/^Why$/).fill('Festive campaign')
         await meera.getByRole('button', { name: 'Save trial terms' }).click()
-        await meera.getByText('New sign-ups get 45 days from going live.').waitFor()
+        await expectToast(meera, 'New sign-ups get 45 days from going live.', 'ok')
         await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)
         await meera.getByText('No trial.').waitFor()
         await meera.getByLabel(/^Days, 7 to 90/).fill('14')
@@ -196,7 +198,7 @@ export default {
         await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)
         await meera.getByLabel('Why end the trial').fill('Test over')
         await meera.getByRole('button', { name: 'End the trial now' }).click()
-        await meera.getByText('Trial ended.').waitFor()
+        await expectToast(meera, 'Trial ended.', 'ok')
         assert.equal((await db`select count(*)::int n from audit_events where tenant_id = ${KESAR} and action in ('trial.set', 'trial.end')`)[0].n, 2)
       })
       await t.step('AD·0: Admin moves Kesar to Scale from the 1st, at a custom price with a reason; support sees the plan and no form', async () => {
@@ -207,7 +209,9 @@ export default {
         await meera.getByLabel(/^Custom monthly price/).fill('9999')
         await meera.getByLabel(/^Reason/).fill('E2E move')
         await meera.getByRole('button', { name: 'Move Kesar Studio' }).click()
-        await meera.getByText('Plan changed.').waitFor()
+        // The change lands on the merchant's page (`go`); its toast comes with it (the shell's Toaster outlives the move).
+        await expectToast(meera, 'Plan changed.', 'ok')
+        await meera.waitForURL(new RegExp(`/admin/merchants/${KESAR}$`))
         const [row] = await db`select custom_monthly_price::text p, starts_at > now() later from tenant_plans where tenant_id = ${KESAR} and reason = 'E2E move'`
         assert.equal(row.p, '999900'); assert.equal(row.later, true)
         await db`insert into platform_staff (user_id, email, role) values (${USERS.staff.id}, ${USERS.staff.email}, 'support') on conflict (user_id) do update set role = 'support'`

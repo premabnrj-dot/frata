@@ -3,7 +3,6 @@ import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/com
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
-import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { ekBlocks, ekSettings, ekShops, ekStats } from '@/lib/admin/ekcode'
@@ -11,6 +10,7 @@ import { DEFAULT_LIMITS, type Limits } from '@/domains/ekcode-core/limits'
 import { dateTimeIN } from '@/lib/format-date'
 import { blockAction, limitsAction, shopControlAction } from './actions'
 import { Submit } from '@/components/ui/submit'
+import { ActionForm, FieldMessage } from '@/components/ui/action-form'
 
 export const metadata = { title: 'EkCode' }
 
@@ -21,7 +21,7 @@ const PER_MSG_PAISE = 11.5 // Meta's India authentication rate before GST (frata
 const n = (x: number | null | undefined) => (x == null ? 'fewer than 5' : x.toLocaleString('en-IN'))
 const field = 'h-10 w-28 rounded-md border border-input bg-card px-3 text-sm md:h-9'
 
-export default async function EkcodeAdmin({ searchParams }: { searchParams: Promise<{ tab?: string; days?: string; ok?: string; error?: string }> }) {
+export default async function EkcodeAdmin({ searchParams }: { searchParams: Promise<{ tab?: string; days?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
   const sp = await searchParams
@@ -32,7 +32,6 @@ export default async function EkcodeAdmin({ searchParams }: { searchParams: Prom
   return (
     <>
       <PageHeader title="EkCode" />
-      <Notice ok={sp.ok} error={sp.error} />
       <nav aria-label="EkCode" className="mb-4 flex gap-1 border-b border-border">
         {TABS.filter(([t]) => admin.ok || t === 'overview').map(([t, label]) => (
           <Link key={t} href={href(t)} aria-current={tab === t ? 'page' : undefined} className={`px-3 py-2 text-sm ${tab === t ? 'border-b-2 border-foreground font-medium' : 'text-muted-foreground'}`}>{label}</Link>
@@ -83,13 +82,14 @@ async function Shops({ staff, days }: { staff: Parameters<typeof ekShops>[0]; da
             <Td cell="c" className="text-right font-mono">{n(r.continued)}</Td>
             <Td cell="d">{r.paused_at ? <Badge tone="warn">Paused</Badge> : r.breaker_at ? <Badge tone="warn">Breaker</Badge> : <Badge tone="ok">OK</Badge>}{r.raised_cap ? <span className="ml-2 text-xs text-muted-foreground">cap {r.raised_cap}/day</span> : null}</Td>
             <Td cell="f" className="text-right">
-              <form action={shopControlAction} className="flex justify-end gap-2">
+              <ActionForm action={shopControlAction} className="flex flex-wrap justify-end gap-2">
                 <input type="hidden" name="tenantId" value={r.tenant_id} /><input type="hidden" name="shop" value={r.shop} />
                 <input type="hidden" name="action" value={r.paused_at ? 'resume' : r.breaker_at ? 'reset' : 'pause'} />
                 <label className="sr-only" htmlFor={`why-${r.tenant_id}`}>Why</label>
-                <input id={`why-${r.tenant_id}`} name="reason" required minLength={3} maxLength={500} placeholder="Why" className="h-10 w-40 rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+                <input id={`why-${r.tenant_id}`} name="reason" required minLength={3} maxLength={500} placeholder="Why" data-error="Say why, in a few words." className="h-10 w-40 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9" />
                 <Submit variant="secondary">{r.paused_at ? `Resume ${r.shop}` : r.breaker_at ? `Reset ${r.shop}'s breaker` : `Pause EkCode for ${r.shop}`}</Submit>
-              </form>
+                <span className="basis-full text-left empty:hidden"><FieldMessage name="reason" /></span>
+              </ActionForm>
             </Td>
           </DataTableRow>
         ))}
@@ -107,7 +107,7 @@ async function Controls({ staff }: { staff: Parameters<typeof ekSettings>[0] }) 
   return (
     <div className="grid gap-6">
       <Section title="Limits">
-      <form action={limitsAction} className="grid gap-3">
+      <ActionForm action={limitsAction} className="grid gap-3">
         <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" name="signIn" defaultChecked={s?.sign_in ?? true} /> Sign-in with EkCode, every shop</label>
         {rows.map(([k, label]) => (
           <label key={k} className="flex items-center justify-between gap-3 text-sm">{label}
@@ -117,20 +117,20 @@ async function Controls({ staff }: { staff: Parameters<typeof ekSettings>[0] }) 
           <label key={p} className="flex items-center justify-between gap-3 text-sm">Codes a day per shop · {p[0]!.toUpperCase() + p.slice(1)}
             <input name={p} type="number" defaultValue={String(l.perShopDay[p])} className={field} /></label>
         ))}
-        <label className="grid gap-1 text-sm font-medium">Why<input name="reason" required minLength={3} maxLength={500} className="h-10 rounded-md border border-input bg-card px-3 text-sm font-normal md:h-9" /></label>
+        <label className="grid gap-1 text-sm font-medium">Why<input name="reason" required minLength={3} maxLength={500} data-error="Say why, in a few words." className="h-10 rounded-md border border-input bg-card px-3 text-sm font-normal aria-invalid:border-danger-mark md:h-9" /><FieldMessage name="reason" /></label>
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs text-muted-foreground">{s ? `v${s.version} · ${dateTimeIN(new Date(s.at))}` : ''}</span>
           <Submit>Save limits for every shop</Submit>
         </div>
-      </form>
+      </ActionForm>
       </Section>
       <Section title="Block a number">
-      <form action={blockAction} className="flex flex-wrap items-end gap-2">
-        <label className="grid gap-1 text-sm font-medium">Number<input name="phone" inputMode="numeric" maxLength={14} className="h-10 w-40 rounded-md border border-input bg-card px-3 font-mono text-sm md:h-9" /></label>
-        <label className="grid gap-1 text-sm font-medium">Why<input name="reason" required minLength={3} maxLength={500} className="h-10 w-56 rounded-md border border-input bg-card px-3 text-sm font-normal md:h-9" /></label>
+      <ActionForm action={blockAction} className="flex flex-wrap items-end gap-2">
+        <label className="grid gap-1 text-sm font-medium">Number<input name="phone" inputMode="numeric" maxLength={14} className="h-10 w-40 rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-mark md:h-9" /><FieldMessage name="phone" /></label>
+        <label className="grid gap-1 text-sm font-medium">Why<input name="reason" required minLength={3} maxLength={500} data-error="Say why, in a few words." className="h-10 w-56 rounded-md border border-input bg-card px-3 text-sm font-normal aria-invalid:border-danger-mark md:h-9" /><FieldMessage name="reason" /></label>
         <select name="lift" className="h-10 rounded-md border border-input bg-card px-2 text-sm md:h-9" aria-label="Block or unblock"><option value="0">Block</option><option value="1">Unblock</option></select>
         <Submit variant="secondary">Apply to this number</Submit>
-      </form>
+      </ActionForm>
       </Section>
       <DataTable label="Blocked">
         <DataTableHead><th>Kind</th><th>Why</th><th>When</th></DataTableHead>

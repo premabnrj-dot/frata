@@ -1,6 +1,5 @@
 'use server'
 
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { fromRupees } from '@/domains/money/paise'
 import { PLAN_CODES } from '@/domains/plans/entitlements'
@@ -10,6 +9,7 @@ import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { endShopTrial, extendShopTrial, setShopTrial, trialError } from '@/lib/admin/trials'
 import { revalidatePath } from 'next/cache'
 import { errName } from '@/lib/log'
+import type { ActionResult } from '@/components/ui/action-form'
 
 const Change = z.object({
   tenantId: z.uuid(),
@@ -19,17 +19,17 @@ const Change = z.object({
   reason: z.string().trim().max(200).optional().transform((v) => v || null),
 })
 
-export async function changePlanAction(form: FormData) {
+export async function changePlanAction(form: FormData): Promise<ActionResult> {
   // Admin writes are admin-role only (frata-design-language § Apps and modules; UX audit 2026-11-11: support could move
   // a shop's plan and set a custom price). Support reads the tab and sees no form.
   const staff = await requireStaff(ADMIN_ONLY)
   const tid = z.uuid().safeParse(form.get('tenantId'))
-  if (!tid.success) redirect(`/admin/merchants?error=${encodeURIComponent('That form was incomplete. Nothing was changed.')}`)
+  if (!tid.success) return { error: 'That form was incomplete. Nothing was changed.' }
   const id = tid.data
-  if (!staff.ok) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent(staff.reason === 'signed_out' ? 'Sign in again.' : staff.reason === 'needs_passkey' ? 'Confirm it\'s you with your passkey first.' : 'Only an admin can change a plan.')}`)
+  if (!staff.ok) return { error: staff.reason === 'signed_out' ? 'Sign in again.' : staff.reason === 'needs_passkey' ? 'Confirm it\'s you with your passkey first.' : 'Only an admin can change a plan.' }
   const p = Change.safeParse(Object.fromEntries(form))
-  if (!p.success) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent('Check the plan and the custom price')}`)
-  if (p.data.customPrice !== null && !p.data.reason) redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent('A custom price needs a reason')}`)
+  if (!p.success) return { error: 'Check the plan and the custom price.' }
+  if (p.data.customPrice !== null && !p.data.reason) return { fields: { reason: 'A custom price needs a reason.' } }
   const now = new Date()
   try {
     await changeTenantPlan(staff, p.data.tenantId, {
@@ -43,35 +43,35 @@ export async function changePlanAction(form: FormData) {
     })
   } catch (err) {
     console.error('[changePlanAction]', errName(err))
-    redirect(`/admin/merchants/${id}/plan?error=${encodeURIComponent('We could not change the plan. Nothing was saved.')}`)
+    return { error: 'We could not change the plan. Nothing was saved.' }
   }
-  redirect(`/admin/merchants/${id}?ok=${encodeURIComponent('Plan changed.')}`)
+  return { ok: 'Plan changed.', go: `/admin/merchants/${id}` }
 }
 
 // ── Trials TR0·4: one shop's trial (ADMIN_ONLY; the definers check again, require the reason and audit it). ──
 const TrialBase = z.object({ tenantId: z.uuid(), reason: z.string().trim().min(3).max(240) })
 const TrialDays = TrialBase.extend({ days: z.coerce.number().int().min(7).max(90) })
-async function trialAction(form: FormData, schema: typeof TrialBase | typeof TrialDays, run: (staff: Extract<Awaited<ReturnType<typeof requireStaff>>, { ok: true }>, d: { tenantId: string; reason: string; days?: number }) => Promise<void>, done: string) {
+async function trialAction(form: FormData, schema: typeof TrialBase | typeof TrialDays, run: (staff: Extract<Awaited<ReturnType<typeof requireStaff>>, { ok: true }>, d: { tenantId: string; reason: string; days?: number }) => Promise<void>, done: string): Promise<ActionResult> {
   const staff = await requireStaff(ADMIN_ONLY)
   const tid = z.uuid().safeParse(form.get('tenantId'))
-  if (!tid.success) redirect(`/admin/merchants?error=${encodeURIComponent('That form was incomplete. Nothing was changed.')}`)
+  if (!tid.success) return { error: 'That form was incomplete. Nothing was changed.' }
   const back = `/admin/merchants/${tid.data}/plan`
-  if (!staff.ok) redirect(`${back}?error=${encodeURIComponent(staff.reason === 'signed_out' ? 'Sign in again.' : staff.reason === 'needs_passkey' ? 'Confirm it\'s you with your passkey first.' : 'Only an admin can change a trial.')}`)
+  if (!staff.ok) return { error: staff.reason === 'signed_out' ? 'Sign in again.' : staff.reason === 'needs_passkey' ? 'Confirm it\'s you with your passkey first.' : 'Only an admin can change a trial.' }
   const p = schema.safeParse(Object.fromEntries(form))
-  if (!p.success) redirect(`${back}?error=${encodeURIComponent('A trial is 7 to 90 days for one shop, and needs a reason.')}`)
+  if (!p.success) return { error: 'A trial is 7 to 90 days for one shop, and needs a reason.' }
   try { await run(staff, p.data) } catch (e) {
     console.error('[trial.shop]', errName(e))
-    redirect(`${back}?error=${encodeURIComponent(trialError(e))}`)
+    return { error: trialError(e) }
   }
   revalidatePath(back)
-  redirect(`${back}?ok=${encodeURIComponent(done)}`)
+  return { ok: done }
 }
-export async function setShopTrialAction(form: FormData) {
-  await trialAction(form, TrialDays, (s, d) => setShopTrial(s, d.tenantId, d.days!, d.reason), 'Trial saved.')
+export async function setShopTrialAction(form: FormData): Promise<ActionResult> {
+  return trialAction(form, TrialDays, (s, d) => setShopTrial(s, d.tenantId, d.days!, d.reason), 'Trial saved.')
 }
-export async function extendShopTrialAction(form: FormData) {
-  await trialAction(form, TrialBase, (s, d) => extendShopTrial(s, d.tenantId, d.reason), 'Trial extended by 7 days.')
+export async function extendShopTrialAction(form: FormData): Promise<ActionResult> {
+  return trialAction(form, TrialBase, (s, d) => extendShopTrial(s, d.tenantId, d.reason), 'Trial extended by 7 days.')
 }
-export async function endShopTrialAction(form: FormData) {
-  await trialAction(form, TrialBase, (s, d) => endShopTrial(s, d.tenantId, d.reason), 'Trial ended.')
+export async function endShopTrialAction(form: FormData): Promise<ActionResult> {
+  return trialAction(form, TrialBase, (s, d) => endShopTrial(s, d.tenantId, d.reason), 'Trial ended.')
 }

@@ -1,43 +1,44 @@
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
 import { button } from '@/components/ui/button'
-import { Notice } from '@/components/ui/notice'
 import { Panel } from '@/components/ui/panel'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { SHOP_DOMAIN } from '@/lib/public-env'
 import { createMerchantAction } from './actions'
 import { Section } from '@/components/layout/section'
 import { Submit } from '@/components/ui/submit'
+import { ActionForm, FieldMessage } from '@/components/ui/action-form'
 
 export const metadata = { title: 'Add merchant' }
 
-const field = 'h-10 rounded-md border border-input bg-card px-3 text-sm'
+const field = 'h-10 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark'
 
-export default async function NewMerchantPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function NewMerchantPage() {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
-  const { error } = await searchParams
   return (
     <>
       <PageHeader title="Add a merchant" back={{ href: '/admin/merchants', label: 'Merchants' }} />
-      <Notice error={error} />
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <Section className="w-full max-w-xl"><form action={createMerchantAction} className="space-y-4">
+        <Section className="w-full max-w-xl"><ActionForm action={createMerchantAction} className="space-y-4">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="name" className="text-sm font-medium">Brand name</label>
-            <input id="name" name="name" required className={field} />
+            <input id="name" name="name" required minLength={2} maxLength={80} data-error="Give the brand's name." className={field} />
+            <FieldMessage name="name" />
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="slug" className="text-sm font-medium">Shop address</label>
-            <div className="flex overflow-hidden rounded-md border border-input">
-              <input id="slug" name="slug" required pattern="[a-z0-9-]+" className="h-10 flex-1 bg-card px-3 font-mono text-sm" />
+            <div className="flex overflow-hidden rounded-md border border-input has-[[aria-invalid=true]]:border-danger-mark">
+              <input id="slug" name="slug" required pattern="[a-z0-9-]+" data-error="Lower-case letters, digits and hyphens." className="h-10 flex-1 bg-card px-3 font-mono text-sm" />
               <span className="flex items-center border-l border-border bg-muted px-3 font-mono text-sm text-muted-foreground">.{SHOP_DOMAIN}</span>
             </div>
+            <FieldMessage name="slug" />
             <span className="text-xs text-muted-foreground">Lower-case letters, digits and hyphens.</span>
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="ownerEmail" className="text-sm font-medium">Owner&apos;s email</label>
-            <input id="ownerEmail" name="ownerEmail" type="email" required autoComplete="off" className={`${field} font-mono`} />
+            <input id="ownerEmail" name="ownerEmail" type="email" required autoComplete="off" data-error="Enter the owner's email." className={`${field} font-mono`} />
+            <FieldMessage name="ownerEmail" />
             <span className="text-xs text-muted-foreground">They get a sign-in link. Signing in with this email, once confirmed, makes them the owner.</span>
           </div>
           <fieldset className="space-y-2">
@@ -60,7 +61,7 @@ export default async function NewMerchantPage({ searchParams }: { searchParams: 
             <Link href="/admin/merchants" className={button({ variant: 'secondary' })}>Cancel</Link>
             <Submit>Add merchant and email the owner</Submit>
           </div>
-        </form></Section>
+        </ActionForm></Section>
         <aside className="max-w-sm space-y-3 text-sm leading-relaxed text-muted-foreground">
           <h2 className="text-section font-semibold text-foreground">What happens</h2>
           <p>The store is created with its shop address and plan. The owner gets an email with a sign-in link; the store shows &quot;Owner not signed in yet&quot; until they use it.</p>

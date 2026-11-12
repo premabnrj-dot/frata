@@ -8,6 +8,7 @@ import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { startSupportAction } from './actions'
 import { Section } from '@/components/layout/section'
 import { Submit } from '@/components/ui/submit'
+import { ActionForm } from '@/components/ui/action-form'
 import { InfoTip } from '@/components/ui/info-tip'
 
 export const metadata = { title: 'Open a console as support' }
@@ -24,7 +25,7 @@ export default async function SupportStartPage({ params }: { params: Promise<{ i
   if (!m) notFound()
   const owner = m.members.find((x) => x.role === 'owner')
   return (
-    <Section className="mx-auto max-w-lg"><form action={startSupportAction} className="space-y-5">
+    <Section className="mx-auto max-w-lg"><ActionForm action={startSupportAction} className="space-y-5">
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">Open {m.tenant.name}&apos;s console as Frrata support</h1>
         <p className="text-sm text-muted-foreground">{owner?.email ?? 'The owner'} sees this visit in {m.tenant.name}&apos;s activity. Everything you change is recorded with your name and this reason.</p>
@@ -54,6 +55,6 @@ export default async function SupportStartPage({ params }: { params: Promise<{ i
         <Link href={`/admin/merchants/${id}`} className={button({ variant: 'secondary' })}>Stay in Admin</Link>
         <Submit>Open {m.tenant.name}&apos;s console</Submit>
       </div>
-    </form></Section>
+    </ActionForm></Section>
   )
 }
