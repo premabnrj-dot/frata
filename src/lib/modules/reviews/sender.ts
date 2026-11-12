@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, isNull } from 'drizzle-orm'
 import { askable } from '@/domains/reviews/schedule'
 import { askComponents, firstNameOf, REVIEW_TEMPLATE, REVIEW_TEMPLATE_LANG } from '@/domains/reviews/template'
 import { phoneHmac, reviewToken } from '@/lib/crypto/secret-box'
@@ -45,7 +45,7 @@ export async function sendReviewAsk(row: OutboxRow): Promise<void> {
     if (s?.templateStatus !== 'APPROVED' || s.templateCategory !== 'UTILITY') return { wait: 'template' as const }
     const wa = await tokenFor(tx, tenantId)
     if (!wa) return { wait: 'connection' as const }
-    const [line] = await tx.select({ title: orderLines.title }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(asc(orderLines.id)).limit(1)
+    const [line] = await tx.select({ title: orderLines.title }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id), isNull(orderLines.removedAt))).orderBy(asc(orderLines.id)).limit(1)
     return { send: { request: r, phone: o.phone, name: o.customerName, product: line?.title ?? 'order', token: wa.token, phoneNumberId: wa.row.phoneNumberId, wabaId: wa.row.wabaId } }
   })
   if ('skip' in job) return

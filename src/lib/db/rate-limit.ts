@@ -41,6 +41,13 @@ export const LIMITS = {
   codeSeen: { action: 'shop_code:seen', max: 1, windowSeconds: 600 },
   // Upload tokens per shop (security review S11): four widths per photo, so 200 photos an hour; Frrata pays for storage.
   uploadShop: { action: 'upload:shop', max: 800, windowSeconds: 3600 },
+  // Photos by file name (product import PI·2, its own bucket: plan 2026-11-12 § Changes to the spec): a photo counts
+  // once, at its first size (400 wide), which alone writes its start; its larger sizes ride on it, at most 3 more.
+  // 500 photos an hour a shop (60 products × 4 photos in 10 minutes, twice over), 2,000 a day. All fail closed.
+  importPhotoShop: { action: 'upload_import:shop', max: 500, windowSeconds: 3600 },
+  importPhotoShopDay: { action: 'upload_import:shop_day', max: 2000, windowSeconds: 86400 },
+  importPhotoStart: { action: 'upload_import:start', max: 1, windowSeconds: 3600 },
+  importPhotoSizes: { action: 'upload_import:photo', max: 3, windowSeconds: 3600 },
   // PDF documents (Documents D1, security review 2026-11-08): a render is CPU; per member and per shop, fail closed.
   pdfMember: { action: 'pdf:member', max: 30, windowSeconds: 600 },
   // Own domains D2·10 (security review 2026-11-09): claims per member and shop; the dialog's 15 s check per member,
@@ -54,6 +61,9 @@ export const LIMITS = {
   domainCheckIp: { action: 'domain_check:ip', max: 200, windowSeconds: 600 },
   domainCheckAll: { action: 'domain_check:all', max: 3000, windowSeconds: 600 },
   pdfShop: { action: 'pdf:shop', max: 120, windowSeconds: 600 },
+  // Product import (PI·1, security review 2026-11-12): each Check reads a chunk of up to 512 kB by the rules; per shop,
+  // fail closed. A 600-product file is a few chunks; a re-match reads them all again.
+  importCheckShop: { action: 'import_check:shop', max: 600, windowSeconds: 3600 },
   // GST exports (GST app G1): a period's documents rendered whole; per member, fail closed.
   gstExportMember: { action: 'gst_export:member', max: 30, windowSeconds: 600 },
   deliveryExportMember: { action: 'delivery_export:member', max: 30, windowSeconds: 600 },
@@ -71,6 +81,12 @@ export const LIMITS = {
   gstOtpShop: { action: 'gst_otp:shop', max: 10, windowSeconds: 3600 },
   // OTPs typed (verify, file): a guess loop stops at the server, before the portal (security review M2).
   gstOtpTry: { action: 'gst_otp_try:shop', max: 8, windowSeconds: 900 },
+  // Order edit (OE·1, security review 2026-11-12), per member: opening the editor and its search read a shop's catalogue
+  // with stock; a save and an Undo lock the order and its variants. Save and Undo fail closed; the reads fail open.
+  orderEditLoad: { action: 'order_edit:load', max: 120, windowSeconds: 600 },
+  orderEditFind: { action: 'order_edit:find', max: 300, windowSeconds: 600 },
+  orderEditSave: { action: 'order_edit:save', max: 60, windowSeconds: 600 },
+  orderEditUndo: { action: 'order_edit:undo', max: 60, windowSeconds: 600 },
   // Frrata's billing gateway (B3 security review): each start makes a gateway customer or order; per member, fail closed.
   billingMember: { action: 'billing:member', max: 10, windowSeconds: 600 },
   // Sign-up WhatsApp codes (trials TR1, R2): per person, per phone and per IP; fail closed (a code costs Frrata a message).

@@ -1,0 +1,7 @@
+Handle,Title,Body (HTML),Vendor,Product Category,Type,Tags,Published,Option1 Name,Option1 Value,Option2 Name,Option2 Value,Option3 Name,Option3 Value,Variant SKU,Variant Grams,Variant Inventory Tracker,Variant Inventory Qty,Variant Inventory Policy,Variant Fulfillment Service,Variant Price,Variant Compare At Price,Variant Requires Shipping,Variant Taxable,Variant Barcode,Image Src,Image Position,Image Alt Text,Gift Card,SEO Title,SEO Description,Variant Image,Variant Weight Unit,Cost per item,Status
+linen-kurta-set,Linen kurta set,"<p>Hand-loomed linen.</p><p>Wash cold &amp; dry in shade.</p>",Kesar Studio,Apparel & Accessories > Clothing,Kurta,"linen, summer",TRUE,Size,S,Colour,Indigo,,,KS-LIN-S-IND,400,shopify,4,deny,manual,2499.00,2999.00,TRUE,TRUE,,https://cdn.shopify.com/s/files/1/linen-1.jpg,1,,FALSE,,,,g,900.00,active
+linen-kurta-set,,,,,,,,,M,,Indigo,,,KS-LIN-M-IND,400,shopify,6,deny,manual,2499.00,2999.00,TRUE,TRUE,,https://cdn.shopify.com/s/files/1/linen-2.jpg,2,,,,,,g,900.00,
+linen-kurta-set,,,,,,,,,S,,Rust,,,KS-LIN-S-RUS,400,shopify,0,deny,manual,2499.00,2999.00,TRUE,TRUE,,,,,,,,,g,900.00,
+linen-kurta-set,,,,,,,,,M,,Rust,,,KS-LIN-M-RUS,400,shopify,2,deny,manual,2599.00,2999.00,TRUE,TRUE,,,,,,,,,g,950.00,
+linen-kurta-set,,,,,,,,,,,,,,,,,,,,,,,,,https://cdn.shopify.com/s/files/1/linen-3.jpg,3,,,,,,,,
+silk-dupatta,Silk dupatta,Pure silk.,Kesar Studio,,Dupatta,silk,TRUE,Title,Default Title,,,,,KS-SLK,200,shopify,12,deny,manual,1299.00,,TRUE,TRUE,4006381333931,https://cdn.shopify.com/s/files/1/silk.jpg,1,,FALSE,,,,g,,active

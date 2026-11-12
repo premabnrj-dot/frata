@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.22.1
+  version: 5.22.2
   verified: 2026-11-12
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -471,12 +471,33 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   ("Keep my shop as it is"). Imported products arrive as drafts. Done lists what each still needs, each with its button.
 - **Photos in bulk are matched by file name** (SKU, address or name, a trailing number for order); an unmatched photo
   asks "Which product?" in place.
+  As built (PI·2, 2026-11-12; `src/app/(console)/console/products/photos/`): "Add photos" from Done's Need photos tile
+  (back: Import) and from Products' header (back: Products); meta "N products need photos", one primary "Choose
+  photos", the info callout with two example names from the shop's own products; empty: a drop area with the formats
+  and "up to 500 at a time". One card: "126 photos · 37 products" + a warn "4 not matched"; cards as drawn (the file
+  name on the photo; the product, then "Photo 2 of 3" or its colour; "Change"); a card that asks has a warn edge, its
+  preview, and a search combobox named "Which product is IMG_4021.jpg", offering first the products a name fits when
+  they are ≤ 3. Buttons: "Skip the N not matched" and "Add N photos" (only photos with a product and room). While
+  sending: one bar for all, one per photo; each card ends "Added", "Not added" or "No room" (a product holds 10). A
+  failed photo is ONE error toast (its words, "N photos added" under it, Try again); success one ok toast.
+  Leaving while sending asks the browser's own "Leave site?".
 - **Editing a placed order is in place, until packed.** Per line: the product's other sizes and colours as chips with
   what is left ("L · 2 left"; the original dashed; sold out crossed through), quantity − / +, Remove with a reason.
   "What changes" beside it, live: each change in words, an offer that now gives less, and the money (COD "Collect
   ₹6,016 → ₹5,207"; paid online: "Refund ₹1,899" with its timing and that the gateway keeps its fee, or "Collect ₹499 on
   delivery"). Save names the order and the money ("Save and refund ₹1,899"); the safe button keeps the order as it was.
   After: a toast with Undo, "Was M" on the line, the change in Activity.
+  As built (OE·1, 2026-11-12; `src/app/(console)/console/orders/_components/edit/`): the editor replaces the Items card
+  in place and loads its code only then; "Edit items" sits in the card's header, with "Undo the change" beside it while
+  the edit can still be undone (10 minutes, before packing). Remove asks its reason as three chips on the line (Out of
+  stock, Customer asked, Other; "Keep it"); a removed line is struck through with "Removed · out of stock" and "Put it
+  back"; a piece added in the edit comes out without a reason. A line whose product was deleted says "No longer sold":
+  no chips, no − / +, Remove only. A size already on the order is not offered again. A refusal (over the COD maximum,
+  sold out, a reason missing) is one line in "What changes", in the error colour, and Save waits. The email tick shows
+  only when the order has an email ("Email Ananya the new total"). Who sees "Edit items": owners and admins, on an order
+  paid on delivery, until packed — never staff, a support visit, a paid order or one that started as an online payment.
+  Activity says "emailed" only once the email went ("email waiting" while it is held for the Undo window). Phone: one column, the two buttons
+  fixed above the bottom bar.
 
 ## Offers (owner-approved 2026-11-08; spec `docs/specs/2026-11-08-coupons.md`, mockup https://claude.ai/artifact/HVFMBJzJoH9tTUh9d1zxHT)
 

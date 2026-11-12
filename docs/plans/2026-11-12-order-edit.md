@@ -35,6 +35,24 @@ and the edit is applied only when that payment is captured. Built as:
 - Tasks: an `edit.payment` kind beside `payment.check`; the order page's payment block reads a waiting edit; e2e: pay
   the difference, and a request that lapses.
 
+## Razorpay facts that shape OE·2 (integration-researcher, 2026-11-12; frata-integrations § Razorpay)
+- Every refund sends `speed: "normal"` (the merchant's dashboard default is the API default; Instant costs ₹7.99–14.99),
+  `receipt` = the `order_refunds` attempt id and `X-Refund-Idempotency` = the same id; the payment's refunds are listed
+  before every create and retry (key retention undocumented). Only `pending`/`processed` count as given; a `failed`
+  attempt is retried as a NEW attempt (new receipt, new key). 409 / "another operation in progress" = retry later.
+- No "refundable" field: what can still be refunded is captured − listed pending − processed, PER Razorpay payment. After
+  a paid increase an order has two payments: the ledger is per payment, a later decrease may need two refunds, and the
+  6-month check is per payment (both a 400 at create and a later `failed` are handled).
+- Too little balance FAILS the refund at create (not queued): the order shows "Refund ₹X not sent · add funds in
+  Razorpay · Try again"; the edit stands.
+- The payment for a higher total is a second Razorpay order with its own receipt (`${number}-e${editId8}`, ≤ 40 chars,
+  unique per account; reused on retry via `GET /v1/orders?receipt=`), opened in Checkout with the shop's key on the
+  order page; the signature checked against OUR stored second order id. A difference under ₹1 (Razorpay's minimum) is
+  not asked for: the edit applies at once (the shop absorbs it).
+- "Processed" is not "in the shopper's account": the email says the refund is on its way within 5–10 working days.
+- `refund.check` (reading status back) stays the primary path; `refund.*` webhooks are optional (the merchant must tick
+  them) and an auto-refund event matching no `order_refunds` row is ignored.
+
 ## Open (owner)
 - **An offer that now gives less** (a tier steps down, a % on a smaller bag, a product offer on fewer lines). Uses and
   budgets read `order_discounts.amount`. Leaning (coordinator, 2026-11-12): mark the old row `removed_at` and insert a
@@ -72,6 +90,22 @@ and the edit is applied only when that payment is captured. Built as:
    is left for both, which line is taken must not depend on row order (take the kept line first, or refuse the edit).
 5. UI per the mockup, plus the states it didn't draw (over the COD limit, phone). Verify: `npm run e2e -- --only
    order-edit` (new flow) and `50-order-page`.
+   As built (2026-11-12): 0117 (drizzle-kit) and 0118 (access), proof check 74. `order_edits` keeps the offer rows an
+   edit took off and added (`offers_removed`, `offers_added`, uuid arrays) and `order_edit_lines` an after line's
+   `replaces`, so Undo and Activity need nothing else. Who and when are the edit's `items_edited` event, and an undone
+   edit is that event's undo: no `undone_at` (derived, never stored twice). The reason is per removed line
+   (`order_edit_lines.reason`, asked on the line as drawn), not one per edit. `product_discount` joins `order_lines`'
+   update grant: a re-plan moves the product offers' part of a kept line's discount. A COD order keeps its own COD fee
+   (the stored one, as its delivery and offers; only the maximum is today's). The panel's room and the save's are one
+   rule (`roomOf`/`sellsAs`: checkout's `sellable` with the order's own pieces back). E2e: `77-order-edit`.
+   Reviews (2026-11-12) folded in: an order switched to pay on delivery that has a Razorpay order is not editable
+   until OE·2 (it could still be paid at the old online total), so OE·1 asks Razorpay nothing; the four actions are
+   limited per member; `order_edit_lines.variant_id` is a same-shop FK; a removed line holds no stock (CHECK); the
+   arrival dates follow the live lines; only a later edit that emails supersedes an earlier edit's email; Activity
+   says "emailed" once it went; `order_lines_product` became `order_lines_product_live` (live lines only).
+   **Deploy:** apply 0117 and 0118 before pushing the code: every reader selects `removed_at`, and `writeReprice` needs
+   the `product_discount` grant. Both are additive (nullable columns, new tables, a new index built before the old one
+   is dropped), so the code running before the push keeps working.
 
 **OE·2 · paid online** (increase decided 2026-11-12: pay the difference first)
 6. `refund()` in `src/lib/payments/razorpay.ts` (normal speed; before each create, list the payment's refunds and match

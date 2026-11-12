@@ -45,8 +45,15 @@ export const DEFAULT_WORDS: Record<OrderMessage, EmailWords> = {
     message: "If you paid online, the refund reaches you in 5–7 working days. Reply to this email if anything looks wrong.",
     button: 'See your order',
   },
+  edited: {
+    subject: 'Order [Order number] has changed',
+    preview: 'Your new total is [Total]',
+    heading: 'Your order has changed',
+    message: "We've changed the items in your order, as below. Reply to this email if anything looks wrong.",
+    button: 'See your order',
+  },
 }
 
 export const EMAIL_NAMES: Record<OrderMessage, string> = {
-  confirmed: 'Order confirmed', finish_paying: 'Finish paying', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled',
+  confirmed: 'Order confirmed', finish_paying: 'Finish paying', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled', edited: 'Items changed',
 }

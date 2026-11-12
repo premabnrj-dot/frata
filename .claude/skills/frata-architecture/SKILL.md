@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.50.0
+  version: 2.52.2
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -513,6 +513,41 @@ after it. A class a shop page uses from outside the shop's folders must be added
   orders.) A lock not had in its 1 s is told as "Someone is buying this product right now" (`lockTimedOut`).
 - New products' addresses come from `freeHandles` (`src/lib/catalogue/handles.ts`, one read for the batch);
   `handleFor` writes Indian scripts in Latin letters (`src/domains/catalogue/indic.ts`).
+- **A SKU is one in a shop in any case at the database too** (`variants_tenant_sku_upper`, drizzle/0119): a unique
+  violation on either SKU index means another product took it meanwhile (`skuTaken`, write.ts: the editor and the import
+  tell it in words). **A product goes live only through `goLive`** (readiness.ts: Publish and "Publish the N ready").
+  **HSN digits for the turnover are `hsnDigitsIn`** (queries/settings.ts) passed to `cleanTax` / `cleanProduct`.
+- **What a product still needs before it goes live, for one or many, is `readinessIn`** (`src/lib/catalogue/readiness.ts`:
+  one read per table, the rule `readiness` in product-form.ts): Publish (`setStatus`) and the import's Done step both ask
+  it. **Before deleting a product photo's files, ask `photosInUse`** (`photos-in-use.ts`: a look, a story or a page may show it).
+
+## Importing products (PI·1, 2026-11-12; plan docs/plans/2026-11-12-product-import.md § Tasks 4–7)
+
+- **The browser reads and groups; the server rules.** The page reads the file (read-excel-file's `universal` build for
+  .xlsx — no worker, so the console's CSP is unchanged — and papaparse, both `import()`ed on pick), groups rows into whole
+  products and chunks (`group.ts`, `plan.ts fileChunks`: mapped cells only, ≤ 512 kB, a product never split). The rules
+  (`domains/catalogue/import/read.ts` → the editor's `cleanProduct`) run only on the server: once per chunk for the
+  Check (`checkImport`, writes nothing; SKUs and barcodes carried across chunks in `seen`) and again for the write
+  (`importChunk`). Never import `read.ts` or `cleanProduct` into a client component: they name `unitCost`, and
+  `check:client-bundle` fails the build. The Check gets `checkedOf` (states and preview lines, never a cost).
+- **A job is driven only by its open page, through `asMember`**: no unattended runner (it would have no session, no
+  support audit, and outlive a removed member). One running job a shop (`import_jobs_one_running`); the server takes
+  only `next_chunk` (an earlier one is a no-op retry, a later one refused); the same file (hash) resumes a running job,
+  is refused once imported, and comes again only after its drafts are deleted (the hash is cleared). At most
+  `IMPORTS_PER_DAY` starts in 24 h, counted in the transaction. Every chunk re-reads with the job's STORED mapping,
+  re-checks the caps (600 products, 1,800 sizes: `limits.ts`) and the shop's matches, then `writeProducts` as drafts with
+  costs only if `costsVisibleIn` says so.
+- **A chunk is written exactly as the Check read it**: the job's earlier chunks' SKUs and barcodes are rebuilt from their
+  rows (`seen`), and its own drafts never count as already in the shop (`existingIn(…, job)`). The rules read no cell
+  longer than its cap (`CELL_CAPS`, read.ts: a longer one is a problem on its row), and the cell readers use no
+  backtracking pattern (a 480 kB chunk once cost 18 s of CPU; `speed.test.ts` holds it under a second). The Check is
+  limited per shop (`LIMITS.importCheckShop`, failing closed). A job that reads a cost column continues only for a member
+  who sees costs.
+- **`import_rows` hold cells only while the job runs** (they carry costs): ending or stopping a job nulls them
+  (`forgetCells`). A job's products are exactly its rows' `product_id` (composite FK, SET NULL on delete): deleting drafts
+  and "Publish the N ready" read nothing else. Drafts never reach shoppers, so a chunk revalidates `/console/products`
+  only; only a publish purges the catalogue. `import_jobs`/`import_rows`: no frata_admin grant, no delete for anyone,
+  column-level updates (tenancy.sql § 72).
 
 ## Catalogue links (Signal S3, 2026-11-09; plan docs/plans/2026-11-09-signal-s3.md)
 
@@ -522,8 +557,9 @@ after it. A class a shop page uses from outside the shop's folders must be added
   (`savePairs`, one message for "not yours" and "missing").
 - **Content that belongs to one product lives on it** (`products.stories` jsonb, like `label`): Zod caps by
   characters (`domains/catalogue/stories.ts`), a looser CHECK by bytes in the database.
-- **A photo a second place uses joins the in-use check:** `editPhoto` keeps the files while a look's settings or any
-  product's stories mention the base. A story photo is rebuilt with `acceptedBase(…, 'products')` on every save.
+- **A photo a second place uses joins the in-use check** (`photosInUse`, `src/lib/catalogue/photos-in-use.ts`, asked by
+  `editPhoto` and by deleting an import's drafts): the files stay while a look's settings, any product's stories or a page
+  mention the base; a new place that shows product photos is added there. A story photo is rebuilt with `acceptedBase(…, 'products')` on every save.
 - **The shop reads a page's linked pieces inside its own entry** (`coreProduct`: ≤ 2 pieces, variants, first photo,
   in the same round; drafts never), tagged `catalogue` so a linked piece's change purges the page; which ones show,
   at what price, Add or Choose, is one pure rule (`domains/storefront/pairs.ts`).
@@ -636,7 +672,8 @@ Rules:
   the shop. A sell-out's catalogue purge runs at most once per shop per 30 s across every instance (`refreshSoldOut`,
   limiter `soldOutPurge`); one inside a purged window queues ONE trailing purge at its end (`soldOutTrail`, in
   `after()`), never dropped. A sell-out is the last piece by stock OR hold (stock − held − owed), and an offer an order
-  uses up (`usedUp`) purges the same way: the bar (`shopAnnouncement`) is tagged catalogue with the showcase.
+  uses up (`usedUp`) purges the same way: the bar (`shopAnnouncement`) is tagged catalogue with the showcase. So do a
+  live product's new photos from the Photos page (`addPhotos`, PI·2): many products' photos, one purge per 30 s.
 - **Shop pages read holds once per entry** (`heldByVariant`, grouped from the holds index): `heldSql` per variant over a
   3,000-variant catalogue cost 265 ms at 10× (1 ms grouped). Checkout's ≤ 20 variants keep `heldSql`; one rule.
 - A flash drop (2026-11-11): placing an order waits at most 2 s for a lock (`set local lock_timeout`) and a shop places
@@ -711,8 +748,28 @@ Rules:
 - **One format per photo, said by its stored base** (`src/domains/media/sizes.ts`): WebP (`<id>` → `<id>-<w>.webp`, every
   photo before this date) or JPEG where the browser makes no WebP (Safari: a `.jpg` base, `<id>.jpg` → `<id>-<w>.jpg`).
   No column: `formatOf(base)`. A file's URL is built only by `urlFor` (never `${base}-${w}.webp` by hand); the upload
-  path by `blobPath`; the token allows exactly the type the path's extension says; `photosAreMade` reads each file's
-  first bytes against its base's format (`headIs`).
+  path by `blobPath`; the token allows exactly the type the path's extension says, at most `maxBytesFor(width)` (512 kB
+  at 400 … 3 MB; the browser lowers quality to fit), for `UPLOAD_TOKEN_MS` (5 minutes); `photosAreMade` reads EVERY
+  size's first bytes against its base's format (`headIs`) and refuses a size it cannot read (404, 5xx, no answer).
+- **Both token routes answer only the console's own origin** (`fromConsole`, `src/lib/http/same-origin.ts`: Origin's
+  host:port is the request's Host, and that host serves the console). A new cookie-authenticated POST route uses it.
+- **A product photo's row is written only by `attachIn`** (`src/lib/catalogue/photos.ts`, in the caller's `asMember`
+  transaction; the editor's `attachPhotos` and the Photos page's `addPhotos`): the base rebuilt by `acceptedBase(…,
+  'products')`, the ladder's widths only, the product looked up in the member's shop and locked FOR NO KEY UPDATE while
+  placed (FOR UPDATE would hold up a review or an order line that points at it), a base the product has already
+  skipped (Try again never adds a photo twice), a colour kept only if it is the product's own, a `max` counting the
+  photos it has (the Photos page: 10). Never insert into `product_images` from an action.
+- **Many photos at once go through the import's token route** (`/api/console/upload/import`, PI·2): product paths only,
+  counted by `importToken` (`src/lib/media/import-bucket.ts`): a photo's 400 (every photo has one, uploaded first)
+  alone writes its start (`importPhotoStart`) and counts once against `importPhotoShop` (500 an hour) and
+  `importPhotoShopDay` (2,000); its larger sizes only within the start's window or the next, 3 at most; all failing
+  closed. The editor, the look and the logo stay on `/api/console/upload` (`uploadShop`).
+- **Frrata's pages under /products/ keep their addresses**: `RESERVED_HANDLES` (`domains/catalogue/variants.ts`):
+  `freeHandles` skips them ("photos-2"), `cleanProduct` refuses one typed. A new static folder beside `[handle]` in the
+  console or the shop goes on the list (`reserved-handles.test.ts` reads the folders).
+- **Photos by file name are matched in the browser** (`src/domains/catalogue/import/photos.ts`, pure); the server
+  trusts nothing of the match but the product id, which `attachIn` looks up in the member's shop. A live product's new
+  photos purge the catalogue through `refreshSoldOut` (once per 30 s, a trailing one after), never once per product.
 
 ## Razorpay keys that stop working (2026-11-12)
 
@@ -746,7 +803,8 @@ Look's controls, Settings' shipping costs and sections, and Admin's custom plan 
   marks them 'prepaid' and 'cod', so `reprice()` prices either way, and uses follow the row's way (`offerWay`;
   `discountUseSql(now, 'both' | 'prepaid' | 'cod')`; a hold holds both).
 - **One repricer and one writer:** a placed order is priced again only by `amounts.reprice()` from
-  its stored lines and `order_discounts` (never today's offers), and written only by
+  its stored lines and `order_discounts` (never today's offers) — or, when its items change, by `planEdit` (new lines,
+  the order's own offers re-planned) and an Undo's `priceAsKept` (`src/domains/orders/edit.ts`) — and written only by
   `lib/orders/reprice.ts writeReprice()` — every money column of the order and its lines together.
   Switch to COD, a capture after a switch and a retry go through them; a retry never reprices.
 - **An order's own offers on new lines** (an order edit): only `replanKept()` (`src/domains/checkout/replan.ts`), from the terms
@@ -757,6 +815,30 @@ Look's controls, Settings' shipping costs and sections, and Admin's custom plan 
   caller must not re-plan that order. A new term on an offer is copied in `termsCopy` (a typed column) the same day.
   `storedTerms` takes the row's `code_id` as `code`: a tie between product offers goes to the automatic one, as at
   placement (`productPass`, shared with `planOffers`).
+- **Editing an order's items** (OE·1, 2026-11-12; plan `docs/plans/2026-11-12-order-edit.md`): planned only by
+  `planEdit` (`src/domains/orders/edit.ts`, pure) — the order page's panel prices each tap with it in the browser, and
+  `editItems` (`src/lib/orders/edit.ts`, under `current()`) plans again from facts read after every touched variant is
+  locked (`editFactsIn`, `src/lib/orders/edit-facts.ts`, the panel's read too) and refuses a total that moved. Lines and
+  offers are never rewritten: a line comes out (`removed_at`; `replaced_by` names what a swap or new quantity made) and
+  its successor is inserted (`lineSnapshot`); an offer that comes off or gives another amount gets `removed_at`, and a
+  new amount is a new row with the old row's `created_at` (one live use per order and offer: a partial unique index).
+  **Every reader of an order's lines or offers reads the live rows** (`removed_at is null`; uses through `useOfRowSql`,
+  which says it; Admin's `app_admin_offer_totals` too, 0118): a new reader adds it. Stock: the pieces coming out go back
+  first, then the new ones are taken; room for a new piece is checkout's `sellable` with the order's own pieces back
+  (`roomOf`/`sellsAs`). Money: `writeReprice` (one `update … from (values)`) writes `product_discount` too, and an
+  edit's subtotal, delivery and COGS; Frrata's fee follows `merchandise_net` (an edit issues no credit note, so
+  `returnedSql` never counts it). Delivery stays the order's own unless the bag crosses today's `freeShippingAbove`;
+  the COD fee is the order's own; today's COD maximum refuses a higher total above it, never the minimum. Undo
+  (`undoEdit`) puts back the edit's record (`order_edits`, `order_edit_lines` before/after with `replaces`) within
+  `UNDO_MINUTES` and before packing, only while the order still has the edit's lines and offers, re-checking any offer
+  the edit freed. The `edited` email waits `UNDO_MINUTES` and is skipped when undone or a later edit supersedes it.
+  Refused (`cannotEdit`, the one rule for the button and the save): a support visit, paid online, and an order switched
+  to pay on delivery that has a Razorpay order — it could still be paid at the old online total — until OE·2. The
+  arrival dates are made again from the live lines (`arrivalRange`) after an edit and an Undo; an Undo whose price
+  differs from the one before the edit is refused, never written. A removed line holds no stock (CHECK
+  `order_lines_removed_stock`: its pieces go back first). Readers by product use `order_lines_product_live` (0118).
+  **Deploy order:** 0117 and 0118 before the code (every reader selects `removed_at`; `writeReprice` needs the
+  `product_discount` grant).
 - **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
   `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`
   (parity-tested). Placement locks every offer the bag could get that has a limit, in id order,

@@ -7,6 +7,7 @@ import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { products, variants } from '@/lib/db/schema-catalogue'
 import { arrayParam } from '@/lib/db/sql-array'
+import { errName } from '@/lib/log'
 import { freeHandles, undigit } from './handles'
 import { retireVariants } from './retire-variants'
 
@@ -46,6 +47,9 @@ export type ProductDraft = {
   /** A new product's other columns (the column defaults otherwise: a draft). */
   row?: NewRow
 }
+/** A SKU another save took between the check and the write: either SKU index (exact, or any case: 0119) refused it. */
+export const skuTaken = (err: unknown) => errName(err).includes('variants_tenant_sku')
+
 export type Written = { ok: true; products: { id: string; handle: string }[] } | { ok: false; draft: number; error: string }
 
 /**

@@ -6,6 +6,7 @@ import { pick, srcSet, urlFor } from '@/domains/media/sizes'
 import { useToast } from '@/components/ui/toast'
 import { attachPhotos, editPhoto } from '../actions'
 import type { Uploaded } from './upload-photos'
+import { photoUploadProblem } from './upload-problem'
 
 export type Photo = { id: string; base: string; widths: number[]; optionValue: string | null; width: number; height: number; alt?: string }
 
@@ -28,13 +29,8 @@ export function Photos({ productId, tenantId, photos, colours, enabled, title = 
     for (const [i, f] of list.entries()) {
       try { done.push(await uploadPhoto(f, tenantId, (p) => setBusy((b) => b.map((x, j) => (j === i ? { ...x, p } : x))))) }
       catch (e) {
-        const m = e instanceof Error ? e.message : ''
-        // Say what is wrong in words; the storage service's own messages are for us, not the merchant.
-        toast.error(/private/i.test(m) ? 'Photo storage is set to private, so shoppers could not see these photos. Frrata support needs to switch it to a public store.'
-          : /network|fetch|failed to fetch/i.test(m) ? `${f.name} did not upload: the connection dropped. Try again.`
-          : m.startsWith('Vercel Blob') ? `${f.name} was refused by photo storage. Try again, or send us this: ${m.replace(/^Vercel Blob:\s*/, '').slice(0, 120)}`
-          : m || `${f.name} could not be uploaded.`)
-        console.error('[photos] upload', m)
+        toast.error(photoUploadProblem(f.name, e))
+        console.error('[photos] upload', e instanceof Error ? e.message : '')
       }
     }
     if (done.length) {

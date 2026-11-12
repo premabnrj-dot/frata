@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq, gt, sql } from 'drizzle-orm'
+import { and, eq, gt, isNull, sql } from 'drizzle-orm'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { invoice, type CreditReason } from '@/domains/orders/documents'
 import { creditOpen, discountCredit, restockOf, returnCredit, reversalCredit, type CreditKind, type CreditLine, type InvoicedLine, type Taken } from '@/domains/orders/credits'
@@ -104,7 +104,7 @@ export async function issueCredit(tx: Tx, tenantId: string, actor: Actor, orderI
  */
 async function restockReturn(tx: Tx, tenantId: string, orderId: string, lines: CreditLine[]): Promise<{ restocked: Record<string, number>; backInStock: string[] }> {
   const sold = await tx.select({ id: orderLines.id, qty: orderLines.qty, variantId: orderLines.variantId, takenAt: orderLines.stockTakenAt }).from(orderLines)
-    .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId)))
+    .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), isNull(orderLines.removedAt)))
   const prior = await tx.select({ lineId: creditNoteLines.orderLineId, restockedQty: creditNoteLines.restockedQty }).from(creditNoteLines)
     .innerJoin(creditNotes, and(eq(creditNotes.tenantId, creditNoteLines.tenantId), eq(creditNotes.id, creditNoteLines.creditNoteId)))
     .where(and(eq(creditNoteLines.tenantId, tenantId), eq(creditNotes.orderId, orderId), gt(creditNoteLines.restockedQty, 0)))

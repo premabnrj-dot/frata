@@ -161,3 +161,5 @@ export const b2bAllowed = (band: TurnoverBand) => band === 'under_5cr'
 
 /** The merchant's own rates for a code the table lacks (GST 2.0 slabs). */
 export const OWN_RATES = [0, 300, 500, 1800, 4000] as const
+/** The same list in words: "0, 3, 5, 18 or 40%". A function, so a page that never says it doesn't carry it. */
+export const ownRatesText = () => `${OWN_RATES.slice(0, -1).map((b) => b / 100).join(', ')} or ${OWN_RATES[OWN_RATES.length - 1]! / 100}%`

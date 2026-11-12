@@ -11,7 +11,7 @@ import { boolean, check, date, foreignKey, index, integer, pgTable, primaryKey, 
 import { at, createdAt, id, tenants } from '@/lib/db/schema'
 import { orders } from '@/lib/db/schema-orders'
 
-export const EMAIL_KINDS = ['confirmed', 'finish_paying', 'shipped', 'delivered', 'cancelled', 'test', 'invoice', 'notice', 'sign_in'] as const
+export const EMAIL_KINDS = ['confirmed', 'finish_paying', 'shipped', 'delivered', 'cancelled', 'edited', 'test', 'invoice', 'notice', 'sign_in'] as const
 
 export const emailMessages = pgTable('email_messages', {
   /** Our message id: travels to SES as tag `m` and comes back on every event. */
@@ -40,7 +40,7 @@ export const emailMessages = pgTable('email_messages', {
   index('email_messages_order').on(t.tenantId, t.orderId).where(sql`${t.orderId} is not null`),
   index('email_messages_tenant_created').on(t.tenantId, t.createdAt),
   uniqueIndex('email_messages_notice_user').on(t.noticeId, t.userId).where(sql`${t.noticeId} is not null`),
-  check('email_messages_kind', sql`${t.kind} in ('confirmed','finish_paying','shipped','delivered','cancelled','test','invoice','notice','sign_in')`),
+  check('email_messages_kind', sql`${t.kind} in ('confirmed','finish_paying','shipped','delivered','cancelled','edited','test','invoice','notice','sign_in')`),
   check('email_messages_codes', sql`(${t.failedCode} is null or ${t.failedCode} ~ '^[a-z0-9_]{1,48}$') and (${t.skipCode} is null or ${t.skipCode} ~ '^[a-z_]{1,24}$') and (${t.bounceKind} is null or ${t.bounceKind} in ('permanent','transient','undetermined'))`),
   check('email_messages_provider', sql`${t.providerId} is null or length(${t.providerId}) <= 200`),
 ])
@@ -74,7 +74,7 @@ export const shopEmails = pgTable('shop_emails', {
   updatedAt: at('updated_at').notNull().defaultNow(),
 }, (t) => [
   primaryKey({ name: 'shop_emails_pk', columns: [t.tenantId, t.kind] }),
-  check('shop_emails_kind', sql`${t.kind} in ('confirmed','finish_paying','shipped','delivered','cancelled')`),
+  check('shop_emails_kind', sql`${t.kind} in ('confirmed','finish_paying','shipped','delivered','cancelled','edited')`),
   check('shop_emails_lengths', sql`coalesce(length(${t.subject}),0) <= 120 and coalesce(length(${t.preview}),0) <= 140 and coalesce(length(${t.heading}),0) <= 80 and coalesce(length(${t.message}),0) <= 600 and coalesce(length(${t.button}),0) <= 30`),
 ])
 

@@ -1,0 +1,6 @@
+ID,Type,SKU,Name,Published,Is featured?,Visibility in catalog,Short description,Description,Tax status,In stock?,Stock,Sale price,Regular price,Categories,Tags,Images,Parent,Attribute 1 name,Attribute 1 value(s),Attribute 1 visible,Attribute 1 global
+101,variable,BPK,Block print kurta,1,0,visible,Cotton.,"Hand block printed in Sanganer.",taxable,1,,,,Kurtas,"cotton, block print",https://shop.example/bpk.jpg,,Size,"S, M, L",1,1
+102,variation,BPK-L,Block print kurta - L,1,0,visible,,,taxable,1,3,,1899,,,,id:101,Size,L,,1
+103,variation,BPK-S,Block print kurta - S,1,0,visible,,,taxable,1,5,,1899,,,,id:101,Size,S,,1
+104,variation,BPK-M,Block print kurta - M,1,0,visible,,,taxable,1,0,,1899,,,,BPK,Size,M,,1
+105,simple,CST-1,Cotton stole,1,0,visible,,Soft cotton.,taxable,1,10,499,699,Stoles,,,,,,,

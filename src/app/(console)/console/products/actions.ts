@@ -1,16 +1,13 @@
 'use server'
 
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { del } from '@vercel/blob'
-import { cleanProduct, readiness, type ProductInput } from '@/domains/catalogue/product-form'
-import { hasRate, hsnDigitsFor, type TurnoverBand } from '@/domains/tax/rates'
-import { chargesGst, type Scheme } from '@/domains/tax/gst'
+import { cleanProduct, cleanTax, type ProductInput } from '@/domains/catalogue/product-form'
 import { sellsSized } from '@/domains/catalogue/sell-keys'
-import { labelAsked, labelMissing, readLabel } from '@/domains/catalogue/label'
-import { availability, type Status, type WhenOut } from '@/domains/catalogue/availability'
+import type { Status } from '@/domains/catalogue/availability'
 import { attributesFor, categoryById, cleanAttributes, COLOUR_FAMILIES, searchCategories } from '@/domains/catalogue/taxonomy'
-import { acceptedBase, storeHost, WIDTHS, urlFor } from '@/domains/media/sizes'
+import { acceptedBase, storeHost, urlFor } from '@/domains/media/sizes'
 import { photosAreMade } from '@/lib/media/uploaded'
 import { checkStoryPhotos, savePairs } from '@/lib/catalogue/extras'
 import { cleanPairIds, UUID, type Piece } from '@/domains/catalogue/stories'
@@ -18,13 +15,15 @@ import { refreshShop } from '@/lib/queries/storefront'
 import { searchPieces } from '@/lib/queries/catalogue'
 import { asMember } from '@/lib/auth/as-member'
 import { memberAudit } from '@/lib/auth/member-audit'
-import { costsVisibleIn } from '@/lib/queries/settings'
+import { costsVisibleIn, hsnDigitsIn } from '@/lib/queries/settings'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import { shopSettings } from '@/lib/db/schema'
-import { shopPages, shopThemeRevisions } from '@/lib/db/schema-themes'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
-import { writeProducts } from '@/lib/catalogue/write'
+import { skuTaken, writeProducts } from '@/lib/catalogue/write'
+import { goLive, readinessIn } from '@/lib/catalogue/readiness'
+import { photosInUse } from '@/lib/catalogue/photos-in-use'
+import { attachIn, type NewPhoto } from '@/lib/catalogue/photos'
 import { lockTimedOut } from '@/lib/orders/place'
 import { ensureTypes, freeHandle, handleFree } from '@/lib/catalogue/handles'
 import { errName } from '@/lib/log'
@@ -95,11 +94,10 @@ export async function saveProduct(productId: string, version: number, input: Pro
         // Going back to one of its own old addresses needs nothing more: the current handle is looked up first,
         // and history is append-only (frata_app holds no delete on it).
       }
-      // HSN digits by the shop's turnover band (rates.ts): 4 under ₹5 crore, 6 above.
-      if (p.tax?.hsn) {
-        const [band] = await tx.select({ b: shopSettings.turnoverBand }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
-        const digits = hsnDigitsFor((band?.b ?? 'under_5cr') as TurnoverBand)
-        if (p.tax.hsn.length < digits) throw new Stop({ ok: false, error: 'Some fields need a look before saving.', errors: { 'tax.hsn': `At your turnover, invoices need ${digits} digits of HSN.` } })
+      // The tax again with the HSN digits the shop's turnover needs (cleanTax, the one rule; the check above assumed 4).
+      if (input.tax) {
+        const t = cleanTax(input.tax, new Date(), await hsnDigitsIn(tx, tenantId))
+        if (!t.ok) throw new Stop({ ok: false, error: 'Some fields need a look before saving.', errors: Object.fromEntries(Object.entries(t.errors).map(([k, v]) => [`tax.${k}`, v])) })
       }
       const [row] = await tx.update(products).set({
         ...(p.tax ? { hsn: p.tax.hsn, uqc: p.tax.uqc, gstBps: p.tax.gstBps, originCountry: p.tax.originCountry } : {}), ...(p.label ? { label: p.label } : {}), ...(stories ? { stories } : {}),
@@ -154,7 +152,7 @@ export async function saveProduct(productId: string, version: number, input: Pro
   } catch (err) {
     if (err instanceof Stop) return err.result
     const why = reason(err)
-    if (why.includes('variants_tenant_sku')) return { ok: false, error: 'A SKU is already used by another product in your shop.' }
+    if (skuTaken(err)) return { ok: false, error: 'A SKU is already used by another product in your shop.' }
     if (why.includes('products_tenant_handle')) return { ok: false, error: 'Another product uses that address.', errors: { handle: 'Another product uses this address.' } }
     // A drop's checkout holds its sizes' rows for longer than writeProducts waits (1 s): expected, not an error.
     if (lockTimedOut(err)) return { ok: false, error: 'Someone is buying this product right now. Save again in a moment.' }
@@ -179,24 +177,15 @@ export async function setStatus(productId: string, status: Status, publishAt: st
       if (!p) throw new Stop({ ok: false, error: 'This product is not in your shop.' })
       const live = status === 'active' || status === 'unlisted'
       if (live) {
-        const vs = await tx.select().from(variants).where(and(eq(variants.tenantId, tenantId), eq(variants.productId, productId), isNull(variants.archivedAt)))
-        const n = (await tx.select({ n: sql<number>`count(*)::int` }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId))))[0]?.n ?? 0
-        const chart = p.typeId ? (await tx.select({ c: productTypes.sizeChart }).from(productTypes).where(and(eq(productTypes.tenantId, tenantId), eq(productTypes.id, p.typeId))))[0]?.c : null
-        const now = new Date()
-        const anyBuyable = vs.some((v) => availability({ stock: v.stock, whenOut: v.whenOut as WhenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap }, now).canBuy)
-        // A shop that charges GST can't sell a piece with no known rate (quote() refuses it): so it can't go live without one.
-        const [tax] = await tx.select({ gstin: shopSettings.gstin, scheme: shopSettings.gstScheme, sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
-        const taxReady = tax && chargesGst({ gstin: tax.gstin, scheme: tax.scheme as Scheme }) ? !!p.hsn && hasRate(p.hsn, now, p.gstBps) : undefined
-        const missing = readiness({ title: p.title, photos: n, prices: vs.map((v) => v.price), hasSizes: p.options.some((o) => /^sizes?$/i.test(o)), chartRows: chart?.rows.length ?? 0, anyBuyable, taxReady,
-          labelMissing: tax && labelAsked(tax.sells) ? labelMissing(readLabel(p.label)) : undefined }).filter((x) => !x.ok)
+        // What it still needs (readiness.ts): a shop that charges GST can't sell a piece with no known rate (quote()
+        // refuses it), so it can't go live without one.
+        const missing = (await readinessIn(tx, tenantId, [productId], new Date())).get(productId)!.readiness.filter((x) => !x.ok)
         if (missing.length) throw new Stop({ ok: false, error: `Before shoppers can see it: ${missing.map((m) => m.label.toLowerCase()).join(', ')}.` })
       }
-      const goesLive = live && (!when || when <= new Date())
-      await tx.update(products).set({
-        status, publishAt: when, archivedAt: status === 'archived' ? new Date() : null,
-        // Set the first time it is live (or due to be: a scheduled drop counts from its moment).
-        publishedAt: p.publishedAt ?? (goesLive ? new Date() : live ? when : null), updatedAt: new Date(),
-      }).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
+      const now = new Date()
+      if (live) await goLive(tx, tenantId, [productId], now, { status, at: when })
+      else await tx.update(products).set({ status, publishAt: null, archivedAt: status === 'archived' ? now : null, updatedAt: now })
+        .where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
       await memberAudit(tx, auth, `product.status.${status}`, p.title)
     })
     if (!r.ok) return { ok: false, error: r.error }
@@ -231,27 +220,15 @@ export async function categoryDetails(id: string) {
   return c ? { id: c.id, name: c.name, path: c.path, attributes: attributesFor(c.id) } : null
 }
 
-/** Photos the browser has uploaded (every width) — attached only if they are inside THIS shop's folder. */
-export async function attachPhotos(productId: string, photos: { base: string; widths: number[]; width: number; height: number }[]): Promise<Result> {
+/** Photos the browser has uploaded (every width) — attached only if they are inside THIS shop's folder (attachIn). */
+export async function attachPhotos(productId: string, photos: NewPhoto[]): Promise<Result> {
   if (!Array.isArray(photos) || !photos.length || photos.length > 12) return { ok: false, error: 'Up to 12 photos at a time.' }
   if (!(await photosAreMade(photos))) return { ok: false, error: 'That file is not a photo we made. Upload it again.' }
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.photos', target: productId, detail: { added: photos.length } }, async (tx, auth) => {
-      const tenantId = auth.membership.tenantId
-      const host = storeHost(BLOB_STORE_ID)
-      if (!host) throw new Stop({ ok: false, error: 'Photo storage is not connected.' })
-      // The stored URL is the REBUILT one from acceptedBase, never the browser's string (tenancy audit).
-      const clean = photos.map((ph) => {
-        const base = acceptedBase(ph.base, host, tenantId, 'products')
-        if (!base) throw new Stop({ ok: false, error: 'That photo is not in your shop’s folder.' })
-        if (!ph.widths.length || ph.widths.some((w) => !(WIDTHS as readonly number[]).includes(w)) || !(ph.width > 0 && ph.height > 0)) throw new Stop({ ok: false, error: 'That photo’s sizes are not ones we make.' })
-        return { ...ph, base }
-      })
-      const [p] = await tx.select({ id: products.id }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
-      if (!p) throw new Stop({ ok: false, error: 'This product is not in your shop.' })
-      const last = (await tx.select({ last: sql<number>`coalesce(max(position), -1)::int` }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId))))[0]?.last ?? -1
-      await tx.insert(productImages).values(clean.map((ph, i) => ({ tenantId, productId, base: ph.base, widths: [...ph.widths].sort((a, b) => a - b), width: Math.round(ph.width), height: Math.round(ph.height), position: last + 1 + i })))
-      await tx.update(products).set({ updatedAt: new Date() }).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
+      // The editor tags a colour afterwards (editPhoto): a photo arrives with none.
+      const done = await attachIn(tx, auth.membership.tenantId, productId, photos.map((ph) => ({ ...ph, colour: null })))
+      if (!done.ok) throw new Stop(done)
       await memberAudit(tx, auth, 'product.photos', productId)
     })
     if (!r.ok) return { ok: false, error: r.error }
@@ -274,16 +251,9 @@ export async function editPhoto(imageId: string, change: { move?: -1 | 1; option
       if (!img) throw new Stop({ ok: false, error: 'That photo is not in your shop.' })
       if (change.remove) {
         await tx.delete(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.id, imageId)))
-        // A look may show this photo (Look v3: "From your products"): then its files stay, so a published or
-        // restorable look never loses its photo (security review 2026-11-09).
-        const [used] = await tx.select({ id: shopThemeRevisions.id }).from(shopThemeRevisions)
-          .where(and(eq(shopThemeRevisions.tenantId, tenantId), sql`position(${img.base} in ${shopThemeRevisions.settings}::text) > 0`)).limit(1)
-        const [inStory] = used ? [used] : await tx.select({ id: products.id }).from(products) // or a story (Signal S3)
-          .where(and(eq(products.tenantId, tenantId), sql`position(${img.base} in ${products.stories}::text) > 0`)).limit(1)
-        // or a page (TS1a: About's photo may be one of the shop's product photos): draft, live or the one Undo restores.
-        const [inPage] = used || inStory ? [used ?? inStory] : await tx.select({ id: shopPages.id }).from(shopPages)
-          .where(and(eq(shopPages.tenantId, tenantId), sql`position(${img.base} in (${shopPages.draft}::text || coalesce(${shopPages.live}::text, '') || coalesce(${shopPages.previous}::text, ''))) > 0`)).limit(1)
-        return { ...img, inLook: !!(used || inStory || inPage) }
+        // A look, a story or a page may show this photo: then its files stay, so a published or restorable look never
+        // loses its photo (photos-in-use.ts).
+        return { ...img, inLook: (await photosInUse(tx, tenantId, [img.base])).has(img.base) }
       }
       if (change.move) {
         const all = await tx.select({ id: productImages.id }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, img.productId))).orderBy(productImages.position)

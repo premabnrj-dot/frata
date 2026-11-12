@@ -55,11 +55,11 @@ export async function saveShopEmail(tx: Tx, tenantId: string, userId: string, ki
   await tx.insert(shopEmails).values({ tenantId, kind, ...set }).onConflictDoUpdate({ target: [shopEmails.tenantId, shopEmails.kind], set })
 }
 
-export type OrderEmail = { id: string; kind: string; at: Date; state: ReturnType<typeof messageState>; words: string }
+export type OrderEmail = { id: string; kind: string; eventId: string | null; at: Date; state: ReturnType<typeof messageState>; words: string }
 
 /** One order's emails for the order page's Emails card. Inside the order page's own read (one transaction). */
 export async function orderEmailsIn(tx: Tx, tenantId: string, orderId: string): Promise<OrderEmail[]> {
   const rows = await tx.select().from(emailMessages).where(and(eq(emailMessages.tenantId, tenantId), eq(emailMessages.orderId, orderId)))
     .orderBy(desc(emailMessages.createdAt)).limit(30)
-  return rows.map((r) => { const m = r as unknown as MessageMoments & { id: string; kind: string; createdAt: Date }; return { id: r.id, kind: r.kind, at: r.sentAt ?? r.createdAt, state: messageState(m), words: stateWords(m) } })
+  return rows.map((r) => { const m = r as unknown as MessageMoments & { id: string; kind: string; createdAt: Date }; return { id: r.id, kind: r.kind, eventId: r.eventId, at: r.sentAt ?? r.createdAt, state: messageState(m), words: stateWords(m) } })
 }

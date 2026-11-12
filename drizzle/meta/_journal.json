@@ -820,6 +820,27 @@
       "when": 1794492328427,
       "tag": "0116_true_profit_in_scale",
       "breakpoints": true
+    },
+    {
+      "idx": 117,
+      "version": "7",
+      "when": 1794495205535,
+      "tag": "0117_order_edits",
+      "breakpoints": true
+    },
+    {
+      "idx": 118,
+      "version": "7",
+      "when": 1794495207519,
+      "tag": "0118_order_edits_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 119,
+      "version": "7",
+      "when": 1794495228643,
+      "tag": "0119_product_import",
+      "breakpoints": true
     }
   ]
 }

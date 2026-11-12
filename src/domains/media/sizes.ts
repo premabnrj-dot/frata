@@ -15,7 +15,6 @@
 export const WIDTHS = [400, 800, 1200, 1600] as const
 export const MAX_UPLOAD_BYTES = 3 * 1024 * 1024
 export const MAX_SOURCE_BYTES = 25 * 1024 * 1024
-
 /** The widths to make from a photo this wide: never larger than the photo, always at least the smallest. */
 export function widthsFor(sourceWidth: number): number[] {
   const fit = WIDTHS.filter((w) => w <= sourceWidth)

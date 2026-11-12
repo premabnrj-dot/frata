@@ -95,15 +95,16 @@ Edits after packing, the shopper editing her own order, exchanges after delivery
 
 ## Facts used
 Razorpay docs pages carry one site-wide date (2026-10-08): "served current", not "rechecked that day".
-- Partial refund: `amount` less than the payment; more than captured fails; `receipt` unique per payment (our edit id
-  makes it idempotent); no normal refund on a payment older than 6 months (Refunds API, 2026-10-08).
+- Partial refund: `amount` less than the payment; more than captured fails; `receipt` unique per payment and treated as
+  an idempotency key; an optional `X-Refund-Idempotency` header (retention undocumented) — rechecked 2026-11-12; no normal refund on a payment older than 6 months (Refunds API, 2026-10-08).
 - A normal refund is free, but Razorpay's original fee and its GST are not returned (Refunds, 2026-10-08).
 - Timing: "5–7 working days" (API page, FAQ) vs "7–10 working days" (Normal refunds page); UPI 2–7 days. Shown as
   "5–10 working days" (2026-10-08).
 - Instant refunds cost ₹7.99 (to ₹1,000), ₹11.99 (to ₹25,000), ₹14.99 above; credited back if it falls back to normal
   (pricing, "Last updated May 2026"). Frrata uses normal refunds.
-- Refunds come from the merchant's Razorpay balance, can't be cancelled, and may wait in `pending`; `refund.processed`
-  is final (FAQ, 2026-10-08).
+- Refunds come from the merchant's Razorpay balance and can't be cancelled; too little balance fails the refund at
+  create (not queued); `pending` means accepted and with the bank; `refund.processed` is final but comes before the
+  bank reference (FAQ, refunds overview, balances; rechecked 2026-11-12).
 - Payment Links (an option for a higher prepaid total, not in v1): expire within 6 months, at least 15 minutes ahead;
   `reference_id` ≤ 40 characters; Razorpay's own SMS/email can be switched off (`notify`), which our no-SMS rule needs;
   fee: the standard 2% (pricing page ambiguous: confirm with Razorpay) (2026-10-08).
