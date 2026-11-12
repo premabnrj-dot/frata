@@ -93,4 +93,35 @@ describe.skipIf(!host)('draftInvoice on a real database', () => {
     // 2% of ₹428.57 kept = ₹8.57, never 2% of the ₹857.14 placed (and the late note left out).
     expect(fee).toEqual({ base: 42857, fee: 857 })
   })
+
+  it('an order edit lowers the fee base by itself, and a later return comes off it once (an edit issues no credit note)', async () => {
+    const { draftInvoice } = await import('../draft')
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { frrataInvoiceFees } = await import('@/lib/db/schema-billing')
+    const { orders, orderLines, creditNotes } = await import('@/lib/db/schema-orders')
+    const { editItems } = await import('@/lib/orders/edit')
+    const { eq, and } = await import('drizzle-orm')
+    const actor = { kind: 'member' as const, userId: 'aaaaaaaa-0000-0000-0000-0000000000ff', email: 'int@frata.test' }
+    // Order 6, to confirm, pay on delivery: two ₹500 pieces (not registered for GST: the taxable value is the price).
+    const { id, second } = await withTenant(tenantId, async (tx) => {
+      const [o] = await tx.insert(orders).values({ tenantId, number: 6, paymentMethod: 'cod', placedAt: ist('2026-10-15T10:00:00'), subtotal: 100000, total: 100000, merchandiseNet: 100000 }).returning({ id: orders.id })
+      const ls = await tx.insert(orderLines).values([0, 1].map((position) => ({ tenantId, orderId: o!.id, title: `Piece ${position}`, qty: 1, unitPrice: 50000, taxableValue: 50000, position, chargeTaxable: 0, chargeGst: 0 })))
+        .returning({ id: orderLines.id })
+      return { id: o!.id, second: ls[1]!.id }
+    })
+    const lines = await withTenant(tenantId, (tx) => tx.select({ id: orderLines.id }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, id))).orderBy(orderLines.position))
+    const r = await withTenant(tenantId, (tx) => editItems(tx, tenantId, actor, id, { want: [{ line: lines[0]!.id, variantId: null, qty: 1 }], reasons: { [second]: 'customer_asked' }, notify: false, expectedTotal: 50000 }, ist('2026-10-15T12:00:00')))
+    expect(r.ok).toBe(true)
+    await withTenant(tenantId, async (tx) => {
+      await tx.update(orders).set({ confirmedAt: ist('2026-10-15T13:00:00'), packedAt: ist('2026-10-16T10:00:00'), invoiceNumber: 'BS/26-27/6', shippedAt: ist('2026-11-05T10:00:00'), deliveredAt: ist('2026-11-10T10:00:00') })
+        .where(and(eq(orders.tenantId, tenantId), eq(orders.id, id)))
+      await tx.insert(creditNotes).values({ tenantId, orderId: id, number: 'BS/CN/26-27/11', againstInvoice: 'BS/26-27/6', reason: 'returned', kind: 'return',
+        taxable: 20000, cgst: 0, sgst: 0, igst: 0, total: 20000, issuedAt: ist('2026-11-20T10:00:00'), issuedBy: actor.userId })
+    })
+    expect(await withTenant(tenantId, async (tx) => (await tx.select({ n: creditNotes.id }).from(creditNotes).where(and(eq(creditNotes.tenantId, tenantId), eq(creditNotes.orderId, id)))).length)).toBe(1)
+    await draftInvoice(tenantId, ist('2026-12-01T00:00:00'), ist('2026-12-02T09:00:00'))
+    const [fee] = await withTenant(tenantId, (tx) => tx.select({ base: frrataInvoiceFees.base, fee: frrataInvoiceFees.fee }).from(frrataInvoiceFees).where(eq(frrataInvoiceFees.orderId, id)))
+    // ₹500 after the edit, less the ₹200 returned = ₹300: 2% = ₹6. The edit's ₹500 never comes off a second time.
+    expect(fee).toEqual({ base: 30000, fee: 600 })
+  })
 })

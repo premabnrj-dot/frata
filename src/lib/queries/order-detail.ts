@@ -7,9 +7,11 @@ import { attributionInputsSql } from '@/lib/db/attribution-sql'
 import { creatorCodeJoinSql } from '@/lib/db/discount-predicates'
 import { momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
 import { creditNoteLines, creditNotes, orderEvents, orderLines, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
+import { orderEditLines, orderEdits } from '@/lib/db/schema-edits'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import { riskFactsFor } from './order-risk'
+import type { RecordLine } from '@/domains/orders/edit'
 
 // =============================================================================
 // FILE: src/lib/queries/order-detail.ts
@@ -43,15 +45,18 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       onlineTotal: onlineTotalCol, subtotal: orders.subtotal, discount: orders.discount, shipping: orders.shipping, codCharge: orders.codCharge, gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst,
       customerName: orders.customerName, phone: orders.phone, email: orders.email, addressLine: orders.addressLine, area: orders.area, landmark: orders.landmark,
       pincode: orders.pincode, city: orders.city, state: orders.state,
-      invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote, erasedAt: orders.erasedAt,
+      invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote, erasedAt: orders.erasedAt, razorpayOrderId: orders.razorpayOrderId,
     }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.number, number))).limit(1)
     if (!o) return null
     // Seven reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
-    const [lines, events, notes, offerRows, [shipment], creditRows, source, emails] = await Promise.all([tx.select({
+    const [lines, events, notes, offerRows, [shipment], creditRows, source, emails, editRows] = await Promise.all([tx.select({
       id: orderLines.id, title: orderLines.title, optionValues: orderLines.optionValues, sku: orderLines.sku, qty: orderLines.qty, unitPrice: orderLines.unitPrice,
       imageBase: orderLines.imageBase, imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy,
-      leadMinDays: orderLines.leadMinDays, leadMaxDays: orderLines.leadMaxDays, stockTakenAt: orderLines.stockTakenAt,
-    }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(asc(orderLines.position)),
+      leadMinDays: orderLines.leadMinDays, leadMaxDays: orderLines.leadMaxDays, stockTakenAt: orderLines.stockTakenAt, variantId: orderLines.variantId,
+      // An edit's successor: the line it replaced, for "Was M".
+      was: sql<{ values: string[]; qty: number } | null>`(select json_build_object('values', p.option_values, 'qty', p.qty) from ${orderLines} p
+        where p.tenant_id = ${tenantId} and p.order_id = ${o.id} and p.replaced_by = "order_lines"."id" limit 1)`,
+    }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id), isNull(orderLines.removedAt))).orderBy(asc(orderLines.position)),
     tx.select({ id: orderEvents.id, kind: orderEvents.kind, actorKind: orderEvents.actorKind, actorEmail: orderEvents.actorEmail, fields: orderEvents.fields,
       reason: orderEvents.reason, undoes: orderEvents.undoes, at: orderEvents.at })
       .from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.orderId, o.id))).orderBy(desc(orderEvents.at)).limit(100),
@@ -59,7 +64,7 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       .from(orderNotes).where(and(eq(orderNotes.tenantId, tenantId), eq(orderNotes.orderId, o.id))).orderBy(desc(orderNotes.at)).limit(100),
     // The offers it got, as recorded at placement (the pay-online saving is shown only while it is paid online).
     tx.select({ title: orderDiscounts.title, class: orderDiscounts.class, amount: orderDiscounts.amount, method: orderDiscounts.method }).from(orderDiscounts)
-      .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, o.id))),
+      .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, o.id), isNull(orderDiscounts.removedAt))),
     // The parcel on its way (Ship): who carries it and how to follow it; none before it shipped.
     tx.select({ provider: shipments.provider, courierName: shipments.courierName, trackingNumber: shipments.trackingNumber })
       .from(shipments).where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, o.id), isNull(shipments.endedAt))).limit(1),
@@ -71,12 +76,26 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
     orderSourceIn(tx, tenantId, o.id, now),
     // Its emails to the shopper (email E·2), states in words.
     orderEmailsIn(tx, tenantId, o.id),
+    // Its items edits (OE·1): each edit's lines before and after, for Activity and Undo.
+    tx.select({ eventId: orderEdits.eventId, totalBefore: orderEdits.totalBefore, totalAfter: orderEdits.totalAfter, notify: orderEdits.notify, side: orderEditLines.side,
+      lineId: orderEditLines.orderLineId, qty: orderEditLines.qty, replaces: orderEditLines.replaces, title: orderLines.title, values: orderLines.optionValues }).from(orderEdits)
+      .innerJoin(orderEditLines, and(eq(orderEditLines.tenantId, orderEdits.tenantId), eq(orderEditLines.editId, orderEdits.id)))
+      .innerJoin(orderLines, and(eq(orderLines.tenantId, orderEditLines.tenantId), eq(orderLines.id, orderEditLines.orderLineId)))
+      // The latest 20 edits whole (an edit holds at most 40 line rows), newest first: never an edit cut in half.
+      .where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.orderId, o.id), sql`${orderEdits.id} in (select x.id from ${orderEdits} x
+        where x.tenant_id = ${tenantId} and x.order_id = ${o.id} order by x.created_at desc, x.id limit 20)`)).orderBy(desc(orderEdits.createdAt), orderEditLines.side, orderEditLines.id),
     ])
     const offers = offerRows.map((d) => ({ ...d, amount: Number(d.amount) }))
     const credits = creditRows.map((c) => ({ number: c.number, issuedAt: c.issuedAt, kind: c.kind, total: Number(c.total), lines: c.lines }))
     // The whole invoice credited: a reversal with no lines (before 0071), or nothing left on any line (GST phase 2).
     const credit = credits.find((c) => c.kind === 'reversal') ?? null
-    return { o, lines, events, notes, offers, shipment: shipment ?? null, credit, credits, source, emails }
+    const edits = new Map<string, { totalBefore: number; totalAfter: number; notify: boolean; before: RecordLine[]; after: RecordLine[] }>()
+    for (const r of editRows) {
+      const e = edits.get(r.eventId) ?? { totalBefore: Number(r.totalBefore), totalAfter: Number(r.totalAfter), notify: r.notify, before: [], after: [] }
+      e[r.side === 'before' ? 'before' : 'after'].push({ lineId: r.lineId, title: r.title, values: r.values, qty: r.qty, replaces: r.replaces })
+      edits.set(r.eventId, e)
+    }
+    return { o, lines, events, notes, offers, shipment: shipment ?? null, credit, credits, source, emails, edits }
   })
   if (!data) return null
   // Risk: null when its facts cannot be read (the page then says "Risk unavailable" and fails closed).

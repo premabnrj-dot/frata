@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.48.0
+  version: 2.49.0
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -731,7 +731,8 @@ Look's controls, Settings' shipping costs and sections, and Admin's custom plan 
   marks them 'prepaid' and 'cod', so `reprice()` prices either way, and uses follow the row's way (`offerWay`;
   `discountUseSql(now, 'both' | 'prepaid' | 'cod')`; a hold holds both).
 - **One repricer and one writer:** a placed order is priced again only by `amounts.reprice()` from
-  its stored lines and `order_discounts` (never today's offers), and written only by
+  its stored lines and `order_discounts` (never today's offers) — or, when its items change, by `planEdit` (new lines,
+  the order's own offers re-planned) and an Undo's `priceAsKept` (`src/domains/orders/edit.ts`) — and written only by
   `lib/orders/reprice.ts writeReprice()` — every money column of the order and its lines together.
   Switch to COD, a capture after a switch and a retry go through them; a retry never reprices.
 - **An order's own offers on new lines** (an order edit): only `replanKept()` (`src/domains/checkout/replan.ts`), from the terms
@@ -742,6 +743,30 @@ Look's controls, Settings' shipping costs and sections, and Admin's custom plan 
   caller must not re-plan that order. A new term on an offer is copied in `termsCopy` (a typed column) the same day.
   `storedTerms` takes the row's `code_id` as `code`: a tie between product offers goes to the automatic one, as at
   placement (`productPass`, shared with `planOffers`).
+- **Editing an order's items** (OE·1, 2026-11-12; plan `docs/plans/2026-11-12-order-edit.md`): planned only by
+  `planEdit` (`src/domains/orders/edit.ts`, pure) — the order page's panel prices each tap with it in the browser, and
+  `editItems` (`src/lib/orders/edit.ts`, under `current()`) plans again from facts read after every touched variant is
+  locked (`editFactsIn`, `src/lib/orders/edit-facts.ts`, the panel's read too) and refuses a total that moved. Lines and
+  offers are never rewritten: a line comes out (`removed_at`; `replaced_by` names what a swap or new quantity made) and
+  its successor is inserted (`lineSnapshot`); an offer that comes off or gives another amount gets `removed_at`, and a
+  new amount is a new row with the old row's `created_at` (one live use per order and offer: a partial unique index).
+  **Every reader of an order's lines or offers reads the live rows** (`removed_at is null`; uses through `useOfRowSql`,
+  which says it; Admin's `app_admin_offer_totals` too, 0117): a new reader adds it. Stock: the pieces coming out go back
+  first, then the new ones are taken; room for a new piece is checkout's `sellable` with the order's own pieces back
+  (`roomOf`/`sellsAs`). Money: `writeReprice` (one `update … from (values)`) writes `product_discount` too, and an
+  edit's subtotal, delivery and COGS; Frrata's fee follows `merchandise_net` (an edit issues no credit note, so
+  `returnedSql` never counts it). Delivery stays the order's own unless the bag crosses today's `freeShippingAbove`;
+  the COD fee is the order's own; today's COD maximum refuses a higher total above it, never the minimum. Undo
+  (`undoEdit`) puts back the edit's record (`order_edits`, `order_edit_lines` before/after with `replaces`) within
+  `UNDO_MINUTES` and before packing, only while the order still has the edit's lines and offers, re-checking any offer
+  the edit freed. The `edited` email waits `UNDO_MINUTES` and is skipped when undone or a later edit supersedes it.
+  Refused (`cannotEdit`, the one rule for the button and the save): a support visit, paid online, and an order switched
+  to pay on delivery that has a Razorpay order — it could still be paid at the old online total — until OE·2. The
+  arrival dates are made again from the live lines (`arrivalRange`) after an edit and an Undo; an Undo whose price
+  differs from the one before the edit is refused, never written. A removed line holds no stock (CHECK
+  `order_lines_removed_stock`: its pieces go back first). Readers by product use `order_lines_product_live` (0117).
+  **Deploy order:** 0116 and 0117 before the code (every reader selects `removed_at`; `writeReprice` needs the
+  `product_discount` grant).
 - **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
   `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`
   (parity-tested). Placement locks every offer the bag could get that has a limit, in id order,

@@ -7,7 +7,7 @@
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
-import { boolean, check, foreignKey, index, integer, pgTable, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, check, foreignKey, index, integer, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { DISCOUNT_STYLES } from '@/domains/checkout/discounts'
 import { sqlList } from '@/domains/tenancy/roles'
 import { at, createdAt, id, money, tenants } from './schema'
@@ -173,12 +173,16 @@ export const orderDiscounts = pgTable('order_discounts', {
   buyQty: integer('buy_qty'), getQty: integer('get_qty'), getBps: integer('get_bps'),
   /** A free gift: the piece made free (a copy of the term, not a link: the variant may go). */
   giftVariantId: uuid('gift_variant_id'),
+  /** An order edit took it off (it no longer applies, or now gives another amount: a new row carries that). Uses,
+   *  budgets and the order's money read only the rows without it; the amount is never changed (OE·1). */
+  removedAt: timestamp('removed_at', { withTimezone: true }),
   createdAt: createdAt(),
 }, (t) => [
   foreignKey({ name: 'order_discounts_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
   foreignKey({ name: 'order_discounts_discount_fk', columns: [t.tenantId, t.discountId], foreignColumns: [discounts.tenantId, discounts.id] }).onDelete('restrict'),
   foreignKey({ name: 'order_discounts_code_fk', columns: [t.tenantId, t.discountId, t.codeId], foreignColumns: [discountCodes.tenantId, discountCodes.discountId, discountCodes.id] }).onDelete('restrict'),
-  uniqueIndex('order_discounts_order_offer').on(t.tenantId, t.orderId, t.discountId),
+  // One live use of an offer per order; an edit's removed rows stay beside it.
+  uniqueIndex('order_discounts_order_offer').on(t.tenantId, t.orderId, t.discountId).where(sql`${t.removedAt} is null`),
   index('order_discounts_discount').on(t.tenantId, t.discountId),
   check('order_discounts_class', sql`${t.class} in ('product','order','shipping','payment')`),
   check('order_discounts_via', sql`${t.via} in ('auto','typed','link')`),

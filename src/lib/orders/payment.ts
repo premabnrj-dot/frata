@@ -168,7 +168,7 @@ export async function releaseHold(tenantId: string, hash: string, now = new Date
     if (!r.length) return null
     // A piece the hold kept off sale (the product page said sold out: stock − held − owed) is on sale again.
     const lines = await tx.select({ variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
-      .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id), eq(orderLines.kind, 'in_stock'), isNull(orderLines.stockTakenAt)))
+      .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id), eq(orderLines.kind, 'in_stock'), isNull(orderLines.stockTakenAt), isNull(orderLines.removedAt)))
     const rows = await variantRows(tx, tenantId, lines.flatMap((l) => (l.variantId ? [l.variantId] : [])), now)
     return lines.some((l) => { const v = rows.find((x) => x.variantId === l.variantId); return v !== undefined && freeStock(v) <= l.qty })
   })
@@ -224,7 +224,7 @@ export async function switchToCod(tenantId: string, hash: string, expectedTotal:
     }
     // In position order, and kept with their ids: the quote's shares come back in bag order and are written by id.
     const lines = (await tx.select({ id: orderLines.id, variantId: orderLines.variantId, qty: orderLines.qty }).from(orderLines)
-      .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(orderLines.position)).filter((l) => l.variantId)
+      .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id), isNull(orderLines.removedAt))).orderBy(orderLines.position)).filter((l) => l.variantId)
     const bag = lines.map((l) => ({ variantId: l.variantId!, qty: l.qty }))
     // Re-priced against today's rows, this order's own hold excluded (it is the one switching).
     const rows = (await variantRows(tx, tenantId, bag.map((b) => b.variantId), now, { lock: true }))
@@ -262,7 +262,7 @@ export async function retryPayment(tenantId: string, hash: string, now = new Dat
     const o = await byHash(tx, tenantId, hash)
     if (!o || o.method !== 'prepaid' || o.paidAt || o.switchedAt || o.cancelledAt) return 'none' as const
     if (!o.payBy || o.payBy <= now) {
-      const lines = await tx.select({ variantId: orderLines.variantId, qty: orderLines.qty, kind: orderLines.kind }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id)))
+      const lines = await tx.select({ variantId: orderLines.variantId, qty: orderLines.qty, kind: orderLines.kind }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id), isNull(orderLines.removedAt)))
       const rows = await variantRows(tx, tenantId, lines.map((l) => l.variantId!).filter(Boolean), now, { lock: true })
       const shop = await checkoutShop(tx, tenantId, null)
       if (!shop?.published) return 'closed' as const
@@ -292,7 +292,7 @@ export async function retryPayment(tenantId: string, hash: string, now = new Dat
 export async function offersStillFit(tx: Tx, tenantId: string, orderId: string, phone: string, now: Date, way: 'prepaid' | 'cod' = 'prepaid'): Promise<boolean> {
   const all = await tx.select({ discountId: orderDiscounts.discountId, amount: orderDiscounts.amount, cls: orderDiscounts.class, method: orderDiscounts.method, firstOrder: discounts.firstOrder, live: sql<boolean>`${liveDiscountSql(now)}` }).from(orderDiscounts)
     .innerJoin(discounts, and(eq(discounts.tenantId, orderDiscounts.tenantId), eq(discounts.id, orderDiscounts.discountId)))
-    .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, orderId)))
+    .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, orderId), isNull(orderDiscounts.removedAt)))
   // Only the offers the order would be paid at this way: paying online never needs the COD-only order offer, and paying
   // on delivery never the pay-online saving or an online-only order offer (offers per method, 0106).
   const mine = all.filter((m) => (way === 'cod' ? m.cls !== 'payment' && m.method !== 'prepaid' : m.method !== 'cod'))

@@ -41,7 +41,7 @@ export async function variantRows(tx: Tx, tenantId: string, ids: string[], now: 
     // Units owed to pre-orders not yet packed: stock that arrives for them is not for sale (plan review 2026-11-07).
     owed: owedSql(tenantId, now),
     preordered: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l join ${orders} o on o.id = l.order_id and o.tenant_id = l.tenant_id
-      where l.tenant_id = ${tenantId} and l.variant_id = "variants"."id" and l.kind = 'preorder' and (${standingSql('o')} or ${holdingSql(now, 'o')}))`,
+      where l.tenant_id = ${tenantId} and l.variant_id = "variants"."id" and l.kind = 'preorder' and l.removed_at is null and (${standingSql('o')} or ${holdingSql(now, 'o')}))`,
     image: sql<{ base: string; widths: number[] } | null>`(select json_build_object('base', i.base, 'widths', i.widths) from ${productImages} i
       where i.tenant_id = ${tenantId} and i.product_id = "products"."id" order by (i.option_value = any("variants"."option_values")) desc nulls last, i.position limit 1)`,
   }).from(variants).innerJoin(products, and(eq(products.id, variants.productId), eq(products.tenantId, tenantId)))
@@ -171,10 +171,10 @@ export async function orderPage(tx: Tx, tenantId: string, tokenHash: string) {
   if (!o) return null
   const lines = await tx.select({ title: orderLines.title, optionValues: orderLines.optionValues, qty: orderLines.qty, unitPrice: orderLines.unitPrice, imageBase: orderLines.imageBase,
     imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy })
-    .from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(orderLines.position)
+    .from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id), isNull(orderLines.removedAt))).orderBy(orderLines.position)
   // The offers it got: title, class and amount only (never an offer's id, limits or budget).
   const offers = (await tx.select({ title: orderDiscounts.title, class: orderDiscounts.class, amount: orderDiscounts.amount, method: orderDiscounts.method }).from(orderDiscounts)
-    .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, o.id)))).map((d) => ({ ...d, amount: Number(d.amount) }))
+    .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, o.id), isNull(orderDiscounts.removedAt)))).map((d) => ({ ...d, amount: Number(d.amount) }))
   return { ...o, lines, offers }
 }
 

@@ -72,6 +72,22 @@ and the edit is applied only when that payment is captured. Built as:
    is left for both, which line is taken must not depend on row order (take the kept line first, or refuse the edit).
 5. UI per the mockup, plus the states it didn't draw (over the COD limit, phone). Verify: `npm run e2e -- --only
    order-edit` (new flow) and `50-order-page`.
+   As built (2026-11-12): 0116 (drizzle-kit) and 0117 (access), proof check 74. `order_edits` keeps the offer rows an
+   edit took off and added (`offers_removed`, `offers_added`, uuid arrays) and `order_edit_lines` an after line's
+   `replaces`, so Undo and Activity need nothing else. Who and when are the edit's `items_edited` event, and an undone
+   edit is that event's undo: no `undone_at` (derived, never stored twice). The reason is per removed line
+   (`order_edit_lines.reason`, asked on the line as drawn), not one per edit. `product_discount` joins `order_lines`'
+   update grant: a re-plan moves the product offers' part of a kept line's discount. A COD order keeps its own COD fee
+   (the stored one, as its delivery and offers; only the maximum is today's). The panel's room and the save's are one
+   rule (`roomOf`/`sellsAs`: checkout's `sellable` with the order's own pieces back). E2e: `77-order-edit`.
+   Reviews (2026-11-12) folded in: an order switched to pay on delivery that has a Razorpay order is not editable
+   until OE·2 (it could still be paid at the old online total), so OE·1 asks Razorpay nothing; the four actions are
+   limited per member; `order_edit_lines.variant_id` is a same-shop FK; a removed line holds no stock (CHECK); the
+   arrival dates follow the live lines; only a later edit that emails supersedes an earlier edit's email; Activity
+   says "emailed" once it went; `order_lines_product` became `order_lines_product_live` (live lines only).
+   **Deploy:** apply 0116 and 0117 before pushing the code: every reader selects `removed_at`, and `writeReprice` needs
+   the `product_discount` grant. Both are additive (nullable columns, new tables, a new index built before the old one
+   is dropped), so the code running before the push keeps working.
 
 **OE·2 · paid online** (increase decided 2026-11-12: pay the difference first)
 6. `refund()` in `src/lib/payments/razorpay.ts` (normal speed; before each create, list the payment's refunds and match
