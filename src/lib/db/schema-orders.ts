@@ -205,6 +205,9 @@ export const orderLines = pgTable('order_lines', {
   unique('order_lines_tenant_id_key').on(t.tenantId, t.id),
   foreignKey({ name: 'order_lines_replaced_by_fk', columns: [t.tenantId, t.replacedBy], foreignColumns: [t.tenantId, t.id] }),
   check('order_lines_replaced', sql`${t.replacedBy} is null or (${t.removedAt} is not null and ${t.replacedBy} <> ${t.id})`),
+  // A line comes out only after its pieces went back (stock.ts putStockBackLines clears the stamp first): a cancel puts
+  // back what live lines took, so a removed line holding stock would never return it.
+  check('order_lines_removed_stock', sql`${t.removedAt} is null or ${t.stockTakenAt} is null`),
   foreignKey({ name: 'order_lines_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
   index('order_lines_order').on(t.tenantId, t.orderId),
   index('order_lines_variant').on(t.tenantId, t.variantId),

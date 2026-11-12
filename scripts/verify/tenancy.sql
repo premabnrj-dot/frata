@@ -2844,6 +2844,9 @@ do $$ declare got text; begin
      or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_any_column_privilege(r, 'order_discounts', 'update'))
   then raise exception 'FAIL: another role updates order lines or offers'; end if;
   if has_function_privilege('frata_app', 'app_admin_offer_totals(timestamptz)', 'execute') then raise exception 'FAIL: frata_app runs the admin offer totals'; end if;
+  -- Readers by product read live lines: the partial index says so, and the old one is gone.
+  if not exists (select 1 from pg_indexes where indexname = 'order_lines_product_live' and indexdef like '%removed_at IS NULL%') or exists (select 1 from pg_indexes where indexname = 'order_lines_product')
+  then raise exception 'FAIL: order_lines by product is not indexed on live lines only'; end if;
 end $$;
 begin; set local role frata_app;
 select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
@@ -2873,6 +2876,12 @@ do $$ declare n int; e uuid; begin
   begin insert into order_edit_lines (tenant_id, edit_id, side, order_line_id, qty, unit_price, product_discount, line_discount, replaces)
     values ('11111111-1111-1111-1111-111111111111', e, 'after', 'ed11ed11-0000-0000-0000-0000000000a2', 1, 1, 0, 0, 'ed11ed11-0000-0000-0000-00000000000b'); raise exception 'FAIL: A''s line replaces B''s';
   exception when foreign_key_violation then null; end;
+  begin insert into order_edit_lines (tenant_id, edit_id, side, order_line_id, variant_id, qty, unit_price, product_discount, line_discount)
+    values ('11111111-1111-1111-1111-111111111111', e, 'after', 'ed11ed11-0000-0000-0000-0000000000a2', 'cdcdcdcd-0000-0000-0000-00000000000b', 1, 1, 0, 0); raise exception 'FAIL: A''s edit names B''s variant';
+  exception when foreign_key_violation then null; end;
+  -- A line holding stock never comes out (its pieces go back first).
+  begin update order_lines set stock_taken_at = now(), removed_at = now() where id = 'ed11ed11-0000-0000-0000-0000000000a2'; raise exception 'FAIL: a removed line kept its stock';
+  exception when check_violation then null; end;
   begin update order_edits set total_after = 1; raise exception 'FAIL: an edit was changed'; exception when insufficient_privilege then null; end;
   begin delete from order_edit_lines; raise exception 'FAIL: an edit''s lines were deleted'; exception when insufficient_privilege then null; end;
   -- A line is taken out and replaced within its own shop only, and never rewritten as sold.

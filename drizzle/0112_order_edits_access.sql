@@ -10,7 +10,17 @@
 -- order_discounts: an offer an edit takes off gets removed_at; its amount and terms never change (a new row carries a
 --   new amount). One live use per order and offer (0111's partial unique index).
 -- app_admin_offer_totals restates the use rule (KNOWN COPY of useOfRowSql): a removed use is no use.
+-- order_edit_lines.variant_id is this shop's variant (composite FK), set null when it is deleted, as order_lines' (0017).
+-- order_lines_product (0101) becomes order_lines_product_live: every reader by product reads live lines only (traffic,
+--   best sellers), so the partial index carries the filter and keeps its index-only scan (speed review 2026-11-12).
+--   The new one is built before the old one is dropped.
 -- =============================================================================
+alter table order_edit_lines add constraint order_edit_lines_variant_fk foreign key (tenant_id, variant_id) references variants (tenant_id, id) on delete set null (variant_id);
+--> statement-breakpoint
+create index if not exists order_lines_product_live on order_lines (tenant_id, product_id) include (order_id) where product_id is not null and removed_at is null;
+--> statement-breakpoint
+drop index if exists order_lines_product;
+--> statement-breakpoint
 revoke all on order_edits, order_edit_lines from anon, authenticated, service_role;
 --> statement-breakpoint
 alter table order_edits enable row level security;

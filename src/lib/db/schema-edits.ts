@@ -26,7 +26,9 @@ export const orderEdits = pgTable('order_edits', {
   shippingAfter: money('shipping_after').notNull(),
   /** The merchant ticked "Email the new total" (the email waits for the Undo window). */
   notify: boolean('notify').notNull(),
-  /** The order_discounts rows this edit took off, and the rows it added (an offer giving another amount now). */
+  /** The order_discounts rows this edit took off, and the rows it added (an offer giving another amount now). Ids only,
+   *  with no FK (Postgres has none for array elements): Undo reads them only together with this order and tenant
+   *  (`order_id` and `tenant_id` in every where), so another shop's or order's row is never touched. */
   offersRemoved: uuid('offers_removed').array().notNull().default(sql`'{}'::uuid[]`),
   offersAdded: uuid('offers_added').array().notNull().default(sql`'{}'::uuid[]`),
   createdAt: createdAt(),
@@ -52,6 +54,7 @@ export const orderEditLines = pgTable('order_edit_lines', {
   editId: uuid('edit_id').notNull(),
   side: text('side').notNull(),
   orderLineId: uuid('order_line_id').notNull(),
+  /** The variant then (FK to this shop's variants, set null when one is deleted: 0112, as order_lines'). */
   variantId: uuid('variant_id'),
   qty: integer('qty').notNull(),
   unitPrice: money('unit_price').notNull(),

@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.47.2
+  version: 2.47.3
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -710,7 +710,8 @@ Look's controls, Settings' shipping costs and sections, and Admin's custom plan 
   marks them 'prepaid' and 'cod', so `reprice()` prices either way, and uses follow the row's way (`offerWay`;
   `discountUseSql(now, 'both' | 'prepaid' | 'cod')`; a hold holds both).
 - **One repricer and one writer:** a placed order is priced again only by `amounts.reprice()` from
-  its stored lines and `order_discounts` (never today's offers), and written only by
+  its stored lines and `order_discounts` (never today's offers) — or, when its items change, by `planEdit` (new lines,
+  the order's own offers re-planned) and an Undo's `priceAsKept` (`src/domains/orders/edit.ts`) — and written only by
   `lib/orders/reprice.ts writeReprice()` — every money column of the order and its lines together.
   Switch to COD, a capture after a switch and a retry go through them; a retry never reprices.
 - **An order's own offers on new lines** (an order edit): only `replanKept()` (`src/domains/checkout/replan.ts`), from the terms
@@ -738,8 +739,13 @@ Look's controls, Settings' shipping costs and sections, and Admin's custom plan 
   (`undoEdit`) puts back the edit's record (`order_edits`, `order_edit_lines` before/after with `replaces`) within
   `UNDO_MINUTES` and before packing, only while the order still has the edit's lines and offers, re-checking any offer
   the edit freed. The `edited` email waits `UNDO_MINUTES` and is skipped when undone or a later edit supersedes it.
-  Refused: a support visit, paid online (OE·2), and a switched order whose Razorpay payment is created or authorized
-  (`paymentStillOpen`, asked before the transaction).
+  Refused (`cannotEdit`, the one rule for the button and the save): a support visit, paid online, and an order switched
+  to pay on delivery that has a Razorpay order — it could still be paid at the old online total — until OE·2. The
+  arrival dates are made again from the live lines (`arrivalRange`) after an edit and an Undo; an Undo whose price
+  differs from the one before the edit is refused, never written. A removed line holds no stock (CHECK
+  `order_lines_removed_stock`: its pieces go back first). Readers by product use `order_lines_product_live` (0112).
+  **Deploy order:** 0111 and 0112 before the code (every reader selects `removed_at`; `writeReprice` needs the
+  `product_discount` grant).
 - **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
   `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`
   (parity-tested). Placement locks every offer the bag could get that has a limit, in id order,

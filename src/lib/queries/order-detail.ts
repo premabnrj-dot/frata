@@ -45,7 +45,7 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       onlineTotal: onlineTotalCol, subtotal: orders.subtotal, discount: orders.discount, shipping: orders.shipping, codCharge: orders.codCharge, gstTotal: orders.gstTotal, total: orders.total, pricesIncludeGst: orders.pricesIncludeGst,
       customerName: orders.customerName, phone: orders.phone, email: orders.email, addressLine: orders.addressLine, area: orders.area, landmark: orders.landmark,
       pincode: orders.pincode, city: orders.city, state: orders.state,
-      invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote, erasedAt: orders.erasedAt,
+      invoiceNumber: orders.invoiceNumber, cancelReason: orders.cancelReason, cancelNote: orders.cancelNote, erasedAt: orders.erasedAt, razorpayOrderId: orders.razorpayOrderId,
     }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.number, number))).limit(1)
     if (!o) return null
     // Seven reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
@@ -81,7 +81,9 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       lineId: orderEditLines.orderLineId, qty: orderEditLines.qty, replaces: orderEditLines.replaces, title: orderLines.title, values: orderLines.optionValues }).from(orderEdits)
       .innerJoin(orderEditLines, and(eq(orderEditLines.tenantId, orderEdits.tenantId), eq(orderEditLines.editId, orderEdits.id)))
       .innerJoin(orderLines, and(eq(orderLines.tenantId, orderEditLines.tenantId), eq(orderLines.id, orderEditLines.orderLineId)))
-      .where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.orderId, o.id))).limit(400),
+      // The latest 20 edits whole (an edit holds at most 40 line rows), newest first: never an edit cut in half.
+      .where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.orderId, o.id), sql`${orderEdits.id} in (select x.id from ${orderEdits} x
+        where x.tenant_id = ${tenantId} and x.order_id = ${o.id} order by x.created_at desc, x.id limit 20)`)).orderBy(desc(orderEdits.createdAt), orderEditLines.side, orderEditLines.id),
     ])
     const offers = offerRows.map((d) => ({ ...d, amount: Number(d.amount) }))
     const credits = creditRows.map((c) => ({ number: c.number, issuedAt: c.issuedAt, kind: c.kind, total: Number(c.total), lines: c.lines }))

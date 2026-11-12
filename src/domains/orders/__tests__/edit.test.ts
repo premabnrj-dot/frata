@@ -56,7 +56,9 @@ describe('planEdit', () => {
     // Activity says the same from the saved record (the line a swap replaced named on its successor).
     const rec = (id: string, title: string, values: string[], replaces: string | null = null) => ({ lineId: id, title, values, qty: 1, replaces })
     const saved = recordChanges([rec('m', 'Tpa', ['M']), rec('d', 'Tpd', ['Haldi']), rec('c', 'Tpl', ['M'])], [rec('l', 'Tpa', ['L'], 'm'), rec('c', 'Tpl', ['M']), rec('x', 'Tpx', ['Red'])])
-    expect(activityWords(saved, { before: 601600, after: 520700 }, true, inr)).toBe('Items changed · Tpa M → L, Tpx · Red added, Tpd removed · ₹6016 → ₹5207 · emailed')
+    expect(activityWords(saved, { before: 601600, after: 520700 }, 'sent', inr)).toBe('Items changed · Tpa M → L, Tpx · Red added, Tpd removed · ₹6016 → ₹5207 · emailed')
+    expect(activityWords(saved, { before: 601600, after: 520700 }, 'waiting', inr)).toMatch(/· email waiting$/)
+    expect(activityWords(saved, { before: 601600, after: 520700 }, null, inr)).toMatch(/₹5207$/)
   })
 
   it('keeps the price a line was sold at when only its quantity changes; a swap or an addition is at today\'s price', () => {

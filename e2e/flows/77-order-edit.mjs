@@ -87,9 +87,9 @@ export default {
         assert.ok(mail && new Date(mail.next_attempt_at).getTime() - Date.now() > 8 * 60_000, 'the email waits out the Undo window')
       })
 
-      await t.step('the Items card says "Was M"; Activity says what changed and the totals', async () => {
+      await t.step('the Items card says "Was M"; Activity says what changed, the totals, and that the email waits', async () => {
         await p.getByRole('region', { name: 'Items' }).getByText('Was M').waitFor()
-        await p.getByRole('region', { name: 'Activity' }).getByText(/Items changed · Chanderi kurta set M → S, Chanderi kurta set removed · ₹4,980 → ₹2,490 · emailed/).waitFor()
+        await p.getByRole('region', { name: 'Activity' }).getByText(/Items changed · Chanderi kurta set M → S, Chanderi kurta set removed · ₹4,980 → ₹2,490 · email waiting/).waitFor()
         await p.screenshot({ path: t.out('saved'), fullPage: true })
       })
 

@@ -1,6 +1,6 @@
 {
-  "id": "6c193007-a808-4715-982a-b77660ab8041",
-  "prevId": "c1a97512-c602-42ae-9892-63ade07c8dbe",
+  "id": "e5a18a7b-512f-4e0e-93e7-febd0b6a08ab",
+  "prevId": "780b3ab3-3d92-4b07-a541-8f0467a10afe",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4605,6 +4605,10 @@
         "order_lines_replaced": {
           "name": "order_lines_replaced",
           "value": "\"order_lines\".\"replaced_by\" is null or (\"order_lines\".\"removed_at\" is not null and \"order_lines\".\"replaced_by\" <> \"order_lines\".\"id\")"
+        },
+        "order_lines_removed_stock": {
+          "name": "order_lines_removed_stock",
+          "value": "\"order_lines\".\"removed_at\" is null or \"order_lines\".\"stock_taken_at\" is null"
         },
         "order_lines_qty": {
           "name": "order_lines_qty",

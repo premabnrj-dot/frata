@@ -24,10 +24,25 @@
 import { classOf, priceMethod, type MethodPrice, type PlanLine } from '@/domains/checkout/discounts'
 import { MAX_LINES, MAX_QTY } from '@/domains/checkout/quote'
 import { replanKept, type Kept } from '@/domains/checkout/replan'
+import { currentMethod, type OrderMoments, type OrderState } from './order-state'
+import { applies } from './work'
 
 export const EDIT_REASONS = ['out_of_stock', 'customer_asked', 'other'] as const
 export type EditReason = (typeof EDIT_REASONS)[number]
 export const REASON_LABEL: Record<EditReason, string> = { out_of_stock: 'Out of stock', customer_asked: 'Customer asked', other: 'Other' }
+
+/**
+ * Why this order's items can't change now (null: they can), roles aside: the one rule for the order page's button and
+ * the save. Until packed (applies('edit')); never paid online, nor an order that started as an online payment and was
+ * switched to pay on delivery — its Razorpay order can still be paid at the old total (security review 2026-11-12):
+ * both wait for online-paid editing (OE·2).
+ */
+export function cannotEdit(state: OrderState, o: Pick<OrderMoments, 'paidAt' | 'paymentMethod' | 'switchedToCodAt'> & { razorpayOrderId: string | null }): string | null {
+  if (!applies('edit', state)) return state === 'packed' || state === 'shipped' ? 'Already packed: its slip and invoice keep these items.' : `This order is ${state.replace('_', ' ')}.`
+  if (o.paidAt || currentMethod(o) !== 'cod') return 'Paid online: its items can\'t be changed here yet.'
+  if (o.switchedToCodAt && o.razorpayOrderId) return 'This order started as an online payment. Its items can be changed once online-paid editing arrives.'
+  return null
+}
 
 /** How long an edit can be undone (owner, 2026-11-12); packing ends it sooner. Its email waits as long. */
 export const UNDO_MINUTES = 10
@@ -237,10 +252,13 @@ export function changeWords(c: ItemChange): string {
   return c.back ? 'Removed · back in stock' : 'Removed'
 }
 
-/** Activity's line for a saved edit ("Anarkali kurta set M → L, Chanderi dupatta removed · ₹6,016 → ₹5,207 · emailed"). */
-export function activityWords(changes: ItemChange[], total: { before: number; after: number }, emailed: boolean, inr: (paise: number) => string): string {
+/**
+ * Activity's line for a saved edit ("Anarkali kurta set M → L, Chanderi dupatta removed · ₹6,016 → ₹5,207 · emailed"):
+ * `email` 'sent' once it went, 'waiting' while it is held for the Undo window or queued, null when none goes.
+ */
+export function activityWords(changes: ItemChange[], total: { before: number; after: number }, email: 'sent' | 'waiting' | null, inr: (paise: number) => string): string {
   const each = changes.map((c) => (c.kind === 'removed' ? `${c.title} removed` : c.kind === 'added' ? `${[c.title, ...c.values].join(' · ')} added` : `${c.title} ${changeWords(c)}`))
-  return ['Items changed', each.join(', '), `${inr(total.before)} → ${inr(total.after)}`, ...(emailed ? ['emailed'] : [])].filter(Boolean).join(' · ')
+  return ['Items changed', each.join(', '), `${inr(total.before)} → ${inr(total.after)}`, ...(email === 'sent' ? ['emailed'] : email === 'waiting' ? ['email waiting'] : [])].filter(Boolean).join(' · ')
 }
 
 /** A refusal in the merchant's words. */

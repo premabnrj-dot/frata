@@ -9,9 +9,13 @@
 //  3. a race with packing: an edit waiting on the order's lock sees it packed and changes nothing;
 //  4. an offer's use is freed by an edit, taken by another order, and Undo is then refused; a tier steps down; free
 //     delivery from an offer comes off below its minimum, and the shop's own threshold brings the charge back;
-//  5. refused: paid online, packed, a support visit, a payment Razorpay may still capture, over the COD maximum, a total
-//     that moved;
-//  6. two lines on one variant with too little for both: the line with the lower id is taken, whatever the call order.
+//  5. refused: paid online, packed, a support visit, an order that started as an online payment, over the COD maximum,
+//     a total that moved;
+//  6. two lines on one variant with too little for both: the line with the lower id is taken, whatever the call order;
+//  7. after an edit, every reader reads the live lines: packing's invoice, a cancel that restocks, pre-orders owed, the
+//     list's item counts;
+//  8. the edited email: sent after its wait; skipped when undone, cancelled, or superseded by a later edit that emails
+//     too (never by one saved without the email).
 // The shops and their rows stay in the proof database (frata_app deletes no orders); their outbox rows are marked dead.
 import { afterAll, describe, expect, it, vi } from 'vitest'
 import type { EditReason, Want } from '@/domains/orders/edit'
@@ -25,13 +29,19 @@ const ME = '99999999-9999-9999-9999-999999999999'
 const ACTOR = { kind: 'member' as const, userId: ME, email: 'int@frata.test' }
 const address = (phone: string) => ({ name: 'Int Shopper', phone, addressLine: '12 MG Road', area: 'Vaishali Nagar', landmark: '', pincode: '302021', city: 'Jaipur', state: 'Rajasthan' as const, email: 'shopper@frata.test' })
 
-let payments: { id: string; status: string; amount: number; fee: number | null; tax: number | null; currency: string }[] = []
 vi.mock('@/lib/payments/razorpay', async (orig) => ({ ...(await orig<typeof import('@/lib/payments/razorpay')>()),
   createOrder: async () => ({ ok: true as const, id: `order_INTED${Date.now() % 1_000_000}` }),
-  orderPayments: async () => ({ ok: true as const, items: payments }) }))
+  orderPayments: async () => ({ ok: true as const, items: [] }) }))
 vi.mock('@/lib/payments/keys', async (orig) => ({ ...(await orig<typeof import('@/lib/payments/keys')>()), canTakeOnline: (k: unknown) => !!k }))
 vi.mock('@/lib/queries/addresses', async (orig) => ({ ...(await orig<typeof import('@/lib/queries/addresses')>()), hostApprovedIn: async () => true }))
+// The edited email's sender, with SES and the shop's cached look stubbed (Next's cache is not there in a test).
+process.env.EMAIL_SHOP_DOMAIN ??= 'mail.frata.test'
+const sent: string[] = []
+vi.mock('@/lib/email/ses', async (orig) => ({ ...(await orig<typeof import('@/lib/email/ses')>()), sendEmail: async (m: { subject: string }) => { sent.push(m.subject); return { ok: true as const, providerId: `p-${sent.length}` } } }))
+vi.mock('@/lib/themes/page-look', async (orig) => ({ ...(await orig<typeof import('@/lib/themes/page-look')>()), themeOf: () => ({ schemes: { paper: { accent: '#1C1917' } } }) }))
+vi.mock('@/lib/themes/manifests', async (orig) => ({ ...(await orig<typeof import('@/lib/themes/manifests')>()), manifestsFor: async () => ({}) }))
 vi.mock('@/lib/queries/storefront', async (orig) => ({ ...(await orig<typeof import('@/lib/queries/storefront')>()), refreshSoldOut: async () => 'now' as const,
+  shopSettingsFor: async () => ({ publishedAt: new Date(), supportEmail: 'help@kesar.test', shopName: 'Int order edit', slug: 'int-ed', host: 'int-ed.frata.test' }), shopLook: async () => null,
   collectionMembers: async (t: string) => (await import('@/lib/db/tenant')).withTenant(t, async (tx) => (await import('@/lib/catalogue/collection-members')).collectionMembersIn(tx, t)) }))
 
 const shops: string[] = []
@@ -97,7 +107,7 @@ async function tools(A: string, stamp: number) {
     const r = await placeOrder(A, { host: HOST, idempotencyKey: `ed${stamp}${++n}`.padEnd(22, 'x').slice(0, 22), bag, address: address(`98295${String(stamp).slice(-4)}${n}`), method: 'cod', expectedTotal: q.cod.total, facts: {} })
     if (r.kind !== 'placed') throw new Error(`not placed: ${r.kind}`)
     const [o] = await withTenant(A, (tx) => tx.select({ id: orders.id }).from(orders).where(and(eq(orders.tenantId, A), eq(orders.number, r.number))))
-    return { id: o!.id, total: q.cod.total }
+    return { id: o!.id, number: r.number, total: q.cod.total }
   }
   const lines = (id: string) => withTenant(A, (tx) => tx.select().from(orderLines).where(and(eq(orderLines.tenantId, A), eq(orderLines.orderId, id))).orderBy(orderLines.position, orderLines.id))
   const live = async (id: string) => (await lines(id)).filter((l) => !l.removedAt)
@@ -296,12 +306,10 @@ describe.skipIf(!host)('editing an order\'s items', () => {
     void ship
   }, 90_000)
 
-  it('refused: paid online, packed, a support visit, a payment that may still capture, the COD maximum, a moved total', async () => {
+  it('refused: paid online, packed, a support visit, an order that started online, the COD maximum, a moved total', async () => {
     const s = await shop({ codMax: 600000 })
     const t = await tools(s.A, s.stamp)
     const { orders } = await import('@/lib/db/schema-orders')
-    const { paymentStillOpen } = await import('@/lib/orders/edit')
-    const { saveKeys } = await import('@/lib/payments/keys')
     const { and, eq } = await import('drizzle-orm')
     const o = await t.place([{ variantId: s.m, qty: 1 }])
     const m = await t.lineOf(o.id, s.m)
@@ -309,16 +317,10 @@ describe.skipIf(!host)('editing an order\'s items', () => {
     expect(await t.edit(o.id, swap, {}, { actor: { kind: 'support', userId: ME, email: 'support@frata.test' } })).toEqual({ ok: false, error: 'A support visit can\'t change an order\'s items.' })
     expect(await t.edit(o.id, swap, {}, { expectedTotal: 1 })).toEqual({ ok: false, error: 'The new total is ₹2,598. Check it, then save again.', total: 259800 })
     expect(await t.edit(o.id, [{ line: m.id, variantId: s.m, qty: 3 }])).toEqual({ ok: false, error: 'Pay on delivery is for orders up to ₹6,000. Ask them to pay online, or keep the order as it was.' })
-    // Switched from an online payment Razorpay still holds open: no edit until it settles.
-    await t.withTenant(s.A, async (tx) => {
-      await saveKeys(tx, s.A, { keyId: 'rzp_test_INTED0000001', keySecret: 'int-secret' })
-      await tx.update(orders).set({ paymentMethod: 'prepaid', switchedToCodAt: new Date(), razorpayOrderId: `order_INTEDSW${s.stamp}` }).where(and(eq(orders.tenantId, s.A), eq(orders.id, o.id)))
-    })
-    payments = [{ id: 'pay_INTED1', status: 'created', amount: 254800, fee: null, tax: null, currency: 'INR' }]
-    expect(await paymentStillOpen(s.A, o.id)).toBe('An online payment for it is still going through in Razorpay. Try again in a few minutes.')
-    payments = [{ id: 'pay_INTED1', status: 'failed', amount: 254800, fee: null, tax: null, currency: 'INR' }]
-    expect(await paymentStillOpen(s.A, o.id)).toBeNull()
-    payments = []
+    // Switched to pay on delivery from an online payment: its Razorpay order could still be paid at the old total.
+    await t.withTenant(s.A, (tx) => tx.update(orders).set({ paymentMethod: 'prepaid', switchedToCodAt: new Date(), razorpayOrderId: `order_INTEDSW${s.stamp}` }).where(and(eq(orders.tenantId, s.A), eq(orders.id, o.id))))
+    expect(await t.edit(o.id, swap, {}, { expectedTotal: 0 })).toEqual({ ok: false, error: 'This order started as an online payment. Its items can be changed once online-paid editing arrives.' })
+    expect((await t.live(o.id)).map((l) => l.id)).toEqual([m.id])
     // Paid online (OE·2), and packed.
     await t.withTenant(s.A, (tx) => tx.update(orders).set({ paidAt: new Date() }).where(and(eq(orders.tenantId, s.A), eq(orders.id, o.id))))
     expect(await t.edit(o.id, swap, {}, { expectedTotal: 0 })).toEqual({ ok: false, error: 'Paid online: its items can\'t be changed here yet.' })
@@ -352,4 +354,73 @@ describe.skipIf(!host)('editing an order\'s items', () => {
       expect(got).toEqual({ r: { short: 1, taken: 1 }, taken: [ids[0]] })
     }
   }, 30_000)
+
+  it('after an edit every reader reads the live lines: the invoice, a cancel that restocks, pre-orders owed, the list', async () => {
+    const s = await shop()
+    const t = await tools(s.A, s.stamp)
+    const { variants } = await import('@/lib/db/schema-catalogue')
+    const { confirm, pack, cancel } = await import('@/lib/orders/work')
+    const { documentsFor } = await import('@/lib/orders/documents')
+    const { variantRows } = await import('@/lib/queries/checkout')
+    const { listOrders } = await import('@/lib/queries/orders')
+    const { and, eq } = await import('drizzle-orm')
+    // A pre-order piece: none on the shelf, ships in a month.
+    const ships = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10)
+    await t.withTenant(s.A, (tx) => tx.update(variants).set({ whenOut: 'preorder', shipsBy: ships }).where(and(eq(variants.tenantId, s.A), eq(variants.id, s.xl))))
+    const o = await t.place([{ variantId: s.m, qty: 1 }, { variantId: s.xl, qty: 1 }, { variantId: s.coord, qty: 2 }])
+    const owed = async () => (await t.withTenant(s.A, (tx) => variantRows(tx, s.A, [s.xl], new Date()))).map((r) => [r.owed, r.preordered])
+    expect(await owed()).toEqual([[1, 1]])
+    const [m, xl, c] = [await t.lineOf(o.id, s.m), await t.lineOf(o.id, s.xl), await t.lineOf(o.id, s.coord)]
+    const r = await t.edit(o.id, [{ line: m.id, variantId: s.l, qty: 1 }, { line: c.id, variantId: s.coord, qty: 1 }], { [xl.id]: 'customer_asked' })
+    if (!r.ok) throw new Error(r.error)
+    expect(await owed()).toEqual([[0, 0]])
+    const row = (await listOrders(s.A, { tab: 'all', now: new Date() })).find((x) => x.id === o.id)
+    expect(row?.items).toBe(2)
+    expect(await t.stock([s.m, s.l, s.coord])).toEqual({ [s.m]: 5, [s.l]: 1, [s.coord]: 4 })
+    // Packed: the invoice has the two live lines, as they are now.
+    await t.withTenant(s.A, async (tx) => { await confirm(tx, s.A, ACTOR, o.id); expect((await pack(tx, s.A, ACTOR, o.id)).ok).toBe(true) })
+    const docs = await t.withTenant(s.A, (tx) => documentsFor(tx, s.A, [o.number], 'invoice'))
+    expect(docs.orders[0]!.lines.map((l) => [l.optionValues, l.qty])).toEqual([[['L'], 1], [['M'], 1]])
+    // Cancelled with its stock put back: exactly what the live lines took (the removed ones gave theirs back already).
+    expect((await t.withTenant(s.A, (tx) => cancel(tx, s.A, ACTOR, o.id, { reason: 'customer_cancelled', restock: true }))).ok).toBe(true)
+    expect(await t.stock([s.m, s.l, s.coord])).toEqual({ [s.m]: 5, [s.l]: 2, [s.coord]: 5 })
+  }, 60_000)
+
+  it('the edited email: sent after its wait, skipped when undone, cancelled or superseded by a later emailing edit', async () => {
+    const s = await shop()
+    const t = await tools(s.A, s.stamp)
+    const { outbox } = await import('@/lib/db/schema')
+    const { emailMessages, emailShops } = await import('@/lib/db/schema-email')
+    const { sendOrderEmail } = await import('@/lib/email/order-sender')
+    const { cancel } = await import('@/lib/orders/work')
+    const { and, eq } = await import('drizzle-orm')
+    await t.withTenant(s.A, (tx) => tx.insert(emailShops).values({ tenantId: s.A, sesReadyAt: new Date() }))
+    /** Send the edit's email now (its wait skipped) and say what became of it. */
+    const send = async (eventId: string) => {
+      const [row] = await t.withTenant(s.A, (tx) => tx.select().from(outbox).where(and(eq(outbox.tenantId, s.A), eq(outbox.dedupeKey, `email:edited:${eventId}`))))
+      await sendOrderEmail(row!)
+      const [m] = await t.withTenant(s.A, (tx) => tx.select({ sent: emailMessages.sentAt, skip: emailMessages.skipCode }).from(emailMessages).where(and(eq(emailMessages.tenantId, s.A), eq(emailMessages.id, row!.id))))
+      return m?.sent ? 'sent' : m?.skip ?? null
+    }
+    const swap = async (o: string, to: string, notify = true) => { const l = (await t.live(o))[0]!; const r = await t.edit(o, [{ line: l.id, variantId: to, qty: 1 }], {}, { notify }); if (!r.ok) throw new Error(r.error); return r.eventId }
+    // A later change saved without the email: the earlier one still tells the shopper.
+    const a = await t.place([{ variantId: s.m, qty: 1 }])
+    const a1 = await swap(a.id, s.l)
+    await swap(a.id, s.m, false)
+    expect(await send(a1)).toBe('sent')
+    expect(sent.at(-1)).toMatch(/has changed$/)
+    // A later change that emails too: the earlier one is superseded, the later one goes.
+    const b = await t.place([{ variantId: s.m, qty: 1 }])
+    const b1 = await swap(b.id, s.l), b2 = await swap(b.id, s.m)
+    expect([await send(b1), await send(b2)]).toEqual(['superseded', 'sent'])
+    // Undone, or cancelled since: nothing goes.
+    const c = await t.place([{ variantId: s.m, qty: 1 }])
+    const c1 = await swap(c.id, s.l)
+    expect((await t.undo(c1)).ok).toBe(true)
+    expect(await send(c1)).toBe('undone')
+    const d = await t.place([{ variantId: s.m, qty: 1 }])
+    const d1 = await swap(d.id, s.l)
+    await t.withTenant(s.A, (tx) => cancel(tx, s.A, ACTOR, d.id, { reason: 'customer_cancelled', restock: true }))
+    expect(await send(d1)).toBe('cancelled')
+  }, 60_000)
 })

@@ -6,7 +6,8 @@ import { EDIT_REASONS } from '@/domains/orders/edit'
 import { ROLES } from '@/domains/orders/work'
 import { asMember } from '@/lib/auth/as-member'
 import { requireMember } from '@/lib/auth/require-member'
-import { editItems, paymentStillOpen, undoEdit } from '@/lib/orders/edit'
+import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
+import { editItems, undoEdit } from '@/lib/orders/edit'
 import { drainSoon } from '@/lib/outbox/drain'
 import { itemsEditor, itemsToAdd, type AddResult, type EditorData } from '@/lib/queries/order-edit'
 import { refreshSoldOut } from '@/lib/queries/storefront'
@@ -19,10 +20,13 @@ import { refreshSoldOut } from '@/lib/queries/storefront'
 // moves stock and what the courier collects). The tenant is the membership's; the order is found inside it. The save is
 // src/lib/orders/edit.ts under the order's lock, the money worked out there again (never taken from the browser): the
 // total the panel showed is only compared. A support visit's audit row would name the field "items", never a value.
+// Each action is limited per member (rate-limit.ts orderEdit*): Save and Undo fail closed, the two reads fail open.
 // =============================================================================
 
 const Id = z.string().uuid()
 const SUPPORT = 'A support visit can\'t change an order\'s items.'
+const BUSY = 'Too many changes in a few minutes. Try again shortly.'
+const who = (a: { userId: string; membership: { tenantId: string } }) => `${a.membership.tenantId}:${a.userId}`
 
 /** The panel's facts, read once when "Edit items" opens. */
 export async function loadItemsEditor(orderId: string): Promise<{ ok: true; data: EditorData } | { ok: false; error: string }> {
@@ -30,6 +34,7 @@ export async function loadItemsEditor(orderId: string): Promise<{ ok: true; data
   if (!auth.ok) return { ok: false, error: auth.message }
   if (auth.membership.supportSessionId) return { ok: false, error: SUPPORT }
   if (!Id.safeParse(orderId).success) return { ok: false, error: 'Order not found.' }
+  if (!(await withinLimit(LIMITS.orderEditLoad, who(auth)))) return { ok: false, error: BUSY }
   try {
     const data = await itemsEditor(auth.membership.tenantId, orderId)
     return data ? { ok: true, data } : { ok: false, error: 'Order not found.' }
@@ -43,6 +48,7 @@ export async function loadItemsEditor(orderId: string): Promise<{ ok: true; data
 export async function findItemsToAdd(orderId: string, q: unknown): Promise<AddResult[]> {
   const auth = await requireMember(ROLES.edit)
   if (!auth.ok || auth.membership.supportSessionId || !Id.safeParse(orderId).success || typeof q !== 'string') return []
+  if (!(await withinLimit(LIMITS.orderEditFind, who(auth)))) return []
   try {
     return await itemsToAdd(auth.membership.tenantId, orderId, q)
   } catch (err) {
@@ -68,9 +74,7 @@ export async function saveItemsEdit(orderId: string, input: unknown): Promise<Sa
     const auth = await requireMember(ROLES.edit)
     if (!auth.ok) return { ok: false, error: auth.message }
     if (auth.membership.supportSessionId) return { ok: false, error: SUPPORT }
-    // Razorpay is asked before the transaction (never a call out inside one).
-    const open = await paymentStillOpen(auth.membership.tenantId, orderId)
-    if (open) return { ok: false, error: open }
+    if (!(await withinLimit(LIMITS.orderEditSave, who(auth), new Date(), true))) return { ok: false, error: BUSY }
     const r = await asMember(ROLES.edit, { action: 'order.items_edit', target: orderId, detail: { fields: ['items'] } }, (tx, a) =>
       editItems(tx, a.membership.tenantId, { kind: a.membership.supportSessionId ? 'support' : 'member', userId: a.userId, email: a.email ?? '' }, orderId, p.data))
     if (!r.ok) return { ok: false, error: r.error }
@@ -90,6 +94,9 @@ export async function saveItemsEdit(orderId: string, input: unknown): Promise<Sa
 export async function undoItemsEdit(eventId: string): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!Id.safeParse(eventId).success) return { ok: false, error: 'There is nothing to undo.' }
   try {
+    const auth = await requireMember(ROLES.edit)
+    if (!auth.ok) return { ok: false, error: auth.message }
+    if (!(await withinLimit(LIMITS.orderEditUndo, who(auth), new Date(), true))) return { ok: false, error: BUSY }
     const r = await asMember(ROLES.edit, { action: 'order.items_undo', target: eventId, detail: {} }, (tx, a) =>
       undoEdit(tx, a.membership.tenantId, { kind: a.membership.supportSessionId ? 'support' : 'member', userId: a.userId, email: a.email ?? '' }, eventId))
     if (!r.ok) return { ok: false, error: r.error }

@@ -68,6 +68,12 @@ export const LIMITS = {
   gstOtpShop: { action: 'gst_otp:shop', max: 10, windowSeconds: 3600 },
   // OTPs typed (verify, file): a guess loop stops at the server, before the portal (security review M2).
   gstOtpTry: { action: 'gst_otp_try:shop', max: 8, windowSeconds: 900 },
+  // Order edit (OE·1, security review 2026-11-12), per member: opening the editor and its search read a shop's catalogue
+  // with stock; a save and an Undo lock the order and its variants. Save and Undo fail closed; the reads fail open.
+  orderEditLoad: { action: 'order_edit:load', max: 120, windowSeconds: 600 },
+  orderEditFind: { action: 'order_edit:find', max: 300, windowSeconds: 600 },
+  orderEditSave: { action: 'order_edit:save', max: 60, windowSeconds: 600 },
+  orderEditUndo: { action: 'order_edit:undo', max: 60, windowSeconds: 600 },
   // Frrata's billing gateway (B3 security review): each start makes a gateway customer or order; per member, fail closed.
   billingMember: { action: 'billing:member', max: 10, windowSeconds: 600 },
   // Sign-up WhatsApp codes (trials TR1, R2): per person, per phone and per IP; fail closed (a code costs Frrata a message).

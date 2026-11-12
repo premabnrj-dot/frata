@@ -28,7 +28,7 @@ export type EditRead = { facts: EditFacts; live: LiveLine[]; rows: VariantRow[] 
 const MAX_VARIANTS = 200
 
 /** The order's live offers with the terms they kept; null when one cannot be re-planned (a product offer before 0110). */
-export async function keptRowsIn(tx: Tx, tenantId: string, orderId: string): Promise<KeptRow[] | null> {
+async function keptRowsIn(tx: Tx, tenantId: string, orderId: string): Promise<KeptRow[] | null> {
   const rows = await tx.select().from(orderDiscounts).where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, orderId), isNull(orderDiscounts.removedAt)))
   const out: KeptRow[] = []
   for (const r of rows) {
@@ -95,7 +95,10 @@ export async function editFactsIn(tx: Tx, tenantId: string, orderId: string, now
   }
 }
 
-/** Lock the order's live lines' variants and these, once each, in id order (before reading them: stock moves both ways). */
+/**
+ * The variants of every line the order has had (live and taken out: an Undo brings a removed line back), for the caller
+ * to lock with the request's own, once each, in id order (lockVariants) before reading them: stock moves both ways.
+ */
 export async function editVariantIds(tx: Tx, tenantId: string, orderId: string): Promise<string[]> {
   const rows = await tx.select({ v: orderLines.variantId }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), sql`${orderLines.variantId} is not null`))
   return rows.map((r) => r.v!)

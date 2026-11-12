@@ -24,7 +24,7 @@ import { OrderActions } from '../_components/order-actions'
 import { ShipPanel } from '../_components/ship-panel'
 import { Icon } from '@/components/icons/icon'
 import { saysOnline } from '@/domains/checkout/offer-text'
-import { activityWords, recordChanges, undoUntil, valuesChanged } from '@/domains/orders/edit'
+import { activityWords, cannotEdit, recordChanges, undoUntil, valuesChanged } from '@/domains/orders/edit'
 import { EditItemsButton, ItemsArea } from '../_components/edit/items-area'
 
 // =============================================================================
@@ -77,8 +77,8 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const shipStage = tab === 'to_ship' ? 'to_ship' as const : tab === 'on_the_way' || tab === 'couldnt_deliver' ? 'on_the_way' as const
     : state === 'delivered' || state === 'rto' || state === 'rto_received' || state === 'lost' ? 'done' as const : null
   const can = { confirm: may('confirm', state, role), hold: may('hold', state, role), unhold: may('unhold', state, role), cancel: may('cancel', state, role), pack: may('pack', state, role), edit: may('edit', state, role), note: may('note', state, role) }
-  // Items (OE·1): owners and admins, until packed, paying on delivery, never on a support visit; Undo for 10 minutes.
-  const itemsEditable = can.edit && !o.paidAt && method === 'cod' && !o.erasedAt && !auth.membership.supportSessionId
+  // Items (OE·1): owners and admins, while cannotEdit says nothing, never on a support visit; Undo for 10 minutes.
+  const itemsEditable = can.edit && cannotEdit(state, o) === null && !o.erasedAt && !auth.membership.supportSessionId
   const lastEdit = events.find((e) => e.kind === 'items_edited')
   const undoEvent = itemsEditable && lastEdit && !events.some((e) => e.undoes === lastEdit.id) && now <= undoUntil(lastEdit.at) ? lastEdit.id : null
   const inr = (x: number) => formatInr(paise(x))
@@ -87,7 +87,10 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const history = [
     ...events.map((e) => {
       const edit = e.kind === 'items_edited' ? d.edits.get(e.id) : undefined
-      const text = edit ? activityWords(recordChanges(edit.before, edit.after), { before: edit.totalBefore, after: edit.totalAfter }, edit.notify, inr) : eventLabel(e, (x) => CANCEL_LABEL[x as CancelReason] ?? x)
+      // "emailed" only once it went; held for the Undo window (no message yet) or queued, it is waiting.
+      const mail = edit ? emails.find((m) => m.kind === 'edited' && m.eventId === e.id) : undefined
+      const email = !edit?.notify || events.some((x) => x.undoes === e.id) ? null : !mail || mail.state === 'queued' || mail.state === 'sending' ? 'waiting' as const : mail.state === 'sent' || mail.state === 'delivered' ? 'sent' as const : null
+      const text = edit ? activityWords(recordChanges(edit.before, edit.after), { before: edit.totalBefore, after: edit.totalAfter }, email, inr) : eventLabel(e, (x) => CANCEL_LABEL[x as CancelReason] ?? x)
       return { at: e.at, text, who: e.actorKind === 'support' ? `${e.actorEmail ?? ''} · Frrata support` : e.actorEmail ?? 'Frrata' }
     }),
     { at: o.placedAt, text: method === 'cod' && !o.switchedToCodAt ? 'Placed · pay on delivery' : 'Placed · online', who: 'Customer' },

@@ -1,25 +1,21 @@
 import 'server-only'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { classOf } from '@/domains/checkout/discounts'
-import { inOrder, planEdit, priceAsKept, problemWords, undoUntil, usesOnCod, type EditReason, type Want } from '@/domains/orders/edit'
+import { cannotEdit, inOrder, planEdit, priceAsKept, problemWords, undoUntil, usesOnCod, type EditReason, type Want } from '@/domains/orders/edit'
+import { arrivalRange } from '@/domains/checkout/quote'
 import { chargesGst, type Scheme } from '@/domains/tax/gst'
-import { currentMethod } from '@/domains/orders/order-state'
-import { applies } from '@/domains/orders/work'
-import type { QuoteLine } from '@/domains/checkout/quote'
+import type { LineKind, QuoteLine } from '@/domains/checkout/quote'
 import { formatInr } from '@/lib/format'
 import type { Paise } from '@/domains/money/paise'
 import type { Tx } from '@/lib/db'
 import { discountUses, fits } from '@/lib/db/discount-predicates'
+import { shopSettings } from '@/lib/db/schema'
 import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import { orderEditLines, orderEdits } from '@/lib/db/schema-edits'
 import { orderEvents, orderLines, orders } from '@/lib/db/schema-orders'
-import { withTenant } from '@/lib/db/tenant'
 import { enqueueOrderEmail } from '@/lib/email/enqueue'
-import { keysFor, noteKeysAnswer } from '@/lib/payments/keys'
-import { orderPayments } from '@/lib/payments/razorpay'
 import { editFactsIn, editVariantIds, sellsAs, type LiveLine } from './edit-facts'
 import { lineSnapshot, unitCosts } from './lines'
-import { storeRazorpayEvent } from './payment'
 import { writeReprice } from './reprice'
 import { lockVariants, putStockBackLines, takeStockLines } from './stock'
 import { current, moment, record, type Actor, type Done } from './work'
@@ -36,7 +32,7 @@ import { current, moment, record, type Actor, type Done } from './work'
 // are taken. Every money column is written together (writeReprice), so Frrata's fee follows merchandise_net. One
 // items_edited event, the edit's record (order_edits, order_edit_lines) and, when asked, an `edited` email that waits
 // out the Undo window. A refusal rolls the savepoint back: nothing is written.
-// Refused: a support visit (the action), packed or later, paid online (OE·2), a Razorpay payment that may still capture.
+// Refused: a support visit, packed or later, paid online, and an order that started as an online payment (cannotEdit).
 // =============================================================================
 
 export type EditInput = { want: Want[]; reasons: Record<string, EditReason | undefined>; notify: boolean; expectedTotal: number }
@@ -47,36 +43,19 @@ const inr = (p: number) => formatInr(p as Paise)
 /** A support visit changes no order's items: the shop's own people do (it moves stock and the amount collected). */
 const SUPPORT = 'A support visit can\'t change an order\'s items.'
 
-/**
- * Before the transaction (never a call out inside one): an order switched to pay on delivery from an online payment can
- * still be captured while Razorpay holds a payment created or authorized for it — an edit then would collect cash for
- * a paid order. A capture found is recorded (applied by the next pass, as a switch does). Null: nothing open.
- */
-export async function paymentStillOpen(tenantId: string, orderId: string): Promise<string | null> {
-  const pre = await withTenant(tenantId, async (tx) => {
-    const [o] = await tx.select({ rzp: orders.razorpayOrderId, paidAt: orders.paidAt, switchedAt: orders.switchedToCodAt }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId)))
-    return { o, keys: o?.rzp && o.switchedAt && !o.paidAt ? await keysFor(tx, tenantId) : null }
-  })
-  if (!pre.o?.rzp || !pre.o.switchedAt || pre.o.paidAt) return null
-  if (!pre.keys) return 'We could not check with Razorpay whether its online payment is still open. Connect Razorpay again, then edit.'
-  const asked = await orderPayments(pre.keys, pre.o.rzp)
-  await noteKeysAnswer(tenantId, pre.keys, asked)
-  if (!asked.ok) return 'We could not check with Razorpay whether its online payment is still open. Try again in a minute.'
-  const captured = asked.items.find((p) => p.status === 'captured')
-  if (captured) {
-    await storeRazorpayEvent(tenantId, `razorpay:payment.captured:${captured.id}`, { event: 'payment.captured',
-      payload: { payment: { entity: { id: captured.id, order_id: pre.o.rzp, amount: captured.amount, currency: 'INR', status: 'captured', fee: captured.fee, tax: captured.tax } } } })
-    return 'It was paid online after all: reload the order.'
-  }
-  if (asked.items.some((p) => p.status === 'created' || p.status === 'authorized')) return 'An online payment for it is still going through in Razorpay. Try again in a few minutes.'
-  return null
+/** Why this order's items can't change now (cannotEdit), with the order's Razorpay order read under its lock. */
+async function notEditable(tx: Tx, tenantId: string, orderId: string, c: NonNullable<Awaited<ReturnType<typeof current>>>): Promise<string | null> {
+  const [o] = await tx.select({ rzp: orders.razorpayOrderId }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId)))
+  return cannotEdit(c.state, { ...c.o, razorpayOrderId: o?.rzp ?? null })
 }
 
-/** Why this order's items can't change now, or null. */
-function notEditable(state: string, o: { paidAt: Date | null } & Parameters<typeof currentMethod>[0]): string | null {
-  if (!applies('edit', state as Parameters<typeof applies>[1])) return state === 'packed' || state === 'shipped' ? 'Already packed: its slip and invoice keep these items.' : `This order is ${state.replace('_', ' ')}.`
-  if (o.paidAt || currentMethod(o) !== 'cod') return 'Paid online: its items can\'t be changed here yet.'
-  return null
+/** The arrival promise again, from the live lines (a piece pre-ordered or made to order moves it), as placement makes it. */
+async function rearrive(tx: Tx, tenantId: string, orderId: string, now: Date) {
+  const [s] = await tx.select({ dispatchDays: shopSettings.dispatchDays, metroDays: shopSettings.metroDays, restDays: shopSettings.restDays }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
+  const ls = await tx.select({ kind: orderLines.kind, shipsBy: orderLines.shipsBy, leadMinDays: orderLines.leadMinDays, leadMaxDays: orderLines.leadMaxDays }).from(orderLines)
+    .where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), isNull(orderLines.removedAt)))
+  const r = s ? arrivalRange(ls.map((l) => ({ ...l, kind: l.kind as LineKind })), s, now) : null
+  if (r) await tx.update(orders).set({ arrivesFrom: r.from, arrivesTo: r.to }).where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId)))
 }
 
 /** The limited offers among `rows` whose new use must fit (limits and budgets), the order's own use left out. */
@@ -99,7 +78,7 @@ export async function editItems(tx: Tx, tenantId: string, actor: Actor, orderId:
   if (actor.kind === 'support') return { ok: false, error: SUPPORT }
   const c = await current(tx, tenantId, orderId, now)
   if (!c) return { ok: false, error: 'Order not found.' }
-  const why = notEditable(c.state, c.o)
+  const why = await notEditable(tx, tenantId, orderId, c)
   if (why) return { ok: false, error: why }
   try {
     return await tx.transaction(async (sp) => {
@@ -132,9 +111,12 @@ export async function editItems(tx: Tx, tenantId: string, actor: Actor, orderId:
         const position = l.from ? byId.get(l.from.id)!.position : next++
         if (l.change === 'qty') {
           const old = byId.get(l.from!.id)!
-          const kind = l.qty < old.qty ? old.kind : (sellsAs(rows.find((x) => x.variantId === old.variantId)!, live, l.qty, now).kind)
+          // Fewer pieces sell as they did; more sell as checkout would sell them now, with that kind's own dates.
+          const v = l.qty < old.qty ? null : rows.find((x) => x.variantId === old.variantId)!
+          const kind = v ? sellsAs(v, live, l.qty, now).kind : old.kind
+          const dates = v ? { shipsBy: kind === 'preorder' ? v.shipsBy : null, leadMinDays: kind === 'made_to_order' ? v.leadMinDays : null, leadMaxDays: kind === 'made_to_order' ? v.leadMaxDays : null } : {}
           const { id: _i, removedAt: _r, replacedBy: _b, stockTakenAt: _s, ...as } = old
-          return [{ i, row: { ...as, qty: l.qty, kind, position, lineDiscount: priced.discount, productDiscount: priced.productDiscount, taxableValue: priced.taxable, gstBps: priced.gstBps, gst: priced.gst, ...share } }]
+          return [{ i, row: { ...as, ...dates, qty: l.qty, kind, position, lineDiscount: priced.discount, productDiscount: priced.productDiscount, taxableValue: priced.taxable, gstBps: priced.gstBps, gst: priced.gst, ...share } }]
         }
         const v = rows.find((x) => x.variantId === l.variantId)!
         const sold = sellsAs(v, live, l.qty, now)
@@ -146,7 +128,7 @@ export async function editItems(tx: Tx, tenantId: string, actor: Actor, orderId:
       const inserted = fresh.length ? await sp.insert(orderLines).values(fresh.map((x) => x.row)).returning({ id: orderLines.id }) : []
       const idAt = new Map(fresh.map((x, k) => [x.i, inserted[k]!.id]))
       for (const l of p.lines) if (l.from && l.change !== 'kept') {
-        await sp.update(orderLines).set({ replacedBy: idAt.get(p.lines.indexOf(l))! }).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.id, l.from.id)))
+        await sp.update(orderLines).set({ replacedBy: idAt.get(p.lines.indexOf(l))! }).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, orderId), eq(orderLines.id, l.from.id)))
       }
       const soldOut: string[] = []
       const take = fresh.filter((x) => x.row.kind === 'in_stock').map((x) => idAt.get(x.i)!)
@@ -156,6 +138,7 @@ export async function editItems(tx: Tx, tenantId: string, actor: Actor, orderId:
       const unitCost = (i: number) => { const l = p.lines[i]!; return l.change === 'kept' || l.change === 'qty' ? byId.get(l.from!.id)!.unitCost : fresh.find((x) => x.i === i)!.row.unitCost ?? null }
       const cogs = p.lines.every((_, i) => unitCost(i) != null) ? p.lines.reduce((a, l, i) => a + Number(unitCost(i)) * l.qty, 0) : null
       await writeReprice(sp, tenantId, orderId, lineIds, { ...p.price, codCharge: facts.order.codCharge }, { subtotal: p.subtotal, shipping: p.shipping.after, cogs })
+      await rearrive(sp, tenantId, orderId, now)
 
       // Offers: one whose amount moved comes off; a new row (the same terms) carries what it gives now.
       const moved = p.offers.map((x) => x.rowId)
@@ -200,7 +183,7 @@ export async function undoEdit(tx: Tx, tenantId: string, actor: Actor, eventId: 
   if (!c) return { ok: false, error: 'Order not found.' }
   const [already] = await tx.select({ id: orderEvents.id }).from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.undoes, eventId)))
   if (already) return { ok: false, error: 'Already undone.' }
-  const why = notEditable(c.state, c.o)
+  const why = await notEditable(tx, tenantId, e.orderId, c)
   if (why) return { ok: false, error: why }
   if (now > undoUntil(e.at)) return { ok: false, error: 'The 10 minutes to undo have passed. Edit the items instead.' }
   try {
@@ -219,14 +202,14 @@ export async function undoEdit(tx: Tx, tenantId: string, actor: Actor, eventId: 
       const goes = after.filter((s) => !before.some((b) => b.orderLineId === s.orderLineId)).map((s) => s.orderLineId)
       const comes = before.filter((b) => !after.some((s) => s.orderLineId === b.orderLineId)).map((b) => b.orderLineId)
       const backInStock = await putStockBackLines(sp, tenantId, goes)
-      if (goes.length) await sp.update(orderLines).set({ removedAt: stamp }).where(and(eq(orderLines.tenantId, tenantId), inArray(orderLines.id, goes)))
+      if (goes.length) await sp.update(orderLines).set({ removedAt: stamp }).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, e.orderId), inArray(orderLines.id, goes)))
       if (comes.length) await sp.update(orderLines).set({ removedAt: null, replacedBy: null }).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, e.orderId), inArray(orderLines.id, comes)))
       const restored = await sp.select().from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, e.orderId), isNull(orderLines.removedAt)))
       const soldOut: string[] = []
       const take = restored.filter((l) => comes.includes(l.id) && l.kind === 'in_stock').map((l) => l.id)
       if ((await takeStockLines(sp, tenantId, take, soldOut)).short) throw new Refused('A piece it had sold out since: Undo can\'t put it back. Edit the items instead.')
 
-      if (e.added.length) await sp.update(orderDiscounts).set({ removedAt: stamp }).where(and(eq(orderDiscounts.tenantId, tenantId), inArray(orderDiscounts.id, e.added)))
+      if (e.added.length) await sp.update(orderDiscounts).set({ removedAt: stamp }).where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, e.orderId), inArray(orderDiscounts.id, e.added)))
       if (e.removed.length) await sp.update(orderDiscounts).set({ removedAt: null }).where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, e.orderId), inArray(orderDiscounts.id, e.removed)))
       const offers = await sp.select().from(orderDiscounts).where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, e.orderId), isNull(orderDiscounts.removedAt)))
       const back = offers.filter((o) => e.removed.includes(o.id) && usesOnCod(o)).map((o) => ({ discountId: o.discountId, amount: Number(o.amount), title: o.title }))
@@ -241,10 +224,12 @@ export async function undoEdit(tx: Tx, tenantId: string, actor: Actor, eventId: 
       const price = priceAsKept(lines.map((l) => ({ unitPrice: Number(l.unitPrice), qty: l.qty, hsn: l.hsn, gstBps: l.gstBps, productDiscount: pd.get(l.id) ?? 0 })),
         offers.map((x) => ({ class: x.class, method: x.method, amount: Number(x.amount) })), { shipping: Number(e.shippingBefore), codCharge: Number(o!.codCharge) },
         { registered: chargesGst({ gstin: o!.sellerGstin, scheme: (o!.sellerScheme ?? 'regular') as Scheme }), pricesIncludeGst: o!.pricesIncludeGst, placedAt: o!.placedAt })
-      if (price.total !== Number(e.totalBefore)) console.error('[undoEdit] the total put back differs from the one before the edit', { order: e.orderId })
+      // The price the order had: anything else means the order moved in a way this Undo does not know (never written).
+      if (price.total !== Number(e.totalBefore)) throw new Refused('Its money changed since. Edit the items instead.')
       const cogs = lines.every((l) => l.unitCost !== null) ? lines.reduce((a, l: LiveLine) => a + Number(l.unitCost) * l.qty, 0) : null
       await writeReprice(sp, tenantId, e.orderId, lines.map((l) => l.id), { ...price, codCharge: Number(o!.codCharge) },
         { subtotal: lines.reduce((a, l) => a + Number(l.unitPrice) * l.qty, 0), shipping: Number(e.shippingBefore), cogs })
+      await rearrive(sp, tenantId, e.orderId, now)
       const undone = await record(sp, tenantId, e.orderId, actor, 'undone', stamp, { undoes: eventId, reason: 'items_edited' })
       return { ok: true as const, eventId: undone, total: price.total, soldOut, backInStock }
     })

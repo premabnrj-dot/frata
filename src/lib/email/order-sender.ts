@@ -2,6 +2,7 @@ import 'server-only'
 import { and, asc, count, eq, gte, inArray, isNull, sql } from 'drizzle-orm'
 import { withTenant } from '@/lib/db/tenant'
 import { orders, orderEvents, orderLines, shipments } from '@/lib/db/schema-orders'
+import { orderEdits } from '@/lib/db/schema-edits'
 import { emailMessages, emailShops, emailSuppressions, shopEmails } from '@/lib/db/schema-email'
 import { enqueue, GiveUp, Later, type OutboxRow } from '@/lib/outbox'
 import { shopLook, shopSettingsFor } from '@/lib/queries/storefront'
@@ -88,8 +89,10 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
     const [undone] = eventId ? await tx.select({ id: orderEvents.id }).from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.undoes, eventId))).limit(1) : []
     const still = stillTrue(kind, { ...o, stockShort: false }, now, !!undone)
     if (still !== 'ok') return skip(still)
-    // Items changed again since (and not undone): that change's email says where the order stands.
-    const [later] = kind === 'edited' && eventId ? await tx.execute(sql`select 1 from ${orderEvents} l where l.tenant_id = ${tenantId} and l.order_id = ${o.id} and l.kind = 'items_edited'
+    // Items changed again since, that change emailing too (and not undone): its email says where the order stands. A
+    // later change saved without the email leaves this one to say it.
+    const [later] = kind === 'edited' && eventId ? await tx.execute(sql`select 1 from ${orderEvents} l join ${orderEdits} x on x.tenant_id = l.tenant_id and x.event_id = l.id and x.notify
+      where l.tenant_id = ${tenantId} and l.order_id = ${o.id} and l.kind = 'items_edited'
       and l.at > (select e.at from ${orderEvents} e where e.tenant_id = ${tenantId} and e.id = ${eventId}) and not exists (select 1 from ${orderEvents} u where u.tenant_id = l.tenant_id and u.undoes = l.id) limit 1`) : []
     if (later) return skip('superseded')
     if (!shop.publishedAt) return skip('shop_closed')

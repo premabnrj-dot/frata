@@ -80,6 +80,14 @@ and the edit is applied only when that payment is captured. Built as:
    update grant: a re-plan moves the product offers' part of a kept line's discount. A COD order keeps its own COD fee
    (the stored one, as its delivery and offers; only the maximum is today's). The panel's room and the save's are one
    rule (`roomOf`/`sellsAs`: checkout's `sellable` with the order's own pieces back). E2e: `77-order-edit`.
+   Reviews (2026-11-12) folded in: an order switched to pay on delivery that has a Razorpay order is not editable
+   until OE·2 (it could still be paid at the old online total), so OE·1 asks Razorpay nothing; the four actions are
+   limited per member; `order_edit_lines.variant_id` is a same-shop FK; a removed line holds no stock (CHECK); the
+   arrival dates follow the live lines; only a later edit that emails supersedes an earlier edit's email; Activity
+   says "emailed" once it went; `order_lines_product` became `order_lines_product_live` (live lines only).
+   **Deploy:** apply 0111 and 0112 before pushing the code: every reader selects `removed_at`, and `writeReprice` needs
+   the `product_discount` grant. Both are additive (nullable columns, new tables, a new index built before the old one
+   is dropped), so the code running before the push keeps working.
 
 **OE·2 · paid online** (increase decided 2026-11-12: pay the difference first)
 6. `refund()` in `src/lib/payments/razorpay.ts` (normal speed; before each create, list the payment's refunds and match
