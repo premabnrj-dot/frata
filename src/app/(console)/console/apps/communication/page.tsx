@@ -14,6 +14,7 @@ import { aboutProps } from '../_components/about-data'
 import { dateTimeIN } from '@/lib/format-date'
 import { ConnectChoices } from './connect'
 import { DisconnectOnly, NumberHealth } from './health'
+import { InfoTip } from '@/components/ui/info-tip'
 
 export const metadata = { title: 'Messages' }
 
@@ -39,7 +40,7 @@ export default async function MessagesSetupPage() {
     const ready = isMessagesConfigured() && isWhatsAppSignupConfigured()
     return (
       <>
-        <PageHeader title="Connect WhatsApp" back={back} meta="Your own business number. Meta bills messages to you." />
+        <PageHeader title="Connect WhatsApp" back={back} meta={<span className="inline-flex items-center gap-1">Your own business number<InfoTip about="cost and time">Meta bills messages to you. Connecting takes about 3 minutes.</InfoTip></span>} />
         <ConnectChoices ready={ready} canManage={canManage} appId={META_APP_ID} configId={WA_CONFIG_ID} graphVersion={GRAPH_VERSION} />
       </>
     )

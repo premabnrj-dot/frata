@@ -78,7 +78,6 @@ export default async function SettingsPage() {
   return (
     <>
       <PageHeader title="Settings" />
-      <p className="-mt-2 text-sm text-muted-foreground">What you save here shows on your shop straight away.</p>
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Section as="nav" flush ariaLabel="Settings">
           {SECTIONS.filter((s) => s.editors.includes(auth.membership.role)).map((s) => (

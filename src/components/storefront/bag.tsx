@@ -67,7 +67,7 @@ export function BagContents({ onCheckout, onKeepShopping, added = null }: { onCh
       <ul className="divide-y divide-store-line">
         {(q?.lines ?? []).map((l) => (
           <li key={l.variantId} data-added={l.variantId === added || undefined} className="store-bag-line flex gap-3 py-3">
-            {l.image ? <img src={urlFor(l.image.base, pick(l.image.widths, 160))} alt="" width={56} height={70} className="h-[70px] w-14 shrink-0 rounded-sm bg-store-chip object-cover" /> : <span className="h-[70px] w-14 shrink-0 rounded-sm bg-store-chip" />}
+            {l.image ? <img src={urlFor(l.image.base, pick(l.image.widths, 160))} alt="" width={56} height={70} data-photo className="h-[70px] w-14 shrink-0 rounded-sm object-cover" /> : <span className="h-[70px] w-14 shrink-0 rounded-sm bg-store-chip" />}
             <div className="min-w-0 flex-1 space-y-1">
               <p className="leading-snug">{l.title}</p>
               <p className="text-sm text-store-sub">{l.values.join(' · ')}</p>
@@ -110,8 +110,15 @@ export function BagContents({ onCheckout, onKeepShopping, added = null }: { onCh
  */
 export function OfferRows({ applied }: { applied: PublicQuote['appliedPrepaid'] }) {
   return <>{applied.map((a, i) => (
-    <p key={`${a.class}-${i}`} className="flex justify-between text-store-good"><span>{a.class === 'payment' ? `${a.title} (paying online)` : a.class === 'shipping' ? `${a.title}: free delivery` : a.title}</span><span className="tabular-nums">−{inr(a.amount)}</span></p>
+    <p key={`${a.class}-${i}`} className="flex justify-between text-store-good"><span>{savingName(a)}</span><span className="tabular-nums">−{inr(a.amount)}</span></p>
   ))}</>
+}
+
+/** An offer's name with what it is, said once: "Pay online, save" already says online, so no "(paying online)" after it. */
+function savingName(a: { class: string; title: string }): string {
+  if (a.class === 'payment') return /online/i.test(a.title) ? a.title : `${a.title} (paying online)`
+  if (a.class === 'shipping') return /free (delivery|shipping)/i.test(a.title) ? a.title : `${a.title}: free delivery`
+  return a.title
 }
 
 /** The nearest listed offer the bag misses by an amount: "₹420 more for Diwali". One line, never a timer. */

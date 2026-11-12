@@ -85,7 +85,7 @@ export default {
         await p.getByText('Pay online, save ₹50', { exact: true }).first().waitFor() // the bar
         const bag = p.getByRole('dialog', { name: 'Your bag' })
         await bag.getByText('Festive', { exact: true }).waitFor(); await bag.getByText('−₹249').waitFor()
-        await bag.getByText('Pay online, save (paying online)').waitFor(); await bag.getByText('−₹50').waitFor()
+        await bag.getByText('Pay online, save', { exact: true }).waitFor(); await bag.getByText('−₹50').waitFor()
         await bag.getByText(inr(online)).waitFor()
         await p.screenshot({ path: t.out('bag'), fullPage: true })
       })

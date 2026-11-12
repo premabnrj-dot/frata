@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { PAYMENT, RISK_LABEL, STATE, TABS } from '../orders/_components/labels'
 import { CopyLink } from './copy-link'
 import { PictoTile } from '@/components/brand/illustrations'
+import { InfoTip } from '@/components/ui/info-tip'
 
 // =============================================================================
 // FILE: src/app/(console)/console/_components/today.tsx
@@ -100,7 +101,7 @@ export function Today({ s, setup, now, share }: { s: TodaySummary | null; setup:
           <div className="grid items-end gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
             <div className="flex gap-6 md:grid md:gap-3">
               <p className="grid"><b className="font-mono text-xl font-semibold tabular-nums">{count(weekOrders)}</b><span className="text-xs text-muted-foreground">orders placed</span></p>
-              <p className="grid"><b className="font-mono text-xl font-semibold tabular-nums"><Money paise={paise(weekValue)} /></b><span className="text-xs text-muted-foreground">their value · cancelled left out</span></p>
+              <p className="grid"><b className="font-mono text-xl font-semibold tabular-nums"><Money paise={paise(weekValue)} /></b><span className="inline-flex items-center text-xs text-muted-foreground">their value<InfoTip about="this value">Cancelled orders are left out.</InfoTip></span></p>
             </div>
             <div>
               {/* Each day's count over its bar, and today said to be still going (visual changes, owner-approved 2026-11-08). */}

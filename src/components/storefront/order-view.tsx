@@ -104,7 +104,7 @@ export function OrderView({ prefix, returnsHref }: { prefix: string; returnsHref
       <ul className="divide-y divide-store-line border-y border-store-line">
         {v.lines.map((l, i) => (
           <li key={i} className="flex items-center gap-3 py-3 text-sm">
-            {l.imageBase && l.imageWidths ? <img src={urlFor(l.imageBase, pick(l.imageWidths, 160))} alt="" width={48} height={60} className="h-[60px] w-12 rounded-sm object-cover" /> : <span className="h-[60px] w-12 rounded-sm bg-store-chip" />}
+            {l.imageBase && l.imageWidths ? <img src={urlFor(l.imageBase, pick(l.imageWidths, 160))} alt="" width={48} height={60} data-photo className="h-[60px] w-12 rounded-sm object-cover" /> : <span className="h-[60px] w-12 rounded-sm bg-store-chip" />}
             <span className="min-w-0 flex-1">{l.title}<span className="block text-store-sub">{[...l.optionValues, `× ${l.qty}`].join(' · ')}{l.kind === 'preorder' ? ' · pre-order' : l.kind === 'made_to_order' ? ' · made to order' : ''}</span></span>
             <span className="tabular-nums">{inr(l.unitPrice * l.qty)}</span>
           </li>

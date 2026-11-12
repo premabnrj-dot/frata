@@ -31,6 +31,7 @@ export function noticeWords(s: NoticeSource, shopName: string): NoticeWords {
     case 'billing_notice':
       if (s.billingKind === 'debit_notice') return { title: `${s.amount} will be debited${s.debitAt ? ` on ${s.debitAt}` : ''}`, body: `${shopName}'s Frrata bill${s.invoiceNumber ? ` ${s.invoiceNumber}` : ''}. Nothing to do if this looks right.` }
       if (s.billingKind === 'failed') return { title: `Your payment of ${s.amount} didn't go through`, body: `We'll try again. Pay now from Plan and billing to keep ${shopName} running without a break.` }
+      if (s.billingKind === 'acknowledge') return { title: `${s.amount} is due on your Frrata bill`, body: `${shopName}'s bill${s.invoiceNumber ? ` ${s.invoiceNumber}` : ''} is still unpaid. Pay it from Plan and billing.` }
       return { title: `Your Frrata bill: ${s.amount}`, body: `${shopName}'s bill${s.invoiceNumber ? ` ${s.invoiceNumber}` : ''} is ready in Plan and billing.` }
     case 'support_session': {
       const why = SUPPORT_REASON_LABEL[s.reason as SupportReason] ?? 'Support'
@@ -39,4 +40,15 @@ export function noticeWords(s: NoticeSource, shopName: string): NoticeWords {
     case 'admin':
       return { title: s.title, body: s.body ?? '' }
   }
+}
+
+/**
+ * A notice whose source row is gone (or was never readable): still titled by what it is, never a bare "Notice" (full
+ * e2e 2026-11-12: three Billing notices read "Notice"). Admin's own words win when it has them.
+ */
+export function noticeFallback(n: { sourceKind: string; type: string; title: string | null; body: string | null }): NoticeWords {
+  if (n.title) return { title: n.title, body: n.body ?? '' }
+  if (n.sourceKind === 'billing_notice') return { title: 'Your Frrata bill', body: 'See it in Plan and billing.' }
+  if (n.sourceKind === 'support_session') return { title: 'Frrata support opened your shop', body: 'Every change they made is in Activity.' }
+  return { title: TYPE_LABEL[n.type as NoticeType] ?? 'Frrata update', body: n.body ?? '' }
 }

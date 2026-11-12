@@ -112,7 +112,7 @@ export function Strip({ a, visits }: { a: Analytics; visits?: StripVisits }) {
         {tile(<span className="inline-flex items-center gap-1">Visits<InfoTip about="how visits are counted">{HOW_VISITS}</InfoTip></span>, v ? <Numeric>{formatCount(v)}</Numeric> : '—', visitChange(v, visits.prev.visitors, visits.since, a.start, visits.prevRates))}
         {tile('Orders per 100 visits', rate === null ? '—' : rate.toFixed(2),
           rate !== null && before !== null ? <span className="text-xs text-muted-foreground">from {before.toFixed(2)}</span>
-            : rate === null && visits.fullFrom && visits.since && visits.since > a.start ? <span className="text-xs text-muted-foreground">from {dayMonthIN(visits.fullFrom)}</span> : null)}
+            : rate === null && visits.since && visits.since > a.start ? <span className="text-xs text-muted-foreground">Counting since {dayMonthIN(visits.since)}</span> : null)}
         {tile('Orders', <Numeric>{c.orders}</Numeric>, <Change now={c.orders} before={p.orders} />)}
         {tile('Came back (RTO)', out ? shareOf(c.rto, out) : '—', <span className="text-xs text-muted-foreground">{out ? `of ${out} with an outcome` : 'none with an outcome yet'}</span>)}
       </dl>
@@ -197,7 +197,7 @@ export function Pincodes({ a }: { a: Analytics }) {
         <DataTableHead><th>Pincode</th><th className="text-right">Came back</th></DataTableHead>
         <DataTableBody>
           {a.pincodes.map((p) => (
-            <DataTableRow key={p.pincode}><Td cell="a"><Numeric>{p.pincode}</Numeric></Td><Td cell="b" className="text-right">{judgeable(p.outcomes) ? `${formatPercent(p.rto / p.outcomes, 0)} of ${p.outcomes}` : `${p.rto} of ${p.outcomes}`}</Td></DataTableRow>
+            <DataTableRow key={p.pincode}><Td cell="a"><Numeric>{p.pincode}</Numeric></Td><Td cell="b" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Came back </span>{judgeable(p.outcomes) ? `${formatPercent(p.rto / p.outcomes, 0)} of ${p.outcomes}` : `${p.rto} of ${p.outcomes}`}</Td></DataTableRow>
           ))}
         </DataTableBody>
       </DataTable>

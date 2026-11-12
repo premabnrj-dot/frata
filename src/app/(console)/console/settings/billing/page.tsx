@@ -65,7 +65,7 @@ export default async function PlanAndBillingPage() {
           <>
             <dl className="grid gap-3 text-sm sm:grid-cols-3">
               <div><dt className="text-muted-foreground">Delivered orders</dt><dd className="text-lg font-semibold"><Numeric>{e.bill.usage.orders.toLocaleString('en-IN')}</Numeric> <span className="text-sm font-normal text-muted-foreground">of {e.bill.usage.included.toLocaleString('en-IN')} included</span></dd></div>
-              <div><dt className="text-muted-foreground">Delivered value</dt><dd className="text-lg font-semibold"><Money paise={paise(delivered)} /></dd></div>
+              <div><dt className="text-muted-foreground">Delivered value</dt><dd className="text-lg font-semibold"><Money paise={paise(delivered)} decimals /></dd></div>
               <div><dt className="text-muted-foreground">Fee so far</dt><dd className="text-lg font-semibold"><Money paise={paise(feeSoFar)} decimals /></dd></div>
             </dl>
             {usage(e.bill.usage.orders, e.bill.usage.included).over && <p className="text-sm text-warn-text">Over included orders · same fee per order</p>}

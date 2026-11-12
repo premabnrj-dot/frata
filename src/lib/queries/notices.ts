@@ -4,7 +4,7 @@ import { withTenant } from '@/lib/db/tenant'
 import { noticePrefs, noticeReads, notices } from '@/lib/db/schema-email'
 import { billingNotices, frrataInvoices } from '@/lib/db/schema-billing'
 import { supportSessions } from '@/lib/db/schema'
-import { noticeWords, OPTIONAL_TYPES, DEFAULT_EMAIL, type NoticeSource, type NoticeType, type OptionalType } from '@/domains/email/notices'
+import { noticeFallback, noticeWords, OPTIONAL_TYPES, DEFAULT_EMAIL, type NoticeSource, type NoticeType, type OptionalType } from '@/domains/email/notices'
 import { formatInr } from '@/lib/format'
 import { dayMonthIN } from '@/lib/format-date'
 import type { Paise } from '@/domains/money/paise'
@@ -41,7 +41,7 @@ export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string): 
       const v = n.sourceId ? visit.get(n.sourceId) : undefined
       if (v) src = { kind: 'support_session', reason: v.reason, minutes: Math.round((v.expiresAt.getTime() - v.startedAt.getTime()) / 60_000) }
     } else if (n.title) src = { kind: 'admin', title: n.title, body: n.body }
-    out.set(n.id, src ? noticeWords(src, shopName) : { title: n.title ?? 'Notice', body: n.body ?? '' })
+    out.set(n.id, src ? noticeWords(src, shopName) : noticeFallback(n))
   }
   return out
 }

@@ -12,6 +12,9 @@ export function ShareSheet({ share, target }: { share: ShareData; target: ShareT
   const [open, setOpen] = useState(false)
   const [said, setSaid] = useState('')
   const [qr, setQr] = useState<string | null>(null)
+  // The card is drawn on the shop's own address; until it loads, or if it can't (a shop address this browser can't
+  // reach), a plain tile of the same shape stands in, never the browser's broken-image glyph.
+  const [cardFailed, setCardFailed] = useState(false)
   const [pending, start] = useTransition()
   const linkRef = useRef<HTMLInputElement>(null)
   const copy = (text: string, done: string) => (navigator.clipboard?.writeText(text) ?? Promise.reject(new Error('no clipboard'))).then(
@@ -25,11 +28,13 @@ export function ShareSheet({ share, target }: { share: ShareData; target: ShareT
   const opt = 'flex min-h-16 flex-col items-center justify-center gap-1 rounded-md border border-border bg-card px-2 text-xs font-medium hover:bg-muted'
   return (
     <>
-      <Button variant="secondary" disabled={!share.ready} onClick={() => { setSaid(''); setQr(null); setOpen(true) }}>Share</Button>
+      <Button variant="secondary" disabled={!share.ready} onClick={() => { setSaid(''); setQr(null); setCardFailed(false); setOpen(true) }}>Share</Button>
       <Dialog open={open} onClose={() => setOpen(false)} title={`Share ${share.title}`}
         actions={<Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Done</Button>}>
         <div className="space-y-3">
-          {share.card && <img src={share.card} alt="" width={1200} height={630} className="aspect-[1200/630] w-full rounded-md border border-border object-cover" />}
+          {share.card && (cardFailed
+            ? <div aria-hidden="true" className="aspect-[1200/630] w-full rounded-md border border-border bg-muted" />
+            : <img src={share.card} alt="" width={1200} height={630} onError={() => setCardFailed(true)} ref={(el) => { if (el?.complete && el.naturalWidth === 0) setCardFailed(true) }} className="aspect-[1200/630] w-full rounded-md border border-border bg-muted object-cover" />)}
           <div className="grid grid-cols-4 gap-2">
             <a className={opt} href={share.whatsapp} target="_blank" rel="noopener noreferrer">WhatsApp</a>
             <button type="button" className={opt} onClick={() => copy(share.links.share_instagram, 'Copied for Instagram.')}>Instagram</button>

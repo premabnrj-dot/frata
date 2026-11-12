@@ -40,7 +40,7 @@ export function OfferStrip({ s }: { s: OfferStats }) {
         <Kpi k="₹ given" v={<Money paise={paise(a.given)} />} f={<><Numeric>{a.orders}</Numeric> orders with an offer</>} />
         <Kpi k="Prepaid share" v={share(a.prepaid, a.orders)} f="of orders with an offer" />
         <Kpi k="Average order with an offer" v={rs(a.aov)} f={<>{rs(w.aov)} without</>} />
-        <Kpi k="₹ given per delivered order" v={rs(a.givenPerDelivered)} f={<>₹ given ÷ <Numeric>{a.delivered}</Numeric> delivered</>} />
+        <Kpi k="₹ given per delivered order" v={rs(a.givenPerDelivered)} f={<><Numeric>{a.delivered}</Numeric> delivered</>} />
       </dl>
     </Section>
   )

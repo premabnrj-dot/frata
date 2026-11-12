@@ -62,7 +62,7 @@ export function OnlinePayments({ status, support, available, now }: { status: St
               <input id="key-id" value={keyId} onChange={(e) => setKeyId(e.target.value)} autoComplete="off" spellCheck={false} placeholder="rzp_live_…" aria-invalid={err?.field === 'keyId' || undefined}
                 className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /></div>
             <div className="space-y-1"><div className="flex items-center"><label htmlFor="key-secret" className="text-sm font-medium">Key secret</label><InfoTip about="the key secret">Checked with Razorpay before saving: wrong keys are refused and nothing changes. Saved keys are encrypted and never shown again.</InfoTip></div>
-              <input id="key-secret" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} autoComplete="off" placeholder={status ? 'Saved — paste a new one to change it' : ''} aria-invalid={err?.field === 'keySecret' || undefined}
+              <input id="key-secret" type="password" value={secret} onChange={(e) => setSecret(e.target.value)} autoComplete="off" placeholder={status ? 'Saved · paste a new one' : ''} aria-invalid={err?.field === 'keySecret' || undefined}
                 className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /></div>
             <p className="text-xs text-muted-foreground">Razorpay → Account &amp; Settings → API keys. The secret is shown there once: generate a new pair if you do not have it.</p>
             <div className="flex flex-wrap items-center gap-3">
@@ -124,7 +124,8 @@ function MoneyFlow() {
       </ol>
       <figcaption className="flex items-center gap-2 text-xs text-muted-foreground">
         <span aria-hidden="true" className="inline-block w-10 border-t-2 border-dashed border-thread" />
-        Razorpay tells Frrata, so the order is marked paid. Frrata never holds your money.
+        Razorpay tells your shop it&apos;s paid
+        <InfoTip about="how a payment reaches you">Razorpay tells Frrata, so the order is marked paid. Frrata never holds your money.</InfoTip>
       </figcaption>
     </figure>
   )

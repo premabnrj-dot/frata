@@ -226,6 +226,8 @@ export default {
       await db.begin(async (x) => {
         await x`set local session_replication_role = replica`
         await x`delete from billing_notices where tenant_id = ${KESAR}`
+        // Their console notices too: a notice whose billing row is gone has nothing to be worded from.
+        await x`delete from notices where tenant_id = ${KESAR} and source_kind = 'billing_notice'`
         await x`delete from billing_mandate_setups where tenant_id = ${KESAR}`
         await x`delete from billing_events`
         await x`delete from frrata_payments where tenant_id = ${KESAR}`

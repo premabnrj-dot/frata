@@ -336,7 +336,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       <ul className="divide-y divide-store-line text-sm">
         {lines.map((l) => (
           <li key={l.variantId} className="flex items-center gap-3 py-2">
-            {l.image ? <img src={urlFor(l.image.base, pick(l.image.widths, 160))} alt="" width={40} height={50} className="h-[50px] w-10 rounded-sm object-cover" /> : <span className="h-[50px] w-10 rounded-sm bg-store-chip" />}
+            {l.image ? <img src={urlFor(l.image.base, pick(l.image.widths, 160))} alt="" width={40} height={50} data-photo className="h-[50px] w-10 rounded-sm object-cover" /> : <span className="h-[50px] w-10 rounded-sm bg-store-chip" />}
             <span className="min-w-0 flex-1">{l.title}<span className="block text-store-sub">{l.values.join(' · ')} × {l.qty}</span></span>
             <span className="tabular-nums">{inr(l.unitPrice * l.qty)}</span>
           </li>

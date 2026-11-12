@@ -89,10 +89,13 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const info = TABS.find((t) => t.tab === tab)!
   // Couldn't deliver jumps to the front when it holds anything (design language 53): a failed delivery is today's work.
   const ordered = counts.couldnt_deliver > 0 ? [...TABS].sort((a, b) => Number(b.tab === 'couldnt_deliver') - Number(a.tab === 'couldnt_deliver')) : TABS
+  // Couldn't deliver and Coming back show only while they hold an order (or are the open view): nothing records a
+  // failed delivery yet (ndr_at is never written), so an always-empty tab would only widen the row.
+  const shown = ordered.filter((t) => (t.tab !== 'couldnt_deliver' && t.tab !== 'coming_back') || counts[t.tab] > 0 || t.tab === tab)
   return (
     <>
       <PageHeader title="Orders" />
-      <ViewTabs label="Order views" tabs={ordered.map((t) => ({ href: href({ tab: t.tab, q: '' }), label: t.label, count: counts[t.tab], current: t.tab === tab, apart: t.tab === 'not_paid' }))} />
+      <ViewTabs label="Order views" scroll tabs={shown.map((t) => ({ href: href({ tab: t.tab, q: '' }), label: t.label, count: counts[t.tab], current: t.tab === tab, apart: t.tab === 'not_paid' }))} />
       <SearchField label="Search orders" placeholder="Search number, name or phone" value={q} clearHref={href({ q: '' })} hidden={tab !== 'to_confirm' ? { tab } : undefined} />
       {/* Always the Queue, even empty: its toast (and Undo) must outlive the last row leaving the tab (e2e 49). */}
       <Queue rows={rows} label={`Orders · ${info.label}`} slipSize={queueShop.slipSize} empty={
