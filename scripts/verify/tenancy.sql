@@ -2828,4 +2828,43 @@ do $$ declare n int; begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 72 checks passed'
+-- 73. A3 self-serve add-on trials (0112–0113): the shop's only writes to tenant_addons are three definers; the shop is
+-- the session's, the caller its owner or admin, the price the newest and the one shown; one trial per shop and add-on.
+do $$ begin
+  if has_function_privilege('frata_admin', 'app_start_addon_trial(uuid, text, uuid)', 'execute') or has_function_privilege('authenticated', 'app_start_addon_trial(uuid, text, uuid)', 'execute')
+     or has_function_privilege('anon', 'app_end_addon_trial(uuid, text)', 'execute') or has_function_privilege('service_role', 'app_stop_addon(uuid, text)', 'execute')
+  then raise exception 'FAIL: another role runs the trial definers'; end if;
+  if has_table_privilege('frata_app', 'tenant_addons', 'insert') or has_table_privilege('frata_app', 'tenant_addons', 'update') then raise exception 'FAIL: frata_app writes add-ons'; end if;
+end $$;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare p uuid; e timestamptz; n int; begin
+  select id into p from addon_prices where module = 'delivery_zones' order by version desc limit 1;
+  -- Not the shop's owner or admin (B's staff member), a stale price, no shop at all: refused.
+  begin perform app_start_addon_trial('aaaaaaaa-0000-0000-0000-000000000001', 'delivery_zones', p); raise exception 'FAIL: a stranger started a trial'; exception when sqlstate 'P0001' then null; end;
+  begin perform app_start_addon_trial('99999999-9999-9999-9999-999999999999', 'delivery_zones', gen_random_uuid()); raise exception 'FAIL: a price never shown'; exception when sqlstate 'P0001' then null; end;
+  e := app_start_addon_trial('99999999-9999-9999-9999-999999999999', 'delivery_zones', p);
+  if e < now() + interval '13 days' or e > now() + interval '15 days' then raise exception 'FAIL: trial length %', e - now(); end if;
+  select count(*) into n from tenant_addons where module = 'delivery_zones' and by_shop and tenant_id = '11111111-1111-1111-1111-111111111111';
+  if n <> 2 then raise exception 'FAIL: a trial writes its trial and its paid row, got %', n; end if;
+  if (select starts_at from tenant_addons where addon_price_id = p and by_shop) <> e then raise exception 'FAIL: the paid row starts when the trial ends'; end if;
+  -- A second trial: refused, now and after ending it.
+  begin perform app_start_addon_trial('99999999-9999-9999-9999-999999999999', 'delivery_zones', p); raise exception 'FAIL: two trials'; exception when sqlstate 'P0001' then null; end;
+  if not app_end_addon_trial('99999999-9999-9999-9999-999999999999', 'delivery_zones') then raise exception 'FAIL: End trial'; end if;
+  if exists (select 1 from tenant_addons where module = 'delivery_zones' and (ends_at is null or ends_at > starts_at)) then raise exception 'FAIL: End trial left a row live'; end if;
+  begin perform app_start_addon_trial('99999999-9999-9999-9999-999999999999', 'delivery_zones', p); raise exception 'FAIL: a trial after a trial'; exception when sqlstate 'P0001' then null; end;
+  -- Another shop's rows: never touched (B's Admin trial of reviews stays open).
+  perform app_end_addon_trial('99999999-9999-9999-9999-999999999999', 'reviews');
+  perform app_stop_addon('99999999-9999-9999-9999-999999999999', 'reviews');
+end $$;
+rollback;
+do $$ begin
+  if not exists (select 1 from tenant_addons where tenant_id = '22222222-2222-2222-2222-222222222222' and module = 'reviews' and reason = 'proof') then raise exception 'FAIL: B add-on changed'; end if;
+end $$;
+-- A paid row whose price is another add-on's: refused by the key.
+do $$ begin
+  insert into tenant_addons (tenant_id, module, addon_price_id, created_by) select '22222222-2222-2222-2222-222222222222', 'reviews', id, 'aaaaaaaa-0000-0000-0000-000000000001' from addon_prices where module = 'delivery_zones' limit 1;
+  raise exception 'FAIL: a price of another add-on';
+exception when foreign_key_violation then null; end $$;
+
+\echo 'tenancy proof — all 73 checks passed'

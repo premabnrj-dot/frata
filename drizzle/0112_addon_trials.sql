@@ -1,0 +1,2 @@
+ALTER TABLE "tenant_addons" ADD COLUMN "by_shop" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "tenant_addons_one_shop_trial" ON "tenant_addons" USING btree ("tenant_id","module") WHERE "tenant_addons"."by_shop" and "tenant_addons"."trial_ends_at" is not null;

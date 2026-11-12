@@ -6,7 +6,7 @@
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
-import { check, index, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, check, index, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { ADD_ONS, MODULE_KEYS, PLAN_GRANTABLE } from '@/domains/modules/registry'
 import { sqlList } from '@/domains/tenancy/roles'
 import { at, createdAt, id, money, tenants } from './schema'
@@ -53,12 +53,16 @@ export const tenantAddons = pgTable('tenant_addons', {
   startsAt: at('starts_at').notNull().defaultNow(),
   endsAt: at('ends_at'),
   trialEndsAt: at('trial_ends_at'),
+  /** Started by the shop itself (A3 self-serve trial, and its paid row), never by Frrata staff. */
+  byShop: boolean('by_shop').notNull().default(false),
   reason: text('reason'),
   createdBy: uuid('created_by').notNull(),
   createdAt: createdAt(),
 }, (t) => [
   index('tenant_addons_tenant').on(t.tenantId),
   check('tenant_addons_module', sql`${t.module} in (${sql.raw(sqlList(PLAN_GRANTABLE))})`),
+  // One self-serve trial per shop and add-on, ever (A3 review Sec H3; Admin's trials are not by_shop).
+  uniqueIndex('tenant_addons_one_shop_trial').on(t.tenantId, t.module).where(sql`${t.byShop} and ${t.trialEndsAt} is not null`),
   check('tenant_addons_paid_or_trial', sql`(${t.addonPriceId} is not null) <> (${t.trialEndsAt} is not null)`),
 ])
 

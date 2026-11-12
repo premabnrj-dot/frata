@@ -785,6 +785,20 @@
       "when": 1794474746548,
       "tag": "0111_delivery_zones_access",
       "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1794474993586,
+      "tag": "0112_addon_trials",
+      "breakpoints": true
+    },
+    {
+      "idx": 113,
+      "version": "7",
+      "when": 1794474995442,
+      "tag": "0113_addon_trials_access",
+      "breakpoints": true
     }
   ]
 }
