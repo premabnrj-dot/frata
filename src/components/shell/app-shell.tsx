@@ -6,6 +6,7 @@ import { SHELL_FONT_VARS } from './fonts'
 import { BottomBar, SidebarNav, type NavGroup, type NavItem } from './nav'
 import { NavProgress } from './nav-progress'
 import { Monogram } from '@/components/brand/monogram'
+import { Toaster } from '@/components/ui/toast'
 
 // =============================================================================
 // FILE: src/components/shell/app-shell.tsx — ONE shell for Console and Admin.
@@ -105,7 +106,10 @@ function Account({ email, ink }: { email: string | null; ink: boolean }) {
 export function AppShell({ ink = false, title, tag, places = [], navLabel, groups, tabs, more, foot, email, tenantId, banner, children }: ShellProps) {
   const surface = ink ? 'ink' : undefined
   return (
-    <div data-shell data-tenant={tenantId} style={{ '--shell-top': banner ? '2.75rem' : '0px' } as CSSProperties /* the banner's own height reads this too */} className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
+    <div data-shell data-tenant={tenantId} style={{ '--shell-top': banner ? '2.75rem' : '0px' } as CSSProperties /* the banner's own height reads this too */} className={`min-h-dvh bg-background [--toast-lift:3.5rem] md:[--toast-lift:0px] ${SHELL_FONT_VARS}`}>
+      {/* The surface's ONE Toaster (§ Feedback): inside [data-shell] (its font and focus ring), outside main (never under
+          its aria-busy); Admin's is calm (no snap). The shell's own polite region below serves its announce(). */}
+      <Toaster region={false} calm={ink}>
       <a href="#content" className="sr-only text-sm font-medium text-foreground focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-md focus:bg-card focus:px-3 focus:py-2">Skip to content</a>
       {banner}
       <Suspense fallback={null}><NavProgress /></Suspense>
@@ -133,6 +137,7 @@ export function AppShell({ ink = false, title, tag, places = [], navLabel, group
       </div>
       <BottomBar label={navLabel} tabs={tabs} more={[...more, ...foot]} ink={ink} moreFoot={<><Switcher places={places} ink={false} /><Account email={email} ink={false} /></>} />
       <div id={ANNOUNCER_ID} aria-live="polite" aria-atomic="true" className="sr-only" />
+      </Toaster>
     </div>
   )
 }

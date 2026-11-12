@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.21.0
+  version: 5.22.0
   verified: 2026-11-12
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -588,6 +588,35 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 - Cards: 4:5 cover, second photo on hover (pointer devices only), name, "From
   ₹" when prices differ, every colour as a small swatch, one tag at most.
 - Before a shop opens every page but the policies is "Opening soon".
+
+## Feedback: toasts, popups, field errors (owner-approved 2026-11-12; spec `docs/specs/2026-11-12-feedback.md`, mockup https://claude.ai/artifact/J74M3yUytfbgkMh4UNQbcp) — the default on every surface
+
+1. **A failure after a button is an error toast** (`toast.error(text, { sub?, action? })`, `src/components/ui/toast.tsx`):
+   save refused, a conflict ("Already confirmed by Riya at 10:42" + Reload), no connection, a server refusal, Admin's
+   result. Ink toast, red mark, one line (+ one short second line), ONE action (Try again / Reload / Show) and ×.
+   **It never leaves by itself** (WCAG 2.2.1), `role="alert"`, Esc or × closes it. Never a red line at the top of a
+   page, never a `?error=` paragraph.
+2. **Success is a toast of kind ok** (green check), 8 s, paused on hover/focus, Undo where reversible (§ Work queues 4).
+   No role of its own: spoken through the one polite region (the shell's, or the Toaster's where there is no shell).
+3. **Field mistakes stay at the field** (`<FieldError>` + `useFieldErrors`, or `<ActionForm>` + `<FieldMessage>`):
+   red edge, one short line with the mark, checked on submit (on blur where a form already does), cleared the moment the field is fixed, nothing typed is ever cleared. On submit,
+   focus goes to the first wrong field and ONE error toast says "2 fields need fixing" with **Show**; it counts down
+   as they are fixed and leaves at zero. The toast never takes focus and is not an alert (said once, politely); inside
+   a Dialog there is no toast (the page behind is inert): the marks and the focus say it.
+4. **Popups confirm what loses work, money or stock** (`Dialog`, the phone sheet), with a pictogram from § Graphic
+   language. A failure inside a popup is shown in that popup (`Dialog`'s error slot), never a second popup or a toast
+   behind it. No other kind of popup for errors.
+5. **Stays where it is** (pinned by its own rule): "Pick a size.", a code that doesn't apply, a failed payment's filled
+   form and its line above Pay, "Price updated to ₹…", a domain's row problem, "Couldn't count" / "Risk unavailable",
+   autosave's "Not saved", Publish's blocking list, `Panel` states, the support-mode and billing banners.
+6. **One toast at a time** (a new one replaces the last), bottom centre, clear of a phone's pay or save bar and never
+   over the focused control (WCAG 2.4.11). The shop's toast wears the shop's colours.
+7. **Motion**: toast in 200 ms (`ease-entrance`, 12 px up), out 200 ms (`ease-exit`); its mark pops once on
+   `--ease-snap` (scale .5 → 1); a field's line drops in 4 px over 200 ms; dialogs as § UX foundation 23/25a. **No
+   shake.** Reduced motion: a 120 ms fade, nothing travels.
+8. **By default**: every surface mounts ONE `<Toaster>` in its layout; `check:feedback` refuses a hand-written error
+   line (`role="alert"` paragraph, `text-danger-text` sentence, `?error=` read) outside the primitives and the rule-5
+   allow-list.
 
 ## Labels, info tips and help text (owner, 2026-11-07 — overrides any earlier "say it under the field")
 

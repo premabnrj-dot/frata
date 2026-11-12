@@ -207,6 +207,14 @@ export async function confirmOrder(input: unknown): Promise<{ ok: boolean; error
 }
 ```
 
+**A result goes back to the form, never into a URL or a cookie** (feedback plan 2026-11-12, frata-design-language
+§ Feedback). A form that posts to a server action is an `<ActionForm action={…}>` (`src/components/ui/action-form.tsx`);
+the action returns `ActionResult` — `{ ok?: string, error?: string, fields?: Record<name, string>, go?: path }` — and
+the form shows it (toast.ok / toast.error, `<FieldMessage name>` under each field, `go` followed after the toast). Never
+`redirect('?error=…')`: any link could put words there (check:feedback refuses it). Client code that calls an action
+itself uses `useToast()` (`toast.error` for a refusal, `toast.ok` or `toast({ text, undo })` for a success), plain
+pending state and `settle(router)` after it, never a `useTransition` around the action (frata-gotchas: Next 15.5).
+
 ## Record actions (1D Orders, 2026-11-07)
 
 - **Roles are passed, not hidden.** Each action's allowed roles go in its

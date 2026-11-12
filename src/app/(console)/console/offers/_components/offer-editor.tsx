@@ -139,7 +139,7 @@ export function OfferEditor({ id, initial, locked, pickers }: { id: string | nul
       </Section>
 
       {!id && <div className="flex gap-2"><Button onClick={save} disabled={pending}>{pending ? 'Saving…' : 'Save as draft'}</Button></div>}
-      {guard.leaveTo && <LeaveDialog what="this offer" onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(v))} />}
+      <LeaveDialog open={!!guard.leaveTo} what="this offer" onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(v))} />
     </div>
   )
 }
