@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { pick, urlFor } from '@/domains/media/sizes'
-import { api, codWhyNotText, inr, type PublicQuote } from './shop-client'
+import { api, inr, type PublicQuote } from './shop-client'
 import { bag, useBag, useOfferCode } from './bag-store'
 import { CloseMark } from './close-mark'
 
@@ -93,7 +93,7 @@ export function BagContents({ onCheckout, onKeepShopping, added = null }: { onCh
           <OfferRows applied={q.appliedPrepaid} />
           <p className="flex justify-between"><span>Delivery</span><span>{q.shipping ? inr(q.shipping) : 'Free'}</span></p>
           {q.cod ? q.cod.charge > 0 && <p className="flex justify-between text-store-sub"><span>Pay on delivery adds {inr(q.cod.charge)}</span><span>if you choose it</span></p>
-            : <p className="text-store-sub">{codWhyNotText(q.codWhyNot)}</p>}
+            : <p className="text-store-sub">{q.codWhy}</p>}
           <p className="flex justify-between pt-1 text-base font-medium"><span>Total</span><span className="store-price tabular-nums">{inr(q.prepaid)}</span></p>
           <button type="button" onClick={onCheckout} className="store-btn store-buy mt-2 h-12 w-full rounded-[var(--store-radius)] bg-store-button text-base font-medium text-store-on-button">Checkout</button>
           <button type="button" onClick={onKeepShopping} className="store-btn-2 h-12 w-full rounded-[var(--store-radius)] border border-store-ink">Keep shopping</button>

@@ -9,7 +9,7 @@ import type { Biz, BizCheck } from './checkout-biz'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { OfferProgress, OfferRows, useQuote } from './bag'
 import { ATTR_KEY, bag, offerCode, useOfferCode } from './bag-store'
-import { api, codWhyNotText, dayRange, inr, type Pay, type PublicListed, type PublicQuote } from './shop-client'
+import { api, dayRange, inr, type Pay, type PublicListed, type PublicQuote } from './shop-client'
 
 // =============================================================================
 // ONE-PAGE CHECKOUT (checkout spec § Design, mockup approved 2026-11-07).
@@ -279,7 +279,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
             <span className="ml-6 block text-sm text-store-sub">{q.cod!.charge ? `Includes a ${inr(q.cod!.charge)} Pay on delivery fee. ` : ''}Cash or UPI to the courier.{saving ? ` No ${inr(saving.amount)} online saving.` : ''}</span>
           </label>
         ) : (
-          <div className="rounded-sm border border-store-line p-3 opacity-70"><b className="font-medium">Pay on delivery</b><p className="text-sm text-store-bad">{codWhyNotText(q.codWhyNot)}</p></div>
+          <div className="rounded-sm border border-store-line p-3 opacity-70"><b className="font-medium">Pay on delivery</b><p className="text-sm text-store-bad">{q.codWhy}</p></div>
         ))}
       </div>
 
@@ -298,7 +298,8 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
           <OfferRows applied={method === 'cod' ? q.cod?.applied ?? [] : q.appliedPrepaid.filter((a) => a.class !== 'payment' || method === 'prepaid')} />
           <p className="flex justify-between"><span>Delivery</span><span>{q.shipping ? inr(q.shipping) : 'Free'}</span></p>
           {method === 'cod' && q.cod?.charge ? <p className="flex justify-between"><span>Pay on delivery fee</span><span>{inr(q.cod.charge)}</span></p> : null}
-          {q.arrives && <p className="flex justify-between text-store-sub"><span>Arrives</span><span>{dayRange(q.arrives)}</span></p>}
+          {q.arrives && q.deliverable && <p className="flex justify-between text-store-sub"><span>Arrives</span><span>{dayRange(q.arrives)}</span></p>}
+          {!q.deliverable && <p role="alert" className="text-sm text-store-bad">This shop does not deliver to this PIN code yet.</p>}
           {returnLine && <p className="flex justify-between text-store-sub"><span>Returns</span><span>{returnLine}</span></p>}
         </div>
       )}
@@ -309,7 +310,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-store-line bg-store-paper px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3 shadow-store-bar">
         <div className="mx-auto max-w-lg">
           <p className="flex justify-between text-sm"><span className="text-store-sub">{method === 'cod' ? 'Pay on delivery' : method === 'prepaid' ? 'Pay online' : 'Choose how to pay'}</span><b className="tabular-nums">{q ? inr(failed && method !== 'cod' ? failed.total : total) : '…'}</b></p>
-          <button type="submit" disabled={busy || !q || q.empty || (!method && !failed)} className="store-btn store-buy mt-2 h-12 w-full rounded-[var(--store-radius)] bg-store-button text-base font-medium text-store-on-button disabled:opacity-60">{busy ? 'Placing your order…' : button}</button>
+          <button type="submit" disabled={busy || !q || q.empty || !q.deliverable || (!method && !failed)} className="store-btn store-buy mt-2 h-12 w-full rounded-[var(--store-radius)] bg-store-button text-base font-medium text-store-on-button disabled:opacity-60">{busy ? 'Placing your order…' : button}</button>
         </div>
       </div>
     </form>

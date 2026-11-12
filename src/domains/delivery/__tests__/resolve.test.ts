@@ -50,7 +50,8 @@ describe('resolveDelivery: zones', () => {
     expect(resolveDelivery('400070', floor, setup())).toMatchObject({ zone: 'Metro', charge: 5900, freeAbove: 149900, days: [2, 3] })
     expect(resolveDelivery('302012', floor, setup())).toMatchObject({ zone: 'Tier 2' })
     expect(resolveDelivery('845401', floor, setup())).toMatchObject({ zone: 'Rest of India', charge: 9900, cod: { on: true, charge: 6900, max: 300000 } })
-    expect(resolveDelivery('799001', floor, setup())).toMatchObject({ zone: 'Special', freeAbove: null, cod: { on: false, why: 'off' } })
+    expect(resolveDelivery('799001', floor, setup())).toMatchObject({ zone: 'Special', freeAbove: null, cod: { on: false, why: 'prepaid_only' } })
+    expect(resolveDelivery('799001', { ...floor, codOn: false }, setup()).cod).toEqual({ on: false, why: 'off' }) // the shop's own switch
   })
   it("the brand's own zone that lists the PIN code beats every preset", () => {
     expect(resolveDelivery('302012', floor, setup({ ownZoneIds: ['Jaipur same city'] }))).toMatchObject({ zone: 'Jaipur same city', charge: 3900, days: [1, 2] })

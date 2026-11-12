@@ -69,6 +69,8 @@ const BUY_EN = {
   inStock: 'In stock', lowStock: 'Only {n} left', preorderBy: 'Pre-order · ships by {date}', madeToOrder: 'Made to order · ships in {a}–{b} days', soldOut: 'Sold out',
   soldOutSr: ', sold out', size: 'Size', photos: 'Photos', choosePhoto: 'Choose a photo', photoOf: 'Photo {i} of {n}', photoAlt: '{title}, photo {i}',
   units: 'Units', cm: 'cm', inches: 'inches', closeGuide: 'Close size guide', offers: 'Offers',
+  pinLabel: 'PIN code', pinCheck: 'Check', pinChecking: 'Checking…', pinBad: 'Type a 6-digit PIN code.', pinFailed: 'We could not check that. Try again.',
+  pinBy: 'Delivers to {place} by {date}', pinNo: "We don't deliver to {place} yet", pinOnline: 'Pay online for this PIN code', pinCodUpTo: 'Pay on delivery for orders up to {max}',
 }
 export type BuyWords = typeof BUY_EN
 const BUY_HI: BuyWords = {
@@ -78,6 +80,8 @@ const BUY_HI: BuyWords = {
   delivery: 'डिलीवरी {flat}', deliveryFreeAbove: ', {above} से ऊपर फ्री',
   inStock: 'स्टॉक में', lowStock: 'सिर्फ़ {n} बचे', preorderBy: 'प्री-ऑर्डर · {date} तक भेजा जाएगा', madeToOrder: 'ऑर्डर पर बनेगा · {a}–{b} दिन में भेजा जाएगा', soldOut: 'स्टॉक खत्म',
   soldOutSr: ', स्टॉक खत्म', size: 'साइज़', photos: 'फ़ोटो', choosePhoto: 'फ़ोटो चुनें', photoOf: 'फ़ोटो {i} / {n}', photoAlt: '{title}, फ़ोटो {i}',
+  pinLabel: 'पिन कोड', pinCheck: 'देखें', pinChecking: 'देख रहे हैं…', pinBad: '6 अंकों का पिन कोड लिखें।', pinFailed: 'अभी नहीं देख पाए। फिर कोशिश करें।',
+  pinBy: '{place} में {date} तक डिलीवरी', pinNo: '{place} में अभी डिलीवरी नहीं', pinOnline: 'इस पिन कोड के लिए ऑनलाइन भुगतान करें', pinCodUpTo: '{max} तक के ऑर्डर पर कैश ऑन डिलीवरी',
   units: 'इकाई', cm: 'सेमी', inches: 'इंच', closeGuide: 'साइज़ चार्ट बंद करें', offers: 'ऑफ़र',
 }
 

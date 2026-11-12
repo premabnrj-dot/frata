@@ -24,6 +24,8 @@ export const LIMITS = {
   checkAddressUser: { action: 'check_address:user', max: 120, windowSeconds: 600 },
   // Checkout (1C). Subjects are "<tenant>:<ip>" or "<tenant>:<phone>" (hashed with the action below). Mobile networks share IPs: generous per IP.
   quoteIp: { action: 'shop_quote:ip', max: 300, windowSeconds: 600 },
+  // Delivery Zones: the product page's PIN code check, apart from checkout's quote budget (security review L1).
+  deliveryIp: { action: 'shop_delivery:ip', max: 120, windowSeconds: 600 },
   placeOrderIp: { action: 'shop_place:ip', max: 30, windowSeconds: 3600 },
   placeOrderPhone: { action: 'shop_place:phone', max: 5, windowSeconds: 3600 },
   payIp: { action: 'shop_pay:ip', max: 60, windowSeconds: 600 },

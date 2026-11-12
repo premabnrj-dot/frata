@@ -15,6 +15,7 @@ import { bag, openBag } from './bag-store'
 import { fill } from './fill'
 import type { BuyWords } from './words'
 import { CloseMark } from './close-mark'
+import { DeliveryCheck } from './delivery-check'
 
 type Gallery = 'swipe' | 'thumbs' | 'rail' | 'stack'
 type Img = PhotoData & SwatchImage & { optionValue: string | null; alt: string }
@@ -149,6 +150,8 @@ export function BuyBox(p: BuyBoxProps) {
           {/* notes: dispatch first, then returns (product-view.tsx) */}
           {p.notes.map((n, i) => <li key={n}><PromiseIcon d={i === 0 ? BOX : BACK} />{n}</li>)}
         </ul>
+        {/* Delivery Zones PD·0: this PIN code's terms (every plan), on the shop itself only. */}
+        {p.live !== false && <DeliveryCheck price={shown?.price ?? null} w={p.w} />}
         {p.model && <p className="text-sm text-store-sub">{p.model}</p>}
       </div>
       {p.buyBar && <PhoneBar target={buyRef} title={p.title} price={shown ? money(shown.price) : null} label={a?.kind === 'preorder' ? p.w.preorder : p.w.addToBag} onAdd={() => { buyRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }); add() }} aboveTabs={!!p.aboveTabs} />}

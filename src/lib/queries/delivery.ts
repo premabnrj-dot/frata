@@ -8,6 +8,7 @@ import type { Tx } from '@/lib/db'
 import { pincodes, shopSettings } from '@/lib/db/schema'
 import { deliveryRules, deliveryZonePins, deliveryZones, shopHolidays } from '@/lib/db/schema-delivery'
 import { withTenant } from '@/lib/db/tenant'
+import { checkoutShop } from './checkout'
 import { moduleAccessIn } from './modules'
 
 // =============================================================================
@@ -52,7 +53,11 @@ export async function deliveryIn(tx: Tx, tenantId: string, pin: string | null | 
   return { setup, dispatch, place: placeOf }
 }
 
-/** The product page's PIN code check (the storefront delivery endpoint): the same read, in its own transaction. */
-export function deliveryFor(tenantId: string, pin: string, now: Date): Promise<DeliveryRead> {
-  return withTenant(tenantId, (tx) => deliveryIn(tx, tenantId, pin, now))
+/** The product page's PIN code check (the storefront delivery endpoint): the shop's floor and open state, and the same
+ *  read, in one transaction of its own. */
+export function deliveryFor(tenantId: string, pin: string, now: Date) {
+  return withTenant(tenantId, async (tx) => {
+    const [shop, read] = await Promise.all([checkoutShop(tx, tenantId, null), deliveryIn(tx, tenantId, pin, now)])
+    return { shop, ...read }
+  })
 }

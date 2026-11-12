@@ -46,7 +46,9 @@ export function resolveDelivery(pin: string | null, floor: Floor, setup: ZoneSet
   if (!setup || !pin || !PIN.test(pin)) return onFloor
   const z = zoneFor(pin, setup)
   if (!z) return onFloor
-  let cod: CodTerms = !z.codOn ? { on: false, why: 'off' } : blocked ? { on: false, why: 'blocked_pincode' }
+  // A zone without pay on delivery means "pay online here" (the shop still takes it elsewhere); the shop's own switch off
+  // stays "off" everywhere.
+  let cod: CodTerms = !floor.codOn ? { on: false, why: 'off' } : !z.codOn ? { on: false, why: 'prepaid_only' } : blocked ? { on: false, why: 'blocked_pincode' }
     : { on: true, charge: z.codCharge, min: z.codMin, max: z.codMax }
   const r = setup.rule
   if (r?.rule === 'no_delivery') return { deliverable: false, zone: z.name, charge: z.charge, freeAbove: z.freeAbove, cod: { on: false, why: 'off' }, days: [z.daysMin, z.daysMax] }

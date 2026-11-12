@@ -6,7 +6,6 @@ export type PublicQuoteLine = {
   unitPrice: number; compareAt: number | null; requested: number; qty: number; kind: 'in_stock' | 'preorder' | 'made_to_order'
   shipsBy: string | null; leadMinDays: number | null; leadMaxDays: number | null; problem: 'gone' | 'sold_out' | 'reduced' | null
 }
-export type CodWhyNot = { reason: 'off' } | { reason: 'below_min'; min: number } | { reason: 'above_max'; max: number } | { reason: 'blocked_pincode'; pincode: string }
 export type PublicApplied = { title: string; amount: number; class: 'product' | 'order' | 'shipping' | 'payment' }
 export type PublicListed = { title: string; code: string | null; style: 'order_off' | 'free_shipping' | 'pay_online' | 'product_off' | 'bxgy' | 'free_gift'; applied: boolean
   need: { kind: 'add'; amount: number } | { kind: 'add_items'; n: number } | { kind: 'gift'; variantId: string } | { kind: 'pay_online' } | { kind: 'first_order' } | null }
@@ -14,7 +13,7 @@ export type PublicQuote = {
   lines: PublicQuoteLine[]; subtotal: number; shipping: number; prepaid: number; gstPrepaid: number
   /** Offers (server-named fields only: shop-api publicQuote). */
   discountPrepaid: number; appliedPrepaid: PublicApplied[]
-  cod: { total: number; charge: number; gst: number; discount: number; applied: PublicApplied[] } | null; codWhyNot: CodWhyNot | null
+  cod: { total: number; charge: number; gst: number; discount: number; applied: PublicApplied[] } | null; codWhy: string | null; deliverable: boolean
   offers: { listed: PublicListed[]; code: 'applied' | 'not_applied' | null }
   arrives: { from: string; to: string } | null; empty: boolean; missing: string[]
 }
@@ -35,12 +34,6 @@ export const dayRange = (a: { from: string; to: string }) => {
   const f = (iso: string) => new Date(`${iso}T00:00:00+05:30`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })
   return `${f(a.from)}–${f(a.to)}`
 }
-export const codWhyNotText = (w: CodWhyNot | null) => !w ? null
-  : w.reason === 'off' ? 'This shop does not take Pay on delivery.'
-  : w.reason === 'below_min' ? `Pay on delivery is for orders from ${inr(w.min)}.`
-  : w.reason === 'above_max' ? `Pay on delivery is for orders up to ${inr(w.max)}. Pay online for this bag, or remove an item.`
-  : `Pay on delivery is not offered to ${w.pincode}.`
-
 /** The shopper's invoice PDF (Documents D2): POSTed with the order token, saved under the file name the shop gave it. */
 /** How the order page names its order (src/lib/http/order-ref.ts). */
 export type OrderRef = { token: string } | { o: string; e: string }
