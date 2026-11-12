@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Icon } from '@/components/icons/icon'
 import { Badge } from '@/components/ui/badge'
 import { InfoTip } from '@/components/ui/info-tip'
+import { useToast } from '@/components/ui/toast'
 import { connectWhatsAppAction } from './actions'
 import { settle } from '@/lib/settle'
 import { Journey } from '@/components/brand/journey'
@@ -41,7 +42,7 @@ type Path = 'app' | 'new'
 export function ConnectChoices({ ready, canManage, appId, configId, graphVersion }: { ready: boolean; canManage: boolean; appId: string; configId: string; graphVersion: string }) {
   const router = useRouter()
   const [busy, setBusy] = useState<Path | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
   const hint = useRef<{ wabaId?: string; phoneNumberId?: string }>({})
 
   // Meta's popup posts the ids it used. Only from facebook.com, only the WhatsApp signup event (Meta's own check).
@@ -52,16 +53,16 @@ export function ConnectChoices({ ready, canManage, appId, configId, graphVersion
       try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data } catch { return }
       if (d?.type !== 'WA_EMBEDDED_SIGNUP') return
       if (d.event?.startsWith('FINISH')) hint.current = { wabaId: d.data?.waba_id, phoneNumberId: d.data?.phone_number_id }
-      if (d.event === 'CANCEL') { setBusy(null); setError(null) }
-      if (d.event === 'ERROR') { setBusy(null); setError('Meta stopped the sign-up. Try again.') }
+      if (d.event === 'CANCEL') setBusy(null)
+      if (d.event === 'ERROR') { setBusy(null); toast.error('Meta stopped the sign-up. Try again.') }
     }
     window.addEventListener('message', on)
     return () => window.removeEventListener('message', on)
-  }, [])
+  }, [toast])
 
   const start = async (path: Path) => {
-    setError(null); setBusy(path)
-    if (!(await loadSdk(appId, graphVersion)) || !window.FB) { setBusy(null); setError('Meta’s window did not load. Check your connection and try again.'); return }
+    setBusy(path)
+    if (!(await loadSdk(appId, graphVersion)) || !window.FB) { setBusy(null); toast.error('Meta’s window did not load. Check your connection and try again.'); return }
     window.FB.login((r) => {
       const code = r.authResponse?.code
       if (!code) { setBusy(null); return } // closed or cancelled
@@ -69,10 +70,10 @@ export function ConnectChoices({ ready, canManage, appId, configId, graphVersion
       setTimeout(async () => {
         try {
           const res = await connectWhatsAppAction({ code, hint: hint.current })
-          if (!res.ok) { setBusy(null); setError(res.error); return }
+          if (!res.ok) { setBusy(null); toast.error(res.error); return }
           settle(router)
         } catch {
-          setBusy(null); setError('We could not reach Frrata. Nothing was saved. Try again.')
+          setBusy(null); toast.error('We could not reach Frrata.', { sub: 'Nothing was saved. Try again.' })
         }
       }, 300)
     }, {
@@ -109,7 +110,6 @@ export function ConnectChoices({ ready, canManage, appId, configId, graphVersion
         Already on Interakt, Wati or another tool?
         <InfoTip about="moving from another tool">A number can’t move between tools any more. In your tool’s WhatsApp settings, share the account with Frrata as a partner, then pick it in Meta’s window here.</InfoTip>
       </p>
-      {error ? <p role="alert" className="text-sm text-danger-text">{error}</p> : null}
       {/* What happens next, drawn as three steps (visual changes, owner-approved 2026-11-08). */}
       <section aria-label="What happens next" className="space-y-3 rounded-md bg-muted px-4 py-4 text-sm">
         <Journey label="Connecting WhatsApp, in three steps" steps={[

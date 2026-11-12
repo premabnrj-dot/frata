@@ -101,65 +101,8 @@
   "src/app/(admin)/admin/themes/page.tsx": {
     "count": 3
   },
-  "src/app/(console)/console/_components/billing-banner.tsx": {
-    "count": 1
-  },
-  "src/app/(console)/console/_components/domain-banner.tsx": {
-    "count": 1
-  },
-  "src/app/(console)/console/_components/open-shop.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/apps/_components/app-action.tsx": {
-    "count": 8
-  },
-  "src/app/(console)/console/apps/communication/connect.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/apps/communication/health.tsx": {
-    "count": 6
-  },
   "src/app/(console)/console/apps/delivery_zones/rules.tsx": {
     "count": 4
-  },
-  "src/app/(console)/console/apps/gst/file-panel.tsx": {
-    "count": 3
-  },
-  "src/app/(console)/console/look/_components/gallery.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/look/_components/look-actions.tsx": {
-    "count": 2
-  },
-  "src/app/(console)/console/look/_components/restore.tsx": {
-    "count": 1
-  },
-  "src/app/(lookeditor)/console/look/customize/controls.tsx": {
-    "count": 1
-  },
-  "src/app/(lookeditor)/console/look/customize/editor.tsx": {
-    "count": 2
-  },
-  "src/app/(lookeditor)/console/look/customize/pages-panel.tsx": {
-    "count": 4
-  },
-  "src/app/(lookeditor)/console/look/customize/publish-confirm.tsx": {
-    "count": 2
-  },
-  "src/app/(lookeditor)/console/look/customize/published.tsx": {
-    "count": 2
-  },
-  "src/app/(lookeditor)/console/look/customize/site-form.tsx": {
-    "count": 2
-  },
-  "src/app/(lookeditor)/console/look/customize/theme-form.tsx": {
-    "count": 2
-  },
-  "src/app/(lookeditor)/console/look/customize/video-field.tsx": {
-    "count": 3
-  },
-  "src/components/nav/building-banner.tsx": {
-    "count": 2
   },
   "src/components/storefront/bag.tsx": {
     "count": 3

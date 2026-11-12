@@ -98,6 +98,7 @@ function Colours({ site, set, presets, theme }: { site: SiteSettings; set: (s: S
           <span className="font-medium">Aa</span><span style={{ color: shown.muted }}>Second words</span>
           <span className="ml-auto rounded-md px-2.5 py-1 text-xs font-medium" style={{ background: shown.primary, color: onColour(shown.primary) }}>Button</span>
         </div>
+        {/* feedback-ok: the palette's live contrast check ("Reads well" or why not) is pinned in place (rule 5) */}
         {why ? <p role="alert" className="text-sm text-danger-text">{why}</p> : <p role="status" className="text-sm text-ok-text">Reads well</p>}
       </>}
     </Group>

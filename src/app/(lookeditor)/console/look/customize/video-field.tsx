@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 import { Icon } from '@/components/icons/icon'
+import { useToast } from '@/components/ui/toast'
 import { MAX_LOOP_MS, uploadProblem } from '@/domains/video/state'
 import { cancelVideoUploadAction, startVideoUploadAction, videoStatusAction, type VideoStatus } from '@/app/(console)/console/look/video-actions'
 
@@ -20,7 +21,7 @@ export function VideoField({ value, onChange, on }: { value: { id: string } | un
   const id = useId()
   const [progress, setProgress] = useState<number | null>(null)
   const [status, setStatus] = useState<VideoStatus | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
   const xhr = useRef<XMLHttpRequest | null>(null)
 
   // While a video is getting ready, ask again: 2, 4, 8 … 30 s; stop once it plays, failed or is gone.
@@ -42,17 +43,16 @@ export function VideoField({ value, onChange, on }: { value: { id: string } | un
 
   const pick = async (f: File | undefined) => {
     if (!f) return
-    setError(null)
     const why = uploadProblem(f.type, f.size)
-    if (why) { setError(why); return }
+    if (why) { toast.error(why); return }
     const r = await startVideoUploadAction({ contentType: f.type, size: f.size })
-    if (!r.ok) { setError(r.error); return }
+    if (!r.ok) { toast.error(r.error); return }
     setStatus(null); setProgress(0)
     onChange({ id: r.videoId })
     const x = new XMLHttpRequest(); xhr.current = x
     x.upload.onprogress = (e) => { if (e.lengthComputable) setProgress(e.loaded / e.total) }
-    x.onload = () => { xhr.current = null; setProgress(null); if (x.status >= 300) setError('The video didn’t upload. Try again.') }
-    x.onerror = () => { xhr.current = null; setProgress(null); setError('The video didn’t upload. Check your connection and try again.') }
+    x.onload = () => { xhr.current = null; setProgress(null); if (x.status >= 300) toast.error('The video didn’t upload. Try again.') }
+    x.onerror = () => { xhr.current = null; setProgress(null); toast.error('The video didn’t upload. Check your connection and try again.') }
     x.open('PUT', r.url); x.setRequestHeader('content-type', f.type); x.send(f)
   }
   const cancel = async () => {
@@ -95,13 +95,13 @@ export function VideoField({ value, onChange, on }: { value: { id: string } | un
           </span>
         </div>
       ) : (
+        // feedback-ok: the failed video's own state with Choose another is pinned at the field (rule 5)
         <div role="alert" className="space-y-2 rounded-xl border border-danger-text/40 bg-danger p-3 text-sm text-danger-text">
           <p>{status?.tooLong ? `Didn’t work: it’s longer than ${MAX_LOOP_MS / 1000} seconds.` : 'Didn’t work.'}</p>
           <label htmlFor={id} className="cursor-pointer font-medium underline underline-offset-4">Choose another</label>
         </div>
       )}
       {input}
-      {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
     </div>
   )
 }

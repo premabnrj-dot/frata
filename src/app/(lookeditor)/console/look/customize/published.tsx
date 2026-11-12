@@ -23,7 +23,7 @@ export function Published({ liveId, address, shopOpen, undoFrom }: { liveId: str
   return (
     <main className="relative h-dvh overflow-hidden bg-muted">
       <iframe title="Your shop with its new look" src={`/console/theme-preview/${liveId}?as=shop`} tabIndex={-1} aria-hidden="true" className="pointer-events-none size-full" />
-      <Dialog open onClose={() => router.push('/console/look')} title="Your shop has its new look" className="w-[min(28rem,calc(100vw-2rem))]"
+      <Dialog open onClose={() => router.push('/console/look')} title="Your shop has its new look" error={error} className="w-[min(28rem,calc(100vw-2rem))]"
         description={shopOpen ? 'Shoppers see it on their next visit.' : 'Shoppers see it when your shop opens.'}
         actions={<>
           {undoFrom && <Button variant="ghost" disabled={pending} onClick={() => run(() => undoPublishAction({ live: undoFrom }), () => router.push('/console/look'))}>Undo</Button>}
@@ -34,7 +34,6 @@ export function Published({ liveId, address, shopOpen, undoFrom }: { liveId: str
           <span className="min-w-0 flex-1 select-all truncate font-mono text-sm">{address}</span>
           <button type="button" onClick={copy} className="min-h-8 rounded-md px-2 text-sm underline-offset-4 hover:underline">{copied ? 'Copied' : 'Copy'}</button>
         </div>
-        {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
       </Dialog>
     </main>
   )

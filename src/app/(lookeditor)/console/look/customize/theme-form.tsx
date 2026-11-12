@@ -65,6 +65,7 @@ export function ThemeForm({ settings, style, styles, allowed, made, themeName, c
                 className={`size-8 rounded-full border-2 border-card transition-[scale] duration-fast ease-snap hover:scale-110 ${settings.brandColour === c ? 'ring-2 ring-foreground' : 'ring-1 ring-border'}`} style={{ background: c }} />)}
               <Field label="Any colour">{(id) => <input id={id} type="color" value={settings.brandColour!} onChange={(e) => set({ brandColour: e.target.value.toUpperCase() as `#${string}` })} className="h-8 w-12 cursor-pointer rounded-md border border-input" aria-invalid={!!brandWhy} />}</Field>
             </div>
+            {/* feedback-ok: the brand colour's live contrast check, as site-form's palette check (rule 5) */}
             {brandWhy && <p role="alert" className="text-sm text-danger-text">{brandWhy}</p>}
           </>}
         </div>}

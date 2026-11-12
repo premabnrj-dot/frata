@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { dateTimeIN } from '@/lib/format-date'
 import type { FilingStep, Liability } from '@/domains/tax/gsp'
 import { gstConnect, gstDisconnect, gstFile, gstFileOtp, gstPush, gstVerify } from './actions'
@@ -23,16 +24,22 @@ export function FilePanel({ period, step, ours, portal, username, pushedAt, file
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
-  const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
+  // The refusal on screen (an error toast stays until closed): the next step that works takes it away.
+  const shown = useRef<number | null>(null)
   const [txn, setTxn] = useState<string | null>(null)
   const [user, setUser] = useState(username ?? '')
   const [otp, setOtp] = useState('')
   const [fileOtp, setFileOtp] = useState(false)
   const [sure, setSure] = useState(false)
   const run = (f: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => start(async () => {
-    setError(null)
     const r = await f()
-    if (!r.ok) { setError(r.error ?? 'Something went wrong. Nothing was filed.'); return }
+    if (!r.ok) {
+      shown.current = toast.next()
+      if (r.error) toast.error(r.error); else toast.error('Something went wrong.', { sub: 'Nothing was filed.' })
+      return
+    }
+    if (shown.current !== null) { toast.dismiss(shown.current); shown.current = null }
     setOtp(''); after?.(); router.refresh()
   })
   const otpBox = (label: string) => (
@@ -87,8 +94,8 @@ export function FilePanel({ period, step, ours, portal, username, pushedAt, file
           </div>
         </form>
       )}
+      {/* feedback-ok: a state of the return with what to do next (rule 5), not the result of a button */}
       {step === 'check' && <p className="text-sm text-danger-text">The portal’s totals don’t match ours. Push again; if they still differ, send the files to your CA.</p>}
-      {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
     </div>
   )
 }

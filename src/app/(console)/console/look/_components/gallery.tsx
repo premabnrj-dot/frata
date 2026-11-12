@@ -6,6 +6,7 @@ import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
 import { ThemesLockup } from '@/components/brand/themes-lockup'
 import { tryThemeAction } from '../actions'
 
@@ -23,14 +24,16 @@ export function Gallery({ themes, canEdit, sorted, draft = null }: { themes: Gal
   const router = useRouter()
   const [open, setOpen] = useState<GalleryTheme | null>(null)
   const [pending, start] = useTransition()
+  const toast = useToast()
+  /** A refusal while the theme's details are open: that Dialog's error line (§ Feedback 4); after the confirm, a toast. */
   const [error, setError] = useState<string | null>(null)
   const [lost, setLost] = useState<string[]>([])
   const [confirmTry, setConfirmTry] = useState<GalleryTheme | null>(null)
-  const askOrTry = (t: GalleryTheme) => { if (draft && draft.key !== t.key) { setOpen(null); setConfirmTry(t) } else tryIt(t) }
-  const tryIt = (t: GalleryTheme) => start(async () => {
+  const askOrTry = (t: GalleryTheme) => { if (draft && draft.key !== t.key) { setOpen(null); setConfirmTry(t) } else tryIt(t, true) }
+  const tryIt = (t: GalleryTheme, inDialog = false) => start(async () => {
     setError(null)
     const r = await tryThemeAction({ theme: t.key })
-    if (!r.ok) { setError(r.error); return }
+    if (!r.ok) { if (inDialog) setError(r.error); else toast.error(r.error); return }
     if (r.lost.length) { setLost(r.lost); return }
     router.push('/console/look/customize')
   })
@@ -59,7 +62,7 @@ export function Gallery({ themes, canEdit, sorted, draft = null }: { themes: Gal
           <span className="text-muted-foreground">All themes are free in every plan.</span>
         </li>
       </ul>
-      <Dialog open={!!open} onClose={() => setOpen(null)} title={open?.name ?? ''} description={open?.job} className="md:w-[min(56rem,calc(100vw-2rem))]"
+      <Dialog open={!!open} onClose={() => setOpen(null)} title={open?.name ?? ''} description={open?.job} error={error} className="md:w-[min(56rem,calc(100vw-2rem))]"
         actions={open ? <>
           <Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setOpen(null)}>Not now</Button>
           {canEdit && (!open.inUse || open.newer) && (lost.length ? <Button onClick={() => router.push('/console/look/customize')}>Open the draft</Button> : <Button disabled={pending} onClick={() => askOrTry(open)}>{open.newer ? `Try ${open.name} ${open.version} in a draft` : `Try ${open.name} in a draft`}</Button>)}
@@ -71,7 +74,6 @@ export function Gallery({ themes, canEdit, sorted, draft = null }: { themes: Gal
               <h3 className="text-sm font-semibold">What it has</h3>
               <ul className="grid gap-2 text-sm sm:grid-cols-2">{open.features.map((f) => <li key={f} className="flex gap-2"><span aria-hidden="true" className="text-ok-text">✓</span>{f}</li>)}</ul>
               {lost.length > 0 && <div role="status" className="rounded-md bg-warn px-3 py-2 text-sm text-warn-text"><p className="font-medium">Your draft is on {open.name}. Not carried across:</p><ul className="list-disc pl-5">{lost.map((x) => <li key={x}>{x}</li>)}</ul></div>}
-              {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
             </div>
             <div className="space-y-3 rounded-lg bg-muted p-4 text-sm">
               <Badge>Free</Badge>
