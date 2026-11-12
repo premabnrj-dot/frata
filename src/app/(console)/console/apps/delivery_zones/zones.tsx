@@ -34,6 +34,8 @@ const WHERE: Record<PresetKey, string> = {
 const rs = (p: number) => <Money paise={p as Paise} />
 const field = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9'
 
+const days = (z: Row) => (z.daysMin === z.daysMax ? String(z.daysMin) : `${z.daysMin}–${z.daysMax}`)
+
 function cod(z: Row) {
   if (!z.codOn) return 'Pay online only'
   const fee = z.codCharge ? `₹${(z.codCharge / 100).toLocaleString('en-IN')}` : 'free'
@@ -85,11 +87,12 @@ function Zones({ zones, canEdit }: { zones: Row[]; floor: Floor; canEdit: boolea
                 <b className="block">{z.name}</b>
                 <span className="text-xs text-muted-foreground">{z.preset ? WHERE[z.preset] : `Yours: ${z.pins.slice(0, 4).map((p) => (p.length === 3 ? `${p}…` : p)).join(', ')}${z.pins.length > 4 ? '…' : ''}`}</span>
               </Td>
-              <Td cell="b" className="text-right"><Numeric>{z.count === null ? '—' : formatCount(z.count)}</Numeric></Td>
-              <Td cell="c" className="text-right">{z.charge ? rs(z.charge) : 'Free'}</Td>
+              <Td cell="hide" className="text-right"><Numeric>{z.count === null ? '—' : formatCount(z.count)}</Numeric></Td>
+              <Td cell="b" className="text-right">{z.charge ? rs(z.charge) : 'Free'}</Td>
               <Td cell="hide" className="text-right">{z.freeAbove ? rs(z.freeAbove) : '—'}</Td>
-              <Td cell="c" className="text-right"><Numeric>{z.daysMin === z.daysMax ? z.daysMin : `${z.daysMin}–${z.daysMax}`}</Numeric></Td>
-              <Td cell="d">{cod(z)}</Td>
+              <Td cell="hide" className="text-right"><Numeric>{days(z)}</Numeric></Td>
+              {/* A phone's line 2: the days beside pay on delivery (the days column is desktop-only). */}
+              <Td cell="d"><span className="md:hidden">{days(z)} days · </span>{cod(z)}</Td>
               {canEdit && (
                 <Td cell="e" className="whitespace-nowrap text-right">
                   <Button variant="ghost" aria-label={`Move ${z.name} up`} disabled={i === 0 || !!busy} onClick={() => act(z.id, () => moveZoneAction({ id: z.id, up: true }))}>↑</Button>

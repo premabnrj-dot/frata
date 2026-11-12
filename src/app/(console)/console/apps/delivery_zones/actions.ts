@@ -102,9 +102,9 @@ export async function saveZoneAction(input: unknown): Promise<Result> {
       if ((c?.n ?? 0) + own.pins.length > MAX_PINS) return `A shop's zones can list up to ${MAX_PINS.toLocaleString('en-IN')} PIN codes.`
       if (own.pins.length) {
         const taken = await tx.execute<{ pin: string; name: string }>(sql`select p.pin, z.name from ${deliveryZonePins} p join ${deliveryZones} z on z.id = p.zone_id
-          where p.tenant_id = ${t} and p.pin = any(${own.pins}::text[]) limit 3`)
+          where p.tenant_id = ${t} and p.pin in (select jsonb_array_elements_text(${JSON.stringify(own.pins)}::jsonb)) limit 3`)
         if (taken.length) return `${taken.map((x) => `${x.pin} is already in ${x.name}`).join('; ')}.`
-        await tx.execute(sql`insert into ${deliveryZonePins} (tenant_id, pin, zone_id) select ${t}::uuid, unnest(${own.pins}::text[]), ${id}::uuid`)
+        await tx.execute(sql`insert into ${deliveryZonePins} (tenant_id, pin, zone_id) select ${t}::uuid, x, ${id}::uuid from jsonb_array_elements_text(${JSON.stringify(own.pins)}::jsonb) x`)
       }
     }
     return null
@@ -173,18 +173,18 @@ export async function previewRulesAction(text: unknown): Promise<{ ok: true; row
   return { ok: true, rows: rows.length, errors }
 }
 
-/** Import: the file is read again here (never the preview's rows back from the browser), then one statement. */
+/** Import: the file is read again here (never the preview's rows back from the browser), then one statement (the rows as one JSON parameter: drizzle spreads a JS array into a list). */
 export async function importRulesAction(text: unknown): Promise<Result & { added?: number; errors?: string[] }> {
   const p = z.string().max(300_000).safeParse(text)
   if (!p.success) return { ok: false, error: 'The file is over 256 KB. Split it into smaller files.' }
   const { rows, errors } = readRulesCsv(p.data)
   if (!rows.length) return { ok: false, error: errors[0] ?? 'No rules in the file.', errors }
   const r = await write('delivery.rules.import', { rows: rows.length, errors: errors.length }, async (tx, t) => {
-    const [c] = await tx.execute<{ n: number }>(sql`select count(*)::int as n from ${deliveryRules} where tenant_id = ${t} and not (pincode = any(${rows.map((x) => x.pincode)}::text[]))`)
+    const [c] = await tx.execute<{ n: number }>(sql`select count(*)::int as n from ${deliveryRules} where tenant_id = ${t} and pincode not in (select jsonb_array_elements_text(${JSON.stringify(rows.map((x) => x.pincode))}::jsonb))`)
     if ((c?.n ?? 0) + rows.length > MAX_RULES) return `A shop can have up to ${MAX_RULES.toLocaleString('en-IN')} PIN code rules.`
     await tx.execute(sql`insert into ${deliveryRules} (tenant_id, pincode, rule, cod_max, note)
-      select ${t}::uuid, x.pincode, x.rule, x.cod_max, x.note from unnest(${rows.map((x) => x.pincode)}::text[], ${rows.map((x) => x.rule)}::text[],
-        ${rows.map((x) => (x.codMax === null ? null : String(x.codMax)))}::bigint[], ${rows.map((x) => x.note)}::text[]) as x(pincode, rule, cod_max, note)
+      select ${t}::uuid, x.pincode, x.rule, x.cod_max, x.note
+        from jsonb_to_recordset(${JSON.stringify(rows.map((x) => ({ pincode: x.pincode, rule: x.rule, cod_max: x.codMax, note: x.note })))}::jsonb) as x(pincode text, rule text, cod_max bigint, note text)
       on conflict (tenant_id, pincode) do update set rule = excluded.rule, cod_max = excluded.cod_max, note = excluded.note`)
     return null
   })
