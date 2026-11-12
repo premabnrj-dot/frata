@@ -1081,7 +1081,8 @@ do $$ declare n int; begin
   exception when insufficient_privilege then null; end;
   begin insert into module_pauses (module, paused_by, reason) values ('communication', '99999999-9999-9999-9999-999999999999', 'x'); raise exception 'FAIL: app paused a module';
   exception when insufficient_privilege then null; end;
-  if (select count(*) from addon_prices) <> 3 then raise exception 'FAIL: app cannot read add-on prices'; end if;
+  if (select count(*) from addon_prices) <> 4 then -- reviews, true_profit, marketplace_export, delivery_zones (0106)
+   raise exception 'FAIL: app cannot read add-on prices'; end if;
 end $$;
 commit;
 -- Frata admin grants a trial to B; A cannot see it; admin may only end it
@@ -2664,4 +2665,33 @@ do $$ begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 71 checks passed'
+-- 72. Delivery Zones (0105–0106): four tables, own shop both ways, no other role; a PIN code row can never name another
+-- shop's zone (the key holds the shop, since a foreign key check skips row policies).
+insert into delivery_zones (id, tenant_id, position, name, preset, charge, days_min, days_max, cod_on)
+  values ('d2000000-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', 0, 'B metro', 'metro', 5900, 2, 3, true);
+insert into delivery_zone_pins (tenant_id, pin, zone_id) values ('22222222-2222-2222-2222-222222222222', '302', 'd2000000-0000-0000-0000-000000000002');
+insert into delivery_rules (tenant_id, pincode, rule) values ('22222222-2222-2222-2222-222222222222', '110094', 'prepaid_only');
+insert into shop_holidays (tenant_id, day, name) values ('22222222-2222-2222-2222-222222222222', '2026-12-25', 'Christmas');
+do $$ declare t text; begin
+  foreach t in array array['delivery_zones', 'delivery_zone_pins', 'delivery_rules', 'shop_holidays'] loop
+    if exists (select 1 from pg_tables where tablename = t and not rowsecurity) then raise exception 'FAIL: % without RLS', t; end if;
+    if not exists (select 1 from pg_policies where tablename = t and policyname = 'tenant_rows') then raise exception 'FAIL: % without its policy', t; end if;
+    if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r(role)
+               where has_table_privilege(r.role, t, 'select') or has_table_privilege(r.role, t, 'insert') or has_table_privilege(r.role, t, 'update') or has_table_privilege(r.role, t, 'delete'))
+    then raise exception 'FAIL: another role holds %', t; end if;
+  end loop;
+end $$;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from delivery_zones) or exists (select 1 from delivery_zone_pins) or exists (select 1 from delivery_rules) or exists (select 1 from shop_holidays)
+  then raise exception 'FAIL: A reads B delivery'; end if;
+  update delivery_zones set charge = 0; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed B zones'; end if;
+  delete from delivery_rules; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A deleted B rules'; end if;
+  begin insert into delivery_rules (tenant_id, pincode, rule) values ('22222222-2222-2222-2222-222222222222', '400070', 'no_delivery'); raise exception 'FAIL: A wrote B rules'; exception when insufficient_privilege then null; end;
+  -- A's own pin row naming B's zone: refused by the key, not only the policy.
+  begin insert into delivery_zone_pins (tenant_id, pin, zone_id) values ('11111111-1111-1111-1111-111111111111', '110', 'd2000000-0000-0000-0000-000000000002'); raise exception 'FAIL: A pointed at B zone'; exception when foreign_key_violation then null; end;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 72 checks passed'

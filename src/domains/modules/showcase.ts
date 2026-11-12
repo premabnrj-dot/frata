@@ -123,7 +123,20 @@ export const SHOWCASE: Record<ModuleKey, Showcase> = {
     ],
     questions: [{ q: 'How long can a video be?', a: 'Up to a minute, one per product.' }],
     uses: ['The videos you upload'],
+  },  delivery_zones: {
+    headline: 'Charge, promise and take pay on delivery by PIN code, the way couriers really work.',
+    features: [
+      { title: 'Zones filled in for you', line: 'Metro, Tier 2, Rest of India and Special, each with its own charge, days and COD.', shot: { kind: 'rows', title: 'Zones', rows: [{ text: 'Metro · ₹59 · 2–3 days', chip: 'COD ₹49', tone: 'ok' }, { text: 'Rest of India · ₹99 · 4–7 days', chip: 'COD up to ₹3,000', tone: 'ok' }, { text: 'Special · ₹149 · 6–10 days', chip: 'Pay online', tone: 'warn' }] } },
+      { title: 'Rules for a PIN code', line: 'Pay online only where COD keeps coming back; no delivery where couriers don’t go.', shot: { kind: 'rows', title: 'PIN code rules', rows: [{ text: '110094 · North East Delhi', chip: 'Pay online', tone: 'warn' }, { text: '744101 · South Andaman', chip: "Don't deliver", tone: 'neutral' }] } },
+      { title: 'A date that holds', line: 'Ship days, a daily cutoff and your holidays decide the date shoppers see.', shot: { kind: 'stats', items: [{ label: 'Ordered now', value: 'Wed, 12 Nov' }, { label: 'Arrives by', value: 'Tue, 18 Nov' }] } },
+    ],
+    questions: [
+      { q: 'What do shoppers see without it?', a: 'Every shop has the PIN code check and the charges before checkout, with one delivery charge and one COD fee.' },
+      { q: 'Does it change anything when I turn it on?', a: 'No. Your current settings act as one zone until you change a zone.' },
+    ],
+    uses: ['Your delivery charges, COD rules and dispatch days', 'India Post’s PIN code directory'],
   },
+
 }
 
 /** What turning an app off does, in the confirm only (Rule 0: never on the page; Apps A2). 1–3 short lines each, true
@@ -139,5 +152,6 @@ export const OFF: Record<ModuleKey, readonly string[]> = {
   gst: ['GST returns leave the console.', 'Your invoices stay GST-correct.'],
   ekcode: ['The EkCode button leaves your checkout.', 'Shoppers’ rows stay.'],
   product_video: ['Videos leave your product pages.', 'Uploaded videos stay.'],
+  delivery_zones: ['Your zones and PIN code rules stop applying.', 'Checkout goes back to your Settings: one charge, one COD fee.'],
   cart_flows: ['Bag reminders stop.'],
 }

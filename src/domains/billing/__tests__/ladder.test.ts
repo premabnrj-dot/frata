@@ -70,3 +70,15 @@ describe('cheapestPlan', () => {
 it('knows every bill line kind', () => {
   expect([...LINE_KINDS].sort()).toEqual(['addon', 'carry', 'change', 'credit', 'fee', 'over', 'plan'])
 })
+
+// An add-on the target plan includes drops out (unit-economics review 2026-11-12): a ₹4,500 × 80 shop on Launch with
+// Delivery Zones (₹999) is cheaper on Growth, which includes it, though plan + fee alone save only ₹100.
+it('counts an add-on the target plan includes', () => {
+  const withAddon = (id: string, at: Date) => {
+    const inv = invoice(id, at, 80, 4500)
+    return { ...inv, taxable: (inv.taxable + 99900) as Paise, lines: [...inv.lines, { kind: 'addon', periodStart: at, taxable: paise(99900), name: 'Delivery Zones' }] }
+  }
+  const g = { ...growth, includes: ['Delivery Zones'] }
+  expect(cheapestPlan([withAddon('dec', dec), withAddon('nov', nov)], launch, [growth, scale])).toBeNull()
+  expect(cheapestPlan([withAddon('dec', dec), withAddon('nov', nov)], launch, [g, scale])).toMatchObject({ plan: { code: 'growth' }, saving: rs(100 + 999) })
+})

@@ -736,6 +736,20 @@
       "when": 1794431705709,
       "tag": "0104_app_interest",
       "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1794457966732,
+      "tag": "0105_delivery_zones",
+      "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1794457982249,
+      "tag": "0106_delivery_zones_access",
+      "breakpoints": true
     }
   ]
 }
