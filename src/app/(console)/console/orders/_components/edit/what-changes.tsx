@@ -33,8 +33,8 @@ export function WhatChanges({ number, plan, problem, before, to, notify, onNotif
   busy: boolean
   /** Paid online: what the new total does with the money paid (null: paid on delivery). */
   settle: Settle | null
-  /** Paid online and refunding: what Razorpay keeps of its fee on the refunded part, and the fee (unknown: null). */
-  kept?: { kept: number; fee: number } | null
+  /** Paid online and refunding: Razorpay's fee on the payments refunded from, which it keeps (unknown or none: null). */
+  kept: { kept: number; fee: number } | null
 }) {
   const changes = plan ? changesOf(plan) : []
   const said = problem && problem.kind !== 'nothing' ? problemWords(problem, inr) : settle?.kind === 'too_old' ? 'Paid over 6 months ago: Razorpay can\'t refund it.' : null
@@ -70,7 +70,7 @@ export function WhatChanges({ number, plan, problem, before, to, notify, onNotif
       )}
       {settle?.kind === 'refund' ? (
         <div className="rounded-md border border-warn bg-warn/40 p-3 text-sm" data-settle="refund"><b className="font-mono tabular-nums">Refund <Money paise={paise(settle.amount)} /></b>
-          <span className="block text-muted-foreground">{kept ? <>Back in 5–10 working days · Razorpay keeps <Money paise={paise(kept.kept)} /> of its <Money paise={paise(kept.fee)} /> fee</> : 'Razorpay · back in 5–10 working days · its fee isn’t returned'}</span></div>
+          <span className="block text-muted-foreground">{kept ? <>Back in 5–10 working days · Razorpay keeps its <Money paise={paise(kept.fee)} decimals /> fee</> : 'Razorpay · back in 5–10 working days · its fee isn’t returned'}</span></div>
       ) : settle?.kind === 'ask' ? (
         <div className="rounded-md border border-border bg-muted p-3 text-sm" data-settle="ask"><b className="font-mono tabular-nums">Ask for <Money paise={paise(settle.amount)} /></b>
           <span className="block text-muted-foreground">The shopper pays first · nothing changes until then</span></div>

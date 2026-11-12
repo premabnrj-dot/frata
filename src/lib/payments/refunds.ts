@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, notExists, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, ne, notExists, sql } from 'drizzle-orm'
 import { AUTO_RETRIES, canRetry, chainLength, paidNet, refundable, tooOldToRefund, type Paid, type RefundRow } from '@/domains/orders/refunds'
 import type { Tx } from '@/lib/db'
 import { editWaitingSql } from '@/lib/db/order-predicates'
@@ -26,8 +26,10 @@ import { createRefund, fetchPayment, fetchRefund, paymentRefunds, type RzpRefund
 // reads a pending refund's state back (refund.* webhooks are optional and not relied on). A failed refund is tried again
 // as a NEW attempt (a new receipt and key), by itself up to AUTO_RETRIES times, then by Try again — unless a later change
 // of the order settled it instead (superseded_by: its total was worked out without that money going back; security
-// review 2026-11-12 H1). An attempt still unresolved on its outbox row's last try is settled by one more list: its receipt
-// there → recorded; absent → failed, so Try again appears (never "being sent" for good: M1).
+// review 2026-11-12 H1; only the failed ones the change's own plan counted as not going back). An attempt the sender leaves
+// unresolved (no answer on its last try, or its outbox row dead after an error) stays on its way — counted, never offered
+// again, never settled by a later change — until the check queued with its claim reads Razorpay's list: its receipt (or
+// an earlier one of its chain) there → recorded; absent → failed, so Try again appears (security re-review M3, L4).
 // A payment refunded in full (after_drop, old_order) costs the shop Razorpay's fee on it: recorded once on its first
 // attempt and added to the order's gateway_fee (profit per order; unit-economics review 2026-11-12).
 // =============================================================================
@@ -55,13 +57,18 @@ export async function ledgerIn(tx: Tx, tenantId: string, orderId: string): Promi
 }
 
 /**
- * A later change of this order settled the failed `edit` refunds nobody tried again (its total was worked out with
- * that money still with the shop): they are marked so and never tried again (security review 2026-11-12 H1).
+ * A later change of this order settled the failed `edit` refunds its own plan counted as not going back (its total was
+ * worked out with that money still with the shop): they are marked so and never tried again (security review H1). ONLY
+ * those: `ids`, the failed ones in the facts an applied edit was planned from, or, for a change paid later, the ones that
+ * had failed before it was saved (`failedBefore`). One failing after the plan was counted as on its way: still owed
+ * (security re-review 2026-11-12 H1), and a fail that races the plan can't be swept in with them.
  */
-export async function supersedeFailed(tx: Tx, tenantId: string, orderId: string, editId: string): Promise<void> {
+export async function supersedeFailed(tx: Tx, tenantId: string, orderId: string, editId: string, which: { ids: string[] } | { failedBefore: Date }): Promise<void> {
+  if ('ids' in which && !which.ids.length) return
   const again = tx.select({ id: sql`1` }).from(sql`order_refunds n`).where(sql`n.tenant_id = ${tenantId} and n.retry_of = ${orderRefunds.id}`)
   await tx.update(orderRefunds).set({ supersededBy: editId }).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.orderId, orderId), eq(orderRefunds.cause, 'edit'),
-    isNotNull(orderRefunds.failedAt), isNull(orderRefunds.supersededBy), ne(orderRefunds.editId, editId), notExists(again)))
+    isNotNull(orderRefunds.failedAt), isNull(orderRefunds.supersededBy), ne(orderRefunds.editId, editId), notExists(again),
+    'ids' in which ? inArray(orderRefunds.id, which.ids) : lt(orderRefunds.failedAt, which.failedBefore)))
 }
 
 /** Razorpay's fee (with its GST) on a cost the order now carries: added to its gateway_fee. A paid order whose own fee is
@@ -107,7 +114,11 @@ export async function cancelEditRefunds(tx: Tx, tenantId: string, editId: string
 }
 
 const fail = (tenantId: string, id: string, failure: string) => withTenant(tenantId, async (tx) => {
-  await tx.update(orderRefunds).set({ failedAt: new Date(), failure }).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.id, id), isNull(orderRefunds.failedAt), isNull(orderRefunds.processedAt)))
+  // Under the order's lock, stamped once it is had: a change planned under that lock either saw this failure (failed
+  // before it, so it may settle it) or did not (failed after it, still owed) — never a failure it didn't see stamped as
+  // before it (security re-review 2026-11-12 H1).
+  await tx.execute(sql`select 1 from orders where tenant_id = ${tenantId} and id = (select order_id from order_refunds where tenant_id = ${tenantId} and id = ${id}) for update`)
+  await tx.update(orderRefunds).set({ failedAt: sql`clock_timestamp()`, failure }).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.id, id), isNull(orderRefunds.failedAt), isNull(orderRefunds.processedAt)))
   if (failure !== 'failed') return
   // Razorpay failed it after accepting it: tried again by itself, as a new attempt, a few times (then Try again).
   const [r] = await tx.select().from(orderRefunds).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.id, id)))
@@ -140,10 +151,17 @@ export async function sendRefund(row: OutboxRow): Promise<void> {
     const [r] = await tx.select().from(orderRefunds).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.id, id))).for('update')
     if (!r) return null
     if (r.cancelledAt || r.failedAt || r.sentAt) return 'done' as const
-    // Claimed, committed before the request: from here an Undo is refused and the attempt is this row's for good.
-    if (!r.sendingAt) await tx.update(orderRefunds).set({ sendingAt: new Date() }).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.id, id)))
+    // Claimed, committed before the request: from here an Undo is refused and the attempt is this row's for good. With
+    // the claim, a check that settles it whatever happens next (a lost answer, a dead outbox row: security re-review
+    // M3, L4): it reads Razorpay's list once the sender is done or gone.
+    const tried = !!r.sendingAt
+    if (!r.sendingAt) {
+      await tx.update(orderRefunds).set({ sendingAt: new Date() }).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.id, id)))
+      await enqueue(tx, { tenantId, kind: 'refund.check', dedupeKey: `refund.settle:${id}`, payload: { refundId: id }, notBefore: new Date(Date.now() + SETTLE_MINUTES * 60_000) })
+    }
+    const chain = await chainIds(tx, tenantId, r)
     const [o] = await tx.select({ number: orders.number }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, r.orderId)))
-    return { r, number: o?.number ?? 0, keys: await keysFor(tx, tenantId) }
+    return { r, chain, tried, number: o?.number ?? 0, keys: await keysFor(tx, tenantId) }
   })
   if (claim === null) throw new GiveUp('no such refund')
   if (claim === 'done') return
@@ -153,8 +171,12 @@ export async function sendRefund(row: OutboxRow): Promise<void> {
   const listed = await paymentRefunds(keys, r.razorpayPaymentId)
   await noteKeysAnswer(tenantId, keys, listed)
   if (!listed.ok) { if (listed.status === 401 || listed.status === 403) return void await fail(tenantId, id, 'keys'); throw new Later('razorpay unreachable', 5) }
-  const mine = listed.items.find((x) => x.receipt === id)
+  // This attempt, or an earlier one of its chain that Razorpay made after all (its answer lost): never sent twice.
+  const mine = listed.items.find((x) => x.receipt === id) ?? listed.items.find((x) => x.status !== 'failed' && x.receipt !== null && claim.chain.includes(x.receipt))
   if (mine) return void await taken(tenantId, id, mine)
+  // The last try after an earlier one went unanswered: that create may still be in flight, so none is made again — it
+  // stays on its way for the claim's check (impact re-review 2026-11-12).
+  if (claim.tried && row.attempts >= MAX_ATTEMPTS) return
   const pay = await fetchPayment(keys, r.razorpayPaymentId)
   if (!pay.ok) throw new Later('razorpay unreachable', 5)
   if (tooOldToRefund(pay.createdAt, new Date())) return void await fail(tenantId, id, 'too_old')
@@ -165,12 +187,22 @@ export async function sendRefund(row: OutboxRow): Promise<void> {
   if (made.why === 'busy') throw new Later('razorpay busy', 1)
   if (made.why !== 'unreachable') return void await fail(tenantId, id, made.why)
   // No answer: counted and tried again; the next try lists first and finds it if it went through. On the row's last try
-  // it is settled now by one more list: there → recorded; absent → failed (Try again); no list → asked again later.
+  // it is NOT failed (Razorpay may have made it and not list it yet: security re-review M3): it stays on its way — counted,
+  // never offered again, never settled by a later change — until the claim's check reads the list (sendRefundCheck).
   if (row.attempts < MAX_ATTEMPTS) throw new Error('razorpay unreachable')
-  const last = await paymentRefunds(keys, r.razorpayPaymentId)
-  if (!last.ok) throw new Later('razorpay unreachable', 15)
-  const found = last.items.find((x) => x.receipt === id)
-  await (found ? taken(tenantId, id, found) : fail(tenantId, id, 'refused'))
+}
+
+/** How long after a claim its check settles an attempt the sender left unresolved. */
+export const SETTLE_MINUTES = 30
+
+/** The receipts of this attempt's chain: itself and every attempt it tries again. */
+async function chainIds(tx: Tx, tenantId: string, r: { id: string; orderId: string; retryOf: string | null }): Promise<string[]> {
+  if (!r.retryOf) return [r.id]
+  const rows = await tx.select({ id: orderRefunds.id, retryOf: orderRefunds.retryOf }).from(orderRefunds).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.orderId, r.orderId)))
+  const out = [r.id]
+  let at = r.retryOf as string | null
+  while (at && !out.includes(at)) { out.push(at); at = rows.find((x) => x.id === at)?.retryOf ?? null }
+  return out
 }
 
 /** The `refund.check` sender: a pending refund's state, read back until it is processed or failed (15 days at most). */
@@ -182,7 +214,11 @@ export async function sendRefundCheck(row: OutboxRow): Promise<void> {
   })
   if (!pre) throw new GiveUp('no such refund')
   const { r, keys } = pre
-  if (r.processedAt || r.failedAt || !r.razorpayRefundId) return
+  if (r.processedAt || r.failedAt || r.cancelledAt) return
+  if (!r.razorpayRefundId) {
+    if (!r.sendingAt) return
+    return settleUnresolved(row, r, keys)
+  }
   if (!keys) throw new Later('no keys', 60)
   const got = await fetchRefund(keys, r.razorpayPaymentId, r.razorpayRefundId)
   if (!got.ok) throw new Later('razorpay unreachable', 15)
@@ -190,6 +226,27 @@ export async function sendRefundCheck(row: OutboxRow): Promise<void> {
   if (got.refund.status === 'failed') return void await fail(tenantId, id, 'failed')
   if (Date.now() - new Date(row.createdAt).getTime() > 15 * 86_400_000) throw new GiveUp('still pending after 15 days')
   throw new Later('refund pending', 60)
+}
+
+/**
+ * An attempt claimed and still unresolved (the sender's answer lost on its last try, or its outbox row dead after an
+ * error): settled by Razorpay's list once the sender is done or gone — its receipt (or an earlier one of its chain)
+ * there → recorded; absent → failed as refused, and Try again appears. Razorpay not answering → asked again later.
+ */
+async function settleUnresolved(row: OutboxRow, r: typeof orderRefunds.$inferSelect, keys: Awaited<ReturnType<typeof keysFor>>) {
+  const tenantId = row.tenantId
+  const [sender] = await withTenant(tenantId, (tx) => tx.select({ sentAt: outbox.sentAt, deadAt: outbox.deadAt }).from(outbox)
+    .where(and(eq(outbox.tenantId, tenantId), eq(outbox.dedupeKey, `refund.send:${r.id}`))))
+  // The sender is still trying: let it.
+  if (sender && !sender.sentAt && !sender.deadAt) throw new Later('refund still being sent', 30)
+  if (!keys) throw new Later('no keys', 60)
+  // A ceiling: a week of Razorpay not answering leaves it for a person (logged; it still shows "with Razorpay").
+  if (Date.now() - new Date(row.createdAt).getTime() > 7 * 86_400_000) throw new GiveUp('unresolved after 7 days')
+  const chain = await withTenant(tenantId, (tx) => chainIds(tx, tenantId, r))
+  const list = await paymentRefunds(keys, r.razorpayPaymentId)
+  if (!list.ok) throw new Later('razorpay unreachable', 15)
+  const found = list.items.find((x) => x.receipt === r.id) ?? list.items.find((x) => x.status !== 'failed' && x.receipt !== null && chain.includes(x.receipt))
+  await (found ? taken(tenantId, r.id, found) : fail(tenantId, r.id, 'refused'))
 }
 
 /**
@@ -211,7 +268,10 @@ export async function retryRefund(tx: Tx, tenantId: string, refundId: string, no
   // change waiting for payment would make it): a later change may have settled it (security review 2026-11-12 H1).
   if (r.cause === 'edit') {
     const l = await ledgerIn(tx, tenantId, r.orderId)
-    const [o] = await tx.select({ total: orders.total, waiting: sql<string | null>`(select e.total_after from order_edits e where e.tenant_id = ${tenantId} and e.order_id = ${r.orderId} and ${editWaitingSql('e', '"orders"')} limit 1)` })
+    // A change waiting for payment: what the shop holds once it is paid is its total, so what it may still give back is
+    // measured against its total less what it asks (a refund it counted as on its way is still owed; one it counted as
+    // not going back is not: security re-review 2026-11-12 H1).
+    const [o] = await tx.select({ total: orders.total, waiting: sql<string | null>`(select e.total_after - e.asked from order_edits e where e.tenant_id = ${tenantId} and e.order_id = ${r.orderId} and ${editWaitingSql('e', '"orders"')} limit 1)` })
       .from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.id, r.orderId)))
     const target = o?.waiting != null ? Number(o.waiting) : Number(o?.total ?? 0)
     if (!l || paidNet(l.payments, l.refunds) - target < Number(r.amount)) return { ok: false, error: 'A later change of this order settled it. Nothing to send.' }

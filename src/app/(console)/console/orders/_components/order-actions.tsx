@@ -9,6 +9,8 @@ import { FieldError, useFieldErrors, fieldProps } from '@/components/ui/field-er
 import { Menu, type MenuItem } from '@/components/ui/menu'
 import { useToast } from '@/components/ui/toast'
 import { CANCEL_LABEL, CANCEL_REASONS, type CancelReason } from '@/domains/orders/work'
+import { paise } from '@/domains/money/paise'
+import { formatInr } from '@/lib/format'
 import { cancelOrder, confirmOrder, holdOrder, issueCreditNote, issuePartCreditNote, packOrder, undoOrderAction, unholdOrder } from '../actions'
 import { PartCreditDialog, type PartLine } from './part-credit'
 
@@ -46,7 +48,7 @@ export type OrderActionsProps = {
   refund: number
   refundLabel: string
   /** Already refunded, or on its way, for its edits (OE·2), formatted; null when none. */
-  refunded?: string | null
+  refunded: string | null
   /** Whether any line's stock was taken (so "Put stock back" means something). */
   stockTaken: boolean
 }
@@ -70,7 +72,7 @@ function Actions(p: OrderActionsProps) {
   const closeCancel = () => { setCancelOpen(false); fields.set({}); setCancelError(null) }
 
   /** `say`: a failure inside a dialog is that dialog's to show, not a toast behind it. */
-  async function run(label: string, fn: () => Promise<{ ok: boolean; error?: string; eventId?: string; by?: { email: string | null; at: string } }>, undo = false, say?: (error: string) => void) {
+  async function run(label: string | ((r: { refund?: number }) => string), fn: () => Promise<{ ok: boolean; error?: string; eventId?: string; by?: { email: string | null; at: string }; refund?: number }>, undo = false, say?: (error: string) => void) {
     if (busy) { toast.error('Still saving the last change…'); return null }
     setBusy(true)
     let r: Awaited<ReturnType<typeof fn>>
@@ -81,7 +83,7 @@ function Actions(p: OrderActionsProps) {
       router.refresh(); return null
     }
     const eventId = r.eventId
-    toast({ text: `${p.number} ${label}.`, undo: undo && eventId ? async () => { const u = await undoOrderAction(eventId); router.refresh(); return u.ok ? { ok: true } : { ok: false, error: u.error } } : undefined })
+    toast({ text: `${p.number} ${typeof label === 'function' ? label(r) : label}.`, undo: undo && eventId ? async () => { const u = await undoOrderAction(eventId); router.refresh(); return u.ok ? { ok: true } : { ok: false, error: u.error } } : undefined })
     router.refresh()
     return r
   }
@@ -112,7 +114,8 @@ function Actions(p: OrderActionsProps) {
     if (!reason) { fields.set({ reason: 'Pick a reason.' }); return }
     if (reason === 'other' && !note.trim()) { fields.set({ note: 'Say why in a few words.' }); return }
     fields.set({}); setCancelError(null)
-    const r = await run('cancelled', () => cancelOrder(p.orderId, { reason, note: note.trim() || undefined, restock }), false, setCancelError)
+    // What to refund in Razorpay: what the payments still hold after the refunds its edits sent (OE·2).
+    const r = await run((x) => (x.refund ? `cancelled · refund ${formatInr(paise(x.refund))} in Razorpay` : 'cancelled'), () => cancelOrder(p.orderId, { reason, note: note.trim() || undefined, restock }), false, setCancelError)
     if (r) closeCancel()
   }
 

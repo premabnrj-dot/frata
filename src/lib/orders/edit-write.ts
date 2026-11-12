@@ -1,7 +1,8 @@
 import 'server-only'
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { arrivalRange, type LineKind, type QuoteLine } from '@/domains/checkout/quote'
-import { inOrder, planEdit, problemWords, type EditFacts, type EditPlan, type EditReason, type Want } from '@/domains/orders/edit'
+import { inOrder, planEdit, problemWords, usesOn, type EditFacts, type EditPlan, type EditReason, type Want } from '@/domains/orders/edit'
+import { classOf } from '@/domains/checkout/discounts'
 import type { Paise } from '@/domains/money/paise'
 import { formatInr } from '@/lib/format'
 import type { Tx } from '@/lib/db'
@@ -52,6 +53,13 @@ export async function stillFit(tx: Tx, tenantId: string, orderId: string, uses: 
   const bad = limited.find((l) => !fits({ limitTotal: l.limit_total, limitPerPhone: l.limit_per_phone, budget: l.budget === null ? null : Number(l.budget) }, used.get(l.id),
     uses.filter((u) => u.discountId === l.id).reduce((a, u) => a + u.amount, 0)))
   return bad ? uses.find((u) => u.discountId === bad.id)!.title : null
+}
+
+/** The offers whose saving grew under this plan and count as a use the way the order is paid: each must still fit its
+ * limits and budget (stillFit) — at Save, and again when a change's payment applies. */
+export function grownUses(p: EditPlan, facts: EditFacts): { discountId: string; amount: number; title: string }[] {
+  return p.offers.flatMap((x) => { const o = facts.offers!.find((k) => k.rowId === x.rowId)!.kept
+    return x.after > x.before && usesOn(facts.order.way)({ class: classOf(o.terms.style), method: o.method }) ? [{ discountId: o.terms.id, amount: x.after, title: x.title }] : [] })
 }
 
 /**

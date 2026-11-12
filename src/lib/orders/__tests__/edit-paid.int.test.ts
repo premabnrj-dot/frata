@@ -36,7 +36,7 @@ const rz = vi.hoisted(() => {
     orders: new Map<string, { id: string; amount: number; receipt: string }>(), payments: new Map<string, { id: string; order_id: string; amount: number; status: string; currency: string; created_at: number; fee: number; tax: number }>(),
     refunds: [] as Refund[], calls: [] as { method: string; path: string; body: Record<string, unknown>; headers: Record<string, string> }[],
     /** What the next refund create does: refuse for low balance, say another operation is in progress, or accept then fail. */
-    next: [] as ('balance' | 'busy' | 'fail_later' | 'down' | 'lost')[], n: 0,
+    next: [] as ('balance' | 'busy' | 'fail_later' | 'down' | 'lost')[], n: 0, hidden: new Set<string>(),
   }
   const answer = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
   const handle = async (url: string, init: RequestInit = {}) => {
@@ -55,7 +55,8 @@ const rz = vi.hoisted(() => {
     m = p.match(/^\/v1\/payments\/(pay_\w+)$/)
     if (method === 'GET' && m) return s.payments.has(m[1]!) ? answer(200, s.payments.get(m[1]!)) : answer(404, { error: { description: 'no such payment' } })
     m = p.match(/^\/v1\/payments\/(pay_\w+)\/refunds$/)
-    if (method === 'GET' && m) return answer(200, { items: s.refunds.filter((r) => r.payment_id === m![1]) })
+    // `hidden`: a refund Razorpay made but doesn't list yet (its list lags its create).
+    if (method === 'GET' && m) return answer(200, { items: s.refunds.filter((r) => r.payment_id === m![1] && !s.hidden.has(r.receipt)) })
     m = p.match(/^\/v1\/payments\/(pay_\w+)\/refunds\/(rfnd_\w+)$/)
     if (method === 'GET' && m) { const r = s.refunds.find((x) => x.id === m![2]); return r ? answer(200, r) : answer(404, {}) }
     m = p.match(/^\/v1\/payments\/(pay_\w+)\/refund$/)
@@ -141,7 +142,7 @@ async function shop() {
 async function tools(A: string, stamp: number) {
   const { withTenant } = await import('@/lib/db/tenant')
   const { orders, orderLines } = await import('@/lib/db/schema-orders')
-  const { orderEdits, orderRefunds } = await import('@/lib/db/schema-edits')
+  const { orderEdits, orderEditLines, orderRefunds } = await import('@/lib/db/schema-edits')
   const { outbox } = await import('@/lib/db/schema')
   const { variants } = await import('@/lib/db/schema-catalogue')
   const { placeOrder } = await import('@/lib/orders/place')
@@ -193,7 +194,10 @@ async function tools(A: string, stamp: number) {
   const free = (v: string) => withTenant(A, async (tx) => { const [r] = await variantRows(tx, A, [v], new Date()); return { stock: r!.stock, held: r!.held } })
   const stock = async (v: string) => (await withTenant(A, (tx) => tx.select({ s: variants.stock }).from(variants).where(and(eq(variants.tenantId, A), eq(variants.id, v)))))[0]!.s
   const undo = (eventId: string, now?: Date) => withTenant(A, (tx) => undoEdit(tx, A, ACTOR, eventId, now))
-  return { withTenant, paidOrder, capture, live, lineOf, edit, order, refunds, edits, outboxRow, free, stock, undo }
+  /** The pieces a change's lines still hold (the column itself, not only what checkout reads from it). */
+  const heldOn = async (editId: string) => (await withTenant(A, (tx) => tx.select({ held: orderEditLines.held }).from(orderEditLines).where(and(eq(orderEditLines.tenantId, A), eq(orderEditLines.editId, editId)))))
+    .reduce((a, r) => a + r.held, 0)
+  return { withTenant, paidOrder, capture, live, lineOf, edit, order, refunds, edits, outboxRow, free, stock, undo, heldOn }
 }
 
 const refundCalls = () => rz.s.calls.filter((c) => c.method === 'POST' && /\/refund$/.test(c.path))
@@ -357,6 +361,7 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
     expect(await t.free(s.coordL)).toEqual({ stock: before.stock - 1, held: before.held })
     const [paidEdit] = await t.edits(o.id)
     expect(paidEdit).toMatchObject({ razorpayPaymentId: payment.id, droppedAt: null })
+    expect(await t.heldOn(paidEdit!.id)).toBe(0)
     expect(paidEdit!.paidAt).not.toBeNull()
     // The webhook for the same payment later: its fee is news, once.
     const feeBefore = Number((await t.order(o.id)).gatewayFee ?? 0)
@@ -364,12 +369,21 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
     await processEvents(s.A)
     expect(Number((await t.order(o.id)).gatewayFee)).toBe(feeBefore + payment.fee)
     expect((await t.edits(o.id))[0]!.gatewayFee).toBe(payment.fee)
+    // A second payment on the same change's Razorpay order (L2): not the order's — refunded in full, once, its fee kept
+    // once, the order as it was.
+    const totalPaid = Number((await t.order(o.id)).total), linesPaid = (await t.live(o.id)).map((l) => [l.variantId, l.qty])
+    const extra = await t.capture(start.pay.razorpayOrderId)
+    await storeRazorpayEvent(s.A, `razorpay:order.paid:${extra.id}`, { event: 'order.paid', payload: { payment: { entity: extra } } })
+    await processEvents(s.A)
+    expect((await t.refunds(o.id)).filter((r) => r.razorpayPaymentId === extra.id).map((r) => [r.cause, Number(r.amount), Number(r.gatewayFee)])).toEqual([['after_drop', 49900, extra.fee]])
+    expect(Number((await t.order(o.id)).gatewayFee)).toBe(feeBefore + payment.fee + extra.fee)
+    expect([Number((await t.order(o.id)).total), (await t.live(o.id)).map((l) => [l.variantId, l.qty])]).toEqual([totalPaid, linesPaid])
 
     // A later decrease below what the second payment carries: refunded from both, the newest first (a ledger per payment).
     const l = await t.lineOf(o.id, s.coordL)
     const swapBack = await t.edit(o.id, [{ line: null, variantId: s.s, qty: 1 }], { [l.id]: 'customer_asked' })
     if (!swapBack.ok) throw new Error(swapBack.error)
-    const parts = (await t.refunds(o.id)).map((r) => [r.razorpayPaymentId, Number(r.amount)])
+    const parts = (await t.refunds(o.id)).filter((r) => r.cause === 'edit').map((r) => [r.razorpayPaymentId, Number(r.amount)])
     const first = (await t.order(o.id)).razorpayPaymentId
     // The newest payment gives all it has; the first the rest (both written in one transaction: compared as a set).
     expect(new Map(parts as [string, number][])).toEqual(new Map([[payment.id, 49900], [first!, 293000 - 49900 - (189900 + 5000)]]))
@@ -392,6 +406,7 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
     expect(dropped).toMatchObject({ ok: true, backInStock: [s.coordL] })
     expect((await t.free(s.coordL)).held).toBe(held0)
     expect((await t.edits(o.id))[0]).toMatchObject({ droppedReason: 'ship_without', paidAt: null })
+    expect(await t.heldOn((await t.edits(o.id))[0]!.id)).toBe(0)
     expect(await t.withTenant(s.A, (tx) => dropRequest(tx, s.A, { kind: 'support', userId: ME, email: 's@frata.test' }, o.id))).toMatchObject({ ok: false })
     // The shopper pays anyway (the page was open): recorded, refunded at once in full, the order as it was.
     const late = await t.capture(start.pay.razorpayOrderId)
@@ -502,11 +517,13 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
     expect(await retry(f2!.id)).toEqual({ ok: true })
   }, 120_000)
 
-  it('an attempt still unresolved on its last try is settled by one more list: absent → failed (Try again), present → recorded (security M1)', async () => {
+  it('an attempt left unresolved stays on its way until the claim\'s check reads the list: absent → failed, present (or an earlier attempt\'s) → recorded, never twice (security M1, re-review M3, L4)', async () => {
     const s = await shop()
     const t = await tools(s.A, s.stamp)
-    const { sendRefund } = await import('@/lib/payments/refunds')
+    const { sendRefund, sendRefundCheck, retryRefund } = await import('@/lib/payments/refunds')
     const { MAX_ATTEMPTS } = await import('@/lib/outbox')
+    const { outbox } = await import('@/lib/db/schema')
+    const { and, eq } = await import('drizzle-orm')
     const lower = async () => {
       const o = await t.paidOrder([{ variantId: s.coordM, qty: 2 }])
       const r = await t.edit(o.id, [{ line: (await t.lineOf(o.id, s.coordM)).id, variantId: s.coordM, qty: 1 }])
@@ -514,21 +531,139 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
       const [x] = await t.refunds(o.id)
       return { o, row: { ...(await t.outboxRow('refund.send', `refund.send:${x!.id}`))!, attempts: MAX_ATTEMPTS }, id: x!.id }
     }
-    // Razorpay never got it: on the last try the list doesn't have it, so it fails and Try again appears.
+    // The sender's row as the drain leaves it: sent (it returned) or dead (its tries ran out).
+    const senderDone = (id: string, how: 'sentAt' | 'deadAt') => t.withTenant(s.A, (tx) => tx.update(outbox).set({ [how]: new Date() }).where(and(eq(outbox.tenantId, s.A), eq(outbox.dedupeKey, `refund.send:${id}`))))
+    const settle = async (id: string) => sendRefundCheck((await t.outboxRow('refund.check', `refund.settle:${id}`))!)
+
+    // No answer on the last try, and Razorpay never got it: not failed then (it may not be listed yet) — on its way, no
+    // Try again. The claim's check, once the sender is done, lists it absent: failed, and Try again appears.
     const a = await lower()
     rz.s.next.push('down')
     await sendRefund(a.row)
+    expect((await t.refunds(a.o.id))[0]).toMatchObject({ failedAt: null, sentAt: null })
+    expect((await t.refunds(a.o.id))[0]!.sendingAt).not.toBeNull()
+    // While the sender may still try, the check waits for it.
+    await expect(settle(a.id)).rejects.toMatchObject({ name: 'Later' })
+    await senderDone(a.id, 'sentAt')
+    await settle(a.id)
     expect((await t.refunds(a.o.id))[0]).toMatchObject({ failure: 'refused', sentAt: null })
-    // An earlier try (not the last) only counts the miss and tries again later.
+
+    // Razorpay made it, the answer was lost and its list lags: the last try leaves it on its way; the check, once the list
+    // has it, records it — never failed.
     const b = await lower()
-    rz.s.next.push('down')
-    await expect(sendRefund({ ...b.row, attempts: 1 })).rejects.toThrow('razorpay unreachable')
-    expect((await t.refunds(b.o.id))[0]).toMatchObject({ failedAt: null })
-    // Razorpay made it but the answer was lost: the last list finds it by its receipt, recorded, never failed.
     rz.s.next.push('lost')
     await sendRefund(b.row)
+    await senderDone(b.id, 'sentAt')
+    await settle(b.id)
     const got = (await t.refunds(b.o.id))[0]!
     expect([got.failedAt, got.razorpayRefundId?.startsWith('rfnd_')]).toEqual([null, true])
+
+    // An error after the claim on an earlier try, then the outbox row died (L4): the check settles it the same way.
+    const c = await lower()
+    rz.s.next.push('down')
+    await expect(sendRefund({ ...c.row, attempts: 1 })).rejects.toThrow('razorpay unreachable')
+    // Its last try: the earlier create went unanswered and may be in flight, so none is made again (impact re-review).
+    const creates0 = refundCalls().length
+    await sendRefund(c.row)
+    expect(refundCalls().length).toBe(creates0)
+    expect((await t.refunds(c.o.id))[0]).toMatchObject({ failedAt: null, sentAt: null })
+    await senderDone(c.id, 'deadAt')
+    await settle(c.id)
+    expect((await t.refunds(c.o.id))[0]).toMatchObject({ failure: 'refused' })
+
+    // Made at Razorpay but not listed when the check read it (failed as refused); Try again's new attempt lists first and
+    // finds the earlier attempt's receipt in its chain: recorded as that refund, nothing sent twice.
+    const d = await lower()
+    rz.s.next.push('lost')
+    await sendRefund(d.row)
+    rz.s.hidden.add(d.id)
+    await senderDone(d.id, 'sentAt')
+    await settle(d.id)
+    expect((await t.refunds(d.o.id))[0]).toMatchObject({ failure: 'refused' })
+    expect(await t.withTenant(s.A, (tx) => retryRefund(tx, s.A, d.id, new Date()))).toEqual({ ok: true })
+    rz.s.hidden.delete(d.id)
+    const d2 = (await t.refunds(d.o.id))[1]!
+    const creates = refundCalls().length
+    await sendRefund((await t.outboxRow('refund.send', `refund.send:${d2.id}`))!)
+    expect(refundCalls().length).toBe(creates)
+    expect((await t.refunds(d.o.id))[1]!.razorpayRefundId).toBe(rz.s.refunds.find((x) => x.receipt === d.id)!.id)
+  }, 120_000)
+
+  it('a refund failing AFTER a later change was planned is still owed (security re-review H1): immediate and waiting', async () => {
+    const s = await shop()
+    const t = await tools(s.A, s.stamp)
+    const { sendRefund, retryRefund } = await import('@/lib/payments/refunds')
+    const { startEditPayment } = await import('@/lib/orders/edit-paid')
+    const retry = (id: string) => t.withTenant(s.A, (tx) => retryRefund(tx, s.A, id, new Date()))
+    // Immediate: ₹4,812 → ₹2,431 (₹2,381 queued), then → ₹1,949 while it waits (₹482 more): both counted as going back.
+    const o = await t.paidOrder([{ variantId: s.coordM, qty: 2 }])
+    const a = await t.edit(o.id, [{ line: (await t.lineOf(o.id, s.coordM)).id, variantId: s.coordM, qty: 1 }])
+    if (!a.ok) throw new Error(a.error)
+    const [r1] = await t.refunds(o.id)
+    const b = await t.edit(o.id, [{ line: null, variantId: s.s, qty: 1 }], { [(await t.lineOf(o.id, s.coordM)).id]: 'customer_asked' })
+    if (!b.ok) throw new Error(b.error)
+    expect(b).toMatchObject({ refund: 243100 - (189900 + 5000) })
+    // Only now does the first fail: it was counted as on its way, so it is not settled, and Try again sends it.
+    rz.s.next.push('balance')
+    await sendRefund((await t.outboxRow('refund.send', `refund.send:${r1!.id}`))!)
+    expect((await t.refunds(o.id)).find((r) => r.id === r1!.id)).toMatchObject({ failure: 'balance', supersededBy: null })
+    expect(await retry(r1!.id)).toEqual({ ok: true })
+
+    // Waiting: ₹4,812 → ₹2,431 (₹2,381 queued), then up to ₹5,311 asking ₹2,880 (worked out with the ₹2,381 as going back).
+    const w = await t.paidOrder([{ variantId: s.coordM, qty: 2 }])
+    const wa = await t.edit(w.id, [{ line: (await t.lineOf(w.id, s.coordM)).id, variantId: s.coordM, qty: 1 }])
+    if (!wa.ok) throw new Error(wa.error)
+    const [f1] = await t.refunds(w.id)
+    const ask = await t.edit(w.id, [{ line: (await t.lineOf(w.id, s.coordM)).id, variantId: s.coordM, qty: 1 }, { line: null, variantId: s.coordL, qty: 1 }])
+    if (!ask.ok) throw new Error(ask.error)
+    expect(ask).toMatchObject({ asked: 238100 + 288000 + 5000 - 243100 })
+    // The ₹2,381 fails after the change was saved: still owed — Try again is offered while it waits, and after it is paid.
+    rz.s.next.push('balance')
+    await sendRefund((await t.outboxRow('refund.send', `refund.send:${f1!.id}`))!)
+    const st = await startEditPayment(s.A, w.hash)
+    if (!st.ok) throw new Error(st.error)
+    await t.capture(st.pay.razorpayOrderId)
+    expect(Number((await t.order(w.id)).total)).toBe(531100)
+    expect((await t.refunds(w.id)).find((r) => r.id === f1!.id)).toMatchObject({ failure: 'balance', supersededBy: null })
+    expect(await retry(f1!.id)).toEqual({ ok: true })
+  }, 120_000)
+
+  it('Try again is not offered, and refused, for a payment already refunded elsewhere or too old', async () => {
+    const s = await shop()
+    const t = await tools(s.A, s.stamp)
+    const { sendRefund, retryRefund } = await import('@/lib/payments/refunds')
+    const o = await t.paidOrder([{ variantId: s.coordM, qty: 2 }])
+    const d = await t.edit(o.id, [{ line: (await t.lineOf(o.id, s.coordM)).id, variantId: s.coordM, qty: 1 }])
+    if (!d.ok) throw new Error(d.error)
+    const [r] = await t.refunds(o.id)
+    // The merchant refunded most of it in Razorpay's dashboard meanwhile: more than is left → failed as `over`.
+    rz.s.refunds.push({ id: `rfnd_DASH${s.stamp}`, entity: 'refund', amount: 400000, receipt: 'dashboard', status: 'processed', payment_id: r!.razorpayPaymentId, notes: {}, speed_requested: 'normal' })
+    await sendRefund((await t.outboxRow('refund.send', `refund.send:${r!.id}`))!)
+    expect((await t.refunds(o.id))[0]).toMatchObject({ failure: 'over' })
+    expect(await t.withTenant(s.A, (tx) => retryRefund(tx, s.A, r!.id, new Date()))).toEqual({ ok: false, error: 'Razorpay won\'t take this refund. Check Razorpay.' })
+    expect(await t.refunds(o.id)).toHaveLength(1)
+  }, 120_000)
+
+  it('a payment at the old total refunded in full stays refunded after the edit is undone (security re-review M2)', async () => {
+    const s = await shop()
+    const t = await tools(s.A, s.stamp)
+    const { switchToCod, storeRazorpayEvent, processEvents } = await import('@/lib/orders/payment')
+    const { quoteData } = await import('@/lib/queries/checkout')
+    const { quote } = await import('@/domains/checkout/quote')
+    const o = await t.paidOrder([{ variantId: s.s, qty: 2 }], { pay: false })
+    const d = await quoteData(s.A, [s.s], new Date(), null, HOST)
+    const q = quote([{ variantId: s.s, qty: 2 }], d.rows, d.shop!, new Date(), '302021', { offers: d.offers })
+    expect(await switchToCod(s.A, o.hash, q.cod.total)).toEqual({ kind: 'switched', total: q.cod.total })
+    const e = await t.edit(o.id, [{ line: (await t.lineOf(o.id, s.s)).id, variantId: s.s, qty: 1 }])
+    if (!e.ok) throw new Error(e.error)
+    const p = await t.capture(o.rzp)
+    expect((await t.order(o.id)).paidAt).toBeNull()
+    expect((await t.undo(e.eventId)).ok).toBe(true)
+    // A late order.paid / a re-sent capture for the same payment: still refunded, never the order's payment.
+    await storeRazorpayEvent(s.A, `razorpay:order.paid:${p.id}`, { event: 'order.paid', payload: { payment: { entity: p } } })
+    await processEvents(s.A)
+    expect((await t.order(o.id)).paidAt).toBeNull()
+    expect((await t.refunds(o.id)).filter((r) => r.razorpayPaymentId === p.id)).toHaveLength(1)
   }, 120_000)
 
   it('cancelling a paid order after an edit names what the payments still hold (after a lower edit, after a paid increase)', async () => {
@@ -569,6 +704,7 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
     if (!st.ok) throw new Error(st.error)
     const done = await t.withTenant(s.A, (tx) => cancel(tx, s.A, ACTOR, o.id, { reason: 'customer_cancelled', restock: false }))
     expect(done).toMatchObject({ ok: true, backInStock: [s.coordL] })
+    expect(await t.heldOn((await t.edits(o.id))[0]!.id)).toBe(0)
     expect((await t.free(s.coordL)).held).toBe(held0)
     expect((await t.withTenant(s.A, (tx) => heldByVariant(tx, s.A, new Date()))).get(s.coordL) ?? 0).toBe(held0)
     const fee0 = Number((await t.order(o.id)).gatewayFee)
@@ -599,6 +735,7 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
     expect((await t.edits(o.id))[0]).toMatchObject({ droppedReason: 'cannot_apply', paidAt: null })
     expect((await t.refunds(o.id)).map((r) => [r.cause, r.razorpayPaymentId])).toEqual([['after_drop', p.id]])
     expect((await t.free(s.coordL)).held).toBe(held0 - 1)
+    expect(await t.heldOn((await t.edits(o.id))[0]!.id)).toBe(0)
   }, 120_000)
 
   it('a change paid before the order\'s own fee was known: the fee, when it comes, adds both (markPaid and editFeesSql); Razorpay asked for a lost payment', async () => {

@@ -13,6 +13,9 @@
 // - An attempt's stage comes from its moments (order_refunds), never a status column.
 // =============================================================================
 
+import { paise } from '@/domains/money/paise'
+import { estimateGatewayFee, RAZORPAY_STANDARD_BPS } from './profit'
+
 /** Razorpay's smallest payment and refund: ₹1. */
 export const MIN_PAISE = 100
 
@@ -98,7 +101,7 @@ export const FAILURE_WORDS: Record<string, string> = {
   balance: 'Not enough balance in Razorpay: add funds, then try again.',
   too_old: 'Paid over 6 months ago: Razorpay can\'t refund it. Refund the shopper yourself.',
   disabled: 'Refunds are off for this payment in Razorpay: turn them on, then try again.',
-  over: 'Razorpay shows part of this payment already refunded. Check Razorpay, then try again.',
+  over: 'Razorpay shows part of this payment already refunded. Refund what\'s left from your Razorpay dashboard.',
   keys: 'Razorpay refused your keys: check them in Settings, then try again.',
   refused: 'Razorpay refused this refund. Check Razorpay, then try again.',
   failed: 'Razorpay could not complete this refund. Try again.',
@@ -124,11 +127,16 @@ export function feeKept(parts: { paymentId: string; amount: number }[], payments
 }
 
 /** About what Razorpay keeps on a payment of `amount` refunded in full: at this order's own payment's rate when known,
- * else 2% plus 18% GST (Razorpay's standard rate, frata-unit-economics). Paise. */
+ * else Razorpay's standard rate plus GST (estimateGatewayFee, profit.ts). Paise. */
 export function feeAbout(amount: number, rateFrom: Paid | null): number {
   if (rateFrom?.fee != null && rateFrom.amount > 0) return Math.round((rateFrom.fee * amount) / rateFrom.amount)
-  const fee = Math.round((amount * 200) / 10_000)
-  return fee + Math.round(fee * 0.18)
+  return estimateGatewayFee(paise(amount), RAZORPAY_STANDARD_BPS)
+}
+
+/** What has gone back to the shopper, or is on its way, from this order's own payments (the cancel dialog says it). */
+export function refundedOf(ledger: { payments: Paid[]; refunds: (RefundMoments & { razorpayPaymentId: string; amount: number })[] } | null): number {
+  if (!ledger) return 0
+  return ledger.refunds.filter((r) => counts(r) && ledger.payments.some((p) => p.id === r.razorpayPaymentId)).reduce((a, r) => a + r.amount, 0)
 }
 
 /** How many times a refund Razorpay failed after accepting it is tried again by itself, before it waits for Try again. */
@@ -148,7 +156,7 @@ export function refundChains<T extends Pick<RefundRow, 'id' | 'retryOf' | 'super
  * Razorpay", "refunded · 5–10 working days to reach the shopper", or "not sent" (its cause beside it). Why, when it was
  * not an edit's lower total: a payment that came after its change was dropped, or one at the order's old total.
  */
-export function refundLine(r: RefundMoments & { cause: string; failure: string | null; gatewayFee?: number | null }, sendsAt: string, inr: (p: number) => string = String): { words: string; failed: string | null } {
+export function refundLine(r: RefundMoments & { cause: string; failure: string | null; gatewayFee?: number | null }, sendsAt: string, inr: (p: number) => string): { words: string; failed: string | null } {
   // A payment refunded in full: Razorpay keeps its fee on it (unit-economics review 2026-11-12), said once known.
   const kept = r.gatewayFee ? ` · Razorpay kept ${inr(r.gatewayFee)}` : ''
   const why = r.cause === 'after_drop' ? ` · paid after the change was dropped${kept}` : r.cause === 'old_order' ? ` · paid at the old total${kept}` : ''
@@ -157,6 +165,16 @@ export function refundLine(r: RefundMoments & { cause: string; failure: string |
   if (s === 'queued') return { words: `refund · sends ${sendsAt}${why}`, failed: null }
   if (s === 'processed') return { words: `refunded · 5–10 working days to reach the shopper${why}`, failed: null }
   return { words: `refund · with Razorpay${why}`, failed: null }
+}
+
+/**
+ * The failed attempts a plan made now counts as NOT going back (failed, never tried again, not settled yet): the only
+ * ones a change saved from that plan may settle (security re-review 2026-11-12 H1 — one failing after the plan was
+ * counted as on its way, so it is still owed).
+ */
+export function failedUnretried<T extends Partial<Pick<RefundRow, 'id' | 'retryOf' | 'supersededBy'>> & Pick<RefundMoments, 'failedAt'>>(rows: T[]): string[] {
+  const retried = new Set(rows.flatMap((r) => (r.retryOf ? [r.retryOf] : [])))
+  return rows.flatMap((r) => (r.id && r.failedAt && !r.supersededBy && !retried.has(r.id) ? [r.id] : []))
 }
 
 /** The attempts before this one in its chain (to count automatic retries). */

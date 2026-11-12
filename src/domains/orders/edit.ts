@@ -75,7 +75,8 @@ export type EditFacts = {
     /** How it is paid now: priced that way. */
     way: 'cod' | 'prepaid' }
   /** Paid online: its payments and the refunds against them (refunds.ts settleOf), as of `now`. Null: not paid online. */
-  paid: { payments: Paid[]; refunds: Pick<RefundRow, 'razorpayPaymentId' | 'amount' | 'cancelledAt' | 'sendingAt' | 'sentAt' | 'processedAt' | 'failedAt'>[]; now: Date } | null
+  paid: { payments: Paid[]; refunds: (Pick<RefundRow, 'razorpayPaymentId' | 'amount' | 'cancelledAt' | 'sendingAt' | 'sentAt' | 'processedAt' | 'failedAt'>
+    & Partial<Pick<RefundRow, 'id' | 'retryOf' | 'supersededBy'>>)[]; now: Date } | null
   rules: { shippingFlat: number; freeShippingAbove: number; codMax: number }
   /** Pieces of a variant the order may hold on a new or changed line (today's free stock, its own pieces back). */
   room: Record<string, number>

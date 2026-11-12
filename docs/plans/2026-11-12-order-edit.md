@@ -135,6 +135,10 @@ and the edit is applied only when that payment is captured. Built as:
    counted (`order_refunds.gateway_fee`); the screens give the fee in rupees; refunds and edit lines name only their own
    order (tenancy); a cancel names `paidLeft` from the ledger (impact BLOCKER); `stillFit` at capture; held pieces reset
    and the sold-out cache refreshed on cancel and capture; no Try again for `too_old`/`over`.
+   Security re-review (2026-11-12): a change settles only the failed refunds its own plan counted as not going back (ids, or
+   failed before a waiting change was saved; failures stamped under the order's lock); a send left unresolved stays on its
+   way until a check queued with its claim reads the list (no "refused" on a lost answer; chain receipts count); a payment at
+   the old total refunded once stays refunded after an Undo.
    **Deploy:** apply 0120 and 0121 before pushing the code (readers select `asked`, `held`; `heldSql` joins
    `order_edit_lines`). Both are additive (new table, nullable columns, a NOT NULL dropped, CHECKs widened).
 

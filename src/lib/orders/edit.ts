@@ -1,9 +1,8 @@
 import 'server-only'
 import { and, eq, inArray, isNull } from 'drizzle-orm'
-import { classOf } from '@/domains/checkout/discounts'
 import { cannotEdit, priceAsKept, undoUntil, usesOn, type EditReason, type Want } from '@/domains/orders/edit'
 import { currentMethod } from '@/domains/orders/order-state'
-import { dueOf, settleOf } from '@/domains/orders/refunds'
+import { dueOf, failedUnretried, settleOf } from '@/domains/orders/refunds'
 import { chargesGst, type Scheme } from '@/domains/tax/gst'
 import type { Tx } from '@/lib/db'
 import { orderDiscounts } from '@/lib/db/schema-discounts'
@@ -13,7 +12,7 @@ import { enqueueOrderEmail } from '@/lib/email/enqueue'
 import { cancelEditRefunds, queueRefund, supersedeFailed } from '@/lib/payments/refunds'
 import { editVariantIds, type LiveLine } from './edit-facts'
 import { requestPayment, waitingEdit } from './edit-paid'
-import { applyPlan, inr, planLocked, rearrive, Refused, stillFit } from './edit-write'
+import { applyPlan, grownUses, inr, planLocked, rearrive, Refused, stillFit } from './edit-write'
 import { writeReprice } from './reprice'
 import { lockVariants, putStockBackLines, takeStockLines } from './stock'
 import { current, moment, record, type Actor, type Done } from './work'
@@ -59,11 +58,8 @@ export async function editItems(tx: Tx, tenantId: string, actor: Actor, orderId:
       const { read, p } = await planLocked(sp, tenantId, orderId, input.want, input.reasons, now)
       const { facts, live } = read
       if (p.total.after !== input.expectedTotal) throw new Refused(`The new total is ${inr(p.total.after)}. Check it, then save again.`, p.total.after)
-      const way = facts.order.way
       // A saving that grew is a bigger use of its offer: it must still fit its budget.
-      const grew = p.offers.flatMap((x) => { const o = facts.offers!.find((k) => k.rowId === x.rowId)!.kept
-        return x.after > x.before && usesOn(way)({ class: classOf(o.terms.style), method: o.method }) ? [{ discountId: o.terms.id, amount: x.after, title: x.title }] : [] })
-      const short = await stillFit(sp, tenantId, orderId, grew, now)
+      const short = await stillFit(sp, tenantId, orderId, grownUses(p, facts), now)
       if (short) throw new Refused(`${short} has no room for a bigger saving. Keep the order as it was.`)
       // Paid online: refund the difference, or ask for it first (refunds.ts), exactly as Save showed it.
       const settle = settleOf(p.total.after, facts.paid, now)
@@ -86,7 +82,8 @@ export async function editItems(tx: Tx, tenantId: string, actor: Actor, orderId:
       ])
       // A failed refund nobody tried again is settled by this change (its total counted that money as the shop's): never
       // tried again after it (security review 2026-11-12 H1).
-      if (facts.paid) await supersedeFailed(sp, tenantId, orderId, edit!.id)
+      // Only the failed ones this plan counted as not going back (security re-review H1): one failing since stays owed.
+      if (facts.paid) await supersedeFailed(sp, tenantId, orderId, edit!.id, { ids: failedUnretried(facts.paid.refunds) })
       // The refund waits out the Undo window (an Undo before then cancels it in its own transaction).
       if (settle.kind === 'refund') for (const part of settle.parts) {
         await queueRefund(sp, tenantId, { orderId, editId: edit!.id, cause: 'edit', paymentId: part.paymentId, amount: part.amount, notBefore: undoUntil(stamp) })
