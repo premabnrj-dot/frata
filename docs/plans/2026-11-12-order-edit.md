@@ -145,3 +145,10 @@ and the edit is applied only when that payment is captured. Built as:
 ## Accepted
 - No edit after packing (a credit note instead), no shopper-side edit, normal-speed refunds only (all reviews agreed).
 - A size swap at today's price can change the amount to collect: shown in "What changes" before Save.
+
+## Known limit at OE·2 release (security pass 3, 2026-11-12)
+
+- A refund Razorpay made but did not list for over an hour after it was claimed is failed as refused. Try again adopts it
+  (a new attempt lists first and takes an earlier receipt of its chain). A later decrease edit does not: it plans as if
+  that money were still with the shopper, and Razorpay's per-payment cap is the only limit. Close it by having any create
+  on a payment first record a listed refund whose receipt is any attempt of the order, then re-plan.

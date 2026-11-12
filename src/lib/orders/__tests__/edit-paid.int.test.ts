@@ -266,7 +266,11 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
     rz.s.next.push('fail_later')
     await sendRefund((await t.outboxRow('refund.send', `refund.send:${f1!.id}`))!)
     await new Promise((r) => setTimeout(r, 5))
-    await sendRefundCheck((await t.outboxRow('refund.check', `refund.check:${f1!.id}`))!)
+    // Two checks reading it pending at once (security pass 3 M1): one failure, one retry — never two.
+    const check = (await t.outboxRow('refund.check', `refund.check:${f1!.id}`))!
+    await Promise.all([sendRefundCheck(check), sendRefundCheck(check)])
+    // The claim's settle check leaves a refund Razorpay gave an id to its own check.
+    await sendRefundCheck((await t.outboxRow('refund.check', `refund.settle:${f1!.id}`))!)
     const chain = await t.refunds(o2.id)
     expect(chain).toHaveLength(2)
     expect(chain[0]).toMatchObject({ failure: 'failed' })
@@ -533,7 +537,8 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
     }
     // The sender's row as the drain leaves it: sent (it returned) or dead (its tries ran out).
     const senderDone = (id: string, how: 'sentAt' | 'deadAt') => t.withTenant(s.A, (tx) => tx.update(outbox).set({ [how]: new Date() }).where(and(eq(outbox.tenantId, s.A), eq(outbox.dedupeKey, `refund.send:${id}`))))
-    const settle = async (id: string) => sendRefundCheck((await t.outboxRow('refund.check', `refund.settle:${id}`))!)
+    // The check as the drain runs it an hour after the claim (absent once is not enough: it lists again 30 minutes on).
+    const settle = async (id: string, minutes = 61) => { const row = (await t.outboxRow('refund.check', `refund.settle:${id}`))!; return sendRefundCheck({ ...row, createdAt: new Date(Date.now() - minutes * 60_000) }) }
 
     // No answer on the last try, and Razorpay never got it: not failed then (it may not be listed yet) — on its way, no
     // Try again. The claim's check, once the sender is done, lists it absent: failed, and Try again appears.
@@ -545,6 +550,9 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
     // While the sender may still try, the check waits for it.
     await expect(settle(a.id)).rejects.toMatchObject({ name: 'Later' })
     await senderDone(a.id, 'sentAt')
+    // Absent at its first read, 30 minutes on: read again later, not failed yet.
+    await expect(settle(a.id, 31)).rejects.toMatchObject({ name: 'Later' })
+    expect((await t.refunds(a.o.id))[0]!.failedAt).toBeNull()
     await settle(a.id)
     expect((await t.refunds(a.o.id))[0]).toMatchObject({ failure: 'refused', sentAt: null })
 
@@ -587,6 +595,16 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
     await sendRefund((await t.outboxRow('refund.send', `refund.send:${d2.id}`))!)
     expect(refundCalls().length).toBe(creates)
     expect((await t.refunds(d.o.id))[1]!.razorpayRefundId).toBe(rz.s.refunds.find((x) => x.receipt === d.id)!.id)
+
+    // A week on with the sender still looping: failed as refused, so it shows owed with Try again (security pass 3 L3).
+    const eo = await t.paidOrder([{ variantId: s.s, qty: 2 }])
+    const er = await t.edit(eo.id, [{ line: (await t.lineOf(eo.id, s.s)).id, variantId: s.s, qty: 1 }])
+    if (!er.ok) throw new Error(er.error)
+    const [e] = await t.refunds(eo.id)
+    rz.s.next.push('down')
+    await sendRefund({ ...(await t.outboxRow('refund.send', `refund.send:${e!.id}`))!, attempts: 1 }).catch(() => {})
+    await settle(e!.id, 8 * 24 * 60)
+    expect((await t.refunds(eo.id))[0]).toMatchObject({ failure: 'refused' })
   }, 120_000)
 
   it('a refund failing AFTER a later change was planned is still owed (security re-review H1): immediate and waiting', async () => {

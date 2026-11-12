@@ -118,8 +118,9 @@ const fail = (tenantId: string, id: string, failure: string) => withTenant(tenan
   // before it, so it may settle it) or did not (failed after it, still owed) — never a failure it didn't see stamped as
   // before it (security re-review 2026-11-12 H1).
   await tx.execute(sql`select 1 from orders where tenant_id = ${tenantId} and id = (select order_id from order_refunds where tenant_id = ${tenantId} and id = ${id}) for update`)
-  await tx.update(orderRefunds).set({ failedAt: sql`clock_timestamp()`, failure }).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.id, id), isNull(orderRefunds.failedAt), isNull(orderRefunds.processedAt)))
-  if (failure !== 'failed') return
+  const done = await tx.update(orderRefunds).set({ failedAt: sql`clock_timestamp()`, failure }).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.id, id), isNull(orderRefunds.failedAt), isNull(orderRefunds.processedAt))).returning({ id: orderRefunds.id })
+  // Failed already (two checks read it pending at once): the first one queued its retry; never a second (security pass 3 M1).
+  if (!done.length || failure !== 'failed') return
   // Razorpay failed it after accepting it: tried again by itself, as a new attempt, a few times (then Try again).
   const [r] = await tx.select().from(orderRefunds).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.id, id)))
   const chain = await tx.select({ id: orderRefunds.id, retryOf: orderRefunds.retryOf }).from(orderRefunds).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.orderId, r!.orderId)))
@@ -219,6 +220,8 @@ export async function sendRefundCheck(row: OutboxRow): Promise<void> {
     if (!r.sendingAt) return
     return settleUnresolved(row, r, keys)
   }
+  // Razorpay gave it an id: its own check (refund.check:<id>) reads it from here, never two pollers (security pass 3 M1).
+  if (row.dedupeKey.startsWith('refund.settle:')) return
   if (!keys) throw new Later('no keys', 60)
   const got = await fetchRefund(keys, r.razorpayPaymentId, r.razorpayRefundId)
   if (!got.ok) throw new Later('razorpay unreachable', 15)
@@ -235,18 +238,24 @@ export async function sendRefundCheck(row: OutboxRow): Promise<void> {
  */
 async function settleUnresolved(row: OutboxRow, r: typeof orderRefunds.$inferSelect, keys: Awaited<ReturnType<typeof keysFor>>) {
   const tenantId = row.tenantId
+  const age = Date.now() - new Date(row.createdAt).getTime()
+  // A ceiling first, whatever the sender or the keys are doing: after a week it is failed as refused, so the order page
+  // shows it owed with Try again (whose new attempt lists first and adopts this one if Razorpay made it after all), never
+  // "with Razorpay" for good (security pass 3 L3).
+  if (age > 7 * 86_400_000) return void await fail(tenantId, r.id, 'refused')
   const [sender] = await withTenant(tenantId, (tx) => tx.select({ sentAt: outbox.sentAt, deadAt: outbox.deadAt }).from(outbox)
     .where(and(eq(outbox.tenantId, tenantId), eq(outbox.dedupeKey, `refund.send:${r.id}`))))
   // The sender is still trying: let it.
   if (sender && !sender.sentAt && !sender.deadAt) throw new Later('refund still being sent', 30)
   if (!keys) throw new Later('no keys', 60)
-  // A ceiling: a week of Razorpay not answering leaves it for a person (logged; it still shows "with Razorpay").
-  if (Date.now() - new Date(row.createdAt).getTime() > 7 * 86_400_000) throw new GiveUp('unresolved after 7 days')
   const chain = await withTenant(tenantId, (tx) => chainIds(tx, tenantId, r))
   const list = await paymentRefunds(keys, r.razorpayPaymentId)
   if (!list.ok) throw new Later('razorpay unreachable', 15)
   const found = list.items.find((x) => x.receipt === r.id) ?? list.items.find((x) => x.status !== 'failed' && x.receipt !== null && chain.includes(x.receipt))
-  await (found ? taken(tenantId, r.id, found) : fail(tenantId, r.id, 'refused'))
+  if (found) return void await taken(tenantId, r.id, found)
+  // Absent: listed once more a while later before it is failed — at least an hour after the claim (security pass 3).
+  if (age < 2 * SETTLE_MINUTES * 60_000) throw new Later('not listed yet', SETTLE_MINUTES)
+  await fail(tenantId, r.id, 'refused')
 }
 
 /**
