@@ -81,6 +81,26 @@ create your tenant and owner membership (it is a plain insert; no secret).
    on. Invites are claimed only by confirmed emails.
 4. Redeploy. You are already in `platform_staff` as Admin.
 
+### 6b. Staff passkeys — the first time (ADR-0007 amended 2026-11-12; spec `docs/specs/2026-11-12-staff-passkeys.md`)
+
+From this release Admin, and every support visit into a shop, opens only after a passkey check on that browser. Nobody
+has a passkey on the first day, so the owner lets themself in once (about two minutes):
+
+1. Sign in and open Admin. It shows **Add a passkey**. Click **Ask to add a passkey** (a 6-digit code appears; you need
+   not read it to anyone this once).
+2. Supabase → SQL Editor, within 15 minutes: `select app_staff_bootstrap('<your staff email>');` — it answers
+   "approved for 10 minutes" and writes an audit row. No app role can call this function; only the SQL Editor.
+3. Back in Admin (it refreshes by itself): name the passkey, **Add passkey**, confirm with your fingerprint, face or
+   device PIN. Admin opens.
+4. Admin › Staff → **Add a passkey** on a second device (your phone), so losing one device never locks you out.
+5. Other staff: they open Admin and ask; they read you their code by voice or video; you type it in Admin › Staff →
+   **Approve** (your own passkey confirms first). Never approve a code you did not hear from the person.
+6. Lost every device, or the only admin: repeat steps 1–3. The same SQL is the break-glass, so keep multi-factor sign-in
+   on the Supabase account (anyone who can run SQL there can do this).
+
+Passkeys belong to the console's host (`NEXT_PUBLIC_CONSOLE_HOST`). When the console moves to `app.frrata.com`, everyone
+adds passkeys again through steps 1–5.
+
 ### Rename day: Frrata (brand spec 2026-11-07)
 
 1. Supabase → Authentication → Emails: set the **sender name** to "Frrata" and the sign-in email's **subject** to

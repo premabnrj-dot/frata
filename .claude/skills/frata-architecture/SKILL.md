@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.44.0
+  version: 2.45.0
   verified: 2026-11-11
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -113,6 +113,17 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   (`signedInUser`, `accessOf`, React `cache`), shared by `requireMember`, `requireStaff` and `requireUser`; Admin's
   layout used to ask each twice. `cache` does not memoize inside a server action or route handler: there each call is
   its own lookup (and each `adminDb()` its own connection), so pass the transaction down instead of reading again.
+- **Staff passkeys** (ADR-0007 amended 2026-11-12; `docs/specs/2026-11-12-staff-passkeys.md`): staff access and every
+  support visit need a live passkey step-up on this browser session. `app_access_for(user, session, stepup hash)`
+  answers `staffConfirmedAt` and drops support visits without one, in the query every signed-in request already runs.
+  `requireStaff` returns `StaffOk` (with `sessionId`, `confirmedAt`) or `needs_passkey` with a `StaffIdentity` — a
+  different type that only `src/lib/admin/passkeys.ts` accepts; Admin's layout renders the check in place of any
+  page. Adding or removing staff, approving a request and removing a passkey need `confirmedRecently` (5 minutes).
+  The `staff_*` tables have no grant to any role (definers only, `check:tenant`); the session id comes from
+  `getClaims()` with `sub` matched; the cookie is `__Host-frrata_staff` (plain `frrata_staff` on the local e2e stack).
+- **Secrets only in Production** (previews off production, 2026-11-12): every secret in `src/lib/env.ts` is read through
+  `secret()` (`src/domains/infra/stage.ts`): on Vercel, Production only; off Vercel, as given. `check:config` fails an
+  unwrapped read. Sign-in is off in the browser on a preview.
 - Signing in grants nothing; a `members` row does. Roles: owner, admin, staff,
   partner (`MEMBER_ROLES`); tuples `ANY_MEMBER` (everyone, partner included:
   orders, and products and collections — staff edit the catalogue, owner
