@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { staffProof } from '@/lib/auth/session'
 import { passkeySite, staffCookieName, staffCookieSecure } from '@/lib/auth/staff-cookie'
+import { PASSKEY_BODY_MAX, PasskeyResponse, readCapped } from '@/lib/auth/webauthn'
 import {
   addOptions, addVerify, approveRequest, confirmOptions, confirmVerify, removePasskey, requestPasskey, type Result,
 } from '@/lib/admin/passkeys'
@@ -22,38 +23,13 @@ export const maxDuration = 15
 
 const Body = z.object({
   op: z.enum(['confirm-options', 'confirm-verify', 'add-options', 'add-verify', 'request', 'approve', 'remove']),
-  // The browser's WebAuthn answer: only the fields the server reads, each capped (security review L1).
-  response: z.object({
-    id: z.string().regex(/^[A-Za-z0-9_-]{16,1400}$/), rawId: z.string().regex(/^[A-Za-z0-9_-]{16,1400}$/), type: z.literal('public-key'),
-    authenticatorAttachment: z.string().max(40).optional(), clientExtensionResults: z.record(z.string(), z.unknown()).optional(),
-    response: z.object({
-      clientDataJSON: z.string().regex(/^[A-Za-z0-9_-]{1,4000}$/),
-      authenticatorData: z.string().regex(/^[A-Za-z0-9_-]{1,8000}$/).optional(), signature: z.string().regex(/^[A-Za-z0-9_-]{1,2000}$/).optional(),
-      userHandle: z.string().regex(/^[A-Za-z0-9_-]{0,400}$/).optional(), attestationObject: z.string().regex(/^[A-Za-z0-9_-]{1,10000}$/).optional(),
-      transports: z.array(z.string().max(20)).max(8).optional(), publicKeyAlgorithm: z.number().int().optional(),
-      publicKey: z.string().max(2000).optional(), authenticatorDataPresent: z.boolean().optional(),
-    }),
-  }).optional(),
+  response: PasskeyResponse.optional(),
   name: z.string().trim().min(1).max(40).optional(),
   email: z.string().trim().toLowerCase().email().max(200).optional(),
   code: z.string().regex(/^[0-9 ]{6,8}$/).optional(),
   passkeyId: z.string().uuid().optional(),
 })
-const MAX = 16 * 1024
-async function readCapped(request: Request, max: number): Promise<string | null> {
-  const reader = request.body?.getReader()
-  if (!reader) return ''
-  const chunks: Uint8Array[] = []
-  let size = 0
-  for (;;) {
-    const { done, value } = await reader.read()
-    if (done) break
-    size += value.byteLength
-    if (size > max) { await reader.cancel().catch(() => {}); return null }
-    chunks.push(value)
-  }
-  return new TextDecoder().decode(Buffer.concat(chunks))
-}
+const MAX = PASSKEY_BODY_MAX
 const no = (error: string, status = 400) => NextResponse.json({ error }, { status, headers: { 'cache-control': 'no-store' } })
 const send = <T>(r: Result<T>) => (r.ok ? NextResponse.json({ ok: true, value: r.value }, { headers: { 'cache-control': 'no-store' } }) : no(r.error, 409))
 

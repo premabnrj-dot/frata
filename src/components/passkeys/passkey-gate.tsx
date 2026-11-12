@@ -4,15 +4,17 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Section } from '@/components/layout/section'
-import type { GateState } from '@/lib/admin/passkeys'
 import { useToast } from '@/components/ui/toast'
-import { addPasskey, confirmPasskey, requestCode } from './passkey-client'
+import { dateTimeIN } from '@/lib/format-date'
+import { passkeyClient, type PasskeyEndpoint } from './passkey-client'
+import type { GateState } from './types'
 
 // =============================================================================
-// FILE: src/app/(admin)/admin/_components/staff-gate.tsx — what Admin shows instead of any page until this browser
-// session has passed a passkey check (mockup https://claude.ai/artifact/Xng3BV15YZpDQi9MoYLGsZ). Confirm with a
-// passkey; with none, ask for one (a code another admin types to approve) and, once approved, add it on this browser.
-// A failure is an error toast (§ Feedback 1): the layout wraps the gate in its own calm Toaster.
+// FILE: src/components/passkeys/passkey-gate.tsx — what Admin (and the partner workspace, T1b) shows instead of any
+// page until this browser session has passed a passkey check (mockup https://claude.ai/artifact/Xng3BV15YZpDQi9MoYLGsZ).
+// Confirm with a passkey; with none, ask for one (a code someone else types to approve) and, once approved, add it on
+// this browser. A failure is an error toast (§ Feedback 1): the layout wraps the gate in its own calm Toaster.
+// `readTo` names who approves ("an admin", "your team's owner", "Frrata"); `help` says how to reach them.
 // =============================================================================
 
 function Key() {
@@ -23,7 +25,10 @@ function Key() {
   )
 }
 
-export function StaffGate({ email, state, signOut }: { email: string; state: GateState | null; signOut: React.ReactNode }) {
+export function PasskeyGate({ email, state, signOut, endpoint = '/admin/passkey', readTo = 'an admin', help = null }: {
+  email: string; state: GateState | null; signOut: React.ReactNode; endpoint?: PasskeyEndpoint; readTo?: string; help?: React.ReactNode
+}) {
+  const { addPasskey, confirmPasskey, requestCode } = passkeyClient(endpoint)
   const router = useRouter()
   const toast = useToast()
   const [busy, setBusy] = useState(false)
@@ -67,9 +72,10 @@ export function StaffGate({ email, state, signOut }: { email: string; state: Gat
         <h1 className="text-xl font-semibold">Add a passkey</h1>
         {code ? (
           <>
-            <p className="text-sm text-muted-foreground">Read this code to an admin</p>
+            <p className="text-sm text-muted-foreground">Read this code to {readTo}</p>
             <p className="font-mono text-3xl font-semibold tracking-[0.18em] tabular-nums" aria-live="polite">{code.slice(0, 3)} {code.slice(3)}</p>
-            <Button disabled aria-disabled>Waiting for approval</Button>
+            <Button disabled aria-disabled>{request?.opensAt ? `Can be approved from ${dateTimeIN(new Date(request.opensAt))}` : 'Waiting for approval'}</Button>
+            {help}
           </>
         ) : (
           <Button disabled={busy} onClick={() => run(async () => { const r = await requestCode(); if (r.ok && r.value) setCode(r.value.code); return r.ok ? { ok: true } : r })}>
@@ -99,3 +105,6 @@ export function StaffGate({ email, state, signOut }: { email: string; state: Gat
     </main>
   )
 }
+
+/** Admin's name for it (src/app/(admin)/admin/layout.tsx). */
+export const StaffGate = (p: { email: string; state: GateState | null; signOut: React.ReactNode }) => <PasskeyGate {...p} />

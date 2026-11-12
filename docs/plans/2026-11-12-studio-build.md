@@ -259,6 +259,10 @@ staff passkeys (docs/specs/2026-11-12-staff-passkeys.md, ADR-0007 amended), the 
     re-enrol when the console host moves, as staff do.
 
 ### Tasks (T1b)
+**Progress (2026-11-12, paused by the owner at a safe point):** task 1 done on branch `claude/amazing-wright-7irwn3`,
+not on main (`src/lib/auth/webauthn.ts`, `src/components/passkeys/`; Admin runs on them; `npm test`, typecheck and
+flow 75 green). Resume at task 2 (migrations 0125/0126; re-check main's newest migration number first). Nothing of
+T1b is applied to production.
 1. Shared WebAuthn module and gate component; Admin on them (flow 75 green before and after). Commit.
 2. Migration 0125 (tables, generated) + 0126 (custom: access, definers, rewritten partner definers, hand over,
    emails), proof § 78 and § 77 helper, `check:tenant` rules. `verify:tenancy`.

@@ -8,7 +8,7 @@ import { adminHealth } from '@/lib/admin/health'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { requireMember, ANY_MEMBER } from '@/lib/auth/require-member'
 import { gateState } from '@/lib/admin/passkeys'
-import { StaffGate } from './_components/staff-gate'
+import { StaffGate } from '@/components/passkeys/passkey-gate'
 import { signOutAction } from './sign-out/actions'
 import { Toaster } from '@/components/ui/toast'
 
