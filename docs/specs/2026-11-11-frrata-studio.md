@@ -36,7 +36,7 @@ points (Shopify India, Shiprocket, GoKwik, 2026).
 9. **Brand brain**: brand.md (read every session), skills stacked Frrata → starter → agency, reviewers, learned facts a
    person keeps.
 10. **Environment**: preview data (catalogue read-only; never orders or customers), outbound allow-list, packages
-    (allow-list, a day's wait, no install scripts), keys added by a proxy, domains, who publishes.
+    (allow-list, a 7-day wait for outside packages — kit-and-fleet spec 2026-11-12 § 4, no install scripts), keys added by a proxy, domains, who publishes.
 11. **Developer**: clone, `npx frrata dev` with the test key, pull a session, push; every push gets a preview and the
     same checks; a branch can be handed to the agent.
 12. **Credits**: by client and session, reserved per turn and returned on failure, caps, the client's invoice option.

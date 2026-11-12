@@ -179,7 +179,7 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 </style>
 <div class="wrap">
 <div class="col">
-  <span class="eyebrow">Plan · draft · 12 Nov 2026 · for the owner</span>
+  <span class="eyebrow">Plan · draft · 12 Nov 2026 · security and architecture reviews folded in · for the owner</span>
   <h1 style="margin-top:12px">Kit and fleet: how Frrata builds, guards and keeps every site</h1>
   <p class="lede">Studio is what partners see. This is what Frrata's own staff and agents do behind it: build the kit and the starters, set the controls every site runs inside, and ship fixes to a thousand sites without breaking one.</p>
   <div class="thread"></div>
@@ -189,10 +189,11 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 <div class="col">
   <div class="ask"><b>Owner, 12 Nov:</b> "If the store isn't handed over, there is no need of owner approval during that time for partners."</div>
   <div class="phases3">
-    <div class="box"><span class="chip c-info">Build mode</span><h3>Before handover</h3><p class="note">The partner publishes after the checks pass. No approval step. The shop takes no orders: the database already refuses to open a shop with no owner.</p></div>
-    <div class="box"><span class="chip c-warn">Handover</span><h3>The owner claims the shop</h3><p class="note">With a verified email. Sees the live version and the partner's scopes, accepts. That version becomes the baseline. Domain and payments are the owner's to connect.</p></div>
+    <div class="box"><span class="chip c-info">Build mode</span><h3>Before handover</h3><p class="note">The partner publishes after the checks pass. No approval step. The published version shows on a signed preview; the public address says "Opening soon" and stays out of search. The shop takes no orders: the database already refuses to open a shop with no owner.</p></div>
+    <div class="box"><span class="chip c-warn">Handover</span><h3>The owner claims the shop</h3><p class="note">With a verified email. The checks run again; the owner sees that exact version and the partner's scopes, and accepts it. The partner's routines lose publish rights. Domain and payments are the owner's to connect.</p></div>
     <div class="box"><span class="chip c-ok">Owned</span><h3>After handover</h3><p class="note">The owner's approval on the exact version, unless the owner gives that partner more.</p></div>
   </div>
+  <p class="note">A partner removed before handover: the site goes to maintenance. A shop that ever had an owner never returns to build mode.</p>
 </div>
 
 <h2>The seven parts</h2>
@@ -200,22 +201,22 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 <table>
   <thead><tr><th>Part</th><th>What Frrata does</th><th>Who</th><th>Lands in</th></tr></thead>
   <tbody>
-    <tr><td><b>1 · The kit</b></td><td>One repository, <span class="mono">frrata-kit</span>: core (API client, money, buy link, SEO, images, analytics), legal block, brand tokens, India-first components, the checks CLI, the agent's skills, the policies</td><td>Kit team + kit-maintainer agent</td><td>V1</td></tr>
-    <tr><td><b>2 · Starters</b></td><td>Starter 0 built by staff to a stricter bar (10% under every budget, a person's accessibility pass, two approvals). From V3 starters are built in Studio itself, on a demo shop</td><td>Kit team + starter-builder agent</td><td>V1, V3</td></tr>
-    <tr><td><b>3 · Controls</b></td><td>Package allow-list (7-day wait, no install scripts), outbound hosts, headers, budgets, scopes, limits, the agent, the sandbox image — files, two staff approve every change</td><td>Security owner + kit team</td><td>V1, V1.5</td></tr>
-    <tr><td><b>4 · Releases</b></td><td>Signed releases with provenance; canary then stable; three lanes: patch (Frrata deploys, no click), minor (agent applies, a person approves), major (codemod + migration skill)</td><td>Release manager + fleet-runner agent</td><td>V1, V2</td></tr>
-    <tr><td><b>5 · Security</b></td><td>Threat model per phase, review on every release, pen test before V2 and V3, fleet watching, abuse queue, four kill switches, incident runbooks</td><td>Security owner + abuse-triage agent</td><td>V2, V3</td></tr>
-    <tr><td><b>6 · Frrata's agents</b></td><td>kit-maintainer, fleet-runner, starter-builder, release-reviewer, abuse-triage. A person approves every release and every takedown. Studio's model upgraded like a release: golden tasks, then 5% of sessions, then all</td><td>Kit team</td><td>V1–V3</td></tr>
-    <tr><td><b>7 · Maintenance</b></td><td>Fleet view, drift (a live site failing today's checks: 30 days), sites with no partner keep the patch lane, framework upgrades only through kit majors, 12 months' support for the previous major</td><td>Release manager + partner success</td><td>V2</td></tr>
+    <tr><td><b>1 · Domains</b></td><td>Code sites on their own web domain (shown as <span class="mono">frrata.site</span>), previews on another; never on checkout's, sign-in's or the console's domain, so a site's code can't touch checkout cookies</td><td>Hosting decision record</td><td>V2</td></tr>
+    <tr><td><b>2 · The kit</b></td><td>One repository, one version for all packages: a thin API client, legal block placement, India-first components, the CLI with checks, the agent's skills. Money, offers, attribution and brand tokens stay API data, never copied into code</td><td>Kit team + kit-maintainer agent</td><td>V1</td></tr>
+    <tr><td><b>3 · Starters</b></td><td>Starter 0 built by staff to a stricter bar (10% under every budget, a person's accessibility pass, author plus approver). From V3 built in Studio on a demo shop. Each site records its starter</td><td>Kit team + starter-builder agent</td><td>V1, V3</td></tr>
+    <tr><td><b>4 · Controls</b></td><td>A separate policies repository the security owner must approve; widening waits 24 h; one signed version in force; a hard floor in Frrata's own tests; Frrata's checks run on the build output, never the site's copy</td><td>Security owner</td><td>V2</td></tr>
+    <tr><td><b>5 · Releases</b></td><td>Trusted and staged publishing (a person approves each publish with two-factor); three lanes; 7-day wait for outside packages; 12 months' support per major</td><td>Release manager</td><td>V1, V2</td></tr>
+    <tr><td><b>6 · Fleet service</b></td><td>Plain code, not an AI agent: builds each site in its own sandbox with no credentials, deploys only signed and approved builds, records every deployment, rolls back to a kept version</td><td>Kit team</td><td>V2</td></tr>
+    <tr><td><b>7 · Security and upkeep</b></td><td>Phishing-resistant sign-in for staff, four kill switches, abuse queue, pen tests before V2 and V3, checkout kept in Mumbai, fleet view, drift, sites with no partner kept patched</td><td>Security owner + partner success</td><td>V1–V3</td></tr>
   </tbody>
 </table>
 </div>
 
 <h2>The three update lanes</h2>
 <div class="phases3">
-  <div class="box"><span class="chip c-bad">Lane 1 · Patch</span><h3>Security and legal fixes</h3><p class="note">Frrata builds every site, runs the checks, compares screenshots with the live site. A site that changes is held; the rest deploy in waves of 1%, 10%, all, rolled back automatically on errors. Within 24 hours. Owner and partner told after.</p></div>
+  <div class="box"><span class="chip c-bad">Lane 1 · Patch</span><h3>Security and legal fixes</h3><p class="note">Only fixes signed by the security owner and a second person. Frrata builds the affected sites, runs the checks and a smoke test of each site (pages load, legal block shows, buy opens checkout). A site that changes is held, with a 12-hour clock. The rest deploy in waves, rolled back automatically to a kept version, never below the new minimum. Patched or mitigated within 24 hours; owner and partner told after.</p></div>
   <div class="box"><span class="chip c-info">Lane 2 · Minor</span><h3>New parts</h3><p class="note">"Update available" in Studio. The agent applies it on a draft with its skill. The usual checks and approval.</p></div>
-  <div class="box"><span class="chip c-warn">Lane 3 · Major</span><h3>Breaking changes</h3><p class="note">A codemod and a migration skill. Frrata does it for shops with no partner. The old major gets 12 months; then the site serves but cannot publish until moved.</p></div>
+  <div class="box"><span class="chip c-warn">Lane 3 · Major</span><h3>Breaking changes</h3><p class="note">A codemod and a migration skill. Frrata does it for shops with no partner. The old major gets 12 months; then the site moves to Starter 0 or maintenance, never served unpatched. No minor or major rollouts in festive weeks.</p></div>
 </div>
 <p class="note">Prices, stock, content and the legal block's words never need a release: the API serves them at runtime.</p>
 
@@ -239,7 +240,7 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 <!-- 1 Kit -->
 <section id="s1" role="tabpanel" aria-labelledby="b1">
   <div class="frame">
-    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">admin.frrata.shop/kit</div><span class="chip c-n">Staff · two-factor</span></div>
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">app.frrata.com/admin/kit</div><span class="chip c-n">Staff · two-factor</span></div>
     <div class="shell">
       <aside class="rail"><div class="mark"><i></i>Admin</div>
         <a class="sess on" href="#s1"><b>Kit</b></a><a class="sess" href="#s3"><b>Rollouts</b></a><a class="sess" href="#s4"><b>Sites</b></a><a class="sess" href="#s5"><b>Controls</b></a><a class="sess" href="#s6"><b>Starters</b></a><a class="sess" href="#s7"><b>Agent</b></a><a class="sess" href="#s8"><b>Kill switches</b></a>
@@ -272,9 +273,9 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 <!-- 2 Release -->
 <section id="s2" role="tabpanel" aria-labelledby="b2" hidden>
   <div class="frame">
-    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">admin.frrata.shop/kit/2.4.2</div><span class="chip c-n">Staff · two-factor</span></div>
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">app.frrata.com/admin/kit/2.4.2</div><span class="chip c-n">Staff · two-factor</span></div>
     <div class="pad">
-      <div class="ph"><h3>2.4.2</h3><span class="chip c-bad">Patch · security</span><span class="chip c-warn">1 of 2 approvals</span><span class="sp"></span><button class="btn" type="button">Hold</button><button class="btn pri" type="button">Approve and start rollout</button></div>
+      <div class="ph"><h3>2.4.2</h3><span class="chip c-bad">Patch · security</span><span class="chip c-n">Minimum → 2.4.2</span><span class="chip c-warn">1 of 2 approvals</span><span class="sp"></span><button class="btn" type="button">Hold</button><button class="btn pri" type="button">Approve and start rollout</button></div>
       <div class="two">
         <div class="card"><h4>What changed</h4>
           <div class="rows">
@@ -288,14 +289,15 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
             <div><span>Unit and contract tests</span><span class="chip c-ok">412 passed</span></div>
             <div><span>Starters, every page, phone and desktop</span><span class="chip c-ok">No change</span></div>
             <div><span>Shadow builds · 100 real sites</span><span class="chip c-ok">100 of 100</span></div>
+            <div><span>Built code · no new hosts, eval or user-agent branches</span><span class="chip c-ok">Clean</span></div>
             <div><span>Screenshots against live</span><span class="chip c-warn">2 changed · held</span></div>
             <div><span>Security review</span><span class="chip c-ok">Done · release-reviewer + Asha</span></div>
-            <div><span>Signed · provenance · SBOM</span><span class="chip c-ok">Yes</span></div>
+            <div><span>Staged publish · approved with two-factor</span><span class="chip c-ok">Yes · provenance</span></div>
           </div>
         </div>
       </div>
       <div class="card" style="margin-top:12px"><h4>Approvals</h4>
-        <div class="rows"><div><span>Asha Rao · security owner</span><span class="chip c-ok">Approved 10:42</span></div><div><span>Second staff</span><span class="chip c-n">Waiting</span></div></div>
+        <div class="rows"><div><span>Asha Rao · security owner</span><span class="chip c-ok">Approved 10:42</span></div><div><span>Second staff · not the author</span><span class="chip c-n">Waiting</span></div><div><span>Affected sites</span><span class="mono">1,031 of 1,177</span></div></div>
       </div>
     </div>
   </div>
@@ -305,22 +307,22 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 <!-- 3 Rollout -->
 <section id="s3" role="tabpanel" aria-labelledby="b3" hidden>
   <div class="frame">
-    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">admin.frrata.shop/rollouts/2.4.2</div><span class="chip c-n">Staff · two-factor</span></div>
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">app.frrata.com/admin/rollouts/2.4.2</div><span class="chip c-n">Staff · two-factor</span></div>
     <div class="pad">
       <div class="ph"><h3>Rollout · 2.4.2</h3><span class="chip c-info">Wave 2 of 3</span><span class="mono">6 h 12 m of 24 h</span><span class="sp"></span><button class="btn" type="button">Pause</button><button class="btn" type="button">Roll back all</button></div>
       <div class="waves">
-        <div class="card"><div class="k">Wave 1 · 1%</div><div class="big">11</div><div class="meter"><i style="width:100%;background:var(--ok-t)"></i></div><div class="k">deployed · 2 h watch passed</div></div>
+        <div class="card"><div class="k">Wave 1 · demo shops + 20</div><div class="big">23</div><div class="meter"><i style="width:100%;background:var(--ok-t)"></i></div><div class="k">deployed · 2 h watch passed</div></div>
         <div class="card"><div class="k">Wave 2 · 10%</div><div class="big">64 / 105</div><div class="meter"><i style="width:61%"></i></div><div class="k">deploying</div></div>
         <div class="card"><div class="k">Wave 3 · all</div><div class="big">928</div><div class="meter"><i style="width:0"></i></div><div class="k">waiting</div></div>
       </div>
       <div class="scroll" style="margin-top:12px">
         <table>
-          <thead><tr><th>Site</th><th>Result</th><th>Errors</th><th>Phone speed</th><th></th></tr></thead>
+          <thead><tr><th>Site</th><th>Result</th><th>Smoke test</th><th>Errors</th><th></th></tr></thead>
           <tbody>
-            <tr><td>nila.frrata.shop</td><td><span class="chip c-warn">Held · home changed</span></td><td class="mono">—</td><td class="mono">—</td><td><button class="btn sm" type="button">Compare</button></td></tr>
-            <tr><td>glowlabs.co.in</td><td><span class="chip c-warn">Held · checks</span></td><td class="mono">—</td><td class="mono">—</td><td><button class="btn sm" type="button">Open</button></td></tr>
-            <tr><td>roambags.in</td><td><span class="chip c-bad">Rolled back</span></td><td class="mono">4.1%</td><td class="mono">2.9 s</td><td><button class="btn sm" type="button">Open</button></td></tr>
-            <tr><td>kesarstudio.in</td><td><span class="chip c-ok">Live</span></td><td class="mono">0.0%</td><td class="mono">1.6 s</td><td></td></tr>
+            <tr><td>tanmay-tees.in</td><td><span class="chip c-warn">Held · home changed · 3 h of 12</span></td><td class="mono">—</td><td class="mono">—</td><td><button class="btn sm" type="button">Compare</button></td></tr>
+            <tr><td>glowlabs.co.in</td><td><span class="chip c-warn">Held · checks · 1 h of 12</span></td><td class="mono">—</td><td class="mono">—</td><td><button class="btn sm" type="button">Open</button></td></tr>
+            <tr><td>roambags.in</td><td><span class="chip c-bad">Rolled back to 2.4.1 · mitigated</span></td><td><span class="chip c-bad">Buy link failed</span></td><td class="mono">4.1%</td><td><button class="btn sm" type="button">Open</button></td></tr>
+            <tr><td>kesarstudio.in</td><td><span class="chip c-ok">Live</span></td><td><span class="chip c-ok">Passed</span></td><td class="mono">0.0%</td><td></td></tr>
           </tbody>
         </table>
       </div>
@@ -332,7 +334,7 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 <!-- 4 Sites -->
 <section id="s4" role="tabpanel" aria-labelledby="b4" hidden>
   <div class="frame">
-    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">admin.frrata.shop/sites</div><span class="chip c-n">Staff · two-factor</span></div>
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">app.frrata.com/admin/sites</div><span class="chip c-n">Staff · two-factor</span></div>
     <div class="pad">
       <div class="ph"><h3>Sites</h3><span class="mono">1,177</span><span class="sp"></span><span class="filters"><span class="chip c-ink">All</span><span class="chip c-n">Below minimum 6</span><span class="chip c-n">Held 2</span><span class="chip c-n">Drift 31</span><span class="chip c-n">No partner 14</span><span class="chip c-n">Build mode 112</span></span></div>
       <div class="scroll">
@@ -340,7 +342,7 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
           <thead><tr><th>Site</th><th>Kit</th><th>Checks</th><th>Phone speed</th><th>Errors</th><th>Partner</th><th>State</th></tr></thead>
           <tbody>
             <tr><td>kesarstudio.in</td><td class="mono">2.4.2</td><td><span class="chip c-ok">6 of 6</span></td><td class="mono">1.6 s</td><td class="mono">0.0%</td><td>Pixel &amp; Thread</td><td><span class="chip c-ok">Owned</span></td></tr>
-            <tr><td>nila.frrata.shop</td><td class="mono">2.4.1</td><td><span class="chip c-ok">6 of 6</span></td><td class="mono">1.9 s</td><td class="mono">0.1%</td><td>Pixel &amp; Thread</td><td><span class="chip c-info">Build mode</span></td></tr>
+            <tr><td>nila.frrata.site</td><td class="mono">2.4.1</td><td><span class="chip c-ok">6 of 6</span></td><td class="mono">—</td><td class="mono">—</td><td>Pixel &amp; Thread</td><td><span class="chip c-info">Build mode · preview only</span></td></tr>
             <tr><td>tanmay-tees.in</td><td class="mono">2.3.0</td><td><span class="chip c-warn">5 of 6 · drift 12 days</span></td><td class="mono">2.4 s</td><td class="mono">0.2%</td><td>Own developer</td><td><span class="chip c-ok">Owned</span></td></tr>
             <tr><td>meher-jewels.in</td><td class="mono">1.9.6</td><td><span class="chip c-ok">6 of 6</span></td><td class="mono">2.1 s</td><td class="mono">0.0%</td><td>—</td><td><span class="chip c-warn">No partner</span></td></tr>
             <tr><td>ojas-home.in</td><td class="mono">2.1.0</td><td><span class="chip c-bad">Below minimum</span></td><td class="mono">3.4 s</td><td class="mono">0.6%</td><td>Studio Weft</td><td><span class="chip c-ok">Owned</span></td></tr>
@@ -355,9 +357,9 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 <!-- 5 Controls -->
 <section id="s5" role="tabpanel" aria-labelledby="b5" hidden>
   <div class="frame">
-    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">admin.frrata.shop/controls</div><span class="chip c-n">Staff · two-factor</span></div>
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">app.frrata.com/admin/controls</div><span class="chip c-n">Staff · two-factor</span></div>
     <div class="pad">
-      <div class="ph"><h3>Controls</h3><span class="mono">policies v14</span><span class="sp"></span></div>
+      <div class="ph"><h3>Controls</h3><span class="mono">frrata-policies v14 · signed</span><span class="chip c-n">Security owner approves every change</span><span class="sp"></span></div>
       <div class="two">
         <div class="card"><h4>In force</h4>
           <div class="rows">
@@ -373,7 +375,9 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
         </div>
         <div class="card"><h4>Waiting · add a package <span class="chip c-warn">1 of 2</span></h4>
           <div class="rows">
-            <div><span class="mono">embla-carousel 8.x</span><span class="chip c-info">Asked by Pixel &amp; Thread</span></div>
+            <div><span class="mono">embla-carousel 8.6.0</span><span class="chip c-info">Asked by Pixel &amp; Thread</span></div>
+            <div><span>Integrity</span><span class="mono">sha512 pinned</span></div>
+            <div><span>Widens the allow-list</span><span class="chip c-warn">Waits 24 h · all staff told</span></div>
             <div><span>Published</span><span class="mono">19 days ago</span></div>
             <div><span>Install scripts</span><span class="chip c-ok">None</span></div>
             <div><span>Licence</span><span class="chip c-ok">MIT</span></div>
@@ -392,7 +396,7 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 <!-- 6 Starters -->
 <section id="s6" role="tabpanel" aria-labelledby="b6" hidden>
   <div class="frame">
-    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">admin.frrata.shop/starters/starter-0</div><span class="chip c-n">Staff · two-factor</span></div>
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">app.frrata.com/admin/starters/starter-0</div><span class="chip c-n">Staff · two-factor</span></div>
     <div class="pad">
       <div class="ph"><h3>Starter 0</h3><span class="chip c-ok">1.2.0 live</span><span class="chip c-info">1.3.0 in review</span><span class="sp"></span><button class="btn" type="button">Open in Studio</button></div>
       <div class="two">
@@ -423,14 +427,14 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 <!-- 7 Agent -->
 <section id="s7" role="tabpanel" aria-labelledby="b7" hidden>
   <div class="frame">
-    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">admin.frrata.shop/agent</div><span class="chip c-n">Staff · two-factor</span></div>
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">app.frrata.com/admin/agent</div><span class="chip c-n">Staff · two-factor</span></div>
     <div class="pad">
       <div class="ph"><h3>Agent</h3><span class="chip c-ok">Current · 95% of sessions</span><span class="chip c-info">Candidate · 5%</span><span class="sp"></span><button class="btn" type="button">Stop candidate</button><button class="btn pri" type="button">Move all</button></div>
       <div class="scroll">
         <table>
-          <thead><tr><th>Golden tasks · 40</th><th>Current</th><th>Candidate</th></tr></thead>
+          <thead><tr><th>Golden tasks · 40 · 5 trials each</th><th>Current</th><th>Candidate</th></tr></thead>
           <tbody>
-            <tr><td>Checks passed first time</td><td class="mono">34</td><td class="mono">37</td></tr>
+            <tr><td>Passed all 5 trials</td><td class="mono">34</td><td class="mono">37</td></tr>
             <tr><td>Credits per task (median)</td><td class="mono">18</td><td class="mono">15</td></tr>
             <tr><td>Quality · staff rating of 5</td><td class="mono">3.9</td><td class="mono">4.2</td></tr>
             <tr><td>Refused a forbidden request</td><td class="mono">12 of 12</td><td class="mono">12 of 12</td></tr>
@@ -447,18 +451,18 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 <!-- 8 Kill switches -->
 <section id="s8" role="tabpanel" aria-labelledby="b8" hidden>
   <div class="frame">
-    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">admin.frrata.shop/kill-switches</div><span class="chip c-n">Staff · two-factor</span></div>
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">app.frrata.com/admin/kill-switches</div><span class="chip c-n">Staff · two-factor</span></div>
     <div class="pad">
       <div class="ph"><h3>Kill switches</h3><span class="sp"></span></div>
       <div class="kpis kpis4">
-        <div class="card"><h4>A site</h4><div class="k">Serve last good version or a maintenance page</div><button class="btn sm" type="button" style="margin-top:8px">Choose a site</button></div>
-        <div class="card"><h4>A partner</h4><div class="k">Sessions, routines, keys and publishes stop</div><button class="btn sm" type="button" style="margin-top:8px">Choose a partner</button></div>
-        <div class="card"><h4>A starter version</h4><div class="k">No new site from it</div><button class="btn sm" type="button" style="margin-top:8px">Choose a version</button></div>
-        <div class="card"><h4>A kit version</h4><div class="k">No publish on it; patch lane moves sites off</div><button class="btn sm" type="button" style="margin-top:8px">Choose a version</button></div>
+        <div class="card"><h4>A site <span class="chip c-n">1 person + review</span></h4><div class="k">Serve last good version or a maintenance page</div><button class="btn sm" type="button" style="margin-top:8px">Choose a site</button></div>
+        <div class="card"><h4>A partner <span class="chip c-n">1 person + review</span></h4><div class="k">Sessions, routines, keys and publishes stop</div><button class="btn sm" type="button" style="margin-top:8px">Choose a partner</button></div>
+        <div class="card"><h4>A starter version <span class="chip c-warn">2 people</span></h4><div class="k">No new site from it</div><button class="btn sm" type="button" style="margin-top:8px">Choose a version</button></div>
+        <div class="card"><h4>A kit version <span class="chip c-warn">2 people</span></h4><div class="k">No publish on it; patch lane moves sites off</div><button class="btn sm" type="button" style="margin-top:8px">Choose a version</button></div>
       </div>
       <div class="card" style="margin-top:12px"><h4>Active <span class="chip c-bad">1</span></h4>
         <div class="rows">
-          <div><span>brandz-offers.frrata.shop · site off · phishing report</span><span class="mono">Asha · 09:14 · runbook R2</span></div>
+          <div><span>brandz-offers.frrata.site · site off · phishing report</span><span class="mono">Asha · 09:14 · runbook R2</span></div>
         </div>
       </div>
       <div class="card" style="margin-top:12px"><h4>Abuse queue <span class="chip c-warn">3</span></h4>
@@ -476,22 +480,24 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 <!-- 9 Build mode -->
 <section id="s9" role="tabpanel" aria-labelledby="b9" hidden>
   <div class="frame">
-    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">studio.frrata.shop/nila</div><span class="chip c-info">Pixel &amp; Thread</span></div>
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">studio.frrata.com/nila</div><span class="chip c-info">Pixel &amp; Thread</span></div>
     <div class="pad">
-      <div class="ph"><h3>Nila</h3><span class="chip c-info">Build mode · no owner yet</span><span class="mono">nila.frrata.shop</span><span class="sp"></span><button class="btn" type="button">Hand over</button><button class="btn pri" type="button">Publish</button></div>
+      <div class="ph"><h3>Nila</h3><span class="chip c-info">Build mode · no owner yet</span><span class="mono">nila.frrata.site</span><span class="sp"></span><button class="btn" type="button">Hand over</button><button class="btn pri" type="button">Publish</button></div>
       <div class="two">
         <div class="card"><h4>Draft · size quiz</h4>
           <div class="rows">
             <div><span>Checks</span><span class="chip c-ok">6 of 6</span></div>
             <div><span>Owner approval</span><span class="chip c-n">Not needed before handover</span></div>
             <div><span>Orders</span><span class="chip c-n">Off until the owner opens the shop</span></div>
+            <div><span>Public address</span><span class="chip c-n">Opening soon · not in search</span></div>
           </div>
         </div>
-        <div class="card"><h4>Live</h4>
+        <div class="card"><h4>Ready to open</h4>
           <div class="rows">
             <div><span>Version</span><span class="mono">v6 · today 11:20</span></div>
+            <div><span></span><button class="btn sm" type="button">Open signed preview</button></div>
             <div><span>Kit</span><span class="mono">2.4.1</span></div>
-            <div><span>Domain</span><span class="mono">nila.frrata.shop</span></div>
+            <div><span>Domain</span><span class="mono">nila.frrata.site</span></div>
           </div>
         </div>
       </div>
@@ -503,13 +509,13 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 <!-- 10 Handover -->
 <section id="s10" role="tabpanel" aria-labelledby="b10" hidden>
   <div class="frame">
-    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">console.frrata.shop/handover</div><span class="chip c-n">Meera · nila@…</span></div>
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">app.frrata.com/handover</div><span class="chip c-n">Meera · nila@…</span></div>
     <div class="pad" style="max-width:620px">
       <div class="ph"><h3>Nila is ready for you</h3></div>
       <div class="card"><h4>Website</h4>
         <div class="rows">
-          <div><span>Live version</span><span class="mono">v6 · built by Pixel &amp; Thread</span></div>
-          <div><span>Checks</span><span class="chip c-ok">6 of 6</span></div>
+          <div><span>Version you accept</span><span class="mono">v6 · built by Pixel &amp; Thread</span></div>
+          <div><span>Checks · run again now</span><span class="chip c-ok">6 of 6</span></div>
           <div><span></span><button class="btn sm" type="button">Open the website</button></div>
         </div>
       </div>
@@ -517,6 +523,7 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
         <div class="rows">
           <div><span>Build and preview</span><span class="chip c-ok">On</span></div>
           <div><span>Publish</span><span class="chip c-warn">After your approval</span></div>
+          <div><span>Publish on a schedule</span><span class="chip c-n">Off</span></div>
           <div><span>See your costs and profit</span><span class="chip c-n">Off</span></div>
         </div>
       </div>
@@ -529,13 +536,14 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 <!-- 11 Updates -->
 <section id="s11" role="tabpanel" aria-labelledby="b11" hidden>
   <div class="frame">
-    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">studio.frrata.shop/kesar-studio</div><span class="chip c-info">Pixel &amp; Thread</span></div>
+    <div class="bar"><div class="dots"><i></i><i></i><i></i></div><div class="url">studio.frrata.com/kesar-studio</div><span class="chip c-info">Pixel &amp; Thread</span></div>
     <div class="pad">
       <div class="ph"><h3>Kesar Studio</h3><span class="chip c-ok">Owned</span><span class="sp"></span></div>
       <div class="card"><h4>Frrata patched your site <span class="chip c-ok">Done</span></h4>
         <div class="rows">
           <div><span>Kit 2.4.1 → 2.4.2 · security</span><span class="mono">today 03:10</span></div>
           <div><span>Pages changed</span><span class="mono">none</span></div>
+          <div><span>Minimum version</span><span class="mono">now 2.4.2</span></div>
           <div><span></span><button class="btn sm" type="button">What changed</button></div>
         </div>
       </div>
@@ -559,10 +567,40 @@ footer { margin-top: 64px; font-size: 13px; color: var(--sub) }
 </div>
 
 <h2>Reviews on this plan</h2>
-<div class="col" id="reviews"><p class="note">Architecture and security reviews are running; their findings and what changed are added here.</p></div>
+<div class="col" id="reviews">
+<div class="scroll"><table>
+<thead><tr><th>Finding</th><th>From</th><th>What changed</th></tr></thead>
+<tbody>
+<tr><td>Before handover a partner's site would be public under any brand name</td><td>Security · blocker</td><td>Publish goes to a signed preview; the public address says "Opening soon", out of search; reserved and known-brand names refused</td></tr>
+<tr><td>Site code on <span class="mono">frrata.shop</span> shares a site with checkout</td><td>Both · blocker</td><td>Code sites on their own web domain on the Public Suffix List; checkout, sign-in and the console never on it</td></tr>
+<tr><td>The fleet runner could deploy anything to every site</td><td>Security · blocker</td><td>Plain code, not an AI agent; builds with no credentials; deploys only signed, approved builds; no key that reaches every shop</td></tr>
+<tr><td>A release carried both the code and the controls that contain it</td><td>Security · blocker</td><td>Policies in their own repository, security owner required, widening waits 24 h; a hard floor in Frrata's tests; checks run on the build output</td></tr>
+<tr><td>Research sections empty</td><td>Architecture · blocker</td><td>Filled with dated sources below</td></tr>
+<tr><td>The runner "acting as Admin" breaks ADR-0007</td><td>Architecture · blocker</td><td>Deployment records in this app, outbox requests out, webhook results in; the role chosen in the V2 spec with the tenancy audit</td></tr>
+<tr><td>Patch lane could be abused, evaded or undone</td><td>Both · high</td><td>Security and legal only, two signatures, diff and built-code limits, minimum raised, fix committed to the live branch, smoke tests, 12-hour clock, rollback never below the minimum</td></tr>
+<tr><td>Staff sign in with an email code</td><td>Security · high</td><td>Phishing-resistant sign-in for GitHub and the registry before the first kit release; for Admin before V2</td></tr>
+<tr><td>AI agents could be steered by what they read</td><td>Security · high</td><td>No agent ever approves; the maintainer agent can't touch policies; the abuse agent can't close a report</td></tr>
+<tr><td>Header and CSP changes would hit every site at once</td><td>Architecture · high</td><td>Report-Only in waves, then enforce; a break-glass switch on the router</td></tr>
+<tr><td>Shopper data could pass through a global router</td><td>Security · medium</td><td>Checkout, sign-in and order pages stay on Frrata's own host in Mumbai</td></tr>
+</tbody></table></div>
+<p class="note">Every finding and where it went is listed in the spec. Still to run before V2: the tenancy audit on the deployment tables, the unit-economics review, the speed review of the router.</p>
+</div>
 
 <h2>Research</h2>
-<div class="col" id="research"><p class="note">Dated sources are added here from the research run.</p></div>
+<div class="col" id="research">
+<div class="scroll"><table>
+<thead><tr><th>Who</th><th>What they do (date)</th><th>Taken</th></tr></thead>
+<tbody>
+<tr><td>Shopify themes</td><td>Updates install as an unpublished copy; automatic only if the merchant edited no code; semver and release notes; Lighthouse ≥ 60 speed, ≥ 90 accessibility (docs undated; 2025 deadlines)</td><td>Automatic only when nothing visible changes; breaking changes as a draft; a stricter floor</td></tr>
+<tr><td>Shopify API</td><td>A version a quarter, each ≥ 12 months; retired versions fall forward (undated); Hydrogen tied to API versions (2026-04-09, 2026-10-02)</td><td>Each kit major tied to a dated API version, ≥ 12 months</td></tr>
+<tr><td>Cloudflare Workers for Platforms</td><td>Outbound Workers control every fetch; per-call caps; no gradual deploys for user Workers; 1,200 API calls per 5 min (2026-04-21 to 2026-11-03)</td><td>Egress enforced at the host; our own waves; rollouts paced</td></tr>
+<tr><td>Cloudflare data locality</td><td>Data Localization Suite is Enterprise-only; India region limits request processing only (2026-05-05 to 2026-10-30)</td><td>Checkout stays on Frrata in Mumbai; no residency claim yet</td></tr>
+<tr><td>Vercel for Platforms</td><td>450 deploys an hour on Pro; rolling releases for one project only (2026-09)</td><td>Waves are ours on either host; Cloudflare favoured</td></tr>
+<tr><td>npm</td><td>Trusted publishing, staged publishing with two-factor approval, install scripts off in npm 12 (2025-12 to 2026-10); provenance proves origin, not safety</td><td>Trusted + staged publishing; provenance required, never trusted alone</td></tr>
+<tr><td>2026 attacks</td><td>Mini Shai-Hulud: 637 bad versions in 40 min, a 7-day wait would have blocked all (2026-05-19); keyv: bad releases with valid provenance (2026-08-04)</td><td>7-day wait on outside packages; checks flag install scripts and hook folders</td></tr>
+<tr><td>Anthropic</td><td>Regression evals near 100% before switching models, several trials per task (2026-01-09); ≥ 60 days' notice before a model retires (2026-09-30)</td><td>Pinned model, golden tasks × 5 trials, then 5% of sessions</td></tr>
+</tbody></table></div>
+</div>
 </div>
 
 <script>
