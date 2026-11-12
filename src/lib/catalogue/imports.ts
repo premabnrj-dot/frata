@@ -12,6 +12,7 @@ import { importJobs, importRows } from '@/lib/db/schema-imports'
 import { arrayParam } from '@/lib/db/sql-array'
 import { hsnDigitsIn } from '@/lib/queries/settings'
 import { ensureTypes } from './handles'
+import { typeFor } from '@/domains/catalogue/kind'
 import { writeProducts } from './write'
 
 // =============================================================================
@@ -133,12 +134,16 @@ export async function writeChunk(tx: Tx, tenantId: string, jobId: string, n: num
   let fresh = [...plan.fresh]
   const sized = (p: ImportProduct) => p.draft!.options.some((o) => isSizeOption(o.name))
   if (fresh.some(sized)) await ensureTypes(tx, tenantId)
-  const [type] = fresh.some(sized) ? await tx.select({ id: productTypes.id }).from(productTypes).where(eq(productTypes.tenantId, tenantId)).orderBy(asc(productTypes.name)).limit(1) : []
+  // Each sized product's type from its name, else the first whose chart has all its sizes (kind.ts typeFor; PR·0: the
+  // shop's first type by name went to every product, so a kids' or footwear type could take the kurtas).
+  const types = fresh.some(sized) ? (await tx.select({ id: productTypes.id, name: productTypes.name, chart: productTypes.sizeChart }).from(productTypes).where(eq(productTypes.tenantId, tenantId)))
+    .map((t) => ({ id: t.id, name: t.name, chartSizes: t.chart.rows.map((r) => r.size) })) : []
+  const typeOf = (p: ImportProduct) => { const d = p.draft!, o = d.options.find((x) => isSizeOption(x.name)); return o ? typeFor(d.title, types, o.values) : null }
   let written: { id: string; handle: string }[] = []
   while (fresh.length) {
     const w = await writeProducts(tx, tenantId, fresh.map((p) => {
       const d = p.draft!
-      return { handle: d.handle, title: d.title, options: d.options, variants: d.variants, row: { ...d.row, typeId: sized(p) ? type?.id ?? null : null } }
+      return { handle: d.handle, title: d.title, options: d.options, variants: d.variants, row: { ...d.row, typeId: typeOf(p) } }
     }), { costs: opts.costs })
     if (w.ok) { written = w.products; break }
     refused.set(fresh[w.draft]!, w.error)

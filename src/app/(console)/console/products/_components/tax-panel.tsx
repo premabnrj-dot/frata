@@ -31,6 +31,8 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
   const id = useId()
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
+  // What was typed and left without a code: kept in the box and said (PR·0: it went back to the old code unseen).
+  const [left, setLeft] = useState<string | null>(null)
   const results = useMemo(() => searchHsn(q || tax.hsn, now), [q, tax.hsn, now])
   const entry = hsnEntry(tax.hsn, now)
   const rule = ruleOn(tax.hsn, now)
@@ -38,18 +40,20 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
   const gap = price !== null ? inGap(tax.hsn, price, inclusive, now) : null
   const known = !!rule
   const valid = /^\d{4}(\d{2})?(\d{2})?$/.test(tax.hsn)
-  const pick = (code: string) => { onChange({ ...tax, hsn: code, ownBps: '' }); setQ(''); setOpen(false) }
+  const leftError = left === null ? undefined : `${/^\d+$/.test(left.replace(/\s/g, '')) ? `${left.trim()} is not an HSN code: 4, 6 or 8 digits.` : `Pick a code from the list for “${left.trim()}”.`}${tax.hsn ? ` Saving keeps ${tax.hsn}.` : ''}`
+  const pick = (code: string) => { onChange({ ...tax, hsn: code, ownBps: '' }); setQ(''); setLeft(null); setOpen(false) }
 
   return (
     <div className="space-y-4">
       <div className="space-y-1">
         <label htmlFor={`${id}-hsn`} className="flex items-center text-sm font-medium">HSN code<InfoTip about="the HSN code">The code GST uses for what this is. It sets the rate and goes on every invoice.</InfoTip></label>
         <div className="relative">
-          <input id={`${id}-hsn`} value={open ? q : tax.hsn ? `${tax.hsn}${entry ? ` · ${entry.name}` : ''}` : ''} placeholder="Search by name or code"
-            onFocus={() => { setOpen(true); setQ('') }} onBlur={() => setTimeout(() => setOpen(false), 150)}
+          <input id={`${id}-hsn`} value={open ? q : left ?? (tax.hsn ? `${tax.hsn}${entry ? ` · ${entry.name}` : ''}` : '')} placeholder="Search by name or code"
+            onFocus={() => { setOpen(true); setQ(left ?? '') }} onBlur={(e) => { const t = e.currentTarget.value, typing = open; setTimeout(() => { setOpen(false); if (typing) setLeft(t.trim() && !/^\d{4}(\d{2})?(\d{2})?$/.test(t.replace(/\s/g, '')) ? t : null) }, 150) }}
             onChange={(e) => { setQ(e.target.value); const d = e.target.value.replace(/\s/g, ''); if (/^\d{4}(\d{2})?(\d{2})?$/.test(d)) onChange({ ...tax, hsn: d }) }}
-            {...fieldProps('tax.hsn', errors['tax.hsn'])}
+            {...fieldProps('tax.hsn', errors['tax.hsn'] ?? leftError)}
             className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text md:h-9" role="combobox" aria-expanded={open} aria-controls={`${id}-list`} />
+          {open && q.trim().length > 1 && !results.length && <p role="status" className="absolute inset-x-0 top-full z-20 mt-1 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-lg">No HSN code matches “{q.trim()}”</p>}
           {open && results.length > 0 && (
             <ul id={`${id}-list`} role="listbox" className="absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-md border border-border bg-card py-1 shadow-lg">
               {results.map((e) => (
@@ -63,7 +67,8 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
             </ul>
           )}
         </div>
-        <FieldError name="tax.hsn" message={errors['tax.hsn']} />
+        <FieldError name="tax.hsn" message={errors['tax.hsn'] ?? leftError} />
+        {!leftError && !errors['tax.hsn'] && valid && !entry && !(charges && !known) && <p className="text-xs text-muted-foreground">Frrata doesn’t list {tax.hsn}.</p>}
       </div>
 
       {charges && valid && known && (

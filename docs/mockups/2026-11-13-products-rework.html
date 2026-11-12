@@ -1,0 +1,366 @@
+<title>Products rework</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the console as it would be — a gallery, an app's page in its states, the app's home once on, and phone views. Frrata console tokens. */
+:root{
+  --bg:#FAFAF9;--fg:#1C1917;--card:#FFFFFF;--muted:#F2F1EF;--sub:#5F5A55;--border:#DEDBD7;--input:#8C857F;--brand:#D61F69;--thread:#D61F69;
+  --ok:#E9F6EC;--ok-text:#1E7B52;--ok-mark:#2E9E6A;--warn:#FFF5C2;--warn-text:#8A5000;--danger:#FFEFEF;--danger-text:#C02A2F;--info:#EDF2FE;--info-text:#3451B2;
+  --tile:#F2F1EF;--haldi-soft:#FBEFD2;--indigo-soft:#E7EAF8;--rani-soft:#FBE3EE;--shot:#F7F5F2;
+  --sans:"Inter",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--display:"Bricolage Grotesque","Inter",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;
+  --tile:#262320;--haldi-soft:#3A2E14;--indigo-soft:#1E2340;--rani-soft:#3A1828;--shot:#211F1C;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141211;--fg:#EDEAE6;--card:#1C1A18;--muted:#262320;--sub:#A9A29B;--border:#38342F;--input:#8A837C;
+  --ok:#14281C;--ok-text:#6FD3A0;--warn:#2E2610;--warn-text:#F2C25B;--danger:#2E1516;--danger-text:#FF8A8A;--info:#151C33;--info-text:#9CB1FF;
+  --tile:#262320;--haldi-soft:#3A2E14;--indigo-soft:#1E2340;--rani-soft:#3A1828;--shot:#211F1C;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--sans);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--sub);font-weight:600}
+h1{font:700 30px/1.15 var(--display);margin:4px 0 6px;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:19px;margin:56px 0 12px;display:flex;gap:10px;align-items:center;text-wrap:balance;scroll-margin-top:16px}
+h2::before{content:"";width:18px;height:2px;background:var(--thread);flex:none}
+p{margin:0 0 10px;max-width:74ch}
+.sub{color:var(--sub)}.mono{font-family:var(--mono)}.k{font-size:12px;color:var(--sub)}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 0}
+nav.toc a{font-size:12.5px;color:var(--fg);text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:3px 10px;background:var(--card)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:6px;border:1px solid var(--input);background:var(--card);color:var(--fg);padding:7px 14px;font:500 13.5px var(--sans);min-height:36px;white-space:nowrap;cursor:pointer;position:relative}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.primary::after{content:"";position:absolute;left:33%;right:33%;bottom:0;height:2px;background:var(--thread);border-radius:2px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn[disabled]{opacity:1;background:var(--muted);color:var(--sub);border-color:var(--border);cursor:default}
+.btn:focus-visible,.chipf:focus-visible,.acard:focus-visible,summary:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:500;white-space:nowrap}
+.c-ok{background:var(--ok);color:var(--ok-text)}.c-warn{background:var(--warn);color:var(--warn-text)}.c-n{background:var(--muted);color:var(--sub)}.c-info{background:var(--info);color:var(--info-text)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok-mark);display:inline-block}
+/* Console frame */
+.console{border:1px solid var(--border);border-radius:10px;background:var(--bg);overflow:hidden}
+.cbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:18px 20px 8px}
+.cbar h3{font:700 22px var(--display);margin:0}
+.cbody{padding:8px 20px 22px}
+.search{display:flex;align-items:center;gap:8px;border:1px solid var(--input);border-radius:6px;padding:0 10px;background:var(--card);min-height:36px;min-width:0;flex:1;max-width:320px}
+.search input{border:0;background:transparent;color:var(--fg);font:14px var(--sans);outline:none;width:100%;min-width:0}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+.chipf{border:1px solid var(--border);background:var(--card);color:var(--fg);border-radius:999px;padding:4px 12px;font:500 13px var(--sans);cursor:pointer;min-height:30px}
+.chipf[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chipf b{font:500 12px var(--mono);margin-left:4px;opacity:.75}
+.sect{margin-top:22px}
+.sect h4{font-size:13px;margin:0 0 10px;color:var(--sub);font-weight:600;display:flex;justify-content:space-between}
+/* Your apps strip */
+.mine{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.mcard{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;min-width:0}
+.mcard .t{min-width:0;flex:1}
+.mcard b{display:block;font-size:14px}
+.mcard .k{display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Gallery grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.acard{display:flex;flex-direction:column;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:left;color:var(--fg);font:inherit;cursor:pointer;min-width:0;transition:border-color .12s}
+.acard:hover{border-color:var(--input)}
+.acard .top{display:flex;gap:12px;align-items:flex-start}
+.acard b{display:block;font-size:15px;margin-top:2px}
+.acard .job{color:var(--sub);font-size:13px;line-height:1.45;min-height:38px}
+.acard .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--border);padding-top:10px;margin-top:auto;font-size:12.5px}
+.acard.next{background:var(--bg)}
+.acard.next .icon{opacity:.75}
+.price{font:500 12.5px var(--mono)}
+.lock{display:inline-flex;align-items:center;gap:4px;color:var(--sub)}
+/* Icon tiles */
+.icon{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--tile)}
+.icon.lg{width:64px;height:64px;border-radius:14px}
+.icon svg{width:22px;height:22px}.icon.lg svg{width:30px;height:30px}
+.icon .b{stroke:var(--fg)}.icon .t{stroke:var(--brand)}
+/* Featured */
+.feature{display:grid;grid-template-columns:1.1fr 1fr;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);margin-top:16px}
+.feature .l{padding:20px;display:flex;flex-direction:column;gap:10px;justify-content:center;min-width:0}
+.feature .r{background:var(--haldi-soft);padding:18px;display:grid;place-items:center;min-width:0}
+.feature h5{font:600 20px/1.2 var(--display);margin:0;text-wrap:balance}
+.feature .x{align-self:flex-start}
+@media (max-width:760px){.feature{grid-template-columns:1fr}}
+/* Drawn product shots */
+.shot{width:100%;aspect-ratio:16/10;border-radius:8px;background:var(--card);border:1px solid var(--border);padding:12px;display:flex;flex-direction:column;gap:8px;overflow:hidden;font-size:11.5px;max-width:100%}
+.shot .ln{height:7px;border-radius:3px;background:var(--muted)}
+.shot .row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.stars{color:var(--warn-text);letter-spacing:1px;font-size:12px}
+.ph{background:linear-gradient(160deg,#D9B99B,#B07A52);border-radius:4px}
+.wa{background:#E7F7EE;color:#1C1917;border-radius:8px 8px 8px 2px;padding:6px 8px;max-width:85%;font-size:11.5px}
+.wa.me{background:#D9FDD3;align-self:flex-end;border-radius:8px 8px 2px 8px}
+/* Detail page */
+.detail{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}
+@media (max-width:900px){.detail{grid-template-columns:1fr}}
+.dhead{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.dhead .t{flex:1;min-width:220px}
+.dhead h3{font:700 26px/1.15 var(--display);margin:0}
+.dhead .by{font-size:12.5px;color:var(--sub)}
+.headline{font-size:16px;margin:6px 0 0;max-width:52ch}
+.feats{display:grid;gap:18px;margin-top:22px}
+.feat{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:center}
+.feat:nth-child(even) .fx{order:2}
+@media (max-width:700px){.feat{grid-template-columns:1fr}.feat:nth-child(even) .fx{order:0}}
+.feat h5{font-size:15px;margin:0 0 4px}
+.side{display:grid;gap:12px}
+.box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.box h6{font-size:12px;color:var(--sub);font-weight:600;margin:0 0 8px;letter-spacing:.02em}
+.big{font:600 24px var(--mono);letter-spacing:-.02em}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}.kv dt{color:var(--sub)}.kv dd{margin:0;min-width:0}
+.ul{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13px}
+.ul li{display:flex;gap:8px;align-items:flex-start}
+.ul li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--sub);margin-top:7px;flex:none}
+details{border-top:1px solid var(--border);padding:10px 0}
+details:last-child{border-bottom:1px solid var(--border)}
+summary{cursor:pointer;font-weight:500;list-style:none;display:flex;justify-content:space-between}
+summary::after{content:"+";color:var(--sub)}details[open] summary::after{content:"–"}
+details p{margin:6px 0 0;color:var(--sub);font-size:13px}
+.states{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+/* App home (installed) */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin:14px 0 16px;overflow-x:auto}
+.tab{border:0;background:none;padding:8px 12px;font:500 13px var(--sans);color:var(--sub);border-bottom:2px solid transparent;white-space:nowrap}
+.tab.on{color:var(--fg);border-bottom-color:var(--thread);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card)}
+.kpi{padding:14px 16px;border-right:1px solid var(--border);min-width:0}
+.kpi:last-child{border-right:0}
+.kpi b{display:block;font:500 22px var(--mono);margin-top:2px}
+.meter{height:8px;background:var(--muted);border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.meter i{display:block;height:100%;background:var(--fg);transform-origin:left}
+.danger{color:var(--danger-text);border-color:var(--danger-text)}
+/* Phone */
+.phones{display:flex;gap:24px;flex-wrap:wrap}
+.phone{width:100%;max-width:340px;border:1px solid var(--border);border-radius:26px;padding:10px;background:var(--card)}
+.phone .scr{border-radius:18px;overflow:hidden;border:1px solid var(--border);background:var(--bg)}
+.phone .bar{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--card);font-weight:600}
+.phone .pb{padding:12px;display:grid;gap:10px}
+.prow{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px}
+.prow .t{flex:1;min-width:0}.prow b{display:block;font-size:14px}
+.stick{border-top:1px solid var(--border);background:var(--card);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+/* Dialog */
+.dialog{max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:0 12px 32px rgb(0 0 0 / .12)}
+.dialog h5{font-size:17px;margin:0 0 10px}
+.calls{padding-left:20px;max-width:82ch}.calls li{margin-bottom:6px}
+@media (prefers-reduced-motion:reduce){.acard{transition:none}}
+/* True Profit additions */
+table.t{width:100%;border-collapse:collapse;font-size:13px;background:var(--card)}
+table.t th{font-size:11.5px;color:var(--sub);font-weight:600;text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.t td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.t tr:last-child td{border-bottom:0}
+table.t .r{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);white-space:nowrap}
+table.t tr.sub td{background:var(--muted);font-size:12.5px}
+table.t tr.sub td:first-child{padding-left:32px}
+.neg{color:var(--danger-text)}.pos{color:var(--ok-text)}
+.tablewrap{border:1px solid var(--border);border-radius:10px;overflow-x:auto}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-top:14px}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:13.5px}
+.list li:first-child{border-top:0}
+.list .r{font-family:var(--mono);white-space:nowrap}
+.foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end}
+.note{background:var(--warn);color:var(--warn-text);border-radius:6px;padding:8px 12px;font-size:13px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.stack{display:grid;gap:14px}
+.calls li{margin-bottom:8px}
+/* Delivery Zones additions */
+.shop{border:1px solid var(--border);border-radius:12px;background:#FFFDF8;color:#2A2420;padding:16px;font-family:var(--sans)}
+.shop .ttl{font:600 18px var(--display);margin:0}
+.shop .price{font:600 16px var(--sans)}
+.pin{display:flex;gap:8px;margin-top:10px}
+.pin input{flex:1;min-width:0;border:1px solid #CFC6BC;border-radius:6px;padding:9px 10px;font:500 15px var(--mono);background:#fff;color:#2A2420}
+.pin button{border:1px solid #2A2420;background:#2A2420;color:#fff;border-radius:6px;padding:0 14px;font:500 14px var(--sans)}
+.ans{margin-top:10px;border-top:1px dashed #E2D8CD;padding-top:10px;display:grid;gap:4px;font-size:13.5px}
+.ans .ok{color:#1E7B52}.ans .warn{color:#8A5000}.ans .no{color:#C02A2F}
+.lines{display:grid;gap:4px;font-size:13.5px}.lines div{display:flex;justify-content:space-between}
+.field{display:grid;gap:4px;font-size:13px}.field input,.field select{border:1px solid var(--input);border-radius:6px;padding:8px 10px;font:14px var(--sans);background:var(--card);color:var(--fg);min-width:0}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:13.5px}
+.switch i{width:34px;height:20px;border-radius:999px;background:var(--fg);position:relative;display:inline-block}
+.switch i::after{content:"";position:absolute;right:3px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--bg)}
+.switch.off i{background:var(--border)}.switch.off i::after{right:auto;left:3px}
+
+/* Products rework */
+.tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--border);margin-bottom:14px}
+.tab{padding:8px 12px;font-size:13.5px;color:var(--sub)}
+.tab.on{color:var(--fg);font-weight:600;box-shadow:inset 0 -2px 0 var(--thread)}
+.box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-width:0}
+.box h6{font-size:11px;letter-spacing:.08em;color:var(--sub);margin:0 0 8px;font-weight:600}
+.thumb{width:40px;height:50px;border-radius:6px;flex:none;background:linear-gradient(135deg,var(--rani-soft),var(--haldi-soft))}
+.thumb.b{background:linear-gradient(135deg,var(--indigo-soft),var(--muted))}.thumb.c{background:linear-gradient(135deg,var(--haldi-soft),var(--ok))}
+.cell{display:flex;gap:10px;align-items:center;min-width:0}
+.c-live{background:var(--ok);color:var(--ok-text)}.c-unl{background:var(--info);color:var(--info-text)}
+.edit{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+@media (max-width:860px){.edit{grid-template-columns:minmax(0,1fr)}}
+.aside{position:sticky;top:12px;display:grid;gap:12px}
+.sec{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:grid;gap:10px}
+.sec h5{margin:0;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.fold{background:var(--card);border:1px dashed var(--border);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;color:var(--sub);font-size:13.5px}
+.photos{display:flex;gap:8px;flex-wrap:wrap}
+.ph{width:76px;height:96px;border-radius:8px;background:linear-gradient(160deg,var(--rani-soft),var(--haldi-soft));position:relative}
+.ph.add{background:var(--muted);border:1px dashed var(--input);display:grid;place-items:center;color:var(--sub);font-size:22px}
+.ph i{position:absolute;left:6px;bottom:6px;width:14px;height:14px;border-radius:50%;border:2px solid var(--card)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.vchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--card);border-radius:8px;padding:4px 8px;font-size:13px}
+.vchip .h{color:var(--sub);cursor:grab;font-size:11px}.vchip.ed{border-color:var(--fg);box-shadow:0 0 0 2px var(--muted)}
+.sw{width:14px;height:14px;border-radius:50%;display:inline-block;border:1px solid var(--border)}
+.err{color:var(--danger-text);font-size:12.5px}
+.field.bad input{border-color:var(--danger-text)}
+.savebar{position:sticky;bottom:0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:var(--fg);color:var(--bg);border-radius:10px;padding:10px 14px;margin-top:12px}
+.savebar .btn{background:var(--bg);color:var(--fg);border-color:var(--bg)}
+.savebar .btn.ghost{background:transparent;color:var(--bg);border-color:transparent}
+.kinds{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.kind{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--card);display:grid;gap:4px;font-size:13px}
+.kind.on{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+.kind b{font-size:14px}
+.card{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
+.og{aspect-ratio:1200/630;display:grid;grid-template-columns:44% 1fr;background:#FBF7F1;color:#211C18;max-width:100%}
+.og .img{background:linear-gradient(160deg,#E7B8C8,#F3D9A4)}
+.og .txt{padding:16px;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.og .nm{font:700 16px var(--display);line-height:1.2}
+.og .pr{font:600 15px var(--mono)}
+.og .shop{font-size:11px;display:flex;align-items:center;gap:6px;color:#5F5A55}
+.og .logo{width:18px;height:18px;border-radius:4px;background:#211C18}
+.wa{background:var(--ok);padding:10px;border-radius:10px}
+.wa .bub{background:var(--card);border-radius:8px;overflow:hidden;max-width:300px}
+.wa .meta{padding:8px 10px;font-size:12px}
+.wa .meta b{display:block;font-size:13px}
+</style>
+<div class="wrap">
+  <div class="eyebrow">Mockup · for the owner's sign-off · 13 Nov 2026</div>
+  <h1>Products, reworked</h1>
+  <p class="sub">One page, one Save, a sticky side panel. A product starts from what it is, sizes and colours edit like text, nothing you typed is lost, and the link you share looks like your shop. Built from a code audit, a browser stress test across kurtas, sarees, jewellery, footwear and kids' wear, and dated research. Example shop: Kesar Studio.</p>
+  <nav class="toc" aria-label="Sections"><a href="#list">Products list</a><a href="#new">Add a product</a><a href="#editor">The editor</a><a href="#variants">Sizes and colours</a><a href="#errors">Errors</a><a href="#delete">Delete and archive</a><a href="#share">Link preview</a><a href="#phone">Phone</a><a href="#calls">Your calls</a></nav>
+
+  <h2 id="list">Products list</h2>
+  <div class="console"><div class="cbar"><h3>Products</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn">Import</button><button class="btn primary">Add product</button></div></div>
+  <div class="cbody">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div class="search"><input placeholder="Search name, SKU or tag" aria-label="Search products" value=""></div>
+      <div class="filters" style="margin:0"><button class="chipf" aria-pressed="true">All <b>68</b></button><button class="chipf">Live <b>51</b></button><button class="chipf">Draft <b>12</b></button><button class="chipf">Unlisted <b>2</b></button><button class="chipf">Archived <b>3</b></button><button class="chipf">Low stock <b>6</b></button></div>
+      <span style="flex:1"></span><span class="k">Sort: Recently edited ▾</span>
+    </div>
+    <div class="note" style="margin:12px 0;background:var(--muted);color:var(--fg)"><span><b>2 selected</b></span><span style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn">Set status</button><button class="btn">Add to collection</button><button class="btn">Duplicate</button><button class="btn">Archive</button><button class="btn danger">Delete</button></span></div>
+    <div class="tablewrap"><table class="t">
+      <thead><tr><th><input type="checkbox" aria-label="Select all"></th><th>Product</th><th>Status</th><th class="r">Price</th><th class="r">Stock</th><th>Sizes · colours</th></tr></thead>
+      <tbody>
+        <tr><td><input type="checkbox" checked aria-label="Select"></td><td><div class="cell"><span class="thumb"></span><div><b>Sabz chanderi kurta set</b><div class="k">kurta-set · edited 2 h ago</div></div></div></td><td><span class="chip c-live">Live</span></td><td class="r">₹2,490</td><td class="r">48</td><td class="k">6 sizes · <span class="sw" style="background:#2F6B4F"></span> <span class="sw" style="background:#B5452E"></span> <span class="sw" style="background:#2B3A67"></span></td></tr>
+        <tr><td><input type="checkbox" checked aria-label="Select"></td><td><div class="cell"><span class="thumb b"></span><div><b>Banarasi silk saree</b><div class="k">saree · edited yesterday</div></div></div></td><td><span class="chip c-n">Draft</span></td><td class="r">₹8,900</td><td class="r">3</td><td class="k">One size</td></tr>
+        <tr><td><input type="checkbox" aria-label="Select"></td><td><div class="cell"><span class="thumb c"></span><div><b>Gulnar jhumka earrings</b><div class="k">jewellery · 4 days ago</div></div></div></td><td><span class="chip c-unl">Unlisted</span></td><td class="r">₹1,290</td><td class="r">12</td><td class="k">One size · <span class="sw" style="background:#C9A227"></span> <span class="sw" style="background:#B8B8B8"></span></td></tr>
+        <tr><td><input type="checkbox" aria-label="Select"></td><td><div class="cell"><span class="thumb"></span><div><b>Mehr lehenga</b><div class="k">made to order · 2 weeks ago</div></div></div></td><td><span class="chip c-live">Live</span></td><td class="r">₹14,500</td><td class="r">—</td><td class="k">Made to order · 12–15 days</td></tr>
+      </tbody></table></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px"><span class="k">Showing 1–50 of 68</span><span style="display:flex;gap:6px"><button class="btn" disabled>Previous</button><button class="btn">Next</button></span></div>
+  </div></div>
+
+  <h2 id="new">Add a product: start from what it is</h2>
+  <div class="console"><div class="cbody" style="padding-top:18px">
+    <div class="form" style="grid-template-columns:minmax(0,1fr)"><label class="field">Name<input value="Gulabi chikankari kurta"></label></div>
+    <p class="k" style="margin:14px 0 8px">What are you selling?</p>
+    <div class="kinds">
+      <div class="kind on"><b>Clothing with sizes</b><span class="k">XS S M L XL XXL · size chart · colours</span></div>
+      <div class="kind"><b>Footwear</b><span class="k">UK 5–11 · foot length chart</span></div>
+      <div class="kind"><b>Kids</b><span class="k">2-3Y … 7-8Y · age chart</span></div>
+      <div class="kind"><b>One size</b><span class="k">Saree, dupatta, jewellery, bags · colours only</span></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn primary">Create draft</button></div>
+  </div></div>
+
+  <h2 id="editor">The editor: one page, one Save, a sticky side panel</h2>
+  <div class="console"><div class="cbar"><h3>Gulabi chikankari kurta</h3><span class="chip c-n">Draft</span></div>
+  <div class="cbody"><div class="edit">
+    <div style="display:grid;gap:12px;min-width:0">
+      <div class="sec"><h5>Photos <span class="k">Drag to order · first is the cover</span></h5>
+        <div class="photos"><div class="ph"><i style="background:#E8A3B8"></i></div><div class="ph"><i style="background:#E8A3B8"></i></div><div class="ph" style="background:linear-gradient(160deg,#F2F0E6,#D9E6DD)"><i style="background:#F2F0E6"></i></div><div class="ph add">+</div></div></div>
+      <div class="sec"><h5>Name, price, description</h5>
+        <div class="form"><label class="field">Name<input value="Gulabi chikankari kurta"></label><label class="field">Price, ₹<input value="2,490"></label><label class="field">M.R.P., ₹<input value="2,990"></label></div>
+        <label class="field">Description<input value="Hand-embroidered chikankari on soft mul cotton."></label>
+        <div class="k">frrata.shop/kesar/products/<b class="mono">gulabi-chikankari-kurta</b> · follows the name until it's live</div></div>
+      <div class="sec" id="variants-sec"><h5>Sizes and colours <span class="k">12 of 100</span></h5>
+        <div class="chips"><span class="k" style="width:52px">Size</span><span class="vchip"><span class="h">⋮⋮</span>XS</span><span class="vchip"><span class="h">⋮⋮</span>S</span><span class="vchip"><span class="h">⋮⋮</span>M</span><span class="vchip"><span class="h">⋮⋮</span>L</span><span class="vchip"><span class="h">⋮⋮</span>XL</span><span class="vchip"><span class="h">⋮⋮</span>XXL</span><button class="btn ghost">+ Add</button></div>
+        <div class="chips"><span class="k" style="width:52px">Colour</span><span class="vchip"><span class="sw" style="background:#E8A3B8"></span>Gulabi</span><span class="vchip ed"><span class="sw" style="background:#F2F0E6"></span><input value="Ivory" aria-label="Rename colour" style="border:0;width:60px;font:inherit;background:transparent;color:inherit"></span><button class="btn ghost">+ Add</button></div>
+        <div class="k">Renaming a colour keeps its prices, stock, photos and SKUs.</div>
+      </div>
+      <div class="sec"><h5>Stock and prices <span class="k">Select rows, then set</span></h5>
+        <div class="note" style="margin:0;background:var(--muted);color:var(--fg)"><span><b>Gulabi · 6 sizes</b> selected</span><span style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="k">Price</span><input aria-label="Price" value="2,490" style="width:80px" class="mono"><span class="k">Stock</span><input aria-label="Stock" value="8" style="width:50px" class="mono"><label class="k"><input type="checkbox" checked> Empty only</label><button class="btn">Set</button></span></div>
+        <div class="tablewrap"><table class="t">
+          <thead><tr><th><input type="checkbox" aria-label="Select all"></th><th>Variant</th><th class="r">Price</th><th class="r">Stock</th><th>Shoppers see</th></tr></thead>
+          <tbody>
+            <tr><td><input type="checkbox" checked aria-label="Select"></td><td><span class="sw" style="background:#E8A3B8"></span> Gulabi · XS</td><td class="r">₹2,490</td><td class="r">4</td><td><span class="chip c-live">In stock</span></td></tr>
+            <tr><td><input type="checkbox" checked aria-label="Select"></td><td><span class="sw" style="background:#E8A3B8"></span> Gulabi · XXL</td><td class="r">₹2,890</td><td class="r">0</td><td><span class="chip c-warn">Sold out</span></td></tr>
+            <tr><td><input type="checkbox" aria-label="Select"></td><td><span class="sw" style="background:#F2F0E6"></span> Ivory · M</td><td class="r">—</td><td class="r">—</td><td><span class="chip c-n">No price yet</span></td></tr>
+          </tbody></table></div>
+        <div class="filters" style="margin:0"><button class="chipf" aria-pressed="true">Price and stock</button><button class="chipf">SKU and barcode</button></div>
+      </div>
+      <div class="fold"><span>Details · Fabric, work, occasion</span><button class="btn ghost">Add</button></div>
+      <div class="fold"><span>Size chart · Women's kurta (XS–XXL, Bust · Waist · Hip)</span><button class="btn ghost">Edit</button></div>
+      <div class="fold"><span>Search and sharing</span><button class="btn ghost">Edit</button></div>
+      <div class="fold"><span>Tax · HSN 6211 · 5% under ₹2,500</span><button class="btn ghost">Edit</button></div>
+      <div class="savebar"><span>3 unsaved changes</span><span style="display:flex;gap:6px"><button class="btn ghost">Discard</button><button class="btn">Save · ⌘S</button></span></div>
+    </div>
+    <div class="aside">
+      <div class="box"><h6>STATUS</h6>
+        <div class="filters" style="margin:0 0 8px"><button class="chipf">Draft</button><button class="chipf" aria-pressed="true">Live</button><button class="chipf">Unlisted</button></div>
+        <p class="k" style="margin:0 0 10px">Missing: a price for Ivory (6 sizes).</p>
+        <button class="btn primary" style="width:100%" disabled>Publish</button>
+      </div>
+      <div class="box"><h6>SHARED ON WHATSAPP</h6>
+        <div class="wa"><div class="bub"><div class="og"><div class="img"></div><div class="txt"><div><div class="nm">Gulabi chikankari kurta</div><div class="pr" style="margin-top:6px">₹2,490 <span style="text-decoration:line-through;color:#8C857F;font-size:12px">₹2,990</span></div></div><div class="shop"><span class="logo"></span>Kesar Studio · kesarstudio.in</div></div></div>
+        <div class="meta"><b>Gulabi chikankari kurta · ₹2,490</b>Hand-embroidered chikankari on soft mul cotton. Pay on delivery.<div class="k">kesarstudio.in</div></div></div></div>
+      </div>
+      <div class="box"><h6>MORE</h6><div style="display:grid;gap:6px"><button class="btn">Duplicate</button><button class="btn">View in shop</button><button class="btn ghost danger">Delete draft</button></div></div>
+    </div>
+  </div></div></div>
+
+  <h2 id="variants">Sizes and colours, edge cases</h2>
+  <div class="two" style="margin-top:0">
+    <div class="box"><h6>RENAME AND REORDER</h6><p class="k" style="margin:0">Click a chip to rename it; its cells, photos and SKUs move with it. Drag the handle (or Alt+arrow keys) to reorder; the shop's size buttons follow. "xl" when "XL" exists is refused as you type.</p></div>
+    <div class="box"><h6>ONE SIZE</h6><p class="k" style="margin:0">A saree, dupatta, jewellery or a bag has no Size and no size chart or model sections; colours are optional. Changing kind later asks first: "Remove Size and its 18 rows?"</p></div>
+    <div class="box"><h6>COLOUR, WHATEVER IT'S CALLED</h6><p class="k" style="margin:0">Colour, Shade, Print or रंग: any option the brand marks as colour gets swatches (a colour, or cut from a photo) and photos per colour.</p></div>
+    <div class="box"><h6>SIZE CHART FITS THE SIZES</h6><p class="k" style="margin:0">Publish checks the chart's rows match the product's sizes. Columns can be removed; cells take decimals (23.5 cm).</p></div>
+  </div>
+
+  <h2 id="errors">Errors at the field, input kept</h2>
+  <div class="console"><div class="cbody" style="padding-top:18px">
+    <div class="note" style="background:var(--danger);color:var(--danger-text)"><span>2 things to fix: <a href="#e1" style="color:inherit">Price</a> · <a href="#e2" style="color:inherit">SKU</a></span></div>
+    <div class="form">
+      <label class="field bad" id="e1">Price, ₹<input value="0"><span class="err">More than ₹0.</span></label>
+      <label class="field bad" id="e2">SKU<input value="KS-LINKUR-S-IND" class="mono"><span class="err">Also used by Linen kurta · S. Pick another.</span></label>
+      <label class="field">HSN<input value="99999999" class="mono"><span class="err">Not an HSN code we know. Check it with your CA.</span></label>
+    </div>
+    <p class="k" style="margin-top:10px">Checked when you leave a field; cleared as soon as it's right; never reset.</p>
+  </div></div>
+
+  <h2 id="delete">Delete and archive</h2>
+  <div class="two" style="margin-top:0">
+    <div class="dialog"><h5>Delete 2 drafts?</h5><p class="k">Banarasi silk saree and Gulnar jhumka earrings. They've never been live or ordered.</p><div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn">Keep them</button><button class="btn danger">Delete 2 drafts</button></div></div>
+    <div class="dialog"><h5>Sabz chanderi kurta set has 14 orders</h5><p class="k">It can be archived, not deleted: orders keep its name, price and photo. Its page tells shoppers it's no longer available.</p><div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn">Cancel</button><button class="btn primary">Archive</button></div></div>
+  </div>
+  <p class="k">Either way, a toast offers Undo for 8 seconds; Archived products are one filter away.</p>
+
+  <h2 id="share">Link preview: a full-website card</h2>
+  <div class="two" style="margin-top:0">
+    <div class="card"><div class="og" style="grid-template-columns:46% 1fr"><div class="img"></div><div class="txt"><div><div class="shop" style="margin-bottom:10px"><span class="logo"></span>Kesar Studio</div><div class="nm" style="font-size:20px">Sabz chanderi kurta set</div><div class="pr" style="margin-top:8px;font-size:18px">₹2,490</div><div style="font-size:11px;margin-top:6px;color:#5F5A55">6 sizes · 3 colours · Pay on delivery</div></div><div class="shop">kesarstudio.in</div></div></div></div>
+    <div class="box"><h6>WHAT CHANGES</h6><p class="k" style="margin:0">The product's cover photo, the shop's logo and address, the name and ₹ price, on the shop's colours. 1200×630, under 300 KB for WhatsApp. og:title "Name · ₹2,490". The image's address changes when the photo or price does, so WhatsApp and Instagram fetch the new one; cached a day. The editor's side panel shows this same card from your draft, before you publish.</p></div>
+  </div>
+
+  <h2 id="phone">On a phone</h2>
+  <div class="phones">
+    <div class="phone"><div class="scr">
+      <div class="bar"><span>Gulabi chikankari kurta</span><span class="chip c-n">Draft</span></div>
+      <div class="pb">
+        <div class="photos"><div class="ph" style="width:64px;height:80px"></div><div class="ph" style="width:64px;height:80px"></div><div class="ph add" style="width:64px;height:80px">+</div></div>
+        <div class="field">Price, ₹<input value="2,490"></div>
+        <div class="chips"><span class="vchip">XS</span><span class="vchip">S</span><span class="vchip">M</span><span class="vchip">L</span><span class="vchip">+</span></div>
+        <div class="prow"><div class="t"><b>Gulabi · 6 sizes</b><span class="k">₹2,490 · 32 in stock</span></div><span class="k">›</span></div>
+        <div class="prow"><div class="t"><b>Ivory · 6 sizes</b><span class="k">No price yet</span></div><span class="k">›</span></div>
+        <div class="fold"><span>Size chart · Details · Sharing · Tax</span><span>›</span></div>
+      </div>
+      <div class="stick"><span class="k">2 changes</span><span style="display:flex;gap:6px"><button class="btn">Save</button><button class="btn primary">Publish</button></span></div>
+    </div></div>
+  </div>
+
+  <h2 id="calls">Your calls</h2>
+  <ol class="calls">
+    <li><b>Start from the kind</b> (Clothing with sizes, Footwear, Kids, One size), which sets sizes, chart, HSN and sections. Recommended.</li>
+    <li><b>One Save for the whole page</b>, explicit, sticky, ⌘/Ctrl+S, Back protected; no autosave (as Shopify keeps for products). Recommended.</li>
+    <li><b>Add an Unlisted status</b>: reachable by its link, out of search, collections and the sitemap (for Instagram DM drops). Recommended.</li>
+    <li><b>Delete</b> only what was never live and never ordered; everything else archives, with Undo either way. Recommended.</li>
+    <li><b>The address follows the name until first live</b>, then stays; changing it later redirects automatically. Recommended.</li>
+    <li><b>The share card becomes a full-website card</b> (photo, logo, name, price, address) and the editor previews it from the draft. Recommended.</li>
+    <li><b>Phases:</b> PR·0 fixes what's broken first (the 50-product list, saving drafts without prices, renames wiping prices, size order, the wrong size chart, decimals, Sold out on made-to-order), then the list, the editor, variants, links. Recommended.</li>
+  </ol>
+</div>

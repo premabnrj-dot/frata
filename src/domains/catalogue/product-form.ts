@@ -8,6 +8,7 @@
 
 import { istDayKey } from '../time/day'
 import { cleanGtin } from './gtin'
+import { sizeKey } from './size-charts'
 import { cleanOptions, combinations, handleFor, keyOf, RESERVED_HANDLES, type Option } from './variants'
 import { parseRupees, priceRefusal } from '../money/rupees'
 
@@ -74,7 +75,9 @@ export const HANDLE_SHAPE = /^[a-z0-9]([a-z0-9-]{0,98}[a-z0-9])?$/
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /** Errors keyed "title", "options", or "v:<values>:<field>" for one grid cell. `hsnDigits`: the shop's, by its turnover (rates.ts hsnDigitsFor). */
-export function cleanProduct(p: ProductInput, now: Date, hsnDigits = 4): { ok: true; product: CleanProduct } | { ok: false; errors: Record<string, string> } {
+/** `blankPrices`: an empty price saves as none yet (a draft in the editor: PR·0, a draft saved before every size is
+ *  priced); going live still needs them (readiness), and a live product's save is refused without them (actions). */
+export function cleanProduct(p: ProductInput, now: Date, hsnDigits = 4, how: { blankPrices?: boolean } = {}): { ok: true; product: CleanProduct } | { ok: false; errors: Record<string, string> } {
   const errors: Record<string, string> = {}
   const title = p.title.trim().replace(/\s+/g, ' ')
   if (!title) errors.title = 'Your product needs a name.'
@@ -90,7 +93,8 @@ export function cleanProduct(p: ProductInput, now: Date, hsnDigits = 4): { ok: t
     for (const values of combinations(opts.options)) {
       const k = keyOf(values), v = byKey.get(k)
       const cell = (f: string) => `v:${k}:${f}`
-      const price = parseRupees(v?.price ?? '')
+      const blank = !(v?.price ?? '').trim()
+      const price = blank && how.blankPrices ? 0 : parseRupees(v?.price ?? '')
       if (price === null) errors[cell('price')] = priceRefusal(v?.price ?? '')
       const compareAt = v?.compareAt.trim() ? parseRupees(v.compareAt) : null
       if (v?.compareAt.trim() && compareAt === null) errors[cell('compareAt')] = priceRefusal(v.compareAt)
@@ -154,8 +158,20 @@ export function cleanProduct(p: ProductInput, now: Date, hsnDigits = 4): { ok: t
 
 export type Readiness = { label: string; ok: boolean }[]
 
+/** A chart with a row for every size the product sells (PR·0: a kids' 2–3 Y went live on an XS–XXL chart). Case and
+ *  spaces don't count ("2-3 y" is "2–3 Y"). */
+function chartLine(sizes: readonly string[], chart: readonly string[]): Readiness[number] {
+  if (!sizes.length) return { label: 'A size chart for its type', ok: true }
+  if (!chart.length) return { label: 'A size chart for its type', ok: false }
+  const has = new Set(chart.map(sizeKey))
+  const missing = sizes.filter((x) => !has.has(sizeKey(x)))
+  return missing.length ? { label: `Size chart rows for ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? ` and ${missing.length - 4} more` : ''}`, ok: false } : { label: 'A size chart for its type', ok: true }
+}
+
 /** What a product needs before shoppers see it — shown as a list, Publish stays off until all are met. */
-export function readiness(p: { title: string; photos: number; prices: number[]; hasSizes: boolean; chartRows: number; anyBuyable: boolean
+export function readiness(p: { title: string; photos: number; prices: number[]; anyBuyable: boolean
+  /** The product's sizes (its Size option's values; none: no chart asked) and the sizes its type's chart has rows for. */
+  sizes: readonly string[]; chartSizes: readonly string[]
   /** A shop that charges GST: false until the product has an HSN with a known rate (or the merchant's own). Absent: not asked. */
   taxReady?: boolean
   /** A beauty or wellness shop: what the pack must say that is still missing (label.ts labelMissing). Absent: not asked. */
@@ -166,7 +182,7 @@ export function readiness(p: { title: string; photos: number; prices: number[]; 
     { label: 'A name', ok: !!p.title.trim() },
     { label: 'At least one photo', ok: p.photos > 0 },
     { label: 'A price on every size and colour', ok: p.prices.length > 0 && p.prices.every((x) => x > 0) },
-    { label: 'A size chart for its type', ok: !p.hasSizes || p.chartRows > 0 },
+    chartLine(p.sizes, p.chartSizes),
     { label: 'Something shoppers can buy (in stock, or taking pre-orders)', ok: p.anyBuyable },
   ]
 }

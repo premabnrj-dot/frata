@@ -44,6 +44,16 @@ export function presetsFor(sells: readonly (typeof SELL_KEYS)[number][]): Preset
   return [...keys].map((k) => PRESETS[k]!)
 }
 
+/** One size however it is typed: case, spaces and dashes don't count ("2-3 y" is "2–3 Y"). */
+export const sizeKey = (x: string) => x.toLowerCase().replace(/[\s–—-]+/g, '')
+
+/** A chart edited as text (each cell what was typed, so "23." survives the keystroke) back to cm, or the first cell that
+ *  is not a number of cm (up to 2 decimals). PR·0: cells kept as numbers turned 23.5 into 235. */
+export function chartFromText(d: Omit<Chart, 'rows'> & { rows: { size: string; values: string[] }[] }): Chart | string {
+  for (const r of d.rows) for (const v of r.values) if (v.trim() && !/^\d+(\.\d{1,2})?$/.test(v.trim())) return `${r.size || 'A size'}: ${v.trim()} is not a number of cm.`
+  return { ...d, rows: d.rows.map((r) => ({ size: r.size, values: r.values.map((v) => (v.trim() ? Number(v) : null)) })) }
+}
+
 /** 86 cm → "33.9"; for showing a chart in inches. */
 export const inches = (cm: number) => (Math.round((cm / 2.54) * 10) / 10).toFixed(1)
 

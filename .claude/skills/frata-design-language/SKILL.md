@@ -2,8 +2,8 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.22.4
-  verified: 2026-11-12
+  version: 5.23.1
+  verified: 2026-11-13
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
 
@@ -462,6 +462,25 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 - **Collections**: hand-picked (an order you set) or filled by rules (all or
   any) with a live "N products match now" count; a product shows the
   hand-picked ones as toggles and the rule-based ones it is in, in words.
+
+## Products rework (owner-approved 2026-11-13; spec `docs/specs/2026-11-13-products-rework.md`, mockup https://claude.ai/artifact/NW8BozPHgfXQcUge2wKyv4)
+
+Rules every products screen keeps (PR·0 built; PR·1–4 follow the mockup):
+1. **A draft saves with what it has.** Blank prices save as none; only a live or Unlisted product refuses one, at its cell.
+2. **Editing never loses work.** A chip renames in place and carries its cells, swatch and photos. A category change keeps the
+   details that still apply. A field never silently reverts what was typed: it keeps it and says what is wrong.
+3. **Fill, don't overwrite.** Bulk actions say how many rows they touch ("Apply to 2"), default to empty cells only, and
+   are off at 0.
+4. **Order the way shoppers read.** Known sizes go to their place (XS before S).
+5. **A product starts from what it is.** Its kind and type come from its name (`src/domains/catalogue/kind.ts`) until PR·2's
+   "What are you selling?" step. No match means no type, never the shop's first type.
+6. **What shoppers see is said once.** The list's stock column comes from `bestOffer` (`src/domains/catalogue/availability.ts`):
+   Pre-order, Made to order and Sold out, never "Sold out" for something that sells at 0. Unpriced sizes are counted
+   ("2 without a price").
+7. **Readiness names the gap.** "Size chart rows for 2–3 Y", not just "a size chart".
+8. **The list scales.** Search by name or SKU, 50 a page, "Showing 1–50 of N"; past the last page goes to the last page.
+9. **Duplicates are refused where they are made**: the field that holds the clash (a SKU, a barcode, a chip) is marked,
+   not a toast alone.
 
 ## Import and order edit (owner-approved 2026-11-12; specs `docs/specs/2026-11-11-product-import.md`, `docs/specs/2026-11-11-order-edit.md`, mockup https://claude.ai/artifact/76HjNBCo2xdJyf6Qvwxutx)
 
