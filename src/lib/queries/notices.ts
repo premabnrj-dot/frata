@@ -37,7 +37,7 @@ export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string): 
       select t.id, t.module, t.trial_ends_at as ends, (select p.monthly_price from ${tenantAddons} a join ${addonPrices} p on p.id = a.addon_price_id
         where a.tenant_id = t.tenant_id and a.module = t.module and a.by_shop and a.addon_price_id is not null
         order by abs(extract(epoch from a.starts_at - t.trial_ends_at)) limit 1) as monthly
-      from ${tenantAddons} t where t.id in (select jsonb_array_elements_text(${JSON.stringify(trialIds)}::jsonb)::uuid)`) : Promise.resolve([]),
+      from ${tenantAddons} t where t.tenant_id = ${rows[0]!.tenantId} and t.id in (select jsonb_array_elements_text(${JSON.stringify(trialIds)}::jsonb)::uuid)`) : Promise.resolve([]),
   ])
   const trial = new Map(trials.map((t) => [t.id, t]))
   const bill = new Map(bills.map((b) => [b.id, b])), visit = new Map(visits.map((v) => [v.id, v]))

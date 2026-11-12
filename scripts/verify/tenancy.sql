@@ -2823,6 +2823,13 @@ do $$ declare n int; begin
   update delivery_zones set charge = 0; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed B zones'; end if;
   delete from delivery_rules; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A deleted B rules'; end if;
   begin insert into delivery_rules (tenant_id, pincode, rule) values ('22222222-2222-2222-2222-222222222222', '400070', 'no_delivery'); raise exception 'FAIL: A wrote B rules'; exception when insufficient_privilege then null; end;
+  delete from delivery_zone_pins; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A deleted B pins'; end if;
+  update shop_holidays set name = 'x'; get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed B holidays'; end if;
+  -- A's own row moved to B: refused by the policy's check.
+  insert into delivery_rules (tenant_id, pincode, rule) values ('11111111-1111-1111-1111-111111111111', '560001', 'prepaid_only');
+  begin update delivery_rules set tenant_id = '22222222-2222-2222-2222-222222222222' where pincode = '560001'; raise exception 'FAIL: A moved a rule to B'; exception when insufficient_privilege then null; end;
+  insert into shop_holidays (tenant_id, day, name) values ('11111111-1111-1111-1111-111111111111', '2026-12-31', 'NYE');
+  begin update shop_holidays set tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: A moved a holiday to B'; exception when insufficient_privilege then null; end;
   -- A's own pin row naming B's zone: refused by the key, not only the policy.
   begin insert into delivery_zone_pins (tenant_id, pin, zone_id) values ('11111111-1111-1111-1111-111111111111', '110', 'd2000000-0000-0000-0000-000000000002'); raise exception 'FAIL: A pointed at B zone'; exception when foreign_key_violation then null; end;
 end $$;

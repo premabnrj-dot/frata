@@ -53,7 +53,7 @@ begin
   if not found then return false; end if;
   update public.tenant_addons a set ends_at = now() where a.id = v_trial.id;
   update public.tenant_addons a set ends_at = a.starts_at
-   where a.tenant_id = v_tenant and a.module = p_module and a.addon_price_id is not null and a.ends_at is null and a.starts_at >= v_trial.trial_ends_at;
+   where a.tenant_id = v_tenant and a.module = p_module and a.by_shop and a.addon_price_id is not null and a.ends_at is null and a.starts_at >= v_trial.trial_ends_at;
   return true;
 end $$;
 --> statement-breakpoint

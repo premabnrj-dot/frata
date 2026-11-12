@@ -101,7 +101,7 @@ export async function saveZoneAction(input: unknown): Promise<Result> {
       const [c] = await tx.execute<{ n: number }>(sql`select count(*)::int as n from ${deliveryZonePins} where tenant_id = ${t}`)
       if ((c?.n ?? 0) + own.pins.length > MAX_PINS) return `A shop's zones can list up to ${MAX_PINS.toLocaleString('en-IN')} PIN codes.`
       if (own.pins.length) {
-        const taken = await tx.execute<{ pin: string; name: string }>(sql`select p.pin, z.name from ${deliveryZonePins} p join ${deliveryZones} z on z.id = p.zone_id
+        const taken = await tx.execute<{ pin: string; name: string }>(sql`select p.pin, z.name from ${deliveryZonePins} p join ${deliveryZones} z on z.id = p.zone_id and z.tenant_id = p.tenant_id
           where p.tenant_id = ${t} and p.pin in (select jsonb_array_elements_text(${JSON.stringify(own.pins)}::jsonb)) limit 3`)
         if (taken.length) return `${taken.map((x) => `${x.pin} is already in ${x.name}`).join('; ')}.`
         await tx.execute(sql`insert into ${deliveryZonePins} (tenant_id, pin, zone_id) select ${t}::uuid, x, ${id}::uuid from jsonb_array_elements_text(${JSON.stringify(own.pins)}::jsonb) x`)
@@ -118,7 +118,7 @@ export async function deleteZoneAction(id: unknown): Promise<Result> {
     const gone = await tx.delete(deliveryZones).where(and(eq(deliveryZones.tenantId, t), eq(deliveryZones.id, p.data))).returning({ id: deliveryZones.id })
     if (!gone.length) return 'This zone was already removed.'
     // Positions stay 0…n−1 (the unique slot a new zone takes).
-    await tx.execute(sql`update ${deliveryZones} z set position = r.p from (select id, (row_number() over (order by position))::int - 1 as p from ${deliveryZones} where tenant_id = ${t}) r where z.id = r.id`)
+    await tx.execute(sql`update ${deliveryZones} z set position = r.p from (select id, (row_number() over (order by position))::int - 1 as p from ${deliveryZones} where tenant_id = ${t}) r where z.id = r.id and z.tenant_id = ${t}`)
     return null
   })
 }
