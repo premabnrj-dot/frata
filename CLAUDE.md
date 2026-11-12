@@ -40,7 +40,10 @@ Agents: `tenancy-auditor`, `architecture-reviewer`, `integration-researcher`,
 gaps, debt), `speed-reviewer` (a plan or diff that touches a page, a query,
 a cache or background work), `security-reviewer` (an action, route, webhook,
 header, cookie or merchant content), `e2e-runner` (the browser flows in `e2e/`), `mockup-parity-reviewer` (a built screen against its approved mockup,
-before a phase closes).
+before a phase closes), `words-reviewer` (every diff or mockup with words a person reads), `design-system-reviewer`
+(tokens, primitives, states and accessibility on every UI diff), `release-agent` (merge main, gates, flows, push, deploy).
+Scripts: `npm run release:check` (migration collisions + the e2e flows a change touches), `scripts/prod-migrate.mjs`
+(prints a migration's production SQL and drizzle row).
 
 ## Rules that apply to everything
 
