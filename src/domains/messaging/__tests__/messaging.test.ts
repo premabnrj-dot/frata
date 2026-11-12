@@ -33,6 +33,12 @@ describe('still true at send time', () => {
     expect(stillTrue('finish_paying', { ...online, switchedToCodAt: t0 }, later, false)).toBe('not_due')
     expect(stillTrue('finish_paying', { ...online, payBy: new Date(later.getTime() + 60_000) }, later, false)).toBe('not_due')
   })
+  it('edited: true unless undone or cancelled since; it waits out the Undo window', () => {
+    expect(stillTrue('edited', o(), later, false)).toBe('ok')
+    expect(stillTrue('edited', o(), later, true)).toBe('undone')
+    expect(stillTrue('edited', o({ cancelledAt: t0 }), later, false)).toBe('cancelled')
+    expect(sendAfter('edited', t0).getTime() - t0.getTime()).toBe(10 * 60_000)
+  })
   it('confirmed: a standing order; an unpaid online one is not due', () => {
     expect(stillTrue('confirmed', o(), later, false)).toBe('ok')
     expect(stillTrue('confirmed', o({ paymentMethod: 'prepaid', payBy: t0 }), later, false)).toBe('not_due')

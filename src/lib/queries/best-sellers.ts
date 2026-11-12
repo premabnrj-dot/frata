@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import { stateSql } from '@/lib/db/order-predicates'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
@@ -13,7 +13,7 @@ export async function coreBestSellers(tenantId: string, days: number): Promise<s
   return withTenant(tenantId, async (tx) => {
     const rows = await tx.select({ productId: orderLines.productId }).from(orderLines)
       .innerJoin(orders, and(eq(orders.tenantId, orderLines.tenantId), eq(orders.id, orderLines.orderId)))
-      .where(and(eq(orders.tenantId, tenantId), sql`${orders.deliveredAt} >= ${since.toISOString()}`, sql`${stateSql(now)} = 'delivered'`, sql`${orderLines.productId} is not null`))
+      .where(and(eq(orders.tenantId, tenantId), sql`${orders.deliveredAt} >= ${since.toISOString()}`, sql`${stateSql(now)} = 'delivered'`, sql`${orderLines.productId} is not null`, isNull(orderLines.removedAt)))
       .groupBy(orderLines.productId).orderBy(sql`sum(${orderLines.qty}) desc`, orderLines.productId).limit(60)
     return rows.map((r) => r.productId!).filter(Boolean)
   })

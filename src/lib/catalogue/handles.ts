@@ -1,7 +1,7 @@
 import 'server-only'
 import { and, eq, sql } from 'drizzle-orm'
 import { presetsFor } from '@/domains/catalogue/size-charts'
-import { handleFor } from '@/domains/catalogue/variants'
+import { handleFor, RESERVED_HANDLES } from '@/domains/catalogue/variants'
 import type { Tx } from '@/lib/db'
 import { arrayParam } from '@/lib/db/sql-array'
 import { shopSettings } from '@/lib/db/schema'
@@ -44,13 +44,14 @@ export const takenHandles = (tx: Tx, tenantId: string, keys: string[]) => {
 /**
  * Free handles for many new products in ONE read (the import's chunks, plan 2026-11-12-product-import PI·0): each base
  * as it is, else "-2", "-3"…, never one another product has or had (old addresses stay reserved for the product that
- * had them: they redirect to it), never two alike in the batch. `bases` are handle-shaped (handleFor).
+ * had them: they redirect to it), never one of Frrata's own (RESERVED_HANDLES: a product called Photos gets
+ * "photos-2"), never two alike in the batch. `bases` are handle-shaped (handleFor).
  */
 export async function freeHandles(tx: Tx, tenantId: string, bases: string[]): Promise<string[]> {
   if (!bases.length) return []
   if (bases.some((b) => !/^[a-z0-9-]{1,100}$/.test(b))) throw new Error('freeHandles: not a handle')
   const taken = await takenHandles(tx, tenantId, [...new Set(bases.flatMap((b) => [undigit(b), `${stemOf(b)}-`]))])
-  const used = new Set(taken.map((t) => t.handle))
+  const used = new Set([...RESERVED_HANDLES, ...taken.map((t) => t.handle)])
   return bases.map((base) => {
     let h = base
     for (let n = 2; used.has(h); n++) h = `${stemOf(base)}-${n}`

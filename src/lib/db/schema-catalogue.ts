@@ -128,6 +128,9 @@ export const variants = pgTable('variants', {
   uniqueIndex('variants_tenant_product_options').on(t.tenantId, t.productId, t.optionValues),
   check('variants_gtin', sql`${t.gtin} is null or ${t.gtin} ~ '^([0-9]{8}|[0-9]{12,14})$'`),
   uniqueIndex('variants_tenant_sku').on(t.tenantId, t.sku).where(sql`${t.sku} is not null`),
+  // A SKU is one in the shop in any case, as the app compares them (writeProducts): two saves at once can't store
+  // KS-1 and ks-1 (PI·1 · 5, found in PI·0).
+  uniqueIndex('variants_tenant_sku_upper').on(t.tenantId, sql`upper(${t.sku})`).where(sql`${t.sku} is not null`),
   // One barcode names one size in a shop (Google refuses duplicates; impact review S2·3).
   uniqueIndex('variants_tenant_gtin').on(t.tenantId, t.gtin).where(sql`${t.gtin} is not null`),
   index('variants_tenant_product').on(t.tenantId, t.productId),

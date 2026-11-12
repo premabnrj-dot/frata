@@ -197,8 +197,17 @@ export const orderLines = pgTable('order_lines', {
   /** This line's share of delivery + COD fee, taxed at its rate (composite supply). Null for orders placed before 1D. */
   chargeTaxable: money('charge_taxable'),
   chargeGst: money('charge_gst'),
+  /** An order edit took it out (OE·1): the line stays as sold, never rewritten; `replaced_by` is the line it became (a
+   *  size swapped or a quantity changed). Every reader of an order's lines reads only the lines with neither. */
+  removedAt: timestamp('removed_at', { withTimezone: true }),
+  replacedBy: uuid('replaced_by'),
 }, (t) => [
   unique('order_lines_tenant_id_key').on(t.tenantId, t.id),
+  foreignKey({ name: 'order_lines_replaced_by_fk', columns: [t.tenantId, t.replacedBy], foreignColumns: [t.tenantId, t.id] }),
+  check('order_lines_replaced', sql`${t.replacedBy} is null or (${t.removedAt} is not null and ${t.replacedBy} <> ${t.id})`),
+  // A line comes out only after its pieces went back (stock.ts putStockBackLines clears the stamp first): a cancel puts
+  // back what live lines took, so a removed line holding stock would never return it.
+  check('order_lines_removed_stock', sql`${t.removedAt} is null or ${t.stockTakenAt} is null`),
   foreignKey({ name: 'order_lines_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
   index('order_lines_order').on(t.tenantId, t.orderId),
   index('order_lines_variant').on(t.tenantId, t.variantId),
@@ -247,7 +256,7 @@ export const orderEvents = pgTable('order_events', {
   fields: text('fields').array(),
   /** cancelled: the reason code; undone: the kind undone; credit_noted: why (cancelled, came_back). */
   reason: text('reason'),
-  /** undone: the event this reverses. */
+  /** undone: the event this reverses. items_edited: its lines and totals are its order_edits row (schema-edits.ts). */
   undoes: uuid('undoes'),
   at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
@@ -256,7 +265,7 @@ export const orderEvents = pgTable('order_events', {
   // An undo points at an event on the same order (FK in drizzle/0020).
   unique('order_events_order_id_key').on(t.tenantId, t.orderId, t.id),
   index('order_events_order').on(t.tenantId, t.orderId, t.at),
-  check('order_events_kind', sql`${t.kind} in ('confirmed','held','unheld','undone','edited','packed','cancelled','note_added','printed_slip','printed_invoice','shipped','delivered','rto','lost','ndr','shipment_cancelled','credit_noted')`),
+  check('order_events_kind', sql`${t.kind} in ('confirmed','held','unheld','undone','edited','packed','cancelled','note_added','printed_slip','printed_invoice','shipped','delivered','rto','lost','ndr','shipment_cancelled','credit_noted','items_edited')`),
   check('order_events_actor', sql`${t.actorKind} in ('member','support','system')`),
   // A person is named exactly when one acted.
   check('order_events_who', sql`(${t.actorKind} = 'system') = (${t.actorUserId} is null) and (${t.actorUserId} is null) = (${t.actorEmail} is null)`),

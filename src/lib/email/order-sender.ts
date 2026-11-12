@@ -2,6 +2,7 @@ import 'server-only'
 import { and, asc, count, eq, gte, inArray, isNull, sql } from 'drizzle-orm'
 import { withTenant } from '@/lib/db/tenant'
 import { orders, orderEvents, orderLines, shipments } from '@/lib/db/schema-orders'
+import { orderEdits } from '@/lib/db/schema-edits'
 import { emailMessages, emailShops, emailSuppressions, shopEmails } from '@/lib/db/schema-email'
 import { enqueue, GiveUp, Later, type OutboxRow } from '@/lib/outbox'
 import { shopLook, shopSettingsFor } from '@/lib/queries/storefront'
@@ -88,6 +89,12 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
     const [undone] = eventId ? await tx.select({ id: orderEvents.id }).from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.undoes, eventId))).limit(1) : []
     const still = stillTrue(kind, { ...o, stockShort: false }, now, !!undone)
     if (still !== 'ok') return skip(still)
+    // Items changed again since, that change emailing too (and not undone): its email says where the order stands. A
+    // later change saved without the email leaves this one to say it.
+    const [later] = kind === 'edited' && eventId ? await tx.execute(sql`select 1 from ${orderEvents} l join ${orderEdits} x on x.tenant_id = l.tenant_id and x.event_id = l.id and x.notify
+      where l.tenant_id = ${tenantId} and l.order_id = ${o.id} and l.kind = 'items_edited'
+      and l.at > (select e.at from ${orderEvents} e where e.tenant_id = ${tenantId} and e.id = ${eventId}) and not exists (select 1 from ${orderEvents} u where u.tenant_id = l.tenant_id and u.undoes = l.id) limit 1`) : []
+    if (later) return skip('superseded')
     if (!shop.publishedAt) return skip('shop_closed')
     const replyTo = cleanEmail(shop.supportEmail)
     if (!replyTo) return skip('no_support_email')
@@ -110,7 +117,7 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
     const [cnt] = await tx.select({ n: count() }).from(emailMessages).where(and(eq(emailMessages.tenantId, tenantId), gte(emailMessages.createdAt, since), inArray(emailMessages.kind, [...ORDER_MESSAGES]), sql`${emailMessages.sentAt} is not null`))
     if ((cnt?.n ?? 0) >= es.dailyCap) return skip('capped')
     const [lines, [ship]] = await Promise.all([
-      tx.select({ title: orderLines.title, values: orderLines.optionValues, qty: orderLines.qty }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id))).orderBy(asc(orderLines.position)),
+      tx.select({ title: orderLines.title, values: orderLines.optionValues, qty: orderLines.qty }).from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, o.id), isNull(orderLines.removedAt))).orderBy(asc(orderLines.position)),
       tx.select({ courier: shipments.courierName, tracking: shipments.trackingNumber }).from(shipments).where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, o.id), isNull(shipments.endedAt))).limit(1),
     ])
     if (prior) await tx.update(emailMessages).set({ attemptedAt: now }).where(and(eq(emailMessages.tenantId, tenantId), eq(emailMessages.id, messageId)))

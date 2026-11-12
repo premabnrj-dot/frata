@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.27.0
+  version: 1.28.0
   verified: 2026-11-12
   decisions: [ADR-0006]
 ---
@@ -29,10 +29,10 @@ the version. Full research: `docs/research/2026-11-06-market-ux-and-stack.md`.
    verification, Razorpay Aggregator) is in the **legal entity's** name — a Pvt
    Ltd before the first application (re-verifying later means downtime).
 
-## Razorpay — checked 2026-11-07
+## Razorpay — checked 2026-11-07 (refunds, orders and Checkout rechecked 2026-11-12, integration-researcher, for OE·2)
 
-Razorpay doc pages carry no date of their own; dates are each page's `lastmod`
-in razorpay.com/docs/sitemap.xml (most read 2026-10-08, a bulk rebuild).
+Razorpay doc pages carry no date of their own; dates are each page's `lastmod` in razorpay.com/docs/sitemap.xml (bulk
+rebuilds 2026-10-08 and 2026-11-12T08:15Z: a lastmod on those days is not proof the text changed).
 
 - Partner Program → request the **Aggregator** partner type → sub-merchant
   onboarding APIs; sub-merchants must be activated before collecting [V, 2026-11-06].
@@ -53,11 +53,12 @@ in razorpay.com/docs/sitemap.xml (most read 2026-10-08, a bulk rebuild).
   not documented, U; 2026-11-07]. A path segment per shop is not forbidden [U].
 - Standard Checkout events to enable: `payment.captured`, `payment.failed`,
   `order.paid` (the only order event) [V, standard/best-practices, 2026-10-08].
-- Orders API: `amount` (paise, min 100) and `currency` required; `receipt` ≤ 40
-  chars, unique; `notes` ≤ 15 pairs × 256 chars; `partial_payment` default
-  false; one successful payment per order, a late authorised one is refunded;
-  **no documented order expiry** [V, docs/api/orders/create lastmod 2026-11-04;
-  payments/orders 2026-10-29].
+- Orders API: `amount` (paise, min 100) and `currency` required; `receipt` ≤ 40 chars, unique PER ACCOUNT (a duplicate →
+  400 "Duplicate request", fetch by `GET /v1/orders?receipt=` and reuse); `notes` ≤ 15 pairs × 256 chars;
+  `partial_payment` default false; one successful payment per order, a late authorised one is auto-refunded; no
+  documented order expiry; no documented limit on orders per account [V, docs/api/orders/create lastmod 2026-11-04,
+  orders/fetch-all, payments/orders 2026-11-12; read 2026-11-12]. Checkout `key`, `order_id`, `amount` mandatory; "An
+  order should be created for every payment" [V, standard/integration-steps 2026-11-12].
 - Payment signature: `hmac_sha256(OUR order_id + "|" + razorpay_payment_id,
   key_secret)` — never the order id Checkout returns [V, standard/integration-steps, 2026-10-08].
 - Checkout `timeout` is in seconds, no documented min/max, and may overrun in a
@@ -72,8 +73,35 @@ in razorpay.com/docs/sitemap.xml (most read 2026-10-08, a bulk rebuild).
 - Keys: `rzp_test_` / `rzp_live_` prefixes (live needs KYC); Basic auth
   `KEY_ID:KEY_SECRET`; a read-only check is `GET /v1/payments?count=1`; the HTTP
   status for a wrong key is not documented [V/U, 2026-10-08].
-- Refund: `POST /v1/payments/:id/refund` (no amount = full); `speed` normal
-  (default, 5–7 working days) or optimum [V, api/refunds/create-normal, 2026-10-08].
+- **Refunds (checked 2026-11-12)** [V, api/refunds/create-normal + normal-refunds-idempotent + fetch-multiple-refund-payment
+  lastmod 2026-10-08; payments/refunds, refunds/normal, refund-speed, subscribe-to-webhooks, balances lastmod 2026-11-12;
+  refunds/faqs 2026-10-29; refunds/issue + errors 2026-10-08]:
+  `POST /v1/payments/:id/refund` {amount (paise, optional = full, min ₹1, 0 rejected), speed, notes (≤ 15, key < 256,
+  value < 512), receipt (unique PER PAYMENT, "treated as an idempotency key")}. Many partials allowed while their sum ≤
+  captured; the payment stays `captured` until fully refunded. **Always send `speed: "normal"`**: the merchant's
+  dashboard Default Refund Speed is the API default, and Instant costs ₹7.99 / ₹11.99 / ₹14.99 (≤ ₹1,000 / ≤ ₹25,000 /
+  above; pricing "Last updated: May 2026").
+- Refund idempotency: optional header `X-Refund-Idempotency`, ≥ 10 chars `[A-Za-z0-9_-]` (a uuid fits); same key, same
+  body = safe retry; different body or still in progress → 409; retention NOT documented [U] → list before every
+  retry. "Another payment operation is in progress" (400) → wait seconds, retry.
+- List: `GET /v1/payments/:id/refunds` (count default 10, max 100; skip, from, to); items carry receipt, notes, status.
+  Statuses `pending` (accepted, with the bank), `processed` (final; usually set BEFORE the ARN/RRN, so not proof the
+  shopper has the money), `failed`. A refund can't be cancelled. Whether a failed refund's `receipt` can be reused:
+  [U] → a new attempt gets a new receipt and key. No "refundable" field on a payment: compute captured − listed
+  pending + processed (whether `amount_refunded` counts pending is [U]).
+- 6 months: normal refund impossible; the API page says status `failed`, the errors page says `BAD_REQUEST_ERROR`
+  (conflict: handle both; check payment age before Save).
+- Refunds are paid from the merchant's available balance; too low → 400 "does not have enough balance"; it FAILS, not
+  queued, unless the merchant funded a Reserve Balance ("becomes the maximum negative limit"). Other refusals: refunds
+  disabled on the account or method, dispute open, partial not supported for the method.
+- Fees: a normal refund is free; the original fee and its GST are not reversed (payment `fee` includes GST) [V].
+- Webhooks: `refund.created`, `refund.processed`, `refund.failed`, `refund.speed_changed`, subscribed by the merchant per
+  webhook in their dashboard (one URL, one secret, chosen events; same secret for payments and refund events on one
+  webhook: inferred [U]); payload has `refund` + `payment`; auto-refunds of uncaptured payments fire them too
+  (`payment.entity.captured` false).
+- Timing: 5–7 working days (API, overview) vs 7–10 working days (Normal refunds page); per method in days: cards 5–10,
+  netbanking 2–10, wallet 0–3, UPI 2–7. Shopper copy "5–10 working days" covers all. Razorpay emails refund id +
+  ARN/RRN only if the customer email was passed (recipient unclear [U]); refund SMS not documented [U].
 - UPI Collect deprecated for P2M from 28 Feb 2026; UPI Intent is the default on
   mobile web, QR on desktop [V Razorpay / S NPCI, 2026-11-07].
 - UPI MDR 0.4% on P2M UPI above ₹2,000 (cap ₹300 at ≥ ₹75,000) was due 15 Oct

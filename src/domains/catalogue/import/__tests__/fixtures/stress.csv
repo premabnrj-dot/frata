@@ -1,0 +1,13 @@
+Item,Size,MRP,Qty,SKU,Purchase price,Supplier,Notes
+Anarkali kurta set,S/M/L,"₹2,499","S:4, M:6, L:2",KS-ANR,1100,Jaipur Prints,
+चंदेरी दुपट्टा,Free size,₹899,20,KS-CHD,350,,"=HYPERLINK(""http://x"")"
+Linen co-ord,S-M-L-XL,"Rs. 3,199/-",9,KS-LIN,1400,,
+Block print kurta,M,1899,5,KS-BPK-M,700,Sanganer,
+Block print kurta,L,1899,0,KS-BPK-L,700,Sanganer,
+Kota doria saree,,"Rs 1,2,99",4,KS-KTD,600,,typo in price
+बनारसी साड़ी,,"12,500",2,KS-BNR,7000,,
+Mul cotton nightsuit,S/M,1199,"S:3, M:3",KS-MUL,450,,
+Bandhani dupatta,Free size,999,6,KS-BND,300,,
+Ajrakh shirt,M,1599,4,KS-BPK-M,600,,=SUM(A1:A9)
+Phulkari jacket,S/M/L,2799,2,KS-PHK,1200,,
+Ikat palazzo,S/M/L/XL,1299,8,KS-IKT,500,,

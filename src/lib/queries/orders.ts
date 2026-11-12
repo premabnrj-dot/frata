@@ -26,7 +26,7 @@ export async function listOrders(tenantId: string, { tab = 'all', page = 1, q = 
     tx.select({
       id: orders.id, number: orders.number, total: orders.total, customerName: orders.customerName, city: orders.city,
       ...momentColumns,
-      items: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l where l.order_id = "orders"."id" and l.tenant_id = ${tenantId})`,
+      items: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l where l.order_id = "orders"."id" and l.tenant_id = ${tenantId} and l.removed_at is null)`,
       // Shipped with a courier through Frrata: its tracking sets the outcome, so the row offers no Delivered (Ship S·0).
       byCourier: sql<boolean>`coalesce(${openShipmentProviderSql()} = 'shiprocket', false)`,
       // How many match the search, in the same query: the pager's "of N" — only when a search is on.

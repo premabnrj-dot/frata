@@ -72,6 +72,13 @@ export function groupOption(options: readonly Option[]): number {
 }
 
 /**
+ * Addresses Frrata's own pages use under /products/ (the console's Products pages and the shop's list pages): a
+ * product never gets one (freeHandles skips them, cleanProduct refuses one typed). A test reads the route folders and
+ * fails when a new one is missing here.
+ */
+export const RESERVED_HANDLES: readonly string[] = ['new', 'tax', 'import', 'photos', 'page']
+
+/**
  * A product's address in the shop: "Linen Kurta Set" → "linen-kurta-set", "लिनन कुर्ता" → "linan-kurta" (Indian
  * scripts in Latin letters, indic.ts). Up to 100 characters.
  */

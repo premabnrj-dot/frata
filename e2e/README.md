@@ -8,7 +8,8 @@ last build (only when nothing under `src/` changed since).
 on port 54340 (or `E2E_ADMIN_URL`, as in CI), a fresh database every run, every
 migration (`scripts/verify/apply-migrations.sh`), then `e2e/seed.sql`; the fake
 Supabase auth (`e2e/fakes/auth.mjs`) and fake Razorpay API
-(`e2e/fakes/razorpay.mjs`); a production build started on port 3077, the shop
+(`e2e/fakes/razorpay.mjs`); a stand-in Blob store (`e2e/fakes/blob.mjs`: a flow puts what the browser
+uploaded there, and the app reads it through the test-only preload `e2e/fakes/blob-read.mjs`); a production build started on port 3077, the shop
 reached as `kesar-studio.frata.test` through Chromium's host resolver. It never
 touches Supabase; the app's database password is made up per run.
 

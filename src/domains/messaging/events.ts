@@ -4,7 +4,9 @@
 // the event, so an undone-and-redone step sends again (plan 2026-11-11-email, decision 6).
 // =============================================================================
 
-export const ORDER_MESSAGES = ['confirmed', 'finish_paying', 'shipped', 'delivered', 'cancelled'] as const
+import { UNDO_MINUTES } from '@/domains/orders/edit'
+
+export const ORDER_MESSAGES = ['confirmed', 'finish_paying', 'shipped', 'delivered', 'cancelled', 'edited'] as const
 export type OrderMessage = (typeof ORDER_MESSAGES)[number]
 
 const MINUTE = 60_000
@@ -16,6 +18,8 @@ export const WAIT_MS: Record<OrderMessage, number> = {
   shipped: 5 * MINUTE,
   delivered: 5 * MINUTE,
   cancelled: 0,
+  // An items edit's email waits out its Undo window (order edit OE·1, owner 2026-11-12).
+  edited: UNDO_MINUTES * MINUTE,
 }
 
 /** When a message may first send: now + its wait, or (finish paying) a minute after the order's pay_by. */

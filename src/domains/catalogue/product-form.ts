@@ -8,7 +8,7 @@
 
 import { istDayKey } from '../time/day'
 import { cleanGtin } from './gtin'
-import { cleanOptions, combinations, handleFor, keyOf, type Option } from './variants'
+import { cleanOptions, combinations, handleFor, keyOf, RESERVED_HANDLES, type Option } from './variants'
 import { parseRupees, priceRefusal } from '../money/rupees'
 
 export type WhenOutInput = 'stop' | 'preorder' | 'made_to_order'
@@ -73,8 +73,8 @@ import { cleanPairIds, cleanStories, type Story } from './stories'
 export const HANDLE_SHAPE = /^[a-z0-9]([a-z0-9-]{0,98}[a-z0-9])?$/
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
-/** Errors keyed "title", "options", or "v:<values>:<field>" for one grid cell. */
-export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: CleanProduct } | { ok: false; errors: Record<string, string> } {
+/** Errors keyed "title", "options", or "v:<values>:<field>" for one grid cell. `hsnDigits`: the shop's, by its turnover (rates.ts hsnDigitsFor). */
+export function cleanProduct(p: ProductInput, now: Date, hsnDigits = 4): { ok: true; product: CleanProduct } | { ok: false; errors: Record<string, string> } {
   const errors: Record<string, string> = {}
   const title = p.title.trim().replace(/\s+/g, ' ')
   if (!title) errors.title = 'Your product needs a name.'
@@ -129,6 +129,7 @@ export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: C
   }
   const handle = (p.handle ?? '').trim().toLowerCase() || handleFor(title)
   if (!HANDLE_SHAPE.test(handle) || handle.includes('--')) errors.handle = 'Lowercase letters, digits and hyphens, like linen-kurta-set.'
+  else if ((p.handle ?? '').trim() && RESERVED_HANDLES.includes(handle)) errors.handle = 'Frrata uses that address. Choose another.'
   const seoTitle = (p.seoTitle ?? '').trim(), seoDescription = (p.seoDescription ?? '').trim()
   if (seoTitle.length > 200) errors.seoTitle = 'Up to 200 characters.'
   if (seoDescription.length > 400) errors.seoDescription = 'Up to 400 characters.'
@@ -140,7 +141,7 @@ export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: C
     value: c.value, family: c.family || null, hex: c.hex && /^#[0-9a-f]{6}$/i.test(c.hex) ? c.hex.toLowerCase() : null,
     crop: c.crop && /^[0-9a-f-]{36}$/.test(c.crop.imageId) && [c.crop.x, c.crop.y].every((n) => n >= 0 && n <= 1) && c.crop.r >= 0.03 && c.crop.r <= 0.5 ? c.crop : null,
   }))
-  const tax = p.tax ? cleanTax(p.tax, now) : null
+  const tax = p.tax ? cleanTax(p.tax, now, hsnDigits) : null
   if (tax && !tax.ok) Object.assign(errors, Object.fromEntries(Object.entries(tax.errors).map(([k, v]) => [`tax.${k}`, v])))
   const label = p.label ? cleanLabel(p.label) : null
   if (label && !label.ok) Object.assign(errors, Object.fromEntries(Object.entries(label.errors).map(([k, v]) => [`label.${k}`, v])))

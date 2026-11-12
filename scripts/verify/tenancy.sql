@@ -1431,7 +1431,7 @@ do $$ begin
 end $$;
 -- An order's discount is the sum of its lines' (a snapshot kept honest).
 do $$ begin
-  if exists (select 1 from orders o where o.discount <> coalesce((select sum(l.line_discount) from order_lines l where l.tenant_id = o.tenant_id and l.order_id = o.id), 0)) then
+  if exists (select 1 from orders o where o.discount <> coalesce((select sum(l.line_discount) from order_lines l where l.tenant_id = o.tenant_id and l.order_id = o.id and l.removed_at is null), 0)) then
     raise exception 'FAIL: an order''s discount is not the sum of its lines'''; end if;
 end $$;
 
@@ -2893,4 +2893,187 @@ do $$ begin
   raise exception 'FAIL: a price of another add-on';
 exception when foreign_key_violation then null; end $$;
 
-\echo 'tenancy proof — all 73 checks passed'
+-- 74. Order edits (OE·1, 0117–0118): an edit's record is the shop's own, appended and never changed or removed; a line is
+-- taken out (removed_at, replaced_by) and an offer taken off (removed_at), never rewritten: frata_app's update columns
+-- on both are exactly these and the money writeReprice sets; no edit, line or replacement points into another shop; one
+-- live use of an offer per order; no other role holds any of it.
+insert into orders (id, tenant_id, number, payment_method, subtotal, total, placed_at) values
+  ('ed0d0000-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 9072, 'cod', 100000, 100000, now());
+insert into order_lines (id, tenant_id, order_id, title, qty, unit_price, taxable_value) values
+  ('ed11ed11-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'A kurta', 1, 100000, 95238),
+  ('ed11ed11-0000-0000-0000-0000000000a2', '11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'A kurta L', 1, 100000, 95238),
+  ('ed11ed11-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'B kurta', 1, 100000, 95238);
+insert into order_events (id, tenant_id, order_id, kind, actor_kind) values
+  ('ed1e0e00-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'items_edited', 'system'),
+  ('ed1e0e00-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'items_edited', 'system');
+insert into order_edits (id, tenant_id, order_id, event_id, total_before, total_after, shipping_before, shipping_after, notify) values
+  ('ed170000-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'ed1e0e00-0000-0000-0000-00000000000b', 100000, 90000, 0, 0, false);
+insert into order_edit_lines (tenant_id, edit_id, side, order_line_id, qty, unit_price, product_discount, line_discount) values
+  ('22222222-2222-2222-2222-222222222222', 'ed170000-0000-0000-0000-00000000000b', 'before', 'ed11ed11-0000-0000-0000-00000000000b', 1, 100000, 0, 0);
+insert into order_discounts (id, tenant_id, order_id, discount_id, class, amount, title, style, percent_bps, min_subtotal) values
+  ('0d0d0d0d-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'd15c0000-0000-0000-0000-00000000000a', 'order', 5000, 'A sale', 'order_off', 500, 0);
+do $$ declare got text; begin
+  if exists (select 1 from pg_tables where tablename in ('order_edits', 'order_edit_lines') and not rowsecurity) then raise exception 'FAIL: an order edit table without RLS'; end if;
+  if (select count(*) from pg_policies where tablename in ('order_edits', 'order_edit_lines') and policyname = 'tenant_rows' and qual like '%app_current_tenant()%' and with_check like '%app_current_tenant()%') <> 2
+  then raise exception 'FAIL: an order edit table without its tenant policy'; end if;
+  if exists (select 1 from unnest(array['order_edits', 'order_edit_lines']) t, unnest(array['update', 'delete', 'truncate', 'references', 'trigger']) p where has_table_privilege('frata_app', t, p))
+     or exists (select 1 from unnest(array['order_edits', 'order_edit_lines']) t, unnest(array['select', 'insert']) p where not has_table_privilege('frata_app', t, p))
+     or exists (select 1 from unnest(array['order_edits', 'order_edit_lines']) t where has_any_column_privilege('frata_app', t, 'update'))
+  then raise exception 'FAIL: frata_app holds other than select and insert on an order edit'; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['order_edits', 'order_edit_lines']) t,
+             unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p where has_table_privilege(r, t, p) or has_any_column_privilege(r, t, 'select'))
+  then raise exception 'FAIL: another role reaches order edits'; end if;
+  -- The exact columns frata_app may update on a sold line and on a kept offer: nothing it may rewrite as sold.
+  select string_agg(column_name, ',' order by column_name) into got from information_schema.column_privileges
+   where grantee = 'frata_app' and table_name = 'order_lines' and privilege_type = 'UPDATE';
+  if got is distinct from 'charge_gst,charge_taxable,gst,gst_bps,line_discount,product_discount,removed_at,replaced_by,stock_taken_at,taxable_value'
+  then raise exception 'FAIL: frata_app updates order_lines columns %', got; end if;
+  select string_agg(column_name, ',' order by column_name) into got from information_schema.column_privileges
+   where grantee = 'frata_app' and table_name = 'order_discounts' and privilege_type = 'UPDATE';
+  if got is distinct from 'removed_at' then raise exception 'FAIL: frata_app updates order_discounts columns %', got; end if;
+  -- service_role still holds order_lines from 0017 (which revoked anon and authenticated only): reported 2026-11-12, not
+  -- widened here; every other role holds no update on either.
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'frata_admin']) r where has_any_column_privilege(r, 'order_lines', 'update'))
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_any_column_privilege(r, 'order_discounts', 'update'))
+  then raise exception 'FAIL: another role updates order lines or offers'; end if;
+  if has_function_privilege('frata_app', 'app_admin_offer_totals(timestamptz)', 'execute') then raise exception 'FAIL: frata_app runs the admin offer totals'; end if;
+  -- Readers by product read live lines: the partial index says so, and the old one is gone.
+  if not exists (select 1 from pg_indexes where indexname = 'order_lines_product_live' and indexdef like '%removed_at IS NULL%') or exists (select 1 from pg_indexes where indexname = 'order_lines_product')
+  then raise exception 'FAIL: order_lines by product is not indexed on live lines only'; end if;
+end $$;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; e uuid; begin
+  if exists (select 1 from order_edits) or exists (select 1 from order_edit_lines) then raise exception 'FAIL: A reads B order edits'; end if;
+  -- A's own edit, on A's order and A's event, with A's lines.
+  insert into order_edits (tenant_id, order_id, event_id, total_before, total_after, shipping_before, shipping_after, notify, offers_removed)
+    values ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'ed1e0e00-0000-0000-0000-00000000000a', 100000, 95000, 0, 0, true, '{0d0d0d0d-0000-0000-0000-00000000000a}') returning id into e;
+  insert into order_edit_lines (tenant_id, edit_id, side, order_line_id, qty, unit_price, product_discount, line_discount, reason)
+    values ('11111111-1111-1111-1111-111111111111', e, 'before', 'ed11ed11-0000-0000-0000-00000000000a', 1, 100000, 0, 0, 'customer_asked');
+  -- Never into B: B's order, B's event (on A's order), under B's tenant, B's edit, B's line.
+  begin insert into order_edits (tenant_id, order_id, event_id, total_before, total_after, shipping_before, shipping_after, notify)
+    values ('11111111-1111-1111-1111-111111111111', 'acacacac-0000-0000-0000-00000000000b', 'ed1e0e00-0000-0000-0000-00000000000b', 1, 1, 0, 0, false); raise exception 'FAIL: A edited B''s order';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_edits (tenant_id, order_id, event_id, total_before, total_after, shipping_before, shipping_after, notify)
+    values ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'ed1e0e00-0000-0000-0000-00000000000b', 1, 1, 0, 0, false); raise exception 'FAIL: A''s edit names B''s event';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_edits (tenant_id, order_id, event_id, total_before, total_after, shipping_before, shipping_after, notify)
+    values ('22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'ed1e0e00-0000-0000-0000-00000000000b', 1, 1, 0, 0, false); raise exception 'FAIL: A wrote an edit under B';
+  exception when insufficient_privilege then null; end;
+  begin insert into order_edit_lines (tenant_id, edit_id, side, order_line_id, qty, unit_price, product_discount, line_discount)
+    values ('11111111-1111-1111-1111-111111111111', 'ed170000-0000-0000-0000-00000000000b', 'after', 'ed11ed11-0000-0000-0000-00000000000a', 1, 1, 0, 0); raise exception 'FAIL: A added a line to B''s edit';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_edit_lines (tenant_id, edit_id, side, order_line_id, qty, unit_price, product_discount, line_discount)
+    values ('11111111-1111-1111-1111-111111111111', e, 'after', 'ed11ed11-0000-0000-0000-00000000000b', 1, 1, 0, 0); raise exception 'FAIL: A''s edit names B''s line';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_edit_lines (tenant_id, edit_id, side, order_line_id, qty, unit_price, product_discount, line_discount, replaces)
+    values ('11111111-1111-1111-1111-111111111111', e, 'after', 'ed11ed11-0000-0000-0000-0000000000a2', 1, 1, 0, 0, 'ed11ed11-0000-0000-0000-00000000000b'); raise exception 'FAIL: A''s line replaces B''s';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_edit_lines (tenant_id, edit_id, side, order_line_id, variant_id, qty, unit_price, product_discount, line_discount)
+    values ('11111111-1111-1111-1111-111111111111', e, 'after', 'ed11ed11-0000-0000-0000-0000000000a2', 'cdcdcdcd-0000-0000-0000-00000000000b', 1, 1, 0, 0); raise exception 'FAIL: A''s edit names B''s variant';
+  exception when foreign_key_violation then null; end;
+  -- A line holding stock never comes out (its pieces go back first).
+  begin update order_lines set stock_taken_at = now(), removed_at = now() where id = 'ed11ed11-0000-0000-0000-0000000000a2'; raise exception 'FAIL: a removed line kept its stock';
+  exception when check_violation then null; end;
+  begin update order_edits set total_after = 1; raise exception 'FAIL: an edit was changed'; exception when insufficient_privilege then null; end;
+  begin delete from order_edit_lines; raise exception 'FAIL: an edit''s lines were deleted'; exception when insufficient_privilege then null; end;
+  -- A line is taken out and replaced within its own shop only, and never rewritten as sold.
+  update order_lines set removed_at = now(), replaced_by = 'ed11ed11-0000-0000-0000-0000000000a2' where id = 'ed11ed11-0000-0000-0000-00000000000a'; get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FAIL: A could not take out its own line'; end if;
+  begin update order_lines set replaced_by = 'ed11ed11-0000-0000-0000-00000000000b' where id = 'ed11ed11-0000-0000-0000-00000000000a'; raise exception 'FAIL: A''s line replaced by B''s';
+  exception when foreign_key_violation then null; end;
+  begin update order_lines set removed_at = now(), replaced_by = 'ed11ed11-0000-0000-0000-0000000000a2' where id = 'ed11ed11-0000-0000-0000-0000000000a2'; raise exception 'FAIL: a line replaced by itself';
+  exception when check_violation then null; end;
+  begin update order_lines set replaced_by = 'ed11ed11-0000-0000-0000-00000000000a' where id = 'ed11ed11-0000-0000-0000-0000000000a2'; raise exception 'FAIL: a live line names a replacement';
+  exception when check_violation then null; end;
+  update order_lines set removed_at = now() where id = 'ed11ed11-0000-0000-0000-00000000000b'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A took out B''s line'; end if;
+  begin update order_lines set unit_price = 1 where id = 'ed11ed11-0000-0000-0000-0000000000a2'; raise exception 'FAIL: a sold line''s price was rewritten';
+  exception when insufficient_privilege then null; end;
+  -- An offer comes off; its amount never changes; one live use per order and offer.
+  begin insert into order_discounts (tenant_id, order_id, discount_id, class, amount, title, style, min_subtotal) values ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'd15c0000-0000-0000-0000-00000000000a', 'order', 4000, 'A sale', 'order_off', 0);
+    raise exception 'FAIL: two live uses of one offer on one order'; exception when unique_violation then null; end;
+  update order_discounts set removed_at = now() where id = '0d0d0d0d-0000-0000-0000-00000000000a'; get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FAIL: A could not take its own offer off'; end if;
+  insert into order_discounts (tenant_id, order_id, discount_id, class, amount, title, style, min_subtotal) values ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'd15c0000-0000-0000-0000-00000000000a', 'order', 4000, 'A sale', 'order_off', 0);
+  begin update order_discounts set amount = 1; raise exception 'FAIL: app changed a use''s amount'; exception when insufficient_privilege then null; end;
+  update order_discounts set removed_at = now() where order_id = 'acacacac-0000-0000-0000-00000000000b'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A took B''s offer off'; end if;
+end $$;
+rollback;
+
+-- 75. Product import PI·1 (0119; plan docs/plans/2026-11-12-product-import.md § Tasks 5): jobs and rows are the shop's
+-- own both ways; a row can never name another shop's job or product (composite keys); the app never deletes either,
+-- never moves one to another shop, and never rewrites a job's file, mapping or who started it; one running job a shop;
+-- a deleted draft leaves its row with no product; no other role holds anything.
+insert into products (id, tenant_id, handle, title) values ('eeeeeeee-0000-0000-0000-0000000000b4', '22222222-2222-2222-2222-222222222222', 'b-imported', 'B imported');
+insert into import_jobs (id, tenant_id, file_name, file_hash, source, mapping, chunks, planned, started_by) values
+  ('f1f1f1f1-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'b.csv', repeat('b', 64), 'sheet', '{"source":"sheet","headers":[],"fields":[]}', 1, 1, 'aaaaaaaa-0000-0000-0000-000000000001');
+insert into import_rows (tenant_id, job_id, n, key, cells, product_id) values
+  ('22222222-2222-2222-2222-222222222222', 'f1f1f1f1-0000-0000-0000-00000000000b', 2, 't:b kurta', '{B kurta,999}', 'eeeeeeee-0000-0000-0000-0000000000b4');
+begin; set local role frata_app;
+do $$ begin
+  if exists (select 1 from import_jobs) or exists (select 1 from import_rows) then raise exception 'FAIL: imports seen with no shop set'; end if;
+  begin insert into import_jobs (tenant_id, file_name, source, mapping, chunks, planned, started_by) values ('11111111-1111-1111-1111-111111111111', 'x.csv', 'sheet', '{}', 1, 0, gen_random_uuid());
+    raise exception 'FAIL: a job with no shop set'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from import_jobs) or exists (select 1 from import_rows) then raise exception 'FAIL: A sees B imports'; end if;
+  update import_jobs set finished_at = now() where id = 'f1f1f1f1-0000-0000-0000-00000000000b';
+  get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A finished B job'; end if;
+  update import_rows set cells = null where job_id = 'f1f1f1f1-0000-0000-0000-00000000000b';
+  get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed B rows'; end if;
+  begin insert into import_jobs (tenant_id, file_name, source, mapping, chunks, planned, started_by) values ('22222222-2222-2222-2222-222222222222', 'x.csv', 'sheet', '{}', 1, 0, gen_random_uuid());
+    raise exception 'FAIL: A wrote a B job'; exception when insufficient_privilege then null; end;
+  insert into import_jobs (id, tenant_id, file_name, file_hash, source, mapping, chunks, planned, started_by) values
+    ('f1f1f1f1-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'a.csv', repeat('a', 64), 'sheet', '{}', 2, 1, gen_random_uuid());
+  begin insert into import_jobs (tenant_id, file_name, source, mapping, chunks, planned, started_by) values ('11111111-1111-1111-1111-111111111111', 'two.csv', 'sheet', '{}', 1, 0, gen_random_uuid());
+    raise exception 'FAIL: two running imports in one shop'; exception when unique_violation then null; end;
+  insert into import_rows (tenant_id, job_id, n, key, product_id) values ('11111111-1111-1111-1111-111111111111', 'f1f1f1f1-0000-0000-0000-00000000000a', 2, 't:a', 'eeeeeeee-0000-0000-0000-00000000000a');
+  begin insert into import_rows (tenant_id, job_id, n, key) values ('11111111-1111-1111-1111-111111111111', 'f1f1f1f1-0000-0000-0000-00000000000b', 3, 't:x');
+    raise exception 'FAIL: A wrote a row into B job'; exception when foreign_key_violation then null; end;
+  begin insert into import_rows (tenant_id, job_id, n, key, product_id) values ('11111111-1111-1111-1111-111111111111', 'f1f1f1f1-0000-0000-0000-00000000000a', 3, 't:x', 'eeeeeeee-0000-0000-0000-0000000000b4');
+    raise exception 'FAIL: an A row named a B product'; exception when foreign_key_violation then null; end;
+  begin insert into import_rows (tenant_id, job_id, n, key) values ('22222222-2222-2222-2222-222222222222', 'f1f1f1f1-0000-0000-0000-00000000000b', 3, 't:x');
+    raise exception 'FAIL: A wrote a B row'; exception when insufficient_privilege then null; end;
+  begin delete from import_jobs where id = 'f1f1f1f1-0000-0000-0000-00000000000a'; raise exception 'FAIL: the app deleted a job'; exception when insufficient_privilege then null; end;
+  begin delete from import_rows; raise exception 'FAIL: the app deleted a row'; exception when insufficient_privilege then null; end;
+  begin update import_jobs set mapping = '{}' where id = 'f1f1f1f1-0000-0000-0000-00000000000a'; raise exception 'FAIL: the app rewrote a mapping'; exception when insufficient_privilege then null; end;
+  begin update import_jobs set tenant_id = '22222222-2222-2222-2222-222222222222' where id = 'f1f1f1f1-0000-0000-0000-00000000000a'; raise exception 'FAIL: the app moved a job'; exception when insufficient_privilege then null; end;
+  begin update import_rows set product_id = null; raise exception 'FAIL: the app re-pointed a row'; exception when insufficient_privilege then null; end;
+  update import_rows set cells = null where job_id = 'f1f1f1f1-0000-0000-0000-00000000000a';
+  get diagnostics n = row_count; if n <> 1 then raise exception 'FAIL: A could not null its own row''s cells'; end if;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update']) p, unnest(array['import_jobs', 'import_rows']) t
+             where has_any_column_privilege(r, t, p))
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_app']) r, unnest(array['import_jobs', 'import_rows']) t where has_table_privilege(r, t, 'delete') or has_table_privilege(r, t, 'truncate'))
+  then raise exception 'FAIL: another role reaches imports, or one deletes them'; end if;
+  if exists (select 1 from pg_class where relname in ('import_jobs', 'import_rows') and not relrowsecurity) then raise exception 'FAIL: imports without RLS'; end if;
+  -- The exact columns frata_app may update, each table (a new grant must be added here on purpose).
+  if (select array_agg(attname::text order by attname) from pg_attribute where attrelid = 'import_jobs'::regclass and attnum > 0 and not attisdropped
+        and has_column_privilege('frata_app', attrelid, attnum, 'update'))
+     is distinct from array['added', 'drafts_deleted_at', 'file_hash', 'finished_at', 'in_shop', 'left_out', 'next_chunk', 'updated_at']
+  then raise exception 'FAIL: frata_app updates other import_jobs columns'; end if;
+  if (select array_agg(attname::text order by attname) from pg_attribute where attrelid = 'import_rows'::regclass and attnum > 0 and not attisdropped
+        and has_column_privilege('frata_app', attrelid, attnum, 'update'))
+     is distinct from array['cells']
+  then raise exception 'FAIL: frata_app updates other import_rows columns'; end if;
+  if exists (select 1 from pg_policies where tablename in ('import_jobs', 'import_rows') and (coalesce(qual, '') not like '%app_current_tenant()%' or coalesce(with_check, '') not like '%app_current_tenant()%'))
+  then raise exception 'FAIL: an import policy that doesn''t name the shop'; end if;
+  -- A deleted draft leaves its row, with no product (SET NULL on product_id only: the row keeps its shop).
+  delete from products where id = 'eeeeeeee-0000-0000-0000-0000000000b4';
+  if not exists (select 1 from import_rows where job_id = 'f1f1f1f1-0000-0000-0000-00000000000b' and product_id is null and tenant_id = '22222222-2222-2222-2222-222222222222')
+  then raise exception 'FAIL: a deleted draft took its import row, or its shop'; end if;
+  -- SKUs are one in a shop in any case (variants_tenant_sku_upper).
+  insert into products (id, tenant_id, handle, title) values ('eeeeeeee-0000-0000-0000-0000000000a3', '11111111-1111-1111-1111-111111111111', 'a-sku-case', 'A');
+  insert into variants (tenant_id, product_id, option_values, price, sku) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-0000000000a3', '{S}', 1, 'KS-CASE-1');
+  begin insert into variants (tenant_id, product_id, option_values, price, sku) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-0000000000a3', '{M}', 1, 'ks-case-1');
+    raise exception 'FAIL: two SKUs that differ only in case'; exception when unique_violation then null; end;
+end $$;
+
+\echo 'tenancy proof — all 75 checks passed'

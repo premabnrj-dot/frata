@@ -6,6 +6,7 @@ import { ViewTabs } from '@/components/ui/view-tabs'
 import { Money, Numeric } from '@/components/data/numeric'
 import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
+import { Menu } from '@/components/ui/menu'
 import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
 import { pick, urlFor } from '@/domains/media/sizes'
@@ -26,18 +27,19 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const [rows, counts] = await Promise.all([listProducts(auth.membership.tenantId, 0, status), statusCounts(auth.membership.tenantId)]).catch((err) => { console.error('[products]', err instanceof Error ? err.name : err); return [null, null] as const })
   if (!rows || !counts) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const add = <Link href="/console/products/new" className={button()}>Add product</Link>
+  const importLink = <Link href="/console/products/import" className={button({ variant: 'secondary' })}>Import</Link>
   const total = Object.values(counts).reduce((a, b) => a + b, 0)
   if (!total) {
     return (
       <>
         <PageHeader title="Products" />
-        <Panel title="No products yet" action={add}>Photos on a model, sizes and colours in one grid, and the size chart for its type. About 10 minutes for the first one.</Panel>
+        <Panel title="No products yet" action={<span className="flex flex-wrap justify-center gap-2">{importLink}{add}</span>}>Photos on a model, sizes and colours in one grid, and the size chart for its type. About 10 minutes for the first one.</Panel>
       </>
     )
   }
   return (
     <>
-      <PageHeader title="Products" actions={<><Link href="/console/products/tax" className={button({ variant: 'secondary' })}>HSN codes</Link><Link href="/console/collections" className={button({ variant: 'secondary' })}>Collections</Link>{add}</>} />
+      <PageHeader title="Products" actions={<><Menu items={[{ label: 'HSN codes', href: '/console/products/tax' }, { label: 'Collections', href: '/console/collections' }]} /><Link href="/console/products/photos" className={button({ variant: 'secondary' })}>Add photos</Link>{importLink}{add}</>} />
       <ViewTabs label="Filter by status" tabs={TABS.map(([k, label]) => ({
         href: k ? `/console/products?status=${k}` : '/console/products', label, current: (status ?? '') === k,
         count: k ? counts[k] ?? 0 : total - (counts.archived ?? 0),

@@ -65,12 +65,15 @@ export function eventLabel(e: { kind: string; reason: string | null; fields: str
     case 'held': return 'Put on hold'
     case 'unheld': return 'Taken off hold'
     case 'undone': return e.reason === 'held' ? 'Undid the hold' : e.reason === 'unheld' ? 'Put back on hold'
+      : e.reason === 'items_edited' ? 'Undid the items change'
       : e.reason === 'shipped' ? 'Undid Shipped' : e.reason === 'delivered' ? 'Undid Delivered' : e.reason === 'rto' ? 'Undid Came back' : e.reason === 'lost' ? 'Undid Lost' : 'Undid the confirmation'
     case 'shipped': return 'Shipped'
     case 'delivered': return 'Delivered'
     case 'rto': return e.reason === 'restocked' ? 'Came back · stock put back' : 'Came back'
     case 'lost': return 'Lost by the courier'
     case 'edited': return `Changed the ${(e.fields ?? []).map((f) => FIELD_LABEL[f] ?? f).join(', ')}`
+    // The order page words an items edit from its record (activityWords); this is the fallback without it.
+    case 'items_edited': return 'Items changed'
     case 'packed': return 'Packed · invoice issued'
     case 'cancelled': return `Cancelled · ${e.reason ? cancelLabel(e.reason) : 'no reason given'}`
     case 'note_added': return 'Added a note'

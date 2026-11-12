@@ -109,6 +109,11 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
 
 - **The fee base is after the discount** (owner call 5): `merchandise_net` is the lines' taxable
   value after offers. Frrata gives up 2% of a discount on Launch (₹2.40 on a ₹1,200 order at 10% off).
+- **An order edit moves the fee base and the cost** (OE·1, 2026-11-12): before packing, an edit rewrites
+  `merchandise_net` and `cogs` from the live lines (a piece removed leaves both; a size swapped or added brings its own
+  price and cost), so Frrata's fee is on the order as it ships. An edit issues no credit note, so `returnedSql` never
+  takes it off a second time (`draft.int.test.ts`). Measure: edited orders' share and their RTO against unedited ones
+  (the spec's goal: fewer "out of stock" and "customer asked" cancels).
 - **Offers are core** (every plan): Shopify includes discounts on every plan and GoKwik's fee
   includes prepaid incentives, so an add-on would make Frrata dearer than the baseline.
 - **"Pay online, save ₹50"** costs ₹45 on every prepaid order (including those that would have paid
