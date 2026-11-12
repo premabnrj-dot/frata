@@ -1,14 +1,12 @@
 'use server'
 
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { del } from '@vercel/blob'
-import { cleanProduct, readiness, type ProductInput } from '@/domains/catalogue/product-form'
-import { hasRate, hsnDigitsFor, type TurnoverBand } from '@/domains/tax/rates'
-import { chargesGst, type Scheme } from '@/domains/tax/gst'
+import { cleanProduct, type ProductInput } from '@/domains/catalogue/product-form'
+import { hsnDigitsFor, type TurnoverBand } from '@/domains/tax/rates'
 import { sellsSized } from '@/domains/catalogue/sell-keys'
-import { labelAsked, labelMissing, readLabel } from '@/domains/catalogue/label'
-import { availability, type Status, type WhenOut } from '@/domains/catalogue/availability'
+import type { Status } from '@/domains/catalogue/availability'
 import { attributesFor, categoryById, cleanAttributes, COLOUR_FAMILIES, searchCategories } from '@/domains/catalogue/taxonomy'
 import { acceptedBase, storeHost, WIDTHS, urlFor } from '@/domains/media/sizes'
 import { photosAreMade } from '@/lib/media/uploaded'
@@ -22,9 +20,10 @@ import { costsVisibleIn } from '@/lib/queries/settings'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import { shopSettings } from '@/lib/db/schema'
-import { shopPages, shopThemeRevisions } from '@/lib/db/schema-themes'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { writeProducts } from '@/lib/catalogue/write'
+import { readinessIn } from '@/lib/catalogue/readiness'
+import { photosInUse } from '@/lib/catalogue/photos-in-use'
 import { lockTimedOut } from '@/lib/orders/place'
 import { ensureTypes, freeHandle, handleFree } from '@/lib/catalogue/handles'
 import { errName } from '@/lib/log'
@@ -179,16 +178,9 @@ export async function setStatus(productId: string, status: Status, publishAt: st
       if (!p) throw new Stop({ ok: false, error: 'This product is not in your shop.' })
       const live = status === 'active' || status === 'unlisted'
       if (live) {
-        const vs = await tx.select().from(variants).where(and(eq(variants.tenantId, tenantId), eq(variants.productId, productId), isNull(variants.archivedAt)))
-        const n = (await tx.select({ n: sql<number>`count(*)::int` }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId))))[0]?.n ?? 0
-        const chart = p.typeId ? (await tx.select({ c: productTypes.sizeChart }).from(productTypes).where(and(eq(productTypes.tenantId, tenantId), eq(productTypes.id, p.typeId))))[0]?.c : null
-        const now = new Date()
-        const anyBuyable = vs.some((v) => availability({ stock: v.stock, whenOut: v.whenOut as WhenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap }, now).canBuy)
-        // A shop that charges GST can't sell a piece with no known rate (quote() refuses it): so it can't go live without one.
-        const [tax] = await tx.select({ gstin: shopSettings.gstin, scheme: shopSettings.gstScheme, sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
-        const taxReady = tax && chargesGst({ gstin: tax.gstin, scheme: tax.scheme as Scheme }) ? !!p.hsn && hasRate(p.hsn, now, p.gstBps) : undefined
-        const missing = readiness({ title: p.title, photos: n, prices: vs.map((v) => v.price), hasSizes: p.options.some((o) => /^sizes?$/i.test(o)), chartRows: chart?.rows.length ?? 0, anyBuyable, taxReady,
-          labelMissing: tax && labelAsked(tax.sells) ? labelMissing(readLabel(p.label)) : undefined }).filter((x) => !x.ok)
+        // What it still needs (readiness.ts): a shop that charges GST can't sell a piece with no known rate (quote()
+        // refuses it), so it can't go live without one.
+        const missing = (await readinessIn(tx, tenantId, [productId], new Date())).get(productId)!.readiness.filter((x) => !x.ok)
         if (missing.length) throw new Stop({ ok: false, error: `Before shoppers can see it: ${missing.map((m) => m.label.toLowerCase()).join(', ')}.` })
       }
       const goesLive = live && (!when || when <= new Date())
@@ -274,16 +266,9 @@ export async function editPhoto(imageId: string, change: { move?: -1 | 1; option
       if (!img) throw new Stop({ ok: false, error: 'That photo is not in your shop.' })
       if (change.remove) {
         await tx.delete(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.id, imageId)))
-        // A look may show this photo (Look v3: "From your products"): then its files stay, so a published or
-        // restorable look never loses its photo (security review 2026-11-09).
-        const [used] = await tx.select({ id: shopThemeRevisions.id }).from(shopThemeRevisions)
-          .where(and(eq(shopThemeRevisions.tenantId, tenantId), sql`position(${img.base} in ${shopThemeRevisions.settings}::text) > 0`)).limit(1)
-        const [inStory] = used ? [used] : await tx.select({ id: products.id }).from(products) // or a story (Signal S3)
-          .where(and(eq(products.tenantId, tenantId), sql`position(${img.base} in ${products.stories}::text) > 0`)).limit(1)
-        // or a page (TS1a: About's photo may be one of the shop's product photos): draft, live or the one Undo restores.
-        const [inPage] = used || inStory ? [used ?? inStory] : await tx.select({ id: shopPages.id }).from(shopPages)
-          .where(and(eq(shopPages.tenantId, tenantId), sql`position(${img.base} in (${shopPages.draft}::text || coalesce(${shopPages.live}::text, '') || coalesce(${shopPages.previous}::text, ''))) > 0`)).limit(1)
-        return { ...img, inLook: !!(used || inStory || inPage) }
+        // A look, a story or a page may show this photo: then its files stay, so a published or restorable look never
+        // loses its photo (photos-in-use.ts).
+        return { ...img, inLook: (await photosInUse(tx, tenantId, [img.base])).has(img.base) }
       }
       if (change.move) {
         const all = await tx.select({ id: productImages.id }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, img.productId))).orderBy(productImages.position)
