@@ -61,7 +61,7 @@ function Switcher({ places, ink }: { places: Place[]; ink: boolean }) {
   const here = places.find((p) => p.current)
   return (
     <details className="group relative px-2 py-1">
-      <summary className={`flex min-h-9 cursor-pointer list-none items-center justify-between gap-2 rounded-md border px-2 text-sm font-medium ${ink ? 'border-primary-foreground/30' : 'border-input'}`}>
+      <summary className={`flex min-h-9 cursor-pointer list-none items-center justify-between gap-2 rounded-md border px-2 text-sm font-medium ${ink ? 'border-ink-foreground/30' : 'border-input'}`}>
         <span className="truncate">{here ? here.name : 'Switch'}</span><span aria-hidden="true" className="text-xs">▾</span>
         <span className="sr-only">: switch store</span>
       </summary>
@@ -97,7 +97,7 @@ function Account({ email, ink }: { email: string | null; ink: boolean }) {
   if (!email) return null
   return (
     <form action={signOutAction} className="flex items-center gap-2 px-2 py-1.5">
-      <span className={`min-w-0 flex-1 truncate font-mono text-xs ${ink ? 'text-primary-foreground/70' : 'text-muted-foreground'}`} title={email}>{email}</span>
+      <span className={`min-w-0 flex-1 truncate font-mono text-xs ${ink ? 'text-ink-foreground/70' : 'text-muted-foreground'}`} title={email}>{email}</span>
       <button type="submit" className={`inline-flex min-h-6 shrink-0 items-center rounded-md px-1.5 text-xs font-medium underline-offset-2 hover:underline ${ink ? '' : 'text-foreground'}`}>Sign out</button>
     </form>
   )
@@ -114,7 +114,7 @@ export function AppShell({ ink = false, title, tag, places = [], navLabel, group
       {banner}
       <Suspense fallback={null}><NavProgress /></Suspense>
       <div className="md:flex">
-        <aside data-surface={surface} className={`sticky top-[var(--shell-top)] hidden h-[calc(100dvh-var(--shell-top))] w-56 shrink-0 flex-col gap-1 overflow-y-auto border-r px-2.5 py-3 md:flex print:hidden ${ink ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card'}`}>
+        <aside data-surface={surface} className={`sticky top-[var(--shell-top)] hidden h-[calc(100dvh-var(--shell-top))] w-56 shrink-0 flex-col gap-1 overflow-y-auto border-r px-2.5 py-3 md:flex print:hidden ${ink ? 'border-ink bg-ink text-ink-foreground' : 'border-border bg-card'}`}>
           <div className="flex items-center gap-2.5 px-1.5 pb-2">
             <Mark ink={ink} />
             <div className="min-w-0">
@@ -122,13 +122,13 @@ export function AppShell({ ink = false, title, tag, places = [], navLabel, group
             </div>
           </div>
           <SidebarNav label={navLabel} groups={groups} ink={ink} />
-          <div className={`mt-auto flex flex-col gap-0.5 border-t pt-2 ${ink ? 'border-primary-foreground/15' : 'border-border'}`}>
+          <div className={`mt-auto flex flex-col gap-0.5 border-t pt-2 ${ink ? 'border-ink-foreground/15' : 'border-border'}`}>
             {foot.length > 0 && <SidebarNav label={`${navLabel}: more`} groups={[{ label: '', items: foot }]} ink={ink} />}
             <Switcher places={places} ink={ink} />
             <Account email={email} ink={ink} />
           </div>
         </aside>
-        <header data-surface={surface} className={`flex h-12 items-center gap-2.5 border-b px-4 md:hidden print:hidden ${ink ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card'}`}>
+        <header data-surface={surface} className={`flex h-12 items-center gap-2.5 border-b px-4 md:hidden print:hidden ${ink ? 'border-ink bg-ink text-ink-foreground' : 'border-border bg-card'}`}>
           <Mark ink={ink} />
           <span className="min-w-0 truncate text-sm font-semibold">{title}</span>
           <Tag tag={tag} />

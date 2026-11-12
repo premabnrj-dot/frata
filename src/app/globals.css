@@ -53,7 +53,7 @@
   /* A link in a working page: ink words, a thread-coloured underline (brand spec, chapter 5). */
   [data-shell] main#content a.underline { text-decoration-color: var(--thread); text-decoration-thickness: 1.5px; }
   [data-shell] :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-  [data-shell] [data-surface="ink"] :focus-visible { outline-color: var(--primary-foreground); }
+  [data-shell] [data-surface="ink"] :focus-visible { outline-color: var(--ink-foreground); }
   [data-shell] [data-support-banner] :focus-visible { outline-color: var(--support-foreground); }
 }
 

@@ -192,7 +192,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
       e.preventDefault()
       // The size chart's own editor (inline) keeps its own Save: the key is left to it, never taken for the product.
       if (e.isComposing || document.querySelector('dialog:modal')) return
-      root.current?.querySelector<HTMLButtonElement>('button[aria-keyshortcuts]:not(:disabled)')?.click()
+      root.current?.querySelector<HTMLButtonElement>('button[data-save-bar]:not(:disabled)')?.click()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

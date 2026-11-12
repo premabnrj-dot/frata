@@ -169,7 +169,7 @@ export function Toaster({ children, calm = false, region = true }: {
           onPointerEnter={() => setHeld((h) => ({ ...h, hover: true }))} onPointerLeave={() => setHeld((h) => ({ ...h, hover: false }))}
           onFocus={() => setHeld((h) => ({ ...h, focus: true }))} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setHeld((h) => ({ ...h, focus: false })) }}
           className={['fixed inset-x-4 z-50 mx-auto flex max-w-md items-center gap-3 overflow-hidden px-3 py-2.5 text-sm print:hidden',
-            'bottom-[calc(var(--toast-lift,0px)+1rem+env(safe-area-inset-bottom))] rounded-md bg-primary text-primary-foreground md:bottom-[calc(var(--toast-lift,0px)+1.5rem)]',
+            'bottom-[calc(var(--toast-lift,0px)+1rem+env(safe-area-inset-bottom))] rounded-md bg-bar text-bar-foreground md:bottom-[calc(var(--toast-lift,0px)+1.5rem)]',
             toast.kind === 'error' ? 'ring-1 ring-danger-mark/60' : ''].join(' ')}
           data-surface="ink">
           <Mark kind={toast.kind} />
@@ -212,7 +212,7 @@ export function Toaster({ children, calm = false, region = true }: {
 function Mark({ kind }: { kind: 'ok' | 'error' }) {
   const disc = kind === 'ok' ? 'bg-ok-mark' : 'bg-danger-mark'
   return (
-    <span data-mark aria-hidden className={`grid size-5.5 shrink-0 place-items-center rounded-full text-primary-foreground ${disc}`}>
+    <span data-mark aria-hidden className={`grid size-5.5 shrink-0 place-items-center rounded-full text-bar-foreground ${disc}`}>
       {kind === 'ok'
         ? <svg width="13" height="13" viewBox="0 0 16 16"><path d="M3.5 8.4l3 3 6-6.4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         : <svg width="13" height="13" viewBox="0 0 16 16"><path d="M8 3.6v5.4M8 12v.4" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /></svg>}

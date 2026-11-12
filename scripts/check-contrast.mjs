@@ -19,7 +19,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
 const TEXT = 4.5, NONTEXT = 3
-const SURFACES = ['background', 'card', 'popover', 'primary', 'secondary', 'muted', 'accent', 'destructive', 'brand', 'support']
+const SURFACES = ['background', 'card', 'popover', 'primary', 'secondary', 'muted', 'accent', 'destructive', 'brand', 'support', 'ink', 'bar']
 const STATUS = ['ok', 'warn', 'danger', 'info', 'neutral']
 /** Tokens that are not read as text or as an edge a person must see, with why. */
 const DECORATIVE = {

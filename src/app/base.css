@@ -28,6 +28,12 @@
   --popover-foreground: #1C1917;
   --primary: #1C1917;            /* ink */
   --primary-foreground: #FFFFFF;
+  /* INK as itself (Neel N0): what is drawn in ink whatever the action colour is — Frrata Admin's dark navigation, the
+     monogram's tile. And THE BAR: the dark floating things (toast, save bar, tooltips). Both equal today's --primary. */
+  --ink: #1C1917;
+  --ink-foreground: #FFFFFF;
+  --bar: #1C1917;
+  --bar-foreground: #FFFFFF;
   --secondary: #F2F1EF;
   --secondary-foreground: #1C1917;
   --muted: #F2F1EF;
@@ -88,6 +94,10 @@
   --popover-foreground: #EDEAE6;
   --primary: #EDEAE6;
   --primary-foreground: #141211;
+  --ink: #EDEAE6;
+  --ink-foreground: #141211;
+  --bar: #EDEAE6;
+  --bar-foreground: #141211;
   --secondary: #262320;
   --secondary-foreground: #EDEAE6;
   --muted: #262320;
@@ -126,6 +136,10 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-bar: var(--bar);
+  --color-bar-foreground: var(--bar-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);

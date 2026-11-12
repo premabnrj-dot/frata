@@ -43,7 +43,7 @@ export function SidebarNav({ label, groups, ink = false }: { label: string; grou
     return (
       <Link key={i.href} href={i.href} aria-current={cur ? 'page' : undefined}
         className={`relative flex ${row ? 'min-w-0 flex-1' : ''} shrink-0 items-center gap-2.5 rounded-md px-2 text-sm transition-colors duration-fast ease-standard ${sub ? 'h-8 pl-8' : 'h-9'} ${cur ? 'font-semibold' : ''} ${ink
-          ? (cur ? 'bg-primary-foreground/15' : 'hover:bg-primary-foreground/10')
+          ? (cur ? 'bg-ink-foreground/15' : 'hover:bg-ink-foreground/10')
           : (cur ? 'bg-accent' : 'hover:bg-accent')}`}>
         {cur && <span aria-hidden="true" className={`absolute -left-2.5 top-2 bottom-2 w-[3px] rounded-r ${ink ? 'bg-warn' : 'bg-thread'}`} />}
         <Icon name={i.icon} current={cur} className={`size-4 shrink-0 ${cur ? '' : ink ? 'opacity-70' : 'text-muted-foreground'}`} />
@@ -56,7 +56,7 @@ export function SidebarNav({ label, groups, ink = false }: { label: string; grou
     <nav aria-label={label} data-tinge className="flex flex-col gap-0.5">
       {groups.map((g) => (
         <div key={g.label} className="flex flex-col gap-0.5">
-          {g.label && <p className={`px-2 pb-1 pt-3 text-xs font-medium ${ink ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{g.label}</p>}
+          {g.label && <p className={`px-2 pb-1 pt-3 text-xs font-medium ${ink ? 'text-ink-foreground/70' : 'text-muted-foreground'}`}>{g.label}</p>}
           {g.items.map((i) => i.children?.length
             ? <Folder key={i.href} item={i} on={on} ink={ink} link={link} />
             : link(i))}
@@ -81,7 +81,7 @@ function Folder({ item, on, ink, link }: { item: NavItem; on: string | null; ink
       <div className="flex items-center">
         {link(item, false, true)}
         <button type="button" onClick={toggle} aria-expanded={!folded} aria-controls={list} aria-label={`${folded ? 'Show' : 'Hide'} ${item.label.toLowerCase()} in use`}
-          className={`ml-0.5 inline-grid size-8 shrink-0 place-items-center rounded-md ${ink ? 'hover:bg-primary-foreground/10' : 'hover:bg-accent'}`}>
+          className={`ml-0.5 inline-grid size-8 shrink-0 place-items-center rounded-md ${ink ? 'hover:bg-ink-foreground/10' : 'hover:bg-accent'}`}>
           <Icon name="chevron" className={`size-3.5 transition-transform duration-fast ease-standard ${folded ? '' : 'rotate-90'} ${ink ? 'opacity-70' : 'text-muted-foreground'}`} />
         </button>
       </div>
@@ -121,11 +121,11 @@ export function BottomBar({ label, tabs, more, moreFoot, ink = false }: { label:
     return () => wide.removeEventListener('change', close)
   }, [])
   const tab = (cur: boolean) => `relative flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${cur ? 'font-semibold' : ''} ${ink
-    ? (cur ? 'text-primary-foreground' : 'text-primary-foreground/70') : (cur ? 'text-foreground' : 'text-muted-foreground')}`
+    ? (cur ? 'text-ink-foreground' : 'text-ink-foreground/70') : (cur ? 'text-foreground' : 'text-muted-foreground')}`
   const bar = (cur: boolean) => cur && <span aria-hidden="true" className={`absolute inset-x-[30%] top-0 h-0.5 rounded-b ${ink ? 'bg-warn' : 'bg-thread'}`} />
   return (
     <>
-      <nav aria-label={label} data-tinge data-surface={ink ? 'ink' : undefined} className={`fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t pb-[env(safe-area-inset-bottom,0px)] md:hidden print:hidden ${ink ? 'border-primary bg-primary' : 'border-border bg-card'}`}>
+      <nav aria-label={label} data-tinge data-surface={ink ? 'ink' : undefined} className={`fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t pb-[env(safe-area-inset-bottom,0px)] md:hidden print:hidden ${ink ? 'border-ink bg-ink' : 'border-border bg-card'}`}>
         {tabs.map((i) => {
           const cur = i.href === on
           return (
