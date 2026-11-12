@@ -1,5 +1,5 @@
 # PIN code delivery — proposal
-Status: draft (proposal for the owner) · Date: 2026-11-12 · Asked by the owner: "we need a PIN code based system,
+Status: active (owner calls 2026-11-12 below; mockup next) · Date: 2026-11-12 · Asked by the owner: "we need a PIN code based system,
 delivery system before we plan [True Profit] more effectively … what should we call it, what all are the features"
 Research: code map (Explore, 2026-11-12) and market/API facts in `frata-integrations` § PIN code delivery and
 § Shiprocket (integration-researcher, 2026-11-12). Mockup: after the owner picks the name and the scope.
@@ -79,3 +79,12 @@ $0–9.99/month (zones, COD rules, dates); Fastrr Smart EDD $2.99–199.99/month
 `frata-integrations` § PIN code delivery and § Shiprocket (2026-11-12): Shiprocket serviceability fields, block-list
 API and rate limit [P/U]; GoKwik, Razorpay, Pindrop, Fastrr prices and features [V-undated]/[V]; India Post directory
 [S, datahub.io mirror 2026-10-03]; RTO by tier [S, ClickPost 2026-11-09]; e-commerce rules [S]/[V gazette].
+
+## Owner calls (2026-11-12)
+- **Name: Delivery Zones.**
+- **Placement:** included in Growth and Scale (a plan feature, the pricing ladder's reason to move up); on Launch an
+  add-on at ₹499/month + GST with a 14-day trial (A3) — as proposed; the unit-economics review checks the ₹499.
+- **Ship stays parked:** PD·0–PD·2 run on the brand's own settings; PD·3 waits for Ship.
+- **Split with the other session** (Admin/console UX, branch `claude/elegant-carson-8jygm1`): it owns loading the India
+  Post directory into `pincodes` (`scripts/ops/pincodes-sql.mjs`, b16baed) with the CSV the owner has; this plan owns
+  everything built on it. Note sent to that session 2026-11-12.
