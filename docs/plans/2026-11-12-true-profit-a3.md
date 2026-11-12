@@ -118,3 +118,6 @@ for this scope and are corrected.
   Scale shops pay ₹11k–22k elsewhere).
 - **Order:** True Profit and A3 are built together now, with every fix above; demand is measured from real trials
   (kept past day 14, still paid at day 60, an action within 30 days). The 10-partner Admin-trial test was declined.
+- **Mockup approved** (owner, 2026-11-12), with the review changes above. **On hold:** the owner wants a PIN-code
+  delivery system planned first ("we need a PIN code based system, delivery system before we plan this more
+  effectively"), since True Profit's pincode view and its COD-by-pincode action depend on it.
