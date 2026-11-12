@@ -1,9 +1,12 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { usePathname } from 'next/navigation'
 import { FALLBACK_ANNOUNCER_ID, announce } from '@/components/shell/announce'
+import { ToastContext, type ToastAction as Action, type ToastApi } from './toast-context'
+// The API and context live apart (toast-context.ts), so the shop's own Toaster can provide them without this one.
+export { ToastContext, useToast, type ToastApi } from './toast-context'
 
 // =============================================================================
 // FILE: src/components/ui/toast.tsx
@@ -31,7 +34,6 @@ import { FALLBACK_ANNOUNCER_ID, announce } from '@/components/shell/announce'
 export const UNDO_MS = 8000
 const EXIT_MS = 200 // the exit takes as long as the entrance (base.css [data-toast])
 
-type Action = { label: string; run: () => void | Promise<void>; /** Stay after it runs (the field summary's Show). */ keep?: boolean }
 type Toast = {
   id: number
   kind: 'ok' | 'error'
@@ -44,26 +46,6 @@ type Toast = {
   /** An error said once politely instead of as an alert (the field summary: focus is already on the field, and each
    *  count-down would otherwise be read aloud again). */
   quiet?: boolean
-}
-type Show = (t: { text: string; undo?: Toast['undo'] }) => void
-export type ToastApi = Show & {
-  ok: (text: string, o?: { undo?: Toast['undo']; sub?: string }) => void
-  error: (text: string, o?: { sub?: string; action?: Action; quiet?: boolean }) => void
-  /** Replaces the text of the toast on screen if it is still `id` (the field-error summary counting down). */
-  update: (id: number, text: string) => void
-  /** Closes the toast on screen if it is still `id` (or any, without an id). */
-  dismiss: (id?: number) => void
-  /** The id the NEXT toast will get (so a caller can update or dismiss what it showed). */
-  next: () => number
-}
-
-const Ctx = createContext<ToastApi | null>(null)
-
-/** `toast({ text, undo })`, `toast.ok(...)`, `toast.error(...)` from anywhere inside <Toaster>. */
-export function useToast(): ToastApi {
-  const api = useContext(Ctx)
-  if (!api) throw new Error('useToast outside <Toaster>')
-  return api
 }
 
 export function Toaster({ children, calm = false, region = true }: {
@@ -147,7 +129,7 @@ export function Toaster({ children, calm = false, region = true }: {
   }, [run])
 
   const api = useMemo<ToastApi>(() => Object.assign(
-    ((t: { text: string; undo?: Toast['undo'] }) => { put({ kind: 'ok', ...t }) }) as Show,
+    ((t: { text: string; undo?: Toast['undo'] }) => { put({ kind: 'ok', ...t }) }) as ToastApi,
     {
       ok: (text: string, o: { undo?: Toast['undo']; sub?: string } = {}) => { put({ kind: 'ok', text, ...o }) },
       error: (text: string, o: { sub?: string; action?: Action; quiet?: boolean } = {}) => { put({ kind: 'error', text, ...o }) },
@@ -217,11 +199,11 @@ export function Toaster({ children, calm = false, region = true }: {
         </div>
       ) : null
   return (
-    <Ctx.Provider value={api}>
+    <ToastContext.Provider value={api}>
       {children}
       {el && host?.isConnected && host.open ? createPortal(el, host) : el}
       {region ? <div id={FALLBACK_ANNOUNCER_ID} aria-live="polite" aria-atomic="true" className="sr-only" /> : null}
-    </Ctx.Provider>
+    </ToastContext.Provider>
   )
 }
 

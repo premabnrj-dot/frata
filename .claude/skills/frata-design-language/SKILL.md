@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.22.0
+  version: 5.22.1
   verified: 2026-11-12
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -625,7 +625,13 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 7. **Motion**: toast in 200 ms (`ease-entrance`, 12 px up), out 200 ms (`ease-exit`); its mark pops once on
    `--ease-snap` (scale .5 → 1); a field's line drops in 4 px over 200 ms; dialogs as § UX foundation 23/25a. **No
    shake.** Reduced motion: a 120 ms fade, nothing travels.
-8. **By default**: every surface mounts ONE `<Toaster>` in its layout; `check:feedback` refuses a hand-written error
+8. **The shop's toast** (`src/components/storefront/store-toast.ts`, built 2026-11-12): the same `ToastApi` in the shop's
+   colours, in three parts to fit the shop's script budgets — a server-rendered box and polite region in `ShopShell`
+   (the real shop only, never the console's preview), a tiny store the islands call (`useStoreToast()`), and the view,
+   loaded lazily into the box. An ok toast leaves after 5 s (no Undo, nothing to pause for); an error stays. If the
+   view cannot load, the words show plainly in the box. A state the shopper cannot act on without it (no price at all,
+   a failed payment, a changed price) stays on the page, never only in a toast.
+9. **By default**: every surface mounts ONE `<Toaster>` in its layout (the shop: its box); `check:feedback` refuses a hand-written error
    line (`role="alert"` paragraph, `text-danger-text` sentence, `?error=` read) outside the primitives and the rule-5
    allow-list.
 

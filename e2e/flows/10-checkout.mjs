@@ -69,13 +69,13 @@ export default {
       await p.fill('#phone', '98290 43210'); await p.fill('#name', 'Ananya Sharma'); await p.fill('#pincode', '302001'); await p.fill('#city', 'Jaipur')
       await p.fill('#addressLine', 'B-14, Tilak Marg'); await p.fill('#area', 'C-Scheme'); await p.selectOption('#state', 'Rajasthan')
     }
-    const toCheckout = async (colour, size) => {
+    const toCheckout = async (colour, size, { filled = true } = {}) => {
       // Each checkout starts from an empty bag and no unpaid order left by an earlier step.
       await p.goto(SHOP + '/products/chanderi-kurta-set', { waitUntil: 'domcontentloaded' })
       await p.evaluate(() => { localStorage.clear(); sessionStorage.clear() }); await p.reload({ waitUntil: 'domcontentloaded' })
       await p.getByRole('button', { name: new RegExp('^' + colour) }).click(); await p.getByRole('button', { name: size, exact: true }).click()
       await p.getByRole('button', { name: /Add to bag|Pre-order/ }).click(); await p.getByRole('dialog', { name: 'Your bag' }).waitFor()
-      await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout$/); await fill()
+      await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout$/); if (filled) await fill()
     }
 
     await t.step('the size guide opens, switches to inches, and Back closes it', async () => {
@@ -86,6 +86,18 @@ export default {
       await g.getByRole('button', { name: 'in' }).click()
       await p.goBack()
       await g.waitFor({ state: 'hidden' })
+    })
+
+    await t.step('checkout mistakes (§ Feedback 3): marked at the fields, focus on the first, one quiet summary that leaves once fixed', async () => {
+      await toCheckout('Rust', 'M', { filled: false }); await p.getByText('Pay on delivery', { exact: true }).click()
+      await p.getByRole('button', { name: /Place order/ }).click()
+      const summary = await expectToast(p, /details? needs? fixing\./, 'error', { quiet: true })
+      await p.waitForFunction(() => document.activeElement?.getAttribute('aria-invalid') === 'true')
+      assert.equal(await p.locator('#phone').getAttribute('aria-invalid'), 'true')
+      await summary.getByRole('button', { name: 'Show' }).waitFor()
+      await fill()
+      await p.locator('[data-toast]').waitFor({ state: 'detached' })
+      assert.equal(await p.locator('[aria-invalid="true"]').count(), 0, 'every mark went as its field was fixed')
     })
 
     await t.step('COD order: placed, stock taken, cost snapshotted, address masked', async () => {

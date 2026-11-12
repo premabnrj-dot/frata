@@ -64,6 +64,7 @@ export function BagContents({ onCheckout, onKeepShopping, added = null }: { onCh
     <div className="space-y-3">
       {added && items.some((i) => i.variantId === added) && <p role="status" className="store-added-note text-sm font-medium">Added to your bag</p>}
       {notes.map((t) => <p key={t} role="status" className="border-l-2 border-store-accent bg-store-chip px-3 py-2 text-sm">{t}</p>)}
+      {/* feedback-ok: rule 4 — the bag drawer is a modal dialog: its own load failure stays inside it (the bag page draws the same lines) */}
       {error && <p role="alert" className="text-sm text-store-bad">{error}</p>}
       <ul className="divide-y divide-store-line">
         {(q?.lines ?? []).map((l) => (
@@ -73,6 +74,7 @@ export function BagContents({ onCheckout, onKeepShopping, added = null }: { onCh
               <p className="leading-snug">{l.title}</p>
               <p className="text-sm text-store-sub">{l.values.join(' · ')}</p>
               {kindLine(l) && <p className="text-xs text-store-sub">{kindLine(l)}</p>}
+              {/* feedback-ok: a line's state (sold out since it was added), on the line with its Remove */}
               {l.problem === 'sold_out' || l.problem === 'gone' ? <p className="text-sm text-store-bad">{l.problem === 'gone' ? 'No longer sold.' : 'Sold out since you added it.'} <button type="button" className="underline" onClick={() => bag.remove(l.variantId)}>Remove</button></p> : (
                 <div className="flex items-center justify-between gap-2">
                   <span className="store-qty inline-flex items-center rounded-[var(--store-radius)] border border-store-line">
