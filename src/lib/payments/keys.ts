@@ -2,6 +2,7 @@ import 'server-only'
 import { randomBytes } from 'node:crypto'
 import { and, eq, lte, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
+import { withTenant } from '@/lib/db/tenant'
 import { paymentWebhookFor } from '@/lib/db/platform'
 import { paymentKeys } from '@/lib/db/schema-orders'
 import { open, seal } from '@/lib/crypto/secret-box'
@@ -59,18 +60,45 @@ export async function paymentStatus(tx: Tx, tenantId: string): Promise<PaymentSt
 }
 
 /** The keys to call Razorpay with, for the server only. Null: not connected, or unreadable (the secret changed: reconnect). */
-export async function keysFor(tx: Tx, tenantId: string): Promise<(Keys & { mode: 'test' | 'live'; webhookSeen: boolean }) | null> {
-  const [r] = await tx.select({ keyId: paymentKeys.keyId, keySecretEnc: paymentKeys.keySecretEnc, mode: paymentKeys.mode, webhookSeenAt: paymentKeys.webhookSeenAt }).from(paymentKeys).where(eq(paymentKeys.tenantId, tenantId))
+export async function keysFor(tx: Tx, tenantId: string): Promise<(Keys & { mode: 'test' | 'live'; webhookSeen: boolean; problem: string | null }) | null> {
+  const [r] = await tx.select({ keyId: paymentKeys.keyId, keySecretEnc: paymentKeys.keySecretEnc, mode: paymentKeys.mode, webhookSeenAt: paymentKeys.webhookSeenAt, problem: paymentKeys.problem }).from(paymentKeys).where(eq(paymentKeys.tenantId, tenantId))
   if (!r) return null
   const keySecret = open(r.keySecretEnc, tenantId, 'key_secret')
-  return keySecret ? { keyId: r.keyId, keySecret, mode: r.mode as 'test' | 'live', webhookSeen: !!r.webhookSeenAt } : null
+  return keySecret ? { keyId: r.keyId, keySecret, mode: r.mode as 'test' | 'live', webhookSeen: !!r.webhookSeenAt, problem: r.problem } : null
 }
 
 /** Online payment is offered on an open shop only with live keys and a webhook that has worked. */
 export const canTakeOnline = (k: Awaited<ReturnType<typeof keysFor>>) => !!k && k.mode === 'live' && k.webhookSeen
 
-export async function markProblem(tx: Tx, tenantId: string, problem: string | null) {
-  await tx.update(paymentKeys).set({ problem }).where(eq(paymentKeys.tenantId, tenantId))
+/** What Settings shows ("Needs attention") once Razorpay has answered 401/403 to a call made with the shop's keys. */
+export const KEYS_REFUSED = 'Razorpay refused the keys'
+
+/** A Razorpay answer that says the keys themselves were refused (not Razorpay down, not a bad request). */
+export const refusedKeys = (status: number) => status === 401 || status === 403
+
+/** The problem a call's answer leaves on the keys, or undefined when nothing changes: refused → KEYS_REFUSED; a call
+ * that worked clears KEYS_REFUSED only (no write per call; another problem is not this call's to clear). Pure. */
+export function problemAfter(current: string | null, answer: { ok: true } | { ok: false; status: number }): string | null | undefined {
+  if (answer.ok) return current === KEYS_REFUSED ? null : undefined
+  return refusedKeys(answer.status) && current !== KEYS_REFUSED ? KEYS_REFUSED : undefined
+}
+
+/** Set (or clear) the keys' problem, only for the keys the call used: a reconnect meanwhile is never marked. */
+export async function markProblem(tx: Tx, tenantId: string, problem: string | null, keyId?: string) {
+  await tx.update(paymentKeys).set({ problem }).where(and(eq(paymentKeys.tenantId, tenantId), keyId ? eq(paymentKeys.keyId, keyId) : undefined))
+}
+
+/** After a call with the shop's keys, no transaction open (the call never runs inside one): records what it showed
+ * (`problemAfter`). Opens a transaction only when the problem changes, so a call that works costs no write. */
+export async function noteKeysAnswer(tenantId: string, keys: { keyId: string; problem: string | null }, answer: { ok: true } | { ok: false; status: number }): Promise<void> {
+  const next = problemAfter(keys.problem, answer)
+  if (next === undefined) return
+  try {
+    await withTenant(tenantId, (tx) => markProblem(tx, tenantId, next, keys.keyId))
+  } catch (err) {
+    // Best effort: the caller's answer to the shopper never waits on this.
+    console.error('[noteKeysAnswer]', (err as { name?: string })?.name ?? 'error')
+  }
 }
 
 /** An event arrived. Only one received after these keys were connected (both times the database's clock: security

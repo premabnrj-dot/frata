@@ -16,7 +16,7 @@
 import { istDayKey } from '../time/day'
 import { availability, visibility, type Status, type WhenOut } from '@/domains/catalogue/availability'
 import type { ChargeShare } from '@/domains/tax/gst'
-import { rateOn } from '@/domains/tax/rates'
+import { hasRate } from '@/domains/tax/rates'
 import { codFor, shippingFor, type Cod, type DeliveryRules } from './delivery'
 import { planOffers, priceMethod, type Applied, type DiscountTerms, type Listed, type MethodLine, type TypedCode } from './discounts'
 
@@ -140,7 +140,7 @@ export function quote(bag: BagLine[], rows: VariantRow[], r: ShopRules, now: Dat
     const s = sellable(v, requested, now)
     // A registered shop can't sell a piece whose GST rate isn't known (no HSN, or a code the table lacks with no rate
     // of the merchant's own): never a guessed rate (plan 2026-11-09-gst-core-and-categories § 2).
-    if (r.registered && s.qty > 0 && rateOn(v.hsn, v.price, r.pricesIncludeGst, now, v.ownBps) === null) return [{ v, requested, qty: 0, kind: s.kind, problem: 'gone' as const }]
+    if (r.registered && s.qty > 0 && !hasRate(v.hsn, now, v.ownBps)) return [{ v, requested, qty: 0, kind: s.kind, problem: 'gone' as const }]
     return [{ v, requested, ...s }]
   })
   const live = draft.filter((d) => d.qty > 0)

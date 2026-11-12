@@ -53,13 +53,14 @@ export async function createOrder(k: Keys, o: { amount: number; receipt: string;
   return typeof id === 'string' && id.startsWith('order_') ? { ok: true, id } : { ok: false, status: 502 }
 }
 
-/** The payments made against a Razorpay order (to see a late capture before switching to COD). */
-export async function orderPayments(k: Keys, rzpOrderId: string): Promise<RzpPayment[] | null> {
-  if (!/^order_[A-Za-z0-9]{6,40}$/.test(rzpOrderId)) return null
+/** The payments made against a Razorpay order (to see a late capture before switching to COD). A failure carries
+ * Razorpay's status (0: unreachable), so the caller can tell refused keys apart (noteKeysAnswer). */
+export async function orderPayments(k: Keys, rzpOrderId: string): Promise<{ ok: true; items: RzpPayment[] } | { ok: false; status: number }> {
+  if (!/^order_[A-Za-z0-9]{6,40}$/.test(rzpOrderId)) return { ok: false, status: 400 }
   const r = await call(k, 'GET', `/v1/orders/${rzpOrderId}/payments`)
-  if (!r.ok) return null
+  if (!r.ok) return r
   const items = Array.isArray(r.json.items) ? (r.json.items as Record<string, unknown>[]) : []
-  return items.map(toPayment)
+  return { ok: true, items: items.map(toPayment) }
 }
 
 export function toPayment(p: Record<string, unknown>): RzpPayment {

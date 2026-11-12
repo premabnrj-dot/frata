@@ -20,6 +20,32 @@ describe('photo sizes', () => {
   })
 })
 
+describe('one format per photo (Safari makes no WebP, 2026-11-12)', () => {
+  const t = '11111111-1111-1111-1111-111111111111', id = '22222222-2222-2222-2222-222222222222'
+  it('a .jpg base is a JPEG photo; every other base is WebP, as every photo stored before', async () => {
+    const { formatOf, urlFor, blobPath, baseFromUpload, headIs, formatOfPath } = await import('../sizes')
+    expect([formatOf('https://x/a'), formatOf('https://x/a.jpg')]).toEqual(['webp', 'jpeg'])
+    expect(urlFor('https://x/a', 800)).toBe('https://x/a-800.webp')
+    expect(urlFor('https://x/a.jpg', 800)).toBe('https://x/a-800.jpg')
+    expect(srcSet('https://x/a.jpg', [400, 800])).toBe('https://x/a-400.jpg 400w, https://x/a-800.jpg 800w')
+    expect(blobPath(t, 'products', id, 400, 'jpeg')).toBe(`tenants/${t}/products/${id}-400.jpg`)
+    expect(blobPath(t, 'products', id, 400, 'webp')).toBe(`tenants/${t}/products/${id}-400.webp`)
+    expect(PATH_SHAPE.exec(blobPath(t, 'theme', id, 1600, 'jpeg'))?.[5]).toBe('jpg')
+    expect(PATH_SHAPE.test(`tenants/${t}/products/${id}-400.png`)).toBe(false)
+    expect(formatOfPath('jpg')).toBe('jpeg')
+    expect(baseFromUpload(`https://h/tenants/${t}/products/${id}-1200.jpg`, 'jpeg')).toBe(`https://h/tenants/${t}/products/${id}.jpg`)
+    expect(baseFromUpload(`https://h/tenants/${t}/products/${id}-1200.webp`, 'webp')).toBe(`https://h/tenants/${t}/products/${id}`)
+    // The bytes must be the format the base says.
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]), webp = new TextEncoder().encode('RIFF\0\0\0\0WEBP')
+    expect([headIs('jpeg', jpeg), headIs('jpeg', webp), headIs('webp', webp), headIs('webp', jpeg)]).toEqual([true, false, true, false])
+  })
+  it('acceptedBase takes a JPEG base in the same folder, and nothing that only looks like one', () => {
+    const host = 'abc.public.blob.vercel-storage.com', ok = `https://${host}/tenants/${t}/products/${id}.jpg`
+    expect(acceptedBase(ok, host, t, 'products')).toBe(ok)
+    for (const bad of [`${ok}.jpg`, ok.replace('.jpg', '.webp'), ok.replace('.jpg', '.png'), ok.replace('.jpg', '-400.jpg')]) expect(acceptedBase(bad, host, t, 'products'), bad).toBeNull()
+  })
+})
+
 describe('acceptedBase', () => {
   const host = storeHost('store_ROPY6FWygQEZwHrb')!
   const A = '11111111-1111-1111-1111-111111111111', B = '22222222-2222-2222-2222-222222222222', id = '33333333-3333-3333-3333-333333333333'

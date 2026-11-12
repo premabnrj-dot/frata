@@ -211,6 +211,16 @@ export const restockedCostSql = (a: string) =>
     join order_lines ol on ol.tenant_id = l.tenant_id and ol.id = l.order_line_id
    where cn.tenant_id = ${c(a, 'tenant_id')} and cn.order_id = ${c(a, 'id')} and cn.kind = 'return' and l.restocked_qty > 0)`
 
+/**
+ * A return whose stock was put back: its came-back event recorded it (`reason = 'restocked'`, markCameBack in
+ * src/lib/orders/outcomes.ts, the one writer) and was not undone. The ONE SQL for it: profit.ts loses a return's COGS
+ * only when this is false (keptSql and Analytics alike). Asked only of an order whose return started (cheap elsewhere);
+ * reads order_events by (tenant_id, order_id).
+ */
+export const rtoRestockedSql = (a: string): SQL<boolean> => sql<boolean>`(${c(a, 'rto_initiated_at')} is not null and exists (
+  select 1 from order_events re where re.tenant_id = ${c(a, 'tenant_id')} and re.order_id = ${c(a, 'id')} and re.kind = 'rto' and re.reason = 'restocked'
+     and not exists (select 1 from order_events ru where ru.tenant_id = re.tenant_id and ru.order_id = re.order_id and ru.undoes = re.id)))`
+
 /** The order's COGS for ₹ kept: as placed, less what returns put back in stock; null while unknown. keptSql and Analytics alike. */
 export const cogsSql = (a: string) => sql`(${c(a, 'cogs')} - ${restockedCostSql(a)})`
 
@@ -232,18 +242,18 @@ export function keptSql(now: Date, a: string, feeChanges: readonly Date[], provi
   return {
     /** Only orders with an outcome. */
     where: sql`${st} in ('delivered', 'rto', 'rto_received', 'lost')`,
-    /** The group's columns: outcome, provider, cod, bucket, then the sums. */
-    columns: sql`${outcome} outcome, ${provider} provider, ${cod} cod, ${bucket} bucket, count(*)::int n,
+    /** The group's columns: outcome, provider, cod, bucket, restocked, then the sums. */
+    columns: sql`${outcome} outcome, ${provider} provider, ${cod} cod, ${bucket} bucket, ${rtoRestockedSql(a)} restocked, count(*)::int n,
       coalesce(sum(${c(a, 'net_revenue')} - ${credited}), 0)::bigint net, sum(${cogsSql(a)})::bigint cogs, sum(${c(a, 'forward_shipping')})::bigint fwd,
       sum(${c(a, 'rto_shipping')})::bigint rto, sum(${c(a, 'courier_cod_fee')})::bigint codfee, coalesce(sum(${c(a, 'gateway_fee')}), 0)::bigint gw,
       coalesce(sum(greatest(${c(a, 'merchandise_net')} - ${returnedSql(a, now)}, 0)), 0)::bigint base`,
-    /** Group by these, after `lead` key columns of the caller's own placed first: the four group columns by position,
+    /** Group by these, after `lead` key columns of the caller's own placed first: the five group columns by position,
      * and known costs apart from unknown, so a sum is null only when all of its orders lack it. */
-    groupBy: (lead = 0) => sql.raw(`${[1, 2, 3, 4].map((i) => i + lead).join(', ')}, (${a}.cogs is null), (${a}.forward_shipping is null), (${a}.rto_shipping is null), (${a}.courier_cod_fee is null)`),
+    groupBy: (lead = 0) => sql.raw(`${[1, 2, 3, 4, 5].map((i) => i + lead).join(', ')}, (${a}.cogs is null), (${a}.forward_shipping is null), (${a}.rto_shipping is null), (${a}.courier_cod_fee is null)`),
   }
 }
 /** A row of keptSql, as postgres returns it. */
-export type KeptRow = { outcome: 'delivered' | 'rto' | 'lost'; provider: 'self' | 'shiprocket' | null; cod: boolean; bucket: number; n: number; net: string; cogs: string | null; fwd: string | null; rto: string | null; codfee: string | null; gw: string; base: string }
+export type KeptRow = { outcome: 'delivered' | 'rto' | 'lost'; provider: 'self' | 'shiprocket' | null; cod: boolean; bucket: number; restocked: boolean; n: number; net: string; cogs: string | null; fwd: string | null; rto: string | null; codfee: string | null; gw: string; base: string }
 /**
  * billableAt() in SQL (src/domains/orders/outcomes.ts): when an order became a delivered order for Frrata's fee —
  * delivered, or shipped + 30 days, whichever came first; null after a return started, when lost without delivery,

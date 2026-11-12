@@ -2,8 +2,8 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.12.0
-  verified: 2026-11-11
+  version: 2.13.0
+  verified: 2026-11-12
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
 
@@ -18,6 +18,13 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
 
 - **A prepaid return** (`ifRto`) also loses the gateway's fee: the payment is refunded and the gateway keeps it
   (unit-economics review 2026-11-08).
+- **A return NOT put back in stock loses its goods** (2026-11-12): `orderProfit` takes `restocked`, and `ifRto` adds
+  COGS when it is false. The fact is the came-back event's own record (`order_events` kind `rto`, reason `restocked`,
+  written only by `markCameBack`, never undone), read in SQL by `rtoRestockedSql` (`src/lib/db/order-predicates.ts`),
+  the one rule for ₹ kept in Offers (`keptSql`) and Analytics (`windowSql`) alike; `kept.ts` groups by it. Nothing is
+  stored twice. A return not restocked with unknown COGS is left out (counted), never ₹0; a restocked one needs no COGS.
+  A return started but not yet back (Shiprocket's RTO in transit, when S·1 writes it) has no came-back event yet, so
+  it counts as not restocked until the event says so. A restocked piece at full cost is hypothesis H-resale (below).
 - **A courier line not arrived yet** (Shiprocket): the shop's confirmed estimate stands in for that line, labelled
   estimated; only with no estimate is the order pending and left out (never ₹0).
 - **Lost by the courier** (`ifLost`, unit-economics review 2026-11-08): −(forward freight + packaging + ads + COGS +

@@ -11,7 +11,7 @@ const pass = process.env.INT_DB_PASSWORD ?? 'x'
 const A = '11111111-1111-1111-1111-111111111111'
 
 const answer: { pays: unknown[] | null } = { pays: [] }
-vi.mock('@/lib/payments/razorpay', async (orig) => ({ ...(await orig<typeof import('@/lib/payments/razorpay')>()), orderPayments: async () => answer.pays }))
+vi.mock('@/lib/payments/razorpay', async (orig) => ({ ...(await orig<typeof import('@/lib/payments/razorpay')>()), orderPayments: async () => (answer.pays === null ? { ok: false, status: 0 } : { ok: true, items: answer.pays }) }))
 vi.mock('@/lib/queries/storefront', async (orig) => ({ ...(await orig<typeof import('@/lib/queries/storefront')>()), refreshSoldOut: () => {} }))
 
 describe.skipIf(!host)('asking Razorpay when a hold ends', () => {

@@ -94,6 +94,19 @@ export function ruleOn(hsn: string | null | undefined, date: Date): RateRule | n
   return best?.rule ?? null
 }
 
+/**
+ * Whether a piece has a GST rate on `date`: the table knows its HSN, or the merchant set a rate of her own. THE ONE TEST
+ * for "a registered shop can sell it" (quote()'s 'gone', the publish check, Settings › Taxes' warning): the rate's value
+ * depends on the price (a slab), whether there is one does not. Same answer as `rateOn(…) !== null`.
+ */
+export const hasRate = (hsn: string | null | undefined, date: Date, own?: number | null): boolean => ruleOn(hsn, date) !== null || own != null
+
+/** Live products a registered shop can't sell for want of a rate: how many, and the first few by name (Settings › Taxes). */
+export type Unrated = { count: number; products: { title: string; handle: string }[] }
+
+/** The pieces of `rows` a registered shop can't sell on `date` for want of a rate (hasRate). */
+export const withoutRate = <T extends { hsn: string | null; gstBps: number | null }>(rows: readonly T[], date: Date): T[] => rows.filter((r) => !hasRate(r.hsn, date, r.gstBps))
+
 /** Taxable value of one piece: the price as shown, without GST at `bps` when prices include GST. */
 const taxableAt = (unitPrice: number, bps: number, inclusive: boolean) => (inclusive ? (unitPrice * 10_000) / (10_000 + bps) : unitPrice)
 

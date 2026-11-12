@@ -3,7 +3,7 @@ import { keptOf, keptPerOrder, type KeptGroup } from '../kept'
 
 const est = { delivery: 7000, ret: 7000, codFee: 5000 }
 // A ₹900 COD order (net of GST ₹857.14 → 85714), COGS 40% (34286), merchandise net 85714, fee 2%.
-const g = (o: Partial<KeptGroup>): KeptGroup => ({ outcome: 'delivered', n: 1, provider: 'self', cod: true, net: 85714, cogs: 34286, forward: null, rto: null, courierCodFee: null, gateway: 0, base: 85714, feeBps: 200, ...o })
+const g = (o: Partial<KeptGroup>): KeptGroup => ({ outcome: 'delivered', n: 1, provider: 'self', cod: true, restocked: false, net: 85714, cogs: 34286, forward: null, rto: null, courierCodFee: null, gateway: 0, base: 85714, feeBps: 200, ...o })
 
 describe('keptOf: ₹ kept after returns and lost parcels', () => {
   it('a delivered COD order shipped another way: the estimate, the COD fee, the plan fee', () => {
@@ -12,12 +12,17 @@ describe('keptOf: ₹ kept after returns and lost parcels', () => {
     expect(k).toMatchObject({ kept: 37714, counted: 1, leftOut: 0, delivered: { n: 1, kept: 37714 }, basis: 'estimate' })
   })
   it('a return loses freight both ways (no COD fee on an estimated return); a lost parcel loses the goods too', () => {
-    expect(keptOf([g({ outcome: 'rto' })], est).rto).toEqual({ n: 1, kept: -14000 })
+    expect(keptOf([g({ outcome: 'rto', restocked: true })], est).rto).toEqual({ n: 1, kept: -14000 })
     expect(keptOf([g({ outcome: 'lost' })], est).lost).toEqual({ n: 1, kept: -(7000 + 34286) })
   })
-  it('a return needs no COGS; a delivered or lost order without COGS is left out, and counted as left out', () => {
-    const k = keptOf([g({ outcome: 'rto', cogs: null }), g({ cogs: null, n: 2 }), g({ outcome: 'lost', cogs: null })], est)
-    expect(k).toMatchObject({ counted: 1, leftOut: 3, kept: -14000 })
+  it('a return NOT put back in stock loses the goods as well; restocked or not is the came-back event\'s', () => {
+    expect(keptOf([g({ outcome: 'rto' })], est).rto).toEqual({ n: 1, kept: -(14000 + 34286) })
+    // `restocked` means nothing outside a return: a delivered order keeps its COGS whatever the flag says.
+    expect(keptOf([g({ restocked: true })], est).kept).toBe(keptOf([g({})], est).kept)
+  })
+  it('a restocked return needs no COGS; any other outcome without COGS is left out, and counted as left out', () => {
+    const k = keptOf([g({ outcome: 'rto', cogs: null, restocked: true }), g({ outcome: 'rto', cogs: null }), g({ cogs: null, n: 2 }), g({ outcome: 'lost', cogs: null })], est)
+    expect(k).toMatchObject({ counted: 1, leftOut: 4, kept: -14000 })
   })
   it('Shiprocket: actual lines as summed; a missing line takes the estimate per parcel; with no estimate, left out', () => {
     const actual = keptOf([g({ provider: 'shiprocket', n: 2, net: 171428, cogs: 68572, base: 171428, forward: 12400, courierCodFee: 7200 })], est)
@@ -35,7 +40,7 @@ describe('keptOf: ₹ kept after returns and lost parcels', () => {
     expect(keptOf([g({})], null)).toMatchObject({ kept: 85714 - 34286 - 1714, basis: 'none' })
   })
   it('per order with an outcome, never per delivered order alone', () => {
-    const k = keptOf([g({}), g({ outcome: 'rto' })], est)
+    const k = keptOf([g({}), g({ outcome: 'rto', restocked: true })], est)
     expect(keptPerOrder(k)).toBe(Math.round((37714 - 14000) / 2))
     expect(keptPerOrder(keptOf([], est))).toBeNull()
   })

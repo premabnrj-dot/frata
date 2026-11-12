@@ -19,8 +19,9 @@ import { errName } from '@/lib/log'
 //
 // THE ORDERS QUEUE (1D·4b, docs/specs/2026-11-07-orders.md § 1D·1): tabs with
 // counts over every order (queueCounts, the same predicates the list filters
-// with), one search, 50 a page, two badges per row (how it is paid, where it
-// is), risk only when Medium or High, and the queue's keys and bulk confirm
+// with), one search over every order whatever the tab (no tab is current then;
+// the pager counts the matches), 50 a page, two badges per row (how it is paid,
+// where it is), risk only when Medium or High, and the queue's keys and bulk confirm
 // (./_components/queue.tsx). The view is in the address: ?tab=&q=&page=.
 // =============================================================================
 
@@ -87,6 +88,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     return `/console/orders${s ? `?${s}` : ''}`
   }
   const info = TABS.find((t) => t.tab === tab)!
+  // A search covers every order (listOrders), so no tab is current while one is on; clearing it goes back to the tab.
   // Couldn't deliver jumps to the front when it holds anything (design language 53): a failed delivery is today's work.
   const ordered = counts.couldnt_deliver > 0 ? [...TABS].sort((a, b) => Number(b.tab === 'couldnt_deliver') - Number(a.tab === 'couldnt_deliver')) : TABS
   // Couldn't deliver and Coming back show only while they hold an order (or are the open view): nothing records a
@@ -95,10 +97,10 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   return (
     <>
       <PageHeader title="Orders" />
-      <ViewTabs label="Order views" scroll tabs={shown.map((t) => ({ href: href({ tab: t.tab, q: '' }), label: t.label, count: counts[t.tab], current: t.tab === tab, apart: t.tab === 'not_paid' }))} />
+      <ViewTabs label="Order views" scroll tabs={shown.map((t) => ({ href: href({ tab: t.tab, q: '' }), label: t.label, count: counts[t.tab], current: !q && t.tab === tab, apart: t.tab === 'not_paid' }))} />
       <SearchField label="Search orders" placeholder="Search number, name or phone" value={q} clearHref={href({ q: '' })} hidden={tab !== 'to_confirm' ? { tab } : undefined} />
       {/* Always the Queue, even empty: its toast (and Undo) must outlive the last row leaving the tab (e2e 49). */}
-      <Queue rows={rows} label={`Orders · ${info.label}`} slipSize={queueShop.slipSize} empty={
+      <Queue rows={rows} label={q ? 'Orders · Search' : `Orders · ${info.label}`} slipSize={queueShop.slipSize} empty={
         <Panel title={q ? 'No order matches that search' : info.empty.title}>
           {q ? <>Try the order number, the customer&apos;s name or the last digits of their phone.</> : info.empty.body ?? null}
         </Panel>} />

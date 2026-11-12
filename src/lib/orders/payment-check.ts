@@ -4,7 +4,7 @@ import { orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import { enqueue, GiveUp, Later, type OutboxRow } from '@/lib/outbox'
-import { keysFor } from '@/lib/payments/keys'
+import { keysFor, noteKeysAnswer } from '@/lib/payments/keys'
 import { orderPayments } from '@/lib/payments/razorpay'
 import { refreshSoldOut } from '@/lib/queries/storefront'
 import { capturedAsAsked, markPaid } from './payment'
@@ -37,8 +37,10 @@ export async function settleWithRazorpay(tenantId: string, orderId: string): Pro
   // recorded (markPaid reprices the order back to prepaid before packing, so the courier collects nothing), and one on a
   // cancelled order shows as a refund due (impact review 2026-11-11: the check skipped both).
   if (o.method !== 'prepaid' || !o.rzp || !keys) return 'unpaid'
-  const pays = await orderPayments(keys, o.rzp)
-  if (pays === null) return 'unknown'
+  const asked = await orderPayments(keys, o.rzp)
+  await noteKeysAnswer(tenantId, keys, asked)
+  if (!asked.ok) return 'unknown'
+  const pays = asked.items
   const captured = pays.find((p) => p.status === 'captured' && capturedAsAsked(p, o.checkout, p.currency))
   if (captured) {
     const soldOut: string[] = []

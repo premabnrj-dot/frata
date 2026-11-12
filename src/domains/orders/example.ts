@@ -22,7 +22,8 @@ export type ExampleOrder = { collect: Paise; fee: Paise; ifDelivered: Paise; ifR
 
 export function exampleOrder(feeBps: number): ExampleOrder {
   const fee = deliveredFee(NET, feeBps)
-  const c: OrderCosts = { netRevenue: NET, gatewayFee: paise(0), platformFee: fee, ...EXAMPLE_COSTS }
+  // The example's return is put back in stock (the usual case), so its cost is not lost.
+  const c: OrderCosts = { netRevenue: NET, gatewayFee: paise(0), platformFee: fee, restocked: true, ...EXAMPLE_COSTS }
   const p = orderProfit(c, 1)
   return { collect: EXAMPLE_COLLECT, fee, ifDelivered: p.ifDelivered, ifReturned: p.ifRto }
 }

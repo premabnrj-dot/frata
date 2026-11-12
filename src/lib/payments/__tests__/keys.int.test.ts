@@ -38,6 +38,16 @@ describe.skipIf(!host)('saving Razorpay keys', () => {
       expect(canTakeOnline(await keysFor(tx, A))).toBe(false)
       await markEvent(tx, A)
       expect(canTakeOnline(await keysFor(tx, A))).toBe(true)
+      // Razorpay refused the keys (2026-11-12): Settings shows it; a mark for keys replaced meanwhile changes nothing;
+      // reconnecting clears it.
+      const { markProblem, KEYS_REFUSED } = await import('@/lib/payments/keys')
+      await markProblem(tx, A, KEYS_REFUSED, 'rzp_test_AAAAAAAAAAAAAA')
+      expect((await paymentStatus(tx, A) as { problem: string | null }).problem).toBeNull()
+      await markProblem(tx, A, KEYS_REFUSED, 'rzp_live_CCCCCCCCCCCCCC')
+      expect((await paymentStatus(tx, A) as { problem: string | null }).problem).toBe(KEYS_REFUSED)
+      expect((await keysFor(tx, A))?.problem).toBe(KEYS_REFUSED)
+      await saveKeys(tx, A, { keyId: 'rzp_live_CCCCCCCCCCCCCC', keySecret: 'live-secret' })
+      expect((await paymentStatus(tx, A) as { problem: string | null }).problem).toBeNull()
       throw ROLLBACK
     }).catch((e) => { if (e !== ROLLBACK) throw e })
   })

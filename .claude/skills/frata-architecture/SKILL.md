@@ -2,8 +2,8 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.43.0
-  verified: 2026-11-11
+  version: 2.44.0
+  verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
 ---
@@ -494,7 +494,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   buy at now, with that size's availability; `compareAt` is the struck before-cut price.
 - **Share cards** `src/app/s/[host]/og/[...card]/route.ts`: canonical paths only (`parseCardPath`), the host's shop,
   ids found in its cached catalogue (listed products only — a random id costs no query), drawing budgeted per caller
-  then per shop, photos only from our store and this shop's folder (PATH_SHAPE), read capped at 1 MB, WebP checked by
+  then per shop, photos only from our store and this shop's folder (PATH_SHAPE), read capped at 1 MB, WebP or JPEG checked by
   sharp, reaching Satori only as data URIs. CDN a day; a stale address shows the current card for 5 minutes. No Blob
   storage (a deleted photo would outlive the product).
 - **Old addresses are history rows, append-only** (`product_handle_history`, `collection_handle_history`: select +
@@ -623,6 +623,22 @@ Rules:
   own origin.
 - Erasing an abandoned order strips the click ids (`ERASED_KEYS`); the utm tags stay (owner: keep everything else).
 
+## Photos (2026-11-12)
+
+- **One format per photo, said by its stored base** (`src/domains/media/sizes.ts`): WebP (`<id>` → `<id>-<w>.webp`, every
+  photo before this date) or JPEG where the browser makes no WebP (Safari: a `.jpg` base, `<id>.jpg` → `<id>-<w>.jpg`).
+  No column: `formatOf(base)`. A file's URL is built only by `urlFor` (never `${base}-${w}.webp` by hand); the upload
+  path by `blobPath`; the token allows exactly the type the path's extension says; `photosAreMade` reads each file's
+  first bytes against its base's format (`headIs`).
+
+## Razorpay keys that stop working (2026-11-12)
+
+- A call with a shop's keys (`createOrder`, `orderPayments`) that Razorpay answers 401/403 sets
+  `payment_keys.problem` to `KEYS_REFUSED` (Settings: "Needs attention"); a call that works clears that problem only.
+  `noteKeysAnswer` (src/lib/payments/keys.ts) runs after the call, with no transaction open, and writes only when the
+  problem changes, matching the key id the call used. No needs-you notice yet: `notices.source_kind` has no kind for it
+  and `notice_write` is not granted to frata_app.
+
 ## Money (ADR-0004)
 
 Paise everywhere (`src/domains/money/paise.ts`); basis points for rates;
@@ -691,7 +707,9 @@ through `asModule('gst', …)`, the Accountant's invite too (removing one works 
   at each line's rate, goodwill no GST in its own G series, reversal takes the rest), lines in `credit_note_lines`
   (final). ₹ kept: `keptSql` takes off credited taxable (`creditedSql`) and the cost of pieces a return put back in
   stock (`cogsSql`). A return restocks only when ticked: `issueCredit`, same transaction, `restockOf` (never past what
-  the line sold less earlier restocks), recorded once in `credit_note_lines.restocked_qty`.
+  the line sold less earlier restocks), recorded once in `credit_note_lines.restocked_qty`. A return that CAME BACK
+  (RTO) loses its COGS unless its came-back event put the stock back (`rtoRestockedSql`, grouped by keptSql and
+  Analytics alike; frata-unit-economics).
 - **GSTR-1:** `domains/tax/gstr1.ts` from the documents; files in `gstr1-files.ts`; the period read is
   `queries/gst.ts gstPeriod(In)`, never cached. Filing (G2): `lib/gst/gsp.ts` (`gsp()` null = off; the fake never in
   Production), the actions in `console/gst/actions.ts` write a `gst_attempts` row before each call (ADR-0008, accepted 2026-11-09),

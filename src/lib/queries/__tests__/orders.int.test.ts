@@ -28,4 +28,54 @@ describe.skipIf(!host)('order search', () => {
     expect((await listOrders(A, { tab: 'all', q: `KS-${n + 1}`, now })).length).toBe(0) // B's number, from A
     expect((await listOrders(A, { tab: 'all', q: '%', now })).some((o) => o.number === n)).toBe(false) // % is text, not "everything"
   })
+
+  it('a search looks through every order, whatever tab is open; without one, the tab alone (2026-11-12)', async () => {
+    process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { orders } = await import('@/lib/db/schema-orders')
+    const { listOrders } = await import('@/lib/queries/orders')
+    const { orderState } = await import('@/domains/orders/order-state')
+    const tag = `Every${Math.floor(Math.random() * 1e6)}`
+    const n = 950_000 + Math.floor(Math.random() * 20_000) * 3
+    const now = new Date(), past = new Date(now.getTime() - 3_600_000)
+    await withTenant(A, async (tx) => {
+      const o = { tenantId: A, placedAt: past, customerName: `${tag} Rao`, subtotal: 100, total: 100 }
+      await tx.insert(orders).values([
+        { ...o, number: n, paymentMethod: 'cod' }, // to confirm
+        { ...o, number: n + 1, paymentMethod: 'prepaid', payBy: new Date(now.getTime() + 3_600_000) }, // not paid yet
+        { ...o, number: n + 2, paymentMethod: 'cod', confirmedAt: past, cancelledAt: past }, // cancelled
+      ])
+    })
+    const hits = await listOrders(A, { tab: 'on_the_way', q: tag, now })
+    expect(hits.map((h) => h.number).sort()).toEqual([n, n + 1, n + 2])
+    expect(hits[0]!.matching).toBe(3)
+    expect(hits.map((h) => orderState(h, now)).sort()).toEqual(['awaiting_payment', 'cancelled', 'unconfirmed'])
+    // No search: the tab's orders only.
+    expect((await listOrders(A, { tab: 'on_the_way', now })).some((h) => h.number >= n && h.number <= n + 2)).toBe(false)
+  })
+
+  it('Settings › Taxes: the live products a registered shop can\'t sell for want of a rate', async () => {
+    process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { products } = await import('@/lib/db/schema-catalogue')
+    const { liveWithoutRateIn } = await import('@/lib/queries/catalogue')
+    const ROLLBACK = new Error('rollback')
+    const k = `int-rate-${Date.now()}`
+    await withTenant(A, async (tx) => {
+      const before = await liveWithoutRateIn(tx, A, new Date())
+      const p = (handle: string, o: Partial<typeof products.$inferInsert>) => ({ tenantId: A, handle: `${k}-${handle}`, title: `${k} ${handle}`, options: ['Size'], status: 'active', ...o })
+      await tx.insert(products).values([
+        p('a', { hsn: '6109' }), // the table knows it
+        p('b', { hsn: '2106' }), // unknown code, no rate of her own: can't be bought
+        p('c', {}), // no HSN: can't be bought
+        p('d', { hsn: '2106', gstBps: 500 }), // her own rate
+        p('e', { status: 'draft' }), // not live
+        p('f', { status: 'unlisted' }), // live, no HSN
+      ])
+      const after = await liveWithoutRateIn(tx, A, new Date())
+      expect(after.count - before.count).toBe(3)
+      expect(after.products.length).toBeLessThanOrEqual(3)
+      throw ROLLBACK
+    }).catch((e) => { if (e !== ROLLBACK) throw e })
+  })
 })

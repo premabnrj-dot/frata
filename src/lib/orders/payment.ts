@@ -11,7 +11,7 @@ import { webhookEvents } from '@/lib/db/schema'
 import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { checkoutShop, variantRows } from '@/lib/queries/checkout'
-import { keysFor, markEvent } from '@/lib/payments/keys'
+import { keysFor, markEvent, noteKeysAnswer } from '@/lib/payments/keys'
 import { checkoutSignatureOk, orderPayments, toPayment } from '@/lib/payments/razorpay'
 import { trimRazorpayEvent } from '@/lib/webhooks/razorpay'
 import { refreshSoldOut } from '@/lib/queries/storefront'
@@ -118,8 +118,10 @@ export async function switchToCod(tenantId: string, hash: string, expectedTotal:
   if (pre.o.paidAt) return { kind: 'paid' }
   if (pre.o.switchedAt) return { kind: 'switched', total: Number(pre.o.total) }
   if (pre.o.rzp && pre.keys) {
-    const pays = await orderPayments(pre.keys, pre.o.rzp)
-    if (pays === null) return { kind: 'refused', status: 409, error: 'We could not check with Razorpay whether your payment went through. Try again in a minute.' }
+    const asked = await orderPayments(pre.keys, pre.o.rzp)
+    await noteKeysAnswer(tenantId, pre.keys, asked)
+    if (!asked.ok) return { kind: 'refused', status: 409, error: 'We could not check with Razorpay whether your payment went through. Try again in a minute.' }
+    const pays = asked.items
     const captured = pays.find((p) => p.status === 'captured' && capturedAsAsked(p, pre.o!.checkout, p.currency))
     if (captured) {
       const soldOut: string[] = []

@@ -10,8 +10,10 @@
 // orders by what decides their figure (outcome, provider, COD, which costs are known, the fee in force) and sums the
 // money; `orderProfit` is linear, so a group's figure is the sum of its orders' (the fee's per-order rounding aside).
 // Left out, and counted as left out: a delivered or lost order with unknown COGS, and freight still pending from the
-// courier (never read as ₹0). A return needs no COGS (the goods come back). A group's COGS arrives net of the pieces
-// credit notes put back in stock after delivery (`cogsSql`, src/lib/db/order-predicates.ts): they are on sale again. Pure.
+// courier (never read as ₹0). A return whose stock was put back needs no COGS (the goods are on sale again); a return
+// NOT put back loses its COGS, so one with unknown COGS is left out too (2026-11-12; `restocked` comes from the
+// came-back event, `rtoRestockedSql`). A group's COGS arrives net of the pieces credit notes put back in stock after
+// delivery (`cogsSql`, src/lib/db/order-predicates.ts): they are on sale again. Pure.
 // =============================================================================
 
 import { type Paise, paise } from '@/domains/money/paise'
@@ -25,6 +27,8 @@ export type KeptGroup = {
   n: number
   provider: 'self' | 'shiprocket' | null
   cod: boolean
+  /** A return whose came-back event put its stock back (`rtoRestockedSql`); false for every other outcome. */
+  restocked: boolean
   /** Sums over the group's orders, in paise; null when its orders do not know it (the SQL groups known apart from unknown). */
   net: number
   /** COGS less the cost of pieces put back in stock by a credit note (cogsSql). */
@@ -65,7 +69,8 @@ export function keptOf(groups: readonly KeptGroup[], est: ShipCostEstimate): Kep
   const sources = new Set<FreightSource>()
   for (const g of groups) {
     if (g.n <= 0) continue
-    if (g.outcome !== 'rto' && g.cogs === null) { out.leftOut += g.n; continue }
+    const restocked = g.outcome === 'rto' && g.restocked
+    if (!restocked && g.cogs === null) { out.leftOut += g.n; continue }
     // Actual lines are already the group's sums; an estimate is per parcel, so it is scaled to the group first (a
     // Shiprocket group can mix both: its missing lines take the estimate).
     const groupEst = est ? { delivery: est.delivery * g.n, ret: est.ret * g.n, codFee: est.codFee * g.n } : null
@@ -76,6 +81,7 @@ export function keptOf(groups: readonly KeptGroup[], est: ShipCostEstimate): Kep
       forwardShipping: f.forwardShipping, rtoShipping: f.rtoShipping, codFee: f.codFee,
       gatewayFee: paise(g.gateway), packaging: paise(0), adCost: paise(0),
       platformFee: g.outcome === 'delivered' && g.feeBps !== null ? deliveredFee(paise(g.base), g.feeBps) : paise(0),
+      restocked,
     }, 1)
     const v: Paise = g.outcome === 'delivered' ? p.ifDelivered : g.outcome === 'rto' ? p.ifRto : p.ifLost
     out[g.outcome].n += g.n; out[g.outcome].kept += v

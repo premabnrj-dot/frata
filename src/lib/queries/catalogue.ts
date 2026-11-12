@@ -4,6 +4,7 @@ import type { MemberRole } from '@/domains/tenancy/roles'
 import { cache } from 'react'
 import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { availability, type WhenOut } from '@/domains/catalogue/availability'
+import { withoutRate, type Unrated } from '@/domains/tax/rates'
 import { matches, type ProductFacts, type Rule } from '@/domains/catalogue/collection-rules'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { withTenant } from '@/lib/db/tenant'
@@ -52,6 +53,20 @@ export async function productsTax(tenantId: string) {
     return { rows: rows.map((r) => ({ ...r, minPrice: r.minPrice === null ? null : Number(r.minPrice) })), shop: shop ?? null }
   })
 }
+
+const UNRATED_NAMED = 3
+
+/** Live products (active or unlisted) a registered shop can't sell for want of a GST rate, in the caller's transaction
+ * (Settings › Taxes' save, after its write). The rule is `withoutRate` (rates.ts), the test quote() refuses a line by;
+ * the rate table lives in code, so it filters here, never in SQL. */
+export async function liveWithoutRateIn(tx: Tx, tenantId: string, now: Date): Promise<Unrated> {
+  const rows = await tx.select({ title: products.title, handle: products.handle, hsn: products.hsn, gstBps: products.gstBps }).from(products)
+    .where(and(eq(products.tenantId, tenantId), inArray(products.status, ['active', 'unlisted']), isNull(products.archivedAt))).orderBy(asc(products.title)).limit(2000)
+  const out = withoutRate(rows, now)
+  return { count: out.length, products: out.slice(0, UNRATED_NAMED).map(({ title, handle }) => ({ title, handle })) }
+}
+
+export const liveWithoutRate = (tenantId: string, now: Date) => withTenant(tenantId, (tx) => liveWithoutRateIn(tx, tenantId, now))
 
 /** How many products have each status (the list's tabs). */
 export async function statusCounts(tenantId: string): Promise<Record<string, number>> {

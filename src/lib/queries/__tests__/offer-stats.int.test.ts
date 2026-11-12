@@ -14,7 +14,7 @@ describe.skipIf(!host)('offerStats', () => {
   it('counts what each offer and creator code brought, by state, method, buyer and route', async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
     const { withTenant } = await import('@/lib/db/tenant')
-    const { orders, shipments } = await import('@/lib/db/schema-orders')
+    const { orders, orderEvents, shipments } = await import('@/lib/db/schema-orders')
     const { shopSettings } = await import('@/lib/db/schema')
     const { discounts, discountCodes, orderDiscounts } = await import('@/lib/db/schema-discounts')
     const { offerStatsIn } = await import('@/lib/queries/discounts')
@@ -38,6 +38,8 @@ describe.skipIf(!host)('offerStats', () => {
           payBy: o.payBy ?? null, paidAt: o.paid ? o.at : null, shippedAt: o.delivered || o.rto ? o.at : null, deliveredAt: o.delivered ? o.at : null,
           rtoInitiatedAt: o.rto ? o.at : null, cancelledAt: o.cancelled ? o.at : null, merchandiseNet: subtotal - discount, ...o.costs,
         }).returning({ id: orders.id })
+        // A return comes back with its stock put back (the came-back event records it), so it needs no COGS.
+        if (o.rto) await tx.insert(orderEvents).values({ tenantId: A, orderId: r!.id, kind: 'rto', actorKind: 'system', reason: 'restocked', at: o.at })
         if (use) await tx.insert(orderDiscounts).values({ tenantId: A, orderId: r!.id, discountId: use.d, codeId: use.code ?? null, class: 'order', amount: use.amount,
           title: 'x', style: 'order_off', percentBps: 1000, minSubtotal: 0, via: use.via ?? 'auto' })
         return r!.id
@@ -70,7 +72,7 @@ describe.skipIf(!host)('offerStats', () => {
       expect({ orders: d.orders, given: d.given, aov: d.aov, prepaid: d.prepaid, repeat: d.repeat, fresh: d.fresh, delivered: d.delivered, rto: d.rto, givenPerDelivered: d.givenPerDelivered })
         .toEqual({ orders: 3, given: 60000, aov: Math.round((180000 + 270000 + 190000) / 3), prepaid: 1, repeat: 1, fresh: 2, delivered: 2, rto: 1, givenPerDelivered: 30000 })
       // ₹ kept per order with an outcome, after returns (kept.ts, the figure Analytics shows): the delivered COD order with
-      // known costs, and the return (which needs no COGS); the delivered prepaid order without COGS is left out, counted.
+      // known costs, and the return (put back in stock, so it needs no COGS); the delivered prepaid order without COGS is left out, counted.
       // No confirmed estimate yet, so freight is left out and said so: (₹1,800 − ₹800 − the plan's 2% fee ₹36) + ₹0 for
       // the return = ₹964 over 2 orders, before shipping costs.
       expect({ kept: d.keptPerOrder, basis: d.keptBasis, leftOut: d.keptLeftOut }).toEqual({ kept: (180000 - 80000 - 3600 + 0) / 2, basis: 'none', leftOut: 1 })

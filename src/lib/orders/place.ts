@@ -20,7 +20,7 @@ import { orderToken, sha256, tokenHash } from '@/lib/crypto/secret-box'
 import { checkoutShop, codeFor, liveOffers, variantRows } from '@/lib/queries/checkout'
 import { discountUses, fits } from '@/lib/db/discount-predicates'
 import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
-import { keysFor } from '@/lib/payments/keys'
+import { keysFor, noteKeysAnswer } from '@/lib/payments/keys'
 import { createOrder } from '@/lib/payments/razorpay'
 import { refreshSoldOut } from '@/lib/queries/storefront'
 import { linkCustomer } from '@/lib/queries/customers'
@@ -288,6 +288,8 @@ export async function startPayment(tenantId: string, orderId: string): Promise<{
   let rzp = o.rzp
   if (!rzp) {
     const made = await createOrder(o.keys, { amount, receipt: `${o.number}-${orderId.slice(0, 8)}`, notes: { frata_order: orderId } })
+    // 401/403: Settings shows "Needs attention" until a call with these keys works again.
+    await noteKeysAnswer(tenantId, o.keys, made)
     if (!made.ok) {
       console.error('[startPayment] razorpay order', made.status)
       return { ok: false, error: 'Online payment is not working right now.' }
