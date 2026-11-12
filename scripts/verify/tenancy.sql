@@ -98,10 +98,20 @@ insert into tenant_plans (tenant_id, plan_version_id, starts_at, created_by)
 insert into audit_events (tenant_id, actor_user_id, actor_kind, action) values
   ('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000001', 'staff', 'proof');
 
--- 8. Support access: active session counts, expired does not; removed staff lose it at once.
+-- 8. Support access: active session counts, expired does not; removed staff lose it at once. Since staff passkeys
+--    (2026-11-12) a visit counts only with a live passkey step-up on the same browser session.
+insert into staff_passkeys (id, user_id, credential_id, public_key, name) values
+  ('dddddddd-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', 'cred-proof-s', 'key-proof-s', 'proof');
+insert into staff_stepups (user_id, session_id, passkey_id, token_hash, expires_at) values
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-000000000001', 'dddddddd-0000-0000-0000-000000000001', 'proof-hash-s', now() + interval '1 hour');
 begin; set local role frata_app;
 do $$ declare m jsonb := app_access_for('aaaaaaaa-0000-0000-0000-000000000001'); begin
   if m->>'staffRole' <> 'support' then raise exception 'FAIL: staff role'; end if;
+  if jsonb_array_length(m->'memberships') <> 0 then raise exception 'FAIL: a support visit counts without a passkey step-up (%)', m; end if;
+  m := app_access_for('aaaaaaaa-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-000000000002', 'proof-hash-s');
+  if jsonb_array_length(m->'memberships') <> 0 then raise exception 'FAIL: a step-up from another session counts (%)', m; end if;
+  m := app_access_for('aaaaaaaa-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-000000000001', 'proof-hash-s');
+  if m->>'staffConfirmedAt' is null then raise exception 'FAIL: live step-up not seen'; end if;
   if jsonb_array_length(m->'memberships') <> 1 then raise exception 'FAIL: expired session still grants access (%)', m; end if;
   if (m->'memberships'->0->>'tenantId') <> '22222222-2222-2222-2222-222222222222' then raise exception 'FAIL: wrong support tenant'; end if;
   if (m->'memberships'->0->>'supportSessionId') is null then raise exception 'FAIL: support row not marked'; end if;
@@ -111,7 +121,7 @@ begin;
 delete from platform_staff where user_id = 'aaaaaaaa-0000-0000-0000-000000000001';
 set local role frata_app;
 do $$ begin
-  if jsonb_array_length(app_access_for('aaaaaaaa-0000-0000-0000-000000000001')->'memberships') <> 0 then raise exception 'FAIL: removed staff keep a live session'; end if;
+  if jsonb_array_length(app_access_for('aaaaaaaa-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-000000000001', 'proof-hash-s')->'memberships') <> 0 then raise exception 'FAIL: removed staff keep a live session'; end if;
 end $$;
 rollback;
 
@@ -119,8 +129,94 @@ rollback;
 begin;
 insert into members (tenant_id, user_id, role) values ('22222222-2222-2222-2222-222222222222', 'aaaaaaaa-0000-0000-0000-000000000001', 'staff');
 set local role frata_app;
-do $$ declare m jsonb := app_access_for('aaaaaaaa-0000-0000-0000-000000000001'); begin
+do $$ declare m jsonb := app_access_for('aaaaaaaa-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-000000000001', 'proof-hash-s'); begin
   if jsonb_array_length(m->'memberships') <> 1 or (m->'memberships'->0->>'supportSessionId') is null then raise exception 'FAIL: support row not preferred (%)', m; end if;
+end $$;
+rollback;
+
+-- 9b. Staff passkeys (docs/specs/2026-11-12-staff-passkeys.md). No role holds a privilege on the staff_* tables; only
+--     frata_admin executes the app_staff_* definers (frata_app: app_access_for and app_staff_signout; nobody:
+--     app_staff_bootstrap); the definers keep people, sessions and purposes apart.
+do $$ declare t text; r text; begin
+  foreach t in array array['staff_passkeys','staff_enrolment_requests','staff_webauthn_challenges','staff_stepups','staff_passkey_tries'] loop
+    foreach r in array array['frata_app','frata_admin','anon','authenticated','service_role'] loop
+      if has_table_privilege(r, 'public.' || t, 'select,insert,update,delete') then raise exception 'FAIL: % holds a privilege on %', r, t; end if;
+    end loop;
+  end loop;
+  if has_function_privilege('frata_app', 'public.app_staff_challenge(uuid,uuid,text,text,text)', 'execute') then raise exception 'FAIL: frata_app may start a passkey check'; end if;
+  if not has_function_privilege('frata_admin', 'public.app_staff_challenge(uuid,uuid,text,text,text)', 'execute') then raise exception 'FAIL: frata_admin may not start a passkey check'; end if;
+  if has_function_privilege('frata_admin', 'public.app_staff_bootstrap(text)', 'execute') or has_function_privilege('frata_app', 'public.app_staff_bootstrap(text)', 'execute') then raise exception 'FAIL: an app role may bootstrap'; end if;
+end $$;
+begin;
+insert into platform_staff (user_id, email, role) values
+  ('aaaaaaaa-0000-0000-0000-0000000000a1', 'pk-a@proof.test', 'admin'),
+  ('aaaaaaaa-0000-0000-0000-0000000000a2', 'pk-b@proof.test', 'admin'),
+  ('aaaaaaaa-0000-0000-0000-0000000000a3', 'pk-s@proof.test', 'support');
+insert into staff_passkeys (id, user_id, credential_id, public_key, counter, name) values
+  ('dddddddd-0000-0000-0000-0000000000a1', 'aaaaaaaa-0000-0000-0000-0000000000a1', 'cred-a', 'key-a', 0, 'A laptop'),
+  ('dddddddd-0000-0000-0000-0000000000a2', 'aaaaaaaa-0000-0000-0000-0000000000a2', 'cred-b', 'key-b', 5, 'B laptop');
+set local role frata_app;
+do $$ begin
+  begin perform 1 from staff_stepups; raise exception 'FAIL: frata_app reads staff_stepups'; exception when insufficient_privilege then null; end;
+end $$;
+reset role; set local role frata_admin;
+do $$
+declare A uuid := 'aaaaaaaa-0000-0000-0000-0000000000a1'; B uuid := 'aaaaaaaa-0000-0000-0000-0000000000a2'; S uuid := 'aaaaaaaa-0000-0000-0000-0000000000a3';
+  M uuid := '99999999-9999-9999-9999-999999999999';
+  sA uuid := 'eeeeeeee-0000-0000-0000-0000000000a1'; sB uuid := 'eeeeeeee-0000-0000-0000-0000000000a2'; sS uuid := 'eeeeeeee-0000-0000-0000-0000000000a3'; sX uuid := 'eeeeeeee-0000-0000-0000-0000000000ff';
+  ch text := repeat('a', 43); k jsonb; e text; l jsonb;
+begin
+  begin perform 1 from staff_passkeys; raise exception 'FAIL: frata_admin reads staff_passkeys'; exception when insufficient_privilege then null; end;
+  -- A merchant's user id is refused.
+  begin perform app_staff_challenge(M, sA, 'confirm', null, ch); raise exception 'FAIL: a merchant started a passkey check'; exception when raise_exception then if sqlerrm <> 'not_staff' then raise; end if; end;
+  -- A challenge belongs to one person, one session, one purpose, once; the key comes back only for that person's credential.
+  perform app_staff_challenge(A, sA, 'confirm', null, ch);
+  if app_staff_take_challenge(B, sA, 'confirm', ch, 'cred-a') is not null then raise exception 'FAIL: another person took a challenge'; end if;
+  if app_staff_take_challenge(A, sX, 'confirm', ch, 'cred-a') is not null then raise exception 'FAIL: another session took a challenge'; end if;
+  if app_staff_take_challenge(A, sA, 'add', ch, 'cred-a') is not null then raise exception 'FAIL: another purpose took a challenge'; end if;
+  if app_staff_take_challenge(A, sA, 'confirm', ch, 'cred-b') is not null then raise exception 'FAIL: another person''s key came back'; end if;
+  perform app_staff_challenge(A, sA, 'confirm', null, repeat('b', 43));
+  k := app_staff_take_challenge(A, sA, 'confirm', repeat('b', 43), 'cred-a');
+  if k->>'publicKey' <> 'key-a' then raise exception 'FAIL: own key not returned (%)', k; end if;
+  if app_staff_take_challenge(A, sA, 'confirm', repeat('b', 43), 'cred-a') is not null then raise exception 'FAIL: a challenge was used twice'; end if;
+  perform app_staff_confirm(A, sA, (k->>'passkeyId')::uuid, 0, 'hash-a');
+  begin perform app_staff_confirm(A, sA, (k->>'passkeyId')::uuid, 0, 'hash-a2'); raise exception 'FAIL: confirmed without a challenge'; exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
+  -- The counter only rises.
+  perform app_staff_challenge(B, sB, 'confirm', null, repeat('c', 43));
+  k := app_staff_take_challenge(B, sB, 'confirm', repeat('c', 43), 'cred-b');
+  begin perform app_staff_confirm(B, sB, (k->>'passkeyId')::uuid, 5, 'hash-b'); raise exception 'FAIL: a replayed counter was accepted'; exception when raise_exception then if sqlerrm <> 'replay' then raise; end if; end;
+  -- Requests: approved only by another admin, freshly checked, with the right code; bound to the asking session.
+  perform app_staff_request(S, sS, 'code-s');
+  begin perform app_staff_approve(S, sS, null, 'pk-s@proof.test', 'code-s'); raise exception 'FAIL: support approved'; exception when raise_exception then if sqlerrm <> 'not_admin' then raise; end if; end;
+  begin perform app_staff_approve(B, sB, 'hash-b', 'pk-s@proof.test', 'code-s'); raise exception 'FAIL: approved without a passkey check'; exception when raise_exception then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  perform app_staff_request(A, sA, 'code-a');
+  begin perform app_staff_approve(A, sA, 'hash-a', 'pk-a@proof.test', 'code-a'); raise exception 'FAIL: an admin approved their own request'; exception when raise_exception then if sqlerrm <> 'own_request' then raise; end if; end;
+  begin perform app_staff_approve(A, sA, 'hash-a', 'pk-s@proof.test', 'wrong'); raise exception 'FAIL: a wrong code was approved'; exception when raise_exception then if sqlerrm <> 'bad_code' then raise; end if; end;
+  e := app_staff_approve(A, sA, 'hash-a', 'pk-s@proof.test', 'code-s');
+  begin perform app_staff_challenge(S, sX, 'add', null, repeat('d', 43)); raise exception 'FAIL: an approval worked from another session'; exception when raise_exception then if sqlerrm <> 'not_allowed' then raise; end if; end;
+  perform app_staff_challenge(S, sS, 'add', null, repeat('e', 43));
+  if app_staff_take_challenge(S, sS, 'add', repeat('e', 43), '') is null then raise exception 'FAIL: add challenge not taken'; end if;
+  perform app_staff_add_passkey(S, sS, null, 'cred-s', 'key-s', 0, '{}', 'S phone');
+  perform app_staff_challenge(A, sA, 'add', 'hash-a', repeat('f', 43));
+  perform app_staff_take_challenge(A, sA, 'add', repeat('f', 43), '');
+  begin perform app_staff_add_passkey(A, sA, 'hash-a', 'cred-s', 'key-x', 0, '{}', 'dup'); raise exception 'FAIL: a duplicate credential was added'; exception when raise_exception then if sqlerrm <> 'duplicate' then raise; end if; end;
+  begin perform app_staff_challenge(S, sS, 'add', null, repeat('g', 43)); raise exception 'FAIL: an approval was used twice'; exception when raise_exception then if sqlerrm <> 'not_allowed' then raise; end if; end;
+  -- The list never carries a key, a credential id or a counter; support needs a step-up and sees only itself.
+  l := app_staff_list(A, sA, 'hash-a');
+  if l::text ~ '(publicKey|credential|counter|key-a|cred-a)' then raise exception 'FAIL: the list leaks key material'; end if;
+  if jsonb_array_length(l) < 3 then raise exception 'FAIL: admin list short (%)', l; end if;
+  begin perform app_staff_list(S, sS, null); raise exception 'FAIL: listed without a step-up'; exception when raise_exception then if sqlerrm <> 'confirm_first' then raise; end if; end;
+end $$;
+reset role;
+do $$ begin
+  if app_staff_live_stepup('aaaaaaaa-0000-0000-0000-0000000000a1', 'eeeeeeee-0000-0000-0000-0000000000a1', 'hash-a') is null then raise exception 'FAIL: step-up not made'; end if;
+  if app_staff_live_stepup('aaaaaaaa-0000-0000-0000-0000000000a1', 'eeeeeeee-0000-0000-0000-0000000000ff', 'hash-a') is not null then raise exception 'FAIL: a step-up counts on another session'; end if;
+end $$;
+-- Removing a staff member ends their step-ups at once.
+delete from platform_staff where user_id = 'aaaaaaaa-0000-0000-0000-0000000000a1';
+do $$ begin
+  if exists (select 1 from staff_stepups where user_id = 'aaaaaaaa-0000-0000-0000-0000000000a1') then raise exception 'FAIL: removed staff keep a step-up'; end if;
+  if app_staff_live_stepup('aaaaaaaa-0000-0000-0000-0000000000a1', 'eeeeeeee-0000-0000-0000-0000000000a1', 'hash-a') is not null then raise exception 'FAIL: removed staff still confirmed'; end if;
 end $$;
 rollback;
 

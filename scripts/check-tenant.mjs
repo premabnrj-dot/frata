@@ -199,6 +199,10 @@ for (const { name, table, body, forApp } of finalPolicies.values()) {
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?"?(ekcode_[a-z_]+)/g)) {
   failures.push(`grant on ${m[1]}  — the EkCode vault has no table grants; add a definer instead (ADR-0009)`)
 }
+// Staff passkeys (ADR-0007 amended 2026-11-12, drizzle/0105): the same — no app role, not even frata_admin, holds a grant.
+for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?"?(staff_(?:passkeys|enrolment_requests|webauthn_challenges|stepups|passkey_tries))\b/g)) {
+  failures.push(`grant on ${m[1]}  — staff passkey tables have no table grants; the app_staff_* definers are the only door (ADR-0007)`)
+}
 // 8. The analytics database (A·2): its own folder, the same rules, and no open tables at all.
 const aSql = readdirSync('drizzle-analytics').filter(f => f.endsWith('.sql'))
   .map(f => readFileSync(join('drizzle-analytics', f), 'utf8').split(/\r?\n/).filter(l => !l.trim().startsWith('--')).join('\n'))
