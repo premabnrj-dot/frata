@@ -93,11 +93,68 @@ and what else we might need across all modules")
   and stores); the partner and Admin pieces in N4. Search and filters run on the server, from the address, behind the
   same indexes the list already uses (speed-reviewer on each); saved views are a new table (tenant, name, query) with RLS.
 
+## v4: brand, voice, layout (owner: "iconography, motifs, visual identity, brand guidelines, logo variations and usage,
+voice and microcopy; sidebar, header, breadcrumbs, widths, grid, spacing, density, separation, sticky bars, side panels,
+breakpoints")
+- **Brand** (mockup § Brand), from the drawn mark (`src/components/brand/mark-paths.ts`): wordmark with the rani thread
+  (brand surfaces), plain (working screens, documents), on ink; the rr monogram on ink, rani and paper tiles. Clear space
+  = the "a"'s height; smallest wordmark 72 px (48 in a footer), monogram 16 px. Never: recolour, stretch, type the name,
+  thread in another colour, over a busy photo, an unruled lockup. Brand palette tied to Neel: rani (mark, thread, loading
+  line), haldi (drawings), neel 900 (brand surfaces) and 600 (action) as one ramp. Motifs: the thread, the running stitch
+  (drop and add places only), the block print (the website's selvedge only).
+- **Icons**: 24 grid, 1.75 px stroke, round, no fill, 16/18/20 px, one colour (text, or neel for the current page);
+  a word beside each except Search, Close, More, Copy. This replaces brand rule 36's two-stroke rani tinge in the
+  console. **Pictograms** stay drawings (48 grid, 2 px ink, one haldi shape, on their tile), for first-use empties, the
+  website and the partner workspace; the 14 in `PICTOGRAMS`.
+- **Voice and microcopy** (§ Voice): tone by moment (done, fixable, refused, money, risk, can't undo, empty, waiting,
+  the one celebration), with an example and a "not"; patterns for titles, buttons, labels, placeholders, tips, toasts,
+  notices, email subjects, WhatsApp; mechanics (sentence case, digits, ₹ grouping, lakh in sentences only, dates, phone,
+  full stops, Indian English spelling, "you"/"we"/"your shopper").
+- **Layout** (§ Layout): page anatomy; sidebar 232 expanded / 64 rail (768–1279 or by choice, "[" toggles, remembered;
+  tooltips, counts become dots) / bottom bar under 768; header order (back or breadcrumb, title, status, meta line,
+  More · secondaries · one primary last); breadcrumbs two levels, a phone shows "‹ Products"; widths (lists fluid to
+  1440, editors 1120 with a 320 panel, settings 760, dialogs 440/560/720); 12 columns, gutters 24/16, page padding
+  32/24/16; four page shapes; the spacing scale with each step's job; separation (soft lines inside, 24 between
+  sections, 32 and a heading between groups, never a card in a card); density (cards 20/16 or 16/12; table rows 48 console,
+  40 Admin, 56 with a photo; header 36 sticky; fields 36/44); sticky bars (filter bar and table header at top, one action
+  bar at the foot, the editor panel at the side); right-side panels (context panel in editors; a 400 px quick look over
+  lists with ↑↓ and Esc; a sheet on a phone; dialogs decide, panels look); breakpoints <768, 768–1023, 1024–1279,
+  1280–1439, ≥1440 with what each does.
+
+## Skills and agents, optimised (owner: "skills optimization, agent optimization")
+- **frata-design-language** becomes a short core (~350 lines: Rule 0, Words, Tokens, Type, Layout, Components index,
+  States and feedback, Motion, Accessibility, Glossary) with `references/`: `brand.md`, `voice.md`, `layout.md`,
+  `components.md`, `data.md` (analytics, finding), `glossary.md`, one `screens/<area>.md` per approved screen family
+  (products, orders, offers, settings, apps, partner, admin, storefront), and `themes-legacy.md` (ADR-0014, no new
+  work). History ("As built", provenance in headings) deleted; one index table of approved mockups instead. The same
+  split for frata-architecture (themes, money, auth, speed, build notes to references) and frata-integrations (one file
+  per provider). Each SKILL.md under 400 lines (`check:skills` warns).
+- **Agents** share one preamble (read CLAUDE.md and the area's skill; report worst first; file:line; a verdict line;
+  under N words) and one output shape, so a phase's reviews can be read in one pass. Each names the gate it complements so
+  it never re-checks what a script already does. New ones: mockup-parity-reviewer, words-reviewer,
+  design-system-reviewer (with accessibility and brand use), release-agent. The review cycle that cost 17 "review fixes"
+  commits runs plan reviews in parallel (architecture, tenancy, security, speed) and diff reviews in parallel (impact,
+  design-system, words) before one commit.
+
+## Also to prepare, so the language holds everywhere
+- **A living reference:** `/console/fixtures/ui` (exists) becomes the Neel gallery: every component in every state, both
+  themes, phone and desktop; the e2e `ux` flow screenshots it, so a drift shows in review.
+- **Tokens as data:** one `tokens.json` generated from base.css for the places CSS can't reach (PDF invoices, emails,
+  share cards, app icons), checked equal by a test.
+- **Emails and documents** in Neel: the email layout (header wordmark, one button, footer), invoice and slip PDFs (plain
+  wordmark, type scale, money), notices.
+- **Message templates:** WhatsApp and email order updates under the voice guide (one per order state, both scripts).
+- **Hindi readiness:** strings out of components into one place per surface before any translation; Noto Devanagari;
+  the words rulebook keeps sentences translatable.
+- **Data-viz beyond three series** (a muted categorical set derived from neel, warm grey and the status dots) for Admin.
+- **Empty-state set:** one first-use empty state per module with its pictogram (orders, products, offers, collections,
+  messages, analytics, partner stores), so none is improvised.
+
 ## Rules Neel retires on approval (frata-design-language, marked "superseded" until N0 lands)
 Ink as the action colour; neel as brand-only; "radius 6px"; mono for money, counts, order numbers and addresses (rules
 35, 67, 72); the 24 bold / 15 semibold type scale; the rani thread under buttons and links (rule 37); "one card per job";
 radio cards for 2–4 choices (segmented instead); payment as a badge (a tag); long dates; voice rule 1's 15 words; the
-icon rule 36 (two strokes, rani tinge) for console nav. The brand's `--neel` (#23307A) becomes neel 900, one blue-violet.
+icon rule 36 (two strokes, rani tinge) for the console (Neel's icon rule replaces it); brand rule 37's thread on console buttons, tabs and links (the thread stays in the mark, the loading line and the website). The brand's `--neel` (#23307A) becomes neel 900, one blue-violet.
 
 ## Tooling added with this spec (owner: "turn repeated tasks into agents")
 - Agents: `mockup-parity-reviewer` (built as drawn), `words-reviewer` (the rulebook and glossary on every diff and

@@ -369,6 +369,36 @@ mark { background: var(--warn-bg); color: inherit; border-radius: 3px; padding: 
 .stores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px } .store { border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 6px; justify-items: start } .store b { font-weight: 600 }
 .diff { display: grid; gap: 4px; margin-top: 12px; font-size: 13px } .diff .del { background: var(--bad-bg); color: var(--bad-fg); padding: 2px 8px; border-radius: 6px; text-decoration: line-through } .diff .add { background: var(--ok-bg); color: var(--ok-fg); padding: 2px 8px; border-radius: 6px }
 @media (max-width: 720px) { .fpop { grid-template-columns: 1fr } .rl { grid-template-columns: 1fr 1fr } .stores { grid-template-columns: 1fr } }
+.logos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px } .logos figure { margin: 0; display: grid; gap: 8px }
+.lg { height: 120px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line) } .lg.paper { background: #FBFAF9 } .lg.ink { background: #171615 }
+.lg svg { max-width: 80% } figcaption { font-size: 13px; color: var(--text-2); display: grid } figcaption b { color: var(--text); font-weight: 600 }
+.clear { display: grid; place-items: center; padding: 20px; background: #FBFAF9; border-radius: 12px; border: 1px solid var(--line) } .cs { padding: 26px; outline: 1.5px dashed var(--n400); outline-offset: -1px } .cs svg { display: block; max-width: 100% }
+.donts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px } .donts > div { display: grid; gap: 6px; font-size: 13px; color: var(--text-2) }
+.donts .x { height: 70px; border-radius: 10px; border: 1px solid var(--line); background: #FBFAF9; display: flex; align-items: center; justify-content: center; position: relative; color: #171615; overflow: hidden }
+.donts .x::after { content: "✕"; position: absolute; right: 6px; top: 4px; color: var(--bad-dot); font-weight: 700 } .donts .x svg { max-width: 80% }
+.motifs { display: grid; gap: 14px } .motifs > div { display: grid; grid-template-columns: 70px 1fr; gap: 4px 12px; align-items: center } .motifs b { font-weight: 600 } .motifs .cap { grid-column: 2 }
+.m-thread { grid-row: span 2; height: 2px; background: #D61F69; border-radius: 2px } .m-stitch { grid-row: span 2; height: 36px; border: 1.5px dashed var(--g400); border-radius: 8px }
+.m-print { grid-row: span 2; height: 36px; border-radius: 8px; background: radial-gradient(circle at 8px 8px, rgba(214,31,105,.18) 0 4px, transparent 5px) 0 0/16px 16px, #FBFAF9; border: 1px solid var(--line) }
+.icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px } .icons span { display: grid; justify-items: center; gap: 6px; padding: 10px 4px; border: 1px solid var(--line-soft); border-radius: 10px; font-size: 12px; color: var(--text-2) }
+.icons svg { width: 20px; height: 20px; fill: none; stroke: var(--text); stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round }
+.picrow { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap } .ptile { width: 92px; display: grid; justify-items: center; gap: 6px; font-size: 12px; color: var(--text-2) } .ptile svg { width: 64px; height: 64px; border-radius: 12px; background: #FBEFD2; padding: 8px }
+.anat { display: grid; grid-template-columns: 150px 1fr; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-height: 300px; font-size: 12px }
+.anat > div, .a-main > div { border: 1px dashed var(--n300) } .a-side { background: var(--side); padding: 10px; display: grid; align-content: start; gap: 4px } .a-side span { color: var(--text-2) }
+.a-main { display: grid; grid-template-rows: auto auto auto 1fr auto; gap: 8px; padding: 12px } .a-main > div { border-radius: 8px; padding: 8px 10px; color: var(--text-2) }
+.a-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center } .a-head b { color: var(--text); font-size: 16px } .a-acts { display: flex; gap: 6px }
+.a-body { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; border: 0 !important; padding: 0 !important } .a-col, .a-panel { border: 1px dashed var(--n300); border-radius: 8px; padding: 10px; min-height: 80px } .a-panel { background: var(--n50) }
+.a-bar { background: var(--bar); color: var(--bar-text) !important; border: 0 !important }
+.sbs { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap } .sb-x { width: 232px; background: var(--side); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 2px }
+.sb-c { width: 64px; background: var(--side); border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; display: grid; gap: 6px; justify-items: center } .sb-c .nav { padding: 0; width: 40px; justify-content: center; position: relative }
+.dotc { position: absolute; right: 6px; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--warn-dot) }
+.widths { display: grid; gap: 6px } .widths div { width: var(--w); background: var(--n50); border: 1px solid var(--n100); border-radius: 6px; padding: 6px 10px; font-size: 13px; color: var(--n800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.cols { display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px; height: 40px; margin-top: 12px } .cols i { background: color-mix(in srgb, var(--bad-dot) 14%, transparent); border-radius: 4px }
+.spacescale { display: grid; gap: 6px } .spacescale div { display: grid; grid-template-columns: 52px 30px 1fr; gap: 10px; align-items: center; font-size: 13px } .spacescale i { height: 12px; background: var(--n400); border-radius: 2px }
+.dens { display: grid; gap: 12px } .dens div { display: grid; gap: 2px } .dens b { font-weight: 600 } .dens span { color: var(--text-2); font-size: 14px }
+.drawer-demo { display: grid; grid-template-columns: 1fr 340px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-height: 200px }
+.dd-list { padding: 8px; display: grid; align-content: start; gap: 2px; background: var(--g25) } .dd-row { padding: 10px; border-radius: 8px; font-size: 14px; color: var(--text-2) } .dd-row.on { background: var(--select); color: var(--text) }
+.dd-panel { border-left: 1px solid var(--line); padding: 16px; box-shadow: var(--e2); background: var(--surface) }
+@media (max-width: 720px) { .anat { grid-template-columns: 1fr } .a-body { grid-template-columns: 1fr } .drawer-demo { grid-template-columns: 1fr } .sb-x { width: 100% } }
 .note { font-size: 13px; color: var(--text-2); margin-top: 8px }
 @media (max-width: 720px) { .spec { grid-template-columns: 1fr } }
 @media (prefers-reduced-motion: no-preference) { .btn, .nav, .seg button, .tbl td { transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease) } }
@@ -377,7 +407,7 @@ mark { background: var(--warn-bg); color: inherit; border-radius: 3px; padding: 
 <div class="doc">
   <div class="doc-top">
     <b><span class="mark">rr</span>Neel · the console's design language</b>
-    <nav aria-label="Parts"><a href="#foundations">Foundations</a><a href="#components">Components</a><a href="#patterns">More</a><a href="#states">States</a><a href="#motion">Motion</a><a href="#access">Access</a><a href="#data">Analytics</a><a href="#find">Finding</a><a href="#modules">Modules</a><a href="#home">Home</a><a href="#orders">Orders</a><a href="#products">Products</a><a href="#editor">Product</a><a href="#settings">Settings</a><a href="#phone">Phone</a><a href="#words">Words</a><a href="#glossary">Glossary</a></nav>
+    <nav aria-label="Parts"><a href="#foundations">Foundations</a><a href="#brand">Brand</a><a href="#voice">Voice</a><a href="#layout">Layout</a><a href="#components">Components</a><a href="#patterns">More</a><a href="#states">States</a><a href="#motion">Motion</a><a href="#access">Access</a><a href="#data">Analytics</a><a href="#find">Finding</a><a href="#modules">Modules</a><a href="#home">Home</a><a href="#orders">Orders</a><a href="#products">Products</a><a href="#editor">Product</a><a href="#settings">Settings</a><a href="#phone">Phone</a><a href="#words">Words</a><a href="#glossary">Glossary</a></nav>
   </div>
 
   <!-- ===================== FOUNDATIONS ===================== -->
@@ -442,6 +472,189 @@ mark { background: var(--warn-bg); color: inherit; border-radius: 3px; padding: 
           <div class="num money" style="font-size:14px"><span class="r">₹</span>1,178<span class="p">.82</span> · <span style="color:var(--bad-fg)">−₹430</span> · <span class="r">₹</span>2,30,28,200</div>
         </div>
         <ul class="rule"><li>Indian grouping (2,30,28,200), the ₹ and paise a step quieter, a loss in red with a real minus.</li><li>Right-aligned in columns; paise only where money is settled (invoices, fees).</li></ul>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===================== BRAND ===================== -->
+  <section class="part" id="brand">
+    <h2>Brand</h2>
+    <p class="lead">One mark, drawn once. Rani is the brand's thread; the console works in neel. Brand moments are few: sign-in, the website, first-use empty states, the store opening.</p>
+    <div class="grid g2">
+      <div class="box" style="grid-column:1/-1"><h3>Logo variations</h3>
+        <div class="logos">
+          <figure><div class="lg paper"><svg viewBox="-6 12 302 92" width="180" role="img" aria-label="frrata"><g fill="none" stroke="#171615" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg></div><figcaption><b>Wordmark, thread</b>Brand surfaces: sign-in, website, emails' header.</figcaption></figure>
+          <figure><div class="lg paper"><svg viewBox="-6 12 302 92" width="180" role="img" aria-label="frrata"><g fill="none" stroke="#171615" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#171615"/></g></svg></div><figcaption><b>Wordmark, plain</b>Working screens, documents, invoices.</figcaption></figure>
+          <figure><div class="lg ink"><svg viewBox="-6 12 302 92" width="180" role="img" aria-label="frrata"><g fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#FF4F93"/></g></svg></div><figcaption><b>Wordmark on ink</b>Dark surfaces; the thread turns rani-on-ink.</figcaption></figure>
+          <figure><div class="lg paper" style="gap:14px"><svg viewBox="0 0 120 120" width="56" height="56" role="img" aria-label="frrata"><rect width="120" height="120" rx="27.6" fill="#171615"/><g transform="translate(-26 -16)" fill="none" stroke="#FFFFFF" stroke-width="14"><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg><svg viewBox="0 0 120 120" width="56" height="56" role="img" aria-label="frrata"><rect width="120" height="120" rx="27.6" fill="#D61F69"/><g transform="translate(-26 -16)" fill="none" stroke="#FFFFFF" stroke-width="14"><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#FFFFFF"/></g></svg><svg viewBox="0 0 120 120" width="56" height="56" role="img" aria-label="frrata"><rect width="120" height="120" rx="27.6" fill="#FFFFFF"/><g transform="translate(-26 -16)" fill="none" stroke="#171615" stroke-width="14"><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg></div><figcaption><b>Monogram rr</b>Ink tile (the shell), rani tile (app icon on ink), paper tile (favicons on dark).</figcaption></figure>
+        </div>
+      </div>
+      <div class="box"><h3>Clear space and size</h3>
+        <div class="clear"><div class="cs"><svg viewBox="-6 12 302 92" width="200" role="img" aria-label="frrata"><g fill="none" stroke="#171615" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg></div></div>
+        <ul class="rule"><li>Clear space on every side: the height of the "a" (the dashed box). Nothing enters it: no text, edge or photo.</li><li>Smallest: wordmark 72 px wide (48 px in a footer), monogram 16 px. Below that, use the monogram.</li></ul>
+      </div>
+      <div class="box"><h3>Never</h3>
+        <div class="donts">
+          <div><span class="x"><svg viewBox="-6 12 302 92" width="110" role="img" aria-label="frrata"><g fill="none" stroke="#3A44C2" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#3A44C2"/></g></svg></span><span>Recolour it (neel, gradients)</span></div>
+          <div><span class="x"><svg style="transform:scaleX(1.35)" viewBox="-6 12 302 92" width="90" role="img" aria-label="frrata"><g fill="none" stroke="#171615" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg></span><span>Stretch or squash</span></div>
+          <div><span class="x"><b style="font:700 26px/1 var(--font)">frrata</b></span><span>Type the name as the logo</span></div>
+          <div><span class="x"><svg viewBox="-6 12 302 92" width="110" role="img" aria-label="frrata"><g fill="none" stroke="#171615" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#2F9E62"/></g></svg></span><span>Thread in any colour but rani</span></div>
+          <div><span class="x" style="background:linear-gradient(135deg,#E8C6CF,#C9CCE8,#EED9C7)"><svg viewBox="-6 12 302 92" width="110" role="img" aria-label="frrata"><g fill="none" stroke="#171615" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg></span><span>Over a busy photo</span></div>
+          <div><span class="x"><svg viewBox="0 0 120 120" width="34" height="34" role="img" aria-label="frrata"><rect width="120" height="120" rx="27.6" fill="#171615"/><g transform="translate(-26 -16)" fill="none" stroke="#FFFFFF" stroke-width="14"><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg><b style="font:600 15px/1 var(--font);margin-left:8px">EkCode by frrata</b></span><span>Lock it up with another name without a rule</span></div>
+        </div>
+      </div>
+      <div class="box"><h3>Brand colour and the console</h3>
+        <div class="ramp" style="grid-template-columns:repeat(auto-fill,minmax(90px,1fr))">
+          <div class="sw d" style="background:#D61F69">Rani · mark, thread</div><div class="sw l" style="background:#F2B233">Haldi · drawings</div><div class="sw d" style="background:#23307A">Neel 900 · brand ink-blue</div>
+          <div class="sw d" style="background:#3A44C2">Neel 600 · action</div><div class="sw d" style="background:#171615">Ink · type, mark</div><div class="sw l" style="background:#FBFAF9">Paper</div>
+        </div>
+        <ul class="rule"><li>The brand's neel and the console's action colour are one ramp: 900 for brand surfaces, 600 for buttons.</li><li>Rani: the mark's thread, the loading line, the sign-in and website only. Haldi: drawings only. Neither is ever a button, a number or a state.</li></ul>
+      </div>
+      <div class="box"><h3>Motifs</h3>
+        <div class="motifs">
+          <div><span class="m-thread"></span><b>The thread</b><span class="cap">A 2 px rani line: the mark, the loading line, the website's links. Not on console buttons or tabs.</span></div>
+          <div><span class="m-stitch"></span><b>The running stitch</b><span class="cap">A dashed edge: where something can be dropped or added. Never round content.</span></div>
+          <div><span class="m-print"></span><b>The block print</b><span class="cap">The mark's circles as a repeat, 6%: the website's selvedge only.</span></div>
+        </div>
+      </div>
+      <div class="box" style="grid-column:1/-1"><h3>Icons and drawings</h3>
+        <div class="icons">
+          <span title="Home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/></svg>Home</span><span title="Orders"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6zM9 7a3 3 0 016 0"/></svg>Orders</span><span title="Products"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg>Products</span><span title="Collections"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>Collections</span><span title="Offers"><svg viewBox="0 0 24 24"><path d="M4 12l8-8h8v8l-8 8z"/><circle cx="16" cy="8" r="1.5"/></svg>Offers</span><span title="Analytics"><svg viewBox="0 0 24 24"><path d="M4 18l5-6 4 3 7-8"/></svg>Analytics</span><span title="Notices"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4zM10 21h4"/></svg>Notices</span><span title="Settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</span><span title="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></svg>Search</span><span title="Filter"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg>Filter</span><span title="Add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</span><span title="More"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></svg>More</span><span title="Delivery"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg>Delivery</span><span title="Payment"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM3 10h18"/></svg>Payment</span><span title="Risk"><svg viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg>Risk</span><span title="Copy"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/></svg>Copy</span>
+        </div>
+        <div class="picrow">
+          <div class="ptile"><svg viewBox="0 0 48 48"><rect x="9" y="20" width="30" height="20" rx="2" fill="#fff" stroke="#171615" stroke-width="2"/><path d="M7 20l3-10h28l3 10z" fill="#F2B233" stroke="#171615" stroke-width="2" stroke-linejoin="round"/><path d="M17 10l-2 10M24 10v10M31 10l2 10" stroke="#171615" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="20" y="29" width="8" height="11" rx="1" fill="#EFEBE5" stroke="#171615" stroke-width="2"/></svg><span>store</span></div>
+          <div class="ptile"><svg viewBox="0 0 48 48"><path d="M8 16l16-8 16 8v18l-16 8-16-8z" fill="#EFEBE5" stroke="#171615" stroke-width="2" stroke-linejoin="round"/><path d="M8 16l16 8 16-8M24 24v18" stroke="#171615" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="36" cy="34" r="7" fill="#F2B233" stroke="#171615" stroke-width="2"/><path d="M33 34l2 2 4-4" stroke="#171615" stroke-width="2" fill="none" stroke-linecap="round"/></svg><span>delivered</span></div>
+          <div class="ptile"><svg viewBox="0 0 48 48"><path d="M9 40V30M18 40V24M27 40V18" stroke="#171615" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="35" cy="14" r="8" fill="#F2B233" stroke="#171615" stroke-width="2"/><text x="35" y="18.5" text-anchor="middle" font-size="12" font-weight="700" fill="#171615">₹</text><path d="M6 40h36" stroke="#171615" stroke-width="2" stroke-linecap="round"/></svg><span>earn</span></div>
+        </div>
+        <ul class="rule"><li><b>Icons:</b> a 24 grid, 1.75 px stroke, round caps, no fills, drawn at 16, 18 or 20 px. One colour: the text's, or neel when it's the current page. Always beside a word, except Search, Close, More and Copy (which carry an aria-label).</li>
+          <li><b>Pictograms</b> are drawings, not icons: 48 grid, a 2 px ink line, one haldi shape, always on their tile. Only in first-use empty states, the website and the partner workspace. The set: store, build, handover, earn, delivered, clients, owner, calendar, shield, apply, payments, risk, returned, tally.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== VOICE & MICROCOPY ===================== -->
+  <section class="part" id="voice">
+    <h2>Voice and microcopy</h2>
+    <p class="lead">Frrata sounds like a calm, sharp colleague who knows the trade: short, specific, never chirpy. The Words rulebook is the law; this is how it sounds in each moment.</p>
+    <div class="grid g2">
+      <div class="box" style="grid-column:1/-1"><h3>Tone by moment</h3>
+        <div class="tblwrap"><table class="tbl gl"><thead><tr><th>Moment</th><th>Sounds</th><th>Example</th><th>Not</th></tr></thead><tbody>
+          <tr><td>Done</td><td>Past tense, the thing</td><td>Archived 2 products</td><td>Success! Your products have been archived.</td></tr>
+          <tr><td>Problem you can fix</td><td>What, then how</td><td>Add a price for Ivory.</td><td>Invalid input in variant row 3</td></tr>
+          <tr><td>Refused by us</td><td>What happened, what's safe</td><td>We couldn't save. Nothing was changed.</td><td>Oops! Something went wrong.</td></tr>
+          <tr><td>Money</td><td>Exact amount and date</td><td>₹4,999 on 1 Dec, from your card ending 4242</td><td>Your subscription will renew soon</td></tr>
+          <tr><td>Risk</td><td>The reason, plainly</td><td>New PIN code, two COD orders came back</td><td>Risk score 0.82</td></tr>
+          <tr><td>Can't be undone</td><td>The consequence, once</td><td>This can't be undone.</td><td>Are you absolutely sure? This action is permanent and irreversible!</td></tr>
+          <tr><td>Empty, first time</td><td>The first step</td><td>No products yet · Add product</td><td>Looks like you don't have any products. Let's get started!</td></tr>
+          <tr><td>Waiting</td><td>What's happening, when</td><td>Razorpay is checking your account. Usually 2 days.</td><td>Please wait…</td></tr>
+          <tr><td>Celebration (once)</td><td>Proud, short</td><td>Your store is open.</td><td>🎉 Congratulations!!</td></tr>
+        </tbody></table></div>
+      </div>
+      <div class="box"><h3>Patterns</h3>
+        <div class="tblwrap"><table class="tbl gl"><tbody>
+          <tr><td>Page title</td><td>A noun: Orders, Plan and billing</td></tr>
+          <tr><td>Section title</td><td>A noun phrase: Sizes and colours</td></tr>
+          <tr><td>Button</td><td>Verb + thing: Confirm 2 orders. Count when it acts on many.</td></tr>
+          <tr><td>Field label</td><td>A noun, unit after a comma: Price, ₹</td></tr>
+          <tr><td>Placeholder</td><td>An example, never the label: Linen kurta set</td></tr>
+          <tr><td>(i) tip</td><td>One or two sentences a person would ask for</td></tr>
+          <tr><td>Toast</td><td>Past tense + Undo, or what happened + one action</td></tr>
+          <tr><td>Notice</td><td>Title: the fact. Line: what to do and by when</td></tr>
+          <tr><td>Email subject</td><td>The fact first: Order KS-5012 is on the way</td></tr>
+          <tr><td>WhatsApp</td><td>One short message, the store's name, one link</td></tr>
+        </tbody></table></div>
+      </div>
+      <div class="box"><h3>Mechanics</h3>
+        <ul class="rule" style="margin:0">
+          <li>Sentence case everywhere, titles included. Product and store names as their owners write them.</li>
+          <li>Numbers as digits (3 sizes). ₹ with Indian grouping (₹2,30,000); lakh and crore in words only in sentences (₹2.3 lakh).</li>
+          <li>Dates: Today, Yesterday, then 12 Nov; the year only when not this year. Times: 10:06 pm.</li>
+          <li>Phone: +91 98450 12345. PIN code: 302001. GSTIN in mono.</li>
+          <li>No full stop on a label, button, title or one-line toast; a full stop on sentences.</li>
+          <li>Indian English spelling: colour, cancelled, catalogue.</li>
+          <li>"You" for the brand; "we" for Frrata; "your shopper", never "your customer".</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== LAYOUT ===================== -->
+  <section class="part" id="layout">
+    <h2>Layout</h2>
+    <p class="lead">Every page is one of four shapes, on one grid, with the same header and the same sticky bars.</p>
+    <div class="grid g2">
+      <div class="box" style="grid-column:1/-1"><h3>Page anatomy</h3>
+        <div class="anat">
+          <div class="a-side"><b>Sidebar</b><span>232 px · expanded</span></div>
+          <div class="a-main">
+            <div class="a-crumb">Breadcrumb · Products › Gulabi kurta</div>
+            <div class="a-head"><span><b>Title</b> <span class="chip c-neu">Draft</span><br><span class="cap">Meta line: edited 2 h ago · kesarstudio.in/products/…</span></span><span class="a-acts"><span class="btn btn-g btn-sm">More</span><span class="btn btn-s btn-sm">Secondary</span><span class="btn btn-p btn-sm">Primary</span></span></div>
+            <div class="a-tabs">Tabs or filter bar (sticky under the header on scroll)</div>
+            <div class="a-body"><div class="a-col">Content column · 8 of 12</div><div class="a-panel">Context panel · 4 of 12 · sticky</div></div>
+            <div class="a-bar">Action bar · sticky at the foot (Save, bulk actions)</div>
+          </div>
+        </div>
+      </div>
+      <div class="box"><h3>Sidebar</h3>
+        <div class="sbs">
+          <div class="sb-x"><div class="shop"><span class="mark">rr</span><span>Kesar Studio<small>kesarstudio.in</small></span></div><a class="nav" aria-current="page" href="#layout"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6zM9 7a3 3 0 016 0"/></svg>Orders<span class="cnt w">43</span></a><a class="nav" href="#layout"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg>Products</a><span class="cap" style="padding:8px 10px">232 px</span></div>
+          <div class="sb-c"><span class="mark">rr</span><a class="nav" aria-current="page" href="#layout" title="Orders · 43"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6zM9 7a3 3 0 016 0"/></svg><i class="dotc"></i></a><a class="nav" href="#layout" title="Products"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg></a><span class="cap">64 px</span></div>
+        </div>
+        <ul class="rule"><li>Expanded at 1280 and up; collapsed to a 64 px icon rail from 768 to 1279, and by choice ("[" or the button at its foot), remembered per person. Collapsed: a tooltip names each icon; a count becomes a dot.</li><li>Groups: Today, Catalogue, Store, then the account at the foot. Under 768: the bottom bar (Home, Orders, Products, More).</li></ul>
+      </div>
+      <div class="box"><h3>Header and breadcrumbs</h3>
+        <ul class="rule" style="margin:0">
+          <li>Order, left to right: back or breadcrumb (above), title, its status chip, then actions at the right: More, secondaries, the one primary last.</li>
+          <li>A meta line under the title for facts (when, where, who); never a sentence of help.</li>
+          <li>Breadcrumbs only below a list (Products › Gulabi kurta), two levels at most; a phone shows "‹ Products" only.</li>
+          <li>Title 22/28 on a desktop, 20/26 on a phone; long names wrap to two lines, then end in "…" with the full name on hover.</li>
+          <li>The header scrolls away; its tabs or filter bar stick under the shell's top edge.</li>
+        </ul>
+      </div>
+      <div class="box"><h3>Widths and grid</h3>
+        <div class="widths">
+          <div style="--w:100%"><b>List</b> · fluid up to 1440</div>
+          <div style="--w:78%"><b>Editor</b> · 1120 (content + 320 panel)</div>
+          <div style="--w:53%"><b>Settings, reading</b> · 760</div>
+          <div style="--w:42%"><b>Dialog</b> · 440 · 560 · 720</div>
+        </div>
+        <div class="cols"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <ul class="rule"><li>12 columns, 24 px gutters on a desktop, 16 on a tablet; a phone is one column with 16 px sides. Page padding 32 · 24 · 16.</li><li>Shapes: list (full), editor (8 + 4), settings (one column 760), dashboard (cards in 3s or 4s, never 5).</li></ul>
+      </div>
+      <div class="box"><h3>Space and separation</h3>
+        <div class="spacescale"><div><i style="width:4px"></i><span>4</span><span class="cap">inside a chip</span></div><div><i style="width:8px"></i><span>8</span><span class="cap">icon to label</span></div><div><i style="width:12px"></i><span>12</span><span class="cap">between controls</span></div><div><i style="width:16px"></i><span>16</span><span class="cap">between fields</span></div><div><i style="width:20px"></i><span>20</span><span class="cap">section padding</span></div><div><i style="width:24px"></i><span>24</span><span class="cap">between sections</span></div><div><i style="width:32px"></i><span>32</span><span class="cap">between groups</span></div><div><i style="width:48px"></i><span>48</span><span class="cap">page top on wide</span></div></div>
+        <ul class="rule"><li>Inside a section, rows are split by a 1 px soft line; sections are 24 apart; a group of sections gets a heading and 32 above it. Never a card in a card.</li></ul>
+      </div>
+      <div class="box"><h3>Density</h3>
+        <div class="dens">
+          <div><b>Cards</b><span>Comfortable: 20 padding, 16 gaps (console). Compact: 16 and 12 (figures, Frrata Admin).</span></div>
+          <div><b>Tables</b><span>48 px rows (console default) · 40 px (Frrata Admin, long lists) · 56 px with a photo or two-line cell. Header 36 px, sticky.</span></div>
+          <div><b>Forms</b><span>Fields 36 px high (44 on a phone), 16 apart; two short fields share a row, never three.</span></div>
+        </div>
+      </div>
+      <div class="box"><h3>Sticky bars</h3>
+        <ul class="rule" style="margin:0">
+          <li>Top: the shell's banner (if any), then a list's tabs or filter bar once the header scrolls away. The table header sticks below them.</li>
+          <li>Bottom: one action bar at a time — the save bar on a form, the bulk bar when rows are picked, the confirm bar on a phone. It floats 16 px above the edge (above the bottom nav on a phone) and lifts toasts above it.</li>
+          <li>Side: the editor's context panel sticks 16 px below the top while the content scrolls.</li>
+        </ul>
+      </div>
+      <div class="box" style="grid-column:1/-1"><h3>Right-side panels</h3>
+        <div class="drawer-demo">
+          <div class="dd-list"><div class="dd-row on">KS-5012 · முத்துலட்சுமி · ₹1,983</div><div class="dd-row">KS-5018 · Ananya · ₹2,458</div><div class="dd-row">KS-5024 · Irfan · ₹2,934</div></div>
+          <div class="dd-panel"><div style="display:flex;justify-content:space-between;align-items:center"><b>KS-5012</b><span class="cap">Esc ✕</span></div><span class="chip c-warn">To confirm</span> <span class="chip c-bad">High risk</span><div class="kv" style="margin-top:10px"><span>Total</span><b class="num">₹1,983</b><span>Ship to</span><b>Madurai 625001</b></div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-p btn-sm">Confirm</button><button class="btn btn-s btn-sm">Open order</button></div></div>
+        </div>
+        <ul class="rule"><li><b>Context panel</b> (editors): part of the page, 320 px, sticky; under 1024 it becomes a strip under the header.</li><li><b>Quick look</b> (lists): 400 px from the right over the list, which stays visible and keeps its scroll; ↑↓ moves between rows, Esc closes, "Open order" goes to the full page. A sheet on a phone. Never for editing more than one field.</li><li>Dialogs are for decisions; panels are for looking. Never a panel inside a dialog.</li></ul>
+      </div>
+      <div class="box" style="grid-column:1/-1"><h3>Breakpoints</h3>
+        <div class="tblwrap"><table class="tbl"><thead><tr><th>Width</th><th>Navigation</th><th>Page</th><th>Lists</th><th>Editors</th></tr></thead><tbody>
+          <tr><td class="num">&lt; 768</td><td>Bottom bar + More sheet</td><td>16 px sides, body 15/22</td><td>Two-line rows; Select mode; filters in a sheet</td><td>Panel → strip under header; save bar above the nav</td></tr>
+          <tr><td class="num">768–1023</td><td>Icon rail 64</td><td>24 px sides</td><td>Columns that fit; less important ones fold into the row</td><td>Panel → strip</td></tr>
+          <tr><td class="num">1024–1279</td><td>Icon rail 64</td><td>24 px sides</td><td>All columns; quick look as an overlay</td><td>8 + 4 with a 300 panel</td></tr>
+          <tr><td class="num">1280–1439</td><td>Sidebar 232</td><td>32 px sides</td><td>All columns</td><td>8 + 4, panel 320</td></tr>
+          <tr><td class="num">≥ 1440</td><td>Sidebar 232</td><td>Content capped at 1440, centred</td><td>—</td><td>—</td></tr>
+        </tbody></table></div>
       </div>
     </div>
   </section>
