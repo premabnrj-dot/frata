@@ -7,7 +7,8 @@
 // One engine, two callers: quote() for a bag, and reprice() for an order already placed
 // (switch to COD, a capture after a switch). Both price each way of paying through
 // priceMethod(), so a stored order and a fresh quote can never disagree. An order whose lines change
-// (an order edit) re-plans only its own offers from the terms it kept: replanKept(), the same steps. Pure; paise; bps.
+// (an order edit) re-plans only its own offers from the terms it kept: replanKept() (replan.ts), the
+// same steps through productPass() and amountFor(). Pure; paise; bps.
 //
 // The order of application:
 //   1. product class — product/collection % or ₹ off, Buy X get Y, a free gift: per line, greedy
@@ -122,8 +123,11 @@ function best(cands: DiscountTerms[], base: number): { t: DiscountTerms; amount:
 
 /** A bag line as the engine reads it (sold lines only). */
 export type PlanLine = { productId: string | null; variantId: string | null; unitPrice: number; qty: number }
-/** What a product offer's saving reads: its value, its minimum and what it covers. */
-type ProductTerms = Pick<DiscountTerms, 'id' | 'style' | 'percentBps' | 'amountOff' | 'cap' | 'minSubtotal' | 'targets' | 'buyQty' | 'getQty' | 'getBps' | 'giftVariantId'> & { code?: string | null }
+/**
+ * What a product offer's saving reads: its value, its minimum and what it covers; `code` only for whether it has one (an
+ * automatic offer goes first on a tie).
+ */
+export type ProductTerms = Pick<DiscountTerms, 'id' | 'style' | 'percentBps' | 'amountOff' | 'cap' | 'minSubtotal' | 'targets' | 'buyQty' | 'getQty' | 'getBps' | 'giftVariantId'> & { code?: string | null }
 const covers = (t: ProductTerms, l: PlanLine) => !t.targets || t.targets === 'all' || (l.productId !== null && t.targets.includes(l.productId))
 
 /** One product offer over the lines still free: its discount per line, and what it needs when it gives nothing. */
@@ -172,7 +176,7 @@ export function productOffer(t: ProductTerms, lines: PlanLine[], free: boolean[]
  * takes one). Each line's product discount, the offers that gave something in the order taken, and what each that gave
  * nothing needs.
  */
-function productPass<T extends ProductTerms>(lines: PlanLine[], offers: T[], subtotal: number) {
+export function productPass<T extends ProductTerms>(lines: PlanLine[], offers: T[], subtotal: number) {
   const free = lines.map(() => true)
   const productDisc = lines.map(() => 0)
   const taken: { t: T; total: number }[] = []
@@ -295,49 +299,6 @@ export function planOffers(linesIn: PlanLine[] | number, offers: DiscountTerms[]
   const codOrder = ways.codOffered?.(afterOrder) === false ? null : order
   const online = altPayment ? { order: altOrder, payment: altPayment, ...words([...products, codOrder], [...products, altOrder, altPayment]) } : null
   return { productDisc, products, order, freeShipping: ship, payment, online, ...words([...products, order], [...products, order, payment]) }
-}
-
-/** An offer's terms as an order keeps them (order_discounts, copied at placement: kept-terms.ts). */
-export type KeptTerms = ProductTerms & Pick<DiscountTerms, 'title' | 'tiers'>
-/** An offer an order kept: its terms, the way of paying it is for (null: as its class says), and what it gave. */
-export type Kept = { terms: KeptTerms; method: 'cod' | 'prepaid' | null; amount: number }
-export type Replanned = {
-  /** Each line's product-offer discount (in `lines` order). */
-  productDisc: number[]
-  /** The kept offers that still apply, each with what it gives now. */
-  kept: Kept[]
-  /** The kept offers that no longer apply, as they were. */
-  removed: Kept[]
-  /** The delivery charge: the order's, plus what a free-delivery offer that came off had waived. */
-  shipping: number
-}
-
-/**
- * An order's OWN offers re-planned on new lines (an order edit), from the terms it kept — never today's offers, and never
- * an offer it did not get (a better one, a code, a first-order offer: those were decided at placement). The same steps as
- * planOffers: product offers greedy over the lines; each order offer on the bag after them (its tier step reached, or
- * off below its minimum); free delivery on the bag after the order offer paying on delivery gets (an order kept for one
- * way only: `method`), and when it no longer applies the charge it waived comes back; the pay-online saving on the bag
- * after the online order offer. One that gives nothing comes off. Limits and budgets are the caller's (placement's rule).
- */
-export function replanKept(lines: PlanLine[], kept: Kept[], shipping: number): Replanned {
-  const subtotal = lines.reduce((a, l) => a + l.unitPrice * l.qty, 0)
-  const cls = (k: Kept) => classOf(k.terms.style)
-  const { productDisc, taken } = productPass(lines, kept.filter((k) => cls(k) === 'product').map((k) => k.terms), subtotal)
-  const afterProduct = subtotal - productDisc.reduce((a, b) => a + b, 0)
-  const now = new Map<Kept, number>(kept.filter((k) => cls(k) === 'product').map((k) => [k, taken.find((x) => x.t === k.terms)?.total ?? 0]))
-  for (const k of kept.filter((x) => cls(x) === 'order')) now.set(k, amountFor(k.terms, afterProduct))
-  const orderFor = (way: 'cod' | 'prepaid') => { const k = kept.find((x) => cls(x) === 'order' && (x.method === null || x.method === way)); return k ? now.get(k)! : 0 }
-  const afterOrder = afterProduct - orderFor('cod')
-  // Free delivery keeps what it waived while the bag still reaches its minimum; the charge is the order's, not today's.
-  for (const k of kept.filter((x) => cls(x) === 'shipping')) now.set(k, afterOrder > 0 && afterOrder >= k.terms.minSubtotal ? k.amount : 0)
-  for (const k of kept.filter((x) => cls(x) === 'payment')) now.set(k, amountFor(k.terms, afterProduct - orderFor('prepaid')))
-  const on = kept.filter((k) => now.get(k)! > 0)
-  const removed = kept.filter((k) => now.get(k)! <= 0)
-  return {
-    productDisc, kept: on.map((k) => ({ ...k, amount: now.get(k)! })), removed,
-    shipping: shipping + removed.filter((k) => cls(k) === 'shipping').reduce((a, k) => a + k.amount, 0),
-  }
 }
 
 export type PriceLine = { gross: number; qty: number; hsn: string | null; productDiscount: number

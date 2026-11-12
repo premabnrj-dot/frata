@@ -4,10 +4,11 @@
 // AN OFFER'S TERMS AS AN ORDER KEEPS THEM (order_discounts' typed columns, drizzle/0109). Copied at placement, so the
 // order keeps the terms it was sold on whatever the offer becomes (a started offer's terms can still be changed by an
 // owner): its value, its tiers, Buy X get Y, its gift and the products it covered (a collection as its products then).
-// `storedTerms` reads them back for replanKept (discounts.ts). Pure.
+// `storedTerms` reads them back for replanKept (replan.ts). Pure.
 // =============================================================================
 
-import { classOf, stepReached, type DiscountStyle, type DiscountTerms, type KeptTerms } from './discounts'
+import { classOf, stepReached, type DiscountStyle, type DiscountTerms } from './discounts'
+import type { KeptTerms } from './replan'
 
 /** The columns an order offer's terms are kept in. Null where the style has none. */
 export type StoredTerms = {
@@ -32,12 +33,12 @@ export function termsCopy(t: DiscountTerms, base: number): StoredTerms {
   const off = steps?.every((x) => x.percentBps == null && x.amountOff != null) ? steps.map((x) => x.amountOff!) : null
   const tiers = pct || off ? steps : null
   const product = classOf(t.style) === 'product'
-  const some = product && t.targets !== undefined && t.targets !== 'all'
+  const some = product && Array.isArray(t.targets) ? (t.targets as readonly string[]) : null
   const bxgy = t.style === 'bxgy' && t.buyQty != null && t.getQty != null
   return {
     ...value,
     tierMins: tiers ? tiers.map((x) => x.min) : null, tierPercentBps: pct, tierAmountsOff: off,
-    targets: product ? (some ? 'products' : 'all') : null, targetProducts: some ? [...(t.targets as readonly string[])] : null,
+    targets: product ? (some ? 'products' : 'all') : null, targetProducts: some ? [...some] : null,
     // The engine's own default for the % off the Y pieces (productOffer): free.
     buyQty: bxgy ? t.buyQty! : null, getQty: bxgy ? t.getQty! : null, getBps: bxgy ? t.getBps ?? 10_000 : null,
     giftVariantId: t.style === 'free_gift' ? t.giftVariantId ?? null : null,
@@ -47,13 +48,14 @@ export function termsCopy(t: DiscountTerms, base: number): StoredTerms {
 /**
  * The terms back from an order_discounts row, for replanKept. Null for a product offer placed before its terms were
  * copied (0109): what it covered is not known, so it cannot be re-planned. An order offer placed then re-plans on the
- * step it reached (its tiers were not kept).
+ * step it reached (its tiers were not kept). `code` is the row's code_id: the re-plan reads only whether the offer came
+ * with a code (on a tie an automatic offer goes first, as at placement), never its text.
  */
-export function storedTerms(r: StoredTerms & { discountId: string; title: string; style: DiscountStyle }): KeptTerms | null {
+export function storedTerms(r: StoredTerms & { discountId: string; title: string; style: DiscountStyle; codeId: string | null }): KeptTerms | null {
   if (classOf(r.style) === 'product' && r.targets === null) return null
   const tiers = r.tierMins?.map((min, i) => ({ min, percentBps: r.tierPercentBps?.[i] ?? null, amountOff: r.tierAmountsOff?.[i] ?? null }))
   return {
-    id: r.discountId, title: r.title, style: r.style, percentBps: r.percentBps, amountOff: r.amountOff, cap: r.cap, minSubtotal: r.minSubtotal,
+    id: r.discountId, title: r.title, style: r.style, code: r.codeId, percentBps: r.percentBps, amountOff: r.amountOff, cap: r.cap, minSubtotal: r.minSubtotal,
     targets: r.targets === 'products' ? r.targetProducts ?? [] : 'all', buyQty: r.buyQty, getQty: r.getQty, getBps: r.getBps, giftVariantId: r.giftVariantId,
     ...(tiers?.length ? { tiers } : {}),
   }

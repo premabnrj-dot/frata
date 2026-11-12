@@ -74,8 +74,9 @@ including that Razorpay keeps its fee on a refund; one message to the shopper pe
   never addresses); tenant from `requireMember`.
 - **Modularity:** pure planning in `src/domains/orders/edit.ts` (reusing `reprice`, `planOffers`); the write in
   `src/lib/orders/edit.ts` under the order lock (`current()`), as every order write.
-- **SSOT / DRY:** one pricing path (`reprice`) for placement, switch, capture and edit; stock through `takeStock` /
-  `putStockBack` per line.
+- **SSOT / DRY:** one pricing path (`reprice`) for placement, switch, capture and edit; stock through
+  `takeStockLines` / `putStockBackLines` (`src/lib/orders/stock.ts`), per line, a swap's variants locked first
+  (`lockVariants`); offers re-planned by `replanKept` (`src/domains/checkout/replan.ts`).
 - **YAGNI:** no edit after packing (credit note instead), no shopper-side edit, no payment link for a higher prepaid
   total in v1 (collect on delivery instead; signal: shops asking).
 - **KISS:** an edit is "these lines now" → reprice → one transaction.

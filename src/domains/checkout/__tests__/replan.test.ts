@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { reprice } from '@/domains/orders/amounts'
-import { classOf, replanKept, type DiscountTerms, type Kept, type PlanLine } from '../discounts'
+import { classOf, type DiscountTerms, type PlanLine } from '../discounts'
+import { replanKept, type Kept } from '../replan'
 import { storedTerms, termsCopy } from '../kept-terms'
 import { keptOffers, quote, type BagLine, type Quote, type ShopRules, type VariantRow } from '../quote'
 
@@ -17,13 +18,13 @@ const v = (id: string, price: number): VariantRow => ({
 const t = (over: Partial<DiscountTerms>): DiscountTerms => ({
   id: 'd1', title: 'Offer', style: 'order_off', percentBps: null, amountOff: null, cap: null, minSubtotal: 0, combinesWithPayment: true, listed: true, code: null, codeId: null, ...over,
 })
-const rows = [v('a', 280000), v('b', 90000), v('c', 60000)]
+const rows = [v('a', 280000), v('b', 90000), v('c', 60000), v('s', 150000)]
 const line = (id: string, qty = 1): PlanLine => { const r = rows.find((x) => x.variantId === id)!; return { productId: r.productId, variantId: id, unitPrice: r.price, qty } }
 
 /** What placement keeps for `method`, written and read back the way an order stores it. */
 function kept(q: Quote, method: 'cod' | 'prepaid'): Kept[] {
   const base = q.subtotal - q.cod.lines.reduce((a, l) => a + l.productDiscount, 0)
-  return keptOffers(q, method).map((a) => ({ terms: storedTerms({ ...termsCopy(a.terms, base), discountId: a.discountId, title: a.title, style: a.terms.style })!, method: a.method, amount: a.amount }))
+  return keptOffers(q, method).map((a) => ({ terms: storedTerms({ ...termsCopy(a.terms, base), discountId: a.discountId, title: a.title, style: a.terms.style, codeId: a.codeId })!, method: a.method, amount: a.amount }))
 }
 const placed = (bag: BagLine[], offers: DiscountTerms[], method: 'cod' | 'prepaid' = 'prepaid') => { const q = quote(bag, rows, rules, now, null, { offers }); return { q, kept: kept(q, method) } }
 const amounts = (ks: Kept[]) => Object.fromEntries(ks.map((k) => [k.terms.title, k.amount]))
@@ -109,6 +110,20 @@ describe('replanKept', () => {
     expect(amounts(replanKept([line('a'), line('b', 2)], k, q.shipping).kept)).toEqual({ 'Buy 2 get 1': 90000 })
   })
 
+  it('on a tie between two kept product offers, the automatic one goes first, as at placement', () => {
+    // Both kept: the kurta offer took the kurta, the coded dupatta offer the dupatta. A shirt both cover, at the same
+    // saving: the automatic one takes it — at placement and in the re-plan — though the coded one's id sorts first.
+    const auto = t({ id: 'd-z-auto', title: 'Kurtas and shirts 10%', style: 'product_off', percentBps: 1000, targets: ['pa', 'ps'] })
+    const coded = t({ id: 'd-a-coded', title: 'Dupattas and shirts 10%', style: 'product_off', percentBps: 1000, targets: ['pb', 'ps'], code: 'DUP10', codeId: 'c-dup' })
+    const { q, kept: k } = placed([{ variantId: 'a', qty: 1 }, { variantId: 'b', qty: 1 }], [auto, coded])
+    expect(amounts(k)).toEqual({ 'Kurtas and shirts 10%': 28000, 'Dupattas and shirts 10%': 9000 })
+    expect(k.find((x) => x.terms.id === 'd-a-coded')!.terms.code).toBe('c-dup')
+    expect(quote([{ variantId: 's', qty: 1 }], rows, rules, now, null, { offers: [auto, coded] }).cod.applied.map((a) => a.title)).toEqual(['Kurtas and shirts 10%'])
+    const r = replanKept([line('s')], k, q.shipping)
+    expect(amounts(r.kept)).toEqual({ 'Kurtas and shirts 10%': 15000 })
+    expect(r.removed.map((x) => x.terms.title)).toEqual(['Dupattas and shirts 10%'])
+  })
+
   it('a free gift stays free while the rest of the bag reaches its minimum', () => {
     const gift = t({ id: 'd-gift', title: 'Free dupatta', style: 'free_gift', giftVariantId: 'c', minSubtotal: 300000 })
     const { q, kept: k } = placed([{ variantId: 'a', qty: 1 }, { variantId: 'b', qty: 1 }, { variantId: 'c', qty: 1 }], [gift])
@@ -119,7 +134,7 @@ describe('replanKept', () => {
 })
 
 describe('kept terms (order_discounts, 0109)', () => {
-  const row = { discountId: 'd', title: 'x', percentBps: null, amountOff: null, cap: null, minSubtotal: 0, tierMins: null, tierPercentBps: null, tierAmountsOff: null,
+  const row = { discountId: 'd', title: 'x', codeId: null, percentBps: null, amountOff: null, cap: null, minSubtotal: 0, tierMins: null, tierPercentBps: null, tierAmountsOff: null,
     targets: null, targetProducts: null, buyQty: null, getQty: null, getBps: null, giftVariantId: null }
   it('copies each style\'s terms into its columns only', () => {
     expect(termsCopy(kurtaOff, 0)).toMatchObject({ targets: 'products', targetProducts: ['pa'], tierMins: null, buyQty: null, giftVariantId: null })
