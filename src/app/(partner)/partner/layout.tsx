@@ -4,6 +4,7 @@ import { AppShell, type Place } from '@/components/shell/app-shell'
 import type { NavItem } from '@/components/shell/nav'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
+import { partnerCan } from '@/domains/partners/team'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { accessOf } from '@/lib/auth/session'
 import { ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
@@ -34,7 +35,8 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   const details: NavItem = { href: '/partner/details', label: 'Your details', icon: 'details' }
   // The team is the owner's (T1a); a lead sees Clients and their details only.
   const team: NavItem = { href: '/partner/team', label: 'Team', icon: 'staff' }
-  const items = auth.partner.memberRole === 'owner' ? [clients, team, details] : [clients, details]
+  const can = (what: Parameters<typeof partnerCan>[1]) => partnerCan(auth.partner.memberRole, what)
+  const items = [clients, ...(can('manageTeam') ? [team] : []), ...(can('seeDetails') ? [details] : [])]
   const name = auth.partner.businessName || auth.partner.name
   return (
     <AppShell title={name} tag="PARTNER" navLabel="Partner" groups={[{ label: '', items }]} tabs={items} more={[]} foot={[]}

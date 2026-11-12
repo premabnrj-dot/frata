@@ -37,7 +37,9 @@ export default async function PeoplePage() {
           // A partner's people are listed by name with their partner and their place in it (T1a, security review: the
           // brand sees each person, not only the partner). Removing the partner ends every one of them.
           const lead = p.role === 'partner' && p.partnerRole === 'lead'
-          const role = { label: lead ? 'Partner · Lead' : ROLE_LABEL[p.role as MemberRole] ?? p.role, tone: p.role === 'partner' ? 'info' as const : 'neutral' as const }
+          // A partner Frrata paused has no access; it is listed so the owner can still remove it (admin_end_partner's notice).
+          const role = p.partnerPaused ? { label: 'Partner · Paused', tone: 'warn' as const }
+            : { label: lead ? 'Partner · Lead' : ROLE_LABEL[p.role as MemberRole] ?? p.role, tone: p.role === 'partner' ? 'info' as const : 'neutral' as const }
           const you = p.userId === auth.userId
           return (
             <li key={p.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
@@ -46,7 +48,7 @@ export default async function PeoplePage() {
                 {p.email && <p className="truncate font-mono text-xs text-muted-foreground">{p.email}</p>}
               </div>
               <Badge tone={role.tone}>{role.label}</Badge>
-              <span className="w-40 text-sm text-muted-foreground">{you ? 'You' : lead ? `Since ${dayIN(p.since)}` : p.role === 'partner' ? `Built this store · ${dayIN(p.since)}` : `Since ${dayIN(p.since)}`}</span>
+              <span className="w-40 text-sm text-muted-foreground">{you ? 'You' : p.partnerPaused ? 'Paused by Frrata' : lead ? `Since ${dayIN(p.since)}` : p.role === 'partner' ? `Built this store · ${dayIN(p.since)}` : `Since ${dayIN(p.since)}`}</span>
               {p.role === 'partner' && !lead && canRemove && <RemovePartner name={p.partnerName ?? 'the partner'} shop={auth.membership.tenantName} />}
             </li>
           )

@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict'
 import { CONSOLE, USERS, expectToast, partnerOn, signedIn } from '../lib.mjs'
 
-const A = 'dddddddd-0000-0000-0000-0000000000a1', B = 'dddddddd-0000-0000-0000-0000000000b1'
+const A = 'dddddddd-0000-4000-8000-0000000000a1', B = 'dddddddd-0000-4000-8000-0000000000b1' // RFC 4122 shape: the form's z.uuid() checks it
 
 export default {
   name: 'partner-team',
@@ -26,7 +26,7 @@ export default {
     const pia = await open('partner', { viewport: { width: 1280, height: 900 } })
     await t.step('the owner invites a lead to one store; a mistake stays in the dialog', async () => {
       await pia.goto(CONSOLE + '/partner/team')
-      await pia.getByRole('heading', { name: 'Team' }).waitFor()
+      await pia.getByRole('heading', { name: 'Team', exact: true }).waitFor()
       await pia.getByRole('button', { name: 'Invite' }).click()
       const dialog = pia.getByRole('dialog', { name: 'Invite to your team' })
       await dialog.getByRole('button', { name: 'Send invite' }).click()
@@ -47,7 +47,7 @@ export default {
       await lead.getByRole('button', { name: `Join ${partnerName}` }).click()
       await expectToast(lead, 'Joined the team.', 'ok')
       await lead.waitForURL(/\/partner$/)
-      await lead.getByText('Amber Looms').waitFor()
+      await lead.getByRole('region', { name: 'Client stores' }).getByText('Amber Looms').waitFor()
       assert.equal(await lead.getByText('Basil Prints').count(), 0, 'a lead sees only the stores given')
       await lead.goto(CONSOLE + '/partner/team')
       await lead.getByText('Only the partner’s owner manages the team').waitFor()
@@ -61,7 +61,7 @@ export default {
       await row.getByRole('button', { name: 'Basil Prints' }).click()
       await expectToast(pia, 'Added to Basil Prints.', 'ok')
       await lead.goto(CONSOLE + '/partner')
-      await lead.getByText('Basil Prints').waitFor()
+      await lead.getByRole('region', { name: 'Client stores' }).getByText('Basil Prints').waitFor()
       await row.getByRole('button', { name: 'Remove' }).click()
       const dialog = pia.getByRole('dialog', { name: `Remove ${L.email}?` })
       await dialog.getByText('Their access to every store ends now.').waitFor()
@@ -89,13 +89,13 @@ export default {
       await meera.getByRole('button', { name: 'Reinstate' }).click()
       await expectToast(meera, 'Reinstated.', 'ok')
       await pia.goto(CONSOLE + '/partner')
-      await pia.getByText('Amber Looms').waitFor()
+      await pia.getByRole('region', { name: 'Client stores' }).getByText('Amber Looms').waitFor()
     })
 
     await t.step('the team on a phone', async () => {
       const phone = await open('partner', { viewport: { width: 390, height: 844 } })
       await phone.goto(CONSOLE + '/partner/team')
-      await phone.getByRole('heading', { name: 'Team' }).waitFor()
+      await phone.getByRole('heading', { name: 'Team', exact: true }).waitFor()
       assert.ok(await phone.evaluate(() => document.documentElement.scrollWidth <= 390), 'no sideways scroll on a phone')
       await phone.screenshot({ path: t.out('team-phone'), fullPage: true })
     })

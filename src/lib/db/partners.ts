@@ -125,13 +125,14 @@ export async function removePartner(tx: Tx, tenantId: string, uid: string): Prom
   }
 }
 
-export type Person = { userId: string; email: string | null; role: string; since: Date; partnerName: string | null; partnerRole: string | null }
+export type Person = { userId: string; email: string | null; role: string; since: Date; partnerName: string | null; partnerRole: string | null; partnerPaused: boolean }
 
 /** Settings › People. The shop is the transaction's tenant (app_current_tenant), never a parameter. */
 export async function shopPeople(tenantId: string): Promise<Person[]> {
   return withTenant(tenantId, async (tx) => {
-    const rows = await tx.execute<Record<string, string | null>>(sql`select * from app_shop_people()`)
-    return rows.map((r) => ({ userId: r.user_id!, email: r.email ?? null, role: r.role!, since: new Date(r.since!), partnerName: r.partner_name ?? null, partnerRole: r.partner_role ?? null }))
+    const rows = await tx.execute<Record<string, string | null> & { since: string | Date; partner_paused: boolean | null }>(sql`select * from app_shop_people()`)
+    return rows.map((r) => ({ userId: r.user_id!, email: r.email ?? null, role: r.role!, since: new Date(r.since), partnerName: r.partner_name ?? null,
+      partnerRole: r.partner_role ?? null, partnerPaused: r.partner_paused === true }))
   })
 }
 

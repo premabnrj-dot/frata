@@ -57,8 +57,10 @@ export async function partnerTeamForAdmin(staff: StaffOk, partnerId: string): Pr
   void staff
   const db = adminDb()
   const rows = await db.select({ id: partnerMembers.id, email: partnerMembers.email, role: partnerMembers.role, acceptedAt: partnerMembers.acceptedAt,
-    inviteExpiresAt: partnerMembers.inviteExpiresAt, stores: count(partnerAssignments.tenantId) })
+    inviteExpiresAt: partnerMembers.inviteExpiresAt, stores: count(partnerLinks.tenantId) })
+    // Stores on live links only, as app_partner_team counts them (impact review).
     .from(partnerMembers).leftJoin(partnerAssignments, eq(partnerAssignments.partnerMemberId, partnerMembers.id))
+    .leftJoin(partnerLinks, and(eq(partnerLinks.tenantId, partnerAssignments.tenantId), eq(partnerLinks.partnerId, partnerMembers.partnerId), isNull(partnerLinks.removedAt)))
     .where(and(eq(partnerMembers.partnerId, partnerId), isNull(partnerMembers.removedAt)))
     .groupBy(partnerMembers.id).orderBy(asc(partnerMembers.invitedAt)).limit(60)
   return rows.map((r) => ({ ...r, stores: Number(r.stores) }))

@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.53.0
+  version: 2.53.1
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -155,13 +155,15 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   team in `partner_members` (owner | lead; `builder` waits for ADR-0015) with `partner_assignments` (which stores a lead
   works on). Both tables are definers-only for `frata_app` (check:tenant fails any grant but Admin's select). A partner
   person's shop access is still a `members` row with role `partner`, now pointing at its person
-  (`members.partner_member_id`, CHECK `(role = 'partner') = (partner_member_id is not null)`); only the `app_partner_*`
-  definers write those rows, and `app_access_for` counts one only while the member, the partner (approved, not
-  suspended) and the link are live (`app_pm_live`). Who may do what: `src/domains/partners/team.ts` for the words, the
-  definers for the lock (owner-only team, owner-only handover until T1b passkeys; a colleague never accepts a
+  (`members.partner_member_id`, CHECK `(role = 'partner') = (partner_member_id is not null)`); only definers write those rows
+  (`app_partner_*`, `app_remove_partner`, the handover ones, `admin_end_partner` / `admin_reinstate_partner`), and `app_access_for` counts one only while the member, the partner (approved, not
+  suspended) and the link are live (`app_pm_live`). Who may do what: `PARTNER_CAN` in `src/domains/partners/team.ts` decides what
+  a page offers (Team, Your details, the hand-over banner: owner only), the definers are the lock (owner-only team, owner-only handover until T1b passkeys; a colleague never accepts a
   handover). Invites are claimed by the invited, confirmed email on `/join` (no token); 7 days; ≤ 50 people;
   20 invites an hour. Admin suspends with `admin_end_partner` (deletes every partner person's shop rows, audits, tells
-  each shop) and reinstates from assignments. A fixture that makes someone a partner on a shop uses e2e `partnerOn`.
+  each shop) and reinstates from assignments (tells each shop again). While paused, `app_shop_people` lists the partner
+  from its link (`partner_paused`) so the brand can still remove it. `app_partner_my_invites` lists only invites the
+  person could accept (sign-in sends anyone with one to `/join`). A lead never gets the owner's contact details. A fixture that makes someone a partner on a shop uses e2e `partnerOn`.
 - A layout refuses with a panel, never a redirect (frata-gotchas) — and its
   check guards nothing below it: **every page and action calls
   `requireMember` itself.** It returns `not_configured` rather than throwing

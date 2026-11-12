@@ -8,18 +8,18 @@
 export const PARTNER_ROLES = ['owner', 'lead', 'builder'] as const
 export type PartnerRole = (typeof PARTNER_ROLES)[number]
 
-/** Roles an owner may invite today. */
-export const INVITABLE_ROLES = ['lead'] as const satisfies readonly PartnerRole[]
 
 export const PARTNER_ROLE_LABEL: Record<PartnerRole, string> = { owner: 'Owner', lead: 'Lead', builder: 'Builder' }
 
-/** What each role may do in the workspace (spec § Roles). The owner works on every client store. */
+/**
+ * What each role may do in the workspace (spec § Roles), read by the partner layout, the Team and Your details pages,
+ * the team actions and the console's building banner. The definers in drizzle/0121 refuse the same on their own.
+ * Hand over stays owner-only until T1b (partner passkeys).
+ */
 export const PARTNER_CAN = {
-  seeTeam: ['owner'],
   manageTeam: ['owner'],
-  createStore: ['owner', 'lead'],
-  handOver: ['owner', 'lead'],
-  allStores: ['owner'],
+  seeDetails: ['owner'],
+  handOver: ['owner'],
 } as const satisfies Record<string, readonly PartnerRole[]>
 
 export const partnerCan = (role: PartnerRole, what: keyof typeof PARTNER_CAN): boolean =>
@@ -33,5 +33,5 @@ export function memberState(m: { acceptedAt: Date | null; removedAt?: Date | nul
   return m.inviteExpiresAt && m.inviteExpiresAt <= now ? 'expired' : 'invited'
 }
 
-/** A partner has at most this many people (owner included), active or invited. */
+/** A partner has at most this many people (owner included), active or invited. app_partner_invite holds the same 50. */
 export const MAX_PARTNER_PEOPLE = 50

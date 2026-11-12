@@ -3,7 +3,7 @@ import { Section } from '@/components/layout/section'
 import { PictoTile } from '@/components/brand/illustrations'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
-import { memberState, PARTNER_ROLE_LABEL } from '@/domains/partners/team'
+import { memberState, partnerCan, PARTNER_ROLE_LABEL } from '@/domains/partners/team'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { partnerClients, partnerTeam } from '@/lib/db/partners'
 import { dayIN } from '@/lib/format-date'
@@ -18,7 +18,7 @@ export const metadata = { title: 'Team' }
 export default async function TeamPage() {
   const auth = await requirePartner()
   if (!auth.ok) return <Panel title={auth.message} />
-  if (auth.partner.memberRole !== 'owner') return <Panel title="Only the partner’s owner manages the team" />
+  if (!partnerCan(auth.partner.memberRole, 'manageTeam')) return <Panel title="Only the partner’s owner manages the team" />
   const now = new Date()
   const [team, clients] = await Promise.all([
     partnerTeam(auth.userId).catch((err) => { console.error('[team]', err instanceof Error ? err.name : err); return null }),
@@ -26,7 +26,7 @@ export default async function TeamPage() {
   ])
   if (!team || !clients) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const stores = clients.filter((c) => !c.removedAt).map((c) => ({ tenantId: c.tenantId, name: c.name }))
-  const people = team.filter((p) => memberState(p, now) !== 'removed')
+  const people = team
   return (
     <>
       <PageHeader title="Team" actions={<InviteButton stores={stores} />} />

@@ -85,8 +85,11 @@ create function app_my_partner(p_uid uuid) returns table (
   brands_now text, applied_at timestamptz, approved_at timestamptz, declined_at timestamptz, decline_reason text,
   member_id uuid, member_role text, suspended_at timestamptz)
   language sql stable security definer set search_path = '' as $$
-  select p.id, p.email, p.name, p.business_name, p.phone, p.city, p.services, p.work_url, p.brands_now,
-         p.applied_at, p.approved_at, p.declined_at, p.decline_reason, pm.id, pm.role, p.suspended_at
+  -- A lead gets the partner's name and state, never the owner's contact details (impact review).
+  select p.id, case when pm.role = 'owner' then p.email else '' end, p.name, p.business_name,
+         case when pm.role = 'owner' then p.phone else '' end, p.city, p.services, p.work_url,
+         case when pm.role = 'owner' then p.brands_now end,
+         p.applied_at, p.approved_at, p.declined_at, case when pm.role = 'owner' then p.decline_reason end, pm.id, pm.role, p.suspended_at
     from public.partner_members pm join public.partners p on p.id = pm.partner_id
    where pm.user_id = p_uid and pm.removed_at is null and pm.accepted_at is not null and pm.role in ('owner', 'lead')
 $$;
@@ -258,18 +261,29 @@ begin
 end $$;
 --> statement-breakpoint
 
--- ── A shop's people: partner people are labelled with their partner and their partner role. ──
+-- ── A shop's people: partner people are labelled with their partner and their partner role. A linked partner that
+--    Frrata paused has no members rows (admin_end_partner), so it is listed from the link, marked paused, and the
+--    brand's owner can still remove it (impact review: the notice sends the brand here). ──
 drop function if exists app_shop_people();
 --> statement-breakpoint
-create function app_shop_people() returns table (user_id uuid, email text, role text, since timestamptz, partner_name text, partner_role text)
+create function app_shop_people() returns table (user_id uuid, email text, role text, since timestamptz, partner_name text,
+  partner_role text, partner_paused boolean)
   language sql stable security definer set search_path = '' as $$
-  select m.user_id, u.email::text, m.role, m.created_at,
-    case when m.role = 'partner' then (select coalesce(nullif(pa.business_name, ''), pa.name) from public.partner_members pm
-                                         join public.partners pa on pa.id = pm.partner_id where pm.id = m.partner_member_id) end,
-    case when m.role = 'partner' then (select pm.role from public.partner_members pm where pm.id = m.partner_member_id) end
-    from public.members m left join auth.users u on u.id = m.user_id
-   where m.tenant_id = public.app_current_tenant()
-   order by array_position(array['owner','admin','partner','staff','accountant'], m.role), m.created_at
+  select x.* from (
+    select m.user_id, u.email::text, m.role, m.created_at,
+      case when m.role = 'partner' then (select coalesce(nullif(pa.business_name, ''), pa.name) from public.partner_members pm
+                                           join public.partners pa on pa.id = pm.partner_id where pm.id = m.partner_member_id) end,
+      case when m.role = 'partner' then (select pm.role from public.partner_members pm where pm.id = m.partner_member_id) end,
+      false
+      from public.members m left join auth.users u on u.id = m.user_id
+     where m.tenant_id = public.app_current_tenant()
+    union all
+    select pa.user_id, pa.email, 'partner', l.created_at, coalesce(nullif(pa.business_name, ''), pa.name), 'owner', true
+      from public.partner_links l join public.partners pa on pa.id = l.partner_id
+     where l.tenant_id = public.app_current_tenant() and l.removed_at is null and pa.suspended_at is not null
+       and not exists (select 1 from public.members m where m.tenant_id = l.tenant_id and m.user_id = pa.user_id)
+  ) x (user_id, email, role, since, partner_name, partner_role, partner_paused)
+   order by array_position(array['owner','admin','partner','staff','accountant'], x.role), x.since
 $$;
 --> statement-breakpoint
 
@@ -402,6 +416,11 @@ create or replace function app_partner_my_invites(p_uid uuid) returns table (
     join public.partner_members pm on pm.email = lower(u.email) and pm.accepted_at is null and pm.removed_at is null and pm.invite_expires_at > now()
     join public.partners pa on pa.id = pm.partner_id and pa.approved_at is not null and pa.declined_at is null and pa.suspended_at is null
    where u.id = p_uid and u.email_confirmed_at is not null
+     -- Only invites this person could accept (app_partner_accept's refusals): not someone already in a live team or with
+     -- their own application; sign-in sends anyone with an invite to /join, so a dead one would trap them there.
+     and not exists (select 1 from public.partner_members x join public.partners xp on xp.id = x.partner_id
+                      where x.user_id = p_uid and x.removed_at is null and xp.declined_at is null)
+     and not exists (select 1 from public.partners p2 where p2.user_id = p_uid and p2.declined_at is null)
    order by pm.invited_at
 $$;
 --> statement-breakpoint
@@ -420,11 +439,15 @@ begin
    for update of pm;
   if r.id is null then raise exception 'no_invite' using errcode = 'P0001'; end if;
   if r.role <> 'lead' then raise exception 'bad_role' using errcode = 'P0001'; end if;
-  if exists (select 1 from public.partner_members pm where pm.user_id = p_uid and pm.removed_at is null) then
-    raise exception 'in_team' using errcode = 'P0001';
-  end if;
   if exists (select 1 from public.partners p where p.user_id = p_uid and p.declined_at is null) then
     raise exception 'own_partner' using errcode = 'P0001';
+  end if;
+  -- A declined applicant's own owner row ends here, so they can join a team (impact review).
+  update public.partner_members set removed_at = now(), removed_by = p_uid
+   where user_id = p_uid and removed_at is null
+     and partner_id in (select p.id from public.partners p where p.user_id = p_uid and p.declined_at is not null);
+  if exists (select 1 from public.partner_members pm where pm.user_id = p_uid and pm.removed_at is null) then
+    raise exception 'in_team' using errcode = 'P0001';
   end if;
   update public.partner_members set user_id = p_uid, accepted_at = now() where id = p_member;
   for a in select x.tenant_id, t.name from public.partner_assignments x join public.tenants t on t.id = x.tenant_id
@@ -537,15 +560,17 @@ begin
 end $$;
 --> statement-breakpoint
 
--- Reinstate: the owner works on every active link again, leads on their assignments.
+-- Reinstate: the owner works on every active link again, leads on their assignments; each linked shop is told.
+-- Returns the number of linked shops.
 create or replace function admin_reinstate_partner(p_staff uuid, p_partner uuid) returns integer
   language plpgsql volatile security definer set search_path = '' as $$
-declare v_email text; v_owner record; n integer;
+declare v_email text; v_name text; v_owner record; n integer; lk record;
 begin
   select ps.email into v_email from public.platform_staff ps where ps.user_id = p_staff and ps.role = 'admin';
   if v_email is null then raise exception 'not_admin' using errcode = 'P0001'; end if;
-  update public.partners set suspended_at = null, suspended_by = null, suspend_reason = null where id = p_partner and suspended_at is not null;
-  if not found then raise exception 'not_suspended' using errcode = 'P0001'; end if;
+  update public.partners set suspended_at = null, suspended_by = null, suspend_reason = null where id = p_partner and suspended_at is not null
+  returning coalesce(nullif(business_name, ''), name) into v_name;
+  if v_name is null then raise exception 'not_suspended' using errcode = 'P0001'; end if;
   select pm.id, pm.user_id into v_owner from public.partner_members pm
    where pm.partner_id = p_partner and pm.role = 'owner' and pm.removed_at is null and pm.accepted_at is not null limit 1;
   if v_owner.id is not null then
@@ -558,7 +583,16 @@ begin
       join public.partner_members pm on pm.id = a.partner_member_id and pm.partner_id = p_partner and pm.removed_at is null and pm.accepted_at is not null
       join public.partner_links l on l.tenant_id = a.tenant_id and l.partner_id = p_partner and l.removed_at is null
     on conflict do nothing;
-  get diagnostics n = row_count;
+  n := 0;
+  for lk in select l2.tenant_id from public.partner_links l2 where l2.partner_id = p_partner and l2.removed_at is null loop
+    n := n + 1;
+    insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
+      values (lk.tenant_id, p_staff, v_email, 'staff', 'shop.partner_reinstated', null, jsonb_build_object('partner', v_name));
+    perform public.notice_write(lk.tenant_id, 'frrata_action', 'admin', null,
+      'Frrata reinstated your partner, ' || v_name,
+      'They can open your shop again. Remove them in People if you no longer work together.',
+      '/console/settings/people', false, true, null, p_staff);
+  end loop;
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target)
     values (null, p_staff, v_email, 'staff', 'partner.reinstated', p_partner::text);
   return n;

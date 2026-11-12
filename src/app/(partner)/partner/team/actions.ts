@@ -6,6 +6,7 @@ import { requirePartner } from '@/lib/auth/require-partner'
 import { assignPartnerPerson, invitePartnerPerson, removePartnerPerson } from '@/lib/db/partners'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import type { ActionResult } from '@/components/ui/action-form'
+import { MAX_PARTNER_PEOPLE, partnerCan } from '@/domains/partners/team'
 
 // =============================================================================
 // FILE: src/app/(partner)/partner/team/actions.ts — the partner's team (T1a). Who may: the partner's OWNER only, and
@@ -19,12 +20,12 @@ const SENTENCES = {
   bad_role: 'Invite them as a Lead.',
   bad_email: 'That email doesn’t look right.',
   bad_store: 'One of those stores isn’t yours any more. Refresh and try again.',
-  too_many: 'A team has at most 50 people, invited or joined.',
+  too_many: `A team has at most ${MAX_PARTNER_PEOPLE} people, invited or joined.`,
   already_invited: 'That email is already in your team or invited.',
   no_person: 'That person isn’t in your team any more. Refresh and try again.',
   already_member: 'They already work on that store in another way (the brand’s own people). Ask the brand.',
   is_owner: 'The owner can’t be removed.',
-} as const satisfies Record<string, string>
+} satisfies Record<string, string>
 const say = (code: string, fallback: string): string => (SENTENCES as Record<string, string | undefined>)[code] ?? fallback
 
 const Invite = z.object({
@@ -35,7 +36,7 @@ const Invite = z.object({
 export async function inviteTeamAction(form: FormData): Promise<ActionResult> {
   const auth = await requirePartner()
   if (!auth.ok) return { error: auth.message }
-  if (auth.partner.memberRole !== 'owner') return { error: SENTENCES.not_owner }
+  if (!partnerCan(auth.partner.memberRole, 'manageTeam')) return { error: SENTENCES.not_owner }
   const parsed = Invite.safeParse({ email: form.get('email'), stores: [...new Set(form.getAll('stores').map(String))] })
   if (!parsed.success) {
     const emailBad = parsed.error.issues.some((i) => i.path[0] === 'email')
