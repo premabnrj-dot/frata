@@ -71,7 +71,7 @@ function ProductPicker({ name, idx, suggest, disabled, onPick, onKeep }: { name:
           else if (e.key === 'Escape') setOpen(false)
         }}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="h-10 w-full min-w-0 rounded-md border border-input bg-card px-2 text-sm md:h-9" />
+        className="h-11 w-full min-w-0 rounded-md border border-input bg-card px-2 text-sm md:h-9" />
       {open && list.length > 0 && (
         <ul id={`${id}-list`} role="listbox" aria-label={`Products for ${name}`} className="absolute inset-x-0 top-full z-20 mt-1 max-h-60 overflow-auto rounded-md border border-border bg-card py-1 shadow-md">
           {list.map((t, i) => (

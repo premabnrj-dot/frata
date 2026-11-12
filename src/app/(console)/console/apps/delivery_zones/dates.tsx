@@ -10,6 +10,7 @@ import { istDayKey } from '@/domains/time/day'
 import { weekdayShortIN } from '@/lib/format-date'
 import { settle } from '@/lib/settle'
 import { addHolidayAction, removeHolidayAction, saveDispatchAction } from './actions'
+import { FIELD } from '@/components/ui/field'
 
 // =============================================================================
 // Delivery Zones › Delivery dates (PD·1, approved mockup "Delivery dates"): dispatch (working days, the daily cutoff,
@@ -19,7 +20,7 @@ import { addHolidayAction, removeHolidayAction, saveDispatchAction } from './act
 // =============================================================================
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const field = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9'
+const field = `${FIELD} w-full`
 const IN_STOCK = [{ kind: 'in_stock' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null }]
 const day = (iso: string) => new Date(`${iso}T00:00:00+05:30`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })
 
@@ -74,7 +75,7 @@ function Dates({ nowIso, canEdit, dispatch, holidays, zones }: Props) {
               {DAYS.map((d, i) => {
                 const on = ((ship >> i) & 1) === 1
                 return <button key={d} type="button" aria-pressed={on} disabled={!canEdit} onClick={() => setShip((s) => s ^ (1 << i))}
-                  className="min-h-10 min-w-12 rounded-md border border-input px-3 text-sm aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground md:min-h-9">{d}</button>
+                  className="min-h-11 min-w-12 rounded-md border border-input px-3 text-sm aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground md:min-h-9">{d}</button>
               })}
             </div>
           </fieldset>

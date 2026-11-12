@@ -48,7 +48,7 @@ export function BuildingBanner({ shop, inviteEmail }: { shop: string; inviteEmai
           <label htmlFor="owner-email" className="block text-sm font-medium text-foreground">Owner’s email</label>
           <input id="owner-email" type="email" inputMode="email" autoComplete="off" value={email} onChange={(e) => { setEmail(e.target.value); fields.clear('owner-email'); setError(null) }}
             {...fields.props('owner-email')}
-            className="h-10 w-full rounded-md border border-input bg-card px-3 font-mono text-sm text-foreground aria-invalid:border-danger-text md:h-9" />
+            className="h-11 w-full rounded-md border border-input bg-card px-3 font-mono text-sm text-foreground aria-invalid:border-danger-text md:h-9" />
           <FieldError name="owner-email" message={fields.errors['owner-email']} reserve />
         </form>
       </Dialog>

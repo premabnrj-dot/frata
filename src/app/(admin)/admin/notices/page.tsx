@@ -10,10 +10,11 @@ import { dateTimeIN } from '@/lib/format-date'
 import { sendNoticeAction } from './actions'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Notices' }
 
-const field = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9'
+const field = `${FIELD} w-full`
 
 /** Admin › Notices (mockup v2 screen 9): write to every shop, a plan or one shop; what was sent, by batch. */
 export default async function AdminNoticesPage() {

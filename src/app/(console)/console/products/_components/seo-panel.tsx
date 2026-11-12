@@ -50,7 +50,7 @@ export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescriptio
         </div>
         <div className="space-y-1">
           <label htmlFor="seo-title" className="block text-sm font-medium">Page title</label>
-          <input id="seo-title" value={seoTitle} maxLength={200} placeholder={defaults.title} {...fieldProps('seoTitle', errors.seoTitle)} onChange={(e) => onSeoTitle(e.target.value)} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text" />
+          <input id="seo-title" value={seoTitle} maxLength={200} placeholder={defaults.title} {...fieldProps('seoTitle', errors.seoTitle)} onChange={(e) => onSeoTitle(e.target.value)} className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text" />
           <FieldError name="seoTitle" message={errors.seoTitle} />
           <p className="text-xs text-muted-foreground">{count(title.length, TITLE_WARN_AT)} characters. Empty uses the one shown.</p>
         </div>
@@ -65,7 +65,7 @@ export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescriptio
           {/* The input carries the mark (focus lands on it); its frame draws the red edge. */}
           <div className={`flex min-w-0 items-center rounded-md border bg-card text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring ${errors.handle ? 'border-danger-text' : 'border-input'}`}>
             <span className="shrink-0 truncate pl-3 font-mono text-xs text-muted-foreground">…/products/</span>
-            <input id="handle" value={handle} maxLength={100} placeholder={defaults.handle} {...fieldProps('handle', errors.handle)} onChange={(e) => onHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} className="h-10 md:h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" />
+            <input id="handle" value={handle} maxLength={100} placeholder={defaults.handle} {...fieldProps('handle', errors.handle)} onChange={(e) => onHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} className="h-11 md:h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" />
           </div>
           {errors.handle ? <FieldError name="handle" message={errors.handle} />
             : <p className="text-xs text-muted-foreground">{everLive ? 'It has been live: if you change it, the old address keeps working and sends shoppers here.' : 'Short words shoppers can read. Fixed once it has been live (a change then redirects).'}</p>}

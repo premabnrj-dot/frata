@@ -11,10 +11,11 @@ import { dayIN } from '@/lib/format-date'
 import { blockNameAction, releaseNameAction, settleDomainAction, unblockNameAction } from './actions'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Names' }
 
-const field = 'h-10 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark'
+const field = FIELD
 const KIND: Record<BlockedKind, string> = { protected: 'Protected brand', offensive: 'Offensive', domain: 'Domain' }
 
 /** Shop addresses D1·7 (mockup § 8, Admin › Names): blocked names and domains, and names held by a shop's past. */

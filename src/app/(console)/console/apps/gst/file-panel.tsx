@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/toast'
 import { dateTimeIN } from '@/lib/format-date'
 import type { FilingStep, Liability } from '@/domains/tax/gsp'
 import { gstConnect, gstDisconnect, gstFile, gstFileOtp, gstPush, gstVerify } from './actions'
+import { FIELD } from '@/components/ui/field'
 
 // =============================================================================
 // Filing from Frrata (GST app G2; approved mockup "File from Frrata"): connect with the portal's OTP, push, see the
@@ -16,7 +17,7 @@ import { gstConnect, gstDisconnect, gstFile, gstFileOtp, gstPush, gstVerify } fr
 
 const rs = (p: number) => `₹${(p / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const HEADS: [keyof Liability, string][] = [['taxable', 'Taxable value'], ['cgst', 'CGST'], ['sgst', 'SGST'], ['igst', 'IGST'], ['documents', 'Documents']]
-const input = 'h-10 rounded-md border border-input bg-card px-3 text-sm md:h-9'
+const input = FIELD
 
 export function FilePanel({ period, step, ours, portal, username, pushedAt, filedAt, arn, gspName }: {
   period: string; step: FilingStep; ours: Liability; portal: Liability | null; username: string | null

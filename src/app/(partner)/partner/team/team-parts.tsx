@@ -24,7 +24,7 @@ export function InviteButton({ stores }: { stores: Store[] }) {
           <div className="grid gap-1.5">
             <label htmlFor="team-email" className="text-sm font-medium">Work email</label>
             <input id="team-email" name="email" type="email" required maxLength={200} autoComplete="off" data-error="Enter their work email"
-              className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+              className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
             <FieldMessage name="email" />
           </div>
           <fieldset className="grid gap-2">

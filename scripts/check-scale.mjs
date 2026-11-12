@@ -7,7 +7,7 @@
 // (frata-design-language § Type scale and § UX foundation rules 14, 19):
 //   text-px     a pixel font size in brackets (use text-xs … text-2xl, or text-section)
 //   card-frame  the inline card frame (use <Section>)
-//   field-h9    an input, select or textarea with a bare 36 px height class (use h-10 md:h-9)
+//   field-h9    an input, select or textarea with a bare 36 px height class (use h-11 md:h-9: 44 px on a phone in Neel; h-10 outside it)
 //   button-h    a height class handed to <Button> or button() (use its size variant: twMerge
 //               drops the caller's h-* but keeps md:h-9 — impact review U·1)
 // Today's debts are listed in scripts/check-scale.allow as "count path · rule"
@@ -107,7 +107,7 @@ export function scan(files) {
   for (const file of files) {
     const rel = relative('.', file).split('\\').join('/')
     const text = readFileSync(file, 'utf8')
-    const h9 = fieldTags(text.split(/\r?\n/).filter((l) => !isComment(l)).join('\n')).filter((t) => /\bh-9\b/.test(t) && !/\bh-10\b/.test(t)).length
+    const h9 = fieldTags(text.split(/\r?\n/).filter((l) => !isComment(l)).join('\n')).filter((t) => /\bh-9\b/.test(t) && !/\bh-1[01]\b/.test(t)).length
     if (h9) found[`${rel} · field-h9`] = h9
     const code = text.split(/\r?\n/).filter((l) => !isComment(l)).join('\n')
     const values = classValues(code)

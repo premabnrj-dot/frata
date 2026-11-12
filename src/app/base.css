@@ -191,24 +191,24 @@
   --color-illo-haldi: var(--illo-haldi);
   --color-illo-haldi-soft: var(--illo-haldi-soft);
   --color-illo-indigo-soft: var(--illo-indigo-soft);
-  /* Neel only (defined under [data-neel]) */
-  --color-primary-hover: var(--primary-hover);
-  --color-link: var(--link);
-  --color-select: var(--select);
-  --color-select-foreground: var(--select-foreground);
-  --color-halo: var(--halo);
-  --color-side: var(--side);
-  --color-sunk: var(--sunk);
-  --color-line-soft: var(--line-soft);
-  --color-edge: var(--edge);
-  --color-text-3: var(--text-3);
-  --color-off: var(--off);
-  --color-neutral-mark: var(--neutral-mark);
-  --color-chart: var(--chart);
-  --color-chart-now: var(--chart-now);
-  --color-bar-btn: var(--bar-btn);
-  --color-bar-btn-text: var(--bar-btn-text);
-  --color-bar-link: var(--bar-link);
+  /* Neel only (defined in neel.css under [data-neel]); outside it each falls back to what the place used before Neel. */
+  --color-primary-hover: var(--primary-hover, color-mix(in oklab, var(--primary) 90%, transparent));
+  --color-link: var(--link, var(--foreground));
+  --color-select: var(--select, var(--accent));
+  --color-select-foreground: var(--select-foreground, var(--foreground));
+  --color-halo: var(--halo, var(--ring));
+  --color-side: var(--side, var(--background));
+  --color-sunk: var(--sunk, var(--muted));
+  --color-line-soft: var(--line-soft, var(--border));
+  --color-edge: var(--edge, var(--input));
+  --color-text-3: var(--text-3, var(--muted-foreground));
+  --color-off: var(--off, var(--input));
+  --color-neutral-mark: var(--neutral-mark, var(--muted-foreground));
+  --color-chart: var(--chart, var(--primary));
+  --color-chart-now: var(--chart-now, var(--muted));
+  --color-bar-btn: var(--bar-btn, var(--bar-foreground));
+  --color-bar-btn-text: var(--bar-btn-text, var(--bar));
+  --color-bar-link: var(--bar-link, var(--bar-foreground));
 
   /* The Section title (every card, Console and Admin): text-section font-semibold. Never --text-card (collides with --color-card). */
   --text-section: var(--t-section);
@@ -221,6 +221,9 @@
   --text-label--line-height: var(--t-label-lh);
   --text-small: var(--t-small);
   --text-small--line-height: var(--t-small-lh);
+  /* A key (⌘S, Ctrl+S): 11 px Inter, never mono (Neel § Components). */
+  --text-kbd: 11px;
+  --text-kbd--line-height: 1;
 
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains);

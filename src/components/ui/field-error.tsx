@@ -95,7 +95,7 @@ export function FieldError({ name, id, message, reserve, className }: { name?: s
   const theId = id ?? (name ? errorId(name) : undefined)
   if (!message) return reserve ? <span className="block min-h-5" aria-hidden /> : null
   return (
-    <span id={theId} className={`flex animate-err-in items-start gap-1.5 text-xs text-danger-text ${className ?? ''}`}>
+    <span id={theId} className={`flex animate-err-in items-start gap-1.5 text-xs text-danger-text in-data-neel:text-label ${className ?? ''}`}>
       <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" className="mt-px shrink-0">
         <circle cx="8" cy="8" r="7" fill="currentColor" />
         <path d="M8 4.6v4.2M8 11.3v.2" stroke="var(--background)" strokeWidth="1.8" strokeLinecap="round" />

@@ -69,7 +69,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                   <ActionForm action={decidePartnerAction} className="space-y-2">
                     <input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="decline" />
                     <label htmlFor="reason" className="block text-sm font-medium">Reason to decline</label>
-                    <input id="reason" name="reason" maxLength={300} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9" />
+                    <input id="reason" name="reason" maxLength={300} className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9" />
                     <FieldMessage name="reason" />
                     <Submit variant="secondary" className="w-full">Decline</Submit>
                   </ActionForm>
@@ -97,11 +97,11 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                       <input type="hidden" name="id" value={open.id} /><input type="hidden" name="name" value={open.businessName || open.name} />
                       {!open.suspendedAt && (<>
                         <label htmlFor="suspend-reason" className="block text-sm font-medium">Reason to suspend</label>
-                        <input id="suspend-reason" name="reason" maxLength={300} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+                        <input id="suspend-reason" name="reason" maxLength={300} className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
                         <FieldMessage name="reason" />
                       </>)}
                       <label htmlFor="suspend-typed" className="block text-sm font-medium">Type {open.businessName || open.name} to confirm</label>
-                      <input id="suspend-typed" name="typed" maxLength={120} autoComplete="off" className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+                      <input id="suspend-typed" name="typed" maxLength={120} autoComplete="off" className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
                       <FieldMessage name="typed" />
                       <Submit variant={open.suspendedAt ? 'secondary' : 'destructive'} className="w-full">{open.suspendedAt ? 'Reinstate' : 'Suspend'}</Submit>
                     </ActionForm>

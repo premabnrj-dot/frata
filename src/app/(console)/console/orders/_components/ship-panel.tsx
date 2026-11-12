@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { cameBackOrder, deliverOrder, lostOrder, shipOrder, undoOutcomeAction } from '../actions'
+import { FIELD } from '@/components/ui/field'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/_components/ship-panel.tsx
@@ -33,7 +34,7 @@ function Panel({ orderId, number, stage, may, shipment, stockTaken }: ShipPanelP
   const [courier, setCourier] = useState(''), [tracking, setTracking] = useState('')
   const [ask, setAsk] = useState<null | 'came_back' | 'lost'>(null)
   const [restock, setRestock] = useState(true)
-  const field = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9'
+  const field = `${FIELD} w-full`
 
   async function go(word: string, fn: () => Promise<{ ok: true; eventId: string } | { ok: false; error: string }>) {
     if (busy) return

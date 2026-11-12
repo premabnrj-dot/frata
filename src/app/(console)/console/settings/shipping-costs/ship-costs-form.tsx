@@ -32,7 +32,7 @@ export function ShipCostsForm({ current, confirmedOn: confirmed0 }: { current: R
   const [confirmedOn, setConfirmedOn] = useState(confirmed0)
   const [saved, setSaved] = useState<Record<Key, string | null>>(current)
   const changed = !confirmedOn || FIELDS.some((f) => v[f.key] !== saved[f.key])
-  const field = 'h-10 w-full min-w-0 bg-transparent text-sm tabular-nums outline-none md:h-9'
+  const field = 'h-11 w-full min-w-0 bg-transparent text-sm tabular-nums outline-none md:h-9'
 
   return (
     <div className="max-w-xl space-y-4">

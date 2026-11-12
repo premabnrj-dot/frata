@@ -23,7 +23,7 @@ export function DetailsPanel({ attributes, values, onChange }: { attributes: Att
                 {chosen.map((id) => <li key={id} className="flex items-center gap-1 rounded-sm bg-accent px-2 py-0.5 text-xs">{name(id)}<button type="button" aria-label={`Remove ${name(id)}`} onClick={() => set(a.handle, chosen.filter((x) => x !== id))} className="inline-grid min-h-6 min-w-6 place-items-center text-muted-foreground hover:text-foreground"><Icon name="close" className="size-4" /></button></li>)}
               </ul>
             )}
-            <select id={`attr-${a.handle}`} value="" disabled={chosen.length >= 20} onChange={(e) => e.target.value && set(a.handle, [...chosen, e.target.value])} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-2 text-sm">
+            <select id={`attr-${a.handle}`} value="" disabled={chosen.length >= 20} onChange={(e) => e.target.value && set(a.handle, [...chosen, e.target.value])} className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-2 text-sm">
               <option value="">{chosen.length ? 'Add another…' : 'Choose…'}</option>
               {rest.map((v) => <option key={v.id} value={v.id}>{v.name}{v.frata ? ' ·' : ''}</option>)}
             </select>

@@ -15,6 +15,7 @@ import { paise } from '@/domains/money/paise'
 import { checkQualify, saveOffer } from '../actions'
 import { OfferMore, type Pickers } from './offer-more'
 import { InfoTip } from '@/components/ui/info-tip'
+import { FIELD } from '@/components/ui/field'
 
 // =============================================================================
 // THE OFFER FORM (spec § Console; mockup "The founder's side"): one short form for the chosen style, a live preview
@@ -23,7 +24,7 @@ import { InfoTip } from '@/components/ui/info-tip'
 // =============================================================================
 
 const inr = (p: number) => formatInr(paise(p))
-const field = 'h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text disabled:opacity-60'
+const field = `${FIELD} w-full`
 
 /** What a shopper reads for these values: the bar's own words (offer-text.ts), from the same parse the action uses. */
 function preview(v: OfferValues): { bar: string; bag: string } | null {

@@ -44,7 +44,7 @@ export function AppsGallery({ cards, groups, featured }: { cards: AppCard[]; gro
       {featured}
 
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-card px-3 sm:max-w-xs md:h-9">
+        <label className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-card px-3 sm:max-w-xs md:h-9">
           <Icon name="search" className="size-4 shrink-0 text-muted-foreground" />
           <span className="sr-only">Search apps</span>
           <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search apps" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />

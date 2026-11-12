@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/toast'
 import { PINCODE_SHAPE, slugFor, slugProblem } from '@/domains/signup/slug'
 import { checkAddress, lookupPincode, type AddressCheck } from '@/app/start/actions'
 import { createClientStoreAction } from './actions'
+import { FIELD } from '@/components/ui/field'
 
 const ADDRESS_WORDS: Record<AddressCheck['state'], string> = {
   ok: 'Free', taken: 'Taken. Try another.', too_short: 'At least 3 letters', shape: 'Letters, digits and hyphens only', reserved: 'Reserved. Try another.',
@@ -58,7 +59,7 @@ export function NewStoreForm({ shopDomain }: { shopDomain: string }) {
       router.replace('/console'); router.refresh()
     })
   }
-  const field = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text md:h-9'
+  const field = `${FIELD} w-full`
   const msg = (f: string) => <FieldError name={f} message={error?.field === f ? error.text : null} className="text-sm" />
   return (
     <form ref={formRef} onSubmit={submit} noValidate className="space-y-4">
@@ -72,7 +73,7 @@ export function NewStoreForm({ shopDomain }: { shopDomain: string }) {
         <label htmlFor="slug" className="block text-sm font-medium">Shop address</label>
         <div className="flex items-stretch overflow-hidden rounded-md border border-input bg-card">
           <input id="slug" value={slug} aria-invalid={error?.field === 'slug' || undefined} aria-describedby={error?.field === 'slug' ? `slug-state ${errorId('slug')}` : 'slug-state'}
-            onChange={(e) => { setEdited(true); setSlug(e.target.value.toLowerCase()); setError(null) }} className="h-10 min-w-0 flex-1 bg-transparent px-3 font-mono text-sm outline-none md:h-9" />
+            onChange={(e) => { setEdited(true); setSlug(e.target.value.toLowerCase()); setError(null) }} className="h-11 min-w-0 flex-1 bg-transparent px-3 font-mono text-sm outline-none md:h-9" />
           <span className="flex items-center bg-muted px-3 font-mono text-sm text-muted-foreground">.{shopDomain}</span>
         </div>
         <p id="slug-state" className={`text-sm ${address?.state === 'ok' ? 'text-ok-text' : 'text-muted-foreground'}`}>{address ? ADDRESS_WORDS[address.state] : ' '}</p>

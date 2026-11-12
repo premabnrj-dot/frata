@@ -78,7 +78,7 @@ export function PartCreditDialog({ open, number, lines, inclusive, busy, onClose
             <div className="space-y-1">
               <label htmlFor="pc-amount" className="block text-sm font-medium">Amount{agreed && inclusive ? ' (with GST)' : ''}</label>
               <div className="flex items-center gap-1.5"><span className="text-sm text-muted-foreground">₹</span>
-                <input id="pc-amount" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} className="h-10 w-40 rounded-md border border-input bg-card px-3 font-mono text-sm md:h-9" /></div>
+                <input id="pc-amount" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} className="h-11 w-40 rounded-md border border-input bg-card px-3 font-mono text-sm md:h-9" /></div>
             </div>
           </div>
         )}

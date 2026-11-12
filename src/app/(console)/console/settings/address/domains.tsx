@@ -245,7 +245,7 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
           <div className="grid gap-2">
             <label className="grid gap-1 text-sm font-medium" htmlFor="domain">Domain
               <input id="domain" value={raw} onChange={(e) => { setRaw(e.target.value); setError(null) }} autoComplete="off" spellCheck={false} placeholder="yourbrand.in" maxLength={300}
-                className="h-10 rounded-md border border-input bg-card px-3 font-mono text-sm md:h-9" onKeyDown={(e) => { if (e.key === 'Enter' && shown) connect() }} />
+                className="h-11 rounded-md border border-input bg-card px-3 font-mono text-sm md:h-9" onKeyDown={(e) => { if (e.key === 'Enter' && shown) connect() }} />
             </label>
             {shown && shown !== raw.trim() && !error && <p className="font-mono text-xs text-muted-foreground">{shown}</p>}
           </div>

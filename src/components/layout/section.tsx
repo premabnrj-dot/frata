@@ -22,10 +22,11 @@ export function Section({ title, action, children, className, id, labelledBy, fl
   const h = id ? `${id}-h` : undefined
   return (
     <Tag id={id} aria-label={ariaLabel} aria-labelledby={labelledBy ?? (title ? h : undefined)}
-      className={cn('rounded-md border border-border bg-card', flush ? 'overflow-hidden' : 'space-y-3 p-4 md:p-5', className)}>
+      // Neel § Components: 12 px corners; 20 px in (16 on a phone), 16 between the title and what follows.
+      className={cn('rounded-lg border border-border bg-card', flush ? 'overflow-hidden' : 'space-y-4 p-4 md:p-5', className)}>
       {(title || action) && (
         // A flush card's rows draw their own padding (px-4); its header lines up with them and centres its action.
-        <div className={cn('flex justify-between gap-3', flush ? 'items-center px-4 pt-3 pb-1' : 'items-start')}>
+        <div className={cn('flex justify-between gap-3', flush ? 'items-center px-4 pt-4 pb-1 md:px-5' : 'items-start')}>
           {title && <h2 id={h} className="text-section font-semibold">{title}</h2>}
           {action && <div className="shrink-0">{action}</div>}
         </div>

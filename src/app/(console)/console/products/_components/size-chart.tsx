@@ -31,7 +31,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
       <div className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
           <label htmlFor="type" className="block text-sm font-medium">Product type</label>
-          <select id="type" value={typeId ?? ''} onChange={(e) => { setEdit(null); onType(e.target.value || null) }} className="h-10 md:h-9 rounded-md border border-input bg-card px-2 text-sm">
+          <select id="type" value={typeId ?? ''} onChange={(e) => { setEdit(null); onType(e.target.value || null) }} className="h-11 md:h-9 rounded-md border border-input bg-card px-2 text-sm">
             <option value="">No type</option>
             {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
@@ -39,7 +39,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
         {newName === null
           ? <button type="button" className="h-9 text-sm underline" onClick={() => setNewName('')}>New type</button>
           : <form className="flex flex-wrap items-end gap-1.5" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await createType(newName, copy ? typeId : null); if (!r.ok) return toast.error(r.error); setNewName(null); setCopy(false); router.refresh(); onType(r.id) }) }}>
-              <input aria-label="New type name" autoFocus value={newName} placeholder="Saree" onChange={(e) => setNewName(e.target.value)} className="h-10 md:h-9 w-36 rounded-md border border-input bg-card px-2 text-sm" />
+              <input aria-label="New type name" autoFocus value={newName} placeholder="Saree" onChange={(e) => setNewName(e.target.value)} className="h-11 md:h-9 w-36 rounded-md border border-input bg-card px-2 text-sm" />
               {type && type.sizeChart.rows.length > 0 && <label className="inline-flex min-h-6 items-center gap-1.5 text-sm"><input type="checkbox" checked={copy} onChange={(e) => setCopy(e.target.checked)} />Copy the {type.name} chart</label>}
               <Button type="submit" variant="secondary" disabled={pending || !newName.trim()}>Create</Button>
               <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => setNewName(null)}>Cancel</button>

@@ -8,10 +8,11 @@ import { createMerchantAction } from './actions'
 import { Section } from '@/components/layout/section'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Add merchant' }
 
-const field = 'h-10 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark'
+const field = FIELD
 
 export default async function NewMerchantPage() {
   const staff = await requireStaff(ANY_STAFF)

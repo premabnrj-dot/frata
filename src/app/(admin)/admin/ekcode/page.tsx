@@ -11,6 +11,7 @@ import { dateTimeIN } from '@/lib/format-date'
 import { blockAction, limitsAction, shopControlAction } from './actions'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'EkCode' }
 
@@ -19,7 +20,7 @@ const TABS = [['overview', 'Overview'], ['shops', 'Shops'], ['controls', 'Contro
 const PERIODS = [[1, 'Today'], [7, '7 days'], [30, '30 days']] as const
 const PER_MSG_PAISE = 11.5 // Meta's India authentication rate before GST (frata-integrations, checked 2026-11-09); GST is reclaimed
 const n = (x: number | null | undefined) => (x == null ? 'fewer than 5' : x.toLocaleString('en-IN'))
-const field = 'h-10 w-28 rounded-md border border-input bg-card px-3 text-sm md:h-9'
+const field = `${FIELD} w-28`
 
 export default async function EkcodeAdmin({ searchParams }: { searchParams: Promise<{ tab?: string; days?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
@@ -86,7 +87,7 @@ async function Shops({ staff, days }: { staff: Parameters<typeof ekShops>[0]; da
                 <input type="hidden" name="tenantId" value={r.tenant_id} /><input type="hidden" name="shop" value={r.shop} />
                 <input type="hidden" name="action" value={r.paused_at ? 'resume' : r.breaker_at ? 'reset' : 'pause'} />
                 <label className="sr-only" htmlFor={`why-${r.tenant_id}`}>Why</label>
-                <input id={`why-${r.tenant_id}`} name="reason" required minLength={3} maxLength={500} placeholder="Why" data-error="Say why, in a few words." className="h-10 w-40 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9" />
+                <input id={`why-${r.tenant_id}`} name="reason" required minLength={3} maxLength={500} placeholder="Why" data-error="Say why, in a few words." className="h-11 w-40 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9" />
                 <Submit variant="secondary">{r.paused_at ? `Resume ${r.shop}` : r.breaker_at ? `Reset ${r.shop}'s breaker` : `Pause EkCode for ${r.shop}`}</Submit>
                 <span className="basis-full text-left empty:hidden"><FieldMessage name="reason" /></span>
               </ActionForm>
@@ -117,7 +118,7 @@ async function Controls({ staff }: { staff: Parameters<typeof ekSettings>[0] }) 
           <label key={p} className="flex items-center justify-between gap-3 text-sm">Codes a day per shop · {p[0]!.toUpperCase() + p.slice(1)}
             <input name={p} type="number" defaultValue={String(l.perShopDay[p])} className={field} /></label>
         ))}
-        <label className="grid gap-1 text-sm font-medium">Why<input name="reason" required minLength={3} maxLength={500} data-error="Say why, in a few words." className="h-10 rounded-md border border-input bg-card px-3 text-sm font-normal aria-invalid:border-danger-mark md:h-9" /><FieldMessage name="reason" /></label>
+        <label className="grid gap-1 text-sm font-medium">Why<input name="reason" required minLength={3} maxLength={500} data-error="Say why, in a few words." className="h-11 rounded-md border border-input bg-card px-3 text-sm font-normal aria-invalid:border-danger-mark md:h-9" /><FieldMessage name="reason" /></label>
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs text-muted-foreground">{s ? `v${s.version} · ${dateTimeIN(new Date(s.at))}` : ''}</span>
           <Submit>Save limits for every shop</Submit>
@@ -126,9 +127,9 @@ async function Controls({ staff }: { staff: Parameters<typeof ekSettings>[0] }) 
       </Section>
       <Section title="Block a number">
       <ActionForm action={blockAction} className="flex flex-wrap items-end gap-2">
-        <label className="grid gap-1 text-sm font-medium">Number<input name="phone" inputMode="numeric" maxLength={14} className="h-10 w-40 rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-mark md:h-9" /><FieldMessage name="phone" /></label>
-        <label className="grid gap-1 text-sm font-medium">Why<input name="reason" required minLength={3} maxLength={500} data-error="Say why, in a few words." className="h-10 w-56 rounded-md border border-input bg-card px-3 text-sm font-normal aria-invalid:border-danger-mark md:h-9" /><FieldMessage name="reason" /></label>
-        <select name="lift" className="h-10 rounded-md border border-input bg-card px-2 text-sm md:h-9" aria-label="Block or unblock"><option value="0">Block</option><option value="1">Unblock</option></select>
+        <label className="grid gap-1 text-sm font-medium">Number<input name="phone" inputMode="numeric" maxLength={14} className="h-11 w-40 rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-mark md:h-9" /><FieldMessage name="phone" /></label>
+        <label className="grid gap-1 text-sm font-medium">Why<input name="reason" required minLength={3} maxLength={500} data-error="Say why, in a few words." className="h-11 w-56 rounded-md border border-input bg-card px-3 text-sm font-normal aria-invalid:border-danger-mark md:h-9" /><FieldMessage name="reason" /></label>
+        <select name="lift" className="h-11 rounded-md border border-input bg-card px-2 text-sm md:h-9" aria-label="Block or unblock"><option value="0">Block</option><option value="1">Unblock</option></select>
         <Submit variant="secondary">Apply to this number</Submit>
       </ActionForm>
       </Section>

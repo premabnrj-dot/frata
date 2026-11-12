@@ -12,6 +12,7 @@ import type { EditorPage } from '@/lib/queries/pages'
 import { Switch, Text } from './controls'
 import { DesignForm } from './design-form'
 import type { FormCtx } from './section-form'
+import { FIELD_BOX } from '@/components/ui/field'
 
 // =============================================================================
 // Look › Pages (Theme Studio TS1a, board v2). Loaded only when a page is opened (next/dynamic: the customizer holds its
@@ -23,7 +24,7 @@ import type { FormCtx } from './section-form'
 export type ContactRow = { label: string; value: string | null }
 const SETTINGS = '/console/settings/contact'
 const move = <T,>(xs: T[], i: number, by: -1 | 1) => { const j = i + by; if (j < 0 || j >= xs.length) return xs; const out = [...xs]; [out[i], out[j]] = [out[j]!, out[i]!]; return out }
-const field = 'w-full rounded-md border border-input bg-card px-3 text-sm placeholder:italic placeholder:text-muted-foreground'
+const field = `${FIELD_BOX} w-full placeholder:italic placeholder:text-muted-foreground`
 
 function FromSettings({ rows }: { rows: ContactRow[] }) {
   return (
@@ -55,7 +56,7 @@ function Questions({ items, set, answers }: { items: FaqItem[]; set: (x: FaqItem
         {items.map((x, i) => (
           <li key={i} className="space-y-2 rounded-xl border border-input p-2.5">
             <div className="flex items-center gap-1">
-              <input aria-label={`Question ${i + 1}`} value={x.q} maxLength={80} onChange={(e) => item(i, { q: e.target.value })} className={`${field} h-10 flex-1`} />
+              <input aria-label={`Question ${i + 1}`} value={x.q} maxLength={80} onChange={(e) => item(i, { q: e.target.value })} className={`${field} h-11 flex-1`} />
               <button type="button" aria-label={`Move question ${i + 1} up`} disabled={i === 0} onClick={() => set(move(items, i, -1))} className="grid size-9 place-items-center rounded-md disabled:opacity-30"><Icon name="up" className="size-4" /></button>
               <button type="button" aria-label={`Move question ${i + 1} down`} disabled={i === items.length - 1} onClick={() => set(move(items, i, 1))} className="grid size-9 place-items-center rounded-md disabled:opacity-30"><Icon name="down" className="size-4" /></button>
               <button type="button" aria-label={`Remove question ${i + 1}`} onClick={() => set(items.filter((_, j) => j !== i))} className="grid size-9 place-items-center rounded-md"><Icon name="close" className="size-3.5" /></button>

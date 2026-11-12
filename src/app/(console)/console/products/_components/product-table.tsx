@@ -147,7 +147,7 @@ export function ProductTable({ rows, collections }: { rows: Row[]; collections: 
           <Button variant="destructive" disabled={pending || (mustType && typed.trim() !== String(ids.length))} onClick={remove}>{pending ? 'Deleting…' : `Delete ${n(ids.length, 'product')}`}</Button>
         </>}>
         {mustType && <label className="block space-y-1 text-sm">Type {ids.length} to delete them
-          <input inputMode="numeric" value={typed} onChange={(e) => setTyped(e.target.value)} className="h-10 w-24 rounded-md border border-input bg-card px-2 font-mono md:h-9" /></label>}
+          <input inputMode="numeric" value={typed} onChange={(e) => setTyped(e.target.value)} className="h-11 w-24 rounded-md border border-input bg-card px-2 font-mono md:h-9" /></label>}
       </Dialog>
 
       <Dialog open={asking?.step === 'kept'} onClose={() => { close(); after() }} error={dialogError}

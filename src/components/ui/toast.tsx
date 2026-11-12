@@ -169,7 +169,7 @@ export function Toaster({ children, calm = false, region = true }: {
           onPointerEnter={() => setHeld((h) => ({ ...h, hover: true }))} onPointerLeave={() => setHeld((h) => ({ ...h, hover: false }))}
           onFocus={() => setHeld((h) => ({ ...h, focus: true }))} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setHeld((h) => ({ ...h, focus: false })) }}
           className={['fixed inset-x-4 z-50 mx-auto flex max-w-md items-center gap-3 overflow-hidden px-3 py-2.5 text-sm print:hidden',
-            'bottom-[calc(var(--toast-lift,0px)+1rem+env(safe-area-inset-bottom))] rounded-md bg-bar text-bar-foreground md:bottom-[calc(var(--toast-lift,0px)+1.5rem)]',
+            'bottom-[calc(var(--toast-lift,0px)+1rem+env(safe-area-inset-bottom))] rounded-mid bg-bar font-medium text-bar-foreground shadow-lg md:bottom-[calc(var(--toast-lift,0px)+1.5rem)]',
             toast.kind === 'error' ? 'ring-1 ring-danger-mark/60' : ''].join(' ')}
           data-surface="ink">
           <Mark kind={toast.kind} />
@@ -180,12 +180,12 @@ export function Toaster({ children, calm = false, region = true }: {
           </span>
           {toast.undo ? (
             // aria-disabled, not disabled: a disabled button drops keyboard focus to the page.
-            <button type="button" onClick={undo} aria-disabled={busy} className="inline-flex min-h-10 items-center rounded-sm px-2 font-semibold underline underline-offset-2 md:min-h-9">
+            <button type="button" onClick={undo} aria-disabled={busy} className="inline-flex min-h-11 items-center rounded-sm px-2 font-medium text-bar-link hover:underline md:min-h-9">
               {busy ? 'Undoing…' : 'Undo'}
             </button>
           ) : null}
           {toast.action ? (
-            <button type="button" onClick={act} aria-disabled={busy} className="inline-flex min-h-10 items-center rounded-sm px-2 font-semibold underline underline-offset-2 md:min-h-9">
+            <button type="button" onClick={act} aria-disabled={busy} className="inline-flex min-h-11 items-center rounded-sm px-2 font-medium text-bar-link hover:underline md:min-h-9">
               {toast.action.label}
             </button>
           ) : null}

@@ -66,3 +66,55 @@
   --t-label: 13px; --t-label-lh: 18px; --t-small: 12px; --t-small-lh: 16px;
   --font-num: var(--font-inter), system-ui, sans-serif;
 }
+
+/* Buttons in Neel (src/components/ui/button.tsx): no thread, 44 px on a phone, ghost in text 2, disabled at 45%. */
+[data-neel] { --btn-h: 2.75rem; }
+[data-neel] .btn.thread::after { content: none; }
+[data-neel] .btn-ghost { color: var(--muted-foreground); }
+[data-neel] .btn-ghost:hover { color: var(--foreground); }
+[data-neel] .btn:disabled { opacity: 0.45; }
+
+/* Badge (src/components/ui/badge.tsx): a 22 px pill, 8 px sides, 12/500, a 6 px dot in the tone's mark. */
+[data-neel] .badge { height: 22px; gap: 6px; padding: 0 8px; border-radius: 999px; font-size: 12px; line-height: 1; }
+[data-neel] .badge::before { content: ""; width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--badge-dot, var(--neutral-mark)); }
+
+/* Dialog (src/components/ui/dialog.tsx): 16 px corners, 18 px padding, 10 apart, e3; on a phone the sheet's top
+   corners are 20 (the sheet itself is base.css's). */
+[data-neel] dialog[data-dialog] { border-radius: var(--r-xl); box-shadow: var(--sh-3); }
+[data-neel] dialog[data-dialog] > div { padding: 18px; gap: 10px; }
+@media (max-width: 767px) { [data-neel] dialog[data-dialog] { border-radius: 20px 20px 0 0; } }
+
+/* Focus (Neel § Access): 2 px neel 500 at a 2 px gap, white on the bar; the same in the look editor, which has no shell. */
+@layer base {
+  [data-neel] :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  [data-neel] [data-surface="ink"] :focus-visible { outline-color: var(--ink-foreground); }
+}
+
+/* Fields (src/components/ui/field.ts, and every inline field): focus is the border and a 2 px neel line at a 1 px gap;
+   a mistake is the bad edge and a 3 px halo in its tint (the words below say what is wrong, 13/18). */
+@layer base {
+  [data-neel] :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea):focus-visible {
+    outline-offset: 1px; border-color: var(--ring);
+  }
+  [data-neel] :is(input, select, textarea)[aria-invalid="true"] { border-color: var(--danger-mark); box-shadow: 0 0 0 3px var(--danger); }
+}
+
+/* Checkbox and radio (Neel § Components): 16 px, the field edge, neel when on; the 24 px target is the label around
+   it (or the cell). Native inputs keep their keyboard and form behaviour; only the paint is ours. */
+@layer base {
+  [data-neel] :is(input[type="checkbox"]:not([role="switch"]), input[type="radio"]) {
+    appearance: none; margin: 0; flex: none; display: inline-grid; place-content: center; width: 16px; height: 16px;
+    border: 1px solid var(--input); background: var(--card); vertical-align: middle; cursor: pointer;
+    transition: background-color var(--transition-duration-fast) var(--ease-standard), border-color var(--transition-duration-fast) var(--ease-standard);
+  }
+  [data-neel] input[type="checkbox"]:not([role="switch"]) { border-radius: var(--r-xs); }
+  [data-neel] input[type="radio"] { border-radius: 50%; }
+  [data-neel] input[type="checkbox"]:not([role="switch"]):is(:checked, :indeterminate) { background: var(--primary); border-color: var(--primary); }
+  [data-neel] input[type="checkbox"]:not([role="switch"]):checked::before {
+    content: ""; width: 10px; height: 10px; background: var(--primary-foreground);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3L13 4.5' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  [data-neel] input[type="checkbox"]:not([role="switch"]):indeterminate::before { content: ""; width: 8px; height: 2px; border-radius: 1px; background: var(--primary-foreground); }
+  [data-neel] input[type="radio"]:checked { border: 5px solid var(--primary); }
+  [data-neel] :is(input[type="checkbox"], input[type="radio"]):disabled { opacity: 0.45; cursor: not-allowed; }
+}

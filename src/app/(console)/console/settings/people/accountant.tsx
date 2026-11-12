@@ -28,7 +28,7 @@ export function AccountantCard({ member, invites, consoleUrl }: { member: { user
         <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); act(() => inviteShopAccountant(email), `Invited. They sign in at ${consoleUrl} with ${email}.`) }}>
           <div className="min-w-56 flex-1 space-y-1">
             <label htmlFor="acc-email" className="block text-sm font-medium">Email</label>
-            <input id="acc-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+            <input id="acc-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
           </div>
           <Button type="submit" disabled={pending || !email.trim()}>{pending ? 'Inviting…' : 'Invite'}</Button>
         </form>

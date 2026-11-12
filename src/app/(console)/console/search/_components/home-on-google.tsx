@@ -43,7 +43,7 @@ export function HomeOnGoogle({ initial, defaults, address }: { initial: { seoTit
       </div>
       <div className="space-y-1">
         <label htmlFor="home-title" className="block text-sm font-medium">Page title</label>
-        <input id="home-title" value={d.seoTitle} maxLength={200} placeholder={defaults.title} {...fieldProps('home-title', errors.seoTitle)} onChange={(e) => { setD({ ...d, seoTitle: e.target.value }); fix('seoTitle') }} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text" />
+        <input id="home-title" value={d.seoTitle} maxLength={200} placeholder={defaults.title} {...fieldProps('home-title', errors.seoTitle)} onChange={(e) => { setD({ ...d, seoTitle: e.target.value }); fix('seoTitle') }} className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text" />
         <FieldError name="home-title" message={errors.seoTitle} />
         <p className="text-xs text-muted-foreground">{count(title.length, TITLE_WARN_AT)} characters</p>
       </div>

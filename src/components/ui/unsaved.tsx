@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button } from './button'
+import { Button, Spinner } from './button'
 import { Dialog } from './dialog'
 import { startNavigation } from '@/components/shell/nav-progress'
 
@@ -44,17 +44,19 @@ export function useLeaveGuard(dirty: boolean) {
  * products PR·2, mockup § The editor and § On a phone): at the foot, above the phone's bottom nav, where the thumb is;
  * `keys` shows the save shortcut the page wired (the button's name stays "Save"; the hint is for the eye).
  */
-export function SaveBar({ onSave, onDiscard, pending, placement = 'top', keys }: { onSave: () => void; onDiscard: () => void; pending: boolean; placement?: 'top' | 'bottom'; keys?: string }) {
+export function SaveBar({ onSave, onDiscard, pending, placement = 'top', keys, count }: { onSave: () => void; onDiscard: () => void; pending: boolean; placement?: 'top' | 'bottom'; keys?: string; count?: number }) {
+  // Neel § Components: the bar (ink), 12 px corners, e3; Discard outlined in the bar's own line, Save in the bar's white.
+  const btn = 'inline-flex h-9 items-center rounded-md px-3.5 text-sm font-medium transition-colors duration-fast ease-standard disabled:opacity-45'
   return (
     <div role="region" aria-label="Unsaved changes" data-surface="ink" data-savebar={placement} className={placement === 'top'
-      ? 'sticky top-[var(--shell-top,0px)] z-10 mb-3 flex animate-rise items-center gap-3 rounded-md bg-bar px-4 py-2.5 text-bar-foreground'
-      : 'fixed inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.5rem)] z-30 flex animate-rise items-center gap-3 rounded-md bg-bar px-4 py-2.5 text-bar-foreground shadow-lg md:sticky md:inset-x-auto md:bottom-4 md:mt-4'}>
-      <b className="text-sm">Unsaved changes</b>
+      ? 'sticky top-[var(--shell-top,0px)] z-10 mb-3 flex animate-rise items-center gap-3 rounded-lg bg-bar py-2.5 pr-2.5 pl-4 text-bar-foreground shadow-lg'
+      : 'fixed inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.5rem)] z-30 flex animate-rise items-center gap-3 rounded-lg bg-bar py-2.5 pr-2.5 pl-4 text-bar-foreground shadow-lg md:sticky md:inset-x-auto md:bottom-4 md:mt-4'}>
+      <b className="text-sm font-medium">{count && count > 1 ? `${count} unsaved changes` : count === 1 ? '1 unsaved change' : 'Unsaved changes'}</b>
       <span className="flex-1" />
-      <button type="button" className="h-8 rounded-md border border-current px-3 text-sm" disabled={pending} onClick={onDiscard}>Discard</button>
-      <button type="button" className="h-8 rounded-md bg-bar-foreground px-3 text-sm font-medium text-bar" disabled={pending} onClick={onSave}
+      <button type="button" className={`${btn} border border-bar-foreground/35 hover:bg-bar-foreground/10`} disabled={pending} onClick={onDiscard}>Discard</button>
+      <button type="button" className={`${btn} gap-1.5 bg-bar-btn text-bar-btn-text`} disabled={pending} onClick={onSave}
         aria-keyshortcuts={keys ? 'Control+S Meta+S' : undefined} data-save-bar="">
-        {pending ? 'Saving…' : 'Save'}{keys && !pending && <span aria-hidden="true" className="ml-1.5 hidden font-mono text-xs opacity-70 md:inline">{keys}</span>}
+        {pending && <Spinner />}{pending ? 'Saving…' : 'Save'}{keys && !pending && <kbd aria-hidden="true" className="hidden rounded-xs font-sans bg-bar-btn-text/10 px-[5px] py-[3px] text-kbd font-medium md:inline">{keys}</kbd>}
       </button>
     </div>
   )

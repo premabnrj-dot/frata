@@ -29,7 +29,7 @@ export function EmailsCard({ orderId, email, emails, canAct }: { orderId: string
       {editing ? (
         <div className="flex flex-wrap items-center gap-2">
           <label htmlFor="order-email" className="sr-only">Shopper’s email</label>
-          <input id="order-email" type="email" value={value} onChange={(e) => setValue(e.target.value)} maxLength={254} className="h-10 min-w-0 flex-1 rounded-md border border-input bg-card px-3 font-mono text-sm md:h-9" />
+          <input id="order-email" type="email" value={value} onChange={(e) => setValue(e.target.value)} maxLength={254} className="h-11 min-w-0 flex-1 rounded-md border border-input bg-card px-3 font-mono text-sm md:h-9" />
           <Button disabled={pending} onClick={() => run(() => setOrderEmailAction(orderId, value), 'Saved.')}>Save</Button>
           <Button variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
         </div>

@@ -15,10 +15,11 @@ import { MerchantTabs } from '../tabs'
 import { adminRenameAction, disconnectDomainAction, freezeAddressAction } from './actions'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Addresses' }
 
-const field = 'h-10 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark'
+const field = FIELD
 
 function state(n: NameView) {
   // D1·9: a name added beside the current one (block it in Names to take it down).

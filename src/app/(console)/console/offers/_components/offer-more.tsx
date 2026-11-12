@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { OfferValues } from '@/domains/checkout/offer-form'
 import { InfoTip } from '@/components/ui/info-tip'
 import { FieldError, errorId, fieldProps } from '@/components/ui/field-error'
+import { FIELD } from '@/components/ui/field'
 
 // =============================================================================
 // THE O·2 PARTS OF THE OFFER FORM (docs/plans/2026-11-08-offers-o2.md): what a product offer covers, Buy X get Y, the
@@ -12,7 +13,7 @@ import { FieldError, errorId, fieldProps } from '@/components/ui/field-error'
 
 export type Pickers = { products: { id: string; title: string }[]; collections: { id: string; title: string }[]; pieces: { id: string; title: string }[] }
 
-const field = 'h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text disabled:opacity-60'
+const field = `${FIELD} w-full`
 const lab = 'block text-sm font-medium'
 
 export function OfferMore({ v, set, errors, pickers }: { v: OfferValues; set: (p: Partial<OfferValues>) => void; errors: Record<string, string>; pickers: Pickers }) {

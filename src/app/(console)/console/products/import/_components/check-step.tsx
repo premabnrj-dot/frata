@@ -77,7 +77,7 @@ export function CheckStep({ sheet, mapping, checked, costs, cap, busy, onRemap, 
                     <dt className="[overflow-wrap:anywhere]">&ldquo;{mapping.headers[i]}&rdquo;</dt>
                     <dd className="sm:col-span-2">
                       <select aria-label={`What “${mapping.headers[i]}” is`} value={f ?? ''} onChange={(e) => onRemap(i, (e.target.value || null) as Field | null)}
-                        className="h-10 w-full min-w-0 rounded-md border border-input bg-card px-2 text-sm md:h-9">
+                        className="h-11 w-full min-w-0 rounded-md border border-input bg-card px-2 text-sm md:h-9">
                         <option value="">Not imported</option>
                         {choices.map((c) => <option key={c} value={c}>{FIELDS[c]}</option>)}
                       </select>

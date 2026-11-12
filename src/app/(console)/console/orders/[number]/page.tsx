@@ -147,8 +147,8 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
               </div>
               {o.phone ? (
                 <div className="flex flex-wrap gap-2">
-                  <a href={`tel:+91${o.phone}`} className="inline-flex min-h-10 items-center rounded-md border border-input px-3 text-sm md:min-h-9">Call {o.phone}</a>
-                  <a href={wa(o.phone, `Hello, this is about your order ${label}. Can you confirm it, please?`)} rel="noopener" target="_blank" className="inline-flex min-h-10 items-center rounded-md border border-input px-3 text-sm md:min-h-9">WhatsApp</a>
+                  <a href={`tel:+91${o.phone}`} className="inline-flex min-h-11 items-center rounded-md border border-input px-3 text-sm md:min-h-9">Call {o.phone}</a>
+                  <a href={wa(o.phone, `Hello, this is about your order ${label}. Can you confirm it, please?`)} rel="noopener" target="_blank" className="inline-flex min-h-11 items-center rounded-md border border-input px-3 text-sm md:min-h-9">WhatsApp</a>
                 </div>
               ) : null}
             </Section>

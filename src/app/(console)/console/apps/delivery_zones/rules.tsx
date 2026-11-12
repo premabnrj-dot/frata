@@ -13,6 +13,7 @@ import { formatCount } from '@/lib/format'
 import { settle } from '@/lib/settle'
 import type { ConsoleRule } from '@/lib/queries/delivery'
 import { addRuleAction, importRulesAction, previewRulesAction, removeRuleAction } from './actions'
+import { FIELD } from '@/components/ui/field'
 
 // =============================================================================
 // Delivery Zones › PIN code rules (PD·1, approved mockup "PIN code rules"): search by PIN code (server, paged at 100),
@@ -21,7 +22,7 @@ import { addRuleAction, importRulesAction, previewRulesAction, removeRuleAction 
 // =============================================================================
 
 const WORDS: Record<ConsoleRule['rule'], string> = { no_delivery: 'Don’t deliver', prepaid_only: 'Pay online only', cod_max: 'Pay on delivery up to' }
-const field = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9'
+const field = `${FIELD} w-full`
 
 type Props = { rules: ConsoleRule[]; count: number; q: string; page: number; pages: number; fromSettings: string[]; canEdit: boolean }
 

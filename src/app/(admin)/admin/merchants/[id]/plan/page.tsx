@@ -15,10 +15,11 @@ import { ADMIN_ONLY } from '@/lib/auth/require-staff'
 import { Section } from '@/components/layout/section'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Change plan' }
 
-const field = 'h-10 rounded-md border border-input bg-card px-3 text-sm'
+const field = FIELD
 
 export default async function ChangePlanPage({ params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaff(ANY_STAFF)

@@ -7,6 +7,7 @@ import type { SourceSchema, ThemeImage } from '@/domains/themes/sections'
 import type { z } from 'zod'
 import { Switch as Toggle } from '@/components/ui/switch'
 import { Icon } from '@/components/icons/icon'
+import { FIELD } from '@/components/ui/field'
 
 // The customizer's small controls: each a labelled native control or a group of real buttons (design-language
 // primitives; recognition over recall). Limits show as counters, never as a refusal after typing.
@@ -22,7 +23,7 @@ export function Field({ label, children, hint }: { label: string; children: (id:
   )
 }
 
-const input = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm'
+const input = `${FIELD} w-full`
 
 export function Text({ label, value, max, onChange, multiline = false }: { label: string; value: string; max: number; onChange: (v: string) => void; multiline?: boolean }) {
   return (

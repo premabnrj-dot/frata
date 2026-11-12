@@ -56,7 +56,7 @@ export function StaffGate({ email, state, signOut }: { email: string; state: Gat
         <p className="text-sm text-muted-foreground">Approved by {request.approvedBy ?? 'Frrata'}</p>
         <label htmlFor="pk-name" className="grid gap-1.5 text-sm font-medium">Name
           <input id="pk-name" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="My laptop"
-            className="h-10 rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+            className="h-11 rounded-md border border-input bg-card px-3 text-sm md:h-9" />
         </label>
         <Button disabled={busy || !name.trim()} onClick={() => run(() => addPasskey(name.trim()))}>{busy ? 'Waiting for your device…' : 'Add passkey'}</Button>
       </>

@@ -17,6 +17,7 @@ import { deleteCollection, previewRules, saveCollection } from '../actions'
 import { Section } from '@/components/layout/section'
 import { PageHeader } from '@/components/layout/page-header'
 import { Icon } from '@/components/icons/icon'
+import { FIELD } from '@/components/ui/field'
 
 export type EditorCollection = { id: string | null; title: string; handle: string; description: string; seoTitle: string; seoDescription: string; kind: 'manual' | 'auto'; matchAll: boolean; rules: Row[]; sort: string; productIds: string[] }
 export type ProductPick = { id: string; title: string; status: string }
@@ -82,7 +83,7 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
 
   const picked = d.productIds.map((id) => products.find((p) => p.id === id)).filter((p): p is ProductPick => !!p)
   const found = q.trim() ? products.filter((p) => !d.productIds.includes(p.id) && p.title.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8) : []
-  const field = 'h-9 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text'
+  const field = `${FIELD} w-full`
 
   return (
     <div ref={root} className="max-w-3xl">
@@ -95,7 +96,7 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
             <FieldError name="title" message={errors.title} /></div>
           <div className="space-y-1"><label htmlFor="c-handle" className="block text-sm font-medium">Address</label>
             <div className={`flex items-center rounded-md border bg-card text-sm ${errors.handle ? 'border-danger-text' : 'border-input'} focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring`}><span className="pl-3 font-mono text-xs text-muted-foreground">…/collections/</span>
-              <input id="c-handle" value={d.handle} maxLength={80} placeholder={handleFor(d.title) || 'festive-edit'} {...mark('handle')} onChange={(e) => set({ handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className="h-10 md:h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" /></div>
+              <input id="c-handle" value={d.handle} maxLength={80} placeholder={handleFor(d.title) || 'festive-edit'} {...mark('handle')} onChange={(e) => set({ handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className="h-11 md:h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" /></div>
             {errors.handle ? <FieldError name="handle" message={errors.handle} />
               : initial.id && d.handle && d.handle !== initial.handle ? <p className="text-xs text-muted-foreground">The old address will send shoppers here.</p> : null}</div>
           <div className="space-y-1"><label htmlFor="c-desc" className="block text-sm font-medium">Description <span className="font-normal text-muted-foreground">(optional, shown at the top of its page)</span></label>
@@ -142,7 +143,7 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
                 {d.rules.map((r, i) => (
                   <li key={i} className="flex flex-wrap items-start gap-2 rounded-md bg-muted/50 p-2">
                     <label className="sr-only" htmlFor={`r-f-${i}`}>Rule {i + 1}</label>
-                    <select id={`r-f-${i}`} value={r.field} onChange={(e) => setRow(i, { field: e.target.value as Rule['field'], value: '', handle: undefined, label: undefined })} className="h-10 md:h-9 rounded-md border border-input bg-card px-1.5 text-sm">
+                    <select id={`r-f-${i}`} value={r.field} onChange={(e) => setRow(i, { field: e.target.value as Rule['field'], value: '', handle: undefined, label: undefined })} className="h-11 md:h-9 rounded-md border border-input bg-card px-1.5 text-sm">
                       {FIELDS.map(([f, l]) => <option key={f} value={f}>{l}</option>)}
                     </select>
                     <div className="min-w-48 flex-1">

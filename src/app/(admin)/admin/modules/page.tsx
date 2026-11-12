@@ -47,7 +47,7 @@ export default async function ModulesPage() {
                     <ActionForm action={pauseModuleAction} className="flex flex-wrap justify-end gap-2">
                       <input type="hidden" name="module" value={k} />
                       <label className="sr-only" htmlFor={`reason-${k}`}>Why pause {def.name}</label>
-                      <input id={`reason-${k}`} name="reason" required minLength={3} maxLength={200} placeholder="Why" data-error="Say why, in a few words." className="h-10 w-40 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9" />
+                      <input id={`reason-${k}`} name="reason" required minLength={3} maxLength={200} placeholder="Why" data-error="Say why, in a few words." className="h-11 w-40 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9" />
                       <Submit variant="secondary">Pause {def.name} for everyone</Submit>
                       <span className="basis-full text-left empty:hidden"><FieldMessage name="reason" /></span>
                     </ActionForm>

@@ -13,10 +13,11 @@ import { STATUS_WORDS } from '@/domains/checkout/offer-status'
 import { resumeAction, stopAction } from '../actions'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Shop offers' }
 
-const input = 'h-10 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark'
+const input = FIELD
 
 /**
  * One shop's offers for Frrata staff (offers O·4): what each is and where it stands, never its terms or uses. Admin
