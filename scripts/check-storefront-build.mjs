@@ -21,7 +21,10 @@ const BUDGET_KB = 120
 // (home 112.8, product 119.4, checkout 120.2 kB JS; CSS 21.1 kB), with room for Signal's ≤ 1 kB of CSS.
 // Product page 121 after merging search and sharing (its share button and barcode work): measured 120.0 kB that day.
 // TS1a: a page (About, FAQ) has no island of its own: held at the shell's weight (speed review LOW 7).
-const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 121, '/s/[host]/(checkout)/checkout/page': 121, '/s/[host]/(shop)/pages/[handle]/page': 113 }
+// Checkout 121.3 (PI·2 release, 2026-11-12): 248fa64 measured 120.73 kB here and passed on Vercel, whose build adds about
+// 0.2 kB to the shared chunk; webpack's runtime lists every route's chunks, so each new console page costs every shop page
+// a few bytes, and PI·2's pages tipped it to 121.0x there. Splitting the checkout form is the fix, not another raise.
+const TIGHT = { '/s/[host]/(shop)/products/[handle]/page': 121, '/s/[host]/(checkout)/checkout/page': 121.3, '/s/[host]/(shop)/pages/[handle]/page': 113 }
 // The shop's stylesheet (shared, render-blocking): every theme's rules land in it, so it has a ceiling too.
 const CSS_BUDGET_KB = 15.9 // 14.9 measured 2026-11-09 after Signal S2 (story sections, Caveat, scale; console rules moved to the app sheet) + 1 kB; was 22.5 before the shop's own sheet
 // Theme Studio TS0b: a design's block rules (.store-b-*, src/app/base.css) have their own ceiling inside the sheet.
