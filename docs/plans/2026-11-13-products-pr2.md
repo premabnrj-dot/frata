@@ -1,5 +1,5 @@
 # Products PR·2 — the editor
-Status: active · Date: 2026-11-13 · Spec: `docs/specs/2026-11-13-products-rework.md` · Mockup: https://claude.ai/artifact/NW8BozPHgfXQcUge2wKyv4 (§ Add a product, § The editor, § On a phone) · Approved: owner, 2026-11-13
+Status: built · Date: 2026-11-13 · Spec: `docs/specs/2026-11-13-products-rework.md` · Mockup: https://claude.ai/artifact/NW8BozPHgfXQcUge2wKyv4 (§ Add a product, § The editor, § On a phone) · Approved: owner, 2026-11-13
 
 ## Goal
 Ranked problem 3: a one-colour kurta from "Add product" to Live in under two minutes on a phone. Measure: time from
@@ -25,14 +25,30 @@ create to first live; editor page height on a phone (6,599 px in the stress test
 5. **Speed**: the editor page's reads after the product (`placeForPincode`, video, modules, share card, address) in one
    `Promise.all` (five round trips in a row → one).
 
+## As built (2026-11-13; architecture review on the plan folded in)
+- **Kind:** `typeFor(title, types, sizes, kind)` takes the chosen kind, so "Linen kurta" chosen as Kids gets the Kids type,
+  never the women's chart; clothing with sizes never takes the Kids, Footwear or One size type. The server checks the
+  kind (`isKind`) and falls back to the guess. HSN stays the shop's starting code (per-kind HSN waits for PR·3's swatches
+  work on categories). The button is "Create draft", as drawn.
+- **One action with Save:** with unsaved changes, Publish reads "Save and make it active" and saves first; a refused save
+  stops there with its mistakes at their fields (the owner's call 2 kept, without a second save model).
+- **The Save bar at the foot**, on the editor only (`SaveBar placement="bottom"`): above the phone's bottom nav, sticky at
+  the desktop's foot; the toasts lift above it (`--toast-lift`, globals.css). The button stays named "Save"
+  (`aria-keyshortcuts`); the "⌘S / Ctrl+S" hint is for the eye.
+- **Ctrl/⌘+S** presses the bar's own Save button (one path), never during a save, a modal dialog or input composition.
+- **Folds:** `FoldSection` (disclosure pattern: a button in the heading, tips outside it, body kept mounted) for Details and
+  The model, decided once from what was saved. Video, Stories and Pairs stay open (their flows look for them).
+- **Size chart and model** show for a product with sizes (or a chart already picked).
+- **Reads:** the five reads after the product run at once.
+- **Budget:** the shop's product page went over 121 kB because a shared chunk carried every starting chart;
+  `src/domains/catalogue/chart-units.ts` now holds what the shop shows (the type and cm → inches).
+
 ## Deliberately not in PR·2 (the signal that brings each back)
-- **Status through the same Save** (spec § 2): Publish stays its own action, refused while there are unsaved changes, as
-  today. Folding it into Save needs the save and the readiness check in one transaction; it waits until merchants
-  publish with unsaved work and lose it (the refusal already prevents that).
+- **Status and Save in one transaction:** "Save and …" runs them one after the other; a status refused after a save
+  leaves the save in place (said in its toast). Signal: a merchant reports a half-done publish.
 - **Photo edits without a page reload**: needs the photo list in client state; PR·3 (swatches cut from photos) touches
   the same component.
-- **A bottom Save bar on every page**: the Save bar is a shared primitive (top, sticky). Moving it is a console-wide
-  change for its own review.
+- **A bottom Save bar on every page:** only the editor has it; other pages keep the top bar until their own review.
 
 ## Design review
 - **UI/UX:** fewer things open at once; nothing removed. Folded sections say what they hold. Keyboard: the summary of each

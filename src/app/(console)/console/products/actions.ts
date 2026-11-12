@@ -21,7 +21,7 @@ import { BLOB_STORE_ID } from '@/lib/env'
 import { shopSettings } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { skuTaken, writeProducts } from '@/lib/catalogue/write'
-import { kindOf, startSizes, typeFor } from '@/domains/catalogue/kind'
+import { isKind, kindOf, startSizes, typeFor } from '@/domains/catalogue/kind'
 import { arrayParam } from '@/lib/db/sql-array'
 import { setStatusIn } from '@/lib/catalogue/status'
 import { photosInUse } from '@/lib/catalogue/photos-in-use'
@@ -38,7 +38,7 @@ type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string; error
 class Stop extends Error { constructor(public result: { ok: false; error: string; errors?: Record<string, string>; conflict?: boolean }) { super('stop') } }
 
 const reason = errName
-export async function createProduct(input: { title: string }): Promise<Result<{ id: string; handle: string }>> {
+export async function createProduct(input: { title: string; kind?: string }): Promise<Result<{ id: string; handle: string }>> {
   const title = String(input?.title ?? '').trim().replace(/\s+/g, ' ')
   if (!title || title.length > 140) return { ok: false, error: 'Give your product a name of up to 140 characters.' }
   try {
@@ -50,9 +50,10 @@ export async function createProduct(input: { title: string }): Promise<Result<{ 
       // a kids' kurta gets the Kids type and its sizes, a saree one variant and no chart; no matching type, none (PR·0:
       // the shop's first type went to everything). Sizes only when the shop sells sized things (all-categories § 2).
       const [shop] = await tx.select({ hsn: shopSettings.defaultHsn, sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
-      const kind = kindOf(title)
+      // The kind the merchant chose on the new-product step, else the name's guess (an unknown value is the guess too).
+      const kind = isKind(input?.kind) ? input.kind : kindOf(title)
       const sizes = sellsSized(shop?.sells ?? []) ? startSizes[kind] : []
-      const typeId = sizes.length || kind === 'one_size' ? typeFor(title, types) : null
+      const typeId = sizes.length || kind === 'one_size' ? typeFor(title, types, undefined, kind) : null
       const [p] = await tx.insert(products).values({
         tenantId, title, handle: await freeHandle(tx, tenantId, title), typeId, hsn: shop?.hsn ?? null,
         ...(sizes.length ? { options: ['Size'], optionValues: [sizes] } : {}),

@@ -9,7 +9,9 @@
 
 import type { SELL_KEYS } from './sell-keys'
 
-export type Chart = { columns: string[]; rows: { size: string; values: (number | null)[] }[]; howToMeasure: string }
+import type { Chart } from './chart-units'
+
+export { inches, type Chart } from './chart-units'
 export type Preset = { name: string; chart: Chart }
 
 const rows = (sizes: string[], cols: number[][]) => sizes.map((size, i) => ({ size, values: cols.map((c) => c[i] ?? null) }))
@@ -54,8 +56,6 @@ export function chartFromText(d: Omit<Chart, 'rows'> & { rows: { size: string; v
   return { ...d, rows: d.rows.map((r) => ({ size: r.size, values: r.values.map((v) => (v.trim() ? Number(v) : null)) })) }
 }
 
-/** 86 cm → "33.9"; for showing a chart in inches. */
-export const inches = (cm: number) => (Math.round((cm / 2.54) * 10) / 10).toFixed(1)
 
 /** Checks a chart a merchant edited: sizes unique, numbers sane, columns named. */
 export function cleanChart(c: Chart): { ok: true; chart: Chart } | { ok: false; error: string } {

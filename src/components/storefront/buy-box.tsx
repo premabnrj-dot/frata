@@ -3,7 +3,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { availability, type Availability } from '@/domains/catalogue/availability'
-import { inches, type Chart } from '@/domains/catalogue/size-charts'
+import { inches, type Chart } from '@/domains/catalogue/chart-units'
 import { codFor, type DeliveryRules } from '@/domains/checkout/delivery'
 import { factsOf, type ListVariant } from '@/domains/storefront/listing'
 import { initialPick, isColourOption, isSizeOption, optionState, pickQuery, variantFor } from '@/domains/storefront/picker'

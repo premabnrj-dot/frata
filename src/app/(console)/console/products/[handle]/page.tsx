@@ -58,7 +58,6 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
   if (data === undefined) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   if (!data || !data.shop) notFound()
   const { product: p, shop } = data
-  const place = shop.pickup ? await placeForPincode(shop.pickup).catch(() => null) : null
   // The editor gets rupees as text; the cost travels as `cost` (the merchant's own), and only to whoever seesCosts.
   const cells = Object.fromEntries(data.variants.map((v) => [keyOf(v.optionValues), {
     price: v.price ? rupeesText(v.price) : '', compareAt: rupeesText(v.compareAt), cost: rupeesText(v.unitCost), stock: String(v.stock), sku: v.sku ?? '', gtin: v.gtin ?? '',
@@ -78,15 +77,17 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
     in: c.kind === 'manual' ? data.memberOf.includes(c.id) : matches(c.rules as Rule[], c.matchAll === 1, facts),
   }))
 
-  // PV·1: the product's video and whether the shop may add one now (the Product video module).
-  const [video, modules] = await Promise.all([
+  // What the editor needs besides the product, at once (products PR·2: five round trips in a row became one wait): the
+  // pickup's city, the video and whether the shop may add one (PV·1), the share card, the main address (D2·9). Each
+  // fails on its own: the video's failure is its own state, never the page's.
+  const [place, video, modules, share, address] = await Promise.all([
+    shop.pickup ? placeForPincode(shop.pickup).catch(() => null) : null,
     productVideoOf(tenantId, p.id).catch(() => undefined),
     shopModules(tenantId, now.toISOString()),
+    shareFor(tenantId, { kind: 'product', id: p.id }, now).catch(() => null),
+    mainHostFor(tenantId, shop.slug).catch(() => shopHost(shop.slug)),
   ])
   const va = modules.access.product_video
-  const share = await shareFor(tenantId, { kind: 'product', id: p.id }, now).catch(() => null)
-  // D2·9: the product's page on the main address.
-  const address = await mainHostFor(tenantId, shop.slug).catch(() => shopHost(shop.slug))
   // One render time for the whole editor, server and browser alike (src/components/time/now.tsx, check:clock).
   return (
     <NowProvider at={now.toISOString()}>

@@ -39,14 +39,22 @@ export function useLeaveGuard(dirty: boolean) {
   }
 }
 
-export function SaveBar({ onSave, onDiscard, pending }: { onSave: () => void; onDiscard: () => void; pending: boolean }) {
+/**
+ * The page's changes and their Save. `top` (every page): sticky under the shell's header. `bottom` (the product editor,
+ * products PR·2, mockup § The editor and § On a phone): at the foot, above the phone's bottom nav, where the thumb is;
+ * `keys` shows the save shortcut the page wired (the button's name stays "Save"; the hint is for the eye).
+ */
+export function SaveBar({ onSave, onDiscard, pending, placement = 'top', keys }: { onSave: () => void; onDiscard: () => void; pending: boolean; placement?: 'top' | 'bottom'; keys?: string }) {
   return (
-    <div role="region" aria-label="Unsaved changes" data-surface="ink" className="sticky top-[var(--shell-top,0px)] z-10 mb-3 flex animate-rise items-center gap-3 rounded-md bg-primary px-4 py-2.5 text-primary-foreground">
+    <div role="region" aria-label="Unsaved changes" data-surface="ink" data-savebar={placement} className={placement === 'top'
+      ? 'sticky top-[var(--shell-top,0px)] z-10 mb-3 flex animate-rise items-center gap-3 rounded-md bg-primary px-4 py-2.5 text-primary-foreground'
+      : 'fixed inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.5rem)] z-30 flex animate-rise items-center gap-3 rounded-md bg-primary px-4 py-2.5 text-primary-foreground shadow-lg md:sticky md:inset-x-auto md:bottom-4 md:mt-4'}>
       <b className="text-sm">Unsaved changes</b>
       <span className="flex-1" />
       <button type="button" className="h-8 rounded-md border border-current px-3 text-sm" disabled={pending} onClick={onDiscard}>Discard</button>
-      <button type="button" className="h-8 rounded-md bg-primary-foreground px-3 text-sm font-medium text-primary" disabled={pending} onClick={onSave}>
-        {pending ? 'Saving…' : 'Save'}
+      <button type="button" className="h-8 rounded-md bg-primary-foreground px-3 text-sm font-medium text-primary" disabled={pending} onClick={onSave}
+        aria-keyshortcuts={keys ? 'Control+S Meta+S' : undefined}>
+        {pending ? 'Saving…' : 'Save'}{keys && !pending && <span aria-hidden="true" className="ml-1.5 hidden font-mono text-xs opacity-70 md:inline">{keys}</span>}
       </button>
     </div>
   )

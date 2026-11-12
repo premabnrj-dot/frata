@@ -59,3 +59,8 @@
 
 /* Which sheet this is (scripts/check-storefront-build.mjs: a shop page must never load the app sheet). */
 :root { --frrata-sheet-app: 1; }
+
+/* A Save bar at the foot (the product editor, products PR·2) lifts the toasts above itself, on a phone above the bottom
+   nav too: a toast never covers Save. Outside the layers, so it wins over the shell's own --toast-lift utility. */
+[data-shell]:has([data-savebar="bottom"]) { --toast-lift: 7rem; }
+@media (min-width: 48rem) { [data-shell]:has([data-savebar="bottom"]) { --toast-lift: 4rem; } }

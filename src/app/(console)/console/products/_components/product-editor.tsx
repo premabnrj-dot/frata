@@ -37,6 +37,7 @@ import { inGap, ruleOn } from '@/domains/tax/rates'
 import { useNow } from '@/components/time/now'
 import { EMPTY_CELL, shopperSees, VariantGrid, type Cell } from './variant-grid'
 import { Section } from '@/components/layout/section'
+import { FoldSection } from '@/components/layout/fold-section'
 import { PageHeader } from '@/components/layout/page-header'
 
 export type EditorProduct = {
@@ -106,6 +107,8 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   const cells = combos.map((c) => d.cells[keyOf(c)] ?? EMPTY_CELL)
   const type = types.find((t) => t.id === d.typeId)
   const colourOpt = d.options.find((o) => isColour(o.name))
+  // The size chart and the model belong to a product with sizes (a saree has neither); a chart already picked stays.
+  const showSizes = shop.sized && (d.options.some((o) => isSizeOption(o.name)) || !!d.typeId)
   const prices = cells.map((c) => parseRupees(c.price)).filter((x): x is number => x !== null && x > 0)
   const ready = readiness({
     title: d.title, photos: photos.length, prices: cells.map((c) => parseRupees(c.price) ?? 0),
@@ -145,8 +148,10 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
     fix('options')
   }
 
-  function save() {
-    start(async () => {
+  function save() { start(async () => { await saveNow() }) }
+  /** The one Save; true when it saved (Publish with unsaved changes saves first, then publishes: one action). */
+  async function saveNow(): Promise<boolean> {
+    {
       const r = await saveProduct(id, version, {
         title: d.title, description: d.description, typeId: d.typeId, modelHeight: d.modelHeight, modelSize: d.modelSize, options: d.options,
         variants: combos.map((c) => ({ values: c, ...(d.cells[keyOf(c)] ?? EMPTY_CELL) })),
@@ -159,20 +164,36 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
         toast.ok(status === 'active' || status === 'unlisted' ? 'Saved. Your shop shows it now.' : 'Saved.')
         if (r.handle !== initial.handle) router.replace(`/console/products/${r.handle}`)
         else router.refresh()
-        return
+        return true
       }
       const marked = r.errors ?? {}
       if (Object.keys(marked).length) {
         // The summary says the count; a refusal beyond "fix these" is its second line.
         setRefusal(r.error === 'Some fields need a look before saving.' ? undefined : r.error)
-        setErrors(marked); setAttempt((a) => a + 1); return
+        setErrors(marked); setAttempt((a) => a + 1); return false
       }
       setErrors({})
       // Someone else saved first: Reload is the one way on (nothing typed here is cleared until they choose it).
       if (r.conflict) toast.error(r.error, { action: { label: 'Reload', run: () => window.location.reload() } })
       else toast.error(r.error)
-    })
+      return false
+    }
   }
+  // Ctrl/⌘+S saves (products PR·2): the browser's own "save page" never fires here. Not while a dialog is open, a
+  // save is running or a word is still being composed; the size chart's own editor keeps its own Save.
+  // It presses the Save bar's own button (the one path a save takes), so it does nothing when there is no bar.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's' || e.altKey || e.shiftKey) return
+      e.preventDefault()
+      if (e.isComposing || document.querySelector('dialog:modal')) return
+      root.current?.querySelector<HTMLButtonElement>('button[aria-keyshortcuts]:not(:disabled)')?.click()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  const [mac, setMac] = useState(false)
+  useEffect(() => { setMac(/Mac|iPhone|iPad/.test(navigator.platform)) }, [])
   /** Grows the title field to its text where the browser lacks `field-sizing: content` (it then sizes itself), and
    * again when the window changes width (a rotate wraps it to more lines). */
   const titleRef = useRef<HTMLTextAreaElement>(null)
@@ -189,7 +210,6 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   }, [])
   return (
     <div ref={root}>
-      {dirty && <SaveBar pending={pending} onSave={save} onDiscard={() => { setD(saved); setErrors({}) }} />}
       {/* PageHeader (rule 13) with the title as a field: the h1 names the product for a screen reader, the field
           shows and edits it. A textarea, so a long title wraps to the next line instead of being cut mid-word
           (stress test S7). One line of text: Enter does nothing, unless an input method is still composing a word. */}
@@ -204,14 +224,17 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
             className="-mx-2 w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-2xl font-bold tracking-tight transition-colors duration-fast hover:border-input focus:border-input focus:bg-card aria-invalid:border-danger-text block resize-none overflow-hidden [field-sizing:content] [overflow-wrap:anywhere]" />
         </div>} />
       <FieldError name="title" message={errors.title} />
+      {/* The main column in the order a brand works (products PR·2, spec § 4): photos, words, sizes and stock, then what
+          describes it. A section with nothing saved in it yet folds to one line (FoldSection); the size chart and the
+          model show for a product with sizes. The side panel stays in view on a wide screen, Publish first. */}
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4">
+          <Section><h2 className="flex items-center text-section font-semibold">Photos<InfoTip about="photos">The first is the cover: show the piece on a person. A large photo is fine; it is resized before it uploads.</InfoTip></h2><Photos productId={id} tenantId={tenantId} photos={photos} colours={colourOpt?.values ?? []} enabled={blobReady} title={d.title} /></Section>
           <Section>
             <label htmlFor="desc" className="block font-semibold">Description <span className="text-sm font-normal text-muted-foreground">(optional)</span></label>
             <textarea id="desc" rows={4} maxLength={5000} value={d.description} onChange={(e) => set({ description: e.target.value })} {...fieldProps('description', errors.description)} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm aria-invalid:border-danger-text" placeholder="Fabric, fit, care. Shoppers read this before the size chart." />
             <FieldError name="description" message={errors.description} />
           </Section>
-          <Section><h2 className="flex items-center text-section font-semibold">Photos<InfoTip about="photos">The first is the cover: show the piece on a person. A large photo is fine; it is resized before it uploads.</InfoTip></h2><Photos productId={id} tenantId={tenantId} photos={photos} colours={colourOpt?.values ?? []} enabled={blobReady} title={d.title} /></Section>
           {video}
           <Section>
             <h2 className="flex items-center text-section font-semibold">Sizes, colours and stock<InfoTip about="sizes, colours and stock">{shop.costs ? 'Your cost is never shown to shoppers: it is how Frrata works out profit on each order. ' : ''}When it runs out applies at 0 stock: stop selling, take pre-orders, or make to order. An empty SKU is made for you when you save.</InfoTip></h2>
@@ -220,6 +243,19 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
             {combos.length > 0 && <VariantGrid options={opts} cells={d.cells} errors={errors} costs={shop.costs} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
               onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); fix(...Object.keys(patch).map((f) => `v:${k}:${f === 'leadMin' || f === 'leadMax' ? 'lead' : f}`)) }} />}
           </Section>
+          <FoldSection title="Details" start={Object.keys(start0.attributes).length > 0} summary={d.category ? 'Fabric, work, occasion' : 'Pick a category first'}
+            side={<InfoTip about="details">Asked for by the product’s category. Shoppers filter by them, and Google and Meta read them. Values marked · are Frrata’s, for Indian crafts and fabrics; each is sent to Google as its nearest standard value.</InfoTip>}>
+            <DetailsPanel attributes={d.category?.attributes ?? []} values={d.attributes} onChange={(attributes) => set({ attributes })} />
+          </FoldSection>
+          {showSizes && <Section><h2 className="text-section font-semibold">Size chart</h2><SizeChartPanel types={types} typeId={d.typeId} onType={(typeId) => set({ typeId })} /></Section>}
+          {showSizes && <FoldSection title="The model in the photos" start={!!(start0.modelHeight || start0.modelSize)} summary="Height, size worn">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1"><label htmlFor="mh" className="block text-sm font-medium">Height <span className="font-normal text-muted-foreground">(optional)</span></label><input id="mh" value={d.modelHeight} maxLength={30} placeholder="5 ft 6 in" onChange={(e) => set({ modelHeight: e.target.value })} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
+              <div className="space-y-1"><label htmlFor="ms" className="block text-sm font-medium">Wears <span className="font-normal text-muted-foreground">(optional)</span></label><input id="ms" value={d.modelSize} maxLength={10} placeholder="S" onChange={(e) => set({ modelSize: e.target.value })} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
+            </div>
+          </FoldSection>}
+          <SeoPanel handle={d.handle} onHandle={(handle) => set({ handle })} seoTitle={d.seoTitle} onSeoTitle={(seoTitle) => set({ seoTitle })} seoDescription={d.seoDescription} onSeoDescription={(seoDescription) => set({ seoDescription })}
+            defaults={defaults} address={shop.address} cover={photos[0]} everLive={everLive} errors={errors} />
           <Section>
             <h2 className="text-section font-semibold">Tax</h2>
             <TaxPanel tax={d.tax} onChange={(tax) => { fix(...changed('tax', d.tax, tax)); set({ tax }) }} price={prices.length ? Math.min(...prices) : null} inclusive={shop.gst.inclusive} charges={shop.gst.charges} now={now} errors={errors}
@@ -228,31 +264,18 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
                 return [k, p !== null && inGap(x.tax.hsn, p, shop.gst.inclusive, now) ? { ...c, price: String(to / 100) } : c]
               })) }))} />
           </Section>
-          <Section>
-            <h2 className="flex items-center text-section font-semibold">Details<InfoTip about="details">Asked for by the product’s category. Shoppers filter by them, and Google and Meta read them. Values marked · are Frrata’s, for Indian crafts and fabrics; each is sent to Google as its nearest standard value.</InfoTip></h2>
-            <DetailsPanel attributes={d.category?.attributes ?? []} values={d.attributes} onChange={(attributes) => set({ attributes })} />
-          </Section>
           {shop.label && <Section><h2 className="text-section font-semibold">On the pack</h2><LabelPanel label={d.label} onChange={(label) => { fix(...changed('label', d.label, label)); set({ label }) }} errors={errors} maker={shop.maker} /></Section>}
-          {shop.sized && <Section><h2 className="text-section font-semibold">Size chart</h2><SizeChartPanel types={types} typeId={d.typeId} onType={(typeId) => set({ typeId })} /></Section>}
-          {shop.sized && <Section>
-            <h2 className="text-section font-semibold">The model in the photos</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1"><label htmlFor="mh" className="block text-sm font-medium">Height <span className="font-normal text-muted-foreground">(optional)</span></label><input id="mh" value={d.modelHeight} maxLength={30} placeholder="5 ft 6 in" onChange={(e) => set({ modelHeight: e.target.value })} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
-              <div className="space-y-1"><label htmlFor="ms" className="block text-sm font-medium">Wears <span className="font-normal text-muted-foreground">(optional)</span></label><input id="ms" value={d.modelSize} maxLength={10} placeholder="S" onChange={(e) => set({ modelSize: e.target.value })} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
-            </div>
-          </Section>}
           {d.stories && <Section><StoriesPanel stories={d.stories} onChange={(stories) => set({ stories })} photos={photos} tenantId={tenantId} enabled={blobReady} error={errors.stories} /></Section>}
           {d.pairs && <Section><PairsPanel productId={id} pairs={d.pairs} onChange={(pairs) => set({ pairs })} /></Section>}
-          <SeoPanel handle={d.handle} onHandle={(handle) => set({ handle })} seoTitle={d.seoTitle} onSeoTitle={(seoTitle) => set({ seoTitle })} seoDescription={d.seoDescription} onSeoDescription={(seoDescription) => set({ seoDescription })}
-            defaults={defaults} address={shop.address} cover={photos[0]} everLive={everLive} errors={errors} />
         </div>
-        <aside className="space-y-3">
-          <StatusCard productId={id} status={status} publishAt={publishAt} ready={ready} dirty={dirty} />
+        <aside className="space-y-3 lg:sticky lg:top-[calc(var(--shell-top,0px)+1rem)] lg:max-h-[calc(100dvh-var(--shell-top,0px)-2rem)] lg:overflow-y-auto">
+          <StatusCard productId={id} status={status} publishAt={publishAt} ready={ready} dirty={dirty} saveFirst={saveNow} />
           <Summary d={d} cells={cells} photos={photos} typeName={type?.name ?? null} status={status} publishAt={publishAt} address={`${shop.address}/products/${d.handle || defaults.handle}`} />
           <OrganiseCard category={d.category} onCategory={(category) => set({ category, attributes: keepDetails(d.attributes, category) })} collections={allCollections} picked={d.collections} onPicked={(collections) => set({ collections })} tags={d.tags} onTags={(tags) => set({ tags })} />
           <ReadyFor d={d} photos={photos.length} priced={prices.length === cells.length && cells.length > 0} />
         </aside>
       </div>
+      {dirty && <SaveBar placement="bottom" keys={mac ? '⌘S' : 'Ctrl+S'} pending={pending} onSave={save} onDiscard={() => { setD(saved); setErrors({}) }} />}
       <LeaveDialog open={!!guard.leaveTo} what={saved.title || 'this product'} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(d))} />
     </div>
   )

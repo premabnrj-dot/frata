@@ -31,6 +31,11 @@ describe('a new product takes its kind and type from its name (PR·0: the first 
     expect(typeFor("Women's co-ord set", types)).toBeNull()
     expect(typeFor('Kids frock', [{ id: 'k', name: 'Kurta set · Women' }])).toBeNull()
   })
+  it('a chosen kind wins over the name: "Linen kurta" chosen as Kids takes the Kids type, never the women\'s chart', () => {
+    expect(typeFor('Linen kurta', types, undefined, 'kids')).toBe('kids')
+    expect(typeFor('Linen kurta', types, undefined, 'one_size')).toBe('o')
+    expect(typeFor('Kids frock', types, undefined, 'sized')).toBeNull()
+  })
   it('an import with sizes falls back to the first type whose chart has them all', () => {
     const charts = [{ id: 'kids', name: 'Kids', chartSizes: ['2–3 Y'] }, { id: 'k', name: 'Kurta set · Women', chartSizes: ['XS', 'S', 'M', 'L', 'XL'] }]
     expect(typeFor('Wrap dress', charts, ['S', 'M', 'XL'])).toBe('k')

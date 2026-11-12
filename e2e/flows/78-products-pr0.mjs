@@ -41,7 +41,9 @@ export default {
       await t.step('Add "Girls\' cotton kurta": kids\' sizes, no type (the shop has no Kids type), never the women\'s chart', async () => {
         await p.goto(CONSOLE + '/console/products/new')
         await p.getByLabel('Name').fill(TITLE)
-        await p.getByRole('button', { name: 'Continue' }).click()
+        // PR·2: the kind follows the name until one is picked.
+        assert.equal(await p.getByRole('radio', { name: /^Kids/ }).isChecked(), true, 'the name says kids')
+        await p.getByRole('button', { name: 'Create draft' }).click()
         await p.waitForURL(/\/console\/products\/girls-cotton-kurta-pr0/)
         const r = await product()
         assert.equal(r.type_id, null, 'no type: the women\'s kurta chart is the shop\'s first type and must not be taken')
@@ -63,6 +65,20 @@ export default {
         await save()
         const vs = await rows((await product()).id)
         assert.deepEqual(vs[0].option_values, ['2–3 Yrs']); assert.deepEqual([vs[0].price, vs[0].stock], [89900, 4])
+      })
+
+      await t.step('PR·2: Ctrl+S saves; an empty Details section is one line until opened', async () => {
+        await p.locator('#desc').fill('Soft cotton, hand block printed.')
+        // Ctrl+S presses Save; while the last save is still finishing the button is off, and so is the key.
+        await p.waitForFunction(() => document.querySelector('button[aria-keyshortcuts]')?.disabled === false)
+        await p.keyboard.press('Control+s')
+        await p.getByText('Unsaved changes').waitFor({ state: 'detached', timeout: 8_000 })
+        const [r] = await db`select description from products where tenant_id = ${KESAR} and title = ${TITLE}`
+        assert.equal(r.description, 'Soft cotton, hand block printed.')
+        const fold = p.getByRole('button', { name: /^Details/ })
+        assert.equal(await fold.getAttribute('aria-expanded'), 'false')
+        await fold.click()
+        assert.equal(await fold.getAttribute('aria-expanded'), 'true')
       })
 
       await t.step('The list finds it by name and says one size has no price', async () => {

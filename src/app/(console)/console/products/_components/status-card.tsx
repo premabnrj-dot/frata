@@ -24,8 +24,10 @@ const CHOICES: { v: Status; label: string; says: string }[] = [
 const toLocal = (iso: string | null) => (iso ? new Date(new Date(iso).getTime() + 330 * 60000).toISOString().slice(0, 16) : '')
 const fromLocal = (v: string) => (v ? new Date(`${v}:00+05:30`).toISOString() : null)
 
-/** Who can find the product. Separate from Save: changing who sees it is its own decision. */
-export function StatusCard({ productId, status, publishAt, ready, dirty }: { productId: string; status: Status; publishAt: string | null; ready: Readiness; dirty: boolean }) {
+/** Who can find the product: its own decision, and one action with Save (products PR·2): with unsaved changes the button
+ *  saves them first ("Save and make it active"), then changes the status; a save that is refused stops there, its
+ *  mistakes at their fields. The readiness checked is the draft's, so what goes live is what was just saved. */
+export function StatusCard({ productId, status, publishAt, ready, dirty, saveFirst }: { productId: string; status: Status; publishAt: string | null; ready: Readiness; dirty: boolean; saveFirst?: () => Promise<boolean> }) {
   const router = useRouter()
   const [pick, setPick] = useState<Status>(status)
   const [when, setWhen] = useState(toLocal(publishAt))
@@ -41,6 +43,7 @@ export function StatusCard({ productId, status, publishAt, ready, dirty }: { pro
   const blocked = (needsReady && !allReady) || (pick === 'active' && later && !when)
 
   const apply = () => start(async () => {
+    if (dirty) { if (!saveFirst || !(await saveFirst())) return }
     // The result is a toast (§ Feedback 1, 2).
     const r = await setStatus(productId, pick, at)
     if (!r.ok) { toast.error(r.error); return }
@@ -84,8 +87,7 @@ export function StatusCard({ productId, status, publishAt, ready, dirty }: { pro
         </details>
       )}
       <p className="text-xs text-muted-foreground">{v.scheduled ? 'Shoppers get "page not found" until it goes live.' : v.listed ? 'Shoppers can find it and buy it.' : v.reachable ? 'Shoppers with the link can buy it.' : pick === 'archived' ? 'Shoppers read that it is no longer available.' : 'Shoppers get "page not found".'}</p>
-      {changed && <Button className="w-full" disabled={pending || blocked || dirty} onClick={apply}>{pick === 'active' && !later ? 'Make it active' : pick === 'active' ? 'Schedule it' : `Set to ${CHOICES.find((c) => c.v === pick)!.label.toLowerCase()}`}</Button>}
-      {changed && dirty && <p className="text-xs text-muted-foreground">Save your changes first.</p>}
+      {changed && <Button className="w-full" disabled={pending || blocked || (dirty && !saveFirst)} onClick={apply}>{(dirty ? 'Save and ' : '') + (pick === 'active' && !later ? (dirty ? 'make it active' : 'Make it active') : pick === 'active' ? (dirty ? 'schedule it' : 'Schedule it') : `${dirty ? 'set' : 'Set'} to ${CHOICES.find((c) => c.v === pick)!.label.toLowerCase()}`)}</Button>}
     </Section>
   )
 }
