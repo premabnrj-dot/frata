@@ -299,6 +299,12 @@ dialog[data-dialog][open]::backdrop { opacity: 1; }
 [data-toast] { transition: opacity var(--transition-duration-base) var(--ease-entrance), transform var(--transition-duration-base) var(--ease-entrance); }
 @starting-style { [data-toast] { opacity: 0; transform: translateY(12px); } }
 [data-toast][data-leaving] { opacity: 0; transform: translateY(12px); transition-timing-function: var(--ease-exit); }
+/* A toast's mark pops once as it lands (§ Feedback 7): scale on --ease-snap, never a spring. Reduced motion: none. */
+@keyframes mark-pop { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: none; } }
+[data-toast] [data-mark] { animation: mark-pop var(--transition-duration-base) var(--ease-snap) 60ms both; }
+/* A field's error line drops in 4 px as it appears (§ Feedback 7). */
+@keyframes err-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@utility animate-err-in { animation: err-in var(--transition-duration-base) var(--ease-entrance); }
 /* The Undo window as a bar that empties; under reduced motion the words say it instead (rule 25). */
 @keyframes undo-window { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @utility animate-undo-window { animation: undo-window 8s linear forwards; transform-origin: left; }

@@ -5,7 +5,7 @@
 // desktop: nothing scrolls the page sideways.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, signedIn } from '../lib.mjs'
+import { CONSOLE, expectToast, signedIn } from '../lib.mjs'
 
 export default {
   name: 'primitives',
@@ -86,6 +86,47 @@ export default {
       await p.locator('[data-toast]', { hasText: 'KS-1003 on hold.' }).waitFor()
       await p.waitForFunction(() => document.querySelectorAll('[data-testid="log"] li').length && [...document.querySelectorAll('[data-testid="log"] li')].filter((l) => l.textContent === 'slow undo').length === 2, null, { timeout: 3000 })
       assert.equal(await p.locator('[data-toast]').textContent(), 'KS-1003 on hold.')
+    })
+
+    await t.step('error toast (§ Feedback 1): role=alert, stays past the 8 s window, its action runs once, × and Esc close it', async () => {
+      await p.getByRole('button', { name: 'Save fails' }).click()
+      const err = await expectToast(p, 'Not saved.', 'error')
+      assert.match(await err.textContent(), /Nothing was changed\./)
+      await p.waitForTimeout(9000)
+      assert.equal(await err.isVisible(), true, 'an error toast never leaves by itself')
+      await err.getByRole('button', { name: 'Try again' }).click()
+      await err.waitFor({ state: 'detached' })
+      assert.ok((await log()).includes('retried'))
+      await p.getByRole('button', { name: 'Save fails' }).click()
+      await (await expectToast(p, 'Not saved.')).getByRole('button', { name: 'Close' }).click()
+      await p.locator('[data-toast]').waitFor({ state: 'detached' })
+      await p.getByRole('button', { name: 'Save fails' }).click(); await expectToast(p, 'Not saved.')
+      await p.keyboard.press('Escape'); await p.locator('[data-toast]').waitFor({ state: 'detached' })
+    })
+
+    await t.step('field errors (§ Feedback 3): marked at the field, focus on the first, one toast counts down and leaves', async () => {
+      await p.getByRole('button', { name: 'Save product' }).click()
+      await expectToast(p, '2 fields need fixing.')
+      await p.waitForFunction(() => document.activeElement?.getAttribute('name') === 'price')
+      assert.equal(await p.getByLabel('Price').getAttribute('aria-invalid'), 'true')
+      assert.equal(await p.locator('#price-error').textContent(), 'More than ₹0.')
+      await p.getByLabel('Price').fill('2490')
+      await expectToast(p, '1 field needs fixing.')
+      assert.equal(await p.getByLabel('HSN code').inputValue(), '62', 'nothing typed is cleared')
+      await p.getByLabel('HSN code').fill('6204')
+      await p.locator('[data-toast]').waitFor({ state: 'detached' })
+      await p.getByRole('button', { name: 'Save product' }).click()
+      assert.equal(await p.locator('[data-toast="error"]').count(), 0, 'a clean form shows no summary')
+    })
+
+    await t.step('a failure inside a popup stays in it (§ Feedback 4)', async () => {
+      await p.getByRole('button', { name: 'Publish…' }).click()
+      const d = p.getByRole('dialog', { name: 'Publish your look?' })
+      await d.getByRole('button', { name: 'Publish' }).click()
+      await d.getByRole('alert').filter({ hasText: "Couldn't publish. Your draft is safe." }).waitFor()
+      assert.equal(await p.locator('[data-toast="error"]').count(), 0, 'no second popup or toast behind it')
+      await d.getByRole('button', { name: 'Try again' }).click()
+      await expectToast(p, 'Published.', 'ok')
     })
 
     await t.step('keys: j moves; never while typing; ? shows the list; off means off, but ? still works', async () => {

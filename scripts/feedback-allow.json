@@ -1,0 +1,302 @@
+{
+  "src/app/(admin)/admin/_components/staff-gate.tsx": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/billing/actions.ts": {
+    "count": 9
+  },
+  "src/app/(admin)/admin/billing/invoice/[id]/page.tsx": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/billing/page.tsx": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/ekcode/page.tsx": {
+    "count": 2
+  },
+  "src/app/(admin)/admin/merchants/[id]/actions.ts": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/merchants/[id]/addresses/actions.ts": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/merchants/[id]/addresses/page.tsx": {
+    "count": 2
+  },
+  "src/app/(admin)/admin/merchants/[id]/modules/actions.ts": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/merchants/[id]/modules/page.tsx": {
+    "count": 2
+  },
+  "src/app/(admin)/admin/merchants/[id]/page.tsx": {
+    "count": 3
+  },
+  "src/app/(admin)/admin/merchants/[id]/plan/actions.ts": {
+    "count": 9
+  },
+  "src/app/(admin)/admin/merchants/[id]/plan/page.tsx": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/merchants/[id]/support/actions.ts": {
+    "count": 2
+  },
+  "src/app/(admin)/admin/merchants/new/actions.ts": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/merchants/new/page.tsx": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/merchants/page.tsx": {
+    "count": 2
+  },
+  "src/app/(admin)/admin/modules/page.tsx": {
+    "count": 2
+  },
+  "src/app/(admin)/admin/names/page.tsx": {
+    "count": 2
+  },
+  "src/app/(admin)/admin/notices/page.tsx": {
+    "count": 2
+  },
+  "src/app/(admin)/admin/offers/[tenantId]/page.tsx": {
+    "count": 2
+  },
+  "src/app/(admin)/admin/partners/actions.ts": {
+    "count": 4
+  },
+  "src/app/(admin)/admin/partners/page.tsx": {
+    "count": 2
+  },
+  "src/app/(admin)/admin/plans/[code]/actions.ts": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/plans/[code]/page.tsx": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/plans/page.tsx": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/plans/trial-actions.ts": {
+    "count": 2
+  },
+  "src/app/(admin)/admin/staff/page.tsx": {
+    "count": 2
+  },
+  "src/app/(admin)/admin/staff/staff-passkeys.tsx": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/themes/[key]/[version]/page.tsx": {
+    "count": 4
+  },
+  "src/app/(admin)/admin/themes/actions.ts": {
+    "count": 1
+  },
+  "src/app/(admin)/admin/themes/page.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/_components/open-shop.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/apps/_components/app-action.tsx": {
+    "count": 4
+  },
+  "src/app/(console)/console/apps/communication/connect.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/apps/communication/health.tsx": {
+    "count": 6
+  },
+  "src/app/(console)/console/apps/gst/file-panel.tsx": {
+    "count": 3
+  },
+  "src/app/(console)/console/collections/_components/collection-editor.tsx": {
+    "count": 4
+  },
+  "src/app/(console)/console/look/_components/gallery.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/look/_components/look-actions.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/look/_components/restore.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/offers/[id]/page.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/offers/_components/offer-editor.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/offers/_components/offer-more.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/orders/_components/contact-and-notes.tsx": {
+    "count": 4
+  },
+  "src/app/(console)/console/orders/_components/emails-card.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/orders/_components/order-actions.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/orders/print/page.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/products/_components/extras-panel.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/products/_components/label-panel.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/products/_components/options-editor.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/products/_components/photos.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/products/_components/product-editor.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/products/_components/seo-panel.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/products/_components/size-chart.tsx": {
+    "count": 4
+  },
+  "src/app/(console)/console/products/_components/status-card.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/products/_components/tax-panel.tsx": {
+    "count": 3
+  },
+  "src/app/(console)/console/products/_components/video-panel.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/products/new/new-product-form.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/products/tax/hsn-table.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/settings/_components/doc-logo.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/settings/_components/policy-pages.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/settings/_components/settings-form.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/settings/_components/shop-logo.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/settings/_components/unrated.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/settings/address/address-form.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/settings/address/domains.tsx": {
+    "count": 4
+  },
+  "src/app/(console)/console/settings/billing/autopay.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/settings/billing/details-form.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/settings/billing/plan-choice.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/settings/billing/take-more-days.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/settings/emails/[kind]/editor.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/settings/emails/switches.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/settings/notifications/prefs.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/settings/online-payments/online-payments.tsx": {
+    "count": 4
+  },
+  "src/app/(console)/console/settings/people/accountant.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/settings/people/remove-partner.tsx": {
+    "count": 2
+  },
+  "src/app/(console)/console/settings/shipping-costs/ship-costs-form.tsx": {
+    "count": 2
+  },
+  "src/app/(lookeditor)/console/look/customize/editor.tsx": {
+    "count": 2
+  },
+  "src/app/(lookeditor)/console/look/customize/pages-panel.tsx": {
+    "count": 4
+  },
+  "src/app/(lookeditor)/console/look/customize/publish-confirm.tsx": {
+    "count": 2
+  },
+  "src/app/(lookeditor)/console/look/customize/published.tsx": {
+    "count": 2
+  },
+  "src/app/(lookeditor)/console/look/customize/site-form.tsx": {
+    "count": 2
+  },
+  "src/app/(lookeditor)/console/look/customize/theme-form.tsx": {
+    "count": 2
+  },
+  "src/app/(lookeditor)/console/look/customize/video-field.tsx": {
+    "count": 2
+  },
+  "src/app/(partner)/partner/new/new-store-form.tsx": {
+    "count": 4
+  },
+  "src/app/handover/actions.ts": {
+    "count": 1
+  },
+  "src/app/handover/page.tsx": {
+    "count": 2
+  },
+  "src/app/login/sign-in-flow.tsx": {
+    "count": 4
+  },
+  "src/app/partners/apply/apply-form.tsx": {
+    "count": 4
+  },
+  "src/app/start/create-shop-form.tsx": {
+    "count": 8
+  },
+  "src/components/ekcode/continue.tsx": {
+    "count": 4
+  },
+  "src/components/nav/building-banner.tsx": {
+    "count": 2
+  },
+  "src/components/storefront/bag.tsx": {
+    "count": 1
+  },
+  "src/components/storefront/buy-box.tsx": {
+    "count": 1
+  },
+  "src/components/storefront/checkout.tsx": {
+    "count": 2
+  },
+  "src/components/storefront/drops-consent.tsx": {
+    "count": 1
+  },
+  "src/components/storefront/order-view.tsx": {
+    "count": 3
+  },
+  "src/components/storefront/pair-add.tsx": {
+    "count": 1
+  },
+  "src/components/ui/unsaved.tsx": {
+    "count": 1
+  }
+}

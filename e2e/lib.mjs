@@ -81,3 +81,14 @@ export function todayAgo(minutes, now = Date.now()) {
   const midnight = Math.floor((now + IST) / DAY) * DAY - IST
   return new Date(Math.max(now - minutes * 60_000, midnight + (120 - minutes) * 1000))
 }
+
+/**
+ * The toast on screen (frata-design-language § Feedback): its words, its kind ('ok' | 'error') and, for an error,
+ * role="alert". `text` is a string (contained) or a RegExp. Returns the toast's locator.
+ */
+export async function expectToast(page, text, kind = 'error', timeout = 10_000) {
+  const t = page.locator(`[data-toast="${kind}"]`).filter({ hasText: text })
+  await t.waitFor({ timeout })
+  if (kind === 'error' && (await t.getAttribute('role')) !== 'alert') throw new Error(`error toast "${text}" is not role="alert"`)
+  return t
+}
