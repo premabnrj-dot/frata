@@ -18,7 +18,7 @@ import { formatInr } from '@/lib/format'
 
 const inr = (p: number) => formatInr(paise(p))
 
-export function WhatChanges({ number, plan, problem, before, to, notify, onNotify, onKeep, onSave, busy, error }: {
+export function WhatChanges({ number, plan, problem, before, to, notify, onNotify, onKeep, onSave, busy }: {
   number: string
   plan: EditPlan | null
   problem: EditProblem | null
@@ -28,10 +28,10 @@ export function WhatChanges({ number, plan, problem, before, to, notify, onNotif
   to: string | null
   notify: boolean; onNotify: (v: boolean) => void
   onKeep: () => void; onSave: () => void
-  busy: boolean; error: string | null
+  busy: boolean
 }) {
   const changes = plan ? changesOf(plan) : []
-  const said = error ?? (problem && problem.kind !== 'nothing' ? problemWords(problem, inr) : null)
+  const said = problem && problem.kind !== 'nothing' ? problemWords(problem, inr) : null
   const after = plan?.total.after ?? before
   return (
     <Section id="what-changes" title="What changes">
@@ -52,6 +52,7 @@ export function WhatChanges({ number, plan, problem, before, to, notify, onNotif
         <span>Collect on delivery</span>
         <span className="text-right font-mono tabular-nums">{after !== before ? <s className="mr-2 text-muted-foreground"><Money paise={paise(before)} /></s> : null}<b className="text-xl font-semibold"><Money paise={paise(after)} /></b></span>
       </div>
+      {/* feedback-ok: a limit the edit must meet (the COD maximum, a sold-out size), said live beside the money (§ Feedback 5) */}
       {said ? <p role="alert" className="text-sm text-danger-text">{said}</p> : null}
       {to ? (
         <label className="flex min-h-10 items-center gap-3 text-sm">

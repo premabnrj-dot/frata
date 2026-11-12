@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
+import { useToast } from '@/components/ui/toast'
 import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { Button, button } from '@/components/ui/button'
@@ -15,10 +16,10 @@ export function DoneStep({ jobId, added, leftOut, inShop, outcome, onFix }: {
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
-  const [said, setSaid] = useState<{ ok: boolean; text: string } | null>(null)
+  const toast = useToast()
   const publish = () => start(async () => {
     const r = await publishImportReady(jobId)
-    setSaid(r.ok ? { ok: true, text: r.published === 1 ? '1 product is live' : `${r.published} products are live` } : { ok: false, text: r.error })
+    if (r.ok) toast({ text: r.published === 1 ? '1 product is live' : `${r.published} products are live` }); else toast.error(r.error)
     router.refresh()
   })
   const ready = outcome?.ready.length ?? 0
@@ -48,7 +49,6 @@ export function DoneStep({ jobId, added, leftOut, inShop, outcome, onFix }: {
           </Count>
         </Counts>
       )}
-      {said && <p role={said.ok ? 'status' : 'alert'} className={said.ok ? 'text-sm text-ok-text' : 'text-sm text-danger-text'}>{said.text}</p>}
     </>
   )
 }

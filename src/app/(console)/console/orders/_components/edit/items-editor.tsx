@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { Section } from '@/components/layout/section'
 import { useToast } from '@/components/ui/toast'
+import { Panel } from '@/components/ui/panel'
+import { Button } from '@/components/ui/button'
 import { paise } from '@/domains/money/paise'
 import { inOrder, planEdit, type Choice, type EditReason, type Want } from '@/domains/orders/edit'
 import { formatInr } from '@/lib/format'
@@ -36,7 +38,6 @@ export default function ItemsEditor({ orderId, number, onClose }: { orderId: str
   const [asking, setAsking] = useState<string | null>(null)
   const [notify, setNotify] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const load = async (keep: boolean) => {
     const r = await loadItemsEditor(orderId).catch(() => ({ ok: false as const, error: 'We could not load its items. Try again.' }))
@@ -54,10 +55,10 @@ export default function ItemsEditor({ orderId, number, onClose }: { orderId: str
     return { want, reasons, r: planEdit(facts, inOrder(data.lines, want), reasons) }
   }, [facts, data, rows])
 
-  if (failed) return <Section id="items" title="Edit items"><p role="alert" className="text-sm text-danger-text">{failed}</p></Section>
+  if (failed) return <Section id="items" title="Edit items"><Panel title={failed} action={<Button variant="secondary" onClick={() => { setFailed(null); void load(false) }}>Try again</Button>} /></Section>
   if (!data || !facts || !result) return <Section id="items" title="Edit items"><p role="status" className="text-sm text-muted-foreground">Loading its items…</p></Section>
 
-  const set = (key: string, change: Partial<Row>) => { setError(null); setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...change } : r))) }
+  const set = (key: string, change: Partial<Row>) => { setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...change } : r))) }
   const view = (r: Row): RowView => {
     const sold = r.line ? data.lines.find((l) => l.id === r.line)! : null
     const product = sold?.productId ?? r.added?.productId ?? null
@@ -72,11 +73,11 @@ export default function ItemsEditor({ orderId, number, onClose }: { orderId: str
 
   async function save() {
     if (!plan || busy) return
-    setBusy(true); setError(null)
+    setBusy(true)
     try {
       const r = await saveItemsEdit(orderId, { want: result!.want, reasons: result!.reasons, notify: !!data!.to && notify, expectedTotal: plan.total.after })
       if (!r.ok) {
-        setError(r.error)
+        toast.error(r.error)
         // The facts moved under the panel (stock, an offer, a price): read them again, keeping the merchant's choices.
         if (r.total !== undefined) await load(true)
         return
@@ -86,7 +87,7 @@ export default function ItemsEditor({ orderId, number, onClose }: { orderId: str
       onClose()
       router.refresh()
     } catch {
-      setError('We could not save that. Check your connection; nothing was changed.')
+      toast.error('We could not save that. Check your connection; nothing was changed.')
     } finally { setBusy(false) }
   }
 
@@ -106,11 +107,10 @@ export default function ItemsEditor({ orderId, number, onClose }: { orderId: str
         <AddItem orderId={orderId} taken={taken} onAdd={(found, variantId) => {
           setExtra((x) => ({ choices: [...x.choices.filter((c) => c.productId !== found.productId), ...found.choices], room: { ...x.room, ...found.room } }))
           setRows((rs) => [...rs, { key: `add-${variantId}-${rs.length}`, line: null, variantId, qty: 1, removed: null, added: found }])
-          setError(null)
         }} />
       </Section>
       <WhatChanges number={number} plan={plan} problem={problem} before={data.facts.order.total} to={data.to} notify={notify} onNotify={setNotify}
-        onKeep={onClose} onSave={() => void save()} busy={busy} error={error} />
+        onKeep={onClose} onSave={() => void save()} busy={busy} />
     </div>
   )
 }

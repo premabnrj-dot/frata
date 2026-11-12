@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import { matchColumns, remap, sameHeaders, sourceOf, type Field, type Mapping } from '@/domains/catalogue/import/fields'
 import { rowsToFix } from '@/domains/catalogue/import/fix-file'
 import type { SheetRow } from '@/domains/catalogue/import/group'
@@ -44,6 +45,10 @@ export function Importer({ data }: { data: Omit<ImportPage, 'history'> }) {
   const { costs } = data.shop
 
   // Leaving mid-import asks first: the job stays paused, and choosing the file again continues it.
+  // § Feedback: a failure after a button is the one error toast (the paused import keeps its Try again in place).
+  const toast = useToast()
+  const failure = 'error' in step ? step.error ?? null : null
+  useEffect(() => { if (failure) toast.error(failure) }, [failure]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (step.at !== 'import' || step.error) return
     const warn = (e: BeforeUnloadEvent) => { e.preventDefault() }
@@ -150,8 +155,7 @@ export function Importer({ data }: { data: Omit<ImportPage, 'history'> }) {
         </div>
       )}
       <Steps at={at as 0 | 1 | 2 | 3} />
-      {step.at === 'file' && <FileStep onFile={onFile} error={step.error} reading={step.reading ?? null} running={data.running} onStop={stop} stopping={stopping} />}
-      {step.at === 'check' && step.error && <p role="alert" className="text-sm text-danger-text">{step.error}</p>}
+      {step.at === 'file' && <FileStep onFile={onFile} reading={step.reading ?? null} running={data.running} onStop={stop} stopping={stopping} />}
       {step.at === 'check' && (
         <CheckStep sheet={step.f.sheet} mapping={step.f.mapping} checked={step.f.checked} costs={costs} busy={busy}
           cap={capRefusal(adds(step.f.checked), data.shop)}
@@ -167,7 +171,6 @@ export function Importer({ data }: { data: Omit<ImportPage, 'history'> }) {
           <Bar done={step.next} total={step.total} label={`Part ${step.next} of ${step.total} imported`} />
           {step.error && (
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p role="alert" className="text-sm text-danger-text">{step.error}</p>
               {step.jobId
                 ? <Button onClick={() => { const s = step; void go(s.f, s.jobId, s.next, s.added) }} disabled={busy}>Try again</Button>
                 : <Button variant="secondary" onClick={() => setStep({ at: 'check', f: step.f })}>Back to the check</Button>}

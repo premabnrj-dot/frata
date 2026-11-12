@@ -122,6 +122,7 @@ export function CheckStep({ sheet, mapping, checked, costs, cap, busy, onRemap, 
           </DataTable>
         ) : <p className="px-4 py-3 text-sm text-muted-foreground">Nothing new to import.</p>}
         <div className="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-card px-4 py-2.5">
+          {/* feedback-ok: a limit the file must meet, said where Import would be (§ Feedback 5, like Publish's blocking list) */}
           {cap && <p role="alert" className="mr-auto text-sm text-danger-text">{cap}</p>}
           <Button variant="secondary" onClick={onKeep}>Keep my shop as it is</Button>
           {n > 0 && !cap && <Button onClick={onImport} disabled={busy}>{n === 1 ? 'Import 1 as a draft' : `Import ${n.toLocaleString('en-IN')} as drafts`}</Button>}

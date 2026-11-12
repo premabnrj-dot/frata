@@ -15,9 +15,8 @@ const ACCEPT = '.xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocumen
  * Step 1 (mockup view 1 · File): drop or choose a spreadsheet, and the three ways to start. A paused import says where
  * it stopped: choosing the same file again continues it, or it can stop there.
  */
-export function FileStep({ onFile, error, reading, running, onStop, stopping }: {
+export function FileStep({ onFile, reading, running, onStop, stopping }: {
   onFile: (f: File) => void
-  error?: string
   reading: { name: string; rows: number; csv: boolean } | null
   running: Running | null
   onStop: () => void
@@ -58,7 +57,6 @@ export function FileStep({ onFile, error, reading, running, onStop, stopping }: 
             <b className="text-base">Drop a spreadsheet</b>
             <span className="text-xs text-muted-foreground">Excel or CSV · up to {MAX_PRODUCTS} products</span>
             {!running && <Button onClick={() => input.current?.click()}>Choose a file</Button>}
-            {error && <p role="alert" className="text-sm text-danger-text">{error}</p>}
           </>
         )}
         <input ref={input} type="file" accept={ACCEPT} className="sr-only" tabIndex={-1} aria-label="Choose a spreadsheet"
