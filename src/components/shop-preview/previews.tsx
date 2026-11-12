@@ -1,4 +1,5 @@
-import { codFor, codWhyNot, shippingFor } from '@/domains/checkout/delivery'
+import { codFor, shippingFor } from '@/domains/checkout/delivery'
+import { codWhyNot } from '@/domains/checkout/cod-words'
 import type { PolicyFacts, PolicyPage } from '@/domains/policies/render'
 import { PolicyBody, POLICY_TITLE } from '@/components/storefront/policy'
 import { orderPrefix } from '@/domains/signup/slug'

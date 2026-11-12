@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { availability, type Availability } from '@/domains/catalogue/availability'
 import { inches, type Chart } from '@/domains/catalogue/size-charts'
@@ -15,7 +15,8 @@ import { bag, openBag } from './bag-store'
 import { fill } from './fill'
 import type { BuyWords } from './words'
 import { CloseMark } from './close-mark'
-import { DeliveryCheck } from './delivery-check'
+// The PIN code check is its own chunk: below the buy box, not needed for the first paint (product page JS budget).
+const DeliveryCheck = lazy(() => import('./delivery-check').then((m) => ({ default: m.DeliveryCheck })))
 
 type Gallery = 'swipe' | 'thumbs' | 'rail' | 'stack'
 type Img = PhotoData & SwatchImage & { optionValue: string | null; alt: string }
@@ -153,7 +154,7 @@ export function BuyBox(p: BuyBoxProps) {
           {p.notes.map((n, i) => <li key={n}><PromiseIcon d={i === 0 ? BOX : BACK} />{n}</li>)}
         </ul>
         {/* Delivery Zones PD·0: this PIN code's terms (every plan), on the shop itself only. */}
-        {p.live !== false && <DeliveryCheck price={shown?.price ?? null} w={p.w} />}
+        {p.live !== false && <Suspense fallback={null}><DeliveryCheck price={shown?.price ?? null} w={p.w} /></Suspense>}
         {p.model && <p className="text-sm text-store-sub">{p.model}</p>}
       </div>
       {p.buyBar && <PhoneBar target={buyRef} title={p.title} price={shown ? money(shown.price) : null} label={a?.kind === 'preorder' ? p.w.preorder : p.w.addToBag} onAdd={() => { buyRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }); add() }} aboveTabs={!!p.aboveTabs} />}

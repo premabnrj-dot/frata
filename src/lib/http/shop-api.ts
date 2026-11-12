@@ -1,5 +1,5 @@
 import 'server-only'
-import { codWhyNot } from '@/domains/checkout/delivery'
+import { codWhyNot } from '@/domains/checkout/cod-words'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { NextResponse } from 'next/server'
