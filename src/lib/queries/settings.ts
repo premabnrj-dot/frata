@@ -100,6 +100,12 @@ export async function planHistoryIn(tx: Tx, tenantId: string): Promise<{ startsA
     .where(eq(tenantPlans.tenantId, tenantId)).orderBy(tenantPlans.startsAt)
 }
 
+/** What the shop said it sells (sign-up), for the new-product step: a shop of jewellery or beauty only is never asked for sizes. */
+export async function shopSells(tenantId: string): Promise<string[]> {
+  const [r] = await withTenant(tenantId, (tx) => tx.select({ sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)))
+  return r?.sells ?? []
+}
+
 /** A new shop's starting HSN, from what it sells (sign-up, plan 2026-11-09-gst-core-and-categories): a prefill for new products. */
 export async function setStartingHsn(tenantId: string, hsn: string) {
   await withTenant(tenantId, (tx) => tx.update(shopSettings).set({ defaultHsn: hsn }).where(eq(shopSettings.tenantId, tenantId)))

@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.24.0
+  version: 5.25.0
   verified: 2026-11-13
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -488,6 +488,10 @@ Rules every products screen keeps (PR·0 built; PR·1–4 follow the mockup):
 11. **Undo where it can be undone; ask where it can't.** Status changes, Archive and Duplicate show Undo for 8 s, and an
     Undo that can't put one back names it. Delete asks in a dialog (type the count for 5 or more). It deletes only what
     was never live, ordered or filmed. The rest is named, and Archive is offered for what isn't archived already.
+12. **The editor (PR·2):** a new product starts from "What are you selling?" (Clothing with sizes · Footwear · Kids · One
+    size; the name's guess until one is picked; "Create draft"). Sections in the order a brand works; a section with
+    nothing saved folds to one line (`FoldSection`). The Save bar sits at the foot (`placement="bottom"`), Ctrl/⌘+S presses
+    it, and toasts lift above it. Publish with unsaved changes says "Save and …" and does both.
 
 ## Import and order edit (owner-approved 2026-11-12; specs `docs/specs/2026-11-11-product-import.md`, `docs/specs/2026-11-11-order-edit.md`, mockup https://claude.ai/artifact/76HjNBCo2xdJyf6Qvwxutx)
 

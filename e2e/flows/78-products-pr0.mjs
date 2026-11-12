@@ -41,7 +41,9 @@ export default {
       await t.step('Add "Girls\' cotton kurta": kids\' sizes, no type (the shop has no Kids type), never the women\'s chart', async () => {
         await p.goto(CONSOLE + '/console/products/new')
         await p.getByLabel('Name').fill(TITLE)
-        await p.getByRole('button', { name: 'Continue' }).click()
+        // PR·2: the kind follows the name until one is picked.
+        assert.equal(await p.getByRole('radio', { name: /^Kids/ }).isChecked(), true, 'the name says kids')
+        await p.getByRole('button', { name: 'Create draft' }).click()
         await p.waitForURL(/\/console\/products\/girls-cotton-kurta-pr0/)
         const r = await product()
         assert.equal(r.type_id, null, 'no type: the women\'s kurta chart is the shop\'s first type and must not be taken')
@@ -65,6 +67,20 @@ export default {
         assert.deepEqual(vs[0].option_values, ['2–3 Yrs']); assert.deepEqual([vs[0].price, vs[0].stock], [89900, 4])
       })
 
+      await t.step('PR·2: Ctrl+S saves; an empty Details section is one line until opened', async () => {
+        await p.locator('#desc').fill('Soft cotton, hand block printed.')
+        // Ctrl+S presses Save; while the last save is still finishing the button is off, and so is the key.
+        await p.waitForFunction(() => document.querySelector('button[aria-keyshortcuts]')?.disabled === false)
+        await p.keyboard.press('Control+s')
+        await p.getByText('Unsaved changes').waitFor({ state: 'detached', timeout: 8_000 })
+        const [r] = await db`select description from products where tenant_id = ${KESAR} and title = ${TITLE}`
+        assert.equal(r.description, 'Soft cotton, hand block printed.')
+        const fold = p.getByRole('button', { name: /^Details/ })
+        assert.equal(await fold.getAttribute('aria-expanded'), 'false')
+        await fold.click()
+        assert.equal(await fold.getAttribute('aria-expanded'), 'true')
+      })
+
       await t.step('The list finds it by name and says one size has no price', async () => {
         await p.goto(CONSOLE + '/console/products?q=' + encodeURIComponent('cotton kurta PR0'))
         const row = p.getByRole('row').filter({ hasText: TITLE })
@@ -72,6 +88,23 @@ export default {
         await row.getByText('2 without a price').waitFor()
         await p.goto(CONSOLE + '/console/products?q=nothing-matches-this')
         await p.getByText('No product matches “nothing-matches-this”').waitFor()
+      })
+      await t.step('PR·2: a kind picked against the name wins; "Save and set to archived" saves, then archives', async () => {
+        await p.goto(CONSOLE + '/console/products/new')
+        await p.getByLabel('Name').fill('Linen kurta PR0')
+        assert.equal(await p.getByRole('radio', { name: /^Clothing with sizes/ }).isChecked(), true)
+        await p.getByRole('radio', { name: /^Kids/ }).check()
+        await p.getByRole('button', { name: 'Create draft' }).click()
+        await p.waitForURL(/\/console\/products\/linen-kurta-pr0/)
+        const [k] = await db`select type_id, option_values from products where tenant_id = ${KESAR} and title = 'Linen kurta PR0'`
+        assert.equal(k.type_id, null, 'Kids chosen: never the women\'s kurta chart')
+        assert.deepEqual(k.option_values, [['2–3 Y', '3–4 Y', '4–5 Y']])
+        await p.locator('#desc').fill('For the little ones.')
+        await p.getByRole('radio', { name: 'Archived' }).check()
+        await p.getByRole('button', { name: 'Save and set to archived' }).click()
+        for (let i = 0; i < 40; i++) { const [r] = await db`select status from products where tenant_id = ${KESAR} and title = 'Linen kurta PR0'`; if (r.status === 'archived') break; await p.waitForTimeout(250) }
+        const [r] = await db`select description, status from products where tenant_id = ${KESAR} and title = 'Linen kurta PR0'`
+        assert.deepEqual([r.description, r.status], ['For the little ones.', 'archived'])
       })
     } finally {
       await ctx.close()
