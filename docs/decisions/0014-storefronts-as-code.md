@@ -48,3 +48,8 @@ Claude builder was skipped "Claude never runs on Frrata's servers" (2026-11-11).
 6. **Partners are verified** (PAN or GSTIN, two-factor) before free credits or publishing; the brand owner grants each
    partner's scope per shop (build, preview, publish after approval), approves the exact version, and removing a
    partner stops its sessions and routines and revokes its keys and code access in one step.
+   **Before handover** (owner, 2026-11-12: "if the store isn't handed over, there is no need of owner approval during
+   that time for partners"): while a partner-built shop has no owner, the partner publishes its website once the checks
+   pass, with no approval step. The shop still cannot open for orders until a brand owner claims it with a verified
+   email (`drizzle/0066`, `app_shop_publish_needs_owner`). At handover the owner accepts the live version and the
+   partner's scopes; from then on the approval rule above applies. Details: `docs/specs/2026-11-12-kit-and-fleet.md`.
