@@ -19,11 +19,13 @@ export type Errors = Record<string, string | null | undefined | false>
 const count = (e: Errors) => Object.values(e).filter(Boolean).length
 const words = (n: number, noun: string) => (n === 1 ? `1 ${noun} needs fixing.` : `${n} ${noun}s need fixing.`)
 
-/** Focus the first field marked aria-invalid inside `scope` (or the page), after React has painted the marks. */
-export function focusFirstInvalid(scope?: HTMLElement | null) {
+/** Focus the first field marked aria-invalid inside the form (`scope`), after React has painted the marks; a closed
+ *  <details> around it opens first. Never the whole page: another form's marks are not this form's. */
+export function focusFirstInvalid(scope: HTMLElement | null | undefined) {
   requestAnimationFrame(() => {
-    const el = (scope ?? document).querySelector<HTMLElement>('[aria-invalid="true"]')
+    const el = scope?.querySelector<HTMLElement>('[aria-invalid="true"]')
     if (!el) return
+    for (let d = el.closest('details'); d; d = d.parentElement?.closest('details') ?? null) d.open = true
     el.focus({ preventScroll: true })
     el.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   })
@@ -33,7 +35,7 @@ export function focusFirstInvalid(scope?: HTMLElement | null) {
  * Watches a form's errors. `attempt` changes on every submit, so the same mistakes submitted again focus and show
  * again. `noun`: "field" in the console and Admin, "detail" at the shop's checkout.
  */
-export function useErrorSummary(errors: Errors, opts: { attempt?: number; noun?: string; scope?: React.RefObject<HTMLElement | null> } = {}) {
+export function useErrorSummary(errors: Errors, opts: { attempt?: number; noun?: string; scope: React.RefObject<HTMLElement | null> }) {
   const toast = useToast()
   const noun = opts.noun ?? 'field'
   const n = count(errors)
@@ -44,19 +46,26 @@ export function useErrorSummary(errors: Errors, opts: { attempt?: number; noun?:
     last.current = { n, attempt: opts.attempt }
     if (n === 0) { if (shown.current !== null) { toast.dismiss(shown.current); shown.current = null } return }
     const fresh = n > prev.n || opts.attempt !== prev.attempt || shown.current === null
+    // Inside an open Dialog the page behind is inert: no toast, the marks and the focus say it (§ Feedback 4).
+    const inDialog = !!opts.scope.current?.closest('dialog[open]')
     if (fresh) {
-      const id = toast.next()
-      toast.error(words(n, noun), { action: { label: 'Show', run: () => focusFirstInvalid(opts.scope?.current) } })
-      shown.current = id
-      focusFirstInvalid(opts.scope?.current)
+      if (!inDialog) {
+        const id = toast.next()
+        // Quiet: focus is already on the first field, which reads its own line; the count is said once, politely.
+        toast.error(words(n, noun), { quiet: true, action: { label: 'Show', keep: true, run: () => focusFirstInvalid(opts.scope.current) } })
+        shown.current = id
+      }
+      focusFirstInvalid(opts.scope.current)
     } else if (shown.current !== null) {
       toast.update(shown.current, words(n, noun))
     }
   }, [n, opts.attempt]) // eslint-disable-line react-hooks/exhaustive-deps -- the toast API is stable; noun and scope are fixed per form
+  // The form went away (a panel closed, the page changed): so does its summary.
+  useEffect(() => () => { if (shown.current !== null) toast.dismiss(shown.current) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /** A form's field errors with the summary built in: set() after a submit, clear(name) as a field changes. */
-export function useFieldErrors(opts: { noun?: string; scope?: React.RefObject<HTMLElement | null> } = {}) {
+export function useFieldErrors(opts: { noun?: string; scope: React.RefObject<HTMLElement | null> }) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [attempt, setAttempt] = useState(0)
   useErrorSummary(errors, { attempt, ...opts })

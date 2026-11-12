@@ -6,6 +6,7 @@ import type { VariantProps } from 'class-variance-authority'
 import { endNavigation, startNavigation } from '@/components/shell/nav-progress'
 import { cn } from '@/lib/utils'
 import { Button, button } from './button'
+import { useActionPending } from './action-form'
 
 // =============================================================================
 // FILE: src/components/ui/submit.tsx — A SERVER-ACTION FORM'S SUBMIT BUTTON THAT SAYS IT IS WORKING. A server-action
@@ -21,7 +22,10 @@ import { Button, button } from './button'
 const GIVE_BACK_MS = 15_000
 
 export function Submit({ variant, size, className, children, onClick, ...props }: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'type'> & VariantProps<typeof button>) {
-  const { pending } = useFormStatus()
+  // A plain server-action form reports through useFormStatus; an <ActionForm> posts by hand and reports its own.
+  const status = useFormStatus()
+  const posting = useActionPending()
+  const pending = status.pending || posting
   const [stale, setStale] = useState(false)
   const was = useRef(false)
   useEffect(() => {

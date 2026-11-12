@@ -1,6 +1,8 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { usePathname } from 'next/navigation'
 import { announce } from '@/components/shell/announce'
 import { cn } from '@/lib/utils'
 
@@ -16,14 +18,20 @@ import { cn } from '@/lib/utils'
 //            again / Reload / Show). It is its own role="alert" (4.1.3), not the polite region.
 // One toast at a time: a new one replaces the last. Every timer is held in a ref and cleared when a newer toast
 // arrives, so a leaving or an earlier undo's result never overwrites the toast on screen (impact review 2026-11-07).
-// ONE Toaster per surface, in its layout (console, Admin, partner, look editor, shop, the public pages): any island
-// below it calls useToast(). The shop's wears the shop's colours (tone="store").
+// ONE Toaster per surface: AppShell mounts it for the console, Admin and partner (inside [data-shell], outside
+// main#content: the shell's font and focus ring, never under main's aria-busy); the look editor and the signed-in
+// public pages (login, start, choose, handover) mount it in their layout; never a public marketing page (rule 44). The
+// shop's is its own small component (F3). A page without the shell gets this Toaster's own polite region (`region`).
+// While a modal Dialog is open the rest of the page is inert and hidden from screen readers, so a toast raised then is
+// drawn INSIDE that dialog (a portal); it moves back out when the dialog closes. An error toast leaves when the page
+// changes (its action belongs to the page it came from). Admin (`calm`): the mark fades in on the standard easing,
+// never a spring or snap (§ UX foundation 22).
 // =============================================================================
 
 export const UNDO_MS = 8000
 const EXIT_MS = 200 // the exit takes as long as the entrance (base.css [data-toast])
 
-type Action = { label: string; run: () => void | Promise<void> }
+type Action = { label: string; run: () => void | Promise<void>; /** Stay after it runs (the field summary's Show). */ keep?: boolean }
 type Toast = {
   id: number
   kind: 'ok' | 'error'
@@ -33,11 +41,14 @@ type Toast = {
   undo?: () => Promise<{ ok: boolean; error?: string }>
   /** An error's one action. */
   action?: Action
+  /** An error said once politely instead of as an alert (the field summary: focus is already on the field, and each
+   *  count-down would otherwise be read aloud again). */
+  quiet?: boolean
 }
 type Show = (t: { text: string; undo?: Toast['undo'] }) => void
 export type ToastApi = Show & {
   ok: (text: string, o?: { undo?: Toast['undo']; sub?: string }) => void
-  error: (text: string, o?: { sub?: string; action?: Action }) => void
+  error: (text: string, o?: { sub?: string; action?: Action; quiet?: boolean }) => void
   /** Replaces the text of the toast on screen if it is still `id` (the field-error summary counting down). */
   update: (id: number, text: string) => void
   /** Closes the toast on screen if it is still `id` (or any, without an id). */
@@ -55,8 +66,17 @@ export function useToast(): ToastApi {
   return api
 }
 
-export function Toaster({ children, tone = 'app' }: { children: React.ReactNode; tone?: 'app' | 'store' }) {
+export function Toaster({ children, tone = 'app', calm = false, region = true }: {
+  children: React.ReactNode
+  tone?: 'app' | 'store'
+  /** Admin: no snap on the mark. */
+  calm?: boolean
+  /** Render a polite region for announce() (false inside AppShell, which has its own). */
+  region?: boolean
+}) {
   const [toast, setToast] = useState<Toast | null>(null)
+  const [host, setHost] = useState<HTMLDialogElement | null>(null)
+  const pathname = usePathname()
   const [leaving, setLeaving] = useState(false)
   const [busy, setBusy] = useState(false)
   const [held, setHeld] = useState({ hover: false, focus: false })
@@ -88,6 +108,21 @@ export function Toaster({ children, tone = 'app' }: { children: React.ReactNode;
   }, [paused, toast, leaving, timed, run])
   useEffect(() => clearAll, [])
 
+  // An error toast belongs to the page it came from: a move to another page closes it.
+  const shownOn = useRef(pathname)
+  useEffect(() => {
+    if (shownOn.current === pathname) return
+    shownOn.current = pathname
+    if (toast?.kind === 'error') leave(toast.id)
+  }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps -- only a change of page
+  // The dialog the toast is drawn in closed: the toast moves back to the page.
+  useEffect(() => {
+    if (!host) return
+    const back = () => setHost(null)
+    host.addEventListener('close', back)
+    return () => host.removeEventListener('close', back)
+  }, [host])
+
   // Esc closes an error toast, unless a dialog is open (Esc is the dialog's then).
   useEffect(() => {
     if (toast?.kind !== 'error' || leaving) return
@@ -100,7 +135,10 @@ export function Toaster({ children, tone = 'app' }: { children: React.ReactNode;
     seq.current++
     clearAll(); setLeaving(false); setBusy(false); setHeld({ hover: false, focus: false })
     setToast({ ...t, id: seq.current })
+    shownOn.current = window.location.pathname
+    setHost([...document.querySelectorAll<HTMLDialogElement>('dialog[open]')].at(-1) ?? null)
     if (t.kind === 'ok') { announce(t.undo ? `${t.text} Undo for ${UNDO_MS / 1000} seconds.` : t.text); run(UNDO_MS) }
+    else if (t.quiet) announce(t.text)
     return seq.current
   }, [run])
 
@@ -108,7 +146,7 @@ export function Toaster({ children, tone = 'app' }: { children: React.ReactNode;
     ((t: { text: string; undo?: Toast['undo'] }) => { put({ kind: 'ok', ...t }) }) as Show,
     {
       ok: (text: string, o: { undo?: Toast['undo']; sub?: string } = {}) => { put({ kind: 'ok', text, ...o }) },
-      error: (text: string, o: { sub?: string; action?: Action } = {}) => { put({ kind: 'error', text, ...o }) },
+      error: (text: string, o: { sub?: string; action?: Action; quiet?: boolean } = {}) => { put({ kind: 'error', text, ...o }) },
       update: (id: number, text: string) => { if (seq.current === id) setToast((t) => (t && t.id === id ? { ...t, text } : t)) },
       dismiss: (id?: number) => leave(id ?? seq.current),
       next: () => seq.current + 1,
@@ -134,16 +172,13 @@ export function Toaster({ children, tone = 'app' }: { children: React.ReactNode;
     if (!a || busy) return
     const id = seq.current
     setBusy(true)
-    try { await a.run() } finally { if (seq.current === id) { setBusy(false); leave(id) } }
+    try { await a.run() } finally { if (seq.current === id) { setBusy(false); if (!a.keep) leave(id) } }
   }
 
   const store = tone === 'store'
-  return (
-    <Ctx.Provider value={api}>
-      {children}
-      {toast ? (
-        <div key={toast.id} ref={box} tabIndex={-1} data-toast={toast.kind} data-leaving={leaving ? '' : undefined}
-          role={toast.kind === 'error' ? 'alert' : undefined}
+  const el = toast ? (
+        <div key={toast.id} ref={box} tabIndex={-1} data-toast={toast.kind} data-leaving={leaving ? '' : undefined} data-calm={calm ? '' : undefined}
+          role={toast.kind === 'error' && !toast.quiet ? 'alert' : undefined}
           onPointerEnter={() => setHeld((h) => ({ ...h, hover: true }))} onPointerLeave={() => setHeld((h) => ({ ...h, hover: false }))}
           onFocus={() => setHeld((h) => ({ ...h, focus: true }))} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setHeld((h) => ({ ...h, focus: false })) }}
           className={cn('fixed inset-x-4 z-50 mx-auto flex max-w-md items-center gap-3 overflow-hidden px-3 py-2.5 text-sm print:hidden',
@@ -153,7 +188,7 @@ export function Toaster({ children, tone = 'app' }: { children: React.ReactNode;
           <Mark kind={toast.kind} store={store} />
           <span className="min-w-0 flex-1">
             {toast.text}
-            {toast.sub ? <span className="block text-[0.8125rem] opacity-80">{toast.sub}</span> : null}
+            {toast.sub ? <span className="block text-xs opacity-80">{toast.sub}</span> : null}
             {toast.undo ? <span className="hidden motion-reduce:inline"> Undo for {UNDO_MS / 1000} seconds.</span> : null}
           </span>
           {toast.undo ? (
@@ -175,16 +210,23 @@ export function Toaster({ children, tone = 'app' }: { children: React.ReactNode;
           {toast.undo && !busy ? <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 animate-undo-window bg-current opacity-60 motion-reduce:hidden"
             style={{ animationDuration: `${UNDO_MS}ms`, animationPlayState: paused ? 'paused' : 'running' }} /> : null}
         </div>
-      ) : null}
+      ) : null
+  return (
+    <Ctx.Provider value={api}>
+      {children}
+      {el && host?.isConnected && host.open ? createPortal(el, host) : el}
+      {region ? <div id={TOAST_REGION_ID} aria-live="polite" aria-atomic="true" className="sr-only" /> : null}
     </Ctx.Provider>
   )
 }
+/** The polite region a Toaster renders on a page without the shell's (announce() falls back to it). */
+export const TOAST_REGION_ID = 'toast-announcer'
 
 /** The kind's mark: a check or an exclamation in a disc, popping once (base.css [data-mark]). Never the only sign: the words say it. */
 function Mark({ kind, store }: { kind: 'ok' | 'error'; store: boolean }) {
   const disc = kind === 'ok' ? (store ? 'bg-store-good' : 'bg-ok-mark') : (store ? 'bg-store-bad' : 'bg-danger-mark')
   return (
-    <span data-mark aria-hidden className={cn('grid size-[22px] shrink-0 place-items-center rounded-full', disc, store ? 'text-store-paper' : 'text-primary-foreground')}>
+    <span data-mark aria-hidden className={cn('grid size-5.5 shrink-0 place-items-center rounded-full', disc, store ? 'text-store-paper' : 'text-primary-foreground')}>
       {kind === 'ok'
         ? <svg width="13" height="13" viewBox="0 0 16 16"><path d="M3.5 8.4l3 3 6-6.4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         : <svg width="13" height="13" viewBox="0 0 16 16"><path d="M8 3.6v5.4M8 12v.4" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /></svg>}

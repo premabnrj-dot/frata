@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { Button, button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Menu, type MenuItem } from '@/components/ui/menu'
-import { Toaster, useToast } from '@/components/ui/toast'
+import { useToast } from '@/components/ui/toast'
 import { CANCEL_LABEL, CANCEL_REASONS, type CancelReason } from '@/domains/orders/work'
 import { cancelOrder, confirmOrder, holdOrder, issueCreditNote, issuePartCreditNote, packOrder, undoOrderAction, unholdOrder } from '../actions'
 import { PartCreditDialog, type PartLine } from './part-credit'
@@ -156,5 +156,5 @@ function Actions(p: OrderActionsProps) {
 }
 
 export function OrderActions(p: OrderActionsProps) {
-  return <Toaster><Actions {...p} /></Toaster>
+  return <Actions {...p} />
 }

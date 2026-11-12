@@ -86,9 +86,12 @@ export function todayAgo(minutes, now = Date.now()) {
  * The toast on screen (frata-design-language § Feedback): its words, its kind ('ok' | 'error') and, for an error,
  * role="alert". `text` is a string (contained) or a RegExp. Returns the toast's locator.
  */
-export async function expectToast(page, text, kind = 'error', timeout = 10_000) {
+export async function expectToast(page, text, kind = 'error', { quiet = false, timeout = 10_000 } = {}) {
   const t = page.locator(`[data-toast="${kind}"]`).filter({ hasText: text })
   await t.waitFor({ timeout })
-  if (kind === 'error' && (await t.getAttribute('role')) !== 'alert') throw new Error(`error toast "${text}" is not role="alert"`)
+  // An error is an alert; the field summary is quiet (focus is on the field, the count said once politely).
+  const role = await t.getAttribute('role')
+  if (kind === 'error' && !quiet && role !== 'alert') throw new Error(`error toast "${text}" is not role="alert"`)
+  if (quiet && role === 'alert') throw new Error(`field summary "${text}" should not be an alert`)
   return t
 }

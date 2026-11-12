@@ -302,6 +302,8 @@ dialog[data-dialog][open]::backdrop { opacity: 1; }
 /* A toast's mark pops once as it lands (§ Feedback 7): scale on --ease-snap, never a spring. Reduced motion: none. */
 @keyframes mark-pop { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: none; } }
 [data-toast] [data-mark] { animation: mark-pop var(--transition-duration-base) var(--ease-snap) 60ms both; }
+/* Admin (calm): no snap, no spring (§ UX foundation 22). */
+[data-toast][data-calm] [data-mark] { animation-timing-function: var(--ease-standard); }
 /* A field's error line drops in 4 px as it appears (§ Feedback 7). */
 @keyframes err-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 @utility animate-err-in { animation: err-in var(--transition-duration-base) var(--ease-entrance); }

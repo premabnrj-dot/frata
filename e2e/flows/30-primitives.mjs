@@ -106,17 +106,33 @@ export default {
 
     await t.step('field errors (§ Feedback 3): marked at the field, focus on the first, one toast counts down and leaves', async () => {
       await p.getByRole('button', { name: 'Save product' }).click()
-      await expectToast(p, '2 fields need fixing.')
+      await expectToast(p, '2 fields need fixing.', 'error', { quiet: true })
       await p.waitForFunction(() => document.activeElement?.getAttribute('name') === 'price')
       assert.equal(await p.getByLabel('Price').getAttribute('aria-invalid'), 'true')
       assert.equal(await p.locator('#price-error').textContent(), 'More than ₹0.')
       await p.getByLabel('Price').fill('2490')
-      await expectToast(p, '1 field needs fixing.')
+      await expectToast(p, '1 field needs fixing.', 'error', { quiet: true })
       assert.equal(await p.getByLabel('HSN code').inputValue(), '62', 'nothing typed is cleared')
       await p.getByLabel('HSN code').fill('6204')
       await p.locator('[data-toast]').waitFor({ state: 'detached' })
       await p.getByRole('button', { name: 'Save product' }).click()
       assert.equal(await p.locator('[data-toast="error"]').count(), 0, 'a clean form shows no summary')
+    })
+
+    await t.step('ActionForm (§ Feedback F0·5): the browser rules as field errors, the action\'s fields, error and ok as toasts; nothing typed cleared', async () => {
+      const f = p.getByRole('form', { name: 'Rename shop' })
+      const name = f.getByLabel('Shop name')
+      await f.getByRole('button', { name: 'Rename' }).click()
+      await expectToast(p, '1 field needs fixing.', 'error', { quiet: true })
+      assert.equal(await p.locator('#shop-error').textContent(), 'At least 3 letters.')
+      await name.fill('taken'); await f.getByRole('button', { name: 'Rename' }).click()
+      await p.locator('#shop-error', { hasText: 'That name is taken.' }).waitFor()
+      assert.equal(await name.inputValue(), 'taken', 'nothing typed is cleared')
+      await name.fill('refuse'); await f.getByRole('button', { name: 'Rename' }).click()
+      await expectToast(p, 'Only an admin can rename a shop.')
+      assert.equal(await name.inputValue(), 'refuse')
+      await name.fill('Kesar Studio'); await f.getByRole('button', { name: 'Rename' }).click()
+      await expectToast(p, 'Renamed to Kesar Studio.', 'ok')
     })
 
     await t.step('a failure inside a popup stays in it (§ Feedback 4)', async () => {

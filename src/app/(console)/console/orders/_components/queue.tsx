@@ -9,7 +9,7 @@ import { Money } from '@/components/data/numeric'
 import { Badge } from '@/components/ui/badge'
 import { Button, button } from '@/components/ui/button'
 import { KeySheet } from '@/components/ui/key-sheet'
-import { Toaster, useToast } from '@/components/ui/toast'
+import { useToast } from '@/components/ui/toast'
 import { useShortcuts, useShortcutsEnabled } from '@/components/ui/use-shortcuts'
 import type { Paise } from '@/domains/money/paise'
 import { MAX_DOCUMENTS } from '@/domains/orders/documents'
@@ -237,7 +237,7 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
   )
 }
 
-/** The queue, or `empty` when the tab has no rows: either way inside one Toaster, so a toast's Undo survives the last row leaving. */
+/** The queue, or `empty` when the tab has no rows. The console layout's Toaster is above both, so a toast's Undo survives the last row leaving. */
 export function Queue({ rows, label, empty, slipSize }: { rows: QueueRow[]; label: string; empty: React.ReactNode; slipSize: 'a4' | 'label' }) {
-  return <Toaster>{rows.length ? <Rows rows={rows} label={label} slipSize={slipSize} /> : empty}</Toaster>
+  return rows.length ? <Rows rows={rows} label={label} slipSize={slipSize} /> : empty
 }

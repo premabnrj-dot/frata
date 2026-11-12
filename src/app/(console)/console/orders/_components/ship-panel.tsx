@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { Section } from '@/components/layout/section'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
-import { Toaster, useToast } from '@/components/ui/toast'
+import { useToast } from '@/components/ui/toast'
 import { cameBackOrder, deliverOrder, lostOrder, shipOrder, undoOutcomeAction } from '../actions'
 
 // =============================================================================
@@ -87,5 +87,5 @@ function Panel({ orderId, number, stage, may, shipment, stockTaken }: ShipPanelP
 }
 
 export function ShipPanel(p: ShipPanelProps) {
-  return <Toaster><Panel {...p} /></Toaster>
+  return <Panel {...p} />
 }

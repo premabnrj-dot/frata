@@ -10,6 +10,7 @@ import { requireMember, ANY_MEMBER } from '@/lib/auth/require-member'
 import { gateState } from '@/lib/admin/passkeys'
 import { StaffGate } from './_components/staff-gate'
 import { signOutAction } from './sign-out/actions'
+import { Toaster } from '@/components/ui/toast'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,8 +24,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!staff.ok && staff.reason === 'needs_passkey') {
     const state = await gateState(staff.identity).catch(() => 'error' as const)
     if (state === 'error') return <main data-shell className="p-6"><Panel title="Admin cannot reach the database">Try again in a minute.</Panel></main>
-    return <StaffGate email={staff.identity.email} state={state}
-      signOut={<form action={signOutAction}><button type="submit" className="text-sm underline underline-offset-4">Sign out</button></form>} />
+    return <Toaster calm><StaffGate email={staff.identity.email} state={state}
+      signOut={<form action={signOutAction}><button type="submit" className="text-sm underline underline-offset-4">Sign out</button></form>} /></Toaster>
   }
   if (!staff.ok) {
     return (

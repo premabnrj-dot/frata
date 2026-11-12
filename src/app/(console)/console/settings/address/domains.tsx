@@ -7,7 +7,7 @@ import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Button, button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
-import { Toaster, useToast } from '@/components/ui/toast'
+import { useToast } from '@/components/ui/toast'
 import { tidyDomain } from '@/domains/addresses/domain-input'
 import { DOMAIN_CHIP, type DomainState } from '@/domains/addresses/domain-state'
 import type { Record3 } from '@/lib/domains/own-domains'
@@ -38,7 +38,7 @@ type Props = { nameHost: string; names: NameView[]; rows: DomainView[]; livePaym
 type Making = { kind: 'domain'; host: string; d: DomainView } | { kind: 'name'; host: string; name: string }
 
 export function Domains(props: Props) {
-  return <Toaster><DomainsInner {...props} /></Toaster>
+  return <DomainsInner {...props} />
 }
 
 function DomainsInner({ nameHost, names, rows, livePayments, available, canManage, left }: Props) {

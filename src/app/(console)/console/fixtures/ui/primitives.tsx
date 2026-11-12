@@ -1,18 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { FieldError, useFieldErrors } from '@/components/ui/field-error'
+import { ActionForm, FieldMessage, type ActionResult } from '@/components/ui/action-form'
+import { Submit } from '@/components/ui/submit'
 import { InfoTip } from '@/components/ui/info-tip'
 import { KeySheet } from '@/components/ui/key-sheet'
 import { Menu } from '@/components/ui/menu'
-import { Toaster, useToast } from '@/components/ui/toast'
+import { useToast } from '@/components/ui/toast'
 import { useShortcuts, useShortcutsEnabled } from '@/components/ui/use-shortcuts'
 import { ViewTabs } from '@/components/ui/view-tabs'
 
 // TEST-ONLY (see page.tsx): each primitive once, with a log the flow reads.
-function Board() {
+function Board({ save }: { save: (f: FormData) => Promise<ActionResult> }) {
   const [log, setLog] = useState<string[]>([])
   const say = (s: string) => setLog((l) => [...l, s])
   const [cancel, setCancel] = useState(false)
@@ -20,7 +22,8 @@ function Board() {
   const [row, setRow] = useState(0)
   const [enabled, setEnabled] = useShortcutsEnabled()
   const toast = useToast()
-  const fields = useFieldErrors()
+  const productForm = useRef<HTMLFormElement>(null)
+  const fields = useFieldErrors({ scope: productForm })
   const [publish, setPublish] = useState(false)
   const [publishError, setPublishError] = useState<string | null>(null)
   useShortcuts(enabled, { next: () => setRow((r) => r + 1), previous: () => setRow((r) => Math.max(0, r - 1)), confirm: () => say('confirm'), help: () => setKeys(true) })
@@ -37,7 +40,7 @@ function Board() {
         <Button variant="secondary" onClick={() => toast.error('Not saved.', { sub: 'Nothing was changed.', action: { label: 'Try again', run: () => { say('retried') } } })}>Save fails</Button>
         <Button variant="secondary" onClick={() => setPublish(true)}>Publish…</Button>
       </div>
-      <form noValidate className="grid max-w-sm gap-3" onSubmit={(e) => {
+      <form ref={productForm} noValidate className="grid max-w-sm gap-3" onSubmit={(e) => {
         e.preventDefault()
         const d = new FormData(e.currentTarget)
         fields.set({ price: Number(d.get('price')) > 0 ? null : 'More than ₹0.', hsn: /^(\d{4}|\d{6}|\d{8})$/.test(String(d.get('hsn'))) ? null : '4, 6 or 8 digits.' })
@@ -48,6 +51,11 @@ function Board() {
         <FieldError name="hsn" message={fields.errors.hsn} />
         <Button type="submit" variant="secondary">Save product</Button>
       </form>
+      <ActionForm action={save} className="grid max-w-sm gap-3" aria-label="Rename shop">
+        <label className="grid gap-1 text-sm">Shop name<input name="shop" required minLength={3} data-error="At least 3 letters." className="h-10 rounded-md border border-input px-3 aria-invalid:border-danger-mark md:h-9" /></label>
+        <FieldMessage name="shop" />
+        <Submit variant="secondary">Rename</Submit>
+      </ActionForm>
       <input aria-label="Search" placeholder="Search" className="h-10 rounded-md border border-input px-3 md:h-9" />
       <p data-testid="row">row {row}</p>
       <ol data-testid="log">{log.map((l, i) => <li key={i}>{l}</li>)}</ol>
@@ -62,6 +70,6 @@ function Board() {
   )
 }
 
-export function Primitives() {
-  return <Toaster><Board /></Toaster>
+export function Primitives({ save }: { save: (f: FormData) => Promise<ActionResult> }) {
+  return <Board save={save} />
 }
