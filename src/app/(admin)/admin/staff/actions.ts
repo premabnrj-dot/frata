@@ -28,7 +28,8 @@ export async function removeStaffAction(form: FormData) {
   const staff = await requireStaff(ADMIN_ONLY)
   if (!staff.ok) back(`error=${encodeURIComponent(staff.message)}`)
   if (!confirmedRecently(staff)) back(`error=${encodeURIComponent('Confirm with your passkey first.')}`)
-  const id = z.uuid().safeParse(form.get('userId'))
+  // Any Postgres uuid (an auth user id need not carry an RFC version; removeStaff checks the person exists).
+  const id = z.guid().safeParse(form.get('userId'))
   if (!id.success) back(`error=${encodeURIComponent('Unknown staff member')}`)
   const r = await removeStaff(staff, id.data, new Date())
   after(() => sendStaffNotices().then(() => undefined, () => undefined))

@@ -97,6 +97,10 @@ export default {
         await meera.p.getByLabel('Name').fill('Meera phone')
         await meera.p.getByRole('button', { name: 'Confirm with passkey and add' }).click()
         await until(async () => (await db`select count(*)::int n from staff_passkeys where user_id = ${F.id}`)[0].n === 2, 10_000)
+        // Adding ends with a fresh check that replaces this session's step-up; wait for the form to close (that check is
+        // done) before going on, or the next page load can cancel its reply and leave the browser with the old cookie.
+        await meera.p.getByRole('button', { name: 'Add a passkey' }).waitFor()
+        await meera.p.getByText('Meera phone').first().waitFor()
         // A stale step-up (made 10 minutes ago) cannot add staff; the form's own passkey prompt makes it fresh again.
         await db`update staff_stepups set created_at = now() - interval '10 minutes' where user_id = ${F.id} and session_id = ${meera.ctx.frrataSession}`
         const cookie = (await meera.ctx.cookies(CONSOLE)).map((c) => `${c.name}=${c.value}`).join('; ')

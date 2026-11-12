@@ -45,7 +45,7 @@ describe.skipIf(!host)('the shopper batch', () => {
     const { and, eq, like, sql } = await import('drizzle-orm')
 
     const stamp = Date.now()
-    const su = postgres(`postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    const su = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
     const [{ id: A }] = await su<[{ id: string }]>`insert into tenants (slug, name) values (${'int-batch-' + stamp}, 'Int batch') returning id`
     await su`create temp table batch_shop as select * from shop_settings where tenant_id = ${PROOF_A}`
     await su`update batch_shop set tenant_id = ${A}, published_at = now(), cod_on = true, cod_min = 0, cod_max = 0, cod_charge = 0, shipping_flat = 0, free_shipping_above = 0, cod_blocked_pincodes = '{}', prices_include_gst = true`
