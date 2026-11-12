@@ -7,7 +7,9 @@
 // The nine Brahmic blocks Unicode lays out alike (from ISCII) share ONE table by offset within the block:
 // Devanagari, Bengali/Assamese, Gurmukhi, Gujarati, Odia, Tamil, Telugu, Kannada, Malayalam; the few letters a block
 // puts elsewhere are its overrides. A consonant carries "a" unless a vowel sign or a virama follows; at the end of a
-// word the northern scripts drop it ("kurta", not "kurataa"), the southern ones and Odia keep it ("pudavai").
+// word the northern scripts drop it ("kurta", not "kurataa"), the southern ones and Odia keep it ("putavai").
+// Text is read composed (NFC): a two-part vowel sign (ো, ொ, ൊ) is one letter, o, never e + a; the nukta letters
+// (क़, ড়) still come apart under NFC (Unicode never composes them), so the nukta rule sees them.
 // Other text passes through unchanged. Pure, small: the editor runs it in the browser.
 // =============================================================================
 
@@ -68,7 +70,7 @@ export function latinOf(text: string): string {
     if (pending) out += pending.latin + (wordEnds && pending.dropsFinalA ? '' : 'a')
     pending = null
   }
-  for (const ch of text.normalize('NFD')) {
+  for (const ch of text.normalize('NFC')) {
     const e = entryOf(ch)
     if (!e) { flush(true); out += ch; continue }
     const [kind, latin] = e.entry
