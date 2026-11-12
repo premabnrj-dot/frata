@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useId, useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { Icon } from '@/components/icons/icon'
 import { cn } from '@/lib/utils'
 
@@ -9,17 +9,16 @@ import { cn } from '@/lib/utils'
  * shows what is filled and one line for each thing that could be (products PR·2, mockup § The editor). Disclosure
  * pattern: the heading holds a button with aria-expanded; anything beside the title (an info tip, an action) sits outside
  * that button, so a tip never toggles the fold. The body stays mounted (hidden), so what was typed survives a fold.
- * `start` is decided once by the caller, from what was saved, never from what is being typed. `open` forces it open (a
- * mistake inside it after a save).
+ * `start` is decided once by the caller, from what was saved, never from what is being typed. Only sections no save
+ * can mark a mistake in are folded (Details, the model): a field with a mistake must never be hidden.
  */
-export function FoldSection({ title, side, summary, start, open, children, id }: {
-  title: string; side?: ReactNode; summary?: ReactNode; start: boolean; open?: boolean; children: ReactNode; id?: string
+export function FoldSection({ title, side, summary, start, children }: {
+  title: string; side?: ReactNode; summary?: ReactNode; start: boolean; children: ReactNode
 }) {
   const [shown, setShown] = useState(start)
-  useEffect(() => { if (open) setShown(true) }, [open])
   const body = useId()
   return (
-    <section id={id} aria-labelledby={`${body}-h`} className="space-y-3 rounded-md border border-border bg-card p-4 md:p-5">
+    <section aria-labelledby={`${body}-h`} className="space-y-3 rounded-md border border-border bg-card p-4 md:p-5">
       <div className="flex items-center gap-2">
         <h2 id={`${body}-h`} className="min-w-0 flex-1 text-section font-semibold">
           <button type="button" aria-expanded={shown} aria-controls={body} onClick={() => setShown((s) => !s)}

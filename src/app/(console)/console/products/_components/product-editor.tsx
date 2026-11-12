@@ -95,6 +95,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   useErrorSummary(errors, { attempt, scope: root, sub: refusal })
   const fix = (...keys: string[]) => setErrors((e) => (keys.some((k) => k in e) ? Object.fromEntries(Object.entries(e).filter(([k]) => !keys.includes(k))) : e))
   const [pending, start] = useTransition()
+  const [saving, setSaving] = useState(false)
   const dirty = JSON.stringify(d) !== JSON.stringify(saved)
   const guard = useLeaveGuard(dirty)
   // A change to a field takes its mistake away (the patch's keys are the error keys for the top-level fields).
@@ -108,7 +109,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   const type = types.find((t) => t.id === d.typeId)
   const colourOpt = d.options.find((o) => isColour(o.name))
   // The size chart and the model belong to a product with sizes (a saree has neither); a chart already picked stays.
-  const showSizes = shop.sized && (d.options.some((o) => isSizeOption(o.name)) || !!d.typeId)
+  const showSizes = shop.sized && (d.options.some((o) => isSizeOption(o.name)) || !!d.typeId || !!(d.modelHeight || d.modelSize))
   const prices = cells.map((c) => parseRupees(c.price)).filter((x): x is number => x !== null && x > 0)
   const ready = readiness({
     title: d.title, photos: photos.length, prices: cells.map((c) => parseRupees(c.price) ?? 0),
@@ -151,7 +152,9 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   function save() { start(async () => { await saveNow() }) }
   /** The one Save; true when it saved (Publish with unsaved changes saves first, then publishes: one action). */
   async function saveNow(): Promise<boolean> {
-    {
+    // Saving is one at a time, whoever started it (the Save bar, Ctrl+S or "Save and publish"): the bar is off meanwhile.
+    setSaving(true)
+    try {
       const r = await saveProduct(id, version, {
         title: d.title, description: d.description, typeId: d.typeId, modelHeight: d.modelHeight, modelSize: d.modelSize, options: d.options,
         variants: combos.map((c) => ({ values: c, ...(d.cells[keyOf(c)] ?? EMPTY_CELL) })),
@@ -177,7 +180,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
       if (r.conflict) toast.error(r.error, { action: { label: 'Reload', run: () => window.location.reload() } })
       else toast.error(r.error)
       return false
-    }
+    } finally { setSaving(false) }
   }
   // Ctrl/⌘+S saves (products PR·2): the browser's own "save page" never fires here. Not while a dialog is open, a
   // save is running or a word is still being composed; the size chart's own editor keeps its own Save.
@@ -185,7 +188,9 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's' || e.altKey || e.shiftKey) return
+      if (e.target instanceof Element && e.target.closest('[data-own-save]')) return
       e.preventDefault()
+      // The size chart's own editor (inline) keeps its own Save: the key is left to it, never taken for the product.
       if (e.isComposing || document.querySelector('dialog:modal')) return
       root.current?.querySelector<HTMLButtonElement>('button[aria-keyshortcuts]:not(:disabled)')?.click()
     }
@@ -209,7 +214,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
     return () => window.removeEventListener('resize', again)
   }, [])
   return (
-    <div ref={root}>
+    <div ref={root} className={dirty ? 'pb-20 md:pb-0' : undefined}>
       {/* PageHeader (rule 13) with the title as a field: the h1 names the product for a screen reader, the field
           shows and edits it. A textarea, so a long title wraps to the next line instead of being cut mid-word
           (stress test S7). One line of text: Enter does nothing, unless an input method is still composing a word. */}
@@ -275,7 +280,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           <ReadyFor d={d} photos={photos.length} priced={prices.length === cells.length && cells.length > 0} />
         </aside>
       </div>
-      {dirty && <SaveBar placement="bottom" keys={mac ? '⌘S' : 'Ctrl+S'} pending={pending} onSave={save} onDiscard={() => { setD(saved); setErrors({}) }} />}
+      {dirty && <SaveBar placement="bottom" keys={mac ? '⌘S' : 'Ctrl+S'} pending={pending || saving} onSave={save} onDiscard={() => { setD(saved); setErrors({}) }} />}
       <LeaveDialog open={!!guard.leaveTo} what={saved.title || 'this product'} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(d))} />
     </div>
   )

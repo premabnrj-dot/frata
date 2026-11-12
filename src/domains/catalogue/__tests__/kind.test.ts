@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { kindOf, startSizes, typeFor } from '../kind'
+import { isKind, kindOf, startSizes, typeFor } from '../kind'
 
 const types = [
   { id: 'k', name: 'Kurta set · Women' }, { id: 's', name: 'Shirt · Men' }, { id: 'kids', name: 'Kids' },
@@ -35,6 +35,10 @@ describe('a new product takes its kind and type from its name (PR·0: the first 
     expect(typeFor('Linen kurta', types, undefined, 'kids')).toBe('kids')
     expect(typeFor('Linen kurta', types, undefined, 'one_size')).toBe('o')
     expect(typeFor('Kids frock', types, undefined, 'sized')).toBeNull()
+  })
+  it('the server takes only a known kind', () => {
+    expect(['sized', 'footwear', 'kids', 'one_size'].every(isKind)).toBe(true)
+    expect([undefined, '', 'Kids', 'shoes', 1, null].some(isKind)).toBe(false)
   })
   it('an import with sizes falls back to the first type whose chart has them all', () => {
     const charts = [{ id: 'kids', name: 'Kids', chartSizes: ['2–3 Y'] }, { id: 'k', name: 'Kurta set · Women', chartSizes: ['XS', 'S', 'M', 'L', 'XL'] }]

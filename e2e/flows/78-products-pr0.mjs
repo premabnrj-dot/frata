@@ -89,6 +89,23 @@ export default {
         await p.goto(CONSOLE + '/console/products?q=nothing-matches-this')
         await p.getByText('No product matches “nothing-matches-this”').waitFor()
       })
+      await t.step('PR·2: a kind picked against the name wins; "Save and set to archived" saves, then archives', async () => {
+        await p.goto(CONSOLE + '/console/products/new')
+        await p.getByLabel('Name').fill('Linen kurta PR0')
+        assert.equal(await p.getByRole('radio', { name: /^Clothing with sizes/ }).isChecked(), true)
+        await p.getByRole('radio', { name: /^Kids/ }).check()
+        await p.getByRole('button', { name: 'Create draft' }).click()
+        await p.waitForURL(/\/console\/products\/linen-kurta-pr0/)
+        const [k] = await db`select type_id, option_values from products where tenant_id = ${KESAR} and title = 'Linen kurta PR0'`
+        assert.equal(k.type_id, null, 'Kids chosen: never the women\'s kurta chart')
+        assert.deepEqual(k.option_values, [['2–3 Y', '3–4 Y', '4–5 Y']])
+        await p.locator('#desc').fill('For the little ones.')
+        await p.getByRole('radio', { name: 'Archived' }).check()
+        await p.getByRole('button', { name: 'Save and set to archived' }).click()
+        for (let i = 0; i < 40; i++) { const [r] = await db`select status from products where tenant_id = ${KESAR} and title = 'Linen kurta PR0'`; if (r.status === 'archived') break; await p.waitForTimeout(250) }
+        const [r] = await db`select description, status from products where tenant_id = ${KESAR} and title = 'Linen kurta PR0'`
+        assert.deepEqual([r.description, r.status], ['For the little ones.', 'archived'])
+      })
     } finally {
       await ctx.close()
       await cleanup()

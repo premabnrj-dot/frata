@@ -65,7 +65,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
         </>
       )}
       {type && edit && (
-        <div className="space-y-2 rounded-md border border-border p-3">
+        <div data-own-save className="space-y-2 rounded-md border border-border p-3">
           <p className="text-sm">Editing the chart for every <b>{type.name}</b> ({type.uses} product{type.uses === 1 ? '' : 's'}). In cm.</p>
           <div className="relative overflow-x-auto"><table className="text-sm"><thead><tr className="[&>th]:px-1 [&>th]:py-1">
             <th className="text-left text-xs text-muted-foreground">Size</th>
