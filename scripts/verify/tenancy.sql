@@ -2800,4 +2800,69 @@ do $$ begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 71 checks passed'
+-- 72. Product import PI·1 (0111; plan docs/plans/2026-11-12-product-import.md § Tasks 5): jobs and rows are the shop's
+-- own both ways; a row can never name another shop's job or product (composite keys); the app never deletes either,
+-- never moves one to another shop, and never rewrites a job's file, mapping or who started it; one running job a shop;
+-- a deleted draft leaves its row with no product; no other role holds anything.
+insert into products (id, tenant_id, handle, title) values ('eeeeeeee-0000-0000-0000-0000000000b4', '22222222-2222-2222-2222-222222222222', 'b-imported', 'B imported');
+insert into import_jobs (id, tenant_id, file_name, file_hash, source, mapping, chunks, planned, started_by) values
+  ('f1f1f1f1-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'b.csv', repeat('b', 64), 'sheet', '{"source":"sheet","headers":[],"fields":[]}', 1, 1, 'aaaaaaaa-0000-0000-0000-000000000001');
+insert into import_rows (tenant_id, job_id, n, key, cells, product_id) values
+  ('22222222-2222-2222-2222-222222222222', 'f1f1f1f1-0000-0000-0000-00000000000b', 2, 't:b kurta', '{B kurta,999}', 'eeeeeeee-0000-0000-0000-0000000000b4');
+begin; set local role frata_app;
+do $$ begin
+  if exists (select 1 from import_jobs) or exists (select 1 from import_rows) then raise exception 'FAIL: imports seen with no shop set'; end if;
+  begin insert into import_jobs (tenant_id, file_name, source, mapping, chunks, planned, started_by) values ('11111111-1111-1111-1111-111111111111', 'x.csv', 'sheet', '{}', 1, 0, gen_random_uuid());
+    raise exception 'FAIL: a job with no shop set'; exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from import_jobs) or exists (select 1 from import_rows) then raise exception 'FAIL: A sees B imports'; end if;
+  update import_jobs set finished_at = now() where id = 'f1f1f1f1-0000-0000-0000-00000000000b';
+  get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A finished B job'; end if;
+  update import_rows set cells = null where job_id = 'f1f1f1f1-0000-0000-0000-00000000000b';
+  get diagnostics n = row_count; if n <> 0 then raise exception 'FAIL: A changed B rows'; end if;
+  begin insert into import_jobs (tenant_id, file_name, source, mapping, chunks, planned, started_by) values ('22222222-2222-2222-2222-222222222222', 'x.csv', 'sheet', '{}', 1, 0, gen_random_uuid());
+    raise exception 'FAIL: A wrote a B job'; exception when insufficient_privilege then null; end;
+  insert into import_jobs (id, tenant_id, file_name, file_hash, source, mapping, chunks, planned, started_by) values
+    ('f1f1f1f1-0000-0000-0000-00000000000a', '11111111-1111-1111-1111-111111111111', 'a.csv', repeat('a', 64), 'sheet', '{}', 2, 1, gen_random_uuid());
+  begin insert into import_jobs (tenant_id, file_name, source, mapping, chunks, planned, started_by) values ('11111111-1111-1111-1111-111111111111', 'two.csv', 'sheet', '{}', 1, 0, gen_random_uuid());
+    raise exception 'FAIL: two running imports in one shop'; exception when unique_violation then null; end;
+  insert into import_rows (tenant_id, job_id, n, key, product_id) values ('11111111-1111-1111-1111-111111111111', 'f1f1f1f1-0000-0000-0000-00000000000a', 2, 't:a', 'eeeeeeee-0000-0000-0000-00000000000a');
+  begin insert into import_rows (tenant_id, job_id, n, key) values ('11111111-1111-1111-1111-111111111111', 'f1f1f1f1-0000-0000-0000-00000000000b', 3, 't:x');
+    raise exception 'FAIL: A wrote a row into B job'; exception when foreign_key_violation then null; end;
+  begin insert into import_rows (tenant_id, job_id, n, key, product_id) values ('11111111-1111-1111-1111-111111111111', 'f1f1f1f1-0000-0000-0000-00000000000a', 3, 't:x', 'eeeeeeee-0000-0000-0000-0000000000b4');
+    raise exception 'FAIL: an A row named a B product'; exception when foreign_key_violation then null; end;
+  begin insert into import_rows (tenant_id, job_id, n, key) values ('22222222-2222-2222-2222-222222222222', 'f1f1f1f1-0000-0000-0000-00000000000b', 3, 't:x');
+    raise exception 'FAIL: A wrote a B row'; exception when insufficient_privilege then null; end;
+  begin delete from import_jobs where id = 'f1f1f1f1-0000-0000-0000-00000000000a'; raise exception 'FAIL: the app deleted a job'; exception when insufficient_privilege then null; end;
+  begin delete from import_rows; raise exception 'FAIL: the app deleted a row'; exception when insufficient_privilege then null; end;
+  begin update import_jobs set mapping = '{}' where id = 'f1f1f1f1-0000-0000-0000-00000000000a'; raise exception 'FAIL: the app rewrote a mapping'; exception when insufficient_privilege then null; end;
+  begin update import_jobs set tenant_id = '22222222-2222-2222-2222-222222222222' where id = 'f1f1f1f1-0000-0000-0000-00000000000a'; raise exception 'FAIL: the app moved a job'; exception when insufficient_privilege then null; end;
+  begin update import_rows set product_id = null; raise exception 'FAIL: the app re-pointed a row'; exception when insufficient_privilege then null; end;
+  update import_rows set cells = null where job_id = 'f1f1f1f1-0000-0000-0000-00000000000a';
+  get diagnostics n = row_count; if n <> 1 then raise exception 'FAIL: A could not null its own row''s cells'; end if;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update']) p, unnest(array['import_jobs', 'import_rows']) t
+             where has_any_column_privilege(r, t, p))
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_app']) r, unnest(array['import_jobs', 'import_rows']) t where has_table_privilege(r, t, 'delete') or has_table_privilege(r, t, 'truncate'))
+  then raise exception 'FAIL: another role reaches imports, or one deletes them'; end if;
+  if exists (select 1 from pg_class where relname in ('import_jobs', 'import_rows') and not relrowsecurity) then raise exception 'FAIL: imports without RLS'; end if;
+  if exists (select 1 from pg_policies where tablename in ('import_jobs', 'import_rows') and (coalesce(qual, '') not like '%app_current_tenant()%' or coalesce(with_check, '') not like '%app_current_tenant()%'))
+  then raise exception 'FAIL: an import policy that doesn''t name the shop'; end if;
+  -- A deleted draft leaves its row, with no product (SET NULL on product_id only: the row keeps its shop).
+  delete from products where id = 'eeeeeeee-0000-0000-0000-0000000000b4';
+  if not exists (select 1 from import_rows where job_id = 'f1f1f1f1-0000-0000-0000-00000000000b' and product_id is null and tenant_id = '22222222-2222-2222-2222-222222222222')
+  then raise exception 'FAIL: a deleted draft took its import row, or its shop'; end if;
+  -- SKUs are one in a shop in any case (variants_tenant_sku_upper).
+  insert into products (id, tenant_id, handle, title) values ('eeeeeeee-0000-0000-0000-0000000000a3', '11111111-1111-1111-1111-111111111111', 'a-sku-case', 'A');
+  insert into variants (tenant_id, product_id, option_values, price, sku) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-0000000000a3', '{S}', 1, 'KS-CASE-1');
+  begin insert into variants (tenant_id, product_id, option_values, price, sku) values ('11111111-1111-1111-1111-111111111111', 'eeeeeeee-0000-0000-0000-0000000000a3', '{M}', 1, 'ks-case-1');
+    raise exception 'FAIL: two SKUs that differ only in case'; exception when unique_violation then null; end;
+end $$;
+
+\echo 'tenancy proof — all 72 checks passed'
