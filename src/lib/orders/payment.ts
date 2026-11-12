@@ -16,7 +16,7 @@ import { keysFor, markEvent } from '@/lib/payments/keys'
 import { checkoutSignatureOk, orderPayments, toPayment } from '@/lib/payments/razorpay'
 import { trimRazorpayEvent } from '@/lib/webhooks/razorpay'
 import { refreshSoldOut } from '@/lib/queries/storefront'
-import { HOLD_MINUTES, startPayment, takeStock, type Pay } from './place'
+import { HOLD_MINUTES, lockTimedOut, startPayment, takeSlot, takeStock, type Pay } from './place'
 import { storedPricing, writeReprice } from './reprice'
 
 // =============================================================================
@@ -30,6 +30,23 @@ import { storedPricing, writeReprice } from './reprice'
 // =============================================================================
 
 type OrderKey = { id: string; tenantId: string }
+
+// A flash drop (impact review 2026-11-11): a payment landing and a switch to pay on delivery take stock like a
+// placement, so they share the shop's slots and the 2 s lock wait (place.ts takeSlot). Past either, nothing is written:
+// the payment is safe at Razorpay and its webhook event is stored, processed when the shop is less busy.
+type Busy = { ok: false; status: 503; error: string }
+const PAID_BUSY: Busy = { ok: false, status: 503, error: 'Your payment went through. Your order shows as paid in a few minutes.' }
+const SWITCH_BUSY = 'So many orders right now. Nothing changed on your order. Try again in a moment.'
+
+/** `run` in the shop's transaction holding a slot; null when the shop is busy (no slot, or a lock not had in 2 s). */
+async function withSlot<T>(tenantId: string, run: (tx: Tx) => Promise<T>): Promise<T | null> {
+  try {
+    return await withTenant(tenantId, async (tx) => ((await takeSlot(tx, tenantId)) ? run(tx) : null))
+  } catch (e) {
+    if (lockTimedOut(e)) return null
+    throw e
+  }
+}
 
 /**
  * Record the payment once and take the stock of any line not taken yet (none, after a switch to COD: takeStock
@@ -72,9 +89,9 @@ const byToken = async (tx: Tx, tenantId: string, token: string) => {
 }
 
 /** The browser's Checkout reply. The signature is checked with OUR stored Razorpay order id. */
-export async function confirmPayment(tenantId: string, token: string, reply: { paymentId: string; signature: string }): Promise<{ ok: true } | { ok: false; status: 400 | 404; error: string }> {
+export async function confirmPayment(tenantId: string, token: string, reply: { paymentId: string; signature: string }): Promise<{ ok: true } | { ok: false; status: 400 | 404; error: string } | Busy> {
   const soldOut: string[] = []
-  const r = await withTenant(tenantId, async (tx): Promise<{ ok: true } | { ok: false; status: 400 | 404; error: string }> => {
+  const r = await withSlot(tenantId, async (tx): Promise<{ ok: true } | { ok: false; status: 400 | 404; error: string }> => {
     const o = await byToken(tx, tenantId, token)
     if (!o || !o.rzp) return { ok: false, status: 404, error: 'Not found' }
     const keys = await keysFor(tx, tenantId)
@@ -82,6 +99,7 @@ export async function confirmPayment(tenantId: string, token: string, reply: { p
     await markPaid(tx, { id: o.id, tenantId }, { paymentId: reply.paymentId }, soldOut)
     return { ok: true }
   })
+  if (r === null) return PAID_BUSY
   if (soldOut.length) await refreshSoldOut(tenantId)
   return r
 }
@@ -95,7 +113,7 @@ export async function paymentFailed(tenantId: string, token: string): Promise<vo
 }
 
 export type SwitchResult = { kind: 'switched'; total: number } | { kind: 'paid' } | { kind: 'changed'; quote: Quote }
-  | { kind: 'refused'; status: 404 | 409 | 422; error: string; codTotal?: number }
+  | { kind: 'refused'; status: 404 | 409 | 422 | 503; error: string; codTotal?: number }
 
 /**
  * Pay on delivery instead, for the SAME order. Asks Razorpay first: a payment authorized or captured means it is
@@ -114,14 +132,15 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
     const captured = pays.find((p) => p.status === 'captured')
     if (captured) {
       const soldOut: string[] = []
-      await withTenant(tenantId, (tx) => markPaid(tx, { id: pre.o!.id, tenantId }, { paymentId: captured.id, fee: captured.fee, tax: captured.tax }, soldOut))
+      const paid = await withSlot(tenantId, (tx) => markPaid(tx, { id: pre.o!.id, tenantId }, { paymentId: captured.id, fee: captured.fee, tax: captured.tax }, soldOut))
+      if (paid === null) return { kind: 'refused', status: 503, error: PAID_BUSY.error }
       if (soldOut.length) await refreshSoldOut(tenantId)
       return { kind: 'paid' }
     }
     if (pays.some((p) => p.status === 'authorized')) return { kind: 'refused', status: 409, error: 'Your payment is still going through. Wait a moment, then check your order.' }
   }
   const soldOut: string[] = []
-  const r = await withTenant(tenantId, async (tx): Promise<SwitchResult> => {
+  const r = await withSlot(tenantId, async (tx): Promise<SwitchResult> => {
     const o = await byToken(tx, tenantId, token)
     if (!o || o.paidAt || o.switchedAt || o.cancelledAt) return { kind: 'refused', status: 409, error: 'This order changed. Reload the page.' }
     const shop = await checkoutShop(tx, tenantId, null)
@@ -149,6 +168,7 @@ export async function switchToCod(tenantId: string, token: string, expectedTotal
     await enqueueOrderEmail(tx, tenantId, o.id, 'confirmed', null, now)
     return { kind: 'switched', total: r.total }
   })
+  if (r === null) return { kind: 'refused', status: 503, error: SWITCH_BUSY }
   if (soldOut.length) await refreshSoldOut(tenantId)
   return r
 }
@@ -220,22 +240,29 @@ export async function storeRazorpayEvent(tenantId: string, key: string, payload:
  */
 export async function processEvents(tenantId: string, limit = 20): Promise<number> {
   const soldOut: string[] = []
-  const n = await withTenant(tenantId, async (tx) => {
+  const n = await withSlot(tenantId, async (tx) => {
     const rows = await tx.select({ id: webhookEvents.id, payload: webhookEvents.payload }).from(webhookEvents)
       .where(and(eq(webhookEvents.tenantId, tenantId), isNull(webhookEvents.processedAt), eq(webhookEvents.provider, 'razorpay'))).orderBy(webhookEvents.receivedAt).limit(limit)
       .for('update', { skipLocked: true })
+    let done = 0
     for (const row of rows) {
       let error: string | null = null
       // A savepoint per event: one bad event must not abort the batch and block every later payment (audit 2026-11-07).
-      try { error = await tx.transaction((sp) => applyEvent(sp, tenantId, row.payload as Record<string, unknown>, soldOut)) } catch (e) { error = e instanceof Error ? e.name : 'error' }
+      try { error = await tx.transaction((sp) => applyEvent(sp, tenantId, row.payload as Record<string, unknown>, soldOut)) } catch (e) {
+        // A lock not had in 2 s (a drop): the payment is fine, the shop is busy. This event and the rest stay
+        // unprocessed for the next pass (the 5-minute drain); marking it processed would lose the payment.
+        if (lockTimedOut(e)) break
+        error = e instanceof Error ? e.name : 'error'
+      }
       await tx.update(webhookEvents).set({ processedAt: sql`now()`, lastError: error, payload: trimRazorpayEvent(row.payload as Record<string, unknown>) }).where(and(eq(webhookEvents.tenantId, tenantId), eq(webhookEvents.id, row.id)))
+      done++
     }
-    if (rows.length) await markEvent(tx, tenantId)
-    return rows.length
+    if (done) await markEvent(tx, tenantId)
+    return done
   })
-  // A rolled-back savepoint may have listed a variant: one refresh too many is harmless.
+  // A rolled-back savepoint may have listed a variant: one refresh too many is harmless. Busy (null): none processed.
   if (soldOut.length) await refreshSoldOut(tenantId)
-  return n
+  return n ?? 0
 }
 
 async function applyEvent(tx: Tx, tenantId: string, ev: Record<string, unknown>, soldOut: string[]): Promise<string | null> {

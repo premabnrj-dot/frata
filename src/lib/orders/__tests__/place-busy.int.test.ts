@@ -27,7 +27,7 @@ describe.skipIf(!host)('placing orders at a flash drop', () => {
 
     const stamp = Date.now()
     // The throwaway shop: shop A's settings, published, pay on delivery on, no offers of its own.
-    const su = postgres(`postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    const su = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
     const [{ id: A }] = await su<[{ id: string }]>`insert into tenants (slug, name) values (${'int-busy-' + stamp}, 'Int busy') returning id`
     await su`create temp table busy_shop as select * from shop_settings where tenant_id = ${PROOF_A}`
     await su`update busy_shop set tenant_id = ${A}, published_at = now(), cod_on = true, cod_min = 0, cod_max = 0, cod_charge = 4900, shipping_flat = 0, free_shipping_above = 0, cod_blocked_pincodes = '{}'`

@@ -1,6 +1,6 @@
 import 'server-only'
 import { randomBytes } from 'node:crypto'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import type { Tx } from '@/lib/db'
 import { paymentWebhookFor } from '@/lib/db/platform'
 import { paymentKeys } from '@/lib/db/schema-orders'
@@ -66,7 +66,10 @@ export async function markProblem(tx: Tx, tenantId: string, problem: string | nu
 }
 
 export async function markEvent(tx: Tx, tenantId: string) {
-  await tx.update(paymentKeys).set({ lastEventAt: new Date(), webhookSeenAt: sql`coalesce(${paymentKeys.webhookSeenAt}, now())` }).where(eq(paymentKeys.tenantId, tenantId))
+  // Skipped while another pass holds the row (it is stamping the same moment): at a drop every payment's pass would
+  // otherwise queue on this one row per shop (impact review 2026-11-11).
+  await tx.update(paymentKeys).set({ lastEventAt: new Date(), webhookSeenAt: sql`coalesce(${paymentKeys.webhookSeenAt}, now())` })
+    .where(and(eq(paymentKeys.tenantId, tenantId), sql`${paymentKeys.tenantId} in (select tenant_id from payment_keys where tenant_id = ${tenantId} for update skip locked)`))
 }
 
 /** A webhook's shop and its secret, from the key in its URL (before any tenant is known: app_payment_webhook_for). */

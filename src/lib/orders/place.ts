@@ -80,7 +80,19 @@ export type PlaceResult =
  */
 export const PLACE_SLOTS = 8
 const BUSY = 'So many orders right now. Nothing was charged. Try again in a moment.'
-const lockTimedOut = (e: unknown) => { const c = (e as { code?: string; cause?: { code?: string } }); return (c.cause?.code ?? c.code) === '55P03' }
+/** A Postgres lock not had within the transaction's lock_timeout (drizzle 0.45 wraps the driver's error: `cause`). */
+export const lockTimedOut = (e: unknown) => { const c = (e as { code?: string; cause?: { code?: string } }); return (c.cause?.code ?? c.code) === '55P03' }
+
+/**
+ * Everything that takes a shop's stock (placing, a payment landing, a switch to pay on delivery) shares the shop's
+ * PLACE_SLOTS and waits at most 2 s for any lock after this. False: every slot is taken (busy). Call it first in the
+ * transaction, before any lock.
+ */
+export async function takeSlot(tx: Tx, tenantId: string): Promise<boolean> {
+  await tx.execute(sql`set local lock_timeout = '2s'`)
+  const [slot] = await tx.execute<{ s: number }>(sql`select s from generate_series(0, ${PLACE_SLOTS - 1}) s where pg_try_advisory_xact_lock(hashtextextended(${tenantId + ':place'}, s)) limit 1`)
+  return !!slot
+}
 
 const requestHashOf = (i: PlaceInput) => sha256(JSON.stringify([i.address.phone, i.method, [...i.bag].map((b) => [b.variantId, b.qty]).sort(), ...(i.code ? [normalCode(i.code)] : []), ...(i.b2b ? [cleanGstin(i.b2b.gstin)] : [])]))
 
@@ -99,12 +111,11 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
   const soldOut: string[] = []
   let placed: PlaceResult | Written
   try { placed = await withTenant(tenantId, async (tx): Promise<PlaceResult | Written> => {
-    await tx.execute(sql`set local lock_timeout = '2s'`)
     // A retry whose order was placed (the response lost) finds it before any slot: never "busy, nothing was charged".
+    // A plain read: it waits on no lock.
     const earlier = await priorOf(tx, tenantId, input)
     if (earlier) return earlier
-    const [slot] = await tx.execute<{ s: number }>(sql`select s from generate_series(0, ${PLACE_SLOTS - 1}) s where pg_try_advisory_xact_lock(hashtextextended(${tenantId + ':place'}, s)) limit 1`)
-    if (!slot) return { kind: 'refused', status: 503, error: BUSY }
+    if (!(await takeSlot(tx, tenantId))) return { kind: 'refused', status: 503, error: BUSY }
     // Under the key's lock, again: two tries of the same attempt at once place one order.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${tenantId + ':' + input.idempotencyKey}, 0))`)
     const prior = await priorOf(tx, tenantId, input)
