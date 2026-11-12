@@ -55,7 +55,7 @@ export default {
         await p.getByRole('checkbox', { name: `Select ${T}Old draft B` }).first().check()
         await p.getByRole('region', { name: 'Selected products' }).getByText('2 selected').waitFor()
         await p.getByRole('button', { name: 'Archive' }).click()
-        await p.getByText('Archived: 2 products.').waitFor()
+        await p.getByText('Archived: 2 products.').first().waitFor()
         assert.equal(await statusOf(T + 'Old draft A'), 'archived')
         await p.getByRole('button', { name: 'Undo' }).click()
         for (let i = 0; i < 20 && (await statusOf(T + 'Old draft A')) !== 'draft'; i++) await p.waitForTimeout(250)
@@ -66,7 +66,7 @@ export default {
         await p.goto(CONSOLE + '/console/products?q=Tagged%20dupatta')
         await p.getByRole('checkbox', { name: `Select ${T}Tagged dupatta` }).first().check()
         await p.getByRole('button', { name: 'Duplicate' }).click()
-        await p.getByText('Duplicated as a draft.').waitFor()
+        await p.getByText('Duplicated as a draft.').first().waitFor()
         assert.equal(await statusOf(T + 'Tagged dupatta copy'), 'draft')
       })
 
@@ -77,7 +77,7 @@ export default {
         const d = p.getByRole('dialog', { name: 'Delete 1 product?' })
         await d.waitFor()
         await d.getByRole('button', { name: 'Delete 1 product' }).click()
-        await p.getByText('Deleted 1 product.').waitFor()
+        await p.getByText('Deleted 1 product.').first().waitFor()
         assert.equal(await statusOf(T + 'Old draft A'), undefined)
       })
 
@@ -90,7 +90,7 @@ export default {
         const kept = p.getByRole('dialog', { name: '1 product can’t be deleted' })
         await kept.waitFor()
         await kept.getByRole('button', { name: 'Archive 1 product' }).click()
-        await p.getByText('Archived: 1 product.').waitFor()
+        await p.getByText('Archived: 1 product.').first().waitFor()
         assert.equal(await statusOf(T + 'Live saree'), 'archived')
       })
     } finally {
