@@ -39,7 +39,7 @@ export function DoneStep({ jobId, added, leftOut, inShop, outcome, onFix }: {
       {outcome && outcome.drafts > 0 && (
         <Counts label="What the drafts need">
           <Count value={outcome.needPhotos} label="Need photos">
-            {outcome.needPhotos > 0 && <Link href="/console/products?status=draft" className={button({ variant: 'secondary' })}>Add photos</Link>}
+            {outcome.needPhotos > 0 && <Link href="/console/products/photos?from=import" className={button({ variant: 'secondary' })}>Add photos</Link>}
           </Count>
           <Count value={ready} label="Ready to go live">
             {ready > 0 && <Button variant="secondary" onClick={publish} disabled={pending}>{ready === 1 ? 'Publish the 1 ready' : `Publish the ${ready} ready`}</Button>}

@@ -5,7 +5,12 @@
 // row and column, lists Supplier and Notes as not imported, and its rows-to-fix file makes formulas inert; Import 9
 // as drafts writes 9 drafts (costs for the owner), ends the job and forgets its cells. On a phone, staff checking the
 // same sheet as CSV see it all in the shop already (a SKU in the shop matches) and no cost column; the owner deletes the import's drafts.
-// Guards: a draft that reaches the shop; a cost from staff; a cell kept after the job; a formula in the fix file.
+// Photos by file name (PI·2): from Done's "Add photos", 12 phone photos matched by SKU, a SKU's start, address, a Hindi
+// name, a name with "(2)", and a colour word; one named IMG_… and one that fits two products ask "Which product?"; the
+// first upload refused by storage is a toast with Try again; each lands on its product in its place (Blob stood in by
+// the browser's network, as the Vercel Blob client calls it). On a phone, staff see a photo that asks.
+// Guards: a draft that reaches the shop; a cost from staff; a cell kept after the job; a formula in the fix file; a
+// photo on the wrong product or out of its place; a colour photo without its colour.
 // =============================================================================
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -16,6 +21,33 @@ const FIXTURES = new URL('../../src/domains/catalogue/import/__tests__/fixtures/
 const XLSX = readFileSync(new URL('stress.xlsx', FIXTURES))
 const CSV = readFileSync(new URL('stress.csv', FIXTURES))
 const INPUT = 'input[type=file][aria-label="Choose a spreadsheet"]'
+const STORE = 'https://e2e.public.blob.vercel-storage.com' // BLOB_STORE_ID store_e2e (stack.mjs)
+/** Photos the browser makes (a JPEG, or PNG/WebP), each `w` px wide so the database tells which file is which. */
+async function makePhotos(page, specs) {
+  const made = await page.evaluate(async (list) => Promise.all(list.map(async ({ name, w, type }) => {
+    const c = document.createElement('canvas'); c.width = w; c.height = Math.round(w * 1.25)
+    const g = c.getContext('2d'); g.fillStyle = `hsl(${w % 360} 50% 60%)`; g.fillRect(0, 0, c.width, c.height)
+    const blob = await new Promise((r) => c.toBlob(r, type, 0.8))
+    const bytes = new Uint8Array(await blob.arrayBuffer()); let bin = ''; for (const b of bytes) bin += String.fromCharCode(b)
+    return { name, mimeType: type, b64: btoa(bin) }
+  })), specs)
+  return made.map((f) => ({ name: f.name, mimeType: f.mimeType, buffer: Buffer.from(f.b64, 'base64') }))
+}
+/** Vercel Blob's upload API as the client calls it (PUT https://vercel.com/api/blob/?pathname=…); `refuse` the first n. */
+async function fakeBlob(ctx, refuse = 0) {
+  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'PUT, OPTIONS', 'access-control-allow-headers': '*', 'access-control-expose-headers': '*' }
+  const seen = []
+  await ctx.route(/^https:\/\/vercel\.com\/api\/blob\//, async (route) => {
+    const req = route.request()
+    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
+    const pathname = new URL(req.url()).searchParams.get('pathname')
+    seen.push(pathname)
+    if (refuse > 0) { refuse--; return route.fulfill({ status: 403, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify({ error: { code: 'forbidden', message: 'Access denied' } }) }) }
+    const url = `${STORE}/${pathname}`
+    return route.fulfill({ status: 200, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify({ url, downloadUrl: `${url}?download=1`, pathname, contentType: req.headers()['x-content-type'] ?? 'image/webp', contentDisposition: 'inline' }) })
+  })
+  return seen
+}
 const HANDLES = ['anarkali-kurta-set', 'chanderi-dupatta', 'linen-co-ord', 'block-print-kurta', 'banarasi-sari', 'mul-cotton-nightsuit', 'bandhani-dupatta', 'phulkari-jacket', 'ikat-palazzo']
 
 export default {
@@ -53,7 +85,7 @@ export default {
         await fix.getByText('KS-BPK-M is also on row 5').waitFor()
         await p.getByText('“Supplier”, “Notes”').waitFor()
         await p.getByText('Only you see it').waitFor()
-        await p.getByRole('table', { name: 'Preview' }).getByText('चंदेरी दुपट्टा').waitFor()
+        await p.getByRole('table', { name: 'Preview' }).getByText('चंदेरी दुपट्टा', { exact: true }).waitFor()
         await p.getByText('/chanderi-dupatta').waitFor()
         await p.getByRole('button', { name: 'Import 9 as drafts' }).waitFor()
         await p.screenshot({ path: t.out('import-check'), fullPage: true })
@@ -85,6 +117,69 @@ export default {
         await p.getByRole('table', { name: 'Import history' }).getByRole('cell', { name: 'kesar-catalogue.xlsx' }).waitFor()
         await p.screenshot({ path: t.out('import-done'), fullPage: true })
       })
+
+      await t.step('Photos: 12 matched by file name, two asked "Which product?", the first refused upload tried again; each on its product in its place', async () => {
+        // Bandhani comes in two colours here, so a colour word in a name makes a colour photo.
+        await db`update products set options = '{Size,Colour}', option_values = '[["Free size"],["Rani","Haldi"]]' where tenant_id = ${KESAR} and handle = 'bandhani-dupatta'`
+        const puts = await fakeBlob(owner, 1)
+        await p.getByRole('group', { name: 'What the drafts need' }).getByRole('link', { name: 'Add photos' }).click()
+        await p.waitForURL(/\/console\/products\/photos\?from=import$/)
+        await p.getByRole('heading', { name: 'Add photos', level: 1 }).waitFor()
+        await p.getByText('Name photos by SKU or product').waitFor()
+        await p.getByText('Drop photos').waitFor()
+        await p.screenshot({ path: t.out('import-photos-empty') })
+        const J = 'image/jpeg'
+        const files = await makePhotos(p, [
+          { name: 'KS-ANR-1.jpg', w: 410, type: J }, { name: 'KS-ANR-2.jpg', w: 420, type: J }, { name: 'anarkali-kurta-set-3.jpg', w: 430, type: J },
+          { name: 'चंदेरी दुपट्टा (1).jpg', w: 440, type: J }, { name: 'Linen co-ord (2).jpeg', w: 450, type: J }, { name: 'linen-co-ord-1.jpg', w: 460, type: J },
+          { name: 'KS-BPK-M.jpg', w: 470, type: J }, { name: 'bandhani-dupatta-rani-1.jpg', w: 480, type: J }, { name: 'Mul Cotton Nightsuit.png', w: 490, type: 'image/png' },
+          { name: 'phulkari-jacket-1.webp', w: 500, type: 'image/webp' }, { name: 'IMG_4021.jpg', w: 510, type: J }, { name: 'chanderi-2.jpg', w: 520, type: J },
+        ])
+        await p.locator('input[type=file][aria-label="Choose photos"]').setInputFiles(files)
+        const card = p.getByRole('region', { name: /^12 photos · \d+ products$/ })
+        await card.getByText('2 not matched', { exact: true }).waitFor()
+        await card.locator('[data-photo="KS-ANR-2.jpg"]').getByText('Photo 2 of 3', { exact: true }).waitFor()
+        await card.locator('[data-photo="bandhani-dupatta-rani-1.jpg"]').getByText('Rani', { exact: true }).waitFor()
+        await card.locator('[data-photo="चंदेरी दुपट्टा (1).jpg"]').getByText('चंदेरी दुपट्टा', { exact: true }).waitFor()
+        await p.screenshot({ path: t.out('import-photos-matched'), fullPage: true })
+        // IMG_…: found by searching; chanderi-2 fits the dupatta and the seed's Chanderi kurta set: both are offered.
+        const img = card.getByRole('combobox', { name: 'Which product is IMG_4021.jpg' })
+        await img.fill('ikat'); await p.getByRole('option', { name: /Ikat palazzo/ }).click()
+        await card.getByRole('combobox', { name: 'Which product is chanderi-2.jpg' }).focus()
+        const offered = p.getByRole('listbox', { name: 'Products for chanderi-2.jpg' })
+        await offered.getByRole('option', { name: /Chanderi kurta set/ }).waitFor()
+        await offered.getByRole('option', { name: /चंदेरी दुपट्टा/ }).click()
+        await card.locator('[data-photo="chanderi-2.jpg"]').getByText('Photo 2 of 2', { exact: true }).waitFor()
+        assert.equal(await card.getByText(/not matched/).count(), 0)
+        await card.getByRole('button', { name: 'Add 12 photos' }).click()
+        // The first upload is refused by storage: a toast that stays, with Try again. The other products' photos are
+        // added; that product's photos that did upload wait for it, so Try again attaches them all in their places.
+        const alert = p.getByRole('alert').filter({ hasText: 'was refused by photo storage' })
+        await alert.waitFor({ timeout: 30_000 })
+        const first = Number(/(\d+) photos added/.exec(await alert.innerText())?.[1])
+        assert.ok(first >= 9 && first <= 11, `${first} added before Try again`)
+        assert.equal(await card.getByText('Not added').count(), 1)
+        assert.equal(await card.getByText('Added', { exact: true }).count(), first)
+        await p.screenshot({ path: t.out('import-photos-failed'), fullPage: true })
+        await alert.getByRole('button', { name: 'Try again' }).click()
+        await alert.waitFor({ state: 'detached' })
+        await p.getByText(12 - first === 1 ? '1 photo added' : `${12 - first} photos added`, { exact: true }).first().waitFor({ timeout: 30_000 })
+        assert.equal(await card.getByText('Added', { exact: true }).count(), 12)
+        await p.screenshot({ path: t.out('import-photos-added'), fullPage: true })
+        assert.ok(puts.every((path) => path.startsWith(`tenants/${KESAR}/products/`)), 'only this shop\'s products folder')
+        const got = await db`select p.handle, i.width, i.option_value, i.position, i.base from product_images i join products p on p.id = i.product_id
+          where i.tenant_id = ${KESAR} and p.handle = any(${HANDLES}) order by p.handle, i.position`
+        const by = (h) => got.filter((g) => g.handle === h).map((g) => [g.width, g.option_value])
+        assert.deepEqual(by('anarkali-kurta-set'), [[410, null], [420, null], [430, null]])
+        assert.deepEqual(by('chanderi-dupatta'), [[440, null], [520, null]])
+        assert.deepEqual(by('linen-co-ord'), [[460, null], [450, null]])
+        assert.deepEqual(by('block-print-kurta'), [[470, null]])
+        assert.deepEqual(by('bandhani-dupatta'), [[480, 'Rani']])
+        assert.deepEqual([by('mul-cotton-nightsuit'), by('phulkari-jacket'), by('ikat-palazzo')], [[[490, null]], [[500, null]], [[510, null]]])
+        assert.ok(got.every((g) => g.base.startsWith(`${STORE}/tenants/${KESAR}/products/`)))
+        // Blob is stood in: the files exist nowhere, so the rows go before the drafts are deleted below.
+        await db`delete from product_images where tenant_id = ${KESAR} and product_id in (select id from products where tenant_id = ${KESAR} and handle = any(${HANDLES}))`
+      })
     } finally {
       await owner.close()
     }
@@ -110,6 +205,19 @@ export default {
         await s.screenshot({ path: t.out('import-check-phone'), fullPage: true })
         await s.getByRole('button', { name: 'Keep my shop as it is' }).click()
         await s.waitForURL(/\/console\/products$/)
+      })
+
+      await t.step('Phone, staff: Products leads to Add photos; a matched photo and one that asks, with no sideways scroll', async () => {
+        await s.getByRole('link', { name: 'Add photos' }).click()
+        await s.waitForURL(/\/console\/products\/photos$/)
+        const files = await makePhotos(s, [{ name: 'KS-PHK-1.jpg', w: 600, type: 'image/jpeg' }, { name: 'IMG_0007.jpg', w: 600, type: 'image/jpeg' }])
+        await s.locator('input[type=file][aria-label="Choose photos"]').setInputFiles(files)
+        await s.getByText('1 not matched', { exact: true }).waitFor()
+        await s.getByRole('combobox', { name: 'Which product is IMG_0007.jpg' }).waitFor()
+        await s.getByRole('button', { name: 'Add 1 photo' }).waitFor()
+        const wide = await s.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+        assert.equal(wide, false, 'no sideways scroll on a phone')
+        await s.screenshot({ path: t.out('import-photos-phone'), fullPage: true })
       })
     } finally {
       await staff.close()

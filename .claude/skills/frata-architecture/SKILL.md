@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.52.0
+  version: 2.52.1
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -749,6 +749,18 @@ Rules:
   No column: `formatOf(base)`. A file's URL is built only by `urlFor` (never `${base}-${w}.webp` by hand); the upload
   path by `blobPath`; the token allows exactly the type the path's extension says; `photosAreMade` reads each file's
   first bytes against its base's format (`headIs`).
+- **A product photo's row is written only by `attachIn`** (`src/lib/catalogue/photos.ts`, in the caller's `asMember`
+  transaction; the editor's `attachPhotos` and the Photos page's `addPhotos`): the base rebuilt by `acceptedBase(…,
+  'products')`, the ladder's widths only, the product looked up in the member's shop and locked while placed, a colour
+  kept only if it is the product's own, a `max` counting the photos it has (the Photos page: 10). Never insert into
+  `product_images` from an action.
+- **Many photos at once go through the import's token route** (`/api/console/upload/import`, PI·2): product paths only,
+  same-origin, counted by `importToken` (`src/lib/media/import-bucket.ts`): a photo counts once at its 400 (every photo
+  has one, uploaded first) against `LIMITS.importPhotoShop` (500 an hour), its larger sizes only after its 400, at most
+  4 tokens a photo; all failing closed. The editor, the look and the logo stay on `/api/console/upload` (`uploadShop`).
+- **Photos by file name are matched in the browser** (`src/domains/catalogue/import/photos.ts`, pure); the server
+  trusts nothing of the match but the product id, which `attachIn` looks up in the member's shop. A live product's new
+  photos purge the catalogue through `refreshSoldOut` (once per 30 s, a trailing one after), never once per product.
 
 ## Razorpay keys that stop working (2026-11-12)
 
