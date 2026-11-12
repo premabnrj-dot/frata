@@ -1,6 +1,8 @@
 # Edit a placed order
 Status: active · Date: 2026-11-11 · Mockup: https://claude.ai/artifact/76HjNBCo2xdJyf6Qvwxutx (views COD, Paid online, Saved) · Approved: owner, 2026-11-12
 
+> **Amended by the plan reviews (2026-11-12):** see `docs/plans/2026-11-12-order-edit.md` § Changes to the spec — that table overrides the text below where they differ.
+
 ## Goal
 North star (1) COD/RTO losses and (2) size returns. Today a "change my size" WhatsApp or a piece out of stock after
 the order means cancelling the whole order and hoping the shopper orders again, or shipping two of three pieces with a
