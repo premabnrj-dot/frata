@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
 import { availability, type Availability } from '@/domains/catalogue/availability'
 import { inches, type Chart } from '@/domains/catalogue/size-charts'
@@ -15,7 +16,8 @@ import { bag, openBag } from './bag-store'
 import { fill } from './fill'
 import type { BuyWords } from './words'
 import { CloseMark } from './close-mark'
-import { DeliveryCheck } from './delivery-check'
+// The PIN code check is its own chunk: below the buy box, not needed for the first paint (product page JS budget).
+const DeliveryCheck = dynamic(() => import('./delivery-check').then((m) => m.DeliveryCheck))
 
 type Gallery = 'swipe' | 'thumbs' | 'rail' | 'stack'
 type Img = PhotoData & SwatchImage & { optionValue: string | null; alt: string }
