@@ -83,3 +83,30 @@ for this scope and are corrected.
 
 ## Review findings
 (filled after the agents run)
+
+## Review findings (2026-11-12) — folded in; owner calls marked
+| Agent / finding | Fix in the plan |
+|---|---|
+| Security C1 / Arch B3: `frata_app` has only SELECT on `tenant_addons`; a grant would let app code write any trial length or price | Definers `app_start_addon_trial(module, shown_price_id)`, `app_end_addon_trial(module)`, `app_stop_addon(module)`: tenant from `app_current_tenant()`, times from `now()`, price = the module's newest version and must equal the one shown; composite FK `(addon_price_id, module)`; tenancy proof row; tenancy-auditor |
+| Arch B1 / Security H1 / UE1: add-ons bill in advance; days after a mid-month trial end are never billed, and a trial spanning the 1st is billed before it ends | An add-on twin of the plan trial's rules: a row in force on the 1st is billed in advance; a row that began during M−1 is made up by days on M's invoice; a trial running on the 1st is billed in arrears. Bill tests for both; e2e across a month end |
+| Arch B2 / UE4: `allocate()` per order can't run on grouped SQL; `n` counts lines; credits are per order | Allocation in SQL as a weight per line (`taxable_value / merchandise_net`), sums weighted, line returns from `credit_note_lines.order_line_id` (credits with no lines spread by weight); a parity test against a pure `allocate()`; rounding per group, not "to the paisa" |
+| Security H2 / Arch M5: Admin's End closes only the trial row | Admin's End goes through `app_end_addon_trial` (both rows) |
+| Security H3 / Arch M4: one-trial index would catch Admin's trials | `by_shop` column; unique `where trial_ends_at is not null and by_shop`; refuse self-serve when any earlier trial exists; the `trial:<tenant>:<module>` advisory lock |
+| Security M1 / Arch M6: price shown vs price charged | The confirm posts the price id it showed; refused with a reload if no longer current |
+| Security M2 / Arch M7: the Notice | The daily outbox sweep finds self-serve trials with 3 days left, writes the Notice (new `source_kind`, migration) and enqueues the email with dedupe key `addon-trial-end:<row>`; End trial before then means none is written; the sender re-checks the trial is live |
+| Security M3 / Arch M8: who sees costs | `seesCosts` via `costsVisibleIn` inside the page's one `withTenant` (a partner before handover sees them, as everywhere); `server-only`; new field names in cost sentinels |
+| Security M4: Apps' off switch on a paid add-on leaves it billed | On a paid add-on, Turn off IS Stop (one confirm saying when billing ends) |
+| Security M5: in-person checks, consent evidence | `managesInPerson` inside the definer's transaction; `where ends_at is null … returning`; the audit row carries the price paise, the first charge date and the confirm's copy version |
+| Security L1: one date | The trial ends at 23:59:59 IST on day 14; that one date everywhere |
+| Security L2: a pincode with one order identifies a shopper | Pincodes with fewer than 5 orders merge into "Other pincodes" |
+| CCPA 2023 (drip pricing, subscription trap) | The confirm shows the GST-inclusive monthly total (₹1,178.82), that the first month is charged by days and on which invoice, and how to end it; the T−3 Notice is required and links End trial; End trial and Stop are one click + one confirm on the home and in Usage and billing; no retention screen |
+| Arch 9: pincode × keys ≈ one group per order | Top 50 pincodes by order count first (index-only), then ₹ kept for those; variants only for the product opened; EXPLAINs in the plan before TP·1 ships (speed-reviewer) |
+| Arch 10: "which size returns" mixes RTO with line returns; overlaps Size and fit | "Returned" per line = RTO of the order or a credit note line; one return-rate-by-variant read that Size and fit will reuse |
+| Arch 11: no mandate, plan-trial pause | A shop with no autopay sees the add-on on its next invoice like any line; the pause covers the add-on too (no add-on billed while the plan is paused) |
+| Arch 12: blast radius | `OfferAction` gains `trial` and `in_trial`; e2e 45's Admin-trial count; an ended shop is offered "Add True Profit · ₹999/month" (no second trial) |
+| Arch 13–15 | CHECK `ends_at >= starts_at`; a not-yet-started paid row closes at its own `starts_at`; the bill line's date from `periodStart`; deleted variants group under "Removed products" |
+| UE3: few pincodes lose money on COD before ads | Each pincode's ₹ kept is shown; "COD loses money here" only past the shop's own break-even (orderProfit at that pincode's RTO) |
+| UE5: stopping a paid add-on | It runs to the end of the month already billed, no credit (add-ons are billed in advance); one not yet billed ends now |
+| UE7: trial→paid counts inertia | Measure also: still paid at day 60; an action within 30 days (product hidden, price changed, COD off once RTO Shield ships) |
+| **UE2 (owner): store B (₹4,500 × 80) pays more than Shopify's free profit apps** | **Owner call** — see below |
+| **UE (owner): test demand before building A3** | **Owner call** — see below |
