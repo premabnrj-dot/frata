@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, inr } from './shop-client'
 import { fill } from './fill'
 import type { BuyWords } from './words'
@@ -26,20 +26,26 @@ export function DeliveryCheck({ price, w }: { price: number | null; w: BuyWords 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [t, setT] = useState<(Terms & { pin: string }) | null>(null)
+  // Only the latest check's answer counts: the remembered PIN code's check on load can answer after a newer one.
+  const latest = useRef(0)
 
   const check = async (p: string) => {
     if (!PIN.test(p)) { setError(w.pinBad); return }
+    const mine = ++latest.current
     setBusy(true); setError(null)
     const r = await api<Terms>('/api/shop/delivery', { pincode: p })
+    if (mine !== latest.current) return
     setBusy(false)
-    if (!r.ok) { setError(r.status === 429 ? w.pinFailed : w.pinFailed); return }
+    if (!r.ok) { setError(r.status === 429 ? w.pinMany : w.pinFailed); return }
     setT({ ...r.data, pin: p })
     try { localStorage.setItem(KEY, p) } catch { /* private mode */ }
   }
   useEffect(() => {
     let saved: string | null = null
     try { saved = localStorage.getItem(KEY) } catch { /* private mode */ }
-    if (saved && PIN.test(saved)) { setPin(saved); void check(saved) }
+    // Never over what the shopper has already typed (the box can be filled before this runs).
+    const box = document.getElementById('delivery-pin') as HTMLInputElement | null
+    if (saved && PIN.test(saved) && !box?.value) { setPin(saved); void check(saved) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

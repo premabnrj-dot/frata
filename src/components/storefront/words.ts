@@ -23,7 +23,7 @@ const EN = {
   from: 'From {price}', colours: '{n} colours',
   tag: { 'Sold out': 'Sold out', 'Pre-order': 'Pre-order', 'Made to order': 'Made to order' },
   about: 'About this piece', details: 'Details',
-  ships: 'Ships in {d} {days} · arrives in {m} days to metros, {r} elsewhere', day: 'day', days: 'days',
+  ships: 'Ships in {d} {days} · arrives in {m} days to metros, {r} elsewhere', shipsZones: 'Ships in {d} {days} · delivery in {m}–{r} days, by PIN code', day: 'day', days: 'days',
   returns: { exchange_or_refund: '{d}-day returns and exchanges', exchange_only: '{d}-day exchanges', refund_only: '{d}-day returns', none: 'No returns on this shop' },
   taxIncluded: 'Price includes GST.', taxAdded: 'GST is added at checkout.',
   seeAll: 'See all',
@@ -47,7 +47,7 @@ const HI: Words = {
   from: '{price} से', colours: '{n} रंग',
   tag: { 'Sold out': 'स्टॉक खत्म', 'Pre-order': 'प्री-ऑर्डर', 'Made to order': 'ऑर्डर पर बनेगा' },
   about: 'इस पीस के बारे में', details: 'विवरण',
-  ships: '{d} {days} में भेजा जाएगा · मेट्रो शहरों में {m} दिन में, बाकी जगह {r} दिन में पहुँचेगा', day: 'दिन', days: 'दिन',
+  ships: '{d} {days} में भेजा जाएगा · मेट्रो शहरों में {m} दिन में, बाकी जगह {r} दिन में पहुँचेगा', shipsZones: '{d} {days} में भेजा जाएगा · पिन कोड के हिसाब से {m}–{r} दिन में डिलीवरी', day: 'दिन', days: 'दिन',
   returns: { exchange_or_refund: '{d} दिन में वापसी और एक्सचेंज', exchange_only: '{d} दिन में एक्सचेंज', refund_only: '{d} दिन में वापसी', none: 'इस शॉप पर वापसी नहीं होती' },
   taxIncluded: 'कीमत में GST शामिल है।', taxAdded: 'GST चेकआउट पर जुड़ेगा।',
   seeAll: 'सब देखें',
@@ -69,7 +69,7 @@ const BUY_EN = {
   inStock: 'In stock', lowStock: 'Only {n} left', preorderBy: 'Pre-order · ships by {date}', madeToOrder: 'Made to order · ships in {a}–{b} days', soldOut: 'Sold out',
   soldOutSr: ', sold out', size: 'Size', photos: 'Photos', choosePhoto: 'Choose a photo', photoOf: 'Photo {i} of {n}', photoAlt: '{title}, photo {i}',
   units: 'Units', cm: 'cm', inches: 'inches', closeGuide: 'Close size guide', offers: 'Offers',
-  pinLabel: 'PIN code', pinCheck: 'Check', pinChecking: 'Checking…', pinBad: 'Type a 6-digit PIN code.', pinFailed: 'We could not check that. Try again.',
+  pinLabel: 'PIN code', pinCheck: 'Check', pinChecking: 'Checking…', pinBad: 'Type a 6-digit PIN code.', pinFailed: 'We could not check that. Try again.', pinMany: 'Too many checks. Try again in a few minutes.',
   pinBy: 'Delivers to {place} by {date}', pinNo: "We don't deliver to {place} yet", pinOnline: 'Pay online for this PIN code', pinCodUpTo: 'Pay on delivery for orders up to {max}',
 }
 export type BuyWords = typeof BUY_EN
@@ -80,7 +80,7 @@ const BUY_HI: BuyWords = {
   delivery: 'डिलीवरी {flat}', deliveryFreeAbove: ', {above} से ऊपर फ्री',
   inStock: 'स्टॉक में', lowStock: 'सिर्फ़ {n} बचे', preorderBy: 'प्री-ऑर्डर · {date} तक भेजा जाएगा', madeToOrder: 'ऑर्डर पर बनेगा · {a}–{b} दिन में भेजा जाएगा', soldOut: 'स्टॉक खत्म',
   soldOutSr: ', स्टॉक खत्म', size: 'साइज़', photos: 'फ़ोटो', choosePhoto: 'फ़ोटो चुनें', photoOf: 'फ़ोटो {i} / {n}', photoAlt: '{title}, फ़ोटो {i}',
-  pinLabel: 'पिन कोड', pinCheck: 'देखें', pinChecking: 'देख रहे हैं…', pinBad: '6 अंकों का पिन कोड लिखें।', pinFailed: 'अभी नहीं देख पाए। फिर कोशिश करें।',
+  pinLabel: 'पिन कोड', pinCheck: 'देखें', pinChecking: 'देख रहे हैं…', pinBad: '6 अंकों का पिन कोड लिखें।', pinFailed: 'अभी नहीं देख पाए। फिर कोशिश करें।', pinMany: 'बहुत बार देखा गया। कुछ मिनट बाद फिर कोशिश करें।',
   pinBy: '{place} में {date} तक डिलीवरी', pinNo: '{place} में अभी डिलीवरी नहीं', pinOnline: 'इस पिन कोड के लिए ऑनलाइन भुगतान करें', pinCodUpTo: '{max} तक के ऑर्डर पर कैश ऑन डिलीवरी',
   units: 'इकाई', cm: 'सेमी', inches: 'इंच', closeGuide: 'साइज़ चार्ट बंद करें', offers: 'ऑफ़र',
 }

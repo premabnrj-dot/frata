@@ -1,4 +1,5 @@
 import 'server-only'
+import type { PublicZone } from '@/domains/delivery/public'
 import { and, asc, desc, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
 import { coreShop } from './store-shop'
@@ -88,6 +89,8 @@ export type StoreShop = PolicyFacts & DeliveryRules & {
   overrides: Record<string, string>; nav: { handle: string; title: string }[]
   /** GST at checkout (public facts; tax/gstin.ts checkoutGst). */
   gst: { deliversWithin: string | null; b2b: boolean }
+  /** Delivery Zones, while the app is usable: the zones in order (public prices); null on the floor. */
+  zones: PublicZone[] | null
 }
 
 

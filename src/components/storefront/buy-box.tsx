@@ -22,6 +22,8 @@ type Img = PhotoData & SwatchImage & { optionValue: string | null; alt: string }
 export type BuyBoxProps = {
   title: string; options: string[]; values: string[][]; variants: (ListVariant & { id: string })[]; colours: SwatchColour[]; images: Img[]
   chart: Chart | null; model: string | null; delivery: DeliveryRules; now: string
+  /** Delivery Zones usable: delivery and pay on delivery depend on the PIN code, so only the check states them. */
+  zoned?: boolean
   /** Server-written lines in the shop's words: dispatch and delivery days, the return window, the tax note. */
   notes: string[]; taxNote: string
   /** On the shop itself (the bag works); false in the console's preview. */
@@ -145,8 +147,8 @@ export function BuyBox(p: BuyBoxProps) {
 
         {/* The shop's true promises; a theme on tiles shows each with its icon (Signal's trust row). */}
         <ul className="store-promises space-y-1.5 border-t border-store-line pt-4 text-sm">
-          {cod?.offered && <li><PromiseIcon d={PAY} />{p.w.cod}{cod.charge > 0 ? fill(p.w.codExtra, { fee: money(cod.charge) }) : ''}</li>}
-          {shown && <li><PromiseIcon d={SHIP} />{deliveryLine(shown.price, p.delivery, p.w)}</li>}
+          {!p.zoned && cod?.offered && <li><PromiseIcon d={PAY} />{p.w.cod}{cod.charge > 0 ? fill(p.w.codExtra, { fee: money(cod.charge) }) : ''}</li>}
+          {!p.zoned && shown && <li><PromiseIcon d={SHIP} />{deliveryLine(shown.price, p.delivery, p.w)}</li>}
           {/* notes: dispatch first, then returns (product-view.tsx) */}
           {p.notes.map((n, i) => <li key={n}><PromiseIcon d={i === 0 ? BOX : BACK} />{n}</li>)}
         </ul>

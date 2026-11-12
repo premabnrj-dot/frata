@@ -1,3 +1,4 @@
+import { zoneDays } from '@/domains/delivery/public'
 import { pdpLines } from '@/domains/checkout/offer-showcase'
 import { describeAttribute } from '@/domains/catalogue/taxonomy'
 import { labelRows, readLabel } from '@/domains/catalogue/label'
@@ -66,7 +67,10 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below,
   const rt = (w.returns as Record<string, string>)[shop.returnKind]
   const ret = rt ? fill(rt, { d: shop.returnDays }) : null
   const notes = [
-    fill(w.ships, { d: shop.dispatchDays, days: shop.dispatchDays === 1 ? w.day : w.days, m: shop.metroDays, r: shop.restDays }),
+    // Delivery Zones: the zones' fastest…slowest days, by PIN code; the floor's metro / elsewhere days otherwise.
+    shop.zones?.length
+      ? fill(w.shipsZones, { d: shop.dispatchDays, days: shop.dispatchDays === 1 ? w.day : w.days, m: zoneDays(shop.zones)[0], r: zoneDays(shop.zones)[1] })
+      : fill(w.ships, { d: shop.dispatchDays, days: shop.dispatchDays === 1 ? w.day : w.days, m: shop.metroDays, r: shop.restDays }),
     ...(ret ? [ret] : []),
   ]
   const ld = productJsonLd({
@@ -85,7 +89,7 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below,
     <article className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
       <BuyBox title={p.title} options={p.options} values={p.optionValues} variants={p.variants.map(({ restockedAt: _, ...v }) => v)} colours={p.colours} images={p.images}
         chart={p.sizeChart && p.sizeChart.rows.length ? p.sizeChart : null} model={model} now={now.toISOString()}
-        delivery={{ shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, codOn: shop.codOn, codMin: shop.codMin, codMax: shop.codMax, codCharge: shop.codCharge }}
+        zoned={!!shop.zones?.length} delivery={{ shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, codOn: shop.codOn, codMin: shop.codMin, codMax: shop.codMax, codCharge: shop.codCharge }}
         live={live} notes={notes} taxNote={shop.pricesIncludeGst ? w.taxIncluded : w.taxAdded} w={buyWords(shop.shopLanguage)} gallery={layout?.gallery} stickyBox={layout?.buyBoxSticky} buyBar={layout?.buyBar} aboveTabs={layout?.bottomTabs} offers={offers ?? pdpLines(p.offers, now)}
         belowGallery={stacked && stories.length ? <StoriesStacked stories={stories} w={w} /> : undefined} belowBuy={pairs} />
       {!stacked && <StoriesSlides stories={stories} w={w} />}

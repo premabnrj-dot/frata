@@ -24,7 +24,7 @@ export function HomeView({ shop, cat, href, now, theme, bestSellers, videos, pre
     <>
       <Sections list={t.home} ctx={{ shop, cat, theme: t, href, now, bestSellers, videos, preview, examples }} />
       <JsonLd data={shopJsonLd({ name: shop.shopName, url: `https://${shop.host}`, logo: shop.logoUrl, sameAs: shop.instagram ? [`https://instagram.com/${shop.instagram.replace(/^@/, '')}`] : [],
-        returnDays: shop.returnDays, returnKind: shop.returnKind, shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, metroDays: shop.metroDays, restDays: shop.restDays, dispatchDays: shop.dispatchDays })} />
+        returnDays: shop.returnDays, returnKind: shop.returnKind, shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, metroDays: shop.metroDays, restDays: shop.restDays, dispatchDays: shop.dispatchDays, zones: shop.zones })} />
       {!preview && <JsonLd data={websiteJsonLd(shop.shopName, `https://${shop.host}/`)} />}
     </>
   )

@@ -128,7 +128,8 @@ function PriceTiles({ s, ctx }: { s: SectionOf<'price_tiles'>; ctx: SectionCtx }
 /** Promises in the shop's own facts: switching COD off removes "Pay on delivery" (spec § Sections rules). */
 function Promises({ s, ctx }: { s: SectionOf<'promises'>; ctx: SectionCtx }) {
   const f = ctx.shop
-  const t = truePromises({ collections: [], codOn: f.codOn, freeShippingAbove: f.freeShippingAbove, returnDays: f.returnDays, dispatchDays: f.dispatchDays })
+  // Delivery Zones usable: free delivery depends on the PIN code's zone, so the shop-wide promise is not made.
+  const t = truePromises({ collections: [], codOn: f.codOn, freeShippingAbove: f.zones?.length ? null : f.freeShippingAbove, returnDays: f.returnDays, dispatchDays: f.dispatchDays })
   const w = wordsFor(f.shopLanguage).promise
   const ICON = { cod: 'cash', free_shipping: 'truck', returns: 'return', dispatch: 'package' } as const
   const words = s.show.filter((k) => t.includes(k)).map((k) => [k,

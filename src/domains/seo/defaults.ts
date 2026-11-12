@@ -9,6 +9,7 @@
 // Pure: money in paise, rendered to rupees only here at the edge.
 // =============================================================================
 
+import { lowestCharge, zoneDays, type PublicZone } from '@/domains/delivery/public'
 import type { Availability } from '../catalogue/availability'
 
 /** Google shows no fixed length; these are when to warn that a phone may shorten it. */
@@ -91,13 +92,19 @@ export function variantUrl(base: string, options: string[], values: string[]): s
   return q ? `${base}?${q}` : base
 }
 
-export type ShopLd = { name: string; url: string; logo: string | null; sameAs: string[]; returnDays: number; returnKind: string; shippingFlat: number; freeShippingAbove: number; metroDays: number; restDays: number; dispatchDays: number }
+export type ShopLd = { name: string; url: string; logo: string | null; sameAs: string[]; returnDays: number; returnKind: string; shippingFlat: number; freeShippingAbove: number; metroDays: number; restDays: number; dispatchDays: number
+  /** Delivery Zones while usable: the transit range and the lowest charge come from the zones. */
+  zones?: readonly PublicZone[] | null }
 
 /** The shop as an Organization, with its return policy and shipping once (not repeated on every product). */
 export function shopJsonLd(s: ShopLd): object {
   const returns = s.returnKind === 'none' || s.returnDays <= 0
     ? { '@type': 'MerchantReturnPolicy', applicableCountry: 'IN', returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted' }
     : { '@type': 'MerchantReturnPolicy', applicableCountry: 'IN', returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow', merchantReturnDays: s.returnDays, returnMethod: 'https://schema.org/ReturnByMail' }
+  // Delivery Zones: the zones' fastest…slowest days and lowest charge, never the floor numbers checkout no longer uses.
+  const [tMin, tMax] = s.zones?.length ? zoneDays(s.zones) : [s.metroDays, s.restDays]
+  const flat = s.zones?.length ? lowestCharge(s.zones) : s.shippingFlat
+  const freeAbove = s.zones?.length ? 0 : s.freeShippingAbove
   return {
     '@context': 'https://schema.org', '@type': 'OnlineStore', name: s.name, url: s.url, ...(s.logo ? { logo: s.logo } : {}), ...(s.sameAs.length ? { sameAs: s.sameAs } : {}),
     hasMerchantReturnPolicy: returns,
@@ -108,15 +115,15 @@ export function shopJsonLd(s: ShopLd): object {
       shippingConditions: [
         {
           '@type': 'ShippingConditions', shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
-          shippingRate: { '@type': 'MonetaryAmount', value: rupees(s.shippingFlat).replace(/,/g, ''), currency: 'INR' },
-          transitTime: { '@type': 'ServicePeriod', duration: { '@type': 'QuantitativeValue', minValue: s.metroDays, maxValue: s.restDays, unitCode: 'DAY' } },
+          shippingRate: { '@type': 'MonetaryAmount', value: rupees(flat).replace(/,/g, ''), currency: 'INR' },
+          transitTime: { '@type': 'ServicePeriod', duration: { '@type': 'QuantitativeValue', minValue: tMin, maxValue: tMax, unitCode: 'DAY' } },
         },
         // Free above the shop's threshold (S2·3).
-        ...(s.shippingFlat > 0 && s.freeShippingAbove > 0 ? [{
+        ...(flat > 0 && freeAbove > 0 ? [{
           '@type': 'ShippingConditions', shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
-          orderValue: { '@type': 'MonetaryAmount', minValue: rupees(s.freeShippingAbove).replace(/,/g, ''), currency: 'INR' },
+          orderValue: { '@type': 'MonetaryAmount', minValue: rupees(freeAbove).replace(/,/g, ''), currency: 'INR' },
           shippingRate: { '@type': 'MonetaryAmount', value: '0', currency: 'INR' },
-          transitTime: { '@type': 'ServicePeriod', duration: { '@type': 'QuantitativeValue', minValue: s.metroDays, maxValue: s.restDays, unitCode: 'DAY' } },
+          transitTime: { '@type': 'ServicePeriod', duration: { '@type': 'QuantitativeValue', minValue: tMin, maxValue: tMax, unitCode: 'DAY' } },
         }] : []),
       ],
     },

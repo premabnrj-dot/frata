@@ -45,7 +45,11 @@ export default {
           (${KESAR}, 1, 'Special', 'special', 14900, null, 6, 10, false, 0),
           (${KESAR}, 2, 'Rest of India', 'rest', 9900, 199900, 4, 7, true, 6900)`
         await db`insert into delivery_rules (tenant_id, pincode, rule) values (${KESAR}, '744101', 'no_delivery')`
-        await p.goto(SHOP + '/products/chanderi-kurta-set', { waitUntil: 'domcontentloaded' })
+        // The shop's cached facts follow the zones (60 s backstop; a console save purges them).
+        // No remembered PIN code while polling, so each reload asks nothing of the check's rate limit.
+        await p.evaluate(() => localStorage.removeItem('frrata.pin'))
+        await until(async () => { await p.goto(SHOP + '/products/chanderi-kurta-set', { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(2000); return (await p.getByText(/delivery in 2–10 days, by PIN code/).count()) > 0 }, 75_000)
+        assert.equal(await p.getByText(/to metros, .+ elsewhere/).count(), 0, 'the floor’s metro / elsewhere days are gone')
         await check('799001')
         await p.getByText('Pay online for this PIN code').waitFor()
         await p.getByText(/^Delivery ₹149/).waitFor()
