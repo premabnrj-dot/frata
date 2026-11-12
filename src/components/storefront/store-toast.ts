@@ -36,7 +36,12 @@ function load(): boolean {
   const el = typeof document === 'undefined' ? null : document.getElementById(TOAST_BOX)
   if (!el) return false
   if (el !== box) { void view?.then((unmount) => unmount?.()); box = el; view = null }
-  view ??= import('./store-toast-view').then((m) => m.mount(el), () => { view = null; box = null })
+  // Its chunk did not load (a weak connection): the words still show, plainly, in the box; the next toast tries again.
+  // Only this box is reset: a late failure must not undo a newer box (impact review F3).
+  view ??= import('./store-toast-view').then((m) => m.mount(el), () => {
+    if (box === el) { view = null; box = null }
+    if (now) { el.setAttribute('role', now.kind === 'error' && !now.quiet ? 'alert' : 'status'); el.textContent = now.sub ? `${now.text} ${now.sub}` : now.text }
+  })
   return true
 }
 function say(text: string) {
@@ -48,7 +53,7 @@ function say(text: string) {
 function put(t: Omit<StoreToast, 'id'>) {
   if (!load()) return
   set({ ...t, id: ++seq })
-  if (t.kind === 'ok' || t.quiet) say(t.text)
+  if (t.kind === 'ok' || t.quiet) say(t.sub ? `${t.text} ${t.sub}` : t.text)
 }
 
 export const storeToast: ToastApi = Object.assign((t: { text: string }) => put({ kind: 'ok', text: t.text }), {

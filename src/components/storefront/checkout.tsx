@@ -81,7 +81,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   const q = shownQuote(fitted, fitKey(items, f.phone, f.pincode, code), live)
   const seen = useRef<PublicQuote | null>(null)
   const attempt = useRef<{ sig: string; key: string } | null>(null)
-  useQuoteToast(toast, quoteError, refresh)
+  useQuoteToast(toast, q ? quoteError : null, refresh)
   useEffect(() => { const t = setTimeout(() => void summary().catch(() => {}), 3000); return () => clearTimeout(t) }, [])
 
   // Restore what was typed (this tab only); a pending online order goes to its own page. It never did (the key was
@@ -152,12 +152,14 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   useEffect(() => { if (q && !q.cod && method === 'cod') setMethod(null) }, [q, method])
   const choose = (m: 'cod' | 'prepaid') => { if (!firstMethod.current) firstMethod.current = m; setMethod(m); setMsg(null) }
 
+  // Focus the first wrong field here too: the summary's chunk may be slow or not load (impact review F3).
+  const focusWrong = () => requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus())
   async function check(): Promise<boolean> {
     const { formErrors } = await import('./checkout-place')
     const e = formErrors(f, gst.deliversWithin, biz.on ? bizCheck.current?.(biz, f.state) ?? null : null)
     setErrors(e)
     // The summary moves focus to the first wrong field and says how many.
-    if (Object.keys(e).length) { setTries((t) => ({ n: t.n + 1 })); return false }
+    if (Object.keys(e).length) { setTries((t) => ({ n: t.n + 1 })); focusWrong(); return false }
     return true
   }
 
@@ -195,9 +197,12 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       }
       // Field mistakes the server found go to their fields (`address.phone` → `phone`), its refusal as the summary's
       // second line; any other refusal is the line above the form.
-      if (r.data.fields) {
-        setErrors(Object.fromEntries(Object.entries(r.data.fields).map(([k, v]) => [k.replace(/^address\./, ''), v])))
+      // Only mistakes with a field on screen (a bag line or a hidden key has none: impact review F3).
+      const drawn = Object.entries(r.data.fields ?? {}).map(([k, v]) => [k.replace(/^address\./, ''), v] as const).filter(([k]) => formRef.current?.querySelector(`#${CSS.escape(k)}`))
+      if (drawn.length) {
+        setErrors(Object.fromEntries(drawn))
         setTries((t) => ({ n: t.n + 1, sub: r.data.error }))
+        focusWrong()
         return
       }
       setMsg({ tone: 'error', text: r.data.error ?? 'We could not place the order. Nothing was charged. Try again.' })
@@ -263,6 +268,8 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
       {tries.n > 0 && <Suspense fallback={null}><CheckoutSummary toast={toast} errors={errors} attempt={tries.n} sub={tries.sub} scope={formRef} /></Suspense>}
       {/* feedback-ok: rule 5 — a failed payment's line with its filled form, a refused placement (nothing charged), a changed price */}
       {msg && <p role="alert" className={`mt-4 border-l-2 px-3 py-2 text-sm ${msg.tone === 'changed' ? 'border-store-accent bg-store-chip' : 'border-store-bad bg-store-chip'}`}>{msg.text}</p>}
+      {/* feedback-ok: no price at all is the page's state (Pay waits on it), so it stays; with an older price it is a toast */}
+      {quoteError && !q && <p role="alert" className="mt-4 text-sm text-store-bad">{quoteError}</p>}
       {identity && <div className="mt-4 grid gap-3">{identity}</div>}
 
       <fieldset disabled={!!failed} className="disabled:opacity-60">
