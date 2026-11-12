@@ -4,7 +4,7 @@
 // a file Frrata can't read is refused in words; the sheet's check counts 9 new and 2 left out, names each problem by
 // row and column, lists Supplier and Notes as not imported, and its rows-to-fix file makes formulas inert; Import 9
 // as drafts writes 9 drafts (costs for the owner), ends the job and forgets its cells. On a phone, staff checking the
-// same sheet as CSV see all 9 already in the shop and no cost column; the owner deletes the import's drafts.
+// same sheet as CSV see it all in the shop already (a SKU in the shop matches) and no cost column; the owner deletes the import's drafts.
 // Guards: a draft that reaches the shop; a cost from staff; a cell kept after the job; a formula in the fix file.
 // =============================================================================
 import assert from 'node:assert/strict'
@@ -82,7 +82,7 @@ export default {
         assert.deepEqual(made.find((m) => m.handle === 'anarkali-kurta-set'), { handle: 'anarkali-kurta-set', status: 'draft', published_at: null, cost: 110000, sizes: 3 })
         const [job] = await db`select added, left_out, finished_at, (select count(*)::int from import_rows r where r.job_id = j.id and r.cells is not null) cells from import_jobs j where tenant_id = ${KESAR}`
         assert.deepEqual([job.added, job.left_out, job.finished_at !== null, job.cells], [9, 2, true, 0])
-        await p.getByRole('table', { name: 'Import history' }).getByText('kesar-catalogue.xlsx').waitFor()
+        await p.getByRole('table', { name: 'Import history' }).getByRole('cell', { name: 'kesar-catalogue.xlsx' }).waitFor()
         await p.screenshot({ path: t.out('import-done'), fullPage: true })
       })
     } finally {
@@ -95,14 +95,14 @@ export default {
     const staff = await signedIn(t.browser, 'staff', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
     const s = await staff.newPage(); s.setDefaultTimeout(15_000); s.on('pageerror', (e) => t.errors.push(`${e.message} at ${s.url()}`))
     try {
-      await t.step('Phone, staff: the same sheet as CSV is all in the shop already, nothing to import, no cost column', async () => {
+      await t.step('Phone, staff: the same sheet as CSV is in the shop already (Ajrakh too: its SKU is), nothing to import, no cost column', async () => {
         await s.goto(CONSOLE + '/console/products/import')
         await s.getByText('Drop a spreadsheet').waitFor()
         await s.screenshot({ path: t.out('import-file-phone'), fullPage: true })
         await s.locator(INPUT).setInputFiles({ name: 'kesar-catalogue.csv', mimeType: 'text/csv', buffer: CSV })
         const counts = s.getByRole('group', { name: 'What this file does' })
         await counts.getByText('Already in your shop').waitFor()
-        assert.match(await counts.innerText(), /0\s+New products · 0 sizes and colours\s+9\s+Already in your shop\s+2\s+Left out until fixed/)
+        assert.match(await counts.innerText(), /0\s+New products · 0 sizes and colours\s+10\s+Already in your shop\s+1\s+Left out until fixed/)
         await s.getByText('Nothing new to import.').waitFor()
         assert.equal(await s.getByRole('button', { name: /^Import \d/ }).count(), 0)
         assert.equal(await s.getByText('Only you see it').count(), 0, 'staff import no cost')

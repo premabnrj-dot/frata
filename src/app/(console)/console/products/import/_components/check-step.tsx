@@ -58,7 +58,7 @@ export function CheckStep({ sheet, mapping, checked, costs, cap, busy, onRemap, 
               <DataTableBody>
                 {shown.slice(0, SHOWN).map((p, i) => (
                   <DataTableRow key={`${p.row}-${i}`}>
-                    <Td cell="a" className="text-right"><Numeric>{p.row}</Numeric></Td>
+                    <Td cell="a" className="md:text-right"><Numeric>{p.row}</Numeric></Td>
                     <Td cell="b" className="md:text-left">{p.column}</Td>
                     <Td cell="e" className="[overflow-wrap:anywhere]">{p.message}</Td>
                   </DataTableRow>

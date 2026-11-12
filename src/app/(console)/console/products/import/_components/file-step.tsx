@@ -32,7 +32,7 @@ export function FileStep({ onFile, error, reading, running, onStop, stopping }: 
         <Section title="Import paused" action={<span className="font-mono text-sm">{running.fileName}</span>}>
           <Bar done={running.next} total={running.chunks} label={`Part ${running.next} of ${running.chunks} imported`} />
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm text-muted-foreground"><span className="font-mono tabular-nums">{running.added.toLocaleString('en-IN')}</span> added · part {running.next} of {running.chunks}</span>
+            <span className="text-sm text-muted-foreground"><span className="font-mono tabular-nums">{running.added.toLocaleString('en-IN')}</span> added · {running.next} of {running.chunks} parts</span>
             <span className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={onStop} disabled={stopping}>Stop here</Button>
               <Button onClick={() => input.current?.click()} disabled={!!reading}>Choose the file again</Button>
