@@ -5,7 +5,8 @@ import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm'
 import { sourceOfInputs, type Source, type SourceInputs } from '@/domains/analytics/source'
 import { attributionInputsSql } from '@/lib/db/attribution-sql'
 import { creatorCodeJoinSql } from '@/lib/db/discount-predicates'
-import { momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
+import { editWaitingSql, momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
+import { ledgerIn } from '@/lib/payments/refunds'
 import { creditNoteLines, creditNotes, orderEvents, orderLines, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
 import { orderEditLines, orderEdits, orderRefunds } from '@/lib/db/schema-edits'
 import { products, variants } from '@/lib/db/schema-catalogue'
@@ -54,7 +55,7 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
     }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.number, number))).limit(1)
     if (!o) return null
     // Seven reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
-    const [lines, events, notes, offerRows, [shipment], creditRows, source, emails, editRows, refunds] = await Promise.all([tx.select({
+    const [lines, events, notes, offerRows, [shipment], creditRows, source, emails, editRows, refunds, ledger, [waiting]] = await Promise.all([tx.select({
       id: orderLines.id, title: orderLines.title, optionValues: orderLines.optionValues, sku: orderLines.sku, qty: orderLines.qty, unitPrice: orderLines.unitPrice,
       imageBase: orderLines.imageBase, imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy,
       leadMinDays: orderLines.leadMinDays, leadMaxDays: orderLines.leadMaxDays, stockTakenAt: orderLines.stockTakenAt, variantId: orderLines.variantId,
@@ -96,8 +97,15 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
         where x.tenant_id = ${tenantId} and x.order_id = ${o.id} order by x.created_at desc, x.id limit 20)`)).orderBy(desc(orderEdits.createdAt), orderEditLines.side, orderEditLines.id),
     // Refunds Frrata sent through the shop's Razorpay (OE·2), every attempt: the page shows each chain's latest.
     tx.select({ id: orderRefunds.id, amount: orderRefunds.amount, cause: orderRefunds.cause, retryOf: orderRefunds.retryOf, notBefore: orderRefunds.notBefore, cancelledAt: orderRefunds.cancelledAt,
-      sendingAt: orderRefunds.sendingAt, sentAt: orderRefunds.sentAt, processedAt: orderRefunds.processedAt, failedAt: orderRefunds.failedAt, failure: orderRefunds.failure, createdAt: orderRefunds.createdAt })
+      sendingAt: orderRefunds.sendingAt, sentAt: orderRefunds.sentAt, processedAt: orderRefunds.processedAt, failedAt: orderRefunds.failedAt, failure: orderRefunds.failure, createdAt: orderRefunds.createdAt,
+      supersededBy: orderRefunds.supersededBy, gatewayFee: orderRefunds.gatewayFee })
       .from(orderRefunds).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.orderId, o.id))).orderBy(asc(orderRefunds.createdAt)).limit(100),
+    // What the shopper's payments hold now (the cancel dialog's refund: impact review 2026-11-12), and a change waiting
+    // for their payment, by the one rule (editWaitingSql).
+    ledgerIn(tx, tenantId, o.id),
+    tx.select({ eventId: orderEdits.eventId, asked: orderEdits.asked, totalAfter: orderEdits.totalAfter }).from(orderEdits)
+      .innerJoin(orders, and(eq(orders.tenantId, orderEdits.tenantId), eq(orders.id, orderEdits.orderId)))
+      .where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.orderId, o.id), editWaitingSql('"order_edits"', '"orders"'))).limit(1),
     ])
     const offers = offerRows.map((d) => ({ ...d, amount: Number(d.amount) }))
     const credits = creditRows.map((c) => ({ number: c.number, issuedAt: c.issuedAt, kind: c.kind, total: Number(c.total), lines: c.lines }))
@@ -110,7 +118,9 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       e[r.side === 'before' ? 'before' : 'after'].push({ lineId: r.lineId, title: r.title, values: r.values, qty: r.qty, replaces: r.replaces })
       edits.set(r.eventId, e)
     }
-    return { o, lines, events, notes, offers, shipment: shipment ?? null, credit, credits, source, emails, edits, refunds: refunds.map((r) => ({ ...r, amount: Number(r.amount) })) }
+    return { o, lines, events, notes, offers, shipment: shipment ?? null, credit, credits, source, emails, edits, ledger,
+      refunds: refunds.map((r) => ({ ...r, amount: Number(r.amount), gatewayFee: r.gatewayFee === null ? null : Number(r.gatewayFee) })),
+      waiting: waiting ? { eventId: waiting.eventId, asked: Number(waiting.asked), totalAfter: Number(waiting.totalAfter) } : null }
   })
   if (!data) return null
   // Risk: null when its facts cannot be read (the page then says "Risk unavailable" and fails closed).

@@ -16,11 +16,14 @@
 /** Razorpay's smallest payment and refund: ₹1. */
 export const MIN_PAISE = 100
 
-/** One captured payment that paid this order: its Razorpay id, what it captured and when. */
-export type Paid = { id: string; amount: number; at: Date }
+/** One captured payment that paid this order: its Razorpay id, what it captured and when, and Razorpay's fee on it
+ *  (with GST; null until Razorpay says). */
+export type Paid = { id: string; amount: number; at: Date; fee?: number | null }
 /** An attempt's moments (order_refunds). */
 export type RefundMoments = { cancelledAt: Date | null; sendingAt: Date | null; sentAt: Date | null; processedAt: Date | null; failedAt: Date | null }
-export type RefundRow = RefundMoments & { id: string; razorpayPaymentId: string; amount: number; failure: string | null; retryOf: string | null; notBefore: Date }
+export type RefundRow = RefundMoments & { id: string; razorpayPaymentId: string; amount: number; failure: string | null; retryOf: string | null; notBefore: Date
+  /** A failed `edit` refund a later change settled instead (security review 2026-11-12 H1): never tried again. */
+  supersededBy?: string | null }
 
 export type RefundStage = 'queued' | 'sending' | 'sent' | 'processed' | 'cancelled' | 'failed'
 
@@ -101,8 +104,32 @@ export const FAILURE_WORDS: Record<string, string> = {
   failed: 'Razorpay could not complete this refund. Try again.',
 }
 
-/** A failure the merchant must act on before it is tried again (the rest are tried again by themselves). */
-export const needsMerchant = (failure: string | null) => failure !== null && failure !== 'failed'
+/**
+ * Whether "Try again" is offered for a failed attempt: not once a later change settled it (superseded), and not for a
+ * payment too old or one Razorpay shows already refunded — their words tell the merchant what to do instead.
+ */
+export const canRetry = (r: { failure: string | null; supersededBy?: string | null }) => r.failure !== null && !r.supersededBy && r.failure !== 'too_old' && r.failure !== 'over'
+
+/** What Razorpay keeps of its fee on the refunded part of each payment (it keeps its whole fee on a payment), with the
+ * fees of the payments the refund comes from; null when a payment's fee is not known yet. Paise. */
+export function feeKept(parts: { paymentId: string; amount: number }[], payments: Paid[]): { kept: number; fee: number } | null {
+  let kept = 0, fee = 0
+  for (const part of parts) {
+    const p = payments.find((x) => x.id === part.paymentId)
+    if (!p || p.fee == null || !p.amount) return null
+    kept += Math.round((p.fee * part.amount) / p.amount)
+    fee += p.fee
+  }
+  return { kept, fee }
+}
+
+/** About what Razorpay keeps on a payment of `amount` refunded in full: at this order's own payment's rate when known,
+ * else 2% plus 18% GST (Razorpay's standard rate, frata-unit-economics). Paise. */
+export function feeAbout(amount: number, rateFrom: Paid | null): number {
+  if (rateFrom?.fee != null && rateFrom.amount > 0) return Math.round((rateFrom.fee * amount) / rateFrom.amount)
+  const fee = Math.round((amount * 200) / 10_000)
+  return fee + Math.round(fee * 0.18)
+}
 
 /** How many times a refund Razorpay failed after accepting it is tried again by itself, before it waits for Try again. */
 export const AUTO_RETRIES = 2
@@ -111,9 +138,9 @@ export const AUTO_RETRIES = 2
  * The refunds to show on the order: each chain of attempts (a first try and its retries) as its latest attempt. A failed
  * latest attempt is "not sent" with its cause and Try again; a cancelled one is not shown.
  */
-export function refundChains<T extends Pick<RefundRow, 'id' | 'retryOf' | keyof RefundMoments>>(rows: T[]): T[] {
+export function refundChains<T extends Pick<RefundRow, 'id' | 'retryOf' | 'supersededBy' | keyof RefundMoments>>(rows: T[]): T[] {
   const retried = new Set(rows.flatMap((r) => (r.retryOf ? [r.retryOf] : [])))
-  return rows.filter((r) => !retried.has(r.id) && refundStage(r) !== 'cancelled')
+  return rows.filter((r) => !retried.has(r.id) && refundStage(r) !== 'cancelled' && !r.supersededBy)
 }
 
 /**
@@ -121,8 +148,10 @@ export function refundChains<T extends Pick<RefundRow, 'id' | 'retryOf' | keyof 
  * Razorpay", "refunded · 5–10 working days to reach the shopper", or "not sent" (its cause beside it). Why, when it was
  * not an edit's lower total: a payment that came after its change was dropped, or one at the order's old total.
  */
-export function refundLine(r: RefundMoments & { cause: string; failure: string | null }, sendsAt: string): { words: string; failed: string | null } {
-  const why = r.cause === 'after_drop' ? ' · paid after the change was dropped' : r.cause === 'old_order' ? ' · paid at the old total' : ''
+export function refundLine(r: RefundMoments & { cause: string; failure: string | null; gatewayFee?: number | null }, sendsAt: string, inr: (p: number) => string = String): { words: string; failed: string | null } {
+  // A payment refunded in full: Razorpay keeps its fee on it (unit-economics review 2026-11-12), said once known.
+  const kept = r.gatewayFee ? ` · Razorpay kept ${inr(r.gatewayFee)}` : ''
+  const why = r.cause === 'after_drop' ? ` · paid after the change was dropped${kept}` : r.cause === 'old_order' ? ` · paid at the old total${kept}` : ''
   const s = refundStage(r)
   if (s === 'failed') return { words: `not sent${why}`, failed: FAILURE_WORDS[r.failure ?? 'failed'] ?? FAILURE_WORDS.failed! }
   if (s === 'queued') return { words: `refund · sends ${sendsAt}${why}`, failed: null }

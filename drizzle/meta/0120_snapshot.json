@@ -1,5 +1,5 @@
 {
-  "id": "a24f1815-5c18-4cf7-b0da-58816854584b",
+  "id": "fc81841c-e1a2-46a0-8743-7d0dad7436a6",
   "prevId": "24183a42-5190-4e8d-8f96-b0740e2ffac5",
   "version": "7",
   "dialect": "postgresql",
@@ -6333,6 +6333,15 @@
             "id"
           ]
         },
+        "order_edits_order_id_key": {
+          "name": "order_edits_order_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "order_id",
+            "id"
+          ]
+        },
         "order_edits_event": {
           "name": "order_edits_event",
           "nullsNotDistinct": false,
@@ -6461,6 +6470,24 @@
         "failure": {
           "name": "failure",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_by": {
+          "name": "superseded_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gateway_fee": {
+          "name": "gateway_fee",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gateway_tax": {
+          "name": "gateway_tax",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },
@@ -6610,10 +6637,29 @@
           "tableTo": "order_edits",
           "columnsFrom": [
             "tenant_id",
+            "order_id",
             "edit_id"
           ],
           "columnsTo": [
             "tenant_id",
+            "order_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "order_refunds_superseded_fk": {
+          "name": "order_refunds_superseded_fk",
+          "tableFrom": "order_refunds",
+          "tableTo": "order_edits",
+          "columnsFrom": [
+            "tenant_id",
+            "order_id",
+            "superseded_by"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "order_id",
             "id"
           ],
           "onDelete": "cascade",
@@ -6652,6 +6698,14 @@
         "order_refunds_moments": {
           "name": "order_refunds_moments",
           "value": "(\"order_refunds\".\"cancelled_at\" is null or (\"order_refunds\".\"sending_at\" is null and \"order_refunds\".\"sent_at\" is null))\n    and (\"order_refunds\".\"sent_at\" is null or (\"order_refunds\".\"sending_at\" is not null and \"order_refunds\".\"razorpay_refund_id\" is not null))\n    and (\"order_refunds\".\"processed_at\" is null or \"order_refunds\".\"sent_at\" is not null) and (\"order_refunds\".\"processed_at\" is null or \"order_refunds\".\"failed_at\" is null)"
+        },
+        "order_refunds_superseded": {
+          "name": "order_refunds_superseded",
+          "value": "\"order_refunds\".\"superseded_by\" is null or (\"order_refunds\".\"failed_at\" is not null and \"order_refunds\".\"cause\" = 'edit')"
+        },
+        "order_refunds_fee": {
+          "name": "order_refunds_fee",
+          "value": "(\"order_refunds\".\"gateway_fee\" is null or (\"order_refunds\".\"gateway_fee\" >= 0 and \"order_refunds\".\"retry_of\" is null and \"order_refunds\".\"cause\" <> 'edit')) and (\"order_refunds\".\"gateway_tax\" is null or \"order_refunds\".\"gateway_tax\" >= 0)"
         }
       },
       "isRLSEnabled": false

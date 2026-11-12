@@ -54,7 +54,8 @@ export async function settleWithRazorpay(tenantId: string, orderId: string): Pro
     const soldOut: string[] = []
     const paid = await withSlot(tenantId, (tx) => markPaid(tx, { id: orderId, tenantId }, { paymentId: captured.id, fee: captured.fee, tax: captured.tax }, soldOut))
     if (paid !== null && soldOut.length) await refreshSoldOut(tenantId).catch(() => {})
-    return 'paid'
+    // A payment at the old total after an edit (OE·2) was refunded, not taken: the order is not paid by it.
+    return paid === 'refunded' ? 'unpaid' : 'paid'
   }
   return pays.some((p) => p.status === 'authorized' || p.status === 'created') ? 'pending' : 'unpaid'
 }

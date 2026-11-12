@@ -10,7 +10,8 @@ import { applies, invoiceNumber, seriesFits, type CancelReason, type OrderAction
 import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
 import { editWaitingSql, momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
-import { orderEdits } from '@/lib/db/schema-edits'
+import { orderEditLines, orderEdits } from '@/lib/db/schema-edits'
+import { ledgerIn } from '@/lib/payments/refunds'
 import { formatInr } from '@/lib/format'
 import type { Paise } from '@/domains/money/paise'
 import { shopSettings, tenantCounters, tenants } from '@/lib/db/schema'
@@ -228,12 +229,19 @@ export async function cancel(tx: Tx, tenantId: string, actor: Actor, orderId: st
   const [open] = await tx.select({ id: shipments.id }).from(shipments).where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, orderId), isNull(shipments.endedAt))).limit(1)
   if (open) return { ok: false, error: 'A shipment is booked for it: cancel the shipment first.' }
   const at = moment(now)
+  // A change waiting for the shopper's payment (OE·2): read before the cancel ends it, so its held pieces go back on sale
+  // (and the shop's sold-out marks with them) whatever "put the stock back" says (impact review 2026-11-12).
+  const waiting = await tx.select({ id: orderEdits.id }).from(orderEdits).innerJoin(orders, and(eq(orders.tenantId, orderEdits.tenantId), eq(orders.id, orderEdits.orderId)))
+    .where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.orderId, orderId), editWaitingSql('"order_edits"', '"orders"')))
   const r = await tx.update(orders).set({ cancelledAt: at, cancelReason: c0.reason, cancelNote: note })
     .where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId), isNull(orders.cancelledAt), isNull(orders.shippedAt))).returning({ id: orders.id })
   if (!r.length) return refuse(tx, tenantId, orderId, 'cancel', (await current(tx, tenantId, orderId, now))!.state)
-  const backInStock = c0.restock ? await putStockBack(tx, tenantId, orderId) : []
+  const freed = waiting.length ? await tx.update(orderEditLines).set({ held: 0 }).where(and(eq(orderEditLines.tenantId, tenantId), inArray(orderEditLines.editId, waiting.map((w) => w.id)),
+    gt(orderEditLines.held, 0))).returning({ v: orderEditLines.variantId }) : []
+  const backInStock = [...(c0.restock ? await putStockBack(tx, tenantId, orderId) : []), ...freed.flatMap((f) => (f.v ? [f.v] : []))]
   const after: StoredOrder = { ...c.o, cancelledAt: at }
   const eventId = await record(tx, tenantId, orderId, actor, 'cancelled', at, { reason: c0.reason })
   await enqueueOrderEmail(tx, tenantId, orderId, 'cancelled', null, now)
-  return { ok: true, eventId, refund: refundDue(after), backInStock }
+  // What the shopper's payments still hold: net of the refunds Frrata sent for its edits (OE·2; impact review BLOCKER).
+  return { ok: true, eventId, refund: refundDue(after, await ledgerIn(tx, tenantId, orderId)), backInStock }
 }

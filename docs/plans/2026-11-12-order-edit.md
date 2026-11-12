@@ -129,6 +129,12 @@ and the edit is applied only when that payment is captured. Built as:
    as the `edited` kind with its own payLine and button ("Pay ₹499 for the changes"). `edit.payment` asks Razorpay for a
    waiting edit's second order every 15 minutes for 72 hours. `refund.*` webhooks: not handled (optional; an event is
    processed as nothing). Int: `edit-paid.int.test.ts` (Razorpay faked at `fetchWithTimeout`); e2e: `77-order-edit`.
+   Reviews (2026-11-12) folded in: a later change settles a failed edit refund (`superseded_by`) and Try again re-checks
+   the ledger (security H1); a send still unresolved on its last try is settled by one more list (M1); Save needs
+   `expectedDue` (L1); another payment on a paid change is refunded (L2); Razorpay's fee on a payment refunded in full is
+   counted (`order_refunds.gateway_fee`); the screens give the fee in rupees; refunds and edit lines name only their own
+   order (tenancy); a cancel names `paidLeft` from the ledger (impact BLOCKER); `stillFit` at capture; held pieces reset
+   and the sold-out cache refreshed on cancel and capture; no Try again for `too_old`/`over`.
    **Deploy:** apply 0120 and 0121 before pushing the code (readers select `asked`, `held`; `heldSql` joins
    `order_edit_lines`). Both are additive (new table, nullable columns, a NOT NULL dropped, CHECKs widened).
 

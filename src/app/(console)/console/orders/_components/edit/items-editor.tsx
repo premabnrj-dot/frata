@@ -8,7 +8,7 @@ import { Panel } from '@/components/ui/panel'
 import { Button } from '@/components/ui/button'
 import { paise } from '@/domains/money/paise'
 import { inOrder, planEdit, type Choice, type EditReason, type Want } from '@/domains/orders/edit'
-import { dueOf, settleOf } from '@/domains/orders/refunds'
+import { dueOf, feeKept, settleOf } from '@/domains/orders/refunds'
 import { formatInr } from '@/lib/format'
 import type { AddResult, EditorData } from '@/lib/queries/order-edit'
 import { loadItemsEditor, saveItemsEdit, undoItemsEdit } from '../../edit-actions'
@@ -116,6 +116,7 @@ export default function ItemsEditor({ orderId, number, onClose }: { orderId: str
         }} />
       </Section>
       <WhatChanges number={number} plan={plan} problem={problem} before={data.facts.order.total} to={data.to} notify={notify} onNotify={setNotify} settle={settle}
+        kept={settle?.kind === 'refund' && data.facts.paid ? feeKept(settle.parts, data.facts.paid.payments) : null}
         onKeep={onClose} onSave={() => void save()} busy={busy} />
     </div>
   )

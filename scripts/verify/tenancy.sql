@@ -3076,9 +3076,11 @@ do $$ begin
     raise exception 'FAIL: two SKUs that differ only in case'; exception when unique_violation then null; end;
 end $$;
 
--- 76. Paid-online edits (OE·2, 0120–0121): a refund attempt is the shop's own both ways, never names another shop's
--- order, edit or attempt, is never deleted, and only its moments change, each once; a waiting edit is settled once and
--- only in its own columns; the 24-hour reminder notices only the shop's own waiting edit; no other role holds any of it.
+-- 76. Paid-online edits (OE·2, 0120–0121): a refund attempt is the shop's own both ways; it never names another shop's
+-- order, edit or attempt, nor an edit of another of the shop's orders; it is never deleted; only its moments, the change
+-- that settled it and the fee of a payment refunded in full change, each once; a waiting edit is settled once and only in
+-- its own columns; an edit line names a line of its own order only, and its held pieces only go back to 0; the 24-hour
+-- reminder notices only the shop's own waiting edit; no other role holds any of it.
 insert into order_refunds (id, tenant_id, order_id, edit_id, cause, razorpay_payment_id, amount, not_before) values
   ('7ef00000-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'acacacac-0000-0000-0000-00000000000b', 'ed170000-0000-0000-0000-00000000000b', 'edit', 'pay_B0000001', 10000, now());
 insert into order_events (id, tenant_id, order_id, kind, actor_kind) values
@@ -3098,11 +3100,11 @@ do $$ declare got text; begin
   then raise exception 'FAIL: another role reaches refunds or settles an edit'; end if;
   -- The exact columns frata_app may update, each table (a new grant must be added here on purpose).
   select string_agg(column_name, ',' order by column_name) into got from information_schema.column_privileges where grantee = 'frata_app' and table_name = 'order_refunds' and privilege_type = 'UPDATE';
-  if got is distinct from 'cancelled_at,failed_at,failure,processed_at,razorpay_refund_id,sending_at,sent_at' then raise exception 'FAIL: frata_app updates order_refunds columns %', got; end if;
+  if got is distinct from 'cancelled_at,failed_at,failure,gateway_fee,gateway_tax,processed_at,razorpay_refund_id,sending_at,sent_at,superseded_by' then raise exception 'FAIL: frata_app updates order_refunds columns %', got; end if;
   select string_agg(column_name, ',' order by column_name) into got from information_schema.column_privileges where grantee = 'frata_app' and table_name = 'order_edits' and privilege_type = 'UPDATE';
   if got is distinct from 'dropped_at,dropped_reason,gateway_fee,gateway_tax,offers_added,offers_removed,paid_at,razorpay_order_id,razorpay_payment_id' then raise exception 'FAIL: frata_app updates order_edits columns %', got; end if;
   select string_agg(column_name, ',' order by column_name) into got from information_schema.column_privileges where grantee = 'frata_app' and table_name = 'order_edit_lines' and privilege_type = 'UPDATE';
-  if got is distinct from 'order_line_id' then raise exception 'FAIL: frata_app updates order_edit_lines columns %', got; end if;
+  if got is distinct from 'held,order_line_id' then raise exception 'FAIL: frata_app updates order_edit_lines columns %', got; end if;
   -- The reminder: a definer with an empty search path, the shop's app only.
   if not (select prosecdef from pg_proc where proname = 'app_edit_payment_notice') then raise exception 'FAIL: the edit reminder is not a definer'; end if;
   if not has_function_privilege('frata_app', 'public.app_edit_payment_notice(uuid)', 'execute')
@@ -3113,8 +3115,33 @@ do $$ declare got text; begin
 end $$;
 begin; set local role frata_app;
 select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
-do $$ declare n int; r uuid; begin
+do $$ declare n int; r uuid; e uuid; l uuid; o2 uuid; begin
   if exists (select 1 from order_refunds) then raise exception 'FAIL: A reads B refunds'; end if;
+  -- A waiting edit of A's order, a line of A's other order: neither a refund nor an edit line crosses between them.
+  insert into order_edits (tenant_id, order_id, event_id, total_before, total_after, shipping_before, shipping_after, notify, asked)
+    values ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'ed1e0e00-0000-0000-0000-00000000000a', 100000, 150000, 0, 0, false, 50000) returning id into e;
+  insert into orders (id, tenant_id, number, payment_method, subtotal, total, placed_at) values
+    ('ed0d0000-0000-0000-0000-0000000000a2', '11111111-1111-1111-1111-111111111111', 9073, 'cod', 100000, 100000, now());
+  insert into order_lines (tenant_id, order_id, title, qty, unit_price, taxable_value) values
+    ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-0000000000a2', 'Other order''s kurta', 1, 100000, 95238) returning id into o2;
+  insert into order_edit_lines (tenant_id, edit_id, side, order_line_id, qty, unit_price, product_discount, line_discount, held)
+    values ('11111111-1111-1111-1111-111111111111', e, 'after', null, 1, 100000, 0, 0, 1) returning id into l;
+  begin update order_edit_lines set order_line_id = 'ed11ed11-0000-0000-0000-00000000000b' where id = l; raise exception 'FAIL: A''s edit line named B''s line';
+  exception when foreign_key_violation then null; end;
+  begin update order_edit_lines set order_line_id = o2 where id = l; raise exception 'FAIL: an edit line named a line of another order';
+  exception when foreign_key_violation then null; end;
+  begin insert into order_edit_lines (tenant_id, edit_id, side, order_line_id, qty, unit_price, product_discount, line_discount)
+    values ('11111111-1111-1111-1111-111111111111', e, 'before', o2, 1, 100000, 0, 0); raise exception 'FAIL: an edit saw a line of another order';
+  exception when foreign_key_violation then null; end;
+  begin update order_edit_lines set held = 2 where id = l; raise exception 'FAIL: an edit line held more';
+  exception when check_violation then null; end;
+  update order_edit_lines set held = 0 where id = l; get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FAIL: A could not let its held pieces go'; end if;
+  update order_edit_lines set order_line_id = 'ed11ed11-0000-0000-0000-00000000000a' where id = l; get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FAIL: A could not name its own order''s line'; end if;
+  begin insert into order_refunds (tenant_id, order_id, edit_id, cause, razorpay_payment_id, amount, not_before) values
+    ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-0000000000a2', e, 'edit', 'pay_A0000007', 10000, now()); raise exception 'FAIL: a refund named an edit of another order';
+  exception when foreign_key_violation then null; end;
   -- A's own attempt, on A's order.
   insert into order_refunds (tenant_id, order_id, cause, razorpay_payment_id, amount, not_before) values
     ('11111111-1111-1111-1111-111111111111', 'ed0d0000-0000-0000-0000-00000000000a', 'old_order', 'pay_A0000001', 10000, now()) returning id into r;
@@ -3145,6 +3172,13 @@ do $$ declare n int; r uuid; begin
   begin update order_refunds set amount = 1 where id = r; raise exception 'FAIL: a refund''s amount was changed'; exception when insufficient_privilege then null; end;
   begin update order_refunds set razorpay_payment_id = 'pay_B0000001' where id = r; raise exception 'FAIL: a refund was moved to another payment'; exception when insufficient_privilege then null; end;
   begin delete from order_refunds where id = r; raise exception 'FAIL: a refund was deleted'; exception when insufficient_privilege then null; end;
+  -- Only a failed edit refund is settled by a later change; a fee once written stays.
+  begin update order_refunds set superseded_by = e where id = r; raise exception 'FAIL: a refund that is not a failed edit refund was superseded';
+  exception when check_violation then null; end;
+  update order_refunds set gateway_fee = 236, gateway_tax = 36 where id = r; get diagnostics n = row_count;
+  if n <> 1 then raise exception 'FAIL: A could not record the fee on its own refunded payment'; end if;
+  begin update order_refunds set gateway_fee = 1 where id = r; raise exception 'FAIL: a refunded payment''s fee was rewritten';
+  exception when check_violation then null; end;
   update order_refunds set failed_at = now(), failure = 'balance' where id = '7ef00000-0000-0000-0000-00000000000b'; get diagnostics n = row_count;
   if n <> 0 then raise exception 'FAIL: A marked B''s refund'; end if;
   -- B's waiting edit: A can't settle it, and the reminder writes nothing for it.

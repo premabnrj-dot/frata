@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { chainLength, dueOf, paidNet, refundable, refundChains, refundLine, refundStage, settleOf, tooOldToRefund, type RefundRow } from '../refunds'
+import { paidLeft, refundDue } from '../amounts'
+import { canRetry, chainLength, dueOf, feeAbout, feeKept, paidNet, refundable, refundChains, refundLine, refundStage, settleOf, tooOldToRefund, type RefundRow } from '../refunds'
 
 const now = new Date('2026-11-12T10:00:00Z')
 const at = (days: number) => new Date(now.getTime() - days * 86_400_000)
@@ -62,5 +63,34 @@ describe('a paid order\'s money after an edit (OE·2)', () => {
     expect(refundLine({ ...none, sendingAt: now, cause: 'edit', failure: null }, '').words).toBe('refund · with Razorpay')
     expect(refundLine({ ...none, sendingAt: now, sentAt: now, processedAt: now, cause: 'after_drop', failure: null }, '').words).toBe('refunded · 5–10 working days to reach the shopper · paid after the change was dropped')
     expect(refundLine({ ...none, failedAt: now, cause: 'edit', failure: 'balance' }, '')).toEqual({ words: 'not sent', failed: 'Not enough balance in Razorpay: add funds, then try again.' })
+  })
+
+  it('Try again: never for one a later change settled, a payment too old or one already refunded elsewhere', () => {
+    expect(canRetry({ failure: 'balance' })).toBe(true)
+    expect(canRetry({ failure: 'balance', supersededBy: 'e2' })).toBe(false)
+    expect(canRetry({ failure: 'too_old' })).toBe(false)
+    expect(canRetry({ failure: 'over' })).toBe(false)
+    expect(canRetry({ failure: null })).toBe(false)
+    const a = row({ id: 'a', failedAt: now, failure: 'balance', supersededBy: 'e2' })
+    expect(refundChains([a])).toEqual([])
+  })
+
+  it('what Razorpay keeps of its fee on the refunded part; about what it keeps on a payment refunded in full', () => {
+    const pays = [{ id: 'pay_A', amount: 428000, at: at(1), fee: 10101 }, { id: 'pay_B', amount: 49900, at: at(1), fee: 1180 }]
+    expect(feeKept([{ paymentId: 'pay_A', amount: 189900 }], pays)).toEqual({ kept: Math.round((10101 * 189900) / 428000), fee: 10101 })
+    expect(feeKept([{ paymentId: 'pay_B', amount: 49900 }, { paymentId: 'pay_A', amount: 1000 }], pays)).toEqual({ kept: 1180 + Math.round(10101 * 1000 / 428000), fee: 11281 })
+    expect(feeKept([{ paymentId: 'pay_A', amount: 1000 }], [{ id: 'pay_A', amount: 428000, at: at(1), fee: null }])).toBeNull()
+    expect(feeAbout(49900, pays[1]!)).toBe(1180)
+    expect(feeAbout(49900, null)).toBe(998 + 180)
+    expect(refundLine({ ...none, sendingAt: now, cause: 'after_drop', failure: null, gatewayFee: 1180 }, '', (p) => `₹${p / 100}`).words).toBe('refund · with Razorpay · paid after the change was dropped · Razorpay kept ₹11.8')
+  })
+
+  it('a cancel refunds what the payments still hold (impact review BLOCKER)', () => {
+    const o = { paidAt: now, cancelledAt: now, onlineTotal: 481200, total: 243100 } as unknown as Parameters<typeof refundDue>[0]
+    const ledger = { payments: [{ id: 'pay_A', amount: 481200, at: now }], refunds: [row({ amount: 238100 })] }
+    expect(paidLeft(o, null)).toBe(481200)
+    expect(paidLeft(o, ledger)).toBe(243100)
+    expect(refundDue(o, ledger)).toBe(243100)
+    expect(refundDue({ ...o, cancelledAt: null } as typeof o, ledger)).toBe(0)
   })
 })

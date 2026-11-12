@@ -52,6 +52,8 @@ export const orderEdits = pgTable('order_edits', {
   createdAt: createdAt(),
 }, (t) => [
   unique('order_edits_tenant_id_key').on(t.tenantId, t.id),
+  // A refund names an edit of its own order (order_refunds_edit_fk).
+  unique('order_edits_order_id_key').on(t.tenantId, t.orderId, t.id),
   unique('order_edits_event').on(t.tenantId, t.eventId),
   foreignKey({ name: 'order_edits_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
   // The event is this order's own (order_events_order_id_key).
@@ -144,12 +146,20 @@ export const orderRefunds = pgTable('order_refunds', {
   failedAt: at('failed_at'),
   /** Our code for why it failed (REFUND_FAILURES), never Razorpay's words. */
   failure: text('failure'),
+  /** A failed `edit` refund a later change of the same order settled instead (its new total was worked out without this
+   *  money going back): never tried again. */
+  supersededBy: uuid('superseded_by'),
+  /** A payment refunded in full (after_drop, old_order), on its first attempt: Razorpay's fee on it, with its GST — kept by
+   *  Razorpay, so added to the order's gateway_fee (profit per order). Written once. */
+  gatewayFee: money('gateway_fee'),
+  gatewayTax: money('gateway_tax'),
   createdAt: createdAt(),
 }, (t) => [
   unique('order_refunds_tenant_id_key').on(t.tenantId, t.id),
   foreignKey({ name: 'order_refunds_order_fk', columns: [t.tenantId, t.orderId], foreignColumns: [orders.tenantId, orders.id] }).onDelete('cascade'),
   foreignKey({ name: 'order_refunds_retry_fk', columns: [t.tenantId, t.retryOf], foreignColumns: [t.tenantId, t.id] }).onDelete('restrict'),
-  foreignKey({ name: 'order_refunds_edit_fk', columns: [t.tenantId, t.editId], foreignColumns: [orderEdits.tenantId, orderEdits.id] }).onDelete('cascade'),
+  foreignKey({ name: 'order_refunds_edit_fk', columns: [t.tenantId, t.orderId, t.editId], foreignColumns: [orderEdits.tenantId, orderEdits.orderId, orderEdits.id] }).onDelete('cascade'),
+  foreignKey({ name: 'order_refunds_superseded_fk', columns: [t.tenantId, t.orderId, t.supersededBy], foreignColumns: [orderEdits.tenantId, orderEdits.orderId, orderEdits.id] }).onDelete('cascade'),
   index('order_refunds_order').on(t.tenantId, t.orderId),
   index('order_refunds_payment').on(t.tenantId, t.razorpayPaymentId),
   uniqueIndex('order_refunds_razorpay').on(t.tenantId, t.razorpayRefundId).where(sql`${t.razorpayRefundId} is not null`),
@@ -162,4 +172,6 @@ export const orderRefunds = pgTable('order_refunds', {
   check('order_refunds_moments', sql`(${t.cancelledAt} is null or (${t.sendingAt} is null and ${t.sentAt} is null))
     and (${t.sentAt} is null or (${t.sendingAt} is not null and ${t.razorpayRefundId} is not null))
     and (${t.processedAt} is null or ${t.sentAt} is not null) and (${t.processedAt} is null or ${t.failedAt} is null)`),
+  check('order_refunds_superseded', sql`${t.supersededBy} is null or (${t.failedAt} is not null and ${t.cause} = 'edit')`),
+  check('order_refunds_fee', sql`(${t.gatewayFee} is null or (${t.gatewayFee} >= 0 and ${t.retryOf} is null and ${t.cause} <> 'edit')) and (${t.gatewayTax} is null or ${t.gatewayTax} >= 0)`),
 ])

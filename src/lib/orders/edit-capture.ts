@@ -1,13 +1,14 @@
 import 'server-only'
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { capturedAsAsked } from '@/domains/orders/captured'
-import type { EditFacts, EditReason, Want } from '@/domains/orders/edit'
+import { usesOn, type EditFacts, type EditReason, type Want } from '@/domains/orders/edit'
+import { classOf } from '@/domains/checkout/discounts'
 import type { Tx } from '@/lib/db'
 import { orderEditLines, orderEdits, orderRefunds } from '@/lib/db/schema-edits'
-import { orders } from '@/lib/db/schema-orders'
 import type { RzpPayment } from '@/lib/payments/razorpay'
-import { queueRefund } from '@/lib/payments/refunds'
-import { applyPlan, planLocked, Refused } from './edit-write'
+import { addOrderFee, queueRefund, recordRefundedFee, supersedeFailed } from '@/lib/payments/refunds'
+import { applyPlan, planLocked, Refused, stillFit } from './edit-write'
+import { releaseHeld } from './edit-paid'
 import { current, moment } from './work'
 
 // =============================================================================
@@ -21,7 +22,10 @@ import { current, moment } from './work'
 //   become the order's; its record is filled in (paid_at, the payment, the fee, the offers).
 // - Dropped, cancelled, packed, or it can no longer apply (a price or the shop's delivery rules moved, a piece gone):
 //   the payment is refunded at once in full (refund ledger, cause after_drop), and the order stays as it was.
-// - Paid already by this payment (the webhook after the browser's reply): only its fee may be news.
+// - Paid already by this payment (the webhook after the browser's reply): only its fee may be news; by another payment:
+//   that one is refunded in full.
+// A payment refunded in full leaves Razorpay's fee on it with the order (gateway_fee). Held pieces back on sale are
+// listed in `soldOut` for the caller's refresh; a failed edit refund the change settled is never tried again.
 // =============================================================================
 
 export async function applyEditCapture(tx: Tx, tenantId: string, rzpOrderId: string, p: RzpPayment, currency: unknown, soldOut: string[]): Promise<string | null> {
@@ -31,24 +35,32 @@ export async function applyEditCapture(tx: Tx, tenantId: string, rzpOrderId: str
   const now = new Date()
   const c = await current(tx, tenantId, e.orderId, now)
   if (!c) return 'no such order'
-  if (e.paidAt) {
-    if (e.razorpayPaymentId === p.id && p.fee != null && e.gatewayFee === null) await feeNews(tx, tenantId, e.orderId, e.id, p.fee, p.tax)
-    return null
-  }
+  // The payment goes back in full, once, and Razorpay's fee on it stays with the order (unit-economics review 2026-11-12).
   const refund = async () => {
-    if (!e.razorpayPaymentId) await tx.update(orderEdits).set({ razorpayPaymentId: p.id }).where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.id, e.id), isNull(orderEdits.razorpayPaymentId)))
     const [had] = await tx.select({ id: orderRefunds.id }).from(orderRefunds).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.razorpayPaymentId, p.id))).limit(1)
     if (!had) await queueRefund(tx, tenantId, { orderId: e.orderId, editId: e.id, cause: 'after_drop', paymentId: p.id, amount: Number(e.asked), notBefore: now })
+    await recordRefundedFee(tx, tenantId, e.orderId, p.id, p.fee, p.tax)
     return null
   }
-  if (e.droppedAt || c.o.cancelledAt || c.o.packedAt) return refund()
+  if (e.paidAt) {
+    if (e.razorpayPaymentId === p.id) { if (p.fee != null) await feeNews(tx, tenantId, e.orderId, e.id, p.fee, p.tax); return null }
+    // Another payment on a change already paid (security review 2026-11-12 L2): not the order's, refunded.
+    return refund()
+  }
+  if (e.droppedAt || c.o.cancelledAt || c.o.packedAt) {
+    if (!e.razorpayPaymentId) await tx.update(orderEdits).set({ razorpayPaymentId: p.id }).where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.id, e.id), isNull(orderEdits.razorpayPaymentId)))
+    soldOut.push(...await releaseHeld(tx, tenantId, e.id))
+    return refund()
+  }
   try {
     await tx.transaction((sp) => applyWaiting(sp, tenantId, e, p, now, soldOut))
     return null
   } catch (err) {
     if (!(err instanceof Refused)) throw err
-    // It can no longer be what the shopper paid for: dropped, and the payment goes back.
-    await tx.update(orderEdits).set({ droppedAt: moment(now), droppedReason: 'cannot_apply' }).where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.id, e.id), isNull(orderEdits.droppedAt), isNull(orderEdits.paidAt)))
+    // It can no longer be what the shopper paid for: dropped, its pieces back on sale, and the payment goes back.
+    await tx.update(orderEdits).set({ droppedAt: moment(now), droppedReason: 'cannot_apply', razorpayPaymentId: e.razorpayPaymentId ?? p.id })
+      .where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.id, e.id), isNull(orderEdits.droppedAt), isNull(orderEdits.paidAt)))
+    soldOut.push(...await releaseHeld(tx, tenantId, e.id))
     return refund()
   }
 }
@@ -65,9 +77,15 @@ async function applyWaiting(sp: Tx, tenantId: string, e: typeof orderEdits.$infe
     room: Object.fromEntries(Object.entries(f.room).map(([v, n]) => [v, n + (held.get(v) ?? 0)])) })
   const { read, p: plan } = await planLocked(sp, tenantId, e.orderId, want, reasons, now, adjust)
   if (plan.total.after !== Number(e.totalAfter)) throw new Refused('moved')
+  // Hours can pass between Save and the payment: a saving that grew must still fit its offer's limits now, as at Save
+  // (impact review 2026-11-12).
+  const way = read.facts.order.way
+  const grew = plan.offers.flatMap((x) => { const o = read.facts.offers!.find((k) => k.rowId === x.rowId)!.kept
+    return x.after > x.before && usesOn(way)({ class: classOf(o.terms.style), method: o.method }) ? [{ discountId: o.terms.id, amount: x.after, title: x.title }] : [] })
+  if (await stillFit(sp, tenantId, e.orderId, grew, now)) throw new Refused('offer')
   // Stock is taken for the held pieces now (from the shelf); paid_at, written with the rest below, ends their hold.
   const w = await applyPlan(sp, tenantId, e.orderId, plan, read, now)
-  soldOut.push(...w.soldOut)
+  soldOut.push(...w.soldOut, ...w.backInStock)
   for (const n of w.newLines) {
     if (!n.variantId) continue
     await sp.update(orderEditLines).set({ orderLineId: n.id }).where(and(eq(orderEditLines.tenantId, tenantId), eq(orderEditLines.editId, e.id), eq(orderEditLines.side, 'after'),
@@ -76,12 +94,14 @@ async function applyWaiting(sp: Tx, tenantId: string, e: typeof orderEdits.$infe
   const done = await sp.update(orderEdits).set({ paidAt: moment(now), razorpayPaymentId: p.id, offersRemoved: w.moved, offersAdded: w.added })
     .where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.id, e.id), isNull(orderEdits.paidAt), isNull(orderEdits.droppedAt))).returning({ id: orderEdits.id })
   if (!done.length) throw new Refused('moved')
+  await releaseHeld(sp, tenantId, e.id)
+  // Its total was worked out with any failed edit refund's money as the shop's: those are settled by it (H1).
+  await supersedeFailed(sp, tenantId, e.orderId, e.id)
   if (p.fee != null) await feeNews(sp, tenantId, e.orderId, e.id, p.fee, p.tax)
 }
 
-/** Razorpay's fee on a change's payment: on its record, and added to the order's own (profit per order) once that is known. */
+/** Razorpay's fee on a change's payment: on its record once, and added to the order's own (profit per order) then. */
 async function feeNews(tx: Tx, tenantId: string, orderId: string, editId: string, fee: number, tax: number | null) {
-  await tx.update(orderEdits).set({ gatewayFee: fee, gatewayTax: tax }).where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.id, editId), isNull(orderEdits.gatewayFee)))
-  await tx.update(orders).set({ gatewayFee: sql`${orders.gatewayFee} + ${fee}`, gatewayTax: sql`coalesce(${orders.gatewayTax}, 0) + ${tax ?? 0}` })
-    .where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId), sql`${orders.gatewayFee} is not null`))
+  const r = await tx.update(orderEdits).set({ gatewayFee: fee, gatewayTax: tax }).where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.id, editId), isNull(orderEdits.gatewayFee))).returning({ id: orderEdits.id })
+  if (r.length) await addOrderFee(tx, tenantId, orderId, fee, tax)
 }

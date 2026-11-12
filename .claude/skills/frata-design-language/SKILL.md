@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.22.2
+  version: 5.22.3
   verified: 2026-11-12
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -503,6 +503,11 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   boxed "Pay ₹499 for the changes" with each change ("Linen co-ord: M → L"), "New total" and "Pay ₹499" (Razorpay on
   the shop's key); a refund is a line "Refund on its way · 5–10 working days" — never "refunded" (processed is not
   in their account yet).
+  Rupees, never "a fee" (unit-economics review 2026-11-12): the refund callout says "Back in 5–10 working days · Razorpay
+  keeps ₹23.58 of its ₹70.80 fee" once the payment's fee is known (else "its fee isn't returned"); the waiting box says
+  "If they pay later, it's refunded and Razorpay keeps about ₹11.78."; a payment refunded in full says "· Razorpay kept
+  ₹11.80" on its line. Try again shows only where it can work (never too old, already refunded, or settled by a later
+  change). The cancel dialog names what the payments still hold, and what is already refunded or on its way.
 
 ## Offers (owner-approved 2026-11-08; spec `docs/specs/2026-11-08-coupons.md`, mockup https://claude.ai/artifact/HVFMBJzJoH9tTUh9d1zxHT)
 

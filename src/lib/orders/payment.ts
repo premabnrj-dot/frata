@@ -67,9 +67,9 @@ export async function withSlot<T>(tenantId: string, run: (tx: Tx) => Promise<T>)
  * Once packed, its invoice is issued under its number and is never rewritten (GST Rule 46; unit-economics review
  * 2026-11-07): the order keeps its figures and says "paid after packing" (paidAfterPacking) for a person to settle.
  */
-export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?: number | null; tax?: number | null }, soldOut: string[] = []): Promise<'paid' | 'already'> {
+export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?: number | null; tax?: number | null }, soldOut: string[] = []): Promise<'paid' | 'already' | 'refunded'> {
   // OE·2: paid at the old total after its items changed (a switched order's first Razorpay order): refunded, never paid.
-  if (await strayCapture(tx, o, p.paymentId)) return 'already'
+  if (await strayCapture(tx, o, p)) return 'refunded'
   const r = await tx.update(orders).set({ paidAt: sql`now()`, razorpayPaymentId: p.paymentId, ...(p.fee != null ? { gatewayFee: p.fee, gatewayTax: p.tax ?? null } : {}) })
     .where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id), isNull(orders.paidAt)))
     .returning({ switchedAt: orders.switchedToCodAt, packedAt: orders.packedAt, shipping: orders.shipping, pricesIncludeGst: orders.pricesIncludeGst, sellerGstin: orders.sellerGstin, checkout: orders.checkout })

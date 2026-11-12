@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.52.1
+  version: 2.52.2
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -850,6 +850,20 @@ Look's controls, Settings' shipping costs and sections, and Admin's custom plan 
   `AUTO_RETRIES` times. `refund.*` webhooks are not relied on (an unmatched event is processed as nothing).
   `edit.payment` asks Razorpay for a waiting edit's second order's payments (a lost reply and webhook), `edit.remind`
   writes the 24-hour Notice (definer `app_edit_payment_notice`, source `edit_payment`, once per edit).
+  Reviews 2026-11-12 folded in: **a later change settles a failed edit refund** nobody tried again (`supersedeFailed`:
+  `superseded_by`, set by an applied edit and by a change when its payment applies, never by one only waiting); Try again
+  refuses a superseded attempt, `too_old` and `over`, and any `edit` refund larger than the payments' net minus the
+  order's total (or a waiting change's total); an edit that superseded one has no Undo. An attempt still unresolved on its
+  outbox row's last try is settled by one more list (receipt there → recorded; absent → `refused`, Try again). Save
+  refuses a refund or ask without the panel's `expectedDue`. At capture, a saving that grew must still `stillFit`
+  (else `cannot_apply`). Another payment on a change already paid is refunded (`after_drop`). **Razorpay's fee on a
+  payment refunded in full** is written once on its first attempt (`order_refunds.gateway_fee`) and added to the order's
+  `gateway_fee` (`addOrderFee`; `editFeesSql` sums edits' and these when the order's own fee arrives).
+  A cancel names what the payments still hold (`paidLeft(o, ledgerIn)`, amounts.ts), never the placement's online
+  total, and frees a waiting change's held pieces (`held` goes back to 0 whenever a change is paid, dropped, refunded or
+  cancelled: the partial index stays small). `order_refunds` names an edit of its own order (FK on (tenant, order, edit)),
+  and an edit line names only lines of its own order (trigger, 23503). `orderDetail` reads the waiting change by
+  `editWaitingSql` and the ledger.
   **Deploy order:** 0120 and 0121 before the code (the readers select `order_edits.asked` and `held`).
 - **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
   `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`

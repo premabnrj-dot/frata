@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
-import { collect, paidOnline, savingsAsPaid } from '@/domains/orders/amounts'
+import { collect, paidLeft, savingsAsPaid } from '@/domains/orders/amounts'
 import { currentMethod, orderState, paidAfterPacking, paidAfterSwitch, queueTab } from '@/domains/orders/order-state'
 import { risk } from '@/domains/orders/risk'
 import { CANCEL_LABEL, may, primaryAction, type CancelReason } from '@/domains/orders/work'
@@ -28,7 +28,7 @@ import { activityWords, cannotEdit, recordChanges, undoUntil, valuesChanged } fr
 import { EditItemsButton, ItemsArea } from '../_components/edit/items-area'
 import { RefundRows, WaitingChange } from '../_components/edit/paid-online'
 import { changeWords } from '@/domains/orders/edit'
-import { refundChains, refundLine } from '@/domains/orders/refunds'
+import { canRetry, counts, feeAbout, refundChains, refundLine } from '@/domains/orders/refunds'
 import { orderToken } from '@/lib/crypto/secret-box'
 import { scheme } from '@/lib/ekcode/cookie-name'
 import { shopSettingsFor } from '@/lib/queries/storefront'
@@ -76,7 +76,8 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const pay = method === 'cod' ? PAYMENT.cod : o.paidAt ? PAYMENT.paid : PAYMENT.unpaid
   const owed = collect(o)
   // What a cancel would send back: what reached Razorpay (amounts.ts — after a switch the COD fee is already off).
-  const refund = paidOnline(o)
+  // What the shopper's payments still hold: net of the refunds sent or queued for its edits (OE·2; impact review BLOCKER).
+  const refund = paidLeft(o, d.ledger)
   const primary = primaryAction(state)
   // The Ship panel by queue tab; after an outcome it stays (nothing shown) so its toast's Undo survives the refresh.
   const tab = queueTab(state)
@@ -84,14 +85,18 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
     : state === 'delivered' || state === 'rto' || state === 'rto_received' || state === 'lost' ? 'done' as const : null
   const can = { confirm: may('confirm', state, role), hold: may('hold', state, role), unhold: may('unhold', state, role), cancel: may('cancel', state, role), pack: may('pack', state, role), edit: may('edit', state, role), note: may('note', state, role) }
   // OE·2: a change waiting for the shopper's payment (nothing on the order changed yet; packing waits for it).
-  const waiting = o.cancelledAt ? undefined : [...d.edits.values()].find((e) => e.asked !== null && !e.paidAt && !e.droppedAt)
+  const waiting = d.waiting ? { ...d.waiting, before: d.edits.get(d.waiting.eventId)?.before ?? [], after: d.edits.get(d.waiting.eventId)?.after ?? [] } : null
   // Items (OE·1): owners and admins, while cannotEdit says nothing, never on a support visit; Undo for 10 minutes.
   const itemsEditable = can.edit && cannotEdit(state, { waiting: !!waiting }) === null && !o.erasedAt && !auth.membership.supportSessionId
   const payLink = waiting ? await shopSettingsFor(tenantId).then((x) => (x ? `${scheme()}://${x.host}/orders#t=${orderToken(o.id)}` : '')).catch(() => '') : ''
-  const refundRows = refundChains(d.refunds).map((x) => ({ id: x.id, amount: x.amount, ...refundLine(x, dateTimeIN(x.notBefore)) }))
+  const inr = (x: number) => formatInr(paise(x))
+  const refundRows = refundChains(d.refunds).map((x) => ({ id: x.id, amount: x.amount, retry: canRetry(x), ...refundLine(x, dateTimeIN(x.notBefore), inr) }))
+  // Already refunded or on its way for its edits (the cancel dialog says so), and about what Razorpay keeps if a change's
+  // payment comes after "Ship without the change" (refunded in full: unit-economics review 2026-11-12).
+  const refunded = d.ledger ? d.ledger.refunds.filter((x) => counts(x) && d.ledger!.payments.some((p) => p.id === x.razorpayPaymentId)).reduce((a, x) => a + x.amount, 0) : 0
+  const lateFee = waiting ? feeAbout(waiting.asked, d.ledger?.payments[0] ?? null) : 0
   const lastEdit = events.find((e) => e.kind === 'items_edited')
   const undoEvent = itemsEditable && lastEdit && !events.some((e) => e.undoes === lastEdit.id) && now <= undoUntil(lastEdit.at) ? lastEdit.id : null
-  const inr = (x: number) => formatInr(paise(x))
   const why = (r?.reasons.join('; ') || r?.next || '').replace(/\.$/, '')
   const riskWarning = r && (r.level === 'high' || r.level === 'unknown') ? `${r.level === 'high' ? 'High risk' : 'Risk unavailable'}: ${why}. Confirm only once you have spoken to the customer.` : null
   const history = [
@@ -117,14 +122,14 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
       <PageHeader title={label} back={{ href: '/console/orders', label: 'Orders' }}
         badges={<><Badge tone={pay.tone}><Icon name={pay.icon} className="mr-1 inline size-3.5 align-[-2px]" />{pay.label}</Badge><Badge tone={s.tone}>{s.label}</Badge></>}
         meta={<>Placed {dateTimeIN(o.placedAt)}{o.invoiceNumber ? <> · Invoice <span className="font-mono">{o.invoiceNumber}</span></> : null}{d.credits.length ? <> · Credit {d.credits.length === 1 ? 'note' : 'notes'} {d.credits.map((c, i) => <span key={c.number}>{i ? ', ' : ''}<span className="font-mono">{c.number}</span></span>)}</> : null}</>}
-        actions={<OrderActions orderId={o.id} number={label} primary={primary} waiting={waiting ? `Waiting for ${inr(waiting.asked!)} from the shopper` : null}
+        actions={<OrderActions orderId={o.id} number={label} primary={primary} waiting={waiting ? `Waiting for ${inr(waiting.asked)} from the shopper` : null}
           print={{ slip: may('print', state, role) ? printHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? printHref('invoice', [o.number]) : null }}
           pdf={{ slip: may('print', state, role) ? pdfHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? pdfHref('invoice', [o.number]) : null, credit: d.credits.length ? pdfHref('credit', [o.number]) : null }}
           credit={{ may: !d.credit && !!o.invoiceNumber && may('credit', state, role), number: d.credit?.number ?? null }}
           part={o.invoiceNumber && may('part_credit', state, role) ? { inclusive: o.pricesIncludeGst, lines: lines.map((l) => ({ id: l.id, title: [l.title, ...l.optionValues].join(' · '), qty: l.qty, stocked: !!l.stockTakenAt,
             left: l.qty - d.credits.reduce((a, c) => a + c.lines.filter((x) => x.lineId === l.id).reduce((b, x) => b + x.qty, 0), 0) })) } : null} riskWarning={riskWarning} heldPaid={state === 'held' && !!o.paidAt}
           may={{ hold: can.hold, unhold: can.unhold, cancel: can.cancel, pack: can.pack, confirm: can.confirm }}
-          refund={refund} refundLabel={formatInr(paise(refund))} stockTaken={lines.some((l) => l.stockTakenAt)} />} />
+          refund={refund} refundLabel={formatInr(paise(refund))} refunded={refunded ? formatInr(paise(refunded)) : null} stockTaken={lines.some((l) => l.stockTakenAt)} />} />
 
       <div className="grid gap-6 pb-16 md:grid-cols-[minmax(0,1fr)_20rem] md:pb-0">
         <div className="min-w-0 space-y-6">
@@ -177,7 +182,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
               {Number(o.gstTotal) !== 0 ? <div className="flex justify-between text-muted-foreground"><dt>GST {o.pricesIncludeGst ? '(included)' : ''}</dt><dd><Money paise={paise(o.gstTotal)} /></dd></div> : null}
               <div className="flex justify-between pt-1 font-medium"><dt>Total</dt><dd><Money paise={paise(o.total)} /></dd></div>
             </dl>
-            {waiting ? <WaitingChange orderId={o.id} asked={waiting.asked!} total={waiting.totalAfter} link={payLink} canAct={can.edit && !auth.membership.supportSessionId}
+            {waiting ? <WaitingChange orderId={o.id} asked={waiting.asked} total={waiting.totalAfter} link={payLink} canAct={can.edit && !auth.membership.supportSessionId} lateFee={inr(lateFee)}
               changes={recordChanges(waiting.before, waiting.after).map((c) => `${c.title}: ${changeWords(c)}`)} /> : null}
             <RefundRows rows={refundRows} canAct={can.edit && !auth.membership.supportSessionId} />
             {/* The line the courier and the packer need, in words: never only a colour. */}

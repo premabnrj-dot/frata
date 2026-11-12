@@ -7,10 +7,10 @@ import { dueOf, settleOf } from '@/domains/orders/refunds'
 import { chargesGst, type Scheme } from '@/domains/tax/gst'
 import type { Tx } from '@/lib/db'
 import { orderDiscounts } from '@/lib/db/schema-discounts'
-import { orderEditLines, orderEdits } from '@/lib/db/schema-edits'
+import { orderEditLines, orderEdits, orderRefunds } from '@/lib/db/schema-edits'
 import { orderEvents, orderLines, orders } from '@/lib/db/schema-orders'
 import { enqueueOrderEmail } from '@/lib/email/enqueue'
-import { cancelEditRefunds, queueRefund } from '@/lib/payments/refunds'
+import { cancelEditRefunds, queueRefund, supersedeFailed } from '@/lib/payments/refunds'
 import { editVariantIds, type LiveLine } from './edit-facts'
 import { requestPayment, waitingEdit } from './edit-paid'
 import { applyPlan, inr, planLocked, rearrive, Refused, stillFit } from './edit-write'
@@ -67,6 +67,8 @@ export async function editItems(tx: Tx, tenantId: string, actor: Actor, orderId:
       if (short) throw new Refused(`${short} has no room for a bigger saving. Keep the order as it was.`)
       // Paid online: refund the difference, or ask for it first (refunds.ts), exactly as Save showed it.
       const settle = settleOf(p.total.after, facts.paid, now)
+      // Paid online, Save must say what it showed (security review 2026-11-12 L1): never moved without it.
+      if ((settle.kind === 'refund' || settle.kind === 'ask') && input.expectedDue === undefined) throw new Refused('What it refunds or asks for changed. Check it, then save again.', p.total.after)
       if (input.expectedDue !== undefined && dueOf(settle) !== input.expectedDue) throw new Refused('What it refunds or asks for changed. Check it, then save again.', p.total.after)
       if (settle.kind === 'too_old') throw new Refused('Paid over 6 months ago: Razorpay can\'t refund it. Keep the order as it was.')
       if (settle.kind === 'ask') return requestPayment(sp, tenantId, actor, orderId, p, read, settle.amount, input, now)
@@ -82,6 +84,9 @@ export async function editItems(tx: Tx, tenantId: string, actor: Actor, orderId:
         ...p.lines.map((l, i) => ({ tenantId, editId: edit!.id, side: 'after', orderLineId: w.lineIds[i]!, variantId: l.variantId, qty: l.qty, unitPrice: l.unitPrice,
           productDiscount: p.price.lines[i]!.productDiscount, lineDiscount: p.price.lines[i]!.discount, replaces: l.change === 'kept' || !l.from ? null : l.from.id })),
       ])
+      // A failed refund nobody tried again is settled by this change (its total counted that money as the shop's): never
+      // tried again after it (security review 2026-11-12 H1).
+      if (facts.paid) await supersedeFailed(sp, tenantId, orderId, edit!.id)
       // The refund waits out the Undo window (an Undo before then cancels it in its own transaction).
       if (settle.kind === 'refund') for (const part of settle.parts) {
         await queueRefund(sp, tenantId, { orderId, editId: edit!.id, cause: 'edit', paymentId: part.paymentId, amount: part.amount, notBefore: undoUntil(stamp) })
@@ -118,7 +123,10 @@ export async function undoEdit(tx: Tx, tenantId: string, actor: Actor, eventId: 
   if (now > undoUntil(e.at)) return { ok: false, error: 'The 10 minutes to undo have passed. Edit the items instead.' }
   try {
     return await tx.transaction(async (sp) => {
-      // Its refund, not yet with Razorpay, is cancelled first; one already sent means the edit stands.
+      // Its refund, not yet with Razorpay, is cancelled first; one already sent means the edit stands. One that settled an
+      // earlier failed refund stands too: undone, that money would be owed with nothing to send it.
+      const [settled] = await sp.select({ id: orderRefunds.id }).from(orderRefunds).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.supersededBy, e.id))).limit(1)
+      if (settled) throw new Refused('It settled a refund that wasn\'t sent: this change can\'t be undone. Edit the items instead.')
       if (!(await cancelEditRefunds(sp, tenantId, e.id, now))) throw new Refused('The refund has gone to Razorpay: this change can\'t be undone.')
       const sides = await sp.select().from(orderEditLines).where(and(eq(orderEditLines.tenantId, tenantId), eq(orderEditLines.editId, e.id)))
       // An edit that applied at once names every line it saw and left (only a waiting one leaves a line unnamed).

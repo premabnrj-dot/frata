@@ -19,7 +19,9 @@ import { retryOrderRefund, shipWithoutChange } from '../../edit-actions'
 // A failure after a button is an error toast (design-language § Feedback 1).
 // =============================================================================
 
-export function WaitingChange({ orderId, asked, total, changes, link, canAct }: { orderId: string; asked: number; total: number; changes: string[]; link: string; canAct: boolean }) {
+export function WaitingChange({ orderId, asked, total, changes, link, canAct, lateFee }: { orderId: string; asked: number; total: number; changes: string[]; link: string; canAct: boolean
+  /** About what Razorpay keeps if they pay after the change is dropped (it is refunded in full), formatted. */
+  lateFee: string }) {
   const router = useRouter()
   const toast = useToast()
   const [busy, setBusy] = useState(false)
@@ -44,11 +46,14 @@ export function WaitingChange({ orderId, asked, total, changes, link, canAct }: 
         <Button variant="secondary" onClick={copy}>Copy payment link</Button>
         {canAct ? <Button variant="ghost" aria-disabled={busy} onClick={() => void drop()}>Ship without the change</Button> : null}
       </div>
+      {canAct ? <p className="text-muted-foreground">If they pay later, it&rsquo;s refunded and Razorpay keeps about {lateFee}.</p> : null}
     </div>
   )
 }
 
-export type RefundView = { id: string; amount: number; words: string; failed: string | null }
+export type RefundView = { id: string; amount: number; words: string; failed: string | null
+  /** Try again is offered (not for a payment too old or already refunded elsewhere: their words say what to do). */
+  retry: boolean }
 
 export function RefundRows({ rows, canAct }: { rows: RefundView[]; canAct: boolean }) {
   const router = useRouter()
@@ -72,7 +77,7 @@ export function RefundRows({ rows, canAct }: { rows: RefundView[]; canAct: boole
             <span className={r.failed ? 'font-medium' : undefined}>{r.failed ? 'Refund ' : ''}<Money paise={paise(r.amount)} /> {r.words}</span>
             {r.failed ? <span className="block text-muted-foreground">{r.failed}</span> : null}
           </span>
-          {r.failed && canAct ? <Button variant="secondary" aria-disabled={busy === r.id} onClick={() => void again(r.id)}>Try again</Button> : null}
+          {r.failed && r.retry && canAct ? <Button variant="secondary" aria-disabled={busy === r.id} onClick={() => void again(r.id)}>Try again</Button> : null}
         </li>
       ))}
     </ul>

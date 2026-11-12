@@ -45,6 +45,8 @@ export type OrderActionsProps = {
   /** Paise to refund in Razorpay if cancelled (paid online), else 0. */
   refund: number
   refundLabel: string
+  /** Already refunded, or on its way, for its edits (OE·2), formatted; null when none. */
+  refunded?: string | null
   /** Whether any line's stock was taken (so "Put stock back" means something). */
   stockTaken: boolean
 }
@@ -141,7 +143,7 @@ function Actions(p: OrderActionsProps) {
         actions={<><Button variant="secondary" data-autofocus onClick={() => { setCreditOpen(false); setCreditError(null) }}>Not now</Button><Button onClick={() => { setCreditError(null); void run('credited', async () => { const r = await issueCreditNote(p.orderId); return r.ok ? { ...r, ok: true } : r }, false, setCreditError).then((r) => { if (r) setCreditOpen(false) }) }} aria-disabled={busy}>Issue credit note</Button></>} />
 
       <Dialog open={cancelOpen} onClose={closeCancel} title={`Cancel ${p.number}?`} error={cancelError}
-        description={p.refund ? <>It was paid online: refund <strong>{p.refundLabel}</strong> in your Razorpay dashboard after cancelling (Frrata does not move the money). We email the customer only if they gave an email: tell them on WhatsApp or by phone.</> : 'We email the customer only if they gave an email: tell them on WhatsApp or by phone.'}
+        description={p.refund ? <>It was paid online: refund <strong>{p.refundLabel}</strong> in your Razorpay dashboard after cancelling (cancelling sends no refund).{p.refunded ? <> {p.refunded} is already refunded or on its way.</> : null} We email the customer only if they gave an email: tell them on WhatsApp or by phone.</> : 'We email the customer only if they gave an email: tell them on WhatsApp or by phone.'}
         actions={<><Button variant="secondary" data-autofocus onClick={closeCancel}>Keep the order</Button><Button variant="destructive" onClick={doCancel} aria-disabled={busy}>Cancel order</Button></>}>
         <div ref={cancelFields} className="grid gap-4">
           <fieldset className="grid gap-2">

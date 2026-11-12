@@ -10,7 +10,7 @@ import { withTenant } from '@/lib/db/tenant'
 import { enqueue, GiveUp, type OutboxRow } from '@/lib/outbox'
 import { keysFor, noteKeysAnswer } from '@/lib/payments/keys'
 import { checkoutSignatureOk, createOrder, orderByReceipt } from '@/lib/payments/razorpay'
-import { queueRefund } from '@/lib/payments/refunds'
+import { queueRefund, recordRefundedFee } from '@/lib/payments/refunds'
 import { checkoutShop } from '@/lib/queries/checkout'
 import { editWaitingSql } from '@/lib/db/order-predicates'
 import { sellsAs, type EditRead } from './edit-facts'
@@ -42,9 +42,21 @@ export async function waitingEdit(tx: Tx, tenantId: string, orderId: string): Pr
   return w ? { ...w, asked: Number(w.asked), totalAfter: Number(w.totalAfter) } : null
 }
 
-/** Razorpay's fee (or its GST) on the changes this order paid for since (added to the order's own once that is known). */
+/**
+ * Razorpay's fee (or its GST) on every later payment this order carries: a change it paid for, and a payment refunded in
+ * full (after_drop, old_order: its first attempt holds it). Added to the order's own once that is known (payment.ts).
+ */
 export const editFeesSql = (tenantId: string, orderId: string, part: 'fee' | 'tax'): SQL =>
-  sql`(select coalesce(sum(${part === 'fee' ? orderEdits.gatewayFee : orderEdits.gatewayTax}), 0) from ${orderEdits} where ${orderEdits.tenantId} = ${tenantId} and ${orderEdits.orderId} = ${orderId} and ${orderEdits.paidAt} is not null)`
+  sql`((select coalesce(sum(${part === 'fee' ? orderEdits.gatewayFee : orderEdits.gatewayTax}), 0) from ${orderEdits} where ${orderEdits.tenantId} = ${tenantId} and ${orderEdits.orderId} = ${orderId})
+    + (select coalesce(sum(${part === 'fee' ? orderRefunds.gatewayFee : orderRefunds.gatewayTax}), 0) from ${orderRefunds} where ${orderRefunds.tenantId} = ${tenantId} and ${orderRefunds.orderId} = ${orderId} and ${orderRefunds.retryOf} is null))`
+
+/** A change's held pieces go back on sale (paid, dropped, refunded or cancelled): `held` to 0, so the partial index stays
+ * small. The variants it held, for the caller's sold-out refresh. */
+export async function releaseHeld(tx: Tx, tenantId: string, editId: string): Promise<string[]> {
+  const rows = await tx.update(orderEditLines).set({ held: 0 }).where(and(eq(orderEditLines.tenantId, tenantId), eq(orderEditLines.editId, editId), sql`${orderEditLines.held} > 0`))
+    .returning({ v: orderEditLines.variantId })
+  return rows.flatMap((r) => (r.v ? [r.v] : []))
+}
 
 /**
  * Save a higher total on a paid order as a request: the record and its lines (the `after` lines that are new carry no
@@ -86,8 +98,8 @@ export async function dropRequest(tx: Tx, tenantId: string, actor: Actor, orderI
   const r = await tx.update(orderEdits).set({ droppedAt: stamp, droppedReason: 'ship_without' })
     .where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.id, w.id), isNull(orderEdits.paidAt), isNull(orderEdits.droppedAt))).returning({ id: orderEdits.id })
   if (!r.length) return { ok: false, error: 'This order changed. Reload the page.' }
-  const freed = await tx.select({ v: orderEditLines.variantId }).from(orderEditLines).where(and(eq(orderEditLines.tenantId, tenantId), eq(orderEditLines.editId, w.id), sql`${orderEditLines.held} > 0`))
-  return { ok: true, eventId: await record(tx, tenantId, orderId, actor, 'edit_dropped', stamp), backInStock: freed.flatMap((f) => (f.v ? [f.v] : [])) }
+  const backInStock = await releaseHeld(tx, tenantId, w.id)
+  return { ok: true, eventId: await record(tx, tenantId, orderId, actor, 'edit_dropped', stamp), backInStock }
 }
 
 /**
@@ -95,7 +107,8 @@ export async function dropRequest(tx: Tx, tenantId: string, actor: Actor, orderI
  * edited: the shopper paid the old online total). Never marks it paid: the whole payment is refunded at once (once per
  * payment) and the order stays as edited, paid on delivery. False: not such a payment (markPaid goes on as before).
  */
-export async function strayCapture(tx: Tx, o: { id: string; tenantId: string }, paymentId: string): Promise<boolean> {
+export async function strayCapture(tx: Tx, o: { id: string; tenantId: string }, pay: { paymentId: string; fee?: number | null; tax?: number | null }): Promise<boolean> {
+  const paymentId = pay.paymentId
   const [ord] = await tx.select({ paidAt: orders.paidAt, online: sql<number | null>`(${orders.checkout}->>'onlineTotal')::bigint`.mapWith((v) => (v == null ? null : Number(v))) })
     .from(orders).where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id))).for('update')
   if (!ord || ord.paidAt || !ord.online) return false
@@ -106,6 +119,8 @@ export async function strayCapture(tx: Tx, o: { id: string; tenantId: string }, 
   if (!edited) return false
   const [had] = await tx.select({ id: orderRefunds.id }).from(orderRefunds).where(and(eq(orderRefunds.tenantId, o.tenantId), eq(orderRefunds.razorpayPaymentId, paymentId), eq(orderRefunds.cause, 'old_order'))).limit(1)
   if (!had) await queueRefund(tx, o.tenantId, { orderId: o.id, editId: null, cause: 'old_order', paymentId, amount: ord.online, notBefore: new Date() })
+  // Razorpay keeps its fee on it: once, when known (the webhook after the browser's reply brings it).
+  await recordRefundedFee(tx, o.tenantId, o.id, paymentId, pay.fee, pay.tax)
   return true
 }
 
