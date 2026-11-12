@@ -2,7 +2,7 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.26.0
+  version: 1.27.0
   verified: 2026-11-12
   decisions: [ADR-0006]
 ---
@@ -159,9 +159,23 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
   "₹1.49 per order" [V-undated, © 2026] — conflict. Fastrr Promise / Smart EDD (2025-09-26) $2.99 / $14.99 / $49.99 /
   $199.99 a month by 0–100 / –1,000 / –5,000 / 5,000+ orders; rules by PIN code, SKU, zone; 2.4★/14 [V-undated, newest
   review 2026-10-09]. Shiprocket Checkout shows EDD; price unpublished [V-undated, 2026-11-12].
-- **Zones**: A city, B state/region, C metro–metro, D rest of India, E special; E = NE + J&K (blog 2019) or also Kerala and
-  HP (support 2022-12-13) — conflict, no current source [U]; each courier defines its own and the serviceability response
-  carries `zone` per courier: read it, never a fixed table.
+- **Zones**: A city, B state/region, C metro–metro, D rest of India, E special. Couriers disagree: Delhivery E = Jammu, HP,
+  NE excl. Manipur; F = Kashmir, Manipur, Ladakh, Andaman & Nicobar [V, help.delhivery.com/docs/rate-card 2024-12-20];
+  Shiprocket E = NE, J&K, Kerala, HP [V, support 2022-12-13] vs NE + J&K [S, blog 2019-08-30]; aggregators 2025–26 say
+  NE + J&K (Shipway 2025-08-07, NimbusPost 2026-05-14), add Andaman (ShipyBox 2026), or "differ between courier partners"
+  (RapidShyp 2026-09-22) [S]. Lakshadweep: in no courier's own page [U]. No courier zone page dated in the last 12 months
+  (2026-11-12). The serviceability response carries `zone` per courier: read it, never a fixed table; a "Special"
+  preset is a merchant default, not a courier fact.
+- **HRA city classes** (Delivery Zones presets): DoE OM 2/5/2014-E.II(B) 2015-07-21, Annexure repeated in OM
+  2/5/2017-E.II(B) 2017-07-07, + Mathura-Vrindavan Y from 2020-03-01 (OM 2/4/2018-E.II(B) 2020-02-25); no later
+  classification OM on doe.gov.in/orders-circulars/32 (newest: compendium 2022-12-30) [V, read 2026-11-12; no source
+  from the last 12 months]. X (8): Hyderabad, Delhi, Ahmadabad, Bengaluru, Greater Mumbai, Pune, Chennai, Kolkata.
+  Y = 88 Annexure entries + Mathura-Vrindavan = 89 (Faridabad, Gurgaon, Ghaziabad, Noida starred for dependency HRA).
+  Classes are by Census-2011 urban agglomeration, not district. 8th CPC constituted 2025-11-03, no report yet [V].
+- **Directory district names ≠ city boundaries** [S, api.postalpincode.in, 2026-11-12]: `Mumbai` covers Andheri and
+  Kandivali, `Bangalore` includes rural 562157, Hyderabad is split across `Hyderabad` and `K.V.Rangareddy`, Kolkata
+  across `Kolkata` and the 24 Parganas. So Delivery Zones' presets match PIN-code PREFIXES (src/domains/delivery/
+  presets.ts), never district names; the directory gives only the place name shown to the shopper.
 - **AWB** `POST /courier/assign/awb` (shipment_id; courier_id optional, default courier otherwise; `reassign` once
   per 24 h). **Pickup** `POST /courier/generate/pickup`; `/manifests/generate`, `/manifests/print`,
   `/courier/generate/label`, `/orders/print/invoice`; wrapper `/shipments/create/forward-shipment` [P/U].
