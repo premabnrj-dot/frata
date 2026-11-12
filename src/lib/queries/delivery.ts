@@ -7,6 +7,7 @@ import { istDayKey } from '@/domains/time/day'
 import type { Tx } from '@/lib/db'
 import { pincodes, shopSettings } from '@/lib/db/schema'
 import { deliveryRules, deliveryZonePins, deliveryZones, shopHolidays } from '@/lib/db/schema-delivery'
+import { withTenant } from '@/lib/db/tenant'
 import { moduleAccessIn } from './modules'
 
 // =============================================================================
@@ -49,4 +50,9 @@ export async function deliveryIn(tx: Tx, tenantId: string, pin: string | null | 
   }
   const dispatch: Dispatch = { days: s?.days ?? 1, cutoff: s?.cutoff ?? null, shipDays: s?.shipDays ?? MON_TO_SAT, holidays: holidays.map((h) => String(h.day)) }
   return { setup, dispatch, place: placeOf }
+}
+
+/** The product page's PIN code check (the storefront delivery endpoint): the same read, in its own transaction. */
+export function deliveryFor(tenantId: string, pin: string, now: Date): Promise<DeliveryRead> {
+  return withTenant(tenantId, (tx) => deliveryIn(tx, tenantId, pin, now))
 }
