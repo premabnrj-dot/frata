@@ -103,5 +103,70 @@ export default {
       const [r] = await db`select resumed_at from module_pauses where module = 'communication'`
       assert.ok(r.resumed_at)
     })
+
+    await t.step('A2 featured card: two issued Launch invoices that Growth beats; the owner sees it in rupees, staff never; Not now sticks; See Growth carries the source', async () => {
+      // Two issued, non-test invoices on Launch: 10 orders at a ₹1,00,000 base each month (₹10 L). Launch: plan + 2%;
+      // Growth: ₹4,999 + 1% = ₹6,500 less; Scale: ₹14,999 + 0.5% = ₹1,500 less, so Growth is named.
+      const [launch] = await db`select v.monthly_price::bigint p from plan_versions v join plans p on p.id = v.plan_id where p.code = 'launch' order by v.version desc limit 1`
+      const month = (k) => db`select (date_trunc('month', now() at time zone 'Asia/Kolkata') + ${k} * interval '1 month') at time zone 'Asia/Kolkata' as at`
+      const [[m0], [m1], [m2]] = await Promise.all([month(0), month(-1), month(1)])
+      const ids = []
+      await db.begin(async (x) => {
+        await x`set local session_replication_role = replica`
+        for (const [n, from, to] of [[1, m1.at, m0.at], [2, m0.at, m2.at]]) {
+          const taxable = Number(launch.p) + 10 * 200_000
+          const [inv] = await x`insert into frrata_invoices (tenant_id, period_start, period_end, taxable, cgst, sgst, igst, total, number, issued_at, test_mode)
+            values (${KESAR}, ${from}, ${to}, ${taxable}, 0, 0, 0, ${taxable}, ${'E2E-A2-' + n}, now(), false) returning id`
+          ids.push(inv.id)
+          await x`insert into frrata_invoice_lines (tenant_id, invoice_id, position, kind, description, period_start, period_end, quantity, rate_bps, taxable) values
+            (${KESAR}, ${inv.id}, 1, 'plan', 'Launch plan', ${from}, ${to}, 1, null, ${Number(launch.p)}),
+            (${KESAR}, ${inv.id}, 2, 'fee', 'Fee on delivered orders', ${from}, ${to}, 10, 200, ${10 * 200_000})`
+          await x`insert into frrata_invoice_fees (tenant_id, invoice_id, order_id, billable_at, base, fee_bps, fee) select ${KESAR}, ${inv.id}, gen_random_uuid(), ${from}, 10000000, 200, 200000 from generate_series(1, 10)`
+        }
+      })
+      try {
+        const own = await open('owner')
+        await own.evaluate(() => localStorage.removeItem('frrata.featured.dismissed')).catch(() => {})
+        await own.goto(CONSOLE + '/console/apps')
+        await own.getByRole('heading', { name: /^On Growth your .+ invoice would have been ₹6,500 less$/ }).waitFor()
+        await own.getByText(/on Launch · .+ on Growth · both \+ 18% GST/).waitFor()
+        await own.screenshot({ path: t.out('featured') })
+        // Staff never see the shop's bill.
+        await db`insert into auth.users (id, email, email_confirmed_at) values (${USERS.staff.id}, ${USERS.staff.email}, now()) on conflict (id) do nothing`
+        await db`insert into members (tenant_id, user_id, role) values (${KESAR}, ${USERS.staff.id}, 'staff') on conflict do nothing`
+        const arjun = await open('staff')
+        await arjun.goto(CONSOLE + '/console/apps')
+        await arjun.getByRole('heading', { name: 'Your apps' }).or(arjun.getByRole('heading', { name: 'Talk to shoppers' })).first().waitFor()
+        assert.equal(await arjun.getByText(/invoice would have been/).count(), 0, 'staff see no featured card')
+        // See Growth: the billing page; an upgrade from there records where it came from.
+        await own.getByRole('link', { name: 'See Growth' }).click()
+        await own.waitForURL(/\/console\/settings\/billing\?from=featured$/)
+        await own.getByRole('button', { name: 'Upgrade to Growth' }).click()
+        await own.getByRole('button', { name: 'Upgrade now' }).click()
+        await own.getByText('You are on Growth now.').waitFor()
+        const src = await db`select detail->>'source' s from audit_events where tenant_id = ${KESAR} and action = 'billing.plan.source'`
+        assert.deepEqual(src.map((r) => r.s), ['featured'])
+        // On Growth now: no card. Back on Launch for the dismiss check.
+        await own.goto(CONSOLE + '/console/apps')
+        await own.getByRole('heading', { name: 'Talk to shoppers' }).waitFor()
+        assert.equal(await own.getByText(/invoice would have been/).count(), 0, 'no card once on Growth')
+        await db`delete from tenant_plans where tenant_id = ${KESAR} and reason = 'Changed by the shop'`
+        await own.reload()
+        await own.getByRole('button', { name: 'Not now' }).click()
+        await own.reload()
+        await own.getByRole('heading', { name: 'Talk to shoppers' }).waitFor()
+        assert.equal(await own.getByText(/invoice would have been/).count(), 0, 'Not now hides it until the next invoice')
+      } finally {
+        await db.begin(async (x) => {
+          await x`set local session_replication_role = replica`
+          await x`delete from frrata_invoice_fees where tenant_id = ${KESAR} and invoice_id = any(${ids})`
+          await x`delete from frrata_invoice_lines where tenant_id = ${KESAR} and invoice_id = any(${ids})`
+          await x`delete from frrata_invoices where tenant_id = ${KESAR} and id = any(${ids})`
+        })
+        await db`delete from tenant_plans where tenant_id = ${KESAR} and reason = 'Changed by the shop'`
+        await db`delete from audit_events where tenant_id = ${KESAR} and action in ('billing.plan.change', 'billing.plan.source')`
+        await db`delete from members where tenant_id = ${KESAR} and user_id = ${USERS.staff.id}`
+      }
+    })
   },
 }

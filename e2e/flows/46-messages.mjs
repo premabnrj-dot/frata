@@ -33,20 +33,20 @@ export default {
       await riya.locator('a[href="/console/apps/communication"]').first().click()
       await riya.waitForURL(/\/console\/apps\/communication$/)
       await riya.getByRole('button', { name: 'Turn on Messages' }).click()
-      await riya.getByRole('heading', { level: 1, name: 'Connect WhatsApp' }).waitFor()
+      await riya.getByRole('heading', { level: 2, name: 'Connect WhatsApp' }).waitFor()
       const [m] = await db`select module from tenant_modules where tenant_id = ${KESAR} and disabled_at is null`
       assert.equal(m.module, 'communication')
       await riya.screenshot({ path: t.out('apps-on') })
     })
 
     await t.step('Connect: two paths, a phone that does not scroll sideways', async () => {
-      await riya.getByRole('heading', { level: 1, name: 'Connect WhatsApp' }).waitFor()
+      await riya.getByRole('heading', { level: 2, name: 'Connect WhatsApp' }).waitFor()
       await riya.getByRole('button', { name: /I use the WhatsApp Business app/ }).waitFor()
       await riya.getByRole('button', { name: /A new number/ }).waitFor()
       await riya.screenshot({ path: t.out('connect'), fullPage: true })
       const q = await open('owner', { viewport: { width: 390, height: 844 } })
       await q.goto(CONSOLE + '/console/apps/communication')
-      await q.getByRole('heading', { level: 1, name: 'Connect WhatsApp' }).waitFor()
+      await q.getByRole('heading', { level: 2, name: 'Connect WhatsApp' }).waitFor()
       assert.ok(await q.evaluate(() => document.documentElement.scrollWidth <= 390), 'no sideways scroll on a phone')
       await q.screenshot({ path: t.out('connect-phone'), fullPage: true })
     })
@@ -117,7 +117,7 @@ export default {
       await riya.getByRole('menuitem', { name: 'Disconnect' }).click()
       const d = riya.getByRole('dialog', { name: /Disconnect \+91 98450 12345/ })
       await d.getByRole('button', { name: 'Disconnect' }).click()
-      await riya.getByRole('heading', { level: 1, name: 'Connect WhatsApp' }).waitFor()
+      await riya.getByRole('heading', { level: 2, name: 'Connect WhatsApp' }).waitFor()
       const [c] = await db`select token_enc, disconnected_at from wa_connections where tenant_id = ${KESAR} order by connected_at desc limit 1`
       assert.equal(c.token_enc, null); assert.ok(c.disconnected_at)
       assert.ok((await calls()).some((x) => x.method === 'DELETE' && x.path.endsWith('/100000000001/subscribed_apps')))
@@ -148,6 +148,7 @@ export default {
       await arjun.goto(CONSOLE + '/console/apps/communication')
       await arjun.getByText('+91 90000 22222').first().waitFor()
       assert.equal(await arjun.getByRole('button', { name: 'More' }).count(), 0)
+      assert.equal(await arjun.getByRole('button', { name: 'Turn off Messages' }).count(), 0, 'staff never see Turn off')
       await db`delete from members where tenant_id = ${KESAR} and user_id = ${S.id}`
     })
 
@@ -159,7 +160,26 @@ export default {
       const [c] = await db`select token_enc, disconnected_by from wa_connections where tenant_id = ${KESAR} order by connected_at desc limit 1`
       assert.equal(c.token_enc, null); assert.equal(c.disconnected_by, '00000000-0000-0000-0000-000000000000')
       await riya.reload()
-      await riya.getByRole('heading', { level: 1, name: 'Connect WhatsApp' }).waitFor()
+      await riya.getByRole('heading', { level: 2, name: 'Connect WhatsApp' }).waitFor()
+    })
+
+    await t.step('A2 home: one state chip, Usage and billing, and Turn off alone at the foot with its consequences in the confirm', async () => {
+      await riya.goto(CONSOLE + '/console/apps/communication')
+      await riya.getByText('Working', { exact: true }).first().waitFor()
+      await riya.getByRole('link', { name: 'Usage and billing' }).click()
+      await riya.waitForURL(/\?tab=billing$/)
+      await riya.getByText('In your plan').first().waitFor()
+      await riya.getByText('Meta bills messages', { exact: true }).waitFor()
+      await riya.screenshot({ path: t.out('home-billing'), fullPage: true })
+      await riya.getByRole('button', { name: 'Turn off Messages' }).click()
+      const dlg = riya.getByRole('dialog')
+      await dlg.getByText('Messages stops for your shop.').waitFor()
+      await dlg.getByRole('button', { name: 'Turn off Messages' }).click()
+      await riya.getByRole('button', { name: 'Turn on Messages' }).first().waitFor() // the app's page again
+      await riya.getByRole('button', { name: 'Turn on Messages' }).first().click()
+      await riya.getByRole('button', { name: 'Turn off Messages' }).waitFor() // its home again (still on Usage and billing)
+      await riya.getByRole('link', { name: 'Overview' }).click()
+      await riya.getByRole('heading', { level: 2, name: 'Connect WhatsApp' }).waitFor()
     })
   },
 }

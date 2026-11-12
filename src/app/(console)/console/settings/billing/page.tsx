@@ -30,7 +30,9 @@ export const dynamic = 'force-dynamic'
  * only — staff and partners never see money (the query refuses them too). Test mode: nothing is charged yet, and the
  * page says so where Paying and Invoices will be.
  */
-export default async function PlanAndBillingPage() {
+export default async function PlanAndBillingPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
+  // Apps A2: where an upgrade came from, as a boolean only (never rendered, logged or stored raw).
+  const fromFeatured = (await searchParams).from === 'featured'
   const auth = await requireMember(CAN_MANAGE)
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the shop’s owner or an admin can see its plan and bills' : auth.message} />
   const now = new Date()
@@ -113,7 +115,7 @@ export default async function PlanAndBillingPage() {
             ) : o.plan.trialEndsAt && o.plan.trialEndsAt > now && <p className="text-sm text-ok-text">Trial until {dayIN(lastDay(o.plan.trialEndsAt))}</p>}
             {o.plan.custom || auth.membership.supportSessionId || plans.length === 0
               ? <p className="text-xs text-muted-foreground">{o.plan.custom ? 'Price agreed with Frrata' : auth.membership.supportSessionId ? 'Read-only on a support visit' : 'Plans could not be loaded. Try again in a minute.'}</p>
-              : <PlanChoice downgradeOn={dayMonthLongIN(o.forChange.downgradeOn)}
+              : <PlanChoice fromFeatured={fromFeatured} downgradeOn={dayMonthLongIN(o.forChange.downgradeOn)}
                   scheduled={o.scheduled ? { name: o.scheduled.name, on: dayMonthLongIN(o.scheduled.startsAt), byShop: o.scheduled.byShop } : null}
                   options={plans.filter((p) => p.code !== o.plan!.code).map((p) => {
                     const target = { planCode: p.code as never, name: p.name, monthlyPrice: paise(p.monthlyPrice), includedOrders: p.includedOrders, feeBps: p.feeBps }

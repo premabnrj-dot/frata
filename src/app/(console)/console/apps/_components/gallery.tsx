@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Icon } from '@/components/icons/icon'
-import { FILTERS, passes, type OfferFilter } from '@/domains/modules/offer'
+import { FILTERS, homeState, passes, type OfferFilter } from '@/domains/modules/offer'
 import type { Group, ModuleKey } from '@/domains/modules/registry'
 import { AppTile } from './tile'
 
@@ -15,7 +15,7 @@ export type AppCard = {
 }
 
 /** The gallery (approved mockup 2026-11-11): your apps, search, filters with counts, and a card per app by job group. */
-export function AppsGallery({ cards, groups }: { cards: AppCard[]; groups: { key: Group; label: string }[] }) {
+export function AppsGallery({ cards, groups, featured }: { cards: AppCard[]; groups: { key: Group; label: string }[]; featured?: React.ReactNode }) {
   const [filter, setFilter] = useState<OfferFilter | 'all'>('all')
   const [q, setQ] = useState('')
   const mine = cards.filter((c) => c.mine)
@@ -32,7 +32,7 @@ export function AppsGallery({ cards, groups }: { cards: AppCard[]; groups: { key
               <li key={c.key}>
                 <CardLink href={c.href} className="flex items-center gap-3 rounded-lg p-3">
                   <AppTile k={c.key} />
-                  <span className="min-w-0 flex-1"><span className="block font-semibold">{c.name}</span><span className="flex items-center gap-1.5 text-xs text-muted-foreground"><span aria-hidden="true" className="size-1.5 rounded-full bg-ok-mark" />{c.state?.label ?? 'On'}</span></span>
+                  <span className="min-w-0 flex-1"><span className="block font-semibold">{c.name}</span><span className="flex items-center gap-1.5 text-xs text-muted-foreground"><span aria-hidden="true" className={`size-1.5 rounded-full ${c.state?.tone === 'warn' ? 'bg-warn-mark' : 'bg-ok-mark'}`} />{c.state?.label ?? homeState().label}</span></span>
                   <Icon name="chevron" className="size-4 text-muted-foreground" />
                 </CardLink>
               </li>
@@ -40,6 +40,8 @@ export function AppsGallery({ cards, groups }: { cards: AppCard[]; groups: { key
           </ul>
         </section>
       ) : null}
+
+      {featured}
 
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-card px-3 sm:max-w-xs md:h-9">

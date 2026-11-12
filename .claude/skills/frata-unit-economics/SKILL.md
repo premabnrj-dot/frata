@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.10.0
+  version: 2.12.0
   verified: 2026-11-11
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
@@ -127,7 +127,11 @@ Every feature or add-on is placed and priced by these five steps before it is pl
 2. **Check the three stores** — low AOV (₹599 × 300), high AOV (₹4,500 × 80), volume (₹900 × 3,000): what each pays and
    saves from its own orders; an add-on above 2% of a low-AOV shop's GMV is priced again.
 3. **Check the baseline** (rule 2): never dearer for the shop the job is for.
-4. **Write the nudge:** after a win, never mid-task, in the shop's own rupees, one action, GST shown.
+4. **Write the nudge:** after a win, never mid-task, in the shop's own rupees, one action, GST shown. A nudge reads
+   ISSUED invoices, never a recomputed bill (Apps A2, `cheapestPlan` in `src/domains/billing/ladder.ts`): Launch at its
+   list price on the last TWO invoices, no change line, the stored per-order bases at each plan's bps (credits restated),
+   the cheapest of Growth and Scale, ≥ ₹500 before GST on both (a festive month alone never triggers it). A move up
+   from it writes `billing.plan.source` {source: featured}.
 5. **Write the hypotheses** (rule 1).
 
 **The cheapest plan follows delivered GMV, not orders:** Launch → Growth at ₹3.5 L a month, Growth → Scale at ₹20 L.
@@ -144,6 +148,15 @@ labelled by who it is for; no dark patterns (CCPA 2023). Never a one-time activa
 **Email marketing as placed (parked by the owner 2026-11-11):** Launch included at ₹0 with 5,000 emails; Growth adds
 Pay online next time, Win-back, cart flows, resend, best time, calendar; Scale adds VIP segments, several senders,
 higher caps, review of big sends, export/API.
+
+**The plan nudge's hypotheses (unit-economics review 2026-11-11):**
+
+| Figure | Source · date | Test |
+|---|---|---|
+| A Launch shop ≥ ₹4 L base two months running stays ≥ ₹3.5 L next month | review · 2026-11-11 | backtest over issued `frrata_invoice_fees` |
+| A ₹ nudge converts better than a feature list | assumption · 2026-11-11 | a 50% holdout if the owner approves; until then `billing.plan.source` upgrades per eligible shop, 30 days |
+| An upgrade from the card is not undone within 60 days | pricing-ladder spec · 2026-11-11 | downgrades within 60 days of a `source: featured` change |
+| Frrata gives up ₹500–₹26,500 a month per shop that moves up from the card | review · 2026-11-11 | invoices before and after, per moved shop |
 
 ## Current model (founder's, unvalidated, 2026-11)
 
