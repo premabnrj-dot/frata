@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { SectionLibrary, type LibraryDesign } from './section-library'
+import dynamic from 'next/dynamic'
+import type { LibraryDesign } from './section-library'
+// The library loads the first time it opens and then stays mounted, so it keeps its exit motion (feedback F1, budget).
+const SectionLibrary = dynamic(() => import('./section-library').then((m) => m.SectionLibrary))
 import { sectionName, type SectionInstance, type SectionKey, MAX_CARDS } from '@/domains/themes/sections'
 import { Icon } from '@/components/icons/icon'
 
@@ -58,6 +61,8 @@ export function SectionsPanel({ home, selected, allowed, made = [], themeName, o
   issues: Map<string, string>
 }) {
   const [adding, setAdding] = useState(false)
+  const [libraryOpened, setLibraryOpened] = useState(false)
+  if (adding && !libraryOpened) setLibraryOpened(true)
   const move = (i: number, d: -1 | 1) => { const h = [...home]; const j = i + d; if (j < 0 || j >= h.length) return; [h[i], h[j]] = [h[j]!, h[i]!]; onChange(h) }
   const count = (k: SectionKey) => home.filter((s) => s.key === k).length
   const add = (k: SectionKey, design?: string) => {
@@ -89,8 +94,8 @@ export function SectionsPanel({ home, selected, allowed, made = [], themeName, o
       <button type="button" onClick={() => setAdding(true)} disabled={home.length >= 20} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-input text-sm font-medium transition-colors duration-fast hover:border-foreground hover:bg-muted"><Icon name="search" className="size-4" />Add a section</button>
       <p className="text-xs text-muted-foreground">Policies and contact always show in the footer.</p>
 
-      <SectionLibrary open={adding} onClose={() => setAdding(false)} onAdd={add} allowed={allowed} made={made} themeName={themeName} count={count} after={afterName ? nameOf(afterName) : null} designs={designs}
-        commerce={home.filter((s) => s.key === 'design' && !s.hidden && byId[s.design]?.commerce).length} />
+      {(adding || libraryOpened) && <SectionLibrary open={adding} onClose={() => setAdding(false)} onAdd={add} allowed={allowed} made={made} themeName={themeName} count={count} after={afterName ? nameOf(afterName) : null} designs={designs}
+        commerce={home.filter((s) => s.key === 'design' && !s.hidden && byId[s.design]?.commerce).length} />}
     </div>
   )
 }

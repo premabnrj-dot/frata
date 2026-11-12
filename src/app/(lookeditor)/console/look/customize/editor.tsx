@@ -20,10 +20,8 @@ import type { ContactRow } from './pages-panel'
 import type { EditorPage } from '@/lib/queries/pages'
 import type { PageTemplate } from '@/domains/pages/templates'
 import type { Bound } from '@/domains/policies/answers'
-import { PageForm } from './page-form'
 import type { StyleOption } from './theme-form'
 import { Icon } from '@/components/icons/icon'
-import { PublishConfirm } from './publish-confirm'
 import { Segmented } from './controls'
 import { menusOf, siteIsDefault, type Menus, type Palette, type SiteSettings } from '@/domains/themes/site'
 import type { IconPreviews } from './site-form'
@@ -39,6 +37,10 @@ const ThemeForm = dynamic(() => import('./theme-form').then((m) => m.ThemeForm))
 const ContactPanel = dynamic(() => import('./pages-panel').then((m) => m.ContactPanel))
 const PagePanel = dynamic(() => import('./pages-panel').then((m) => m.PagePanel))
 const AddPage = dynamic(() => import('./pages-panel').then((m) => m.AddPage))
+// Feedback F1 (2026-11-12): the toast joined the editor's first load (+3 kB); a page's own form and Publish's confirm
+// load when opened to pay for it.
+const PageForm = dynamic(() => import('./page-form').then((m) => m.PageForm))
+const PublishConfirm = dynamic(() => import('./publish-confirm').then((m) => m.PublishConfirm))
 
 // =============================================================================
 // The customizer (approved mockup "Customizer", "Customizer on a phone", "Publish"). One draft revision:
