@@ -15,6 +15,7 @@ import { stillTrue } from '@/domains/messaging/still'
 import { cleanEmail } from '@/domains/email/shape'
 import { fromHeader } from '@/domains/email/headers'
 import { composeOrderEmail } from './compose'
+import { editEmailIn } from './edit-email'
 import { KEEP_ASKING_MS, settleWithRazorpay } from '@/lib/orders/payment-check'
 import type { SkipCode } from '@/domains/email/state'
 import { suppressionHashes } from './hash'
@@ -95,6 +96,9 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
       where l.tenant_id = ${tenantId} and l.order_id = ${o.id} and l.kind = 'items_edited'
       and l.at > (select e.at from ${orderEvents} e where e.tenant_id = ${tenantId} and e.id = ${eventId}) and not exists (select 1 from ${orderEvents} u where u.tenant_id = l.tenant_id and u.undoes = l.id) limit 1`) : []
     if (later) return skip('superseded')
+    // OE·2: what the edit did with the money (a refund on its way, or the payment it asks for: paid or dropped since → not sent).
+    const edit = kind === 'edited' && eventId ? await editEmailIn(tx, tenantId, eventId) : null
+    if (edit?.stale) return skip('superseded')
     if (!shop.publishedAt) return skip('shop_closed')
     const replyTo = cleanEmail(shop.supportEmail)
     if (!replyTo) return skip('no_support_email')
@@ -122,13 +126,13 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
     ])
     if (prior) await tx.update(emailMessages).set({ attemptedAt: now }).where(and(eq(emailMessages.tenantId, tenantId), eq(emailMessages.id, messageId)))
     else await tx.insert(emailMessages).values({ id: messageId, tenantId, kind, orderId, eventId, attemptedAt: now })
-    return { send: { o, to, replyTo, own, lines, ship } }
+    return { send: { o, to, replyTo, own, lines: edit?.lines ?? lines, ship, edit } }
   })
   if ('done' in job) return
   if ('wait' in job) throw new Later(job.wait === 'tenant' ? 'ses_tenant_not_ready' : 'awaiting_ses_event', job.wait === 'tenant' ? 1 : 15)
 
-  const { o, to, replyTo, own, lines, ship } = job.send
-  const { mail, subject } = composeOrderEmail({ kind, shop, accent, order: { ...o, stockShort: false }, lines, ship, own, to, replyTo })
+  const { o, to, replyTo, own, lines, ship, edit } = job.send
+  const { mail, subject } = composeOrderEmail({ kind, shop, accent, order: { ...o, stockShort: false }, lines, ship, own, to, replyTo, edit })
   const sent = await sendEmail({
     from: fromHeader(shop.shopName, `${shop.slug}@${EMAIL_SHOP_DOMAIN}`), to, replyTo, subject, html: mail.html, text: mail.text,
     configurationSet: SES_CONFIG_SHOPS, tenant: tenantName(tenantId), messageId, tenantTag: tenantId,

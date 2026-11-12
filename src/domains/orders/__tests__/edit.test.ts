@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { DiscountTerms } from '@/domains/checkout/discounts'
 import { storedTerms, termsCopy } from '@/domains/checkout/kept-terms'
 import { keptOffers, quote, type BagLine, type ShopRules, type VariantRow } from '@/domains/checkout/quote'
-import { activityWords, changesOf, changeWords, planEdit, priceAsKept, problemWords, recordChanges, valuesChanged, type EditFacts, type SoldLine, type Want } from '../edit'
+import { activityWords, cannotEdit, changesOf, changeWords, planEdit, priceAsKept, problemWords, recordChanges, valuesChanged, type EditFacts, type SoldLine, type Want } from '../edit'
 
 // The order edit's pure planning (OE·1, docs/plans/2026-11-12-order-edit.md): an order placed by the real quote(), its
 // lines and offers as the order stores them, then edited. The planner prices paying on delivery exactly as checkout's
@@ -28,7 +28,8 @@ function placed(bag: BagLine[], offers: DiscountTerms[], r: ShopRules = rules): 
   return {
     lines, choices: rows.map((x) => ({ variantId: x.variantId, productId: x.productId, title: x.title, values: x.values, price: x.price, hsn: x.hsn, ownBps: null })),
     offers: keptOffers(q, 'cod').map((a) => ({ rowId: `row-${a.discountId}`, kept: { terms: storedTerms({ ...termsCopy(a.terms, base), discountId: a.discountId, title: a.title, style: a.terms.style, codeId: a.codeId })!, method: a.method, amount: a.amount } })),
-    order: { shipping: q.shipping, codCharge: q.cod.codCharge, total: q.cod.total, pricesIncludeGst: true, registered: true, placedAt: now },
+    order: { shipping: q.shipping, codCharge: q.cod.codCharge, total: q.cod.total, pricesIncludeGst: true, registered: true, placedAt: now, way: 'cod' },
+    paid: null,
     rules: { shippingFlat: r.shippingFlat, freeShippingAbove: r.freeShippingAbove, codMax: r.codMax },
     room: Object.fromEntries(rows.map((x) => [x.variantId, 5])),
   }
@@ -145,6 +146,23 @@ describe('planEdit', () => {
     const f = placed(bag, [festive])
     const p = priceAsKept(f.lines, f.offers!.map((o) => ({ class: 'order', method: o.kept.method, amount: o.kept.amount })), { shipping: f.order.shipping, codCharge: f.order.codCharge }, f.order)
     expect(p.total).toBe(f.order.total)
+  })
+
+  it('paid online (OE·2): priced as paid online — no COD fee, its order offer — as checkout\'s online card; waiting refuses another edit', () => {
+    const f = placed(bag, [festive])
+    const online: EditFacts = { ...f, order: { ...f.order, way: 'prepaid' }, paid: { payments: [{ id: 'pay_A', amount: f.order.total, at: now }], refunds: [], now } }
+    // A paid order whose payment can't be read moves no money: refused.
+    expect(planEdit({ ...online, paid: null }, keep(f), {})).toEqual({ ok: false, problem: { kind: 'payment_unknown' } })
+    const want: Want[] = [{ line: 'line-am', variantId: 'am', qty: 1 }, { line: 'line-lm', variantId: 'lm', qty: 1 }]
+    const r = planEdit(online, want, { 'line-dh': 'customer_asked' })
+    if (!r.ok) throw new Error(r.problem.kind)
+    const two = [{ variantId: 'am', qty: 1 }, { variantId: 'lm', qty: 1 }]
+    expect(r.plan.total.after).toBe(quote(two, rows, rules, now, null, { offers: [festive] }).prepaid.total)
+    // Over the COD maximum does not matter paid online.
+    expect(planEdit({ ...online, rules: { ...online.rules, codMax: 1000 } }, [...want, { line: null, variantId: 'ax', qty: 1 }], { 'line-dh': 'other' }).ok).toBe(true)
+    expect(cannotEdit('paid', { waiting: true })).toBe('Waiting for the shopper to pay for the last change. Wait, or ship without the change.')
+    expect(cannotEdit('paid', { waiting: false })).toBeNull()
+    expect(cannotEdit('packed', { waiting: false })).toBe('Already packed: its slip and invoice keep these items.')
   })
 
   it('names what changed between two pieces', () => {

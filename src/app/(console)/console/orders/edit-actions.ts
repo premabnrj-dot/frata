@@ -8,6 +8,11 @@ import { asMember } from '@/lib/auth/as-member'
 import { requireMember } from '@/lib/auth/require-member'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { editItems, undoEdit } from '@/lib/orders/edit'
+import { dropRequest } from '@/lib/orders/edit-paid'
+import { current } from '@/lib/orders/work'
+import { retryRefund } from '@/lib/payments/refunds'
+import { orderRefunds } from '@/lib/db/schema-edits'
+import { and, eq } from 'drizzle-orm'
 import { drainSoon } from '@/lib/outbox/drain'
 import { itemsEditor, itemsToAdd, type AddResult, type EditorData } from '@/lib/queries/order-edit'
 import { refreshSoldOut } from '@/lib/queries/storefront'
@@ -21,6 +26,8 @@ import { refreshSoldOut } from '@/lib/queries/storefront'
 // src/lib/orders/edit.ts under the order's lock, the money worked out there again (never taken from the browser): the
 // total the panel showed is only compared. A support visit's audit row would name the field "items", never a value.
 // Each action is limited per member (rate-limit.ts orderEdit*): Save and Undo fail closed, the two reads fail open.
+// OE·2 (paid online): "Ship without the change" drops a change waiting for the shopper's payment, and Try again sends a
+// refund Razorpay refused as a new attempt — both owner/admin, never a support visit (they move money and stock).
 // =============================================================================
 
 const Id = z.string().uuid()
@@ -62,9 +69,11 @@ const Edit = z.object({
   reasons: z.record(Id, z.enum(EDIT_REASONS)).refine((r) => Object.keys(r).length <= 20),
   notify: z.boolean(),
   expectedTotal: z.number().int().min(0).max(10_000_000_00),
+  // Paid online (OE·2): the refund (+) or the payment asked for (−) the panel showed; compared, never sent as such.
+  expectedDue: z.number().int().min(-10_000_000_00).max(10_000_000_00).optional(),
 }).strict()
 
-export type SaveResult = { ok: true; eventId: string; total: number } | { ok: false; error: string; total?: number }
+export type SaveResult = { ok: true; eventId: string; total: number; asked?: number; refund?: number } | { ok: false; error: string; total?: number }
 
 /** Save the edit at the total the panel showed (refused, with the new one, when it moved). */
 export async function saveItemsEdit(orderId: string, input: unknown): Promise<SaveResult> {
@@ -83,7 +92,7 @@ export async function saveItemsEdit(orderId: string, input: unknown): Promise<Sa
     if (v.soldOut.length || v.backInStock.length) await refreshSoldOut(r.tenantId).catch((e: unknown) => console.error('[order.items_edit] purge', e instanceof Error ? e.name : 'error'))
     drainSoon()
     revalidatePath('/console', 'layout')
-    return { ok: true, eventId: v.eventId, total: v.total }
+    return { ok: true, eventId: v.eventId, total: v.total, ...(v.asked ? { asked: v.asked } : {}), ...(v.refund ? { refund: v.refund } : {}) }
   } catch (err) {
     console.error('[order.items_edit]', err instanceof Error ? err.name : 'error')
     return { ok: false, error: 'We could not save that. Nothing was changed.' }
@@ -107,5 +116,51 @@ export async function undoItemsEdit(eventId: string): Promise<{ ok: true } | { o
   } catch (err) {
     console.error('[order.items_undo]', err instanceof Error ? err.name : 'error')
     return { ok: false, error: 'We could not undo that. Nothing was changed.' }
+  }
+}
+
+/** "Ship without the change": the change waiting for the shopper's payment is dropped; the order packs as it was. */
+export async function shipWithoutChange(orderId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!Id.safeParse(orderId).success) return { ok: false, error: 'Order not found.' }
+  try {
+    const auth = await requireMember(ROLES.edit)
+    if (!auth.ok) return { ok: false, error: auth.message }
+    if (auth.membership.supportSessionId) return { ok: false, error: SUPPORT }
+    if (!(await withinLimit(LIMITS.orderEditSave, who(auth), new Date(), true))) return { ok: false, error: BUSY }
+    const r = await asMember(ROLES.edit, { action: 'order.edit_drop', target: orderId, detail: {} }, (tx, a) =>
+      dropRequest(tx, a.membership.tenantId, { kind: a.membership.supportSessionId ? 'support' : 'member', userId: a.userId, email: a.email ?? '' }, orderId))
+    if (!r.ok) return { ok: false, error: r.error }
+    if (!r.value.ok) return { ok: false, error: r.value.error }
+    if (r.value.backInStock.length) await refreshSoldOut(r.tenantId).catch((e: unknown) => console.error('[order.edit_drop] purge', e instanceof Error ? e.name : 'error'))
+    revalidatePath('/console', 'layout')
+    return { ok: true }
+  } catch (err) {
+    console.error('[order.edit_drop]', err instanceof Error ? err.name : 'error')
+    return { ok: false, error: 'We could not do that. Nothing was changed.' }
+  }
+}
+
+/** Try again: a refund Razorpay refused (too little balance, refunds off…) is sent as a new attempt. */
+export async function retryOrderRefund(refundId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!Id.safeParse(refundId).success) return { ok: false, error: 'Refund not found.' }
+  try {
+    const auth = await requireMember(ROLES.edit)
+    if (!auth.ok) return { ok: false, error: auth.message }
+    if (auth.membership.supportSessionId) return { ok: false, error: 'A support visit can\'t send a refund.' }
+    if (!(await withinLimit(LIMITS.orderEditSave, who(auth), new Date(), true))) return { ok: false, error: BUSY }
+    const r = await asMember(ROLES.edit, { action: 'order.refund_retry', target: refundId, detail: {} }, async (tx, a) => {
+      const t = a.membership.tenantId
+      const [x] = await tx.select({ orderId: orderRefunds.orderId }).from(orderRefunds).where(and(eq(orderRefunds.tenantId, t), eq(orderRefunds.id, refundId)))
+      if (!x || !(await current(tx, t, x.orderId, new Date()))) return { ok: false as const, error: 'Refund not found.' }
+      return retryRefund(tx, t, refundId, new Date())
+    })
+    if (!r.ok) return { ok: false, error: r.error }
+    if (!r.value.ok) return { ok: false, error: r.value.error }
+    drainSoon()
+    revalidatePath('/console', 'layout')
+    return { ok: true }
+  } catch (err) {
+    console.error('[order.refund_retry]', err instanceof Error ? err.name : 'error')
+    return { ok: false, error: 'We could not send that. Nothing was changed.' }
   }
 }

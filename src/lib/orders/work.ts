@@ -9,7 +9,10 @@ import { deliveryIn } from '@/lib/queries/delivery'
 import { applies, invoiceNumber, seriesFits, type CancelReason, type OrderAction } from '@/domains/orders/work'
 import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
-import { momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
+import { editWaitingSql, momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
+import { orderEdits } from '@/lib/db/schema-edits'
+import { formatInr } from '@/lib/format'
+import type { Paise } from '@/domains/money/paise'
 import { shopSettings, tenantCounters, tenants } from '@/lib/db/schema'
 import { orderEvents, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
 import { putStockBack, takeStock } from './stock'
@@ -152,6 +155,10 @@ export async function pack(tx: Tx, tenantId: string, actor: Actor, orderId: stri
   const c = await current(tx, tenantId, orderId, now)
   if (!c) return { ok: false, error: 'Order not found.' }
   if (!applies('pack', c.state)) return c.state === 'unconfirmed' || c.state === 'held' ? { ok: false, error: 'Confirm it first.' } : refuse(tx, tenantId, orderId, 'pack', c.state)
+  // A change waiting for the shopper's payment (OE·2, owner 2026-11-12): never packed under it.
+  const [waiting] = await tx.select({ asked: orderEdits.asked }).from(orderEdits).innerJoin(orders, and(eq(orders.tenantId, orderEdits.tenantId), eq(orders.id, orderEdits.orderId)))
+    .where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.orderId, orderId), editWaitingSql('"order_edits"', '"orders"'))).limit(1)
+  if (waiting) return { ok: false, error: `Waiting for ${formatInr(Number(waiting.asked) as Paise)} from the shopper. Ship without the change to pack it as it was.` }
   const pre = await takeStock(tx, tenantId, orderId, 'preorder', soldOut)
   if (pre.short) return { ok: false, error: 'The pre-ordered pieces are not in stock yet. Add the stock when they arrive, then pack.' }
   const kind = c.o.sellerGstin ? 'invoice' : 'bill'

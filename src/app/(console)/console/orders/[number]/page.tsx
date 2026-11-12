@@ -26,6 +26,12 @@ import { Icon } from '@/components/icons/icon'
 import { saysOnline } from '@/domains/checkout/offer-text'
 import { activityWords, cannotEdit, recordChanges, undoUntil, valuesChanged } from '@/domains/orders/edit'
 import { EditItemsButton, ItemsArea } from '../_components/edit/items-area'
+import { RefundRows, WaitingChange } from '../_components/edit/paid-online'
+import { changeWords } from '@/domains/orders/edit'
+import { refundChains, refundLine } from '@/domains/orders/refunds'
+import { orderToken } from '@/lib/crypto/secret-box'
+import { scheme } from '@/lib/ekcode/cookie-name'
+import { shopSettingsFor } from '@/lib/queries/storefront'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/[number]/page.tsx
@@ -77,8 +83,12 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const shipStage = tab === 'to_ship' ? 'to_ship' as const : tab === 'on_the_way' || tab === 'couldnt_deliver' ? 'on_the_way' as const
     : state === 'delivered' || state === 'rto' || state === 'rto_received' || state === 'lost' ? 'done' as const : null
   const can = { confirm: may('confirm', state, role), hold: may('hold', state, role), unhold: may('unhold', state, role), cancel: may('cancel', state, role), pack: may('pack', state, role), edit: may('edit', state, role), note: may('note', state, role) }
+  // OE·2: a change waiting for the shopper's payment (nothing on the order changed yet; packing waits for it).
+  const waiting = o.cancelledAt ? undefined : [...d.edits.values()].find((e) => e.asked !== null && !e.paidAt && !e.droppedAt)
   // Items (OE·1): owners and admins, while cannotEdit says nothing, never on a support visit; Undo for 10 minutes.
-  const itemsEditable = can.edit && cannotEdit(state, o) === null && !o.erasedAt && !auth.membership.supportSessionId
+  const itemsEditable = can.edit && cannotEdit(state, { waiting: !!waiting }) === null && !o.erasedAt && !auth.membership.supportSessionId
+  const payLink = waiting ? await shopSettingsFor(tenantId).then((x) => (x ? `${scheme()}://${x.host}/orders#t=${orderToken(o.id)}` : '')).catch(() => '') : ''
+  const refundRows = refundChains(d.refunds).map((x) => ({ id: x.id, amount: x.amount, ...refundLine(x, dateTimeIN(x.notBefore)) }))
   const lastEdit = events.find((e) => e.kind === 'items_edited')
   const undoEvent = itemsEditable && lastEdit && !events.some((e) => e.undoes === lastEdit.id) && now <= undoUntil(lastEdit.at) ? lastEdit.id : null
   const inr = (x: number) => formatInr(paise(x))
@@ -86,16 +96,20 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const riskWarning = r && (r.level === 'high' || r.level === 'unknown') ? `${r.level === 'high' ? 'High risk' : 'Risk unavailable'}: ${why}. Confirm only once you have spoken to the customer.` : null
   const history = [
     ...events.map((e) => {
-      const edit = e.kind === 'items_edited' ? d.edits.get(e.id) : undefined
+      const edit = e.kind === 'items_edited' || e.kind === 'edit_requested' ? d.edits.get(e.id) : undefined
       // "emailed" only once it went; held for the Undo window (no message yet) or queued, it is waiting.
       const mail = edit ? emails.find((m) => m.kind === 'edited' && m.eventId === e.id) : undefined
       const email = !edit?.notify || events.some((x) => x.undoes === e.id) ? null : !mail || mail.state === 'queued' || mail.state === 'sending' ? 'waiting' as const : mail.state === 'sent' || mail.state === 'delivered' ? 'sent' as const : null
-      const text = edit ? activityWords(recordChanges(edit.before, edit.after), { before: edit.totalBefore, after: edit.totalAfter }, email, inr) : eventLabel(e, (x) => CANCEL_LABEL[x as CancelReason] ?? x)
+      const words = edit ? activityWords(recordChanges(edit.before, edit.after), { before: edit.totalBefore, after: edit.totalAfter }, email, inr) : ''
+      // A change that asked the shopper to pay first says so (and what came of it is its own line below).
+      const text = edit?.asked ? `Asked for ${inr(edit.asked)} · ${words.replace(/^Items changed · /, '')}` : edit ? words : eventLabel(e, (x) => CANCEL_LABEL[x as CancelReason] ?? x)
       return { at: e.at, text, who: e.actorKind === 'support' ? `${e.actorEmail ?? ''} · Frrata support` : e.actorEmail ?? 'Frrata' }
     }),
     { at: o.placedAt, text: method === 'cod' && !o.switchedToCodAt ? 'Placed · pay on delivery' : 'Placed · online', who: 'Customer' },
     ...(o.paidAt ? [{ at: o.paidAt, text: 'Paid online', who: 'Razorpay' }] : []),
     ...(o.switchedToCodAt ? [{ at: o.switchedToCodAt, text: 'Switched to pay on delivery', who: 'Customer' }] : []),
+    ...[...d.edits.values()].flatMap((e) => (e.asked !== null && e.paidAt ? [{ at: e.paidAt, text: `Paid ${inr(e.asked)} for the change · items changed`, who: 'Customer' }]
+      : e.droppedReason === 'cannot_apply' && e.droppedAt ? [{ at: e.droppedAt, text: 'Paid for a change that could no longer apply · refunded', who: 'Razorpay' }] : [])),
   ].sort((a, b) => b.at.getTime() - a.at.getTime())
 
   return (
@@ -103,7 +117,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
       <PageHeader title={label} back={{ href: '/console/orders', label: 'Orders' }}
         badges={<><Badge tone={pay.tone}><Icon name={pay.icon} className="mr-1 inline size-3.5 align-[-2px]" />{pay.label}</Badge><Badge tone={s.tone}>{s.label}</Badge></>}
         meta={<>Placed {dateTimeIN(o.placedAt)}{o.invoiceNumber ? <> · Invoice <span className="font-mono">{o.invoiceNumber}</span></> : null}{d.credits.length ? <> · Credit {d.credits.length === 1 ? 'note' : 'notes'} {d.credits.map((c, i) => <span key={c.number}>{i ? ', ' : ''}<span className="font-mono">{c.number}</span></span>)}</> : null}</>}
-        actions={<OrderActions orderId={o.id} number={label} primary={primary}
+        actions={<OrderActions orderId={o.id} number={label} primary={primary} waiting={waiting ? `Waiting for ${inr(waiting.asked!)} from the shopper` : null}
           print={{ slip: may('print', state, role) ? printHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? printHref('invoice', [o.number]) : null }}
           pdf={{ slip: may('print', state, role) ? pdfHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? pdfHref('invoice', [o.number]) : null, credit: d.credits.length ? pdfHref('credit', [o.number]) : null }}
           credit={{ may: !d.credit && !!o.invoiceNumber && may('credit', state, role), number: d.credit?.number ?? null }}
@@ -163,6 +177,9 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
               {Number(o.gstTotal) !== 0 ? <div className="flex justify-between text-muted-foreground"><dt>GST {o.pricesIncludeGst ? '(included)' : ''}</dt><dd><Money paise={paise(o.gstTotal)} /></dd></div> : null}
               <div className="flex justify-between pt-1 font-medium"><dt>Total</dt><dd><Money paise={paise(o.total)} /></dd></div>
             </dl>
+            {waiting ? <WaitingChange orderId={o.id} asked={waiting.asked!} total={waiting.totalAfter} link={payLink} canAct={can.edit && !auth.membership.supportSessionId}
+              changes={recordChanges(waiting.before, waiting.after).map((c) => `${c.title}: ${changeWords(c)}`)} /> : null}
+            <RefundRows rows={refundRows} canAct={can.edit && !auth.membership.supportSessionId} />
             {/* The line the courier and the packer need, in words: never only a colour. */}
             <p className="border-t border-border pt-3 text-sm font-medium">
               {paidAfterPacking(o) && state !== 'cancelled' ? <span className="text-danger-text">Paid online after it was packed for Pay on delivery. Tell the courier not to collect cash; if cash was collected too, refund the online payment in Razorpay. The invoice stays as issued: ask your CA whether it needs a credit note.</span>

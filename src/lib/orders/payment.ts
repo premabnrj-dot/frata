@@ -3,9 +3,6 @@ import { enqueueOrderEmail } from '@/lib/email/enqueue'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { quote, type Quote } from '@/domains/checkout/quote'
 import { reprice } from '@/domains/orders/amounts'
-import { discountUses, fits, liveDiscountSql } from '@/lib/db/discount-predicates'
-import { priorOrderSql } from '@/lib/db/order-predicates'
-import { discounts, orderDiscounts } from '@/lib/db/schema-discounts'
 import type { Tx } from '@/lib/db'
 import { webhookEvents } from '@/lib/db/schema'
 import { orderLines, orders } from '@/lib/db/schema-orders'
@@ -20,6 +17,9 @@ import { HOLD_MINUTES, startPayment, takeSlot, type Pay } from './place'
 import { takeStock } from './stock'
 import { storedPricing, writeReprice } from './reprice'
 import { enqueuePaymentCheck } from './payment-check'
+import { offersStillFit } from './offers-fit'
+import { editFeesSql, strayCapture } from './edit-paid'
+import { applyEditCapture } from './edit-capture'
 import { freeStock } from '@/domains/catalogue/availability'
 import { capturedAsAsked } from '@/domains/orders/captured'
 
@@ -68,12 +68,16 @@ export async function withSlot<T>(tenantId: string, run: (tx: Tx) => Promise<T>)
  * 2026-11-07): the order keeps its figures and says "paid after packing" (paidAfterPacking) for a person to settle.
  */
 export async function markPaid(tx: Tx, o: OrderKey, p: { paymentId: string; fee?: number | null; tax?: number | null }, soldOut: string[] = []): Promise<'paid' | 'already'> {
+  // OE·2: paid at the old total after its items changed (a switched order's first Razorpay order): refunded, never paid.
+  if (await strayCapture(tx, o, p.paymentId)) return 'already'
   const r = await tx.update(orders).set({ paidAt: sql`now()`, razorpayPaymentId: p.paymentId, ...(p.fee != null ? { gatewayFee: p.fee, gatewayTax: p.tax ?? null } : {}) })
     .where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id), isNull(orders.paidAt)))
     .returning({ switchedAt: orders.switchedToCodAt, packedAt: orders.packedAt, shipping: orders.shipping, pricesIncludeGst: orders.pricesIncludeGst, sellerGstin: orders.sellerGstin, checkout: orders.checkout })
   if (!r.length) {
     // Already paid (the other path won): the fee may still be news.
-    if (p.fee != null) await tx.update(orders).set({ gatewayFee: p.fee, gatewayTax: p.tax ?? null }).where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id), isNull(orders.gatewayFee)))
+    // With the fees of any change it paid for since (OE·2: their payments add theirs once this one's is known).
+    if (p.fee != null) await tx.update(orders).set({ gatewayFee: sql`${p.fee} + ${editFeesSql(o.tenantId, o.id, 'fee')}`, gatewayTax: p.tax == null ? null : sql`${p.tax} + ${editFeesSql(o.tenantId, o.id, 'tax')}` })
+      .where(and(eq(orders.tenantId, o.tenantId), eq(orders.id, o.id), isNull(orders.gatewayFee)))
     return 'already'
   }
   const paid = r[0]!
@@ -285,34 +289,6 @@ export async function retryPayment(tenantId: string, hash: string, now = new Dat
 }
 
 /**
- * After a hold ran out, whether the order may still be paid at its offers: each is still live (not paused, ended or
- * stopped by Frrata: "before paying, never after"), a first-order one is still the phone's first, and each limited
- * one still has room for it (the order's own use excluded), under a lock. Exported for its int test.
- */
-export async function offersStillFit(tx: Tx, tenantId: string, orderId: string, phone: string, now: Date, way: 'prepaid' | 'cod' = 'prepaid'): Promise<boolean> {
-  const all = await tx.select({ discountId: orderDiscounts.discountId, amount: orderDiscounts.amount, cls: orderDiscounts.class, method: orderDiscounts.method, firstOrder: discounts.firstOrder, live: sql<boolean>`${liveDiscountSql(now)}` }).from(orderDiscounts)
-    .innerJoin(discounts, and(eq(discounts.tenantId, orderDiscounts.tenantId), eq(discounts.id, orderDiscounts.discountId)))
-    .where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, orderId), isNull(orderDiscounts.removedAt)))
-  // Only the offers the order would be paid at this way: paying online never needs the COD-only order offer, and paying
-  // on delivery never the pay-online saving or an online-only order offer (offers per method, 0106).
-  const mine = all.filter((m) => (way === 'cod' ? m.cls !== 'payment' && m.method !== 'prepaid' : m.method !== 'cod'))
-  if (!mine.length) return true
-  if (mine.some((m) => !m.live)) return false
-  // A first-order offer: the phone may have ordered since this hold ran out (impact review) — same lock, same rule.
-  if (mine.some((m) => m.firstOrder)) {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${tenantId + ':phone:' + phone}, 0))`)
-    const [had] = await tx.execute<{ yes: boolean }>(sql`select ${priorOrderSql(now, tenantId, phone, { except: orderId })} yes`)
-    if (had?.yes) return false
-  }
-  const limited = (await tx.execute<{ id: string; limit_total: number | null; limit_per_phone: number | null; budget: string | null }>(sql`
-    select id, limit_total, limit_per_phone, budget from ${discounts} where tenant_id = ${tenantId} and id in ${mine.map((m) => m.discountId)}
-      and (limit_total is not null or limit_per_phone is not null or budget is not null) order by id for update`))
-  const used = await discountUses(tx, tenantId, limited.map((l) => l.id), now, { phone, excludeOrder: orderId })
-  return limited.every((l) => fits({ limitTotal: l.limit_total, limitPerPhone: l.limit_per_phone, budget: l.budget === null ? null : Number(l.budget) }, used.get(l.id),
-    Number(mine.find((m) => m.discountId === l.id)!.amount)))
-}
-
-/**
  * Store a verified Razorpay event inside the shop OUR key named (drizzle/0043: no webhook row exists outside a shop).
  * A captured payment also keeps its order's hold while it waits to be applied (a busy drop can defer it): pay_by moves
  * to at least CAPTURE_HOLD_MINUTES from now — only while the hold still runs, so pieces already let go are never held
@@ -390,7 +366,8 @@ async function applyEvent(tx: Tx, tenantId: string, ev: Record<string, unknown>,
   const p = toPayment(entity)
   const rzpOrder = typeof entity.order_id === 'string' ? entity.order_id : ''
   const [o] = await tx.select({ id: orders.id, checkout: orders.checkout }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.razorpayOrderId, rzpOrder)))
-  if (!o) return 'no such order'
+  // Not an order's own Razorpay order: a change's (OE·2), or nothing of ours.
+  if (!o) return kind === 'payment.captured' || kind === 'order.paid' ? applyEditCapture(tx, tenantId, rzpOrder, p, entity.currency, soldOut) : 'no such order'
   if (kind === 'payment.failed') { await tx.update(orders).set({ paymentFailedAt: sql`now()` }).where(and(eq(orders.tenantId, tenantId), eq(orders.id, o.id), isNull(orders.paidAt))); return null }
   if (kind !== 'payment.captured' && kind !== 'order.paid') return null
   if (p.status !== 'captured' || !capturedAsAsked(p, o.checkout, entity.currency)) return `amount or state does not match (${p.status})`

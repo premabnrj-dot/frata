@@ -6,6 +6,7 @@ import { emailMessages, noticePrefs, noticeReads, notices } from '@/lib/db/schem
 import { GiveUp, Later, type OutboxRow } from '@/lib/outbox'
 import { shopSettingsFor } from '@/lib/queries/storefront'
 import { wordNotices } from '@/lib/queries/notices'
+import { editWaitingSql } from '@/lib/db/order-predicates'
 import { DEFAULT_EMAIL, REQUIRED_TYPES, type NoticeType, type OptionalType } from '@/domains/email/notices'
 import { frrataEmail } from '@/domains/email/layouts'
 import { cleanEmail } from '@/domains/email/shape'
@@ -35,6 +36,12 @@ export async function sendNoticeEmail(row: OutboxRow): Promise<void> {
     // A3: a trial ended (or stopped) since the reminder was written is not emailed about.
     if (n.sourceKind === 'addon_trial') {
       const live = await tx.execute(sql`select 1 from tenant_addons where tenant_id = ${tenantId} and id = ${n.sourceId} and ends_at is null and trial_ends_at > now()`)
+      if (!live.length) return null
+    }
+    // OE·2: a change paid for or dropped since the reminder was written is not emailed about.
+    if (n.sourceKind === 'edit_payment') {
+      const live = await tx.execute(sql`select 1 from order_edits e join orders o on o.tenant_id = e.tenant_id and o.id = e.order_id
+        where e.tenant_id = ${tenantId} and e.id = ${n.sourceId} and ${editWaitingSql('e', 'o')}`)
       if (!live.length) return null
     }
     const required = (REQUIRED_TYPES as readonly string[]).includes(n.type)

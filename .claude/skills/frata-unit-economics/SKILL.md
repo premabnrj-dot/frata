@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.16.0
+  version: 2.16.1
   verified: 2026-11-12
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
@@ -114,6 +114,12 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
   price and cost), so Frrata's fee is on the order as it ships. An edit issues no credit note, so `returnedSql` never
   takes it off a second time (`draft.int.test.ts`). Measure: edited orders' share and their RTO against unedited ones
   (the spec's goal: fewer "out of stock" and "customer asked" cancels).
+- **A paid-online edit moves the gateway's money too** (OE·2, 2026-11-12): a lower total is refunded at normal speed
+  (free; Razorpay keeps its fee on the whole first payment, so `gateway_fee` stays as charged and the order now earns
+  less on the same fee); a higher total is a second payment whose fee (with its GST) is ADDED to `orders.gateway_fee`
+  (kept on `order_edits.gateway_fee` too, and summed in once the first payment's own fee is known), so profit per order
+  carries both. A difference under ₹1 (Razorpay's minimum) is absorbed by the shop. Instant refunds (₹7.99–14.99) are
+  never used. Measure: refunds sent per edited paid order, and the fee share of edited paid orders against unedited ones.
 - **Offers are core** (every plan): Shopify includes discounts on every plan and GoKwik's fee
   includes prepaid incentives, so an add-on would make Frrata dearer than the baseline.
 - **"Pay online, save ₹50"** costs ₹45 on every prepaid order (including those that would have paid

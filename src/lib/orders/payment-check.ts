@@ -7,7 +7,9 @@ import { enqueue, GiveUp, Later, type OutboxRow } from '@/lib/outbox'
 import { keysFor, noteKeysAnswer } from '@/lib/payments/keys'
 import { orderPayments } from '@/lib/payments/razorpay'
 import { capturedAsAsked } from '@/domains/orders/captured'
-import { markPaid, storeRazorpayEvent, withSlot } from './payment'
+import { markPaid, processEvents, storeRazorpayEvent, withSlot } from './payment'
+import { orderEdits } from '@/lib/db/schema-edits'
+import { waitingEdit } from './edit-paid'
 import { refreshSoldOut } from '@/lib/queries/storefront'
 
 // =============================================================================
@@ -71,4 +73,32 @@ export async function sendPaymentCheck(row: OutboxRow): Promise<void> {
   if (r === 'paid' || r === 'unpaid') return
   if (Date.now() - new Date(row.createdAt).getTime() > KEEP_ASKING_MS) throw new GiveUp(`still ${r} after 72 hours`)
   throw new Later(r === 'pending' ? 'payment in flight' : 'razorpay unreachable', r === 'pending' ? 10 : 5)
+}
+
+/**
+ * The `edit.payment` sender (beside `payment.check`): asks Razorpay for the change's second order's payments, so a capture
+ * whose browser reply and webhook were both lost is still recorded (stored as its event, then applied by processEvents).
+ * Asks every 15 minutes while the change waits, for 72 hours.
+ */
+export async function sendEditPaymentCheck(row: OutboxRow): Promise<void> {
+  const id = (row.payload as { editId?: unknown })?.editId
+  if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/.test(id)) throw new GiveUp('bad payload')
+  const pre = await withTenant(row.tenantId, async (tx) => {
+    const [e] = await tx.select({ rzp: orderEdits.razorpayOrderId, asked: orderEdits.asked, orderId: orderEdits.orderId }).from(orderEdits).where(and(eq(orderEdits.tenantId, row.tenantId), eq(orderEdits.id, id)))
+    return e?.rzp ? { e, waiting: !!(await waitingEdit(tx, row.tenantId, e.orderId)), keys: await keysFor(tx, row.tenantId) } : null
+  })
+  if (!pre?.keys) return
+  const asked = await orderPayments(pre.keys, pre.e.rzp!)
+  if (asked.ok) {
+    const p = asked.items.find((x) => x.status === 'captured' && x.amount === Number(pre.e.asked) && x.currency === 'INR')
+    if (p) {
+      await storeRazorpayEvent(row.tenantId, `razorpay:payment.captured:${p.id}`, { event: 'payment.captured',
+        payload: { payment: { entity: { id: p.id, order_id: pre.e.rzp, amount: p.amount, currency: 'INR', status: 'captured', fee: p.fee, tax: p.tax } } } })
+      await processEvents(row.tenantId)
+      return
+    }
+  }
+  if (!pre.waiting) return
+  if (Date.now() - new Date(row.createdAt).getTime() > 72 * 3_600_000) throw new GiveUp('no payment after 72 hours')
+  throw new Later(asked.ok ? 'no payment yet' : 'razorpay unreachable', 15)
 }

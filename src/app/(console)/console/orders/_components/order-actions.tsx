@@ -26,6 +26,8 @@ import { PartCreditDialog, type PartLine } from './part-credit'
 export type OrderActionsProps = {
   orderId: string; number: string
   primary: 'confirm' | 'pack' | 'print_slip' | 'cancel' | null
+  /** A change waiting for the shopper's payment (order edit OE·2): said in place of Mark packed, which waits for it. */
+  waiting?: string | null
   /** The print pages this order has now: a slip once it is placed, an invoice once packed. */
   print: { slip: string | null; invoice: string | null }
   /** The same documents as PDF downloads (Documents D1). */
@@ -85,7 +87,7 @@ function Actions(p: OrderActionsProps) {
   const confirm = () => run(p.heldPaid ? 'released from hold' : 'confirmed', () => confirmOrder(p.orderId), true)
   // The primary button only when this person may do it (the action checks again): the role table can change.
   const primary = p.primary === 'confirm' && p.may.confirm ? { label: p.heldPaid ? 'Release from hold' : 'Confirm', go: () => (p.riskWarning ? setRiskOpen(true) : void confirm()) }
-    : p.primary === 'pack' && p.may.pack ? { label: 'Mark packed', go: () => void run('packed', async () => { const r = await packOrder(p.orderId); return r.ok ? { ...r, ok: true } : r }) }
+    : p.primary === 'pack' && p.may.pack && !p.waiting ? { label: 'Mark packed', go: () => void run('packed', async () => { const r = await packOrder(p.orderId); return r.ok ? { ...r, ok: true } : r }) }
     : p.primary === 'cancel' && p.may.cancel ? { label: 'Cancel and refund…', go: () => setCancelOpen(true) } : null
   // Packed: the next thing is the slip in the parcel — a link (a page to print), not an action.
   const printPrimary = p.primary === 'print_slip' && p.print.slip ? p.print.slip : null
@@ -113,6 +115,7 @@ function Actions(p: OrderActionsProps) {
   }
 
   const primaryButton = primary ? <Button onClick={primary.go} aria-disabled={busy}>{primary.label}</Button>
+    : p.waiting && p.primary === 'pack' ? <span role="status" className="inline-flex min-h-10 items-center rounded-md border border-border px-3 text-sm font-medium md:min-h-9" data-waiting>{p.waiting}</span>
     : printPrimary ? <Link prefetch={false} href={printPrimary} className={button()}>Print packing slip</Link> : null
   return (
     <>

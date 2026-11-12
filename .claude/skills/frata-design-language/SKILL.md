@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.22.1
+  version: 5.22.2
   verified: 2026-11-12
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -484,10 +484,25 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   back"; a piece added in the edit comes out without a reason. A line whose product was deleted says "No longer sold":
   no chips, no − / +, Remove only. A size already on the order is not offered again. A refusal (over the COD maximum,
   sold out, a reason missing) is one line in "What changes", in the error colour, and Save waits. The email tick shows
-  only when the order has an email ("Email Ananya the new total"). Who sees "Edit items": owners and admins, on an order
-  paid on delivery, until packed — never staff, a support visit, a paid order or one that started as an online payment.
+  only when the order has an email ("Email Ananya the new total"). Who sees "Edit items": owners and admins, until
+  packed — never staff or a support visit; paid online too since OE·2, never while a change waits for the shopper.
   Activity says "emailed" only once the email went ("email waiting" while it is held for the Undo window). Phone: one column, the two buttons
   fixed above the bottom bar.
+  As built (OE·2, paid online, 2026-11-12; `_components/edit/what-changes.tsx`, `paid-online.tsx`): "What changes" shows
+  "Paid online ₹X" and "New total ₹Y" instead of "Collect on delivery"; lower → a warn callout "Refund ₹1,899 / Razorpay ·
+  back in 5–10 working days · its fee isn't returned", Save "Save and refund ₹1,899", tick "Email Meera the refund", the
+  toast "KS-1051 saved · refund ₹1,899 in 10 minutes" with Undo; higher → "Ask for ₹499 / The shopper pays first ·
+  nothing changes until then", Save "Save and ask for ₹499", tick "… the payment link", the toast "KS-1051: waiting for
+  ₹499 from the shopper" with no Undo (nothing changed). "Paid over 6 months ago: Razorpay can't refund it." is the
+  refusal line, Save waits. While a change waits: the header's "Mark packed" becomes the status "Waiting for ₹499 from
+  the shopper" (not a button), and the Items card holds one warn block — the changes, "New total", "Copy payment link"
+  (the order's own page, for WhatsApp) and "Ship without the change". Refunds sit as rows under the money: "₹1,899 refund
+  · sends at 10:52", "… · with Razorpay", "refunded · 5–10 working days to reach the shopper", or "Refund ₹1,899 not sent"
+  with the cause on the next line and Try again (a failure after it is toast.error). Activity: "Asked for ₹499 · …", then
+  "Paid ₹499 for the change · items changed" (Customer) or "Shipped without the change". The shopper's order page: a
+  boxed "Pay ₹499 for the changes" with each change ("Linen co-ord: M → L"), "New total" and "Pay ₹499" (Razorpay on
+  the shop's key); a refund is a line "Refund on its way · 5–10 working days" — never "refunded" (processed is not
+  in their account yet).
 
 ## Offers (owner-approved 2026-11-08; spec `docs/specs/2026-11-08-coupons.md`, mockup https://claude.ai/artifact/HVFMBJzJoH9tTUh9d1zxHT)
 
