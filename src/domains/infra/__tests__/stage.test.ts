@@ -6,10 +6,10 @@ describe('where secrets may be read', () => {
     expect(secretsAllowed('1', 'production')).toBe(true)
     expect(secretsAllowed(undefined, undefined)).toBe(true) // local, e2e, CI
     expect(secretsAllowed('', 'preview')).toBe(true) // not on Vercel: VERCEL unset or empty
+    expect(secretsAllowed('1', 'development')).toBe(true) // vercel dev / vercel env pull: a person's own machine
   })
   it('refuses them on a preview, a custom environment, or Vercel with no stage', () => {
     expect(secretsAllowed('1', 'preview')).toBe(false)
-    expect(secretsAllowed('1', 'development')).toBe(false)
     expect(secretsAllowed('1', 'staging')).toBe(false)
     expect(secretsAllowed('1', undefined)).toBe(false)
     expect(secretsAllowed('1', '')).toBe(false)

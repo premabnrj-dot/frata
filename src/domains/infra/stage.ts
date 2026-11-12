@@ -8,9 +8,11 @@
 // boundary is Vercel's variable scoping, the rotated tokens and staff passkeys.
 // =============================================================================
 
-/** `vercel`: process.env.VERCEL ('1' on Vercel); `stage`: process.env.VERCEL_ENV. */
-export const secretsAllowed = (vercel: string | undefined, stage: string | undefined): boolean => vercel !== '1' || stage === 'production'
+/** `vercel`: process.env.VERCEL ('1' on Vercel); `stage`: process.env.VERCEL_ENV. 'development' is only ever a person's
+ *  own machine (`vercel dev`, or `vercel env pull`, which writes VERCEL=1 and VERCEL_ENV=development); no Vercel
+ *  deployment runs as it, and Development holds no production secret. */
+export const secretsAllowed = (vercel: string | undefined, stage: string | undefined): boolean => vercel !== '1' || stage === 'production' || stage === 'development'
 
 /** Sign-in in the browser: NEXT_PUBLIC_VERCEL_ENV is set per environment at build ('' off Vercel, or when the project
  *  does not expose system variables). Off on a preview or a custom environment. */
-export const signInAllowedIn = (publicStage: string | undefined): boolean => !publicStage || publicStage === 'production'
+export const signInAllowedIn = (publicStage: string | undefined): boolean => !publicStage || publicStage === 'production' || publicStage === 'development'

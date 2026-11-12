@@ -81,6 +81,43 @@ export default {
         await riya.p.getByRole('link', { name: 'Merchants' }).first().waitFor()
       })
 
+      await t.step('Every approval and new passkey emailed the person and every admin (rows written with the change)', async () => {
+        const rows = await db`select to_email, kind from staff_notices where about = ${O.email} order by created_at`
+        assert.ok(rows.some((r) => r.kind === 'request_approved' && r.to_email === F.email), 'the approver (an admin) is told')
+        assert.ok(rows.some((r) => r.kind === 'request_approved' && r.to_email === O.email), 'the person is told')
+        assert.ok(rows.some((r) => r.kind === 'passkey_added' && r.to_email === F.email), 'a new passkey reaches the admins')
+      })
+
+      await t.step('A second device confirms first; a confirmation older than 5 minutes is refused for staff changes', async () => {
+        await meera.p.goto(CONSOLE + '/admin/staff')
+        await meera.p.getByRole('button', { name: 'Add a passkey' }).click()
+        await meera.p.getByLabel('Name').fill('Meera phone')
+        await meera.p.getByRole('button', { name: 'Confirm with passkey and add' }).click()
+        await until(async () => (await db`select count(*)::int n from staff_passkeys where user_id = ${F.id}`)[0].n === 2, 10_000)
+        // A stale step-up (made 10 minutes ago) cannot add staff; the form's own passkey prompt makes it fresh again.
+        await db`update staff_stepups set created_at = now() - interval '10 minutes' where user_id = ${F.id} and session_id = ${meera.ctx.frrataSession}`
+        const cookie = (await meera.ctx.cookies(CONSOLE)).map((c) => `${c.name}=${c.value}`).join('; ')
+        const stale = await fetch(CONSOLE + '/admin/passkey', { method: 'POST', redirect: 'manual', headers: { cookie, origin: CONSOLE, 'content-type': 'application/json' }, body: JSON.stringify({ op: 'remove', passkeyId: '00000000-0000-4000-8000-000000000000' }) })
+        assert.equal(stale.status, 409)
+        assert.match((await stale.json()).error, /Confirm with your passkey first/)
+        await db`insert into auth.users (id, email, email_confirmed_at) values (${USERS.accountant.id}, ${USERS.accountant.email}, now()) on conflict (id) do nothing`.catch(() => {})
+        await meera.p.goto(CONSOLE + '/admin/staff')
+        await meera.p.getByLabel('Add by email').fill(USERS.accountant.email)
+        await meera.p.getByRole('button', { name: 'Add staff' }).click()
+        await until(async () => (await db`select 1 from platform_staff where email = ${USERS.accountant.email}`).length > 0, 10_000)
+        await meera.p.getByRole('button', { name: `Remove ${USERS.accountant.email}` }).click()
+        await until(async () => (await db`select 1 from platform_staff where email = ${USERS.accountant.email}`).length === 0, 10_000)
+        const mail = await db`select kind from staff_notices where about = ${USERS.accountant.email}`
+        assert.ok(mail.some((r) => r.kind === 'staff_added') && mail.some((r) => r.kind === 'staff_removed'), 'adding and removing staff emailed the admins')
+      })
+
+      await t.step('Passkeys may be asked for on Admin only: /admin allows this origin, the console allows none', async () => {
+        const h = async (path) => (await fetch(CONSOLE + path, { redirect: 'manual' })).headers.get('permissions-policy') ?? ''
+        assert.match(await h('/admin'), /publickey-credentials-get=\(self\)/)
+        assert.match(await h('/console'), /publickey-credentials-get=\(\)/)
+        assert.match(await h('/login'), /publickey-credentials-create=\(\)/)
+      })
+
       await t.step('Removing her passkey sends her back to the gate', async () => {
         await meera.p.goto(CONSOLE + '/admin/staff')
         await meera.p.getByRole('button', { name: 'Remove Riya phone' }).click()
@@ -117,7 +154,7 @@ export default {
         await phone.p.screenshot({ path: t.out('phone') })
       })
     } finally {
-      await db`delete from platform_staff where user_id = ${O.id}`
+      await db`delete from platform_staff where user_id in (${O.id}, ${USERS.accountant.id})`
       await db`delete from staff_passkeys where user_id = ${F.id}`
     }
   },

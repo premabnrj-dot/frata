@@ -138,7 +138,7 @@ rollback;
 --     frata_admin executes the app_staff_* definers (frata_app: app_access_for and app_staff_signout; nobody:
 --     app_staff_bootstrap); the definers keep people, sessions and purposes apart.
 do $$ declare t text; r text; begin
-  foreach t in array array['staff_passkeys','staff_enrolment_requests','staff_webauthn_challenges','staff_stepups','staff_passkey_tries'] loop
+  foreach t in array array['staff_passkeys','staff_enrolment_requests','staff_webauthn_challenges','staff_stepups','staff_passkey_tries','staff_notices'] loop
     foreach r in array array['frata_app','frata_admin','anon','authenticated','service_role'] loop
       if has_table_privilege(r, 'public.' || t, 'select,insert,update,delete') then raise exception 'FAIL: % holds a privilege on %', r, t; end if;
     end loop;
@@ -146,6 +146,8 @@ do $$ declare t text; r text; begin
   if has_function_privilege('frata_app', 'public.app_staff_challenge(uuid,uuid,text,text,text)', 'execute') then raise exception 'FAIL: frata_app may start a passkey check'; end if;
   if not has_function_privilege('frata_admin', 'public.app_staff_challenge(uuid,uuid,text,text,text)', 'execute') then raise exception 'FAIL: frata_admin may not start a passkey check'; end if;
   if has_function_privilege('frata_admin', 'public.app_staff_bootstrap(text)', 'execute') or has_function_privilege('frata_app', 'public.app_staff_bootstrap(text)', 'execute') then raise exception 'FAIL: an app role may bootstrap'; end if;
+  if has_function_privilege('frata_admin', 'public.app_staff_notify(text,text,text,text)', 'execute') or has_function_privilege('frata_app', 'public.app_staff_notify(text,text,text,text)', 'execute') then raise exception 'FAIL: an app role may write a staff email'; end if;
+  if not has_function_privilege('frata_app', 'public.app_staff_notices_claim(integer)', 'execute') or has_function_privilege('frata_admin', 'public.app_staff_notices_claim(integer)', 'execute') then raise exception 'FAIL: staff emails claimed by the wrong role'; end if;
 end $$;
 begin;
 insert into platform_staff (user_id, email, role) values
@@ -179,20 +181,21 @@ begin
   k := app_staff_take_challenge(A, sA, 'confirm', repeat('b', 43), 'cred-a');
   if k->>'publicKey' <> 'key-a' then raise exception 'FAIL: own key not returned (%)', k; end if;
   if app_staff_take_challenge(A, sA, 'confirm', repeat('b', 43), 'cred-a') is not null then raise exception 'FAIL: a challenge was used twice'; end if;
-  perform app_staff_confirm(A, sA, (k->>'passkeyId')::uuid, 0, 'hash-a');
-  begin perform app_staff_confirm(A, sA, (k->>'passkeyId')::uuid, 0, 'hash-a2'); raise exception 'FAIL: confirmed without a challenge'; exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
+  perform app_staff_confirm(A, sA, repeat('b', 43), (k->>'passkeyId')::uuid, 0, 'hash-a');
+  begin perform app_staff_confirm(A, sA, repeat('b', 43), (k->>'passkeyId')::uuid, 0, 'hash-a2'); raise exception 'FAIL: confirmed without a challenge'; exception when raise_exception then if sqlerrm <> 'no_challenge' then raise; end if; end;
   -- The counter only rises.
   perform app_staff_challenge(B, sB, 'confirm', null, repeat('c', 43));
   k := app_staff_take_challenge(B, sB, 'confirm', repeat('c', 43), 'cred-b');
-  begin perform app_staff_confirm(B, sB, (k->>'passkeyId')::uuid, 5, 'hash-b'); raise exception 'FAIL: a replayed counter was accepted'; exception when raise_exception then if sqlerrm <> 'replay' then raise; end if; end;
+  begin perform app_staff_confirm(B, sB, repeat('c', 43), (k->>'passkeyId')::uuid, 5, 'hash-b'); raise exception 'FAIL: a replayed counter was accepted'; exception when raise_exception then if sqlerrm <> 'replay' then raise; end if; end;
   -- Requests: approved only by another admin, freshly checked, with the right code; bound to the asking session.
   perform app_staff_request(S, sS, 'code-s');
   begin perform app_staff_approve(S, sS, null, 'pk-s@proof.test', 'code-s'); raise exception 'FAIL: support approved'; exception when raise_exception then if sqlerrm <> 'not_admin' then raise; end if; end;
   begin perform app_staff_approve(B, sB, 'hash-b', 'pk-s@proof.test', 'code-s'); raise exception 'FAIL: approved without a passkey check'; exception when raise_exception then if sqlerrm <> 'confirm_first' then raise; end if; end;
   perform app_staff_request(A, sA, 'code-a');
   begin perform app_staff_approve(A, sA, 'hash-a', 'pk-a@proof.test', 'code-a'); raise exception 'FAIL: an admin approved their own request'; exception when raise_exception then if sqlerrm <> 'own_request' then raise; end if; end;
-  begin perform app_staff_approve(A, sA, 'hash-a', 'pk-s@proof.test', 'wrong'); raise exception 'FAIL: a wrong code was approved'; exception when raise_exception then if sqlerrm <> 'bad_code' then raise; end if; end;
+  if app_staff_approve(A, sA, 'hash-a', 'pk-s@proof.test', 'wrong') is not null then raise exception 'FAIL: a wrong code was approved'; end if;
   e := app_staff_approve(A, sA, 'hash-a', 'pk-s@proof.test', 'code-s');
+  if e is distinct from 'pk-s@proof.test' then raise exception 'FAIL: the right code was not approved (%)', e; end if;
   begin perform app_staff_challenge(S, sX, 'add', null, repeat('d', 43)); raise exception 'FAIL: an approval worked from another session'; exception when raise_exception then if sqlerrm <> 'not_allowed' then raise; end if; end;
   perform app_staff_challenge(S, sS, 'add', null, repeat('e', 43));
   if app_staff_take_challenge(S, sS, 'add', repeat('e', 43), '') is null then raise exception 'FAIL: add challenge not taken'; end if;
@@ -201,6 +204,12 @@ begin
   perform app_staff_take_challenge(A, sA, 'add', repeat('f', 43), '');
   begin perform app_staff_add_passkey(A, sA, 'hash-a', 'cred-s', 'key-x', 0, '{}', 'dup'); raise exception 'FAIL: a duplicate credential was added'; exception when raise_exception then if sqlerrm <> 'duplicate' then raise; end if; end;
   begin perform app_staff_challenge(S, sS, 'add', null, repeat('g', 43)); raise exception 'FAIL: an approval was used twice'; exception when raise_exception then if sqlerrm <> 'not_allowed' then raise; end if; end;
+  -- Wrong codes are counted, not rolled back: the 6th try in 10 minutes is refused.
+  perform app_staff_request(B, sB, 'code-b');
+  perform app_staff_approve(A, sA, 'hash-a', 'pk-b@proof.test', 'wrong-1');
+  perform app_staff_approve(A, sA, 'hash-a', 'pk-b@proof.test', 'wrong-2');
+  perform app_staff_approve(A, sA, 'hash-a', 'pk-b@proof.test', 'wrong-3');
+  begin perform app_staff_approve(A, sA, 'hash-a', 'pk-b@proof.test', 'code-b'); raise exception 'FAIL: wrong codes were not counted'; exception when raise_exception then if sqlerrm <> 'too_many' then raise; end if; end;
   -- The list never carries a key, a credential id or a counter; support needs a step-up and sees only itself.
   l := app_staff_list(A, sA, 'hash-a');
   if l::text ~ '(publicKey|credential|counter|key-a|cred-a)' then raise exception 'FAIL: the list leaks key material'; end if;
@@ -209,6 +218,9 @@ begin
 end $$;
 reset role;
 do $$ begin
+  -- The approval and the added passkey each emailed the person and every admin.
+  if (select count(*) from staff_notices where kind = 'request_approved' and about = 'pk-s@proof.test') < 3 then raise exception 'FAIL: approval not emailed to the person and the admins'; end if;
+  if not exists (select 1 from staff_notices where kind = 'passkey_added' and about = 'pk-s@proof.test' and to_email = 'pk-a@proof.test') then raise exception 'FAIL: a new passkey not emailed to the admins'; end if;
   if app_staff_live_stepup('aaaaaaaa-0000-0000-0000-0000000000a1', 'eeeeeeee-0000-0000-0000-0000000000a1', 'hash-a') is null then raise exception 'FAIL: step-up not made'; end if;
   if app_staff_live_stepup('aaaaaaaa-0000-0000-0000-0000000000a1', 'eeeeeeee-0000-0000-0000-0000000000ff', 'hash-a') is not null then raise exception 'FAIL: a step-up counts on another session'; end if;
 end $$;

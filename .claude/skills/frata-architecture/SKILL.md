@@ -168,8 +168,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - **A tuple means what its comment says.** An action whose tuple's comment
   excludes the role it lets through is a finding, not a judgement call (S6,
   settled by the owner 2026-11-08: staff edit products and collections).
-- Staff sign-in needs a second factor (aal2 in `requireStaff`) before outside
-  merchants go live; a support visit acts as owner (S5, ADR-0007).
+- Staff access and every support visit need a passkey step-up on that browser session (S5 closed 2026-11-12, ADR-0007
+  amended; § Auth "Staff passkeys"); a support visit acts as owner.
 
 ## Time in client components (2026-11-07, `check:clock`)
 

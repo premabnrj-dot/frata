@@ -58,7 +58,7 @@ const challengeOf = (clientDataJSON: string): string | null => {
   try { const c = JSON.parse(Buffer.from(clientDataJSON, 'base64url').toString('utf8')) as { challenge?: unknown }; return typeof c.challenge === 'string' && /^[A-Za-z0-9_-]{40,100}$/.test(c.challenge) ? c.challenge : null } catch { return null }
 }
 /** The 6-digit request code, as stored (never the code itself). */
-export const codeHash = (code: string) => createHash('sha256').update(`staff-enrol:${code.replace(/\D/g, '')}`).digest('hex')
+const codeHash = (code: string) => createHash('sha256').update(`staff-enrol:${code.replace(/\D/g, '')}`).digest('hex')
 
 export type GateState = { passkeys: number; request: { expiresAt: string; approved: boolean; approvedUntil: string; approvedBy: string | null } | null }
 /** What the gate screen shows: confirm, ask, or add. */
@@ -97,7 +97,7 @@ export async function confirmVerify(identity: StaffIdentity | StaffOk, response:
     })
     if (!v.verified) throw Object.assign(new Error('replay'), { cause: { message: 'replay' } })
     const token = randomBytes(32).toString('base64url')
-    await adminDb().execute(sql`select app_staff_confirm(${w.userId}::uuid, ${w.sessionId}::uuid, ${key.passkeyId}::uuid, ${v.authenticationInfo.newCounter}, ${tokenHash(token)})`)
+    await adminDb().execute(sql`select app_staff_confirm(${w.userId}::uuid, ${w.sessionId}::uuid, ${challenge}, ${key.passkeyId}::uuid, ${v.authenticationInfo.newCounter}, ${tokenHash(token)})`)
     return token
   })
 }
@@ -147,7 +147,12 @@ export async function requestPasskey(identity: StaffIdentity | StaffOk): Promise
 /** An admin approves another person's request with the code they read out; needs a passkey check in the last 5 minutes. */
 export async function approveRequest(staff: StaffOk, proof: Proof, email: string, code: string): Promise<Result<string>> {
   if (!confirmedRecently(staff)) return { ok: false, error: SAYS.confirm_first! }
-  return run('approve', () => one<string>(sql`select app_staff_approve(${staff.userId}::uuid, ${proof.sessionId}::uuid, ${proof.hash}, ${email}, ${codeHash(code)}) as r`))
+  // A wrong code comes back null (the definer keeps its counted try); it reads as "doesn't match".
+  return run('approve', async () => {
+    const r = await one<string | null>(sql`select app_staff_approve(${staff.userId}::uuid, ${proof.sessionId}::uuid, ${proof.hash}, ${email}, ${codeHash(code)}) as r`)
+    if (r === null) throw Object.assign(new Error('bad_code'), { cause: { message: 'bad_code' } })
+    return r
+  })
 }
 
 export async function removePasskey(staff: StaffOk, proof: Proof, passkeyId: string): Promise<Result<string>> {

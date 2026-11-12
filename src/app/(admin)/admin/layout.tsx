@@ -21,7 +21,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const staff = await requireStaff(ANY_STAFF)
   // Staff passkeys (ADR-0007 amended 2026-11-12): no page renders until this browser session has passed the check.
   if (!staff.ok && staff.reason === 'needs_passkey') {
-    const state = await gateState(staff.identity).catch(() => null)
+    const state = await gateState(staff.identity).catch(() => 'error' as const)
+    if (state === 'error') return <main data-shell className="p-6"><Panel title="Admin cannot reach the database">Try again in a minute.</Panel></main>
     return <StaffGate email={staff.identity.email} state={state}
       signOut={<form action={signOutAction}><button type="submit" className="text-sm underline underline-offset-4">Sign out</button></form>} />
   }

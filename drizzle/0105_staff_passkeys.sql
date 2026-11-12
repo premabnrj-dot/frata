@@ -10,6 +10,20 @@ CREATE TABLE "staff_enrolment_requests" (
 	"used_at" timestamp with time zone
 );
 --> statement-breakpoint
+CREATE TABLE "staff_notices" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"to_email" text NOT NULL,
+	"kind" text NOT NULL,
+	"about" text NOT NULL,
+	"by_email" text,
+	"detail" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"attempts" integer DEFAULT 0 NOT NULL,
+	"sent_at" timestamp with time zone,
+	"last_error" text,
+	CONSTRAINT "staff_notices_kind" CHECK ("staff_notices"."kind" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed'))
+);
+--> statement-breakpoint
 CREATE TABLE "staff_passkey_tries" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -62,6 +76,7 @@ ALTER TABLE "staff_stepups" ADD CONSTRAINT "staff_stepups_user_id_platform_staff
 ALTER TABLE "staff_stepups" ADD CONSTRAINT "staff_stepups_passkey_id_staff_passkeys_id_fk" FOREIGN KEY ("passkey_id") REFERENCES "public"."staff_passkeys"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "staff_webauthn_challenges" ADD CONSTRAINT "staff_webauthn_challenges_user_id_platform_staff_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."platform_staff"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "staff_enrolment_requests_user" ON "staff_enrolment_requests" USING btree ("user_id","created_at");--> statement-breakpoint
+CREATE INDEX "staff_notices_due" ON "staff_notices" USING btree ("created_at") WHERE "staff_notices"."sent_at" is null;--> statement-breakpoint
 CREATE INDEX "staff_passkey_tries_user" ON "staff_passkey_tries" USING btree ("user_id","kind","at");--> statement-breakpoint
 CREATE UNIQUE INDEX "staff_passkeys_credential" ON "staff_passkeys" USING btree ("credential_id");--> statement-breakpoint
 CREATE INDEX "staff_passkeys_user" ON "staff_passkeys" USING btree ("user_id");--> statement-breakpoint
@@ -77,13 +92,25 @@ alter table staff_enrolment_requests enable row level security;--> statement-bre
 alter table staff_webauthn_challenges enable row level security;--> statement-breakpoint
 alter table staff_stepups enable row level security;--> statement-breakpoint
 alter table staff_passkey_tries enable row level security;--> statement-breakpoint
-revoke all on staff_passkeys, staff_enrolment_requests, staff_webauthn_challenges, staff_stepups, staff_passkey_tries
+alter table staff_notices enable row level security;--> statement-breakpoint
+revoke all on staff_passkeys, staff_enrolment_requests, staff_webauthn_challenges, staff_stepups, staff_passkey_tries, staff_notices
   from public, anon, authenticated, service_role, frata_app, frata_admin;--> statement-breakpoint
 create policy definer_only on staff_passkeys as restrictive for all to public using (false) with check (false);--> statement-breakpoint
 create policy definer_only on staff_enrolment_requests as restrictive for all to public using (false) with check (false);--> statement-breakpoint
 create policy definer_only on staff_webauthn_challenges as restrictive for all to public using (false) with check (false);--> statement-breakpoint
 create policy definer_only on staff_stepups as restrictive for all to public using (false) with check (false);--> statement-breakpoint
 create policy definer_only on staff_passkey_tries as restrictive for all to public using (false) with check (false);--> statement-breakpoint
+create policy definer_only on staff_notices as restrictive for all to public using (false) with check (false);--> statement-breakpoint
+
+-- Security emails (staff passkeys spec § Design 5): one row for the person concerned and one for every admin, written in
+-- the transaction of the change. Internal: no role may call it; the definers below do.
+create or replace function app_staff_notify(p_kind text, p_about text, p_by text, p_detail text) returns void
+  language sql security definer set search_path = '' as $$
+  insert into public.staff_notices (to_email, kind, about, by_email, detail)
+  select distinct lower(e), p_kind, lower(p_about), lower(p_by), p_detail
+    from (select p_about as e union select ps.email from public.platform_staff ps where ps.role = 'admin') x
+   where e is not null and e <> ''
+$$;--> statement-breakpoint
 
 -- A live step-up for (user, session, token hash): the one rule, read by app_access_for and every definer below.
 create or replace function app_staff_live_stepup(p_uid uuid, p_session uuid, p_hash text) returns timestamptz
@@ -162,7 +189,7 @@ begin
   if p_purpose = 'confirm' and not exists (select 1 from public.staff_passkeys k where k.user_id = p_uid) then
     raise exception 'no_passkey' using errcode = 'P0001';
   end if;
-  if p_purpose = 'add' and public.app_staff_live_stepup(p_uid, p_session, p_stepup) is null and not exists (
+  if p_purpose = 'add' and coalesce(public.app_staff_live_stepup(p_uid, p_session, p_stepup) > now() - interval '5 minutes', false) is false and not exists (
       select 1 from public.staff_enrolment_requests r where r.user_id = p_uid and r.session_id = p_session and r.used_at is null
          and r.approved_at > now() - interval '10 minutes') then
     raise exception 'not_allowed' using errcode = 'P0001';
@@ -193,14 +220,14 @@ end $$;--> statement-breakpoint
 
 -- After the app verified the signature: the challenge taken in the last 2 minutes is consumed, the counter only rises
 -- (synced passkeys stay at 0), and a 12-hour step-up is made, its expiry set here.
-create or replace function app_staff_confirm(p_uid uuid, p_session uuid, p_passkey uuid, p_counter bigint, p_token_hash text) returns timestamptz
+create or replace function app_staff_confirm(p_uid uuid, p_session uuid, p_challenge text, p_passkey uuid, p_counter bigint, p_token_hash text) returns timestamptz
   language plpgsql security definer set search_path = '' as $$
 declare n int; v_email text; v_name text; v_counter bigint; v_at timestamptz;
 begin
   select ps.email into v_email from public.platform_staff ps where ps.user_id = p_uid;
   if v_email is null then raise exception 'not_staff' using errcode = 'P0001'; end if;
   delete from public.staff_webauthn_challenges c where c.user_id = p_uid and c.session_id = p_session and c.purpose = 'confirm'
-     and c.used_at > now() - interval '2 minutes';
+     and c.challenge = p_challenge and c.used_at > now() - interval '2 minutes';
   get diagnostics n = row_count;
   if n = 0 then raise exception 'no_challenge' using errcode = 'P0001'; end if;
   select k.name, k.counter into v_name, v_counter from public.staff_passkeys k where k.id = p_passkey and k.user_id = p_uid for update;
@@ -229,7 +256,7 @@ begin
      and c.used_at > now() - interval '2 minutes';
   get diagnostics n = row_count;
   if n = 0 then raise exception 'no_challenge' using errcode = 'P0001'; end if;
-  if public.app_staff_live_stepup(p_uid, p_session, p_stepup) is not null then
+  if coalesce(public.app_staff_live_stepup(p_uid, p_session, p_stepup) > now() - interval '5 minutes', false) then
     v_via := 'second_device';
   else
     update public.staff_enrolment_requests r set used_at = now()
@@ -248,6 +275,7 @@ begin
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
     values (null, p_uid, v_email, 'staff', 'staff.passkey.add', v_email, jsonb_build_object('name', btrim(p_name), 'via', v_via,
             'approvedBy', (select ps.email from public.platform_staff ps where ps.user_id = v_by)));
+  perform public.app_staff_notify('passkey_added', v_email, v_email, btrim(p_name));
   return v_id;
 end $$;--> statement-breakpoint
 
@@ -285,9 +313,11 @@ begin
    where r.id = (select r2.id from public.staff_enrolment_requests r2 where r2.user_id = v_target and r2.used_at is null
                    and r2.approved_at is null and r2.expires_at > now() and r2.code_hash = p_code_hash order by r2.created_at desc limit 1)
   returning r.id into v_req;
-  if v_req is null then raise exception 'bad_code' using errcode = 'P0001'; end if;
+  -- A wrong code returns null rather than raising, so its counted try is kept (a raise would roll the count back).
+  if v_req is null then return null; end if;
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
     values (null, p_admin, v_admin_email, 'staff', 'staff.passkey.approve', lower(btrim(p_email)), null);
+  perform public.app_staff_notify('request_approved', lower(btrim(p_email)), v_admin_email, null);
   return lower(btrim(p_email));
 end $$;--> statement-breakpoint
 
@@ -311,6 +341,7 @@ begin
   delete from public.staff_passkeys where id = p_passkey;
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
     values (null, p_uid, v_email, 'staff', 'staff.passkey.remove', v_owner_email, jsonb_build_object('name', v_name));
+  perform public.app_staff_notify('passkey_removed', v_owner_email, v_email, v_name);
   return v_owner_email;
 end $$;--> statement-breakpoint
 
@@ -355,17 +386,44 @@ begin
   if v_req is null then raise exception 'no_request' using errcode = 'P0001'; end if;
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
     values (null, v_uid, lower(btrim(p_email)), 'staff', 'staff.passkey.bootstrap', lower(btrim(p_email)), jsonb_build_object('by', 'owner (SQL)'));
+  perform public.app_staff_notify('request_approved', lower(btrim(p_email)), 'owner (SQL)', null);
   return 'approved for 10 minutes';
 end $$;--> statement-breakpoint
 
+-- Staff added or removed (src/lib/admin/staff.ts, in its transaction): the emails, after checking the actor is an admin.
+create or replace function app_staff_changed(p_actor uuid, p_kind text, p_about text) returns void
+  language plpgsql security definer set search_path = '' as $$
+declare v_by text;
+begin
+  select ps.email into v_by from public.platform_staff ps where ps.user_id = p_actor and ps.role = 'admin';
+  if v_by is null then raise exception 'not_admin' using errcode = 'P0001'; end if;
+  if p_kind not in ('staff_added', 'staff_removed') then raise exception 'bad_input' using errcode = 'P0001'; end if;
+  perform public.app_staff_notify(p_kind, p_about, v_by, null);
+end $$;--> statement-breakpoint
+
+-- The 5-minute drain: claim up to p_limit unsent emails (5 tries each), then settle each.
+create or replace function app_staff_notices_claim(p_limit int) returns table (id uuid, to_email text, kind text, about text, by_email text, detail text, created_at timestamptz)
+  language sql security definer set search_path = '' as $$
+  update public.staff_notices n set attempts = n.attempts + 1
+   where n.id in (select n2.id from public.staff_notices n2 where n2.sent_at is null and n2.attempts < 5
+                   order by n2.created_at limit least(greatest(p_limit, 1), 50) for update skip locked)
+  returning n.id, n.to_email, n.kind, n.about, n.by_email, n.detail, n.created_at
+$$;--> statement-breakpoint
+create or replace function app_staff_notices_settle(p_id uuid, p_ok boolean, p_error text) returns void
+  language sql security definer set search_path = '' as $$
+  update public.staff_notices set sent_at = case when p_ok then now() end, last_error = case when p_ok then null else left(p_error, 48) end
+   where id = p_id and sent_at is null
+$$;--> statement-breakpoint
+
 revoke all on function app_access_for(uuid, uuid, text), app_staff_live_stepup(uuid, uuid, text), app_staff_try(uuid, uuid, text),
   app_staff_state(uuid, uuid), app_staff_challenge(uuid, uuid, text, text, text), app_staff_take_challenge(uuid, uuid, text, text, text),
-  app_staff_confirm(uuid, uuid, uuid, bigint, text), app_staff_add_passkey(uuid, uuid, text, text, text, bigint, text[], text),
+  app_staff_confirm(uuid, uuid, text, uuid, bigint, text), app_staff_add_passkey(uuid, uuid, text, text, text, bigint, text[], text),
   app_staff_request(uuid, uuid, text), app_staff_approve(uuid, uuid, text, text, text), app_staff_remove_passkey(uuid, uuid, text, uuid),
-  app_staff_list(uuid, uuid, text), app_staff_signout(text), app_staff_bootstrap(text)
+  app_staff_list(uuid, uuid, text), app_staff_signout(text), app_staff_bootstrap(text), app_staff_notify(text, text, text, text),
+  app_staff_changed(uuid, text, text), app_staff_notices_claim(int), app_staff_notices_settle(uuid, boolean, text)
   from public, anon, authenticated, service_role, frata_app, frata_admin;--> statement-breakpoint
-grant execute on function app_access_for(uuid, uuid, text), app_staff_signout(text) to frata_app;--> statement-breakpoint
+grant execute on function app_access_for(uuid, uuid, text), app_staff_signout(text), app_staff_notices_claim(int), app_staff_notices_settle(uuid, boolean, text) to frata_app;--> statement-breakpoint
 grant execute on function app_staff_state(uuid, uuid), app_staff_challenge(uuid, uuid, text, text, text), app_staff_take_challenge(uuid, uuid, text, text, text),
-  app_staff_confirm(uuid, uuid, uuid, bigint, text), app_staff_add_passkey(uuid, uuid, text, text, text, bigint, text[], text),
+  app_staff_confirm(uuid, uuid, text, uuid, bigint, text), app_staff_add_passkey(uuid, uuid, text, text, text, bigint, text[], text),
   app_staff_request(uuid, uuid, text), app_staff_approve(uuid, uuid, text, text, text), app_staff_remove_passkey(uuid, uuid, text, uuid),
-  app_staff_list(uuid, uuid, text) to frata_admin;
+  app_staff_list(uuid, uuid, text), app_staff_changed(uuid, text, text) to frata_admin;

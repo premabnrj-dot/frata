@@ -84,10 +84,10 @@ export function AddOwnPasskey() {
         <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
         <Button disabled={busy || !name.trim()} onClick={async () => {
           setBusy(true); setError(null)
-          const r = await addPasskey(name.trim())
+          const r = await addPasskey(name.trim(), true)
           setBusy(false)
           if (r.ok) { setOpen(false); setName(''); router.refresh() } else setError(r.error)
-        }}>{busy ? 'Waiting for your device…' : 'Add passkey'}</Button>
+        }}>{busy ? 'Waiting for your device…' : 'Confirm with passkey and add'}</Button>
       </div>
       <Err text={error} />
     </div>

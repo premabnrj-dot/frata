@@ -10,8 +10,10 @@ export const dynamic = 'force-dynamic'
 
 /** Staff who are also store members choose where to go after sign-in (approved mockup). */
 export default async function ChoosePage() {
-  const [staff, member] = await Promise.all([requireStaff(ANY_STAFF), requireMember(ANY_MEMBER)])
-  if (!staff.ok) redirect('/console')
+  const [result, member] = await Promise.all([requireStaff(ANY_STAFF), requireMember(ANY_MEMBER)])
+  // A fresh sign-in has no passkey check yet (staff passkeys): still staff here; the Admin link lands on the check.
+  const staff = result.ok ? result : result.reason === 'needs_passkey' ? result.identity : null
+  if (!staff) redirect('/console')
   if (!member.ok) redirect('/admin')
   const own = member.all.filter((m) => !m.supportSessionId)
   return (

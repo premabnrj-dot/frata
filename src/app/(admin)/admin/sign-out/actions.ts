@@ -30,8 +30,10 @@ export async function signOutAction() {
   const staff = await requireStaff(ANY_STAFF).catch(() => null)
   const jar = await cookies()
   // Ending the visit is tried twice: a visit left open would show in the merchant's activity as longer than it was.
-  if (staff?.ok) {
-    const end = () => endSupport(staff, new Date(), { by: 'sign-out' })
+  // Also without a passkey check on this session (an expired step-up): ending access never needs it (security L3).
+  const who = staff?.ok ? staff : staff && staff.reason === 'needs_passkey' ? staff.identity : null
+  if (who) {
+    const end = () => endSupport(who, new Date(), { by: 'sign-out' })
     await end().catch(() => end()).catch((err) => console.error('[sign-out] end support', err instanceof Error ? err.name : err))
   }
   // The staff passkey step-up ends with the sign-out (after the visit is ended, which needs it), its row first.

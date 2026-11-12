@@ -54,12 +54,23 @@ describe.skipIf(!host)('Admin library on a real database', () => {
 
     const r = await support.startSupport(staff, { tenantId, reason: 'setup_help', note: 'int', minutes: 30, now: new Date() })
     expect('id' in r).toBe(true)
-    const a = await platform.accessFor(staff.userId)
+    // Staff passkeys (2026-11-12): the visit counts only with a live passkey step-up on the same session. The staff_*
+    // tables have no grant to any app role, so the step-up is seeded as the superuser.
+    const { default: postgres } = await import('postgres')
+    const su = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    const [k] = await su<{ id: string }[]>`insert into staff_passkeys (user_id, credential_id, public_key, name) values (${staff.userId}, ${'int-' + Date.now()}, 'int', 'int') returning id`
+    await su`insert into staff_stepups (user_id, session_id, passkey_id, token_hash, expires_at) values (${staff.userId}, ${staff.sessionId}, ${k!.id}, 'int-hash', now() + interval '1 hour')`
+    await su.end()
+    const none = await platform.accessFor(staff.userId)
+    expect(none.staffConfirmedAt).toBeNull()
+    expect(none.memberships.find((m) => m.tenantId === tenantId)).toBeUndefined() // no step-up: no visit
+    const a = await platform.accessFor(staff.userId, staff.sessionId, 'int-hash')
     expect(a.staffRole).toBe('admin')
+    expect(a.staffConfirmedAt).not.toBeNull()
     expect(a.memberships.find((m) => m.tenantId === tenantId)?.supportSessionId).toBeTruthy()
 
     expect(await support.endSupport(staff, new Date())).toBe(tenantId)
-    const after = await platform.accessFor(staff.userId)
+    const after = await platform.accessFor(staff.userId, staff.sessionId, 'int-hash')
     expect(after.memberships.find((m) => m.tenantId === tenantId)).toBeUndefined()
   })
 

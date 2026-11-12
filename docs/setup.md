@@ -83,6 +83,12 @@ create your tenant and owner membership (it is a plain insert; no secret).
 
 ### 6b. Staff passkeys — the first time (ADR-0007 amended 2026-11-12; spec `docs/specs/2026-11-12-staff-passkeys.md`)
 
+**Deploy order (agents):** apply `drizzle/0105_staff_passkeys.sql` to production FIRST, in one transaction (it drops
+and recreates `app_access_for`), and record its row; THEN push the code to `main`. New code calls
+`app_access_for(uuid, uuid, text)`, which exists only after the migration (before it, every signed-in request fails).
+Old code calling `app_access_for(uuid)` keeps working through the new function's defaults; in that gap support visits
+stop counting and Admin opens without a passkey, so push the code straight after.
+
 From this release Admin, and every support visit into a shop, opens only after a passkey check on that browser. Nobody
 has a passkey on the first day, so the owner lets themself in once (about two minutes):
 

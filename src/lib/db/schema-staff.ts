@@ -1,11 +1,11 @@
-import { bigint, check, index, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { bigint, check, index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import { at, createdAt, id, platformStaff } from './schema'
 
 // =============================================================================
 // FILE: src/lib/db/schema-staff.ts — STAFF PASSKEYS (docs/specs/2026-11-12-staff-passkeys.md; ADR-0007 amended).
 // Platform rows, no tenant. NO grant to any app role: every read and write goes through the app_staff_* definers
-// (drizzle/0106), and app_access_for reads the step-ups. Every row belongs to a staff member and goes when they do
+// (drizzle/0105), and app_access_for reads the step-ups. Every row belongs to a staff member and goes when they do
 // (on delete cascade from platform_staff). Credential ids, public keys and challenges are base64url text; tokens and
 // codes are stored only as SHA-256 hex.
 // =============================================================================
@@ -80,4 +80,25 @@ export const staffPasskeyTries = pgTable('staff_passkey_tries', {
 }, (t) => [
   index('staff_passkey_tries_user').on(t.userId, t.kind, t.at),
   check('staff_passkey_tries_kind', sql`${t.kind} in ('check','request','approve')`),
+])
+
+/**
+ * Security emails about staff (staff passkeys spec § Design 5): a staff member added or removed, a request approved, a
+ * passkey added or removed — one row per recipient (the person and every admin), written by the same definer and
+ * transaction as the change (ADR-0006), sent by the 5-minute drain through SES's notices set. Platform rows, no grant.
+ */
+export const staffNotices = pgTable('staff_notices', {
+  id: id(),
+  toEmail: text('to_email').notNull(),
+  kind: text('kind').notNull(),
+  about: text('about').notNull(),
+  byEmail: text('by_email'),
+  detail: text('detail'),
+  createdAt: createdAt(),
+  attempts: integer('attempts').notNull().default(0),
+  sentAt: at('sent_at'),
+  lastError: text('last_error'),
+}, (t) => [
+  index('staff_notices_due').on(t.createdAt).where(sql`${t.sentAt} is null`),
+  check('staff_notices_kind', sql`${t.kind} in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed')`),
 ])
