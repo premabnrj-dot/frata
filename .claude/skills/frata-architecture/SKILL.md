@@ -222,6 +222,11 @@ export async function confirmOrder(input: unknown): Promise<{ ok: boolean; error
 - **Stock is per line.** `order_lines.stock_taken_at` says which lines took
   stock; a writer stamps only the lines it took (`where stock_taken_at is
   null`), so a retry, a late capture or a cancel never takes or returns twice.
+  Stock moves only through `src/lib/orders/stock.ts`: `takeStockLines` / `putStockBackLines` (named lines; every
+  touched variant locked once, in id order, before anything moves), which the order-wide `takeStock` / `putStockBack`
+  call. Never an `update variants set stock` of your own in an order writer.
+- **A sold line is written in one shape** (`lineSnapshot`, `src/lib/orders/lines.ts`), the one place a line's cost is
+  read (`unitCosts`; `cogsOf` for the order): placement now, an added or swapped line in an order edit.
 - **Additive migrations deploy in this order:** every new column nullable or
   defaulted (the old code keeps writing between apply and push) → apply →
   push → re-run the idempotent backfill (`where … is null`) for rows placed in
@@ -693,6 +698,12 @@ error), never guessed and never 0.
   its stored lines and `order_discounts` (never today's offers), and written only by
   `lib/orders/reprice.ts writeReprice()` — every money column of the order and its lines together.
   Switch to COD, a capture after a switch and a retry go through them; a retry never reprices.
+- **An order's own offers on new lines** (an order edit): only `replanKept()` (discounts.ts), from the terms
+  `order_discounts` kept (0109: every tier step, Buy X get Y, the gift, the products covered; `termsCopy` writes them at
+  placement and `storedTerms` reads them, `src/domains/checkout/kept-terms.ts`). Never `planOffers` with today's
+  offers, never a new offer; one that gives nothing comes off; free delivery that comes off adds back what it waived.
+  A product offer on a row placed before 0109 (`targets` null) has no known terms: `storedTerms` gives null, and the
+  caller must not re-plan that order. A new term on an offer is copied in `termsCopy` (a typed column) the same day.
 - **Uses are derived:** `discountUses()`/`fits()` in `src/lib/db/discount-predicates.ts` (with
   `liveDiscountSql`, twin of `offerStatus()`), counted through `discountUseSql`/`usesDiscount`
   (parity-tested). Placement locks every offer the bag could get that has a limit, in id order,
