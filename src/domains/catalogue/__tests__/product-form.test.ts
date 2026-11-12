@@ -65,3 +65,14 @@ describe('when it runs out', () => {
     expect(c.ok && c.product.colours).toEqual([{ value: 'Indigo', family: '2', hex: '#2e3a63', crop: null }])
   })
 })
+
+describe('a draft saves before every size is priced (PR·0)', () => {
+  it('an empty price is none yet with blankPrices; refused without it; a typed bad price is refused either way', () => {
+    const empty = { ...base, variants: [{ ...base.variants[0]!, price: '' }, base.variants[1]!] }
+    expect(cleanProduct(empty, new Date()).ok).toBe(false)
+    const r = cleanProduct(empty, new Date(), 4, { blankPrices: true })
+    expect(r.ok && r.product.variants[0]!.price).toBe(0)
+    expect(cleanProduct({ ...base, variants: [{ ...base.variants[0]!, price: 'abc' }, base.variants[1]!] }, new Date(), 4, { blankPrices: true }).ok).toBe(false)
+  })
+})
+

@@ -80,6 +80,8 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   const { id, version: v0, status, publishAt, everLive, ...start0 } = initial
   const [saved, setSaved] = useState<Draft>(start0)
   const [d, setD] = useState<Draft>(start0)
+  // Colour renames since the last save: photos tagged with the old name are retagged on the server (PR·0).
+  const [renames, setRenames] = useState<{ from: string; to: string }[]>([])
   const [version, setVersion] = useState(v0)
   const toast = useToast()
   // The save's mistakes stay at their fields (keys as cleanProduct gives them: "title", "v:<values>:price", "tax.hsn",
@@ -121,6 +123,25 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
     handle: handleFor(d.title) || 'product',
   }
 
+  /** A size or colour renamed in place keeps what it had: its cells (price, stock, SKU…), its swatch, and — on save —
+   *  the photos tagged with it (PR·0: a rename used to be a remove and an add, wiping all of these). */
+  function rename(option: number, from: string, to: string) {
+    setD((x) => {
+      const options = x.options.map((o, i) => (i === option ? { ...o, values: o.values.map((v) => (v === from ? to : v)) } : o))
+      const live = x.options.filter((o) => o.name.trim() && o.values.length)
+      const at = live.indexOf(x.options[option]!)
+      const cells = at < 0 ? x.cells : Object.fromEntries(Object.entries(x.cells).map(([k, c]) => {
+        const parts = k.split('\u0000')
+        if (parts[at] === from) parts[at] = to
+        return [parts.join('\u0000'), c]
+      }))
+      const colours = isColour(x.options[option]!.name) ? x.colours.map((c) => (c.value === from ? { ...c, value: to } : c)) : x.colours
+      return { ...x, options, cells, colours }
+    })
+    if (isColour(d.options[option]!.name)) setRenames((r) => [...r.map((x) => (x.to === from ? { ...x, to } : x)), ...(r.some((x) => x.to === from) ? [] : [{ from, to }])])
+    fix('options')
+  }
+
   function save() {
     start(async () => {
       const r = await saveProduct(id, version, {
@@ -129,9 +150,9 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
         handle: d.handle, seoTitle: d.seoTitle, seoDescription: d.seoDescription, categoryId: d.category?.id ?? null,
         attributes: d.attributes, colours: d.colours, tags: d.tags, tax: d.tax, ...(shop.label ? { label: d.label } : {}),
         ...(d.stories ? { stories: d.stories } : {}), ...(d.pairs ? { pairs: d.pairs.map((p) => p.id) } : {}),
-      }, d.collections)
+      }, d.collections, renames)
       if (r.ok) {
-        setSaved(d); setVersion(r.version); setErrors({})
+        setSaved(d); setVersion(r.version); setErrors({}); setRenames([])
         toast.ok(status === 'active' || status === 'unlisted' ? 'Saved. Your shop shows it now.' : 'Saved.')
         if (r.handle !== initial.handle) router.replace(`/console/products/${r.handle}`)
         else router.refresh()
@@ -191,7 +212,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           {video}
           <Section>
             <h2 className="flex items-center text-section font-semibold">Sizes, colours and stock<InfoTip about="sizes, colours and stock">{shop.costs ? 'Your cost is never shown to shoppers: it is how Frrata works out profit on each order. ' : ''}When it runs out applies at 0 stock: stop selling, take pre-orders, or make to order. An empty SKU is made for you when you save.</InfoTip></h2>
-            <OptionsEditor options={d.options} onChange={(options) => set({ options })} error={errors.options} />
+            <OptionsEditor options={d.options} onChange={(options) => set({ options })} error={errors.options} onRename={rename} />
             {colourOpt && colourOpt.values.length > 0 && <ColoursPanel values={colourOpt.values} colours={d.colours} onChange={(colours) => set({ colours })} photos={photos} families={families} />}
             {combos.length > 0 && <VariantGrid options={opts} cells={d.cells} errors={errors} costs={shop.costs} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
               onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); fix(...Object.keys(patch).map((f) => `v:${k}:${f === 'leadMin' || f === 'leadMax' ? 'lead' : f}`)) }} />}
@@ -225,7 +246,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
         <aside className="space-y-3">
           <StatusCard productId={id} status={status} publishAt={publishAt} ready={ready} dirty={dirty} />
           <Summary d={d} cells={cells} photos={photos} typeName={type?.name ?? null} status={status} publishAt={publishAt} address={`${shop.address}/products/${d.handle || defaults.handle}`} />
-          <OrganiseCard category={d.category} onCategory={(category) => set({ category, attributes: {} })} collections={allCollections} picked={d.collections} onPicked={(collections) => set({ collections })} tags={d.tags} onTags={(tags) => set({ tags })} />
+          <OrganiseCard category={d.category} onCategory={(category) => set({ category, attributes: keepDetails(d.attributes, category) })} collections={allCollections} picked={d.collections} onPicked={(collections) => set({ collections })} tags={d.tags} onTags={(tags) => set({ tags })} />
           <ReadyFor d={d} photos={photos.length} priced={prices.length === cells.length && cells.length > 0} />
         </aside>
       </div>
@@ -292,4 +313,17 @@ function ReadyFor({ d, photos, priced }: { d: Draft; photos: number; priced: boo
         : <p className="text-sm text-muted-foreground">Google Shopping and Meta catalogues will accept it once those channels are connected.</p>}
     </Section>
   )
+}
+
+/** Details that still apply under a new category keep their values (a fabric stays a fabric); the rest go, and only
+ *  values the new category offers stay (PR·0: changing category silently erased every detail). */
+function keepDetails(attributes: Record<string, string[]>, category: PickedCategory | null): Record<string, string[]> {
+  if (!category) return {}
+  const out: Record<string, string[]> = {}
+  for (const a of category.attributes) {
+    const ids = new Set(a.values.map((v) => v.id))
+    const kept = (attributes[a.handle] ?? []).filter((v) => ids.has(v))
+    if (kept.length) out[a.handle] = kept
+  }
+  return out
 }

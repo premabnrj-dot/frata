@@ -74,7 +74,9 @@ export const HANDLE_SHAPE = /^[a-z0-9]([a-z0-9-]{0,98}[a-z0-9])?$/
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /** Errors keyed "title", "options", or "v:<values>:<field>" for one grid cell. `hsnDigits`: the shop's, by its turnover (rates.ts hsnDigitsFor). */
-export function cleanProduct(p: ProductInput, now: Date, hsnDigits = 4): { ok: true; product: CleanProduct } | { ok: false; errors: Record<string, string> } {
+/** `blankPrices`: an empty price saves as none yet (a draft in the editor: PR·0, a draft saved before every size is
+ *  priced); going live still needs them (readiness), and a live product's save is refused without them (actions). */
+export function cleanProduct(p: ProductInput, now: Date, hsnDigits = 4, how: { blankPrices?: boolean } = {}): { ok: true; product: CleanProduct } | { ok: false; errors: Record<string, string> } {
   const errors: Record<string, string> = {}
   const title = p.title.trim().replace(/\s+/g, ' ')
   if (!title) errors.title = 'Your product needs a name.'
@@ -90,7 +92,8 @@ export function cleanProduct(p: ProductInput, now: Date, hsnDigits = 4): { ok: t
     for (const values of combinations(opts.options)) {
       const k = keyOf(values), v = byKey.get(k)
       const cell = (f: string) => `v:${k}:${f}`
-      const price = parseRupees(v?.price ?? '')
+      const blank = !(v?.price ?? '').trim()
+      const price = blank && how.blankPrices ? 0 : parseRupees(v?.price ?? '')
       if (price === null) errors[cell('price')] = priceRefusal(v?.price ?? '')
       const compareAt = v?.compareAt.trim() ? parseRupees(v.compareAt) : null
       if (v?.compareAt.trim() && compareAt === null) errors[cell('compareAt')] = priceRefusal(v.compareAt)

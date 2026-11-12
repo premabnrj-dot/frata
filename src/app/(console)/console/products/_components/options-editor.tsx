@@ -10,17 +10,44 @@ const SUGGEST: Record<string, string[]> = {
   colour: ['Black', 'White', 'Indigo', 'Rust', 'Sage', 'Ivory'],
 }
 
-/** Options first (Shopify's model): a name, then its values as chips. Enter adds; × removes. */
-export function OptionsEditor({ options, onChange, error }: { options: Option[]; onChange: (o: Option[]) => void; error?: string }) {
+/** Clothing sizes in the order shoppers read them: a size added later goes to its place, not the end (PR·0). */
+const SIZE_ORDER = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL']
+const rank = (v: string) => SIZE_ORDER.indexOf(v.trim().toUpperCase())
+
+/** Adds `adds` to `values` once each (case-blind, within the new ones too), each known size in its place. */
+export function addInOrder(values: readonly string[], adds: readonly string[]): string[] {
+  const out = [...values]
+  for (const a of adds) {
+    if (out.some((v) => v.toLowerCase() === a.toLowerCase())) continue
+    const r = rank(a)
+    const at = r < 0 || out.some((v) => rank(v) < 0) ? -1 : out.findIndex((v) => rank(v) > r)
+    if (at < 0) out.push(a); else out.splice(at, 0, a)
+  }
+  return out
+}
+
+/** Options first (Shopify's model): a name, then its values as chips. Enter adds; × removes; a chip renames in place
+ *  and `onRename` carries its prices, stock, SKU, swatch and photos to the new name (PR·0: a rename wiped them). */
+export function OptionsEditor({ options, onChange, onRename, error }: { options: Option[]; onChange: (o: Option[]) => void
+  onRename?: (option: number, from: string, to: string) => void; error?: string }) {
   const [drafts, setDrafts] = useState<string[]>(options.map(() => ''))
+  const [editing, setEditing] = useState<{ i: number; k: number; text: string; error?: string } | null>(null)
   const set = (i: number, o: Option) => onChange(options.map((x, j) => (j === i ? o : x)))
   const addValues = (i: number, raw: string) => {
-    const vals = raw.split(',').map((v) => v.trim()).filter(Boolean)
+    const vals = raw.split(',').map((v) => v.trim().replace(/\s+/g, ' ')).filter(Boolean)
     if (!vals.length) return
     const o = options[i]!
-    const have = new Set(o.values.map((v) => v.toLowerCase()))
-    set(i, { ...o, values: [...o.values, ...vals.filter((v) => !have.has(v.toLowerCase()))] })
+    set(i, { ...o, values: addInOrder(o.values, vals) })
     setDrafts((d) => d.map((x, j) => (j === i ? '' : x)))
+  }
+  const commit = () => {
+    if (!editing) return
+    const o = options[editing.i]!, from = o.values[editing.k]!, to = editing.text.trim().replace(/\s+/g, ' ')
+    if (!to || to === from) { setEditing(null); return }
+    if (o.values.some((v, j) => j !== editing.k && v.toLowerCase() === to.toLowerCase())) { setEditing({ ...editing, error: `${to} is already here.` }); return }
+    if (onRename) onRename(editing.i, from, to)
+    else set(editing.i, { ...o, values: o.values.map((v, j) => (j === editing.k ? to : v)) })
+    setEditing(null)
   }
   return (
     <div className="space-y-3">
@@ -36,9 +63,18 @@ export function OptionsEditor({ options, onChange, error }: { options: Option[];
               <button type="button" className="inline-flex min-h-6 items-center text-sm text-muted-foreground underline" onClick={() => { onChange(options.filter((_, j) => j !== i)); setDrafts((d) => d.filter((_, j) => j !== i)) }}>Remove {o.name || 'option'}</button>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
-              {o.values.map((v, k) => (
+              {o.values.map((v, k) => editing?.i === i && editing.k === k ? (
+                <span key={v} className="inline-flex flex-col">
+                  <label htmlFor={`ren-${i}-${k}`} className="sr-only">Rename {v}</label>
+                  <input id={`ren-${i}-${k}`} autoFocus value={editing.text} maxLength={40} aria-invalid={!!editing.error}
+                    onChange={(e) => setEditing({ ...editing, text: e.target.value, error: undefined })}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit() } if (e.key === 'Escape') setEditing(null) }}
+                    onBlur={commit} className="h-7 w-28 rounded-full border border-foreground bg-card px-2.5 text-sm aria-invalid:border-danger-text" />
+                  {editing.error && <span className="text-xs text-danger-text">{editing.error}</span>}
+                </span>
+              ) : (
                 <span key={v} className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-0.5 text-sm">
-                  {v}<button type="button" aria-label={`Remove ${v}`} className="inline-grid min-h-6 min-w-6 place-items-center text-muted-foreground hover:text-foreground" onClick={() => set(i, { ...o, values: o.values.filter((_, j) => j !== k) })}><Icon name="close" className="size-3.5" /></button>
+                  <button type="button" aria-label={`Rename ${v}`} className="min-h-6" onClick={() => setEditing({ i, k, text: v })}>{v}</button><button type="button" aria-label={`Remove ${v}`} className="inline-grid min-h-6 min-w-6 place-items-center text-muted-foreground hover:text-foreground" onClick={() => set(i, { ...o, values: o.values.filter((_, j) => j !== k) })}><Icon name="close" className="size-3.5" /></button>
                 </span>
               ))}
               <label htmlFor={`val-${i}`} className="sr-only">Add a {o.name || 'value'}</label>
@@ -51,7 +87,7 @@ export function OptionsEditor({ options, onChange, error }: { options: Option[];
             {suggest.length > 0 && (
               // Quick-add chips, 24 px each (rule 19): they were comma-separated words 16 px tall (stress test S4).
               <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">Add: {suggest.map((s) => (
-                <button key={s} type="button" aria-label={`Add ${s}`} className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border border-dashed border-input px-2 text-foreground hover:bg-accent" onClick={() => set(i, { ...o, values: [...o.values, s] })}>{s}</button>
+                <button key={s} type="button" aria-label={`Add ${s}`} className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border border-dashed border-input px-2 text-foreground hover:bg-accent" onClick={() => set(i, { ...o, values: addInOrder(o.values, [s]) })}>{s}</button>
               ))}</p>
             )}
           </div>

@@ -3,6 +3,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { del } from '@vercel/blob'
+import { keyOf } from '@/domains/catalogue/variants'
 import { cleanProduct, cleanTax, type ProductInput } from '@/domains/catalogue/product-form'
 import { sellsSized } from '@/domains/catalogue/sell-keys'
 import type { Status } from '@/domains/catalogue/availability'
@@ -65,8 +66,8 @@ export async function createProduct(input: { title: string }): Promise<Result<{ 
   }
 }
 
-export async function saveProduct(productId: string, version: number, input: ProductInput, manualCollections: string[] = []): Promise<Result<{ version: number; handle: string }>> {
-  const parsed = cleanProduct(input, new Date())
+export async function saveProduct(productId: string, version: number, input: ProductInput, manualCollections: string[] = [], renames: { from: string; to: string }[] = []): Promise<Result<{ version: number; handle: string }>> {
+  const parsed = cleanProduct(input, new Date(), 4, { blankPrices: true })
   if (!parsed.ok) return { ok: false, error: 'Some fields need a look before saving.', errors: parsed.errors }
   const p = parsed.product
   // Signal S3: a story photo is one we made, WebP or JPEG (read outside the transaction), then this shop's own, rebuilt inside it.
@@ -85,8 +86,14 @@ export async function saveProduct(productId: string, version: number, input: Pro
         const [t] = await tx.select({ id: productTypes.id }).from(productTypes).where(and(eq(productTypes.tenantId, tenantId), eq(productTypes.id, p.typeId)))
         if (!t) throw new Stop({ ok: false, error: 'That product type is not in your shop.' })
       }
-      const [cur] = await tx.select({ handle: products.handle, publishedAt: products.publishedAt }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
+      const [cur] = await tx.select({ handle: products.handle, publishedAt: products.publishedAt, status: products.status }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
       if (!cur) throw new Stop({ ok: false, error: 'This product is not in your shop.' })
+      // A draft saves before every size is priced (PR·0); a live product keeps a price on every size it sells.
+      if (cur.status === 'active' || cur.status === 'unlisted') {
+        const unpriced = p.variants.filter((v) => v.price <= 0)
+        if (unpriced.length) throw new Stop({ ok: false, error: 'Some fields need a look before saving.',
+          errors: Object.fromEntries(unpriced.map((v) => [`v:${keyOf(v.values)}:price`, 'A price, while it’s live.'])) })
+      }
       if (p.handle !== cur.handle) {
         if (!(await handleFree(tx, tenantId, p.handle, productId))) throw new Stop({ ok: false, error: 'Another product uses that address.', errors: { handle: 'Another product uses (or used) this address.' } })
         // Once it has been live, the old address keeps working: it redirects here (seo.handleChange).
@@ -115,6 +122,12 @@ export async function saveProduct(productId: string, version: number, input: Pro
       const costs = await costsVisibleIn(tx, tenantId, auth.membership.role)
       const written = await writeProducts(tx, tenantId, [{ productId, handle: p.handle, title: p.title, options: p.options, variants: p.variants }], { costs })
       if (!written.ok) throw new Stop({ ok: false, error: written.error })
+      // A colour renamed in the editor keeps its photos: their tags follow it before stale tags are cleared (PR·0).
+      for (const r of renames.slice(0, 60)) {
+        const from = String(r?.from ?? '').slice(0, 40), to = String(r?.to ?? '').slice(0, 40)
+        if (from && to && from !== to) await tx.update(productImages).set({ optionValue: to })
+          .where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId), eq(productImages.optionValue, from)))
+      }
       // A photo tagged with a colour that no longer exists shows for every colour.
       const values = new Set(p.options.flatMap((o) => o.values))
       const imgs = await tx.select({ id: productImages.id, optionValue: productImages.optionValue }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId)))
