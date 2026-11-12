@@ -35,9 +35,10 @@ export function FileStep({ onFile, error, reading, running, onStop, stopping }: 
             <span className="text-sm text-muted-foreground"><span className="font-mono tabular-nums">{running.added.toLocaleString('en-IN')}</span> added · {running.next} of {running.chunks} parts</span>
             <span className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={onStop} disabled={stopping}>Stop here</Button>
-              <Button onClick={() => input.current?.click()} disabled={!!reading}>Choose the file again</Button>
+              {!running.costsOnly && <Button onClick={() => input.current?.click()} disabled={!!reading}>Choose the file again</Button>}
             </span>
           </div>
+          {running.costsOnly && <p className="text-sm text-muted-foreground">Started with costs: an owner or admin can continue it.</p>}
         </Section>
       )}
       <div

@@ -135,6 +135,6 @@ describe('what to fix, in words', () => {
   it('an HSN the table lacks needs its rate; a known one ignores the column; too few digits for the turnover', () => {
     const s = sheet([['Name', 'Price', 'HSN', 'GST'], ['A', '9', '9999', ''], ['B', '9', '6204', '12%'], ['C', '9', '6204', '']])
     expect(read(s).problems.map((p) => `${p.row} ${p.column}: ${p.message}`)).toEqual(['2 GST: HSN 9999 needs its GST rate: 0, 3, 5, 18 or 40%'])
-    expect(read(s, undefined, { ...ctx, hsnDigits: 6 }).problems.map((p) => p.row)).toEqual([2, 3, 4])
+    expect(read(s, undefined, { ...ctx, hsnDigits: 6 }).problems.filter((p) => p.message === 'At your turnover, invoices need 6 digits of HSN.').map((p) => p.row)).toEqual([2, 3, 4])
   })
 })

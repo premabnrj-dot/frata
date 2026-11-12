@@ -3,8 +3,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { del } from '@vercel/blob'
-import { cleanProduct, type ProductInput } from '@/domains/catalogue/product-form'
-import { hsnDigitsFor, type TurnoverBand } from '@/domains/tax/rates'
+import { cleanProduct, cleanTax, type ProductInput } from '@/domains/catalogue/product-form'
 import { sellsSized } from '@/domains/catalogue/sell-keys'
 import type { Status } from '@/domains/catalogue/availability'
 import { attributesFor, categoryById, cleanAttributes, COLOUR_FAMILIES, searchCategories } from '@/domains/catalogue/taxonomy'
@@ -16,13 +15,13 @@ import { refreshShop } from '@/lib/queries/storefront'
 import { searchPieces } from '@/lib/queries/catalogue'
 import { asMember } from '@/lib/auth/as-member'
 import { memberAudit } from '@/lib/auth/member-audit'
-import { costsVisibleIn } from '@/lib/queries/settings'
+import { costsVisibleIn, hsnDigitsIn } from '@/lib/queries/settings'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import { shopSettings } from '@/lib/db/schema'
 import { collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, products, productTypes, variants } from '@/lib/db/schema-catalogue'
-import { writeProducts } from '@/lib/catalogue/write'
-import { readinessIn } from '@/lib/catalogue/readiness'
+import { skuTaken, writeProducts } from '@/lib/catalogue/write'
+import { goLive, readinessIn } from '@/lib/catalogue/readiness'
 import { photosInUse } from '@/lib/catalogue/photos-in-use'
 import { lockTimedOut } from '@/lib/orders/place'
 import { ensureTypes, freeHandle, handleFree } from '@/lib/catalogue/handles'
@@ -94,11 +93,10 @@ export async function saveProduct(productId: string, version: number, input: Pro
         // Going back to one of its own old addresses needs nothing more: the current handle is looked up first,
         // and history is append-only (frata_app holds no delete on it).
       }
-      // HSN digits by the shop's turnover band (rates.ts): 4 under ₹5 crore, 6 above.
-      if (p.tax?.hsn) {
-        const [band] = await tx.select({ b: shopSettings.turnoverBand }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
-        const digits = hsnDigitsFor((band?.b ?? 'under_5cr') as TurnoverBand)
-        if (p.tax.hsn.length < digits) throw new Stop({ ok: false, error: 'Some fields need a look before saving.', errors: { 'tax.hsn': `At your turnover, invoices need ${digits} digits of HSN.` } })
+      // The tax again with the HSN digits the shop's turnover needs (cleanTax, the one rule; the check above assumed 4).
+      if (input.tax) {
+        const t = cleanTax(input.tax, new Date(), await hsnDigitsIn(tx, tenantId))
+        if (!t.ok) throw new Stop({ ok: false, error: 'Some fields need a look before saving.', errors: Object.fromEntries(Object.entries(t.errors).map(([k, v]) => [`tax.${k}`, v])) })
       }
       const [row] = await tx.update(products).set({
         ...(p.tax ? { hsn: p.tax.hsn, uqc: p.tax.uqc, gstBps: p.tax.gstBps, originCountry: p.tax.originCountry } : {}), ...(p.label ? { label: p.label } : {}), ...(stories ? { stories } : {}),
@@ -153,7 +151,7 @@ export async function saveProduct(productId: string, version: number, input: Pro
   } catch (err) {
     if (err instanceof Stop) return err.result
     const why = reason(err)
-    if (why.includes('variants_tenant_sku')) return { ok: false, error: 'A SKU is already used by another product in your shop.' }
+    if (skuTaken(err)) return { ok: false, error: 'A SKU is already used by another product in your shop.' }
     if (why.includes('products_tenant_handle')) return { ok: false, error: 'Another product uses that address.', errors: { handle: 'Another product uses this address.' } }
     // A drop's checkout holds its sizes' rows for longer than writeProducts waits (1 s): expected, not an error.
     if (lockTimedOut(err)) return { ok: false, error: 'Someone is buying this product right now. Save again in a moment.' }
@@ -183,12 +181,10 @@ export async function setStatus(productId: string, status: Status, publishAt: st
         const missing = (await readinessIn(tx, tenantId, [productId], new Date())).get(productId)!.readiness.filter((x) => !x.ok)
         if (missing.length) throw new Stop({ ok: false, error: `Before shoppers can see it: ${missing.map((m) => m.label.toLowerCase()).join(', ')}.` })
       }
-      const goesLive = live && (!when || when <= new Date())
-      await tx.update(products).set({
-        status, publishAt: when, archivedAt: status === 'archived' ? new Date() : null,
-        // Set the first time it is live (or due to be: a scheduled drop counts from its moment).
-        publishedAt: p.publishedAt ?? (goesLive ? new Date() : live ? when : null), updatedAt: new Date(),
-      }).where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
+      const now = new Date()
+      if (live) await goLive(tx, tenantId, [productId], now, { status, at: when })
+      else await tx.update(products).set({ status, publishAt: null, archivedAt: status === 'archived' ? now : null, updatedAt: now })
+        .where(and(eq(products.tenantId, tenantId), eq(products.id, productId)))
       await memberAudit(tx, auth, `product.status.${status}`, p.title)
     })
     if (!r.ok) return { ok: false, error: r.error }

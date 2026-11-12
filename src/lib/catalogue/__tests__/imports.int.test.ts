@@ -6,15 +6,10 @@
 // "Publish the N ready" makes live only what needs nothing more; another shop's job is invisible to every action.
 // The sign-in is faked (the member is the test's); the shops are throwaway ones made through ADMIN_URL and removed
 // after. Skipped unless INT_DB_HOST is set.
-import { createHash } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-import Papa from 'papaparse'
 import postgres from 'postgres'
-import { matchColumns } from '@/domains/catalogue/import/fields'
 import { compactMapping } from '@/domains/catalogue/import/limits'
-import { chunkRows } from '@/domains/catalogue/import/plan'
-import { readImport } from '@/domains/catalogue/import/read'
-import { sheetOf } from '@/domains/catalogue/import/sheet'
+import { dropShops, file, HEAD, LONG_HEAD, longRow, makeShop, rowsOf } from './import-helpers'
 
 const state = vi.hoisted(() => ({ tenantId: '', role: 'owner' as 'owner' | 'staff' }))
 vi.mock('@/lib/auth/require-member', async () => ({
@@ -27,38 +22,13 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn(), 
 const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
 const pass = process.env.INT_DB_PASSWORD ?? 'x'
-const PROOF_A = '11111111-1111-1111-1111-111111111111'
-const NOW = new Date()
-
-/** A CSV as the browser hands it to the actions: its mapping, its chunks, its summary. */
-function file(csv: string, opts: { costs?: boolean; chunkBytes?: boolean } = {}) {
-  const s = sheetOf(Papa.parse<string[]>(csv, { skipEmptyLines: 'greedy' }).data)
-  if (!s.ok) throw new Error(s.error)
-  const mapping = matchColumns(s.sheet.headers, { costs: opts.costs ?? true })
-  const read = readImport(mapping, s.sheet.rows, { now: NOW, hsnDigits: 4, costs: opts.costs ?? true })
-  const chunks = chunkRows(mapping, s.sheet.rows, read.products)
-  const fresh = read.products.filter((p) => p.draft)
-  return {
-    mapping, chunks, start: { fileName: 'kesar.csv', hash: createHash('sha256').update(csv).digest('hex'), mapping, chunks: chunks.length, products: fresh.length, variants: fresh.reduce((n, p) => n + p.draft!.variants.length, 0) },
-  }
-}
-const rowsOf = (n: number, from = 0) => Array.from({ length: n }, (_, i) => `Kurta ${from + i},S/M,1299,4,IMP-${from + i},600`).join('\n')
-const HEAD = 'Name,Sizes,Price,Stock,SKU,Cost\n'
 
 describe.skipIf(!host)('importing a file (actions)', () => {
   const su = host ? postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} }) : null
   let a: typeof import('@/app/(console)/console/products/import/actions')
   let page: typeof import('@/lib/queries/imports')
   const shops: string[] = []
-  async function shop(name: string) {
-    const [{ id }] = await su!<[{ id: string }]>`insert into tenants (slug, name) values (${'int-imp-' + name + '-' + Date.now()}, ${'Int ' + name}) returning id`
-    await su!`create temp table imp_shop as select * from shop_settings where tenant_id = ${PROOF_A}`
-    await su!`update imp_shop set tenant_id = ${id}, order_prefix = 'KS', gstin = null`
-    await su!`insert into shop_settings select * from imp_shop`
-    await su!`drop table imp_shop`
-    shops.push(id)
-    return id
-  }
+  const shop = (name: string) => makeShop(su!, shops, name)
   /** Start a file and send its chunks from `from` up to (not including) `to`. */
   async function run(f: ReturnType<typeof file>, from = 0, to = f.chunks.length) {
     const s = await a.startImport(f.start)
@@ -77,10 +47,7 @@ describe.skipIf(!host)('importing a file (actions)', () => {
   })
   afterAll(async () => {
     if (!su) return
-    for (const t of shops) {
-      for (const table of ['import_rows', 'import_jobs', 'order_lines', 'orders', 'price_history', 'audit_events']) await su`delete from ${su(table)} where tenant_id = ${t}`
-      await su`delete from tenants where id = ${t}`
-    }
+    await dropShops(su, shops)
     await su.end()
   })
 
@@ -178,19 +145,27 @@ describe.skipIf(!host)('importing a file (actions)', () => {
     expect((await su!`select file_hash, drafts_deleted_at from import_jobs where id = ${r.jobId}`)[0]).toMatchObject({ file_hash: null })
   })
 
-  it('another shop\'s job is invisible to every action', async () => {
-    state.tenantId = await shop('mine'); state.role = 'owner'
-    const f = file(HEAD + rowsOf(2))
+  it('another shop\'s job is invisible to every action; its drafts stay as they are', async () => {
+    const mine = state.tenantId = await shop('mine'); state.role = 'owner'
+    const f = file(LONG_HEAD + Array.from({ length: 120 }, (_, i) => longRow(`Saree ${i}`, `SR-${i}`)).join('\n'))
+    expect(f.chunks.length).toBe(2)
     const s = await a.startImport(f.start)
     if (!s.ok) throw new Error(s.error)
+    expect(await a.importChunk({ jobId: s.jobId, n: 0, rows: f.chunks[0] })).toMatchObject({ ok: true, next: 1 })
+    // A photo each: in A, "Publish the N ready" and "Delete drafts" would each have something to do.
+    await su!`insert into product_images (tenant_id, product_id, base, widths, width, height)
+      select tenant_id, id, 'https://x.public.blob.vercel-storage.com/tenants/' || tenant_id || '/products/' || id, '{400}', 4, 5 from products where tenant_id = ${mine}`
+    const before = await su!`select id, status, updated_at from products where tenant_id = ${mine} order by id`
+    expect(before.length).toBeGreaterThan(0)
     state.tenantId = await shop('other')
-    expect(await a.importChunk({ jobId: s.jobId, n: 0, rows: f.chunks[0] })).toEqual({ ok: false, error: 'This import is not in your shop.' })
+    expect(await a.importChunk({ jobId: s.jobId, n: 1, rows: f.chunks[1] })).toEqual({ ok: false, error: 'This import is not in your shop.' })
     expect(await a.stopImport(s.jobId)).toEqual({ ok: false, error: 'That import has already ended.' })
     expect(await a.deleteImportDrafts(s.jobId)).toEqual({ ok: false, error: 'That import is not in your shop.' })
     expect(await a.publishImportReady(s.jobId)).toEqual({ ok: true, published: 0 })
     const other = await page.importPage(state.tenantId, 'owner', new Date())
     expect([other.running, other.history]).toEqual([null, []])
-    expect((await su!`select finished_at from import_jobs where id = ${s.jobId}`)[0]!.finished_at).toBeNull()
+    expect(await su!`select id, status, updated_at from products where tenant_id = ${mine} order by id`).toEqual(before)
+    expect((await su!`select finished_at, next_chunk from import_jobs where id = ${s.jobId}`)[0]).toEqual({ finished_at: null, next_chunk: 1 })
   })
 
   it('refuses a chunk over 512 kB, and a chunk with a field the call made up', async () => {

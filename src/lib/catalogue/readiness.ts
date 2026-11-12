@@ -3,6 +3,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm'
 import { availability, type WhenOut } from '@/domains/catalogue/availability'
 import { labelAsked, labelMissing, readLabel } from '@/domains/catalogue/label'
 import { readiness, type Readiness } from '@/domains/catalogue/product-form'
+import { isSizeOption } from '@/domains/storefront/picker'
 import { hasRate } from '@/domains/tax/rates'
 import { chargesGst, type Scheme } from '@/domains/tax/gst'
 import type { Tx } from '@/lib/db'
@@ -13,7 +14,8 @@ import { arrayParam } from '@/lib/db/sql-array'
 // =============================================================================
 // FILE: src/lib/catalogue/readiness.ts
 //
-// WHAT EACH PRODUCT STILL NEEDS BEFORE SHOPPERS SEE IT, for many at once, inside the caller's tenant transaction: the
+// GOING LIVE: the one write that makes products live (goLive: Publish in the editor, the import's "Publish the N
+// ready"), and WHAT EACH PRODUCT STILL NEEDS BEFORE SHOPPERS SEE IT, for many at once, inside the caller's tenant transaction: the
 // one read behind Publish (setStatus) and the import's Done step ("Need photos", "Need a GST rate", "Publish the N
 // ready"). The rule itself is `readiness` (domains/catalogue/product-form.ts); this only gathers its facts, one read
 // per table whatever the count.
@@ -45,11 +47,27 @@ export async function readinessIn(tx: Tx, tenantId: string, ids: readonly string
     out.set(p.id, {
       photos: n.get(p.id) ?? 0, taxReady,
       readiness: readiness({
-        title: p.title, photos: n.get(p.id) ?? 0, prices: mine.map((v) => Number(v.price)), hasSizes: p.options.some((o) => /^sizes?$/i.test(o)),
+        title: p.title, photos: n.get(p.id) ?? 0, prices: mine.map((v) => Number(v.price)), hasSizes: p.options.some(isSizeOption),
         chartRows: p.chart?.rows.length ?? 0, taxReady, labelMissing: asksLabel ? labelMissing(readLabel(p.label)) : undefined,
         anyBuyable: mine.some((v) => availability({ stock: v.stock, whenOut: v.whenOut as WhenOut, shipsBy: v.shipsBy, leadMinDays: v.leadMinDays, leadMaxDays: v.leadMaxDays, preorderCap: v.preorderCap }, now).canBuy),
       }),
     })
   }
   return out
+}
+
+/**
+ * Makes products live: Active (or Unlisted), now or from `at` (a scheduled drop). The first time it is live is kept
+ * (`published_at`, from then on its address is fixed; a scheduled drop counts from its moment). The caller has
+ * checked readinessIn and holds the rows.
+ */
+export async function goLive(tx: Tx, tenantId: string, ids: readonly string[], now: Date, opts: { status?: 'active' | 'unlisted'; at?: Date | null } = {}): Promise<number> {
+  if (!ids.length) return 0
+  const at = opts.at ?? null
+  const first = at && at > now ? at : now
+  const done = await tx.update(products).set({
+    status: opts.status ?? 'active', publishAt: at, archivedAt: null, updatedAt: now,
+    publishedAt: sql`coalesce(${products.publishedAt}, ${first.toISOString()}::timestamptz)`,
+  }).where(and(eq(products.tenantId, tenantId), sql`${products.id} = any(${arrayParam([...ids], 'uuid')})`)).returning({ id: products.id })
+  return done.length
 }

@@ -32,7 +32,7 @@ const adds = (c: Checked) => { const fresh = c.products.filter((p) => p.state ==
 
 type Step =
   | { at: 'file'; error?: string; reading?: { name: string; rows: number; csv: boolean } }
-  | { at: 'check'; f: Loaded }
+  | { at: 'check'; f: Loaded; error?: string }
   | { at: 'import'; f: Loaded; jobId: string | null; next: number; total: number; added: number; error?: string }
   | { at: 'done'; f: Loaded | null; jobId: string; added: number; leftOut: number; inShop: number }
 
@@ -99,6 +99,11 @@ export function Importer({ data }: { data: Omit<ImportPage, 'history'> }) {
     try {
       if (!id) {
         const s = await startImport({ fileName: f.name, hash: f.hash, mapping: f.mapping, chunks: chunks.length, ...adds(f.checked) })
+        if (!s.ok && s.mapping) {
+          // Another tab started this file with other matches: the check again, with those, and why.
+          const g = await check(f.name, f.hash, f.sheet, s.mapping)
+          return setStep(typeof g === 'string' ? { at: 'file', error: g } : { at: 'check', f: g, error: s.error })
+        }
         if (!s.ok) return setStep({ at: 'import', f, jobId: null, next: 0, total, added: 0, error: s.error })
         id = s.jobId; next = s.next; total = s.chunks
       }
@@ -146,6 +151,7 @@ export function Importer({ data }: { data: Omit<ImportPage, 'history'> }) {
       )}
       <Steps at={at as 0 | 1 | 2 | 3} />
       {step.at === 'file' && <FileStep onFile={onFile} error={step.error} reading={step.reading ?? null} running={data.running} onStop={stop} stopping={stopping} />}
+      {step.at === 'check' && step.error && <p role="alert" className="text-sm text-danger-text">{step.error}</p>}
       {step.at === 'check' && (
         <CheckStep sheet={step.f.sheet} mapping={step.f.mapping} checked={step.f.checked} costs={costs} busy={busy}
           cap={capRefusal(adds(step.f.checked), data.shop)}

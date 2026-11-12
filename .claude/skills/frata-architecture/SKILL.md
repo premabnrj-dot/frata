@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.47.2
+  version: 2.47.3
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -502,7 +502,9 @@ after it. A class a shop page uses from outside the shop's folders must be added
 - New products' addresses come from `freeHandles` (`src/lib/catalogue/handles.ts`, one read for the batch);
   `handleFor` writes Indian scripts in Latin letters (`src/domains/catalogue/indic.ts`).
 - **A SKU is one in a shop in any case at the database too** (`variants_tenant_sku_upper`, drizzle/0111): a unique
-  violation on either SKU index means another product took it meanwhile.
+  violation on either SKU index means another product took it meanwhile (`skuTaken`, write.ts: the editor and the import
+  tell it in words). **A product goes live only through `goLive`** (readiness.ts: Publish and "Publish the N ready").
+  **HSN digits for the turnover are `hsnDigitsIn`** (queries/settings.ts) passed to `cleanTax` / `cleanProduct`.
 - **What a product still needs before it goes live, for one or many, is `readinessIn`** (`src/lib/catalogue/readiness.ts`:
   one read per table, the rule `readiness` in product-form.ts): Publish (`setStatus`) and the import's Done step both ask
   it. **Before deleting a product photo's files, ask `photosInUse`** (`photos-in-use.ts`: a look, a story or a page may show it).
@@ -523,6 +525,12 @@ after it. A class a shop page uses from outside the shop's folders must be added
   `IMPORTS_PER_DAY` starts in 24 h, counted in the transaction. Every chunk re-reads with the job's STORED mapping,
   re-checks the caps (600 products, 1,800 sizes: `limits.ts`) and the shop's matches, then `writeProducts` as drafts with
   costs only if `costsVisibleIn` says so.
+- **A chunk is written exactly as the Check read it**: the job's earlier chunks' SKUs and barcodes are rebuilt from their
+  rows (`seen`), and its own drafts never count as already in the shop (`existingIn(…, job)`). The rules read no cell
+  longer than its cap (`CELL_CAPS`, read.ts: a longer one is a problem on its row), and the cell readers use no
+  backtracking pattern (a 480 kB chunk once cost 18 s of CPU; `speed.test.ts` holds it under a second). The Check is
+  limited per shop (`LIMITS.importCheckShop`, failing closed). A job that reads a cost column continues only for a member
+  who sees costs.
 - **`import_rows` hold cells only while the job runs** (they carry costs): ending or stopping a job nulls them
   (`forgetCells`). A job's products are exactly its rows' `product_id` (composite FK, SET NULL on delete): deleting drafts
   and "Publish the N ready" read nothing else. Drafts never reach shoppers, so a chunk revalidates `/console/products`
@@ -537,8 +545,9 @@ after it. A class a shop page uses from outside the shop's folders must be added
   (`savePairs`, one message for "not yours" and "missing").
 - **Content that belongs to one product lives on it** (`products.stories` jsonb, like `label`): Zod caps by
   characters (`domains/catalogue/stories.ts`), a looser CHECK by bytes in the database.
-- **A photo a second place uses joins the in-use check:** `editPhoto` keeps the files while a look's settings or any
-  product's stories mention the base. A story photo is rebuilt with `acceptedBase(…, 'products')` on every save.
+- **A photo a second place uses joins the in-use check** (`photosInUse`, `src/lib/catalogue/photos-in-use.ts`, asked by
+  `editPhoto` and by deleting an import's drafts): the files stay while a look's settings, any product's stories or a page
+  mention the base; a new place that shows product photos is added there. A story photo is rebuilt with `acceptedBase(…, 'products')` on every save.
 - **The shop reads a page's linked pieces inside its own entry** (`coreProduct`: ≤ 2 pieces, variants, first photo,
   in the same round; drafts never), tagged `catalogue` so a linked piece's change purges the page; which ones show,
   at what price, Add or Choose, is one pure rule (`domains/storefront/pairs.ts`).

@@ -2852,6 +2852,15 @@ do $$ begin
      or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_app']) r, unnest(array['import_jobs', 'import_rows']) t where has_table_privilege(r, t, 'delete') or has_table_privilege(r, t, 'truncate'))
   then raise exception 'FAIL: another role reaches imports, or one deletes them'; end if;
   if exists (select 1 from pg_class where relname in ('import_jobs', 'import_rows') and not relrowsecurity) then raise exception 'FAIL: imports without RLS'; end if;
+  -- The exact columns frata_app may update, each table (a new grant must be added here on purpose).
+  if (select array_agg(attname::text order by attname) from pg_attribute where attrelid = 'import_jobs'::regclass and attnum > 0 and not attisdropped
+        and has_column_privilege('frata_app', attrelid, attnum, 'update'))
+     is distinct from array['added', 'drafts_deleted_at', 'file_hash', 'finished_at', 'in_shop', 'left_out', 'next_chunk', 'updated_at']
+  then raise exception 'FAIL: frata_app updates other import_jobs columns'; end if;
+  if (select array_agg(attname::text order by attname) from pg_attribute where attrelid = 'import_rows'::regclass and attnum > 0 and not attisdropped
+        and has_column_privilege('frata_app', attrelid, attnum, 'update'))
+     is distinct from array['cells']
+  then raise exception 'FAIL: frata_app updates other import_rows columns'; end if;
   if exists (select 1 from pg_policies where tablename in ('import_jobs', 'import_rows') and (coalesce(qual, '') not like '%app_current_tenant()%' or coalesce(with_check, '') not like '%app_current_tenant()%'))
   then raise exception 'FAIL: an import policy that doesn''t name the shop'; end if;
   -- A deleted draft leaves its row, with no product (SET NULL on product_id only: the row keeps its shop).

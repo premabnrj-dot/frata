@@ -7,6 +7,7 @@ import type { Tx } from '@/lib/db'
 import type { ShipCosts } from '@/domains/settings/ship-costs'
 import { seesCosts, type MemberRole } from '@/domains/tenancy/roles'
 import { paise } from '@/domains/money/paise'
+import { hsnDigitsFor, type TurnoverBand } from '@/domains/tax/rates'
 import { BUILT_PAGES, readyToOpen, setupSteps, type SetupStep } from '@/domains/setup/checklist'
 import { formatInr } from '@/lib/format'
 import { activeProductCount, paymentStatusFor } from './payments'
@@ -84,6 +85,13 @@ export async function costsVisibleIn(tx: Tx, tenantId: string, role: MemberRole)
     .from(members).where(eq(members.tenantId, tenantId))
   if (!r || r.all === 0) return false
   return seesCosts(role, r.owners > 0)
+}
+
+/** The HSN digits the shop's invoices need for its turnover (rates.ts hsnDigitsFor), inside the caller's transaction:
+ *  the one read behind the editor's save, Products › HSN codes and the import. */
+export async function hsnDigitsIn(tx: Tx, tenantId: string): Promise<number> {
+  const [s] = await tx.select({ band: shopSettings.turnoverBand }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
+  return hsnDigitsFor((s?.band ?? 'under_5cr') as TurnoverBand)
 }
 
 /** The shop's plan versions with their fee, oldest first (feeForOrder's history; billing B0 replaces the pick). */

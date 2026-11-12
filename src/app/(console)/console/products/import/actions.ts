@@ -4,13 +4,15 @@ import { revalidatePath } from 'next/cache'
 import { del } from '@vercel/blob'
 import { z } from 'zod'
 import { CELL_MAX } from '@/domains/catalogue/import/cells'
-import { FIELDS, SOURCES, type Field } from '@/domains/catalogue/import/fields'
+import { FIELDS, SOURCES, type Field, type Mapping } from '@/domains/catalogue/import/fields'
 import { CHUNK_BYTES, MAX_COLUMNS, MAX_ROWS } from '@/domains/catalogue/import/limits'
 import { acceptedBase, storeHost, urlFor } from '@/domains/media/sizes'
 import { asMember } from '@/lib/auth/as-member'
 import { memberAudit } from '@/lib/auth/member-audit'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { deleteDrafts, publishReady } from '@/lib/catalogue/import-drafts'
+import { skuTaken } from '@/lib/catalogue/write'
+import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { Refused, startJob, stopJob, writeChunk, type ChunkResult } from '@/lib/catalogue/imports'
 import { BLOB_READ_WRITE_TOKEN, BLOB_STORE_ID } from '@/lib/env'
 import { errName } from '@/lib/log'
@@ -36,7 +38,8 @@ import { refreshShop } from '@/lib/queries/storefront'
 // | publishImportReady  | ANY_MEMBER | makes live the job's drafts that need nothing more                       |
 // =============================================================================
 
-type Fail = { ok: false; error: string }
+type Fail = { ok: false; error: string; mapping?: Mapping }
+const SKU_TAKEN = 'A SKU in this part was just taken by another product. Choose the file again.'
 const FIELD = z.enum(Object.keys(FIELDS) as [Field, ...Field[]])
 const MappingSchema = z.object({
   source: z.enum(SOURCES),
@@ -61,11 +64,11 @@ const JobId = z.uuid()
 const encoder = new TextEncoder()
 
 const said = (where: string, err: unknown, fallback: string): Fail => {
-  if (err instanceof Refused) return { ok: false, error: err.reason }
+  if (err instanceof Refused) return { ok: false, error: err.reason, ...(err.mapping ? { mapping: err.mapping } : {}) }
   const why = errName(err)
   if (why.includes('import_jobs_one_running')) return { ok: false, error: 'Another import is running in your shop. Finish or stop it first.' }
   if (why.includes('import_jobs_file')) return { ok: false, error: 'You imported this file already.' }
-  if (why.includes('variants_tenant_sku')) return { ok: false, error: 'A SKU in this part was just taken by another product. Choose the file again.' }
+  if (skuTaken(err)) return { ok: false, error: SKU_TAKEN }
   console.error(`[${where}]`, why)
   return { ok: false, error: fallback }
 }
@@ -77,6 +80,8 @@ export async function checkImport(input: unknown): Promise<({ ok: true; seen: Se
   try { size = encoder.encode(JSON.stringify(input)).length } catch { /* not JSON: refused below */ }
   const p = Check.safeParse(input)
   if (size > CHUNK_BYTES * 2 || !p.success) return { ok: false, error: 'This file’s rows did not come through. Choose the file again.' }
+  // Reading a chunk is CPU: a shop checks at most LIMITS.importCheckShop chunks an hour, failing closed.
+  if (!(await withinLimit(LIMITS.importCheckShop, auth.membership.tenantId, new Date(), true))) return { ok: false, error: 'Many files checked this hour. Try again in a while.' }
   try {
     const seen = { skus: new Map(p.data.seen.skus), gtins: new Map(p.data.seen.gtins) }
     const checked = await checkRows(auth.membership.tenantId, auth.membership.role, p.data.mapping, p.data.rows, seen, new Date())
@@ -93,7 +98,7 @@ export async function startImport(input: unknown): Promise<{ ok: true; jobId: st
     const r = await asMember(ANY_MEMBER, { action: 'product.import.start', target: p.data.fileName }, async (tx, auth) => {
       const costs = await costsVisibleIn(tx, auth.membership.tenantId, auth.membership.role)
       const mapping = { ...p.data.mapping, fields: p.data.mapping.fields.map((f) => (f === 'cost' && !costs ? null : f)) }
-      const started = await startJob(tx, { tenantId: auth.membership.tenantId, userId: auth.userId, email: auth.email, supportSessionId: auth.membership.supportSessionId }, { ...p.data, mapping }, new Date())
+      const started = await startJob(tx, { tenantId: auth.membership.tenantId, userId: auth.userId, email: auth.email, supportSessionId: auth.membership.supportSessionId, costs }, { ...p.data, mapping }, new Date())
       if (!started.resumed) await memberAudit(tx, auth, 'product.import.start', started.job.id)
       return started
     })

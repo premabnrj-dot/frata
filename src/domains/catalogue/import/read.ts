@@ -23,7 +23,8 @@
 
 import { cleanProduct, type CleanVariant, type ProductInput, type VariantInput } from '../product-form'
 import { combinations, handleFor, keyOf, type Option } from '../variants'
-import { OWN_RATES, ruleOn } from '../../tax/rates'
+import { OWN_RATES, OWN_RATES_TEXT, ruleOn } from '../../tax/rates'
+import { isSizeOption } from '../../storefront/picker'
 import { htmlText, parseGst, parseStock, splitValues } from './cells'
 import { FIELDS, type Field, type Mapping } from './fields'
 import { groupRows, reader, type SheetRow } from './group'
@@ -47,6 +48,14 @@ export type Read = { products: ImportProduct[]; problems: Problem[] }
 export type Seen = { skus: Map<string, number>; gtins: Map<string, number> }
 
 const fail = (problems: Problem[], row: number, column: string, message: string) => problems.push({ row, column, message })
+/** An echoed cell, short enough for a message (and the row's 4 kB of errors). */
+export const clip = (s: string, n = 60) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
+/** The longest cell each field may hold: the rules read nothing longer (security review 2026-11-12: no regex sees a long cell). */
+export const CELL_CAPS: Partial<Record<Field, number>> = {
+  title: 200, handle: 200, size: 500, colour: 500, option1Value: 500, option2Value: 500, option3Value: 500, stock: 500,
+  option1Name: 100, option2Name: 100, option3Name: 100, sku: 100, price: 100, sale: 100, compareAt: 100, cost: 100, barcode: 100,
+  hsn: 100, gst: 100, tags: 1000, rowId: 100, parent: 100, kind: 100,
+}
 const code = (v: string) => v.toUpperCase().normalize('NFKD').replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'X'
 
 /** `seen` carries SKUs and barcodes across a file read in parts; it is added to as rows are read. */
@@ -61,9 +70,19 @@ export function readImport(m: Mapping, rows: readonly SheetRow[], ctx: ReadConte
     const mine: Problem[] = []
     const first = g.rows[0]!
     const pick = (f: Field) => { for (const r of g.rows) { const v = get(r, f); if (v) return v } return '' }
-    const title = pick('title')
-    const handleCell = pick('handle')
-    const handle = handleFor(handleCell) || handleFor(title)
+    const title = pick('title').slice(0, CELL_CAPS.title)
+    const handle = handleFor(pick('handle').slice(0, CELL_CAPS.handle)) || handleFor(title)
+
+    // A cell longer than its field allows leaves the product out before any rule reads it.
+    for (const r of g.rows) for (const [i, f] of m.fields.entries()) {
+      const cap = f ? CELL_CAPS[f] : undefined
+      if (cap && (r.cells[i] ?? '').length > cap) fail(mine, r.n, m.headers[i]!, `Up to ${cap} characters`)
+    }
+    if (mine.length) {
+      problems.push(...mine)
+      products.push({ key: g.key, rows: g.rows.map((r) => r.n), title, handle, skus: [], draft: null })
+      continue
+    }
 
     // Options: the file's named options (Shopify, WooCommerce), then a Sizes and a Colours column.
     type Opt = { name: string; field: Field; split: 'size' | 'other' | 'none' }
@@ -75,7 +94,7 @@ export function readImport(m: Mapping, rows: readonly SheetRow[], ctx: ReadConte
       if (i === 1 && /^title$/i.test(name) && values.every((v) => !v || /^default title$/i.test(v))) continue
       opts.push({ name, field, split: 'none' })
     }
-    if (has('size') && !opts.some((o) => /^sizes?$/i.test(o.name))) opts.push({ name: 'Size', field: 'size', split: 'size' })
+    if (has('size') && !opts.some((o) => isSizeOption(o.name))) opts.push({ name: 'Size', field: 'size', split: 'size' })
     if (has('colour') && !opts.some((o) => /^colou?rs?$/i.test(o.name))) opts.push({ name: 'Colour', field: 'colour', split: 'other' })
     // The options this product has: those some row gives a value. A row that only lists values (WooCommerce's
     // variable row) sets their order.
@@ -90,7 +109,7 @@ export function readImport(m: Mapping, rows: readonly SheetRow[], ctx: ReadConte
     for (const [j, r] of g.variantRows.entries()) {
       const own = lists[j]!.filter((_, i) => on[i])
       const miss = own.findIndex((l) => !l.length)
-      if (miss >= 0) { fail(mine, r.n, header(live[miss]!.field), `Needs its ${live[miss]!.name.toLowerCase()}`); continue }
+      if (miss >= 0) { fail(mine, r.n, header(live[miss]!.field), `Needs its ${clip(live[miss]!.name.toLowerCase(), 40)}`); continue }
       const combos = combinations(live.map((o, i) => ({ name: o.name, values: own[i]! })))
       const stock = parseStock(get(r, 'stock'))
       if (!stock) fail(mine, r.n, header('stock'), 'A whole number, or per size like S:4, M:6')
@@ -99,7 +118,7 @@ export function readImport(m: Mapping, rows: readonly SheetRow[], ctx: ReadConte
       if (gtin && combos.length > 1) fail(mine, r.n, header('barcode'), `One barcode can't name ${combos.length} sizes and colours`)
       for (const values of combos) {
         const k = keyOf(values)
-        if (rowOf.has(k)) { fail(mine, r.n, header(live[0]?.field ?? 'title'), values.length ? `${values.join(' · ')} is also on row ${rowOf.get(k)}` : `This product is also on row ${rowOf.get(k)}`); continue }
+        if (rowOf.has(k)) { fail(mine, r.n, header(live[0]?.field ?? 'title'), values.length ? `${clip(values.join(' · '))} is also on row ${rowOf.get(k)}` : `This product is also on row ${rowOf.get(k)}`); continue }
         rowOf.set(k, r.n)
         const each = stock && 'per' in stock ? stock.per.get(values.find((v) => stock.per.has(v.toLowerCase()))?.toLowerCase() ?? '') ?? '0' : stock?.each ?? '0'
         cells.push({
@@ -120,15 +139,14 @@ export function readImport(m: Mapping, rows: readonly SheetRow[], ctx: ReadConte
       return { name: o.name, values: seen.sort((a, b) => rank(i, a[0]) - rank(i, b[0]) || a[1] - b[1]).map(([v]) => v) }
     })
     if (!mine.length && options.length) for (const values of combinations(options)) {
-      if (!rowOf.has(keyOf(values))) { fail(mine, first.n, header(live[0]!.field), `No row for ${values.join(' · ')}`); break }
+      if (!rowOf.has(keyOf(values))) { fail(mine, first.n, header(live[0]!.field), `No row for ${clip(values.join(' · '))}`); break }
     }
 
     // Tax: a known HSN decides; an unknown one needs one of the law's rates.
     const hsn = pick('hsn').replace(/\s/g, ''), gstCell = pick('gst')
     const known = !!hsn && ruleOn(hsn, ctx.now) !== null
     const bps = gstCell && !known ? parseGst(gstCell) : null
-    if (gstCell && !known && (bps === null || !(OWN_RATES as readonly number[]).includes(bps))) fail(mine, first.n, header('gst'), 'A GST rate of 0, 3, 5, 18 or 40%')
-    if (/^\d+$/.test(hsn) && [4, 6, 8].includes(hsn.length) && hsn.length < ctx.hsnDigits) fail(mine, first.n, header('hsn'), `At your turnover, invoices need ${ctx.hsnDigits} digits of HSN`)
+    if (gstCell && !known && (bps === null || !(OWN_RATES as readonly number[]).includes(bps))) fail(mine, first.n, header('gst'), `A GST rate of ${OWN_RATES_TEXT}`)
 
     const tags = pick('tags') ? pick('tags').split(',').map((t) => t.trim()).filter(Boolean) : []
     const input: ProductInput = {
@@ -136,7 +154,7 @@ export function readImport(m: Mapping, rows: readonly SheetRow[], ctx: ReadConte
       variants: cells.map(({ row: _r, sale: _s, ...v }) => v),
       ...(hsn || gstCell ? { tax: { hsn, uqc: 'NOS', ownBps: bps === null ? '' : String(bps), origin: '' } } : {}),
     }
-    const clean = mine.length ? null : cleanProduct(input, ctx.now)
+    const clean = mine.length ? null : cleanProduct(input, ctx.now, ctx.hsnDigits)
     if (clean && !clean.ok) for (const [k, message] of Object.entries(clean.errors)) {
       const v = /^v:(.*):(\w+)$/.exec(k)
       if (v) {
@@ -145,20 +163,20 @@ export function readImport(m: Mapping, rows: readonly SheetRow[], ctx: ReadConte
         const col = f === 'price' ? header(c?.sale ? 'sale' : 'price') : f === 'compareAt' ? header(c?.sale && !has('compareAt') ? 'price' : 'compareAt')
           : f === 'gtin' ? header('barcode') : header(f as Field)
         const raw = f === 'price' ? c?.price : f === 'compareAt' ? c?.compareAt : f === 'cost' ? c?.cost : null
-        const said = raw == null ? message : !raw.trim() ? 'Needs a price' : /^More than/.test(message) || /M\.R\.P\./.test(message) ? message : `"${raw}" isn't ${f === 'cost' ? 'a cost in rupees' : 'a price'}`
+        const said = raw == null ? message : !raw.trim() ? 'Needs a price' : /^More than/.test(message) || /M\.R\.P\./.test(message) ? message : `"${clip(raw)}" isn't ${f === 'cost' ? 'a cost in rupees' : 'a price'}`
         fail(mine, c?.row ?? first.n, col, said)
       } else {
         const f: Field = k === 'title' ? 'title' : k === 'handle' ? 'handle' : k === 'description' ? 'description' : k === 'tags' ? 'tags'
           : k === 'tax.hsn' ? 'hsn' : k === 'tax.ownBps' ? (has('gst') ? 'gst' : 'hsn') : live[0]?.field ?? 'title'
         if (k === 'handle' && !title) continue
-        fail(mine, first.n, header(f), k === 'tax.ownBps' ? `HSN ${hsn} needs its GST rate: 0, 3, 5, 18 or 40%` : k === 'title' && !title ? 'Needs a product name' : message)
+        fail(mine, first.n, header(f), k === 'tax.ownBps' ? `HSN ${clip(hsn, 20)} needs its GST rate: ${OWN_RATES_TEXT}` : k === 'title' && !title ? 'Needs a product name' : message)
       }
     }
 
     // A SKU or barcode on another product in the file: the later product names the earlier row.
     if (!mine.length) for (const c of cells) {
-      if (c.sku) { const at = skuAt.get(c.sku.toUpperCase()); if (at !== undefined) fail(mine, c.row, header('sku'), `${c.sku} is also on row ${at}`) }
-      if (c.gtin) { const at = gtinAt.get(c.gtin); if (at !== undefined) fail(mine, c.row, header('barcode'), `Barcode ${c.gtin} is also on row ${at}`) }
+      if (c.sku) { const at = skuAt.get(c.sku.toUpperCase()); if (at !== undefined) fail(mine, c.row, header('sku'), `${clip(c.sku)} is also on row ${at}`) }
+      if (c.gtin) { const at = gtinAt.get(c.gtin); if (at !== undefined) fail(mine, c.row, header('barcode'), `Barcode ${clip(c.gtin)} is also on row ${at}`) }
     }
     for (const c of cells) {
       if (c.sku && !skuAt.has(c.sku.toUpperCase())) skuAt.set(c.sku.toUpperCase(), c.row)

@@ -6,10 +6,10 @@ import { checkedOf, type Checked } from '@/domains/catalogue/import/plan'
 import { readImport, type Seen } from '@/domains/catalogue/import/read'
 import type { MemberRole } from '@/domains/tenancy/roles'
 import { outcomeIn, type Outcome } from '@/lib/catalogue/import-drafts'
-import { existingIn, hsnDigitsIn, shopCounts } from '@/lib/catalogue/imports'
+import { existingIn, shopCounts } from '@/lib/catalogue/imports'
 import { importJobs } from '@/lib/db/schema-imports'
 import { withTenant } from '@/lib/db/tenant'
-import { costsVisibleIn } from './settings'
+import { costsVisibleIn, hsnDigitsIn } from './settings'
 
 // =============================================================================
 // FILE: src/lib/queries/imports.ts
@@ -24,7 +24,8 @@ export type HistoryRow = {
   id: string; fileName: string; createdAt: Date; finishedAt: Date | null; added: number; inShop: number; leftOut: number
   planned: number; by: string | null; draftsDeleted: boolean
 }
-export type Running = { id: string; fileName: string; hash: string; mapping: Mapping; next: number; chunks: number; added: number }
+/** A paused job. `costsOnly`: it reads a cost column and this member doesn't see costs: they may only stop it. */
+export type Running = { id: string; fileName: string; hash: string; mapping: Mapping; next: number; chunks: number; added: number; costsOnly: boolean }
 export type ImportPage = {
   shop: { products: number; variants: number; hsnDigits: number; costs: boolean }
   running: Running | null
@@ -41,15 +42,18 @@ export async function importPage(tenantId: string, role: MemberRole, now: Date):
     ])
     const open = jobs.find((j) => !j.finishedAt)
     const last = jobs.find((j) => j.finishedAt && !j.draftsDeletedAt)
+    // A member who doesn't see costs never gets a mapping that names the cost column.
+    const shown = (m: Mapping): Mapping => (costs ? m : { ...m, fields: m.fields.map((f) => (f === 'cost' ? null : f)) })
     const mappings: Partial<Record<Source, Mapping>> = {}
-    for (const s of SOURCES) { const j = jobs.find((x) => x.source === s); if (j) mappings[s] = j.mapping }
+    for (const s of SOURCES) { const j = jobs.find((x) => x.source === s); if (j) mappings[s] = shown(j.mapping) }
     return {
       shop: { ...counts, hsnDigits, costs },
-      running: open ? { id: open.id, fileName: open.fileName, hash: open.fileHash ?? '', mapping: open.mapping, next: open.nextChunk, chunks: open.chunks, added: open.added } : null,
+      running: open ? { id: open.id, fileName: open.fileName, hash: open.fileHash ?? '', mapping: shown(open.mapping), next: open.nextChunk, chunks: open.chunks, added: open.added,
+        costsOnly: !costs && open.mapping.fields.includes('cost') } : null,
       history: jobs.map((j) => ({ id: j.id, fileName: j.fileName, createdAt: j.createdAt, finishedAt: j.finishedAt, added: j.added, inShop: j.inShop, leftOut: j.leftOut,
         planned: j.planned, by: j.startedByEmail, draftsDeleted: !!j.draftsDeletedAt })),
       latest: last ? { id: last.id, outcome: await outcomeIn(tx, tenantId, last.id, now) } : null,
-      mappings: costs ? mappings : Object.fromEntries(Object.entries(mappings).map(([k, m]) => [k, { ...m, fields: m.fields.map((f) => (f === 'cost' ? null : f)) }])),
+      mappings,
     }
   }, { snapshot: true })
 }

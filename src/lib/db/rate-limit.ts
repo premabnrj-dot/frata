@@ -52,6 +52,9 @@ export const LIMITS = {
   domainCheckIp: { action: 'domain_check:ip', max: 200, windowSeconds: 600 },
   domainCheckAll: { action: 'domain_check:all', max: 3000, windowSeconds: 600 },
   pdfShop: { action: 'pdf:shop', max: 120, windowSeconds: 600 },
+  // Product import (PI·1, security review 2026-11-12): each Check reads a chunk of up to 512 kB by the rules; per shop,
+  // fail closed. A 600-product file is a few chunks; a re-match reads them all again.
+  importCheckShop: { action: 'import_check:shop', max: 600, windowSeconds: 3600 },
   // GST exports (GST app G1): a period's documents rendered whole; per member, fail closed.
   gstExportMember: { action: 'gst_export:member', max: 30, windowSeconds: 600 },
   // Email (E·2; security review H4/M5), all failing closed. An address given at checkout: per shop and across shops,

@@ -3,10 +3,10 @@
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { cleanTax } from '@/domains/catalogue/product-form'
-import { hsnDigitsFor, type TurnoverBand } from '@/domains/tax/rates'
+import { hsnDigitsIn } from '@/lib/queries/settings'
 import { asMember } from '@/lib/auth/as-member'
 import { ANY_MEMBER } from '@/lib/auth/require-member'
-import { auditEvents, shopSettings } from '@/lib/db/schema'
+import { auditEvents } from '@/lib/db/schema'
 import { products } from '@/lib/db/schema-catalogue'
 import { refreshShop } from '@/lib/queries/storefront'
 import { errName } from '@/lib/log'
@@ -25,8 +25,7 @@ export async function setProductsTax(ids: string[], input: { hsn: string; uqc: s
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.tax', detail: { count: list.length } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
-      const [band] = await tx.select({ b: shopSettings.turnoverBand }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
-      const t = cleanTax({ hsn: String(input?.hsn ?? ''), uqc: String(input?.uqc ?? ''), ownBps: String(input?.ownBps ?? ''), origin: '' }, new Date(), hsnDigitsFor((band?.b ?? 'under_5cr') as TurnoverBand))
+      const t = cleanTax({ hsn: String(input?.hsn ?? ''), uqc: String(input?.uqc ?? ''), ownBps: String(input?.ownBps ?? ''), origin: '' }, new Date(), await hsnDigitsIn(tx, tenantId))
       if (!t.ok) throw new Stop(Object.values(t.errors)[0]!)
       if (!t.tax.hsn) throw new Stop('Choose an HSN code.')
       const rows = await tx.update(products).set({ hsn: t.tax.hsn, uqc: t.tax.uqc, gstBps: t.tax.gstBps, version: sql`${products.version} + 1`, updatedAt: new Date() })

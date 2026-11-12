@@ -24,7 +24,6 @@ export const FIELDS = {
   rowId: 'Row ID', parent: 'Parent', kind: 'Row type',
 } as const
 export type Field = keyof typeof FIELDS
-export const FIELD_KEYS = Object.keys(FIELDS) as Field[]
 
 export const SOURCES = ['shopify', 'woocommerce', 'sheet'] as const
 export type Source = (typeof SOURCES)[number]

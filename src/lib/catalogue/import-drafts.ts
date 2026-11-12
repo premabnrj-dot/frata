@@ -6,7 +6,7 @@ import { importJobs, importRows } from '@/lib/db/schema-imports'
 import { orderLines } from '@/lib/db/schema-orders'
 import { arrayParam } from '@/lib/db/sql-array'
 import { photosInUse } from './photos-in-use'
-import { readinessIn } from './readiness'
+import { goLive, readinessIn } from './readiness'
 
 // =============================================================================
 // FILE: src/lib/catalogue/import-drafts.ts
@@ -80,7 +80,5 @@ export async function outcomeIn(tx: Tx, tenantId: string, jobId: string, now: Da
 export async function publishReady(tx: Tx, tenantId: string, jobId: string, now: Date): Promise<number> {
   const { ready } = await outcomeIn(tx, tenantId, jobId, now, true)
   if (!ready.length) return 0
-  const done = await tx.update(products).set({ status: 'active', publishAt: null, archivedAt: null, publishedAt: sql`coalesce(${products.publishedAt}, ${now.toISOString()}::timestamptz)`, updatedAt: now })
-    .where(and(eq(products.tenantId, tenantId), sql`${products.id} = any(${arrayParam(ready, 'uuid')})`, eq(products.status, 'draft'))).returning({ id: products.id })
-  return done.length
+  return goLive(tx, tenantId, ready, now)
 }

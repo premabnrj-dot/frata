@@ -31,6 +31,11 @@ export function reader(m: Pick<Mapping, 'fields'>) {
 
 const tidy = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
 
+/** FNV-1a, 32 bits: a long key's tail, so two long names that share a beginning stay two products. */
+const fnv = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 } return h.toString(36) }
+/** A key fits import_rows.key (300 characters): up to 160 as written, then a hash of the whole. */
+const bounded = (k: string) => (k.length > 160 ? `${k.slice(0, 150)}~${fnv(k)}` : k)
+
 /** The file's products, in the order their first row appears. */
 export function groupRows(m: Mapping, rows: readonly SheetRow[]): Group[] {
   const { get, has } = reader(m)
@@ -54,7 +59,7 @@ export function groupRows(m: Mapping, rows: readonly SheetRow[]): Group[] {
       } else key = id ? `id:${id}` : sku ? `sku:${sku.toUpperCase()}` : `row:${r.n}`
     } else if (has('handle')) key = get(r, 'handle') ? `h:${tidy(get(r, 'handle'))}` : get(r, 'title') && !last ? `t:${tidy(get(r, 'title'))}` : last
     else key = get(r, 'title') ? `t:${tidy(get(r, 'title'))}` : last
-    key ??= `row:${r.n}`
+    key = bounded(key ?? `row:${r.n}`)
     last = key
     const g = groups.get(key) ?? { key, rows: [], variantRows: [] }
     g.rows.push(r)

@@ -41,7 +41,9 @@ and `impact-reviewer` on its diff; tasks touching `drizzle/` also run `npm run v
    listed. Rows' cells are nulled when the job ends (costs). The same migration adds a unique index on
    `variants (tenant_id, upper(sku))` (PI·0 found the app treats SKUs case-blind while `variants_tenant_sku` doesn't: two
    saves at once could store `KS-1` and `ks-1`; the index also turns `writeProducts`' SKU read into a lookup, now ~7 ms
-   at 10×); check production for case-only duplicates first. Verify: `npm run check:tenant`, `npm run verify:tenancy`.
+   at 10×); check production for case-only duplicates first (none, 2026-11-12). The exact `variants_tenant_sku` index stays
+   for now; a later migration drops it once the upper-case one has run in production. Verify: `npm run check:tenant`,
+   `npm run verify:tenancy`.
 6. Actions: `startImport` (server re-checks the file's summary: ≤ 600 products, ≤ 1,800 variants, one running job per
    shop, a daily limit failing closed), `importChunk` (Zod `.strict()`, ≤ 512 kB, a Handle group never split; the server
    re-runs task 4's rules; `writeProducts` as drafts; audit row in a support visit), `deleteImportDrafts` (never
