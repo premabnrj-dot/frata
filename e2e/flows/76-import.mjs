@@ -14,7 +14,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { CONSOLE, USERS, signedIn, until } from '../lib.mjs'
+import { CONSOLE, PORTS, USERS, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const FIXTURES = new URL('../../src/domains/catalogue/import/__tests__/fixtures/', import.meta.url)
@@ -33,7 +33,10 @@ async function makePhotos(page, specs) {
   })), specs)
   return made.map((f) => ({ name: f.name, mimeType: f.mimeType, buffer: Buffer.from(f.b64, 'base64') }))
 }
-/** Vercel Blob's upload API as the client calls it (PUT https://vercel.com/api/blob/?pathname=…); `refuse` the first n. */
+/**
+ * Vercel Blob's upload API as the client calls it (PUT https://vercel.com/api/blob/?pathname=…); `refuse` the first n.
+ * What it takes goes to the stand-in store (e2e/fakes/blob.mjs), where the app reads each file's first bytes.
+ */
 async function fakeBlob(ctx, refuse = 0) {
   const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'PUT, OPTIONS', 'access-control-allow-headers': '*', 'access-control-expose-headers': '*' }
   const seen = []
@@ -43,6 +46,8 @@ async function fakeBlob(ctx, refuse = 0) {
     const pathname = new URL(req.url()).searchParams.get('pathname')
     seen.push(pathname)
     if (refuse > 0) { refuse--; return route.fulfill({ status: 403, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify({ error: { code: 'forbidden', message: 'Access denied' } }) }) }
+    const kept = await fetch(`http://127.0.0.1:${PORTS.blob}/_test/put?pathname=${encodeURIComponent(pathname)}`, { method: 'PUT', body: req.postDataBuffer() ?? Buffer.alloc(0) })
+    assert.equal(kept.status, 200)
     const url = `${STORE}/${pathname}`
     return route.fulfill({ status: 200, headers: { ...cors, 'content-type': 'application/json' }, body: JSON.stringify({ url, downloadUrl: `${url}?download=1`, pathname, contentType: req.headers()['x-content-type'] ?? 'image/webp', contentDisposition: 'inline' }) })
   })

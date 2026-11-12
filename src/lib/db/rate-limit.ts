@@ -42,10 +42,12 @@ export const LIMITS = {
   // Upload tokens per shop (security review S11): four widths per photo, so 200 photos an hour; Frrata pays for storage.
   uploadShop: { action: 'upload:shop', max: 800, windowSeconds: 3600 },
   // Photos by file name (product import PI·2, its own bucket: plan 2026-11-12 § Changes to the spec): a photo counts
-  // once, at its first size (400 wide); its larger sizes ride on it, at most 4 tokens a photo. 500 photos an hour a
-  // shop (60 products × 4 photos in 10 minutes, twice over). Both fail closed.
+  // once, at its first size (400 wide), which alone writes its start; its larger sizes ride on it, at most 3 more.
+  // 500 photos an hour a shop (60 products × 4 photos in 10 minutes, twice over), 2,000 a day. All fail closed.
   importPhotoShop: { action: 'upload_import:shop', max: 500, windowSeconds: 3600 },
-  importPhotoSizes: { action: 'upload_import:photo', max: 4, windowSeconds: 3600 },
+  importPhotoShopDay: { action: 'upload_import:shop_day', max: 2000, windowSeconds: 86400 },
+  importPhotoStart: { action: 'upload_import:start', max: 1, windowSeconds: 3600 },
+  importPhotoSizes: { action: 'upload_import:photo', max: 3, windowSeconds: 3600 },
   // PDF documents (Documents D1, security review 2026-11-08): a render is CPU; per member and per shop, fail closed.
   pdfMember: { action: 'pdf:member', max: 30, windowSeconds: 600 },
   // Own domains D2·10 (security review 2026-11-09): claims per member and shop; the dialog's 15 s check per member,
