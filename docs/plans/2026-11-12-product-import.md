@@ -38,7 +38,10 @@ and `impact-reviewer` on its diff; tasks touching `drizzle/` also run `npm run v
    support_session_id, created/finished) and `import_rows` (tenant, job, n, cells, errors, product_id), composite
    `(tenant_id, job_id)` and `(tenant_id, product_id)` FKs, unique `(tenant_id, file_hash, update)`, grant/revoke/RLS/
    `tenant_rows` policy in the same migration, no `frata_admin` grant; `tenancy.sql` gains the checks the tenancy audit
-   listed. Rows' cells are nulled when the job ends (costs). Verify: `npm run check:tenant`, `npm run verify:tenancy`.
+   listed. Rows' cells are nulled when the job ends (costs). The same migration adds a unique index on
+   `variants (tenant_id, upper(sku))` (PI·0 found the app treats SKUs case-blind while `variants_tenant_sku` doesn't: two
+   saves at once could store `KS-1` and `ks-1`; the index also turns `writeProducts`' SKU read into a lookup, now ~7 ms
+   at 10×); check production for case-only duplicates first. Verify: `npm run check:tenant`, `npm run verify:tenancy`.
 6. Actions: `startImport` (server re-checks the file's summary: ≤ 600 products, ≤ 1,800 variants, one running job per
    shop, a daily limit failing closed), `importChunk` (Zod `.strict()`, ≤ 512 kB, a Handle group never split; the server
    re-runs task 4's rules; `writeProducts` as drafts; audit row in a support visit), `deleteImportDrafts` (never
