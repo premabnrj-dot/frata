@@ -1,6 +1,6 @@
 import 'server-only'
 import { cache } from 'react'
-import { accessOf, signedInUser } from './session'
+import { accessOf, sessionIdOf, signedInUser } from './session'
 import { isAdminDatabaseConfigured, isDatabaseConfigured } from '@/lib/env'
 import { isAuthConfigured } from '@/lib/public-env'
 import type { StaffRole } from '@/lib/db/schema'
@@ -13,12 +13,23 @@ import type { StaffRole } from '@/lib/db/schema'
 // not staff. Every src/lib/admin function takes the StaffOk this returns, so
 // Admin data cannot be read without passing here first.
 //
-// Staff 2FA is off for now (owner, 2026-11-06). When it is turned on, the aal2
-// check goes HERE and nowhere else.
+// Staff passkeys (owner, 2026-11-12; ADR-0007 amended; docs/specs/2026-11-12-staff-passkeys.md): staff access needs
+// a live passkey step-up on this browser session, read in the same app_access_for query. Without one the answer is
+// `needs_passkey` with a StaffIdentity — a different type, accepted only by the passkey module (src/lib/admin/passkeys).
 // =============================================================================
 
-export type StaffOk = { ok: true; userId: string; email: string; role: StaffRole }
-export type StaffResult = StaffOk | { ok: false; reason: 'not_configured' | 'signed_out' | 'not_staff'; message: string }
+/** `confirmedAt`: when this session's passkey check was made (sensitive actions want it within 5 minutes). */
+export type StaffOk = { ok: true; userId: string; email: string; role: StaffRole; sessionId: string; confirmedAt: Date }
+/** Signed in and on staff, but no passkey check yet on this session: enough to run the check, nothing else. The brand
+ *  keeps it from ever being passed where a StaffOk is wanted. `sessionId` null: sign in again. */
+export type StaffIdentity = { readonly kind: 'staff-identity'; userId: string; email: string; role: StaffRole; sessionId: string | null }
+export type StaffResult = StaffOk
+  | { ok: false; reason: 'not_configured' | 'signed_out' | 'not_staff'; message: string }
+  | { ok: false; reason: 'needs_passkey'; message: string; identity: StaffIdentity }
+
+/** Within the last 5 minutes: adding or removing staff, approving a passkey request, removing a passkey. */
+export const FRESH_MS = 5 * 60_000
+export const confirmedRecently = (s: StaffOk, now = Date.now()) => now - s.confirmedAt.getTime() < FRESH_MS
 
 export const ANY_STAFF = ['admin', 'support'] as const satisfies readonly StaffRole[]
 export const ADMIN_ONLY = ['admin'] as const satisfies readonly StaffRole[]
@@ -30,14 +41,18 @@ const currentStaff = cache(async (): Promise<StaffOk | Exclude<StaffResult, Staf
   }
   const user = await signedInUser()
   if (!user) return { ok: false, reason: 'signed_out', message: 'Not signed in' }
-  const { staffRole } = await accessOf(user.id)
+  const { staffRole, staffConfirmedAt } = await accessOf(user.id)
   if (!staffRole) return { ok: 'none', userId: user.id }
-  return { ok: true, userId: user.id, email: user.email ?? '', role: staffRole }
+  const sessionId = await sessionIdOf(user.id)
+  if (!staffConfirmedAt || !sessionId) {
+    return { ok: false, reason: 'needs_passkey', message: 'Confirm it\'s you', identity: { kind: 'staff-identity', userId: user.id, email: user.email ?? '', role: staffRole, sessionId } }
+  }
+  return { ok: true, userId: user.id, email: user.email ?? '', role: staffRole, sessionId, confirmedAt: new Date(staffConfirmedAt) }
 })
 
 export async function requireStaff(allowed: readonly StaffRole[]): Promise<StaffResult> {
   const s = await currentStaff()
-  if (s.ok === 'none' || (s.ok === true && !allowed.includes(s.role))) {
+  if (s.ok === 'none' || (s.ok === true && !allowed.includes(s.role)) || (s.ok === false && s.reason === 'needs_passkey' && !allowed.includes(s.identity.role))) {
     return { ok: false, reason: 'not_staff', message: 'This needs Frrata staff access' }
   }
   return s

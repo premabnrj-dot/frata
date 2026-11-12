@@ -7,6 +7,9 @@ import { Panel } from '@/components/ui/panel'
 import { adminHealth } from '@/lib/admin/health'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { requireMember, ANY_MEMBER } from '@/lib/auth/require-member'
+import { gateState } from '@/lib/admin/passkeys'
+import { StaffGate } from './_components/staff-gate'
+import { signOutAction } from './sign-out/actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +19,12 @@ export const metadata: Metadata = { title: { template: '%s · Frrata Admin', def
 /** The frame and the refusal. ⚠️ It guards nothing below: every page calls requireStaff itself. */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const staff = await requireStaff(ANY_STAFF)
+  // Staff passkeys (ADR-0007 amended 2026-11-12): no page renders until this browser session has passed the check.
+  if (!staff.ok && staff.reason === 'needs_passkey') {
+    const state = await gateState(staff.identity).catch(() => null)
+    return <StaffGate email={staff.identity.email} state={state}
+      signOut={<form action={signOutAction}><button type="submit" className="text-sm underline underline-offset-4">Sign out</button></form>} />
+  }
   if (!staff.ok) {
     return (
       <main data-shell className="p-6">
