@@ -1,5 +1,5 @@
 # Neel — the console's design language (v6)
-Status: draft · Date: 2026-11-13 · Mockup: (link below once published) · Approved: — (awaiting the owner)
+Status: draft · Date: 2026-11-13 · Mockup: https://claude.ai/artifact/9WNgk65rAmNQagjTT2xmrx · Approved: — (awaiting the owner)
 
 ## Goal
 The owner (2026-11-13): "rework colour palettes, typography, the design system altogether", and the words: "tone, clear
