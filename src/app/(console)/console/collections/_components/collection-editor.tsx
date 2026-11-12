@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { LeaveDialog, Message, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import type { Rule } from '@/domains/catalogue/collection-rules'
 import { MAX_RULES } from '@/domains/catalogue/collection-rules'
-import { type Row, toRules } from './rule-rows'
+import { type Row, ruleErrors, toRules } from './rule-rows'
 import { handleFor } from '@/domains/catalogue/variants'
 import { CategoryPicker } from '../../products/_components/organise-card'
 import { SeoPanel } from '../../products/_components/seo-panel'
@@ -50,6 +50,8 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
   }, [ruleKey, d.kind]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = () => start(async () => {
+    const bad = ruleErrors(d.rules)
+    if (Object.keys(bad).length) { setErrors(bad); setMsg({ tone: 'error', text: 'Some fields need a look before saving.' }); return }
     const r = await saveCollection(d.id, { ...d, rules: toRules(d.rules) })
     if (!r.ok) { setErrors(r.errors ?? {}); setMsg({ tone: 'error', text: r.error }); return }
     setSaved(d); setErrors({}); setMsg({ tone: 'ok', text: 'Saved.' })
@@ -134,7 +136,8 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
                           <option value="">Choose…</option>{attrOptions.map((o) => <option key={`${o.handle}|${o.value}`} value={`${o.handle}|${o.value}`}>{o.label}</option>)}
                         </select>) : <p className="py-2 text-xs text-muted-foreground">Add details (fabric, occasion…) to products first.</p>)}
                       {r.field === 'colour_family' && <select aria-label={`Colour family for rule ${i + 1}`} value={r.value} onChange={(e) => setRow(i, { value: e.target.value })} className={field}><option value="">Choose…</option>{families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select>}
-                      {(r.field === 'price_below' || r.field === 'price_at_least') && <input aria-label={`Price for rule ${i + 1}`} inputMode="decimal" value={r.value} placeholder="2000" onChange={(e) => setRow(i, { value: e.target.value })} className={`${field} font-mono`} />}
+                      {(r.field === 'price_below' || r.field === 'price_at_least') && <input aria-label={`Price for rule ${i + 1}`} inputMode="decimal" value={r.value} placeholder="2000" aria-invalid={!!errors[`rule:${i}`] || undefined} onChange={(e) => setRow(i, { value: e.target.value })} className={`${field} font-mono`} />}
+                      {errors[`rule:${i}`] && <p className="text-xs text-danger-text">{errors[`rule:${i}`]}</p>}
                       {r.field === 'tag' && <input aria-label={`Tag for rule ${i + 1}`} value={r.value} maxLength={40} placeholder="Diwali 2026" onChange={(e) => setRow(i, { value: e.target.value })} className={field} />}
                       {r.field === 'in_stock' && <p className="py-2 text-xs text-muted-foreground">In stock, or taking pre-orders or made to order.</p>}
                     </div>

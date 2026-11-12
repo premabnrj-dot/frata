@@ -34,6 +34,9 @@ export function parseRupees(text: string, opts: { zero?: boolean } = {}): number
   return paise > 0 || (paise === 0 && opts.zero) ? paise : null
 }
 
+/** Why a price box was refused, in the merchant's words: a zero is a number, just not a price a shop sells at. */
+export const priceRefusal = (text: string) => (parseRupees(text, { zero: true }) === 0 ? 'More than ₹0.' : 'A price in rupees.')
+
 /** 249050 → "2490.50", 249000 → "2490": what a price box shows. */
 export function rupeesText(paise: number | null): string {
   if (paise === null) return ''

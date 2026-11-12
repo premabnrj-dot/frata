@@ -9,7 +9,7 @@
 import { istDayKey } from '../time/day'
 import { cleanGtin } from './gtin'
 import { cleanOptions, combinations, handleFor, keyOf, type Option } from './variants'
-import { parseRupees } from '../money/rupees'
+import { parseRupees, priceRefusal } from '../money/rupees'
 
 export type WhenOutInput = 'stop' | 'preorder' | 'made_to_order'
 export type VariantInput = {
@@ -70,9 +70,6 @@ import { isUqc, type Uqc } from '../tax/units'
 import { cleanLabel, type Label, type LabelInput } from './label'
 import { cleanPairIds, cleanStories, type Story } from './stories'
 
-/** Why a price box was refused: a zero is a price, just not one a shop sells at (spec 2026-11-11 § Parsing rules). */
-const notAPrice = (text: string) => (parseRupees(text, { zero: true }) === 0 ? 'More than ₹0.' : 'A price in rupees.')
-
 export const HANDLE_SHAPE = /^[a-z0-9]([a-z0-9-]{0,98}[a-z0-9])?$/
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -94,9 +91,9 @@ export function cleanProduct(p: ProductInput, now: Date): { ok: true; product: C
       const k = keyOf(values), v = byKey.get(k)
       const cell = (f: string) => `v:${k}:${f}`
       const price = parseRupees(v?.price ?? '')
-      if (price === null) errors[cell('price')] = notAPrice(v?.price ?? '')
+      if (price === null) errors[cell('price')] = priceRefusal(v?.price ?? '')
       const compareAt = v?.compareAt.trim() ? parseRupees(v.compareAt) : null
-      if (v?.compareAt.trim() && compareAt === null) errors[cell('compareAt')] = notAPrice(v.compareAt)
+      if (v?.compareAt.trim() && compareAt === null) errors[cell('compareAt')] = priceRefusal(v.compareAt)
       else if (compareAt !== null && price !== null && compareAt < price) errors[cell('compareAt')] = 'The M.R.P. can’t be below the price: never sell above M.R.P.'
       const unitCost = v?.cost.trim() ? parseRupees(v.cost, { zero: true }) : null
       if (v?.cost.trim() && unitCost === null) errors[cell('cost')] = 'A cost in rupees, or empty.'
