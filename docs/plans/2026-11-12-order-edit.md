@@ -35,6 +35,24 @@ and the edit is applied only when that payment is captured. Built as:
 - Tasks: an `edit.payment` kind beside `payment.check`; the order page's payment block reads a waiting edit; e2e: pay
   the difference, and a request that lapses.
 
+## Razorpay facts that shape OE·2 (integration-researcher, 2026-11-12; frata-integrations § Razorpay)
+- Every refund sends `speed: "normal"` (the merchant's dashboard default is the API default; Instant costs ₹7.99–14.99),
+  `receipt` = the `order_refunds` attempt id and `X-Refund-Idempotency` = the same id; the payment's refunds are listed
+  before every create and retry (key retention undocumented). Only `pending`/`processed` count as given; a `failed`
+  attempt is retried as a NEW attempt (new receipt, new key). 409 / "another operation in progress" = retry later.
+- No "refundable" field: what can still be refunded is captured − listed pending − processed, PER Razorpay payment. After
+  a paid increase an order has two payments: the ledger is per payment, a later decrease may need two refunds, and the
+  6-month check is per payment (both a 400 at create and a later `failed` are handled).
+- Too little balance FAILS the refund at create (not queued): the order shows "Refund ₹X not sent · add funds in
+  Razorpay · Try again"; the edit stands.
+- The payment for a higher total is a second Razorpay order with its own receipt (`${number}-e${editId8}`, ≤ 40 chars,
+  unique per account; reused on retry via `GET /v1/orders?receipt=`), opened in Checkout with the shop's key on the
+  order page; the signature checked against OUR stored second order id. A difference under ₹1 (Razorpay's minimum) is
+  not asked for: the edit applies at once (the shop absorbs it).
+- "Processed" is not "in the shopper's account": the email says the refund is on its way within 5–10 working days.
+- `refund.check` (reading status back) stays the primary path; `refund.*` webhooks are optional (the merchant must tick
+  them) and an auto-refund event matching no `order_refunds` row is ignored.
+
 ## Open (owner)
 - **An offer that now gives less** (a tier steps down, a % on a smaller bag, a product offer on fewer lines). Uses and
   budgets read `order_discounts.amount`. Leaning (coordinator, 2026-11-12): mark the old row `removed_at` and insert a
