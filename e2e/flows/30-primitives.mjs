@@ -80,7 +80,7 @@ export default {
     await t.step('toast: a failed undo says why; an undo that finishes after a newer toast leaves the newer one alone', async () => {
       await p.getByRole('button', { name: 'Confirm slowly' }).click(); await p.getByText('KS-1002 confirmed.').waitFor()
       await p.getByRole('button', { name: 'Undo' }).click()
-      await p.locator('[data-toast]', { hasText: 'Already packed — cancel it instead.' }).waitFor()
+      await expectToast(p, 'Already packed — cancel it instead.', 'error')
       await p.getByRole('button', { name: 'Confirm slowly' }).click(); await p.getByRole('button', { name: 'Undo' }).click()
       await p.getByRole('button', { name: 'Hold', exact: true }).click() // a newer toast while the undo still runs
       await p.locator('[data-toast]', { hasText: 'KS-1003 on hold.' }).waitFor()
@@ -133,6 +133,24 @@ export default {
       assert.equal(await name.inputValue(), 'refuse')
       await name.fill('Kesar Studio'); await f.getByRole('button', { name: 'Rename' }).click()
       await expectToast(p, 'Renamed to Kesar Studio.', 'ok')
+    })
+
+    await t.step('leaving with unsaved changes asks in the one Dialog; Keep editing keeps the words; Leave goes', async () => {
+      await p.goto(CONSOLE + '/console/settings/store')
+      const name = p.getByLabel('Shop name')
+      await name.fill('Kesar Studio Test')
+      await p.getByRole('link', { name: 'Orders' }).first().click()
+      const d = p.getByRole('dialog', { name: 'Leave without saving?' })
+      await d.waitFor()
+      assert.equal(await d.getByRole('button', { name: 'Keep editing' }).evaluate((b) => b === document.activeElement), true, 'the safe button has focus')
+      await d.getByRole('button', { name: 'Keep editing' }).click()
+      await d.waitFor({ state: 'hidden' })
+      assert.equal(await name.inputValue(), 'Kesar Studio Test')
+      assert.match(p.url(), /\/console\/settings\/store/)
+      await p.getByRole('link', { name: 'Orders' }).first().click()
+      await d.getByRole('button', { name: 'Leave' }).click()
+      await p.waitForURL(/\/console\/orders/)
+      await p.goto(CONSOLE + '/console/fixtures/ui')
     })
 
     await t.step('a failure inside a popup stays in it (§ Feedback 4)', async () => {

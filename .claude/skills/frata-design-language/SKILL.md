@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.21.0
+  version: 5.21.1
   verified: 2026-11-12
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -586,11 +586,12 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
    **It never leaves by itself** (WCAG 2.2.1), `role="alert"`, Esc or × closes it. Never a red line at the top of a
    page, never a `?error=` paragraph.
 2. **Success is a toast of kind ok** (green check), 8 s, paused on hover/focus, Undo where reversible (§ Work queues 4).
-   `role="status"`, spoken through the one polite region.
-3. **Field mistakes stay at the field** (`<FieldError>` + `useFieldErrors`): red edge, one short line with the mark,
-   checked on blur and on submit, cleared the moment the field is fixed, nothing typed is ever cleared. On submit,
+   No role of its own: spoken through the one polite region (the shell's, or the Toaster's where there is no shell).
+3. **Field mistakes stay at the field** (`<FieldError>` + `useFieldErrors`, or `<ActionForm>` + `<FieldMessage>`):
+   red edge, one short line with the mark, checked on submit (on blur where a form already does), cleared the moment the field is fixed, nothing typed is ever cleared. On submit,
    focus goes to the first wrong field and ONE error toast says "2 fields need fixing" with **Show**; it counts down
-   as they are fixed and leaves at zero. The toast never takes focus.
+   as they are fixed and leaves at zero. The toast never takes focus and is not an alert (said once, politely); inside
+   a Dialog there is no toast (the page behind is inert): the marks and the focus say it.
 4. **Popups confirm what loses work, money or stock** (`Dialog`, the phone sheet), with a pictogram from § Graphic
    language. A failure inside a popup is shown in that popup (`Dialog`'s error slot), never a second popup or a toast
    behind it. No other kind of popup for errors.

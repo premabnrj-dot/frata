@@ -35,7 +35,7 @@ export function focusFirstInvalid(scope: HTMLElement | null | undefined) {
  * Watches a form's errors. `attempt` changes on every submit, so the same mistakes submitted again focus and show
  * again. `noun`: "field" in the console and Admin, "detail" at the shop's checkout.
  */
-export function useErrorSummary(errors: Errors, opts: { attempt?: number; noun?: string; scope: React.RefObject<HTMLElement | null> }) {
+export function useErrorSummary(errors: Errors, opts: { attempt?: number; noun?: string; scope: React.RefObject<HTMLElement | null>; /** A refusal said with the mistakes, as the second line. */ sub?: string }) {
   const toast = useToast()
   const noun = opts.noun ?? 'field'
   const n = count(errors)
@@ -45,14 +45,15 @@ export function useErrorSummary(errors: Errors, opts: { attempt?: number; noun?:
     const prev = last.current
     last.current = { n, attempt: opts.attempt }
     if (n === 0) { if (shown.current !== null) { toast.dismiss(shown.current); shown.current = null } return }
-    const fresh = n > prev.n || opts.attempt !== prev.attempt || shown.current === null
+    // Fresh only for more mistakes or a new submit: fixing one never moves focus (inside a Dialog too).
+    const fresh = n > prev.n || opts.attempt !== prev.attempt
     // Inside an open Dialog the page behind is inert: no toast, the marks and the focus say it (§ Feedback 4).
     const inDialog = !!opts.scope.current?.closest('dialog[open]')
     if (fresh) {
       if (!inDialog) {
         const id = toast.next()
         // Quiet: focus is already on the first field, which reads its own line; the count is said once, politely.
-        toast.error(words(n, noun), { quiet: true, action: { label: 'Show', keep: true, run: () => focusFirstInvalid(opts.scope.current) } })
+        toast.error(words(n, noun), { quiet: true, sub: opts.sub, action: { label: 'Show', keep: true, run: () => focusFirstInvalid(opts.scope.current) } })
         shown.current = id
       }
       focusFirstInvalid(opts.scope.current)

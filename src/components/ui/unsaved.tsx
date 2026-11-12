@@ -53,9 +53,10 @@ export function SaveBar({ onSave, onDiscard, pending }: { onSave: () => void; on
 }
 
 /** Leaving with changes: the one Dialog (a sheet on a phone), "Keep editing" the safe, focused button (§ Feedback 4). */
-export function LeaveDialog({ what, onStay, onLeave }: { what: string; onStay: () => void; onLeave: () => void }) {
+export function LeaveDialog({ open, what, onStay, onLeave }: { open: boolean; what: string; onStay: () => void; onLeave: () => void }) {
+  // Kept mounted and opened/closed (never mounted open): closing returns focus to what had it.
   return (
-    <Dialog open onClose={onStay} title="Leave without saving?" description={<>Your changes to {what} are not saved and will be lost.</>}
+    <Dialog open={open} onClose={onStay} title="Leave without saving?" description={<>Your changes to {what} are not saved and will be lost.</>}
       actions={<>
         <Button variant="secondary" data-autofocus onClick={onStay}>Keep editing</Button>
         <Button variant="destructive" onClick={onLeave}>Leave</Button>

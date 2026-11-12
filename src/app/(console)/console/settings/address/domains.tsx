@@ -60,7 +60,7 @@ function DomainsInner({ nameHost, names, rows, livePayments, available, canManag
     setBusy(id)
     const r = await run().catch(() => ({ ok: false, error: 'We could not change it. Nothing was changed.' }))
     setBusy(null)
-    if (!r.ok) { toast({ text: r.error ?? 'We could not change it. Nothing was changed.' }); return }
+    if (!r.ok) { toast.error(r.error ?? 'We could not change it. Nothing was changed.'); return }
     if (ok) toast({ text: ok })
     settle(router)
   }
@@ -79,7 +79,7 @@ function DomainsInner({ nameHost, names, rows, livePayments, available, canManag
       const r = await run.catch(() => ({ ok: false as const, error: 'We could not change it. Nothing was changed.' }))
       await new Promise((res) => setTimeout(res, Math.max(0, 1300 - (Date.now() - began)))) // clock-ok: in a handler or timer, never at render
       setGoing(false)
-      if (!r.ok) { toast({ text: r.error }); return }
+      if (!r.ok) { toast.error(r.error); return }
       settle(router)
       // A name made main while a domain is main is the shop's frrata name, not its main address: a toast says so.
       if (m.kind === 'name' && main) toast({ text: `${m.host} is your frrata address` })

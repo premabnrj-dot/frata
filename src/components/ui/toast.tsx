@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { usePathname } from 'next/navigation'
-import { announce } from '@/components/shell/announce'
+import { FALLBACK_ANNOUNCER_ID, announce } from '@/components/shell/announce'
 import { cn } from '@/lib/utils'
 
 // =============================================================================
@@ -67,9 +67,8 @@ export function useToast(): ToastApi {
   return api
 }
 
-export function Toaster({ children, tone = 'app', calm = false, region = true }: {
+export function Toaster({ children, calm = false, region = true }: {
   children: React.ReactNode
-  tone?: 'app' | 'store'
   /** Admin: no snap on the mark. */
   calm?: boolean
   /** Render a polite region for announce() (false inside AppShell, which has its own). */
@@ -127,7 +126,12 @@ export function Toaster({ children, tone = 'app', calm = false, region = true }:
   // Esc closes an error toast, unless a dialog is open (Esc is the dialog's then).
   useEffect(() => {
     if (toast?.kind !== 'error' || leaving) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('dialog[open]')) leave(toast.id) }
+    // Not while typing, in a menu, or with a dialog open: Esc is theirs then.
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (e.key !== 'Escape' || document.querySelector('dialog[open]') || t?.closest('input, textarea, select, [contenteditable], [role="menu"], [popover]:popover-open')) return
+      leave(toast.id)
+    }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [toast, leaving, leave])
@@ -165,7 +169,9 @@ export function Toaster({ children, tone = 'app', calm = false, region = true }:
     // Same toast, new words: no remount, so keyboard focus stays on the toast, which now says what happened.
     const said = r.ok ? 'Undone.' : r.error ?? 'We could not undo that.'
     setToast({ id, kind: r.ok ? 'ok' : 'error', text: said })
-    if (r.ok) { announce(said); run(4000) }
+    // Said aloud either way: a node already on screen turning into an alert is not reliably read.
+    announce(said)
+    if (r.ok) run(4000)
     box.current?.focus()
   }
   const act = async () => {
@@ -176,17 +182,16 @@ export function Toaster({ children, tone = 'app', calm = false, region = true }:
     try { await a.run() } finally { if (seq.current === id) { setBusy(false); if (!a.keep) leave(id) } }
   }
 
-  const store = tone === 'store'
   const el = toast ? (
         <div key={toast.id} ref={box} tabIndex={-1} data-toast={toast.kind} data-leaving={leaving ? '' : undefined} data-calm={calm ? '' : undefined}
           role={toast.kind === 'error' && !toast.quiet ? 'alert' : undefined}
           onPointerEnter={() => setHeld((h) => ({ ...h, hover: true }))} onPointerLeave={() => setHeld((h) => ({ ...h, hover: false }))}
           onFocus={() => setHeld((h) => ({ ...h, focus: true }))} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setHeld((h) => ({ ...h, focus: false })) }}
           className={cn('fixed inset-x-4 z-50 mx-auto flex max-w-md items-center gap-3 overflow-hidden px-3 py-2.5 text-sm print:hidden',
-            store ? 'bottom-[calc(var(--store-bar,5.5rem)+1rem+env(safe-area-inset-bottom))] rounded-xl bg-store-ink text-store-paper' : 'bottom-[calc(var(--toast-lift,0px)+1rem+env(safe-area-inset-bottom))] rounded-md bg-primary text-primary-foreground md:bottom-[calc(var(--toast-lift,0px)+1.5rem)]',
-            toast.kind === 'error' && (store ? 'ring-1 ring-store-bad/60' : 'ring-1 ring-danger-mark/60'))}
-          data-surface={store ? undefined : 'ink'}>
-          <Mark kind={toast.kind} store={store} />
+            'bottom-[calc(var(--toast-lift,0px)+1rem+env(safe-area-inset-bottom))] rounded-md bg-primary text-primary-foreground md:bottom-[calc(var(--toast-lift,0px)+1.5rem)]',
+            toast.kind === 'error' && 'ring-1 ring-danger-mark/60')}
+          data-surface="ink">
+          <Mark kind={toast.kind} />
           <span className="min-w-0 flex-1">
             {toast.text}
             {toast.sub ? <span className="block text-xs opacity-80">{toast.sub}</span> : null}
@@ -216,18 +221,17 @@ export function Toaster({ children, tone = 'app', calm = false, region = true }:
     <Ctx.Provider value={api}>
       {children}
       {el && host?.isConnected && host.open ? createPortal(el, host) : el}
-      {region ? <div id={TOAST_REGION_ID} aria-live="polite" aria-atomic="true" className="sr-only" /> : null}
+      {region ? <div id={FALLBACK_ANNOUNCER_ID} aria-live="polite" aria-atomic="true" className="sr-only" /> : null}
     </Ctx.Provider>
   )
 }
-/** The polite region a Toaster renders on a page without the shell's (announce() falls back to it). */
-export const TOAST_REGION_ID = 'toast-announcer'
+
 
 /** The kind's mark: a check or an exclamation in a disc, popping once (base.css [data-mark]). Never the only sign: the words say it. */
-function Mark({ kind, store }: { kind: 'ok' | 'error'; store: boolean }) {
-  const disc = kind === 'ok' ? (store ? 'bg-store-good' : 'bg-ok-mark') : (store ? 'bg-store-bad' : 'bg-danger-mark')
+function Mark({ kind }: { kind: 'ok' | 'error' }) {
+  const disc = kind === 'ok' ? 'bg-ok-mark' : 'bg-danger-mark'
   return (
-    <span data-mark aria-hidden className={cn('grid size-5.5 shrink-0 place-items-center rounded-full', disc, store ? 'text-store-paper' : 'text-primary-foreground')}>
+    <span data-mark aria-hidden className={cn('grid size-5.5 shrink-0 place-items-center rounded-full', disc, 'text-primary-foreground')}>
       {kind === 'ok'
         ? <svg width="13" height="13" viewBox="0 0 16 16"><path d="M3.5 8.4l3 3 6-6.4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         : <svg width="13" height="13" viewBox="0 0 16 16"><path d="M8 3.6v5.4M8 12v.4" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /></svg>}

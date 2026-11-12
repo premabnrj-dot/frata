@@ -9,10 +9,10 @@
 export const ANNOUNCER_ID = 'shell-announcer'
 
 /** A page without the shell (sign-in, the look editor, Admin's passkey gate) has its Toaster's region instead. */
-const FALLBACK_ID = 'toast-announcer'
+export const FALLBACK_ANNOUNCER_ID = 'toast-announcer'
 
 export function announce(text: string) {
-  const el = typeof document === 'undefined' ? null : document.getElementById(ANNOUNCER_ID) ?? document.getElementById(FALLBACK_ID)
+  const el = typeof document === 'undefined' ? null : document.getElementById(ANNOUNCER_ID) ?? document.getElementById(FALLBACK_ANNOUNCER_ID)
   if (!el) return
   el.textContent = ''
   window.setTimeout(() => { el.textContent = text }, 50)

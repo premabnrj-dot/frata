@@ -164,7 +164,7 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
           </Section>
         )}
       </div>
-      {guard.leaveTo && <LeaveDialog what={saved.title || 'this collection'} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(d))} />}
+      <LeaveDialog open={!!guard.leaveTo} what={saved.title || 'this collection'} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(d))} />
     </div>
   )
 }

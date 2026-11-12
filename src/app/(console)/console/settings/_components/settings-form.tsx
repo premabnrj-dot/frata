@@ -115,7 +115,7 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
         </aside>
       </div>
 
-      {guard.leaveTo && <LeaveDialog what={section.title} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(values))} />}
+      <LeaveDialog open={!!guard.leaveTo} what={section.title} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(values))} />
     </div>
   )
 }

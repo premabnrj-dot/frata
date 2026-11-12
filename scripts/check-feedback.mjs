@@ -17,6 +17,7 @@
 // =============================================================================
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const ROOT = process.cwd()
 const ALLOW = join(ROOT, 'scripts/feedback-allow.json')
@@ -64,7 +65,8 @@ export function scan(files) {
       for (let m; (m = re.exec(text)); ) {
         const i = lineOf(m.index), t = lines[i].trim()
         if (t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('{/*')) continue
-        if (/feedback-ok:/.test(lines[i]) || /feedback-ok:/.test(lines[i - 1] ?? '')) continue
+        // A pinned site names its reason: `feedback-ok: <why>` (a bare marker does not count).
+        if (/feedback-ok:\s*\S.{2,}/.test(lines[i]) || /feedback-ok:\s*\S.{2,}/.test(lines[i - 1] ?? '')) continue
         ;(found[rel] ??= { count: 0, hits: [] }).count++
         found[rel].hits.push(`${i + 1}: ${name}`)
       }
@@ -73,28 +75,36 @@ export function scan(files) {
   return found
 }
 
-const files = only ? (statSync(only).isDirectory() ? walk(only) : [only]) : DIRS.flatMap((d) => walk(join(ROOT, d)))
-const found = scan(files)
-let allow = {}
-try { allow = JSON.parse(readFileSync(ALLOW, 'utf8')) } catch { allow = {} }
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main()
 
-if (write) {
-  const next = {}
-  for (const [f, v] of Object.entries(found).sort()) next[f] = { count: v.count }
-  writeFileSync(ALLOW, JSON.stringify(next, null, 2) + '\n')
-  console.log(`check:feedback — wrote ${Object.keys(next).length} files to scripts/feedback-allow.json`)
-  process.exit(0)
-}
+function main() {
+  const files = only ? (statSync(only).isDirectory() ? walk(only) : [only]) : DIRS.flatMap((d) => walk(join(ROOT, d)))
+  const found = scan(files)
+  let allow = {}
+  try { allow = JSON.parse(readFileSync(ALLOW, 'utf8')) } catch { allow = {} }
 
-const problems = []
-for (const [f, v] of Object.entries(found)) {
-  const max = allow[f]?.count ?? 0
-  if (v.count > max) problems.push(`${f}: ${v.count} hand-written error line(s), ${max} allowed — use toast.error, <FieldError> or the Dialog's error slot (§ Feedback)\n    ${v.hits.join('\n    ')}`)
+  if (write) {
+    // Only ever lower a count (the ratchet): a file above its allowance stays at it and fails below; a new file is
+    // never added. With a path, the files outside it keep their entries.
+    const next = only ? { ...allow } : {}
+    for (const [f, v] of Object.entries(found)) if (allow[f]) next[f] = { count: Math.min(v.count, allow[f].count) }
+    for (const f of Object.keys(next)) if (!found[f] && (!only || files.some((x) => relative(ROOT, x) === f))) delete next[f]
+    const sorted = Object.fromEntries(Object.entries(next).sort(([a], [b]) => a.localeCompare(b)))
+    writeFileSync(ALLOW, JSON.stringify(sorted, null, 2) + '\n')
+    console.log(`check:feedback — wrote ${Object.keys(sorted).length} files to scripts/feedback-allow.json`)
+    return
+  }
+
+  const problems = []
+  for (const [f, v] of Object.entries(found)) {
+    const max = allow[f]?.count ?? 0
+    if (v.count > max) problems.push(`${f}: ${v.count} hand-written error line(s), ${max} allowed — use toast.error, <FieldError> or the Dialog's error slot (§ Feedback)\n    ${v.hits.join('\n    ')}`)
+  }
+  if (!only) for (const [f, v] of Object.entries(allow)) {
+    const now = found[f]?.count ?? 0
+    if (now < v.count) problems.push(`${f}: down to ${now} from ${v.count} — record it: node scripts/check-feedback.mjs --write`)
+  }
+  if (problems.length) { console.error('check:feedback —\n  ' + problems.join('\n  ')); process.exitCode = 1; return }
+  const left = Object.values(allow).reduce((s, v) => s + v.count, 0)
+  console.log(`check:feedback — clean (${files.length} files; ${left} lines left to move)`)
 }
-if (!only) for (const [f, v] of Object.entries(allow)) {
-  const now = found[f]?.count ?? 0
-  if (now < v.count) problems.push(`${f}: down to ${now} from ${v.count} — record it: node scripts/check-feedback.mjs --write`)
-}
-if (problems.length) { console.error('check:feedback —\n  ' + problems.join('\n  ')); process.exit(1) }
-const left = Object.values(allow).reduce((s, v) => s + v.count, 0)
-console.log(`check:feedback — clean (${files.length} files; ${left} lines left to move)`)

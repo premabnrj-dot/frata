@@ -60,13 +60,13 @@ function Actions(p: OrderActionsProps) {
   const [error, setError] = useState<string | null>(null)
 
   async function run(label: string, fn: () => Promise<{ ok: boolean; error?: string; eventId?: string; by?: { email: string | null; at: string } }>, undo = false) {
-    if (busy) { toast({ text: 'Still saving the last change…' }); return null }
+    if (busy) { toast.error('Still saving the last change…'); return null }
     setBusy(true)
     let r: Awaited<ReturnType<typeof fn>>
     try { r = await fn() } catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing was changed.' } } finally { setBusy(false) }
     if (!r.ok) {
       const by = r.by ? ` by ${r.by.email ?? 'someone'} at ${new Date(r.by.at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' })}` : ''
-      toast({ text: `${r.error}${by}.` }); router.refresh(); return null
+      toast.error(`${r.error}${by}.`); router.refresh(); return null
     }
     const eventId = r.eventId
     toast({ text: `${p.number} ${label}.`, undo: undo && eventId ? async () => { const u = await undoOrderAction(eventId); router.refresh(); return u.ok ? { ok: true } : { ok: false, error: u.error } } : undefined })
@@ -92,7 +92,7 @@ function Actions(p: OrderActionsProps) {
     ...(p.pdf?.credit ? [{ label: 'Download credit note (PDF)', href: p.pdf.credit }] : []),
     ...(p.credit?.may ? [{ label: 'Issue credit note…', onSelect: () => setCreditOpen(true) }] : []),
     ...(p.part ? [{ label: 'Credit returned items or a discount…', onSelect: () => setPartOpen(true) }] : []),
-    { label: 'Copy link', onSelect: () => { void navigator.clipboard?.writeText(window.location.href).then(() => toast({ text: 'Link copied.' }), () => toast({ text: 'Copy the address from the address bar.' })) } },
+    { label: 'Copy link', onSelect: () => { void navigator.clipboard?.writeText(window.location.href).then(() => toast({ text: 'Link copied.' }), () => toast.error('Copy the address from the address bar.')) } },
     ...(p.may.cancel && p.primary !== 'cancel' ? [{ label: 'Cancel order…', onSelect: () => setCancelOpen(true), danger: true }] : []),
   ]
 

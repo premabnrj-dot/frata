@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a PDF download that saves as pdf.txt, MODULE_NOT_FOUND in production only, a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.21.0
+  version: 1.22.0
   verified: 2026-11-08
 ---
 
@@ -38,7 +38,7 @@ metadata:
 | "Set every price" fills only the last row | Many `onChange` calls in one event each spread the SAME stale state | Update with a function: `setD((x) => …)` |
 | Phone page scrolls sideways though every table sits in `overflow-x-auto` | `sr-only` labels are `position: absolute` and escape a scroll box that is not positioned | Every scroll box is `relative overflow-x-auto` |
 | React #418 "text" in production, now and then | A client component read `Date.now()`/`new Date()` while rendering; server and browser got different minutes ("just now" vs "1 min ago") | Render from `useNow()` (the page's time); `check:clock`; e2e with `page.clock.install` ahead of the server |
-| An Undo toast vanishes the moment the action succeeds | The `<Toaster>` lived inside the row list or panel that `router.refresh()` removed (the tab emptied; the order left the panel's state) | Keep the Toaster mounted above the conditional: `Queue` takes `empty`, `ShipPanel` has stage `done` (e2e 49) |
+| An Undo toast vanishes the moment the action succeeds | The `<Toaster>` lived inside the row list or panel that `router.refresh()` removed (the tab emptied; the order left the panel's state) | The Toaster is AppShell's now, above every page (feedback F0, 2026-11-12): never mount another inside a panel or list. An ok toast's Undo therefore outlives its row, its panel and a move to another page; an error toast leaves on a page change |
 | A form loses its "Saved" message right after saving | The page passed `key={version}`, so `router.refresh()` re-created the form | No `key` from data that a save changes |
 | Local run tests an old build after a rebuild | `pkill -f "next start"` misses the `next-server` child; the new server hits EADDRINUSE | `pkill -f "next-server|next start"`, then check the log says Ready |
 | A shop page renders on every request though it has `revalidate` | A `[param]` segment with no `generateStaticParams` is a dynamic route in Next 15 | `export const generateStaticParams = () => []` on every segment (`check:storefront-build`) |

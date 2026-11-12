@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.47.1
+  version: 2.48.0
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -206,6 +206,14 @@ export async function confirmOrder(input: unknown): Promise<{ ok: boolean; error
   }
 }
 ```
+
+**A result goes back to the form, never into a URL or a cookie** (feedback plan 2026-11-12, frata-design-language
+§ Feedback). A form that posts to a server action is an `<ActionForm action={…}>` (`src/components/ui/action-form.tsx`);
+the action returns `ActionResult` — `{ ok?: string, error?: string, fields?: Record<name, string>, go?: path }` — and
+the form shows it (toast.ok / toast.error, `<FieldMessage name>` under each field, `go` followed after the toast). Never
+`redirect('?error=…')`: any link could put words there (check:feedback refuses it). Client code that calls an action
+itself uses `useToast()` (`toast.error` for a refusal, `toast.ok` or `toast({ text, undo })` for a success), plain
+pending state and `settle(router)` after it, never a `useTransition` around the action (frata-gotchas: Next 15.5).
 
 ## Record actions (1D Orders, 2026-11-07)
 

@@ -78,7 +78,7 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
     }
     return undo
   }
-  const saving = () => { toast({ text: 'Still saving the last change…' }); return true }
+  const saving = () => { toast.error('Still saving the last change…'); return true }
 
   async function act(row: QueueRow, what: 'confirm' | 'hold') {
     if (busy && saving()) return
@@ -92,7 +92,7 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
       unmark([row.id])
       const by = (r as { by?: { email: string | null; at: string } }).by
       const who = by ? ` by ${by.email ?? 'someone'} at ${new Date(by.at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' })}` : ''
-      toast({ text: `${row.number}: ${r.error}${who}.` })
+      toast.error(`${row.number}: ${r.error}${who}.`)
       return
     }
     const undo = undoable([r.eventId], [row.id]); lastUndo.current = undo
@@ -108,7 +108,7 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
     try { r = row.shipStep === 'ship' ? await shipOrder(row.id) : await deliverOrder(row.id) }
     catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing was changed.' } }
     finally { setBusy(false) }
-    if (!r.ok) { unmark([row.id]); toast({ text: `${row.number}: ${r.error}` }); return }
+    if (!r.ok) { unmark([row.id]); toast.error(`${row.number}: ${r.error}`); return }
     const undo = undoable([r.eventId], [row.id], true); lastUndo.current = undo
     toast({ text: `${row.number} marked ${word.toLowerCase()}.`, undo })
   }
@@ -116,11 +116,11 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
   async function bulkDelivered() {
     if (busy && saving()) return
     const ids = rows.filter((r) => picked.has(r.id) && r.shipStep === 'deliver').map((r) => r.id)
-    if (!ids.length) { toast({ text: 'None of the selected orders is on its way.' }); return }
+    if (!ids.length) { toast.error('None of the selected orders is on its way.'); return }
     setBusy(true)
     let r: BulkResult
     try { r = await deliverMany(ids) } catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing more was changed.' } } finally { setBusy(false) }
-    if (!r.ok) { toast({ text: r.error }); return }
+    if (!r.ok) { toast.error(r.error); return }
     setDone((d) => ({ ...d, ...Object.fromEntries(r.done.map((c) => [c.id, 'Delivered'])) }))
     setPicked(new Set())
     const label = (id: string) => rows.find((x) => x.id === id)?.number ?? 'One order'
@@ -134,13 +134,13 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
   async function bulk(what: 'confirm' | 'hold') {
     if (busy && saving()) return
     const ids = rows.filter((r) => picked.has(r.id) && (what === 'confirm' ? r.canConfirm : r.canHold)).map((r) => r.id)
-    if (!ids.length) { toast({ text: what === 'confirm' ? 'None of the selected orders can be confirmed.' : 'None of the selected orders can be put on hold.' }); return }
+    if (!ids.length) { toast.error(what === 'confirm' ? 'None of the selected orders can be confirmed.' : 'None of the selected orders can be put on hold.'); return }
     setBusy(true)
     let r: BulkResult
     try { r = what === 'confirm' ? await confirmMany(ids) : await holdMany(ids) }
     catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing more was changed.' } }
     finally { setBusy(false) }
-    if (!r.ok) { toast({ text: r.error }); return }
+    if (!r.ok) { toast.error(r.error); return }
     setDone((d) => ({ ...d, ...Object.fromEntries(r.done.map((c) => [c.id, what === 'confirm' ? 'Confirmed' : 'On hold'])) }))
     setPicked(new Set())
     const parts = [`${what === 'confirm' ? 'Confirmed' : 'Put on hold'} ${r.done.length}.`]
@@ -160,8 +160,8 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
     open: () => { const r = here(); if (r) router.push(r.href) },
     confirm: () => { const r = here(); if (!r) return; if (confirmKey(r) === 'open') router.push(r.href); else void act(r, 'confirm') },
     hold: () => { const r = here(); if (r?.canHold) void act(r, 'hold') },
-    print: () => { const r = here(); if (r?.canPrint) router.push(printHref('slip', [r.n])); else if (r) toast({ text: `${r.number} has no packing slip yet.` }) },
-    undo: () => { const u = lastUndo.current; if (u) void u().then((x) => toast({ text: x.ok ? 'Undone.' : x.error ?? 'We could not undo that.' })) },
+    print: () => { const r = here(); if (r?.canPrint) router.push(printHref('slip', [r.n])); else if (r) toast.error(`${r.number} has no packing slip yet.`) },
+    undo: () => { const u = lastUndo.current; if (u) void u().then((x) => (x.ok ? toast.ok('Undone.') : toast.error(x.error ?? 'We could not undo that.'))) },
     search: () => document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
     help: () => setKeys(true),
   })

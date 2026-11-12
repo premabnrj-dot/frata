@@ -41,7 +41,7 @@ function Panel({ orderId, number, stage, may, shipment, stockTaken }: ShipPanelP
     let r: { ok: true; eventId: string } | { ok: false; error: string }
     try { r = await fn() } catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing was changed.' } }
     setBusy(false); setAsk(null)
-    if (!r.ok) { toast({ text: r.error }); return }
+    if (!r.ok) { toast.error(r.error); return }
     const eventId = r.eventId
     toast({ text: `${number} marked ${word}.`, undo: async () => { const u = await undoOutcomeAction(eventId); router.refresh(); return u.ok ? { ok: true } : { ok: false, error: u.error } } })
     router.refresh()

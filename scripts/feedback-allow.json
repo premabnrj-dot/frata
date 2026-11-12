@@ -134,9 +134,6 @@
   "src/app/(console)/console/look/_components/restore.tsx": {
     "count": 1
   },
-  "src/app/(console)/console/offers/[id]/page.tsx": {
-    "count": 1
-  },
   "src/app/(console)/console/offers/_components/offer-codes.tsx": {
     "count": 1
   },
@@ -147,6 +144,9 @@
     "count": 1
   },
   "src/app/(console)/console/offers/_components/offer-steps.tsx": {
+    "count": 1
+  },
+  "src/app/(console)/console/offers/[id]/page.tsx": {
     "count": 1
   },
   "src/app/(console)/console/orders/_components/contact-and-notes.tsx": {

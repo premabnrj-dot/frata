@@ -209,7 +209,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           <ReadyFor d={d} photos={photos.length} priced={prices.length === cells.length && cells.length > 0} />
         </aside>
       </div>
-      {guard.leaveTo && <LeaveDialog what={saved.title || 'this product'} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(d))} />}
+      <LeaveDialog open={!!guard.leaveTo} what={saved.title || 'this product'} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(d))} />
     </div>
   )
 }

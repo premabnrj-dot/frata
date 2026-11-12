@@ -148,3 +148,31 @@ describe('check:motion', async () => {
     ].sort())
   })
 })
+
+describe('check:feedback', async () => {
+  const { scan } = await import('../check-feedback.mjs')
+  it('finds hand-written error lines, JSX across lines, URL results; skips comments and reasoned pins', () => {
+    const bad = file('feedback-bad.tsx', [
+      'const a = <p',
+      "  role={m.tone === 'ok' ? 'status' : 'alert'}>x</p>",
+      'const b = <Message m={m} />',
+      'const c = <div className="x" role="alert">y</div>',
+      'const d = <p className="text-store-bad">z</p>',
+      'back(`ok=${x}`)',
+      'const { error } = await searchParams',
+      'type P = { searchParams: Promise<{ error?: string }> }',
+    ].join('\n'))
+    const hits = (scan([bad]) as Record<string, { hits: string[] }>)
+    const got = Object.values(hits)[0]!.hits.map((h) => h.split(': ')[1]).sort()
+    expect(got).toEqual(['alert-line', 'alert-line', 'danger-line', 'message', 'url-result', 'url-result', 'url-result'])
+    const quiet = file('feedback-quiet.tsx', [
+      '// <p role="alert"> is only mentioned here',
+      'const e = <p role="alert">Pick a size.</p> // feedback-ok: § Feedback 5 Pick a size stays',
+      '// feedback-ok: § Feedback 5 a code that does not apply stays beside it',
+      'const f = <span role="alert">This code doesn’t work here.</span>',
+    ].join('\n'))
+    expect(scan([quiet])).toEqual({})
+    const bare = file('feedback-bare.tsx', 'const g = <p role="alert">x</p> // feedback-ok:\n')
+    expect(Object.keys(scan([bare]))).toHaveLength(1)
+  })
+})
