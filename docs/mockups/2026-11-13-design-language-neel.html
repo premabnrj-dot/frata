@@ -318,6 +318,57 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
 .sb { height: 8px; background: var(--g100); border-radius: 999px; overflow: hidden } .sb i { display: block; height: 100%; background: var(--chart); border-radius: 999px } .share-bars b { font-weight: 500; text-align: right }
 .funnel { display: grid; gap: 4px } .funnel div { background: var(--n50); color: var(--n800); border-radius: 6px; padding: 6px 10px; font-size: 13px; white-space: nowrap; display: flex; gap: 6px; min-width: max-content }
 .funnel b { font-weight: 600 }
+.kpis4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px }
+.kc { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; align-content: start }
+.kc .k { font: 500 13px/18px var(--font); color: var(--text-2); display: flex; gap: 6px; align-items: center } .kc b { font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em }
+.kc svg { width: 100%; height: 24px } .sl { fill: none; stroke: var(--n500); stroke-width: 1.5 }
+.tip { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--g400); font: 600 10px/14px var(--font); text-align: center; color: var(--text-2) }
+.d { font: 500 12px/16px var(--font) } .d.up { color: var(--ok-fg) } .d.bad { color: var(--bad-fg) }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); margin-bottom: 6px } .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px }
+.legend i.dash, .ttip i.dash { background: repeating-linear-gradient(90deg, var(--g400) 0 3px, transparent 3px 5px); height: 2px; vertical-align: 3px }
+.chart .grid line { stroke: var(--g100) } .chart .yl text { text-anchor: end } .chart .xl text { text-anchor: middle }
+.chart .ann { stroke: var(--warn-dot); stroke-dasharray: 3 3 } .chart .annt { fill: var(--warn-fg); text-anchor: start; font-weight: 600 } .chart .cross { stroke: var(--g300) }
+.ttip { position: absolute; max-width: 200px; background: var(--bar); color: var(--bar-text); border-radius: 8px; padding: 8px 10px; display: grid; gap: 2px; font-size: 12px; box-shadow: var(--e2); white-space: nowrap }
+.ttip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px }
+.stack { display: grid; gap: 8px } .stack div { display: grid; grid-template-columns: 60px 1fr 40px; gap: 10px; align-items: center; font-size: 13px } .stack b { font-weight: 500; text-align: right }
+.sb2 { display: flex; height: 12px; border-radius: 4px; overflow: hidden; gap: 2px } .sb2 i { display: block; height: 100% }
+.chart .wf rect { fill: var(--g300) } .chart .wf .pos { fill: var(--action) }
+.heat { display: grid; grid-template-columns: 34px repeat(7, 1fr); gap: 3px; font-size: 11px; color: var(--text-2) }
+.heat i { aspect-ratio: 1.6; border-radius: 4px; background: color-mix(in srgb, var(--action) calc(var(--h) * 100%), var(--g50)) } .heat .hl { text-align: center } .heat .dl { align-self: center }
+.tiles { display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(7, 34px); gap: 3px; max-width: 280px }
+.tiles i { font: 600 10px/34px var(--font); font-style: normal; text-align: center; border-radius: 6px; color: var(--g950); background: color-mix(in srgb, var(--bad-dot) calc(var(--h) * 80%), var(--g50)) }
+.scale { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--text-2); margin-top: 10px } .scale i { width: 90px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--g50), color-mix(in srgb, var(--bad-dot) 80%, var(--g50))) }
+.coh td[style] { background: color-mix(in srgb, var(--action) calc(var(--h) * 120%), var(--surface)); color: var(--text); font-variant-numeric: tabular-nums }
+.meter i { background: var(--warn-dot) } .meter { position: relative; height: 8px }
+.hist { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; align-items: end; height: 70px; margin-top: 16px; border-bottom: 1px solid var(--g300) } .hist i { height: calc(var(--h) * 100%); background: var(--chart); border-radius: 3px 3px 0 0 }
+.xs { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-2); margin-top: 4px }
+.fbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px } .srch { position: relative; flex: 0 1 220px } .srch .inp { padding-left: 30px } .srch::before { content: "⌕"; position: absolute; left: 10px; top: 7px; color: var(--text-2) }
+.fchip { display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 4px 0 10px; border-radius: 8px; background: var(--n50); color: var(--n800); font-size: 13px; border: 1px solid var(--n100) }
+.fchip b { font-weight: 600 } .fchip button { border: 0; background: transparent; color: inherit; width: 24px; height: 24px; border-radius: 6px; cursor: pointer; font-size: 15px }
+.fpop { display: grid; grid-template-columns: 150px minmax(0,1fr); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--e2); margin-top: 8px; max-width: 460px; overflow: hidden; background: var(--surface) }
+.fpop-l { border-right: 1px solid var(--line-soft); padding: 6px; display: grid; align-content: start } .fpop-l a { padding: 7px 10px; border-radius: 8px; color: var(--text); text-decoration: none; font-size: 13px } .fpop-l a[aria-current] { background: var(--select); color: var(--n800); font-weight: 500 }
+.fpop-r { padding: 10px; display: grid; gap: 8px } .fpop-r label { display: flex; gap: 8px; align-items: center; font-size: 14px } .fpop-r label .cap { margin-left: auto }
+mark { background: var(--warn-bg); color: inherit; border-radius: 3px; padding: 0 1px }
+.pal { border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--e3); overflow: hidden; background: var(--surface) }
+.pal-in { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--line-soft); font-size: 16px; color: var(--text-2) }
+.pal-g { font: 500 11px/16px var(--font); color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; padding: 10px 14px 4px }
+.pal-i { display: flex; align-items: center; gap: 10px; padding: 8px 14px; color: var(--text); text-decoration: none; font-size: 14px } .pal-i.on { background: var(--select) } .pal-i .kbd2 { margin-left: auto; color: var(--text-2) }
+.pal-f { display: flex; gap: 14px; padding: 8px 14px; border-top: 1px solid var(--line-soft); font-size: 12px; color: var(--text-2) }
+.sheet { border: 1px solid var(--line); border-radius: 20px 20px 0 0; padding: 10px 16px 16px; display: grid; gap: 14px; box-shadow: var(--e3); max-width: 390px; background: var(--surface) }
+.grab { width: 36px; height: 4px; border-radius: 2px; background: var(--g300); justify-self: center } .fs { display: grid; gap: 8px }
+.pill { height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--g300); display: inline-flex; align-items: center; font-size: 14px } .pill.on { background: var(--n50); border-color: var(--action); color: var(--n800); font-weight: 500 }
+.track { list-style: none; margin: 0; padding: 0; display: grid; gap: 0 }
+.track li { display: grid; padding: 0 0 14px 24px; position: relative; font-weight: 500 } .track li::before { content: ""; position: absolute; left: 0; top: 3px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--g300); background: var(--surface) }
+.track li::after { content: ""; position: absolute; left: 6px; top: 17px; bottom: 0; width: 2px; background: var(--g200) } .track li:last-child::after { display: none }
+.track li.done::before { background: var(--ok-dot); border-color: var(--ok-dot) } .track li.done::after { background: var(--ok-dot) } .track li.now::before { border-color: var(--action); box-shadow: 0 0 0 4px var(--n100) }
+.who { display: flex; gap: 12px; align-items: center } .av { width: 36px; height: 36px; border-radius: 50%; background: var(--n100); color: var(--n800); display: grid; place-items: center; font-weight: 600 }
+.rules { display: grid; gap: 8px } .rl { display: grid; grid-template-columns: 52px 1fr 90px 1fr 30px; gap: 6px; align-items: center } .rl .tag { justify-content: center }
+.setup { display: flex; gap: 16px; align-items: center } .ring { width: 72px; height: 72px; border-radius: 50%; background: conic-gradient(var(--action) calc(var(--p) * 1%), var(--g100) 0); display: grid; place-items: center; flex: none }
+.ring b { width: 54px; height: 54px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-weight: 600 }
+.ck { display: flex; gap: 8px; align-items: center; font-size: 14px } .ck::before { content: ""; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--g400); flex: none } .ck.done { color: var(--text-2); text-decoration: line-through } .ck.done::before { background: var(--ok-dot); border-color: var(--ok-dot) } .ck .lnk { margin-left: auto }
+.stores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px } .store { border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 6px; justify-items: start } .store b { font-weight: 600 }
+.diff { display: grid; gap: 4px; margin-top: 12px; font-size: 13px } .diff .del { background: var(--bad-bg); color: var(--bad-fg); padding: 2px 8px; border-radius: 6px; text-decoration: line-through } .diff .add { background: var(--ok-bg); color: var(--ok-fg); padding: 2px 8px; border-radius: 6px }
+@media (max-width: 720px) { .fpop { grid-template-columns: 1fr } .rl { grid-template-columns: 1fr 1fr } .stores { grid-template-columns: 1fr } }
 .note { font-size: 13px; color: var(--text-2); margin-top: 8px }
 @media (max-width: 720px) { .spec { grid-template-columns: 1fr } }
 @media (prefers-reduced-motion: no-preference) { .btn, .nav, .seg button, .tbl td { transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease) } }
@@ -326,7 +377,7 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
 <div class="doc">
   <div class="doc-top">
     <b><span class="mark">rr</span>Neel · the console's design language</b>
-    <nav aria-label="Parts"><a href="#foundations">Foundations</a><a href="#components">Components</a><a href="#patterns">More</a><a href="#states">States</a><a href="#motion">Motion</a><a href="#access">Access</a><a href="#home">Home</a><a href="#orders">Orders</a><a href="#products">Products</a><a href="#editor">Product</a><a href="#settings">Settings</a><a href="#phone">Phone</a><a href="#words">Words</a><a href="#glossary">Glossary</a></nav>
+    <nav aria-label="Parts"><a href="#foundations">Foundations</a><a href="#components">Components</a><a href="#patterns">More</a><a href="#states">States</a><a href="#motion">Motion</a><a href="#access">Access</a><a href="#data">Analytics</a><a href="#find">Finding</a><a href="#modules">Modules</a><a href="#home">Home</a><a href="#orders">Orders</a><a href="#products">Products</a><a href="#editor">Product</a><a href="#settings">Settings</a><a href="#phone">Phone</a><a href="#words">Words</a><a href="#glossary">Glossary</a></nav>
   </div>
 
   <!-- ===================== FOUNDATIONS ===================== -->
@@ -401,7 +452,7 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
     <p class="lead">One of each. Every screen below is made only of these.</p>
     <div class="grid g2">
       <div class="box"><h3>Buttons</h3>
-        <div class="chips" style="gap:8px"><button class="btn btn-p">Add product</button><button class="btn btn-s">Import</button><button class="btn btn-g">More</button><button class="btn btn-d">Delete 2 drafts</button><a class="lnk" href="#components">View in shop</a></div>
+        <div class="chips" style="gap:8px"><button class="btn btn-p">Add product</button><button class="btn btn-s">Import</button><button class="btn btn-g">More</button><button class="btn btn-d">Delete 2 drafts</button><a class="lnk" href="#components">View in store</a></div>
         <ul class="rule"><li>One primary per view. Secondary is white with a 300 edge. A link is neel text, underlined only on hover.</li><li>36 px tall on a desktop, 44 px on a phone.</li></ul>
       </div>
       <div class="box"><h3>Fields</h3>
@@ -420,7 +471,7 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
       <div class="box"><h3>Tabs, menus, feedback</h3>
         <nav class="tabs" aria-label="Example"><a href="#components" aria-current="page">To confirm <span class="cnt">43</span></a><a href="#components">To pack <span class="cnt">96</span></a><a href="#components">All <span class="cnt">300</span></a></nav>
         <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;align-items:flex-start">
-          <div class="menu"><a href="#components">Duplicate</a><a href="#components">View in shop</a><hr><a class="danger" href="#components">Delete draft</a></div>
+          <div class="menu"><a href="#components">Duplicate</a><a href="#components">View in store</a><hr><a class="danger" href="#components">Delete draft</a></div>
           <div style="display:grid;gap:10px"><span class="toast" role="status">Archived 2 products <a class="lnk" href="#components">Undo</a></span>
             <div class="savebar" style="min-width:300px"><b style="font-weight:500">3 unsaved changes</b><span style="flex:1"></span><button class="btn btn-s btn-sm">Discard</button><button class="btn btn-p btn-sm">Save <span class="kbd">⌘S</span></button></div></div>
         </div>
@@ -495,7 +546,7 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
         <ul class="rule"><li>Newest first; who, what, when. A support visit's actions say "Frrata support".</li></ul>
       </div>
       <div class="box"><h3>Banners</h3>
-        <div class="banner b-bad" role="alert"><b>Payment due</b>Pay ₹4,999 by 18 Nov to keep your shop open.<a class="lnk" href="#patterns">Pay now</a></div>
+        <div class="banner b-bad" role="alert"><b>Payment due</b>Pay ₹4,999 by 18 Nov to keep your store open.<a class="lnk" href="#patterns">Pay now</a></div>
         <div class="banner b-warn" role="status"><b>Trial ends in 3 days</b><a class="lnk" href="#patterns">Choose a plan</a></div>
         <div class="banner b-info" role="status"><b>You're offline</b>Changes save when you're back.</div>
         <div class="banner b-support" role="status"><b>Frrata support is in your console</b>Riya from Frrata · 22 min left<a class="lnk" href="#patterns">End visit</a></div>
@@ -575,7 +626,7 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
           <tr><td>Chip</td><td>Add, remove, move</td><td>Pops in from 90%; fades out; slides to its place</td><td class="num">120 · 120 · 200</td><td>Instant; move announced</td></tr>
           <tr><td>Switch</td><td>Toggle</td><td>Knob slides</td><td class="num">120 ms</td><td>Instant</td></tr>
           <tr><td>A changed number</td><td>After save</td><td>Flashes once; never counts up</td><td class="num">800 ms</td><td>None</td></tr>
-          <tr><td>Shop opens</td><td>Once</td><td>A tick draws in a circle (the one celebration)</td><td class="num">320 + 200</td><td>Shown at once</td></tr>
+          <tr><td>Store opens</td><td>Once</td><td>A tick draws in a circle (the one celebration)</td><td class="num">320 + 200</td><td>Shown at once</td></tr>
         </tbody></table></div>
         <ul class="rule"><li>Only the motion tokens (fast 120, base 200, slow 320; standard, entrance, exit). Nothing over 400 ms but the Undo line. No press-shrink, no shimmer, no bounce on data.</li></ul>
       </div>
@@ -632,6 +683,212 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
     </div>
   </section>
 
+  <!-- ===================== ANALYTICS KIT ===================== -->
+  <section class="part" id="data">
+    <h2>Analytics kit</h2>
+    <p class="lead">Every number answers "is this good?" — a comparison, a direction in words, and the figure behind each chart.</p>
+    <div class="grid g2">
+      <div class="box" style="grid-column:1/-1"><h3>Period and comparison</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div class="seg" role="group" aria-label="Period"><button aria-pressed="false">Today</button><button aria-pressed="false">7 days</button><button aria-pressed="true">30 days</button><button aria-pressed="false">This month</button><button aria-pressed="false">Custom</button></div>
+          <span class="tag" style="height:30px">vs previous 30 days ▾</span><span class="cap">14 Oct – 12 Nov · India time</span>
+        </div>
+        <ul class="rule"><li>One period picker per page, top right of the header; every tile and chart below follows it. The comparison is on by default and named on each figure.</li></ul>
+      </div>
+      <div class="box" style="grid-column:1/-1"><h3>Figures</h3>
+        <div class="kpis4">
+          <div class="kc"><span class="k">Sales <span class="tip" aria-label="What counts">i</span></span><b class="num">₹18,42,300</b><span class="d up">↑ 12% vs previous 30 days</span><svg viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true"><path d="M2 18 L18 16 L34 17 L50 11 L66 12 L82 7 L98 5" class="sl"/></svg></div>
+          <div class="kc"><span class="k">Orders</span><b class="num">512</b><span class="d up">↑ 8%</span><svg viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true"><path d="M2 16 L18 15 L34 16 L50 12 L66 13 L82 9 L98 8" class="sl"/></svg></div>
+          <div class="kc"><span class="k">Came back (RTO)</span><b class="num">14.2%</b><span class="d bad">↑ 2.1 points — worse</span><svg viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true"><path d="M2 14 L18 15 L34 13 L50 12 L66 10 L82 9 L98 7" class="sl"/></svg></div>
+          <div class="kc"><span class="k">Kept after returns</span><b class="num" style="color:var(--text-2)">—</b><span class="cap">Needs 20 delivered orders · 14 so far</span></div>
+        </div>
+        <ul class="rule"><li>The change is coloured by meaning, not direction: RTO going up is red. Every change says what it's compared with once per row. Too little data says how much is needed.</li></ul>
+      </div>
+      <div class="box" style="grid-column:1/-1"><h3>Trend with a tooltip and a note</h3>
+        <div class="legend"><span><i style="background:var(--action)"></i>This period</span><span><i class="dash"></i>Previous</span><span><i style="background:var(--warn-dot)"></i>Came back</span></div>
+        <div style="position:relative">
+          <svg viewBox="0 0 720 200" class="chart" style="max-width:760px" role="img" aria-label="Daily sales, 30 days, rising from ₹48,000 to ₹82,000; Diwali sale on 1 November">
+            <g class="grid"><line x1="40" y1="30" x2="712" y2="30"/><line x1="40" y1="90" x2="712" y2="90"/><line x1="40" y1="150" x2="712" y2="150"/></g>
+            <g class="yl"><text x="32" y="34">₹90k</text><text x="32" y="94">₹60k</text><text x="32" y="154">₹30k</text></g>
+            <path d="M40 120 L120 118 L200 112 L280 116 L360 96 L440 62 L520 58 L600 70 L712 50 L712 180 L40 180Z" class="area"/>
+            <path d="M40 120 L120 118 L200 112 L280 116 L360 96 L440 62 L520 58 L600 70 L712 50" class="line"/>
+            <path d="M40 128 L120 126 L200 124 L280 122 L360 120 L440 116 L520 118 L600 112 L712 110" class="prev"/>
+            <path d="M40 170 L120 168 L200 169 L280 166 L360 164 L440 160 L520 161 L600 162 L712 158" class="line" style="stroke:var(--warn-dot);stroke-width:1.5"/>
+            <line x1="440" y1="22" x2="440" y2="180" class="ann"/><text x="446" y="20" class="annt">Diwali sale</text>
+            <line x1="520" y1="22" x2="520" y2="180" class="cross"/><circle cx="520" cy="58" r="4" class="dot"/>
+            <g class="xl"><text x="40" y="196">14 Oct</text><text x="280" y="196">24 Oct</text><text x="520" y="196">3 Nov</text><text x="700" y="196">12 Nov</text></g>
+          </svg>
+          <div class="ttip" style="left:min(calc(520/720*760px + 10px), calc(100% - 150px));top:40px"><b>3 Nov</b><span><i style="background:var(--action)"></i>₹79,400</span><span><i class="dash"></i>₹54,100</span><span><i style="background:var(--warn-dot)"></i>4 came back</span></div>
+        </div>
+        <ul class="rule"><li>Hover or arrow keys move a line through the days; the tooltip lists each series with its key. Notes (a sale, a price change) sit on the date as a thin line with a word.</li></ul>
+      </div>
+      <div class="box"><h3>Split bars</h3>
+        <div class="legend"><span><i style="background:var(--action)"></i>Prepaid</span><span><i style="background:var(--n200)"></i>COD</span></div>
+        <div class="stack">
+          <div><span>Week 1</span><span class="sb2"><i style="width:34%;background:var(--action)"></i><i style="width:66%;background:var(--n200)"></i></span><b class="num">118</b></div>
+          <div><span>Week 2</span><span class="sb2"><i style="width:38%;background:var(--action)"></i><i style="width:62%;background:var(--n200)"></i></span><b class="num">126</b></div>
+          <div><span>Week 3</span><span class="sb2"><i style="width:44%;background:var(--action)"></i><i style="width:56%;background:var(--n200)"></i></span><b class="num">131</b></div>
+          <div><span>Week 4</span><span class="sb2"><i style="width:47%;background:var(--action)"></i><i style="width:53%;background:var(--n200)"></i></span><b class="num">137</b></div>
+        </div>
+        <ul class="rule"><li>Two parts at most; the stronger shade is the one you want more of.</li></ul>
+      </div>
+      <div class="box"><h3>Where the money went</h3>
+        <svg viewBox="0 0 360 170" class="chart" role="img" aria-label="On ₹2,490: GST ₹119, fees ₹58, shipping ₹85, returns ₹140, cost ₹900, kept ₹1,188">
+          <g class="wf"><rect x="10" y="20" width="40" height="120" class="pos"/><rect x="60" y="20" width="40" height="6"/><rect x="110" y="26" width="40" height="3"/><rect x="160" y="29" width="40" height="4"/><rect x="210" y="33" width="40" height="7"/><rect x="260" y="40" width="40" height="43"/><rect x="310" y="83" width="40" height="57" class="pos"/></g>
+          <g class="xl"><text x="30" y="156">Price</text><text x="80" y="156">GST</text><text x="130" y="156">Fees</text><text x="180" y="156">Ship</text><text x="230" y="156">Returns</text><text x="280" y="156">Cost</text><text x="330" y="156">Kept</text></g>
+          <g class="v"><text x="30" y="14">₹2,490</text><text x="330" y="77">₹1,188</text></g>
+        </svg>
+        <ul class="rule"><li>True profit's waterfall: what starts, each cut in grey, what's kept in neel. Costs never reach a shopper's screen.</li></ul>
+      </div>
+      <div class="box"><h3>Ranked, with bars</h3>
+        <table class="tbl"><thead><tr><th aria-sort="descending">Product ↓</th><th class="r">Sold</th><th>Share</th><th class="r">Change</th></tr></thead><tbody>
+          <tr><td>Sabz chanderi kurta set</td><td class="r num">142</td><td><span class="sb"><i style="width:100%"></i></span></td><td class="r"><span class="d up">↑ 18%</span></td></tr>
+          <tr><td>Gulabi chikankari kurta</td><td class="r num">96</td><td><span class="sb"><i style="width:68%"></i></span></td><td class="r"><span class="d up">↑ 4%</span></td></tr>
+          <tr><td>Banarasi silk saree</td><td class="r num">41</td><td><span class="sb"><i style="width:29%"></i></span></td><td class="r"><span class="d bad">↓ 12%</span></td></tr>
+        </tbody></table>
+        <ul class="rule"><li>Sortable headers show their arrow and say so to a screen reader. A bar shows share; the number stays.</li></ul>
+      </div>
+      <div class="box"><h3>When orders come</h3>
+        <div class="heat" role="img" aria-label="Most orders 8 to 11 pm, busiest Sunday">
+          <span></span><span class="hl">6a</span><span class="hl">9a</span><span class="hl">12p</span><span class="hl">3p</span><span class="hl">6p</span><span class="hl">9p</span><span class="hl">12a</span>
+          <span class="dl">Mon</span><i style="--h:.10"></i><i style="--h:.25"></i><i style="--h:.35"></i><i style="--h:.30"></i><i style="--h:.45"></i><i style="--h:.85"></i><i style="--h:.30"></i>
+          <span class="dl">Wed</span><i style="--h:.08"></i><i style="--h:.22"></i><i style="--h:.30"></i><i style="--h:.28"></i><i style="--h:.50"></i><i style="--h:.80"></i><i style="--h:.25"></i>
+          <span class="dl">Fri</span><i style="--h:.12"></i><i style="--h:.26"></i><i style="--h:.38"></i><i style="--h:.32"></i><i style="--h:.55"></i><i style="--h:.90"></i><i style="--h:.40"></i>
+          <span class="dl">Sun</span><i style="--h:.15"></i><i style="--h:.40"></i><i style="--h:.55"></i><i style="--h:.50"></i><i style="--h:.65"></i><i style="--h:1"></i><i style="--h:.45"></i>
+        </div>
+        <ul class="rule"><li>One colour, light to dark; the busiest cell named in words under it ("Sundays 9–11 pm").</li></ul>
+      </div>
+      <div class="box"><h3>By state</h3>
+        <div class="tiles" role="img" aria-label="RTO by state: highest Bihar 31%, lowest Kerala 6%">
+          <i style="grid-area:2/3;--h:.6">PB</i><i style="grid-area:2/4;--h:.4">HR</i><i style="grid-area:2/5;--h:.5">DL</i><i style="grid-area:3/2;--h:.55">RJ</i><i style="grid-area:3/3;--h:.7">UP</i><i style="grid-area:3/5;--h:1">BR</i><i style="grid-area:3/6;--h:.6">WB</i>
+          <i style="grid-area:4/1;--h:.35">GJ</i><i style="grid-area:4/3;--h:.5">MP</i><i style="grid-area:4/4;--h:.55">JH</i><i style="grid-area:5/2;--h:.3">MH</i><i style="grid-area:5/4;--h:.45">OD</i><i style="grid-area:6/2;--h:.25">KA</i><i style="grid-area:6/3;--h:.3">TG</i><i style="grid-area:7/2;--h:.12">KL</i><i style="grid-area:7/3;--h:.2">TN</i>
+        </div>
+        <div class="scale"><span>6%</span><i></i><span>31%</span><a class="lnk" href="#data" style="margin-left:auto">See as a table</a></div>
+        <ul class="rule"><li>A tile per state, not a drawn map: every state the same size, readable on a phone. Always a table beside it.</li></ul>
+      </div>
+      <div class="box"><h3>Shoppers who come back</h3>
+        <table class="tbl coh"><thead><tr><th>First order</th><th class="r">Shoppers</th><th>1 mo</th><th>2 mo</th><th>3 mo</th></tr></thead><tbody>
+          <tr><td>Aug</td><td class="r num">310</td><td style="--h:.32">32%</td><td style="--h:.21">21%</td><td style="--h:.15">15%</td></tr>
+          <tr><td>Sep</td><td class="r num">402</td><td style="--h:.28">28%</td><td style="--h:.18">18%</td><td></td></tr>
+          <tr><td>Oct</td><td class="r num">455</td><td style="--h:.35">35%</td><td></td><td></td></tr>
+        </tbody></table>
+      </div>
+      <div class="box"><h3>Usage and spread</h3>
+        <div style="display:grid;gap:6px"><div style="display:flex;justify-content:space-between"><span class="t-label">Orders in your plan this month</span><span class="num">132 of 150</span></div><span class="bar meter"><i style="width:88%"></i><b style="left:100%"></b></span><span class="cap">18 left · then each order costs ₹12</span></div>
+        <div class="hist" role="img" aria-label="Order values: most between ₹1,500 and ₹2,500"><i style="--h:.2"></i><i style="--h:.45"></i><i style="--h:.8"></i><i style="--h:1"></i><i style="--h:.7"></i><i style="--h:.35"></i><i style="--h:.15"></i><i style="--h:.08"></i></div>
+        <div class="xs"><span>₹500</span><span>₹1,500</span><span>₹2,500</span><span>₹4,000+</span></div>
+        <ul class="rule"><li>A meter turns amber at 80% and says what happens at 100%. A histogram labels its edges, not every bar.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FINDING THINGS ===================== -->
+  <section class="part" id="find">
+    <h2>Finding things</h2>
+    <p class="lead">Search answers as you type. Filters are chips you can read back as a sentence. Any view can be kept as a tab.</p>
+    <div class="grid g2">
+      <div class="box" style="grid-column:1/-1"><h3>Filter bar and saved views</h3>
+        <nav class="tabs" aria-label="Views"><a href="#find">To confirm <span class="cnt">43</span></a><a href="#find" aria-current="page">High-risk COD <span class="cnt">9</span></a><a href="#find">Bihar this week <span class="cnt">14</span></a><a href="#find" class="lnk" style="border:0">+ Save view</a></nav>
+        <div class="fbar">
+          <span class="srch"><input class="inp" value="ks-50" aria-label="Search orders"></span>
+          <span class="fchip">Payment is <b>COD</b><button aria-label="Remove filter">×</button></span>
+          <span class="fchip">Risk is <b>High</b><button aria-label="Remove filter">×</button></span>
+          <span class="fchip">Total <b>₹500–₹2,000</b><button aria-label="Remove filter">×</button></span>
+          <button class="btn btn-g btn-sm">+ Filter</button><a class="lnk" href="#find" style="font-size:13px">Clear all</a>
+          <span class="cap" style="margin-left:auto"><b class="num" style="color:var(--text)">9</b> of 300 orders</span>
+        </div>
+        <div class="fpop">
+          <div class="fpop-l"><a href="#find">Status</a><a href="#find">Payment</a><a href="#find">Risk</a><a href="#find" aria-current="true">State</a><a href="#find">Placed</a><a href="#find">Total</a><a href="#find">Source</a><a href="#find">Tag</a></div>
+          <div class="fpop-r"><input class="inp" placeholder="Search states" aria-label="Search states">
+            <label><span class="cb on" role="checkbox" aria-checked="true" aria-label="Bihar"></span>Bihar<span class="cap num">14</span></label>
+            <label><span class="cb on" role="checkbox" aria-checked="true" aria-label="Uttar Pradesh"></span>Uttar Pradesh<span class="cap num">11</span></label>
+            <label><span class="cb" role="checkbox" aria-checked="false" aria-label="Rajasthan"></span>Rajasthan<span class="cap num">8</span></label>
+            <label><span class="cb" role="checkbox" aria-checked="false" aria-label="Kerala"></span>Kerala<span class="cap num">2</span></label>
+            <div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-g btn-sm">Cancel</button><button class="btn btn-p btn-sm">Show 25 orders</button></div></div>
+        </div>
+        <ul class="rule"><li>Each chip reads "Field is value"; × removes it. "+ Filter" opens a field list, then the values with their counts. Ranges for money and dates. All of it lives in the address, so Back works and a link can be shared.</li><li>"+ Save view" keeps the filters as a tab for the whole team; a view tab can be renamed or removed from its menu.</li></ul>
+      </div>
+      <div class="box"><h3>Instant search in a list</h3>
+        <div class="srch"><input class="inp" value="9845" aria-label="Search"></div>
+        <table class="tbl" style="margin-top:8px"><tbody>
+          <tr><td class="ord num">KS-5006</td><td>Sneha<div class="sub">+91 <mark>9845</mark>0 12345</div></td><td class="r num money"><span class="r">₹</span>1,508</td></tr>
+          <tr><td class="ord num">KS-4911</td><td>Rahul<div class="sub">+91 <mark>9845</mark>6 77001</div></td><td class="r num money"><span class="r">₹</span>2,190</td></tr>
+        </tbody></table>
+        <ul class="rule"><li>Results follow each key after 150 ms; the match is marked. Finds an order by number, name, phone (any 4 digits), AWB; a product by name, SKU, tag.</li><li>Nothing found: "No order matches 9845" and what it searched.</li></ul>
+      </div>
+      <div class="box"><h3>Search everything · ⌘K</h3>
+        <div class="pal">
+          <div class="pal-in"><span aria-hidden="true">⌕</span><input class="inp" value="gulabi" aria-label="Search everything" style="border:0;outline:0;box-shadow:none"></div>
+          <div class="pal-g">Products</div>
+          <a href="#find" class="pal-i on"><i class="thumb th2" style="width:24px;height:30px"></i><span><mark>Gulabi</mark> chikankari kurta<span class="cap"> · Draft · ₹2,490</span></span><span class="kbd2">↵</span></a>
+          <div class="pal-g">Orders</div>
+          <a href="#find" class="pal-i"><b class="num">KS-5131</b><span>Ananya · <mark>Gulabi</mark> kurta · M<span class="cap"> · To pack</span></span></a>
+          <div class="pal-g">Actions</div>
+          <a href="#find" class="pal-i"><span>+</span><span>Add product</span></a><a href="#find" class="pal-i"><span>+</span><span>Create offer</span></a>
+          <div class="pal-g">Settings</div>
+          <a href="#find" class="pal-i"><span>›</span><span>Pay on delivery</span></a>
+          <div class="pal-f"><span>↑↓ move</span><span>↵ open</span><span>esc close</span></div>
+        </div>
+        <ul class="rule"><li>One box for the whole console: orders, products, shoppers, pages and actions, grouped, newest first. Empty: recent items. Frrata Admin's finds stores by name, GSTIN or phone.</li></ul>
+      </div>
+      <div class="box"><h3>Filters on a phone</h3>
+        <div class="sheet"><div class="grab"></div><div style="display:flex;justify-content:space-between"><b>Filters</b><a class="lnk" href="#find">Clear all</a></div>
+          <div class="fs"><span class="t-label">Payment</span><div class="chips"><span class="pill on">COD</span><span class="pill">Prepaid</span></div></div>
+          <div class="fs"><span class="t-label">Risk</span><div class="chips"><span class="pill">Low</span><span class="pill">Medium</span><span class="pill on">High</span></div></div>
+          <div class="fs"><span class="t-label">Total, ₹</span><div class="row2"><input class="inp num" value="500" aria-label="Minimum"><input class="inp num" value="2,000" aria-label="Maximum"></div></div>
+          <button class="btn btn-p" style="width:100%;justify-content:center;height:44px">Show 9 orders</button></div>
+        <ul class="rule"><li>A sheet from the bottom; the button counts what you'll see before you look.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ACROSS MODULES ===================== -->
+  <section class="part" id="modules">
+    <h2>Across modules</h2>
+    <p class="lead">What each surface needs from the kit, and the pieces still to draw for it.</p>
+    <div class="grid g2">
+      <div class="box"><h3>An order's journey</h3>
+        <ol class="track"><li class="done">Placed<span class="cap">10 Nov, 9:12 pm</span></li><li class="done">Confirmed<span class="cap">10 Nov, 9:40 pm</span></li><li class="done">Packed<span class="cap">11 Nov</span></li><li class="now">On the way<span class="cap">Delhivery · <span class="code">1490023381</span></span></li><li>Delivered<span class="cap">Expected 14 Nov</span></li></ol>
+        <ul class="rule"><li>The same steps the shopper sees, with the courier's last scan. A failed attempt shows red at its step with the reason.</li></ul>
+      </div>
+      <div class="box"><h3>The shopper</h3>
+        <div class="who"><span class="av">S</span><div><b>Sneha</b><div class="cap">+91 98450 12345 · Thiruvananthapuram</div></div><span class="chip c-bad" style="margin-left:auto">High risk</span></div>
+        <div class="kv" style="margin-top:12px"><span>Orders</span><b class="num">4 · ₹8,920</b><span>Came back</span><b class="num">2 of 4 (COD)</b><span>Why risky</span><b>New PIN code, two COD orders came back</b></div>
+        <ul class="rule"><li>Risk always says why, in words. Staff see no cost or margin here.</li></ul>
+      </div>
+      <div class="box"><h3>Rules (collections, offers, zones)</h3>
+        <div class="rules"><div class="rl"><span class="tag">When</span><select class="inp" aria-label="Field"><option>Category</option></select><select class="inp" aria-label="Test"><option>is</option></select><input class="inp" value="Kurta sets" aria-label="Value"><button class="btn btn-g btn-sm" aria-label="Remove rule">×</button></div>
+          <div class="rl"><span class="tag">and</span><select class="inp" aria-label="Field"><option>Price</option></select><select class="inp" aria-label="Test"><option>under</option></select><span class="pre"><i>₹</i><input class="inp num" value="2,000" aria-label="Value"></span><button class="btn btn-g btn-sm" aria-label="Remove rule">×</button></div>
+          <a class="lnk" href="#modules">+ Add a rule</a><span class="cap"><b class="num" style="color:var(--text)">18</b> products match now</span></div>
+      </div>
+      <div class="box"><h3>Getting set up</h3>
+        <div class="setup"><span class="ring" style="--p:60" aria-label="3 of 5 done"><b class="num">3/5</b></span><div style="display:grid;gap:6px">
+          <span class="ck done">Add your first product</span><span class="ck done">Set delivery charges</span><span class="ck done">Add your GSTIN</span><span class="ck">Connect online payments <a class="lnk" href="#modules">Connect</a></span><span class="ck">Open your store</span></div></div>
+      </div>
+      <div class="box"><h3>Partner workspace · client stores</h3>
+        <div class="stores">
+          <div class="store"><i class="thumb th2" style="width:100%;height:56px"></i><b>Kesar Studio</b><span class="chip c-ok">Open</span><span class="cap">Handed over · 12 Oct</span></div>
+          <div class="store"><i class="thumb th4" style="width:100%;height:56px"></i><b>Neelam Weaves</b><span class="chip c-warn">Building · 3/5</span><span class="cap">Lead: Arjun</span></div>
+        </div>
+        <div class="tile" style="margin-top:12px"><span class="k">Your share this month</span><b class="num">₹38,780</b><span class="cap">From 11 stores · paid on the 7th</span></div>
+      </div>
+      <div class="box"><h3>Frrata Admin · stores at a glance</h3>
+        <div class="tblwrap"><table class="tbl"><thead><tr><th>Store</th><th>Plan</th><th>Orders, 30 days</th><th>Flags</th></tr></thead><tbody>
+          <tr><td>Kesar Studio<div class="sub">Jaipur</div></td><td><span class="tag">Growth</span></td><td><svg viewBox="0 0 80 18" width="80" height="18" aria-hidden="true"><path d="M2 14 L14 12 L26 13 L38 9 L50 10 L62 6 L78 4" class="sl"/></svg> <span class="num">512</span></td><td><span class="chip c-ok">Healthy</span></td></tr>
+          <tr><td>Neelam Weaves<div class="sub">Varanasi</div></td><td><span class="tag">Launch · trial</span></td><td><svg viewBox="0 0 80 18" width="80" height="18" aria-hidden="true"><path d="M2 8 L14 9 L26 11 L38 12 L50 14 L62 15 L78 16" class="sl" style="stroke:var(--bad-dot)"/></svg> <span class="num">23</span></td><td><span class="chip c-bad">Payment due</span></td></tr>
+        </tbody></table></div>
+        <div class="diff"><span class="cap">Activity · Riya (support visit) changed Pay on delivery</span><span class="del">limit ₹2,000</span><span class="add">limit ₹3,000</span></div>
+      </div>
+      <div class="box" style="grid-column:1/-1"><h3>Who needs what</h3>
+        <div class="tblwrap"><table class="tbl gl"><thead><tr><th>Surface</th><th>Screens</th><th>From the kit</th></tr></thead><tbody>
+          <tr><td><b style="font-weight:500">Console</b></td><td>Home, Orders, Products, Collections, Offers, Analytics, True profit, GST, Delivery zones, Messages, Look, Activity, Notices, Settings, Billing, Import, Setup</td><td>Period picker, figures, trend, split bars, ranked table, heat, state tiles, cohort, waterfall, meter; filter bar, saved views, instant search, ⌘K; journey, shopper, rules, setup, upload, steps</td></tr>
+          <tr><td><b style="font-weight:500">Partner workspace</b></td><td>Client stores, a store's build, team, handover, earnings, apply</td><td>Store cards, steps, setup ring, figures, statement table, instant search</td></tr>
+          <tr><td><b style="font-weight:500">Frrata Admin</b></td><td>Stores, a store, plans and billing run, trials, infrastructure, EkCode cost, notices, activity, themes, staff, partners</td><td>Stores table with sparklines and flags, filter bar and ⌘K across stores, trend and meter for infrastructure, activity with before/after, support visit banner</td></tr>
+        </tbody></table></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===================== SCREENS ===================== -->
   <section class="part" id="home">
     <h2>Screens</h2>
@@ -654,7 +911,7 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
         <a class="nav" href="#settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</a>
       </aside>
       <main class="main">
-        <div class="ph"><div><h1>Today</h1><div class="meta">Friday, 13 November</div></div><div class="acts"><span class="chip c-ok">Shop open</span><button class="btn btn-s">Share shop</button></div></div>
+        <div class="ph"><div><h1>Today</h1><div class="meta">Friday, 13 November</div></div><div class="acts"><span class="chip c-ok">Store open</span><button class="btn btn-s">Share store</button></div></div>
         <div class="stack">
           <div class="sec"><div class="kpis">
             <div class="kpi"><div class="k">To confirm</div><div class="v num">43</div><span class="chip c-warn">Oldest 8 d</span></div>
@@ -858,13 +1115,13 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
   <!-- ===================== WORDS ===================== -->
   <section class="part" id="words">
     <h2>Words</h2>
-    <p class="lead">A shop owner reads the console on a phone, between orders. Every line should be clear in one read.</p>
+    <p class="lead">A store owner reads the console on a phone, between orders. Every line should be clear in one read.</p>
     <div class="grid g2">
       <div class="box"><h3>The rulebook</h3>
         <ol class="words">
           <li><div><b>One idea, one sentence.</b> <span>Up to 12 words. Two ideas are two sentences, or one is cut.</span></div></li>
           <li><div><b>No joining marks.</b> <span>No colon, semicolon or dash to glue two thoughts together in a sentence.</span></div></li>
-          <li><div><b>Everyday words.</b> <span>The words a shop owner says out loud. Never ours: tenant, sync, server, token, webhook, variant, readiness.</span></div></li>
+          <li><div><b>Everyday words.</b> <span>The words a store owner says out loud. Never ours: tenant, sync, server, token, webhook, variant, readiness.</span></div></li>
           <li><div><b>Say what to do, or what happened.</b> <span>Start with it. "Add a price for Ivory." "Saved."</span></div></li>
           <li><div><b>Buttons are a verb and a thing.</b> <span>"Confirm 2 orders", "Save price". Never "OK", "Submit" or "Proceed".</span></div></li>
           <li><div><b>Errors: what's wrong, then the fix.</b> <span>Next to the field. No "invalid", no "error occurred", no blame.</span></div></li>
@@ -890,7 +1147,7 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
       <div class="h">Now</div><div class="h">Neel</div>
       <div class="was">Only drafts that were never live or ordered can be deleted. The rest stay, and can be archived instead.</div><div class="now">You can delete drafts that never sold. Archive the rest.</div>
       <div class="was">Opens from its link only: not in menus, search or Google. For a private drop or a DM.</div><div class="now">Only people with the link can see it.</div>
-      <div class="was">Gone from your shop. Its page says it is no longer available, with your newest pieces below.</div><div class="now">Hidden from your shop. Its orders stay.</div>
+      <div class="was">Gone from your shop. Its page says it is no longer available, with your newest pieces below.</div><div class="now">Hidden from your store. Its orders stay.</div>
       <div class="was">Checked with Razorpay before saving: wrong keys are refused and nothing changes. Saved keys are encrypted and never shown again.</div><div class="now">We check the keys with Razorpay before saving them.</div>
       <div class="was">Frrata lost access to this number. Disconnect it here, then connect it again in Meta's window.</div><div class="now">This number is disconnected. Connect it again.</div>
       <div class="was">Most orders came without a source. A link from Make a link tells an Instagram bio from a WhatsApp broadcast.</div><div class="now">Most orders have no source yet. Share your links from Make a link.</div>
@@ -903,14 +1160,14 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
   <!-- ===================== GLOSSARY ===================== -->
   <section class="part" id="glossary">
     <h2>One word for each thing</h2>
-    <p class="lead">The same word on every surface, so a merchant, a partner and Frrata's team mean the same thing.</p>
+    <p class="lead">The same word on every surface, so a brand, a partner and Frrata's team mean the same thing. "Store", never "shop" (owner, 2026-11-13).</p>
     <div class="grid g2">
       <div class="box" style="grid-column:1/-1"><h3>Where you are</h3>
         <div class="tblwrap"><table class="tbl"><thead><tr><th>Surface</th><th>Who uses it</th><th>For</th><th>Never call it</th></tr></thead><tbody>
-          <tr><td><b style="font-weight:500">Console</b></td><td>The brand's team (and its partner)</td><td>Running the shop: orders, products, offers, settings</td><td>dashboard, admin</td></tr>
-          <tr><td><b style="font-weight:500">Partner workspace</b></td><td>The agency that builds shops</td><td>Its client shops, team, handover</td><td>partner console</td></tr>
+          <tr><td><b style="font-weight:500">Console</b></td><td>The brand's team (and its partner)</td><td>Running the store: orders, products, offers, settings</td><td>dashboard, admin</td></tr>
+          <tr><td><b style="font-weight:500">Partner workspace</b></td><td>The agency that builds stores</td><td>Its client stores, team, handover</td><td>partner console</td></tr>
           <tr><td><b style="font-weight:500">Frrata Admin</b></td><td>Frrata's own team only</td><td>Merchants, plans, billing, support visits</td><td>"Admin" on its own</td></tr>
-          <tr><td><b style="font-weight:500">Shop</b></td><td>Shoppers</td><td>Buying</td><td>store, website (in the console)</td></tr>
+          <tr><td><b style="font-weight:500">Store</b></td><td>Shoppers</td><td>Buying (its pages are the storefront)</td><td>shop, website, site</td></tr>
         </tbody></table></div></div>
       <div class="box" style="grid-column:1/-1"><h3>Roles</h3>
         <div class="tblwrap"><table class="tbl"><thead><tr><th>Role</th><th>Who</th><th>Where</th><th>Can</th><th>Can't</th></tr></thead><tbody>
@@ -918,15 +1175,15 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
           <tr><td><b style="font-weight:500">Manager</b> <span class="chip c-info">renamed from Admin</span></td><td>The owner's deputy</td><td>Console</td><td>Everything else the owner can</td><td>Remove the partner</td></tr>
           <tr><td><b style="font-weight:500">Staff</b></td><td>The brand's team</td><td>Console</td><td>Orders, shipping, products</td><td>Costs, GST, settings, people</td></tr>
           <tr><td><b style="font-weight:500">Accountant</b></td><td>The brand's CA</td><td>Console</td><td>GST and documents</td><td>Orders, costs</td></tr>
-          <tr><td><b style="font-weight:500">Partner</b></td><td>The agency that built the shop</td><td>Console + partner workspace</td><td>Orders, products, look, settings</td><td>Payments, people; costs after handover</td></tr>
-          <tr><td><b style="font-weight:500">Partner owner · Lead</b></td><td>The agency's head · its builders</td><td>Partner workspace</td><td>Team and handover · the shops given to them</td><td>—</td></tr>
+          <tr><td><b style="font-weight:500">Partner</b></td><td>The agency that built the store</td><td>Console + partner workspace</td><td>Orders, products, look, settings</td><td>Payments, people; costs after handover</td></tr>
+          <tr><td><b style="font-weight:500">Partner owner · Lead</b></td><td>The agency's head · its builders</td><td>Partner workspace</td><td>Team and handover · the stores given to them</td><td>—</td></tr>
           <tr><td><b style="font-weight:500">Frrata support</b></td><td>Frrata's team, on a support visit</td><td>Frrata Admin → a console</td><td>What the owner can, every step recorded</td><td>Payment keys, GST filing, billing</td></tr>
         </tbody></table></div>
-        <ul class="rule"><li>"Admin" alone is never a person. "Owner" alone means the shop's owner; the agency's is "Partner owner".</li></ul>
+        <ul class="rule"><li>"Admin" alone is never a person. "Owner" alone means the store's owner; the agency's is "Partner owner".</li></ul>
       </div>
       <div class="box"><h3>Words</h3>
         <div class="tblwrap"><table class="tbl gl"><thead><tr><th>Say</th><th>For</th><th>Never</th></tr></thead><tbody>
-          <tr><td>shop</td><td>The brand's business and site</td><td>store, tenant, merchant (in the console)</td></tr>
+          <tr><td>store</td><td>The brand's business and its storefront</td><td>shop, tenant, merchant (merchant only in Frrata Admin)</td></tr>
           <tr><td>shopper</td><td>The person who buys</td><td>customer, buyer (the invoice says buyer by law)</td></tr>
           <tr><td>product · item</td><td>In the catalogue · in an order or bag</td><td>piece, variant</td></tr>
           <tr><td>sizes and colours</td><td>A product's options</td><td>variants</td></tr>
@@ -936,7 +1193,7 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
           <tr><td>Live</td><td>An offer or app that's running; the published look</td><td>Active (for these)</td></tr>
           <tr><td>Archive · Delete · Remove · Disconnect · Turn off</td><td>Hide and keep · gone for good · take a part out · end a connection · stop an app</td><td>mixing them</td></tr>
           <tr><td>payout</td><td>Money reaching the brand's bank</td><td>settlement, remittance</td></tr>
-          <tr><td>app</td><td>A feature the shop turns on</td><td>module, add-on (Admin only)</td></tr>
+          <tr><td>app</td><td>A feature the store turns on</td><td>module, add-on (Admin only)</td></tr>
           <tr><td>support visit</td><td>Frrata support inside a console</td><td>support session</td></tr>
           <tr><td>Frrata</td><td>The company</td><td>Frata</td></tr>
         </tbody></table></div></div>
@@ -948,7 +1205,7 @@ textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
           <tr><td><span class="chip c-info">On the way</span></td><td>On its way</td><td>Shipped</td></tr>
           <tr><td><span class="chip c-ok">Delivered</span></td><td>Delivered</td><td>—</td></tr>
           <tr><td><span class="chip c-bad">Couldn't deliver</span></td><td>Delivery attempt failed</td><td>NDR</td></tr>
-          <tr><td><span class="chip c-bad">Coming back</span> · <span class="chip c-neu">Came back</span></td><td>Returning to the shop · Returned to the shop</td><td>RTO, Returned (for RTO)</td></tr>
+          <tr><td><span class="chip c-bad">Coming back</span> · <span class="chip c-neu">Came back</span></td><td>Returning to the store · Returned to the store</td><td>RTO, Returned (for RTO)</td></tr>
           <tr><td><span class="chip c-neu">Returned</span></td><td>Returned</td><td>(only for a shopper's return)</td></tr>
           <tr><td><span class="chip c-neu">On hold</span> · <span class="chip c-neu">Cancelled</span></td><td>— · Cancelled</td><td>—</td></tr>
         </tbody></table></div></div>

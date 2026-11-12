@@ -63,12 +63,35 @@ support asks per 100 shops, the owner's own read of each screen against this moc
 - **Glossary** (§ Glossary): surfaces, roles, words, order states across console and shop, short forms (PIN code one spelling,
   M.R.P. dotted, COD only in console tags).
 
-## The owner's calls (asked, not decided)
-1. Rename the shop role "Admin" to **Manager** (it collides with Frrata Admin and the staff role). Recommended.
-2. **"Shop" everywhere**, partner screens too ("client shops"), instead of "store" there. Recommended.
-3. Order "Shipped" becomes **On the way** in badges and emails, as the tab already says. Recommended.
-4. Words: aim for 12 words a sentence; the `check:words` gate fails at 16 (warns from 13).
-5. Brand rule 35 (Bricolage Grotesque for console h1s) retires: Inter everywhere in the console. Recommended.
+## The owner's calls (2026-11-13)
+1. The shop role "Admin" is renamed **Manager**. Decided.
+2. **"Store" everywhere, never "shop"**, console, partner workspace, Frrata Admin, emails, the storefront's own words
+   ("Store open", "View in store", "your store"). "Shopper" stays for the buyer; "Shop" as a verb on the storefront
+   ("Shop all") stays. Code names (`shop*`, tables, routes) keep their spelling (like `frata_app`). Decided.
+3. "Shipped" becomes **On the way** in badges and emails. Decided.
+4. Words: aim for 12 words; `check:words` warns from 13 and fails at 16. Decided.
+5. Inter everywhere in the console; Bricolage Grotesque headings retire there. Decided.
+
+## v3: data, finding things, modules (owner: "more visualizations, charts, analytical components, filters, instant search,
+and what else we might need across all modules")
+- **Analytics kit** (mockup § Analytics): one period picker per page with a comparison on by default; figures with a
+  change coloured by meaning (RTO up is red), a sparkline and a "needs N more" state; trend with a keyboard tooltip and
+  dated notes; split bars (COD/prepaid); the true-profit waterfall; ranked tables with share bars and sortable headers;
+  an hour × day heat grid; a state tile map with a table beside it (no drawn map); a repeat-shopper cohort table; a usage
+  meter (amber at 80%, says what happens at 100%); an order-value histogram. Every chart writes its number in words.
+- **Finding things** (§ Finding): instant list search (150 ms, marked matches, numbers, names, any 4 phone digits, SKU, AWB,
+  tags); a filter bar of readable chips ("Payment is COD ×"), "+ Filter" with values and counts, money and date ranges,
+  "Clear all", the result count; saved views as team tabs; one ⌘K search for orders, products, shoppers, pages and actions
+  (Frrata Admin: stores by name, GSTIN, phone); the phone's filter sheet with "Show 9 orders". All of it in the address.
+- **Across modules** (§ Modules): an order's journey stepper (the shopper's own steps + the courier's last scan); the
+  shopper card (history, risk with its reason, no cost for staff); a rules builder for collections, offers and delivery
+  zones with a live match count; a setup checklist with a progress ring; the partner's store cards and share tile;
+  Frrata Admin's stores table with sparklines and flags, and activity with before/after. A table maps every surface's
+  screens to the kit.
+- **Build order:** the kit's primitives land in N0 with the rest; Orders gets the filter bar, saved views and instant
+  search in N1; ⌘K and the analytics kit in a new **N1b** (Analytics, True profit, Offers results, Admin infrastructure
+  and stores); the partner and Admin pieces in N4. Search and filters run on the server, from the address, behind the
+  same indexes the list already uses (speed-reviewer on each); saved views are a new table (tenant, name, query) with RLS.
 
 ## Rules Neel retires on approval (frata-design-language, marked "superseded" until N0 lands)
 Ink as the action colour; neel as brand-only; "radius 6px"; mono for money, counts, order numbers and addresses (rules
