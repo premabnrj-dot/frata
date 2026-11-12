@@ -8,7 +8,7 @@ import { Dialog } from '@/components/ui/dialog'
 import { Submit } from '@/components/ui/submit'
 import { useToast } from '@/components/ui/toast'
 import { settle } from '@/lib/settle'
-import { assignTeamAction, inviteTeamAction, removeTeamAction } from './actions'
+import { assignTeamAction, inviteTeamAction, removeTeamAction, resendTeamInviteAction } from './actions'
 
 type Store = { tenantId: string; name: string }
 
@@ -103,4 +103,16 @@ export function RemovePerson({ memberId, label, invited }: { memberId: string; l
         </>} />
     </>
   )
+}
+
+/** An invited person's sign-in email again (the first one may sit in spam or be lost). */
+export function ResendInvite({ memberId }: { memberId: string }) {
+  const toast = useToast()
+  const [pending, setPending] = useState(false)
+  const resend = async () => {
+    setPending(true)
+    const r = await resendTeamInviteAction({ memberId }).finally(() => setPending(false))
+    if (r.ok) toast.ok(r.text); else toast.error(r.error)
+  }
+  return <Button variant="ghost" disabled={pending} onClick={resend}>{pending ? 'Sending…' : 'Send again'}</Button>
 }

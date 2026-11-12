@@ -6,7 +6,7 @@
 // keeping access, an invite field mistake leaving the dialog.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, USERS, expectToast, partnerOn, signedIn } from '../lib.mjs'
+import { CONSOLE, PORTS, USERS, expectToast, partnerOn, signedIn } from '../lib.mjs'
 
 const A = 'dddddddd-0000-4000-8000-0000000000a1', B = 'dddddddd-0000-4000-8000-0000000000b1' // RFC 4122 shape: the form's z.uuid() checks it
 
@@ -34,8 +34,13 @@ export default {
       await dialog.getByLabel('Work email').fill(L.email)
       await dialog.getByLabel('Amber Looms').check()
       await dialog.getByRole('button', { name: 'Send invite' }).click()
-      await expectToast(pia, `Invited ${L.email}`, 'ok')
+      await expectToast(pia, `Invited ${L.email}. We emailed them a sign-in link.`, 'ok')
       await pia.getByText('Invited', { exact: true }).first().waitFor()
+      const asked = async () => (await (await fetch(`http://localhost:${PORTS.auth}/_test/otp`)).json()).filter((e) => e === L.email).length
+      assert.equal(await asked(), 1, 'the invite emails a sign-in link')
+      await pia.getByRole('listitem').filter({ hasText: L.email }).getByRole('button', { name: 'Send again' }).click()
+      await expectToast(pia, `Sent again to ${L.email}.`, 'ok')
+      assert.equal(await asked(), 2, 'Send again emails it again')
       await pia.screenshot({ path: t.out('team-invited') })
     })
 
