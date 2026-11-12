@@ -1,0 +1,381 @@
+<title>Frrata Admin · Partners</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Frrata Admin (staff only). Left nav of Admin's sections; Partners has a list, a partner page with tabs,
+   Studio credits across partners, and the monthly payout run. Calm motion (Admin: fades, no springs). */
+:root {
+  --bg: #FAFAF9; --fg: #1C1917; --card: #FFFFFF; --muted: #F2F1EF; --sub: #5F5A55; --line: #DEDBD7; --input: #8C857F;
+  --ink: #1C1917; --on-ink: #FFFFFF; --rani: #D61F69; --rani-text: #A8124F; --neel: #23307A;
+  --ok: #E9F6EC; --ok-t: #1E7B52; --warn: #FFF5C2; --warn-t: #8A5000; --bad: #FFEFEF; --bad-t: #C02A2F; --info: #EDF2FE; --info-t: #3451B2;
+  --code: #F5F3F0; --scrim: rgb(28 25 23 / .45);
+  --f-display: "Bricolage Grotesque", "Inter", system-ui, sans-serif; --f-body: "Inter", system-ui, sans-serif; --f-mono: "JetBrains Mono", ui-monospace, monospace;
+  --fast: 120ms; --base: 200ms; --e-std: cubic-bezier(.2,0,0,1); --e-in: cubic-bezier(0,0,0,1)
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141211; --fg: #EDEAE6; --card: #1C1A18; --muted: #262320; --sub: #A9A29B; --line: #34302C; --input: #6E6760; --ink: #EDEAE6; --on-ink: #141211; --rani: #FF4F93; --rani-text: #FF7DAE;
+  --ok: #16301F; --ok-t: #7FD3A2; --warn: #352A0C; --warn-t: #F4C766; --bad: #3A1517; --bad-t: #FF8A8E; --info: #1A2238; --info-t: #9DB2FF; --code: #211F1D; --scrim: rgb(0 0 0 / .6); color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #141211; --fg: #EDEAE6; --card: #1C1A18; --muted: #262320; --sub: #A9A29B; --line: #34302C; --input: #6E6760; --ink: #EDEAE6; --on-ink: #141211; --rani: #FF4F93; --rani-text: #FF7DAE;
+  --ok: #16301F; --ok-t: #7FD3A2; --warn: #352A0C; --warn-t: #F4C766; --bad: #3A1517; --bad-t: #FF8A8E; --info: #1A2238; --info-t: #9DB2FF; --code: #211F1D; --scrim: rgb(0 0 0 / .6); color-scheme: dark }
+* { box-sizing: border-box } [hidden] { display: none !important }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 var(--f-body) }
+button, input, select, textarea { font: inherit; color: inherit }
+:focus-visible { outline: 2px solid var(--rani); outline-offset: 2px }
+.i { width: 16px; height: 16px; stroke-width: 1.75; flex: none } .i-sm { width: 14px; height: 14px } .i-lg { width: 20px; height: 20px }
+.mono { font-family: var(--f-mono); font-size: 12.5px } .sub { color: var(--sub) }
+.top { position: sticky; top: 0; z-index: 20; background: var(--card); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)) }
+.mark { display: flex; align-items: center; gap: 8px; font: 700 15px var(--f-display); white-space: nowrap }
+.mark b { width: 26px; height: 26px; border-radius: 7px; background: var(--ink); color: var(--on-ink); display: grid; place-items: center; font-size: 14px }
+.mark small { font: 600 10px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--bad-t); border: 1px solid color-mix(in srgb, var(--bad-t) 40%, transparent); padding: 1px 6px; border-radius: 99px }
+.grow { flex: 1 }
+.who { display: flex; align-items: center; gap: 8px; font-size: 12.5px; white-space: nowrap }
+.who .k { display: inline-flex; gap: 4px; align-items: center; color: var(--ok-t); font-size: 12px }
+.wrap { display: grid; grid-template-columns: 210px minmax(0, 1fr); min-height: calc(100vh - 53px) }
+.nav { border-right: 1px solid var(--line); background: var(--card); padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 53px; height: calc(100vh - 53px); overflow: auto }
+.nav a { display: flex; gap: 10px; align-items: center; padding: 7px 10px; border-radius: 8px; color: var(--sub); text-decoration: none; font-size: 13.5px; font-weight: 500 }
+.nav a:hover { background: var(--muted); color: var(--fg) }
+.nav a[aria-current="page"] { background: var(--muted); color: var(--fg); font-weight: 600 }
+.nav .sub-l { padding-left: 36px; font-size: 13px }
+.nav .grp { font: 600 11px var(--f-body); letter-spacing: .07em; text-transform: uppercase; color: var(--sub); padding: 14px 10px 6px }
+main { min-width: 0; padding: 22px max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px)); overflow-x: clip }
+.view { max-width: 1180px; margin: 0 auto; animation: fade var(--base) var(--e-std) both }
+@keyframes fade { from { opacity: 0 } to { opacity: 1 } }
+@media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr) } .nav { position: static; height: auto; flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); scrollbar-width: none } .nav .grp, .nav .x { display: none } .nav a { white-space: nowrap } .nav .sub-l { padding-left: 10px } .who .em { display: none } }
+h1 { font: 600 clamp(24px, 3vw, 30px)/1.15 var(--f-display); margin: 0; letter-spacing: -.01em }
+h2 { font: 600 15px var(--f-display); margin: 0 }
+.vhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 16px }
+.eyebrow { font: 600 11.5px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--sub); margin-bottom: 6px; display: flex; gap: 6px; align-items: center }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--input); background: var(--card); color: var(--fg); font-weight: 500; font-size: 13.5px; cursor: pointer; white-space: nowrap; text-decoration: none; transition: background var(--fast) var(--e-std) }
+.btn:hover { background: var(--muted) } .btn.primary { background: var(--ink); color: var(--on-ink); border-color: var(--ink) } .btn.primary:hover { filter: brightness(1.15) }
+.btn.danger { background: var(--bad-t); border-color: var(--bad-t); color: #fff } .btn.ghost { border-color: transparent; background: transparent } .btn.ghost:hover { background: var(--muted) }
+.btn.sm { min-height: 30px; padding: 0 10px; font-size: 12.5px } .btn[aria-disabled="true"] { opacity: .45; cursor: not-allowed }
+@media (max-width: 767px) { .btn { min-height: 40px } .btn.sm { min-height: 34px } }
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 2px 7px; border-radius: 5px; white-space: nowrap; background: var(--muted); color: var(--sub) }
+.badge.ok { background: var(--ok); color: var(--ok-t) } .badge.warn { background: var(--warn); color: var(--warn-t) } .badge.bad { background: var(--bad); color: var(--bad-t) } .badge.info { background: var(--info); color: var(--info-t) }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; min-width: 0 }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 16px; overflow-x: auto; scrollbar-width: none }
+.tabs button { flex: none; border: 0; background: none; padding: 9px 12px; font-size: 13.5px; font-weight: 500; color: var(--sub); cursor: pointer; position: relative; display: inline-flex; gap: 6px; align-items: center }
+.tabs button b { font: 600 11px var(--f-mono); background: var(--muted); border-radius: 99px; padding: 0 6px; color: var(--sub) }
+.tabs button[aria-selected="true"] { color: var(--fg) } .tabs button[aria-selected="true"]::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; background: var(--ink); border-radius: 2px }
+.tbl-wrap { overflow-x: auto } .tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px }
+.tbl th { text-align: left; color: var(--sub); font-weight: 600; font-size: 12px; padding: 9px 12px; border-bottom: 1px solid var(--line); background: var(--bg); white-space: nowrap }
+.tbl td { padding: 10px 12px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; vertical-align: middle }
+.tbl tr:last-child td { border-bottom: 0 } .tbl .n { text-align: right; font-family: var(--f-mono); font-size: 12.5px; white-space: nowrap }
+.tbl tbody tr.click { cursor: pointer } .tbl tbody tr.click:hover { background: var(--bg) }
+.nm { display: flex; gap: 10px; align-items: center }
+.tbl td:first-child { min-width: 210px } .nm small { display: block; color: var(--sub); font-size: 11.5px }
+.ava { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font: 700 12px var(--f-display); color: #fff; flex: none }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center }
+.kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 12px; background: var(--card); margin-bottom: 16px }
+.kpis > div { padding: 12px 14px; border-right: 1px solid var(--line); display: grid; gap: 2px; font-size: 12px; color: var(--sub) }
+.kpis > div:last-child { border-right: 0 }
+.kpis b { font: 700 19px var(--f-display); color: var(--fg); font-variant-numeric: tabular-nums }
+@media (max-width: 980px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) } .kpis > div:nth-child(3n) { border-right: 0 } .kpis > div:nth-child(-n+3) { border-bottom: 1px solid var(--line) } }
+@media (max-width: 560px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) } .kpis > div { border-right: 1px solid var(--line) !important; border-bottom: 1px solid var(--line) } .kpis > div:nth-child(2n) { border-right: 0 !important } }
+.two { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start }
+@media (max-width: 980px) { .two { grid-template-columns: minmax(0, 1fr) } }
+.pad { padding: 16px; display: grid; gap: 10px }
+.kv { display: flex; justify-content: space-between; gap: 12px; font-size: 13px } .kv span:first-child { color: var(--sub) } .kv b { text-align: right; font-variant-numeric: tabular-nums }
+.flag { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; font-size: 13px }
+.flag.warn { background: var(--warn) } .flag.bad { background: var(--bad) } .flag.info { background: var(--info) }
+.flag .i { margin-top: 2px } .flag.warn .i { color: var(--warn-t) } .flag.bad .i { color: var(--bad-t) } .flag.info .i { color: var(--info-t) }
+.note { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--sub); padding: 8px 0 }
+.field { display: grid; gap: 6px } .field label, .lbl { font-size: 12.5px; font-weight: 600 }
+.input { width: 100%; border: 1px solid var(--input); border-radius: 8px; background: var(--card); padding: 8px 11px; min-height: 38px }
+.input:focus { outline: none; border-color: var(--fg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--rani) 18%, transparent) }
+.input[aria-invalid="true"] { border-color: var(--bad-t) }
+.err-line { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--bad-t) }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; padding: 3px; gap: 2px; background: var(--muted) }
+.seg button { border: 0; background: transparent; padding: 5px 11px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: var(--sub); cursor: pointer }
+.seg button[aria-pressed="true"] { background: var(--card); color: var(--fg); box-shadow: 0 1px 2px rgb(0 0 0 / .08) }
+.check { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px }
+.check .ic { width: 22px; height: 22px; border-radius: 99px; display: grid; place-items: center; flex: none }
+.check.ok .ic { background: var(--ok); color: var(--ok-t) } .check.warn .ic { background: var(--warn); color: var(--warn-t) } .check.bad .ic { background: var(--bad); color: var(--bad-t) }
+.check small { display: block; color: var(--sub); font-size: 11.5px }
+.timeline { display: grid; font-size: 12.5px }
+.timeline div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--line) }
+.timeline time { font: 11.5px var(--f-mono); color: var(--sub) }
+.bar { height: 6px; border-radius: 99px; background: var(--muted); overflow: hidden } .bar i { display: block; height: 100%; background: var(--ink); transform-origin: left }
+.modal-wrap { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: var(--scrim); opacity: 0; transition: opacity var(--base) var(--e-std) }
+.modal-wrap.open { opacity: 1 }
+.modal { width: min(540px, 100%); max-height: 88vh; overflow: auto; background: var(--card); border: 1px solid var(--line); border-radius: 14px; display: grid }
+.modal .mh { padding: 18px 20px 6px; display: flex; gap: 12px; align-items: flex-start } .modal .mh h2 { font-size: 18px; flex: 1 }
+.modal .mb { padding: 8px 20px 18px; display: grid; gap: 12px } .modal .mf { padding: 14px 20px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap }
+.pic { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; flex: none }
+@media (max-width: 767px) { .modal-wrap { place-items: end stretch; padding: 0 } .modal { width: 100%; border-radius: 16px 16px 0 0 } .modal .mf { flex-direction: column-reverse } .modal .mf .btn { width: 100% } }
+.pk { display: grid; justify-items: center; gap: 10px; padding: 12px; text-align: center }
+.pk .ring { width: 54px; height: 54px; border-radius: 99px; border: 4px solid var(--muted); border-top-color: var(--rani); animation: spin .9s linear infinite }
+@keyframes spin { to { transform: rotate(360deg) } }
+.dlg-err { display: flex; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bad); color: var(--bad-t); font-size: 13px }
+.toasts { position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 80; display: grid; justify-items: center; pointer-events: none }
+.toast { pointer-events: auto; width: 100%; max-width: 440px; display: flex; gap: 10px; align-items: center; background: var(--ink); color: var(--on-ink); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; transition: opacity var(--base) var(--e-in) }
+@starting-style { .toast { opacity: 0 } } .toast.out { opacity: 0 }
+.toast .mk { width: 22px; height: 22px; border-radius: 99px; display: grid; place-items: center; flex: none; background: var(--ok-t); color: var(--on-ink) } .toast .mk.bad { background: var(--bad-t) } .toast .mk.info { background: var(--rani) }
+.toast .tx { flex: 1 } .toast button { background: none; border: 0; color: inherit; font-weight: 600; text-decoration: underline; cursor: pointer }
+.skel { display: block; height: 12px; border-radius: 6px; background: var(--muted); animation: pulse 1.2s ease-in-out infinite } @keyframes pulse { 50% { opacity: .5 } }
+.empty { display: grid; justify-items: center; gap: 8px; padding: 36px 16px; text-align: center; color: var(--sub); font-size: 13px } .empty b { color: var(--fg); font-size: 15px }
+.proto { position: fixed; left: 12px; bottom: 12px; z-index: 35; display: flex; align-items: center; gap: 6px; background: var(--card); border: 1px dashed var(--rani); border-radius: 99px; padding: 4px 6px 4px 10px; font-size: 11.5px; color: var(--rani-text) }
+.proto select { border: 0; background: transparent; font-size: 12px; color: var(--fg) }
+.tip { position: relative } .tip:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--on-ink); font-size: 11.5px; padding: 4px 8px; border-radius: 6px; white-space: nowrap; z-index: 45 }
+@media (max-width: 560px) { .who .k .t { display: none } .top { gap: 8px } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important } }
+</style>
+
+<header class="top">
+  <div class="mark"><b>f</b>Frrata <small>Admin</small></div>
+  <span class="grow"></span>
+  <span class="who"><span class="k"><i data-lucide="key-round" class="i i-sm"></i><span class="t">Confirmed 2 min ago</span></span><span class="em sub">· Vikram</span><select id="role" class="input" style="width:auto;min-height:30px;padding:2px 8px;font-size:12.5px" aria-label="Viewing as"><option value="admin">Admin</option><option value="support">Support</option></select></span>
+  <button class="btn sm ghost" id="theme" aria-label="Switch theme"><i data-lucide="sun-moon" class="i"></i></button>
+</header>
+<div class="wrap">
+  <nav class="nav" aria-label="Admin">
+    <a class="x" href="#partners"><i data-lucide="store" class="i"></i>Merchants</a>
+    <a href="#partners" data-nav="partners"><i data-lucide="handshake" class="i"></i>Partners</a>
+    <a href="#credits" data-nav="credits" class="sub-l">Studio credits</a>
+    <a href="#payouts" data-nav="payouts" class="sub-l">Payouts</a>
+    <span class="grp">Also in Admin</span>
+    <a class="x" href="#partners"><i data-lucide="receipt" class="i"></i>Billing</a>
+    <a class="x" href="#partners"><i data-lucide="blocks" class="i"></i>Apps</a>
+    <a class="x" href="#partners"><i data-lucide="users" class="i"></i>Staff</a>
+    <a class="x" href="#partners"><i data-lucide="activity" class="i"></i>Activity</a>
+  </nav>
+  <main id="main">
+    <section class="view" data-view="partners" hidden>
+      <div class="vhead"><div><div class="eyebrow"><i data-lucide="handshake" class="i i-sm"></i>Admin</div><h1>Partners</h1></div><div class="row"><input class="input" id="q" placeholder="Search partners, GSTIN, email" aria-label="Search partners" style="width:240px"></div></div>
+      <div class="tabs" id="p-tabs" role="tablist"></div>
+      <div id="p-body"></div>
+    </section>
+    <section class="view" data-view="partner" hidden><div id="pd"></div></section>
+    <section class="view" data-view="credits" hidden><div id="cr"></div></section>
+    <section class="view" data-view="payouts" hidden><div id="po"></div></section>
+  </main>
+</div>
+<div id="modal-root"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<label class="proto"><i data-lucide="flask-conical" class="i i-sm"></i>State<select id="proto" aria-label="Prototype state"><option value="normal">Normal</option><option value="empty">Empty</option><option value="loading">Loading</option><option value="error">Couldn’t load</option></select></label>
+
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script>
+(() => {
+'use strict'
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)]
+const icons = (root) => { try { window.lucide && window.lucide.createIcons({ attrs: { class: 'i', 'stroke-width': 1.75 }, nameAttr: 'data-lucide', root }) } catch (_) {} }
+const ico = (n, c = 'i') => `<i data-lucide="${n}" class="${c}"></i>`
+const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+const inr = (n) => '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })
+const S = { role: 'admin', proto: 'normal', tab: 'active', ptab: 'overview', open: 'pixel' }
+const admin = () => S.role === 'admin'
+$('#theme').onclick = () => { const d = document.documentElement; const dark = d.dataset.theme ? d.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; d.dataset.theme = dark ? 'light' : 'dark' }
+function toast(text, kind = 'ok', action) {
+  const box = $('#toasts'); box.innerHTML = ''; const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', kind === 'bad' ? 'alert' : 'status')
+  t.innerHTML = `<span class="mk ${kind}">${ico(kind === 'ok' ? 'check' : kind === 'bad' ? 'alert-circle' : 'info', 'i i-sm')}</span><span class="tx">${text}</span>`
+  if (action) { const b = document.createElement('button'); b.textContent = action.label; b.onclick = () => { action.run(); t.remove() }; t.append(b) }
+  box.append(t); icons(t); if (kind !== 'bad') setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 200) }, 4200)
+}
+function modal({ title, pic, body, foot, onOpen }) {
+  const w = document.createElement('div'); w.className = 'modal-wrap'
+  w.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="mh">${pic || ''}<h2 id="mt">${title}</h2><button class="btn sm ghost" data-x aria-label="Close">${ico('x', 'i i-sm')}</button></div><div class="mb">${body}</div>${foot ? `<div class="mf">${foot}</div>` : ''}</div>`
+  $('#modal-root').append(w); icons(w); const prev = document.activeElement
+  requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('open')))
+  const close = () => { w.classList.remove('open'); setTimeout(() => { w.remove(); prev?.focus?.() }, 220); document.removeEventListener('keydown', k) }
+  const k = (e) => { if (e.key === 'Escape') close() }; document.addEventListener('keydown', k)
+  w.addEventListener('click', (e) => { if (e.target === w || e.target.closest('[data-x]')) close() })
+  setTimeout(() => w.querySelector('[data-autofocus]')?.focus(), 60); onOpen && onOpen(w.querySelector('.modal'), close); return close
+}
+const pic = (n, bg, fg) => `<span class="pic" style="background:${bg};color:${fg}">${ico(n, 'i i-lg')}</span>`
+/* A money or access action asks for the passkey again when the last check is older than 5 minutes (requireStaff · FRESH_MS). */
+async function passkey(m, slot) { const el = $(slot, m); const was = el.innerHTML; el.innerHTML = `<div class="pk"><span class="ring"></span><b>Touch your passkey</b><span class="sub" style="font-size:12.5px">Money and access changes ask again.</span></div>`; await wait(1100); el.innerHTML = was; icons(el) }
+const adminOnly = (html, why = 'Admins only') => admin() ? html : html.replace('<button ', `<button aria-disabled="true" data-tip="${why}" `).replace('class="btn', 'class="tip btn')
+
+/* ── Data (illustrative) ── */
+const P = [
+  { id: 'pixel', n: 'Pixel & Thread LLP', city: 'Pune', since: 'Apr 2026', col: '#23307A', plan: 'Studio', team: 4, live: 5, onb: 3, bal: 142, res: 18, spent: 108, share: 9874, gstin: '27AAACP1234R1Z5', flags: [['warn', 'credit-card', 'Seat renewal failed 1 Oct; paid 2 Oct'], ['info', 'hourglass', '2 clients waiting on their brands']], st: 'active' },
+  { id: 'kalam', n: 'Kalam Studio', city: 'Jaipur', since: 'Jun 2026', col: '#7A1F2B', plan: 'Studio Plus', team: 9, live: 12, onb: 4, bal: 611, res: 42, spent: 388, share: 31240, gstin: '08AAKCK5521M1Z2', flags: [], st: 'active' },
+  { id: 'dhaga', n: 'Dhaga Digital', city: 'Surat', since: 'Sep 2026', col: '#2F5D50', plan: 'Studio', team: 2, live: 1, onb: 2, bal: 6, res: 0, spent: 150, share: 704.8, gstin: '24AAGFD8812Q1Z9', flags: [['bad', 'battery-low', '6 credits left · 2 turns paused'], ['warn', 'hourglass', 'Renewal fails: day 3 of 7 grace']], st: 'grace' },
+  { id: 'aarav', n: 'Aarav Mehta', city: 'Indore', since: 'Oct 2026', col: '#B7791F', plan: 'Partner (free)', team: 1, live: 0, onb: 1, bal: 4, res: 0, spent: 6, share: 0, gstin: '—', flags: [['info', 'user', 'Freelancer without GSTIN: paid without GST']], st: 'active' },
+  { id: 'zari', n: 'Zari Labs', city: 'Delhi', since: 'Aug 2026', col: '#6B4E9B', plan: 'Studio', team: 3, live: 0, onb: 9, bal: 0, res: 0, spent: 410, share: 0, gstin: '07AAJCZ4410P1Z1', flags: [['bad', 'shield-alert', '9 unopened stores, none handed over in 90 days'], ['bad', 'fingerprint', 'Payout account matches a declined applicant']], st: 'suspended' },
+]
+const QUEUE = [
+  { id: 'q1', n: 'Bunkar Collective', city: 'Varanasi', who: 'Shabana Ansari', does: 'Design, Store setup', brands: '6–20 brands', gst: 'GSTIN 09AAFCB7741K1Z3 · valid', checks: [['ok', 'PAN unique'], ['ok', 'GSTIN valid and active'], ['ok', 'Payout account not seen before'], ['ok', 'Work links reachable']], ago: '2 h' },
+  { id: 'q2', n: 'Rohit Kulkarni', city: 'Nagpur', who: 'Rohit Kulkarni', does: 'Store setup', brands: '1–5 brands', gst: 'No GSTIN', checks: [['ok', 'PAN unique'], ['warn', 'No GSTIN: paid without GST'], ['bad', 'This device signed up Zari Labs (suspended)'], ['ok', 'Work links reachable']], ago: '1 day' },
+]
+const LEDGER = [['12 Nov 16:02', 'Turn', 'Kesar Studio', 'Diwali home · build', 'Meera', -31, 111], ['12 Nov 15:40', 'Turn', 'Kesar Studio', 'Design system', 'Meera', -14, 142], ['12 Nov 11:12', 'Turn', 'Noor Threads', 'Sana’s 3 notes', 'Rohan', -6, 156], ['11 Nov 19:30', 'Returned', 'Bandhej Co.', 'Lookbook · failed on Frrata’s side', 'system', 4, 162], ['11 Nov 09:00', 'Frrata paid', 'Mitti Ceramics', 'Kit 2.3 update', 'system', 0, 158], ['3 Oct', 'Top-up', '—', '100 credits · FRR/26-27/00118', 'Ananya', 100, 158], ['1 Nov', 'Seat', '—', 'Studio · November', 'system', 150, 58]]
+
+/* ── Partners list ── */
+function renderList() {
+  const counts = { review: QUEUE.length, active: P.filter((p) => p.st !== 'suspended').length, suspended: P.filter((p) => p.st === 'suspended').length, declined: 3 }
+  $('#p-tabs').innerHTML = [['review', 'To review'], ['active', 'Active'], ['suspended', 'Suspended'], ['declined', 'Declined']].map(([k, n]) => `<button role="tab" aria-selected="${S.tab === k}" data-t="${k}">${n}<b>${counts[k]}</b></button>`).join('')
+  const body = $('#p-body')
+  if (S.proto === 'loading') { body.innerHTML = `<div class="card pad">${'<span class="skel" style="width:60%"></span><span class="skel" style="width:85%"></span><span class="skel" style="width:40%"></span>'.repeat(2)}</div>`; return }
+  if (S.proto === 'error') { body.innerHTML = `<div class="card empty">${ico('cloud-off', 'i i-lg')}<b>Couldn’t load partners</b><button class="btn sm" data-retry>${ico('refresh-cw', 'i i-sm')}Try again</button></div>`; icons(body); return }
+  if (S.proto === 'empty') { body.innerHTML = `<div class="card empty">${ico('handshake', 'i i-lg')}<b>${S.tab === 'review' ? 'Nothing to review' : 'No partners here'}</b></div>`; icons(body); return }
+  if (S.tab === 'review') {
+    body.innerHTML = `<div style="display:grid;gap:12px">${QUEUE.map((q) => `<div class="card pad"><div class="row" style="justify-content:space-between"><div class="nm"><span class="ava" style="background:#5B4636">${q.n[0]}</span><div><b>${q.n}</b><small>${q.who} · ${q.city} · ${q.does} · ${q.brands}</small></div></div><span class="sub mono">${q.ago} ago</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px">${q.checks.map(([k, t]) => `<div class="check ${k}"><span class="ic">${ico(k === 'ok' ? 'check' : k === 'warn' ? 'alert-triangle' : 'x', 'i i-sm')}</span>${t}</div>`).join('')}</div>
+      <div class="row">${adminOnly(`<button class="btn sm primary" data-approve="${q.id}">${ico('check', 'i i-sm')}Approve · 10 credits</button>`)}${adminOnly(`<button class="btn sm" data-decline="${q.id}">Decline</button>`)}<span class="sub" style="font-size:12px">${q.gst}</span></div></div>`).join('')}</div>`
+  } else if (S.tab === 'declined') {
+    body.innerHTML = `<div class="card empty">${ico('archive', 'i i-lg')}<b>3 declined</b><span>Kept 90 days for duplicate checks, then deleted.</span></div>`
+  } else {
+    const q = ($('#q').value || '').toLowerCase()
+    const rows = P.filter((p) => (S.tab === 'suspended' ? p.st === 'suspended' : p.st !== 'suspended') && (!q || (p.n + p.gstin + p.city).toLowerCase().includes(q)))
+    body.innerHTML = `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Partner</th><th>Plan</th><th class="n">People</th><th class="n">Brands</th><th class="n">Credits</th><th class="n">Used Nov</th><th class="n">Share Oct</th><th>Flags</th></tr></thead><tbody>${rows.map((p) => `<tr class="click" data-open="${p.id}"><td><div class="nm"><span class="ava" style="background:${p.col}">${p.n[0]}</span><div><b>${p.n}</b><small>${p.city} · since ${p.since}</small></div></div></td><td>${p.plan}${p.st === 'grace' ? ' <span class="badge warn">Grace</span>' : ''}</td><td class="n">${p.team}</td><td class="n">${p.live} live · ${p.onb}</td><td class="n">${p.bal}</td><td class="n">${p.spent} · ${inr(p.spent * 19)}</td><td class="n">${p.share ? inr(p.share) : '—'}</td><td>${p.flags.length ? p.flags.map(([k]) => `<span class="badge ${k}">${k === 'bad' ? 'Look' : k === 'warn' ? 'Watch' : 'Note'}</span>`).join(' ') : '<span class="sub">—</span>'}</td></tr>`).join('') || `<tr><td colspan="8"><div class="empty"><b>No match</b></div></td></tr>`}</tbody></table></div>
+      <div class="note">${ico('shield', 'i i-sm')}Read across partners through frata_admin (ADR-0007). Brands’ orders and shoppers are never shown here.</div>`
+  }
+  icons(body)
+}
+$('#p-tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (b) { S.tab = b.dataset.t; renderList() } })
+$('#q').addEventListener('input', renderList)
+$('#p-body').addEventListener('click', (e) => {
+  const o = e.target.closest('[data-open]'); if (o) { S.open = o.dataset.open; S.ptab = 'overview'; location.hash = '#partner' }
+  if (e.target.closest('[data-retry]')) { S.proto = 'normal'; $('#proto').value = 'normal'; renderList() }
+  const a = e.target.closest('[data-approve]'); if (a && a.getAttribute('aria-disabled') !== 'true') approve(QUEUE.find((q) => q.id === a.dataset.approve))
+  const d = e.target.closest('[data-decline]'); if (d && d.getAttribute('aria-disabled') !== 'true') decline(QUEUE.find((q) => q.id === d.dataset.decline))
+})
+function approve(q) {
+  const risky = q.checks.some(([k]) => k === 'bad')
+  modal({ title: `Approve ${esc(q.n)}?`, pic: pic('handshake', 'var(--ok)', 'var(--ok-t)'),
+    body: `${q.checks.map(([k, t]) => `<div class="check ${k}"><span class="ic">${ico(k === 'ok' ? 'check' : k === 'warn' ? 'alert-triangle' : 'x', 'i i-sm')}</span>${t}</div>`).join('')}<div class="kv"><span>On approval</span><b>10 credits, once · Partner (free)</b></div>${risky ? `<div class="field"><label for="ap-why">Why approve despite the warning</label><textarea id="ap-why" class="input" rows="2" aria-describedby="ap-err"></textarea><span id="ap-err"></span></div>` : ''}<div id="ap-pk"></div>`,
+    foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="ap-ok" data-autofocus>Approve</button>`,
+    onOpen: (m, close) => { $('#ap-ok', m).onclick = async () => { if (risky && !$('#ap-why', m).value.trim()) { $('#ap-why', m).setAttribute('aria-invalid', 'true'); $('#ap-err', m).innerHTML = `<span class="err-line">${ico('alert-circle', 'i i-sm')}Say why: it goes in the audit log</span>`; icons(m); $('#ap-why', m).focus(); return } await passkey(m, '#ap-pk'); close(); QUEUE.splice(QUEUE.indexOf(q), 1); renderList(); toast(`${q.n} approved. 10 credits added; welcome email queued.`) } } })
+}
+function decline(q) {
+  modal({ title: `Decline ${esc(q.n)}?`, pic: pic('x', 'var(--bad)', 'var(--bad-t)'),
+    body: `<div class="field"><label for="dc-why">Reason they’ll read</label><select id="dc-why" class="input"><option>We couldn’t verify your work links</option><option>This device or payout account belongs to another partner</option><option>Not a fit for now</option></select></div>`,
+    foot: `<button class="btn" data-x>Cancel</button><button class="btn danger" id="dc-ok">Decline</button>`,
+    onOpen: (m, close) => { $('#dc-ok', m).onclick = () => { close(); QUEUE.splice(QUEUE.indexOf(q), 1); renderList(); toast(`${q.n} declined.`) } } })
+}
+
+/* ── Partner page ── */
+const PT = [['overview', 'Overview'], ['team', 'Team'], ['clients', 'Brands'], ['credits', 'Credits'], ['billing', 'Payments'], ['share', 'Share'], ['audit', 'Audit']]
+function renderPartner() {
+  const p = P.find((x) => x.id === S.open), pd = $('#pd')
+  const status = p.st === 'suspended' ? '<span class="badge bad">Suspended</span>' : p.st === 'grace' ? '<span class="badge warn">Grace · day 3 of 7</span>' : '<span class="badge ok">Active</span>'
+  pd.innerHTML = `<div class="vhead"><div><div class="eyebrow"><a href="#partners" class="sub" style="text-decoration:none;display:inline-flex;gap:4px;align-items:center">${ico('chevron-left', 'i i-sm')}Partners</a></div><div class="row"><span class="ava" style="background:${p.col};width:36px;height:36px;border-radius:10px">${p.n[0]}</span><h1>${p.n}</h1>${status}</div><div class="sub" style="font-size:12.5px;margin-top:4px">${p.city} · since ${p.since} · ${p.plan} · GSTIN <span class="mono">${p.gstin}</span></div></div>
+    <div class="row">${adminOnly(`<button class="btn" data-grant>${ico('plus', 'i i-sm')}Grant credits</button>`)}${p.st === 'suspended' ? adminOnly(`<button class="btn" data-reinstate>Reinstate</button>`) : adminOnly(`<button class="btn" data-suspend style="color:var(--bad-t)">${ico('ban', 'i i-sm')}Suspend</button>`)}<button class="btn ghost" data-note>${ico('sticky-note', 'i i-sm')}Note</button></div></div>
+    <div class="tabs" id="pt" role="tablist">${PT.map(([k, n]) => `<button role="tab" aria-selected="${S.ptab === k}" data-pt="${k}">${n}</button>`).join('')}</div><div id="ptb"></div>`
+  icons(pd); renderPtab(p)
+}
+function renderPtab(p) {
+  const b = $('#ptb'), t = S.ptab
+  if (t === 'overview') {
+    b.innerHTML = `<div class="kpis"><div><b>${p.bal}</b>Credits now</div><div><b>${p.res}</b>Reserved</div><div><b>${p.spent}</b>Used in Nov</div><div><b>${inr(p.spent * 19)}</b>Sold in Nov</div><div><b>${(19 / 6.33).toFixed(1)}×</b>Price ÷ measured cost</div><div><b>${p.share ? inr(p.share) : '—'}</b>Share for Oct</div></div>
+      <div class="two"><div class="card pad"><h2>Needs a look</h2>${p.flags.length ? p.flags.map(([k, ic, t]) => `<div class="flag ${k}">${ico(ic)}<span>${t}</span></div>`).join('') : '<span class="sub">Nothing.</span>'}</div>
+      <div class="card pad"><h2>Business</h2><div class="kv"><span>PAN</span><b class="mono">AAACP••••R ✓</b></div><div class="kv"><span>GSTIN</span><b class="mono">${p.gstin}</b></div><div class="kv"><span>Payouts</span><b>HDFC ••4421 · verified</b></div><div class="kv"><span>Terms</span><b>v1 · 20% for 24 months</b></div><div class="kv"><span>Brands share signals</span><b>Consent at linking</b></div></div></div>`
+  } else if (t === 'team') {
+    const T = [['Ananya Rao', 'Owner', 2, 'Today', 'All brands'], ['Rohan Mehta', 'Lead', 1, 'Today', 'Kesar, Noor'], ['Meera Iyer', 'Builder', 1, 'Yesterday', 'Kesar'], ['Dev Shah', 'Builder · invited', 0, '—', 'Bandhej']]
+    b.innerHTML = `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Role</th><th class="n">Passkeys</th><th>Last seen</th><th>Brands</th><th></th></tr></thead><tbody>${T.map(([n, r, k, s, br]) => `<tr><td>${n}</td><td><span class="badge ${r.startsWith('Owner') ? 'info' : r.startsWith('Lead') ? 'ok' : 'warn'}">${r}</span></td><td class="n">${k}</td><td>${s}</td><td>${br}</td><td class="n">${adminOnly(`<button class="btn sm ghost" data-end="${n}">End sessions</button>`)}</td></tr>`).join('')}</tbody></table></div><div class="note">${ico('info', 'i i-sm')}Roles and removals are the partner owner’s. Frrata ends sessions or suspends the whole partner.</div>`
+  } else if (t === 'clients') {
+    const C = [['Kesar Studio', 'Onboarding', 'Opens at handover', '12 Oct', '—'], ['Noor Threads', 'Live', 'Launch', 'Apr', 'month 7 of 24'], ['Bandhej Co.', 'Onboarding', 'Opens at handover', '28 Oct', '—'], ['Haldi House', 'Live', 'Launch', 'Dec 2025', 'month 11 of 24'], ['Mitti Ceramics', 'Live', 'Growth', 'Jul', 'month 4 of 24'], ['Rangrez Prints', 'Live', 'Launch · trial', 'Oct', 'starts at first payment'], ['Vastra Loom', 'Live', 'Growth', 'Aug 2025', 'month 15 of 24'], ['Pahadi Pantry', 'Unlinked 2 Oct', 'Launch', 'Jan', 'notice to 31 Dec']]
+    b.innerHTML = `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Brand</th><th>Stage</th><th>Frrata plan</th><th>Linked</th><th>Share window</th><th></th></tr></thead><tbody>${C.map(([n, s, pl, l, w]) => `<tr><td>${n}</td><td><span class="badge ${s === 'Live' ? 'ok' : s.startsWith('Unlinked') ? '' : 'info'}">${s}</span></td><td>${pl}</td><td>${l}</td><td>${w}</td><td class="n"><button class="btn sm ghost" data-merchant="${n}">Merchant ›</button></td></tr>`).join('')}</tbody></table></div><div class="note">${ico('shield', 'i i-sm')}Stage, plan and dates only. A brand’s orders and shoppers stay in Merchants, behind a support visit.</div>`
+  } else if (t === 'credits') {
+    b.innerHTML = `<div class="two"><div class="card tbl-wrap"><table class="tbl" style="min-width:640px"><thead><tr><th>When</th><th>Kind</th><th>Brand</th><th>What</th><th>Who</th><th class="n">Credits</th><th class="n">After</th></tr></thead><tbody>${LEDGER.map(([d, k, br, w, who, n, after]) => `<tr><td class="sub">${d}</td><td><span class="badge ${k === 'Turn' ? '' : k === 'Returned' ? 'info' : k === 'Grant' ? 'warn' : 'ok'}">${k}</span></td><td>${br}</td><td>${w}</td><td>${who}</td><td class="n">${n > 0 ? '+' + n : n}</td><td class="n">${after}</td></tr>`).join('')}</tbody></table></div>
+      <div style="display:grid;gap:16px"><div class="card pad"><h2>Where they sit</h2><div class="kv"><span>November seat</span><b>42 · use by 31 Jan</b></div><div class="kv"><span>Top-up 3 Oct</span><b>100 · use by 3 Oct 2027</b></div><div class="kv"><span>Reserved now</span><b>18 · 2 turns</b></div></div>
+      <div class="card pad"><h2>Fix a balance</h2>${adminOnly(`<button class="btn sm" data-return>${ico('undo-2', 'i i-sm')}Return a failed turn</button>`)}${adminOnly(`<button class="btn sm" data-grant>${ico('plus', 'i i-sm')}Grant credits</button>`)}<span class="sub" style="font-size:12px">Every change needs a reason and shows in the partner’s ledger. Over 200 credits needs a second admin.</span></div></div></div>`
+  } else if (t === 'billing') {
+    b.innerHTML = `<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Date</th><th>What</th><th class="n">With GST</th><th>Status</th><th>Invoice</th><th></th></tr></thead><tbody>${[['1 Nov', 'Studio · November', 3538.82, 'Paid', 'FRR/26-27/00131'], ['3 Oct', 'Top-up · 100', 2242, 'Paid', 'FRR/26-27/00118'], ['2 Oct', 'Studio · October (retry)', 3538.82, 'Paid', 'FRR/26-27/00112'], ['1 Oct', 'Studio · October', 3538.82, 'Failed · UPI declined', '—']].map(([d, w, a, s, i]) => `<tr><td>${d}</td><td>${w}</td><td class="n">${inr(a)}</td><td><span class="badge ${s === 'Paid' ? 'ok' : 'bad'}">${s}</span></td><td class="mono">${i}</td><td class="n">${s === 'Paid' ? adminOnly(`<button class="btn sm ghost" data-refund="${i}">Refund</button>`) : ''}</td></tr>`).join('')}</tbody></table></div><div class="note">${ico('info', 'i i-sm')}Credits aren’t refunded as money. Refund is for a charge taken twice or in error, back to the same UPI or card, with a credit note.</div>`
+  } else if (t === 'share') {
+    const g = p.share || 0, tds = Math.round(g * 2) / 100
+    b.innerHTML = `<div class="two"><div class="card tbl-wrap"><table class="tbl" style="min-width:560px"><thead><tr><th>Month</th><th class="n">20%</th><th class="n">+ GST</th><th class="n">− TDS</th><th class="n">Pays</th><th>Status</th></tr></thead><tbody>${[['October', g, 'Ready · 5 Dec'], ['September', 9169.2, 'Paid 5 Nov · UTR ••8842'], ['August', 5289.4, 'Paid 5 Oct']].map(([m, a, s]) => `<tr><td>${m}</td><td class="n">${inr(a)}</td><td class="n">${inr(Math.round(a * 18) / 100)}</td><td class="n">−${inr(Math.round(a * 2) / 100)}</td><td class="n">${inr(a + Math.round(a * 18) / 100 - Math.round(a * 2) / 100)}</td><td><span class="badge ${s.startsWith('Paid') ? 'ok' : 'info'}">${s}</span></td></tr>`).join('')}</tbody></table></div>
+      <div class="card pad"><h2>This year</h2><div class="kv"><span>Share so far (FY 26-27)</span><b>${inr(38420)}</b></div><div class="kv"><span>TDS 2% (s.393, was 194H)</span><b>Applies: over ₹20,000</b></div><div class="kv"><span>GST</span><b>18%, self-billed (GSTIN on file)</b></div><div class="kv"><span>Form 16A</span><b>Quarterly</b></div>${adminOnly(`<button class="btn sm" data-hold style="justify-self:start">${ico('pause', 'i i-sm')}Hold October</button>`)}</div></div>`
+  } else {
+    b.innerHTML = `<div class="card pad"><div class="timeline">${[['12 Nov 16:02', 'Meera spent 31 credits on Kesar Studio (build)'], ['12 Nov 10:20', 'Ananya added a passkey (Pixel 8); email sent'], ['11 Nov 19:30', 'System returned 4 credits: a turn failed on Frrata’s side'], ['2 Oct 09:14', 'Seat renewal paid on retry'], ['1 Oct 09:00', 'Seat renewal failed: UPI declined'], ['14 Apr', 'Vikram approved the application']].map(([d, t]) => `<div><time>${d}</time><span>${t}</span></div>`).join('')}</div></div>`
+  }
+  icons(b)
+}
+$('#pd').addEventListener('click', (e) => {
+  const p = P.find((x) => x.id === S.open)
+  const tb = e.target.closest('[data-pt]'); if (tb) { S.ptab = tb.dataset.pt; $$('#pt button').forEach((x) => x.setAttribute('aria-selected', String(x === tb))); renderPtab(p); return }
+  const dis = e.target.closest('[aria-disabled="true"]'); if (dis) { toast('Support can look; only admins change money or access.', 'info'); return }
+  if (e.target.closest('[data-grant]')) grant(p)
+  if (e.target.closest('[data-suspend]')) suspend(p)
+  if (e.target.closest('[data-reinstate]')) { p.st = 'active'; renderPartner(); toast(`${p.n} reinstated. People sign in again with passkeys.`) }
+  if (e.target.closest('[data-return]')) returnTurn(p)
+  if (e.target.closest('[data-note]')) modal({ title: 'Note', body: `<textarea class="input" rows="3" aria-label="Note" data-autofocus placeholder="Seen only by Frrata staff"></textarea>`, foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" data-x data-saved>Save</button>` })
+  const en = e.target.closest('[data-end]'); if (en) toast(`${en.dataset.end}: every session ended. They sign in again with a passkey.`)
+  const mr = e.target.closest('[data-merchant]'); if (mr) toast(`Opens ${mr.dataset.merchant} in Merchants.`, 'info')
+  const rf = e.target.closest('[data-refund]'); if (rf) modal({ title: `Refund ${rf.dataset.refund}?`, pic: pic('undo-2', 'var(--warn)', 'var(--warn-t)'), body: `<div class="field"><label for="rf-why">Why</label><select id="rf-why" class="input"><option>Charged twice</option><option>Charged in error</option></select></div><div class="kv"><span>Goes back to</span><b>The same UPI · 5–7 working days</b></div><div class="kv"><span>Also</span><b>Credits removed · credit note issued</b></div><div id="rf-pk"></div>`, foot: `<button class="btn" data-x>Cancel</button><button class="btn danger" id="rf-ok">Refund</button>`, onOpen: (m, close) => { $('#rf-ok', m).onclick = async () => { await passkey(m, '#rf-pk'); close(); toast('Refund started. Credit note CN/26-27/0007 issued.') } } })
+  if (e.target.closest('[data-hold]')) modal({ title: 'Hold October’s payout?', pic: pic('pause', 'var(--warn)', 'var(--warn-t)'), body: `<div class="field"><label for="h-why">Reason the partner reads</label><input id="h-why" class="input" value="A brand’s refund is under review"></div>`, foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" data-x data-held>Hold</button>` })
+})
+document.addEventListener('click', (e) => { if (e.target.closest('[data-saved]')) toast('Note saved.'); if (e.target.closest('[data-held]')) toast('October held. The partner sees the reason on their statement.') })
+function grant(p) {
+  modal({ title: `Grant credits to ${esc(p.n)}`, pic: pic('gift', 'var(--info)', 'var(--info-t)'),
+    body: `<div class="field"><label for="g-n">Credits</label><input id="g-n" class="input" inputmode="numeric" value="50" aria-describedby="g-err" style="max-width:140px"><span id="g-err"></span></div>
+      <div class="field"><label for="g-why">Reason</label><select id="g-why" class="input"><option>Outage on Frrata’s side</option><option>Goodwill</option><option>Pilot programme</option><option>Correction</option></select></div>
+      <div class="field"><label for="g-note">Note for the audit log</label><textarea id="g-note" class="input" rows="2" aria-describedby="g-nerr"></textarea><span id="g-nerr"></span></div>
+      <div class="kv"><span>Lasts</span><b>12 months · shows as “Frrata grant”</b></div><div class="kv"><span>Costs Frrata</span><b id="g-cost">${inr(50 * 6.33)} measured</b></div><div id="g-pk"></div>`,
+    foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="g-ok">Grant</button>`,
+    onOpen: (m, close) => {
+      const n = $('#g-n', m); n.oninput = () => { const v = +n.value.replace(/\D/g, '') || 0; $('#g-cost', m).textContent = `${inr(Math.round(v * 633) / 100)} measured${v > 200 ? ' · needs a second admin' : ''}`; n.removeAttribute('aria-invalid'); $('#g-err', m).innerHTML = '' }
+      $('#g-ok', m).onclick = async () => {
+        const v = +n.value.replace(/\D/g, '') || 0, note = $('#g-note', m).value.trim(); let bad = false
+        if (!v || v > 1000) { n.setAttribute('aria-invalid', 'true'); $('#g-err', m).innerHTML = `<span class="err-line">${ico('alert-circle', 'i i-sm')}${v ? 'Up to 1,000 at a time' : 'Enter a number of credits'}</span>`; bad = true }
+        if (!note) { $('#g-note', m).setAttribute('aria-invalid', 'true'); $('#g-nerr', m).innerHTML = `<span class="err-line">${ico('alert-circle', 'i i-sm')}Add a note: it goes in the audit log</span>`; bad = true }
+        if (bad) { icons(m); (n.getAttribute('aria-invalid') ? n : $('#g-note', m)).focus(); return }
+        await passkey(m, '#g-pk'); close()
+        if (v > 200) toast(`${v} credits waiting for a second admin. Sent to Sneha.`, 'info')
+        else { p.bal += v; LEDGER.unshift(['Now', 'Grant', '—', `${$('#g-why', m).value} · ${note}`, 'Vikram', v, p.bal]); renderPartner(); toast(`${v} credits granted to ${p.n}.`) }
+      }
+    } })
+}
+function returnTurn(p) {
+  modal({ title: 'Return a failed turn', pic: pic('undo-2', 'var(--info)', 'var(--info-t)'),
+    body: `<div class="field"><label for="rt">Turn</label><select id="rt" class="input"><option>12 Nov 16:02 · Kesar Studio · build · 31 credits</option><option>12 Nov 11:12 · Noor Threads · 6 credits</option></select></div><div class="kv"><span>Rule</span><b>Only when it failed on Frrata’s side</b></div><div class="field"><label for="rt-why">What failed</label><input id="rt-why" class="input" value="Build host timed out (incident #41)"></div>`,
+    foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="rt-ok">Return</button>`,
+    onOpen: (m, close) => { $('#rt-ok', m).onclick = () => { close(); p.bal += 31; LEDGER.unshift(['Now', 'Returned', 'Kesar Studio', 'Build · Frrata-side failure', 'Vikram', 31, p.bal]); renderPartner(); toast('31 credits returned.') } } })
+}
+function suspend(p) {
+  modal({ title: `Suspend ${esc(p.n)}?`, pic: pic('ban', 'var(--bad)', 'var(--bad-t)'),
+    body: `${['All ' + p.team + ' people lose access to every brand now', 'Studio sessions and routines stop; drafts are kept', 'Brands’ shops and sites keep running', 'Payouts are held until a decision', 'Brands are told their partner is paused'].map((t) => `<div class="check warn"><span class="ic">${ico('arrow-right', 'i i-sm')}</span>${t}</div>`).join('')}
+      <div class="field"><label for="s-why">Reason (partner and audit log)</label><select id="s-why" class="input"><option>Farming free credits</option><option>Payment fraud</option><option>Shopper data misuse</option><option>Breach of partner terms</option></select></div>
+      <div class="field"><label for="s-name">Type <b>${esc(p.n)}</b> to confirm</label><input id="s-name" class="input" autocomplete="off" aria-describedby="s-err"><span id="s-err"></span></div><div id="s-pk"></div>`,
+    foot: `<button class="btn" data-x>Cancel</button><button class="btn danger" id="s-ok">Suspend</button>`,
+    onOpen: (m, close) => { $('#s-ok', m).onclick = async () => { const v = $('#s-name', m).value.trim(); if (v !== p.n) { $('#s-name', m).setAttribute('aria-invalid', 'true'); $('#s-err', m).innerHTML = `<span class="err-line">${ico('alert-circle', 'i i-sm')}Type the name exactly</span>`; icons(m); $('#s-name', m).focus(); return } await passkey(m, '#s-pk'); close(); p.st = 'suspended'; renderPartner(); toast(`${p.n} suspended. Access ended for ${p.team} people; ${p.live + p.onb} brands told.`) } } })
+}
+
+/* ── Studio credits across partners ── */
+function renderCredits() {
+  const c = $('#cr')
+  if (S.proto === 'loading') { c.innerHTML = '<div class="card pad"><span class="skel" style="width:50%"></span><span class="skel"></span></div>'; return }
+  const sold = P.reduce((a, p) => a + p.spent, 0), held = P.reduce((a, p) => a + p.bal, 0)
+  c.innerHTML = `<div class="vhead"><div><div class="eyebrow"><i data-lucide="coins" class="i i-sm"></i>Partners</div><h1>Studio credits</h1></div><div class="seg"><button aria-pressed="true">November</button><button aria-pressed="false">October</button></div></div>
+    <div class="kpis"><div><b>${sold.toLocaleString('en-IN')}</b>Credits used</div><div><b>${inr(sold * 19)}</b>Sold (ex GST)</div><div><b>${inr(Math.round(sold * 633) / 100)}</b>Measured cost</div><div><b>3.0×</b>Price ÷ cost</div><div><b>${held.toLocaleString('en-IN')}</b>Held, unused</div><div><b>2.1%</b>Turns failed on our side</div></div>
+    <div class="two"><div class="card tbl-wrap"><table class="tbl" style="min-width:560px"><thead><tr><th>Partner</th><th class="n">Used</th><th class="n">Sold</th><th class="n">Held</th><th class="n">Expiring 30 days</th></tr></thead><tbody>${P.map((p) => `<tr class="click" data-open="${p.id}"><td>${p.n}</td><td class="n">${p.spent}</td><td class="n">${inr(p.spent * 19)}</td><td class="n">${p.bal}</td><td class="n">${p.id === 'kalam' ? 120 : p.id === 'pixel' ? 0 : '—'}</td></tr>`).join('')}</tbody></table></div>
+    <div style="display:grid;gap:16px"><div class="card pad"><h2>Grants this month</h2><div class="kv"><span>Pixel &amp; Thread · outage</span><b>+31 · Vikram</b></div><div class="kv"><span>Kalam Studio · pilot</span><b>+300 · Vikram, Sneha</b></div><div class="kv"><span>Free credits on approval</span><b>4 × 10</b></div></div>
+    <div class="card pad"><h2>Held credits are owed work</h2><span class="sub" style="font-size:12.5px">${held.toLocaleString('en-IN')} credits paid for and unused (≈ ${inr(held * 19)}): income only as they’re used or expire.</span></div></div></div>`
+  icons(c)
+}
+$('#cr').addEventListener('click', (e) => { const o = e.target.closest('[data-open]'); if (o) { S.open = o.dataset.open; S.ptab = 'credits'; location.hash = '#partner' } })
+
+/* ── Payout run ── */
+const RUN = [['Pixel & Thread LLP', 9874, true, 'ready'], ['Kalam Studio', 31240, true, 'ready'], ['Dhaga Digital', 704.8, true, 'carry'], ['Aarav Mehta', 0, false, 'none'], ['Bunkar Collective', 1409.6, true, 'kyc']]
+function renderPayouts() {
+  const ready = RUN.filter((r) => r[3] === 'ready'), tot = ready.reduce((a, r) => a + r[1] + (r[2] ? Math.round(r[1] * 18) / 100 : 0) - Math.round(r[1] * 2) / 100, 0)
+  $('#po').innerHTML = `<div class="vhead"><div><div class="eyebrow"><i data-lucide="banknote" class="i i-sm"></i>Partners</div><h1>Payouts · October</h1></div>${adminOnly(`<button class="btn primary" data-run ${S.ran ? 'aria-disabled="true"' : ''}>${ico('send', 'i i-sm')}${S.ran ? 'Queued' : `Pay ${ready.length} · ${inr(tot)}`}</button>`)}</div>
+    <div class="note" style="padding-top:0">${ico('calendar', 'i i-sm')}Statements on the 5th; paid 30 days later; under ₹1,000 carries forward. Payouts go through the outbox to RazorpayX (Phase 6).</div>
+    <div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Partner</th><th class="n">20%</th><th class="n">+ GST</th><th class="n">− TDS 2%</th><th class="n">Net</th><th>Status</th></tr></thead><tbody>${RUN.map(([n, g, gst, s]) => { const G = gst ? Math.round(g * 18) / 100 : 0, T = Math.round(g * 2) / 100; return `<tr><td>${n}</td><td class="n">${inr(g)}</td><td class="n">${gst ? inr(G) : '—'}</td><td class="n">${g ? '−' + inr(T) : '—'}</td><td class="n">${inr(g + G - T)}</td><td>${s === 'ready' ? `<span class="badge ${S.ran ? 'info' : 'ok'}">${S.ran ? 'Queued' : 'Ready'}</span>` : s === 'carry' ? '<span class="badge">Under ₹1,000 · carried</span>' : s === 'kyc' ? '<span class="badge warn">Bank not verified</span>' : '<span class="badge">Nothing due</span>'}</td></tr>` }).join('')}</tbody></table></div>`
+  icons($('#po'))
+}
+$('#po').addEventListener('click', (e) => {
+  const r = e.target.closest('[data-run]'); if (!r) return
+  if (r.getAttribute('aria-disabled') === 'true') { toast(S.ran ? 'Already queued.' : 'Support can look; only admins pay out.', 'info'); return }
+  modal({ title: 'Pay October’s share?', pic: pic('banknote', 'var(--ok)', 'var(--ok-t)'), body: `<div class="kv"><span>Partners</span><b>2 ready · 1 carried · 1 waiting on bank</b></div><div class="kv"><span>Each</span><b>One outbox row, keyed by statement id</b></div><div id="r-pk"></div>`, foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="r-ok">Pay</button>`,
+    onOpen: (m, close) => { $('#r-ok', m).onclick = async () => { await passkey(m, '#r-pk'); close(); S.ran = true; renderPayouts(); toast('2 payouts queued. Partners get their statements by email.') } } })
+})
+
+/* ── Routing, role, states ── */
+function show() {
+  let v = (location.hash || '#partners').slice(1); if (!['partners', 'partner', 'credits', 'payouts'].includes(v)) v = 'partners'
+  $$('section[data-view]').forEach((s) => { s.hidden = s.dataset.view !== v })
+  $$('.nav a[data-nav]').forEach((a) => a.dataset.nav === (v === 'partner' ? 'partners' : v) ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'))
+  if (v === 'partners') renderList(); if (v === 'partner') renderPartner(); if (v === 'credits') renderCredits(); if (v === 'payouts') renderPayouts()
+  scrollTo(0, 0)
+}
+$('#role').onchange = (e) => { S.role = e.target.value; show(); toast(S.role === 'admin' ? 'Viewing as an admin.' : 'Viewing as support: money and access actions are off.', 'info') }
+$('#proto').onchange = (e) => { S.proto = e.target.value; show() }
+addEventListener('hashchange', show)
+icons(document.body); show()
+})()
+</script>

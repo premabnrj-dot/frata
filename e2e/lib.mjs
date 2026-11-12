@@ -95,3 +95,19 @@ export async function expectToast(page, text, kind = 'error', { quiet = false, t
   if (quiet && role === 'alert') throw new Error(`field summary "${text}" should not be an alert`)
   return t
 }
+
+/**
+ * Make `user` a live partner on `tenantId` (partner teams T1a, drizzle/0124): an approved partner with its owner member,
+ * an active link to the shop, and the shop row pointing at the member. A partner shop row without its person is refused
+ * by the members CHECK, and access counts only while the member, the partner and the link are live.
+ */
+export async function partnerOn(db, tenantId, user) {
+  const [p] = await db`insert into partners (user_id, email, name, business_name, phone, city, services, work_url, brands_now, terms_version, agreed_at, approved_at)
+    values (${user.id}, ${user.email}, 'Pia', 'Pia Studio', '919845012345', 'Jaipur', '{}', '', '1-4', 1, now(), now())
+    on conflict (user_id) do update set approved_at = coalesce(partners.approved_at, now()), declined_at = null, suspended_at = null returning id`
+  let [pm] = await db`select id from partner_members where partner_id = ${p.id} and user_id = ${user.id} and removed_at is null`
+  if (!pm) [pm] = await db`insert into partner_members (partner_id, user_id, email, role, accepted_at) values (${p.id}, ${user.id}, ${user.email.toLowerCase()}, 'owner', now()) returning id`
+  await db`insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days) values (${tenantId}, ${p.id}, 2000, 24, 90) on conflict do nothing`
+  await db`insert into members (tenant_id, user_id, role, partner_member_id) values (${tenantId}, ${user.id}, 'partner', ${pm.id})
+    on conflict (tenant_id, user_id) do update set role = 'partner', partner_member_id = excluded.partner_member_id`
+}

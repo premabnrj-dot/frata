@@ -23,7 +23,14 @@ describe.skipIf(!host)('costs visible', () => {
 
   it('a partner before handover only; owners and admins always; staff never; no tenant means no ₹', async () => {
     await admin!`insert into tenants (id, slug, name) values (${NEW}, 'costs-visible-int', 'Being built') on conflict (id) do nothing`
-    await admin!`insert into members (tenant_id, user_id, role) values (${A}, ${PARTNER}, 'partner'), (${NEW}, ${PARTNER}, 'partner') on conflict do nothing`
+    // A partner shop row points at its partner person (members CHECK, partner teams T1a, drizzle/0124).
+    const [p] = await admin!`insert into partners (user_id, email, name, phone, city, brands_now, terms_version, agreed_at, approved_at)
+      values (${PARTNER}, 'costs-int@partner.test', 'P', '919845012345', 'Jaipur', '1-4', 1, now(), now())
+      on conflict (user_id) do update set approved_at = coalesce(partners.approved_at, now()) returning id`
+    const [pm] = await admin!`insert into partner_members (partner_id, user_id, email, role, accepted_at) values (${p!.id}, ${PARTNER}, 'costs-int@partner.test', 'owner', now())
+      on conflict do nothing returning id`
+    const memberId = pm?.id ?? (await admin!`select id from partner_members where user_id = ${PARTNER} and removed_at is null`)[0]!.id
+    await admin!`insert into members (tenant_id, user_id, role, partner_member_id) values (${A}, ${PARTNER}, 'partner', ${memberId}), (${NEW}, ${PARTNER}, 'partner', ${memberId}) on conflict do nothing`
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
     const { withTenant } = await import('@/lib/db/tenant')
     const { db } = await import('@/lib/db')

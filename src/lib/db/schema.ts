@@ -41,9 +41,12 @@ export const members = pgTable('members', {
   userId: uuid('user_id').notNull(),
   role: text('role').notNull(),
   createdAt: createdAt(),
+  /** A partner person's row points at their partner_members row (T1a; FK and CHECK in drizzle/0124). */
+  partnerMemberId: uuid('partner_member_id'),
 }, (t) => [
   primaryKey({ columns: [t.tenantId, t.userId] }),
   index('members_user').on(t.userId),
+  index('members_partner_member').on(t.partnerMemberId),
   check('members_role', sql`${t.role} in (${sql.raw(sqlList(MEMBER_ROLES))})`),
 ])
 

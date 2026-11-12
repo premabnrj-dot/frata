@@ -92,7 +92,7 @@ export function ekcodeCsp(nonce: string, dev: boolean): string {
   ].join('; ')
 }
 
-const SIGNED_IN = ['/console', '/admin', '/partner', '/choose', '/handover', '/login', '/start', '/auth']
+const SIGNED_IN = ['/console', '/admin', '/partner', '/choose', '/handover', '/join', '/login', '/start', '/auth']
 export function isSignedInPath(path: string): boolean {
   return SIGNED_IN.some((p) => path === p || path.startsWith(`${p}/`))
 }

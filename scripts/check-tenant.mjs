@@ -204,6 +204,10 @@ for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|referen
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?"?(staff_(?:passkeys|enrolment_requests|webauthn_challenges|stepups|passkey_tries))\b/g)) {
   failures.push(`grant on ${m[1]}  — staff passkey tables have no table grants; the app_staff_* definers are the only door (ADR-0007)`)
 }
+// Partner teams (T1a, drizzle/0124): definers are the only door for the app; frata_admin may only read.
+for (const m of sql.matchAll(/grant\s+((?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?)\bon\s+(?:table\s+)?"?(partner_(?:members|assignments))\b([^;]*);/g)) {
+  if (!/^select\s+$/.test(m[1]) || !/\bto\s+frata_admin\s*$/.test(m[3].replace(/,\s*partner_(?:members|assignments)/, ''))) failures.push(`grant on ${m[2]}  — partner team tables: only "grant select … to frata_admin"; the app_partner_* definers are the only door`)
+}
 // 8. The analytics database (A·2): its own folder, the same rules, and no open tables at all.
 const aSql = readdirSync('drizzle-analytics').filter(f => f.endsWith('.sql'))
   .map(f => readFileSync(join('drizzle-analytics', f), 'utf8').split(/\r?\n/).filter(l => !l.trim().startsWith('--')).join('\n'))

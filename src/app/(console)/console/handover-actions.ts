@@ -11,7 +11,7 @@ import { sendHandover } from '@/lib/db/partners'
 // owner gets the usual sign-in email, and signing in shows them the store to accept (/handover).
 
 const SENTENCES: Record<string, string> = {
-  not_partner: 'Only the partner who built this store can hand it over.',
+  not_partner: 'Only the partner’s owner can hand this store over.',
   has_owner: 'This store already has its owner.',
   bad_email: 'That does not look like an email address.',
   member_email: 'Use the brand owner’s email, not one already on this store.',

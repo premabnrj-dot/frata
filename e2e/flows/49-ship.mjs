@@ -7,7 +7,7 @@
 // order unable to ship again.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { todayAgo, until, CONSOLE, USERS, signedIn, expectToast } from '../lib.mjs'
+import { todayAgo, until, CONSOLE, USERS, signedIn, expectToast, partnerOn } from '../lib.mjs'
 
 export default {
   name: 'ship',
@@ -28,7 +28,8 @@ export default {
     const moments = async (n) => (await db`select shipped_at, delivered_at, rto_delivered_at from orders where tenant_id = ${T} and number = ${n}`)[0]
     const S = USERS.staff, Pa = USERS.partner
     await db`insert into auth.users (id, email, email_confirmed_at) values (${Pa.id}, ${Pa.email}, now()), (${S.id}, ${S.email}, now()) on conflict (id) do nothing`
-    await db`insert into members (tenant_id, user_id, role) values (${T}, ${Pa.id}, 'partner'), (${T}, ${S.id}, 'staff') on conflict do nothing`
+    await partnerOn(db, T, Pa)
+    await db`insert into members (tenant_id, user_id, role) values (${T}, ${S.id}, 'staff') on conflict do nothing`
 
     const owner = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
     const p = await owner.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))

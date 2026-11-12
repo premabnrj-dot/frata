@@ -5,11 +5,11 @@ import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { BRANDS_NOW, PARTNER_SERVICES } from '@/domains/partners/terms'
-import { listPartners, partnerCounts, type PartnerView } from '@/lib/admin/partners'
+import { listPartners, partnerCounts, partnerTeamForAdmin, type PartnerView } from '@/lib/admin/partners'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { formatPhone } from '@/lib/format'
 import { dateTimeIN, sinceIN } from '@/lib/format-date'
-import { decidePartnerAction } from './actions'
+import { decidePartnerAction, reinstatePartnerAction, suspendPartnerAction } from './actions'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
 
@@ -25,6 +25,8 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   const view: PartnerView = VIEWS.some(([k]) => k === sp.view) ? (sp.view as PartnerView) : 'review'
   const [counts, rows] = await Promise.all([partnerCounts(staff), listPartners(staff, view)])
   const open = rows.find((r) => r.id === sp.id) ?? (view === 'review' ? rows[0] : undefined)
+  // The open partner's team (T1a): who works for them and on how many stores.
+  const team = open?.approvedAt ? await partnerTeamForAdmin(staff, open.id).catch(() => null) : null
   const href = (id: string) => `/admin/partners?${view === 'review' ? '' : `view=${view}&`}id=${id}`
   return (
     <>
@@ -72,7 +74,40 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                     <Submit variant="secondary" className="w-full">Decline</Submit>
                   </ActionForm>
                 </div>
-              ) : <Badge tone={open.approvedAt ? 'ok' : 'neutral'}>{open.approvedAt ? 'Approved' : 'Declined'}</Badge>}
+              ) : (
+                <div className="space-y-4">
+                  <Badge tone={open.suspendedAt ? 'warn' : open.approvedAt ? 'ok' : 'neutral'}>{open.suspendedAt ? `Suspended · ${dateTimeIN(open.suspendedAt)}` : open.approvedAt ? 'Approved' : 'Declined'}</Badge>
+                  {open.suspendedAt && open.suspendReason && <p className="text-sm text-muted-foreground">{open.suspendReason}</p>}
+                  {team && (
+                    <div className="space-y-2 border-t border-border pt-4">
+                      <h3 className="text-sm font-semibold">Team</h3>
+                      <ul className="space-y-1 text-sm">
+                        {team.map((m) => (
+                          <li key={m.id} className="flex flex-wrap items-center gap-2">
+                            <span className="min-w-0 flex-1 truncate font-mono text-xs">{m.email}</span>
+                            <Badge tone={m.role === 'owner' ? 'info' : 'neutral'}>{m.role === 'owner' ? 'Owner' : 'Lead'}</Badge>
+                            <span className="text-xs text-muted-foreground">{m.role === 'owner' ? 'every store' : m.acceptedAt ? `${m.stores} ${m.stores === 1 ? 'store' : 'stores'}` : 'invited'}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {open.approvedAt && staff.role === 'admin' && (
+                    <ActionForm action={open.suspendedAt ? reinstatePartnerAction : suspendPartnerAction} className="space-y-2 border-t border-border pt-4">
+                      <input type="hidden" name="id" value={open.id} /><input type="hidden" name="name" value={open.businessName || open.name} />
+                      {!open.suspendedAt && (<>
+                        <label htmlFor="suspend-reason" className="block text-sm font-medium">Reason to suspend</label>
+                        <input id="suspend-reason" name="reason" maxLength={300} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+                        <FieldMessage name="reason" />
+                      </>)}
+                      <label htmlFor="suspend-typed" className="block text-sm font-medium">Type {open.businessName || open.name} to confirm</label>
+                      <input id="suspend-typed" name="typed" maxLength={120} autoComplete="off" className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+                      <FieldMessage name="typed" />
+                      <Submit variant={open.suspendedAt ? 'secondary' : 'destructive'} className="w-full">{open.suspendedAt ? 'Reinstate' : 'Suspend'}</Submit>
+                    </ActionForm>
+                  )}
+                </div>
+              )}
             </Section>
           )}
         </div>

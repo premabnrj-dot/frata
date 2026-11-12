@@ -9,7 +9,7 @@
 // stops an offer with a reason; the shop's console says so and the bag loses it; the shop can only end it.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, FAKE_CHECKOUT, SHOP, USERS, expectToast, playwright, signedIn, until } from '../lib.mjs'
+import { CONSOLE, FAKE_CHECKOUT, SHOP, USERS, expectToast, partnerOn, playwright, signedIn, until } from '../lib.mjs'
 const { devices } = playwright
 
 export default {
@@ -190,7 +190,7 @@ export default {
           // Partners build offers but never see a cost either.
           const Pa = USERS.partner
           await db`insert into auth.users (id, email, email_confirmed_at) values (${Pa.id}, ${Pa.email}, now()) on conflict (id) do nothing`
-          await db`insert into members (tenant_id, user_id, role) values (${KESAR}, ${Pa.id}, 'partner') on conflict do nothing`
+          await partnerOn(db, KESAR, Pa)
           const pc = await signedIn(t.browser, 'partner', { viewport: { width: 1280, height: 900 } })
           try {
             const pp = await pc.newPage(); pp.setDefaultTimeout(10_000); pp.on('pageerror', (e) => t.errors.push(e.message))

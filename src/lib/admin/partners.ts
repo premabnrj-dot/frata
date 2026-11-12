@@ -1,7 +1,7 @@
 import 'server-only'
-import { and, asc, count, desc, eq, isNotNull, isNull } from 'drizzle-orm'
+import { and, asc, count, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
 import { adminDb } from '@/lib/db/admin'
-import { partnerLinks, partners } from '@/lib/db/schema-partners'
+import { partnerAssignments, partnerLinks, partnerMembers, partners } from '@/lib/db/schema-partners'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { auditStaff } from './audit'
 
@@ -46,4 +46,45 @@ export async function decidePartner(staff: StaffOk, id: string, d: { approve: tr
     await auditStaff(tx, staff, { action: d.approve ? 'partner.approved' : 'partner.declined', target: id })
     return { ok: true as const, email: row.email }
   })
+}
+
+// ════════ Teams and suspension (T1a; drizzle/0124). frata_admin reads the team; suspend and reinstate only through the
+// admin_* definers, which re-check the admin, end or rebuild every partner person's access, audit and tell the shops. ════════
+
+export type AdminTeamPerson = { id: string; email: string; role: string; acceptedAt: Date | null; inviteExpiresAt: Date | null; stores: number }
+
+export async function partnerTeamForAdmin(staff: StaffOk, partnerId: string): Promise<AdminTeamPerson[]> {
+  void staff
+  const db = adminDb()
+  const rows = await db.select({ id: partnerMembers.id, email: partnerMembers.email, role: partnerMembers.role, acceptedAt: partnerMembers.acceptedAt,
+    inviteExpiresAt: partnerMembers.inviteExpiresAt, stores: count(partnerLinks.tenantId) })
+    // Stores on live links only, as app_partner_team counts them (impact review).
+    .from(partnerMembers).leftJoin(partnerAssignments, eq(partnerAssignments.partnerMemberId, partnerMembers.id))
+    .leftJoin(partnerLinks, and(eq(partnerLinks.tenantId, partnerAssignments.tenantId), eq(partnerLinks.partnerId, partnerMembers.partnerId), isNull(partnerLinks.removedAt)))
+    .where(and(eq(partnerMembers.partnerId, partnerId), isNull(partnerMembers.removedAt)))
+    .groupBy(partnerMembers.id).orderBy(asc(partnerMembers.invitedAt)).limit(60)
+  return rows.map((r) => ({ ...r, stores: Number(r.stores) }))
+}
+
+const code = (err: unknown, codes: string[]) => {
+  const msg = (err as { cause?: { message?: string } })?.cause?.message ?? (err instanceof Error ? err.message : '')
+  return codes.find((c) => msg.includes(c)) ?? 'unknown'
+}
+
+export async function suspendPartner(staff: StaffOk, partnerId: string, reason: string): Promise<{ ok: true; shops: number } | { ok: false; error: string }> {
+  try {
+    const rows = await adminDb().execute<{ n: number }>(sql`select admin_end_partner(${staff.userId}::uuid, ${partnerId}::uuid, ${reason}) as n`)
+    return { ok: true, shops: Number(rows[0]?.n ?? 0) }
+  } catch (err) {
+    return { ok: false, error: code(err, ['not_admin', 'bad_reason', 'not_active']) }
+  }
+}
+
+export async function reinstatePartner(staff: StaffOk, partnerId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await adminDb().execute(sql`select admin_reinstate_partner(${staff.userId}::uuid, ${partnerId}::uuid)`)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: code(err, ['not_admin', 'not_suspended']) }
+  }
 }

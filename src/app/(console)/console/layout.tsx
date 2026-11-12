@@ -20,6 +20,7 @@ import { MODULE_KEYS, MODULES } from '@/domains/modules/registry'
 import { shopModules } from '@/lib/queries/modules'
 import { MODULE_ICON } from '@/components/modules/icons'
 import { CONSOLE_ROLES, ROLE_LABEL } from '@/domains/tenancy/roles'
+import { partnerCan } from '@/domains/partners/team'
 
 export const dynamic = 'force-dynamic'
 
@@ -77,7 +78,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const client = partner ? (await partnerClients(auth.userId).catch(logged([]))).find((c) => c.tenantId === tenantId) : undefined
   // The stage is clientStage's, the one home (src/domains/partners/stage.ts): the banner shows while there is no owner.
   const stage = client ? clientStage({ removedAt: client.removedAt, openInviteExpiresAt: client.inviteExpiresAt, hasOwner: !!client.ownerEmail, firstOpenedAt: client.firstOpenedAt }, now) : null
-  const building = client && (stage === 'building' || stage === 'invited') ? client : null
+  // Hand over is the owner's (PARTNER_CAN.handOver): a lead builds the store and sees no banner.
+  const building = client && partner && partnerCan(partner.memberRole, 'handOver') && (stage === 'building' || stage === 'invited') ? client : null
   const places: Place[] = [
     ...(partner?.approvedAt ? [{ href: '/partner', name: 'Partner workspace', role: '', current: false }] : []),
     ...auth.all.filter((m) => !m.supportSessionId).map((m) => ({ href: '/console', name: m.tenantName, role: ROLE_LABEL[m.role], current: m.tenantId === tenantId, tenantId: m.tenantId })),

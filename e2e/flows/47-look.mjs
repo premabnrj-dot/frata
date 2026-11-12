@@ -7,7 +7,7 @@
 // =============================================================================
 import assert from 'node:assert/strict'
 import http from 'node:http'
-import { CONSOLE, PORTS, USERS, signedIn, until, expectToast } from '../lib.mjs'
+import { CONSOLE, PORTS, USERS, signedIn, until, expectToast, partnerOn } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const shopHtml = (path = '/') => new Promise((res, rej) => http.get(`http://localhost:${PORTS.app}${path}`, { headers: { host: 'kesar-studio.frata.test' } }, (r) => { let b = ''; r.on('data', (c) => (b += c)); r.on('end', () => res(b)) }).on('error', rej))
@@ -148,7 +148,8 @@ export default {
     await t.step('A partner edits the draft but can’t publish; staff only look', async () => {
       const P = USERS.partner, S = USERS.staff
       await db`insert into auth.users (id, email, email_confirmed_at) values (${P.id}, ${P.email}, now()), (${S.id}, ${S.email}, now()) on conflict (id) do nothing`
-      await db`insert into members (tenant_id, user_id, role) values (${KESAR}, ${P.id}, 'partner'), (${KESAR}, ${S.id}, 'staff') on conflict do nothing`
+      await partnerOn(db, KESAR, P)
+      await db`insert into members (tenant_id, user_id, role) values (${KESAR}, ${S.id}, 'staff') on conflict do nothing`
       const pia = await open('partner', { viewport: { width: 1280, height: 900 } })
       await pia.goto(CONSOLE + '/console/look')
       await pia.getByText('You can edit the draft; the owner or an admin publishes it.').waitFor()
