@@ -2,8 +2,8 @@
 name: frata-integrations
 description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 1.25.0
-  verified: 2026-11-11
+  version: 1.26.0
+  verified: 2026-11-12
   decisions: [ADR-0006]
 ---
 
@@ -81,7 +81,12 @@ in razorpay.com/docs/sitemap.xml (most read 2026-10-08, a bulk rebuild).
   small-merchant zero MDR is defined on UPI **QR** receipts ≤ ₹1 lakh/month and
   may not cover online checkout [S, PayU 2026-10-15, Medianama 2026-10-13; NPCI
   text not read]. (Corrects the 2026-11-06 note, which said "from 15 Oct 2026 [V]".)
-- Magic Checkout ~0.65–0.75% per order (competitor reference) [S, 2026-11-06].
+- Magic Checkout: no public price ("Enterprise pricing … Contact sales", razorpay.com/pricing, last updated May 2026) [V];
+  ~0.65–0.75% per order [S, 2026-11-06]; RTO protection price unpublished [U]. Per ZIP: COD only to uploaded ZIPs, shipping
+  only to uploaded ZIPs, COD fee by order-value slab, zone/method rates, "Display Delivery in" timeline [V, shopify/features
+  lastmod 2026-10-23]; blocklist phone/email/IP/6-digit ZIP, allowlist phone/email, CSV ≤ 1M rows, needs COD Intelligence,
+  allowlisted orders get no RTO insurance [V, rto-reduction/allowlist-blocklist lastmod 2026-10-08]. Standard Checkout: the
+  merchant decides COD by PIN code; `cod_fee` in paise, a negative is not rejected [V-undated, standard/cod.md].
 - No RBI/NPCI rule on cash on delivery found [U, 2026-11-07].
 - **Registered websites (checked 2026-11-09):** live payments are accepted only from websites registered on the
   merchant's OWN account; "Razorpay fails the payments received on the unregistered websites" [V Custom Checkout page,
@@ -137,9 +142,26 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
   (name, address, city, pincode, state, country, email, phone), shipping_is_billing, order_items[name, sku, units,
   selling_price], payment_method "COD"|"Prepaid", sub_total (₹), length/breadth/height cm > 0.5, weight kg > 0
   [P/U]. Pickup locations `GET /settings/company/pickup`.
-- **Rates** `GET /courier/serviceability/` pickup_postcode, delivery_postcode, cod 1/0, weight (or order_id); per
-  courier courier_company_id, freight_charge, cod_charges, rate, rating, estimated_delivery_days, etd, rto_charges;
-  top-level recommended_courier_company_id. Field meanings undocumented [P/U]. A quote, never the cost.
+- **Rates / serviceability** `GET /courier/serviceability/` pickup_postcode + delivery_postcode required; cod 1/0 and
+  weight (kg) conditional; optional order_id, length/breadth/height, declared_value (₹), mode Surface|Air, is_return,
+  only_local, qc_check. Per courier in data.available_courier_companies[]: cod (1/0), cod_charges,
+  estimated_delivery_days (string), etd ("Jul 01, 2024"), etd_hours, edd/new_edd, cutoff_time, freight_charge, rate,
+  rto_charges, cost, zone ("z_e"), metro, region, is_surface, odablock, blocked, suppression_dates;
+  data.recommended_courier_company_id, blocked_courier_companies[{block_reason, courier_company_id, postcode}]. Field
+  meanings undocumented [P/U, collection undated, read 2026-11-12]. A quote, never the cost; freight_charge, rate,
+  cod_charges, rto_charges and cost are the MERCHANT'S cost (ADR-0003): never in a storefront response. Rate limit
+  `X-RateLimit-Limit: 180`, window unstated [U]: never a live call per shopper; a per-shop pincode table refreshed
+  through the outbox.
+- **Blocked PIN codes** `POST https://serviceability.shiprocket.in/v1/external/blocked-pincodes/upload`
+  {postcode:{delivery_blocked:[…]}, action:"block"|"unblock"} ("unblock" fails whole if any PIN is invalid);
+  `GET …/v1/external/block-pincodes/get` is_download|search|per_page ≤ 15|current_page [P/U, read 2026-11-12].
+- **Promise / EDD**: Shiprocket Promise (Shopify) $0.02 per order, 1.5★/19 [V-undated, newest review 2026-08-11]; own page
+  "₹1.49 per order" [V-undated, © 2026] — conflict. Fastrr Promise / Smart EDD (2025-09-26) $2.99 / $14.99 / $49.99 /
+  $199.99 a month by 0–100 / –1,000 / –5,000 / 5,000+ orders; rules by PIN code, SKU, zone; 2.4★/14 [V-undated, newest
+  review 2026-10-09]. Shiprocket Checkout shows EDD; price unpublished [V-undated, 2026-11-12].
+- **Zones**: A city, B state/region, C metro–metro, D rest of India, E special; E = NE + J&K (blog 2019) or also Kerala and
+  HP (support 2022-12-13) — conflict, no current source [U]; each courier defines its own and the serviceability response
+  carries `zone` per courier: read it, never a fixed table.
 - **AWB** `POST /courier/assign/awb` (shipment_id; courier_id optional, default courier otherwise; `reassign` once
   per 24 h). **Pickup** `POST /courier/generate/pickup`; `/manifests/generate`, `/manifests/print`,
   `/courier/generate/label`, `/orders/print/invoice`; wrapper `/shipments/create/forward-shipment` [P/U].
@@ -176,6 +198,26 @@ but undated: tagged [P/U]. Recheck against the live collection before building. 
   Shiprocket sees every order shipped through it.
 - **Alternatives** (no current dated API page): Delhivery One (token, Settings > API Setup), iThink (access token
   + secret from iThink), Shipway (username + licence key) [U].
+
+## PIN code delivery (competitors, data, RTO) — checked 2026-11-12 (integration-researcher)
+- GoKwik: gokwik.co/pricing Emerging ₹3,000/month, 0–2,000 orders, "COD 3.5% Applicable on all transactions", PA charges
+  extra; Enterprise custom [V-undated]. Shopify listing: Emerging $35/month + 3.5% on PA transactions, "Blocking COD for
+  unlimited pincodes", RTO Intelligence, custom COD fees, prepaid incentives; 4.7★/399 [V-undated, newest review
+  2026-10-30]. The two prices conflict; what the 3.5% is charged on: [U].
+- Pindrop (Shopify, 2026-06-18): Free 500 PIN codes; $2.99 Growth (COD rules, 10 zones); $9.99 Pro; Metro / Tier 2 / rest
+  zones, COD vs prepaid windows, blackout dates, a cutoff countdown (false urgency: never copy) [V-undated, review 2026-09-26].
+- Delhivery `track.delhivery.com/c/api/pin-codes/json/` flags prepaid + COD, "NSZ" = not serviceable; params undocumented
+  [U, undated]. Shadowfax: no public PIN code API found [U].
+- India Post directory (data.gov.in, GODL-India): unreachable 2026-11-12 (403/503) [U]. Mirror: CircleName, RegionName,
+  DivisionName, OfficeName, Pincode, OfficeType, Delivery, District, StateName, Latitude, Longitude; 157,087 rows; 9,260 rows
+  with unusable coordinates [S, datahub.io 2026-10-03]. Never trust a row's lat/long without a check. Frrata's `pincodes`
+  table is EMPTY: its loader (scripts/data/load-pincodes.mjs) was never written (2026-11-12).
+- RTO by tier (all modes): metro 6.60%, T1 8.10%, T2 11.50%, T3+ 12.00% (Oct–Nov 2025, 35.8M orders); COD 37.51% vs
+  prepaid 5.28% (FY26); fashion COD RTO 21–32% [S, ClickPost 2026-11-09]. No official national rate.
+- Law: total price with a break-up incl. delivery (r.7(1)(e)) [S, indialaw 2026-08-24]; from 1 Jan 2027 r.7(1)(a) "delivery
+  and shipment, cost of return shipping, mode of payments" [V gazette 2026-11-11]; Zepto ₹7 lakh for a handling charge
+  added at checkout, FirstCry ₹2 lakh to disclose extra costs upfront [S, PolicyEdge 2026-08-04]. Show the delivery charge
+  and COD fee before checkout. No rule requiring a delivery date found [U].
 
 ## Meta — checked 2026-11-07 (WhatsApp: integration-researcher; spec docs/specs/2026-11-07-communication.md; templates, sends, errors, webhooks, opt-in rechecked 2026-11-09 — docs moved to developers.facebook.com/documentation/business-messaging/whatsapp/, pages undated)
 
