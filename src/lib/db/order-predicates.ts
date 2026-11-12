@@ -192,9 +192,13 @@ export const creditedSql = (a: string) =>
  * The taxable value of the order's items returned on credit notes issued before `before` (kind 'return' only: a discount
  * or goodwill note is not a return). Owner, 2026-11-12: a returned item isn't billable, so Frrata's fee base is the
  * order's merchandise net less this (billing draft), and a return after billing gives its fee back.
+ * Only a note issued within the shop's return window plus 15 days of delivery (delivered, or assumed delivered 30 days
+ * after shipping) moves the fee: nothing ties a return note to goods coming back, and a later note is still a valid GST
+ * document but no longer a return for the fee (unit-economics review 2026-11-12, the abuse path).
  */
 export const returnedSql = (a: string, before: Date) =>
-  sql`(select coalesce(sum(cn.taxable), 0) from credit_notes cn where cn.tenant_id = ${c(a, 'tenant_id')} and cn.order_id = ${c(a, 'id')} and cn.kind = 'return' and cn.issued_at < ${before.toISOString()}::timestamptz)`
+  sql`(select coalesce(sum(cn.taxable), 0) from credit_notes cn where cn.tenant_id = ${c(a, 'tenant_id')} and cn.order_id = ${c(a, 'id')} and cn.kind = 'return' and cn.issued_at < ${before.toISOString()}::timestamptz
+    and cn.issued_at <= coalesce(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + interval '30 days') + make_interval(days => coalesce(${c(a, 'return_days')}, 0) + 15))`
 
 /**
  * The goods' cost of the pieces a return put back in stock (credit_note_lines.restocked_qty × the line's own unit cost,

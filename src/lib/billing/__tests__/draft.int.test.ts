@@ -85,9 +85,12 @@ describe.skipIf(!host)('draftInvoice on a real database', () => {
         taxable: 42857, cgst: 0, sgst: 0, igst: 0, total: 42857, issuedAt: ist('2026-11-20T10:00:00'), issuedBy: 'aaaaaaaa-0000-0000-0000-0000000000ff' })
       return o!.id
     })
+    // A second "return" note long after the return window (none set: 0 + 15 days from delivery) doesn't move the fee.
+    await withTenant(tenantId, (tx) => tx.insert(creditNotes).values({ tenantId, orderId: id, number: 'BS/CN/26-27/10', againstInvoice: 'BS/26-27/5', reason: 'returned', kind: 'return',
+      taxable: 20000, cgst: 0, sgst: 0, igst: 0, total: 20000, issuedAt: ist('2026-11-29T10:00:00'), issuedBy: 'aaaaaaaa-0000-0000-0000-0000000000ff' }))
     await draftInvoice(tenantId, ist('2026-12-01T00:00:00'), ist('2026-12-02T09:00:00'))
     const [fee] = await withTenant(tenantId, (tx) => tx.select({ base: frrataInvoiceFees.base, fee: frrataInvoiceFees.fee }).from(frrataInvoiceFees).where(eq(frrataInvoiceFees.orderId, id)))
-    // 2% of ₹428.57 kept = ₹8.57, never 2% of the ₹857.14 placed.
+    // 2% of ₹428.57 kept = ₹8.57, never 2% of the ₹857.14 placed (and the late note left out).
     expect(fee).toEqual({ base: 42857, fee: 857 })
   })
 })

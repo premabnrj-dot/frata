@@ -43,7 +43,11 @@ Contribution per ₹100 is `contributionPer100()`. Money in paise.
   kept: `merchandise_net` less the taxable value of `return` credit notes (`returnedSql`). Before the fee is billed, the
   billing draft charges it on that; a return after billing gives back the fee on the returned value on the next
   invoice (`returnCreditDue`, a `frrata_fee_credits` row of kind `return`; a later came-back or lost credit gives back
-  only what is left). ₹ kept counts the fee the same way. Discount and goodwill notes don't change the fee.
+  only what is left). ₹ kept counts the fee the same way. Discount and goodwill notes don't change the fee. Only a note
+  issued within the return window + 15 days of delivery moves the fee (nothing ties a note to goods coming back).
+  Cost (unit-economics review 2026-11-12, illustrative): at a 20% return rate, −11.5% (Launch) to −14.8% (Growth) of
+  Frrata's revenue per tenant; break-even moves from ~471 to ~546 tenants. Watch: returned value ÷ delivered value per
+  shop (flag above 2× the cohort median or 35%); test at 3 design partners over 8 weeks.
 - **The inclusive-price gap** (rates.ts, ₹2,625.01–₹2,950 with GST): one paisa above ₹2,625 moves a piece from 5% to 18%
   (₹269.91 less kept on a ₹900-COGS piece); there, a discount down to ₹2,625 RAISES kept. "A blanket % off is a giveaway"
   holds only below the gap; the console warns on prices in it.
