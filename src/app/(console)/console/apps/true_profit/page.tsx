@@ -11,7 +11,8 @@ import { requireMember } from '@/lib/auth/require-member'
 import { formatCount, formatPercent } from '@/lib/format'
 import { errName } from '@/lib/log'
 import { appsPage } from '@/lib/queries/modules'
-import { isTpPeriod, TP_PERIODS, trueProfitPage, variantsFor, type Line, type TpPeriod } from '@/lib/queries/true-profit'
+import { isTpPeriod, rateOf, TP_PERIODS, trueProfitPage, variantsFor, type Line, type TpPeriod } from '@/lib/queries/true-profit'
+import { keptPerOrder } from '@/domains/orders/kept'
 import { AppAbout } from '../_components/app-about'
 import { aboutProps, mayTurnOff } from '../_components/about-data'
 import { AppHome } from '../_components/app-home'
@@ -32,8 +33,9 @@ type Sort = keyof typeof SORTS
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 const rs = (p: number) => <Money paise={p as Paise} />
-const rate = (l: Pick<Line, 'delivered' | 'returned'>) => (l.delivered + l.returned > 0 ? l.returned / (l.delivered + l.returned) : null)
-const perOrder = (l: Line) => { const n = l.delivered + l.returned + l.lost; return n ? Math.round(l.kept / n) : null }
+const rate = (l: Pick<Line, 'delivered' | 'returned'>) => rateOf(l.returned, l.delivered + l.returned)
+// Per order counted (with an outcome and known costs), never per delivered order alone (frata-unit-economics).
+const perOrder = (l: Line) => (l.counted > 0 ? Math.round(l.kept / l.counted) : null)
 
 export default async function TrueProfitPage({ searchParams }: { searchParams: Promise<{ tab?: string; days?: string; sort?: string; open?: string }> }) {
   const auth = await requireMember(CONSOLE_ROLES)
@@ -106,7 +108,7 @@ export default async function TrueProfitPage({ searchParams }: { searchParams: P
   }
 
   if (tab === 'pincodes') {
-    const losing = d.pincodes.filter((p) => p.codKept !== null && p.codKept < 0).length
+    const losing = d.pincodes.filter((p) => p.codLoses).length
     return home(
       <div className="space-y-4">
         {periods}
@@ -134,20 +136,22 @@ export default async function TrueProfitPage({ searchParams }: { searchParams: P
 
   // Overview.
   const k = d.total
-  const returnsCost = -(k.rto.kept + k.lost.kept)
+  // What came back cost: parcels back and lost, and what returns after delivery credited.
+  const returnsCost = -(k.rto.kept + k.lost.kept) + d.afterCredited
+  const per = keptPerOrder(k)
   const earns = [...d.products].filter((p) => p.kept > 0).sort((a, b) => b.kept - a.kept).slice(0, 3)
   const loses = [
     ...d.products.filter((p) => p.kept < 0).map((p) => ({ label: p.name, kept: p.kept, href: q({ tab: 'products', open: p.id }) })),
-    ...d.pincodes.filter((p) => p.codKept !== null && p.codKept < 0).map((p) => ({ label: `Pincode ${p.pincode} · COD`, kept: p.codKept!, href: q({ tab: 'pincodes' }) })),
+    ...d.pincodes.filter((p) => p.codLoses).map((p) => ({ label: `Pincode ${p.pincode} · COD`, kept: p.codKept!, href: q({ tab: 'pincodes' }) })),
   ].sort((a, b) => a.kept - b.kept).slice(0, 3)
-  const overall = d.delivered + d.returned > 0 ? d.returned / (d.delivered + d.returned) : null
+  const overall = rateOf(d.returned, d.delivered + k.rto.n)
   return home(
     <div className="space-y-4">
       {periods}
       {leftOut}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile label={`₹ kept · ${period} days`} value={rs(k.kept)} sub={`${formatCount(k.counted)} orders with an outcome`} />
-        <Tile label="Per delivered order" value={d.delivered ? rs(Math.round(k.kept / d.delivered)) : '—'} />
+        <Tile label="Per order" value={per === null ? '—' : rs(per)} />
         <Tile label="Returns cost you" value={rs(Math.max(0, returnsCost))} sub={`${formatCount(d.returned)} returned · ${formatCount(d.lost)} lost`} />
         <Tile label="Return rate" value={overall === null ? '—' : formatPercent(overall)}
           sub={d.codRate !== null || d.prepaidRate !== null ? `COD ${d.codRate === null ? '—' : formatPercent(d.codRate, 0)} · prepaid ${d.prepaidRate === null ? '—' : formatPercent(d.prepaidRate, 0)}` : undefined} />

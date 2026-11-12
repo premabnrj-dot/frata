@@ -44,4 +44,14 @@ describe('keptOf: ₹ kept after returns and lost parcels', () => {
     expect(keptPerOrder(k)).toBe(Math.round((37714 - 14000) / 2))
     expect(keptPerOrder(keptOf([], est))).toBeNull()
   })
+  it('True Profit: lines are the count, their share of their orders scales the estimate (a gift line of share 0 still counts)', () => {
+    // Two lines that are 0.9 and 0.1 of one parcel carry ₹63 and ₹7 of a ₹70 estimate, never ₹70 each.
+    const kurta = keptOf([g({ share: 0.9, net: 77143, cogs: 30000, base: 77143 })], est)
+    const dupatta = keptOf([g({ share: 0.1, net: 8571, cogs: 4286, base: 8571 })], est)
+    expect([kurta.counted, dupatta.counted]).toEqual([1, 1])
+    expect(kurta.kept).toBe(77143 - 30000 - 6300 - 4500 - 1543)
+    expect(dupatta.kept).toBe(8571 - 4286 - 700 - 500 - 171)
+    // A free gift (share 0): counted, its cost lost, no freight of its own.
+    expect(keptOf([g({ share: 0, net: 0, cogs: 5000, base: 0 })], est)).toMatchObject({ counted: 1, kept: -5000 })
+  })
 })

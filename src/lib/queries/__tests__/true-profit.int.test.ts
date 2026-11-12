@@ -36,16 +36,32 @@ describe.skipIf(!host)('True Profit: by product and by PIN code, through keptOf'
         const [o] = await tx.insert(orders).values({ tenantId: A, number: n++, paymentMethod: 'cod', placedAt: at(48), confirmedAt: at(47), packedAt: at(46), shippedAt: at(40),
           deliveredAt: outcome === 'delivered' ? at(10) : null, rtoInitiatedAt: outcome === 'rto' ? at(10) : null, pincode,
           invoiceNumber: `TP/${n % 1e5}/${Date.now() % 1e5}`, subtotal: 279000, total: 279000, merchandiseNet: 265714, cogs: 120000 }).returning({ id: orders.id })
-        await tx.insert(orderLines).values([
+        const ls = await tx.insert(orderLines).values([
           { tenantId: A, orderId: o!.id, variantId: kurta.v, productId: kurta.p, title: 'Int kurta', qty: 1, unitPrice: 249000, taxableValue: 237143, unitCost: 100000, kind: 'in_stock', stockTakenAt: at(48) },
           { tenantId: A, orderId: o!.id, variantId: dupatta.v, productId: dupatta.p, title: 'Int dupatta', qty: 1, unitPrice: 30000, taxableValue: 28571, unitCost: 20000, kind: 'in_stock', stockTakenAt: at(48), position: 1 },
-        ])
+        ]).returning({ id: orderLines.id, productId: orderLines.productId })
+        return { id: o!.id, dupattaLine: ls.find((l) => l.productId === dupatta.p)!.id }
       }
       for (let i = 0; i < 4; i++) await order('delivered', '302012')
       await order('rto', '302012')
       await order('delivered', '845401') // one order: never its own row
+      const before = await tp.trueProfitIn(tx, A, 'owner', 7, now)
+      const duBefore = before!.products.find((p) => p.id === dupatta.p)!.kept, kuBefore = before!.products.find((p) => p.id === kurta.p)!.kept
+      // A dupatta returned after delivery, put back in stock: its credit comes off the dupatta, not the kurta (review UE1).
+      const back = await order('delivered', '302012')
+      const { issueCredit } = await import('@/lib/orders/credit')
+      const riya = { kind: 'member' as const, userId: '99999999-9999-9999-9999-999999999999', email: 'riya@kesar.test' }
+      const cr = await issueCredit(tx, A, riya, back.id, at(5), { kind: 'return', lines: { [back.dupattaLine]: 1 }, restock: true })
+      expect(cr.ok).toBe(true)
+      const after = await tp.trueProfitIn(tx, A, 'owner', 7, now)
+      const duAfter = after!.products.find((p) => p.id === dupatta.p)!, kuAfter = after!.products.find((p) => p.id === kurta.p)!
+      expect(duAfter.returned).toBe(2) // the parcel that came back, and this return
+      expect(duAfter.kept - duBefore).toBeLessThan(5000) // the dupatta gained little: its sale was credited back
+      expect(kuAfter.kept - kuBefore).toBeGreaterThan(100000) // the kurta's sale stands whole
+      expect(Math.abs(after!.products.filter((p) => p.id === kurta.p || p.id === dupatta.p).reduce((a, p) => a + p.kept, 0) - after!.total.kept)).toBeLessThanOrEqual(20)
+      expect(after!.afterReturns).toBe(1)
 
-      const d = await tp.trueProfitIn(tx, A, 'owner', 7, now)
+      const d = before
       expect(d).not.toBeNull()
       const mine = d!.products.filter((p) => p.id === kurta.p || p.id === dupatta.p)
       expect(mine.map((p) => [p.name, p.delivered, p.returned])).toEqual(expect.arrayContaining([['Int kurta', 5, 1], ['Int dupatta', 5, 1]]))

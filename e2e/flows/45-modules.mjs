@@ -64,16 +64,17 @@ export default {
     await t.step('Admin: no trial of a module not built yet; a trial shows and can be ended', async () => {
       await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/modules`)
       await meera.getByRole('link', { name: 'Modules', exact: true }).first().waitFor()
-      // Only a built module a plan or add-on grants can be trialled — GST and Delivery Zones today; none for a module not built yet
-      // (its days would run out unused) nor one off its plans (Reviews: Growth and Scale).
-      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 2)
+      // Only a built module a plan or add-on grants can be trialled — GST, Delivery Zones and True Profit today; none for a
+      // module not built yet (its days would run out unused) nor one off its plans (Reviews: Growth and Scale).
+      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 3)
       await meera.getByRole('button', { name: 'Give a 30-day trial of Delivery Zones' }).waitFor()
-      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial of (Reviews|True Profit)/ }).count(), 0)
+      await meera.getByRole('button', { name: 'Give a 30-day trial of True Profit' }).waitFor()
+      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial of Reviews/ }).count(), 0)
       // AD·0: giving one writes one row on the action's own transaction (under its lock), then it can be ended.
       await meera.getByRole('button', { name: 'Give a 30-day trial of GST' }).click()
       await meera.getByText('GST: 30-day trial started.').waitFor()
       assert.equal((await db`select count(*)::int n from tenant_addons where tenant_id = ${KESAR} and module = 'gst' and ends_at is null`)[0].n, 1)
-      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 1) // Delivery Zones still offered
+      assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 2) // Delivery Zones and True Profit still offered
       await meera.getByRole('button', { name: 'End trial' }).click()
       await meera.getByText('GST ended.').waitFor()
       // A trial granted before (the row Admin writes when a module ships) shows its end and can be ended.
