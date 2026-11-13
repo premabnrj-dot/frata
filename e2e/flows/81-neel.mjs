@@ -26,7 +26,7 @@ export default {
       await p.goto(CONSOLE + '/console/fixtures/neel'); await p.getByRole('heading', { name: 'Neel', exact: true }).waitFor()
 
       await t.step(`${size}: the drawn values hold`, async () => {
-        const add = p.getByRole('button', { name: 'Add product' })
+        const add = p.getByRole('button', { name: 'Add product' }).first()
         const look = await add.evaluate((b) => { const s = getComputedStyle(b), a = getComputedStyle(b, '::after'); return { bg: s.backgroundColor, h: b.getBoundingClientRect().height, radius: s.borderTopLeftRadius, thread: a.content } })
         assert.equal(look.bg, 'rgb(58, 68, 194)', 'primary is neel 600')
         assert.equal(look.thread, 'none', 'no thread on a console button')
@@ -39,7 +39,7 @@ export default {
         assert.equal(await p.locator('[role="region"][aria-label="Unsaved changes"] b').textContent(), '3 unsaved changes')
         // Parity review 2026-11-13: busy at full strength; the select white; the header 500; the reason tied to its button.
         assert.equal(await p.getByRole('button', { name: 'Saving' }).evaluate((b) => getComputedStyle(b).opacity), '1')
-        assert.equal(await p.getByLabel('Category').evaluate((x) => getComputedStyle(x).backgroundColor), 'rgb(255, 255, 255)')
+        assert.equal(await p.locator('select').first().evaluate((x) => getComputedStyle(x).backgroundColor), 'rgb(255, 255, 255)')
         assert.equal(await p.locator('thead th').first().evaluate((x) => getComputedStyle(x).fontWeight), '500')
         const publish = p.getByRole('button', { name: 'Publish' })
         assert.equal(await publish.getAttribute('aria-disabled'), 'true')
@@ -47,13 +47,13 @@ export default {
         const link = await p.getByRole('button', { name: 'View in store' }).evaluate((b) => [getComputedStyle(b).paddingLeft, b.getBoundingClientRect().height])
         assert.equal(link[0], '0px'); assert.ok(link[1] <= 28, `link ${link[1]} px tall`)
         assert.equal(await p.getByRole('heading', { name: 'Neel', exact: true }).evaluate((h) => getComputedStyle(h).color), 'rgb(23, 22, 21)')
-        if (size === 'phone') assert.equal(await p.getByRole('button', { name: 'Edit' }).evaluate((b) => getComputedStyle(b).fontSize), '15px')
+        if (size === 'phone') assert.equal(await p.getByRole('button', { name: 'Edit' }).first().evaluate((b) => getComputedStyle(b).fontSize), '15px')
         const rid = await publish.getAttribute('aria-describedby')
         assert.equal(await p.evaluate((id) => document.getElementById(id)?.textContent, rid), 'Add a price first')
       })
 
       await t.step(`${size}: focus is neel 500, 2 px`, async () => {
-        await p.getByRole('button', { name: 'Import' }).focus(); await p.keyboard.press('Shift+Tab'); await p.keyboard.press('Tab')
+        await p.getByRole('button', { name: 'Import' }).first().focus(); await p.keyboard.press('Shift+Tab'); await p.keyboard.press('Tab')
         await p.waitForTimeout(250) // outline-color is in transition-colors (120 ms)
         const [color, width, who] = await p.evaluate(() => { const e = document.activeElement, s = getComputedStyle(e); return [s.outlineColor, s.outlineWidth, e.outerHTML.slice(0, 160)] })
         assert.deepEqual([color, width], ['rgb(76, 87, 214)', '2px'], who)
@@ -72,6 +72,30 @@ export default {
         await p.waitForFunction(() => document.activeElement?.textContent === 'Month') // focus follows on the next frame
       })
 
+      await t.step(`${size}: more components — picker, calendar, typed count, stepper, code, banner`, async () => {
+        const pick = p.getByRole('combobox', { name: 'Category' }); await pick.fill('kurta')
+        await p.getByRole('option', { name: /Kurtas/ }).waitFor()
+        await pick.press('ArrowDown'); await pick.press('Enter')
+        await p.getByText('Picked Kurtas', { exact: true }).waitFor()
+        await pick.fill('silk'); await p.getByRole('option', { name: '+ Create “silk”' }).waitFor(); await pick.press('Escape')
+        if (size === 'desktop') {
+          await p.getByRole('button', { name: /Starts: Choose a day/ }).click()
+          const cal = p.getByRole('dialog', { name: 'Starts' }); await cal.waitFor()
+          await p.keyboard.press('ArrowRight'); await p.keyboard.press('Enter')
+          await cal.waitFor({ state: 'hidden' })
+          assert.doesNotMatch(await p.getByRole('button', { name: /^Starts:/ }).textContent(), /Choose a day/)
+        }
+        await p.getByRole('button', { name: 'One more' }).click()
+        assert.equal(await p.getByRole('group', { name: 'Quantity' }).getByRole('textbox').inputValue(), '3')
+        await p.getByRole('button', { name: 'Delete 12 products' }).first().click()
+        const d = p.getByRole('dialog', { name: 'Delete 12 products?' }); await d.waitFor()
+        const go = d.getByRole('button', { name: 'Delete 12 products' })
+        assert.equal(await go.isDisabled(), true)
+        await d.getByLabel('Type 12 to delete them').fill('12'); assert.equal(await go.isDisabled(), false)
+        await d.getByRole('button', { name: 'Keep them' }).click(); await d.waitFor({ state: 'hidden' })
+        assert.equal(await p.locator('[data-banner="support"]').evaluate((b) => getComputedStyle(b).backgroundColor), 'rgb(34, 32, 30)')
+      })
+
       await t.step(`${size}: axe finds nothing serious, nothing scrolls sideways`, async () => {
         assert.deepEqual(await audit(p), [])
         assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no sideways scroll')
@@ -84,7 +108,7 @@ export default {
         assert.equal(await d.evaluate((x) => getComputedStyle(x).borderTopLeftRadius), '16px')
         await p.screenshot({ path: 'e2e/.out/81-neel-dialog.png' })
         await p.keyboard.press('Escape'); await d.waitFor({ state: 'hidden' })
-        await p.getByRole('button', { name: 'More' }).click()
+        await p.getByRole('button', { name: 'More', exact: true }).click()
         const m = p.getByRole('menu', { name: 'More' }); await m.waitFor()
         assert.equal(await m.evaluate((x) => getComputedStyle(x).borderTopLeftRadius), '12px')
         assert.deepEqual(await audit(p), [])

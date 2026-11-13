@@ -16,13 +16,32 @@ import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/com
 import { Money, Numeric } from '@/components/data/numeric'
 import { useToast } from '@/components/ui/toast-context'
 import { paise } from '@/domains/money/paise'
+import { Banner } from '@/components/ui/banner'
+import { Empty, Locked, NoMatch, Skeleton } from '@/components/ui/empty'
+import { Facts, StatTile } from '@/components/data/facts'
+import { ActivityFeed } from '@/components/data/activity'
+import { Steps } from '@/components/ui/steps'
+import { CopyField } from '@/components/ui/copy-field'
+import { LongJob } from '@/components/ui/long-job'
+import { CodeInput, PinField, Stepper, UnitField } from '@/components/ui/unit-field'
+import { DropZone } from '@/components/ui/drop-zone'
+import { ConfirmDelete } from '@/components/ui/confirm-delete'
+import { SearchPicker } from '@/components/ui/search-picker'
+import { DateField, TimeField } from '@/components/ui/date-field'
+import { InfoTip } from '@/components/ui/info-tip'
 
 // Neel's primitives in their states (fixtures/neel/page.tsx). Each block is one row of § Components.
-export function Gallery() {
+export function Gallery({ today }: { today: string }) {
   const [on, setOn] = useState(true)
   const [seg, setSeg] = useState<'day' | 'week' | 'month'>('week')
   const [open, setOpen] = useState(false)
   const toast = useToast()
+  const [qty, setQty] = useState(2)
+  const [code, setCode] = useState('4819')
+  const [day, setDay] = useState<string | null>(null)
+  const [time, setTime] = useState('10:00')
+  const [picked, setPicked] = useState('')
+  const [many, setMany] = useState(false)
   return (
     <div className="space-y-6">
       <h1 className="font-display text-title font-semibold">Neel</h1>
@@ -79,7 +98,7 @@ export function Gallery() {
             <FieldError name="g-price" message="Add a price above ₹0." /></div>
           <label className="grid content-start gap-1.5"><span className="text-label font-medium">SKU</span><input className={`${FIELD} w-full font-mono`} defaultValue="KS-KUR-014" readOnly /></label>
           <label className="grid content-start gap-1.5"><span className="text-label font-medium">GSTIN</span><input className={`${FIELD} w-full`} defaultValue="" disabled placeholder="Locked while a filing runs" /></label>
-          <label className="grid content-start gap-1.5"><span className="text-label font-medium">Category</span><select className={`${FIELD} w-full`} defaultValue="kurta"><option value="kurta">Kurta set</option><option value="saree">Saree</option></select></label>
+          <label className="grid content-start gap-1.5"><span className="text-label font-medium">Kind</span><select className={`${FIELD} w-full`} defaultValue="kurta"><option value="kurta">Kurta set</option><option value="saree">Saree</option></select></label>
           <label className="grid content-start gap-1.5"><span className="text-label font-medium">Description</span><textarea className={`${FIELD_BOX} w-full py-2`} rows={3} defaultValue="Hand block printed." /></label>
         </div>
       </Section>
@@ -105,6 +124,80 @@ export function Gallery() {
         <SaveBar onSave={() => {}} onDiscard={() => {}} pending={false} count={3} keys="Ctrl+S" />
       </Section>
 
+
+      <h2 className="font-display text-title font-semibold">More components</h2>
+
+      <Section title="Banners" id="g-banners">
+        <div className="grid gap-2">
+          <Banner tone="bad" title="Payment due" action={<a href="#g-banners">Pay now</a>}>Pay ₹4,999 by 18 Nov to keep your store open.</Banner>
+          <Banner tone="warn" title="Trial ends in 3 days" action={<a href="#g-banners">Choose a plan</a>} />
+          <Banner tone="info" title="You're offline">Changes save when you're back.</Banner>
+          <Banner tone="support" title="Frrata support is in your console" action={<a href="#g-banners">End visit</a>}>Riya from Frrata · 22 min left</Banner>
+        </div>
+      </Section>
+
+      <Section title="Empty, locked, loading" id="g-empty">
+        <div className="grid gap-2">
+          <Empty picto="store" title="No products yet"><Button size="sm" variant="secondary">Import</Button><Button size="sm">Add product</Button></Empty>
+          <NoMatch title="No product matches “silk”"><Button variant="link">Clear search</Button></NoMatch>
+          <Locked title="Only the owner can change payments" who="Ask Riya Mehta" />
+          <Skeleton />
+        </div>
+      </Section>
+
+      <Section title="Facts and activity" id="g-facts">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3.5">
+            <Facts rows={[['Placed', 'Today, 10:06 pm'], ['Payment', <Tag key="t">COD</Tag>], ['Ship to', 'Sneha, 14 MG Road, Thiruvananthapuram 695001'], ['AWB', <span key="a" className="font-mono">1490023381</span>]]} />
+            <StatTile label="Kept after returns" value={<Money paise={paise(18432000)} />} change={{ words: '↑ 12% on last month', tone: 'ok' }} />
+          </div>
+          <ActivityFeed label="Order activity" items={[
+            { key: 'c', what: 'Confirmed', detail: 'by Riya', when: 'Today, 10:12 pm' },
+            { key: 'p', what: 'Placed', detail: 'by the shopper · COD', when: 'Today, 10:06 pm' },
+            { key: 'n', what: 'Note', detail: '“Call before delivery” · Riya', when: 'Today, 10:15 pm' },
+          ]} />
+        </div>
+      </Section>
+
+      <Section title="Copy, steps, long jobs" id="g-copy">
+        <div className="grid gap-3">
+          <CopyField value="kesarstudio.in/l/insta-bio" label="link" />
+          <Steps label="Import" steps={['File', 'Check', 'Write', 'Done']} current={2} />
+          <LongJob title="Importing 1,240 products" done={640} total={1240} note="3 rows to fix · keep this page open" action={<Button size="sm" variant="secondary">Pause</Button>} />
+        </div>
+      </Section>
+
+      <Section title="Inputs with a unit" id="g-units">
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="grid content-start gap-1.5"><span className="text-label font-medium">COD fee</span><UnitField unit="₹" defaultValue="49" inputMode="decimal" /></label>
+          <label className="grid content-start gap-1.5"><span className="text-label font-medium">Discount</span><UnitField unit="%" at="end" defaultValue="10" inputMode="decimal" /></label>
+          <label className="grid content-start gap-1.5"><span className="text-label font-medium">Phone</span><UnitField unit="+91" defaultValue="98450 12345" inputMode="tel" /></label>
+          <label className="grid content-start gap-1.5"><span className="text-label font-medium">PIN code</span><PinField defaultValue="302001" place="Jaipur, Rajasthan" /></label>
+          <div className="grid content-start gap-1.5"><span className="text-label font-medium">Quantity</span><Stepper label="Quantity" value={qty} onChange={setQty} min={1} /></div>
+          <div className="grid content-start gap-1.5"><span className="text-label font-medium">Code sent to your phone</span><CodeInput label="Code sent to your phone" value={code} onChange={setCode} /></div>
+        </div>
+      </Section>
+
+      <Section title="Pickers" id="g-pickers">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid content-start gap-1.5"><span className="text-label font-medium">Category</span>
+            <SearchPicker label="Category" options={[{ id: 'k1', label: 'Kurta sets', meta: 'Apparel › Women' }, { id: 'k2', label: 'Kurtas', meta: 'Apparel › Men' }, { id: 's', label: 'Sarees', meta: 'Apparel › Women' }]}
+              onPick={(o) => setPicked(o.label)} onCreate={(t) => setPicked(`new: ${t}`)} />
+            {picked ? <span className="text-small text-muted-foreground">Picked {picked}</span> : null}</div>
+          <label className="grid content-start gap-1.5"><span className="text-label font-medium">When it runs out</span><select className={`${FIELD} w-full`} defaultValue="stop"><option value="stop">Stop selling</option><option value="pre">Take pre-orders</option></select></label>
+          <div className="grid content-start gap-1.5"><span className="text-label font-medium">Starts</span><DateField label="Starts" value={day} onChange={setDay} today={today} /></div>
+          <div className="grid content-start gap-1.5"><span className="text-label font-medium">At <InfoTip about="the time">India time, always.</InfoTip></span><TimeField label="Starts at" value={time} onChange={setTime} /></div>
+        </div>
+      </Section>
+
+      <Section title="Upload and confirm" id="g-upload">
+        <div className="grid gap-3 md:grid-cols-2">
+          <DropZone noun="photos" accept="image/*" hint="JPEG, PNG, WebP · up to 20 MB" onFiles={() => {}}
+            uploads={[{ name: 'kurta-front.jpg', loaded: 4.1 * 1048576, size: 6.6 * 1048576 }, { name: 'scan.heic', error: "This file type can't be used. Use JPEG or PNG." }]} />
+          <div><Button variant="destructive" onClick={() => setMany(true)}>Delete 12 products</Button></div>
+        </div>
+      </Section>
+      <ConfirmDelete open={many} count={12} noun={['product', 'products']} consequence="This can't be undone." onConfirm={() => setMany(false)} onClose={() => setMany(false)} />
       <Dialog open={open} onClose={() => setOpen(false)} title="Delete Mehr lehenga?" description="It leaves your store and cannot come back."
         actions={<><Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Keep it</Button><Button variant="destructive" onClick={() => setOpen(false)}>Delete</Button></>} />
     </div>

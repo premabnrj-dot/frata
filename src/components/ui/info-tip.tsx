@@ -30,7 +30,7 @@ export function InfoTip({ about, children }: { about: string; children: React.Re
         // Said before it shows (beforetoggle is synchronous), so a screen reader never hears a stale state.
         onBeforeToggle={(e) => button.current?.setAttribute('aria-expanded', String((e as unknown as ToggleEvent).newState === 'open'))}
         onToggle={(e) => { if ((e as unknown as ToggleEvent).newState === 'open' && button.current) placeUnder(button.current, e.currentTarget) }}
-        className="max-w-72 rounded-md border border-border bg-popover p-3 text-sm text-popover-foreground">
+        className="max-w-72 rounded-md border border-border bg-popover p-3 text-sm text-popover-foreground in-data-neel:rounded-mid in-data-neel:border-0 in-data-neel:bg-bar in-data-neel:text-bar-foreground in-data-neel:shadow-md">
         {children}
       </span>
     </>

@@ -36,6 +36,8 @@
   --info: #E8F1FD;    --info-text: #1F5BA8;
   --neutral: #F1F0EE; --neutral-text: #57524D;
   /* warn dot #C98318, not the mockup's #D98E1A (2.68:1): a mark needs 3:1 (N0 Deviations). */
+  --support: #22201E;            /* g900: a support visit's strip and banner (Neel § Banners) */
+  --support-foreground: #FFFFFF;
   --ok-mark: #2F9E62; --warn-mark: #C98318; --danger-mark: #DC3B3B; --info-mark: #3B82E0;
   /* ── Neel only ── */
   --primary-hover: #2F37A3;       /* neel 700 */

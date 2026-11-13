@@ -12,5 +12,7 @@ export default async function NeelGallery() {
   if (!E2E_FIXTURES) notFound()
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) notFound()
-  return <Gallery />
+  // Today in India time, for the date field (the server's clock: check:clock).
+  const today = new Date(Date.now() + 5.5 * 3_600_000).toISOString().slice(0, 10)
+  return <Gallery today={today} />
 }

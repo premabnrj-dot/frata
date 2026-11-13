@@ -225,6 +225,10 @@
   --text-label--line-height: var(--t-label-lh);
   --text-small: var(--t-small);
   --text-small--line-height: var(--t-small-lh);
+  /* A stat tile's figure (Neel § More components · Facts): 26/32, tight. */
+  --text-stat: 26px;
+  --text-stat--line-height: 32px;
+  --text-stat--letter-spacing: -0.02em;
   /* A key (⌘S, Ctrl+S): 11 px Inter, never mono (Neel § Components). */
   --text-kbd: 11px;
   --text-kbd--line-height: 1;
