@@ -137,7 +137,7 @@
 }
 
 /* Money (src/components/data/numeric.tsx): the ₹ and the paise a step quieter than the rupees, in the same hue. */
-[data-neel] :is(.money-sym, .money-paise):not([data-store-theme] *) { color: color-mix(in srgb, currentColor 72%, transparent); }
+[data-neel] :is(.money-sym, .money-paise):not([data-store-theme] *, .btn *, .badge *, [data-surface] *, [data-toast] *, .text-danger-text *, .text-danger-text) { color: var(--muted-foreground); } /* text 2 (4.5:1); a coloured amount keeps its colour */
 [data-neel] .money-paise:not([data-store-theme] *) { font-size: 0.85em; }
 
 /* Toasts (src/components/ui/toast.tsx): no disc mark in Neel; an error is the bad tint with its own words and e2, its
