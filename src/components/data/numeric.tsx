@@ -11,11 +11,19 @@ import { cn } from '@/lib/utils'
 export function Money({ paise, decimals, className }: { paise: Paise; decimals?: boolean; className?: string }) {
   return (
     <span className={cn('font-num', paise < 0 && 'text-danger-text', className)}>
-      {formatInr(paise, { decimals })}
+      <MoneyParts text={formatInr(paise, { decimals })} />
     </span>
   )
 }
 
 export function Numeric({ children, className }: { children: ReactNode; className?: string }) {
   return <span className={cn('font-num', className)}>{children}</span>
+}
+
+/** "−₹1,234.50" as its parts: the symbol and the paise a step quieter in Neel (neel.css .money-sym, .money-paise; the
+ * mockup's § Components), the rupees as they are. The text a person or a screen reader gets is unchanged. */
+function MoneyParts({ text }: { text: string }) {
+  const m = text.match(/^(−?₹)([^.]*)(\.\d+)?$/)
+  if (!m) return <>{text}</>
+  return <><span className="money-sym">{m[1]}</span>{m[2]}{m[3] ? <span className="money-paise">{m[3]}</span> : null}</>
 }

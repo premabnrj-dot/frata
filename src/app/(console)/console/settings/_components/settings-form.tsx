@@ -207,7 +207,7 @@ function FieldInput({ f, value, error, onChange, locked }: { f: Field; value: Va
         <input {...common} value={v} maxLength={f.max} onChange={(e) => onChange(e.target.value)}
           type={f.kind === 'email' ? 'email' : 'text'} inputMode={numeric ? 'numeric' : f.kind === 'phone' ? 'tel' : f.kind === 'email' ? 'email' : undefined}
           autoCapitalize={f.kind === 'gstin' ? 'characters' : undefined}
-          className={`${base} h-11 md:h-9 ${numeric || f.kind === 'phone' || f.kind === 'gstin' ? 'font-mono' : ''}`} />
+          className={`${base} h-11 md:h-9 ${f.kind === 'gstin' ? 'font-mono' : numeric || f.kind === 'phone' ? 'font-num' : ''}`} />
       </div>
     )
   }

@@ -67,7 +67,7 @@ export function pairs() {
     ['select-foreground', 'select', TEXT], ['foreground', 'select', TEXT], ['foreground', 'sunk', TEXT], ['muted-foreground', 'sunk', TEXT],
     ['foreground', 'side', TEXT], ['muted-foreground', 'side', TEXT], ['bar-btn-text', 'bar-btn', TEXT], ['bar-link', 'bar', TEXT],
     ['text-3', 'card', NONTEXT] /* icons; never a sentence */, ['off', 'card', NONTEXT], ['neutral-mark', 'card', NONTEXT],
-    ['chart', 'card', NONTEXT], ['ring', 'select', NONTEXT], ['input', 'sunk', NONTEXT])
+    ['chart', 'card', NONTEXT], ['ring', 'select', NONTEXT], ['input', 'sunk', NONTEXT], ['field-hover', 'card', NONTEXT])
   return p
 }
 

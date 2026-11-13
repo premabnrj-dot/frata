@@ -57,12 +57,12 @@ export function Menu({ label = 'More', items, align = 'end' }: { label?: string;
           else if (e.key === 'Escape') back.current = true // the popover closes itself on Esc
           else if (e.key === 'Tab') close(false)
         }}
-        className="min-w-[220px] rounded-lg border border-border bg-popover p-1.5 text-popover-foreground shadow-md">
-        {items.map((it) => 'href' in it
+        className="min-w-55 rounded-lg border border-border bg-popover p-1.5 text-popover-foreground shadow-md">
+        {items.map((it, i) => [it.danger && i > 0 && !items[i - 1]!.danger ? <hr key={`${it.label}-rule`} aria-hidden="true" className="my-1.5 border-line-soft" /> : null, 'href' in it
           ? <a key={it.label} role="menuitem" href={it.href} download={it.download || undefined} tabIndex={-1} className={itemClass(it.danger)} onClick={() => close(false)}>{it.label}</a>
           : <button key={it.label} type="button" role="menuitem" tabIndex={-1} className={itemClass(it.danger)} // Focus to More FIRST (the menu is still open, so this cannot race a dialog the item opens): a dialog
             // opened next returns focus to More when it closes.
-            onClick={() => { back.current = false; trigger.current?.focus(); pop.current?.hidePopover(); it.onSelect() }}>{it.label}</button>)}
+            onClick={() => { back.current = false; trigger.current?.focus(); pop.current?.hidePopover(); it.onSelect() }}>{it.label}</button>])}
       </div>
     </>
   )

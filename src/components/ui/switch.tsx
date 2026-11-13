@@ -11,7 +11,7 @@ export function Switch({ on, onChange, label, id, disabled }: { on: boolean; onC
   return (
     <button id={id} type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} onClick={() => onChange(!on)}
       className={`relative inline-flex h-5 w-[34px] shrink-0 items-center rounded-full transition-colors duration-fast ease-standard before:absolute before:-inset-x-2 before:-inset-y-3 md:before:-inset-y-2 before:content-[''] disabled:opacity-45 ${on ? 'bg-primary' : 'bg-off'}`}>
-      <span aria-hidden="true" className={`absolute left-0.5 size-4 rounded-full bg-white shadow-sm transition-transform duration-fast ease-snap ${on ? 'translate-x-3.5' : ''}`} />
+      <span aria-hidden="true" className={`absolute left-0.5 size-4 rounded-full bg-primary-foreground shadow-sm transition-transform duration-fast ease-snap ${on ? 'translate-x-3.5' : ''}`} />
     </button>
   )
 }

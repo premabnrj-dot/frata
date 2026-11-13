@@ -48,7 +48,7 @@ export function NewProductForm({ sized }: { sized: boolean }) {
           <legend className="mb-1.5 text-sm font-medium">What are you selling?</legend>
           {CHOICES.map((c) => (
             <label key={c.kind} className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-md border px-3 py-2 transition-colors duration-fast ${kind === c.kind ? 'border-ring bg-accent' : 'border-border hover:bg-accent'}`}>
-              <input type="radio" name="kind" value={c.kind} checked={kind === c.kind} onChange={() => setChosen(c.kind)} className="size-4 accent-primary" />
+              <input type="radio" name="kind" value={c.kind} checked={kind === c.kind} onChange={() => setChosen(c.kind)} />
               <span className="min-w-0"><span className="block text-sm font-medium">{c.label}</span><span className="block text-xs text-muted-foreground">{c.sizes}</span></span>
             </label>
           ))}

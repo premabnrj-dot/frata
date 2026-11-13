@@ -34,8 +34,9 @@ export function Gallery() {
           <Button variant="ghost">Cancel</Button>
           <Button variant="destructive">Delete</Button>
           <Button size="sm" variant="secondary">Edit</Button>
-          <Button disabled>Publish</Button>
+          <Button reason="Add a price first">Publish</Button>
           <Button busy>Saving</Button>
+          <Button variant="link">View in store</Button>
         </div>
       </Section>
 
@@ -96,7 +97,8 @@ export function Gallery() {
 
       <Section title="Floating" id="g-floating" action={<Menu items={[{ label: 'Duplicate', onSelect: () => toast.ok('Duplicated.') }, { label: 'Archive', onSelect: () => {} }, { label: 'Delete', danger: true, onSelect: () => setOpen(true) }]} />}>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="secondary" onClick={() => toast.error('Could not reach the courier.', { action: { label: 'Try again', run: () => {} } })}>Show a toast</Button>
+          <Button variant="secondary" onClick={() => toast.ok('Saved.')}>Show a toast</Button>
+          <Button variant="secondary" onClick={() => toast.error('Could not reach the courier.', { action: { label: 'Try again', run: () => {} } })}>Show an error</Button>
           <Button variant="secondary" onClick={() => setOpen(true)}>Open a dialog</Button>
           <span className="inline-flex items-center gap-2 text-sm text-muted-foreground"><Spinner /> Loading</span>
         </div>

@@ -69,7 +69,7 @@ export default async function StaffPage() {
         <Section className="max-w-xl"><ConfirmFirst action={addStaffAction} className="flex flex-wrap items-end gap-2">
           <div className="flex flex-1 flex-col gap-1.5">
             <label htmlFor="email" className="text-sm font-medium">Add by email</label>
-            <input id="email" name="email" type="email" required data-error="Enter an email." className="h-11 md:h-9 rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-mark" />
+            <input id="email" name="email" type="email" required data-error="Enter an email." className="h-11 md:h-9 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark" />
             <FieldMessage name="email" />
           </div>
           <div className="flex flex-col gap-1.5">

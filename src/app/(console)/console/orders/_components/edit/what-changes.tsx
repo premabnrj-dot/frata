@@ -79,7 +79,7 @@ export function WhatChanges({ number, plan, problem, before, to, notify, onNotif
       {said ? <p role="alert" className="text-sm text-danger-text">{said}</p> : null}
       {to ? (
         <label className="flex min-h-10 items-center gap-3 text-sm">
-          <input type="checkbox" checked={notify} onChange={(e) => onNotify(e.target.checked)} className="size-5 accent-primary" />Email {to} {mail}
+          <input type="checkbox" checked={notify} onChange={(e) => onNotify(e.target.checked)} />Email {to} {mail}
         </label>
       ) : null}
       <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 flex flex-wrap justify-end gap-2 border-t border-border bg-card px-4 py-3 md:static md:z-auto md:border-0 md:bg-transparent md:p-0 print:hidden">

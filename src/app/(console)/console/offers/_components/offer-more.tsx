@@ -50,7 +50,7 @@ export function OfferMore({ v, set, errors, pickers }: { v: OfferValues; set: (p
         <fieldset className="space-y-2"><legend className={lab}>Covers</legend>
           <div className="flex flex-wrap gap-3 text-sm">
             {([['all', 'Every product'], ['products', 'Chosen products'], ['collections', 'Chosen collections']] as const).map(([k, l]) => (
-              <label key={k} className="flex min-h-6 items-center gap-2"><input type="radio" name="targets" className="size-5 accent-primary" checked={(v.targets ?? 'all') === k} onChange={() => set({ targets: k, targetIds: [] })} />{l}</label>
+              <label key={k} className="flex min-h-6 items-center gap-2"><input type="radio" name="targets"  checked={(v.targets ?? 'all') === k} onChange={() => set({ targets: k, targetIds: [] })} />{l}</label>
             ))}
           </div>
           {(v.targets ?? 'all') !== 'all' && (

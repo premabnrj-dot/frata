@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
@@ -22,11 +23,13 @@ export const button = cva(
         inverse: `bg-primary-foreground text-primary hover:bg-primary-foreground/90 ${THREAD} after:scale-x-[0.34]`,
         ghost: 'btn-ghost hover:bg-accent',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        // Neel: a link that acts ("View in store"): neel 700, underlined on hover, no box (its target is the row's height).
+        link: 'h-auto px-0 text-link underline-offset-2 hover:underline',
       },
       // Height is a variant, never a className: twMerge drops a caller's h-11 against the variant's height but keeps md:h-9 (impact review U·1).
       size: {
         default: 'h-[var(--btn-h,2.5rem)] px-3 text-sm md:h-9', // 40 px on a phone (44 in Neel), 36 px from 768 px
-        sm: 'h-[30px] px-2.5 text-label md:h-[30px]', // Neel: a row's action, a table's toolbar
+        sm: 'btn-sm h-11 px-2.5 text-label md:h-7.5', // Neel: a row's action, a table's toolbar (44 on a phone)
         lg: 'h-11 px-5 text-base', // sign-in, sign-up and the website's one call to action
         // A label that can be long (it names a merchant, § Frrata Admin): grows to two lines instead of overflowing.
         wrap: 'min-h-[var(--btn-h,2.5rem)] px-3 py-2 text-left text-sm whitespace-normal [overflow-wrap:anywhere] md:min-h-9',
@@ -40,22 +43,34 @@ type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof
   /** A save or send in flight: the label stays, a spinner joins it, and a second press does nothing. aria-disabled,
    * not disabled: a disabled button drops keyboard focus to the page (Neel § States). */
   busy?: boolean
+  /** Why it cannot be pressed now (Neel § States: "Off"): the button stays reachable by keyboard (aria-disabled) and
+   * the reason sits beside it, tied by aria-describedby. Prefer this to a bare `disabled`. */
+  reason?: string
 }
 
-export function Button({ variant, size, className, busy, disabled, children, onClick, ...props }: Props) {
+export function Button({ variant, size, className, busy, disabled, reason, children, onClick, ...props }: Props) {
+  const rid = useId()
+  if (reason) return (
+    <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1">
+      <button {...props} type="button" className={cn(button({ variant, size }), 'cursor-not-allowed', className)} aria-disabled="true" aria-describedby={rid}>{children}</button>
+      <span id={rid} className="text-label text-muted-foreground">{reason}</span>
+    </span>
+  )
   return (
     <button className={cn(button({ variant, size }), busy && 'cursor-progress', className)} disabled={disabled} aria-disabled={busy || undefined}
-      aria-busy={busy || undefined} onClick={(e) => { if (busy) { e.preventDefault(); return } onClick?.(e) }} {...props}>
+      aria-busy={busy || undefined} {...props}
+      // Only a busy button takes over the click (a server component may render Button and cannot pass a function).
+      onClick={busy ? (e) => e.preventDefault() : onClick}>
       {busy && <Spinner />}
       {children}
     </button>
   )
 }
 
-/** A 14 px ring that turns (stilled under reduced motion: the label and aria-busy carry the meaning). */
+/** A 12 px ring that turns (stilled under reduced motion: the label and aria-busy carry the meaning). */
 export function Spinner({ className }: { className?: string }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 16 16" className={cn('size-3.5 shrink-0 animate-spin motion-reduce:animate-none', className)}>
+    <svg aria-hidden="true" viewBox="0 0 16 16" className={cn('size-3 shrink-0 animate-spin motion-reduce:animate-none', className)}>
       <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeOpacity="0.3" strokeWidth="2" />
       <path d="M14 8a6 6 0 0 0-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>

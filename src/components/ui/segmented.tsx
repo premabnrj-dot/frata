@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 // FILE: src/components/ui/segmented.tsx — ONE CHOICE OF A FEW, SIDE BY SIDE (Neel N0, § Components).
 //
 // A radiogroup: the chosen one is white with e1 on a sunk track (10 px corners, the soft line); the others in text 2.
-// One tab stop (the chosen one); ← → ↑ ↓ move and choose, as radios do. 30 px on a desktop, 44 on a phone.
+// One tab stop (the chosen one, or the first when none is); ← → ↑ ↓ Home End move and choose, as radios do. 30 px on a desktop, 44 on a phone.
 // For two to four short words; more than that is a Select.
 // =============================================================================
 
@@ -21,6 +21,8 @@ export function Segmented<T extends string>({ label, value, options, onPick, inv
   className?: string
 }) {
   const box = useRef<HTMLDivElement>(null)
+  // Nothing chosen yet: the first option takes the tab stop, so the group can still be reached by keyboard.
+  const chosen = options.some(([v]) => v === value)
   const step = (by: number) => {
     const at = options.findIndex(([v]) => v === value)
     const next = (at + by + options.length) % options.length
@@ -32,10 +34,11 @@ export function Segmented<T extends string>({ label, value, options, onPick, inv
       onKeyDown={(e) => {
         if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); step(1) }
         else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); step(-1) }
+        else if (e.key === 'Home' || e.key === 'End') { e.preventDefault(); const k = e.key === 'Home' ? 0 : options.length - 1; onPick(options[k]![0]); requestAnimationFrame(() => box.current?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[k]?.focus()) }
       }}>
-      {options.map(([v, words]) => (
-        <button key={v} type="button" role="radio" aria-checked={value === v} tabIndex={value === v ? 0 : -1} {...invalid} onClick={() => onPick(v)}
-          className={cn('min-h-11 rounded-[7px] px-3 text-label font-medium transition-colors duration-fast ease-standard md:min-h-[30px]',
+      {options.map(([v, words], i) => (
+        <button key={v} type="button" role="radio" aria-checked={value === v} tabIndex={value === v || (!chosen && i === 0) ? 0 : -1} {...invalid} onClick={() => onPick(v)}
+          className={cn('min-h-11 rounded-[calc(var(--r-mid)-3px)] px-3 text-label font-medium transition-colors duration-fast ease-standard md:min-h-[30px]',
             value === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>{words}</button>
       ))}
     </div>

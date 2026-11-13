@@ -37,6 +37,14 @@ export default {
         const off = await p.getByRole('switch', { name: 'Off' }).evaluate((b) => [b.getBoundingClientRect().width, b.getBoundingClientRect().height])
         assert.deepEqual(off.map(Math.round), [34, 20])
         assert.equal(await p.locator('[role="region"][aria-label="Unsaved changes"] b').textContent(), '3 unsaved changes')
+        // Parity review 2026-11-13: busy at full strength; the select white; the header 500; the reason tied to its button.
+        assert.equal(await p.getByRole('button', { name: 'Saving' }).evaluate((b) => getComputedStyle(b).opacity), '1')
+        assert.equal(await p.getByLabel('Category').evaluate((x) => getComputedStyle(x).backgroundColor), 'rgb(255, 255, 255)')
+        assert.equal(await p.locator('thead th').first().evaluate((x) => getComputedStyle(x).fontWeight), '500')
+        const publish = p.getByRole('button', { name: 'Publish' })
+        assert.equal(await publish.getAttribute('aria-disabled'), 'true')
+        const rid = await publish.getAttribute('aria-describedby')
+        assert.equal(await p.evaluate((id) => document.getElementById(id)?.textContent, rid), 'Add a price first')
       })
 
       await t.step(`${size}: focus is neel 500, 2 px`, async () => {

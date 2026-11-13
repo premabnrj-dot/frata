@@ -25,7 +25,7 @@ export function ViewTabs({ label, tabs, scroll = false }: { label: string; tabs:
           <li key={t.href} className={cn('shrink-0', t.apart && 'ml-auto pl-4')}>
             {/* Neel § Components: underline tabs 20 apart; the current one in text and a 2 px neel line (no thread). */}
             <Link href={t.href} aria-current={t.current ? 'page' : undefined}
-              className={cn('-mb-px inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap border-b-2 text-sm font-medium md:min-h-10',
+              className={cn('-mb-px inline-flex min-h-11 items-center focus-visible:outline-offset-[-2px] gap-1.5 whitespace-nowrap border-b-2 text-sm font-medium md:min-h-10',
                 t.current ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}>
               {t.label}
               {t.count !== undefined ? <span className={cn('rounded-full px-1.5 py-[3px] font-num text-small leading-none font-medium', t.current ? 'bg-select text-link' : 'bg-line-soft text-muted-foreground')}>{t.count.toLocaleString('en-IN')}</span> : null}

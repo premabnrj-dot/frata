@@ -87,7 +87,7 @@ export function FilePanel({ period, step, ours, portal, username, pushedAt, file
 
       {step === 'file' && (
         <form className="space-y-3 rounded-lg border border-border p-4" onSubmit={(e) => { e.preventDefault(); run(fileOtp ? () => gstFile(period, otp) : async () => { const r = await gstFileOtp(period); if (r.ok) setFileOtp(true); return r }) }}>
-          <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={sure} onChange={(e) => setSure(e.target.checked)} className="mt-0.5 size-4" />
+          <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={sure} onChange={(e) => setSure(e.target.checked)} className="mt-0.5" />
             <span>I’ve checked this return. A filed GSTR-1 can’t be changed; a mistake is corrected in a later period.</span></label>
           <div className="flex flex-wrap items-center gap-2">
             {fileOtp && otpBox('EVC OTP')}

@@ -22,5 +22,5 @@ export function Badge({ tone, className, children }: VariantProps<typeof badge> 
 
 /** A fact that is not a status (a category, "Made to order", a channel): outlined, text 2, 6 px corners. Neel only. */
 export function Tag({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <span className={cn('inline-flex h-[22px] items-center rounded-sm border border-border bg-card px-[7px] text-small font-medium whitespace-nowrap text-muted-foreground', className)}>{children}</span>
+  return <span className={cn('inline-flex h-5.5 items-center rounded-sm border border-border bg-card px-1.75 text-small font-medium whitespace-nowrap text-muted-foreground', className)}>{children}</span>
 }

@@ -90,6 +90,7 @@
   --t-section: 15px; --t-section-lh: 1.4;
   --t-title: 1.5rem; --t-title-lh: 2rem; --t-display: 1.875rem; --t-display-lh: 2.25rem;
   --t-label: 0.8125rem; --t-label-lh: 1.125rem; --t-small: 0.75rem; --t-small-lh: 1rem;
+  --t-display-ls: normal; --t-title-ls: normal; --t-section-ls: normal;
 }
 
 /* DARK — written and gated, NOT switched on (owner call 2, 2026-11-07): nothing sets data-theme yet. */
@@ -213,10 +214,13 @@
   /* The Section title (every card, Console and Admin): text-section font-semibold. Never --text-card (collides with --color-card). */
   --text-section: var(--t-section);
   --text-section--line-height: var(--t-section-lh);
+  --text-section--letter-spacing: var(--t-section-ls);
   --text-title: var(--t-title);
   --text-title--line-height: var(--t-title-lh);
+  --text-title--letter-spacing: var(--t-title-ls);
   --text-display: var(--t-display);
   --text-display--line-height: var(--t-display-lh);
+  --text-display--letter-spacing: var(--t-display-ls);
   --text-label: var(--t-label);
   --text-label--line-height: var(--t-label-lh);
   --text-small: var(--t-small);

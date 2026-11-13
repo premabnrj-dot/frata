@@ -22,8 +22,8 @@ export function Section({ title, action, children, className, id, labelledBy, fl
   const h = id ? `${id}-h` : undefined
   return (
     <Tag id={id} aria-label={ariaLabel} aria-labelledby={labelledBy ?? (title ? h : undefined)}
-      // Neel § Components: 12 px corners; 20 px in (16 on a phone), 16 between the title and what follows.
-      className={cn('rounded-lg border border-border bg-card', flush ? 'overflow-hidden' : 'space-y-4 p-4 md:p-5', className)}>
+      // Neel § Components: 12 px corners; the header 16 from the top, 20 at the sides and foot (16 on a phone), 16 between.
+      className={cn('rounded-lg border border-border bg-card', flush ? 'overflow-hidden' : 'space-y-4 p-4 md:px-5 md:pb-5', className)}>
       {(title || action) && (
         // A flush card's rows draw their own padding (px-4); its header lines up with them and centres its action.
         <div className={cn('flex justify-between gap-3', flush ? 'items-center px-4 pt-4 pb-1 md:px-5' : 'items-start')}>

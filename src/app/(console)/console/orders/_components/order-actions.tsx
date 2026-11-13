@@ -153,7 +153,7 @@ function Actions(p: OrderActionsProps) {
             <legend className="mb-1 text-sm font-medium">Why?</legend>
             {CANCEL_REASONS.map((r) => (
               <label key={r} className="flex min-h-11 items-center gap-3 text-sm md:min-h-9">
-                <input type="radio" name="reason" value={r} checked={reason === r} onChange={() => { setReason(r); fields.clear('reason') }} {...fields.props('reason')} className="size-5 accent-primary" />{CANCEL_LABEL[r]}
+                <input type="radio" name="reason" value={r} checked={reason === r} onChange={() => { setReason(r); fields.clear('reason') }} {...fields.props('reason')} />{CANCEL_LABEL[r]}
               </label>
             ))}
             <FieldError name="reason" message={fields.errors.reason} />
@@ -167,7 +167,7 @@ function Actions(p: OrderActionsProps) {
         </div>
         {p.stockTaken ? (
           <label className="flex min-h-10 items-center gap-3 text-sm">
-            <input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} className="size-5 accent-primary" />Put the stock back
+            <input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} />Put the stock back
           </label>
         ) : null}
       </Dialog>

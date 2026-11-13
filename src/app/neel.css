@@ -15,6 +15,7 @@
   --popover-foreground: #171615;
   --primary: #3A44C2;             /* neel 600: the one action colour */
   --primary-foreground: #FFFFFF;
+  --ink: #171615;                 /* g950: Admin's dark navigation and the monogram, the same as the bar */
   --bar: #171615;
   --bar-foreground: #FFFFFF;
   --secondary: #F6F5F3;
@@ -53,6 +54,7 @@
   --bar-btn: #FFFFFF;
   --bar-btn-text: #171615;
   --bar-link: #A3ABF5;
+  --field-hover: #4D4944;         /* g700: a field's edge under the pointer */
   /* Radius by role: 4 checkbox and kbd · 6 chip and tag · 8 button and field · 10 toast, banner, segmented · 12 card,
      menu · 16 dialog. Depth: e1 rests (secondary button, segment), e2 floats (menu, popover), e3 overlays (dialog, toast). */
   --r-xs: 4px; --r-sm: 6px; --r-md: 8px; --r-mid: 10px; --r-lg: 12px; --r-xl: 16px;
@@ -64,6 +66,7 @@
      small 12/16. Weights 400, 500, 600 only. */
   --t-section: 16px; --t-section-lh: 24px; --t-title: 22px; --t-title-lh: 28px; --t-display: 30px; --t-display-lh: 36px;
   --t-label: 13px; --t-label-lh: 18px; --t-small: 12px; --t-small-lh: 16px;
+  --t-display-ls: -0.02em; --t-title-ls: -0.015em; --t-section-ls: -0.01em;
   --font-num: var(--font-inter), system-ui, sans-serif;
 }
 
@@ -73,7 +76,7 @@
   --primary-hover: initial; --link: initial; --select: initial; --select-foreground: initial; --halo: initial; --side: initial;
   --sunk: initial; --line-soft: initial; --edge: initial; --text-3: initial; --off: initial; --neutral-mark: initial;
   --chart: initial; --chart-now: initial; --bar-btn: initial; --bar-btn-text: initial; --bar-link: initial;
-  --font-num: initial; --btn-h: initial;
+  --font-num: initial; --btn-h: initial; --field-hover: initial;
 }
 
 /* Buttons in Neel (src/components/ui/button.tsx): no thread, 44 px on a phone, ghost in text 2, disabled at 45%. */
@@ -81,7 +84,8 @@
 [data-neel] .btn.thread:not([data-store-theme] *)::after { content: none; }
 [data-neel] .btn-ghost:not([data-store-theme] *) { color: var(--muted-foreground); }
 [data-neel] .btn-ghost:not([data-store-theme] *):hover { color: var(--foreground); }
-[data-neel] .btn:not([data-store-theme] *):is(:disabled, [aria-disabled="true"]) { opacity: 0.45; }
+[data-neel] .btn:not([data-store-theme] *):is(:disabled, [aria-disabled="true"]:not([aria-busy="true"])) { opacity: 0.45; }
+[data-neel] .btn:not(.btn-sm):not([data-store-theme] *) { padding-inline: 14px; gap: 6px; } /* the mockup's 14 and 6 */
 
 /* Badge (src/components/ui/badge.tsx): a 22 px pill, 8 px sides, 12/500, a 6 px dot in the tone's mark. */
 [data-neel] .badge:not([data-store-theme] *) { height: 22px; gap: 6px; padding: 0 8px; border-radius: 999px; font-size: var(--t-small); line-height: 1; }
@@ -106,6 +110,8 @@
 [data-neel] :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea):not([data-store-theme] *):focus-visible {
   outline-offset: 1px; border-color: var(--ring);
 }
+[data-neel] :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea):not([data-store-theme] *):hover:not(:focus-visible, :disabled, [aria-invalid="true"], [readonly]) { border-color: var(--field-hover); }
+[data-neel] :is(input:not([type="checkbox"], [type="radio"]), textarea):not([data-store-theme] *)[readonly] { background: var(--sunk); color: var(--muted-foreground); }
 [data-neel] :is(input, select, textarea):not([data-store-theme] *)[aria-invalid="true"] { border-color: var(--danger-mark); box-shadow: 0 0 0 3px var(--danger); }
 
 /* Checkbox and radio (Neel § Components): a 16 px box in a 24 px target. The input itself is 24 px (a transparent
@@ -128,4 +134,20 @@
   [data-neel] input[type="checkbox"]:not([role="switch"]):not([data-store-theme] *):indeterminate::before { content: ""; width: 8px; height: 2px; border-radius: 1px; background: var(--primary-foreground); }
   [data-neel] input[type="radio"]:not([data-store-theme] *):checked { box-shadow: inset 0 0 0 5px var(--primary); }
   [data-neel] :is(input[type="checkbox"], input[type="radio"]):not([data-store-theme] *):disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+/* Money (src/components/data/numeric.tsx): the ₹ and the paise a step quieter than the rupees, in the same hue. */
+[data-neel] :is(.money-sym, .money-paise):not([data-store-theme] *) { color: color-mix(in srgb, currentColor 72%, transparent); }
+[data-neel] .money-paise:not([data-store-theme] *) { font-size: 0.85em; }
+
+/* Toasts (src/components/ui/toast.tsx): no disc mark in Neel; an error is the bad tint with its own words and e2, its
+   action underlined (a close button stays: errors wait to be dismissed, N0 Deviations). */
+[data-neel] [data-toast] [data-mark] { display: none; }
+[data-neel] [data-toast="error"] { background: var(--danger); color: var(--danger-text); box-shadow: var(--sh-2); --tw-ring-shadow: 0 0 #0000; }
+[data-neel] [data-toast="error"] button { color: inherit; text-decoration-line: underline; }
+[data-neel] [data-toast="error"] :focus-visible { outline-color: var(--ring); }
+
+/* A phone (Neel § Screens, On a phone): fields and buttons read 15 px. */
+@media (max-width: 767px) {
+  [data-neel] :is(.btn:not(.btn-sm), input:not([type="checkbox"], [type="radio"]), select, textarea):not([data-store-theme] *) { font-size: 15px; }
 }

@@ -78,7 +78,7 @@ function Panel({ orderId, number, stage, may, shipment, stockTaken }: ShipPanelP
       <Dialog open={ask === 'came_back'} onClose={() => setAsk(null)} title={`${number} came back?`}
         description="It came back to the shop without being delivered (RTO). Nothing was collected."
         actions={<><Button variant="secondary" data-autofocus onClick={() => setAsk(null)}>Not yet</Button><Button onClick={() => void go('came back', () => cameBackOrder(orderId, restock))} aria-disabled={busy}>Came back</Button></>}>
-        {stockTaken ? <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} className="size-5 accent-primary" />Put the stock back (it can't be undone after)</label> : null}
+        {stockTaken ? <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} />Put the stock back (it can't be undone after)</label> : null}
       </Dialog>
       <Dialog open={ask === 'lost'} onClose={() => setAsk(null)} title={`Lost by the courier?`}
         description="The courier lost or damaged the parcel. It is never billed as delivered; claim it with the courier."
