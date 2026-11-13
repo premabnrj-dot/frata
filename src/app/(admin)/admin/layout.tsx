@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { AppShell } from '@/components/shell/app-shell'
@@ -69,7 +70,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const infraItem: NavItem = { href: '/admin/infrastructure', label: 'Infrastructure', icon: 'risk' }
   const foot: NavItem[] = ownStore ? [{ href: '/console', label: `${ownStore} console`, icon: 'external' }] : []
   return (
-    <AppShell ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, trialsItem, partnersItem, plans, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem] }, { label: 'Frrata', items: [noticesItem, emailItem, infraItem, staffItem, activity] }]}
+    <AppShell rail={(await cookies()).get('rail')?.value === '1'} ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, trialsItem, partnersItem, plans, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem] }, { label: 'Frrata', items: [noticesItem, emailItem, infraItem, staffItem, activity] }]}
       tabs={[merchants, plans, staffItem]} more={[trialsItem, partnersItem, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem, noticesItem, emailItem, infraItem, activity]} foot={foot} email={staff.email}>
       {children}
     </AppShell>

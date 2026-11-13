@@ -10,6 +10,9 @@ import { orderPrefix } from '@/domains/signup/slug'
 import { inFlightSql, inTabSql, momentColumns, openShipmentProviderSql, openSql, placedSql } from '@/lib/db/order-predicates'
 import { QUEUE_TABS, SHIP_TABS, type QueueTab } from '@/domains/orders/order-state'
 import { parseOrderSearch } from '@/domains/orders/search'
+import { mainDomainIn } from './addresses'
+import { mainAddress } from '@/domains/addresses/names'
+import { shopHost } from '@/lib/public-env'
 
 /** Rows a page (docs/specs/2026-11-07-orders.md § 1D·1). */
 export const ORDERS_PAGE = 50
@@ -97,14 +100,18 @@ export async function queueShopFor(tenantId: string): Promise<{ prefix: string; 
  */
 /** The console nav's two counts in ONE transaction (speed review P8): orders to confirm, and this member's unread
  *  Frrata notices (capped at 10: the pill shows 9+). Per request, shared by both pills. */
-export const navCounts = cache(async (tenantId: string, userId: string): Promise<{ toConfirm: number; unread: number }> => {
+/** What the shell shows on every page: the counts on Orders and Notices, and the store's address under its name (Neel
+ * N1: the sidebar draws it; read here, in the same transaction, so the shell adds no request of its own). */
+export const navCounts = cache(async (tenantId: string, userId: string): Promise<{ toConfirm: number; unread: number; address: string | null }> => {
   const now = new Date()
   return withTenant(tenantId, async (tx) => {
-    const [[r], unread] = await Promise.all([
+    const [[r], unread, [shop], domain] = await Promise.all([
       tx.select({ n: sql<number>`count(*)::int` }).from(orders).where(and(eq(orders.tenantId, tenantId), inTabSql('to_confirm', now))),
       unreadNotices(tx, tenantId, userId),
+      tx.select({ slug: tenants.slug }).from(tenants).where(eq(tenants.id, tenantId)).limit(1),
+      mainDomainIn(tx, tenantId),
     ])
-    return { toConfirm: Number(r?.n ?? 0), unread }
+    return { toConfirm: Number(r?.n ?? 0), unread, address: shop ? mainAddress(shopHost(shop.slug), domain) : null }
   })
 })
 

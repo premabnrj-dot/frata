@@ -154,3 +154,39 @@
 @media (max-width: 767px) {
   [data-neel] :is(.btn:not(.btn-link), input:not([type="checkbox"], [type="radio"]), select, textarea):not([data-store-theme] *) { font-size: 15px; }
 }
+
+/* THE SIDEBAR AS A RAIL (Neel N1, § Layout · Sidebar; src/components/shell/app-shell.tsx, rail-toggle.tsx): 64 px from 768 to
+   1279 px, and at any width by choice ([data-rail]). Each link keeps its name: the label becomes a tooltip on the bar (still
+   in the accessible name), a count a dot that keeps its words for a screen reader. The group names, the store's name, the
+   account and an app's sub-items step out. */
+@media (min-width: 768px) and (max-width: 1279.98px) {
+  [data-shell-aside] { width: 64px; padding: 10px 8px; align-items: center; overflow: visible; }
+  [data-shell-aside] :is([data-nav-group], [data-nav-shop] [data-nav-label], [id^="nav-kids-"], [aria-controls^="nav-kids-"]) { display: none; }
+  [data-shell-aside] > div:last-child > [data-nav-label] { display: none; }
+  [data-shell-aside] [data-nav-shop] { padding: 0 0 10px; }
+  [data-shell-aside] :is([data-nav], [data-rail-toggle]) { width: 40px; padding: 0; justify-content: center; position: relative; flex: none; }
+  [data-shell-aside] :is([data-nav], [data-rail-toggle]) [data-nav-label] {
+    position: absolute; left: calc(100% + 8px); top: 50%; translate: 0 -50%; z-index: 50; padding: 4px 8px; border-radius: var(--r-sm);
+    background: var(--bar); color: var(--bar-foreground); font-size: var(--t-small); line-height: var(--t-small-lh); font-weight: 500;
+    white-space: nowrap; overflow: visible; opacity: 0; pointer-events: none; transition: opacity var(--transition-duration-fast) var(--ease-standard);
+  }
+  [data-shell-aside] :is([data-nav], [data-rail-toggle]):is(:hover, :focus-visible) [data-nav-label] { opacity: 1; }
+  [data-shell-aside] [data-nav-count] { position: absolute; right: 5px; top: 5px; width: 7px; height: 7px; padding: 0; margin: 0; font-size: 0; line-height: 0; background: var(--warn-mark); }
+}
+[data-shell-aside][data-rail] { width: 64px; padding: 10px 8px; align-items: center; overflow: visible; }
+[data-shell-aside][data-rail] :is([data-nav-group], [data-nav-shop] [data-nav-label], [id^="nav-kids-"], [aria-controls^="nav-kids-"]) { display: none; }
+[data-shell-aside][data-rail] > div:last-child > [data-nav-label] { display: none; }
+[data-shell-aside][data-rail] [data-nav-shop] { padding: 0 0 10px; }
+[data-shell-aside][data-rail] :is([data-nav], [data-rail-toggle]) { width: 40px; padding: 0; justify-content: center; position: relative; flex: none; }
+[data-shell-aside][data-rail] :is([data-nav], [data-rail-toggle]) [data-nav-label] {
+    position: absolute; left: calc(100% + 8px); top: 50%; translate: 0 -50%; z-index: 50; padding: 4px 8px; border-radius: var(--r-sm);
+    background: var(--bar); color: var(--bar-foreground); font-size: var(--t-small); line-height: var(--t-small-lh); font-weight: 500;
+    white-space: nowrap; overflow: visible; opacity: 0; pointer-events: none; transition: opacity var(--transition-duration-fast) var(--ease-standard);
+  }
+[data-shell-aside][data-rail] :is([data-nav], [data-rail-toggle]):is(:hover, :focus-visible) [data-nav-label] { opacity: 1; }
+[data-shell-aside][data-rail] [data-nav-count] { position: absolute; right: 5px; top: 5px; width: 7px; height: 7px; padding: 0; margin: 0; font-size: 0; line-height: 0; background: var(--warn-mark); }
+
+/* A phone (Neel § Screens · On a phone): body 15/22, titles 20/26. */
+@media (max-width: 767px) {
+  [data-neel] { font-size: 15px; line-height: 22px; --t-title: 20px; --t-title-lh: 26px; }
+}
