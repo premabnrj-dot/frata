@@ -15,7 +15,7 @@ export function LongJob({ title, done, total, note, action, className }: {
   const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0
   return (
     <div className={cn('grid gap-2.5 rounded-lg border border-border bg-card p-3.5', className)}>
-      <div className="flex flex-wrap justify-between gap-2"><b className="font-medium">{title}</b>
+      <div className="flex flex-wrap justify-between gap-2"><b className="text-sm font-medium">{title}</b>
         <span className="font-num text-small text-muted-foreground">{done.toLocaleString('en-IN')} of {total.toLocaleString('en-IN')}</span></div>
       <ProgressBar value={pct} label={typeof title === 'string' ? title : 'Progress'} />
       {note || action ? <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-small text-muted-foreground">{note}</span>{action}</div> : null}

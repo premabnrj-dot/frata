@@ -66,7 +66,7 @@ export function SearchPicker({ label, options, onPick, onCreate, placeholder, fi
           {!shown.length && !canCreate ? <p role="status" className="px-2.5 py-2 text-sm text-muted-foreground">No match for “{q.trim()}”</p> : null}
           {canCreate ? <>{shown.length ? <hr aria-hidden="true" className="my-1.5 border-line-soft" /> : null}
             <div id={`${id}-o${shown.length}`} role="option" aria-selected={at === shown.length} onMouseDown={(e) => { e.preventDefault(); pick(shown.length) }}
-              className={cn('flex min-h-11 cursor-pointer items-center rounded-md px-2.5 text-sm font-medium text-link md:min-h-9', at === shown.length && 'bg-select')}>+ Create “{q.trim()}”</div></> : null}
+              className={cn('flex min-h-11 cursor-pointer items-center rounded-md px-2.5 text-sm font-medium text-foreground md:min-h-9', at === shown.length && 'bg-select')}>+ Create “{q.trim()}”</div></> : null}
         </div>
       ) : null}
     </div>

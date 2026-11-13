@@ -33,7 +33,8 @@ export function ConfirmDelete({ open, count, noun, consequence, keep = 'Keep the
     <Dialog open={open} onClose={onClose} title={`${verb} ${what}?`} description={consequence} error={error}
       actions={<>
         <Button variant="secondary" data-autofocus onClick={onClose}>{keep}</Button>
-        <Button variant="destructive" busy={busy} disabled={!ready} onClick={onConfirm}>{verb} {what}</Button>
+        {ready ? <Button variant="destructive" busy={busy} onClick={onConfirm}>{verb} {what}</Button>
+          : <Button variant="destructive" reason={`Type ${count} first`}>{verb} {what}</Button>}
       </>}>
       {ask ? <label htmlFor={id} className="grid gap-1.5"><span className="text-label font-medium">Type {count} to {verb.toLowerCase()} them</span>
         <input id={id} inputMode="numeric" autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} className={`${FIELD} w-full font-num`} /></label> : null}

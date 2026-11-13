@@ -28,7 +28,6 @@ import { DropZone } from '@/components/ui/drop-zone'
 import { ConfirmDelete } from '@/components/ui/confirm-delete'
 import { SearchPicker } from '@/components/ui/search-picker'
 import { DateField, TimeField } from '@/components/ui/date-field'
-import { InfoTip } from '@/components/ui/info-tip'
 
 // Neel's primitives in their states (fixtures/neel/page.tsx). Each block is one row of § Components.
 export function Gallery({ today }: { today: string }) {
@@ -42,6 +41,7 @@ export function Gallery({ today }: { today: string }) {
   const [time, setTime] = useState('10:00')
   const [picked, setPicked] = useState('')
   const [many, setMany] = useState(false)
+  const [few, setFew] = useState(false)
   return (
     <div className="space-y-6">
       <h1 className="font-display text-title font-semibold">Neel</h1>
@@ -148,7 +148,7 @@ export function Gallery({ today }: { today: string }) {
       <Section title="Facts and activity" id="g-facts">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="grid gap-3.5">
-            <Facts rows={[['Placed', 'Today, 10:06 pm'], ['Payment', <Tag key="t">COD</Tag>], ['Ship to', 'Sneha, 14 MG Road, Thiruvananthapuram 695001'], ['AWB', <span key="a" className="font-mono">1490023381</span>]]} />
+            <Facts rows={[['Placed', 'Today, 10:06 pm'], ['Payment', <Tag key="t">COD</Tag>], ['Ship to', 'Sneha, 14 MG Road, Thiruvananthapuram 695001'], ['AWB', <span key="a" className="font-mono text-small">1490023381</span>]]} />
             <StatTile label="Kept after returns" value={<Money paise={paise(18432000)} />} change={{ words: '↑ 12% on last month', tone: 'ok' }} />
           </div>
           <ActivityFeed label="Order activity" items={[
@@ -186,7 +186,7 @@ export function Gallery({ today }: { today: string }) {
             {picked ? <span className="text-small text-muted-foreground">Picked {picked}</span> : null}</div>
           <label className="grid content-start gap-1.5"><span className="text-label font-medium">When it runs out</span><select className={`${FIELD} w-full`} defaultValue="stop"><option value="stop">Stop selling</option><option value="pre">Take pre-orders</option></select></label>
           <div className="grid content-start gap-1.5"><span className="text-label font-medium">Starts</span><DateField label="Starts" value={day} onChange={setDay} today={today} /></div>
-          <div className="grid content-start gap-1.5"><span className="text-label font-medium">At <InfoTip about="the time">India time, always.</InfoTip></span><TimeField label="Starts at" value={time} onChange={setTime} /></div>
+          <div className="grid content-start gap-1.5"><span className="text-label font-medium">At</span><TimeField label="Starts at" value={time} onChange={setTime} /></div>
         </div>
       </Section>
 
@@ -194,9 +194,10 @@ export function Gallery({ today }: { today: string }) {
         <div className="grid gap-3 md:grid-cols-2">
           <DropZone noun="photos" accept="image/*" hint="JPEG, PNG, WebP · up to 20 MB" onFiles={() => {}}
             uploads={[{ name: 'kurta-front.jpg', loaded: 4.1 * 1048576, size: 6.6 * 1048576 }, { name: 'scan.heic', error: "This file type can't be used. Use JPEG or PNG." }]} />
-          <div><Button variant="destructive" onClick={() => setMany(true)}>Delete 12 products</Button></div>
+          <div className="flex flex-wrap content-start gap-2"><Button variant="destructive" onClick={() => setFew(true)}>Delete 2 drafts</Button><Button variant="destructive" onClick={() => setMany(true)}>Delete 12 products</Button></div>
         </div>
       </Section>
+      <ConfirmDelete open={few} count={2} noun={['draft', 'drafts']} consequence="Banarasi silk saree and Gulnar jhumka earrings. This can't be undone." keep="Keep them" onConfirm={() => setFew(false)} onClose={() => setFew(false)} />
       <ConfirmDelete open={many} count={12} noun={['product', 'products']} consequence="This can't be undone." onConfirm={() => setMany(false)} onClose={() => setMany(false)} />
       <Dialog open={open} onClose={() => setOpen(false)} title="Delete Mehr lehenga?" description="It leaves your store and cannot come back."
         actions={<><Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Keep it</Button><Button variant="destructive" onClick={() => setOpen(false)}>Delete</Button></>} />

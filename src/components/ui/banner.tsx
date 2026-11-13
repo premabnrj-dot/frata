@@ -30,7 +30,7 @@ export function Banner({ tone, title, children, action, className }: {
       className={cn('flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-mid px-3.5 py-2.5 text-sm', TONE[tone], className)}>
       <b className="font-semibold">{title}</b>
       {children ? <span>{children}</span> : null}
-      {action ? <span className={cn('ml-auto font-medium [&_a]:underline-offset-2 [&_a:hover]:underline', tone === 'support' && '[&_a]:text-bar-link')}>{action}</span> : null}
+      {action ? <span className={cn('ml-auto font-medium [&_a]:underline-offset-2 [&_a:hover]:underline', tone === 'support' ? '[&_a]:text-bar-link' : '[&_a]:text-link')}>{action}</span> : null}
     </div>
   )
 }

@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 
 export function Facts({ rows, className }: { rows: [label: ReactNode, value: ReactNode][]; className?: string }) {
   return (
-    <dl className={cn('grid grid-cols-[minmax(5.5rem,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm', className)}>
+    <dl className={cn('grid grid-cols-[90px_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm', className)}>
       {rows.map(([k, v], i) => <div key={i} className="contents"><dt className="text-muted-foreground">{k}</dt><dd className="min-w-0 [overflow-wrap:anywhere]">{v}</dd></div>)}
     </dl>
   )

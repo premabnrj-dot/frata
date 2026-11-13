@@ -18,7 +18,7 @@ export function UnitField({ unit, at = 'start', className, ...input }: Base & { 
   const wide = unit.length > 1
   return (
     <span className={cn('relative block', className)}>
-      <i aria-hidden="true" className={cn('pointer-events-none absolute top-1/2 -translate-y-1/2 not-italic text-muted-foreground', at === 'start' ? 'left-2.5' : 'right-2.5')}>{unit}</i>
+      <i aria-hidden="true" className={cn('pointer-events-none absolute top-1/2 -translate-y-1/2 text-label font-medium not-italic text-muted-foreground', at === 'start' ? 'left-2.5' : 'right-2.5')}>{unit}</i>
       <input {...input} className={cn(FIELD, 'w-full font-num', at === 'start' ? (wide ? 'pl-10' : 'pl-6') : 'pr-8')} />
     </span>
   )
@@ -57,8 +57,8 @@ export function CodeInput({ length = 6, value, onChange, label, className }: { l
 export function PinField({ place, className, ...input }: Base & { place?: ReactNode | null }) {
   return (
     <span className={cn('grid gap-1', className)}>
-      <input inputMode="numeric" maxLength={6} autoComplete="postal-code" {...input} className={cn(FIELD, 'w-full font-mono')} />
-      <span aria-live="polite" className="min-h-4 text-small text-muted-foreground">{place === null ? 'No such PIN code' : place}</span>
+      <input inputMode="numeric" maxLength={6} autoComplete="postal-code" {...input} className={cn(FIELD, 'w-full font-num')} />
+      <span aria-live="polite" className="min-h-4.5 text-label font-medium text-muted-foreground">{place === null ? 'No such PIN code' : place}</span>
     </span>
   )
 }

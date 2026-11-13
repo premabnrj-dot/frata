@@ -3,13 +3,13 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dayIN, monthYearIN } from '@/lib/format-date'
+import { dayIN, dayMonthIN, monthLongYearIN } from '@/lib/format-date'
 import { FIELD } from './field'
 
 // =============================================================================
 // FILE: src/components/ui/date-field.tsx — A DAY, IN INDIA TIME (Neel N0b, § More components · Select, date, time).
 //
-// Shown short ("14 Nov 2026") in the field; a calendar under it as drawn (Monday first, today ringed, the chosen day in
+// Shown short ("14 Nov"; the year only when it is not this one) in the field; a calendar under it as drawn (Monday first, today ringed, the chosen day in
 // neel, other months' days in text 3). Arrow keys move a day or a week, Enter picks, Esc closes. A phone (a coarse
 // pointer) gets its own date wheel: the native input. Values are day keys ("2026-11-14"); `today` comes from the
 // caller (the server's clock: check:clock), never from the browser's.
@@ -43,7 +43,7 @@ export function DateField({ label, value, onChange, today, min, max, className }
     <div className={cn('relative', className)}>
       <button type="button" id={id} aria-haspopup="dialog" aria-expanded={open} onClick={() => { setFocus(value ?? today); setOpen((o) => !o) }}
         className={cn(FIELD, 'w-full text-left', !value && 'text-muted-foreground')}>
-        <span className="sr-only">{label}: </span>{value ? dayIN(atIST(value)) : 'Choose a day'}
+        <span className="sr-only">{label}: </span>{value ? (value.slice(0, 4) === today.slice(0, 4) ? dayMonthIN(atIST(value)) : dayIN(atIST(value))) : 'Choose a day'}
       </button>
       {open ? (
         <div role="dialog" aria-label={label} className="absolute top-full left-0 z-20 mt-1.5 w-70 rounded-lg border border-border bg-popover p-2.5 shadow-md"
@@ -53,7 +53,7 @@ export function DateField({ label, value, onChange, today, min, max, className }
             else if (e.key === 'Escape') { setOpen(false); document.getElementById(id)?.focus() }
           }}>
           <div className="mb-1.5 flex items-center justify-between">
-            <b className="text-sm font-medium" aria-live="polite">{monthYearIN(atIST(first))}</b>
+            <b className="text-sm font-medium" aria-live="polite">{monthLongYearIN(atIST(first))}</b>
             <span className="flex">
               <button type="button" aria-label="Last month" className="grid size-7 place-items-center rounded-md hover:bg-accent" onClick={() => setFocus(addDays(first, -1).slice(0, 7) + '-01')}><ChevronLeft aria-hidden className="size-4" /></button>
               <button type="button" aria-label="Next month" className="grid size-7 place-items-center rounded-md hover:bg-accent" onClick={() => setFocus(addDays(first, 32).slice(0, 7) + '-01')}><ChevronRight aria-hidden className="size-4" /></button>

@@ -15,7 +15,7 @@ export function ActivityFeed({ items, label, className }: { items: ActivityItem[
     <ol aria-label={label} className={cn('grid content-start gap-3 border-l-2 border-line-soft pl-3.5', className)}>
       {items.map((it) => (
         <li key={it.key} className="relative grid text-sm before:absolute before:top-1.5 before:-left-5 before:size-2.5 before:rounded-full before:border-2 before:border-edge before:bg-card before:content-['']">
-          <span><b className="font-semibold">{it.what}</b>{it.detail ? <> {it.detail}</> : null}</span>
+          <b className="font-semibold">{it.what}</b>{it.detail ? <span>{it.detail}</span> : null}
           <span className="text-small text-muted-foreground">{it.when}</span>
         </li>
       ))}
