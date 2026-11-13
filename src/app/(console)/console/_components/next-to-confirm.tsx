@@ -61,7 +61,7 @@ export function NextToConfirm({ rows }: { rows: NextRow[] }) {
           const open = r.state !== null || confirmKey({ canConfirm: r.canConfirm, risk: r.risk }) === 'open'
           return (
             <tr key={r.id} data-next-order={i === 0 ? '' : undefined} className="border-b border-line-soft last:border-0 [&>td]:h-14 [&>td]:px-3 [&>td]:py-1.5 [&>td:first-child]:pl-0 [&>td:last-child]:pr-0">
-              <td><Link href={`/console/orders/${r.number}`} className="font-num font-medium hover:underline">{r.label}</Link></td>
+              <td><Link href={`/console/orders/${r.number}`} className="font-num font-semibold hover:underline">{r.label}</Link></td>
               <td className="min-w-0"><span className="block truncate"><Name>{r.name}</Name></span><span className="block truncate text-small text-muted-foreground">{r.place}</span></td>
               <td className="hidden whitespace-nowrap md:table-cell"><span className="inline-flex flex-wrap gap-1.5"><Tag>{r.cod ? PAYMENT.cod.label : PAYMENT.paid.label}</Tag>
                 {r.state ? <Badge tone={r.state.tone}>{r.state.label}</Badge> : null}

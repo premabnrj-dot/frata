@@ -59,7 +59,7 @@ export function RailToggle({ choice, ink = false }: { choice: RailChoice; ink?: 
       if (!link || !aside || !isRail(aside)) return
       aside.removeAttribute('data-tip-off')
       const r = link.getBoundingClientRect()
-      link.style.setProperty('--tip-x', `${r.right + 8}px`)
+      link.style.setProperty('--tip-x', `${aside.getBoundingClientRect().right + 6}px`)
       link.style.setProperty('--tip-y', `${r.top + r.height / 2}px`)
     }
     window.addEventListener('keydown', onKey)

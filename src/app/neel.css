@@ -201,3 +201,7 @@
 @media (max-width: 767px) {
   [data-neel] { font-size: 15px; line-height: 22px; --t-title: 20px; --t-title-lh: 26px; }
 }
+
+/* Neel § Icons: one colour, the text's (neel on the current page). Rani is the mark's alone, so the nav's second stroke
+   (globals.css [data-tinge]) is the text's colour here. */
+[data-neel] [data-tinge] { --icon-accent: currentColor; }

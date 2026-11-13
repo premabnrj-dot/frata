@@ -19,7 +19,6 @@ import { confirmKey } from '@/domains/ui/shortcuts'
 import { cn } from '@/lib/utils'
 import { confirmMany, confirmOrder, deliverMany, deliverOrder, holdMany, holdOrder, shipOrder, undoMany, undoOrderAction, undoOutcomeAction, undoOutcomeMany, type BulkResult } from '../actions'
 import { pdfHref, printHref, RISK_LABEL, type Tone } from './labels'
-import { Icon } from '@/components/icons/icon'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/_components/queue.tsx
@@ -211,14 +210,12 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
                 className={cn('border-b border-line-soft last:border-0 focus-visible:bg-side md:[&>td]:h-12 [&>td]:px-3 [&>td]:py-1.5', (r.dimmed || now) && 'text-muted-foreground', picked.has(r.id) ? 'bg-select' : 'hover:bg-side')}>
                 <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.number}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)}  /></Td>
                 {/* No prefetch: 50 row links would be 50 server renders on every visit (found by e2e under the stress data, 2026-11-07). */}
-                <Td cell="a"><Link data-row-link prefetch={false} href={r.href} className="inline-flex min-h-6 items-center whitespace-nowrap font-num font-medium">{r.number}</Link></Td>
+                <Td cell="a"><Link data-row-link prefetch={false} href={r.href} className="inline-flex min-h-6 items-center whitespace-nowrap font-num font-semibold">{r.number}</Link></Td>
                 <Td cell="c"><span className="line-clamp-2">{r.customer ? <Name>{r.customer}</Name> : '—'}</span><span className="block text-small text-muted-foreground">{r.place}</span></Td>
-                {/* One cell for the badges (several would overlap on a phone), on a full line of its own there: payment,
-                    status and risk do not fit beside the customer at 390 px (seen at phone width, 2026-11-07). */}
-                {/* Neel § Screens · Orders: how it is paid as a Tag; where it is as a status chip, its risk beside it. On a
-                    phone both sit on one full line under the customer (they do not fit beside it at 390 px). */}
+                {/* Neel § Screens · Orders: how it is paid as a Tag; where it is, and its risk, in the status cell (d). On a
+                    phone each sits on a line of its own under the customer (they do not fit beside it at 390 px). */}
                 <Td cell="e"><span className="flex flex-wrap items-center gap-1.5">
-                  <Tag><Icon name={r.payment.icon} className="mr-1 inline size-3.5 align-[-2px]" />{r.payment.label}</Tag>
+                  <Tag>{r.payment.label}</Tag>
                   {r.doNotCollect ? <Badge tone="danger">Do not collect cash</Badge> : null}
                 </span></Td>
                 {/* One status cell at every width: on a phone it is line 2's badges (cell d), the ship step with it. */}

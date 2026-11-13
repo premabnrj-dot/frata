@@ -21,11 +21,10 @@ import { errName } from '@/lib/log'
 
 export const metadata = { title: 'Settings' }
 
-// One icon a row (visual changes, owner-approved 2026-11-08): the section is found by its picture as well as its name.
+// One plain icon a row (Neel § Screens · Settings; no tile behind it): the section is found by its picture and its name.
 const SECTION_ICON: Record<SectionKey, IconName> = { store: 'merchants', contact: 'messages', brand: 'brand', policies: 'policy', payments: 'cod', shipping: 'ship', taxes: 'tax', documents: 'slip' }
 
-/** A settings row: its icon, its name, what it holds now, and "Needs you" only when it does — else a chevron. */
-/** One setting (Neel § Screens · Settings): a plain icon, its name, its current value at the right, "›". On a phone the
+/** One setting (Neel § Screens · Settings): a plain icon, its name, its current value at the right, a chevron. On a phone the
  * value goes under the name. Something to fix shows as a chip in the value's place. */
 function Row({ href, icon, title, summary, needs = false, mono = false }: { href: string; icon: IconName; title: string; summary: string; needs?: boolean; mono?: boolean }) {
   return (
