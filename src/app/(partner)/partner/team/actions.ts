@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requirePartner } from '@/lib/auth/require-partner'
-import { assignPartnerPerson, invitePartnerPerson, removePartnerPerson } from '@/lib/db/partners'
+import { sendSignInLink } from '@/lib/auth/send-link'
+import { assignPartnerPerson, invitePartnerPerson, partnerTeam, removePartnerPerson } from '@/lib/db/partners'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import type { ActionResult } from '@/components/ui/action-form'
 import { MAX_PARTNER_PEOPLE, partnerCan } from '@/domains/partners/team'
@@ -13,6 +14,8 @@ import { MAX_PARTNER_PEOPLE, partnerCan } from '@/domains/partners/team'
 // that is checked twice: requirePartner's role here for the words, and inside every app_partner_* definer, which
 // refuses anyone else whatever this file says. Store ids come from the form; the definers accept only the partner's own
 // active links. No result travels in a URL (frata-design-language § Feedback).
+// The invitee gets the usual sign-in email (link and 6-digit code, as hand over does); signing in with that address
+// takes them to /join. The invite stands without the email: they can sign in at /login with that address.
 // =============================================================================
 
 const SENTENCES = {
@@ -46,7 +49,25 @@ export async function inviteTeamAction(form: FormData): Promise<ActionResult> {
   const r = await invitePartnerPerson(auth.userId, parsed.data.email, parsed.data.stores)
   if (!r.ok) return r.error === 'bad_email' ? { fields: { email: SENTENCES.bad_email } } : { error: say(r.error, 'We could not send the invite. Nothing was changed.') }
   revalidatePath('/partner/team')
-  return { ok: `Invited ${parsed.data.email}. They sign in with that email to join.` }
+  const mail = await sendSignInLink(parsed.data.email).catch(() => ({ sent: false as const }))
+  return { ok: mail.sent ? `Invited ${parsed.data.email}. We emailed them a sign-in link.` : `Invited ${parsed.data.email}. The email didn’t send: ask them to sign in at /login with that address.` }
+}
+
+/** "Send again" on an invited person's row: the same sign-in email, counted against the same hourly limit. */
+export async function resendTeamInviteAction(input: { memberId: string }): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  const auth = await requirePartner()
+  if (!auth.ok) return { ok: false, error: auth.message }
+  if (!partnerCan(auth.partner.memberRole, 'manageTeam')) return { ok: false, error: SENTENCES.not_owner }
+  const id = z.uuid().safeParse(input?.memberId)
+  if (!id.success) return { ok: false, error: SENTENCES.no_person }
+  // The person is read back from the owner's own team (the definer checks the caller is its owner): never an email
+  // from the browser.
+  const team = await partnerTeam(auth.userId).catch(() => null)
+  const p = team?.find((m) => m.memberId === id.data && !m.acceptedAt && m.inviteExpiresAt && m.inviteExpiresAt > new Date())
+  if (!p) return { ok: false, error: 'That invite has ended. Invite them again.' }
+  if (!(await withinLimit(LIMITS.partnerInvite, auth.partner.memberId, new Date(), true))) return { ok: false, error: 'Too many invites this hour. Try again later.' }
+  const mail = await sendSignInLink(p.email).catch(() => ({ sent: false as const, error: 'We could not send the email. Try again in a minute.' }))
+  return mail.sent ? { ok: true, text: `Sent again to ${p.email}.` } : { ok: false, error: mail.error }
 }
 
 const Assign = z.object({ memberId: z.uuid(), tenantId: z.uuid(), on: z.boolean() })

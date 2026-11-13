@@ -7,7 +7,7 @@ import { memberState, partnerCan, PARTNER_ROLE_LABEL } from '@/domains/partners/
 import { requirePartner } from '@/lib/auth/require-partner'
 import { partnerClients, partnerTeam } from '@/lib/db/partners'
 import { dayIN } from '@/lib/format-date'
-import { InviteButton, RemovePerson, StoreToggles } from './team-parts'
+import { InviteButton, RemovePerson, ResendInvite, StoreToggles } from './team-parts'
 
 export const metadata = { title: 'Team' }
 
@@ -58,7 +58,7 @@ export default async function TeamPage() {
                 {p.role === 'owner' ? <span className="text-muted-foreground">Every store</span>
                   : <StoreToggles memberId={p.memberId} stores={stores} given={p.stores.map((s) => s.tenantId)} />}
               </div>
-              <div className="md:text-right">{p.role !== 'owner' && <RemovePerson memberId={p.memberId} label={p.email} invited={state !== 'active'} />}</div>
+              <div className="flex flex-wrap gap-1 md:justify-end">{state === 'invited' && <ResendInvite memberId={p.memberId} />}{p.role !== 'owner' && <RemovePerson memberId={p.memberId} label={p.email} invited={state !== 'active'} />}</div>
             </li>
           )
         })}
