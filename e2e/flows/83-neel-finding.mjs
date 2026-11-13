@@ -75,6 +75,7 @@ export default {
 
       await t.step('search as you type: no page load per key, the match marked', async () => {
         await p.goto(CONSOLE + '/console/orders?tab=all')
+        await p.waitForLoadState('networkidle') // keys typed before the page wakes up go to the bare input, not to React
         // A page render is a request for /console/orders itself (a document or its RSC payload); the rows route is not one.
         const loads = []; p.on('request', (r) => { const u = new URL(r.url()); if (u.pathname === '/console/orders') loads.push(u.search) })
         const box = p.getByLabel('Search orders')
