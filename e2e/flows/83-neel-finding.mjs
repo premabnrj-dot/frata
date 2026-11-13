@@ -21,7 +21,7 @@ export default {
       (${T}, ${B}, 'cod', ${todayAgo(30)}, 'Finder Rahul', '9845677001', '3 Frazer Road', 'Patna', 'Bihar', 219000, 219000, null),
       (${T}, ${C}, 'prepaid', ${todayAgo(20)}, 'Finder Anu', '9447001122', '8 MG Road', 'Kochi', 'Kerala', 99000, 99000, now())`
     const [{ id: cId }] = await db`select id from orders where tenant_id = ${T} and number = ${C}`
-    await db`update orders set confirmed_at = now(), packed_at = now(), shipped_at = now() where tenant_id = ${T} and number = ${C}`
+    await db`update orders set confirmed_at = now(), shipped_at = now() where tenant_id = ${T} and number = ${C}` // shipped without packing (no invoice): on the way
     await db`insert into shipments (tenant_id, order_id, provider, courier_name, tracking_number) values (${T}, ${cId}, 'self', 'Delhivery', 'FND1490023381')`
     const [{ prefix }] = await db`select order_prefix as prefix from shop_settings where tenant_id = ${T}`
     const label = (n) => `${prefix || 'KS'}-${n}`
@@ -75,7 +75,8 @@ export default {
 
       await t.step('search as you type: no page load per key, the match marked', async () => {
         await p.goto(CONSOLE + '/console/orders?tab=all')
-        const loads = []; p.on('framenavigated', (f) => { if (f === p.mainFrame()) loads.push(f.url()) })
+        // A page render is a request for /console/orders itself (a document or its RSC payload); the rows route is not one.
+        const loads = []; p.on('request', (r) => { const u = new URL(r.url()); if (u.pathname === '/console/orders') loads.push(u.search) })
         const box = p.getByLabel('Search orders')
         await box.pressSequentially('Finder Sne', { delay: 40 })
         await p.waitForFunction(() => document.querySelectorAll('tbody tr').length === 1)
@@ -83,10 +84,11 @@ export default {
         assert.ok(new URL(p.url()).searchParams.get('q') === 'Finder Sne', 'the address holds the search')
         assert.equal(loads.length, 0, `no page load while typing (${loads.join(', ')})`)
         await box.fill(''); await box.pressSequentially('98450', { delay: 30 })
-        await rowOf(A).waitFor(); await p.waitForFunction(() => document.querySelectorAll('tbody tr').length === 1)
-        assert.equal(await rowOf(A).locator('mark').innerText(), '98450') // the phone shows, its digits marked
+        // The previous search's row stays until this one answers: wait for the phone's own mark.
+        await rowOf(A).locator('mark', { hasText: '98450' }).waitFor() // the phone shows, its digits marked
+        await p.waitForFunction(() => document.querySelectorAll('tbody tr').length === 1)
         await box.fill('FND1490023381')
-        await rowOf(C).waitFor(); assert.equal(await rowOf(C).locator('mark').innerText(), 'FND1490023381') // an AWB
+        await rowOf(C).locator('mark', { hasText: 'FND1490023381' }).waitFor() // an AWB, marked
         await box.fill('nobody-like-this-xyz'); await p.getByText('No order matches “nobody-like-this-xyz”').waitFor()
       })
 
@@ -111,7 +113,9 @@ export default {
         await p.setViewportSize({ width: 390, height: 844 })
         await p.goto(CONSOLE + '/console/orders?tab=all&st=10')
         const row = rowOf(A); await row.waitFor()
-        assert.match(await row.innerText(), new RegExp(`${label(A)} · Finder Sneha`))
+        // Line 1: the number, "· Finder Sneha", ₹ at the right — one row of the grid.
+        const [num, name] = [await row.locator('[data-row-link]').boundingBox(), await row.locator('[data-o-name]').boundingBox()]
+        assert.ok(Math.abs(num.y - name.y) < 8 && name.x > num.x, 'the name sits beside the number')
         await p.getByText(/^\d+ to confirm$/).first().waitFor()
         await p.getByRole('button', { name: /^Filters/ }).click()
         const sheet = p.getByRole('dialog', { name: 'Filters' }); await sheet.waitFor()

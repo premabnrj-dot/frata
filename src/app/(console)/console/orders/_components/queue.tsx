@@ -218,19 +218,18 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
           {rows.map((r, i) => {
             const now = done[r.id]
             return (
-              <tr key={r.id} role="row" tabIndex={i === Math.max(at, 0) ? 0 : -1} onFocus={() => setAt(i)}
+              <tr key={r.id} role="row" data-order-row="" tabIndex={i === Math.max(at, 0) ? 0 : -1} onFocus={() => setAt(i)}
                 className={cn('border-b border-line-soft last:border-0 focus-visible:bg-side md:[&>td]:h-12 [&>td]:px-3 [&>td]:py-1.5', (r.dimmed || now) && 'text-muted-foreground', picked.has(r.id) ? 'bg-select' : 'hover:bg-side')}>
                 <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.number}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)}  /></Td>
                 {/* No prefetch: 50 row links would be 50 server renders on every visit (found by e2e under the stress data, 2026-11-07). */}
                 <Td cell="a"><Link data-row-link prefetch={false} href={r.href} className="inline-flex min-h-6 items-center whitespace-nowrap font-num font-semibold">{r.matched?.field === 'number' ? <Marked text={r.number} query={query} digits /> : r.number}</Link>
                   {/* Quick look on a desktop (Space does the same on a focused row). */}
                   <button type="button" aria-label={`Quick look ${r.number}`} onClick={() => setPeekAt(i)} className="ml-1 hidden size-6 place-items-center rounded-sm align-middle text-muted-foreground hover:bg-accent hover:text-foreground md:inline-grid"><Eye aria-hidden="true" className="size-3.5" /></button>
-                  {/* On a phone, line 1 is "KS-5006 · Sneha" with ₹ at the right (Neel § On a phone; N1c). */}
-                  {r.customer ? <span className="md:hidden"> · {r.customer}</span> : null}</Td>
-                <Td cell="c"><span className="line-clamp-2 max-md:hidden">{r.customer ? <Name mark={r.matched?.field === 'name' ? <Marked text={r.customer} query={query} /> : undefined}>{r.customer}</Name> : '—'}</span>
+</Td>
+                <Td cell="c"><span data-o-name="" className="line-clamp-2">{r.customer ? <Name mark={r.matched?.field === 'name' ? <Marked text={r.customer} query={query} /> : undefined}>{r.customer}</Name> : '—'}</span>
                   {/* A phone or a tracking number found by a search shows under the name, the match marked (N1c, as drawn). */}
-                  {r.matched?.field === 'phone' || r.matched?.field === 'awb' ? <span className="block font-num text-small text-muted-foreground"><Marked text={r.matched.text} query={query} digits={r.matched.field === 'phone'} /></span> : null}
-                  <span className="block text-small text-muted-foreground">{r.place}</span></Td>
+                  {r.matched?.field === 'phone' || r.matched?.field === 'awb' ? <span data-o-match="" className="block font-num text-small text-muted-foreground"><Marked text={r.matched.text} query={query} digits={r.matched.field === 'phone'} /></span> : null}
+                  <span data-o-place="" className="block text-small text-muted-foreground">{r.place}</span></Td>
                 {/* Neel § Screens · Orders: how it is paid as a Tag; where it is, and its risk, in the status cell (d). On a
                     phone each sits on a line of its own under the customer (they do not fit beside it at 390 px). */}
                 {/* On a phone only "Do not collect cash" stays: how it is paid is in quick look and the order page. */}

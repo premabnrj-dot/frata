@@ -205,3 +205,15 @@
 /* Neel § Icons: one colour, the text's (neel on the current page). Rani is the mark's alone, so the nav's second stroke
    (globals.css [data-tinge]) is the text's colour here. */
 [data-neel] [data-tinge] { --icon-accent: currentColor; }
+
+/* Neel § On a phone, Orders (N1c): two lines — "KS-5006 · Sneha" with ₹ at the right, then the place and the status
+   chip; a phone or AWB a search matched between them. The customer cell lends its parts to the row's grid (one copy of
+   the name in the DOM, so a screen reader and a test read it once). */
+@media (max-width: 767px) {
+  table[data-rows="list"] > tbody > tr[data-order-row] { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "a n b" "m m m" "p p d" "e e e"; }
+  table[data-rows="list"] > tbody > tr[data-order-row] > td[data-cell="c"] { display: contents; }
+  tr[data-order-row] [data-o-name] { grid-area: n; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+  tr[data-order-row] [data-o-name]::before { content: "· "; color: var(--muted-foreground); }
+  tr[data-order-row] [data-o-match] { grid-area: m; }
+  tr[data-order-row] [data-o-place] { grid-area: p; align-self: center; }
+}

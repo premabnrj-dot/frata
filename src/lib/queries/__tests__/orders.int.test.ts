@@ -14,7 +14,7 @@ describe.skipIf(!host)('order search', () => {
     const { withTenant } = await import('@/lib/db/tenant')
     const { orders } = await import('@/lib/db/schema-orders')
     const { listOrders } = await import('@/lib/queries/orders')
-    const tag = `Srch${Math.floor(Math.random() * 1e6)}`
+    const tag = `Srch${Math.random().toString(36).replace(/[^a-z]/g, '').slice(0, 8)}` // letters only: digits and letters together read as a tracking number (N1c)
     const n = 970_000 + Math.floor(Math.random() * 20_000)
     const phone = `98${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`
     for (const [t, i] of [[A, 0], [B, 1]] as const) {
@@ -29,13 +29,33 @@ describe.skipIf(!host)('order search', () => {
     expect((await listOrders(A, { tab: 'all', q: '%', now })).some((o) => o.number === n)).toBe(false) // % is text, not "everything"
   })
 
+  it('a tracking number finds its own order only, in the shop only, and says what matched (N1c)', async () => {
+    process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { orders, shipments } = await import('@/lib/db/schema-orders')
+    const { listOrders } = await import('@/lib/queries/orders')
+    const n = 880_000 + Math.floor(Math.random() * 9_000) // a range no other test uses
+    const awb = `AWB${Math.floor(Math.random() * 1e9)}`
+    for (const [t, i] of [[A, 0], [B, 1]] as const) {
+      await withTenant(t, async (tx) => {
+        const [o] = await tx.insert(orders).values({ tenantId: t, number: n + i, paymentMethod: 'prepaid', paidAt: new Date(), placedAt: new Date(), customerName: 'Track', phone: `97${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`, subtotal: 100, total: 100 }).returning({ id: orders.id })
+        // Paid online, so they never move the shop's COD median (the risk test reads it). A's other order shipped too, under another number: an unqualified id in the subquery once matched every order.
+        const [o2] = await tx.insert(orders).values({ tenantId: t, number: n + 10 + i, paymentMethod: 'prepaid', paidAt: new Date(), placedAt: new Date(), customerName: 'Other', phone: `96${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`, subtotal: 100, total: 100 }).returning({ id: orders.id })
+        await tx.insert(shipments).values([{ tenantId: t, orderId: o!.id, provider: 'self', trackingNumber: awb }, { tenantId: t, orderId: o2!.id, provider: 'self', trackingNumber: `${awb}X` }])
+      })
+    }
+    const hits = await listOrders(A, { tab: 'all', q: awb, now: new Date() })
+    expect(hits.map((o) => o.number)).toEqual([n])
+    expect(hits[0]!.awb).toBe(awb)
+  })
+
   it('a search looks through every order, whatever tab is open; without one, the tab alone (2026-11-12)', async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
     const { withTenant } = await import('@/lib/db/tenant')
     const { orders } = await import('@/lib/db/schema-orders')
     const { listOrders } = await import('@/lib/queries/orders')
     const { orderState } = await import('@/domains/orders/order-state')
-    const tag = `Every${Math.floor(Math.random() * 1e6)}`
+    const tag = `Every${Math.random().toString(36).replace(/[^a-z]/g, '').slice(0, 8)}`
     const n = 950_000 + Math.floor(Math.random() * 20_000) * 3
     const now = new Date(), past = new Date(now.getTime() - 3_600_000)
     await withTenant(A, async (tx) => {

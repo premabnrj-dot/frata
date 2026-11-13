@@ -56,7 +56,7 @@ export default {
         await p.getByText(`Showing ${(n - 1) * 50 + 1}–`).waitFor()
       }
       assert.equal(await p.getByRole('link', { name: 'Older' }).count(), 0)
-      await p.getByText(`Stress 150`).waitFor()
+      await p.getByText(`Stress 150`, { exact: true }).waitFor()
       assert.equal(await p.locator('tbody tr').count(), placed - (pages - 1) * 50)
     })
     await t.step('unpaid online orders are listed apart and never counted to confirm', async () => {
@@ -70,7 +70,7 @@ export default {
       await p.goto(CONSOLE + '/console/orders?tab=all&page=1e400')
       await p.getByText('Showing 1–50 of').waitFor()
       await p.goto(CONSOLE + '/console/orders?tab=all&page=99')
-      await p.getByText(`Stress 150`).waitFor()
+      await p.getByText(`Stress 150`, { exact: true }).waitFor()
     })
     } finally {
       await ctx.close()

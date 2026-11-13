@@ -47,7 +47,7 @@ export async function listOrdersWith(tx: Tx, tenantId: string, { tab = 'all', pa
     byCourier: sql<boolean>`coalesce(${openShipmentProviderSql()} = 'shiprocket', false)`,
     // What the search matched, for the mark (N1c): the phone only when the phone was searched, the AWB only when one was.
     phone: search?.phoneDigits ? orders.phone : sql<string | null>`null`,
-    awb: search?.awb ? sql<string | null>`(select s.tracking_number from ${shipments} s where s.tenant_id = ${tenantId} and s.order_id = ${orders.id} and s.tracking_number = ${search.awb} limit 1)` : sql<string | null>`null`,
+    awb: search?.awb ? sql<string | null>`(select s.tracking_number from ${shipments} s where s.tenant_id = ${tenantId} and s.order_id = "orders"."id" and s.tracking_number = ${search.awb} limit 1)` : sql<string | null>`null`,
   }).from(orders).where(where)
     .orderBy(desc(orders.placedAt), desc(orders.number)).limit(ORDERS_PAGE + 1).offset((page - 1) * ORDERS_PAGE)
 }
@@ -59,7 +59,7 @@ function searchSql(q: OrderSearch, tenantId: string) {
     ...(q.number !== null ? [eq(orders.number, q.number)] : []),
     ...(q.phoneDigits ? [like_(orders.phone, `%${q.phoneDigits}%`)] : []),
     // Exact, on shipments (tenant_id, tracking_number): `=` keeps the index under RLS.
-    ...(q.awb ? [sql`exists (select 1 from ${shipments} s where s.tenant_id = ${tenantId} and s.order_id = ${orders.id} and s.tracking_number = ${q.awb})`] : []),
+    ...(q.awb ? [sql`exists (select 1 from ${shipments} s where s.tenant_id = ${tenantId} and s.order_id = "orders"."id" and s.tracking_number = ${q.awb})`] : []),
   ) ?? sql`false`
 }
 
