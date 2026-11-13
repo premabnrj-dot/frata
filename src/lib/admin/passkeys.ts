@@ -76,7 +76,10 @@ export async function confirmOptions(identity: StaffIdentity | StaffOk, site: Pa
   return run('confirm options', async () => {
     const mine = await one<{ id: string; transports: string[] }[]>(sql`select app_staff_credentials(${w.userId}::uuid) as r`)
     const options = await generateAuthenticationOptions({ rpID: site.rpID, userVerification: 'required', timeout: 120_000,
-      allowCredentials: mine.map((c) => ({ id: c.id, transports: c.transports as never })) })
+      // No transports here: a passkey recorded as `internal` would otherwise be looked for on this device alone, and a
+      // browser never offers "use a phone" (hybrid) or a security key for it — a synced passkey on another device then
+      // fails as "Not confirmed" (owner locked out, 2026-11-13). The id list still limits it to this person's own.
+      allowCredentials: mine.map((c) => ({ id: c.id })) })
     await adminDb().execute(sql`select app_staff_challenge(${w.userId}::uuid, ${w.sessionId}::uuid, 'confirm', null, ${options.challenge})`)
     return options
   })
