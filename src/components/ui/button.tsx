@@ -24,7 +24,7 @@ export const button = cva(
         ghost: 'btn-ghost hover:bg-accent',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
         // Neel: a link that acts ("View in store"): neel 700, underlined on hover, no box (its target is the row's height).
-        link: 'h-auto px-0 text-link underline-offset-2 hover:underline',
+        link: 'btn-link text-link underline-offset-2 hover:underline',
       },
       // Height is a variant, never a className: twMerge drops a caller's h-11 against the variant's height but keeps md:h-9 (impact review U·1).
       size: {
@@ -35,6 +35,8 @@ export const button = cva(
         wrap: 'min-h-[var(--btn-h,2.5rem)] px-3 py-2 text-left text-sm whitespace-normal [overflow-wrap:anywhere] md:min-h-9',
       },
     },
+    // A link is bare text whatever the size: no box, 24 px tall at least (its row gives the phone's 44).
+    compoundVariants: [{ variant: 'link', class: 'h-auto min-h-6 px-0 md:h-auto' }],
     defaultVariants: { variant: 'primary', size: 'default' },
   },
 )

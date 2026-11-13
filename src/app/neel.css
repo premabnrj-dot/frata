@@ -7,6 +7,7 @@
    rani for the mark and the loading line only. The store preview inside resets to :root (the selector above).
    Tokens below the line exist only here; check:contrast reads this block as a third theme. */
 [data-neel] {
+  color: var(--foreground);       /* the body resolved --foreground at :root; text here takes g950 */
   --background: #FFFFFF;          /* g0, the page */
   --foreground: #171615;          /* g950 */
   --card: #FFFFFF;
@@ -85,7 +86,7 @@
 [data-neel] .btn-ghost:not([data-store-theme] *) { color: var(--muted-foreground); }
 [data-neel] .btn-ghost:not([data-store-theme] *):hover { color: var(--foreground); }
 [data-neel] .btn:not([data-store-theme] *):is(:disabled, [aria-disabled="true"]:not([aria-busy="true"])) { opacity: 0.45; }
-[data-neel] .btn:not(.btn-sm):not([data-store-theme] *) { padding-inline: 14px; gap: 6px; } /* the mockup's 14 and 6 */
+[data-neel] .btn:not(.btn-sm, .btn-link):not([data-store-theme] *) { padding-inline: 14px; gap: 6px; } /* the mockup's 14 and 6 */
 
 /* Badge (src/components/ui/badge.tsx): a 22 px pill, 8 px sides, 12/500, a 6 px dot in the tone's mark. */
 [data-neel] .badge:not([data-store-theme] *) { height: 22px; gap: 6px; padding: 0 8px; border-radius: 999px; font-size: var(--t-small); line-height: 1; }
@@ -149,5 +150,5 @@
 
 /* A phone (Neel § Screens, On a phone): fields and buttons read 15 px. */
 @media (max-width: 767px) {
-  [data-neel] :is(.btn:not(.btn-sm), input:not([type="checkbox"], [type="radio"]), select, textarea):not([data-store-theme] *) { font-size: 15px; }
+  [data-neel] :is(.btn:not(.btn-link), input:not([type="checkbox"], [type="radio"]), select, textarea):not([data-store-theme] *) { font-size: 15px; }
 }

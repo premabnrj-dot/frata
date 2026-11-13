@@ -43,6 +43,11 @@ export default {
         assert.equal(await p.locator('thead th').first().evaluate((x) => getComputedStyle(x).fontWeight), '500')
         const publish = p.getByRole('button', { name: 'Publish' })
         assert.equal(await publish.getAttribute('aria-disabled'), 'true')
+        // Parity re-check: the link is bare text; text is g950; a small button reads 15 px on a phone.
+        const link = await p.getByRole('button', { name: 'View in store' }).evaluate((b) => [getComputedStyle(b).paddingLeft, b.getBoundingClientRect().height])
+        assert.equal(link[0], '0px'); assert.ok(link[1] <= 28, `link ${link[1]} px tall`)
+        assert.equal(await p.getByRole('heading', { name: 'Neel', exact: true }).evaluate((h) => getComputedStyle(h).color), 'rgb(23, 22, 21)')
+        if (size === 'phone') assert.equal(await p.getByRole('button', { name: 'Edit' }).evaluate((b) => getComputedStyle(b).fontSize), '15px')
         const rid = await publish.getAttribute('aria-describedby')
         assert.equal(await p.evaluate((id) => document.getElementById(id)?.textContent, rid), 'Add a price first')
       })

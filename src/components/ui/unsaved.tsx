@@ -46,7 +46,7 @@ export function useLeaveGuard(dirty: boolean) {
  */
 export function SaveBar({ onSave, onDiscard, pending, placement = 'top', keys, count }: { onSave: () => void; onDiscard: () => void; pending: boolean; placement?: 'top' | 'bottom'; keys?: string; count?: number }) {
   // Neel § Components: the bar (ink), 12 px corners, e3; Discard outlined in the bar's own line, Save in the bar's white.
-  const btn = 'inline-flex h-11 md:h-7.5 items-center rounded-md px-2.5 text-label font-medium transition-colors duration-fast ease-standard disabled:opacity-45'
+  const btn = 'btn btn-sm inline-flex h-11 md:h-7.5 items-center rounded-md px-2.5 text-label font-medium transition-colors duration-fast ease-standard disabled:opacity-45'
   return (
     <div role="region" aria-label="Unsaved changes" data-surface="ink" data-savebar={placement} className={placement === 'top'
       ? 'sticky top-[var(--shell-top,0px)] z-10 mb-3 flex animate-rise items-center gap-3 rounded-lg bg-bar py-2.5 pr-2.5 pl-4 text-bar-foreground shadow-lg'
