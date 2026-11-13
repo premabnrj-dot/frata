@@ -2,8 +2,8 @@ import { FilterBar } from '@/components/data/filter-bar'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
-import { chipsFor, filterParams, filterQuery, hasFilters, parseFilters, type OrderFilters } from '@/domains/orders/filters'
-import { QUEUE_TABS, type QueueTab } from '@/domains/orders/order-state'
+import { chipsFor, filterParams, filterQuery, hasFilters, ordersHref, parseFilters, parseTab, type OrderFilters } from '@/domains/orders/filters'
+import type { QueueTab } from '@/domains/orders/order-state'
 import { MAX_SEARCH } from '@/domains/orders/search'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { countOrders, ORDERS_PAGE, ordersPage, queueCounts } from '@/lib/queries/orders'
@@ -34,7 +34,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
   const sp = await searchParams
-  const tab: QueueTab = (QUEUE_TABS as readonly string[]).includes(one(sp.tab)) ? (one(sp.tab) as QueueTab) : 'to_confirm'
+  const tab = parseTab(one(sp.tab))
   const q = one(sp.q).trim().slice(0, MAX_SEARCH)
   const filters = parseFilters(sp)
   const filtered = hasFilters(filters)
@@ -57,23 +57,17 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const rows = toRows(view, q, auth.membership.role, now)
 
   // Hrefs keep the tab, the search and every filter (Back restores exactly this).
-  const href = (o: { tab?: QueueTab; q?: string; filters?: OrderFilters }) => {
-    const u = new URLSearchParams(filterParams(o.filters ?? filters))
-    const t = o.tab ?? tab
-    if (t !== 'to_confirm') u.set('tab', t)
-    if (o.q ?? q) u.set('q', o.q ?? q)
-    const s = new URLSearchParams([...u.entries()].sort(([a], [b]) => a.localeCompare(b))).toString()
-    return `/console/orders${s ? `?${s}` : ''}`
-  }
+  const href = (o: { tab?: QueueTab; q?: string; filters?: OrderFilters }) => ordersHref({ tab: o.tab ?? tab, filters: o.filters ?? filters, q: o.q ?? q })
   const info = TABS.find((t) => t.tab === tab)!
   // Couldn't deliver jumps to the front when it holds anything (design language 53): a failed delivery is today's work.
   const ordered = counts.couldnt_deliver > 0 ? [...TABS].sort((a, b) => Number(b.tab === 'couldnt_deliver') - Number(a.tab === 'couldnt_deliver')) : TABS
   // Couldn't deliver and Coming back show only while they hold an order (or are the open view).
   const shown = ordered.filter((t) => (t.tab !== 'couldnt_deliver' && t.tab !== 'coming_back') || counts[t.tab] > 0 || t.tab === tab)
-  const chips = chipsFor(filters).map((c) => ({ label: c.label, href: href({ filters: c.without }) }))
+  const chips = chipsFor(filters).map((c) => ({ label: c.label, lead: c.lead, value: c.value, href: href({ filters: c.without }) }))
   const ask = { tab, q, filters: new URLSearchParams(filterParams(filters)).toString() }
   const n = (x: number) => x.toLocaleString('en-IN')
-  const summary = filtered && !q && unfiltered !== null ? `${n(counts[tab])} of ${n(unfiltered)} orders` : null
+  // "9 of 300 orders": what is shown in text colour, the rest muted (as drawn).
+  const summary = filtered && !q && unfiltered !== null ? <><span className="text-foreground">{n(counts[tab])}</span> of {n(unfiltered)} orders</> : null
   const waiting = counts.to_confirm
   // A view is current when the address holds exactly its tab and filters (no ?view= to go stale).
   const here = filterQuery(filters)

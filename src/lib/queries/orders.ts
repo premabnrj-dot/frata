@@ -11,6 +11,7 @@ import { filterSql, paymentKindSql, inFlightSql, inTabSql, momentColumns, openSh
 import { QUEUE_TABS, SHIP_TABS, type QueueTab } from '@/domains/orders/order-state'
 import { parseOrderSearch, type OrderSearch } from '@/domains/orders/search'
 import type { OrderFilters } from '@/domains/orders/filters'
+import { STATE_CODE } from '@/domains/checkout/states'
 import { mainDomainIn } from './addresses'
 import { riskFactsWith } from './order-risk'
 import { errName } from '@/lib/log'
@@ -37,8 +38,9 @@ export async function listOrders(tenantId: string, ask: ListAsk) {
 export async function listOrdersWith(tx: Tx, tenantId: string, { tab = 'all', page = 1, q = '', filters = {}, now }: ListAsk) {
   const search = parseOrderSearch(q)
   const where = and(eq(orders.tenantId, tenantId), search ? searchSql(search, tenantId) : inTabSql(tab, now), filterSql(filters, now) ?? undefined)
-  // A name is a scan of the shop's orders (no index helps a leading % under RLS): it gets a ceiling (speed review).
-  if (search?.like) await tx.execute(sql`set local statement_timeout = '1500ms'`)
+  // A name or a phone is a scan of the shop's orders (no index helps a leading % under RLS): any search gets a ceiling.
+  // It covers the rest of ordersPage's transaction too (the prefix, the risk facts): a timeout there fails safe.
+  if (search) await tx.execute(sql`set local statement_timeout = '1500ms'`)
   return tx.select({
     id: orders.id, number: orders.number, total: orders.total, customerName: orders.customerName, city: orders.city,
     ...momentColumns,
@@ -76,7 +78,8 @@ export async function queueCounts(tenantId: string, now: Date, filters: OrderFil
 
 /** queueCounts inside a caller's transaction (Home reads its counts, oldest waits and risk in one, U·4). */
 export async function queueCountsWith(tx: Tx, tenantId: string, now: Date, filters: OrderFilters = {}): Promise<Record<QueueTab, number>> {
-  // The in-flight count crossed JIT's threshold at the 10× seed (700 ms with it, 127 ms without; speed review N1c).
+  // The in-flight count crossed JIT's threshold at the 10× seed (700 ms with it, 127 ms without; speed review N1c). Inside
+  // Home's transaction this holds for its other reads too: each is a small indexed read that JIT never helped.
   await tx.execute(sql`set local jit = off`)
   const f_ = filterSql(filters, now) ?? undefined
   const n = (tab: QueueTab) => sql<number>`(count(*) filter (where ${inTabSql(tab, now)}))::int`
@@ -117,10 +120,6 @@ export async function ordersPage(tenantId: string, ask: ListAsk) {
 }
 
 /** The queue's shop facts in one read: the order prefix and the default slip size (Settings › Documents, D2). */
-export async function queueShopFor(tenantId: string): Promise<{ prefix: string; slipSize: 'a4' | 'label' }> {
-  return withTenant(tenantId, (tx) => queueShopWith(tx, tenantId))
-}
-
 async function queueShopWith(tx: Tx, tenantId: string): Promise<{ prefix: string; slipSize: 'a4' | 'label' }> {
   const [r] = await (tx.select({ prefix: shopSettings.orderPrefix, name: tenants.name, slipSize: shopSettings.slipSize }).from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)))
   return { prefix: orderPrefix(r?.prefix ?? '', r?.name ?? ''), slipSize: r?.slipSize === 'label' ? 'label' : 'a4' }
@@ -164,7 +163,7 @@ export async function countOrders(tenantId: string, { tab = 'all', q = '', filte
   const search = parseOrderSearch(q)
   return withTenant(tenantId, async (tx) => {
     await tx.execute(sql`set local jit = off`)
-    if (search?.like) await tx.execute(sql`set local statement_timeout = '1500ms'`)
+    if (search) await tx.execute(sql`set local statement_timeout = '1500ms'`)
     const [r] = await tx.select({ n: sql<number>`count(*)::int` }).from(orders)
       .where(and(eq(orders.tenantId, tenantId), search ? searchSql(search, tenantId) : inTabSql(tab, now), filterSql(filters, now) ?? undefined))
     return r?.n ?? 0
@@ -192,7 +191,8 @@ export async function filterValues(tenantId: string, field: ValueField, { tab = 
     const rows = await tx.select({ value: sql<string>`${v}`, n: sql<number>`count(*)::int` }).from(orders)
       .where(and(eq(orders.tenantId, tenantId), inTabSql(tab, now), filterSql(others, now) ?? undefined, field === 'st' ? sql`"orders"."state" <> ''` : undefined))
       .groupBy(sql`1`).orderBy(sql`2 desc`).limit(40)
-    return rows.map((r) => ({ value: r.value, n: Number(r.n) }))
+    // orders.state is free text (assisted and imported orders): only names on the closed list can be a filter.
+    return rows.filter((r) => field !== 'st' || r.value in STATE_CODE).map((r) => ({ value: r.value, n: Number(r.n) }))
   }).catch((err) => { console.error('[orders] filter values', errName(err)); return null })
 }
 

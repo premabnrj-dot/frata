@@ -19,6 +19,7 @@ import { orderPrefixFor } from '@/lib/queries/orders'
 import { EmailsCard } from '../_components/emails-card'
 import { EMAIL_NAMES } from '@/domains/email/words'
 import { AddNote, EditContact } from '../_components/contact-and-notes'
+import { paymentKind } from '@/domains/orders/order-state'
 import { eventLabel, PAYMENT, pdfHref, printHref, STATE } from '../_components/labels'
 import { OrderActions } from '../_components/order-actions'
 import { ShipPanel } from '../_components/ship-panel'
@@ -73,7 +74,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const method = currentMethod(o)
   const r = state === 'unconfirmed' || state === 'held' ? (facts ? risk(facts) : { level: 'unknown' as const, reasons: [], next: 'The risk checks could not be read: look at the order before confirming.' }) : null
   const s = STATE[state]
-  const pay = method === 'cod' ? PAYMENT.cod : o.paidAt ? PAYMENT.paid : PAYMENT.unpaid
+  const pay = PAYMENT[paymentKind(o)] // the one rule the list, the filter and quick look read (N1c)
   const owed = collect(o)
   // What a cancel would send back: what reached Razorpay (amounts.ts — after a switch the COD fee is already off).
   // What the shopper's payments still hold: net of the refunds sent or queued for its edits (OE·2; impact review BLOCKER).

@@ -2,7 +2,7 @@
 
 import { Search, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, useTransition } from 'react'
 
 // =============================================================================
 // FILE: src/components/data/live-search-field.tsx — A LIST'S SEARCH THAT ANSWERS AS YOU TYPE (Neel N1c, Products).
@@ -16,6 +16,8 @@ const DEBOUNCE_MS = 250
 
 export function LiveSearchField({ path, params, label, placeholder, value }: { path: string; params: Record<string, string>; label: string; placeholder: string; value: string }) {
   const router = useRouter()
+  const id = useId()
+  const [pending, start] = useTransition()
   const [q, setQ] = useState(value)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => { setQ(value) }, [value])
@@ -25,7 +27,7 @@ export function LiveSearchField({ path, params, label, placeholder, value }: { p
     if (next.trim()) u.set('q', next.trim())
     const s = u.toString()
     const href = `${path}${s ? `?${s}` : ''}`
-    if (push) router.push(href, { scroll: false }); else router.replace(href, { scroll: false })
+    start(() => { if (push) router.push(href, { scroll: false }); else router.replace(href, { scroll: false }) })
   }
   const type = (next: string) => {
     setQ(next)
@@ -33,15 +35,17 @@ export function LiveSearchField({ path, params, label, placeholder, value }: { p
     timer.current = setTimeout(() => go(next), DEBOUNCE_MS)
   }
   return (
-    <form role="search" className="flex min-w-0 flex-1 items-center gap-2" onSubmit={(e) => { e.preventDefault(); if (timer.current) clearTimeout(timer.current); go(q, true) }}>
-      <label htmlFor="search-q" className="sr-only">{label}</label>
+    <form role="search" aria-busy={pending || undefined} data-pending={pending || undefined} className="flex min-w-0 flex-1 items-center gap-2" onSubmit={(e) => { e.preventDefault(); if (timer.current) clearTimeout(timer.current); go(q, true) }}>
+      <label htmlFor={id} className="sr-only">{label}</label>
       <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-card px-3 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring md:h-9 md:max-w-md">
         <Search aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-        <input id="search-q" name="q" type="search" value={q} maxLength={60} autoComplete="off" placeholder={placeholder}
+        <input id={id} name="q" type="search" value={q} maxLength={60} autoComplete="off" placeholder={placeholder}
           onChange={(e) => type(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape' && q) { e.preventDefault(); type('') } }}
           className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none" />
-        {q && <button type="button" aria-label="Clear search" onClick={() => type('')} className="inline-grid size-6 place-items-center rounded-sm text-muted-foreground hover:text-foreground"><X aria-hidden="true" className="size-4" /></button>}
+        {q && <button type="button" aria-label="Clear search" onClick={() => type('')} className="relative inline-grid size-6 place-items-center rounded-sm text-muted-foreground after:absolute after:-inset-2.5 hover:text-foreground md:after:inset-0"><X aria-hidden="true" className="size-4" /></button>}
       </div>
+      {/* Said when the list under it has been replaced (the page's own count follows in its pager). */}
+      <span role="status" className="sr-only">{pending ? 'Searching' : ''}</span>
     </form>
   )
 }

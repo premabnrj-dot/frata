@@ -12,6 +12,7 @@
 import { STATE_CODE, type State } from '@/domains/checkout/states'
 import { fromRupees, type Paise } from '@/domains/money/paise'
 import { istDayStart, IST_OFFSET_MS } from '@/domains/time/day'
+import { QUEUE_TABS, type QueueTab } from './order-state'
 
 /** How an order is paid now, as a filter reads it: the same three the queue's Payment column shows. */
 export const PAY = ['cod', 'paid', 'unpaid'] as const
@@ -94,22 +95,46 @@ const dayWords = (s: string) => new Date(`${s}T00:00:00Z`).toLocaleDateString('e
 const or = (xs: string[]) => (xs.length < 3 ? xs.join(' or ') : `${xs.slice(0, -1).join(', ')} or ${xs.at(-1)}`)
 
 export type FilterField = 'pay' | 'st' | 'placed' | 'total'
-export type Chip = { field: FilterField; label: string; without: OrderFilters }
+/** `label` is the whole sentence (the × names it); `lead` and `value` are its two parts, the value shown in bold. */
+export type Chip = { field: FilterField; label: string; lead: string; value: string; without: OrderFilters }
 
 /** Each filter as a chip that reads back as a sentence, with the filters left when its × is pressed. */
 export function chipsFor(f: OrderFilters): Chip[] {
   const out: Chip[] = []
   const drop = (k: keyof OrderFilters): OrderFilters => { const c = { ...f }; delete c[k]; return c }
-  if (f.pay?.length) out.push({ field: 'pay', label: `Payment is ${or(f.pay.map((p) => PAY_WORDS[p]))}`, without: drop('pay') })
-  if (f.states?.length) out.push({ field: 'st', label: `State is ${or(f.states.length > 3 ? [...f.states.slice(0, 2), `${f.states.length - 2} more`] : f.states)}`, without: drop('states') })
-  if (typeof f.placed === 'string') out.push({ field: 'placed', label: `Placed ${PLACED_WORDS[f.placed]}`, without: drop('placed') })
+  const chip = (field: FilterField, lead: string, value: string, k: keyof OrderFilters) => out.push({ field, lead, value, label: `${lead} ${value}`, without: drop(k) })
+  if (f.pay?.length) chip('pay', 'Payment is', or(f.pay.map((p) => PAY_WORDS[p])), 'pay')
+  if (f.states?.length) chip('st', 'State is', or(f.states.length > 3 ? [...f.states.slice(0, 2), `${f.states.length - 2} more`] : f.states), 'states')
+  if (typeof f.placed === 'string') chip('placed', 'Placed', PLACED_WORDS[f.placed], 'placed')
   else if (f.placed) {
     const { from, to } = f.placed
-    out.push({ field: 'placed', label: from && to ? (from === to ? `Placed on ${dayWords(from)}` : `Placed ${dayWords(from)}–${dayWords(to)}`) : from ? `Placed from ${dayWords(from)}` : `Placed up to ${dayWords(to!)}`, without: drop('placed') })
+    if (from && to && from === to) chip('placed', 'Placed on', dayWords(from), 'placed')
+    else if (from && to) chip('placed', 'Placed', `${dayWords(from)}–${dayWords(to)}`, 'placed')
+    else if (from) chip('placed', 'Placed from', dayWords(from), 'placed')
+    else chip('placed', 'Placed up to', dayWords(to!), 'placed')
   }
   if (f.total) {
     const { min, max } = f.total
-    out.push({ field: 'total', label: min !== undefined && max !== undefined ? `Total ${rs(min)}–${rs(max)}` : min !== undefined ? `Total ${rs(min)} or more` : `Total up to ${rs(max!)}`, without: drop('total') })
+    if (min !== undefined && max !== undefined) chip('total', 'Total', `${rs(min)}–${rs(max)}`, 'total')
+    else if (min !== undefined) chip('total', 'Total', `${rs(min)} or more`, 'total')
+    else chip('total', 'Total up to', rs(max!), 'total')
   }
   return out
+}
+
+/** A queue tab from the address; anything else is To confirm, the list's first view (one copy: page, routes, panel). */
+export function parseTab(v: string | null | undefined): QueueTab {
+  return (QUEUE_TABS as readonly string[]).includes(v ?? '') ? (v as QueueTab) : 'to_confirm'
+}
+
+/** The Orders list's address: the tab (unless To confirm), the filters, a search and a page, keys sorted, so a link
+ * built anywhere equals what Back restores and what a saved view compares with. */
+export function ordersHref(o: { tab: QueueTab; filters: OrderFilters; q?: string; page?: number }, extra: Record<string, string> = {}): string {
+  const u = new URLSearchParams(filterParams(o.filters))
+  if (o.tab !== 'to_confirm') u.set('tab', o.tab)
+  if (o.q?.trim()) u.set('q', o.q.trim())
+  if ((o.page ?? 1) > 1) u.set('page', String(o.page))
+  for (const [k, v] of Object.entries(extra)) u.set(k, v)
+  const s = new URLSearchParams([...u.entries()].sort(([a], [b]) => a.localeCompare(b))).toString()
+  return `/console/orders${s ? `?${s}` : ''}`
 }

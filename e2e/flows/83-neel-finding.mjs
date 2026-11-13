@@ -119,7 +119,8 @@ export default {
         await p.getByText(/^\d+ to confirm$/).first().waitFor()
         await p.getByRole('button', { name: /^Filters/ }).click()
         const sheet = p.getByRole('dialog', { name: 'Filters' }); await sheet.waitFor()
-        await sheet.getByRole('checkbox', { name: 'COD' }).check()
+        await sheet.getByRole('button', { name: /^COD/ }).click() // a pill toggle, as drawn
+        assert.equal(await sheet.getByRole('button', { name: /^COD/ }).getAttribute('aria-pressed'), 'true')
         await sheet.getByRole('button', { name: /^Show \d+ orders?$/ }).click()
         await p.waitForURL(/pay=cod/); await p.getByText('Payment is COD').waitFor()
         await p.screenshot({ path: 'e2e/.out/83-phone.png' })

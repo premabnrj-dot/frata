@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.1.0
+  version: 7.1.1
   verified: 2026-11-13
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -490,7 +490,7 @@ Rules every products screen keeps (PR·0 built; PR·1–4 follow the mockup):
    Pre-order, Made to order and Sold out, never "Sold out" for something that sells at 0. Unpriced sizes are counted
    ("2 without a price").
 7. **Readiness names the gap.** "Size chart rows for 2–3 Y", not just "a size chart".
-8. **The list scales.** Search by name or SKU, 50 a page, "Showing 1–50 of N"; past the last page goes to the last page.
+8. **The list scales.** Search by name or SKU, 50 a page, "Showing 1–50 of N" ("of 50+" while a search is on: no count of every match); past the last page goes to the last page.
 9. **Duplicates are refused where they are made**: the field that holds the clash (a SKU, a barcode, a chip) is marked,
    not a toast alone.
 10. **The list acts on many (PR·1).** Filters are tabs with counts (All, Active, Draft, Unlisted, Archived, Low stock),
@@ -1163,7 +1163,7 @@ values, keyboard and axe at phone and desktop. A new primitive or state joins th
   page per search, 250 ms: `LiveSearchField`), the one in flight aborted, `?q=` written with replaceState, Enter and
   Back render the page. The match is marked (`<Marked>`, from `highlight()`: text parts, never HTML, never a RegExp
   from what was typed); a phone or AWB match shows under the name. Nothing found: "No order matches “9845”" and what it
-  searched. Letters with digits (8+) search tracking numbers, digits search numbers and phones, words search names.
+  searched. Letters with digits (8+) search tracking numbers; digits search numbers and phones, and 8+ of them tracking numbers too; words search names.
 - **Quick look** (`QuickLook`): 400 px from the right over the list, not modal; Space on a focused row or the row's eye
   button; ↑ ↓ move it, Esc gives the row its focus back, "Open order" goes to the page; words only, never a cost;
   desktop only (a phone opens the page).

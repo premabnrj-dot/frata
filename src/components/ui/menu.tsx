@@ -40,7 +40,7 @@ export function Menu({ label = 'More', items, align = 'end', size, variant = 'se
   return (
     <>
       <button ref={trigger} type="button" popoverTarget={id} aria-haspopup="menu" aria-expanded={false} aria-controls={id}
-        aria-label={icon ? label : undefined} className={icon ? 'inline-grid size-6 place-items-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground' : button({ variant, size })}>
+        aria-label={icon ? label : undefined} className={icon ? 'relative inline-grid size-6 place-items-center rounded-sm text-muted-foreground after:absolute after:-inset-2.5 hover:bg-accent hover:text-foreground md:after:inset-0' : button({ variant, size })}>
         {icon ?? <>{label}<ChevronDown aria-hidden className="size-4" /></>}
       </button>
       <div ref={pop} id={id} popover="auto" data-pop="menu" role="menu" aria-label={label}

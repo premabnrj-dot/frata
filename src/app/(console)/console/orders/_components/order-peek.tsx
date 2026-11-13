@@ -28,7 +28,7 @@ export function OrderPeek({ n, label, onClose, onMove }: { n: number; label: str
   const dt = 'text-label text-muted-foreground'
   return (
     <QuickLook title={label} onClose={onClose} onMove={onMove}
-      footer={<><span className="text-small text-muted-foreground">↑ ↓ next order · Esc close</span>
+      footer={<><span />
         <Link href={`/console/orders/${n}`} className={button({ variant: 'primary', size: 'sm' })}>Open order</Link></>}>
       {error ? <Panel title={error} />
         : !peek ? <p role="status" className="text-sm text-muted-foreground">Loading…</p>

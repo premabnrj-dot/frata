@@ -1,6 +1,5 @@
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
-import { parseFilters } from '@/domains/orders/filters'
-import { QUEUE_TABS, type QueueTab } from '@/domains/orders/order-state'
+import { parseFilters, parseTab } from '@/domains/orders/filters'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { filterValues, isValueField } from '@/lib/queries/orders'
 
@@ -22,7 +21,7 @@ export async function GET(request: Request) {
   const sp = new URL(request.url).searchParams
   const field = sp.get('field') ?? ''
   if (!isValueField(field)) return json(400, { error: 'Unknown filter.' })
-  const tab: QueueTab = (QUEUE_TABS as readonly string[]).includes(sp.get('tab') ?? '') ? (sp.get('tab') as QueueTab) : 'to_confirm'
+  const tab = parseTab(sp.get('tab'))
   const now = new Date()
   if (!(await withinLimit(LIMITS.ordersReadMember, auth.userId, now))) return json(429, { error: 'Too many requests in the last few minutes. Try again shortly.' })
   return json(200, { values: await filterValues(auth.membership.tenantId, field, { tab, filters: parseFilters(Object.fromEntries(sp)), now }) })

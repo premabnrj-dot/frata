@@ -16,11 +16,16 @@ export function QuickLook({ title, onClose, onMove, children, footer }: {
 }) {
   const panel = useRef<HTMLElement>(null)
   useEffect(() => { panel.current?.focus() }, [])
+  // Esc closes it from anywhere while it is open (after a click back into the list too), unless a dialog has the keys.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('dialog[open]')) { e.preventDefault(); onClose() } }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
   return (
     <aside ref={panel} tabIndex={-1} role="dialog" aria-modal="false" aria-label={`Quick look: ${title}`} data-quick-look=""
       onKeyDown={(e) => {
-        if (e.key === 'Escape') { e.preventDefault(); onClose() }
-        else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
           const t = e.target as HTMLElement
           if (t.closest('input, textarea, select')) return
           e.preventDefault(); onMove(e.key === 'ArrowDown' ? 1 : -1)

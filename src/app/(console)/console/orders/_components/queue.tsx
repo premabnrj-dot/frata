@@ -250,7 +250,7 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
       </DataTable>
       </div>
       <p className="text-xs text-muted-foreground"><button type="button" onClick={() => setKeys(true)} className="inline-flex min-h-6 items-center underline underline-offset-2">Keyboard shortcuts</button> · press ?</p>
-      {peekAt !== null && rows[peekAt] ? <OrderPeek key={rows[peekAt]!.id} n={rows[peekAt]!.n} label={rows[peekAt]!.number} onClose={peekClose} onMove={peekMove} /> : null}
+      {peekAt !== null && rows[peekAt] ? <OrderPeek n={rows[peekAt]!.n} label={rows[peekAt]!.number} onClose={peekClose} onMove={peekMove} /> : null}
       <KeySheet open={keys} onClose={() => setKeys(false)} enabled={enabled} onEnabled={setEnabled} only={['next', 'previous', 'select', 'open', 'peek', 'confirm', 'hold', 'undo', 'search', 'help', 'rail']} />
     </>
   )

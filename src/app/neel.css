@@ -213,7 +213,7 @@
   table[data-rows="list"] > tbody > tr[data-order-row] { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "a n b" "m m m" "p p d" "e e e"; }
   table[data-rows="list"] > tbody > tr[data-order-row] > td[data-cell="c"] { display: contents; }
   tr[data-order-row] [data-o-name] { grid-area: n; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-  tr[data-order-row] [data-o-name]::before { content: "· "; color: var(--muted-foreground); }
+  tr[data-order-row] [data-o-name]::before { content: "· " / ""; color: var(--muted-foreground); }
   tr[data-order-row] [data-o-match] { grid-area: m; }
   tr[data-order-row] [data-o-place] { grid-area: p; align-self: center; }
 }

@@ -3345,7 +3345,7 @@ do $$ begin
 end $$;
 
 -- 78. Saved views (Neel N1c, 0125–0126; plan docs/plans/2026-11-13-neel-n1c.md § N1c·2): a view is the shop's own both
--- ways; frata_app reads, adds and deletes its own and changes only a name and its moments; no other role holds any of
+-- ways; frata_app reads and adds its own (never deletes: Remove is removed_at) and changes only a name and its moments; no other role holds any of
 -- it; names are one a shop in any case (a removed view's name is free again); the AWB index leads with the shop.
 insert into saved_views (id, tenant_id, name, tab, query, created_by) values
   ('5a7e0000-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'Bihar COD', 'to_confirm', 'pay=cod&st=10', '99999999-9999-9999-9999-999999999999');
@@ -3355,9 +3355,9 @@ do $$ declare got text; begin
      or (select count(*) from pg_policies where tablename = 'saved_views' and policyname = 'tenant_rows' and roles = '{frata_app}'
          and qual like '%app_current_tenant()%' and with_check like '%app_current_tenant()%' and qual not like '%is null%') <> 1
   then raise exception 'FAIL: saved_views without its one tenant policy'; end if;
-  if not (has_table_privilege('frata_app', 'saved_views', 'select') and has_table_privilege('frata_app', 'saved_views', 'insert') and has_table_privilege('frata_app', 'saved_views', 'delete'))
-     or exists (select 1 from unnest(array['update', 'truncate', 'references', 'trigger']) p where has_table_privilege('frata_app', 'saved_views', p))
-  then raise exception 'FAIL: frata_app holds other than select, insert, delete and its columns on saved_views'; end if;
+  if not (has_table_privilege('frata_app', 'saved_views', 'select') and has_table_privilege('frata_app', 'saved_views', 'insert'))
+     or exists (select 1 from unnest(array['update', 'delete', 'truncate', 'references', 'trigger']) p where has_table_privilege('frata_app', 'saved_views', p))
+  then raise exception 'FAIL: frata_app holds other than select, insert and its columns on saved_views'; end if;
   select string_agg(column_name, ',' order by column_name) into got from information_schema.column_privileges where grantee = 'frata_app' and table_name = 'saved_views' and privilege_type = 'UPDATE';
   if got is distinct from 'name,removed_at,updated_at' then raise exception 'FAIL: frata_app updates saved_views columns %', got; end if;
   if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p
@@ -3378,8 +3378,8 @@ do $$ declare n int; begin
     raise exception 'FAIL: A wrote a view into B'; exception when insufficient_privilege then null; end;
   update saved_views set name = 'Taken' where id = '5a7e0000-0000-0000-0000-00000000000b'; get diagnostics n = row_count;
   if n <> 0 then raise exception 'FAIL: A renamed B''s view'; end if;
-  delete from saved_views where id = '5a7e0000-0000-0000-0000-00000000000b'; get diagnostics n = row_count;
-  if n <> 0 then raise exception 'FAIL: A deleted B''s view'; end if;
+  begin delete from saved_views where id = '5a7e0000-0000-0000-0000-00000000000b'; raise exception 'FAIL: frata_app deletes views';
+  exception when insufficient_privilege then null; end;
   begin update saved_views set tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: A moved a view to B';
   exception when insufficient_privilege then null; end;
   -- one name a shop, any case; a removed view's name is free again

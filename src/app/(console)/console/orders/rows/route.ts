@@ -1,6 +1,5 @@
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
-import { parseFilters } from '@/domains/orders/filters'
-import { QUEUE_TABS, type QueueTab } from '@/domains/orders/order-state'
+import { parseFilters, parseTab } from '@/domains/orders/filters'
 import { MAX_SEARCH } from '@/domains/orders/search'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { errName } from '@/lib/log'
@@ -24,7 +23,7 @@ export async function GET(request: Request) {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return json(403, { error: auth.message })
   const sp = new URL(request.url).searchParams
-  const tab: QueueTab = (QUEUE_TABS as readonly string[]).includes(sp.get('tab') ?? '') ? (sp.get('tab') as QueueTab) : 'to_confirm'
+  const tab = parseTab(sp.get('tab'))
   const q = (sp.get('q') ?? '').trim().slice(0, MAX_SEARCH)
   const page = Math.min(Math.max(1, Number(sp.get('page')) || 1), 1_000)
   const filters = parseFilters(Object.fromEntries(sp))

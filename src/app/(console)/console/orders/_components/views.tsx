@@ -3,7 +3,9 @@
 import { MoreHorizontal } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button, button } from '@/components/ui/button'
+import { FieldError } from '@/components/ui/field-error'
+import { cn } from '@/lib/utils'
 import { Dialog } from '@/components/ui/dialog'
 import { FIELD } from '@/components/ui/field'
 import { Menu } from '@/components/ui/menu'
@@ -29,11 +31,12 @@ function NameDialog({ title, initial, cta, open, onClose, onSave }: { title: str
     if (e) setError(e); else onClose()
   }
   return (
-    <Dialog open={open} onClose={onClose} title={title} error={error}
+    <Dialog open={open} onClose={onClose} title={title}
       actions={<><Button type="button" variant="secondary" onClick={onClose}>Cancel</Button><Button type="button" busy={busy} onClick={() => void submit()}>{cta}</Button></>}>
       <form onSubmit={(e) => { e.preventDefault(); void submit() }} className="flex flex-col gap-1.5">
         <label htmlFor="view-name" className="text-label font-medium">Name</label>
-        <input id="view-name" className={FIELD} value={name} maxLength={40} autoFocus onChange={(e) => setName(e.target.value)} aria-invalid={error ? true : undefined} />
+        <input id="view-name" className={FIELD} value={name} maxLength={40} autoFocus onChange={(e) => setName(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? 'view-name-error' : undefined} />
+        <FieldError id="view-name-error" message={error} />
       </form>
     </Dialog>
   )
@@ -45,7 +48,7 @@ export function SaveView({ tab, query }: { tab: QueueTab; query: string }) {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-11 items-center text-sm font-medium text-link underline-offset-2 hover:underline md:min-h-10">+ Save view</button>
+      <button type="button" onClick={() => setOpen(true)} className={cn(button({ variant: 'link' }), 'min-h-11 md:min-h-10')}>+ Save view</button>
       {open ? <NameDialog title="Save view" initial="" cta="Save view" open={open} onClose={() => setOpen(false)} onSave={async (name) => {
         const r = await saveView({ name, tab, query })
         if (!r.ok) return r.error

@@ -23,9 +23,10 @@ import { errName } from '@/lib/log'
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string }
 
-// No control characters and no bidi overrides: one member must not make a tab read differently to the others.
+// No control characters, bidi overrides, direction marks or zero-width characters: one member must not make a tab read
+// differently to the others, nor save a second "Bihar COD" that only looks like the first (security review N1c).
 const Name = z.string().transform((s) => s.normalize('NFC').trim()).pipe(z.string().min(1, 'Name the view.').max(40, 'Up to 40 characters.')
-  .refine((s) => !/[\u0000-\u001f\u007f‪-‮⁦-⁩]/.test(s), 'Use letters, numbers and spaces.'))
+  .refine((s) => !/[\u0000-\u001f\u007f؜​-‏‪-‮⁠⁦-⁩﻿]/.test(s), 'Use letters, numbers and spaces.'))
 const Id = z.string().uuid()
 const Save = z.object({ name: Name, tab: z.enum(QUEUE_TABS), query: z.string().max(400) })
 

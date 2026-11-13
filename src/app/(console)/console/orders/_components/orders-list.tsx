@@ -7,6 +7,7 @@ import { Pager } from '@/components/data/pager'
 import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import type { QueueTab } from '@/domains/orders/order-state'
+import { ordersHref, parseFilters } from '@/domains/orders/filters'
 import { Queue, type QueueRow } from './queue'
 import { SaveView, ViewMenu } from './views'
 
@@ -40,20 +41,12 @@ export function OrdersList({ tab, tabs, q: initialQ, filters, page, rows, more, 
   const [q, setQ] = useState(initialQ)
   const [live, setLive] = useState<Live>(null)
   const [failed, setFailed] = useState(false)
+  const [loading, setLoading] = useState(false)
   const inflight = useRef<AbortController | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const href = (o: { tab?: QueueTab; q?: string; page?: number }) => {
-    const u = new URLSearchParams(filters)
-    const t = o.tab ?? tab
-    if (t !== 'to_confirm') u.set('tab', t)
-    const qq = (o.q ?? '').trim()
-    if (qq) u.set('q', qq)
-    if ((o.page ?? 1) > 1) u.set('page', String(o.page))
-    // Keys in one order, so a link equals what Back restores.
-    const s = new URLSearchParams([...u.entries()].sort(([a], [b]) => a.localeCompare(b))).toString()
-    return `/console/orders${s ? `?${s}` : ''}`
-  }
+  const parsed = parseFilters(Object.fromEntries(new URLSearchParams(filters)))
+  const href = (o: { tab?: QueueTab; q?: string; page?: number }) => ordersHref({ tab: o.tab ?? tab, filters: parsed, q: o.q, page: o.page })
 
   // The server's answer is the truth: a fresh render (an action's refresh, Back, Enter) replaces what was typed live.
   useEffect(() => { setLive(null); setQ(initialQ); setFailed(false) }, [rows, initialQ])
@@ -72,6 +65,7 @@ export function OrdersList({ tab, tabs, q: initialQ, filters, page, rows, more, 
     if (qq === initialQ.trim()) { setLive(null); setFailed(false); return } // back to what the page holds
     if (!qq) { setLive({ q: '', rows: [], more: false }); router.replace(href({}), { scroll: false }); return }
     const ctl = new AbortController(); inflight.current = ctl
+    setLoading(true)
     try {
       const u = new URL(href({ q: qq }), window.location.origin)
       const res = await fetch(`/console/orders/rows${u.search}`, { signal: ctl.signal, headers: { accept: 'application/json' } })
@@ -80,6 +74,8 @@ export function OrdersList({ tab, tabs, q: initialQ, filters, page, rows, more, 
       if (!ctl.signal.aborted) { setLive({ q: qq, rows: body.rows, more: body.more }); setFailed(false) }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') setFailed(true)
+    } finally {
+      if (inflight.current === ctl) setLoading(false)
     }
   }
 
@@ -114,17 +110,20 @@ export function OrdersList({ tab, tabs, q: initialQ, filters, page, rows, more, 
           <Search aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
           <input id="search-orders" name="q" type="search" value={q} onChange={(e) => type(e.target.value)} autoComplete="off" maxLength={60}
             onKeyDown={(e) => { if (e.key === 'Escape' && q) { e.preventDefault(); type('') } }}
-            placeholder="Search number, name, phone or AWB" className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none" />
-          {q && <button type="button" aria-label="Clear search" onClick={() => type('')} className="inline-grid size-6 place-items-center rounded-sm text-muted-foreground hover:text-foreground"><X aria-hidden="true" className="size-4" /></button>}
+            placeholder="Search number, name or phone" className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none" />
+          {q && <button type="button" aria-label="Clear search" onClick={() => type('')} className="relative inline-grid size-6 place-items-center rounded-sm text-muted-foreground after:absolute after:-inset-2.5 hover:text-foreground md:after:inset-0"><X aria-hidden="true" className="size-4" /></button>}
         </div>
       </form>
       {bar}
       </div>
       {/* Said once the list has changed under the person's typing (or a filter): how many rows they now see. */}
-      <p role="status" className="sr-only">{failed ? 'Search did not run' : `${shown.length}${shownMore ? ' or more' : ''} orders`}</p>
+      <p role="status" className="sr-only">{failed ? 'Search did not run' : `${shown.length}${shownMore ? ' or more' : ''} order${shown.length === 1 && !shownMore ? '' : 's'}`}</p>
       {failed ? <Panel title="We could not search just now">Press Enter to try again.</Panel> : null}
+      {/* While a search is on its way the list dims (Neel § Motion: lists dim while a view loads) and says it is busy. */}
+      <div aria-busy={loading || undefined} className={loading ? 'opacity-60 transition-opacity duration-fast' : 'transition-opacity duration-fast'}>
       <Queue rows={shown} label={label} slipSize={slipSize} query={qShown} empty={
         <Panel title={searching ? `No order matches “${qShown}”` : none.title}>{none.body ?? null}</Panel>} />
+      </div>
       {shown.length > 0 ? (
         <Pager first={first} shown={shown.length} total={pagerTotal} suffix="newest first" prevLabel="Newer" nextLabel="Older"
           prevHref={shownPage > 1 ? href({ q: qShown, page: shownPage - 1 }) : undefined}

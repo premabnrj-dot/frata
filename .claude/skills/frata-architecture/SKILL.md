@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.54.0
+  version: 2.54.1
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -667,6 +667,7 @@ Budgets. Each says whether a gate holds it yet:
 | No preloaded font and `priority` only on the first section's photos | review (P6, P15 fixed) |
 | Console page < 1 s p95; a query < 100 ms at the 10× seed, no seq scan on `orders` | review + EXPLAIN |
 | **Named exception:** Analytics' window aggregate (one grouped read of a period and the one before) is held to the page's 1 s, not 100 ms (the timings at 10× live in the test's header) | `analytics-speed.int.test.ts` (`SPEED=1`) |
+| **Named exception:** Orders' filter values with counts and saved views' counts (N1c): their own transaction, `jit = off`, an 800 ms ceiling, no count on a timeout; never inside another read | review (speed N1c: 18–212 ms at 150 k) |
 
 Rules:
 - Every exported storefront loader is `cache(shopCached(...))`. `unstable_cache`

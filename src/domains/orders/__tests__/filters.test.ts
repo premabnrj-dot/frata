@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chipsFor, filterQuery, parseFilters, placedRange, sameFilters } from '../filters'
+import { chipsFor, filterQuery, ordersHref, parseFilters, parseTab, placedRange, sameFilters } from '../filters'
 
 describe('parseFilters', () => {
   it('keeps what it understands, in one canonical form', () => {
@@ -44,5 +44,18 @@ describe('chipsFor', () => {
   })
   it('many states fold', () => {
     expect(chipsFor(parseFilters({ st: '10,32,09,08' }))[0]!.label).toBe('State is Bihar, Kerala or 2 more')
+  })
+})
+
+describe('ordersHref and parseTab', () => {
+  it('one address, keys sorted; To confirm and page 1 left out', () => {
+    expect(ordersHref({ tab: 'to_confirm', filters: {} })).toBe('/console/orders')
+    expect(ordersHref({ tab: 'all', filters: parseFilters({ st: '10', pay: 'cod' }), q: ' 9845 ', page: 2 })).toBe('/console/orders?page=2&pay=cod&q=9845&st=10&tab=all')
+  })
+  it('an unknown tab is To confirm', () => {
+    expect(parseTab('all')).toBe('all'); expect(parseTab('everything')).toBe('to_confirm'); expect(parseTab(null)).toBe('to_confirm')
+  })
+  it('a chip shows its value apart, to be bold', () => {
+    expect(chipsFor(parseFilters({ pay: 'cod' }))[0]).toMatchObject({ lead: 'Payment is', value: 'COD', label: 'Payment is COD' })
   })
 })

@@ -4,6 +4,10 @@
 import { sql } from 'drizzle-orm'
 import { check, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { createdAt, id, tenants } from './schema'
+import { QUEUE_TABS } from '@/domains/orders/order-state'
+
+// The order the first migration wrote them in (0125), so the generated CHECK stays byte-equal.
+const TAB_ORDER = ['to_confirm', 'to_pack', 'to_ship', 'on_the_way', 'couldnt_deliver', 'coming_back', 'on_hold', 'all', 'not_paid']
 
 /**
  * A view of the Orders list kept as a tab for the whole team (Neel N1c, § Finding: "+ Save view"): a queue tab and
@@ -28,5 +32,6 @@ export const savedViews = pgTable('saved_views', {
   uniqueIndex('saved_views_tenant_name').on(t.tenantId, sql`lower(${t.name})`).where(sql`${t.removedAt} is null`),
   check('saved_views_name', sql`length(${t.name}) between 1 and 40 and ${t.name} = btrim(${t.name})`),
   check('saved_views_query', sql`length(${t.query}) <= 400`),
-  check('saved_views_tab', sql`${t.tab} in ('to_confirm','to_pack','to_ship','on_the_way','couldnt_deliver','coming_back','on_hold','all','not_paid')`),
+  // Built from QUEUE_TABS: a new tab changes this CHECK in a generated migration, never silently refuses a view of it.
+  check('saved_views_tab', sql`${t.tab} in (${sql.raw([...QUEUE_TABS].sort((a, b) => TAB_ORDER.indexOf(a) - TAB_ORDER.indexOf(b)).map((x) => `'${x}'`).join(','))})`),
 ])

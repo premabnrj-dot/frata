@@ -10,15 +10,18 @@ import type { ReactNode } from 'react'
 // something to clear; `summary` sits at the right ("9 of 300 orders"). No state: the page renders it from the address.
 // =============================================================================
 
-export type FilterChip = { label: string; href: string }
+/** `label` names the chip (its × says "Remove …"); `lead` and `value`, when given, show the value in bold, as drawn. */
+export type FilterChip = { label: string; href: string; lead?: string; value?: string }
 
 export function FilterBar({ chips, clearHref, add, summary }: { chips: FilterChip[]; clearHref: string; add: ReactNode; summary?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-center gap-2" data-filter-bar="">
       {chips.map((c) => (
-        <span key={c.label} className="inline-flex h-7 items-center gap-1 rounded-full border border-edge bg-card pl-3 pr-1 text-label font-medium shadow-sm">
-          {c.label}
-          <Link href={c.href} scroll={false} aria-label={`Remove ${c.label}`} className="inline-grid size-6 place-items-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground">
+        // Neel § Finding: a chip is 6 px round, the n50 fill, no shadow at rest; the value in bold.
+        <span key={c.label} className="inline-flex h-7 items-center gap-1 rounded-sm border border-border bg-side pl-2.5 pr-1 text-label">
+          {c.lead && c.value ? <>{c.lead} <b className="font-semibold">{c.value}</b></> : c.label}
+          {/* 24 px on a desktop, a 44 px reach on a phone (the hit area grows past the chip, never the chip). */}
+          <Link href={c.href} scroll={false} aria-label={`Remove ${c.label}`} className="relative inline-grid size-6 place-items-center rounded-xs text-muted-foreground after:absolute after:-inset-2.5 hover:bg-accent hover:text-foreground md:after:inset-0">
             <X aria-hidden="true" className="size-3.5" />
           </Link>
         </span>

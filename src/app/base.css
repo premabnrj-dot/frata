@@ -321,7 +321,7 @@
 @utility animate-pop { animation: pop-in 200ms cubic-bezier(0, 0, 0, 1); }
 /* Quick look (Neel N1c): the panel comes in 24 px from the right edge it sits on, and fades in. */
 @keyframes panel-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
-@utility animate-panel { animation: panel-in 200ms cubic-bezier(0, 0, 0, 1); }
+@utility animate-panel { animation: panel-in var(--transition-duration-base) var(--ease-entrance); }
 @utility animate-value-flash { animation: value-flash var(--duration-flash) cubic-bezier(0.2, 0, 0, 1); }
 /* The shell (plan U · U·2a, motion rules 22–23): the progress bar creeps to 80 % while a move is on its way. (The
    phone's More sheet is a [data-dialog] sheet: in on the spring, out in 200 ms.) Transform and scale only (rule 22). */

@@ -382,4 +382,3 @@ export const creditNoteLines = pgTable('credit_note_lines', {
   check('credit_note_lines_money', sql`${t.qty} >= 0 and ${t.taxable} >= 0 and ${t.gst} >= 0 and ${t.gstBps} >= 0`),
   check('credit_note_lines_restocked', sql`${t.restockedQty} >= 0 and ${t.restockedQty} <= ${t.qty}`),
 ])
-
