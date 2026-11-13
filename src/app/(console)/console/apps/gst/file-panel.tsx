@@ -79,7 +79,7 @@ export function FilePanel({ period, step, ours, portal, username, pushedAt, file
             {HEADS.map(([h, l]) => {
               const off = h === 'documents' ? ours[h] !== portal[h] : Math.abs(ours[h] - portal[h]) > 100
               const f = (v: number) => (h === 'documents' ? String(v) : rs(v))
-              return <tr key={h} className={off ? 'text-danger-text' : undefined}><td className="py-2">{l}</td><td className="py-2 text-right font-mono tabular-nums">{f(ours[h])}</td><td className="py-2 text-right font-mono tabular-nums">{f(portal[h])}{off ? ' ≠' : ' ✓'}</td></tr>
+              return <tr key={h} className={off ? 'text-danger-text' : undefined}><td className="py-2">{l}</td><td className="py-2 text-right font-num">{f(ours[h])}</td><td className="py-2 text-right font-num">{f(portal[h])}{off ? ' ≠' : ' ✓'}</td></tr>
             })}
           </tbody>
         </table>

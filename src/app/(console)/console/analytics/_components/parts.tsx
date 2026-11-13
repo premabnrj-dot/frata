@@ -105,7 +105,7 @@ export function Strip({ a, visits }: { a: Analytics; visits?: StripVisits }) {
     const rate = visits.rates ? perHundred(c.orders, v, 1, 2) : null
     const before = visits.prevRates ? perHundred(p.orders, visits.prev.visitors, 1, 2) : null
     const tile = (k: React.ReactNode, val: React.ReactNode, d: React.ReactNode) => (
-      <div className="grid min-w-0 gap-0.5 bg-card p-3"><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-mono text-lg font-semibold tabular-nums">{val}</dd><dd>{d}</dd></div>
+      <div className="grid min-w-0 gap-0.5 bg-card p-3"><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-num text-lg font-semibold tabular-nums">{val}</dd><dd>{d}</dd></div>
     )
     return (
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border lg:grid-cols-4">
@@ -133,7 +133,7 @@ export function Strip({ a, visits }: { a: Analytics; visits?: StripVisits }) {
   }
   const out = outcomes(c)
   const tile = (k: string, v: React.ReactNode, d: React.ReactNode) => (
-    <div className="grid min-w-0 gap-0.5 bg-card p-3"><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-mono text-lg font-semibold tabular-nums">{v}</dd><dd>{d}</dd></div>
+    <div className="grid min-w-0 gap-0.5 bg-card p-3"><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-num text-lg font-semibold tabular-nums">{v}</dd><dd>{d}</dd></div>
   )
   return (
     <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border lg:grid-cols-4">

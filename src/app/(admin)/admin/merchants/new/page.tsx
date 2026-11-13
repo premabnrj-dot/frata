@@ -48,7 +48,7 @@ export default async function NewMerchantPage() {
               {[['launch', 'Launch', '₹1,499/mo'], ['growth', 'Growth', '₹4,999/mo'], ['scale', 'Scale', '₹14,999/mo']].map(([code, name, price]) => (
                 <label key={code} className="flex flex-col gap-0.5 rounded-md border border-input p-3 text-sm has-[:checked]:border-2 has-[:checked]:border-primary">
                   <span className="flex items-center gap-2"><input type="radio" name="planCode" value={code} defaultChecked={code === 'growth'} /><strong>{name}</strong></span>
-                  <span className="font-mono text-muted-foreground">{price}</span>
+                  <span className="font-num text-muted-foreground">{price}</span>
                 </label>
               ))}
             </div>

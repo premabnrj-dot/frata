@@ -26,7 +26,7 @@ export function SupabaseTab({ h, alerts }: { h: DbHealth | null; alerts: Alert[]
           <DataTable label="Connections">
             <DataTableHead><th>Connections</th><th className="text-right">Open</th><th className="text-right">Busy</th></DataTableHead>
             <DataTableBody>
-              {h.connections.map((c) => <DataTableRow key={c.role}><Td cell="a">{ROLE[c.role] ?? c.role}</Td><Td cell="b" className="text-right font-mono tabular-nums">{c.open}</Td><Td cell="c" className="text-right font-mono tabular-nums">{c.busy}</Td></DataTableRow>)}
+              {h.connections.map((c) => <DataTableRow key={c.role}><Td cell="a">{ROLE[c.role] ?? c.role}</Td><Td cell="b" className="text-right font-num">{c.open}</Td><Td cell="c" className="text-right font-num">{c.busy}</Td></DataTableRow>)}
             </DataTableBody>
           </DataTable>
           <div className="grid gap-3 p-4">
@@ -51,7 +51,7 @@ export function SupabaseTab({ h, alerts }: { h: DbHealth | null; alerts: Alert[]
           <DataTable label="Biggest tables">
             <DataTableHead><th>Table</th><th className="text-right">Rows</th><th className="text-right">Size</th></DataTableHead>
             <DataTableBody>
-              {h.tables.map((t) => <DataTableRow key={t.name}><Td cell="a" className="font-mono text-xs">{t.name}</Td><Td cell="b" className="text-right font-mono tabular-nums">{t.rows.toLocaleString('en-IN')}</Td><Td cell="c" className="text-right font-mono tabular-nums">{bytes(t.bytes)}</Td></DataTableRow>)}
+              {h.tables.map((t) => <DataTableRow key={t.name}><Td cell="a" className="font-num text-xs">{t.name}</Td><Td cell="b" className="text-right font-num">{t.rows.toLocaleString('en-IN')}</Td><Td cell="c" className="text-right font-num">{bytes(t.bytes)}</Td></DataTableRow>)}
             </DataTableBody>
           </DataTable>
         </Section>

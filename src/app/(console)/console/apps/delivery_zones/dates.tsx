@@ -93,7 +93,7 @@ function Dates({ nowIso, canEdit, dispatch, holidays, zones }: Props) {
               {holidays.map((h) => (
                 <li key={h.day} className="flex items-center gap-3 py-2 text-sm">
                   <span className="min-w-0 flex-1">{h.name}</span>
-                  <span className="font-mono text-muted-foreground">{day(h.day)}</span>
+                  <span className="font-num text-muted-foreground">{day(h.day)}</span>
                   {canEdit && <Button variant="ghost" disabled={busy === h.day} onClick={() => act(h.day, () => removeHolidayAction(h.day), 'Holiday removed')}>Remove</Button>}
                 </li>
               ))}
@@ -114,7 +114,7 @@ function Dates({ nowIso, canEdit, dispatch, holidays, zones }: Props) {
       <Section title={`Ordered now · ${weekdayShortIN(today)}`}>
         {shown.length ? (
           <ul className="divide-y divide-border text-sm">
-            {shown.map((z) => <li key={z.id} className="flex justify-between gap-3 py-2"><span>{z.name}</span><b className="font-mono">{z.by ? day(z.by) : '—'}</b></li>)}
+            {shown.map((z) => <li key={z.id} className="flex justify-between gap-3 py-2"><span>{z.name}</span><b className="font-num">{z.by ? day(z.by) : '—'}</b></li>)}
           </ul>
         ) : <p className="text-sm text-muted-foreground">Set up zones first.</p>}
       </Section>

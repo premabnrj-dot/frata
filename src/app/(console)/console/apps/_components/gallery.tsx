@@ -53,7 +53,7 @@ export function AppsGallery({ cards, groups, featured }: { cards: AppCard[]; gro
           {FILTERS.filter(([f]) => f === 'all' || counts[f]).map(([f, label]) => (
             <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}
               className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 text-sm font-medium ${filter === f ? 'border-foreground bg-foreground text-background' : 'border-border bg-card'}`}>
-              {label}<span className="font-mono text-xs opacity-75">{counts[f]}</span>
+              {label}<span className="font-num text-xs opacity-75">{counts[f]}</span>
             </button>
           ))}
         </div>
@@ -75,7 +75,7 @@ export function AppsGallery({ cards, groups, featured }: { cards: AppCard[]; gro
                     </span>
                     <span className="text-sm text-muted-foreground">{c.job}</span>
                     <span className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3 text-sm">
-                      {c.locked ? <span className="inline-flex items-center gap-1 text-muted-foreground"><Icon name="lock" className="size-3.5" />{c.footer}</span> : <span className="font-mono">{c.footer}</span>}
+                      {c.locked ? <span className="inline-flex items-center gap-1 text-muted-foreground"><Icon name="lock" className="size-3.5" />{c.footer}</span> : <span className="font-num">{c.footer}</span>}
                       {c.state ? <Badge tone={c.state.tone}>{c.state.label}</Badge> : null}
                     </span>
                   </CardLink>

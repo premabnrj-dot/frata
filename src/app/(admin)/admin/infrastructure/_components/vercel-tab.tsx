@@ -52,7 +52,7 @@ export function VercelTab({ f, alerts, pulls, connected }: { f: VercelFacts; ale
           <DataTable label="By project">
             <DataTableHead><th>Project</th><th className="text-right">Cost</th><th className="text-right">Share</th></DataTableHead>
             <DataTableBody>
-              {f.byProject.slice(0, 8).map((p) => <DataTableRow key={p.project}><Td cell="a">{p.project}{p.project === RULES.ourProject ? <span className="ml-2 text-xs text-muted-foreground">Frrata</span> : null}</Td><Td cell="b" className="text-right font-mono tabular-nums">{formatUsd(p.micros)}</Td><Td cell="c" className="text-right font-mono tabular-nums">{Math.round(p.share * 100)}%</Td></DataTableRow>)}
+              {f.byProject.slice(0, 8).map((p) => <DataTableRow key={p.project}><Td cell="a">{p.project}{p.project === RULES.ourProject ? <span className="ml-2 text-xs text-muted-foreground">Frrata</span> : null}</Td><Td cell="b" className="text-right font-num">{formatUsd(p.micros)}</Td><Td cell="c" className="text-right font-num">{Math.round(p.share * 100)}%</Td></DataTableRow>)}
             </DataTableBody>
           </DataTable>
         </Section>
@@ -60,7 +60,7 @@ export function VercelTab({ f, alerts, pulls, connected }: { f: VercelFacts; ale
           <DataTable label="By service">
             <DataTableHead><th>Service</th><th className="text-right">Cost</th></DataTableHead>
             <DataTableBody>
-              {f.byService.filter((s) => s.micros > 0).slice(0, 8).map((s) => <DataTableRow key={s.service}><Td cell="a">{s.service}</Td><Td cell="b" className="text-right font-mono tabular-nums">{formatUsd(s.micros)}</Td></DataTableRow>)}
+              {f.byService.filter((s) => s.micros > 0).slice(0, 8).map((s) => <DataTableRow key={s.service}><Td cell="a">{s.service}</Td><Td cell="b" className="text-right font-num">{formatUsd(s.micros)}</Td></DataTableRow>)}
             </DataTableBody>
           </DataTable>
         </Section>

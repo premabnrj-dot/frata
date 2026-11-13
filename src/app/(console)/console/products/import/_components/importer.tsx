@@ -149,8 +149,8 @@ export function Importer({ data }: { data: Omit<ImportPage, 'history'> }) {
     <div className="space-y-4">
       {step.at === 'check' && (
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-muted-foreground">
-          <span className="font-mono [overflow-wrap:anywhere]">{step.f.name}</span>
-          <span><span className="font-mono tabular-nums">{step.f.sheet.rows.length.toLocaleString('en-IN')}</span> rows</span>
+          <span className="font-num [overflow-wrap:anywhere]">{step.f.name}</span>
+          <span><span className="font-num">{step.f.sheet.rows.length.toLocaleString('en-IN')}</span> rows</span>
           <Button variant="ghost" onClick={() => setStep({ at: 'file' })}>Choose another file</Button>
         </div>
       )}
@@ -165,8 +165,8 @@ export function Importer({ data }: { data: Omit<ImportPage, 'history'> }) {
       {step.at === 'import' && (
         <Section>
           <div className="flex flex-wrap items-baseline justify-between gap-2" role="status">
-            <b className="text-base">{step.error ? 'Import paused' : 'Importing'} <span className="font-mono font-normal">{step.f.name}</span></b>
-            <span className="text-xs text-muted-foreground"><span className="font-mono tabular-nums">{step.added.toLocaleString('en-IN')}</span> added · part {Math.min(step.next + 1, step.total)} of {step.total}</span>
+            <b className="text-base">{step.error ? 'Import paused' : 'Importing'} <span className="font-num font-normal">{step.f.name}</span></b>
+            <span className="text-xs text-muted-foreground"><span className="font-num">{step.added.toLocaleString('en-IN')}</span> added · part {Math.min(step.next + 1, step.total)} of {step.total}</span>
           </div>
           <Bar done={step.next} total={step.total} label={`Part ${step.next} of ${step.total} imported`} />
           {step.error && (

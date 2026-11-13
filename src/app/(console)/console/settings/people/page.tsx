@@ -45,7 +45,7 @@ export default async function PeoplePage() {
             <li key={p.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{lead ? `${p.email ?? 'A partner person'} · ${p.partnerName ?? 'partner'}` : p.partnerName ?? p.email ?? 'Unknown'}</p>
-                {p.email && <p className="truncate font-mono text-xs text-muted-foreground">{p.email}</p>}
+                {p.email && <p className="truncate font-num text-xs text-muted-foreground">{p.email}</p>}
               </div>
               <Badge tone={role.tone}>{role.label}</Badge>
               <span className="w-40 text-sm text-muted-foreground">{you ? 'You' : p.partnerPaused ? 'Paused by Frrata' : lead ? `Since ${dayIN(p.since)}` : p.role === 'partner' ? `Built this store · ${dayIN(p.since)}` : `Since ${dayIN(p.since)}`}</span>

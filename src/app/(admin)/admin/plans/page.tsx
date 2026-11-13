@@ -83,9 +83,9 @@ export default async function PlansPage() {
         {staff.role === 'admin' && (
           <ActionForm action={setTrialTermsAction} className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5"><span className="font-medium">Length for new sign-ups, 7 to 45 days</span>
-              <input name="days" type="number" min={7} max={45} required data-error="7 to 45 days." defaultValue={terms.days} className="h-10 rounded-md border border-input bg-card px-3 font-mono aria-invalid:border-danger-mark" /><FieldMessage name="days" /></label>
+              <input name="days" type="number" min={7} max={45} required data-error="7 to 45 days." defaultValue={terms.days} className="h-10 rounded-md border border-input bg-card px-3 font-num aria-invalid:border-danger-mark" /><FieldMessage name="days" /></label>
             <label className="flex flex-col gap-1.5"><span className="font-medium">Days to go live, 0 to 30</span>
-              <input name="openWindowDays" type="number" min={0} max={30} required data-error="0 to 30 days." defaultValue={terms.openWindowDays} className="h-10 rounded-md border border-input bg-card px-3 font-mono aria-invalid:border-danger-mark" /><FieldMessage name="openWindowDays" /></label>
+              <input name="openWindowDays" type="number" min={0} max={30} required data-error="0 to 30 days." defaultValue={terms.openWindowDays} className="h-10 rounded-md border border-input bg-card px-3 font-num aria-invalid:border-danger-mark" /><FieldMessage name="openWindowDays" /></label>
             <label className="flex flex-col gap-1.5 sm:col-span-2"><span className="font-medium">Why</span>
               <input name="reason" required minLength={3} maxLength={240} data-error="Say why, in a few words." className="h-10 rounded-md border border-input bg-card px-3 aria-invalid:border-danger-mark" /><FieldMessage name="reason" /></label>
             <div className="sm:col-span-2"><Submit>Save trial terms</Submit></div>

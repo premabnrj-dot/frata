@@ -23,7 +23,7 @@ const WOO_ONLY: Field[] = ['rowId', 'parent', 'kind']
 function Sample({ field, cell }: { field: Field; cell: string }) {
   if (!cell) return null
   if (field === 'cost') return <>Only you see it</>
-  if (MONEY.includes(field)) { const p = parseRupees(cell); return <span className="font-mono">{cell}{p !== null && <> → <Money paise={paise(p)} decimals /></>}</span> }
+  if (MONEY.includes(field)) { const p = parseRupees(cell); return <span className="font-num">{cell}{p !== null && <> → <Money paise={paise(p)} decimals /></>}</span> }
   if (field === 'size' || field === 'colour') { const n = splitValues(cell, field === 'size' ? 'size' : 'other').length; return <>{cell}{n > 1 && ` → ${n} ${field === 'size' ? 'sizes' : 'colours'}`}</> }
   return <span className="line-clamp-1 [overflow-wrap:anywhere]">{cell}</span>
 }
@@ -46,7 +46,7 @@ export function CheckStep({ sheet, mapping, checked, costs, cap, busy, onRemap, 
   return (
     <>
       <Counts label="What this file does">
-        <Count value={n} label={<>New products · <span className="font-mono tabular-nums">{variants.toLocaleString('en-IN')}</span> sizes and colours</>} />
+        <Count value={n} label={<>New products · <span className="font-num">{variants.toLocaleString('en-IN')}</span> sizes and colours</>} />
         <Count value={count('in_shop')} label="Already in your shop" />
         <Count value={count('left_out')} label="Left out until fixed" bad />
       </Counts>

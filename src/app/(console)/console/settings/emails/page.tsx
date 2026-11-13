@@ -39,12 +39,12 @@ export default async function EmailsPage() {
         <Section title="Sender">
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
             <dt className="text-muted-foreground">From</dt><dd><b className="font-medium">{shop.shopName}</b>{from ? <span className="ml-1 font-mono text-xs text-muted-foreground">{from}</span> : null}</dd>
-            <dt className="text-muted-foreground">Replies go to</dt><dd className="font-mono text-xs">{reply ?? '—'}</dd>
+            <dt className="text-muted-foreground">Replies go to</dt><dd className="font-num text-xs">{reply ?? '—'}</dd>
           </dl>
         </Section>
         <Section title="Last 7 days">
           <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-4">
-            {strip.map(([k, v]) => <div key={k} className="bg-card p-3"><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-mono text-lg font-semibold tabular-nums">{v}</dd></div>)}
+            {strip.map(([k, v]) => <div key={k} className="bg-card p-3"><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-num text-lg font-semibold tabular-nums">{v}</dd></div>)}
           </dl>
         </Section>
       </div>

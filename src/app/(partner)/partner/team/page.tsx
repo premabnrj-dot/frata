@@ -52,7 +52,7 @@ export default async function TeamPage() {
                   {state === 'invited' && <Badge tone="warn">Invited</Badge>}
                   {state === 'expired' && <Badge tone="neutral">Invite ended</Badge>}
                 </p>
-                {!p.isYou && <p className="truncate font-mono text-xs text-muted-foreground">{state === 'active' ? `Since ${dayIN(p.acceptedAt!)}` : p.inviteExpiresAt ? `Invited · until ${dayIN(p.inviteExpiresAt)}` : ''}</p>}
+                {!p.isYou && <p className="truncate font-num text-xs text-muted-foreground">{state === 'active' ? `Since ${dayIN(p.acceptedAt!)}` : p.inviteExpiresAt ? `Invited · until ${dayIN(p.inviteExpiresAt)}` : ''}</p>}
               </div>
               <div className="min-w-0">
                 {p.role === 'owner' ? <span className="text-muted-foreground">Every store</span>

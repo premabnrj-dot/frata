@@ -66,7 +66,7 @@ export default async function MerchantPage({ params }: { params: Promise<{ id: s
             ))}
             {openInvite && (
               <ActionForm action={resendOwnerLinkAction} className="flex items-center justify-between border-t border-border pt-3 text-sm">
-                <span>Invited: <span className="font-mono">{openInvite.email}</span> <span className="text-muted-foreground">· until {dayIN(openInvite.expiresAt)}</span></span>
+                <span>Invited: <span className="font-num">{openInvite.email}</span> <span className="text-muted-foreground">· until {dayIN(openInvite.expiresAt)}</span></span>
                 <input type="hidden" name="tenantId" value={id} />
                 <Submit variant="secondary">Resend sign-in link</Submit>
               </ActionForm>

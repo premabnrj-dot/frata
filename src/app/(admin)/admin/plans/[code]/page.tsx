@@ -16,7 +16,7 @@ import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Edit plan' }
 
-const field = `${FIELD} font-mono`
+const field = `${FIELD} font-num`
 
 export default async function EditPlanPage({ params }: { params: Promise<{ code: string }> }) {
   const staff = await requireStaff(ADMIN_ONLY)

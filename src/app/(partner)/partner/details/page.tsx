@@ -19,8 +19,8 @@ export default async function PartnerDetailsPage() {
   if (!partnerCan(p.memberRole, 'seeDetails')) return <Panel title="Only the partner’s owner sees these details" />
   const services = p.services.map((s) => PARTNER_SERVICES.find(([k]) => k === s)?.[1] ?? s).join(', ')
   const rows: [string, React.ReactNode][] = [
-    ['Name', p.name], ['Studio', p.businessName || '—'], ['Email', <span key="e" className="font-mono">{p.email}</span>],
-    ['WhatsApp', <span key="w" className="font-mono">{formatPhone(p.phone)}</span>], ['City', p.city], ['Does', services || '—'],
+    ['Name', p.name], ['Studio', p.businessName || '—'], ['Email', <span key="e" className="font-num">{p.email}</span>],
+    ['WhatsApp', <span key="w" className="font-num">{formatPhone(p.phone)}</span>], ['City', p.city], ['Does', services || '—'],
     ['Work', p.workUrl || '—'], ['Approved', p.approvedAt ? dayIN(p.approvedAt) : '—'],
     ['Terms', `${PARTNER_TERMS.shareBps / 100}% for ${PARTNER_TERMS.shareMonths} months · version ${PARTNER_TERMS.version}`],
   ]

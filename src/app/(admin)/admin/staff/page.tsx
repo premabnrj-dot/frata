@@ -29,7 +29,7 @@ export default async function StaffPage() {
         <Section title={<span className="flex items-center gap-2">Asking to add a passkey <Badge tone="warn">{asking.length}</Badge></span>}>
           {asking.map((r) => (
             <div key={r.userId} className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-              <span className="font-mono text-sm">{r.email}</span>
+              <span className="font-num text-sm">{r.email}</span>
               <ApproveRequest email={r.email} />
             </div>
           ))}
@@ -40,7 +40,7 @@ export default async function StaffPage() {
         <DataTableBody>
           {rows.map((r) => (
             <DataTableRow key={r.userId}>
-              <Td cell="a" className="font-mono">{r.email}</Td>
+              <Td cell="a" className="font-num">{r.email}</Td>
               <Td cell="d"><Badge tone={r.role === 'admin' ? 'info' : 'neutral'}>{r.role === 'admin' ? 'Admin' : 'Support'}</Badge></Td>
               <Td cell="c">
                 <div className="grid gap-2">

@@ -165,5 +165,5 @@ export function BottomBar({ label, tabs, more, moreFoot, ink = false }: { label:
  */
 export function NavPill({ n, label, max = 999 }: { n: number; label: string; max?: number }) {
   if (!n) return null
-  return <span className="ml-auto rounded-full bg-warn px-1.5 font-mono text-xs font-semibold leading-[18px] text-warn-text tabular-nums"><span className="sr-only">, </span>{n > max ? `${max}+` : n}<span className="sr-only"> {label}</span></span>
+  return <span className="ml-auto rounded-full bg-warn px-1.5 font-num text-xs font-semibold leading-[18px] text-warn-text tabular-nums"><span className="sr-only">, </span>{n > max ? `${max}+` : n}<span className="sr-only"> {label}</span></span>
 }

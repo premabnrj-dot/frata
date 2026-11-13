@@ -82,7 +82,7 @@ export function NewStoreForm({ shopDomain }: { shopDomain: string }) {
       <div className="space-y-1.5">
         <div className="flex items-center"><label htmlFor="pickup" className="text-sm font-medium">Pickup pincode</label><InfoTip about="pickup pincode">Where the brand’s parcels are collected. Delivery days are counted from here.</InfoTip></div>
         <input id="pickup" value={pickup} inputMode="numeric" maxLength={6} aria-invalid={error?.field === 'pickup' || undefined} aria-describedby={error?.field === 'pickup' ? errorId('pickup') : undefined}
-          onChange={(e) => { setPickup(e.target.value.replace(/\D/g, '')); setError(null) }} className={`${field} w-40 font-mono`} />
+          onChange={(e) => { setPickup(e.target.value.replace(/\D/g, '')); setError(null) }} className={`${field} w-40 font-num`} />
         {place && <p className="text-sm text-muted-foreground">{place === 'unknown' ? 'Pincode not found' : `${place.city}, ${place.state}`}</p>}
         {msg('pickup')}
       </div>

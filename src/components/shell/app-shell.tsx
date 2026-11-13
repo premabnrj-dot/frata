@@ -97,7 +97,7 @@ function Account({ email, ink }: { email: string | null; ink: boolean }) {
   if (!email) return null
   return (
     <form action={signOutAction} className="flex items-center gap-2 px-2 py-1.5">
-      <span className={`min-w-0 flex-1 truncate font-mono text-xs ${ink ? 'text-ink-foreground/70' : 'text-muted-foreground'}`} title={email}>{email}</span>
+      <span className={`min-w-0 flex-1 truncate font-num text-xs ${ink ? 'text-ink-foreground/70' : 'text-muted-foreground'}`} title={email}>{email}</span>
       <button type="submit" className={`inline-flex min-h-6 shrink-0 items-center rounded-md px-1.5 text-xs font-medium underline-offset-2 hover:underline ${ink ? '' : 'text-foreground'}`}>Sign out</button>
     </form>
   )

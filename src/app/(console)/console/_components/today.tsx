@@ -68,7 +68,7 @@ export function Today({ s, setup, now, share }: { s: TodaySummary | null; setup:
           {/* Line 1: the number and what to know first (risk, or a refund due); line 2: who, how much, how long. On a
               phone the name truncates, never the badge or the amount's line. */}
           <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <b className="font-mono text-sm">{next.label}</b>
+            <b className="font-num text-sm">{next.label}</b>
             {next.state === 'refund_due' ? <Badge tone={STATE.refund_due.tone}>{STATE.refund_due.label}</Badge>
               : nextRisk === 'high' || nextRisk === 'medium' ? <Badge tone={nextRisk === 'high' ? 'danger' : 'warn'}>{RISK_LABEL[nextRisk]} risk</Badge>
               : nextRisk === null ? <span className="text-xs text-muted-foreground">Risk unavailable</span> : null}
@@ -100,12 +100,12 @@ export function Today({ s, setup, now, share }: { s: TodaySummary | null; setup:
         <Section title="Last 7 days" action={<Link href="/console/orders?tab=all" className="inline-flex min-h-6 items-center text-sm underline">All orders</Link>}>
           <div className="grid items-end gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
             <div className="flex gap-6 md:grid md:gap-3">
-              <p className="grid"><b className="font-mono text-xl font-semibold tabular-nums">{count(weekOrders)}</b><span className="text-xs text-muted-foreground">orders placed</span></p>
-              <p className="grid"><b className="font-mono text-xl font-semibold tabular-nums"><Money paise={paise(weekValue)} /></b><span className="inline-flex items-center text-xs text-muted-foreground">their value<InfoTip about="this value">Cancelled orders are left out.</InfoTip></span></p>
+              <p className="grid"><b className="font-num text-xl font-semibold tabular-nums">{count(weekOrders)}</b><span className="text-xs text-muted-foreground">orders placed</span></p>
+              <p className="grid"><b className="font-num text-xl font-semibold tabular-nums"><Money paise={paise(weekValue)} /></b><span className="inline-flex items-center text-xs text-muted-foreground">their value<InfoTip about="this value">Cancelled orders are left out.</InfoTip></span></p>
             </div>
             <div>
               {/* Each day's count over its bar, and today said to be still going (visual changes, owner-approved 2026-11-08). */}
-              <div className="mb-1 grid grid-cols-7 gap-1.5 text-center font-mono text-xs tabular-nums text-muted-foreground" aria-hidden>
+              <div className="mb-1 grid grid-cols-7 gap-1.5 text-center font-num text-xs text-muted-foreground" aria-hidden>
                 {bars.map((b) => <span key={b.day}>{b.orders}</span>)}
               </div>
               <div role="img" aria-label={`Orders placed per day: ${bars.map((b) => `${b.today ? 'today so far' : weekdayShortIN(b.day)} ${b.orders}`).join(', ')}`} className="grid h-16 grid-cols-7 items-end gap-1.5">

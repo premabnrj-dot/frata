@@ -41,24 +41,24 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                   <span className="truncate font-medium">{r.businessName || r.name}</span>
                   <span className="text-muted-foreground">{sinceIN(r.appliedAt, new Date())}</span>
                   <span className="truncate text-muted-foreground">{r.name} · {r.city}</span>
-                  <span className="text-right font-mono text-xs">{view === 'approved' ? `${r.stores} stores` : BRANDS_NOW.find(([k]) => k === r.brandsNow)?.[1]}</span>
+                  <span className="text-right font-num text-xs">{view === 'approved' ? `${r.stores} stores` : BRANDS_NOW.find(([k]) => k === r.brandsNow)?.[1]}</span>
                 </Link>
               </li>
             ))}
           </ul></Section>
           {open && (
             <Section title={open.businessName || open.name}>
-              <p className="-mt-3 font-mono text-xs text-muted-foreground">{open.email}</p>
+              <p className="-mt-3 font-num text-xs text-muted-foreground">{open.email}</p>
               <dl className="grid grid-cols-[7rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
                 <dt className="text-muted-foreground">Name</dt><dd>{open.name}</dd>
-                <dt className="text-muted-foreground">WhatsApp</dt><dd className="font-mono">{formatPhone(open.phone)}</dd>
+                <dt className="text-muted-foreground">WhatsApp</dt><dd className="font-num">{formatPhone(open.phone)}</dd>
                 <dt className="text-muted-foreground">City</dt><dd>{open.city}</dd>
                 <dt className="text-muted-foreground">Does</dt><dd>{open.services.map((s) => PARTNER_SERVICES.find(([k]) => k === s)?.[1] ?? s).join(', ') || '—'}</dd>
                 <dt className="text-muted-foreground">Work</dt><dd className="break-all">{open.workUrl || '—'}</dd>
                 <dt className="text-muted-foreground">Brands now</dt><dd>{BRANDS_NOW.find(([k]) => k === open.brandsNow)?.[1]}</dd>
                 <dt className="text-muted-foreground">Terms</dt><dd>Version {open.termsVersion}, {dateTimeIN(open.agreedAt)}</dd>
                 {open.declineReason && <><dt className="text-muted-foreground">Declined</dt><dd>{open.declineReason}</dd></>}
-                {open.approvedAt && <><dt className="text-muted-foreground">Stores</dt><dd className="font-mono">{open.stores}</dd></>}
+                {open.approvedAt && <><dt className="text-muted-foreground">Stores</dt><dd className="font-num">{open.stores}</dd></>}
               </dl>
               {view === 'review' && staff.role !== 'admin' ? <p className="text-sm text-muted-foreground">A Frrata admin decides applications.</p> : view === 'review' ? (
                 <div className="space-y-3 border-t border-border pt-4">
@@ -84,7 +84,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                       <ul className="space-y-1 text-sm">
                         {team.map((m) => (
                           <li key={m.id} className="flex flex-wrap items-center gap-2">
-                            <span className="min-w-0 flex-1 truncate font-mono text-xs">{m.email}</span>
+                            <span className="min-w-0 flex-1 truncate font-num text-xs">{m.email}</span>
                             <Badge tone={m.role === 'owner' ? 'info' : 'neutral'}>{m.role === 'owner' ? 'Owner' : 'Lead'}</Badge>
                             <span className="text-xs text-muted-foreground">{m.role === 'owner' ? 'every store' : m.acceptedAt ? `${m.stores} ${m.stores === 1 ? 'store' : 'stores'}` : 'invited'}</span>
                           </li>

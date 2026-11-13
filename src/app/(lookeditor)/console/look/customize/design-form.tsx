@@ -39,7 +39,7 @@ function Example({ label, value: stored, example, max, multiline, onChange }: { 
   return (
     <div className="space-y-1.5">
       <label htmlFor={id} className="flex items-center gap-2 text-sm font-medium">{label}{!value.trim() && <span className="rounded-full bg-warn px-2 py-0.5 text-xs font-medium text-warn-text">Example</span>}
-        <span className="ml-auto font-mono text-xs font-normal text-muted-foreground">{value.length}/{max}</span></label>
+        <span className="ml-auto font-num text-xs font-normal text-muted-foreground">{value.length}/{max}</span></label>
       {multiline
         ? <textarea id={id} value={value} maxLength={max} rows={4} placeholder={example} onChange={(e) => set(e.target.value)} className={`${field} py-2`} />
         : <input id={id} value={value} maxLength={max} placeholder={example} onChange={(e) => set(e.target.value)} className={`${field} h-11 md:h-9`} />}
@@ -59,7 +59,7 @@ function Questions({ b, items, set }: { b: Extract<LeafBlock, { kind: 'accordion
   const item = (i: number, v: Partial<{ q: string; a: string }>) => set(items.map((x, j) => (j === i ? { ...x, ...v } : x)))
   return (
     <div className="space-y-2">
-      <p className="flex items-center text-sm font-medium">{b.fill!.label}<span className="ml-auto font-mono text-xs font-normal text-muted-foreground">{items.length}/{MAX_ITEMS}</span></p>
+      <p className="flex items-center text-sm font-medium">{b.fill!.label}<span className="ml-auto font-num text-xs font-normal text-muted-foreground">{items.length}/{MAX_ITEMS}</span></p>
       <ol className="space-y-2">
         {items.map((x, i) => (
           <li key={i} className="space-y-2 rounded-xl border border-input p-2.5">

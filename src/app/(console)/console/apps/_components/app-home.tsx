@@ -45,7 +45,7 @@ export function AppHome({ k, tab, tabs = [], first = 'Overview', badge, meta, pr
         <div className="grid max-w-3xl gap-3 sm:grid-cols-2">
           {offer.selfTrial && (
             <Section className="sm:col-span-2">
-              <p className="text-sm">Then <b className="font-mono">{formatInr(paise(offer.selfTrial.monthly))}</b>/month + GST from {dayMonthLongIN(offer.selfTrial.paidFrom)}</p>
+              <p className="text-sm">Then <b className="font-num">{formatInr(paise(offer.selfTrial.monthly))}</b>/month + GST from {dayMonthLongIN(offer.selfTrial.paidFrom)}</p>
             </Section>
           )}
           <AppFacts k={k} offer={offer} worksWith={worksWith} />

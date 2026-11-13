@@ -125,7 +125,7 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
                 <ol className="divide-y divide-border rounded-md border border-border">
                   {picked.map((p, i) => (
                     <li key={p.id} className="flex items-center gap-2 px-3 py-1.5 text-sm">
-                      <span className="w-6 font-mono text-xs text-muted-foreground">{i + 1}</span><span className="min-w-0 flex-1 truncate">{p.title}</span>
+                      <span className="w-6 font-num text-xs text-muted-foreground">{i + 1}</span><span className="min-w-0 flex-1 truncate">{p.title}</span>
                       <button type="button" aria-label={`Move ${p.title} up`} disabled={i === 0} className="px-1 disabled:opacity-30" onClick={() => { const a = [...d.productIds]; [a[i - 1], a[i]] = [a[i]!, a[i - 1]!]; set({ productIds: a }) }}>↑</button>
                       <button type="button" aria-label={`Move ${p.title} down`} disabled={i === picked.length - 1} className="px-1 disabled:opacity-30" onClick={() => { const a = [...d.productIds]; [a[i + 1], a[i]] = [a[i]!, a[i + 1]!]; set({ productIds: a }) }}>↓</button>
                       <button type="button" className="inline-flex min-h-6 items-center text-xs text-muted-foreground underline" onClick={() => set({ productIds: d.productIds.filter((x) => x !== p.id) })}>Remove</button>
@@ -153,7 +153,7 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
                           <option value="">Choose…</option>{attrOptions.map((o) => <option key={`${o.handle}|${o.value}`} value={`${o.handle}|${o.value}`}>{o.label}</option>)}
                         </select>) : <p className="py-2 text-xs text-muted-foreground">Add details (fabric, occasion…) to products first.</p>)}
                       {r.field === 'colour_family' && <select aria-label={`Colour family for rule ${i + 1}`} value={r.value} onChange={(e) => setRow(i, { value: e.target.value })} className={field}><option value="">Choose…</option>{families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select>}
-                      {(r.field === 'price_below' || r.field === 'price_at_least') && <input aria-label={`Price for rule ${i + 1}`} inputMode="decimal" value={r.value} placeholder="2000" {...mark(`rule:${i}`)} onChange={(e) => setRow(i, { value: e.target.value })} className={`${field} font-mono`} />}
+                      {(r.field === 'price_below' || r.field === 'price_at_least') && <input aria-label={`Price for rule ${i + 1}`} inputMode="decimal" value={r.value} placeholder="2000" {...mark(`rule:${i}`)} onChange={(e) => setRow(i, { value: e.target.value })} className={`${field} font-num`} />}
                       <FieldError name={`rule:${i}`} message={errors[`rule:${i}`]} />
                       {r.field === 'tag' && <input aria-label={`Tag for rule ${i + 1}`} value={r.value} maxLength={40} placeholder="Diwali 2026" onChange={(e) => setRow(i, { value: e.target.value })} className={field} />}
                       {r.field === 'in_stock' && <p className="py-2 text-xs text-muted-foreground">In stock, or taking pre-orders or made to order.</p>}
@@ -164,7 +164,7 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
               </ul>
               {d.rules.length < MAX_RULES && <button type="button" {...mark('rules')} className="inline-flex min-h-6 items-center text-sm underline" onClick={() => set({ rules: [...d.rules, { field: 'category', value: '' }] })}>+ Add a rule</button>}
               <FieldError name="rules" message={errors.rules} />
-              <p role="status" className="rounded-md bg-accent px-3 py-2 text-sm">{preview ? <><span className="font-mono font-semibold">{preview.count}</span> product{preview.count === 1 ? '' : 's'} match now{preview.sample.length ? `: ${preview.sample.join(', ')}${preview.count > preview.sample.length ? '…' : ''}` : ''}</> : 'Counting…'}</p>
+              <p role="status" className="rounded-md bg-accent px-3 py-2 text-sm">{preview ? <><span className="font-num font-semibold">{preview.count}</span> product{preview.count === 1 ? '' : 's'} match now{preview.sample.length ? `: ${preview.sample.join(', ')}${preview.count > preview.sample.length ? '…' : ''}` : ''}</> : 'Counting…'}</p>
             </div>
           )}
           <div className="space-y-1"><label htmlFor="c-sort" className="block text-sm font-medium">Order on your shop</label>

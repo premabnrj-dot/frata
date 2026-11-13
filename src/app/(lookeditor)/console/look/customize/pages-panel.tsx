@@ -51,7 +51,7 @@ function Questions({ items, set, answers }: { items: FaqItem[]; set: (x: FaqItem
   const item = (i: number, v: Partial<{ q: string; a: string }>) => set(items.map((x, j) => (j === i ? ({ ...x, ...v } as FaqItem) : x)))
   return (
     <div className="space-y-2">
-      <p className="flex items-center text-sm font-medium">Questions<span className="ml-auto font-mono text-xs font-normal text-muted-foreground">{items.length}/{MAX_FAQ}</span></p>
+      <p className="flex items-center text-sm font-medium">Questions<span className="ml-auto font-num text-xs font-normal text-muted-foreground">{items.length}/{MAX_FAQ}</span></p>
       <ol className="space-y-2">
         {items.map((x, i) => (
           <li key={i} className="space-y-2 rounded-xl border border-input p-2.5">
@@ -148,7 +148,7 @@ export function AddPage({ open, onClose, onAdded, hasFaq, count, thumbs }: { ope
   }
   const full = count >= 20
   return (
-    <Dialog open={open} onClose={onClose} title="Add a page" error={error} actions={<><span className="mr-auto self-center font-mono text-xs text-muted-foreground">{count} of 20</span><button type="button" data-autofocus onClick={onClose} className="min-h-10 rounded-md border border-input px-4 text-sm">Close</button></>}>
+    <Dialog open={open} onClose={onClose} title="Add a page" error={error} actions={<><span className="mr-auto self-center font-num text-xs text-muted-foreground">{count} of 20</span><button type="button" data-autofocus onClick={onClose} className="min-h-10 rounded-md border border-input px-4 text-sm">Close</button></>}>
       <ul className="grid gap-3 sm:grid-cols-2">
         {(['about', 'faq'] as const).map((t) => {
           const off = full || (t === 'faq' && hasFaq)

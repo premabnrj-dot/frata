@@ -17,7 +17,7 @@ export function CountTiles({ label, tiles }: { label: string; tiles: CountTile[]
           className={cn('grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-b border-border px-4 py-2.5 last:border-b-0 hover:bg-accent',
             'md:grid-cols-1 md:gap-1 md:rounded-md md:border md:bg-card md:py-3 md:last:border-b md:hover:border-input md:hover:bg-card')}>
           <span className={cn('text-sm', t.zero ? 'text-muted-foreground' : 'font-semibold md:font-normal md:text-muted-foreground')}>{t.label}</span>
-          <span className={cn('row-span-2 font-mono text-xl font-semibold tabular-nums md:row-span-1 md:text-2xl', t.zero && 'text-muted-foreground')}>{t.value}</span>
+          <span className={cn('row-span-2 font-num text-xl font-semibold tabular-nums md:row-span-1 md:text-2xl', t.zero && 'text-muted-foreground')}>{t.value}</span>
           <span className="text-xs text-muted-foreground">{t.line}</span>
         </Link>
       ))}

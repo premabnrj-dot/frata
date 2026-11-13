@@ -64,7 +64,7 @@ export function EditLine({ row, onPick, onQty, onRemove, onBack, asking, onAsk }
                   return (
                     <button key={c.variantId} type="button" aria-pressed={on} disabled={out && !on} onClick={() => onPick(c.variantId)}
                       className={cn(chip, on && 'border-primary bg-primary text-primary-foreground', mine && !on && 'border-dashed', out && !on && 'cursor-not-allowed line-through opacity-50')}>
-                      {label(c)}{on && left > 0 && left <= LOW_STOCK_AT && !mine ? <span className="font-mono">· {left} left</span> : null}
+                      {label(c)}{on && left > 0 && left <= LOW_STOCK_AT && !mine ? <span className="font-num">· {left} left</span> : null}
                     </button>
                   )
                 })}
@@ -74,7 +74,7 @@ export function EditLine({ row, onPick, onQty, onRemove, onBack, asking, onAsk }
               {gone ? null : (
                 <span className="inline-flex items-center rounded-md border border-input">
                   <button type="button" aria-label="One less" disabled={row.qty <= 1} onClick={() => onQty(row.qty - 1)} className="min-h-10 w-10 text-base font-semibold disabled:opacity-40 md:min-h-8 md:w-8">−</button>
-                  <span className="min-w-7 text-center font-mono tabular-nums" aria-live="polite">{row.qty}</span>
+                  <span className="min-w-7 text-center font-num" aria-live="polite">{row.qty}</span>
                   <button type="button" aria-label="One more" disabled={row.qty >= most} onClick={() => onQty(row.qty + 1)} className="min-h-10 w-10 text-base font-semibold disabled:opacity-40 md:min-h-8 md:w-8">+</button>
                 </span>
               )}
@@ -88,7 +88,7 @@ export function EditLine({ row, onPick, onQty, onRemove, onBack, asking, onAsk }
           </>
         )}
       </div>
-      <span className="text-right font-mono text-sm tabular-nums">
+      <span className="text-right font-num text-sm">
         {row.removed ? <s className="text-muted-foreground"><Money paise={paise(row.unitPrice * row.qty)} /></s> : <>{row.qty > 1 ? `${row.qty} × ` : ''}<Money paise={paise(row.unitPrice)} /></>}
       </span>
     </li>

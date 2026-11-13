@@ -73,7 +73,7 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
 
       {charges && valid && known && (
         <div className="flex items-center gap-4 rounded-lg bg-muted p-3">
-          <b className="font-mono text-2xl tabular-nums">{bps !== null ? `${bps / 100}%` : '—'}</b>
+          <b className="font-num text-2xl">{bps !== null ? `${bps / 100}%` : '—'}</b>
           <div className="min-w-0 flex-1 space-y-1.5 text-sm">
             <p>{price !== null ? `At ${rs(price)} a piece${inclusive ? ' including GST' : ''}` : ruleWords(rule)}</p>
             {rule.kind === 'slab' && price !== null && (() => {

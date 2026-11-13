@@ -93,7 +93,7 @@ export function StaffGate({ email, state, signOut }: { email: string; state: Gat
       <Section className="grid w-full max-w-sm gap-4">
         <Key />
         {body}
-        <p className="font-mono text-sm text-muted-foreground">{email}</p>
+        <p className="font-num text-sm text-muted-foreground">{email}</p>
         {signOut}
       </Section>
     </main>

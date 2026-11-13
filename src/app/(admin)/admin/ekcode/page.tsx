@@ -56,12 +56,12 @@ async function Overview({ staff, days }: { staff: Parameters<typeof ekStats>[0];
     <div className="grid gap-4">
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-4">
         {[['EkCode accounts', n(s.accounts)], ['Signed in · 30 days', n(s.active)], ['Shoppers on 2+ shops', n(s.multi_shop)], ['Peak codes a minute', n(s.peak_minute)]].map(([l, v]) => (
-          <div key={l} className="bg-card p-4"><dd className="font-mono text-2xl">{v}</dd><dt className="text-xs text-muted-foreground">{l}</dt></div>
+          <div key={l} className="bg-card p-4"><dd className="font-num text-2xl">{v}</dd><dt className="text-xs text-muted-foreground">{l}</dt></div>
         ))}
       </dl>
       <DataTable label="Sign-in, step by step">
         <DataTableHead><th>Step</th><th className="text-right">Count</th></DataTableHead>
-        <DataTableBody>{steps.map(([l, v]) => <DataTableRow key={l}><Td cell="a">{l}</Td><Td cell="c" className="text-right font-mono">{n(v)}</Td></DataTableRow>)}</DataTableBody>
+        <DataTableBody>{steps.map(([l, v]) => <DataTableRow key={l}><Td cell="a">{l}</Td><Td cell="c" className="text-right font-num">{n(v)}</Td></DataTableRow>)}</DataTableBody>
       </DataTable>
       <p className="text-sm">Codes delivered this month: <span className="font-mono">{n(s.codes_month)}</span> · Meta, ex GST: <span className="font-mono">₹{((s.codes_month * PER_MSG_PAISE) / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></p>
     </div>
@@ -80,7 +80,7 @@ async function Shops({ staff, days }: { staff: Parameters<typeof ekShops>[0]; da
             <Td cell="a" className="font-medium">{r.shop}</Td>
             <Td cell="c" className="text-right font-mono">{n(r.codes)}</Td>
             <Td cell="c" className="text-right font-mono">{r.codes && r.verified != null ? `${Math.round((r.verified / r.codes) * 100)}%` : '—'}</Td>
-            <Td cell="c" className="text-right font-mono">{n(r.continued)}</Td>
+            <Td cell="c" className="text-right font-num">{n(r.continued)}</Td>
             <Td cell="d">{r.paused_at ? <Badge tone="warn">Paused</Badge> : r.breaker_at ? <Badge tone="warn">Breaker</Badge> : <Badge tone="ok">OK</Badge>}{r.raised_cap ? <span className="ml-2 text-xs text-muted-foreground">cap {r.raised_cap}/day</span> : null}</Td>
             <Td cell="f" className="text-right">
               <ActionForm action={shopControlAction} className="flex flex-wrap justify-end gap-2">
@@ -127,7 +127,7 @@ async function Controls({ staff }: { staff: Parameters<typeof ekSettings>[0] }) 
       </Section>
       <Section title="Block a number">
       <ActionForm action={blockAction} className="flex flex-wrap items-end gap-2">
-        <label className="grid gap-1 text-sm font-medium">Number<input name="phone" inputMode="numeric" maxLength={14} className="h-11 w-40 rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-mark md:h-9" /><FieldMessage name="phone" /></label>
+        <label className="grid gap-1 text-sm font-medium">Number<input name="phone" inputMode="numeric" maxLength={14} className="h-11 w-40 rounded-md border border-input bg-card px-3 font-num text-sm aria-invalid:border-danger-mark md:h-9" /><FieldMessage name="phone" /></label>
         <label className="grid gap-1 text-sm font-medium">Why<input name="reason" required minLength={3} maxLength={500} data-error="Say why, in a few words." className="h-11 w-56 rounded-md border border-input bg-card px-3 text-sm font-normal aria-invalid:border-danger-mark md:h-9" /><FieldMessage name="reason" /></label>
         <select name="lift" className="h-11 rounded-md border border-input bg-card px-2 text-sm md:h-9" aria-label="Block or unblock"><option value="0">Block</option><option value="1">Unblock</option></select>
         <Submit variant="secondary">Apply to this number</Submit>

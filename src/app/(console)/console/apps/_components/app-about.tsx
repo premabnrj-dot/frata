@@ -69,7 +69,7 @@ export function AppAbout({ k, offer, worksWith, canManage, askHref, notice, afte
       {/* Phone: the price and the button in a bar above the bottom nav (architecture review A9). */}
       <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-20 border-t border-border bg-card px-4 py-3 md:hidden">
         <div className="flex items-center justify-between gap-3">
-          <p className="min-w-0 font-mono text-sm font-semibold">{offer.price}</p>
+          <p className="min-w-0 font-num text-sm font-semibold">{offer.price}</p>
           <div className="shrink-0"><AppAction k={k} name={def.name} action={offer.action} canManage={canManage} askHref={askHref} /></div>
         </div>
       </div>

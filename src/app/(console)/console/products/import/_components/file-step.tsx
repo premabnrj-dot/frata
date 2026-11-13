@@ -28,10 +28,10 @@ export function FileStep({ onFile, reading, running, onStop, stopping }: {
   return (
     <>
       {running && (
-        <Section title="Import paused" action={<span className="font-mono text-sm">{running.fileName}</span>}>
+        <Section title="Import paused" action={<span className="font-num text-sm">{running.fileName}</span>}>
           <Bar done={running.next} total={running.chunks} label={`Part ${running.next} of ${running.chunks} imported`} />
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm text-muted-foreground"><span className="font-mono tabular-nums">{running.added.toLocaleString('en-IN')}</span> added · {running.next} of {running.chunks} parts</span>
+            <span className="text-sm text-muted-foreground"><span className="font-num">{running.added.toLocaleString('en-IN')}</span> added · {running.next} of {running.chunks} parts</span>
             <span className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={onStop} disabled={stopping}>Stop here</Button>
               {!running.costsOnly && <Button onClick={() => input.current?.click()} disabled={!!reading}>Choose the file again</Button>}
@@ -48,9 +48,9 @@ export function FileStep({ onFile, reading, running, onStop, stopping }: {
         <Icon name="upload" className="size-8 text-muted-foreground" />
         {reading ? (
           <div className="grid w-full max-w-xs gap-2" role="status">
-            <b className="text-base">Reading <span className="font-mono">{reading.name}</span></b>
+            <b className="text-base">Reading <span className="font-num">{reading.name}</span></b>
             <Bar done={reading.csv ? Math.min(reading.rows, 1) : 1} total={reading.csv ? 1 : 3} label={`Reading ${reading.name}`} />
-            {reading.rows > 0 && <span className="text-xs text-muted-foreground"><span className="font-mono tabular-nums">{reading.rows.toLocaleString('en-IN')}</span> rows read</span>}
+            {reading.rows > 0 && <span className="text-xs text-muted-foreground"><span className="font-num">{reading.rows.toLocaleString('en-IN')}</span> rows read</span>}
           </div>
         ) : (
           <>

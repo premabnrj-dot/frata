@@ -42,7 +42,7 @@ export function AddItem({ orderId, taken, onAdd }: { orderId: string; taken: Set
         <ul className="divide-y divide-border">
           {found.map((r) => (
             <li key={r.productId} className="grid gap-1.5 py-2 text-sm">
-              <span className="flex justify-between gap-3"><span className="font-medium">{r.title}</span><span className="font-mono tabular-nums"><Money paise={paise(Math.min(...r.choices.map((c) => c.price)))} /></span></span>
+              <span className="flex justify-between gap-3"><span className="font-medium">{r.title}</span><span className="font-num"><Money paise={paise(Math.min(...r.choices.map((c) => c.price)))} /></span></span>
               <div role="group" aria-label={`${r.title}: ${r.options.join(' and ') || 'options'}`} className="flex flex-wrap gap-1.5">
                 {r.choices.map((c) => {
                   const out = (r.room[c.variantId] ?? 0) <= 0 || taken.has(c.variantId)

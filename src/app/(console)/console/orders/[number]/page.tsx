@@ -123,7 +123,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
     <>
       <PageHeader title={label} back={{ href: '/console/orders', label: 'Orders' }}
         badges={<><Badge tone={pay.tone}><Icon name={pay.icon} className="mr-1 inline size-3.5 align-[-2px]" />{pay.label}</Badge><Badge tone={s.tone}>{s.label}</Badge></>}
-        meta={<>Placed {dateTimeIN(o.placedAt)}{o.invoiceNumber ? <> · Invoice <span className="font-mono">{o.invoiceNumber}</span></> : null}{d.credits.length ? <> · Credit {d.credits.length === 1 ? 'note' : 'notes'} {d.credits.map((c, i) => <span key={c.number}>{i ? ', ' : ''}<span className="font-mono">{c.number}</span></span>)}</> : null}</>}
+        meta={<>Placed {dateTimeIN(o.placedAt)}{o.invoiceNumber ? <> · Invoice <span className="font-num">{o.invoiceNumber}</span></> : null}{d.credits.length ? <> · Credit {d.credits.length === 1 ? 'note' : 'notes'} {d.credits.map((c, i) => <span key={c.number}>{i ? ', ' : ''}<span className="font-num">{c.number}</span></span>)}</> : null}</>}
         actions={<OrderActions orderId={o.id} number={label} primary={primary} waiting={waiting ? `Waiting for ${inr(waiting.asked)} from the shopper` : null}
           print={{ slip: may('print', state, role) ? printHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? printHref('invoice', [o.number]) : null }}
           pdf={{ slip: may('print', state, role) ? pdfHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? pdfHref('invoice', [o.number]) : null, credit: d.credits.length ? pdfHref('credit', [o.number]) : null }}
@@ -171,7 +171,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
                     {l.kind === 'preorder' ? <span className="block text-xs text-warn-text">Pre-order{l.shipsBy ? ` · ships by ${dayMonthIN(new Date(`${l.shipsBy}T00:00:00+05:30`))}` : ''}</span> : null}
                     {l.kind === 'made_to_order' ? <span className="block text-xs text-muted-foreground">Made to order · {l.leadMinDays}–{l.leadMaxDays} days</span> : null}
                   </span>
-                  <span className="text-right font-mono tabular-nums">{l.qty} × <Money paise={paise(l.unitPrice)} /></span>
+                  <span className="text-right font-num">{l.qty} × <Money paise={paise(l.unitPrice)} /></span>
                 </li>
               ))}
             </ul>
@@ -211,7 +211,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
               <div className="space-y-1 text-sm">
                 <p className="font-medium">{o.customerName ? <Name>{o.customerName}</Name> : '—'}</p>
                 {[o.area ? `${o.addressLine}, ${o.area}` : o.addressLine, o.landmark, `${o.city} ${o.pincode}`, o.state].filter((x) => x && x.trim()).map((x) => <p key={x}>{x}</p>)}
-                {o.phone ? <p className="flex flex-wrap items-center gap-x-3 pt-1"><span className="font-mono">{o.phone}</span>
+                {o.phone ? <p className="flex flex-wrap items-center gap-x-3 pt-1"><span className="font-num">{o.phone}</span>
                   <a href={`tel:+91${o.phone}`} className="inline-flex min-h-6 items-center underline underline-offset-2">Call</a>
                   <a href={wa(o.phone, `Hello, this is about your order ${label}.`)} target="_blank" rel="noopener" className="inline-flex min-h-6 items-center underline underline-offset-2">WhatsApp</a></p> : null}
                 {o.cancelReason ? <p className="pt-2 text-muted-foreground">Cancelled: {CANCEL_LABEL[o.cancelReason as CancelReason] ?? o.cancelReason}{o.cancelNote ? ` — ${o.cancelNote}` : ''}</p> : null}

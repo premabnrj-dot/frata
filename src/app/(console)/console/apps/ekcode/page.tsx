@@ -58,7 +58,7 @@ export default async function EkcodePage({ searchParams }: { searchParams: Promi
         {stats.map((st) => (
           <div key={st.label} className="grid min-w-0 gap-0.5 bg-card p-3">
             <dt className="text-xs text-muted-foreground">{st.label}</dt>
-            <dd className="font-mono text-lg font-semibold tabular-nums">{st.value}</dd>
+            <dd className="font-num text-lg font-semibold tabular-nums">{st.value}</dd>
           </div>
         ))}
       </dl>,

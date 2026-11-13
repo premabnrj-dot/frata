@@ -32,7 +32,7 @@ export default async function ImportPage() {
               {data.history.map((j) => (
                 <DataTableRow key={j.id} dimmed={j.draftsDeleted}>
                   <Td cell="c" className="whitespace-nowrap text-muted-foreground">{dateTimeIN(j.createdAt)}</Td>
-                  <Td cell="a" className="font-mono [overflow-wrap:anywhere]">{j.fileName}</Td>
+                  <Td cell="a" className="font-num [overflow-wrap:anywhere]">{j.fileName}</Td>
                   <Td cell="b" className="text-right"><Numeric>{j.added}</Numeric><span className="md:hidden"> added</span></Td>
                   <Td cell="hide" className="text-right"><Numeric>0</Numeric></Td>
                   <Td cell="e" className="[overflow-wrap:anywhere]">{j.by ?? 'Frrata support'}</Td>

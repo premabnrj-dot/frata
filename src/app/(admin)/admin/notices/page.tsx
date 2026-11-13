@@ -52,7 +52,7 @@ export default async function AdminNoticesPage() {
                 <DataTableRow key={b.batch}>
                   <Td cell="a">{b.title}</Td>
                   <Td cell="d"><Badge tone={b.required ? 'warn' : 'neutral'}>{TYPE_LABEL[b.type as keyof typeof TYPE_LABEL] ?? b.type}</Badge></Td>
-                  <Td cell="b" className="text-right font-mono tabular-nums">{b.shops}</Td>
+                  <Td cell="b" className="text-right font-num">{b.shops}</Td>
                   <Td cell="c">{dateTimeIN(b.at)}</Td>
                 </DataTableRow>
               ))}

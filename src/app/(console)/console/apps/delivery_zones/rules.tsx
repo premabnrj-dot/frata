@@ -72,7 +72,7 @@ function Rules({ rules, count, q, page, pages, fromSettings, canEdit }: Props) {
               <DataTableRow key={r.pincode}>
                 <Td cell="a"><span className="font-mono">{r.pincode}</span></Td>
                 <Td cell="c">{r.place ?? '—'}</Td>
-                <Td cell="b">{WORDS[r.rule]}{r.rule === 'cod_max' && r.codMax ? <span className="font-mono"> ₹{(r.codMax / 100).toLocaleString('en-IN')}</span> : null}</Td>
+                <Td cell="b">{WORDS[r.rule]}{r.rule === 'cod_max' && r.codMax ? <span className="font-num"> ₹{(r.codMax / 100).toLocaleString('en-IN')}</span> : null}</Td>
                 <Td cell="e" className="text-muted-foreground">{r.note ?? '—'}</Td>
                 {canEdit && <Td cell="f" className="text-right"><Button variant="ghost" disabled={busy === r.pincode} onClick={() => remove(r.pincode)}>Remove</Button></Td>}
               </DataTableRow>

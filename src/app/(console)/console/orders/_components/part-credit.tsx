@@ -50,7 +50,7 @@ export function PartCreditDialog({ open, number, lines, inclusive, busy, onClose
                   {l.left ? <>
                     <span className="inline-flex items-center rounded-md border border-input">
                       <button type="button" aria-label={`Fewer ${l.title}`} disabled={!n} onClick={() => step(-1)} className="grid size-8 place-items-center disabled:opacity-40">−</button>
-                      <span className="w-6 text-center font-mono text-sm tabular-nums" aria-live="polite">{n}</span>
+                      <span className="w-6 text-center font-num text-sm" aria-live="polite">{n}</span>
                       <button type="button" aria-label={`More ${l.title}`} disabled={n >= l.left} onClick={() => step(1)} className="grid size-8 place-items-center disabled:opacity-40">+</button>
                     </span>
                     <span className="w-10 text-right text-xs text-muted-foreground">of {l.left}</span>
