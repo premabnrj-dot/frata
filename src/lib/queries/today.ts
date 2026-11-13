@@ -6,7 +6,7 @@ import { orderPrefix } from '@/domains/signup/slug'
 import { istDayStart } from '@/domains/time/day'
 import { enteredAtSql, inTabSql, momentColumns, standingSql, openSql } from '@/lib/db/order-predicates'
 import { shopSettings, tenants } from '@/lib/db/schema'
-import { orders } from '@/lib/db/schema-orders'
+import { orderLines, orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { queueCountsWith } from './orders'
 import { riskFactsWith } from './order-risk'
@@ -28,6 +28,8 @@ const RISK_TIMEOUT_MS = 2000
 export type NextOrder = {
   id: string; number: number; label: string; customerName: string; total: number; cod: boolean
   state: OrderState; since: Date; risk: Risk['level'] | null
+  /** Where it goes and how many pieces ("Jaipur · 2 items", Neel § Screens · Home). */
+  city: string | null; items: number
 }
 
 export type TodaySummary = {
@@ -35,6 +37,8 @@ export type TodaySummary = {
   /** Oldest entry (enteredAt) in To pack and On hold; To confirm's is `next.since`. */
   oldest: { to_pack: Date | null; on_hold: Date | null }
   next: NextOrder | null
+  /** The first five to confirm, oldest first (Home's "Next to confirm", Neel N1); `next` is the first of them. */
+  nextFive: NextOrder[]
   /** High-risk orders waiting in To confirm; null when the risk read failed or timed out. */
   high: number | null
   /** Standing orders (placed, not cancelled) by IST day, over the last 7 IST days. Value in paise. */
@@ -47,13 +51,14 @@ export async function todaySummary(tenantId: string, now: Date): Promise<TodaySu
   return withTenant(tenantId, async (tx) => {
     const day = sql<string>`((${orders.placedAt} at time zone 'Asia/Kolkata')::date)::text`
     // Five reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
-    const [counts, [w], [n], [p], week] = await Promise.all([queueCountsWith(tx, tenantId, now), tx.select({
+    const [counts, [w], five, [p], week] = await Promise.all([queueCountsWith(tx, tenantId, now), tx.select({
       to_pack: sql<string | null>`min(${enteredAtSql(now)}) filter (where ${inTabSql('to_pack', now)})`,
       on_hold: sql<string | null>`min(${enteredAtSql(now)}) filter (where ${inTabSql('on_hold', now)})`,
     }).from(orders).where(and(eq(orders.tenantId, tenantId), openSql())), // open orders only: the partial index (1D·7)
-    tx.select({ id: orders.id, number: orders.number, customerName: orders.customerName, total: orders.total, ...momentColumns, entered: sql<string | null>`${enteredAtSql(now)}` })
+    tx.select({ id: orders.id, number: orders.number, customerName: orders.customerName, total: orders.total, city: orders.city, ...momentColumns, entered: sql<string | null>`${enteredAtSql(now)}`,
+      items: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l where l.order_id = "orders"."id" and l.tenant_id = ${tenantId} and l.removed_at is null)` })
       .from(orders).where(and(eq(orders.tenantId, tenantId), inTabSql('to_confirm', now)))
-      .orderBy(asc(enteredAtSql(now)), asc(orders.number)).limit(1),
+      .orderBy(asc(enteredAtSql(now)), asc(orders.number)).limit(5),
     tx.select({ prefix: shopSettings.orderPrefix, name: tenants.name }).from(tenants)
       .leftJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)),
     tx.select({ day, orders: sql<number>`count(*)::int`, value: sql<string>`coalesce(sum(${orders.total}), 0)::bigint` })
@@ -77,15 +82,16 @@ export async function todaySummary(tenantId: string, now: Date): Promise<TodaySu
     })
     const levels = facts ? new Map([...facts].map(([id, f]) => [id, risk(f).level])) : null
 
-    const next: NextOrder | null = n ? {
+    const nextFive: NextOrder[] = five.map((n) => ({
       id: n.id, number: n.number, label: `${prefix}-${n.number}`, customerName: n.customerName, total: Number(n.total),
       cod: currentMethod(n) === 'cod', state: orderState(n, now), since: asDate(n.entered) ?? n.placedAt,
       // Missing from the map (it arrived after the risk read) is unknown, never another order's level.
-      risk: levels?.get(n.id) ?? null,
-    } : null
+      risk: levels?.get(n.id) ?? null, city: n.city, items: Number(n.items),
+    }))
+    const next = nextFive[0] ?? null
 
     return {
-      counts, next,
+      counts, next, nextFive,
       oldest: { to_pack: asDate(w?.to_pack), on_hold: asDate(w?.on_hold) },
       high: levels ? [...levels.values()].filter((l) => l === 'high').length : null,
       week: week.map((r) => ({ day: r.day, orders: Number(r.orders), value: Number(r.value) })),

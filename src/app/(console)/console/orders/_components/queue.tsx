@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from 'react'
 import { DataTable, DataTableBody, DataTableHead, Td } from '@/components/data/data-table'
 import { Name } from '@/components/data/name'
 import { Money } from '@/components/data/numeric'
-import { Badge } from '@/components/ui/badge'
+import { Badge, Tag } from '@/components/ui/badge'
+import { BulkBar } from '@/components/data/bulk-bar'
 import { Button, button } from '@/components/ui/button'
 import { KeySheet } from '@/components/ui/key-sheet'
 import { useToast } from '@/components/ui/toast'
@@ -178,53 +179,53 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
   return (
     <>
       {count > 0 ? (
-        <div role="region" aria-label="Selected orders" className="sticky top-[var(--shell-top,0px)] z-10 flex flex-wrap items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm">
-          <span className="font-medium">{count} selected</span>
+        <BulkBar count={count} label="Selected orders">
           {/* What the picked rows can take: Delivered for those on their way; Confirm and Hold for the rest (a mixed pick on All). */}
-          {onWay ? <Button onClick={() => bulkDelivered()} aria-disabled={busy}>Delivered</Button> : null}
-          {others ? <><Button variant={onWay ? 'secondary' : 'primary'} onClick={() => bulk('confirm')} aria-disabled={busy}>Confirm</Button>
-            <Button variant="secondary" onClick={() => bulk('hold')} aria-disabled={busy}>Hold</Button></> : null}
+          {onWay ? <Button size="sm" onClick={() => bulkDelivered()} aria-disabled={busy}>Delivered</Button> : null}
+          {others ? <><Button size="sm" variant={onWay ? 'secondary' : 'primary'} onClick={() => bulk('confirm')} aria-disabled={busy}>Confirm {count}</Button>
+            <Button size="sm" variant="secondary" onClick={() => bulk('hold')} aria-disabled={busy}>Put on hold</Button></> : null}
           {/* Slips for the selected orders that have one, in the queue's order (the print page takes at most 50). */}
-          {printable.length ? <Link prefetch={false} href={printHref('slip', printable)} className={button({ variant: 'secondary' })}>Print {printable.length === 1 ? 'slip' : `${printable.length} slips`}</Link> : null}
+          {printable.length ? <Link prefetch={false} href={printHref('slip', printable)} className={button({ variant: 'secondary', size: 'sm' })}>Print {printable.length === 1 ? 'slip' : `${printable.length} slips`}</Link> : null}
           {/* The same slips as one PDF, on A4 or a 4×6 thermal label (Documents D1); the size is remembered on this device. */}
           {printable.length ? <>
-            <a href={pdfHref('slip', printable, slipSize)} className={button({ variant: 'secondary' })}>Download {printable.length === 1 ? 'slip' : `${printable.length} slips`} (PDF)</a>
+            <a href={pdfHref('slip', printable, slipSize)} className={button({ variant: 'secondary', size: 'sm' })}>Download {printable.length === 1 ? 'slip' : `${printable.length} slips`} (PDF)</a>
             <label className="sr-only" htmlFor="slip-size">Slip size</label>
-            <select id="slip-size" value={slipSize} onChange={(e) => pickSize(e.target.value === 'label' ? 'label' : 'a4')} className="h-11 rounded-md border border-input bg-card px-2 text-sm md:h-9">
+            <select id="slip-size" value={slipSize} onChange={(e) => pickSize(e.target.value === 'label' ? 'label' : 'a4')} className="h-11 rounded-md border border-input bg-card px-2 text-label md:h-7.5">
               <option value="a4">A4</option><option value="label">4×6 label</option>
             </select>
           </> : null}
-          <Button variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>
-        </div>
+          <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>
+        </BulkBar>
       ) : null}
       <div ref={wrap}>
       <DataTable label={label}>
         <DataTableHead>
-          <th className="w-8"><span className="sr-only">Select</span></th><th>Order</th><th>Customer</th><th>Payment · status · risk</th><th className="text-right">Total</th><th>Placed</th>
+          <th className="w-10"><span className="sr-only">Select</span></th><th>Order</th><th>Customer</th><th>Payment</th><th>Status</th><th className="text-right">Total</th><th>Placed</th>
         </DataTableHead>
         <DataTableBody>
           {rows.map((r, i) => {
             const now = done[r.id]
             return (
               <tr key={r.id} role="row" tabIndex={i === Math.max(at, 0) ? 0 : -1} onFocus={() => setAt(i)}
-                className={cn('border-b border-border last:border-0 hover:bg-muted/40 focus-visible:bg-accent [&>td]:px-3 [&>td]:py-2', (r.dimmed || now) && 'text-muted-foreground', picked.has(r.id) && 'bg-accent')}>
+                className={cn('border-b border-line-soft last:border-0 focus-visible:bg-side md:[&>td]:h-12 [&>td]:px-3 [&>td]:py-1.5', (r.dimmed || now) && 'text-muted-foreground', picked.has(r.id) ? 'bg-select' : 'hover:bg-side')}>
                 <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.number}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)}  /></Td>
                 {/* No prefetch: 50 row links would be 50 server renders on every visit (found by e2e under the stress data, 2026-11-07). */}
                 <Td cell="a"><Link data-row-link prefetch={false} href={r.href} className="inline-flex min-h-6 items-center whitespace-nowrap font-num font-medium">{r.number}</Link></Td>
-                <Td cell="c"><span className="line-clamp-2">{r.customer ? <Name>{r.customer}</Name> : '—'}</span><span className="block text-xs text-muted-foreground">{r.place}</span></Td>
+                <Td cell="c"><span className="line-clamp-2">{r.customer ? <Name>{r.customer}</Name> : '—'}</span><span className="block text-small text-muted-foreground">{r.place}</span></Td>
                 {/* One cell for the badges (several would overlap on a phone), on a full line of its own there: payment,
                     status and risk do not fit beside the customer at 390 px (seen at phone width, 2026-11-07). */}
+                {/* Neel § Screens · Orders: how it is paid as a Tag; where it is as a status chip, its risk beside it. On a
+                    phone both sit on one full line under the customer (they do not fit beside it at 390 px). */}
                 <Td cell="e"><span className="flex flex-wrap items-center gap-1.5">
-                  <Badge tone={r.payment.tone}><Icon name={r.payment.icon} className="mr-1 inline size-3.5 align-[-2px]" />{r.payment.label}</Badge>
+                  <Tag><Icon name={r.payment.icon} className="mr-1 inline size-3.5 align-[-2px]" />{r.payment.label}</Tag>
                   {r.doNotCollect ? <Badge tone="danger">Do not collect cash</Badge> : null}
-                  {now ? <Badge tone="info">{now}</Badge> : <Badge tone={r.state.tone}>{r.state.label}</Badge>}
-                  {r.risk === 'low' ? null : r.risk === 'unknown' ? <span className="text-xs text-muted-foreground">Risk unavailable</span> : (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium"><span aria-hidden className={cn('size-2 rounded-full', r.risk === 'high' ? 'bg-danger-mark' : 'bg-warn-mark')} />{RISK_LABEL[r.risk]} risk</span>
-                  )}
-                  {r.shipStep && !now ? <Button variant="secondary" onClick={() => void step(r)} aria-disabled={busy}>{r.shipStep === 'ship' ? 'Mark shipped' : 'Delivered'}<span className="sr-only"> {r.number}</span></Button> : null}
+                  <span className="md:hidden">{status(r, now)}</span>
+                </span></Td>
+                <Td cell="hide"><span className="flex flex-wrap items-center gap-1.5">{status(r, now)}
+                  {r.shipStep && !now ? <Button size="sm" variant="secondary" onClick={() => void step(r)} aria-disabled={busy}>{r.shipStep === 'ship' ? 'Mark shipped' : 'Delivered'}<span className="sr-only"> {r.number}</span></Button> : null}
                 </span></Td>
                 <Td cell="b" className="text-right"><Money paise={r.total as Paise} /></Td>
-                <Td cell="f" className="whitespace-nowrap text-xs text-muted-foreground md:text-sm">{r.placed}</Td>
+                <Td cell="f" className="whitespace-nowrap text-small text-muted-foreground md:text-sm">{r.placed}</Td>
               </tr>
             )
           })}
@@ -235,6 +236,15 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
       <KeySheet open={keys} onClose={() => setKeys(false)} enabled={enabled} onEnabled={setEnabled} only={['next', 'previous', 'select', 'open', 'confirm', 'hold', 'undo', 'search', 'help']} />
     </>
   )
+}
+
+/** Where the order is, and its risk while it waits to be decided (a chip each; "Risk unavailable" in words). */
+function status(r: QueueRow, now: string | undefined) {
+  return <>
+    {now ? <Badge tone="info">{now}</Badge> : <Badge tone={r.state.tone}>{r.state.label}</Badge>}
+    {r.risk === 'low' ? null : r.risk === 'unknown' ? <span className="text-small text-muted-foreground">Risk unavailable</span>
+      : <Badge tone={r.risk === 'high' ? 'danger' : 'warn'}>{RISK_LABEL[r.risk]} risk</Badge>}
+  </>
 }
 
 /** The queue, or `empty` when the tab has no rows. The console layout's Toaster is above both, so a toast's Undo survives the last row leaving. */

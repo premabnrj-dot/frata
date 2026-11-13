@@ -1,4 +1,6 @@
+import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
+import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { redirect } from 'next/navigation'
 import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
@@ -35,15 +37,22 @@ export default async function ConsoleHome() {
   const now = new Date()
   const setup = await setupFor(tenantId).catch((err) => { console.error('[console home]', err instanceof Error ? err.name : 'error'); return null })
   if (!setup) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
-  // A failed summary is a page of "Couldn't count", never of zeros.
-  const s = setup.open ? await todaySummary(tenantId, now).catch((err) => { console.error('[today]', err instanceof Error ? err.name : 'error'); return null }) : null
-
-  // Share the shop (search and sharing S1·7); a failed read only hides the button.
-  const share = setup.open ? await shareFor(tenantId, { kind: 'shop' }, now).catch(() => null) : null
+  // A failed summary is a page of "Couldn't count", never of zeros. The summary and the share card do not wait for each
+  // other (speed review 2026-11-13); a failed share read only hides the button.
+  const [s, share] = setup.open ? await Promise.all([
+    todaySummary(tenantId, now).catch((err) => { console.error('[today]', err instanceof Error ? err.name : 'error'); return null }),
+    shareFor(tenantId, { kind: 'shop' }, now).catch(() => null),
+  ]) : [null, null]
+  // Neel § Screens · Home: "Today" and the day; Store open (a link to Setup, where the store closes for now) and Share
+  // store at the right. The store's name and address live in the sidebar now.
+  const actions = setup.open ? <>
+    <Link href="/console/setup" aria-label="Store open: setup, or close the store for now" className="inline-flex min-h-6 items-center rounded-full"><Badge tone="ok">Store open</Badge></Link>
+    {share ? <ShareSheet share={share} target={{ kind: 'shop' }} label="Share store" /> : null}
+  </> : undefined
   return (
-    <OpenMoment key={tenantId} address={setup.address} header={<PageHeader title={setup.open ? 'Today' : 'Home'}
-      meta={<>{setup.name} · <span className="font-mono">{setup.address}</span>{setup.open ? ` · ${todayLongIN(now)}` : ''}</>} />}>
-      {setup.open ? <Today s={s} setup={setup} now={now} share={share ? <ShareSheet share={share} target={{ kind: 'shop' }} /> : null} /> : <Checklist setup={setup} canManage={canManage} />}
+    <OpenMoment key={tenantId} address={setup.address} header={<PageHeader title={setup.open ? 'Today' : 'Home'} actions={actions}
+      meta={setup.open ? todayLongIN(now) : <>{setup.name} · <span className="font-mono">{setup.address}</span></>} />}>
+      {setup.open ? <Today s={s} setup={setup} now={now} /> : <Checklist setup={setup} canManage={canManage} />}
     </OpenMoment>
   )
 }

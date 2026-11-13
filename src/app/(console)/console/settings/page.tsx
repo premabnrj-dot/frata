@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
+import { Banner } from '@/components/ui/banner'
 import { Badge } from '@/components/ui/badge'
 import { Icon, type IconName } from '@/components/icons/icon'
 import { Panel } from '@/components/ui/panel'
@@ -24,13 +25,15 @@ export const metadata = { title: 'Settings' }
 const SECTION_ICON: Record<SectionKey, IconName> = { store: 'merchants', contact: 'messages', brand: 'brand', policies: 'policy', payments: 'cod', shipping: 'ship', taxes: 'tax', documents: 'slip' }
 
 /** A settings row: its icon, its name, what it holds now, and "Needs you" only when it does — else a chevron. */
+/** One setting (Neel § Screens · Settings): a plain icon, its name, its current value at the right, "›". On a phone the
+ * value goes under the name. Something to fix shows as a chip in the value's place. */
 function Row({ href, icon, title, summary, needs = false, mono = false }: { href: string; icon: IconName; title: string; summary: string; needs?: boolean; mono?: boolean }) {
   return (
-    <Link href={href} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-4 py-3 first:border-t-0 transition-colors duration-fast hover:bg-accent">
-      <span aria-hidden="true" className="row-span-2 grid size-9 place-items-center rounded-md bg-muted"><Icon name={icon} className="size-5" /></span>
+    <Link href={href} className="grid grid-cols-[20px_minmax(0,1fr)_16px] items-center gap-x-3.5 gap-y-0.5 border-t border-line-soft px-4 py-3.5 first:border-t-0 transition-colors duration-fast hover:bg-side md:grid-cols-[20px_minmax(0,1fr)_minmax(0,380px)_16px] md:px-5">
+      <Icon name={icon} className="row-span-2 size-5 text-muted-foreground md:row-span-1" />
       <span className="font-medium">{title}</span>
-      <span className="row-span-2 flex items-center">{needs ? <Badge tone="warn">Needs you</Badge> : <Icon name="chevron" className="size-4 text-muted-foreground" />}</span>
-      <span className={`truncate text-sm text-muted-foreground ${mono ? 'font-mono' : ''}`}>{summary}</span>
+      <span aria-hidden="true" className="row-span-2 text-muted-foreground md:order-last md:row-span-1">›</span>
+      <span className={`col-start-2 truncate text-label text-muted-foreground md:col-start-auto md:text-right ${mono ? 'font-mono' : ''}`}>{needs ? <Badge tone="warn">{summary}</Badge> : summary}</span>
     </Link>
   )
 }
@@ -77,8 +80,14 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" />
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      {/* Neel § Screens · Settings: one list, each row its current value; "Ready for live payments" a chip in the header. */}
+      <PageHeader title="Settings" actions={missing.length ? <Badge tone="warn">{missing.length} to fix for live payments</Badge> : <Badge tone="ok">Ready for live payments</Badge>} />
+      <div className="max-w-[860px] space-y-4">
+        {missing.length ? (
+          <Banner tone="warn" title="Before live payments">
+            <span className="inline-flex flex-wrap gap-x-3">{missing.map((m) => <Link key={m.label} href={`/console/settings/${m.section}`} className="font-medium text-link hover:underline">{m.label}</Link>)}</span>
+          </Banner>
+        ) : null}
         <Section as="nav" flush ariaLabel="Settings">
           {SECTIONS.filter((s) => s.editors.includes(auth.membership.role)).map((s) => (
             <Row key={s.key} href={`/console/settings/${s.key}`} icon={SECTION_ICON[s.key]} title={s.title} summary={summary[s.key]} needs={needs(s.key)} />
@@ -91,18 +100,6 @@ export default async function SettingsPage() {
           {manages && <Row href="/console/settings/address" icon="address" title="Shop address" summary={mainHost} mono />}
           {seen !== null && (seen === undefined || seen.visible) && <Row href="/console/settings/shipping-costs" icon="shipped" title="Shipping costs" summary={shipSummary} needs={shipNeeds} />}
         </Section>
-        <aside className="space-y-3">
-          <Section>
-            <h2 className="text-section font-semibold">Ready for live payments</h2>
-            {missing.length ? (
-              <>
-                <p className="text-sm text-muted-foreground">Razorpay checks your shop for these before it turns on live UPI and cards. The law asks for them too.</p>
-                <ul className="space-y-1 text-sm">{missing.map((m) => <li key={m.label}><Link href={`/console/settings/${m.section}`} className="text-warn-text underline">{m.label}</Link></li>)}</ul>
-              </>
-            ) : <p className="text-sm text-ok-text">Your business details, contacts and grievance officer are all set.</p>}
-          </Section>
-          <p className="px-1 text-xs text-muted-foreground">Coming later: sending from your own domain.</p>
-        </aside>
       </div>
     </>
   )

@@ -1,8 +1,5 @@
 import Link from 'next/link'
-import { CardLink } from '@/components/layout/card-link'
 import { Section } from '@/components/layout/section'
-import { CountTiles } from '@/components/data/count-tiles'
-import { Name } from '@/components/data/name'
 import { Money } from '@/components/data/numeric'
 import { Badge } from '@/components/ui/badge'
 import { paise } from '@/domains/money/paise'
@@ -12,10 +9,10 @@ import { waitedIN, weekdayShortIN } from '@/lib/format-date'
 import type { Setup } from '@/lib/queries/settings'
 import type { TodaySummary } from '@/lib/queries/today'
 import { cn } from '@/lib/utils'
-import { PAYMENT, RISK_LABEL, STATE, TABS } from '../orders/_components/labels'
+import { TABS } from '../orders/_components/labels'
 import { CopyLink } from './copy-link'
 import { PictoTile } from '@/components/brand/illustrations'
-import { InfoTip } from '@/components/ui/info-tip'
+import { NextToConfirm, type NextRow } from './next-to-confirm'
 
 // =============================================================================
 // FILE: src/app/(console)/console/_components/today.tsx
@@ -35,18 +32,19 @@ const TILES = [
 
 const count = (n: number) => n.toLocaleString('en-IN')
 
-function lineText(tab: string, l: TileLine, now: Date): { node: React.ReactNode; words: string } {
-  const wait = (since: Date | null) => (since ? `oldest waiting ${waitedIN(since, now)}` : '')
+/** A tile's chip (Neel § Screens · Home): the oldest wait in warn, "Nothing waiting" in ok, high risk in danger. */
+function chipFor(tab: string, l: TileLine, now: Date): { node: React.ReactNode; words: string } {
+  const old = (since: Date | null) => (since ? `Oldest ${waitedIN(since, now)}` : '')
   switch (l.kind) {
-    case 'uncounted': return { node: <span className="text-danger-text">Couldn’t count. Open the list →</span>, words: 'could not count' }
-    case 'none': return { node: EMPTY[tab], words: EMPTY[tab]! }
-    case 'risk_unavailable': return { node: <><Badge tone="neutral">Risk unavailable</Badge>{l.since ? ` · ${wait(l.since)}` : ''}</>, words: `risk unavailable${l.since ? `, ${wait(l.since)}` : ''}` }
-    case 'high': return { node: <><Badge tone="danger">{count(l.high)} high risk</Badge>{l.since ? ` · ${wait(l.since)}` : ''}</>, words: `${count(l.high)} high risk${l.since ? `, ${wait(l.since)}` : ''}` }
-    case 'oldest': return { node: wait(l.since), words: wait(l.since) }
+    case 'uncounted': return { node: <Badge tone="danger">Couldn’t count</Badge>, words: 'could not count' }
+    case 'none': return { node: <Badge tone="ok">Nothing waiting</Badge>, words: EMPTY[tab] ?? 'nothing waiting' }
+    case 'risk_unavailable': return { node: <Badge>Risk unavailable</Badge>, words: 'risk unavailable' }
+    case 'high': return { node: <Badge tone="danger">{count(l.high)} high risk</Badge>, words: `${count(l.high)} high risk${l.since ? `, oldest waiting ${waitedIN(l.since, now)}` : ''}` }
+    case 'oldest': return { node: l.since ? <Badge tone="warn">{old(l.since)}</Badge> : null, words: l.since ? `oldest waiting ${waitedIN(l.since, now)}` : '' }
   }
 }
 
-export function Today({ s, setup, now, share }: { s: TodaySummary | null; setup: Setup; now: Date; share?: React.ReactNode }) {
+export function Today({ s, setup, now }: { s: TodaySummary | null; setup: Setup; now: Date }) {
   const lines: Record<(typeof TILES)[number]['tab'], TileLine> = {
     to_confirm: toConfirmLine(s?.counts.to_confirm ?? null, s ? s.high : null, s?.next?.since ?? null),
     to_pack: waitLine(s?.counts.to_pack ?? null, s?.oldest.to_pack ?? null),
@@ -55,79 +53,69 @@ export function Today({ s, setup, now, share }: { s: TodaySummary | null; setup:
   const bars = s ? weekBars(s.week, now) : null
   const weekOrders = bars?.reduce((t, b) => t + b.orders, 0) ?? 0
   const weekValue = bars?.reduce((t, b) => t + b.value, 0) ?? 0
-  const next = s?.next ?? null
-  const nextRisk = next ? (next.state === 'refund_due' ? null : next.risk) : null
+  const top = Math.max(1, ...(bars ?? []).map((b) => b.orders))
+  const rows: NextRow[] = (s?.nextFive ?? []).map((n) => ({
+    id: n.id, label: n.label, number: n.number, name: n.customerName, total: n.total, cod: n.cod,
+    place: [n.city, `${n.items} item${n.items === 1 ? '' : 's'}`].filter(Boolean).join(' · '),
+    risk: n.state === 'refund_due' ? 'unknown' : n.risk ?? 'unknown', waited: waitedIN(n.since, now),
+  }))
 
   return (
-    <div className="space-y-4">
-      {s && !next && s.counts.to_pack === 0 && s.counts.to_ship === 0 && s.counts.on_hold === 0 && <p className="font-semibold">You’re up to date.</p>}
-      {next && (
-        // On a phone the next order comes first: it is the one tap the page exists for.
-        <CardLink href={`/console/orders/${next.number}`} data-next-order className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5">
-          <span className="col-span-2 text-xs text-muted-foreground">Next to confirm, oldest first</span>
-          {/* Line 1: the number and what to know first (risk, or a refund due); line 2: who, how much, how long. On a
-              phone the name truncates, never the badge or the amount's line. */}
-          <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <b className="font-num text-sm">{next.label}</b>
-            {next.state === 'refund_due' ? <Badge tone={STATE.refund_due.tone}>{STATE.refund_due.label}</Badge>
-              : nextRisk === 'high' || nextRisk === 'medium' ? <Badge tone={nextRisk === 'high' ? 'danger' : 'warn'}>{RISK_LABEL[nextRisk]} risk</Badge>
-              : nextRisk === null ? <span className="text-xs text-muted-foreground">Risk unavailable</span> : null}
-          </span>
-          <span className="row-span-2 self-center text-sm font-semibold whitespace-nowrap">Open →</span>
-          <span className="flex min-w-0 gap-1 text-sm text-muted-foreground">
-            <span className="min-w-0 truncate"><Name>{next.customerName}</Name></span>
-            <span className="shrink-0">· <Money paise={paise(next.total)} /> · {next.cod ? PAYMENT.cod.label : PAYMENT.paid.label} · {waitedIN(next.since, now)}</span>
-          </span>
-        </CardLink>
-      )}
+    <div className="space-y-6">
+      {/* Three counts in one card, each a link to its tab (Neel § Screens · Home: 30/36 figures, a chip under each). */}
+      <Section flush ariaLabel="Waiting for you"><nav aria-label="Waiting for you" className="grid md:grid-cols-3">
+        {TILES.map((t) => {
+          const n = s ? s.counts[t.tab] : null, chip = chipFor(t.tab, lines[t.tab], now)
+          return (
+            <Link key={t.tab} href={t.href} data-tile={t.tab} aria-label={`${t.label}, ${n === null ? 'not counted' : count(n)}, ${chip.words}`}
+              className="grid justify-items-start gap-1 border-b border-line-soft px-5 py-4.5 last:border-b-0 hover:bg-side md:border-b-0 md:border-l md:first:border-l-0">
+              <span className="text-label font-medium text-muted-foreground">{t.label}</span>
+              <b className={cn('font-num text-display font-semibold', !n && 'text-text-3')}>{n === null ? '—' : count(n)}</b>
+              {chip.node}
+            </Link>
+          )
+        })}
+      </nav></Section>
 
-      <CountTiles label="Waiting for you" tiles={TILES.map((t) => {
-        const n = s ? s.counts[t.tab] : null, txt = lineText(t.tab, lines[t.tab], now)
-        return { key: t.tab, label: t.label, href: t.href, value: n === null ? '—' : count(n), zero: !n, line: txt.node, ariaLabel: `${t.label}, ${n === null ? 'not counted' : count(n)}, ${txt.words}` }
-      })} />
+      {s && !rows.length && s.counts.to_pack === 0 && s.counts.to_ship === 0 && s.counts.on_hold === 0 && <p className="font-semibold">You’re up to date.</p>}
+      {rows.length ? (
+        <Section title="Next to confirm" action={<Link href="/console/orders" className="inline-flex min-h-6 items-center text-sm font-medium text-link hover:underline">All {count(s?.counts.to_confirm ?? rows.length)}</Link>}>
+          <NextToConfirm rows={rows} />
+        </Section>
+      ) : null}
 
       {s && weekOrders === 0 && s.counts.all === 0 ? (
         // A brand empty state (brand spec, chapter 5): one pictogram on its tile; the words carry the meaning.
         <Section ariaLabel="No orders yet">
           <div className="grid justify-items-start gap-3">
             <PictoTile name="store" tone="haldi" />
-            <h2 className="font-display text-xl font-semibold tracking-tight">No orders yet</h2>
+            <h2 className="text-section font-semibold">No orders yet</h2>
             <p className="text-sm text-muted-foreground">Share your shop on Instagram or WhatsApp. Orders land here.</p>
             <CopyLink address={setup.address} />
           </div>
         </Section>
       ) : bars ? (
-        <Section title="Last 7 days" action={<Link href="/console/orders?tab=all" className="inline-flex min-h-6 items-center text-sm underline">All orders</Link>}>
-          <div className="grid items-end gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
-            <div className="flex gap-6 md:grid md:gap-3">
-              <p className="grid"><b className="font-num text-xl font-semibold tabular-nums">{count(weekOrders)}</b><span className="text-xs text-muted-foreground">orders placed</span></p>
-              <p className="grid"><b className="font-num text-xl font-semibold tabular-nums"><Money paise={paise(weekValue)} /></b><span className="inline-flex items-center text-xs text-muted-foreground">their value<InfoTip about="this value">Cancelled orders are left out.</InfoTip></span></p>
-            </div>
-            <div>
-              {/* Each day's count over its bar, and today said to be still going (visual changes, owner-approved 2026-11-08). */}
-              <div className="mb-1 grid grid-cols-7 gap-1.5 text-center font-num text-xs text-muted-foreground" aria-hidden>
-                {bars.map((b) => <span key={b.day}>{b.orders}</span>)}
+        <Section title="Last 7 days" action={<span className="text-small text-muted-foreground">{count(weekOrders)} orders · <Money paise={paise(weekValue)} /></span>}>
+          {/* Bars in --chart, today still running in --chart-now; each day's count over its bar (Neel § Screens · Home). */}
+          <div role="img" aria-label={`Orders placed per day: ${bars.map((b) => `${b.today ? 'today so far' : weekdayShortIN(b.day)} ${b.orders}`).join(', ')}`}
+            className="grid h-[150px] grid-cols-7 items-end gap-2.5 border-b border-edge pt-2.5">
+            {bars.map((b) => (
+              <div key={b.day} className="grid h-full grid-rows-[auto_1fr_auto] justify-items-center gap-1.5 text-small text-muted-foreground" title={`${b.orders} · ${formatInr(paise(b.value))}`}>
+                <span className="font-num">{b.orders}</span>
+                <span className="flex w-full items-end"><i className={cn('block w-full rounded-t-xs', b.today ? 'bg-chart-now' : 'bg-chart')} style={{ height: `${Math.max(2, (b.orders / top) * 100)}%` }} /></span>
+                <span className="leading-tight">{b.today ? 'Today so far' : weekdayShortIN(b.day)}</span>
               </div>
-              <div role="img" aria-label={`Orders placed per day: ${bars.map((b) => `${b.today ? 'today so far' : weekdayShortIN(b.day)} ${b.orders}`).join(', ')}`} className="grid h-16 grid-cols-7 items-end gap-1.5">
-                {bars.map((b) => <span key={b.day} title={`${b.orders} · ${formatInr(paise(b.value))}`} className={cn('block h-full min-h-0.5 origin-bottom rounded-t-sm bg-foreground', b.today ? 'opacity-45' : 'opacity-80')} style={{ transform: `scaleY(${Math.max(b.share, 0.02)})` }} />)}
-              </div>
-              <div className="mt-1 grid grid-cols-7 gap-1.5 text-center text-xs text-muted-foreground" aria-hidden>
-                {bars.map((b) => <span key={b.day} className="leading-tight">{b.today ? <>Today<span className="block">so far</span></> : weekdayShortIN(b.day)}</span>)}
-              </div>
-            </div>
+            ))}
           </div>
         </Section>
       ) : null}
 
       {setup.left.length > 0 ? (
-        <Link href="/console/setup" className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border px-4 py-2.5 text-sm hover:border-input">
+        <Link href="/console/setup" className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-edge px-4 py-2.5 text-sm hover:bg-side">
           <Badge tone="warn">{setup.left.length} setup step{setup.left.length === 1 ? '' : 's'} left</Badge>
           <span>{setup.left.map((x) => x.title).join(', ')} →</span>
         </Link>
-      ) : (
-        // The way to close the shop again lives with the checklist: always one tap from Home (impact review U·4).
-        <div className="flex flex-wrap items-center gap-3"><p className="text-sm text-muted-foreground"><Badge tone="ok">Shop open</Badge> <Link href="/console/setup" className="inline-flex min-h-6 items-center underline">Setup, or close the shop for now</Link></p>{share}</div>
-      )}
+      ) : null}
     </div>
   )
 }

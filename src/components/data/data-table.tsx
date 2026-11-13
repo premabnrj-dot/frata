@@ -39,9 +39,11 @@ export function DataTableBody({ children }: { children: ReactNode }) {
 
 /** `dimmed`: a finished row (cancelled, returned) in the secondary text colour, which keeps 4.5:1. Never opacity (rule 4).
  * `selected`: a row picked for a bulk action (neel 50). */
-export function DataTableRow({ children, dimmed = false, selected = false }: { children: ReactNode; dimmed?: boolean; selected?: boolean }) {
+export function DataTableRow({ children, dimmed = false, selected = false, tall = false }: { children: ReactNode; dimmed?: boolean; selected?: boolean
+  /** A row with a photo or a two-line cell: 56 px (Neel § Layout · Density). */
+  tall?: boolean }) {
   return (
-    <tr role="row" data-selected={selected || undefined} className={`border-b border-line-soft last:border-0 md:[&>td]:h-12 [&>td]:px-3 [&>td]:py-1.5 ${selected ? 'bg-select' : 'hover:bg-side'} ${dimmed ? 'text-muted-foreground' : ''}`}>
+    <tr role="row" data-selected={selected || undefined} className={`border-b border-line-soft last:border-0 ${tall ? 'md:[&>td]:h-14' : 'md:[&>td]:h-12'} [&>td]:px-3 [&>td]:py-1.5 ${selected ? 'bg-select' : 'hover:bg-side'} ${dimmed ? 'text-muted-foreground' : ''}`}>
       {children}
     </tr>
   )

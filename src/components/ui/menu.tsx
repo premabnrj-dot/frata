@@ -18,7 +18,7 @@ import { button } from './button'
 
 export type MenuItem = { label: string; onSelect: () => void; danger?: boolean } | { label: string; href: string; danger?: boolean; download?: boolean }
 
-export function Menu({ label = 'More', items, align = 'end' }: { label?: string; items: MenuItem[]; align?: 'start' | 'end' }) {
+export function Menu({ label = 'More', items, align = 'end', size }: { label?: string; items: MenuItem[]; align?: 'start' | 'end'; size?: 'sm' }) {
   const id = useId()
   const trigger = useRef<HTMLButtonElement>(null)
   const pop = useRef<HTMLDivElement>(null)
@@ -37,7 +37,7 @@ export function Menu({ label = 'More', items, align = 'end' }: { label?: string;
   const itemClass = (danger?: boolean) => cn('flex min-h-11 w-full items-center rounded-md px-2.5 text-left text-sm md:min-h-9 hover:bg-accent focus-visible:bg-accent', danger && 'text-danger-text')
   return (
     <>
-      <button ref={trigger} type="button" popoverTarget={id} aria-haspopup="menu" aria-expanded={false} aria-controls={id} className={button({ variant: 'secondary' })}>
+      <button ref={trigger} type="button" popoverTarget={id} aria-haspopup="menu" aria-expanded={false} aria-controls={id} className={button({ variant: 'secondary', size })}>
         {label}<ChevronDown aria-hidden className="size-4" />
       </button>
       <div ref={pop} id={id} popover="auto" data-pop="menu" role="menu" aria-label={label}

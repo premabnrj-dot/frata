@@ -9,6 +9,7 @@ import { Money, Numeric } from '@/components/data/numeric'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { BulkBar } from '@/components/data/bulk-bar'
 import { Menu } from '@/components/ui/menu'
 import { useToast } from '@/components/ui/toast'
 import { paise } from '@/domains/money/paise'
@@ -96,16 +97,15 @@ export function ProductTable({ rows, collections }: { rows: Row[]; collections: 
       {ids.length > 0 && (
         // The bulk bar, above the table. Bulk is a desktop tool (design language § Work queues 7): on a phone a row is
         // one target, so its checkbox cell is hidden and the bar never shows.
-        <div role="region" aria-label="Selected products" className="mb-3 hidden flex-wrap items-center gap-2 rounded-lg border border-border bg-muted p-2 md:flex">
-          <b className="px-1 text-sm">{n(ids.length, 'selected', 'selected')}</b>
-          <button type="button" className="min-h-6 text-sm text-muted-foreground underline" onClick={() => setPicked(new Set())}>Clear</button>
-          <span className="flex-1" />
-          {!pending && <Menu label="Set status" align="end" items={(['active', 'draft', 'unlisted'] as const).map((s) => ({ label: { active: 'Active', draft: 'Draft', unlisted: 'Unlisted' }[s], onSelect: () => setStatus(s) }))} />}
-          {!pending && collections.length > 0 && <Menu label="Add to collection" align="end" items={collections.map((c) => ({ label: c.title, onSelect: () => collect(c) }))} />}
-          {ids.length === 1 && <Button variant="secondary" disabled={pending} onClick={duplicate}>Duplicate</Button>}
-          <Button variant="secondary" disabled={pending} onClick={() => setStatus('archived')}>Archive</Button>
-          <Button variant="destructive" disabled={pending} onClick={() => setAsking({ step: 'confirm' })}>Delete</Button>
-        </div>
+        // Neel § Screens · Products: the bulk bar in neel 50, small buttons, Clear last.
+        <BulkBar count={ids.length} label="Selected products" className="mb-3 hidden md:flex">
+          {!pending && <Menu size="sm" label="Set status" align="end" items={(['active', 'draft', 'unlisted'] as const).map((s) => ({ label: { active: 'Active', draft: 'Draft', unlisted: 'Unlisted' }[s], onSelect: () => setStatus(s) }))} />}
+          {!pending && collections.length > 0 && <Menu size="sm" label="Add to collection" align="end" items={collections.map((c) => ({ label: c.title, onSelect: () => collect(c) }))} />}
+          {ids.length === 1 && <Button size="sm" variant="secondary" disabled={pending} onClick={duplicate}>Duplicate</Button>}
+          <Button size="sm" variant="secondary" disabled={pending} onClick={() => setStatus('archived')}>Archive</Button>
+          <Button size="sm" variant="secondary" className="text-danger-text" disabled={pending} onClick={() => setAsking({ step: 'confirm' })}>Delete</Button>
+          <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>
+        </BulkBar>
       )}
       <DataTable label="Products">
         <DataTableHead>
@@ -115,14 +115,14 @@ export function ProductTable({ rows, collections }: { rows: Row[]; collections: 
         </DataTableHead>
         <DataTableBody>
           {rows.map((r) => (
-            <DataTableRow key={r.id}>
+            <DataTableRow key={r.id} tall selected={picked.has(r.id)}>
               <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.title}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)}  /></Td>
               <Td cell="hide">{r.thumb
                 ? <img src={r.thumb} alt="" width={40} height={50} loading="lazy" className="h-[50px] w-10 rounded-sm object-cover" />
                 : <span className="block h-[50px] w-10 rounded-sm bg-muted" aria-hidden="true" />}</Td>
               <Td cell="a">
                 <Link href={r.href} data-row-link prefetch={false} className="line-clamp-2 min-h-6 py-0.5 font-medium [overflow-wrap:anywhere] hover:underline"><Name>{r.title}</Name></Link>
-                <span className="block text-xs text-muted-foreground">{r.sub}</span>
+                <span className="block text-small text-muted-foreground">{r.sub}</span>
               </Td>
               <Td cell="d"><LabelBadge label={r.status} /></Td>
               <Td cell="b" className="whitespace-nowrap text-right">{r.minPrice === null ? <span className="text-muted-foreground">No price</span>

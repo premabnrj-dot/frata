@@ -287,7 +287,7 @@ export default {
         await q.close()
         const next = p.locator('[data-next-order]')
         assert.ok((await next.innerText()).includes(oldest), `the next order is the oldest waiting (${oldest})`)
-        await next.click()
+        await next.getByRole('link', { name: oldest }).click() // its number opens it (Neel: Home's rows, § Screens · Home)
         await p.waitForURL(/\/console\/orders\/\d+$/)
         await p.getByRole('heading', { level: 1 }).filter({ hasText: oldest }).waitFor()
         await ctx.close()
@@ -337,7 +337,7 @@ export default {
         const hc = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' })
         // Setup (and closing the shop) is reached from Home, by a tap, not by typing its address (impact review U·4).
         const h = await hc.newPage(); await h.goto(CONSOLE + '/console')
-        await h.getByRole('link', { name: 'Setup, or close the shop for now' }).click(); await h.waitForURL(/\/console\/setup$/)
+        await h.getByRole('link', { name: 'Store open: setup, or close the store for now' }).click(); await h.waitForURL(/\/console\/setup$/)
         const closeShop = async () => { await h.getByRole('button', { name: 'Close the shop for now' }).click(); await h.getByRole('button', { name: 'Close shop' }).click(); await expectToast(h, 'Closed. Shoppers see “Opening soon”.', 'ok') }
         const openShop = async () => { await h.getByRole('button', { name: 'Open my shop' }).click(); await h.getByRole('button', { name: 'Open it' }).click() }
         await closeShop(); await openShop()
