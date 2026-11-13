@@ -47,7 +47,7 @@ export function SidebarNav({ label, groups, ink = false }: { label: string; grou
           : (cur ? 'bg-card text-foreground shadow-sm ring-1 ring-border ring-inset' : 'text-muted-foreground hover:bg-accent hover:text-foreground')}`}>
         {/* Neel § Layout · Sidebar: the current item is white with e1 and a line edge, its icon neel (Admin keeps its ink frame). */}
         {cur && ink && <span aria-hidden="true" className="absolute -left-2.5 top-2 bottom-2 w-[3px] rounded-r bg-warn" />}
-        <Icon name={i.icon} current={cur} className={`size-[18px] shrink-0 ${ink ? (cur ? '' : 'opacity-70') : cur ? 'text-primary' : ''}`} />
+        <Icon name={i.icon} current={cur} className={`size-4.5 shrink-0 ${ink ? (cur ? '' : 'opacity-70') : cur ? 'text-primary' : ''}`} />
         <span data-nav-label="" className="truncate">{i.label}</span>
         {i.badge}
       </Link>
@@ -57,7 +57,7 @@ export function SidebarNav({ label, groups, ink = false }: { label: string; grou
     <nav aria-label={label} data-tinge className="flex flex-col gap-0.5">
       {groups.map((g) => (
         <div key={g.label} className="flex flex-col gap-0.5">
-          {g.label && <p data-nav-group="" className={`px-2.5 pb-1 pt-3.5 text-kbd leading-4 font-medium tracking-[0.06em] uppercase ${ink ? 'text-ink-foreground/70' : 'text-muted-foreground'}`}>{g.label}</p>}
+          {g.label && <p data-nav-group="" className={`px-2.5 pb-1 pt-3.5 text-overline font-medium uppercase ${ink ? 'text-ink-foreground/70' : 'text-muted-foreground'}`}>{g.label}</p>}
           {g.items.map((i) => i.children?.length
             ? <Folder key={i.href} item={i} on={on} ink={ink} link={link} />
             : link(i))}

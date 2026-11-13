@@ -1,3 +1,4 @@
+import { railFrom } from '@/components/shell/rail'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
 import type { Metadata } from 'next'
@@ -40,7 +41,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   const items = [clients, ...(can('manageTeam') ? [team] : []), ...(can('seeDetails') ? [details] : [])]
   const name = auth.partner.businessName || auth.partner.name
   return (
-    <AppShell rail={(await cookies()).get('rail')?.value === '1'} title={name} tag="PARTNER" navLabel="Partner" groups={[{ label: '', items }]} tabs={items} more={[]} foot={[]}
+    <AppShell rail={railFrom((await cookies()).get('rail')?.value)} title={name} tag="PARTNER" navLabel="Partner" groups={[{ label: '', items }]} tabs={items} more={[]} foot={[]}
       email={auth.email} places={places}>
       {children}
     </AppShell>

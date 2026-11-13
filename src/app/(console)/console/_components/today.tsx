@@ -9,7 +9,9 @@ import { waitedIN, weekdayShortIN } from '@/lib/format-date'
 import type { Setup } from '@/lib/queries/settings'
 import type { TodaySummary } from '@/lib/queries/today'
 import { cn } from '@/lib/utils'
-import { TABS } from '../orders/_components/labels'
+import { STATE, TABS } from '../orders/_components/labels'
+import { applies } from '@/domains/orders/work'
+import { placeLine } from '@/domains/orders/place-line'
 import { CopyLink } from './copy-link'
 import { PictoTile } from '@/components/brand/illustrations'
 import { NextToConfirm, type NextRow } from './next-to-confirm'
@@ -54,16 +56,18 @@ export function Today({ s, setup, now }: { s: TodaySummary | null; setup: Setup;
   const weekOrders = bars?.reduce((t, b) => t + b.orders, 0) ?? 0
   const weekValue = bars?.reduce((t, b) => t + b.value, 0) ?? 0
   const top = Math.max(1, ...(bars ?? []).map((b) => b.orders))
+  // Built here, on the server, by the queue's own rules: whether it can be confirmed (applies), its state's words.
   const rows: NextRow[] = (s?.nextFive ?? []).map((n) => ({
     id: n.id, label: n.label, number: n.number, name: n.customerName, total: n.total, cod: n.cod,
-    place: [n.city, `${n.items} item${n.items === 1 ? '' : 's'}`].filter(Boolean).join(' · '),
-    risk: n.state === 'refund_due' ? 'unknown' : n.risk ?? 'unknown', waited: waitedIN(n.since, now),
+    place: placeLine(n.city, n.items), canConfirm: applies('confirm', n.state),
+    state: n.state === 'unconfirmed' ? null : STATE[n.state],
+    risk: n.state === 'refund_due' ? 'low' : n.risk ?? 'unknown', waited: waitedIN(n.since, now),
   }))
 
   return (
     <div className="space-y-6">
       {/* Three counts in one card, each a link to its tab (Neel § Screens · Home: 30/36 figures, a chip under each). */}
-      <Section flush ariaLabel="Waiting for you"><nav aria-label="Waiting for you" className="grid md:grid-cols-3">
+      <Section flush><nav aria-label="Waiting for you" className="grid md:grid-cols-3">
         {TILES.map((t) => {
           const n = s ? s.counts[t.tab] : null, chip = chipFor(t.tab, lines[t.tab], now)
           return (
@@ -98,7 +102,7 @@ export function Today({ s, setup, now }: { s: TodaySummary | null; setup: Setup;
         <Section title="Last 7 days" action={<span className="text-small text-muted-foreground">{count(weekOrders)} orders · <Money paise={paise(weekValue)} /></span>}>
           {/* Bars in --chart, today still running in --chart-now; each day's count over its bar (Neel § Screens · Home). */}
           <div role="img" aria-label={`Orders placed per day: ${bars.map((b) => `${b.today ? 'today so far' : weekdayShortIN(b.day)} ${b.orders}`).join(', ')}`}
-            className="grid h-[150px] grid-cols-7 items-end gap-2.5 border-b border-edge pt-2.5">
+            className="grid h-38 grid-cols-7 items-end gap-2.5 border-b border-edge pt-2.5">
             {bars.map((b) => (
               <div key={b.day} className="grid h-full grid-rows-[auto_1fr_auto] justify-items-center gap-1.5 text-small text-muted-foreground" title={`${b.orders} · ${formatInr(paise(b.value))}`}>
                 <span className="font-num">{b.orders}</span>

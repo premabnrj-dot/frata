@@ -285,6 +285,24 @@ export default {
         assert.deepEqual([await tabCount('To confirm'), await tabCount('To pack'), await tabCount('On hold')], [toConfirm, toPack, onHold], 'Home and the Orders tabs')
         const oldest = (await q.locator('tbody tr').last().locator('a[data-row-link]').innerText()).trim()
         await q.close()
+        // Home's "Next to confirm" (Neel N1): a risky row (high, unknown or another state) offers Open, never Confirm;
+        // Confirm confirms with Undo, and Undo puts the order back in the list.
+        const table = p.getByRole('table', { name: 'Next to confirm' })
+        for (const r of await table.locator('tbody tr').all()) {
+          if (await r.getByText(/High risk|Risk unavailable|Refund due/).count()) {
+            assert.equal(await r.getByRole('button', { name: /^Confirm / }).count(), 0, 'a risky row is never confirmed from Home')
+            await r.getByRole('link', { name: /^Open / }).waitFor()
+          }
+        }
+        const confirmBtn = table.getByRole('button', { name: /^Confirm / }).first()
+        if (await confirmBtn.count()) {
+          const what = (await confirmBtn.getAttribute('aria-label')).replace(/^Confirm /, '')
+          await confirmBtn.click()
+          await p.locator('[data-toast]', { hasText: `${what} confirmed.` }).getByRole('button', { name: 'Undo' }).click()
+          await p.waitForTimeout(500)
+          await p.reload()
+          await p.getByRole('table', { name: 'Next to confirm' }).getByRole('button', { name: `Confirm ${what}` }).waitFor()
+        }
         const next = p.locator('[data-next-order]')
         assert.ok((await next.innerText()).includes(oldest), `the next order is the oldest waiting (${oldest})`)
         await next.getByRole('link', { name: oldest }).click() // its number opens it (Neel: Home's rows, § Screens · Home)

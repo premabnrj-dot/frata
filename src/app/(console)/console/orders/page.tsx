@@ -5,6 +5,7 @@ import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { currentMethod, orderState, paidAfterSwitch, QUEUE_TABS, type QueueTab } from '@/domains/orders/order-state'
 import { risk } from '@/domains/orders/risk'
+import { placeLine } from '@/domains/orders/place-line'
 import { applies, may } from '@/domains/orders/work'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dateTimeIN } from '@/lib/format-date'
@@ -68,7 +69,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     const f = facts?.get(o.id)
     return {
       id: o.id, n: o.number, number: `${prefix}-${o.number}`, href: `/console/orders/${o.number}`,
-      customer: o.customerName, place: [o.city, `${o.items} item${o.items === 1 ? '' : 's'}`].filter(Boolean).join(' · '),
+      customer: o.customerName, place: placeLine(o.city, o.items),
       payment: method === 'cod' ? PAYMENT.cod : o.paidAt ? PAYMENT.paid : PAYMENT.unpaid, state: STATE[state], doNotCollect: paidAfterSwitch(o),
       // Risk is for orders still to be decided; once confirmed, packed or paid it is not news.
       risk: state === 'unconfirmed' || state === 'held' ? (facts === null ? 'unknown' : f ? risk(f).level : 'low') : 'low',

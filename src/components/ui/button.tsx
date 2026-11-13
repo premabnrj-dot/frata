@@ -23,6 +23,8 @@ export const button = cva(
         inverse: `bg-primary-foreground text-primary hover:bg-primary-foreground/90 ${THREAD} after:scale-x-[0.34]`,
         ghost: 'btn-ghost hover:bg-accent',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        // Neel: a secondary button whose action loses something (a bulk Delete beside others): the danger words, no fill.
+        danger: 'border border-edge bg-card text-danger-text shadow-sm hover:bg-danger',
         // Neel: a link that acts ("View in store"): neel 700, underlined on hover, no box (its target is the row's height).
         link: 'btn-link text-link underline-offset-2 hover:underline',
       },

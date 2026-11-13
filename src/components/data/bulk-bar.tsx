@@ -12,7 +12,7 @@ export function BulkBar({ count, label, children, className }: { count: number; 
   return (
     <div role="region" aria-label={label}
       className={cn('sticky top-[var(--shell-top,0px)] z-10 flex flex-wrap items-center gap-2 rounded-mid border border-halo bg-select py-2 pr-2 pl-3.5 text-sm', className)}>
-      <b className="font-semibold text-select-foreground">{count} selected</b>
+      <b role="status" className="font-semibold text-select-foreground">{count} selected</b>
       <span className="flex-1" />
       {children}
     </div>

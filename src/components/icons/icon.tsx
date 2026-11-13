@@ -32,6 +32,8 @@ const ICONS = {
   close: ['M6 6l12 12', 'M18 6 6 18'],
   // Neel N1: the sidebar as a rail (a panel and its left column).
   sidebar: ['M4 5h16v14H4z', 'M9.5 5v14'],
+  // Neel N1: signing out (a door and the way out).
+  signout: ['M10 4H5v16h5', 'M14 8l4 4-4 4M18 12H9'],
   search: ['M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z', 'M20 20l-4-4'],
   upload: ['M4 17v3h16v-3', 'M12 15V4 M7.5 8.5 12 4l4.5 4.5'],
   // The merchant's day (brand book chapter 4): ready for pages and empty states.

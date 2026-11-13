@@ -103,7 +103,7 @@ export function ProductTable({ rows, collections }: { rows: Row[]; collections: 
           {!pending && collections.length > 0 && <Menu size="sm" label="Add to collection" align="end" items={collections.map((c) => ({ label: c.title, onSelect: () => collect(c) }))} />}
           {ids.length === 1 && <Button size="sm" variant="secondary" disabled={pending} onClick={duplicate}>Duplicate</Button>}
           <Button size="sm" variant="secondary" disabled={pending} onClick={() => setStatus('archived')}>Archive</Button>
-          <Button size="sm" variant="secondary" className="text-danger-text" disabled={pending} onClick={() => setAsking({ step: 'confirm' })}>Delete</Button>
+          <Button size="sm" variant="danger" disabled={pending} onClick={() => setAsking({ step: 'confirm' })}>Delete</Button>
           <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>
         </BulkBar>
       )}

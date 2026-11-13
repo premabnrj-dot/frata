@@ -8,6 +8,8 @@ import { NavProgress } from './nav-progress'
 import { Monogram } from '@/components/brand/monogram'
 import { Toaster } from '@/components/ui/toast'
 import { RailToggle } from './rail-toggle'
+import { railAttr, type RailChoice } from './rail'
+import { Icon } from '@/components/icons/icon'
 
 // =============================================================================
 // FILE: src/components/shell/app-shell.tsx — ONE shell for Console and Admin.
@@ -44,8 +46,8 @@ export type ShellProps = {
   banner?: ReactNode
   /** Under the name in the sidebar: the store's address (Console), a streamed slot. */
   subtitle?: ReactNode
-  /** The person chose the 64 px rail (the `rail` cookie, read by the layout as '1' or '0' only). */
-  rail?: boolean
+  /** The person's choice of width (the `rail` cookie through railFrom): the rail, the full sidebar, or by width. */
+  rail?: RailChoice
   children: ReactNode
 }
 
@@ -108,7 +110,7 @@ function Account({ email, ink }: { email: string | null; ink: boolean }) {
   )
 }
 
-export function AppShell({ ink = false, title, tag, places = [], navLabel, groups, tabs, more, foot, email, tenantId, banner, subtitle, rail = false, children }: ShellProps) {
+export function AppShell({ ink = false, title, tag, places = [], navLabel, groups, tabs, more, foot, email, tenantId, banner, subtitle, rail = null, children }: ShellProps) {
   const surface = ink ? 'ink' : undefined
   return (
     <div data-shell data-neel="" data-tenant={tenantId} style={{ '--shell-top': banner ? '2.75rem' : '0px' } as CSSProperties /* the banner's own height reads this too */} className={`min-h-dvh bg-background [--toast-lift:3.5rem] md:[--toast-lift:0px] ${SHELL_FONT_VARS}`}>
@@ -121,7 +123,7 @@ export function AppShell({ ink = false, title, tag, places = [], navLabel, group
       <div className="md:flex">
         {/* Neel § Layout · Sidebar: 232 px from 1280; a 64 px rail from 768 to 1279 (CSS) and by choice ([data-rail], the
             `rail` cookie); the rail's rules are in src/app/neel.css. */}
-        <aside data-surface={surface} data-shell-aside="" data-rail={rail ? '' : undefined}
+        <aside data-surface={surface} data-shell-aside="" data-rail={railAttr(rail)}
           className={`sticky top-[var(--shell-top)] hidden h-[calc(100dvh-var(--shell-top))] w-58 shrink-0 flex-col gap-0.5 overflow-y-auto border-r px-2.5 py-3.5 md:flex print:hidden ${ink ? 'border-ink bg-ink text-ink-foreground' : 'border-border bg-side'}`}>
           <div data-nav-shop="" className="flex items-center gap-2.5 px-2 pt-1.5 pb-3.5">
             <Mark ink={ink} />
@@ -134,7 +136,13 @@ export function AppShell({ ink = false, title, tag, places = [], navLabel, group
           <div className={`mt-auto flex flex-col gap-0.5 border-t pt-2 ${ink ? 'border-ink-foreground/15' : 'border-border'}`}>
             {foot.length > 0 && <SidebarNav label={`${navLabel}: more`} groups={[{ label: '', items: foot }]} ink={ink} />}
             <div data-nav-label=""><Switcher places={places} ink={ink} /><Account email={email} ink={ink} /></div>
-            <RailToggle on={rail} ink={ink} />
+            {/* On the rail the account keeps its two ways out, as icons with their names (design-system review N1). */}
+            {places.length > 1 && <a href="/choose" data-nav="" data-rail-only="" className={`relative flex h-8.5 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium ${ink ? 'hover:bg-ink-foreground/10' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
+              <Icon name="merchants" className="size-4.5 shrink-0" /><span data-nav-label="">Switch store</span></a>}
+            {email && <form action={signOutAction} data-rail-only="" className="contents">
+              <button type="submit" data-nav="" className={`relative flex h-8.5 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium ${ink ? 'hover:bg-ink-foreground/10' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
+                <Icon name="signout" className="size-4.5 shrink-0" /><span data-nav-label="">Sign out</span></button></form>}
+            <RailToggle choice={rail} ink={ink} />
           </div>
         </aside>
         <header data-surface={surface} className={`flex h-12 items-center gap-2.5 border-b px-4 md:hidden print:hidden ${ink ? 'border-ink bg-ink text-ink-foreground' : 'border-border bg-card'}`}>

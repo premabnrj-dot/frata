@@ -229,6 +229,10 @@
   --text-stat: 26px;
   --text-stat--line-height: 32px;
   --text-stat--letter-spacing: -0.02em;
+  /* An overline (the sidebar's group names, Neel § Layout · Sidebar): 11/16, capitals, spaced. */
+  --text-overline: 11px;
+  --text-overline--line-height: 16px;
+  --text-overline--letter-spacing: 0.06em;
   /* A key (⌘S, Ctrl+S): 11 px Inter, never mono (Neel § Components). */
   --text-kbd: 11px;
   --text-kbd--line-height: 1;

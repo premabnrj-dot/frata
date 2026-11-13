@@ -8,6 +8,7 @@ import { Name } from '@/components/data/name'
 import { Money } from '@/components/data/numeric'
 import { Badge, Tag } from '@/components/ui/badge'
 import { BulkBar } from '@/components/data/bulk-bar'
+import { FIELD_BOX } from '@/components/ui/field'
 import { Button, button } from '@/components/ui/button'
 import { KeySheet } from '@/components/ui/key-sheet'
 import { useToast } from '@/components/ui/toast'
@@ -190,7 +191,7 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
           {printable.length ? <>
             <a href={pdfHref('slip', printable, slipSize)} className={button({ variant: 'secondary', size: 'sm' })}>Download {printable.length === 1 ? 'slip' : `${printable.length} slips`} (PDF)</a>
             <label className="sr-only" htmlFor="slip-size">Slip size</label>
-            <select id="slip-size" value={slipSize} onChange={(e) => pickSize(e.target.value === 'label' ? 'label' : 'a4')} className="h-11 rounded-md border border-input bg-card px-2 text-label md:h-7.5">
+            <select id="slip-size" value={slipSize} onChange={(e) => pickSize(e.target.value === 'label' ? 'label' : 'a4')} className={`${FIELD_BOX} h-11 px-2 text-label md:h-7.5`}>
               <option value="a4">A4</option><option value="label">4×6 label</option>
             </select>
           </> : null}
@@ -233,7 +234,7 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
       </DataTable>
       </div>
       <p className="text-xs text-muted-foreground"><button type="button" onClick={() => setKeys(true)} className="inline-flex min-h-6 items-center underline underline-offset-2">Keyboard shortcuts</button> · press ?</p>
-      <KeySheet open={keys} onClose={() => setKeys(false)} enabled={enabled} onEnabled={setEnabled} only={['next', 'previous', 'select', 'open', 'confirm', 'hold', 'undo', 'search', 'help']} />
+      <KeySheet open={keys} onClose={() => setKeys(false)} enabled={enabled} onEnabled={setEnabled} only={['next', 'previous', 'select', 'open', 'confirm', 'hold', 'undo', 'search', 'help', 'rail']} />
     </>
   )
 }
@@ -242,7 +243,7 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
 function status(r: QueueRow, now: string | undefined) {
   return <>
     {now ? <Badge tone="info">{now}</Badge> : <Badge tone={r.state.tone}>{r.state.label}</Badge>}
-    {r.risk === 'low' ? null : r.risk === 'unknown' ? <span className="text-small text-muted-foreground">Risk unavailable</span>
+    {r.risk === 'low' ? null : r.risk === 'unknown' ? <Badge>Risk unavailable</Badge>
       : <Badge tone={r.risk === 'high' ? 'danger' : 'warn'}>{RISK_LABEL[r.risk]} risk</Badge>}
   </>
 }

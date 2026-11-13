@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 6.0.0
+  version: 7.0.0
   verified: 2026-11-13
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -812,9 +812,12 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 8. Console and Admin share one shell and every page primitive. **Admin differs
    only in chrome**: the ink frame, the rani monogram tile, STAFF, and a yellow
    active bar. Status and semantic colours never change between surfaces.
-9. Nav: groups by job. The current item gets a 3 px bar, semibold, and
-   `aria-current="page"`, never colour alone. Counts are a warn pill. An account
-   block (email, sign out, own store / Admin) shows at every width.
+9. Nav (Neel N1, § Layout · Sidebar): groups by job, their names an overline (`text-overline`, capitals). The
+   current item is white with e1 and a line edge, its icon neel, and `aria-current="page"`, never colour alone
+   (Frrata Admin's ink frame keeps its warn bar). Counts are a warn pill; on the rail a dot that keeps its words. The
+   sidebar is 232 px from 1280 and a 64 px rail from 768 to 1279, either one by choice (`rail` cookie, `railFrom`,
+   "[" or the button at its foot). On the rail each label is a tooltip on the bar (still the link's name; hoverable,
+   Esc closes it) and the account's ways out (sign out, switch store) are icons. The store's name and address sit at the top.
 10. **Phone (< 768 px): a bottom bar.** Console has Home, Orders (count),
     Products and More; Admin has Merchants, Plans, Staff and More. Labels always
     show under 22 px icons. Items are 56 px tall. More opens a sheet with
@@ -831,9 +834,10 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 **Pages and tables**
 13. Pages open with `PageHeader` (`src/components/layout/page-header.tsx`; on a detail page with `back`, the
     one `BackLink`):
-    breadcrumb, title + badges, one meta line, one primary action + More. A
-    long title wraps to two lines, never cut mid-word. A title that is an
-    input still shows the record's name as the h1's text.
+    breadcrumb (two levels, a phone shows "‹ Products"), title 22/28 (20/26 on a phone) + its chip, one meta line of
+    facts, then More, secondaries and the one primary last. A long title wraps to two lines, then ends in "…" with
+    the full name on hover (supersedes "never cut", Neel N1). A title that is an input still shows the record's name
+    as the h1's text.
 14. Below the header come `Section`s (`src/components/layout/section.tsx`: title, optional action, `p-4 md:p-5`,
     titles `text-section font-semibold`). A form that is a card is a `<Section><form>`.
     No hand-written card frames and no cards inside cards (`check:scale`).
@@ -859,8 +863,8 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     height is its `size` variant (`default`, `lg`), never a className (twMerge
     keeps `md:h-9` against a caller's `h-11`). Rows and the
     bottom bar are 44–56 px on phones.
-20. Icons: frrata's own set (`src/components/icons/icon.tsx`, rule 36), 16 px
-    in nav (22 px in the bottom bar), `--sub` until active. No coloured icon
+20. Icons: frrata's own set (`src/components/icons/icon.tsx`, rule 36), 18 px
+    in nav (`size-4.5`; 22 px in the bottom bar), `--sub` until active. No coloured icon
     backgrounds. Utility glyphs inside primitives (the back chevron, search,
     info, menu dots) stay lucide until redrawn in the set. A brand empty state
     may lead with one `PictoTile` (§ Graphic language); working lists keep
@@ -942,12 +946,12 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 
 **Home "Today" (owner-approved mockup 2026-11-07, U·4; spec `docs/specs/2026-11-07-ux-today.md`)**
 30. Before the shop opens, Home is the setup checklist. Once it is open, Home is
-    the day's work, in this order: the next order to confirm (oldest first,
-    one tap to its page), three counts (To confirm, To pack, On hold; each a
-    link to its tab; `CountTiles`), the last 7 days (orders placed and their
-    value, cancelled left out, one `scaleY` bar per IST day), and one line for
-    setup steps still open, or, when none are, "Setup, or close the shop for
-    now" (the checklist lives at `/console/setup`; always one tap away). No
+    the day's work, as Neel § Screens · Home draws it: "Today" and the day, Store open (a link to `/console/setup`,
+    where the store closes for now; always one tap away) and Share store; three counts in one card (To confirm, To
+    pack, On hold; 30/36 figures, a chip each: "Oldest 8 d", "Nothing waiting", "N high risk"; each a link to its
+    tab); "Next to confirm", the oldest five with Confirm and Undo (a high-risk, unknown-risk or refund-due order
+    says Open: applies + confirmKey, decided on the server); the last 7 days as bars in `--chart` (today
+    `--chart-now`), the count and ₹ in the header; and a line for setup steps still open. No
     suggestions or feature cards, no change-on-last-week figure, no chart
     library.
 31. A Home count is `queueCounts`' and the nav pill's `toConfirmCount` reads the
@@ -955,8 +959,8 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     high risk" is `risk()` over the whole tab, never a page of it. A count that
     could not be read says "Couldn't count", a risk "Risk unavailable"; never
     0. A tile that is 0 stays in place and says so ("Nothing to confirm").
-32. A card that is one link is `CardLink` (`src/components/layout/`); waiting
-    counts are `CountTiles` (`src/components/data/`). The brand moment lives
+32. A card that is one link is `CardLink` (`src/components/layout/`); a list's picked rows act through `BulkBar`
+    (`src/components/data/`, neel 50, small buttons, Clear last). The brand moment lives
     in `OpenMoment`, which wraps a page whose content changes when the shop
     opens; never in the component that opened it.
 
@@ -1131,3 +1135,15 @@ values, keyboard and axe at phone and desktop. A new primitive or state joins th
 - **Section**: 12 px, 20 in (16 on a phone). **Fields**: `FIELD` / `FIELD_BOX`; a mistake is `fieldProps` +
   `FieldError` (13/18), its edge and halo drawn by neel.css.
 - **Never inside the store preview:** every Neel rule skips `[data-store-theme] *`, and the Neel-only tokens are unset there.
+
+## Neel layout (N1, 2026-11-13)
+
+- **The shell**: rule 9 above; `src/components/shell/{app-shell,nav,rail,rail-toggle}.tsx`, the rail's CSS at the end of
+  `src/app/neel.css` (two blocks, one list of rules: change both). Page padding 28 · 32 at 1280, 24 from 768, 16 on a
+  phone; body 15/22 and titles 20/26 on a phone in `[data-neel]`.
+- **The header**: rule 13 above; one `PageHeader` for every page in Console, Admin and the partner workspace.
+- **Lists**: rows 48 px (56 with a photo: `DataTableRow tall`), the picked rows in neel 50 and `BulkBar`; Orders shows
+  Payment as a Tag and Status (with risk) as chips, one status cell that reflows on a phone.
+- **Settings**: one list, a plain 20 px icon per row, its current value at the right, a chevron; up to 860 wide;
+  "Ready for live payments" a chip in the header, and what is missing a warn banner above the list.
+- **Not yet** (N1c): filter chips, saved views, instant search, quick look; ⌘K is N1b.

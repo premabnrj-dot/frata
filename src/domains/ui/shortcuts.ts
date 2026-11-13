@@ -22,6 +22,8 @@ export const SHORTCUTS = [
   { key: 'z', action: 'undo', label: 'Undo the last action' },
   { key: '/', action: 'search', label: 'Search' },
   { key: '?', action: 'help', label: 'Show these keys' },
+  // Neel N1: everywhere in the console, not only the queue (src/components/shell/rail-toggle.tsx handles it).
+  { key: '[', action: 'rail', label: 'Sidebar or rail' },
 ] as const
 
 export type ShortcutAction = (typeof SHORTCUTS)[number]['action'] | 'close'

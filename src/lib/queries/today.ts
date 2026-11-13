@@ -4,9 +4,9 @@ import { currentMethod, orderState, type OrderState, type QueueTab } from '@/dom
 import { risk, type Risk } from '@/domains/orders/risk'
 import { orderPrefix } from '@/domains/signup/slug'
 import { istDayStart } from '@/domains/time/day'
-import { enteredAtSql, inTabSql, momentColumns, standingSql, openSql } from '@/lib/db/order-predicates'
+import { enteredAtSql, inTabSql, momentColumns, standingSql, openSql, orderItemsSql } from '@/lib/db/order-predicates'
 import { shopSettings, tenants } from '@/lib/db/schema'
-import { orderLines, orders } from '@/lib/db/schema-orders'
+import { orders } from '@/lib/db/schema-orders'
 import { withTenant } from '@/lib/db/tenant'
 import { queueCountsWith } from './orders'
 import { riskFactsWith } from './order-risk'
@@ -56,7 +56,7 @@ export async function todaySummary(tenantId: string, now: Date): Promise<TodaySu
       on_hold: sql<string | null>`min(${enteredAtSql(now)}) filter (where ${inTabSql('on_hold', now)})`,
     }).from(orders).where(and(eq(orders.tenantId, tenantId), openSql())), // open orders only: the partial index (1D·7)
     tx.select({ id: orders.id, number: orders.number, customerName: orders.customerName, total: orders.total, city: orders.city, ...momentColumns, entered: sql<string | null>`${enteredAtSql(now)}`,
-      items: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l where l.order_id = "orders"."id" and l.tenant_id = ${tenantId} and l.removed_at is null)` })
+      items: orderItemsSql(tenantId) })
       .from(orders).where(and(eq(orders.tenantId, tenantId), inTabSql('to_confirm', now)))
       .orderBy(asc(enteredAtSql(now)), asc(orders.number)).limit(5),
     tx.select({ prefix: shopSettings.orderPrefix, name: tenants.name }).from(tenants)

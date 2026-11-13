@@ -2,12 +2,12 @@ import 'server-only'
 import { unreadNotices } from './notices'
 import { cache } from 'react'
 import { and, desc, eq, ilike, like as like_, or, sql } from 'drizzle-orm'
-import { orderLines, orders } from '@/lib/db/schema-orders'
+import { orders } from '@/lib/db/schema-orders'
 import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { orderPrefix } from '@/domains/signup/slug'
-import { inFlightSql, inTabSql, momentColumns, openShipmentProviderSql, openSql, placedSql } from '@/lib/db/order-predicates'
+import { inFlightSql, inTabSql, momentColumns, openShipmentProviderSql, openSql, placedSql, orderItemsSql } from '@/lib/db/order-predicates'
 import { QUEUE_TABS, SHIP_TABS, type QueueTab } from '@/domains/orders/order-state'
 import { parseOrderSearch } from '@/domains/orders/search'
 import { mainDomainIn } from './addresses'
@@ -29,7 +29,7 @@ export async function listOrders(tenantId: string, { tab = 'all', page = 1, q = 
     tx.select({
       id: orders.id, number: orders.number, total: orders.total, customerName: orders.customerName, city: orders.city,
       ...momentColumns,
-      items: sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l where l.order_id = "orders"."id" and l.tenant_id = ${tenantId} and l.removed_at is null)`,
+      items: orderItemsSql(tenantId),
       // Shipped with a courier through Frrata: its tracking sets the outcome, so the row offers no Delivered (Ship S·0).
       byCourier: sql<boolean>`coalesce(${openShipmentProviderSql()} = 'shiprocket', false)`,
       // How many match the search, in the same query: the pager's "of N" — only when a search is on.

@@ -1,3 +1,4 @@
+import { railFrom } from '@/components/shell/rail'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
@@ -89,7 +90,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const pill = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="toConfirm" /></Suspense>
   const bell = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="unread" /></Suspense>
   const address = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="address" /></Suspense>
-  const rail = (await cookies()).get('rail')?.value === '1'
+  const rail = railFrom((await cookies()).get('rail')?.value)
   const home: NavItem = { href: '/console', label: 'Home', icon: 'home', exact: true }
   const orders: NavItem = { href: '/console/orders', label: 'Orders', icon: 'orders', badge: pill }
   const products: NavItem = { href: '/console/products', label: 'Products', icon: 'products' }

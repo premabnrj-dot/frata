@@ -32,8 +32,8 @@ function Row({ href, icon, title, summary, needs = false, mono = false }: { href
     <Link href={href} className="grid grid-cols-[20px_minmax(0,1fr)_16px] items-center gap-x-3.5 gap-y-0.5 border-t border-line-soft px-4 py-3.5 first:border-t-0 transition-colors duration-fast hover:bg-side md:grid-cols-[20px_minmax(0,1fr)_minmax(0,380px)_16px] md:px-5">
       <Icon name={icon} className="row-span-2 size-5 text-muted-foreground md:row-span-1" />
       <span className="font-medium">{title}</span>
-      <span aria-hidden="true" className="row-span-2 text-muted-foreground md:order-last md:row-span-1">›</span>
-      <span className={`col-start-2 truncate text-label text-muted-foreground md:col-start-auto md:text-right ${mono ? 'font-mono' : ''}`}>{needs ? <Badge tone="warn">{summary}</Badge> : summary}</span>
+      <Icon name="chevron" className="row-span-2 size-4 text-muted-foreground md:order-last md:row-span-1" />
+      <span className={`col-start-2 truncate text-label text-muted-foreground md:col-start-auto md:text-right ${mono ? 'font-mono' : ''}`}>{needs ? <Badge tone="warn" className="max-w-full overflow-hidden text-ellipsis">{summary}</Badge> : summary}</span>
     </Link>
   )
 }
@@ -82,7 +82,7 @@ export default async function SettingsPage() {
     <>
       {/* Neel § Screens · Settings: one list, each row its current value; "Ready for live payments" a chip in the header. */}
       <PageHeader title="Settings" actions={missing.length ? <Badge tone="warn">{missing.length} to fix for live payments</Badge> : <Badge tone="ok">Ready for live payments</Badge>} />
-      <div className="max-w-[860px] space-y-4">
+      <div className="max-w-215 space-y-4">
         {missing.length ? (
           <Banner tone="warn" title="Before live payments">
             <span className="inline-flex flex-wrap gap-x-3">{missing.map((m) => <Link key={m.label} href={`/console/settings/${m.section}`} className="font-medium text-link hover:underline">{m.label}</Link>)}</span>

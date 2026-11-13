@@ -305,3 +305,8 @@ export const billableAtSql = (a = '"orders"'): SQL<Date | null> => sql<Date | nu
   when ${c(a, 'delivered_at')} is not null then least(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + interval '${sql.raw(String(ASSUME_DELIVERED_DAYS))} days')
   when ${c(a, 'shipped_at')} is null or ${c(a, 'lost_at')} is not null then null
   else ${c(a, 'shipped_at')} + interval '${sql.raw(String(ASSUME_DELIVERED_DAYS))} days' end)`
+
+/** How many pieces an order holds now (removed lines left out): the queue's and Home's "3 items" (one copy, impact
+ * review N1). Tenant-scoped inside, as every subquery here. */
+export const orderItemsSql = (tenantId: string) =>
+  sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l where l.order_id = "orders"."id" and l.tenant_id = ${tenantId} and l.removed_at is null)`
