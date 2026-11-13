@@ -219,9 +219,9 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
                 <Td cell="e"><span className="flex flex-wrap items-center gap-1.5">
                   <Tag><Icon name={r.payment.icon} className="mr-1 inline size-3.5 align-[-2px]" />{r.payment.label}</Tag>
                   {r.doNotCollect ? <Badge tone="danger">Do not collect cash</Badge> : null}
-                  <span className="md:hidden">{status(r, now)}</span>
                 </span></Td>
-                <Td cell="hide"><span className="flex flex-wrap items-center gap-1.5">{status(r, now)}
+                {/* One status cell at every width: on a phone it is line 2's badges (cell d), the ship step with it. */}
+                <Td cell="d"><span className="flex flex-wrap items-center gap-1.5">{status(r, now)}
                   {r.shipStep && !now ? <Button size="sm" variant="secondary" onClick={() => void step(r)} aria-disabled={busy}>{r.shipStep === 'ship' ? 'Mark shipped' : 'Delivered'}<span className="sr-only"> {r.number}</span></Button> : null}
                 </span></Td>
                 <Td cell="b" className="text-right"><Money paise={r.total as Paise} /></Td>

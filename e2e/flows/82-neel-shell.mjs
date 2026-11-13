@@ -56,7 +56,7 @@ export default {
 
     await t.step('390: the bottom bar, the active tab in neel', async () => {
       await p.setViewportSize({ width: 390, height: 844 }); await p.goto(CONSOLE + '/console/orders')
-      const tab = p.getByRole('navigation', { name: 'Console' }).last().getByRole('link', { name: /^Orders/ })
+      const tab = p.getByRole('navigation', { name: 'Console' }).last().getByRole('link', { name: /Orders/ }) // its count may come first
       assert.equal(await tab.getAttribute('aria-current'), 'page')
       assert.equal(await tab.evaluate((a) => getComputedStyle(a).color), 'rgb(58, 68, 194)')
       await p.screenshot({ path: 'e2e/.out/82-shell-390.png' })
