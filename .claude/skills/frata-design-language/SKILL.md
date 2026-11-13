@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.0.0
+  version: 7.1.0
   verified: 2026-11-13
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -1146,4 +1146,26 @@ values, keyboard and axe at phone and desktop. A new primitive or state joins th
   Payment as a Tag and Status (with risk) as chips, one status cell that reflows on a phone.
 - **Settings**: one list, a plain 20 px icon per row, its current value at the right, a chevron; up to 860 wide;
   "Ready for live payments" a chip in the header, and what is missing a warn banner above the list.
-- **Not yet** (N1c): filter chips, saved views, instant search, quick look; ⌘K is N1b.
+- **Not yet**: ⌘K (N1b).
+
+## Neel finding (N1c, 2026-11-13; plan `docs/plans/2026-11-13-neel-n1c.md`)
+
+- **Filters are chips that read back** ("Payment is COD", "Total ₹500–₹2,000"): `FilterBar` (`src/components/data/`),
+  × is a link to the list without it, "Clear all" when there is something to clear, "9 of 300 orders" at the right.
+  Everything lives in the address in ONE canonical form (`filterQuery`), so Back works, a link shares and a view saves it.
+- **"+ Filter"**: fields on the left, a field's values on the right with how many each has (inside the tab and the
+  other filters; no counts when they could not be read in time), ranges for money and dates, and the button counts
+  what applying shows ("Show 25 orders") before the person looks. On a phone the same panel is a sheet ("Filters").
+- **Saved views** are the team's, after the queue's own tabs, with their counts (streamed: the page never waits on
+  them); "+ Save view" when filters are on and match no view; a view's ⋯ menu renames it and removes it with Undo. A view
+  never holds a search.
+- **Search answers as you type**: 150 ms after the last key (Orders through its rows route; a small list may render its
+  page per search, 250 ms: `LiveSearchField`), the one in flight aborted, `?q=` written with replaceState, Enter and
+  Back render the page. The match is marked (`<Marked>`, from `highlight()`: text parts, never HTML, never a RegExp
+  from what was typed); a phone or AWB match shows under the name. Nothing found: "No order matches “9845”" and what it
+  searched. Letters with digits (8+) search tracking numbers, digits search numbers and phones, words search names.
+- **Quick look** (`QuickLook`): 400 px from the right over the list, not modal; Space on a focused row or the row's eye
+  button; ↑ ↓ move it, Esc gives the row its focus back, "Open order" goes to the page; words only, never a cost;
+  desktop only (a phone opens the page).
+- **Phone order rows**: line 1 "KS-5006 · Sneha" with ₹ at the right, line 2 the place and the status chip; the
+  customer cell lends its parts to the row's grid (`neel.css`), so the name is in the DOM once.
