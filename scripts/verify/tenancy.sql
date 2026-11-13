@@ -3344,4 +3344,70 @@ do $$ begin
   if exists (select 1 from pg_policies where tablename in ('partner_members', 'partner_assignments') and 'frata_app' = any(roles)) then raise exception 'FAIL: frata_app policy on team tables'; end if;
 end $$;
 
-\echo 'tenancy proof — all 77 checks passed'
+-- 78. Saved views (Neel N1c, 0125–0126; plan docs/plans/2026-11-13-neel-n1c.md § N1c·2): a view is the shop's own both
+-- ways; frata_app reads, adds and deletes its own and changes only a name and its moments; no other role holds any of
+-- it; names are one a shop in any case (a removed view's name is free again); the AWB index leads with the shop.
+insert into saved_views (id, tenant_id, name, tab, query, created_by) values
+  ('5a7e0000-0000-0000-0000-00000000000b', '22222222-2222-2222-2222-222222222222', 'Bihar COD', 'to_confirm', 'pay=cod&st=10', '99999999-9999-9999-9999-999999999999');
+do $$ declare got text; begin
+  if exists (select 1 from pg_tables where tablename = 'saved_views' and not rowsecurity) then raise exception 'FAIL: saved_views without RLS'; end if;
+  if (select count(*) from pg_policies where tablename = 'saved_views') <> 1
+     or (select count(*) from pg_policies where tablename = 'saved_views' and policyname = 'tenant_rows' and roles = '{frata_app}'
+         and qual like '%app_current_tenant()%' and with_check like '%app_current_tenant()%' and qual not like '%is null%') <> 1
+  then raise exception 'FAIL: saved_views without its one tenant policy'; end if;
+  if not (has_table_privilege('frata_app', 'saved_views', 'select') and has_table_privilege('frata_app', 'saved_views', 'insert') and has_table_privilege('frata_app', 'saved_views', 'delete'))
+     or exists (select 1 from unnest(array['update', 'truncate', 'references', 'trigger']) p where has_table_privilege('frata_app', 'saved_views', p))
+  then raise exception 'FAIL: frata_app holds other than select, insert, delete and its columns on saved_views'; end if;
+  select string_agg(column_name, ',' order by column_name) into got from information_schema.column_privileges where grantee = 'frata_app' and table_name = 'saved_views' and privilege_type = 'UPDATE';
+  if got is distinct from 'name,removed_at,updated_at' then raise exception 'FAIL: frata_app updates saved_views columns %', got; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p
+             where has_table_privilege(r, 'saved_views', p) or has_any_column_privilege(r, 'saved_views', 'select') or has_any_column_privilege(r, 'saved_views', 'update'))
+  then raise exception 'FAIL: another role reaches saved_views'; end if;
+  if exists (select 1 from pg_indexes where tablename in ('saved_views', 'shipments') and indexname in ('saved_views_tenant_name', 'shipments_tracking') and indexdef not like '%(tenant_id,%')
+     or (select count(*) from pg_indexes where indexname in ('saved_views_tenant_name', 'shipments_tracking')) <> 2
+  then raise exception 'FAIL: a saved-view or tracking index does not lead with the shop'; end if;
+  if exists (select 1 from pg_indexes where tablename = 'shipments' and indexdef like '%UNIQUE%' and indexdef like '%(tracking_number)%') then raise exception 'FAIL: a unique on tracking_number alone'; end if;
+end $$;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+do $$ declare n int; begin
+  if exists (select 1 from saved_views) then raise exception 'FAIL: A reads B views'; end if;
+  insert into saved_views (tenant_id, name, tab, query, created_by) values ('11111111-1111-1111-1111-111111111111', 'Bihar COD', 'to_confirm', 'pay=cod&st=10', '99999999-9999-9999-9999-999999999999');
+  if (select count(*) from saved_views) <> 1 then raise exception 'FAIL: A cannot see its own view'; end if;
+  begin insert into saved_views (tenant_id, name, tab, created_by) values ('22222222-2222-2222-2222-222222222222', 'Forged', 'all', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: A wrote a view into B'; exception when insufficient_privilege then null; end;
+  update saved_views set name = 'Taken' where id = '5a7e0000-0000-0000-0000-00000000000b'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A renamed B''s view'; end if;
+  delete from saved_views where id = '5a7e0000-0000-0000-0000-00000000000b'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A deleted B''s view'; end if;
+  begin update saved_views set tenant_id = '22222222-2222-2222-2222-222222222222'; raise exception 'FAIL: A moved a view to B';
+  exception when insufficient_privilege then null; end;
+  -- one name a shop, any case; a removed view's name is free again
+  begin insert into saved_views (tenant_id, name, tab, created_by) values ('11111111-1111-1111-1111-111111111111', 'bihar cod', 'all', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: two views named alike'; exception when unique_violation then null; end;
+  update saved_views set removed_at = now() where name = 'Bihar COD';
+  insert into saved_views (tenant_id, name, tab, created_by) values ('11111111-1111-1111-1111-111111111111', 'bihar cod', 'all', '99999999-9999-9999-9999-999999999999');
+  -- the shape
+  begin insert into saved_views (tenant_id, name, tab, created_by) values ('11111111-1111-1111-1111-111111111111', '', 'all', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: an empty name'; exception when check_violation then null; end;
+  begin insert into saved_views (tenant_id, name, tab, created_by) values ('11111111-1111-1111-1111-111111111111', repeat('x', 41), 'all', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: a 41-character name'; exception when check_violation then null; end;
+  begin insert into saved_views (tenant_id, name, tab, query, created_by) values ('11111111-1111-1111-1111-111111111111', 'Long', 'all', repeat('x', 401), '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: a 401-character query'; exception when check_violation then null; end;
+  begin insert into saved_views (tenant_id, name, tab, created_by) values ('11111111-1111-1111-1111-111111111111', 'Bad tab', 'everything', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: a tab that is not a queue tab'; exception when check_violation then null; end;
+end $$;
+commit;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '', true);
+do $$ begin
+  if exists (select 1 from saved_views) then raise exception 'FAIL: views read with no shop set'; end if;
+  begin insert into saved_views (tenant_id, name, tab, created_by) values ('11111111-1111-1111-1111-111111111111', 'No shop', 'all', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: a view written with no shop set'; exception when insufficient_privilege then null; end;
+end $$;
+commit;
+do $$ begin
+  if (select name from saved_views where id = '5a7e0000-0000-0000-0000-00000000000b') is distinct from 'Bihar COD' then raise exception 'FAIL: B''s view changed'; end if;
+end $$;
+
+\echo 'tenancy proof — all 78 checks passed'

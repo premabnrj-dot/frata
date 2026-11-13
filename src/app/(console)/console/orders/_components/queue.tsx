@@ -1,5 +1,9 @@
 'use client'
 
+import { Eye } from 'lucide-react'
+import { Marked } from '@/components/data/marked'
+import { OrderPeek } from './order-peek'
+
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
@@ -37,9 +41,11 @@ export type QueueRow = {
   risk: 'low' | 'medium' | 'high' | 'unknown'; canConfirm: boolean; canHold: boolean; canPrint: boolean; total: number; placed: string; dimmed: boolean
   /** Ship S·0: the row's one shipping step for THIS member (packed → Mark shipped; on its way → Delivered), or none. */
   shipStep: 'ship' | 'deliver' | null
+  /** What a search matched, for the mark (N1c): the text shown and where it came from. */
+  matched?: { field: 'number' | 'name' | 'phone' | 'awb'; text: string } | null
 }
 
-function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: string; slipSize: 'a4' | 'label' }) {
+function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; label: string; slipSize: 'a4' | 'label'; query?: string }) {
   const router = useRouter()
   const toast = useToast()
   const [enabled, setEnabled] = useShortcutsEnabled()
@@ -155,10 +161,16 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
   }
 
   const here = () => { const i = focused(); return i >= 0 ? rows[i] : undefined }
+  // Quick look (N1c·4): which row it shows; ↑ ↓ in it move to the next row (and keep the row in view), Esc gives the row focus back.
+  const [peekAt, setPeekAt] = useState<number | null>(null)
+  useEffect(() => { setPeekAt(null) }, [rows])
+  const peekMove = (by: 1 | -1) => setPeekAt((i) => { if (i === null) return i; const n = Math.max(0, Math.min(rows.length - 1, i + by)); setAt(n); trs()[n]?.scrollIntoView({ block: 'nearest' }); return n })
+  const peekClose = () => { const i = peekAt; setPeekAt(null); if (i !== null) focusRow(i) }
   useShortcuts(enabled, {
     next: () => focusRow(focused() + 1), previous: () => focusRow(Math.max(0, focused() - 1)),
     select: () => { const r = here(); if (r) toggle(r.id) },
     open: () => { const r = here(); if (r) router.push(r.href) },
+    peek: () => { const i = focused(); if (i >= 0) setPeekAt(i) },
     confirm: () => { const r = here(); if (!r) return; if (confirmKey(r) === 'open') router.push(r.href); else void act(r, 'confirm') },
     hold: () => { const r = here(); if (r?.canHold) void act(r, 'hold') },
     print: () => { const r = here(); if (r?.canPrint) router.push(printHref('slip', [r.n])); else if (r) toast.error(`${r.number} has no packing slip yet.`) },
@@ -210,11 +222,19 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
                 className={cn('border-b border-line-soft last:border-0 focus-visible:bg-side md:[&>td]:h-12 [&>td]:px-3 [&>td]:py-1.5', (r.dimmed || now) && 'text-muted-foreground', picked.has(r.id) ? 'bg-select' : 'hover:bg-side')}>
                 <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.number}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)}  /></Td>
                 {/* No prefetch: 50 row links would be 50 server renders on every visit (found by e2e under the stress data, 2026-11-07). */}
-                <Td cell="a"><Link data-row-link prefetch={false} href={r.href} className="inline-flex min-h-6 items-center whitespace-nowrap font-num font-semibold">{r.number}</Link></Td>
-                <Td cell="c"><span className="line-clamp-2">{r.customer ? <Name>{r.customer}</Name> : '—'}</span><span className="block text-small text-muted-foreground">{r.place}</span></Td>
+                <Td cell="a"><Link data-row-link prefetch={false} href={r.href} className="inline-flex min-h-6 items-center whitespace-nowrap font-num font-semibold">{r.matched?.field === 'number' ? <Marked text={r.number} query={query} digits /> : r.number}</Link>
+                  {/* Quick look on a desktop (Space does the same on a focused row). */}
+                  <button type="button" aria-label={`Quick look ${r.number}`} onClick={() => setPeekAt(i)} className="ml-1 hidden size-6 place-items-center rounded-sm align-middle text-muted-foreground hover:bg-accent hover:text-foreground md:inline-grid"><Eye aria-hidden="true" className="size-3.5" /></button>
+                  {/* On a phone, line 1 is "KS-5006 · Sneha" with ₹ at the right (Neel § On a phone; N1c). */}
+                  {r.customer ? <span className="md:hidden"> · {r.customer}</span> : null}</Td>
+                <Td cell="c"><span className="line-clamp-2 max-md:hidden">{r.customer ? <Name mark={r.matched?.field === 'name' ? <Marked text={r.customer} query={query} /> : undefined}>{r.customer}</Name> : '—'}</span>
+                  {/* A phone or a tracking number found by a search shows under the name, the match marked (N1c, as drawn). */}
+                  {r.matched?.field === 'phone' || r.matched?.field === 'awb' ? <span className="block font-num text-small text-muted-foreground"><Marked text={r.matched.text} query={query} digits={r.matched.field === 'phone'} /></span> : null}
+                  <span className="block text-small text-muted-foreground">{r.place}</span></Td>
                 {/* Neel § Screens · Orders: how it is paid as a Tag; where it is, and its risk, in the status cell (d). On a
                     phone each sits on a line of its own under the customer (they do not fit beside it at 390 px). */}
-                <Td cell="e"><span className="flex flex-wrap items-center gap-1.5">
+                {/* On a phone only "Do not collect cash" stays: how it is paid is in quick look and the order page. */}
+                <Td cell={r.doNotCollect ? 'e' : 'hide'}><span className="flex flex-wrap items-center gap-1.5">
                   <Tag>{r.payment.label}</Tag>
                   {r.doNotCollect ? <Badge tone="danger">Do not collect cash</Badge> : null}
                 </span></Td>
@@ -223,7 +243,7 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
                   {r.shipStep && !now ? <Button size="sm" variant="secondary" onClick={() => void step(r)} aria-disabled={busy}>{r.shipStep === 'ship' ? 'Mark shipped' : 'Delivered'}<span className="sr-only"> {r.number}</span></Button> : null}
                 </span></Td>
                 <Td cell="b" className="text-right"><Money paise={r.total as Paise} /></Td>
-                <Td cell="f" className="whitespace-nowrap text-small text-muted-foreground md:text-sm">{r.placed}</Td>
+                <Td cell="hide" className="whitespace-nowrap text-sm text-muted-foreground">{r.placed}</Td>
               </tr>
             )
           })}
@@ -231,7 +251,8 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
       </DataTable>
       </div>
       <p className="text-xs text-muted-foreground"><button type="button" onClick={() => setKeys(true)} className="inline-flex min-h-6 items-center underline underline-offset-2">Keyboard shortcuts</button> · press ?</p>
-      <KeySheet open={keys} onClose={() => setKeys(false)} enabled={enabled} onEnabled={setEnabled} only={['next', 'previous', 'select', 'open', 'confirm', 'hold', 'undo', 'search', 'help', 'rail']} />
+      {peekAt !== null && rows[peekAt] ? <OrderPeek key={rows[peekAt]!.id} n={rows[peekAt]!.n} label={rows[peekAt]!.number} onClose={peekClose} onMove={peekMove} /> : null}
+      <KeySheet open={keys} onClose={() => setKeys(false)} enabled={enabled} onEnabled={setEnabled} only={['next', 'previous', 'select', 'open', 'peek', 'confirm', 'hold', 'undo', 'search', 'help', 'rail']} />
     </>
   )
 }
@@ -246,6 +267,6 @@ function status(r: QueueRow, now: string | undefined) {
 }
 
 /** The queue, or `empty` when the tab has no rows. The console layout's Toaster is above both, so a toast's Undo survives the last row leaving. */
-export function Queue({ rows, label, empty, slipSize }: { rows: QueueRow[]; label: string; empty: React.ReactNode; slipSize: 'a4' | 'label' }) {
-  return rows.length ? <Rows rows={rows} label={label} slipSize={slipSize} /> : empty
+export function Queue({ rows, label, empty, slipSize, query }: { rows: QueueRow[]; label: string; empty: React.ReactNode; slipSize: 'a4' | 'label'; query?: string }) {
+  return rows.length ? <Rows rows={rows} label={label} slipSize={slipSize} query={query} /> : empty
 }

@@ -5,7 +5,7 @@
 // does what, and when a key must do nothing. Pure — the React hook
 // (src/components/ui/use-shortcuts.ts, 1D·3) feeds it the event and acts on
 // the answer, so the rules are tested without a browser.
-//   j / k move · x select · Enter open · c confirm · h hold · p print slip
+//   j / k move · x select · Enter open · Space quick look · c confirm · h hold · p print slip
 //   z undo · / search · ? the list. Never inside a field, never with a
 //   modifier, never while a dialog is open, never when the person turned
 //   single-key shortcuts off on this device (WCAG 2.1.4) — except ? and Esc, which stay.
@@ -16,6 +16,8 @@ export const SHORTCUTS = [
   { key: 'k', action: 'previous', label: 'Previous order' },
   { key: 'x', action: 'select', label: 'Select or unselect' },
   { key: 'Enter', action: 'open', label: 'Open the order' },
+  // Neel N1c: the order beside the list (↑ ↓ move it, Esc closes).
+  { key: ' ', action: 'peek', label: 'Quick look' },
   { key: 'c', action: 'confirm', label: 'Confirm (a high-risk order opens instead)' },
   { key: 'h', action: 'hold', label: 'Put on hold' },
   { key: 'p', action: 'print', label: 'Print the packing slip' },
@@ -56,7 +58,8 @@ export function shortcutFor(e: KeyInput): ShortcutAction | null {
   if (e.key === 'Escape') return e.modalOpen ? null : 'close' // the dialog handles its own Esc
   if (e.modalOpen || inField(e.target)) return null
   // Enter on a button or link is that control's own click: the queue only opens a row that has focus.
-  if (e.key === 'Enter' && e.target.tag.toUpperCase() !== 'TR') return null
+  // So is Space (a button presses, a page scrolls): quick look only opens from a row that has focus.
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.tag.toUpperCase() !== 'TR') return null
   if (e.key === '?') return 'help' // always on, so the person can find the switch
   if (!e.enabled) return null
   return SHORTCUTS.find((s) => s.key === e.key)?.action ?? null

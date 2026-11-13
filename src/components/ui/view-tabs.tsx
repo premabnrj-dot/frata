@@ -14,15 +14,16 @@ import { cn } from '@/lib/utils'
 // alone on its own row).
 // =============================================================================
 
-export type ViewTab = { href: string; label: string; count?: number; current: boolean; apart?: boolean }
+export type ViewTab = { href: string; label: string; count?: number; current: boolean; apart?: boolean; menu?: React.ReactNode }
 
-export function ViewTabs({ label, tabs, scroll = false }: { label: string; tabs: ViewTab[]; scroll?: boolean }) {
+/** `trailing`: the last item of the row (Orders' "+ Save view"); a tab's `menu` sits right after it (a saved view's Rename and Remove). */
+export function ViewTabs({ label, tabs, scroll = false, trailing }: { label: string; tabs: ViewTab[]; scroll?: boolean; trailing?: React.ReactNode }) {
   return (
     <nav aria-label={label} className={cn('overflow-x-auto border-b border-border [scrollbar-width:none]', scroll && '-mx-4 px-4 md:-mx-1 md:px-1 md:[scrollbar-width:thin]')}>
       {/* Neel § Components: one row that scrolls sideways, never a second row (`scroll` also runs it to the phone's edge). */}
       <ul className="flex w-max min-w-full items-center gap-5">
         {tabs.map((t) => (
-          <li key={t.href} className={cn('shrink-0', t.apart && 'ml-auto pl-4')}>
+          <li key={t.href} className={cn('flex shrink-0 items-center gap-0.5', t.apart && 'ml-auto pl-4')}>
             {/* Neel § Components: underline tabs 20 apart; the current one in text and a 2 px neel line (no thread). */}
             <Link href={t.href} aria-current={t.current ? 'page' : undefined}
               className={cn('-mb-px inline-flex min-h-11 items-center focus-visible:outline-offset-[-2px] gap-1.5 whitespace-nowrap border-b-2 text-sm font-medium md:min-h-10',
@@ -30,8 +31,10 @@ export function ViewTabs({ label, tabs, scroll = false }: { label: string; tabs:
               {t.label}
               {t.count !== undefined ? <span className={cn('rounded-full px-1.5 py-[3px] font-num text-small leading-none font-medium', t.current ? 'bg-select text-link' : 'bg-line-soft text-muted-foreground')}>{t.count.toLocaleString('en-IN')}</span> : null}
             </Link>
+            {t.menu}
           </li>
         ))}
+        {trailing ? <li className="shrink-0">{trailing}</li> : null}
       </ul>
     </nav>
   )

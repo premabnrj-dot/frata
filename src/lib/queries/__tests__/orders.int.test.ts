@@ -23,7 +23,7 @@ describe.skipIf(!host)('order search', () => {
     const now = new Date()
     const mine = await listOrders(A, { tab: 'all', q: tag, now })
     expect(mine.map((o) => o.number)).toEqual([n]) // B's same-named order never shows
-    expect(mine[0]!.matching).toBe(1)
+    expect(mine.length).toBe(1)
     expect((await listOrders(A, { tab: 'all', q: phone, now })).map((o) => o.number)).toEqual([n])
     expect((await listOrders(A, { tab: 'all', q: `KS-${n + 1}`, now })).length).toBe(0) // B's number, from A
     expect((await listOrders(A, { tab: 'all', q: '%', now })).some((o) => o.number === n)).toBe(false) // % is text, not "everything"
@@ -48,7 +48,7 @@ describe.skipIf(!host)('order search', () => {
     })
     const hits = await listOrders(A, { tab: 'on_the_way', q: tag, now })
     expect(hits.map((h) => h.number).sort()).toEqual([n, n + 1, n + 2])
-    expect(hits[0]!.matching).toBe(3)
+    expect(hits.length).toBe(3)
     expect(hits.map((h) => orderState(h, now)).sort()).toEqual(['awaiting_payment', 'cancelled', 'unconfirmed'])
     // No search: the tab's orders only.
     expect((await listOrders(A, { tab: 'on_the_way', now })).some((h) => h.number >= n && h.number <= n + 2)).toBe(false)

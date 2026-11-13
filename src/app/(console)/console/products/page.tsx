@@ -6,7 +6,7 @@ import { button } from '@/components/ui/button'
 import { Menu } from '@/components/ui/menu'
 import { Panel } from '@/components/ui/panel'
 import { Pager } from '@/components/data/pager'
-import { SearchField } from '@/components/data/search-field'
+import { LiveSearchField } from '@/components/data/live-search-field'
 import { bestOffer, statusLabel, type Status } from '@/domains/catalogue/availability'
 import { hrefFor, listQuery, type ListFilter } from '@/domains/catalogue/list-query'
 import { pick, urlFor } from '@/domains/media/sizes'
@@ -46,13 +46,14 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const empty = query.q ? `No product matches “${query.q}”` : query.filter === 'low' ? 'No products are low on stock' : query.filter === 'all' ? 'Every product is archived' : `No ${FILTERS.find(([k]) => k === query.filter)![1].toLowerCase()} products`
   return (
     <>
-      <PageHeader title="Products" actions={<><Menu items={[{ label: 'Add photos', href: '/console/products/photos' }, { label: 'HSN codes', href: '/console/products/tax' }, { label: 'Collections', href: '/console/collections' }]} />{importLink}{add}</>} />
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <SearchField label="Search products" placeholder="Search name, SKU or tag" value={query.q} clearHref={hrefFor(query, { q: '' })}
-          hidden={{ ...(query.filter !== 'all' ? { status: query.filter } : {}), ...(query.sort !== 'edited' ? { sort: query.sort } : {}) }} />
+      <PageHeader title="Products" actions={<><Menu variant="ghost" items={[{ label: 'Add photos', href: '/console/products/photos' }, { label: 'HSN codes', href: '/console/products/tax' }, { label: 'Collections', href: '/console/collections' }]} />{importLink}{add}</>} />
+      {/* Neel § Screens · Products (N1c): the tabs, then the search and Sort; the search answers as you type. */}
+      <ViewTabs label="Filter products" scroll tabs={FILTERS.map(([k, label]) => ({ href: hrefFor(query, { filter: k }), label, current: query.filter === k, count: list.counts[k] }))} />
+      <div className="my-3 flex flex-wrap items-center gap-2">
+        <LiveSearchField path="/console/products" label="Search products" placeholder="Search name, SKU or tag" value={query.q}
+          params={{ ...(query.filter !== 'all' ? { status: query.filter } : {}), ...(query.sort !== 'edited' ? { sort: query.sort } : {}) }} />
         <SortSelect value={query.sort} hrefs={{ edited: hrefFor(query, { sort: 'edited' }), name: hrefFor(query, { sort: 'name' }), stock: hrefFor(query, { sort: 'stock' }) }} />
       </div>
-      <ViewTabs label="Filter products" scroll tabs={FILTERS.map(([k, label]) => ({ href: hrefFor(query, { filter: k }), label, current: query.filter === k, count: list.counts[k] }))} />
       {!rows.length ? <Panel title={empty} />
         : <ProductTable key={hrefFor(query, { page: query.page })} rows={rows} collections={cols} />}
       <div className="mt-3">

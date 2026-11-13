@@ -21,7 +21,7 @@ export function KeySheet({ open, onClose, enabled, onEnabled, only }: { open: bo
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
         {SHORTCUTS.filter((s) => !only || only.includes(s.action)).map((s) => (
           <div key={s.key} className="contents">
-            <dt><kbd className="inline-grid min-w-7 place-items-center rounded-sm border border-input px-1.5 font-mono text-xs">{s.key === 'Enter' ? '↵' : s.key}</kbd></dt>
+            <dt><kbd className="inline-grid min-w-7 place-items-center rounded-sm border border-input px-1.5 font-mono text-xs">{s.key === 'Enter' ? '↵' : s.key === ' ' ? 'Space' : s.key}</kbd></dt>
             <dd>{s.label}</dd>
           </div>
         ))}

@@ -109,15 +109,16 @@ export default {
         await p.getByLabel('Search orders').fill('Queue Aarti'); await p.getByLabel('Search orders').press('Enter')
         await p.waitForURL(/q=Queue/); assert.equal(await p.locator('tbody tr').count(), 3)
         await p.getByLabel('Search orders').fill('9811100001'); await p.getByLabel('Search orders').press('Enter')
-        await row(A).waitFor(); assert.equal(await p.locator('tbody tr').count(), 3) // a phone: that customer's orders
+        await p.waitForFunction(() => document.querySelectorAll('tbody tr').length === 3); await row(A).waitFor() // a phone: that customer's orders
         await p.getByLabel('Search orders').fill(label(B)); await p.getByLabel('Search orders').press('Enter')
-        await row(B).waitFor(); assert.equal(await p.locator('tbody tr').count(), 1) // the number, not D's phone that contains it
+        // Results follow the keys (N1c): wait for the list to become the one order, not for a row already on screen.
+        await p.waitForFunction(() => document.querySelectorAll('tbody tr').length === 1); await row(B).waitFor() // the number, not D's phone that contains it
         // A search link past its last page (results shrank): its first page, and the pager says so.
         await p.goto(CONSOLE + `/console/orders?tab=all&q=${encodeURIComponent('Queue Aarti')}&page=3`)
         await row(A).waitFor(); assert.equal(await p.locator('tbody tr').count(), 3)
         assert.equal(await p.getByText(/Showing 4–/).count(), 0)
         await p.getByLabel('Search orders').fill('nobody-like-this'); await p.getByLabel('Search orders').press('Enter')
-        await p.getByText('No order matches that search').waitFor()
+        await p.getByText('No order matches “nobody-like-this”').waitFor() // says what it searched (N1c, as drawn)
       })
 
       await t.step('? lists only the keys this screen has', async () => {

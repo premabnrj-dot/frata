@@ -1,114 +1,94 @@
-import { Pager } from '@/components/data/pager'
-import { SearchField } from '@/components/data/search-field'
+import { FilterBar } from '@/components/data/filter-bar'
 import { PageHeader } from '@/components/layout/page-header'
+import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
-import { ViewTabs } from '@/components/ui/view-tabs'
-import { currentMethod, orderState, paidAfterSwitch, QUEUE_TABS, type QueueTab } from '@/domains/orders/order-state'
-import { risk } from '@/domains/orders/risk'
-import { placeLine } from '@/domains/orders/place-line'
-import { applies, may } from '@/domains/orders/work'
+import { chipsFor, filterParams, filterQuery, hasFilters, parseFilters, type OrderFilters } from '@/domains/orders/filters'
+import { QUEUE_TABS, type QueueTab } from '@/domains/orders/order-state'
+import { MAX_SEARCH } from '@/domains/orders/search'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
-import { dateTimeIN } from '@/lib/format-date'
-import { riskFactsFor } from '@/lib/queries/order-risk'
-import { listOrders, ORDERS_PAGE, queueShopFor, queueCounts } from '@/lib/queries/orders'
-import { PAYMENT, STATE, TABS } from './_components/labels'
-import { Queue, type QueueRow } from './_components/queue'
+import { countOrders, ORDERS_PAGE, ordersPage, queueCounts } from '@/lib/queries/orders'
+import { savedViewsFor, viewCounts } from '@/lib/queries/saved-views'
 import { errName } from '@/lib/log'
+import { TABS } from './_components/labels'
+import { AddFilter, FilterSheet } from './_components/filter-panel'
+import { OrdersList } from './_components/orders-list'
+import { toRows } from './_components/rows'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/page.tsx
 //
-// THE ORDERS QUEUE (1D·4b, docs/specs/2026-11-07-orders.md § 1D·1): tabs with
-// counts over every order (queueCounts, the same predicates the list filters
-// with), one search over every order whatever the tab (no tab is current then;
-// the pager counts the matches), 50 a page, two badges per row (how it is paid,
-// where it is), risk only when Medium or High, and the queue's keys and bulk confirm
-// (./_components/queue.tsx). The view is in the address: ?tab=&q=&page=.
+// THE ORDERS QUEUE (1D·4b; Neel N1c § Finding): tabs with counts under the filters (queueCounts, the same predicates
+// the list filters with), the filters as chips that read back as a sentence, one search over every order whatever the
+// tab (as you type: ./_components/orders-list.tsx and ./rows), 50 a page, the queue's keys and bulk confirm. The view
+// is in the address: ?tab=&q=&page= and the filters (src/domains/orders/filters.ts). Reads: counts ‖ the page (list
+// and prefix, then risk) ‖ the tab's unfiltered count when filters are on, each its own transaction.
 // =============================================================================
 
 export const metadata = { title: 'Orders' }
 
 const fail = <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+type SP = Record<string, string | string[] | undefined>
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? ''
 
-export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ tab?: string; q?: string; page?: string }> }) {
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<SP> }) {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
   const sp = await searchParams
-  const tab: QueueTab = (QUEUE_TABS as readonly string[]).includes(sp.tab ?? '') ? (sp.tab as QueueTab) : 'to_confirm'
-  const q = (sp.q ?? '').trim().slice(0, 60)
+  const tab: QueueTab = (QUEUE_TABS as readonly string[]).includes(one(sp.tab)) ? (one(sp.tab) as QueueTab) : 'to_confirm'
+  const q = one(sp.q).trim().slice(0, MAX_SEARCH)
+  const filters = parseFilters(sp)
+  const filtered = hasFilters(filters)
   const now = new Date()
   const tenantId = auth.membership.tenantId
-  const role = auth.membership.role
-  // Counts, the page asked for and the order prefix in parallel (speed review P8: they ran one after another); the
-  // rare page past the end is fetched again once the count says where the end is.
-  const asked = Number(sp.page)
-  const pagesFor = (n: number) => Math.max(1, Math.ceil(n / ORDERS_PAGE))
+  const asked = Number(one(sp.page))
   const wanted = Number.isSafeInteger(asked) ? Math.min(Math.max(1, asked), 1_000) : 1
-  const [counts, first, queueShop] = await Promise.all([
-    queueCounts(tenantId, now).catch((err) => { console.error('[orders]', errName(err)); return null }),
-    listOrders(tenantId, { tab, page: wanted, q, now }).catch((err) => { console.error('[orders]', errName(err)); return null }),
-    queueShopFor(tenantId),
+  const log = (err: unknown) => { console.error('[orders]', errName(err)); return null }
+  const [counts, first, unfiltered, views] = await Promise.all([
+    queueCounts(tenantId, now, filters).catch(log),
+    ordersPage(tenantId, { tab, page: wanted, q, filters, now }).catch(log),
+    filtered && !q ? countOrders(tenantId, { tab, now }).catch(log) : null,
+    savedViewsFor(tenantId).catch((err) => { log(err); return [] }),
   ])
-  const prefix = queueShop.prefix
   if (!counts || !first) return fail
-  // The pager's total: the tab's own count, or (searching) how many match, from the list query itself.
-  const page = q ? wanted : Math.min(wanted, pagesFor(counts[tab]))
-  let list = page === wanted ? first : ((await listOrders(tenantId, { tab, page, q, now }).catch(() => null)) ?? [])
-  // A search link past its last page (results shrank since): show its first page, and say so in the pager.
-  const refetched = q !== '' && !list.length && page > 1
-  if (refetched) list = (await listOrders(tenantId, { tab, page: 1, q, now }).catch(() => [])) ?? []
-  const total = q ? (list[0]?.matching ?? 0) : counts[tab]
-  const pages = pagesFor(total)
-  const shownPage = refetched ? 1 : page
+  // A page past the end (rows left since the link was made): its last page instead (a search: its first).
+  const last = Math.max(1, Math.ceil((q ? 1 : counts[tab]) / ORDERS_PAGE))
+  const page = !first.list.length && wanted > 1 ? (q ? 1 : Math.min(wanted, last)) : wanted
+  const view = page === wanted ? first : ((await ordersPage(tenantId, { tab, page, q, filters, now }).catch(log)) ?? first)
+  const rows = toRows(view, q, auth.membership.role, now)
 
-  // If the risk facts cannot be read, rows say "Risk unavailable" and c opens instead of confirming: never fail open.
-  const facts = await riskFactsFor(tenantId, list.map((o) => o.id), now).catch((err) => { console.error('[orders] risk', errName(err)); return null })
-  const rows: QueueRow[] = list.map((o) => {
-    const state = orderState(o, now)
-    const method = currentMethod(o)
-    const f = facts?.get(o.id)
-    return {
-      id: o.id, n: o.number, number: `${prefix}-${o.number}`, href: `/console/orders/${o.number}`,
-      customer: o.customerName, place: placeLine(o.city, o.items),
-      payment: method === 'cod' ? PAYMENT.cod : o.paidAt ? PAYMENT.paid : PAYMENT.unpaid, state: STATE[state], doNotCollect: paidAfterSwitch(o),
-      // Risk is for orders still to be decided; once confirmed, packed or paid it is not news.
-      risk: state === 'unconfirmed' || state === 'held' ? (facts === null ? 'unknown' : f ? risk(f).level : 'low') : 'low',
-      canConfirm: applies('confirm', state), canHold: applies('hold', state), canPrint: applies('print', state),
-      total: Number(o.total), placed: dateTimeIN(o.placedAt), dimmed: STATE[state].tone === 'neutral',
-      shipStep: o.byCourier ? null : may('ship_self', state, role) ? 'ship' : may('deliver', state, role) ? 'deliver' : null,
-    }
-  })
-
-  const href = (p: { tab?: QueueTab; page?: number; q?: string }) => {
-    const u = new URLSearchParams()
-    const t = p.tab ?? tab
+  // Hrefs keep the tab, the search and every filter (Back restores exactly this).
+  const href = (o: { tab?: QueueTab; q?: string; filters?: OrderFilters }) => {
+    const u = new URLSearchParams(filterParams(o.filters ?? filters))
+    const t = o.tab ?? tab
     if (t !== 'to_confirm') u.set('tab', t)
-    if (p.q ?? q) u.set('q', p.q ?? q)
-    if ((p.page ?? 1) > 1) u.set('page', String(p.page))
-    const s = u.toString()
+    if (o.q ?? q) u.set('q', o.q ?? q)
+    const s = new URLSearchParams([...u.entries()].sort(([a], [b]) => a.localeCompare(b))).toString()
     return `/console/orders${s ? `?${s}` : ''}`
   }
   const info = TABS.find((t) => t.tab === tab)!
-  // A search covers every order (listOrders), so no tab is current while one is on; clearing it goes back to the tab.
   // Couldn't deliver jumps to the front when it holds anything (design language 53): a failed delivery is today's work.
   const ordered = counts.couldnt_deliver > 0 ? [...TABS].sort((a, b) => Number(b.tab === 'couldnt_deliver') - Number(a.tab === 'couldnt_deliver')) : TABS
-  // Couldn't deliver and Coming back show only while they hold an order (or are the open view): nothing records a
-  // failed delivery yet (ndr_at is never written), so an always-empty tab would only widen the row.
+  // Couldn't deliver and Coming back show only while they hold an order (or are the open view).
   const shown = ordered.filter((t) => (t.tab !== 'couldnt_deliver' && t.tab !== 'coming_back') || counts[t.tab] > 0 || t.tab === tab)
+  const chips = chipsFor(filters).map((c) => ({ label: c.label, href: href({ filters: c.without }) }))
+  const ask = { tab, q, filters: new URLSearchParams(filterParams(filters)).toString() }
+  const n = (x: number) => x.toLocaleString('en-IN')
+  const summary = filtered && !q && unfiltered !== null ? `${n(counts[tab])} of ${n(unfiltered)} orders` : null
+  const waiting = counts.to_confirm
+  // A view is current when the address holds exactly its tab and filters (no ?view= to go stale).
+  const here = filterQuery(filters)
+  const viewLinks = views.map((v) => ({ id: v.id, name: v.name, href: href({ tab: v.tab, q: '', filters: v.filters }), current: !q && v.tab === tab && v.query === here }))
   return (
     <>
-      <PageHeader title="Orders" />
-      <ViewTabs label="Order views" scroll tabs={shown.map((t) => ({ href: href({ tab: t.tab, q: '' }), label: t.label, count: counts[t.tab], current: !q && t.tab === tab, apart: t.tab === 'not_paid' }))} />
-      <SearchField label="Search orders" placeholder="Search number, name or phone" value={q} clearHref={href({ q: '' })} hidden={tab !== 'to_confirm' ? { tab } : undefined} />
-      {/* Always the Queue, even empty: its toast (and Undo) must outlive the last row leaving the tab (e2e 49). */}
-      <Queue rows={rows} label={q ? 'Orders · Search' : `Orders · ${info.label}`} slipSize={queueShop.slipSize} empty={
-        <Panel title={q ? 'No order matches that search' : info.empty.title}>
-          {q ? <>Try the order number, the customer&apos;s name or the last digits of their phone.</> : info.empty.body ?? null}
-        </Panel>} />
-      {rows.length > 0 ? (
-        <Pager first={(shownPage - 1) * ORDERS_PAGE + 1} shown={rows.length} total={total} suffix="newest first" prevLabel="Newer" nextLabel="Older"
-          prevHref={shownPage > 1 ? href({ page: shownPage - 1 }) : undefined} nextHref={shownPage < pages ? href({ page: shownPage + 1 }) : undefined} />
-      ) : null}
+      <PageHeader title="Orders" badges={waiting > 0 ? <span className="md:hidden"><Badge tone="warn">{n(waiting)} to confirm</Badge></span> : undefined} />
+      <OrdersList tab={tab} q={q} filters={ask.filters} page={page} rows={rows} more={view.more} total={counts[tab]} filtered={filtered}
+        slipSize={view.slipSize}
+        tabs={shown.map((t) => ({ tab: t.tab, label: t.label, count: counts[t.tab], apart: t.tab === 'not_paid' }))}
+        empty={info.empty}
+        empties={{ search: { title: 'No order matches that search', body: 'Searched order numbers, names, phones and tracking numbers.' }, filters: { title: 'No order matches these filters' } }}
+        views={viewLinks} viewCounts={viewCounts(tenantId, views, now)} saveable={filtered && !viewLinks.some((v) => v.current)}
+        bar={<FilterBar chips={chips} clearHref={href({ filters: {} })} summary={summary}
+          add={<><AddFilter ask={ask} /><FilterSheet ask={ask} active={chips.length} /></>} />} />
     </>
   )
 }

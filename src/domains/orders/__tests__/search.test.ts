@@ -20,7 +20,7 @@ describe('order search', () => {
   })
   it('empty is no search; long input is cut', () => {
     expect(parseOrderSearch('   ')).toBe(null)
-    expect(parseOrderSearch('x'.repeat(200))!.like.length).toBe(MAX_SEARCH + 2)
+    expect(parseOrderSearch('x'.repeat(200))!.like!.length).toBe(MAX_SEARCH + 2)
   })
 })
 
@@ -34,4 +34,16 @@ describe('a phone pasted from WhatsApp (shop stress test 2026-11-11)', () => {
     expect(parseOrderSearch('43210')?.phoneDigits).toBe('43210')
     expect(parseOrderSearch('0987')?.phoneDigits).toBe('0987')
   })
+})
+
+describe('which test runs (N1c: a fast test never waits on the name scan)', () => {
+  it('digits are a number, a phone and a tracking number, never a name', () => {
+    expect(parseOrderSearch('9845')).toEqual({ like: null, number: 9845, phoneDigits: '9845', awb: null })
+    expect(parseOrderSearch('14900233812')).toMatchObject({ like: null, awb: '14900233812' })
+  })
+  it('an order number is not a name', () => expect(parseOrderSearch('KS-1012')?.like).toBe(null))
+  it('letters and digits, 8 or more: a tracking number', () => {
+    expect(parseOrderSearch('SF123456789IN')).toMatchObject({ like: null, awb: 'SF123456789IN', number: null })
+  })
+  it('a name is only a name', () => expect(parseOrderSearch('Sneha')).toEqual({ like: '%Sneha%', number: null, phoneDigits: null, awb: null }))
 })

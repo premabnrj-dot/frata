@@ -18,7 +18,9 @@ import { button } from './button'
 
 export type MenuItem = { label: string; onSelect: () => void; danger?: boolean } | { label: string; href: string; danger?: boolean; download?: boolean }
 
-export function Menu({ label = 'More', items, align = 'end', size }: { label?: string; items: MenuItem[]; align?: 'start' | 'end'; size?: 'sm' }) {
+/** `variant`: the trigger's look (secondary by default; ghost for a quiet "More", Neel). `icon`: the trigger shows only
+ * this, `label` becoming its accessible name (a saved view's ⋯). */
+export function Menu({ label = 'More', items, align = 'end', size, variant = 'secondary', icon }: { label?: string; items: MenuItem[]; align?: 'start' | 'end'; size?: 'sm'; variant?: 'secondary' | 'ghost'; icon?: React.ReactNode }) {
   const id = useId()
   const trigger = useRef<HTMLButtonElement>(null)
   const pop = useRef<HTMLDivElement>(null)
@@ -37,8 +39,9 @@ export function Menu({ label = 'More', items, align = 'end', size }: { label?: s
   const itemClass = (danger?: boolean) => cn('flex min-h-11 w-full items-center rounded-md px-2.5 text-left text-sm md:min-h-9 hover:bg-accent focus-visible:bg-accent', danger && 'text-danger-text')
   return (
     <>
-      <button ref={trigger} type="button" popoverTarget={id} aria-haspopup="menu" aria-expanded={false} aria-controls={id} className={button({ variant: 'secondary', size })}>
-        {label}<ChevronDown aria-hidden className="size-4" />
+      <button ref={trigger} type="button" popoverTarget={id} aria-haspopup="menu" aria-expanded={false} aria-controls={id}
+        aria-label={icon ? label : undefined} className={icon ? 'inline-grid size-6 place-items-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground' : button({ variant, size })}>
+        {icon ?? <>{label}<ChevronDown aria-hidden className="size-4" /></>}
       </button>
       <div ref={pop} id={id} popover="auto" data-pop="menu" role="menu" aria-label={label}
         // Said before it shows (beforetoggle is synchronous), so a screen reader never hears a stale state.

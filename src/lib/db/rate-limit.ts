@@ -52,6 +52,11 @@ export const LIMITS = {
   importPhotoSizes: { action: 'upload_import:photo', max: 3, windowSeconds: 3600 },
   // PDF documents (Documents D1, security review 2026-11-08): a render is CPU; per member and per shop, fail closed.
   pdfMember: { action: 'pdf:member', max: 30, windowSeconds: 600 },
+  // Orders' instant search and filter values (Neel N1c, security review 2026-11-13): a key every 150 ms is ~400 in 10
+  // minutes of steady typing; past that it is a script. Per member, failing open (a list is never worse than the page).
+  ordersReadMember: { action: 'orders_read:member', max: 600, windowSeconds: 600 },
+  // Quick look reads an order's address and phone: one person looking reads ~120 in 10 minutes; fails closed.
+  peekMember: { action: 'orders_peek:member', max: 120, windowSeconds: 600 },
   // Own domains D2·10 (security review 2026-11-09): claims per member and shop; the dialog's 15 s check per member,
   // shop and IP bucket, and one budget for all shops (Vercel reads and DoH are shared); all fail closed.
   domainClaimMember: { action: 'domain_claim:member', max: 20, windowSeconds: 3600 },
