@@ -8,6 +8,7 @@
 // queues 1).
 // =============================================================================
 import type { OrderState, QueueTab } from '@/domains/orders/order-state'
+import { PAY_WORDS } from '@/domains/orders/filters'
 
 export type Tone = 'ok' | 'warn' | 'danger' | 'info' | 'neutral'
 
@@ -33,9 +34,9 @@ export const STATE: Record<OrderState, { label: string; tone: Tone }> = {
 // How it is paid is a neutral badge with its icon; only the order's STATE is coloured, so "COD" and "To confirm" no
 // longer read as one yellow axis (visual changes, owner-approved 2026-11-08).
 export const PAYMENT = {
-  cod: { label: 'COD', tone: 'neutral' as Tone, icon: 'cod' as const },
-  paid: { label: 'Paid online', tone: 'neutral' as Tone, icon: 'prepaid' as const },
-  unpaid: { label: 'Online, not paid', tone: 'neutral' as Tone, icon: 'prepaid' as const },
+  cod: { label: PAY_WORDS.cod, tone: 'neutral' as Tone, icon: 'cod' as const },
+  paid: { label: PAY_WORDS.paid, tone: 'neutral' as Tone, icon: 'prepaid' as const },
+  unpaid: { label: PAY_WORDS.unpaid, tone: 'neutral' as Tone, icon: 'prepaid' as const },
 }
 
 /** The queue's views, and what each says when nothing waits in it (an empty state per tab, design-language § Work queues 8). */
