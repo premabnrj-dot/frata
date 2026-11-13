@@ -46,6 +46,13 @@ export default {
         assert.deepEqual([color, width], ['rgb(76, 87, 214)', '2px'], who)
       })
 
+      await t.step(`${size}: a field's focus and its mistake`, async () => {
+        const wrong = p.getByLabel('Price')
+        assert.deepEqual(await wrong.evaluate((x) => [getComputedStyle(x).borderTopColor, getComputedStyle(x).boxShadow]), ['rgb(220, 59, 59)', 'rgb(253, 236, 236) 0px 0px 0px 3px'])
+        const name = p.getByLabel('Product name'); await name.click(); await p.waitForTimeout(250) // a text field shows focus on a click too
+        assert.deepEqual(await name.evaluate((x) => [getComputedStyle(x).borderTopColor, getComputedStyle(x).outlineOffset]), ['rgb(76, 87, 214)', '1px'])
+      })
+
       await t.step(`${size}: the segmented control moves by arrows`, async () => {
         const week = p.getByRole('radio', { name: 'Week' }); await week.focus(); await p.keyboard.press('ArrowRight')
         assert.equal(await p.getByRole('radio', { name: 'Month' }).getAttribute('aria-checked'), 'true')

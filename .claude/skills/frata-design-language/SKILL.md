@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.25.0
+  version: 6.0.0
   verified: 2026-11-13
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -280,24 +280,36 @@ fashion lives in the storefront.** Patterns below are taken from Ekatan's admin
 - `--accent`, `--muted`, `--secondary` are neutral hover surfaces.
 - Status pairs, background then text, all ≥ 4.5:1: `ok`, `warn`, `danger`,
   `info`, `neutral` → `bg-ok text-ok-text` …
-- **Borders, not shadows.** Shadows are zeroed; only floating things get one.
-- Radius 6px. Inter for UI, JetBrains Mono for figures.
+- **NEEL (owner, 2026-11-13; Neel N0): the console, Frrata Admin, the partner workspace and the look editor carry
+  `data-neel`** and draw from `src/app/neel.css` (globals.css only, never a store): warm grey, neel 600 the one action
+  colour (`--primary`), focus neel 500, rani for the mark and the loading line only. Outside `[data-neel]` (the store,
+  the website, sign-in) every token is as before; the store preview inside resets to them. Mockup:
+  `docs/mockups/2026-11-13-design-language-neel.html`; plan `docs/plans/2026-11-13-neel-n0.md`.
+- **Depth by role in Neel:** e1 rests (secondary button, segment), e2 floats (menu, popover), e3 overlays (dialog,
+  toast, save bar) — `shadow-sm` / `shadow-md` / `shadow-lg`. Outside Neel, borders, not shadows.
+- **Radius by role in Neel:** 4 checkbox and kbd (`rounded-xs`) · 6 chip and tag (`rounded-sm`) · 8 button and field
+  (`rounded-md`) · 10 toast, banner, segmented (`rounded-mid`) · 12 card and menu (`rounded-lg`) · 16 dialog
+  (`rounded-xl`). Hand-written CSS reads `--r-*`, never `--radius-*`.
+- Inter for everything in Neel, numbers included (`font-num`: tabular). Mono only for codes: SKU, AWB, GSTIN, a code,
+  a domain being copied. Weights 400, 500, 600 (no `font-bold` in Neel).
+- Neel-only colours (`bg-select`, `text-link`, `bg-sunk`, `bg-side`, `border-edge`, `bg-off`, `bg-chart` …) fall back
+  outside the scope to what the place used before (base.css @theme), so a shared primitive renders as before there.
 - Motion: `duration-fast|base|slow` + `ease-standard|entrance|exit`. Never
   `duration-[…]`. Reduced motion is honoured globally. Lists never animate;
   they dim while loading.
 
 ## Type scale
 
-Page title `text-2xl font-bold tracking-tight` · section `text-xl font-semibold`
-· card (every `Section` title, Console and Admin) `text-section`
-(token `--text-section`, never `--text-card`, which collides with `--color-card`), 15 px semibold (owner, 2026-11-07; replaces 18 px medium) · label
-`text-sm font-medium` · body `text-sm` · micro `text-xs text-muted-foreground`.
+Neel: display `text-display` 30/36 · page title `text-title` 22/28 semibold · card (every `Section` title)
+`text-section` 16/24 semibold · body `text-sm` 14/20 · label `text-label` 13/18 medium · small `text-small` 12/16 · key
+`text-kbd` 11 px Inter. Outside Neel `text-section` keeps 15 px (tokens `--t-*`). The roles are registered with
+tailwind-merge in `cn()` (`src/lib/utils.ts`): add a new size role there too, or `cn` drops it beside a colour.
 No other size: `check:scale` fails `text-[Npx]` in app code.
 
 ## Numbers, dates, people
 
 - Every ₹, order number and count in a column: `<Money paise>` / `<Numeric>`
-  (mono, tabular), right-aligned. A loss renders in `text-danger-text` with a
+  (`font-num`: Inter with tabular figures in Neel, mono outside it), right-aligned. A loss renders in `text-danger-text` with a
   real minus (−₹430).
 - Dates only through `src/lib/format-date.ts` (`dayIN`, `dateTimeIN`,
   `sinceIN`) — always IST (`check:dates`).
@@ -842,7 +854,8 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 **Targets and type**
 19. Every target is at least 24 × 24 px (WCAG 2.5.8), padded rather than a
     bigger icon; a text button or link is `inline-flex min-h-6 items-center` (a one-letter one also `min-w-6`);
-    quick-add words are chips, not comma-separated text. Controls are `h-10` under 768 px and `h-9` above; a button's
+    quick-add words are chips, not comma-separated text. Controls are `h-11` (44 px) under 768 px and `h-9` above in Neel (`h-10` outside it); a field is `FIELD` from
+    `src/components/ui/field.ts`, its focus and mistake drawn once in neel.css; a button's
     height is its `size` variant (`default`, `lg`), never a className (twMerge
     keeps `md:h-9` against a caller's `h-11`). Rows and the
     bottom bar are 44–56 px on phones.
@@ -977,7 +990,8 @@ saving we cannot show from their own orders.
     on ink). A new frame (an Apps tile grid, an icon button) opts in the same way.
     In a table or beside a status badge an icon is one colour. The current
     page's icon is drawn at 2.25.
-37. **The thread** (`--thread`, 2 px, ≥ 3:1 on ink and card): a primary button
+37. **The thread** (`--thread`, 2 px, ≥ 3:1 on ink and card) — brand surfaces only; Neel draws no thread on a button
+    or a tab (the loading line stays rani). On a brand surface a primary button
     carries it a third wide at its foot and the full width on hover or keyboard
     focus (a `scale` transform, 120 ms); a secondary button on hover and focus
     only; destructive, ghost and disabled buttons never, nor a secondary button
@@ -992,8 +1006,8 @@ saving we cannot show from their own orders.
     circle as a repeat, a mask over a token at 6%. On the public pages it is the
     `Selvedge` only (paper on ink, under the stage; rule 42), never behind a
     number, a table, a form or a control. Brand empty states use a `PictoTile`.
-40. **Haldi and Neel** live on brand surfaces only and are never text or a
-    control. Rani as text is `--brand-text`.
+40. **Haldi and `--neel` (neel 900)** live on brand surfaces only and are never text or a control. The console's
+    action colour is neel 600 (`--primary` inside `[data-neel]`), a different step of the same family. Rani as text is `--brand-text`.
 
 ## The public pages (owner-approved W·1, 2026-11-07; spec `docs/specs/2026-11-07-website-rework.md`)
 
@@ -1099,3 +1113,21 @@ What a link to a shop page shows in WhatsApp, Instagram DMs, Facebook, X, iMessa
   (also lists and policies): the name on the theme's tint, its promises, three photos. No photo: name, shop, price.
 - **Few words, no Devanagari drawn** (Satori cannot shape it; Hindi goes in og:title and og:description). Apple: avoid
   text-heavy images. og:image:alt describes the photo, not a caption.
+
+## Neel primitives (N0, 2026-11-13)
+
+The gallery `/console/fixtures/neel` (test-only) shows each in its states; `e2e/flows/81-neel.mjs` holds the drawn
+values, keyboard and axe at phone and desktop. A new primitive or state joins the gallery and the flow.
+
+- **Button** (`ui/button.tsx`): primary, secondary (edge + e1), ghost (text 2), destructive; `default` 44/36, `sm` 30,
+  `lg`. `busy` keeps the label, adds `Spinner`, and is `aria-disabled` (focus stays). No thread in Neel.
+- **Badge** is a status (a pill, a 6 px dot, a word); **Tag** is a fact (outlined, text 2). Never a dot alone.
+- **ViewTabs**: underline tabs, count pills, one row that scrolls — never a second row.
+- **Switch** 34×20; **Segmented** (`ui/segmented.tsx`) for two to four short words, arrows move the choice; more is a
+  Select. **Checkbox and radio** are native inputs painted in neel.css: 16 px in a 24 px target.
+- **SaveBar** says "N unsaved changes" when given `count`; **Toast** actions in `--bar-link`.
+- **Dialog**: 16 px, e3, its body `[data-dialog-body]` 18 in; a sheet on a phone. **Menu**: 12 px, e2, 220 wide.
+- **DataTable**: 36 px sunk header, 48 px rows from md (a phone reflows), `selected` rows in neel 50.
+- **Section**: 12 px, 20 in (16 on a phone). **Fields**: `FIELD` / `FIELD_BOX`; a mistake is `fieldProps` +
+  `FieldError` (13/18), its edge and halo drawn by neel.css.
+- **Never inside the store preview:** every Neel rule skips `[data-store-theme] *`, and the Neel-only tokens are unset there.

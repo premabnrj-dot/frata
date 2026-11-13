@@ -23,7 +23,7 @@ export const button = cva(
         ghost: 'btn-ghost hover:bg-accent',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
       },
-      // Height is a variant, never a className: twMerge drops a caller's h-11 against h-11 but keeps md:h-9 (impact review U·1).
+      // Height is a variant, never a className: twMerge drops a caller's h-11 against the variant's height but keeps md:h-9 (impact review U·1).
       size: {
         default: 'h-[var(--btn-h,2.5rem)] px-3 text-sm md:h-9', // 40 px on a phone (44 in Neel), 36 px from 768 px
         sm: 'h-[30px] px-2.5 text-label md:h-[30px]', // Neel: a row's action, a table's toolbar
@@ -37,13 +37,15 @@ export const button = cva(
 )
 
 type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof button> & {
-  /** A save or send in flight: the label stays, a spinner joins it, and the button cannot be pressed twice. */
+  /** A save or send in flight: the label stays, a spinner joins it, and a second press does nothing. aria-disabled,
+   * not disabled: a disabled button drops keyboard focus to the page (Neel § States). */
   busy?: boolean
 }
 
-export function Button({ variant, size, className, busy, disabled, children, ...props }: Props) {
+export function Button({ variant, size, className, busy, disabled, children, onClick, ...props }: Props) {
   return (
-    <button className={cn(button({ variant, size }), className)} disabled={disabled || busy} aria-busy={busy || undefined} {...props}>
+    <button className={cn(button({ variant, size }), busy && 'cursor-progress', className)} disabled={disabled} aria-disabled={busy || undefined}
+      aria-busy={busy || undefined} onClick={(e) => { if (busy) { e.preventDefault(); return } onClick?.(e) }} {...props}>
       {busy && <Spinner />}
       {children}
     </button>

@@ -24,7 +24,7 @@ export function DataTableHead({ children }: { children: ReactNode }) {
   return (
     <thead role="rowgroup" className="border-b border-border bg-sunk text-left">
       {/* Neel § Components: a 36 px sunk header, 12/16 labels in text 2; rows 48 px, the soft rule, hover g25, selected neel 50. */}
-      <tr role="row" className="text-small font-medium text-muted-foreground [&>th]:h-9 [&>th]:px-3 [&>th]:py-1">
+      <tr role="row" className="text-small font-medium text-muted-foreground md:[&>th]:h-9 [&>th]:px-3 [&>th]:py-1">
         {/* Each header cell says it is one, so WebKit keeps reading headers when a phone reflows the table. */}
         {Children.map(children, (c) => isValidElement(c) && c.type === 'th' ? cloneElement(c as ReactElement<{ role?: string }>, { role: 'columnheader' }) : c)}
       </tr>
@@ -41,7 +41,7 @@ export function DataTableBody({ children }: { children: ReactNode }) {
  * `selected`: a row picked for a bulk action (neel 50). */
 export function DataTableRow({ children, dimmed = false, selected = false }: { children: ReactNode; dimmed?: boolean; selected?: boolean }) {
   return (
-    <tr role="row" aria-selected={selected || undefined} className={`border-b border-line-soft last:border-0 [&>td]:h-12 [&>td]:px-3 [&>td]:py-1.5 ${selected ? 'bg-select' : 'hover:bg-side'} ${dimmed ? 'text-muted-foreground' : ''}`}>
+    <tr role="row" aria-selected={selected || undefined} className={`border-b border-line-soft last:border-0 md:[&>td]:h-12 [&>td]:px-3 [&>td]:py-1.5 ${selected ? 'bg-select' : 'hover:bg-side'} ${dimmed ? 'text-muted-foreground' : ''}`}>
       {children}
     </tr>
   )

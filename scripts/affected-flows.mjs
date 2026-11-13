@@ -21,10 +21,11 @@ for (const path of changed) {
   const route = path.match(/^src\/app\/\((console|admin)\)\/(console|admin)\/([^/]+)/)
   if (route) { for (const f of flows) if (f.src.includes(`/${route[2]}/${route[3]}`)) add(f, path); continue }
   if (path.startsWith('e2e/flows/')) { const f = flows.find((x) => x.file === basename(path)); if (f) add(f, path); continue }
-  if (/^src\/(components|domains|lib)\//.test(path) || /src\/app\/(globals|base|shop)\.css$/.test(path)) {
+  if (/^src\/(components|domains|lib)\//.test(path) || /src\/app\/(globals|base|shop|neel)\.css$/.test(path)) {
     const mod = basename(path).replace(/\.(tsx?|css)$/, '')
     for (const f of flows) if (mod.length > 3 && f.src.includes(mod)) add(f, path)
-    if (/^src\/components\/|\.css$/.test(path)) { const ux = flows.find((f) => f.name === 'ux'); if (ux) add(ux, path) }
+    // A primitive or a stylesheet: the UX sweep and the Neel gallery (its drawn values, keyboard and axe).
+    if (/^src\/components\/|\.css$/.test(path)) for (const n of ['ux', 'neel']) { const f = flows.find((x) => x.name === n); if (f) add(f, path) }
   }
 }
 if (!picked.size) { console.log('No e2e flow is touched by this change.'); process.exit(0) }

@@ -110,13 +110,13 @@ export function ProductTable({ rows, collections }: { rows: Row[]; collections: 
       <DataTable label="Products">
         <DataTableHead>
           <th className="w-10"><input type="checkbox" aria-label="Select all on this page" checked={all} ref={(el) => { if (el) el.indeterminate = ids.length > 0 && !all }}
-            onChange={() => setPicked(all ? new Set() : new Set(rows.map((r) => r.id)))} className="size-6 accent-primary" /></th>
+            onChange={() => setPicked(all ? new Set() : new Set(rows.map((r) => r.id)))}  /></th>
           <th className="w-14"><span className="sr-only">Photo</span></th><th>Product</th><th>Status</th><th className="text-right">Price</th><th className="text-right">Stock</th><th>Sizes and colours</th>
         </DataTableHead>
         <DataTableBody>
           {rows.map((r) => (
             <DataTableRow key={r.id}>
-              <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.title}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)} className="size-6 accent-primary" /></Td>
+              <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.title}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)}  /></Td>
               <Td cell="hide">{r.thumb
                 ? <img src={r.thumb} alt="" width={40} height={50} loading="lazy" className="h-[50px] w-10 rounded-sm object-cover" />
                 : <span className="block h-[50px] w-10 rounded-sm bg-muted" aria-hidden="true" />}</Td>

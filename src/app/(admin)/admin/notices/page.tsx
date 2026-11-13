@@ -37,8 +37,8 @@ export default async function AdminNoticesPage() {
             <label className="grid gap-1"><span className="font-medium">Title</span><input name="title" required minLength={3} maxLength={120} data-error="A title of 3 to 120 characters." className={field} /><FieldMessage name="title" /></label>
             <label className="grid gap-1"><span className="font-medium">Message</span><textarea name="body" maxLength={1000} rows={4} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" /></label>
             <label className="grid gap-1"><span className="font-medium">Link</span><input name="href" className={`${field} font-mono`} placeholder="/console/settings/billing" /></label>
-            <label className="flex items-center gap-2"><input type="checkbox" name="email" defaultChecked className="size-4 accent-foreground" />Also email</label>
-            <label className="flex items-center gap-2"><input type="checkbox" name="required" className="size-4 accent-foreground" />Required (billing, security, Frrata acted)</label>
+            <label className="flex items-center gap-2"><input type="checkbox" name="email" defaultChecked  />Also email</label>
+            <label className="flex items-center gap-2"><input type="checkbox" name="required"  />Required (billing, security, Frrata acted)</label>
             <div><Submit>Send</Submit></div>
           </ActionForm>
         </Section>

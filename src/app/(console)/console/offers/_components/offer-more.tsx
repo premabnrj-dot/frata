@@ -59,7 +59,7 @@ export function OfferMore({ v, set, errors, pickers }: { v: OfferValues; set: (p
               <input id="o-find" value={q} {...fp('targets')} placeholder={v.targets === 'collections' ? 'Find a collection' : 'Find a product'} onChange={(e) => setQ(e.target.value)} className={field} />
               <ul className="max-h-56 divide-y divide-border overflow-y-auto rounded-md border border-border" aria-label="Choose">
                 {found.map((x) => (
-                  <li key={x.id}><label className="flex min-h-9 items-center gap-2 px-3 text-sm"><input type="checkbox" className="size-5 shrink-0 accent-primary" checked={picked.has(x.id)}
+                  <li key={x.id}><label className="flex min-h-9 items-center gap-2 px-3 text-sm"><input type="checkbox" className="shrink-0" checked={picked.has(x.id)}
                     onChange={(e) => set({ targetIds: e.target.checked ? [...picked, x.id] : [...picked].filter((y) => y !== x.id) })} />{x.title}</label></li>
                 ))}
                 {!found.length && <li className="px-3 py-2 text-sm text-muted-foreground">Nothing matches.</li>}
@@ -83,7 +83,7 @@ export function OfferMore({ v, set, errors, pickers }: { v: OfferValues; set: (p
           ))}
           {tiers.length < 4 && <button type="button" className="min-h-9 text-sm underline" onClick={() => set({ tiers: [...tiers, { min: '', value: '' }] })}>Add a step</button>}
           {err('tiers')}
-          <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="size-5 shrink-0 accent-primary" checked={!!v.firstOrder} onChange={(e) => set({ firstOrder: e.target.checked })} />Only for a shopper&apos;s first order here (checked by phone when they order)</label>
+          <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="shrink-0" checked={!!v.firstOrder} onChange={(e) => set({ firstOrder: e.target.checked })} />Only for a shopper&apos;s first order here (checked by phone when they order)</label>
         </fieldset>
       )}
     </>

@@ -208,7 +208,7 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
             return (
               <tr key={r.id} role="row" tabIndex={i === Math.max(at, 0) ? 0 : -1} onFocus={() => setAt(i)}
                 className={cn('border-b border-border last:border-0 hover:bg-muted/40 focus-visible:bg-accent [&>td]:px-3 [&>td]:py-2', (r.dimmed || now) && 'text-muted-foreground', picked.has(r.id) && 'bg-accent')}>
-                <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.number}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)} className="size-6 accent-primary" /></Td>
+                <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.number}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)}  /></Td>
                 {/* No prefetch: 50 row links would be 50 server renders on every visit (found by e2e under the stress data, 2026-11-07). */}
                 <Td cell="a"><Link data-row-link prefetch={false} href={r.href} className="inline-flex min-h-6 items-center whitespace-nowrap font-mono font-medium">{r.number}</Link></Td>
                 <Td cell="c"><span className="line-clamp-2">{r.customer ? <Name>{r.customer}</Name> : '—'}</span><span className="block text-xs text-muted-foreground">{r.place}</span></Td>

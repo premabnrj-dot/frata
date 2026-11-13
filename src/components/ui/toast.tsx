@@ -180,12 +180,12 @@ export function Toaster({ children, calm = false, region = true }: {
           </span>
           {toast.undo ? (
             // aria-disabled, not disabled: a disabled button drops keyboard focus to the page.
-            <button type="button" onClick={undo} aria-disabled={busy} className="inline-flex min-h-11 items-center rounded-sm px-2 font-medium text-bar-link hover:underline md:min-h-9">
+            <button type="button" onClick={undo} aria-disabled={busy} className="inline-flex min-h-11 items-center rounded-sm px-2 font-medium text-bar-link underline underline-offset-2 md:min-h-9 in-data-neel:no-underline in-data-neel:hover:underline">
               {busy ? 'Undoing…' : 'Undo'}
             </button>
           ) : null}
           {toast.action ? (
-            <button type="button" onClick={act} aria-disabled={busy} className="inline-flex min-h-11 items-center rounded-sm px-2 font-medium text-bar-link hover:underline md:min-h-9">
+            <button type="button" onClick={act} aria-disabled={busy} className="inline-flex min-h-11 items-center rounded-sm px-2 font-medium text-bar-link underline underline-offset-2 md:min-h-9 in-data-neel:no-underline in-data-neel:hover:underline">
               {toast.action.label}
             </button>
           ) : null}
