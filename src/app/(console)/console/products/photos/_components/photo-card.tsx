@@ -24,7 +24,7 @@ export function PhotoCard({ card, idx, busy, onPick }: { card: Card; idx: PhotoI
     <li className={cn('grid rounded-sm border bg-card text-xs', asking || card.state === 'failed' ? 'border-warn-text' : 'border-border')} data-photo={card.name}>
       <div className="relative grid aspect-[4/5] items-end overflow-hidden rounded-t-sm bg-muted p-1.5">
         {card.preview && !broken && <img src={card.preview} alt="" loading="lazy" decoding="async" onError={() => setBroken(true)} className="absolute inset-0 size-full object-cover" />}
-        <span className="relative w-fit max-w-full truncate rounded-sm bg-card/80 px-1 font-mono text-muted-foreground">{card.name}</span>
+        <span className="relative w-fit max-w-full truncate rounded-sm bg-card/80 px-1 font-num text-muted-foreground">{card.name}</span>
         {card.state === 'uploading' && (
           <span role="progressbar" aria-label={`Uploading ${card.name}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(card.p * 100)} className="absolute inset-x-1.5 bottom-1 h-1 overflow-hidden rounded-full bg-card">
             <span className="block h-full w-full origin-left bg-ok-text transition-transform duration-base ease-standard" style={{ transform: `scaleX(${card.p})` }} />
@@ -71,7 +71,7 @@ function ProductPicker({ name, idx, suggest, disabled, onPick, onKeep }: { name:
           else if (e.key === 'Escape') setOpen(false)
         }}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        className="h-10 w-full min-w-0 rounded-md border border-input bg-card px-2 text-sm md:h-9" />
+        className="h-11 w-full min-w-0 rounded-md border border-input bg-card px-2 text-sm md:h-9" />
       {open && list.length > 0 && (
         <ul id={`${id}-list`} role="listbox" aria-label={`Products for ${name}`} className="absolute inset-x-0 top-full z-20 mt-1 max-h-60 overflow-auto rounded-md border border-border bg-card py-1 shadow-md">
           {list.map((t, i) => (

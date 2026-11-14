@@ -19,7 +19,7 @@
    reads this file and holds every pair (frata-design-language § UX foundation).
    ========================================================================== */
 
-:root {
+:root, [data-neel] [data-store-theme] { /* the second selector: the console's store preview keeps the store's own tokens (Neel N0) */
   --background: #FAFAF9;
   --foreground: #1C1917;
   --card: #FFFFFF;
@@ -28,6 +28,12 @@
   --popover-foreground: #1C1917;
   --primary: #1C1917;            /* ink */
   --primary-foreground: #FFFFFF;
+  /* INK as itself (Neel N0): what is drawn in ink whatever the action colour is — Frrata Admin's dark navigation, the
+     monogram's tile. And THE BAR: the dark floating things (toast, save bar, tooltips). Both equal today's --primary. */
+  --ink: #1C1917;
+  --ink-foreground: #FFFFFF;
+  --bar: var(--ink);
+  --bar-foreground: #FFFFFF;
   --secondary: #F2F1EF;
   --secondary-foreground: #1C1917;
   --muted: #F2F1EF;
@@ -73,6 +79,18 @@
   --illo-haldi: var(--haldi); --illo-haldi-soft: #FBEFD2; --illo-indigo-soft: #DCE3F5;
 
   --radius: 0.375rem;
+  /* Radius and depth as variables (Neel N0 step 4): these are today's values; [data-neel] sets its own. Hand-written CSS
+     reads --r-*, never --radius-* (an @theme value resolves at :root). */
+  --r-xs: 0.125rem; --r-sm: calc(var(--radius) * 0.6); --r-md: calc(var(--radius) * 0.8); --r-lg: var(--radius);
+  --r-xl: calc(var(--radius) * 1.4); --r-mid: var(--radius);
+  --sh-1: 0 0 #0000; --sh-2: 0 0 #0000;
+  --sh-3: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);   /* Tailwind's shadow-lg, as the shop draws it */
+  --sh-4: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);  /* Tailwind's shadow-xl */
+  /* Type roles as variables (Neel N0 step 5): today's section title here; [data-neel] sets the Neel scale. */
+  --t-section: 15px; --t-section-lh: 1.4;
+  --t-title: 1.5rem; --t-title-lh: 2rem; --t-display: 1.875rem; --t-display-lh: 2.25rem;
+  --t-label: 0.8125rem; --t-label-lh: 1.125rem; --t-small: 0.75rem; --t-small-lh: 1rem;
+  --t-display-ls: normal; --t-title-ls: normal; --t-section-ls: normal;
 }
 
 /* DARK — written and gated, NOT switched on (owner call 2, 2026-11-07): nothing sets data-theme yet. */
@@ -88,6 +106,10 @@
   --popover-foreground: #EDEAE6;
   --primary: #EDEAE6;
   --primary-foreground: #141211;
+  --ink: #EDEAE6;
+  --ink-foreground: #141211;
+  --bar: var(--ink);
+  --bar-foreground: #141211;
   --secondary: #262320;
   --secondary-foreground: #EDEAE6;
   --muted: #262320;
@@ -126,6 +148,10 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-bar: var(--bar);
+  --color-bar-foreground: var(--bar-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -166,19 +192,61 @@
   --color-illo-haldi: var(--illo-haldi);
   --color-illo-haldi-soft: var(--illo-haldi-soft);
   --color-illo-indigo-soft: var(--illo-indigo-soft);
+  /* Neel only (defined in neel.css under [data-neel]); outside it each falls back to what the place used before Neel. */
+  --color-primary-hover: var(--primary-hover, color-mix(in oklab, var(--primary) 90%, transparent));
+  --color-link: var(--link, var(--foreground));
+  --color-select: var(--select, var(--accent));
+  --color-select-foreground: var(--select-foreground, var(--foreground));
+  --color-halo: var(--halo, var(--ring));
+  --color-side: var(--side, var(--background));
+  --color-sunk: var(--sunk, var(--muted));
+  --color-line-soft: var(--line-soft, var(--border));
+  --color-edge: var(--edge, var(--input));
+  --color-text-3: var(--text-3, var(--muted-foreground));
+  --color-off: var(--off, var(--input));
+  --color-neutral-mark: var(--neutral-mark, var(--muted-foreground));
+  --color-chart: var(--chart, var(--primary));
+  --color-chart-now: var(--chart-now, var(--muted));
+  --color-bar-btn: var(--bar-btn, var(--bar-foreground));
+  --color-bar-btn-text: var(--bar-btn-text, var(--bar));
+  --color-bar-link: var(--bar-link, var(--bar-foreground));
 
   /* The Section title (every card, Console and Admin): text-section font-semibold. Never --text-card (collides with --color-card). */
-  --text-section: 15px;
-  --text-section--line-height: 1.4;
+  --text-section: var(--t-section);
+  --text-section--line-height: var(--t-section-lh);
+  --text-section--letter-spacing: var(--t-section-ls);
+  --text-title: var(--t-title);
+  --text-title--line-height: var(--t-title-lh);
+  --text-title--letter-spacing: var(--t-title-ls);
+  --text-display: var(--t-display);
+  --text-display--line-height: var(--t-display-lh);
+  --text-display--letter-spacing: var(--t-display-ls);
+  --text-label: var(--t-label);
+  --text-label--line-height: var(--t-label-lh);
+  --text-small: var(--t-small);
+  --text-small--line-height: var(--t-small-lh);
+  /* A stat tile's figure (Neel § More components · Facts): 26/32, tight. */
+  --text-stat: 26px;
+  --text-stat--line-height: 32px;
+  --text-stat--letter-spacing: -0.02em;
+  /* An overline (the sidebar's group names, Neel § Layout · Sidebar): 11/16, capitals, spaced. */
+  --text-overline: 11px;
+  --text-overline--line-height: 16px;
+  --text-overline--letter-spacing: 0.06em;
+  /* A key (⌘S, Ctrl+S): 11 px Inter, never mono (Neel § Components). */
+  --text-kbd: 11px;
+  --text-kbd--line-height: 1;
 
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains);
   --font-display: var(--font-display-stack);
 
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-mid: var(--r-mid);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
 
   /* Motion. Tailwind v4 reads duration-* from --transition-duration-*, not --duration-*. */
   --transition-duration-fast: 120ms;
@@ -193,15 +261,21 @@
   --ease-spring: linear(0, 0.13 6%, 0.5 16%, 0.86 28%, 1.02 40%, 1.04 50%, 1.01 66%, 1);
   --ease-snap: linear(0, 0.16 6%, 0.55 16%, 0.88 30%, 0.98 46%, 1);
 
-  /* Borders, not shadows. */
+  /* Borders, not shadows, outside Neel. In [data-neel]: shadow-sm = e1, shadow-md = e2, shadow-lg and -xl = e3. */
   --shadow-xs: 0 0 #0000;
-  --shadow-sm: 0 0 #0000;
+  --shadow-sm: var(--sh-1);
   --shadow: 0 0 #0000;
-  --shadow-md: 0 0 #0000;
+  --shadow-md: var(--sh-2);
+  --shadow-lg: var(--sh-3);
+  --shadow-xl: var(--sh-4);
   /* The two named shadows that exist: the storefront's fixed pay bar, and the swatch crop's ring and dimmed surround. */
   --shadow-store-bar: 0 -6px 14px rgb(31 26 23 / 0.06);
   --shadow-crop: 0 0 0 1px rgb(0 0 0 / 0.5), 0 0 0 999px rgb(0 0 0 / 0.35);
 }
+
+/* NUMBERS THAT LINE UP (<Money>, <Numeric>): mono with tabular figures outside Neel; Inter with tabular figures
+   inside it (Neel N0 step 5: mono is for codes only, SKU, AWB, GSTIN, a domain being copied). */
+@utility font-num { font-family: var(--font-num, var(--font-jetbrains), ui-monospace, monospace); font-variant-numeric: tabular-nums; }
 
 /* THE BLOCK PRINT (brand spec, chapter 5): a repeat tile from the mark's quarter circle (the r's arm) and circle
    (the a's bowl), like a Bagru block. Brand surfaces only (sign-in, brand empty states), at 5%, never behind text
@@ -245,6 +319,9 @@
 /* A dialog drawn by hand (the leave-without-saving alert): the dialog's own entrance, fade and scale from .97. */
 @keyframes pop-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
 @utility animate-pop { animation: pop-in 200ms cubic-bezier(0, 0, 0, 1); }
+/* Quick look (Neel N1c): the panel comes in 24 px from the right edge it sits on, and fades in. */
+@keyframes panel-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@utility animate-panel { animation: panel-in var(--transition-duration-base) var(--ease-entrance); }
 @utility animate-value-flash { animation: value-flash var(--duration-flash) cubic-bezier(0.2, 0, 0, 1); }
 /* The shell (plan U · U·2a, motion rules 22–23): the progress bar creeps to 80 % while a move is on its way. (The
    phone's More sheet is a [data-dialog] sheet: in on the spring, out in 200 ms.) Transform and scale only (rule 22). */

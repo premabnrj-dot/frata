@@ -102,7 +102,7 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {([['Invoices', String(tax.invoices)], ['Taxable value', rs(tax.taxable)], ['CGST + SGST', rs(tax.cgst + tax.sgst)], ['IGST', rs(tax.igst)], ['Credit notes', tax.credited ? `−${rs(tax.credited)}` : '₹0']] as const).map(([l, v]) => (
-          <div key={l} className="rounded-lg border border-border p-3"><span className="text-xs text-muted-foreground">{l}</span><b className="block font-mono text-lg tabular-nums">{v}</b></div>
+          <div key={l} className="rounded-lg border border-border p-3"><span className="text-xs text-muted-foreground">{l}</span><b className="block font-num text-lg">{v}</b></div>
         ))}
       </div>
 

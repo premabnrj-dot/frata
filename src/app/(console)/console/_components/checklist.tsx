@@ -12,7 +12,7 @@ export function Checklist({ setup, canManage }: { setup: Setup; canManage: boole
       <div className="space-y-2.5 p-4">
         <div className="flex items-baseline justify-between gap-4">
           <h2 id="setup-h" className="text-section font-semibold">{setup.open ? 'Your shop’s setup' : 'Get your shop ready to sell'}</h2>
-          <span className="text-sm text-muted-foreground"><span className="font-mono">{done} of {steps.length}</span> done</span>
+          <span className="text-sm text-muted-foreground"><span className="font-num">{done} of {steps.length}</span> done</span>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="img" aria-label={`${done} of ${steps.length} steps done`}>
           <div className="h-full w-full origin-left bg-ok-text transition-transform duration-slow ease-standard" style={{ transform: `scaleX(${done / steps.length})` }} />

@@ -23,7 +23,7 @@ const VIEWS = [['all', 'All'], ['building', 'Building'], ['invited', 'Invite sen
 function Share({ c }: { c: ClientRow }) {
   const w = shareWindow(c, c.firstOpenedAt, c.removedAt)
   if (w === 'not_started') return <span className="text-muted-foreground">{c.removedAt ? '—' : 'Starts at opening'}</span>
-  return <span><span className="font-mono">{PARTNER_TERMS.shareBps / 100}%</span> until <span className="font-mono">{c.removedAt ? dayIN(w.endsAt) : monthYearIN(w.endsAt)}</span></span>
+  return <span><span className="font-num">{PARTNER_TERMS.shareBps / 100}%</span> until <span className="font-num">{c.removedAt ? dayIN(w.endsAt) : monthYearIN(w.endsAt)}</span></span>
 }
 
 /** Partner workspace › Clients (approved mockup screens 5, 5b, 5c). Frrata's facts per store, never its orders. */
@@ -74,7 +74,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                 <Badge tone={TONE[stage]}>{STAGE_LABEL[stage]}</Badge>
                 <span className="text-xs text-muted-foreground lg:hidden">{c.removedAt ? dayIN(c.removedAt) : null}</span>
               </div>
-              <div className="min-w-0 truncate font-mono text-xs">
+              <div className="min-w-0 truncate font-num text-xs">
                 {stage === 'invited' ? c.inviteEmail : c.ownerEmail ?? (stage === 'ended' ? '' : <span className="font-sans text-muted-foreground">Not invited</span>)}
               </div>
               <div>{c.planName ?? <span className="text-muted-foreground">—</span>}</div>

@@ -51,7 +51,7 @@ export function Dialog({ open, onClose, title, description, children, actions, e
       onClose={() => { if (wanted.current) onClose() }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       className={cn('m-auto w-[min(32rem,calc(100vw-2rem))] rounded-lg border border-border bg-popover p-0 text-popover-foreground', className)}>
-      <div className="grid gap-4 p-5">
+      <div data-dialog-body="" className="grid gap-4 p-5">
         <h2 id={titleId} className="text-section font-semibold">{title}</h2>
         {description ? <div id={descId} className="text-sm text-muted-foreground">{description}</div> : null}
         {children}

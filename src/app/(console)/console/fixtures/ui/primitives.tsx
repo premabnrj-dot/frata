@@ -45,18 +45,18 @@ function Board({ save }: { save: (f: FormData) => Promise<ActionResult> }) {
         const d = new FormData(e.currentTarget)
         fields.set({ price: Number(d.get('price')) > 0 ? null : 'More than ₹0.', hsn: /^(\d{4}|\d{6}|\d{8})$/.test(String(d.get('hsn'))) ? null : '4, 6 or 8 digits.' })
       }}>
-        <label className="grid gap-1 text-sm">Price<input name="price" defaultValue="0" onChange={() => fields.clear('price')} {...fields.props('price')} className="h-10 rounded-md border border-input px-3 aria-invalid:border-danger-mark md:h-9" /></label>
+        <label className="grid gap-1 text-sm">Price<input name="price" defaultValue="0" onChange={() => fields.clear('price')} {...fields.props('price')} className="h-11 rounded-md border border-input px-3 aria-invalid:border-danger-mark md:h-9" /></label>
         <FieldError name="price" message={fields.errors.price} />
-        <label className="grid gap-1 text-sm">HSN code<input name="hsn" defaultValue="62" onChange={() => fields.clear('hsn')} {...fields.props('hsn')} className="h-10 rounded-md border border-input px-3 aria-invalid:border-danger-mark md:h-9" /></label>
+        <label className="grid gap-1 text-sm">HSN code<input name="hsn" defaultValue="62" onChange={() => fields.clear('hsn')} {...fields.props('hsn')} className="h-11 rounded-md border border-input px-3 aria-invalid:border-danger-mark md:h-9" /></label>
         <FieldError name="hsn" message={fields.errors.hsn} />
         <Button type="submit" variant="secondary">Save product</Button>
       </form>
       <ActionForm action={save} className="grid max-w-sm gap-3" aria-label="Rename shop">
-        <label className="grid gap-1 text-sm">Shop name<input name="shop" required minLength={3} data-error="At least 3 letters." className="h-10 rounded-md border border-input px-3 aria-invalid:border-danger-mark md:h-9" /></label>
+        <label className="grid gap-1 text-sm">Shop name<input name="shop" required minLength={3} data-error="At least 3 letters." className="h-11 rounded-md border border-input px-3 aria-invalid:border-danger-mark md:h-9" /></label>
         <FieldMessage name="shop" />
         <Submit variant="secondary">Rename</Submit>
       </ActionForm>
-      <input aria-label="Search" placeholder="Search" className="h-10 rounded-md border border-input px-3 md:h-9" />
+      <input aria-label="Search" placeholder="Search" className="h-11 rounded-md border border-input px-3 md:h-9" />
       <p data-testid="row">row {row}</p>
       <ol data-testid="log">{log.map((l, i) => <li key={i}>{l}</li>)}</ol>
       <Dialog open={cancel} onClose={() => { setCancel(false); say('kept') }} title="Cancel KS-1001?" description="The stock goes back. This cannot be undone."

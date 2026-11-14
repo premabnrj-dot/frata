@@ -1,7 +1,7 @@
+import { colourIndex } from '@/domains/catalogue/option-kind'
 import 'server-only'
 import { and, eq, inArray, sql } from 'drizzle-orm'
 import { acceptedBase, storeHost, WIDTHS } from '@/domains/media/sizes'
-import { isColourOption } from '@/domains/storefront/picker'
 import type { Tx } from '@/lib/db'
 import { productImages, products } from '@/lib/db/schema-catalogue'
 import { BLOB_STORE_ID } from '@/lib/env'
@@ -54,7 +54,7 @@ export async function attachIn(tx: Tx, tenantId: string, productId: string, phot
   if (opts.max !== undefined && n + fresh.length > opts.max) {
     return { ok: false, error: n >= opts.max ? `This product has its ${opts.max} photos.` : `This product has room for ${opts.max - n} more ${opts.max - n === 1 ? 'photo' : 'photos'}.` }
   }
-  const at = p.options.findIndex(isColourOption)
+  const at = colourIndex(p.options)
   const colours = at >= 0 ? (p.optionValues[at] ?? []) : []
   const colourOf = (c: unknown) => (typeof c === 'string' ? colours.find((v) => v.toLowerCase() === c.trim().toLowerCase()) ?? null : null)
   const last = have?.last ?? -1

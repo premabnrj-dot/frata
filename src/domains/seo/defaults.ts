@@ -9,6 +9,7 @@
 // Pure: money in paise, rendered to rupees only here at the edge.
 // =============================================================================
 
+import { colourIndex, optionKind } from '@/domains/catalogue/option-kind'
 import { lowestCharge, zoneDays, type PublicZone } from '@/domains/delivery/public'
 import type { Availability } from '../catalogue/availability'
 
@@ -72,7 +73,8 @@ export function productJsonLd(p: LdProduct): object {
   })
   // Identifiers (S2·3): the SKU is also the brand's part number (MPN); the barcode only when one was typed.
   const ids = (v: LdVariant) => ({ ...(v.sku ? { sku: v.sku, mpn: v.sku } : {}), ...(v.gtin ? { gtin: v.gtin } : {}) })
-  const props = (values: string[]) => Object.fromEntries(p.options.map((o, i) => [/^colou?rs?$/i.test(o) ? 'color' : /^sizes?$/i.test(o) ? 'size' : o.toLowerCase(), values[i]]).filter(([k]) => k === 'color' || k === 'size'))
+  const ci = colourIndex(p.options)
+  const props = (values: string[]) => Object.fromEntries(p.options.map((o, i) => [i === ci ? 'color' : optionKind(o) === 'size' ? 'size' : o.toLowerCase(), values[i]]).filter(([k]) => k === 'color' || k === 'size'))
   const aggregate = p.rating && p.rating.count > 0 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: Math.round(p.rating.value * 10) / 10, reviewCount: p.rating.count, bestRating: 5, worstRating: 1 } } : {}
   const common = { ...aggregate, brand: { '@type': 'Brand', name: p.brand }, description: p.description, ...(p.material ? { material: p.material } : {}), ...(p.gender ? { audience: { '@type': 'PeopleAudience', suggestedGender: p.gender } } : {}) }
   if (p.variants.length <= 1 || !p.options.length) {
@@ -81,7 +83,7 @@ export function productJsonLd(p: LdProduct): object {
   }
   return {
     '@context': 'https://schema.org', '@type': 'ProductGroup', name: p.name, url: p.url, productGroupID: p.groupId, ...common,
-    variesBy: p.options.map((o) => (/^colou?rs?$/i.test(o) ? 'https://schema.org/color' : /^sizes?$/i.test(o) ? 'https://schema.org/size' : null)).filter(Boolean),
+    variesBy: p.options.map((o, i) => (i === ci ? 'https://schema.org/color' : optionKind(o) === 'size' ? 'https://schema.org/size' : null)).filter(Boolean),
     hasVariant: p.variants.map((v) => ({ '@type': 'Product', name: `${p.name} – ${v.values.join(', ')}`, ...ids(v), image: v.image ? [v.image] : p.images, ...props(v.values), offers: offer(v) })),
   }
 }

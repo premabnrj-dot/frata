@@ -6,11 +6,12 @@
 // the choice a variant link (?colour=rust&size=m) opens. Pure.
 // =============================================================================
 
+import { optionKind } from '@/domains/catalogue/option-kind'
 import { availability, type Availability } from '@/domains/catalogue/availability'
 import { factsOf, type ListVariant } from './listing'
 
-export const isColourOption = (name: string) => /^colou?rs?$/i.test(name)
-export const isSizeOption = (name: string) => /^sizes?$/i.test(name)
+export const isColourOption = (name: string) => optionKind(name) === 'colour'
+export const isSizeOption = (name: string) => optionKind(name) === 'size'
 const slug = (s: string) => s.toLowerCase().trim().replace(/\s+/g, '-')
 
 /** The variant whose values are exactly `picked` (null while a choice is missing). */

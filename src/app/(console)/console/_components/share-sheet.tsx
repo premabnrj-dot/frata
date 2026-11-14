@@ -9,7 +9,7 @@ import { shareQr } from '../share-actions'
 
 /** Share a product, a collection or the shop (search and sharing S1·7, as the approved mockup): the card every app
  *  shows, then WhatsApp, Instagram, Facebook, QR code and the link. Each link carries its channel's tags. */
-export function ShareSheet({ share, target }: { share: ShareData; target: ShareTarget }) {
+export function ShareSheet({ share, target, label = 'Share' }: { share: ShareData; target: ShareTarget; label?: string }) {
   const [open, setOpen] = useState(false)
   const toast = useToast()
   const [qr, setQr] = useState<string | null>(null)
@@ -30,7 +30,7 @@ export function ShareSheet({ share, target }: { share: ShareData; target: ShareT
   const opt = 'flex min-h-16 flex-col items-center justify-center gap-1 rounded-md border border-border bg-card px-2 text-xs font-medium hover:bg-muted'
   return (
     <>
-      <Button variant="secondary" disabled={!share.ready} onClick={() => { setQr(null); setCardFailed(false); setOpen(true) }}>Share</Button>
+      <Button variant="secondary" disabled={!share.ready} onClick={() => { setQr(null); setCardFailed(false); setOpen(true) }}>{label}</Button>
       <Dialog open={open} onClose={() => setOpen(false)} title={`Share ${share.title}`}
         actions={<Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Done</Button>}>
         <div className="space-y-3">

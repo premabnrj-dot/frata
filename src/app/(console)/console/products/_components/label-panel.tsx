@@ -3,6 +3,8 @@
 import { useId } from 'react'
 import { NET_UNITS, NET_UNIT_WORDS, SHELF_MONTHS, type LabelInput } from '@/domains/catalogue/label'
 import { FieldError, fieldProps } from '@/components/ui/field-error'
+import { FIELD_BOX } from '@/components/ui/field'
+import { Segmented } from '@/components/ui/segmented'
 
 // =============================================================================
 // What the pack says (Beauty and wellness W1, domains/catalogue/label.ts): net quantity with its unit, best before,
@@ -10,20 +12,7 @@ import { FieldError, fieldProps } from '@/components/ui/field-error'
 // go live (Legal Metrology r.6(10)), so they carry no "(optional)".
 // =============================================================================
 
-const field = 'w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text'
-
-function Segmented<T extends string>({ label, value, options, onPick, invalid }: { label: string; value: T; options: readonly (readonly [T, string])[]; onPick: (v: T) => void
-  /** The field's mistake marks (fieldProps): on each choice, so focus can land on the first. */
-  invalid?: ReturnType<typeof fieldProps> }) {
-  return (
-    <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap gap-0.5 rounded-lg bg-muted p-0.5">
-      {options.map(([v, words]) => (
-        <button key={v} type="button" role="radio" aria-checked={value === v} {...invalid} onClick={() => onPick(v)}
-          className={`min-h-9 rounded-md px-3 text-sm font-medium ${value === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{words}</button>
-      ))}
-    </div>
-  )
-}
+const field = `${FIELD_BOX} w-full`
 
 export function LabelPanel({ label, onChange, errors, maker }: {
   label: LabelInput; onChange: (l: LabelInput) => void; errors: Record<string, string>
@@ -40,7 +29,7 @@ export function LabelPanel({ label, onChange, errors, maker }: {
       <div className="space-y-1">
         <label htmlFor={`${id}-net`} className="block text-sm font-medium">Net quantity</label>
         <div className="flex flex-wrap items-center gap-2">
-          <input id={`${id}-net`} value={label.net} inputMode="decimal" placeholder="50" maxLength={12} onChange={(e) => set({ net: e.target.value })} {...inv('net')} className={`${field} h-10 w-28 md:h-9`} />
+          <input id={`${id}-net`} value={label.net} inputMode="decimal" placeholder="50" maxLength={12} onChange={(e) => set({ net: e.target.value })} {...inv('net')} className={`${field} h-11 w-28 md:h-9`} />
           <Segmented label="Unit" value={label.unit as (typeof NET_UNITS)[number]} options={NET_UNITS.map((u) => [u, NET_UNIT_WORDS[u]] as const)} onPick={(unit) => set({ unit })} invalid={inv('unit')} />
         </div>
         {err('net')}

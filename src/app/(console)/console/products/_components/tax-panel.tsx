@@ -52,7 +52,7 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
             onFocus={() => { setOpen(true); setQ(left ?? '') }} onBlur={(e) => { const t = e.currentTarget.value, typing = open; setTimeout(() => { setOpen(false); if (typing) setLeft(t.trim() && !/^\d{4}(\d{2})?(\d{2})?$/.test(t.replace(/\s/g, '')) ? t : null) }, 150) }}
             onChange={(e) => { setQ(e.target.value); const d = e.target.value.replace(/\s/g, ''); if (/^\d{4}(\d{2})?(\d{2})?$/.test(d)) onChange({ ...tax, hsn: d }) }}
             {...fieldProps('tax.hsn', errors['tax.hsn'] ?? leftError)}
-            className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text md:h-9" role="combobox" aria-expanded={open} aria-controls={`${id}-list`} />
+            className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text md:h-9" role="combobox" aria-expanded={open} aria-controls={`${id}-list`} />
           {open && q.trim().length > 1 && !results.length && <p role="status" className="absolute inset-x-0 top-full z-20 mt-1 rounded-md border border-border bg-card px-3 py-2 text-sm shadow-lg">No HSN code matches “{q.trim()}”</p>}
           {open && results.length > 0 && (
             <ul id={`${id}-list`} role="listbox" className="absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-md border border-border bg-card py-1 shadow-lg">
@@ -73,7 +73,7 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
 
       {charges && valid && known && (
         <div className="flex items-center gap-4 rounded-lg bg-muted p-3">
-          <b className="font-mono text-2xl tabular-nums">{bps !== null ? `${bps / 100}%` : '—'}</b>
+          <b className="font-num text-2xl">{bps !== null ? `${bps / 100}%` : '—'}</b>
           <div className="min-w-0 flex-1 space-y-1.5 text-sm">
             <p>{price !== null ? `At ${rs(price)} a piece${inclusive ? ' including GST' : ''}` : ruleWords(rule)}</p>
             {rule.kind === 'slab' && price !== null && (() => {
@@ -115,7 +115,7 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <label htmlFor={`${id}-uqc`} className="block text-sm font-medium">Sold by</label>
-          <select id={`${id}-uqc`} value={tax.uqc} onChange={(e) => onChange({ ...tax, uqc: e.target.value })} {...fieldProps('tax.uqc', errors['tax.uqc'])} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text md:h-9">
+          <select id={`${id}-uqc`} value={tax.uqc} onChange={(e) => onChange({ ...tax, uqc: e.target.value })} {...fieldProps('tax.uqc', errors['tax.uqc'])} className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text md:h-9">
             {UQCS.map((u) => <option key={u} value={u}>{UQC_NAMES[u]} ({u})</option>)}
           </select>
           <FieldError name="tax.uqc" message={errors['tax.uqc']} />
@@ -123,7 +123,7 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
         <div className="space-y-1">
           <label htmlFor={`${id}-origin`} className="block text-sm font-medium">Made in</label>
           <input id={`${id}-origin`} list={`${id}-countries`} value={tax.origin} maxLength={60} onChange={(e) => onChange({ ...tax, origin: e.target.value })} placeholder="India"
-            {...fieldProps('tax.origin', errors['tax.origin'])} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text md:h-9" />
+            {...fieldProps('tax.origin', errors['tax.origin'])} className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text md:h-9" />
           <datalist id={`${id}-countries`}>{['India', 'Bangladesh', 'China', 'Nepal', 'Sri Lanka', 'Vietnam', 'Thailand', 'Indonesia', 'Turkey', 'Italy'].map((c) => <option key={c} value={c} />)}</datalist>
           <FieldError name="tax.origin" message={errors['tax.origin']} />
         </div>

@@ -5,12 +5,15 @@ import { startAuthentication, startRegistration } from '@simplewebauthn/browser'
 // =============================================================================
 // FILE: src/components/passkeys/passkey-client.ts — the browser half of passkeys, for staff (/admin/passkey) and
 // partner people (/partner/passkey): asks the endpoint for options, lets the device sign, sends the answer back.
-// Errors come back in words a person reads; a cancelled or failed device prompt reads "Not confirmed".
+// Errors come back in words a person reads; a prompt closed with no passkey says to try a phone or another device; any
+// other failure, or a passkey the server refuses, reads "Not confirmed".
 // =============================================================================
 
 export type Done<T = unknown> = { ok: true; value?: T } | { ok: false; error: string }
 export type PasskeyEndpoint = '/admin/passkey' | '/partner/passkey'
 const NOT_CONFIRMED = 'Not confirmed. Try again, or use your other passkey.'
+/** The device's prompt closed without a passkey: cancelled, or this device holds none of this person's passkeys. */
+const NO_PASSKEY_HERE = 'No passkey confirmed on this device. Try again and choose to use a phone or another device in the prompt.'
 
 export function passkeyClient(endpoint: PasskeyEndpoint) {
   async function call<T>(op: string, extra: Record<string, unknown> = {}): Promise<Done<T>> {
@@ -25,7 +28,7 @@ export function passkeyClient(endpoint: PasskeyEndpoint) {
     const o = await call<Parameters<typeof startAuthentication>[0]['optionsJSON']>('confirm-options')
     if (!o.ok || !o.value) return o.ok ? { ok: false, error: NOT_CONFIRMED } : o
     let response
-    try { response = await startAuthentication({ optionsJSON: o.value }) } catch { return { ok: false, error: NOT_CONFIRMED } }
+    try { response = await startAuthentication({ optionsJSON: o.value }) } catch (e) { return { ok: false, error: (e as Error)?.name === 'NotAllowedError' ? NO_PASSKEY_HERE : NOT_CONFIRMED } }
     return call('confirm-verify', { response })
   }
   /** "Add passkey", then confirm with it so the session is through. `confirmFirst`: a second device for someone already

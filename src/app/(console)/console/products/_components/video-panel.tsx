@@ -131,7 +131,7 @@ export function VideoPanel({ productId, initial, blocked, title, onShop }: { pro
       ) : k === 'sending' ? (
         <div role="status" className="space-y-2 rounded-md bg-muted p-3 text-sm">
           <div className="flex items-center gap-3">
-            <span className="font-mono font-semibold tabular-nums">{Math.round((progress ?? 0) * 100)}%</span>
+            <span className="font-num font-semibold">{Math.round((progress ?? 0) * 100)}%</span>
             <span className="flex-1">Uploading</span>
             <button type="button" disabled={busy} onClick={() => void remove()} className="font-medium underline underline-offset-4">Cancel</button>
           </div>
@@ -155,12 +155,12 @@ export function VideoPanel({ productId, initial, blocked, title, onShop }: { pro
           <div className={`relative overflow-hidden rounded-md bg-muted ${reel ? 'aspect-[9/16] max-w-[200px]' : 'aspect-video'}`}>
             {video.poster && <img src={video.poster} alt="" className="size-full object-cover" />}
             <span aria-hidden="true" className="absolute inset-0 grid place-items-center"><span className="grid size-10 place-items-center rounded-full bg-card/90 text-foreground"><Icon name="play" className="size-5" /></span></span>
-            {video.length && <span className="absolute bottom-2 left-2 rounded-sm bg-card/95 px-1.5 py-0.5 font-mono text-xs">{video.length}</span>}
+            {video.length && <span className="absolute bottom-2 left-2 rounded-sm bg-card/95 px-1.5 py-0.5 font-num text-xs">{video.length}</span>}
           </div>
           <div className="grid content-start gap-3">
             <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Shape</dt><dd>{video.shape}{video.size && <span className="text-muted-foreground"> · {video.size}</span>}</dd>
-              <dt className="text-muted-foreground">Length</dt><dd className="font-mono tabular-nums">{video.length}</dd>
+              <dt className="text-muted-foreground">Length</dt><dd className="font-num">{video.length}</dd>
               <dt className="text-muted-foreground">Shows</dt><dd>{onShop ? <>Second in the photos{video.button !== 'none' && ' · beside the sizes'}</> : 'Not on your shop yet'}</dd>
             </dl>
             <div className="grid gap-1.5">

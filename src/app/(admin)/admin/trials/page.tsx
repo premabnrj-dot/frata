@@ -30,7 +30,7 @@ export default async function TrialsPage() {
                 <Td cell="a"><Link href={`/admin/merchants/${r.tenantId}/plan#trial`} data-row-link prefetch={false} className="font-medium hover:underline">{r.name}</Link></Td>
                 <Td cell="b"><Badge tone={TONE[r.state]}>{LABEL[r.state]}</Badge></Td>
                 <Td cell="c" className="whitespace-nowrap">{r.state === 'building' ? '—' : dayMonthIN(r.lastDay)}</Td>
-                <Td cell="d" className="text-right font-mono">{r.state === 'trial' || r.state === 'ending' ? r.daysLeft : '—'}</Td>
+                <Td cell="d" className="text-right font-num">{r.state === 'trial' || r.state === 'ending' ? r.daysLeft : '—'}</Td>
                 <Td cell="e">{r.autopay ? 'Yes' : 'No'}</Td>
               </DataTableRow>
             ))}

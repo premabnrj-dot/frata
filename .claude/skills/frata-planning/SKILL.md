@@ -2,7 +2,7 @@
 name: frata-planning
 description: Use when planning any Frata feature, enhancement, redesign or connector - before writing a spec or plan, before executing one, and when closing one - to run the spec, research, design review, mockup, sign-off, plan, execute and document loop, with the review headings (UI/UX, tenancy, modularity, SSOT/DRY, YAGNI, KISS, performance, reliability, security, motion and visuals, unit economics, blast radius).
 metadata:
-  version: 2.6.0
+  version: 2.7.0
   verified: 2026-11-11
   decisions: [ADR-0001]
 ---
@@ -79,11 +79,22 @@ Copy into the conversation and tick as you go:
 - [ ] 6 PLAN      docs/plans/YYYY-MM-DD-<topic>.md: tasks, each with its verify command
 - [ ] 7 EXECUTE   task by task; run and read each verify command (frata-verify);
                   impact-reviewer on each task's diff before its commit
+- [ ] 7b PARITY   BUILT AS DRAWN (CLAUDE.md): mockup-parity-reviewer screenshots the mockup and the build at
+                  the same widths and checks every drawn element; each difference is fixed, or written
+                  in the plan's Deviations table with its reason and shown to the owner before it ships
 - [ ] 8 DOCUMENT  skills/rules the change touched updated, version bumped
 - [ ] 9 CLOSE     spec status: built, plan status: done
 ```
 
 **Never start 7 before 5.** If the owner is away, stop at the mockup and say so.
+
+**Never close at 9 before 7b.** A plan for a phase with a mockup has a **Deviations** table (mockup element · what was
+built · reason · owner seen yes/no) — empty is the goal. Never:
+- relabel the old screen as the new one;
+- keep an old component because it is "close enough";
+- defer a drawn element without a row in the table and the owner told.
+(2026-11-13: the products editor kept its old status, summary and form cards against an approved mockup, and the
+owner found it, not a review.)
 
 ## Step 2 — research
 

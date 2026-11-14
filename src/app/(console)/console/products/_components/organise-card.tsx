@@ -43,7 +43,7 @@ export function OrganiseCard({ category, onCategory, collections, picked, onPick
         <label htmlFor="tag" className="block text-sm font-medium">Tags <span className="font-normal text-muted-foreground">(optional, for your own sorting)</span></label>
         {tags.length > 0 && <ul className="flex flex-wrap gap-1.5">{tags.map((t) => <li key={t} className="flex items-center gap-1 rounded-sm bg-muted px-2 py-0.5 text-xs">{t}<button type="button" aria-label={`Remove tag ${t}`} onClick={() => onTags(tags.filter((x) => x !== t))} className="inline-grid min-h-6 min-w-6 place-items-center text-muted-foreground hover:text-foreground"><Icon name="close" className="size-4" /></button></li>)}</ul>}
         <input id="tag" value={tag} maxLength={40} placeholder="Diwali 2026, then Enter" onChange={(e) => setTag(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag() } }} onBlur={addTag}
-          className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" />
+          className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" />
       </div>
     </Section>
   )
@@ -91,7 +91,7 @@ export function CategoryPicker({ value, onChange, label = 'Category', bare = fal
               else if (e.key === 'Escape') { setOpen(false) }
             }}
             onBlur={() => setTimeout(() => setOpen(false), 150)}
-            className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" />
+            className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" />
           {open && list.length > 0 && (
             <ul id={`${id}-list`} role="listbox" className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-md border border-border bg-card py-1 shadow-md">
               {list.map((c, i) => (

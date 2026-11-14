@@ -136,8 +136,8 @@ function Prices({ s, set }: { s: SectionOf<'price_tiles'>; set: Set<SectionOf<'p
     <Text label="Heading" value={s.heading} max={40} onChange={(heading) => set({ ...s, heading })} />
     {s.bands.map((b, i) => (
       <div key={i} className="flex flex-wrap items-end gap-2 text-sm">
-        <Field label={`Tile ${i + 1}: from ₹`}>{(id) => <input id={id} inputMode="numeric" defaultValue={paiseToRupees(b.minPaise)} onBlur={(e) => put(i, { ...b, minPaise: rupeesToPaise(e.target.value) })} placeholder="any" className="h-10 w-24 rounded-md border border-input bg-card px-2 font-mono" />}</Field>
-        <Field label="to ₹">{(id) => <input id={id} inputMode="numeric" defaultValue={paiseToRupees(b.maxPaise)} onBlur={(e) => put(i, { ...b, maxPaise: rupeesToPaise(e.target.value) })} placeholder="any" className="h-10 w-24 rounded-md border border-input bg-card px-2 font-mono" />}</Field>
+        <Field label={`Tile ${i + 1}: from ₹`}>{(id) => <input id={id} inputMode="numeric" defaultValue={paiseToRupees(b.minPaise)} onBlur={(e) => put(i, { ...b, minPaise: rupeesToPaise(e.target.value) })} placeholder="any" className="h-10 w-24 rounded-md border border-input bg-card px-2 font-num" />}</Field>
+        <Field label="to ₹">{(id) => <input id={id} inputMode="numeric" defaultValue={paiseToRupees(b.maxPaise)} onBlur={(e) => put(i, { ...b, maxPaise: rupeesToPaise(e.target.value) })} placeholder="any" className="h-10 w-24 rounded-md border border-input bg-card px-2 font-num" />}</Field>
         {s.bands.length > 1 && <button type="button" onClick={() => set({ ...s, bands: s.bands.filter((_, j) => j !== i) })} className="min-h-10 px-2 underline underline-offset-4">Remove</button>}
       </div>
     ))}

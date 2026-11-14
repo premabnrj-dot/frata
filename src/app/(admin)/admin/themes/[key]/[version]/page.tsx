@@ -14,10 +14,11 @@ import { StateBadge } from '../../state-badge'
 import { Submit } from '@/components/ui/submit'
 import { Button } from '@/components/ui/button'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Theme version' }
 
-const input = 'h-10 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark'
+const input = FIELD
 
 /** One version (mockup "Admin › Themes"): what changed, who it's offered to, and the decisions (each final). */
 export default async function ThemeVersionPage({ params, searchParams }: { params: Promise<{ key: string; version: string }>; searchParams: Promise<{ q?: string }> }) {

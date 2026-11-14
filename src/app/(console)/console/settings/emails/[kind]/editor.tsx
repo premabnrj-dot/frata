@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/toast'
 import { PLACEHOLDERS } from '@/domains/messaging/placeholders'
 import { WORD_LIMITS, type EmailWords } from '@/domains/email/words'
 import { saveEmailAction, sendTestAction } from '../actions'
+import { FIELD_BOX } from '@/components/ui/field'
 
 const FIELDS: { key: keyof EmailWords; label: string; area?: boolean; max: number }[] = [
   { key: 'subject', label: 'Subject', max: WORD_LIMITS.subject }, { key: 'preview', label: 'Preview line', max: WORD_LIMITS.preview }, { key: 'heading', label: 'Heading', max: WORD_LIMITS.heading },
@@ -21,7 +22,7 @@ export function Editor({ kind, words, defaults, on, readOnly }: { kind: string; 
   const [pending, start] = useTransition()
   const router = useRouter()
   const refs = useRef<Partial<Record<keyof EmailWords, HTMLInputElement | HTMLTextAreaElement | null>>>({})
-  const field = 'w-full rounded-md border border-input bg-card px-3 py-2 text-sm'
+  const field = `${FIELD_BOX} w-full py-2`
   const insert = (p: string) => {
     const el = refs.current[focus], token = `[${p}]`
     const at = el?.selectionStart ?? w[focus].length
@@ -37,7 +38,7 @@ export function Editor({ kind, words, defaults, on, readOnly }: { kind: string; 
         <label key={f.key} className="grid gap-1"><span className="font-medium">{f.label}</span>
           {f.area
             ? <textarea ref={(el) => { refs.current[f.key] = el }} rows={4} maxLength={f.max} value={w[f.key]} disabled={readOnly} onFocus={() => setFocus(f.key)} onChange={(e) => setW({ ...w, [f.key]: e.target.value })} className={field} />
-            : <input ref={(el) => { refs.current[f.key] = el }} maxLength={f.max} value={w[f.key]} disabled={readOnly} onFocus={() => setFocus(f.key)} onChange={(e) => setW({ ...w, [f.key]: e.target.value })} className={`${field} h-10 md:h-9`} />}
+            : <input ref={(el) => { refs.current[f.key] = el }} maxLength={f.max} value={w[f.key]} disabled={readOnly} onFocus={() => setFocus(f.key)} onChange={(e) => setW({ ...w, [f.key]: e.target.value })} className={`${field} h-11 md:h-9`} />}
         </label>
       ))}
       {!readOnly ? (

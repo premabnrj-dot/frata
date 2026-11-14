@@ -7,6 +7,7 @@ import { accordionItems, fillFor, fillableOf } from '@/domains/themes/design-tre
 import { MAX_TILES, type Fill, type SectionOf } from '@/domains/themes/sections'
 import { Choice, Field, ImageField, LinkPicker, SourcePicker, Text, WhenIST } from './controls'
 import { LoopField, type FormCtx } from './section-form'
+import { FIELD_BOX } from '@/components/ui/field'
 
 // Theme Studio TS0b: a design's form (board v2 "Fill one"). The fields the theme marks for the owner, in page order,
 // each with the theme's label. A field whose theme words are an example shows them greyed as a placeholder, marked
@@ -25,7 +26,7 @@ const toBody = (t: string) => t.split(/\n{2,}/).filter((p) => p.trim()).slice(0,
 /** Words typed as they are, kept while the field is edited (a blank line being typed isn't eaten: impact review); the
  *  saved paragraphs follow. When the stored words change from elsewhere (Undo), the field takes them. */
 const asSaved = (t: string) => bodyText(toBody(t))
-const field = 'w-full rounded-md border border-input bg-card px-3 text-sm placeholder:italic placeholder:text-muted-foreground'
+const field = `${FIELD_BOX} w-full placeholder:italic placeholder:text-muted-foreground`
 function useRaw(stored: string, save: (t: string) => void, norm: (t: string) => string = (t) => t): [string, (t: string) => void] {
   const [raw, setRaw] = useState(stored)
   if (norm(raw) !== stored && raw !== stored) { setRaw(stored); return [stored, (t) => { setRaw(t); save(t) }] }
@@ -38,10 +39,10 @@ function Example({ label, value: stored, example, max, multiline, onChange }: { 
   return (
     <div className="space-y-1.5">
       <label htmlFor={id} className="flex items-center gap-2 text-sm font-medium">{label}{!value.trim() && <span className="rounded-full bg-warn px-2 py-0.5 text-xs font-medium text-warn-text">Example</span>}
-        <span className="ml-auto font-mono text-xs font-normal text-muted-foreground">{value.length}/{max}</span></label>
+        <span className="ml-auto font-num text-xs font-normal text-muted-foreground">{value.length}/{max}</span></label>
       {multiline
         ? <textarea id={id} value={value} maxLength={max} rows={4} placeholder={example} onChange={(e) => set(e.target.value)} className={`${field} py-2`} />
-        : <input id={id} value={value} maxLength={max} placeholder={example} onChange={(e) => set(e.target.value)} className={`${field} h-10`} />}
+        : <input id={id} value={value} maxLength={max} placeholder={example} onChange={(e) => set(e.target.value)} className={`${field} h-11 md:h-9`} />}
       {!value.trim() && <p className="text-xs text-warn-text">Write your own</p>}
     </div>
   )
@@ -58,12 +59,12 @@ function Questions({ b, items, set }: { b: Extract<LeafBlock, { kind: 'accordion
   const item = (i: number, v: Partial<{ q: string; a: string }>) => set(items.map((x, j) => (j === i ? { ...x, ...v } : x)))
   return (
     <div className="space-y-2">
-      <p className="flex items-center text-sm font-medium">{b.fill!.label}<span className="ml-auto font-mono text-xs font-normal text-muted-foreground">{items.length}/{MAX_ITEMS}</span></p>
+      <p className="flex items-center text-sm font-medium">{b.fill!.label}<span className="ml-auto font-num text-xs font-normal text-muted-foreground">{items.length}/{MAX_ITEMS}</span></p>
       <ol className="space-y-2">
         {items.map((x, i) => (
           <li key={i} className="space-y-2 rounded-xl border border-input p-2.5">
             <div className="flex items-center gap-1">
-              <input aria-label={`Question ${i + 1}`} value={x.q} maxLength={80} onChange={(e) => item(i, { q: e.target.value })} className={`${field} h-10 flex-1`} />
+              <input aria-label={`Question ${i + 1}`} value={x.q} maxLength={80} onChange={(e) => item(i, { q: e.target.value })} className={`${field} h-11 md:h-9 flex-1`} />
               <button type="button" aria-label={`Move question ${i + 1} up`} disabled={i === 0} onClick={() => set(move(items, i, -1))} className="grid size-9 place-items-center rounded-md disabled:opacity-30"><Icon name="up" className="size-4" /></button>
               <button type="button" aria-label={`Move question ${i + 1} down`} disabled={i === items.length - 1} onClick={() => set(move(items, i, 1))} className="grid size-9 place-items-center rounded-md disabled:opacity-30"><Icon name="down" className="size-4" /></button>
               <button type="button" aria-label={`Remove question ${i + 1}`} onClick={() => set(items.filter((_, j) => j !== i))} className="grid size-9 place-items-center rounded-md"><Icon name="close" className="size-3.5" /></button>

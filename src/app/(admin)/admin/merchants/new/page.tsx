@@ -8,10 +8,11 @@ import { createMerchantAction } from './actions'
 import { Section } from '@/components/layout/section'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Add merchant' }
 
-const field = 'h-10 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark'
+const field = FIELD
 
 export default async function NewMerchantPage() {
   const staff = await requireStaff(ANY_STAFF)
@@ -47,7 +48,7 @@ export default async function NewMerchantPage() {
               {[['launch', 'Launch', '₹1,499/mo'], ['growth', 'Growth', '₹4,999/mo'], ['scale', 'Scale', '₹14,999/mo']].map(([code, name, price]) => (
                 <label key={code} className="flex flex-col gap-0.5 rounded-md border border-input p-3 text-sm has-[:checked]:border-2 has-[:checked]:border-primary">
                   <span className="flex items-center gap-2"><input type="radio" name="planCode" value={code} defaultChecked={code === 'growth'} /><strong>{name}</strong></span>
-                  <span className="font-mono text-muted-foreground">{price}</span>
+                  <span className="font-num text-muted-foreground">{price}</span>
                 </label>
               ))}
             </div>

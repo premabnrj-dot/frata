@@ -45,8 +45,8 @@ export default async function OfferPage({ params }: { params: Promise<{ id: stri
       <Section title="So far">
         {o.useCount === 0 ? <p className="text-sm text-muted-foreground">Not used yet{o.budgetLeft !== null ? <> · <Money paise={paise(o.budgetLeft)} /> of the budget to give</> : null}.</p> : (
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div><dt className="text-xs text-muted-foreground">Uses</dt><dd className="font-mono text-lg"><Numeric>{o.useCount}</Numeric>{o.limitTotal ? <span className="text-sm text-muted-foreground"> / {o.limitTotal}</span> : null}</dd></div>
-          <div><dt className="text-xs text-muted-foreground">₹ given</dt><dd className="font-mono text-lg"><Money paise={paise(o.given)} /></dd>{o.budgetLeft !== null ? <dd className="text-xs text-muted-foreground"><Money paise={paise(o.budgetLeft)} /> of the budget left</dd> : null}</div>
+          <div><dt className="text-xs text-muted-foreground">Uses</dt><dd className="font-num text-lg"><Numeric>{o.useCount}</Numeric>{o.limitTotal ? <span className="text-sm text-muted-foreground"> / {o.limitTotal}</span> : null}</dd></div>
+          <div><dt className="text-xs text-muted-foreground">₹ given</dt><dd className="font-num text-lg"><Money paise={paise(o.given)} /></dd>{o.budgetLeft !== null ? <dd className="text-xs text-muted-foreground"><Money paise={paise(o.budgetLeft)} /> of the budget left</dd> : null}</div>
         </dl>)}
       </Section>
       {o.status !== 'draft' ? <OfferNumbers o={mine} s={stats} costs={stats.costs} /> : null}

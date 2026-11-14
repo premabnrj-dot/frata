@@ -155,7 +155,7 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
             <tbody>{o.invoices.map((i) => (
               <tr key={i.id} className="border-t border-border align-top">
                 <td className="py-1.5">{monthYearIN(i.periodStart)}</td>
-                <td className="py-1.5 font-mono">{i.number}{i.credits.map((c) => <a key={c.number} href={`/console/settings/billing/invoice/${i.id}?credit=${encodeURIComponent(c.number)}`} className="block text-xs text-muted-foreground underline">Credit note {c.number}</a>)}</td>
+                <td className="py-1.5 font-num">{i.number}{i.credits.map((c) => <a key={c.number} href={`/console/settings/billing/invoice/${i.id}?credit=${encodeURIComponent(c.number)}`} className="block text-xs text-muted-foreground underline">Credit note {c.number}</a>)}</td>
                 <td className="py-1.5 text-right"><Money paise={paise(i.total)} decimals /></td>
                 <td className="py-1.5">{i.testMode ? <span className="text-muted-foreground">{i.state === 'due' && billingGatewayIsTest() ? <>Test · due <Money paise={paise(i.due)} decimals /> (test money)</> : i.state === 'due' ? 'Test — never collected' : `Test · ${STATE_LABEL[i.state].toLowerCase()}`}</span> : i.state === 'due' ? <span className="text-warn-text">Due <Money paise={paise(i.due)} decimals /></span> : STATE_LABEL[i.state]}</td>
                 <td className="py-1.5 text-right"><a href={`/console/settings/billing/invoice/${i.id}`} className="underline">PDF</a>{canPay && i.state === 'due' && i.testMode === billingGatewayIsTest() ? <div className="mt-1"><PayNow invoiceId={i.id} /></div> : null}</td>

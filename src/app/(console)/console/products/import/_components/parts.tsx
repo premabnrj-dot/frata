@@ -29,7 +29,7 @@ export function Steps({ at }: { at: 0 | 1 | 2 | 3 }) {
 export function Count({ value, label, bad = false, children }: { value: number; label: ReactNode; bad?: boolean; children?: ReactNode }) {
   return (
     <Section className={cn('grid content-start gap-0.5 space-y-0 px-3.5 py-3 md:px-3.5 md:py-3', bad && value > 0 && 'border-danger-text/40')}>
-      <span className="font-mono text-2xl font-semibold tabular-nums">{value.toLocaleString('en-IN')}</span>
+      <span className="font-num text-2xl font-semibold tabular-nums">{value.toLocaleString('en-IN')}</span>
       <span className="text-xs text-muted-foreground">{label}</span>
       {children && <span className="mt-1.5">{children}</span>}
     </Section>

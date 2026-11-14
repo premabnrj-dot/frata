@@ -74,6 +74,12 @@ export function currentMethod(o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' |
   return o.paymentMethod === 'prepaid' ? 'prepaid' : 'cod'
 }
 
+/** How it is paid now, as the Payment column and the `pay` filter read it (N1c): COD, paid online, or online and not
+ * paid yet. paymentKindSql (src/lib/db/order-predicates.ts) is its SQL twin, held to it by the parity test. */
+export function paymentKind(o: Pick<OrderMoments, 'paymentMethod' | 'paidAt' | 'switchedToCodAt'>): 'cod' | 'paid' | 'unpaid' {
+  return o.paidAt ? 'paid' : currentMethod(o) === 'cod' ? 'cod' : 'unpaid'
+}
+
 /** Paid online after the shopper switched to COD: the courier must not collect. */
 export const paidAfterSwitch = (o: Pick<OrderMoments, 'paidAt' | 'switchedToCodAt'>) => !!(o.paidAt && o.switchedToCodAt)
 

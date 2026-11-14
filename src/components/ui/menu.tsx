@@ -18,7 +18,9 @@ import { button } from './button'
 
 export type MenuItem = { label: string; onSelect: () => void; danger?: boolean } | { label: string; href: string; danger?: boolean; download?: boolean }
 
-export function Menu({ label = 'More', items, align = 'end' }: { label?: string; items: MenuItem[]; align?: 'start' | 'end' }) {
+/** `variant`: the trigger's look (secondary by default; ghost for a quiet "More", Neel). `icon`: the trigger shows only
+ * this, `label` becoming its accessible name (a saved view's ⋯). */
+export function Menu({ label = 'More', items, align = 'end', size, variant = 'secondary', icon }: { label?: string; items: MenuItem[]; align?: 'start' | 'end'; size?: 'sm'; variant?: 'secondary' | 'ghost'; icon?: React.ReactNode }) {
   const id = useId()
   const trigger = useRef<HTMLButtonElement>(null)
   const pop = useRef<HTMLDivElement>(null)
@@ -34,11 +36,12 @@ export function Menu({ label = 'More', items, align = 'end' }: { label?: string;
   // click into a field, a Tab onward, or an item that opens a dialog of its own (impact review 2026-11-07).
   const back = useRef(false)
   const close = (returnFocus = true) => { back.current = returnFocus; pop.current?.hidePopover() }
-  const itemClass = (danger?: boolean) => cn('flex min-h-10 w-full items-center rounded-sm px-3 text-left text-sm md:min-h-9 hover:bg-accent focus-visible:bg-accent', danger && 'text-destructive')
+  const itemClass = (danger?: boolean) => cn('flex min-h-11 w-full items-center rounded-md px-2.5 text-left text-sm md:min-h-9 hover:bg-accent focus-visible:bg-accent', danger && 'text-danger-text')
   return (
     <>
-      <button ref={trigger} type="button" popoverTarget={id} aria-haspopup="menu" aria-expanded={false} aria-controls={id} className={button({ variant: 'secondary' })}>
-        {label}<ChevronDown aria-hidden className="size-4" />
+      <button ref={trigger} type="button" popoverTarget={id} aria-haspopup="menu" aria-expanded={false} aria-controls={id}
+        aria-label={icon ? label : undefined} className={icon ? 'relative inline-grid size-6 place-items-center rounded-sm text-muted-foreground after:absolute after:-inset-2.5 hover:bg-accent hover:text-foreground md:after:inset-0' : button({ variant, size })}>
+        {icon ?? <>{label}<ChevronDown aria-hidden className="size-4" /></>}
       </button>
       <div ref={pop} id={id} popover="auto" data-pop="menu" role="menu" aria-label={label}
         // Said before it shows (beforetoggle is synchronous), so a screen reader never hears a stale state.
@@ -57,12 +60,12 @@ export function Menu({ label = 'More', items, align = 'end' }: { label?: string;
           else if (e.key === 'Escape') back.current = true // the popover closes itself on Esc
           else if (e.key === 'Tab') close(false)
         }}
-        className="min-w-48 rounded-md border border-border bg-popover p-1 text-popover-foreground">
-        {items.map((it) => 'href' in it
+        className="min-w-55 rounded-lg border border-border bg-popover p-1.5 text-popover-foreground shadow-md">
+        {items.map((it, i) => [it.danger && i > 0 && !items[i - 1]!.danger ? <hr key={`${it.label}-rule`} aria-hidden="true" className="my-1.5 border-line-soft" /> : null, 'href' in it
           ? <a key={it.label} role="menuitem" href={it.href} download={it.download || undefined} tabIndex={-1} className={itemClass(it.danger)} onClick={() => close(false)}>{it.label}</a>
           : <button key={it.label} type="button" role="menuitem" tabIndex={-1} className={itemClass(it.danger)} // Focus to More FIRST (the menu is still open, so this cannot race a dialog the item opens): a dialog
             // opened next returns focus to More when it closes.
-            onClick={() => { back.current = false; trigger.current?.focus(); pop.current?.hidePopover(); it.onSelect() }}>{it.label}</button>)}
+            onClick={() => { back.current = false; trigger.current?.focus(); pop.current?.hidePopover(); it.onSelect() }}>{it.label}</button>])}
       </div>
     </>
   )

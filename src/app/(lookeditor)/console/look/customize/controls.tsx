@@ -7,6 +7,7 @@ import type { SourceSchema, ThemeImage } from '@/domains/themes/sections'
 import type { z } from 'zod'
 import { Switch as Toggle } from '@/components/ui/switch'
 import { Icon } from '@/components/icons/icon'
+import { FIELD } from '@/components/ui/field'
 
 // The customizer's small controls: each a labelled native control or a group of real buttons (design-language
 // primitives; recognition over recall). Limits show as counters, never as a refusal after typing.
@@ -22,7 +23,7 @@ export function Field({ label, children, hint }: { label: string; children: (id:
   )
 }
 
-const input = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm'
+const input = `${FIELD} w-full`
 
 export function Text({ label, value, max, onChange, multiline = false }: { label: string; value: string; max: number; onChange: (v: string) => void; multiline?: boolean }) {
   return (
@@ -127,7 +128,7 @@ export function ImageField({ label, value, tenantId, onChange, library = [], sug
           <img src={local} alt="" className="size-full object-cover opacity-70 saturate-50" />
           <span role="status" className="absolute inset-0 grid place-items-center bg-foreground/25 text-background">
             <svg viewBox="0 0 60 60" className="size-14 -rotate-90" aria-hidden="true"><circle cx="30" cy="30" r="26" fill="none" strokeWidth="4" className="stroke-background/30" /><circle cx="30" cy="30" r="26" fill="none" strokeWidth="4" strokeLinecap="round" className="stroke-background transition-[stroke-dashoffset] duration-base" strokeDasharray="163.4" strokeDashoffset={163.4 * (1 - progress)} /></svg>
-            <span className="absolute font-mono text-sm font-semibold">{Math.round(progress * 100)}%</span>
+            <span className="absolute font-num text-sm font-semibold">{Math.round(progress * 100)}%</span>
           </span>
         </div>
       ) : value ? (
@@ -261,7 +262,7 @@ export function SourcePicker({ value: src, collections, onChange, label = 'Show'
       <select id={id} value={src.handle} onChange={(e) => onChange({ kind: 'collection', handle: e.target.value })} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm">
         {collections.map((x) => <option key={x.handle} value={x.handle}>{x.title}</option>)}
       </select>)}</Field>}
-    {src.kind === 'under_price' && <Field label="Under, in ₹">{(id) => <input id={id} inputMode="numeric" defaultValue={paiseToRupees(src.maxPaise)} onBlur={(e) => { const p = rupeesToPaise(e.target.value); if (p) onChange({ kind: 'under_price', maxPaise: p }) }} className="h-10 w-full rounded-md border border-input bg-card px-3 font-mono text-sm" />}</Field>}
+    {src.kind === 'under_price' && <Field label="Under, in ₹">{(id) => <input id={id} inputMode="numeric" defaultValue={paiseToRupees(src.maxPaise)} onBlur={(e) => { const p = rupeesToPaise(e.target.value); if (p) onChange({ kind: 'under_price', maxPaise: p }) }} className="h-10 w-full rounded-md border border-input bg-card px-3 font-num text-sm" />}</Field>}
   </>)
 }
 

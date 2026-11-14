@@ -34,7 +34,7 @@ export function AddItem({ orderId, taken, onAdd }: { orderId: string; taken: Set
       <label htmlFor={id} className="text-sm font-medium">Add an item</label>
       <div className="flex gap-2">
         <input id={id} type="search" autoFocus value={q} onChange={(e) => setQ(e.target.value)} maxLength={60} autoComplete="off"
-          className="h-10 min-w-0 flex-1 rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+          className="h-11 min-w-0 flex-1 rounded-md border border-input bg-card px-3 text-sm md:h-9" />
         <Button variant="ghost" onClick={() => { setOpen(false); setQ('') }}>Close</Button>
       </div>
       {found && !found.length ? <p className="text-sm text-muted-foreground">No piece called that.</p> : null}
@@ -42,7 +42,7 @@ export function AddItem({ orderId, taken, onAdd }: { orderId: string; taken: Set
         <ul className="divide-y divide-border">
           {found.map((r) => (
             <li key={r.productId} className="grid gap-1.5 py-2 text-sm">
-              <span className="flex justify-between gap-3"><span className="font-medium">{r.title}</span><span className="font-mono tabular-nums"><Money paise={paise(Math.min(...r.choices.map((c) => c.price)))} /></span></span>
+              <span className="flex justify-between gap-3"><span className="font-medium">{r.title}</span><span className="font-num"><Money paise={paise(Math.min(...r.choices.map((c) => c.price)))} /></span></span>
               <div role="group" aria-label={`${r.title}: ${r.options.join(' and ') || 'options'}`} className="flex flex-wrap gap-1.5">
                 {r.choices.map((c) => {
                   const out = (r.room[c.variantId] ?? 0) <= 0 || taken.has(c.variantId)

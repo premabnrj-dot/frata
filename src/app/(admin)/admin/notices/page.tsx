@@ -10,10 +10,11 @@ import { dateTimeIN } from '@/lib/format-date'
 import { sendNoticeAction } from './actions'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Notices' }
 
-const field = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9'
+const field = `${FIELD} w-full`
 
 /** Admin › Notices (mockup v2 screen 9): write to every shop, a plan or one shop; what was sent, by batch. */
 export default async function AdminNoticesPage() {
@@ -36,8 +37,8 @@ export default async function AdminNoticesPage() {
             <label className="grid gap-1"><span className="font-medium">Title</span><input name="title" required minLength={3} maxLength={120} data-error="A title of 3 to 120 characters." className={field} /><FieldMessage name="title" /></label>
             <label className="grid gap-1"><span className="font-medium">Message</span><textarea name="body" maxLength={1000} rows={4} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" /></label>
             <label className="grid gap-1"><span className="font-medium">Link</span><input name="href" className={`${field} font-mono`} placeholder="/console/settings/billing" /></label>
-            <label className="flex items-center gap-2"><input type="checkbox" name="email" defaultChecked className="size-4 accent-foreground" />Also email</label>
-            <label className="flex items-center gap-2"><input type="checkbox" name="required" className="size-4 accent-foreground" />Required (billing, security, Frrata acted)</label>
+            <label className="flex items-center gap-2"><input type="checkbox" name="email" defaultChecked  />Also email</label>
+            <label className="flex items-center gap-2"><input type="checkbox" name="required"  />Required (billing, security, Frrata acted)</label>
             <div><Submit>Send</Submit></div>
           </ActionForm>
         </Section>
@@ -51,7 +52,7 @@ export default async function AdminNoticesPage() {
                 <DataTableRow key={b.batch}>
                   <Td cell="a">{b.title}</Td>
                   <Td cell="d"><Badge tone={b.required ? 'warn' : 'neutral'}>{TYPE_LABEL[b.type as keyof typeof TYPE_LABEL] ?? b.type}</Badge></Td>
-                  <Td cell="b" className="text-right font-mono tabular-nums">{b.shops}</Td>
+                  <Td cell="b" className="text-right font-num">{b.shops}</Td>
                   <Td cell="c">{dateTimeIN(b.at)}</Td>
                 </DataTableRow>
               ))}

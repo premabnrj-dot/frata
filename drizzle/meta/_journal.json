@@ -876,6 +876,20 @@
       "when": 1794513452730,
       "tag": "0124_partner_teams_access",
       "breakpoints": true
+    },
+    {
+      "idx": 125,
+      "version": "7",
+      "when": 1794573121204,
+      "tag": "0125_saved_views",
+      "breakpoints": true
+    },
+    {
+      "idx": 126,
+      "version": "7",
+      "when": 1794573129211,
+      "tag": "0126_saved_views_access",
+      "breakpoints": true
     }
   ]
 }

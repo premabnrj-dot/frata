@@ -16,7 +16,7 @@ export function AppFacts({ k, offer, worksWith, action, priceClass = '' }: {
     <>
       <div className={`rounded-xl border border-border bg-card p-4 ${priceClass}`}>
         <p className="text-xs font-semibold tracking-wide text-muted-foreground">PRICE</p>
-        <p className="mt-1 font-mono text-xl font-semibold">{offer.price}</p>
+        <p className="mt-1 font-num text-xl font-semibold">{offer.price}</p>
         {offer.action.kind === 'ask' ? <p className="mt-1 text-xs text-muted-foreground">On your Frrata bill · stop any time</p> : null}
         {offer.state ? <p className="mt-2"><Badge tone={offer.state.tone}>{offer.state.label}</Badge></p> : null}
         {action ? <div className="mt-3">{action}</div> : null}

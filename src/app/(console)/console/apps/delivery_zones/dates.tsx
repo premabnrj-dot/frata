@@ -10,6 +10,7 @@ import { istDayKey } from '@/domains/time/day'
 import { weekdayShortIN } from '@/lib/format-date'
 import { settle } from '@/lib/settle'
 import { addHolidayAction, removeHolidayAction, saveDispatchAction } from './actions'
+import { FIELD } from '@/components/ui/field'
 
 // =============================================================================
 // Delivery Zones › Delivery dates (PD·1, approved mockup "Delivery dates"): dispatch (working days, the daily cutoff,
@@ -19,7 +20,7 @@ import { addHolidayAction, removeHolidayAction, saveDispatchAction } from './act
 // =============================================================================
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const field = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9'
+const field = `${FIELD} w-full`
 const IN_STOCK = [{ kind: 'in_stock' as const, shipsBy: null, leadMinDays: null, leadMaxDays: null }]
 const day = (iso: string) => new Date(`${iso}T00:00:00+05:30`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })
 
@@ -74,7 +75,7 @@ function Dates({ nowIso, canEdit, dispatch, holidays, zones }: Props) {
               {DAYS.map((d, i) => {
                 const on = ((ship >> i) & 1) === 1
                 return <button key={d} type="button" aria-pressed={on} disabled={!canEdit} onClick={() => setShip((s) => s ^ (1 << i))}
-                  className="min-h-10 min-w-12 rounded-md border border-input px-3 text-sm aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground md:min-h-9">{d}</button>
+                  className="min-h-11 min-w-12 rounded-md border border-input px-3 text-sm aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground md:min-h-9">{d}</button>
               })}
             </div>
           </fieldset>
@@ -92,7 +93,7 @@ function Dates({ nowIso, canEdit, dispatch, holidays, zones }: Props) {
               {holidays.map((h) => (
                 <li key={h.day} className="flex items-center gap-3 py-2 text-sm">
                   <span className="min-w-0 flex-1">{h.name}</span>
-                  <span className="font-mono text-muted-foreground">{day(h.day)}</span>
+                  <span className="font-num text-muted-foreground">{day(h.day)}</span>
                   {canEdit && <Button variant="ghost" disabled={busy === h.day} onClick={() => act(h.day, () => removeHolidayAction(h.day), 'Holiday removed')}>Remove</Button>}
                 </li>
               ))}
@@ -113,7 +114,7 @@ function Dates({ nowIso, canEdit, dispatch, holidays, zones }: Props) {
       <Section title={`Ordered now · ${weekdayShortIN(today)}`}>
         {shown.length ? (
           <ul className="divide-y divide-border text-sm">
-            {shown.map((z) => <li key={z.id} className="flex justify-between gap-3 py-2"><span>{z.name}</span><b className="font-mono">{z.by ? day(z.by) : '—'}</b></li>)}
+            {shown.map((z) => <li key={z.id} className="flex justify-between gap-3 py-2"><span>{z.name}</span><b className="font-num">{z.by ? day(z.by) : '—'}</b></li>)}
           </ul>
         ) : <p className="text-sm text-muted-foreground">Set up zones first.</p>}
       </Section>

@@ -44,7 +44,7 @@ describe.skipIf(!host)('order predicates match orderState()', () => {
         toShip: sql<boolean>`${p.inTabSql('to_ship', now)}`, onTheWay: sql<boolean>`${p.inTabSql('on_the_way', now)}`,
         couldntDeliver: sql<boolean>`${p.inTabSql('couldnt_deliver', now)}`, comingBack: sql<boolean>`${p.inTabSql('coming_back', now)}`,
         entered: sql<string | null>`${p.enteredAtSql(now)}`, placed: sql<boolean>`${p.placedSql()}`, holding: sql<boolean>`${p.holdingSql(now)}`, standing: sql<boolean>`${p.standingSql()}`,
-        useOrder: sql<boolean>`${p.discountUseSql(now, 'both')}`, usePayment: sql<boolean>`${p.discountUseSql(now, 'prepaid')}`, useCod: sql<boolean>`${p.discountUseSql(now, 'cod')}`, method: p.currentMethodSql(),
+        useOrder: sql<boolean>`${p.discountUseSql(now, 'both')}`, usePayment: sql<boolean>`${p.discountUseSql(now, 'prepaid')}`, useCod: sql<boolean>`${p.discountUseSql(now, 'cod')}`, method: p.currentMethodSql(), kind: p.paymentKindSql(),
         stage: sql<string>`${p.stageSql()}`,
       }).from(orders).where(and(eq(orders.tenantId, A), gte(orders.number, 900_000), lt(orders.number, 900_400)))
       expect(rows.length).toBe(400)
@@ -55,9 +55,9 @@ describe.skipIf(!host)('order predicates match orderState()', () => {
         const state = s.orderState(row, now)
         seen.add(state)
         const tab = s.queueTab(state)
-        const got = { state: row.sqlState, to_ship: row.toShip, on_the_way: row.onTheWay, couldnt_deliver: row.couldntDeliver, coming_back: row.comingBack, to_confirm: row.toConfirm, to_pack: row.toPack, on_hold: row.onHold, not_paid: row.notPaid, all: row.all, placed: row.placed, holding: row.holding, standing: row.standing, useOrder: row.useOrder, usePayment: row.usePayment, useCod: row.useCod, method: row.method }
+        const got = { state: row.sqlState, to_ship: row.toShip, on_the_way: row.onTheWay, couldnt_deliver: row.couldntDeliver, coming_back: row.comingBack, to_confirm: row.toConfirm, to_pack: row.toPack, on_hold: row.onHold, not_paid: row.notPaid, all: row.all, placed: row.placed, holding: row.holding, standing: row.standing, useOrder: row.useOrder, usePayment: row.usePayment, useCod: row.useCod, method: row.method, kind: row.kind }
         const want = { state, to_ship: tab === 'to_ship', on_the_way: tab === 'on_the_way', couldnt_deliver: tab === 'couldnt_deliver', coming_back: tab === 'coming_back', to_confirm: tab === 'to_confirm', to_pack: tab === 'to_pack', on_hold: tab === 'on_hold', not_paid: tab === 'not_paid', all: s.isPlaced(row), placed: s.isPlaced(row),
-          holding: s.isHolding(row, now), standing: s.isStanding(row), useOrder: s.usesDiscount(row, 'both', now), usePayment: s.usesDiscount(row, 'prepaid', now), useCod: s.usesDiscount(row, 'cod', now), method: s.currentMethod(row) }
+          holding: s.isHolding(row, now), standing: s.isStanding(row), useOrder: s.usesDiscount(row, 'both', now), usePayment: s.usesDiscount(row, 'prepaid', now), useCod: s.usesDiscount(row, 'cod', now), method: s.currentMethod(row), kind: s.paymentKind(row) }
         expect({ number: row.number, ...got }).toEqual({ number: row.number, ...want })
         // Analytics' stage (A·1), straight from the outcome columns, agrees with the state for every order not cancelled.
         if (state !== 'cancelled') {

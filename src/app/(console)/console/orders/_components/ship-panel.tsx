@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { cameBackOrder, deliverOrder, lostOrder, shipOrder, undoOutcomeAction } from '../actions'
+import { FIELD } from '@/components/ui/field'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/_components/ship-panel.tsx
@@ -33,7 +34,7 @@ function Panel({ orderId, number, stage, may, shipment, stockTaken }: ShipPanelP
   const [courier, setCourier] = useState(''), [tracking, setTracking] = useState('')
   const [ask, setAsk] = useState<null | 'came_back' | 'lost'>(null)
   const [restock, setRestock] = useState(true)
-  const field = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9'
+  const field = `${FIELD} w-full`
 
   async function go(word: string, fn: () => Promise<{ ok: true; eventId: string } | { ok: false; error: string }>) {
     if (busy) return
@@ -77,7 +78,7 @@ function Panel({ orderId, number, stage, may, shipment, stockTaken }: ShipPanelP
       <Dialog open={ask === 'came_back'} onClose={() => setAsk(null)} title={`${number} came back?`}
         description="It came back to the shop without being delivered (RTO). Nothing was collected."
         actions={<><Button variant="secondary" data-autofocus onClick={() => setAsk(null)}>Not yet</Button><Button onClick={() => void go('came back', () => cameBackOrder(orderId, restock))} aria-disabled={busy}>Came back</Button></>}>
-        {stockTaken ? <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} className="size-5 accent-primary" />Put the stock back (it can't be undone after)</label> : null}
+        {stockTaken ? <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} />Put the stock back (it can't be undone after)</label> : null}
       </Dialog>
       <Dialog open={ask === 'lost'} onClose={() => setAsk(null)} title={`Lost by the courier?`}
         description="The courier lost or damaged the parcel. It is never billed as delivered; claim it with the courier."

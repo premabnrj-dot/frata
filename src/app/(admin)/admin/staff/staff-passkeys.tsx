@@ -26,7 +26,7 @@ export function ApproveRequest({ email }: { email: string }) {
     <div className="grid w-full max-w-sm gap-2">
       <label htmlFor={`code-${email}`} className="grid gap-1.5 text-sm font-medium">Code {email.split('@')[0]} reads to you
         <input id={`code-${email}`} inputMode="numeric" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value.replace(/[^0-9 ]/g, '').slice(0, 7))}
-          className="h-10 rounded-md border border-input bg-card px-3 font-mono text-sm tracking-widest md:h-9" />
+          className="h-11 rounded-md border border-input bg-card px-3 font-mono text-sm tracking-widest md:h-9" />
       </label>
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" onClick={() => { setOpen(false); setCode('') }}>Cancel</Button>
@@ -77,7 +77,7 @@ export function AddOwnPasskey() {
     <div className="grid w-full max-w-sm gap-2">
       <label htmlFor="own-pk" className="grid gap-1.5 text-sm font-medium">Name
         <input id="own-pk" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} placeholder="My phone"
-          className="h-10 rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+          className="h-11 rounded-md border border-input bg-card px-3 text-sm md:h-9" />
       </label>
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>

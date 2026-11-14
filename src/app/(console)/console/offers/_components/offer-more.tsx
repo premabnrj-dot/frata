@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { OfferValues } from '@/domains/checkout/offer-form'
 import { InfoTip } from '@/components/ui/info-tip'
 import { FieldError, errorId, fieldProps } from '@/components/ui/field-error'
+import { FIELD } from '@/components/ui/field'
 
 // =============================================================================
 // THE O·2 PARTS OF THE OFFER FORM (docs/plans/2026-11-08-offers-o2.md): what a product offer covers, Buy X get Y, the
@@ -12,7 +13,7 @@ import { FieldError, errorId, fieldProps } from '@/components/ui/field-error'
 
 export type Pickers = { products: { id: string; title: string }[]; collections: { id: string; title: string }[]; pieces: { id: string; title: string }[] }
 
-const field = 'h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text disabled:opacity-60'
+const field = `${FIELD} w-full`
 const lab = 'block text-sm font-medium'
 
 export function OfferMore({ v, set, errors, pickers }: { v: OfferValues; set: (p: Partial<OfferValues>) => void; errors: Record<string, string>; pickers: Pickers }) {
@@ -49,7 +50,7 @@ export function OfferMore({ v, set, errors, pickers }: { v: OfferValues; set: (p
         <fieldset className="space-y-2"><legend className={lab}>Covers</legend>
           <div className="flex flex-wrap gap-3 text-sm">
             {([['all', 'Every product'], ['products', 'Chosen products'], ['collections', 'Chosen collections']] as const).map(([k, l]) => (
-              <label key={k} className="flex min-h-6 items-center gap-2"><input type="radio" name="targets" className="size-5 accent-primary" checked={(v.targets ?? 'all') === k} onChange={() => set({ targets: k, targetIds: [] })} />{l}</label>
+              <label key={k} className="flex min-h-6 items-center gap-2"><input type="radio" name="targets"  checked={(v.targets ?? 'all') === k} onChange={() => set({ targets: k, targetIds: [] })} />{l}</label>
             ))}
           </div>
           {(v.targets ?? 'all') !== 'all' && (
@@ -58,7 +59,7 @@ export function OfferMore({ v, set, errors, pickers }: { v: OfferValues; set: (p
               <input id="o-find" value={q} {...fp('targets')} placeholder={v.targets === 'collections' ? 'Find a collection' : 'Find a product'} onChange={(e) => setQ(e.target.value)} className={field} />
               <ul className="max-h-56 divide-y divide-border overflow-y-auto rounded-md border border-border" aria-label="Choose">
                 {found.map((x) => (
-                  <li key={x.id}><label className="flex min-h-9 items-center gap-2 px-3 text-sm"><input type="checkbox" className="size-5 shrink-0 accent-primary" checked={picked.has(x.id)}
+                  <li key={x.id}><label className="flex min-h-9 items-center gap-2 px-3 text-sm"><input type="checkbox" className="shrink-0" checked={picked.has(x.id)}
                     onChange={(e) => set({ targetIds: e.target.checked ? [...picked, x.id] : [...picked].filter((y) => y !== x.id) })} />{x.title}</label></li>
                 ))}
                 {!found.length && <li className="px-3 py-2 text-sm text-muted-foreground">Nothing matches.</li>}
@@ -82,7 +83,7 @@ export function OfferMore({ v, set, errors, pickers }: { v: OfferValues; set: (p
           ))}
           {tiers.length < 4 && <button type="button" className="min-h-9 text-sm underline" onClick={() => set({ tiers: [...tiers, { min: '', value: '' }] })}>Add a step</button>}
           {err('tiers')}
-          <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="size-5 shrink-0 accent-primary" checked={!!v.firstOrder} onChange={(e) => set({ firstOrder: e.target.checked })} />Only for a shopper&apos;s first order here (checked by phone when they order)</label>
+          <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="shrink-0" checked={!!v.firstOrder} onChange={(e) => set({ firstOrder: e.target.checked })} />Only for a shopper&apos;s first order here (checked by phone when they order)</label>
         </fieldset>
       )}
     </>

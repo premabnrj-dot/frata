@@ -86,7 +86,7 @@ export function HsnTable({ rows, charges, inclusive }: { rows: Row[]; charges: b
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full min-w-[560px] text-sm">
           <thead className="bg-muted text-left text-xs text-muted-foreground"><tr>
-            <th className="w-10 px-3 py-2"><input type="checkbox" aria-label="Select all shown" checked={all} onChange={() => setPicked(all ? new Set() : new Set(shown.map((r) => r.id)))} className="size-4 accent-[var(--color-foreground)]" /></th>
+            <th className="w-10 px-3 py-2"><input type="checkbox" aria-label="Select all shown" checked={all} onChange={() => setPicked(all ? new Set() : new Set(shown.map((r) => r.id)))} /></th>
             <th className="px-3 py-2">Product</th><th className="px-3 py-2">HSN</th><th className="px-3 py-2">Unit</th><th className="px-3 py-2 text-right">Price</th>{charges && <th className="px-3 py-2 text-right">GST</th>}
           </tr></thead>
           <tbody className="divide-y divide-border">
@@ -94,7 +94,7 @@ export function HsnTable({ rows, charges, inclusive }: { rows: Row[]; charges: b
               const bps = rateOf(r), gap = charges && r.minPrice !== null && inGap(r.hsn, r.minPrice, inclusive, now)
               return (
                 <tr key={r.id}>
-                  <td className="px-3 py-2"><input type="checkbox" aria-label={`Select ${r.title}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)} className="size-4 accent-[var(--color-foreground)]" /></td>
+                  <td className="px-3 py-2"><input type="checkbox" aria-label={`Select ${r.title}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)} /></td>
                   <td className="px-3 py-2"><Link href={`/console/products/${r.handle}`} className="font-medium hover:underline">{r.title}</Link>{r.typeName && <span className="block text-xs text-muted-foreground">{r.typeName}</span>}</td>
                   <td className="px-3 py-2">{r.hsn ? <span className="font-mono">{r.hsn}</span> : <span className="rounded-full bg-warn px-2 py-0.5 text-xs text-warn-text">Needs HSN</span>}</td>
                   <td className="px-3 py-2 font-mono text-xs">{r.uqc}</td>

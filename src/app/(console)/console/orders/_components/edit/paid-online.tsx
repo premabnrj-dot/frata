@@ -39,7 +39,7 @@ export function WaitingChange({ orderId, asked, total, changes, link, canAct, la
     <div className="space-y-3 rounded-md border border-warn bg-warn/40 p-3 text-sm" data-waiting-change>
       <div className="flex items-baseline justify-between gap-3">
         <b>Waiting for <Money paise={paise(asked)} /> from the shopper</b>
-        <span className="font-mono tabular-nums text-muted-foreground">New total <Money paise={paise(total)} /></span>
+        <span className="font-num text-muted-foreground">New total <Money paise={paise(total)} /></span>
       </div>
       {changes.length ? <ul className="space-y-1">{changes.map((c, i) => <li key={i}>{c}</li>)}</ul> : null}
       <div className="flex flex-wrap gap-2">

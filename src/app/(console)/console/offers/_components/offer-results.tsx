@@ -24,7 +24,7 @@ function Kpi({ k, v, f }: { k: string; v: React.ReactNode; f: React.ReactNode })
   return (
     <div className="min-w-0">
       <dt className="text-xs text-muted-foreground">{k}</dt>
-      <dd className="font-mono text-lg font-semibold">{v}</dd>
+      <dd className="font-num text-lg font-semibold">{v}</dd>
       <dd className="text-xs text-muted-foreground">{f}</dd>
     </div>
   )
@@ -64,17 +64,17 @@ export function OfferNumbers({ o, s, costs }: { o: OfferStat | undefined; s: Off
         </div>
       ) : (
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div><dt className="text-xs text-muted-foreground">Orders</dt><dd className="font-mono text-lg"><Numeric>{x.orders}</Numeric></dd>
+        <div><dt className="text-xs text-muted-foreground">Orders</dt><dd className="font-num text-lg"><Numeric>{x.orders}</Numeric></dd>
           <dd className="text-xs text-muted-foreground"><Numeric>{x.fresh}</Numeric> new · <Numeric>{x.repeat}</Numeric> repeat buyers</dd></div>
-        <div><dt className="text-xs text-muted-foreground">₹ given</dt><dd className="font-mono text-lg"><Money paise={paise(x.given)} /></dd>
+        <div><dt className="text-xs text-muted-foreground">₹ given</dt><dd className="font-num text-lg"><Money paise={paise(x.given)} /></dd>
           <dd className="text-xs text-muted-foreground">{rs(x.givenPerDelivered)} per delivered order</dd></div>
-        <div><dt className="text-xs text-muted-foreground">Average order</dt><dd className="font-mono text-lg">{rs(x.aov)}</dd>
+        <div><dt className="text-xs text-muted-foreground">Average order</dt><dd className="font-num text-lg">{rs(x.aov)}</dd>
           <dd className="text-xs text-muted-foreground">{rs(w.aov)} without an offer</dd></div>
-        <div><dt className="text-xs text-muted-foreground">Prepaid</dt><dd className="font-mono text-lg">{share(x.prepaid, x.orders)}</dd></div>
-        <div><dt className="text-xs text-muted-foreground">Delivered</dt><dd className="font-mono text-lg"><Numeric>{x.delivered}</Numeric></dd></div>
-        <div><dt className="text-xs text-muted-foreground">Returned (RTO)</dt><dd className="font-mono text-lg">{rtoRate(x)}</dd>
+        <div><dt className="text-xs text-muted-foreground">Prepaid</dt><dd className="font-num text-lg">{share(x.prepaid, x.orders)}</dd></div>
+        <div><dt className="text-xs text-muted-foreground">Delivered</dt><dd className="font-num text-lg"><Numeric>{x.delivered}</Numeric></dd></div>
+        <div><dt className="text-xs text-muted-foreground">Returned (RTO)</dt><dd className="font-num text-lg">{rtoRate(x)}</dd>
           <dd className="text-xs text-muted-foreground">{rtoRate(w)} without an offer</dd></div>
-        {costs ? <div className="col-span-2"><dt className="text-xs text-muted-foreground">₹ kept per order, after returns</dt><dd className="font-mono text-lg">{rs(x.keptPerOrder)}</dd>
+        {costs ? <div className="col-span-2"><dt className="text-xs text-muted-foreground">₹ kept per order, after returns</dt><dd className="font-num text-lg">{rs(x.keptPerOrder)}</dd>
           <dd className="text-xs text-muted-foreground">Delivered, came back or lost · before ads and packaging{x.keptLeftOut ? ` · ${x.keptLeftOut} left out (cost of goods or courier charges not known yet)` : ''}</dd>
           {x.keptPerOrder === null ? <dd className="text-xs text-muted-foreground">Once orders are delivered or come back, and their costs are known.</dd>
             : keptNote(x.keptBasis) ? <dd className="text-xs text-muted-foreground">{keptNote(x.keptBasis)}{x.keptBasis === 'none' ? <> · <Link href="/console/settings/shipping-costs" className="underline">set shipping costs</Link></> : null}</dd> : null}</div> : null}

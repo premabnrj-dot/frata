@@ -14,7 +14,7 @@ export function Kpis({ items }: { items: { label: string; value: ReactNode; sub?
       {items.map((k) => (
         <div key={k.label} className="grid min-w-0 gap-0.5 bg-card p-3">
           <dt className="text-xs text-muted-foreground">{k.label}</dt>
-          <dd className="font-mono text-lg font-semibold tabular-nums">{k.value}</dd>
+          <dd className="font-num text-lg font-semibold tabular-nums">{k.value}</dd>
           {k.sub ? <dd className="text-xs text-muted-foreground">{k.sub}</dd> : null}
         </div>
       ))}
@@ -45,7 +45,7 @@ export function Meter({ label, value, share, tone = 'neutral' }: { label: string
   const fill = tone === 'danger' ? 'bg-danger-text' : tone === 'warn' ? 'bg-warn-text' : 'bg-foreground'
   return (
     <div className="grid gap-1">
-      <div className="flex justify-between gap-2 text-sm"><span>{label}</span><span className="font-mono tabular-nums">{value}</span></div>
+      <div className="flex justify-between gap-2 text-sm"><span>{label}</span><span className="font-num">{value}</span></div>
       <div aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-muted"><span className={`block h-full origin-left rounded-full ${fill}`} style={{ transform: `scaleX(${Math.max(0, Math.min(1, share))})` }} /></div>
     </div>
   )

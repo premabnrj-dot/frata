@@ -93,14 +93,14 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
         <div className="flex items-center gap-1 rounded-md border border-input bg-card px-3 font-mono text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
           <input id="slug" value={slug} disabled={locked || pending} aria-describedby="slug-h"
             onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 30)) }}
-            className="h-10 min-w-0 flex-1 bg-transparent outline-none disabled:opacity-70 md:h-9" />
+            className="h-11 min-w-0 flex-1 bg-transparent outline-none disabled:opacity-70 md:h-9" />
           <span className="text-muted-foreground">.{shopDomain}</span>
         </div>
         {line && <p id="slug-h" aria-live="polite" className={`text-sm ${state?.state === 'ok' ? 'text-ok-text' : state || frozen || left === 0 ? 'text-warn-text' : 'text-muted-foreground'}`}>{line}</p>}
         {!changed && (
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="secondary" onClick={() => { void navigator.clipboard?.writeText(`https://${current}.${shopDomain}`).then(() => toast.ok('Copied')).catch(() => {}) }}>Copy</Button>
-            <a href={`https://${current}.${shopDomain}`} target="_blank" rel="noopener" className="inline-flex min-h-10 items-center rounded-md border border-input px-3 text-sm md:min-h-9">Open</a>
+            <a href={`https://${current}.${shopDomain}`} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center rounded-md border border-input px-3 text-sm md:min-h-9">Open</a>
           </div>
         )}
         {old.length > 0 && <p className="text-sm text-muted-foreground">Old: <span className="font-mono">{old.map((n) => `${n}.${shopDomain}`).join(', ')}</span></p>}

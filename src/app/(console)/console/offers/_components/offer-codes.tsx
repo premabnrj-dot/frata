@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { FieldError, fieldProps, useErrorSummary } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
 import { addCreatorCode } from '../actions'
+import { FIELD } from '@/components/ui/field'
 
 /** The creator's link (the one builder, shopLink); with no address yet, the code alone. */
 const creatorLink = (address: string, code: string) => { try { return shopLink(`https://${address}`, '/', { code }) } catch { return `?code=${code}` } }
@@ -28,7 +29,7 @@ export function OfferCodes({ id, address, creators, canAdd, publicCode }: {
   const [attempt, setAttempt] = useState(0)
   const [also, setAlso] = useState<string | undefined>(undefined)
   useErrorSummary(errors, { attempt, scope: box, sub: also })
-  const field = 'h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-text'
+  const field = `${FIELD} w-full`
   const add = () => start(async () => {
     const r = await addCreatorCode(id, label, code)
     if (!r.ok) {

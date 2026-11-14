@@ -2,6 +2,7 @@ import 'server-only'
 import { sql, type SQL } from 'drizzle-orm'
 import { SHIP_TABS, type OfferWay, type OrderState, type QueueTab } from '@/domains/orders/order-state'
 import { ASSUME_DELIVERED_DAYS } from '@/domains/orders/outcomes'
+import { placedRange, type OrderFilters } from '@/domains/orders/filters'
 import { orderLines, orders, shipments } from '@/lib/db/schema-orders'
 
 // =============================================================================
@@ -103,6 +104,10 @@ export const openShipmentProviderSql = (a = '"orders"'): SQL<'self' | 'shiprocke
 export const currentMethodSql = (a = '"orders"'): SQL<'cod' | 'prepaid'> => sql<'cod' | 'prepaid'>`(case
   when ${c(a, 'paid_at')} is not null then 'prepaid' when ${c(a, 'switched_to_cod_at')} is not null then 'cod'
   when ${c(a, 'payment_method')} = 'prepaid' then 'prepaid' else 'cod' end)`
+
+/** paymentKind() in SQL: 'paid' once paid, else 'cod' or 'unpaid' by the current method. */
+export const paymentKindSql = (a = '"orders"'): SQL<'cod' | 'paid' | 'unpaid'> => sql<'cod' | 'paid' | 'unpaid'>`(case
+  when ${c(a, 'paid_at')} is not null then 'paid' when ${currentMethodSql(a)} = 'cod' then 'cod' else 'unpaid' end)`
 
 /** isHolding(): an unpaid online order inside pay_by, not cancelled, holds its stock. */
 export const holdingSql = (now: Date, a = '"orders"'): SQL =>
@@ -305,3 +310,26 @@ export const billableAtSql = (a = '"orders"'): SQL<Date | null> => sql<Date | nu
   when ${c(a, 'delivered_at')} is not null then least(${c(a, 'delivered_at')}, ${c(a, 'shipped_at')} + interval '${sql.raw(String(ASSUME_DELIVERED_DAYS))} days')
   when ${c(a, 'shipped_at')} is null or ${c(a, 'lost_at')} is not null then null
   else ${c(a, 'shipped_at')} + interval '${sql.raw(String(ASSUME_DELIVERED_DAYS))} days' end)`
+
+/** How many pieces an order holds now (removed lines left out): the queue's and Home's "3 items" (one copy, impact
+ * review N1). Tenant-scoped inside, as every subquery here. */
+export const orderItemsSql = (tenantId: string) =>
+  sql<number>`(select coalesce(sum(l.qty), 0)::int from ${orderLines} l where l.order_id = "orders"."id" and l.tenant_id = ${tenantId} and l.removed_at is null)`
+
+/**
+ * The Orders list's filters in SQL (Neel N1c; what each means: src/domains/orders/filters.ts). Payment reads the same
+ * rule as the Payment column (currentMethodSql, paid_at); State is the delivery state as stored; Placed is IST days
+ * [from, before); Total is the order's total in paise. Null when there is nothing to filter.
+ */
+export function filterSql(f: OrderFilters, now: Date, a = '"orders"'): SQL | null {
+  const parts: SQL[] = []
+  // One parameter array (`= any`): the rule is paymentKindSql's, and the values never reach SQL as text.
+  if (f.pay?.length) parts.push(sql`${paymentKindSql(a)} = any(${`{${f.pay.join(',')}}`}::text[])`)
+  if (f.states?.length) parts.push(sql`${c(a, 'state')} in (${sql.join(f.states.map((s) => sql`${s}`), sql`, `)})`)
+  const { from, before } = placedRange(f.placed, now)
+  if (from) parts.push(sql`${c(a, 'placed_at')} >= ${ts(from)}`)
+  if (before) parts.push(sql`${c(a, 'placed_at')} < ${ts(before)}`)
+  if (f.total?.min !== undefined) parts.push(sql`${c(a, 'total')} >= ${f.total.min}`)
+  if (f.total?.max !== undefined) parts.push(sql`${c(a, 'total')} <= ${f.total.max}`)
+  return parts.length ? sql`(${sql.join(parts, sql` and `)})` : null
+}

@@ -31,7 +31,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
       <div className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
           <label htmlFor="type" className="block text-sm font-medium">Product type</label>
-          <select id="type" value={typeId ?? ''} onChange={(e) => { setEdit(null); onType(e.target.value || null) }} className="h-10 md:h-9 rounded-md border border-input bg-card px-2 text-sm">
+          <select id="type" value={typeId ?? ''} onChange={(e) => { setEdit(null); onType(e.target.value || null) }} className="h-11 md:h-9 rounded-md border border-input bg-card px-2 text-sm">
             <option value="">No type</option>
             {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
@@ -39,7 +39,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
         {newName === null
           ? <button type="button" className="h-9 text-sm underline" onClick={() => setNewName('')}>New type</button>
           : <form className="flex flex-wrap items-end gap-1.5" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await createType(newName, copy ? typeId : null); if (!r.ok) return toast.error(r.error); setNewName(null); setCopy(false); router.refresh(); onType(r.id) }) }}>
-              <input aria-label="New type name" autoFocus value={newName} placeholder="Saree" onChange={(e) => setNewName(e.target.value)} className="h-10 md:h-9 w-36 rounded-md border border-input bg-card px-2 text-sm" />
+              <input aria-label="New type name" autoFocus value={newName} placeholder="Saree" onChange={(e) => setNewName(e.target.value)} className="h-11 md:h-9 w-36 rounded-md border border-input bg-card px-2 text-sm" />
               {type && type.sizeChart.rows.length > 0 && <label className="inline-flex min-h-6 items-center gap-1.5 text-sm"><input type="checkbox" checked={copy} onChange={(e) => setCopy(e.target.checked)} />Copy the {type.name} chart</label>}
               <Button type="submit" variant="secondary" disabled={pending || !newName.trim()}>Create</Button>
               <button type="button" className="inline-flex min-h-6 items-center text-sm underline" onClick={() => setNewName(null)}>Cancel</button>
@@ -48,7 +48,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
       {type && !edit && (
         <>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Shared by <b className="font-mono text-foreground">{type.uses}</b> product{type.uses === 1 ? '' : 's'}. Edit once and all follow.</span>
+            <span className="text-muted-foreground">Shared by <b className="font-num text-foreground">{type.uses}</b> product{type.uses === 1 ? '' : 's'}. Edit once and all follow.</span>
             <div role="group" aria-label="Units" className="flex overflow-hidden rounded-md border border-border text-xs">
               {(['cm', 'in'] as const).map((u) => <button key={u} type="button" aria-pressed={unit === u} onClick={() => setUnit(u)} className="px-2 py-1 aria-pressed:bg-primary aria-pressed:text-primary-foreground">{u === 'cm' ? 'cm' : 'inches'}</button>)}
             </div>
@@ -56,7 +56,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
           {type.sizeChart.rows.length ? (
             <div className="relative overflow-x-auto rounded-md border border-border">
               <table className="w-full table-fixed text-sm"><thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr className="[&>th]:px-1.5 [&>th]:py-1.5 [&>th]:[overflow-wrap:anywhere] md:[&>th]:px-2"><th>Size</th>{type.sizeChart.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
-                <tbody>{type.sizeChart.rows.map((r) => <tr key={r.size} className="border-t border-border [&>td]:px-1.5 [&>td]:py-1.5 md:[&>td]:px-2"><td className="font-medium">{r.size}</td>{r.values.map((v, i) => <td key={i} className="font-mono">{show(v)}</td>)}</tr>)}</tbody>
+                <tbody>{type.sizeChart.rows.map((r) => <tr key={r.size} className="border-t border-border [&>td]:px-1.5 [&>td]:py-1.5 md:[&>td]:px-2"><td className="font-medium">{r.size}</td>{r.values.map((v, i) => <td key={i} className="font-num">{show(v)}</td>)}</tr>)}</tbody>
               </table>
             </div>
           ) : <p className="text-sm text-muted-foreground">This type has no size chart.</p>}
@@ -78,7 +78,7 @@ export function SizeChartPanel({ types, typeId, onType }: { types: TypeRow[]; ty
                 {edit.columns.map((_, ci) => <td key={ci}><input aria-label={`${r.size} ${edit.columns[ci]}`} inputMode="decimal" maxLength={6} value={r.values[ci] ?? ''} onChange={(e) => {
                   const v = e.target.value.replace(',', '.')
                   setEdit({ ...edit, rows: edit.rows.map((x, j) => (j === ri ? { ...x, values: x.values.map((y, k) => (k === ci ? v : y)) } : x)) })
-                }} className="h-7 w-20 rounded border border-input px-1 font-mono text-xs" /></td>)}
+                }} className="h-7 w-20 rounded border border-input px-1 font-num text-xs" /></td>)}
                 <td><button type="button" aria-label={`Remove ${r.size}`} className="inline-grid min-h-6 min-w-6 place-items-center text-xs text-muted-foreground" onClick={() => setEdit({ ...edit, rows: edit.rows.filter((_, j) => j !== ri) })}><Icon name="close" className="size-3.5" /></button></td>
               </tr>
             ))}</tbody></table></div>

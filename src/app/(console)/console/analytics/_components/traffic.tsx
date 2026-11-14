@@ -84,7 +84,7 @@ export function Browse({ shares, devices }: { shares: Share[]; devices: { phone:
       <ul className="grid gap-2.5">
         {shares.map((s) => (
           <li key={s.name} className="grid gap-1 text-sm">
-            <span className="flex items-baseline justify-between gap-3"><span className="min-w-0 truncate">{s.name} <span className="text-xs text-muted-foreground">· {formatPercent(s.share, 0)}</span></span><span className="font-mono tabular-nums">{per(s.perHundred)}</span></span>
+            <span className="flex items-baseline justify-between gap-3"><span className="min-w-0 truncate">{s.name} <span className="text-xs text-muted-foreground">· {formatPercent(s.share, 0)}</span></span><span className="font-num">{per(s.perHundred)}</span></span>
             {bar(s.share)}
           </li>
         ))}
@@ -148,7 +148,7 @@ const secs = (ms: number) => `${(ms / 1000).toFixed(ms < 1000 ? 2 : 1)} s`
 export function SpeedOnPhones({ s, slowest }: { s: Speed; slowest: { title: string; lcpMs: number } | null }) {
   if (s.lcpMs === null || !s.verdict) return null
   const [tone, word] = VERDICT[s.verdict]
-  const cell = (k: string, v: string) => <div className="grid gap-0.5"><span className="text-xs text-muted-foreground">{k}</span><span className="font-mono text-lg font-semibold tabular-nums">{v}</span></div>
+  const cell = (k: string, v: string) => <div className="grid gap-0.5"><span className="text-xs text-muted-foreground">{k}</span><span className="font-num text-lg font-semibold tabular-nums">{v}</span></div>
   return (
     <Section title={<span className="inline-flex items-center gap-1">Speed on phones<InfoTip about="how speed is measured">{HOW_SPEED}</InfoTip></span>} action={<Badge tone={tone}>{word}</Badge>}>
       <div className="grid grid-cols-3 gap-3">

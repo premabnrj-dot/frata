@@ -285,9 +285,27 @@ export default {
         assert.deepEqual([await tabCount('To confirm'), await tabCount('To pack'), await tabCount('On hold')], [toConfirm, toPack, onHold], 'Home and the Orders tabs')
         const oldest = (await q.locator('tbody tr').last().locator('a[data-row-link]').innerText()).trim()
         await q.close()
+        // Home's "Next to confirm" (Neel N1): a risky row (high, unknown or another state) offers Open, never Confirm;
+        // Confirm confirms with Undo, and Undo puts the order back in the list.
+        const table = p.getByRole('table', { name: 'Next to confirm' })
+        for (const r of await table.locator('tbody tr').all()) {
+          if (await r.getByText(/High risk|Risk unavailable|Refund due/).count()) {
+            assert.equal(await r.getByRole('button', { name: /^Confirm / }).count(), 0, 'a risky row is never confirmed from Home')
+            await r.getByRole('link', { name: /^Open / }).waitFor()
+          }
+        }
+        const confirmBtn = table.getByRole('button', { name: /^Confirm / }).first()
+        if (await confirmBtn.count()) {
+          const what = (await confirmBtn.getAttribute('aria-label')).replace(/^Confirm /, '')
+          await confirmBtn.click()
+          await p.locator('[data-toast]', { hasText: `${what} confirmed.` }).getByRole('button', { name: 'Undo' }).click()
+          await p.waitForTimeout(500)
+          await p.reload()
+          await p.getByRole('table', { name: 'Next to confirm' }).getByRole('button', { name: `Confirm ${what}` }).waitFor()
+        }
         const next = p.locator('[data-next-order]')
         assert.ok((await next.innerText()).includes(oldest), `the next order is the oldest waiting (${oldest})`)
-        await next.click()
+        await next.getByRole('link', { name: oldest }).click() // its number opens it (Neel: Home's rows, § Screens · Home)
         await p.waitForURL(/\/console\/orders\/\d+$/)
         await p.getByRole('heading', { level: 1 }).filter({ hasText: oldest }).waitFor()
         await ctx.close()
@@ -337,7 +355,7 @@ export default {
         const hc = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' })
         // Setup (and closing the shop) is reached from Home, by a tap, not by typing its address (impact review U·4).
         const h = await hc.newPage(); await h.goto(CONSOLE + '/console')
-        await h.getByRole('link', { name: 'Setup, or close the shop for now' }).click(); await h.waitForURL(/\/console\/setup$/)
+        await h.getByRole('link', { name: 'Store open: setup, or close the store for now' }).click(); await h.waitForURL(/\/console\/setup$/)
         const closeShop = async () => { await h.getByRole('button', { name: 'Close the shop for now' }).click(); await h.getByRole('button', { name: 'Close shop' }).click(); await expectToast(h, 'Closed. Shoppers see “Opening soon”.', 'ok') }
         const openShop = async () => { await h.getByRole('button', { name: 'Open my shop' }).click(); await h.getByRole('button', { name: 'Open it' }).click() }
         await closeShop(); await openShop()

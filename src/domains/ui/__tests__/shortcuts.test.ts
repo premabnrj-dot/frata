@@ -46,3 +46,12 @@ describe('queue keys', () => {
     expect(confirmKey({ canConfirm: true, risk: 'unknown' })).toBe('open') // risk unreadable: fail closed
   })
 })
+
+describe('Space (quick look, Neel N1c)', () => {
+  const base = { ctrlKey: false, metaKey: false, altKey: false, modalOpen: false, enabled: true }
+  it('a focused row looks; a button or the page keeps Space', () => {
+    expect(shortcutFor({ ...base, key: ' ', target: { tag: 'TR', editable: false } })).toBe('peek')
+    expect(shortcutFor({ ...base, key: ' ', target: { tag: 'BUTTON', editable: false } })).toBe(null)
+    expect(shortcutFor({ ...base, key: ' ', target: { tag: 'BODY', editable: false } })).toBe(null)
+  })
+})

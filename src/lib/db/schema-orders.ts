@@ -308,6 +308,8 @@ export const shipments = pgTable('shipments', {
   unique('shipments_tenant_id_key').on(t.tenantId, t.id),
   uniqueIndex('shipments_one_open').on(t.tenantId, t.orderId).where(sql`${t.endedAt} is null`),
   index('shipments_order').on(t.tenantId, t.orderId),
+  // Orders' search by tracking number (Neel N1c): `tracking_number = $1`, exact, so it stays on this index under RLS.
+  index('shipments_tracking').on(t.tenantId, t.trackingNumber).where(sql`${t.trackingNumber} is not null`),
   check('shipments_provider', sql`${t.provider} in ('self','shiprocket')`),
   check('shipments_text', sql`(${t.courierName} is null or length(${t.courierName}) between 1 and 60) and (${t.trackingNumber} is null or length(${t.trackingNumber}) between 1 and 40)`),
   check('shipments_ended', sql`(${t.endedAt} is null) = (${t.endedReason} is null) and (${t.endedReason} is null or ${t.endedReason} in ('cancelled','undone'))`),

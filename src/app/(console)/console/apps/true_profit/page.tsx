@@ -181,7 +181,7 @@ function Tile({ label, value, sub }: { label: string; value: React.ReactNode; su
   return (
     <Section>
       <span className="text-xs text-muted-foreground">{label}</span>
-      <b className="block font-mono text-lg tabular-nums">{value}</b>
+      <b className="block font-num text-lg">{value}</b>
       {sub ? <span className="text-xs text-muted-foreground">{sub}</span> : null}
     </Section>
   )

@@ -196,8 +196,8 @@ function FieldInput({ f, value, error, onChange, locked }: { f: Field; value: Va
   const v = typeof value === 'string' ? value : ''
   let input: React.ReactNode
   if (f.kind === 'textarea' || f.kind === 'pincodes') input = <textarea {...common} rows={3} maxLength={f.max} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} py-2 ${f.kind === 'pincodes' ? 'font-mono' : ''}`} />
-  else if (f.kind === 'state') input = <select {...common} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} h-10 md:h-9`}><option value="">Choose</option>{STATES.map((st) => <option key={st} value={STATE_CODE[st]}>{st}</option>)}</select>
-  else if (f.kind === 'select') input = <select {...common} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} h-10 md:h-9`}>{f.options!.map(([o, l]) => <option key={o} value={o}>{l}</option>)}</select>
+  else if (f.kind === 'state') input = <select {...common} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} h-11 md:h-9`}><option value="">Choose</option>{STATES.map((st) => <option key={st} value={STATE_CODE[st]}>{st}</option>)}</select>
+  else if (f.kind === 'select') input = <select {...common} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} h-11 md:h-9`}>{f.options!.map(([o, l]) => <option key={o} value={o}>{l}</option>)}</select>
   else {
     const numeric = f.kind === 'rupees' || f.kind === 'days' || f.kind === 'hsn'
     input = (
@@ -207,7 +207,7 @@ function FieldInput({ f, value, error, onChange, locked }: { f: Field; value: Va
         <input {...common} value={v} maxLength={f.max} onChange={(e) => onChange(e.target.value)}
           type={f.kind === 'email' ? 'email' : 'text'} inputMode={numeric ? 'numeric' : f.kind === 'phone' ? 'tel' : f.kind === 'email' ? 'email' : undefined}
           autoCapitalize={f.kind === 'gstin' ? 'characters' : undefined}
-          className={`${base} h-10 md:h-9 ${numeric || f.kind === 'phone' || f.kind === 'gstin' ? 'font-mono' : ''}`} />
+          className={`${base} h-11 md:h-9 ${f.kind === 'gstin' ? 'font-mono' : numeric || f.kind === 'phone' ? 'font-num' : ''}`} />
       </div>
     )
   }

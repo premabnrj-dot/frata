@@ -120,7 +120,7 @@ function Actions(p: OrderActionsProps) {
   }
 
   const primaryButton = primary ? <Button onClick={primary.go} aria-disabled={busy}>{primary.label}</Button>
-    : p.waiting && p.primary === 'pack' ? <span role="status" className="inline-flex min-h-10 items-center rounded-md border border-border px-3 text-sm font-medium md:min-h-9" data-waiting>{p.waiting}</span>
+    : p.waiting && p.primary === 'pack' ? <span role="status" className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm font-medium md:min-h-9" data-waiting>{p.waiting}</span>
     : printPrimary ? <Link prefetch={false} href={printPrimary} className={button()}>Print packing slip</Link> : null
   return (
     <>
@@ -152,8 +152,8 @@ function Actions(p: OrderActionsProps) {
           <fieldset className="grid gap-2">
             <legend className="mb-1 text-sm font-medium">Why?</legend>
             {CANCEL_REASONS.map((r) => (
-              <label key={r} className="flex min-h-10 items-center gap-3 text-sm md:min-h-9">
-                <input type="radio" name="reason" value={r} checked={reason === r} onChange={() => { setReason(r); fields.clear('reason') }} {...fields.props('reason')} className="size-5 accent-primary" />{CANCEL_LABEL[r]}
+              <label key={r} className="flex min-h-11 items-center gap-3 text-sm md:min-h-9">
+                <input type="radio" name="reason" value={r} checked={reason === r} onChange={() => { setReason(r); fields.clear('reason') }} {...fields.props('reason')} />{CANCEL_LABEL[r]}
               </label>
             ))}
             <FieldError name="reason" message={fields.errors.reason} />
@@ -167,7 +167,7 @@ function Actions(p: OrderActionsProps) {
         </div>
         {p.stockTaken ? (
           <label className="flex min-h-10 items-center gap-3 text-sm">
-            <input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} className="size-5 accent-primary" />Put the stock back
+            <input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} />Put the stock back
           </label>
         ) : null}
       </Dialog>

@@ -10,6 +10,7 @@ import { dateTimeIN, dayIN, monthYearIN } from '@/lib/format-date'
 import { creditAction, paymentAction } from '../../actions'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Invoice' }
 const METHOD: Record<string, string> = { bank_transfer: 'Bank transfer', upi: 'UPI', card: 'Card', emandate: 'Bank mandate', paylink: 'Pay link' }
@@ -23,7 +24,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const d = await invoiceDetail(staff, id)
   if (!d || !d.invoice.number) notFound()
   const i = d.invoice
-  const field = 'h-10 rounded-md border border-border bg-background px-3 text-sm aria-invalid:border-danger-mark md:h-9'
+  const field = FIELD
   return (
     <div className="max-w-3xl space-y-4">
       <PageHeader title={`${i.shop} · ${i.number}`} back={{ href: `/admin/billing`, label: 'Billing' }}
@@ -52,7 +53,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
       </Panel>
       <Panel title="Credit notes">
         {d.credits.length === 0 ? <p className="text-sm text-muted-foreground">None.</p> : (
-          <ul className="space-y-1 text-sm">{d.credits.map((c) => <li key={c.number}><span className="font-mono">{c.number}</span> · <Money paise={paise(c.total)} decimals /> · {c.reason} · <a href={`/admin/billing/invoice/${i.id}/pdf?credit=${encodeURIComponent(c.number)}`} className="underline">PDF</a></li>)}</ul>
+          <ul className="space-y-1 text-sm">{d.credits.map((c) => <li key={c.number}><span className="font-num">{c.number}</span> · <Money paise={paise(c.total)} decimals /> · {c.reason} · <a href={`/admin/billing/invoice/${i.id}/pdf?credit=${encodeURIComponent(c.number)}`} className="underline">PDF</a></li>)}</ul>
         )}
         <ActionForm action={creditAction} className="mt-3 flex flex-wrap items-end gap-2">
           <input type="hidden" name="invoice" value={i.id} />

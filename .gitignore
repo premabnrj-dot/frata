@@ -12,3 +12,4 @@ e2e/.out.prev/
 
 # Agent worktrees (isolated copies of this repo)
 .claude/worktrees/
+docs/mockups/check-*.png

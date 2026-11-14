@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.53.1
+  version: 2.54.1
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -667,6 +667,7 @@ Budgets. Each says whether a gate holds it yet:
 | No preloaded font and `priority` only on the first section's photos | review (P6, P15 fixed) |
 | Console page < 1 s p95; a query < 100 ms at the 10× seed, no seq scan on `orders` | review + EXPLAIN |
 | **Named exception:** Analytics' window aggregate (one grouped read of a period and the one before) is held to the page's 1 s, not 100 ms (the timings at 10× live in the test's header) | `analytics-speed.int.test.ts` (`SPEED=1`) |
+| **Named exception:** Orders' filter values with counts and saved views' counts (N1c): their own transaction, `jit = off`, an 800 ms ceiling, no count on a timeout; never inside another read | review (speed N1c: 18–212 ms at 150 k) |
 
 Rules:
 - Every exported storefront loader is `cache(shopCached(...))`. `unstable_cache`
@@ -714,6 +715,18 @@ Rules:
   no query `frata_app` runs (P10, measured; drizzle/0044). Search a tenant's history with ILIKE only
   where the plan can walk an ordered index and stop at the page (orders search: 100 ms at 150k), or
   through a tenant-bound definer — measured both ways first.
+- **No expression index for a tenant's search** (N1c speed review, measured at 150 k under RLS): `right(phone, 4)`
+  and any function is not leakproof, so the index is never used; a search compares plain columns with `=` (AWB:
+  `shipments (tenant_id, tracking_number)`, 0.12 ms) and never ORs a fast test with the name's ILIKE (one parse,
+  `parseOrderSearch`, picks the test). An unqualified column in a correlated subquery binds to the inner table: write
+  `"orders"."id"`, never `${orders.id}`, inside one (N1c: an AWB search matched nothing).
+- **A list that answers as you type** (N1c, Orders): a GET rows route next to the page, reading the page's own query
+  string, building rows with the page's own builder (`orders/_components/rows.ts`), one transaction (list ‖ prefix,
+  then risk), no counts, `statement_timeout` on a name scan, rate-limited per member, `private, no-store`, logs
+  `errName` only. Fetch one row past the page ("50+") instead of a window count.
+- **A named exception to the 100 ms query budget**: "+ Filter"'s values with counts (`filterValues`) and saved views'
+  counts (`viewCounts`) run in their own transaction with `jit = off` and an 800 ms ceiling, streamed or on demand, and
+  show no count when they time out; never inside another read's transaction.
 
 ## Attribution (Analytics A·1, 2026-11-08)
 

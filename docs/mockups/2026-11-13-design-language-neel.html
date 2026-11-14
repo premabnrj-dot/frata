@@ -1,0 +1,1440 @@
+<title>Frrata Neel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap">
+<style>
+/* Layout: a reference page (foundations → components → screens), each screen drawn at its real width inside a frame. */
+:root {
+  /* Neutral: warm grey, each step has one job (backgrounds 0–100, borders 200–500, text 600–950) */
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  /* Neel: the one action colour (buttons, links, focus, selection, charts) */
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n300:#9AA3EE; --n400:#6E79E3; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3; --n800:#272D82;
+  /* Rani: the brand mark and the loading line only */
+  --rani:#D61F69;
+  /* Status: pale tint · text · dot */
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62;
+  --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B;
+  --info-bg:#E8F1FD; --info-fg:#1F5BA8; --info-dot:#3B82E0;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  /* Roles */
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --hover:var(--g50); --sunk:var(--g50);
+  --line:var(--g200); --line-soft:var(--g100); --field:var(--g500);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-hover:var(--n700); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --bar:var(--g950); --bar-text:#fff; --bar-btn:#FFFFFF; --bar-btn-text:var(--g950); --bar-line:rgba(255,255,255,.35); --bar-link:#A3ABF5;
+  --danger-fill:#C42F2F; --mark-bg:#171615; --mark-fg:#FFFFFF; --off:var(--g500); --chart:var(--n400); --chart-now:var(--n200);
+  /* Motion (the console's existing tokens, kept): */
+  --fast:120ms; --base:200ms; --slow:320ms; --ease:cubic-bezier(.2,0,0,1); --ease-in:cubic-bezier(0,0,0,1); --ease-out:cubic-bezier(.3,0,1,1);
+  --font: 'Inter', 'Noto Sans Devanagari', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --n200:#3A3F7A; --n300:#4F56A8; --n400:#6E77D6; --n800:#C8CDFA; --bar-btn:#141312; --bar-btn-text:#F3F1EE; --bar-line:rgba(20,19,18,.35); --bar-link:#2F37A3; --danger-fill:#E05555; --mark-bg:#F3F1EE; --mark-fg:#141312; --chart:var(--n500); --chart-now:var(--n300); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --n200:#3A3F7A; --n300:#4F56A8; --n400:#6E77D6; --n800:#C8CDFA; --bar-btn:#141312; --bar-btn-text:#F3F1EE; --bar-line:rgba(20,19,18,.35); --bar-link:#2F37A3; --danger-fill:#E05555; --mark-bg:#F3F1EE; --mark-fg:#141312; --chart:var(--n500); --chart-now:var(--n300); color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--page); color: var(--text); font: 400 14px/20px var(--font); font-feature-settings: 'cv11','ss01'; -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 64px; margin: 0 }
+.num { font-variant-numeric: tabular-nums }
+.code { font-family: var(--mono); font-size: 12px; letter-spacing: 0 }
+h1, h2, h3 { text-wrap: balance; margin: 0 }
+
+/* The reference page itself */
+.doc { max-width: 1320px; margin: 0 auto }
+.doc-top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--page); border-bottom: 1px solid var(--line); display: grid; gap: 8px; padding: 10px 0 }
+@media (min-width: 900px) { .doc-top { display: flex; gap: 16px; align-items: center } }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--page) }
+.doc-top b { font-weight: 600; display: flex; align-items: center; gap: 8px }
+.doc-top nav { display: flex; gap: 4px; overflow-x: auto; max-width: 100%; scrollbar-width: none }
+.doc-top nav a { color: var(--text-2); text-decoration: none; padding: 6px 10px; border-radius: 8px; font-weight: 500 }
+.doc-top nav a:hover { background: var(--hover); color: var(--text) }
+.mark { width: 22px; height: 22px; border-radius: 6px; background: var(--mark-bg); display: inline-grid; place-items: center; color: var(--mark-fg); font-weight: 600; font-size: 12px; position: relative }
+.mark::after { content: ""; position: absolute; left: 5px; right: 5px; bottom: 4px; height: 2px; background: var(--rani); border-radius: 2px }
+.part { padding-top: 48px }
+.part > h2 { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.015em }
+.part > p.lead { color: var(--text-2); margin: 6px 0 20px; max-width: 70ch }
+.grid { display: grid; gap: 16px }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)) }
+.g3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) }
+.box { border: 1px solid var(--line); border-radius: 12px; padding: 20px; background: var(--surface); min-width: 0 }
+.box h3 { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 12px }
+.cap { font-size: 12px; line-height: 16px; color: var(--text-2) }
+.rule { font-size: 13px; line-height: 18px; color: var(--text-2); margin: 10px 0 0; padding-left: 16px }
+.rule li { margin: 3px 0 }
+
+/* Swatches */
+.ramp { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px }
+.sw { border-radius: 8px; height: 52px; border: 1px solid var(--line-soft); display: flex; align-items: flex-end; padding: 6px; font-size: 11px; line-height: 14px }
+.sw.d { color: #fff } .sw.l { color: #171615 }
+.pairs { display: grid; gap: 8px }
+
+/* Type specimens */
+.spec { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 6px 16px; align-items: baseline }
+.spec .cap { white-space: nowrap } .spec > * { min-width: 0; overflow-wrap: anywhere }
+.t-display { font-size: 30px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em }
+.t-title { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.015em }
+.t-heading { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em }
+.t-sub { font-size: 14px; line-height: 20px; font-weight: 600 }
+.t-body { font-size: 14px; line-height: 20px }
+.t-label { font-size: 13px; line-height: 18px; font-weight: 500 }
+.t-small { font-size: 12px; line-height: 16px; color: var(--text-2) }
+
+/* ---------- Components (the console's own) ---------- */
+.btn { height: 36px; padding: 0 14px; border-radius: 8px; font: 500 14px/1 var(--font); border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap }
+.btn:focus-visible, .inp:focus-visible, .chipbtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px }
+.btn-p { background: var(--action); color: var(--action-text) } .btn-p:hover { background: var(--action-hover) }
+.btn:disabled { opacity: .45; cursor: not-allowed }
+.btn-s { background: var(--surface); color: var(--text); border-color: var(--g300); box-shadow: var(--e1) } .btn-s:hover { background: var(--hover) }
+.btn-g { background: transparent; color: var(--text-2) } .btn-g:hover { background: var(--hover); color: var(--text) }
+.btn-d { background: var(--danger-fill); color: #fff }
+.btn-sm { height: 30px; padding: 0 10px; font-size: 13px }
+.lnk { color: var(--link); text-decoration: none; font-weight: 500 } .lnk:hover { text-decoration: underline }
+.kbd { font: 500 11px/1 var(--font); padding: 3px 5px; border-radius: 4px; background: rgba(255,255,255,.14); margin-left: 4px }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 999px; font: 500 12px/1 var(--font); white-space: nowrap }
+.chip::before { content: ""; width: 6px; height: 6px; border-radius: 50% }
+.c-ok { background: var(--ok-bg); color: var(--ok-fg) } .c-ok::before { background: var(--ok-dot) }
+.c-warn { background: var(--warn-bg); color: var(--warn-fg) } .c-warn::before { background: var(--warn-dot) }
+.c-bad { background: var(--bad-bg); color: var(--bad-fg) } .c-bad::before { background: var(--bad-dot) }
+.c-info { background: var(--info-bg); color: var(--info-fg) } .c-info::before { background: var(--info-dot) }
+.c-neu { background: var(--neu-bg); color: var(--neu-fg) } .c-neu::before { background: var(--neu-dot) }
+.tag { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border-radius: 6px; border: 1px solid var(--line); font: 500 12px/1 var(--font); color: var(--text-2); background: var(--surface) }
+
+.fld { display: grid; gap: 6px; min-width: 0 }
+.fld > span { font: 500 13px/18px var(--font) }
+.inp { height: 36px; border: 1px solid var(--field); border-radius: 8px; padding: 0 10px; font: 400 14px/20px var(--font); background: var(--surface); color: var(--text); width: 100%; min-width: 0 }
+.inp:focus-visible, .inp:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: var(--focus) }
+.inp.bad { border-color: var(--bad-dot); box-shadow: 0 0 0 3px var(--bad-bg) }
+.err { font: 400 13px/18px var(--font); color: var(--bad-fg); display: flex; gap: 6px }
+.pre { position: relative } .pre > i { position: absolute; left: 10px; top: 8px; font-style: normal; color: var(--text-2) } .pre .inp { padding-left: 24px }
+textarea.inp { height: auto; padding: 8px 10px; resize: vertical }
+
+.seg { display: inline-flex; padding: 3px; gap: 2px; background: var(--sunk); border-radius: 10px; border: 1px solid var(--line-soft) }
+.seg button { border: 0; background: transparent; height: 30px; padding: 0 12px; border-radius: 7px; font: 500 13px/1 var(--font); color: var(--text-2); cursor: pointer }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--e1) }
+.sw-t { width: 34px; height: 20px; border-radius: 999px; background: var(--off); position: relative; display: inline-block }
+.sw-t::after { content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 2px; left: 2px; box-shadow: var(--e1) }
+.sw-t.on { background: var(--action) } .sw-t.on::after { left: 16px }
+.cb { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--field); display: inline-grid; place-items: center; background: var(--surface); vertical-align: middle }
+.cb.on { background: var(--action); border-color: var(--action) } .cb.on::after { content: ""; width: 8px; height: 4px; border: 2px solid #fff; border-top: 0; border-right: 0; transform: rotate(-45deg) translateY(-1px) }
+.cbt { display: inline-grid; place-items: center; width: 24px; height: 24px } /* 24 px target round a 16 px box */
+
+.tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--line); overflow-x: auto }
+.tabs a { padding: 10px 0; font-weight: 500; color: var(--text-2); text-decoration: none; display: flex; gap: 6px; align-items: center; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap }
+.tabs a[aria-current] { color: var(--text); border-color: var(--action) }
+.cnt { font: 500 12px/1 var(--font); padding: 3px 6px; border-radius: 999px; background: var(--g100); color: var(--text-2) }
+.tabs a[aria-current] .cnt { background: var(--n50); color: var(--n700) }
+
+.toast { display: inline-flex; gap: 12px; align-items: center; background: var(--bar); color: var(--bar-text); border-radius: 10px; padding: 10px 14px; box-shadow: var(--e3); font-weight: 500 }
+.toast .lnk { color: var(--bar-link) }
+.savebar { display: flex; align-items: center; gap: 12px; background: var(--bar); color: var(--bar-text); border-radius: 12px; padding: 10px 10px 10px 16px; box-shadow: var(--e3) }
+.savebar .btn-s { background: transparent; color: var(--bar-text); border-color: var(--bar-line); box-shadow: none }
+.savebar .btn-p { background: var(--bar-btn); color: var(--bar-btn-text) }
+.menu { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--e2); padding: 6px; width: 220px }
+.menu a { display: flex; justify-content: space-between; padding: 8px 10px; border-radius: 8px; color: var(--text); text-decoration: none }
+.menu a:hover { background: var(--hover) } .menu hr { border: 0; border-top: 1px solid var(--line-soft); margin: 6px 0 } .menu a.danger { color: var(--bad-fg) }
+.money .r { color: var(--text-2); margin-right: 1px } .money .p { color: var(--text-2); font-size: .85em }
+
+/* ---------- The console frame ---------- */
+.frame { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; width: max-content; background: var(--page); box-shadow: var(--e2) }
+.frame-wrap { overflow-x: auto; padding: 4px 4px 24px }
+.frame-label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 28px 0 10px; flex-wrap: wrap }
+.frame-label h3 { font-size: 16px; line-height: 24px; font-weight: 600 }
+.app { display: grid; grid-template-columns: 232px 1fr; width: 1280px; min-height: 760px }
+.side { background: var(--side); border-right: 1px solid var(--line); padding: 14px 10px; display: flex; flex-direction: column; gap: 2px }
+.shop { display: flex; gap: 10px; align-items: center; padding: 6px 8px 14px; font-weight: 600 }
+.shop small { display: block; font-weight: 400; color: var(--text-2); font-size: 12px }
+.grp { font: 500 11px/16px var(--font); color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; padding: 14px 10px 4px }
+.nav { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; color: var(--text-2); font-weight: 500; text-decoration: none }
+.nav svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.6 }
+.nav:hover { background: var(--hover); color: var(--text) }
+.nav[aria-current] { background: var(--surface); color: var(--text); box-shadow: var(--e1), inset 0 0 0 1px var(--line) }
+.nav:focus-visible, .tabs a:focus-visible, .seg button:focus-visible, .lnk:focus-visible, .menu a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px }
+.nav[aria-current] svg { stroke: var(--action) }
+.nav .cnt { margin-left: auto }
+.nav .cnt.w { background: var(--warn-bg); color: var(--warn-fg) }
+.main { padding: 28px 32px 96px; min-width: 0; position: relative }
+.ph { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px }
+.ph .back { font: 500 13px/18px var(--font); color: var(--text-2); text-decoration: none; display: inline-flex; gap: 4px; margin-bottom: 6px }
+.ph h1 { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.015em; display: flex; gap: 10px; align-items: center }
+.ph .meta { color: var(--text-2); margin-top: 2px }
+.ph .acts { margin-left: auto; display: flex; gap: 8px; align-items: center }
+.sec { border: 1px solid var(--line); border-radius: 12px; background: var(--surface) }
+.sec-h { display: flex; align-items: center; gap: 8px; padding: 16px 20px 0 }
+.sec-h h2 { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em }
+.sec-h .x { margin-left: auto; display: flex; gap: 8px; align-items: center }
+.sec-b { padding: 16px 20px 20px; display: grid; gap: 16px }
+.fold { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-top: 1px solid var(--line-soft) }
+.fold:first-child { border-top: 0 }
+.fold b { font-weight: 600; min-width: 120px } .fold span { color: var(--text-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap } .fold .lnk { margin-left: auto }
+.stack { display: grid; gap: 16px; align-content: start; min-width: 0 }
+
+/* Tables */
+.tbl { width: 100%; border-collapse: separate; border-spacing: 0 }
+.tbl th { text-align: left; font: 500 12px/16px var(--font); color: var(--text-2); padding: 10px 12px; background: var(--sunk); border-bottom: 1px solid var(--line) }
+.tbl th:first-child { border-top-left-radius: 11px } .tbl th:last-child { border-top-right-radius: 11px }
+.tbl td { padding: 0 12px; height: 48px; border-bottom: 1px solid var(--line-soft); vertical-align: middle }
+.tbl tr:last-child td { border-bottom: 0 }
+.sec > .tbl td:first-child, .sec > .tbl th:first-child { padding-left: 20px } .sec > .tbl td:last-child, .sec > .tbl th:last-child { padding-right: 20px }
+.tbl tbody tr:hover td { background: var(--g25) }
+.tbl tr.sel td { background: var(--select) }
+.tbl .r { text-align: right }
+.ord { font-weight: 600 } .sub { color: var(--text-2); font-size: 12px; line-height: 16px }
+.thumb { width: 36px; height: 44px; border-radius: 6px; background: linear-gradient(160deg, var(--g200), var(--g100)); display: block }
+.th2 { background: linear-gradient(160deg, #E5C8B5, #F3E3D7) } .th3 { background: linear-gradient(160deg, #BFD3C4, #E3EDE5) } .th4 { background: linear-gradient(160deg, #C9CCE8, #E7E8F6) }
+.dots { display: inline-flex; gap: 3px } .dots i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,.08) }
+.bulk { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; border-radius: 10px; background: var(--n50); border: 1px solid var(--n100); margin-bottom: 12px }
+.bulk b { color: var(--n800) }
+.lnk, .fold .lnk { display: inline-flex; align-items: center; min-height: 24px }
+
+/* KPI strip */
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr) }
+.kpi { padding: 18px 20px; border-left: 1px solid var(--line-soft) } .kpi:first-child { border-left: 0 }
+.kpi .k { font: 500 13px/18px var(--font); color: var(--text-2) }
+.kpi .v { font-size: 30px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0 6px }
+.bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; align-items: end; height: 150px; padding-top: 10px }
+.bars div { display: grid; gap: 6px; justify-items: center; font-size: 12px; color: var(--text-2) }
+.bars i { width: 100%; border-radius: 4px 4px 0 0; background: var(--chart) } .bars .today i { background: var(--chart-now) }
+.bars { border-bottom: 1px solid var(--g300) }
+
+/* Editor */
+.ed { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start }
+.aside { position: sticky; top: 16px; display: grid; gap: 16px }
+.photos { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end }
+.ph-i { width: 104px; height: 130px; flex: none; border-radius: 10px; position: relative; background: linear-gradient(160deg, #E8C6CF, #F6E6EA) }
+.ph-i:nth-child(2) { background: linear-gradient(160deg, #EED9C7, #F8EEE5) } .ph-i:nth-child(3) { background: linear-gradient(160deg, #D9D4EA, #EEEBF6) }
+.ph-i:first-child { width: 148px; height: 185px }
+.ph-i .badge { position: absolute; left: 8px; top: 8px; background: rgba(23,22,21,.75); color: #fff; font: 500 11px/1 var(--font); padding: 4px 6px; border-radius: 6px }
+.ph-add { width: 104px; height: 130px; flex: none; border-radius: 10px; border: 1.5px dashed var(--g300); display: grid; place-items: center; text-align: center; color: var(--text-2); font-weight: 500 }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px }
+.addr { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--text-2); padding: 8px 10px; background: var(--sunk); border-radius: 8px; min-width: 0 }
+.addr b { color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.opt { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--g25) }
+.opt-h { display: flex; justify-content: space-between; align-items: center; font: 500 13px/18px var(--font) }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+.chipbtn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); font: 500 13px/1 var(--font); color: var(--text) }
+.chipbtn .h { color: var(--text-2); letter-spacing: -2px; font-size: 12px }
+.chipbtn .sq { width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(0,0,0,.1) }
+.chipadd { height: 30px; padding: 0 10px; border-radius: 8px; border: 1px dashed var(--g300); color: var(--text-2); font: 500 13px/1 var(--font); display: inline-flex; align-items: center }
+.cell { height: 32px; border: 1px solid var(--line); border-radius: 6px; padding: 0 8px; display: flex; align-items: center; background: var(--surface) }
+.cell.e { color: var(--text-2) }
+.status-card { display: grid; gap: 12px }
+.need { display: flex; gap: 8px; font-size: 13px; line-height: 18px; color: var(--warn-fg); background: var(--warn-bg); border-radius: 8px; padding: 8px 10px }
+.share { border: 1px solid var(--line); border-radius: 12px; overflow: hidden }
+.share .img { height: 140px; background: linear-gradient(160deg, #E8C6CF 0 55%, #F6E6EA 55%); position: relative }
+.share .img .logo { position: absolute; left: 12px; bottom: 10px; background: #fff; color: #171615; border-radius: 6px; padding: 4px 8px; font: 600 12px/1 var(--font) }
+.share .txt { padding: 10px 12px; background: var(--sunk); display: grid; gap: 2px; font-size: 13px }
+.floatbar { position: absolute; left: 32px; right: 32px; bottom: 20px }
+
+/* Settings */
+.list a { display: grid; grid-template-columns: 20px 1fr auto 16px; gap: 14px; align-items: center; padding: 14px 20px; border-top: 1px solid var(--line-soft); color: var(--text); text-decoration: none }
+.list a:first-child { border-top: 0 } .list a:hover { background: var(--g25) }
+.list svg { width: 20px; height: 20px; stroke: var(--text-2); fill: none; stroke-width: 1.6 }
+.list .v { color: var(--text-2); font-size: 13px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px }
+
+/* Phone */
+.phones { display: flex; gap: 28px; flex-wrap: wrap }
+.phone { width: 390px; max-width: 100%; border: 1px solid var(--line); border-radius: 28px; overflow: hidden; background: var(--page); box-shadow: var(--e2); position: relative; font-size: 15px; line-height: 22px }
+.p-top { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line-soft) }
+.p-body { padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding-bottom: 150px }
+.p-nav { position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); background: var(--surface); padding: 8px 0 14px; font: 500 11px/14px var(--font); color: var(--text-2); text-align: center }
+.p-nav a { color: inherit; text-decoration: none; min-height: 24px } .p-nav a[aria-current] { color: var(--action) }
+.p-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 0; border-top: 1px solid var(--line-soft) }
+.p-save { position: absolute; left: 12px; right: 12px; bottom: 72px }
+.phone .inp, .phone .btn { height: 44px; font-size: 15px }
+.phone .seg button { height: 36px }
+.ba { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden }
+.ba > div { background: var(--surface); padding: 12px 14px; font-size: 14px; line-height: 20px }
+.ba .h { font: 500 12px/16px var(--font); color: var(--text-2); background: var(--sunk) }
+.ba .was { color: var(--text-2); text-decoration: line-through; text-decoration-color: var(--bad-dot); text-decoration-thickness: 1px }
+.ba .now { color: var(--text); font-weight: 500 }
+.words { display: grid; gap: 10px; counter-reset: w; margin: 0; padding: 0; list-style: none }
+.words li { counter-increment: w; display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 10px }
+.words li::before { content: counter(w); font: 600 12px/22px var(--font); width: 22px; height: 22px; border-radius: 6px; background: var(--n50); color: var(--n700); text-align: center }
+.words b { font-weight: 600 } .words span { color: var(--text-2) }
+.swap { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px }
+.swap div { font-size: 13px; padding: 6px 10px; border-radius: 8px; background: var(--sunk) } .swap s { color: var(--text-3) }
+@media (max-width: 720px) { .ba { grid-template-columns: 1fr } .ba .h:nth-child(2) { display: none } }
+.tblwrap { overflow-x: auto }
+.gl td { vertical-align: top; padding-block: 10px; height: auto }
+.cal { border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-top: 12px; box-shadow: var(--e2); max-width: 280px }
+.cal-h { display: flex; justify-content: space-between; margin-bottom: 6px }
+.cal-g { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; font-size: 13px }
+.cal-g i { font-style: normal; color: var(--text-2); font-size: 11px } .cal-g span { height: 30px; display: grid; place-items: center; border-radius: 8px }
+.cal-g .o { color: var(--text-3) } .cal-g .t { box-shadow: inset 0 0 0 1px var(--line) } .cal-g .s { background: var(--action); color: var(--action-text) }
+.affix { position: relative } .affix > i { position: absolute; right: 10px; top: 8px; font-style: normal; color: var(--text-2) }
+.step { display: inline-flex; border: 1px solid var(--field); border-radius: 8px; overflow: hidden } .step .inp { border: 0; width: 52px; text-align: center; border-radius: 0 }
+.step button { width: 36px; border: 0; background: var(--sunk); font-size: 16px; color: var(--text); cursor: pointer }
+.otp { display: flex; gap: 4px; flex-wrap: wrap } .otp i { width: 32px; height: 40px; border: 1px solid var(--field); border-radius: 8px; display: grid; place-items: center; font: 600 16px/1 var(--font); font-style: normal }
+.otp i:nth-child(5) { outline: 2px solid var(--focus) }
+.drops { display: grid; gap: 8px } .drop { border: 1.5px dashed var(--g300); border-radius: 10px; padding: 12px; display: grid; gap: 6px; text-align: left }
+.drop.over { border-color: var(--action); background: var(--n50); color: var(--n800) } .drop.bad { border-style: solid; border-color: var(--bad-bg); background: var(--bad-bg) }
+.bar { display: block; height: 6px; border-radius: 999px; background: var(--g100); overflow: hidden } .bar i { display: block; height: 100%; background: var(--action); border-radius: 999px }
+.dlg { border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: var(--e3); display: grid; gap: 10px; background: var(--surface) }
+.dlg h4 { margin: 0; font-size: 16px; line-height: 24px; font-weight: 600 } .dlg p { margin: 0; color: var(--text-2) } .dlg-a { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap }
+.copy { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 4px 4px 10px; background: var(--sunk); min-width: 0 } .copy .code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.steps { display: flex; gap: 6px; list-style: none; padding: 0; margin: 14px 0 0; flex-wrap: wrap; counter-reset: s }
+.steps li { counter-increment: s; display: flex; align-items: center; gap: 6px; font: 500 13px/18px var(--font); color: var(--text-2); padding-right: 6px }
+.steps li::before { content: counter(s); width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--g300); font-size: 12px }
+.steps li.done::before { content: "✓"; background: var(--ok-bg); color: var(--ok-fg); border-color: transparent } .steps li.now { color: var(--text) } .steps li.now::before { background: var(--action); color: var(--action-text); border-color: transparent }
+.kv { display: grid; grid-template-columns: 90px minmax(0,1fr); gap: 8px 12px; font-size: 14px } .kv span { color: var(--text-2) } .kv b { font-weight: 400 }
+.tile { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; justify-items: start }
+.tile .k { font: 500 13px/18px var(--font); color: var(--text-2) } .tile b { font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em }
+.feed { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--g100); display: grid; gap: 12px }
+.feed li { position: relative; display: grid } .feed li::before { content: ""; position: absolute; left: -20px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid var(--g300) }
+.feed b { font-weight: 600 }
+.banner { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; font-size: 14px }
+.banner b { font-weight: 600 } .banner .lnk { margin-left: auto }
+.b-bad { background: var(--bad-bg); color: var(--bad-fg) } .b-warn { background: var(--warn-bg); color: var(--warn-fg) } .b-info { background: var(--info-bg); color: var(--info-fg) }
+.b-support { background: var(--g900); color: var(--g0) } .b-support .lnk { color: var(--bar-link) }
+.empty { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 22px; border: 1px dashed var(--g300); border-radius: 12px; margin-bottom: 8px }
+.empty.sm { padding: 12px; gap: 4px; border-style: solid; border-color: var(--line-soft) } .empty b { font-weight: 600 }
+.picto { width: 48px; height: 48px; border-radius: 12px; background: var(--g50); position: relative; border: 2px solid var(--g800) } .picto::after { content: ""; position: absolute; right: 6px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: #F2B233 }
+.skel { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line-soft); border-radius: 12px } .skel i { height: 12px; border-radius: 6px; background: var(--g100) }
+.statesrow { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px } .statesrow > div { display: grid; gap: 6px; align-content: start }
+.spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent }
+@media (prefers-reduced-motion: no-preference) { .spin { animation: sp .8s linear infinite } @keyframes sp { to { transform: rotate(360deg) } } }
+.job { border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 10px }
+.chart { width: 100%; height: auto; display: block; margin-bottom: 8px }
+.chart .ax { stroke: var(--g300) } .chart .b rect { fill: var(--chart) } .chart .now { fill: var(--chart-now) }
+.chart text { fill: var(--text-2); font: 500 11px var(--font); text-anchor: middle } .chart .area { fill: var(--n50) } .chart .line { fill: none; stroke: var(--action); stroke-width: 2 }
+.chart .prev { fill: none; stroke: var(--g400); stroke-width: 1.5; stroke-dasharray: 4 4 } .chart .dot, .spark .dot { fill: var(--action) }
+.spark { display: flex; gap: 12px; align-items: center } .spark svg { width: 120px; height: 28px } .spark .line { fill: none; stroke: var(--n500); stroke-width: 1.5 }
+.share-bars { display: grid; gap: 8px; margin: 14px 0 } .share-bars div { display: grid; grid-template-columns: 110px 1fr 44px; gap: 10px; align-items: center; font-size: 13px }
+.sb { height: 8px; background: var(--g100); border-radius: 999px; overflow: hidden } .sb i { display: block; height: 100%; background: var(--chart); border-radius: 999px } .share-bars b { font-weight: 500; text-align: right }
+.funnel { display: grid; gap: 4px } .funnel div { background: var(--n50); color: var(--n800); border-radius: 6px; padding: 6px 10px; font-size: 13px; white-space: nowrap; display: flex; gap: 6px; min-width: max-content }
+.funnel b { font-weight: 600 }
+.kpis4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px }
+.kc { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; align-content: start }
+.kc .k { font: 500 13px/18px var(--font); color: var(--text-2); display: flex; gap: 6px; align-items: center } .kc b { font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em }
+.kc svg { width: 100%; height: 24px } .sl { fill: none; stroke: var(--n500); stroke-width: 1.5 }
+.tip { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--g400); font: 600 10px/14px var(--font); text-align: center; color: var(--text-2) }
+.d { font: 500 12px/16px var(--font) } .d.up { color: var(--ok-fg) } .d.bad { color: var(--bad-fg) }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); margin-bottom: 6px } .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px }
+.legend i.dash, .ttip i.dash { background: repeating-linear-gradient(90deg, var(--g400) 0 3px, transparent 3px 5px); height: 2px; vertical-align: 3px }
+.chart .grid line { stroke: var(--g100) } .chart .yl text { text-anchor: end } .chart .xl text { text-anchor: middle }
+.chart .ann { stroke: var(--warn-dot); stroke-dasharray: 3 3 } .chart .annt { fill: var(--warn-fg); text-anchor: start; font-weight: 600 } .chart .cross { stroke: var(--g300) }
+.ttip { position: absolute; max-width: 200px; background: var(--bar); color: var(--bar-text); border-radius: 8px; padding: 8px 10px; display: grid; gap: 2px; font-size: 12px; box-shadow: var(--e2); white-space: nowrap }
+.ttip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px }
+.stack { display: grid; gap: 8px } .stack div { display: grid; grid-template-columns: 60px 1fr 40px; gap: 10px; align-items: center; font-size: 13px } .stack b { font-weight: 500; text-align: right }
+.sb2 { display: flex; height: 12px; border-radius: 4px; overflow: hidden; gap: 2px } .sb2 i { display: block; height: 100% }
+.chart .wf rect { fill: var(--g300) } .chart .wf .pos { fill: var(--action) }
+.heat { display: grid; grid-template-columns: 34px repeat(7, 1fr); gap: 3px; font-size: 11px; color: var(--text-2) }
+.heat i { aspect-ratio: 1.6; border-radius: 4px; background: color-mix(in srgb, var(--action) calc(var(--h) * 100%), var(--g50)) } .heat .hl { text-align: center } .heat .dl { align-self: center }
+.tiles { display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(7, 34px); gap: 3px; max-width: 280px }
+.tiles i { font: 600 10px/34px var(--font); font-style: normal; text-align: center; border-radius: 6px; color: var(--g950); background: color-mix(in srgb, var(--bad-dot) calc(var(--h) * 80%), var(--g50)) }
+.scale { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--text-2); margin-top: 10px } .scale i { width: 90px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--g50), color-mix(in srgb, var(--bad-dot) 80%, var(--g50))) }
+.coh td[style] { background: color-mix(in srgb, var(--action) calc(var(--h) * 120%), var(--surface)); color: var(--text); font-variant-numeric: tabular-nums }
+.meter i { background: var(--warn-dot) } .meter { position: relative; height: 8px }
+.hist { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; align-items: end; height: 70px; margin-top: 16px; border-bottom: 1px solid var(--g300) } .hist i { height: calc(var(--h) * 100%); background: var(--chart); border-radius: 3px 3px 0 0 }
+.xs { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-2); margin-top: 4px }
+.fbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px } .srch { position: relative; flex: 0 1 220px } .srch .inp { padding-left: 30px } .srch::before { content: "⌕"; position: absolute; left: 10px; top: 7px; color: var(--text-2) }
+.fchip { display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 4px 0 10px; border-radius: 8px; background: var(--n50); color: var(--n800); font-size: 13px; border: 1px solid var(--n100) }
+.fchip b { font-weight: 600 } .fchip button { border: 0; background: transparent; color: inherit; width: 24px; height: 24px; border-radius: 6px; cursor: pointer; font-size: 15px }
+.fpop { display: grid; grid-template-columns: 150px minmax(0,1fr); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--e2); margin-top: 8px; max-width: 460px; overflow: hidden; background: var(--surface) }
+.fpop-l { border-right: 1px solid var(--line-soft); padding: 6px; display: grid; align-content: start } .fpop-l a { padding: 7px 10px; border-radius: 8px; color: var(--text); text-decoration: none; font-size: 13px } .fpop-l a[aria-current] { background: var(--select); color: var(--n800); font-weight: 500 }
+.fpop-r { padding: 10px; display: grid; gap: 8px } .fpop-r label { display: flex; gap: 8px; align-items: center; font-size: 14px } .fpop-r label .cap { margin-left: auto }
+mark { background: var(--warn-bg); color: inherit; border-radius: 3px; padding: 0 1px }
+.pal { border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--e3); overflow: hidden; background: var(--surface) }
+.pal-in { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--line-soft); font-size: 16px; color: var(--text-2) }
+.pal-g { font: 500 11px/16px var(--font); color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; padding: 10px 14px 4px }
+.pal-i { display: flex; align-items: center; gap: 10px; padding: 8px 14px; color: var(--text); text-decoration: none; font-size: 14px } .pal-i.on { background: var(--select) } .pal-i .kbd2 { margin-left: auto; color: var(--text-2) }
+.pal-f { display: flex; gap: 14px; padding: 8px 14px; border-top: 1px solid var(--line-soft); font-size: 12px; color: var(--text-2) }
+.sheet { border: 1px solid var(--line); border-radius: 20px 20px 0 0; padding: 10px 16px 16px; display: grid; gap: 14px; box-shadow: var(--e3); max-width: 390px; background: var(--surface) }
+.grab { width: 36px; height: 4px; border-radius: 2px; background: var(--g300); justify-self: center } .fs { display: grid; gap: 8px }
+.pill { height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--g300); display: inline-flex; align-items: center; font-size: 14px } .pill.on { background: var(--n50); border-color: var(--action); color: var(--n800); font-weight: 500 }
+.track { list-style: none; margin: 0; padding: 0; display: grid; gap: 0 }
+.track li { display: grid; padding: 0 0 14px 24px; position: relative; font-weight: 500 } .track li::before { content: ""; position: absolute; left: 0; top: 3px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--g300); background: var(--surface) }
+.track li::after { content: ""; position: absolute; left: 6px; top: 17px; bottom: 0; width: 2px; background: var(--g200) } .track li:last-child::after { display: none }
+.track li.done::before { background: var(--ok-dot); border-color: var(--ok-dot) } .track li.done::after { background: var(--ok-dot) } .track li.now::before { border-color: var(--action); box-shadow: 0 0 0 4px var(--n100) }
+.who { display: flex; gap: 12px; align-items: center } .av { width: 36px; height: 36px; border-radius: 50%; background: var(--n100); color: var(--n800); display: grid; place-items: center; font-weight: 600 }
+.rules { display: grid; gap: 8px } .rl { display: grid; grid-template-columns: 52px 1fr 90px 1fr 30px; gap: 6px; align-items: center } .rl .tag { justify-content: center }
+.setup { display: flex; gap: 16px; align-items: center } .ring { width: 72px; height: 72px; border-radius: 50%; background: conic-gradient(var(--action) calc(var(--p) * 1%), var(--g100) 0); display: grid; place-items: center; flex: none }
+.ring b { width: 54px; height: 54px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-weight: 600 }
+.ck { display: flex; gap: 8px; align-items: center; font-size: 14px } .ck::before { content: ""; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--g400); flex: none } .ck.done { color: var(--text-2); text-decoration: line-through } .ck.done::before { background: var(--ok-dot); border-color: var(--ok-dot) } .ck .lnk { margin-left: auto }
+.stores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px } .store { border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 6px; justify-items: start } .store b { font-weight: 600 }
+.diff { display: grid; gap: 4px; margin-top: 12px; font-size: 13px } .diff .del { background: var(--bad-bg); color: var(--bad-fg); padding: 2px 8px; border-radius: 6px; text-decoration: line-through } .diff .add { background: var(--ok-bg); color: var(--ok-fg); padding: 2px 8px; border-radius: 6px }
+@media (max-width: 720px) { .fpop { grid-template-columns: 1fr } .rl { grid-template-columns: 1fr 1fr } .stores { grid-template-columns: 1fr } }
+.logos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px } .logos figure { margin: 0; display: grid; gap: 8px }
+.lg { height: 120px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line) } .lg.paper { background: #FBFAF9 } .lg.ink { background: #171615 }
+.lg svg { max-width: 80% } figcaption { font-size: 13px; color: var(--text-2); display: grid } figcaption b { color: var(--text); font-weight: 600 }
+.clear { display: grid; place-items: center; padding: 20px; background: #FBFAF9; border-radius: 12px; border: 1px solid var(--line) } .cs { padding: 26px; outline: 1.5px dashed var(--n400); outline-offset: -1px } .cs svg { display: block; max-width: 100% }
+.donts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px } .donts > div { display: grid; gap: 6px; font-size: 13px; color: var(--text-2) }
+.donts .x { height: 70px; border-radius: 10px; border: 1px solid var(--line); background: #FBFAF9; display: flex; align-items: center; justify-content: center; position: relative; color: #171615; overflow: hidden }
+.donts .x::after { content: "✕"; position: absolute; right: 6px; top: 4px; color: var(--bad-dot); font-weight: 700 } .donts .x svg { max-width: 80% }
+.motifs { display: grid; gap: 14px } .motifs > div { display: grid; grid-template-columns: 70px 1fr; gap: 4px 12px; align-items: center } .motifs b { font-weight: 600 } .motifs .cap { grid-column: 2 }
+.m-thread { grid-row: span 2; height: 2px; background: #D61F69; border-radius: 2px } .m-stitch { grid-row: span 2; height: 36px; border: 1.5px dashed var(--g400); border-radius: 8px }
+.m-print { grid-row: span 2; height: 36px; border-radius: 8px; background: radial-gradient(circle at 8px 8px, rgba(214,31,105,.18) 0 4px, transparent 5px) 0 0/16px 16px, #FBFAF9; border: 1px solid var(--line) }
+.icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px } .icons span { display: grid; justify-items: center; gap: 6px; padding: 10px 4px; border: 1px solid var(--line-soft); border-radius: 10px; font-size: 12px; color: var(--text-2) }
+.icons svg { width: 20px; height: 20px; fill: none; stroke: var(--text); stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round }
+.picrow { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap } .ptile { width: 92px; display: grid; justify-items: center; gap: 6px; font-size: 12px; color: var(--text-2) } .ptile svg { width: 64px; height: 64px; border-radius: 12px; background: #FBEFD2; padding: 8px }
+.anat { display: grid; grid-template-columns: 150px 1fr; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-height: 300px; font-size: 12px }
+.anat > div, .a-main > div { border: 1px dashed var(--n300) } .a-side { background: var(--side); padding: 10px; display: grid; align-content: start; gap: 4px } .a-side span { color: var(--text-2) }
+.a-main { display: grid; grid-template-rows: auto auto auto 1fr auto; gap: 8px; padding: 12px } .a-main > div { border-radius: 8px; padding: 8px 10px; color: var(--text-2) }
+.a-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center } .a-head b { color: var(--text); font-size: 16px } .a-acts { display: flex; gap: 6px }
+.a-body { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; border: 0 !important; padding: 0 !important } .a-col, .a-panel { border: 1px dashed var(--n300); border-radius: 8px; padding: 10px; min-height: 80px } .a-panel { background: var(--n50) }
+.a-bar { background: var(--bar); color: var(--bar-text) !important; border: 0 !important }
+.sbs { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap } .sb-x { width: 232px; background: var(--side); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 2px }
+.sb-c { width: 64px; background: var(--side); border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; display: grid; gap: 6px; justify-items: center } .sb-c .nav { padding: 0; width: 40px; justify-content: center; position: relative }
+.dotc { position: absolute; right: 6px; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--warn-dot) }
+.widths { display: grid; gap: 6px } .widths div { width: var(--w); background: var(--n50); border: 1px solid var(--n100); border-radius: 6px; padding: 6px 10px; font-size: 13px; color: var(--n800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.cols { display: grid; grid-template-columns: repeat(12, 1fr); gap: 8px; height: 40px; margin-top: 12px } .cols i { background: color-mix(in srgb, var(--bad-dot) 14%, transparent); border-radius: 4px }
+.spacescale { display: grid; gap: 6px } .spacescale div { display: grid; grid-template-columns: 52px 30px 1fr; gap: 10px; align-items: center; font-size: 13px } .spacescale i { height: 12px; background: var(--n400); border-radius: 2px }
+.dens { display: grid; gap: 12px } .dens div { display: grid; gap: 2px } .dens b { font-weight: 600 } .dens span { color: var(--text-2); font-size: 14px }
+.drawer-demo { display: grid; grid-template-columns: 1fr 340px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-height: 200px }
+.dd-list { padding: 8px; display: grid; align-content: start; gap: 2px; background: var(--g25) } .dd-row { padding: 10px; border-radius: 8px; font-size: 14px; color: var(--text-2) } .dd-row.on { background: var(--select); color: var(--text) }
+.dd-panel { border-left: 1px solid var(--line); padding: 16px; box-shadow: var(--e2); background: var(--surface) }
+@media (max-width: 720px) { .anat { grid-template-columns: 1fr } .a-body { grid-template-columns: 1fr } .drawer-demo { grid-template-columns: 1fr } .sb-x { width: 100% } }
+.note { font-size: 13px; color: var(--text-2); margin-top: 8px }
+@media (max-width: 720px) { .spec { grid-template-columns: 1fr } }
+@media (prefers-reduced-motion: no-preference) { .btn, .nav, .seg button, .tbl td { transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease) } }
+</style>
+
+<div class="doc">
+  <div class="doc-top">
+    <b><span class="mark">rr</span>Neel · the console's design language</b>
+    <nav aria-label="Parts"><a href="#foundations">Foundations</a><a href="#brand">Brand</a><a href="#voice">Voice</a><a href="#layout">Layout</a><a href="#components">Components</a><a href="#patterns">More</a><a href="#states">States</a><a href="#motion">Motion</a><a href="#access">Access</a><a href="#data">Analytics</a><a href="#find">Finding</a><a href="#modules">Modules</a><a href="#home">Home</a><a href="#orders">Orders</a><a href="#products">Products</a><a href="#editor">Product</a><a href="#settings">Settings</a><a href="#phone">Phone</a><a href="#words">Words</a><a href="#glossary">Glossary</a></nav>
+  </div>
+
+  <!-- ===================== FOUNDATIONS ===================== -->
+  <section class="part" id="foundations">
+    <h2>Foundations</h2>
+    <p class="lead">A white page, one warm grey, one action colour. Colour means something: neel is what you can press, a tinted chip is a state, rani is only the brand.</p>
+    <div class="grid g2">
+      <div class="box">
+        <h3>Neutral · warm grey</h3>
+        <div class="ramp">
+          <div class="sw l" style="background:#FFFFFF">0 page</div><div class="sw l" style="background:#FBFAF9">25 sidebar</div><div class="sw l" style="background:#F6F5F3">50 hover</div><div class="sw l" style="background:#EEEDEA">100 divider</div>
+          <div class="sw l" style="background:#E3E1DD">200 border</div><div class="sw l" style="background:#CFCCC7">300 button edge</div><div class="sw d" style="background:#8F8A84">500 field edge</div><div class="sw d" style="background:#67625C">600 text 2</div>
+          <div class="sw d" style="background:#34312E">800</div><div class="sw d" style="background:#171615">950 text</div>
+        </div>
+        <ul class="rule"><li>Steps have jobs: 0–100 backgrounds, 200–500 lines, 600–950 text. Never swapped.</li><li>Field edge 500 is 3.4:1 on white; text 2 (600) is 6.0:1.</li></ul>
+      </div>
+      <div class="box">
+        <h3>Neel · the action colour</h3>
+        <div class="ramp">
+          <div class="sw l" style="background:#EEF0FD">50 selected</div><div class="sw l" style="background:#E0E3FB">100 focus halo</div><div class="sw l" style="background:#C3C9F6">200 chart</div><div class="sw d" style="background:#6E79E3">400</div>
+          <div class="sw d" style="background:#4C57D6">500 focus</div><div class="sw d" style="background:#3A44C2">600 button</div><div class="sw d" style="background:#2F37A3">700 link</div><div class="sw d" style="background:#D61F69">Rani · brand only</div>
+        </div>
+        <ul class="rule"><li>Neel is the only colour that means "you can press this": primary buttons, links, focus, the selected row and tab, chart bars.</li><li>White on 600 is 6.9:1. Rani never fills a button, a number or a state.</li></ul>
+      </div>
+      <div class="box">
+        <h3>States · tint, dot, word</h3>
+        <div class="chips" style="gap:8px">
+          <span class="chip c-ok">Active</span><span class="chip c-ok">Delivered</span><span class="chip c-warn">To confirm</span><span class="chip c-warn">Low stock</span>
+          <span class="chip c-bad">Couldn't deliver</span><span class="chip c-bad">High risk</span><span class="chip c-info">Unlisted</span><span class="chip c-info">Scheduled</span>
+          <span class="chip c-neu">Draft</span><span class="chip c-neu">Archived</span><span class="tag">COD</span><span class="tag">Prepaid</span>
+        </div>
+        <ul class="rule"><li>A state is a pill: pale tint, a 6 px dot, a word. Never a dot or colour alone.</li><li>A fact that isn't a state (COD, Prepaid) is a plain tag: outlined, no colour.</li></ul>
+      </div>
+      <div class="box">
+        <h3>Type · Inter 400 / 500 / 600</h3>
+        <div class="spec">
+          <span class="cap">Display 30/36</span><span class="t-display num">₹2,30,28,200</span>
+          <span class="cap">Title 22/28</span><span class="t-title">Chanderi kurta set</span>
+          <span class="cap">Heading 16/24</span><span class="t-heading">Sizes and colours</span>
+          <span class="cap">Subhead 14/20</span><span class="t-sub">Stock and prices</span>
+          <span class="cap">Body 14/20</span><span class="t-body">Handwoven linen, block printed in Jaipur.</span>
+          <span class="cap">Label 13/18</span><span class="t-label">Price, ₹</span>
+          <span class="cap">Small 12/16</span><span class="t-small">edited 2 h ago · कुर्ता सेट</span>
+          <span class="cap">Code 12 mono</span><span class="code">KS-LINKUR-M · AWB 1490023381</span>
+        </div>
+        <ul class="rule"><li>Numbers are Inter with tabular figures, never monospace. Mono is only for codes people copy: SKU, AWB, GSTIN.</li><li>Phone body is 15/22. Hindi falls back to Noto Sans Devanagari.</li></ul>
+      </div>
+      <div class="box">
+        <h3>Space, radius, depth</h3>
+        <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:10px;align-items:end">
+          <div style="display:grid;gap:6px"><div style="height:36px;border:1px solid var(--line);border-radius:6px"></div><span class="cap">6 · chip, cell</span></div>
+          <div style="display:grid;gap:6px"><div style="height:36px;border:1px solid var(--line);border-radius:8px"></div><span class="cap">8 · button, field</span></div>
+          <div style="display:grid;gap:6px"><div style="height:36px;border:1px solid var(--line);border-radius:12px"></div><span class="cap">12 · section</span></div>
+          <div style="display:grid;gap:6px"><div style="height:36px;border-radius:16px;box-shadow:var(--e3);border:1px solid var(--line)"></div><span class="cap">16 · dialog</span></div>
+        </div>
+        <ul class="rule"><li>Spacing 4 · 8 · 12 · 16 · 20 · 24 · 32 · 48. Sections pad 20; fields stack 16 apart.</li><li>Lines, not shadows, for anything on the page. Shadows only for what floats: menus, dialogs, the save bar, toasts.</li></ul>
+      </div>
+      <div class="box">
+        <h3>Money</h3>
+        <div style="display:grid;gap:10px">
+          <div class="t-display num money"><span class="r">₹</span>2,490</div>
+          <div class="num money" style="font-size:14px"><span class="r">₹</span>1,178<span class="p">.82</span> · <span style="color:var(--bad-fg)">−₹430</span> · <span class="r">₹</span>2,30,28,200</div>
+        </div>
+        <ul class="rule"><li>Indian grouping (2,30,28,200), the ₹ and paise a step quieter, a loss in red with a real minus.</li><li>Right-aligned in columns; paise only where money is settled (invoices, fees).</li></ul>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ===================== BRAND ===================== -->
+  <section class="part" id="brand">
+    <h2>Brand</h2>
+    <p class="lead">One mark, drawn once. Rani is the brand's thread; the console works in neel. Brand moments are few: sign-in, the website, first-use empty states, the store opening.</p>
+    <div class="grid g2">
+      <div class="box" style="grid-column:1/-1"><h3>Logo variations</h3>
+        <div class="logos">
+          <figure><div class="lg paper"><svg viewBox="-6 12 302 92" width="180" role="img" aria-label="frrata"><g fill="none" stroke="#171615" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg></div><figcaption><b>Wordmark, thread</b>Brand surfaces: sign-in, website, emails' header.</figcaption></figure>
+          <figure><div class="lg paper"><svg viewBox="-6 12 302 92" width="180" role="img" aria-label="frrata"><g fill="none" stroke="#171615" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#171615"/></g></svg></div><figcaption><b>Wordmark, plain</b>Working screens, documents, invoices.</figcaption></figure>
+          <figure><div class="lg ink"><svg viewBox="-6 12 302 92" width="180" role="img" aria-label="frrata"><g fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#FF4F93"/></g></svg></div><figcaption><b>Wordmark on ink</b>Dark surfaces; the thread turns rani-on-ink.</figcaption></figure>
+          <figure><div class="lg paper" style="gap:14px"><svg viewBox="0 0 120 120" width="56" height="56" role="img" aria-label="frrata"><rect width="120" height="120" rx="27.6" fill="#171615"/><g transform="translate(-26 -16)" fill="none" stroke="#FFFFFF" stroke-width="14"><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg><svg viewBox="0 0 120 120" width="56" height="56" role="img" aria-label="frrata"><rect width="120" height="120" rx="27.6" fill="#D61F69"/><g transform="translate(-26 -16)" fill="none" stroke="#FFFFFF" stroke-width="14"><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#FFFFFF"/></g></svg><svg viewBox="0 0 120 120" width="56" height="56" role="img" aria-label="frrata"><rect width="120" height="120" rx="27.6" fill="#FFFFFF"/><g transform="translate(-26 -16)" fill="none" stroke="#171615" stroke-width="14"><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg></div><figcaption><b>Monogram rr</b>Ink tile (the shell), rani tile (app icon on ink), paper tile (favicons on dark).</figcaption></figure>
+        </div>
+      </div>
+      <div class="box"><h3>Clear space and size</h3>
+        <div class="clear"><div class="cs"><svg viewBox="-6 12 302 92" width="200" role="img" aria-label="frrata"><g fill="none" stroke="#171615" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg></div></div>
+        <ul class="rule"><li>Clear space on every side: the height of the "a" (the dashed box). Nothing enters it: no text, edge or photo.</li><li>Smallest: wordmark 72 px wide (48 px in a footer), monogram 16 px. Below that, use the monogram.</li></ul>
+      </div>
+      <div class="box"><h3>Never</h3>
+        <div class="donts">
+          <div><span class="x"><svg viewBox="-6 12 302 92" width="110" role="img" aria-label="frrata"><g fill="none" stroke="#3A44C2" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#3A44C2"/></g></svg></span><span>Recolour it (neel, gradients)</span></div>
+          <div><span class="x"><svg style="transform:scaleX(1.35)" viewBox="-6 12 302 92" width="90" role="img" aria-label="frrata"><g fill="none" stroke="#171615" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg></span><span>Stretch or squash</span></div>
+          <div><span class="x"><b style="font:700 26px/1 var(--font)">frrata</b></span><span>Type the name as the logo</span></div>
+          <div><span class="x"><svg viewBox="-6 12 302 92" width="110" role="img" aria-label="frrata"><g fill="none" stroke="#171615" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#2F9E62"/></g></svg></span><span>Thread in any colour but rani</span></div>
+          <div><span class="x" style="background:linear-gradient(135deg,#E8C6CF,#C9CCE8,#EED9C7)"><svg viewBox="-6 12 302 92" width="110" role="img" aria-label="frrata"><g fill="none" stroke="#171615" stroke-width="14" stroke-linecap="butt"><path d="M7 100 V42 A20 20 0 0 1 27 22 H38"/><path d="M0 53 H31"/><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M183 73 A20 20 0 1 1 143 73 A20 20 0 1 1 183 73"/><path d="M183 46 V100"/><path d="M208 30 V76 A17 17 0 0 0 225 93 H234"/><path d="M196 53 H230"/><path d="M287 73 A20 20 0 1 1 247 73 A20 20 0 1 1 287 73"/><path d="M287 46 V100"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg></span><span>Over a busy photo</span></div>
+          <div><span class="x"><svg viewBox="0 0 120 120" width="34" height="34" role="img" aria-label="frrata"><rect width="120" height="120" rx="27.6" fill="#171615"/><g transform="translate(-26 -16)" fill="none" stroke="#FFFFFF" stroke-width="14"><path d="M51 100 V46"/><path d="M96 100 V46"/><path d="M96 77 A24 24 0 0 1 120 53 H128"/><path d="M51 77 A24 24 0 0 1 75 53 H86" stroke="#D61F69"/></g></svg><b style="font:600 15px/1 var(--font);margin-left:8px">EkCode by frrata</b></span><span>Lock it up with another name without a rule</span></div>
+        </div>
+      </div>
+      <div class="box"><h3>Brand colour and the console</h3>
+        <div class="ramp" style="grid-template-columns:repeat(auto-fill,minmax(90px,1fr))">
+          <div class="sw d" style="background:#D61F69">Rani · mark, thread</div><div class="sw l" style="background:#F2B233">Haldi · drawings</div><div class="sw d" style="background:#23307A">Neel 900 · brand ink-blue</div>
+          <div class="sw d" style="background:#3A44C2">Neel 600 · action</div><div class="sw d" style="background:#171615">Ink · type, mark</div><div class="sw l" style="background:#FBFAF9">Paper</div>
+        </div>
+        <ul class="rule"><li>The brand's neel and the console's action colour are one ramp: 900 for brand surfaces, 600 for buttons.</li><li>Rani: the mark's thread, the loading line, the sign-in and website only. Haldi: drawings only. Neither is ever a button, a number or a state.</li></ul>
+      </div>
+      <div class="box"><h3>Motifs</h3>
+        <div class="motifs">
+          <div><span class="m-thread"></span><b>The thread</b><span class="cap">A 2 px rani line: the mark, the loading line, the website's links. Not on console buttons or tabs.</span></div>
+          <div><span class="m-stitch"></span><b>The running stitch</b><span class="cap">A dashed edge: where something can be dropped or added. Never round content.</span></div>
+          <div><span class="m-print"></span><b>The block print</b><span class="cap">The mark's circles as a repeat, 6%: the website's selvedge only.</span></div>
+        </div>
+      </div>
+      <div class="box" style="grid-column:1/-1"><h3>Icons and drawings</h3>
+        <div class="icons">
+          <span title="Home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/></svg>Home</span><span title="Orders"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6zM9 7a3 3 0 016 0"/></svg>Orders</span><span title="Products"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg>Products</span><span title="Collections"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>Collections</span><span title="Offers"><svg viewBox="0 0 24 24"><path d="M4 12l8-8h8v8l-8 8z"/><circle cx="16" cy="8" r="1.5"/></svg>Offers</span><span title="Analytics"><svg viewBox="0 0 24 24"><path d="M4 18l5-6 4 3 7-8"/></svg>Analytics</span><span title="Notices"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4zM10 21h4"/></svg>Notices</span><span title="Settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</span><span title="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></svg>Search</span><span title="Filter"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg>Filter</span><span title="Add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</span><span title="More"><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></svg>More</span><span title="Delivery"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg>Delivery</span><span title="Payment"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM3 10h18"/></svg>Payment</span><span title="Risk"><svg viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg>Risk</span><span title="Copy"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/></svg>Copy</span>
+        </div>
+        <div class="picrow">
+          <div class="ptile"><svg viewBox="0 0 48 48"><rect x="9" y="20" width="30" height="20" rx="2" fill="#fff" stroke="#171615" stroke-width="2"/><path d="M7 20l3-10h28l3 10z" fill="#F2B233" stroke="#171615" stroke-width="2" stroke-linejoin="round"/><path d="M17 10l-2 10M24 10v10M31 10l2 10" stroke="#171615" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="20" y="29" width="8" height="11" rx="1" fill="#EFEBE5" stroke="#171615" stroke-width="2"/></svg><span>store</span></div>
+          <div class="ptile"><svg viewBox="0 0 48 48"><path d="M8 16l16-8 16 8v18l-16 8-16-8z" fill="#EFEBE5" stroke="#171615" stroke-width="2" stroke-linejoin="round"/><path d="M8 16l16 8 16-8M24 24v18" stroke="#171615" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="36" cy="34" r="7" fill="#F2B233" stroke="#171615" stroke-width="2"/><path d="M33 34l2 2 4-4" stroke="#171615" stroke-width="2" fill="none" stroke-linecap="round"/></svg><span>delivered</span></div>
+          <div class="ptile"><svg viewBox="0 0 48 48"><path d="M9 40V30M18 40V24M27 40V18" stroke="#171615" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="35" cy="14" r="8" fill="#F2B233" stroke="#171615" stroke-width="2"/><text x="35" y="18.5" text-anchor="middle" font-size="12" font-weight="700" fill="#171615">₹</text><path d="M6 40h36" stroke="#171615" stroke-width="2" stroke-linecap="round"/></svg><span>earn</span></div>
+        </div>
+        <ul class="rule"><li><b>Icons:</b> a 24 grid, 1.75 px stroke, round caps, no fills, drawn at 16, 18 or 20 px. One colour: the text's, or neel when it's the current page. Always beside a word, except Search, Close, More and Copy (which carry an aria-label).</li>
+          <li><b>Pictograms</b> are drawings, not icons: 48 grid, a 2 px ink line, one haldi shape, always on their tile. Only in first-use empty states, the website and the partner workspace. The set: store, build, handover, earn, delivered, clients, owner, calendar, shield, apply, payments, risk, returned, tally.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== VOICE & MICROCOPY ===================== -->
+  <section class="part" id="voice">
+    <h2>Voice and microcopy</h2>
+    <p class="lead">Frrata sounds like a calm, sharp colleague who knows the trade: short, specific, never chirpy. The Words rulebook is the law; this is how it sounds in each moment.</p>
+    <div class="grid g2">
+      <div class="box" style="grid-column:1/-1"><h3>Tone by moment</h3>
+        <div class="tblwrap"><table class="tbl gl"><thead><tr><th>Moment</th><th>Sounds</th><th>Example</th><th>Not</th></tr></thead><tbody>
+          <tr><td>Done</td><td>Past tense, the thing</td><td>Archived 2 products</td><td>Success! Your products have been archived.</td></tr>
+          <tr><td>Problem you can fix</td><td>What, then how</td><td>Add a price for Ivory.</td><td>Invalid input in variant row 3</td></tr>
+          <tr><td>Refused by us</td><td>What happened, what's safe</td><td>We couldn't save. Nothing was changed.</td><td>Oops! Something went wrong.</td></tr>
+          <tr><td>Money</td><td>Exact amount and date</td><td>₹4,999 on 1 Dec, from your card ending 4242</td><td>Your subscription will renew soon</td></tr>
+          <tr><td>Risk</td><td>The reason, plainly</td><td>New PIN code, two COD orders came back</td><td>Risk score 0.82</td></tr>
+          <tr><td>Can't be undone</td><td>The consequence, once</td><td>This can't be undone.</td><td>Are you absolutely sure? This action is permanent and irreversible!</td></tr>
+          <tr><td>Empty, first time</td><td>The first step</td><td>No products yet · Add product</td><td>Looks like you don't have any products. Let's get started!</td></tr>
+          <tr><td>Waiting</td><td>What's happening, when</td><td>Razorpay is checking your account. Usually 2 days.</td><td>Please wait…</td></tr>
+          <tr><td>Celebration (once)</td><td>Proud, short</td><td>Your store is open.</td><td>🎉 Congratulations!!</td></tr>
+        </tbody></table></div>
+      </div>
+      <div class="box"><h3>Patterns</h3>
+        <div class="tblwrap"><table class="tbl gl"><tbody>
+          <tr><td>Page title</td><td>A noun: Orders, Plan and billing</td></tr>
+          <tr><td>Section title</td><td>A noun phrase: Sizes and colours</td></tr>
+          <tr><td>Button</td><td>Verb + thing: Confirm 2 orders. Count when it acts on many.</td></tr>
+          <tr><td>Field label</td><td>A noun, unit after a comma: Price, ₹</td></tr>
+          <tr><td>Placeholder</td><td>An example, never the label: Linen kurta set</td></tr>
+          <tr><td>(i) tip</td><td>One or two sentences a person would ask for</td></tr>
+          <tr><td>Toast</td><td>Past tense + Undo, or what happened + one action</td></tr>
+          <tr><td>Notice</td><td>Title: the fact. Line: what to do and by when</td></tr>
+          <tr><td>Email subject</td><td>The fact first: Order KS-5012 is on the way</td></tr>
+          <tr><td>WhatsApp</td><td>One short message, the store's name, one link</td></tr>
+        </tbody></table></div>
+      </div>
+      <div class="box"><h3>Mechanics</h3>
+        <ul class="rule" style="margin:0">
+          <li>Sentence case everywhere, titles included. Product and store names as their owners write them.</li>
+          <li>Numbers as digits (3 sizes). ₹ with Indian grouping (₹2,30,000); lakh and crore in words only in sentences (₹2.3 lakh).</li>
+          <li>Dates: Today, Yesterday, then 12 Nov; the year only when not this year. Times: 10:06 pm.</li>
+          <li>Phone: +91 98450 12345. PIN code: 302001. GSTIN in mono.</li>
+          <li>No full stop on a label, button, title or one-line toast; a full stop on sentences.</li>
+          <li>Indian English spelling: colour, cancelled, catalogue.</li>
+          <li>"You" for the brand; "we" for Frrata; "your shopper", never "your customer".</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== LAYOUT ===================== -->
+  <section class="part" id="layout">
+    <h2>Layout</h2>
+    <p class="lead">Every page is one of four shapes, on one grid, with the same header and the same sticky bars.</p>
+    <div class="grid g2">
+      <div class="box" style="grid-column:1/-1"><h3>Page anatomy</h3>
+        <div class="anat">
+          <div class="a-side"><b>Sidebar</b><span>232 px · expanded</span></div>
+          <div class="a-main">
+            <div class="a-crumb">Breadcrumb · Products › Gulabi kurta</div>
+            <div class="a-head"><span><b>Title</b> <span class="chip c-neu">Draft</span><br><span class="cap">Meta line: edited 2 h ago · kesarstudio.in/products/…</span></span><span class="a-acts"><span class="btn btn-g btn-sm">More</span><span class="btn btn-s btn-sm">Secondary</span><span class="btn btn-p btn-sm">Primary</span></span></div>
+            <div class="a-tabs">Tabs or filter bar (sticky under the header on scroll)</div>
+            <div class="a-body"><div class="a-col">Content column · 8 of 12</div><div class="a-panel">Context panel · 4 of 12 · sticky</div></div>
+            <div class="a-bar">Action bar · sticky at the foot (Save, bulk actions)</div>
+          </div>
+        </div>
+      </div>
+      <div class="box"><h3>Sidebar</h3>
+        <div class="sbs">
+          <div class="sb-x"><div class="shop"><span class="mark">rr</span><span>Kesar Studio<small>kesarstudio.in</small></span></div><a class="nav" aria-current="page" href="#layout"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6zM9 7a3 3 0 016 0"/></svg>Orders<span class="cnt w">43</span></a><a class="nav" href="#layout"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg>Products</a><span class="cap" style="padding:8px 10px">232 px</span></div>
+          <div class="sb-c"><span class="mark">rr</span><a class="nav" aria-current="page" href="#layout" title="Orders · 43"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6zM9 7a3 3 0 016 0"/></svg><i class="dotc"></i></a><a class="nav" href="#layout" title="Products"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg></a><span class="cap">64 px</span></div>
+        </div>
+        <ul class="rule"><li>Expanded at 1280 and up; collapsed to a 64 px icon rail from 768 to 1279, and by choice ("[" or the button at its foot), remembered per person. Collapsed: a tooltip names each icon; a count becomes a dot.</li><li>Groups: Today, Catalogue, Store, then the account at the foot. Under 768: the bottom bar (Home, Orders, Products, More).</li></ul>
+      </div>
+      <div class="box"><h3>Header and breadcrumbs</h3>
+        <ul class="rule" style="margin:0">
+          <li>Order, left to right: back or breadcrumb (above), title, its status chip, then actions at the right: More, secondaries, the one primary last.</li>
+          <li>A meta line under the title for facts (when, where, who); never a sentence of help.</li>
+          <li>Breadcrumbs only below a list (Products › Gulabi kurta), two levels at most; a phone shows "‹ Products" only.</li>
+          <li>Title 22/28 on a desktop, 20/26 on a phone; long names wrap to two lines, then end in "…" with the full name on hover.</li>
+          <li>The header scrolls away; its tabs or filter bar stick under the shell's top edge.</li>
+        </ul>
+      </div>
+      <div class="box"><h3>Widths and grid</h3>
+        <div class="widths">
+          <div style="--w:100%"><b>List</b> · fluid up to 1440</div>
+          <div style="--w:78%"><b>Editor</b> · 1120 (content + 320 panel)</div>
+          <div style="--w:53%"><b>Settings, reading</b> · 760</div>
+          <div style="--w:42%"><b>Dialog</b> · 440 · 560 · 720</div>
+        </div>
+        <div class="cols"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <ul class="rule"><li>12 columns, 24 px gutters on a desktop, 16 on a tablet; a phone is one column with 16 px sides. Page padding 32 · 24 · 16.</li><li>Shapes: list (full), editor (8 + 4), settings (one column 760), dashboard (cards in 3s or 4s, never 5).</li></ul>
+      </div>
+      <div class="box"><h3>Space and separation</h3>
+        <div class="spacescale"><div><i style="width:4px"></i><span>4</span><span class="cap">inside a chip</span></div><div><i style="width:8px"></i><span>8</span><span class="cap">icon to label</span></div><div><i style="width:12px"></i><span>12</span><span class="cap">between controls</span></div><div><i style="width:16px"></i><span>16</span><span class="cap">between fields</span></div><div><i style="width:20px"></i><span>20</span><span class="cap">section padding</span></div><div><i style="width:24px"></i><span>24</span><span class="cap">between sections</span></div><div><i style="width:32px"></i><span>32</span><span class="cap">between groups</span></div><div><i style="width:48px"></i><span>48</span><span class="cap">page top on wide</span></div></div>
+        <ul class="rule"><li>Inside a section, rows are split by a 1 px soft line; sections are 24 apart; a group of sections gets a heading and 32 above it. Never a card in a card.</li></ul>
+      </div>
+      <div class="box"><h3>Density</h3>
+        <div class="dens">
+          <div><b>Cards</b><span>Comfortable: 20 padding, 16 gaps (console). Compact: 16 and 12 (figures, Frrata Admin).</span></div>
+          <div><b>Tables</b><span>48 px rows (console default) · 40 px (Frrata Admin, long lists) · 56 px with a photo or two-line cell. Header 36 px, sticky.</span></div>
+          <div><b>Forms</b><span>Fields 36 px high (44 on a phone), 16 apart; two short fields share a row, never three.</span></div>
+        </div>
+      </div>
+      <div class="box"><h3>Sticky bars</h3>
+        <ul class="rule" style="margin:0">
+          <li>Top: the shell's banner (if any), then a list's tabs or filter bar once the header scrolls away. The table header sticks below them.</li>
+          <li>Bottom: one action bar at a time — the save bar on a form, the bulk bar when rows are picked, the confirm bar on a phone. It floats 16 px above the edge (above the bottom nav on a phone) and lifts toasts above it.</li>
+          <li>Side: the editor's context panel sticks 16 px below the top while the content scrolls.</li>
+        </ul>
+      </div>
+      <div class="box" style="grid-column:1/-1"><h3>Right-side panels</h3>
+        <div class="drawer-demo">
+          <div class="dd-list"><div class="dd-row on">KS-5012 · முத்துலட்சுமி · ₹1,983</div><div class="dd-row">KS-5018 · Ananya · ₹2,458</div><div class="dd-row">KS-5024 · Irfan · ₹2,934</div></div>
+          <div class="dd-panel"><div style="display:flex;justify-content:space-between;align-items:center"><b>KS-5012</b><span class="cap">Esc ✕</span></div><span class="chip c-warn">To confirm</span> <span class="chip c-bad">High risk</span><div class="kv" style="margin-top:10px"><span>Total</span><b class="num">₹1,983</b><span>Ship to</span><b>Madurai 625001</b></div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-p btn-sm">Confirm</button><button class="btn btn-s btn-sm">Open order</button></div></div>
+        </div>
+        <ul class="rule"><li><b>Context panel</b> (editors): part of the page, 320 px, sticky; under 1024 it becomes a strip under the header.</li><li><b>Quick look</b> (lists): 400 px from the right over the list, which stays visible and keeps its scroll; ↑↓ moves between rows, Esc closes, "Open order" goes to the full page. A sheet on a phone. Never for editing more than one field.</li><li>Dialogs are for decisions; panels are for looking. Never a panel inside a dialog.</li></ul>
+      </div>
+      <div class="box" style="grid-column:1/-1"><h3>Breakpoints</h3>
+        <div class="tblwrap"><table class="tbl"><thead><tr><th>Width</th><th>Navigation</th><th>Page</th><th>Lists</th><th>Editors</th></tr></thead><tbody>
+          <tr><td class="num">&lt; 768</td><td>Bottom bar + More sheet</td><td>16 px sides, body 15/22</td><td>Two-line rows; Select mode; filters in a sheet</td><td>Panel → strip under header; save bar above the nav</td></tr>
+          <tr><td class="num">768–1023</td><td>Icon rail 64</td><td>24 px sides</td><td>Columns that fit; less important ones fold into the row</td><td>Panel → strip</td></tr>
+          <tr><td class="num">1024–1279</td><td>Icon rail 64</td><td>24 px sides</td><td>All columns; quick look as an overlay</td><td>8 + 4 with a 300 panel</td></tr>
+          <tr><td class="num">1280–1439</td><td>Sidebar 232</td><td>32 px sides</td><td>All columns</td><td>8 + 4, panel 320</td></tr>
+          <tr><td class="num">≥ 1440</td><td>Sidebar 232</td><td>Content capped at 1440, centred</td><td>—</td><td>—</td></tr>
+        </tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== COMPONENTS ===================== -->
+  <section class="part" id="components">
+    <h2>Components</h2>
+    <p class="lead">One of each. Every screen below is made only of these.</p>
+    <div class="grid g2">
+      <div class="box"><h3>Buttons</h3>
+        <div class="chips" style="gap:8px"><button class="btn btn-p">Add product</button><button class="btn btn-s">Import</button><button class="btn btn-g">More</button><button class="btn btn-d">Delete 2 drafts</button><a class="lnk" href="#components">View in store</a></div>
+        <ul class="rule"><li>One primary per view. Secondary is white with a 300 edge. A link is neel text, underlined only on hover.</li><li>36 px tall on a desktop, 44 px on a phone.</li></ul>
+      </div>
+      <div class="box"><h3>Fields</h3>
+        <div class="row2"><label class="fld"><span>Price, ₹</span><input class="inp num" value="2,490"></label><label class="fld"><span>M.R.P., ₹</span><input class="inp num" value="2,990"></label></div>
+        <label class="fld" style="margin-top:12px"><span>SKU</span><input class="inp bad code" value="KS-LINKUR-S" aria-label="SKU"><span class="err">Also used by Linen kurta · S. Pick another.</span></label>
+        <ul class="rule"><li>Label above, always visible. Checked when you leave the field; the mistake under it; what you typed is kept.</li></ul>
+      </div>
+      <div class="box"><h3>Choices</h3>
+        <div style="display:grid;gap:14px">
+          <div class="seg" role="group" aria-label="Status"><button aria-pressed="false">Draft</button><button aria-pressed="true">Active</button><button aria-pressed="false">Unlisted</button></div>
+          <div style="display:flex;gap:10px;align-items:center"><span class="sw-t on" role="switch" aria-checked="true" aria-label="Pay on delivery"></span>Pay on delivery</div>
+          <div style="display:flex;gap:10px;align-items:center"><span class="cbt"><span class="cb on" role="checkbox" aria-checked="true" aria-label="Selected"></span></span>Empty only</div>
+        </div>
+        <ul class="rule"><li>2–4 exclusive choices: segmented. On/off: a switch. Many from a list: checkboxes with 24 px targets.</li></ul>
+      </div>
+      <div class="box"><h3>Tabs, menus, feedback</h3>
+        <nav class="tabs" aria-label="Example"><a href="#components" aria-current="page">To confirm <span class="cnt">43</span></a><a href="#components">To pack <span class="cnt">96</span></a><a href="#components">All <span class="cnt">300</span></a></nav>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;align-items:flex-start">
+          <div class="menu"><a href="#components">Duplicate</a><a href="#components">View in store</a><hr><a class="danger" href="#components">Delete draft</a></div>
+          <div style="display:grid;gap:10px"><span class="toast" role="status">Archived 2 products <a class="lnk" href="#components">Undo</a></span>
+            <div class="savebar" style="min-width:300px"><b style="font-weight:500">3 unsaved changes</b><span style="flex:1"></span><button class="btn btn-s btn-sm">Discard</button><button class="btn btn-p btn-sm">Save <span class="kbd">⌘S</span></button></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MORE COMPONENTS ===================== -->
+  <section class="part" id="patterns">
+    <h2>More components</h2>
+    <p class="lead">Everything the console uses today, each drawn once. A screen picks from here; nothing is hand-made.</p>
+    <div class="grid g2">
+      <div class="box"><h3>Search picker</h3>
+        <label class="fld"><span>Category</span><input class="inp" value="kurta" style="border-color:var(--focus);outline:2px solid var(--focus);outline-offset:1px"></label>
+        <div class="menu" style="width:100%;margin-top:6px" role="listbox" aria-label="Categories">
+          <a href="#patterns" role="option" aria-selected="true" style="background:var(--select)"><span><b style="font-weight:500">Kurta</b> sets</span><span class="cap">Apparel › Women</span></a>
+          <a href="#patterns" role="option"><span><b style="font-weight:500">Kurta</b>s</span><span class="cap">Apparel › Men</span></a>
+          <hr><a href="#patterns" role="option" class="lnk" style="justify-content:flex-start">+ Create “kurta”</a>
+        </div>
+        <ul class="rule"><li>One picker for category, HSN, product, PIN code: type, arrow keys, Enter. No match says so and offers create when allowed.</li></ul>
+      </div>
+      <div class="box"><h3>Select, date, time</h3>
+        <div class="row2"><label class="fld"><span>When it runs out</span><select class="inp"><option>Stop selling</option><option>Take pre-orders</option></select></label>
+          <label class="fld"><span>Starts</span><input class="inp" value="14 Nov, 10:00 am" ></label></div>
+        <div class="cal" aria-label="November 2026">
+          <div class="cal-h"><b>November 2026</b><span>‹ ›</span></div>
+          <div class="cal-g"><i>M</i><i>T</i><i>W</i><i>T</i><i>F</i><i>S</i><i>S</i>
+            <span class="o">26</span><span class="o">27</span><span class="o">28</span><span class="o">29</span><span class="o">30</span><span class="o">31</span><span>1</span>
+            <span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span>
+            <span>9</span><span>10</span><span>11</span><span>12</span><span class="t">13</span><span class="s">14</span><span>15</span></div></div>
+        <ul class="rule"><li>India time always. Shown short ("14 Nov, 10:00 am"); typed or picked. A phone opens its own date wheel.</li></ul>
+      </div>
+      <div class="box"><h3>Inputs with a unit</h3>
+        <div class="row2"><label class="fld"><span>COD fee</span><span class="pre"><i>₹</i><input class="inp num" value="49"></span></label><label class="fld"><span>Discount</span><span class="affix"><input class="inp num" value="10"><i>%</i></span></label></div>
+        <div class="row2" style="margin-top:12px"><label class="fld"><span>Phone</span><span class="pre"><i>+91</i><input class="inp num" value="98450 12345" style="padding-left:40px"></span></label>
+          <label class="fld"><span>PIN code</span><input class="inp num" value="302001"><span class="cap">Jaipur, Rajasthan</span></label></div>
+        <div style="display:flex;gap:12px;align-items:end;margin-top:12px;flex-wrap:wrap"><label class="fld"><span>Quantity</span><span class="step"><button aria-label="One less">−</button><input class="inp num" value="2"><button aria-label="One more">+</button></span></label>
+          <label class="fld" style="flex:1"><span>Code sent to your phone</span><span class="otp"><i>4</i><i>8</i><i>1</i><i>9</i><i></i><i></i></span></label></div>
+        <ul class="rule"><li>The unit sits in the field (₹, %, kg, +91). PIN code names its city as you finish typing. A code takes a paste.</li></ul>
+      </div>
+      <div class="box"><h3>Upload</h3>
+        <div class="drops">
+          <div class="drop"><span>Drop photos or <span class="lnk">choose</span></span><span class="cap">JPEG, PNG, WebP · up to 20 MB</span></div>
+          <div class="drop over">Drop to add 3 photos</div>
+          <div class="drop"><b style="font-weight:500">kurta-front.jpg</b><span class="bar"><i style="width:62%"></i></span><span class="cap num">62% · 4.1 of 6.6 MB</span></div>
+          <div class="drop bad"><b style="font-weight:500">scan.heic</b><span class="err">This file type can't be used. Use JPEG or PNG.</span></div>
+        </div>
+        <ul class="rule"><li>Four states: ready, over, uploading with %, failed with the fix. Done shows the file in place.</li></ul>
+      </div>
+      <div class="box"><h3>Dialogs and sheets</h3>
+        <div class="dlg"><h4>Delete 2 drafts?</h4><p>Banarasi silk saree and Gulnar jhumka earrings. This can't be undone.</p><div class="dlg-a"><button class="btn btn-s">Keep them</button><button class="btn btn-d">Delete 2 drafts</button></div></div>
+        <div class="dlg" style="margin-top:12px"><h4>Delete 12 products?</h4><label class="fld"><span>Type 12 to delete them</span><input class="inp num" value="12"></label><div class="dlg-a"><button class="btn btn-s">Keep them</button><button class="btn btn-d">Delete 12 products</button></div></div>
+        <ul class="rule"><li>Confirm: the thing in the title, the consequence in one line, the safe button first and focused.</li><li>Five or more to delete: type the count. A form in a dialog keeps its error inside the dialog. On a phone a dialog is a sheet from the bottom.</li></ul>
+      </div>
+      <div class="box"><h3>Copy, share, steps</h3>
+        <div class="copy"><span class="code">kesarstudio.in/l/insta-bio</span><button class="btn btn-s btn-sm">Copy</button></div>
+        <div class="copy" style="margin-top:8px"><span class="code">kesarstudio.in/l/insta-bio</span><button class="btn btn-s btn-sm" style="color:var(--ok-fg)">✓ Copied</button></div>
+        <ol class="steps"><li class="done">File</li><li class="done">Check</li><li class="now">Write</li><li>Done</li></ol>
+        <ul class="rule"><li>A copy button says Copied for 2 s; where the browser refuses, the text is selected for the person to copy.</li></ul>
+      </div>
+      <div class="box"><h3>Facts</h3>
+        <div class="kv"><span>Placed</span><b>Today, 10:06 pm</b><span>Payment</span><b><span class="tag">COD</span></b><span>Ship to</span><b>Sneha, 14 MG Road, Thiruvananthapuram 695001</b><span>AWB</span><b class="code">1490023381</b></div>
+        <div class="tile"><span class="k">Kept after returns</span><b class="num">₹1,84,320</b><span class="chip c-ok">↑ 12% on last month</span></div>
+        <ul class="rule"><li>Facts are a two-column list: label left in text 2, value right. A stat tile: label, figure, change with its direction in words.</li></ul>
+      </div>
+      <div class="box"><h3>Activity</h3>
+        <ol class="feed">
+          <li><b>Confirmed</b> by Riya<span class="cap">Today, 10:12 pm</span></li>
+          <li><b>Placed</b> by the shopper · COD<span class="cap">Today, 10:06 pm</span></li>
+          <li><b>Note</b> “Call before delivery” · Riya<span class="cap">Today, 10:15 pm</span></li>
+        </ol>
+        <ul class="rule"><li>Newest first; who, what, when. A support visit's actions say "Frrata support".</li></ul>
+      </div>
+      <div class="box"><h3>Banners</h3>
+        <div class="banner b-bad" role="alert"><b>Payment due</b>Pay ₹4,999 by 18 Nov to keep your store open.<a class="lnk" href="#patterns">Pay now</a></div>
+        <div class="banner b-warn" role="status"><b>Trial ends in 3 days</b><a class="lnk" href="#patterns">Choose a plan</a></div>
+        <div class="banner b-info" role="status"><b>You're offline</b>Changes save when you're back.</div>
+        <div class="banner b-support" role="status"><b>Frrata support is in your console</b>Riya from Frrata · 22 min left<a class="lnk" href="#patterns">End visit</a></div>
+        <ul class="rule"><li>A banner is a lasting condition of the account, at the top of every page until it's fixed. One at a time; the most urgent wins.</li></ul>
+      </div>
+      <div class="box"><h3>Empty, locked, loading</h3>
+        <div class="empty"><span class="picto" aria-hidden="true"></span><b>No products yet</b><div style="display:flex;gap:8px"><button class="btn btn-s btn-sm">Import</button><button class="btn btn-p btn-sm">Add product</button></div></div>
+        <div class="empty sm"><b>No product matches “silk”</b><a class="lnk" href="#patterns">Clear search</a></div>
+        <div class="empty sm"><b>Only the owner can change payments</b><span class="cap">Ask Riya Mehta</span></div>
+        <div class="skel"><i style="width:40%"></i><i style="width:70%"></i><i style="width:55%"></i></div>
+        <ul class="rule"><li>First use: a drawing, one line, the action. A filter with nothing: one line and the way back. Locked: who can.</li><li>Loading: the thin top line; a first load shows still grey blocks (no shimmer).</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== STATES & FEEDBACK ===================== -->
+  <section class="part" id="states">
+    <h2>States, errors, feedback</h2>
+    <p class="lead">Every control has these states, and every problem has one place to be told.</p>
+    <div class="grid g2">
+      <div class="box"><h3>Control states</h3>
+        <div class="statesrow">
+          <div><span class="cap">Default</span><button class="btn btn-p btn-sm">Save</button><input class="inp" value="2,490"></div>
+          <div><span class="cap">Hover</span><button class="btn btn-p btn-sm" style="background:var(--action-hover)">Save</button><input class="inp" value="2,490" style="border-color:var(--g700)"></div>
+          <div><span class="cap">Focus</span><button class="btn btn-p btn-sm" style="outline:2px solid var(--focus);outline-offset:2px">Save</button><input class="inp" value="2,490" style="outline:2px solid var(--focus);outline-offset:1px;border-color:var(--focus)"></div>
+          <div><span class="cap">Busy</span><button class="btn btn-p btn-sm" aria-busy="true"><span class="spin" aria-hidden="true"></span>Saving</button><input class="inp" value="2,490"></div>
+          <div><span class="cap">Off</span><button class="btn btn-p btn-sm" style="opacity:.45" aria-disabled="true">Save</button><input class="inp" value="2,490" style="background:var(--sunk);color:var(--text-2)" readonly></div>
+          <div><span class="cap">Mistake</span><button class="btn btn-p btn-sm">Save</button><input class="inp bad num" value="0"></div>
+        </div>
+        <ul class="rule"><li>Busy keeps the label, adds a spinner and refuses clicks (aria-busy). Off is 45% with the reason beside it, reachable by keyboard. Read-only is a sunk field you can still select.</li></ul>
+      </div>
+      <div class="box"><h3>Where each problem is told</h3>
+        <table class="tbl"><tbody>
+          <tr><td><b style="font-weight:500">A field is wrong</b></td><td class="sub">Under the field, when you leave it. What you typed stays.</td></tr>
+          <tr><td><b style="font-weight:500">Two or more after Save</b></td><td class="sub">Each at its field, plus one toast "2 things to fix" with Show.</td></tr>
+          <tr><td><b style="font-weight:500">The action was refused</b></td><td class="sub">An error toast that stays: what happened, "Nothing was changed", one action.</td></tr>
+          <tr><td><b style="font-weight:500">Someone else saved first</b></td><td class="sub">Error toast with Reload. Nothing typed is lost until you choose it.</td></tr>
+          <tr><td><b style="font-weight:500">No connection / too many tries</b></td><td class="sub">Error toast: "We couldn't reach Frrata. Try again." / "Try again in 2 minutes."</td></tr>
+          <tr><td><b style="font-weight:500">Inside a dialog</b></td><td class="sub">The dialog's own line above its buttons. Never a toast over a dialog.</td></tr>
+          <tr><td><b style="font-weight:500">The account needs something</b></td><td class="sub">A banner at the top until it's fixed.</td></tr>
+          <tr><td><b style="font-weight:500">The page can't load / not allowed</b></td><td class="sub">A page panel with one way on.</td></tr>
+        </tbody></table>
+        <ul class="rule"><li>Never "Something went wrong". Never a red sentence floating in a form.</li></ul>
+      </div>
+      <div class="box"><h3>After an action</h3>
+        <div style="display:grid;gap:10px;justify-items:start">
+          <span class="toast" role="status">Archived 2 products <a class="lnk" href="#states">Undo</a></span>
+          <span class="toast" role="status" style="background:var(--bad-bg);color:var(--bad-fg);box-shadow:var(--e2)">We couldn't save. Nothing was changed. <a class="lnk" href="#states" style="color:var(--bad-fg);text-decoration:underline">Try again</a></span>
+        </div>
+        <ul class="rule"><li>Done: a toast in the past tense naming the thing. Undo for 8 s where it can be undone (archive, status, hold, duplicate, remove a photo). A dialog first where it can't (delete, disconnect, refund).</li>
+          <li>Instant switches (a notice read, an app on/off) change at once and go back with an error toast if refused.</li></ul>
+      </div>
+      <div class="box"><h3>Long jobs</h3>
+        <div class="job"><div style="display:flex;justify-content:space-between"><b style="font-weight:500">Importing 1,240 products</b><span class="num cap">640 of 1,240</span></div><span class="bar"><i style="width:52%"></i></span>
+          <div style="display:flex;gap:8px;justify-content:space-between;align-items:center"><span class="cap">3 rows to fix · keep this page open</span><button class="btn btn-s btn-sm">Pause</button></div></div>
+        <ul class="rule"><li>A count, a bar, Pause, the rows to fix, and Done with what's next. Leaving the page asks first.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MOTION & CHARTS ===================== -->
+  <section class="part" id="motion">
+    <h2>Motion and charts</h2>
+    <p class="lead">Motion says what changed, then gets out of the way. Charts show the shape; the number is always written too.</p>
+    <div class="grid g2">
+      <div class="box" style="grid-column:1/-1"><h3>What moves</h3>
+        <div class="tblwrap"><table class="tbl"><thead><tr><th>Element</th><th>When</th><th>How</th><th>Time</th><th>Reduced motion</th></tr></thead><tbody>
+          <tr><td>Page</td><td>Open</td><td>Content fades in</td><td class="num">200 ms</td><td>Instant</td></tr>
+          <tr><td>List</td><td>Filter or page</td><td>Rows dim to 55% while loading; never slide</td><td class="num">120 ms</td><td>Dim, no fade</td></tr>
+          <tr><td>Row</td><td>Select</td><td>Background to neel 50</td><td class="num">120 ms</td><td>Instant</td></tr>
+          <tr><td>Bulk bar, save bar</td><td>First pick, first edit</td><td>Rises 8 px and fades in</td><td class="num">200 ms in · 120 out</td><td>Fade 120</td></tr>
+          <tr><td>Toast</td><td>Show, hide</td><td>Rises 12 px; Undo line runs 8 s</td><td class="num">200 ms</td><td>Fade; "Undo for 8 s" in words</td></tr>
+          <tr><td>Dialog · menu</td><td>Open</td><td>Fade, scale from 97%</td><td class="num">200 in · 120 out</td><td>Fade 120</td></tr>
+          <tr><td>Sheet (phone)</td><td>Open</td><td>Slides up with a light spring</td><td class="num">320 ms</td><td>Fade 120</td></tr>
+          <tr><td>Tabs</td><td>Change</td><td>The underline slides; content swaps at once</td><td class="num">200 ms</td><td>Instant</td></tr>
+          <tr><td>Fold</td><td>Open, close</td><td>Content fades and drops 4 px; height jumps</td><td class="num">200 · 120</td><td>Instant</td></tr>
+          <tr><td>Chip</td><td>Add, remove, move</td><td>Pops in from 90%; fades out; slides to its place</td><td class="num">120 · 120 · 200</td><td>Instant; move announced</td></tr>
+          <tr><td>Switch</td><td>Toggle</td><td>Knob slides</td><td class="num">120 ms</td><td>Instant</td></tr>
+          <tr><td>A changed number</td><td>After save</td><td>Flashes once; never counts up</td><td class="num">800 ms</td><td>None</td></tr>
+          <tr><td>Store opens</td><td>Once</td><td>A tick draws in a circle (the one celebration)</td><td class="num">320 + 200</td><td>Shown at once</td></tr>
+        </tbody></table></div>
+        <ul class="rule"><li>Only the motion tokens (fast 120, base 200, slow 320; standard, entrance, exit). Nothing over 400 ms but the Undo line. No press-shrink, no shimmer, no bounce on data.</li></ul>
+      </div>
+      <div class="box"><h3>Bars and lines</h3>
+        <svg viewBox="0 0 320 150" class="chart" role="img" aria-label="Orders this week, highest Wednesday 30">
+          <line x1="8" y1="128" x2="312" y2="128" class="ax"/>
+          <g class="b"><rect x="14" y="58" width="30" height="70" rx="3"/><rect x="58" y="58" width="30" height="70" rx="3"/><rect x="102" y="58" width="30" height="70" rx="3"/><rect x="146" y="58" width="30" height="70" rx="3"/><rect x="190" y="54" width="30" height="74" rx="3"/><rect x="234" y="58" width="30" height="70" rx="3"/></g>
+          <rect x="278" y="120" width="30" height="8" rx="3" class="now"/>
+          <g class="v"><text x="29" y="50">29</text><text x="73" y="50">29</text><text x="117" y="50">29</text><text x="161" y="50">29</text><text x="205" y="46">30</text><text x="249" y="50">29</text><text x="293" y="112">2</text></g>
+          <g class="l"><text x="29" y="144">Sat</text><text x="73" y="144">Sun</text><text x="117" y="144">Mon</text><text x="161" y="144">Tue</text><text x="205" y="144">Wed</text><text x="249" y="144">Thu</text><text x="293" y="144">Today</text></g>
+        </svg>
+        <svg viewBox="0 0 320 110" class="chart" role="img" aria-label="Kept after returns, rising over 30 days">
+          <path d="M8 90 L60 80 L112 84 L164 60 L216 52 L268 40 L312 30 L312 100 L8 100Z" class="area"/>
+          <path d="M8 90 L60 80 L112 84 L164 60 L216 52 L268 40 L312 30" class="line"/>
+          <path d="M8 70 L60 72 L112 70 L164 66 L216 68 L268 62 L312 60" class="prev"/>
+          <circle cx="312" cy="30" r="3.5" class="dot"/>
+        </svg>
+        <ul class="rule"><li>Bars neel 400 with their value on top; the day still running lighter, labelled "so far". Lines 2 px neel with a pale fill; last period dashed grey. No chart without its number in words.</li></ul>
+      </div>
+      <div class="box"><h3>Small charts</h3>
+        <div class="spark"><span class="t-sub num">₹1,84,320</span><svg viewBox="0 0 120 28" aria-hidden="true"><path d="M2 22 L20 18 L38 20 L56 12 L74 14 L92 8 L118 5" class="line"/><circle cx="118" cy="5" r="2.5" class="dot"/></svg></div>
+        <div class="share-bars"><div><span>Instagram bio</span><span class="sb"><i style="width:62%"></i></span><b class="num">62%</b></div><div><span>WhatsApp</span><span class="sb"><i style="width:24%"></i></span><b class="num">24%</b></div><div><span>No source</span><span class="sb"><i style="width:14%;background:var(--g400)"></i></span><b class="num">14%</b></div></div>
+        <div class="funnel"><div style="width:100%">Visited <b class="num">4,210</b></div><div style="width:46%">Added to bag <b class="num">1,930</b></div><div style="width:12%">Ordered <b class="num">512</b></div></div>
+        <ul class="rule"><li>A sparkline sits beside its number, never alone. Share bars and the funnel label every bar. States use their own dot colour; at most three series.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ACCESS & PHONE ===================== -->
+  <section class="part" id="access">
+    <h2>Easy for everyone, on every screen</h2>
+    <div class="grid g2">
+      <div class="box"><h3>Accessibility rules</h3>
+        <ul class="rule" style="margin:0">
+          <li>Text 4.5:1 or more; large type, lines and field edges 3:1. Text 3 (grey 500) only for big numbers and off states.</li>
+          <li>Focus: a 2 px neel ring on everything you can press, never hidden.</li>
+          <li>Targets 24 px at least; 44 px on a phone.</li>
+          <li>Every field has a visible label; its mistake is tied to it (aria-describedby) and marks it (aria-invalid).</li>
+          <li>Status words, never colour alone. Changes are spoken (toast, "2 selected", moves).</li>
+          <li>Everything by keyboard: Esc closes, Enter confirms the focused action, Ctrl/⌘ S saves, arrows move chips.</li>
+          <li>Reduced motion honoured everywhere. Zoom to 200% without sideways scrolling.</li>
+          <li>Hindi and Tamil names fit: no fixed-width text, Noto fallbacks.</li>
+        </ul>
+      </div>
+      <div class="box"><h3>Widths</h3>
+        <table class="tbl"><tbody>
+          <tr><td><b style="font-weight:500">Under 768</b></td><td class="sub">Phone: bottom nav (4 + More), body 15/22, 44 px controls, menus and selects as sheets, tables as two-line rows, the action bar above the nav.</td></tr>
+          <tr><td><b style="font-weight:500">768–1023</b></td><td class="sub">Tablet: sidebar shrinks to icons; tables keep columns.</td></tr>
+          <tr><td><b style="font-weight:500">1024–1279</b></td><td class="sub">Editor's side panel moves under the header as a strip.</td></tr>
+          <tr><td><b style="font-weight:500">1280 and up</b></td><td class="sub">Everything as drawn above.</td></tr>
+        </tbody></table>
+        <ul class="rule"><li>On a phone: selection is a "Select" mode, not checkboxes on every row; filters open in a sheet; the header keeps one action plus More; tabs scroll sideways.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ANALYTICS KIT ===================== -->
+  <section class="part" id="data">
+    <h2>Analytics kit</h2>
+    <p class="lead">Every number answers "is this good?" — a comparison, a direction in words, and the figure behind each chart.</p>
+    <div class="grid g2">
+      <div class="box" style="grid-column:1/-1"><h3>Period and comparison</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div class="seg" role="group" aria-label="Period"><button aria-pressed="false">Today</button><button aria-pressed="false">7 days</button><button aria-pressed="true">30 days</button><button aria-pressed="false">This month</button><button aria-pressed="false">Custom</button></div>
+          <span class="tag" style="height:30px">vs previous 30 days ▾</span><span class="cap">14 Oct – 12 Nov · India time</span>
+        </div>
+        <ul class="rule"><li>One period picker per page, top right of the header; every tile and chart below follows it. The comparison is on by default and named on each figure.</li></ul>
+      </div>
+      <div class="box" style="grid-column:1/-1"><h3>Figures</h3>
+        <div class="kpis4">
+          <div class="kc"><span class="k">Sales <span class="tip" aria-label="What counts">i</span></span><b class="num">₹18,42,300</b><span class="d up">↑ 12% vs previous 30 days</span><svg viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true"><path d="M2 18 L18 16 L34 17 L50 11 L66 12 L82 7 L98 5" class="sl"/></svg></div>
+          <div class="kc"><span class="k">Orders</span><b class="num">512</b><span class="d up">↑ 8%</span><svg viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true"><path d="M2 16 L18 15 L34 16 L50 12 L66 13 L82 9 L98 8" class="sl"/></svg></div>
+          <div class="kc"><span class="k">Came back (RTO)</span><b class="num">14.2%</b><span class="d bad">↑ 2.1 points — worse</span><svg viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true"><path d="M2 14 L18 15 L34 13 L50 12 L66 10 L82 9 L98 7" class="sl"/></svg></div>
+          <div class="kc"><span class="k">Kept after returns</span><b class="num" style="color:var(--text-2)">—</b><span class="cap">Needs 20 delivered orders · 14 so far</span></div>
+        </div>
+        <ul class="rule"><li>The change is coloured by meaning, not direction: RTO going up is red. Every change says what it's compared with once per row. Too little data says how much is needed.</li></ul>
+      </div>
+      <div class="box" style="grid-column:1/-1"><h3>Trend with a tooltip and a note</h3>
+        <div class="legend"><span><i style="background:var(--action)"></i>This period</span><span><i class="dash"></i>Previous</span><span><i style="background:var(--warn-dot)"></i>Came back</span></div>
+        <div style="position:relative">
+          <svg viewBox="0 0 720 200" class="chart" style="max-width:760px" role="img" aria-label="Daily sales, 30 days, rising from ₹48,000 to ₹82,000; Diwali sale on 1 November">
+            <g class="grid"><line x1="40" y1="30" x2="712" y2="30"/><line x1="40" y1="90" x2="712" y2="90"/><line x1="40" y1="150" x2="712" y2="150"/></g>
+            <g class="yl"><text x="32" y="34">₹90k</text><text x="32" y="94">₹60k</text><text x="32" y="154">₹30k</text></g>
+            <path d="M40 120 L120 118 L200 112 L280 116 L360 96 L440 62 L520 58 L600 70 L712 50 L712 180 L40 180Z" class="area"/>
+            <path d="M40 120 L120 118 L200 112 L280 116 L360 96 L440 62 L520 58 L600 70 L712 50" class="line"/>
+            <path d="M40 128 L120 126 L200 124 L280 122 L360 120 L440 116 L520 118 L600 112 L712 110" class="prev"/>
+            <path d="M40 170 L120 168 L200 169 L280 166 L360 164 L440 160 L520 161 L600 162 L712 158" class="line" style="stroke:var(--warn-dot);stroke-width:1.5"/>
+            <line x1="440" y1="22" x2="440" y2="180" class="ann"/><text x="446" y="20" class="annt">Diwali sale</text>
+            <line x1="520" y1="22" x2="520" y2="180" class="cross"/><circle cx="520" cy="58" r="4" class="dot"/>
+            <g class="xl"><text x="40" y="196">14 Oct</text><text x="280" y="196">24 Oct</text><text x="520" y="196">3 Nov</text><text x="700" y="196">12 Nov</text></g>
+          </svg>
+          <div class="ttip" style="left:min(calc(520/720*760px + 10px), calc(100% - 150px));top:40px"><b>3 Nov</b><span><i style="background:var(--action)"></i>₹79,400</span><span><i class="dash"></i>₹54,100</span><span><i style="background:var(--warn-dot)"></i>4 came back</span></div>
+        </div>
+        <ul class="rule"><li>Hover or arrow keys move a line through the days; the tooltip lists each series with its key. Notes (a sale, a price change) sit on the date as a thin line with a word.</li></ul>
+      </div>
+      <div class="box"><h3>Split bars</h3>
+        <div class="legend"><span><i style="background:var(--action)"></i>Prepaid</span><span><i style="background:var(--n200)"></i>COD</span></div>
+        <div class="stack">
+          <div><span>Week 1</span><span class="sb2"><i style="width:34%;background:var(--action)"></i><i style="width:66%;background:var(--n200)"></i></span><b class="num">118</b></div>
+          <div><span>Week 2</span><span class="sb2"><i style="width:38%;background:var(--action)"></i><i style="width:62%;background:var(--n200)"></i></span><b class="num">126</b></div>
+          <div><span>Week 3</span><span class="sb2"><i style="width:44%;background:var(--action)"></i><i style="width:56%;background:var(--n200)"></i></span><b class="num">131</b></div>
+          <div><span>Week 4</span><span class="sb2"><i style="width:47%;background:var(--action)"></i><i style="width:53%;background:var(--n200)"></i></span><b class="num">137</b></div>
+        </div>
+        <ul class="rule"><li>Two parts at most; the stronger shade is the one you want more of.</li></ul>
+      </div>
+      <div class="box"><h3>Where the money went</h3>
+        <svg viewBox="0 0 360 170" class="chart" role="img" aria-label="On ₹2,490: GST ₹119, fees ₹58, shipping ₹85, returns ₹140, cost ₹900, kept ₹1,188">
+          <g class="wf"><rect x="10" y="20" width="40" height="120" class="pos"/><rect x="60" y="20" width="40" height="6"/><rect x="110" y="26" width="40" height="3"/><rect x="160" y="29" width="40" height="4"/><rect x="210" y="33" width="40" height="7"/><rect x="260" y="40" width="40" height="43"/><rect x="310" y="83" width="40" height="57" class="pos"/></g>
+          <g class="xl"><text x="30" y="156">Price</text><text x="80" y="156">GST</text><text x="130" y="156">Fees</text><text x="180" y="156">Ship</text><text x="230" y="156">Returns</text><text x="280" y="156">Cost</text><text x="330" y="156">Kept</text></g>
+          <g class="v"><text x="30" y="14">₹2,490</text><text x="330" y="77">₹1,188</text></g>
+        </svg>
+        <ul class="rule"><li>True profit's waterfall: what starts, each cut in grey, what's kept in neel. Costs never reach a shopper's screen.</li></ul>
+      </div>
+      <div class="box"><h3>Ranked, with bars</h3>
+        <table class="tbl"><thead><tr><th aria-sort="descending">Product ↓</th><th class="r">Sold</th><th>Share</th><th class="r">Change</th></tr></thead><tbody>
+          <tr><td>Sabz chanderi kurta set</td><td class="r num">142</td><td><span class="sb"><i style="width:100%"></i></span></td><td class="r"><span class="d up">↑ 18%</span></td></tr>
+          <tr><td>Gulabi chikankari kurta</td><td class="r num">96</td><td><span class="sb"><i style="width:68%"></i></span></td><td class="r"><span class="d up">↑ 4%</span></td></tr>
+          <tr><td>Banarasi silk saree</td><td class="r num">41</td><td><span class="sb"><i style="width:29%"></i></span></td><td class="r"><span class="d bad">↓ 12%</span></td></tr>
+        </tbody></table>
+        <ul class="rule"><li>Sortable headers show their arrow and say so to a screen reader. A bar shows share; the number stays.</li></ul>
+      </div>
+      <div class="box"><h3>When orders come</h3>
+        <div class="heat" role="img" aria-label="Most orders 8 to 11 pm, busiest Sunday">
+          <span></span><span class="hl">6a</span><span class="hl">9a</span><span class="hl">12p</span><span class="hl">3p</span><span class="hl">6p</span><span class="hl">9p</span><span class="hl">12a</span>
+          <span class="dl">Mon</span><i style="--h:.10"></i><i style="--h:.25"></i><i style="--h:.35"></i><i style="--h:.30"></i><i style="--h:.45"></i><i style="--h:.85"></i><i style="--h:.30"></i>
+          <span class="dl">Wed</span><i style="--h:.08"></i><i style="--h:.22"></i><i style="--h:.30"></i><i style="--h:.28"></i><i style="--h:.50"></i><i style="--h:.80"></i><i style="--h:.25"></i>
+          <span class="dl">Fri</span><i style="--h:.12"></i><i style="--h:.26"></i><i style="--h:.38"></i><i style="--h:.32"></i><i style="--h:.55"></i><i style="--h:.90"></i><i style="--h:.40"></i>
+          <span class="dl">Sun</span><i style="--h:.15"></i><i style="--h:.40"></i><i style="--h:.55"></i><i style="--h:.50"></i><i style="--h:.65"></i><i style="--h:1"></i><i style="--h:.45"></i>
+        </div>
+        <ul class="rule"><li>One colour, light to dark; the busiest cell named in words under it ("Sundays 9–11 pm").</li></ul>
+      </div>
+      <div class="box"><h3>By state</h3>
+        <div class="tiles" role="img" aria-label="RTO by state: highest Bihar 31%, lowest Kerala 6%">
+          <i style="grid-area:2/3;--h:.6">PB</i><i style="grid-area:2/4;--h:.4">HR</i><i style="grid-area:2/5;--h:.5">DL</i><i style="grid-area:3/2;--h:.55">RJ</i><i style="grid-area:3/3;--h:.7">UP</i><i style="grid-area:3/5;--h:1">BR</i><i style="grid-area:3/6;--h:.6">WB</i>
+          <i style="grid-area:4/1;--h:.35">GJ</i><i style="grid-area:4/3;--h:.5">MP</i><i style="grid-area:4/4;--h:.55">JH</i><i style="grid-area:5/2;--h:.3">MH</i><i style="grid-area:5/4;--h:.45">OD</i><i style="grid-area:6/2;--h:.25">KA</i><i style="grid-area:6/3;--h:.3">TG</i><i style="grid-area:7/2;--h:.12">KL</i><i style="grid-area:7/3;--h:.2">TN</i>
+        </div>
+        <div class="scale"><span>6%</span><i></i><span>31%</span><a class="lnk" href="#data" style="margin-left:auto">See as a table</a></div>
+        <ul class="rule"><li>A tile per state, not a drawn map: every state the same size, readable on a phone. Always a table beside it.</li></ul>
+      </div>
+      <div class="box"><h3>Shoppers who come back</h3>
+        <table class="tbl coh"><thead><tr><th>First order</th><th class="r">Shoppers</th><th>1 mo</th><th>2 mo</th><th>3 mo</th></tr></thead><tbody>
+          <tr><td>Aug</td><td class="r num">310</td><td style="--h:.32">32%</td><td style="--h:.21">21%</td><td style="--h:.15">15%</td></tr>
+          <tr><td>Sep</td><td class="r num">402</td><td style="--h:.28">28%</td><td style="--h:.18">18%</td><td></td></tr>
+          <tr><td>Oct</td><td class="r num">455</td><td style="--h:.35">35%</td><td></td><td></td></tr>
+        </tbody></table>
+      </div>
+      <div class="box"><h3>Usage and spread</h3>
+        <div style="display:grid;gap:6px"><div style="display:flex;justify-content:space-between"><span class="t-label">Orders in your plan this month</span><span class="num">132 of 150</span></div><span class="bar meter"><i style="width:88%"></i><b style="left:100%"></b></span><span class="cap">18 left · then each order costs ₹12</span></div>
+        <div class="hist" role="img" aria-label="Order values: most between ₹1,500 and ₹2,500"><i style="--h:.2"></i><i style="--h:.45"></i><i style="--h:.8"></i><i style="--h:1"></i><i style="--h:.7"></i><i style="--h:.35"></i><i style="--h:.15"></i><i style="--h:.08"></i></div>
+        <div class="xs"><span>₹500</span><span>₹1,500</span><span>₹2,500</span><span>₹4,000+</span></div>
+        <ul class="rule"><li>A meter turns amber at 80% and says what happens at 100%. A histogram labels its edges, not every bar.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FINDING THINGS ===================== -->
+  <section class="part" id="find">
+    <h2>Finding things</h2>
+    <p class="lead">Search answers as you type. Filters are chips you can read back as a sentence. Any view can be kept as a tab.</p>
+    <div class="grid g2">
+      <div class="box" style="grid-column:1/-1"><h3>Filter bar and saved views</h3>
+        <nav class="tabs" aria-label="Views"><a href="#find">To confirm <span class="cnt">43</span></a><a href="#find" aria-current="page">High-risk COD <span class="cnt">9</span></a><a href="#find">Bihar this week <span class="cnt">14</span></a><a href="#find" class="lnk" style="border:0">+ Save view</a></nav>
+        <div class="fbar">
+          <span class="srch"><input class="inp" value="ks-50" aria-label="Search orders"></span>
+          <span class="fchip">Payment is <b>COD</b><button aria-label="Remove filter">×</button></span>
+          <span class="fchip">Risk is <b>High</b><button aria-label="Remove filter">×</button></span>
+          <span class="fchip">Total <b>₹500–₹2,000</b><button aria-label="Remove filter">×</button></span>
+          <button class="btn btn-g btn-sm">+ Filter</button><a class="lnk" href="#find" style="font-size:13px">Clear all</a>
+          <span class="cap" style="margin-left:auto"><b class="num" style="color:var(--text)">9</b> of 300 orders</span>
+        </div>
+        <div class="fpop">
+          <div class="fpop-l"><a href="#find">Status</a><a href="#find">Payment</a><a href="#find">Risk</a><a href="#find" aria-current="true">State</a><a href="#find">Placed</a><a href="#find">Total</a><a href="#find">Source</a><a href="#find">Tag</a></div>
+          <div class="fpop-r"><input class="inp" placeholder="Search states" aria-label="Search states">
+            <label><span class="cb on" role="checkbox" aria-checked="true" aria-label="Bihar"></span>Bihar<span class="cap num">14</span></label>
+            <label><span class="cb on" role="checkbox" aria-checked="true" aria-label="Uttar Pradesh"></span>Uttar Pradesh<span class="cap num">11</span></label>
+            <label><span class="cb" role="checkbox" aria-checked="false" aria-label="Rajasthan"></span>Rajasthan<span class="cap num">8</span></label>
+            <label><span class="cb" role="checkbox" aria-checked="false" aria-label="Kerala"></span>Kerala<span class="cap num">2</span></label>
+            <div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-g btn-sm">Cancel</button><button class="btn btn-p btn-sm">Show 25 orders</button></div></div>
+        </div>
+        <ul class="rule"><li>Each chip reads "Field is value"; × removes it. "+ Filter" opens a field list, then the values with their counts. Ranges for money and dates. All of it lives in the address, so Back works and a link can be shared.</li><li>"+ Save view" keeps the filters as a tab for the whole team; a view tab can be renamed or removed from its menu.</li></ul>
+      </div>
+      <div class="box"><h3>Instant search in a list</h3>
+        <div class="srch"><input class="inp" value="9845" aria-label="Search"></div>
+        <table class="tbl" style="margin-top:8px"><tbody>
+          <tr><td class="ord num">KS-5006</td><td>Sneha<div class="sub">+91 <mark>9845</mark>0 12345</div></td><td class="r num money"><span class="r">₹</span>1,508</td></tr>
+          <tr><td class="ord num">KS-4911</td><td>Rahul<div class="sub">+91 <mark>9845</mark>6 77001</div></td><td class="r num money"><span class="r">₹</span>2,190</td></tr>
+        </tbody></table>
+        <ul class="rule"><li>Results follow each key after 150 ms; the match is marked. Finds an order by number, name, phone (any 4 digits), AWB; a product by name, SKU, tag.</li><li>Nothing found: "No order matches 9845" and what it searched.</li></ul>
+      </div>
+      <div class="box"><h3>Search everything · ⌘K</h3>
+        <div class="pal">
+          <div class="pal-in"><span aria-hidden="true">⌕</span><input class="inp" value="gulabi" aria-label="Search everything" style="border:0;outline:0;box-shadow:none"></div>
+          <div class="pal-g">Products</div>
+          <a href="#find" class="pal-i on"><i class="thumb th2" style="width:24px;height:30px"></i><span><mark>Gulabi</mark> chikankari kurta<span class="cap"> · Draft · ₹2,490</span></span><span class="kbd2">↵</span></a>
+          <div class="pal-g">Orders</div>
+          <a href="#find" class="pal-i"><b class="num">KS-5131</b><span>Ananya · <mark>Gulabi</mark> kurta · M<span class="cap"> · To pack</span></span></a>
+          <div class="pal-g">Actions</div>
+          <a href="#find" class="pal-i"><span>+</span><span>Add product</span></a><a href="#find" class="pal-i"><span>+</span><span>Create offer</span></a>
+          <div class="pal-g">Settings</div>
+          <a href="#find" class="pal-i"><span>›</span><span>Pay on delivery</span></a>
+          <div class="pal-f"><span>↑↓ move</span><span>↵ open</span><span>esc close</span></div>
+        </div>
+        <ul class="rule"><li>One box for the whole console: orders, products, shoppers, pages and actions, grouped, newest first. Empty: recent items. Frrata Admin's finds stores by name, GSTIN or phone.</li></ul>
+      </div>
+      <div class="box"><h3>Filters on a phone</h3>
+        <div class="sheet"><div class="grab"></div><div style="display:flex;justify-content:space-between"><b>Filters</b><a class="lnk" href="#find">Clear all</a></div>
+          <div class="fs"><span class="t-label">Payment</span><div class="chips"><span class="pill on">COD</span><span class="pill">Prepaid</span></div></div>
+          <div class="fs"><span class="t-label">Risk</span><div class="chips"><span class="pill">Low</span><span class="pill">Medium</span><span class="pill on">High</span></div></div>
+          <div class="fs"><span class="t-label">Total, ₹</span><div class="row2"><input class="inp num" value="500" aria-label="Minimum"><input class="inp num" value="2,000" aria-label="Maximum"></div></div>
+          <button class="btn btn-p" style="width:100%;justify-content:center;height:44px">Show 9 orders</button></div>
+        <ul class="rule"><li>A sheet from the bottom; the button counts what you'll see before you look.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ACROSS MODULES ===================== -->
+  <section class="part" id="modules">
+    <h2>Across modules</h2>
+    <p class="lead">What each surface needs from the kit, and the pieces still to draw for it.</p>
+    <div class="grid g2">
+      <div class="box"><h3>An order's journey</h3>
+        <ol class="track"><li class="done">Placed<span class="cap">10 Nov, 9:12 pm</span></li><li class="done">Confirmed<span class="cap">10 Nov, 9:40 pm</span></li><li class="done">Packed<span class="cap">11 Nov</span></li><li class="now">On the way<span class="cap">Delhivery · <span class="code">1490023381</span></span></li><li>Delivered<span class="cap">Expected 14 Nov</span></li></ol>
+        <ul class="rule"><li>The same steps the shopper sees, with the courier's last scan. A failed attempt shows red at its step with the reason.</li></ul>
+      </div>
+      <div class="box"><h3>The shopper</h3>
+        <div class="who"><span class="av">S</span><div><b>Sneha</b><div class="cap">+91 98450 12345 · Thiruvananthapuram</div></div><span class="chip c-bad" style="margin-left:auto">High risk</span></div>
+        <div class="kv" style="margin-top:12px"><span>Orders</span><b class="num">4 · ₹8,920</b><span>Came back</span><b class="num">2 of 4 (COD)</b><span>Why risky</span><b>New PIN code, two COD orders came back</b></div>
+        <ul class="rule"><li>Risk always says why, in words. Staff see no cost or margin here.</li></ul>
+      </div>
+      <div class="box"><h3>Rules (collections, offers, zones)</h3>
+        <div class="rules"><div class="rl"><span class="tag">When</span><select class="inp" aria-label="Field"><option>Category</option></select><select class="inp" aria-label="Test"><option>is</option></select><input class="inp" value="Kurta sets" aria-label="Value"><button class="btn btn-g btn-sm" aria-label="Remove rule">×</button></div>
+          <div class="rl"><span class="tag">and</span><select class="inp" aria-label="Field"><option>Price</option></select><select class="inp" aria-label="Test"><option>under</option></select><span class="pre"><i>₹</i><input class="inp num" value="2,000" aria-label="Value"></span><button class="btn btn-g btn-sm" aria-label="Remove rule">×</button></div>
+          <a class="lnk" href="#modules">+ Add a rule</a><span class="cap"><b class="num" style="color:var(--text)">18</b> products match now</span></div>
+      </div>
+      <div class="box"><h3>Getting set up</h3>
+        <div class="setup"><span class="ring" style="--p:60" aria-label="3 of 5 done"><b class="num">3/5</b></span><div style="display:grid;gap:6px">
+          <span class="ck done">Add your first product</span><span class="ck done">Set delivery charges</span><span class="ck done">Add your GSTIN</span><span class="ck">Connect online payments <a class="lnk" href="#modules">Connect</a></span><span class="ck">Open your store</span></div></div>
+      </div>
+      <div class="box"><h3>Partner workspace · client stores</h3>
+        <div class="stores">
+          <div class="store"><i class="thumb th2" style="width:100%;height:56px"></i><b>Kesar Studio</b><span class="chip c-ok">Open</span><span class="cap">Handed over · 12 Oct</span></div>
+          <div class="store"><i class="thumb th4" style="width:100%;height:56px"></i><b>Neelam Weaves</b><span class="chip c-warn">Building · 3/5</span><span class="cap">Lead: Arjun</span></div>
+        </div>
+        <div class="tile" style="margin-top:12px"><span class="k">Your share this month</span><b class="num">₹38,780</b><span class="cap">From 11 stores · paid on the 7th</span></div>
+      </div>
+      <div class="box"><h3>Frrata Admin · stores at a glance</h3>
+        <div class="tblwrap"><table class="tbl"><thead><tr><th>Store</th><th>Plan</th><th>Orders, 30 days</th><th>Flags</th></tr></thead><tbody>
+          <tr><td>Kesar Studio<div class="sub">Jaipur</div></td><td><span class="tag">Growth</span></td><td><svg viewBox="0 0 80 18" width="80" height="18" aria-hidden="true"><path d="M2 14 L14 12 L26 13 L38 9 L50 10 L62 6 L78 4" class="sl"/></svg> <span class="num">512</span></td><td><span class="chip c-ok">Healthy</span></td></tr>
+          <tr><td>Neelam Weaves<div class="sub">Varanasi</div></td><td><span class="tag">Launch · trial</span></td><td><svg viewBox="0 0 80 18" width="80" height="18" aria-hidden="true"><path d="M2 8 L14 9 L26 11 L38 12 L50 14 L62 15 L78 16" class="sl" style="stroke:var(--bad-dot)"/></svg> <span class="num">23</span></td><td><span class="chip c-bad">Payment due</span></td></tr>
+        </tbody></table></div>
+        <div class="diff"><span class="cap">Activity · Riya (support visit) changed Pay on delivery</span><span class="del">limit ₹2,000</span><span class="add">limit ₹3,000</span></div>
+      </div>
+      <div class="box" style="grid-column:1/-1"><h3>Who needs what</h3>
+        <div class="tblwrap"><table class="tbl gl"><thead><tr><th>Surface</th><th>Screens</th><th>From the kit</th></tr></thead><tbody>
+          <tr><td><b style="font-weight:500">Console</b></td><td>Home, Orders, Products, Collections, Offers, Analytics, True profit, GST, Delivery zones, Messages, Look, Activity, Notices, Settings, Billing, Import, Setup</td><td>Period picker, figures, trend, split bars, ranked table, heat, state tiles, cohort, waterfall, meter; filter bar, saved views, instant search, ⌘K; journey, shopper, rules, setup, upload, steps</td></tr>
+          <tr><td><b style="font-weight:500">Partner workspace</b></td><td>Client stores, a store's build, team, handover, earnings, apply</td><td>Store cards, steps, setup ring, figures, statement table, instant search</td></tr>
+          <tr><td><b style="font-weight:500">Frrata Admin</b></td><td>Stores, a store, plans and billing run, trials, infrastructure, EkCode cost, notices, activity, themes, staff, partners</td><td>Stores table with sparklines and flags, filter bar and ⌘K across stores, trend and meter for infrastructure, activity with before/after, support visit banner</td></tr>
+        </tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SCREENS ===================== -->
+  <section class="part" id="home">
+    <h2>Screens</h2>
+    <p class="lead">The same five screens, drawn in Neel at 1280 wide. Built as drawn.</p>
+    <div class="frame-label"><h3>Home</h3><span class="cap">Today's work first; numbers you act on, not a report.</span></div>
+    <div class="frame-wrap"><div class="frame"><div class="app">
+      <aside class="side" aria-label="Console">
+        <div class="shop"><span class="mark">rr</span><span>Kesar Studio<small>kesarstudio.in</small></span></div>
+        <div class="grp">Today</div>
+        <a class="nav" aria-current="page" href="#home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/></svg>Home</a>
+        <a class="nav" href="#orders"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6zM9 7a3 3 0 016 0"/></svg>Orders<span class="cnt w">43</span></a>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4zM10 21h4"/></svg>Notices</a>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M4 18l5-6 4 3 7-8"/></svg>Analytics</a>
+        <div class="grp">Catalogue</div>
+        <a class="nav" href="#products"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg>Products</a>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>Collections</a>
+        <div class="grp">Store</div>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M4 12l8-8h8v8l-8 8z"/></svg>Offers</a>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M4 8h16v12H4zM4 8l2-4h12l2 4"/></svg>Look</a>
+        <a class="nav" href="#settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</a>
+      </aside>
+      <main class="main">
+        <div class="ph"><div><h1>Today</h1><div class="meta">Friday, 13 November</div></div><div class="acts"><span class="chip c-ok">Store open</span><button class="btn btn-s">Share store</button></div></div>
+        <div class="stack">
+          <div class="sec"><div class="kpis">
+            <div class="kpi"><div class="k">To confirm</div><div class="v num">43</div><span class="chip c-warn">Oldest 8 d</span></div>
+            <div class="kpi"><div class="k">To pack</div><div class="v num">96</div><span class="chip c-warn">Oldest 8 d</span></div>
+            <div class="kpi"><div class="k">On hold</div><div class="v num" style="color:var(--text-3)">0</div><span class="chip c-ok">Nothing waiting</span></div>
+          </div></div>
+          <div class="sec"><div class="sec-h"><h2>Next to confirm</h2><div class="x"><a class="lnk" href="#orders">All 43</a></div></div>
+            <table class="tbl" style="margin-top:12px"><tbody>
+              <tr><td style="width:110px"><span class="ord num">KS-5300</span></td><td>Venkatanarasimharajuvaripeta S.<div class="sub">Jaipur · 2 items</div></td><td><span class="tag">COD</span> <span class="chip c-bad">High risk</span></td><td class="r num money"><span class="r">₹</span>6,790</td><td class="sub" style="width:80px">8 d</td><td style="width:110px"><button class="btn btn-p btn-sm">Confirm</button></td></tr>
+              <tr><td><span class="ord num">KS-5298</span></td><td>Ananya Bandyopadhyay<div class="sub">Kolkata · 1 item</div></td><td><span class="tag">COD</span></td><td class="r num money"><span class="r">₹</span>2,490</td><td class="sub">7 d</td><td><button class="btn btn-s btn-sm">Confirm</button></td></tr>
+            </tbody></table></div>
+          <div class="sec"><div class="sec-h"><h2>Last 7 days</h2><div class="x"><span class="cap">177 orders · <span class="num">₹2,30,28,200</span></span></div></div>
+            <div class="sec-b"><div class="bars" role="img" aria-label="Orders a day: Saturday to Thursday 29 or 30 each, today 2 so far">
+              <div><span class="num">29</span><i style="height:90px"></i>Sat</div><div><span class="num">29</span><i style="height:90px"></i>Sun</div><div><span class="num">29</span><i style="height:90px"></i>Mon</div><div><span class="num">29</span><i style="height:90px"></i>Tue</div><div><span class="num">30</span><i style="height:94px"></i>Wed</div><div><span class="num">29</span><i style="height:90px"></i>Thu</div><div class="today"><span class="num">2</span><i style="height:8px"></i>Today so far</div>
+            </div></div></div>
+        </div>
+      </main>
+    </div></div></div>
+  </section>
+
+  <section class="part" id="orders" style="padding-top:8px">
+    <div class="frame-label"><h3>Orders</h3><span class="cap">A work queue: tabs with counts, one search, 48 px rows, states as chips.</span></div>
+    <div class="frame-wrap"><div class="frame"><div class="app">
+      <aside class="side" aria-label="Console">
+        <div class="shop"><span class="mark">rr</span><span>Kesar Studio<small>kesarstudio.in</small></span></div>
+        <div class="grp">Today</div>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/></svg>Home</a>
+        <a class="nav" aria-current="page" href="#orders"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6zM9 7a3 3 0 016 0"/></svg>Orders<span class="cnt w">43</span></a>
+        <div class="grp">Catalogue</div>
+        <a class="nav" href="#products"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg>Products</a>
+        <div class="grp">Store</div>
+        <a class="nav" href="#settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</a>
+      </aside>
+      <main class="main">
+        <div class="ph"><div><h1>Orders</h1></div><div class="acts"><button class="btn btn-s">Download</button><button class="btn btn-p">Create order</button></div></div>
+        <nav class="tabs" aria-label="Queues"><a href="#orders">Couldn't deliver <span class="cnt">15</span></a><a href="#orders" aria-current="page">To confirm <span class="cnt">43</span></a><a href="#orders">To pack <span class="cnt">96</span></a><a href="#orders">To ship <span class="cnt">0</span></a><a href="#orders">On the way <span class="cnt">43</span></a><a href="#orders">Coming back <span class="cnt">3</span></a><a href="#orders">All <span class="cnt">300</span></a></nav>
+        <div style="display:flex;gap:8px;margin:16px 0 12px"><input class="inp" style="max-width:360px" placeholder="Search number, name or phone" aria-label="Search orders"><button class="btn btn-s">Payment</button><button class="btn btn-s">Risk</button></div>
+        <div class="bulk"><b>2 selected</b><span style="flex:1"></span><button class="btn btn-p btn-sm">Confirm 2</button><button class="btn btn-s btn-sm">Put on hold</button><button class="btn btn-g btn-sm">Clear</button></div>
+        <div class="sec"><table class="tbl"><thead><tr><th style="width:44px"><span class="cbt"><span class="cb" role="checkbox" aria-checked="false" aria-label="Select"></span></span></th><th>Order</th><th>Customer</th><th>Payment</th><th>Status</th><th class="r">Total</th><th>Placed</th></tr></thead><tbody>
+          <tr class="sel"><td><span class="cbt"><span class="cb on" role="checkbox" aria-checked="true" aria-label="Selected"></span></span></td><td class="ord num">KS-5006</td><td>Sneha<div class="sub">Thiruvananthapuram · 3 items</div></td><td><span class="tag">COD</span></td><td><span class="chip c-warn">To confirm</span></td><td class="r num money"><span class="r">₹</span>1,508</td><td class="sub">Today, 10:06 pm</td></tr>
+          <tr class="sel"><td><span class="cbt"><span class="cb on" role="checkbox" aria-checked="true" aria-label="Selected"></span></span></td><td class="ord num">KS-5012</td><td>முத்துலட்சுமி<div class="sub">Madurai · 3 items</div></td><td><span class="tag">COD</span></td><td><span class="chip c-warn">To confirm</span> <span class="chip c-bad">High risk</span></td><td class="r num money"><span class="r">₹</span>1,983</td><td class="sub">Today, 6:00 pm</td></tr>
+          <tr><td><span class="cbt"><span class="cb" role="checkbox" aria-checked="false" aria-label="Select"></span></span></td><td class="ord num">KS-5018</td><td>অনন্যা বন্দ্যোপাধ্যায়<div class="sub">Kolkata · 3 items</div></td><td><span class="tag">Prepaid</span></td><td><span class="chip c-warn">To confirm</span></td><td class="r num money"><span class="r">₹</span>2,458</td><td class="sub">Today, 1:54 pm</td></tr>
+          <tr><td><span class="cbt"><span class="cb" role="checkbox" aria-checked="false" aria-label="Select"></span></span></td><td class="ord num">KS-5024</td><td>Mohammed Irfan Qureshi<div class="sub">Lucknow · 3 items</div></td><td><span class="tag">COD</span></td><td><span class="chip c-warn">To confirm</span></td><td class="r num money"><span class="r">₹</span>2,934</td><td class="sub">Today, 9:48 am</td></tr>
+          <tr><td><span class="cbt"><span class="cb" role="checkbox" aria-checked="false" aria-label="Select"></span></span></td><td class="ord num">KS-5030</td><td>Venkatanarasimharajuvaripeta S.<div class="sub">Tirupati · 3 items</div></td><td><span class="tag">COD</span></td><td><span class="chip c-warn">To confirm</span></td><td class="r num money"><span class="r">₹</span>3,409</td><td class="sub">Today, 5:42 am</td></tr>
+          <tr><td><span class="cbt"><span class="cb" role="checkbox" aria-checked="false" aria-label="Select"></span></span></td><td class="ord num">KS-5036</td><td>Sneha<div class="sub">Kochi · 3 items</div></td><td><span class="tag">Prepaid</span></td><td><span class="chip c-warn">To confirm</span></td><td class="r num money"><span class="r">₹</span>3,884</td><td class="sub">Yesterday, 1:36 am</td></tr>
+        </tbody></table></div>
+        <div style="display:flex;justify-content:space-between;margin-top:12px;color:var(--text-2)"><span>Showing 1–50 of 43</span><span style="display:flex;gap:8px"><button class="btn btn-s btn-sm">Previous</button><button class="btn btn-s btn-sm">Next</button></span></div>
+      </main>
+    </div></div></div>
+  </section>
+
+  <section class="part" id="products" style="padding-top:8px">
+    <div class="frame-label"><h3>Products</h3><span class="cap">Photo-forward rows; status in colour; the bulk bar in neel when rows are picked.</span></div>
+    <div class="frame-wrap"><div class="frame"><div class="app">
+      <aside class="side" aria-label="Console">
+        <div class="shop"><span class="mark">rr</span><span>Kesar Studio<small>kesarstudio.in</small></span></div>
+        <div class="grp">Today</div>
+        <a class="nav" href="#home"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/></svg>Home</a>
+        <a class="nav" href="#orders"><svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6zM9 7a3 3 0 016 0"/></svg>Orders<span class="cnt w">43</span></a>
+        <div class="grp">Catalogue</div>
+        <a class="nav" aria-current="page" href="#products"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg>Products</a>
+        <a class="nav" href="#products"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>Collections</a>
+        <div class="grp">Store</div>
+        <a class="nav" href="#settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</a>
+      </aside>
+      <main class="main">
+        <div class="ph"><div><h1>Products</h1></div><div class="acts"><button class="btn btn-g">More</button><button class="btn btn-s">Import</button><button class="btn btn-p">Add product</button></div></div>
+        <nav class="tabs" aria-label="Filter"><a href="#products" aria-current="page">All <span class="cnt">68</span></a><a href="#products">Active <span class="cnt">51</span></a><a href="#products">Draft <span class="cnt">12</span></a><a href="#products">Unlisted <span class="cnt">2</span></a><a href="#products">Archived <span class="cnt">3</span></a><a href="#products">Low stock <span class="cnt">6</span></a></nav>
+        <div style="display:flex;gap:8px;margin:16px 0 12px;align-items:center"><input class="inp" style="max-width:360px" placeholder="Search name, SKU or tag" aria-label="Search products"><span style="flex:1"></span><span class="cap">Sort</span><select class="inp" style="width:170px" aria-label="Sort"><option>Recently edited</option></select></div>
+        <div class="bulk"><b>2 selected</b><span style="flex:1"></span><button class="btn btn-s btn-sm">Set status</button><button class="btn btn-s btn-sm">Add to collection</button><button class="btn btn-s btn-sm">Archive</button><button class="btn btn-s btn-sm" style="color:var(--bad-fg)">Delete</button></div>
+        <div class="sec"><table class="tbl"><thead><tr><th style="width:44px"><span class="cbt"><span class="cb" role="checkbox" aria-checked="false" aria-label="Select"></span></span></th><th>Product</th><th>Status</th><th class="r">Price</th><th class="r">Stock</th><th>Sizes and colours</th></tr></thead><tbody>
+          <tr class="sel"><td><span class="cbt"><span class="cb on" role="checkbox" aria-checked="true" aria-label="Selected"></span></span></td><td><div style="display:flex;gap:12px;align-items:center"><i class="thumb th2"></i><div><b style="font-weight:500">Sabz chanderi kurta set</b><div class="sub">Kurta set · edited 2 h ago</div></div></div></td><td><span class="chip c-ok">Active</span></td><td class="r num money"><span class="r">₹</span>2,490</td><td class="r num">48</td><td class="sub">6 sizes <span class="dots"><i style="background:#2F6B4F"></i><i style="background:#B5452E"></i><i style="background:#2B3A67"></i></span></td></tr>
+          <tr class="sel"><td><span class="cbt"><span class="cb on" role="checkbox" aria-checked="true" aria-label="Selected"></span></span></td><td><div style="display:flex;gap:12px;align-items:center"><i class="thumb th4"></i><div><b style="font-weight:500">Banarasi silk saree</b><div class="sub">Saree · edited yesterday</div></div></div></td><td><span class="chip c-neu">Draft</span></td><td class="r num money"><span class="r">₹</span>8,900</td><td class="r num">3</td><td class="sub">One size</td></tr>
+          <tr><td><span class="cbt"><span class="cb" role="checkbox" aria-checked="false" aria-label="Select"></span></span></td><td><div style="display:flex;gap:12px;align-items:center"><i class="thumb th3"></i><div><b style="font-weight:500">Gulnar jhumka earrings</b><div class="sub">Jewellery · 4 days ago</div></div></div></td><td><span class="chip c-info">Unlisted</span></td><td class="r num money"><span class="r">₹</span>1,290</td><td class="r"><span class="chip c-warn">Low · 2</span></td><td class="sub">One size <span class="dots"><i style="background:#C9A227"></i><i style="background:#B8B8B8"></i></span></td></tr>
+          <tr><td><span class="cbt"><span class="cb" role="checkbox" aria-checked="false" aria-label="Select"></span></span></td><td><div style="display:flex;gap:12px;align-items:center"><i class="thumb"></i><div><b style="font-weight:500">Mehr lehenga</b><div class="sub">Lehenga · 2 weeks ago</div></div></div></td><td><span class="chip c-ok">Active</span></td><td class="r num money"><span class="r">₹</span>14,500</td><td class="r"><span class="chip c-neu">Made to order</span></td><td class="sub">4 sizes</td></tr>
+        </tbody></table></div>
+      </main>
+    </div></div></div>
+  </section>
+
+  <section class="part" id="editor" style="padding-top:8px">
+    <div class="frame-label"><h3>Product</h3><span class="cap">What the approved products mockup drew, now in Neel: content left, a sticky panel right, finished sections as one line, the save bar at the foot.</span></div>
+    <div class="frame-wrap"><div class="frame"><div class="app">
+      <aside class="side" aria-label="Console">
+        <div class="shop"><span class="mark">rr</span><span>Kesar Studio<small>kesarstudio.in</small></span></div>
+        <div class="grp">Catalogue</div>
+        <a class="nav" aria-current="page" href="#products"><svg viewBox="0 0 24 24"><path d="M8 4l4 2 4-2 4 4-3 2v10H7V10L4 8z"/></svg>Products</a>
+        <a class="nav" href="#products"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>Collections</a>
+      </aside>
+      <main class="main">
+        <div class="ph"><div><a class="back" href="#products">‹ Products</a><h1>Gulabi chikankari kurta <span class="chip c-neu">Draft</span></h1></div><div class="acts"><button class="btn btn-s">Preview</button><button class="btn btn-g">More</button></div></div>
+        <div class="ed">
+          <div class="stack">
+            <div class="sec"><div class="sec-h"><h2>Photos</h2><div class="x"><span class="cap">Drag to order · the first is the cover</span></div></div>
+              <div class="sec-b"><div class="photos"><div class="ph-i"><span class="badge">Cover</span></div><div class="ph-i"></div><div class="ph-i"></div><div class="ph-add">+ Add<br><span class="cap">JPEG, PNG, WebP</span></div></div></div></div>
+            <div class="sec"><div class="sec-h"><h2>Name, price, description</h2></div>
+              <div class="sec-b">
+                <label class="fld"><span>Name</span><input class="inp" value="Gulabi chikankari kurta"></label>
+                <div class="row2"><label class="fld"><span>Price, ₹</span><input class="inp num" value="2,490"></label><label class="fld"><span>M.R.P., ₹</span><input class="inp num" value="2,990"></label></div>
+                <label class="fld"><span>Description</span><textarea class="inp" rows="3">Hand-embroidered chikankari on soft mul cotton. Straight cut, three-quarter sleeves.</textarea></label>
+                <div class="addr"><span>kesarstudio.in/products/</span><b>gulabi-chikankari-kurta</b><span style="margin-left:auto" class="chip c-neu">Follows the name until live</span></div>
+              </div></div>
+            <div class="sec"><div class="sec-h"><h2>Sizes and colours</h2><div class="x"><span class="cap num">12 of 100</span></div></div>
+              <div class="sec-b">
+                <div class="opt"><div class="opt-h">Size<a class="lnk" href="#editor" style="font-size:13px">Remove</a></div><div class="chips">
+                  <span class="chipbtn"><span class="h">⋮⋮</span>XS</span><span class="chipbtn"><span class="h">⋮⋮</span>S</span><span class="chipbtn"><span class="h">⋮⋮</span>M</span><span class="chipbtn"><span class="h">⋮⋮</span>L</span><span class="chipbtn"><span class="h">⋮⋮</span>XL</span><span class="chipbtn"><span class="h">⋮⋮</span>XXL</span><span class="chipadd">+ Add</span></div></div>
+                <div class="opt"><div class="opt-h">Colour<a class="lnk" href="#editor" style="font-size:13px">Remove</a></div><div class="chips">
+                  <span class="chipbtn"><span class="h">⋮⋮</span><span class="sq" style="background:#E7A3B5"></span>Gulabi</span><span class="chipbtn"><span class="h">⋮⋮</span><span class="sq" style="background:#F2EBDD"></span>Ivory</span><span class="chipadd">+ Add</span></div></div>
+              </div></div>
+            <div class="sec"><div class="sec-h"><h2>Stock and prices</h2><div class="x"><div class="seg" role="group" aria-label="View"><button aria-pressed="true">Price and stock</button><button aria-pressed="false">SKU and barcode</button></div></div></div>
+              <div class="sec-b" style="gap:12px">
+                <div class="bulk" style="margin:0"><b>Gulabi · 6 sizes</b><span style="flex:1"></span><input class="inp num" style="width:110px;height:30px" placeholder="Price" aria-label="Price for selected"><input class="inp num" style="width:90px;height:30px" placeholder="Stock" aria-label="Stock for selected"><span style="display:flex;gap:6px;align-items:center;font-size:13px"><span class="cb on" role="checkbox" aria-checked="true" aria-label="Selected"></span>Empty only</span><button class="btn btn-p btn-sm">Set</button></div>
+                <table class="tbl"><thead><tr><th style="width:36px"><span class="cbt"><span class="cb on" role="checkbox" aria-checked="true" aria-label="Selected"></span></span></th><th>Variant</th><th>Price, ₹</th><th>Stock</th><th>Shoppers see</th></tr></thead><tbody>
+                  <tr class="sel"><td><span class="cbt"><span class="cb on" role="checkbox" aria-checked="true" aria-label="Selected"></span></span></td><td>Gulabi · XS</td><td><span class="cell num">2,490</span></td><td><span class="cell num">4</span></td><td><span class="chip c-ok">In stock</span></td></tr>
+                  <tr class="sel"><td><span class="cbt"><span class="cb on" role="checkbox" aria-checked="true" aria-label="Selected"></span></span></td><td>Gulabi · XXL</td><td><span class="cell num">2,890</span></td><td><span class="cell num">0</span></td><td><span class="chip c-warn">Sold out</span></td></tr>
+                  <tr><td><span class="cbt"><span class="cb" role="checkbox" aria-checked="false" aria-label="Select"></span></span></td><td>Ivory · M</td><td><span class="cell e">—</span></td><td><span class="cell e">—</span></td><td><span class="chip c-neu">No price yet</span></td></tr>
+                </tbody></table>
+              </div></div>
+            <div class="sec">
+              <div class="fold"><b>Details</b><span>Fabric, work, occasion</span><a class="lnk" href="#editor">Add</a></div>
+              <div class="fold"><b>Size chart</b><span>Women's kurta · XS–XXL · Bust, Waist, Hip</span><a class="lnk" href="#editor">Edit</a></div>
+              <div class="fold"><b>Search and sharing</b><span>Gulabi chikankari kurta · ₹2,490 · Kesar Studio</span><a class="lnk" href="#editor">Edit</a></div>
+              <div class="fold"><b>Tax</b><span>HSN 6211 · 5% under ₹2,500</span><a class="lnk" href="#editor">Edit</a></div>
+            </div>
+          </div>
+          <div class="aside">
+            <div class="sec"><div class="sec-b status-card">
+              <div class="seg" role="group" aria-label="Status" style="width:100%;display:grid;grid-template-columns:repeat(3,1fr)"><button aria-pressed="true">Draft</button><button aria-pressed="false">Active</button><button aria-pressed="false">Unlisted</button></div>
+              <div class="need" id="need-1"><span aria-hidden="true">●</span>Missing: a price for Ivory (6 sizes)</div>
+              <button class="btn btn-p" style="width:100%;justify-content:center;opacity:.45" aria-disabled="true" aria-describedby="need-1">Publish</button>
+            </div></div>
+            <div class="sec"><div class="sec-h"><h2>Shared on WhatsApp</h2></div><div class="sec-b">
+              <div class="share"><div class="img"><span class="logo">Kesar Studio</span></div><div class="txt"><b style="font-weight:600">Gulabi chikankari kurta · ₹2,490</b><span class="cap">Hand-embroidered chikankari on soft mul cotton. Pay on delivery.</span><span class="cap">kesarstudio.in</span></div></div>
+            </div></div>
+            <div class="sec"><div class="sec-b" style="gap:10px">
+              <label class="fld"><span>Category</span><input class="inp" value="Kurtas › Kurta sets"></label>
+              <label class="fld"><span>Collections</span><div class="chips"><span class="tag">Festive edit ×</span><span class="chipadd">+ Add</span></div></label>
+            </div></div>
+          </div>
+        </div>
+        <div class="floatbar"><div class="savebar" style="max-width:680px;margin:0 auto"><b style="font-weight:500">3 unsaved changes</b><span style="flex:1"></span><button class="btn btn-s btn-sm">Discard</button><button class="btn btn-p btn-sm">Save <span class="kbd">⌘S</span></button></div></div>
+      </main>
+    </div></div></div>
+  </section>
+
+  <section class="part" id="settings" style="padding-top:8px">
+    <div class="frame-label"><h3>Settings</h3><span class="cap">One list, each row its current value; no icon tiles.</span></div>
+    <div class="frame-wrap"><div class="frame"><div class="app" style="min-height:560px">
+      <aside class="side" aria-label="Console">
+        <div class="shop"><span class="mark">rr</span><span>Kesar Studio<small>kesarstudio.in</small></span></div>
+        <div class="grp">Store</div>
+        <a class="nav" aria-current="page" href="#settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</a>
+      </aside>
+      <main class="main">
+        <div class="ph"><div><h1>Settings</h1></div><div class="acts"><span class="chip c-ok">Ready for live payments</span></div></div>
+        <div class="sec list" style="max-width:860px">
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M4 9l2-5h12l2 5M5 9v11h14V9"/></svg><span>Store details</span><span class="v">Kesar Studio LLP · Jaipur</span><span aria-hidden="true">›</span></a>
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg><span>Contact and grievance officer</span><span class="v">riya@kesarstudio.in · Riya Mehta</span><span aria-hidden="true">›</span></a>
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M3 7h18v10H3zM7 12h2"/></svg><span>Pay on delivery</span><span class="v">On · up to ₹3,000 · fee ₹49</span><span aria-hidden="true">›</span></a>
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/></svg><span>Shipping and delivery</span><span class="v">₹85 · free above ₹1,999 · 2 days</span><span aria-hidden="true">›</span></a>
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/></svg><span>Taxes and invoices</span><span class="v code">08AAAAA0000A1Z2</span><span aria-hidden="true">›</span></a>
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM3 10h18"/></svg><span>Online payments</span><span class="v"><span class="chip c-warn">Not connected</span></span><span aria-hidden="true">›</span></a>
+          <a href="#settings"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM7 14h4"/></svg><span>Plan and billing</span><span class="v">Growth · ₹4,999 a month</span><span aria-hidden="true">›</span></a>
+        </div>
+      </main>
+    </div></div></div>
+  </section>
+
+  <section class="part" id="phone" style="padding-top:8px">
+    <div class="frame-label"><h3>On a phone</h3><span class="cap">Body 15/22, 44 px controls, the save bar above the bottom nav.</span></div>
+    <div class="phones">
+      <div class="phone" aria-label="Orders on a phone">
+        <div class="p-top"><b style="font-size:20px;line-height:26px;font-weight:600">Orders</b><span style="margin-left:auto" class="chip c-warn">43 to confirm</span></div>
+        <div class="p-body">
+          <nav class="tabs" aria-label="Queues"><a href="#phone" aria-current="page">To confirm <span class="cnt">43</span></a><a href="#phone">To pack <span class="cnt">96</span></a><a href="#phone">All <span class="cnt">300</span></a></nav>
+          <input class="inp" placeholder="Search number, name or phone" aria-label="Search orders">
+          <div>
+            <div class="p-row" style="border-top:0"><span><b class="num" style="font-weight:600">KS-5006</b> · Sneha</span><span class="num money"><span class="r">₹</span>1,508</span><span class="sub">Thiruvananthapuram · 3 items</span><span><span class="chip c-warn">To confirm</span></span></div>
+            <div class="p-row"><span><b class="num" style="font-weight:600">KS-5012</b> · முத்துலட்சுமி</span><span class="num money"><span class="r">₹</span>1,983</span><span class="sub">Madurai · COD</span><span><span class="chip c-bad">High risk</span></span></div>
+            <div class="p-row"><span><b class="num" style="font-weight:600">KS-5018</b> · Ananya</span><span class="num money"><span class="r">₹</span>2,458</span><span class="sub">Kolkata · Prepaid</span><span><span class="chip c-warn">To confirm</span></span></div>
+          </div>
+        </div>
+        <nav class="p-nav" aria-label="Console"><a href="#phone">Home</a><a href="#phone" aria-current="page">Orders</a><a href="#phone">Products</a><a href="#phone">More</a></nav>
+      </div>
+      <div class="phone" aria-label="A product on a phone">
+        <div class="p-top"><span style="color:var(--text-2)">‹</span><b style="font-weight:600">Gulabi chikankari kurta</b><span style="margin-left:auto" class="chip c-neu">Draft</span></div>
+        <div class="p-body">
+          <div class="seg" role="group" aria-label="Status" style="display:grid;grid-template-columns:repeat(3,1fr)"><button aria-pressed="true">Draft</button><button aria-pressed="false">Active</button><button aria-pressed="false">Unlisted</button></div>
+          <div class="need"><span aria-hidden="true">●</span>Missing: a price for Ivory</div>
+          <div class="photos"><div class="ph-i"><span class="badge">Cover</span></div><div class="ph-i"></div><div class="ph-add">+</div></div>
+          <label class="fld"><span>Name</span><input class="inp" value="Gulabi chikankari kurta"></label>
+          <div class="row2"><label class="fld"><span>Price, ₹</span><input class="inp num" value="2,490"></label><label class="fld"><span>M.R.P., ₹</span><input class="inp num" value="2,990"></label></div>
+          <div class="sec"><div class="fold"><b>Sizes and colours</b><span>6 sizes · 2 colours</span><a class="lnk" href="#phone">Edit</a></div><div class="fold"><b>Size chart</b><span>Women's kurta</span><a class="lnk" href="#phone">Edit</a></div></div>
+        </div>
+        <div class="p-save"><div class="savebar"><b style="font-weight:500;white-space:nowrap">3 unsaved</b><span style="flex:1"></span><button class="btn btn-s btn-sm">Discard</button><button class="btn btn-p btn-sm">Save</button></div></div>
+        <nav class="p-nav" aria-label="Console"><a href="#phone">Home</a><a href="#phone">Orders</a><a href="#phone" aria-current="page">Products</a><a href="#phone">More</a></nav>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== WORDS ===================== -->
+  <section class="part" id="words">
+    <h2>Words</h2>
+    <p class="lead">A store owner reads the console on a phone, between orders. Every line should be clear in one read.</p>
+    <div class="grid g2">
+      <div class="box"><h3>The rulebook</h3>
+        <ol class="words">
+          <li><div><b>One idea, one sentence.</b> <span>Up to 12 words. Two ideas are two sentences, or one is cut.</span></div></li>
+          <li><div><b>No joining marks.</b> <span>No colon, semicolon or dash to glue two thoughts together in a sentence.</span></div></li>
+          <li><div><b>Everyday words.</b> <span>The words a store owner says out loud. Never ours: tenant, sync, server, token, webhook, variant, readiness.</span></div></li>
+          <li><div><b>Say what to do, or what happened.</b> <span>Start with it. "Add a price for Ivory." "Saved."</span></div></li>
+          <li><div><b>Buttons are a verb and a thing.</b> <span>"Confirm 2 orders", "Save price". Never "OK", "Submit" or "Proceed".</span></div></li>
+          <li><div><b>Errors: what's wrong, then the fix.</b> <span>Next to the field. No "invalid", no "error occurred", no blame.</span></div></li>
+          <li><div><b>Numbers, not adjectives.</b> <span>₹2,490, 8 days, 3 sizes. Dates as "Today, 10:06 pm" or "12 Nov".</span></div></li>
+          <li><div><b>Confirm with the consequence only.</b> <span>Title asks with the thing ("Delete 2 drafts?"). Buttons name both outcomes ("Keep them", "Delete 2 drafts").</span></div></li>
+          <li><div><b>Law and tax words only where the law needs them.</b> <span>Then an (i) says it plainly.</span></div></li>
+          <li><div><b>Calm and direct.</b> <span>"You" for the merchant, "we" for Frrata. No please, kindly, sorry, oops, emoji or exclamation marks.</span></div></li>
+          <li><div><b>Easy to translate.</b> <span>No idioms or wordplay. Short sentences carry into Hindi.</span></div></li>
+        </ol>
+      </div>
+      <div class="box"><h3>Swap these</h3>
+        <div class="swap">
+          <div><s>in order to</s> → to</div><div><s>prior to</s> → before</div><div><s>utilise</s> → use</div><div><s>via</s> → through, by</div>
+          <div><s>e.g.</s> → like</div><div><s>commence</s> → start</div><div><s>issue (a bill)</s> → send</div><div><s>respective</s> → (cut)</div>
+          <div><s>variant</s> → size or colour</div><div><s>SKU limit exceeded</s> → up to 100</div><div><s>invalid</s> → say what's wrong</div><div><s>successfully</s> → (cut)</div>
+          <div><s>is not able to</s> → can't</div><div><s>please note</s> → (cut)</div><div><s>at this time</s> → now</div><div><s>in case of</s> → if</div>
+        </div>
+        <ul class="rule"><li>Merchants' own trade words stay: COD, RTO, SKU, AWB, GST, HSN, M.R.P.</li></ul>
+      </div>
+    </div>
+    <div class="frame-label"><h3>Rewritten from today's console</h3><span class="cap">The left column is live copy now.</span></div>
+    <div class="ba">
+      <div class="h">Now</div><div class="h">Neel</div>
+      <div class="was">Only drafts that were never live or ordered can be deleted. The rest stay, and can be archived instead.</div><div class="now">You can delete drafts that never sold. Archive the rest.</div>
+      <div class="was">Opens from its link only: not in menus, search or Google. For a private drop or a DM.</div><div class="now">Only people with the link can see it.</div>
+      <div class="was">Gone from your shop. Its page says it is no longer available, with your newest pieces below.</div><div class="now">Hidden from your store. Its orders stay.</div>
+      <div class="was">Checked with Razorpay before saving: wrong keys are refused and nothing changes. Saved keys are encrypted and never shown again.</div><div class="now">We check the keys with Razorpay before saving them.</div>
+      <div class="was">Frrata lost access to this number. Disconnect it here, then connect it again in Meta's window.</div><div class="now">This number is disconnected. Connect it again.</div>
+      <div class="was">Most orders came without a source. A link from Make a link tells an Instagram bio from a WhatsApp broadcast.</div><div class="now">Most orders have no source yet. Share your links from Make a link.</div>
+      <div class="was">Not confirmed yet: profit on those orders says "before shipping costs".</div><div class="now">Shipping costs aren't confirmed yet. Profit leaves them out for now.</div>
+      <div class="was">Shoppers add it themselves when the rest of the bag reaches the amount below. It is billed at ₹0; your CA may ask you to reverse input credit on gifted stock.</div><div class="now">Free when the bag reaches this amount. <span class="cap">(i) holds the tax note.</span></div>
+      <div class="was">Before shoppers can see it: a price on every size and colour, a size chart for its type.</div><div class="now">Add a price for Ivory (6 sizes).</div>
+      <div class="was">Some fields need a look before saving.</div><div class="now">2 things to fix: Price, SKU.</div>
+    </div>
+  </section>
+  <!-- ===================== GLOSSARY ===================== -->
+  <section class="part" id="glossary">
+    <h2>One word for each thing</h2>
+    <p class="lead">The same word on every surface, so a brand, a partner and Frrata's team mean the same thing. "Store", never "shop" (owner, 2026-11-13).</p>
+    <div class="grid g2">
+      <div class="box" style="grid-column:1/-1"><h3>Where you are</h3>
+        <div class="tblwrap"><table class="tbl"><thead><tr><th>Surface</th><th>Who uses it</th><th>For</th><th>Never call it</th></tr></thead><tbody>
+          <tr><td><b style="font-weight:500">Console</b></td><td>The brand's team (and its partner)</td><td>Running the store: orders, products, offers, settings</td><td>dashboard, admin</td></tr>
+          <tr><td><b style="font-weight:500">Partner workspace</b></td><td>The agency that builds stores</td><td>Its client stores, team, handover</td><td>partner console</td></tr>
+          <tr><td><b style="font-weight:500">Frrata Admin</b></td><td>Frrata's own team only</td><td>Merchants, plans, billing, support visits</td><td>"Admin" on its own</td></tr>
+          <tr><td><b style="font-weight:500">Store</b></td><td>Shoppers</td><td>Buying (its pages are the storefront)</td><td>shop, website, site</td></tr>
+        </tbody></table></div></div>
+      <div class="box" style="grid-column:1/-1"><h3>Roles</h3>
+        <div class="tblwrap"><table class="tbl"><thead><tr><th>Role</th><th>Who</th><th>Where</th><th>Can</th><th>Can't</th></tr></thead><tbody>
+          <tr><td><b style="font-weight:500">Owner</b></td><td>The brand's owner</td><td>Console</td><td>Everything</td><td>—</td></tr>
+          <tr><td><b style="font-weight:500">Manager</b> <span class="chip c-info">renamed from Admin</span></td><td>The owner's deputy</td><td>Console</td><td>Everything else the owner can</td><td>Remove the partner</td></tr>
+          <tr><td><b style="font-weight:500">Staff</b></td><td>The brand's team</td><td>Console</td><td>Orders, shipping, products</td><td>Costs, GST, settings, people</td></tr>
+          <tr><td><b style="font-weight:500">Accountant</b></td><td>The brand's CA</td><td>Console</td><td>GST and documents</td><td>Orders, costs</td></tr>
+          <tr><td><b style="font-weight:500">Partner</b></td><td>The agency that built the store</td><td>Console + partner workspace</td><td>Orders, products, look, settings</td><td>Payments, people; costs after handover</td></tr>
+          <tr><td><b style="font-weight:500">Partner owner · Lead</b></td><td>The agency's head · its builders</td><td>Partner workspace</td><td>Team and handover · the stores given to them</td><td>—</td></tr>
+          <tr><td><b style="font-weight:500">Frrata support</b></td><td>Frrata's team, on a support visit</td><td>Frrata Admin → a console</td><td>What the owner can, every step recorded</td><td>Payment keys, GST filing, billing</td></tr>
+        </tbody></table></div>
+        <ul class="rule"><li>"Admin" alone is never a person. "Owner" alone means the store's owner; the agency's is "Partner owner".</li></ul>
+      </div>
+      <div class="box"><h3>Words</h3>
+        <div class="tblwrap"><table class="tbl gl"><thead><tr><th>Say</th><th>For</th><th>Never</th></tr></thead><tbody>
+          <tr><td>store</td><td>The brand's business and its storefront</td><td>shop, tenant, merchant (merchant only in Frrata Admin)</td></tr>
+          <tr><td>shopper</td><td>The person who buys</td><td>customer, buyer (the invoice says buyer by law)</td></tr>
+          <tr><td>product · item</td><td>In the catalogue · in an order or bag</td><td>piece, variant</td></tr>
+          <tr><td>sizes and colours</td><td>A product's options</td><td>variants</td></tr>
+          <tr><td>collection · category</td><td>A group you pick · its kind for tax and filters</td><td>type (except the size chart's type)</td></tr>
+          <tr><td>offer · code · discount</td><td>The thing · what shoppers type · what they save</td><td>coupon, voucher</td></tr>
+          <tr><td>Active · Draft · Unlisted · Archived</td><td>A product's status</td><td>live, published (for products)</td></tr>
+          <tr><td>Live</td><td>An offer or app that's running; the published look</td><td>Active (for these)</td></tr>
+          <tr><td>Archive · Delete · Remove · Disconnect · Turn off</td><td>Hide and keep · gone for good · take a part out · end a connection · stop an app</td><td>mixing them</td></tr>
+          <tr><td>payout</td><td>Money reaching the brand's bank</td><td>settlement, remittance</td></tr>
+          <tr><td>app</td><td>A feature the store turns on</td><td>module, add-on (Admin only)</td></tr>
+          <tr><td>support visit</td><td>Frrata support inside a console</td><td>support session</td></tr>
+          <tr><td>Frrata</td><td>The company</td><td>Frata</td></tr>
+        </tbody></table></div></div>
+      <div class="box"><h3>Order states, the same everywhere</h3>
+        <div class="tblwrap"><table class="tbl gl"><thead><tr><th>Console</th><th>Shopper sees</th><th>Was also</th></tr></thead><tbody>
+          <tr><td><span class="chip c-warn">To confirm</span></td><td>Order placed</td><td>—</td></tr>
+          <tr><td><span class="chip c-warn">To pack</span></td><td>Confirmed</td><td>Confirmed (paid orders)</td></tr>
+          <tr><td><span class="chip c-info">To ship</span></td><td>Packed</td><td>—</td></tr>
+          <tr><td><span class="chip c-info">On the way</span></td><td>On its way</td><td>Shipped</td></tr>
+          <tr><td><span class="chip c-ok">Delivered</span></td><td>Delivered</td><td>—</td></tr>
+          <tr><td><span class="chip c-bad">Couldn't deliver</span></td><td>Delivery attempt failed</td><td>NDR</td></tr>
+          <tr><td><span class="chip c-bad">Coming back</span> · <span class="chip c-neu">Came back</span></td><td>Returning to the store · Returned to the store</td><td>RTO, Returned (for RTO)</td></tr>
+          <tr><td><span class="chip c-neu">Returned</span></td><td>Returned</td><td>(only for a shopper's return)</td></tr>
+          <tr><td><span class="chip c-neu">On hold</span> · <span class="chip c-neu">Cancelled</span></td><td>— · Cancelled</td><td>—</td></tr>
+        </tbody></table></div></div>
+      <div class="box" style="grid-column:1/-1"><h3>Short forms</h3>
+        <div class="tblwrap"><table class="tbl"><thead><tr><th>Write</th><th>Means</th><th>Where</th><th>Rule</th></tr></thead><tbody>
+          <tr><td>COD</td><td>Cash on delivery</td><td>Console tags and filters</td><td>Shoppers and sentences say "Pay on delivery"</td></tr>
+          <tr><td>RTO</td><td>Return to origin</td><td>Console detail</td><td>Headings say "Coming back"</td></tr>
+          <tr><td>SKU · AWB</td><td>Stock code · courier tracking number</td><td>Console</td><td>Mono; an (i) on the column</td></tr>
+          <tr><td>GST · GSTIN · HSN · IGST/CGST/SGST · GSTR-1</td><td>Tax terms the law uses</td><td>Console, invoice</td><td>As is; an (i) where first asked for</td></tr>
+          <tr><td>B2B · B2C</td><td>Sales to a business · to a person</td><td>GST app</td><td>An (i)</td></tr>
+          <tr><td>M.R.P.</td><td>Maximum retail price</td><td>All</td><td>Always with dots; "incl. taxes" to shoppers</td></tr>
+          <tr><td>PIN code</td><td>Postal code</td><td>All</td><td>Exactly this spelling (not pincode, Pincode)</td></tr>
+          <tr><td>UPI · OTP · CSV · PDF · CA</td><td>—</td><td>All</td><td>As is; "your CA"</td></tr>
+        </tbody></table></div>
+        <ul class="rule"><li>Never in the UI: NDR, tenant, SKU combo, UQC (invoice only), API (except a provider's own label).</li></ul>
+      </div>
+    </div>
+  </section>
+</div>

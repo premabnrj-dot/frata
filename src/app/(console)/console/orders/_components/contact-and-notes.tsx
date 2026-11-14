@@ -67,13 +67,13 @@ export function EditContact({ orderId, number, contact }: { orderId: string; num
               {x.label}
               <input type={x.type ?? 'text'} inputMode={x.inputMode} value={f[x.key]} onChange={(e) => { setF({ ...f, [x.key]: e.target.value }); clear(x.key) }}
                 {...fieldProps(x.key, fieldErrors[x.key])}
-                className="h-10 rounded-md border border-input bg-card px-3 aria-invalid:border-danger-mark md:h-9" />
+                className="h-11 rounded-md border border-input bg-card px-3 aria-invalid:border-danger-mark md:h-9" />
               <FieldError name={x.key} message={fieldErrors[x.key]} />
             </label>
           ))}
           <label className="grid gap-1 text-sm">State
             <select value={f.state} onChange={(e) => { setF({ ...f, state: e.target.value }); clear('state') }} {...fieldProps('state', fieldErrors.state)}
-              className="h-10 rounded-md border border-input bg-card px-2 aria-invalid:border-danger-mark md:h-9">
+              className="h-11 rounded-md border border-input bg-card px-2 aria-invalid:border-danger-mark md:h-9">
               {/* A stored state off the list (or none) shows as itself, never as the first state silently. */}
               {(STATES as readonly string[]).includes(f.state) ? null : <option value={f.state}>{f.state || 'Pick the state'}</option>}
               {STATES.map((s) => <option key={s}>{s}</option>)}

@@ -11,7 +11,9 @@ import { cleanMobile } from '@/domains/checkout/mobile'
 
 export const MAX_SEARCH = 60
 
-export type OrderSearch = { like: string; number: number | null; phoneDigits: string | null }
+/** Which tests a search runs (N1c, speed review): a fast test is never ORed with the name's scan. `like` is null unless
+ * what was typed is text; `awb` is an exact tracking number (couriers print digits or letters and digits, 8–40). */
+export type OrderSearch = { like: string | null; number: number | null; phoneDigits: string | null; awb: string | null }
 
 /** LIKE wildcards and the escape character in what was typed match as text (Postgres's default escape is \). */
 export const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`)
@@ -26,10 +28,14 @@ export function parseOrderSearch(raw: string): OrderSearch | null {
   if (!q) return null
   const digits = q.replace(/\D/g, '')
   const numberLike = /^[A-Za-z]{0,6}[-\s]?\d{1,9}$/.test(q)
+  const digitsOnly = /^[\d\s+()-]+$/.test(q)
+  const awbLike = /^[A-Za-z0-9-]{8,40}$/.test(q) && /\d/.test(q)
   return {
-    like: `%${escapeLike(q)}%`,
+    // A name is searched only when what was typed is not a number, a phone or a tracking number.
+    like: digitsOnly || numberLike || awbLike ? null : `%${escapeLike(q)}%`,
     number: numberLike ? Number(digits) : null,
     // "KS-1004" is an order number, not part of a phone: phones match only on digits typed alone (review 2026-11-07).
-    phoneDigits: /^[\d\s+()-]+$/.test(q) && digits.length >= 4 ? storedDigits(digits) : null,
+    phoneDigits: digitsOnly && digits.length >= 4 ? storedDigits(digits) : null,
+    awb: awbLike ? q : null, // exact, as the courier printed it: `=` stays on its index under RLS
   }
 }

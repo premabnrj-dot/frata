@@ -12,10 +12,11 @@ import { newVersionAction } from './actions'
 import { Section } from '@/components/layout/section'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm } from '@/components/ui/action-form'
+import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Edit plan' }
 
-const field = 'h-10 rounded-md border border-input bg-card px-3 font-mono text-sm'
+const field = `${FIELD} font-num`
 
 export default async function EditPlanPage({ params }: { params: Promise<{ code: string }> }) {
   const staff = await requireStaff(ADMIN_ONLY)

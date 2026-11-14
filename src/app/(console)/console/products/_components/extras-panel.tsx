@@ -10,11 +10,12 @@ import { paise } from '@/domains/money/paise'
 import { MAX_NOTES, MAX_PAIRS, MAX_STORIES, pairAction, STORY_LIMITS, type Piece, type Story } from '@/domains/catalogue/stories'
 import { findPieces } from '../actions'
 import type { Photo } from './photos'
+import { FIELD_BOX } from '@/components/ui/field'
 
 // Signal S3: the product's stories and "Pair it with" (approved board "Product editor", v5). Both save with the
 // product (one Save); a story photo uploads at once into the shop's products folder and is checked again on save.
 
-const field = 'w-full rounded-md border border-input bg-card px-3 text-sm'
+const field = `${FIELD_BOX} w-full`
 const iconBtn = 'inline-grid min-h-8 min-w-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30'
 const addRow = 'w-full rounded-md border border-dashed border-input px-3 py-2.5 text-sm font-medium hover:bg-muted'
 const Thumb = ({ base, widths }: { base: string | null; widths: number[] | null }) => base && widths?.length
@@ -77,7 +78,7 @@ export function StoriesPanel({ stories, onChange, photos, tenantId, enabled, err
                   {s.notes.map((n, k) => (
                     <div key={k} className="flex items-center gap-2">
                       <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">{k + 1}</span>
-                      <input aria-label={`Note ${k + 1}`} value={n} maxLength={STORY_LIMITS.note} onChange={(e) => put(i, { notes: s.notes.map((x, j) => (j === k ? e.target.value : x)) })} className={`${field} h-10 md:h-9`} />
+                      <input aria-label={`Note ${k + 1}`} value={n} maxLength={STORY_LIMITS.note} onChange={(e) => put(i, { notes: s.notes.map((x, j) => (j === k ? e.target.value : x)) })} className={`${field} h-11 md:h-9`} />
                       <button type="button" className={iconBtn} aria-label={`Remove note ${k + 1}`} onClick={() => put(i, { notes: s.notes.filter((_, j) => j !== k) })}><Icon name="close" className="size-3.5" /></button>
                     </div>
                   ))}
@@ -98,7 +99,7 @@ function Text({ id, label, value, max, area, onChange }: { id: string; label: st
     <div className="space-y-1">
       <label htmlFor={id} className="flex justify-between text-sm font-medium">{label}<i className="font-normal not-italic text-muted-foreground">{[...value].length} / {max}</i></label>
       {area ? <textarea id={id} rows={3} value={value} maxLength={max} onChange={(e) => onChange(e.target.value)} className={`${field} py-2`} />
-        : <input id={id} value={value} maxLength={max} onChange={(e) => onChange(e.target.value)} className={`${field} h-10 md:h-9`} />}
+        : <input id={id} value={value} maxLength={max} onChange={(e) => onChange(e.target.value)} className={`${field} h-11 md:h-9`} />}
     </div>
   )
 }
@@ -138,7 +139,7 @@ export function PairsPanel({ productId, pairs, onChange }: { productId: string; 
       {pairs.length < MAX_PAIRS && <>
         <div className="relative">
           <label htmlFor="pair-find" className="sr-only">Find a piece</label>
-          <input id="pair-find" type="search" value={q} maxLength={60} placeholder="Find a piece…" onChange={(e) => setQ(e.target.value)} className={`${field} h-10 pr-9 md:h-9`} />
+          <input id="pair-find" type="search" value={q} maxLength={60} placeholder="Find a piece…" onChange={(e) => setQ(e.target.value)} className={`${field} h-11 pr-9 md:h-9`} />
           <Icon name="search" className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         </div>
         {found && (shown.length

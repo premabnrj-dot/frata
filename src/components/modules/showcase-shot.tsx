@@ -34,7 +34,7 @@ export function ShowcaseShot({ shot }: { shot: Shot }) {
             {shot.items.map((s) => (
               <div key={s.label} className="rounded-md bg-muted p-2">
                 <dt className="text-muted-foreground">{s.label}</dt>
-                <dd className="font-mono text-lg font-medium tabular-nums">{s.value}</dd>
+                <dd className="font-num text-lg font-medium tabular-nums">{s.value}</dd>
               </div>
             ))}
           </dl>

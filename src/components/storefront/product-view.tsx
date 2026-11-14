@@ -1,3 +1,4 @@
+import { colourIndex } from '@/domains/catalogue/option-kind'
 import { zoneDays } from '@/domains/delivery/public'
 import { pdpLines } from '@/domains/checkout/offer-showcase'
 import { describeAttribute } from '@/domains/catalogue/taxonomy'
@@ -7,7 +8,6 @@ import { availability } from '@/domains/catalogue/availability'
 import { pick, urlFor } from '@/domains/media/sizes'
 import { factsOf, priceOf } from '@/domains/storefront/listing'
 import { offerFor } from '@/domains/seo/tags'
-import { isColourOption } from '@/domains/storefront/picker'
 import type { StoreProduct, StoreShop } from '@/lib/queries/storefront'
 import type { ThemeSettings } from '@/domains/themes/types'
 import { BuyBox, type OfferLine } from './buy-box'
@@ -27,7 +27,7 @@ export function detailsOf(p: Pick<StoreProduct, 'attributes'>): { name: string; 
 }
 
 export function productSeo(shop: StoreShop, p: StoreProduct) {
-  const ci = p.options.findIndex(isColourOption)
+  const ci = colourIndex(p.options)
   const colours = ci >= 0 ? p.optionValues[ci] ?? [] : []
   const fabric = detailsOf(p).find((d) => d.name === 'Fabric')?.value ?? null
   return {
@@ -61,7 +61,7 @@ export function ProductView({ shop, p, now, live = false, layout, offers, below,
   // The taxonomy's details, then what the pack says (label.ts: Legal Metrology declarations, beauty and wellness).
   const details = [...detailsOf(p), ...labelRows(readLabel(p.label), p.originCountry)]
   const gender = p.attributes['target-gender']?.[0] ? describeAttribute('target-gender')?.values.find((v) => v.id === p.attributes['target-gender']![0])?.name ?? null : null
-  const ci = p.options.findIndex(isColourOption)
+  const ci = colourIndex(p.options)
   const w = wordsFor(shop.shopLanguage)
   const model = p.modelHeight && p.modelSize ? fill(w.model.both, { h: p.modelHeight, s: p.modelSize }) : p.modelHeight ? fill(w.model.height, { h: p.modelHeight }) : p.modelSize ? fill(w.model.size, { s: p.modelSize }) : null
   const rt = (w.returns as Record<string, string>)[shop.returnKind]

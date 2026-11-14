@@ -12,6 +12,7 @@ import type { EditorPage } from '@/lib/queries/pages'
 import { Switch, Text } from './controls'
 import { DesignForm } from './design-form'
 import type { FormCtx } from './section-form'
+import { FIELD_BOX } from '@/components/ui/field'
 
 // =============================================================================
 // Look › Pages (Theme Studio TS1a, board v2). Loaded only when a page is opened (next/dynamic: the customizer holds its
@@ -23,7 +24,7 @@ import type { FormCtx } from './section-form'
 export type ContactRow = { label: string; value: string | null }
 const SETTINGS = '/console/settings/contact'
 const move = <T,>(xs: T[], i: number, by: -1 | 1) => { const j = i + by; if (j < 0 || j >= xs.length) return xs; const out = [...xs]; [out[i], out[j]] = [out[j]!, out[i]!]; return out }
-const field = 'w-full rounded-md border border-input bg-card px-3 text-sm placeholder:italic placeholder:text-muted-foreground'
+const field = `${FIELD_BOX} w-full placeholder:italic placeholder:text-muted-foreground`
 
 function FromSettings({ rows }: { rows: ContactRow[] }) {
   return (
@@ -50,12 +51,12 @@ function Questions({ items, set, answers }: { items: FaqItem[]; set: (x: FaqItem
   const item = (i: number, v: Partial<{ q: string; a: string }>) => set(items.map((x, j) => (j === i ? ({ ...x, ...v } as FaqItem) : x)))
   return (
     <div className="space-y-2">
-      <p className="flex items-center text-sm font-medium">Questions<span className="ml-auto font-mono text-xs font-normal text-muted-foreground">{items.length}/{MAX_FAQ}</span></p>
+      <p className="flex items-center text-sm font-medium">Questions<span className="ml-auto font-num text-xs font-normal text-muted-foreground">{items.length}/{MAX_FAQ}</span></p>
       <ol className="space-y-2">
         {items.map((x, i) => (
           <li key={i} className="space-y-2 rounded-xl border border-input p-2.5">
             <div className="flex items-center gap-1">
-              <input aria-label={`Question ${i + 1}`} value={x.q} maxLength={80} onChange={(e) => item(i, { q: e.target.value })} className={`${field} h-10 flex-1`} />
+              <input aria-label={`Question ${i + 1}`} value={x.q} maxLength={80} onChange={(e) => item(i, { q: e.target.value })} className={`${field} h-11 md:h-9 flex-1`} />
               <button type="button" aria-label={`Move question ${i + 1} up`} disabled={i === 0} onClick={() => set(move(items, i, -1))} className="grid size-9 place-items-center rounded-md disabled:opacity-30"><Icon name="up" className="size-4" /></button>
               <button type="button" aria-label={`Move question ${i + 1} down`} disabled={i === items.length - 1} onClick={() => set(move(items, i, 1))} className="grid size-9 place-items-center rounded-md disabled:opacity-30"><Icon name="down" className="size-4" /></button>
               <button type="button" aria-label={`Remove question ${i + 1}`} onClick={() => set(items.filter((_, j) => j !== i))} className="grid size-9 place-items-center rounded-md"><Icon name="close" className="size-3.5" /></button>
@@ -147,7 +148,7 @@ export function AddPage({ open, onClose, onAdded, hasFaq, count, thumbs }: { ope
   }
   const full = count >= 20
   return (
-    <Dialog open={open} onClose={onClose} title="Add a page" error={error} actions={<><span className="mr-auto self-center font-mono text-xs text-muted-foreground">{count} of 20</span><button type="button" data-autofocus onClick={onClose} className="min-h-10 rounded-md border border-input px-4 text-sm">Close</button></>}>
+    <Dialog open={open} onClose={onClose} title="Add a page" error={error} actions={<><span className="mr-auto self-center font-num text-xs text-muted-foreground">{count} of 20</span><button type="button" data-autofocus onClick={onClose} className="min-h-10 rounded-md border border-input px-4 text-sm">Close</button></>}>
       <ul className="grid gap-3 sm:grid-cols-2">
         {(['about', 'faq'] as const).map((t) => {
           const off = full || (t === 'faq' && hasFaq)

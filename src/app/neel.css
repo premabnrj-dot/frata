@@ -1,0 +1,219 @@
+/* The console's tokens (Neel N0). Imported by globals.css only, never by shop.css: a store never carries them (the
+   shop's CSS budget, check-storefront-build). Hex lives here and in base.css only (check:hex); check:contrast reads
+   this block as the Neel theme. */
+
+/* NEEL — the console, Frrata Admin, the partner workspace and the look editor ([data-neel], Neel N0; mockup
+   docs/mockups/2026-11-13-design-language-neel.html § Foundations). Warm grey g0–g950, one action colour (neel 600),
+   rani for the mark and the loading line only. The store preview inside resets to :root (the selector above).
+   Tokens below the line exist only here; check:contrast reads this block as a third theme. */
+[data-neel] {
+  color: var(--foreground);       /* the body resolved --foreground at :root; text here takes g950 */
+  --background: #FFFFFF;          /* g0, the page */
+  --foreground: #171615;          /* g950 */
+  --card: #FFFFFF;
+  --card-foreground: #171615;
+  --popover: #FFFFFF;
+  --popover-foreground: #171615;
+  --primary: #3A44C2;             /* neel 600: the one action colour */
+  --primary-foreground: #FFFFFF;
+  --ink: #171615;                 /* g950: Admin's dark navigation and the monogram, the same as the bar */
+  --bar: #171615;
+  --bar-foreground: #FFFFFF;
+  --secondary: #F6F5F3;
+  --secondary-foreground: #171615;
+  --muted: #F6F5F3;
+  --muted-foreground: #67625C;    /* text 2 */
+  --accent: #F6F5F3;              /* hover */
+  --accent-foreground: #171615;
+  --destructive: #C42F2F;         /* the danger fill, and danger words in a menu */
+  --destructive-foreground: #FFFFFF;
+  --border: #E3E1DD;              /* g200 line */
+  --input: #8F8A84;               /* g500 field edge */
+  --ring: #4C57D6;                /* neel 500 focus */
+  --ok: #E7F5EC;      --ok-text: #1A6B43;
+  --warn: #FDF3DC;    --warn-text: #85500B;
+  --danger: #FDECEC;  --danger-text: #A82828;
+  --info: #E8F1FD;    --info-text: #1F5BA8;
+  --neutral: #F1F0EE; --neutral-text: #57524D;
+  /* warn dot #C98318, not the mockup's #D98E1A (2.68:1): a mark needs 3:1 (N0 Deviations). */
+  --support: #22201E;            /* g900: a support visit's strip and banner (Neel § Banners) */
+  --support-foreground: #FFFFFF;
+  --ok-mark: #2F9E62; --warn-mark: #C98318; --danger-mark: #DC3B3B; --info-mark: #3B82E0;
+  /* ── Neel only ── */
+  --primary-hover: #2F37A3;       /* neel 700 */
+  --link: #2F37A3;                /* neel 700 */
+  --select: #EEF0FD;              /* neel 50: a selected row, chip or segment */
+  --select-foreground: #272D82;   /* neel 800 */
+  --halo: #E0E3FB;                /* neel 100: the 3 px ring around a focused or wrong field */
+  --side: #FBFAF9;                /* g25 sidebar */
+  --sunk: #F6F5F3;                /* g50 table header, read-only field */
+  --line-soft: #EEEDEA;           /* g100 */
+  --edge: #CFCCC7;                /* g300 secondary button edge */
+  --text-3: #8F8A84;              /* g500 icons and placeholders' hint colour, never a sentence */
+  --off: #8F8A84;                 /* g500 a switch that is off */
+  --neutral-mark: #8F8A84;
+  --chart: #6E79E3;               /* neel 400 */
+  --chart-now: #C3C9F6;           /* neel 200: the period still running */
+  --bar-btn: #FFFFFF;
+  --bar-btn-text: #171615;
+  --bar-link: #A3ABF5;
+  --field-hover: #4D4944;         /* g700: a field's edge under the pointer */
+  /* Radius by role: 4 checkbox and kbd · 6 chip and tag · 8 button and field · 10 toast, banner, segmented · 12 card,
+     menu · 16 dialog. Depth: e1 rests (secondary button, segment), e2 floats (menu, popover), e3 overlays (dialog, toast). */
+  --r-xs: 4px; --r-sm: 6px; --r-md: 8px; --r-mid: 10px; --r-lg: 12px; --r-xl: 16px;
+  --sh-1: 0 1px 2px rgb(23 22 21 / 0.06);
+  --sh-2: 0 8px 24px -6px rgb(23 22 21 / 0.14);
+  --sh-3: 0 24px 48px -12px rgb(23 22 21 / 0.24);
+  --sh-4: var(--sh-3);
+  /* Type: display 30/36 · title 22/28 (a page's name) · section 16/24 (a card's name) · body 14/20 · label 13/18 ·
+     small 12/16. Weights 400, 500, 600 only. */
+  --t-section: 16px; --t-section-lh: 24px; --t-title: 22px; --t-title-lh: 28px; --t-display: 30px; --t-display-lh: 36px;
+  --t-label: 13px; --t-label-lh: 18px; --t-small: 12px; --t-small-lh: 16px;
+  --t-display-ls: -0.02em; --t-title-ls: -0.015em; --t-section-ls: -0.01em;
+  --font-num: var(--font-inter), system-ui, sans-serif;
+}
+
+/* THE STORE PREVIEW keeps the store's own look: the Neel-only tokens are unset inside it (each utility then falls back
+   to what it drew before Neel, base.css @theme), and every rule below skips elements inside [data-store-theme]. */
+[data-neel] [data-store-theme] {
+  --primary-hover: initial; --link: initial; --select: initial; --select-foreground: initial; --halo: initial; --side: initial;
+  --sunk: initial; --line-soft: initial; --edge: initial; --text-3: initial; --off: initial; --neutral-mark: initial;
+  --chart: initial; --chart-now: initial; --bar-btn: initial; --bar-btn-text: initial; --bar-link: initial;
+  --font-num: initial; --btn-h: initial; --field-hover: initial;
+}
+
+/* Buttons in Neel (src/components/ui/button.tsx): no thread, 44 px on a phone, ghost in text 2, disabled at 45%. */
+[data-neel] { --btn-h: 2.75rem; }
+[data-neel] .btn.thread:not([data-store-theme] *)::after { content: none; }
+[data-neel] .btn-ghost:not([data-store-theme] *) { color: var(--muted-foreground); }
+[data-neel] .btn-ghost:not([data-store-theme] *):hover { color: var(--foreground); }
+[data-neel] .btn:not([data-store-theme] *):is(:disabled, [aria-disabled="true"]:not([aria-busy="true"])) { opacity: 0.45; }
+[data-neel] .btn:not(.btn-sm, .btn-link):not([data-store-theme] *) { padding-inline: 14px; gap: 6px; } /* the mockup's 14 and 6 */
+
+/* Badge (src/components/ui/badge.tsx): a 22 px pill, 8 px sides, 12/500, a 6 px dot in the tone's mark. */
+[data-neel] .badge:not([data-store-theme] *) { height: 22px; gap: 6px; padding: 0 8px; border-radius: 999px; font-size: var(--t-small); line-height: 1; }
+[data-neel] .badge:not([data-store-theme] *)::before { content: ""; width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--badge-dot, var(--neutral-mark)); }
+
+/* Dialog (src/components/ui/dialog.tsx): 16 px corners, e3; its body 18 px in, 10 apart. On a phone the sheet's top
+   corners are 20 (the sheet itself is base.css's). Only the Dialog's own body ([data-dialog-body]): the phone's More
+   sheet is a dialog too and keeps its safe-area padding. */
+[data-neel] dialog[data-dialog] { border-radius: var(--r-xl); box-shadow: var(--sh-3); }
+[data-neel] [data-dialog-body] { padding: 18px; gap: 10px; }
+@media (max-width: 767px) { [data-neel] dialog[data-dialog] { border-radius: 20px 20px 0 0; } }
+
+/* Focus (Neel § Access): 2 px neel 500 at a 2 px gap, white on the bar; the same in the look editor, which has no shell. */
+@layer base {
+  [data-neel] :focus-visible:not([data-store-theme] *) { outline: 2px solid var(--ring); outline-offset: 2px; }
+  [data-neel] [data-surface="ink"] :focus-visible { outline-color: var(--ink-foreground); }
+}
+
+/* Fields (src/components/ui/field.ts, and every inline field): focus is the border and a 2 px neel line at a 1 px gap;
+   a mistake is the bad edge and a 3 px halo in its tint (the words below say what is wrong, 13/18). Outside any layer
+   on purpose: a field's own border-input utility must not win over them (impact review N0 #1). */
+[data-neel] :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea):not([data-store-theme] *):focus-visible {
+  outline-offset: 1px; border-color: var(--ring);
+}
+[data-neel] :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), select, textarea):not([data-store-theme] *):hover:not(:focus-visible, :disabled, [aria-invalid="true"], [readonly]) { border-color: var(--field-hover); }
+[data-neel] :is(input:not([type="checkbox"], [type="radio"]), textarea):not([data-store-theme] *)[readonly] { background: var(--sunk); color: var(--muted-foreground); }
+[data-neel] :is(input, select, textarea):not([data-store-theme] *)[aria-invalid="true"] { border-color: var(--danger-mark); box-shadow: 0 0 0 3px var(--danger); }
+
+/* Checkbox and radio (Neel § Components): a 16 px box in a 24 px target. The input itself is 24 px (a transparent
+   4 px border), the visible box its padding box: the field edge as an inset line, neel when on. Native inputs keep
+   their keyboard and form behaviour; only the paint is ours. */
+@layer base {
+  [data-neel] :is(input[type="checkbox"]:not([role="switch"]), input[type="radio"]):not([data-store-theme] *) {
+    appearance: none; margin: -4px; flex: none; display: inline-grid; place-content: center; width: 24px; height: 24px;
+    border: 4px solid transparent; background: var(--card) padding-box; box-shadow: inset 0 0 0 1px var(--input);
+    vertical-align: middle; cursor: pointer;
+    transition: background-color var(--transition-duration-fast) var(--ease-standard), box-shadow var(--transition-duration-fast) var(--ease-standard);
+  }
+  [data-neel] input[type="checkbox"]:not([role="switch"]):not([data-store-theme] *) { border-radius: 8px; } /* 4 px inside the 4 px border */
+  [data-neel] input[type="radio"]:not([data-store-theme] *) { border-radius: 50%; }
+  [data-neel] input[type="checkbox"]:not([role="switch"]):not([data-store-theme] *):is(:checked, :indeterminate) { background-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+  [data-neel] input[type="checkbox"]:not([role="switch"]):not([data-store-theme] *):checked::before {
+    content: ""; width: 10px; height: 10px; background: var(--primary-foreground);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3.2 3L13 4.5' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  [data-neel] input[type="checkbox"]:not([role="switch"]):not([data-store-theme] *):indeterminate::before { content: ""; width: 8px; height: 2px; border-radius: 1px; background: var(--primary-foreground); }
+  [data-neel] input[type="radio"]:not([data-store-theme] *):checked { box-shadow: inset 0 0 0 5px var(--primary); }
+  [data-neel] :is(input[type="checkbox"], input[type="radio"]):not([data-store-theme] *):disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+/* Money (src/components/data/numeric.tsx): the ₹ and the paise a step quieter than the rupees, in the same hue. */
+[data-neel] :is(.money-sym, .money-paise):not([data-store-theme] *, .btn *, .badge *, [data-surface] *, [data-toast] *, .text-danger-text *, .text-danger-text) { color: var(--muted-foreground); } /* text 2 (4.5:1); a coloured amount keeps its colour */
+[data-neel] .money-paise:not([data-store-theme] *) { font-size: 0.85em; }
+
+/* Toasts (src/components/ui/toast.tsx): no disc mark in Neel; an error is the bad tint with its own words and e2, its
+   action underlined (a close button stays: errors wait to be dismissed, N0 Deviations). */
+[data-neel] [data-toast] [data-mark] { display: none; }
+[data-neel] [data-toast="error"] { background: var(--danger); color: var(--danger-text); box-shadow: var(--sh-2); --tw-ring-shadow: 0 0 #0000; }
+[data-neel] [data-toast="error"] button { color: inherit; text-decoration-line: underline; }
+[data-neel] [data-toast="error"] :focus-visible { outline-color: var(--ring); }
+
+/* A phone (Neel § Screens, On a phone): fields and buttons read 15 px. */
+@media (max-width: 767px) {
+  [data-neel] :is(.btn:not(.btn-link), input:not([type="checkbox"], [type="radio"]), select, textarea):not([data-store-theme] *) { font-size: 15px; }
+}
+
+/* THE SIDEBAR AS A RAIL (Neel N1, § Layout · Sidebar; src/components/shell/app-shell.tsx, rail.ts, rail-toggle.tsx): 64 px
+   from 768 to 1279 px unless the person chose the full sidebar (data-rail="0"), and at any width when they chose the rail
+   (data-rail="1"). The two blocks below are ONE list of rules written for the two conditions (CSS cannot join a media
+   query and an attribute in one selector): change both together; flow 82-neel-shell checks both. Each link keeps its
+   name: its label becomes a fixed tooltip on the bar (rail-toggle.tsx places it; the aside keeps its own scroll), a
+   count a dot that keeps its words. The account's two ways out show as icons ([data-rail-only]). */
+[data-rail-only] { display: none; }
+@media (min-width: 768px) and (max-width: 1279.98px) {
+  [data-shell-aside]:not([data-rail="0"]) { width: 64px; padding: 10px 8px; align-items: center; }
+  [data-shell-aside]:not([data-rail="0"]) :is([data-nav-group], [data-nav-shop] [data-nav-label], [id^="nav-kids-"], [aria-controls^="nav-kids-"]) { display: none; }
+  [data-shell-aside]:not([data-rail="0"]) > div:last-child > [data-nav-label] { display: none; }
+  [data-shell-aside]:not([data-rail="0"]) [data-rail-only] { display: flex; }
+  [data-shell-aside]:not([data-rail="0"]) [data-nav-shop] { padding: 0 0 10px; }
+  [data-shell-aside]:not([data-rail="0"]) :is([data-nav], [data-rail-toggle]) { width: 40px; padding: 0; justify-content: center; position: relative; flex: none; }
+  [data-shell-aside]:not([data-rail="0"]) :is([data-nav], [data-rail-toggle]) [data-nav-label] {
+    position: fixed; left: var(--tip-x, -999px); top: var(--tip-y, -999px); translate: 0 -50%; z-index: 60; padding: 4px 8px; border-radius: var(--r-sm);
+    background: var(--bar); color: var(--bar-foreground); font-size: var(--t-small); line-height: var(--t-small-lh); font-weight: 500;
+    white-space: nowrap; overflow: visible; opacity: 0; pointer-events: none;
+    transition: opacity var(--transition-duration-fast) var(--ease-standard);
+  }
+  /* A transparent bridge over the 8 px gap, so the pointer can move onto the tooltip (WCAG 1.4.13). */
+  [data-shell-aside]:not([data-rail="0"]) :is([data-nav], [data-rail-toggle]) [data-nav-label]::before { content: ""; position: absolute; inset: 0 100% 0 -10px; }
+  [data-shell-aside]:not([data-rail="0"]):not([data-tip-off]) :is([data-nav], [data-rail-toggle]):is(:hover, :focus-visible) [data-nav-label] { opacity: 1; pointer-events: auto; }
+  [data-shell-aside]:not([data-rail="0"]) [data-nav-count] { position: absolute; right: 5px; top: 5px; width: 7px; height: 7px; padding: 0; margin: 0; font-size: 0; line-height: 0; background: var(--warn-mark); }
+}
+[data-shell-aside][data-rail="1"] { width: 64px; padding: 10px 8px; align-items: center; }
+[data-shell-aside][data-rail="1"] :is([data-nav-group], [data-nav-shop] [data-nav-label], [id^="nav-kids-"], [aria-controls^="nav-kids-"]) { display: none; }
+[data-shell-aside][data-rail="1"] > div:last-child > [data-nav-label] { display: none; }
+[data-shell-aside][data-rail="1"] [data-rail-only] { display: flex; }
+[data-shell-aside][data-rail="1"] [data-nav-shop] { padding: 0 0 10px; }
+[data-shell-aside][data-rail="1"] :is([data-nav], [data-rail-toggle]) { width: 40px; padding: 0; justify-content: center; position: relative; flex: none; }
+[data-shell-aside][data-rail="1"] :is([data-nav], [data-rail-toggle]) [data-nav-label] {
+    position: fixed; left: var(--tip-x, -999px); top: var(--tip-y, -999px); translate: 0 -50%; z-index: 60; padding: 4px 8px; border-radius: var(--r-sm);
+    background: var(--bar); color: var(--bar-foreground); font-size: var(--t-small); line-height: var(--t-small-lh); font-weight: 500;
+    white-space: nowrap; overflow: visible; opacity: 0; pointer-events: none;
+    transition: opacity var(--transition-duration-fast) var(--ease-standard);
+  }
+  /* A transparent bridge over the 8 px gap, so the pointer can move onto the tooltip (WCAG 1.4.13). */
+[data-shell-aside][data-rail="1"] :is([data-nav], [data-rail-toggle]) [data-nav-label]::before { content: ""; position: absolute; inset: 0 100% 0 -10px; }
+[data-shell-aside][data-rail="1"]:not([data-tip-off]) :is([data-nav], [data-rail-toggle]):is(:hover, :focus-visible) [data-nav-label] { opacity: 1; pointer-events: auto; }
+[data-shell-aside][data-rail="1"] [data-nav-count] { position: absolute; right: 5px; top: 5px; width: 7px; height: 7px; padding: 0; margin: 0; font-size: 0; line-height: 0; background: var(--warn-mark); }
+
+/* A phone (Neel § Screens · On a phone): body 15/22, titles 20/26. */
+@media (max-width: 767px) {
+  [data-neel] { font-size: 15px; line-height: 22px; --t-title: 20px; --t-title-lh: 26px; }
+}
+
+/* Neel § Icons: one colour, the text's (neel on the current page). Rani is the mark's alone, so the nav's second stroke
+   (globals.css [data-tinge]) is the text's colour here. */
+[data-neel] [data-tinge] { --icon-accent: currentColor; }
+
+/* Neel § On a phone, Orders (N1c): two lines — "KS-5006 · Sneha" with ₹ at the right, then the place and the status
+   chip; a phone or AWB a search matched between them. The customer cell lends its parts to the row's grid (one copy of
+   the name in the DOM, so a screen reader and a test read it once). */
+@media (max-width: 767px) {
+  table[data-rows="list"] > tbody > tr[data-order-row] { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "a n b" "m m m" "p p d" "e e e"; }
+  table[data-rows="list"] > tbody > tr[data-order-row] > td[data-cell="c"] { display: contents; }
+  tr[data-order-row] [data-o-name] { grid-area: n; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+  tr[data-order-row] [data-o-name]::before { content: "· " / ""; color: var(--muted-foreground); }
+  tr[data-order-row] [data-o-match] { grid-area: m; }
+  tr[data-order-row] [data-o-place] { grid-area: p; align-self: center; }
+}

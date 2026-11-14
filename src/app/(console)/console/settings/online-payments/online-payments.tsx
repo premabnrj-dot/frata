@@ -69,10 +69,10 @@ export function OnlinePayments({ status, support, available, now }: { status: St
           <div ref={keys} className="space-y-3">
             <div className="space-y-1"><label htmlFor="key-id" className="block text-sm font-medium">Key ID</label>
               <input id="key-id" value={keyId} onChange={(e) => { setKeyId(e.target.value); setErrors(({ keyId: _gone, ...rest }) => rest) }} autoComplete="off" spellCheck={false} placeholder="rzp_live_…" {...fieldProps('key-id', errors.keyId)}
-                className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /><FieldError name="key-id" message={errors.keyId} /></div>
+                className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /><FieldError name="key-id" message={errors.keyId} /></div>
             <div className="space-y-1"><div className="flex items-center"><label htmlFor="key-secret" className="text-sm font-medium">Key secret</label><InfoTip about="the key secret">Checked with Razorpay before saving: wrong keys are refused and nothing changes. Saved keys are encrypted and never shown again.</InfoTip></div>
               <input id="key-secret" type="password" value={secret} onChange={(e) => { setSecret(e.target.value); setErrors(({ keySecret: _gone, ...rest }) => rest) }} autoComplete="off" placeholder={status ? 'Saved · paste a new one' : ''} {...fieldProps('key-secret', errors.keySecret)}
-                className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /><FieldError name="key-secret" message={errors.keySecret} /></div>
+                className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /><FieldError name="key-secret" message={errors.keySecret} /></div>
             <p className="text-xs text-muted-foreground">Razorpay → Account &amp; Settings → API keys. The secret is shown there once: generate a new pair if you do not have it.</p>
             <div className="flex flex-wrap items-center gap-3">
               <Button disabled={pending || !keyId || !secret} onClick={connect}>{pending ? 'Checking with Razorpay…' : status ? 'Test and save new keys' : 'Test and connect'}</Button>

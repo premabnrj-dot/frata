@@ -70,7 +70,7 @@ export default {
       await t.step('PR·2: Ctrl+S saves; an empty Details section is one line until opened', async () => {
         await p.locator('#desc').fill('Soft cotton, hand block printed.')
         // Ctrl+S presses Save; while the last save is still finishing the button is off, and so is the key.
-        await p.waitForFunction(() => document.querySelector('button[aria-keyshortcuts]')?.disabled === false)
+        await p.waitForFunction(() => document.querySelector('button[data-save-bar]')?.disabled === false)
         await p.keyboard.press('Control+s')
         await p.getByText('Unsaved changes').waitFor({ state: 'detached', timeout: 8_000 })
         const [r] = await db`select description from products where tenant_id = ${KESAR} and title = ${TITLE}`

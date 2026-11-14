@@ -49,37 +49,37 @@ export function WhatChanges({ number, plan, problem, before, to, notify, onNotif
           {changes.map((c, i) => <div key={i} className="flex justify-between gap-3 py-2 first:pt-0"><dt className="min-w-0">{c.title}</dt><dd className="text-right">{changeWords(c)}</dd></div>)}
           {plan?.offers.map((o) => (
             <div key={o.rowId} className="flex justify-between gap-3 py-2"><dt className="min-w-0">{o.title}</dt>
-              <dd className="text-right font-mono tabular-nums"><s className="mr-1.5 text-muted-foreground"><Money paise={paise(o.before)} /></s>{o.after ? <Money paise={paise(o.after)} /> : <span className="font-sans">Off</span>}</dd></div>
+              <dd className="text-right font-num"><s className="mr-1.5 text-muted-foreground"><Money paise={paise(o.before)} /></s>{o.after ? <Money paise={paise(o.after)} /> : <span className="font-sans">Off</span>}</dd></div>
           ))}
           {plan && plan.shipping.before !== plan.shipping.after ? (
             <div className="flex justify-between gap-3 py-2"><dt>Delivery</dt>
-              <dd className="text-right font-mono tabular-nums"><s className="mr-1.5 text-muted-foreground">{plan.shipping.before ? <Money paise={paise(plan.shipping.before)} /> : 'Free'}</s>{plan.shipping.after ? <Money paise={paise(plan.shipping.after)} /> : <span className="font-sans">Free</span>}</dd></div>
+              <dd className="text-right font-num"><s className="mr-1.5 text-muted-foreground">{plan.shipping.before ? <Money paise={paise(plan.shipping.before)} /> : 'Free'}</s>{plan.shipping.after ? <Money paise={paise(plan.shipping.after)} /> : <span className="font-sans">Free</span>}</dd></div>
           ) : null}
         </dl>
       ) : null}
       {online ? (
         <dl className="space-y-1 border-t border-border pt-3 text-sm">
-          <div className="flex justify-between gap-3"><dt>Paid online</dt><dd className="font-mono tabular-nums"><Money paise={paise(before)} /></dd></div>
-          <div className="flex justify-between gap-3"><dt>New total</dt><dd className="font-mono tabular-nums"><b className="text-xl font-semibold"><Money paise={paise(after)} /></b></dd></div>
+          <div className="flex justify-between gap-3"><dt>Paid online</dt><dd className="font-num"><Money paise={paise(before)} /></dd></div>
+          <div className="flex justify-between gap-3"><dt>New total</dt><dd className="font-num"><b className="text-xl font-semibold"><Money paise={paise(after)} /></b></dd></div>
         </dl>
       ) : (
         <div className="flex items-baseline justify-between gap-3 border-t border-border pt-3 text-sm">
           <span>Collect on delivery</span>
-          <span className="text-right font-mono tabular-nums">{after !== before ? <s className="mr-2 text-muted-foreground"><Money paise={paise(before)} /></s> : null}<b className="text-xl font-semibold"><Money paise={paise(after)} /></b></span>
+          <span className="text-right font-num">{after !== before ? <s className="mr-2 text-muted-foreground"><Money paise={paise(before)} /></s> : null}<b className="text-xl font-semibold"><Money paise={paise(after)} /></b></span>
         </div>
       )}
       {settle?.kind === 'refund' ? (
-        <div className="rounded-md border border-warn bg-warn/40 p-3 text-sm" data-settle="refund"><b className="font-mono tabular-nums">Refund <Money paise={paise(settle.amount)} /></b>
+        <div className="rounded-md border border-warn bg-warn/40 p-3 text-sm" data-settle="refund"><b className="font-num">Refund <Money paise={paise(settle.amount)} /></b>
           <span className="block text-muted-foreground">{kept ? <>Back in 5–10 working days · Razorpay keeps its <Money paise={paise(kept.fee)} decimals /> fee</> : 'Razorpay · back in 5–10 working days · its fee isn’t returned'}</span></div>
       ) : settle?.kind === 'ask' ? (
-        <div className="rounded-md border border-border bg-muted p-3 text-sm" data-settle="ask"><b className="font-mono tabular-nums">Ask for <Money paise={paise(settle.amount)} /></b>
+        <div className="rounded-md border border-border bg-muted p-3 text-sm" data-settle="ask"><b className="font-num">Ask for <Money paise={paise(settle.amount)} /></b>
           <span className="block text-muted-foreground">The shopper pays first · nothing changes until then</span></div>
       ) : null}
       {/* feedback-ok: a limit the edit must meet (the COD maximum, a sold-out size), said live beside the money (§ Feedback 5) */}
       {said ? <p role="alert" className="text-sm text-danger-text">{said}</p> : null}
       {to ? (
         <label className="flex min-h-10 items-center gap-3 text-sm">
-          <input type="checkbox" checked={notify} onChange={(e) => onNotify(e.target.checked)} className="size-5 accent-primary" />Email {to} {mail}
+          <input type="checkbox" checked={notify} onChange={(e) => onNotify(e.target.checked)} />Email {to} {mail}
         </label>
       ) : null}
       <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 flex flex-wrap justify-end gap-2 border-t border-border bg-card px-4 py-3 md:static md:z-auto md:border-0 md:bg-transparent md:p-0 print:hidden">

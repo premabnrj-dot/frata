@@ -13,6 +13,7 @@ import { formatCount } from '@/lib/format'
 import { settle } from '@/lib/settle'
 import type { ConsoleRule } from '@/lib/queries/delivery'
 import { addRuleAction, importRulesAction, previewRulesAction, removeRuleAction } from './actions'
+import { FIELD } from '@/components/ui/field'
 
 // =============================================================================
 // Delivery Zones › PIN code rules (PD·1, approved mockup "PIN code rules"): search by PIN code (server, paged at 100),
@@ -21,7 +22,7 @@ import { addRuleAction, importRulesAction, previewRulesAction, removeRuleAction 
 // =============================================================================
 
 const WORDS: Record<ConsoleRule['rule'], string> = { no_delivery: 'Don’t deliver', prepaid_only: 'Pay online only', cod_max: 'Pay on delivery up to' }
-const field = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9'
+const field = `${FIELD} w-full`
 
 type Props = { rules: ConsoleRule[]; count: number; q: string; page: number; pages: number; fromSettings: string[]; canEdit: boolean }
 
@@ -71,7 +72,7 @@ function Rules({ rules, count, q, page, pages, fromSettings, canEdit }: Props) {
               <DataTableRow key={r.pincode}>
                 <Td cell="a"><span className="font-mono">{r.pincode}</span></Td>
                 <Td cell="c">{r.place ?? '—'}</Td>
-                <Td cell="b">{WORDS[r.rule]}{r.rule === 'cod_max' && r.codMax ? <span className="font-mono"> ₹{(r.codMax / 100).toLocaleString('en-IN')}</span> : null}</Td>
+                <Td cell="b">{WORDS[r.rule]}{r.rule === 'cod_max' && r.codMax ? <span className="font-num"> ₹{(r.codMax / 100).toLocaleString('en-IN')}</span> : null}</Td>
                 <Td cell="e" className="text-muted-foreground">{r.note ?? '—'}</Td>
                 {canEdit && <Td cell="f" className="text-right"><Button variant="ghost" disabled={busy === r.pincode} onClick={() => remove(r.pincode)}>Remove</Button></Td>}
               </DataTableRow>

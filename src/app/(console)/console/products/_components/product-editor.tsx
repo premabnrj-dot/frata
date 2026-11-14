@@ -1,6 +1,7 @@
 'use client'
 
 import { isSizeOption } from '@/domains/storefront/picker'
+import { colourIndex } from '@/domains/catalogue/option-kind'
 import { InfoTip } from '@/components/ui/info-tip'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
@@ -62,7 +63,6 @@ export type EditorShop = { name: string; address: string; skuPrefix: string; cod
   maker: string }
 
 type Draft = Omit<EditorProduct, 'id' | 'version' | 'status' | 'publishAt' | 'everLive'>
-const isColour = (name: string) => /^colou?rs?$/i.test(name)
 
 /**
  * One product. Main column in the order a merchant fills it (approved mockup,
@@ -107,7 +107,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   const combos = useMemo(() => combinations(opts), [d.options]) // eslint-disable-line react-hooks/exhaustive-deps
   const cells = combos.map((c) => d.cells[keyOf(c)] ?? EMPTY_CELL)
   const type = types.find((t) => t.id === d.typeId)
-  const colourOpt = d.options.find((o) => isColour(o.name))
+  const colourOpt = d.options[colourIndex(d.options.map((o) => o.name))]
   // The size chart and the model belong to a product with sizes (a saree has neither); a chart already picked stays.
   const showSizes = shop.sized && (d.options.some((o) => isSizeOption(o.name)) || !!d.typeId || !!(d.modelHeight || d.modelSize))
   const prices = cells.map((c) => parseRupees(c.price)).filter((x): x is number => x !== null && x > 0)
@@ -142,10 +142,10 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
         if (parts[at] === from) parts[at] = to
         return [parts.join('\u0000'), c]
       }))
-      const colours = isColour(x.options[option]!.name) ? x.colours.map((c) => (c.value === from ? { ...c, value: to } : c)) : x.colours
+      const colours = option === colourIndex(x.options.map((o) => o.name)) ? x.colours.map((c) => (c.value === from ? { ...c, value: to } : c)) : x.colours
       return { ...x, options, cells, colours }
     })
-    if (isColour(d.options[option]!.name)) setRenames((r) => [...r.map((x) => (x.to === from ? { ...x, to } : x)), ...(r.some((x) => x.to === from) ? [] : [{ from, to }])])
+    if (option === colourIndex(d.options.map((o) => o.name))) setRenames((r) => [...r.map((x) => (x.to === from ? { ...x, to } : x)), ...(r.some((x) => x.to === from) ? [] : [{ from, to }])])
     fix('options')
   }
 
@@ -192,7 +192,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
       e.preventDefault()
       // The size chart's own editor (inline) keeps its own Save: the key is left to it, never taken for the product.
       if (e.isComposing || document.querySelector('dialog:modal')) return
-      root.current?.querySelector<HTMLButtonElement>('button[aria-keyshortcuts]:not(:disabled)')?.click()
+      root.current?.querySelector<HTMLButtonElement>('button[data-save-bar]:not(:disabled)')?.click()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -226,7 +226,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           <textarea id="title" rows={1} value={d.title} maxLength={140} {...fieldProps('title', errors.title)} placeholder="Product title"
             onChange={(e) => set({ title: e.target.value.replace(/\s*\n\s*/g, ' ') })}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) e.preventDefault() }} ref={titleRef}
-            className="-mx-2 w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-2xl font-bold tracking-tight transition-colors duration-fast hover:border-input focus:border-input focus:bg-card aria-invalid:border-danger-text block resize-none overflow-hidden [field-sizing:content] [overflow-wrap:anywhere]" />
+            className="-mx-2 w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-2xl font-semibold tracking-tight transition-colors duration-fast hover:border-input focus:border-input focus:bg-card aria-invalid:border-danger-text block resize-none overflow-hidden [field-sizing:content] [overflow-wrap:anywhere]" />
         </div>} />
       <FieldError name="title" message={errors.title} />
       {/* The main column in the order a brand works (products PR·2, spec § 4): photos, words, sizes and stock, then what
@@ -255,8 +255,8 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           {showSizes && <Section><h2 className="text-section font-semibold">Size chart</h2><SizeChartPanel types={types} typeId={d.typeId} onType={(typeId) => set({ typeId })} /></Section>}
           {showSizes && <FoldSection title="The model in the photos" start={!!(start0.modelHeight || start0.modelSize)} summary="Height, size worn">
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1"><label htmlFor="mh" className="block text-sm font-medium">Height <span className="font-normal text-muted-foreground">(optional)</span></label><input id="mh" value={d.modelHeight} maxLength={30} placeholder="5 ft 6 in" onChange={(e) => set({ modelHeight: e.target.value })} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
-              <div className="space-y-1"><label htmlFor="ms" className="block text-sm font-medium">Wears <span className="font-normal text-muted-foreground">(optional)</span></label><input id="ms" value={d.modelSize} maxLength={10} placeholder="S" onChange={(e) => set({ modelSize: e.target.value })} className="h-10 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
+              <div className="space-y-1"><label htmlFor="mh" className="block text-sm font-medium">Height <span className="font-normal text-muted-foreground">(optional)</span></label><input id="mh" value={d.modelHeight} maxLength={30} placeholder="5 ft 6 in" onChange={(e) => set({ modelHeight: e.target.value })} className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
+              <div className="space-y-1"><label htmlFor="ms" className="block text-sm font-medium">Wears <span className="font-normal text-muted-foreground">(optional)</span></label><input id="ms" value={d.modelSize} maxLength={10} placeholder="S" onChange={(e) => set({ modelSize: e.target.value })} className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
             </div>
           </FoldSection>}
           <SeoPanel handle={d.handle} onHandle={(handle) => set({ handle })} seoTitle={d.seoTitle} onSeoTitle={(seoTitle) => set({ seoTitle })} seoDescription={d.seoDescription} onSeoDescription={(seoDescription) => set({ seoDescription })}
@@ -295,7 +295,7 @@ function Summary({ d, cells, photos, typeName, status, publishAt, address }: { d
   const soldOut = sees.filter((s) => !s.canBuy).length
   const later = sees.filter((s) => s.kind === 'preorder' || s.kind === 'made_to_order').length
   const cover = photos[0]
-  const colourOpt = d.options.find((o) => isColour(o.name))
+  const colourOpt = d.options[colourIndex(d.options.map((o) => o.name))]
   return (
     <Section flush ariaLabel="Summary">
       <div className="flex gap-3 p-4">
@@ -312,9 +312,9 @@ function Summary({ d, cells, photos, typeName, status, publishAt, address }: { d
       </div>
       <dl className="grid grid-cols-2 gap-px border-t border-border bg-border text-sm">
         <div className="bg-card p-3"><dt className="text-xs text-muted-foreground">Price</dt><dd>{prices.length ? (Math.min(...prices) === Math.max(...prices) ? <Money paise={paise(prices[0]!)} /> : <><Money paise={paise(Math.min(...prices))} />–<Money paise={paise(Math.max(...prices))} /></>) : <span className="text-muted-foreground">Not set</span>}</dd></div>
-        <div className="bg-card p-3"><dt className="text-xs text-muted-foreground">In stock</dt><dd className="font-mono">{total}</dd></div>
-        <div className="bg-card p-3"><dt className="text-xs text-muted-foreground">Sold out</dt><dd className={soldOut ? 'font-mono text-warn-text' : 'font-mono'}>{soldOut} of {cells.length}</dd></div>
-        <div className="bg-card p-3"><dt className="text-xs text-muted-foreground">Pre-order or made to order</dt><dd className="font-mono">{later}</dd></div>
+        <div className="bg-card p-3"><dt className="text-xs text-muted-foreground">In stock</dt><dd className="font-num">{total}</dd></div>
+        <div className="bg-card p-3"><dt className="text-xs text-muted-foreground">Sold out</dt><dd className={soldOut ? 'font-num text-warn-text' : 'font-num'}>{soldOut} of {cells.length}</dd></div>
+        <div className="bg-card p-3"><dt className="text-xs text-muted-foreground">Pre-order or made to order</dt><dd className="font-num">{later}</dd></div>
       </dl>
       <div className="flex items-center gap-2 border-t border-border px-4 py-2 text-xs">
         <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground" title={address}>{address}</span>
@@ -334,7 +334,7 @@ function ReadyFor({ d, photos, priced }: { d: Draft; photos: number; priced: boo
     { label: 'Age group', ok: !asks('age-group') || has('age-group') },
     { label: 'A photo', ok: photos > 0 },
     { label: 'Prices', ok: priced },
-    { label: 'A colour family for each colour', ok: !d.options.some((o) => isColour(o.name)) || (d.options.find((o) => isColour(o.name))!.values.every((v) => d.colours.some((c) => c.value === v && c.family))) },
+    { label: 'A colour family for each colour', ok: (() => { const c = d.options[colourIndex(d.options.map((o) => o.name))]; return !c || c.values.every((v) => d.colours.some((x) => x.value === v && x.family)) })() },
   ]
   const missing = needs.filter((n) => !n.ok)
   return (

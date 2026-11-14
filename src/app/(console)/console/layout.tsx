@@ -1,5 +1,7 @@
+import { railFrom } from '@/components/shell/rail'
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { Suspense } from 'react'
 import { SupportBanner } from '@/components/nav/support-banner'
 import { AppShell } from '@/components/shell/app-shell'
@@ -33,8 +35,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** The nav's counts (U·2a; email E·1): orders to confirm and unread notices, from ONE cached read (navCounts),
  *  streamed so the shell never waits; no pill on failure. */
-async function NavCount({ tenantId, userId, which }: { tenantId: string; userId: string; which: 'toConfirm' | 'unread' }) {
+async function NavCount({ tenantId, userId, which }: { tenantId: string; userId: string; which: 'toConfirm' | 'unread' | 'address' }) {
   const c = await navCounts(tenantId, userId).catch((err) => { console.error('[nav count]', err instanceof Error ? err.name : err); return null })
+  if (which === 'address') return c?.address ?? null
   const n = c?.[which] ?? 0
   return which === 'toConfirm' ? <NavPill n={n} label="to confirm" /> : <NavPill n={n} label="unread notices" max={9} />
 }
@@ -50,7 +53,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const auth = await requireMember(CONSOLE_ROLES)
   if (!auth.ok && auth.reason === 'not_configured') {
     return (
-      <main data-shell className="p-6">
+      <main data-shell data-neel="" className="p-6">
         <Panel title={auth.message}>
           Set the Supabase and database variables listed in <code>.env.example</code> in Vercel, then redeploy.
         </Panel>
@@ -59,7 +62,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   }
   if (!auth.ok) {
     return (
-      <main data-shell className="p-6">
+      <main data-shell data-neel="" className="p-6">
         <Panel title={auth.reason === 'signed_out' ? 'Sign in to continue' : 'No store on this account'}
           action={auth.reason === 'no_access'
             ? <div className="flex flex-wrap justify-center gap-2"><Link href="/start" className={button()}>Start your shop</Link><Link href="/login" className={button({ variant: 'secondary' })}>Sign in with another email</Link></div>
@@ -86,6 +89,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   ]
   const pill = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="toConfirm" /></Suspense>
   const bell = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="unread" /></Suspense>
+  const address = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="address" /></Suspense>
+  const rail = railFrom((await cookies()).get('rail')?.value)
   const home: NavItem = { href: '/console', label: 'Home', icon: 'home', exact: true }
   const orders: NavItem = { href: '/console/orders', label: 'Orders', icon: 'orders', badge: pill }
   const products: NavItem = { href: '/console/products', label: 'Products', icon: 'products' }
@@ -115,7 +120,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   if (auth.staffRole !== null && !supportSessionId) foot.push({ href: '/admin', label: 'Frrata Admin', icon: 'admin' })
   return (
     <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={accountant ? [gst] : [home, orders, products]} more={accountant ? [] : [noticesItem, analytics, collections, offers, look, search, apps, settings, activity]} foot={accountant ? [] : foot}
-      email={auth.email} tenantId={tenantId} places={places}
+      email={auth.email} tenantId={tenantId} places={places} subtitle={address} rail={rail}
       banner={visit ? <SupportBanner storeName={tenantName} visit={visit} now={now} />
         : building ? <BuildingBanner shop={tenantName} inviteEmail={building.inviteEmail} /> : undefined}>
       {/* Anyone who can be in two places checks which shop each page is for (tenancy audit 2026-11-07). */}

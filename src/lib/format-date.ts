@@ -26,6 +26,10 @@ export function dropLineIN(d: Date): string {
 export const dayMonthIN = (d: Date) =>
   d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: IST })
 
+/** "November 2026" — a calendar's month (Neel's date field). */
+export const monthLongYearIN = (d: Date) =>
+  d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: IST })
+
 /** "Aug 2028" — a month a window ends in. */
 export const monthYearIN = (d: Date) =>
   d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: IST })

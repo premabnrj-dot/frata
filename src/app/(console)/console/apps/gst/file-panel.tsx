@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/toast'
 import { dateTimeIN } from '@/lib/format-date'
 import type { FilingStep, Liability } from '@/domains/tax/gsp'
 import { gstConnect, gstDisconnect, gstFile, gstFileOtp, gstPush, gstVerify } from './actions'
+import { FIELD } from '@/components/ui/field'
 
 // =============================================================================
 // Filing from Frrata (GST app G2; approved mockup "File from Frrata"): connect with the portal's OTP, push, see the
@@ -16,7 +17,7 @@ import { gstConnect, gstDisconnect, gstFile, gstFileOtp, gstPush, gstVerify } fr
 
 const rs = (p: number) => `₹${(p / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const HEADS: [keyof Liability, string][] = [['taxable', 'Taxable value'], ['cgst', 'CGST'], ['sgst', 'SGST'], ['igst', 'IGST'], ['documents', 'Documents']]
-const input = 'h-10 rounded-md border border-input bg-card px-3 text-sm md:h-9'
+const input = FIELD
 
 export function FilePanel({ period, step, ours, portal, username, pushedAt, filedAt, arn, gspName }: {
   period: string; step: FilingStep; ours: Liability; portal: Liability | null; username: string | null
@@ -78,7 +79,7 @@ export function FilePanel({ period, step, ours, portal, username, pushedAt, file
             {HEADS.map(([h, l]) => {
               const off = h === 'documents' ? ours[h] !== portal[h] : Math.abs(ours[h] - portal[h]) > 100
               const f = (v: number) => (h === 'documents' ? String(v) : rs(v))
-              return <tr key={h} className={off ? 'text-danger-text' : undefined}><td className="py-2">{l}</td><td className="py-2 text-right font-mono tabular-nums">{f(ours[h])}</td><td className="py-2 text-right font-mono tabular-nums">{f(portal[h])}{off ? ' ≠' : ' ✓'}</td></tr>
+              return <tr key={h} className={off ? 'text-danger-text' : undefined}><td className="py-2">{l}</td><td className="py-2 text-right font-num">{f(ours[h])}</td><td className="py-2 text-right font-num">{f(portal[h])}{off ? ' ≠' : ' ✓'}</td></tr>
             })}
           </tbody>
         </table>
@@ -86,7 +87,7 @@ export function FilePanel({ period, step, ours, portal, username, pushedAt, file
 
       {step === 'file' && (
         <form className="space-y-3 rounded-lg border border-border p-4" onSubmit={(e) => { e.preventDefault(); run(fileOtp ? () => gstFile(period, otp) : async () => { const r = await gstFileOtp(period); if (r.ok) setFileOtp(true); return r }) }}>
-          <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={sure} onChange={(e) => setSure(e.target.checked)} className="mt-0.5 size-4" />
+          <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={sure} onChange={(e) => setSure(e.target.checked)} className="mt-0.5" />
             <span>I’ve checked this return. A filed GSTR-1 can’t be changed; a mistake is corrected in a later period.</span></label>
           <div className="flex flex-wrap items-center gap-2">
             {fileOtp && otpBox('EVC OTP')}

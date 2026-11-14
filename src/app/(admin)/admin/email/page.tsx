@@ -30,7 +30,7 @@ export default async function EmailHealth({ searchParams }: { searchParams: Prom
       <dl className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-5">
         {[['Sent', total.sent.toLocaleString('en-IN')], ['Bounced', pct(total.bounced, total.sent)], ['Complaints', pct(total.complained, total.sent)],
           ['Waiting to send', q.waiting.toLocaleString('en-IN') + (q.oldest ? ` · since ${dateTimeIN(q.oldest)}` : '')], ['Gave up today', q.dead_today.toLocaleString('en-IN')]].map(([l, v]) => (
-          <div key={l} className="bg-card p-4"><dd className="font-mono text-xl">{v}</dd><dt className="text-xs text-muted-foreground">{l}</dt></div>
+          <div key={l} className="bg-card p-4"><dd className="font-num text-xl">{v}</dd><dt className="text-xs text-muted-foreground">{l}</dt></div>
         ))}
       </dl>
       {sorted.length ? (
@@ -40,11 +40,11 @@ export default async function EmailHealth({ searchParams }: { searchParams: Prom
             {sorted.map((r) => (
               <DataTableRow key={r.tenant_id}>
                 <Td cell="a" className="font-medium"><Link href={`/admin/merchants/${r.tenant_id}`} className="underline-offset-2 hover:underline">{r.shop}</Link></Td>
-                <Td cell="c" label="Sent" className="text-right font-mono">{r.sent.toLocaleString('en-IN')}</Td>
-                <Td cell="c" label="Delivered" className="text-right font-mono">{pct(r.delivered, r.sent)}</Td>
-                <Td cell="c" label="Bounced" className="text-right font-mono">{r.sent && r.bounced / r.sent >= 0.02 ? <Badge tone="danger">{pct(r.bounced, r.sent)}</Badge> : pct(r.bounced, r.sent)}</Td>
-                <Td cell="c" label="Complaints" className="text-right font-mono">{r.sent && r.complained / r.sent >= 0.0005 ? <Badge tone="danger">{pct(r.complained, r.sent)}</Badge> : pct(r.complained, r.sent)}</Td>
-                <Td cell="c" label="Skipped" className="text-right font-mono">{r.skipped.toLocaleString('en-IN')}</Td>
+                <Td cell="c" label="Sent" className="text-right font-num">{r.sent.toLocaleString('en-IN')}</Td>
+                <Td cell="c" label="Delivered" className="text-right font-num">{pct(r.delivered, r.sent)}</Td>
+                <Td cell="c" label="Bounced" className="text-right font-num">{r.sent && r.bounced / r.sent >= 0.02 ? <Badge tone="danger">{pct(r.bounced, r.sent)}</Badge> : pct(r.bounced, r.sent)}</Td>
+                <Td cell="c" label="Complaints" className="text-right font-num">{r.sent && r.complained / r.sent >= 0.0005 ? <Badge tone="danger">{pct(r.complained, r.sent)}</Badge> : pct(r.complained, r.sent)}</Td>
+                <Td cell="c" label="Skipped" className="text-right font-num">{r.skipped.toLocaleString('en-IN')}</Td>
               </DataTableRow>
             ))}
           </DataTableBody>

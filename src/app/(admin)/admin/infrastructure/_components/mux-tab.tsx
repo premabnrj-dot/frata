@@ -39,7 +39,7 @@ export function MuxTab({ f, alerts, pulls, connected, videosRead }: { f: MuxFact
             <DataTable label="Most watched">
               <DataTableHead><th>Video</th><th>Shop</th><th className="text-right">Minutes</th><th className="text-right">Share</th></DataTableHead>
               <DataTableBody>
-                {f.top.map((t) => <DataTableRow key={t.assetId}><Td cell="a">{t.label}</Td><Td cell="b">{t.shop}</Td><Td cell="c" className="text-right font-mono tabular-nums">{n(t.minutes)}</Td><Td cell="d" className="text-right font-mono tabular-nums">{Math.round(t.share * 100)}%</Td></DataTableRow>)}
+                {f.top.map((t) => <DataTableRow key={t.assetId}><Td cell="a">{t.label}</Td><Td cell="b">{t.shop}</Td><Td cell="c" className="text-right font-num">{n(t.minutes)}</Td><Td cell="d" className="text-right font-num">{Math.round(t.share * 100)}%</Td></DataTableRow>)}
               </DataTableBody>
             </DataTable>
           ) : <p className="px-4 pb-4 text-sm text-muted-foreground">No delivery this month yet.</p>}
@@ -51,7 +51,7 @@ export function MuxTab({ f, alerts, pulls, connected, videosRead }: { f: MuxFact
             <DataTable label="By shop">
               <DataTableHead><th>Shop</th><th>Plan</th><th className="text-right">Live</th><th className="text-right">Delivered</th></DataTableHead>
               <DataTableBody>
-                {f.shops.slice(0, 12).map((s) => <DataTableRow key={s.tenantId}><Td cell="a">{s.shop}</Td><Td cell="b">{PLAN[s.plan] ?? s.plan}</Td><Td cell="c" className="text-right font-mono tabular-nums">{n(s.liveProduct)} / {n(s.cap)}</Td><Td cell="d" className="text-right font-mono tabular-nums">{n(s.minutes)} min</Td></DataTableRow>)}
+                {f.shops.slice(0, 12).map((s) => <DataTableRow key={s.tenantId}><Td cell="a">{s.shop}</Td><Td cell="b">{PLAN[s.plan] ?? s.plan}</Td><Td cell="c" className="text-right font-num">{n(s.liveProduct)} / {n(s.cap)}</Td><Td cell="d" className="text-right font-num">{n(s.minutes)} min</Td></DataTableRow>)}
               </DataTableBody>
             </DataTable>
           ) : <p className="px-4 pb-4 text-sm text-muted-foreground">No shop has product videos yet.</p>}

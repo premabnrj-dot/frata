@@ -64,7 +64,7 @@ export function MakeLink({ origin, open, products, collections, showsAs: shows }
               <>
                 <div className="grid gap-1">
                   <label htmlFor="link-page" className="text-sm font-medium">Which page opens?</label>
-                  <select id="link-page" value={page} onChange={(e) => { setPage(e.target.value); setCopied(null) }} className="h-10 rounded-md border border-input bg-card px-3 text-sm md:h-9">
+                  <select id="link-page" value={page} onChange={(e) => { setPage(e.target.value); setCopied(null) }} className="h-11 rounded-md border border-input bg-card px-3 text-sm md:h-9">
                     <option value="/">Your shop&apos;s home</option>
                     {collections.length ? <optgroup label="Collections">{collections.map((c) => <option key={c.handle} value={`/collections/${c.handle}`}>{c.title}</option>)}</optgroup> : null}
                     {products.length ? <optgroup label="Products">{products.map((p) => <option key={p.handle} value={`/products/${p.handle}`}>{p.title}</option>)}</optgroup> : null}
@@ -72,7 +72,7 @@ export function MakeLink({ origin, open, products, collections, showsAs: shows }
                 </div>
                 <div className="grid gap-1">
                   <label htmlFor="link-name" className="text-sm font-medium">Name it, so you can tell posts apart</label>
-                  <input id="link-name" value={name} maxLength={50} onChange={(e) => { setName(e.target.value); setCopied(null) }} placeholder="Diwali drop" className="h-10 rounded-md border border-input bg-card px-3 text-sm md:h-9" />
+                  <input id="link-name" value={name} maxLength={50} onChange={(e) => { setName(e.target.value); setCopied(null) }} placeholder="Diwali drop" className="h-11 rounded-md border border-input bg-card px-3 text-sm md:h-9" />
                   <span className="text-xs text-muted-foreground">Optional. Shown as the campaign on Analytics.</span>
                 </div>
                 {link ? (

@@ -1,3 +1,5 @@
+import { railFrom } from '@/components/shell/rail'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { AppShell } from '@/components/shell/app-shell'
@@ -23,13 +25,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Staff passkeys (ADR-0007 amended 2026-11-12): no page renders until this browser session has passed the check.
   if (!staff.ok && staff.reason === 'needs_passkey') {
     const state = await gateState(staff.identity).catch(() => 'error' as const)
-    if (state === 'error') return <main data-shell className="p-6"><Panel title="Admin cannot reach the database">Try again in a minute.</Panel></main>
+    if (state === 'error') return <main data-shell data-neel="" className="p-6"><Panel title="Admin cannot reach the database">Try again in a minute.</Panel></main>
     return <Toaster calm><StaffGate email={staff.identity.email} state={state}
       signOut={<form action={signOutAction}><button type="submit" className="text-sm underline underline-offset-4">Sign out</button></form>} /></Toaster>
   }
   if (!staff.ok) {
     return (
-      <main data-shell className="p-6">
+      <main data-shell data-neel="" className="p-6">
         <Panel title={staff.reason === 'not_configured' ? staff.message : 'Frrata Admin is for Frrata staff'}
           action={<Link href="/console" className={button({ variant: 'secondary' })}>Go to your console</Link>}>
           {staff.reason === 'not_configured' && <>Set <code>ADMIN_DATABASE_URL</code> in Vercel (Production), then redeploy.</>}
@@ -40,7 +42,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const health = await adminHealth(staff)
   if (!health.ok) {
     return (
-      <main data-shell className="p-6">
+      <main data-shell data-neel="" className="p-6">
         <Panel title={health.why === 'login_refused' ? 'Admin cannot sign in to the database' : 'Admin cannot reach the database'}>
           {health.why === 'login_refused'
             ? <>Supabase refused the <code>frata_admin</code> login. Set its password in the SQL Editor (<code>alter role frata_admin with password &apos;…&apos;</code>), use the same value in <code>ADMIN_DATABASE_URL</code> in Vercel, then redeploy. See docs/setup.md § 6.</>
@@ -69,7 +71,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const infraItem: NavItem = { href: '/admin/infrastructure', label: 'Infrastructure', icon: 'risk' }
   const foot: NavItem[] = ownStore ? [{ href: '/console', label: `${ownStore} console`, icon: 'external' }] : []
   return (
-    <AppShell ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, trialsItem, partnersItem, plans, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem] }, { label: 'Frrata', items: [noticesItem, emailItem, infraItem, staffItem, activity] }]}
+    <AppShell rail={railFrom((await cookies()).get('rail')?.value)} ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, trialsItem, partnersItem, plans, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem] }, { label: 'Frrata', items: [noticesItem, emailItem, infraItem, staffItem, activity] }]}
       tabs={[merchants, plans, staffItem]} more={[trialsItem, partnersItem, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem, noticesItem, emailItem, infraItem, activity]} foot={foot} email={staff.email}>
       {children}
     </AppShell>

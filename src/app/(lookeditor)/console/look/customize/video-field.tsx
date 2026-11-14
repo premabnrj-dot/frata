@@ -75,7 +75,7 @@ export function VideoField({ value, onChange, on }: { value: { id: string } | un
         </label>
       ) : k === 'sending' ? (
         <div role="status" className="flex items-center gap-3 rounded-xl bg-muted p-3 text-sm">
-          <span className="font-mono font-semibold tabular-nums">{Math.round((progress ?? 0) * 100)}%</span>
+          <span className="font-num font-semibold">{Math.round((progress ?? 0) * 100)}%</span>
           <span className="flex-1">Uploading</span>
           <button type="button" onClick={() => void cancel()} className="font-medium underline underline-offset-4">Cancel</button>
         </div>
@@ -88,7 +88,7 @@ export function VideoField({ value, onChange, on }: { value: { id: string } | un
       ) : k === 'playable' ? (
         <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-muted">
           {status?.poster && <img src={status.poster} alt="" className="size-full object-cover" />}
-          {status?.durationMs != null && <span className="absolute bottom-2 left-2 rounded-md bg-card/95 px-1.5 py-0.5 font-mono text-xs">{secs(status.durationMs)}</span>}
+          {status?.durationMs != null && <span className="absolute bottom-2 left-2 rounded-md bg-card/95 px-1.5 py-0.5 font-num text-xs">{secs(status.durationMs)}</span>}
           <span className="absolute right-2 top-2 flex gap-1">
             <label htmlFor={id} className="grid size-8 cursor-pointer place-items-center rounded-lg bg-card/95 text-foreground shadow-sm" title="Replace"><Icon name="upload" className="size-4" /><span className="sr-only">Replace video</span></label>
             <button type="button" onClick={() => { onChange(undefined); setStatus(null) }} className="grid size-8 place-items-center rounded-lg bg-card/95 text-foreground shadow-sm" title="Remove"><Icon name="close" className="size-3.5" /><span className="sr-only">Remove video</span></button>

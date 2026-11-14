@@ -15,6 +15,7 @@ import { formatCount } from '@/lib/format'
 import { settle } from '@/lib/settle'
 import type { ConsoleZone } from '@/lib/queries/delivery'
 import { deleteZoneAction, moveZoneAction, saveZoneAction, startZonesAction } from './actions'
+import { FIELD } from '@/components/ui/field'
 
 // =============================================================================
 // Delivery Zones › Zones (PD·1, approved mockup "Zones" and "Edit a zone"). No zones yet: one button sets up the four
@@ -32,7 +33,7 @@ const WHERE: Record<PresetKey, string> = {
   rest: 'Everywhere else',
 }
 const rs = (p: number) => <Money paise={p as Paise} />
-const field = 'h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9'
+const field = `${FIELD} w-full`
 
 const days = (z: Row) => (z.daysMin === z.daysMax ? String(z.daysMin) : `${z.daysMin}–${z.daysMax}`)
 

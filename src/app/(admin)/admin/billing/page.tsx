@@ -14,6 +14,7 @@ import { dayIN } from '@/lib/format-date'
 import { collectAction, issueAction, runDraftsAction } from './actions'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Billing' }
 
@@ -30,7 +31,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const begun = start.getTime() <= Date.now()
   const sum = (k: 'taxable' | 'gst' | 'total') => rows.reduce((t, r) => t + r[k], 0)
   const label = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(start)
-  const field = 'h-10 rounded-md border border-border bg-background px-3 text-sm aria-invalid:border-danger-mark md:h-9'
+  const field = FIELD
   return (
     <>
       <PageHeader title="Billing" meta={`Invoices dated 1 ${label}: the plan for ${label} in advance, the fee on last month's delivered orders. Without Frrata's GSTIN set, issuing is test mode: a TEST series, never collected.`} />

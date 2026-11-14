@@ -6,7 +6,8 @@ import { scriptOf } from '@/domains/text/script'
  * are not clipped; the Noto faces behind Inter (src/components/shell/fonts.ts)
  * draw them, downloaded only when such a name is on the page.
  */
-export function Name({ children, className }: { children: string; className?: string }) {
+export function Name({ children, className, mark }: { children: string; className?: string; mark?: React.ReactNode }) {
   const s = scriptOf(children)
-  return <span data-script={s === 'latin' ? undefined : s} className={className}>{children}</span>
+  // `mark`: the same name with a search's match marked (Neel N1c); its script is still read from the plain name.
+  return <span data-script={s === 'latin' ? undefined : s} className={className}>{mark ?? children}</span>
 }

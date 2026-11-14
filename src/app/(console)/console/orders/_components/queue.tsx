@@ -1,12 +1,18 @@
 'use client'
 
+import { Eye } from 'lucide-react'
+import { Marked } from '@/components/data/marked'
+import { OrderPeek } from './order-peek'
+
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { DataTable, DataTableBody, DataTableHead, Td } from '@/components/data/data-table'
 import { Name } from '@/components/data/name'
 import { Money } from '@/components/data/numeric'
-import { Badge } from '@/components/ui/badge'
+import { Badge, Tag } from '@/components/ui/badge'
+import { BulkBar } from '@/components/data/bulk-bar'
+import { FIELD_BOX } from '@/components/ui/field'
 import { Button, button } from '@/components/ui/button'
 import { KeySheet } from '@/components/ui/key-sheet'
 import { useToast } from '@/components/ui/toast'
@@ -17,7 +23,6 @@ import { confirmKey } from '@/domains/ui/shortcuts'
 import { cn } from '@/lib/utils'
 import { confirmMany, confirmOrder, deliverMany, deliverOrder, holdMany, holdOrder, shipOrder, undoMany, undoOrderAction, undoOutcomeAction, undoOutcomeMany, type BulkResult } from '../actions'
 import { pdfHref, printHref, RISK_LABEL, type Tone } from './labels'
-import { Icon } from '@/components/icons/icon'
 
 // =============================================================================
 // FILE: src/app/(console)/console/orders/_components/queue.tsx
@@ -36,9 +41,11 @@ export type QueueRow = {
   risk: 'low' | 'medium' | 'high' | 'unknown'; canConfirm: boolean; canHold: boolean; canPrint: boolean; total: number; placed: string; dimmed: boolean
   /** Ship S·0: the row's one shipping step for THIS member (packed → Mark shipped; on its way → Delivered), or none. */
   shipStep: 'ship' | 'deliver' | null
+  /** What a search matched, for the mark (N1c): the text shown and where it came from. */
+  matched?: { field: 'number' | 'name' | 'phone' | 'awb'; text: string } | null
 }
 
-function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: string; slipSize: 'a4' | 'label' }) {
+function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; label: string; slipSize: 'a4' | 'label'; query?: string }) {
   const router = useRouter()
   const toast = useToast()
   const [enabled, setEnabled] = useShortcutsEnabled()
@@ -154,10 +161,16 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
   }
 
   const here = () => { const i = focused(); return i >= 0 ? rows[i] : undefined }
+  // Quick look (N1c·4): which row it shows; ↑ ↓ in it move to the next row (and keep the row in view), Esc gives the row focus back.
+  const [peekAt, setPeekAt] = useState<number | null>(null)
+  useEffect(() => { setPeekAt(null) }, [rows])
+  const peekMove = (by: 1 | -1) => setPeekAt((i) => { if (i === null) return i; const n = Math.max(0, Math.min(rows.length - 1, i + by)); setAt(n); trs()[n]?.scrollIntoView({ block: 'nearest' }); return n })
+  const peekClose = () => { const i = peekAt; setPeekAt(null); if (i !== null) focusRow(i) }
   useShortcuts(enabled, {
     next: () => focusRow(focused() + 1), previous: () => focusRow(Math.max(0, focused() - 1)),
     select: () => { const r = here(); if (r) toggle(r.id) },
     open: () => { const r = here(); if (r) router.push(r.href) },
+    peek: () => { const i = focused(); if (i >= 0) setPeekAt(i) },
     confirm: () => { const r = here(); if (!r) return; if (confirmKey(r) === 'open') router.push(r.href); else void act(r, 'confirm') },
     hold: () => { const r = here(); if (r?.canHold) void act(r, 'hold') },
     print: () => { const r = here(); if (r?.canPrint) router.push(printHref('slip', [r.n])); else if (r) toast.error(`${r.number} has no packing slip yet.`) },
@@ -178,53 +191,58 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
   return (
     <>
       {count > 0 ? (
-        <div role="region" aria-label="Selected orders" className="sticky top-[var(--shell-top,0px)] z-10 flex flex-wrap items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm">
-          <span className="font-medium">{count} selected</span>
+        <BulkBar count={count} label="Selected orders">
           {/* What the picked rows can take: Delivered for those on their way; Confirm and Hold for the rest (a mixed pick on All). */}
-          {onWay ? <Button onClick={() => bulkDelivered()} aria-disabled={busy}>Delivered</Button> : null}
-          {others ? <><Button variant={onWay ? 'secondary' : 'primary'} onClick={() => bulk('confirm')} aria-disabled={busy}>Confirm</Button>
-            <Button variant="secondary" onClick={() => bulk('hold')} aria-disabled={busy}>Hold</Button></> : null}
+          {onWay ? <Button size="sm" onClick={() => bulkDelivered()} aria-disabled={busy}>Delivered</Button> : null}
+          {others ? <><Button size="sm" variant={onWay ? 'secondary' : 'primary'} onClick={() => bulk('confirm')} aria-disabled={busy}>Confirm {count}</Button>
+            <Button size="sm" variant="secondary" onClick={() => bulk('hold')} aria-disabled={busy}>Put on hold</Button></> : null}
           {/* Slips for the selected orders that have one, in the queue's order (the print page takes at most 50). */}
-          {printable.length ? <Link prefetch={false} href={printHref('slip', printable)} className={button({ variant: 'secondary' })}>Print {printable.length === 1 ? 'slip' : `${printable.length} slips`}</Link> : null}
+          {printable.length ? <Link prefetch={false} href={printHref('slip', printable)} className={button({ variant: 'secondary', size: 'sm' })}>Print {printable.length === 1 ? 'slip' : `${printable.length} slips`}</Link> : null}
           {/* The same slips as one PDF, on A4 or a 4×6 thermal label (Documents D1); the size is remembered on this device. */}
           {printable.length ? <>
-            <a href={pdfHref('slip', printable, slipSize)} className={button({ variant: 'secondary' })}>Download {printable.length === 1 ? 'slip' : `${printable.length} slips`} (PDF)</a>
+            <a href={pdfHref('slip', printable, slipSize)} className={button({ variant: 'secondary', size: 'sm' })}>Download {printable.length === 1 ? 'slip' : `${printable.length} slips`} (PDF)</a>
             <label className="sr-only" htmlFor="slip-size">Slip size</label>
-            <select id="slip-size" value={slipSize} onChange={(e) => pickSize(e.target.value === 'label' ? 'label' : 'a4')} className="h-10 rounded-md border border-input bg-card px-2 text-sm md:h-9">
+            <select id="slip-size" value={slipSize} onChange={(e) => pickSize(e.target.value === 'label' ? 'label' : 'a4')} className={`${FIELD_BOX} h-11 px-2 text-label md:h-7.5`}>
               <option value="a4">A4</option><option value="label">4×6 label</option>
             </select>
           </> : null}
-          <Button variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>
-        </div>
+          <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>
+        </BulkBar>
       ) : null}
       <div ref={wrap}>
       <DataTable label={label}>
         <DataTableHead>
-          <th className="w-8"><span className="sr-only">Select</span></th><th>Order</th><th>Customer</th><th>Payment · status · risk</th><th className="text-right">Total</th><th>Placed</th>
+          <th className="w-10"><span className="sr-only">Select</span></th><th>Order</th><th>Customer</th><th>Payment</th><th>Status</th><th className="text-right">Total</th><th>Placed</th>
         </DataTableHead>
         <DataTableBody>
           {rows.map((r, i) => {
             const now = done[r.id]
             return (
-              <tr key={r.id} role="row" tabIndex={i === Math.max(at, 0) ? 0 : -1} onFocus={() => setAt(i)}
-                className={cn('border-b border-border last:border-0 hover:bg-muted/40 focus-visible:bg-accent [&>td]:px-3 [&>td]:py-2', (r.dimmed || now) && 'text-muted-foreground', picked.has(r.id) && 'bg-accent')}>
-                <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.number}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)} className="size-6 accent-primary" /></Td>
+              <tr key={r.id} role="row" data-order-row="" tabIndex={i === Math.max(at, 0) ? 0 : -1} onFocus={() => setAt(i)}
+                className={cn('border-b border-line-soft last:border-0 focus-visible:bg-side md:[&>td]:h-12 [&>td]:px-3 [&>td]:py-1.5', (r.dimmed || now) && 'text-muted-foreground', picked.has(r.id) ? 'bg-select' : 'hover:bg-side')}>
+                <Td cell="hide"><input type="checkbox" aria-label={`Select ${r.number}`} checked={picked.has(r.id)} onChange={() => toggle(r.id)}  /></Td>
                 {/* No prefetch: 50 row links would be 50 server renders on every visit (found by e2e under the stress data, 2026-11-07). */}
-                <Td cell="a"><Link data-row-link prefetch={false} href={r.href} className="inline-flex min-h-6 items-center whitespace-nowrap font-mono font-medium">{r.number}</Link></Td>
-                <Td cell="c"><span className="line-clamp-2">{r.customer ? <Name>{r.customer}</Name> : '—'}</span><span className="block text-xs text-muted-foreground">{r.place}</span></Td>
-                {/* One cell for the badges (several would overlap on a phone), on a full line of its own there: payment,
-                    status and risk do not fit beside the customer at 390 px (seen at phone width, 2026-11-07). */}
-                <Td cell="e"><span className="flex flex-wrap items-center gap-1.5">
-                  <Badge tone={r.payment.tone}><Icon name={r.payment.icon} className="mr-1 inline size-3.5 align-[-2px]" />{r.payment.label}</Badge>
+                <Td cell="a"><Link data-row-link prefetch={false} href={r.href} className="inline-flex min-h-6 items-center whitespace-nowrap font-num font-semibold">{r.matched?.field === 'number' ? <Marked text={r.number} query={query} digits /> : r.number}</Link>
+                  {/* Quick look on a desktop (Space does the same on a focused row). */}
+                  <button type="button" aria-label={`Quick look ${r.number}`} onClick={() => setPeekAt(i)} className="ml-1 hidden size-6 place-items-center rounded-sm align-middle text-muted-foreground hover:bg-accent hover:text-foreground md:inline-grid"><Eye aria-hidden="true" className="size-3.5" /></button>
+</Td>
+                <Td cell="c"><span data-o-name="" className="line-clamp-2">{r.customer ? <Name mark={r.matched?.field === 'name' ? <Marked text={r.customer} query={query} /> : undefined}>{r.customer}</Name> : '—'}</span>
+                  {/* A phone or a tracking number found by a search shows under the name, the match marked (N1c, as drawn). */}
+                  {r.matched?.field === 'phone' || r.matched?.field === 'awb' ? <span data-o-match="" className="block font-num text-small text-muted-foreground"><Marked text={r.matched.text} query={query} digits={r.matched.field === 'phone'} /></span> : null}
+                  <span data-o-place="" className="block text-small text-muted-foreground">{r.place}</span></Td>
+                {/* Neel § Screens · Orders: how it is paid as a Tag; where it is, and its risk, in the status cell (d). On a
+                    phone each sits on a line of its own under the customer (they do not fit beside it at 390 px). */}
+                {/* On a phone only "Do not collect cash" stays: how it is paid is in quick look and the order page. */}
+                <Td cell={r.doNotCollect ? 'e' : 'hide'}><span className="flex flex-wrap items-center gap-1.5">
+                  <Tag>{r.payment.label}</Tag>
                   {r.doNotCollect ? <Badge tone="danger">Do not collect cash</Badge> : null}
-                  {now ? <Badge tone="info">{now}</Badge> : <Badge tone={r.state.tone}>{r.state.label}</Badge>}
-                  {r.risk === 'low' ? null : r.risk === 'unknown' ? <span className="text-xs text-muted-foreground">Risk unavailable</span> : (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium"><span aria-hidden className={cn('size-2 rounded-full', r.risk === 'high' ? 'bg-danger-mark' : 'bg-warn-mark')} />{RISK_LABEL[r.risk]} risk</span>
-                  )}
-                  {r.shipStep && !now ? <Button variant="secondary" onClick={() => void step(r)} aria-disabled={busy}>{r.shipStep === 'ship' ? 'Mark shipped' : 'Delivered'}<span className="sr-only"> {r.number}</span></Button> : null}
+                </span></Td>
+                {/* One status cell at every width: on a phone it is line 2's badges (cell d), the ship step with it. */}
+                <Td cell="d"><span className="flex flex-wrap items-center gap-1.5">{status(r, now)}
+                  {r.shipStep && !now ? <Button size="sm" variant="secondary" onClick={() => void step(r)} aria-disabled={busy}>{r.shipStep === 'ship' ? 'Mark shipped' : 'Delivered'}<span className="sr-only"> {r.number}</span></Button> : null}
                 </span></Td>
                 <Td cell="b" className="text-right"><Money paise={r.total as Paise} /></Td>
-                <Td cell="f" className="whitespace-nowrap text-xs text-muted-foreground md:text-sm">{r.placed}</Td>
+                <Td cell="hide" className="whitespace-nowrap text-sm text-muted-foreground">{r.placed}</Td>
               </tr>
             )
           })}
@@ -232,12 +250,22 @@ function Rows({ rows, label, slipSize: shopSize }: { rows: QueueRow[]; label: st
       </DataTable>
       </div>
       <p className="text-xs text-muted-foreground"><button type="button" onClick={() => setKeys(true)} className="inline-flex min-h-6 items-center underline underline-offset-2">Keyboard shortcuts</button> · press ?</p>
-      <KeySheet open={keys} onClose={() => setKeys(false)} enabled={enabled} onEnabled={setEnabled} only={['next', 'previous', 'select', 'open', 'confirm', 'hold', 'undo', 'search', 'help']} />
+      {peekAt !== null && rows[peekAt] ? <OrderPeek n={rows[peekAt]!.n} label={rows[peekAt]!.number} onClose={peekClose} onMove={peekMove} /> : null}
+      <KeySheet open={keys} onClose={() => setKeys(false)} enabled={enabled} onEnabled={setEnabled} only={['next', 'previous', 'select', 'open', 'peek', 'confirm', 'hold', 'undo', 'search', 'help', 'rail']} />
     </>
   )
 }
 
+/** Where the order is, and its risk while it waits to be decided (a chip each; "Risk unavailable" in words). */
+function status(r: QueueRow, now: string | undefined) {
+  return <>
+    {now ? <Badge tone="info">{now}</Badge> : <Badge tone={r.state.tone}>{r.state.label}</Badge>}
+    {r.risk === 'low' ? null : r.risk === 'unknown' ? <Badge>Risk unavailable</Badge>
+      : <Badge tone={r.risk === 'high' ? 'danger' : 'warn'}>{RISK_LABEL[r.risk]} risk</Badge>}
+  </>
+}
+
 /** The queue, or `empty` when the tab has no rows. The console layout's Toaster is above both, so a toast's Undo survives the last row leaving. */
-export function Queue({ rows, label, empty, slipSize }: { rows: QueueRow[]; label: string; empty: React.ReactNode; slipSize: 'a4' | 'label' }) {
-  return rows.length ? <Rows rows={rows} label={label} slipSize={slipSize} /> : empty
+export function Queue({ rows, label, empty, slipSize, query }: { rows: QueueRow[]; label: string; empty: React.ReactNode; slipSize: 'a4' | 'label'; query?: string }) {
+  return rows.length ? <Rows rows={rows} label={label} slipSize={slipSize} query={query} /> : empty
 }

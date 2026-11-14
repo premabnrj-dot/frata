@@ -1,12 +1,13 @@
 'use client'
 
+import { colourIndex } from '@/domains/catalogue/option-kind'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { availability, type Availability } from '@/domains/catalogue/availability'
 import { inches, type Chart } from '@/domains/catalogue/chart-units'
 import { codFor, type DeliveryRules } from '@/domains/checkout/delivery'
 import { factsOf, type ListVariant } from '@/domains/storefront/listing'
-import { initialPick, isColourOption, isSizeOption, optionState, pickQuery, variantFor } from '@/domains/storefront/picker'
+import { initialPick, isSizeOption, optionState, pickQuery, variantFor } from '@/domains/storefront/picker'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { Photo, type PhotoData } from './photo'
@@ -63,7 +64,7 @@ export function BuyBox(p: BuyBoxProps) {
   const [guide, setGuide] = useState(false)
   const sizesRef = useRef<HTMLFieldSetElement>(null)
   const buyRef = useRef<HTMLButtonElement>(null)
-  const ci = p.options.findIndex(isColourOption), si = p.options.findIndex(isSizeOption)
+  const ci = colourIndex(p.options), si = p.options.findIndex(isSizeOption)
   const order = p.options.map((_, i) => i).sort((a, b) => Number(b === ci) - Number(a === ci))
 
   useEffect(() => {

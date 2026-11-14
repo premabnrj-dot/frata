@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 5.25.0
+  version: 7.1.1
   verified: 2026-11-13
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -280,24 +280,36 @@ fashion lives in the storefront.** Patterns below are taken from Ekatan's admin
 - `--accent`, `--muted`, `--secondary` are neutral hover surfaces.
 - Status pairs, background then text, all ≥ 4.5:1: `ok`, `warn`, `danger`,
   `info`, `neutral` → `bg-ok text-ok-text` …
-- **Borders, not shadows.** Shadows are zeroed; only floating things get one.
-- Radius 6px. Inter for UI, JetBrains Mono for figures.
+- **NEEL (owner, 2026-11-13; Neel N0): the console, Frrata Admin, the partner workspace and the look editor carry
+  `data-neel`** and draw from `src/app/neel.css` (globals.css only, never a store): warm grey, neel 600 the one action
+  colour (`--primary`), focus neel 500, rani for the mark and the loading line only. Outside `[data-neel]` (the store,
+  the website, sign-in) every token is as before; the store preview inside resets to them. Mockup:
+  `docs/mockups/2026-11-13-design-language-neel.html`; plan `docs/plans/2026-11-13-neel-n0.md`.
+- **Depth by role in Neel:** e1 rests (secondary button, segment), e2 floats (menu, popover), e3 overlays (dialog,
+  toast, save bar) — `shadow-sm` / `shadow-md` / `shadow-lg`. Outside Neel, borders, not shadows.
+- **Radius by role in Neel:** 4 checkbox and kbd (`rounded-xs`) · 6 chip and tag (`rounded-sm`) · 8 button and field
+  (`rounded-md`) · 10 toast, banner, segmented (`rounded-mid`) · 12 card and menu (`rounded-lg`) · 16 dialog
+  (`rounded-xl`). Hand-written CSS reads `--r-*`, never `--radius-*`.
+- Inter for everything in Neel, numbers included (`font-num`: tabular). Mono only for codes: SKU, AWB, GSTIN, a code,
+  a domain being copied. Weights 400, 500, 600 (no `font-bold` in Neel).
+- Neel-only colours (`bg-select`, `text-link`, `bg-sunk`, `bg-side`, `border-edge`, `bg-off`, `bg-chart` …) fall back
+  outside the scope to what the place used before (base.css @theme), so a shared primitive renders as before there.
 - Motion: `duration-fast|base|slow` + `ease-standard|entrance|exit`. Never
   `duration-[…]`. Reduced motion is honoured globally. Lists never animate;
   they dim while loading.
 
 ## Type scale
 
-Page title `text-2xl font-bold tracking-tight` · section `text-xl font-semibold`
-· card (every `Section` title, Console and Admin) `text-section`
-(token `--text-section`, never `--text-card`, which collides with `--color-card`), 15 px semibold (owner, 2026-11-07; replaces 18 px medium) · label
-`text-sm font-medium` · body `text-sm` · micro `text-xs text-muted-foreground`.
+Neel: display `text-display` 30/36 · page title `text-title` 22/28 semibold · card (every `Section` title)
+`text-section` 16/24 semibold · body `text-sm` 14/20 · label `text-label` 13/18 medium · small `text-small` 12/16 · key
+`text-kbd` 11 px Inter. Outside Neel `text-section` keeps 15 px (tokens `--t-*`). The roles are registered with
+tailwind-merge in `cn()` (`src/lib/utils.ts`): add a new size role there too, or `cn` drops it beside a colour.
 No other size: `check:scale` fails `text-[Npx]` in app code.
 
 ## Numbers, dates, people
 
 - Every ₹, order number and count in a column: `<Money paise>` / `<Numeric>`
-  (mono, tabular), right-aligned. A loss renders in `text-danger-text` with a
+  (`font-num`: Inter with tabular figures in Neel, mono outside it), right-aligned. A loss renders in `text-danger-text` with a
   real minus (−₹430).
 - Dates only through `src/lib/format-date.ts` (`dayIN`, `dateTimeIN`,
   `sinceIN`) — always IST (`check:dates`).
@@ -478,7 +490,7 @@ Rules every products screen keeps (PR·0 built; PR·1–4 follow the mockup):
    Pre-order, Made to order and Sold out, never "Sold out" for something that sells at 0. Unpriced sizes are counted
    ("2 without a price").
 7. **Readiness names the gap.** "Size chart rows for 2–3 Y", not just "a size chart".
-8. **The list scales.** Search by name or SKU, 50 a page, "Showing 1–50 of N"; past the last page goes to the last page.
+8. **The list scales.** Search by name or SKU, 50 a page, "Showing 1–50 of N" ("of 50+" while a search is on: no count of every match); past the last page goes to the last page.
 9. **Duplicates are refused where they are made**: the field that holds the clash (a SKU, a barcode, a chip) is marked,
    not a toast alone.
 10. **The list acts on many (PR·1).** Filters are tabs with counts (All, Active, Draft, Unlisted, Archived, Low stock),
@@ -800,9 +812,12 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 8. Console and Admin share one shell and every page primitive. **Admin differs
    only in chrome**: the ink frame, the rani monogram tile, STAFF, and a yellow
    active bar. Status and semantic colours never change between surfaces.
-9. Nav: groups by job. The current item gets a 3 px bar, semibold, and
-   `aria-current="page"`, never colour alone. Counts are a warn pill. An account
-   block (email, sign out, own store / Admin) shows at every width.
+9. Nav (Neel N1, § Layout · Sidebar): groups by job, their names an overline (`text-overline`, capitals). The
+   current item is white with e1 and a line edge, its icon neel, and `aria-current="page"`, never colour alone
+   (Frrata Admin's ink frame keeps its warn bar). Counts are a warn pill; on the rail a dot that keeps its words. The
+   sidebar is 232 px from 1280 and a 64 px rail from 768 to 1279, either one by choice (`rail` cookie, `railFrom`,
+   "[" or the button at its foot). On the rail each label is a tooltip on the bar (still the link's name; hoverable,
+   Esc closes it) and the account's ways out (sign out, switch store) are icons. The store's name and address sit at the top.
 10. **Phone (< 768 px): a bottom bar.** Console has Home, Orders (count),
     Products and More; Admin has Merchants, Plans, Staff and More. Labels always
     show under 22 px icons. Items are 56 px tall. More opens a sheet with
@@ -819,9 +834,10 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 **Pages and tables**
 13. Pages open with `PageHeader` (`src/components/layout/page-header.tsx`; on a detail page with `back`, the
     one `BackLink`):
-    breadcrumb, title + badges, one meta line, one primary action + More. A
-    long title wraps to two lines, never cut mid-word. A title that is an
-    input still shows the record's name as the h1's text.
+    breadcrumb (two levels, a phone shows "‹ Products"), title 22/28 (20/26 on a phone) + its chip, one meta line of
+    facts, then More, secondaries and the one primary last. A long title wraps to two lines, then ends in "…" with
+    the full name on hover (supersedes "never cut", Neel N1). A title that is an input still shows the record's name
+    as the h1's text.
 14. Below the header come `Section`s (`src/components/layout/section.tsx`: title, optional action, `p-4 md:p-5`,
     titles `text-section font-semibold`). A form that is a card is a `<Section><form>`.
     No hand-written card frames and no cards inside cards (`check:scale`).
@@ -842,12 +858,13 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 **Targets and type**
 19. Every target is at least 24 × 24 px (WCAG 2.5.8), padded rather than a
     bigger icon; a text button or link is `inline-flex min-h-6 items-center` (a one-letter one also `min-w-6`);
-    quick-add words are chips, not comma-separated text. Controls are `h-10` under 768 px and `h-9` above; a button's
+    quick-add words are chips, not comma-separated text. Controls are `h-11` (44 px) under 768 px and `h-9` above in Neel (`h-10` outside it); a field is `FIELD` from
+    `src/components/ui/field.ts`, its focus and mistake drawn once in neel.css; a button's
     height is its `size` variant (`default`, `lg`), never a className (twMerge
     keeps `md:h-9` against a caller's `h-11`). Rows and the
     bottom bar are 44–56 px on phones.
-20. Icons: frrata's own set (`src/components/icons/icon.tsx`, rule 36), 16 px
-    in nav (22 px in the bottom bar), `--sub` until active. No coloured icon
+20. Icons: frrata's own set (`src/components/icons/icon.tsx`, rule 36), 18 px
+    in nav (`size-4.5`; 22 px in the bottom bar), `--sub` until active. No coloured icon
     backgrounds. Utility glyphs inside primitives (the back chevron, search,
     info, menu dots) stay lucide until redrawn in the set. A brand empty state
     may lead with one `PictoTile` (§ Graphic language); working lists keep
@@ -929,12 +946,12 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
 
 **Home "Today" (owner-approved mockup 2026-11-07, U·4; spec `docs/specs/2026-11-07-ux-today.md`)**
 30. Before the shop opens, Home is the setup checklist. Once it is open, Home is
-    the day's work, in this order: the next order to confirm (oldest first,
-    one tap to its page), three counts (To confirm, To pack, On hold; each a
-    link to its tab; `CountTiles`), the last 7 days (orders placed and their
-    value, cancelled left out, one `scaleY` bar per IST day), and one line for
-    setup steps still open, or, when none are, "Setup, or close the shop for
-    now" (the checklist lives at `/console/setup`; always one tap away). No
+    the day's work, as Neel § Screens · Home draws it: "Today" and the day, Store open (a link to `/console/setup`,
+    where the store closes for now; always one tap away) and Share store; three counts in one card (To confirm, To
+    pack, On hold; 30/36 figures, a chip each: "Oldest 8 d", "Nothing waiting", "N high risk"; each a link to its
+    tab); "Next to confirm", the oldest five with Confirm and Undo (a high-risk, unknown-risk or refund-due order
+    says Open: applies + confirmKey, decided on the server); the last 7 days as bars in `--chart` (today
+    `--chart-now`), the count and ₹ in the header; and a line for setup steps still open. No
     suggestions or feature cards, no change-on-last-week figure, no chart
     library.
 31. A Home count is `queueCounts`' and the nav pill's `toConfirmCount` reads the
@@ -942,8 +959,8 @@ https://claude.ai/artifact/QC3ujrncYJYjJMKhe6LvbC, research (dated)
     high risk" is `risk()` over the whole tab, never a page of it. A count that
     could not be read says "Couldn't count", a risk "Risk unavailable"; never
     0. A tile that is 0 stays in place and says so ("Nothing to confirm").
-32. A card that is one link is `CardLink` (`src/components/layout/`); waiting
-    counts are `CountTiles` (`src/components/data/`). The brand moment lives
+32. A card that is one link is `CardLink` (`src/components/layout/`); a list's picked rows act through `BulkBar`
+    (`src/components/data/`, neel 50, small buttons, Clear last). The brand moment lives
     in `OpenMoment`, which wraps a page whose content changes when the shop
     opens; never in the component that opened it.
 
@@ -977,7 +994,8 @@ saving we cannot show from their own orders.
     on ink). A new frame (an Apps tile grid, an icon button) opts in the same way.
     In a table or beside a status badge an icon is one colour. The current
     page's icon is drawn at 2.25.
-37. **The thread** (`--thread`, 2 px, ≥ 3:1 on ink and card): a primary button
+37. **The thread** (`--thread`, 2 px, ≥ 3:1 on ink and card) — brand surfaces only; Neel draws no thread on a button
+    or a tab (the loading line stays rani). On a brand surface a primary button
     carries it a third wide at its foot and the full width on hover or keyboard
     focus (a `scale` transform, 120 ms); a secondary button on hover and focus
     only; destructive, ghost and disabled buttons never, nor a secondary button
@@ -992,8 +1010,8 @@ saving we cannot show from their own orders.
     circle as a repeat, a mask over a token at 6%. On the public pages it is the
     `Selvedge` only (paper on ink, under the stage; rule 42), never behind a
     number, a table, a form or a control. Brand empty states use a `PictoTile`.
-40. **Haldi and Neel** live on brand surfaces only and are never text or a
-    control. Rani as text is `--brand-text`.
+40. **Haldi and `--neel` (neel 900)** live on brand surfaces only and are never text or a control. The console's
+    action colour is neel 600 (`--primary` inside `[data-neel]`), a different step of the same family. Rani as text is `--brand-text`.
 
 ## The public pages (owner-approved W·1, 2026-11-07; spec `docs/specs/2026-11-07-website-rework.md`)
 
@@ -1099,3 +1117,55 @@ What a link to a shop page shows in WhatsApp, Instagram DMs, Facebook, X, iMessa
   (also lists and policies): the name on the theme's tint, its promises, three photos. No photo: name, shop, price.
 - **Few words, no Devanagari drawn** (Satori cannot shape it; Hindi goes in og:title and og:description). Apple: avoid
   text-heavy images. og:image:alt describes the photo, not a caption.
+
+## Neel primitives (N0, 2026-11-13)
+
+The gallery `/console/fixtures/neel` (test-only) shows each in its states; `e2e/flows/81-neel.mjs` holds the drawn
+values, keyboard and axe at phone and desktop. A new primitive or state joins the gallery and the flow.
+
+- **Button** (`ui/button.tsx`): primary, secondary (edge + e1), ghost (text 2), destructive; `default` 44/36, `sm` 30,
+  `lg`. `busy` keeps the label, adds `Spinner`, and is `aria-disabled` (focus stays). No thread in Neel.
+- **Badge** is a status (a pill, a 6 px dot, a word); **Tag** is a fact (outlined, text 2). Never a dot alone.
+- **ViewTabs**: underline tabs, count pills, one row that scrolls — never a second row.
+- **Switch** 34×20; **Segmented** (`ui/segmented.tsx`) for two to four short words, arrows move the choice; more is a
+  Select. **Checkbox and radio** are native inputs painted in neel.css: 16 px in a 24 px target.
+- **SaveBar** says "N unsaved changes" when given `count`; **Toast** actions in `--bar-link`.
+- **Dialog**: 16 px, e3, its body `[data-dialog-body]` 18 in; a sheet on a phone. **Menu**: 12 px, e2, 220 wide.
+- **DataTable**: 36 px sunk header, 48 px rows from md (a phone reflows), `selected` rows in neel 50.
+- **Section**: 12 px, 20 in (16 on a phone). **Fields**: `FIELD` / `FIELD_BOX`; a mistake is `fieldProps` +
+  `FieldError` (13/18), its edge and halo drawn by neel.css.
+- **Never inside the store preview:** every Neel rule skips `[data-store-theme] *`, and the Neel-only tokens are unset there.
+
+## Neel layout (N1, 2026-11-13)
+
+- **The shell**: rule 9 above; `src/components/shell/{app-shell,nav,rail,rail-toggle}.tsx`, the rail's CSS at the end of
+  `src/app/neel.css` (two blocks, one list of rules: change both). Page padding 28 · 32 at 1280, 24 from 768, 16 on a
+  phone; body 15/22 and titles 20/26 on a phone in `[data-neel]`.
+- **The header**: rule 13 above; one `PageHeader` for every page in Console, Admin and the partner workspace.
+- **Lists**: rows 48 px (56 with a photo: `DataTableRow tall`), the picked rows in neel 50 and `BulkBar`; Orders shows
+  Payment as a Tag and Status (with risk) as chips, one status cell that reflows on a phone.
+- **Settings**: one list, a plain 20 px icon per row, its current value at the right, a chevron; up to 860 wide;
+  "Ready for live payments" a chip in the header, and what is missing a warn banner above the list.
+- **Not yet**: ⌘K (N1b).
+
+## Neel finding (N1c, 2026-11-13; plan `docs/plans/2026-11-13-neel-n1c.md`)
+
+- **Filters are chips that read back** ("Payment is COD", "Total ₹500–₹2,000"): `FilterBar` (`src/components/data/`),
+  × is a link to the list without it, "Clear all" when there is something to clear, "9 of 300 orders" at the right.
+  Everything lives in the address in ONE canonical form (`filterQuery`), so Back works, a link shares and a view saves it.
+- **"+ Filter"**: fields on the left, a field's values on the right with how many each has (inside the tab and the
+  other filters; no counts when they could not be read in time), ranges for money and dates, and the button counts
+  what applying shows ("Show 25 orders") before the person looks. On a phone the same panel is a sheet ("Filters").
+- **Saved views** are the team's, after the queue's own tabs, with their counts (streamed: the page never waits on
+  them); "+ Save view" when filters are on and match no view; a view's ⋯ menu renames it and removes it with Undo. A view
+  never holds a search.
+- **Search answers as you type**: 150 ms after the last key (Orders through its rows route; a small list may render its
+  page per search, 250 ms: `LiveSearchField`), the one in flight aborted, `?q=` written with replaceState, Enter and
+  Back render the page. The match is marked (`<Marked>`, from `highlight()`: text parts, never HTML, never a RegExp
+  from what was typed); a phone or AWB match shows under the name. Nothing found: "No order matches “9845”" and what it
+  searched. Letters with digits (8+) search tracking numbers; digits search numbers and phones, and 8+ of them tracking numbers too; words search names.
+- **Quick look** (`QuickLook`): 400 px from the right over the list, not modal; Space on a focused row or the row's eye
+  button; ↑ ↓ move it, Esc gives the row its focus back, "Open order" goes to the page; words only, never a cost;
+  desktop only (a phone opens the page).
+- **Phone order rows**: line 1 "KS-5006 · Sneha" with ₹ at the right, line 2 the place and the status chip; the
+  customer cell lends its parts to the row's grid (`neel.css`), so the name is in the DOM once.

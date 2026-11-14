@@ -7,6 +7,7 @@
 // with it, and both agree on what a variant is.
 // =============================================================================
 
+import { colourIndex } from './option-kind'
 import { latinOf } from './indic'
 
 export const MAX_OPTIONS = 3
@@ -67,7 +68,7 @@ export function reconcile<T extends { id: string; optionValues: string[] }>(exis
 /** Which option the grid groups by: a colour if there is one, else the last option. -1 with fewer than two options. */
 export function groupOption(options: readonly Option[]): number {
   if (options.length < 2) return -1
-  const i = options.findIndex((o) => /^colou?rs?$/i.test(o.name))
+  const i = colourIndex(options.map((o) => o.name))
   return i >= 0 ? i : options.length - 1
 }
 
