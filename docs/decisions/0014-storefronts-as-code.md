@@ -59,3 +59,20 @@ Claude builder was skipped "Claude never runs on Frrata's servers" (2026-11-11).
    `docs/specs/2026-11-12-kit-and-fleet.md` is the plan for how Frrata's staff, fleet service and agents build the kit
    and starters, set controls, release updates (three lanes) and keep every site safe. Code sites live on their own
    registrable domain, never checkout's; its name is a placeholder (`frrata.site`) until chosen.
+
+## Amendment 8 — PROPOSED, not in force (drafted 2026-11-14 for the owner; spec `docs/specs/2026-11-14-site-content-layer.md`)
+**Content is declared by code and edited as data.** Widens amendment 3.
+1. **Three layers.** *Content* (announcements with dates, banners and other placements a site declares, featured
+   collections or products, menus, page words, FAQ, size help, a season's dates and words) is edited by the brand in
+   Console › Content, free, live within 60 s or at its scheduled time, never through a build, an agent turn or a
+   publish. *Design system* (tokens, logo, a season's tokens) is the partner's, edited by chat or directly on Studio's
+   preview, a commit with no agent turn. *Structure* (pages, layouts, components) is agent work: plan, checks, a
+   person publishes.
+2. **The code declares, the console draws.** A code site declares its placements and their fields in its repository
+   (`frrata/fields.json`) from a closed set of field types; the publish gate validates it and keeps it with the
+   published version; the console draws the brand's editor from the live version; the Storefront API serves the
+   values as plain text, Frrata media and shop paths. A future-dated entry is never served before it starts.
+3. **One content source from V1.** Theme shops and code sites read the same content; the Look's menus and pages move
+   to Console › Content (moving content out of themes, not new theme work).
+4. **A gate before handover.** No code site is handed to a brand before Console › Content edits what that site
+   declares.

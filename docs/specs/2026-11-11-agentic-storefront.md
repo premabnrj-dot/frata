@@ -20,7 +20,8 @@ a starter, while the brand runs the business in Frrata's console and every rupee
 ## What stays · goes · comes
 See the mockup (with file counts). Stays: console, integrations, catalogue, offers, checkout and order pages, EkCode,
 ADR-0002/3/4/6/8. Goes (frozen at V0, removed at V5): theme catalogue and manifests, the customizer and Look, Theme
-Studio TS1c–TS4, ADR-0012, the section renderers once every shop has moved, Admin theme releases, pages as data.
+Studio TS1c–TS4, ADR-0012, the section renderers once every shop has moved, Admin theme releases, pages as theme
+layouts (their words stay data: ADR-0014 amendment 3).
 Comes: the Storefront API (un-parked from `docs/specs/2026-11-11-storefront-api.md`), one repo and one isolated
 deployment per shop, the builder, the gallery of agentic starters, developer access, publish checks.
 
@@ -57,7 +58,7 @@ deployment per shop, the builder, the gallery of agentic starters, developer acc
 ## Phases
 | Phase | What people get | Kill signal |
 |---|---|---|
-| V0 | Owner's decision (ADR-0013, north star, CLAUDE.md); Theme Studio frozen | — |
+| V0 | Owner's decision (ADR-0014, north star, CLAUDE.md); Theme Studio frozen | — |
 | V1 | Storefront API SA1 (read, cart link), keys, docs, a starter repo | < 3 external sites live in 90 days |
 | V2 | Repo + isolated deployment per shop on Frrata's hosting; domains, previews, rollback, checks | Hosting cost per shop above what plans recover |
 | V3 | The builder (chat, preview, files, checks, credits) | Agent-built sites slower or less accessible than the starter |
