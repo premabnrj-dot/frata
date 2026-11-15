@@ -28,7 +28,7 @@ import { PairsPanel, StoriesPanel } from './extras-panel'
 import type { Piece, Story } from '@/domains/catalogue/stories'
 import { labelMissing, readLabel, type LabelInput } from '@/domains/catalogue/label'
 import type { TaxInput } from '@/domains/catalogue/product-form'
-import { inGap, rateOn, ruleOn } from '@/domains/tax/rates'
+import { inGap, ruleOn } from '@/domains/tax/rates'
 import { useNow } from '@/components/time/now'
 import { EMPTY_CELL, shopperSees, VariantGrid, type Cell } from './variant-grid'
 import { Section } from '@/components/layout/section'
@@ -39,6 +39,8 @@ import { FIELD } from '@/components/ui/field'
 import { announce } from '@/components/shell/announce'
 import { commonPrice, targetsOf, targetsWords } from '@/domains/catalogue/common-price'
 import { rupeesText } from '@/domains/money/rupees'
+import { formatInr } from '@/lib/format'
+import { paise } from '@/domains/money/paise'
 import { WhatsAppPreview } from './editor-side'
 import { ProductMore } from './product-more'
 
@@ -225,9 +227,12 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   useEffect(() => { if (dirty && !wasDirty.current) announce('Unsaved changes.'); wasDirty.current = dirty }, [dirty])
   const has = (...prefixes: string[]) => Object.keys(errors).some((k) => prefixes.some((p) => k === p || k.startsWith(`${p}.`)))
   const priceWords = targetsWords(commonRows('price'))
-  // "HSN 6211 · 5%" as drawn: the rate at the lowest price (the one GST's slab is judged on).
-  const rate = d.tax.hsn ? rateOn(d.tax.hsn, prices.length ? Math.min(...prices) : 0, shop.gst.inclusive, now, Number(d.tax.ownBps) || null) : null
-  const taxWords = d.tax.hsn ? `HSN ${d.tax.hsn}${rate !== null ? ` · ${rate / 100}%` : ''}` : shop.gst.charges ? 'Needs an HSN code' : 'No GST charged'
+  // "HSN 6211 · 5% under ₹2,500" as drawn: a slab code names its band (the rate under the limit); a flat one its rate;
+  // a code the table lacks the merchant's own rate.
+  const rule = d.tax.hsn ? ruleOn(d.tax.hsn, now) : null
+  const own = Number(d.tax.ownBps) || null
+  const rateWords = rule?.kind === 'slab' ? `${rule.low / 100}% under ${formatInr(paise(rule.limit))}` : rule ? `${rule.bps / 100}%` : own ? `${own / 100}%` : ''
+  const taxWords = d.tax.hsn ? `HSN ${d.tax.hsn}${rateWords ? ` · ${rateWords}` : ''}` : shop.gst.charges ? 'Needs an HSN code' : 'No GST charged'
   const field = 'flex flex-col gap-1.5 text-label font-medium'
   const sizedSummary = type ? `${type.name} · ${(type.sizeChart.rows ?? []).map((r) => r.size).filter(Boolean).slice(0, 1).concat((type.sizeChart.rows ?? []).slice(-1).map((r) => r.size)).join('–')}` : 'Pick a chart'
   return (
