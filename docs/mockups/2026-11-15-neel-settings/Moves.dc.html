@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>What moves where</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1280px; height: 760px; box-sizing: border-box; padding: 32px; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 20px; display: flex; flex-direction: column; gap: 16px;">
+  <h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">What moves where</h1>
+  <table style="border-collapse: collapse; width: 100%;">
+    <thead>
+      <tr style="text-align: left; color: #67625C; font-size: 13px;">
+        <th style="font-weight: 500; padding: 8px 12px; border-bottom: 1px solid #E3E1DD; width: 26%;">Today</th>
+        <th style="font-weight: 500; padding: 8px 12px; border-bottom: 1px solid #E3E1DD; width: 26%;">Goes to</th>
+        <th style="font-weight: 500; padding: 8px 12px; border-bottom: 1px solid #E3E1DD;">Why</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">13 rows in one list</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">5 groups, 14 pages</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA; color: #67625C;">Found by what the merchant is doing: the store, checkout, money and tax, messages, the team</td></tr>
+      <tr><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Brand (logo, one line, store words)</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Store details</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA; color: #67625C;">The store's name and its logo were on two pages</td></tr>
+      <tr><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Store details › Your business (legal name, registered address, country of origin)</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Business and GST</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA; color: #67625C;">The legal name and the GSTIN go together on every invoice</td></tr>
+      <tr><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Taxes and invoices › Registration, Prices and sales to businesses</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Business and GST</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA; color: #67625C;">As above</td></tr>
+      <tr><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Taxes and invoices › Invoice numbers; Store details › Order number prefix</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Invoices and slips › Numbers</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA; color: #67625C;">Both are numbering, set once</td></tr>
+      <tr><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Documents</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Invoices and slips</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA; color: #67625C;">Named by what it makes</td></tr>
+      <tr><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Store address</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Web address</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA; color: #67625C;">It is the store's domain; "address" read as the registered address</td></tr>
+      <tr><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Shipping costs (last in the list)</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Business and tax › Your shipping costs</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA; color: #67625C;">Your costs, not what shoppers pay; kept apart from Shipping and delivery, and only for whoever sees costs</td></tr>
+      <tr><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Online payments (after the sections)</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Checkout, first</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA; color: #67625C;">Beside Pay on delivery and Shipping: the three things a shopper meets at checkout</td></tr>
+      <tr><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Old links (/settings/brand, /taxes, /documents, /address)</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA;">Redirect to the new page</td><td style="padding: 10px 12px; border-bottom: 1px solid #EEEDEA; color: #67625C;">Bookmarks, emails and the live-payments checklist keep working</td></tr>
+      <tr><td style="padding: 10px 12px;">Who sees what</td><td style="padding: 10px 12px;">Unchanged</td><td style="padding: 10px 12px; color: #67625C;">A group hides when none of its rows are yours; no data or saving changes</td></tr>
+    </tbody>
+  </table>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
