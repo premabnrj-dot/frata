@@ -37,13 +37,13 @@ export type Field = {
 
 export type Block = { title: string; hint?: string; tip?: string; fields: Field[] }
 
-export type SectionKey = 'store' | 'contact' | 'brand' | 'policies' | 'payments' | 'shipping' | 'taxes' | 'documents'
+export type SectionKey = 'store' | 'contact' | 'policies' | 'payments' | 'shipping' | 'business' | 'invoices'
 
 /**
  * `editors`: who may open and save this section (tenancy audit 2026-11-07). Required, so a new section decides
  * it on purpose: a section that holds keys, people or money a partner must not touch says CAN_MANAGE or ['owner'].
  */
-export type Section = { key: SectionKey; title: string; intro: string; blocks: Block[]; preview: 'footer' | 'contact' | 'brand' | 'policy' | 'checkout' | 'invoice'; editors: readonly MemberRole[] }
+export type Section = { key: SectionKey; title: string; blocks: Block[]; preview: 'footer' | 'contact' | 'brand' | 'policy' | 'checkout' | 'invoice'; editors: readonly MemberRole[] }
 
 export const REGISTRATION_OPTIONS = [['regular', 'Regular'], ['composition', 'Composition'], ['none', 'Not registered']] as const
 export const TURNOVER_OPTIONS = [['under_5cr', 'Under ₹5 crore'], ['5_to_10cr', '₹5–10 crore'], ['over_10cr', '₹10 crore or more']] as const
@@ -58,22 +58,20 @@ const LAW = 'Shown on your store’s Contact page and footer, as the Consumer Pr
 export const SECTIONS: readonly Section[] = [
   {
     editors: CAN_BUILD,
-    key: 'store', title: 'Store details', intro: 'Your store’s name and the business behind it.', preview: 'footer',
+    key: 'store', title: 'Store details', preview: 'brand',
     blocks: [
       { title: 'Your store', fields: [
         { key: 'name', label: 'Store name', kind: 'text', required: true, max: 60 },
-        { key: 'orderPrefix', label: 'Order number prefix', kind: 'text', max: 4, tip: 'Orders read KS-1043. Left empty, two letters of your store’s name.' },
+        { key: 'tagline', label: 'One line about your brand', kind: 'text', max: 150, wide: true, tip: 'Under your logo, and when your link is shared.' },
       ] },
-      { title: 'Your business', hint: LAW, fields: [
-        { key: 'legalName', label: 'Legal business name', kind: 'text', max: 120, tip: 'As registered. A sole proprietor’s name, an LLP or a company.' },
-        { key: 'originCountry', label: 'Country of origin, for products', kind: 'text', max: 40, tip: 'Each product can say otherwise.' },
-        { key: 'address', label: 'Registered address', kind: 'textarea', max: 400, wide: true },
+      { title: 'Store words', hint: 'Menus, buttons, delivery and returns. What you type stays as you typed it. Checkout stays in English for now.', fields: [
+        { key: 'shopLanguage', label: 'Show them in', kind: 'select', options: LANGUAGE_OPTIONS },
       ] },
     ],
   },
   {
     editors: CAN_BUILD,
-    key: 'contact', title: 'Contact and grievance officer', intro: 'How shoppers reach you, and who answers a complaint.', preview: 'contact',
+    key: 'contact', title: 'Contact and grievance officer', preview: 'contact',
     blocks: [
       { title: 'How shoppers reach you', fields: [
         { key: 'supportEmail', label: 'Customer care email', kind: 'email', required: true },
@@ -91,19 +89,7 @@ export const SECTIONS: readonly Section[] = [
   },
   {
     editors: CAN_BUILD,
-    key: 'brand', title: 'Brand', intro: 'Your logo and one line about your brand. Colours, type and layout live in Look.', preview: 'brand',
-    blocks: [
-      { title: 'Look', fields: [
-        { key: 'tagline', label: 'One line about your brand', kind: 'text', max: 150, wide: true, tip: 'Under your logo, and when your link is shared.' },
-      ] },
-      { title: 'Store words', hint: 'Menus, buttons, delivery and returns. What you type stays as you typed it. Checkout stays in English for now.', fields: [
-        { key: 'shopLanguage', label: 'Show them in', kind: 'select', options: LANGUAGE_OPTIONS },
-      ] },
-    ],
-  },
-  {
-    editors: CAN_BUILD,
-    key: 'policies', title: 'Policies', intro: 'Five pages written from your settings. Change a setting and the pages follow.', preview: 'policy',
+    key: 'policies', title: 'Policies', preview: 'policy',
     blocks: [
       { title: 'Returns', fields: [
         { key: 'returnKind', label: 'What shoppers can ask for', kind: 'select', options: RETURN_OPTIONS },
@@ -113,20 +99,20 @@ export const SECTIONS: readonly Section[] = [
   },
   {
     editors: CAN_BUILD,
-    key: 'payments', title: 'Pay on delivery', intro: 'Your rules for cash and UPI on delivery. UPI and cards online come with Razorpay.', preview: 'checkout',
+    key: 'payments', title: 'Pay on delivery', preview: 'checkout',
     blocks: [
       { title: 'Pay on delivery', fields: [
-        { key: 'codOn', label: 'Offer Pay on delivery', kind: 'switch', wide: true },
-        { key: 'codMin', label: 'Lowest order value, ₹', kind: 'rupees', hint: '0 for no lower limit.' },
-        { key: 'codMax', label: 'Highest order value, ₹', kind: 'rupees', hint: 'Bigger orders must be paid online. 0 for no limit.' },
-        { key: 'codCharge', label: 'Pay on delivery fee, ₹', kind: 'rupees', hint: '0 for none.', tip: 'Shown as its own line before the shopper orders, never added later.' },
-        { key: 'codBlockedPincodes', label: 'PIN codes without Pay on delivery', kind: 'pincodes', wide: true, hint: 'Separated by commas or spaces.', tip: 'A shopper there sees why, and can still pay online.' },
+        { key: 'codOn', label: 'Offer Pay on delivery', kind: 'switch', wide: true, hint: 'Cash or UPI to the courier' },
+        { key: 'codMin', label: 'Lowest order, ₹', kind: 'rupees', hint: '0 for none' },
+        { key: 'codMax', label: 'Highest order, ₹', kind: 'rupees', hint: 'Above it, online only' },
+        { key: 'codCharge', label: 'Fee, ₹', kind: 'rupees', hint: 'Its own line at checkout' },
+        { key: 'codBlockedPincodes', label: 'PIN codes without Pay on delivery', kind: 'pincodes', wide: true },
       ] },
     ],
   },
   {
     editors: CAN_BUILD,
-    key: 'shipping', title: 'Shipping and delivery', intro: 'What shoppers pay for delivery and how long it takes.', preview: 'checkout',
+    key: 'shipping', title: 'Shipping and delivery', preview: 'checkout',
     blocks: [
       { title: 'What shoppers pay', fields: [
         { key: 'shippingFlat', label: 'Shipping charge, ₹', kind: 'rupees' },
@@ -141,8 +127,13 @@ export const SECTIONS: readonly Section[] = [
   },
   {
     editors: CAN_BUILD,
-    key: 'taxes', title: 'Taxes and invoices', intro: 'GST on your prices and invoices.', preview: 'invoice',
+    key: 'business', title: 'Business and GST', preview: 'invoice',
     blocks: [
+      { title: 'Your business', hint: LAW, fields: [
+        { key: 'legalName', label: 'Legal business name', kind: 'text', max: 120, tip: 'As registered. A sole proprietor’s name, an LLP or a company.' },
+        { key: 'originCountry', label: 'Country of origin, for products', kind: 'text', max: 40 },
+        { key: 'address', label: 'Registered address', kind: 'textarea', max: 400, wide: true },
+      ] },
       { title: 'Registration', fields: [
         { key: 'gstRegistration', label: 'Registration', kind: 'radio', wide: true, options: REGISTRATION_OPTIONS,
           notes: { regular: 'Tax invoices', composition: 'Bill of supply · within your state', none: 'Bill of supply · within your state' } },
@@ -158,20 +149,21 @@ export const SECTIONS: readonly Section[] = [
           tip: 'They enter their GSTIN and get an invoice they can claim input credit on. Turns itself off at ₹5 crore and above until e-invoicing is set up.' },
         { key: 'defaultHsn', label: 'HSN code new products start with', kind: 'hsn' },
       ] },
-      { title: 'Invoice numbers', hint: 'One series a financial year, never reused. A new series starts on 1 April.', fields: [
-        { key: 'invoiceSeries', label: 'Series prefix', kind: 'text', max: 5, hint: 'Up to 4 characters, or 5 ending in / or -.', tip: 'Like KS/. The year and the number follow it: KS/26-27/00001.' },
-      ] },
     ],
   },
   {
     editors: CAN_BUILD,
-    key: 'documents', title: 'Documents', intro: 'Your packing slips and invoices as PDFs, in your logo, colour and words.', preview: 'invoice',
+    key: 'invoices', title: 'Invoices and slips', preview: 'invoice',
     blocks: [
+      { title: 'Numbers', hint: 'One invoice series a financial year, never reused. A new series starts on 1 April.', fields: [
+        { key: 'orderPrefix', label: 'Order number prefix', kind: 'text', max: 4, tip: 'Orders read KS-1043. Left empty, two letters of your store’s name.' },
+        { key: 'invoiceSeries', label: 'Series prefix', kind: 'text', max: 5, hint: 'Up to 4 characters, or 5 ending in / or -.', tip: 'Like KS/. The year and the number follow it: KS/26-27/00001.' },
+      ] },
       { title: 'Invoices', fields: [
         { key: 'docSignatory', label: 'Authorised signatory', kind: 'text', max: 80, noLinks: true, tip: 'The name printed under “For <your business>” on each invoice, as GST asks.' },
-        { key: 'docNote', label: 'Note at the foot of each invoice', kind: 'textarea', max: 240, wide: true, noLinks: true, tip: 'A return-policy line or a thank-you. Plain text: no links.' },
+        { key: 'docNote', label: 'Note at the foot of each invoice', kind: 'textarea', max: 240, wide: true, noLinks: true },
       ] },
-      { title: 'Packing slips', tip: 'Where a new teammate starts. After that, each person’s last choice in the order queue wins.', fields: [
+      { title: 'Packing slips', fields: [
         { key: 'slipSize', label: 'Slip size', kind: 'select', options: SLIP_SIZE_OPTIONS },
       ] },
     ],
@@ -179,6 +171,8 @@ export const SECTIONS: readonly Section[] = [
 ]
 
 export const sectionFor = (key: string): Section | undefined => SECTIONS.find((s) => s.key === key)
+/** Who may edit a section, by its key (typed: a renamed section breaks the build, not a permission check). */
+export const editorsOf = (key: SectionKey): readonly MemberRole[] => SECTIONS.find((s) => s.key === key)!.editors
 
 /** GSTIN checks live in domains/tax/gstin.ts (checkout uses them too). */
 export { gstinValid } from '../tax/gstin'
@@ -295,7 +289,7 @@ function check(section: Section, values: Values): { patch: Patch; errors: Record
     const min = patch.codMin as number, max = patch.codMax as number
     if (max > 0 && min > max) errors.codMin = 'Lower than the highest value.'
   }
-  if (section.key === 'taxes') taxesPatch(values, patch, errors)
+  if (section.key === 'business') taxesPatch(values, patch, errors)
   for (const k of Object.keys(errors)) delete patch[k]
   return { patch, errors }
 }
@@ -323,7 +317,7 @@ export function formValues(section: Section, stored: Record<string, unknown>): V
     const x = stored[f.key]
     if (f.key === 'gstRegistration') v[f.key] = stored.gstin ? String(stored.gstScheme ?? 'regular') : 'none'
     else if (f.kind === 'switch') v[f.key] = x === true
-    else if (f.kind === 'rupees') v[f.key] = String(Math.round(Number(x ?? 0) / 100))
+    else if (f.kind === 'rupees') v[f.key] = Math.round(Number(x ?? 0) / 100).toLocaleString('en-IN') // "3,000", as drawn; the parse takes the commas off
     else if (f.kind === 'pincodes') v[f.key] = (Array.isArray(x) ? x : []).join(', ')
     else v[f.key] = x == null ? '' : String(x)
   }
@@ -341,8 +335,8 @@ export const grievanceComplete = (s: { grievanceName: string; grievanceEmail: st
 
 export function missingForLivePayments(s: { legalName: string; address: string; supportEmail: string; supportPhone: string; grievanceName: string; grievanceEmail: string; grievancePhone: string }): { label: string; section: SectionKey }[] {
   const out: { label: string; section: SectionKey }[] = []
-  if (!s.legalName.trim()) out.push({ label: 'Legal business name', section: 'store' })
-  if (!s.address.trim()) out.push({ label: 'Registered address', section: 'store' })
+  if (!s.legalName.trim()) out.push({ label: 'Legal business name', section: 'business' })
+  if (!s.address.trim()) out.push({ label: 'Registered address', section: 'business' })
   if (!s.supportEmail.trim() || !s.supportPhone.trim()) out.push({ label: 'Customer care email and phone', section: 'contact' })
   if (!grievanceComplete(s)) out.push({ label: 'Grievance officer', section: 'contact' })
   return out

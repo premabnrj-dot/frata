@@ -4,8 +4,9 @@ import Link from 'next/link'
 import { BRAND_COLOUR_PICKS as BRAND_PICKS, BRAND_COLOUR_START } from '@/domains/themes/catalogue/kit'
 import type { Choices } from '@/domains/themes/choices'
 import { brandColourProblem } from '@/domains/themes/layer'
-import { FOOTER_NAMES, HEADER_NAMES, PAIRING_NAMES, type Announcement, type FooterVariant, type HeaderVariant, type Pairing, type Scheme, type ThemeSettings } from '@/domains/themes/types'
-import { Field, Group, LinkPicker, Offered, OfferedSwitch, Segmented, Switch, Text, Tiles, type LinkTarget } from './controls'
+import { FOOTER_NAMES, HEADER_NAMES, PAIRING_NAMES, type FooterVariant, type HeaderVariant, type Pairing, type Scheme, type ThemeSettings } from '@/domains/themes/types'
+import { ContentLink } from './content-link'
+import { Field, Group, Offered, OfferedSwitch, Segmented, Switch, Tiles, type LinkTarget } from './controls'
 
 // =============================================================================
 // "Style" (Look v3; themes spec § Theme settings, every control): groups that open and close, each saying what it
@@ -24,8 +25,10 @@ const ICONS = {
   motion: ic('M4 12h10M4 7h6M4 17h6M16 8l4 4-4 4'),
 }
 
-export function ThemeForm({ settings, style, styles, allowed, made, themeName, choices, schemes, targets, fonts, set, setStyle, onPage, paletteOn = false, openSite }: {
+export function ThemeForm({ settings, style, styles, allowed, made, themeName, choices, schemes, fonts, set, setStyle, onPage, paletteOn = false, openSite, bar }: {
   settings: ThemeSettings; style: string; styles: StyleOption[]
+  /** The store's bar today (Console › Content, V1): the Header group links there. */
+  bar: string | null
   allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[] }
   made: { headers?: HeaderVariant[]; footers?: FooterVariant[] }; themeName: string
   choices: Choices; schemes: { key: 'paper' | 'tint' | 'ink'; name: string }[]
@@ -38,7 +41,6 @@ export function ThemeForm({ settings, style, styles, allowed, made, themeName, c
 }) {
   const current = styles.find((s) => s.key === style) ?? styles[0]!
   const brandWhy = settings.brandColour ? brandColourProblem(settings.brandColour, current.light) : null
-  const ann: Announcement = settings.announcement ?? { text: '', link: null, scheme: 'paper' }
   // Designs made for this theme first.
   const first = <T extends string>(xs: T[], m: T[] = []) => [...xs].sort((a, b) => Number(m.includes(b)) - Number(m.includes(a)))
   const badge = (m: string[] | undefined, v: string) => (m?.includes(v) ? `Made for ${themeName}` : undefined)
@@ -109,14 +111,8 @@ export function ThemeForm({ settings, style, styles, allowed, made, themeName, c
           options={first(allowed.headers, made.headers).map((h) => ({ value: h, label: HEADER_NAMES[h], picture: <HeaderPicture v={h} />, badge: badge(made.headers, h) }))} />
         <Switch label="Stays at the top when scrolling" on={settings.sticky} onChange={(sticky) => set({ sticky })} />
         <Switch label="Tabs at the bottom on phones" on={settings.bottomTabs} onChange={(bottomTabs) => set({ bottomTabs })} />
-        <div className="space-y-2">
-          <Switch label="Announcement bar" on={!!settings.announcement} onChange={(on) => set({ announcement: on ? { text: 'Free shipping above ₹1,999', link: null, scheme: 'paper' } : null })} />
-          {settings.announcement && <>
-            <Text label="Announcement" value={ann.text} max={80} onChange={(text) => set({ announcement: { ...ann, text } })} />
-            <LinkPicker label="Goes to" value={ann.link} targets={targets} onChange={(link) => set({ announcement: { ...ann, link } })} />
-          </>}
-        </div>
-        <p className="text-sm text-muted-foreground">Logo: <Link href="/console/settings/brand" className="underline underline-offset-4">Settings › Brand</Link></p>
+        <ContentLink tab="announcement" title="Announcement" sub={bar} />
+        <p className="text-sm text-muted-foreground">Logo: <Link href="/console/settings/store" className="underline underline-offset-4">Settings › Store details</Link></p>
       </Group>
 
       <Group title="Footer" icon={ICONS.footer} onOpen={() => onPage?.('home')} value={FOOTER_NAMES[settings.footer]}>

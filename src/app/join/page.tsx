@@ -37,7 +37,7 @@ export default async function JoinPage() {
   return (
     <PartnerFrame>
       <JoinSteps at={1} />
-      <h1 className="font-display text-title font-semibold">Join {i.partnerName}</h1>
+      <h1 className="font-display text-title font-semibold">Join {i.partnerName} as a {PARTNER_ROLE_LABEL[i.role as PartnerRole] ?? 'Lead'}</h1>
       <p className="text-sm text-muted-foreground">
         {i.invitedBy ? <>{i.invitedBy} invited you as {PARTNER_ROLE_LABEL[i.role as PartnerRole] ?? i.role}</> : <>Invited as {PARTNER_ROLE_LABEL[i.role as PartnerRole] ?? i.role}</>}
         {i.stores.length > 0 && <><br />Clients: {i.stores.join(', ')}</>}

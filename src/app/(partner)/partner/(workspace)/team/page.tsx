@@ -6,7 +6,8 @@ import { Panel } from '@/components/ui/panel'
 import { memberState, partnerCan, PARTNER_ROLE_LABEL } from '@/domains/partners/team'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { partnerClients, partnerTeam } from '@/lib/db/partners'
-import { InviteButton, RemovePerson, ResendInvite, StoreToggles } from './team-parts'
+import { InviteButton, RemovePerson, ResendInvite, RoleSelect, StoreToggles } from './team-parts'
+import { RolesCard } from './roles-card'
 import { ApprovePasskey, DeletePasskeys } from './team-passkeys'
 
 /** "arjun.k@pixelthread.in" → "Arjun": the name the approval card and its buttons use (mockup screen 10). */
@@ -16,8 +17,9 @@ const daysLeft = (until: Date, now: Date) => Math.max(1, Math.ceil((until.getTim
 export const metadata = { title: 'Team' }
 
 /**
- * Partner workspace › Team (T1a; approved Studio mockup, Team). The owner invites Leads, gives each the stores they work
- * on, and removes them. Leads don't see this page; every write is re-checked in its definer.
+ * Partner workspace › Team (T1a; approved Studio mockup, Team; T1c approved mockup screens 1–3). The owner invites Leads
+ * and Builders, gives each the stores they work on, changes Lead ↔ Builder, and removes them. Leads and Builders don't
+ * see this page; every write is re-checked in its definer.
  */
 export default async function TeamPage() {
   const auth = await requirePartner()
@@ -39,10 +41,11 @@ export default async function TeamPage() {
           <PictoTile name="clients" tone="indigo" />
           <div>
             <h2 className="text-section font-semibold">Bring in your team</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Leads build the stores you give them.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Leads and Builders work on the stores you give them.</p>
           </div>
         </Section>
       )}
+      <div className="grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_300px]">
       <Section flush ariaLabel="People"><ul data-list className="divide-y divide-border">
         {people.map((p) => {
           const state = memberState(p, now)
@@ -71,12 +74,15 @@ export default async function TeamPage() {
                   askedMinutes: Math.max(0, Math.floor((now.getTime() - p.request.createdAt.getTime()) / 60_000)) }} />}
                 {state === 'active' && p.role !== 'owner' && p.passkeys > 0 && <DeletePasskeys memberId={p.memberId} name={firstName(p.email)} count={p.passkeys} />}
                 {state === 'invited' && <ResendInvite memberId={p.memberId} />}
+                {p.role !== 'owner' && state !== 'expired' && <RoleSelect memberId={p.memberId} label={p.email} role={p.role} />}
                 {p.role !== 'owner' && <RemovePerson memberId={p.memberId} label={p.email} invited={state !== 'active'} />}
               </div>
             </li>
           )
         })}
       </ul></Section>
+      <RolesCard />
+      </div>
     </>
   )
 }

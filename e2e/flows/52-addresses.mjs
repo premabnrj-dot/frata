@@ -17,7 +17,7 @@ export default {
     const [{ id: T, first_opened_at: opened }] = await db`select id, first_opened_at from tenants where slug = 'kesar-studio'`
     const owner = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
     const rename = async (p, to) => {
-      await p.goto(CONSOLE + '/console/settings/address')
+      await p.goto(CONSOLE + '/console/settings/web-address')
       await p.fill('#slug', to)
       await p.getByText('Available', { exact: true }).waitFor()
       // Live payments (the seed's keys are live): the new name is added beside the current one, ticked as approved by
@@ -44,7 +44,7 @@ export default {
     try {
       const p = await owner.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
       await t.step('an open shop renames itself; the page shows the changes left and the old name', async () => {
-        await p.goto(CONSOLE + '/console/settings/address')
+        await p.goto(CONSOLE + '/console/settings/web-address')
         await p.getByText('2 changes left').waitFor()
         await rename(p, 'kesar-two')
         await p.getByText('1 change left').waitFor()
@@ -60,7 +60,7 @@ export default {
         await s.close()
       })
       await t.step('a retired name is "Taken" for everyone; a second rename uses the last change; a third is refused', async () => {
-        await p.goto(CONSOLE + '/console/settings/address')
+        await p.goto(CONSOLE + '/console/settings/web-address')
         await p.fill('#slug', 'kesar-studio-x'); await p.getByText('Available', { exact: true }).waitFor()
         await rename(p, 'kesar-studio-x')
         await p.getByText('No changes left').waitFor()
@@ -71,7 +71,7 @@ export default {
       await t.step('the shop can take back one of its own old names (here: the seed\'s, for the flows after this one)', async () => {
         // Through the app, so every host's lookup is refreshed; the change count is lifted for this step only.
         await db`update tenants set first_opened_at = null where id = ${T}`
-        await p.goto(CONSOLE + '/console/settings/address')
+        await p.goto(CONSOLE + '/console/settings/web-address')
         await p.fill('#slug', 'kesar-studio'); await p.getByText('Available', { exact: true }).waitFor()
         await p.getByRole('button', { name: 'Change to kesar-studio' }).click()
         await expectToast(p, `Moved to kesar-studio.${SHOP_DOMAIN}`, 'ok')
@@ -106,7 +106,7 @@ export default {
           await expectToast(a, 'kesar-studio released.', 'ok')
         } finally { await staff.close() }
         // Not opened (the step before lifted it), so the change needs no confirm.
-        await p.goto(CONSOLE + '/console/settings/address')
+        await p.goto(CONSOLE + '/console/settings/web-address')
         await p.fill('#slug', 'kesar-studio'); await p.getByText('Available', { exact: true }).waitFor()
         await p.getByRole('button', { name: 'Change to kesar-studio' }).click()
         await expectToast(p, `Moved to kesar-studio.${SHOP_DOMAIN}`, 'ok')

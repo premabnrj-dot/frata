@@ -119,15 +119,15 @@ export default {
       })
 
       await t.step('Shipping costs: confirmed once, shown on Settings', async () => {
-        await p.goto(CONSOLE + '/console/settings')
-        await p.getByRole('link', { name: /Shipping costs/ }).filter({ hasText: 'Not confirmed' }).click()
+        await p.goto(CONSOLE + '/console/settings?group=tax')
+        await p.getByRole('link', { name: /shipping costs/i }).filter({ hasText: 'Not confirmed' }).click()
         await p.waitForURL(/\/console\/settings\/shipping-costs$/)
         await p.getByLabel('A delivery').fill('65')
         await p.getByRole('button', { name: 'Confirm these costs' }).click()
         await expectToast(p, 'Shipping costs confirmed.', 'ok')
         await p.getByText(/^Confirmed on /).waitFor()
-        await p.goto(CONSOLE + '/console/settings')
-        await p.getByRole('link', { name: /Shipping costs/ }).filter({ hasText: 'Delivery ₹65' }).waitFor()
+        await p.goto(CONSOLE + '/console/settings?group=tax')
+        await p.getByRole('link', { name: /shipping costs/i }).filter({ hasText: 'Delivery ₹65' }).waitFor()
       })
     } finally {
       await owner.close()

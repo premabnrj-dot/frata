@@ -1,3 +1,5 @@
+import { shopContent } from '@/lib/queries/content'
+import { shellContentOf } from '@/domains/content/bar'
 import type { Metadata } from 'next'
 import { pageDescription } from '@/domains/seo/defaults'
 import { notFound } from 'next/navigation'
@@ -30,6 +32,6 @@ export default async function Policy({ params }: { params: Params }) {
   const shop = await shopFor(params)
   const { page } = await params
   if (!isPage(page)) notFound()
-  const theme = await shopTheme(shop)
-  return <ShopShell shop={shop} href={shopHref} theme={theme} gated={!shop.publishedAt} capture={!!shop.publishedAt}><PolicyView shop={shop} page={page} contact={theme.contact} /></ShopShell>
+  const [theme, content] = await Promise.all([shopTheme(shop), shopContent(shop.id).catch(() => null)])
+  return <ShopShell shop={shop} href={shopHref} theme={theme} content={shellContentOf(content, false, new Date())} gated={!shop.publishedAt} capture={!!shop.publishedAt}><PolicyView shop={shop} page={page} contact={content?.contact ?? undefined} /></ShopShell>
 }

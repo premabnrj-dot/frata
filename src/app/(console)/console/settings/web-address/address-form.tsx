@@ -13,7 +13,6 @@ import type { AddressCheck } from '@/app/start/actions'
 import { changeAddress, checkShopAddress } from '../actions'
 import { addShopNameAction } from './domain-actions'
 import { Section } from '@/components/layout/section'
-import { PageHeader } from '@/components/layout/page-header'
 
 const WORDS: Record<AddressCheck['state'], string> = { ok: 'Available', taken: 'Taken', too_short: 'At least 3 letters', shape: 'Letters, digits and hyphens only', reserved: 'Taken' }
 
@@ -85,7 +84,6 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
 
   return (
     <div className="max-w-xl space-y-4">
-      <PageHeader title="Store address" back={{ href: '/console/settings', label: 'Settings' }} />
       <Section>
         <label htmlFor="slug" className="flex items-center gap-1 text-sm font-medium">Frrata address
           {left !== null && <InfoTip about="old addresses">Old addresses keep working.</InfoTip>}

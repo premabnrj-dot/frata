@@ -74,7 +74,7 @@ describe.skipIf(!host)('order search', () => {
     expect((await listOrders(A, { tab: 'on_the_way', now })).some((h) => h.number >= n && h.number <= n + 2)).toBe(false)
   })
 
-  it('Settings › Taxes: the live products a registered shop can\'t sell for want of a rate', async () => {
+  it('Settings › Business and GST: the live products a registered shop can\'t sell for want of a rate', async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
     const { withTenant } = await import('@/lib/db/tenant')
     const { products } = await import('@/lib/db/schema-catalogue')

@@ -15,3 +15,6 @@ export const FRATA_WHATSAPP_DISPLAY = '+91 95603 66601'
 export function frataWhatsappLink(text = 'Hi Frrata, I have a question about starting my store.') {
   return `https://wa.me/${FRATA_WHATSAPP}?text=${encodeURIComponent(text)}`
 }
+
+/** Shown on /privacy-policy (owner, 2026-11-15). A named grievance officer replaces this once the business has one. */
+export const FRATA_PRIVACY_EMAIL = 'doloslyf@gmail.com'

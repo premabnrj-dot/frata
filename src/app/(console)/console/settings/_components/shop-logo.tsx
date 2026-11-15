@@ -7,7 +7,7 @@ import { button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { setShopLogo } from '../actions'
 
-/** The shop's logo (Settings › Brand; search and sharing S1·6): the shop's header, its tab icon and its markup. */
+/** The shop's logo (Settings › Store details; search and sharing S1·6): the shop's header, its tab icon and its markup. */
 export function ShopLogo({ tenantId, current }: { tenantId: string; current: string | null }) {
   const router = useRouter()
   const [busy, start] = useTransition()

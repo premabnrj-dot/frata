@@ -4,7 +4,7 @@
 // refuse first; these decide what a page offers. The partner_members role CHECK is built from PARTNER_ROLES.
 // =============================================================================
 
-/** `builder` waits for T1c (ADR-0015): the table allows it, every definer refuses it until then. */
+/** `builder` (T1c, ADR-0015): builds the stores it is given, and never sees their orders, shoppers or costs. */
 export const PARTNER_ROLES = ['owner', 'lead', 'builder'] as const
 export type PartnerRole = (typeof PARTNER_ROLES)[number]
 
@@ -14,12 +14,16 @@ export const PARTNER_ROLE_LABEL: Record<PartnerRole, string> = { owner: 'Owner',
 /**
  * What each role may do in the workspace (spec § Roles), read by the partner layout, the Team and Your details pages,
  * the team actions and the console's building banner. The definers in drizzle/0124 refuse the same on their own.
- * Hand over stays owner-only until T1b (partner passkeys).
+ * Hand over is the owner's (T1b). A Builder holds none of these.
  */
 export const PARTNER_CAN = {
   manageTeam: ['owner'],
   seeDetails: ['owner'],
   handOver: ['owner'],
+  /** "New client store": the owner and Leads (app_partner_create_shop refuses a Builder). */
+  createShop: ['owner', 'lead'],
+  /** A store's owner email, open invite, plan and the partner's share: the owner only (T1c, owner question 6). */
+  seeClientTerms: ['owner'],
 } as const satisfies Record<string, readonly PartnerRole[]>
 
 export const partnerCan = (role: PartnerRole, what: keyof typeof PARTNER_CAN): boolean =>
@@ -35,3 +39,10 @@ export function memberState(m: { acceptedAt: Date | null; removedAt?: Date | nul
 
 /** A partner has at most this many people (owner included), active or invited. app_partner_invite holds the same 50. */
 export const MAX_PARTNER_PEOPLE = 50
+
+/** The roles a partner owner may give a person (never `owner`: only Frrata moves the owner). */
+export const GIVEN_ROLES = ['lead', 'builder'] as const satisfies readonly PartnerRole[]
+export type GivenRole = (typeof GIVEN_ROLES)[number]
+
+/** A role read from the database, by name; anything else is no role at all (security review H2: never "owner"). */
+export const partnerRoleOf = (v: unknown): PartnerRole | null => (PARTNER_ROLES as readonly unknown[]).includes(v) ? v as PartnerRole : null

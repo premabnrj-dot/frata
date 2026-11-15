@@ -23,6 +23,8 @@ export const LIMITS = {
   createShopIp: { action: 'create_shop:ip', max: 5, windowSeconds: 3600 },
   // Partner teams T1a (security review 2026-11-12): an owner sends at most 20 team invites an hour; fail closed.
   partnerInvite: { action: 'partner_invite:owner', max: 20, windowSeconds: 3600 },
+  // Builders T1c (security review L11): an owner changes Lead ↔ Builder at most 30 times an hour; fail closed.
+  partnerRole: { action: 'partner_role:owner', max: 30, windowSeconds: 3600 },
   checkAddressUser: { action: 'check_address:user', max: 120, windowSeconds: 600 },
   // Checkout (1C). Subjects are "<tenant>:<ip>" or "<tenant>:<phone>" (hashed with the action below). Mobile networks share IPs: generous per IP.
   quoteIp: { action: 'shop_quote:ip', max: 300, windowSeconds: 600 },
@@ -128,6 +130,13 @@ export const LIMITS = {
   // A sell-out inside a window already purged queues ONE trailing purge at the window's end, across every instance
   // (shopper batch 2026-11-12: a second sell-out within 30 s was dropped until the 60 s backstop). Fails open too.
   soldOutTrail: { action: 'sold_out_trail:shop', max: 1, windowSeconds: 30 },
+  // V1 content (plan docs/plans/2026-11-15-v1-content.md): a store's content saves, counted first and given back when the
+  // save is refused (a refused partner never spends the owner's), failing closed; Undo has its own bucket so a store at its limit
+  // can still undo. The purge pair works as soldOutPurge/soldOutTrail do, for the `content` scope.
+  contentSave: { action: 'content_save:shop', max: 30, windowSeconds: 60 },
+  contentUndo: { action: 'content_undo:shop', max: 30, windowSeconds: 60 },
+  contentPurge: { action: 'content_purge:shop', max: 1, windowSeconds: 30 },
+  contentTrail: { action: 'content_trail:shop', max: 1, windowSeconds: 30 },
   // The Storefront API (V1 SA0, security and unit-economics reviews 2026-11-15), all failing closed. Unknown keys per
   // network (counted after a lookup misses, on the dynamic tree); test keys at 60 a minute per network; a test key's
   // search; keys made per shop (each is a new set of cached copies).

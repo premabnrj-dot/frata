@@ -3,11 +3,8 @@ import { ON_COLOUR } from './catalogue/kit'
 import { choicesFor } from './choices'
 import { contrast } from './contrast'
 import { SECTION_NAMES, SectionSchema, MAX_PER_PAGE, MAX_SECTIONS, shopPath, type SectionInstance, VIDEO_KEYS, type VideoKey } from './sections'
-import { MenusSchema, SiteSchema, menusProblem, siteProblem } from './site'
+import { SiteSchema, siteProblem } from './site'
 
-/** The Contact page's line above Chat on WhatsApp and the business details (plain words, no markup characters). */
-export const ContactSchema = z.object({ line: z.string().max(160).regex(/^[^<>{}\\\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]*$/) }).strict()
-export const readContact = (raw: unknown): { line: string } | undefined => { const r = ContactSchema.safeParse(raw); return r.success && r.data.line.trim() ? r.data : undefined }
 import { FOOTERS, HEADERS, HEADER_NAMES, PAGE_DEFAULTS, PAIRINGS, type Hex, type Scheme, type ThemeLayer, type ThemeManifest, type ThemeSettings } from './types'
 
 // =============================================================================
@@ -16,7 +13,8 @@ import { FOOTERS, HEADERS, HEADER_NAMES, PAGE_DEFAULTS, PAIRINGS, type Hex, type
 // =============================================================================
 
 const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/).transform((h) => h.toUpperCase() as Hex)
-/** The announcement bar: one line, a link only to the shop's own pages (the manifest schema reuses it). */
+/** The announcement bar as released manifests carry it (`null`; the manifest schema reads it). The store's bar is its
+ *  content since V1 (src/domains/content/kinds.ts); a look never holds one. */
 export const AnnouncementSchema = z.object({ text: z.string().trim().min(1).max(80), link: shopPath.nullable(), scheme: z.enum(['paper', 'tint', 'ink']) })
 export const SettingsSchema = z.object({
   pairing: z.enum(PAIRINGS),
@@ -31,7 +29,6 @@ export const SettingsSchema = z.object({
   header: z.enum(HEADERS),
   sticky: z.boolean(),
   bottomTabs: z.boolean(),
-  announcement: AnnouncementSchema.nullable(),
   footer: z.enum(FOOTERS),
   social: z.boolean(),
   motion: z.enum(['subtle', 'none']),
@@ -60,11 +57,9 @@ export const SettingsSchema = z.object({
 export const LayerSchema = z.object({
   settings: SettingsSchema.default({}),
   home: z.array(z.unknown()).max(MAX_SECTIONS).optional(),
-  // Look v4: site settings and menus, in the same layer (draft → publish → undo).
+  // Look v4: site settings, in the same layer (draft → publish → undo). Menus, the bar and the Contact line are the
+  // store's content since V1 (src/domains/content/): an old layer's keys are dropped here, never saved again.
   site: SiteSchema.optional(),
-  menus: MenusSchema.optional(),
-  /** Theme Studio TS1a: the Contact page's own line (it renders at /policies/contact); content, like menus. */
-  contact: ContactSchema.optional(),
 })
 export type StoredLayer = z.infer<typeof LayerSchema>
 
@@ -83,12 +78,10 @@ export const layerTooLong = (layer: unknown) => layerBytes(layer) > MAX_LAYER_BY
 
 /** Why a layer can't be saved as it is (shape and limits only). Empty: it can be saved. */
 export function layerProblems(layer: unknown): string[] {
-  // Site settings and menus first: their problems in the merchant's words.
-  const lr = (layer ?? {}) as { site?: unknown; menus?: unknown; contact?: unknown }
-  // TS1a: Contact's line in words, never Zod's (impact review).
-  const contactWhy = lr.contact !== undefined && !ContactSchema.safeParse(lr.contact).success ? 'Contact’s line: plain words, up to 160 characters (no < > { } or \\).' : null
-  const own = [siteProblem(lr.site), menusProblem(lr.menus), contactWhy].filter((x): x is string => !!x)
-  if (own.length) return own
+  // Site settings first: their problems in the merchant's words.
+  const lr = (layer ?? {}) as { site?: unknown }
+  const own = siteProblem(lr.site)
+  if (own) return [own]
   const p = LayerSchema.safeParse(layer)
   if (!p.success) return p.error.issues.map((i) => `${i.path.join('.') || 'look'}: ${i.message}`)
   const out: string[] = []
@@ -134,17 +127,16 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
     const home = from.layer.home?.filter((s) => { const r = SectionSchema.safeParse(s); return r.success && fits(r.data, from.manifest, to) })
     // Moving back a version (a recall) can drop a section the earlier version lacks: say so (T3 review).
     const lost = [...new Set(parsed.filter((s) => !fits(s, from.manifest, to)).map((s) => `${nameIn(s, from.manifest)} isn't in ${to.name} ${to.version}`))]
-    return { layer: { style, ...(from.layer.settings ? { settings: from.layer.settings } : {}), ...(home ? { home } : {}), ...(from.layer.site !== undefined ? { site: from.layer.site } : {}), ...(from.layer.menus !== undefined ? { menus: from.layer.menus } : {}), ...(from.layer.contact !== undefined ? { contact: from.layer.contact } : {}) }, lost }
+    return { layer: { style, ...(from.layer.settings ? { settings: from.layer.settings } : {}), ...(home ? { home } : {}), ...(from.layer.site !== undefined ? { site: from.layer.site } : {}) }, lost }
   }
   const was = { ...PAGE_DEFAULTS, ...from.manifest.defaults, ...(from.layer.settings ?? {}) } as ThemeSettings
   const lost: string[] = []
   // Only what the merchant chose comes across, never the old theme's defaults: a new theme opens with its own
-  // character (plan 2026-11-09-themes-three). Content (brand colour, announcement) always; a layout choice only if
+  // character (plan 2026-11-09-themes-three). The brand colour always; a layout choice only if
   // the new theme offers that value.
   const mine = from.layer.settings ?? {}
   const settings: Partial<ThemeSettings> = {}
   if (mine.brandColour !== undefined) settings.brandColour = mine.brandColour
-  if (mine.announcement !== undefined) settings.announcement = mine.announcement
   for (const k of ['corners', 'photo', 'gallery', 'details', 'card', 'desktopColumns', 'collectionTop'] as const) {
     const v = mine[k]; const list = choicesFor(to, k)
     if (v !== undefined && (!list || (list as readonly unknown[]).includes(v))) (settings as Record<string, unknown>)[k] = v
@@ -169,8 +161,8 @@ export function carryOver(from: { manifest: ThemeManifest; layer: ThemeLayer }, 
   if (kept.some((s) => s.key === 'hero' && s.script?.trim()) && !to.allowed.heroScript) lost.push(`The Hero's handwritten line isn't in ${to.name}`)
   // Keep the merchant's own Home only if they changed it; an untouched Home takes the new theme's.
   const changed = JSON.stringify(from.layer.home ?? null) !== 'null'
-  // Site settings are the theme's own (owner 2026-11-09: a new theme brings its palette, type and icons); menus are
-  // content and come across.
+  // Site settings are the theme's own (owner 2026-11-09: a new theme brings its palette, type and icons). Menus, the bar
+  // and the Contact line are the store's content (V1), never in the layer.
   if (from.layer.site !== undefined) lost.push('Your site colours, text styles and icons')
-  return { layer: { style: to.styles[0]!.key, settings, ...(changed ? { home: kept } : {}), ...(from.layer.menus !== undefined ? { menus: from.layer.menus } : {}), ...(from.layer.contact !== undefined ? { contact: from.layer.contact } : {}) }, lost }
+  return { layer: { style: to.styles[0]!.key, settings, ...(changed ? { home: kept } : {}) }, lost }
 }

@@ -31,7 +31,7 @@ export default {
     try {
       const riya = await open('owner', { viewport: { width: 390, height: 844 } })
       await t.step('the owner: plan and this month so far, with the delivered order and its fee; no sideways scroll on a phone', async () => {
-        await riya.goto(CONSOLE + '/console/settings')
+        await riya.goto(CONSOLE + '/console/settings?group=team')
         await riya.getByRole('link', { name: /Plan and billing/ }).click()
         await riya.getByRole('heading', { level: 1, name: 'Plan and billing' }).waitFor()
         await riya.locator('strong', { hasText: 'Launch' }).waitFor()

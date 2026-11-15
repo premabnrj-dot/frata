@@ -2738,7 +2738,7 @@ end $$;
 rollback;
 
 -- 70. Shop pages (Theme Studio TS1a, 0099–0100; tenancy-auditor 2026-11-11): own shop only; no delete or edit across
--- shops; tenant, id and template never change; a page's live publish must be its own shop's; at most 20 pages and
+-- shops; tenant, id and template never change; a page names no publish (0136); at most 20 pages and
 -- one FAQ a shop (B's don't count against A); no API role or frata_admin reaches the table.
 begin; set local role frata_app;
 do $$ declare n int; pa uuid; pb uuid; pubb uuid; rb uuid; i int; begin
@@ -2771,9 +2771,9 @@ do $$ declare n int; pa uuid; pb uuid; pubb uuid; rb uuid; i int; begin
   exception when insufficient_privilege then null; end;
   begin update shop_pages set template = 'about' where id = pa; raise exception 'FAIL: a page changed its template';
   exception when insufficient_privilege then null; end;
-  -- a page's live publish must be its own shop's
+  -- a page can't name a publish at all since pages save live (V1 content, 0136: the column is no longer writable)
   begin update shop_pages set live_publish_id = pubb where id = pa; raise exception 'FAIL: A pointed a page at B''s publish';
-  exception when foreign_key_violation then null; end;
+  exception when insufficient_privilege then null; end;
   -- a live page can't be deleted outside Publish (the delete policy); once removed at a publish, it can
   update shop_pages set live = draft where id = pa;
   delete from shop_pages where id = pa; get diagnostics n = row_count;
@@ -3271,7 +3271,7 @@ begin
   begin perform app_partner_team(X, proof.sess(X), proof.h(X)); raise exception 'FAIL: a stranger read a team'; exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
   -- invites: owner only, a lead, the partner's own live stores only
   begin perform app_partner_invite(Z, proof.sess(Z), proof.h(Z), 'x@else.test', 'lead', array[t1]); raise exception 'FAIL: another partner invited into P store'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_store' then raise; end if; end;
-  begin perform app_partner_invite(O, proof.sess(O), proof.h(O), 'lead@team.test', 'builder', array[t1]); raise exception 'FAIL: a builder before T1c'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_role' then raise; end if; end;
+  begin perform app_partner_invite(O, proof.sess(O), proof.h(O), 'lead@team.test', 'owner', array[t1]); raise exception 'FAIL: an invite made an owner'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_role' then raise; end if; end;
   begin perform app_partner_invite(O, proof.sess(O), proof.h(O), 'lead@team.test', 'owner', array[t1]); raise exception 'FAIL: a second owner'; exception when sqlstate 'P0001' then if sqlerrm <> 'bad_role' then raise; end if; end;
   inv := app_partner_invite(O, proof.sess(O), proof.h(O), 'Lead@Team.test', 'lead', array[t1]);
   begin perform app_partner_invite(O, proof.sess(O), proof.h(O), 'lead@team.test', 'lead', '{}'); raise exception 'FAIL: the same email twice'; exception when sqlstate 'P0001' then if sqlerrm <> 'already_invited' then raise; end if; end;
@@ -3630,11 +3630,178 @@ commit;
 do $$ begin
   if exists (select 1 from partner_passkey_requests where approved_at is not null and (device is not null or city is not null)) then raise exception 'FAIL: a decided request kept its device or city'; end if;
 end $$;
+-- 82. Builders T1c (0130–0131; plan docs/plans/2026-11-15-t1c-builders.md, reviews folded in). G owns partner Nook with
+-- stores n1 and n2; D is a Builder on n1 only; Z owns another partner (§ 77). frata_builder reads named catalogue columns
+-- of its shop and nothing else; members.role follows partner_members.role; Builders never get a notice, an owner's email
+-- or the partner's terms.
+insert into auth.users (id, email, email_confirmed_at) values
+  ('aaaaaaaa-0000-0000-0000-000000000092', 'g@nook.test', now()), ('aaaaaaaa-0000-0000-0000-000000000093', 'd@nook.test', now());
+begin; set local role frata_app;
+select app_partner_apply('aaaaaaaa-0000-0000-0000-000000000092', 'Gita', 'Nook', '919845012360', 'Pune', '{}', '', '1-4', 1);
+commit;
+update partners set approved_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000092';
+begin; set local role frata_app;
+select proof.check('aaaaaaaa-0000-0000-0000-000000000092');
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; D uuid := 'aaaaaaaa-0000-0000-0000-000000000093'; Z uuid := 'aaaaaaaa-0000-0000-0000-000000000032';
+  n1 uuid; n2 uuid; inv uuid; me uuid; c record;
+begin
+  n1 := app_partner_create_shop(G, proof.sess(G), proof.h(G), 'Nook One', 'proof-nook-1', '411001', 2000, 24, 90, 10);
+  n2 := app_partner_create_shop(G, proof.sess(G), proof.h(G), 'Nook Two', 'proof-nook-2', '411001', 2000, 24, 90, 10);
+  begin perform app_partner_invite(G, proof.sess(G), proof.h(G), 'd@nook.test', 'owner', array[n1]); raise exception 'FAIL: an invite made an owner';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'bad_role' then raise; end if; end;
+  inv := app_partner_invite(G, proof.sess(G), proof.h(G), 'd@nook.test', 'builder', array[n1]);
+  if (app_partner_accept(D, inv)->>'role') <> 'builder' then raise exception 'FAIL: accept did not say builder'; end if;
+  perform proof.check(D);
+  me := (select member_id from app_my_partner(D));
+  if me is null or (select member_role from app_my_partner(D)) <> 'builder' then raise exception 'FAIL: a Builder has no partner record'; end if;
+  -- access: the Builder's row is 'builder', in n1 only
+  if (select e->>'role' from jsonb_array_elements(app_access_for(D, proof.sess(D), null, proof.h(D))->'memberships') e where (e->>'tenantId')::uuid = n1) <> 'builder'
+     or exists (select 1 from jsonb_array_elements(app_access_for(D, proof.sess(D), null, proof.h(D))->'memberships') e where (e->>'tenantId')::uuid = n2)
+  then raise exception 'FAIL: a Builder''s access'; end if;
+  -- clients: assigned only, no owner email, invite, plan or terms; has_owner says the stage
+  select * into c from app_partner_clients(D, proof.sess(D), proof.h(D)) x;
+  if (select count(*) from app_partner_clients(D, proof.sess(D), proof.h(D))) <> 1 or c.tenant_id <> n1 or c.owner_email is not null or c.invite_email is not null
+     or c.plan_name is not null or c.share_months is not null or c.notice_days is not null or c.has_owner is not false
+  then raise exception 'FAIL: a Builder''s clients (%)', c; end if;
+  -- owner question 6: a Lead gets no owner contact details either; the owner still does
+  if exists (select 1 from app_partner_clients(G, proof.sess(G), proof.h(G)) x where x.share_months is null) then raise exception 'FAIL: the owner lost the terms'; end if;
+  -- a Builder makes no store, hands over nothing, runs no team
+  begin perform app_partner_create_shop(D, proof.sess(D), proof.h(D), 'Nook X', 'proof-nook-x', '411001', 2000, 24, 90, 10); raise exception 'FAIL: a Builder made a store';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
+  begin perform app_handover_invite(n1, D, 'brand@nook.test', proof.sess(D), proof.h(D)); raise exception 'FAIL: a Builder handed over';
+  exception when sqlstate 'P0001' then null; end;
+  begin perform app_partner_set_role(D, proof.sess(D), proof.h(D), me, 'lead'); raise exception 'FAIL: a Builder changed its own role';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_partner_set_role(Z, proof.sess(Z), proof.h(Z), me, 'lead'); raise exception 'FAIL: another partner changed a role';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'no_person' then raise; end if; end;
+  begin perform app_partner_set_role(G, proof.sess(G), proof.h(G), me, 'owner'); raise exception 'FAIL: a role of owner';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'bad_role' then raise; end if; end;
+  begin perform app_partner_set_role(G, proof.sess(G), proof.h(G), (select member_id from app_my_partner(G)), 'lead'); raise exception 'FAIL: the owner demoted';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'no_person' then raise; end if; end;
+  begin perform app_partner_set_role(G, proof.sess(G), null, me, 'lead'); raise exception 'FAIL: set role without a check';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  -- Lead and back: the store row follows, every time
+  perform app_partner_set_role(G, proof.sess(G), proof.h(G), me, 'lead');
+  if (select e->>'role' from jsonb_array_elements(app_access_for(D, proof.sess(D), null, proof.h(D))->'memberships') e where (e->>'tenantId')::uuid = n1) <> 'partner' then raise exception 'FAIL: Lead row'; end if;
+  perform app_partner_set_role(G, proof.sess(G), proof.h(G), me, 'builder');
+  if (select e->>'role' from jsonb_array_elements(app_access_for(D, proof.sess(D), null, proof.h(D))->'memberships') e where (e->>'tenantId')::uuid = n1) <> 'builder' then raise exception 'FAIL: Builder row'; end if;
+  -- assign n2: the new row is a builder's too
+  perform app_partner_assign(G, proof.sess(G), proof.h(G), me, n2, true);
+  if (select e->>'role' from jsonb_array_elements(app_access_for(D, proof.sess(D), null, proof.h(D))->'memberships') e where (e->>'tenantId')::uuid = n2) <> 'builder' then raise exception 'FAIL: assign row'; end if;
+  perform app_partner_assign(G, proof.sess(G), proof.h(G), me, n2, false);
+  -- a Builder's passkeys are the owner's to manage, as a Lead's
+  if app_partner_pk_remove_all(G, proof.sess(G), proof.h(G), me) < 1 then raise exception 'FAIL: the owner could not delete a Builder''s passkeys'; end if;
+  perform proof.check(D);
+  -- the app may not move a role by hand
+  begin update members set role = 'partner' where user_id = D; raise exception 'FAIL: frata_app updated members';
+  exception when insufficient_privilege then null; end;
+  -- notices: never a Builder
+  perform set_config('app.tenant_id', n1::text, true);
+  if exists (select 1 from app_notice_members() x where x.user_id = D) or app_member_email(D, false) is not null then raise exception 'FAIL: a notice reaches a Builder'; end if;
+  perform set_config('proof.nook1', n1::text, false);
+  perform set_config('proof.nook2', n2::text, false);
+  perform set_config('proof.nookd', D::text, false);
+end $$;
+commit;
+-- a stray write as the table owner still cannot leave a Builder on 'partner' (the trigger derives it)
+update members set role = 'partner' where user_id = 'aaaaaaaa-0000-0000-0000-000000000093';
+do $$ begin
+  if exists (select 1 from members where user_id = 'aaaaaaaa-0000-0000-0000-000000000093' and role <> 'builder') then raise exception 'FAIL: a Builder row on partner'; end if;
+  if exists (select 1 from members m join partner_members pm on pm.id = m.partner_member_id
+              where m.role <> case when pm.role = 'builder' then 'builder' else 'partner' end) then raise exception 'FAIL: a members row disagrees with its person'; end if;
+end $$;
+-- catalogue in both stores, with a cost
+insert into products (id, tenant_id, handle, title, status) values
+  ('eeeeeeee-0000-0000-0000-0000000000c1', current_setting('proof.nook1')::uuid, 'nook-kurta', 'Nook kurta', 'active'),
+  ('eeeeeeee-0000-0000-0000-0000000000c2', current_setting('proof.nook2')::uuid, 'nook-saree', 'Nook saree', 'active');
+insert into variants (tenant_id, product_id, option_values, price, unit_cost) values
+  (current_setting('proof.nook1')::uuid, 'eeeeeeee-0000-0000-0000-0000000000c1', '{M}', 249000, 98000),
+  (current_setting('proof.nook2')::uuid, 'eeeeeeee-0000-0000-0000-0000000000c2', '{M}', 349000, 128000);
+insert into collections (id, tenant_id, handle, title, kind, rules, match_all) values
+  ('eeeeeeee-0000-0000-0000-0000000000d1', current_setting('proof.nook1')::uuid, 'nook-picks', 'Nook picks', 'manual', '[]', 1),
+  ('eeeeeeee-0000-0000-0000-0000000000d2', current_setting('proof.nook1')::uuid, 'nook-all', 'Nook all', 'auto', '[{"field":"price_at_least","value":1}]', 1);
+insert into collection_products (tenant_id, collection_id, product_id) values
+  (current_setting('proof.nook1')::uuid, 'eeeeeeee-0000-0000-0000-0000000000d1', 'eeeeeeee-0000-0000-0000-0000000000c1');
+-- as frata_builder: its shop's named columns, nothing else
+begin; set local role frata_builder;
+select set_config('app.tenant_id', current_setting('proof.nook1'), true), set_config('app.member_role', 'builder', true);
+do $$ declare n int; begin
+  select count(*) into n from products; if n <> 1 then raise exception 'FAIL: a Builder read % products', n; end if;
+  select count(*) into n from variants where price = 249000; if n <> 1 then raise exception 'FAIL: a Builder read no price'; end if;
+  begin perform unit_cost from variants; raise exception 'FAIL: a Builder read a cost'; exception when insufficient_privilege then null; end;
+  begin perform 1 from variants where unit_cost > 0; raise exception 'FAIL: a Builder filtered on a cost'; exception when insufficient_privilege then null; end;
+  begin perform hsn from products; raise exception 'FAIL: a Builder read HSN'; exception when insufficient_privilege then null; end;
+  begin perform 1 from orders; raise exception 'FAIL: a Builder read orders'; exception when insufficient_privilege then null; end;
+  begin perform 1 from order_lines; raise exception 'FAIL: a Builder read order lines'; exception when insufficient_privilege then null; end;
+  begin perform 1 from shop_settings; raise exception 'FAIL: a Builder read settings'; exception when insufficient_privilege then null; end;
+  begin perform 1 from members; raise exception 'FAIL: a Builder read members'; exception when insufficient_privilege then null; end;
+  begin perform 1 from discounts; raise exception 'FAIL: a Builder read offers'; exception when insufficient_privilege then null; end;
+  begin insert into products (tenant_id, handle, title) values (current_setting('proof.nook1')::uuid, 'b', 'B'); raise exception 'FAIL: a Builder wrote';
+  exception when insufficient_privilege then null; end;
+  begin update products set title = 'x'; raise exception 'FAIL: a Builder updated'; exception when insufficient_privilege then null; end;
+  begin perform app_access_for(current_setting('proof.nookd')::uuid, null, null, null); raise exception 'FAIL: a Builder ran a definer';
+  exception when insufficient_privilege then null; end;
+end $$;
+commit;
+-- the role without its setting reads nothing (ADR-0015 § 3: an unset role refuses)
+begin; set local role frata_builder;
+select set_config('app.tenant_id', current_setting('proof.nook1'), true);
+do $$ begin if exists (select 1 from products) then raise exception 'FAIL: frata_builder read without app.member_role'; end if; end $$;
+commit;
+-- the owner's and the store's reads are untouched by the Builder's policies
+begin; set local role frata_app;
+select set_config('app.tenant_id', current_setting('proof.nook1'), true);
+do $$ begin if (select count(*) from products) <> 1 or (select unit_cost from variants limit 1) <> 98000 then raise exception 'FAIL: frata_app lost its catalogue'; end if; end $$;
+commit;
+-- generic: frata_builder's whole reach is the allow-list (security M3, tenancy audit)
+do $$ declare r record; allowed jsonb := '{
+  "products": ["id","tenant_id","title","handle","status","publish_at","published_at","updated_at","type_id","options","option_values","tags","taxonomy_category"],
+  "product_types": ["id","tenant_id","name"],
+  "variants": ["id","tenant_id","product_id","archived_at","stock","price","when_out","ships_by","lead_min_days","lead_max_days","preorder_cap","sku"],
+  "product_colours": ["tenant_id","product_id","hex","value","family"],
+  "product_images": ["tenant_id","product_id","base","widths","position"],
+  "collections": ["id","tenant_id","title","handle","kind","rules","match_all"],
+  "collection_products": ["tenant_id","collection_id","product_id"],
+  "product_attributes": ["tenant_id","product_id","attribute","values"]}'; begin
+  for r in select c.oid as rel, n.nspname, c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+            where c.relkind in ('r','v','m','p','f') and n.nspname not in ('pg_catalog','information_schema') loop
+    if has_table_privilege('frata_builder', r.rel, 'insert') or has_table_privilege('frata_builder', r.rel, 'update')
+       or has_table_privilege('frata_builder', r.rel, 'delete') or has_table_privilege('frata_builder', r.rel, 'truncate')
+       or has_table_privilege('frata_builder', r.rel, 'select') then raise exception 'FAIL: frata_builder holds a table privilege on %.%', r.nspname, r.relname; end if;
+  end loop;
+  for r in select n.nspname, c.relname, a.attname from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace n on n.oid = c.relnamespace
+            where a.attnum > 0 and not a.attisdropped and c.relkind in ('r','v','m','p','f') and n.nspname not in ('pg_catalog','information_schema')
+              and has_column_privilege('frata_builder', c.oid, a.attnum, 'select') loop
+    if r.nspname <> 'public' or not coalesce((allowed->r.relname) ? r.attname, false) then raise exception 'FAIL: frata_builder may read %.%.%', r.nspname, r.relname, r.attname; end if;
+  end loop;
+  for r in select n.nspname, c.relname, a.attname from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace n on n.oid = c.relnamespace
+            where a.attnum > 0 and not a.attisdropped and n.nspname not in ('pg_catalog','information_schema')
+              and (has_column_privilege('frata_builder', c.oid, a.attnum, 'insert') or has_column_privilege('frata_builder', c.oid, a.attnum, 'update')) loop
+    raise exception 'FAIL: frata_builder may write %.%.%', r.nspname, r.relname, r.attname;
+  end loop;
+  for r in select n.nspname, p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where p.prosecdef and n.nspname <> 'proof' and has_function_privilege('frata_builder', p.oid, 'execute') loop
+    raise exception 'FAIL: frata_builder may run the definer %.%', r.nspname, r.proname;
+  end loop;
+  if has_schema_privilege('frata_builder', 'public', 'create') then raise exception 'FAIL: frata_builder may create in public'; end if;
+  if exists (select 1 from pg_class c where c.relkind = 'S' and (has_sequence_privilege('frata_builder', c.oid, 'usage') or has_sequence_privilege('frata_builder', c.oid, 'select')))
+  then raise exception 'FAIL: frata_builder holds a sequence'; end if;
+  if (select rolsuper or rolbypassrls or rolinherit or rolcreaterole or rolcreatedb from pg_roles where rolname = 'frata_builder')
+  then raise exception 'FAIL: frata_builder has a power it must not'; end if;
+  if exists (select 1 from pg_auth_members m join pg_roles ro on ro.oid = m.member where ro.rolname = 'frata_builder')
+     -- the role's creator may hold ADMIN on it (Supabase, PG16+: a non-superuser postgres that ran create role); nobody else
+     or exists (select 1 from pg_auth_members m join pg_roles ro on ro.oid = m.roleid join pg_roles mem on mem.oid = m.member
+                 where ro.rolname = 'frata_builder' and not (mem.rolname = 'postgres' and m.admin_option))
+  then raise exception 'FAIL: frata_builder is in a role, or a role is in it'; end if;
+  if exists (select 1 from pg_policies where 'frata_builder' = any(roles) and policyname not in ('builder_rows','builder_only'))
+     or (select count(*) from pg_policies where 'frata_builder' = any(roles)) <> 16
+  then raise exception 'FAIL: frata_builder''s policies'; end if;
+end $$;
 -- the proof-only helpers go, and are gone
 drop schema proof cascade;
 do $$ begin if to_regnamespace('proof') is not null then raise exception 'FAIL: proof helpers left behind'; end if; end $$;
 
--- 81. Storefront keys (V1 Storefront API SA0, 0130–0131; ADR-0018; plan docs/plans/2026-11-15-v1-storefront-api.md
+-- 81. Storefront keys (V1 Storefront API SA0, 0137–0138; ADR-0018; plan docs/plans/2026-11-15-v1-storefront-api.md
 -- § SA0·3). A key is its shop's own row both ways; frata_app never changes a hash, kind, shop or maker and never deletes;
 -- no other role reaches it. app_storefront_key is the one way from a key to a shop: it returns exactly four columns and
 -- derives every stop (deleted, expired, a test key once the store ever opened, a partner's key once that partner's link
@@ -3823,4 +3990,93 @@ do $$ begin
 end $$;
 commit;
 
-\echo 'tenancy proof — all 81 checks passed'
+-- 80. Store content (V1 content, 0133–0136; plan docs/plans/2026-11-15-v1-content.md; tenancy-auditor 2026-11-15): a
+-- store's bars, menus and Contact line are its own both ways; tenant, kind and key never change; at most 3 bars a store
+-- (B's don't count, and B is refused before any lock); no store set reads nothing and writes nothing; no API role or
+-- frata_admin reaches the table or runs its functions; the move copies each store's own live look into its own rows.
+begin; set local role frata_app;
+do $$ declare n int; ca uuid; cb uuid; i int; begin
+  -- The cap trigger refuses another store's insert first, so the policy's own with check is asserted directly.
+  if not exists (select 1 from pg_policies where tablename = 'site_content' and policyname = 'tenant_rows' and qual like '%app_current_tenant()%' and with_check like '%app_current_tenant()%')
+    then raise exception 'FAIL: site_content''s policy does not hold both ways'; end if;
+  perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+  insert into site_content (tenant_id, kind, key, value) values ('22222222-2222-2222-2222-222222222222', 'contact', 'contact', '{"line":"B"}') returning id into cb;
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  if exists (select 1 from site_content where tenant_id = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: A sees B''s content'; end if;
+  begin insert into site_content (tenant_id, kind, key, value) values ('22222222-2222-2222-2222-222222222222', 'menu', 'main', '[]'); raise exception 'FAIL: A wrote content for B';
+  exception when insufficient_privilege then null; end;
+  begin insert into site_content (tenant_id, kind, key, value) values ('22222222-2222-2222-2222-222222222222', 'announcement', 'x', '{}'); raise exception 'FAIL: A wrote a bar for B';
+  exception when insufficient_privilege then null; end;
+  update site_content set value = '{"line":"A"}' where id = cb; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A edited B''s content'; end if;
+  delete from site_content where id = cb; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: A deleted B''s content'; end if;
+  insert into site_content (tenant_id, kind, key, value) values ('11111111-1111-1111-1111-111111111111', 'contact', 'contact', '{"line":"A"}') returning id into ca;
+  begin update site_content set tenant_id = '22222222-2222-2222-2222-222222222222' where id = ca; raise exception 'FAIL: A moved content to B';
+  exception when insufficient_privilege then null; end;
+  begin update site_content set kind = 'menu' where id = ca; raise exception 'FAIL: a row changed its kind';
+  exception when insufficient_privilege then null; end;
+  begin update site_content set key = 'other' where id = ca; raise exception 'FAIL: a row changed its key';
+  exception when insufficient_privilege then null; end;
+  begin insert into site_content (tenant_id, kind, key, value) values ('11111111-1111-1111-1111-111111111111', 'menu', 'side', '[]'); raise exception 'FAIL: a menu that is not main, footer or tabs';
+  exception when check_violation then null; end;
+  begin insert into site_content (tenant_id, kind, key, value, starts_at) values ('11111111-1111-1111-1111-111111111111', 'menu', 'main', '[]', now()); raise exception 'FAIL: a dated menu';
+  exception when check_violation then null; end;
+  begin insert into site_content (tenant_id, kind, key, value, starts_at, ends_at) values ('11111111-1111-1111-1111-111111111111', 'announcement', 'a0', '{}', now(), now() - interval '1 hour'); raise exception 'FAIL: a bar that ends before it starts';
+  exception when check_violation then null; end;
+  -- at most 3 bars not deleted; a deleted one doesn't count, but bringing it back does
+  for i in 1..3 loop insert into site_content (tenant_id, kind, key, value) values ('11111111-1111-1111-1111-111111111111', 'announcement', 'a' || i, '{}'); end loop;
+  begin insert into site_content (tenant_id, kind, key, value) values ('11111111-1111-1111-1111-111111111111', 'announcement', 'a4', '{}'); raise exception 'FAIL: a 4th bar';
+  exception when check_violation then null; end;
+  update site_content set deleted_at = now() where tenant_id = '11111111-1111-1111-1111-111111111111' and key = 'a1';
+  insert into site_content (tenant_id, kind, key, value) values ('11111111-1111-1111-1111-111111111111', 'announcement', 'a4', '{}');
+  begin update site_content set deleted_at = null where tenant_id = '11111111-1111-1111-1111-111111111111' and key = 'a1'; raise exception 'FAIL: a deleted bar came back past 3';
+  exception when check_violation then null; end;
+end $$;
+rollback;
+begin; set local role frata_app;
+do $$ begin
+  if exists (select 1 from site_content) then raise exception 'FAIL: content seen with no store set'; end if;
+  begin insert into site_content (tenant_id, kind, key, value) values ('11111111-1111-1111-1111-111111111111', 'contact', 'contact', '{"line":"x"}'); raise exception 'FAIL: content with no store set';
+  exception when insufficient_privilege then null; end;
+end $$;
+rollback;
+do $$ begin
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update']) p
+              where has_any_column_privilege(r, 'site_content', p))
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_table_privilege(r, 'site_content', 'delete'))
+  then raise exception 'FAIL: an API role or frata_admin reaches site_content'; end if;
+  if exists (select 1 from unnest(array['tenant_id', 'id', 'kind', 'key', 'created_at']) c where has_column_privilege('frata_app', 'site_content', c, 'update'))
+  then raise exception 'FAIL: frata_app can update a fixed column of site_content'; end if;
+  if exists (select 1 from pg_proc where proname in ('app_site_content_cap', 'app_move_content') and (prosecdef or proconfig is null or not ('search_path=""' = any (proconfig))))
+  then raise exception 'FAIL: a content function is a definer or has no fixed search_path'; end if;
+  if exists (select 1 from pg_proc p, unnest(array['public', 'anon', 'authenticated', 'service_role', 'frata_app', 'frata_admin']) r
+              where p.proname in ('app_site_content_cap', 'app_move_content') and r <> 'public' and has_function_privilege(r, p.oid, 'execute'))
+  then raise exception 'FAIL: a role may run a content function'; end if;
+end $$;
+-- The move (0135): each store's own live look into its own rows; B's rows and notice hold nothing of A's.
+begin;
+do $$ declare ra uuid; rb uuid; n int; begin
+  delete from site_content where tenant_id in ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222');
+  delete from notices where source_kind = 'content';
+  insert into shop_theme_revisions (tenant_id, theme_key, theme_version, style_key, settings, created_by, updated_by)
+    values ('11111111-1111-1111-1111-111111111111', 'classic', '1.0.0', 'default', '{"settings":{"announcement":{"text":"A-bar","link":null,"scheme":"ink"}},"menus":{"main":[{"id":"a","label":"A-menu","link":"/products","icon":null,"children":[]}],"footer":null},"contact":{"line":"A-line"}}', '99999999-9999-9999-9999-999999999999', '99999999-9999-9999-9999-999999999999') returning id into ra;
+  insert into shop_theme_publishes (tenant_id, revision_id, published_by) values ('11111111-1111-1111-1111-111111111111', ra, '99999999-9999-9999-9999-999999999999');
+  insert into shop_theme_revisions (tenant_id, theme_key, theme_version, style_key, settings, created_by, updated_by)
+    values ('22222222-2222-2222-2222-222222222222', 'classic', '1.0.0', 'default', '{"menus":{"footer":[]}}', '99999999-9999-9999-9999-999999999999', '99999999-9999-9999-9999-999999999999') returning id into rb;
+  insert into shop_theme_publishes (tenant_id, revision_id, published_by) values ('22222222-2222-2222-2222-222222222222', rb, '99999999-9999-9999-9999-999999999999');
+  perform app_move_content();
+  if current_setting('app.tenant_id', true) <> '' then raise exception 'FAIL: the move left a store set'; end if;
+  select count(*) into n from site_content where tenant_id = '11111111-1111-1111-1111-111111111111';
+  if n <> 3 then raise exception 'FAIL: A has % moved rows, not 3 (bar, main menu, Contact line)', n; end if;
+  if exists (select 1 from site_content where tenant_id = '22222222-2222-2222-2222-222222222222' and value::text ~ 'A-') then raise exception 'FAIL: B got A''s content'; end if;
+  if (select count(*) from site_content where tenant_id = '22222222-2222-2222-2222-222222222222') <> 1
+     or not exists (select 1 from site_content where tenant_id = '22222222-2222-2222-2222-222222222222' and kind = 'menu' and key = 'footer' and value = '[]')
+  then raise exception 'FAIL: B''s own empty footer menu was not moved alone'; end if;
+  if exists (select 1 from notices where tenant_id = '22222222-2222-2222-2222-222222222222' and source_kind = 'content' and coalesce(body, '') ~ 'A-') then raise exception 'FAIL: B''s notice names A''s content'; end if;
+  perform app_move_content();
+  if (select count(*) from notices where source_kind = 'content' and tenant_id = '11111111-1111-1111-1111-111111111111') <> 1 then raise exception 'FAIL: the move''s notice was sent twice'; end if;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 82 checks passed'

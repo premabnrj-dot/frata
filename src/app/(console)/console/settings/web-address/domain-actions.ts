@@ -21,7 +21,7 @@ import { checkDomain } from '@/domains/addresses/domains'
 import { slugProblem } from '@/domains/signup/slug'
 
 // =============================================================================
-// FILE: settings/address/domain-actions.ts — OWN DOMAINS FROM SETTINGS › SHOP ADDRESS (D2·10; mockup v2, rules 72–76).
+// FILE: settings/web-address/domain-actions.ts — OWN DOMAINS FROM SETTINGS › SHOP ADDRESS (D2·10; mockup v2, rules 72–76).
 // Every action: owners and admins (CAN_MANAGE), never a support visit; a row id only (the host comes from the row);
 // rate limits failing closed (the check per member, shop, IP bucket and one budget for all shops); replies are named
 // fields and error codes; anything thrown is logged as its name only. The definers check who again.

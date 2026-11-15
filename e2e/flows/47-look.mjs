@@ -192,8 +192,8 @@ export default {
       await until(async () => { const [r] = await db`select settings from shop_theme_revisions where id = ${draft}`; return (r.settings.home ?? []).some((s) => s.source?.kind === 'back_in_stock') }, 10_000)
     })
 
-    await t.step('T2: Shop words in Hindi (Settings › Brand): the shop’s own words change, what the merchant typed stays', async () => {
-      await riya.goto(CONSOLE + '/console/settings/brand')
+    await t.step('T2: Shop words in Hindi (Settings › Store details): the shop’s own words change, what the merchant typed stays', async () => {
+      await riya.goto(CONSOLE + '/console/settings/store')
       await riya.getByLabel('Show them in').selectOption('hi')
       await riya.getByRole('button', { name: 'Save', exact: true }).click()
       await expectToast(riya, 'Saved. Your store shows it now.', 'ok')

@@ -89,7 +89,7 @@ export default {
 
       await t.step('a note for the team', async () => {
         await p.getByLabel('A note for your team').fill('Call after 6 pm'); await p.getByRole('button', { name: 'Add note' }).click()
-        await p.getByRole('region', { name: 'Notes' }).getByText('Call after 6 pm').waitFor()
+        await p.getByRole('region', { name: 'Activity' }).getByText('Call after 6 pm').waitFor()
       })
 
       await t.step('confirm then Mark packed: the invoice number is issued and shown; the address is no longer editable', async () => {

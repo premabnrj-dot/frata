@@ -26,13 +26,9 @@ import { Published } from './published'
 import { DesignThumb } from './design-thumb'
 import { designsOf, isCommerce } from '@/domains/themes/blocks'
 import { pagesForEditor } from '@/lib/queries/pages'
-import { TEMPLATES } from '@/domains/pages/templates'
-import type { Design } from '@/domains/themes/blocks'
 
-/** The FAQ's picture: a heading over its questions (its template's own blocks are only the line above). */
-const FAQ_THUMB = { children: [{ id: 'h', kind: 'heading', size: 'l', text: 'FAQ' }, { id: 'q', kind: 'accordion', items: [1, 2, 3, 4].map((n) => ({ q: `Q${n}`, a: '' })) }] } as unknown as Pick<Design, 'children'>
-import { BOUND, answerText, boundAnswer } from '@/domains/policies/answers'
-import { POLICY_PAGES } from '@/domains/policies/render'
+import { previewContent } from '@/lib/queries/content'
+import { shellContentOf } from '@/domains/content/bar'
 
 // The customizer page: its own route group (no console chrome: the shop is the canvas). Only an editor of the look
 // (owner, admin, partner; not a support visit) gets here; the draft must exist (Look's Customize makes it).
@@ -41,11 +37,11 @@ export const dynamic = 'force-dynamic'
 
 export default async function Customize() {
   const auth = await requireMember(ANY_MEMBER)
-  if (!auth.ok) redirect('/login')
+  if (!auth.ok) redirect(auth.reason === 'builder' ? '/console/look' : '/login') // a Builder meets Look's refusal panel (T1c)
   const role = auth.membership.role, support = !!auth.membership.supportSessionId
   if (!(CAN_BUILD as readonly string[]).includes(role) || support) redirect('/console/look')
   const t = auth.membership.tenantId
-  const [data, shop, src, pages] = await Promise.all([editorData(t), previewShop(t), manifestsFor(t), pagesForEditor(t)])
+  const [data, shop, src, pages, content] = await Promise.all([editorData(t), previewShop(t), manifestsFor(t), pagesForEditor(t), previewContent(t)])
   if (!shop) redirect('/console/look')
   // No open draft: if this person just published it (this page re-renders after Publish), say so and offer Undo;
   // otherwise (Discard, a bookmark, someone else published) back to Look.
@@ -56,7 +52,7 @@ export default async function Customize() {
   }
   const m = manifestOf(src, data.draft.themeKey, data.draft.themeVersion)
   if (!m) redirect('/console/look')
-  const stored = data.draft.settings as { settings?: object; home?: unknown[]; site?: unknown; menus?: unknown }
+  const stored = data.draft.settings as { settings?: object; home?: unknown[]; site?: unknown }
   const draft = resolveTheme(m, { style: data.draft.styleKey, ...stored })
   const f = data.facts
   const tp = truePromises(f)
@@ -78,23 +74,14 @@ export default async function Customize() {
   const schemeNames = m.styles.find((s) => s.key === draft.style)?.schemeNames ?? {}
   // TS0b: the theme's designs (parsed), and each one's picture drawn here (never the drawing code in the browser).
   const designs = designsOf(m)
-  // TS1a: Contact's facts from Settings (read-only in the form), and the FAQ's answers from the policies.
-  const phone = (x: string) => (x ? `+91 ${x.slice(0, 5)} ${x.slice(5)}` : '')
-  const contactRows = [
-    { label: 'WhatsApp', value: shop.whatsapp ? phone(shop.whatsapp) : null },
-    { label: 'Store', value: shop.legalName ? `${shop.shopName}, run by ${shop.legalName}` : null },
-    { label: 'Address', value: shop.address || null },
-    { label: 'Customer care', value: [shop.supportEmail, phone(shop.supportPhone)].filter(Boolean).join(' · ') || null },
-    { label: 'Grievance officer', value: shop.grievanceName ? [shop.grievanceName + (shop.grievanceRole ? `, ${shop.grievanceRole}` : ''), shop.grievanceEmail, phone(shop.grievancePhone)].filter(Boolean).join(' · ') : null },
-  ]
-  const policyTitle = Object.fromEntries(POLICY_PAGES) as Record<string, string>
-  const answers = Object.fromEntries(BOUND.map((b) => { const a = boundAnswer(b, shop, shop.overrides, (x) => formatInr(paise(x))); return [b, !a ? null : 'policy' in a ? `See your ${policyTitle[a.policy]} policy` : answerText(a.pieces)] })) as Record<(typeof BOUND)[number], string | null>
+  // V1: the bar, menus, Contact line and pages are the store's content (Console › Content); the panels link there.
+  const bar = shellContentOf(content, false, new Date()).bar
   return (
     <div className={STORE_FONT_VARS}>
       <Editor
         revisionId={data.draft.id} version={data.draft.version} themeName={m.name} style={draft.style}
-        // Site settings and menus only once set (absent = the theme's own and the default menus: Look v4).
-        layer={{ settings: draft.settings, home: draft.home, ...(stored.site !== undefined ? { site: draft.site } : {}), ...(stored.menus !== undefined ? { menus: draft.menus } : {}), ...(draft.contact ? { contact: draft.contact } : {}) }}
+        // Site settings only once set (absent = the theme's own: Look v4).
+        layer={{ settings: draft.settings, home: draft.home, ...(stored.site !== undefined ? { site: draft.site } : {}) }}
         site={draft.site}
         presets={m.styles.map((s) => ({ name: s.name, palette: paletteOf(s.schemes.paper) })).filter((x) => !paletteProblem(x.palette))}
         // The shop's icons, drawn here on the server (their path data never reaches a browser as data).
@@ -111,7 +98,7 @@ export default async function Customize() {
         firstProduct={data.products[0]?.handle ?? (sampled ? first.product : null)} firstCollection={data.collections[0]?.handle ?? (sampled ? first.collection : null)}
         choices={choicesOf(m)}
         designs={designs.map((d) => ({ id: d.id, name: d.name, line: d.line, tags: d.tags, commerce: isCommerce(d), thumb: <DesignThumb design={d} /> }))}
-        pages={pages} pageThumbs={{ about: <DesignThumb design={TEMPLATES.about} />, faq: <DesignThumb design={FAQ_THUMB} /> }} contactRows={contactRows} answers={answers}
+        pages={pages} content={{ bar: bar?.text ?? null, contact: content.contact?.line ?? null }}
       />
     </div>
   )

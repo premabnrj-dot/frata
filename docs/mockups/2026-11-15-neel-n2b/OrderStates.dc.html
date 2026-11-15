@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The order's top line, by state</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F37A3}a:hover{color:#272D82}
+</style>
+</helmet>
+<div style="width: 880px; height: 1180px; box-sizing: border-box; padding: 32px; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 20px; display: flex; flex-direction: column; gap: 12px;">
+  <h1 style="margin: 0 0 8px; font-size: 18px; font-weight: 600;">The top line says what to do now, in money</h1>
+  <sc-for list="{{rows}}" as="r" hint-placeholder-count="9">
+    <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 16px; align-items: center;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 500; justify-self: start; background: {{r.chipBg}}; color: {{r.chipFg}};">{{r.state}}</span>
+      <div style="border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; background: {{r.bg}};">
+        <b style="font-weight: 600; font-size: 15px; color: {{r.fg}};">{{r.line}}</b>
+        <span style="color: #67625C;">{{r.sub}}</span>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":880,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const calm = { bg: '#F6F5F3', fg: '#171615' }, warn = { bg: '#FDF3DC', fg: '#85500B' }, bad = { bg: '#FDECEC', fg: '#A82828' }, ok = { bg: '#E7F5EC', fg: '#1A6B43' }
+    const chip = (bg, fg) => ({ chipBg: bg, chipFg: fg })
+    return { rows: [
+      { state: 'To confirm', line: 'Confirm it before you pack', sub: 'No reply on WhatsApp yet. Call 98290 43211.', ...warn, ...chip('#FDF3DC', '#85500B') },
+      { state: 'To pack', line: 'Collect ₹2,290 on delivery', sub: 'Confirmed on WhatsApp at 10:14 am.', ...calm, ...chip('#E8F1FD', '#1F5BA8') },
+      { state: 'To pack', line: 'Paid online. Collect nothing.', sub: 'Razorpay · paid at 10:07 am.', ...calm, ...chip('#E8F1FD', '#1F5BA8') },
+      { state: 'On the way', line: 'Collect ₹2,290 on delivery', sub: 'Delhivery · AWB 1490 2283 4471 · out for delivery today.', ...calm, ...chip('#E8F1FD', '#1F5BA8') },
+      { state: 'Delivered', line: '₹2,290 collected by the courier', sub: 'Delivered 18 Nov. Remitted by Delhivery on 23 Nov.', ...ok, ...chip('#E7F5EC', '#1A6B43') },
+      { state: 'Coming back', line: 'Coming back. Nothing was collected.', sub: 'Refused at the door on 18 Nov. Check it when it arrives.', ...bad, ...chip('#FDECEC', '#A82828') },
+      { state: 'Refund due', line: 'Refund ₹2,290 in Razorpay', sub: 'Paid after it sold out. Cancel it first.', ...bad, ...chip('#FDECEC', '#A82828') },
+      { state: 'To pack', line: 'Paid online after packing. Don’t collect cash.', sub: 'Tell the courier. If cash was collected too, refund the online payment.', ...bad, ...chip('#E8F1FD', '#1F5BA8') },
+      { state: 'Cancelled', line: 'Cancelled. Nothing to collect.', sub: 'By the shopper on WhatsApp, 13 Nov.', ...calm, ...chip('#F1F0EE', '#57524D') },
+    ] }
+  }
+}
+</script>
+</body>
+</html>

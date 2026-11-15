@@ -128,7 +128,7 @@ function OptionRow({ i, o, error, onName, onRemoveOption, onMove, onRemoveValue,
           ) : (
             <span key={v} className="inline-flex h-11 items-center rounded-md border border-input bg-card pr-0.5 text-sm md:h-8">
               <span aria-hidden="true" className="grid h-full w-6 cursor-grab touch-none place-items-center text-muted-foreground" {...dragOnly(itemProps(k, v))}><GripVertical className="size-3.5" /></span>
-              <button type="button" id={`chip-${i}-${k}`} aria-label={`Rename ${v}`} {...keysOnly(itemProps(k, v))} className="h-full px-1" onClick={() => onEdit(k)}>{v}</button>
+              <button type="button" id={`chip-${i}-${k}`} aria-label={`Rename ${v}`} {...keysOnly(itemProps(k, v))} className="h-full min-w-6 px-1" onClick={() => onEdit(k)}>{v}</button>
               {/* A phone has no Alt key and no hover: moving a value is its menu there. */}
               <span className="md:hidden"><Menu label={`Move ${v}`} icon={<MoreHorizontal aria-hidden="true" className="size-4" />} items={[
                 ...(k > 0 ? [{ label: 'Move earlier', onSelect: () => onMove(k, k - 1) }] : []),

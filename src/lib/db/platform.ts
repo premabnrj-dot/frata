@@ -1,4 +1,5 @@
 import 'server-only'
+import { MEMBER_ROLES } from '@/domains/tenancy/roles'
 import { sql } from 'drizzle-orm'
 import { db, withFreshPool } from './index'
 import type { ClaimKey } from '@/lib/trials/claims'
@@ -74,15 +75,26 @@ export type Membership = {
 /** `staffConfirmedAt` / `partnerConfirmedAt`: when this browser session's live staff or partner passkey step-up was
  *  made (null without one). `partnerHeld`: stores this person works on as a partner that open only after a partner
  *  check (T1b, drizzle/0129) — the console says so instead of "no access". */
-export type Access = { staffRole: StaffRole | null; staffConfirmedAt: string | null; partnerConfirmedAt: string | null; partnerHeld: string[]; memberships: Membership[] }
+/** A store this person works on as a partner's Builder (T1c, ADR-0015). Never a Membership: requireMember cannot carry
+ *  one, so no page or action written for members can receive a Builder. Only requireCapability reads these. */
+export type Build = { tenantId: string; tenantName: string }
+
+export type Access = { staffRole: StaffRole | null; staffConfirmedAt: string | null; partnerConfirmedAt: string | null; partnerHeld: string[]; memberships: Membership[]; builds: Build[] }
 
 export async function accessFor(userId: string, sessionId: string | null = null, stepupHash: string | null = null, partnerHash: string | null = null): Promise<Access> {
   // The first query of every signed-in request: if its pooled connection is lost, a fresh pool answers instead of the
   // request waiting to Vercel's 60 s (src/lib/db/index.ts withFreshPool; 2026-11-11).
   const rows = await withFreshPool(() => db().execute<{ a: Access }>(sql`select app_access_for(${userId}::uuid, ${sessionId}::uuid, ${stepupHash}::text, ${partnerHash}::text) as a`))
-  const a = rows[0]?.a
+  type Raw = { staffRole: StaffRole | null; staffConfirmedAt: string | null; partnerConfirmedAt: string | null; partnerHeld: string[]
+    memberships: { tenantId: string; tenantName: string; role: string; supportSessionId: string | null }[] }
+  const a = rows[0]?.a as unknown as Raw | undefined
+  const all = a?.memberships ?? []
+  // A Builder's row is split off here, the one place the role arrives from the database (architecture review: the
+  // refusal is structural, never a branch in each page).
   return { staffRole: a?.staffRole ?? null, staffConfirmedAt: a?.staffConfirmedAt ?? null, partnerConfirmedAt: a?.partnerConfirmedAt ?? null,
-    partnerHeld: a?.partnerHeld ?? [], memberships: a?.memberships ?? [] }
+    partnerHeld: a?.partnerHeld ?? [],
+    memberships: all.filter((m) => (MEMBER_ROLES as readonly string[]).includes(m.role)) as Membership[],
+    builds: all.filter((m) => m.role === 'builder' && !m.supportSessionId).map((m) => ({ tenantId: m.tenantId, tenantName: m.tenantName })) }
 }
 
 /** Sign-out ends this browser's staff step-up first (by its cookie's hash). */

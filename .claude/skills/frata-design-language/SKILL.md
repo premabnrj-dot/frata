@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.6.0
+  version: 7.8.0
   verified: 2026-11-15
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -194,7 +194,7 @@ from it).
   changes until they publish), Frrata recalled the version they're on (with one tap to restore the previous look),
   or withdrew it (their previous look is live, nothing lost). Admin › Themes says every decision is final and names
   the shops it touches; a destructive decision is a red-labelled form with a required reason, not a typed phrase.
-- Colours and type live in Look only; Settings › Brand keeps the logo and tagline and previews them in the published look.
+- Colours and type live in Look only; Settings › Store details keeps the logo and tagline and previews them in the published look.
 - **Three themes, each a job** (owner, 2026-11-08 night; plan `docs/plans/2026-11-09-themes-three.md`):
   **Editorial** — occasion and designer wear: photos stacked large beside a buy box that stays, Cormorant, square,
   a sheen on buttons, photos that grow, pages that fade in, sections that rise, statement footer in ink, focused
@@ -285,6 +285,26 @@ from it).
   Settings" with **Change in Settings**, never a field. An FAQ answer from Settings carries a "From your settings" chip.
   A page's address is set while it is a draft and fixed once published; Hide and Remove take effect at Publish.
 
+## Console › Content (owner-approved final mockup 2026-11-15, https://claude.ai/artifact/6WemLUPWd2z9rPXsVRzTv4; V1)
+
+- **What the store says, saved live**: tabs Announcement · Menus · Pages · FAQ · Contact line (`ViewTabs`, one row that
+  scrolls on a phone); "View store" the header's action. Placements (V2) and Season (V1.5) join as tabs when they exist.
+- **A dated entry's state is a chip, never a sentence**: Live now · Starts 1 Dec, 10:00 am · Shows after the offer ·
+  Shows after the newer bar · Ended · Ended early, from `barChip` on the server's `now`. A live offer heads the bars,
+  read-only, with Open Offers.
+- **Add and Edit open a dialog** (a sheet on a phone); a mistake stays at its field ("End is before the start. Pick a later
+  end."); a refusal is in the dialog. Cancel names the safe outcome ("Keep as it is", "Don't add").
+- **Menus save with one explicit Save per menu** (shoppers see it at once), an unsaved bar with "Discard change" and
+  "Save main menu"; moves are Up, Down, "Move under Kurtas", "Move out of Kurtas". Bars, questions, pages and the Contact
+  line save from their dialog or field.
+- **Every save is a toast with Undo** (the saver's own, a minute); End now and Delete too. A stale save is an error toast
+  naming who saved, as a role ("The owner changed this today, 10:42 pm. Reload to see it.").
+- **Read only says who can**, as a chip: "Only the owner can edit" (staff; a partner after handover); a support visit
+  sees "Support visit · read only". Edit is disabled, never hidden.
+- **What comes from Settings is read-only here** with "From Settings" and Change in Settings (an FAQ answer, the Contact
+  page's details).
+- **The Look links, never edits**: where Menus, the bar, the Contact line and a page were, one row "Edit in Content ›".
+
 ## Partner workspace (approved mockup 2026-11-07)
 
 - `/partner` uses the console's `AppShell` with `tag="PARTNER"` (info pair).
@@ -305,6 +325,13 @@ from it).
 - Client stages are derived (`src/domains/partners/stage.ts`) and shown as
   badges with words: Building, Invite sent, With the owner, Open, Removed. A
   removed store is dimmed with colour and has no actions.
+- **Builders** (T1c, approved mockup https://claude.ai/artifact/LnwWWrV37oQgbnfmc5bvFP, owner 2026-11-15): a role's
+  console shows only what opens for it (nav drawn from its capabilities): a Builder's is Catalogue › Products,
+  Collections; Preview store and Partner workspace at the foot; the phone bar Products · Collections · Preview. Its lists
+  are the owner's, view only (no selection, Add, Import or More); a row opens the store preview. A page it can't open is
+  that page's own panel, "Builders can’t see this page." with a lock tile and Open products. Team's invite asks the
+  Role (Lead · Builder) with two lines of what it reaches; each person has a Role select; a Roles card (Partner owner ·
+  Lead · Builder) says what each sees in a store. The brand's People shows "Partner · Builder" with an (i).
 - **F3 store switcher**: in the account block at every width and in More on
   phones, only with two or more places to go; it lists what app_access_for
   returned, current one marked.
@@ -699,7 +726,7 @@ Rules every products screen keeps (PR·0 built; PR·1–4 follow the mockup):
 **Own domains v2** (owner-approved 2026-11-09, mockup https://claude.ai/artifact/XrDQj61tSBe4YKvUrH76xt; replaces the
 8 Nov mockup's § 5–7):
 
-72. **One address list, titled "Custom domain"** (owner 2026-11-09) on Settings › Shop address: every address a row (mono, its state chip, actions beside it);
+72. **One address list, titled "Custom domain"** (owner 2026-11-09) on Settings › Web address: every address a row (mono, its state chip, actions beside it);
     the main one carries a `Main` chip; rows change in place and never animate (rule 28).
 73. **Connect is a `Dialog`** (a sheet on a phone, rule 27) of three steps (Domain · Records · Securing) with step dots
     and the step slide; the domain is cleaned as typed (`https://www.KesarStudio.in/` → `kesarstudio.in`, www added),
@@ -1198,8 +1225,19 @@ values, keyboard and axe at phone and desktop. A new primitive or state joins th
 - **The header**: rule 13 above; one `PageHeader` for every page in Console, Admin and the partner workspace.
 - **Lists**: rows 48 px (56 with a photo: `DataTableRow tall`), the picked rows in neel 50 and `BulkBar`; Orders shows
   Payment as a Tag and Status (with risk) as chips, one status cell that reflows on a phone.
-- **Settings**: one list, a plain 20 px icon per row, its current value at the right, a chevron; up to 860 wide;
-  "Ready for live payments" a chip in the header, and what is missing a warn banner above the list.
+- **Settings, in five groups** (owner, 2026-11-15; mockup https://claude.ai/artifact/GGkvYuwqxL7YEoXxAjbYLD,
+  `src/domains/settings/groups.ts` is the one list): Store, Checkout, Business and tax, Messages, Team and plan. Pick a
+  group, its pages appear: on a wide screen the groups at the left (each with its one line and a count of what to fix),
+  the picked group's pages at the right (name, current value, chevron); on a phone the groups first, then the group's
+  pages with "‹ Settings". The group is in the address (`?group=`). A settings page opens "Settings › <group>", its title,
+  then its group's other pages as tabs (`SettingsHead`). A field lives where a merchant looks for it (the legal name
+  beside the GSTIN, order and invoice numbering together); a moved page keeps its old address as a redirect (`movedTo`).
+  "Ready for live payments" stays a chip in the header, what is missing a warn banner above the groups.
+- **A settings form** (Neel N2b·3): one card per block; a page of one block hides its block title (screen readers keep
+  it); switch rows carry their line under the label; short fields side by side (three across when there are three);
+  wide fields and groups of a kind under a hairline; no intro paragraph under the title (Rule 0); a list of codes is
+  chips (`ChipInput`), never a text box; the save bar at the foot with its count and Ctrl/⌘+S; a side card says what a
+  shopper meets (Pay on delivery: "At checkout", from checkout's own rule and words).
 - **Not yet**: ⌘K (N1b).
 
 ## Neel analytics (N1b, 2026-11-15; plan `docs/plans/2026-11-15-neel-n1b-analytics.md`, screen mockup

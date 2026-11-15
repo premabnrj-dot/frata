@@ -1,0 +1,1 @@
+CREATE INDEX "orders_tenant_pincode" ON "orders" USING btree ("tenant_id","pincode","placed_at") WHERE "orders"."cancelled_at" is null;

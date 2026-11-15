@@ -5,7 +5,11 @@ import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm'
 import { sourceOfInputs, type Source, type SourceInputs } from '@/domains/analytics/source'
 import { attributionInputsSql } from '@/lib/db/attribution-sql'
 import { creatorCodeJoinSql } from '@/lib/db/discount-predicates'
-import { editWaitingSql, momentColumns, onlineTotalCol } from '@/lib/db/order-predicates'
+import { cogsSql, creditedSql, currentMethodSql, editWaitingSql, feeBaseSql, feeBucketSql, momentColumns, onlineTotalCol, openShipmentProviderSql } from '@/lib/db/order-predicates'
+import type { MemberRole } from '@/domains/tenancy/roles'
+import { orderKeep, type OrderKeep } from '@/domains/orders/kept'
+import { estimateOf } from '@/domains/settings/ship-costs'
+import { costsVisibleIn, planHistoryIn, shipCostsIn } from './settings'
 import { ledgerIn } from '@/lib/payments/refunds'
 import { creditNoteLines, creditNotes, orderEvents, orderLines, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
 import { orderEditLines, orderEdits, orderRefunds } from '@/lib/db/schema-edits'
@@ -13,6 +17,7 @@ import { products, variants } from '@/lib/db/schema-catalogue'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import { riskFactsFor } from './order-risk'
+import { backIn, outcomeIn, pinIn, since } from './pin-returns'
 import type { RecordLine } from '@/domains/orders/edit'
 
 /** One items edit as the order page reads it (OE·2: a change that asked the shopper to pay, and how it ended). */
@@ -43,7 +48,7 @@ export async function orderSourceIn(tx: Tx, tenantId: string, orderId: string, n
   return r ? sourceOfInputs(r) : null
 }
 
-export async function orderDetail(tenantId: string, number: number, now = new Date()) {
+export async function orderDetail(tenantId: string, number: number, now = new Date(), role: MemberRole | null = null) {
   if (!Number.isSafeInteger(number) || number < 1) return null
   const data = await withTenant(tenantId, async (tx) => {
     const [o] = await tx.select({
@@ -55,7 +60,7 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
     }).from(orders).where(and(eq(orders.tenantId, tenantId), eq(orders.number, number))).limit(1)
     if (!o) return null
     // Seven reads at once in the one transaction (speed review P8: postgres-js pipelines them; they ran in turn).
-    const [lines, events, notes, offerRows, [shipment], creditRows, source, emails, editRows, refunds, ledger, [waiting]] = await Promise.all([tx.select({
+    const [lines, events, notes, offerRows, [shipment], creditRows, source, emails, editRows, refunds, ledger, [waiting], keep, couriers, pin] = await Promise.all([tx.select({
       id: orderLines.id, title: orderLines.title, optionValues: orderLines.optionValues, sku: orderLines.sku, qty: orderLines.qty, unitPrice: orderLines.unitPrice,
       imageBase: orderLines.imageBase, imageWidths: orderLines.imageWidths, kind: orderLines.kind, shipsBy: orderLines.shipsBy,
       leadMinDays: orderLines.leadMinDays, leadMaxDays: orderLines.leadMaxDays, stockTakenAt: orderLines.stockTakenAt, variantId: orderLines.variantId,
@@ -106,6 +111,11 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
     tx.select({ eventId: orderEdits.eventId, asked: orderEdits.asked, totalAfter: orderEdits.totalAfter }).from(orderEdits)
       .innerJoin(orders, and(eq(orders.tenantId, orderEdits.tenantId), eq(orders.id, orderEdits.orderId)))
       .where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.orderId, o.id), editWaitingSql('"order_edits"', '"orders"'))).limit(1),
+    // Around it (Neel N2b·1): what it keeps (only for whoever sees costs), the couriers' and its PIN code's came-back counts.
+    role ? keepIn(tx, tenantId, o.id, role, now) : Promise.resolve(null),
+    // Courier cards show only on a packed order still to ship (ShipPanel's to_ship): no window aggregate for any other.
+    o.packedAt && !o.shippedAt && !o.ndrAt && !o.deliveredAt && !o.lostAt && !o.cancelledAt && !o.rtoInitiatedAt && !o.rtoDeliveredAt ? couriersIn(tx, tenantId, now) : Promise.resolve([]),
+    pinIn(tx, tenantId, o.pincode ?? '', now),
     ])
     const offers = offerRows.map((d) => ({ ...d, amount: Number(d.amount) }))
     const credits = creditRows.map((c) => ({ number: c.number, issuedAt: c.issuedAt, kind: c.kind, total: Number(c.total), lines: c.lines }))
@@ -118,7 +128,7 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       e[r.side === 'before' ? 'before' : 'after'].push({ lineId: r.lineId, title: r.title, values: r.values, qty: r.qty, replaces: r.replaces })
       edits.set(r.eventId, e)
     }
-    return { o, lines, events, notes, offers, shipment: shipment ?? null, credit, credits, source, emails, edits, ledger,
+    return { o, lines, events, notes, offers, shipment: shipment ?? null, credit, credits, source, emails, edits, ledger, keep, couriers, pin,
       refunds: refunds.map((r) => ({ ...r, amount: Number(r.amount), gatewayFee: r.gatewayFee === null ? null : Number(r.gatewayFee) })),
       waiting: waiting ? { eventId: waiting.eventId, asked: Number(waiting.asked), totalAfter: Number(waiting.totalAfter) } : null }
   })
@@ -126,5 +136,46 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
   // Risk: null when its facts cannot be read (the page then says "Risk unavailable" and fails closed).
   const facts = await riskFactsFor(tenantId, [data.o.id], now).then((m) => m.get(data.o.id) ?? null).catch(() => null)
   return { ...data, facts }
+}
+
+// =============================================================================
+// AROUND ONE ORDER (Neel N2b·1), inside orderDetail's own tenant transaction (no second withTenant, no cache):
+//  - keepIn: the order's "What you keep", read only when this person sees costs (costsVisibleIn, failing closed); when
+//    not, no cost column is selected at all and null comes back. Totals only (orderKeep), never the breakdown.
+//  - couriersIn: the couriers this store has shipped with in the last 180 days, each with its orders that have an
+//    outcome and how many came back (the outcome states Analytics counts, stateSql). Free text, grouped as typed.
+//  - pinIn (pin-returns.ts, shared with Settings): the same counts for one PIN code. Counts only: never another order's name, address or ₹.
+// =============================================================================
+
+
+export type CourierCount = { name: string; outcomes: number; back: number }
+export type { PinCount } from './pin-returns'
+
+export async function keepIn(tx: Tx, tenantId: string, orderId: string, role: MemberRole, now: Date): Promise<OrderKeep | null> {
+  const [costs, history, shipCosts] = await Promise.all([costsVisibleIn(tx, tenantId, role), planHistoryIn(tx, tenantId), shipCostsIn(tx, tenantId)])
+  if (!costs) return null
+  const feeChanges = history.map((h) => h.startsAt)
+  const [r] = await tx.execute<{ provider: 'self' | 'shiprocket' | null; cod: boolean; bucket: number; net: string; cogs: string | null; fwd: string | null; rto: string | null; codfee: string | null; gw: string; base: string }>(sql`
+    select ${openShipmentProviderSql('o')} provider, (${currentMethodSql('o')} = 'cod') cod, ${feeBucketSql('o', feeChanges)} bucket,
+           (o.net_revenue - ${creditedSql('o')})::bigint net, (${cogsSql('o')})::bigint cogs, o.forward_shipping::bigint fwd, o.rto_shipping::bigint rto,
+           o.courier_cod_fee::bigint codfee, coalesce(o.gateway_fee, 0)::bigint gw, (${feeBaseSql('o', now)})::bigint base
+      from ${orders} o where o.tenant_id = ${tenantId} and o.id = ${orderId}`)
+  if (!r) return null
+  const n = (v: string | null) => (v === null ? null : Number(v))
+  return orderKeep({
+    provider: r.provider, cod: !!r.cod, net: Number(r.net), cogs: n(r.cogs), forward: n(r.fwd), rto: n(r.rto), courierCodFee: n(r.codfee),
+    gateway: Number(r.gw), base: Number(r.base), feeBps: r.bucket > 0 ? history[r.bucket - 1]?.feeBps ?? null : null,
+  }, estimateOf(shipCosts))
+}
+
+
+export async function couriersIn(tx: Tx, tenantId: string, now: Date): Promise<CourierCount[]> {
+  const rows = await tx.execute<{ name: string; outcomes: number; back: number }>(sql`
+    select min(trim(s.courier_name)) name, count(*)::int outcomes, (count(*) filter (where ${backIn(now)}))::int back
+      from ${shipments} s join ${orders} o on o.tenant_id = s.tenant_id and o.id = s.order_id
+     where s.tenant_id = ${tenantId} and s.ended_at is null and coalesce(trim(s.courier_name), '') <> ''
+       and o.placed_at >= ${since(now)} and ${outcomeIn(now)}
+     group by lower(trim(s.courier_name)) order by count(*) desc limit 6`)
+  return [...rows]
 }
 

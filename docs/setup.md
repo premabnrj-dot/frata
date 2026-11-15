@@ -85,6 +85,17 @@ create your tenant and owner membership (it is a plain insert; no secret).
    on. Invites are claimed only by confirmed emails.
 4. Redeploy. You are already in `platform_staff` as Admin.
 
+### 6a. Builders' login (T1c, ADR-0015; owner 2026-11-15, question 7)
+
+**Deploy order (agents):** apply the two T1c migrations (`*_builders.sql`, `*_builders_access.sql`) FIRST; old code is
+safe on them. Before step 2, run the generic block of `scripts/verify/tenancy.sql` § 82 (the `has_*_privilege` sweep,
+read-only) through `execute_sql` and paste its result in the release report: Supabase has schemas (`extensions`,
+`graphql`, `vault`, `pgbouncer`) a throwaway Postgres doesn't.
+1. SQL Editor: `alter role frata_builder with password '<hex>';` — a NEW hex value (`openssl rand -hex 24`).
+2. Vercel: `DATABASE_URL_BUILDER` = the Transaction pooler URI with user `frata_builder.szqwveysvbbxpjhjlnwl` and that
+   password. Type **Sensitive**, **Production only**. Without it a Builder's pages say "Builder access isn’t set up yet"
+   and read nothing.
+
 ### 6b. Staff passkeys — the first time (ADR-0007 amended 2026-11-12; spec `docs/specs/2026-11-12-staff-passkeys.md`)
 
 **Deploy order (agents):** apply `drizzle/0109_staff_passkeys.sql` to production FIRST, in one transaction (it drops
@@ -305,7 +316,7 @@ it to `100000` after moving to Pro. Never Preview: a preview build must not add 
 
 **3. Redeploy:** Deployments → the latest Production deployment → ⋯ → Redeploy (or any push to `main`).
 
-**4. Check:** Settings › Shop address in the console shows **Connect a domain**. If it doesn't, the token or project id
+**4. Check:** Settings › Web address in the console shows **Connect a domain**. If it doesn't, the token or project id
 is missing or not in Production.
 
 On Vercel Pro (2026-11-12): the background check runs every 10 minutes (`vercel.json`); **owner step:** set

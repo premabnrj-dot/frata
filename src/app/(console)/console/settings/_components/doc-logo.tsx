@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/toast'
 import { DOC_LOGO_PX, MAX_DOC_IMAGE_BYTES, MAX_SOURCE_BYTES } from '@/domains/media/sizes'
 import { setDocLogo } from '../actions'
 
-// The logo for paper (Settings › Documents, D2). React-PDF reads PNG or JPEG only, so the browser redraws the chosen
+// The logo for paper (Settings › Invoices and slips, D2). React-PDF reads PNG or JPEG only, so the browser redraws the chosen
 // file as a PNG (at most 600 px a side, transparency kept) and uploads that to the shop's documents folder; the
 // server checks its bytes before it is set. An invoice keeps the logo it was packed with.
 

@@ -21,7 +21,6 @@ import { refreshShop } from '@/lib/queries/storefront'
 import { lookFacts } from '@/lib/themes/facts'
 import { drainSoon } from '@/lib/outbox/drain'
 import { cleanVideos, releaseUnusedVideos } from '@/lib/queries/videos'
-import { pagesReadiness } from '@/lib/themes/page-readiness'
 import { discardDraft, lookFor, newDraft, publishRevision, revisionOf, saveDraft, themeAccess, undoPublish } from '@/lib/themes/look'
 
 // =============================================================================
@@ -99,9 +98,9 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
     if (layer.home) layer.home = designed.home
     // Stored as parsed: unknown settings keys are dropped (tenancy audit 2026-11-08).
     const parsed = LayerSchema.parse(layer)
-    // TS1a: the Contact page's line is stored as parsed (or not at all), never as sent.
-    const { contact: _sent, ...rest } = layer as { contact?: unknown; home?: unknown[] }
-    const clean = cleanImages({ ...rest, settings: parsed.settings, ...(parsed.site ? { site: parsed.site } : {}), ...(parsed.menus ? { menus: parsed.menus } : {}), ...(parsed.contact ? { contact: parsed.contact } : {}) }, t, storeHost(BLOB_STORE_ID))
+    // Only the look's own parts are stored: Home, its settings and site settings. The bar, menus and the Contact line are
+    // the store's content (V1, Console › Content): sent or not, they are never written here.
+    const clean = cleanImages({ ...(layer.home ? { home: layer.home } : {}), settings: parsed.settings, ...(parsed.site ? { site: parsed.site } : {}) }, t, storeHost(BLOB_STORE_ID))
     if (!clean) return { error: 'A photo didn’t come from this store. Upload it again.' }
     // V1: a video id must be one of this shop's own, not removed; anything else is dropped (the photo shows).
     const kept = await cleanVideos(tx, t, clean)
@@ -118,7 +117,7 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
 
 export async function publishLookAction(input: unknown): Promise<R> {
   // TS1a: `pages`: the version of each page the editor holds (a page changed elsewhere refuses the Publish).
-  const p = z.object({ revisionId: z.uuid(), version: z.number().int().positive(), pages: z.record(z.uuid(), z.number().int().positive()).refine((x) => Object.keys(x).length <= 20) }).safeParse(input)
+  const p = z.object({ revisionId: z.uuid(), version: z.number().int().positive() }).safeParse(input)
   if (!p.success) return { ok: false, error: 'Nothing to publish.' }
   const src = await sourceFor(CAN_MANAGE)
   const r = await asMember(CAN_MANAGE, { action: 'look.publish' }, async (tx, auth) => {
@@ -128,19 +127,16 @@ export async function publishLookAction(input: unknown): Promise<R> {
     if (!rev) return { error: 'This draft is gone. Reload.' }
     const m = manifestOf(src, rev.themeKey, rev.themeVersion)
     if (!m) return { error: 'This theme isn’t available.' }
-    const layer = rev.settings as { settings?: object; home?: unknown[]; contact?: unknown }
+    const layer = rev.settings as { settings?: object; home?: unknown[] }
     const theme = resolveTheme(m, { style: rev.styleKey, ...layer })
     const facts = await lookFacts(tx, t)
     const blocking = readinessOf(theme.home, facts, new Date(), theme.designs).filter((i) => i.blocks)
     if (blocking.length) return { error: `Before publishing: ${blocking[0]!.text}.` }
-    // TS1a: what this publish changes on the pages must be ready too (an example not replaced; Contact's details).
-    const pageWhy = await pagesReadiness(tx, t, layer, (await lookFor(tx, t)).live?.revision.settings)
-    if (pageWhy) return { error: `Before publishing: ${pageWhy}.` }
     const out = await publishRevision(tx, t, { userId: auth.userId, email: auth.email }, {
-      revisionId: rev.id, version: p.data.version, pages: p.data.pages,
+      revisionId: rev.id, version: p.data.version,
       baseline: () => baselineRevision(facts.accent, facts.displayFont),
     })
-    if (out !== 'ok') return { error: out === 'stale' ? 'The draft changed after you opened Publish. Look again, then publish.' : out === 'too_long' ? 'Your pages hold too many words to publish together. Shorten one, or hide one.' : out === 'unavailable' ? `${m.name} ${rev.themeVersion} isn’t offered by Frrata any more, so it can’t be published. Try the theme again for its current version, or restore an earlier look.` : 'This draft is gone. Reload.' }
+    if (out !== 'ok') return { error: out === 'stale' ? 'The draft changed after you opened Publish. Look again, then publish.' : out === 'unavailable' ? `${m.name} ${rev.themeVersion} isn’t offered by Frrata any more, so it can’t be published. Try the theme again for its current version, or restore an earlier look.` : 'This draft is gone. Reload.' }
     await audit(tx, auth, 'look.publish', `${m.name} · ${rev.styleKey}`)
     // V1: videos no stored look uses any more are removed now, their Mux side queued in this transaction.
     return { freed: await releaseUnusedVideos(tx, t, new Date()) }
@@ -149,7 +145,6 @@ export async function publishLookAction(input: unknown): Promise<R> {
   if ('error' in r.value) return { ok: false, error: r.value.error as string }
   if (r.value.freed) drainSoon()
   refreshShop(r.tenantId, 'look')
-  refreshShop(r.tenantId, 'pages')
   revalidatePath('/console/look')
   return { ok: true }
 }

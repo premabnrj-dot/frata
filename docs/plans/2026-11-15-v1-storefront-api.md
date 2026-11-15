@@ -323,12 +323,12 @@ this branch first; SA1·1 (the Settings page and its actions) waits for C and B 
 |---|---|---|
 | SA0·1 host, rewrites | done | host tests; `api-isr.mjs` (console and shop hosts 404 a versioned path) |
 | SA0·2 key shape | done | `keys.test.ts` (checksum, rejection sampling) |
-| SA0·3 migration 0130–0131 | done | `verify:tenancy` "all 81 checks passed" |
+| SA0·3 migration 0137–0138 (renumbered at merge) | done | `verify:tenancy` block 81 |
 | SA0·4 lookup, door, limits | done | `request.test.ts`; int test on a real Postgres |
 | SA0·5 gates, proof, docs | done | `check:tenant` § 9 and `check:api` each caught a planted bad file; `api-isr.mjs` under `next start` |
 | SA1·1 Settings › Website | **waits for lanes C (`api.manage`) and B (`hasOwnerIn`) on main** | — |
 | SA1·2 mappers, schemas | done | `map.test.ts` (sentinels, drafts, media host, closed links), `released-api.test.ts` |
-| SA1·3 routes, boundary purge (0132), WAF | done | int test (A never reads B, no draft under a live key, no cost); proof 81; `waf.test.ts` |
+| SA1·3 routes, boundary purge (0139), WAF | done | int test (A never reads B, no draft under a live key, no cost); proof 81; `waf.test.ts` |
 | SA1·4 skill, agent, planning heading | done | — |
 | e2e, mockup parity | after SA1·1 | — |
 | Content resources (`content`, `pages/{handle}`, `faq`) | **this lane, after lane B is on main** (orchestrator 2026-11-15), reading B's `src/lib/queries/content.ts` seam; B builds no API route | — |

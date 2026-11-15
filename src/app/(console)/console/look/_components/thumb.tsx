@@ -12,7 +12,6 @@ export function ThemeThumb({ t, name, size = 'md' }: { t: ResolvedTheme; name: s
   return (
     <div aria-hidden="true" className={size === 'sm' ? 'h-[200px] w-[104px] shrink-0 overflow-hidden' : 'h-[300px] w-[150px] shrink-0 overflow-hidden'}>
       <div className={`flex h-[600px] w-[300px] origin-top-left flex-col overflow-hidden rounded-[36px] border-[10px] border-foreground ${size === 'sm' ? 'scale-[0.3467]' : 'scale-50'}`} style={{ background: p.bg, color: p.text }}>
-        {s.announcement && <div className="py-1 text-center text-xs" style={{ background: p.accent, color: p.onAccent }}>{s.announcement.text}</div>}
         <div className={`flex h-12 items-center px-4 text-lg font-semibold ${s.header === 'centred' || s.header === 'minimal' || s.header === 'split' ? 'justify-center' : ''}`} style={{ fontFamily: displayFamily(s.pairing), letterSpacing: upper ? '0.2em' : '0.08em' }}>
           {upper ? name.toUpperCase() : name}
         </div>

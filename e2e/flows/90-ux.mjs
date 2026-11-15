@@ -49,7 +49,7 @@ export default {
         ['console-offer-new', 'owner', '/console/offers/new'],
         ['console-collection', 'owner', '/console/collections/kurtas'],
         ['console-activity', 'owner', '/console/activity'],
-        ['console-settings-address', 'owner', '/console/settings/address'],
+        ['console-settings-address', 'owner', '/console/settings/web-address'],
         ['console-settings-payments', 'owner', '/console/settings/online-payments'],
         ['console-product-new', 'owner', '/console/products/new'],
         ['console-search', 'owner', '/console/search'],

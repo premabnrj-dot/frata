@@ -39,8 +39,9 @@ describe('routeFor and shopRewrites: /s/ is reachable only through the rewrite',
   it('passes a shop host to the rewrite, refuses a malformed one', async () => {
     const { routeFor } = await import('../host')
     expect(routeFor('kesar.frata.store', '/products/kurta', C, false, 'frata.store')).toEqual({ kind: 'shop' })
-    // The bare shop domain holds no shop: it is sent to Frrata's site; its subdomains stay shops.
-    expect(routeFor('frata.store', '/', C, false, 'frata.store')).toEqual({ kind: 'platform_apex' })
+    // The bare shop domain holds no shop: its home page is Frrata's own site, every other path is sent there
+    // instead; its subdomains stay shops.
+    expect(routeFor('frata.store', '/', C, false, 'frata.store')).toEqual({ kind: 'platform_site' })
     expect(routeFor('FRATA.STORE:443', '/x', C, false, 'frata.store')).toEqual({ kind: 'platform_apex' })
     expect(routeFor('kesar.frata.store', '/', C, false, 'frata.store')).toEqual({ kind: 'shop' })
     expect(routeFor('kesar.frata.store', '/s/b.frata.store/products/x.png', C, false, 'frata.store')).toEqual({ kind: 'shop' })
@@ -84,6 +85,25 @@ describe('routeFor and shopRewrites: /s/ is reachable only through the rewrite',
   })
 })
 
+describe('the bare shop domain serves Frrata\'s own site, stopgap (owner, 2026-11-15)', () => {
+  const C = 'app.frata.in'
+  it('only PLATFORM_SITE_PATHS; everything else still redirects, and a subdomain is still a shop', () => {
+    expect(routeFor('frrata.shop', '/', C, false, 'frrata.shop')).toEqual({ kind: 'platform_site' })
+    expect(routeFor('frrata.shop', '/privacy-policy', C, false, 'frrata.shop')).toEqual({ kind: 'platform_site' })
+    expect(routeFor('FRRATA.SHOP:443', '/privacy-policy', C, false, 'frrata.shop')).toEqual({ kind: 'platform_site' })
+    expect(routeFor('frrata.shop', '/login', C, false, 'frrata.shop')).toEqual({ kind: 'platform_apex' })
+    expect(routeFor('kesar-studio.frrata.shop', '/', C, false, 'frrata.shop')).toEqual({ kind: 'shop' })
+  })
+  it('is left out of the shop rewrite; a subdomain is not', () => {
+    const rules = shopRewrites(C, 'frrata.shop')
+    const shop = rules.find((x) => x.destination.startsWith('/s/'))!
+    const notShop = new RegExp(`^${shop.missing[0]!.value}$`)
+    expect(notShop.test('frrata.shop')).toBe(true)
+    expect(notShop.test('FRRATA.SHOP')).toBe(false) // the header is lower-cased by surfaceFor before this ever runs
+    expect(notShop.test('kesar-studio.frrata.shop')).toBe(false)
+  })
+})
+
 describe('EkCode host (P1 task 6)', () => {
   const EK = 'ekcode.test'
   const r = (host: string, path: string) => routeFor(host, path, 'app.frata.test', false, 'frata.store', EK).kind
@@ -104,7 +124,7 @@ describe('EkCode host (P1 task 6)', () => {
     expect(surfaceFor(EK, 'app.frata.test').kind).toBe('storefront')
   })
   it('rewrites its pages to /ek first, and leaves it out of the shop rewrite', () => {
-    const rules = shopRewrites('app.frata.test', EK)
+    const rules = shopRewrites('app.frata.test', '', EK)
     expect(rules[0]!.destination).toBe('/ek/:page')
     expect(rules[1]!.destination).toBe('/ek')
     const shop = rules.find((x) => x.destination.startsWith('/s/'))!

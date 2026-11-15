@@ -20,7 +20,7 @@ export function RemovePartner({ name, shop }: { name: string; shop: string }) {
   })
   return (
     <>
-      <Button variant="secondary" onClick={() => { setError(null); setOpen(true) }}>Remove</Button>
+      <Button variant="secondary" onClick={() => { setError(null); setOpen(true) }}>Remove partner</Button>
       <Dialog open={open} onClose={() => setOpen(false)} error={error} title={`Remove ${name} from ${shop}?`}
         description={<ul className="list-disc space-y-1 pl-5"><li>Their access ends now.</li><li>Your products, orders and settings stay.</li><li>Your price stays the same.</li></ul>}
         actions={<>
