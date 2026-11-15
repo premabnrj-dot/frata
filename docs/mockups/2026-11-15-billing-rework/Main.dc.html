@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Plan and billing</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#2F37A3}a:hover{color:#272D82}
+button,input,select{font:inherit}
+input[type=range]{accent-color:#3A44C2}
+.rail{flex:0 0 232px;background:#FBFAF9;border-right:1px solid #E3E1DD;min-height:100vh;box-sizing:border-box;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.rail a{display:flex;align-items:center;min-height:36px;padding:0 10px;border-radius:8px;color:#57524D;text-decoration:none;font-weight:500}
+.rail a[aria-current=page]{background:#EEF0FD;color:#272D82}
+.main{flex:999 1 560px;min-width:0;box-sizing:border-box;padding:28px 32px 72px}
+@media (max-width:820px){.rail{display:none}.main{padding:16px 16px 72px}}
+.section{border:1px solid #E3E1DD;border-radius:12px;padding:16px 20px 20px;display:flex;flex-direction:column;gap:16px;background:#FFFFFF}
+.section h2{margin:0;font-size:16px;line-height:24px;font-weight:600;letter-spacing:-0.01em}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border-radius:8px;font-weight:500;cursor:pointer;white-space:nowrap;font-size:14px}
+.btn-p{border:0;background:#3A44C2;color:#FFFFFF}.btn-p:hover{background:#2F37A3}
+.btn-s{border:1px solid #CFCCC7;background:#FFFFFF;color:#171615;box-shadow:0 1px 2px rgb(23 22 21 / 0.06)}.btn-s:hover{background:#F6F5F3}
+.btn-g{border:0;background:transparent;color:#67625C;padding:0 8px}.btn-g:hover{background:#F6F5F3;color:#171615}
+.btn-d{border:0;background:#C42F2F;color:#FFFFFF}
+.btn-sm{height:30px;padding:0 10px;font-size:13px}
+.link{background:none;border:0;padding:0;color:#2F37A3;cursor:pointer;text-decoration:underline;text-underline-offset:2px;min-height:24px}
+.badge{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.badge::before{content:"";width:6px;height:6px;border-radius:3px;background:var(--dot)}
+.b-ok{background:#E7F5EC;color:#1A6B43;--dot:#2F9E62}.b-warn{background:#FDF3DC;color:#85500B;--dot:#C98318}.b-danger{background:#FDECEC;color:#A82828;--dot:#DC3B3B}.b-info{background:#E8F1FD;color:#1F5BA8;--dot:#3B82E0}.b-neutral{background:#F1F0EE;color:#57524D;--dot:#8F8A84}
+.tag{display:inline-flex;align-items:center;height:22px;padding:0 7px;border-radius:6px;border:1px solid #E3E1DD;background:#FFFFFF;color:#67625C;font-size:12px;font-weight:500;white-space:nowrap}
+.seg{display:inline-flex;background:#F6F5F3;border-radius:10px;padding:2px;gap:2px}
+.seg button{height:32px;padding:0 12px;border-radius:8px;border:0;background:transparent;color:#67625C;cursor:pointer;font-weight:500;font-size:13px;white-space:nowrap}
+.seg button[aria-pressed=true]{background:#FFFFFF;color:#171615;box-shadow:0 1px 2px rgb(23 22 21 / 0.06)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{height:30px;padding:0 12px;border-radius:999px;border:1px solid #E3E1DD;background:#FFFFFF;color:#171615;cursor:pointer;font-size:13px;font-weight:500}
+.chips button[aria-pressed=true]{background:#EEF0FD;border-color:#C3C9F6;color:#272D82}
+.tabs{display:flex;gap:20px;border-bottom:1px solid #E3E1DD;overflow-x:auto;scrollbar-width:none}
+.tabs button{margin-bottom:-1px;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0;border:0;border-bottom:2px solid transparent;background:none;color:#67625C;font-weight:500;cursor:pointer;white-space:nowrap}
+.tabs button[aria-current=page]{border-bottom-color:#3A44C2;color:#171615}
+.count{border-radius:999px;padding:3px 6px;font-size:12px;line-height:1;font-weight:500;background:#FDF3DC;color:#85500B}
+.table{width:100%;border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
+.table th{height:36px;background:#F6F5F3;color:#67625C;font-size:13px;font-weight:500;text-align:left;padding:0 12px;border-bottom:1px solid #E3E1DD;white-space:nowrap}
+.table th:first-child{border-top-left-radius:8px}.table th:last-child{border-top-right-radius:8px}
+.table td{height:48px;padding:0 12px;border-bottom:1px solid #EEEDEA}
+.table .num{text-align:right}
+.table tr.total td{border-top:1px solid #171615;border-bottom:0;font-weight:600}
+.table .cur{background:#EEF0FD}
+.wrap{overflow-x:auto;border:1px solid #E3E1DD;border-radius:8px}
+.wrap .table th{border-radius:0}
+.muted{color:#67625C}.small{font-size:13px;line-height:18px}
+.field{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500}
+.field input,.field select{height:36px;border:1px solid #8F8A84;border-radius:8px;padding:0 10px;font-size:14px;font-weight:400;background:#FFFFFF;color:#171615}
+.field .hint{font-weight:400;color:#67625C}
+.banner{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;border-radius:10px;padding:10px 12px 10px 16px}
+.banner-warn{background:#FDF3DC;color:#85500B}
+.fig dt{color:#67625C;font-size:13px}.fig dd{margin:0;font-size:22px;line-height:28px;font-weight:600;letter-spacing:-0.015em}
+:focus-visible{outline:2px solid #4C57D6;outline-offset:2px}
+</style>
+</helmet>
+<div style="font-family: Inter, system-ui, sans-serif; color: #171615; background: #FFFFFF; font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; min-height: 100vh">
+
+<nav class="rail" aria-label="Console">
+<div style="display: flex; align-items: center; gap: 8px; padding: 4px 10px 14px"><span aria-hidden="true" style="width: 24px; height: 24px; border-radius: 6px; background: #171615; color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px">f</span><strong style="font-weight: 600">Ivory Lane</strong></div>
+<a href="#">Home</a><a href="#">Orders</a><a href="#">Products</a><a href="#">Customers</a><a href="#">Analytics</a><a href="#">Apps</a><a href="#" aria-current="page">Settings</a>
+</nav>
+
+<main class="main">
+<div style="max-width: 1040px; display: flex; flex-direction: column; gap: 20px">
+
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span class="small muted"><a href="#">Settings</a> › Team and plan</span>
+<h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.015em">Plan and billing</h1>
+<div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px">
+<span class="tag">{{planChip}}</span>
+<span class="{{autopayBadge}}">{{autopayChip}}</span>
+<span class="badge b-info">Test gateway</span>
+</div>
+</div>
+<button type="button" class="btn btn-s" onClick="{{goPlans}}">Compare plans</button>
+</header>
+
+<sc-if value="{{showDue}}" hint-placeholder-val="{{ true }}">
+<div class="banner banner-warn" role="status">
+<span>November’s bill of ₹8,070.02 was due on 5 Nov.</span>
+<button type="button" class="btn btn-s btn-sm" onClick="{{openPayNov}}">Pay ₹8,070.02</button>
+</div>
+</sc-if>
+
+<nav class="tabs" aria-label="Billing">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="6">
+<button type="button" onClick="{{t.go}}" aria-current="{{t.current}}">{{t.label}}<sc-if value="{{t.hasBadge}}" hint-placeholder-val="{{ false }}"><span class="count">{{t.badge}}</span></sc-if></button>
+</sc-for>
+</nav>
+
+<!-- ============ OVERVIEW ============ -->
+<sc-if value="{{tabOverview}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px">
+
+<section class="section" aria-labelledby="nb-h">
+<div style="display: flex; justify-content: space-between; gap: 8px; align-items: baseline"><h2 id="nb-h">Next bill</h2><span class="muted small">1 Dec · in 16 days</span></div>
+<div><span style="font-size: 30px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em">₹6,987.96</span> <span class="muted">so far, with GST</span></div>
+<div role="img" aria-label="Day 15 of 30 in November" style="height: 6px; background: #F6F5F3; border-radius: 999px; overflow: hidden"><div style="width: 50%; height: 100%; background: #3A44C2"></div></div>
+<table class="table" style="margin-top: -4px">
+<tbody>
+<tr><td style="padding-left: 0">Growth · December</td><td class="num" style="padding-right: 0">₹4,999.00</td></tr>
+<tr><td style="padding-left: 0">1% of ₹92,300 delivered · November</td><td class="num" style="padding-right: 0">₹923.00</td></tr>
+<tr><td style="padding-left: 0">IGST 18%</td><td class="num" style="padding-right: 0">₹1,065.96</td></tr>
+</tbody>
+</table>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between">
+<span class="muted">{{payLine}}</span>
+<span style="display: flex; gap: 8px; flex-wrap: wrap"><button type="button" class="btn btn-g" onClick="{{goCharges}}">See every charge</button><sc-if value="{{autopayOff}}" hint-placeholder-val="{{ true }}"><button type="button" class="btn btn-p" onClick="{{openAutopay}}">Turn on autopay</button></sc-if></span>
+</div>
+</section>
+
+<section class="section" aria-labelledby="ms-h">
+<div style="display: flex; justify-content: space-between; gap: 8px; align-items: baseline"><h2 id="ms-h">November so far</h2><span class="muted small">1–15 Nov</span></div>
+<dl class="fig" style="margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+<div><dt>Delivered orders</dt><dd>61</dd></div>
+<div><dt>Delivered sales</dt><dd>₹92,300</dd></div>
+<div><dt>Fee so far · 1%</dt><dd>₹923</dd></div>
+<div><dt>Not billed</dt><dd>7 <span class="small muted" style="font-weight: 400; letter-spacing: 0">came back or lost</span></dd></div>
+</dl>
+<div style="border-top: 1px solid #EEEDEA; padding-top: 14px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center">
+<span class="muted">October, Frrata cost you</span>
+<span><strong style="font-weight: 600">3.7%</strong> <span class="muted">of delivered sales</span></span>
+</div>
+</section>
+</div>
+
+<section class="section" aria-labelledby="ch-h">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center">
+<h2 id="ch-h">What Frrata cost each month</h2>
+<div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap" class="small muted">
+<span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 2px; background: #3A44C2"></span>Plan</span>
+<span style="display: inline-flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 2px; background: #C3C9F6"></span>Fee on delivered sales</span>
+<button type="button" class="link small" onClick="{{toggleChartTable}}">{{chartTableLabel}}</button>
+</div>
+</div>
+<sc-if value="{{chartAsBars}}" hint-placeholder-val="{{ true }}">
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; align-items: end; height: 220px">
+<sc-for list="{{months}}" as="m" hint-placeholder-count="6">
+<div role="img" aria-label="{{m.aria}}" style="display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; height: 100%">
+<span class="small" style="font-weight: 500">{{m.total}}</span>
+<div style="{{m.stackStyle}}"><div style="{{m.feeStyle}}"></div><div style="{{m.planStyle}}"></div></div>
+<span class="small muted">{{m.label}}</span>
+<span class="small muted">{{m.rate}}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{chartAsTable}}" hint-placeholder-val="{{ false }}">
+<div class="wrap"><table class="table">
+<thead><tr><th>Month</th><th class="num">Delivered sales</th><th class="num">Plan</th><th class="num">Fee</th><th class="num">Before GST</th><th class="num">Of sales</th></tr></thead>
+<tbody><sc-for list="{{months}}" as="m" hint-placeholder-count="6"><tr><td>{{m.label}}</td><td class="num">{{m.sales}}</td><td class="num">₹4,999</td><td class="num">{{m.fee}}</td><td class="num">{{m.total}}</td><td class="num">{{m.rate}}</td></tr></sc-for></tbody>
+</table></div>
+</sc-if>
+</section>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px">
+<section class="section" aria-labelledby="sv-h" style="background: #EEF0FD; border-color: #C3C9F6">
+<h2 id="sv-h" style="color: #272D82">Launch would have cost ₹1,660 less in October</h2>
+<span style="color: #272D82">Growth costs less above ₹3.5 lakh delivered a month.</span>
+<button type="button" class="btn btn-s" style="align-self: flex-start" onClick="{{goPlans}}">Compare plans</button>
+</section>
+<section class="section" aria-labelledby="up-h" style="gap: 0">
+<h2 id="up-h" style="margin-bottom: 8px">Coming up</h2>
+<sc-for list="{{upcoming}}" as="u" hint-placeholder-count="3">
+<div style="display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid #EEEDEA"><span class="muted" style="width: 56px; flex: none">{{u.when}}</span><span>{{u.what}}</span></div>
+</sc-for>
+</section>
+</div>
+</div>
+</sc-if>
+
+<!-- ============ CHARGES ============ -->
+<sc-if value="{{tabCharges}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between">
+<div class="chips" role="group" aria-label="Bill">
+<sc-for list="{{billPicks}}" as="b" hint-placeholder-count="3"><button type="button" onClick="{{b.go}}" aria-pressed="{{b.pressed}}">{{b.label}}</button></sc-for>
+</div>
+<button type="button" class="btn btn-s" onClick="{{downloadCsv}}">Download CSV</button>
+</div>
+
+<section class="section" aria-labelledby="bs-h">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center">
+<h2 id="bs-h">{{billTitle}}</h2>
+<span class="{{billBadge}}">{{billChip}}</span>
+</div>
+<div class="wrap"><table class="table" style="min-width: 560px">
+<thead><tr><th>Charge</th><th>For</th><th>Worked out</th><th class="num">Amount</th></tr></thead>
+<tbody>
+<sc-for list="{{sumRows}}" as="r" hint-placeholder-count="7">
+<tr class="{{r.rowClass}}">
+<td><sc-if value="{{r.hasJump}}" hint-placeholder-val="{{ false }}"><button type="button" class="link" onClick="{{r.jump}}">{{r.k}}</button></sc-if><sc-if value="{{r.noJump}}" hint-placeholder-val="{{ true }}">{{r.k}}</sc-if></td>
+<td class="muted">{{r.period}}</td>
+<td class="muted">{{r.how}}</td>
+<td class="num">{{r.v}}</td>
+</tr>
+</sc-for>
+</tbody>
+</table></div>
+</section>
+
+<section class="section" aria-label="Charges in detail">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center">
+<div class="seg" role="group" aria-label="View">
+<button type="button" onClick="{{viewOrders}}" aria-pressed="{{ordersPressed}}">By order</button>
+<button type="button" onClick="{{viewItems}}" aria-pressed="{{itemsPressed}}">Plan and apps</button>
+</div>
+<sc-if value="{{chOrders}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+<label for="find" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Find an order</label>
+<input id="find" placeholder="Order number" style="height: 30px; width: 140px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font-size: 13px">
+<div class="chips" role="group" aria-label="Show orders"><sc-for list="{{ordFilters}}" as="f" hint-placeholder-count="3"><button type="button" onClick="{{f.go}}" aria-pressed="{{f.pressed}}">{{f.label}}</button></sc-for></div>
+</div>
+</sc-if>
+</div>
+
+<sc-if value="{{chOrders}}" hint-placeholder-val="{{ true }}">
+<div class="wrap"><table class="table" style="min-width: 780px">
+<thead><tr><th>Order</th><th>Shipped</th><th>Outcome</th><th class="num">Order total</th><th class="num"><span style="display: inline-flex; align-items: center; gap: 4px">Fee is on <button type="button" aria-label="What the fee is on" title="Goods after offers. No GST, delivery or COD charge." style="width: 18px; height: 18px; border-radius: 9px; border: 1px solid #8F8A84; background: #FFFFFF; color: #67625C; font-size: 11px; line-height: 1; cursor: help; padding: 0">i</button></span></th><th class="num">Rate</th><th class="num">Fee</th></tr></thead>
+<tbody>
+<sc-for list="{{ordRows}}" as="o" hint-placeholder-count="8">
+<tr>
+<td><a href="#">{{o.num}}</a></td>
+<td>{{o.shipped}}</td>
+<td><span class="{{o.badge}}">{{o.outcome}}</span></td>
+<td class="num">{{o.total}}</td>
+<td class="num">{{o.base}}</td>
+<td class="num muted">{{o.rate}}</td>
+<td class="num" style="font-weight: 500">{{o.fee}}</td>
+</tr>
+</sc-for>
+<tr class="total"><td colspan="3">{{ordTotalLabel}}</td><td></td><td class="num">{{ordTotalBase}}</td><td class="num">1%</td><td class="num">{{ordTotalFee}}</td></tr>
+</tbody>
+</table></div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center" class="small muted"><span>{{ordShowing}}</span><button type="button" class="btn btn-s btn-sm" onClick="{{moreOrders}}">Show 50 more</button></div>
+</sc-if>
+
+<sc-if value="{{chItems}}" hint-placeholder-val="{{ false }}">
+<div class="wrap"><table class="table" style="min-width: 620px">
+<thead><tr><th>Item</th><th>Period</th><th class="num">Days</th><th class="num">Price</th><th class="num">Amount</th></tr></thead>
+<tbody>
+<sc-for list="{{itemRows}}" as="it" hint-placeholder-count="4">
+<tr><td><span style="display: inline-flex; gap: 8px; align-items: center">{{it.name}} <span class="{{it.badge}}">{{it.note}}</span></span></td><td>{{it.period}}</td><td class="num">{{it.days}}</td><td class="num muted">{{it.price}}</td><td class="num" style="font-weight: 500">{{it.amount}}</td></tr>
+</sc-for>
+<tr class="total"><td colspan="4">Plan and apps</td><td class="num">{{itemsTotal}}</td></tr>
+</tbody>
+</table></div>
+</sc-if>
+</section>
+</div>
+</sc-if>
+
+<!-- ============ PLANS ============ -->
+<sc-if value="{{tabPlans}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<section class="section" aria-labelledby="cl-h">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center">
+<h2 id="cl-h">Which plan costs least</h2>
+<div class="seg" role="group" aria-label="Billing period">
+<button type="button" onClick="{{setMonthly}}" aria-pressed="{{monthlyPressed}}">Monthly</button>
+<button type="button" onClick="{{setYearly}}" aria-pressed="{{yearlyPressed}}">Yearly · 2 months free</button>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label for="sales" style="display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap"><span class="muted">Delivered sales a month</span><strong style="font-weight: 600">{{salesLabel}}</strong></label>
+<input id="sales" type="range" min="50000" max="3000000" step="10000" value="{{sales}}" onInput="{{onSales}}" style="width: 100%">
+<div class="small muted" style="display: flex; justify-content: space-between; gap: 8px"><span>₹50,000</span><button type="button" class="link small" onClick="{{useMine}}">Use my last 3 months · ₹1,64,000</button><span>₹30 lakh</span></div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px">
+<sc-for list="{{calc}}" as="c" hint-placeholder-count="3">
+<div style="{{c.style}}">
+<div style="display: flex; justify-content: space-between; gap: 6px; align-items: center"><span style="font-weight: 600">{{c.name}}</span><sc-if value="{{c.best}}" hint-placeholder-val="{{ false }}"><span class="badge b-ok">Costs least</span></sc-if></div>
+<span style="font-size: 22px; line-height: 28px; font-weight: 600">{{c.total}}</span>
+<span class="small muted">{{c.detail}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section class="section" aria-labelledby="pl-h">
+<h2 id="pl-h" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Plans</h2>
+<sc-if value="{{scheduledOn}}" hint-placeholder-val="{{ false }}">
+<div class="banner" style="background: #F1F0EE; color: #57524D"><span>Moving to Launch on 1 Dec.</span><button type="button" class="btn btn-s btn-sm" onClick="{{cancelScheduled}}">Keep Growth</button></div>
+</sc-if>
+<div class="wrap"><table class="table" style="min-width: 660px">
+<thead><tr>
+<th style="height: auto; padding: 12px; vertical-align: bottom; width: 32%">Feature</th>
+<sc-for list="{{plans}}" as="p" hint-placeholder-count="3">
+<th style="{{p.headStyle}}">
+<div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start; color: #171615">
+<span style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap"><span style="font-size: 16px; font-weight: 600">{{p.name}}</span><sc-if value="{{p.current}}" hint-placeholder-val="{{ false }}"><span class="badge b-info">Your plan</span></sc-if></span>
+<span><span style="font-size: 20px; line-height: 28px; font-weight: 600">{{p.price}}</span><span class="muted" style="font-weight: 400">{{p.per}}</span></span>
+<span class="muted small" style="font-weight: 400">{{p.yearNote}}</span>
+<span style="font-weight: 400">+ {{p.fee}} of delivered sales</span>
+</div>
+</th>
+</sc-for>
+</tr></thead>
+<tbody>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="9">
+<tr><td>{{r.name}}</td>
+<sc-for list="{{r.cells}}" as="cell" hint-placeholder-count="3">
+<td class="{{cell.cls}}">
+<sc-if value="{{cell.yes}}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A6B43" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Included"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+<sc-if value="{{cell.hasText}}" hint-placeholder-val="{{ false }}"><span class="small muted">{{cell.text}}</span></sc-if>
+</td>
+</sc-for>
+</tr>
+</sc-for>
+<tr><td style="border-bottom: 0"></td>
+<sc-for list="{{plans}}" as="p" hint-placeholder-count="3">
+<td class="{{p.cellCls}}" style="border-bottom: 0; height: 64px"><sc-if value="{{p.hasAction}}" hint-placeholder-val="{{ true }}"><button type="button" class="{{p.btnCls}}" onClick="{{p.act}}">{{p.action}}</button></sc-if></td>
+</sc-for>
+</tr>
+</tbody>
+</table></div>
+</section>
+
+<section class="section" aria-labelledby="ap-h" style="gap: 0">
+<h2 id="ap-h" style="margin-bottom: 8px">Apps on your bill</h2>
+<sc-for list="{{apps}}" as="a" hint-placeholder-count="4">
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; border-top: 1px solid #EEEDEA; padding: 12px 0">
+<span style="display: flex; flex-direction: column"><span style="font-weight: 500">{{a.name}}</span><span class="small muted">{{a.job}}</span></span>
+<span style="display: flex; gap: 12px; align-items: center"><span class="{{a.badge}}">{{a.state}}</span><span style="min-width: 104px; text-align: right">{{a.price}}</span></span>
+</div>
+</sc-for>
+</section>
+</div>
+</sc-if>
+
+<!-- ============ INVOICES ============ -->
+<sc-if value="{{tabInvoices}}" hint-placeholder-val="{{ false }}">
+<section class="section" aria-label="Invoices">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center">
+<div class="chips" role="group" aria-label="Show"><sc-for list="{{filters}}" as="f" hint-placeholder-count="4"><button type="button" onClick="{{f.go}}" aria-pressed="{{f.pressed}}">{{f.label}}</button></sc-for></div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+<label for="fy" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Financial year</label>
+<select id="fy" style="height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid #8F8A84; background: #FFFFFF"><option>FY 2026–27</option><option>FY 2025–26</option></select>
+<button type="button" class="btn btn-s" onClick="{{downloadAll}}">Download all (ZIP)</button>
+<button type="button" class="btn btn-s" onClick="{{emailCa}}">Email to my CA</button>
+</div>
+</div>
+<div class="wrap"><table class="table" style="min-width: 720px">
+<thead><tr><th>Issued</th><th>Number</th><th>For</th><th class="num">Amount</th><th>Status</th><th><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Actions</span></th></tr></thead>
+<tbody>
+<sc-for list="{{invoices}}" as="i" hint-placeholder-count="5">
+<tr>
+<td>{{i.issued}}</td>
+<td style="font-family: ui-monospace, monospace; font-size: 13px">{{i.number}}</td>
+<td class="muted">{{i.covers}}</td>
+<td class="num">{{i.amount}}</td>
+<td><span class="{{i.badge}}">{{i.status}}</span></td>
+<td class="num" style="white-space: nowrap"><span style="display: inline-flex; gap: 6px; justify-content: flex-end"><sc-if value="{{i.due}}" hint-placeholder-val="{{ false }}"><button type="button" class="btn btn-p btn-sm" onClick="{{i.pay}}">Pay {{i.amount}}</button></sc-if><button type="button" class="btn btn-g btn-sm" onClick="{{i.charges}}">Charges</button><a href="#" class="btn btn-g btn-sm" style="text-decoration: none">PDF</a></span></td>
+</tr>
+</sc-for>
+</tbody>
+</table></div>
+<sc-if value="{{noInvoices}}" hint-placeholder-val="{{ false }}"><p class="muted" style="margin: 0">No invoices here.</p></sc-if>
+</section>
+</sc-if>
+
+<!-- ============ PAYMENT ============ -->
+<sc-if value="{{tabPayment}}" hint-placeholder-val="{{ false }}">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; align-items: start">
+<section class="section" aria-labelledby="ap2-h">
+<div style="display: flex; justify-content: space-between; gap: 8px; align-items: center"><h2 id="ap2-h">Autopay</h2><span class="{{autopayBadge}}">{{autopayChip}}</span></div>
+<sc-if value="{{autopayOn}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<dl class="fig" style="margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+<div><dt>Method</dt><dd style="font-size: 14px; line-height: 20px; font-weight: 500">{{methodName}}</dd></div>
+<div><dt>Limit a debit</dt><dd style="font-size: 14px; line-height: 20px; font-weight: 500">{{methodLimit}}</dd></div>
+<div><dt>Next debit</dt><dd style="font-size: 14px; line-height: 20px; font-weight: 500">₹6,987.96 · 1 Dec</dd></div>
+<div><dt>Notice</dt><dd style="font-size: 14px; line-height: 20px; font-weight: 500">30 Nov, by email</dd></div>
+</dl>
+<div style="display: flex; flex-wrap: wrap; gap: 8px"><button type="button" class="btn btn-s" onClick="{{openAutopay}}">Change method</button><button type="button" class="btn btn-g" style="color: #A82828" onClick="{{askStop}}">Turn off autopay</button></div>
+</div>
+</sc-if>
+<sc-if value="{{autopayOff}}" hint-placeholder-val="{{ true }}">
+<div role="radiogroup" aria-label="Pay with" style="display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{methods}}" as="m" hint-placeholder-count="3">
+<button type="button" onClick="{{m.pick}}" style="text-align: left; min-height: 60px; padding: 10px 14px; border-radius: 10px; border: 1px solid #E3E1DD; background: #FFFFFF; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px">
+<span style="display: flex; flex-direction: column"><span style="font-weight: 600">{{m.name}}</span><span class="small muted">{{m.limit}}</span></span>
+<sc-if value="{{m.best}}" hint-placeholder-val="{{ false }}"><span class="badge b-ok">Recommended</span></sc-if>
+</button>
+</sc-for>
+<span class="small muted">Without autopay, pay each bill from Invoices.</span>
+</div>
+</sc-if>
+</section>
+
+<section class="section" aria-labelledby="py-h" style="gap: 0">
+<h2 id="py-h" style="margin-bottom: 8px">Payments</h2>
+<sc-for list="{{payments}}" as="p" hint-placeholder-count="4">
+<div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; border-top: 1px solid #EEEDEA; padding: 10px 0">
+<span style="display: flex; flex-direction: column"><span>{{p.when}} · {{p.method}}</span><span class="small muted">{{p.note}}</span></span>
+<span style="display: flex; gap: 10px; align-items: center"><span>{{p.amount}}</span><span class="{{p.badge}}">{{p.status}}</span></span>
+</div>
+</sc-for>
+</section>
+</div>
+</sc-if>
+
+<!-- ============ DETAILS ============ -->
+<sc-if value="{{tabDetails}}" hint-placeholder-val="{{ false }}">
+<section class="section" aria-label="On your invoices" style="max-width: 720px">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px">
+<label class="field">Legal name<input value="Ivory Lane Clothing Pvt Ltd"></label>
+<label class="field"><span style="display: flex; gap: 8px; align-items: center">GSTIN <span class="badge b-ok">Checked</span></span><input value="29ABCDE1234F1Z5" style="font-family: ui-monospace, monospace"></label>
+<label class="field" style="grid-column: 1 / -1">Billing address<input value="12, 4th Cross, Indiranagar, Bengaluru 560038"></label>
+<label class="field">State<select><option>Karnataka</option><option>Maharashtra</option><option>Delhi</option></select><span class="hint">IGST 18% on your bills</span></label>
+<label class="field">Bills go to<input value="accounts@ivorylane.in"></label>
+<label class="field" style="grid-column: 1 / -1; border-top: 1px solid #EEEDEA; padding-top: 14px">Copy to your CA<input placeholder="ca@firm.in"></label>
+</div>
+<div style="display: flex; justify-content: flex-end"><button type="button" class="btn btn-p" onClick="{{saveDetails}}">Save details</button></div>
+</section>
+</sc-if>
+
+</div>
+</main>
+
+<!-- ============ DIALOG ============ -->
+<sc-if value="{{dialogOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: fixed; inset: 0; background: rgb(23 22 21 / 0.4); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10">
+<div role="dialog" aria-modal="true" aria-label="{{dTitle}}" style="background: #FFFFFF; border-radius: 16px; width: 100%; max-width: 460px; padding: 18px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 24px 48px -12px rgb(23 22 21 / 0.24)">
+<h3 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">{{dTitle}}</h3>
+<sc-if value="{{isAutopay}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{methods}}" as="m" hint-placeholder-count="3">
+<button type="button" onClick="{{m.pick}}" style="text-align: left; min-height: 56px; padding: 10px 14px; border-radius: 10px; border: 1px solid #E3E1DD; background: #FFFFFF; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px">
+<span style="display: flex; flex-direction: column"><span style="font-weight: 600">{{m.name}}</span><span class="small muted">{{m.limit}}</span></span>
+<sc-if value="{{m.best}}" hint-placeholder-val="{{ false }}"><span class="badge b-ok">Recommended</span></sc-if>
+</button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{isLines}}" hint-placeholder-val="{{ false }}">
+<table class="table"><tbody>
+<sc-for list="{{dLines}}" as="l" hint-placeholder-count="2"><tr><td class="muted" style="padding-left: 0; height: 40px">{{l.k}}</td><td class="num" style="padding-right: 0; height: 40px; font-weight: 500">{{l.v}}</td></tr></sc-for>
+</tbody></table>
+</sc-if>
+<sc-if value="{{hasNote}}" hint-placeholder-val="{{ false }}"><p style="margin: 0; color: {{dNoteColor}}">{{dNote}}</p></sc-if>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end">
+<button type="button" class="btn btn-s" onClick="{{closeDialog}}">{{dCancel}}</button>
+<sc-if value="{{hasConfirm}}" hint-placeholder-val="{{ true }}"><button type="button" class="{{dConfirmCls}}" onClick="{{confirm}}">{{dConfirm}}</button></sc-if>
+</div>
+<sc-if value="{{showsRzp}}" hint-placeholder-val="{{ false }}"><span class="small muted" style="text-align: right">Opens Razorpay · UPI, card or net banking</span></sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{toast}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #171615; color: #FFFFFF; padding: 10px 16px; border-radius: 10px; z-index: 20; max-width: 90vw; box-shadow: 0 24px 48px -12px rgb(23 22 21 / 0.24)">{{toastText}}</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startTab":{"editor":"enum","options":["overview","charges","plans","invoices","payment","details"],"default":"overview"},"$preview":{"width":1280,"height":1900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: null, period: 'monthly', dialog: null, autopay: null, novPaid: false, scheduled: false, toast: null, sales: 164000, filter: 'all', bill: 'dec', chView: 'orders', ordFilter: 'all', chartTable: false };
+  }
+  say(text) { this.setState({ toast: text }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: null }), 2600); }
+  renderVals() {
+    const s = this.state;
+    const tab = s.tab || this.props.startTab || 'overview';
+    const inr = (n, d) => '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+    const rs = (p) => inr(p / 100, 2);
+    const badge = (k) => 'badge b-' + k;
+    const yearly = s.period === 'yearly';
+
+    const tabs = [['overview', 'Overview'], ['charges', 'Charges'], ['plans', 'Plans'], ['invoices', 'Invoices'], ['payment', 'Payment'], ['details', 'Details']].map(([k, label]) => ({
+      label, go: () => this.setState({ tab: k }), current: tab === k ? 'page' : 'false', hasBadge: k === 'invoices' && !s.novPaid, badge: '1 due' }));
+
+    // Six months, before GST
+    const hist = [['Jun', 112000], ['Jul', 138000], ['Aug', 161000], ['Sep', 146000], ['Oct', 184000], ['Nov', 92300]];
+    const months = hist.map(([label, sales], i) => {
+      const fee = Math.round(sales * 0.01), total = 4999 + fee, px = (v) => Math.round(v / 7200 * 150);
+      const now = i === hist.length - 1;
+      return { label: now ? 'Nov so far' : label, total: inr(total), fee: inr(fee), sales: inr(sales), rate: (total / sales * 100).toFixed(1) + '%',
+        aria: label + ': plan ₹4,999, fee ' + inr(fee) + ', on sales of ' + inr(sales),
+        stackStyle: 'width: 100%; max-width: 56px; display: flex; flex-direction: column; border-radius: 6px 6px 0 0; overflow: hidden' + (now ? '; outline: 1px dashed #8F8A84; outline-offset: 2px' : ''),
+        feeStyle: 'height: ' + px(fee) + 'px; background: #C3C9F6', planStyle: 'height: ' + px(4999) + 'px; background: #3A44C2' };
+    });
+    const upcoming = [
+      { when: '30 Nov', what: s.autopay ? 'Notice of the 1 Dec debit, by email' : 'December’s bill is drafted' },
+      { when: '1 Dec', what: s.autopay ? 'Debit of ₹6,987.96 by ' + s.autopay : 'Bill of ₹6,987.96 · pay by 5 Dec' },
+      s.scheduled ? { when: '1 Dec', what: 'You move to Launch' } : { when: '1 Jan', what: 'January’s bill' }
+    ];
+
+    // Charges: one bill at a time; every table adds up to the bill.
+    const B = {
+      dec: { pick: '1 Dec · so far', title: 'Bill of 1 Dec · so far', chip: 'Open till 30 Nov', chipKind: 'neutral', planMonth: 'December', planDays: 31, feeMonth: 'November', count: 61, base: 9230000, fee: 92300, notBilled: 7, igst: 106596, total: 698796 },
+      nov: { pick: '1 Nov', title: 'Bill of 1 Nov · FRR/26-27/000031', chip: s.novPaid ? 'Paid' : 'Due 5 Nov', chipKind: s.novPaid ? 'ok' : 'warn', planMonth: 'November', planDays: 30, feeMonth: 'October', count: 118, base: 18400000, fee: 184000, notBilled: 12, igst: 123102, total: 807002 },
+      oct: { pick: '1 Oct', title: 'Bill of 1 Oct · FRR/26-27/000024', chip: 'Paid', chipKind: 'ok', planMonth: 'October', planDays: 31, feeMonth: 'September', count: 97, base: 14600000, fee: 146000, notBilled: 9, igst: 116262, total: 762162 }
+    };
+    const bill = s.bill, b = B[bill];
+    const billPicks = ['dec', 'nov', 'oct'].map((k) => ({ label: B[k].pick, pressed: String(bill === k), go: () => this.setState({ bill: k, ordFilter: 'all' }) }));
+    const sumRows = [
+      { k: 'Growth plan', period: b.planMonth + ', ahead', how: '₹4,999 a month', v: '₹4,999.00', jump: () => this.setState({ chView: 'items' }) },
+      { k: 'Apps', period: b.planMonth + ', ahead', how: 'Delivery Zones is in Growth', v: '₹0.00', jump: () => this.setState({ chView: 'items' }) },
+      { k: 'Fee on delivered orders', period: b.feeMonth, how: b.count + ' orders · 1% of ' + rs(b.base), v: rs(b.fee), jump: () => this.setState({ chView: 'orders' }) },
+      { k: 'Not billed', period: b.feeMonth, how: b.notBilled + ' came back, lost or not shipped', v: '₹0.00' },
+      { k: 'Before GST', period: '', how: '', v: rs(499900 + b.fee), strong: true },
+      { k: 'IGST 18%', period: '', how: 'Karnataka to Maharashtra', v: rs(b.igst) },
+      { k: 'Total', period: '', how: '', v: rs(b.total), total: true }
+    ].map((r) => ({ ...r, hasJump: !!r.jump, noJump: !r.jump, jump: r.jump || (() => {}), rowClass: r.total ? 'total' : '' }));
+    const sample = {
+      dec: [['#2482', '2 Nov', 'Delivered 5 Nov', 268900, 249000], ['#2490', '3 Nov', 'Delivered 6 Nov', 139900, 129900], ['#2497', '4 Nov', 'Came back 10 Nov', 89900, 89900], ['#2503', '5 Nov', 'Delivered 8 Nov', 419900, 398000], ['#2511', '7 Nov', 'Delivered 9 Nov', 94900, 89900], ['#2516', '8 Nov', 'Lost 14 Nov', 174900, 174900], ['#2524', '9 Nov', 'Delivered 12 Nov', 567900, 547000], ['#2531', '10 Nov', 'Delivered 13 Nov', 184900, 174900]],
+      nov: [['#2318', '29 Sep', 'Delivered 2 Oct', 268900, 249000], ['#2324', '1 Oct', 'Delivered 3 Oct', 139900, 129900], ['#2329', '1 Oct', 'Came back 7 Oct', 249900, 239000], ['#2331', '2 Oct', 'Delivered 4 Oct', 419900, 398000], ['#2340', '4 Oct', 'Delivered 6 Oct', 94900, 89900], ['#2352', '6 Oct', 'Delivered 9 Oct', 567900, 547000], ['#2361', '—', 'Packed, not shipped', 129900, 129900], ['#2367', '10 Oct', 'Delivered 12 Oct', 184900, 174900]],
+      oct: [['#2209', '30 Aug', 'Delivered 2 Sep', 189900, 179900], ['#2214', '1 Sep', 'Delivered 4 Sep', 329900, 315000], ['#2221', '2 Sep', 'Came back 9 Sep', 99900, 99900], ['#2230', '4 Sep', 'Delivered 6 Sep', 459900, 439000], ['#2236', '5 Sep', 'Delivered 8 Sep', 129900, 119900], ['#2241', '7 Sep', 'Delivered 10 Sep', 239900, 229900]]
+    }[bill];
+    const of = s.ordFilter;
+    const ordRows = sample.map(([num, shipped, outcome, total, base]) => {
+      const billed = outcome.indexOf('Delivered') === 0;
+      return { num, shipped, outcome, billed, total: rs(total), base: billed ? rs(base) : '—', rate: billed ? '1%' : '—', fee: billed ? rs(Math.round(base / 100)) : '₹0.00', badge: badge(billed ? 'ok' : 'neutral') };
+    }).filter((o) => of === 'all' || (of === 'billed' ? o.billed : !o.billed));
+    const ordFilters = [['all', 'All'], ['billed', 'Billed'], ['not', 'Not billed']].map(([k, label]) => ({ label, pressed: String(of === k), go: () => this.setState({ ordFilter: k }) }));
+    const itemRows = [
+      { name: 'Growth plan', note: 'Plan', kind: 'info', period: '1–' + b.planDays + ' ' + b.planMonth.slice(0, 3), days: String(b.planDays), price: '₹4,999 a month', amount: '₹4,999.00' },
+      { name: 'Delivery Zones', note: 'In Growth', kind: 'ok', period: '1–' + b.planDays + ' ' + b.planMonth.slice(0, 3), days: String(b.planDays), price: '₹999 a month', amount: '₹0.00' },
+      { name: 'Reviews', note: 'Off', kind: 'neutral', period: '—', days: '0', price: '₹499 a month', amount: '₹0.00' },
+      { name: 'True Profit', note: 'Off', kind: 'neutral', period: '—', days: '0', price: '₹999 a month', amount: '₹0.00' }
+    ].map((r) => ({ ...r, badge: badge(r.kind) }));
+
+    // Plans
+    const P = [
+      { code: 'launch', name: 'Launch', m: 1499, rate: 0.02, fee: '2%' },
+      { code: 'growth', name: 'Growth', m: 4999, rate: 0.01, fee: '1%', current: true },
+      { code: 'scale', name: 'Scale', m: 14999, rate: 0.005, fee: '0.5%' }
+    ];
+    const monthlyPlan = (p) => yearly ? p.m * 10 / 12 : p.m;
+    const totals = P.map((p) => monthlyPlan(p) + p.rate * s.sales);
+    const min = Math.min.apply(null, totals);
+    const calc = P.map((p, i) => ({ name: p.name, best: totals[i] === min, total: inr(Math.round(totals[i])) + ' a month',
+      detail: inr(Math.round(monthlyPlan(p))) + ' plan + ' + inr(Math.round(p.rate * s.sales)) + ' fee · ' + (totals[i] / s.sales * 100).toFixed(1) + '% of sales',
+      style: 'border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; ' + (totals[i] === min ? 'border: 1px solid #C3C9F6; background: #EEF0FD' : 'border: 1px solid #E3E1DD') }));
+    const plans = P.map((p) => {
+      let action = '', act = () => {}, cls = 'btn btn-s';
+      if (p.current && yearly) { action = 'Pay yearly · save ₹9,998'; act = () => this.setState({ dialog: 'yearly' }); cls = 'btn btn-p'; }
+      else if (p.code === 'scale') { action = 'Move to Scale'; act = () => this.setState({ dialog: 'up' }); }
+      else if (p.code === 'launch') { action = s.scheduled ? 'Moving on 1 Dec' : 'Switch to Launch'; act = s.scheduled ? () => {} : () => this.setState({ dialog: 'down' }); }
+      return { name: p.name, current: !!p.current, price: yearly ? inr(p.m * 10) : inr(p.m), per: yearly ? ' a year' : ' a month',
+        yearNote: yearly ? inr(Math.round(p.m * 10 / 12)) + ' a month' : 'or ' + inr(p.m * 10) + ' a year',
+        fee: p.fee, hasAction: !!action, action, act, btnCls: cls, cellCls: p.current ? 'cur' : '',
+        headStyle: 'height: auto; padding: 12px; vertical-align: top; ' + (p.current ? 'background: #EEF0FD' : '') };
+    });
+    const feat = [
+      ['Store, checkout, orders, shipping', [1, 1, 1]], ['Online payments and COD', [1, 1, 1]], ['GST invoices and GSTR-1', [0, 1, 1]],
+      ['Delivery Zones', ['₹999 a month', 1, 1]], ['RTO Shield', [0, 1, 1]], ['Size and fit', [0, 1, 1]], ['Cart flows', [0, 1, 1]],
+      ['Reviews', [0, '₹499 a month', 1]], ['True Profit', ['₹999 a month', '₹999 a month', 1]]
+    ];
+    const rows = feat.map(([name, v]) => ({ name, cells: v.map((x, i) => ({ yes: x === 1, hasText: x !== 1, text: x === 0 ? '—' : String(x), cls: P[i].current ? 'cur' : '' })) }));
+    const apps = [
+      { name: 'Delivery Zones', job: 'Charges, dates and COD by PIN code', state: 'In Growth', kind: 'ok', price: '₹0' },
+      { name: 'Reviews', job: 'Photo reviews after delivery', state: 'Off', kind: 'neutral', price: '₹499 a month' },
+      { name: 'True Profit', job: 'What each product kept after returns', state: 'Off', kind: 'neutral', price: '₹999 a month' },
+      { name: 'Marketplace export', job: 'Myntra, Ajio and Nykaa files', state: 'Off', kind: 'neutral', price: '₹1,499 a month' }
+    ].map((a) => ({ ...a, badge: badge(a.kind) }));
+
+    // Invoices
+    const allInv = [
+      { issued: '1 Nov', number: 'FRR/26-27/000031', covers: 'Growth Nov · fee Oct', amount: 8070.02, kind: s.novPaid ? 'paid' : 'due', status: s.novPaid ? 'Paid · UPI' : 'Due 5 Nov', bill: 'nov' },
+      { issued: '1 Oct', number: 'FRR/26-27/000024', covers: 'Growth Oct · fee Sep', amount: 7621.62, kind: 'paid', status: 'Paid · UPI Autopay', bill: 'oct' },
+      { issued: '12 Sep', number: 'FRR/26-27/CN0003', covers: 'Credit · 2 returned orders', amount: -236.00, kind: 'credit', status: 'Credit note' },
+      { issued: '1 Sep', number: 'FRR/26-27/000017', covers: 'Growth Sep · fee Aug', amount: 7798.62, kind: 'paid', status: 'Paid · UPI Autopay' },
+      { issued: '1 Aug', number: 'FRR/26-27/000010', covers: 'Growth Aug · fee Jul', amount: 7527.22, kind: 'paid', status: 'Paid · UPI, 3 Aug' }
+    ];
+    const invoices = allInv.filter((i) => s.filter === 'all' || s.filter === i.kind).map((i) => ({ ...i,
+      amount: (i.amount < 0 ? '−' : '') + inr(Math.abs(i.amount), 2), due: i.kind === 'due',
+      badge: badge(i.kind === 'due' ? 'warn' : i.kind === 'credit' ? 'neutral' : 'ok'),
+      pay: () => this.setState({ dialog: 'payNov' }),
+      charges: () => this.setState({ tab: 'charges', bill: i.bill || 'nov', chView: 'orders' }) }));
+    const filters = [['all', 'All'], ['due', 'Due'], ['paid', 'Paid'], ['credit', 'Credit notes']].map(([k, label]) => ({ label, pressed: String(s.filter === k), go: () => this.setState({ filter: k }) }));
+
+    const pickMethod = (name) => () => { this.setState({ dialog: null, autopay: name }); this.say('Autopay is on. The next bill is taken on 1 Dec.'); };
+    const methods = [
+      { name: 'UPI Autopay', limit: 'Up to ₹15,000 a debit · approve in your UPI app', best: true, pick: pickMethod('UPI Autopay') },
+      { name: 'Card', limit: 'Up to ₹15,000 a debit', best: false, pick: pickMethod('Card') },
+      { name: 'Bank account (eNACH)', limit: 'Above ₹15,000 · ready in 1–2 days', best: false, pick: pickMethod('Bank account (eNACH)') }
+    ];
+    const payments = [
+      { when: '1 Oct', method: 'UPI Autopay', note: 'FRR/26-27/000024', amount: '₹7,621.62', status: 'Paid', kind: 'ok' },
+      { when: '1 Sep', method: 'UPI Autopay', note: 'FRR/26-27/000017', amount: '₹7,798.62', status: 'Paid', kind: 'ok' },
+      { when: '3 Aug', method: 'UPI', note: 'FRR/26-27/000010', amount: '₹7,527.22', status: 'Paid', kind: 'ok' },
+      { when: '1 Aug', method: 'Card ending 4417', note: 'The card had expired', amount: '₹7,527.22', status: 'Failed', kind: 'danger' }
+    ];
+    if (s.novPaid) payments.unshift({ when: '15 Nov', method: 'UPI', note: 'FRR/26-27/000031', amount: '₹8,070.02', status: 'Paid', kind: 'ok' });
+
+    const D = {
+      up: { title: 'Move to Scale now?', lines: [['16 Nov – 30 Nov', '₹5,333.33 + GST on the 1 Dec bill'], ['From 1 Dec', '₹14,999 a month + 0.5%'], ['You add', 'Reviews, True Profit']], cancel: 'Keep Growth', confirm: 'Move to Scale',
+        done: () => { this.setState({ dialog: null }); this.say('You are on Scale now.'); } },
+      down: { title: 'Switch to Launch on 1 Dec?', lines: [['From 1 Dec', '₹1,499 a month + 2%'], ['October on Launch', '₹5,179 instead of ₹6,839']], note: 'On 1 Dec you lose GST invoices, RTO Shield, Size and fit and Cart flows. Delivery Zones becomes ₹999 a month.', noteColor: '#A82828', cancel: 'Keep Growth', confirm: 'Switch on 1 Dec',
+        done: () => { this.setState({ dialog: null, scheduled: true }); this.say('You move to Launch on 1 Dec.'); } },
+      yearly: { title: 'Pay Growth for a year?', lines: [['1 Dec 2026 – 30 Nov 2027', '₹49,990 + GST'], ['You save', '₹9,998 against monthly'], ['Pay today', '₹58,988.20 with GST'], ['Each month', 'The 1% fee, on that month’s bill']], cancel: 'Stay monthly', confirm: 'Pay ₹58,988.20', rzp: true,
+        done: () => { this.setState({ dialog: null, period: 'monthly' }); this.say('Paid. Growth is paid until 30 Nov 2027.'); } },
+      payNov: { title: 'Pay November’s bill?', lines: [['FRR/26-27/000031', '₹8,070.02']], cancel: 'Not now', confirm: 'Pay ₹8,070.02', rzp: true,
+        done: () => { this.setState({ dialog: null, novPaid: true }); this.say('Paid. Thank you.'); } },
+      stop: { title: 'Turn off autopay?', note: 'From 1 Dec, pay each bill yourself by the 5th.', noteColor: '#67625C', cancel: 'Keep autopay', confirm: 'Turn off', danger: true,
+        done: () => { this.setState({ dialog: null, autopay: null }); this.say('Autopay is off.'); } },
+      autopay: { title: 'Turn on autopay', cancel: 'Not now' }
+    };
+    const d = s.dialog ? D[s.dialog] : null;
+
+    return {
+      showDue: !s.novPaid, openPayNov: () => this.setState({ dialog: 'payNov' }),
+      planChip: s.scheduled ? 'Growth · Launch from 1 Dec' : 'Growth · ₹4,999 a month + 1%',
+      autopayChip: s.autopay ? 'Autopay on' : 'Autopay off', autopayBadge: badge(s.autopay ? 'ok' : 'neutral'),
+      goPlans: () => this.setState({ tab: 'plans' }), goCharges: () => this.setState({ tab: 'charges', bill: 'dec' }),
+      tabs,
+      tabOverview: tab === 'overview', tabCharges: tab === 'charges', tabPlans: tab === 'plans', tabInvoices: tab === 'invoices', tabPayment: tab === 'payment', tabDetails: tab === 'details',
+      payLine: s.autopay ? 'Taken by ' + s.autopay + ' on 1 Dec' : 'Pay by 5 Dec',
+      autopayOn: !!s.autopay, autopayOff: !s.autopay, methodName: s.autopay || '', methodLimit: s.autopay === 'Bank account (eNACH)' ? '₹1,00,000' : '₹15,000',
+      openAutopay: () => this.setState({ dialog: 'autopay' }), askStop: () => this.setState({ dialog: 'stop' }),
+      months, upcoming, chartAsBars: !s.chartTable, chartAsTable: s.chartTable, chartTableLabel: s.chartTable ? 'See as a chart' : 'See as a table',
+      toggleChartTable: () => this.setState({ chartTable: !s.chartTable }),
+      billPicks, billTitle: b.title, billChip: b.chip, billBadge: badge(b.chipKind), sumRows,
+      downloadCsv: () => this.say((b.count + b.notBilled) + ' orders in one CSV.'),
+      viewOrders: () => this.setState({ chView: 'orders' }), viewItems: () => this.setState({ chView: 'items' }),
+      ordersPressed: String(s.chView === 'orders'), itemsPressed: String(s.chView === 'items'),
+      chOrders: s.chView === 'orders', chItems: s.chView === 'items', ordFilters, ordRows,
+      ordTotalLabel: b.count + ' billed orders · ' + b.notBilled + ' not billed', ordTotalBase: rs(b.base), ordTotalFee: rs(b.fee),
+      ordShowing: 'Showing ' + ordRows.length + ' of ' + (b.count + b.notBilled), moreOrders: () => this.say('50 more orders shown.'),
+      itemRows, itemsTotal: '₹4,999.00',
+      setMonthly: () => this.setState({ period: 'monthly' }), setYearly: () => this.setState({ period: 'yearly' }),
+      monthlyPressed: String(!yearly), yearlyPressed: String(yearly),
+      sales: s.sales, salesLabel: inr(s.sales), onSales: (e) => this.setState({ sales: Number(e.target.value) }), useMine: () => this.setState({ sales: 164000 }),
+      calc, plans, rows, apps,
+      scheduledOn: s.scheduled, cancelScheduled: () => { this.setState({ scheduled: false }); this.say('You stay on Growth.'); },
+      filters, invoices, noInvoices: invoices.length === 0,
+      downloadAll: () => this.say('5 PDFs in one ZIP for FY 2026–27.'), emailCa: () => this.say('Add your CA’s email in Details first.'),
+      methods, payments: payments.map((p) => ({ ...p, badge: badge(p.kind) })),
+      saveDetails: () => this.say('Saved. New bills use these details.'),
+      dialogOpen: !!d, dTitle: d ? d.title : '', isAutopay: s.dialog === 'autopay',
+      isLines: !!(d && d.lines), dLines: d && d.lines ? d.lines.map(([k, v]) => ({ k, v })) : [],
+      hasNote: !!(d && d.note), dNote: d && d.note ? d.note : '', dNoteColor: d && d.noteColor ? d.noteColor : '#67625C',
+      dCancel: d ? d.cancel : '', hasConfirm: !!(d && d.confirm), dConfirm: d && d.confirm ? d.confirm : '', dConfirmCls: d && d.danger ? 'btn btn-d' : 'btn btn-p',
+      showsRzp: !!(d && d.rzp), confirm: d && d.done ? d.done : () => {}, closeDialog: () => this.setState({ dialog: null }),
+      toast: !!s.toast, toastText: s.toast || ''
+    };
+  }
+}
+</script>
+</body>
+</html>
