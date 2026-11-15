@@ -26,14 +26,14 @@ describe('a Builder and requireMember', () => {
     accessFor.mockResolvedValue(builderOnly)
     const roles = await import('@/domains/tenancy/roles')
     const { requireMember } = await import('../require-member')
-    for (const t of TUPLES) expect(await requireMember(roles[t])).toMatchObject({ ok: false, reason: 'builder', message: 'Builders can’t see this page.' })
+    for (const t of TUPLES) expect(await requireMember(roles[t])).toMatchObject({ ok: false, reason: 'builder', message: 'Builders can’t see this page' })
   })
   it('asMember refuses a Builder before any transaction', async () => {
     accessFor.mockResolvedValue(builderOnly)
     const { asMember } = await import('../as-member')
     const { ANY_MEMBER } = await import('@/domains/tenancy/roles')
     const work = vi.fn()
-    expect(await asMember(ANY_MEMBER, { action: 'x' }, work)).toEqual({ ok: false, error: 'Builders can’t see this page.' })
+    expect(await asMember(ANY_MEMBER, { action: 'x' }, work)).toEqual({ ok: false, error: 'Builders can’t see this page' })
     expect(work).not.toHaveBeenCalled()
   })
   it('a person who owns B and builds A: the cookie on A refuses, never falls through to B', async () => {

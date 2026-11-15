@@ -145,14 +145,16 @@ export default {
     })
 
     await t.step('phone: the bottom bar is Products, Collections, Preview', async () => {
-      const ph = await bc.newPage({ viewport: { width: 390, height: 844 } })
+      const phc = await signedIn(t.browser, 'builder', { viewport: { width: 390, height: 844 } })
+      await seedPartnerStepup(phc, 'builder')
+      const ph = await phc.newPage()
       await ph.goto(CONSOLE + '/console/products')
       await ph.getByRole('heading', { name: 'Products' }).waitFor()
       await ph.screenshot({ path: t.out('builder-products-phone') })
       await ph.goto(CONSOLE + '/console/orders')
       await ph.getByRole('heading', { name: 'Builders can’t see this page' }).waitFor()
       await ph.screenshot({ path: t.out('builder-refused-phone') })
-      await ph.close()
+      await phc.close()
     })
 
     await t.step('the brand sees Partner · Builder', async () => {

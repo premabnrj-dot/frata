@@ -45,7 +45,7 @@ export default async function TeamPage() {
           </div>
         </Section>
       )}
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_300px]">
       <Section flush ariaLabel="People"><ul data-list className="divide-y divide-border">
         {people.map((p) => {
           const state = memberState(p, now)

@@ -11,7 +11,7 @@ export type MemberRole = (typeof MEMBER_ROLES)[number]
  */
 export const BUILDER_ROLE = 'builder' as const
 /** What a console page says to a Builder it does not open (owner 2026-11-15, T1c question 3: the page's own panel). */
-export const BUILDER_REFUSED = 'Builders can’t see this page.'
+export const BUILDER_REFUSED = 'Builders can’t see this page'
 
 /** Every value `members.role` may hold: the members_role CHECK is built from this list (schema.ts). */
 export const SHOP_ROLES = [...MEMBER_ROLES, BUILDER_ROLE] as const

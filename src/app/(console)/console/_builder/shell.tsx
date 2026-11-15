@@ -25,7 +25,7 @@ export function BuilderShell({ nav, email, rail, children }: { nav: BuilderNav; 
   return (
     <AppShell title={store.tenantName} navLabel="Console" groups={[{ label: 'Catalogue', items: [products, collections] }]}
       tabs={[products, collections, previewTab]} more={[]} foot={[preview, { href: '/partner', label: 'Partner workspace', icon: 'partners' }]}
-      email={email} tenantId={store.tenantId} places={places} rail={rail}>
+      email={email ? `${email} · ${BUILDER_LABEL}` : null} tenantId={store.tenantId} places={places} rail={rail}>
       <TenantCheck tenantId={store.tenantId} staff={places.length > 2} />
       {children}
     </AppShell>
