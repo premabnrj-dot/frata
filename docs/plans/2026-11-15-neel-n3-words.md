@@ -1,5 +1,5 @@
 # Neel N3 — Words: the `check:words` gate and the console copy sweep
-Status: built, awaiting the owner's ship call (step 6 done 2026-11-15 after N1b reached main; reviews folded: architecture, words, impact, security, design-system, mockup-parity) · Date: 2026-11-15 · Branch: `claude/neel-n3-words`
+Status: shipped 2026-11-15 (owner approved the Deviations: "approved. merge."; main f0fad39, no migration)
 Spec: `docs/specs/2026-11-13-design-language-neel.md` (§ v4 voice, owner calls 1–4, § Phases · N3) · Mockup:
 `docs/mockups/2026-11-13-design-language-neel.html` (§ Voice, § Words, § Glossary; § Screens: Orders, Settings) ·
 Approved: owner, 2026-11-13 (the mockup; the calls "Manager", "store", "On the way", "warn from 13, fail at 16")
