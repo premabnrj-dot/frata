@@ -114,6 +114,20 @@ common case; the owner's "showing everything at once doesn't make sense" closed.
 - **Themes:** only the existing actions move (Release primary, Recall and Withdraw in More); no new theme work (ADR-0014).
 - **Flow number:** `91-neel-admin.mjs` (89 is taken).
 
+## Speed review on the plan (2026-11-15, 10× seed: 5k shops, 2M audit rows), folded in
+
+- **H1 no transaction around Today.** The readers call `adminDb()` themselves; a transaction in the layout and another
+  in the page would hold both of Admin's two connections and deadlock. Plain parallel reads, one gather per person per
+  request (`todayItems`, React cache keyed by user id), shared by the nav counts and the page.
+- **H2 themes source reads `theme_versions` only** (21 rows, 0.03 ms) and diffs it against the build's manifests; the
+  full read (every shop's publishes, 257 ms) stays on `/admin/themes`.
+- **M1 trials source is one join** of open trials without autopay (5.9 ms), never the Trials list (4 statements, 99 ms).
+- **M2 Activity indexes ascending** (`(at, id)`, `(actor_user_id, at, id)`, `(split_part(action,'.',1), at, id)`),
+  scanned backward; `audit_events_at` dropped (superseded). The keyset uses the row comparison `(at, id) < ($at, $id)`.
+- **L1** partial index `partner_passkey_requests_open` for the passkey definer.
+- EkCode, Email and Infrastructure have no count slot at all (`TodayArea`), so the nav can never wait on them.
+- The layout runs `requireMember` and the counts together.
+
 ## Scalability, reliability, motion
 - **Scalability:** Today's nine reads are counts or short lists over indexed columns; at 500 merchants each stays under
   20 ms (speed-reviewer EXPLAINs them at 10×). Activity is keyset-paged on indexes.

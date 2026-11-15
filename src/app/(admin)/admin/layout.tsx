@@ -53,12 +53,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </main>
     )
   }
-  const own = await requireMember(ANY_MEMBER)
+  // Both at once (speed review on the plan): neither waits on the other.
+  const [own, n] = await Promise.all([requireMember(ANY_MEMBER), todayCounts(staff).catch(() => null)])
   const ownStore = own.ok && !own.membership.supportSessionId ? own.membership.tenantName : null
   // The same shell as the console; Admin differs only in chrome (ink, reversed mark, STAFF). Neel N4 (owner-approved
   // mockup): Today first, then four groups, each item with the count of what waits in it (todayCounts, the same list
   // Today shows, filtered by this person's role; none when it can't be read).
-  const n = await todayCounts(staff).catch(() => null)
   const item = (href: string, label: string, icon: NavItem['icon'], key?: TodayArea): NavItem => ({ href, label, icon, ...(key && n?.[key] ? { badge: n[key] } : {}) })
   const today = item('/admin', 'Today', 'home', 'today')
   const merchants = item('/admin/merchants', 'Merchants', 'merchants', 'merchants')
@@ -70,11 +70,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const plans = item('/admin/plans', 'Plans', 'plans')
   const billingItem = item('/admin/billing', 'Billing', 'payments', 'billing')
   const appsItem = item('/admin/apps', 'Apps', 'apps')
-  const ekcodeItem = item('/admin/ekcode', 'EkCode', 'people', 'ekcode')
+  const ekcodeItem = item('/admin/ekcode', 'EkCode', 'people')
   const themesItem = item('/admin/themes', 'Themes', 'themes', 'themes')
   const noticesItem = item('/admin/notices', 'Notices', 'bell')
-  const emailItem = item('/admin/email', 'Email health', 'messages', 'email')
-  const infraItem = item('/admin/infrastructure', 'Infrastructure', 'risk', 'infrastructure')
+  const emailItem = item('/admin/email', 'Email health', 'messages')
+  const infraItem = item('/admin/infrastructure', 'Infrastructure', 'risk')
   const activity = item('/admin/activity', 'Activity', 'activity')
   const foot: NavItem[] = ownStore ? [{ href: '/console', label: `${ownStore} console`, icon: 'external' }] : []
   const groups = [

@@ -8,7 +8,7 @@
 export type StaffRoleName = 'admin' | 'support'
 
 export type TodayKind = 'partner_passkey' | 'staff_passkey' | 'partner_review' | 'address_claim' | 'overpaid' | 'issue_run' | 'trial_ending' | 'owner_waiting' | 'theme_new'
-export type TodayArea = 'today' | 'merchants' | 'trials' | 'names' | 'partners' | 'staff' | 'billing' | 'themes' | 'ekcode' | 'email' | 'infrastructure'
+export type TodayArea = 'today' | 'merchants' | 'trials' | 'names' | 'partners' | 'staff' | 'billing' | 'themes'
 export type TodayTone = 'warn' | 'bad' | 'info'
 
 export type TodaySource = { kind: TodayKind; area: Exclude<TodayArea, 'today'>; roles: readonly StaffRoleName[]; chip: string; tone: TodayTone }

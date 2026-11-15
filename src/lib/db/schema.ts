@@ -154,10 +154,12 @@ export const auditEvents = pgTable('audit_events', {
   detail: jsonb('detail'),
 }, (t) => [
   index('audit_events_tenant_at').on(t.tenantId, t.at),
-  index('audit_events_at').on(t.at),
-  // Admin › Activity (Neel N4): keyset pages on (at, id), and by person; rows in one transaction share `at`.
-  index('audit_events_at_id').on(t.at.desc(), t.id.desc()),
-  index('audit_events_actor_at').on(t.actorUserId, t.at.desc(), t.id.desc()),
+  // Admin › Activity (Neel N4): keyset pages on (at, id), newest first by a backward scan, with the row comparison
+  // (at, id) < (…) (speed review on the plan: ascending, so drizzle's desc() NULLS FIRST never misses the index; this
+  // one supersedes audit_events_at). By person, and by kind (the action's first word).
+  index('audit_events_at_id').on(t.at, t.id),
+  index('audit_events_actor_at').on(t.actorUserId, t.at, t.id),
+  index('audit_events_kind_at').on(sql`split_part(${t.action}, '.', 1)`, t.at, t.id),
   index('audit_events_session').on(t.supportSessionId),
   check('audit_events_kind', sql`${t.actorKind} in ('member','staff','support')`),
 ])

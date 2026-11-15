@@ -1,6 +1,6 @@
 {
-  "id": "68e8cf8c-d77e-4c54-b4b1-060386926f13",
-  "prevId": "fa416526-4339-431e-9b3e-23527c8d921e",
+  "id": "74378846-39c2-44f0-a3d7-24364698bd5d",
+  "prevId": "cb2b9fa7-9db5-4af9-8d62-9809107916b5",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -93,34 +93,19 @@
           "method": "btree",
           "concurrently": false
         },
-        "audit_events_at": {
-          "name": "audit_events_at",
-          "columns": [
-            {
-              "expression": "at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        },
         "audit_events_at_id": {
           "name": "audit_events_at_id",
           "columns": [
             {
               "expression": "at",
               "isExpression": false,
-              "asc": false,
+              "asc": true,
               "nulls": "last"
             },
             {
               "expression": "id",
               "isExpression": false,
-              "asc": false,
+              "asc": true,
               "nulls": "last"
             }
           ],
@@ -141,13 +126,40 @@
             {
               "expression": "at",
               "isExpression": false,
-              "asc": false,
+              "asc": true,
               "nulls": "last"
             },
             {
               "expression": "id",
               "isExpression": false,
-              "asc": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "audit_events_kind_at": {
+          "name": "audit_events_kind_at",
+          "columns": [
+            {
+              "expression": "split_part(\"action\", '.', 1)",
+              "isExpression": true,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
               "nulls": "last"
             }
           ],
@@ -7497,6 +7509,22 @@
           "isUnique": false,
           "with": {},
           "method": "btree",
+          "concurrently": false
+        },
+        "partner_passkey_requests_open": {
+          "name": "partner_passkey_requests_open",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"partner_passkey_requests\".\"used_at\" is null and \"partner_passkey_requests\".\"declined_at\" is null and \"partner_passkey_requests\".\"approved_at\" is null",
           "concurrently": false
         }
       },

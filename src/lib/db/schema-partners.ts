@@ -154,6 +154,8 @@ export const partnerPasskeyRequests = pgTable('partner_passkey_requests', {
 }, (t) => [
   check('partner_passkey_requests_context', sql`(${t.device} is null or length(${t.device}) <= 60) and (${t.city} is null or length(${t.city}) <= 60)`),
   index('partner_passkey_requests_member').on(t.partnerMemberId, t.createdAt),
+  // Admin › Today's passkey source (0138 admin_waiting_passkeys): open requests only (speed review on N4's plan).
+  index('partner_passkey_requests_open').on(t.createdAt).where(sql`${t.usedAt} is null and ${t.declinedAt} is null and ${t.approvedAt} is null`),
   check('partner_passkey_requests_kind', sql`${t.approvedKind} is null or ${t.approvedKind} in ('owner','staff')`),
 ])
 

@@ -1,18 +1,20 @@
 import 'server-only'
 import { cache } from 'react'
-import { and, asc, eq, gt, isNotNull, isNull, lt, sql } from 'drizzle-orm'
+import { and, asc, eq, gt, isNotNull, isNull, lt, or, sql } from 'drizzle-orm'
 import { adminDb } from '@/lib/db/admin'
 import { invites, tenants } from '@/lib/db/schema'
-import { frrataInvoices, frrataPayments } from '@/lib/db/schema-billing'
+import { billingAccounts, frrataInvoices, frrataPayments } from '@/lib/db/schema-billing'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { errName } from '@/lib/log'
 import { countsOf, orderItems, sourcesFor, type TodayArea, type TodayItem, type TodayKind } from '@/domains/admin/today'
+import { shopTrials } from '@/lib/db/schema-trials'
+import { themeVersions } from '@/lib/db/schema-themes'
+import { daysUntil, lastDay, trialEndsAt, trialState } from '@/domains/plans/trial'
+import { codeSource } from '@/domains/themes/source'
 import { listPartners } from './partners'
 import { domainsNeedingFrrata } from './addresses'
-import { trialList } from './trials'
-import { themeVersionsForAdmin } from './themes'
 
 // =============================================================================
 // FILE: src/lib/admin/today.ts — ADMIN › TODAY AND THE NAV COUNTS (Neel N4; plan, reviews folded in). Each source
@@ -58,8 +60,12 @@ const READERS: Record<TodayKind, Reader> = {
     kind: 'partner_review' as const, key: p.id, title: `${p.businessName || p.name} applied to be a partner`,
     line: [p.name, p.city, ago(p.appliedAt, now)].filter(Boolean).join(' · '), action: 'Review application', href: `/admin/partners?id=${p.id}`, since: p.appliedAt,
   })),
-  trial_ending: async (staff, now) => (await trialList(staff, now))
-    .filter((t) => (t.state === 'ending' || t.state === 'grace') && !t.autopay && t.daysLeft <= 3)
+  // One join, open trials without autopay only (speed review on the plan, MED 1: never the whole Trials list).
+  trial_ending: async (_staff, now) => (await adminDb().select({ f: shopTrials, name: tenants.name })
+    .from(shopTrials).innerJoin(tenants, eq(tenants.id, shopTrials.tenantId)).leftJoin(billingAccounts, eq(billingAccounts.tenantId, shopTrials.tenantId))
+    .where(and(isNull(shopTrials.endedAt), or(isNull(billingAccounts.mandateAt), isNotNull(billingAccounts.mandateRevokedAt)))))
+    .map(({ f, name }) => { const endsAt = trialEndsAt(f); return { tenantId: f.tenantId, name, endsAt, lastDay: lastDay(endsAt), daysLeft: daysUntil(now, endsAt), state: trialState(now, f, { mandateActive: false, exposedAt: null }) } })
+    .filter((t) => (t.state === 'ending' || t.state === 'grace') && t.daysLeft <= 3)
     .map((t) => ({ kind: 'trial_ending' as const, key: t.tenantId,
       title: t.daysLeft <= 0 ? `${t.name}'s trial has ended. No autopay yet.` : `${t.name}'s trial ends in ${t.daysLeft} ${t.daysLeft === 1 ? 'day' : 'days'}. No autopay yet.`,
       line: 'Trial', action: `Open ${t.name}`, href: `/admin/merchants/${t.tenantId}/plan`, since: new Date(t.lastDay.getTime() - 3 * DAY) })),
@@ -70,14 +76,20 @@ const READERS: Record<TodayKind, Reader> = {
     return rows.map((r) => ({ kind: 'owner_waiting' as const, key: r.tenantId, title: `${r.name}'s owner hasn't signed in`, line: `Added ${ago(r.at, now)}`,
       action: `Open ${r.name}`, href: `/admin/merchants/${r.tenantId}`, since: r.at }))
   },
-  theme_new: async (staff) => (await themeVersionsForAdmin(staff)).filter((v) => v.state === 'deployed').map((v) => ({
+  // A version in this build with no row yet is new in this deploy (versionState 'deployed'): the small table only,
+  // never every shop's publishes (speed review on the plan, HIGH 2).
+  theme_new: async () => {
+    const rows = await adminDb().select({ key: themeVersions.themeKey, version: themeVersions.version }).from(themeVersions)
+    const known = new Set(rows.map((r) => `${r.key}@${r.version}`))
+    return codeSource.keys().flatMap((k) => codeSource.versions(k)).filter((m) => !known.has(`${m.key}@${m.version}`)).map((v) => ({
     kind: 'theme_new' as const, key: `${v.key}@${v.version}`, title: `${v.name} ${v.version} is new in this deploy`, line: 'Add pilot stores, then release it',
     action: `Open ${v.name} ${v.version}`, href: `/admin/themes/${v.key}/${v.version}`, since: null,
-  })),
+  }))
+  },
 }
 
 async function passkeys(staff: StaffOk, now: Date, kind: 'partner' | 'staff'): Promise<TodayItem[]> {
-  const rows = await waitingPasskeys(staff)
+  const rows = await waitingPasskeys(staff.userId)
   return rows.filter((r) => r.kind === kind).map((r) => ({
     kind: kind === 'partner' ? 'partner_passkey' as const : 'staff_passkey' as const, key: r.ref,
     title: `${r.name} asks for a passkey`, line: `Waiting ${ago(r.since, now)}`, action: 'Approve passkey',
@@ -86,19 +98,29 @@ async function passkeys(staff: StaffOk, now: Date, kind: 'partner' | 'staff'): P
 }
 
 /** One call for both passkey sources (admin_waiting_passkeys, 0138: master admin only, checked in the database). */
-const waitingPasskeys = cache(async (staff: StaffOk) => {
-  const rows = await adminDb().execute<{ kind: 'partner' | 'staff'; ref: string; name: string; since: Date | string }>(sql`select * from admin_waiting_passkeys(${staff.userId}::uuid)`)
+const waitingPasskeys = cache(async (userId: string) => {
+  const rows = await adminDb().execute<{ kind: 'partner' | 'staff'; ref: string; name: string; since: Date | string }>(sql`select * from admin_waiting_passkeys(${userId}::uuid)`)
   return [...rows].map((r) => ({ ...r, since: new Date(r.since) }))
 })
 
+type Gathered = { items: TodayItem[]; missed: TodayKind[] }
+// Keyed by the person, not the StaffOk object: the layout's counts and the page's list share one gather per request
+// (speed review on the plan, HIGH 1). Plain parallel reads, never a transaction holding one of Admin's two connections.
+const slot = cache((_userId: string): { p: Promise<Gathered> | null } => ({ p: null }))
+
 /** Every item this person may see; a failing source is logged and left out. */
-export const todayItems = cache(async (staff: StaffOk): Promise<{ items: TodayItem[]; missed: TodayKind[] }> => {
+export function todayItems(staff: StaffOk): Promise<Gathered> {
+  const s = slot(staff.userId)
+  return (s.p ??= gather(staff))
+}
+
+async function gather(staff: StaffOk): Promise<Gathered> {
   const now = new Date()
   const sources = sourcesFor(staff.role)
   const missed: TodayKind[] = []
   const lists = await Promise.all(sources.map((s) => READERS[s.kind](staff, now).catch((err) => { console.error('[admin today]', s.kind, errName(err)); missed.push(s.kind); return [] })))
   return { items: orderItems(lists.flat()), missed }
-})
+}
 
 /** The nav's counts: the same items, counted by area. Late (over 1.5 s) or failed: no counts at all. */
 export async function todayCounts(staff: StaffOk): Promise<Partial<Record<TodayArea, number>> | null> {
