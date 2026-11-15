@@ -1009,6 +1009,20 @@
       "when": 1794768611909,
       "tag": "0143_api_boundary_purge",
       "breakpoints": true
+    },
+    {
+      "idx": 144,
+      "version": "7",
+      "when": 1794771323207,
+      "tag": "0144_partner_client_bills",
+      "breakpoints": true
+    },
+    {
+      "idx": 145,
+      "version": "7",
+      "when": 1794771354107,
+      "tag": "0145_partner_bills_access",
+      "breakpoints": true
     }
   ]
 }

@@ -246,6 +246,11 @@ for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|referen
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?"?(partner_(?:passkeys|passkey_requests|webauthn_challenges|stepups|passkey_tries))\b/g)) {
   failures.push(`grant on ${m[1]}  — partner passkey tables have no table grants; the app_partner_pk_* definers are the only door (T1b)`)
 }
+// P2 Clients (drizzle/0145): a partner's own bills reach no Frrata role at all, not even frata_admin (owner, 2026-11-15);
+// the app_partner_bill* / app_partner_client* definers are the only door, and Admin counts through admin_partner_bill_stats.
+for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?"?(partner_(?:client_bills|client_deals|bill_tries))\b/g)) {
+  failures.push(`grant on ${m[1]}  — a partner's own bills have no table grants; the partner definers are the only door (P2)`)
+}
 if (/\bcreate\s+schema\s+proof\b|\bproof\.(?:key|check|sess|h)\s*\(/i.test(sql)) failures.push('a proof-only helper (schema proof) in a migration  — it belongs in scripts/verify/tenancy.sql only')
 for (const m of sql.matchAll(/grant\s+((?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?)\bon\s+(?:table\s+)?"?(partner_(?:members|assignments))\b([^;]*);/g)) {
   if (!/^select\s+$/.test(m[1]) || !/\bto\s+frata_admin\s*$/.test(m[3].replace(/,\s*partner_(?:members|assignments)/, ''))) failures.push(`grant on ${m[2]}  — partner team tables: only "grant select … to frata_admin"; the app_partner_* definers are the only door`)
