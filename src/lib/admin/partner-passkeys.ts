@@ -19,7 +19,7 @@ export type OwnerPasskeys = {
 } | null
 
 const SAYS: Record<string, string> = {
-  not_admin: 'Only a Frrata admin can do that.',
+  not_admin: 'Only a master admin can do that.',
   confirm_first: 'Confirm with your passkey first.',
   no_person: 'This partner has no owner to approve.',
   own_request: 'Another Frrata admin must approve your request.',

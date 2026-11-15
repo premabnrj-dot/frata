@@ -6,7 +6,7 @@ import { moduleName, pauseModule, resumeModule } from '@/lib/admin/modules'
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import type { ActionResult } from '@/components/ui/action-form'
 
-const refusal = (reason: string) => (reason === 'signed_out' ? 'Sign in again.' : reason === 'needs_passkey' ? 'Confirm it\'s you with your passkey first.' : 'Only an admin can pause or resume a module.')
+const refusal = (reason: string) => (reason === 'signed_out' ? 'Sign in again.' : reason === 'needs_passkey' ? 'Confirm it\'s you with your passkey first.' : 'Only a master admin can pause or resume an app.')
 
 export async function pauseModuleAction(form: FormData): Promise<ActionResult> {
   const staff = await requireStaff(ADMIN_ONLY)

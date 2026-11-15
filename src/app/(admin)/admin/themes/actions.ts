@@ -11,7 +11,7 @@ import type { ActionResult } from '@/components/ui/action-form'
 // versions every shop may render (one tag, whatever the number of shops).
 const V = z.object({ key: z.enum(THEME_KEYS), version: z.string().regex(/^\d{1,3}\.\d{1,3}\.\d{1,3}$/) })
 // A refusal or a form that doesn't parse says so on the page, in a toast (UX audit 2026-11-11; § Feedback 1).
-const NOT_ADMIN = 'Only an admin can change theme versions.'
+const NOT_ADMIN = 'Only a master admin can change theme versions.'
 const BAD_FORM = 'That form was incomplete. Nothing was changed.'
 const refusal = (reason: string) => (reason === 'signed_out' ? 'Sign in again.' : reason === 'needs_passkey' ? 'Confirm it\'s you with your passkey first.' : NOT_ADMIN)
 

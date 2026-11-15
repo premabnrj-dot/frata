@@ -1,3 +1,4 @@
+import { STAFF_ROLE_WORDS } from '@/domains/tenancy/staff-words'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
@@ -41,7 +42,7 @@ export default async function StaffPage() {
           {rows.map((r) => (
             <DataTableRow key={r.userId}>
               <Td cell="a" className="font-num">{r.email}</Td>
-              <Td cell="d"><Badge tone={r.role === 'admin' ? 'info' : 'neutral'}>{r.role === 'admin' ? 'Admin' : 'Support'}</Badge></Td>
+              <Td cell="d"><Badge tone={r.role === 'admin' ? 'info' : 'neutral'}>{STAFF_ROLE_WORDS[r.role as 'admin' | 'support'] ?? r.role}</Badge></Td>
               <Td cell="c">
                 <div className="grid gap-2">
                   <Badge tone={r.passkeys.length >= 2 ? 'ok' : r.passkeys.length === 1 ? 'warn' : 'danger'}>{r.passkeys.length}</Badge>
@@ -74,7 +75,7 @@ export default async function StaffPage() {
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="role" className="text-sm font-medium">Role</label>
-            <select id="role" name="role" className="h-11 md:h-9 rounded-md border border-input bg-card px-2 text-sm"><option value="support">Support</option><option value="admin">Admin</option></select>
+            <select id="role" name="role" className="h-11 md:h-9 rounded-md border border-input bg-card px-2 text-sm"><option value="support">Support</option><option value="admin">{STAFF_ROLE_WORDS.admin}</option></select>
           </div>
           <Submit>Add staff</Submit>
           <p className="w-full text-xs text-muted-foreground">They must have signed in to Frrata once with that email. Support can open merchants&apos; consoles; Admin can also edit plans and staff.</p>

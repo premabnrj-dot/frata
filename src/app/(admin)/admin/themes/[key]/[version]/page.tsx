@@ -42,7 +42,7 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
   return (
     <>
       <PageHeader title={`${v.name} ${v.version}`} back={{ href: '/admin/themes', label: 'Themes' }} meta={<span className="inline-flex items-center gap-2"><StateBadge state={v.state} /> {v.live} shop{v.live === 1 ? '' : 's'} live on it</span>} />
-      {!admin && <p className="mb-3 text-sm text-muted-foreground">Only an admin can stage, release, recall or withdraw a theme version.</p>}
+      {!admin && <p className="mb-3 text-sm text-muted-foreground">Only a master admin can stage, release, recall or withdraw a theme version.</p>}
       <Section title="What’s in it">
         {/* feedback-ok: a state of the version (not in the deployed code), not the result of a button */}
         {!v.inCode && <p className="text-sm text-danger-text">This version is no longer in the deployed code; shops on it render the nearest earlier version.</p>}
