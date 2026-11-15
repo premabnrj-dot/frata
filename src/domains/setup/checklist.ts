@@ -45,7 +45,7 @@ export function setupSteps(f: SetupFacts, built: BuiltPages, formatInr: (paise: 
   const hasProduct = f.productCount > 0
   const canPay = f.codOn || f.paymentsConnected
   return [
-    { key: 'shop', title: 'Name and address', done: true, href: built.settings ? '/console/settings/address' : null, detail: `${f.shopName} · ${f.address}` },
+    { key: 'shop', title: 'Name and address', done: true, href: built.settings ? '/console/settings/web-address' : null, detail: `${f.shopName} · ${f.address}` },
     {
       key: 'product', title: 'Add your first product', done: hasProduct, href: built.products ? '/console/products' : null,
       detail: hasProduct ? `${f.productCount} active product${f.productCount === 1 ? '' : 's'}`

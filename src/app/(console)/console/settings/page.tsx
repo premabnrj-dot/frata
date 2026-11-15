@@ -1,11 +1,12 @@
 import Link from 'next/link'
-import { PageHeader } from '@/components/layout/page-header'
+import { BackLink, PageHeader } from '@/components/layout/page-header'
+import { groupFor, groupsFor, pageHref, pageTitle, type PageKey } from '@/domains/settings/groups'
 import { Banner } from '@/components/ui/banner'
 import { Badge } from '@/components/ui/badge'
-import { Icon, type IconName } from '@/components/icons/icon'
+import { Icon } from '@/components/icons/icon'
 import { Panel } from '@/components/ui/panel'
 import { missingFacts, POLICY_PAGES, renderPolicy } from '@/domains/policies/render'
-import { grievanceComplete, missingForLivePayments, SECTIONS, type SectionKey } from '@/domains/settings/sections'
+import { grievanceComplete, missingForLivePayments, type SectionKey } from '@/domains/settings/sections'
 import { paise } from '@/domains/money/paise'
 import { estimateOf } from '@/domains/settings/ship-costs'
 import { CAN_BUILD, CAN_MANAGE, CAN_SET_COSTS, requireMember } from '@/lib/auth/require-member'
@@ -22,25 +23,21 @@ import { errName } from '@/lib/log'
 
 export const metadata = { title: 'Settings' }
 
-// One plain icon a row (Neel § Screens · Settings; no tile behind it): the section is found by its picture and its name.
-const SECTION_ICON: Record<SectionKey, IconName> = { store: 'merchants', contact: 'messages', brand: 'brand', policies: 'policy', payments: 'cod', shipping: 'ship', taxes: 'tax', documents: 'slip' }
-
-/** One setting (Neel § Screens · Settings): a plain icon, its name, its current value at the right, a chevron. On a phone the
- * value goes under the name. Something to fix shows as a chip in the value's place. */
-function Row({ href, icon, title, summary, needs = false, mono = false }: { href: string; icon: IconName; title: string; summary: string; needs?: boolean; mono?: boolean }) {
+/** One page of a group (Neel § Screens · Settings, regrouped 2026-11-15): its name, its current value at the right, a chevron.
+ * On a phone the value goes under the name. Something to fix shows as a chip in the value's place. */
+function Row({ href, title, summary, needs = false, mono = false }: { href: string; title: string; summary: string; needs?: boolean; mono?: boolean }) {
   return (
-    <Link href={href} className="grid grid-cols-[20px_minmax(0,1fr)_16px] items-center gap-x-3.5 gap-y-0.5 border-t border-line-soft px-4 py-3.5 first:border-t-0 transition-colors duration-fast hover:bg-side md:grid-cols-[20px_minmax(0,1fr)_minmax(0,380px)_16px] md:px-5">
-      <Icon name={icon} className="row-span-2 size-5 text-muted-foreground md:row-span-1" />
+    <Link href={href} className="grid grid-cols-[minmax(0,1fr)_16px] items-center gap-x-3.5 gap-y-0.5 border-t border-line-soft px-4 py-3.5 first:border-t-0 transition-colors duration-fast hover:bg-side md:grid-cols-[minmax(0,1fr)_minmax(0,360px)_16px] md:px-5">
       <span className="font-medium">{title}</span>
       <Icon name="chevron" className="row-span-2 size-4 text-muted-foreground md:order-last md:row-span-1" />
-      <span className={`col-start-2 truncate text-label text-muted-foreground md:col-start-auto md:text-right`}>{needs ? <Badge tone="warn" className="max-w-full overflow-hidden text-ellipsis">{summary}</Badge> : <span className={mono ? 'font-mono' : undefined}>{summary}</span>}</span>
+      <span className="col-start-1 truncate text-label text-muted-foreground md:col-start-auto md:text-right">{needs ? <Badge tone="warn" className="max-w-full overflow-hidden text-ellipsis">{summary}</Badge> : <span className={mono ? 'font-mono' : undefined}>{summary}</span>}</span>
     </Link>
   )
 }
 
 const inr = (p: number) => formatInr(paise(p))
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ group?: string }> }) {
   const auth = await requireMember(CAN_BUILD)
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this store’s settings' : auth.message} />
   const shop = await shopWithSettings(auth.membership.tenantId).catch((err) => { console.error('[settings]', errName(err)); return null })
@@ -65,46 +62,87 @@ export default async function SettingsPage() {
   // Neel § Screens · Settings: each row its current value, the parts joined by " · ".
   const parts = (...p: (string | null | false)[]) => p.filter(Boolean).join(' · ')
   const summary: Record<SectionKey, string> = {
-    store: f.legalName || 'Legal name missing',
+    store: parts(f.shopName, f.logoUrl ? 'logo' : 'no logo yet', !!f.tagline && `“${f.tagline.slice(0, 40)}”`),
     contact: grievanceComplete(f) ? parts(f.supportEmail, f.grievanceName) : f.grievanceName ? 'Grievance officer’s email or phone missing' : 'Grievance officer missing',
-    brand: f.tagline ? `“${f.tagline.slice(0, 40)}”` : 'Your logo and one line',
     policies: policyGaps ? `${policyGaps} of 5 pages need details` : parts(f.returnKind === 'none' ? 'No returns' : `${f.returnDays}-day returns`, '5 pages'),
     payments: f.codOn ? parts('On', !!f.codMax && `up to ${inr(f.codMax)}`, !!f.codCharge && `fee ${inr(f.codCharge)}`) : 'Off',
     shipping: parts(f.shippingFlat ? inr(f.shippingFlat) : 'Free', !!f.shippingFlat && !!f.freeShippingAbove && `free above ${inr(f.freeShippingAbove)}`, `${f.dispatchDays} ${f.dispatchDays === 1 ? 'day' : 'days'}`),
-    taxes: f.gstin || 'Not registered',
-    documents: parts(f.slipSize === 'label' ? '4×6 slips' : 'A4 slips', f.docSignatory ? `signed ${f.docSignatory}` : 'no signatory yet'),
+    business: missing.some((m) => m.section === 'business') ? missing.filter((m) => m.section === 'business').map((m) => m.label).join(' and ') + ' missing' : parts(f.legalName, f.gstin || 'Not registered for GST'),
+    invoices: parts(`${f.invoiceSeries} series`, f.slipSize === 'label' ? '4×6 slips' : 'A4 slips', f.docSignatory ? `signed ${f.docSignatory}` : 'no signatory yet'),
   }
-  const owner = auth.membership.role === 'owner'
   // Shipping costs: whoever seesCosts (owners and admins; a partner before handover). Staff never read them.
   const seen = (CAN_SET_COSTS as readonly string[]).includes(auth.membership.role) ? await shipCostsSeenBy(auth.membership.tenantId, auth.membership.role).catch(() => undefined) : null
   const ship = seen?.visible ? seen.costs : seen === undefined ? undefined : null
   const est = ship === undefined ? null : estimateOf(ship)
   const shipSummary = ship === undefined ? 'Couldn’t load' : est ? `Delivery ${inr(est.delivery)} · return ${inr(est.ret)} · COD fee ${inr(est.codFee)}` : 'Not confirmed'
   const shipNeeds = ship !== undefined && !est
-  const needs = (k: SectionKey) => missing.some((m) => m.section === k) || (k === 'policies' && policyGaps > 0)
+  const sectionNeeds = (k: SectionKey) => missing.some((m) => m.section === k) || (k === 'policies' && policyGaps > 0)
+  const role = auth.membership.role
+  // Each page this person may open: its value, and whether it has something to fix (the group counts those).
+  const rowOf = (k: PageKey): { summary: string; needs: boolean; mono?: boolean } | null => {
+    switch (k) {
+      case 'web-address': return { summary: mainHost, needs: missing.some((m) => m.section === 'address'), mono: true }
+      case 'online-payments': return { summary: online, needs: onlineNeeds }
+      case 'shipping-costs': return seen === null || (seen !== undefined && !seen.visible) ? null : { summary: shipSummary, needs: shipNeeds }
+      case 'emails': return { summary: 'Order emails in your store’s name', needs: false }
+      case 'notifications': return { summary: 'What Frrata emails you', needs: false }
+      case 'people': return { summary: 'Who works on this store', needs: false }
+      case 'billing': return { summary: plan === 'not_allowed' || plan === undefined && !manages ? '' : plan ? `${plan.name} · ${formatInr(plan.monthlyPrice)} a month` : plan === null ? 'No plan yet' : 'Couldn’t load', needs: false }
+      default: return { summary: summary[k], needs: sectionNeeds(k), mono: k === 'business' && !!f.gstin && !f.legalName }
+    }
+  }
+  const groups = groupsFor(role).map(({ group, pages }) => {
+    const rows = pages.map((k) => ({ k, r: rowOf(k) })).filter((x): x is { k: PageKey; r: NonNullable<ReturnType<typeof rowOf>> } => x.r !== null)
+    return { group, rows, fix: rows.filter((x) => x.r.needs).length }
+  }).filter((g) => g.rows.length)
+  const asked = groupFor((await searchParams).group)
+  // No group asked for: a phone shows the groups; a wide screen opens the first with something to fix, else the first.
+  const open = groups.find((g) => g.group.key === asked?.key) ?? groups.find((g) => g.fix) ?? groups[0]
 
   return (
     <>
-      {/* Neel § Screens · Settings: one list, each row its current value; "Ready for live payments" a chip in the header. */}
-      <PageHeader title="Settings" actions={missing.length ? <Badge tone="warn">{missing.length} to fix for live payments</Badge> : <Badge tone="ok">Ready for live payments</Badge>} />
-      <div className="max-w-215 space-y-4">
+      {/* Settings in five groups (owner, 2026-11-15): pick a group, its pages appear. */}
+      <div className={asked ? 'max-md:hidden' : undefined}>
+        <PageHeader title="Settings" actions={missing.length ? <Badge tone="warn">{missing.length} to fix for live payments</Badge> : <Badge tone="ok">Ready for live payments</Badge>} />
+      </div>
+      <div className="mt-4 max-w-240 space-y-4">
         {missing.length ? (
-          <Banner tone="warn" title="Before live payments">
-            <span className="inline-flex flex-wrap gap-x-3">{missing.map((m) => <Link key={m.label} href={`/console/settings/${m.section}`} className="font-medium text-link hover:underline">{m.label}</Link>)}</span>
-          </Banner>
+          <div className={asked ? 'max-md:hidden' : undefined}>
+            <Banner tone="warn" title="Before live payments">
+              <span className="inline-flex flex-wrap gap-x-3">{missing.map((m) => <Link key={m.label} href={`/console/settings/${m.section === 'address' ? 'web-address' : m.section}`} className="font-medium text-link hover:underline">{m.label}</Link>)}</span>
+            </Banner>
+          </div>
         ) : null}
-        <Section as="nav" flush ariaLabel="Settings">
-          {SECTIONS.filter((s) => s.editors.includes(auth.membership.role)).map((s) => (
-            <Row key={s.key} href={`/console/settings/${s.key}`} icon={SECTION_ICON[s.key]} title={s.title} summary={summary[s.key]} needs={needs(s.key)} mono={s.key === 'taxes' && !!f.gstin} />
-          ))}
-          {owner && <Row href="/console/settings/online-payments" icon="payments" title="Online payments" summary={online} needs={onlineNeeds} />}
-          {manages && <Row href="/console/settings/billing" icon="plans" title="Plan and billing" summary={plan === 'not_allowed' ? '' : plan ? `${plan.name} · ${formatInr(plan.monthlyPrice)} a month` : plan === null ? 'No plan yet' : 'Couldn’t load'} />}
-          {manages && <Row href="/console/settings/people" icon="people" title="People" summary="Who works on this store" />}
-          <Row href="/console/settings/emails" icon="messages" title="Emails to shoppers" summary="Order emails in your store’s name" />
-          <Row href="/console/settings/notifications" icon="bell" title="Your notifications" summary="What Frrata emails you" />
-          {manages && <Row href="/console/settings/address" icon="address" title="Store address" summary={mainHost} mono />}
-          {seen !== null && (seen === undefined || seen.visible) && <Row href="/console/settings/shipping-costs" icon="shipped" title="Shipping costs" summary={shipSummary} needs={shipNeeds} />}
-        </Section>
+        <div className="grid items-start gap-6 md:grid-cols-[280px_minmax(0,1fr)]">
+          <nav aria-label="Settings groups" className={asked ? 'max-md:hidden' : undefined}>
+            <ul className="flex flex-col overflow-hidden rounded-lg border border-border md:gap-1 md:overflow-visible md:rounded-none md:border-0">
+              {groups.map(({ group, fix }) => {
+                const current = open?.group.key === group.key
+                return (
+                  <li key={group.key} className="border-t border-line-soft first:border-t-0 md:border-0">
+                    <Link href={`/console/settings?group=${group.key}`} aria-current={current ? 'true' : undefined}
+                      className={`flex min-h-14 items-center justify-between gap-3 px-4 py-2.5 transition-colors duration-fast md:rounded-mid md:border md:px-3.5 ${current ? 'md:border-transparent md:bg-select' : 'md:border-transparent hover:bg-side'}`}>
+                      <span className="flex min-w-0 flex-col gap-0.5"><span className="font-medium">{group.name}</span><span className="truncate text-label text-muted-foreground">{group.sub}</span></span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        {fix ? <Badge tone="warn" aria-label={`${fix} to fix`}>{fix}</Badge> : null}
+                        <Icon name="chevron" className="size-4 text-muted-foreground md:hidden" />
+                      </span>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </nav>
+          {open ? (
+            <section aria-labelledby="settings-group" className={`flex flex-col gap-2 ${asked ? '' : 'max-md:hidden'}`}>
+              <span className="md:hidden"><BackLink href="/console/settings" label="Settings" /></span>
+              <h2 id="settings-group" className="text-title font-semibold md:text-section">{open.group.name}</h2>
+              <Section as="nav" flush ariaLabel={open.group.name}>
+                {open.rows.map(({ k, r }) => <Row key={k} href={pageHref(k)} title={pageTitle(k)} summary={r.summary} needs={r.needs} mono={r.mono} />)}
+              </Section>
+            </section>
+          ) : null}
+        </div>
       </div>
     </>
   )

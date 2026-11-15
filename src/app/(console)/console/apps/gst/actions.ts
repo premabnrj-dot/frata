@@ -81,7 +81,7 @@ export async function gstConnect(name: unknown): Promise<Out<{ txn: string }>> {
     if (!(await withinLimit(LIMITS.gstOtpShop, tenantId, new Date(), true))) return { ok: false, error: 'Too many OTPs this hour. Try again later.' }
     const [shop] = await tx.select({ gstin: shopSettings.gstin }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
     const gstin = shop?.gstin ?? null
-    return gstin ? { ok: true, gstin } : { ok: false, error: 'Add your GSTIN in Settings › Taxes first.' }
+    return gstin ? { ok: true, gstin } : { ok: false, error: 'Add your GSTIN in Settings › Business and GST first.' }
   })
   const f = failed(b)
   if (f || !b.ok || !b.value.ok) return f!

@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/layout/page-header'
+import { SettingsHead } from '../_components/settings-head'
 import { Section } from '@/components/layout/section'
 import { Panel } from '@/components/ui/panel'
 import { requireMember } from '@/lib/auth/require-member'
@@ -13,7 +13,7 @@ export default async function NotificationsPage() {
   const auth = await requireMember(CONSOLE_ROLES)
   if (!auth.ok) return <Panel title={auth.message} />
   const prefs = await noticePrefsFor(auth.membership.tenantId, auth.userId).catch(() => null)
-  if (!prefs) return <><PageHeader title="Your notifications" back={{ href: '/console/settings', label: 'Settings' }} /><Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel></>
+  if (!prefs) return <><SettingsHead page="notifications" role={auth.membership.role} /><Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel></>
   const ownerAdmin = auth.membership.role === 'owner' || auth.membership.role === 'admin'
   const rows: PrefRow[] = [
     ...(ownerAdmin ? [{ type: 'required', label: 'Billing · security · Frrata acted on your store', email: 'always' as const }] : []),
@@ -22,7 +22,7 @@ export default async function NotificationsPage() {
   ]
   return (
     <>
-      <PageHeader title="Your notifications" back={{ href: '/console/settings', label: 'Settings' }} />
+      <SettingsHead page="notifications" role={auth.membership.role} />
       <Section flush ariaLabel="Email for each kind of notice">
         <Prefs rows={rows} readOnly={!!auth.membership.supportSessionId} />
       </Section>

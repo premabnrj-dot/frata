@@ -1,5 +1,5 @@
 import { Money, Numeric } from '@/components/data/numeric'
-import { PageHeader } from '@/components/layout/page-header'
+import { SettingsHead } from '../_components/settings-head'
 import { Section } from '@/components/layout/section'
 import { Panel } from '@/components/ui/panel'
 import { STATE_OPTIONS } from '@/domains/billing/details'
@@ -58,7 +58,7 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
   const gst = e ? e.bill.cgst + e.bill.sgst + e.bill.igst : 0
   return (
     <div className="max-w-3xl space-y-4">
-      <PageHeader title="Plan and billing" back={{ href: '/console/settings', label: 'Settings' }} />
+      <SettingsHead page="billing" role={auth.membership.role} />
 
       <Section>
         <h2 className="text-section font-semibold">{thisMonth} so far</h2>

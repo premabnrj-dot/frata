@@ -116,7 +116,7 @@ export function ThemeForm({ settings, style, styles, allowed, made, themeName, c
             <LinkPicker label="Goes to" value={ann.link} targets={targets} onChange={(link) => set({ announcement: { ...ann, link } })} />
           </>}
         </div>
-        <p className="text-sm text-muted-foreground">Logo: <Link href="/console/settings/brand" className="underline underline-offset-4">Settings › Brand</Link></p>
+        <p className="text-sm text-muted-foreground">Logo: <Link href="/console/settings/store" className="underline underline-offset-4">Settings › Store details</Link></p>
       </Group>
 
       <Group title="Footer" icon={ICONS.footer} onOpen={() => onPage?.('home')} value={FOOTER_NAMES[settings.footer]}>

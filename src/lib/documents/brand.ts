@@ -9,7 +9,7 @@ import type { Brand } from './pdf/blocks'
 /**
  * A shop's brand on paper (Documents D1–D2): its name, its look's colour where it reads on white (paperAccent), its
  * support contact for the footer, and (for slips; null for invoices, which carry their own frozen paper) today's logo,
- * signatory and note from Settings › Documents.
+ * signatory and note from Settings › Invoices and slips.
  * The colour and contact come from the cached shop loaders the storefront reads, so a document and the shop agree.
  */
 export async function brandFor(tenantId: string, paper: Paper | null): Promise<{ brand: Brand; contact: string } | null> {

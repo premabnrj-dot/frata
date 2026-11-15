@@ -15,7 +15,7 @@ import { checkDomainAction, connectDomainAction, domainRecordsAction, dropAddedN
 import { changeAddress } from '../actions'
 
 // =============================================================================
-// FILE: settings/address/domains.tsx — OWN DOMAINS (D2·10; mockup v2 https://claude.ai/artifact/XrDQj61tSBe4YKvUrH76xt,
+// FILE: settings/web-address/domains.tsx — OWN DOMAINS (D2·10; mockup v2 https://claude.ai/artifact/XrDQj61tSBe4YKvUrH76xt,
 // design rules 72–76). One Addresses list; Connect is a Dialog (a sheet on a phone) of three steps that checks by
 // itself every 15 s while open and visible, waiting for each answer, for 20 minutes at most; Make main works like
 // Publish (one-line confirm, the 1.3 s Going-live line, then a toast with Undo). Rows change in place; nothing animates

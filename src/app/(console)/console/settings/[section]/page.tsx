@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { Panel } from '@/components/ui/panel'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { formValues, sectionFor } from '@/domains/settings/sections'
@@ -14,6 +14,9 @@ import { manifestsFor } from '@/lib/themes/manifests'
 import { displayFamily } from '@/components/shop-preview/fonts'
 import { shopFacts, storedValues } from '../_components/facts'
 import { SettingsForm } from '../_components/settings-form'
+import { SettingsHead } from '../_components/settings-head'
+import { MOVED } from '@/domains/settings/groups'
+import { pinSuggestionFor } from '@/lib/queries/pin-returns'
 import { errName } from '@/lib/log'
 import { HELD_BY_ZONES } from '@/domains/delivery/lists'
 import { shopModules } from '@/lib/queries/modules'
@@ -26,22 +29,26 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
   const auth = await requireMember(CAN_BUILD)
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this store’s settings' : auth.message} />
   const { section: key } = await params
+  // Settings regrouped (owner, 2026-11-15): an old address goes to the page that holds its fields now.
+  if (MOVED[key]) redirect(`/console/settings/${MOVED[key]}`)
   const section = sectionFor(key)
   if (!section) notFound()
   if (!section.editors.includes(auth.membership.role)) return <Panel title="Only the owner or a manager can change this" />
   const tenantId = auth.membership.tenantId
   const zoned = section.key === 'shipping' || section.key === 'payments'
-  const [shop, overrides, live, src, mods] = await Promise.all([
+  const [shop, overrides, live, src, mods, suggest] = await Promise.all([
     shopWithSettings(tenantId),
     section.key === 'policies' ? policyOverrides(tenantId) : Promise.resolve({}),
     section.preview === 'brand' || section.preview === 'footer' ? previewLook(tenantId) : Promise.resolve(null),
     manifestsFor(tenantId),
     zoned ? shopModules(tenantId, new Date().toISOString()) : Promise.resolve(null),
-  ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null, codeSource, null] as const })
+    // Best effort: without it the page shows no suggestion, never an error.
+    section.key === 'payments' ? pinSuggestionFor(tenantId, new Date()).catch((err) => { console.error('[settings pin]', errName(err)); return null }) : Promise.resolve(null),
+  ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null, codeSource, null, null] as const })
   if (!shop) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   // The brand and footer previews wear the shop's published look (Look owns colours and type now).
   // Taxes: a shop that charges GST can't sell a live product with no rate (quote); say which, never block (best effort).
-  const unrated = section.key === 'taxes' && chargesGst({ gstin: shop.settings.gstin, scheme: shop.settings.gstScheme as Scheme })
+  const unrated = section.key === 'business' && chargesGst({ gstin: shop.settings.gstin, scheme: shop.settings.gstScheme as Scheme })
     ? await liveWithoutRate(tenantId, new Date()).catch((err) => { console.error('[settings taxes] unrated', errName(err)); return null })
     : null
   const theme = resolveStored(live, shop.settings, src)
@@ -49,6 +56,8 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
   return (
     <SettingsForm
       sectionKey={section.key}
+      head={<SettingsHead page={section.key} role={auth.membership.role} />}
+      suggest={suggest}
       initial={formValues(section, storedValues(facts))}
       version={shop.settings.version}
       facts={facts}

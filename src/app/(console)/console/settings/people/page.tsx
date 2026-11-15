@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { PageHeader } from '@/components/layout/page-header'
+import { SettingsHead } from '../_components/settings-head'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
@@ -31,7 +31,7 @@ export default async function PeoplePage() {
   return (
     <div className="max-w-3xl space-y-4">
       <Link href="/console/settings" className="text-sm text-muted-foreground hover:text-foreground">← Settings</Link>
-      <PageHeader title="People" />
+      <SettingsHead page="people" role={auth.membership.role} />
       <Section flush ariaLabel="People"><ul data-list className="divide-y divide-border">
         {people.map((p) => {
           // A partner's people are listed by name with their partner and their place in it (T1a, security review: the

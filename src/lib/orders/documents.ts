@@ -24,7 +24,7 @@ import type { CreditKind } from '@/domains/orders/credits'
 
 export { MAX_DOCUMENTS }
 
-/** Settings › Documents (D2): the logo for paper, the signatory and the invoice note — today's (slips), or as an invoice froze them. */
+/** Settings › Invoices and slips (D2): the logo for paper, the signatory and the invoice note — today's (slips), or as an invoice froze them. */
 export type Paper = { logo: string | null; signatory: string; note: string }
 
 export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], kind: 'slip' | 'invoice' | 'credit', now = new Date(),

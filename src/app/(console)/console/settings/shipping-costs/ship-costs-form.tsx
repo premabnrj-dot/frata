@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation'
 import { useRef, useState, useTransition } from 'react'
-import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Button } from '@/components/ui/button'
 import { FieldError, errorId, useErrorSummary } from '@/components/ui/field-error'
@@ -36,7 +35,6 @@ export function ShipCostsForm({ current, confirmedOn: confirmed0 }: { current: R
 
   return (
     <div className="max-w-xl space-y-4">
-      <PageHeader title="Shipping costs" back={{ href: '/console/settings', label: 'Settings' }} />
       <p className="text-sm text-muted-foreground">For orders you ship yourself, by a local courier or your own Shiprocket panel. Profit on those orders uses these. Orders shipped with Shiprocket through Frrata use what was actually charged.</p>
       <Section>
         <p className={`text-sm ${confirmedOn ? 'text-muted-foreground' : 'text-warn-text'}`} aria-live="polite">

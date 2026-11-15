@@ -17,6 +17,7 @@ import { products, variants } from '@/lib/db/schema-catalogue'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import { riskFactsFor } from './order-risk'
+import { pinIn } from './pin-returns'
 import type { RecordLine } from '@/domains/orders/edit'
 
 /** One items edit as the order page reads it (OE·2: a change that asked the shopper to pay, and how it ended). */
@@ -142,13 +143,13 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
 //    not, no cost column is selected at all and null comes back. Totals only (orderKeep), never the breakdown.
 //  - couriersIn: the couriers this store has shipped with in the last 180 days, each with its orders that have an
 //    outcome and how many came back (the outcome states Analytics counts, stateSql). Free text, grouped as typed.
-//  - pinIn: the same counts for one PIN code. Counts only: never another order's name, address or ₹.
+//  - pinIn (pin-returns.ts, shared with Settings): the same counts for one PIN code. Counts only: never another order's name, address or ₹.
 // =============================================================================
 
 const WINDOW_DAYS = 180
 
 export type CourierCount = { name: string; outcomes: number; back: number }
-export type PinCount = { outcomes: number; back: number }
+export type { PinCount } from './pin-returns'
 
 export async function keepIn(tx: Tx, tenantId: string, orderId: string, role: MemberRole, now: Date): Promise<OrderKeep | null> {
   const [costs, history, shipCosts] = await Promise.all([costsVisibleIn(tx, tenantId, role), planHistoryIn(tx, tenantId), shipCostsIn(tx, tenantId)])
@@ -181,10 +182,3 @@ export async function couriersIn(tx: Tx, tenantId: string, now: Date): Promise<C
   return [...rows]
 }
 
-export async function pinIn(tx: Tx, tenantId: string, pincode: string, now: Date): Promise<PinCount | null> {
-  if (!/^\d{6}$/.test(pincode)) return null
-  const [r] = await tx.execute<PinCount>(sql`
-    select count(*)::int outcomes, (count(*) filter (where ${backIn(now)}))::int back from ${orders} o
-     where o.tenant_id = ${tenantId} and o.pincode = ${pincode} and o.placed_at >= ${since(now)} and o.cancelled_at is null and ${outcomeIn(now)}`)
-  return r ?? null
-}

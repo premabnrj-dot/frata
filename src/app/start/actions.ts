@@ -72,7 +72,7 @@ export async function createMyShop(input: unknown): Promise<{ ok: true; trial: b
   // Misses are not cached, but a lookup made in the same minute is: clear it for the new address.
   if (r.ok) {
     // A new product's starting HSN, from what the shop sells (plan 2026-11-09-gst-core-and-categories § 2): a prefill,
-    // never a fallback. Best effort: the shop exists either way, and Settings › Taxes shows and changes it.
+    // never a fallback. Best effort: the shop exists either way, and Settings › Business and GST shows and changes it.
     await setStartingHsn(r.tenantId, startingHsn(sells)).catch((e) => console.error('[createMyShop] starting hsn', errName(e)))
     refreshHosts(hostFor(slug)); return { ok: true, trial: r.trial }
   }

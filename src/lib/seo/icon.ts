@@ -5,7 +5,7 @@ import type { StoreShop } from '@/lib/queries/storefront'
 
 // =============================================================================
 // FILE: src/lib/seo/icon.ts — A SHOP'S OWN TAB AND HOME-SCREEN ICON (search and sharing S1·6).
-// The logo (Settings › Brand) centred on a square of the theme's tint, or the shop's initial when there is none.
+// The logo (Settings › Store details) centred on a square of the theme's tint, or the shop's initial when there is none.
 // Never Frrata's mark (brand spec: a shop's tab is the shop's). Its hash covers what is drawn, so a new logo is a new
 // address and browsers fetch it.
 // =============================================================================

@@ -4,7 +4,7 @@ import { HELD_BY_ZONES } from '@/domains/delivery/lists'
 import { moduleAccessIn } from '@/lib/queries/modules'
 import { and, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { openShopErrors, parseSection, sectionFor, type Values } from '@/domains/settings/sections'
+import { openShopErrors, parseSection, sectionFor, editorsOf, type Values } from '@/domains/settings/sections'
 import { POLICY_PAGES } from '@/domains/policies/render'
 import { hostFor, refreshHosts, refreshShop } from '@/lib/queries/storefront'
 import { asMember } from '@/lib/auth/as-member'
@@ -50,12 +50,16 @@ export type SaveResult =
   | { ok: true; version: number; unrated?: Unrated }
   | { ok: false; error: string; errors?: Record<string, string>; conflict?: boolean }
 
-export async function saveSection(sectionKey: string, values: Values, version: number): Promise<SaveResult> {
+/** `took`: the PIN code Settings › Pay on delivery suggested and the merchant added (recorded so the suggestion is measured). */
+export async function saveSection(sectionKey: string, values: Values, version: number, took?: string): Promise<SaveResult> {
   const section = sectionFor(sectionKey)
   if (!section || !Number.isInteger(version)) return { ok: false, error: 'This page is out of date. Reload it.' }
   const parsed = parseSection(section, values)
   if (!parsed.ok) return { ok: false, error: 'Some fields need a look before saving.', errors: parsed.errors }
   const { name, ...columns } = parsed.patch
+  // Only a PIN code this save really adds to the list counts as taken: the suggestion's measure, never trusted beyond that.
+  const blocked = (parsed.patch as Record<string, unknown>).codBlockedPincodes
+  const suggested = section.key === 'payments' && typeof took === 'string' && /^[1-9]\d{5}$/.test(took) && Array.isArray(blocked) && blocked.includes(took) ? took : null
   try {
     const r = await asMember(section.editors, { action: `settings.${section.key}`, detail: { fields: Object.keys(parsed.patch) } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
@@ -78,10 +82,10 @@ export async function saveSection(sectionKey: string, values: Values, version: n
       if (!row) throw new VersionConflict()
       if (typeof name === 'string') await tx.update(tenants).set({ name }).where(eq(tenants.id, tenantId))
       if (!auth.membership.supportSessionId) {
-        await tx.insert(auditEvents).values({ tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: `settings.${section.key}`, detail: { fields: Object.keys(parsed.patch) } })
+        await tx.insert(auditEvents).values({ tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: `settings.${section.key}`, detail: { fields: Object.keys(parsed.patch), ...(suggested ? { suggestedPin: suggested } : {}) } })
       }
       // A GSTIN saved: every live product without a rate is now 'gone' at checkout (quote). Said in the reply, not refused.
-      const registered = section.key === 'taxes' && chargesGst({ gstin: (columns.gstin as string | null) ?? null, scheme: columns.gstScheme as Scheme })
+      const registered = section.key === 'business' && chargesGst({ gstin: (columns.gstin as string | null) ?? null, scheme: columns.gstScheme as Scheme })
       return { version: row.version, unrated: registered ? await liveWithoutRateIn(tx, tenantId, new Date()) : undefined }
     })
     if (!r.ok) return { ok: false, error: r.error }
@@ -192,12 +196,12 @@ export async function saveShipCosts(input: ShipCostsInput): Promise<{ ok: true; 
 }
 
 /**
- * The logo for paper (Settings › Documents, D2): a PNG the browser uploaded to this shop's documents folder, or null
+ * The logo for paper (Settings › Invoices and slips, D2): a PNG the browser uploaded to this shop's documents folder, or null
  * to go back to the shop's initial. Accepted only as this shop's exact path, and only once its bytes are a PNG within
  * the size limits (docImage reads it the way a document will). Never by a Frrata support visit.
  */
 export async function setDocLogo(url: string | null): Promise<{ ok: true } | { ok: false; error: string }> {
-  const editors = sectionFor('documents')!.editors
+  const editors = editorsOf('invoices')
   const me = await requireMember(editors)
   if (!me.ok) return { ok: false, error: me.message }
   if (me.membership.supportSessionId) return { ok: false, error: 'A support visit cannot change the store’s logo.' }
@@ -225,7 +229,7 @@ export async function setDocLogo(url: string | null): Promise<{ ok: true } | { o
  * Never by a Frrata support visit.
  */
 export async function setShopLogo(base: string | null): Promise<{ ok: true } | { ok: false; error: string }> {
-  const editors = sectionFor('brand')!.editors
+  const editors = editorsOf('store')
   const me = await requireMember(editors)
   if (!me.ok) return { ok: false, error: me.message }
   if (me.membership.supportSessionId) return { ok: false, error: 'A support visit cannot change the store’s logo.' }

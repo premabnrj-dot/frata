@@ -1,3 +1,4 @@
+import { SettingsHead } from '../_components/settings-head'
 import { Panel } from '@/components/ui/panel'
 import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { isOwnDomainsConfigured } from '@/lib/env'
@@ -10,7 +11,7 @@ import { canMakeMain, domainState } from '@/domains/addresses/domain-state'
 import { AddressForm } from './address-form'
 import { Domains } from './domains'
 
-export const metadata = { title: 'Store address' }
+export const metadata = { title: 'Web address' }
 
 export default async function AddressPage() {
   const auth = await requireMember(CAN_MANAGE)
@@ -26,6 +27,8 @@ export default async function AddressPage() {
     canMain: canMakeMain(r, livePayments) }))
   return (
     <>
+      <SettingsHead page="web-address" role={auth.membership.role} />
+      <div className="mt-4" />
       {/* D1·9: a shop on live payments that has opened adds a name, then makes it main once Razorpay approves it. */}
       <AddressForm current={f.slug} shopDomain={SHOP_DOMAIN} left={renamesLeft(f.firstOpenedAt, f.renamesUsed)} old={oldNames(f.names)} frozen={f.frozen} support={support}
         twoStep={livePayments && !!f.firstOpenedAt} adding={liveNames.find((n) => n.added)?.name ?? null} />
