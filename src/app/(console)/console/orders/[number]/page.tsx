@@ -23,6 +23,8 @@ import { paymentKind } from '@/domains/orders/order-state'
 import { eventLabel, PAYMENT, pdfHref, printHref, STATE } from '../_components/labels'
 import { OrderActions } from '../_components/order-actions'
 import { ShipPanel } from '../_components/ship-panel'
+import { KeepCard, Timeline, TopLineCard, type TimelineRow } from '../_components/order-parts'
+import { orderTopLine } from '@/domains/orders/top-line'
 import { Icon } from '@/components/icons/icon'
 import { saysOnline } from '@/domains/checkout/offer-text'
 import { activityWords, cannotEdit, recordChanges, undoUntil, valuesChanged } from '@/domains/orders/edit'
@@ -54,6 +56,9 @@ export async function generateMetadata({ params }: { params: Promise<{ number: s
 const wasOf = (was: { values: string[]; qty: number }, now: { optionValues: string[]; qty: number }) =>
   was.values.join('\u0000') !== now.optionValues.join('\u0000') ? valuesChanged(was.values, now.optionValues).from : `${was.qty}`
 
+/** "2nd", "3rd", "11th": a shopper's order count (Neel N2b, the shopper card). */
+const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
+
 const wa = (phone: string, text: string) => `https://wa.me/91${phone}?text=${encodeURIComponent(text)}`
 
 export default async function OrderPage({ params }: { params: Promise<{ number: string }> }) {
@@ -63,7 +68,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const raw = (await params).number
   const n = /^\d{1,9}$/.test(raw) ? Number(raw) : NaN
   const now = new Date()
-  const [d, prefix] = await Promise.all([orderDetail(tenantId, n, now).catch((err) => { console.error('[order]', err instanceof Error ? err.name : err); return undefined }), orderPrefixFor(tenantId)])
+  const [d, prefix] = await Promise.all([orderDetail(tenantId, n, now, role).catch((err) => { console.error('[order]', err instanceof Error ? err.name : err); return undefined }), orderPrefixFor(tenantId)])
   if (d === undefined) return <Panel title="We couldn’t load this order">Nothing was changed. Try again in a minute.</Panel>
   // Another shop's order is the same "not found" as one that does not exist.
   if (d === null) return <Panel title="No such order in your store">Check the number, or find it from <a href="/console/orders?tab=all" className="underline">all orders</a>.</Panel>
@@ -102,6 +107,13 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const undoEvent = itemsEditable && lastEdit && !events.some((e) => e.undoes === lastEdit.id) && now <= undoUntil(lastEdit.at) ? lastEdit.id : null
   const why = (r?.reasons.join('; ') || r?.next || '').replace(/\.$/, '')
   const riskWarning = r && (r.level === 'high' || r.level === 'unknown') ? `${r.level === 'high' ? 'High risk' : 'Risk unavailable'}: ${why}. Confirm only once you have spoken to the customer.` : null
+  // The top line (Neel N2b): what to do now, in money, from one rule (top-line.ts); the foot line it replaces is gone.
+  const top = orderTopLine({ state, method, paid: !!o.paidAt, paidAfterPacking: paidAfterPacking(o), paidAfterSwitch: paidAfterSwitch(o), owed, refund, canCancel: can.cancel, inr,
+    confirmedAt: o.confirmedAt ? momentIN(o.confirmedAt, now) : null, paidAt: o.paidAt ? momentIN(o.paidAt, now) : null,
+    deliveredOn: o.deliveredAt ? dayMonthIN(o.deliveredAt) : null, riskFirst: r?.reasons[0] ?? null,
+    cancelWhy: o.cancelReason ? `${CANCEL_LABEL[o.cancelReason as CancelReason] ?? o.cancelReason}${o.cancelNote ? `. ${o.cancelNote}` : ''}` : null })
+  // The COD risk as a chip for every Pay on delivery order not yet on its way (the reasons stay in their card when high).
+  const codRisk = facts && method === 'cod' && !o.paidAt && (state === 'unconfirmed' || state === 'held' || state === 'confirmed' || state === 'packed') ? risk(facts).level : null
   const history = [
     ...events.map((e) => {
       const edit = e.kind === 'items_edited' || e.kind === 'edit_requested' ? d.edits.get(e.id) : undefined
@@ -119,6 +131,17 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
     ...[...d.edits.values()].flatMap((e) => (e.asked !== null && e.paidAt ? [{ at: e.paidAt, text: `Paid ${inr(e.asked)} for the change · items changed`, who: 'Shopper' }]
       : e.droppedReason === 'cannot_apply' && e.droppedAt ? [{ at: e.droppedAt, text: 'Paid for a change that could no longer apply · refunded', who: 'Razorpay' }] : [])),
   ].sort((a, b) => b.at.getTime() - a.at.getTime())
+  // One timeline (owner, 2026-11-15): what people did, each note's text on its own row (its "Added a note" event gives who
+  // wrote it, a support visit's included), and each email to the shopper in words.
+  const noteEvents = events.filter((e) => e.kind === 'note_added')
+  const timeline: TimelineRow[] = [
+    ...history.filter((h) => h.text !== 'Added a note'),
+    ...notes.map((x) => {
+      const ev = noteEvents.find((e) => Math.abs(e.at.getTime() - x.at.getTime()) < 5_000)
+      return { at: x.at, text: 'Note', body: x.body, who: ev?.actorKind === 'support' ? `${x.authorEmail} · Frrata support` : x.authorEmail ?? 'Your team' }
+    }),
+    ...(o.erasedAt ? [] : emails.map((e) => ({ at: e.at, text: `Email · ${(EMAIL_NAMES as Record<string, string>)[e.kind] ?? (e.kind === 'test' ? 'Test' : e.kind)} · ${e.words}`, who: 'Frrata' }))),
+  ].sort((a, b) => b.at.getTime() - a.at.getTime()).map((x) => ({ ...x, when: dateTimeIN(x.at) }))
 
   return (
     <>
@@ -134,13 +157,15 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
           may={{ hold: can.hold, unhold: can.unhold, cancel: can.cancel, pack: can.pack, confirm: can.confirm }}
           refund={refund} refundLabel={formatInr(paise(refund))} refunded={refunded ? formatInr(paise(refunded)) : null} stockTaken={lines.some((l) => l.stockTakenAt)} />} />
 
+      <TopLineCard t={top} risk={codRisk} />
+
       <div className="grid gap-6 pb-16 md:grid-cols-[minmax(0,1fr)_20rem] md:pb-0">
         <div className="min-w-0 space-y-6">
-          {r && r.level !== 'low' ? (
-            <Section id="risk" title={r.level === 'high' ? 'High risk' : r.level === 'medium' ? 'Medium risk' : 'Risk unavailable'}>
+          {r && (r.level === 'high' || r.level === 'unknown') ? (
+            <Section id="risk" title={r.level === 'high' ? 'High risk' : 'Risk unavailable'}>
               {/* The level as a mark and a word, the reasons as rows (visual changes, owner-approved 2026-11-08). */}
               <div className="flex items-start gap-3">
-                <span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-md ${r.level === 'high' ? 'bg-danger text-danger-text' : r.level === 'medium' ? 'bg-warn text-warn-text' : 'bg-muted text-muted-foreground'}`}><Icon name="risk" className="size-5" /></span>
+                <span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-md ${r.level === 'high' ? 'bg-danger text-danger-text' : 'bg-muted text-muted-foreground'}`}><Icon name="risk" className="size-5" /></span>
                 <div className="min-w-0 flex-1">
                   {r.reasons.length ? <ul className="divide-y divide-border text-sm">{r.reasons.map((x) => <li key={x} className="py-1.5 first:pt-0">{x}</li>)}</ul> : null}
                   {r.next ? <p className="mt-2 text-sm font-medium">{r.next}</p> : null}
@@ -157,7 +182,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
 
           {shipStage ? <ShipPanel orderId={o.id} number={label} stage={shipStage} stockTaken={lines.some((l) => l.stockTakenAt)}
             may={{ ship: may('ship_self', state, role), outcome: may('deliver', state, role) }}
-            shipment={shipment ? { courierName: shipment.courierName, trackingNumber: shipment.trackingNumber, byCourier: shipment.provider === 'shiprocket' } : null} /> : null}
+            shipment={shipment ? { courierName: shipment.courierName, trackingNumber: shipment.trackingNumber, byCourier: shipment.provider === 'shiprocket' } : null} couriers={d.couriers} /> : null}
 
           <ItemsArea orderId={o.id} number={label} undoEvent={undoEvent}>
           <Section id="items" title="Items" action={itemsEditable || undoEvent ? <EditItemsButton canEdit={itemsEditable} /> : undefined}>
@@ -188,21 +213,9 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
             {waiting ? <WaitingChange orderId={o.id} asked={waiting.asked} total={waiting.totalAfter} link={payLink} canAct={can.edit && !auth.membership.supportSessionId} lateFee={inrFee(lateFee)}
               changes={recordChanges(waiting.before, waiting.after).map((c) => `${c.title}: ${changeWords(c)}`)} /> : null}
             <RefundRows rows={refundRows} canAct={can.edit && !auth.membership.supportSessionId} />
-            {/* The line the courier and the packer need, in words: never only a colour. */}
-            <p className="border-t border-border pt-3 text-sm font-medium">
-              {paidAfterPacking(o) && state !== 'cancelled' ? <span className="text-danger-text">Paid online after it was packed for Pay on delivery. Tell the courier not to collect cash. If cash was collected too, refund the online payment in Razorpay. The invoice stays as issued. Ask your CA if it needs a credit note.</span>
-                : state === 'cancelled' ? (refund ? <>Paid online, then cancelled. Refund <Money paise={paise(refund)} /> in Razorpay.</> : 'Cancelled. Nothing to collect.')
-                : state === 'refund_due' ? <>Paid after it sold out. Cancel it, then refund <Money paise={paise(refund)} /> in Razorpay.{can.cancel ? null : ' Ask the owner or a manager to cancel it.'}</>
-                : state === 'delivered' ? (method === 'cod' && !o.paidAt ? <>Delivered: <Money paise={paise(Number(o.total))} /> collected by the courier.</> : 'Delivered.')
-                : (state === 'rto' || state === 'rto_received') && o.paidAt ? 'Came back after it was paid online. Refund the shopper in Razorpay.'
-                : state === 'rto' || state === 'rto_received' ? 'Came back. Nothing was collected.'
-                : state === 'lost' && o.paidAt ? 'Lost by the courier after it was paid online. Refund the shopper in Razorpay. Claim it with the courier.'
-                : state === 'lost' ? 'Lost by the courier. Nothing was collected. Claim it with the courier.'
-                : paidAfterSwitch(o) ? 'Paid online. Don’t collect cash.'
-                : owed ? <>Collect <Money paise={paise(owed)} /> on delivery.</> : o.paidAt ? 'Paid online. Collect nothing.' : 'Not paid yet.'}
-            </p>
           </Section>
           </ItemsArea>
+          {d.keep ? <KeepCard k={d.keep} /> : null}
         </div>
 
         <div className="min-w-0 space-y-6">
@@ -218,26 +231,16 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
                 {o.cancelReason ? <p className="pt-2 text-muted-foreground">Cancelled: {CANCEL_LABEL[o.cancelReason as CancelReason] ?? o.cancelReason}{o.cancelNote ? ` — ${o.cancelNote}` : ''}</p> : null}
               </div>
             )}
+            {facts && !o.erasedAt ? <p className="text-sm text-muted-foreground">{facts.earlierOrders === 0 ? 'First order from this phone' : `${ordinal(facts.earlierOrders + 1)} order${facts.cameBack ? ` · ${facts.cameBack === 1 ? 'one' : facts.cameBack} came back before` : ''}`}</p> : null}
+            {d.pin && d.pin.outcomes ? <p className={`text-sm ${d.pin.outcomes >= 10 && d.pin.back / d.pin.outcomes >= 0.2 ? 'text-danger-text' : 'text-muted-foreground'}`}>PIN {o.pincode}: {d.pin.back} of {d.pin.outcomes} came back</p> : null}
             {source ? <p className="text-sm text-muted-foreground">Came from: <span className="text-foreground">{source.label}{source.campaign ? ` · ${source.campaign}` : ''}</span></p> : null}
           </Section>
 
-          {o.erasedAt ? null : (
-            <Section id="emails" title="Emails">
-              <EmailsCard orderId={o.id} email={o.email} canAct={can.edit && !auth.membership.supportSessionId}
-                emails={emails.map((e) => ({ id: e.id, kind: e.kind, name: (EMAIL_NAMES as Record<string, string>)[e.kind] ?? (e.kind === 'test' ? 'Test' : e.kind), at: dateTimeIN(e.at), state: e.state, words: e.words }))} />
-            </Section>
-          )}
-
-          <Section id="notes" title="Notes">
-            {notes.length ? <ul className="space-y-2 text-sm">{notes.map((x) => <li key={x.id}><p className="whitespace-pre-wrap">{x.body}</p><p className="text-xs text-muted-foreground">{x.authorEmail} · {dateTimeIN(x.at)}</p></li>)}</ul> : null}
-            {can.note ? <AddNote orderId={o.id} /> : notes.length ? null : <p className="text-sm text-muted-foreground">No notes.</p>}
-          </Section>
-
-          <Section id="activity" title="Activity">
-            <ol className="space-y-2 text-sm">
-              {history.map((h, i) => <li key={i}><p>{h.text}</p><p className="text-xs text-muted-foreground">{h.who} · {dateTimeIN(h.at)}</p></li>)}
-            </ol>
-          </Section>
+          <Timeline rows={timeline} head={<>
+            {can.note ? <AddNote orderId={o.id} /> : null}
+            {o.erasedAt ? null : <EmailsCard orderId={o.id} email={o.email} canAct={can.edit && !auth.membership.supportSessionId} list={false}
+              emails={emails.map((e) => ({ id: e.id, kind: e.kind, name: (EMAIL_NAMES as Record<string, string>)[e.kind] ?? (e.kind === 'test' ? 'Test' : e.kind), at: dateTimeIN(e.at), state: e.state, words: e.words }))} />}
+          </>} />
         </div>
       </div>
     </>

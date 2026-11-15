@@ -25,9 +25,14 @@ type ShipPanelProps = {
   may: { ship: boolean; outcome: boolean }
   shipment: { courierName: string | null; trackingNumber: string | null; byCourier: boolean } | null
   stockTaken: boolean
+  /** The couriers this store shipped with (180 days), each with its orders that have an outcome and how many came back. */
+  couriers?: { name: string; outcomes: number; back: number }[]
 }
 
-function Panel({ orderId, number, stage, may, shipment, stockTaken }: ShipPanelProps) {
+/** "4 of 96 of your orders came back" (counts, never a share that reads as this PIN's: unit-economics review N2b). */
+const backWords = (c: { outcomes: number; back: number }) => (c.outcomes ? `${c.back} of ${c.outcomes} of your orders came back` : 'No outcomes yet')
+
+function Panel({ orderId, number, stage, may, shipment, stockTaken, couriers = [] }: ShipPanelProps) {
   const router = useRouter()
   const toast = useToast()
   const [busy, setBusy] = useState(false)
@@ -52,15 +57,30 @@ function Panel({ orderId, number, stage, may, shipment, stockTaken }: ShipPanelP
   if (stage === 'to_ship') {
     if (!may.ship) return null
     return (
-      <Section id="ship" title="Shipped another way">
-        <p className="text-sm text-muted-foreground">A local courier, or your own Shiprocket panel. Both details are optional.</p>
+      // As drawn (Neel N2b): the couriers this store uses as cards, each with its own came-back count; picking one fills
+      // the courier. Booking through a courier waits for a Shiprocket connection (Deviations).
+      <Section id="ship" title="Shipping">
+        {couriers.length ? (
+          <fieldset className="grid gap-2 sm:grid-cols-3">
+            <legend className="sr-only">Courier</legend>
+            {[...couriers.map((c) => ({ key: c.name, title: c.name, sub: backWords(c) })), { key: '', title: 'Ship another way', sub: 'Your own courier, an AWB by hand' }].map((c) => {
+              const on = courier.trim().toLowerCase() === c.key.toLowerCase() && (c.key !== '' || !couriers.some((x) => x.name.toLowerCase() === courier.trim().toLowerCase()))
+              return (
+                <label key={c.key || 'other'} className={`flex cursor-pointer flex-col gap-0.5 rounded-mid border p-3 text-sm ${on ? 'border-ring bg-select' : 'border-border hover:bg-accent'}`}>
+                  <span className="flex items-center gap-2"><input type="radio" name="ship-courier-pick" checked={on} onChange={() => setCourier(c.key)} /><b className="font-medium">{c.title}</b></span>
+                  <span className="text-small text-muted-foreground">{c.sub}</span>
+                </label>
+              )
+            })}
+          </fieldset>
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1"><label htmlFor="ship-courier" className="block text-sm font-medium">Courier</label>
             <input id="ship-courier" value={courier} maxLength={60} onChange={(e) => setCourier(e.target.value)} placeholder="Professional Couriers" className={field} /></div>
           <div className="space-y-1"><label htmlFor="ship-tracking" className="block text-sm font-medium">Tracking number</label>
             <input id="ship-tracking" value={tracking} maxLength={40} onChange={(e) => setTracking(e.target.value)} className={`${field} font-mono`} /></div>
         </div>
-        <Button onClick={() => void go('shipped', () => shipOrder(orderId, { courierName: courier || undefined, trackingNumber: tracking || undefined }))} aria-disabled={busy}>Mark shipped</Button>
+        <div><Button onClick={() => void go('shipped', () => shipOrder(orderId, { courierName: courier || undefined, trackingNumber: tracking || undefined }))} aria-disabled={busy}>Mark shipped</Button></div>
       </Section>
     )
   }
