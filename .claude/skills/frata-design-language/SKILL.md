@@ -344,7 +344,8 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 - Dates only through `src/lib/format-date.ts` (`dayIN`, `dateTimeIN`,
   `sinceIN`, `momentIN`) — always IST (`check:dates`). A moment in a live list or page: `momentIN(at, now)` → "Today,
   10:06 pm", "Yesterday, 1:36 am", "13 Nov, 10:06 pm" (the year only when not this year; IST calendar days), in
-  `<time dateTime>`. Print, PDF, CSV and emails keep `dateTimeIN`; a wait or an edit time keeps `sinceIN`.
+  `<time dateTime>`. Print, PDF, CSV and emails keep `dateTimeIN`; a wait or an edit time keeps `sinceIN`. Months are three letters
+  everywhere ("13 Sep", never en-IN's "Sept"; owner, 2026-11-15): every format-date helper does it, never a page.
 - Phones `formatPhone` → "+91 98450 12345".
 
 ## Console patterns

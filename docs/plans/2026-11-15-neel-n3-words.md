@@ -1,5 +1,5 @@
 # Neel N3 — Words: the `check:words` gate and the console copy sweep
-Status: active (reviews folded 2026-11-15: architecture-reviewer, words-reviewer) · Date: 2026-11-15 · Branch: `claude/neel-n3-words`
+Status: built, awaiting the owner's ship call (step 6 done 2026-11-15 after N1b reached main; reviews folded: architecture, words, impact, security, design-system, mockup-parity) · Date: 2026-11-15 · Branch: `claude/neel-n3-words`
 Spec: `docs/specs/2026-11-13-design-language-neel.md` (§ v4 voice, owner calls 1–4, § Phases · N3) · Mockup:
 `docs/mockups/2026-11-13-design-language-neel.html` (§ Voice, § Words, § Glossary; § Screens: Orders, Settings) ·
 Approved: owner, 2026-11-13 (the mockup; the calls "Manager", "store", "On the way", "warn from 13, fail at 16")
@@ -141,6 +141,8 @@ script cannot hold) and a new § Glossary (surfaces, roles, words, order states,
 | Orders: no shortcuts line under the table | A quiet "Keyboard shortcuts" button there (no "· press ?") | The sheet holds the switch that turns single-key shortcuts off; WCAG 2.1.4 needs it reachable by pointer and touch (design-system review) | Not yet |
 | The free gift's tax note in an (i) (§ Words, rewritten line) | As drawn | The design-system review asked for it visible (InfoTip's contract: no tax wording in a tip); the approved mockup puts it in the (i) | Not yet (a question of rule against drawing) |
 | Orders tabs: all seven drawn with counts, "Couldn't deliver 15" first | "Couldn't deliver" and "Coming back" appear only when they hold orders (Couldn't deliver then first) | Older than N3 (1D queue), not a words change, missed by N1's Deviations (found by N3's parity review); a change to the queue's tabs is its own step | Not yet |
+| N1b Analytics mockup: "Pincodes with the most returns", column "Pincode" (and True profit's) | "PIN codes …", "PIN code" | The glossary's one spelling (§ Short forms), the same call as Shopper | Not yet |
+| Months as en-IN writes them ("Sept") | Three letters everywhere ("13 Sep") | Neel draws three-letter months | Owner's call, 2026-11-15 |
 | Settings "Ready for live payments" chip beside "Not connected" | As built in N1 | The chip counts what blocks live payments; Online payments is its own row | Not yet |
 
 ## Design review
