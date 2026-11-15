@@ -3,8 +3,8 @@ name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
   version: 2.57.0
-  verified: 2026-11-12
-  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
+  verified: 2026-11-15
+  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0018]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
 ---
 
@@ -32,7 +32,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - Console: `requireMember(roles)` (`src/lib/auth/require-member.ts`) gives the
   tenant id — a membership or an active support session, both from
   `app_access_for`. Storefront: `tenantForHost(host)` (`src/lib/db/platform.ts`).
-  **The Storefront API's host** (ADR-0018, V1 SA0): `storefrontKeyFor(key)` (`src/lib/queries/storefront.ts`), called
+  **The Storefront API's host** (ADR-0018, V1 SA0): `storefrontKeyFor(key)` (`src/lib/queries/storefront-keys.ts`), called
   only inside `apiRequest()` (`src/lib/storefront-api/request.ts`), from the key in the path through the definer
   `app_storefront_key`. **These are the only three sources of a tenant id.**
 - **The Storefront API** (ADR-0018; plan `docs/plans/2026-11-15-v1-storefront-api.md`): its host `NEXT_PUBLIC_API_HOST`

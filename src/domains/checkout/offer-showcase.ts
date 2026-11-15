@@ -23,8 +23,12 @@ export const cardBadge = (offers: readonly ShowOffer[] | undefined, now: Date): 
 }
 
 /** The product page's lines: this product's live offers first, then the shop's; a real end only ("till 30 Nov"). */
+/** The live offers a product page shows, in its order (this product's first), at most 4: read by the page and the API. */
+export const liveLines = (offers: readonly ShowOffer[] | undefined, now: Date) =>
+  [...(offers ?? [])].filter((o) => live(o, now)).sort((a, b) => Number(b.product) - Number(a.product)).slice(0, 4)
+
 export const pdpLines = (offers: readonly ShowOffer[] | undefined, now: Date) =>
-  [...(offers ?? [])].filter((o) => live(o, now)).sort((a, b) => Number(b.product) - Number(a.product)).slice(0, 4).map((o) => ({
+  liveLines(offers, now).map((o) => ({
     label: o.label,
     ends: o.endsAt ? `till ${new Date(o.endsAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })}` : null,
   }))

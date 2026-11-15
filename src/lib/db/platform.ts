@@ -6,6 +6,7 @@ import { shopSlugFromHost } from '@/domains/tenancy/host'
 import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import type { MemberRole, StaffRole } from './schema'
 import { errName } from '@/lib/log'
+import type { KeyKind } from '@/domains/storefront-api/keys'
 
 // =============================================================================
 // FILE: src/lib/db/platform.ts
@@ -21,11 +22,11 @@ import { errName } from '@/lib/log'
 /**
  * Which shop a storefront key names (ADR-0018): the definer's one row for the key's sha256 (lowercase hex), or null.
  * Every stop is the definer's (deleted, expired, a test key once the store opened, a gone partner's key, a Website not
- * on a live domain). Called only by storefrontKeyFor (src/lib/queries/storefront.ts; check:tenant § API).
+ * on a live domain). Called only by storefrontKeyFor (src/lib/queries/storefront-keys.ts; check:tenant § 9).
  */
-export async function storefrontKeyRow(hashHex: string): Promise<{ keyId: string; tenantId: string; kind: 'public' | 'test'; expiresAt: string | null } | null> {
+export async function storefrontKeyRow(hashHex: string): Promise<{ keyId: string; tenantId: string; kind: KeyKind; expiresAt: string | null } | null> {
   if (!/^[0-9a-f]{64}$/.test(hashHex)) return null
-  const rows = await db().execute<{ key_id: string; tenant_id: string; kind: 'public' | 'test'; expires_at: Date | string | null }>(
+  const rows = await db().execute<{ key_id: string; tenant_id: string; kind: KeyKind; expires_at: Date | string | null }>(
     sql`select key_id, tenant_id, kind, expires_at from app_storefront_key(${hashHex})`)
   const r = rows[0]
   if (!r) return null

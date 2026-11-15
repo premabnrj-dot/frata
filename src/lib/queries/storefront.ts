@@ -1,6 +1,4 @@
 import 'server-only'
-import { createHash } from 'node:crypto'
-import { keyShape } from '@/domains/storefront-api/keys'
 import type { PublicZone } from '@/domains/delivery/public'
 import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm'
 import { revalidateTag, unstable_cache } from 'next/cache'
@@ -12,7 +10,7 @@ import type { Chart } from '@/domains/catalogue/chart-units'
 import { readStories, type Story } from '@/domains/catalogue/stories'
 import type { PolicyFacts } from '@/domains/policies/render'
 import type { DeliveryRules } from '@/domains/checkout/delivery'
-import { allPincodes, storefrontKeyRow, tenantForHost, themeVersionRows } from '@/lib/db/platform'
+import { allPincodes, tenantForHost, themeVersionRows } from '@/lib/db/platform'
 import { collectionHandleHistory, collectionProducts, collections, productAttributes, productColours, productHandleHistory, productImages, productPairs, products, productTypes, variants } from '@/lib/db/schema-catalogue'
 import { heldByVariant, owedSql } from '@/lib/db/order-predicates'
 import { priorPriceSql } from '@/lib/db/price-predicates'
@@ -71,36 +69,6 @@ const hostFacts = cache(async (host: string): Promise<{ id: string; movedTo: str
     throw e
   }
 })
-/**
- * Which shop a storefront key names (ADR-0018 § 7; V1 plan § SA0·4), cached like hostFacts: keyed AND tagged by the
- * key's sha256 in lowercase hex, which is known before the call (an `unstable_cache` tag must be: speed review H2), so a
- * delete purges `skey:<hex>` and every API copy read under it. A miss is never cached in the data cache (anyone can mint
- * key shapes); this instance remembers a miss for 60 s so a repeat costs no definer call. A cached test key's end is
- * checked again on every use. Only apiRequest calls this (check:tenant § API).
- */
-export type KeyRow = { keyId: string; tenantId: string; kind: 'public' | 'test'; expiresAt: string | null }
-const keyMisses = new Map<string, number>()
-export const keyHash = (key: string) => createHash('sha256').update(key).digest('hex')
-export const storefrontKeyFor = cache(async (key: string): Promise<KeyRow | null> => {
-  if (!keyShape(key)) return null
-  const hex = keyHash(key)
-  const now = Date.now() // clock-ok: server, a miss memo's age
-  if ((keyMisses.get(hex) ?? 0) > now) return null
-  let row: KeyRow | null
-  try {
-    row = await unstable_cache(async () => { const r = await storefrontKeyRow(hex); if (!r) throw new Miss(); return r }, ['skey-v1', hex], { tags: [`skey:${hex}`], revalidate: 30 })()
-  } catch (e) {
-    if (!(e instanceof Miss)) throw e
-    row = null
-  }
-  if (!row || (row.expiresAt && Date.parse(row.expiresAt) <= now)) {
-    if (keyMisses.size > 10_000) keyMisses.clear()
-    keyMisses.set(hex, now + 60_000)
-    return null
-  }
-  return row
-})
-
 export const shopIdForHost = async (host: string): Promise<string | null> => (await hostFacts(host))?.id ?? null
 /** The shop's current address when `host` is one of its old names; null for its current one. */
 export const shopMovedTo = async (host: string): Promise<string | null> => (await hostFacts(host))?.movedTo ?? null

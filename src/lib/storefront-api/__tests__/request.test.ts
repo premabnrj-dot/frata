@@ -5,7 +5,7 @@ import { newKey } from '@/domains/storefront-api/keys'
 
 const rows = new Map<string, { keyId: string; tenantId: string; kind: 'public' | 'test'; expiresAt: string | null }>()
 const limits = { over: false, within: true }
-vi.mock('@/lib/queries/storefront', () => ({ storefrontKeyFor: vi.fn(async (k: string) => rows.get(k) ?? null) }))
+vi.mock('@/lib/queries/storefront-keys', () => ({ storefrontKeyFor: vi.fn(async (k: string) => rows.get(k) ?? null) }))
 vi.mock('@/lib/queries/storefront-api', () => ({ markKeySeen: vi.fn(async () => {}), siteOriginFor: vi.fn(async () => 'https://kesarstudio.in') }))
 vi.mock('@/lib/db/rate-limit', () => ({
   LIMITS: { apiMissIp: {}, apiTestIp: {}, apiSearchIp: {} },
@@ -13,6 +13,8 @@ vi.mock('@/lib/db/rate-limit', () => ({
   withinLimit: vi.fn(async () => limits.within),
 }))
 const { apiRequest } = await import('../request')
+const limiter = await import('@/lib/db/rate-limit')
+const seenApi = await import('@/lib/queries/storefront-api')
 
 const rnd = (n: number) => new Uint8Array(randomBytes(n))
 const LIVE = newKey('public', rnd), TEST = newKey('test', rnd), OTHER = newKey('public', rnd)
@@ -88,5 +90,32 @@ describe('apiRequest (ADR-0018 § 5)', () => {
     expect(await r.json()).toEqual({ q: 'kurta' })
     expect(r.headers.get('cache-control')).toBe('public, s-maxage=60')
     expect((await search(req({}, 'https://api.frrata.shop/2026-12/k/x/search?q='), at(LIVE))).status).toBe(404)
+  })
+  it('counts a miss and checks every limit failing closed', async () => {
+    vi.mocked(limiter.withinLimit).mockClear(); vi.mocked(limiter.overLimit).mockClear()
+    await test(req(), at(newKey('test', rnd)))
+    expect(vi.mocked(limiter.overLimit).mock.calls.every((c) => c[3] === true)).toBe(true)
+    expect(vi.mocked(limiter.withinLimit).mock.calls.some((c) => c[0] === limiter.LIMITS.apiMissIp && c[3] === true)).toBe(true)
+    vi.mocked(limiter.withinLimit).mockClear()
+    await test(req(), at(TEST))
+    expect(vi.mocked(limiter.withinLimit).mock.calls.length).toBeGreaterThan(0)
+    expect(vi.mocked(limiter.withinLimit).mock.calls.every((c) => c[3] === true)).toBe(true)
+  })
+  it('null from run is the same 404; a test route declared cached is refused', async () => {
+    const none = apiRequest({ version: '2026-12', tree: 'live', mode: 'isr', resource: 'product', schema: Shop, run: async () => null })
+    expect(await (await none(untouchable(), at(LIVE))).text()).toBe('{"error":"not_found"}')
+    const wrong = apiRequest({ version: '2026-12', tree: 'test', mode: 'isr', resource: 'shop', schema: Shop, run: async () => ({ name: 'x' }) })
+    expect((await wrong(req(), at(TEST))).status).toBe(404)
+  })
+  it('notes a key seen only on the cached tree', async () => {
+    vi.mocked(seenApi.markKeySeen).mockClear()
+    await live(untouchable(), at(LIVE))
+    expect(seenApi.markKeySeen).toHaveBeenCalledTimes(1)
+    await test(req(), at(TEST))
+    expect(seenApi.markKeySeen).toHaveBeenCalledTimes(1)
+  })
+  it('refuses params that name a shop (the shop is ctx, from the key)', async () => {
+    const bad = apiRequest({ version: '2026-12', tree: 'live', mode: 'isr', resource: 'shop', schema: Shop, params: () => ({ shopId: 'x' }), run: async () => ({ name: 'x' }) })
+    expect((await bad(untouchable(), at(LIVE))).status).toBe(500)
   })
 })

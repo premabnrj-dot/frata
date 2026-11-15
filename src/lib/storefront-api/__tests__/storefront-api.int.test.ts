@@ -17,7 +17,7 @@ describe.skipIf(!host)('the Storefront API door', () => {
   it('names the key’s own shop only, and every stop is one 404', async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
     const { newKey, shownPrefix } = await import('@/domains/storefront-api/keys')
-    const { keyHash } = await import('@/lib/queries/storefront')
+    const { keyHash } = await import('@/lib/queries/storefront-keys')
     const { apiRequest } = await import('../request')
     const postgres = (await import('postgres')).default
     const su = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
@@ -64,6 +64,7 @@ describe.skipIf(!host)('the Storefront API door', () => {
     } finally {
       await su`delete from storefront_keys where tenant_id in ${su(shops)}`
       await su`update shop_settings set site_origin = null, site_domain_id = null where tenant_id in ${su(shops)}`
+      await su`delete from tenants where id in ${su(shops)}`
       await su.end()
     }
   })

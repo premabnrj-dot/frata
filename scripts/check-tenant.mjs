@@ -147,7 +147,7 @@ for (const file of walk('src')) {
     failures.push(`${file}  a design block imports a loader or the db — blocks render what their section passes them`)
   }
   // 6d. One cache helper: shopCached in src/lib/queries/storefront.ts puts the tenant in every key and tag.
-  if (/\bunstable_cache\b/.test(text) && !/^src\/lib\/queries\/storefront\.ts$/.test(file)) {
+  if (/\bunstable_cache\b/.test(text) && !/^src\/lib\/queries\/storefront(-keys)?\.ts$/.test(file)) {
     failures.push(`${file}  unstable_cache outside src/lib/queries/storefront.ts — use shopCached (tenant in key and tags)`)
   }
   // 9. The Storefront API's one door (ADR-0018 § Gates and proof).
@@ -164,17 +164,20 @@ for (const file of walk('src')) {
       [/\bcookies\(|\bheaders\(\)|from\s+['"]next\/headers['"]/, 'cookies() or headers()'],
       [/params\??\.(tenant|shop)\w*/i, 'a tenant or shop id from params'],
       [/searchParams[^\n]*\.get\(\s*['"](shop|tenant)/, 'a tenant or shop id from the query'],
+      [/\b(raw|search|p|parsed|params)\??\.?\[?\s*['"]?(?:get\(\s*['"])?(shop|tenant)\w*/i, 'a tenant or shop id from params or the query'],
       [/\.json\(\)|\.formData\(\)/, 'a request body'],
     ]
     for (const [re, what] of banned) if (re.test(text)) failures.push(`${file}  ${what} in Storefront API code — the shop comes only from the key, through apiRequest (ADR-0018)`)
+    if (/\[(shop|tenant)[^\]]*\]/i.test(file)) failures.push(`${file}  a route segment named for a shop or tenant — the shop comes only from the key (ADR-0018)`)
     if (file !== 'src/lib/storefront-api/request.ts' && /headers\.get\(/.test(text)) failures.push(`${file}  reads a request header — only request.ts reads the network and the Origin`)
   }
-  if (/\bstorefrontKeyFor\b/.test(text) && !['src/lib/storefront-api/request.ts', 'src/lib/queries/storefront.ts'].includes(file)) failures.push(`${file}  calls storefrontKeyFor — only apiRequest resolves a key (ADR-0018)`)
-  if (/\bstorefrontKeyRow\b/.test(text) && !['src/lib/queries/storefront.ts', 'src/lib/db/platform.ts'].includes(file)) failures.push(`${file}  calls storefrontKeyRow — only the cached storefrontKeyFor does (ADR-0018)`)
+  if (/\bstorefrontKeyFor\b/.test(text) && !['src/lib/storefront-api/request.ts', 'src/lib/queries/storefront-keys.ts'].includes(file)) failures.push(`${file}  calls storefrontKeyFor — only apiRequest resolves a key (ADR-0018)`)
+  if (/\bstorefrontKeyRow\b/.test(text) && !['src/lib/queries/storefront-keys.ts', 'src/lib/db/platform.ts'].includes(file)) failures.push(`${file}  calls storefrontKeyRow — only the cached storefrontKeyFor does (ADR-0018)`)
   if (/\bapp_storefront_key\b/.test(text) && file !== 'src/lib/db/platform.ts') failures.push(`${file}  names app_storefront_key — only src/lib/db/platform.ts calls the definer (ADR-0018)`)
   if (file.startsWith('src/lib/queries/')) {
     if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  query file without import 'server-only'`)
-    if (!/\bwith(Analytics)?Tenant\(/.test(text)) failures.push(`${file}  query file that never calls withTenant( or withAnalyticsTenant(`)
+    // The one pre-tenant query file: which shop a storefront key names (ADR-0018), through the definer, cached.
+    if (!/\bwith(Analytics)?Tenant\(/.test(text) && file !== 'src/lib/queries/storefront-keys.ts') failures.push(`${file}  query file that never calls withTenant( or withAnalyticsTenant(`)
   }
 }
 

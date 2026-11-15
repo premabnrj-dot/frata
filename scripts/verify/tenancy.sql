@@ -3705,6 +3705,17 @@ do $$ begin
   begin update shop_settings set site_domain_id = null where tenant_id = 'c8100000-0000-0000-0000-000000000001';
     raise exception 'FAIL: an origin without its domain'; exception when check_violation then null; end;
 end $$;
+-- as frata_app, C can't name D's domain, and the refusal says nothing about whether the id exists
+begin; set local role frata_app;
+select set_config('app.tenant_id', 'c8100000-0000-0000-0000-000000000001', true);
+do $$ declare m1 text; m2 text; begin
+  begin update shop_settings set site_origin = 'https://proof-d81.in', site_domain_id = 'c8100000-0000-0000-0000-0000000000d2' where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: C named D''s domain as frata_app'; exception when check_violation then get stacked diagnostics m1 = message_text; end;
+  begin update shop_settings set site_origin = 'https://proof-d81.in', site_domain_id = gen_random_uuid() where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: an unknown domain id'; exception when check_violation or foreign_key_violation then get stacked diagnostics m2 = message_text; end;
+  if m1 not like 'site domain not live%' then raise exception 'FAIL: naming D''s domain answered %', m1; end if;
+end $$;
+commit;
 begin; set local role frata_app;
 select set_config('app.tenant_id', 'c8100000-0000-0000-0000-000000000001', true);
 do $$ declare n int; begin
@@ -3735,6 +3746,8 @@ do $$ declare n int; begin
     raise exception 'FAIL: a 41-character name'; exception when check_violation then null; end;
   begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values ('c8100000-0000-0000-0000-000000000001', 'live', 'Kind', repeat('6', 64), 'frs_pub_666666', '99999999-9999-9999-9999-999999999999');
     raise exception 'FAIL: an unknown kind'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by, expires_at) values ('c8100000-0000-0000-0000-000000000001', 'test', 'Long', repeat('8', 64), 'frs_test_888888', '99999999-9999-9999-9999-999999999999', now() + interval '31 days');
+    raise exception 'FAIL: a test key past 30 days'; exception when check_violation then null; end;
 end $$;
 commit;
 begin; set local role frata_app;

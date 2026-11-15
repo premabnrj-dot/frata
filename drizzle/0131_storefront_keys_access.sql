@@ -24,6 +24,9 @@ grant select, insert on storefront_keys to frata_app;
 --> statement-breakpoint
 grant update (name, revoked_at, revoked_by, last_seen_version, last_seen_on) on storefront_keys to frata_app;
 --> statement-breakpoint
+-- A test key lasts 30 days at most (TEST_KEY_DAYS; ADR-0018 decision 4), whatever the writer sends.
+alter table storefront_keys add constraint storefront_keys_test_days check (expires_at is null or expires_at <= created_at + interval '30 days');
+--> statement-breakpoint
 create or replace function app_storefront_key_revoked_once() returns trigger
   language plpgsql set search_path = '' as $$
 begin
@@ -35,8 +38,10 @@ end $$;
 --> statement-breakpoint
 create trigger storefront_keys_revoked_once before update on storefront_keys for each row execute function app_storefront_key_revoked_once();
 --> statement-breakpoint
+-- Security INVOKER (tenancy audit 2026-11-15 L): it reads shop_domains as the writer, so frata_app sees only its own
+-- shop's rows through their policy and can't learn another shop's domain ids from the answer.
 create or replace function app_site_origin_check() returns trigger
-  language plpgsql security definer set search_path = '' as $$
+  language plpgsql set search_path = '' as $$
 declare v_apex text; v_host text;
 begin
   if new.site_origin is null then return new; end if;

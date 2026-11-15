@@ -2,10 +2,10 @@ import 'server-only'
 import type { z } from 'zod'
 import { keyShape, type KeyKind } from '@/domains/storefront-api/keys'
 import { API_VERSIONS, type ApiVersion } from '@/domains/storefront-api/versions'
-import { storefrontKeyFor } from '@/lib/queries/storefront'
+import { storefrontKeyFor } from '@/lib/queries/storefront-keys'
 import { markKeySeen, siteOriginFor } from '@/lib/queries/storefront-api'
 import { LIMITS, overLimit, withinLimit } from '@/lib/db/rate-limit'
-import { ipBucket } from '@/lib/http/client-ip'
+import { ipFrom } from '@/lib/http/client-ip'
 import { errName } from '@/lib/log'
 
 // =============================================================================
@@ -73,7 +73,7 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
     if (!shape || (shape.kind === 'test') !== test || (test && opts.mode !== 'dynamic')) return refuse()
 
     // Only the dynamic tree reads the request: the network, for its limits, and the Origin, for CORS.
-    const ip = dynamic ? ipBucket((req.headers.get('x-forwarded-for')?.split(',')[0] ?? req.headers.get('x-real-ip') ?? 'unknown').trim()) : ''
+    const ip = dynamic ? ipFrom(req.headers) : ''
     if (dynamic && await overLimit(LIMITS.apiMissIp, ip, new Date(), true)) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
 
     const row = await storefrontKeyFor(key)
@@ -95,6 +95,11 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
     const search = dynamic ? new URL(req.url).searchParams : null
     const parsed = opts.params ? opts.params(raw, search) : ({} as P)
     if (parsed === null) return refuse(404, NOT_FOUND, cors)
+    // A handler's params never carry a shop (tenancy audit 2026-11-15 H1): the shop is ctx.tenantId, from the key.
+    if (parsed && typeof parsed === 'object' && Object.keys(parsed).some((k) => /tenant|shop/i.test(k))) {
+      console.error('[api]', opts.resource, 'params_name_a_shop', `key=${ctx.keyId}`)
+      return refuse(500, JSON.stringify({ error: 'unavailable' }), cors)
+    }
     try {
       const result = await opts.run(ctx, parsed)
       if (result === null) return refuse(404, NOT_FOUND, cors)

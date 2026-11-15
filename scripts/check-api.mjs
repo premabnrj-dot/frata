@@ -54,7 +54,7 @@ for (const file of walk(ROUTES)) {
 }
 
 // Output schemas: closed. Pure mappers and schemas live in src/domains/storefront-api/.
-for (const file of walk('src/domains/storefront-api')) {
+for (const file of [...walk('src/domains/storefront-api'), ...walk(ROUTES), ...walk('src/lib/storefront-api')]) {
   const text = code(file)
   const open = text.match(/z\.(unknown|any|record|looseObject|object)\(|\.(passthrough|catchall|loose|nonstrict)\(/)
   if (open) failures.push(`${file}  an open schema (${open[0]}) — the API's answers use z.strictObject and named fields only`)

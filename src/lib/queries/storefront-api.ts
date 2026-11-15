@@ -49,7 +49,12 @@ export async function markKeySeen(ctx: { tenantId: string; keyId: string; versio
  * cached copies too). At most MAX_LIVE_KEYS a shop.
  */
 export async function refreshKeys(tenantId: string): Promise<void> {
-  const rows = await withTenant(tenantId, (tx) => tx.select({ hash: storefrontKeys.hash }).from(storefrontKeys)
-    .where(and(eq(storefrontKeys.tenantId, tenantId), isNull(storefrontKeys.revokedAt))))
-  for (const r of rows) refreshKey(r.hash)
+  try {
+    const rows = await withTenant(tenantId, (tx) => tx.select({ hash: storefrontKeys.hash }).from(storefrontKeys)
+      .where(and(eq(storefrontKeys.tenantId, tenantId), isNull(storefrontKeys.revokedAt))))
+    for (const r of rows) refreshKey(r.hash)
+  } catch (err) {
+    // Called after a write committed: a failed purge never turns it into a refusal (the hour's backstop covers it).
+    console.error('[refreshKeys]', errName(err))
+  }
 }
