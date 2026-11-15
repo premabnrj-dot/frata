@@ -1,5 +1,5 @@
 # Neel N2a — the product editor as drawn (the PR·2 redo)
-Status: draft (for the review agents) · Date: 2026-11-15 · Spec: `docs/specs/2026-11-13-design-language-neel.md` § N2,
+Status: active (architecture and design-system reviews folded in, 2026-11-15) · Date: 2026-11-15 · Spec: `docs/specs/2026-11-13-design-language-neel.md` § N2,
 `docs/specs/2026-11-13-products-rework.md` § 4 · Mockups (both approved by the owner, 2026-11-13):
 `docs/mockups/2026-11-13-design-language-neel.html` § Screens › Product (the look: Neel), and
 `docs/mockups/2026-11-13-products-rework.html` § The editor, § Sizes and colours, § Errors, § On a phone (the layout:
@@ -32,19 +32,57 @@ folded rows after Tax, in that order; Summary and Ready for (side) go — their 
 Shoppers see chips. Ready for Google and Meta becomes one line in the Missing chip when a feed fact is missing.
 
 ## Regression net first
-`78-products-pr0`, `79-products-list`, `68-product-video`, `47-offers`, `76-import`, `83-neel-finding`, `90-ux` stay green
+`78-products-pr0`, `79-products-list`, `68-product-video`, `15-clock`, `49-ship`, `64-seo`, `65-signal`, `70-cleaner`,
+`83-neel-finding`, `90-ux` stay green
 before any change (run them on main first and record the result). New flow `85-neel-editor.mjs` written before the
 build, failing: header as drawn; the name typed in its card renames the page; common price fills every variant that had
 it and leaves an own price alone; select two rows → Set price; SKU tab; folded rows open; Status segmented + Publish;
 drag a photo to cover (keyboard too); the phone (no sideways scroll, page height recorded); axe clean.
 Unit: `commonPrice` (below) and `applyCommon`.
 
-## SSOT — the common price (no new column)
-The product has no price of its own; variants do. The card's **Price** is *derived*: `commonPrice(cells)` = the price
-most variants share (ties → the lowest), or empty when none has a price. Typing a new price calls
-`applyCommon(cells, from, to)`: every variant whose price equals the old common price, or is empty, takes the new one;
-a variant with its own price keeps it (the drawn XXL at ₹2,890). M.R.P. the same over `compareAt`. Both pure, in
-`src/domains/catalogue/common-price.ts`, unit-tested. Nothing new is stored; the save sends variants as today.
+## SSOT — the common price (no new column; architecture review 1 folded in)
+The product has no price of its own; variants do. The card's **Price** shows `commonPrice(cells)`: over the LIVE
+combinations only (never cells of removed values), the price in paise most variants share (ties → the lowest); empty
+when none is priced. "Unpriced" is one test, `unpriced(c)` (`''` or 0 after `parseRupees`), in
+`src/domains/catalogue/common-price.ts`, imported by the grid's "Empty only" too.
+- **The targets are fixed on focus**: `targetsOf(cells)` = live variants priced at the common price, or unpriced. While
+  the field has focus, each keystroke writes the typed price (`rupeesText` of its paise, or `''` while it does not parse,
+  e.g. "14.") to those targets only; blur ends it. Clearing the field never sweeps an own price, and an intermediate value
+  equal to an own price never takes that variant.
+- Under the field, when some variants differ: "Sets 5 of 6 · XXL has its own price" (one tie, or a variant priced at the
+  common price on purpose, is visible before typing).
+- M.R.P. the same over `compareAt`.
+- **Which price where** (one rule each): the card shows the common price; Tax's gap check and the "5% under ₹2,500"
+  summary read the common price (was the lowest); the WhatsApp preview reads the buy-box price (`priceOf`,
+  `domains/storefront/listing.ts`), as the real link card does; `defaultDescription` keeps the lowest ("from ₹…").
+- Unit cases: cleared field, tie, unparsable text, a variant equal to the common price on purpose, removed values ignored.
+
+## Architecture review on the plan (2026-11-15), folded in
+- **Folds and hidden fields** (also design-system 1): Tax, Search and sharing, On the pack, Stories fold with `invalid`;
+  the SKU tab and the Shoppers-see popover open on their errors; the chip is `aria-invalid`. Field ids and `fieldProps`
+  names stay (`title`, `desc`, `handle`, `tax.hsn`, `v:<k>:sku` …). The handle is edited in one place (Search and
+  sharing); the address line under the name only shows it.
+- **Photos:** the order action exists, `editPhoto(id, { move: -1|1 })` (actions.ts), and the dashed tile and formats line
+  exist. Drag adds `move: { to: 0..49 }` to `editPhoto` (Zod), optimistic on drop; role `ANY_MEMBER` as today.
+- **The WhatsApp preview** is built in the browser from the draft (title, description, cover, buy-box price), as the
+  rework board says ("from your draft, before you publish"); SeoPanel's second preview goes.
+- **Blast radius (e2e):** 78 (`radio 'Archived'`, "Save and set to archived", `getByText('Unsaved changes')` → the region
+  by name), 15-clock (a status description), 70-cleaner and 49-ship ("Sizes, colours and stock" heading), 64-seo (Share
+  moves into More), 65-signal (Stories folds), 68 (Video folds), 90 (page heights). The net adds 15, 49, 64, 65, 70; 47,
+  76 and 66 never open the editor and leave the list.
+- **check:size:** variant-grid.tsx splits (`stock-table.tsx`, `bulk-bar.tsx`, `shopper-chip.tsx`); Summary and ReadyFor go.
+- **onReprice** clears the `v:*:price` errors it fixes and writes `rupeesText(to)`.
+- **Archived:** the drawn switch has three states. Archive and Unarchive go in More; an archived product shows its chip
+  and the switch reads its last state disabled with "Archived · Unarchive" (Deviations).
+- **A variant's own M.R.P. and Your cost** (not drawn as columns): in the Price and stock tab as two more columns, Your
+  cost only for `seesCosts`, M.R.P. only when a variant's differs from the card's (Deviations).
+- **Phone as drawn (rework § On a phone):** rows grouped by colour; the folds as one "Size chart · Details · Sharing ·
+  Tax ›" row opening a sheet; Publish in the save bar ("2 changes · Save · Publish").
+- **Check on blur:** a field's mistake shows when it loses focus; a refused save lists "2 things to fix: Price · SKU"
+  (the existing summary toast, words as drawn).
+- **More** as drawn: Duplicate (copies what is saved; the menu says so when there are unsaved changes) · View in shop ·
+  Delete draft (a draft) or Archive (live); then Share and Schedule (Deviations).
+- **Chips reorder** with Alt+←/→ (as options-editor does today), never plain arrows.
 
 ## Design-system review on the plan (2026-11-15), folded in
 - **A fold opens itself on an error.** `FoldSection` gains `invalid` (true when any of its error keys is in `errors`): it
@@ -107,6 +145,9 @@ a variant with its own price keeps it (the drawn XXL at ₹2,890). M.R.P. the sa
 | Schedule a publish (not drawn) | In More › Schedule | Live feature (publish_at) | — |
 | Ready for Google and Meta card (not drawn) | One line in the Missing chip | Same facts, the drawn place | — |
 | When it runs out, lead days, cap (not drawn) | Opened from a row's Shoppers see chip | Pre-orders and made-to-order are live | — |
+| Status: Draft · Active · Unlisted | Archive and Unarchive in More; an archived product's switch reads "Archived · Unarchive" | Archived is a live status; the switch was drawn without it | — |
+| Price and stock columns: Variant · Price · Stock · Shoppers see | Plus Your cost (only who sees costs) and M.R.P. (only when a variant's differs) | Profit per order needs the cost; an own M.R.P. exists today | — |
+| More: Duplicate · View in shop · Delete draft | Plus Share and Schedule | Live features with nowhere else drawn | — |
 
 ## Design review
 - **UI/UX:** one primary action (Publish/Save); every state: empty product, no photos, one variant, 100 variants, a save
@@ -118,7 +159,7 @@ a variant with its own price keeps it (the drawn XXL at ₹2,890). M.R.P. the sa
 - **SSOT:** price stays on variants; the common price is derived. Status, readiness, shopper view: existing engines.
 - **YAGNI:** no product-level price column; no new status; no undo history beyond Discard.
 - **Performance:** no new reads (share card, video, modules are already in the page's one `Promise.all`).
-- **Security:** reorder action (if added) Zod-capped (≤ 50 ids), role `ANY_EDITOR`, same as photo upload.
+- **Security:** `editPhoto`'s new `move.to` is Zod-capped (0..49) under its existing role (`ANY_MEMBER`) and row check.
 - **Blast radius:** e2e 78, 68, 47, 76 click editor parts by name; each is updated in the same task that moves the part.
 
 ## Practices recorded in skills
