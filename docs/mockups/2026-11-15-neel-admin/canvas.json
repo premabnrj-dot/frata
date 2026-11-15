@@ -1,0 +1,22 @@
+{"v":3,"createdOnFiles":{"v":1,"at":"2026-11-15T16:10:00Z"},"title":"Neel · Frrata Admin, one job at a time","launch":{"view":"canvas"},"pages":[],
+"boards":{
+"Main.dc.html":{"x":0,"y":0,"w":1280,"h":860,"title":"Today · what needs someone, one action each"},
+"Merchants.dc.html":{"x":1360,"y":0,"w":1280,"h":860,"title":"Merchants · a list that leads with what needs you"},
+"Merchant.dc.html":{"x":2720,"y":0,"w":1280,"h":860,"title":"A merchant · the waiting task leads, tabs for the rest"},
+"MerchantPlan.dc.html":{"x":4080,"y":0,"w":1280,"h":860,"title":"A merchant › Plan · Change plan as a dialog"},
+"Partners.dc.html":{"x":0,"y":1100,"w":1280,"h":860,"title":"Partners · the orchestrator's pass, kept"},
+"Staff.dc.html":{"x":1360,"y":1100,"w":1280,"h":860,"title":"Staff · your own request, another admin approves"},
+"Billing.dc.html":{"x":2720,"y":1100,"w":1280,"h":860,"title":"Billing · this month's run, one step in view"},
+"Invoice.dc.html":{"x":4080,"y":1100,"w":1280,"h":860,"title":"An invoice · what is due, tabs for the rest"},
+"EkCode.dc.html":{"x":0,"y":2200,"w":1280,"h":860,"title":"EkCode · the breaker leads, limits behind Edit"},
+"Infrastructure.dc.html":{"x":1360,"y":2200,"w":1280,"h":860,"title":"Infrastructure · Needs you first, the rest folded"},
+"Names.dc.html":{"x":2720,"y":2200,"w":1280,"h":860,"title":"Names · domains waiting lead; lists in tabs"},
+"Theme.dc.html":{"x":4080,"y":2200,"w":1280,"h":860,"title":"A theme version · Release leads; Recall and Withdraw in More"},
+"Reference.dc.html":{"x":0,"y":3300,"w":1280,"h":1100,"title":"Plans, Modules, Offers, Notices, Email, Activity, Trials"},
+"Phone.dc.html":{"x":1360,"y":3300,"w":390,"h":844,"title":"Phone · Today"},
+"PhoneRecord.dc.html":{"x":1830,"y":3300,"w":390,"h":844,"title":"Phone · a merchant, a dialog as a sheet"},
+"Rules.dc.html":{"x":2300,"y":3300,"w":1280,"h":1100,"title":"The Admin rules, and what changes"}
+},
+"order":["Main.dc.html","Merchants.dc.html","Merchant.dc.html","MerchantPlan.dc.html","Partners.dc.html","Staff.dc.html","Billing.dc.html","Invoice.dc.html","EkCode.dc.html","Infrastructure.dc.html","Names.dc.html","Theme.dc.html","Reference.dc.html","Phone.dc.html","PhoneRecord.dc.html","Rules.dc.html"],
+"notes":{"t1":{"x":0,"y":-300,"text":"Frrata Admin: one job in view at a time","kind":"title1","maxW":5360}},
+"designSystems":[]}

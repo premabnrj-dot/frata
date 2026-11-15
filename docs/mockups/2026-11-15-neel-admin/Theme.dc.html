@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin · A theme version</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F37A3;text-decoration:none}a:hover{color:#272D82}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 10px;border-radius:8px;border:1px solid #E3E1DD;background:#FFFFFF;color:#171615;font:inherit;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer}
+.btn.p{background:#3A44C2;border-color:#3A44C2;color:#FFFFFF}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:500;white-space:nowrap}
+.chip::before{content:"";width:6px;height:6px;border-radius:3px;background:currentColor}
+.info{background:#E8F1FD;color:#1F5BA8}
+.tab{display:inline-flex;align-items:center;gap:6px;height:40px;color:#67625C;font-weight:500}
+.tab[aria-current]{color:#171615;box-shadow:inset 0 -2px 0 #3A44C2}
+.tn{border-radius:10px;padding:2px 6px;font-size:12px;background:#EEEDEA;color:#67625C}
+.lab{font-size:13px;color:#67625C}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #EEEDEA}
+</style>
+</helmet>
+<div style="width: 1280px; height: 860px; box-sizing: border-box; display: flex; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 20px; position: relative;">
+  <div aria-hidden="true" style="width: 232px; flex: none; background: #171615;"></div>
+  <main style="flex: 1; min-width: 0; padding: 28px 32px; display: flex; flex-direction: column; gap: 16px; max-width: 1000px;">
+    <header style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-size: 13px; color: #67625C;">Themes › Saffron</span>
+        <div style="display: flex; align-items: center; gap: 10px;"><h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">Saffron 1.3.0</h1><span class="chip info">Staged · 3 stores</span></div>
+        <span class="lab">New in this deploy · 2 new sections</span>
+      </div>
+      <div style="display: flex; gap: 8px;"><button type="button" class="btn">More ▾</button><button type="button" class="btn p">Release to everyone</button></div>
+    </header>
+    <nav aria-label="Saffron 1.3.0" style="display: flex; gap: 20px; border-bottom: 1px solid #E3E1DD;">
+      <a class="tab" href="#" aria-current="page">Pilot stores <span class="tn">3</span></a><a class="tab" href="#">What's in it</a><a class="tab" href="#">History</a>
+    </nav>
+    <div style="display: flex; justify-content: flex-end;"><button type="button" class="btn">Stage to a store</button></div>
+    <div style="max-width: 640px;">
+      <div class="row" style="border-top: 0;"><span>Kesar Studio</span><span style="display: flex; gap: 12px; align-items: center;"><span class="lab">Since 12 Nov</span><button type="button" class="btn">Unstage</button></span></div>
+      <div class="row"><span>Gulmohar</span><span style="display: flex; gap: 12px; align-items: center;"><span class="lab">Since 13 Nov</span><button type="button" class="btn">Unstage</button></span></div>
+      <div class="row"><span>Noor Threads</span><span style="display: flex; gap: 12px; align-items: center;"><span class="lab">Since 14 Nov</span><button type="button" class="btn">Unstage</button></span></div>
+    </div>
+  </main>
+  <div role="menu" aria-label="More" style="position: absolute; left: 1010px; top: 70px; width: 220px; background: #FFFFFF; border: 1px solid #E3E1DD; border-radius: 10px; box-shadow: 0 8px 24px -6px rgba(23,22,21,.14); padding: 6px; display: flex; flex-direction: column;">
+    <button type="button" role="menuitem" style="text-align: left; border: 0; background: transparent; font: inherit; padding: 8px 10px; border-radius: 6px;">Recall Saffron 1.3.0…</button>
+    <button type="button" role="menuitem" style="text-align: left; border: 0; background: transparent; font: inherit; padding: 8px 10px; border-radius: 6px; color: #A82828;">Withdraw Saffron 1.3.0…</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

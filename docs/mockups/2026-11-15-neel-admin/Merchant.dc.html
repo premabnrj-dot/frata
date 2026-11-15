@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin · A merchant</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F37A3;text-decoration:none}a:hover{color:#272D82}
+.sb a{color:#D9D5D0;display:flex;align-items:center;height:34px;padding:0 10px;border-radius:8px}
+.sb .h{padding:14px 10px 4px;font-size:11px;font-weight:600;letter-spacing:.06em;color:#A29D97}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 10px;border-radius:8px;border:1px solid #E3E1DD;background:#FFFFFF;color:#171615;font:inherit;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer}
+.btn.p{background:#3A44C2;border-color:#3A44C2;color:#FFFFFF}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:500;white-space:nowrap}
+.chip::before{content:"";width:6px;height:6px;border-radius:3px;background:currentColor}
+.warn{background:#FDF3DC;color:#85500B}.bad{background:#FDECEC;color:#A82828}.info{background:#E8F1FD;color:#1F5BA8}.ok{background:#E7F5EC;color:#1A6B43}.neu{background:#F1F0EE;color:#57524D}
+.cnt{margin-left:auto;min-width:20px;height:20px;border-radius:10px;background:#3A44C2;color:#FFFFFF;font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;padding:0 6px}
+.tab{display:inline-flex;align-items:center;gap:6px;height:40px;color:#67625C;font-weight:500}
+.tab[aria-current]{color:#171615;box-shadow:inset 0 -2px 0 #3A44C2}
+.card{border:1px solid #E3E1DD;border-radius:12px;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid #EEEDEA}
+.lab{font-size:13px;color:#67625C}
+</style>
+</helmet>
+<div style="width: 1280px; height: 860px; box-sizing: border-box; display: flex; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 20px;">
+  <nav class="sb" aria-label="Admin" style="width: 232px; flex: none; background: #171615; color: #D9D5D0; padding: 18px 12px; display: flex; flex-direction: column; gap: 2px;">
+    <div style="display: flex; align-items: center; gap: 8px; padding: 0 8px 14px;"><b style="color: #FFFFFF; font-weight: 600;">Frrata Admin</b><span style="font-size: 11px; font-weight: 600; letter-spacing: .06em; color: #A29D97;">STAFF</span></div>
+    <a href="Main.dc.html">Today<span class="cnt">7</span></a>
+    <span class="h">MERCHANTS</span>
+    <a href="Merchants.dc.html" aria-current="page" style="background: #34312E; color: #FFFFFF;">Merchants<span class="cnt">2</span></a>
+    <a href="#">Trials<span class="cnt">1</span></a><a href="#">Offers</a><a href="Names.dc.html">Names<span class="cnt">1</span></a>
+    <span class="h">PEOPLE</span><a href="Partners.dc.html">Partners<span class="cnt">2</span></a><a href="Staff.dc.html">Staff</a>
+    <span class="h">MONEY</span><a href="#">Plans</a><a href="Billing.dc.html">Billing<span class="cnt">1</span></a>
+    <span class="h">PLATFORM</span><a href="#">Modules</a><a href="EkCode.dc.html">EkCode</a><a href="Theme.dc.html">Themes</a><a href="#">Notices</a><a href="#">Email health</a><a href="Infrastructure.dc.html">Infrastructure</a><a href="#">Activity</a>
+  </nav>
+  <main style="flex: 1; min-width: 0; padding: 28px 32px; display: flex; flex-direction: column; gap: 16px;">
+    <header style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-size: 13px; color: #67625C;"><a href="Merchants.dc.html" style="color: #67625C;">Merchants</a> › Noor Threads</span>
+        <div style="display: flex; align-items: center; gap: 10px;"><h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">Noor Threads</h1><span class="chip neu">Launch</span><span class="chip info">Trial · 26 days left</span></div>
+        <span style="font-size: 13px; color: #67625C;">noor.frrata.shop · added 11 Nov</span>
+      </div>
+      <div style="display: flex; gap: 8px;"><button type="button" class="btn">More ▾</button><button type="button" class="btn p">Open console</button></div>
+    </header>
+    <section aria-label="Needs you" style="display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-radius: 12px; background: #FDF3DC; color: #85500B;">
+      <span style="flex: 1;"><b style="font-weight: 600;">The owner hasn't signed in.</b> Sign-in link sent to aisha@noorthreads.in 4 days ago.</span>
+      <button type="button" class="btn">Resend sign-in link</button>
+    </section>
+    <nav aria-label="Noor Threads" style="display: flex; gap: 20px; border-bottom: 1px solid #E3E1DD;">
+      <a class="tab" href="#" aria-current="page">Overview</a>
+      <a class="tab" href="MerchantPlan.dc.html">Plan</a>
+      <a class="tab" href="#">Modules</a>
+      <a class="tab" href="#">Addresses</a>
+      <a class="tab" href="#">Activity</a>
+    </nav>
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start;">
+      <section class="card" aria-labelledby="team-h">
+        <h2 id="team-h" style="margin: 0; font-size: 15px; font-weight: 600;">Team</h2>
+        <div class="row" style="border-top: 0;"><span>aisha@noorthreads.in</span><span style="display: flex; gap: 8px; align-items: center;"><span class="chip neu">Owner</span><span class="lab">Never signed in</span></span></div>
+        <div class="row"><span>Pixel &amp; Thread</span><span style="display: flex; gap: 8px; align-items: center;"><span class="chip neu">Partner</span><span class="lab">Today</span></span></div>
+        <h2 style="margin: 8px 0 0; font-size: 15px; font-weight: 600;">Support visits</h2>
+        <div class="row" style="border-top: 0;"><span>riya@frrata.in · set up payments</span><span class="lab">12 Nov · 30 min</span></div>
+      </section>
+      <aside class="card" aria-labelledby="plan-h">
+        <h2 id="plan-h" style="margin: 0; font-size: 15px; font-weight: 600;">Plan</h2>
+        <div class="row" style="border-top: 0;"><span class="lab">Launch</span><span>₹1,499 a month · 2%</span></div>
+        <div class="row"><span class="lab">Delivered</span><span style="font-variant-numeric: tabular-nums;">0 of 150</span></div>
+        <div class="row"><span class="lab">Trial ends</span><span>11 Dec</span></div>
+        <a href="MerchantPlan.dc.html" style="font-size: 13px;">Change plan</a>
+      </aside>
+    </div>
+    <div role="menu" aria-label="More" style="position: absolute; left: 1050px; top: 70px; width: 220px; background: #FFFFFF; border: 1px solid #E3E1DD; border-radius: 10px; box-shadow: 0 8px 24px -6px rgba(23,22,21,.14); padding: 6px; display: flex; flex-direction: column;">
+      <button type="button" role="menuitem" style="text-align: left; border: 0; background: transparent; font: inherit; padding: 8px 10px; border-radius: 6px;">Rename the address…</button>
+      <button type="button" role="menuitem" style="text-align: left; border: 0; background: transparent; font: inherit; padding: 8px 10px; border-radius: 6px;">Freeze address changes…</button>
+      <button type="button" role="menuitem" style="text-align: left; border: 0; background: transparent; font: inherit; padding: 8px 10px; border-radius: 6px; color: #A82828;">End the trial now…</button>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

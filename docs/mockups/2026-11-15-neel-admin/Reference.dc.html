@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin · the other screens</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F37A3;text-decoration:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:28px;padding:0 10px;border-radius:8px;border:1px solid #E3E1DD;background:#FFFFFF;color:#171615;font:inherit;font-size:12px;font-weight:500;white-space:nowrap}
+.btn.p{background:#3A44C2;border-color:#3A44C2;color:#FFFFFF}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:500;white-space:nowrap}
+.chip::before{content:"";width:5px;height:5px;border-radius:3px;background:currentColor}
+.warn{background:#FDF3DC;color:#85500B}.bad{background:#FDECEC;color:#A82828}.ok{background:#E7F5EC;color:#1A6B43}.neu{background:#F1F0EE;color:#57524D}
+.fr{border:1px solid #E3E1DD;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:18px;min-width:0}
+.fr h2{margin:0;font-size:16px;font-weight:600}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tabs{display:flex;gap:14px;border-bottom:1px solid #E3E1DD}
+.tab{height:30px;display:inline-flex;align-items:center;color:#67625C;font-weight:500}
+.tab[aria-current]{color:#171615;box-shadow:inset 0 -2px 0 #3A44C2}
+.r{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid #EEEDEA}
+.lab{color:#67625C}
+.band{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px}
+.cap{font-size:12px;color:#67625C}
+</style>
+</helmet>
+<div style="width: 1280px; height: 1100px; box-sizing: border-box; padding: 28px 32px; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-content: start;">
+
+  <section class="fr" aria-labelledby="pl-h">
+    <div class="hd"><h2 id="pl-h">Plans</h2></div>
+    <div class="r" style="border-top: 0;"><span><b style="font-weight: 500;">Launch</b> <span class="lab">· ₹1,499 · 150 · 2% · 24 stores</span></span><a class="btn" href="#">Edit</a></div>
+    <div class="r"><span><b style="font-weight: 500;">Growth</b> <span class="lab">· ₹4,999 · 1,500 · 1% · 12 stores</span></span><a class="btn" href="#">Edit</a></div>
+    <div class="r"><span><b style="font-weight: 500;">Scale</b> <span class="lab">· ₹14,999 · 5,000 · 0.5% · 3 stores</span></span><a class="btn" href="#">Edit</a></div>
+    <div class="r"><span><b style="font-weight: 500;">Free trial</b> <span class="lab">· 30 days · go live within 14</span></span><button type="button" class="btn">Edit</button></div>
+    <span class="cap">Edit on a plan opens its page and saves a new version. The trial opens a dialog.</span>
+  </section>
+
+  <section class="fr" aria-labelledby="tr-h">
+    <div class="hd"><h2 id="tr-h">Trials</h2></div>
+    <nav class="tabs" aria-label="Trials"><a class="tab" href="#" aria-current="page">Needs you · 1</a><a class="tab" href="#">In trial · 6</a><a class="tab" href="#">Ended</a></nav>
+    <div class="r" style="border-top: 0;"><span>Gulmohar <span class="lab">· ends in 2 days</span></span><span class="chip warn">No autopay</span></div>
+    <span class="cap">A row opens the merchant's Plan tab, where Extend and End live.</span>
+  </section>
+
+  <section class="fr" aria-labelledby="md-h">
+    <div class="hd"><h2 id="md-h">Modules</h2></div>
+    <nav class="tabs" aria-label="Modules"><a class="tab" href="#" aria-current="page">Modules</a><a class="tab" href="#">Asked to be told · 9</a></nav>
+    <div class="r" style="border-top: 0;"><span>Delivery Zones <span class="lab">· add-on</span></span><span style="display: flex; gap: 6px; align-items: center;"><span class="chip ok">Running</span><button type="button" class="btn" aria-label="More for Delivery Zones">⋯</button></span></div>
+    <div class="r"><span>GST <span class="lab">· in Growth</span></span><span style="display: flex; gap: 6px; align-items: center;"><span class="chip warn">Paused 2 Nov</span><button type="button" class="btn">Resume</button></span></div>
+    <span class="cap">"Pause for everyone" sits in a row's ⋯ and asks why in a dialog.</span>
+  </section>
+
+  <section class="fr" aria-labelledby="of-h">
+    <div class="hd"><h2 id="of-h">Offers</h2></div>
+    <div class="r" style="border-top: 0;"><span>Kesar Studio <span class="lab">· 3 live · ₹18,400 given</span></span><span class="chip bad">1 stopped</span></div>
+    <div class="r"><span>Gulmohar <span class="lab">· 1 live · ₹2,100 given</span></span><span></span></div>
+    <span class="cap">A store opens its offers. Stop is in each offer's ⋯, with a reason the store reads.</span>
+  </section>
+
+  <section class="fr" aria-labelledby="no-h">
+    <div class="hd"><h2 id="no-h">Notices</h2><button type="button" class="btn p">New notice</button></div>
+    <div class="r" style="border-top: 0;"><span>GST rates change on 1 Dec <span class="lab">· every store</span></span><span class="lab">12 Nov</span></div>
+    <div class="r"><span>Your trial ends soon <span class="lab">· 1 store</span></span><span class="lab">10 Nov</span></div>
+    <span class="cap">New notice opens a dialog. Only what was sent stays on the page.</span>
+  </section>
+
+  <section class="fr" aria-labelledby="em-h">
+    <div class="hd"><h2 id="em-h">Email health</h2></div>
+    <div class="band" style="background: #FDF3DC; color: #85500B;"><b style="font-weight: 600;">31 waiting to send since 10:42.</b></div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+      <div style="background: #F6F5F3; border-radius: 8px; padding: 8px;"><span class="lab">Sent</span><br><b style="font-size: 16px;">4,120</b></div>
+      <div style="background: #F6F5F3; border-radius: 8px; padding: 8px;"><span class="lab">Bounced</span><br><b style="font-size: 16px;">0.8%</b></div>
+      <div style="background: #F6F5F3; border-radius: 8px; padding: 8px;"><span class="lab">Complaints</span><br><b style="font-size: 16px;">0.01%</b></div>
+    </div>
+    <div class="r"><span>Noor Threads <span class="lab">· worst first</span></span><span class="chip bad">3.1% bounced</span></div>
+  </section>
+
+  <section class="fr" aria-labelledby="ac-h" style="grid-column: span 2;">
+    <div class="hd"><h2 id="ac-h">Activity</h2></div>
+    <div style="display: flex; gap: 8px;">
+      <input aria-label="Store" placeholder="Any store" style="height: 30px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 8px; font: inherit; font-size: 12px;">
+      <input aria-label="Who" placeholder="Anyone" style="height: 30px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 8px; font: inherit; font-size: 12px;">
+      <select aria-label="What" style="height: 30px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 8px; font: inherit; font-size: 12px; background: #FFFFFF;"><option>Everything</option></select>
+    </div>
+    <div class="r" style="border-top: 0;"><span>you@frrata.in <span class="lab">· Noor Threads · changed the plan to Growth</span></span><span class="lab">Today, 3:12 pm</span></div>
+    <div class="r"><span>riya@frrata.in <span class="lab">· support visit · Kesar Studio · set up payments</span></span><span class="lab">12 Nov</span></div>
+    <span class="cap">Filters and pages, newest first. A merchant's Activity tab is this list for one store.</span>
+  </section>
+
+  <section class="fr" aria-labelledby="st-h">
+    <div class="hd"><h2 id="st-h">Every page</h2></div>
+    <span class="cap">One header: the title, at most one primary, More. A waiting task as a band under it, with its one action. Tabs for the rest. Forms in dialogs. A destructive action in More, asking for the reason in a dialog.</span>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

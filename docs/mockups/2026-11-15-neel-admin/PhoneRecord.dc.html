@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin on a phone · a merchant</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F37A3;text-decoration:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 14px;border-radius:8px;border:1px solid #E3E1DD;background:#FFFFFF;color:#171615;font:inherit;font-size:15px;font-weight:500}
+.btn.p{background:#3A44C2;border-color:#3A44C2;color:#FFFFFF}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:500;white-space:nowrap}
+.chip::before{content:"";width:6px;height:6px;border-radius:3px;background:currentColor}
+.info{background:#E8F1FD;color:#1F5BA8}.neu{background:#F1F0EE;color:#57524D}
+.tab{display:inline-flex;align-items:center;height:44px;color:#67625C;font-weight:500;white-space:nowrap}
+.tab[aria-current]{color:#171615;box-shadow:inset 0 -2px 0 #3A44C2}
+.lab{font-size:13px;color:#67625C}
+.opt{display:flex;align-items:center;gap:10px;min-height:44px;border:1px solid #E3E1DD;border-radius:10px;padding:0 12px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 15px; line-height: 20px; position: relative; overflow: hidden;">
+  <header style="height: 52px; flex: none; background: #171615; color: #FFFFFF; display: flex; align-items: center; padding: 0 16px;"><b style="font-weight: 600;">Frrata Admin</b></header>
+  <main style="flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 12px 16px;">
+    <a href="#" style="font-size: 14px; color: #67625C;">‹ Merchants</a>
+    <h1 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 600;">Noor Threads</h1>
+    <span style="display: flex; gap: 6px;"><span class="chip neu">Launch</span><span class="chip info">Trial · 26 days left</span></span>
+    <nav aria-label="Noor Threads" style="display: flex; gap: 18px; border-bottom: 1px solid #E3E1DD; overflow: hidden;"><a class="tab" href="#">Overview</a><a class="tab" href="#" aria-current="page">Plan</a><a class="tab" href="#">Modules</a><a class="tab" href="#">Addresses</a></nav>
+    <span>Launch · ₹1,499 a month</span>
+  </main>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(23,22,21,.36);"></div>
+  <section role="dialog" aria-modal="true" aria-labelledby="s-h" style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFFFF; border-radius: 16px 16px 0 0; padding: 12px 16px 20px; display: flex; flex-direction: column; gap: 12px;">
+    <span aria-hidden="true" style="width: 36px; height: 4px; border-radius: 2px; background: #CFCCC7; align-self: center;"></span>
+    <h2 id="s-h" style="margin: 0; font-size: 18px; font-weight: 600;">Change Noor Threads' plan</h2>
+    <label class="opt"><input type="radio" name="pp"><span>Launch <span class="lab">· now</span></span></label>
+    <label class="opt" style="border-color: #3A44C2; background: #EEF0FD;"><input type="radio" name="pp" checked="checked"><span>Growth <span class="lab">· ₹4,999 · 1%</span></span></label>
+    <label class="opt"><input type="radio" name="pp"><span>Scale <span class="lab">· ₹14,999 · 0.5%</span></span></label>
+    <label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 500;">Reason<input value="Asked for more orders before Diwali" style="height: 44px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font: inherit;"></label>
+    <button type="button" class="btn p">Move to Growth</button>
+    <button type="button" class="btn">Keep Launch</button>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

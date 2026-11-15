@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin · A merchant's plan</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F37A3;text-decoration:none}a:hover{color:#272D82}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 10px;border-radius:8px;border:1px solid #E3E1DD;background:#FFFFFF;color:#171615;font:inherit;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer}
+.btn.p{background:#3A44C2;border-color:#3A44C2;color:#FFFFFF}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:500;white-space:nowrap}
+.chip::before{content:"";width:6px;height:6px;border-radius:3px;background:currentColor}
+.info{background:#E8F1FD;color:#1F5BA8}.neu{background:#F1F0EE;color:#57524D}
+.tab{display:inline-flex;align-items:center;gap:6px;height:40px;color:#67625C;font-weight:500}
+.tab[aria-current]{color:#171615;box-shadow:inset 0 -2px 0 #3A44C2}
+.card{border:1px solid #E3E1DD;border-radius:12px;padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.lab{font-size:13px;color:#67625C}
+.opt{display:flex;align-items:flex-start;gap:10px;border:1px solid #E3E1DD;border-radius:10px;padding:10px 12px}
+.opt[data-on]{border-color:#3A44C2;background:#EEF0FD}
+input[type=text]{height:36px;border:1px solid #8F8A84;border-radius:8px;padding:0 10px;font:inherit;width:100%;box-sizing:border-box}
+</style>
+</helmet>
+<div style="width: 1280px; height: 860px; box-sizing: border-box; display: flex; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 20px; position: relative;">
+  <div aria-hidden="true" style="width: 232px; flex: none; background: #171615;"></div>
+  <main style="flex: 1; min-width: 0; padding: 28px 32px; display: flex; flex-direction: column; gap: 16px;">
+    <header style="display: flex; flex-direction: column; gap: 4px;">
+      <span style="font-size: 13px; color: #67625C;">Merchants › Noor Threads</span>
+      <div style="display: flex; align-items: center; gap: 10px;"><h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">Noor Threads</h1><span class="chip neu">Launch</span><span class="chip info">Trial · 26 days left</span></div>
+    </header>
+    <nav aria-label="Noor Threads" style="display: flex; gap: 20px; border-bottom: 1px solid #E3E1DD;">
+      <a class="tab" href="Merchant.dc.html">Overview</a><a class="tab" href="#" aria-current="page">Plan</a><a class="tab" href="#">Modules</a><a class="tab" href="#">Addresses</a><a class="tab" href="#">Activity</a>
+    </nav>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; max-width: 900px;">
+      <section class="card" aria-labelledby="p-h">
+        <div style="display: flex; justify-content: space-between; align-items: center;"><h2 id="p-h" style="margin: 0; font-size: 15px; font-weight: 600;">Launch</h2><button type="button" class="btn">Change plan</button></div>
+        <span>₹1,499 a month · 150 orders · 2% of delivered</span>
+        <span class="lab">Version 3 · since 11 Nov</span>
+      </section>
+      <section class="card" aria-labelledby="t-h">
+        <div style="display: flex; justify-content: space-between; align-items: center;"><h2 id="t-h" style="margin: 0; font-size: 15px; font-weight: 600;">Free trial</h2><button type="button" class="btn">Extend 7 days</button></div>
+        <span>Ends 11 Dec · 26 days left</span>
+        <span class="lab">30 days · no autopay yet</span>
+      </section>
+    </div>
+  </main>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(23,22,21,.36);"></div>
+  <section role="dialog" aria-modal="true" aria-labelledby="d-h" style="position: absolute; left: 420px; top: 90px; width: 520px; background: #FFFFFF; border-radius: 12px; box-shadow: 0 24px 48px -12px rgba(23,22,21,.24); padding: 20px 24px; display: flex; flex-direction: column; gap: 14px;">
+    <h2 id="d-h" style="margin: 0; font-size: 18px; font-weight: 600;">Change Noor Threads' plan</h2>
+    <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;"><legend style="font-size: 13px; font-weight: 500; margin-bottom: 6px;">Plan</legend>
+      <label class="opt"><input type="radio" name="pl"><span><b style="font-weight: 500;">Launch</b> <span class="lab">· now · ₹1,499 · 2%</span></span></label>
+      <label class="opt" data-on="1"><input type="radio" name="pl" checked="checked"><span><b style="font-weight: 500;">Growth</b> <span class="lab">· ₹4,999 · 1,500 orders · 1%</span></span></label>
+      <label class="opt"><input type="radio" name="pl"><span><b style="font-weight: 500;">Scale</b> <span class="lab">· ₹14,999 · 5,000 orders · 0.5%</span></span></label>
+    </fieldset>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Starts
+        <span role="radiogroup" aria-label="Starts" style="display: inline-flex; gap: 2px; background: #F6F5F3; border-radius: 8px; padding: 3px;"><button type="button" role="radio" aria-checked="true" class="btn" style="height: 28px; border: 0;">Today</button><button type="button" role="radio" aria-checked="false" style="height: 28px; border: 0; background: transparent; font: inherit; font-size: 13px; color: #67625C; padding: 0 10px;">1 December</button></span></label>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Monthly price, ₹ <span style="font-weight: 400; color: #67625C;">(optional)</span><input type="text" placeholder="4,999"></label>
+    </div>
+    <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Reason<input type="text" value="Asked for more orders before Diwali"></label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px;"><button type="button" class="btn">Keep Launch</button><button type="button" class="btn p">Move to Growth</button></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
