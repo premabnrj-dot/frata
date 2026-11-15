@@ -79,10 +79,12 @@ export function nextWords(c: Client, today: string, now: Date): string {
 
 /** Who acts first: you, then the client, then nobody; removed last. The list's order below 9 clients. */
 const WHO_ORDER = { you: 0, client: 1, nobody: 2 } as const
+/** Within who acts, the step that costs most first: money overdue, a store to hand over, a bill to record (mockup v2). */
+const STEP_ORDER: Record<string, number> = { overdue: 0, building: 1, renews: 2, invited: 3, notOpen: 4, dueSoon: 5, open: 6, removed: 7 }
+const rank = (c: Client) => [c.stage === 'ended' && c.next?.who !== 'you' ? 3 : WHO_ORDER[c.next?.who ?? 'nobody'], c.stage === 'ended' ? 1 : 0, STEP_ORDER[c.next?.reason ?? 'open'] ?? 9] as const
 export function byWho(a: Client, b: Client): number {
-  const ka = a.stage === 'ended' && a.next?.who !== 'you' ? 3 : WHO_ORDER[a.next?.who ?? 'nobody']
-  const kb = b.stage === 'ended' && b.next?.who !== 'you' ? 3 : WHO_ORDER[b.next?.who ?? 'nobody']
-  return ka - kb || a.row.name.localeCompare(b.row.name, 'en-IN', { numeric: true })
+  const ra = rank(a), rb = rank(b)
+  return ra[0] - rb[0] || ra[1] - rb[1] || ra[2] - rb[2] || a.row.name.localeCompare(b.row.name, 'en-IN', { numeric: true })
 }
 
 /** The Remind link: WhatsApp on the partner's own phone with the drafted words, no number (owner Q4; ADR-0010). */

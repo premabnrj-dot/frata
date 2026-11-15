@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { MessageCircle } from 'lucide-react'
+import { Icon } from '@/components/icons/icon'
 import { z } from 'zod'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
@@ -63,11 +65,11 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   const fill = { label: deal?.kind === 'retainer' ? `${new Date(`${nextBillDay}T12:00:00+05:30`).toLocaleDateString('en-IN', { month: 'long', timeZone: 'Asia/Kolkata' })} retainer` : '', amount: deal ? rupees(deal.amount) : '', dueOn: nextBillDay }
   const primary = !owner ? null
     : c.next?.action === 'handOver' ? <HandOver tenantId={row.tenantId} store={row.name} again={false} primary />
-    : remind ? <a href={remind} target="_blank" rel="noopener noreferrer" className={button()}>Remind</a>
-    : c.next?.action === 'recordBill' ? <RecordBill linkId={link} store={row.name} fill={fill} primary startOpen={record === '1'} /> : null
+    : remind ? <a href={remind} target="_blank" rel="noopener noreferrer" className={button()}><MessageCircle aria-hidden="true" className="size-4" />Remind</a>
+    : c.next?.action === 'recordBill' ? <RecordBill linkId={link} store={row.name} fill={fill} today={today} primary startOpen={record === '1'} /> : null
   const actions = <>
     {!ended && <StoreMore tenantId={row.tenantId} />}
-    {!ended && <form action={switchStoreAction}><input type="hidden" name="tenantId" value={row.tenantId} /><button type="submit" className={button({ variant: 'secondary' })}>Open store</button></form>}
+    {!ended && <form action={switchStoreAction}><input type="hidden" name="tenantId" value={row.tenantId} /><button type="submit" className={button({ variant: 'secondary' })}><Icon name="merchants" className="size-4" />Open store</button></form>}
     {primary}
   </>
   const meta = <span className="flex flex-wrap gap-x-3.5">
@@ -98,7 +100,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
                 {deal.renewsOn ? <p className="text-small text-muted-foreground">Next bill {dayWords(deal.renewsOn, today)}</p> : null}</>
                 : <p className="text-muted-foreground">No billing set</p>}
             </div>
-            <ChangeBilling linkId={link} store={row.name} deal={{ kind: deal?.kind ?? 'retainer', amount: deal ? rupees(deal.amount) : '', renewsOn: deal?.renewsOn ?? '' }} />
+            <ChangeBilling linkId={link} store={row.name} today={today} deal={{ kind: deal?.kind ?? 'retainer', amount: deal ? rupees(deal.amount) : '', renewsOn: deal?.renewsOn ?? '' }} />
           </div>
           <ul data-list className="divide-y divide-border">
             {bills.map((b) => {
@@ -111,7 +113,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
                   <Money paise={b.amount} className="text-right" />
                   <span><Badge tone={s === 'paid' ? 'ok' : s === 'overdue' ? 'danger' : s === 'due' ? 'warn' : 'neutral'}>{s === 'paid' ? 'Paid' : s === 'overdue' ? 'Overdue' : s === 'due' ? 'Due' : 'Later'}</Badge></span>
                   <span className="flex items-center justify-end gap-1.5">
-                    {!b.paidAt && <MarkPaid linkId={link} billId={b.id} name={name} />}
+                    {!b.paidAt && <MarkPaid linkId={link} billId={b.id} name={name} amount={formatInr(b.amount)} />}
                     <BillMore linkId={link} billId={b.id} name={name} amount={formatInr(b.amount)} paid={!!b.paidAt} />
                   </span>
                 </li>
@@ -119,8 +121,8 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
             })}
           </ul>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3">
-            {c.next?.action === 'recordBill' ? <span /> : <RecordBill linkId={link} store={row.name} fill={fill} startOpen={record === '1'} />}
-            <span className="text-small text-muted-foreground">Your client never sees this</span>
+            {c.next?.action === 'recordBill' ? <span /> : <RecordBill linkId={link} store={row.name} fill={fill} today={today} startOpen={record === '1'} />}
+            <span className="inline-flex items-center gap-1.5 text-small text-muted-foreground"><Icon name="eyeOff" className="size-3.5" />Your client never sees this</span>
           </div>
         </Section>
       )}

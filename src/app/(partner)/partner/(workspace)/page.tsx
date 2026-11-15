@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { MessageCircle, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { PictoTile } from '@/components/brand/illustrations'
@@ -20,6 +21,7 @@ import { requirePartner } from '@/lib/auth/require-partner'
 import { partnerClients } from '@/lib/db/partners'
 import { billSummary, clientShares } from '@/lib/db/partner-bills'
 import { shopHost } from '@/lib/public-env'
+import { dayMonthIN } from '@/lib/format-date'
 import { HandOver } from './hand-over'
 import { buildClients, byWho, failed, nextWords, remindHref, shareMonthLabel, signer, STAGE_TONE, type Client } from './_components/clients'
 
@@ -44,7 +46,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     owner ? clientShares(auth).catch(failed('clients.shares')) : Promise.resolve([]),
   ])
   const canCreate = partnerCan(role, 'createShop')
-  const newStore = canCreate ? <Link href="/partner/new" className={button()}>New client store</Link> : undefined
+  const newStore = canCreate ? <Link href="/partner/new" className={button()}><Plus aria-hidden="true" className="size-4" />New client store</Link> : undefined
   if (!rows || !billing || !shares) {
     return (<><PageHeader title="Clients" actions={newStore} />
       <Panel title="We couldn’t load your clients" action={<Link href="/partner" className={button({ variant: 'secondary', size: 'sm' })}>Try again</Link>}>Nothing was changed. Try again in a minute.</Panel></>)
@@ -103,18 +105,19 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                   <Td cell="a">
                     {builder ? <span className="font-medium">{c.row.name}</span>
                       : <Link href={`/partner/clients/${c.row.linkId}`} data-row-link prefetch={false} className="font-medium hover:underline">{c.row.name}</Link>}
-                    <span className="hidden text-small text-muted-foreground md:block">{ended ? 'Removed' : c.row.slug ? shopHost(c.row.slug) : null}</span>
+                    <span className="hidden text-small text-muted-foreground md:block">{ended ? (c.row.removedAt ? `Removed ${dayMonthIN(c.row.removedAt)}` : 'Removed') : c.row.slug ? shopHost(c.row.slug) : null}</span>
                   </Td>
                   <Td cell="d"><Badge tone={STAGE_TONE[c.stage]}>{STAGE_LABEL[c.stage]}</Badge></Td>
-                  {!builder && <Td cell="c" className={c.next?.reason === 'overdue' ? 'text-danger-text' : undefined}>{words || <span className="text-muted-foreground">—</span>}</Td>}
+                  {!builder && <Td cell="c" className={c.next?.reason === 'overdue' ? 'text-danger-text' : undefined}>
+                    {words || (c.next?.reason === 'building' ? (owner ? <span className="md:hidden">Hand over</span> : null) : <span className="hidden text-muted-foreground md:inline">—</span>)}</Td>}
                   {owner && <Td cell="hide" className="w-px whitespace-nowrap text-right">
                     {c.next?.action === 'handOver' && <HandOver tenantId={c.row.tenantId} store={c.row.name} again={false} size="sm" startOpen={handover === c.row.tenantId} />}
-                    {remind && <a href={remind} target="_blank" rel="noopener noreferrer" className={button({ variant: 'secondary', size: 'sm' })}>Remind</a>}
+                    {remind && <a href={remind} target="_blank" rel="noopener noreferrer" className={button({ variant: 'secondary', size: 'sm' })}><MessageCircle aria-hidden="true" className="size-4" />Remind</a>}
                     {c.next?.action === 'recordBill' && <Link href={`/partner/clients/${c.row.linkId}?record=1`} prefetch={false} className={button({ variant: 'secondary', size: 'sm' })}>Record bill</Link>}
                   </Td>}
                   {owner && <Td cell="b" className="text-right">{c.deal ? <><Money paise={c.deal.amount} />{c.deal.kind === 'retainer' ? <span className="text-muted-foreground"> a month</span> : null}</> : <span className="text-muted-foreground">—</span>}</Td>}
-                  {builder && <Td cell="b" className="w-px text-right">
-                    <form action={switchStoreAction}><input type="hidden" name="tenantId" value={c.row.tenantId} /><button type="submit" className={button({ variant: 'secondary', size: 'sm' })}>Open store</button></form>
+                  {builder && <Td cell="b" className="w-px whitespace-nowrap text-right">
+                    <form action={switchStoreAction}><input type="hidden" name="tenantId" value={c.row.tenantId} /><button type="submit" className={button({ variant: 'secondary', size: 'sm', className: 'whitespace-nowrap' })}>Open store</button></form>
                   </Td>}
                 </DataTableRow>
               )

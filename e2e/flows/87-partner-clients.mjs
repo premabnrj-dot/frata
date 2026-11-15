@@ -55,10 +55,12 @@ export default {
       await pia.getByRole('button', { name: 'Set billing' }).click()
       const d = pia.getByRole('dialog', { name: 'Change billing · Kesar Studio' })
       await d.getByLabel('Amount a month (₹)').fill('12,000')
-      await d.getByLabel('Next bill').fill(ist(20))
       await d.getByRole('button', { name: 'Save billing' }).click()
       await expectToast(pia, 'Billing saved', 'ok')
       await pia.getByText('Retainer ·').waitFor()
+      // The next bill fell due 11 days ago (the clock, set in the database: the day field is a calendar).
+      await db`update partner_client_deals set renews_on = ${ist(-11)}::date where partner_id = ${link.partner_id}`
+      await pia.reload()
       await pia.getByRole('button', { name: 'Record bill' }).click()
       const r = pia.getByRole('dialog', { name: 'Record bill · Kesar Studio' })
       await r.getByLabel('Amount (₹)').fill('')
@@ -66,7 +68,7 @@ export default {
       await r.getByText('Enter the amount.').waitFor()
       await r.getByLabel('Bill for').fill('October retainer')
       await r.getByLabel('Amount (₹)').fill('12000')
-      await r.getByLabel('Due').fill(ist(-11))
+      await r.getByRole('button', { name: /^Due: / }).waitFor()
       await r.getByLabel('Bill number (optional)').fill('PT-0412')
       await pia.screenshot({ path: t.out('record-bill') })
       await r.getByRole('button', { name: 'Record bill' }).click()

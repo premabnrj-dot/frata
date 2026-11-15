@@ -93,10 +93,10 @@ export async function setBillingAction(input: { linkId: string; kind: string; am
   return { ok: true, text: 'Billing saved' }
 }
 
-const Mark = z.object({ linkId: Id, billId: Id, paid: z.boolean(), name: z.string().max(80) })
+const Mark = z.object({ linkId: Id, billId: Id, paid: z.boolean(), name: z.string().max(80), amount: z.string().max(24) })
 
 /** Mark paid or unpaid: the toast's Undo calls it again with the other value. */
-export async function markBillAction(input: { linkId: string; billId: string; paid: boolean; name: string }): Promise<BillResult> {
+export async function markBillAction(input: { linkId: string; billId: string; paid: boolean; name: string; amount: string }): Promise<BillResult> {
   const o = await owner()
   if (!o.ok) return o
   const p = Mark.safeParse(input ?? {})
@@ -104,7 +104,7 @@ export async function markBillAction(input: { linkId: string; billId: string; pa
   const r = await markBill(o.auth, p.data.billId, p.data.paid)
   if (!r.ok) return { ok: false, error: SENTENCES[r.error] }
   refresh(p.data.linkId)
-  return { ok: true, text: p.data.paid ? `Marked ${p.data.name} paid` : `Marked ${p.data.name} unpaid` }
+  return { ok: true, text: `Marked ${p.data.name} ${p.data.paid ? 'paid' : 'unpaid'} · ${p.data.amount}` }
 }
 
 const Del = z.object({ linkId: Id, billId: Id })
