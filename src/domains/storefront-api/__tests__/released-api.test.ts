@@ -11,7 +11,7 @@ import { openApi } from '../2026-12/openapi'
 import { SENTINELS } from '../../../../scripts/cost-sentinels.mjs'
 
 type J = Record<string, unknown>
-const RESOURCES = { Shop: S.Shop, Page: S.Page, Product: S.Product, Collections: S.Collections, CollectionPage: S.CollectionPage, Offers: S.Offers, Search: S.Search }
+const RESOURCES = { Shop: S.Shop, Page: S.Page, Product: S.Product, Collections: S.Collections, CollectionPage: S.CollectionPage, Offers: S.Offers, Search: S.Search, Content: S.Content, StorePage: S.StorePage, Faq: S.Faq }
 const now = () => Object.fromEntries(Object.entries(RESOURCES).map(([k, s]) => [k, z.toJSONSchema(s, { io: 'output' }) as J]))
 const FILE = join(__dirname, 'released', '2026-12.json')
 

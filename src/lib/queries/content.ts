@@ -33,6 +33,11 @@ const coreRows = (tenantId: string) => withTenant(tenantId, (tx) => rowsIn(tx, t
 const shopRows = shopCached('content-v1', 'content', coreRows)
 /** A store's content as its pages show it. A read that fails shows no bar and the default menus, never an error page. */
 export const shopContent = async (tenantId: string): Promise<StoreContent> => contentOf(await shopRows(tenantId))
+/** The Storefront API's copy (V1 SA1, lane A): the same rows, an hour per entry, so the API's routes keep their hour
+ *  (a cached route takes the shortest period it reads). A save purges it with the shop's (same tag); a bar's start and
+ *  a save the limiter left behind are purged by the drain (app_shops_with_content_change). */
+const apiRows = shopCached('api-content-v1', 'content', coreRows, 3600)
+export const apiContent = async (tenantId: string): Promise<StoreContent> => contentOf(await apiRows(tenantId))
 /** The same, uncached: the console's previews. */
 export const previewContent = async (tenantId: string): Promise<StoreContent> => contentOf(await coreRows(tenantId))
 

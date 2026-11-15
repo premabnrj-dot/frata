@@ -6,6 +6,7 @@ import { asModule } from '@/lib/auth/as-module'
 import { revalidatePath } from 'next/cache'
 import { asMember } from '@/lib/auth/as-member'
 import { removePartner } from '@/lib/db/partners'
+import { refreshKeys } from '@/lib/queries/storefront-api'
 import { inviteAccountant, removeAccountant, revokeAccountantInvite } from '@/lib/db/accountants'
 import { CAN_INVITE_ACCOUNTANT } from '@/domains/tenancy/roles'
 
@@ -25,6 +26,8 @@ export async function removeShopPartner(): Promise<{ ok: true } | { ok: false; e
     })
     if (!r.ok) return { ok: false, error: r.error }
     if (!r.value.ok) return { ok: false, error: SENTENCES[r.value.error] ?? 'We couldn’t remove the partner. Nothing was changed.' }
+    // The partner's storefront keys stop with its link (the definer derives it); their cached copies go now.
+    await refreshKeys(r.tenantId)
     revalidatePath('/console/settings/people')
     return { ok: true }
   } catch (err) {

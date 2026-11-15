@@ -7,6 +7,13 @@ import type { ApiCtx } from './request'
 import { visibility, type Status } from '@/domains/catalogue/availability'
 import { storeHost } from '@/domains/media/sizes'
 import { BLOB_STORE_ID } from '@/lib/env'
+import { contentOut, faqOut, storePageOut } from '@/domains/storefront-api/2026-12/content-map'
+import { resolvePage } from '@/domains/pages/page'
+import { HANDLE as PAGE_HANDLE } from '@/domains/pages/templates'
+import { apiContent, previewContent } from '@/lib/queries/content'
+import { previewPages, shopPages, type ShopPage } from '@/lib/queries/pages'
+import { formatInr } from '@/lib/format'
+import { paise } from '@/domains/money/paise'
 
 // =============================================================================
 // FILE: src/lib/storefront-api/resources.ts — VERSION 2026-12's RESOURCES (spec § 3; V1 plan § SA1·3).
@@ -18,8 +25,21 @@ import { BLOB_STORE_ID } from '@/lib/env'
 // =============================================================================
 
 const loaders = (ctx: ApiCtx) => ctx.keyKind === 'test'
-  ? { shop: previewShop, catalogue: previewCatalogue, product: previewProduct }
-  : { shop: apiShop, catalogue: apiCatalogue, product: apiProduct }
+  ? { shop: previewShop, catalogue: previewCatalogue, product: previewProduct, content: previewContent }
+  : { shop: apiShop, catalogue: apiCatalogue, product: apiProduct, content: apiContent }
+
+/** One page by its address: a live page (the store's cached list), or under a test key also a draft that isn't hidden. */
+async function pageAt(ctx: ApiCtx, handle: string): Promise<Pick<ShopPage, 'handle' | 'title' | 'template' | 'fill'> | null> {
+  if (!PAGE_HANDLE.test(handle)) return null
+  const live = (await shopPages(ctx.tenantId)).find((p) => p.handle === handle)
+  if (live || ctx.keyKind !== 'test') return live ?? null
+  return (await previewPages(ctx.tenantId)).find((p) => p.handle === handle && !p.hidden) ?? null
+}
+/** A page as the store shows a shopper (never a sample or an example), bound answers from the store's Settings. */
+async function pageNodes(ctx: ApiCtx, p: Pick<ShopPage, 'template' | 'fill'>) {
+  const s = await loaders(ctx).shop(ctx.tenantId)
+  return s ? resolvePage(p.template, p.fill, 'shop', { facts: s, overrides: s.overrides, inr: (n) => formatInr(paise(n)) }) : null
+}
 
 /** The mappers' context: the shop from the key, and Frrata's one media store (photos from anywhere else are dropped). */
 const mapCtx = (ctx: ApiCtx) => ({ tenantId: ctx.tenantId, mediaHost: storeHost(BLOB_STORE_ID) })
@@ -69,6 +89,20 @@ export const RESOURCES = {
     return c ? collectionPageOut(mapCtx(ctx), c, cat.products, p.page, ctx.now) : null
   } },
   offers: { schema: S.Offers, run: async (ctx: ApiCtx) => offersOut(await (ctx.keyKind === 'test' ? shopAnnouncement : apiAnnouncement)(ctx.tenantId), ctx.now) },
+  content: { schema: S.Content, run: async (ctx: ApiCtx) => {
+    const [c, pages] = await Promise.all([loaders(ctx).content(ctx.tenantId), shopPages(ctx.tenantId)])
+    return contentOut(c, pages, ctx.now)
+  } },
+  page: { schema: S.StorePage, run: async (ctx: ApiCtx, p: { handle: string }) => {
+    const page = await pageAt(ctx, p.handle)
+    const nodes = page && await pageNodes(ctx, page)
+    return page && nodes ? storePageOut(mapCtx(ctx), page, nodes) : null
+  } },
+  faq: { schema: S.Faq, run: async (ctx: ApiCtx) => {
+    const page = (await shopPages(ctx.tenantId)).find((x) => x.template === 'faq')
+    const nodes = page && await pageNodes(ctx, page)
+    return page && nodes ? faqOut(page, nodes) : null
+  } },
   search: { schema: S.Search, run: async (ctx: ApiCtx, p: { q: string }) =>
     searchOut(mapCtx(ctx), (await loaders(ctx).catalogue(ctx.tenantId)).products, p.q, ctx.now) },
 } as const

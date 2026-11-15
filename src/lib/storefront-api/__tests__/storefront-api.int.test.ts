@@ -143,7 +143,31 @@ describe.skipIf(!host)('the Storefront API door', () => {
         expect(body).not.toContain('987654')
         for (const k of SENTINELS) expect(body).not.toContain(k)
       }
+      // Content and pages (V1 SA1, on lane B's seam): A's own only; a draft page opens only under A's test key.
+      for (const [i, t] of shops.entries()) await su.begin(async (tx) => {
+        await tx`select set_config('app.tenant_id', ${t}, true)`
+        await tx`insert into site_content (tenant_id, kind, key, value) values (${t}, 'contact', 'contact', ${tx.json({ line: `Call store ${i}` })})`
+        const words = (h: string) => ({ story: { kind: 'text', body: [[{ text: `Story of ${h}` }]] } })
+        await tx`insert into shop_pages (tenant_id, template, draft, live) values
+          (${t}, 'about', ${tx.json({ title: `About ${i}`, handle: `about-${i}`, fill: words(`about-${i}`), hidden: false })}, ${tx.json({ title: `About ${i}`, handle: `about-${i}`, fill: words(`about-${i}`) })}),
+          (${t}, 'about', ${tx.json({ title: `Soon ${i}`, handle: `soon-${i}`, fill: words(`soon-${i}`), hidden: false })}, null)`
+      })
+      const content = (tree: 'live' | 'test', name: 'content' | 'page' | 'faq', key: string, more: Record<string, string> = {}) => apiRequest({ version: '2026-12', tree,
+        mode: tree === 'live' ? 'isr' : 'dynamic', resource: name, schema: RESOURCES[name].schema, params: (name === 'page' ? handleParam : undefined) as never,
+        run: RESOURCES[name].run as never })(r(), at(key, more))
+      const c0 = JSON.parse(await (await content('live', 'content', keys[0]!)).text())
+      expect(c0).toMatchObject({ contact: 'Call store 0', pages: [{ handle: 'about-0', title: 'About 0', kind: 'about' }] })
+      const p0 = await read(content('live', 'page', keys[0]!, { handle: 'about-0' }))
+      expect(p0.status).toBe(200)
+      expect(p0.body).toContain('Story of about-0')
+      expect((await read(content('live', 'page', keys[0]!, { handle: 'about-1' }))).status).toBe(404)
+      expect((await read(content('live', 'page', keys[0]!, { handle: 'soon-0' }))).status).toBe(404)
+      expect((await read(content('test', 'page', tests[0]!, { handle: 'soon-0' }))).body).toContain('Story of soon-0')
+      expect((await read(content('test', 'page', tests[0]!, { handle: 'soon-1' }))).status).toBe(404)
+      expect((await read(content('live', 'faq', keys[0]!))).status).toBe(404)
     } finally {
+      await su`delete from shop_pages where tenant_id in ${su(shops)}`
+      await su`delete from site_content where tenant_id in ${su(shops)}`
       await su`delete from storefront_keys where tenant_id in ${su(shops)}`
       await su`update shop_settings set site_origin = null, site_domain_id = null where tenant_id in ${su(shops)}`
       // The shops stay (price history holds them): the proof database is throwaway, and their keys are gone.

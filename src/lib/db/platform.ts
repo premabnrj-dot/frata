@@ -44,6 +44,25 @@ export async function shopsWithBoundary(since: Date, until: Date): Promise<strin
 }
 
 /**
+ * Shops holding a live storefront key that a moment in (since, until] stopped without touching the key's row: its
+ * partner's link ended, the partner was suspended, or a domain went (V1 SA1). Ids only, at most 500; the drain purges
+ * their keys, since a key's cached lookup lives an hour.
+ */
+export async function shopsWithKeyStop(since: Date, until: Date): Promise<string[]> {
+  const rows = await db().execute<{ id: string }>(sql`select app_shops_with_key_stop(${since.toISOString()}::timestamptz, ${until.toISOString()}::timestamptz) as id`)
+  return rows.map((r) => r.id)
+}
+
+/**
+ * Shops whose content (the bar, menus, the Contact line) was saved, deleted or started in (since, until] (V1 SA1). Ids
+ * only, at most 500; the drain purges their content scope, since the Storefront API's copies live an hour.
+ */
+export async function shopsWithContentChange(since: Date, until: Date): Promise<string[]> {
+  const rows = await db().execute<{ id: string }>(sql`select app_shops_with_content_change(${since.toISOString()}::timestamptz, ${until.toISOString()}::timestamptz) as id`)
+  return rows.map((r) => r.id)
+}
+
+/**
  * Which shop a storefront host belongs to. A platform address (<slug>.<shop
  * domain>) is found by its slug, so changing the shop domain is an environment
  * change; any other host is a merchant's own domain (shop_domains; tenant_domains is retired, app_tenant_for_host

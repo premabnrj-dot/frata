@@ -21,12 +21,13 @@ const unavailable = { description: 'We couldn’t answer just now. Try again sho
 const key = { name: 'key', in: 'path', required: true, description: 'Your store’s live key (frs_pub_…) or, before it opens, a test key (frs_test_…).', schema: { type: 'string', pattern: '^frs_(pub|test)_[0-9A-Za-z]{38}$' } }
 const n = { name: 'n', in: 'path', required: true, schema: { type: 'integer', minimum: 1, maximum: MAX_PAGE } }
 const handle = { name: 'handle', in: 'path', required: true, schema: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$', maxLength: 100 } }
+const pageHandle = { name: 'handle', in: 'path', required: true, schema: { type: 'string', pattern: '^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$', maxLength: 60 } }
 const get = (summary: string, schema: z.ZodType, params: object[] = []) => ({ get: { summary, parameters: [key, ...params], responses: { 200: ok(schema, summary), 404: notFound, 429: busy, 500: unavailable } } })
 
 export function openApi() {
   return {
     openapi: '3.1.0',
-    info: { title: 'Frrata Storefront', version: '2026-12', description: 'Read a store’s public catalogue. Prices are in paise. Render text as text, never as HTML. Enums marked so may gain values. A test key also opens a draft by its handle. Checkout stays on the store’s checkout address. The cart link comes in the next release.' },
+    info: { title: 'Frrata Storefront', version: '2026-12', description: 'Read a store’s public catalogue, content and pages. Prices are in paise. Render text as text, never as HTML. Enums marked so may gain values. A test key also opens a draft by its handle. Checkout stays on the store’s checkout address. The cart link comes in the next release.' },
     servers: [{ url: 'https://api.frrata.shop/2026-12' }],
     paths: {
       '/k/{key}/shop': get('The store, with the legal details every page must show', S.Shop),
@@ -35,6 +36,9 @@ export function openApi() {
       '/k/{key}/collections': get('The store’s collections', S.Collections),
       '/k/{key}/collections/{handle}/page/{n}': get('A collection’s listed products, 48 a page', S.CollectionPage, [handle, n]),
       '/k/{key}/offers': get('The offer in the store’s bar, while it runs', S.Offers),
+      '/k/{key}/content': get('The store’s bars, menus, Contact line and pages', S.Content),
+      '/k/{key}/pages/{handle}': get('One of the store’s pages, block by block', S.StorePage, [pageHandle]),
+      '/k/{key}/faq': get('The store’s questions, answered from its Settings', S.Faq),
       '/k/{key}/search': get('Listed products matching every word of q', S.Search, [{ name: 'q', in: 'query', required: true, schema: { type: 'string', minLength: 1, maxLength: 60 } }]),
     },
   }

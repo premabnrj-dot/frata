@@ -3867,7 +3867,37 @@ do $$ begin
      or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_shops_with_boundary(timestamptz, timestamptz)', 'execute'))
      or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_shops_with_boundary(timestamptz, timestamptz)'::regprocedure and a.grantee = 0)
   then raise exception 'FAIL: app_shops_with_boundary is not a pinned definer for frata_app alone'; end if;
+  if pg_get_function_result('app_shops_with_key_stop(timestamptz, timestamptz)'::regprocedure) <> 'SETOF uuid' then raise exception 'FAIL: app_shops_with_key_stop returns more than ids'; end if;
+  if not (select prosecdef from pg_proc where oid = 'app_shops_with_key_stop(timestamptz, timestamptz)'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_shops_with_key_stop(timestamptz, timestamptz)'::regprocedure) is distinct from array['search_path=""']
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_shops_with_key_stop(timestamptz, timestamptz)', 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_shops_with_key_stop(timestamptz, timestamptz)'::regprocedure and a.grantee = 0)
+     or not has_function_privilege('frata_app', 'app_shops_with_key_stop(timestamptz, timestamptz)', 'execute')
+  then raise exception 'FAIL: app_shops_with_key_stop is not a pinned definer for frata_app alone'; end if;
+  if pg_get_function_result('app_shops_with_content_change(timestamptz, timestamptz)'::regprocedure) <> 'SETOF uuid' then raise exception 'FAIL: app_shops_with_content_change returns more than ids'; end if;
+  if not (select prosecdef from pg_proc where oid = 'app_shops_with_content_change(timestamptz, timestamptz)'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_shops_with_content_change(timestamptz, timestamptz)'::regprocedure) is distinct from array['search_path=""']
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_shops_with_content_change(timestamptz, timestamptz)', 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_shops_with_content_change(timestamptz, timestamptz)'::regprocedure and a.grantee = 0)
+     or not has_function_privilege('frata_app', 'app_shops_with_content_change(timestamptz, timestamptz)', 'execute')
+  then raise exception 'FAIL: app_shops_with_content_change is not a pinned definer for frata_app alone'; end if;
 end $$;
+begin;
+select set_config('app.tenant_id', 'c8100000-0000-0000-0000-000000000001', true);
+insert into site_content (tenant_id, kind, key, value, starts_at, updated_at) values
+  ('c8100000-0000-0000-0000-000000000001', 'announcement', 'b1', '{"text":"Sale","link":null,"scheme":"paper"}', now() - interval '2 minutes', now() - interval '3 hours');
+select set_config('app.tenant_id', 'c8100000-0000-0000-0000-000000000002', true);
+insert into site_content (tenant_id, kind, key, value, starts_at, updated_at) values
+  ('c8100000-0000-0000-0000-000000000002', 'contact', 'contact', '{"line":"Call us"}', null, now() - interval '3 hours');
+commit;
+begin; set local role frata_app;
+do $$ begin
+  if not exists (select 1 from app_shops_with_content_change(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000001') then raise exception 'FAIL: a bar starting in the window was missed'; end if;
+  if exists (select 1 from app_shops_with_content_change(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: content saved hours ago was swept'; end if;
+  if not exists (select 1 from app_shops_with_content_change(now() - interval '4 hours', now() - interval '2 hours') s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: a save in the window was missed'; end if;
+end $$;
+commit;
+delete from site_content where tenant_id in ('c8100000-0000-0000-0000-000000000001', 'c8100000-0000-0000-0000-000000000002');
 insert into products (tenant_id, handle, title, status, publish_at) values ('c8100000-0000-0000-0000-000000000002', 'drop-81', 'Drop', 'active', now() - interval '1 minute');
 insert into discounts (tenant_id, title, style, percent_bps, starts_at, ends_at, created_by) values
   ('c8100000-0000-0000-0000-000000000001', 'Starts', 'order_off', 1000, now() - interval '2 minutes', null, '99999999-9999-9999-9999-999999999999');
@@ -3968,12 +3998,17 @@ do $$ begin
   if pg_temp.skey(repeat('f', 64)) is distinct from 'c8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: C opening stopped D''s test key'; end if;
   if pg_temp.skey(repeat('c', 64)) is not null then raise exception 'FAIL: a removed partner''s key answers'; end if;
   if pg_temp.skey(repeat('d', 64)) is null then raise exception 'FAIL: removing the partner from C stopped its key on D'; end if;
+  if not exists (select 1 from app_shops_with_key_stop(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000001') then raise exception 'FAIL: the sweep missed C''s removed partner'; end if;
+  if exists (select 1 from app_shops_with_key_stop(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: the sweep purged D for C''s partner'; end if;
+  if exists (select 1 from app_shops_with_key_stop(now() - interval '1 hour', now() - interval '30 minutes')) then raise exception 'FAIL: the key sweep reached outside its window'; end if;
 end $$;
 commit;
+update partner_links set removed_at = now() - interval '2 hours' where tenant_id = 'c8100000-0000-0000-0000-000000000001' and partner_id = 'c8100000-0000-0000-0000-0000000000a1';
 update partners set suspended_at = now() where id = 'c8100000-0000-0000-0000-0000000000a1';
 begin; set local role frata_app;
 do $$ begin
   if pg_temp.skey(repeat('d', 64)) is not null then raise exception 'FAIL: a suspended partner''s key answers'; end if;
+  if not exists (select 1 from app_shops_with_key_stop(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: the sweep missed a suspended partner''s shop'; end if;
 end $$;
 commit;
 update partners set suspended_at = null where id = 'c8100000-0000-0000-0000-0000000000a1';
@@ -3987,6 +4022,7 @@ begin; set local role frata_app;
 do $$ begin
   if pg_temp.skey(repeat('d', 64)) is not null then raise exception 'FAIL: a key answers once its domain is removed'; end if;
   if pg_temp.skey(repeat('a', 64)) is not null then raise exception 'FAIL: a key answers while the store runs on Frrata'; end if;
+  if not exists (select 1 from app_shops_with_key_stop(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: the sweep missed a removed domain'; end if;
 end $$;
 commit;
 

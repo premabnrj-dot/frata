@@ -113,3 +113,45 @@ export const Shop = z.strictObject({
   siteOrigin: https.nullable().describe('Your own address for the store, as it was set in Frrata.'),
   checkoutOrigin: https.describe('Where checkout, orders and policies live. The cart link (coming next) starts here.'),
 })
+
+// ── Store content and pages (V1 SA1, on lane B's content layer: src/lib/queries/content.ts, queries/pages.ts) ──────────
+const PATH = 'A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site.'
+const storePath = z.string().max(200).regex(/^\/[a-z0-9/-]*$/).describe(PATH)
+const icon = z.string().regex(/^[a-z]{1,20}$/).nullable().describe(`An icon name Frrata's own store draws, or null. ${MAY_GROW}`)
+const Link3 = z.strictObject({ label: text(40), link: storePath, icon })
+const Link2 = z.strictObject({ label: text(40), link: storePath, icon, children: z.array(Link3).max(12) })
+const Link1 = z.strictObject({ label: text(40), link: storePath, icon, children: z.array(Link2).max(12) })
+const Menu = z.array(Link1).max(12).nullable().describe('Null when the store has not set this menu. Build your own then.')
+export const PAGE_KINDS = ['about', 'faq'] as const
+export const Announcement = z.strictObject({
+  text: text(120), link: storePath.nullable(), scheme: z.enum(['paper', 'tint', 'ink']).describe(`Light, tinted or dark. ${MAY_GROW}`),
+  endsAt: moment.nullable().describe('Hide it once the clock passes this. Null when it has no end.'),
+})
+export const Content = z.strictObject({
+  announcements: z.array(Announcement).max(3)
+    .describe('Live bars, the one to show first. A live offer (offers.bar) shows before any of them. A bar that starts later is not here yet.'),
+  menus: z.strictObject({ main: Menu, footer: Menu, tabs: Menu.describe('The phone’s bottom tabs, each with an icon.') }),
+  contact: text(160).nullable().describe('The store’s Contact line, or null.'),
+  pages: z.array(z.strictObject({ handle: handle.describe('/pages/<handle>.'), title: text(120), kind: z.enum(PAGE_KINDS).describe(MAY_GROW) })).max(20),
+})
+export const FaqItem = z.strictObject({
+  question: text(80), answer: text(1200).nullable(),
+  policy: z.enum(['returns', 'shipping', 'privacy', 'terms', 'contact']).nullable()
+    .describe(`Set when the answer is the store’s own policy page. Link that page instead of an answer. ${MAY_GROW}`),
+})
+const Run = z.strictObject({ text: text(600), bold: z.boolean(), italic: z.boolean(), link: storePath.nullable() })
+const Leaf = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('heading'), level: z.union([z.literal(2), z.literal(3)]), text: text(60) }),
+  z.strictObject({ kind: z.literal('text'), paragraphs: z.array(z.array(Run).max(40)).max(12) }),
+  z.strictObject({ kind: z.literal('image'), ratio: z.enum(['4:5', '3:4', '1:1', '16:9']).describe(MAY_GROW), image: Image }),
+  z.strictObject({ kind: z.literal('button'), label: text(24), link: storePath }),
+  z.strictObject({ kind: z.literal('questions'), items: z.array(FaqItem).max(12) }),
+])
+const Group = z.strictObject({ kind: z.literal('group'), blocks: z.array(Leaf).max(40).describe('Blocks that belong together, as one card.') })
+const Columns = z.strictObject({ kind: z.literal('columns'), phone: z.enum(['stack', 'swipe']).describe(`How it shows on a phone. ${MAY_GROW}`), blocks: z.array(z.union([Leaf, Group])).max(40) })
+export const StorePage = z.strictObject({
+  handle: handle.describe('/pages/<handle>.'), title: text(120), kind: z.enum(PAGE_KINDS).describe(MAY_GROW),
+  blocks: z.array(z.union([Leaf, Group, Columns])).max(100)
+    .describe('The page, top to bottom. New block kinds may appear. Skip a kind you don’t know.'),
+})
+export const Faq = z.strictObject({ handle: handle.describe('/pages/<handle>.'), title: text(120), items: z.array(FaqItem).max(12) })
