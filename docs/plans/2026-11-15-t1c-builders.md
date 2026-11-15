@@ -75,6 +75,11 @@ A Builder joins **no tuple** (ADR-0015 § 1). Read on 2026-11-15 (`grep -rlw`), 
   `gst.read` = CAN_SEE_GST, `accountant.invite` = CAN_INVITE_ACCOUNTANT, `costs.set` = CAN_SET_COSTS,
   `console.full` = CONSOLE_ROLES. **The tuples become views** (`export const ANY_MEMBER = CAPABILITIES['orders.work']`),
   so no caller changes meaning on the day it lands; the snapshot test proves it.
+- **Capabilities other lanes read** (orchestrator, 2026-11-15; release order C, then B, then A: this table lands first and
+  the other lanes only read it): `api.manage` (lane A, storefront keys: `owner`, `admin`, `partner`; a partner only while
+  the store has never had an owner, a predicate beside the list as `seesCosts` is) and `content.write` (lane B, Console ›
+  Content: `owner`, `admin`, `partner`; a partner after handover only with the owner's content scope, lane B's own rule).
+  Never `builder`. Both are declared with their roles and no caller in T1c; the snapshot pins them.
 - `costs.read` stays the predicate `seesCosts` (ADR-0015 § 3), now with `builder → false`.
 - `studio.build`, `studio.publish`, `exports`, `documents`, `shoppers.read`: not declared until a page needs them (V3,
   and the file-by-file move): default deny means nothing waits on them (YAGNI; the ADR names them as examples).
@@ -387,6 +392,14 @@ green on a throwaway PG16; a fresh role there executes no function and reads no 
 - **L11 →** set-role has its own limit (`partnerRole`, fail closed); the invite's role is `z.enum(['lead','builder'])`
   (`partners.ts` hard-codes `'lead'` today); `builderProducts` takes `q` ≤ 100, enum sort and view, a bounded page.
 - **L12 →** corrected: `app_handover_invite` is owner-only (0129).
+
+## Coordination with the other lanes (orchestrator, 2026-11-15)
+- **Lane A's key-cache purge:** `removePartner` (the brand's People › Remove partner, `app_remove_partner`),
+  `removePartnerPerson` (`src/lib/db/partners.ts`, `app_partner_remove_member`) and `admin_end_partner` (Admin ›
+  Partners) will call lane A's `refreshKeys` after commit. T1c does not build it; T1c's set-role and remove paths keep
+  one post-commit spot in each (the place `revalidatePath` runs) so lane A adds one line. Listed in the report.
+- **`hasOwnerIn`** is lane B's extraction from `costsVisibleIn`. T1c needs the same fact in SQL only (`has_owner` inside
+  `app_partner_clients`), so it does not need the TypeScript helper and does not extract it.
 
 ## Repetitive work → agents and scripts
 | Chore | Now |
