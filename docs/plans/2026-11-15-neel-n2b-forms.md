@@ -61,7 +61,25 @@ Unit: `orderTopLine` (every state the board draws), the courier came-back share,
 ## Deviations (proposed; owner sees them before ship)
 | Mockup element | Built | Reason | Owner seen |
 |---|---|---|---|
+| Money words on the order and the offer (drawn: "after cost, courier, fees", "both courier legs", "pays back at 1.7×", "4% came back here") | The words above (unit-economics review) | A fact the mockup got wrong: each drawn line said less or other than the engine computes | — |
 | Courier cards with price and days, "Book Delhivery · ₹78" | Cards for couriers the store has used, each with its came-back share; picking one fills the courier; booking stays "Ship another way" (name and AWB) | No Shiprocket connector exists (no rates, no booking). It is its own phase: current facts on Shiprocket's API and terms first (`frata-integrations`, 90-day rule) | — |
+
+## Unit-economics review on the plan (2026-11-15), folded in
+Every figure comes from the engines (`orderProfit`, `taxOrder`, `freightOf`, `deliveredFee`, `keptPerOrder`), never typed;
+the mockup's ₹612 / −₹186 / ₹363 were illustrative and do not agree with each other. The words, so they are true:
+- **If delivered** ₹N, under it: "After GST, goods, courier and Frrata's fee. Before ads and packaging."
+- **If it comes back** −₹N, under it: "Courier both ways." and, when the pieces can't go back in stock, the second figure
+  "−₹M if it can't go back in stock" (which case is shown is said; whether it restocks is not known before it returns).
+- Frrata's fee is named where it applies: "Frrata's fee ₹42.69 only if delivered." On the goods after the offer, without
+  GST, delivery or the COD fee, at the plan in force when it shipped (`feeForOrder`).
+- A line whose goods cost or courier estimate is unknown shows nothing (never ₹0): the card says which cost is missing.
+- **The offer:** "On a ₹2,490 kurta: ₹N off. You keep ₹A instead of ₹B." from the engine (the GST inside the discount is
+  counted). "Pays back at 1.7×" goes: it is per delivered order and ignores those who would have bought anyway. In its
+  place: "To keep what you keep today, you'd need about 1.2× the orders. 62% of them already qualify." (`keptPerOrder` at
+  the store's own came-back share).
+- **Courier lines:** "4 of 96 of your orders came back" (counts under 30, as "6 of 14"), not "4% came back here" (it reads
+  as this PIN, and a courier does not cause it).
+- Hypothesis H-resale (a return is worth its full cost) stands behind "−₹156"; its test is in frata-unit-economics.
 
 ## Tenancy review on the plan (2026-11-15), folded in
 - **Costs read only when shown.** "What you keep" and "What it costs you" call `costsVisibleIn(tx, tenantId, role)` inside
