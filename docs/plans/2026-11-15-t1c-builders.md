@@ -1,5 +1,5 @@
 # T1c · Builders: capabilities, and a Builder who never sees orders, shoppers or costs
-Status: draft (plan; architecture, tenancy, security and words reviews folded in 2026-11-15; final mockup awaiting the owner) · Date: 2026-11-15 · Lane C
+Status: active (owner approved the final mockup and questions 1–8 "all recommended", 2026-11-15, relayed by the orchestrator; reviews folded in) · Date: 2026-11-15 · Lane C
 (`claude/lane-c-builders`, `docs/plans/2026-11-15-parallel-lanes.md`) · Decision: ADR-0015 accepted (owner 2026-11-15:
 "builders approved") · Spec: `docs/specs/2026-11-12-studio-intake-and-team.md` § Partner teams · Row: T1c in
 `docs/plans/2026-11-12-studio-build.md` · Builds on T1a (teams, 0123–0124) and T1b (partner passkeys, 0128–0129) ·
@@ -10,7 +10,7 @@ phase:** https://claude.ai/artifact/LnwWWrV37oQgbnfmc5bvFP (`docs/mockups/2026-1
 Ranked problem 5 (a premium storefront, built as code by partners; partners get the builder first). An agency puts its
 designers and developers on a brand's store without handing them the brand's orders, shoppers' names, phones and
 addresses, or its costs. Measure: a partner owner can invite a Builder, assign stores and change Lead ↔ Builder; the
-Builder opens only Products, Collections and Preview store; `verify:tenancy` § 80 proves `frata_builder` reads nothing
+Builder opens only Products, Collections and Preview store; `verify:tenancy` § 82 proves `frata_builder` reads nothing
 else; e2e `86-builders` sweeps every console route and finds no refusal missing.
 
 ## Regression net (before the first line of code)
@@ -21,7 +21,7 @@ Run on the branch head and kept green after every task:
 - **The console flows a Builder must be refused from** (they hold the owner and staff paths that must not move): `40-queue`
   (orders), `79-products-list` (the list a Builder sees read-only must stay the same for owners), `47-look`, `51-analytics`,
   `64-seo` (collections), `12-security` (headers, nonce, frame rules), `82-neel-shell` (the nav), `90-ux` (targets).
-- **Proofs:** `npm run verify:tenancy` § 77 (teams) and § 79 (partner passkeys) green before; § 80 added in task 2.
+- **Proofs:** `npm run verify:tenancy` § 77 (teams) and § 79 (partner passkeys) green before; § 82 added in task 2.
 - **Unit:** `src/domains/tenancy/__tests__/capabilities.test.ts` lands FIRST in task 1, as a snapshot of today's tuples,
   so the move to capabilities is proven to change no one's access; `src/domains/partners` tests; `check:tenant`.
 
@@ -132,9 +132,9 @@ A Builder joins **no tuple** (ADR-0015 § 1). Read on 2026-11-15 (`grep -rlw`), 
      app_member_role()) = 'builder')`): a role set without its setting reads nothing (ADR-0015 § 3, "an unset role
      refuses").
    - `revoke execute on all functions in schema public from frata_builder` (functions keep PUBLIC execute by default;
-     every definer already revokes PUBLIC, the gate and § 80 hold it for new ones), then the two `execute` grants.
+     every definer already revokes PUBLIC, the gate and § 82 hold it for new ones), then the two `execute` grants.
    - The definers in the table above (`create or replace`, grants re-run: frata-architecture § Definers).
-3. **`scripts/verify/tenancy.sql` § 80** (next free block; renumbered at merge if a lane takes 80): two shops, a partner
+3. **`scripts/verify/tenancy.sql` § 82** (orchestrator: B has 80, A 81): two shops, a partner
    with an owner, a lead and a builder on shop A only. As `frata_builder` with A's tenant and the setting:
    products/variants/images/collections of A read; of B nothing; `variants.unit_cost`, `orders`, `order_lines`,
    `customers`, `conversations`, `messages`, `discounts`, `shop_settings`, `payment_keys`, `audit_events`,
@@ -175,7 +175,7 @@ A Builder joins **no tuple** (ADR-0015 § 1). Read on 2026-11-15 (`grep -rlw`), 
 |---|---|---|
 | "`withTenant` takes an actor" | `withActor(actor)` is the Builder's (and new code's) door; the 176 `withTenant(tenantId)` calls in 63 files stay for owner, admin, staff, partner, accountant, shop and system, and move file by file (gate ratchet) | the Builder can never hold a tenant string, so no legacy call can run for one; a 63-file change now would collide with lanes A and B for no added lock |
 | "role policies on sensitive tables" | `frata_builder` holds no grant on them at all, and its five tables carry a restrictive role policy | a grant refuses before any policy; a restrictive policy on every frata_app table would also refuse today's raw platform paths |
-| "every sensitive definer checks `app_member_role()`" | `frata_builder` may execute no definer (§ 80 asserts it); the definers reachable through a partner's uid (`app_partner_*`) check the person's role themselves | every one of the ~194 definers already revokes PUBLIC, and `frata_builder` holds no direct grant; § 80 checks every schema |
+| "every sensitive definer checks `app_member_role()`" | `frata_builder` may execute no definer (§ 82 asserts it); the definers reachable through a partner's uid (`app_partner_*`) check the person's role themselves | every one of the ~194 definers already revokes PUBLIC, and `frata_builder` holds no direct grant; § 82 checks every schema |
 | "For a Builder it runs `set local role frata_builder`" (§ 3, § 5) | the store preview runs as `frata_app`, reached only through `previewTenantOf` | its loaders read orders for held pieces and best sellers and return only what shoppers see; owner question 5 |
 | e2e: "every route answers 404" | the page's own refusal `Panel` (HTTP 200) inside the Builder's shell | every page already refuses through `requireMember`; a 404 needs each of 55 pages edited |
 | "Audit: each refusal logged … repeated refusals alert" | logged (`[builder refused]` with capability, route and member id, never an email); the alert waits (owner question 2) | no alert channel to a partner owner exists before C1 |
@@ -184,7 +184,7 @@ A Builder joins **no tuple** (ADR-0015 § 1). Read on 2026-11-15 (`grep -rlw`), 
 1. **Capabilities, no one's access moves.** `capabilities.test.ts` (snapshot of today's tuples) first; then
    `CAPABILITIES`, the tuples as views, `builder` in `MEMBER_ROLES`, `ROLE_LABEL`, `seesCosts`. Typecheck finds every
    `Record<MemberRole, …>`. Verify: `npm test && npm run typecheck`.
-2. **The database.** The two migrations, § 80, the definers. Verify: `npm run verify:tenancy`, then e2e `partners,
+2. **The database.** The two migrations, § 82, the definers. Verify: `npm run verify:tenancy`, then e2e `partners,
    partner-team, staff-passkeys`.
 3. **The door.** `requireMember`'s Builder refusal, `requireCapability`, `Actor`/`withActor`/`assertCan`,
    `previewTenantOf`; `src/lib/queries/builder.ts` (`builderProducts(actor, query)`, `builderCollections(actor)`:
@@ -253,7 +253,7 @@ A Builder joins **no tuple** (ADR-0015 § 1). Read on 2026-11-15 (`grep -rlw`), 
   `scripts/check-tenant.mjs` and a new gate. Shared files (lanes rule 4): `src/domains/tenancy/roles.ts`, the console
   layout, `require-member.ts`, `src/lib/db/` (new `actor.ts`), `scripts/check-tenant.mjs`, `scripts/check-capabilities.mjs`
   (new), `package.json` (the gate in `npm test`), `CLAUDE.md`, `frata-architecture`, `frata-design-language`,
-  `scripts/verify/tenancy.sql` (§ 80), `e2e/lib.mjs` (a `builder` user). Footguns written down: `set_config('role')`
+  `scripts/verify/tenancy.sql` (§ 82), `e2e/lib.mjs` (a `builder` user). Footguns written down: `set_config('role')`
   is undone by `reset role` (gate); a policy `to frata_app` never applies to `frata_builder` (so its tables need their
   own); dropping and recreating a definer resets its grants.
 
@@ -262,7 +262,7 @@ Studio and its capabilities (V3); Builder credit caps (C1); alerts on repeated r
 legacy `withTenant` calls to actors (each file as it is next touched; the gate's ratchet shows the count); a Builder in
 the Look (themes are retiring, ADR-0014).
 
-## Owner questions
+## Owner questions (answered 2026-11-15: all as recommended)
 1. **A Builder's console holds Products, Collections and Preview store, read-only.** Recommended. (The alternative,
    Look too, gives them theme work that is retiring.)
 2. **Refusals: logged now, an alert to the partner owner later** (when C1 brings partner notices). Recommended.
@@ -273,7 +273,8 @@ the Look (themes are retiring, ADR-0014).
    every storefront loader on `frata_builder`).
 6. **Today a Lead receives the brand owner's email in Clients**, against the rule "a lead never gets the owner's contact
    details". Fix it in T1c (one line in the same definer), or leave it to its own change? Recommended: fix here.
-7. **Builders connect to the database with their own login** (`frata_builder`, its own secret and a 2-connection pool),
+7. **Builders connect to the database with their own login** (approved: a missing `DATABASE_URL_BUILDER` fails closed with a
+   clear panel; the orchestrator sets the password and the secret at release) (`frata_builder`, its own secret and a 2-connection pool),
    as Frrata Admin does. Recommended: no Builder query can ever run with the app's rights. You add one secret in Vercel.
 8. **A Builder sees each product's stock count** (the list's stock column), not only "In stock" or "Sold out".
    Recommended: yes, it is catalogue work, not orders.
@@ -290,7 +291,7 @@ These override the text above where they differ.
   (`match_all`), collection_products, **product_types (`name`)**, **product_colours (`hex, value, family`)**,
   **product_attributes** (rule collections' counts): eight tables, each with the two policies. `builderProducts` and
   `builderCollections` call the page's own `listProductsWith(tx, …)` / `listCollectionsWith(tx, …)` (extracted from
-  today's readers), never a copy of the SQL. § 80, the `check:tenant` allow-list and KISS say eight.
+  today's readers), never a copy of the SQL. § 82, the `check:tenant` allow-list and KISS say eight.
 - **High → the store switch** is `switchStoreAction` (`src/app/choose/actions.ts`) and `/choose` (also Clients' "Open
   store"): on `console.open`, in `BUILDER_DOORS` (same as security M5). `api/console/tenant` is TenantCheck's read, not a
   switch; it stays.
@@ -341,7 +342,7 @@ green on a throwaway PG16; a fresh role there executes no function and reads no 
   'partner','accountant')` as each needs today; 0096 is a deny list, `role <> 'accountant'`), in the SAME migration that
   first allows a `builder` row.
 - **Medium → `app_member_role()` revokes from `public, anon, authenticated, service_role`** and grants to `frata_app`,
-  `frata_builder`. § 80 asserts generically: `frata_builder` executes no function in any schema but its two, holds no
+  `frata_builder`. § 82 asserts generically: `frata_builder` executes no function in any schema but its two, holds no
   privilege on any relation but the eight, no column outside the allow-list, no CREATE on `public`, no sequence. The
   same read-only probe runs against the project after the orchestrator applies the migrations (Supabase's own schemas:
   auth, extensions, pgbouncer, vault), and its output goes in the release report.
@@ -361,15 +362,15 @@ green on a throwaway PG16; a fresh role there executes no function and reads no 
 - **H1 → the role is bound by the database, not by care.** A CHECK cannot read `partner_members`, so: a constraint
   trigger on `members` (insert, update) and on `partner_members.role` (update) refuses a row whose `role` is not
   `builder` exactly when its person's role is `builder`; `revoke update (role) on members from frata_app` (only definers
-  move a role); `app_partner_set_role` locks the person `FOR UPDATE` first (as accept and assign do); § 80 asserts no
+  move a role); `app_partner_set_role` locks the person `FOR UPDATE` first (as accept and assign do); § 82 asserts no
   row disagrees, and that a direct `update members set role` as `frata_app` raises.
 - **H2 → `app_my_partner` joins the definer table** (returns `builder`); `partners.ts` maps each role by name and an
   unknown role REFUSES (today anything not `lead` reads as `owner`); `memberRole: PartnerRole`; a unit test per role.
-- **M3 → the lock on functions is PUBLIC's revoke on each definer**, so § 80 checks `has_function_privilege` for every
+- **M3 → the lock on functions is PUBLIC's revoke on each definer**, so § 82 checks `has_function_privilege` for every
   `prosecdef` function in every schema and `has_table_privilege`/`has_column_privilege` over all of `pg_class` (views
   included) for `frata_builder` against the allow-list; the migration adds `alter default privileges revoke execute on
   functions from public`.
-- **M4 →** `grant frata_builder to frata_app with inherit false, set true`; § 80 proves an owner and the storefront still
+- **M4 →** `grant frata_builder to frata_app with inherit false, set true`; § 82 proves an owner and the storefront still
   read products; task 2 reads production's `pg_roles`/`pg_auth_members` for `frata_app` (read only) and the report names
   the result.
 - **M5 → the store switch is `src/app/choose/actions.ts` (`switchStoreAction`) and `/choose`**, not
@@ -385,7 +386,7 @@ green on a throwaway PG16; a fresh role there executes no function and reads no 
   asserting the Builder's preview HTML holds none of the seed's cost or fee values.
 - **L9 → `app_partner_set_role`** refuses any role but `lead`/`builder`, the owner row, the caller's own row and another
   partner's person; covers invited people; Lead → Builder revokes the shop invites the person made (as assign-off
-  does); the person is told by the existing partner notice (`app_partner_notify`); § 80: a Builder setting its own role
+  does); the person is told by the existing partner notice (`app_partner_notify`); § 82: a Builder setting its own role
   and a role of `owner` are refused.
 - **L10 → `app_partner_clients` for a Builder** also nulls `share_months`, `notice_days`, `share_starts_at`, and returns
   `has_owner` (boolean) so the stage stays right without the owner's email (the stage reads it, not the email).
@@ -405,7 +406,7 @@ green on a throwaway PG16; a fresh role there executes no function and reads no 
 | Chore | Now |
 |---|---|
 | Finding a console route a Builder reaches | `check:capabilities` (`BUILDER_DOORS`) + e2e `86-builders`' sweep over the folders |
-| Granting `frata_builder` a column by mistake | `check:tenant` allow-list + § 80 |
+| Granting `frata_builder` a column by mistake | `check:tenant` allow-list + § 82 |
 
 ## Practices recorded in skills (task 7)
 - architecture: a role that must not see a class of data gets a database role with column grants, never a filter; its
