@@ -184,3 +184,11 @@ merchant's band and tabs, a dialog, Record refund, Activity filter, phone) writt
 | "Modules" in the nav, Merchant, Merchants and Reference boards | "Apps" | Owner, 2026-11-15: "It'll be Apps. across the whole ecosystem." | Yes, 2026-11-15 |
 | Staff role "Admin" | "Master admin" | Owner, 2026-11-15: "keep master admin for frrata admin" | Yes, 2026-11-15 |
 | Record refund (no dialog drawn) | A dialog: the amount fixed at what was over-paid, UTR, date sent; Keep / Record refund; a fresh passkey first | The board drew the band's button only; the fields are what a refund record needs | — |
+| Names tab "Recently released" | "Held" | The list is names a store's past still holds (released only when a master admin releases one); "Recently released" would say the opposite | — |
+| A claim band: "Studio Kaaru uses it as its main address" | "Another store uses it as its main address" | Admin's domain read names the claimant only; naming the holder needs a second read per claim | — |
+| Apps row "· in Growth" | "· in plans" | The registry says a plan app is in some plans, not which; naming them needs the plan versions' features per app | — |
+| Billing month as a select that changes the page | A select and Show | No client script on Admin's server page for one control | — |
+| A partner's passkey band: Approve passkey in the band | Approve passkey opens the Passkeys tab, where the code is typed | The approval needs the owner's code read aloud and a passkey check (the existing panel); the band names the call to make | — |
+| Plans as rows (the feature matrix gone) | As drawn: one row a plan, Edit opens its page | Built as drawn; which apps a plan includes is on the plan's own page | — |
+| Activity filter chips | Two selects (Person, Kind) and Show; a store chip when a merchant's Activity tab opened it | No client script for the filters | — |
+| Trial card "no autopay yet" on a merchant's Plan tab | Not shown | The plan page reads the trial's facts; autopay is on Trials and Today | — |
