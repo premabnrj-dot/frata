@@ -41,6 +41,24 @@ Spec: `docs/specs/2026-11-15-billing-rework.md` · Mockup: `docs/mockups/2026-11
 - L1–L3: CSV headers (`text/csv`, attachment, `private, no-store`, `nosniff`); formula-injection guard; no PII; cron
   calls auto-issue after drafts and before collection in its own try/catch.
 
+**architecture-reviewer (2026-11-15)** — 2 blockers (R2), 7 major, 5 minor; taken as follows.
+- B1 = H2 above (system issuer migration, `p_system`, `'system'` audit kind, `issueWith` shared by Admin and auto;
+  ADR-0007 amended; tenancy-auditor on the migration).
+- B2: on the 1st–3rd IST draft `monthStartIST(now)` alone with its own budget; auto-issue only when the run reached and
+  drafted every shop (`failed = 0 && skipped = 0`); a staff notice after the 3rd. The month issued on the 1st is
+  `monthStartIST(now)` (this month's plan ahead + last month's fees) — finding 3.
+- 4: count and total read inside the issuing transaction with `toIssue`'s rule; the spec says auto-issue replaces the
+  human count check (owner decision 3).
+- 5: the open bill's Charges come from the estimate's `Bill` (the same rolled-back run as Overview); stored rows only
+  for issued bills.
+- 6: the not-billed list needs `billableAtSql` with the draft's window and a `(tenant_id, shipped_at)` partial index
+  (a migration) → moves to R2 with EXPLAIN; R1 shows billed orders and credits only.
+- 7: one verdict — the calculator uses `deliveredFee` per plan for a figure the merchant picks; the Overview card stays
+  `cheapestPlan` (issued bills). They answer different questions (your sales at a figure vs your last two bills).
+- 8: history and payments read inside `billingOverview`'s base transaction; each tab loads only its own reads.
+- 9: delivered sales = billed fee bases less credited bases, defined once in `charges.ts`.
+- 11–14 taken: no yearly test in R1; no gate edit for the CSV route; the `over` line never shown; line kinds mapped once.
+
 **Decision (2026-11-15):** R1 ships first without the CSV route (Download CSV lands with R2's review fixes); R2 waits
 for its migration to pass `verify:tenancy`.
 
