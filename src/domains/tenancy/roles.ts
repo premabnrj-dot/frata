@@ -50,7 +50,8 @@ export const CAPABILITIES = {
   /** Storefront API keys (lane A, ADR-0018): a partner only while the store has never had an owner, a rule beside this
    *  list as `seesCosts` is (orchestrator 2026-11-15). */
   'api.manage': ['owner', 'admin', 'partner'],
-  /** Console › Content (lane B): a partner after handover only with the owner's content scope, lane B's own rule. */
+  /** Console › Content (lane B): the owner, a Manager and the store's partner, before and after handover (owner,
+   *  2026-11-15); a partner's save tells the store in Notices (drizzle/0137). */
   'content.write': ['owner', 'admin', 'partner'],
 } as const satisfies Record<string, readonly ShopRole[]>
 export type Capability = keyof typeof CAPABILITIES

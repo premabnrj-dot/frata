@@ -1,6 +1,6 @@
 // =============================================================================
 // FLOW: who may change a store's content (V1 content, docs/plans/2026-11-15-v1-content.md; owner 2026-11-15): staff
-// read it and can't edit; a partner on a store that has an owner reads it and can't edit; the owner saves, and a save on a stale copy is refused in words naming who changed it,
+// read it and can't edit; the store's partner saves after handover and the owner is told in Notices; the owner saves, and a save on a stale copy is refused in words naming who changed it,
 // as a role. The Look's Header shows the bar as a link to Content. Phone and desktop.
 // =============================================================================
 import assert from 'node:assert/strict'
@@ -49,7 +49,7 @@ export default {
         try {
           await staff.p.goto(CONSOLE + '/console/content?tab=contact')
           await staff.p.screenshot({ path: t.out('content-staff-contact') })
-          await staff.p.getByText(/^Only the owner/).first().waitFor()
+          await staff.p.getByText('Only the owner or a Manager can edit', { exact: true }).first().waitFor() // no partner on the store yet: only roles it has
           assert.equal(await staff.p.getByRole('button', { name: 'Save' }).count(), 0, 'no Save for staff')
           assert.ok(await staff.p.getByLabel(/^Line/).isDisabled())
           await staff.p.goto(CONSOLE + '/console/content')
@@ -57,20 +57,23 @@ export default {
         } finally { await staff.ctx.close(); await db`delete from members where tenant_id = ${KESAR} and user_id = ${USERS.staff.id}` }
       })
 
-      await t.step('A partner on a store with an owner reads it and can’t edit (the actions refuse too: who.ts, its unit test)', async () => {
+      await t.step('The store’s partner saves after handover, and the owner is told in Notices (owner, 2026-11-15)', async () => {
         await partnerOn(db, KESAR, USERS.partner)
+        await db`delete from notices where tenant_id = ${KESAR} and source_kind = 'content' and source_id is not null`
         const pia = await open('partner')
         // Pia may build other stores (earlier flows): this step is about Kesar Studio.
         await pia.ctx.addCookies([{ name: 'frata_tenant', value: KESAR, domain: 'localhost', path: '/' }])
         try {
-          await pia.p.goto(CONSOLE + '/console/content?tab=menus')
-          await pia.p.screenshot({ path: t.out('content-partner-menus') })
-          await pia.p.getByText(/^Only the owner/).first().waitFor()
-          assert.equal(await pia.p.getByRole('button', { name: 'Add a link' }).count(), 0, 'no Add for a partner after handover')
           await pia.p.goto(CONSOLE + '/console/content?tab=contact')
-          assert.ok(await pia.p.getByLabel(/^Line/).isDisabled(), 'the line is read-only for a partner after handover')
+          await pia.p.getByLabel(/^Line/).fill('Pia’s line: we reply within the hour.')
+          await pia.p.getByRole('button', { name: 'Save' }).click()
+          await pia.p.getByText('Contact line saved').first().waitFor()
           await pia.p.screenshot({ path: t.out('content-partner-after-handover') })
         } finally { await pia.ctx.close(); await db`delete from members where tenant_id = ${KESAR} and user_id = ${USERS.partner.id}` }
+        assert.deepEqual((await contact()).value, { line: 'Pia’s line: we reply within the hour.' })
+        await owner.p.goto(CONSOLE + '/console/notices')
+        await owner.p.getByText('Your partner changed the Contact line').first().waitFor()
+        await owner.p.screenshot({ path: t.out('content-partner-notice') })
       })
 
       await t.step('The Look’s Header shows the bar as a link to Content', async () => {

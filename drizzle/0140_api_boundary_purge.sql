@@ -10,7 +10,7 @@
 -- A key also stops without a write to its own row: its partner's link to the shop ends, Frrata suspends the partner
 -- (Admin, admin_end_partner, across shops), or the domain its Website names goes (Admin's disconnect included). The
 -- definer derives each stop at once, but a key's cached lookup lives an hour, and Admin may not read a key or its hash
--- (0138). So app_shops_with_key_stop returns the ids of shops holding a live key that such a moment stopped, and the
+-- (0139). So app_shops_with_key_stop returns the ids of shops holding a live key that such a moment stopped, and the
 -- same drain purges their keys as frata_app (refreshKeys), each through withTenant.
 --
 -- Store content (the bar, menus, the Contact line: lane B's site_content) reaches the API's hour-long copies through

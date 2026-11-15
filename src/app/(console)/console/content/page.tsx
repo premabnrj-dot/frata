@@ -64,11 +64,14 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
   const [data, shop, offer, look, src] = read
   // A store whose settings aren't made yet (a partner's new store): its content waits for them.
   if (!shop) return <Panel title="Set up your store first" action={<a href="/console/setup" className={button({ variant: 'secondary' })}>Open setup</a>} />
-  const saver = contentSaver(auth.membership.role, data.hasOwner, auth.membership.supportSessionId)
+  const saver = contentSaver(auth.membership.role, auth.membership.supportSessionId)
   const canSave = saver === 'yes'
-  // Who can, said as a role (the console has no names): "Only the owner can edit".
+  // Who can, said as roles (the console has no names): the owner, a Manager or the store's partner (owner, 2026-11-15).
   // A support visit says so once, in the banner (as drawn), not on every section.
-  const lock = canSave || saver === 'support' ? null : data.hasOwner ? `Only the ${ROLE_LABEL.owner.toLowerCase()} can edit` : `Only the ${ROLE_LABEL.owner.toLowerCase()} or a ${ROLE_LABEL.admin.toLowerCase()} can edit`
+  // Only roles this store has: the partner is named only where there is one (words review 2026-11-15).
+  const lock = canSave || saver === 'support' ? null : data.hasPartner
+    ? `Only the ${ROLE_LABEL.owner.toLowerCase()}, a ${ROLE_LABEL.admin} or the ${ROLE_LABEL.partner.toLowerCase()} can edit`
+    : `Only the ${ROLE_LABEL.owner.toLowerCase()} or a ${ROLE_LABEL.admin} can edit`
 
   // ── Announcement ─────────────────────────────────────────────────────────────────────────────────────────────
   const offerLive = offerBarLive(offer, now)

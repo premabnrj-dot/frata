@@ -71,6 +71,9 @@ Claude builder was skipped "Claude never runs on Frrata's servers" (2026-11-11).
    person publishes.
 2. **Who saves live.** Owners and admins. A partner before handover, or after it only with a content scope the owner
    grants (ADR-0015, never a Builder); the owner is told of each partner save. Support visits do not save content.
+   *(Owner, 2026-11-15: "after handover, yes. as long as the partner is added in the store's account, he should be able
+   to manage." Membership is the scope: the store's partner member saves before and after handover, with no separate
+   grant. The store is told in Notices, one line per partner an hour, never sent to the saver; Activity has every save.)*
 3. **The code declares, the console draws.** A code site declares its placements in its repository
    (`frrata/fields.json`, a closed set of field types, capped, no values and no secrets asked for); the publish gate
    validates it and keeps it with the published deployment; the console draws the editor from the live deployment;

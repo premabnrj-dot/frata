@@ -300,10 +300,10 @@ request"; "an `unstable_cache` tag must be known before the call: tag by the inp
 `scripts/check-actions.mjs`, new `scripts/check-api.mjs`; `package.json`; `scripts/verify/tenancy.sql` (block 81);
 `src/app/(console)/console/settings/page.tsx` (one row); `src/app/(console)/console/shop-actions.ts` (`openShop`
 purge); `docs/decisions/0002-*.md`, `0018-*.md` (notes); `docs/setup.md` (WAF step).
-**Migrations:** `drizzle/0137_storefront_keys.sql`, `0138_storefront_keys_access.sql`, `0139_api_boundary_purge.sql` (+ journal, snapshot).
+**Migrations:** `drizzle/0138_storefront_keys.sql`, `0139_storefront_keys_access.sql`, `0140_api_boundary_purge.sql` (+ journal, snapshot).
 **Not touched:** lane C's partner definers and `members` (partner keys stop by derivation), the console layout and shell.
 **After C and B merged, this branch added:** `refreshKeys(t)` in Settings › People's partner removal; the drain's
-key-stop and content sweeps (0139); `apiContent` in lane B's `src/lib/queries/content.ts`; `e2e/stack.mjs` (the API
+key-stop and content sweeps (0140); `apiContent` in lane B's `src/lib/queries/content.ts`; `e2e/stack.mjs` (the API
 host); `src/domains/settings/groups.ts` and its test (the Website page in the Store group); `scripts/check-words.allow.json`.
 
 ## Release order and merges (orchestrator 2026-11-15)
@@ -330,16 +330,16 @@ this branch first; SA1·1 (the Settings page and its actions) waits for C and B 
 |---|---|---|
 | SA0·1 host, rewrites | done | host tests; `api-isr.mjs` (console and shop hosts 404 a versioned path) |
 | SA0·2 key shape | done | `keys.test.ts` (checksum, rejection sampling) |
-| SA0·3 migration 0137–0138 (renumbered at merge) | done | `verify:tenancy` block 81 |
+| SA0·3 migration 0138–0139 (renumbered at merge) | done | `verify:tenancy` block 81 |
 | SA0·4 lookup, door, limits | done | `request.test.ts`; int test on a real Postgres |
 | SA0·5 gates, proof, docs | done | `check:tenant` § 9 and `check:api` each caught a planted bad file; `api-isr.mjs` under `next start` |
 | SA1·1 Settings › Website | done (after C and B on main) | `groups.test.ts`, `keys.test.ts` (`mayManageApi` on `holds`); e2e `91-storefront-api`; mockup parity |
 | SA1·2 mappers, schemas | done | `map.test.ts` (sentinels, drafts, media host, closed links), `released-api.test.ts` |
-| SA1·3 routes, boundary purge (0139), WAF | done | int test (A never reads B, no draft under a live key, no cost); proof 81; `waf.test.ts` |
+| SA1·3 routes, boundary purge (0140), WAF | done | int test (A never reads B, no draft under a live key, no cost); proof 81; `waf.test.ts` |
 | SA1·4 skill, agent, planning heading | done | — |
 | e2e, mockup parity | done | `e2e/flows/91-storefront-api.mjs`; `mockup-parity-reviewer` |
 | Content resources (`content`, `pages/{handle}`, `faq`) | done, on B's seam (`apiContent` added beside `shopContent`; `shopPages`/`previewPages` read as they are) | `content-map.test.ts`; int test (A's own only, a draft page only under A's test key); `api-isr.mjs` (content a HIT, still the hour 65 s later); proof 81 |
-| Partner and domain stops, content freshness | done | drain sweeps `app_shops_with_key_stop` and `app_shops_with_content_change` (0139); proof 81 |
+| Partner and domain stops, content freshness | done | drain sweeps `app_shops_with_key_stop` and `app_shops_with_content_change` (0140); proof 81 |
 
 **As built, differing from the plan text above** (the screen's differences are in the Deviations table):
 - The hash is sha256 **hex text**, not bytea (one form for the column, the cache key and the tag); `revoked_by` beside
@@ -363,7 +363,7 @@ this branch first; SA1·1 (the Settings page and its actions) waits for C and B 
 - Stops that write nothing to a key's row purge through the 5-minute drain, never through Admin: a partner's link ending,
   Frrata suspending a partner (`admin_end_partner`, across shops) and a domain going (Admin's disconnect included) are
   found by `app_shops_with_key_stop` (shop ids only, frata_app alone), whose keys `refreshKeys` purges shop by shop. So
-  Admin never reads a key or its hash (0138), and a stopped key's cached copies answer for at most ~5 minutes, not the
+  Admin never reads a key or its hash (0139), and a stopped key's cached copies answer for at most ~5 minutes, not the
   hour. Settings › People's removal also purges at once. `removePartnerPerson` needs nothing: a key follows the
   partner, not the person (owner decision 4). Reinstating a partner is not swept: a miss is held only on the instance (60 s), so its keys answer again within minutes.
 - Content (lane B) reaches the API's hour-long copies through B's throttled save purge, which may leave a burst to the

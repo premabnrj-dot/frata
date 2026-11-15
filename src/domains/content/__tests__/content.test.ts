@@ -67,14 +67,14 @@ describe('the bar', () => {
 
 describe('who saves', () => {
   it('is an allow-list', () => {
-    expect(contentSaver('owner', true, null)).toBe('yes')
-    expect(contentSaver('admin', true, null)).toBe('yes')
-    expect(contentSaver('partner', false, null)).toBe('yes')
-    expect(contentSaver('partner', true, null)).toBe('after_handover')
-    expect(contentSaver('staff', true, null)).toBe('read_only')
-    expect(contentSaver('accountant', true, null)).toBe('read_only')
-    expect(contentSaver('builder', false, null)).toBe('read_only')
-    expect(contentSaver('owner', true, 'sess')).toBe('support')
+    expect(contentSaver('owner', null)).toBe('yes')
+    expect(contentSaver('admin', null)).toBe('yes')
+    expect(contentSaver('partner', null)).toBe('yes') // before and after handover (owner, 2026-11-15)
+    expect(contentSaver('staff', null)).toBe('read_only')
+    expect(contentSaver('accountant', null)).toBe('read_only')
+    expect(contentSaver('builder', null)).toBe('read_only')
+    expect(contentSaver('owner', 'sess')).toBe('support')
+    expect(contentSaver('partner', 'sess')).toBe('support')
   })
 })
 
