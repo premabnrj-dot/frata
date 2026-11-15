@@ -3,7 +3,8 @@ import { Section } from '@/components/layout/section'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { Money, Numeric } from '@/components/data/numeric'
 import { Pictogram } from '@/components/brand/pictogram'
-import { Icon } from '@/components/icons/icon'
+import { ShareBar } from '@/components/charts/share-bar'
+import { change } from '@/domains/analytics/kit'
 import { InfoTip } from '@/components/ui/info-tip'
 import { JUDGE_MIN, judgeable } from '@/domains/analytics/judge'
 import { paise } from '@/domains/money/paise'
@@ -27,68 +28,20 @@ const outcomes = (t: Totals) => t.delivered + t.rto + t.lost
 /** A share, or a count under 30: "18%" or "3 of 24". */
 export const shareOf = (n: number, of: number) => (judgeable(of) ? formatPercent(of ? n / of : 0, 0) : `${n} of ${of}`)
 
-/** The change from the period before, with its own words: "18% more than 349" / "from ₹1,09,300". */
+/** The change from the period before: the kit's one rule (src/domains/analytics/kit.ts change), coloured by meaning. */
 function Change({ now, before, money = false }: { now: number; before: number; money?: boolean }) {
   if (before === 0 && now === 0) return null
-  const up = now >= before
-  const word = money ? <Money paise={paise(before)} /> : <Numeric>{before}</Numeric>
-  return (
-    <span className="inline-flex flex-wrap items-center gap-1 text-xs">
-      <Icon name={up ? 'up' : 'down'} className="size-3.5" />
-      <span className="text-muted-foreground">from {word}</span>
-    </span>
-  )
+  const c = change(now, before, { kind: money ? 'money' : 'count', good: 'up' })
+  return <span className={`text-xs ${c.tone === 'good' ? 'text-ok-text' : c.tone === 'bad' ? 'text-danger-text' : 'text-muted-foreground'}`}>{c.words}</span>
 }
 
 /** What ₹ kept counted and left out, in words, with the way to fix it. */
-function KeptNote({ k, estimate }: { k: Kept; estimate: boolean }) {
+export function KeptNote({ k, estimate }: { k: Kept; estimate: boolean }) {
   const lines: React.ReactNode[] = []
   if (k.basis === 'estimate') lines.push('Shipping estimated')
   if (k.basis === 'none' || !estimate) lines.push(<>Before shipping costs · <Link href="/console/settings/shipping-costs" className="underline">set them</Link></>)
   if (k.leftOut) lines.push(<><Numeric>{k.leftOut}</Numeric> left out (costs not known yet) · <Link href="/console/products" className="underline">add costs</Link></>)
   return <p className="text-xs text-muted-foreground">Before ads and packaging{lines.map((l, i) => <span key={i}> · {l}</span>)}</p>
-}
-
-/** The one question first: ₹ kept after returns (or, for a viewer without costs, the orders), then the flow. */
-export function Summary({ a }: { a: Analytics }) {
-  const c = a.cur, k = c.kept
-  const out = outcomes(c)
-  return (
-    <Section>
-      {a.costs && k ? (
-        k.counted > 0 ? (
-          <div className="grid gap-1">
-            <span className="text-xs text-muted-foreground">₹ kept after returns</span>
-            <Money paise={paise(k.kept)} className="text-2xl font-semibold" />
-            <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-              {a.prev.kept && a.prev.kept.counted > 0 ? <Change now={k.kept} before={a.prev.kept.kept} money /> : null}
-              <span><Money paise={paise(k.delivered.kept)} /> on <Numeric>{k.delivered.n}</Numeric> delivered{k.rto.n ? <>, less <Money paise={paise(-k.rto.kept)} /> on <Numeric>{k.rto.n}</Numeric> returns</> : null}{k.lost.n ? <>, <Money paise={paise(-k.lost.kept)} /> on <Numeric>{k.lost.n}</Numeric> lost</> : null}</span>
-            </span>
-            <KeptNote k={k} estimate={a.estimate} />
-          </div>
-        ) : (
-          <div className="grid gap-1">
-            <span className="text-xs text-muted-foreground">₹ kept after returns</span>
-            <p className="text-sm">Shows once orders are delivered or come back. <Numeric>{c.onTheWay}</Numeric> on the way, <Numeric>{c.notSent}</Numeric> not sent yet.</p>
-            <p className="text-xs"><Link href="/console/orders?tab=on_the_way" className="underline">On the way</Link> · <Link href="/console/orders?tab=to_ship" className="underline">To ship</Link></p>
-          </div>
-        )
-      ) : null}
-      {/* The flow of orders, drawn with the icon set (rule 20a), its words in the page. */}
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm" aria-label="Where this period's orders are">
-        <span><Numeric className="font-semibold">{c.orders}</Numeric> orders</span>
-        <Icon name="chevron" className="size-4 text-muted-foreground" />
-        <span><Numeric className="font-semibold">{c.delivered}</Numeric> delivered</span>
-        <span className="text-muted-foreground">·</span>
-        <span><Numeric className="font-semibold">{c.rto}</Numeric> came back{out ? <span className="text-muted-foreground"> ({shareOf(c.rto, out)} of {out} with an outcome)</span> : null}</span>
-        {c.lost ? <><span className="text-muted-foreground">·</span><span><Numeric className="font-semibold">{c.lost}</Numeric> lost</span></> : null}
-        <span className="text-muted-foreground">·</span>
-        <span><Numeric className="font-semibold">{c.onTheWay}</Numeric> on the way</span>
-        <span className="text-muted-foreground">·</span>
-        <span><Numeric className="font-semibold">{c.notSent}</Numeric> not sent yet</span>
-      </p>
-    </Section>
-  )
 }
 
 /** What the strip knows of visits (A·2): this window, the one before, the first counted day, and coverage: a rate of
@@ -149,39 +102,40 @@ export function Strip({ a, visits }: { a: Analytics; visits?: StripVisits }) {
 const HOW = 'A source is the tagged link the shopper arrived on, else the site they came from, else "Direct or unknown" (WhatsApp chats and many apps hide where a tap came from: a link from Make a link fixes that). The last one before the order, in that browser tab. Anyone can type tags into an address, so a source is what the link said. Visits and orders use the same rule.'
 
 /** Where orders came from: one row per source, most ₹ kept after returns first; on a phone, rows become cards. */
-export function Sources({ a, period, visits }: { a: Analytics; period: number; visits?: { by: ReadonlyMap<string, SourceVisits>; rates: boolean } }) {
-  if (visits) return <SourcesWithVisits a={a} period={period} visits={visits} />
+export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: { by: ReadonlyMap<string, SourceVisits>; rates: boolean } }) {
+  if (visits) return <SourcesWithVisits a={a} pq={pq} visits={visits} />
   const { rows, other } = foldSources(a.sources)
-  const line = (t: Totals, name: React.ReactNode, href: string | null, sub: React.ReactNode) => {
+  const top = Math.max(1, ...rows.map((r) => r.cur.orders), other?.orders ?? 0)
+  // As drawn (Neel N1b): Source · Orders · Share · Came back · ₹ kept an order (who sees costs) · Change.
+  const line = (t: Totals, before: Totals | null, name: React.ReactNode, href: string | null, sub: React.ReactNode) => {
     const out = outcomes(t)
     const k = t.kept
+    const ch = before ? change(t.orders, before.orders, { kind: 'count', good: 'up' }) : null
     return (
       <>
-        <Td cell="a">{href ? <Link href={href} data-row-link prefetch={false} className="font-medium hover:underline">{name}</Link> : <span className="font-medium">{name}</span>}
-          <span className="block text-xs text-muted-foreground">{sub}</span></Td>
-        <Td cell="b" className="text-right">{a.costs && k && k.counted ? <Money paise={paise(k.kept)} /> : <><span className="text-xs text-muted-foreground md:hidden">Orders </span><Numeric>{t.orders}</Numeric></>}</Td>
-        <Td cell="hide" className="text-right"><Numeric>{t.orders}</Numeric></Td>
-        <Td cell="hide" className="text-right"><Money paise={paise(t.sales)} /></Td>
-        <Td cell="hide" className="text-right">{t.orders ? shareOf(t.cod, t.orders) : '—'}</Td>
-        <Td cell="c" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Delivered </span><Numeric>{t.delivered}</Numeric></Td>
-        <Td cell="e" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Came back </span>{out ? shareOf(t.rto, out) : '—'}</Td>
-        {a.costs ? <Td cell="f" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Per order with an outcome </span>{k && keptPerOrder(k) !== null ? (judgeable(k.counted) ? <Money paise={paise(keptPerOrder(k)!)} /> : <span className="text-xs text-muted-foreground">too few to judge</span>) : '—'}</Td> : null}
+        <Td cell="a">{href ? <Link href={href} data-row-link prefetch={false} className="font-medium hover:underline">{name}</Link> : <span className="font-medium text-muted-foreground">{name}</span>}
+          {sub ? <span className="block text-xs text-muted-foreground">{sub}</span> : null}</Td>
+        <Td cell="b" className="text-right"><Numeric>{t.orders}</Numeric></Td>
+        <Td cell="hide" className="w-[22%]"><ShareBar share={t.orders / top} tone={href ? 'chart' : 'muted'} /></Td>
+        <Td cell="c" className={`text-right ${out && judgeable(out) && t.rto / out >= 0.2 ? 'text-danger-text' : ''}`}><span className="text-xs text-muted-foreground md:hidden">Came back </span>{out ? shareOf(t.rto, out) : '—'}</Td>
+        {a.costs ? <Td cell="e" className="text-right"><span className="text-xs text-muted-foreground md:hidden">₹ kept an order </span>{k && keptPerOrder(k) !== null ? (judgeable(k.counted) ? <Money paise={paise(keptPerOrder(k)!)} /> : <span className="text-xs text-muted-foreground">too few to judge</span>) : '—'}</Td> : null}
+        <Td cell="d" className={`text-right ${ch?.tone === 'good' ? 'text-ok-text' : ch?.tone === 'bad' ? 'text-danger-text' : 'text-muted-foreground'}`}>{ch ? ch.words : '—'}</Td>
       </>
     )
   }
   return (
-    <Section flush title={<span className="inline-flex items-center gap-1">Where orders came from<InfoTip about="how a source is decided">{HOW}</InfoTip></span>}>
+    <Section flush title={<span className="inline-flex items-center gap-1">Where orders came from<InfoTip about="how a source is decided">{HOW}</InfoTip></span>}
+      action={a.cur.orders ? <span className="text-label text-muted-foreground">Source known for {formatPercent(a.known / a.cur.orders, 0)}</span> : undefined}>
       <DataTable label="Where orders came from">
         <DataTableHead>
-          <th>Source</th><th className="text-right">{a.costs ? '₹ kept after returns' : 'Orders'}</th><th className="text-right">Orders</th><th className="text-right">Sales</th><th className="text-right">COD</th>
-          <th className="text-right">Delivered</th><th className="text-right">Came back</th>{a.costs ? <th className="text-right">Per order with an outcome</th> : null}
+          <th>Source</th><th className="text-right" aria-sort="descending">Orders</th><th>Share</th><th className="text-right">Came back</th>{a.costs ? <th className="text-right">₹ kept an order</th> : null}<th className="text-right">Change</th>
         </DataTableHead>
         <DataTableBody>
           {rows.map((s) => (
-            <DataTableRow key={s.slug}>{line(s.cur, s.label, `/console/analytics/${encodeURIComponent(s.slug)}?period=${period}`,
-              s.campaigns.length ? `${s.campaigns[0]!.name}${s.campaigns.length > 1 ? ` and ${s.campaigns.length - 1} more` : ''}` : s.channel === 'direct' ? 'chats, typed address, apps that hide it' : '')}</DataTableRow>
+            <DataTableRow key={s.slug} tall>{line(s.cur, s.prev, s.label, `/console/analytics/${encodeURIComponent(s.slug)}?${pq}`,
+              s.campaigns.length ? `${s.campaigns[0]!.name}${s.campaigns.length > 1 ? ` and ${s.campaigns.length - 1} more` : ''}` : '')}</DataTableRow>
           ))}
-          {other ? <DataTableRow key="other">{line(other, 'Other', null, 'sources with few orders, and tags typed by hand')}</DataTableRow> : null}
+          {other ? <DataTableRow key="other">{line(other, null, 'Other', null, 'sources with few orders, and tags typed by hand')}</DataTableRow> : null}
         </DataTableBody>
       </DataTable>
     </Section>
@@ -207,7 +161,7 @@ export function Pincodes({ a }: { a: Analytics }) {
 
 /** Where orders came from, with visits (A·2, as the mockup): each source's ₹ kept (or orders), visits, orders per 100
  * visits, returns and ₹ kept per visit. A source with visits but no orders yet is a row too (from 5 visitors). */
-function SourcesWithVisits({ a, period, visits }: { a: Analytics; period: number; visits: { by: ReadonlyMap<string, SourceVisits>; rates: boolean } }) {
+function SourcesWithVisits({ a, pq, visits }: { a: Analytics; pq: string; visits: { by: ReadonlyMap<string, SourceVisits>; rates: boolean } }) {
   const { rows, other } = foldSources(a.sources)
   const rest = otherVisits(visits.by, new Set(rows.map((r) => r.slug)))
   const line = (t: Totals, v: number, name: React.ReactNode, href: string | null, sub: React.ReactNode) => {
@@ -240,7 +194,7 @@ function SourcesWithVisits({ a, period, visits }: { a: Analytics; period: number
         <DataTableBody>
           {rows.map((s) => (
             // A source with visits but no orders has no page of its own (its orders list would be empty: a 404).
-            <DataTableRow key={s.slug}>{line(s.cur, visits.by.get(s.slug)?.visitors ?? 0, s.label, s.cur.orders ? `/console/analytics/${encodeURIComponent(s.slug)}?period=${period}` : null,
+            <DataTableRow key={s.slug}>{line(s.cur, visits.by.get(s.slug)?.visitors ?? 0, s.label, s.cur.orders ? `/console/analytics/${encodeURIComponent(s.slug)}?${pq}` : null,
               s.campaigns.length ? `${s.campaigns[0]!.name}${s.campaigns.length > 1 ? ` and ${s.campaigns.length - 1} more` : ''}` : s.channel === 'direct' ? 'chats, typed address, apps that hide it' : '')}</DataTableRow>
           ))}
           {other || rest ? <DataTableRow key="other">{line(other ?? EMPTY_TOTALS, rest, 'Other', null, 'sources with few orders or visits, and tags typed by hand')}</DataTableRow> : null}

@@ -1,12 +1,14 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Panel } from '@/components/ui/panel'
-import { ViewTabs } from '@/components/ui/view-tabs'
 import { InfoTip } from '@/components/ui/info-tip'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dayMonthIN } from '@/lib/format-date'
 import { PRESETS, type Preset } from '@/domains/analytics/link'
 import { classifySource } from '@/domains/analytics/source'
-import { PERIODS, analyticsPage, isPeriod, windowOf, type Period, type SourceStat } from '@/lib/queries/analytics'
+import { analyticsPage, type SourceStat } from '@/lib/queries/analytics'
+import { compareWords, parsePeriod, periodQuery, windowFor } from '@/domains/analytics/period'
+import { istDayKey } from '@/domains/time/day'
+import { PeriodPicker } from '@/components/charts/period-picker'
 import { trafficNames, trafficRead } from '@/lib/queries/traffic'
 import { browserShares, cityShares, coverage, emptyTotals, enoughVisits, funnel, productLines, slowestPage, speedOf, visitOnly, visitsBySource, type SourceVisits } from '@/domains/analytics/traffic'
 import { EMPTY_TOTALS } from '@/domains/analytics/totals'
@@ -15,7 +17,9 @@ import { urlProblem } from '@/lib/db/url'
 import { Browse, Cities, Funnel, NoVisitsYet, Products, SpeedOnPhones, TooFewVisits, VisitsUnavailable } from './_components/traffic'
 import { readFailed } from './_components/read-failed'
 import { MakeLink } from './_components/make-link'
-import { Pincodes, Sources, Strip, Summary } from './_components/parts'
+import { KeptNote, Pincodes, Sources, Strip } from './_components/parts'
+import { ByState, ComeBack, Figures, FlowLine, PaidAndCod, SalesByDay, TooFew, WhenOrdersCome } from './_components/charts'
+import { JUDGE_MIN } from '@/domains/analytics/judge'
 
 export const metadata = { title: 'Analytics' }
 // The viewer's role decides what is computed (₹ only for seesCosts), and "so far" includes today: never cached.
@@ -31,54 +35,55 @@ export const dynamic = 'force-dynamic'
 // States: counting off (A·1 as it was), visits unavailable, no visits yet, the first days (under 1,000), ready.
 // =============================================================================
 
-export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
+export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
-  const asked = Number((await searchParams).period ?? 30)
-  const period: Period = isPeriod(asked) ? asked : 30
   const now = new Date()
+  // One window for every read (src/domains/analytics/period.ts): orders, visits and the charts.
+  const w = windowFor(parsePeriod(await searchParams, now), now)
+  const pq = periodQuery(w.choice)
+  const compare = compareWords(w)
   const { tenantId, role } = auth.membership
   // One snapshot transaction: the numbers, Make a link's targets and the shop's address (speed review A1·7). Visits
   // (A·2) come from the analytics database beside it, never inside it: if that read fails, the orders still show.
-  const { start, prevStart } = windowOf(period, now)
   // The shop's own words for what visits carry (labels, product names, returns by city) follow the visits, as their
   // product ids decide which names are asked for — chained to that read, so both run beside A·1's (speed review M1). A
   // failure of either makes the visits unavailable (below); the orders still show.
-  const visitsAndNames = trafficRead(tenantId, start, prevStart, now)
+  const visitsAndNames = trafficRead(tenantId, w)
     .catch((err: unknown) => { console.error('[analytics] visits', errName(err), urlProblem(err)); return 'failed' as const })
     .then(async (r) => {
       if (typeof r !== 'object') return { read: r, names: null }
-      const names = await trafficNames(tenantId, [...r.products.map((p) => p.productId), ...r.productLcp.map((p) => p.productId)], start)
+      const names = await trafficNames(tenantId, [...r.products.map((p) => p.productId), ...r.productLcp.map((p) => p.productId)], w)
         .catch((err: unknown) => { console.error('[analytics] visit names', errName(err)); return null })
       return { read: r, names }
     })
   const [page, { read, names }] = await Promise.all([
-    analyticsPage(tenantId, role, period, now).catch((err: unknown) => readFailed('[analytics]', err)),
+    analyticsPage(tenantId, role, w, now).catch((err: unknown) => readFailed('[analytics]', err)),
     visitsAndNames,
   ])
   if ('failed' in page) return page.failed
-  const { a, targets, shop } = page
+  const { a, targets, shop, series } = page
   const traffic = typeof read === 'object' ? read : null
 
   // What each preset's orders show as, said by the server (the classifier stays out of the browser bundle).
   const showsAs = Object.fromEntries((Object.keys(PRESETS) as Preset[]).map((k) => [k, classifySource({ utm_source: PRESETS[k].source, utm_medium: PRESETS[k].medium }, null).label])) as Record<Preset, string>
   const make = <MakeLink origin={`https://${shop.host ?? ''}`} open={shop.open && !!shop.slug} products={targets.products} collections={targets.collections} showsAs={showsAs} />
-  const dayBefore = new Date(a.start.getTime() - 86_400_000)
-  const tabs = <ViewTabs label="Period" tabs={PERIODS.map((p) => ({ href: `/console/analytics?period=${p}`, label: `${p} days`, current: p === period }))} />
-  // The two periods stay in the line (design language 61); how they are counted is the (i) tip (Rule 0).
-  const range = `${dayMonthIN(a.start)} – today (so far), against ${dayMonthIN(a.prevStart)} – ${dayMonthIN(dayBefore)}`
+  // The dates and what they are against stay in the line (design language 61); how they are counted is the (i) tip.
+  const lastDay = new Date(w.end.getTime() - 1)
+  const range = `${dayMonthIN(a.start)} – ${w.toNow ? 'today (so far)' : dayMonthIN(lastDay)} · India time`
   const metaLine = (visitsSince: Date | null) => (
     <span className="inline-flex flex-wrap items-center gap-x-1">{range}
       <InfoTip about="these dates">Orders count on the day they were placed (IST); today&apos;s numbers still change.{visitsSince ? ` Visits counted since ${dayMonthIN(visitsSince)}.` : ''}</InfoTip>
     </span>
   )
+  const picker = <PeriodPicker path="/console/analytics" choice={w.choice} compare={compare} today={istDayKey(now)} />
+  const actions = <>{picker}{make}</>
 
   if (a.cur.orders === 0 && a.prev.orders === 0 && !traffic?.cur.visitors) {
     return (
       <>
-        <PageHeader title="Analytics" actions={make} />
-        {tabs}
-        <Panel title={`No orders in the last ${period} days`}>Share your shop with a link that says where it was shared, and orders from it show here.</Panel>
+        <PageHeader title="Analytics" actions={actions} meta={metaLine(null)} />
+        <Panel title="No orders in these days">Share your shop with a link that says where it was shared, and orders from it show here.</Panel>
       </>
     )
   }
@@ -88,7 +93,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const on = read !== 'off'
   const failed = read === 'failed' || (!!traffic && !names)
   const t = failed ? null : traffic
-  const cov = coverage(t?.firstDay ?? null, a.start, a.prevStart, period)
+  const cov = coverage(t?.firstDay ?? null, a.start, a.prevStart, w.days)
   const enough = !!t && enoughVisits(t.cur.visitors)
   const rates = enough && cov.cur
   const prevRates = cov.prev && !!t && enoughVisits(t.prev.visitors)
@@ -99,17 +104,22 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const f = t ? funnel(t.cur, cov.cur ? a.cur.orders : null, cov.cur ? a.cur.delivered : null) : null
   // Only the shop's own product pages compete for slowest (a forged slow id must not hide the real one: tenancy audit).
   const slow = t && names ? slowestPage(t.productLcp.filter((r) => names.products.has(r.productId))) : null
+  const visitsOn = on && !failed
   return (
     <>
-      <PageHeader title="Analytics" actions={make} meta={metaLine(on && cov.since && cov.since > a.start ? cov.since : null)} />
-      {tabs}
-      <Summary a={a} />
-      <Strip a={a} visits={on && !failed ? { cur: t?.cur ?? emptyTotals(), prev: t?.prev ?? emptyTotals(), since: cov.since, rates, prevRates, fullFrom: cov.fullFrom } : undefined} />
-      {!on ? null : failed ? <VisitsUnavailable /> : !t?.firstDay ? <NoVisitsYet /> : !enough ? <TooFewVisits visits={t.cur.visitors} /> : f ? <Funnel steps={f.steps} drop={f.drop} fullFrom={cov.fullFrom} /> : null}
+      <PageHeader title="Analytics" actions={actions} meta={metaLine(on && cov.since && cov.since > a.start ? cov.since : null)} />
+      {a.cur.orders < JUDGE_MIN ? <TooFew n={a.cur.orders} /> : null}
+      <Figures a={a} compare={compare} series={series} keptNote={a.cur.kept ? <KeptNote k={a.cur.kept} estimate={a.estimate} /> : undefined} />
+      <FlowLine c={a.cur} />
+      {series ? <SalesByDay s={series} compareName={compare.replace(/^vs /, '').replace(/^(.)/, (m) => m.toUpperCase())} /> : null}
+      {series ? <div className="grid gap-4 lg:grid-cols-2"><PaidAndCod s={series} /><WhenOrdersCome s={series} /></div> : null}
       {a.cur.orders > 0 && a.known / a.cur.orders < 0.5 ? (
         <p className="rounded-md bg-info px-3 py-2 text-sm text-info-text">Most orders came without a source. A link from Make a link tells an Instagram bio from a WhatsApp broadcast.</p>
       ) : null}
-      <Sources a={on && !failed ? { ...a, sources: [...a.sources, ...extra] } : a} period={period} visits={on && !failed ? { by, rates } : undefined} />
+      <Sources a={visitsOn ? { ...a, sources: [...a.sources, ...extra] } : a} pq={pq} visits={visitsOn ? { by, rates } : undefined} />
+      {series ? <div className="grid gap-4 lg:grid-cols-2"><ByState s={series} /><ComeBack s={series} /></div> : null}
+      {visitsOn ? <Strip a={a} visits={{ cur: t?.cur ?? emptyTotals(), prev: t?.prev ?? emptyTotals(), since: cov.since, rates, prevRates, fullFrom: cov.fullFrom }} /> : null}
+      {!on ? null : failed ? <VisitsUnavailable /> : !t?.firstDay ? <NoVisitsYet /> : !enough ? <TooFewVisits visits={t.cur.visitors} /> : f ? <Funnel steps={f.steps} drop={f.drop} fullFrom={cov.fullFrom} /> : null}
       {t && names && enough ? (
         <>
           <div className="grid gap-4 lg:grid-cols-2">

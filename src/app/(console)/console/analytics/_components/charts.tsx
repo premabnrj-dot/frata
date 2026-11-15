@@ -1,0 +1,112 @@
+import Link from 'next/link'
+import { Section } from '@/components/layout/section'
+import { CohortTable } from '@/components/charts/cohort-table'
+import { Figure } from '@/components/charts/figure'
+import { Heatmap } from '@/components/charts/heatmap'
+import { SplitBars } from '@/components/charts/split-bars'
+import { StateTiles } from '@/components/charts/state-tiles'
+import { TrendChart } from '@/components/charts/trend-chart'
+import { Money, Numeric } from '@/components/data/numeric'
+import { change } from '@/domains/analytics/kit'
+import { JUDGE_MIN } from '@/domains/analytics/judge'
+import { paise } from '@/domains/money/paise'
+import { formatInr, formatPercent } from '@/lib/format'
+import { dayMonthIN, monthShortIN } from '@/lib/format-date'
+import type { Series } from '@/lib/queries/analytics-series'
+import type { Analytics, Totals } from '@/lib/queries/analytics'
+
+// =============================================================================
+// ANALYTICS · THE KIT ON THE PAGE (Neel N1b, screen mockup docs/mockups/2026-11-15-analytics-n1b/, as approved). Server
+// components: each takes the page's numbers (₹ kept only when the viewer sees costs) and the series, and draws them with
+// src/components/charts/. Every change says what it is against (once per row); colour by meaning (returns up is bad).
+// =============================================================================
+
+const outcomes = (t: Totals) => t.delivered + t.rto + t.lost
+const inrShort = (p: number) => {
+  const r = p / 100
+  return r >= 1_00_000 ? `₹${(r / 1_00_000).toFixed(r >= 10_00_000 ? 0 : 1)}L` : r >= 1000 ? `₹${Math.round(r / 1000)}k` : formatInr(paise(Math.round(p)))
+}
+
+/** The four figures as drawn: Sales, Orders, Came back, ₹ kept after returns (only for whoever sees costs). */
+export function Figures({ a, compare, series, keptNote }: { a: Pick<Analytics, 'cur' | 'prev' | 'costs'>; compare: string; series: Series | null; keptNote?: React.ReactNode }) {
+  const c = a.cur, p = a.prev
+  const out = outcomes(c), outBefore = outcomes(p)
+  const spark = (k: 'sales' | 'orders') => series?.days.map((d) => d[k])
+  const k = c.kept
+  return (
+    <section aria-label="Figures" className="grid grid-cols-2 gap-2 md:gap-3 lg:grid-cols-4">
+      <Figure label="Sales" value={<Money paise={paise(c.sales)} />} change={change(c.sales, p.sales, { kind: 'money', good: 'up' })} against={compare} spark={spark('sales')} />
+      <Figure label="Orders" value={<Numeric>{c.orders}</Numeric>} change={change(c.orders, p.orders, { kind: 'count', good: 'up' })} spark={spark('orders')} />
+      <Figure label="Came back (RTO)"
+        value={out >= JUDGE_MIN ? formatPercent(c.rto / out, 1) : `${c.rto} of ${out}`}
+        change={out >= JUDGE_MIN && outBefore >= JUDGE_MIN ? change(c.rto / out, p.rto / outBefore, { kind: 'share', good: 'down' }) : null}
+        note={out ? `${c.rto} of ${out} with an outcome` : 'None with an outcome yet'} />
+      {a.costs ? (
+        k && k.counted > 0
+          ? <Figure label="₹ kept after returns" value={<Money paise={paise(k.kept)} />} change={p.kept && p.kept.counted > 0 ? change(k.kept, p.kept.kept, { kind: 'money', good: 'up' }) : null} note={keptNote} />
+          : <Figure label="₹ kept after returns" value={null} empty={<>Shows once orders are delivered or come back · <Numeric>{c.onTheWay}</Numeric> on the way</>} />
+      ) : null}
+    </section>
+  )
+}
+
+/** "512 orders → 388 delivered · 61 came back · 3 lost · 41 on the way · 19 not sent yet" (as drawn). */
+export function FlowLine({ c }: { c: Totals }) {
+  return (
+    <p aria-label="Where this period's orders are" className="text-sm text-muted-foreground">
+      <b className="font-num font-medium text-foreground tabular-nums">{c.orders}</b> orders → <b className="font-num font-medium text-foreground tabular-nums">{c.delivered}</b> delivered
+      {' · '}<b className="font-num font-medium text-foreground tabular-nums">{c.rto}</b> came back
+      {c.lost ? <>{' · '}<b className="font-num font-medium text-foreground tabular-nums">{c.lost}</b> lost</> : null}
+      {' · '}<b className="font-num font-medium text-foreground tabular-nums">{c.onTheWay}</b> on the way
+      {' · '}<b className="font-num font-medium text-foreground tabular-nums">{c.notSent}</b> not sent yet
+    </p>
+  )
+}
+
+/** Sales by day, this period against the one before; came back marked on the day those orders were placed. */
+export function SalesByDay({ s, compareName }: { s: Series; compareName: string }) {
+  const points = s.days.map((d) => ({ key: d.key, label: dayMonthIN(new Date(`${d.key}T06:30:00Z`)), value: d.sales, prev: d.prevSales, marks: d.rto }))
+  if (points.length < 2) return null
+  const first = points[0]!, last = points.at(-1)!
+  const summary = `Sales a day, ${first.label} to ${last.label}: from ${inrShort(first.value)} to ${inrShort(last.value)}${s.notes.length ? `; ${s.notes.map((n) => `${n.title} from ${dayMonthIN(new Date(`${n.key}T06:30:00Z`))}`).join('; ')}` : ''}`
+  return (
+    <Section title="Sales by day">
+      <TrendChart points={points} summary={summary} format={inrShort} seriesNames={['This period', compareName]} notes={s.notes} marksName="came back (of orders placed that day)" />
+    </Section>
+  )
+}
+
+export function PaidAndCod({ s }: { s: Series }) {
+  if (!s.weeks.some((w) => w.a + w.b > 0)) return null
+  return <Section title={s.weeks.length && s.weeks[0]!.label.startsWith('Week') ? 'Paid online and COD, by week' : 'Paid online and COD, by day'}><SplitBars rows={s.weeks} a="Paid online" b="COD" /></Section>
+}
+
+export function WhenOrdersCome({ s }: { s: Series }) {
+  if (!s.heat.flat().some((n) => n > 0)) return null
+  return <Section title="When orders come"><Heatmap grid={s.heat} /></Section>
+}
+
+export function ByState({ s }: { s: Series }) {
+  if (!s.states.length) return null
+  return <Section title="Came back, by state"><StateTiles rows={s.states} /></Section>
+}
+
+export function ComeBack({ s }: { s: Series }) {
+  if (!s.cohort.some((c) => c.shoppers > 0)) return null
+  const first = s.cohort[0]!.month, last = s.cohort.at(-1)!.month
+  return (
+    <Section title="Shoppers who come back" action={<span className="text-label text-muted-foreground">First orders {monthShortIN(first)}–{monthShortIN(last)}</span>}>
+      <CohortTable rows={s.cohort} />
+    </Section>
+  )
+}
+
+/** The under-30 state (rule 63): the tally and a count to go, in place of the figures' shares. */
+export function TooFew({ n }: { n: number }) {
+  return (
+    <p className="text-sm text-muted-foreground">
+      Too few to judge: <Numeric>{n}</Numeric> {n === 1 ? 'order' : 'orders'} so far. Shares mean something from {JUDGE_MIN}.{' '}
+      <Link href="/console/orders?tab=all" className="text-link underline-offset-2 hover:underline">See the orders</Link>
+    </p>
+  )
+}

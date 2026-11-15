@@ -9,7 +9,11 @@ import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dayMonthIN } from '@/lib/format-date'
-import { isPeriod, sourcePage, type Period, type Stage } from '@/lib/queries/analytics'
+import { sourcePage, type Stage } from '@/lib/queries/analytics'
+import { compareWords, parsePeriod, periodQuery, windowFor } from '@/domains/analytics/period'
+import { istDayKey } from '@/domains/time/day'
+import { PeriodPicker } from '@/components/charts/period-picker'
+import { Figures, FlowLine } from '../_components/charts'
 import { shareOf } from '../_components/parts'
 import { readFailed } from '../_components/read-failed'
 
@@ -25,25 +29,31 @@ const STAGE: Record<Stage, { label: string; tone: 'ok' | 'info' | 'neutral' | 'd
   on_the_way: { label: 'On the way', tone: 'info' }, not_sent: { label: 'Not sent yet', tone: 'neutral' },
 }
 
-export default async function SourcePage({ params, searchParams }: { params: Promise<{ source: string }>; searchParams: Promise<{ period?: string }> }) {
+export default async function SourcePage({ params, searchParams }: { params: Promise<{ source: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
   const slug = (await params).source
   if (!/^[a-z0-9-]{1,64}$/.test(slug)) notFound()
-  const asked = Number((await searchParams).period ?? 30)
-  const period: Period = isPeriod(asked) ? asked : 30
+  const now = new Date()
+  // The same window as Analytics (src/domains/analytics/period.ts), carried in the address.
+  const w = windowFor(parsePeriod(await searchParams, now), now)
+  const pq = periodQuery(w.choice)
   const { tenantId, role } = auth.membership
   // One snapshot transaction: the source's numbers, its orders and the order prefix (speed review A1·7).
-  const page = await sourcePage(tenantId, role, period, slug).catch((err: unknown) => readFailed('[analytics source]', err))
+  const page = await sourcePage(tenantId, role, w, slug, now).catch((err: unknown) => readFailed('[analytics source]', err))
   if (page && 'failed' in page) return page.failed
   if (!page) notFound()
   const { stat, orders, prefix } = page
-  const t = stat.cur, out = t.delivered + t.rto + t.lost
-  const back = { href: `/console/analytics?period=${period}`, label: 'Analytics' }
+  const t = stat.cur
+  const back = { href: `/console/analytics?${pq}`, label: 'Analytics' }
   return (
     <>
       <PageHeader title={stat.label} back={back}
-        meta={<>Last {period} days · <Numeric>{t.orders}</Numeric> orders · <Numeric>{t.delivered}</Numeric> delivered · {out ? `${shareOf(t.rto, out)} came back` : 'none back yet'}{t.kept && t.kept.counted ? <> · <Money paise={paise(t.kept.kept)} /> kept after returns</> : null}</>} />
+        meta={<>{dayMonthIN(w.start)} – {w.toNow ? 'today (so far)' : dayMonthIN(new Date(w.end.getTime() - 1))} · India time</>}
+        actions={<PeriodPicker path={`/console/analytics/${encodeURIComponent(slug)}`} choice={w.choice} compare={compareWords(w)} today={istDayKey(now)} />} />
+      {/* The source's own figures, the kit's (Neel N1b): the same words and colours as Analytics. */}
+      <Figures a={{ cur: t, prev: stat.prev, costs: t.kept !== null }} compare={compareWords(w)} series={null} />
+      <FlowLine c={t} />
       {stat.campaigns.length ? (
         <Section flush title="Campaigns">
           <DataTable label="Campaigns">
@@ -81,7 +91,7 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
               ))}
             </DataTableBody>
           </DataTable>
-        ) : <p className="px-4 py-3 text-sm text-muted-foreground">No orders from it in the last {period} days.</p>}
+        ) : <p className="px-4 py-3 text-sm text-muted-foreground">No orders from it in these days.</p>}
         <p className="px-4 pb-3 text-xs text-muted-foreground">The latest 50. Each opens its order.</p>
       </Section>
     </>
