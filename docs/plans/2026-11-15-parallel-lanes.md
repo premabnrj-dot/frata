@@ -12,8 +12,8 @@ working do share one final mockup for each for me to review") · Orchestrator: s
 | **C** | T1c · Builders: capabilities, the Builder role that never sees orders, shoppers or costs | ADR-0015 accepted; `docs/specs/2026-11-12-studio-intake-and-team.md` | `claude/lane-c-builders` |
 
 **Next, when a lane frees:** P2 Clients (`docs/specs/2026-11-12-studio-shell-clients-billing.md`).
-**Held:** C1 credits and A1 (Frrata's payment account for partners must exist first); V2 hosting (after V1, and the
-owner's yes on ADR-0017's Vercel-only revision); V3 Studio (after V1, V2, C1, T1c).
+**Held:** C1 credits and A1 (Frrata's payment account for partners must exist first); V2 hosting (after V1; its first step is the
+Vercel and Cloudflare test on Starter 0, ADR-0017 § The test, when); V3 Studio (after V1, V2, C1, T1c).
 
 ## The rules every worker follows
 1. **Its own branch only.** Never push `main`, never apply a migration to production, never `vercel deploy`, never
