@@ -139,6 +139,10 @@ Handlers never open `withTenant` around a cached loader (P4).
   `moduleAccess` for `ctx.tenantId` (tenancy M). `check-modules` gains these paths and the map as a hook.
 - Not usable (off, not in plan, paused) → `404 {"error":"not_available"}`, one answer for all.
 - **No module resource in SA1** (Reviews is still `next`); the contract and its gate ship so the first one follows it.
+- **The `shop` resource lists the site-facing apps that are usable** (owner, 2026-11-15), when the contract ships: an
+  open enum of module keys that offer an API resource and pass `moduleAccess` now, nothing else (no plan, price or
+  trial). A site and the starter show or hide each app's block from it instead of probing for `not_available`; the
+  resource still answers `not_available` on its own, so a stale list never breaks a page. Additive to 2026-12.
 
 ### 6. Limits and cost
 - Reads are CDN hits; misses regenerate at most once per path per 60 s. **One Vercel WAF rule** on the API host: per
