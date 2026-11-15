@@ -65,6 +65,7 @@ Unit: `orderTopLine` (every state the board draws), the courier came-back share,
 | Sub-lines "Confirmed on WhatsApp at 10:14 am", "No reply on WhatsApp yet", "Refused at the door", "Remitted by Delhivery on 23 Nov", an email "· opened" | Facts we record (confirmed time, risk reasons, cancel reason, delivered date); the rest left out | No row records a WhatsApp reply, an NDR reason, a remittance or an open | — |
 | Top line cases not drawn | Today's words for held-and-paid, delivered prepaid, came back after paying, lost, cancelled with a refund, not paid yet; and today's CA and "ask the owner" sentences on two drawn cases | An accounting step and a role step a merchant needs; the board drew nine of fourteen cases | — |
 | Notes and Activity (separate cards drawn) | One timeline | Owner, 2026-11-15 | Yes, 2026-11-15 |
+| Shipping on a To pack order (drawn beside Mark packed) | The Shipping card once the order is packed | An order is packed (its invoice issued, its stock taken) before it ships; marking it shipped first would skip both | — |
 | Courier cards with price and days, "Book Delhivery · ₹78" | Cards for couriers the store has used, each with its came-back share; picking one fills the courier; booking stays "Ship another way" (name and AWB) | No Shiprocket connector exists (no rates, no booking). It is its own phase: current facts on Shiprocket's API and terms first (`frata-integrations`, 90-day rule) | — |
 
 ## Architecture review on the plan (2026-11-15), folded in

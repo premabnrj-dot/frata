@@ -56,6 +56,9 @@ export async function generateMetadata({ params }: { params: Promise<{ number: s
 const wasOf = (was: { values: string[]; qty: number }, now: { optionValues: string[]; qty: number }) =>
   was.values.join('\u0000') !== now.optionValues.join('\u0000') ? valuesChanged(was.values, now.optionValues).from : `${was.qty}`
 
+/** "Today, 10:14 am" inside a sentence: "today, 10:14 am". */
+const midSentence = (w: string) => w.replace(/^(Today|Yesterday)/, (m) => m.toLowerCase())
+
 /** "2nd", "3rd", "11th": a shopper's order count (Neel N2b, the shopper card). */
 const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
 
@@ -109,7 +112,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const riskWarning = r && (r.level === 'high' || r.level === 'unknown') ? `${r.level === 'high' ? 'High risk' : 'Risk unavailable'}: ${why}. Confirm only once you have spoken to the customer.` : null
   // The top line (Neel N2b): what to do now, in money, from one rule (top-line.ts); the foot line it replaces is gone.
   const top = orderTopLine({ state, method, paid: !!o.paidAt, paidAfterPacking: paidAfterPacking(o), paidAfterSwitch: paidAfterSwitch(o), owed, refund, canCancel: can.cancel, inr,
-    confirmedAt: o.confirmedAt ? momentIN(o.confirmedAt, now) : null, paidAt: o.paidAt ? momentIN(o.paidAt, now) : null,
+    confirmedAt: o.confirmedAt ? midSentence(momentIN(o.confirmedAt, now)) : null, paidAt: o.paidAt ? midSentence(momentIN(o.paidAt, now)) : null,
     deliveredOn: o.deliveredAt ? dayMonthIN(o.deliveredAt) : null, riskFirst: r?.reasons[0] ?? null,
     cancelWhy: o.cancelReason ? `${CANCEL_LABEL[o.cancelReason as CancelReason] ?? o.cancelReason}${o.cancelNote ? `. ${o.cancelNote}` : ''}` : null })
   // The COD risk as a chip for every Pay on delivery order not yet on its way (the reasons stay in their card when high).
@@ -158,6 +161,13 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
           refund={refund} refundLabel={formatInr(paise(refund))} refunded={refunded ? formatInr(paise(refunded)) : null} stockTaken={lines.some((l) => l.stockTakenAt)} />} />
 
       <TopLineCard t={top} risk={codRisk} />
+      {/* On a phone, the two ways to reach the shopper sit right under it (as drawn). */}
+      {o.phone && !o.erasedAt ? (
+        <div className="grid grid-cols-2 gap-2 md:hidden">
+          <a href={`tel:+91${o.phone}`} className="grid h-11 place-items-center rounded-md border border-edge text-sm font-medium">Call</a>
+          <a href={wa(o.phone, `Hello, this is about your order ${label}.`)} target="_blank" rel="noopener" className="grid h-11 place-items-center rounded-md border border-edge text-sm font-medium">WhatsApp</a>
+        </div>
+      ) : null}
 
       <div className="grid gap-6 pb-16 md:grid-cols-[minmax(0,1fr)_20rem] md:pb-0">
         <div className="min-w-0 space-y-6">
@@ -180,9 +190,6 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
             </Section>
           ) : null}
 
-          {shipStage ? <ShipPanel orderId={o.id} number={label} stage={shipStage} stockTaken={lines.some((l) => l.stockTakenAt)}
-            may={{ ship: may('ship_self', state, role), outcome: may('deliver', state, role) }}
-            shipment={shipment ? { courierName: shipment.courierName, trackingNumber: shipment.trackingNumber, byCourier: shipment.provider === 'shiprocket' } : null} couriers={d.couriers} /> : null}
 
           <ItemsArea orderId={o.id} number={label} undoEvent={undoEvent}>
           <Section id="items" title="Items" action={itemsEditable || undoEvent ? <EditItemsButton canEdit={itemsEditable} /> : undefined}>
@@ -215,6 +222,9 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
             <RefundRows rows={refundRows} canAct={can.edit && !auth.membership.supportSessionId} />
           </Section>
           </ItemsArea>
+          {shipStage ? <ShipPanel orderId={o.id} number={label} stage={shipStage} stockTaken={lines.some((l) => l.stockTakenAt)}
+            may={{ ship: may('ship_self', state, role), outcome: may('deliver', state, role) }}
+            shipment={shipment ? { courierName: shipment.courierName, trackingNumber: shipment.trackingNumber, byCourier: shipment.provider === 'shiprocket' } : null} couriers={d.couriers} /> : null}
           {d.keep ? <KeepCard k={d.keep} /> : null}
         </div>
 

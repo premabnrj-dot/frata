@@ -29,6 +29,8 @@ export function TopLineCard({ t, risk }: { t: TopLine; risk: 'low' | 'medium' | 
 }
 
 const missingWords = { cogs: 'Add the cost of its goods to see this.', freight: 'Shows once the courier’s charges arrive.' } as const
+// No shipping costs at all (no estimate set, no courier lines): a return's figure would read ₹0, which is not true.
+const NO_SHIPPING = 'Set your shipping costs to see what a return costs.'
 
 /** What this order keeps if it is delivered, and if it comes back. Known costs only: before ads and packaging. */
 export function KeepCard({ k }: { k: OrderKeep }) {
@@ -39,13 +41,18 @@ export function KeepCard({ k }: { k: OrderKeep }) {
           <div className="flex flex-col gap-0.5 rounded-mid bg-sunk p-3">
             <span className="text-label text-muted-foreground">If delivered</span>
             {k.ifDelivered === null ? <b className="text-title font-semibold text-muted-foreground">—</b> : <b className="font-num text-title font-semibold tabular-nums"><Money paise={k.ifDelivered} /></b>}
-            <span className="text-label text-muted-foreground">After GST, goods, courier and Frrata’s fee. Before ads and packaging.</span>
+            <span className="text-label text-muted-foreground">{k.basis === 'none' ? 'After GST, goods and Frrata’s fee. Before shipping, ads and packaging.' : 'After GST, goods, courier and Frrata’s fee. Before ads and packaging.'}</span>
           </div>
-          <div className="flex flex-col gap-0.5 rounded-mid bg-danger p-3 text-danger-text">
+          {k.basis === 'none' ? (
+            <div className="flex flex-col gap-1 rounded-mid bg-sunk p-3">
+              <span className="text-label text-muted-foreground">If it comes back</span>
+              <span className="text-sm">{NO_SHIPPING} <a href="/console/settings/shipping-costs" className="text-link underline underline-offset-2">Shipping costs</a></span>
+            </div>
+          ) : <div className="flex flex-col gap-0.5 rounded-mid bg-danger p-3 text-danger-text">
             <span className="text-label">If it comes back</span>
             {k.ifBack === null ? <b className="text-title font-semibold">—</b> : <b className="font-num text-title font-semibold tabular-nums"><Money paise={k.ifBack} /></b>}
             <span className="text-label">Courier both ways.{k.ifBackNotStocked !== null && k.ifBackNotStocked !== k.ifBack ? <> <Money paise={k.ifBackNotStocked} /> if it can’t go back in stock.</> : null}</span>
-          </div>
+          </div>}
         </div>
       )}
       {k.fee > 0 ? <p className="text-label text-muted-foreground">Frrata’s fee <Money paise={paise(k.fee)} decimals /> only if delivered.</p> : null}
