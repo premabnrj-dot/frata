@@ -113,7 +113,8 @@ button { font:inherit; color:inherit; cursor:pointer }
 .wm .ic { gap:4px; padding:6px 0; grid-auto-flow:row }
 .wm .ic i { width:32px; height:32px; border-radius:8px; background:#2A1D14; display:grid; place-items:center; padding:4px }
 .wm .ic em { width:16px; height:16px; display:block }
-.wm-name { font-size:12px; color:var(--text-2); margin-top:-2px }
+.wm-name { font-size:12px; color:var(--text-2); margin-top:-2px; display:flex; justify-content:space-between; gap:8px }
+.wm-checks { color:var(--ok-fg); display:inline-flex; gap:4px; align-items:center } .wm-checks::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--ok-dot) }
 .look { border:1px solid var(--line); border-radius:10px; background:var(--surface); padding:0; overflow:hidden; text-align:left; display:grid }
 .look[aria-pressed="true"] { border-color:var(--action); box-shadow:0 0 0 3px var(--select) }
 .look .sw { height:44px; display:grid; grid-template-columns:2fr 1fr 1fr }
@@ -305,7 +306,7 @@ const WMS = [
     icon:(c, bg, acc='#C9A227') => WOVEN(c, acc, bg) },
   { id:'zari', name:'Zari border',
     html:(c, bg, acc='#C9A227') => `<span style="display:inline-grid;justify-items:center;gap:3px;color:${c}"><span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:21px;font-weight:600;letter-spacing:.34em;line-height:1;margin-right:-.34em">KESAR</span>${ZARI(acc)}</span>`,
-    icon:(c, bg, acc='#C9A227') => `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><path d="M12 2.5 21.5 12 12 21.5 2.5 12Z" fill="none" stroke="${acc}" stroke-width="1.6"/><text x="12" y="16.2" text-anchor="middle" font-family="Cormorant Garamond, Georgia, serif" font-weight="600" font-size="12" fill="${c}">K</text></svg>` },
+    icon:(c, bg, acc='#C9A227') => `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><path d="M12 2.5 21.5 12 12 21.5 2.5 12Z" fill="none" stroke="${acc}" stroke-width="1.6"/><path fill="${c}" d="M9 7.6h2.3v3.7l3.2-3.7h2.2l-3.2 3.6 3.6 5.2h-2.5l-2.6-3.8-.7.8v3h-2.3z"/></svg>` },
 ]
 const wm = () => WMS.find(w => w.id === S.wm)
 const LOOKS = [
@@ -362,7 +363,7 @@ function renderLog() {
   // 3 · Look
   if (S.state === 'nologo') {
     out.push(agent(`<div class="txt">No logo yet. Three wordmarks from the name.</div>
-      <div class="wms">${WMS.map(w=>`<button class="wm" data-act="wm" data-w="${w.id}" data-peek="wm" aria-pressed="${S.wm===w.id}" aria-label="${w.name}"><span class="on-paper">${w.html('#2A1D14','#F7F1EA')}</span><span class="on-ink">${w.html('#F7F1EA','#2A1D14')}</span><span class="ic"><i aria-hidden="true">${w.icon('#F7F1EA','#2A1D14')}</i><em aria-hidden="true">${w.icon('#2A1D14','#F7F1EA')}</em></span></button><div class="wm-name">${w.name}</div>`).join('')}</div>
+      <div class="wms">${WMS.map(w=>`<button class="wm" data-act="wm" data-w="${w.id}" data-peek="wm" aria-pressed="${S.wm===w.id}" aria-label="${w.name}"><span class="on-paper">${w.html('#2A1D14','#F7F1EA')}</span><span class="on-ink">${w.html('#F7F1EA','#2A1D14')}</span><span class="ic"><i aria-hidden="true">${w.icon('#F7F1EA','#2A1D14')}</i><em aria-hidden="true">${w.icon('#2A1D14','#F7F1EA')}</em></span></button><div class="wm-name"><span>${w.name}${w.id==='saffron'?' · Kesar\'s choice':''}</span><span class="wm-checks">16 px · One colour · Reversed</span></div>`).join('')}</div>
       <div class="row"><button class="btn sm">Upload a logo</button><button class="btn sm">Ask Riya for hers</button><span class="sp"></span><button class="btn ghost sm">Write my own</button></div>`))
     if (!S.wm) return out.join('')
     out.push(me(wm().name))

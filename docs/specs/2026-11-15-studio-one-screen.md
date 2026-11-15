@@ -66,10 +66,32 @@ change away from a computer; the full build is meant for a computer.
 ## Out of scope
 Clients, Billing, Team, Settings (unchanged) · the brand's own chat (later, ADR-0014).
 
-## No logo (owner, 2026-11-15: "draw the no-logo part too"; "use some good logo designing skills")
+## No logo (owner, 2026-11-15: "draw the no-logo part too"; "use some good logo designing skills"; then "approved. go with saffron threads for kesar")
 When the console, the link and Instagram hold no logo, the chat offers three directions, each from a reason in the
 brand (Kesar: **Saffron threads**, kesar is saffron; **Woven K**, warp and weft over and under; **Zari border**, the
 sari's edge), drawn as one-colour marks plus the brand accent. Each card shows the logo on paper and on ink and the
 icon at 32 and 16 px; hovering previews it in the site's header; choosing it puts it in brand data (site, checkout,
-emails, share cards). Upload a logo, Ask Riya for hers, Write my own stay one tap away. The agent's logo skill and
-checks: § Logo skill (after the research pass).
+emails, share cards). Upload a logo, Ask Riya for hers, Write my own stay one tap away. **Kesar's logo: Saffron threads** (owner,
+2026-11-15). The agent's logo skill and
+checks: § Logo skill.
+
+## Logo skill (research 2026-11-15; repos cloned and checked: last commit, LICENSE)
+What Studio's agent uses to design and prove a logo (V3; the logo itself is brand data from V1.5):
+| Use | What | Licence · last update | How |
+|---|---|---|---|
+| The agent's logo skill | `kaankiziltug/logo-design-skill` (SKILL.md, 13 references, audit and test-sheet scripts) | MIT · 2026-11-13 | Fork the SKILL.md and references as the base of Studio's skill, cut to wordmarks, monograms and wordmark-plus-mark; its "three concepts, checkpoint, then the kit" is this screen's flow. **Never ship its `assets/library/svg/`** (1,432 real logos; its TRADEMARKS.md excludes them from MIT) |
+| Name to outlines | `harfbuzz/harfbuzzjs` | MIT-style · v1.6.4, 2026-10-22 | Sets the name in the chosen font with kerning and shapes Devanagari, Tamil and Bengali properly (opentype.js does not); glyph paths become the logo's outlines |
+| Fonts | Google Fonts `ofl/` and `apache/` only | OFL FAQ updated 2026-11-09 | ~30 curated faces incl. Noto, Mukta, Anek, Tiro, Hind, Rozha One, Martel; logos are allowed, the artwork is the maker's, no attribution; **always outlines, never an embedded font** |
+| Render checks | `yisibl/resvg-js` | MPL-2.0 · 2026-03-26 (pin) | PNGs at 16, 32, 48, 512 px; one colour; reversed; on the brand colour; blur; the agent looks before it shows |
+| Clean-up | `svg/svgo` | MIT · 2026-11-07 | Last step before brand data; keep the `viewBox` |
+| Reading only | `rampstackco/claude-skills` logo-design (MIT); `anthropics/skills` frontend-design (Apache-2.0, attribution if quoted) | 2026-10-04; 2026-09-03 | Mark types and application contexts; deliberate type choice |
+Not used: anthropics/skills brand-guidelines, theme-factory, canvas-design, algorithmic-art (not logo work); skills with
+no licence file (no right to reuse) or one-day histories.
+
+**The checks every concept passes before the chat shows it** (the card's "16 px · One colour · Reversed"): a concept in
+one sentence from the name (Kesar: saffron); three different directions; no category cliché (hanger, needle, thread
+spool); outlines only (no text element, raster, filter or stroke), at most two colours, padding; the mark readable at
+16 and 32 px (a long wordmark brings a monogram); one colour; reversed on dark; contrast ≥ 3:1 on light and dark (our
+rule; WCAG exempts logos); the blurred silhouette; distinct from each other and from famous marks. **Trademark:** the
+agent cannot clear a mark and says so; the hand-over card links India's free search (tmrsearch.ipindia.gov.in, since
+2026-07-01) for the name in the brand's classes.
