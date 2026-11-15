@@ -342,6 +342,12 @@ this branch first; SA1·1 (the Settings page and its actions) waits for C and B 
   the shop's 60 s entries made every API copy stale after a minute (impact review; measured under `next start`, then
   fixed and proved: still a HIT 65 s later). Cost: a second copy of each shop's catalogue entry in the data cache,
   refilled only on a purge or once an hour.
+- After `api-contract-reviewer` (2026-11-15), before freezing 2026-12: photos answer finished URLs per width with
+  their size and colour; `delivery.zones` and `payOnDelivery.min`; the store's `status` (open, opening soon, paused) and
+  its `pause` window (sites check it against the clock: a pause is derived from billing, so the sweep doesn't purge on it);
+  product `details` (the page's rows and the pack's declarations), `model`, `seo`, variant `sku`/`gtin`; collection and
+  shop `seo`; the store's `policies` links; `priorPrice` everywhere (never `compareAt`, which read as the M.R.P.); 429 and
+  500 in the description; field notes in `openapi.json`. The snapshot was made again once; 2026-12 freezes at release.
 - Public search is a dynamic live route answered `public, s-maxage=60` (an ISR route can't vary by query); the slim
   search entry (speed review M2) is not built: search filters the cached catalogue in memory. Signal to build it: a
   search p95 over 50 ms in Observability.

@@ -22,7 +22,8 @@ describe('version 2026-12 mappers (spec § 3, ADR-0003)', () => {
     const json = JSON.stringify(out)
     for (const k of SENTINELS) expect(json).not.toContain(k)
     expect(json).not.toContain('987654321')
-    expect(out.price).toEqual({ min: 249000, max: 249000, compareAt: null })
+    expect(out.price).toEqual({ min: 249000, max: 249000, priorPrice: null })
+    expect(out.image).toEqual({ sizes: [{ width: 400, url: media('p1') + '-400.webp' }, { width: 800, url: media('p1') + '-800.webp' }], width: 800, height: 1000, alt: 'Kurta', colour: null })
     expect(out.availability).toEqual({ kind: 'in_stock', left: null, shipsBy: null, leadDays: null })
   })
   it('a count only at 3 or fewer', () => {
@@ -77,13 +78,19 @@ describe('version 2026-12 mappers (spec § 3, ADR-0003)', () => {
     expect(offersOut(null, now)).toEqual({ bar: null })
   })
   it('the shop: the legal block, closed links, no cost', () => {
-    const s = { shopName: 'Kesar Studio', shopLanguage: 'en' as const, logoUrl: 'https://evil.in/logo.png', pricesIncludeGst: true, codOn: true, codMax: 300000, codCharge: 4900, shippingFlat: 8500, freeShippingAbove: 199900,
+    const s = { publishedAt: '2026-11-01T00:00:00Z', pause: null, tagline: 'Hand block print', seoTitle: '', seoDescription: '', codMin: 0, zones: null, shopName: 'Kesar Studio', shopLanguage: 'en' as const, logoUrl: 'https://evil.in/logo.png', pricesIncludeGst: true, codOn: true, codMax: 300000, codCharge: 4900, shippingFlat: 8500, freeShippingAbove: 199900,
       dispatchDays: 2, metroDays: 3, restDays: 6, returnKind: 'exchange_or_refund' as const, returnDays: 7, legalName: 'Kesar Studio LLP', address: 'Jaipur', supportEmail: 'care@kesar.in', supportPhone: '+91 98450 12345',
       grievanceName: 'Meera', grievanceRole: 'Owner', grievanceEmail: 'g@kesar.in', grievancePhone: '+91 98450 12345', instagram: 'javascript:alert(1)', whatsapp: '+91 98450 12345', ...costs }
-    const out = S.Shop.parse(shopOut(M, s, { site: 'https://kesarstudio.in', checkout: 'https://checkout.kesarstudio.in' }))
+    const out = S.Shop.parse(shopOut(M, s, { site: 'https://kesarstudio.in', checkout: 'https://checkout.kesarstudio.in' }, now))
     expect(out.logo).toBeNull()
     expect(out.social).toEqual({ instagram: null, whatsapp: '919845012345' })
-    expect(shopOut(M, { ...s, instagram: '@kesar.studio' }, { site: null, checkout: 'https://x.in' }).social.instagram).toBe('kesar.studio')
+    expect(shopOut(M, { ...s, instagram: '@kesar.studio' }, { site: null, checkout: 'https://x.in' }, now).social.instagram).toBe('kesar.studio')
+    expect(out.status).toBe('open')
+    expect(out.policies.map((p) => p.url)).toContain('https://checkout.kesarstudio.in/policies/returns')
+    expect(shopOut(M, { ...s, publishedAt: null }, { site: null, checkout: 'https://x.in' }, now).status).toBe('opening_soon')
+    expect(shopOut(M, { ...s, pause: { from: '2026-11-10T00:00:00Z', to: null } }, { site: null, checkout: 'https://x.in' }, now).status).toBe('paused')
+    const zoned = S.Shop.parse(shopOut(M, { ...s, zones: [{ name: 'Metro', charge: 5000, freeAbove: null, daysMin: 2, daysMax: 3, codOn: true, codCharge: 4900, codMax: 300000 }] }, { site: null, checkout: 'https://x.in' }, now))
+    expect(zoned.delivery.zones).toEqual([{ name: 'Metro', charge: 5000, freeAbove: null, days: [2, 3], payOnDelivery: { on: true, charge: 4900, max: 300000 } }])
     expect(out.legal.grievanceOfficer.name).toBe('Meera')
     for (const k of SENTINELS) expect(JSON.stringify(out)).not.toContain(k)
   })

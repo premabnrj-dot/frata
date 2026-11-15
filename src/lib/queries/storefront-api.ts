@@ -13,7 +13,8 @@ import { errName } from '@/lib/log'
 // request. The catalogue itself is read through the shop's cached loaders (src/lib/queries/storefront.ts).
 // =============================================================================
 
-/** The shop's website address, for a test key's CORS answer (the dynamic tree only; never cached). */
+/** The shop's own website address: a test key's CORS answer, and `siteOrigin` in the shop resource (the cached copy
+ *  takes it at render, so whatever sets it must purge the keys: refreshKeys). Uncached, its own transaction. */
 export async function siteOriginFor(tenantId: string): Promise<string | null> {
   const [r] = await withTenant(tenantId, (tx) => tx.select({ o: shopSettings.siteOrigin }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)))
   return r?.o ?? null

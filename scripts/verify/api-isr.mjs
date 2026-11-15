@@ -6,7 +6,8 @@
 //     (`skey:<sha256 hex>` and `shop:<tenant>`);
 //   - a test key's answer is never cached (no HIT, `private, no-store`);
 //   - a key-shaped path for another host, a bad shape or an unknown key is a 404 with the one body.
-// Usage (PERIOD=1 adds the 65 s period check): ADMIN_URL=postgres://postgres@localhost:54330/frata_proof API_HOST=api.frrata.test node scripts/verify/api-isr.mjs
+// Usage (PERIOD=1 adds the 65 s period check): ADMIN_URL=postgres://postgres@localhost:54330/frata_proof API_HOST=api.frrata.test
+//   DATABASE_URL=postgresql://frata_app:x@localhost:54330/frata_proof node scripts/verify/api-isr.mjs
 // (build first: NEXT_PUBLIC_API_HOST=api.frrata.test DATABASE_URL=… npm run build). Hosts go through node:http:
 // undici drops a Host header (frata-gotchas).
 // =============================================================================

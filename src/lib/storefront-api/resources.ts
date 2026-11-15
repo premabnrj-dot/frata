@@ -12,7 +12,8 @@ import { BLOB_STORE_ID } from '@/lib/env'
 // FILE: src/lib/storefront-api/resources.ts — VERSION 2026-12's RESOURCES (spec § 3; V1 plan § SA1·3).
 //
 // One function per resource, shared by the cached tree (live keys: the shop's cached loaders) and the dynamic tree (test
-// keys: the uncached preview loaders: a draft opens by its handle; lists, collections and search stay listed-only). Every read takes the shop from ctx.tenantId, never anything
+// keys: the uncached preview loaders: a draft opens by its handle; lists, collections and search stay listed-only; the
+// offer bar is the shop's own live one under either key: a draft offer never shows). Every read takes the shop from ctx.tenantId, never anything
 // else, and never opens a withTenant around a cached loader (P4). The answer is a mapper's output; apiRequest parses it.
 // =============================================================================
 
@@ -44,7 +45,7 @@ export const RESOURCES = {
   shop: { schema: S.Shop, run: async (ctx: ApiCtx) => {
     const [s, site] = await Promise.all([loaders(ctx).shop(ctx.tenantId), siteOriginFor(ctx.tenantId)])
     if (!s) return null
-    return shopOut(mapCtx(ctx), s, { site, checkout: `https://${s.host}` })
+    return shopOut(mapCtx(ctx), s, { site, checkout: `https://${s.host}` }, ctx.now)
   } },
   products: { schema: S.Page, run: async (ctx: ApiCtx, p: { page: number }) =>
     pageOut(mapCtx(ctx), (await loaders(ctx).catalogue(ctx.tenantId)).products, p.page, ctx.now) },

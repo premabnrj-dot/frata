@@ -7,12 +7,17 @@
     "type": "string",
     "maxLength": 120
    },
+   "tagline": {
+    "type": "string",
+    "maxLength": 200
+   },
    "language": {
     "type": "string",
     "enum": [
      "en",
      "hi"
-    ]
+    ],
+    "description": "New values may appear. Show something sensible for one you don’t know."
    },
    "logo": {
     "anyOf": [
@@ -26,6 +31,50 @@
      }
     ]
    },
+   "status": {
+    "type": "string",
+    "enum": [
+     "open",
+     "opening_soon",
+     "paused"
+    ],
+    "description": "As of this answer. Show the store as closed unless it is \"open\". \"paused\" takes no new orders until pause.to. New values may appear. Show something sensible for one you don’t know."
+   },
+   "pause": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "from": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+       },
+       "to": {
+        "anyOf": [
+         {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       }
+      },
+      "required": [
+       "from",
+       "to"
+      ],
+      "additionalProperties": false
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "description": "A pause the store has or will have. Check it against the clock."
+   },
    "pricesIncludeGst": {
     "type": "boolean"
    },
@@ -34,6 +83,11 @@
     "properties": {
      "on": {
       "type": "boolean"
+     },
+     "min": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
      },
      "max": {
       "type": "integer",
@@ -48,10 +102,12 @@
     },
     "required": [
      "on",
+     "min",
      "max",
      "charge"
     ],
-    "additionalProperties": false
+    "additionalProperties": false,
+    "description": "The store-wide rule. With zones, each zone’s own applies."
    },
    "delivery": {
     "type": "object",
@@ -80,6 +136,101 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 9007199254740991
+     },
+     "zones": {
+      "anyOf": [
+       {
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "name": {
+           "type": "string",
+           "maxLength": 60
+          },
+          "charge": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 9007199254740991
+          },
+          "freeAbove": {
+           "anyOf": [
+            {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            },
+            {
+             "type": "null"
+            }
+           ]
+          },
+          "days": {
+           "type": "array",
+           "prefixItems": [
+            {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            },
+            {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            }
+           ],
+           "items": false,
+           "minItems": 2,
+           "maxItems": 2
+          },
+          "payOnDelivery": {
+           "type": "object",
+           "properties": {
+            "on": {
+             "type": "boolean"
+            },
+            "charge": {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            },
+            "max": {
+             "anyOf": [
+              {
+               "type": "integer",
+               "minimum": 0,
+               "maximum": 9007199254740991
+              },
+              {
+               "type": "null"
+              }
+             ]
+            }
+           },
+           "required": [
+            "on",
+            "charge",
+            "max"
+           ],
+           "additionalProperties": false
+          }
+         },
+         "required": [
+          "name",
+          "charge",
+          "freeAbove",
+          "days",
+          "payOnDelivery"
+         ],
+         "additionalProperties": false
+        }
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Delivery by area. A shopper’s PIN code picks the zone. The flat fields are then only the fallback."
      }
     },
     "required": [
@@ -87,7 +238,8 @@
      "freeAbove",
      "dispatchDays",
      "metroDays",
-     "restDays"
+     "restDays",
+     "zones"
     ],
     "additionalProperties": false
    },
@@ -101,7 +253,8 @@
        "exchange_only",
        "refund_only",
        "none"
-      ]
+      ],
+      "description": "New values may appear. Show something sensible for one you don’t know."
      },
      "days": {
       "type": "integer",
@@ -179,7 +332,44 @@
      "customerCare",
      "grievanceOfficer"
     ],
-    "additionalProperties": false
+    "additionalProperties": false,
+    "description": "What India’s E-Commerce Rules ask every page of the store to show. Render it from here at runtime. Never copy it into code."
+   },
+   "policies": {
+    "maxItems": 10,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "kind": {
+       "type": "string",
+       "enum": [
+        "returns",
+        "shipping",
+        "privacy",
+        "terms",
+        "contact"
+       ],
+       "description": "New values may appear. Show something sensible for one you don’t know."
+      },
+      "title": {
+       "type": "string",
+       "maxLength": 80
+      },
+      "url": {
+       "type": "string",
+       "maxLength": 500,
+       "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+      }
+     },
+     "required": [
+      "kind",
+      "title",
+      "url"
+     ],
+     "additionalProperties": false
+    },
+    "description": "The store’s policy pages, on Frrata. Link them from every page."
    },
    "social": {
     "type": "object",
@@ -199,7 +389,7 @@
       "anyOf": [
        {
         "type": "string",
-        "pattern": "^\\d{10,15}$"
+        "pattern": "^91\\d{10}$"
        },
        {
         "type": "null"
@@ -213,6 +403,24 @@
     ],
     "additionalProperties": false
    },
+   "seo": {
+    "type": "object",
+    "properties": {
+     "title": {
+      "type": "string",
+      "maxLength": 200
+     },
+     "description": {
+      "type": "string",
+      "maxLength": 400
+     }
+    },
+    "required": [
+     "title",
+     "description"
+    ],
+    "additionalProperties": false
+   },
    "siteOrigin": {
     "anyOf": [
      {
@@ -223,24 +431,31 @@
      {
       "type": "null"
      }
-    ]
+    ],
+    "description": "Your own address for the store, as it was set in Frrata."
    },
    "checkoutOrigin": {
     "type": "string",
     "maxLength": 500,
-    "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+    "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$",
+    "description": "Where checkout, orders and policies live. The cart link (coming next) starts here."
    }
   },
   "required": [
    "name",
+   "tagline",
    "language",
    "logo",
+   "status",
+   "pause",
    "pricesIncludeGst",
    "payOnDelivery",
    "delivery",
    "returns",
    "legal",
+   "policies",
    "social",
+   "seo",
    "siteOrigin",
    "checkoutOrigin"
   ],
@@ -264,7 +479,8 @@
       "handle": {
        "type": "string",
        "maxLength": 100,
-       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "description": "The product’s current address: /products/<handle>."
       },
       "title": {
        "type": "string",
@@ -285,7 +501,7 @@
            "minimum": 0,
            "maximum": 9007199254740991
           },
-          "compareAt": {
+          "priorPrice": {
            "anyOf": [
             {
              "type": "integer",
@@ -295,20 +511,22 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "The lowest price in the 30 days before a recent cut. Show it struck through. Null when there was no cut."
           }
          },
          "required": [
           "min",
           "max",
-          "compareAt"
+          "priorPrice"
          ],
          "additionalProperties": false
         },
         {
          "type": "null"
         }
-       ]
+       ],
+       "description": "Null when no size has a price yet."
       },
       "availability": {
        "anyOf": [
@@ -323,7 +541,8 @@
             "sold_out",
             "preorder",
             "made_to_order"
-           ]
+           ],
+           "description": "New values may appear. Show something sensible for one you don’t know."
           },
           "left": {
            "anyOf": [
@@ -335,7 +554,8 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "How many are left, only when 3 or fewer."
           },
           "shipsBy": {
            "anyOf": [
@@ -346,7 +566,8 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "For a pre-order, the day it ships by (India)."
           },
           "leadDays": {
            "anyOf": [
@@ -371,7 +592,8 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "For made to order, days to ship, least and most."
           }
          },
          "required": [
@@ -433,29 +655,66 @@
         {
          "type": "object",
          "properties": {
-          "base": {
-           "type": "string",
-           "maxLength": 500,
-           "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
-          },
-          "widths": {
+          "sizes": {
+           "minItems": 1,
            "maxItems": 8,
            "type": "array",
            "items": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
-           }
+            "type": "object",
+            "properties": {
+             "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+             },
+             "url": {
+              "type": "string",
+              "maxLength": 500,
+              "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+             }
+            },
+            "required": [
+             "width",
+             "url"
+            ],
+            "additionalProperties": false
+           },
+           "description": "The same photo at each width, smallest first. Use them as srcset."
+          },
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991,
+           "description": "The original’s width in pixels (with height: the aspect ratio)."
+          },
+          "height": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
           },
           "alt": {
            "type": "string",
            "maxLength": 200
+          },
+          "colour": {
+           "anyOf": [
+            {
+             "type": "string",
+             "maxLength": 60
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The colour this photo shows (a value of the Colour option), or null."
           }
          },
          "required": [
-          "base",
-          "widths",
-          "alt"
+          "sizes",
+          "width",
+          "height",
+          "alt",
+          "colour"
          ],
          "additionalProperties": false
         },
@@ -473,7 +732,8 @@
         {
          "type": "null"
         }
-       ]
+       ],
+       "description": "The one offer tag a card may carry, in the store’s words."
       }
      },
      "required": [
@@ -505,7 +765,8 @@
     "maximum": 9007199254740991
    },
    "truncated": {
-    "type": "boolean"
+    "type": "boolean",
+    "description": "True when the catalogue has more than 600 listed products. Later ones are in no page yet."
    }
   },
   "required": [
@@ -529,7 +790,8 @@
    "handle": {
     "type": "string",
     "maxLength": 100,
-    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+    "description": "The product’s current address: /products/<handle>."
    },
    "title": {
     "type": "string",
@@ -550,7 +812,7 @@
         "minimum": 0,
         "maximum": 9007199254740991
        },
-       "compareAt": {
+       "priorPrice": {
         "anyOf": [
          {
           "type": "integer",
@@ -560,20 +822,22 @@
          {
           "type": "null"
          }
-        ]
+        ],
+        "description": "The lowest price in the 30 days before a recent cut. Show it struck through. Null when there was no cut."
        }
       },
       "required": [
        "min",
        "max",
-       "compareAt"
+       "priorPrice"
       ],
       "additionalProperties": false
      },
      {
       "type": "null"
      }
-    ]
+    ],
+    "description": "Null when no size has a price yet."
    },
    "availability": {
     "anyOf": [
@@ -588,7 +852,8 @@
          "sold_out",
          "preorder",
          "made_to_order"
-        ]
+        ],
+        "description": "New values may appear. Show something sensible for one you don’t know."
        },
        "left": {
         "anyOf": [
@@ -600,7 +865,8 @@
          {
           "type": "null"
          }
-        ]
+        ],
+        "description": "How many are left, only when 3 or fewer."
        },
        "shipsBy": {
         "anyOf": [
@@ -611,7 +877,8 @@
          {
           "type": "null"
          }
-        ]
+        ],
+        "description": "For a pre-order, the day it ships by (India)."
        },
        "leadDays": {
         "anyOf": [
@@ -636,7 +903,8 @@
          {
           "type": "null"
          }
-        ]
+        ],
+        "description": "For made to order, days to ship, least and most."
        }
       },
       "required": [
@@ -698,29 +966,66 @@
      {
       "type": "object",
       "properties": {
-       "base": {
-        "type": "string",
-        "maxLength": 500,
-        "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
-       },
-       "widths": {
+       "sizes": {
+        "minItems": 1,
         "maxItems": 8,
         "type": "array",
         "items": {
-         "type": "integer",
-         "exclusiveMinimum": 0,
-         "maximum": 9007199254740991
-        }
+         "type": "object",
+         "properties": {
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          },
+          "url": {
+           "type": "string",
+           "maxLength": 500,
+           "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+          }
+         },
+         "required": [
+          "width",
+          "url"
+         ],
+         "additionalProperties": false
+        },
+        "description": "The same photo at each width, smallest first. Use them as srcset."
+       },
+       "width": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991,
+        "description": "The original’s width in pixels (with height: the aspect ratio)."
+       },
+       "height": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
        },
        "alt": {
         "type": "string",
         "maxLength": 200
+       },
+       "colour": {
+        "anyOf": [
+         {
+          "type": "string",
+          "maxLength": 60
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "description": "The colour this photo shows (a value of the Colour option), or null."
        }
       },
       "required": [
-       "base",
-       "widths",
-       "alt"
+       "sizes",
+       "width",
+       "height",
+       "alt",
+       "colour"
       ],
       "additionalProperties": false
      },
@@ -738,7 +1043,8 @@
      {
       "type": "null"
      }
-    ]
+    ],
+    "description": "The one offer tag a card may carry, in the store’s words."
    },
    "description": {
     "type": "string",
@@ -761,7 +1067,8 @@
       "id": {
        "type": "string",
        "format": "uuid",
-       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+       "description": "Use it in the cart link."
       },
       "values": {
        "maxItems": 3,
@@ -769,11 +1076,12 @@
        "items": {
         "type": "string",
         "maxLength": 60
-       }
+       },
+       "description": "One value per option, in the options’ order."
       },
       "price": {
        "type": "integer",
-       "minimum": 0,
+       "exclusiveMinimum": 0,
        "maximum": 9007199254740991
       },
       "priorPrice": {
@@ -786,7 +1094,8 @@
         {
          "type": "null"
         }
-       ]
+       ],
+       "description": "The lowest price in the 30 days before a recent cut. Show it struck through. Null when there was no cut."
       },
       "mrp": {
        "anyOf": [
@@ -794,6 +1103,29 @@
          "type": "integer",
          "minimum": 0,
          "maximum": 9007199254740991
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "The tag’s M.R.P., at or above the price. Never struck through."
+      },
+      "sku": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 64
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "gtin": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{8,14}$"
         },
         {
          "type": "null"
@@ -811,7 +1143,8 @@
           "sold_out",
           "preorder",
           "made_to_order"
-         ]
+         ],
+         "description": "New values may appear. Show something sensible for one you don’t know."
         },
         "left": {
          "anyOf": [
@@ -823,7 +1156,8 @@
           {
            "type": "null"
           }
-         ]
+         ],
+         "description": "How many are left, only when 3 or fewer."
         },
         "shipsBy": {
          "anyOf": [
@@ -834,7 +1168,8 @@
           {
            "type": "null"
           }
-         ]
+         ],
+         "description": "For a pre-order, the day it ships by (India)."
         },
         "leadDays": {
          "anyOf": [
@@ -859,7 +1194,8 @@
           {
            "type": "null"
           }
-         ]
+         ],
+         "description": "For made to order, days to ship, least and most."
         }
        },
        "required": [
@@ -877,10 +1213,13 @@
       "price",
       "priorPrice",
       "mrp",
+      "sku",
+      "gtin",
       "availability"
      ],
      "additionalProperties": false
-    }
+    },
+    "description": "Sizes and colours with a price."
    },
    "images": {
     "maxItems": 20,
@@ -888,32 +1227,118 @@
     "items": {
      "type": "object",
      "properties": {
-      "base": {
-       "type": "string",
-       "maxLength": 500,
-       "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
-      },
-      "widths": {
+      "sizes": {
+       "minItems": 1,
        "maxItems": 8,
        "type": "array",
        "items": {
-        "type": "integer",
-        "exclusiveMinimum": 0,
-        "maximum": 9007199254740991
-       }
+        "type": "object",
+        "properties": {
+         "width": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+         },
+         "url": {
+          "type": "string",
+          "maxLength": 500,
+          "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+         }
+        },
+        "required": [
+         "width",
+         "url"
+        ],
+        "additionalProperties": false
+       },
+       "description": "The same photo at each width, smallest first. Use them as srcset."
+      },
+      "width": {
+       "type": "integer",
+       "exclusiveMinimum": 0,
+       "maximum": 9007199254740991,
+       "description": "The original’s width in pixels (with height: the aspect ratio)."
+      },
+      "height": {
+       "type": "integer",
+       "exclusiveMinimum": 0,
+       "maximum": 9007199254740991
       },
       "alt": {
        "type": "string",
        "maxLength": 200
+      },
+      "colour": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 60
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "The colour this photo shows (a value of the Colour option), or null."
       }
      },
      "required": [
-      "base",
-      "widths",
-      "alt"
+      "sizes",
+      "width",
+      "height",
+      "alt",
+      "colour"
      ],
      "additionalProperties": false
     }
+   },
+   "details": {
+    "maxItems": 40,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string",
+       "maxLength": 80
+      },
+      "value": {
+       "type": "string",
+       "maxLength": 400
+      }
+     },
+     "required": [
+      "name",
+      "value"
+     ],
+     "additionalProperties": false
+    },
+    "description": "The product page’s rows, like fabric and care. The pack’s legal declarations too. Show every row."
+   },
+   "model": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "height": {
+        "type": "string",
+        "maxLength": 40
+       },
+       "size": {
+        "type": "string",
+        "maxLength": 20
+       }
+      },
+      "required": [
+       "height",
+       "size"
+      ],
+      "additionalProperties": false
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "description": "The model in the photos."
    },
    "stories": {
     "maxItems": 8,
@@ -942,29 +1367,66 @@
         {
          "type": "object",
          "properties": {
-          "base": {
-           "type": "string",
-           "maxLength": 500,
-           "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
-          },
-          "widths": {
+          "sizes": {
+           "minItems": 1,
            "maxItems": 8,
            "type": "array",
            "items": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
-           }
+            "type": "object",
+            "properties": {
+             "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+             },
+             "url": {
+              "type": "string",
+              "maxLength": 500,
+              "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+             }
+            },
+            "required": [
+             "width",
+             "url"
+            ],
+            "additionalProperties": false
+           },
+           "description": "The same photo at each width, smallest first. Use them as srcset."
+          },
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991,
+           "description": "The original’s width in pixels (with height: the aspect ratio)."
+          },
+          "height": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
           },
           "alt": {
            "type": "string",
            "maxLength": 200
+          },
+          "colour": {
+           "anyOf": [
+            {
+             "type": "string",
+             "maxLength": 60
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The colour this photo shows (a value of the Colour option), or null."
           }
          },
          "required": [
-          "base",
-          "widths",
-          "alt"
+          "sizes",
+          "width",
+          "height",
+          "alt",
+          "colour"
          ],
          "additionalProperties": false
         },
@@ -997,7 +1459,8 @@
       "handle": {
        "type": "string",
        "maxLength": 100,
-       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "description": "The product’s current address: /products/<handle>."
       },
       "title": {
        "type": "string",
@@ -1018,7 +1481,7 @@
            "minimum": 0,
            "maximum": 9007199254740991
           },
-          "compareAt": {
+          "priorPrice": {
            "anyOf": [
             {
              "type": "integer",
@@ -1028,20 +1491,22 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "The lowest price in the 30 days before a recent cut. Show it struck through. Null when there was no cut."
           }
          },
          "required": [
           "min",
           "max",
-          "compareAt"
+          "priorPrice"
          ],
          "additionalProperties": false
         },
         {
          "type": "null"
         }
-       ]
+       ],
+       "description": "Null when no size has a price yet."
       },
       "availability": {
        "anyOf": [
@@ -1056,7 +1521,8 @@
             "sold_out",
             "preorder",
             "made_to_order"
-           ]
+           ],
+           "description": "New values may appear. Show something sensible for one you don’t know."
           },
           "left": {
            "anyOf": [
@@ -1068,7 +1534,8 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "How many are left, only when 3 or fewer."
           },
           "shipsBy": {
            "anyOf": [
@@ -1079,7 +1546,8 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "For a pre-order, the day it ships by (India)."
           },
           "leadDays": {
            "anyOf": [
@@ -1104,7 +1572,8 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "For made to order, days to ship, least and most."
           }
          },
          "required": [
@@ -1166,29 +1635,66 @@
         {
          "type": "object",
          "properties": {
-          "base": {
-           "type": "string",
-           "maxLength": 500,
-           "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
-          },
-          "widths": {
+          "sizes": {
+           "minItems": 1,
            "maxItems": 8,
            "type": "array",
            "items": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
-           }
+            "type": "object",
+            "properties": {
+             "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+             },
+             "url": {
+              "type": "string",
+              "maxLength": 500,
+              "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+             }
+            },
+            "required": [
+             "width",
+             "url"
+            ],
+            "additionalProperties": false
+           },
+           "description": "The same photo at each width, smallest first. Use them as srcset."
+          },
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991,
+           "description": "The original’s width in pixels (with height: the aspect ratio)."
+          },
+          "height": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
           },
           "alt": {
            "type": "string",
            "maxLength": 200
+          },
+          "colour": {
+           "anyOf": [
+            {
+             "type": "string",
+             "maxLength": 60
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The colour this photo shows (a value of the Colour option), or null."
           }
          },
          "required": [
-          "base",
-          "widths",
-          "alt"
+          "sizes",
+          "width",
+          "height",
+          "alt",
+          "colour"
          ],
          "additionalProperties": false
         },
@@ -1206,7 +1712,8 @@
         {
          "type": "null"
         }
-       ]
+       ],
+       "description": "The one offer tag a card may carry, in the store’s words."
       }
      },
      "required": [
@@ -1273,7 +1780,8 @@
        "rows",
        "howToMeasure"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "Measurements in centimetres."
      },
      {
       "type": "null"
@@ -1300,7 +1808,8 @@
         {
          "type": "null"
         }
-       ]
+       ],
+       "description": "A real end only. Null when the offer has none."
       }
      },
      "required": [
@@ -1309,6 +1818,24 @@
      ],
      "additionalProperties": false
     }
+   },
+   "seo": {
+    "type": "object",
+    "properties": {
+     "title": {
+      "type": "string",
+      "maxLength": 200
+     },
+     "description": {
+      "type": "string",
+      "maxLength": 400
+     }
+    },
+    "required": [
+     "title",
+     "description"
+    ],
+    "additionalProperties": false
    }
   },
   "required": [
@@ -1324,10 +1851,13 @@
    "options",
    "variants",
    "images",
+   "details",
+   "model",
    "stories",
    "pairs",
    "sizeChart",
-   "offers"
+   "offers",
+   "seo"
   ],
   "additionalProperties": false
  },
@@ -1344,7 +1874,8 @@
       "handle": {
        "type": "string",
        "maxLength": 100,
-       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "description": "/collections/<handle>."
       },
       "title": {
        "type": "string",
@@ -1353,12 +1884,31 @@
       "description": {
        "type": "string",
        "maxLength": 2000
+      },
+      "seo": {
+       "type": "object",
+       "properties": {
+        "title": {
+         "type": "string",
+         "maxLength": 200
+        },
+        "description": {
+         "type": "string",
+         "maxLength": 400
+        }
+       },
+       "required": [
+        "title",
+        "description"
+       ],
+       "additionalProperties": false
       }
      },
      "required": [
       "handle",
       "title",
-      "description"
+      "description",
+      "seo"
      ],
      "additionalProperties": false
     }
@@ -1379,7 +1929,8 @@
      "handle": {
       "type": "string",
       "maxLength": 100,
-      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "/collections/<handle>."
      },
      "title": {
       "type": "string",
@@ -1388,12 +1939,31 @@
      "description": {
       "type": "string",
       "maxLength": 2000
+     },
+     "seo": {
+      "type": "object",
+      "properties": {
+       "title": {
+        "type": "string",
+        "maxLength": 200
+       },
+       "description": {
+        "type": "string",
+        "maxLength": 400
+       }
+      },
+      "required": [
+       "title",
+       "description"
+      ],
+      "additionalProperties": false
      }
     },
     "required": [
      "handle",
      "title",
-     "description"
+     "description",
+     "seo"
     ],
     "additionalProperties": false
    },
@@ -1411,7 +1981,8 @@
       "handle": {
        "type": "string",
        "maxLength": 100,
-       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "description": "The product’s current address: /products/<handle>."
       },
       "title": {
        "type": "string",
@@ -1432,7 +2003,7 @@
            "minimum": 0,
            "maximum": 9007199254740991
           },
-          "compareAt": {
+          "priorPrice": {
            "anyOf": [
             {
              "type": "integer",
@@ -1442,20 +2013,22 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "The lowest price in the 30 days before a recent cut. Show it struck through. Null when there was no cut."
           }
          },
          "required": [
           "min",
           "max",
-          "compareAt"
+          "priorPrice"
          ],
          "additionalProperties": false
         },
         {
          "type": "null"
         }
-       ]
+       ],
+       "description": "Null when no size has a price yet."
       },
       "availability": {
        "anyOf": [
@@ -1470,7 +2043,8 @@
             "sold_out",
             "preorder",
             "made_to_order"
-           ]
+           ],
+           "description": "New values may appear. Show something sensible for one you don’t know."
           },
           "left": {
            "anyOf": [
@@ -1482,7 +2056,8 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "How many are left, only when 3 or fewer."
           },
           "shipsBy": {
            "anyOf": [
@@ -1493,7 +2068,8 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "For a pre-order, the day it ships by (India)."
           },
           "leadDays": {
            "anyOf": [
@@ -1518,7 +2094,8 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "For made to order, days to ship, least and most."
           }
          },
          "required": [
@@ -1580,29 +2157,66 @@
         {
          "type": "object",
          "properties": {
-          "base": {
-           "type": "string",
-           "maxLength": 500,
-           "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
-          },
-          "widths": {
+          "sizes": {
+           "minItems": 1,
            "maxItems": 8,
            "type": "array",
            "items": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
-           }
+            "type": "object",
+            "properties": {
+             "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+             },
+             "url": {
+              "type": "string",
+              "maxLength": 500,
+              "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+             }
+            },
+            "required": [
+             "width",
+             "url"
+            ],
+            "additionalProperties": false
+           },
+           "description": "The same photo at each width, smallest first. Use them as srcset."
+          },
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991,
+           "description": "The original’s width in pixels (with height: the aspect ratio)."
+          },
+          "height": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
           },
           "alt": {
            "type": "string",
            "maxLength": 200
+          },
+          "colour": {
+           "anyOf": [
+            {
+             "type": "string",
+             "maxLength": 60
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The colour this photo shows (a value of the Colour option), or null."
           }
          },
          "required": [
-          "base",
-          "widths",
-          "alt"
+          "sizes",
+          "width",
+          "height",
+          "alt",
+          "colour"
          ],
          "additionalProperties": false
         },
@@ -1620,7 +2234,8 @@
         {
          "type": "null"
         }
-       ]
+       ],
+       "description": "The one offer tag a card may carry, in the store’s words."
       }
      },
      "required": [
@@ -1652,7 +2267,8 @@
     "maximum": 9007199254740991
    },
    "truncated": {
-    "type": "boolean"
+    "type": "boolean",
+    "description": "True when the catalogue has more than 600 listed products. Later ones are in no page yet."
    }
   },
   "required": [
@@ -1700,7 +2316,8 @@
      {
       "type": "null"
      }
-    ]
+    ],
+    "description": "The offer in the store’s bar, while it runs."
    }
   },
   "required": [
@@ -1730,7 +2347,8 @@
       "handle": {
        "type": "string",
        "maxLength": 100,
-       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "description": "The product’s current address: /products/<handle>."
       },
       "title": {
        "type": "string",
@@ -1751,7 +2369,7 @@
            "minimum": 0,
            "maximum": 9007199254740991
           },
-          "compareAt": {
+          "priorPrice": {
            "anyOf": [
             {
              "type": "integer",
@@ -1761,20 +2379,22 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "The lowest price in the 30 days before a recent cut. Show it struck through. Null when there was no cut."
           }
          },
          "required": [
           "min",
           "max",
-          "compareAt"
+          "priorPrice"
          ],
          "additionalProperties": false
         },
         {
          "type": "null"
         }
-       ]
+       ],
+       "description": "Null when no size has a price yet."
       },
       "availability": {
        "anyOf": [
@@ -1789,7 +2409,8 @@
             "sold_out",
             "preorder",
             "made_to_order"
-           ]
+           ],
+           "description": "New values may appear. Show something sensible for one you don’t know."
           },
           "left": {
            "anyOf": [
@@ -1801,7 +2422,8 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "How many are left, only when 3 or fewer."
           },
           "shipsBy": {
            "anyOf": [
@@ -1812,7 +2434,8 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "For a pre-order, the day it ships by (India)."
           },
           "leadDays": {
            "anyOf": [
@@ -1837,7 +2460,8 @@
             {
              "type": "null"
             }
-           ]
+           ],
+           "description": "For made to order, days to ship, least and most."
           }
          },
          "required": [
@@ -1899,29 +2523,66 @@
         {
          "type": "object",
          "properties": {
-          "base": {
-           "type": "string",
-           "maxLength": 500,
-           "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
-          },
-          "widths": {
+          "sizes": {
+           "minItems": 1,
            "maxItems": 8,
            "type": "array",
            "items": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
-           }
+            "type": "object",
+            "properties": {
+             "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+             },
+             "url": {
+              "type": "string",
+              "maxLength": 500,
+              "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+             }
+            },
+            "required": [
+             "width",
+             "url"
+            ],
+            "additionalProperties": false
+           },
+           "description": "The same photo at each width, smallest first. Use them as srcset."
+          },
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991,
+           "description": "The original’s width in pixels (with height: the aspect ratio)."
+          },
+          "height": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
           },
           "alt": {
            "type": "string",
            "maxLength": 200
+          },
+          "colour": {
+           "anyOf": [
+            {
+             "type": "string",
+             "maxLength": 60
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The colour this photo shows (a value of the Colour option), or null."
           }
          },
          "required": [
-          "base",
-          "widths",
-          "alt"
+          "sizes",
+          "width",
+          "height",
+          "alt",
+          "colour"
          ],
          "additionalProperties": false
         },
@@ -1939,7 +2600,8 @@
         {
          "type": "null"
         }
-       ]
+       ],
+       "description": "The one offer tag a card may carry, in the store’s words."
       }
      },
      "required": [

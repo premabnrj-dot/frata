@@ -17,14 +17,9 @@ import { buyWords, fill, wordsFor } from './words'
 import { JsonLd } from './json-ld'
 
 
-/** Details named from the taxonomy (and Frrata's additions), in the merchant's chosen order. */
-export function detailsOf(p: Pick<StoreProduct, 'attributes'>): { name: string; value: string }[] {
-  return Object.entries(p.attributes).flatMap(([h, ids]) => {
-    const a = describeAttribute(h)
-    if (!a || h === 'target-gender' || h === 'age-group') return []
-    return [{ name: a.name, value: ids.map((id) => a.values.find((v) => v.id === id)?.name ?? '').filter(Boolean).join(', ') }]
-  }).filter((d) => d.value)
-}
+/** Details named from the taxonomy: one rule, read by this page and the Storefront API (src/domains/catalogue/details.ts). */
+export { detailsOf } from '@/domains/catalogue/details'
+import { detailsOf } from '@/domains/catalogue/details'
 
 export function productSeo(shop: StoreShop, p: StoreProduct) {
   const ci = colourIndex(p.options)
