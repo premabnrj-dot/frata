@@ -16,6 +16,7 @@ import { planVersions, plans, shopSettings, tenantPlans } from '@/lib/db/schema'
 import { billingAccounts, billingNotices, frrataCreditNotes, frrataFeeCredits, frrataInvoiceFees, frrataInvoiceLines, frrataInvoices, frrataPayments } from '@/lib/db/schema-billing'
 import { cheapestPlan, type LadderInvoice, type LadderPlan } from '@/domains/billing/ladder'
 import { costBar, deliveredSales } from '@/domains/billing/charges'
+import { addonPrices, tenantAddons } from '@/lib/db/schema-modules'
 import { isModuleKey, MODULES } from '@/domains/modules/registry'
 import type { PlanCode } from '@/domains/plans/entitlements'
 import { invoiceState, type InvoiceState } from '@/domains/billing/status'
@@ -314,7 +315,7 @@ export async function featuredBillWith(tx: Tx, m: Pick<Membership, 'tenantId' | 
 export type ChargeOrder = { number: number; total: number; shippedAt: Date | null; outcome: 'delivered' | 'assumed' | 'came_back' | 'lost'; outcomeAt: Date | null; base: number; feeBps: number; fee: number }
 export type IssuedCharges = {
   invoice: { id: string; number: string; periodStart: Date; testMode: boolean; taxable: number; cgst: number; sgst: number; igst: number; total: number }
-  lines: { kind: string; description: string; quantity: number; rateBps: number | null; taxable: number }[]
+  lines: { kind: string; description: string; quantity: number; rateBps: number | null; taxable: number; periodStart: Date | null; periodEnd: Date | null }[]
   orders: ChargeOrder[]; orderCount: number; credits: ChargeOrder[]
 }
 export const CHARGE_PAGE = 50
@@ -336,7 +337,7 @@ export async function issuedCharges(m: Pick<Membership, 'tenantId' | 'role'>, in
       .from(frrataInvoices).where(and(eq(frrataInvoices.tenantId, t), eq(frrataInvoices.id, invoiceId)))
     if (!i || !i.issuedAt || !i.number) return null
     const [lines, fees, [count], credits] = await Promise.all([
-      tx.select({ kind: frrataInvoiceLines.kind, description: frrataInvoiceLines.description, quantity: frrataInvoiceLines.quantity, rateBps: frrataInvoiceLines.rateBps, taxable: frrataInvoiceLines.taxable })
+      tx.select({ kind: frrataInvoiceLines.kind, description: frrataInvoiceLines.description, quantity: frrataInvoiceLines.quantity, rateBps: frrataInvoiceLines.rateBps, taxable: frrataInvoiceLines.taxable, periodStart: frrataInvoiceLines.periodStart, periodEnd: frrataInvoiceLines.periodEnd })
         .from(frrataInvoiceLines).where(and(eq(frrataInvoiceLines.tenantId, t), eq(frrataInvoiceLines.invoiceId, i.id))).orderBy(asc(frrataInvoiceLines.position)),
       tx.select({ ...FACTS, base: frrataInvoiceFees.base, feeBps: frrataInvoiceFees.feeBps, fee: frrataInvoiceFees.fee }).from(frrataInvoiceFees)
         .innerJoin(orders, and(eq(orders.tenantId, frrataInvoiceFees.tenantId), eq(orders.id, frrataInvoiceFees.orderId)))
@@ -361,4 +362,16 @@ export async function openChargeOrders(m: Pick<Membership, 'tenantId' | 'role'>,
   const by = new Map(facts.map((f) => [f.id, f]))
   return fees.flatMap((f) => { const o = by.get(f.orderId); return o ? [{ number: o.number, total: o.total, shippedAt: o.shippedAt, ...outcomeOf(o), base: f.base, feeBps: f.feeBps, fee: f.fee }] : [] })
     .sort((a, b) => b.number - a.number)
+}
+
+/** Plans tab: each add-on's current price, and which add-ons this shop has on now (Apps on your bill). */
+export async function addonsFor(m: Pick<Membership, 'tenantId' | 'role'>, now = new Date()): Promise<{ prices: Partial<Record<string, number>>; on: string[] }> {
+  mayReadMoney(m)
+  return withTenant(m.tenantId, async (tx) => {
+    const [prices, on] = await Promise.all([
+      tx.execute<{ module: string; monthly_price: string }>(sql`select distinct on (module) module, monthly_price from ${addonPrices} order by module, version desc`),
+      tx.select({ module: tenantAddons.module }).from(tenantAddons).where(and(eq(tenantAddons.tenantId, m.tenantId), sql`${tenantAddons.startsAt} <= ${now} and (${tenantAddons.endsAt} is null or ${tenantAddons.endsAt} > ${now})`)),
+    ])
+    return { prices: Object.fromEntries(prices.map((r) => [r.module, Number(r.monthly_price)])), on: on.map((r) => r.module) }
+  })
 }

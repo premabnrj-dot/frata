@@ -1,172 +1,134 @@
+import Link from 'next/link'
 import { pageRoles } from '@/domains/settings/groups'
-import { Money, Numeric } from '@/components/data/numeric'
+import { Money } from '@/components/data/numeric'
 import { SettingsHead } from '../_components/settings-head'
-import { Section } from '@/components/layout/section'
 import { Panel } from '@/components/ui/panel'
+import { Badge, Tag } from '@/components/ui/badge'
+import { Banner } from '@/components/ui/banner'
+import { button } from '@/components/ui/button'
+import { ViewTabs } from '@/components/ui/view-tabs'
 import { STATE_OPTIONS } from '@/domains/billing/details'
-import { STATE_LABEL } from '@/domains/billing/status'
 import { paise } from '@/domains/money/paise'
-import { usage } from '@/domains/plans/entitlements'
 import { planChangeAdds, planChangeStarts } from '@/domains/billing/bill'
-import { lastDay } from '@/domains/plans/trial'
 import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
-import { formatInr, formatPercent } from '@/lib/format'
+import { MODULES, isModuleKey } from '@/domains/modules/registry'
+import { formatInr } from '@/lib/format'
 import { publicPlans } from '@/lib/db/platform'
-import { PlanChoice } from './plan-choice'
 import { requireMember } from '@/lib/auth/require-member'
 import { dayIN, dayMonthLongIN, monthYearIN } from '@/lib/format-date'
 import { errName } from '@/lib/log'
-import { billingOverview, payingFor, shopTrial } from '@/lib/queries/billing'
+import { addonsFor, billingOverview, CHARGE_PAGE, issuedCharges, openChargeOrders, payingFor, shopTrial } from '@/lib/queries/billing'
 import { TakeMoreDays } from './take-more-days'
 import { billingGatewayIsTest, isBillingGatewayConfigured } from '@/lib/billing/gateway'
-import { PayNow, SetUpAutopay, StopAutopay } from './autopay'
+import { PayNow } from './autopay'
 import { orderPrefixFor } from '@/lib/queries/orders'
 import { BillingDetailsForm } from './details-form'
+import { BILLING_TABS, billOf, billingHref, pageOf, tabOf } from './_components/tabs'
+import { Overview, pct } from './_components/overview'
+import { Charges, type ChargesBill } from './_components/charges'
+import { Plans } from './_components/plans'
+import { Invoices, Payment, filterOf, methodName } from './_components/invoices'
+import type { PlanOption } from './plan-choice'
 
 export const metadata = { title: 'Plan and billing' }
 export const dynamic = 'force-dynamic'
 
 /**
- * Console › Settings › Plan and billing (billing B1; mockup docs/mockups/2026-11-08-billing.html). Owners and admins
- * only — staff and partners never see money (the query refuses them too). Test mode: nothing is charged yet, and the
- * page says so where Paying and Invoices will be.
+ * Console › Settings › Plan and billing (billing B1–B4; rework R1, spec docs/specs/2026-11-15-billing-rework.md, mockup
+ * docs/mockups/2026-11-15-billing-rework/). Six tabs in the address (?tab=). Owners and admins only — staff and partners
+ * never see money (the query refuses them too); a support visit reads, never pays or changes the plan.
  */
-export default async function PlanAndBillingPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
+export default async function PlanAndBillingPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const q = await searchParams
   // Apps A2: where an upgrade came from, as a boolean only (never rendered, logged or stored raw).
-  const fromFeatured = (await searchParams).from === 'featured'
+  const fromFeatured = q.from === 'featured'
+  const tab = tabOf(q.tab)
   const auth = await requireMember(pageRoles('billing'))
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the store’s owner or a manager can see its plan and bills' : auth.message} />
   const now = new Date()
-  const [o, prefix, paying] = await Promise.all([
-    billingOverview(auth.membership, now).catch((e) => { console.error('[billing page]', errName(e)); return null }),
-    orderPrefixFor(auth.membership.tenantId),
-    payingFor(auth.membership, now).catch(() => null),
+  const m = auth.membership
+  const [o, prefix, paying, trial, plans] = await Promise.all([
+    billingOverview(m, now).catch((e) => { console.error('[billing page]', errName(e)); return null }),
+    orderPrefixFor(m.tenantId),
+    payingFor(m, now).catch(() => null),
+    shopTrial(m, now).catch(() => null),
+    publicPlans().catch((e) => { console.error('[billing page] plans', errName(e)); return [] as Awaited<ReturnType<typeof publicPlans>> }),
   ])
-  const trial = await shopTrial(auth.membership, now).catch(() => null)
-  const plans = await publicPlans().catch((e) => { console.error('[billing page] plans', errName(e)); return [] as Awaited<ReturnType<typeof publicPlans>> })
-  // Autopay and Pay now: only with Frrata's gateway connected, never on a Frrata support visit (finding 10).
-  const canPay = isBillingGatewayConfigured() && !auth.membership.supportSessionId
-  const METHOD: Record<string, string> = { upi: 'UPI Autopay', card: 'Card', emandate: 'Bank mandate (eNACH)' }
   if (!o) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
+  const configured = isBillingGatewayConfigured(), test = billingGatewayIsTest()
+  // Autopay and Pay now: only with Frrata's gateway connected, never on a Frrata support visit (finding 10).
+  const canPay = configured && !m.supportSessionId
+  const method = paying?.mandate ? methodName(paying.mandate.method) : null
+  const due = o.invoices.find((i) => i.state === 'due' && i.testMode === test)
   const e = o.estimate === 'busy' ? null : o.estimate
-  // This month's delivered orders only (a late order from last month is billed too, and listed, but not counted here),
-  // so the value matches the count beside it.
-  const monthStart = e ? new Date(e.bill.lines.find((l) => l.kind === 'fee')?.periodStart ?? e.invoiceOn) : now
-  const thisMonthOrders = e?.orders.filter((x) => x.billableAt >= monthStart) ?? []
-  const feeSoFar = thisMonthOrders.reduce((t, x) => t + x.fee, 0)
-  const delivered = thisMonthOrders.reduce((t, x) => t + x.base, 0)
-  const thisMonth = monthYearIN(now)
-  const gst = e ? e.bill.cgst + e.bill.sgst + e.bill.igst : 0
+
+  const head = (
+    <SettingsHead page="billing" role={m.role}
+      badges={<>
+        {o.plan ? <Tag>{o.plan.name} · {formatInr(paise(o.plan.monthlyPrice))} a month + {pct(o.plan.feeBps)}</Tag> : null}
+        {trial && trial.state !== 'paid' ? <Badge tone={trial.state === 'grace' || trial.state === 'paused' ? 'danger' : 'info'}>{trial.state === 'building' ? 'Trial starts when you go live' : trial.state === 'grace' || trial.state === 'paused' ? `Trial ended · ${trial.state === 'paused' ? 'paused' : `pauses ${dayIN(trial.pausesAt)}`}` : `Trial · ${trial.daysLeft} days left`}</Badge> : null}
+        <Badge tone={method ? 'ok' : 'neutral'}>{method ? 'Autopay on' : 'Autopay off'}</Badge>
+        {test ? <Badge tone="info">Test gateway</Badge> : null}
+      </>}
+      actions={<>{trial?.mayExtend && !m.supportSessionId ? <TakeMoreDays /> : null}<Link href={billingHref('plans')} className={button({ variant: 'secondary' })}>Compare plans</Link></>} />
+  )
+
+  let body: React.ReactNode
+  if (tab === 'overview') {
+    body = <Overview o={o} paying={paying} plans={plans} now={now} canPay={canPay} method={method} />
+  } else if (tab === 'charges') {
+    const id = billOf(q.bill), page = pageOf(q.page)
+    const picks = [...(e ? [{ id: 'open', label: `${dayMonthLongIN(e.invoiceOn)} · so far` }] : []), ...o.invoices.slice(0, 12).map((i) => ({ id: i.id, label: monthYearIN(i.periodStart) }))]
+    let bill: ChargesBill | null = null
+    if (id === 'open' && e) {
+      const all = await openChargeOrders(m, e.bill.fees)
+      bill = { id: 'open', title: `Bill of ${dayMonthLongIN(e.invoiceOn)} · so far`, status: { tone: 'neutral', label: 'Still growing' }, lines: e.bill.lines, taxable: e.bill.taxable,
+        cgst: e.bill.cgst, sgst: e.bill.sgst, igst: e.bill.igst, total: e.bill.total, orders: all.slice(page * CHARGE_PAGE, (page + 1) * CHARGE_PAGE), orderCount: all.length, credits: [], page, pageSize: CHARGE_PAGE }
+    } else if (id !== 'open') {
+      const c = await issuedCharges(m, id, page)
+      const inv = o.invoices.find((i) => i.id === id)
+      if (c) bill = { id, title: `Bill of ${dayMonthLongIN(c.invoice.periodStart)} · ${c.invoice.number}`, status: inv?.state === 'due' ? { tone: 'warn', label: 'Due' } : inv?.state === 'paid' ? { tone: 'ok', label: 'Paid' } : { tone: 'neutral', label: c.invoice.testMode ? 'Test' : 'Issued' },
+        lines: c.lines, taxable: c.invoice.taxable, cgst: c.invoice.cgst, sgst: c.invoice.sgst, igst: c.invoice.igst, total: c.invoice.total, orders: c.orders, orderCount: c.orderCount, credits: page === 0 ? c.credits : [], page, pageSize: CHARGE_PAGE }
+    }
+    body = bill ? <Charges picks={picks} bill={bill} view={q.view === 'items' ? 'items' : 'orders'} prefix={prefix} /> : <Panel title="That bill isn’t here">Pick a bill above, or go back to Overview.</Panel>
+  } else if (tab === 'plans') {
+    const addons = await addonsFor(m, now).catch(() => ({ prices: {}, on: [] as string[] }))
+    const cur = o.plan
+    const names = (keys: string[]) => keys.filter(isModuleKey).map((k) => MODULES[k].name)
+    const curFeatures = plans.find((p) => p.code === cur?.code)?.features ?? []
+    const options: PlanOption[] = cur ? plans.filter((p) => p.code !== cur.code).map((p) => {
+      const target = { planCode: p.code as never, name: p.name, monthlyPrice: paise(p.monthlyPrice), includedOrders: p.includedOrders, feeBps: p.feeBps }
+      const latest = [...o.forChange.plans].sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0]
+      const starts = latest ? planChangeStarts(latest, target, now, nextMonthStartIST(now)) : now
+      // The figure the next invoice carries: the same rule (planChangeAdds), never the page's own arithmetic.
+      const d = planChangeAdds(o.forChange.plans, target, now, monthStartIST(now), nextMonthStartIST(now), o.forChange.billed)
+      const upgrade = p.monthlyPrice > cur.monthlyPrice
+      return { code: p.code, name: p.name, price: formatInr(paise(p.monthlyPrice)), fee: pct(p.feeBps), upgrade,
+        difference: d > 0 ? formatInr(d) : null, afterTrial: starts.getTime() > now.getTime() && upgrade ? dayMonthLongIN(starts) : null,
+        gains: names(p.features.filter((f) => !curFeatures.includes(f))), loses: names(curFeatures.filter((f) => !p.features.includes(f))) }
+    }) : []
+    const recent = o.history.slice(-3).filter((h) => h.sales > 0)
+    const mine = recent.length ? Math.round(recent.reduce((t, h) => t + h.sales, 0) / recent.length) : null
+    body = <Plans plans={plans} current={cur?.code ?? null} custom={!!cur?.custom} options={options} downgradeOn={dayMonthLongIN(o.forChange.downgradeOn)}
+      scheduled={o.scheduled ? { name: o.scheduled.name, on: dayMonthLongIN(o.scheduled.startsAt), byShop: o.scheduled.byShop } : null}
+      fromFeatured={fromFeatured} mine={mine} prices={addons.prices} on={addons.on} readOnly={!!m.supportSessionId} />
+  } else if (tab === 'invoices') {
+    body = <Invoices invoices={o.invoices} show={filterOf(q.show)} canPay={canPay} testGateway={test} />
+  } else if (tab === 'payment') {
+    body = <Payment paying={paying} payments={o.payments} canPay={canPay} configured={configured} supportVisit={!!m.supportSessionId} />
+  } else {
+    body = <BillingDetailsForm initial={o.details} states={STATE_OPTIONS.map(([c, l]) => [c, l])} />
+  }
+
   return (
-    <div className="max-w-3xl space-y-4">
-      <SettingsHead page="billing" role={auth.membership.role} />
-
-      <Section>
-        <h2 className="text-section font-semibold">{thisMonth} so far</h2>
-        {o.estimate === 'busy' ? <p className="text-sm text-muted-foreground">Frrata is updating this estimate right now. Reload in a moment.</p>
-          : !o.plan || !e ? <p className="text-sm text-muted-foreground">No plan yet, so nothing to bill. Frrata sets your plan when your store opens.</p> : (
-          <>
-            <dl className="grid gap-3 text-sm sm:grid-cols-3">
-              <div><dt className="text-muted-foreground">Delivered orders</dt><dd className="text-lg font-semibold"><Numeric>{e.bill.usage.orders.toLocaleString('en-IN')}</Numeric> <span className="text-sm font-normal text-muted-foreground">of {e.bill.usage.included.toLocaleString('en-IN')} included</span></dd></div>
-              <div><dt className="text-muted-foreground">Delivered value</dt><dd className="text-lg font-semibold"><Money paise={paise(delivered)} decimals /></dd></div>
-              <div><dt className="text-muted-foreground">Fee so far</dt><dd className="text-lg font-semibold"><Money paise={paise(feeSoFar)} decimals /></dd></div>
-            </dl>
-            {usage(e.bill.usage.orders, e.bill.usage.included).over && <p className="text-sm text-warn-text">Over included orders · same fee per order</p>}
-            <div className="rounded-md bg-muted px-3 py-2 text-sm">
-              {e.bill.rolled
-                ? <>Your bill on {dayMonthLongIN(e.invoiceOn)} is under ₹100. It moves to next month’s bill.</>
-                : <>Estimated bill on {dayMonthLongIN(e.invoiceOn)}: <strong><Money paise={paise(e.bill.total)} decimals /></strong> including GST.</>}
-            </div>
-            <details className="text-sm">
-              <summary className="cursor-pointer text-muted-foreground">How it adds up</summary>
-              <table className="mt-2 w-full">
-                <tbody>
-                  {e.bill.lines.map((l, i) => <tr key={i} className="border-t border-border"><td className="py-1.5 pr-3">{l.description}</td><td className="py-1.5 text-right"><Money paise={paise(l.taxable)} decimals /></td></tr>)}
-                  {!e.bill.rolled && <tr className="border-t border-border"><td className="py-1.5 pr-3">GST 18%</td><td className="py-1.5 text-right"><Money paise={paise(gst)} decimals /></td></tr>}
-                </tbody>
-              </table>
-              {e.orders.length > 0 && (
-                <>
-                  <table className="mt-1 w-full">
-                    <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1 font-medium">Order</th><th className="py-1 text-right font-medium">Value</th><th className="py-1 text-right font-medium">Fee</th></tr></thead>
-                    <tbody>
-                      {e.orders.slice(0, 200).map((x) => (
-                        <tr key={x.number} className="border-t border-border"><td className="py-1 font-mono">{prefix}-{x.number}</td><td className="py-1 text-right"><Money paise={paise(x.base)} decimals /></td><td className="py-1 text-right"><Money paise={paise(x.fee)} decimals /> <span className="text-xs text-muted-foreground">{formatPercent(x.feeBps / 10_000, x.feeBps % 100 === 0 ? 0 : 1)}</span></td></tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {e.orders.length > 200 && <p className="mt-1 text-xs text-muted-foreground">The first 200 of {e.orders.length.toLocaleString('en-IN')} are shown.</p>}
-                </>
-              )}
-            </details>
-          </>
-        )}
-      </Section>
-
-      <Section>
-        <h2 className="text-section font-semibold">Your plan</h2>
-        {o.plan ? (
-          <>
-            <p className="text-sm"><strong>{o.plan.name}</strong> · <Money paise={paise(o.plan.monthlyPrice)} />/mo · {o.plan.includedOrders.toLocaleString('en-IN')} orders · {formatPercent(o.plan.feeBps / 10_000, o.plan.feeBps % 100 === 0 ? 0 : 1)} per delivered order</p>
-            {trial && trial.state !== 'paid' ? (
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className={trial.state === 'grace' || trial.state === 'paused' ? 'text-danger-text' : 'text-ok-text'}>{trial.state === 'building' ? 'Trial starts when your store goes live' : trial.state === 'grace' || trial.state === 'paused' ? `Trial ended · ${trial.state === 'paused' ? 'paused' : `pauses ${dayIN(trial.pausesAt)}`}` : `Trial · ${trial.daysLeft} days left · last day ${dayIN(trial.lastDay)}`}</span>
-                {trial.mayExtend && !auth.membership.supportSessionId && <TakeMoreDays />}
-              </div>
-            ) : o.plan.trialEndsAt && o.plan.trialEndsAt > now && <p className="text-sm text-ok-text">Trial until {dayIN(lastDay(o.plan.trialEndsAt))}</p>}
-            {o.plan.custom || auth.membership.supportSessionId || plans.length === 0
-              ? <p className="text-xs text-muted-foreground">{o.plan.custom ? 'Price agreed with Frrata' : auth.membership.supportSessionId ? 'Read-only on a support visit' : 'Plans could not be loaded. Try again in a minute.'}</p>
-              : <PlanChoice fromFeatured={fromFeatured} downgradeOn={dayMonthLongIN(o.forChange.downgradeOn)}
-                  scheduled={o.scheduled ? { name: o.scheduled.name, on: dayMonthLongIN(o.scheduled.startsAt), byShop: o.scheduled.byShop } : null}
-                  options={plans.filter((p) => p.code !== o.plan!.code).map((p) => {
-                    const target = { planCode: p.code as never, name: p.name, monthlyPrice: paise(p.monthlyPrice), includedOrders: p.includedOrders, feeBps: p.feeBps }
-                    const cur = [...o.forChange.plans].sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0]
-                    const starts = planChangeStarts(cur, target, now, nextMonthStartIST(now))
-                    // The figure the next invoice carries: the same rule (planChangeAdds), never the page's own arithmetic.
-                    const d = planChangeAdds(o.forChange.plans, target, now, monthStartIST(now), nextMonthStartIST(now), o.forChange.billed)
-                    return {
-                      code: p.code, name: p.name, price: formatInr(paise(p.monthlyPrice)), included: p.includedOrders.toLocaleString('en-IN'),
-                      fee: formatPercent(p.feeBps / 10_000, p.feeBps % 100 === 0 ? 0 : 1), upgrade: p.monthlyPrice > o.plan!.monthlyPrice,
-                      afterTrial: starts.getTime() > now.getTime() && p.monthlyPrice > o.plan!.monthlyPrice ? dayMonthLongIN(starts) : null,
-                      difference: d > 0 ? formatInr(d) : null,
-                    }
-                  })} />}
-          </>
-        ) : <p className="text-sm text-muted-foreground">No plan yet.</p>}
-      </Section>
-
-      <Section id="paying">
-        <h2 className="text-section font-semibold">Paying</h2>
-        {!isBillingGatewayConfigured() ? <p className="text-sm text-muted-foreground">Not open yet</p>
-          : paying?.mandate ? (
-            <div className="space-y-1 text-sm">
-              <p><strong>{METHOD[paying.mandate.method] ?? paying.mandate.method}</strong> · <span className="text-ok-text">Active</span> · up to <Money paise={paise(paying.mandate.max)} /> a debit · since {dayIN(paying.mandate.since)}</p>
-              {paying.nextDebit && <p>Next debit <Money paise={paise(paying.nextDebit.amount)} decimals /> on {dayIN(paying.nextDebit.at)}. You were told a day ahead, as the RBI rules ask.</p>}
-              {canPay && <StopAutopay />}
-            </div>
-          ) : canPay ? <SetUpAutopay /> : <p className="text-sm text-muted-foreground">No autopay. {auth.membership.supportSessionId ? 'Only the store’s owner or a manager can set it up.' : ''}</p>}
-        {billingGatewayIsTest() && <p className="mt-1 text-xs text-muted-foreground">Test gateway. No real money moves.</p>}
-      </Section>
-
-      <Section>
-        <h2 className="text-section font-semibold">Invoices</h2>
-        {o.invoices.length === 0 ? <p className="text-sm text-muted-foreground">No invoices yet</p> : (
-          <table className="w-full text-sm">
-            <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1 font-medium">Month</th><th className="py-1 font-medium">Invoice</th><th className="py-1 text-right font-medium">Amount</th><th className="py-1 font-medium">Status</th><th className="py-1"><span className="sr-only">PDF</span></th></tr></thead>
-            <tbody>{o.invoices.map((i) => (
-              <tr key={i.id} className="border-t border-border align-top">
-                <td className="py-1.5">{monthYearIN(i.periodStart)}</td>
-                <td className="py-1.5 font-num">{i.number}{i.credits.map((c) => <a key={c.number} href={`/console/settings/billing/invoice/${i.id}?credit=${encodeURIComponent(c.number)}`} className="block text-xs text-muted-foreground underline">Credit note {c.number}</a>)}</td>
-                <td className="py-1.5 text-right"><Money paise={paise(i.total)} decimals /></td>
-                <td className="py-1.5">{i.testMode ? <span className="text-muted-foreground">{i.state === 'due' && billingGatewayIsTest() ? <>Test · due <Money paise={paise(i.due)} decimals /> (test money)</> : i.state === 'due' ? 'Test — never collected' : `Test · ${STATE_LABEL[i.state].toLowerCase()}`}</span> : i.state === 'due' ? <span className="text-warn-text">Due <Money paise={paise(i.due)} decimals /></span> : STATE_LABEL[i.state]}</td>
-                <td className="py-1.5 text-right"><a href={`/console/settings/billing/invoice/${i.id}`} className="underline">PDF</a>{canPay && i.state === 'due' && i.testMode === billingGatewayIsTest() ? <div className="mt-1"><PayNow invoiceId={i.id} /></div> : null}</td>
-              </tr>
-            ))}</tbody>
-          </table>
-        )}
-      </Section>
-
-      <BillingDetailsForm initial={o.details} states={STATE_OPTIONS.map(([c, l]) => [c, l])} />
+    <div className="max-w-5xl space-y-5">
+      {head}
+      {due ? (
+        <Banner tone="warn" title={<>{monthYearIN(due.periodStart)} bill of <Money paise={paise(due.due)} decimals /> is due</>}
+          action={canPay ? <PayNow invoiceId={due.id} /> : <Link href={billingHref('invoices', { show: 'due' })}>See invoices</Link>} />
+      ) : null}
+      <ViewTabs label="Plan and billing" scroll tabs={BILLING_TABS.map(([k, label]) => ({ href: billingHref(k), label, current: k === tab, count: k === 'invoices' && due ? 1 : undefined }))} />
+      {body}
     </div>
   )
 }
