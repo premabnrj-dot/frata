@@ -35,7 +35,7 @@ export default {
     }
     await reset()
     await db`insert into shop_domains (id, tenant_id, host, apex, with_www, claimed_by, proved_at, cert_ok_at) values (${domain}, ${T}, ${OWN_DOMAIN}, ${OWN_DOMAIN}, false, ${USERS.owner.id}, now(), now())`
-    await db`insert into shop_pages (id, tenant_id, template, draft, updated_by) values (${page}, ${T}, 'about', ${db.json({ title: 'Our weavers', handle: 'our-weavers', fill: {}, hidden: true })}, ${USERS.owner.id})`
+    await db.begin(async (x) => { await x`select set_config('app.tenant_id', ${T}, true)`; await x`insert into shop_pages (id, tenant_id, template, draft, updated_by) values (${page}, ${T}, 'about', ${x.json({ title: 'Our weavers', handle: 'our-weavers', fill: {}, hidden: true })}, ${USERS.owner.id})` })
     const owner = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
     const p = await owner.newPage(); p.setDefaultTimeout(15_000); p.on('pageerror', (e) => t.errors.push(e.message))
     let key = ''
@@ -193,11 +193,13 @@ export default {
           const up = http.request({ host: '127.0.0.1', port: PORTS.app, path: req.url, method: req.method, headers: { ...req.headers, host: API } }, (r) => { res.writeHead(r.statusCode, r.headers); r.pipe(res) })
           up.on('error', () => { res.writeHead(502); res.end() }); req.pipe(up)
         }).listen(4092)
-        const env = { ...process.env, FRRATA_KEY: key, FRRATA_API_ORIGIN: 'http://127.0.0.1:4092', NEXT_TELEMETRY_DISABLED: '1' }
+        // A clean environment: the starter is a partner's own app, nothing of the stack's (its database, its public hosts).
+        const env = { PATH: process.env.PATH, HOME: process.env.HOME, FRRATA_KEY: key, FRRATA_API_ORIGIN: 'http://127.0.0.1:4092', NEXT_TELEMETRY_DISABLED: '1' }
+        const run = (args) => { try { execFileSync(process.execPath, args, { cwd: dir, env, stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 }) } catch (e) { throw new Error(`${args.join(' ')}\n${String(e.stdout ?? '').slice(-2000)}\n${String(e.stderr ?? '').slice(-2000)}`) } }
         let srv
         try {
-          execFileSync(process.execPath, [`${ROOT}node_modules/next/dist/bin/next`, 'build'], { cwd: dir, env, stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 })
-          execFileSync(process.execPath, ['scripts/scan-bundle.mjs'], { cwd: dir, env, stdio: 'pipe' })
+          run([`${ROOT}node_modules/next/dist/bin/next`, 'build'])
+          run(['scripts/scan-bundle.mjs'])
           srv = spawn(process.execPath, [`${ROOT}node_modules/next/dist/bin/next`, 'start', '-p', '4093'], { cwd: dir, env, stdio: 'ignore' })
           await until(async () => (await fetch('http://127.0.0.1:4093/bag').catch(() => null))?.ok, 30_000)
           const home = await (await fetch('http://127.0.0.1:4093/')).text()
