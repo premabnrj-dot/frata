@@ -1,220 +1,246 @@
 # V1 · Storefront API — SA0 (keys, the third tenant source) and SA1 (catalogue reads)
-Status: plan, reviews folded in, awaiting the owner's approval of the final mockup · Date: 2026-11-15 · Lane A
-(`docs/plans/2026-11-15-parallel-lanes.md`), branch `claude/lane-a-storefront-api`
+Status: plan v2, reviews folded in (architecture, tenancy, security, speed, words; unit economics running), awaiting
+the owner's approval of the final mockup · Date: 2026-11-15 · Lane A (`docs/plans/2026-11-15-parallel-lanes.md`),
+branch `claude/lane-a-storefront-api`
 Spec: `docs/specs/2026-11-11-storefront-api.md` (§ 1–3, 6–7, 9) · Decisions: ADR-0018 (accepted 2026-11-15, decisions
-1–6 yes), ADR-0014 (and amendment 8), ADR-0002, ADR-0003 · Content: `docs/specs/2026-11-14-site-content-layer.md`
-§ Storefront API additions, § API gaps for SA1 · Earlier mockup: https://claude.ai/artifact/SKpPx1rfBu48w18HMNUK7u (v2,
-2026-11-11) · **Final mockup (this phase):** _link added on publish_ · Approved: —
+1–6 yes), ADR-0014 (and amendment 8), ADR-0002, ADR-0003, ADR-0015 (capabilities, lane C) · Content:
+`docs/specs/2026-11-14-site-content-layer.md` § Storefront API additions, § API gaps for SA1 · Earlier mockup:
+https://claude.ai/artifact/SKpPx1rfBu48w18HMNUK7u (v2, 2026-11-11) · **Final mockup (this phase):**
+`docs/mockups/2026-11-15-storefront-keys.html`, artifact link in the report · Approved: —
 
 ## Goal
-North star (5) a premium storefront built as code by developers, partners or the agent (partners first), and the
-ADR-0014 path: no code site can exist until a key names its shop and the API serves its catalogue. Measures: SA0 —
-`verify:tenancy` block passes, `check:tenant` API rule and `check:api` green and run against their own docs; SA1 — a
-partner reads a shop's whole listed catalogue with one public key, **zero** cross-shop reads and **zero** cost fields
-in any response (int test sentinel grep), a page of 48 ≤ 150 kB raw, a CDN hit on the second read. Spec § Goal's
-90-day measures (≥ 3 partner sites) start at SA1b, when the cart link lands.
+North star (5): a premium storefront built as code by developers, partners or the agent (partners first). No code site
+can exist until a key names its shop and the API serves its catalogue. Measures: SA0 — proof block 80 passes,
+`check:tenant` § API and `check:api` green and run against their own documents, a `next start` proof (second read
+`x-nextjs-cache: HIT`, a revoke turns it into 404); SA1 — a partner reads a shop's whole listed catalogue with one
+public key; **zero** cross-shop reads and **zero** cost fields in any response (int test sentinel grep, over
+`openapi.json` too); a page of 48 ≤ 150 kB raw; `x-vercel-cache: HIT` on a preview's second read. The spec's 90-day
+measures (≥ 3 partner sites) start at SA1b, when the cart link lands.
 
 ## Scope
-**SA0 (no screen; lands and passes its proof before any resource):**
-1. `api` route kind on `NEXT_PUBLIC_API_HOST` (`api.frrata.shop`); only `/2026-12/…` answers there; `/api/storefront`
-   is 404 on every other host; no cookies read or set on the API host.
-2. Key format (pure): `frs_pub_` | `frs_test_` + 32 base62 + 6-char CRC32 checksum; shape and checksum before any read.
-3. Migration: `storefront_keys` (ADR-0018 § 3), `shop_settings.site_origin` (nullable; written only by SA1·1's Website
-   action), the definer `app_storefront_key`, the `revoked_at` write-once trigger, two revoke triggers (below), RLS,
-   grants, `frata_admin` none. Tenancy proof block.
-4. `storefrontKeyFor(key)` in `src/lib/db/platform.ts` (cached like `hostFacts`), `apiRequest()` in
-   `src/lib/storefront-api/request.ts`, `API_VERSIONS`.
-5. Gates: `check:tenant` § API rule; new `check:api`; host tests; `storefront-api.int.test.ts` (SA0 half).
-6. **CLAUDE.md** tenancy line exactly as ADR-0018 § "The CLAUDE.md line" (owner approved, decision 2) and
-   `frata-architecture` § Tenancy "only two sources" → three, in the SA0 commit.
+**SA0 (no screen; passes its proof before any resource):** the `api` host and its rewrites; the key format; the
+migration (`storefront_keys`, `shop_settings.site_origin` + `site_domain_id`, the definer, the write-once trigger, the
+domain-removed trigger); `storefrontKeyRow` (platform.ts) and the cached `storefrontKeyFor` (queries); `apiRequest`;
+the limits; `check:tenant` § API, `check:api`, `check:actions` chokepoint; proof block 80; the int test's SA0 half;
+the CLAUDE.md line exactly as ADR-0018 writes it, `frata-architecture` § Tenancy "two sources" → three, ADR-0002's
+one-line amendment note — all in the SA0 commit.
 
-**SA1 (catalogue reads + the console screen):**
-1. Console › Settings › **Website and API** (`/console/settings/website`): Website (Runs on Frrata / Runs elsewhere,
-   address from a proved domain), Checkout (read-only: the Main address and its Razorpay chip, a link to Store address),
-   Keys (Create, shown once, Revoke), Developer kit (the OpenAPI address only — the docs site, starter and skill don't
-   exist yet and are not drawn).
-2. Resources, version `2026-12`: `shop` (with the legal block), `products/page/{n}`, `products/{handle}`,
-   `collections`, `collections/{handle}/page/{n}`, `offers`, `search?q=`, and `openapi.json`.
-3. `released-api.test.ts` (structural old ⊆ new), mapper tests, int test SA1 half, e2e `8x-storefront-api` (number
-   taken at merge; `70-` is used).
+**SA1:** Console › Settings › **Website** (`/console/settings/website`, as drawn); resources of version `2026-12`:
+`shop` (with the legal block), `products/page/{n}`, `products/{handle}`, `collections`, `collections/{handle}/page/{n}`,
+`offers`, `search?q=`, `openapi.json`; `released-api.test.ts`; mappers; int test SA1 half; e2e `8x-storefront-api`
+(number at merge; `70-` is taken).
 
-**Not in this lane (SA1b, its own plan; owner question 1):** the cart link `/cart?l=`, the shop pages' 307 to the site
-origin, `classifySource`'s "Your website" rule, the starter repo, the partner skill and docs site, the Accept dialog's
-key list, Admin › Storefront API, D2 filters and D3 past 600 (content spec § API gaps). **Content resources**
-(`content`, `pages/{handle}`, `faq`) wait for SA0's proof and lane B's read seam (ADR-0018 decision 14, owner decision
-6): coordinated through the orchestrator, not built here.
+**SA1b, its own plan next (owner question 1):** the cart link, the shop's 307s to the site, `classifySource`'s
+"Your website" rule, the starter, partner skill and docs site, the Accept dialog's key list, Frrata Admin › Storefront
+API, D2 filters, D3 past 600, the module contract (`API_RESOURCES`, `check-modules` paths: no module offers a resource
+in SA1, so the contract ships with the first one). **Content resources** wait for SA0's proof and lane B's read seam
+(ADR-0018 decisions 6 and 14), coordinated through the orchestrator.
 
 ## Regression net first (owner rule 5)
-Before any change, run and keep green: e2e `01-signup`, `05-shop-look` (pixel), `13-paging`, the settings flows
-(`release:check` lists them for `src/middleware.ts`, `host.ts` and settings), `host.test.ts`, `catalogue-size.int.test.ts`.
-New tests land with each task, never after.
+Green before any change: e2e `01-signup`, `05-shop-look` (pixel), `13-paging`, `12-security`, the settings flows
+`release:check` lists for `src/middleware.ts`, `next.config.ts`, `host.ts` and settings; `host.test.ts`,
+`framing.test.ts`, `catalogue-size.int.test.ts`. New tests land with each task, never after.
 
 ## Tasks
 
-### SA0·1 Host and route kind
-- `src/domains/tenancy/host.ts`: `Surface` and `Route` gain `{ kind: 'api' }` when the host equals `apiHost`
-  (lower-cased, exact; no `www.`); on it only `^/\d{4}-\d{2}/` answers, everything else `not_found`. `/api/storefront`
-  and `/api/storefront/*` on any other host → `not_found` (like `/api/ek`). `shopRewrites` excludes the API host in
-  its `missing` list. `NEXT_PUBLIC_API_HOST` read once in `src/lib/public-env.ts`, named in `.env.example`; unset →
-  no host matches (the kind never fires).
-- `src/middleware.ts`: the `api` branch rewrites `/<version>/…` to `/api/storefront/<version>/…`, runs no Supabase
-  client, sets no cookie, adds no nonce CSP; keeps nosniff and HSTS from `next.config.ts`.
-- Verify: `npx vitest run src/domains/tenancy` (both directions: API paths 404 on console, shop and EkCode hosts; shop
-  and console paths 404 on the API host; a mixed-case and a trailing-dot host).
+### SA0·1 Host, rewrites and the edge check
+- `src/domains/tenancy/host.ts`: `Surface`/`Route` gain `{ kind: 'api' }` for the exact `apiHost` (lower-cased, no
+  trailing dot, no `www.`); on it only `/2026-12/…` answers, anything else `not_found`; `/api/storefront*` on any other
+  host → `not_found` (like `/api/ek`). The kind never fires on `*.vercel.app` or when `NEXT_PUBLIC_API_HOST` is unset
+  (`src/lib/public-env.ts`, `.env.example`). `api` is already a reserved slug.
+- **Rewrites in `next.config.ts`, never in the middleware** (a middleware rewrite turns ISR into `private, no-store`;
+  frata-gotchas): `beforeFiles`, `has: host = API host`, before the shop rules —
+  `/2026-12/k/:key(frs_test_[0-9A-Za-z]{38})/:path*` → `/api/storefront/2026-12/t/:key/:path*` (the dynamic tree) and
+  `/2026-12/k/:key/:path*` → `/api/storefront/2026-12/k/:key/:path*` (the ISR tree); `shopRewrites` adds the API host
+  to its `missing` list.
+- `src/middleware.ts` on the API host: no Supabase client, no cookie, no nonce CSP; it runs `keyShape` (pure CRC32, no
+  I/O) and answers a bad shape, checksum, version or path with the one 404 body at the edge, so no function runs for a
+  minted-looking key that fails its checksum; otherwise it passes the request on untouched.
+- Verify: `npx vitest run src/domains/tenancy` (both directions, mixed case, trailing dot, `*.vercel.app`);
+  `next.config` rewrite unit test; `framing.test.ts`.
 
 ### SA0·2 The key (pure)
-- `src/domains/storefront-api/keys.ts`: `KEY_KINDS = ['public','test']`, `keyShape(s) → { kind, body } | null`
-  (regex `^frs_(pub|test)_[0-9A-Za-z]{32}[0-9A-Za-z]{6}$`, then CRC32 of `prefix+body` in base62, constant time compare
-  not needed: it is not a secret), `shownPrefix(key)` (kind + 6 body chars), `newKey(kind, random)` (random passed in:
-  the domain does no I/O), `mayManageApi(role, hasOwner)` (owner, admin; partner only while `hasOwner` false),
-  `TEST_KEY_DAYS = 30`, `MAX_LIVE_KEYS = 20`, `KEY_NAME_MAX = 40`.
-- Verify: `npx vitest run src/domains/storefront-api` (a flipped character fails the checksum; 31 and 33 chars fail;
-  `frs_live_` fails; `mayManageApi` table incl. staff, accountant, partner with and without owner).
+- `src/domains/storefront-api/keys.ts`: `KEY_KINDS`; `keyShape(s) → { kind, body } | null` (shape, then CRC32 of
+  `prefix + body` as 6 base62 chars); `shownPrefix(key)`; `newKey(kind, bytes)` — the caller passes
+  `crypto.getRandomValues` bytes, mapped to base62 by **rejection sampling** (unbiased; never `Math.random`);
+  `hashHex(key)` is not here (I/O-free, but crypto lives in `src/lib`); `TEST_KEY_DAYS = 30`, `MAX_LIVE_KEYS = 20`,
+  `KEY_NAME_MAX = 40`; `looksLikeKey(name)` (a pasted key refused as a name). `siteOriginProblem(origin, apex)`
+  (`https://` + the apex or `www.` + apex exactly; no path, port or other subdomain).
+- **Who may manage keys is a capability in `src/domains/tenancy/roles.ts`** (ADR-0015, agreed with lane C through the
+  orchestrator): `api.manage` = owners and Managers; a partner only while the shop has **never had an owner** (ADR-0018
+  decision 5, the same fact `seesCosts` reads), never a support visit. `hasOwnerIn(tx)` is extracted from
+  `costsVisibleIn` so both read one rule.
+- Verify: `npx vitest run src/domains/storefront-api src/domains/tenancy` (a flipped char fails; 37/39 chars fail;
+  `frs_live_` fails; base62 distribution within 1 % over 10⁶ draws; the capability table incl. staff, Accountant,
+  partner with and without an owner ever).
 
-### SA0·3 Migration `drizzle/01xx_storefront_keys.sql` (+ `_access.sql`, `--custom`; renumbered at merge)
-- Schema in `src/lib/db/schema.ts` (`storefrontKeys`; `shopSettings.siteOrigin`). Columns as ADR-0018 § 3; `hash
-  bytea not null unique`; `kind text check in ('public','test')`; `name` 1–40 chars CHECK; `prefix` CHECK shape;
-  index `(tenant_id, created_at desc)`; `expires_at` CHECK (`kind = 'test') = (expires_at is not null)`.
-- `site_origin text` CHECK `^https://[a-z0-9.-]+$` (no path, no port, lower case). Its domain check (on a proved
-  `shop_domains` row's apex) is in the action; a trigger `app_site_origin_proved` refuses a value whose host is not
-  on a live proved apex of the same tenant (defence in depth; the action's words come first).
+### SA0·3 Migration `drizzle/01xx_storefront_keys.sql` + `_access.sql` (`--custom`; renumbered at merge)
+- `storefront_keys` (ADR-0018 § 3) + `partner_id uuid null` (the partner whose person made it, set by the action from
+  the member row, never from input). `hash bytea not null unique` (sha256); `kind` CHECK; `name` 1–40 CHECK; `prefix`
+  CHECK; index `(tenant_id, created_at desc)`; CHECK `(kind = 'test') = (expires_at is not null)`.
+- `shop_settings.site_origin text` CHECK `^https://[a-z0-9.-]+$` and `site_domain_id uuid` → `shop_domains(id)`, both
+  null or both set (CHECK). The row named is the proof; a trigger (`app_site_origin_check`) refuses an origin that is
+  not `siteOriginProblem`-clean against **that row's** apex, or a row of another tenant, or a row not live (proved, not
+  removed). A trigger on `shop_domains` clears `site_origin`/`site_domain_id` when that row is removed or parked.
 - Grants exactly ADR-0018 § 3; `revoke all … from public, anon, authenticated, service_role`; RLS; `tenant_rows`
-  policy, no null branch; no `frata_admin` grant. Trigger `app_storefront_key_revoked_once` (BEFORE UPDATE: an
-  existing `revoked_at` never changes).
-- `app_storefront_key(p_hash bytea)` as spec § 2 (three columns; `security definer`, `search_path ''`, revoked from
-  public, anon, authenticated, service_role; granted to `frata_app` only). It is the one platform read with no tenant
-  set, so it filters by the hash's unique index (EXPLAIN in the proof).
-- **Revoke triggers** (ADR-0018 § 6, keep lane C's definers untouched): (a) AFTER UPDATE OF `published_at` on the
-  shop's row, null → not null: revoke every live `test` key of that tenant; (b) AFTER DELETE on `members` where
-  `role = 'partner'`: revoke live keys of that tenant `created_by` that user. Both `security definer`, `search_path ''`,
-  revoked from every role (a trigger function needs no execute grant).
-- `scripts/verify/tenancy.sql` block **80** (next free; renumbered at merge): ADR-0018 § Gates and proof, every line,
-  plus: the two revoke triggers fire and touch only their tenant; `site_origin` on another shop's apex raises.
-- Verify: `npm run db:generate` clean; `npm run verify:tenancy` (throwaway Postgres, frata-verify); `npm run check:tenant`.
+  policy, no null branch; no `frata_admin` grant. `app_storefront_key_revoked_once` (BEFORE UPDATE: a set `revoked_at`
+  never changes).
+- **`app_storefront_key(p_hash bytea)` returns `(key_id, tenant_id, kind, expires_at)` and derives every stop, so no
+  stop is a race** (security 4, architecture 4–5, tenancy):
+  ```sql
+  where k.hash = p_hash and k.revoked_at is null and (k.expires_at is null or k.expires_at > now())
+    and s.site_origin is not null and d.id = s.site_domain_id and d.proved_at is not null and d.removed_at is null
+    and (k.kind = 'public' or s.published_at is null)                    -- test keys end when the store opens
+    and (k.partner_id is null or <the partner's link to this shop is live and the partner approved, not suspended>)
+  ```
+  The partner condition reuses the link-and-partner part of `app_pm_live` (no copy of the rule). So: the store opens →
+  test keys stop; a partner is removed or suspended → its keys stop; reinstated → they answer again (owner note). No
+  trigger touches `members` or lane C's definers. `security definer`, `search_path ''`, revoked from public, anon,
+  authenticated, service_role, granted to `frata_app` only.
+- `scripts/verify/tenancy.sql` block **80** (next free; renumbered at merge): every line of ADR-0018 § Gates and proof
+  (result exactly the columns above), plus: a key whose store opened answers 0 rows (test) / 1 (public); A opening
+  leaves B's test keys answering; a partner person in A and B removed from A — B's partner key still answers; a removed
+  partner link stops only that shop's partner keys; `site_domain_id` of another shop raises; a removed domain clears the
+  origin and the key stops; `site_origin` on a subdomain other than `www.` raises; `frata_admin` cannot execute or read
+  `hash`.
+- Verify: `npm run db:generate` clean; `npm run verify:tenancy`; `npm run check:tenant`.
 
-### SA0·4 Lookup and the one door
-- `storefrontKeyFor(key)` (`src/lib/db/platform.ts`): `keyShape` first (null → null, no read); `sha256` → definer;
-  wrapped `cache(unstable_cache(['skey-v1', hash], …, { tags: ['skey:<id>', 'shop:<tenant>'], revalidate: 60 }))`; a
-  miss throws inside the inner function so nothing is cached for it (the `hostFacts` pattern), caught outside.
-- `src/lib/storefront-api/request.ts`: `apiRequest(version, handler, opts)` returns a route handler. Order: version in
-  `API_VERSIONS` (else 404 `unknown_version`) → key shape → `storefrontKeyFor` (else 404 `not_found`, the same body for
-  bad shape, unknown, revoked, expired and Website-on-Frrata) → for search, test keys and (later) preview: the
-  Postgres limiter by `ipBucket` (fail closed: 429) → `handler(ctx)` with `ctx = { tenantId, keyId, keyKind,
-  version, now }` and parsed params only (never the `Request`) → the body is `schema.parse(result)` → headers:
-  `Frrata-Api-Version`, `Cache-Control` (read routes `public, s-maxage=60, stale-while-revalidate=300`; test keys,
-  search: `private, no-store`), CORS (public `*`, no credentials; test: the shop's `site_origin` or
-  `http://localhost:<port>` echoed, `Vary: Origin`), `X-Content-Type-Options: nosniff`, no `Set-Cookie`. Errors log
-  `[api] <code> key=<keyId>` (never the key, never the raw error).
-- `last_seen_version` / `last_seen_on`: written at most once per key per IST day, after the response (`after()`),
-  through a guarded update (`where last_seen_on is distinct from today`).
-- Verify: `npx vitest run src/lib/storefront-api` (a handler receives no Request; every failure is the one 404 body);
-  int test SA0 half below.
+### SA0·4 Lookup, the door and the limits
+- `storefrontKeyRow(hashHex)` in `src/lib/db/platform.ts` (raw definer call, like `tenantForHost`).
+  `storefrontKeyFor(key)` in `src/lib/queries/storefront.ts` beside `hostFacts` (check:tenant 6d holds):
+  `cache(unstable_cache(['skey-v1', hex], …, { tags: ['skey:' + hex], revalidate: 30 }))` — **the cache key and tag are
+  the lowercase hex of the sha256** (never decoded bytes), known before the call; a miss throws inside so it is never
+  cached; the cached `expires_at` is checked again on each use. `refreshKey(hex)` and `refreshKeys(tenantId)` (reads
+  the shop's live hashes, ≤ 20, purges each) live in `src/lib/storefront/refresh.ts`.
+- `src/lib/storefront-api/request.ts`: `apiRequest(resource, handler, { tree: 'isr' | 'dynamic' })`. Order: key shape
+  (again) → `storefrontKeyFor` → the kind must match the tree (a test key on the ISR tree or a public key on the dynamic
+  tree → 404) → on the dynamic tree only, the limiter → `handler(ctx)` with `ctx = { tenantId, keyId, keyKind,
+  version, now }` and parsed params only → `schema.parse(result)` → headers.
+  - **The ISR tree never touches the request** (a header read there is a 500, measured): CORS `*` is a static header,
+    no credentials; Next owns `Cache-Control`; `Frrata-Api-Version`, nosniff. Every 404 entry it writes carries
+    `skey:<hex>`.
+  - **The dynamic tree** (`force-dynamic`, test keys; public search is ISR-cached, below): reads `Origin` and the client
+    IP here only; CORS echoes the shop's `site_origin` or `^http://localhost(:\d{1,5})?$` exactly, never `null`,
+    `Vary: Origin`; `private, no-store`.
+  - Errors log `[api] <code> key=<keyId>` (never the key, never the path, never the raw error).
+- **Limits** (`src/lib/db/rate-limit.ts` `LIMITS`, every call `failClosed = true`, a test that a database error gives
+  429): `apiMissIp` (unknown keys per `ipBucket`, counted on each definer miss and checked before the lookup, dynamic
+  tree), `apiTestIp` (60 a minute), `apiSearchIp`, `apiKeyCreateShop` (10 an hour). `n` is 1–13 (600 ÷ 48) and a
+  handle must match the handle shape before any read. **One Vercel WAF per-IP rule on the API host is required, not
+  optional** (owner step in `docs/setup.md`; numbers re-verified by `integration-researcher` before SA1 ships).
+- **`last_seen`**: written inline during a regeneration (no shopper waits; `after()` does not run on a background
+  regeneration, measured), skipped when the definer's cached row already says today (IST), through
+  `src/lib/queries/storefront-api.ts` `markKeySeen(ctx)` in `withTenant(ctx.tenantId)` with `where id and tenant_id`.
+- Verify: `npx vitest run src/lib/storefront-api` (two keys, two entries; kind/tree mismatch 404; one 404 body);
+  `next start` proof script `scripts/verify/api-isr.mjs` (HIT on the second read; revoke → 404; test key never HIT).
 
 ### SA0·5 Gates, proof, documents
-- `scripts/check-tenant.mjs` § API (files `src/app/api/storefront/**`, `src/lib/storefront-api/**`,
-  `src/lib/modules/*/api.ts`): every exported `GET` is `apiRequest(…)`; no `params.tenant*`, `searchParams.get('shop'|
-  'tenant')`, `request.json()`, `headers.get(` in handlers; `storefrontKeyFor` only in `request.ts`;
-  `app_storefront_key` only in `platform.ts` and migrations. Run against ADR-0018 and the gate's own file.
-- `scripts/check-api.mjs` (`npm run check:api`, in `npm test`): the chokepoint; no `z.unknown`, `z.record`,
-  `.passthrough`, `.catchall`, `z.any`, `.loose` in `src/domains/storefront-api/**/schemas*.ts`; no cost sentinel name
-  (`scripts/cost-sentinels.mjs`) in a mapper or schema; read routes export `revalidate = 60`, search does not.
-- `storefront-api.int.test.ts` (real Postgres): A's key resolves A only; revoked, expired, unknown, Website-on-Frrata
-  keys → 404 with one body; a test key after opening is revoked by the trigger; a removed partner's key stops.
-- CLAUDE.md line (verbatim, ADR-0018) and `frata-architecture` § Tenancy (three sources, `apiRequest`, the API host);
-  ADR-0002 gets a one-line "amended by ADR-0018".
-- Verify: `npm test`, `npm run typecheck`, `npm run verify:tenancy`, `npx vitest run --project int storefront-api`.
-  **SA0's proof = these green; SA1 starts only after.** The orchestrator is told, so lane B's content resources can
-  follow (ADR-0018 decision 14).
+- `scripts/check-tenant.mjs` § API (`src/app/api/storefront/**`, `src/lib/storefront-api/**`,
+  `src/lib/modules/*/api.ts`): every exported method (`GET`, `OPTIONS`, `POST`, default) is `apiRequest(…)` except the
+  named `openapi.json` entry point; no `shopIdForHost`, `shopMovedTo`, `tenantForHost`, `requireMember`, `asMember`,
+  `cookies()`, `headers()`, `params.tenant*`/`params.shop*`, `request.json()`; `headers.get(` only in `request.ts`;
+  a loader's first argument is `ctx.tenantId`; `storefrontKeyFor` only in `request.ts`, `storefrontKeyRow` only in
+  `queries/storefront.ts`, `app_storefront_key` only in `platform.ts` and migrations. Rules 6/6b's shopper list gains
+  `storefront-api/` and `api/storefront/`. Run against ADR-0018 and the gate's own file.
+- `scripts/check-api.mjs` (`npm run check:api`, in `npm test`): no `z.unknown|record|any|passthrough|catchall|loose`
+  in `src/domains/storefront-api/**`; no cost sentinel name (`scripts/cost-sentinels.mjs`) in a mapper, schema or the
+  generated `openapi.json`; files under `k/` export `revalidate = 60` and never read `request.`, `headers()`,
+  `cookies()`, `connection()` or import `preview*`; files under `t/` export `dynamic = 'force-dynamic'` and no
+  `revalidate`; literal `2026-12/` folders; `generateStaticParams = () => []` on every dynamic segment.
+- `scripts/check-actions.mjs`: `apiRequest` joins the chokepoints; `openapi.json` is a named entry point.
+- Int test SA0 half (real Postgres): A's key resolves A only; revoked, expired, unknown, Website-on-Frrata, store-opened
+  (test), partner-removed keys → one 404 body; two keys never share a cache entry.
+- CLAUDE.md line verbatim (ADR-0018); `frata-architecture` § Tenancy (three sources, `apiRequest`, the two trees, the
+  API host) and § Speed (API rows); ADR-0002 "amended by ADR-0018"; ADR-0018 § 5's "inside `withTenant`" read as
+  "through the cached loaders keyed by `ctx.tenantId`" (a note on the ADR, owner told).
+- Verify: `npm test`, `npm run typecheck`, `npm run verify:tenancy`, the int test, `scripts/verify/api-isr.mjs`.
+  **SA0's proof = these green.** The orchestrator is told, so lane B's content resources may follow.
 
-### SA1·1 Console › Settings › Website and API (as drawn)
-- Page `src/app/(console)/console/settings/website/page.tsx`, one `withTenant(…, { snapshot: true })` reading in
-  `Promise.all`: `site_origin`, live proved domains (`host`, `apex`, `main_at`, `razorpay_ok_at`), keys (name, kind,
-  prefix, created_by's display, created_at, expires_at, revoked_at), `hasOwner`, `published_at`. Settings index gains
-  one Row "Website and API" (summary "Runs on Frrata" / the site address).
-- Actions `website/actions.ts`, all `asMember(ANY_MEMBER, …)` then `mayManageApi(role, hasOwner)` read in the
-  transaction, refused in a support visit (in words), each writing an `audit_events` row (`actor_kind 'member'`,
-  `target` the key id or `website`, `detail` field names only):
-  - `setWebsite({ runs: 'frrata' | 'elsewhere', origin? })`: origin must be `https://` + a live proved host of this
-    shop (www. allowed when `with_www`); refuses otherwise in words; purges `skey:*` of this shop's keys and
-    `shop:<t>` (the definer's join changes).
-  - `createKey({ name, kind })`: Zod (`name` 1–40, trimmed); test only while `published_at` is null; ≤ 20 live keys;
-    ≤ 10 creates an hour a shop (Postgres limiter, fail closed); returns the key **once** in the `ActionResult` (never in
-    a URL, a toast, a log or the page's later renders).
-  - `revokeKey({ id })`: `where id and tenant_id and revoked_at is null`; purges `skey:<id>`.
-- Components as drawn: `ActionForm`, the design-language primitives (Card, RadioCard, Select, Chip, Dialog/Sheet,
-  Toast); the key reveal is a client island receiving the key from the action result only; Copy uses the clipboard.
-- Verify: `npm test` (`check:actions`, `check:states`, `check:words`), the e2e flow (below), `mockup-parity-reviewer`.
+### SA1·1 Console › Settings › Website (as drawn)
+- Page `src/app/(console)/console/settings/website/page.tsx`; reads in `src/lib/queries/website.ts` (`websitePage`):
+  one `withTenant(…, { snapshot: true })`, `Promise.all` over `site_origin`/`site_domain_id`, the keys (name, kind,
+  prefix, partner name, created_at, expires_at, revoked_at, last_seen_on), `hasOwnerIn`, `published_at`, reusing
+  `shopDomainRows`/`mainDomainIn` from `queries/addresses.ts`. Settings list gains one row "Website" (value: the site's
+  host in mono, or "Runs on Frrata"); the Accountant does not get the row or the page.
+- Actions `website/actions.ts`: `asMember(CAN_BUILD, …)`, then `api.manage` read in the transaction, a support visit
+  refused in words; each writes `audit_events` (`target` the key id or `website`, `detail` field names only).
+  - `setWebsite({ runs, domainId? })`: the origin is built from the chosen live row (apex or `www.`+apex when
+    `with_www`), never typed; confirm when going back to Frrata; purges `refreshKeys(t)` only (not the whole shop).
+  - `createKey({ name, kind })`: Zod (1–40, trimmed, `looksLikeKey` refused); reads `shop_settings … for update` first,
+    then the open check (test only while `published_at` is null) and the 20-live-keys count; `apiKeyCreateShop`; the key
+    is returned **once** in the `ActionResult`, never in a URL, toast, log or later render.
+  - `deleteKey({ id })` (the screen says Delete; the column stays `revoked_at`): `where id and tenant_id and revoked_at
+    is null returning hash` → `refreshKey(hex)`.
+  - `openShop` (`shop-actions.ts`) also calls `refreshKeys(t)` after commit (the definer already refuses test keys).
+- Components (existing primitives): `PageHeader`, `Section`, the settings form's radio kind and `SaveBar` (one save),
+  `Dialog` (a sheet on a phone), `Badge`, `Tag`, `CopyField` (the reveal), `FieldError`, `toast`. Nothing new.
+- Verify: `npm test` (`check:actions`, `check:states`, `check:words`), the e2e flow, `mockup-parity-reviewer`.
 
 ### SA1·2 Mappers and schemas (pure)
-- `src/domains/storefront-api/2026-12/` : `schemas.ts` (Zod output per resource, closed objects; open enums such as
-  `availability.kind` and offer classes are `z.enum([...])` in our output, documented to partners as "unknown values
-  may appear", and a new value is an additive change `released-api.test.ts` allows), `map.ts` (`shopOut`, `cardOut`, `productOut`, `collectionOut`, `offerOut`) field by field from
-  `StoreShop`, `StoreCard`, `StoreProduct`, `StoreCollection`; prices paise; availability count only at ≤ 3; images
-  `{ base, widths, alt }` from Frrata's media host only; text plain (merchant HTML stripped by the existing policy text
-  helpers, never passed through).
-- `toJSONSchema` (zod 4) → `openapi.json` built at request time from the schemas, cached like a read route.
-- Verify: `npx vitest run src/domains/storefront-api` (each mapper on fixtures; a fixture with every cost field set to a
-  sentinel never shows one; `released-api.test.ts` snapshot of the structure).
+- `src/domains/storefront-api/2026-12/schemas.ts` (closed objects; `availability.kind` and offer classes `z.enum`,
+  documented as "unknown values may appear"; a new value is additive) and `map.ts` (`shopOut`, `cardOut`, `productOut`,
+  `collectionOut`, `offerOut`) field by field from `StoreShop`, `StoreCard`, `StoreProduct`, `StoreCollection`; prices
+  paise; a count only at ≤ `LOW_STOCK_AT`; images `{ base, widths, alt }` from Frrata's media host only; collections'
+  product ids and a product's pairs filtered by `visibility()`; text plain. **URL-ish fields have closed shapes**: the
+  Instagram handle `^[A-Za-z0-9._]{1,30}$` or null, WhatsApp digits only, every URL `https:` on an allowlisted host.
+  `shop`'s site origin and checkout origin come from `site_origin` and `mainDomainIn` (named, read once).
+- `openapi.json` from `toJSONSchema` (zod 4), ISR-cached, a named entry point with no key.
+- Verify: `npx vitest run src/domains/storefront-api` (every cost field a sentinel never shows; `javascript:` never
+  passes; `released-api.test.ts` structural snapshot).
 
 ### SA1·3 Route handlers
-- `src/app/api/storefront/[version]/k/[key]/…/route.ts`: `shop`, `products/page/[n]`, `products/[handle]`,
-  `collections`, `collections/[handle]/page/[n]`, `offers`, `search`, and `src/app/api/storefront/[version]/openapi.json`.
-  Each `export const revalidate = 60` (search: `dynamic = 'force-dynamic'`), `generateStaticParams` empty.
-- Reads only through existing cached loaders, never inside a `withTenant`: `shopSettingsFor`, `shopCatalogue`,
-  `shopProduct` (moved handle → 200 with the current `handle`), `collectionMembers`, `shopAnnouncement`; listed only
-  via `visibility(status, publishAt, ctx.now)` per request; paging `pageOf` (48), `total`, `truncated` at 600.
-  Search: `q` 1–60 chars, filters the cached entry in memory, ≤ 48 results, the IP limit.
-- Test keys read the uncached preview loaders (`previewShop`, `previewCatalogue`, `previewProduct`), `no-store`.
-- Verify: int test SA1 half (A's key never reads B; B's handle under A's key is `not_found`; every response grepped for
-  the sentinels seeded in every cost column; a draft never appears under a public key, does under a test key),
-  `SPEED=1` bytes at the 10× seed, e2e.
+- `src/app/api/storefront/2026-12/k/[key]/{shop,products/page/[n],products/[handle],collections,collections/[handle]/page/[n],offers,search}/route.ts`
+  (ISR: `revalidate = 60`, `generateStaticParams = () => []`) and the same names under `t/[key]/` (dynamic), both
+  calling one handler per resource.
+- ISR tree reads only cached loaders, never inside a `withTenant`: `shopSettingsFor`, `shopCatalogue`, `shopProduct`
+  (moved handle → 200 with the current `handle`), `collectionMembers`, `shopAnnouncement`; `visibility(…, ctx.now)`;
+  `pageOf` (48), `total`, `truncated` at 600. **Search**: a slim `shopCached('search-v1', 'catalogue')` entry (handle,
+  title, tags, price range, first photo) filtered in memory; public search is ISR-cached per `q` (normalised, 1–60
+  chars) so repeats are CDN hits; test-key search is on the dynamic tree with `apiSearchIp`.
+- Dynamic tree reads the uncached preview loaders (`previewShop`, `previewCatalogue`, `previewProduct`).
+- Verify: int test SA1 half (A's key never reads B; B's handle under A's key is `not_found`; sentinels seeded in every
+  cost column never appear; a draft never under a public key, does under a test key; a test-key response is
+  `no-store` and a second read is not a HIT); `SPEED=1`: bytes at the 10× seed, and 75 parallel reads after a purge
+  count `coreCatalogue` runs.
 
 ### SA1·4 Docs and skills
-- New skill `frata-storefront-api` (the rules of this plan: one door, key shape, no tenant from the request, mappers,
-  closed schemas, additive versions, purges by tag); `frata-planning` § 3 gains the **Storefront API** heading (spec
-  § Guardrails); `frata-architecture` § Speed table gains the API rows. Version bumps.
-- Verify: `npm test`; words-reviewer on the diff.
+- New skill `frata-storefront-api` (one door, two trees, key shape, no tenant from the request, mappers, closed schemas,
+  additive versions, purges by hash tag); `frata-planning` § 3 gains the **Storefront API** heading; new agent
+  `api-contract-reviewer`. Version bumps.
 
 ### e2e `8x-storefront-api` (number at merge)
-Owner signs in → Settings › Website and API → Runs elsewhere with the seed shop's proved domain → Create key (public)
-→ the key shown once, copied, closed, not shown again → `GET` with a Host header of the API host: `shop`,
-`products/page/1`, one product (200, no cost field) → Revoke → within the test's purge the next read is 404 → a staff
-member sees View only, no Create or Revoke → phone width. Screenshots at 390 and 1280.
+Owner → Settings › Website → Your own website with the seed shop's proved domain → Create key (Live) → the key shown
+once, copied, closed, not shown again → reads through `node:http` with the API host's Host header (undici drops it):
+`shop`, `products/page/1`, one product (no cost field) → Delete → the next read is 404 → staff sees View only, no Create
+or Delete → a partner before handover makes a test key → phone width. Screenshots at 390 and 1280.
 
-## Speed (spec § Performance at the 10× seed; folded from speed-reviewer)
-- Statements: a cached read route runs **0** on a CDN hit; on a regeneration, the key lookup (cached 60 s: 0 or 1
-  definer call, 0.03 ms) plus the loaders' own cached entries (0 when warm). No route opens a `withTenant` around a
-  loader (P4). The Settings page: one transaction, 5 statements in `Promise.all`.
-- EXPLAIN: `app_storefront_key` by `storefront_keys_hash_unique` (index scan); the page's key list by
-  `(tenant_id, created_at desc)`. No query on `orders`.
-- Bytes: products page of 48 ≈ 125 kB raw / 13 kB gz; one product ≈ 5 kB; `shop` ≈ 3 kB; nothing added to the cached
-  catalogue entry (926 kB of 1 MB headroom: a field that grows it is a finding).
-- Tags: every API response carries `shop:<t>` and `skey:<id>`; today's `refreshShop` / `refreshSoldOut` reach it; a
-  revoke purges one `skey:<id>`; `setWebsite` purges `shop:<t>` (rare, owner-driven).
-- First-load JS: the settings page adds the reveal/copy island only (< 3 kB gz).
-- Cost: reads are CDN hits; regenerations ≤ 1 per path per 60 s per key; one WAF per-IP rule on the API host is an
-  owner step in `docs/setup.md` (numbers re-verified by `integration-researcher` before SA1 ships: the 2026-11-11 facts
-  are dated, < 90 days).
+## Speed (speed review, measured on Next 15.5.29 and Postgres 16 at the 10× seed)
+- A read route with `revalidate = 60` and empty `generateStaticParams` builds ● and the second read is a HIT;
+  `revalidateTag` on a loader's tag or `skey:<hex>` turns the next read into a blocking MISS (measured).
+- A regeneration: the key lookup (0 or 1 definer call, index scan, 0.027 ms) + the catalogue loader's 12 statements in
+  one transaction (~70 ms; the slowest is the owed subquery on `order_lines` ⋈ `orders`, 54 ms) when its entry is cold;
+  0 when warm. No loader inside a `withTenant` (P4). The Settings page: one transaction, 5 statements, the key list a
+  bitmap scan (0.075 ms).
+- Bytes: the catalogue entry 880 kB raw / 145 kB gz (nothing added); a page of 48 127 kB raw / 12.7 kB gz before
+  mapping; one product ≈ 5 kB.
+- Purges: every API entry carries `shop:<t>` (from the loaders) and `skey:<hex>`; a catalogue purge (≤ 1 per 30 s per
+  shop) now also makes ≤ 1 regeneration per path per 60 s **per live key** (~75 hot paths a key); `setWebsite` and
+  `openShop` purge only key tags.
+- Cost: see § Unit economics (reviewer's numbers folded in when it reports); the WAF rule is required.
 
-## Security (folded from security-reviewer)
-- Who: create/revoke/Website = `mayManageApi` inside the transaction; staff, Accountant, support = read only (no
-  buttons, and the actions refuse). Row: every write matches `id` and `tenant_id`. Zod caps on name, kind, origin.
-- The key: shown once in the action reply, never logged (`[api] … key=<keyId>`), never in a URL of the console, never
-  stored; hash `sha256`; a key-shaped string is refused in the merchant-visible `name` (so a pasted key never lands in
-  a stored field).
-- API host: no cookies, no Supabase client, no CSP nonce; responses JSON with nosniff; CORS public `*` without
-  credentials, test origin-bound; GET only (`OPTIONS` answers 204 with the same CORS, no preflight needed).
-- Merchant text in responses is plain text; HTML in policy bodies is never passed through.
-- Limits: key create 10 an hour a shop; search and test keys by `ipBucket` (/64), failing closed.
-- Open redirect: none in SA0/SA1 (the 307s are SA1b).
+## Security (security review folded in)
+Test keys never ISR (own tree); minted keys stop at the edge (checksum) or at `apiMissIp`; every limit fails closed;
+`createKey` locks `shop_settings` before its checks and the definer refuses test keys on an open store; the site origin
+names a live proved row and only its apex or `www.`; `CAN_BUILD` + `api.manage`, support refused, the Accountant off the
+page; merchant links and handles closed shapes; keys from `getRandomValues` by rejection sampling. **Correction:** a key
+is in the URL path, so Vercel's request logs and Observability store it; our own logs never do. A public key is public
+by design; a test key is to be treated as visible to anyone who sees the developer's browser.
 
-## Tenancy (folded from tenancy-auditor)
-- The tenant comes only from the definer's row for the key's hash, inside `apiRequest`; handlers get `ctx.tenantId`.
-- The definer returns three columns; `frata_admin` cannot execute it or read `hash`.
-- Cached lookup keyed by the hash (never the shown prefix); a miss is not cached; tags include the tenant.
-- Preview loaders under a test key are uncached (no cross-key entry). Shared caches (`shopCatalogue`) are keyed by
-  tenant already.
-- Triggers revoke only rows of the triggering tenant (proved in block 80).
+## Tenancy (tenancy audit folded in)
+The tenant comes only from the definer's row for the key's hash, inside `apiRequest`; the cache key and tag are the
+hash's hex; every stop (revoked, expired, store opened, partner gone, domain removed, back to Frrata) is derived in the
+definer; triggers touch only their tenant (block 80); `last_seen` writes through a queries reader in `withTenant`; cost
+rules cover the API trees.
 
 ## Deviations (mockup element · what was built · reason · owner seen)
 | Mockup element | Built | Reason | Owner seen |
@@ -222,30 +248,42 @@ member sees View only, no Create or Revoke → phone width. Screenshots at 390 a
 | _(empty — the goal)_ | | | |
 
 ## Practices recorded in skills (same commit as each)
-- `frata-architecture` § Tenancy: three sources; § Speed: API rows. `frata-storefront-api` (new). `frata-planning`
-  § 3: Storefront API heading.
+`frata-architecture` § Tenancy (three sources) and § Speed (API rows; "a route handler under ISR never reads the
+request"; "an `unstable_cache` tag must be known before the call: tag by the input"); `frata-storefront-api` (new);
+`frata-planning` § 3 Storefront API heading; `frata-gotchas`: `after()` does not run on a background regeneration.
 
 ## Repetitive work → agents and scripts
 | Chore | Automated as |
 |---|---|
-| Is every API handler behind the door, schemas closed, no cost field? | `check:api` (script) |
-| Did a version change only additively? | `released-api.test.ts` |
-| Did a diff change the API contract (fields, enums, docs)? | `api-contract-reviewer` agent (spec § Guardrails), SA1·4 |
+| Every handler behind the door, two trees kept apart, schemas closed, no cost field | `check:api` |
+| A version changed only additively | `released-api.test.ts` |
+| ISR really caches and a revoke really purges | `scripts/verify/api-isr.mjs` |
+| A diff changes the API contract | `api-contract-reviewer` agent |
 
 ## Shared files this lane touches (parallel-lanes rule 4)
-`CLAUDE.md` (the one tenancy line), `.claude/skills/frata-architecture/SKILL.md`, `.claude/skills/frata-planning/SKILL.md`,
-new `.claude/skills/frata-storefront-api/`, new `.claude/agents/api-contract-reviewer.md`, `src/middleware.ts`,
-`src/domains/tenancy/host.ts` (+ tests), `next.config.ts` (only if `shopRewrites`' call needs the API host),
-`src/lib/db/schema.ts`, `src/lib/db/platform.ts`, `src/lib/public-env.ts`, `.env.example`, `scripts/check-tenant.mjs`,
-new `scripts/check-api.mjs`, `package.json` (`check:api` in `npm test`), `scripts/verify/tenancy.sql` (block 80),
-`src/app/(console)/console/settings/page.tsx` (one Row), `docs/decisions/0002-tenant-isolation.md` (one line).
+`CLAUDE.md` (the one tenancy line); `.claude/skills/frata-architecture/SKILL.md`, `frata-planning/SKILL.md`,
+`frata-gotchas/SKILL.md`; new `.claude/skills/frata-storefront-api/`, `.claude/agents/api-contract-reviewer.md`;
+**`src/domains/tenancy/roles.ts`** (`api.manage`, agreed with lane C); `src/lib/queries/settings.ts` (`hasOwnerIn`
+extracted); `next.config.ts` (rewrites); `src/middleware.ts` (the API branch); `src/domains/tenancy/host.ts` (+ tests);
+`src/lib/db/schema.ts`; `src/lib/db/platform.ts`; `src/lib/queries/storefront.ts`; `src/lib/storefront/refresh.ts`;
+`src/lib/db/rate-limit.ts` (`LIMITS`); `src/lib/public-env.ts`; `.env.example`; `scripts/check-tenant.mjs`,
+`scripts/check-actions.mjs`, new `scripts/check-api.mjs`; `package.json`; `scripts/verify/tenancy.sql` (block 80);
+`src/app/(console)/console/settings/page.tsx` (one row); `src/app/(console)/console/shop-actions.ts` (`openShop`
+purge); `docs/decisions/0002-*.md`, `0018-*.md` (notes); `docs/setup.md` (WAF step).
 **Migrations:** `drizzle/01xx_storefront_keys.sql`, `drizzle/01xx_storefront_keys_access.sql` (+ journal, snapshot).
-Not touched: `src/domains/tenancy/roles.ts` (`mayManageApi` lives in the API domain), the partner definers (triggers
-instead), the console layout and shell.
+**Not touched:** lane C's partner definers and `members` (partner keys stop by derivation), the console layout and shell.
 
 ## Owner questions
-1. **Scope split:** this lane builds SA0 + SA1 as catalogue reads and the Website and API screen; the cart link, the
-   shop's 307s to the site, "Your website" as a source, the starter, skill and docs, the Accept dialog's key list and
-   Admin › Storefront API become **SA1b**, planned next. Yes or no.
-2. **Test keys are drawn but can be made only before the store opens** (after opening the choice is disabled with
-   "Only before the store opens"). Yes or no.
+1. **Scope:** this lane builds SA0 + SA1 (catalogue reads and Settings › Website); the cart link, the 307s, "Your
+   website" as a source, the starter, skill and docs, the Accept dialog's key list and Frrata Admin's page are SA1b,
+   planned next. Yes or no.
+2. **Words:** the screen says **Website** for the brand's own coded site (the glossary keeps "store" for what shoppers
+   use; this needs a glossary line), and **Delete** a key rather than Revoke; key kinds read **Live** and **Test**. Yes
+   or no.
+3. **Building before a domain:** keys answer only once the shop's Website points at a connected domain, so a partner
+   can't start a site before the brand connects one. Keep that (ADR-0018 as accepted), or let **test** keys answer
+   before any domain, from localhost only (an ADR-0018 amendment)?
+4. **A partner's keys follow the partner:** removed or suspended → its keys stop; reinstated → they answer again. Yes
+   or no.
+5. **The legal date:** the banner's "From 1 Jan 2027" rests on the spec's reading of the E-Commerce Rules 2026; the
+   gazette is to be checked before SA1 ships (`integration-researcher`).
