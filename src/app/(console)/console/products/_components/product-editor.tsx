@@ -33,6 +33,7 @@ import { useNow } from '@/components/time/now'
 import { EMPTY_CELL, shopperSees, VariantGrid, type Cell } from './variant-grid'
 import { Section } from '@/components/layout/section'
 import { FoldSection } from '@/components/layout/fold-section'
+import { InfoTip } from '@/components/ui/info-tip'
 import { PageHeader } from '@/components/layout/page-header'
 import { FIELD } from '@/components/ui/field'
 import { announce } from '@/components/shell/announce'
@@ -264,7 +265,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
             <OptionsEditor options={d.options} onChange={(options) => set({ options })} error={errors.options} onRename={rename} />
             {colourOpt && colourOpt.values.length > 0 && <ColoursPanel values={colourOpt.values} colours={d.colours} onChange={(colours) => set({ colours })} photos={photos} families={families} />}
           </Section>
-          {combos.length > 0 && <Section title="Stock and prices">
+          {combos.length > 0 && <Section title={<span className="inline-flex items-center gap-1">Stock and prices<InfoTip about="stock and prices">{shop.costs ? 'Your cost is never shown to shoppers: it is how Frrata works out profit on each order. ' : ''}When it runs out applies at 0 stock: stop selling, take pre-orders, or make to order. An empty SKU is made for you when you save.</InfoTip></span>}>
             <VariantGrid options={opts} cells={d.cells} errors={errors} costs={shop.costs} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
               onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); fix(...Object.keys(patch).map((f) => `v:${k}:${f === 'leadMin' || f === 'leadMax' ? 'lead' : f}`)) }} />
           </Section>}

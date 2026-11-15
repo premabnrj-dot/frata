@@ -127,17 +127,17 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
                     <td className="w-10"><input type="checkbox" aria-label={`Select ${name(c)}`} checked={on} onChange={(e) => toggle([k], e.target.checked)} /></td>
                     <td data-cell="full" className="md:whitespace-nowrap">{name(c)}</td>
                     {which === 'price' ? <>
-                      <td data-label="Price, ₹">{input(k, 'price', `Price for ${name(c)}`, 'w-24')}</td>
-                      {ownMrp ? <td data-label="M.R.P., ₹">{input(k, 'compareAt', `M.R.P. for ${name(c)}`, 'w-24')}</td> : null}
-                      {costs ? <td data-label="Your cost, ₹">{input(k, 'cost', `Your cost for ${name(c)}`, 'w-24')}</td> : null}
-                      <td data-label="Stock">{input(k, 'stock', `Stock for ${name(c)}`, 'w-16')}</td>
+                      <td data-label="Price, ₹">{input(k, 'price', `Price for ${c.join(' ')}`, 'w-24')}</td>
+                      {ownMrp ? <td data-label="M.R.P., ₹">{input(k, 'compareAt', `M.R.P. for ${c.join(' ')}`, 'w-24')}</td> : null}
+                      {costs ? <td data-label="Your cost, ₹">{input(k, 'cost', `Your cost for ${c.join(' ')}`, 'w-24')}</td> : null}
+                      <td data-label="Stock">{input(k, 'stock', `Stock for ${c.join(' ')}`, 'w-16')}</td>
                       <td data-label="Shoppers see">
                         <ShopperChip k={k} name={name(c)} cell={cell} sees={shopperSees(cell, now)} unpriced={unpriced(cell.price)} errors={errors}
                           onChange={(patch) => onChange(k, patch)} open={chip === k} onOpenChange={(o) => setChip(o ? k : chip === k ? null : chip)} />
                       </td>
                     </> : <>
-                      <td data-label="SKU">{input(k, 'sku', `SKU for ${name(c)}`, 'w-44', autoSku(c))}</td>
-                      <td data-label="Barcode">{input(k, 'gtin', `Barcode for ${name(c)}`, 'w-40')}</td>
+                      <td data-label="SKU">{input(k, 'sku', `SKU for ${c.join(' ')}`, 'w-44', autoSku(c))}</td>
+                      <td data-label="Barcode">{input(k, 'gtin', `Barcode for ${c.join(' ')}`, 'w-40')}</td>
                     </>}
                   </tr>
                 )

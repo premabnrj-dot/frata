@@ -160,7 +160,7 @@ export default {
         const known = before.find((r) => r.cost !== null)
         assert.ok(known, 'the seed has a cost to hide')
         await s.goto(CONSOLE + '/console/products/chanderi-kurta-set')
-        await s.getByText('Sizes, colours and stock').waitFor()
+        await s.getByRole('heading', { name: /Stock and prices/ }).waitFor()
         assert.equal(await s.getByRole('columnheader', { name: 'Your cost, ₹' }).count(), 0)
         assert.ok(!(await s.content()).includes(String(Number(known.cost) / 100)), 'the cost is not anywhere in the page')
         // A staff save changes the stock and keeps every stored cost as it was.

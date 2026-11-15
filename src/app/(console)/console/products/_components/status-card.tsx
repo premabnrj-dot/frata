@@ -35,10 +35,12 @@ export function StatusCard({ productId, status, publishAt, ready, dirty, saveFir
   const toast = useToast()
   const [pending, start] = useTransition()
   const missing = ready.filter((r) => !r.ok)
-  const needsReady = pick === 'active' || pick === 'unlisted'
-  const at = pick === 'active' && later ? fromLocal(when) : null
-  const changed = status === 'archived' || pick !== status || (pick === 'active' && at !== (publishAt ? new Date(publishAt).toISOString() : null))
-  const blocked = (needsReady && missing.length > 0) || (pick === 'active' && later && !when)
+  // As drawn: a draft offers Publish while Draft is still picked; picking another state offers that change instead.
+  const to: Status | null = pick !== status ? pick : status === 'draft' ? 'active' : null
+  const needsReady = to === 'active' || to === 'unlisted'
+  const at = to === 'active' && later ? fromLocal(when) : null
+  const changed = to !== null && (to !== status || at !== (publishAt ? new Date(publishAt).toISOString() : null))
+  const blocked = (needsReady && missing.length > 0) || (to === 'active' && later && !when)
 
   const apply = (to: Status) => start(async () => {
     if (dirty) { if (!saveFirst || !(await saveFirst())) return }
@@ -46,7 +48,7 @@ export function StatusCard({ productId, status, publishAt, ready, dirty, saveFir
     if (!r.ok) { toast.error(r.error); return }
     toast.ok(to === 'active' && !at ? 'Published. Your shop shows it now.' : 'Done.'); router.refresh()
   })
-  const words = pick === 'active' ? (later ? 'Schedule' : 'Publish') : pick === 'unlisted' ? 'Make unlisted' : 'Move to draft'
+  const words = to === 'active' ? (later ? 'Schedule' : 'Publish') : to === 'unlisted' ? 'Make unlisted' : 'Move to draft'
 
   if (status === 'archived') {
     return (
@@ -59,10 +61,10 @@ export function StatusCard({ productId, status, publishAt, ready, dirty, saveFir
   return (
     <Section ariaLabel="Status">
       <Segmented label="Status" value={pick} options={CHOICES} onPick={setPick} className="flex w-full [&>button]:flex-1" />
-      {pick === 'active' ? (
+      {to === 'active' ? (
         <label className="flex min-h-11 items-center gap-2 text-sm md:min-h-6"><input type="checkbox" checked={later} onChange={(e) => setLater(e.target.checked)} />Go live later</label>
       ) : null}
-      {pick === 'active' && later ? (
+      {to === 'active' && later ? (
         <label className="flex flex-col gap-1.5 text-label font-medium">From, India time
           <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="h-11 w-full rounded-md border border-input bg-card px-2 text-sm md:h-9" />
         </label>
@@ -75,7 +77,7 @@ export function StatusCard({ productId, status, publishAt, ready, dirty, saveFir
       ) : null}
       {changed ? (
         <Button className={cn('w-full', blocked && 'opacity-45')} aria-disabled={blocked || undefined} aria-describedby={blocked && missing.length ? missingId : undefined}
-          disabled={pending || (dirty && !saveFirst)} onClick={() => { if (!blocked) apply(pick) }}>{dirty ? `Save and ${words.toLowerCase()}` : words}</Button>
+          disabled={pending || (dirty && !saveFirst)} onClick={() => { if (!blocked && to) apply(to) }}>{dirty ? `Save and ${words.toLowerCase()}` : words}</Button>
       ) : null}
     </Section>
   )
