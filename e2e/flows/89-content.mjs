@@ -60,6 +60,8 @@ export default {
       await t.step('A partner on a store with an owner reads it and can’t edit (the actions refuse too: who.ts, its unit test)', async () => {
         await partnerOn(db, KESAR, USERS.partner)
         const pia = await open('partner')
+        // Pia may build other stores (earlier flows): this step is about Kesar Studio.
+        await pia.ctx.addCookies([{ name: 'frata_tenant', value: KESAR, domain: 'localhost', path: '/' }])
         try {
           await pia.p.goto(CONSOLE + '/console/content?tab=menus')
           await pia.p.screenshot({ path: t.out('content-partner-menus') })

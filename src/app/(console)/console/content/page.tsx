@@ -62,7 +62,8 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
     .catch((err) => { console.error('[content]', err instanceof Error ? err.name : 'error'); return null })
   if (!read) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const [data, shop, offer, look, src] = read
-  if (!shop) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
+  // A store whose settings aren't made yet (a partner's new store): its content waits for them.
+  if (!shop) return <Panel title="Set up your store first" action={<a href="/console/setup" className={button({ variant: 'secondary' })}>Open setup</a>} />
   const saver = contentSaver(auth.membership.role, data.hasOwner, auth.membership.supportSessionId)
   const canSave = saver === 'yes'
   // Who can, said as a role (the console has no names): "Only the owner can edit".
