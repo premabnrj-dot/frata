@@ -50,9 +50,3 @@ export function maskEmail(email: string): string {
   if (at < 1) return email
   return `${email[0]}•••${email.slice(at)}`
 }
-
-/** The 12-hour check's warning (mockup screen 15): due within 10 minutes and not yet ended. */
-export function checkEndsSoon(confirmedAt: Date, now: Date): boolean {
-  const left = confirmedAt.getTime() + CHECK_MS - now.getTime()
-  return left > 0 && left <= WARN_BEFORE_MS
-}

@@ -5,6 +5,8 @@ import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { Segmented } from '@/components/ui/segmented'
+import { FIELD } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
 import { FingerprintIcon } from '@/components/passkeys/partner-frame'
 import { freshly, partnerPasskeys } from '@/components/passkeys/fresh'
@@ -23,11 +25,11 @@ export function ApprovePasskey({ w }: { w: Waiting }) {
   const router = useRouter()
   const toast = useToast()
   const [open, setOpen] = useState(false)
-  const [started, setStarted] = useState<boolean | null>(null)
+  const [started, setStarted] = useState<'yes' | 'no' | ''>('')
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const reset = () => { setStarted(null); setCode(''); setError(null) }
+  const reset = () => { setStarted(''); setCode(''); setError(null) }
   const approve = async () => {
     setBusy(true); setError(null)
     const r = await freshly(() => partnerPasskeys.call('approve', { memberId: w.memberId, code }))
@@ -48,40 +50,34 @@ export function ApprovePasskey({ w }: { w: Waiting }) {
       <Button size="sm" onClick={() => { reset(); setOpen(true) }}>Approve {w.name}</Button>
       <Dialog open={open} onClose={() => setOpen(false)} title="Approve a passkey" error={error}
         description={<Badge tone="warn">Waiting</Badge>}
-        actions={started === false
+        actions={started === 'no'
           ? <>
               <Button variant="secondary" data-autofocus busy={busy} onClick={decline}>Decline request</Button>
               <Button disabled reason="You didn’t start the call">Approve {w.name}</Button>
             </>
           : <>
               <Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Not now</Button>
-              <Button busy={busy} disabled={started !== true || !/^\d{6}$/.test(code)} onClick={approve}><FingerprintIcon />Approve {w.name}</Button>
+              <Button busy={busy} reason={started !== 'yes' ? 'Answer the question first' : !/^\d{6}$/.test(code) ? 'Type the 6-digit code' : undefined} onClick={approve}><FingerprintIcon />Approve {w.name}</Button>
             </>}>
         <div className="grid gap-3 text-sm">
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3.5 gap-y-1">
-            <dt className="text-muted-foreground">Who</dt><dd className="font-medium">{w.name} · <span className="font-num">{w.email}</span></dd>
+            <dt className="text-muted-foreground">Who</dt><dd className="font-medium">{w.name} · {w.email}</dd>
             {w.device && <><dt className="text-muted-foreground">Device</dt><dd>{w.device}</dd></>}
             {w.city && <><dt className="text-muted-foreground">Where</dt><dd>{w.city}</dd></>}
             <dt className="text-muted-foreground">Asked</dt><dd>{asked}</dd>
           </dl>
-          <fieldset className="grid gap-2 rounded-lg border border-border px-3 py-2.5">
-            <legend className="sr-only">Did you start this call yourself?</legend>
+          <div className="grid gap-2 rounded-mid border border-border px-3 py-2.5">
             <span aria-hidden="true">Did you start this call yourself?</span>
-            <div role="radiogroup" aria-label="Did you start this call yourself?" className="inline-flex w-fit rounded-md bg-muted p-0.5">
-              {([['Yes', true], ['No', false]] as const).map(([label, v]) => (
-                <button key={label} type="button" role="radio" aria-checked={started === v} onClick={() => { setStarted(v); setError(null) }}
-                  className="min-h-[30px] rounded-[6px] px-3 text-sm aria-checked:bg-card aria-checked:shadow-sm">{label}</button>
-              ))}
-            </div>
-          </fieldset>
-          {started === false
-            ? <p className="rounded-lg bg-warn px-3 py-2.5 font-medium text-warn-text">Hang up and call {w.name} on a number you know.</p>
+            <Segmented<'yes' | 'no' | ''> label="Did you start this call yourself?" value={started} options={[['yes', 'Yes'], ['no', 'No']]} onPick={(v) => { setStarted(v); setError(null) }} className="w-fit" />
+          </div>
+          {started === 'no'
+            ? <p role="status" className="rounded-mid bg-warn px-3 py-2.5 font-medium text-warn-text">Hang up and call {w.name} on a number you know.</p>
             : (
               <div className="grid gap-1.5">
                 <label htmlFor={`code-${w.memberId}`} className="font-medium">Code {w.name} reads out</label>
-                <input id={`code-${w.memberId}`} inputMode="numeric" autoComplete="off" maxLength={6} value={code}
+                <input id={`code-${w.memberId}`} inputMode="numeric" autoComplete="off" value={code}
                   onChange={(e) => { setCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(null) }}
-                  className="h-11 w-full rounded-md border border-input bg-card px-3 text-center font-mono text-[1.375rem] tracking-[0.32em]" />
+                  className={`${FIELD} text-center font-mono text-title tracking-widest`} />
               </div>
             )}
         </div>

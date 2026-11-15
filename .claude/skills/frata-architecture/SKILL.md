@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.55.0
+  version: 2.56.0
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -105,7 +105,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 
 ## Auth
 
-- Supabase auth only (magic link, `src/app/login/`). Data never goes through
+- Supabase auth only (an email code, and a link that opens `/auth/confirm`, which signs in only when the person presses
+  Sign in: an email scanner that follows it uses nothing; `src/app/login/`, `/partner/sign-in`). Data never goes through
   supabase-js or PostgREST; `anon`/`authenticated` hold no table grants.
 - `getUser()` (or, in the middleware's redirect only, `getClaims()`, which verifies the JWT), never
   `getSession()` (`check:layers`). The member and staff checks always ask `getUser()`.
@@ -130,7 +131,10 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   invite, store changes, approving and deleting need a check in the last 5 minutes (the browser retries through
   `freshly`). Cookie `__Host-frrata_partner`. A page keeps the Permissions-Policy it loaded with: passkeys are allowed on
   `/partner`, `/join` and `/auth/confirm` only, so a link from the console or `/login` into the workspace is a full page
-  load (`<a>`, `window.location`), never a client navigation.
+  load (`<a>`, `window.location`), never a client navigation. Signed out on `/partner/*` or `/join`, the session
+  middleware sends people to `/partner/sign-in` (with `next`, and `out=1` when a dead session cookie was there), the one
+  partner page open without a session (`PARTNER_PUBLIC` in check:actions). `signOutAction` takes `to=partner` to land
+  there. An owner who ever had a passkey waits 24 hours to recover one, even after Admin deleted them all.
 - **Secrets only in Production** (previews off production, 2026-11-12): every secret in `src/lib/env.ts` is read through
   `secret()` (`src/domains/infra/stage.ts`): on Vercel, Production only; off Vercel, as given. `check:config` fails an
   unwrapped read. Sign-in is off in the browser on a preview.
@@ -151,8 +155,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   upload, so a new section decides who edits it on purpose.
 - **Partners** (`docs/specs/2026-11-07-partner-foundations.md`): a partner is a
   member with role `partner`, never a cross-tenant role. Their workspace reads
-  only Frata's own facts about their stores, through uid-keyed definer
-  functions in `src/lib/db/partners.ts` (drizzle/0023). `requirePartner()` is the
+  only Frata's own facts about their stores, through definer functions in
+  `src/lib/db/partners.ts` that take the `PartnerOk` as a `Caller` (user, session, step-up; T1b). `requirePartner()` is the
   workspace's first line (`check:actions`). `partners` has no frata_app grant.
   The attribution is `partner_links.created_at`, written once; the share's
   window starts at `share_starts_at` (first opening, a trigger) and terms are
@@ -168,7 +172,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   (`members.partner_member_id`, CHECK `(role = 'partner') = (partner_member_id is not null)`); only definers write those rows
   (`app_partner_*`, `app_remove_partner`, the handover ones, `admin_end_partner` / `admin_reinstate_partner`), and `app_access_for` counts one only while the member, the partner (approved, not
   suspended) and the link are live (`app_pm_live`). Who may do what: `PARTNER_CAN` in `src/domains/partners/team.ts` decides what
-  a page offers (Team, Your details, the hand-over banner: owner only), the definers are the lock (owner-only team, owner-only handover until T1b passkeys; a colleague never accepts a
+  a page offers (Team, Your details, Hand over in Clients: owner only), the definers are the lock (owner-only team and handover, with a passkey check in the last 5 minutes; a colleague never accepts a
   handover). Invites are claimed by the invited, confirmed email on `/join` (no token); 7 days; ≤ 50 people;
   20 invites an hour. Admin suspends with `admin_end_partner` (deletes every partner person's shop rows, audits, tells
   each shop) and reinstates from assignments (tells each shop again). While paused, `app_shop_people` lists the partner

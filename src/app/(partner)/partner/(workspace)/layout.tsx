@@ -11,6 +11,7 @@ import { requirePartner } from '@/lib/auth/require-partner'
 import { accessOf } from '@/lib/auth/session'
 import { ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
 import { Toaster } from '@/components/ui/toast'
+import { Submit } from '@/components/ui/submit'
 import { PartnerFrame } from '@/components/passkeys/partner-frame'
 import { PartnerGate } from '@/components/passkeys/partner-gate'
 import { CheckTimer } from '@/components/passkeys/check-timer'
@@ -30,13 +31,13 @@ export const metadata: Metadata = { title: { template: '%s · Frrata Partners', 
  */
 export default async function PartnerLayout({ children }: { children: React.ReactNode }) {
   const auth = await requirePartner()
-  const signOut = <form action={signOutAction}><input type="hidden" name="to" value="partner" /><button type="submit" className="text-sm text-muted-foreground underline underline-offset-4">Sign out</button></form>
+  const signOut = <form action={signOutAction}><input type="hidden" name="to" value="partner" /><Submit variant="link">Sign out</Submit></form>
   // Partner passkeys (T1b): no page renders until this browser session has passed the check.
   if (!auth.ok && auth.reason === 'needs_passkey') {
     const state = await gateState(auth.identity).catch(() => 'error' as const)
     if (state === 'error') return <main data-shell data-neel="" className="p-6"><Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel></main>
     const p = auth.identity.partner
-    return <Toaster calm><PartnerFrame><PartnerGate state={state} ownerName={(p.name || p.businessName).split(' ')[0] || 'your owner'} phone={maskPhone(p.phone)} signOut={signOut} /></PartnerFrame></Toaster>
+    return <Toaster calm><PartnerFrame><PartnerGate state={state} ownerName={(p.name || p.businessName).split(' ')[0] || 'your partner owner'} phone={maskPhone(p.phone)} signOut={signOut} /></PartnerFrame></Toaster>
   }
   // Signed out (mockup screen 16): back to the same page after signing in again.
   if (!auth.ok && auth.reason === 'signed_out') {
@@ -44,7 +45,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
     const hadSession = (await cookies()).getAll().some((c) => c.name.startsWith('sb-') && c.name.includes('auth-token'))
     return (
       <PartnerFrame>
-        <h1 className="font-display text-[1.375rem] font-semibold leading-7">{hadSession ? 'You’ve been signed out' : 'Sign in'}</h1>
+        <h1 className="font-display text-title font-semibold">{hadSession ? 'You’ve been signed out' : 'Sign in'}</h1>
         {back !== '/partner' && <p className="text-sm text-muted-foreground">Back to {returnLabel(back)}</p>}
         <Link href={`/partner/sign-in?next=${encodeURIComponent(back)}`} className={button({ size: 'lg' })}>{hadSession ? 'Sign in again' : 'Sign in'}</Link>
       </PartnerFrame>
@@ -75,7 +76,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   return (
     <AppShell rail={railFrom((await cookies()).get('rail')?.value)} title={name} tag="PARTNER" navLabel="Partner" groups={[{ label: '', items }]} tabs={items} more={[]} foot={[]}
       email={auth.email} places={places} signOutTo="partner">
-      <CheckTimer confirmedAt={auth.confirmedAt.toISOString()} />
+      <CheckTimer confirmedAt={auth.confirmedAt.toISOString()} signOut={<form action={signOutAction}><input type="hidden" name="to" value="partner" /><Submit variant="secondary">Sign out</Submit></form>} />
       {children}
     </AppShell>
   )

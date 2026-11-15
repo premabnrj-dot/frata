@@ -19,11 +19,11 @@ export type OwnerPasskeys = {
 } | null
 
 const SAYS: Record<string, string> = {
-  not_admin: 'Only an admin can do that.',
+  not_admin: 'Only a Frrata admin can do that.',
   confirm_first: 'Confirm with your passkey first.',
   no_person: 'This partner has no owner to approve.',
-  own_request: 'Another admin must approve your own request.',
-  bad_code: 'That code doesn’t match an open request, or its 24 hours aren’t over.',
+  own_request: 'Another Frrata admin must approve your request.',
+  bad_code: 'That code doesn’t match. Check it, or wait until the request opens.',
   too_many: 'Too many tries. Wait 10 minutes and try again.',
 }
 const fail = (err: unknown, what: string) => {

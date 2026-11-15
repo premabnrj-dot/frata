@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkEndsSoon, cityLabel, deviceLabel, maskEmail, partnerReturnPath, returnLabel } from '../passkeys'
+import { cityLabel, deviceLabel, maskEmail, partnerReturnPath, returnLabel } from '../passkeys'
 import { passkeyProvider } from '@/domains/auth/passkey-providers'
 
 describe('partner sign-in rules (T1b)', () => {
@@ -32,12 +32,6 @@ describe('partner sign-in rules (T1b)', () => {
   it('masks an email to its first letter and domain', () => {
     expect(maskEmail('pia@pixelthread.in')).toBe('p•••@pixelthread.in')
     expect(maskEmail('nope')).toBe('nope')
-  })
-  it('warns in the last 10 minutes of a 12-hour check, not before or after', () => {
-    const at = new Date('2026-11-15T00:00:00Z')
-    expect(checkEndsSoon(at, new Date('2026-11-15T11:49:00Z'))).toBe(false)
-    expect(checkEndsSoon(at, new Date('2026-11-15T11:51:00Z'))).toBe(true)
-    expect(checkEndsSoon(at, new Date('2026-11-15T12:00:01Z'))).toBe(false)
   })
   it('names a passkey by its password manager, else nothing', () => {
     expect(passkeyProvider('EA9B8D66-4D01-1D21-3CE4-B6B48CB575D4')).toBe('Google Password Manager')

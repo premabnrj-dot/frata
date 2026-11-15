@@ -20,7 +20,7 @@ export default async function ConfirmLinkPage({ searchParams }: { searchParams: 
         <form action={confirmLinkAction} className="grid w-full max-w-sm gap-4 rounded-md border border-border bg-card p-6">
           <input type="hidden" name="token" value={token_hash} />
           <input type="hidden" name="type" value={type} />
-          <h1 className="font-display text-[1.375rem] font-semibold leading-7">Sign in on this device?</h1>
+          <h1 className="font-display text-title font-semibold">Sign in on this device?</h1>
           <Submit size="lg">Sign in</Submit>
           <p className="text-sm text-muted-foreground">Started on another device? Type the code there.</p>
         </form>

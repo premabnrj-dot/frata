@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { sendSignInLink } from '@/lib/auth/send-link'
 import { sendHandover } from '@/lib/db/partners'
+import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { partnerCan } from '@/domains/partners/team'
 import { CONFIRM_AGAIN, CONFIRM_FIRST } from '@/domains/partners/passkeys'
 
@@ -14,10 +15,10 @@ import { CONFIRM_AGAIN, CONFIRM_FIRST } from '@/domains/partners/passkeys'
 // accepted. The browser confirms the passkey first; the owner-to-be gets the usual sign-in email and accepts at /handover.
 
 const SENTENCES: Record<string, string> = {
-  not_partner: 'Only the partner’s owner can hand this store over.',
+  not_partner: 'Only the partner owner can hand this store over.',
   has_owner: 'This store already has its owner.',
-  bad_email: 'That does not look like an email address.',
-  member_email: 'Use the brand owner’s email, not one already on this store.',
+  bad_email: 'Enter an email like riya@kesarstudio.in.',
+  member_email: 'This email is already on the store. Use the owner’s email.',
   confirm_again: CONFIRM_AGAIN,
   confirm_first: CONFIRM_FIRST,
 }
@@ -28,7 +29,9 @@ export async function handOverAction(input: { tenantId: string; email: string })
   if (!auth.ok) return { ok: false, error: auth.message }
   if (!partnerCan(auth.partner.memberRole, 'handOver')) return { ok: false, error: SENTENCES.not_partner! }
   const p = Input.safeParse({ tenantId: input?.tenantId, email: String(input?.email ?? '').trim().toLowerCase() })
-  if (!p.success) return p.error.issues.some((i) => i.path[0] === 'email') ? { ok: false, error: SENTENCES.bad_email!, field: 'email' } : { ok: false, error: SENTENCES.not_partner! }
+  if (!p.success) return p.error.issues.some((i) => i.path[0] === 'email') ? { ok: false, error: SENTENCES.bad_email!, field: 'email' } : { ok: false, error: 'We could not send the invite. Nothing was changed.' }
+  // Each hand over emails an address: the team-invite hourly limit, per partner person, failing closed (security L2).
+  if (!(await withinLimit(LIMITS.partnerInvite, auth.partner.memberId, new Date(), true))) return { ok: false, error: 'Too many invites this hour. Try again later.' }
   const r = await sendHandover(auth, p.data.tenantId, p.data.email)
   if (!r.ok) return { ok: false, error: SENTENCES[r.error] ?? 'We could not send the invite. Nothing was changed.', ...(r.error === 'member_email' || r.error === 'bad_email' ? { field: 'email' as const } : {}) }
   // The invite stands without the email: the owner sees the store whenever they sign in with this address.

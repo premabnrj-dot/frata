@@ -5,7 +5,7 @@ import { Submit } from '@/components/ui/submit'
 import { PARTNER_ROLE_LABEL, type PartnerRole } from '@/domains/partners/team'
 import { requireUser } from '@/lib/auth/require-user'
 import { myPartnerInvites } from '@/lib/db/partners'
-import { dayIN } from '@/lib/format-date'
+import { dayMonthIN } from '@/lib/format-date'
 import { signOutAction } from '@/app/(admin)/admin/sign-out/actions'
 import Link from 'next/link'
 import { button } from '@/components/ui/button'
@@ -20,15 +20,15 @@ export const dynamic = 'force-dynamic'
  */
 export default async function JoinPage() {
   const auth = await requireUser()
-  if (!auth.ok) return <PartnerFrame><h1 className="font-display text-[1.375rem] font-semibold leading-7">Sign in to see your invite</h1><Link href="/partner/sign-in" className={button({ size: 'lg' })}>Sign in</Link></PartnerFrame>
+  if (!auth.ok) return <PartnerFrame><h1 className="font-display text-title font-semibold">Sign in to see your invite</h1><Link href="/partner/sign-in" className={button({ size: 'lg' })}>Sign in</Link></PartnerFrame>
   const invites = await myPartnerInvites(auth.userId).catch(() => null)
   if (!invites) return <PartnerFrame><Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel></PartnerFrame>
   if (!invites.length) {
     // Screen 12: signed in with another address than the invite's (the invite is found by this person's email).
     return (
       <PartnerFrame>
-        <h1 className="font-display text-[1.375rem] font-semibold leading-7">No invite for this email</h1>
-        <p className="text-sm text-muted-foreground">You’re signed in as <span className="font-num">{auth.email}</span></p>
+        <h1 className="font-display text-title font-semibold">No invite for this email</h1>
+        <p className="text-sm text-muted-foreground">You’re signed in as {auth.email}</p>
         <form action={signOutAction}><input type="hidden" name="to" value="partner" /><Submit size="lg" className="w-full">Switch account</Submit></form>
       </PartnerFrame>
     )
@@ -37,9 +37,9 @@ export default async function JoinPage() {
   return (
     <PartnerFrame>
       <JoinSteps at={1} />
-      <h1 className="font-display text-[1.375rem] font-semibold leading-7">Join {i.partnerName}</h1>
+      <h1 className="font-display text-title font-semibold">Join {i.partnerName}</h1>
       <p className="text-sm text-muted-foreground">
-        {i.invitedBy ? <><span className="font-num">{i.invitedBy}</span> invited you as {PARTNER_ROLE_LABEL[i.role as PartnerRole] ?? i.role}</> : <>Invited as {PARTNER_ROLE_LABEL[i.role as PartnerRole] ?? i.role}</>}
+        {i.invitedBy ? <>{i.invitedBy} invited you as {PARTNER_ROLE_LABEL[i.role as PartnerRole] ?? i.role}</> : <>Invited as {PARTNER_ROLE_LABEL[i.role as PartnerRole] ?? i.role}</>}
         {i.stores.length > 0 && <><br />Clients: {i.stores.join(', ')}</>}
       </p>
       <ActionForm action={acceptTeamInviteAction} className="grid gap-4">
@@ -50,7 +50,7 @@ export default async function JoinPage() {
         </div>
         <Submit size="lg">Accept invite</Submit>
       </ActionForm>
-      <p className="text-sm text-muted-foreground">Invite ends <span className="font-num">{dayIN(i.expiresAt)}</span></p>
+      <p className="text-sm text-muted-foreground">Invite ends {dayMonthIN(i.expiresAt)}</p>
     </PartnerFrame>
   )
 }

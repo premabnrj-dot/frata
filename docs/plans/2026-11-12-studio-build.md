@@ -23,7 +23,7 @@ it are real work a partner uses today.
 
 ## T1a · Teams: Owner and Leads
 As built: migrations 0123 (tables) and 0124 (access), proof §77, e2e `80-partner-team`. Review changes folded in before
-code: handover stays owner-only until T1b; suspend deletes partner people's shop rows and reinstate rebuilds them from
+code: handover is owner-only (with a passkey check from T1b); suspend deletes partner people's shop rows and reinstate rebuilds them from
 assignments; the applicant is the owner member from apply; 7-day invites, ≤ 50 people, 20 invites an hour; a
 colleague never accepts a handover; create-shop locks per partner.
 Spec: intake-and-team § Partner teams (reviews folded in). Builders wait for T1c; passkeys for T1b.
@@ -97,7 +97,7 @@ Spec: intake-and-team § Partner teams (reviews folded in). Builders wait for T1
   `40-partners`, `75-staff-passkeys`.
 
 ## T1b · Partner passkeys
-Status: planned (owner, 2026-11-12: "go ahead, mockup approved"; Studio mockup v2.4 Team: "Passkey for everyone",
+Status: built on branch `claude/amazing-wright-7irwn3` (2026-11-15; the partner sign-in mockup approved 2026-11-15, `docs/specs/2026-11-15-partner-login.md`, deviations listed there); planned (owner, 2026-11-12: "go ahead, mockup approved"; Studio mockup v2.4 Team: "Passkey for everyone",
 "Again on publish", "Adds a passkey before seeing any brand"). Spec: intake-and-team § Sign-in and invites. Pattern:
 staff passkeys (docs/specs/2026-11-12-staff-passkeys.md, ADR-0007 amended), the same rules for a partner's people.
 
@@ -119,7 +119,7 @@ staff passkeys (docs/specs/2026-11-12-staff-passkeys.md, ADR-0007 amended), the 
 5. **Emails** (SES, the staff security-email pipe): a passkey added or removed, and a request approved, email the
    person and the partner's owner.
 
-### Data (migration 0125 generated + 0126 custom)
+### Data (migration 0127 generated + 0128 custom; as built: one 4-argument `app_access_for`, the 3-argument one dropped; requests carry `declined_at`, `device`, `city`; `app_partner_pk_decline`)
 - `partner_passkeys (id, partner_member_id → partner_members on delete cascade, user_id, credential_id unique,
   public_key, counter, transports, name 1–40, created_at, last_used_at)`; `partner_passkey_requests (id,
   partner_member_id → cascade, user_id, session_id, code_hash, created_at, expires_at, approved_by, approved_kind ∈
@@ -259,18 +259,17 @@ staff passkeys (docs/specs/2026-11-12-staff-passkeys.md, ADR-0007 amended), the 
     re-enrol when the console host moves, as staff do.
 
 ### Tasks (T1b)
-**Progress (2026-11-12, paused by the owner at a safe point):** task 1 done on branch `claude/amazing-wright-7irwn3`,
-not on main (`src/lib/auth/webauthn.ts`, `src/components/passkeys/`; Admin runs on them; `npm test`, typecheck and
-flow 75 green). Resume at task 2 (migrations 0125/0126; re-check main's newest migration number first). Nothing of
-T1b is applied to production.
+**Progress (2026-11-15):** tasks 1–4 done on branch `claude/amazing-wright-7irwn3` (migrations 0127/0128, proof § 79,
+the screens as drawn in the partner sign-in mockup, flows 40, 71, 75, 80 green, reviews folded in). Task 5 (production)
+is next.
 1. Shared WebAuthn module and gate component; Admin on them (flow 75 green before and after). Commit.
-2. Migration 0125 (tables, generated) + 0126 (custom: access, definers, rewritten partner definers, hand over,
+2. Migration 0127 (tables, generated) + 0128 (custom: access, definers, rewritten partner definers, hand over,
    emails), proof § 78 and § 77 helper, `check:tenant` rules. `verify:tenancy`.
 3. Partner side: cookie, `session.ts`, `requireMember`/`requirePartner`, route, gate, Team (approve, remove passkeys),
    `/partner/passkeys`, Clients hand over, console and `/start` panels, sign-out, headers. Admin › Partners approve and
    remove. Emails' words.
 4. e2e helpers and flows 40, 75, 80; unit tests. `impact-reviewer` and `security-reviewer` on the diff.
-5. Apply 0125/0126 to production and push at once; an admin approves the live owner's code.
+5. Apply 0127/0128 to production and push at once; an admin approves the live owner's code.
 
 ### Regression net and verify
 Before: flows 40, 75, 80 and `verify:tenancy` green on main. Each task: `npm test`, `npm run typecheck`,

@@ -1,5 +1,6 @@
 import 'server-only'
 import { passkeyCookieName, passkeyCookieSecure } from './webauthn'
+import { CHECK_MS } from '@/domains/partners/passkeys'
 
 // =============================================================================
 // FILE: src/lib/auth/partner-cookie.ts — the partner person's passkey step-up cookie (T1b): `__Host-frrata_partner`
@@ -8,6 +9,5 @@ import { passkeyCookieName, passkeyCookieSecure } from './webauthn'
 // =============================================================================
 
 export const partnerCookieName = () => passkeyCookieName('frrata_partner')
-export const partnerCookieSecure = passkeyCookieSecure
 /** Set on a passed check: 12 hours, the database's own expiry for the step-up. Cleared with the same flags. */
-export const partnerCookieOptions = (maxAge = 12 * 3600) => ({ httpOnly: true, secure: partnerCookieSecure(), sameSite: 'strict' as const, path: '/', maxAge })
+export const partnerCookieOptions = (maxAge = CHECK_MS / 1000) => ({ httpOnly: true, secure: passkeyCookieSecure(), sameSite: 'strict' as const, path: '/', maxAge })

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Banner } from '@/components/ui/banner'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { CHECK_MS, WARN_BEFORE_MS } from '@/domains/partners/passkeys'
@@ -17,11 +18,15 @@ import { passkeyClient } from './passkey-client'
 
 const { confirmPasskey } = passkeyClient('/partner/passkey')
 
-export function CheckTimer({ confirmedAt }: { confirmedAt: string }) {
+/** `signOut`: the dialog's other way out once the check has ended (a server form from the layout). */
+export function CheckTimer({ confirmedAt, signOut }: { confirmedAt: string; signOut: React.ReactNode }) {
   const router = useRouter()
   const toast = useToast()
   const [left, setLeft] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  // The minutes said once, when the line appears: a status line that changes every minute is read out every minute.
+  const [warnedAt, setWarnedAt] = useState<number | null>(null)
   useEffect(() => {
     const ends = new Date(confirmedAt).getTime() + CHECK_MS
     const read = () => setLeft(ends - Date.now()) // clock-ok: a timer, after mount
@@ -30,25 +35,22 @@ export function CheckTimer({ confirmedAt }: { confirmedAt: string }) {
     return () => clearInterval(t)
   }, [confirmedAt])
   const confirm = async () => {
-    setBusy(true); toast.dismiss()
+    setBusy(true); toast.dismiss(); setError(null)
     const r = await confirmPasskey()
     setBusy(false)
-    if (!r.ok) return toast.error(r.error)
-    router.refresh()
+    if (!r.ok) { if (left !== null && left <= 0) setError(r.error); else toast.error(r.error); return }
+    setWarnedAt(null); router.refresh()
   }
+  useEffect(() => { if (left !== null && left > 0 && left <= WARN_BEFORE_MS && warnedAt === null) setWarnedAt(Math.max(1, Math.ceil(left / 60_000))) }, [left, warnedAt])
   if (left === null || left > WARN_BEFORE_MS) return null
-  const minutes = Math.max(1, Math.ceil(left / 60_000))
   return (
     <>
-      {left > 0 && (
-        <div role="status" className="flex flex-wrap items-center gap-3 border-b border-border bg-warn px-4 py-2 text-sm font-medium text-warn-text md:px-5">
-          <span>Confirm it’s you in {minutes} min</span>
-          <span className="flex-1" />
-          <Button size="sm" variant="secondary" busy={busy} onClick={confirm}>Use passkey</Button>
-        </div>
+      {left > 0 && warnedAt !== null && (
+        <Banner tone="warn" className="mb-3" title={`Confirm it’s you in ${warnedAt} min`}
+          action={<Button size="sm" variant="secondary" busy={busy} onClick={confirm}>Use passkey</Button>} />
       )}
-      <Dialog open={left <= 0} onClose={() => {}} title="Confirm it’s you"
-        actions={<Button busy={busy} onClick={confirm}>Use passkey</Button>} />
+      <Dialog open={left <= 0} onClose={() => {}} title="Confirm it’s you" error={error}
+        actions={<>{signOut}<Button data-autofocus busy={busy} onClick={confirm}>Use passkey</Button></>} />
     </>
   )
 }

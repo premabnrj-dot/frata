@@ -30,8 +30,11 @@ export async function sendStaffNotices(limit = 20): Promise<number> {
     const w = staffSecurityWords({ kind: r.kind, about: r.about, by: r.by_email, detail: r.detail })
     const partner = isPartnerNotice(r.kind)
     const mail = frrataEmail({ preview: w.subject, heading: w.subject, message: w.body,
-      button: partner ? { label: 'Open your passkeys', href: `https://${CONSOLE_HOST}/partner/passkeys` } : { label: 'Open Admin › Staff', href: `https://${CONSOLE_HOST}/admin/staff` },
-      footer: partner ? 'Security emails about a partner’s sign-in reach the person and the partner’s owner. Not expected? Tell your owner or Frrata now.'
+      // An owner's request goes to Frrata's admins too (they make the call): its button opens Admin › Partners.
+      button: r.kind === 'partner_request_made' ? { label: 'Open Admin › Partners', href: `https://${CONSOLE_HOST}/admin/partners?view=approved` }
+        : partner ? { label: 'Open the partner workspace', href: `https://${CONSOLE_HOST}/partner` } : { label: 'Open Admin › Staff', href: `https://${CONSOLE_HOST}/admin/staff` },
+      footer: r.kind === 'partner_request_made' ? 'Sent to the partner owner and every Frrata admin. Not expected? Tell Frrata now.'
+        : partner ? 'Sent to you and your partner owner. Not expected? Tell them or Frrata now.'
         : 'Security emails about Frrata staff always reach every admin. Not expected? Check Admin › Staff now.' })
     const s = await sendEmail({ from: EMAIL_NOTICES_FROM, to: r.to_email, replyTo: null, subject: w.subject.slice(0, 150), html: mail.html, text: mail.text,
       configurationSet: SES_CONFIG_NOTICES, tenant: 'frrata', messageId: randomUUID(), tenantTag: partner ? 'partner' : 'staff' }, new Date())

@@ -54,6 +54,18 @@ who knows them, without a password and without a way round it.
 | 10, 17, 22 | The passkey icon on Approve, Hand over, Delete | The passkey is asked for when the last check is older than 5 minutes | The database's rule (5 minutes); asking every time added a prompt with no gain |
 | 20 | "Invite ended" with "Invite again" | "Invite ended" with Withdraw | An ended invite can't be sent again until it's withdrawn (one row per address) |
 | — | (not drawn) | "Pia declined the request" + "Get a new code" on the Lead's gate | The state after Decline (screen 10) needs a screen |
+| all | A dashed haldi stripe under the stage | The brand's woven edge (`Selvedge`, as on /login) | The mockup's stripe stood for the selvedge; the real one is the brand's single block-print element |
+| 2 | "Resend in 0:24" (30 s) | "Resend in 1:00" (60 s) | Supabase refuses a second email to one address within a minute |
+| 3 | The email's big code and "Sign in on this device" | The sign-in email's own layout and words ("Sign in") | One template for every sign-in (row above) |
+| 6 | "Pia invited you as Lead" | "pia@pixelthread.in invited you as Lead" | The invite records the inviter's email, not a name |
+| 10 | The card inline on Team, Yes pre-chosen, Not now left | A dialog from "Approve Arjun" on the row; neither answer chosen; the dialog's button order | A default answer would let the approver skip the one question that stops a social-engineering call; the dialog is the house pattern |
+| 14 | "on this laptop" | "on this device" | The app can't tell a laptop from a phone |
+| 15 | A full-width "Use passkey" | The dialog's button, with "Sign out" beside it | The Dialog primitive; a way out when no passkey is to hand |
+| 18 | Title and Add inside one card | The page header carries "Passkeys" and "Add a passkey"; the backup line below the list | The workspace's page pattern (PageHeader) |
+| 20 | "Delete passkeys" on one "lost phone" row | On every Lead with a passkey | Frrata can't know which phone is lost; the owner chooses |
+| 20 | Team rows only | Also the T1a controls (stores, Remove/Withdraw, Invite, the owner's own row) | Approved in the Studio mockup's Team (T1a) and still needed |
+| all gates | — | "Sign out" under each gate screen | A shared device must be able to leave the gate |
+| 24 | Dates without a year | Dates without a year on Join; with it on the owner's 24-hour line | The opening time can cross a year |
 
 ## Changes this needs in T1b's database layer (before 0128 reaches production)
 1. **Decline:** `app_partner_pk_decline(uid, session, stepup, member)`: the owner ends a member's open request; the

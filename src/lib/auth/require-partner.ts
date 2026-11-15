@@ -3,6 +3,7 @@ import { cache } from 'react'
 import { requireUser } from './require-user'
 import { accessOf, partnerProof, sessionIdOf } from './session'
 import { myPartner, type MyPartner } from '@/lib/db/partners'
+import { FRESH_MS } from './require-staff'
 
 // =============================================================================
 // FILE: src/lib/auth/require-partner.ts — THE FIRST LINE OF EVERY /partner PAGE
@@ -33,7 +34,7 @@ export type PartnerResult = PartnerOk
   | { ok: false; reason: 'not_configured' | 'signed_out' | 'not_partner' | 'in_review' | 'suspended'; message: string }
   | { ok: false; reason: 'needs_passkey'; message: string; identity: PartnerIdentity }
 
-export const FRESH_MS = 5 * 60_000
+/** Within the last 5 minutes (the staff rule's FRESH_MS, one number): hand over, invite, approve, delete. */
 export const confirmedRecently = (p: PartnerOk, now = Date.now()) => now - p.confirmedAt.getTime() < FRESH_MS
 
 export const requirePartner = cache(async (): Promise<PartnerResult> => {

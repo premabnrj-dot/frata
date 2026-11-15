@@ -6,7 +6,7 @@ import { db } from './index'
 import { confirmedRecently, type PartnerIdentity, type PartnerOk } from '@/lib/auth/require-partner'
 import { tokenHash } from '@/lib/auth/staff-cookie'
 import { enrolCodeHash, passkeyCeremony, type PasskeySite, type PasskeyStore, type Result, type StoredKey, type Who } from '@/lib/auth/webauthn'
-import type { GateState } from '@/components/passkeys/types'
+import type { PartnerGate } from '@/domains/auth/gate-state'
 import { CONFIRM_AGAIN, CONFIRM_FIRST } from '@/domains/partners/passkeys'
 import { passkeyProvider } from '@/domains/auth/passkey-providers'
 
@@ -18,7 +18,7 @@ import { passkeyProvider } from '@/domains/auth/passkey-providers'
 // =============================================================================
 
 export type { Result }
-export type PartnerGate = GateState & { role: 'owner' | 'lead'; request: (GateState['request'] & { declined?: boolean }) | null }
+export type { PartnerGate }
 
 const SAYS: Record<string, string> = {
   too_many: 'Too many tries. Wait 10 minutes and try again.',
@@ -28,16 +28,16 @@ const SAYS: Record<string, string> = {
   replay: 'Not confirmed. Try again, or use your other passkey.',
   duplicate: 'This passkey is already added.',
   too_many_passkeys: 'You have 10 passkeys. Delete one first.',
-  bad_name: 'Give the passkey a name of 1 to 40 letters or numbers.',
-  not_owner: 'Only the partner’s owner can do that.',
-  not_partner: 'This email is not in a partner’s team any more.',
+  bad_name: 'Not added. Try again.',
+  not_owner: 'Only the partner owner can do that.',
+  not_partner: 'You’re no longer on a partner team. Ask the partner owner.',
   confirm_first: CONFIRM_FIRST,
   confirm_again: CONFIRM_AGAIN,
   own_request: 'Someone else must approve your request.',
-  bad_code: 'That code doesn’t match an open request.',
-  no_person: 'That person isn’t in your team any more. Refresh and try again.',
+  bad_code: 'That code doesn’t match. Ask them to read it again.',
+  no_person: 'That person left your team. Refresh the page.',
   no_request: 'That request has ended. Ask them for a new code.',
-  in_use: 'You signed in with this passkey. Use your other passkey, then delete it.',
+  in_use: 'Sign in with another passkey to delete this one.',
   not_found: 'That passkey is already gone.',
 }
 const one = async <T>(q: ReturnType<typeof sql>): Promise<T> => (await db().execute<{ r: T }>(q))[0]!.r

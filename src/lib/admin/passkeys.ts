@@ -6,7 +6,7 @@ import { adminDb } from '@/lib/db/admin'
 import { confirmedRecently, type StaffIdentity, type StaffOk } from '@/lib/auth/require-staff'
 import { tokenHash, type PasskeySite } from '@/lib/auth/staff-cookie'
 import { enrolCodeHash, passkeyCeremony, type PasskeyStore, type Result, type StoredKey, type Who } from '@/lib/auth/webauthn'
-import type { GateState } from '@/components/passkeys/types'
+import type { GateState } from '@/domains/auth/gate-state'
 
 // =============================================================================
 // FILE: src/lib/admin/passkeys.ts — STAFF PASSKEYS (docs/specs/2026-11-12-staff-passkeys.md; ADR-0007 amended).

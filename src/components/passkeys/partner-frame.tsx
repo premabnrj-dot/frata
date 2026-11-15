@@ -15,7 +15,7 @@ export function PartnerFrame({ children }: { children: React.ReactNode }) {
         <header className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 sm:px-8">
           <Wordmark thread onInk className="h-6" />
           <span className="flex-1" />
-          <span className="rounded-full border border-ink-foreground/35 px-2 py-0.5 text-[0.6875rem] font-semibold tracking-[0.08em]">PARTNER</span>
+          <span className="rounded-full border border-ink-foreground/35 px-2 py-0.5 text-overline font-semibold">PARTNER</span>
         </header>
       </SiteStage>
       <Selvedge />
@@ -26,7 +26,8 @@ export function PartnerFrame({ children }: { children: React.ReactNode }) {
   )
 }
 
-/** "1 Join — 2 Approval — 3 Passkey" (mockup screens 6–8): the first-time path, the current step marked. */
+/** "1 Join — 2 Approval — 3 Passkey" (mockup screens 6–8): the first-time path, the current step marked. Drawn as
+ *  numbered circles in the approved mockup, so not the Steps primitive's chips (BUILT AS DRAWN). */
 export function JoinSteps({ at }: { at: 1 | 2 | 3 }) {
   const steps = ['Join', 'Approval', 'Passkey'] as const
   return (
@@ -37,7 +38,7 @@ export function JoinSteps({ at }: { at: 1 | 2 | 3 }) {
         return (
           <li key={s} aria-current={n === at ? 'step' : undefined} className={`flex items-center gap-1.5 ${n === at ? 'font-medium text-foreground' : ''}`}>
             {i > 0 && <span aria-hidden="true" className="h-px w-3.5 bg-input" />}
-            <span aria-hidden="true" className={`grid size-[18px] place-items-center rounded-full border-[1.5px] text-[0.65rem] font-semibold ${done ? 'border-ok-mark bg-ok-mark text-background' : n === at ? 'border-foreground' : 'border-input'}`}>{n}</span>
+            <span aria-hidden="true" className={`grid size-4.5 place-items-center rounded-full border-2 text-overline font-semibold ${done ? 'border-ok-mark bg-ok-mark text-background' : n === at ? 'border-foreground' : 'border-input'}`}>{n}</span>
             {s}{done && <span className="sr-only"> (done)</span>}
           </li>
         )
@@ -49,7 +50,7 @@ export function JoinSteps({ at }: { at: 1 | 2 | 3 }) {
 /** The fingerprint tile above "Sign in faster next time" (mockup screens 8, 14). */
 export function PasskeyTile() {
   return (
-    <span aria-hidden="true" className="grid size-[52px] place-items-center rounded-[14px] bg-warn">
+    <span aria-hidden="true" className="grid size-13 place-items-center rounded-xl bg-illo-haldi-soft">
       <FingerprintIcon className="size-7" />
     </span>
   )
@@ -66,8 +67,9 @@ export function FingerprintIcon({ className = 'size-4' }: { className?: string }
 /** The big 6-digit code someone reads aloud (mockup screens 7, 11, 21). */
 export function ReadCode({ code }: { code: string }) {
   return (
-    <p aria-label={`Code ${code.split('').join(' ')}`} className="rounded-xl border border-dashed border-input bg-card py-3.5 text-center font-mono text-[2.125rem] font-semibold tracking-[0.14em] tabular-nums">
-      {code.slice(0, 3)} {code.slice(3)}
+    <p className="rounded-lg border border-dashed border-input bg-card py-3.5 text-center">
+      <span aria-hidden="true" data-code={code} className="font-mono text-display font-semibold tracking-widest tabular-nums">{code.slice(0, 3)} {code.slice(3)}</span>
+      <span className="sr-only">Code {code.split('').join(' ')}</span>
     </p>
   )
 }

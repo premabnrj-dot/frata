@@ -41,8 +41,8 @@ export function DeleteOne({ id, name }: { id: string; name: string }) {
   }
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={() => { setError(null); setOpen(true) }}>Delete</Button>
-      <Dialog open={open} onClose={() => setOpen(false)} title={`Delete ${name}?`} error={error}
+      <Button variant="danger" size="sm" onClick={() => { setError(null); setOpen(true) }}>Delete</Button>
+      <Dialog open={open} onClose={() => setOpen(false)} title={`Delete the ${name} passkey?`} error={error} description="You can’t sign in with it again."
         actions={<>
           <Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Keep it</Button>
           <Button variant="destructive" busy={busy} onClick={go}><FingerprintIcon />Delete passkey</Button>

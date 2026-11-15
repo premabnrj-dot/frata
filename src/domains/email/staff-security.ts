@@ -21,8 +21,10 @@ export function staffSecurityWords(n: { kind: StaffNoticeKind; about: string; by
     case 'passkey_removed': return { subject: `A passkey was removed from ${n.about}`, body: `${by} removed the passkey${key} from ${n.about}.` }
     case 'partner_passkey_added': return { subject: `${n.about} added a passkey`, body: `${n.about} added the passkey${key} to their Frrata partner sign-in.` }
     case 'partner_passkey_removed': return { subject: `A passkey was deleted for ${n.about}`, body: n.detail === 'every passkey'
-      ? `${by} deleted every passkey of ${n.about} and signed them out on every device.` : `${n.about} deleted the passkey${key} from their Frrata partner sign-in.` }
-    case 'partner_request_made': return { subject: `${n.about} asked Frrata for a new passkey`, body: `${n.about} can't use their passkey and asked Frrata to approve a new one. Frrata calls the phone on file; approval opens after 24 hours.` }
-    case 'partner_request_approved': return { subject: `A new passkey was approved for ${n.about}`, body: `${by} approved a new passkey for ${n.about}. It can be created for 10 minutes, on the device that asked.` }
+      ? `${by} deleted every passkey of ${n.about}. They’re signed out on every device.` : `${n.about} deleted the passkey${key} from their Frrata partner sign-in.` }
+    case 'partner_request_made': return n.detail === 'first'
+      ? { subject: `${n.about} asked Frrata for a first passkey`, body: `${n.about} asked Frrata to approve their first passkey. We'll call the phone on their record.` }
+      : { subject: `${n.about} asked Frrata for a new passkey`, body: `${n.about} can't use their passkey. We'll call the phone on their record. We can approve a new one after 24 hours.` }
+    case 'partner_request_approved': return { subject: `A new passkey was approved for ${n.about}`, body: `${by} approved a new passkey for ${n.about}. ${n.about} can create it on the same device within 10 minutes.` }
   }
 }

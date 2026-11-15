@@ -90,7 +90,7 @@ export async function partnerClients(c: Caller): Promise<ClientRow[]> {
 }
 
 /** Hand over from the workspace's Clients (T1b): the store id comes from the form, but the function accepts only a
- *  store linked to the caller's own partner, from its owner (or a Lead given that store), with a passkey check in the
+ * *  store linked to the caller's own partner, from its owner, with a passkey check in the
  *  last 5 minutes. */
 export async function sendHandover(c: Caller, tenantId: string, email: string): Promise<{ ok: true } | { ok: false; error: string }> {
   try {

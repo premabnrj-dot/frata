@@ -106,7 +106,7 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
     <div ref={codeRef} className="space-y-4 animate-step-forward">
       {linkFailed && !sentAt && (
         <p role="status" className="rounded-md border border-info-text/30 bg-info px-3 py-2 text-sm text-info-text">
-          That link opened in a different browser or app. Type the 6-digit code from the same email here instead.
+          That link has been used or has ended. Type the 6-digit code from the same email here instead.
         </p>
       )}
       {sentAt ? (

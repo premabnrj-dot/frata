@@ -1094,6 +1094,11 @@ create schema proof;
 grant usage on schema proof to frata_app, frata_admin;
 create function proof.sess(p_uid uuid) returns uuid language sql immutable as $$ select (substr(md5('sess' || p_uid::text), 1, 8) || '-' || substr(md5('sess' || p_uid::text), 9, 4) || '-4' || substr(md5('sess' || p_uid::text), 14, 3) || '-8' || substr(md5('sess' || p_uid::text), 18, 3) || '-' || substr(md5('sess' || p_uid::text), 21, 12))::uuid $$;
 create function proof.key(p_uid uuid) returns void language sql security definer set search_path = '' as $$
+  insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
+  select null, p_uid, me.email, 'member', 'partner.passkey.add', me.member_id::text, '{"name":"Proof key","via":"proof"}'::jsonb
+    from (select x.member_id, (select pm.email from public.partner_members pm where pm.id = x.member_id) as email from public.app_pm_live(p_uid) x) me
+   where not exists (select 1 from public.partner_passkeys k where k.partner_member_id = me.member_id);
+  -- as a real add: the passkey, and its audit row (an owner who ever had one waits 24 hours to recover, 0128)
   insert into public.partner_passkeys (partner_member_id, user_id, credential_id, public_key, name)
   select me.member_id, p_uid, 'proof-' || me.member_id, 'proof', 'Proof key' from public.app_pm_live(p_uid) me
    where not exists (select 1 from public.partner_passkeys k where k.partner_member_id = me.member_id) $$;
@@ -3564,6 +3569,15 @@ do $$ declare Q uuid := 'aaaaaaaa-0000-0000-0000-000000000090'; M uuid := 'aaaaa
   if jsonb_array_length(app_access_for(M, proof.sess(M), null, proof.h(M))->'memberships') <> 0 then raise exception 'FAIL: signed out but in'; end if;
 end $$;
 commit;
+-- another partner's owner, with a fresh check: never Kiln's store, never Kiln's people or their request context
+begin; set local role frata_app;
+select proof.check('aaaaaaaa-0000-0000-0000-000000000032');
+do $$ declare Z uuid := 'aaaaaaaa-0000-0000-0000-000000000032'; begin
+  begin perform app_handover_invite(current_setting('proof.t79')::uuid, Z, 'brand@kiln.test', proof.sess(Z), proof.h(Z)); raise exception 'FAIL: another partner handed over Kiln''s store';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_partner' then raise; end if; end;
+  if exists (select 1 from app_partner_team(Z, proof.sess(Z), proof.h(Z)) x where x.email like '%@kiln.test') then raise exception 'FAIL: another partner sees Kiln''s team'; end if;
+end $$;
+commit;
 -- hand over and approvals want a check in the last 5 minutes
 update partner_stepups set created_at = now() - interval '6 minutes' where user_id = 'aaaaaaaa-0000-0000-0000-000000000090';
 begin; set local role frata_app;
@@ -3599,8 +3613,23 @@ do $$ declare S uuid := 'aaaaaaaa-0000-0000-0000-000000000035'; p uuid; st jsonb
   begin perform admin_partner_pk_approve('aaaaaaaa-0000-0000-0000-000000000036', proof.sess(S), 'proof-staff-hash-035', p, encode(sha256(convert_to('partner-enrol:111222', 'UTF8')), 'hex')); raise exception 'FAIL: support approved';
   exception when sqlstate 'P0001' then if sqlerrm <> 'not_admin' then raise; end if; end;
   if admin_partner_pk_approve(S, proof.sess(S), 'proof-staff-hash-035', p, encode(sha256(convert_to('partner-enrol:111222', 'UTF8')), 'hex')) is not null then raise exception 'FAIL: approved before the wait'; end if;
+  -- a lost device: support can't delete an owner's passkeys; an admin can, and the owner's rows all go
+  begin perform admin_partner_pk_remove_all('aaaaaaaa-0000-0000-0000-000000000036', proof.sess(S), 'proof-staff-hash-035', p); raise exception 'FAIL: support deleted an owner''s passkeys';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_admin' then raise; end if; end;
+  if admin_partner_pk_remove_all(S, proof.sess(S), 'proof-staff-hash-035', p) < 1 then raise exception 'FAIL: the owner had a passkey to delete'; end if;
+  if (admin_partner_pk_state(S, proof.sess(S), 'proof-staff-hash-035', p)->>'passkeys')::int <> 0 or admin_partner_pk_state(S, proof.sess(S), 'proof-staff-hash-035', p)->'request' <> 'null'::jsonb then raise exception 'FAIL: the owner''s passkeys or request stayed'; end if;
 end $$;
 commit;
+-- an owner who ever had a passkey still waits 24 hours after Admin deleted every one (security review M1)
+begin; set local role frata_app;
+do $$ declare Q uuid := 'aaaaaaaa-0000-0000-0000-000000000090'; r jsonb; begin
+  r := app_partner_pk_request(Q, proof.sess(Q), encode(sha256(convert_to('partner-enrol:333444', 'UTF8')), 'hex'), null, null);
+  if r->>'opensAt' is null then raise exception 'FAIL: deleting every passkey skipped the owner''s 24-hour wait'; end if;
+end $$;
+commit;
+do $$ begin
+  if exists (select 1 from partner_passkey_requests where approved_at is not null and (device is not null or city is not null)) then raise exception 'FAIL: a decided request kept its device or city'; end if;
+end $$;
 -- the proof-only helpers go, and are gone
 drop schema proof cascade;
 do $$ begin if to_regnamespace('proof') is not null then raise exception 'FAIL: proof helpers left behind'; end if; end $$;

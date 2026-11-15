@@ -75,7 +75,7 @@ export async function approveOwnerPasskeyAction(input: { id: string; code: strin
   const staff = await requireStaff(ADMIN_ONLY)
   if (!staff.ok) return { ok: false, error: 'Only a Frrata admin can approve this.' }
   const p = Owner.safeParse(input)
-  if (!p.success || !p.data.code) return { ok: false, error: 'The code is the 6 digits the owner reads out.' }
+  if (!p.success || !p.data.code) return { ok: false, error: 'Enter the 6-digit code the partner owner reads out.' }
   const proof = await staffProof(staff.userId)
   if (!proof) return { ok: false, error: 'Confirm with your passkey first.' }
   const r = await approveOwnerRequest(staff, proof, p.data.id, p.data.code)
@@ -94,5 +94,5 @@ export async function deleteOwnerPasskeysAction(input: { id: string }): Promise<
   const r = await deleteOwnerPasskeys(staff, proof, p.data.id)
   if (!r.ok) return r
   revalidatePath('/admin/partners')
-  return { ok: true, text: `Deleted ${r.count} ${r.count === 1 ? 'passkey' : 'passkeys'}. The owner is signed out everywhere.` }
+  return { ok: true, text: `Deleted ${r.count} ${r.count === 1 ? 'passkey' : 'passkeys'}. The partner owner is signed out everywhere.` }
 }

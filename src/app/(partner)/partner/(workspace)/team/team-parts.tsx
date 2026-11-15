@@ -115,5 +115,5 @@ export function ResendInvite({ memberId }: { memberId: string }) {
     const r = await resendTeamInviteAction({ memberId }).finally(() => setPending(false))
     if (r.ok) toast.ok(r.text); else toast.error(r.error)
   }
-  return <Button variant="ghost" disabled={pending} onClick={resend}>{pending ? 'Sending…' : 'Send invite again'}</Button>
+  return <Button variant="secondary" size="sm" busy={pending} onClick={resend}>Send invite again</Button>
 }

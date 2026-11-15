@@ -6,7 +6,6 @@ import { Panel } from '@/components/ui/panel'
 import { memberState, partnerCan, PARTNER_ROLE_LABEL } from '@/domains/partners/team'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { partnerClients, partnerTeam } from '@/lib/db/partners'
-import { dayIN } from '@/lib/format-date'
 import { InviteButton, RemovePerson, ResendInvite, StoreToggles } from './team-parts'
 import { ApprovePasskey, DeletePasskeys } from './team-passkeys'
 
@@ -50,21 +49,24 @@ export default async function TeamPage() {
           const name = p.isYou ? 'You' : p.email
           return (
             <li key={p.memberId} className="grid gap-x-3 gap-y-2 px-4 py-3 text-sm md:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)_auto] md:items-center">
-              <div className="min-w-0">
-                <p className="flex flex-wrap items-center gap-2 font-medium">
-                  <span className="truncate">{name}</span>
-                  <Badge tone={p.role === 'owner' ? 'info' : 'neutral'}>{PARTNER_ROLE_LABEL[p.role]}</Badge>
-                  {state === 'active' && p.role !== 'owner' && p.passkeys > 0 && !p.request && <Badge tone="ok">Active</Badge>}
-                </p>
-                {!p.isYou && <p className="truncate text-xs text-muted-foreground">{
-                  state === 'active' ? (p.request ? 'Waiting for your approval' : p.passkeys === 0 ? 'Joined, no passkey' : `${p.passkeys} ${p.passkeys === 1 ? 'passkey' : 'passkeys'} · since ${dayIN(p.acceptedAt!)}`)
-                    : state === 'invited' && p.inviteExpiresAt ? `Invited · ${daysLeft(p.inviteExpiresAt, now)} ${daysLeft(p.inviteExpiresAt, now) === 1 ? 'day' : 'days'} left` : state === 'expired' ? 'Invite ended' : ''}</p>}
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-info text-sm font-semibold text-info-text">{(p.isYou ? 'Y' : p.email[0] ?? '?').toUpperCase()}</span>
+                <div className="min-w-0">
+                  <p className="flex flex-wrap items-center gap-2 font-medium">
+                    <span className="truncate">{name}</span>
+                    {p.role === 'owner' && <Badge tone="info">{PARTNER_ROLE_LABEL[p.role]}</Badge>}
+                  </p>
+                  {!p.isYou && <p className="truncate text-small text-muted-foreground">{PARTNER_ROLE_LABEL[p.role]} · {
+                    state === 'active' ? (p.request ? 'waiting for your approval' : p.passkeys === 0 ? 'joined, no passkey' : `${p.passkeys} ${p.passkeys === 1 ? 'passkey' : 'passkeys'}`)
+                      : state === 'invited' && p.inviteExpiresAt ? `invited · ${daysLeft(p.inviteExpiresAt, now)} ${daysLeft(p.inviteExpiresAt, now) === 1 ? 'day' : 'days'} left` : state === 'expired' ? 'invite ended' : ''}</p>}
+                </div>
               </div>
               <div className="min-w-0">
                 {p.role === 'owner' ? <span className="text-muted-foreground">Every store</span>
                   : <StoreToggles memberId={p.memberId} stores={stores} given={p.stores.map((s) => s.tenantId)} />}
               </div>
-              <div className="flex flex-wrap gap-1 md:justify-end">
+              <div className="flex flex-wrap items-center gap-1 md:justify-end">
+                {state === 'active' && p.role !== 'owner' && p.passkeys > 0 && !p.request && <Badge tone="ok">Active</Badge>}
                 {state === 'active' && p.request && !p.isYou && <ApprovePasskey w={{ memberId: p.memberId, email: p.email, name: firstName(p.email), device: p.request.device, city: p.request.city,
                   askedMinutes: Math.max(0, Math.floor((now.getTime() - p.request.createdAt.getTime()) / 60_000)) }} />}
                 {state === 'active' && p.role !== 'owner' && p.passkeys > 0 && <DeletePasskeys memberId={p.memberId} name={firstName(p.email)} count={p.passkeys} />}

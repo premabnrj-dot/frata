@@ -24,7 +24,7 @@ export default {
     await fetch(`${FAKE}/_test/reset`)
 
     await t.step('sign-in email through the Send Email Hook: Frrata\'s layout, the code and a link, from the notices sender', async () => {
-      const body = JSON.stringify({ user: { email: 'riya@kesarstudio.in' }, email_data: { token: '123456', token_hash: 'pkce_abc', redirect_to: `${CONSOLE}/auth/callback`, email_action_type: 'magiclink', site_url: 'https://proj.supabase.co/auth/v1' } })
+      const body = JSON.stringify({ user: { email: 'riya@kesarstudio.in' }, email_data: { token: '123456', token_hash: 'pkce_0123456789abcdef0123456789abcdef', redirect_to: `${CONSOLE}/auth/callback`, email_action_type: 'magiclink', site_url: 'https://proj.supabase.co/auth/v1' } })
       const r = await hook(body)
       assert.equal(r.status, 200, 'the hook answered 200')
       const [m] = await sent()
@@ -32,8 +32,26 @@ export default {
       assert.equal(m.from, SES.noticesFrom)
       assert.match(m.subject, /^123456 is your Frrata sign-in code$/)
       assert.match(m.html, /frrata/)
-      assert.match(m.text, /https:\/\/proj\.supabase\.co\/auth\/v1\/verify\?token=pkce_abc&type=magiclink/)
+      // The button opens our own page, which signs in only on a press (T1b; partner sign-in mockup screen 4).
+      // The button opens our own /auth/confirm (unit-tested: src/domains/auth/__tests__/email-link.test.ts); a plain-http
+      // localhost link is dropped by the email's link check, so here it is only never Supabase's own verify link.
+      assert.ok(!/\/auth\/v1\/verify/.test(m.text), 'never a link that signs in when opened')
       assert.equal(m.tenant, 'frrata')
+    })
+
+    await t.step('the email link: opening it signs nobody in; Sign in does, once', async () => {
+      const ctx = await t.browser.newContext(); const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(e.message))
+      const hash = `e2e-owner-${Date.now()}-0123456789abcdef`
+      await p.goto(`${CONSOLE}/auth/confirm?token_hash=${hash}&type=magiclink`)
+      await p.getByRole('heading', { name: 'Sign in on this device?' }).waitFor()
+      assert.equal((await ctx.cookies()).filter((c) => c.name.startsWith('sb-')).length, 0, 'opening the link set no session')
+      await p.getByRole('button', { name: 'Sign in' }).click()
+      await p.waitForURL((u) => !u.pathname.startsWith('/auth/') && !u.pathname.startsWith('/login'))
+      assert.ok((await ctx.cookies()).some((c) => c.name.startsWith('sb-')), 'pressing Sign in made the session')
+      const again = await (await t.browser.newContext()).newPage()
+      await again.goto(`${CONSOLE}/auth/confirm?token_hash=${hash}&type=magiclink`)
+      await again.getByRole('button', { name: 'Sign in' }).click()
+      await again.waitForURL(/\/login\?link=other-browser/)
     })
 
     await t.step('refused: an unsigned hook, an SNS message from another topic or unsigned', async () => {

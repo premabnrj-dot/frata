@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { FIELD } from '@/components/ui/field'
 import { FieldError, useFieldErrors } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
 import { FingerprintIcon } from '@/components/passkeys/partner-frame'
@@ -32,7 +33,7 @@ export function HandOver({ tenantId, store, again, startOpen = false }: { tenant
     setBusy(false)
     if (!r.ok) { if ('field' in r && r.field) fields.set({ 'owner-email': r.error }); else setError(r.error); return }
     setOpen(false)
-    toast.ok(r.emailed ? `Invite sent to ${r.email}.` : `Invite made for ${r.email}. The email didn’t send: ask them to sign in with that address.`)
+    toast.ok(r.emailed ? `Invite sent to ${r.email}.` : `Invite ready for ${r.email}. The email didn’t send. Ask them to sign in.`)
     settle(router)
   }
   return (
@@ -48,7 +49,7 @@ export function HandOver({ tenantId, store, again, startOpen = false }: { tenant
           <label htmlFor={`owner-email-${tenantId}`} className="text-sm font-medium text-foreground">Owner’s email</label>
           <input id={`owner-email-${tenantId}`} type="email" inputMode="email" autoComplete="off" value={email}
             onChange={(e) => { setEmail(e.target.value); fields.clear('owner-email'); setError(null) }} {...fields.props('owner-email')}
-            className="h-11 w-full rounded-md border border-input bg-card px-3 font-num text-sm text-foreground aria-invalid:border-danger-text md:h-9" />
+            className={`${FIELD} w-full aria-invalid:border-danger-text`} />
           <FieldError name="owner-email" message={fields.errors['owner-email']} reserve />
         </form>
       </Dialog>

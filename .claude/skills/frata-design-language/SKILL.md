@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.1.1
+  version: 7.2.0
   verified: 2026-11-13
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -255,9 +255,20 @@ from it).
 ## Partner workspace (approved mockup 2026-11-07)
 
 - `/partner` uses the console's `AppShell` with `tag="PARTNER"` (info pair).
-  Admin keeps ink + STAFF. Nav: Clients, Your details.
+  Admin keeps ink + STAFF. Nav: Clients, Team (owner), Passkeys, Your details.
 - A store with no owner shows the **building banner** (info pair, sticky, one
-  line: "Building for <shop> · No owner yet · Hand over") on every console page.
+  line: "Building for <shop> · No owner yet · Hand over") on every console page. Hand over is a link (a full page
+  load) to Clients, where the dialog asks for the passkey (T1b).
+- **Partner sign-in** (approved mockup 2026-11-15, `docs/specs/2026-11-15-partner-login.md`): every sign-in screen sits
+  on `PartnerFrame` (ink stage, the mark, a PARTNER pill, the selvedge, one card); headings `text-title`. One code box
+  (paste and `one-time-code`), never split digit boxes. A code read aloud is `ReadCode` (mono, dashed box, an sr-only
+  spaced copy). First time shows `JoinSteps` (Join · Approval · Passkey). Each gate screen moves focus to its heading.
+- **Approving someone's passkey**: the approver makes the call. The card shows who, device, where and when; asks "Did you
+  start this call yourself?" (Segmented, no default); No turns Approve off and offers Decline with "Hang up and call …
+  on a number you know." A passkey is named by its password manager, never a device model.
+- **A check that lasts 12 hours** warns 10 minutes before with a warn `Banner`, then asks in a Dialog over the page
+  (nothing typed is lost) with Sign out beside Use passkey. A step that needs a fresh check asks only when the last one
+  is older than 5 minutes (`freshly`).
 - Client stages are derived (`src/domains/partners/stage.ts`) and shown as
   badges with words: Building, Invite sent, With the owner, Open, Removed. A
   removed store is dimmed with colour and has no actions.

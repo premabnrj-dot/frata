@@ -12,7 +12,7 @@ export function BuildingBanner({ shop, tenantId, inviteEmail }: { shop: string; 
       <span className="ml-auto" />
       {/* A full page load: the workspace may ask for a passkey, which the console's own page policy refuses. */}
       <a href={`/partner?handover=${tenantId}`} className="inline-flex min-h-6 shrink-0 items-center font-semibold underline">
-        {inviteEmail ? 'Send again' : 'Hand over'}
+        {inviteEmail ? 'Send invite again' : 'Hand over'}
       </a>
     </div>
   )

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { FIELD } from '@/components/ui/field'
 import { FieldError } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
 import { EMAIL_SHAPE } from '@/domains/signup/slug'
@@ -16,10 +17,10 @@ const RESEND_SECONDS = 60 // Supabase refuses a second email to one address with
  * phone's one-time-code autofill (WCAG 2.2 SC 3.3.8). A workspace destination goes to `next`; anything else (an invite,
  * a handover, Admin) goes where sign-in would send it anyway.
  */
-export function PartnerSignIn({ next }: { next: string }) {
+export function PartnerSignIn({ next, signedOut = false, backLabel = null }: { next: string; signedOut?: boolean; backLabel?: string | null }) {
   const router = useRouter()
   const toast = useToast()
-  const [step, setStep] = useState<'email' | 'code'>('email')
+  const [step, setStep] = useState<'out' | 'email' | 'code'>(signedOut ? 'out' : 'email')
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -48,26 +49,36 @@ export function PartnerSignIn({ next }: { next: string }) {
   }
   function check(e?: React.FormEvent) {
     e?.preventDefault()
-    if (!/^\d{6}$/.test(code)) return setError('The code is the 6 digits in the email.')
+    if (!/^\d{6}$/.test(code)) return setError('Enter the 6-digit code from the email.')
     setError(null)
     start(async () => {
       const r = await verifyCode({ email, code })
-      if (!r.ok) { setCode(''); return r.field ? setError(r.error) : toast.error(r.error) }
+      // A wrong code stays in the box to be corrected; focus goes back to it.
+      if (!r.ok) { codeRef.current?.focus(); return r.field ? setError(r.error) : toast.error(r.error) }
       router.replace(r.to === '/partner' ? next : r.to)
       router.refresh()
     })
   }
 
+  if (step === 'out') {
+    return (
+      <div className="grid gap-4">
+        <h1 className="font-display text-title font-semibold">You’ve been signed out</h1>
+        {backLabel && <p className="text-sm text-muted-foreground">Back to {backLabel}</p>}
+        <Button size="lg" onClick={() => setStep('email')}>Sign in again</Button>
+      </div>
+    )
+  }
   if (step === 'email') {
     return (
       <form onSubmit={send} noValidate className="grid gap-4">
-        <h1 className="font-display text-[1.375rem] font-semibold leading-7">Sign in</h1>
+        <h1 className="font-display text-title font-semibold">Sign in</h1>
         <div className="grid gap-1.5">
           <label htmlFor="partner-email" className="text-sm font-medium">Work email</label>
           <input id="partner-email" type="email" inputMode="email" autoComplete="username" autoFocus value={email}
             aria-invalid={!!error || undefined} aria-describedby={error ? 'email-error' : undefined}
             onChange={(e) => { setEmail(e.target.value); setError(null) }}
-            className="h-11 w-full rounded-md border border-input bg-card px-3 text-base aria-invalid:border-danger-text" />
+            className={`${FIELD} w-full aria-invalid:border-danger-text`} />
           <FieldError name="email" message={error} reserve className="text-sm" />
         </div>
         <Button type="submit" size="lg" busy={pending}>Continue with email</Button>
@@ -76,22 +87,22 @@ export function PartnerSignIn({ next }: { next: string }) {
   }
   return (
     <form onSubmit={check} noValidate className="grid gap-4">
-      <h1 className="font-display text-[1.375rem] font-semibold leading-7">Check your email</h1>
-      <p className="text-sm text-muted-foreground">Code sent to <span className="font-num">{maskEmail(email)}</span></p>
+      <h1 className="font-display text-title font-semibold">Check your email</h1>
+      <p className="text-sm text-muted-foreground">Code sent to {maskEmail(email)}</p>
       <div className="grid gap-1.5">
         <label htmlFor="partner-code" className="text-sm font-medium">6-digit code</label>
-        <input id="partner-code" ref={codeRef} inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code}
+        <input id="partner-code" ref={codeRef} inputMode="numeric" autoComplete="one-time-code" value={code}
           aria-invalid={!!error || undefined} aria-describedby={error ? 'code-error' : undefined}
           onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 6); setCode(v); setError(null) }}
-          className="h-11 w-full rounded-md border border-input bg-card px-3 text-center font-mono text-[1.375rem] tracking-[0.32em] aria-invalid:border-danger-text" />
+          className={`${FIELD} w-full text-center font-mono text-title tracking-widest aria-invalid:border-danger-text`} />
         <FieldError name="code" message={error} reserve className="text-sm" />
       </div>
       <Button type="submit" size="lg" busy={pending}>Sign in</Button>
       <div className="flex flex-wrap items-center gap-2.5">
-        {wait > 0 ? <span className="font-num text-sm text-muted-foreground">Resend in 0:{String(wait).padStart(2, '0')}</span>
-          : <button type="button" className="text-sm underline underline-offset-4" onClick={() => send()}>Resend code</button>}
+        {wait > 0 ? <span className="text-sm text-muted-foreground">Resend in {Math.floor(wait / 60)}:{String(wait % 60).padStart(2, '0')}</span>
+          : <Button variant="link" onClick={() => send()}>Resend code</Button>}
         <span className="flex-1" />
-        <button type="button" className="text-sm underline underline-offset-4" onClick={() => { setStep('email'); setError(null) }}>Use a different email</button>
+        <Button variant="link" onClick={() => { setStep('email'); setError(null) }}>Use a different email</Button>
       </div>
     </form>
   )

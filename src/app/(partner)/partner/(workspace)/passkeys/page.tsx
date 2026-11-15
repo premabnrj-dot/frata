@@ -1,6 +1,8 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Panel } from '@/components/ui/panel'
+import { Badge } from '@/components/ui/badge'
+import { Banner } from '@/components/ui/banner'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { myPasskeys } from '@/lib/db/partner-passkeys'
 import { dayIN } from '@/lib/format-date'
@@ -23,23 +25,23 @@ export default async function PasskeysPage() {
   return (
     <>
       <PageHeader title="Passkeys" actions={<AddPasskey />} />
-      {keys.length === 1 && (
-        <div role="status" className="mb-3 flex max-w-xl flex-wrap items-center gap-3 rounded-lg bg-warn px-3 py-2 text-sm font-medium text-warn-text">
-          <span>Add a backup passkey on another device</span><span className="flex-1" /><AddPasskey label="Add passkey" />
-        </div>
-      )}
+      {keys.length === 0 ? <Panel title="No passkeys yet" action={<AddPasskey />} /> : (
       <Section flush className="max-w-xl" ariaLabel="Your passkeys"><ul data-list className="divide-y divide-border">
         {keys.map((k) => (
           <li key={k.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-1 px-4 py-3 text-sm">
             <div className="min-w-0">
               <p className="truncate font-medium">{k.name}</p>
-              <p className="text-xs text-muted-foreground">Added <span className="font-num">{dayIN(new Date(k.createdAt))}</span> · {used(k.lastUsedAt)}</p>
+              <p className="text-small text-muted-foreground">Added <span className="font-num">{dayIN(new Date(k.createdAt))}</span> · {used(k.lastUsedAt)}</p>
             </div>
-            {k.inUse ? <span className="inline-flex items-center gap-1.5 rounded-full bg-info px-2.5 py-0.5 text-xs font-medium text-info-text">This device</span>
+            {k.inUse ? <Badge tone="info">This device</Badge>
               : <DeleteOne id={k.id} name={k.name} />}
           </li>
         ))}
       </ul></Section>
+      )}
+      {keys.length === 1 && (
+        <Banner tone="warn" className="mt-3 max-w-xl" title="Add a backup passkey on another device" action={<AddPasskey label="Add passkey" />} />
+      )}
     </>
   )
 }

@@ -58,7 +58,11 @@ production database — security review S1). Never the `postgres` user: it bypas
 
 - Site URL: `https://frata.vercel.app`
 - Redirect URLs: `https://frata.vercel.app/auth/callback` and
-  `https://*-premabnrj-dots-projects.vercel.app/auth/callback` (previews)
+  `https://*-premabnrj-dots-projects.vercel.app/auth/callback` (previews). With the Send Email Hook on, the email's
+  button opens `https://$NEXT_PUBLIC_CONSOLE_HOST/auth/confirm` instead, which signs in only when the person presses
+  Sign in (T1b); `/auth/callback` serves emails sent without the hook.
+- Authentication → Providers → Email: keep **Secure email change** on. Frrata never changes an address, and the hook
+  refuses address-change emails (security review M2, 2026-11-15).
 
 ### 4. Redeploy
 

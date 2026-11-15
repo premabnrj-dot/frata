@@ -218,7 +218,7 @@ begin
   if coalesce(public.app_partner_live_stepup(p_uid, p_session, p_stepup) > now() - interval '5 minutes', false) then
     v_via := 'second_device';
   else
-    update public.partner_passkey_requests r set used_at = now()
+    update public.partner_passkey_requests r set used_at = now(), device = null, city = null
      where r.id = (select r2.id from public.partner_passkey_requests r2 where r2.partner_member_id = me.member_id and r2.session_id = p_session
                      and r2.used_at is null and r2.approved_at > now() - interval '10 minutes' order by r2.approved_at desc limit 1)
     returning r.id into v_req;
@@ -252,7 +252,10 @@ begin
   if me.member_id is null then raise exception 'not_partner' using errcode = 'P0001'; end if;
   if p_code_hash !~ '^[0-9a-f]{64}$' then raise exception 'bad_input' using errcode = 'P0001'; end if;
   perform public.app_partner_try(p_uid, p_session, 'request');
-  v_wait := me.role = 'owner' and exists (select 1 from public.partner_passkeys k where k.partner_member_id = me.member_id);
+  -- An owner who has EVER had a passkey waits (security review M1): deleting every passkey (Admin, a lost device) must
+  -- not turn a recovery into an instant first passkey. Every add is audited, so the audit row is the record.
+  v_wait := me.role = 'owner' and (exists (select 1 from public.partner_passkeys k where k.partner_member_id = me.member_id)
+    or exists (select 1 from public.audit_events a where a.action = 'partner.passkey.add' and a.target = me.member_id::text));
   delete from public.partner_passkey_requests r where r.partner_member_id = me.member_id and r.used_at is null and r.approved_at is null;
   delete from public.partner_passkey_requests r where r.expires_at < now() - interval '90 days';
   insert into public.partner_passkey_requests (partner_member_id, user_id, session_id, code_hash, expires_at, opens_at, device, city)
@@ -263,7 +266,9 @@ begin
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
     select null, p_uid, pm.email, 'member', 'partner.passkey.request', pm.id::text, jsonb_build_object('waits', v_wait)
       from public.partner_members pm where pm.id = me.member_id;
-  if v_wait then perform public.app_partner_notify(me.member_id, 'partner_request_made', null, null, true); end if;
+  -- Any owner's request reaches Frrata's admins (someone has to make the call): 'first' for a first passkey, else a
+  -- recovery that waits 24 hours. The owner's own inbox is told too.
+  if me.role = 'owner' then perform public.app_partner_notify(me.member_id, 'partner_request_made', null, case when v_wait then null else 'first' end, true); end if;
   return jsonb_build_object('expiresAt', v_exp, 'opensAt', v_opens);
 end $$;--> statement-breakpoint
 
@@ -282,7 +287,7 @@ begin
   if t.id is null then raise exception 'no_person' using errcode = 'P0001'; end if;
   if t.user_id = p_uid then raise exception 'own_request' using errcode = 'P0001'; end if;
   perform public.app_partner_try(p_uid, p_session, 'approve');
-  update public.partner_passkey_requests r set approved_by = p_uid, approved_kind = 'owner', approved_at = now()
+  update public.partner_passkey_requests r set approved_by = p_uid, approved_kind = 'owner', approved_at = now(), device = null, city = null
    where r.id = (select r2.id from public.partner_passkey_requests r2 where r2.partner_member_id = t.id and r2.used_at is null
                    and r2.approved_at is null and r2.declined_at is null and r2.expires_at > now() and (r2.opens_at is null or r2.opens_at <= now())
                    and r2.code_hash = p_code_hash order by r2.created_at desc limit 1)
@@ -307,7 +312,7 @@ begin
   select pm.id, pm.user_id into t from public.partner_members pm
    where pm.id = p_member and pm.partner_id = me.partner_id and pm.role = 'lead' and pm.removed_at is null;
   if t.id is null or t.user_id = p_uid then raise exception 'no_person' using errcode = 'P0001'; end if;
-  update public.partner_passkey_requests r set declined_at = now()
+  update public.partner_passkey_requests r set declined_at = now(), device = null, city = null
    where r.partner_member_id = t.id and r.used_at is null and r.approved_at is null and r.declined_at is null and r.expires_at > now();
   get diagnostics n = row_count;
   if n = 0 then raise exception 'no_request' using errcode = 'P0001'; end if;
@@ -409,7 +414,7 @@ begin
   if o.id is null then raise exception 'no_person' using errcode = 'P0001'; end if;
   if o.user_id = p_staff then raise exception 'own_request' using errcode = 'P0001'; end if;
   perform public.app_staff_try(p_staff, p_session, 'approve');
-  update public.partner_passkey_requests r set approved_by = p_staff, approved_kind = 'staff', approved_at = now()
+  update public.partner_passkey_requests r set approved_by = p_staff, approved_kind = 'staff', approved_at = now(), device = null, city = null
    where r.id = (select r2.id from public.partner_passkey_requests r2 where r2.partner_member_id = o.id and r2.used_at is null
                    and r2.approved_at is null and r2.declined_at is null and r2.expires_at > now() and (r2.opens_at is null or r2.opens_at <= now())
                    and r2.code_hash = p_code_hash order by r2.created_at desc limit 1)

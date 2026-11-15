@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
+import { EMAIL_LINK_TYPES } from '@/domains/auth/email-link'
 import { destinationAfterSignIn } from '@/lib/auth/after-sign-in'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { errName } from '@/lib/log'
@@ -10,7 +11,7 @@ import { errName } from '@/lib/log'
 // send-email). Exchanged only when the person presses "Sign in" on /auth/confirm, never when the link opens: an email
 // scanner that follows the link uses nothing (partner sign-in research lesson 7; mockup screen 4). Works in any browser.
 
-const Link = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{20,200}$/), type: z.enum(['magiclink', 'signup', 'email', 'email_change', 'invite']) })
+const Link = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{20,200}$/), type: z.enum(EMAIL_LINK_TYPES) })
 
 export async function confirmLinkAction(form: FormData): Promise<void> {
   const parsed = Link.safeParse({ token: form.get('token'), type: form.get('type') })

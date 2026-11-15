@@ -8,7 +8,7 @@
 // keeping access, an invite field mistake leaving the dialog.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, PORTS, USERS, expectToast, partnerOn, signedIn, withAuthenticator } from '../lib.mjs'
+import { CONSOLE, PORTS, USERS, expectToast, partnerOn, signedIn, until, withAuthenticator } from '../lib.mjs'
 
 const A = 'dddddddd-0000-4000-8000-0000000000a1', B = 'dddddddd-0000-4000-8000-0000000000b1' // RFC 4122 shape: the form's z.uuid() checks it
 
@@ -37,7 +37,7 @@ export default {
       await dialog.getByLabel('Amber Looms').check()
       await dialog.getByRole('button', { name: 'Send invite' }).click()
       await expectToast(pia, `Invited ${L.email}. We emailed them a sign-in link.`, 'ok')
-      await pia.getByText(/^Invited · \d+ days? left$/).first().waitFor()
+      await pia.getByText(/^Lead · invited · \d+ days? left$/).first().waitFor()
       const asked = async () => (await (await fetch(`http://localhost:${PORTS.auth}/_test/otp`)).json()).filter((e) => e === L.email).length
       assert.equal(await asked(), 1, 'the invite emails a sign-in link')
       await pia.getByRole('listitem').filter({ hasText: L.email }).getByRole('button', { name: 'Send invite again' }).click()
@@ -48,7 +48,7 @@ export default {
 
     const lead = await open('lead', { viewport: { width: 1280, height: 900 } })
     await withAuthenticator(lead)
-    const readCode = async () => (await lead.getByLabel(/^Code \d/).getAttribute('aria-label')).replace(/\D/g, '')
+    const readCode = async () => lead.locator('[data-code]').getAttribute('data-code')
     const leadRow = () => pia.getByRole('listitem').filter({ hasText: L.email })
     await t.step('the lead joins: step 1, then a code to read to the owner (step 2)', async () => {
       await lead.goto(CONSOLE + '/join')
@@ -71,7 +71,7 @@ export default {
 
     await t.step('the owner declines a call they did not start; the lead asks again', async () => {
       await pia.goto(CONSOLE + '/partner/team')
-      await leadRow().getByText('Waiting for your approval').waitFor()
+      await leadRow().getByText('Lead · waiting for your approval').waitFor()
       await leadRow().getByRole('button', { name: /^Approve / }).click()
       const card = pia.getByRole('dialog', { name: 'Approve a passkey' })
       await card.getByText('Chrome on Linux').waitFor()
@@ -109,13 +109,44 @@ export default {
       assert.equal(m.n, 1)
     })
 
-    await t.step('the owner gives another store, then removes the lead', async () => {
+    await t.step('Passkeys: a backup passkey; a check older than 5 minutes asks again before a delete', async () => {
+      await lead.goto(CONSOLE + '/partner/passkeys')
+      await lead.getByRole('heading', { name: 'Passkeys', exact: true }).waitFor()
+      await lead.getByText('Add a backup passkey on another device').waitFor()
+      await lead.getByText('This device').waitFor()
+      await lead.getByRole('button', { name: 'Add passkey' }).click()
+      await expectToast(lead, /^Passkey saved/, 'ok')
+      await until(async () => (await db`select count(*)::int n from partner_passkeys k join partner_members pm on pm.id = k.partner_member_id where pm.user_id = ${L.id}`)[0].n === 2, 10_000)
+      await lead.reload()
+      assert.equal(await lead.getByText('Add a backup passkey on another device').count(), 0, 'two passkeys: no backup prompt')
+      // The check is now 6 minutes old: deleting asks for the passkey again (freshly), then deletes.
+      await db`update partner_stepups set created_at = now() - interval '6 minutes' where user_id = ${L.id}`
+      const before = (await db`select count(*)::int n from partner_stepups where user_id = ${L.id}`)[0].n
+      await lead.getByRole('button', { name: 'Delete', exact: true }).first().click()
+      await lead.getByRole('dialog').getByRole('button', { name: 'Delete passkey' }).click()
+      await expectToast(lead, 'Passkey deleted.', 'ok')
+      assert.equal((await db`select count(*)::int n from partner_passkeys k join partner_members pm on pm.id = k.partner_member_id where pm.user_id = ${L.id}`)[0].n, 1)
+      assert.ok((await db`select count(*)::int n from partner_stepups where user_id = ${L.id} and created_at > now() - interval '1 minute'`)[0].n >= 1 && before >= 1, 'a fresh check was made first')
+      await lead.screenshot({ path: t.out('passkeys') })
+    })
+
+    await t.step('the owner gives another store, deletes the lead\'s passkeys (a lost phone), then removes the lead', async () => {
       await pia.goto(CONSOLE + '/partner/team')
       const row = pia.getByRole('listitem').filter({ hasText: L.email })
       await row.getByRole('button', { name: 'Basil Prints' }).click()
       await expectToast(pia, 'Added to Basil Prints.', 'ok')
       await lead.goto(CONSOLE + '/partner')
       await lead.getByRole('region', { name: 'Client stores' }).getByText('Basil Prints', { exact: true }).waitFor()
+      // A lost phone: every passkey goes and the lead is signed out of the workspace and the stores.
+      await row.getByRole('button', { name: 'Delete passkeys' }).click()
+      await pia.getByRole('dialog').getByRole('button', { name: /^Delete (passkey|\d+ passkeys)$/ }).click()
+      await expectToast(pia, /is signed out everywhere\.$/, 'ok')
+      assert.equal((await db`select count(*)::int n from partner_passkeys k join partner_members pm on pm.id = k.partner_member_id where pm.user_id = ${L.id}`)[0].n, 0)
+      await lead.goto(CONSOLE + '/console')
+      await lead.getByText('Confirm it’s you in the partner workspace').waitFor()
+      await lead.goto(CONSOLE + '/partner')
+      await lead.getByRole('heading', { name: /^Ask .+ to call you$/ }).waitFor()
+      await pia.goto(CONSOLE + '/partner/team')
       await row.getByRole('button', { name: 'Remove' }).click()
       const dialog = pia.getByRole('dialog', { name: `Remove ${L.email}?` })
       await dialog.getByText('Their access to every store ends now.').waitFor()
@@ -144,6 +175,27 @@ export default {
       await expectToast(meera, 'Reinstated.', 'ok')
       await pia.goto(CONSOLE + '/partner')
       await pia.getByRole('region', { name: 'Client stores' }).getByText('Amber Looms', { exact: true }).waitFor()
+    })
+
+    await t.step('signed out: the partner sign-in, back to the same page; sign-out lands there too', async () => {
+      // A session cookie that no longer works (the fake auth knows no "nobody"): the partner sign-in says so.
+      const ctx = await t.browser.newContext({ viewport: { width: 1280, height: 900 } })
+      const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url')
+      const dead = { access_token: `${b64({ alg: 'HS256' })}.${b64({ sub: 'x', who: 'nobody', exp: Math.floor(Date.now() / 1000) + 60 })}.sig`, refresh_token: 'r', token_type: 'bearer', expires_in: 60, expires_at: Math.floor(Date.now() / 1000) + 60, user: { id: 'x' } }
+      await ctx.addCookies([{ name: 'sb-localhost-auth-token', value: 'base64-' + Buffer.from(JSON.stringify(dead)).toString('base64url'), domain: 'localhost', path: '/' }])
+      const p = await ctx.newPage(); p.on('pageerror', (e) => t.errors.push(e.message))
+      await p.goto(CONSOLE + '/partner/team')
+      await p.waitForURL(/\/partner\/sign-in\?/)
+      await p.getByRole('heading', { name: 'You’ve been signed out' }).waitFor()
+      await p.getByText('Back to Team').waitFor()
+      await p.getByRole('button', { name: 'Sign in again' }).click()
+      await p.getByLabel('Work email').waitFor()
+      await p.getByRole('button', { name: 'Continue with email' }).waitFor()
+      await p.screenshot({ path: t.out('sign-in') })
+      const out = await open('partner', { viewport: { width: 1280, height: 900 } })
+      await out.goto(CONSOLE + '/partner')
+      await out.getByRole('button', { name: 'Sign out' }).first().click()
+      await out.waitForURL(/\/partner\/sign-in$/)
     })
 
     await t.step('the team on a phone', async () => {
