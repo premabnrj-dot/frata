@@ -124,7 +124,7 @@ function OptionRow({ i, o, error, onName, onRemoveOption, onMove, onRemoveValue,
               {editing.error && <span className="text-small text-danger-text">{editing.error}</span>}
             </span>
           ) : (
-            <span key={v} className="inline-flex h-11 items-center rounded-md border border-border bg-card pr-0.5 text-sm md:h-8">
+            <span key={v} className="inline-flex h-11 items-center rounded-md border border-input bg-card pr-0.5 text-sm md:h-8">
               <span aria-hidden="true" className="grid h-full w-6 cursor-grab touch-none place-items-center text-muted-foreground" {...dragOnly(itemProps(k, v))}>⋮⋮</span>
               <button type="button" id={`chip-${i}-${k}`} aria-label={`Rename ${v}`} {...keysOnly(itemProps(k, v))} className="min-h-6 px-1" onClick={() => onEdit(k)}>{v}</button>
               <button type="button" aria-label={`Remove ${v}`} className="relative inline-grid size-6 place-items-center text-muted-foreground after:absolute after:-inset-2.5 hover:text-foreground md:after:inset-0" onClick={() => onRemoveValue(k)}><Icon name="close" className="size-3.5" /></button>
