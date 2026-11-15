@@ -257,7 +257,12 @@ export async function attachPhotos(productId: string, photos: NewPhoto[]): Promi
 }
 
 /** Move a photo, tag it with a colour, or remove it (its files are deleted after the row). */
-export async function editPhoto(imageId: string, change: { move?: -1 | 1; optionValue?: string | null; alt?: string; remove?: true }): Promise<Result> {
+export async function editPhoto(imageId: string, change: { move?: -1 | 1 | { to: number }; optionValue?: string | null; alt?: string; remove?: true }): Promise<Result> {
+  // From the browser: a step of one, or a place to drop it on (0–49: a product holds at most 50 photos).
+  const move = change.move
+  if (move !== undefined && move !== -1 && move !== 1 && !(typeof move === 'object' && move !== null && Number.isInteger(move.to) && move.to >= 0 && move.to <= 49)) {
+    return { ok: false, error: 'That move is not one we can make.' }
+  }
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.photo', target: imageId }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
@@ -271,10 +276,11 @@ export async function editPhoto(imageId: string, change: { move?: -1 | 1; option
       }
       if (change.move) {
         const all = await tx.select({ id: productImages.id }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, img.productId))).orderBy(productImages.position)
-        const i = all.findIndex((x) => x.id === imageId), j = i + change.move
-        if (j >= 0 && j < all.length) {
-          [all[i], all[j]] = [all[j]!, all[i]!]
-          for (const [pos, x] of all.entries()) await tx.update(productImages).set({ position: pos }).where(and(eq(productImages.tenantId, tenantId), eq(productImages.id, x.id)))
+        const i = all.findIndex((x) => x.id === imageId)
+        const j = typeof change.move === 'object' ? Math.min(change.move.to, all.length - 1) : i + change.move
+        if (j >= 0 && j < all.length && j !== i) {
+          const [x] = all.splice(i, 1); all.splice(j, 0, x!)
+          for (const [pos, y] of all.entries()) await tx.update(productImages).set({ position: pos }).where(and(eq(productImages.tenantId, tenantId), eq(productImages.id, y.id)))
         }
       }
       if (change.optionValue !== undefined || change.alt !== undefined) {
