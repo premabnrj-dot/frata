@@ -1,6 +1,6 @@
 # ADR-0018: A storefront key is the third source of a tenant id
 
-Status: **proposed** (drafted 2026-11-15 for the owner; not in force) · amends ADR-0002 · Source:
+Status: **accepted** (owner, 2026-11-15: "all others approved": decisions 1–6 yes; the CLAUDE.md line lands with SA0, as written below) · amends ADR-0002 · Source:
 `docs/specs/2026-11-11-storefront-api.md` § 2 (SA0) and § 3–6 · Pairs with: ADR-0014 (Consequences; amendment 8),
 `docs/specs/2026-11-14-site-content-layer.md` (Storefront API additions, tenancy review), ADR-0007, ADR-0016 § 2
 

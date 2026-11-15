@@ -1,6 +1,8 @@
 # ADR-0017: Shop websites run on Cloudflare Workers for Platforms, in an account apart from the console
 
-Status: **proposed** (drafted 2026-11-15 for the owner; not in force) · amends ADR-0005 · Pairs with: ADR-0014
+Status: **proposed, revised** (2026-11-15). The owner: "why not stick to vercel only for now? do not wish to have
+complexity". **Revised recommendation: Vercel only for now** (§ Revised recommendation below); the Cloudflare design
+stays drawn as the second adapter. Awaiting the owner's yes · amends ADR-0005 · Pairs with: ADR-0014
 amendments 4, 6, 7 and 8; `docs/specs/2026-11-12-kit-and-fleet.md` (§ 1 Domains, § 4 Controls, § 5 Lanes, § 6 Fleet,
 § 7 Security); `docs/specs/2026-11-11-agentic-storefront.md` (V2 and its kill signal); ADR-0016
 
@@ -21,6 +23,21 @@ amendments 4, 6, 7 and 8; `docs/specs/2026-11-12-kit-and-fleet.md` (§ 1 Domains
   Scale 1 TB + 1,000; then ₹40/GB and ₹4/minute (`docs/specs/2026-11-11-frrata-studio.md:55`). They were to be re-sized
   once the host was chosen.
 - The V2 kill signal: "hosting cost per shop above what plans recover".
+
+## Revised recommendation (2026-11-15, after the owner's question)
+1. **Code sites run on Vercel**, in a second Vercel team Frrata owns (`frrata-sites`), one project per site, Next.js
+   native, bom1. The console's team never holds site code or its tokens (ADR-0014 amendment 4 stands). No OpenNext,
+   no Cloudflare account, no one-week spike.
+2. **What we accept by it:** bandwidth is the cost (0.3 MB a page is our guess, not a measurement); no server-side
+   egress control on Vercel, so site code's outbound calls are limited by the kit's checks before deploy and the
+   site's CSP in the browser, not at runtime; Vercel's written word on hosting sites inside Frrata's plans
+   (Vercel for Platforms) is asked before the first paid site.
+3. **Allowances are priced on Vercel's numbers measured on the first sites** (bytes and requests per page view,
+   build minutes), not on today's guesses, which fail the 3× rule. Hosting is priced (an owner decision) before it is
+   sold.
+4. **The adapter stays the only door to the host**, so moving to Cloudflare later changes the adapter, not the app.
+   Move when: a plan's median hosted site costs more than a third of its hosting line for two months; or a site needs
+   egress control we can't get; or Vercel declines the terms.
 
 ## Options compared (sources dated; checked 2026-11-15; ₹88/$; ex GST)
 | | Cloudflare Workers for Platforms | Vercel, a second team | Netlify | AWS Amplify |

@@ -1,6 +1,6 @@
 # ADR-0015: Capabilities, and a Builder never sees orders, shoppers or costs
 
-Status: proposed, revised after the architecture review 2026-11-12 (CHANGES NEEDED, folded in) (owner decision 2026-11-12: "builders don't see orders, shoppers or costs. Create a guardrail,
+Status: **accepted** (owner, 2026-11-15: "builders approved"); was proposed, revised after the architecture review 2026-11-12 (CHANGES NEEDED, folded in) (owner decision 2026-11-12: "builders don't see orders, shoppers or costs. Create a guardrail,
 framework, safety, security to ensure we have proper system"; the framework below awaits the owner's sign-off and the
 architecture, security and tenancy reviews) · spec `docs/specs/2026-11-12-studio-intake-and-team.md` (T1) · amends
 ADR-0002 (tenant isolation) with a second axis: what a member may see inside one tenant.
