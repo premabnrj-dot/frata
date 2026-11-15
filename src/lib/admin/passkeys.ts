@@ -22,8 +22,8 @@ export type { Result, GateState }
 /** The reasons a definer refuses, as people read them. Anything else: "Something went wrong. Try again." */
 const SAYS: Record<string, string> = {
   too_many: 'Too many tries. Wait 10 minutes and try again.',
-  no_passkey: 'No passkey yet. Ask another admin to approve one for you.',
-  not_allowed: 'Adding a passkey needs another admin\'s approval first.',
+  no_passkey: 'No passkey yet. Ask another master admin to approve one for you.',
+  not_allowed: 'Adding a passkey needs another master admin\'s approval first.',
   no_challenge: 'That took too long. Try again.',
   replay: 'Not confirmed. Try again, or use your other passkey.',
   duplicate: 'This passkey is already added.',

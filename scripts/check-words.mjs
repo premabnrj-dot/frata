@@ -28,7 +28,7 @@ const ALLOW_FILE = 'scripts/check-words.allow.json'
 const TODO_FILE = 'scripts/check-words.todo'
 
 /** The surfaces N3 holds to the rulebook. */
-export const ROOTS = ['src/app/(console)', 'src/app/(partner)', 'src/app/(lookeditor)', 'src/app/choose', 'src/app/join',
+export const ROOTS = ['src/app/(admin)', 'src/app/(console)', 'src/app/(partner)', 'src/app/(lookeditor)', 'src/app/choose', 'src/app/join',
   'src/components', 'src/lib', 'src/domains']
 /** Inside ROOTS but not N3's: each line says why. */
 export const NOT = [
@@ -36,11 +36,13 @@ export const NOT = [
   'src/components/ekcode/', // EkCode speaks to shoppers in its own brand (ADR-0009)
   'src/components/shop-preview/', // the shop's own words, drawn inside the console's preview
   'src/lib/db/', // schema and SQL
-  'src/lib/admin/', 'src/domains/admin/', // Frrata Admin: staff words (Merchant), its own rule set in N4
   'src/lib/storefront/', 'src/lib/ekcode/', 'src/lib/seo/', 'src/lib/documents/', // shoppers, search engines, PDFs
   'src/domains/themes/', 'src/domains/checkout/', 'src/domains/storefront/', 'src/domains/ekcode-core/',
   'src/domains/pages/', 'src/domains/policies/', 'src/domains/seo/', 'src/domains/documents/', // shopper-facing, legal
 ]
+/** Frrata Admin (Neel N4): every rule but the store owner's glossary (W4): merchant, token, API are staff words there. */
+export const ADMIN_ROOTS = ['src/app/(admin)/', 'src/lib/admin/', 'src/domains/admin/']
+const isAdminFile = (file) => ADMIN_ROOTS.some((r) => file.startsWith(r))
 export const inScope = (file) => ROOTS.some((r) => file.startsWith(r + '/')) && !NOT.some((n) => file.startsWith(n))
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -124,8 +126,10 @@ export function readable(source, fileName = 'x.tsx') {
         if (ts.isJsxText(c)) { if (c.text.trim()) { text += entities(c.text); first ??= c } } else if (ts.isJsxExpression(c) && c.expression && ts.isStringLiteral(c.expression)) text += c.expression.text // {' · '} is text
         else if (text.trim()) text += ' X '
       }
-      // JSX text is never code: a single lower-case word between tags is still a word a person reads.
-      if (first && /\p{L}/u.test(text)) out.push({ text: text.replace(/(X\s*)+$/, '').replace(/\s+/g, ' ').trim(), line: line(first), prop: null, jsx: true, code: false })
+      // JSX text is never code: a single lower-case word between tags is still a word a person reads. The one exception is
+      // text inside <code> or <kbd>: an env name or a SQL line shown as code (Frrata Admin's setup panels).
+      const tag = ts.isJsxElement(n) ? n.openingElement.tagName.getText(sf) : ''
+      if (first && /\p{L}/u.test(text)) out.push({ text: text.replace(/(X\s*)+$/, '').replace(/\s+/g, ' ').trim(), line: line(first), prop: null, jsx: true, code: tag === 'code' || tag === 'kbd' })
       ts.forEachChild(n, (c) => { if (!ts.isJsxText(c)) visit(c) })
       return
     }
@@ -189,7 +193,7 @@ export function judgeText(s, file) {
   }
   if (/\p{Extended_Pictographic}/u.test(t)) fail('W9', 'no emoji')
   for (const re of [RE_SWAP]) { const m = t.match(re); if (m) fail('W3', `"${m[1]}": the swap list says what to write`) }
-  { const m = t.match(RE_OURS) ?? t.match(RE_CASED); if (m) fail('W4', `"${m[1]}": not a store owner's word (§ Glossary)`) }
+  if (!isAdminFile(file)) { const m = t.match(RE_OURS) ?? t.match(RE_CASED); if (m) fail('W4', `"${m[1]}": not a store owner's word (§ Glossary)`) }
   if (RE_SHOP.test(t.replace(SHOP_VERBS, ''))) fail('W5', '"shop": the word is "store" (owner, 2026-11-13)')
   if (RE_ADMIN.test(t)) fail('W6', '"admin" is not a person: Manager, or Frrata Admin for the staff surface')
   if (STATE_FILES.includes(file) && /^(Shipped|Confirmed)$/.test(t) && s.prop && /^(label|shipped|confirmed)$/.test(s.prop)) fail('W7', `"${t}" as a state: On the way, To pack (§ Glossary, order states)`)

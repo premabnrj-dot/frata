@@ -109,7 +109,7 @@ const WORDS: Record<AddressAdminError, string> = {
   reason: 'Add a reason, 3 to 500 characters.',
   bad_slug: 'Use 3–30 letters, digits and single hyphens.',
   not_staff: 'Only Frrata admins can do this.',
-  no_shop: 'That shop no longer exists.',
+  no_shop: 'That store no longer exists.',
   slug_taken: 'That address is taken.',
   not_retired: 'Only an old name can be released.',
   no_domain: 'That domain is no longer connected.',

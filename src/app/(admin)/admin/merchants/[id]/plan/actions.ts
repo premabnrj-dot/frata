@@ -58,7 +58,7 @@ async function trialAction(form: FormData, schema: typeof TrialBase | typeof Tri
   const back = `/admin/merchants/${tid.data}/plan`
   if (!staff.ok) return { error: staff.reason === 'signed_out' ? 'Sign in again.' : staff.reason === 'needs_passkey' ? 'Confirm it\'s you with your passkey first.' : 'Only a master admin can change a trial.' }
   const p = schema.safeParse(Object.fromEntries(form))
-  if (!p.success) return { error: 'A trial is 7 to 90 days for one shop, and needs a reason.' }
+  if (!p.success) return { error: 'A trial is 7 to 90 days for one store, and needs a reason.' }
   try { await run(staff, p.data) } catch (e) {
     console.error('[trial.shop]', errName(e))
     return { error: trialError(e) }

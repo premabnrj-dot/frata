@@ -13,7 +13,7 @@ const n = (x: number) => x.toLocaleString('en-IN')
 const PLAN: Record<string, string> = { trial: 'Trial', launch: 'Launch', growth: 'Growth', scale: 'Scale' }
 
 export function MuxTab({ f, alerts, pulls, connected, videosRead }: { f: MuxFacts; alerts: Alert[]; pulls: { last: Pull | null; lastOk: Pull | null }; connected: boolean; videosRead: boolean }) {
-  if (!videosRead) return <Panel title="We could not read the videos">Admin’s database login didn’t answer. Try again in a minute.</Panel>
+  if (!videosRead) return <Panel title="We could not read the videos">Frrata Admin’s database login didn’t answer. Try again in a minute.</Panel>
   const delivery = connected || pulls.lastOk
   return (
     <div className="grid gap-4">
@@ -36,7 +36,7 @@ export function MuxTab({ f, alerts, pulls, connected, videosRead }: { f: MuxFact
         <Fold title="Most watched">
           {f.top.length ? (
             <DataTable label="Most watched">
-              <DataTableHead><th>Video</th><th>Shop</th><th className="text-right">Minutes</th><th className="text-right">Share</th></DataTableHead>
+              <DataTableHead><th>Video</th><th>Store</th><th className="text-right">Minutes</th><th className="text-right">Share</th></DataTableHead>
               <DataTableBody>
                 {f.top.map((t) => <DataTableRow key={t.assetId}><Td cell="a">{t.label}</Td><Td cell="b">{t.shop}</Td><Td cell="c" className="text-right font-num">{n(t.minutes)}</Td><Td cell="d" className="text-right font-num">{Math.round(t.share * 100)}%</Td></DataTableRow>)}
               </DataTableBody>
@@ -45,19 +45,19 @@ export function MuxTab({ f, alerts, pulls, connected, videosRead }: { f: MuxFact
         </Fold>
       </div>
       <div className="grid gap-2">
-        <Fold title="By shop">
+        <Fold title="By store">
           {f.shops.length ? (
-            <DataTable label="By shop">
-              <DataTableHead><th>Shop</th><th>Plan</th><th className="text-right">Live</th><th className="text-right">Delivered</th></DataTableHead>
+            <DataTable label="By store">
+              <DataTableHead><th>Store</th><th>Plan</th><th className="text-right">Live</th><th className="text-right">Delivered</th></DataTableHead>
               <DataTableBody>
                 {f.shops.slice(0, 12).map((s) => <DataTableRow key={s.tenantId}><Td cell="a">{s.shop}</Td><Td cell="b">{PLAN[s.plan] ?? s.plan}</Td><Td cell="c" className="text-right font-num">{n(s.liveProduct)} / {n(s.cap)}</Td><Td cell="d" className="text-right font-num">{n(s.minutes)} min</Td></DataTableRow>)}
               </DataTableBody>
             </DataTable>
-          ) : <p className="px-4 pb-4 text-sm text-muted-foreground">No shop has product videos yet.</p>}
+          ) : <p className="px-4 pb-4 text-sm text-muted-foreground">No store has product videos yet.</p>}
         </Fold>
         <Rules rules={[
           ['Delivered minutes on pace past the free 100,000', `Then $${MUX.deliveryPerMinuteUsd} a minute`],
-          ['One video over 25% of delivery', 'A reel shared outside the shop'],
+          ['One video over 25% of delivery', 'A reel shared outside the store'],
           ['Uploads that didn’t work over 20% in a day', 'Too long, too short, under 720p or lost'],
           ['Mux’s own spending alerts', 'Email from Mux at the amounts set in Mux (paid plans)'],
         ]} />

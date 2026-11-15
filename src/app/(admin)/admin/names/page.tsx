@@ -82,7 +82,7 @@ export default async function NamesPage({ searchParams }: { searchParams: Promis
                 <Td cell="a" className="font-mono">{h.name}{h.retiredByFrrata && <> <Badge tone="warn">No redirect</Badge></>}</Td>
                 <Td cell="c"><Link href={`/admin/merchants/${h.tenantId}/addresses`} className="underline-offset-2 hover:underline">{h.shop}</Link></Td>
                 <Td cell="d">{dayMonthIN(h.retiredAt)}</Td>
-                {can && <Td cell="f" className="text-right"><DialogButton spec={{ label: `Release ${h.name}`, title: `Release ${h.name}?`, description: 'Any store can take it; it no longer leads to the old store.', action: releaseNameAction, keep: 'Keep held', go: 'Release',
+                {can && <Td cell="f" className="text-right"><DialogButton spec={{ label: `Release ${h.name}`, title: `Release ${h.name}?`, description: 'Any store can take it. It no longer leads to the old store.', action: releaseNameAction, keep: 'Keep held', go: 'Release',
                   fields: <><input type="hidden" name="name" value={h.name} /><Why /></> }} /></Td>}
               </DataTableRow>
             ))}

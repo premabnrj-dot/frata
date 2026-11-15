@@ -111,7 +111,7 @@ export default {
         assert.equal((await db`select count(*)::int n from frrata_invoices where tenant_id = ${KESAR} and number is not null`)[0].n, 0)
         await dlg.getByLabel(/Type ISSUE/).fill(`ISSUE ${n}`)
         await dlg.getByRole('button', { name: `Issue ${n}` }).click()
-        await expectToast(meera, /issued.*test mode/, 'ok')
+        await expectToast(meera, /issued. Test mode/, 'ok')
         const [inv] = await db`select id, number, total from frrata_invoices where tenant_id = ${KESAR} and number is not null order by issued_at desc limit 1`
         assert.match(inv.number, /^FRR\/T\d\d-\d\d\/\d{6}$/)
         // The shop: the test invoice says so, with its PDF (named TEST).

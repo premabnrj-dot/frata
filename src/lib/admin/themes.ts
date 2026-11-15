@@ -123,7 +123,7 @@ export async function releaseVersion(staff: StaffOk, key: string, version: strin
  * need a reason; the baseline (Classic 1.0.0) can't be pulled.
  */
 export async function pullVersion(staff: StaffOk, key: string, version: string, how: 'recall' | 'withdraw', reason: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (isBaseline(key, version)) return { ok: false, error: 'Classic 1.0.0 is every shop’s fallback look; it can’t be pulled.' }
+  if (isBaseline(key, version)) return { ok: false, error: 'Classic 1.0.0 is every store’s fallback look. It can’t be pulled.' }
   if (reason.trim().length < 3) return { ok: false, error: 'Say why, in a few words.' }
   return adminDb().transaction(async (tx) => {
     const r = await rowFor(tx, key, version)

@@ -65,7 +65,7 @@ export function VercelTab({ f, alerts, pulls, connected }: { f: VercelFacts; ale
         </Fold>
       </div>
       <Rules rules={[
-        ['On pace past the budget', `Projected past the credit over ${formatUsd(f.budgetMicros)}; three quarters used is Now`],
+        ['On pace past the budget', `Projected past the credit over ${formatUsd(f.budgetMicros)}. Three quarters used is Now`],
         ['A day over 3× normal', 'A finished day against the 7 days before'],
         ['Another project over 40%', 'It shares Frrata’s budget and its pause'],
         ['Vercel’s own spend alert', 'Email and SMS from Vercel at 50%, 75% and 100% of the budget'],

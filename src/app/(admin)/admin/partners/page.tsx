@@ -62,7 +62,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
     ? { label: 'Reinstate…', title: `Reinstate ${nameOf(open)}?`, description: 'Their team gets its stores back at once.', action: reinstatePartnerAction, keep: 'Keep suspended', go: 'Reinstate',
         fields: <><input type="hidden" name="id" value={open.id} /><input type="hidden" name="name" value={nameOf(open)} />
           <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Type {nameOf(open)} to confirm</span><input name="typed" maxLength={120} autoComplete="off" className={FIELD} /><FieldMessage name="typed" /></label></> }
-    : { label: 'Suspend…', title: `Suspend ${nameOf(open)}?`, description: 'Their team loses every store at once; each brand is told.', action: suspendPartnerAction, keep: 'Keep access', go: 'Suspend', danger: true,
+    : { label: 'Suspend…', title: `Suspend ${nameOf(open)}?`, description: 'Their team loses every store at once. Each brand is told.', action: suspendPartnerAction, keep: 'Keep access', go: 'Suspend', danger: true,
         fields: <><input type="hidden" name="id" value={open.id} /><input type="hidden" name="name" value={nameOf(open)} />
           <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Reason to suspend</span><input name="reason" maxLength={300} className={FIELD} /><FieldMessage name="reason" /></label>
           <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Type {nameOf(open)} to confirm</span><input name="typed" maxLength={120} autoComplete="off" className={FIELD} /><FieldMessage name="typed" /></label></> }] : []

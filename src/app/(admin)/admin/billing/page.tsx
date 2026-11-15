@@ -92,7 +92,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             {!begun ? <span className="text-sm text-muted-foreground">Issued from 1 {label}</span>
               : ready.stale > 0 ? <ActionForm action={runDraftsAction}>{monthField}<Submit>Run drafts again</Submit></ActionForm>
               : ready.count > 0 && <DialogButton variant="primary" spec={{ label: `Issue ${ready.count} ${ready.count === 1 ? 'invoice' : 'invoices'}`, title: `Issue ${ready.count} ${ready.count === 1 ? 'invoice' : 'invoices'} for ${label}?`, danger: true,
-                  description: 'Each gets its number now. An issued invoice never changes; a correction is a credit note.', action: issueAction, keep: 'Not yet', go: `Issue ${ready.count}`,
+                  description: 'Each gets its number now. An issued invoice never changes. A correction is a credit note.', action: issueAction, keep: 'Not yet', go: `Issue ${ready.count}`,
                   fields: <>{monthField}<input type="hidden" name="count" value={ready.count} /><input type="hidden" name="total" value={ready.total} />
                     <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Type ISSUE {ready.count} to confirm</span><input name="confirm" autoComplete="off" className={FIELD} /><FieldMessage name="confirm" /></label></> }} />}
           </div>

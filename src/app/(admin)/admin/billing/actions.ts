@@ -49,7 +49,7 @@ export async function issueAction(form: FormData): Promise<ActionResult> {
   let msg: string
   try {
     const r = await issueMonth(staff, monthOfYM(p.data.month)!, { count: p.data.count, total: p.data.total })
-    msg = `${r.issued} invoice${r.issued === 1 ? '' : 's'} issued${r.closed ? `, ${r.closed} closed with nothing to pay` : ''}${r.test ? ' — test mode: not tax invoices, never collected' : ''}.`
+    msg = `${r.issued} invoice${r.issued === 1 ? '' : 's'} issued${r.closed ? `, ${r.closed} closed with nothing to pay` : ''}${r.test ? '. Test mode, so they are not tax invoices and are never collected' : ''}.`
   } catch (e) {
     console.error('[billing.issue]', errName(e))
     return { error: reason(e) }
@@ -99,7 +99,7 @@ export async function refundAction(form: FormData): Promise<ActionResult> {
   if (!staff.ok) return { error: staff.message }
   if (!confirmedRecently(staff)) return { error: FRESH }
   const p = Refund.safeParse(Object.fromEntries(form))
-  if (!p.success) return { error: 'A reference (6 to 40 letters and digits) and the day it was sent are needed.' }
+  if (!p.success) return { error: 'Give the bank reference and the day it was sent.' }
   try { await recordRefund(staff, p.data.payment, { utr: p.data.utr, sentOn: p.data.sentOn }) } catch (e) {
     console.error('[billing.refund]', errName(e))
     return /frrata_payments_refund_utr/.test(String((e as { cause?: unknown })?.cause ?? e)) ? { fields: { utr: 'That reference was already recorded.' } } : { error: reason(e) }
@@ -117,7 +117,7 @@ export async function collectAction(_form: FormData): Promise<ActionResult> {
     msg = `${r.notices} notice${r.notices === 1 ? '' : 's'}, ${r.attempts} debit${r.attempts === 1 ? '' : 's'} started, ${r.sent} sent, ${r.settled} settled, ${r.acknowledged} day-14 note${r.acknowledged === 1 ? '' : 's'}.`
   } catch (e) {
     console.error('[billing.collect]', errName(e))
-    return { error: 'The collection run failed. Nothing was charged twice; check the logs.' }
+    return { error: 'The collection run failed. Nothing was charged twice. Check the logs.' }
   }
   revalidatePath('/admin/billing')
   return { ok: msg }

@@ -65,11 +65,11 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
           <MoreDialogs specs={more} />
           {admin && v.inCode && !final && v.state !== 'released' && (
             <DialogButton variant="primary" spec={{ label: 'Release to every store', title: `Release ${name} to every store?`, action: releaseAction, keep: 'Not yet', go: 'Release', fields: hidden,
-              description: older > 0 ? `${stores(older)} live on an older ${v.name} see that it’s ready; nothing changes until they publish.` : 'Every store can try it.' }} />
+              description: older > 0 ? `${stores(older)} live on an older ${v.name} see that it’s ready. Nothing changes until they publish.` : 'Every store can try it.' }} />
           )}
         </>} />
       {/* feedback-ok: a state of the version (not in the deployed code), not the result of a button */}
-      {!v.inCode && <p className="text-sm text-danger-text">This version is no longer in the deployed code; stores on it show the nearest earlier version.</p>}
+      {!v.inCode && <p className="text-sm text-danger-text">This version is no longer in the deployed code. Stores on it show the nearest earlier version.</p>}
 
       <ViewTabs label={name} tabs={TABS.map(([k, label]) => ({ href: `${base}?tab=${k}`, label, count: k === 'pilot' ? v.staged.length || undefined : undefined, current: tab === k }))} />
 
@@ -95,7 +95,7 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
       {tab === 'inside' && <div className="space-y-2 text-sm">
         <ul className="list-disc space-y-1 pl-5">{newFeatures.map((f) => <li key={f}>{f}</li>)}</ul>
         {prev && <p className="text-muted-foreground">Since {prev.version}: {added.length ? added.join(', ') : 'no new sections'}. Stores on {prev.version} keep everything they made.</p>}
-        {isBaseline(key, version) && <p className="text-muted-foreground">Every store’s fallback look: it can’t be recalled or withdrawn.</p>}
+        {isBaseline(key, version) && <p className="text-muted-foreground">Every store’s fallback look. It can’t be recalled or withdrawn.</p>}
       </div>}
 
       {tab === 'history' && (v.releasedAt || v.recalledAt || v.withdrawnAt ? (

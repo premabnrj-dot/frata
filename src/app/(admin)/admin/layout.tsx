@@ -27,7 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Staff passkeys (ADR-0007 amended 2026-11-12): no page renders until this browser session has passed the check.
   if (!staff.ok && staff.reason === 'needs_passkey') {
     const state = await gateState(staff.identity).catch(() => 'error' as const)
-    if (state === 'error') return <main data-shell data-neel="" className="p-6"><Panel title="Admin cannot reach the database">Try again in a minute.</Panel></main>
+    if (state === 'error') return <main data-shell data-neel="" className="p-6"><Panel title="Frrata Admin cannot reach the database">Try again in a minute.</Panel></main>
     return <Toaster calm><StaffGate email={staff.identity.email} state={state}
       signOut={<form action={signOutAction}><button type="submit" className="text-sm underline underline-offset-4">Sign out</button></form>} /></Toaster>
   }
@@ -45,9 +45,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!health.ok) {
     return (
       <main data-shell data-neel="" className="p-6">
-        <Panel title={health.why === 'login_refused' ? 'Admin cannot sign in to the database' : 'Admin cannot reach the database'}>
+        <Panel title={health.why === 'login_refused' ? 'Frrata Admin cannot sign in to the database' : 'Frrata Admin cannot reach the database'}>
           {health.why === 'login_refused'
-            ? <>Supabase refused the <code>frata_admin</code> login. Set its password in the SQL Editor (<code>alter role frata_admin with password &apos;…&apos;</code>), use the same value in <code>ADMIN_DATABASE_URL</code> in Vercel, then redeploy. See docs/setup.md § 6.</>
+            ? <>Supabase refused the <code>frata_admin</code> login. Set its password in the SQL Editor (<code>alter role frata_admin with password &apos;…&apos;</code>). Use the same value in <code>ADMIN_DATABASE_URL</code> in Vercel, then redeploy. See docs/setup.md § 6.</>
             : <>Check <code>ADMIN_DATABASE_URL</code> in Vercel points at the Transaction pooler (port 6543), then redeploy.</>}
         </Panel>
       </main>
@@ -85,7 +85,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: 'Platform', items: [appsItem, ekcodeItem, themesItem, noticesItem, emailItem, infraItem, activity] },
   ]
   return (
-    <AppShell rail={railFrom((await cookies()).get('rail')?.value)} ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={groups}
+    <AppShell rail={railFrom((await cookies()).get('rail')?.value)} ink title="Frrata Admin" tag="STAFF" navLabel="Frrata Admin" groups={groups}
       tabs={[today, merchants, partnersItem]} more={[trialsItem, offersItem, namesItem, staffItem, plans, billingItem, appsItem, ekcodeItem, themesItem, noticesItem, emailItem, infraItem, activity]} foot={foot} email={staff.email}>
       {children}
     </AppShell>

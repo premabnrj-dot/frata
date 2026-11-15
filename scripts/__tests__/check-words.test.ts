@@ -58,7 +58,7 @@ describe('check:words', async () => {
     const S = 'src/components/storefront/x.tsx'
     expect(rules(`const a = 'Simply add it to your shop; it is easy.'`, S)).toEqual(['filler'])
     expect(inScope(S)).toBe(false)
-    expect(inScope('src/app/(admin)/admin/x/page.tsx')).toBe(false)
+    expect(inScope('src/app/(admin)/admin/x/page.tsx')).toBe(true) // Frrata Admin joined in Neel N4, with its own rule set
     expect(inScope('src/app/(console)/console/analytics/page.tsx')).toBe(true)
     expect(inScope(F)).toBe(true)
   })
@@ -115,4 +115,16 @@ describe('check:words', async () => {
     expect(judge(fails, [allow[0]], new Map([['b.ts · W5', 2]]))).toEqual([expect.stringContaining('lower the line to 1')])
     expect(judge(fails, [allow[0]], new Map([['b.ts · W5', 1], ['c.ts · W1', 1]]))).toEqual([expect.stringContaining('c.ts · W1 is clean')])
   })
+
+  it('Frrata Admin: every rule but the glossary (merchant, token are staff words); "shop" and a bare admin still fail', () => {
+    const A = 'src/app/(admin)/admin/x/page.tsx'
+    expect(rules(`const a = 'Open the merchant token'`, A)).not.toContain('W4')
+    expect(rules(`const a = 'Open the shop'`, A)).toContain('W5')
+    expect(rules(`const a = 'Ask another admin'`, A)).toContain('W6')
+    expect(rules(`const a = 'Ask another master admin'`, A)).not.toContain('W6')
+  })
+  it('text inside <code> is code: an env name or a SQL line', () => {
+    expect(rules(`const a = <p>Set <code>ADMIN_DATABASE_URL</code> in Vercel.</p>`, 'src/app/(admin)/admin/x/page.tsx')).not.toContain('W6')
+  })
 })
+

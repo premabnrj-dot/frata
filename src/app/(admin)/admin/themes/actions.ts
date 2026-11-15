@@ -21,7 +21,7 @@ export async function stageAction(form: FormData): Promise<ActionResult> {
   const p = V.extend({ tenantId: z.uuid() }).safeParse(Object.fromEntries(form))
   if (!p.success) return { error: BAD_FORM }
   const r = await stageVersion(staff, p.data.key, p.data.version, p.data.tenantId)
-  return r === 'staged' ? { ok: 'Staged: that shop can try this version now.' } : { error: r === 'pulled' ? 'This version was recalled; it can’t be staged.' : 'This version is not in the deployed code.' }
+  return r === 'staged' ? { ok: 'Staged. That store can try this version now.' } : { error: r === 'pulled' ? 'This version was recalled. It can’t be staged.' : 'This version is not in the deployed code.' }
 }
 
 export async function unstageAction(form: FormData): Promise<ActionResult> {
@@ -30,7 +30,7 @@ export async function unstageAction(form: FormData): Promise<ActionResult> {
   const p = V.extend({ tenantId: z.uuid() }).safeParse(Object.fromEntries(form))
   if (!p.success) return { error: BAD_FORM }
   const ok = await unstageVersion(staff, p.data.key, p.data.version, p.data.tenantId)
-  return ok ? { ok: 'Unstaged. A look already published on it stays.' } : { error: 'That shop was not staged.' }
+  return ok ? { ok: 'Unstaged. A look already published on it stays.' } : { error: 'That store was not staged.' }
 }
 
 export async function releaseAction(form: FormData): Promise<ActionResult> {
@@ -39,7 +39,7 @@ export async function releaseAction(form: FormData): Promise<ActionResult> {
   const p = V.safeParse(Object.fromEntries(form))
   if (!p.success) return { error: BAD_FORM }
   const r = await releaseVersion(staff, p.data.key, p.data.version)
-  return r.ok ? { ok: 'Released: every shop can try it, and shops on an older version see that it’s ready.' } : { error: r.error }
+  return r.ok ? { ok: 'Released. Every store can try it, and stores on an older version see it’s ready.' } : { error: r.error }
 }
 
 export async function pullAction(form: FormData): Promise<ActionResult> {
@@ -49,5 +49,5 @@ export async function pullAction(form: FormData): Promise<ActionResult> {
   if (!p.success) return V.safeParse(Object.fromEntries(form)).success ? { fields: { reason: 'Give a reason of at least 3 characters. Nothing was changed.' } } : { error: BAD_FORM }
   const r = await pullVersion(staff, p.data.key, p.data.version, p.data.how, p.data.reason)
   if (r.ok && p.data.how === 'withdraw') refreshThemeVersions()
-  return r.ok ? { ok: p.data.how === 'recall' ? 'Recalled. No new looks on it; shops live on it are offered their previous look.' : 'Withdrawn. Shops on it show their previous look now.' } : { error: r.error }
+  return r.ok ? { ok: p.data.how === 'recall' ? 'Recalled. No new looks on it. Stores live on it are offered their previous look.' : 'Withdrawn. Stores on it show their previous look now.' } : { error: r.error }
 }

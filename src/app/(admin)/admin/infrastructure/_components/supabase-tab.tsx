@@ -4,10 +4,10 @@ import { LIMITS, type Alert, type DbHealth } from '@/domains/infra/alerts'
 import { RATES_CHECKED, SUPABASE } from '@/domains/infra/rates'
 import { bytes, Kpis, Meter, NeedsYou, Rules, Sources, Fold } from './parts'
 
-const ROLE = { frata_app: 'The shop and console', frata_admin: 'Admin', other: 'Supabase’s own' } as Record<string, string>
+const ROLE = { frata_app: 'The store and console', frata_admin: 'Frrata Admin', other: 'Supabase’s own' } as Record<string, string>
 
 export function SupabaseTab({ h, alerts }: { h: DbHealth | null; alerts: Alert[] }) {
-  if (!h) return <Panel title="We could not read the database’s health">Admin’s database login didn’t answer. Try again in a minute.</Panel>
+  if (!h) return <Panel title="We could not read the database’s health">Frrata Admin’s database login didn’t answer. Try again in a minute.</Panel>
   const open = h.connections.reduce((n, c) => n + c.open, 0), busy = h.connections.reduce((n, c) => n + c.busy, 0)
   const disk = SUPABASE.diskBytes[SUPABASE.plan]
   const wait = h.outboxOldestS === null ? 'none waiting' : h.outboxOldestS < 120 ? `oldest ${h.outboxOldestS} s` : `oldest ${Math.round(h.outboxOldestS / 60)} min`

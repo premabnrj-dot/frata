@@ -44,13 +44,13 @@ export async function suspendPartnerAction(form: FormData): Promise<ActionResult
   const p = Suspend.safeParse(Object.fromEntries(form))
   if (!p.success) return { error: 'Check the reason and the name.' }
   const fields: Record<string, string> = {}
-  if (!p.data.reason) fields.reason = 'Give a reason: the shops and the audit log read it.'
+  if (!p.data.reason) fields.reason = 'Give a reason. The stores and the audit log read it.'
   if (p.data.typed !== p.data.name) fields.typed = `Type ${p.data.name} exactly.`
   if (Object.keys(fields).length) return { fields }
   const r = await suspendPartner(staff, p.data.id, p.data.reason)
   if (!r.ok) return { error: SAYS[r.error] ?? 'We could not suspend the partner. Nothing was changed.' }
   revalidatePath('/admin/partners')
-  return { ok: `Suspended. Access ended; ${r.shops} ${r.shops === 1 ? 'shop was' : 'shops were'} told.` }
+  return { ok: `Suspended. Access ended. ${r.shops} ${r.shops === 1 ? 'store was' : 'stores were'} told.` }
 }
 
 export async function reinstatePartnerAction(form: FormData): Promise<ActionResult> {
@@ -88,7 +88,7 @@ export async function deleteOwnerPasskeysAction(input: { id: string }): Promise<
   const staff = await requireStaff(ADMIN_ONLY)
   if (!staff.ok) return { ok: false, error: 'Only a master admin can do this.' }
   const p = Owner.safeParse(input)
-  if (!p.success) return { ok: false, error: 'Something went wrong. Try again.' }
+  if (!p.success) return { ok: false, error: 'That didn’t work. Try again.' }
   const proof = await staffProof(staff.userId)
   if (!proof) return { ok: false, error: 'Confirm with your passkey first.' }
   const r = await deleteOwnerPasskeys(staff, proof, p.data.id)

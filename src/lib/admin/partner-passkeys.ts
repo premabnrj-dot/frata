@@ -29,7 +29,7 @@ const SAYS: Record<string, string> = {
 const fail = (err: unknown, what: string) => {
   const code = dbCodeOf(err)
   if (!SAYS[code]) console.error('[admin partner passkeys]', what, errName(err))
-  return { ok: false as const, error: SAYS[code] ?? 'Something went wrong. Try again.' }
+  return { ok: false as const, error: SAYS[code] ?? 'That didn’t work. Try again.' }
 }
 
 export async function ownerPasskeys(staff: StaffOk, proof: Proof, partnerId: string): Promise<OwnerPasskeys> {
