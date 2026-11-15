@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { Badge, Tag } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { FIELD } from '@/components/ui/field'
 import { Icon } from '@/components/icons/icon'
@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/toast'
 import { BOUND_QUESTION, type Bound } from '@/domains/policies/answers'
 import { MAX_FAQ, type FaqItem } from '@/domains/pages/templates'
 import { saveFaqAction, undoPageAction } from '../actions'
+import { refused } from './refused'
 
 // =============================================================================
 // Content › FAQ (final mockup § FAQ): the questions, in order, moved with ↑ ↓; an answer from Settings is read-only
@@ -32,7 +33,7 @@ export function Faq({ id, version, items, answers, canSave, lock }: { id: string
     setBusy(true); setError(null)
     const r = await saveFaqAction({ id, version, items: next })
     setBusy(false)
-    if (!r.ok) { if (edit) setError(r.error); else toast.error(r.error); return false }
+    if (!r.ok) { if (edit) setError(r.error); else refused(toast, router.refresh, r.error, () => void put(next, said)); return false }
     setEdit(null)
     toast({ text: said, undo: id ? async () => { const u = await undoPageAction({ id: r.id, version: r.version }); router.refresh(); return u } : undefined })
     router.refresh()
@@ -58,15 +59,15 @@ export function Faq({ id, version, items, answers, canSave, lock }: { id: string
             <div className="min-w-0 flex-1"><p className="font-medium">{x.q}</p>
               <p className="mt-0.5 text-label text-muted-foreground">{'bound' in x ? <>{answers[x.bound] ?? 'Shows once Settings has what it answers.'} <Badge className="ml-1">From Settings</Badge></> : x.a}</p></div>
             {canSave && <span className="flex items-center gap-1">
-              <Button size="sm" variant="ghost" aria-label={`Move ${x.q} up`} disabled={i === 0 || busy} onClick={() => swap(i, i - 1)}><Icon name="up" className="size-4" /></Button>
-              <Button size="sm" variant="ghost" aria-label={`Move ${x.q} down`} disabled={i === items.length - 1 || busy} onClick={() => swap(i, i + 1)}><Icon name="down" className="size-4" /></Button>
+              <Button size="sm" variant="secondary" aria-label={`Move ${x.q} up`} disabled={i === 0 || busy} onClick={() => swap(i, i - 1)}><Icon name="up" className="size-4" /></Button>
+              <Button size="sm" variant="secondary" aria-label={`Move ${x.q} down`} disabled={i === items.length - 1 || busy} onClick={() => swap(i, i + 1)}><Icon name="down" className="size-4" /></Button>
               {'bound' in x
                 ? <Button size="sm" variant="ghost" aria-label={`Remove ${x.q}`} onClick={() => void put(items.filter((_, j) => j !== i), 'Question removed')}><Icon name="close" className="size-4" /></Button>
                 : <Button size="sm" variant="secondary" aria-label={`Edit ${x.q}`} onClick={() => setEdit({ at: i, q: x.q, a: x.a })}>Edit</Button>}
             </span>}
           </li>))}</ol>}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <a href={SETTINGS} className="inline-flex min-h-6 items-center text-sm font-medium text-link">Change in Settings</a>
+        <a href={SETTINGS} className={button({ variant: 'secondary', size: 'sm' })}>Change in Settings</a>
         {canSave && items.length < MAX_FAQ && missing.map((b) => <Button key={b} size="sm" variant="ghost" onClick={() => void put([...items, { q: BOUND_QUESTION[b], bound: b }], 'Question added')}>Add “{BOUND_QUESTION[b]}”</Button>)}
       </div>
       <Dialog open={!!edit} onClose={() => { setEdit(null); setError(null) }} title={edit?.at === null ? 'Add a question' : 'Edit question'} error={error}

@@ -91,6 +91,9 @@ export function Pages({ pages, canSave, lock, ctx, templates }: { pages: PageRow
       <Dialog open={!!adding} onClose={close} title="Add a page" error={error && !error.field ? error.text : null}
         actions={<><Button variant="secondary" data-autofocus onClick={close}>Don’t add</Button><Button busy={busy} onClick={add}>Add page</Button></>}>
         {adding && <div className="grid gap-4">
+          {/* The one page a store adds (TS1a templates: the FAQ has its own tab). */}
+          <div className="flex items-center gap-3 rounded-md border border-border p-3"><span aria-hidden="true" className="size-12 shrink-0 rounded-md bg-sunk" />
+            <span className="min-w-0 flex-1"><b className="block font-medium">About</b><span className="block text-label text-muted-foreground">Story, makers, materials</span></span></div>
           <label className="grid gap-1.5"><span className="flex justify-between text-label font-medium">Title<span className="font-num font-normal text-muted-foreground">{adding.title.length}/60</span></span>
             <input name="title" value={adding.title} maxLength={60} placeholder="Our story" {...fieldProps('title', err('title'))} onChange={(e) => setAdding({ ...adding, title: e.target.value, handle: adding.touched ? adding.handle : handleOf(e.target.value) })} className={`${FIELD} w-full`} />
             <FieldError name="title" message={err('title')} /></label>

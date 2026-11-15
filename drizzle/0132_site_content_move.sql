@@ -91,15 +91,15 @@ begin
 
     -- What the open draft had that was not live (it stays in the draft; Content shows what shoppers see).
     if draft is not null then
-      if (draft->'menus') is distinct from (layer->'menus') then lost := lost || 'menus'::text; end if;
-      if (draft->'settings'->'announcement') is distinct from (layer->'settings'->'announcement') then lost := lost || 'the bar'::text; end if;
-      if (draft->'contact') is distinct from (layer->'contact') then lost := lost || 'the Contact line'::text; end if;
+      if (draft->'menus') is distinct from (layer->'menus') then lost := lost || 'menu'::text; end if;
+      if (draft->'settings'->'announcement') is distinct from (layer->'settings'->'announcement') then lost := lost || 'bar'::text; end if;
+      if (draft->'contact') is distinct from (layer->'contact') then lost := lost || 'Contact line'::text; end if;
     end if;
 
     -- Pages save live from now on: a live page's words are its draft; a page never published is hidden.
     if exists (select 1 from public.shop_pages p where p.tenant_id = t and p.live is not null and p.removed_at is null
         and ((p.draft - 'hidden' - 'removed') is distinct from p.live or coalesce((p.draft->>'hidden')::boolean, false) or p.draft ? 'removed')) then
-      lost := lost || 'page words'::text;
+      lost := lost || 'page'::text;
     end if;
     update public.shop_pages p set draft = p.live || '{"hidden": false}'::jsonb, previous = null
       where p.tenant_id = t and p.live is not null and p.removed_at is null and p.draft is distinct from (p.live || '{"hidden": false}'::jsonb);
@@ -108,7 +108,10 @@ begin
 
     if (moved > 0 or cardinality(lost) > 0 or cardinality(skipped) > 0)
         and not exists (select 1 from public.notices n where n.tenant_id = t and n.source_kind = 'content') then
-      body := case when cardinality(lost) > 0 then 'Unpublished changes to ' || array_to_string(lost, ', ') || ' were not moved.' else '' end;
+      -- "Unpublished menu changes were not moved." / "Unpublished menu, bar and page changes were not moved."
+      body := case when cardinality(lost) = 0 then ''
+        when cardinality(lost) = 1 then 'Unpublished ' || lost[1] || ' changes were not moved.'
+        else 'Unpublished ' || array_to_string(lost[1:cardinality(lost) - 1], ', ') || ' and ' || lost[cardinality(lost)] || ' changes were not moved.' end;
       if cardinality(skipped) > 0 then
         body := btrim(body || ' Too long to move: ' || array_to_string(skipped, ', ') || '.');
       end if;

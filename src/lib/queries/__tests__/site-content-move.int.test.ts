@@ -55,7 +55,7 @@ describe.skipIf(!host)('the move out of the look', () => {
       expect((await rows(B)).map((r) => r.value)).toEqual([{ line: 'B-line' }])
       expect(await rows(C)).toEqual([])
       const notes = async (t: string) => su`select title, body from notices where tenant_id = ${t} and source_kind = 'content'`
-      expect((await notes(A))[0]?.body).toMatch(/^Unpublished changes to menus, the bar, the Contact line were not moved\./)
+      expect((await notes(A))[0]?.body).toMatch(/^Unpublished menu, bar and Contact line changes were not moved\./)
       expect((await notes(C))[0]?.body).toMatch(/Too long to move: Main menu\./)
       expect(JSON.stringify(await notes(B))).not.toMatch(/A-bar|Live/)
 

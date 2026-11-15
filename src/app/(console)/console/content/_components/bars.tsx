@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/toast'
 import { BAR_SCHEMES, BAR_TEXT_MAX, MAX_BARS } from '@/domains/content/kinds'
 import { deleteBarAction, endBarAction, saveBarAction, undoContentAction } from '../actions'
 import { LinkSelect, type Target } from './link-select'
+import { refused } from './refused'
 
 // =============================================================================
 // Content › Announcement (final mockup § Announcement): up to 3 bars with dates; a live offer shows first (read-only
@@ -51,7 +52,7 @@ export function Bars({ bars, offer, canSave, lock, targets }: { bars: BarRow[]; 
   }
   const mark = async (b: BarRow, how: 'end' | 'delete') => {
     const r = await (how === 'end' ? endBarAction : deleteBarAction)({ id: b.id, version: b.version })
-    if (!r.ok) { toast.error(r.error); return }
+    if (!r.ok) { refused(toast, router.refresh, r.error, () => void mark(b, how)); return }
     toast({ text: how === 'end' ? 'Bar ended' : 'Bar deleted', undo: async () => { const u = await undoContentAction({ id: b.id, version: r.version }); router.refresh(); return u } })
     router.refresh()
   }

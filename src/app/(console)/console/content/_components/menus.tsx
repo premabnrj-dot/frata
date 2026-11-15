@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { Badge, Tag } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { FIELD } from '@/components/ui/field'
 import { Icon } from '@/components/icons/icon'
@@ -16,6 +16,7 @@ import { MENU_KEYS, MENU_NAMES, type MenuKey } from '@/domains/content/kinds'
 import { MENU_LIMITS, type MenuItem } from '@/domains/themes/site'
 import { saveMenuAction, undoContentAction } from '../actions'
 import { LinkSelect, type Target } from './link-select'
+import { refused } from './refused'
 
 // =============================================================================
 // Content › Menus (final mockup § Menus): Main (3 levels), Footer (1), Phone tabs (≤ 5, each with an icon; shown when
@@ -63,7 +64,7 @@ export function Menus({ menus, canSave, lock, targets, tabsOn, splitHeader }: { 
   return (
     <div className="space-y-4">
       {MENU_KEYS.map((k) => (k === 'tabs' && !tabsOn
-        ? <Section key={k} ariaLabel={MENU_NAMES.tabs} title={MENU_NAMES.tabs} action={<span className="flex items-center gap-2"><Badge>Off in Look</Badge><a href="/console/look" className="inline-flex min-h-6 items-center text-sm font-medium text-link">Turn on in Look</a></span>} />
+        ? <Section key={k} ariaLabel={MENU_NAMES.tabs} title={MENU_NAMES.tabs} action={<span className="flex items-center gap-2"><Badge>Off in Look</Badge><a href="/console/look" className={button({ variant: 'secondary', size: 'sm' })}>Turn on in Look</a></span>} />
         : <OneMenu key={`${k}:${menus[k].version ?? 0}`} which={k} one={menus[k]} canSave={canSave} lock={lock} targets={targets} rowLimit={k === 'main' && splitHeader ? 5 : null} />))}
     </div>
   )
@@ -72,20 +73,26 @@ export function Menus({ menus, canSave, lock, targets, tabsOn, splitHeader }: { 
 function OneMenu({ which, one, canSave, lock, targets, rowLimit }: { which: MenuKey; one: One; canSave: boolean; lock: string | null; targets: Target[]; rowLimit: number | null }) {
   const router = useRouter()
   const toast = useToast()
-  const [items, setItems] = useState(one.items)
+  const [items, setItemsNow] = useState(one.items)
+  // How many changes wait for Save (the save bar counts them, as drawn).
+  const [count, setCount] = useState(0)
+  const setItems = (x: MenuItem[]) => { setItemsNow(x); setCount((n) => n + 1) }
   const [edit, setEdit] = useState<{ path: Path | null; label: string; link: string | null; icon: string | null } | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const changed = JSON.stringify(items) !== JSON.stringify(one.items)
+  // What is saved: the row as read, then each save's own result (the page's refresh follows).
+  const [base, setBase] = useState(one.items)
+  const changed = JSON.stringify(items) !== JSON.stringify(base)
   const max = which === 'tabs' ? MENU_LIMITS.tabs : MENU_LIMITS.items
   const name = MENU_NAMES[which]
-  const linkName = (l: string) => targets.find((x) => x.path === l)?.label.replace(/^\w+ · /, '') ?? l
+  const target = (l: string) => targets.find((x) => x.path === l)?.label ?? l
 
   const save = async () => {
     setBusy(true)
     const r = await saveMenuAction({ key: which, version: one.version, items })
     setBusy(false)
-    if (!r.ok) { toast.error(r.error); return }
+    if (!r.ok) { refused(toast, router.refresh, r.error, () => void save(), name.toLowerCase()); return }
+    setBase(items); setCount(0)
     toast({ text: `${name} saved`, undo: one.version ? async () => { const u = await undoContentAction({ id: r.id, version: r.version }); router.refresh(); return u } : undefined })
     router.refresh()
   }
@@ -106,10 +113,10 @@ function OneMenu({ which, one, canSave, lock, targets, rowLimit }: { which: Menu
       <li key={x.id}>
         <div className="flex items-center gap-2 py-2.5" style={{ paddingLeft: `${(p.length - 1) * 22}px` }}>
           <div className="min-w-0 flex-1"><p className="truncate font-medium">{x.label}</p>
-            <p className="truncate text-label text-muted-foreground">{which === 'tabs' ? `Icon · ${x.icon ?? 'none'}` : `→ ${linkName(x.link)}${x.children.length ? ` · ${x.children.length} links under it` : ''}`}</p></div>
+            <p className="truncate text-label text-muted-foreground">{which === 'tabs' ? `Icon · ${x.icon ?? 'none'}` : <>→ <span className="hidden md:inline">{target(x.link)}</span><span className="md:hidden">{target(x.link).replace(/^[\w ]+ · /, '')}{x.children.length ? ` · ${x.children.length} ${x.children.length === 1 ? 'link' : 'links'} under it` : ''}</span></>}</p></div>
           {canSave && <span className="flex items-center gap-1">
-            <Button size="sm" variant="ghost" aria-label={`Move ${x.label} up`} disabled={i === 0} onClick={() => setItems(move(items, p, 'up'))}><Icon name="up" className="size-4" /></Button>
-            <Button size="sm" variant="ghost" aria-label={`Move ${x.label} down`} disabled={i === list.length - 1} onClick={() => setItems(move(items, p, 'down'))}><Icon name="down" className="size-4" /></Button>
+            <Button size="sm" variant="secondary" aria-label={`Move ${x.label} up`} disabled={i === 0} onClick={() => setItems(move(items, p, 'up'))}><Icon name="up" className="size-4" /></Button>
+            <Button size="sm" variant="secondary" aria-label={`Move ${x.label} down`} disabled={i === list.length - 1} onClick={() => setItems(move(items, p, 'down'))}><Icon name="down" className="size-4" /></Button>
             <Menu label={`More for ${x.label}`} size="sm" icon={<MoreHorizontal aria-hidden="true" className="size-4" />} items={[
               { label: 'Edit', onSelect: () => setEdit({ path: p, label: x.label, link: x.link, icon: x.icon }) },
               ...(canIn ? [{ label: `Move under ${above!.label}`, onSelect: () => setItems(move(items, p, 'in')) }] : []),
@@ -117,8 +124,13 @@ function OneMenu({ which, one, canSave, lock, targets, rowLimit }: { which: Menu
               { label: 'Remove', danger: true, onSelect: () => setItems(move(items, p, 'remove')) },
             ]} />
           </span>}
+          {!canSave && which !== 'tabs' && <Button size="sm" variant="secondary" disabled aria-label={`Edit ${x.label}`}>Edit</Button>}
         </div>
-        {x.children.length > 0 && <ul>{x.children.map((c, j) => row(c, [...p, j]))}</ul>}
+        {x.children.length > 0 && <ul>
+          {/* The store opens every level with "View all" (Look v4): drawn, never edited. */}
+          <li className="py-2.5 text-muted-foreground" style={{ paddingLeft: `${p.length * 22}px` }}><p className="font-medium">View all</p><p className="text-label">→ {target(x.link)}</p></li>
+          {x.children.map((c, j) => row(c, [...p, j]))}
+        </ul>}
       </li>
     )
   }
@@ -129,8 +141,8 @@ function OneMenu({ which, one, canSave, lock, targets, rowLimit }: { which: Menu
       {rowLimit && items.length > rowLimit && <p className="mt-2 text-label text-muted-foreground">The Split header shows the first {rowLimit} on a computer.</p>}
       {changed && canSave && (
         <div role="region" aria-label="Unsaved changes" className="mt-3 flex flex-wrap items-center gap-2 rounded-mid bg-bar px-3 py-2 text-sm text-bar-foreground shadow-lg">
-          <span>Unsaved changes</span><span className="flex-1" />
-          <Button size="sm" variant="ghost" className="text-bar-foreground" onClick={() => setItems(one.items)}>Discard change</Button>
+          <span>{count === 1 ? '1 unsaved change' : `${count} unsaved changes`}</span><span className="flex-1" />
+          <button type="button" className="inline-flex min-h-9 items-center rounded-md px-2.5 text-sm font-medium text-bar-foreground hover:bg-white/10" onClick={() => { setItemsNow(base); setCount(0) }}>{count === 1 ? 'Discard change' : 'Discard changes'}</button>
           <Button size="sm" busy={busy} onClick={save}>Save {name.toLowerCase()}</Button>
         </div>
       )}

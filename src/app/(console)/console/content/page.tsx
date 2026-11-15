@@ -66,7 +66,8 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
   const saver = contentSaver(auth.membership.role, data.hasOwner, auth.membership.supportSessionId)
   const canSave = saver === 'yes'
   // Who can, said as a role (the console has no names): "Only the owner can edit".
-  const lock = canSave ? null : saver === 'support' ? 'Support visit · read only' : data.hasOwner ? `Only the ${ROLE_LABEL.owner.toLowerCase()} can edit` : `Only the ${ROLE_LABEL.owner.toLowerCase()} or a ${ROLE_LABEL.admin.toLowerCase()} can edit`
+  // A support visit says so once, in the banner (as drawn), not on every section.
+  const lock = canSave || saver === 'support' ? null : data.hasOwner ? `Only the ${ROLE_LABEL.owner.toLowerCase()} can edit` : `Only the ${ROLE_LABEL.owner.toLowerCase()} or a ${ROLE_LABEL.admin.toLowerCase()} can edit`
 
   // ── Announcement ─────────────────────────────────────────────────────────────────────────────────────────────
   const offerLive = offerBarLive(offer, now)
@@ -117,8 +118,9 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
   const ctx = { tenantId: t, targets, collections: data.collections, products: data.products, photos: data.photos, shopName: shop.shopName }
   return (
     <div className="space-y-5">
-      <PageHeader title="Content" meta={<span className="font-mono text-small">{shop.host}</span>}
-        actions={<a href={`https://${shop.host}`} target="_blank" rel="noreferrer" className={button({ variant: 'secondary' })}><Icon name="external" className="size-4" />View store</a>} />
+      {/* As drawn: on a phone the header is the title alone. */}
+      <PageHeader title="Content" meta={<span className="hidden font-mono text-small md:inline">{shop.host}</span>}
+        actions={<a href={`https://${shop.host}`} target="_blank" rel="noreferrer" className={`${button({ variant: 'secondary' })} max-md:hidden`}><Icon name="external" className="size-4" />View store</a>} />
       <ViewTabs label="Content" scroll tabs={TABS.map((k) => ({ href: `/console/content?tab=${k}`, label: TAB_NAMES[k], current: k === tab }))} />
       {saver === 'support' && <Banner tone="warn" title="Support visit · read only" />}
       {tab === 'announcement' && <Bars bars={bars} offer={offerRow} canSave={canSave} lock={lock} targets={targets} />}
