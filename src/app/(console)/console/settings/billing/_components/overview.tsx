@@ -8,7 +8,7 @@ import { NUDGE_FLOOR } from '@/domains/billing/ladder'
 import { paise } from '@/domains/money/paise'
 import { formatBps } from '@/lib/format'
 import { dayMonthIN, dayMonthLongIN, monthLongIN, monthShortIN } from '@/lib/format-date'
-import { monthStartIST } from '@/domains/time/month'
+import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
 import type { BillingOverview, Paying } from '@/lib/queries/billing'
 import { billingHref } from './tabs'
 import { SetUpAutopayDialog } from '../autopay'
@@ -40,10 +40,13 @@ export function Overview({ o, paying, plans, now, canPay, method }: { o: Billing
   const best = last && cur && !o.plan.custom && last.sales > 0 ? cheapestAt(paise(last.sales), plans) : null
   const save = best && cur && last ? planCostAt(paise(last.sales), cur) - planCostAt(paise(last.sales), best) : 0
   const cheaper = best && best.code !== cur?.code && save >= NUDGE_FLOOR ? { p: best, save } : null
+  // Where the plan on now starts to cost less than the cheaper one: the sales at which their costs meet.
+  const meet = cheaper && cur && cheaper.p.feeBps !== cur.feeBps ? Math.round(((cur.monthlyPrice - cheaper.p.monthlyPrice) * 10_000) / (cheaper.p.feeBps - cur.feeBps)) : null
   const coming = [
     paying?.nextDebit ? { when: paying.nextDebit.at, what: <>Debit of <Money paise={paise(paying.nextDebit.amount)} decimals /> by {method}</> } : null,
     { when: e.invoiceOn, what: e.bill.rolled ? <>The bill is under ₹100 and moves to next month</> : <>Bill of <Money paise={paise(e.bill.total)} decimals /> so far</> },
     o.scheduled ? { when: o.scheduled.startsAt, what: <>You move to {o.scheduled.name}</> } : null,
+    { when: nextMonthStartIST(e.invoiceOn), what: <>{monthLongIN(nextMonthStartIST(e.invoiceOn))}’s bill</> },
   ].filter((x): x is NonNullable<typeof x> => x !== null)
   const max = Math.max(1, ...o.history.map((h) => h.plan + h.fees), s.beforeGst)
   const bars = [...o.history.map((h) => ({ key: h.id, label: monthShortIN(h.periodStart), plan: h.plan, fees: h.fees, sales: h.sales, open: false })),
@@ -104,8 +107,8 @@ export function Overview({ o, paying, plans, now, canPay, method }: { o: Billing
           </div>
           <details className="mt-3 text-sm">
             <summary className="cursor-pointer text-link">See as a table</summary>
-            <table aria-label="What Frrata cost each month" className="mt-2 w-full"><thead className="text-left text-small text-muted-foreground"><tr><th scope="col" className="py-1 font-medium">Bill</th><th scope="col" className="py-1 text-right font-medium">Delivered sales</th><th scope="col" className="py-1 text-right font-medium">Plan and apps</th><th scope="col" className="py-1 text-right font-medium">Fee</th><th scope="col" className="py-1 text-right font-medium">Of sales</th></tr></thead>
-              <tbody>{bars.map((b) => { const sh = costShareBps(b.plan + b.fees, b.sales); return <tr key={b.key} className="border-t border-line-soft"><td className="py-1.5">{b.label}</td><td className="py-1.5 text-right"><Money paise={paise(b.sales)} /></td><td className="py-1.5 text-right"><Money paise={paise(b.plan)} /></td><td className="py-1.5 text-right"><Money paise={paise(b.fees)} /></td><td className="py-1.5 text-right">{sh === null ? '—' : pct(sh)}</td></tr> })}</tbody></table>
+            <table aria-label="What Frrata cost each month" className="mt-2 w-full"><thead className="text-left text-small text-muted-foreground"><tr><th scope="col" className="py-1 font-medium">Bill</th><th scope="col" className="py-1 text-right font-medium">Delivered sales</th><th scope="col" className="py-1 text-right font-medium">Plan and apps</th><th scope="col" className="py-1 text-right font-medium">Fee</th><th scope="col" className="py-1 text-right font-medium">Before GST</th><th scope="col" className="py-1 text-right font-medium">Of sales</th></tr></thead>
+              <tbody>{bars.map((b) => { const sh = costShareBps(b.plan + b.fees, b.sales); return <tr key={b.key} className="border-t border-line-soft"><td className="py-1.5">{b.label}</td><td className="py-1.5 text-right"><Money paise={paise(b.sales)} /></td><td className="py-1.5 text-right"><Money paise={paise(b.plan)} /></td><td className="py-1.5 text-right"><Money paise={paise(b.fees)} /></td><td className="py-1.5 text-right"><Money paise={paise(b.plan + b.fees)} /></td><td className="py-1.5 text-right">{sh === null ? '—' : pct(sh)}</td></tr> })}</tbody></table>
           </details>
         </Section>
       ) : null}
@@ -113,6 +116,7 @@ export function Overview({ o, paying, plans, now, canPay, method }: { o: Billing
       <div className="grid gap-4 md:grid-cols-2">
         {cheaper ? (
           <Section className="border-chart-now bg-select" title={<span className="text-select-foreground">{cheaper.p.name} would have cost <Money paise={paise(cheaper.save)} /> less on your last bill</span>}>
+            {meet && meet > 0 ? <p className="mb-3 text-select-foreground">{cur!.name} costs less above <Money paise={paise(meet)} /> delivered a month.</p> : null}
             <Link href={billingHref('plans')} className={button({ variant: 'secondary' })}>Compare plans</Link>
           </Section>
         ) : null}

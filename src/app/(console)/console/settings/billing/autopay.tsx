@@ -71,12 +71,12 @@ export function SetUpAutopay({ onStarted }: { onStarted?: () => void }) {
 }
 
 /** Overview's "Turn on autopay": the same three ways, in a dialog. */
-export function SetUpAutopayDialog() {
+export function SetUpAutopayDialog({ label = 'Turn on autopay', variant = 'primary' }: { label?: string; variant?: 'primary' | 'secondary' }) {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button onClick={() => setOpen(true)}>Turn on autopay</Button>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Turn on autopay" actions={<Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Not now</Button>}>
+      <Button variant={variant} onClick={() => setOpen(true)}>{label}</Button>
+      <Dialog open={open} onClose={() => setOpen(false)} title={label === 'Turn on autopay' ? 'Turn on autopay' : 'Change how autopay pays'} actions={<Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Not now</Button>}>
         <SetUpAutopay onStarted={() => setOpen(false)} />
       </Dialog>
     </>

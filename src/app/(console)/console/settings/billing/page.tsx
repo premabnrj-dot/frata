@@ -9,6 +9,7 @@ import { button } from '@/components/ui/button'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { STATE_OPTIONS } from '@/domains/billing/details'
 import { paise } from '@/domains/money/paise'
+import { planCostAt } from '@/domains/billing/charges'
 import { planChangeAdds, planChangeStarts } from '@/domains/billing/bill'
 import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
 import { MODULES, isModuleKey } from '@/domains/modules/registry'
@@ -23,6 +24,8 @@ import { billingGatewayIsTest, isBillingGatewayConfigured } from '@/lib/billing/
 import { PayNow } from './autopay'
 import { orderPrefixFor } from '@/lib/queries/orders'
 import { BillingDetailsForm } from './details-form'
+import { gstinState } from '@/domains/tax/gst'
+import { frrataGstin } from '@/lib/billing/seller'
 import { BILLING_TABS, billOf, billingHref, pageOf, tabOf } from './_components/tabs'
 import { Overview, pct } from './_components/overview'
 import { Charges, type ChargesBill } from './_components/charges'
@@ -84,19 +87,22 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
       // The open bill holds at most a month of orders; the list stops at 2,000 (said in the count) and pages 50 at a time.
       const all = await openChargeOrders(m, e.bill.fees)
       bill = { id: 'open', title: `Bill of ${dayMonthLongIN(e.invoiceOn)} · so far`, status: { tone: 'neutral', label: 'Not issued yet' }, lines: e.bill.lines, taxable: e.bill.taxable,
-        cgst: e.bill.cgst, sgst: e.bill.sgst, igst: e.bill.igst, total: e.bill.total, orders: all.slice(page * CHARGE_PAGE, (page + 1) * CHARGE_PAGE), orderCount: all.length, credits: [], page, pageSize: CHARGE_PAGE }
+        cgst: e.bill.cgst, sgst: e.bill.sgst, igst: e.bill.igst, total: e.bill.total, orders: all.slice(page * CHARGE_PAGE, (page + 1) * CHARGE_PAGE), orderCount: all.length, credits: [], page, pageSize: CHARGE_PAGE,
+        totals: { base: e.bill.fees.reduce((t, f) => t + f.base, 0), fee: e.bill.fees.reduce((t, f) => t + f.fee, 0) } }
     } else if (id !== 'open') {
       const c = await issuedCharges(m, id, page)
       const inv = o.invoices.find((i) => i.id === id)
       if (c) bill = { id, title: `Bill of ${dayMonthLongIN(c.invoice.periodStart)} · ${c.invoice.number}`, status: inv?.state === 'due' ? { tone: 'warn', label: 'Due' } : inv?.state === 'paid' ? { tone: 'ok', label: 'Paid' } : { tone: 'neutral', label: c.invoice.testMode ? 'Test' : 'Issued' },
-        lines: c.lines, taxable: c.invoice.taxable, cgst: c.invoice.cgst, sgst: c.invoice.sgst, igst: c.invoice.igst, total: c.invoice.total, orders: c.orders, orderCount: c.orderCount, credits: page === 0 ? c.credits : [], page, pageSize: CHARGE_PAGE }
+        lines: c.lines, taxable: c.invoice.taxable, cgst: c.invoice.cgst, sgst: c.invoice.sgst, igst: c.invoice.igst, total: c.invoice.total, orders: c.orders, orderCount: c.orderCount, credits: page === 0 ? c.credits : [], page, pageSize: CHARGE_PAGE, totals: c.totals }
     }
     body = bill ? <Charges picks={picks} bill={bill} view={q.view === 'items' ? 'items' : 'orders'} prefix={prefix} /> : <Panel title="That bill isn’t here">Pick a bill above, or go back to Overview.</Panel>
   } else if (tab === 'plans') {
     const addons = await addonsFor(m, now).catch((err) => { console.error('[billing page] add-ons', errName(err)); return { prices: {}, on: [] as string[] } })
     const cur = o.plan
     const names = (keys: string[]) => keys.filter(isModuleKey).map((k) => MODULES[k].name)
-    const curFeatures = plans.find((p) => p.code === cur?.code)?.features ?? []
+    const curPlan = plans.find((p) => p.code === cur?.code)
+    const curFeatures = curPlan?.features ?? []
+    const lastSales = o.history.at(-1)?.sales ?? 0
     const options: PlanOption[] = cur ? plans.filter((p) => p.code !== cur.code).map((p) => {
       const target = { planCode: p.code as never, name: p.name, monthlyPrice: paise(p.monthlyPrice), includedOrders: p.includedOrders, feeBps: p.feeBps }
       const latest = [...o.forChange.plans].sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0]
@@ -106,7 +112,8 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
       const upgrade = p.monthlyPrice > cur.monthlyPrice
       return { code: p.code, name: p.name, price: formatInr(paise(p.monthlyPrice)), fee: pct(p.feeBps), upgrade,
         difference: d > 0 ? formatInr(d) : null, afterTrial: starts.getTime() > now.getTime() && upgrade ? dayMonthLongIN(starts) : null,
-        gains: names(p.features.filter((f) => !curFeatures.includes(f))), loses: names(curFeatures.filter((f) => !p.features.includes(f))) }
+        gains: names(p.features.filter((f) => !curFeatures.includes(f))), loses: names(curFeatures.filter((f) => !p.features.includes(f))),
+        lastBill: lastSales > 0 && curPlan ? [formatInr(planCostAt(paise(lastSales), p)), formatInr(planCostAt(paise(lastSales), curPlan))] : null }
     }) : []
     const recent = o.history.slice(-3).filter((h) => h.sales > 0)
     const mine = recent.length ? Math.round(recent.reduce((t, h) => t + h.sales, 0) / recent.length) : null
@@ -118,7 +125,7 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
   } else if (tab === 'payment') {
     body = <Payment paying={paying} payments={o.payments} canPay={canPay} configured={configured} supportVisit={!!m.supportSessionId} />
   } else {
-    body = <BillingDetailsForm initial={o.details} states={STATE_OPTIONS.map(([c, l]) => [c, l])} />
+    body = <BillingDetailsForm initial={o.details} states={STATE_OPTIONS.map(([c, l]) => [c, l])} frrataState={gstinState(frrataGstin())} />
   }
 
   return (

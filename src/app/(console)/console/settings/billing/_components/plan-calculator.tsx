@@ -30,7 +30,7 @@ export function PlanCalculator({ plans, mine }: { plans: P[]; mine: number | nul
       </div>
       <ul className="grid gap-3 sm:grid-cols-3">
         {plans.map((p, i) => (
-          <li key={p.code} className={`flex flex-col gap-1 rounded-lg border px-4 py-3.5 ${costs[i] === least ? 'border-transparent bg-select text-select-foreground' : 'border-border'}`}>
+          <li key={p.code} className={`flex flex-col gap-1 rounded-lg border px-4 py-3.5 ${costs[i] === least ? 'border-transparent bg-select' : 'border-border'}`}>
             <span className="flex items-center justify-between gap-1.5"><span className="font-semibold">{p.name}</span>{costs[i] === least ? <Badge tone="ok">Costs least</Badge> : null}</span>
             <span className="font-num text-title font-semibold">{formatInr(costs[i]!)} a month</span>
             <span className="text-label text-muted-foreground">{formatInr(paise(p.monthlyPrice))} plan + {formatInr(paise(costs[i]! - p.monthlyPrice))} fee · {formatPercent(costs[i]! / sales, 1)} of sales</span>

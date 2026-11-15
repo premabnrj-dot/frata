@@ -320,6 +320,8 @@ export type IssuedCharges = {
   invoice: { id: string; number: string; periodStart: Date; testMode: boolean; taxable: number; cgst: number; sgst: number; igst: number; total: number }
   lines: { kind: string; description: string; quantity: number; rateBps: number | null; taxable: number; periodStart: Date | null; periodEnd: Date | null }[]
   orders: ChargeOrder[]; orderCount: number; credits: ChargeOrder[]
+  /** Every billed order on the bill, not just this page: the base the fee was on, and the fee. */
+  totals: { base: number; fee: number }
 }
 export const CHARGE_PAGE = 50
 
@@ -341,7 +343,7 @@ export async function issuedCharges(m: Pick<Membership, 'tenantId' | 'role'>, in
       tx.select({ ...FACTS, base: frrataInvoiceFees.base, feeBps: frrataInvoiceFees.feeBps, fee: frrataInvoiceFees.fee }).from(frrataInvoiceFees)
         .innerJoin(orders, and(eq(orders.tenantId, frrataInvoiceFees.tenantId), eq(orders.id, frrataInvoiceFees.orderId)))
         .where(and(eq(frrataInvoiceFees.tenantId, t), eq(frrataInvoiceFees.invoiceId, i.id))).orderBy(desc(orders.number)).limit(CHARGE_PAGE).offset(Math.max(0, page) * CHARGE_PAGE),
-      tx.select({ n: sql<number>`count(*)::int` }).from(frrataInvoiceFees).where(and(eq(frrataInvoiceFees.tenantId, t), eq(frrataInvoiceFees.invoiceId, i.id))),
+      tx.select({ n: sql<number>`count(*)::int`, base: sql<string>`coalesce(sum(${frrataInvoiceFees.base}), 0)`, fee: sql<string>`coalesce(sum(${frrataInvoiceFees.fee}), 0)` }).from(frrataInvoiceFees).where(and(eq(frrataInvoiceFees.tenantId, t), eq(frrataInvoiceFees.invoiceId, i.id))),
       tx.select({ ...FACTS, base: frrataInvoiceFees.base, feeBps: frrataInvoiceFees.feeBps, fee: frrataFeeCredits.fee, kind: frrataFeeCredits.kind }).from(frrataFeeCredits)
         .innerJoin(frrataInvoiceFees, and(eq(frrataInvoiceFees.tenantId, frrataFeeCredits.tenantId), eq(frrataInvoiceFees.orderId, frrataFeeCredits.orderId)))
         .innerJoin(orders, and(eq(orders.tenantId, frrataFeeCredits.tenantId), eq(orders.id, frrataFeeCredits.orderId)))
@@ -350,7 +352,7 @@ export async function issuedCharges(m: Pick<Membership, 'tenantId' | 'role'>, in
     const row = (o: Facts & { base: number; feeBps: number; fee: number }): ChargeOrder => ({ number: o.number, total: o.total, shippedAt: o.shippedAt, ...billedOutcome(o), base: o.base, feeBps: o.feeBps, fee: o.fee })
     // A credit: the fee given back, on the base it was given back on (a return credits only the returned items).
     const credit = (c: Facts & { base: number; feeBps: number; fee: number; kind: string }): ChargeOrder => ({ ...row(c), ...(c.kind === 'return' ? { outcome: 'returned' as const, outcomeAt: null } : {}), base: creditedBase(c), fee: -c.fee })
-    return { invoice: { ...i, number: i.number }, lines, orders: fees.map(row), orderCount: count?.n ?? 0, credits: credits.map(credit) }
+    return { invoice: { ...i, number: i.number }, lines, orders: fees.map(row), orderCount: count?.n ?? 0, credits: credits.map(credit), totals: { base: Number(count?.base ?? 0), fee: Number(count?.fee ?? 0) } }
   })
 }
 

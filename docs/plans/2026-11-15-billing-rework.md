@@ -31,6 +31,17 @@ Spec: `docs/specs/2026-11-15-billing-rework.md` · Mockup: `docs/mockups/2026-11
 | Invoices: financial year select | none | ≤ 36 invoices on one page | no — to show |
 | Savings card wording "in October" | "on your last bill" | the card reads the last issued bill, whichever month | no — to show |
 | Overview: "See as a table" link | a disclosure under the chart | no client script for a toggle | no — to show |
+| Mockup copy changed by the words review (2026-11-15) | "Test payments" chip; "Pay this bill"; "See charges"; "Download PDF"; "How"; "Fee charged on"; "Most per debit"; "Not issued yet"; "Move to <plan>" for every plan move (one verb); "Keep <plan>" on every cancel; "Counted delivered after 30 days"; "We're updating…"; "This month's charge stays." | frata-design-language § Words rules 3, 4, 5, 8, 10, 11 (words-reviewer findings) | no — to show |
+| Due banner "…was due on 5 Nov" with "Pay ₹X"; invoice status "Due 5 Nov" and "Paid · UPI Autopay"; Coming up "pay by 5 Dec" | the month and amount due; "Due ₹X"; "Paid" | the due date and the paying method are not stored on the invoice row; derive them in R2 with the not-billed work | no — to show |
+| Invoices tab badge "1 due" | a count pill "1" | ViewTabs counts are numbers (Neel § Components) | no — to show |
+| Next bill rows "Growth · December", "1% of ₹92,300 · November" | grouped rows "Plan", "Fee on delivered orders", then GST | the same grouping as Charges, so the two tabs agree; the line words are on Charges | no — to show |
+| Last-bill line "October, Frrata cost you 3.7%" | "Your 1 Oct bill was 3.7% of delivered sales" | words review; a bill, not a calendar month, is what was charged | no — to show |
+| Charges: IGST note "Karnataka to Maharashtra" | IGST 18% (or CGST + SGST) | the place of supply is on the PDF; the shop's State is on Details | no — to show |
+| Charges › Plan and apps: apps that are off | only lines on the bill | an app that is off is not a charge; Plans › Apps on your bill lists them | no — to show |
+| Scheduled change banner (grey) | Banner tone info | Banner has no neutral tone (Neel § Banners) | no — to show |
+| Calculator default "Use my last 3 months" | "Use my sales" | the default is the last three bills' sales, fewer when there are fewer | no — to show |
+| Upgrade dialog row "16 Nov – 30 Nov" | "Rest of this month" | the difference comes from planChangeAdds, which gives an amount, not its days | no — to show |
+| Details: GSTIN "Checked" | "Checked" when the GSTIN's checksum passes, "(optional)" otherwise | a GSTIN can be empty | no — to show |
 
 ## Review findings
 **security-reviewer (2026-11-15)** — H1, H2 block R2; M2, M3 block the CSV route.

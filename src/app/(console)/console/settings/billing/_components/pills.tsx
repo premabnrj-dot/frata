@@ -12,3 +12,16 @@ export function BillPicks({ label, items }: { label: string; items: { href: stri
     </nav>
   )
 }
+
+/** Two to four views of one thing as links (Charges: By order · Plan and apps), drawn as Segmented: a sunk track, the
+ *  picked one raised on white (e1). 44 px on a phone, 30 from md. */
+export function ViewSwitch({ label, items }: { label: string; items: { href: string; label: string; current: boolean }[] }) {
+  return (
+    <nav aria-label={label} className="inline-flex gap-0.5 rounded-mid bg-sunk p-0.5">
+      {items.map((i) => (
+        <Link key={i.href} href={i.href} aria-current={i.current ? 'page' : undefined}
+          className={`inline-flex min-h-11 items-center rounded-md px-3 text-label font-medium md:min-h-7.5 ${i.current ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{i.label}</Link>
+      ))}
+    </nav>
+  )
+}

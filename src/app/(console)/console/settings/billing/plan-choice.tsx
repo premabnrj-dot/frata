@@ -14,6 +14,8 @@ export type PlanOption = {
   difference: string | null; afterTrial: string | null
   /** What the move adds (an upgrade) or loses (a downgrade), by app name. */
   gains: string[]; loses: string[]
+  /** The last bill's delivered sales at this plan and at the one on now, before GST: [this, now]. */
+  lastBill: [string, string] | null
 }
 
 export function PlanButton({ option: o, current, downgradeOn, fromFeatured = false, scheduled }: { option: PlanOption; current: string; downgradeOn: string; fromFeatured?: boolean; scheduled: boolean }) {
@@ -33,7 +35,7 @@ export function PlanButton({ option: o, current, downgradeOn, fromFeatured = fal
   const title = on ? `Move to ${o.name} on ${on}?` : `Move to ${o.name} now?`
   const rows: [string, string][] = o.upgrade
     ? [...(o.difference && !o.afterTrial ? [['Rest of this month', `${o.difference} + GST on the next bill`] as [string, string]] : []), [o.afterTrial ? `From ${o.afterTrial}` : 'From today', `${o.price} a month + ${o.fee}`], ...(o.gains.length ? [['You add', o.gains.join(', ')] as [string, string]] : [])]
-    : [[`From ${downgradeOn}`, `${o.price} a month + ${o.fee}`]]
+    : [[`From ${downgradeOn}`, `${o.price} a month + ${o.fee}`], ...(o.lastBill ? [[`Your last bill on ${o.name}`, `${o.lastBill[0]} instead of ${o.lastBill[1]}`] as [string, string]] : [])]
   return (
     <>
       <Button variant="secondary" onClick={() => { setRefused(null); setOpen(true) }}>Move to {o.name}</Button>
@@ -46,8 +48,8 @@ export function PlanButton({ option: o, current, downgradeOn, fromFeatured = fal
   )
 }
 
-export function KeepPlan() {
+export function KeepPlan({ current }: { current: string }) {
   const [busy, start] = useTransition()
   const toast = useToast()
-  return <Button variant="secondary" size="sm" busy={busy} onClick={() => start(async () => { const r = await cancelPlanChange(); if (r.ok) toast.ok('You keep your plan.'); else toast.error(r.error) })}>Keep my plan</Button>
+  return <Button variant="secondary" size="sm" busy={busy} onClick={() => start(async () => { const r = await cancelPlanChange(); if (r.ok) toast.ok('You keep your plan.'); else toast.error(r.error) })}>Keep {current}</Button>
 }

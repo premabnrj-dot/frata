@@ -12,7 +12,7 @@ import { GROUP_LABEL, pct } from './overview'
 import { ASSUME_DELIVERED_DAYS } from '@/domains/orders/outcomes'
 import { Pager } from '@/components/data/pager'
 import { Empty } from '@/components/ui/empty'
-import { BillPicks } from './pills'
+import { BillPicks, ViewSwitch } from './pills'
 
 export type BillPick = { id: string; label: string }
 export type ChargesBill = {
@@ -22,6 +22,7 @@ export type ChargesBill = {
   lines: (ChargeLine & { periodStart?: Date | null; periodEnd?: Date | null })[]
   taxable: number; cgst: number; sgst: number; igst: number; total: number
   orders: ChargeOrder[]; orderCount: number; credits: ChargeOrder[]; page: number; pageSize: number
+  totals: { base: number; fee: number }
 }
 
 const OUTCOME: Record<ChargeOrder['outcome'], string> = { delivered: 'Delivered', assumed: `Counted delivered after ${ASSUME_DELIVERED_DAYS} days`, came_back: 'Came back', lost: 'Lost', returned: 'Items returned' }
@@ -66,7 +67,7 @@ export function Charges({ picks, bill, view, prefix }: { picks: BillPick[]; bill
 
       <Section ariaLabel="Charges in detail">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2.5">
-          <BillPicks label="View" items={([['orders', 'By order'], ['items', 'Plan and apps']] as const).map(([k, l]) => ({ href: at(k), label: l, current: view === k }))} />
+          <ViewSwitch label="View" items={([['orders', 'By order'], ['items', 'Plan and apps']] as const).map(([k, l]) => ({ href: at(k), label: l, current: view === k }))} />
         </div>
         {view === 'orders' ? (
           <>
@@ -84,6 +85,14 @@ export function Charges({ picks, bill, view, prefix }: { picks: BillPick[]; bill
                     <td data-cell="b" className="text-right font-medium"><Money paise={paise(o.fee)} decimals /></td>
                   </DataTableRow>
                 ))}
+                {bill.orderCount > 0 ? (
+                  <DataTableRow>
+                    <td data-cell="a" colSpan={4} className="font-semibold">{bill.orderCount.toLocaleString('en-IN')} billed order{bill.orderCount === 1 ? '' : 's'}</td>
+                    <td data-cell="d" className="text-right font-semibold"><Money paise={paise(bill.totals.base)} decimals /></td>
+                    <td data-cell="hide" className="text-right text-muted-foreground">{fees[0]?.rateBps ? pct(fees[0].rateBps) : ''}</td>
+                    <td data-cell="b" className="text-right font-semibold"><Money paise={paise(bill.totals.fee)} decimals /></td>
+                  </DataTableRow>
+                ) : null}
               </DataTableBody>
             </DataTable>
             {bill.orderCount === 0 && !bill.credits.length ? <Empty className="mt-3" title="No delivered orders on this bill" /> : null}
@@ -98,7 +107,7 @@ export function Charges({ picks, bill, view, prefix }: { picks: BillPick[]; bill
             <DataTableBody>
               {items.map((l, i) => (
                 <DataTableRow key={i}>
-                  <td data-cell="a">{l.description}</td>
+                  <td data-cell="a"><span className="inline-flex flex-wrap items-center gap-2">{l.description}<Badge tone={l.kind === 'addon' ? 'ok' : 'info'}>{l.kind === 'addon' ? 'App' : 'Plan'}</Badge></span></td>
                   <td data-cell="c" className="text-muted-foreground">{l.periodStart && l.periodEnd ? `${dayMonthIN(l.periodStart)} – ${dayMonthLongIN(new Date(l.periodEnd.getTime() - DAY))}` : '—'}</td>
                   <td data-cell="d" className="text-right text-muted-foreground"><span className="md:hidden">Days </span>{l.periodStart && l.periodEnd ? Math.round((l.periodEnd.getTime() - l.periodStart.getTime()) / DAY) : '—'}</td>
                   <td data-cell="b" className="text-right font-medium"><Money paise={paise(l.taxable)} decimals /></td>
