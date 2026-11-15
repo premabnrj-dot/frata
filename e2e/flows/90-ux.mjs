@@ -176,6 +176,7 @@ export default {
         await start(M1)
         const [{ name }] = await db`select name from tenants where id = ${M1}`
         assert.ok((await p.locator('[data-support-banner]').innerText()).includes(name), 'the banner names the visited shop')
+        await until(async () => (await pill()) === 7, 10_000).catch(() => {})
         assert.equal(await pill(), 7, 'the pill counts merchant-1\'s orders to confirm, not Kesar\'s')
         for (const [page, path] of [['support-console-home', '/console'], ['support-console-orders', '/console/orders'], ['support-admin-merchant', `/admin/merchants/${M1}`]]) {
           for (const [w, h, label] of [[390, 844, '390'], [1280, 800, '1280']]) { const q = await measure(ctx, page, path, w, label, h); await q.close() }
@@ -201,17 +202,21 @@ export default {
         await p.goto(CONSOLE + '/console/orders')
         // The To confirm tab's own count (1D·4b's queue tabs replaced the "N to confirm" line).
         const kesar = Number((await p.getByRole('navigation', { name: 'Order views' }).getByRole('link', { name: /^To confirm/ }).innerText()).replace(/\D/g, '') || 0)
+        // The pill streams in after the page (Suspense): wait for it rather than reading it once (it raced on 2026-11-15).
+        await until(async () => (await pill()) === kesar, 10_000).catch(() => {})
         assert.equal(await pill(), kesar, 'after End, the pill is Kesar\'s own count again')
         // Expiry: a visit that runs out while the page is open refreshes it (the kept layout must not show merchant-2).
         await start('eeeeeeee-0000-4000-8000-000000000002')
         await db`update support_sessions set expires_at = now() + interval '3 seconds' where staff_user_id = ${USERS.frata.id} and ended_at is null`
         await p.goto(CONSOLE + '/console/orders')
+        await until(async () => (await pill()) === 3, 10_000).catch(() => {})
         assert.equal(await pill(), 3, 'merchant-2\'s count during its visit')
         await p.locator('[data-support-banner]').waitFor({ state: 'detached', timeout: 15_000 })
         await until(async () => (await pill()) === kesar, 10_000)
         // Ended elsewhere, then an in-app move: the kept layout must not show merchant-1 over Kesar's page (audit MEDIUM 1).
         await start(M1)
         await p.goto(CONSOLE + '/console')
+        await until(async () => (await pill()) === 7, 10_000).catch(() => {})
         assert.equal(await pill(), 7)
         await db`update support_sessions set ended_at = now() where staff_user_id = ${USERS.frata.id} and ended_at is null`
         await p.locator('nav[aria-label="Console"] a[href="/console/products"]').filter({ visible: true }).first().click()
