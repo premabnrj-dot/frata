@@ -63,9 +63,9 @@ export function FlowLine({ c }: { c: Totals }) {
 /** Sales by day, this period against the one before; came back marked on the day those orders were placed. */
 export function SalesByDay({ s, compareName }: { s: Series; compareName: string }) {
   const points = s.days.map((d) => ({ key: d.key, label: dayMonthIN(new Date(`${d.key}T06:30:00Z`)), value: d.sales, prev: d.prevSales, marks: d.rto }))
-  if (points.length < 2) return <Section id="sales-by-day" title="Sales by day" flatOnPhone><p className="text-sm text-muted-foreground">One day so far: the trend draws from two.</p></Section>
+  if (points.length < 2) return <Section id="sales-by-day" title="Sales by day" flatOnPhone><p className="text-sm text-muted-foreground">One day so far. The trend needs two.</p></Section>
   const first = points[0]!, last = points.at(-1)!
-  const summary = `Sales a day, ${first.label} to ${last.label}: from ${inrShort(first.value)} to ${inrShort(last.value)}${s.notes.length ? `; ${s.notes.map((n) => `${n.title} from ${dayMonthIN(new Date(`${n.key}T06:30:00Z`))}`).join('; ')}` : ''}`
+  const summary = `Sales a day from ${first.label} to ${last.label}. ${inrShort(first.value)} to ${inrShort(last.value)}.${s.notes.length ? ` ${s.notes.map((n) => `${n.title} from ${dayMonthIN(new Date(`${n.key}T06:30:00Z`))}.`).join(' ')}` : ''}`
   return (
     <Section id="sales-by-day" title="Sales by day" flatOnPhone action={<TrendLegend names={['This period', compareName]} marks="Came back" className="justify-end max-md:hidden" />}>
       {/* A phone has no room beside the heading: the key goes under it. */}

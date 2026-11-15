@@ -57,7 +57,7 @@ export function VisitFigures({ a, visits }: { a: Analytics; visits: VisitTotals 
   )
 }
 
-const HOW = 'A source is the tagged link the shopper arrived on, else the site they came from, else "Direct or unknown" (WhatsApp chats and many apps hide where a tap came from: a link from Make a link fixes that). The last one before the order, in that browser tab. Anyone can type tags into an address, so a source is what the link said. Visits and orders use the same rule.'
+const HOW = 'A source is the tagged link the shopper arrived on. Without one, it is the site they came from. Without that, it is "Direct or unknown". WhatsApp chats and many apps hide where a tap came from. A link from Make a link fixes that. The last one before the order counts, in that browser tab. Anyone can type tags into an address, so a source is what the link said. Visits and orders use the same rule.'
 
 type Row = { key: string; muted?: boolean; cur: Totals; prev: Totals | null; name: string; href: string | null; sub: string; visitors: number | null }
 
@@ -141,14 +141,14 @@ export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: 
   )
 }
 
-/** Pincodes with the most returns, as drawn: counts, a bar in the bad colour (no ₹: True Profit's). */
+/** PIN codes with the most returns, as drawn: counts, a bar in the bad colour (no ₹: True Profit's). */
 export function Pincodes({ a }: { a: Analytics }) {
   if (!a.pincodes.length) return null
   return (
-    <Section id="pincodes" title="Pincodes with the most returns" flatOnPhone>
+    <Section id="pincodes" title="PIN codes with the most returns" flatOnPhone>
       <table className="w-full text-sm">
-        <caption className="sr-only">Pincodes with the most returns</caption>
-        <thead><tr className="text-label text-muted-foreground [&>th]:py-2 [&>th]:font-medium"><th scope="col" className="text-left">Pincode</th><th scope="col" className="text-right">Came back</th><th scope="col" className="w-[45%] pl-6 text-left">Of orders with an outcome</th></tr></thead>
+        <caption className="sr-only">PIN codes with the most returns</caption>
+        <thead><tr className="text-label text-muted-foreground [&>th]:py-2 [&>th]:font-medium"><th scope="col" className="text-left">PIN code</th><th scope="col" className="text-right">Came back</th><th scope="col" className="w-[45%] pl-6 text-left">Of orders with an outcome</th></tr></thead>
         <tbody>
           {a.pincodes.map((p) => (
             <tr key={p.pincode} className="border-t border-line-soft [&>*]:py-2.5">

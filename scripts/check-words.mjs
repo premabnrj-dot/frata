@@ -40,9 +40,6 @@ export const NOT = [
   'src/lib/storefront/', 'src/lib/ekcode/', 'src/lib/seo/', 'src/lib/documents/', // shoppers, search engines, PDFs
   'src/domains/themes/', 'src/domains/checkout/', 'src/domains/storefront/', 'src/domains/ekcode-core/',
   'src/domains/pages/', 'src/domains/policies/', 'src/domains/seo/', 'src/domains/documents/', // shopper-facing, legal
-  // Pending N1b (the analytics kit is being rewritten in its own session; N3·8 removes these after the merge).
-  'src/app/(console)/console/analytics/', 'src/lib/queries/analytics.ts', 'src/lib/queries/traffic.ts',
-  'src/domains/analytics/', 'src/components/charts/', 'src/app/(console)/console/apps/true_profit/',
 ]
 export const inScope = (file) => ROOTS.some((r) => file.startsWith(r + '/')) && !NOT.some((n) => file.startsWith(n))
 
@@ -124,7 +121,8 @@ export function readable(source, fileName = 'x.tsx') {
       // The element's own sentence: its text, an {expression} or a child element as one stand-in word.
       let text = '', first = null
       for (const c of n.children) {
-        if (ts.isJsxText(c)) { if (c.text.trim()) { text += entities(c.text); first ??= c } } else if (text.trim()) text += ' X '
+        if (ts.isJsxText(c)) { if (c.text.trim()) { text += entities(c.text); first ??= c } } else if (ts.isJsxExpression(c) && c.expression && ts.isStringLiteral(c.expression)) text += c.expression.text // {' · '} is text
+        else if (text.trim()) text += ' X '
       }
       // JSX text is never code: a single lower-case word between tags is still a word a person reads.
       if (first && /\p{L}/u.test(text)) out.push({ text: text.replace(/(X\s*)+$/, '').replace(/\s+/g, ' ').trim(), line: line(first), prop: null, jsx: true, code: false })
@@ -162,7 +160,7 @@ const BUTTONS = new Set(['OK', 'Ok', 'Submit', 'Proceed', 'Click here'])
 const ABBR = /\b(M\.R\.P|incl|e\.g|i\.e|approx|no|nos|vs|Rs|Dr|Mr|Ms|Mrs|St)\.(?=\s|$)/gi
 
 /** Sentences of a string, abbreviations kept whole. */
-export const sentences = (text) => text.replace(ABBR, (m) => m.replace(/\./g, '․')).split(/(?<=[.?!])\s+(?=[\p{Lu}\d₹"“‘'(X])/u).map((s) => s.replace(/․/g, '.'))
+export const sentences = (text) => text.replace(ABBR, (m) => m.replace(/\./g, '․')).split(/(?<=[.?!])\s+(?=[\p{Lu}\d₹"“‘'(X])| · /u).map((s) => s.replace(/․/g, '.'))
 const words = (s) => s.split(/\s+/).filter((w) => /[\p{L}\p{N}₹]/u.test(w))
 const isValue = (s) => /^\s*([\d₹+−\-X"“'‘(]|$)/.test(s)
 

@@ -59,7 +59,7 @@ describe('check:words', async () => {
     expect(rules(`const a = 'Simply add it to your shop; it is easy.'`, S)).toEqual(['filler'])
     expect(inScope(S)).toBe(false)
     expect(inScope('src/app/(admin)/admin/x/page.tsx')).toBe(false)
-    expect(inScope('src/app/(console)/console/analytics/page.tsx')).toBe(false)
+    expect(inScope('src/app/(console)/console/analytics/page.tsx')).toBe(true)
     expect(inScope(F)).toBe(true)
   })
   it('never reads code: directives, imports, classes, SQL, errors, logs, keys, MIME, CSP, cookies, paths, SVG', () => {
@@ -99,6 +99,10 @@ describe('check:words', async () => {
   it('reads HTML entities as the marks they are, and a semicolon after a curly quote', () => {
     expect(rules('const a = <p>&ldquo;{x}&rdquo; is not in your list.</p>')).toEqual([])
     expect(rules("const a = 'Shoppers see “Opening soon”; orders are kept.'")).toEqual(['W2'])
+  })
+  it('a " · " line is values, each judged on its own; {\' · \'} in JSX is text', () => {
+    expect(rules("const a = 'one two three four five six seven · eight nine ten eleven twelve thirteen fourteen fifteen sixteen'")).toEqual([])
+    expect(rules("const a = <p>{n} orders → {d} delivered{' · '}{r} came back{' · '}{w} on the way{' · '}{s} not sent yet</p>")).toEqual([])
   })
   it('splits sentences but keeps M.R.P. and incl. whole', () => {
     expect(sentences('M.R.P. incl. taxes is ₹2,490. Save it.')).toEqual(['M.R.P. incl. taxes is ₹2,490.', 'Save it.'])

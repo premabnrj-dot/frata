@@ -41,3 +41,16 @@ describe('momentIN (Neel N3: a moment in a list)', () => {
     expect(momentIN('2026-11-14T16:36:00Z', now)).toBe('14 Nov, 10:06 pm')
   })
 })
+
+describe('three-letter months (owner, 2026-11-15)', () => {
+  it('September is Sep in every phrase, as Neel draws "12 Nov"', async () => {
+    const { dayIN, dayMonthIN, dateTimeIN, monthYearIN, momentIN, dropLineIN } = await import('../format-date')
+    const d = new Date('2026-09-13T16:36:00Z')
+    expect(dayMonthIN(d)).toBe('13 Sep')
+    expect(dayIN(d)).toBe('13 Sep 2026')
+    expect(monthYearIN(d)).toBe('Sep 2026')
+    expect(dateTimeIN(d)).not.toMatch(/Sept/)
+    expect(dropLineIN(d)).toMatch(/ Sep, /)
+    expect(momentIN(d, new Date('2026-11-15T10:00:00Z'))).toBe('13 Sep, 10:06 pm')
+  })
+})

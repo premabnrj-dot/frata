@@ -92,19 +92,19 @@
   {
     "file": "src/app/(console)/console/settings/online-payments/actions.ts",
     "rule": "W4",
-    "text": "Account & Settings → API keys",
+    "text": "Account & Settings \u2192 API keys",
     "why": "Razorpay's own menu label, named so the owner can find it"
   },
   {
     "file": "src/app/(console)/console/settings/online-payments/online-payments.tsx",
     "rule": "W4",
-    "text": "Account & Settings → API keys",
+    "text": "Account & Settings \u2192 API keys",
     "why": "Razorpay's own menu label, named so the owner can find it"
   },
   {
     "file": "src/app/(console)/console/settings/online-payments/online-payments.tsx",
     "rule": "W4",
-    "text": "Webhooks → Add new webhook",
+    "text": "Webhooks \u2192 Add new webhook",
     "why": "Razorpay's own menu path, named so the owner can find it"
   },
   {
@@ -124,5 +124,17 @@
     "rule": "W4",
     "text": "webhooks not processed",
     "why": "Frrata Admin's infrastructure screen, read by Frrata's engineers only (N4)"
+  },
+  {
+    "file": "src/components/charts/state-tiles.tsx",
+    "rule": "W2",
+    "text": "Came back by state: highest",
+    "why": "Drawn verbatim in the approved N1b Analytics mockup (\"Came back by state: highest Bihar 31%, lowest Kerala 6%\"): a label and its values"
+  },
+  {
+    "file": "src/domains/analytics/source.ts",
+    "rule": "W4",
+    "text": "Another website",
+    "why": "Someone else's website a shopper came from, not the store (the glossary bans calling the store a website)"
   }
 ]

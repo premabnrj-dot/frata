@@ -46,7 +46,7 @@ export default {
         assert.equal(await period.getByRole('link', { name: '30 days' }).getAttribute('aria-current'), 'page')
         await p.locator('header').getByText('vs previous 30 days').locator('visible=true').waitFor()
         await period.getByRole('link', { name: '7 days' }).click(); await p.waitForURL(/period=7/); await p.locator('header').getByText('vs previous 7 days').locator('visible=true').waitFor()
-        await period.getByRole('link', { name: 'Today' }).click(); await p.waitForURL(/period=today/); await p.locator('header').getByText('vs yesterday at this time').locator('visible=true').waitFor()
+        await period.getByRole('link', { name: 'Today' }).click(); await p.waitForURL(/period=today/); await p.locator('header').getByText('vs this time yesterday').locator('visible=true').waitFor()
         await p.getByRole('button', { name: 'Custom' }).click()
         const d = p.getByRole('dialog', { name: 'Custom dates' })
         const ymd = (x) => new Date(x.getTime() + 330 * 60_000).toISOString().slice(0, 10)
