@@ -82,6 +82,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const rowOf = (k: PageKey): { summary: string; needs: boolean; mono?: boolean } | null => {
     switch (k) {
       case 'web-address': return { summary: mainHost, needs: missing.some((m) => m.section === 'web-address'), mono: true }
+      // V1 Storefront API: the brand's own website's address, or where it runs today.
+      case 'website': { const o = shop?.settings.siteOrigin; return o ? { summary: o.replace(/^https:\/\//, ''), needs: false, mono: true } : { summary: 'Runs on Frrata', needs: false } }
       case 'online-payments': return { summary: online, needs: onlineNeeds }
       case 'shipping-costs': return seen === null || (seen !== undefined && !seen.visible) ? null : { summary: shipSummary, needs: shipNeeds }
       case 'emails': return { summary: 'Order emails in your store’s name', needs: false }

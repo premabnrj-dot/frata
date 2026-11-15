@@ -58,3 +58,33 @@ describe('storefront keys (ADR-0018 § 2)', () => {
     expect(siteOriginProblem('https://kesarstudio.in.evil.in', 'kesarstudio.in')).toBe('not_this_domain')
   })
 })
+
+describe('who manages keys, and what a key shows', async () => {
+  const { mayManageApi, keyState, lastUsed } = await import('../keys')
+  it('a partner only while the store has no owner; never without the capability', () => {
+    expect(mayManageApi('owner', true)).toBe(true)
+    expect(mayManageApi('admin', true)).toBe(true)
+    expect(mayManageApi('partner', false)).toBe(true)
+    expect(mayManageApi('partner', true)).toBe(false)
+    expect(mayManageApi('staff', false)).toBe(false)
+    expect(mayManageApi('accountant', false)).toBe(false)
+    expect(mayManageApi('builder', false)).toBe(false)
+  })
+  const now = new Date('2026-11-15T06:00:00Z')
+  const store = { firstOpenedAt: null, partnerLinks: [{ partnerId: 'p', removedAt: null }] }
+  it('derives the state as the definer does', () => {
+    expect(keyState({ kind: 'public', expiresAt: null, revokedAt: null, partnerId: null }, store, now)).toEqual({ kind: 'live' })
+    expect(keyState({ kind: 'public', expiresAt: null, revokedAt: '2026-11-02T00:00:00Z', partnerId: null }, store, now).kind).toBe('deleted')
+    expect(keyState({ kind: 'test', expiresAt: '2026-12-01T00:00:00Z', revokedAt: null, partnerId: null }, store, now).kind).toBe('test')
+    expect(keyState({ kind: 'test', expiresAt: '2026-11-01T00:00:00Z', revokedAt: null, partnerId: null }, store, now)).toMatchObject({ kind: 'ended', why: 'expired' })
+    expect(keyState({ kind: 'test', expiresAt: '2026-12-01T00:00:00Z', revokedAt: null, partnerId: null }, { ...store, firstOpenedAt: '2026-11-14T00:00:00Z' }, now)).toMatchObject({ kind: 'ended', why: 'opened' })
+    expect(keyState({ kind: 'public', expiresAt: null, revokedAt: null, partnerId: 'p' }, { firstOpenedAt: null, partnerLinks: [{ partnerId: 'p', removedAt: '2026-11-10T00:00:00Z' }] }, now).kind).toBe('partner_gone')
+  })
+  it('says when a key was last used in India’s days', () => {
+    const dm = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })
+    expect(lastUsed(null, now, dm)).toBe('Never used')
+    expect(lastUsed('2026-11-15', now, dm)).toBe('Used today')
+    expect(lastUsed('2026-11-14', now, dm)).toBe('Used yesterday')
+    expect(lastUsed('2026-11-02', now, dm)).toBe('Used 2 Nov')
+  })
+})

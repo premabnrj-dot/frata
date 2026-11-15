@@ -8,6 +8,8 @@
 // limit key. Pure: the random bytes come from the caller (crypto.getRandomValues), never Math.random.
 // =============================================================================
 
+import { holds } from '../tenancy/roles'
+
 export const KEY_KINDS = ['public', 'test'] as const
 export type KeyKind = (typeof KEY_KINDS)[number]
 
@@ -89,4 +91,52 @@ export function siteOriginProblem(origin: string, apex: string): 'shape' | 'not_
   const host = m[1]
   const a = apex.toLowerCase()
   return host === a || host === `www.${a}` ? null : 'not_this_domain'
+}
+
+/**
+ * May this person create or delete keys and move the Website (ADR-0018 decision 5): the capability `api.manage`
+ * (owners, Managers, a partner), a partner only while the store has no owner; never on a support visit (the caller adds
+ * that). `holds` is the one capability test (src/domains/tenancy/roles.ts).
+ */
+export function mayManageApi(role: string, hasOwner: boolean): boolean {
+  if (!holds(role, 'api.manage')) return false
+  // Who runs the store (shop.manage: owners, Managers) always; anyone else holding api.manage (a partner) only while the
+  // store has no owner.
+  return holds(role, 'shop.manage') || !hasOwner
+}
+
+/** What a key's row says on screen, derived as the definer derives it (never stored). */
+export type KeyState =
+  | { kind: 'live' }
+  | { kind: 'test'; endsAt: string }
+  | { kind: 'deleted'; at: string }
+  | { kind: 'ended'; why: 'expired' | 'opened'; at: string | null }
+  | { kind: 'partner_gone'; at: string | null }
+
+export function keyState(k: { kind: KeyKind; expiresAt: string | null; revokedAt: string | null; partnerId: string | null },
+  store: { firstOpenedAt: string | null; partnerLinks: { partnerId: string; removedAt: string | null }[] }, now: Date): KeyState {
+  if (k.revokedAt) return { kind: 'deleted', at: k.revokedAt }
+  if (k.partnerId) {
+    const live = store.partnerLinks.some((l) => l.partnerId === k.partnerId && !l.removedAt)
+    if (!live) return { kind: 'partner_gone', at: store.partnerLinks.filter((l) => l.partnerId === k.partnerId).map((l) => l.removedAt).sort().at(-1) ?? null }
+  }
+  if (k.kind === 'test') {
+    if (store.firstOpenedAt) return { kind: 'ended', why: 'opened', at: store.firstOpenedAt }
+    if (k.expiresAt && Date.parse(k.expiresAt) <= now.getTime()) return { kind: 'ended', why: 'expired', at: k.expiresAt }
+    return { kind: 'test', endsAt: k.expiresAt ?? '' }
+  }
+  return { kind: 'live' }
+}
+
+/** A key still answers (shown first, with Delete). */
+export const keyAnswers = (s: KeyState) => s.kind === 'live' || s.kind === 'test'
+
+/** When a key was last used, in words: "Used today", "Used yesterday", "Used 13 Nov", "Never used". India's days. */
+export function lastUsed(lastSeenOn: string | null, now: Date, dayMonth: (d: Date) => string): string {
+  if (!lastSeenOn) return 'Never used'
+  const today = new Date(now.getTime() + 330 * 60_000).toISOString().slice(0, 10)
+  const yesterday = new Date(now.getTime() + 330 * 60_000 - 86_400_000).toISOString().slice(0, 10)
+  if (lastSeenOn === today) return 'Used today'
+  if (lastSeenOn === yesterday) return 'Used yesterday'
+  return `Used ${dayMonth(new Date(`${lastSeenOn}T12:00:00+05:30`))}`
 }

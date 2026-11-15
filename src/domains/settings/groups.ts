@@ -5,16 +5,16 @@
 // (the page itself still checks with requireMember). Pure.
 // =============================================================================
 
-import { CAN_BUILD, CAN_MANAGE, CAN_SET_COSTS, CONSOLE_ROLES, type MemberRole } from '@/domains/tenancy/roles'
+import { CAN_BUILD, CAN_MANAGE, CAN_SET_COSTS, CAPABILITIES, CONSOLE_ROLES, type MemberRole } from '@/domains/tenancy/roles'
 import { SECTIONS, type SectionKey } from './sections'
 
-export type PageKey = SectionKey | 'web-address' | 'online-payments' | 'shipping-costs' | 'emails' | 'notifications' | 'people' | 'billing'
+export type PageKey = SectionKey | 'web-address' | 'website' | 'online-payments' | 'shipping-costs' | 'emails' | 'notifications' | 'people' | 'billing'
 export type GroupKey = 'store' | 'checkout' | 'tax' | 'messages' | 'team'
 
 export type SettingsGroup = { key: GroupKey; name: string; sub: string; pages: readonly PageKey[] }
 
 export const GROUPS: readonly SettingsGroup[] = [
-  { key: 'store', name: 'Store', sub: 'Details, web address, contact, policies', pages: ['store', 'web-address', 'contact', 'policies'] },
+  { key: 'store', name: 'Store', sub: 'Details, web address, contact, policies', pages: ['store', 'web-address', 'website', 'contact', 'policies'] },
   { key: 'checkout', name: 'Checkout', sub: 'Online payments, Pay on delivery, shipping', pages: ['online-payments', 'payments', 'shipping'] },
   { key: 'tax', name: 'Business and tax', sub: 'GST, invoices and slips, your costs', pages: ['business', 'invoices', 'shipping-costs'] },
   { key: 'messages', name: 'Messages', sub: 'Emails to shoppers, your notifications', pages: ['emails', 'notifications'] },
@@ -23,6 +23,9 @@ export const GROUPS: readonly SettingsGroup[] = [
 
 const OTHER: Record<Exclude<PageKey, SectionKey>, { title: string; roles: readonly MemberRole[] }> = {
   'web-address': { title: 'Web address', roles: CAN_MANAGE },
+  // V1 Storefront API (ADR-0018): who holds api.manage opens it; who may change it is decided on the page (a partner
+  // only while the store has no owner, never a support visit), and the rest see it read-only.
+  website: { title: 'Website', roles: CAPABILITIES['api.manage'] },
   'online-payments': { title: 'Online payments', roles: ['owner'] },
   'shipping-costs': { title: 'Your shipping costs', roles: CAN_SET_COSTS },
   emails: { title: 'Emails to shoppers', roles: CONSOLE_ROLES },

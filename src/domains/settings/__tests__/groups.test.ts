@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { GROUPS, groupOf, groupsFor, movedTo, pageTitle, type PageKey } from '../groups'
 import { SECTIONS } from '../sections'
 
-const OTHER: PageKey[] = ['web-address', 'online-payments', 'shipping-costs', 'emails', 'notifications', 'people', 'billing']
+const OTHER: PageKey[] = ['web-address', 'website', 'online-payments', 'shipping-costs', 'emails', 'notifications', 'people', 'billing']
 const ALL: PageKey[] = [...SECTIONS.map((s) => s.key), ...OTHER]
 
 describe('settings groups (owner, 2026-11-15)', () => {
@@ -19,7 +19,8 @@ describe('settings groups (owner, 2026-11-15)', () => {
     const pages = (r: Parameters<typeof groupsFor>[0]) => groupsFor(r).flatMap((g) => g.pages)
     expect(pages('owner').sort()).toEqual([...ALL].sort())
     expect(pages('admin')).not.toContain('online-payments')
-    expect(pages('partner')).toEqual(expect.arrayContaining(['store', 'payments', 'shipping-costs']))
+    expect(pages('partner')).toEqual(expect.arrayContaining(['store', 'payments', 'shipping-costs', 'website']))
+    expect(pages('admin')).toContain('website')
     expect(pages('partner')).not.toContain('people')
     expect(pages('partner')).not.toContain('billing')
     expect(groupsFor('staff')).toEqual([])
