@@ -1946,9 +1946,9 @@ do $$ begin
   begin update frrata_credit_notes set reason = 'changed' where number = 'PROOF/C00001'; raise exception 'FAIL: a Frrata credit note changed';
   exception when check_violation then null; end;
   if exists (select 1 from unnest(array['frata_app', 'anon', 'authenticated', 'service_role']) r,
-               unnest(array['app_issue_frrata_invoices(timestamptz,int,bigint,uuid,text,text,text,text,boolean,text,text)', 'app_record_frrata_payment(uuid,bigint,text,text,uuid)', 'app_issue_frrata_credit_note(uuid,bigint,text,uuid,text,text)']) f
+               unnest(array['app_issue_frrata_invoices(timestamptz,int,bigint,uuid,text,text,text,text,boolean,text,text,boolean)', 'app_record_frrata_payment(uuid,bigint,text,text,uuid)', 'app_issue_frrata_credit_note(uuid,bigint,text,uuid,text,text)']) f
              where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: a non-Admin role may issue, record or credit'; end if;
-  if not has_function_privilege('frata_admin', 'app_issue_frrata_invoices(timestamptz,int,bigint,uuid,text,text,text,text,boolean,text,text)', 'execute') then raise exception 'FAIL: Admin cannot issue'; end if;
+  if not has_function_privilege('frata_admin', 'app_issue_frrata_invoices(timestamptz,int,bigint,uuid,text,text,text,text,boolean,text,text,boolean)', 'execute') then raise exception 'FAIL: Admin cannot issue'; end if;
   if has_table_privilege('frata_admin', 'frrata_payments', 'insert, update, delete') or has_table_privilege('frata_admin', 'frrata_credit_notes', 'insert, update, delete')
      or has_table_privilege('frata_app', 'frrata_payments', 'insert, update, delete')
   then raise exception 'FAIL: a role writes payments or credit notes directly'; end if;
@@ -1974,12 +1974,17 @@ do $$ declare ok boolean; begin
   select app_complete_mandate('order_proofA1', 'token_A') into ok;
   if not ok then raise exception 'FAIL: A could not complete its own autopay'; end if;
   if (select mandate_method from billing_accounts) is distinct from 'upi' then raise exception 'FAIL: A cannot see its own autopay status'; end if;
+  -- Billing R5: a bank mandate (eNACH) is pending until the bank confirms it, whatever the caller says.
+  perform app_begin_mandate('cust_proofA', 'order_proofA2', 'emandate', 10000000, '99999999-9999-9999-9999-999999999999');
+  select app_complete_mandate('order_proofA2', 'token_A2', true) into ok;
+  if not ok then raise exception 'FAIL: A could not complete its own eNACH set-up'; end if;
+  if (select mandate_at from billing_accounts) is not null then raise exception 'FAIL: an eNACH mandate counted before the bank confirmed it'; end if;
 end $$;
 rollback;
 do $$ begin
   if (select mandate_token_id from billing_accounts where tenant_id = '22222222-2222-2222-2222-222222222222') is not null then raise exception 'FAIL: B''s mandate was touched'; end if;
   if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r,
-               unnest(array['app_begin_mandate(text,text,text,bigint,uuid)', 'app_complete_mandate(text,text)', 'app_billing_due()', 'app_billing_begin_attempt(uuid,int)', 'app_billing_attempt_context(uuid)', 'app_billing_attempt_result(text,text,boolean,text)', 'app_store_billing_event(text,text,jsonb)', 'app_apply_billing_event(uuid)']) f
+               unnest(array['app_begin_mandate(text,text,text,bigint,uuid)', 'app_complete_mandate(text,text,boolean)', 'app_billing_due()', 'app_billing_begin_attempt(uuid,int)', 'app_billing_attempt_context(uuid)', 'app_billing_attempt_result(text,text,boolean,text,bigint,text)', 'app_store_billing_event(text,text,jsonb)', 'app_apply_billing_event(uuid)']) f
              where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: an API role may run a billing B3 function'; end if;
   if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'anon', 'authenticated', 'service_role']) r where has_table_privilege(r, 'billing_events', 'select, insert, update, delete'))
   then raise exception 'FAIL: a role reaches billing_events directly'; end if;
@@ -3797,9 +3802,251 @@ do $$ declare r record; allowed jsonb := '{
      or (select count(*) from pg_policies where 'frata_builder' = any(roles)) <> 16
   then raise exception 'FAIL: frata_builder''s policies'; end if;
 end $$;
+-- Billing rework R2: the system issuer (0139) never issues test invoices, never alongside a staff member, and its
+-- audit row has no user (0138).
+do $$ begin
+  begin perform app_issue_frrata_invoices(date_trunc('month', now()), 0, 0, null, 'X', '29ABCDE1234F1Z5', 'A', '998315', true, 'FRR/', '26-27', true);
+    raise exception 'FAIL: a system run issued test invoices';
+  exception when check_violation then null; end;
+  begin perform app_issue_frrata_invoices(date_trunc('month', now()), 0, 0, '99999999-9999-9999-9999-999999999999', 'X', '29ABCDE1234F1Z5', 'A', '998315', false, 'FRR/', '26-27', true);
+    raise exception 'FAIL: a run was both staff and system';
+  exception when invalid_parameter_value then null; end;
+  begin insert into audit_events (actor_user_id, actor_email, actor_kind, action) values ('99999999-9999-9999-9999-999999999999', null, 'system', 'x');
+    raise exception 'FAIL: a system audit row named a user';
+  exception when check_violation then null; end;
+  begin insert into audit_events (actor_user_id, actor_kind, action) values (null, 'staff', 'x');
+    raise exception 'FAIL: a staff audit row had no user';
+  exception when check_violation then null; end;
+end $$;
+
 -- the proof-only helpers go, and are gone
 drop schema proof cascade;
 do $$ begin if to_regnamespace('proof') is not null then raise exception 'FAIL: proof helpers left behind'; end if; end $$;
+
+-- 81. Storefront keys (V1 Storefront API SA0, 0141–0143; ADR-0018; plan docs/plans/2026-11-15-v1-storefront-api.md
+-- § SA0·3). A key is its shop's own row both ways; frata_app never changes a hash, kind, shop or maker and never deletes;
+-- no other role reaches it. app_storefront_key is the one way from a key to a shop: it returns exactly four columns and
+-- derives every stop (deleted, expired, a test key once the store ever opened, a partner's key once that partner's link
+-- is gone or it is suspended, a Website not on a live connected domain). A website's address names a live domain of
+-- the same shop, its apex or www only; removing that domain clears it.
+insert into tenants (id, slug, name) values
+  ('c8100000-0000-0000-0000-000000000001', 'proof-c81', 'Proof C81'),
+  ('c8100000-0000-0000-0000-000000000002', 'proof-d81', 'Proof D81');
+insert into shop_settings (tenant_id, pickup_pincode) values
+  ('c8100000-0000-0000-0000-000000000001', '452009'), ('c8100000-0000-0000-0000-000000000002', '110017');
+insert into shop_domains (id, tenant_id, host, apex, with_www, claimed_by, proved_at, cert_ok_at) values
+  ('c8100000-0000-0000-0000-0000000000d1', 'c8100000-0000-0000-0000-000000000001', 'checkout.proof-c81.in', 'proof-c81.in', false, '99999999-9999-9999-9999-999999999999', now(), now()),
+  ('c8100000-0000-0000-0000-0000000000d2', 'c8100000-0000-0000-0000-000000000002', 'checkout.proof-d81.in', 'proof-d81.in', false, '99999999-9999-9999-9999-999999999999', now(), now());
+insert into partners (id, user_id, email, name, phone, city, brands_now, terms_version, agreed_at, approved_at) values
+  ('c8100000-0000-0000-0000-0000000000a1', 'c8100000-0000-0000-0000-0000000000f1', 'p81@proof.test', 'Proof Partner 81', '919876543210', 'Indore', '0', 1, now(), now());
+insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days) values
+  ('c8100000-0000-0000-0000-000000000001', 'c8100000-0000-0000-0000-0000000000a1', 2000, 24, 90),
+  ('c8100000-0000-0000-0000-000000000002', 'c8100000-0000-0000-0000-0000000000a1', 2000, 24, 90);
+update shop_settings set site_origin = 'https://proof-c81.in', site_domain_id = 'c8100000-0000-0000-0000-0000000000d1' where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+update shop_settings set site_origin = 'https://www.proof-d81.in', site_domain_id = 'c8100000-0000-0000-0000-0000000000d2' where tenant_id = 'c8100000-0000-0000-0000-000000000002';
+insert into storefront_keys (id, tenant_id, kind, name, hash, prefix, partner_id, created_by, expires_at) values
+  ('c8100000-0000-0000-0000-00000000000a', 'c8100000-0000-0000-0000-000000000001', 'public', 'Website', repeat('a', 64), 'frs_pub_aaaaaa', null, '99999999-9999-9999-9999-999999999999', null),
+  ('c8100000-0000-0000-0000-00000000000b', 'c8100000-0000-0000-0000-000000000001', 'test', 'Preview', repeat('b', 64), 'frs_test_bbbbbb', null, '99999999-9999-9999-9999-999999999999', now() + interval '30 days'),
+  ('c8100000-0000-0000-0000-00000000000c', 'c8100000-0000-0000-0000-000000000001', 'public', 'Partner site', repeat('c', 64), 'frs_pub_cccccc', 'c8100000-0000-0000-0000-0000000000a1', 'c8100000-0000-0000-0000-0000000000f1', null),
+  ('c8100000-0000-0000-0000-00000000000d', 'c8100000-0000-0000-0000-000000000002', 'public', 'Partner site', repeat('d', 64), 'frs_pub_dddddd', 'c8100000-0000-0000-0000-0000000000a1', 'c8100000-0000-0000-0000-0000000000f1', null),
+  ('c8100000-0000-0000-0000-00000000000e', 'c8100000-0000-0000-0000-000000000002', 'test', 'Old preview', repeat('e', 64), 'frs_test_eeeeee', null, '99999999-9999-9999-9999-999999999999', now() - interval '1 minute'),
+  ('c8100000-0000-0000-0000-00000000000f', 'c8100000-0000-0000-0000-000000000002', 'test', 'D preview', repeat('f', 64), 'frs_test_ffffff', null, '99999999-9999-9999-9999-999999999999', now() + interval '30 days');
+do $$ declare got text; begin
+  if exists (select 1 from pg_tables where tablename = 'storefront_keys' and not rowsecurity) then raise exception 'FAIL: storefront_keys without RLS'; end if;
+  if (select count(*) from pg_policies where tablename = 'storefront_keys') <> 1
+     or (select count(*) from pg_policies where tablename = 'storefront_keys' and policyname = 'tenant_rows' and roles = '{frata_app}'
+         and qual like '%app_current_tenant()%' and with_check like '%app_current_tenant()%' and qual not like '%is null%') <> 1
+  then raise exception 'FAIL: storefront_keys without its one tenant policy'; end if;
+  if not (has_table_privilege('frata_app', 'storefront_keys', 'select') and has_table_privilege('frata_app', 'storefront_keys', 'insert'))
+     or exists (select 1 from unnest(array['update', 'delete', 'truncate', 'references', 'trigger']) p where has_table_privilege('frata_app', 'storefront_keys', p))
+  then raise exception 'FAIL: frata_app holds other than select, insert and its columns on storefront_keys'; end if;
+  select string_agg(column_name, ',' order by column_name) into got from information_schema.column_privileges where grantee = 'frata_app' and table_name = 'storefront_keys' and privilege_type = 'UPDATE';
+  if got is distinct from 'last_seen_on,last_seen_version,name,revoked_at,revoked_by' then raise exception 'FAIL: frata_app updates storefront_keys columns %', got; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p
+             where has_table_privilege(r, 'storefront_keys', p) or has_any_column_privilege(r, 'storefront_keys', 'select') or has_any_column_privilege(r, 'storefront_keys', 'update'))
+  then raise exception 'FAIL: another role reaches storefront_keys'; end if;
+  if has_column_privilege('frata_admin', 'storefront_keys', 'hash', 'select') then raise exception 'FAIL: frata_admin reads a key hash'; end if;
+  -- the definer: four columns, a definer pinned to an empty search_path, frata_app alone may run it
+  if pg_get_function_result('app_storefront_key(text)'::regprocedure) is distinct from 'TABLE(key_id uuid, tenant_id uuid, kind text, expires_at timestamp with time zone)'
+  then raise exception 'FAIL: app_storefront_key returns %', pg_get_function_result('app_storefront_key(text)'::regprocedure); end if;
+  if not (select prosecdef from pg_proc where oid = 'app_storefront_key(text)'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_storefront_key(text)'::regprocedure) is distinct from array['search_path=""']
+  then raise exception 'FAIL: app_storefront_key is not a pinned definer'; end if;
+  if exists (select 1 from unnest(array['public', 'anon', 'authenticated', 'service_role', 'frata_admin']) r
+             where r <> 'public' and has_function_privilege(r, 'app_storefront_key(text)', 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_storefront_key(text)'::regprocedure and a.grantee = 0)
+     or not has_function_privilege('frata_app', 'app_storefront_key(text)', 'execute')
+  then raise exception 'FAIL: app_storefront_key runs for a role other than frata_app'; end if;
+  if exists (select 1 from pg_proc p, unnest(array['app_site_origin_check', 'app_site_domain_gone', 'app_storefront_key_revoked_once']) f
+             where p.proname = f and (has_function_privilege('frata_app', p.oid, 'execute') or has_function_privilege('frata_admin', p.oid, 'execute')))
+  then raise exception 'FAIL: a storefront-key trigger function can be called'; end if;
+end $$;
+-- the boundary sweep: shop ids only, for frata_app alone, inside its window
+do $$ begin
+  if pg_get_function_result('app_shops_with_boundary(timestamptz, timestamptz)'::regprocedure) <> 'SETOF uuid' then raise exception 'FAIL: app_shops_with_boundary returns more than ids'; end if;
+  if not (select prosecdef from pg_proc where oid = 'app_shops_with_boundary(timestamptz, timestamptz)'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_shops_with_boundary(timestamptz, timestamptz)'::regprocedure) is distinct from array['search_path=""']
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_shops_with_boundary(timestamptz, timestamptz)', 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_shops_with_boundary(timestamptz, timestamptz)'::regprocedure and a.grantee = 0)
+  then raise exception 'FAIL: app_shops_with_boundary is not a pinned definer for frata_app alone'; end if;
+  if pg_get_function_result('app_shops_with_key_stop(timestamptz, timestamptz)'::regprocedure) <> 'SETOF uuid' then raise exception 'FAIL: app_shops_with_key_stop returns more than ids'; end if;
+  if not (select prosecdef from pg_proc where oid = 'app_shops_with_key_stop(timestamptz, timestamptz)'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_shops_with_key_stop(timestamptz, timestamptz)'::regprocedure) is distinct from array['search_path=""']
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_shops_with_key_stop(timestamptz, timestamptz)', 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_shops_with_key_stop(timestamptz, timestamptz)'::regprocedure and a.grantee = 0)
+     or not has_function_privilege('frata_app', 'app_shops_with_key_stop(timestamptz, timestamptz)', 'execute')
+  then raise exception 'FAIL: app_shops_with_key_stop is not a pinned definer for frata_app alone'; end if;
+  if pg_get_function_result('app_shops_with_content_change(timestamptz, timestamptz)'::regprocedure) <> 'SETOF uuid' then raise exception 'FAIL: app_shops_with_content_change returns more than ids'; end if;
+  if not (select prosecdef from pg_proc where oid = 'app_shops_with_content_change(timestamptz, timestamptz)'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_shops_with_content_change(timestamptz, timestamptz)'::regprocedure) is distinct from array['search_path=""']
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_shops_with_content_change(timestamptz, timestamptz)', 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_shops_with_content_change(timestamptz, timestamptz)'::regprocedure and a.grantee = 0)
+     or not has_function_privilege('frata_app', 'app_shops_with_content_change(timestamptz, timestamptz)', 'execute')
+  then raise exception 'FAIL: app_shops_with_content_change is not a pinned definer for frata_app alone'; end if;
+end $$;
+begin;
+select set_config('app.tenant_id', 'c8100000-0000-0000-0000-000000000001', true);
+insert into site_content (tenant_id, kind, key, value, starts_at, updated_at) values
+  ('c8100000-0000-0000-0000-000000000001', 'announcement', 'b1', '{"text":"Sale","link":null,"scheme":"paper"}', now() - interval '2 minutes', now() - interval '3 hours');
+select set_config('app.tenant_id', 'c8100000-0000-0000-0000-000000000002', true);
+insert into site_content (tenant_id, kind, key, value, starts_at, updated_at) values
+  ('c8100000-0000-0000-0000-000000000002', 'contact', 'contact', '{"line":"Call us"}', null, now() - interval '3 hours');
+commit;
+begin; set local role frata_app;
+do $$ begin
+  if not exists (select 1 from app_shops_with_content_change(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000001') then raise exception 'FAIL: a bar starting in the window was missed'; end if;
+  if exists (select 1 from app_shops_with_content_change(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: content saved hours ago was swept'; end if;
+  if not exists (select 1 from app_shops_with_content_change(now() - interval '4 hours', now() - interval '2 hours') s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: a save in the window was missed'; end if;
+end $$;
+commit;
+delete from site_content where tenant_id in ('c8100000-0000-0000-0000-000000000001', 'c8100000-0000-0000-0000-000000000002');
+insert into products (tenant_id, handle, title, status, publish_at) values ('c8100000-0000-0000-0000-000000000002', 'drop-81', 'Drop', 'active', now() - interval '1 minute');
+insert into discounts (tenant_id, title, style, percent_bps, starts_at, ends_at, created_by) values
+  ('c8100000-0000-0000-0000-000000000001', 'Starts', 'order_off', 1000, now() - interval '2 minutes', null, '99999999-9999-9999-9999-999999999999');
+begin; set local role frata_app;
+do $$ begin
+  if not exists (select 1 from app_shops_with_boundary(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: a drop in the window was missed'; end if;
+  if not exists (select 1 from app_shops_with_boundary(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000001') then raise exception 'FAIL: an offer starting in the window was missed'; end if;
+  if exists (select 1 from app_shops_with_boundary(now() - interval '1 hour', now() - interval '30 minutes') s where s = 'c8100000-0000-0000-0000-000000000001') then raise exception 'FAIL: an offer outside the window was swept'; end if;
+  if exists (select 1 from app_shops_with_boundary(now() - interval '1 hour', now() - interval '30 minutes') s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: a moment outside the window was swept'; end if;
+end $$;
+commit;
+-- a website's address: the same shop's live domain, its apex or www only
+do $$ begin
+  begin update shop_settings set site_origin = 'https://proof-d81.in', site_domain_id = 'c8100000-0000-0000-0000-0000000000d2' where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: C named D''s domain'; exception when check_violation then null; end;
+  begin update shop_settings set site_origin = 'https://shop.proof-c81.in' where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: a subdomain other than www'; exception when check_violation then null; end;
+  begin update shop_settings set site_origin = 'https://evil.in' where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: an origin off its domain'; exception when check_violation then null; end;
+  begin update shop_settings set site_origin = 'https://proof-c81.in/x' where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: an origin with a path'; exception when check_violation then null; end;
+  begin update shop_settings set site_domain_id = null where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: an origin without its domain'; exception when check_violation then null; end;
+end $$;
+-- as frata_app, C can't name D's domain, and the refusal says nothing about whether the id exists
+begin; set local role frata_app;
+select set_config('app.tenant_id', 'c8100000-0000-0000-0000-000000000001', true);
+do $$ declare m1 text; m2 text; begin
+  begin update shop_settings set site_origin = 'https://proof-d81.in', site_domain_id = 'c8100000-0000-0000-0000-0000000000d2' where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: C named D''s domain as frata_app'; exception when check_violation then get stacked diagnostics m1 = message_text; end;
+  begin update shop_settings set site_origin = 'https://proof-d81.in', site_domain_id = gen_random_uuid() where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: an unknown domain id'; exception when check_violation or foreign_key_violation then get stacked diagnostics m2 = message_text; end;
+  if m1 not like 'site domain not live%' then raise exception 'FAIL: naming D''s domain answered %', m1; end if;
+end $$;
+commit;
+begin; set local role frata_app;
+select set_config('app.tenant_id', 'c8100000-0000-0000-0000-000000000001', true);
+do $$ declare n int; begin
+  if (select count(*) from storefront_keys) <> 3 or exists (select 1 from storefront_keys where tenant_id <> 'c8100000-0000-0000-0000-000000000001')
+  then raise exception 'FAIL: C sees other than its own keys'; end if;
+  insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values ('c8100000-0000-0000-0000-000000000001', 'public', 'Second', repeat('1', 64), 'frs_pub_111111', '99999999-9999-9999-9999-999999999999');
+  begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values ('c8100000-0000-0000-0000-000000000002', 'public', 'Forged', repeat('2', 64), 'frs_pub_222222', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: C wrote a key into D'; exception when insufficient_privilege then null; end;
+  update storefront_keys set name = 'Taken' where id = 'c8100000-0000-0000-0000-00000000000d'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: C renamed D''s key'; end if;
+  update storefront_keys set revoked_at = now(), revoked_by = '99999999-9999-9999-9999-999999999999' where id = 'c8100000-0000-0000-0000-00000000000f'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: C deleted D''s key'; end if;
+  begin update storefront_keys set hash = repeat('9', 64) where id = 'c8100000-0000-0000-0000-00000000000a'; raise exception 'FAIL: frata_app changes a hash'; exception when insufficient_privilege then null; end;
+  begin update storefront_keys set kind = 'test' where id = 'c8100000-0000-0000-0000-00000000000a'; raise exception 'FAIL: frata_app changes a kind'; exception when insufficient_privilege then null; end;
+  begin update storefront_keys set tenant_id = 'c8100000-0000-0000-0000-000000000002'; raise exception 'FAIL: C moved a key to D'; exception when insufficient_privilege then null; end;
+  begin update storefront_keys set partner_id = null; raise exception 'FAIL: frata_app changes a key''s partner'; exception when insufficient_privilege then null; end;
+  begin delete from storefront_keys where id = 'c8100000-0000-0000-0000-00000000000a'; raise exception 'FAIL: frata_app deletes keys'; exception when insufficient_privilege then null; end;
+  -- deleted once, for good
+  update storefront_keys set revoked_at = now(), revoked_by = '99999999-9999-9999-9999-999999999999' where hash = repeat('1', 64);
+  begin update storefront_keys set revoked_at = null, revoked_by = null where hash = repeat('1', 64); raise exception 'FAIL: a deleted key came back';
+  exception when check_violation then null; end;
+  -- the shape
+  begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values ('c8100000-0000-0000-0000-000000000001', 'test', 'No end', repeat('3', 64), 'frs_test_333333', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: a test key with no end'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values ('c8100000-0000-0000-0000-000000000001', 'public', 'Bad hash', 'ABC', 'frs_pub_444444', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: a hash that is not sha256 hex'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values ('c8100000-0000-0000-0000-000000000001', 'public', repeat('x', 41), repeat('5', 64), 'frs_pub_555555', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: a 41-character name'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values ('c8100000-0000-0000-0000-000000000001', 'live', 'Kind', repeat('6', 64), 'frs_pub_666666', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: an unknown kind'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by, expires_at) values ('c8100000-0000-0000-0000-000000000001', 'test', 'Long', repeat('8', 64), 'frs_test_888888', '99999999-9999-9999-9999-999999999999', now() + interval '31 days');
+    raise exception 'FAIL: a test key past 30 days'; exception when check_violation then null; end;
+end $$;
+commit;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '', true);
+do $$ begin
+  if exists (select 1 from storefront_keys) then raise exception 'FAIL: keys read with no shop set'; end if;
+end $$;
+commit;
+-- the definer, as frata_app with no shop set (how apiRequest calls it)
+create or replace function pg_temp.skey(h text) returns uuid language sql as $$ select tenant_id from app_storefront_key(h) $$;
+begin; set local role frata_app;
+do $$ begin
+  if pg_temp.skey(repeat('a', 64)) is distinct from 'c8100000-0000-0000-0000-000000000001' then raise exception 'FAIL: C''s live key does not name C'; end if;
+  if pg_temp.skey(repeat('b', 64)) is distinct from 'c8100000-0000-0000-0000-000000000001' then raise exception 'FAIL: C''s test key before opening does not answer'; end if;
+  if pg_temp.skey(repeat('d', 64)) is distinct from 'c8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: D''s partner key does not name D'; end if;
+  if pg_temp.skey(repeat('e', 64)) is not null then raise exception 'FAIL: an expired test key answers'; end if;
+  if pg_temp.skey(repeat('1', 64)) is not null then raise exception 'FAIL: a deleted key answers'; end if;
+  if pg_temp.skey(repeat('7', 64)) is not null then raise exception 'FAIL: an unknown key answers'; end if;
+  if (select count(*) from app_storefront_key(repeat('a', 64))) <> 1 then raise exception 'FAIL: one key, more than one row'; end if;
+end $$;
+commit;
+-- every stop is derived: the store opens, the partner's link ends, the partner is suspended, the domain goes, back to Frrata
+insert into members (tenant_id, user_id, role) values ('c8100000-0000-0000-0000-000000000001', '99999999-9999-9999-9999-999999999999', 'owner');
+update shop_settings set published_at = now() where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+update shop_settings set published_at = null where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+update partner_links set removed_at = now() where tenant_id = 'c8100000-0000-0000-0000-000000000001' and partner_id = 'c8100000-0000-0000-0000-0000000000a1';
+begin; set local role frata_app;
+do $$ begin
+  if pg_temp.skey(repeat('b', 64)) is not null then raise exception 'FAIL: a test key answers after the store first opened (closed again since)'; end if;
+  if pg_temp.skey(repeat('a', 64)) is null then raise exception 'FAIL: opening stopped a live key'; end if;
+  if pg_temp.skey(repeat('f', 64)) is distinct from 'c8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: C opening stopped D''s test key'; end if;
+  if pg_temp.skey(repeat('c', 64)) is not null then raise exception 'FAIL: a removed partner''s key answers'; end if;
+  if pg_temp.skey(repeat('d', 64)) is null then raise exception 'FAIL: removing the partner from C stopped its key on D'; end if;
+  if not exists (select 1 from app_shops_with_key_stop(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000001') then raise exception 'FAIL: the sweep missed C''s removed partner'; end if;
+  if exists (select 1 from app_shops_with_key_stop(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: the sweep purged D for C''s partner'; end if;
+  if exists (select 1 from app_shops_with_key_stop(now() - interval '1 hour', now() - interval '30 minutes')) then raise exception 'FAIL: the key sweep reached outside its window'; end if;
+end $$;
+commit;
+update partner_links set removed_at = now() - interval '2 hours' where tenant_id = 'c8100000-0000-0000-0000-000000000001' and partner_id = 'c8100000-0000-0000-0000-0000000000a1';
+update partners set suspended_at = now() where id = 'c8100000-0000-0000-0000-0000000000a1';
+begin; set local role frata_app;
+do $$ begin
+  if pg_temp.skey(repeat('d', 64)) is not null then raise exception 'FAIL: a suspended partner''s key answers'; end if;
+  if not exists (select 1 from app_shops_with_key_stop(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: the sweep missed a suspended partner''s shop'; end if;
+end $$;
+commit;
+update partners set suspended_at = null where id = 'c8100000-0000-0000-0000-0000000000a1';
+update shop_domains set removed_at = now(), removed_reason = 'proof', removed_by = '99999999-9999-9999-9999-999999999999' where id = 'c8100000-0000-0000-0000-0000000000d2';
+do $$ begin
+  if (select site_origin from shop_settings where tenant_id = 'c8100000-0000-0000-0000-000000000002') is not null then raise exception 'FAIL: a removed domain kept its website address'; end if;
+  if (select site_origin from shop_settings where tenant_id = 'c8100000-0000-0000-0000-000000000001') is null then raise exception 'FAIL: D''s domain cleared C''s address'; end if;
+end $$;
+update shop_settings set site_origin = null, site_domain_id = null where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+begin; set local role frata_app;
+do $$ begin
+  if pg_temp.skey(repeat('d', 64)) is not null then raise exception 'FAIL: a key answers once its domain is removed'; end if;
+  if pg_temp.skey(repeat('a', 64)) is not null then raise exception 'FAIL: a key answers while the store runs on Frrata'; end if;
+  if not exists (select 1 from app_shops_with_key_stop(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: the sweep missed a removed domain'; end if;
+end $$;
+commit;
 
 -- 80. Store content (V1 content, 0133–0136; plan docs/plans/2026-11-15-v1-content.md; tenancy-auditor 2026-11-15): a
 -- store's bars, menus and Contact line are its own both ways; tenant, kind and key never change; at most 3 bars a store
@@ -3890,7 +4137,56 @@ do $$ declare ra uuid; rb uuid; n int; begin
 end $$;
 rollback;
 
--- 83. Admin N4 (0137–0138; plan docs/plans/2026-11-15-neel-n4-admin.md, reviews folded in): the waiting-passkeys read and
+-- 80b. A partner's save told to the owner (V1 content follow-up, 0137; owner 2026-11-15): the line goes to the saver's
+-- own store only, only for a partner's save on a store with an owner, once per place an hour; no store set writes
+-- nothing; the API roles can't run it.
+begin;
+insert into tenants (id, slug, name) values ('33333333-3333-3333-3333-3333333380b0', 'proof-80b-no-owner', 'Proof no owner');
+with p as (insert into partners (user_id, email, name, business_name, phone, city, services, work_url, brands_now, terms_version, agreed_at, approved_at)
+    values ('a0000000-0000-0000-0000-00000000c0a1', 'proof-partner@example.in', 'Proof', 'Proof Studio', '919845000000', 'Jaipur', '{}', '', '1-4', 1, now(), now()) returning id),
+  pm as (insert into partner_members (partner_id, user_id, email, role, accepted_at) select p.id, u.id, u.email, 'owner', now() from p,
+    (values ('a0000000-0000-0000-0000-00000000c0a1'::uuid, 'proof-partner@example.in')) u(id, email) returning id, user_id)
+insert into members (tenant_id, user_id, role, partner_member_id)
+  select t, pm.user_id, 'partner', pm.id from pm, (values ('11111111-1111-1111-1111-111111111111'::uuid), ('22222222-2222-2222-2222-222222222222'::uuid),
+    ('33333333-3333-3333-3333-3333333380b0'::uuid)) x(t);
+set local role frata_app;
+do $$ declare ca uuid; cb uuid; cc uuid; co uuid; c2 uuid; pb uuid; n int; begin
+  -- A store with no owner yet (a partner building it): its partner's save tells no one.
+  perform set_config('app.tenant_id', '33333333-3333-3333-3333-3333333380b0', true);
+  insert into site_content (tenant_id, kind, key, value, updated_by) values ('33333333-3333-3333-3333-3333333380b0', 'menu', 'footer', '[]', 'a0000000-0000-0000-0000-00000000c0a1') returning id into cc;
+  if app_content_partner_notice('site_content', cc, 'changed') then raise exception 'FAIL: a store with no owner got a partner notice'; end if;
+  perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+  insert into site_content (tenant_id, kind, key, value, updated_by) values ('22222222-2222-2222-2222-222222222222', 'menu', 'footer', '[]', 'a0000000-0000-0000-0000-00000000c0a1') returning id into cb;
+  insert into shop_pages (tenant_id, template, draft, updated_by) values ('22222222-2222-2222-2222-222222222222', 'faq', '{"title":"Q","handle":"faq","fill":{},"hidden":true}', 'a0000000-0000-0000-0000-00000000c0a1') returning id into pb;
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  if app_content_partner_notice('site_content', cb, 'changed') then raise exception 'FAIL: A wrote a notice from B''s row'; end if;
+  if app_content_partner_notice('shop_pages', pb, 'changed') then raise exception 'FAIL: A wrote a notice from B''s page'; end if;
+  insert into site_content (tenant_id, kind, key, value, updated_by) values ('11111111-1111-1111-1111-111111111111', 'menu', 'footer', '[]', 'a0000000-0000-0000-0000-00000000c0a1') returning id into ca;
+  if not app_content_partner_notice('site_content', ca, 'changed') then raise exception 'FAIL: a partner''s save on a store with an owner wrote no notice'; end if;
+  if app_content_partner_notice('site_content', ca, 'changed') then raise exception 'FAIL: a second save within the hour wrote a second notice'; end if;
+  insert into site_content (tenant_id, kind, key, value, updated_by) values ('11111111-1111-1111-1111-111111111111', 'menu', 'main', '[]', 'a0000000-0000-0000-0000-00000000c0a1') returning id into c2;
+  if app_content_partner_notice('site_content', c2, 'added') then raise exception 'FAIL: a partner''s second place within the hour wrote a second notice (one per partner an hour)'; end if;
+  select count(*) into n from notices where tenant_id = '11111111-1111-1111-1111-111111111111' and source_kind = 'content' and source_id = ca;
+  if n <> 1 then raise exception 'FAIL: % partner notices for one place, not 1', n; end if;
+  if not exists (select 1 from notices where source_id = ca and title = 'Your partner changed the footer menu' and href = '/console/content?tab=menus' and type = 'needs_you' and not required and by = 'a0000000-0000-0000-0000-00000000c0a1')
+    then raise exception 'FAIL: the partner notice is not worded from its place'; end if;
+  insert into site_content (tenant_id, kind, key, value, updated_by) values ('11111111-1111-1111-1111-111111111111', 'contact', 'contact', '{"line":"x"}', '99999999-9999-9999-9999-999999999999') returning id into co;
+  if app_content_partner_notice('site_content', co, 'changed') then raise exception 'FAIL: the owner''s own save wrote a notice'; end if;
+  if exists (select 1 from notices where tenant_id = '22222222-2222-2222-2222-222222222222' and source_kind = 'content' and source_id is not null) then raise exception 'FAIL: B got a partner notice'; end if;
+  if exists (select 1 from notices where source_id = pb) then raise exception 'FAIL: B''s page made a notice'; end if;
+  perform set_config('app.tenant_id', '', true);
+  if app_content_partner_notice('site_content', ca, 'changed') then raise exception 'FAIL: no store set wrote a notice'; end if;
+end $$;
+rollback;
+begin;
+do $$ declare r text; begin
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder'] loop
+    if has_function_privilege(r, 'app_content_partner_notice(text, uuid, text)', 'execute') then raise exception 'FAIL: % can run app_content_partner_notice', r; end if;
+  end loop;
+end $$;
+rollback;
+
+-- 84. Admin N4 (0144–0145; plan docs/plans/2026-11-15-neel-n4-admin.md, reviews folded in): the waiting-passkeys read and
 -- the refund writer are definers with a fixed search_path that only frata_admin may run; support is refused by both; the
 -- refund columns are all or none; nobody but the definer writes frrata_payments.
 do $$ begin
@@ -3907,10 +4203,10 @@ do $$ begin
 end $$;
 begin;
 do $$ declare got boolean; begin
-  insert into platform_staff (user_id, email, role) values ('83838383-8383-8383-8383-838383838383', 'support83@frrata.test', 'support');
-  got := false; begin perform * from admin_waiting_passkeys('83838383-8383-8383-8383-838383838383'); exception when others then got := true; end;
+  insert into platform_staff (user_id, email, role) values ('84848484-8383-8383-8383-838383838383', 'support84@frrata.test', 'support');
+  got := false; begin perform * from admin_waiting_passkeys('84848484-8383-8383-8383-838383838383'); exception when others then got := true; end;
   if not got then raise exception 'FAIL: support read the waiting passkeys'; end if;
-  got := false; begin perform app_record_frrata_refund(gen_random_uuid(), 'UTR83', current_date, '83838383-8383-8383-8383-838383838383'); exception when insufficient_privilege then got := true; end;
+  got := false; begin perform app_record_frrata_refund(gen_random_uuid(), 'UTR83', current_date, '84848484-8383-8383-8383-838383838383'); exception when insufficient_privilege then got := true; end;
   if not got then raise exception 'FAIL: support recorded a refund'; end if;
   if not exists (select 1 from pg_constraint where conname = 'frrata_payments_refund_whole') then raise exception 'FAIL: the refund columns can be half set'; end if;
 end $$;
@@ -3920,9 +4216,9 @@ rollback;
 begin;
 set local session_replication_role = replica;
 do $$ declare got boolean; t uuid := gen_random_uuid(); live uuid := gen_random_uuid(); test uuid := gen_random_uuid();
-  p_ok uuid := gen_random_uuid(); p_test uuid := gen_random_uuid(); p_zero uuid := gen_random_uuid(); m uuid := '83838383-0000-8383-8383-838383838383'; n bigint;
+  p_ok uuid := gen_random_uuid(); p_test uuid := gen_random_uuid(); p_zero uuid := gen_random_uuid(); m uuid := '84848484-0000-8383-8383-838383838383'; n bigint;
 begin
-  insert into platform_staff (user_id, email, role) values (m, 'master83@frrata.test', 'admin');
+  insert into platform_staff (user_id, email, role) values (m, 'master84@frrata.test', 'admin');
   insert into frrata_invoices (id, tenant_id, period_start, period_end, taxable, cgst, sgst, igst, total, test_mode) values
     (live, t, '2024-01-01', '2024-02-01', 100, 0, 0, 0, 100, false), (test, t, '2024-02-01', '2024-03-01', 100, 0, 0, 0, 100, true);
   insert into frrata_payments (id, tenant_id, invoice_id, method, amount, captured_at, over_paid) values
@@ -3944,4 +4240,4 @@ begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 83 checks passed'
+\echo 'tenancy proof — all 84 checks passed'

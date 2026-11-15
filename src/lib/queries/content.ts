@@ -33,6 +33,11 @@ const coreRows = (tenantId: string) => withTenant(tenantId, (tx) => rowsIn(tx, t
 const shopRows = shopCached('content-v1', 'content', coreRows)
 /** A store's content as its pages show it. A read that fails shows no bar and the default menus, never an error page. */
 export const shopContent = async (tenantId: string): Promise<StoreContent> => contentOf(await shopRows(tenantId))
+/** The Storefront API's copy (V1 SA1, lane A): the same rows, an hour per entry, so the API's routes keep their hour
+ *  (a cached route takes the shortest period it reads). A save purges it with the shop's (same tag); a bar's start and
+ *  a save the limiter left behind are purged by the drain (app_shops_with_content_change). */
+const apiRows = shopCached('api-content-v1', 'content', coreRows, 3600)
+export const apiContent = async (tenantId: string): Promise<StoreContent> => contentOf(await apiRows(tenantId))
 /** The same, uncached: the console's previews. */
 export const previewContent = async (tenantId: string): Promise<StoreContent> => contentOf(await coreRows(tenantId))
 
@@ -62,9 +67,11 @@ export function byOf(updatedBy: string | null, userId: string, roles: Map<string
  */
 export async function contentEditorData(tenantId: string, userId: string) {
   return withTenant(tenantId, async (tx) => {
-    const [rows, hasOwner, pages, cols, prods, photos] = await Promise.all([
+    const [rows, hasOwner, partner, pages, cols, prods, photos] = await Promise.all([
       contentRowsIn(tx, tenantId, userId),
       hasOwnerIn(tx, tenantId),
+      // Whether the store has a partner: the read-only chip names only roles the store has (words review 2026-11-15).
+      tx.select({ id: members.userId }).from(members).where(and(eq(members.tenantId, tenantId), eq(members.role, 'partner'))).limit(1),
       tx.select({ id: shopPages.id, template: shopPages.template, version: shopPages.version, draft: shopPages.draft, live: shopPages.live, updatedAt: shopPages.updatedAt })
         .from(shopPages).where(and(eq(shopPages.tenantId, tenantId), isNull(shopPages.removedAt))).orderBy(asc(shopPages.createdAt)),
       tx.select({ handle: collections.handle, title: collections.title }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)).limit(200),
@@ -74,6 +81,6 @@ export async function contentEditorData(tenantId: string, userId: string) {
         .from(productImages).innerJoin(products, and(eq(products.id, productImages.productId), eq(products.tenantId, productImages.tenantId)))
         .where(and(eq(productImages.tenantId, tenantId), eq(productImages.position, 0), eq(products.status, 'active'))).orderBy(desc(productImages.createdAt)).limit(24),
     ])
-    return { rows, hasOwner, pages, collections: cols, products: prods, photos }
+    return { rows, hasOwner, hasPartner: partner.length > 0, pages, collections: cols, products: prods, photos }
   })
 }

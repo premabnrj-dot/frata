@@ -97,3 +97,11 @@ export function refreshProduct(tenantId: string, handle: string) {
 export function refreshHosts(...hosts: string[]) {
   for (const h of hosts) revalidateTag(`host:${h}`)
 }
+
+/**
+ * A storefront key changed (deleted, or its shop's Website moved): purge its cached lookup and every API copy read
+ * under it (tag `skey:<sha256 hex>`, V1 Storefront API; src/lib/queries/storefront.ts storefrontKeyFor).
+ */
+export function refreshKey(hashHex: string) {
+  if (/^[0-9a-f]{64}$/.test(hashHex)) revalidateTag(`skey:${hashHex}`)
+}

@@ -145,7 +145,8 @@ export const auditEvents = pgTable('audit_events', {
   id: id(),
   at: at('at').notNull().defaultNow(),
   tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'restrict' }),
-  actorUserId: uuid('actor_user_id').notNull(),
+  /** Null only for a system run (billing rework R2: bills issued on the 1st), and then the email is null too. */
+  actorUserId: uuid('actor_user_id'),
   actorEmail: text('actor_email'),
   actorKind: text('actor_kind').notNull(),
   supportSessionId: uuid('support_session_id').references(() => supportSessions.id, { onDelete: 'restrict' }),
@@ -164,7 +165,8 @@ export const auditEvents = pgTable('audit_events', {
   index('audit_events_actor_at').on(t.actorUserId, t.at, t.id),
   index('audit_events_kind_at').on(t.actionWord, t.at, t.id),
   index('audit_events_session').on(t.supportSessionId),
-  check('audit_events_kind', sql`${t.actorKind} in ('member','staff','support')`),
+  check('audit_events_kind', sql`${t.actorKind} in ('member','staff','support','system')`),
+  check('audit_events_who', sql`(${t.actorKind} = 'system') = (${t.actorUserId} is null) and (${t.actorKind} <> 'system' or ${t.actorEmail} is null)`),
 ])
 
 export const plans = pgTable('plans', {
@@ -298,12 +300,20 @@ export const shopSettings = pgTable('shop_settings', {
   shipCostCod: money('ship_cost_cod'),
   shipCostsConfirmedAt: at('ship_costs_confirmed_at'),
   publishedAt: at('published_at'),
+  /**
+   * Where the brand's own website runs, when it isn't on Frrata (V1 Storefront API, ADR-0018): `https://<apex>` or
+   * `https://www.<apex>` of the connected domain `site_domain_id` names. Both null = Runs on Frrata. Set only by
+   * Settings › Website; app_site_origin_check holds the shape and the domain; removing the domain clears both.
+   */
+  siteOrigin: text('site_origin'),
+  siteDomainId: uuid('site_domain_id'),
   version: integer('version').notNull().default(1),
   updatedAt: at('updated_at').notNull().defaultNow(),
 }, (t) => [
   check('shop_settings_accent', sql`${t.accent} in ('oxide','indigo','moss','wine','ink')`),
   check('shop_settings_font', sql`${t.displayFont} in ('fraunces','cormorant','inter')`),
   check('shop_settings_language', sql`${t.shopLanguage} in ('en','hi')`),
+  check('shop_settings_site', sql`(${t.siteOrigin} is null) = (${t.siteDomainId} is null) and (${t.siteOrigin} is null or ${t.siteOrigin} ~ '^https://[a-z0-9.-]+$')`),
   check('shop_settings_seo', sql`length(${t.seoTitle}) <= 200 and length(${t.seoDescription}) <= 400`),
   check('shop_settings_return_kind', sql`${t.returnKind} in ('exchange_or_refund','exchange_only','refund_only','none')`),
   check('shop_settings_sells', sql`${t.sells} <@ array['women','men','kids','ethnic','accessories','footwear','jewellery','beauty','wellness']::text[]`),

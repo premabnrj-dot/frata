@@ -14,8 +14,9 @@ import { db, poolReleased, type Tx } from './index'
 // requests; a session-level SET would leak one merchant's id into the next
 // request on that connection. set_config(…, true) ends with the transaction.
 //
-// The tenant id comes from requireMember() or the storefront host lookup —
-// never from a URL, a form field or a request body.
+// The tenant id comes from requireMember(), the storefront host lookup, or a
+// storefront key resolved inside apiRequest() on the API host (ADR-0018) —
+// never from an id in a URL, a form field or a request body.
 // =============================================================================
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

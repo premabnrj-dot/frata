@@ -16,6 +16,7 @@ import { errName } from '@/lib/log'
 import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import { addressFacts, domainClaimFor, shopDomainRows } from '@/lib/queries/addresses'
 import { refreshHosts, refreshShop } from '@/lib/storefront/refresh'
+import { refreshKeys } from '@/lib/queries/storefront-api'
 import { checkDomain } from '@/domains/addresses/domains'
 import { slugProblem } from '@/domains/signup/slug'
 
@@ -170,7 +171,8 @@ export async function removeDomainAction(id: string): Promise<Done> {
   if (!who || !Id.safeParse(id).success) return { ok: false, error: ERR_WORDS.support }
   const hosts = await hostsOf(who.tenantId, await slugOf(who.tenantId))
   const r = await write('domain.removed', id, (tx, w) => tx.execute(sql`select app_remove_domain(${w.tenantId}::uuid, ${w.userId}::uuid, ${id}::uuid)`))
-  if (r.ok) { refreshShop(who.tenantId, 'shop'); refreshHosts(...hosts); revalidatePath(CONSOLE_LAYOUT, 'layout') }
+  // The Website's domain may be the one removed (the definer stops its keys): purge their cached answers too (V1 SA0).
+  if (r.ok) { refreshShop(who.tenantId, 'shop'); refreshHosts(...hosts); await refreshKeys(who.tenantId); revalidatePath(CONSOLE_LAYOUT, 'layout') }
   return r.ok ? { ok: true } : r
 }
 

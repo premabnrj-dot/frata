@@ -137,6 +137,13 @@ export const LIMITS = {
   contentUndo: { action: 'content_undo:shop', max: 30, windowSeconds: 60 },
   contentPurge: { action: 'content_purge:shop', max: 1, windowSeconds: 30 },
   contentTrail: { action: 'content_trail:shop', max: 1, windowSeconds: 30 },
+  // The Storefront API (V1 SA0, security and unit-economics reviews 2026-11-15), all failing closed. Unknown keys per
+  // network (counted after a lookup misses, on the dynamic tree); test keys at 60 a minute per network; a test key's
+  // search; keys made per shop (each is a new set of cached copies).
+  apiMissIp: { action: 'api_miss:ip', max: 300, windowSeconds: 600 },
+  apiTestIp: { action: 'api_test:ip', max: 60, windowSeconds: 60 },
+  apiSearchIp: { action: 'api_search:ip', max: 300, windowSeconds: 600 },
+  apiKeyCreateShop: { action: 'api_key_create:shop', max: 10, windowSeconds: 3600 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */

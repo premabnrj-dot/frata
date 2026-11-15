@@ -14,7 +14,7 @@ import { ACTIVITY_KINDS, MASTER_ONLY_WORDS, type ActivityKind } from '@/domains/
 // =============================================================================
 
 export const ACTIVITY_PAGE = 50
-export type ActivityRow = { id: string; at: Date; actorEmail: string | null; actorUserId: string; actorKind: string; action: string; tenantId: string | null; store: string | null }
+export type ActivityRow = { id: string; at: Date; actorEmail: string | null; actorUserId: string | null; actorKind: string; action: string; tenantId: string | null; store: string | null }
 export type ActivityFilter = { tenant?: string; actor?: string; kind?: ActivityKind; before?: { at: Date; id: string } }
 
 export async function listActivity(staff: StaffOk, f: ActivityFilter = {}): Promise<{ rows: ActivityRow[]; next: { at: Date; id: string } | null }> {

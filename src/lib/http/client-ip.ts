@@ -7,7 +7,11 @@ import { headers } from 'next/headers'
  * would let a guesser rotate past every limit (security review S8, 2026-11-08).
  */
 export async function clientIp(): Promise<string> {
-  const h = await headers()
+  return ipFrom(await headers())
+}
+
+/** The same, from a request's own headers (a route that must not call headers(): the Storefront API's door). */
+export function ipFrom(h: { get(name: string): string | null }): string {
   return ipBucket((h.get('x-forwarded-for')?.split(',')[0] ?? h.get('x-real-ip') ?? 'unknown').trim())
 }
 

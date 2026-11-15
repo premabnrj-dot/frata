@@ -59,7 +59,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
           <DataTableBody>
             {rows.map((e) => (
               <DataTableRow key={e.id}>
-                <Td cell="a" className="font-num">{e.actorEmail ?? 'Someone'}{e.actorKind === 'support' && <span className="text-muted-foreground"> · support visit</span>}</Td>
+                <Td cell="a" className="font-num">{e.actorKind === 'system' ? 'Frrata' : e.actorEmail ?? 'Someone'}{e.actorKind === 'support' && <span className="text-muted-foreground"> · support visit</span>}</Td>
                 <Td cell="c">{e.tenantId && e.store ? <Link href={link({ shop: e.tenantId, before: undefined })} className="underline-offset-2 hover:underline">{e.store}</Link> : <span className="text-muted-foreground">Frrata</span>}</Td>
                 <Td cell="e">{actionWords(e.action)}</Td>
                 <Td cell="f" className="whitespace-nowrap text-right text-muted-foreground">{momentIN(e.at, new Date())}</Td>

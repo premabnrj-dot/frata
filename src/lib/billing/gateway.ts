@@ -31,7 +31,9 @@ async function api<T>(method: 'GET' | 'POST', path: string, body?: object): Prom
 
 export type Method = 'upi' | 'card' | 'emandate'
 type Order = { id: string; amount: number; receipt: string; status: string }
-type Payment = { id: string; status: string; order_id: string; token_id?: string; error_description?: string }
+type Payment = { id: string; status: string; order_id: string; amount: number; currency: string; token_id?: string; error_description?: string }
+/** What a payment took, as the result definer needs it (billing R5). */
+export const moneyOf = (p: Pick<Payment, 'amount' | 'currency'>) => ({ amount: p.amount, currency: p.currency })
 
 export const createCustomer = (c: { name: string; email: string; contact: string }) =>
   api<{ id: string }>('POST', '/v1/customers', { ...c, fail_existing: '0' })

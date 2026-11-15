@@ -1,5 +1,6 @@
 # Parallel lanes: who builds what at once, and how it reaches main
-Status: active (owner, 2026-11-15: "any chance some of them could be taken parallelly in another sessions and you
+Status: done 2026-11-15 (C 8710c39c · 0130–0131; B 29114363 + b1c62ba8 · 0133–0137; A 6d0e0b62 · 0141–0143; all live)
+Was active (owner, 2026-11-15: "any chance some of them could be taken parallelly in another sessions and you
 coordinate/orchestrate them"; "content mockup approved. builders approved. all others approved. but when you're
 working do share one final mockup for each for me to review") · Orchestrator: session `session_01SDQQsALbVP4rESeVnyh8NG`
 (branch `claude/amazing-wright-7irwn3`)
@@ -37,3 +38,14 @@ Vercel and Cloudflare test on Starter 0, ADR-0017 § The test, when); V3 Studio 
 One lane at a time: merge `main` into the lane, renumber its migrations against production, run the gates and the
 touched flows, apply its migrations to production, push to `main` at once, watch the deploy and runtime errors, tell
 the owner. Then the next lane merges the new `main`.
+
+## As released (2026-11-15)
+| Lane | On main | Migrations in production | Owner saw deviations |
+|---|---|---|---|
+| C · Builders | 8710c39c | 0130, 0131 | "ship it" |
+| B · Content | 29114363, follow-up b1c62ba8 | 0133–0136 (0136 after the deploy), 0137 | "ship with differences"; partner after handover: yes |
+| A · Storefront API SA0–SA1 | 6d0e0b62 | 0141–0143 | "ship with differences"; drafts closed to test keys until ADR-0018 § 12's token (SA1b) |
+
+Still to do: the content move's last run and the migration that drops `app_move_content` and `shop_pages.live_publish_id`
+(2026-11-16); the owner's `DATABASE_URL_BUILDER` (docs/setup.md § 6a). Next: SA1b, P2 Clients (mockup first).
+

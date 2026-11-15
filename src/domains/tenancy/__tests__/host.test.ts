@@ -133,3 +133,46 @@ describe('EkCode host (P1 task 6)', () => {
     expect(new RegExp(`^${shop.missing[0]!.value}$`).test('kesar.frata.store')).toBe(false)
   })
 })
+
+describe('the Storefront API host (ADR-0018; V1 plan § SA0·1)', () => {
+  const C = 'app.frata.in', D = 'frrata.shop', E = 'ekcode.in', A = 'api.frrata.shop'
+  it('is its own surface, exact and normalised, and only when set', () => {
+    expect(surfaceFor('api.frrata.shop', C, E, A)).toEqual({ kind: 'api' })
+    expect(surfaceFor('API.frrata.shop.', C, E, A)).toEqual({ kind: 'api' })
+    expect(surfaceFor('api.frrata.shop:443', C, E, A)).toEqual({ kind: 'api' })
+    expect(surfaceFor('www.api.frrata.shop', C, E, A)).toEqual({ kind: 'storefront', host: 'www.api.frrata.shop' })
+    expect(surfaceFor('api.frrata.shop', C, E, '')).toEqual({ kind: 'storefront', host: 'api.frrata.shop' })
+    expect(surfaceFor('frata-git-x.vercel.app', C, E, A)).toEqual({ kind: 'console' })
+  })
+  it('answers versioned paths only on the API host', () => {
+    expect(routeFor(A, '/2026-12/k/frs_pub_x/shop', C, false, D, E, A)).toEqual({ kind: 'api' })
+    expect(routeFor(A, '/2026-12/openapi.json', C, false, D, E, A)).toEqual({ kind: 'api' })
+    expect(routeFor(A, '/', C, false, D, E, A)).toEqual({ kind: 'not_found' })
+    expect(routeFor(A, '/console', C, false, D, E, A)).toEqual({ kind: 'not_found' })
+    expect(routeFor(A, '/api/storefront/2026-12/k/x/shop', C, false, D, E, A)).toEqual({ kind: 'not_found' })
+    expect(routeFor(A, '/2025-01/k/x/shop', C, false, D, E, A)).toEqual({ kind: 'not_found' })
+    expect(routeFor(A, '/s/kesar.frrata.shop/', C, false, D, E, A)).toEqual({ kind: 'not_found' })
+  })
+  it('refuses the API handlers on every other host', () => {
+    for (const host of [C, 'kesar.frrata.shop', 'shop.brand.in', 'frata-git-x.vercel.app', E, 'localhost:3000']) {
+      expect(routeFor(host, '/api/storefront/2026-12/k/frs_pub_x/shop', C, true, D, E, A)).toEqual({ kind: 'not_found' })
+      expect(routeFor(host, '/api/storefront', C, true, D, E, A)).toEqual({ kind: 'not_found' })
+    }
+  })
+  it('rewrites test keys to the dynamic tree, live keys to the cached tree, the API host only', async () => {
+    const { apiRewrites, KEY_BODY } = await import('../host')
+    expect(apiRewrites('')).toEqual([])
+    const r = apiRewrites('API.frrata.shop')
+    expect(r.every((x) => x.has[0]?.value === 'api\\.frrata\\.shop')).toBe(true)
+    const test = r.find((x) => x.source.includes('frs_test_'))!, pub = r.find((x) => x.source.includes('frs_pub_'))!
+    expect(test.destination).toBe('/api/storefront/2026-12/t/:key/:rest*')
+    expect(pub.destination).toBe('/api/storefront/2026-12/k/:key/:rest*')
+    expect(KEY_BODY).toBe('[0-9A-Za-z]{38}')
+  })
+  it('keeps the API host out of the shop rewrite', () => {
+    const shop = shopRewrites(C, E, A)
+    const miss = new RegExp(`^${shop[shop.length - 1]?.missing[0]?.value}$`)
+    expect(miss.test('api.frrata.shop')).toBe(true)
+    expect(miss.test('kesar.frrata.shop')).toBe(false)
+  })
+})

@@ -11,7 +11,7 @@ vi.mock('@/lib/auth/require-member', async () => ({
   requireMember: async () => ({ ok: true, userId: 'u', email: 'e', staffRole: null, all: [], membership: { tenantId: 'aaaaaaaa-1111-4111-8111-111111111111', tenantName: 'A', role: 'staff', supportSessionId: null } }),
 }))
 vi.mock('@/lib/env', () => ({ BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_teststore_secretsecret', isBlobConfigured: () => true }))
-vi.mock('@/lib/public-env', () => ({ CONSOLE_HOST: 'app.frata.in', EKCODE_HOST: 'ekcode.in' }))
+vi.mock('@/lib/public-env', () => ({ CONSOLE_HOST: 'app.frata.in', EKCODE_HOST: 'ekcode.in', API_HOST: 'api.frrata.shop' }))
 vi.mock('@/lib/media/import-bucket', () => ({ importToken: async (t: string, id: string, w: number) => { state.tokens.push([t, id, w]); return state.allow } }))
 vi.mock('@/lib/db/rate-limit', () => ({ LIMITS: { uploadShop: {} }, withinLimit: async () => true }))
 

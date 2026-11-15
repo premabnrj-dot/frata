@@ -57,6 +57,7 @@ export async function sendNoticeEmail(row: OutboxRow): Promise<void> {
     const sent = new Set(done.filter((d) => d.done).map((d) => d.userId)), waiting = new Map(done.filter((d) => !d.done).map((d) => [d.userId, d.id]))
     const who = [...members].filter((m) => {
       if (sent.has(m.user_id)) return false
+      if (n.by && m.user_id === n.by) return false // never tell a person about their own change (a partner's Content save)
       if (required) return m.role === 'owner' || m.role === 'admin'
       if (read.has(m.user_id)) return false
       return pref.get(m.user_id) ?? DEFAULT_EMAIL[n.type as OptionalType] ?? false

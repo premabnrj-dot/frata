@@ -42,8 +42,7 @@ export async function trialFactsIn(tx: Tx, tenantId: string) {
   for (const i of unpaid) { sum += Number(i.taxable); if (sum > FEE_EXPOSURE_PAISE && i.issuedAt) { exposedAt = i.issuedAt; break } }
   return { facts: t, mandateAt: a?.mandateAt ?? null, revokedAt: a?.revokedAt ?? null, exposedAt }
 }
-export const pausedAt = (p: { from: Date | string; to: Date | string | null } | null, now: Date) =>
-  !!p && now >= new Date(p.from) && (!p.to || now < new Date(p.to))
+export { pausedAt } from '@/domains/plans/pause'
 
 
 /** The pause window for the console's banner: owners and admins only, once per request. */

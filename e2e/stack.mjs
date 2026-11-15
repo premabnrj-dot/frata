@@ -26,6 +26,8 @@ const PUBLIC_ENV = {
   NEXT_PUBLIC_SUPABASE_URL: `http://localhost:${PORTS.auth}`, NEXT_PUBLIC_SUPABASE_ANON_KEY: 'local-anon',
   NEXT_PUBLIC_META_APP_ID: META.appId, NEXT_PUBLIC_WA_CONFIG_ID: META.configId,
   NEXT_PUBLIC_EKCODE_HOST: EKCODE.host,
+  // The Storefront API's host (ADR-0018): 91-storefront-api reads the store through it.
+  NEXT_PUBLIC_API_HOST: 'api.localhost',
 }
 
 function startPostgres() {

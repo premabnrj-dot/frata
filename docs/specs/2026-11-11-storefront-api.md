@@ -77,9 +77,10 @@ partner site kesarstudio.in ── GET https://api.frrata.shop/2026-12/k/<public
   revoke all on function app_storefront_key(bytea) from public, anon, authenticated, service_role;
   grant execute on function app_storefront_key(bytea) to frata_app;
   ```
-- **Lookup is cached like `hostFacts`** (speed 6, tenancy H4): `unstable_cache(['skey-v1', hash], tags ['skey:<id>',
-  'shop:<tenant>'], revalidate 60)` inside `cache()`; a miss is never cached; revoke purges the tag. Revocation takes
-  effect within 60 s at most (CDN copies of read routes are purged by the same tag).
+- **Lookup is cached like `hostFacts`** (speed 6, tenancy H4). As built (2026-11-15): `unstable_cache(['skey-v1', hex],
+  tags ['skey:<sha256 hex>'], revalidate 3600)` inside `cache()` (a tag must be known before the call; a shorter period
+  would shorten every cached copy's); a miss is never cached; a delete purges the tag at once, and so does every stop the
+  definer derives (`refreshKeys`). CDN copies of read routes carry the same tag.
 - **Public key** (`frs_pub_`): may live in browser code; it reads only what the shop's own pages show. **Test key**
   (`frs_test_`, security M4): only while the shop isn't open; reads the uncached preview loaders at a low limit (60/min
   per IP); expires after 30 days; all test keys are revoked when the shop opens. Private keys: SA2.
@@ -91,7 +92,7 @@ partner site kesarstudio.in ── GET https://api.frrata.shop/2026-12/k/<public
   every Website change, is an `audit_events` row. Staff and support see the page read-only.
 
 ### 3. Resources (version `2026-12`)
-All under `/2026-12/k/<key>/…`, **ISR route handlers** (`revalidate 60`, tags `shop:<tenant>` + `skey:<id>`), so
+All under `/2026-12/k/<key>/…`, **ISR route handlers** (as built: `revalidate 3600` with purges, tags `shop:<tenant>` + `skey:<sha256 hex>`; plan `docs/plans/2026-11-15-v1-storefront-api.md`), so
 today's `refreshShop` / `refreshSoldOut` calls purge them (speed 1–2: cost is bounded by regenerations, not shoppers).
 Handlers never open `withTenant` around a cached loader (P4).
 | Resource | Notes |

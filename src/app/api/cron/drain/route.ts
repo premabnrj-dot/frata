@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { isCronRequest } from '@/lib/auth/cron'
 import { drainOutbox, eachLimited } from '@/lib/outbox/drain'
-import { shopsWithPendingEvents } from '@/lib/db/platform'
+import { shopsWithBoundary, shopsWithContentChange, shopsWithKeyStop, shopsWithPendingEvents } from '@/lib/db/platform'
+import { refreshKeys } from '@/lib/queries/storefront-api'
+import { refreshShop } from '@/lib/storefront/refresh'
 import { processEvents } from '@/lib/orders/payment'
 import { sendStaffNotices } from '@/lib/admin/staff-notices'
 import { errName } from '@/lib/log'
@@ -29,6 +31,27 @@ export async function GET(request: Request) {
       events += n // read after the await: four shops run at once
     })
   } catch (e) { console.error('[cron] drain events list', errName(e)) }
+  // Time boundaries (V1 Storefront API SA1): a scheduled product going live or an offer starting or ending writes
+  // nothing then, and the API's cached copies live an hour. The last 6 minutes (one run overlaps the next), ids only.
+  try {
+    const due = await shopsWithBoundary(new Date(started - 6 * 60_000), new Date(started))
+    // The sweep returns at most 500: at the cap, shops past it wait for the next run or their own hour (logged, never silent).
+    if (due.length >= 500) console.error('[cron] drain boundaries: 500 shops, the rest next run')
+    for (const t of due) refreshShop(t, 'catalogue')
+  } catch (e) { console.error('[cron] drain boundaries', errName(e)) }
+  // Store content: a bar starting or ending, or a save a burst of saves left to the backstop (the API's copies live an hour).
+  try {
+    const changed = await shopsWithContentChange(new Date(started - 6 * 60_000), new Date(started))
+    if (changed.length >= 500) console.error('[cron] drain content: 500 shops, the rest next run')
+    for (const t of changed) refreshShop(t, 'content')
+  } catch (e) { console.error('[cron] drain content', errName(e)) }
+  // Keys stopped without a write to their row (a partner removed or suspended, a domain gone, Admin's included): their
+  // cached lookups live an hour, so their shops' keys are purged here, each shop through its own withTenant.
+  try {
+    const stopped = await shopsWithKeyStop(new Date(started - 6 * 60_000), new Date(started))
+    if (stopped.length >= 500) console.error('[cron] drain key stops: 500 shops, the rest next run')
+    await eachLimited(stopped, 4, (t) => refreshKeys(t))
+  } catch (e) { console.error('[cron] drain key stops', errName(e)) }
   // Staff security emails (staff passkeys): a handful a day; their own queue, outside the shops' outbox.
   const staffMail = await sendStaffNotices().catch((e) => { console.error('[cron] staff notices', errName(e)); return 0 })
   try {

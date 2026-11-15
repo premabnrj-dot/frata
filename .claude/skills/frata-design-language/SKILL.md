@@ -64,6 +64,9 @@ Neel N4 with every rule but the glossary below (merchant, token, API are staff w
 
 - **Surfaces:** Console (the brand's team and its partner; never "dashboard", "admin"); Partner workspace (never
   "partner console"); Frrata Admin (never "Admin" alone); the store (shoppers; never shop, website, site).
+  **Website** is the one exception (owner, 2026-11-15, Storefront API mockup): the brand's own site built as code on the
+  Storefront API, as in Settings › Website ("Runs on Frrata" · "Your own website"). Never for the store itself. Its keys
+  are **Live** or **Test**, and are **deleted** (never "revoked" on screen).
 - **Roles:** Owner · **Manager** (was Admin; the stored value `admin` keeps its spelling) · Staff · Accountant ·
   Partner · Partner owner and Lead (the agency's) · Frrata support (on a **support visit**). "Admin" is never a person.
 - **Words:** store (never shop; "Shop all", "Shop now", "Shop the look" stay as the store's verbs) · shopper (never
@@ -297,7 +300,7 @@ from it).
   line save from their dialog or field.
 - **Every save is a toast with Undo** (the saver's own, a minute); End now and Delete too. A stale save is an error toast
   naming who saved, as a role ("The owner changed this today, 10:42 pm. Reload to see it.").
-- **Read only says who can**, as a chip: "Only the owner can edit" (staff; a partner after handover); a support visit
+- **Read only says who can**, as a chip: "Only the owner, a Manager or the partner can edit" (staff, accountants; the partner named only where the store has one); a support visit
   sees "Support visit · read only". Edit is disabled, never hidden.
 - **What comes from Settings is read-only here** with "From Settings" and Change in Settings (an FAQ answer, the Contact
   page's details).
@@ -1216,6 +1219,18 @@ What a link to a shop page shows in WhatsApp, Instagram DMs, Facebook, X, iMessa
   (also lists and policies): the name on the theme's tint, its promises, three photos. No photo: name, shop, price.
 - **Few words, no Devanagari drawn** (Satori cannot shape it; Hindi goes in og:title and og:description). Apple: avoid
   text-heavy images. og:image:alt describes the photo, not a caption.
+
+## Plan and billing (billing rework R1, owner-approved 2026-11-15; spec `docs/specs/2026-11-15-billing-rework.md`, mockup https://claude.ai/artifact/Tp6T3A68mzNrYzVP8NhsxD)
+
+- **Tabs in the address** (`?tab=`): Overview, Charges, Plans, Invoices, Payment, Details; the Settings group's tabs stay
+  above them. Each tab loads only its own reads.
+- **A summary reconciles.** Every bill shows rows that add up to its total (plan, apps, fee on delivered orders,
+  credits, carry, before GST, the GST heads, total), and each row drills down to its orders or its plan lines.
+- **Money a merchant compares is worked out by one rule** (`src/domains/billing/charges.ts`): a plan's cost at a sales
+  figure, cost as a share of delivered sales, delivered sales less credited bases. "Orders included" never shows to a
+  merchant (owner, 2026-11-15); Admin keeps it.
+- **A row of link choices** (a bill, a view, a filter) is `BillPicks` (`settings/billing/_components/pills.tsx`): 44 px
+  on a phone, the picked one in the selection colours. A comparison table keeps its columns and scrolls on a phone.
 
 ## Neel primitives (N0, 2026-11-13)
 

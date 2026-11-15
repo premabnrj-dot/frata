@@ -1,5 +1,5 @@
 import { surfaceFor } from '@/domains/tenancy/host'
-import { CONSOLE_HOST, EKCODE_HOST } from '@/lib/public-env'
+import { CONSOLE_HOST, API_HOST, EKCODE_HOST } from '@/lib/public-env'
 
 // =============================================================================
 // FILE: src/lib/http/same-origin.ts
@@ -15,6 +15,6 @@ export function fromConsole(request: Request, consoleHost = CONSOLE_HOST): boole
   if (!origin || !host) return false
   let from: string
   try { from = new URL(origin).host.toLowerCase() } catch { return false }
-  const surface = surfaceFor(host, consoleHost, EKCODE_HOST).kind
+  const surface = surfaceFor(host, consoleHost, EKCODE_HOST, API_HOST).kind
   return from === host && (surface === 'console' || surface === 'local')
 }

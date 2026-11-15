@@ -4,7 +4,7 @@ description: Use when adding a page, route, server action, query, database table
 metadata:
   version: 2.59.0
   verified: 2026-11-15
-  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015]
+  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
 ---
 
@@ -32,7 +32,19 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - Console: `requireMember(roles)` (`src/lib/auth/require-member.ts`) gives the
   tenant id — a membership or an active support session, both from
   `app_access_for`. Storefront: `tenantForHost(host)` (`src/lib/db/platform.ts`).
-  **These are the only two sources of a tenant id.**
+  **The Storefront API's host** (ADR-0018, V1 SA0): `storefrontKeyFor(key)` (`src/lib/queries/storefront-keys.ts`), called
+  only inside `apiRequest()` (`src/lib/storefront-api/request.ts`), from the key in the path through the definer
+  `app_storefront_key`. **These are the only three sources of a tenant id.**
+- **The Storefront API** (ADR-0018; plan `docs/plans/2026-11-15-v1-storefront-api.md`): its host `NEXT_PUBLIC_API_HOST`
+  is a `routeFor` kind of its own, rewritten by next.config (`apiRewrites`; never the middleware, whose matcher skips
+  versioned paths). Live keys (`frs_pub_`) reach the cached tree `api/storefront/<v>/k/`, test keys (`frs_test_`) the
+  dynamic tree `t/`. **A cached route handler never reads the request** (a header read is a runtime error there, and
+  anything per-caller would be served to everyone); CORS there is a static `*`. Every handler is
+  `export const GET = apiRequest({ version, tree, mode, resource, schema, run })`: `run` gets `ctx` (shop, key, kind,
+  version, now) and parsed path params, never the Request; its answer leaves as `schema.parse()` of a closed schema.
+  The key lookup is cached and tagged by the key's sha256 hex (`skey:<hex>`: an `unstable_cache` tag must be known
+  before the call); every stop (deleted, expired, store opened for test keys, partner gone, domain gone, back to
+  Frrata) is derived in the definer. `check:tenant` § 9 and `check:api` hold the shape; proof block 81 the database.
 - Console writes go through `asMember(roles, (tx, ctx) => …)`
   (`src/lib/auth/as-member.ts`): it opens the tenant transaction and, in support
   mode, writes the audit row in the same transaction (`check:actions`).
@@ -571,9 +583,12 @@ after it. A class a shop page uses from outside the shop's folders must be added
   failing quietly; the shell's `content` prop is required (`shellContentOf`). The Storefront API reads the same seam.
 - **One bar rule**: `barFor` (`src/domains/content/bar.ts`): a live offer first, else the live written bar that started
   last. The frame, the console's chips and later the API ask it.
-- **Who saves**: `contentSaver` (`src/domains/content/who.ts`), an allow-list: owners and Managers; a partner only while the
-  store has no owner (`hasOwnerIn(tx, …)`, failing closed; no row lock: `for share` needs an update grant frata_app lacks); staff
-  and everyone else read; a support visit never saves. ADR-0015's `content.write` maps onto it when lane C lands.
+- **Who saves**: `contentSaver(role, supportSessionId)` (`src/domains/content/who.ts`): whoever holds ADR-0015's
+  `content.write` (owner, Manager, the store's partner, before and after handover: owner 2026-11-15); staff, accountants,
+  Builders and any later role read; a support visit never saves. A partner's save tells the owner in the Inbox:
+  `app_content_partner_notice(table, id)` (drizzle/0137), asked on every save, decides from the rows (the row's
+  `updated_by` is a partner member, the store has an owner, no line for that row in the past hour) and words the line
+  from the place, never the content. Compare roles through `holds`, never by hand (check:capabilities).
 - **Writes**: only `src/app/(console)/console/content/actions.ts` (`write()`: the shop's limit `contentSave` counted first
   and given back on a refusal, fail closed; `asMember`; the saver check; a conditional update on `version`; one
   `memberAudit` row with field names only). Undo is the saver's own last save, within a minute, re-checked like a save,

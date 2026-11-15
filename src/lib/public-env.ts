@@ -31,4 +31,7 @@ export const isWhatsAppSignupConfigured = () => META_APP_ID !== '' && WA_CONFIG_
 /** EkCode's own host (ekcode.in). Empty = EkCode's pages are not served anywhere (src/domains/tenancy/host.ts). */
 export const EKCODE_HOST = (process.env.NEXT_PUBLIC_EKCODE_HOST ?? '').toLowerCase()
 
+/** The Storefront API's host (api.frrata.shop; ADR-0018). Empty = the API answers nowhere (src/domains/tenancy/host.ts). */
+export const API_HOST = (process.env.NEXT_PUBLIC_API_HOST ?? '').toLowerCase()
+
 export const isAuthConfigured = () => SUPABASE_URL !== '' && SUPABASE_ANON_KEY !== ''

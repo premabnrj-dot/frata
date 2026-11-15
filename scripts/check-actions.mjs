@@ -22,7 +22,8 @@ import { join } from 'node:path'
 // requireCapability (T1c): requireMember's store choice answered by capability; a Builder's only way in. currentStore: that
 // store choice itself (the switch and the tenant check; check:capabilities pins its callers
 // holds which files may call it).
-const CHOKEPOINTS = ['requireMember', 'requireCapability', 'currentStore', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk']
+// apiRequest (src/lib/storefront-api/request.ts) is the Storefront API's door: the shop from a key's definer row (ADR-0018).
+const CHOKEPOINTS = ['requireMember', 'requireCapability', 'currentStore', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk', 'apiRequest']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
@@ -46,6 +47,8 @@ const ENTRY_POINTS = {
   // Public, read-only, cached per shop: the shop comes from the host the middleware wrote (shopFor checks its shape).
   'src/app/s/[host]/sitemap.xml/route.ts': ['a shop\'s sitemap: public, read-only', 'shopForRoute('],
   'src/app/s/[host]/robots.txt/route.ts': ['a shop\'s robots.txt: public, read-only', 'shopForRoute('],
+  // The Storefront API's published description (V1 SA1): no key, no shop data, generated from the closed schemas.
+  'src/app/api/storefront/2026-12/openapi.json/route.ts': ['the Storefront API description: public, read-only, no shop', 'openApi('],
   'src/app/s/[host]/og/[...card]/route.ts': ['a shop\'s share card: public, read-only, canonical ids looked up inside the host\'s shop', 'shopForRoute('],
 }
 

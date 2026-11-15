@@ -7,6 +7,7 @@ import { shopSlugFromHost } from '@/domains/tenancy/host'
 import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import type { MemberRole, StaffRole } from './schema'
 import { errName } from '@/lib/log'
+import type { KeyKind } from '@/domains/storefront-api/keys'
 
 // =============================================================================
 // FILE: src/lib/db/platform.ts
@@ -18,6 +19,48 @@ import { errName } from '@/lib/log'
 //     support sessions) may they open?
 //   - claim this user's invites (confirmed email only).
 // =============================================================================
+
+/**
+ * Which shop a storefront key names (ADR-0018): the definer's one row for the key's sha256 (lowercase hex), or null.
+ * Every stop is the definer's (deleted, expired, a test key once the store opened, a gone partner's key, a Website not
+ * on a live domain). Called only by storefrontKeyFor (src/lib/queries/storefront-keys.ts; check:tenant § 9).
+ */
+export async function storefrontKeyRow(hashHex: string): Promise<{ keyId: string; tenantId: string; kind: KeyKind; expiresAt: string | null } | null> {
+  if (!/^[0-9a-f]{64}$/.test(hashHex)) return null
+  const rows = await db().execute<{ key_id: string; tenant_id: string; kind: KeyKind; expires_at: Date | string | null }>(
+    sql`select key_id, tenant_id, kind, expires_at from app_storefront_key(${hashHex})`)
+  const r = rows[0]
+  if (!r) return null
+  return { keyId: r.key_id, tenantId: r.tenant_id, kind: r.kind, expiresAt: r.expires_at === null ? null : new Date(r.expires_at).toISOString() }
+}
+
+/**
+ * Shops with a scheduled moment in (since, until]: a product going live, an offer starting or ending (V1 SA1). Ids only,
+ * at most 500; the 5-minute drain purges their catalogue, since the Storefront API's copies live an hour.
+ */
+export async function shopsWithBoundary(since: Date, until: Date): Promise<string[]> {
+  const rows = await db().execute<{ id: string }>(sql`select app_shops_with_boundary(${since.toISOString()}::timestamptz, ${until.toISOString()}::timestamptz) as id`)
+  return rows.map((r) => r.id)
+}
+
+/**
+ * Shops holding a live storefront key that a moment in (since, until] stopped without touching the key's row: its
+ * partner's link ended, the partner was suspended, or a domain went (V1 SA1). Ids only, at most 500; the drain purges
+ * their keys, since a key's cached lookup lives an hour.
+ */
+export async function shopsWithKeyStop(since: Date, until: Date): Promise<string[]> {
+  const rows = await db().execute<{ id: string }>(sql`select app_shops_with_key_stop(${since.toISOString()}::timestamptz, ${until.toISOString()}::timestamptz) as id`)
+  return rows.map((r) => r.id)
+}
+
+/**
+ * Shops whose content (the bar, menus, the Contact line) was saved, deleted or started in (since, until] (V1 SA1). Ids
+ * only, at most 500; the drain purges their content scope, since the Storefront API's copies live an hour.
+ */
+export async function shopsWithContentChange(since: Date, until: Date): Promise<string[]> {
+  const rows = await db().execute<{ id: string }>(sql`select app_shops_with_content_change(${since.toISOString()}::timestamptz, ${until.toISOString()}::timestamptz) as id`)
+  return rows.map((r) => r.id)
+}
 
 /**
  * Which shop a storefront host belongs to. A platform address (<slug>.<shop
@@ -282,8 +325,10 @@ export async function billingUnapplied(olderMinutes: number): Promise<string[]> 
 export async function billingAttemptOrder(paymentId: string, order: string) {
   await db().execute(sql`select app_billing_attempt_order(${paymentId}::uuid, ${order})`)
 }
-export async function billingAttemptResult(order: string, paymentId: string | null, captured: boolean, reason: string | null): Promise<boolean> {
-  const [r] = await db().execute<{ ok: boolean }>(sql`select app_billing_attempt_result(${order}, ${paymentId}, ${captured}, ${reason}) as ok`)
+/** `money`: what the gateway says it took (amount in paise, currency) — required for a capture (billing R5: the definer
+ *  records the money that moved, in INR only, never the amount we asked for). */
+export async function billingAttemptResult(order: string, paymentId: string | null, captured: boolean, reason: string | null, money?: { amount: number; currency: string }): Promise<boolean> {
+  const [r] = await db().execute<{ ok: boolean }>(sql`select app_billing_attempt_result(${order}, ${paymentId}, ${captured}, ${reason}, ${money?.amount ?? null}::bigint, ${money?.currency ?? null}) as ok`)
   return !!r?.ok
 }
 /** Frrata's billing webhook: stored once under the gateway's event id (null: already stored), then applied from the row. */
