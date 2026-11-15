@@ -26,7 +26,7 @@ export default {
         const add = p.getByRole('dialog', { name: 'Add a page' })
         await add.getByLabel('Title').fill('Our story')
         await add.getByRole('button', { name: 'Add page' }).click()
-        await p.getByText('Our story added').waitFor()
+        await p.getByText('Our story added').first().waitFor()
         await p.getByRole('region', { name: 'Pages' }).getByText('Hidden').waitFor()
         assert.equal((await get('/pages/our-story')).status, 404, 'a hidden page is not on the shop')
         await p.getByRole('button', { name: 'Edit Our story' }).click()
@@ -45,7 +45,7 @@ export default {
           await d.getByLabel(new RegExp(`^Card ${n}: words`)).fill(['A metre a day.', 'Indigo and madder.', 'Hemmed by hand.'][n - 1])
         }
         await d.getByRole('button', { name: 'Save' }).click()
-        await p.getByText('Our story saved').waitFor()
+        await p.getByText('Our story saved').first().waitFor()
         await shopSays('/pages/our-story', /Kesar began in 2019 with two looms in Sanganer\./)
         const about = (await get('/pages/our-story')).body
         assert.ok(!/\/themes\/samples\/|data-example|Tell shoppers how your brand began/.test(about), 'no sample or example on the shop')
@@ -57,7 +57,7 @@ export default {
         await p.goto(CONSOLE + '/console/content?tab=contact')
         await p.getByLabel(/^Line/).fill('We reply on WhatsApp within the day.')
         await p.getByRole('button', { name: 'Save' }).click()
-        await p.getByText('Contact line saved').waitFor()
+        await p.getByText('Contact line saved').first().waitFor()
         await shopSays('/policies/contact', /We reply on WhatsApp within the day\./)
         assert.match((await get('/policies/contact')).body, /Chat on WhatsApp/)
       })
@@ -65,8 +65,8 @@ export default {
       await t.step('The FAQ: an answer from Settings and one of the store’s own', async () => {
         await p.goto(CONSOLE + '/console/content?tab=faq')
         await p.getByRole('button', { name: /^Add “Can I pay on delivery/ }).click()
-        await p.getByText('Question added').waitFor()
-        await p.getByRole('region', { name: 'Questions' }).getByRole('button', { name: 'Add a question' }).click()
+        await p.getByText('Question added').first().waitFor()
+        await p.getByRole('region', { name: 'Questions' }).getByRole('button', { name: 'Add a question' }).first().click()
         const d = p.getByRole('dialog', { name: 'Add a question' })
         await d.getByLabel(/^Question/).fill('How do I care for it?')
         await d.getByLabel(/^Answer/).fill('Hand wash cold, dry in the shade.')
@@ -83,7 +83,7 @@ export default {
         const d = p.getByRole('dialog', { name: 'Our story' })
         await d.getByRole('switch', { name: 'Show on your store' }).click()
         await d.getByRole('button', { name: 'Save' }).click()
-        await p.getByText('Our story saved').waitFor()
+        await p.getByText('Our story saved').first().waitFor()
         await until(async () => (await get('/pages/our-story')).status === 404, 45_000)
       })
     } finally {

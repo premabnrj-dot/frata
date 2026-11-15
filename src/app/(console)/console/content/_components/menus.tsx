@@ -1,5 +1,6 @@
 'use client'
 
+import { MoreHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
@@ -109,7 +110,7 @@ function OneMenu({ which, one, canSave, lock, targets, rowLimit }: { which: Menu
           {canSave && <span className="flex items-center gap-1">
             <Button size="sm" variant="ghost" aria-label={`Move ${x.label} up`} disabled={i === 0} onClick={() => setItems(move(items, p, 'up'))}><Icon name="up" className="size-4" /></Button>
             <Button size="sm" variant="ghost" aria-label={`Move ${x.label} down`} disabled={i === list.length - 1} onClick={() => setItems(move(items, p, 'down'))}><Icon name="down" className="size-4" /></Button>
-            <Menu label={`More for ${x.label}`} variant="ghost" size="sm" chevron={false} items={[
+            <Menu label={`More for ${x.label}`} size="sm" icon={<MoreHorizontal aria-hidden="true" className="size-4" />} items={[
               { label: 'Edit', onSelect: () => setEdit({ path: p, label: x.label, link: x.link, icon: x.icon }) },
               ...(canIn ? [{ label: `Move under ${above!.label}`, onSelect: () => setItems(move(items, p, 'in')) }] : []),
               ...(parent ? [{ label: `Move out of ${parent.label}`, onSelect: () => setItems(move(items, p, 'out')) }] : []),

@@ -22,7 +22,7 @@ export default {
         for (const name of ['Announcement', 'Menus', 'Pages', 'FAQ', 'Contact line']) await owner.p.getByRole('link', { name, exact: true }).waitFor()
         await owner.p.getByLabel(/^Line/).fill('We reply within the day.')
         await owner.p.getByRole('button', { name: 'Save' }).click()
-        await owner.p.getByText('Contact line saved').waitFor()
+        await owner.p.getByText('Contact line saved').first().waitFor()
         assert.deepEqual((await contact()).value, { line: 'We reply within the day.' })
         await owner.p.setViewportSize({ width: 390, height: 844 })
         await owner.p.reload()
@@ -44,15 +44,17 @@ export default {
       })
 
       await t.step('Staff read Content and can’t edit', async () => {
+        await db`insert into members (tenant_id, user_id, role) values (${KESAR}, ${USERS.staff.id}, 'staff') on conflict do nothing`
         const staff = await open('staff')
         try {
           await staff.p.goto(CONSOLE + '/console/content?tab=contact')
-          await staff.p.getByText(/^Only the owner/).waitFor()
+          await staff.p.screenshot({ path: t.out('content-staff-contact') })
+          await staff.p.getByText(/^Only the owner/).first().waitFor()
           assert.equal(await staff.p.getByRole('button', { name: 'Save' }).count(), 0, 'no Save for staff')
           assert.ok(await staff.p.getByLabel(/^Line/).isDisabled())
           await staff.p.goto(CONSOLE + '/console/content')
           await staff.p.screenshot({ path: t.out('content-staff') })
-        } finally { await staff.ctx.close() }
+        } finally { await staff.ctx.close(); await db`delete from members where tenant_id = ${KESAR} and user_id = ${USERS.staff.id}` }
       })
 
       await t.step('A partner on a store with an owner reads it and can’t edit (the actions refuse too: who.ts, its unit test)', async () => {
@@ -60,6 +62,7 @@ export default {
         const pia = await open('partner')
         try {
           await pia.p.goto(CONSOLE + '/console/content?tab=menus')
+          await pia.p.screenshot({ path: t.out('content-partner-menus') })
           await pia.p.getByText(/^Only the owner/).first().waitFor()
           assert.equal(await pia.p.getByRole('button', { name: 'Add a link' }).count(), 0, 'no Add for a partner after handover')
           await pia.p.goto(CONSOLE + '/console/content?tab=contact')

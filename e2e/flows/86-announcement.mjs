@@ -36,7 +36,7 @@ export default {
         await d.getByLabel('Link').selectOption('/products')
         await d.getByRole('radio', { name: 'Ink' }).click()
         await d.getByRole('button', { name: 'Save' }).click()
-        await p.getByText('Bar saved').waitFor()
+        await p.getByText('Bar saved').first().waitFor()
         await bars.getByText('Live now').waitFor()
         const [row] = await db`select value, starts_at from site_content where tenant_id = ${KESAR} and kind = 'announcement'`
         assert.deepEqual(row.value, { text: WORDS, link: '/products', scheme: 'ink' })
@@ -59,27 +59,32 @@ export default {
         await d.getByText('End is before the start. Pick a later end.').waitFor()
         await d.getByLabel('Ends').fill(local(3 * 86_400_000))
         await d.getByRole('button', { name: 'Save' }).click()
-        await p.getByText('Bar saved').waitFor()
+        await p.getByText('Bar saved').first().waitFor()
         await bars.getByText(/^Starts /).waitFor()
         assert.ok(!new RegExp(LATER).test((await get('/')).body), 'a bar that starts later is not on the shop')
         await p.screenshot({ path: t.out('announcement-scheduled') })
       })
 
-      await t.step('End now takes the bar off the shop; Undo puts it back', async () => {
+      await t.step('End now, then its Undo puts the bar back; ended for good, it leaves the shop', async () => {
+        const stopped = async () => (await db`select stopped_at from site_content where tenant_id = ${KESAR} and kind = 'announcement' and value->>'text' = ${WORDS}`)[0]?.stopped_at ?? null
         await bars.getByRole('button', { name: `More for ${WORDS}` }).click()
         await p.getByRole('menuitem', { name: 'End now' }).click()
-        await p.getByText('Bar ended').waitFor()
-        await shopSays('/', new RegExp(WORDS), false)
-        // A second purge inside 30 s trails the first: the Undo reaches the shop within the window.
+        await p.getByText('Bar ended').first().waitFor()
+        assert.ok(await stopped(), 'End now stops the bar')
         await p.getByRole('button', { name: 'Undo' }).click()
+        await until(async () => (await stopped()) === null, 10_000)
         await bars.getByText('Live now').waitFor()
-        await shopSays('/', new RegExp(WORDS))
+        await bars.getByRole('button', { name: `More for ${WORDS}` }).click()
+        await p.getByRole('menuitem', { name: 'End now' }).click()
+        await p.getByText('Bar ended').first().waitFor()
+        await shopSays('/', new RegExp(WORDS), false)
+        await bars.getByText('Ended early').waitFor()
       })
 
       await t.step('On a phone: the bars and the edit sheet', async () => {
         await p.setViewportSize({ width: 390, height: 844 })
         await p.goto(CONSOLE + '/console/content')
-        await bars.getByText(WORDS).waitFor()
+        await bars.getByText(WORDS, { exact: true }).waitFor()
         assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= 390), 'no sideways scroll')
         await p.screenshot({ path: t.out('announcement-phone') })
         await bars.getByRole('button', { name: `Edit ${WORDS}` }).click()

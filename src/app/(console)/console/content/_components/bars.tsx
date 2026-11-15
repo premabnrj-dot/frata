@@ -1,5 +1,6 @@
 'use client'
 
+import { MoreHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
@@ -76,7 +77,7 @@ export function Bars({ bars, offer, canSave, lock, targets }: { bars: BarRow[]; 
                 <p className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-label text-muted-foreground"><Badge tone={b.chip.tone}>{b.chip.label}</Badge>{b.ends && <span>{b.ends}</span>}{b.link && <span>→ {label(b.link)}</span>}</p></div>
               <span className="flex items-center gap-1">
                 <Button size="sm" variant="secondary" aria-label={`Edit ${b.text}`} disabled={!canSave} onClick={() => setEdit({ id: b.id, version: b.version, text: b.text, link: b.link, scheme: b.scheme, startsAt: b.startsAt, endsAt: b.endsAt })}>Edit</Button>
-                {canSave && <Menu label={`More for ${b.text}`} variant="ghost" size="sm" chevron={false} items={[
+                {canSave && <Menu label={`More for ${b.text}`} size="sm" icon={<MoreHorizontal aria-hidden="true" className="size-4" />} items={[
                   ...(b.chip.label === 'Ended' || b.chip.label === 'Ended early' ? [] : [{ label: 'End now', onSelect: () => void mark(b, 'end') }]),
                   { label: 'Delete', danger: true, onSelect: () => void mark(b, 'delete') },
                 ]} />}

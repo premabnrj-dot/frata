@@ -135,7 +135,7 @@ export default {
       await main.getByRole('button', { name: 'More for Festive sale' }).click()
       await riya.getByRole('menuitem', { name: /^Move under / }).click()
       await main.getByRole('button', { name: 'Save main menu' }).click()
-      await riya.getByText('Main menu saved').waitFor()
+      await riya.getByText('Main menu saved').first().waitFor()
       const row = async () => (await db`select value from site_content where tenant_id = ${KESAR} and kind = 'menu' and key = 'main'`)[0]?.value ?? []
       await until(async () => (await row()).some((x) => x.children.some((c) => c.label === 'Festive sale' && c.icon === 'flame' && c.link === '/products')), 10_000)
       await riya.screenshot({ path: t.out('menus-main') })
@@ -147,7 +147,7 @@ export default {
         await d.getByRole('button', { name: 'Add tab' }).click()
       }
       await tabs.getByRole('button', { name: 'Save phone tabs' }).click()
-      await riya.getByText('Phone tabs saved').waitFor()
+      await riya.getByText('Phone tabs saved').first().waitFor()
       await riya.screenshot({ path: t.out('menus-tabs') })
       await until(async () => /Festive sale/.test(await shopHtml()) && /Help/.test(await shopHtml()), 45_000)
       assert.match(await shopHtml(), /aria-label="Shop tabs"/, 'the phone tabs')
