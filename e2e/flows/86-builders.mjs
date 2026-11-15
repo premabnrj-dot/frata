@@ -49,7 +49,7 @@ export default {
     await partnerOn(db, KESAR, P)
     // An order with a shopper the Builder must never see (its number, name, phone and total are in PRIVATE).
     await db`insert into orders (tenant_id, number, payment_method, placed_at, customer_name, phone, city, subtotal, total)
-      values (${KESAR}, 8601, 'cod', now(), 'Builderseen Shopper', '919845086011', 'Jaipur', 77777700, 77777700) on conflict do nothing`
+      values (${KESAR}, 8601, 'cod', now(), 'Builderseen Shopper', '9845086011', 'Jaipur', 77777700, 77777700) on conflict do nothing`
     const open = async (who, opts) => { const ctx = await signedIn(t.browser, who, opts); const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message)); return p }
     const pia = await open('partner', { viewport: { width: 1280, height: 900 } })
 
