@@ -83,7 +83,7 @@ A Builder joins **no tuple** (ADR-0015 § 1). Read on 2026-11-15 (`grep -rlw`), 
 ### Who the person is, and the Builder's door (`src/lib/auth/`, `src/lib/db/actor.ts`)
 - `accessOf` returns Builder memberships as `app_access_for` gives them. **`requireMember(tuple)` never returns one**:
   it picks the store exactly as today (the `frata_tenant` cookie, else the first); when that store's membership is a
-  Builder's it answers `{ ok: false, reason: 'builder', message: 'Builders don’t open this page.' }` and never falls
+  Builder's it answers `{ ok: false, reason: 'builder', message: 'Builders can’t see this page.' }` and never falls
   through to another store. So every one of the 55 + 31 + 21 … callers above refuses a Builder with no edit, and every
   action through `asMember` too (it calls `requireMember`).
 - **`requireCapability(cap)`** (new, `require-capability.ts`, cached per request like `requireMember`): the same store
@@ -141,21 +141,25 @@ A Builder joins **no tuple** (ADR-0015 § 1). Read on 2026-11-15 (`grep -rlw`), 
 
 ### Screens (one final mockup, desktop and phone; Rule 0)
 1. **Partner workspace › Team** (owner): the invite dialog gains **Role**, a `Segmented` (Lead · Builder, Lead first and
-   chosen), with the three things the chosen role can't do drawn as a short list under it (approved Studio mockup's
+   chosen), with two lines under it: what the role reaches, and what it doesn't (approved Studio mockup's
    "can-list"); each row shows its role in words ("Builder · 1 passkey") and a **Role** select for Leads and Builders
-   (owner's row has none); changing it asks a fresh passkey (`freshly`) and toasts "Meera is now a Builder." A
+   (owner's row has none); changing it asks a fresh passkey through T1b's check dialog as built (`freshly`, no new words) and toasts
+   "meera@pixelthread.in is now a Builder." A
    **Roles** card beside the list (approved Studio mockup: the matrix) with T1c's columns: Owner · Lead · Builder ×
-   Orders and shoppers · Costs · Products (read) · Look and settings · Hand over · Team.
-2. **A Builder's workspace:** Clients lists the assigned stores (name, stage, Open console); no "New client store", no
+   Orders and shoppers · Costs and profit · Products (Edit / View) · Look and settings · Hand over · Team; the first
+   column is "Partner owner".
+2. **A Builder's workspace:** Clients lists the assigned stores (name, stage, Open store); no "New client store", no
    Hand over, no owner email or plan. Nav: Clients, Passkeys.
 3. **A Builder's console** (the same `AppShell`; nav: Catalogue › Products, Collections; foot: Preview store; the store
    switcher; on a phone the bottom bar is Products · Collections · Preview): **Products**, the list as owners see it
    (view tabs with counts, search, sort) minus what writes or counts money: no checkboxes or bulk bar, no "Add
    product", no More (import, photos); a row opens that product in Preview store. **Collections** likewise; a row
    opens the collection in Preview store. `/console` sends a Builder to Products.
-4. **Refusal:** any other console address shows the Builder's shell with one `Panel` "Builders don’t open this page" and
+4. **Refusal:** any other console address shows the Builder's shell with one `Panel` "Builders can’t see this page" and
    the action "Open products". No number, name or count from that page is computed.
-5. **The brand's side:** Settings › People lists the Builder as "Partner · Builder" with the partner's name; Remove the
+5. **The brand's side:** Settings › People lists the Builder as "Partner · Builder" with an (i) ("Sees products and the store preview. No orders,
+   shoppers or costs."); a partner person's bold line is the partner's name, the email once under it (fixes today's
+   double email); the partner's button reads "Remove partner"; Remove the
    partner removes every partner person (today's action).
 6. **/join:** "Join Pixel & Thread as a Builder" (the invite's role in its words).
 

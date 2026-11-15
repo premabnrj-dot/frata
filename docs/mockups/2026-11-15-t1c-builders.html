@@ -180,6 +180,8 @@ button, select { font:inherit; color:inherit }
 .sheet .grab { width:36px; height:4px; border-radius:4px; background:var(--edge); justify-self:center }
 .sheet .dfoot { flex-direction:column-reverse } .sheet .dfoot .btn { width:100%; min-height:44px }
 .people { display:grid }
+.tipb { width:24px; height:24px; border-radius:50%; border:1px solid var(--field); background:var(--card); font:600 11px var(--font); color:var(--sub); cursor:pointer; margin-left:-6px }
+.tipp { flex-basis:100%; order:9; max-width:288px; margin-left:auto; background:var(--card); border:1px solid var(--line); box-shadow:var(--e2); border-radius:10px; padding:8px 10px; font-size:12.5px }
 .prsn { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:12px 16px; border-top:1px solid var(--line) }
 .prsn:first-child { border-top:0 }
 .prsn .grow { flex:1; min-width:0 } .prsn b { font-weight:500; display:block }
@@ -234,18 +236,18 @@ button, select { font:inherit; color:inherit }
                 <div class="person" role="listitem"><span class="av">Y</span><div><b>You <span class="chip info">Owner</span></b></div><div class="muted">Every store</div><div></div></div>
                 <div class="person" role="listitem"><span class="av">R</span><div><b>rohan@pixelthread.in</b><span class="muted">Lead · 1 passkey</span></div>
                   <div class="stores" role="group" aria-label="Stores"><span class="st" aria-pressed="true">Kesar Studio</span><span class="st" aria-pressed="true">Noor Threads</span><span class="st">Bandhej Co.</span></div>
-                  <div class="acts"><span class="chip ok">Active</span><select class="role-sel" aria-label="Role for rohan@pixelthread.in" data-who="Rohan"><option selected>Lead</option><option>Builder</option></select><button class="btn ghost sm">Remove</button></div></div>
+                  <div class="acts"><span class="chip ok">Active</span><select class="role-sel" aria-label="Role for rohan@pixelthread.in" data-who="rohan@pixelthread.in"><option selected>Lead</option><option>Builder</option></select><button class="btn ghost sm">Remove</button></div></div>
                 <div class="person" role="listitem"><span class="av">M</span><div><b>meera@pixelthread.in</b><span class="muted">Builder · 1 passkey</span></div>
                   <div class="stores" role="group" aria-label="Stores"><span class="st" aria-pressed="true">Kesar Studio</span><span class="st">Noor Threads</span><span class="st">Bandhej Co.</span></div>
-                  <div class="acts"><span class="chip ok">Active</span><select class="role-sel" aria-label="Role for meera@pixelthread.in" data-who="Meera"><option>Lead</option><option selected>Builder</option></select><button class="btn ghost sm">Remove</button></div></div>
+                  <div class="acts"><span class="chip ok">Active</span><select class="role-sel" aria-label="Role for meera@pixelthread.in" data-who="meera@pixelthread.in"><option>Lead</option><option selected>Builder</option></select><button class="btn ghost sm">Remove</button></div></div>
                 <div class="person" role="listitem"><span class="av">D</span><div><b>dev@pixelthread.in</b><span class="muted">Builder · invited · 6 days left</span></div>
                   <div class="stores" role="group" aria-label="Stores"><span class="st">Kesar Studio</span><span class="st">Noor Threads</span><span class="st" aria-pressed="true">Bandhej Co.</span></div>
-                  <div class="acts"><button class="btn sm">Send invite again</button><select class="role-sel" aria-label="Role for dev@pixelthread.in" data-who="Dev"><option>Lead</option><option selected>Builder</option></select><button class="btn ghost sm">Withdraw</button></div></div>
+                  <div class="acts"><button class="btn sm">Send invite again</button><select class="role-sel" aria-label="Role for dev@pixelthread.in" data-who="dev@pixelthread.in"><option>Lead</option><option selected>Builder</option></select><button class="btn ghost sm">Withdraw invite</button></div></div>
               </div>
               <aside class="card pad" style="display:grid;gap:10px" aria-label="Roles">
                 <h4>Roles</h4>
                 <table class="matrix">
-                  <thead><tr><th scope="col"><span class="sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">In a store</span></th><th scope="col">Owner</th><th scope="col">Lead</th><th scope="col">Builder</th></tr></thead>
+                  <thead><tr><th scope="col"><span class="sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">In a store</span></th><th scope="col">Partner owner</th><th scope="col">Lead</th><th scope="col">Builder</th></tr></thead>
                   <tbody>
                     <tr><td>Orders and shoppers</td><td><svg class="i sm y" aria-label="Yes"><use href="#i-check"/></svg></td><td><svg class="i sm y" aria-label="Yes"><use href="#i-check"/></svg></td><td><svg class="i sm no" aria-label="No"><use href="#i-dash"/></svg></td></tr>
                     <tr><td>Costs and profit</td><td class="w">Until handover</td><td class="w">Until handover</td><td><svg class="i sm no" aria-label="No"><use href="#i-dash"/></svg></td></tr>
@@ -257,7 +259,7 @@ button, select { font:inherit; color:inherit }
                 </table>
               </aside>
             </div>
-            <div class="toast" role="status" id="role-toast"><span class="mk"><svg class="i sm"><use href="#i-check"/></svg></span><span id="role-toast-t">Meera is now a Builder.</span><button class="x" aria-label="Close">×</button></div>
+            <div class="toast" role="status" id="role-toast"><span class="mk"><svg class="i sm"><use href="#i-check"/></svg></span><span id="role-toast-t">meera@pixelthread.in is now a Builder.</span><button class="x" aria-label="Close">×</button></div>
           </div>
         </div>
       </div>
@@ -287,7 +289,7 @@ button, select { font:inherit; color:inherit }
             <h4 id="inv-t2" style="font-size:18px;font-weight:600">Invite to your team</h4>
             <div class="field"><label>Work email</label><div class="input" style="min-height:44px">dev@pixelthread.in</div></div>
             <div class="field"><span class="lbl">Role</span><div class="seg" role="radiogroup" aria-label="Role"><button role="radio" aria-checked="false">Lead</button><button role="radio" aria-checked="true">Builder</button></div>
-              <div class="can"><span><svg class="i sm y"><use href="#i-check"/></svg>Products and the store preview</span><span class="off"><svg class="i sm no"><use href="#i-eyeoff"/></svg>No orders, shoppers or costs</span></div></div>
+              <div class="can"><span><svg class="i sm y"><use href="#i-check"/></svg>Products and the store preview</span><span class="off"><svg class="i sm no"><use href="#i-eyeoff"/></svg>No orders, shoppers, costs or settings</span></div></div>
             <div class="field"><span class="lbl">Stores they’ll work on</span><div class="stores"><span class="st">Kesar Studio</span><span class="st">Noor Threads</span><span class="st" aria-pressed="true">Bandhej Co.</span></div></div>
             <div class="dfoot"><button class="btn">Cancel</button><button class="btn primary">Send invite</button></div>
           </div></div>
@@ -352,12 +354,12 @@ button, select { font:inherit; color:inherit }
             <div class="tools"><div class="search"><svg class="i sm"><use href="#i-search"/></svg>Search name, SKU or tag</div><span class="select">Sort: Last edited<svg class="i sm"><use href="#i-down"/></svg></span></div>
             <div class="card">
               <table class="tbl">
-                <thead><tr><th>Product</th><th>Status</th><th class="hide">Sizes</th><th class="r hide">Stock</th><th class="r">Price</th><th aria-label="Open"></th></tr></thead>
+                <thead><tr><th>Product</th><th>Status</th><th class="hide">Sizes</th><th class="r hide">Stock</th><th class="r">Price</th><th><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Preview</span></th></tr></thead>
                 <tbody>
-                  <tr><td><div class="pcell"><span class="thumb"></span><a href="#builder"><b>Gulabi linen kurta set</b><small>Kurta set · edited 2 h ago</small></a></div></td><td><span class="chip ok">Active</span></td><td class="hide">6 sizes</td><td class="r num hide">32</td><td class="r num">₹2,490</td><td><svg class="i sm" style="color:var(--sub)"><use href="#i-ext"/></svg></td></tr>
-                  <tr><td><div class="pcell"><span class="thumb b"></span><a href="#builder"><b>Neel bandhani dupatta</b><small>Dupatta · edited yesterday</small></a></div></td><td><span class="chip ok">Active</span></td><td class="hide">One size</td><td class="r num hide">3</td><td class="r num">₹1,290</td><td><svg class="i sm" style="color:var(--sub)"><use href="#i-ext"/></svg></td></tr>
-                  <tr><td><div class="pcell"><span class="thumb c"></span><a href="#builder"><b>Haldi chanderi saree</b><small>Saree · edited 12 Nov</small></a></div></td><td><span class="chip neu">Draft</span></td><td class="hide">One size</td><td class="r num hide">Made to order</td><td class="r num">₹6,800</td><td><svg class="i sm" style="color:var(--sub)"><use href="#i-ext"/></svg></td></tr>
-                  <tr><td><div class="pcell"><span class="thumb d"></span><a href="#builder"><b>Jamuni co-ord set</b><small>Co-ord · edited 10 Nov</small></a></div></td><td><span class="chip ok">Active</span></td><td class="hide">5 sizes</td><td class="r num hide">Sold out</td><td class="r num">₹3,150</td><td><svg class="i sm" style="color:var(--sub)"><use href="#i-ext"/></svg></td></tr>
+                  <tr><td><div class="pcell"><span class="thumb"></span><a href="#builder"><b>Gulabi linen kurta set</b><small>Kurta set · edited 2 h ago</small></a></div></td><td><span class="chip ok">Active</span></td><td class="hide">6 sizes</td><td class="r num hide">32</td><td class="r num">₹2,490</td><td><svg class="i sm" style="color:var(--sub)" role="img" aria-label="Open Gulabi linen kurta set in preview"><use href="#i-ext"/></svg></td></tr>
+                  <tr><td><div class="pcell"><span class="thumb b"></span><a href="#builder"><b>Neel bandhani dupatta</b><small>Dupatta · edited yesterday</small></a></div></td><td><span class="chip ok">Active</span></td><td class="hide">One size</td><td class="r num hide">3</td><td class="r num">₹1,290</td><td><svg class="i sm" style="color:var(--sub)" role="img" aria-label="Open Neel bandhani dupatta in preview"><use href="#i-ext"/></svg></td></tr>
+                  <tr><td><div class="pcell"><span class="thumb c"></span><a href="#builder"><b>Haldi chanderi saree</b><small>Saree · edited 12 Nov</small></a></div></td><td><span class="chip neu">Draft</span></td><td class="hide">One size</td><td class="r num hide">Made to order</td><td class="r num">₹6,800</td><td><svg class="i sm" style="color:var(--sub)" role="img" aria-label="Open Haldi chanderi saree in preview"><use href="#i-ext"/></svg></td></tr>
+                  <tr><td><div class="pcell"><span class="thumb d"></span><a href="#builder"><b>Jamuni co-ord set</b><small>Co-ord · edited 10 Nov</small></a></div></td><td><span class="chip ok">Active</span></td><td class="hide">5 sizes</td><td class="r num hide">Sold out</td><td class="r num">₹3,150</td><td><svg class="i sm" style="color:var(--sub)" role="img" aria-label="Open Jamuni co-ord set in preview"><use href="#i-ext"/></svg></td></tr>
                 </tbody>
               </table>
             </div>
@@ -396,10 +398,10 @@ button, select { font:inherit; color:inherit }
             <div class="ph"><h3>Collections</h3></div>
             <div class="card">
               <table class="tbl">
-                <thead><tr><th>Collection</th><th>Made by</th><th class="r">Products</th><th aria-label="Open"></th></tr></thead>
+                <thead><tr><th>Collection</th><th>Filled by</th><th class="r">Products</th><th><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Preview</span></th></tr></thead>
                 <tbody>
-                  <tr><td><a href="#builder" style="color:inherit;text-decoration:none"><b style="font-weight:500">Festive edit</b></a></td><td class="muted">Hand-picked</td><td class="r num">18</td><td><svg class="i sm" style="color:var(--sub)"><use href="#i-ext"/></svg></td></tr>
-                  <tr><td><a href="#builder" style="color:inherit;text-decoration:none"><b style="font-weight:500">Under ₹2,000</b></a></td><td class="muted">Rules</td><td class="r num">11</td><td><svg class="i sm" style="color:var(--sub)"><use href="#i-ext"/></svg></td></tr>
+                  <tr><td><a href="#builder" style="color:inherit;text-decoration:none"><b style="font-weight:500">Festive edit</b></a></td><td class="muted">Hand-picked</td><td class="r num">18</td><td><svg class="i sm" style="color:var(--sub)" role="img" aria-label="Open Festive edit in preview"><use href="#i-ext"/></svg></td></tr>
+                  <tr><td><a href="#builder" style="color:inherit;text-decoration:none"><b style="font-weight:500">Under ₹2,000</b></a></td><td class="muted">Rules</td><td class="r num">11</td><td><svg class="i sm" style="color:var(--sub)" role="img" aria-label="Open Under ₹2,000 in preview"><use href="#i-ext"/></svg></td></tr>
                 </tbody>
               </table>
             </div>
@@ -423,7 +425,7 @@ button, select { font:inherit; color:inherit }
             <div class="foot"><a class="nav" href="#refused"><svg class="i"><use href="#i-ext"/></svg>Preview store</a></div>
           </aside>
           <div class="main">
-            <div class="panel"><span class="tile"><svg class="i"><use href="#i-lock"/></svg></span><h4>Builders don’t open this page</h4><a class="btn primary" href="#builder">Open products</a></div>
+            <div class="panel"><span class="tile"><svg class="i"><use href="#i-lock"/></svg></span><h4>Builders can’t see this page</h4><a class="btn primary" href="#builder">Open products</a></div>
           </div>
         </div>
       </div>
@@ -431,7 +433,7 @@ button, select { font:inherit; color:inherit }
         <p class="lab"><b>11</b>Phone · the same</p>
         <div class="phone" style="min-height:480px">
           <div class="pt"><span class="store" style="padding:0"><span class="mono-t">K</span></span><div><b>Kesar Studio</b><small>kesar-studio.frrata.shop</small></div></div>
-          <div class="pm"><div class="panel" style="padding:48px 8px"><span class="tile"><svg class="i"><use href="#i-lock"/></svg></span><h4>Builders don’t open this page</h4><a class="btn primary" style="min-height:44px" href="#builder">Open products</a></div></div>
+          <div class="pm"><div class="panel" style="padding:48px 8px"><span class="tile"><svg class="i"><use href="#i-lock"/></svg></span><h4>Builders can’t see this page</h4><a class="btn primary" style="min-height:44px" href="#builder">Open products</a></div></div>
           <nav class="bbar" aria-label="Console"><a href="#builder"><svg class="i"><use href="#i-products"/></svg>Products</a><a href="#builder"><svg class="i"><use href="#i-coll"/></svg>Collections</a><a href="#builder"><svg class="i"><use href="#i-ext"/></svg>Preview</a></nav>
         </div>
       </div>
@@ -446,9 +448,9 @@ button, select { font:inherit; color:inherit }
         <p class="lab"><b>12</b>People, with the partner’s Builder</p>
         <div class="card people" style="max-width:760px">
           <div class="prsn"><div class="grow"><b>Asha Kapoor</b><span class="mono muted">asha@kesarstudio.in</span></div><span class="chip neu">Owner</span><span class="since">You</span></div>
-          <div class="prsn"><div class="grow"><b>Pixel &amp; Thread</b><span class="mono muted">ananya@pixelthread.in</span></div><span class="chip info">Partner</span><span class="since">Built this store · 2 Nov</span><button class="btn ghost sm">Remove</button></div>
-          <div class="prsn"><div class="grow"><b>rohan@pixelthread.in · Pixel &amp; Thread</b><span class="mono muted">rohan@pixelthread.in</span></div><span class="chip info">Partner · Lead</span><span class="since">Since 4 Nov</span></div>
-          <div class="prsn"><div class="grow"><b>meera@pixelthread.in · Pixel &amp; Thread</b><span class="mono muted">meera@pixelthread.in</span></div><span class="chip info">Partner · Builder</span><span class="since">Since 15 Nov</span></div>
+          <div class="prsn"><div class="grow"><b>Pixel &amp; Thread</b><span class="mono muted">ananya@pixelthread.in</span></div><span class="chip info">Partner</span><span class="since">Built this store · 2 Nov</span><button class="btn ghost sm">Remove partner</button></div>
+          <div class="prsn"><div class="grow"><b>Pixel &amp; Thread</b><span class="mono muted">rohan@pixelthread.in</span></div><span class="chip info">Partner · Lead</span><span class="since">Since 4 Nov</span></div>
+          <div class="prsn"><div class="grow"><b>Pixel &amp; Thread</b><span class="mono muted">meera@pixelthread.in</span></div><span class="chip info">Partner · Builder</span><button class="tipb" aria-label="About Partner · Builder" aria-expanded="true">i</button><span class="tipp" role="note">Sees products and the store preview. No orders, shoppers or costs.</span><span class="since">Since 15 Nov</span></div>
         </div>
       </div>
       <div></div>
@@ -458,8 +460,8 @@ button, select { font:inherit; color:inherit }
 
 <script>
 const CAN = {
-  builder: [[1, 'Products and the store preview'], [0, 'No orders, shoppers or costs']],
-  lead: [[1, 'Orders, products, look and settings'], [0, 'No hand over or team']],
+  builder: [[1, 'Products and the store preview'], [0, 'No orders, shoppers, costs or settings']],
+  lead: [[1, 'Orders, products, look and settings'], [0, 'Can’t hand over or invite people']],
 }
 const can = document.getElementById('can')
 const draw = (r) => { can.innerHTML = CAN[r].map(([ok, t]) => `<span class="${ok ? '' : 'off'}"><svg class="i sm ${ok ? 'y' : 'no'}"><use href="#${ok ? 'i-check' : 'i-eyeoff'}"/></svg>${t}</span>`).join('') }
