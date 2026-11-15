@@ -24,6 +24,13 @@ Spec: `docs/specs/2026-11-15-billing-rework.md` · Mockup: `docs/mockups/2026-11
 | Download all (ZIP), Email to my CA | hidden until R4 | needs SES and a ZIP route | yes |
 | Copy to your CA field | hidden until R4 | needs a column | yes |
 | Console rail | the real app shell | the mockup draws a stand-in | n/a |
+| Header: one tab row | the group's tabs (SettingsHead) above the billing tabs | Settings pages keep their group tabs (Neel § Settings) | no — to show |
+| Month so far: "Not billed" figure | "Credited · came back or lost" | the not-billed list needs R2's index (architecture finding 6) | no — to show |
+| Charges: "For" column; Download CSV; find by number; "Not billed" filter | descriptions carry the period; CSV, find and not-billed come with R2 | CSV needs the security review's route rules (M2, M3); not-billed needs the index | no — to show |
+| Charges › Plan and apps: Price column | Period, Days, Amount | a stored line has no list price | no — to show |
+| Invoices: financial year select | none | ≤ 36 invoices on one page | no — to show |
+| Savings card wording "in October" | "on your last bill" | the card reads the last issued bill, whichever month | no — to show |
+| Overview: "See as a table" link | a disclosure under the chart | no client script for a toggle | no — to show |
 
 ## Review findings
 **security-reviewer (2026-11-15)** — H1, H2 block R2; M2, M3 block the CSV route.

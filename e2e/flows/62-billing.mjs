@@ -34,15 +34,19 @@ export default {
         await riya.goto(CONSOLE + '/console/settings?group=team')
         await riya.getByRole('link', { name: /Plan and billing/ }).click()
         await riya.getByRole('heading', { level: 1, name: 'Plan and billing' }).waitFor()
-        await riya.locator('strong', { hasText: 'Launch' }).waitFor()
-        await riya.getByText(/Estimated bill on|rolls to the next month/).waitFor()
-        await riya.getByText('How it adds up').click()
-        await riya.getByText(new RegExp(`-${N}$`)).waitFor()
+        await riya.getByText(/^Launch · ₹/).waitFor()
+        await riya.getByRole('heading', { name: 'Next bill' }).waitFor()
+        await riya.getByText('so far, with GST').waitFor()
+        // Charges: the open bill, traced to the delivered order and its fee (billing rework R1).
+        await riya.getByRole('link', { name: 'See every charge' }).click()
+        await riya.getByRole('table', { name: 'What this bill is made of' }).getByText('Fee on delivered orders').waitFor()
+        await riya.getByRole('link', { name: new RegExp(`-${N}$`) }).waitFor()
         assert.equal(await riya.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'no sideways scroll at 390 px')
         await riya.screenshot({ path: t.out('plan-and-billing'), fullPage: true })
       })
 
       await t.step('billing details: a GSTIN decides the State (a different one is refused), then they save', async () => {
+        await riya.getByRole('link', { name: 'Details' }).click()
         await riya.getByLabel('Legal name').fill('Kesar Studio LLP')
         await riya.getByLabel(/GSTIN/).fill('27AAPFU0939F1ZV')
         await riya.getByLabel('State').selectOption('08')
@@ -103,7 +107,7 @@ export default {
         const [inv] = await db`select id, number, total from frrata_invoices where tenant_id = ${KESAR} and number is not null order by issued_at desc limit 1`
         assert.match(inv.number, /^FRR\/T\d\d-\d\d\/\d{6}$/)
         // The shop: the test invoice says so, with its PDF (named TEST).
-        await riya.goto(CONSOLE + '/console/settings/billing')
+        await riya.goto(CONSOLE + '/console/settings/billing?tab=invoices')
         await riya.getByText(inv.number).waitFor()
         await riya.getByText(/^Test · due/).first().waitFor()
         const pdf = await riya.context().request.get(CONSOLE + `/console/settings/billing/invoice/${inv.id}`)
@@ -128,9 +132,9 @@ export default {
 
       await t.step('B3: UPI Autopay set up through Checkout (verified on the server); a notice, then a debit 25 h later; a failure shows the banner, the retry after a fresh notice settles it; a signed webhook turns autopay off', async () => {
         await riya.context().route('https://checkout.razorpay.com/v1/checkout.js', (r) => r.fulfill({ contentType: 'application/javascript', body: FAKE_CHECKOUT }))
-        await riya.goto(CONSOLE + '/console/settings/billing')
-        await riya.getByRole('button', { name: 'UPI Autopay' }).click()
-        await riya.getByText('Active', { exact: true }).waitFor()
+        await riya.goto(CONSOLE + '/console/settings/billing?tab=payment')
+        await riya.getByRole('button', { name: /^UPI Autopay/ }).click()
+        await riya.getByText('Autopay on', { exact: true }).first().waitFor()
         const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
         const run = async () => { await meera.goto(CONSOLE + '/admin/billing'); await meera.getByRole('button', { name: 'Run collection now' }).click(); await expectToast(meera, /notices?, \d+ debits? started/, 'ok') }
         const [inv] = await db`select id from frrata_invoices where tenant_id = ${KESAR} and number is not null order by issued_at desc limit 1`
@@ -159,22 +163,22 @@ export default {
         assert.equal((await fetch(CONSOLE + '/api/webhooks/billing', { method: 'POST', headers: { 'content-type': 'application/json', 'x-razorpay-signature': '0'.repeat(64) }, body })).status, 401)
         assert.equal((await fetch(CONSOLE + '/api/webhooks/billing', { method: 'POST', headers: { 'content-type': 'application/json', 'x-razorpay-signature': sig }, body })).status, 200)
         await until(async () => (await db`select mandate_revoked_at from billing_accounts where tenant_id = ${KESAR}`)[0].mandate_revoked_at)
-        await riya.goto(CONSOLE + '/console/settings/billing'); await riya.getByRole('button', { name: 'UPI Autopay' }).waitFor()
+        await riya.goto(CONSOLE + '/console/settings/billing?tab=payment'); await riya.getByRole('button', { name: /^UPI Autopay/ }).waitFor()
         await riya.screenshot({ path: t.out('autopay-off'), fullPage: true })
       })
       await t.step('B4: the owner upgrades to Growth now (the difference by days, in words); a switch back waits for the 1st, and Keep my plan cancels it', async () => {
-        await riya.goto(CONSOLE + '/console/settings/billing')
-        await riya.getByRole('button', { name: 'Upgrade to Growth' }).click()
-        await riya.getByRole('dialog').getByText(/\+ GST on your next bill/).waitFor()
-        await riya.getByRole('button', { name: 'Upgrade now' }).click()
+        await riya.goto(CONSOLE + '/console/settings/billing?tab=plans')
+        await riya.getByRole('button', { name: 'Move to Growth' }).click()
+        await riya.getByRole('dialog').getByText(/\+ GST on the next bill/).waitFor()
+        await riya.getByRole('dialog').getByRole('button', { name: 'Move to Growth' }).click()
         await expectToast(riya, 'You are on Growth now.', 'ok')
-        await riya.locator('strong', { hasText: 'Growth' }).first().waitFor()
-        await riya.getByRole('button', { name: /^Switch to Launch on / }).click()
-        await riya.getByRole('button', { name: 'Switch on the 1st' }).click()
-        await riya.getByText(/^Moving to/).waitFor()
+        await riya.getByText(/^Growth · ₹/).waitFor()
+        await riya.getByRole('button', { name: 'Switch to Launch' }).click()
+        await riya.getByRole('dialog').getByRole('button', { name: /^Switch on / }).click()
+        await riya.getByText(/^Moving to Launch on /).waitFor()
         await riya.screenshot({ path: t.out('plan-change'), fullPage: true })
         await riya.getByRole('button', { name: 'Keep my plan' }).click()
-        await expectToast(riya, 'The change is cancelled.', 'ok')
+        await expectToast(riya, 'You keep your plan.', 'ok')
         await until(async () => (await db`select count(*)::int n from tenant_plans where tenant_id = ${KESAR} and starts_at > now()`)[0].n === 0)
       })
       await t.step('TR0: Admin sets the trial terms for new sign-ups (with a reason); gives a live shop a 14-day trial, sees it on Merchants, then ends it', async () => {
