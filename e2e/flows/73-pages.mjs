@@ -64,14 +64,15 @@ export default {
 
       await t.step('The FAQ: an answer from Settings and one of the store’s own', async () => {
         await p.goto(CONSOLE + '/console/content?tab=faq')
-        await p.getByRole('button', { name: /^Add “Can I pay on delivery/ }).click()
-        await p.getByText('Question added').first().waitFor()
+        // Empty, as drawn: one Add a question; the Settings answers are offered once the FAQ has a question.
         await p.getByRole('region', { name: 'Questions' }).getByRole('button', { name: 'Add a question' }).first().click()
         const d = p.getByRole('dialog', { name: 'Add a question' })
         await d.getByLabel(/^Question/).fill('How do I care for it?')
         await d.getByLabel(/^Answer/).fill('Hand wash cold, dry in the shade.')
         await d.getByRole('button', { name: 'Save' }).click()
         await p.getByRole('region', { name: 'Questions' }).getByText('How do I care for it?').waitFor()
+        await p.getByRole('button', { name: /^Add “Can I pay on delivery/ }).click()
+        await p.getByText('Question added').first().waitFor()
         await p.screenshot({ path: t.out('pages-faq') })
         await shopSays('/pages/faq', /Hand wash cold, dry in the shade\./)
         assert.match((await get('/pages/faq')).body, /Pay on delivery is available/, 'the pay-on-delivery answer comes from Settings')

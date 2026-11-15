@@ -50,8 +50,8 @@ export function Faq({ id, version, items, answers, canSave, lock }: { id: string
   }
 
   return (
-    <Section ariaLabel="Questions" title={<span className="flex items-center gap-2">Questions <Tag className="font-num">{items.length} of {MAX_FAQ}</Tag></span>}
-      action={canSave ? <Button size="sm" variant="secondary" disabled={items.length >= MAX_FAQ} onClick={() => setEdit({ at: null, q: '', a: '' })}>Add a question</Button> : lock ? <Badge>{lock}</Badge> : null}>
+    <Section ariaLabel="Questions" title={!items.length ? 'Questions' : <span className="flex items-center gap-2">Questions <Tag className="font-num">{items.length} of {MAX_FAQ}</Tag></span>}
+      action={!items.length ? (canSave ? null : lock ? <Badge>{lock}</Badge> : null) : canSave ? <Button size="sm" variant="secondary" disabled={items.length >= MAX_FAQ} onClick={() => setEdit({ at: null, q: '', a: '' })}>Add a question</Button> : lock ? <Badge>{lock}</Badge> : null}>
       {!items.length
         ? <div className="grid justify-items-center gap-2 py-6 text-center"><p className="font-medium">No FAQ yet</p>{canSave && <Button onClick={() => setEdit({ at: null, q: '', a: '' })}>Add a question</Button>}</div>
         : <ol data-list className="divide-y divide-line-soft">{items.map((x, i) => (
@@ -66,12 +66,12 @@ export function Faq({ id, version, items, answers, canSave, lock }: { id: string
                 : <Button size="sm" variant="secondary" aria-label={`Edit ${x.q}`} onClick={() => setEdit({ at: i, q: x.q, a: x.a })}>Edit</Button>}
             </span>}
           </li>))}</ol>}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      {items.length > 0 && <div className="mt-3 flex flex-wrap items-center gap-2">
         <a href={SETTINGS} className={button({ variant: 'secondary', size: 'sm' })}>Change in Settings</a>
         {canSave && items.length < MAX_FAQ && missing.map((b) => <Button key={b} size="sm" variant="ghost" onClick={() => void put([...items, { q: BOUND_QUESTION[b], bound: b }], 'Question added')}>Add “{BOUND_QUESTION[b]}”</Button>)}
-      </div>
+      </div>}
       <Dialog open={!!edit} onClose={() => { setEdit(null); setError(null) }} title={edit?.at === null ? 'Add a question' : 'Edit question'} error={error}
-        actions={<>{edit && edit.at !== null && <Button variant="destructive" className="mr-auto" onClick={() => void put(items.filter((_, j) => j !== edit.at), 'Question removed')}>Remove</Button>}
+        actions={<>{edit && edit.at !== null && <Button variant="danger" className="mr-auto" onClick={() => void put(items.filter((_, j) => j !== edit.at), 'Question removed')}>Remove</Button>}
           <Button variant="secondary" data-autofocus onClick={() => { setEdit(null); setError(null) }}>{edit?.at === null ? 'Don’t add' : 'Keep as it is'}</Button><Button busy={busy} onClick={save}>Save</Button></>}>
         {edit && <div className="grid gap-4">
           <label className="grid gap-1.5"><span className="flex justify-between text-label font-medium">Question<span className="font-num font-normal text-muted-foreground">{edit.q.length}/80</span></span>

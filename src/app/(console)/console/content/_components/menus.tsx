@@ -113,7 +113,7 @@ function OneMenu({ which, one, canSave, lock, targets, rowLimit }: { which: Menu
       <li key={x.id}>
         <div className="flex items-center gap-2 py-2.5" style={{ paddingLeft: `${(p.length - 1) * 22}px` }}>
           <div className="min-w-0 flex-1"><p className="truncate font-medium">{x.label}</p>
-            <p className="truncate text-label text-muted-foreground">{which === 'tabs' ? `Icon · ${x.icon ?? 'none'}` : <>→ <span className="hidden md:inline">{target(x.link)}</span><span className="md:hidden">{target(x.link).replace(/^[\w ]+ · /, '')}{x.children.length ? ` · ${x.children.length} ${x.children.length === 1 ? 'link' : 'links'} under it` : ''}</span></>}</p></div>
+            <p className="truncate text-label text-muted-foreground">{which === 'tabs' ? `Icon · ${x.icon ?? 'none'}` : <>→ <span className="hidden md:inline">{target(x.link)}</span><span className="md:hidden">{target(x.link).replace(/^[\w ]+ · /, '')}{x.children.length ? ` · ${x.children.length + 1} links under it` : ''}</span></>}</p></div>
           {canSave && <span className="flex items-center gap-1">
             <Button size="sm" variant="secondary" aria-label={`Move ${x.label} up`} disabled={i === 0} onClick={() => setItems(move(items, p, 'up'))}><Icon name="up" className="size-4" /></Button>
             <Button size="sm" variant="secondary" aria-label={`Move ${x.label} down`} disabled={i === list.length - 1} onClick={() => setItems(move(items, p, 'down'))}><Icon name="down" className="size-4" /></Button>

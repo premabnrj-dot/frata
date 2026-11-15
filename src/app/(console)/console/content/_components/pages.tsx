@@ -63,8 +63,8 @@ export function Pages({ pages, canSave, lock, ctx, templates }: { pages: PageRow
   const asSection = (p: PageRowView) => ({ id: p.id, key: 'design', hidden: false, scheme: 'paper', label: '', design: p.template, fill: p.draft.fill }) as unknown as SectionOf<'design'>
 
   return (
-    <Section ariaLabel="Pages" title={<span className="flex items-center gap-2">Pages <Tag className="font-num">{pages.length} of {MAX_PAGES}</Tag></span>}
-      action={canSave ? <Button size="sm" variant="secondary" disabled={pages.length >= MAX_PAGES} onClick={() => setAdding({ title: '', handle: '', touched: false })}>Add a page</Button> : lock ? <Badge>{lock}</Badge> : null}>
+    <Section ariaLabel="Pages" title={!pages.length ? 'Pages' : <span className="flex items-center gap-2">Pages <Tag className="font-num">{pages.length} of {MAX_PAGES}</Tag></span>}
+      action={!pages.length ? (canSave ? null : lock ? <Badge>{lock}</Badge> : null) : canSave ? <Button size="sm" variant="secondary" disabled={pages.length >= MAX_PAGES} onClick={() => setAdding({ title: '', handle: '', touched: false })}>Add a page</Button> : lock ? <Badge>{lock}</Badge> : null}>
       {pages.length
         ? <ul data-list className="divide-y divide-line-soft">{pages.map((p) => (
           <li key={p.id} className="flex items-center gap-3 py-3">
@@ -93,13 +93,14 @@ export function Pages({ pages, canSave, lock, ctx, templates }: { pages: PageRow
         {adding && <div className="grid gap-4">
           {/* The one page a store adds (TS1a templates: the FAQ has its own tab). */}
           <div className="flex items-center gap-3 rounded-md border border-border p-3"><span aria-hidden="true" className="size-12 shrink-0 rounded-md bg-sunk" />
-            <span className="min-w-0 flex-1"><b className="block font-medium">About</b><span className="block text-label text-muted-foreground">Story, makers, materials</span></span></div>
+            <span className="min-w-0 flex-1"><b className="block font-medium">About</b><span className="block text-label text-muted-foreground">Story, makers, materials</span></span>
+            <Button size="sm" variant="secondary" onClick={() => document.querySelector<HTMLInputElement>('input[name="title"]')?.focus()}>Add About</Button></div>
           <label className="grid gap-1.5"><span className="flex justify-between text-label font-medium">Title<span className="font-num font-normal text-muted-foreground">{adding.title.length}/60</span></span>
             <input name="title" value={adding.title} maxLength={60} placeholder="Our story" {...fieldProps('title', err('title'))} onChange={(e) => setAdding({ ...adding, title: e.target.value, handle: adding.touched ? adding.handle : handleOf(e.target.value) })} className={`${FIELD} w-full`} />
             <FieldError name="title" message={err('title')} /></label>
           <label className="grid gap-1.5"><span className="text-label font-medium">Address</span>
-            <span className="flex items-center gap-1"><span className="font-mono text-small text-muted-foreground">/pages/</span>
-              <input name="handle" value={adding.handle} maxLength={60} {...fieldProps('handle', err('handle'))} onChange={(e) => setAdding({ ...adding, touched: true, handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className={`${FIELD} min-w-0 flex-1 font-mono`} /></span>
+            <span className={`${FIELD} flex w-full items-center focus-within:ring-2 focus-within:ring-ring`}><span aria-hidden="true" className="font-mono text-small text-muted-foreground">/pages/</span>
+              <input name="handle" value={adding.handle} maxLength={60} {...fieldProps('handle', err('handle'))} onChange={(e) => setAdding({ ...adding, touched: true, handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className="min-w-0 flex-1 bg-transparent font-mono text-small outline-none" /></span>
             <FieldError name="handle" message={err('handle')} /></label>
         </div>}
       </Dialog>

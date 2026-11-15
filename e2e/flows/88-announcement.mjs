@@ -60,7 +60,7 @@ export default {
         await d.getByLabel('Ends').fill(local(3 * 86_400_000))
         await d.getByRole('button', { name: 'Save' }).click()
         await p.getByText('Bar saved').first().waitFor()
-        await bars.getByText(/^Starts /).waitFor()
+        await bars.getByText(/^Starts /).filter({ visible: true }).waitFor() // a computer: the day and time; a phone: the day
         assert.ok(!new RegExp(LATER).test((await get('/')).body), 'a bar that starts later is not on the shop')
         await p.screenshot({ path: t.out('announcement-scheduled') })
       })

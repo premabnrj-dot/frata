@@ -78,8 +78,10 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
     const c = CHIP[chip]
     return {
       id: b.id, version: b.version, text: b.text, link: b.link, scheme: b.scheme, startsAt: local(b.startsAt), endsAt: local(b.endsAt),
-      chip: chip === 'scheduled' && b.startsAt ? { tone: c.tone, label: `Starts ${momentIN(b.startsAt, now)}` } : c,
+      // A phone shows the day alone (as drawn: "Starts 1 Dec"); a computer the day and time.
+      chip: chip === 'scheduled' && b.startsAt ? { tone: c.tone, label: `Starts ${momentIN(b.startsAt, now)}`, short: `Starts ${dayMonthIN(b.startsAt)}` } : { ...c, short: c.label },
       ends: b.endsAt && chip !== 'ended' && chip !== 'stopped' ? `Ends ${momentIN(b.endsAt, now)}` : null,
+      endsShort: b.endsAt && chip !== 'ended' && chip !== 'stopped' ? `Ends ${dayMonthIN(b.endsAt)}` : null,
       undoable: b.by === 'You' && now.getTime() - b.updatedAt.getTime() < 60_000,
     }
   })
