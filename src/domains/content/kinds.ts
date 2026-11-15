@@ -21,11 +21,10 @@ export type ContentKind = (typeof CONTENT_KINDS)[number]
 export const MENU_KEYS = ['main', 'footer', 'tabs'] as const
 export type MenuKey = (typeof MENU_KEYS)[number]
 export const CONTACT_KEY = 'contact'
-export const KEY_PATTERN = /^[a-z0-9.-]{1,40}$/
 /** How many bars a store keeps (live, scheduled or ended, not deleted). */
 export const MAX_BARS = 3
 /** A row's value in JSON bytes, below the database's 32 kB check with room for jsonb's spacing. */
-export const MAX_VALUE_BYTES = 30_000
+const MAX_VALUE_BYTES = 30_000
 /** A menu's items at every level together (Zod alone would allow 12 × 12 × 12). */
 export const MAX_MENU_ITEMS = 60
 export const BAR_SCHEMES = ['paper', 'tint', 'ink'] as const
@@ -101,7 +100,6 @@ const at = (x: When) => new Date(x)
 const atOr = (x: When | null) => (x === null ? null : new Date(x))
 export type BarEntry = { id: string; startsAt: Date | null; endsAt: Date | null; stoppedAt: Date | null; createdAt: Date; updatedAt: Date } & BarValue
 export type StoreContent = { bars: BarEntry[]; menus: Partial<Record<MenuKey, MenuItem[]>>; contact: ContactValue | null }
-export const NO_CONTENT: StoreContent = { bars: [], menus: {}, contact: null }
 
 /** Rows → what a page shows, each row through its kind's tolerant reader (a row that fails is left out). */
 export function contentOf(rows: readonly ContentRow[]): StoreContent {

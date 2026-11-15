@@ -22,3 +22,7 @@ export const canon = (x: unknown): string => JSON.stringify(x ?? null, (_k, v) =
 
 /** Below the 64 kB a store's shown pages may hold together (bytes of the jsonb text; checked at a page save). */
 export const MAX_LIVE_BYTES = 64_000
+
+/** A page's address, once it exists: set when it is added (or as it was when pages saved with the look) and never
+ *  moved, so a link to it never breaks. The one rule: the content actions keep it, the editor shows it as fixed. */
+export const fixedHandle = (row: Pick<PageRow, 'draft'>): string | null => draftOf(row)?.handle ?? null

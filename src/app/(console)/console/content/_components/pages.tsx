@@ -22,14 +22,14 @@ import type { Target } from './link-select'
 // =============================================================================
 // Content › Pages (final mockup § Pages): About and the store's other pages (the FAQ has its own tab). A page's words
 // and photos are the template's fields (the same form the Look used, TS1a); Save is live, with Undo for a minute. The
-// address is fixed once the page has been shown. A page with example words still to write can't be shown.
+// address is set when it is added and never moves (lib/themes/pages.ts fixedHandle). A page with example words still to write can't be shown.
 // =============================================================================
 
-export type PageRowView = { id: string; version: number; template: PageTemplate; draft: PageDraft; shown: boolean; fixed: boolean }
+export type PageRowView = { id: string; version: number; template: PageTemplate; draft: PageDraft; shown: boolean }
 type Ctx = { tenantId: string; targets: Target[]; collections: { handle: string; title: string }[]; products: { handle: string; title: string }[]; photos: LibraryPhoto[]; shopName: string }
 const MAX_PAGES = 20
 
-export function Pages({ pages, canSave, lock, host, ctx, templates }: { pages: PageRowView[]; canSave: boolean; lock: string | null; host: string; ctx: Ctx; templates: Record<'about', Design> }) {
+export function Pages({ pages, canSave, lock, ctx, templates }: { pages: PageRowView[]; canSave: boolean; lock: string | null; ctx: Ctx; templates: Record<'about', Design> }) {
   const router = useRouter()
   const toast = useToast()
   const [edit, setEdit] = useState<PageRowView | null>(null)
@@ -80,11 +80,7 @@ export function Pages({ pages, canSave, lock, host, ctx, templates }: { pages: P
           <label className="grid gap-1.5"><span className="flex justify-between text-label font-medium">Title<span className="font-num font-normal text-muted-foreground">{edit.draft.title.length}/60</span></span>
             <input value={edit.draft.title} maxLength={60} onChange={(e) => setEdit({ ...edit, draft: { ...edit.draft, title: e.target.value } })} className={`${FIELD} w-full`} /></label>
           <div className="grid gap-1.5"><span className="text-label font-medium">Address</span>
-            {edit.fixed
-              ? <p className="flex items-center justify-between rounded-md border border-border bg-sunk px-3 py-2"><span className="font-mono text-small">/pages/{edit.draft.handle}</span><span className="text-label text-muted-foreground">Fixed</span></p>
-              : <label className="flex items-center gap-1"><span className="font-mono text-small text-muted-foreground">{host}/pages/</span>
-                <input name="handle" aria-label="Address" value={edit.draft.handle} maxLength={60} {...fieldProps('handle', err('handle'))} onChange={(e) => setEdit({ ...edit, draft: { ...edit.draft, handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') } })} className={`${FIELD} min-w-0 flex-1 font-mono`} /></label>}
-            <FieldError name="handle" message={err('handle')} />
+            <p className="flex items-center justify-between rounded-md border border-border bg-sunk px-3 py-2"><span className="font-mono text-small">/pages/{edit.draft.handle}</span><span className="text-label text-muted-foreground">Fixed</span></p>
           </div>
           {edit.template === 'about' && <DesignForm s={asSection(edit)} c={form} d={templates.about} set={(s) => setEdit({ ...edit, draft: { ...edit.draft, fill: s.fill as Record<string, PageFill> } })} />}
           <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2.5"><span id={`show-${edit.id}`} className="text-sm">Show on your store</span>

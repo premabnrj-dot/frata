@@ -18,7 +18,7 @@ import { byOf as whoSaved } from '@/lib/queries/content'
 import { members } from '@/lib/db/schema'
 import { momentIN } from '@/lib/format-date'
 import { refreshContent, refreshShop } from '@/lib/storefront/refresh'
-import { canon, draftOf, MAX_LIVE_BYTES, targetOf } from '@/lib/themes/pages'
+import { canon, draftOf, fixedHandle, MAX_LIVE_BYTES, targetOf } from '@/lib/themes/pages'
 import { contactReadiness, pageReadiness } from '@/lib/themes/page-readiness'
 import { contentSaver, SAVER_REFUSAL } from '@/domains/content/who'
 import { BarSave, ContactSave, MAX_BARS, MENU_KEYS, menuForSave, type ContentKind } from '@/domains/content/kinds'
@@ -125,7 +125,7 @@ export async function saveBarAction(input: unknown): Promise<R<{ id: string; ver
     if (!row || row.kind !== 'announcement' || row.deletedAt) return { error: 'This bar is gone. Reload.' }
     if (row.version !== p.data.version) return { error: STALE(await byOf(tx, t, row.updatedBy, auth.userId), row.updatedAt) }
     const version = row.version + 1
-    await tx.update(siteContent).set({ value: v.data, startsAt, endsAt, stoppedAt: null, previous: entry(row), version, updatedAt: new Date(), updatedBy: auth.userId })
+    await tx.update(siteContent).set({ value: v.data, startsAt, endsAt, previous: entry(row), version, updatedAt: new Date(), updatedBy: auth.userId })
       .where(and(eq(siteContent.tenantId, t), eq(siteContent.id, row.id), eq(siteContent.version, row.version)))
     await audit(tx, auth, 'save', row.id, 'announcement', row.key, version, ['text', 'link', 'scheme', 'startsAt', 'endsAt'])
     return { done: true, id: row.id, version }
@@ -238,8 +238,8 @@ async function pageRow(tx: Tx, t: string, id: string) {
 /** Writes a page's words; shown unless hidden. `previous` keeps the entry before for Undo. */
 async function putPage(tx: Tx, auth: Auth, row: typeof shopPages.$inferSelect, d: PageDraft, action: string): Promise<Out<{ id: string; version: number }>> {
   const t = auth.membership.tenantId
-  const fixed = (row.live as { handle?: string } | null)?.handle ?? (row.previous as { live?: { handle?: string } | null } | null)?.live?.handle
-  const pruned = prunePage(row.template as PageTemplate, { ...d, handle: fixed ?? d.handle, removed: undefined })
+  // A page's address is set when it is added and never moves (fixedHandle: one rule for the server and the editor).
+  const pruned = prunePage(row.template as PageTemplate, { ...d, handle: fixedHandle(row) ?? d.handle, removed: undefined })
   const fill = cleanFill(pruned.fill, t, storeHost(BLOB_STORE_ID))
   if (!fill) return { error: 'A photo didn’t come from this store. Upload it again.' }
   const draft: PageDraft = { ...pruned, fill }

@@ -13,8 +13,6 @@ export function entryState(r: Dated, now: Date): EntryState {
   return 'live'
 }
 
-export const liveEntries = <T extends Dated>(rows: readonly T[], now: Date): T[] => rows.filter((r) => entryState(r, now) === 'live')
-
 /** Why an entry's dates can't be saved (null: they can). */
 export function datesProblem(startsAt: Date | null, endsAt: Date | null): string | null {
   if (startsAt && endsAt && endsAt <= startsAt) return 'End is before the start. Pick a later end.'

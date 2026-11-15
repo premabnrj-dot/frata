@@ -38,7 +38,7 @@ export function barChip<T extends WrittenBar>(entry: T, offerLive: boolean, writ
 /** What a store page's frame draws from its content: the menus and the written bar to show (none while a live offer
  *  has the bar, before a dated bar starts, or after it ends). */
 export type ShellContent = { menus: Partial<Record<MenuKey, MenuItem[]>>; bar: BarValue | null }
-export const NO_SHELL_CONTENT: ShellContent = { menus: {}, bar: null }
+const NO_SHELL_CONTENT: ShellContent = { menus: {}, bar: null }
 export function shellContentOf(c: StoreContent | null, offerLive: boolean, now: Date): ShellContent {
   if (!c) return NO_SHELL_CONTENT
   const b = barFor(offerLive, c.bars, now)

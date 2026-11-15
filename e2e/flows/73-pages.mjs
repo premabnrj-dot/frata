@@ -11,7 +11,7 @@ import { CONSOLE, PORTS, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const get = (path) => new Promise((res, rej) => http.get(`http://localhost:${PORTS.app}${path}`, { headers: { host: 'kesar-studio.frata.test' } }, (r) => { let b = ''; r.on('data', (c) => (b += c)); r.on('end', () => res({ status: r.statusCode, body: b })) }).on('error', rej))
-const shopSays = (path, re, want = true) => until(async () => { const r = await get(path); return re.test(r.body) === want }, 45_000)
+const shopSays = (path, re, want = true) => until(async () => { const r = await get(path); return re.test(r.body) === want }, 120_000) // a purge inside another's 30 s trails it; pages regenerate within 60 s
 
 export default {
   name: 'pages',

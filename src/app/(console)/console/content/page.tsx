@@ -103,7 +103,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
   })) as Record<MenuKey, { version: number | null; items: MenuItem[]; id: string | null }>
 
   // ── Pages and the FAQ ────────────────────────────────────────────────────────────────────────────────────────
-  const pageRows: PageRowView[] = pages.flatMap((p) => (p.template !== 'faq' && p.d ? [{ id: p.id, version: p.version, template: p.template as PageTemplate, draft: p.d, shown: !!p.live, fixed: !!p.live || p.version > 1 }] : []))
+  const pageRows: PageRowView[] = pages.flatMap((p) => (p.template !== 'faq' && p.d ? [{ id: p.id, version: p.version, template: p.template as PageTemplate, draft: p.d, shown: !!p.live }] : []))
   const faqRow = pages.find((p) => p.template === 'faq')
   const faqItems: FaqItem[] = faqRow?.d && Object.hasOwn(faqRow.d.fill, FAQ_ID) && faqRow.d.fill[FAQ_ID]!.kind === 'faq' ? (faqRow.d.fill[FAQ_ID] as { items: FaqItem[] }).items : []
   const policyTitle = Object.fromEntries(POLICY_PAGES) as Record<string, string>
@@ -123,7 +123,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
       {saver === 'support' && <Banner tone="warn" title="Support visit · read only" />}
       {tab === 'announcement' && <Bars bars={bars} offer={offerRow} canSave={canSave} lock={lock} targets={targets} />}
       {tab === 'menus' && <Menus menus={menus} canSave={canSave} lock={lock} targets={targets} tabsOn={theme.settings.bottomTabs} splitHeader={theme.settings.header === 'split'} />}
-      {tab === 'pages' && <Pages pages={pageRows} canSave={canSave} lock={lock} host={shop.host} ctx={ctx} templates={{ about: TEMPLATES.about }} />}
+      {tab === 'pages' && <Pages pages={pageRows} canSave={canSave} lock={lock} ctx={ctx} templates={{ about: TEMPLATES.about }} />}
       {tab === 'faq' && <Faq id={faqRow?.id ?? null} version={faqRow?.version ?? null} items={faqItems} answers={answers} canSave={canSave} lock={lock} />}
       {tab === 'contact' && <ContactLine id={contactRow?.id ?? null} version={contactRow?.version ?? null} line={(contactRow && readContactLine(contactRow.value)?.line) ?? ''} details={details} canSave={canSave} lock={lock} />}
     </div>

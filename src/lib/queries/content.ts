@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, eq, isNull } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import { siteContent } from '@/lib/db/schema-content'
@@ -7,7 +7,6 @@ import { members } from '@/lib/db/schema'
 import { collections, productImages, products } from '@/lib/db/schema-catalogue'
 import { shopPages } from '@/lib/db/schema-themes'
 import { hasOwnerIn } from './settings'
-import { and as both, desc, sql } from 'drizzle-orm'
 import { contentOf, type ContentRow, type StoreContent } from '@/domains/content/kinds'
 import { ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
 import { shopCached } from './storefront'
@@ -17,7 +16,7 @@ import { shopCached } from './storefront'
 // spec docs/specs/2026-11-14-site-content-layer.md). Theme stores read it now; the Storefront API reads it later.
 //   - shopContent: the store's rows, cached per store (tags shop:<t>, shop:<t>:content; 60 s backstop: the purge
 //     limiter may leave a save to it). Rows only; the schedule is applied at render with the request's `now`
-//     (src/domains/content/schedule.ts, bar.ts), never inside the cache. Every row through its kind's tolerant reader.
+//     (src/domains/content/bar.ts), never inside the cache. Every row through its kind's tolerant reader.
 //   - previewContent: the same core, uncached, for the console's previews (a save shows there at once).
 //   - contentRowsIn: the editor's rows, inside the page's own transaction, with who saved each as a role, never an
 //     email (security review M2).
@@ -67,13 +66,13 @@ export async function contentEditorData(tenantId: string, userId: string) {
       contentRowsIn(tx, tenantId, userId),
       hasOwnerIn(tx, tenantId),
       tx.select({ id: shopPages.id, template: shopPages.template, version: shopPages.version, draft: shopPages.draft, live: shopPages.live, updatedAt: shopPages.updatedAt })
-        .from(shopPages).where(both(eq(shopPages.tenantId, tenantId), isNull(shopPages.removedAt))).orderBy(asc(shopPages.createdAt)),
+        .from(shopPages).where(and(eq(shopPages.tenantId, tenantId), isNull(shopPages.removedAt))).orderBy(asc(shopPages.createdAt)),
       tx.select({ handle: collections.handle, title: collections.title }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)).limit(200),
-      tx.select({ handle: products.handle, title: products.title }).from(products).where(both(eq(products.tenantId, tenantId), eq(products.status, 'active')))
+      tx.select({ handle: products.handle, title: products.title }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.status, 'active')))
         .orderBy(desc(sql`coalesce(${products.publishAt}, ${products.publishedAt}, ${products.createdAt})`)).limit(60),
       tx.select({ base: productImages.base, widths: productImages.widths, width: productImages.width, height: productImages.height, alt: productImages.alt, title: products.title })
-        .from(productImages).innerJoin(products, both(eq(products.id, productImages.productId), eq(products.tenantId, productImages.tenantId)))
-        .where(both(eq(productImages.tenantId, tenantId), eq(productImages.position, 0), eq(products.status, 'active'))).orderBy(desc(productImages.createdAt)).limit(24),
+        .from(productImages).innerJoin(products, and(eq(products.id, productImages.productId), eq(products.tenantId, productImages.tenantId)))
+        .where(and(eq(productImages.tenantId, tenantId), eq(productImages.position, 0), eq(products.status, 'active'))).orderBy(desc(productImages.createdAt)).limit(24),
     ])
     return { rows, hasOwner, pages, collections: cols, products: prods, photos }
   })
