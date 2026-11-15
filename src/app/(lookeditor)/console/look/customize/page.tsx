@@ -41,7 +41,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function Customize() {
   const auth = await requireMember(ANY_MEMBER)
-  if (!auth.ok) redirect('/login')
+  if (!auth.ok) redirect(auth.reason === 'builder' ? '/console/look' : '/login') // a Builder meets Look's refusal panel (T1c)
   const role = auth.membership.role, support = !!auth.membership.supportSessionId
   if (!(CAN_BUILD as readonly string[]).includes(role) || support) redirect('/console/look')
   const t = auth.membership.tenantId

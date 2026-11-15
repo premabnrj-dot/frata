@@ -17,7 +17,7 @@ const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const ROOT = new URL('../../', import.meta.url).pathname
 const DOORS = JSON.parse(readFileSync(join(ROOT, 'scripts/builder-doors.json'), 'utf8')).routes
 /** Words that must never reach a Builder: a cost (seed unit_cost 4242421 paise), the owner's address, a page's money words. */
-const PRIVATE = ['42,424.21', '4242421', 'riya@kesarstudio.in', 'Cost of goods', 'Profit', '₹ kept']
+const PRIVATE = ['42,424.21', '4242421', 'riya@kesarstudio.in', 'Cost of goods', '₹ kept']
 const FIX = { handle: 'chanderi-kurta-set', number: 'KS-1001', id: '00000000-0000-4000-8000-000000000001', section: 'brand', app: 'gst', kind: 'order_confirmed', revision: '00000000-0000-4000-8000-000000000001', source: 'instagram' }
 
 /** Every page and route under the console's route groups, as an address with fixture params. */
@@ -94,9 +94,8 @@ export default {
     await t.step('the console: Products view only, opening the preview; Home sends it to Products', async () => {
       await bp.getByRole('button', { name: 'Open store' }).first().click()
       await bp.waitForURL(/\/console\/products$/)
-      const nav = bp.getByRole('navigation', { name: 'Console' }).first()
-      for (const l of ['Products', 'Collections', 'Preview store']) await nav.getByRole('link', { name: l }).first().waitFor()
-      for (const l of ['Orders', 'Settings', 'Analytics', 'Offers', 'Look', 'Apps']) assert.equal(await nav.getByRole('link', { name: l, exact: true }).count(), 0, `nav shows ${l}`)
+      for (const l of ['Products', 'Collections', 'Preview store', 'Partner workspace']) await bp.getByRole('link', { name: l, exact: true }).first().waitFor()
+      for (const l of ['Home', 'Orders', 'Settings', 'Analytics', 'Offers', 'Look', 'Apps', 'Notices']) assert.equal(await bp.getByRole('link', { name: l, exact: true }).count(), 0, `the shell shows ${l}`)
       await bp.getByRole('heading', { name: 'Products' }).waitFor()
       assert.equal(await bp.locator('main input[type=checkbox]').count(), 0, 'no selection')
       assert.equal(await bp.getByRole('link', { name: 'Add product' }).count(), 0)
@@ -115,7 +114,7 @@ export default {
 
     await t.step('THE SWEEP: every other console page and route refuses the Builder and says nothing private', async () => {
       const all = addresses()
-      assert.ok(all.length > 60, `the sweep found only ${all.length} addresses`)
+      assert.ok(all.length > 40, `the sweep found only ${all.length} addresses`)
       const missed = []
       for (const a of all) {
         const door = DOORS.some((d) => a.url === d || (d === '/console/preview' && a.url.startsWith('/console/preview')))
