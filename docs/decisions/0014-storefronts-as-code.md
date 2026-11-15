@@ -60,19 +60,23 @@ Claude builder was skipped "Claude never runs on Frrata's servers" (2026-11-11).
    and starters, set controls, release updates (three lanes) and keep every site safe. Code sites live on their own
    registrable domain, never checkout's; its name is a placeholder (`frrata.site`) until chosen.
 
-## Amendment 8 — PROPOSED, not in force (drafted 2026-11-14 for the owner; spec `docs/specs/2026-11-14-site-content-layer.md`)
+## Amendment 8 — PROPOSED, not in force (drafted 2026-11-14, reviews folded 2026-11-15; spec `docs/specs/2026-11-14-site-content-layer.md`)
 **Content is declared by code and edited as data.** Widens amendment 3.
-1. **Three layers.** *Content* (announcements with dates, banners and other placements a site declares, featured
-   collections or products, menus, page words, FAQ, size help, a season's dates and words) is edited by the brand in
-   Console › Content, free, live within 60 s or at its scheduled time, never through a build, an agent turn or a
-   publish. *Design system* (tokens, logo, a season's tokens) is the partner's, edited by chat or directly on Studio's
-   preview, a commit with no agent turn. *Structure* (pages, layouts, components) is agent work: plan, checks, a
+1. **Three layers.** *Content* (announcements with dates, placements a site declares such as banners and featured
+   collections or products, menus, page words, FAQ, size help, the Contact line) is edited in Console › Content, free,
+   live on the next visit after at most 60 s or at its scheduled time, never through a build, an agent turn or a
+   publish. *Design system* (brand tokens, logo, a season's tokens and dates) is **data** too (the kit spec's brand
+   tokens, one source for site, checkout, emails and cards), edited by the partner in Studio's chat or directly on its
+   preview, never a commit or a build. *Structure* (page types, layouts, components) is agent work: plan, checks, a
    person publishes.
-2. **The code declares, the console draws.** A code site declares its placements and their fields in its repository
-   (`frrata/fields.json`) from a closed set of field types; the publish gate validates it and keeps it with the
-   published version; the console draws the brand's editor from the live version; the Storefront API serves the
-   values as plain text, Frrata media and shop paths. A future-dated entry is never served before it starts.
-3. **One content source from V1.** Theme shops and code sites read the same content; the Look's menus and pages move
-   to Console › Content (moving content out of themes, not new theme work).
-4. **A gate before handover.** No code site is handed to a brand before Console › Content edits what that site
+2. **Who saves live.** Owners and admins. A partner before handover, or after it only with a content scope the owner
+   grants (ADR-0015, never a Builder); the owner is told of each partner save. Support visits do not save content.
+3. **The code declares, the console draws.** A code site declares its placements in its repository
+   (`frrata/fields.json`, a closed set of field types, capped, no values and no secrets asked for); the publish gate
+   validates it and keeps it with the published deployment; the console draws the editor from the live deployment;
+   the Storefront API serves plain text, ids resolved inside the reading shop, Frrata media and shop paths. A future
+   entry is never served before it starts; each live entry carries its end.
+4. **One content source from V1.** Theme shops and code sites read the same content; the Look's announcement, menus
+   and pages move to Console › Content (moving content out of themes, not new theme work).
+5. **A gate before handover.** No code site is handed to a brand before Console › Content edits what that site
    declares.
