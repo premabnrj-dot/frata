@@ -13,6 +13,7 @@ import { storefrontKeys } from '@/lib/db/schema-storefront-api'
 import { partnerLinks } from '@/lib/db/schema-partners'
 import { hasOwnerIn } from '@/lib/queries/settings'
 import { refreshKeys } from '@/lib/queries/storefront-api'
+import { refreshShop } from '@/lib/storefront/refresh'
 import { refreshKey } from '@/lib/storefront/refresh'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { KEY_NAME_MAX, looksLikeKey, MAX_LIVE_KEYS, mayManageApi, newKey, shownPrefix, siteOriginProblem, TEST_KEY_DAYS } from '@/domains/storefront-api/keys'
@@ -74,6 +75,8 @@ export async function setWebsiteAction(input: unknown): Promise<Done> {
     if (!r.ok) return { ok: false, error: r.error }
     if (r.value) return { ok: false, error: r.value }
     await refreshKeys(r.tenantId)
+    // The store's pages move to the site (or stop moving) from the next copy: only the store entry's own tag (SA1b).
+    refreshShop(r.tenantId, 'settings')
     revalidatePath('/console/settings/website')
     return { ok: true }
   } catch (err) {

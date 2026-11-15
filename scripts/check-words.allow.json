@@ -166,5 +166,11 @@
     "rule": "W4",
     "text": "website",
     "why": "Owner, 2026-11-15 (Storefront API mockup, glossary § Surfaces): Website names the brand's own site built as code on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/domains/analytics/source.ts",
+    "rule": "W4",
+    "text": "Your website",
+    "why": "Owner, 2026-11-15 (SA1b mockup, classifier v3): the source of an order the brand's own website sent, the glossary's Website exception (Storefront API), never the store itself"
   }
 ]

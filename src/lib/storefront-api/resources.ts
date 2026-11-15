@@ -2,7 +2,6 @@ import 'server-only'
 import * as S from '@/domains/storefront-api/2026-12/schemas'
 import { collectionOut, collectionPageOut, MAX_PAGE, offersOut, pageOut, productOut, searchOut, shopOut } from '@/domains/storefront-api/2026-12/map'
 import { apiAnnouncement, apiCatalogue, apiProduct, apiShop, previewCatalogue, previewProduct, previewShop, shopAnnouncement, type Lookup } from '@/lib/queries/storefront'
-import { siteOriginFor } from '@/lib/queries/storefront-api'
 import type { ApiCtx } from './request'
 import { visibility, type Status } from '@/domains/catalogue/availability'
 import { storeHost } from '@/domains/media/sizes'
@@ -63,9 +62,10 @@ export const searchParam = (_raw: unknown, search: URLSearchParams | null) => {
 
 export const RESOURCES = {
   shop: { schema: S.Shop, run: async (ctx: ApiCtx) => {
-    const [s, site] = await Promise.all([loaders(ctx).shop(ctx.tenantId), siteOriginFor(ctx.tenantId)])
+    // The site origin from the shop entry itself, read once, so this answer and the shop's move never disagree (SA1b).
+    const s = await loaders(ctx).shop(ctx.tenantId)
     if (!s) return null
-    return shopOut(mapCtx(ctx), s, { site, checkout: `https://${s.host}` }, ctx.now)
+    return shopOut(mapCtx(ctx), s, { site: s.siteOrigin, checkout: `https://${s.host}` }, ctx.now)
   } },
   products: { schema: S.Page, run: async (ctx: ApiCtx, p: { page: number }) =>
     pageOut(mapCtx(ctx), (await loaders(ctx).catalogue(ctx.tenantId)).products, p.page, ctx.now) },

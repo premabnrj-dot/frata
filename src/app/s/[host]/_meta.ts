@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { pageTags, type PageFacts, type PageTags } from '@/domains/seo/tags'
 import type { StoreShop } from '@/lib/queries/storefront'
+import { siteMove } from '@/domains/addresses/names'
 
 /**
  * A shop page's tags (src/domains/seo/tags.ts, the one writer) as Next metadata. og:type for a product and the
@@ -26,7 +27,14 @@ export function toMetadata(t: PageTags): Metadata {
   }
 }
 
+/** The host a page's canonical, og:url and structured data name: the brand's own website for the pages that move
+ *  there (siteMove: home, products, collections, once the store is open; SA1b), else the store's main address. */
+export function canonicalHost(shop: StoreShop, path: string): string {
+  if (!shop.siteOrigin || !shop.publishedAt) return shop.host
+  return siteMove(shop.siteOrigin, { host: shop.host, pathname: path, search: '', hash: '' }) ? new URL(shop.siteOrigin).host : shop.host
+}
+
 /** A shop page's facts with the shop's own parts filled in: its host, name, language, and noindex until it opens. */
 export function shopTags(shop: StoreShop, f: Omit<PageFacts, 'host' | 'shopName' | 'lang' | 'indexable'> & { indexable?: boolean }): PageTags {
-  return pageTags({ ...f, host: shop.host, shopName: shop.shopName, lang: shop.shopLanguage === 'hi' ? 'hi' : 'en', indexable: !!shop.publishedAt && (f.indexable ?? true) })
+  return pageTags({ ...f, host: canonicalHost(shop, f.path), shopName: shop.shopName, lang: shop.shopLanguage === 'hi' ? 'hi' : 'en', indexable: !!shop.publishedAt && (f.indexable ?? true) })
 }

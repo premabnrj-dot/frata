@@ -49,9 +49,9 @@ const productKey = (v: unknown) => { if (typeof v !== 'string' || !v) throw new 
 // playable or going purges that one product, never the catalogue.
 // 'pages' (TS1a): a shop's live pages; a page or FAQ save purges it (queries/pages.ts).
 // 'content' (V1 content): the store's bars, menus and Contact line; a content save purges it (queries/content.ts).
-export function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'look' | 'catalogue' | 'catalogue:product' | 'reviews' | 'reviews:product' | 'videos' | 'pages' | 'content', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
+export function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'settings' | 'look' | 'catalogue' | 'catalogue:product' | 'reviews' | 'reviews:product' | 'videos' | 'pages' | 'content', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
   return cache((tenantId: string, ...a: A) => unstable_cache(() => fn(tenantId, ...a), ['sf', name, tenantId, ...a.map(String)], {
-    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' || scope === 'videos' || scope === 'look' || scope === 'pages' || scope === 'content' ? [`shop:${tenantId}:${scope}`] : scope === 'catalogue:product' ? [`shop:${tenantId}:catalogue`, `shop:${tenantId}:product:${productKey(a[0])}`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
+    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' || scope === 'videos' || scope === 'look' || scope === 'pages' || scope === 'content' || scope === 'settings' ? [`shop:${tenantId}:${scope}`] : scope === 'catalogue:product' ? [`shop:${tenantId}:catalogue`, `shop:${tenantId}:product:${productKey(a[0])}`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
   })())
 }
 
@@ -87,6 +87,8 @@ export type StoreShop = PolicyFacts & DeliveryRules & {
   /** The words Frrata writes on the shop (themes T2). */
   shopLanguage: Lang
   overrides: Record<string, string>; nav: { handle: string; title: string }[]
+  /** The brand's own website (Settings › Website), or null when the store runs on Frrata: its pages move there (SA1b). */
+  siteOrigin: string | null
   /** GST at checkout (public facts; tax/gstin.ts checkoutGst). */
   gst: { deliversWithin: string | null; b2b: boolean }
   /** Delivery Zones, while the app is usable: the zones in order (public prices); null on the floor. */
@@ -320,7 +322,8 @@ export const previewBestSellers = (tenantId: string, days: number) => coreBestSe
 export const shopVideos = shopCached('videos', 'videos', (t, key: string) => playableVideosFor(t, key), 3600)
 
 // v2: the shop gained seoTitle/seoDescription (S·3); an entry that survives a deploy must not meet the old shape.
-export const shopSettingsFor = shopCached('shop-v2', 'shop', (t) => coreShop(t))
+// v3 (SA1b): siteOrigin joined the entry, with its own `settings` tag (setWebsite purges only that).
+export const shopSettingsFor = shopCached('shop-v3', 'settings', (t) => coreShop(t))
 
 /**
  * The offer in the shop's announcement bar (one at most), as RAW terms and timestamps: whether it is live is decided
@@ -356,7 +359,7 @@ export async function shopProduct(tenantId: string, handle: string): Promise<Loo
 // cached route takes the shortest period of the caches it reads, so the shop's 60 s entries made every API copy stale
 // after a minute). Same tags, so every purge that reaches the shop's pages reaches these; time boundaries are the drain's.
 const API_HOUR = 3600
-export const apiShop = shopCached('api-shop-v1', 'shop', (t) => coreShop(t), API_HOUR)
+export const apiShop = shopCached('api-shop-v2', 'settings', (t) => coreShop(t), API_HOUR)
 export const apiAnnouncement = shopCached('api-announce-v1', 'catalogue', coreAnnouncement, API_HOUR)
 const apiCatalogueEntry = shopCached('api-catalogue-v1', 'catalogue', (t) => coreCatalogue(t, false), API_HOUR)
 export const apiCatalogue = cache(async (tenantId: string): Promise<StoreCatalogue> => expand(await apiCatalogueEntry(tenantId)))

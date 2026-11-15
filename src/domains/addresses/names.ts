@@ -31,6 +31,37 @@ export function movedUrl(to: string, loc: { protocol: string; pathname: string; 
   return `${loc.protocol === 'http:' ? 'http:' : 'https:'}//${to}${path.replace(/^\/+/, '/')}${loc.search}${loc.hash}`
 }
 
+/**
+ * Where a store page sends a shopper when the brand's own website runs elsewhere (Storefront API SA1b, plan D·2; owner
+ * 2026-11-15: in the browser, so the link's tags survive, and only once the store is open). Only the pages the site
+ * has: home, a product, a collection; the bag, checkout, the bag link, orders, policies and pages stay. Null = stay.
+ * SELF-CONTAINED on purpose (no import, no outer name, plain ES2017): its own source text is the shop head's inline
+ * script (`siteMoveScript`), so the server's script and the browser's soft-navigation check are one rule.
+ * No move when this host is the site itself or its www/apex twin (while the site's DNS still points at Frrata the
+ * store serves that host, which would reload forever: architecture review 1). The target is built from the origin
+ * and re-checked to stay on it (no open redirect).
+ */
+export function siteMove(origin: string, loc: { host: string; pathname: string; search: string; hash: string }): string | null {
+  var path = '/' + String(loc.pathname).replace(/^[\/\\]+/, '')
+  if (!/^\/(?:(?:products|collections)\/[a-z0-9]+(?:-[a-z0-9]+)*\/?)?$/.test(path)) return null
+  var u: URL
+  try { u = new URL(origin) } catch (e) { return null }
+  if (u.protocol !== 'https:' || u.pathname !== '/' || u.search || u.hash || u.port || u.username) return null
+  var bare = function (h: string) { return String(h).toLowerCase().replace(/^www\./, '') }
+  if (bare(u.hostname) === bare(String(loc.host).split(':')[0] || '')) return null
+  var t = new URL(path + loc.search + loc.hash, u.origin)
+  return t.origin === u.origin ? t.href : null
+}
+
+/** How long a tab refuses a second move (the one-hop guard: architecture review 1). */
+export const SITE_MOVE_GUARD_MS = 10_000
+
+/** The shop head's inline script for `origin` (runs before the page paints, so the theme page never shows and the
+ *  visit beacon is told not to count: `window.__fe`). */
+export function siteMoveScript(origin: string): string {
+  return `(function(){try{var to=(${siteMove.toString()})(${JSON.stringify(origin).replace(/</g, "\\u003c")},location);if(!to)return;var k='frrata.move',n=Date.now(),l=+(sessionStorage.getItem(k)||0);if(n-l<${SITE_MOVE_GUARD_MS})return;sessionStorage.setItem(k,String(n));window.__fe=1;location.replace(to)}catch(e){}})()` // clock-ok: the browser's one-hop guard, a string never rendered
+}
+
 /** The shop's old names that still lead to it (retired by the shop, not by Frrata), newest first. */
 export const oldNames = (names: readonly NameRow[]) =>
   names.filter((n) => n.retiredAt && !n.retiredByFrrata).sort((a, b) => b.retiredAt!.getTime() - a.retiredAt!.getTime()).map((n) => n.name)
