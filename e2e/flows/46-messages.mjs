@@ -105,7 +105,7 @@ export default {
       await riya.getByRole('menuitem', { name: 'Check again' }).click()
       await riya.getByText('Frrata can no longer reach this number').waitFor()
       await riya.getByRole('button', { name: 'Reconnect' }).click()
-      await riya.getByRole('dialog', { name: /Reconnect \+91 98450 12345/ }).getByRole('button', { name: 'Not now' }).click()
+      await riya.getByRole('dialog', { name: /Connect \+91 98450 12345 again/ }).getByRole('button', { name: 'Not now' }).click()
       await fetch(GRAPH + '/_test/set', { method: 'POST', body: JSON.stringify({ rejectAll: false }) })
       await riya.getByRole('button', { name: 'More' }).click()
       await riya.getByRole('menuitem', { name: 'Check again' }).click()
