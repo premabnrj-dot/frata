@@ -154,7 +154,8 @@ const RE_OURS = list(['tenant', 'tenants', 'webhook', 'webhooks', 'sync', 'synce
 const RE_CASED = list(['API', 'APIs', 'MRP', 'pin code', 'Pin code', 'Pin Code', 'PIN Code'], '') // case-sensitive: the short forms
 const RE_SHOP = /(?<![\p{L}\d-])(shop|shops|shop’s|shop's)(?![\p{L}\d-])/iu
 const SHOP_VERBS = /\bShop (all|now|the look)\b/g
-const RE_ADMIN = /(?<!Frrata )(?<![\p{L}\d-])admins?(?![\p{L}\d-])/iu
+// Owner, 2026-11-15: Frrata's own top staff role reads "Master admin" (src/domains/tenancy/staff-words.ts); a store's is Manager.
+const RE_ADMIN = /(?<!Frrata )(?<![Mm]aster )(?<![\p{L}\d-])admins?(?![\p{L}\d-])/iu
 const STATE_FILES = ['src/app/(console)/console/orders/_components/labels.ts', 'src/domains/email/words.ts']
 const BUTTONS = new Set(['OK', 'Ok', 'Submit', 'Proceed', 'Click here'])
 const ABBR = /\b(M\.R\.P|incl|e\.g|i\.e|approx|no|nos|vs|Rs|Dr|Mr|Ms|Mrs|St)\.(?=\s|$)/gi
