@@ -27,7 +27,7 @@ describe('windowFor', () => {
   it('today against yesterday', () => {
     const w = windowFor({ kind: 'preset', preset: 'today' }, now)
     expect([iso(w.start), iso(w.prevStart), w.days]).toEqual(['2026-11-12T18:30:00.000Z', '2026-11-11T18:30:00.000Z', 1])
-    expect(compareWords(w)).toBe('vs yesterday at this time')
+    expect(compareWords(w)).toBe('vs this time yesterday')
     expect(iso(w.prevEnd)).toBe('2026-11-12T06:00:00.000Z') // yesterday up to this moment
   })
   it('this month against the same number of days before it', () => {

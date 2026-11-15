@@ -20,7 +20,7 @@ export default async function SearchPage() {
   const tenantId = auth.membership.tenantId
   const [facts, own, shop, share] = await Promise.all([seoFixFacts(tenantId), homeSeoFacts(tenantId), shopSettingsFor(tenantId), shareFor(tenantId, { kind: 'shop' }).catch(() => null)])
     .catch(() => [null, null, null, null] as const)
-  if (!facts || !own || !shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!facts || !own || !shop) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const fixes = seoFixes(facts)
   const defaults = homeSeo({ ...shop, seoTitle: '', seoDescription: '' })
   return (

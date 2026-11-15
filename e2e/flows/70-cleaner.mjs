@@ -25,9 +25,9 @@ export default {
           assert.equal(await p.getByText(gone).filter({ visible: true }).count(), 0, `"${gone}" is still on the page`)
         const tip = p.getByRole('button', { name: 'About sizes, colours and stock' })
         await tip.click()
-        await p.getByText('Your cost is never shown to shoppers').waitFor()
+        await p.getByText('Shoppers never see your cost').waitFor()
         await p.keyboard.press('Escape')
-        await p.getByText('Your cost is never shown to shoppers').waitFor({ state: 'hidden' })
+        await p.getByText('Shoppers never see your cost').waitFor({ state: 'hidden' })
         await p.screenshot({ path: t.out('product-editor'), fullPage: true })
       })
 
@@ -44,7 +44,7 @@ export default {
         await p.goto(CONSOLE + '/console/settings/contact')
         await p.locator('#f-grievanceName').fill('')
         await p.getByRole('button', { name: /^Save/ }).first().click()
-        await p.getByText('Your shop is open: keep the grievance officer’s name.').waitFor()
+        await p.getByText('Your store is open, so keep the grievance officer’s name.').waitFor()
         const [after] = await db`select grievance_name from shop_settings where tenant_id = ${T}`
         assert.equal(after.grievance_name, before.grievance_name)
       })

@@ -84,7 +84,7 @@ export function Gallery({ themes, canEdit, sorted, draft = null }: { themes: Gal
           </div>
         ) : null}
       </Dialog>
-      <Dialog open={!!confirmTry} onClose={() => setConfirmTry(null)} title={`Try ${confirmTry?.name ?? ''}?`} description={`Your ${draft?.name ?? ''} draft is replaced. Your shop doesn’t change.`}
+      <Dialog open={!!confirmTry} onClose={() => setConfirmTry(null)} title={`Try ${confirmTry?.name ?? ''}?`} description={`Your ${draft?.name ?? ''} draft is replaced. Your store doesn’t change.`}
         actions={<><Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setConfirmTry(null)}>Keep my draft</Button><Button disabled={pending} onClick={() => { const t = confirmTry!; setConfirmTry(null); tryIt(t) }}>Try {confirmTry?.name}</Button></>} />
     </section>
   )

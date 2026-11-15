@@ -82,7 +82,7 @@ export default async function Customize() {
   const phone = (x: string) => (x ? `+91 ${x.slice(0, 5)} ${x.slice(5)}` : '')
   const contactRows = [
     { label: 'WhatsApp', value: shop.whatsapp ? phone(shop.whatsapp) : null },
-    { label: 'Shop', value: shop.legalName ? `${shop.shopName}, run by ${shop.legalName}` : null },
+    { label: 'Store', value: shop.legalName ? `${shop.shopName}, run by ${shop.legalName}` : null },
     { label: 'Address', value: shop.address || null },
     { label: 'Customer care', value: [shop.supportEmail, phone(shop.supportPhone)].filter(Boolean).join(' · ') || null },
     { label: 'Grievance officer', value: shop.grievanceName ? [shop.grievanceName + (shop.grievanceRole ? `, ${shop.grievanceRole}` : ''), shop.grievanceEmail, phone(shop.grievancePhone)].filter(Boolean).join(' · ') : null },

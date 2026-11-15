@@ -98,11 +98,11 @@ export const dueOf = (s: Settle) => (s.kind === 'refund' ? s.amount : s.kind ===
 
 /** Why an attempt failed, in the merchant's words (our codes only: Razorpay's own words can quote a shopper). */
 export const FAILURE_WORDS: Record<string, string> = {
-  balance: 'Not enough balance in Razorpay: add funds, then try again.',
-  too_old: 'Paid over 6 months ago: Razorpay can\'t refund it. Refund the shopper yourself.',
-  disabled: 'Refunds are off for this payment in Razorpay: turn them on, then try again.',
-  over: 'Razorpay shows part of this payment already refunded. Refund what\'s left from your Razorpay dashboard.',
-  keys: 'Razorpay refused your keys: check them in Settings, then try again.',
+  balance: 'Not enough balance in Razorpay. Add funds, then try again.',
+  too_old: 'Paid over 6 months ago. Razorpay can’t refund it. Refund the shopper yourself.',
+  disabled: 'Refunds are off for this payment in Razorpay. Turn them on, then try again.',
+  over: 'Razorpay shows part of this payment already refunded. Refund what’s left in Razorpay.',
+  keys: 'Razorpay refused your keys. Check them in Settings, then try again.',
   refused: 'Razorpay refused this refund. Check Razorpay, then try again.',
   failed: 'Razorpay could not complete this refund. Try again.',
 }

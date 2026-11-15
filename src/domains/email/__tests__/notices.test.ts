@@ -13,7 +13,7 @@ describe('notice words', () => {
   })
   it('a notice whose source is gone is still titled by what it is, never "Notice"', () => {
     expect(noticeFallback({ sourceKind: 'billing_notice', type: 'billing', title: null, body: null }).title).toBe('Your Frrata bill')
-    expect(noticeFallback({ sourceKind: 'support_session', type: 'frrata_action', title: null, body: null }).title).toBe('Frrata support opened your shop')
+    expect(noticeFallback({ sourceKind: 'support_session', type: 'frrata_action', title: null, body: null }).title).toBe('Frrata support opened your store')
     expect(noticeFallback({ sourceKind: 'handover', type: 'security', title: null, body: null }).title).toBe('Security')
     expect(noticeFallback({ sourceKind: 'admin', type: 'product_update', title: 'New: Offers', body: 'b' })).toEqual({ title: 'New: Offers', body: 'b' })
   })

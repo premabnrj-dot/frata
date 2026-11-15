@@ -50,10 +50,10 @@ export async function inviteTeamAction(form: FormData): Promise<ActionResult> {
   }
   if (!(await withinLimit(LIMITS.partnerInvite, auth.partner.memberId, new Date(), true))) return { error: 'Too many invites this hour. Try again later.' }
   const r = await invitePartnerPerson(auth, parsed.data.email, parsed.data.stores)
-  if (!r.ok) return r.error === 'bad_email' ? { fields: { email: SENTENCES.bad_email } } : { error: say(r.error, 'We could not send the invite. Nothing was changed.') }
+  if (!r.ok) return r.error === 'bad_email' ? { fields: { email: SENTENCES.bad_email } } : { error: say(r.error, 'We couldn’t send the invite. Nothing was changed.') }
   revalidatePath('/partner/team')
   const mail = await sendSignInLink(parsed.data.email).catch(() => ({ sent: false as const }))
-  return { ok: mail.sent ? `Invited ${parsed.data.email}. We emailed them a sign-in link.` : `Invited ${parsed.data.email}. The email didn’t send: ask them to sign in at /login with that address.` }
+  return { ok: mail.sent ? `Invited ${parsed.data.email}. We emailed them a sign-in link.` : `Invited ${parsed.data.email}. The email didn’t send. Ask them to sign in at /login with that address.` }
 }
 
 /** "Send again" on an invited person's row: the same sign-in email, counted against the same hourly limit. */
@@ -69,7 +69,7 @@ export async function resendTeamInviteAction(input: { memberId: string }): Promi
   const p = team?.find((m) => m.memberId === id.data && !m.acceptedAt && m.inviteExpiresAt && m.inviteExpiresAt > new Date())
   if (!p) return { ok: false, error: 'That invite has ended. Invite them again.' }
   if (!(await withinLimit(LIMITS.partnerInvite, auth.partner.memberId, new Date(), true))) return { ok: false, error: 'Too many invites this hour. Try again later.' }
-  const mail = await sendSignInLink(p.email).catch(() => ({ sent: false as const, error: 'We could not send the email. Try again in a minute.' }))
+  const mail = await sendSignInLink(p.email).catch(() => ({ sent: false as const, error: 'We couldn’t send the email. Try again in a minute.' }))
   return mail.sent ? { ok: true, text: `Sent again to ${p.email}.` } : { ok: false, error: mail.error }
 }
 
@@ -81,7 +81,7 @@ export async function assignTeamAction(input: { memberId: string; tenantId: stri
   const p = Assign.safeParse(input)
   if (!p.success) return { ok: false, error: SENTENCES.no_person }
   const r = await assignPartnerPerson(auth, p.data.memberId, p.data.tenantId, p.data.on)
-  if (!r.ok) return { ok: false, error: say(r.error, 'We could not change their stores. Nothing was changed.') }
+  if (!r.ok) return { ok: false, error: say(r.error, 'We couldn’t change their stores. Nothing was changed.') }
   revalidatePath('/partner/team')
   return { ok: true }
 }
@@ -92,7 +92,7 @@ export async function removeTeamAction(input: { memberId: string }): Promise<{ o
   const p = z.uuid().safeParse(input.memberId)
   if (!p.success) return { ok: false, error: SENTENCES.no_person }
   const r = await removePartnerPerson(auth, p.data)
-  if (!r.ok) return { ok: false, error: say(r.error, 'We could not remove them. Nothing was changed.') }
+  if (!r.ok) return { ok: false, error: say(r.error, 'We couldn’t remove them. Nothing was changed.') }
   revalidatePath('/partner/team')
   return { ok: true }
 }

@@ -91,7 +91,7 @@ describe('computeBill (billing B0, golden months)', () => {
     // Everything back: the whole fee, never more.
     expect(returnCreditDue({ billedFee: 4000, feeBps: 200, merchandiseNet: 200000, returned: 250000, given: 0 })).toBe(4000)
     const b = computeBill(base(12, { returnCredits: [{ orderId: 'y', number: '#7', fee: paise(1000), invoiceNumber: 'FR/26-27/12' }, { orderId: 'z', number: '#8', fee: paise(0), invoiceNumber: null }] }))
-    expect(b.lines.filter((l) => l.kind === 'credit')).toEqual([expect.objectContaining({ description: '#7: items returned after billing (invoice FR/26-27/12)', taxable: -1000 })])
+    expect(b.lines.filter((l) => l.kind === 'credit')).toEqual([expect.objectContaining({ description: 'Items returned from #7 after billing (invoice FR/26-27/12)', taxable: -1000 })])
     expect(b.credited).toEqual([{ orderId: 'y', fee: 1000, kind: 'return' }])
   })
   it('the fee follows the plan in force when the order became billable', () => {

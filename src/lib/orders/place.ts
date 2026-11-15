@@ -132,16 +132,16 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     // Delivery Zones beside the shop, before any row is locked (speed review DZ7 M2); the PIN code's place comes from the
     // directory, never the address typed.
     const [shop, delivery] = await Promise.all([checkoutShop(tx, tenantId, input.host), deliveryIn(tx, tenantId, input.address.pincode, now)])
-    if (!shop || !shop.open) return { kind: 'refused', status: 404, error: 'This shop is not taking orders right now.' }
+    if (!shop || !shop.open) return { kind: 'refused', status: 404, error: 'This store isn’t taking orders right now.' }
     // Abandoned online orders lose the shopper's details after 90 days: the daily cron (src/lib/orders/erase.ts).
-    if (input.method === 'prepaid' && !shop.online) return { kind: 'refused', status: 422, error: 'Online payment is not available at this shop right now. Pay on delivery instead.' }
-    // A shop that doesn't charge GST (not registered, or composition) sells within its own state only: inter-state
+    if (input.method === 'prepaid' && !shop.online) return { kind: 'refused', status: 422, error: 'Online payment isn’t available at this store right now. Pay on delivery instead.' }
+    // A shop that doesn’t charge GST (not registered, or composition) sells within its own state only: inter-state
     // supply of goods needs a regular registration (CGST s.24(i)). Checkout says so before this; this is the lock.
     if (shop.scheme !== 'regular' && shop.homeState && stateCode(input.address.state) !== shop.homeState)
-      return { kind: 'refused', status: 422, error: `This shop delivers within ${stateName(shop.homeState)} only.` }
+      return { kind: 'refused', status: 422, error: `This store delivers within ${stateName(shop.homeState)} only.` }
     let buyer: { gstin: string; name: string } | null = null
     if (input.b2b) {
-      if (!shop.b2b) return { kind: 'refused', status: 422, error: 'This shop can’t issue GST invoices to businesses right now. Turn off “Claim GST input credit” to order.' }
+      if (!shop.b2b) return { kind: 'refused', status: 422, error: 'This store can’t issue GST invoices to businesses right now. Turn off “Claim GST input credit” to order.' }
       const why = b2bProblem(input.b2b.gstin, input.b2b.name, input.address.state)
       if (why) return { kind: 'refused', status: 422, error: why.error }
       buyer = { gstin: cleanGstin(input.b2b.gstin), name: input.b2b.name.replace(/\s+/g, ' ').trim() }
@@ -152,7 +152,7 @@ export async function placeOrder(tenantId: string, input: PlaceInput, now = new 
     const fit = await fitOffers(tx, tenantId, await liveOffers(tx, tenantId, now), (o) => quote(input.bag, rows, shop, now, input.address.pincode, { offers: o, code: typed }, delivery), input, typed, now)
     const q = quote(input.bag, rows, shop, now, input.address.pincode, { offers: fit.offers, code: typed }, delivery)
     if (q.empty) return { kind: 'refused', status: 422, error: 'Nothing in your bag can be bought right now.', quote: q }
-    if (!q.deliverable) return { kind: 'refused', status: 422, error: 'This shop does not deliver to this PIN code yet.', quote: q }
+    if (!q.deliverable) return { kind: 'refused', status: 422, error: 'This store doesn’t deliver to this PIN code yet.', quote: q }
     if (q.missing.length || q.lines.some((l) => l.problem) || totalFor(q, input.method) !== input.expectedTotal) return { kind: 'changed', quote: q }
     if (input.method === 'cod' && !q.cod.offer.offered) return { kind: 'refused', status: 422, error: 'Pay on delivery is not offered for this order. Pay online instead.', quote: q }
 

@@ -34,7 +34,7 @@ export function ShopLogo({ tenantId, current }: { tenantId: string; current: str
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex h-16 w-40 items-center justify-center rounded-md border border-border bg-muted p-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- our own Blob file, as the shop shows it */}
-          {current ? <img src={current} alt="Shop logo" className="max-h-full max-w-full object-contain" /> : <span className="text-xs text-muted-foreground">Your shop’s name</span>}
+          {current ? <img src={current} alt="Store logo" className="max-h-full max-w-full object-contain" /> : <span className="text-xs text-muted-foreground">Your store’s name</span>}
         </div>
         <label className={button({ variant: 'secondary' })}>
           {busy ? 'Saving…' : current ? 'Replace' : 'Upload logo'}

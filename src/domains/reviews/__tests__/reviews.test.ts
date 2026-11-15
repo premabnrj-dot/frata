@@ -77,7 +77,7 @@ describe('summary', () => {
   })
   it('a size line only for a size with 5 answers leaning one way', () => {
     const m = (fit: 'small' | 'true') => ({ size: 'M', fit })
-    expect(sizeLine([m('small'), m('small'), m('small'), m('true'), m('true')])).toBe('Size M runs small for 60% of buyers')
+    expect(sizeLine([m('small'), m('small'), m('small'), m('true'), m('true')])).toBe('Size M runs small for 60% of shoppers')
     expect(sizeLine([m('small'), m('small'), m('true')])).toBeNull()
   })
 })

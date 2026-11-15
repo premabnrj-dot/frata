@@ -56,9 +56,9 @@ function Zones({ zones, canEdit }: { zones: Row[]; floor: Floor; canEdit: boolea
 
   const act = async (id: string, run: () => Promise<{ ok: boolean; error?: string }>, ok?: string) => {
     setBusy(id)
-    const r = await run().catch(() => ({ ok: false, error: 'We could not save that. Nothing was changed.' }))
+    const r = await run().catch(() => ({ ok: false, error: 'We couldn’t save that. Nothing was changed.' }))
     setBusy(null)
-    if (!r.ok) { toast({ text: r.error ?? 'We could not save that. Nothing was changed.' }); return false }
+    if (!r.ok) { toast({ text: r.error ?? 'We couldn’t save that. Nothing was changed.' }); return false }
     if (ok) toast({ text: ok })
     settle(router)
     return true

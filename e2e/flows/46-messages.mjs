@@ -105,7 +105,7 @@ export default {
       await riya.getByRole('menuitem', { name: 'Check again' }).click()
       await riya.getByText('Frrata can no longer reach this number').waitFor()
       await riya.getByRole('button', { name: 'Reconnect' }).click()
-      await riya.getByRole('dialog', { name: /Reconnect \+91 98450 12345/ }).getByRole('button', { name: 'Not now' }).click()
+      await riya.getByRole('dialog', { name: /Connect \+91 98450 12345 again/ }).getByRole('button', { name: 'Not now' }).click()
       await fetch(GRAPH + '/_test/set', { method: 'POST', body: JSON.stringify({ rejectAll: false }) })
       await riya.getByRole('button', { name: 'More' }).click()
       await riya.getByRole('menuitem', { name: 'Check again' }).click()
@@ -173,7 +173,7 @@ export default {
       await riya.screenshot({ path: t.out('home-billing'), fullPage: true })
       await riya.getByRole('button', { name: 'Turn off Messages' }).click()
       const dlg = riya.getByRole('dialog')
-      await dlg.getByText('Messages stops for your shop.').waitFor()
+      await dlg.getByText('Messages stops for your store.').waitFor()
       await dlg.getByRole('button', { name: 'Turn off Messages' }).click()
       await riya.getByRole('button', { name: 'Turn on Messages' }).first().waitFor() // the app's page again
       await riya.getByRole('button', { name: 'Turn on Messages' }).first().click()

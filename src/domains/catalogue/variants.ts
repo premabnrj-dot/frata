@@ -43,7 +43,7 @@ export function cleanOptions(options: Option[]): { ok: true; options: Option[] }
     out.push({ name, values })
   }
   const count = out.reduce((n, o) => n * o.values.length, 1)
-  if (count > MAX_VARIANTS) return { ok: false, error: `That makes ${count} sizes and colours; the most is ${MAX_VARIANTS}. Split it into two products.` }
+  if (count > MAX_VARIANTS) return { ok: false, error: `That makes ${count} sizes and colours. The most is ${MAX_VARIANTS}, so split it into two products.` }
   return { ok: true, options: out }
 }
 

@@ -40,7 +40,7 @@ export async function sendPhotos(batches: Batch[], tenantId: string, told: Told)
         }
       }
       if (failed) { for (const m of made) told.held(m.key, m.photo); continue }
-      const r = await addPhotos({ productId: b.productId, photos: made.map((m) => m.photo) }).catch(() => ({ ok: false as const, error: 'We could not add the photos. Try again.' }))
+      const r = await addPhotos({ productId: b.productId, photos: made.map((m) => m.photo) }).catch(() => ({ ok: false as const, error: 'We couldn’t add the photos. Try again.' }))
       if (r.ok) told.added(b.productId, made.map((m) => m.key))
       else for (const m of made) told.failed(m.key, r.error, m.photo)
     }

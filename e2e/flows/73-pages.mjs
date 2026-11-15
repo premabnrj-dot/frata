@@ -9,7 +9,7 @@ import http from 'node:http'
 import { CONSOLE, PORTS, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
-const FRAME = 'iframe[title="Your shop with this look"]'
+const FRAME = 'iframe[title="Your store with this look"]'
 const get = (path) => new Promise((res, rej) => http.get(`http://localhost:${PORTS.app}${path}`, { headers: { host: 'kesar-studio.frata.test' } }, (r) => { let b = ''; r.on('data', (c) => (b += c)); r.on('end', () => res({ status: r.statusCode, body: b })) }).on('error', rej))
 const shopSays = (path, re, want = true) => until(async () => { const r = await get(path); return re.test(r.body) === want }, 15_000)
 
@@ -59,7 +59,7 @@ export default {
       await t.step('Published: the pages and Contact\'s line are on the shop, and in the sitemap', async () => {
         await p.getByRole('button', { name: 'Publish', exact: true }).click()
         await p.getByRole('dialog', { name: /^Publish / }).getByRole('button', { name: 'Publish', exact: true }).click()
-        await p.getByRole('dialog', { name: 'Your shop has its new look' }).waitFor()
+        await p.getByRole('dialog', { name: 'Your store has its new look' }).waitFor()
         await shopSays('/pages/our-story', /Kesar began in 2019 with two looms in Sanganer\./)
         const about = (await get('/pages/our-story')).body
         assert.ok(!/\/themes\/samples\/|data-example|Tell shoppers how your brand began/.test(about), 'no sample or example on the shop')
@@ -76,7 +76,7 @@ export default {
         await p.goto(CONSOLE + '/console/look')
         await p.getByRole('button', { name: 'More' }).click()
         await p.getByRole('menuitem', { name: 'Undo last publish' }).click()
-        await p.getByRole('dialog', { name: /back on your shop\?$/ }).getByRole('button', { name: 'Put it back' }).click()
+        await p.getByRole('dialog', { name: /back on your store\?$/ }).getByRole('button', { name: 'Put it back' }).click()
         await until(async () => (await get('/pages/faq')).status === 404, 15_000)
         assert.equal((await get('/pages/our-story')).status, 404)
         await shopSays('/policies/contact', /We reply on WhatsApp within the day\./, false)

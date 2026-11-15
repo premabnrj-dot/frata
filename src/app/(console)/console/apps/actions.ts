@@ -29,7 +29,7 @@ export async function setModuleAction(input: unknown): Promise<{ ok: true } | { 
   // shoppers); Admin › Modules pauses instead. Refused before any write, so no audit row says it happened.
   if (!on) {
     const me = await requireMember(CAN_MANAGE)
-    if (me.ok && !managesInPerson(me.membership)) return { ok: false, error: me.membership.supportSessionId ? 'A Frrata support visit cannot turn an app off.' : 'Ask the shop’s owner to change this.' }
+    if (me.ok && !managesInPerson(me.membership)) return { ok: false, error: me.membership.supportSessionId ? 'A Frrata support visit cannot turn an app off.' : 'Ask the store’s owner to change this.' }
   }
   try {
     const r = await asMember(CAN_MANAGE, { action: on ? 'module.on' : 'module.off', target: module }, async (tx, auth) => {
@@ -69,7 +69,7 @@ export async function setModuleAction(input: unknown): Promise<{ ok: true } | { 
     return { ok: true }
   } catch (err) {
     console.error('[setModuleAction]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: `We could not ${on ? 'turn on' : 'turn off'} ${def.name}. Nothing was changed.` }
+    return { ok: false, error: `We couldn’t ${on ? 'turn on' : 'turn off'} ${def.name}. Nothing was changed.` }
   }
 }
 
@@ -97,7 +97,7 @@ export async function setInterestAction(input: unknown): Promise<{ ok: true } | 
     return { ok: true }
   } catch (err) {
     console.error('[setInterestAction]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not save that. Try again.' }
+    return { ok: false, error: 'We couldn’t save that. Try again.' }
   }
 }
 
@@ -109,10 +109,10 @@ export async function setInterestAction(input: unknown): Promise<{ ok: true } | 
 const TRIAL_CONFIRM_VERSION = 1
 
 const TRIAL_ERRORS: Record<string, string> = {
-  trialled: 'This shop has tried it before. Ask Frrata to add it.',
-  has_it: 'Your shop has it already.',
+  trialled: 'This store has tried it before. Ask Frrata to add it.',
+  has_it: 'Your store has it already.',
   price_changed: 'The price changed. Reload the page to see it.',
-  not_owner: 'Only the shop’s owner or an admin can start a trial.',
+  not_owner: 'Only the store’s owner or a manager can start a trial.',
 }
 
 export async function startAddonTrialAction(input: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -121,7 +121,7 @@ export async function startAddonTrialAction(input: unknown): Promise<{ ok: true 
   const { module, priceId } = p.data
   const def = MODULES[module]
   const me = await requireMember(CAN_MANAGE)
-  if (me.ok && !managesInPerson(me.membership)) return { ok: false, error: me.membership.supportSessionId ? 'A Frrata support visit cannot start a trial.' : 'Ask the shop’s owner to change this.' }
+  if (me.ok && !managesInPerson(me.membership)) return { ok: false, error: me.membership.supportSessionId ? 'A Frrata support visit cannot start a trial.' : 'Ask the store’s owner to change this.' }
   try {
     const r = await asMember(CAN_MANAGE, { action: 'addon.trial.start', target: module }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
@@ -144,7 +144,7 @@ export async function startAddonTrialAction(input: unknown): Promise<{ ok: true 
     const code = definerError(err)
     if (code && TRIAL_ERRORS[code]) return { ok: false, error: TRIAL_ERRORS[code] }
     console.error('[startAddonTrialAction]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: `We could not start the trial. Nothing was changed.` }
+    return { ok: false, error: `We couldn’t start the trial. Nothing was changed.` }
   }
 }
 
@@ -155,7 +155,7 @@ export async function endAddonTrialAction(input: unknown): Promise<{ ok: true } 
   const { module } = p.data
   const def = MODULES[module]
   const me = await requireMember(CAN_MANAGE)
-  if (me.ok && !managesInPerson(me.membership)) return { ok: false, error: me.membership.supportSessionId ? 'A Frrata support visit cannot end a trial.' : 'Ask the shop’s owner to change this.' }
+  if (me.ok && !managesInPerson(me.membership)) return { ok: false, error: me.membership.supportSessionId ? 'A Frrata support visit cannot end a trial.' : 'Ask the store’s owner to change this.' }
   try {
     const r = await asMember(CAN_MANAGE, { action: 'addon.trial.end', target: module }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
@@ -176,7 +176,7 @@ export async function endAddonTrialAction(input: unknown): Promise<{ ok: true } 
     const code = definerError(err)
     if (code && TRIAL_ERRORS[code]) return { ok: false, error: TRIAL_ERRORS[code] }
     console.error('[endAddonTrialAction]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not end the trial. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t end the trial. Nothing was changed.' }
   }
 }
 

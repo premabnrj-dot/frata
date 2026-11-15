@@ -14,7 +14,7 @@ import { discounts } from '@/lib/db/schema-discounts'
 //    shop's offers lock (runningOffers).
 // =============================================================================
 
-export const STOPPED = 'Frrata stopped this offer, so it does not change. You can end it; to run it again, ask Frrata support.'
+export const STOPPED = 'Frrata stopped this offer, so it doesn’t change. You can end it. To run it again, ask Frrata support.'
 
 /**
  * Only one STARTED offer in the bar: when this one takes it (saving a started offer, or starting a draft that asked
@@ -35,7 +35,7 @@ export async function editRefusal(tx: Tx, tenantId: string, id: string, c: { man
   if (!cur) return 'This offer was not found.'
   if (cur.endedAt) return 'An ended offer does not change. Duplicate it to run it again.'
   if (cur.stoppedAt) return STOPPED
-  if (cur.startedAt && !c.manager) return 'Only an owner or admin can change an offer that has started.'
+  if (cur.startedAt && !c.manager) return 'Only the owner or a manager can change an offer that has started.'
   if (cur.style !== c.style) return 'The style of an offer does not change. Make a new one.'
   // A started offer past its end that gets a later end runs again: it counts toward the limit like a start (audit).
   if (cur.startedAt && cur.endsAt && cur.endsAt <= now && (!c.endsAt || c.endsAt > now) && await runningOffers(tx, tenantId, now) >= MAX_RUNNING_OFFERS) return RUNNING_FULL

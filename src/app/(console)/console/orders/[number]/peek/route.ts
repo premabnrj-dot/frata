@@ -29,6 +29,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ num
     return json(200, toPeek(r, prefix, now))
   } catch (err) {
     console.error('[orders/peek]', errName(err))
-    return json(500, { error: 'We could not open this order. Open the order page instead.' })
+    return json(500, { error: 'We couldn’t open this order. Open the order page instead.' })
   }
 }

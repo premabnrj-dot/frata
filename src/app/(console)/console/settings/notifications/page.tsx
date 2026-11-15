@@ -13,10 +13,10 @@ export default async function NotificationsPage() {
   const auth = await requireMember(CONSOLE_ROLES)
   if (!auth.ok) return <Panel title={auth.message} />
   const prefs = await noticePrefsFor(auth.membership.tenantId, auth.userId).catch(() => null)
-  if (!prefs) return <><PageHeader title="Your notifications" back={{ href: '/console/settings', label: 'Settings' }} /><Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel></>
+  if (!prefs) return <><PageHeader title="Your notifications" back={{ href: '/console/settings', label: 'Settings' }} /><Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel></>
   const ownerAdmin = auth.membership.role === 'owner' || auth.membership.role === 'admin'
   const rows: PrefRow[] = [
-    ...(ownerAdmin ? [{ type: 'required', label: 'Billing · security · Frrata acted on your shop', email: 'always' as const }] : []),
+    ...(ownerAdmin ? [{ type: 'required', label: 'Billing · security · Frrata acted on your store', email: 'always' as const }] : []),
     { type: 'needs_you', label: 'Payment keys · WhatsApp · shipping costs need you', email: prefs.needs_you },
     { type: 'product_update', label: 'Frrata updates (once a month at most)', email: prefs.product_update },
   ]

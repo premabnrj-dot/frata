@@ -41,7 +41,7 @@ export function composeOrderEmail(c: ComposeInput): { mail: Rendered; subject: s
   const total = formatInr((ask ? c.edit!.total : Number(o.total)) as Paise)
   const refund = c.edit?.refund ? formatInr(c.edit.refund as Paise) : null
   const values: Values = {
-    'First name': firstName(o.customerName), 'Order number': number, Total: total, 'Shop name': shop.shopName,
+    'First name': firstName(o.customerName), 'Order number': number, Total: total, 'Store name': shop.shopName,
     'Pay on delivery': cod ? total : undefined, Courier: c.ship?.courier ?? undefined, 'Tracking number': c.ship?.tracking ?? undefined,
   }
   const words = Object.fromEntries(WORD_FIELDS.map((f) => [f, fill(c.own?.[f] || DEFAULT_WORDS[kind][f], values)])) as EmailWords

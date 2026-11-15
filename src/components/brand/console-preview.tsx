@@ -17,7 +17,7 @@ export function ConsolePreview({ order }: { order: ExampleOrder | null }) {
     <figure className="m-0 min-w-0 overflow-hidden rounded-xl border border-primary-foreground/15 bg-background text-foreground">
       <div className="flex items-center gap-2.5 border-b border-border bg-card px-3.5 py-2.5 text-sm">
         <Monogram size={24} /><b>Kesar Studio</b>
-        <span className="ml-auto rounded-sm bg-muted px-1.5 py-0.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Example shop</span>
+        <span className="ml-auto rounded-sm bg-muted px-1.5 py-0.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Example store</span>
       </div>
       <div className="grid gap-3 p-4">
         <p className="font-display text-xl font-semibold tracking-tight">Today</p>
@@ -41,7 +41,7 @@ export function ConsolePreview({ order }: { order: ExampleOrder | null }) {
           )}
         </div>
       </div>
-      <figcaption className="border-t border-border bg-card px-3.5 py-2 text-xs text-muted-foreground">Example shop. Kurta cost {formatInr(EXAMPLE_COSTS.cogs)}, shipping {formatInr(EXAMPLE_COSTS.forwardShipping)} each way, ads {formatInr(EXAMPLE_COSTS.adCost)}.</figcaption>
+      <figcaption className="border-t border-border bg-card px-3.5 py-2 text-xs text-muted-foreground">Example store. Kurta cost {formatInr(EXAMPLE_COSTS.cogs)}, shipping {formatInr(EXAMPLE_COSTS.forwardShipping)} each way, ads {formatInr(EXAMPLE_COSTS.adCost)}.</figcaption>
     </figure>
   )
 }

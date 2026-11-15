@@ -76,7 +76,7 @@ export default {
       })
 
       await t.step('edit the address: a bad phone is said beside it; saved, the history names the field, never the value', async () => {
-        await p.getByRole('region', { name: 'Customer' }).getByRole('button', { name: 'Edit' }).click()
+        await p.getByRole('region', { name: 'Shopper' }).getByRole('button', { name: 'Edit' }).click()
         const d = p.getByRole('dialog', { name: `Who ${label(P)} goes to` }); await d.waitFor()
         await d.getByLabel('Mobile number').fill('12345'); await d.getByRole('button', { name: 'Save the changes' }).click()
         await d.getByText('A 10-digit mobile number.').waitFor()
@@ -98,7 +98,7 @@ export default {
         const o = await until(async () => { const x = await order(P); return x.invoice_number && x })
         assert.match(o.invoice_number, /\/\d\d-\d\d\/B?\d{4,5}$/)
         await p.getByText(o.invoice_number).waitFor()
-        assert.equal(await p.getByRole('region', { name: 'Customer' }).getByRole('button', { name: 'Edit' }).count(), 0)
+        assert.equal(await p.getByRole('region', { name: 'Shopper' }).getByRole('button', { name: 'Edit' }).count(), 0)
       })
 
       await t.step('cancel asks for a reason, puts the stock back once, and keeps the invoice', async () => {
@@ -108,12 +108,12 @@ export default {
         assert.equal(await p.evaluate(() => document.activeElement?.textContent), 'Keep the order')
         await d.getByRole('button', { name: 'Cancel order' }).click(); await d.getByText('Pick a reason.').waitFor()
         await d.getByLabel('Other').check(); await d.getByRole('button', { name: 'Cancel order' }).click(); await d.getByText('Say why in a few words.').waitFor()
-        await d.getByLabel('Customer cancelled').check(); await d.getByRole('button', { name: 'Cancel order' }).click()
+        await d.getByLabel('Shopper cancelled').check(); await d.getByRole('button', { name: 'Cancel order' }).click()
         const o = await until(async () => { const x = await order(P); return x.cancelled_at && x })
         assert.equal(o.cancel_reason, 'customer_cancelled'); assert.ok(o.invoice_number, 'the invoice stays')
         assert.equal(await stock(), before + 1)
-        await p.getByText('Cancelled: nothing to collect.').waitFor()
-        await p.getByRole('region', { name: 'Activity' }).getByText('Cancelled · Customer cancelled').waitFor()
+        await p.getByText('Cancelled. Nothing to collect.').waitFor()
+        await p.getByRole('region', { name: 'Activity' }).getByText('Cancelled · Shopper cancelled').waitFor()
       })
 
       await t.step('a held order paid online: Release from hold (not "confirm"), and its Undo puts the hold back', async () => {
@@ -127,7 +127,7 @@ export default {
 
       await t.step('another shop\'s real order number is "not found" here', async () => {
         await p.goto(CONSOLE + `/console/orders/${top + 900}`)
-        await p.getByText('No such order in your shop').waitFor()
+        await p.getByText('No such order in your store').waitFor()
         assert.equal(await p.getByText('Someone Else').count(), 0)
       })
 
@@ -136,9 +136,9 @@ export default {
         await q.goto(CONSOLE + `/console/orders/${top + 1}`); await q.getByRole('heading', { name: label(top + 1) }).waitFor()
         await q.getByRole('button', { name: 'More' }).click()
         assert.equal(await q.getByRole('menuitem', { name: 'Cancel order…' }).count(), 0)
-        assert.equal(await q.getByRole('region', { name: 'Customer' }).getByRole('button', { name: 'Edit' }).count(), 0)
-        await q.goto(CONSOLE + '/console/orders/999999999'); await q.getByText('No such order in your shop').waitFor()
-        await q.goto(CONSOLE + '/console/orders/not-a-number'); await q.getByText('No such order in your shop').waitFor()
+        assert.equal(await q.getByRole('region', { name: 'Shopper' }).getByRole('button', { name: 'Edit' }).count(), 0)
+        await q.goto(CONSOLE + '/console/orders/999999999'); await q.getByText('No such order in your store').waitFor()
+        await q.goto(CONSOLE + '/console/orders/not-a-number'); await q.getByText('No such order in your store').waitFor()
         await staff.close()
       })
 

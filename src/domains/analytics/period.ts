@@ -79,7 +79,7 @@ export function periodQuery(c: PeriodChoice): string {
 
 /** "vs previous 30 days", "vs yesterday", "vs the 13 days before": what every change is against, said once per row. */
 export function compareWords(w: Window): string {
-  if (w.choice.kind === 'preset' && w.choice.preset === 'today') return 'vs yesterday at this time'
+  if (w.choice.kind === 'preset' && w.choice.preset === 'today') return 'vs this time yesterday'
   if (w.choice.kind === 'preset' && w.choice.preset !== 'month') return `vs previous ${w.days} days`
   return w.days === 1 ? 'vs the day before' : `vs the ${w.days} days before`
 }

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { ORDER_STATES } from '@/domains/orders/order-state'
 import { CANCEL_LABEL, type CancelReason } from '@/domains/orders/work'
-import { eventLabel, STATE } from '../labels'
+import { STATE_WORDS } from '@/domains/orders/state-words'
+import { eventLabel, STATE, TABS } from '../labels'
 
 const say = (kind: string, reason: string | null = null, fields: string[] | null = null) => eventLabel({ kind, reason, fields }, (r) => CANCEL_LABEL[r as CancelReason] ?? r)
 
@@ -14,6 +15,15 @@ describe('order history in words', () => {
     expect(say('edited', null, ['addressLine', 'city'])).toBe('Changed the address, city')
     expect(say('cancelled', 'fake')).toBe('Cancelled · Fake order')
     expect(say('packed')).toBe('Packed · invoice issued')
+  })
+  it('the glossary\'s console words (Neel N3): On the way, To pack, and Undo moves Shipped back to To ship', () => {
+    expect(STATE.shipped.label).toBe('On the way')
+    expect(STATE.confirmed.label).toBe('To pack')
+    expect(say('undone', 'shipped')).toBe('Moved back to To ship')
+    for (const s of ORDER_STATES) expect(STATE[s].label).toBe(STATE_WORDS[s])
+    // A tab and the state it shows say the same word.
+    expect(TABS.find((t) => t.tab === 'couldnt_deliver')?.label).toBe(STATE_WORDS.ndr)
+    expect(TABS.find((t) => t.tab === 'on_the_way')?.label).toBe(STATE_WORDS.shipped)
   })
   it('every order state has a label and a tone', () => {
     for (const s of ORDER_STATES) expect(STATE[s].label.length).toBeGreaterThan(0)

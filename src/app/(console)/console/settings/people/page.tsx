@@ -19,14 +19,14 @@ export const metadata = { title: 'People' }
 /** Settings › People: who works on this shop. Owners and admins see it; only the owner removes the partner. */
 export default async function PeoplePage() {
   const auth = await requireMember(CAN_MANAGE)
-  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or an admin can see people' : auth.message} />
+  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or a manager can see people' : auth.message} />
   const [people, invites, gstOn] = await Promise.all([
     shopPeople(auth.membership.tenantId).catch((err) => { console.error('[people]', err instanceof Error ? err.name : err); return null }),
     accountantInvites(auth.membership.tenantId, auth.userId).catch(() => []),
     // The accountant's login is part of the GST app: offered while GST is on; one already there can still be removed.
     shopModules(auth.membership.tenantId, new Date().toISOString()).then((m) => m.access.gst.usable).catch(() => false),
   ])
-  if (!people) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!people) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const canRemove = auth.membership.role === 'owner' && !auth.membership.supportSessionId
   return (
     <div className="max-w-3xl space-y-4">

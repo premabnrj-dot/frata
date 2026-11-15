@@ -32,7 +32,7 @@ import { discardDraft, lookFor, newDraft, publishRevision, revisionOf, saveDraft
 // =============================================================================
 
 type R<T = object> = ({ ok: true } & T) | { ok: false; error: string }
-const SUPPORT = 'Frrata support can look, not change the shop’s look.'
+const SUPPORT = 'Frrata support can look, not change the store’s look.'
 
 const audit = (tx: Parameters<Parameters<typeof asMember>[2]>[0], a: { membership: { tenantId: string }; userId: string; email: string | null }, action: string, target?: string) =>
   tx.insert(auditEvents).values({ tenantId: a.membership.tenantId, actorUserId: a.userId, actorEmail: a.email, actorKind: 'member', action, target: target ?? null })
@@ -102,7 +102,7 @@ export async function saveLookAction(input: unknown): Promise<R<{ version: numbe
     // TS1a: the Contact page's line is stored as parsed (or not at all), never as sent.
     const { contact: _sent, ...rest } = layer as { contact?: unknown; home?: unknown[] }
     const clean = cleanImages({ ...rest, settings: parsed.settings, ...(parsed.site ? { site: parsed.site } : {}), ...(parsed.menus ? { menus: parsed.menus } : {}), ...(parsed.contact ? { contact: parsed.contact } : {}) }, t, storeHost(BLOB_STORE_ID))
-    if (!clean) return { error: 'A photo didn’t come from this shop. Upload it again.' }
+    if (!clean) return { error: 'A photo didn’t come from this store. Upload it again.' }
     // V1: a video id must be one of this shop's own, not removed; anything else is dropped (the photo shows).
     const kept = await cleanVideos(tx, t, clean)
     // The revision holds at most 64 kB (the database check, in bytes): say so in words before the insert would fail.

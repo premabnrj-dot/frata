@@ -5,7 +5,7 @@ import { photoUploadProblem } from '../upload-problem'
 
 describe('photoUploadProblem', () => {
   it('names the photo and what to do', () => {
-    expect(photoUploadProblem('KS-ANR-1.jpg', new TypeError('Failed to fetch'))).toBe('KS-ANR-1.jpg did not upload: the connection dropped. Try again.')
+    expect(photoUploadProblem('KS-ANR-1.jpg', new TypeError('Failed to fetch'))).toBe('KS-ANR-1.jpg didn’t upload. The connection dropped, so try again.')
     expect(photoUploadProblem('KS-ANR-1.jpg', new Error('Vercel Blob: Access denied, please provide a valid token for this resource.')))
       .toBe('KS-ANR-1.jpg was refused by photo storage. Try again, or send us this: Access denied, please provide a valid token for this resource.')
     expect(photoUploadProblem('a.jpg', new Error('Vercel Blob: Cannot use public access on a private store'))).toMatch(/^Photo storage is set to private/)

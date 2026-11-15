@@ -24,11 +24,11 @@ export async function generateMetadata({ params }: { params: Promise<{ section: 
 
 export default async function SettingsSectionPage({ params }: { params: Promise<{ section: string }> }) {
   const auth = await requireMember(CAN_BUILD)
-  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this shop’s settings' : auth.message} />
+  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this store’s settings' : auth.message} />
   const { section: key } = await params
   const section = sectionFor(key)
   if (!section) notFound()
-  if (!section.editors.includes(auth.membership.role)) return <Panel title="Only the owner or an admin can change this" />
+  if (!section.editors.includes(auth.membership.role)) return <Panel title="Only the owner or a manager can change this" />
   const tenantId = auth.membership.tenantId
   const zoned = section.key === 'shipping' || section.key === 'payments'
   const [shop, overrides, live, src, mods] = await Promise.all([
@@ -38,7 +38,7 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
     manifestsFor(tenantId),
     zoned ? shopModules(tenantId, new Date().toISOString()) : Promise.resolve(null),
   ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null, codeSource, null] as const })
-  if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!shop) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   // The brand and footer previews wear the shop's published look (Look owns colours and type now).
   // Taxes: a shop that charges GST can't sell a live product with no rate (quote); say which, never block (best effort).
   const unrated = section.key === 'taxes' && chargesGst({ gstin: shop.settings.gstin, scheme: shop.settings.gstScheme as Scheme })

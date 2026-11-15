@@ -39,7 +39,7 @@ export async function shopEmailSettings(tenantId: string) {
 export function checkWords(w: EmailWords): string | null {
   for (const f of WORD_FIELDS) {
     if (w[f].length > WORD_LIMITS[f]) return `Too long: ${f} (up to ${WORD_LIMITS[f]} characters).`
-    if (unknownPlaceholders(w[f]).length) return `Use the Insert menu: [${unknownPlaceholders(w[f])[0]}] is not one of them.`
+    if (unknownPlaceholders(w[f]).length) return `Pick from the Insert menu. [${unknownPlaceholders(w[f])[0]}] is not one of them.`
     if (/<[a-z/!]|https?:\/\//i.test(w[f])) return 'Text only. The button links to the order.'
   }
   return w.subject.trim() && w.heading.trim() ? null : 'A subject and a heading are needed.'

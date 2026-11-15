@@ -26,7 +26,7 @@ export default async function OfferPage({ params }: { params: Promise<{ id: stri
   const now = new Date()
   const [rows, stats] = await Promise.all([listOffers(auth.membership.tenantId, now, id), offerStats(auth.membership.tenantId, now, { role: auth.membership.role })])
     .catch((err) => { console.error('[offer]', err instanceof Error ? err.name : err); return [null, null] as const })
-  if (!rows || !stats) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!rows || !stats) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const o = rows.find((r) => r.id === id)
   if (!o) notFound()
   const role = auth.membership.role as string
@@ -40,8 +40,8 @@ export default async function OfferPage({ params }: { params: Promise<{ id: stri
       <PageHeader title={o.title} back={{ href: '/console/offers', label: 'Offers' }} badges={<Badge tone={st.tone}>{st.label}</Badge>} actions={manager ? <OfferSteps id={o.id} status={o.status} title={o.title} /> : undefined} />
       <p className="text-sm text-muted-foreground">{terms(o)}{o.code ? ` · code ${o.code}` : ' · applies by itself'}{o.endsAt ? ` · ends ${dayMonthIN(o.endsAt)}` : ''}</p>
       {/* feedback-ok: an offer stopped by Frrata is the offer's state, not a failure after a button (§ Feedback 5) */}
-      {o.status === 'stopped' ? <p role="status" className="rounded-md bg-danger px-3 py-2 text-sm text-danger-text">Frrata stopped this offer{o.stoppedAt ? ` on ${dayMonthIN(o.stoppedAt)}` : ''}: {o.stopReason}. Shoppers don’t get it. You can end it; to run it again, ask Frrata support.</p> : null}
-      {o.status === 'draft' && !manager ? <p className="rounded-md bg-info px-3 py-2 text-sm text-info-text">A draft. The shop’s owner or an admin starts it.</p> : null}
+      {o.status === 'stopped' ? <p role="status" className="rounded-md bg-danger px-3 py-2 text-sm text-danger-text">Frrata stopped this offer{o.stoppedAt ? ` on ${dayMonthIN(o.stoppedAt)}` : ''}: {o.stopReason}. Shoppers don’t get it. You can end it. To run it again, ask Frrata support.</p> : null}
+      {o.status === 'draft' && !manager ? <p className="rounded-md bg-info px-3 py-2 text-sm text-info-text">A draft. The owner or a manager starts it.</p> : null}
       <Section title="So far">
         {o.useCount === 0 ? <p className="text-sm text-muted-foreground">Not used yet{o.budgetLeft !== null ? <> · <Money paise={paise(o.budgetLeft)} /> of the budget to give</> : null}.</p> : (
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -54,7 +54,7 @@ export default async function OfferPage({ params }: { params: Promise<{ id: stri
         creators={[...o.creators].sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9))
           .map((c) => ({ id: c.id, label: c.label, code: c.code, uses: String(c.useCount), given: formatInr(paise(c.given)), ...creatorLine(mine?.creators.find((x) => x.id === c.id)) }))} /> : null}
       {canEdit ? <OfferEditor id={o.id} initial={valuesOf(o)} locked={{ style: true, code: true }} pickers={await offerPickers(auth.membership.tenantId)} />
-        : <Panel title={o.status === 'ended' ? 'This offer has ended' : o.status === 'stopped' ? 'Stopped offers don’t change' : 'Only an owner or admin can change a started offer'}>{o.status === 'ended' ? 'It no longer changes. Make a new offer to run it again.' : 'You can see its numbers here.'}</Panel>}
+        : <Panel title={o.status === 'ended' ? 'This offer has ended' : o.status === 'stopped' ? 'Stopped offers don’t change' : 'Only the owner or a manager can change a started offer'}>{o.status === 'ended' ? 'It no longer changes. Make a new offer to run it again.' : 'You can see its numbers here.'}</Panel>}
     </div>
   )
 }

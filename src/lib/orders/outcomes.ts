@@ -28,14 +28,14 @@ async function openShipment(tx: Tx, tenantId: string, orderId: string) {
     .where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, orderId), isNull(shipments.endedAt))).limit(1)
   return s ?? null
 }
-const BY_COURIER = 'Shipped with Shiprocket: its tracking sets this.'
+const BY_COURIER = 'Shipped with Shiprocket. Its tracking sets this.'
 
 /** Shipped another way: opens a `self` shipment (courier name and tracking number as typed, both optional). */
 export async function markShipped(tx: Tx, o: Outcome & { courierName?: string; trackingNumber?: string }): Promise<Done> {
   const now = o.now ?? new Date()
   const c = await current(tx, o.tenantId, o.orderId, now)
   if (!c) return { ok: false, error: 'Order not found.' }
-  if (!applies('ship_self', c.state)) return { ok: false, error: c.state === 'confirmed' || c.state === 'paid' ? 'Pack it first.' : 'It has already left the shop, or is not an order to ship.' }
+  if (!applies('ship_self', c.state)) return { ok: false, error: c.state === 'confirmed' || c.state === 'paid' ? 'Pack it first.' : 'It has already left the store, or isn’t an order to ship.' }
   if (await openShipment(tx, o.tenantId, o.orderId)) return { ok: false, error: 'A shipment is already booked for it.' }
   const courierName = o.courierName?.trim().slice(0, 60) || null, trackingNumber = o.trackingNumber?.trim().slice(0, 40) || null
   const at = moment(now)
@@ -90,19 +90,19 @@ export async function undoOutcome(tx: Tx, tenantId: string, actor: Actor & { rol
   const [e] = await tx.select({ id: orderEvents.id, orderId: orderEvents.orderId, kind: orderEvents.kind, at: orderEvents.at, reason: orderEvents.reason }).from(orderEvents)
     .where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.id, eventId)))
   if (!e || !isOutcomeEvent(e.kind)) return { ok: false, error: 'There is nothing to undo.' }
-  if (!ROLES[UNDOES[e.kind]!].includes(actor.role)) return { ok: false, error: 'Only an owner or admin can undo that.' }
+  if (!ROLES[UNDOES[e.kind]!].includes(actor.role)) return { ok: false, error: 'Only the owner or a manager can undo that.' }
   const [already] = await tx.select({ id: orderEvents.id }).from(orderEvents).where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.undoes, e.id)))
   if (already) return { ok: false, error: 'Already undone.' }
-  if (!outcomeUndoOpen(e.at, now)) return { ok: false, error: 'That month is closed: it cannot be undone now.' }
-  if (e.kind === 'shipped' && !shippedUndoOpen(e.at, now)) return { ok: false, error: 'It has been on its way 30 days, so it counts as delivered: it cannot be undone now.' }
-  if (e.kind === 'rto' && e.reason === 'restocked') return { ok: false, error: 'Its stock was put back: undo is not possible. Adjust the stock on Products if you need to.' }
+  if (!outcomeUndoOpen(e.at, now)) return { ok: false, error: 'That month is closed. It can’t be undone now.' }
+  if (e.kind === 'shipped' && !shippedUndoOpen(e.at, now)) return { ok: false, error: 'It counts as delivered after 30 days on the way. It can’t be undone now.' }
+  if (e.kind === 'rto' && e.reason === 'restocked') return { ok: false, error: 'Its stock was put back, so it can’t be undone. Adjust the stock on Products.' }
   await current(tx, tenantId, e.orderId, now) // lock first, so an action committing meanwhile is seen
   const [later] = await tx.select({ id: orderEvents.id }).from(orderEvents)
     // credit_noted is NOT passive: a credit note reverses the sale, so undoing Came back after one must be refused
     // (credit.int.test.ts holds it). Never add it to this list.
     .where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.orderId, e.orderId), gt(orderEvents.at, e.at), notInArray(orderEvents.kind, ['note_added', 'edited', 'printed_slip', 'printed_invoice'])))
     .orderBy(desc(orderEvents.at)).limit(1)
-  if (later) return { ok: false, error: 'This order changed since: open it to see what happened.' }
+  if (later) return { ok: false, error: 'This order changed since. Open it to see what happened.' }
   const at = moment(now)
   const mine = and(eq(orders.tenantId, tenantId), eq(orders.id, e.orderId))
   const r = e.kind === 'shipped'
@@ -112,7 +112,7 @@ export async function undoOutcome(tx: Tx, tenantId: string, actor: Actor & { rol
       : e.kind === 'lost'
         ? await tx.update(orders).set({ lostAt: null }).where(and(mine, eq(orders.lostAt, e.at))).returning({ id: orders.id })
         : await tx.update(orders).set({ rtoInitiatedAt: null, rtoDeliveredAt: null }).where(and(mine, eq(orders.rtoInitiatedAt, e.at), eq(orders.rtoDeliveredAt, e.at))).returning({ id: orders.id })
-  if (!r.length) return { ok: false, error: 'This order changed since: open it to see what happened.' }
+  if (!r.length) return { ok: false, error: 'This order changed since. Open it to see what happened.' }
   if (e.kind === 'shipped') {
     await tx.update(shipments).set({ endedAt: at, endedReason: 'undone' })
       .where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, e.orderId), eq(shipments.provider, 'self'), isNull(shipments.endedAt)))

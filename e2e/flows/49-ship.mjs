@@ -46,7 +46,7 @@ export default {
         await p.getByLabel('Courier').fill('Professional Couriers')
         await p.getByLabel('Tracking number').fill('PC123456')
         await p.getByRole('button', { name: 'Mark shipped' }).click()
-        await p.locator('[data-toast]', { hasText: `${label(P)} marked shipped.` }).waitFor()
+        await p.locator('[data-toast]', { hasText: `${label(P)} is on the way.` }).waitFor()
         await p.getByRole('heading', { name: 'On the way' }).waitFor()
         await p.getByText('PC123456').waitFor()
         await p.getByRole('button', { name: 'Undo' }).click()
@@ -61,13 +61,13 @@ export default {
 
       await t.step('Delivered, with Undo; then delivered for good and in no shipping tab', async () => {
         await p.goto(CONSOLE + `/console/orders/${P}`)
-        await p.getByRole('button', { name: 'Delivered', exact: true }).click()
+        await p.getByRole('button', { name: 'Mark delivered', exact: true }).click()
         await p.locator('[data-toast]', { hasText: `${label(P)} marked delivered.` }).waitFor()
         await p.getByRole('button', { name: 'Undo' }).click()
         await p.locator('[data-toast]', { hasText: 'Undone.' }).waitFor()
         await until(async () => (await moments(P)).delivered_at === null)
         await p.reload()
-        await p.getByRole('button', { name: 'Delivered', exact: true }).click()
+        await p.getByRole('button', { name: 'Mark delivered', exact: true }).click()
         await p.locator('[data-toast]', { hasText: `${label(P)} marked delivered.` }).waitFor()
         await until(async () => (await moments(P)).delivered_at !== null)
         await p.goto(CONSOLE + '/console/orders?tab=on_the_way')
@@ -97,7 +97,7 @@ export default {
         const d = p.getByRole('dialog', { name: 'Lost by the courier?' })
         await d.getByRole('button', { name: 'Mark lost' }).click()
         await p.locator('[data-toast]', { hasText: `${label(L)} marked lost.` }).waitFor()
-        await p.getByText(/Lost by the courier after it was paid online: refund the shopper in Razorpay/).waitFor()
+        await p.getByText(/Lost by the courier after it was paid online. Refund the shopper in Razorpay/).waitFor()
         assert.ok((await db`select lost_at from orders where id = ${id}`)[0].lost_at)
       })
 
@@ -110,7 +110,7 @@ export default {
         }
         await p.goto(CONSOLE + '/console/orders?tab=on_the_way')
         for (const n of U) await p.getByRole('checkbox', { name: `Select ${label(n)}` }).check()
-        await p.getByRole('region', { name: 'Selected orders' }).getByRole('button', { name: 'Delivered' }).click()
+        await p.getByRole('region', { name: 'Selected orders' }).getByRole('button', { name: 'Mark delivered' }).click()
         await p.locator('[data-toast]', { hasText: 'Marked 2 delivered.' }).waitFor()
         await until(async () => (await Promise.all(U.map(moments))).every((m) => m.delivered_at !== null))
         await p.locator('[data-toast]').getByRole('button', { name: 'Undo' }).click()
@@ -144,15 +144,15 @@ export default {
         // From the queue row, with Undo (the outcome Undo checks the staff member's own role on the server).
         await s.goto(CONSOLE + '/console/orders?tab=to_ship')
         await s.getByRole('button', { name: `Mark shipped ${label(R)}` }).click()
-        await s.locator('[data-toast]', { hasText: `${label(R)} marked shipped.` }).waitFor()
+        await s.locator('[data-toast]', { hasText: `${label(R)} is on the way.` }).waitFor()
         await until(async () => (await moments(R)).shipped_at !== null)
         await s.locator('[data-toast]').getByRole('button', { name: 'Undo' }).click()
         await s.locator('[data-toast]', { hasText: 'Undone.' }).waitFor()
         await until(async () => (await moments(R)).shipped_at === null)
         await s.goto(CONSOLE + `/console/orders/${R}`)
         await s.getByRole('button', { name: 'Mark shipped' }).click()
-        await s.getByText('An owner or admin marks it delivered or came back.').waitFor()
-        assert.equal(await s.getByRole('button', { name: 'Delivered', exact: true }).count(), 0)
+        await s.getByText('The owner or a manager marks it delivered or came back.').waitFor()
+        assert.equal(await s.getByRole('button', { name: 'Mark delivered', exact: true }).count(), 0)
         // The cost of goods follows the same rule (owner 2026-11-08): staff edit products without it, and it never reaches their page.
         const costs = async () => (await db`select v.option_values, v.unit_cost, v.stock from variants v join products p on p.id = v.product_id
           where p.tenant_id = ${T} and p.handle = 'chanderi-kurta-set' and v.archived_at is null order by v.option_values`).map((r) => ({ values: r.option_values.join(' '), cost: r.unit_cost, stock: r.stock }))
@@ -169,7 +169,7 @@ export default {
         await until(async () => (await costs()).find((r) => r.values === 'M Rust')?.stock === 7)
         assert.deepEqual((await costs()).map((r) => [r.values, r.cost]), before.map((r) => [r.values, r.cost]))
         await s.goto(CONSOLE + '/console/settings/shipping-costs')
-        await s.getByText(/Only the owner or an admin|can’t change this shop’s settings/).first().waitFor()
+        await s.getByText(/Only the owner or a manager|can’t change this store’s settings/).first().waitFor()
         assert.equal(await s.getByLabel('A delivery').count(), 0)
       })
 

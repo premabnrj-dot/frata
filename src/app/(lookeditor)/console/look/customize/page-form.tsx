@@ -28,14 +28,14 @@ export function PageForm({ page, settings, choices, set, openSite }: { page: Pag
         <Choice label="About and details" value={settings.details} onChange={(details) => set({ details })} options={[{ value: 'open', label: 'Open' }, { value: 'folded', label: 'Folded' }]} />
       </> : <>
         <Choice label="Top of the page" value={settings.collectionTop} onChange={(collectionTop) => set({ collectionTop })} options={[{ value: 'title', label: 'Title' }, { value: 'banner', label: 'Banner' }]} />
-        <p className="text-xs text-muted-foreground">Banner uses the collection’s first piece’s photo. With no photo, the title shows.</p>
+        <p className="text-xs text-muted-foreground">The banner shows the collection’s first product photo, or else its title.</p>
       </>}
       <h3 className="pt-2 text-sm font-semibold">Product cards (every grid)</h3>
       <Offered label="Card" value={settings.card} list={choices.card} onChange={(card) => set({ card })} all={[{ value: 'tile', label: 'Grey tile' }, { value: 'standard', label: 'Standard' }, { value: 'centred', label: 'Centred' }, { value: 'framed', label: 'Framed' }]} />
       <Offered label="Section labels" value={settings.labels} list={choices.labels} onChange={(labels) => set({ labels })} all={[{ value: 'pill', label: 'Pill' }, { value: 'plain', label: 'Plain' }, { value: 'none', label: 'None' }]} />
       <OfferedSwitch label="Swipe rows show 01 / 10" on={settings.railCounter} list={choices.railCounter} onChange={(railCounter) => set({ railCounter })} />
       <Offered label="Columns on a computer" value={settings.desktopColumns} list={choices.desktopColumns} onChange={(desktopColumns) => set({ desktopColumns })} all={[{ value: 4, label: '4' }, { value: 3, label: '3' }]} />
-      <p className="text-xs text-muted-foreground">Reviews, size help and offers appear in their places when you turn them on in Apps and Offers.</p>
+      <p className="text-xs text-muted-foreground">Reviews, size help and offers show here once turned on in Apps and Offers.</p>
     </div>
   )
 }

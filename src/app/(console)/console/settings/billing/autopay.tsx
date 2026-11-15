@@ -35,7 +35,7 @@ function useCheckout() {
         key: s.key, order_id: s.order, ...(s.customer ? { customer_id: s.customer, recurring: '1' } : {}), name: 'Frrata', ...extra,
         handler: async (a: Answer) => {
           const r = await finish({ order: a.razorpay_order_id, payment: a.razorpay_payment_id, signature: a.razorpay_signature })
-          if (r.ok) { toast.ok(done); router.refresh() } else toast.error(r.error ?? 'Something went wrong.')
+          if (r.ok) { toast.ok(done); router.refresh() } else toast.error(r.error ?? 'We couldn’t set up autopay. Nothing was changed.')
           resolve()
         },
         modal: { ondismiss: () => { toast.error('Closed before finishing.', { sub: 'Nothing was set up or paid.' }); resolve() } },
@@ -56,7 +56,7 @@ export function SetUpAutopay() {
         <Button variant="secondary" onClick={() => go('card')} aria-disabled={busy}>Card</Button>
         <Button variant="secondary" onClick={() => go('emandate')} aria-disabled={busy}>Bank mandate (eNACH)</Button>
       </div>
-      <p className="text-xs text-muted-foreground">UPI, card: up to ₹15,000 · eNACH: above</p>
+      <p className="text-xs text-muted-foreground">UPI or card up to ₹15,000 · eNACH above it</p>
     </div>
   )
 }

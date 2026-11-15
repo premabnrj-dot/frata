@@ -15,7 +15,7 @@ export default async function PasskeysPage() {
   const auth = await requirePartner()
   if (!auth.ok) return <Panel title={auth.message} />
   const keys = await myPasskeys(auth).catch((err) => { console.error('[passkeys]', err instanceof Error ? err.name : err); return null })
-  if (!keys) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!keys) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const now = new Date()
   const used = (at: string | null) => {
     if (!at) return 'not used yet'

@@ -42,7 +42,7 @@ export function StoriesPanel({ stories, onChange, photos, tenantId, enabled, err
   return (
     <div className="space-y-2">
       <h2 className="text-section font-semibold">Stories{stories.length > 0 && <Count n={stories.length} of={MAX_STORIES} />}</h2>
-      {stories.length === 0 && <p className="text-sm text-muted-foreground">Add a story: a photo, a title, a few words, up to 3 numbered notes.</p>}
+      {stories.length === 0 && <p className="text-sm text-muted-foreground">Add a story. It has a photo, a title, a few words and up to 3 notes.</p>}
       {/* The save's mistake in the stories: at the stories, each story's row marked so the summary's focus lands on one. */}
       <FieldError name="stories" message={error} />
       <ul className="space-y-2">
@@ -104,12 +104,12 @@ function Text({ id, label, value, max, area, onChange }: { id: string; label: st
   )
 }
 
-/** What the shop will do with a piece, in words (the board): hidden, or Add / Choose. */
+/** What the store will do with a piece, in words (the board): hidden, or Add / Choose. */
 function pieceLine(p: Piece) {
-  if (p.status === 'archived') return <span className="text-danger-text">Archived: not shown on the shop</span>
-  if (p.status === 'draft') return <span className="text-danger-text">Draft: not shown on the shop</span>
-  if (!p.buyable) return <span className="text-danger-text">Sold out: not shown until it’s back</span>
-  return <>{p.price !== null && <Money paise={paise(p.price)} />}{' · '}{pairAction({ options: p.options, variants: p.sizes }) === 'add' ? 'one size: Add on the shop' : `${p.sizes > 1 ? `${p.sizes} sizes` : p.options.join(', ')}: Choose on the shop`}</>
+  if (p.status === 'archived') return <span className="text-danger-text">Archived · hidden from your store</span>
+  if (p.status === 'draft') return <span className="text-danger-text">Draft · hidden from your store</span>
+  if (!p.buyable) return <span className="text-danger-text">Sold out · hidden until it’s back</span>
+  return <>{p.price !== null && <Money paise={paise(p.price)} />}{' · '}{pairAction({ options: p.options, variants: p.sizes }) === 'add' ? 'One size · shoppers tap Add' : `${p.sizes > 1 ? `${p.sizes} sizes` : p.options.join(', ')} · shoppers choose`}</>
 }
 
 export function PairsPanel({ productId, pairs, onChange }: { productId: string; pairs: Piece[]; onChange: (p: Piece[]) => void }) {
@@ -134,17 +134,17 @@ export function PairsPanel({ productId, pairs, onChange }: { productId: string; 
   return (
     <div className="space-y-2">
       <h2 className="text-section font-semibold">Pair it with{pairs.length > 0 && <Count n={pairs.length} of={MAX_PAIRS} />}</h2>
-      {pairs.length === 0 && <p className="text-sm text-muted-foreground">Pick up to 2 pieces shoppers can add from this page.</p>}
+      {pairs.length === 0 && <p className="text-sm text-muted-foreground">Pick up to 2 products shoppers can add from this page.</p>}
       {pairs.length > 0 && <ul className="space-y-2">{pairs.map((p) => row(p, <button type="button" className={btn} aria-label={`Remove ${p.title}`} onClick={() => onChange(pairs.filter((x) => x.id !== p.id))}>Remove</button>))}</ul>}
       {pairs.length < MAX_PAIRS && <>
         <div className="relative">
-          <label htmlFor="pair-find" className="sr-only">Find a piece</label>
-          <input id="pair-find" type="search" value={q} maxLength={60} placeholder="Find a piece…" onChange={(e) => setQ(e.target.value)} className={`${field} h-11 pr-9 md:h-9`} />
+          <label htmlFor="pair-find" className="sr-only">Find a product</label>
+          <input id="pair-find" type="search" value={q} maxLength={60} placeholder="Find a product…" onChange={(e) => setQ(e.target.value)} className={`${field} h-11 pr-9 md:h-9`} />
           <Icon name="search" className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         </div>
         {found && (shown.length
-          ? <ul className="space-y-2" aria-label="Pieces found">{shown.map((p) => row(p, <button type="button" className={btn} aria-label={`Add ${p.title}`} onClick={() => { onChange([...pairs, p]); setQ('') }}>Add</button>, true))}</ul>
-          : <p className="text-sm text-muted-foreground">No piece called “{q.trim()}”.</p>)}
+          ? <ul className="space-y-2" aria-label="Products found">{shown.map((p) => row(p, <button type="button" className={btn} aria-label={`Add ${p.title}`} onClick={() => { onChange([...pairs, p]); setQ('') }}>Add</button>, true))}</ul>
+          : <p className="text-sm text-muted-foreground">No product called “{q.trim()}”.</p>)}
       </>}
     </div>
   )

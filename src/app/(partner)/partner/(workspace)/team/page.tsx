@@ -28,7 +28,7 @@ export default async function TeamPage() {
     partnerTeam(auth).catch((err) => { console.error('[team]', err instanceof Error ? err.name : err); return null }),
     partnerClients(auth).catch(() => null),
   ])
-  if (!team || !clients) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!team || !clients) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const stores = clients.filter((c) => !c.removedAt).map((c) => ({ tenantId: c.tenantId, name: c.name }))
   const people = team
   return (

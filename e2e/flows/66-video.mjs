@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs'
 import { CONSOLE, MUX, PORTS, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
-const FRAME = 'iframe[title="Your shop with this look"]'
+const FRAME = 'iframe[title="Your store with this look"]'
 const MP4 = readFileSync(new URL('../fixtures/loop.mp4', import.meta.url))
 const fake = async () => (await fetch(`http://localhost:${PORTS.mux}/_test/state`)).json()
 const VIDEO_INPUT = 'input[type=file][accept="video/mp4,video/quicktime"]'

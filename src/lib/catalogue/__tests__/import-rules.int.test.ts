@@ -138,7 +138,7 @@ describe.skipIf(!host)('importing a file: the harder edges', () => {
     const { jobId, last } = await run(f)
     expect(last).toMatchObject({ added: 1, leftOut: 1, inShop: 0 })
     expect((await su!`select n, errors, product_id is not null as made from import_rows where job_id = ${jobId} order by n`).map((r) => [r.n, r.errors, r.made]))
-      .toEqual([[2, [{ column: '', message: `Barcode ${EAN} is already on another product in your shop.` }], false], [3, null, true]])
+      .toEqual([[2, [{ column: '', message: `Barcode ${EAN} is already on another product in your store.` }], false], [3, null, true]])
   })
 
   it('a SKU taken in another case between the check and the write is told in words, by the import and by the editor', async () => {
@@ -157,7 +157,7 @@ describe.skipIf(!host)('importing a file: the harder edges', () => {
       const { saveProduct } = await import('@/app/(console)/console/products/actions')
       const cell = (values: string[], sku = '') => ({ values, price: '1299', compareAt: '', cost: '', stock: '1', sku, gtin: '' })
       expect(await saveProduct(mine!.id, 1, { title: 'Int mine', description: '', typeId: null, modelHeight: '', modelSize: '', handle: 'mine',
-        options: [{ name: 'Size', values: ['M', 'L'] }], variants: [cell(['M']), cell(['L'], 'RACE-1')] })).toEqual({ ok: false, error: 'A SKU is already used by another product in your shop.' })
+        options: [{ name: 'Size', values: ['M', 'L'] }], variants: [cell(['M']), cell(['L'], 'RACE-1')] })).toEqual({ ok: false, error: 'A SKU is already used by another product in your store.' })
     } finally {
       await su!.unsafe(`drop trigger int_race_${t.replace(/-/g, '')} on variants`)
       await su!.unsafe(`drop function int_race_${t.replace(/-/g, '')}()`)

@@ -19,7 +19,7 @@ export default async function HandoverPage() {
   const frame = (body: React.ReactNode) => <main data-shell className={`flex min-h-dvh items-start justify-center bg-background p-4 pt-16 ${SHELL_FONT_VARS}`}>{body}</main>
   if (!auth.ok) return frame(<Panel title="Sign in to see your store" action={<Link href="/login" className={button()}>Sign in</Link>} />)
   const handovers = await myHandovers(auth.userId).catch(() => null)
-  if (!handovers) return frame(<Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>)
+  if (!handovers) return frame(<Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>)
   if (!handovers.length) return frame(<Panel title="No store is waiting for you" action={<Link href="/console" className={button({ variant: 'secondary' })}>Go to your console</Link>} />)
   return frame(
     <div className="w-full max-w-lg space-y-4">

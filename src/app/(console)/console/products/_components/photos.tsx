@@ -59,7 +59,7 @@ export function Photos({ productId, tenantId, photos, colours, enabled, title = 
               <button type="button" disabled={i === photos.length - 1 || pending} aria-label="Move later" className="inline-grid min-h-6 min-w-6 place-items-center disabled:opacity-30" onClick={() => act(ph.id, { move: 1 })}>→</button>
             </div>
             {/* What the photo shows, for screen readers, Google Images and AI search (S2·6); empty = the product's title. */}
-            <label htmlFor={`alt-${ph.id}`} className="sr-only">Photo {i + 1}: what it shows</label>
+            <label htmlFor={`alt-${ph.id}`} className="sr-only">What photo {i + 1} shows</label>
             <input id={`alt-${ph.id}`} defaultValue={ph.alt ?? ''} maxLength={200} disabled={pending} placeholder={`${title}${ph.optionValue ? `, ${ph.optionValue}` : ''}, photo ${i + 1}`}
               onBlur={(e) => { const v = e.target.value.trim(); if (v !== (ph.alt ?? '')) act(ph.id, { alt: v }) }}
               className="h-7 w-full rounded-md border border-input bg-card px-1 text-xs" />

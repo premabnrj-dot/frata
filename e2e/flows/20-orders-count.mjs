@@ -43,7 +43,7 @@ export default {
       await p.goto(CONSOLE + '/console/orders?tab=all')
       assert.equal(await shown(), toConfirm)
       assert.equal(await tabCount('All'), placed)
-      await p.getByText(`Showing 1–50 of ${placed.toLocaleString('en-IN')}, newest first`).waitFor()
+      await p.getByText(`Showing 1–50 of ${placed.toLocaleString('en-IN')}`).waitFor()
       assert.equal(await p.locator('tbody tr').count(), 50)
       assert.equal(await tabCount('Not paid online'), 5)
       assert.equal(await p.getByText('Cancelled unpaid').count(), 0)
@@ -52,10 +52,10 @@ export default {
     await t.step('older orders are reachable, page by page', async () => {
       const pages = Math.ceil(placed / 50)
       for (let n = 2; n <= pages; n++) {
-        await p.getByRole('link', { name: 'Older' }).click()
+        await p.getByRole('link', { name: 'Next' }).click()
         await p.getByText(`Showing ${(n - 1) * 50 + 1}–`).waitFor()
       }
-      assert.equal(await p.getByRole('link', { name: 'Older' }).count(), 0)
+      assert.equal(await p.getByRole('link', { name: 'Next' }).count(), 0)
       await p.getByText(`Stress 150`, { exact: true }).waitFor()
       assert.equal(await p.locator('tbody tr').count(), placed - (pages - 1) * 50)
     })

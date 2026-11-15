@@ -12,6 +12,6 @@ export const FRATA_WHATSAPP = '919560366601'
 export const FRATA_WHATSAPP_DISPLAY = '+91 95603 66601'
 
 /** A click-to-chat link with an opening line filled in. */
-export function frataWhatsappLink(text = 'Hi Frrata, I have a question about starting my shop.') {
+export function frataWhatsappLink(text = 'Hi Frrata, I have a question about starting my store.') {
   return `https://wa.me/${FRATA_WHATSAPP}?text=${encodeURIComponent(text)}`
 }

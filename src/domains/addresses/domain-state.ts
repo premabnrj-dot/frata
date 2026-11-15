@@ -24,13 +24,13 @@ export function domainState(d: DomainFacts): DomainState {
 
 export const DOMAIN_CHIP: Record<DomainState, { tone: Tone; words: string }> = {
   waiting: { tone: 'warn', words: 'Waiting for records' },
-  held: { tone: 'warn', words: 'In use by another shop' },
+  held: { tone: 'warn', words: 'In use by another store' },
   other_account: { tone: 'warn', words: 'Waiting for records' },
   securing: { tone: 'info', words: 'Securing' },
   connected: { tone: 'ok', words: 'Connected' },
   main: { tone: 'neutral', words: 'Main' },
   not_working: { tone: 'danger', words: 'Not working' },
-  moved: { tone: 'danger', words: 'Moved to another shop' },
+  moved: { tone: 'danger', words: 'Moved to another store' },
   disconnected: { tone: 'danger', words: 'Disconnected by Frrata' },
 }
 

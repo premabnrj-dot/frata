@@ -37,7 +37,7 @@ export function AddItem({ orderId, taken, onAdd }: { orderId: string; taken: Set
           className="h-11 min-w-0 flex-1 rounded-md border border-input bg-card px-3 text-sm md:h-9" />
         <Button variant="ghost" onClick={() => { setOpen(false); setQ('') }}>Close</Button>
       </div>
-      {found && !found.length ? <p className="text-sm text-muted-foreground">No piece called that.</p> : null}
+      {found && !found.length ? <p className="text-sm text-muted-foreground">No product called that.</p> : null}
       {found?.length ? (
         <ul className="divide-y divide-border">
           {found.map((r) => (

@@ -35,7 +35,7 @@ export default async function Preview({ params }: { params: Promise<{ path?: str
   const banner = (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 bg-store-ink px-4 py-2 text-sm text-store-paper">
       <span className="font-medium">Preview</span>
-      <span className="opacity-80">{shop.publishedAt ? 'Your shop is open.' : 'Shoppers see “Opening soon” until your shop opens.'} Drafts show here; shoppers never see them.</span>
+      <span className="opacity-80">{shop.publishedAt ? 'Your store is open.' : 'Shoppers see “Opening soon” until your store opens.'} Drafts show here. Shoppers never see them.</span>
       {note && <span className="w-full">{note}</span>}
       <Link href="/console/products" className="ml-auto underline">Back to products</Link>
     </div>

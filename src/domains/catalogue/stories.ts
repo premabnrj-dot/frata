@@ -28,7 +28,7 @@ export type Story = z.infer<typeof StorySchema>
 /** The stories as saved: trimmed; a story with nothing in it is dropped; empty notes dropped. */
 export function cleanStories(input: unknown): { ok: true; stories: Story[] } | { ok: false; error: string } {
   const p = z.array(StorySchema).max(MAX_STORIES).safeParse(input ?? [])
-  if (!p.success) return { ok: false, error: `Up to ${MAX_STORIES} stories: a title up to ${STORY_LIMITS.title} characters, text up to ${STORY_LIMITS.text}, up to ${MAX_NOTES} notes.` }
+  if (!p.success) return { ok: false, error: `Up to ${MAX_STORIES} stories, each with up to ${MAX_NOTES} notes. A title holds ${STORY_LIMITS.title} characters, the text ${STORY_LIMITS.text}.` }
   const stories = p.data.map((s) => ({ ...s, title: s.title.trim(), text: s.text.trim(), notes: s.notes.map((n) => n.trim()).filter(Boolean) }))
     .filter((s) => s.image || s.title || s.text || s.notes.length)
   return { ok: true, stories }

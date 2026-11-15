@@ -46,7 +46,7 @@ function clean(c: CollectionInput) {
 
 /** Create (id null) or save a collection. */
 export async function saveCollection(id: string | null, input: CollectionInput): Promise<Result<{ handle: string }>> {
-  if (id !== null && (typeof id !== 'string' || !/^[0-9a-f-]{36}$/.test(id))) return { ok: false, error: 'That collection is not in your shop.' }
+  if (id !== null && (typeof id !== 'string' || !/^[0-9a-f-]{36}$/.test(id))) return { ok: false, error: 'That collection isn’t in your store.' }
   const { errors, value: c } = clean(input)
   if (Object.keys(errors).length) return { ok: false, error: 'Some fields need a look before saving.', errors }
   try {
@@ -63,7 +63,7 @@ export async function saveCollection(id: string | null, input: CollectionInput):
         const [cur] = await tx.select({ handle: collections.handle }).from(collections).where(and(eq(collections.tenantId, tenantId), eq(collections.id, id)))
         if (cur && cur.handle !== c.handle) await tx.insert(collectionHandleHistory).values({ tenantId, handle: cur.handle, collectionId: id }).onConflictDoNothing()
         const [row] = await tx.update(collections).set(data).where(and(eq(collections.tenantId, tenantId), eq(collections.id, id))).returning({ id: collections.id })
-        if (!row) throw new Stop({ ok: false, error: 'That collection is not in your shop.' })
+        if (!row) throw new Stop({ ok: false, error: 'That collection isn’t in your store.' })
       } else {
         const [row] = await tx.insert(collections).values({ tenantId, ...data }).returning({ id: collections.id })
         cid = row!.id
@@ -87,7 +87,7 @@ export async function saveCollection(id: string | null, input: CollectionInput):
   } catch (err) {
     if (err instanceof Stop) return err.result
     console.error('[saveCollection]', errName(err))
-    return { ok: false, error: 'We could not save the collection. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t save the collection. Nothing was changed.' }
   }
 }
 
@@ -96,7 +96,7 @@ export async function deleteCollection(id: string): Promise<Result> {
     const r = await asMember(ANY_MEMBER, { action: 'collection.delete', target: id }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
       const [row] = await tx.delete(collections).where(and(eq(collections.tenantId, tenantId), eq(collections.id, id))).returning({ title: collections.title })
-      if (!row) throw new Stop({ ok: false, error: 'That collection is not in your shop.' })
+      if (!row) throw new Stop({ ok: false, error: 'That collection isn’t in your store.' })
       if (!auth.membership.supportSessionId) await tx.insert(auditEvents).values({ tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: 'collection.delete', target: row.title })
     })
     if (!r.ok) return { ok: false, error: r.error }
@@ -106,7 +106,7 @@ export async function deleteCollection(id: string): Promise<Result> {
   } catch (err) {
     if (err instanceof Stop) return err.result
     console.error('[deleteCollection]', err instanceof Error ? err.name : err)
-    return { ok: false, error: 'We could not delete the collection.' }
+    return { ok: false, error: 'We couldn’t delete the collection.' }
   }
 }
 

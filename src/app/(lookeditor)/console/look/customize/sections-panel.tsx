@@ -23,7 +23,7 @@ const summary = (s: SectionInstance): string => {
     case 'drop_teaser': return s.heading
     case 'rich_text': return s.heading || 'Text'
     case 'logos': return `${s.images.length} logos`
-    case 'shop_the_look': return `${s.pieces.length} of 4 pieces`
+    case 'shop_the_look': return `${s.pieces.length} of 4 products`
     case 'story_fan': return `${s.cards.filter((c) => c.image).length} of ${MAX_CARDS} cards`
     case 'statement': return s.wordmark || 'Needs a wordmark'
     case 'design': return 'Made for your theme'

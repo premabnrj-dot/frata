@@ -37,7 +37,7 @@ export function FileStep({ onFile, reading, running, onStop, stopping }: {
               {!running.costsOnly && <Button onClick={() => input.current?.click()} disabled={!!reading}>Choose the file again</Button>}
             </span>
           </div>
-          {running.costsOnly && <p className="text-sm text-muted-foreground">Started with costs: an owner or admin can continue it.</p>}
+          {running.costsOnly && <p className="text-sm text-muted-foreground">Started with costs. An owner or a manager can continue it.</p>}
         </Section>
       )}
       <div

@@ -28,7 +28,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const query = listQuery(await searchParams)
   const tenantId = auth.membership.tenantId
   const [list, cols] = await Promise.all([listProducts(tenantId, query), manualCollections(tenantId)]).catch((err) => { console.error('[products]', err instanceof Error ? err.name : err); return [null, null] as const })
-  if (!list || !cols) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!list || !cols) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const add = <Link href="/console/products/new" className={button()}>Add product</Link>
   const importLink = <Link href="/console/products/import" className={button({ variant: 'secondary' })}>Import</Link>
   if (!list.counts.any) {

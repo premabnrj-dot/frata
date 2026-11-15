@@ -27,7 +27,7 @@ export function PublishConfirm({ themeName, shopOpen, blocking, pending, onCance
   return (
     <div ref={ref} role="dialog" aria-labelledby="pub-q" className="absolute right-0 top-full z-40 mt-2 w-72 origin-top-right space-y-1 rounded-xl border border-border bg-popover p-4 text-popover-foreground shadow-lg transition-[opacity,scale] duration-fast ease-entrance starting:scale-95 starting:opacity-0">
       <p id="pub-q" className="font-semibold">Publish {themeName}?</p>
-      <p className="text-sm text-muted-foreground">{shopOpen ? 'Shoppers see it on their next visit.' : 'Shoppers see it when your shop opens.'}</p>
+      <p className="text-sm text-muted-foreground">{shopOpen ? 'Shoppers see it on their next visit.' : 'Shoppers see it when your store opens.'}</p>
       {/* feedback-ok: Publish's blocking list is pinned in place (rule 5), each line with its Fix */}
       {blocking.length > 0 && (
         <ul role="alert" className="mt-2 space-y-1 rounded-md bg-danger p-2 text-sm text-danger-text">

@@ -52,7 +52,7 @@ export async function saveView(input: { name: string; tab: string; query: string
   } catch (err) {
     if (taken(err)) return { ok: false, error: 'A view with that name exists.' }
     console.error('[orders] view save', errName(err))
-    return { ok: false, error: 'We could not save the view. Try again.' }
+    return { ok: false, error: 'We couldn’t save the view. Try again.' }
   }
 }
 
@@ -84,7 +84,7 @@ async function change(id: string, what: 'rename' | 'remove' | 'restore', name?: 
   } catch (err) {
     if (taken(err)) return { ok: false, error: 'A view with that name exists.' }
     console.error(`[orders] view ${what}`, errName(err))
-    return { ok: false, error: 'We could not change the view. Try again.' }
+    return { ok: false, error: 'We couldn’t change the view. Try again.' }
   }
 }
 

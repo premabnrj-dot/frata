@@ -48,17 +48,17 @@ describe.skipIf(!host)('outcomes by hand', () => {
       const [s] = await tx.select({ provider: shipments.provider, courier: shipments.courierName }).from(shipments).where(and(eq(shipments.tenantId, A), eq(shipments.orderId, a), isNull(shipments.endedAt)))
       expect(s).toEqual({ provider: 'self', courier: 'Professional Couriers' })
 
-      // Delivered once; staff can't undo it; the owner can, this month; then it can be delivered again.
+      // Delivered once; staff can’t undo it; the owner can, this month; then it can be delivered again.
       const del = await out.markDelivered(tx, { tenantId: A, actor: riya, orderId: a, now: later(4) })
       expect(await state(a)).toBe('delivered')
       expect((await out.markDelivered(tx, { tenantId: A, actor: riya, orderId: a, now: later(5) })).ok).toBe(false)
-      expect(await out.undoOutcome(tx, A, staff, ev(del), later(6))).toMatchObject({ ok: false, error: 'Only an owner or admin can undo that.' })
+      expect(await out.undoOutcome(tx, A, staff, ev(del), later(6))).toMatchObject({ ok: false, error: 'Only the owner or a manager can undo that.' })
       expect(await w.undo(tx, A, riya, ev(del), later(6))).toMatchObject({ ok: false, error: 'There is nothing to undo.' }) // the general Undo never undoes an outcome
       expect((await out.undoOutcome(tx, A, owner, ev(del), later(7))).ok).toBe(true)
       expect(await state(a)).toBe('shipped')
       const del2 = await out.markDelivered(tx, { tenantId: A, actor: riya, orderId: a, now: later(8) })
       // Next month the delivery is billed: no undo.
-      expect(await out.undoOutcome(tx, A, owner, ev(del2), new Date('2026-12-01T00:00:00Z'))).toMatchObject({ ok: false, error: 'That month is closed: it cannot be undone now.' })
+      expect(await out.undoOutcome(tx, A, owner, ev(del2), new Date('2026-12-01T00:00:00Z'))).toMatchObject({ ok: false, error: 'That month is closed. It can’t be undone now.' })
 
       // Undo Shipped ends the self shipment, so the order ships again; staff may undo a Shipped (they ship).
       const b = await packed()
@@ -68,14 +68,14 @@ describe.skipIf(!host)('outcomes by hand', () => {
       const sh2 = await out.markShipped(tx, { tenantId: A, actor: riya, orderId: b, now: later(12) })
       expect(sh2.ok).toBe(true)
       // Next month: closed.
-      expect(await out.undoOutcome(tx, A, owner, ev(sh2), later(12 + 30 * 86_400))).toMatchObject({ ok: false, error: 'That month is closed: it cannot be undone now.' })
+      expect(await out.undoOutcome(tx, A, owner, ev(sh2), later(12 + 30 * 86_400))).toMatchObject({ ok: false, error: 'That month is closed. It can’t be undone now.' })
       // Shipped on 1 Dec (IST) and undone on 31 Dec: the month is open, but 30 days on it counts as delivered, and
       // un-shipping it would restart the billing clock.
       const b2 = await packed()
       const dec1 = new Date('2026-11-30T18:40:00Z') // 00:10 IST, 1 Dec
       const sh3 = await out.markShipped(tx, { tenantId: A, actor: riya, orderId: b2, now: dec1 })
       expect(await out.undoOutcome(tx, A, owner, ev(sh3), new Date(dec1.getTime() + 30 * 86_400_000 + 60_000)))
-        .toMatchObject({ ok: false, error: 'It has been on its way 30 days, so it counts as delivered: it cannot be undone now.' })
+        .toMatchObject({ ok: false, error: 'It counts as delivered after 30 days on the way. It can’t be undone now.' })
 
       // Came back with the stock put back: once; undo refused. Without it: undo puts it back on the way.
       const c = await packed()
@@ -101,7 +101,7 @@ describe.skipIf(!host)('outcomes by hand', () => {
       // A shipment booked with a courier but not picked up: Cancel waits for it; a Shiprocket parcel is never marked by hand.
       const e = await packed()
       await tx.insert(shipments).values({ tenantId: A, orderId: e, provider: 'shiprocket' })
-      expect(await w.cancel(tx, A, riya, e, { reason: 'customer_cancelled', restock: false }, later(50))).toMatchObject({ ok: false, error: 'A shipment is booked for it: cancel the shipment first.' })
+      expect(await w.cancel(tx, A, riya, e, { reason: 'customer_cancelled', restock: false }, later(50))).toMatchObject({ ok: false, error: 'A shipment is booked for it. Cancel the shipment first.' })
       expect((await out.markShipped(tx, { tenantId: A, actor: riya, orderId: e, now: later(51) })).ok).toBe(false)
       throw ROLLBACK
     }).catch((err) => { if (err !== ROLLBACK) throw err })

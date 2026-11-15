@@ -29,11 +29,11 @@ export async function handOverAction(input: { tenantId: string; email: string })
   if (!auth.ok) return { ok: false, error: auth.message }
   if (!partnerCan(auth.partner.memberRole, 'handOver')) return { ok: false, error: SENTENCES.not_partner! }
   const p = Input.safeParse({ tenantId: input?.tenantId, email: String(input?.email ?? '').trim().toLowerCase() })
-  if (!p.success) return p.error.issues.some((i) => i.path[0] === 'email') ? { ok: false, error: SENTENCES.bad_email!, field: 'email' } : { ok: false, error: 'We could not send the invite. Nothing was changed.' }
+  if (!p.success) return p.error.issues.some((i) => i.path[0] === 'email') ? { ok: false, error: SENTENCES.bad_email!, field: 'email' } : { ok: false, error: 'We couldn’t send the invite. Nothing was changed.' }
   // Each hand over emails an address: the team-invite hourly limit, per partner person, failing closed (security L2).
   if (!(await withinLimit(LIMITS.partnerInvite, auth.partner.memberId, new Date(), true))) return { ok: false, error: 'Too many invites this hour. Try again later.' }
   const r = await sendHandover(auth, p.data.tenantId, p.data.email)
-  if (!r.ok) return { ok: false, error: SENTENCES[r.error] ?? 'We could not send the invite. Nothing was changed.', ...(r.error === 'member_email' || r.error === 'bad_email' ? { field: 'email' as const } : {}) }
+  if (!r.ok) return { ok: false, error: SENTENCES[r.error] ?? 'We couldn’t send the invite. Nothing was changed.', ...(r.error === 'member_email' || r.error === 'bad_email' ? { field: 'email' as const } : {}) }
   // The invite stands without the email: the owner sees the store whenever they sign in with this address.
   const mail = await sendSignInLink(p.data.email).catch(() => ({ sent: false as const }))
   revalidatePath('/partner')

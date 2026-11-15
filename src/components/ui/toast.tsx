@@ -143,12 +143,12 @@ export function Toaster({ children, calm = false, region = true }: {
     if (!toast?.undo || busy) return
     const id = seq.current
     setBusy(true); clearAll(); setLeaving(false)
-    const r = await toast.undo().catch(() => ({ ok: false, error: 'We could not undo that. Open the order to see where it is.' }))
+    const r = await toast.undo().catch(() => ({ ok: false, error: 'We couldn’t undo that. Open the order to see where it is.' }))
     // A newer toast arrived while this undo ran: its result is not news on top of it.
     if (seq.current !== id) return
     setBusy(false)
     // Same toast, new words: no remount, so keyboard focus stays on the toast, which now says what happened.
-    const said = r.ok ? 'Undone.' : r.error ?? 'We could not undo that.'
+    const said = r.ok ? 'Undone.' : r.error ?? 'We couldn’t undo that.'
     setToast({ id, kind: r.ok ? 'ok' : 'error', text: said })
     // Said aloud either way: a node already on screen turning into an alert is not reliably read.
     announce(said)

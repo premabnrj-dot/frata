@@ -28,7 +28,7 @@ export default async function MessagesSetupPage({ searchParams }: { searchParams
     appsPage(tenantId, auth.userId, now.toISOString()).catch((err) => { console.error('[messages apps]', err instanceof Error ? err.name : 'error'); return null }),
     shopConnection(tenantId),
   ])
-  if (!d) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!d) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const canManage = canManageWhatsApp(auth.membership)
   const about = aboutProps('communication', d, now, mayTurnOff(auth.membership), auth.membership.tenantName)
   if (!d.access.communication.usable) {

@@ -22,3 +22,35 @@ describe('dropLineIN (Theme Studio TS1b)', () => {
     expect(dropLineIN(new Date('2026-11-14T07:00:00Z'))).toBe('Sat 14 Nov, 12:30 pm')
   })
 })
+
+describe('momentIN (Neel N3: a moment in a list)', () => {
+  it('Today and Yesterday by the IST calendar, then the day, the year only when not this year', async () => {
+    const { momentIN } = await import('../format-date')
+    const now = new Date('2026-11-15T18:00:00Z') // 11:30 pm IST on 15 Nov
+    expect(momentIN(new Date('2026-11-15T04:36:00Z'), now)).toBe('Today, 10:06 am')
+    expect(momentIN(new Date('2026-11-14T20:06:00Z'), now)).toBe('Today, 1:36 am')
+    expect(momentIN(new Date('2026-11-14T16:36:00Z'), now)).toBe('Yesterday, 10:06 pm')
+    expect(momentIN(new Date('2026-11-13T16:36:00Z'), now)).toBe('13 Nov, 10:06 pm')
+    expect(momentIN(new Date('2025-11-13T16:36:00Z'), now)).toBe('13 Nov 2025, 10:06 pm')
+  })
+  it('across IST midnight while the server clock is still on the day before (UTC)', async () => {
+    const { momentIN } = await import('../format-date')
+    const now = new Date('2026-11-15T19:00:00Z') // 12:30 am IST on 16 Nov; UTC still says 15 Nov
+    expect(momentIN(new Date('2026-11-15T18:45:00Z'), now)).toBe('Today, 12:15 am')
+    expect(momentIN(new Date('2026-11-15T16:36:00Z'), now)).toBe('Yesterday, 10:06 pm')
+    expect(momentIN('2026-11-14T16:36:00Z', now)).toBe('14 Nov, 10:06 pm')
+  })
+})
+
+describe('three-letter months (owner, 2026-11-15)', () => {
+  it('September is Sep in every phrase, as Neel draws "12 Nov"', async () => {
+    const { dayIN, dayMonthIN, dateTimeIN, monthYearIN, momentIN, dropLineIN } = await import('../format-date')
+    const d = new Date('2026-09-13T16:36:00Z')
+    expect(dayMonthIN(d)).toBe('13 Sep')
+    expect(dayIN(d)).toBe('13 Sep 2026')
+    expect(monthYearIN(d)).toBe('Sep 2026')
+    expect(dateTimeIN(d)).not.toMatch(/Sept/)
+    expect(dropLineIN(d)).toMatch(/ Sep, /)
+    expect(momentIN(d, new Date('2026-11-15T10:00:00Z'))).toBe('13 Sep, 10:06 pm')
+  })
+})

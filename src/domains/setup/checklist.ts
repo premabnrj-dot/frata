@@ -50,12 +50,12 @@ export function setupSteps(f: SetupFacts, built: BuiltPages, formatInr: (paise: 
       key: 'product', title: 'Add your first product', done: hasProduct, href: built.products ? '/console/products' : null,
       detail: hasProduct ? `${f.productCount} active product${f.productCount === 1 ? '' : 's'}`
         : built.products ? 'Photos on a model, sizes and colours, the size chart for its type. About 10 minutes.'
-        : 'Products open in the next release: photos, sizes and colours and size charts.',
+        : 'Products open in the next release, with photos, sizes, colours and size charts.',
     },
     {
       key: 'details', title: 'Business details and grievance officer', done: !!f.legalName.trim() && grievanceComplete(f),
       href: built.settings ? (f.legalName.trim() ? '/console/settings/contact' : '/console/settings/store') : null,
-      detail: 'Your legal name, address and a grievance officer (name, email and phone) are shown on your shop, as the law asks. Razorpay checks them too.',
+      detail: 'Your store must show your legal name, address and a grievance officer. Razorpay checks them too.',
     },
     {
       key: 'payments', title: 'How shoppers pay', done: canPay, href: built.settings ? '/console/settings/payments' : null,
@@ -64,9 +64,9 @@ export function setupSteps(f: SetupFacts, built: BuiltPages, formatInr: (paise: 
         : 'Turn on Pay on delivery, or connect Razorpay.',
     },
     {
-      key: 'publish', title: 'Open your shop', done: f.publishedAt !== null, href: null,
-      detail: f.publishedAt ? `Open at ${f.address}.` : !hasProduct ? 'Needs one Active product first. Until then your shop shows "Opening soon".'
-        : !canPay ? 'Needs a way to pay first.' : `Ready. Your shop opens at ${f.address}.`,
+      key: 'publish', title: 'Open your store', done: f.publishedAt !== null, href: null,
+      detail: f.publishedAt ? `Open at ${f.address}.` : !hasProduct ? 'Needs one Active product first. Until then your store shows "Opening soon".'
+        : !canPay ? 'Needs a way to pay first.' : `Ready. Your store opens at ${f.address}.`,
     },
   ]
 }

@@ -164,7 +164,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
       }, d.collections, renames)
       if (r.ok) {
         setSaved(d); setVersion(r.version); setErrors({}); setRenames([])
-        toast.ok(status === 'active' || status === 'unlisted' ? 'Saved. Your shop shows it now.' : 'Saved.')
+        toast.ok(status === 'active' || status === 'unlisted' ? 'Saved. Your store shows it now.' : 'Saved.')
         if (r.handle !== initial.handle) router.replace(`/console/products/${r.handle}`)
         else router.refresh()
         return true
@@ -234,7 +234,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           model show for a product with sizes. The side panel stays in view on a wide screen, Publish first. */}
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4">
-          <Section><h2 className="flex items-center text-section font-semibold">Photos<InfoTip about="photos">The first is the cover: show the piece on a person. A large photo is fine; it is resized before it uploads.</InfoTip></h2><Photos productId={id} tenantId={tenantId} photos={photos} colours={colourOpt?.values ?? []} enabled={blobReady} title={d.title} /></Section>
+          <Section><h2 className="flex items-center text-section font-semibold">Photos<InfoTip about="photos">The first is the cover. Show the product on a person. Large photos are resized for you.</InfoTip></h2><Photos productId={id} tenantId={tenantId} photos={photos} colours={colourOpt?.values ?? []} enabled={blobReady} title={d.title} /></Section>
           <Section>
             <label htmlFor="desc" className="block font-semibold">Description <span className="text-sm font-normal text-muted-foreground">(optional)</span></label>
             <textarea id="desc" rows={4} maxLength={5000} value={d.description} onChange={(e) => set({ description: e.target.value })} {...fieldProps('description', errors.description)} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm aria-invalid:border-danger-text" placeholder="Fabric, fit, care. Shoppers read this before the size chart." />
@@ -242,14 +242,14 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           </Section>
           {video}
           <Section>
-            <h2 className="flex items-center text-section font-semibold">Sizes, colours and stock<InfoTip about="sizes, colours and stock">{shop.costs ? 'Your cost is never shown to shoppers: it is how Frrata works out profit on each order. ' : ''}When it runs out applies at 0 stock: stop selling, take pre-orders, or make to order. An empty SKU is made for you when you save.</InfoTip></h2>
+            <h2 className="flex items-center text-section font-semibold">Sizes, colours and stock<InfoTip about="sizes, colours and stock">{shop.costs ? 'Shoppers never see your cost. Frrata uses it to work out profit on each order. ' : ''}When it runs out applies at 0 stock. Stop selling, take pre-orders, or make to order. An empty SKU is made for you when you save.</InfoTip></h2>
             <OptionsEditor options={d.options} onChange={(options) => set({ options })} error={errors.options} onRename={rename} />
             {colourOpt && colourOpt.values.length > 0 && <ColoursPanel values={colourOpt.values} colours={d.colours} onChange={(colours) => set({ colours })} photos={photos} families={families} />}
             {combos.length > 0 && <VariantGrid options={opts} cells={d.cells} errors={errors} costs={shop.costs} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
               onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); fix(...Object.keys(patch).map((f) => `v:${k}:${f === 'leadMin' || f === 'leadMax' ? 'lead' : f}`)) }} />}
           </Section>
           <FoldSection title="Details" start={Object.keys(start0.attributes).length > 0} summary={d.category ? 'Fabric, work, occasion' : 'Pick a category first'}
-            side={<InfoTip about="details">Asked for by the product’s category. Shoppers filter by them, and Google and Meta read them. Values marked · are Frrata’s, for Indian crafts and fabrics; each is sent to Google as its nearest standard value.</InfoTip>}>
+            side={<InfoTip about="details">Asked for by the product’s category. Shoppers filter by them, and Google and Meta read them. Values marked · are Frrata’s, for Indian crafts and fabrics. Google gets the nearest standard value.</InfoTip>}>
             <DetailsPanel attributes={d.category?.attributes ?? []} values={d.attributes} onChange={(attributes) => set({ attributes })} />
           </FoldSection>
           {showSizes && <Section><h2 className="text-section font-semibold">Size chart</h2><SizeChartPanel types={types} typeId={d.typeId} onType={(typeId) => set({ typeId })} /></Section>}

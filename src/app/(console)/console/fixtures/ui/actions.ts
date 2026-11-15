@@ -13,6 +13,6 @@ export async function fixtureSave(form: FormData): Promise<ActionResult> {
   const r = await asMember(ANY_MEMBER, { action: 'fixture.rename' }, async () => name)
   if (!r.ok) return { error: r.error }
   if (name === 'taken') return { fields: { shop: 'That name is taken.' } }
-  if (name === 'refuse') return { error: 'Only an admin can rename a shop.' }
+  if (name === 'refuse') return { error: 'Only a manager can rename a store.' }
   return { ok: `Renamed to ${name}.` }
 }

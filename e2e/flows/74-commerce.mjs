@@ -15,7 +15,7 @@ import { CONSOLE, PORTS, signedIn, until } from '../lib.mjs'
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const MP4 = readFileSync(new URL('../fixtures/loop.mp4', import.meta.url))
 const VIDEO_INPUT = 'input[type=file][accept="video/mp4,video/quicktime"]'
-const FRAME = 'iframe[title="Your shop with this look"]'
+const FRAME = 'iframe[title="Your store with this look"]'
 const HOST = 'kesar-studio.frata.test'
 const PREFIX = 'e2e-commerce'
 /** What TS1b answers for: the designs' own markup (8 cards, ≤ 4 tiles, words at the page's limit), ≤ 2 eager images, and
@@ -128,7 +128,7 @@ export default {
         await p.reload()
         await p.getByRole('button', { name: 'Publish', exact: true }).click()
         await p.getByRole('dialog', { name: 'Publish Signal?' }).getByRole('button', { name: 'Publish', exact: true }).click()
-        await p.getByRole('dialog', { name: 'Your shop has its new look' }).waitFor()
+        await p.getByRole('dialog', { name: 'Your store has its new look' }).waitFor()
       })
 
       await t.step(`Home from the cache: holds every design; designs ≤ ${BUDGET.designs / 1024} kB of markup, the page ≤ ${BUDGET.html / 1024} kB HTML / ${BUDGET.rsc / 1024} kB RSC, ≤ ${BUDGET.eager} eager images`, async () => {
@@ -165,7 +165,7 @@ export default {
         await p.goto(CONSOLE + '/console/look')
         await p.getByRole('button', { name: 'More' }).click()
         await p.getByRole('menuitem', { name: 'Undo last publish' }).click()
-        await p.getByRole('dialog', { name: /back on your shop\?$/ }).getByRole('button', { name: 'Put it back' }).click()
+        await p.getByRole('dialog', { name: /back on your store\?$/ }).getByRole('button', { name: 'Put it back' }).click()
         await until(async () => !(await get('/')).body.toString().includes('data-design="the-drop"'), 15_000)
       })
 

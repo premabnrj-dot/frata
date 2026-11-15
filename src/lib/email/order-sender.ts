@@ -67,7 +67,7 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
     if (settled === 'unknown') throw new Later('razorpay unreachable', 5)
   }
   const shop = await shopSettingsFor(tenantId)
-  if (!shop) throw new GiveUp('no shop')
+  if (!shop) throw new GiveUp('no store')
   const [look, src] = await Promise.all([shopLook(tenantId).catch(() => null), manifestsFor(tenantId)])
   const accent = paperAccent(themeOf(shop, look, src).schemes.paper.accent)
 

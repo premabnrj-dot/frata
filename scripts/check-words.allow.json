@@ -1,0 +1,140 @@
+[
+  {
+    "file": "src/domains/catalogue/import/fields.ts",
+    "rule": "W4",
+    "text": "variant",
+    "why": "Column names in other platforms' CSV exports (Shopify's \"Variant SKU\"), matched against the file; never shown as our words"
+  },
+  {
+    "file": "src/domains/catalogue/taxonomy.ts",
+    "rule": "W4",
+    "text": "Sari and blouse piece",
+    "why": "The trade's name for the unstitched blouse fabric; its id is derived from the name and stored in product rows"
+  },
+  {
+    "file": "src/domains/media/sizes.ts",
+    "rule": "W4",
+    "text": "tenants/",
+    "why": "A storage path, not words (the template's stand-in X reads as a capital)"
+  },
+  {
+    "file": "src/domains/tax/gstr1-files.ts",
+    "rule": "W4",
+    "text": "Buyer",
+    "why": "GSTR-1 file column headers the GST portal and CAs expect; the law says buyer"
+  },
+  {
+    "file": "src/domains/tax/gstr1-files.ts",
+    "rule": "W4",
+    "text": "VOUCHER",
+    "why": "Tally's own XML element names"
+  },
+  {
+    "file": "src/domains/tax/gstr1-files.ts",
+    "rule": "W4",
+    "text": "Vouchers",
+    "why": "Tally's own report name in its import XML"
+  },
+  {
+    "file": "src/domains/tax/units.ts",
+    "rule": "W4",
+    "text": "ieces",
+    "why": "The GST law's UQC names (NOS, PCS) as the invoice prints them"
+  },
+  {
+    "file": "src/app/(lookeditor)/console/look/customize/menus-form.tsx",
+    "rule": "W5",
+    "text": "Shop",
+    "why": "The store's default bottom tabs as shoppers read them (Home, Shop, Search, Bag): 'Shop' is the store's verb"
+  },
+  {
+    "file": "src/app/(lookeditor)/console/look/customize/sections-panel.tsx",
+    "rule": "W5",
+    "text": "Shop by budget",
+    "why": "A new block's default heading, which shoppers read on the store (the store's verb)"
+  },
+  {
+    "file": "src/app/(lookeditor)/console/look/customize/theme-form.tsx",
+    "rule": "W5",
+    "text": "Shop",
+    "why": "A sample store button drawn to show a style; it is the store's verb, aria-hidden"
+  },
+  {
+    "file": "src/app/(console)/console/apps/gst/page.tsx",
+    "rule": "W4",
+    "text": "Vouchers for Tally",
+    "why": "Tally's own name for what its import XML holds; CAs look for it by that word"
+  },
+  {
+    "file": "src/lib/email/sns.ts",
+    "rule": "W4",
+    "text": "Token",
+    "why": "An AWS SNS message field name in a key list, never shown"
+  },
+  {
+    "file": "src/domains/delivery/lists.ts",
+    "rule": "W4",
+    "text": "pincode,rule,cod_max,note",
+    "why": "The CSV file's header row, exactly as the file must hold it (exports write the same header)"
+  },
+  {
+    "file": "src/app/(console)/console/apps/delivery_zones/rules.tsx",
+    "rule": "W4",
+    "text": "pincode,rule,cod_max,note",
+    "why": "The CSV file's header row shown in mono as the file must hold it"
+  },
+  {
+    "file": "src/app/(console)/console/orders/print/page.tsx",
+    "rule": "W4",
+    "text": "Buyer",
+    "why": "The tax invoice names the buyer by law (Glossary: shopper, but the invoice says buyer)"
+  },
+  {
+    "file": "src/app/(console)/console/settings/online-payments/actions.ts",
+    "rule": "W4",
+    "text": "Account & Settings \u2192 API keys",
+    "why": "Razorpay's own menu label, named so the owner can find it"
+  },
+  {
+    "file": "src/app/(console)/console/settings/online-payments/online-payments.tsx",
+    "rule": "W4",
+    "text": "Account & Settings \u2192 API keys",
+    "why": "Razorpay's own menu label, named so the owner can find it"
+  },
+  {
+    "file": "src/app/(console)/console/settings/online-payments/online-payments.tsx",
+    "rule": "W4",
+    "text": "Webhooks \u2192 Add new webhook",
+    "why": "Razorpay's own menu path, named so the owner can find it"
+  },
+  {
+    "file": "src/app/(console)/console/settings/online-payments/online-payments.tsx",
+    "rule": "W4",
+    "text": "Webhook URL",
+    "why": "Razorpay's own field name: the owner pastes this value into it"
+  },
+  {
+    "file": "src/domains/billing/document.ts",
+    "rule": "W4",
+    "text": "Buyer",
+    "why": "GST export columns for the CA: the invoice says buyer by law (glossary)"
+  },
+  {
+    "file": "src/domains/infra/alerts.ts",
+    "rule": "W4",
+    "text": "webhooks not processed",
+    "why": "Frrata Admin's infrastructure screen, read by Frrata's engineers only (N4)"
+  },
+  {
+    "file": "src/components/charts/state-tiles.tsx",
+    "rule": "W2",
+    "text": "Came back by state: highest",
+    "why": "Drawn verbatim in the approved N1b Analytics mockup (\"Came back by state: highest Bihar 31%, lowest Kerala 6%\"): a label and its values"
+  },
+  {
+    "file": "src/domains/analytics/source.ts",
+    "rule": "W4",
+    "text": "Another website",
+    "why": "Someone else's website a shopper came from, not the store (the glossary bans calling the store a website)"
+  }
+]

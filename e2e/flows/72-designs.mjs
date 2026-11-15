@@ -9,7 +9,7 @@ import http from 'node:http'
 import { CONSOLE, PORTS, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
-const FRAME = 'iframe[title="Your shop with this look"]'
+const FRAME = 'iframe[title="Your store with this look"]'
 const shopHtml = (path = '/') => new Promise((res, rej) => http.get(`http://localhost:${PORTS.app}${path}`, { headers: { host: 'kesar-studio.frata.test' } }, (r) => { let b = ''; r.on('data', (c) => (b += c)); r.on('end', () => res(b)) }).on('error', rej))
 const shopSays = (re, want = true) => until(async () => re.test(await shopHtml()) === want, 15_000)
 
@@ -67,7 +67,7 @@ export default {
         await until(async () => { const [r] = await db`select settings from shop_theme_revisions where tenant_id = ${KESAR} and theme_key = 'signal' order by updated_at desc limit 1`; return JSON.stringify(r.settings).includes('Yes, within 7 days, unworn.') }, 10_000)
         await p.getByRole('button', { name: 'Publish', exact: true }).click()
         await p.getByRole('dialog', { name: 'Publish Signal?' }).getByRole('button', { name: 'Publish', exact: true }).click()
-        await p.getByRole('dialog', { name: 'Your shop has its new look' }).waitFor()
+        await p.getByRole('dialog', { name: 'Your store has its new look' }).waitFor()
         await shopSays(/Our sizes run true/)
         const html = await shopHtml()
         assert.ok(html.includes('data-design="size-help"'), 'the design is on the shop')
@@ -81,7 +81,7 @@ export default {
         await p.goto(CONSOLE + '/console/look')
         await p.getByRole('button', { name: 'More' }).click()
         await p.getByRole('menuitem', { name: 'Undo last publish' }).click()
-        await p.getByRole('dialog', { name: /back on your shop\?$/ }).getByRole('button', { name: 'Put it back' }).click()
+        await p.getByRole('dialog', { name: /back on your store\?$/ }).getByRole('button', { name: 'Put it back' }).click()
         await shopSays(/data-design="size-help"/, false)
       })
     } finally {

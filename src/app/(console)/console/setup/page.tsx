@@ -12,7 +12,7 @@ export default async function SetupPage() {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
   const setup = await setupFor(auth.membership.tenantId).catch((err) => { console.error('[setup]', err instanceof Error ? err.name : 'error'); return null })
-  if (!setup) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!setup) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   return (
     <OpenMoment key={auth.membership.tenantId} address={setup.address} header={<PageHeader title="Setup" back={{ href: '/console', label: 'Home' }} meta={<>{setup.name} · <span className="font-mono">{setup.address}</span></>} />}>
       <Checklist setup={setup} canManage={(CAN_MANAGE as readonly string[]).includes(auth.membership.role)} />

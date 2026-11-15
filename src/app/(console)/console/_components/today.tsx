@@ -94,7 +94,7 @@ export function Today({ s, setup, now }: { s: TodaySummary | null; setup: Setup;
           <div className="grid justify-items-start gap-3">
             <PictoTile name="store" tone="haldi" />
             <h2 className="text-section font-semibold">No orders yet</h2>
-            <p className="text-sm text-muted-foreground">Share your shop on Instagram or WhatsApp. Orders land here.</p>
+            <p className="text-sm text-muted-foreground">Share your store on Instagram or WhatsApp. Orders land here.</p>
             <CopyLink address={setup.address} />
           </div>
         </Section>

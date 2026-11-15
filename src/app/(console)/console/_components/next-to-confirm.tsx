@@ -39,7 +39,7 @@ export function NextToConfirm({ rows }: { rows: NextRow[] }) {
   async function confirm(r: NextRow) {
     if (busy) return
     setBusy(r.id)
-    const res = await confirmOrder(r.id).catch(() => ({ ok: false as const, error: 'We could not save that. Nothing was changed.' }))
+    const res = await confirmOrder(r.id).catch(() => ({ ok: false as const, error: 'We couldn’t save that. Nothing was changed.' }))
     setBusy(null)
     if (!res.ok) {
       // The queue's words when someone else got there first: who, and when (India time).
@@ -55,7 +55,7 @@ export function NextToConfirm({ rows }: { rows: NextRow[] }) {
     // Fixed columns: the name takes what is left and truncates, so a phone never scrolls sideways.
     <table aria-label="Next to confirm" className="w-full table-fixed text-sm">
       <colgroup><col className="w-22 md:w-28" /><col /><col className="hidden md:table-column md:w-44" /><col className="w-20 md:w-28" /><col className="hidden md:table-column md:w-20" /><col className="w-20 md:w-28" /></colgroup>
-      <thead className="sr-only"><tr><th>Order</th><th>Customer</th><th>Payment</th><th>Total</th><th>Waiting</th><th>Action</th></tr></thead>
+      <thead className="sr-only"><tr><th>Order</th><th>Shopper</th><th>Payment</th><th>Total</th><th>Waiting</th><th>Action</th></tr></thead>
       <tbody>
         {rows.map((r, i) => {
           const open = r.state !== null || confirmKey({ canConfirm: r.canConfirm, risk: r.risk }) === 'open'

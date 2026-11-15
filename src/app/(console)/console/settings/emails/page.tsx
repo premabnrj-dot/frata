@@ -26,7 +26,7 @@ export default async function EmailsPage() {
   const tenantId = auth.membership.tenantId
   const [data, shop] = await Promise.all([shopEmailSettings(tenantId).catch(() => null), shopSettingsFor(tenantId)])
   const back = { href: '/console/settings', label: 'Settings' }
-  if (!data || !shop) return <><PageHeader title="Emails to shoppers" back={back} /><Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel></>
+  if (!data || !shop) return <><PageHeader title="Emails to shoppers" back={back} /><Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel></>
   const manage = (CAN_MANAGE as readonly string[]).includes(auth.membership.role) && !auth.membership.supportSessionId
   const reply = cleanEmail(shop.supportEmail)
   const from = EMAIL_SHOP_DOMAIN ? `${shop.slug}@${EMAIL_SHOP_DOMAIN}` : null

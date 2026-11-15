@@ -27,6 +27,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return pdfResponse(await frrataFile(doc))
   } catch (e) {
     console.error('[billing invoice pdf]', errName(e))
-    return text(500, 'We could not make the PDF. Try again in a minute.')
+    return text(500, 'We couldn’t make the PDF. Try again in a minute.')
   }
 }

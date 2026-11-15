@@ -34,7 +34,7 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
   // Apps A2: where an upgrade came from, as a boolean only (never rendered, logged or stored raw).
   const fromFeatured = (await searchParams).from === 'featured'
   const auth = await requireMember(CAN_MANAGE)
-  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the shop’s owner or an admin can see its plan and bills' : auth.message} />
+  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the store’s owner or a manager can see its plan and bills' : auth.message} />
   const now = new Date()
   const [o, prefix, paying] = await Promise.all([
     billingOverview(auth.membership, now).catch((e) => { console.error('[billing page]', errName(e)); return null }),
@@ -46,7 +46,7 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
   // Autopay and Pay now: only with Frrata's gateway connected, never on a Frrata support visit (finding 10).
   const canPay = isBillingGatewayConfigured() && !auth.membership.supportSessionId
   const METHOD: Record<string, string> = { upi: 'UPI Autopay', card: 'Card', emandate: 'Bank mandate (eNACH)' }
-  if (!o) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!o) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const e = o.estimate === 'busy' ? null : o.estimate
   // This month's delivered orders only (a late order from last month is billed too, and listed, but not counted here),
   // so the value matches the count beside it.
@@ -63,7 +63,7 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
       <Section>
         <h2 className="text-section font-semibold">{thisMonth} so far</h2>
         {o.estimate === 'busy' ? <p className="text-sm text-muted-foreground">Frrata is updating this estimate right now. Reload in a moment.</p>
-          : !o.plan || !e ? <p className="text-sm text-muted-foreground">No plan yet, so nothing to bill. Frrata sets your plan when your shop opens.</p> : (
+          : !o.plan || !e ? <p className="text-sm text-muted-foreground">No plan yet, so nothing to bill. Frrata sets your plan when your store opens.</p> : (
           <>
             <dl className="grid gap-3 text-sm sm:grid-cols-3">
               <div><dt className="text-muted-foreground">Delivered orders</dt><dd className="text-lg font-semibold"><Numeric>{e.bill.usage.orders.toLocaleString('en-IN')}</Numeric> <span className="text-sm font-normal text-muted-foreground">of {e.bill.usage.included.toLocaleString('en-IN')} included</span></dd></div>
@@ -73,7 +73,7 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
             {usage(e.bill.usage.orders, e.bill.usage.included).over && <p className="text-sm text-warn-text">Over included orders · same fee per order</p>}
             <div className="rounded-md bg-muted px-3 py-2 text-sm">
               {e.bill.rolled
-                ? <>Your bill on {dayMonthLongIN(e.invoiceOn)} would be under ₹100: it rolls to the next month instead of a tiny invoice.</>
+                ? <>Your bill on {dayMonthLongIN(e.invoiceOn)} is under ₹100. It moves to next month’s bill.</>
                 : <>Estimated bill on {dayMonthLongIN(e.invoiceOn)}: <strong><Money paise={paise(e.bill.total)} decimals /></strong> including GST.</>}
             </div>
             <details className="text-sm">
@@ -109,7 +109,7 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
             <p className="text-sm"><strong>{o.plan.name}</strong> · <Money paise={paise(o.plan.monthlyPrice)} />/mo · {o.plan.includedOrders.toLocaleString('en-IN')} orders · {formatPercent(o.plan.feeBps / 10_000, o.plan.feeBps % 100 === 0 ? 0 : 1)} per delivered order</p>
             {trial && trial.state !== 'paid' ? (
               <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className={trial.state === 'grace' || trial.state === 'paused' ? 'text-danger-text' : 'text-ok-text'}>{trial.state === 'building' ? 'Trial starts when your shop goes live' : trial.state === 'grace' || trial.state === 'paused' ? `Trial ended · ${trial.state === 'paused' ? 'paused' : `pauses ${dayIN(trial.pausesAt)}`}` : `Trial · ${trial.daysLeft} days left · last day ${dayIN(trial.lastDay)}`}</span>
+                <span className={trial.state === 'grace' || trial.state === 'paused' ? 'text-danger-text' : 'text-ok-text'}>{trial.state === 'building' ? 'Trial starts when your store goes live' : trial.state === 'grace' || trial.state === 'paused' ? `Trial ended · ${trial.state === 'paused' ? 'paused' : `pauses ${dayIN(trial.pausesAt)}`}` : `Trial · ${trial.daysLeft} days left · last day ${dayIN(trial.lastDay)}`}</span>
                 {trial.mayExtend && !auth.membership.supportSessionId && <TakeMoreDays />}
               </div>
             ) : o.plan.trialEndsAt && o.plan.trialEndsAt > now && <p className="text-sm text-ok-text">Trial until {dayIN(lastDay(o.plan.trialEndsAt))}</p>}
@@ -143,8 +143,8 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
               {paying.nextDebit && <p>Next debit <Money paise={paise(paying.nextDebit.amount)} decimals /> on {dayIN(paying.nextDebit.at)}. You were told a day ahead, as the RBI rules ask.</p>}
               {canPay && <StopAutopay />}
             </div>
-          ) : canPay ? <SetUpAutopay /> : <p className="text-sm text-muted-foreground">No autopay. {auth.membership.supportSessionId ? 'Only the shop’s owner or an admin can set it up.' : ''}</p>}
-        {billingGatewayIsTest() && <p className="mt-1 text-xs text-muted-foreground">Test gateway: no real money moves.</p>}
+          ) : canPay ? <SetUpAutopay /> : <p className="text-sm text-muted-foreground">No autopay. {auth.membership.supportSessionId ? 'Only the store’s owner or a manager can set it up.' : ''}</p>}
+        {billingGatewayIsTest() && <p className="mt-1 text-xs text-muted-foreground">Test gateway. No real money moves.</p>}
       </Section>
 
       <Section>

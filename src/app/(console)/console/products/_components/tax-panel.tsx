@@ -91,7 +91,7 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
       )}
       {charges && gap && (
         <div role="status" className="space-y-2 rounded-lg bg-warn p-3 text-sm text-warn-text">
-          <p>At {rs(price!)} including GST no slab rate fits: it is charged 18%.</p>
+          <p>No slab rate fits {rs(price!)} including GST. It is charged 18%.</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => onReprice(gap.below)} className="min-h-9 rounded-md border border-current px-3 font-medium">Price at {rs(gap.below)} (5%)</button>
             <button type="button" onClick={() => onReprice(gap.above)} className="min-h-9 rounded-md border border-current px-3 font-medium">Price at {rs(gap.above)} (18%)</button>
@@ -108,7 +108,7 @@ export function TaxPanel({ tax, onChange, price, inclusive, charges, now, errors
             ))}
           </div>
           {errors['tax.ownBps'] ? <FieldError name="tax.ownBps" message={errors['tax.ownBps']} />
-            : <p className="text-xs text-muted-foreground">Frrata doesn’t list this code: use the rate your CA gives.</p>}
+            : <p className="text-xs text-muted-foreground">Frrata doesn’t list this code. Use the rate your CA gives.</p>}
         </div>
       )}
 

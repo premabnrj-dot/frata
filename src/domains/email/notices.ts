@@ -16,7 +16,7 @@ export type OptionalType = (typeof OPTIONAL_TYPES)[number]
 export const DEFAULT_EMAIL: Record<OptionalType, boolean> = { needs_you: true, product_update: false, new_order: false }
 
 export const TYPE_LABEL: Record<NoticeType, string> = {
-  billing: 'Billing', security: 'Security', frrata_action: 'Frrata acted on your shop', needs_you: 'Needs you', product_update: 'Frrata update',
+  billing: 'Billing', security: 'Security', frrata_action: 'Frrata acted on your store', needs_you: 'Needs you', product_update: 'Frrata update',
 }
 
 export type NoticeSource =
@@ -39,7 +39,7 @@ export function noticeWords(s: NoticeSource, shopName: string): NoticeWords {
       return { title: `Your Frrata bill: ${s.amount}`, body: `${shopName}'s bill${s.invoiceNumber ? ` ${s.invoiceNumber}` : ''} is ready in Plan and billing.` }
     case 'support_session': {
       const why = SUPPORT_REASON_LABEL[s.reason as SupportReason] ?? 'Support'
-      return { title: 'Frrata support opened your shop', body: `${why}${s.minutes ? ` · for ${s.minutes} minutes` : ''}. Every change they make is in Activity.` }
+      return { title: 'Frrata support opened your store', body: `${why}${s.minutes ? ` · for ${s.minutes} minutes` : ''}. Every change they make is in Activity.` }
     }
     case 'admin':
       return { title: s.title, body: s.body ?? '' }
@@ -58,7 +58,7 @@ export function noticeFallback(n: { sourceKind: string; type: string; title: str
   if (n.title) return { title: n.title, body: n.body ?? '' }
   if (n.sourceKind === 'billing_notice') return { title: 'Your Frrata bill', body: 'See it in Plan and billing.' }
   if (n.sourceKind === 'addon_trial') return { title: 'Your app trial ends soon', body: 'See it in Apps.' }
-  if (n.sourceKind === 'support_session') return { title: 'Frrata support opened your shop', body: 'Every change they made is in Activity.' }
+  if (n.sourceKind === 'support_session') return { title: 'Frrata support opened your store', body: 'Every change they made is in Activity.' }
   if (n.sourceKind === 'edit_payment') return { title: 'An order is waiting for the shopper\'s payment', body: 'See it in Orders.' }
   return { title: TYPE_LABEL[n.type as NoticeType] ?? 'Frrata update', body: n.body ?? '' }
 }

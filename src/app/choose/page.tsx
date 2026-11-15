@@ -26,7 +26,7 @@ export default async function ChoosePage() {
         </div>
         <Link href="/admin" className="flex items-center gap-3 rounded-md border-2 border-primary p-4">
           <span aria-hidden="true" className="flex size-10 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">FA</span>
-          <span className="flex-1"><span className="block font-semibold">Frrata Admin</span><span className="text-sm text-muted-foreground">You are {staff.role === 'admin' ? 'an Admin' : 'Support'}</span></span>
+          <span className="flex-1"><span className="block font-semibold">Frrata Admin</span><span className="text-sm text-muted-foreground">You are {staff.role === 'admin' ? 'Frrata Admin staff' : 'Support'}</span></span>
         </Link>
         {own.map((m) => (
           <Link key={m.tenantId} href="/console" className="flex items-center gap-3 rounded-md border border-input p-4">
@@ -34,7 +34,7 @@ export default async function ChoosePage() {
             <span className="flex-1"><span className="block font-semibold">{m.tenantName}</span><span className="text-sm text-muted-foreground">Your store&apos;s console · {ROLE_LABEL[m.role]}</span></span>
           </Link>
         ))}
-        <p className="text-sm text-muted-foreground">You can switch at any time: Admin links to your store, and your store&apos;s menu links back to Admin.</p>
+        <p className="text-sm text-muted-foreground">Switch at any time. Frrata Admin links to your store, and back.</p>
       </div>
     </main>
   )

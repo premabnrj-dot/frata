@@ -13,8 +13,12 @@ Read first: frata-design-language § Words and § Glossary (or, until they land,
 For the scope given, collect every human-read string: JSX text, string literals passed to toast/error/Dialog/title/
 description/placeholder/aria-label/label, email and PDF copy, mockup text. Skip code comments, test files and log lines.
 
+`npm run check:words` already holds what a script can (length, joining marks, the swap list, our words, store, admin,
+state words, buttons, "!"). Do not re-list what it prints; judge what it cannot: tone by moment, Rule 0, leading with
+the action, confirm dialogs, a word that is right by the gate and wrong for the reader.
+
 Check each against:
-1. One idea per sentence, 12 words at most.
+1. One idea per sentence: aim for 12 words (`check:words` warns from 13 and fails at 16).
 2. No colon, semicolon or dash joining two clauses (labels ending in ":" , times, ₹ and codes are fine).
 3. Everyday words; the swap list; never our words (tenant, sync, server, token, webhook, variant, readiness, member row).
 4. Leads with what to do or what happened.
@@ -24,7 +28,8 @@ Check each against:
 8. Confirm dialogs: title asks with the thing; body is the consequence only; buttons name both outcomes.
 9. Law/tax words only where needed, plain words in an (i).
 10. No please, kindly, sorry, oops, emoji, "!".
-11. Glossary: one word per thing (shop not store in the console, shopper not customer, etc.); abbreviations per the list.
+11. Glossary: one word per thing ("store", never "shop", owner 2026-11-13; shopper not customer; Manager, never "an admin";
+    order states as the glossary's table); abbreviations per the list.
 12. Rule 0: no helper text that isn't required.
 
 Report: a table `file:line · now · rewrite · rule #`, worst first (errors and confirms first, then buttons, then the

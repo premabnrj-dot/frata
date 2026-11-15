@@ -59,7 +59,7 @@ export default {
         await c.getByText('Bags in progress start empty.').waitFor()
         await c.getByRole('button', { name: 'Make it main' }).click()
         const popup = p.getByRole('status').filter({ hasText: `${OWN_DOMAIN} is your main address` })
-        await popup.getByRole('link', { name: 'View your shop' }).waitFor()
+        await popup.getByRole('link', { name: 'View your store' }).waitFor()
         // Undo lives 8 s: used at once, it puts the name back.
         await popup.getByRole('button', { name: 'Undo' }).click()
         await row.getByRole('button', { name: 'Make main' }).waitFor()

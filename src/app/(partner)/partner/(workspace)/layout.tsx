@@ -35,7 +35,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   // Partner passkeys (T1b): no page renders until this browser session has passed the check.
   if (!auth.ok && auth.reason === 'needs_passkey') {
     const state = await gateState(auth.identity).catch(() => 'error' as const)
-    if (state === 'error') return <main data-shell data-neel="" className="p-6"><Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel></main>
+    if (state === 'error') return <main data-shell data-neel="" className="p-6"><Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel></main>
     const p = auth.identity.partner
     return <Toaster calm><PartnerFrame><PartnerGate state={state} ownerName={(p.name || p.businessName).split(' ')[0] || 'your partner owner'} phone={maskPhone(p.phone)} signOut={signOut} /></PartnerFrame></Toaster>
   }

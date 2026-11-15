@@ -73,7 +73,7 @@ export function ConnectChoices({ ready, canManage, appId, configId, graphVersion
           if (!res.ok) { setBusy(null); toast.error(res.error); return }
           settle(router)
         } catch {
-          setBusy(null); toast.error('We could not reach Frrata.', { sub: 'Nothing was saved. Try again.' })
+          setBusy(null); toast.error('We couldn’t reach Frrata.', { sub: 'Nothing was saved. Try again.' })
         }
       }, 300)
     }, {
@@ -87,7 +87,7 @@ export function ConnectChoices({ ready, canManage, appId, configId, graphVersion
   return (
     <div className="flex max-w-4xl flex-col gap-4">
       {!ready ? <p role="status" className="rounded-md bg-muted px-3 py-2 text-sm">WhatsApp isn’t switched on for Frrata yet. It’s coming soon.</p> : null}
-      {ready && !canManage ? <p role="status" className="rounded-md bg-muted px-3 py-2 text-sm">Ask the shop’s owner or an admin to connect WhatsApp.</p> : null}
+      {ready && !canManage ? <p role="status" className="rounded-md bg-muted px-3 py-2 text-sm">Ask the store’s owner or a manager to connect WhatsApp.</p> : null}
       <div className="grid gap-4 md:grid-cols-2" data-tinge>
         <button type="button" disabled={off} onClick={() => start('app')} className={`${card} border-2 border-foreground`}>
           <span aria-hidden="true" className="inline-grid size-14 place-items-center rounded-xl bg-muted"><Icon name="prepaid" className="size-8" /></span>
@@ -108,7 +108,7 @@ export function ConnectChoices({ ready, canManage, appId, configId, graphVersion
       </p>
       <p className="flex flex-wrap items-center gap-1 text-sm">
         Already on Interakt, Wati or another tool?
-        <InfoTip about="moving from another tool">A number can’t move between tools any more. In your tool’s WhatsApp settings, share the account with Frrata as a partner, then pick it in Meta’s window here.</InfoTip>
+        <InfoTip about="moving from another tool">A number can’t move between tools any more. In your tool’s WhatsApp settings, add Frrata as a partner. Then pick the account in Meta’s window here.</InfoTip>
       </p>
       {/* What happens next, drawn as three steps (visual changes, owner-approved 2026-11-08). */}
       <section aria-label="What happens next" className="space-y-3 rounded-md bg-muted px-4 py-4 text-sm">

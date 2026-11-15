@@ -5,7 +5,7 @@ import { parseOrderSearch } from '@/domains/orders/search'
 import { placeLine } from '@/domains/orders/place-line'
 import { risk } from '@/domains/orders/risk'
 import { applies, may } from '@/domains/orders/work'
-import { dateTimeIN } from '@/lib/format-date'
+import { momentIN } from '@/lib/format-date'
 import type { ordersPage } from '@/lib/queries/orders'
 import { PAYMENT, STATE } from './labels'
 import type { QueueRow } from './queue'
@@ -37,7 +37,7 @@ export function toRows({ list, facts, prefix }: Page, q: string, role: MemberRol
       payment: PAYMENT[paymentKind(o)], state: STATE[state], doNotCollect: paidAfterSwitch(o),
       risk: state === 'unconfirmed' || state === 'held' ? (facts === null ? 'unknown' : f ? risk(f).level : 'low') : 'low',
       canConfirm: applies('confirm', state), canHold: applies('hold', state), canPrint: applies('print', state),
-      total: Number(o.total), placed: dateTimeIN(o.placedAt), dimmed: STATE[state].tone === 'neutral',
+      total: Number(o.total), placed: momentIN(o.placedAt, now), placedAt: o.placedAt.toISOString(), dimmed: STATE[state].tone === 'neutral',
       shipStep: o.byCourier ? null : may('ship_self', state, role) ? 'ship' : may('deliver', state, role) ? 'deliver' : null,
       matched,
     }

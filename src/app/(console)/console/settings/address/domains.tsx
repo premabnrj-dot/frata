@@ -58,9 +58,9 @@ function DomainsInner({ nameHost, names, rows, livePayments, available, canManag
   // action carries back now and then never applied, and a transition around it then stayed pending (frata-gotchas).
   const act = async (id: string, run: () => Promise<{ ok: boolean; error?: string }>, ok?: string) => {
     setBusy(id)
-    const r = await run().catch(() => ({ ok: false, error: 'We could not change it. Nothing was changed.' }))
+    const r = await run().catch(() => ({ ok: false, error: 'We couldn’t change it. Nothing was changed.' }))
     setBusy(null)
-    if (!r.ok) { toast.error(r.error ?? 'We could not change it. Nothing was changed.'); return }
+    if (!r.ok) { toast.error(r.error ?? 'We couldn’t change it. Nothing was changed.'); return }
     if (ok) toast({ text: ok })
     settle(router)
   }
@@ -76,7 +76,7 @@ function DomainsInner({ nameHost, names, rows, livePayments, available, canManag
     const began = Date.now() // clock-ok: in a handler or timer, never at render
     void (async () => {
       const run = m.kind === 'domain' ? makeMainAction(m.d.id) : changeAddress(m.name)
-      const r = await run.catch(() => ({ ok: false as const, error: 'We could not change it. Nothing was changed.' }))
+      const r = await run.catch(() => ({ ok: false as const, error: 'We couldn’t change it. Nothing was changed.' }))
       await new Promise((res) => setTimeout(res, Math.max(0, 1300 - (Date.now() - began)))) // clock-ok: in a handler or timer, never at render
       setGoing(false)
       if (!r.ok) { toast.error(r.error); return }
@@ -196,7 +196,7 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
     setStray(c.stray)
     if (c.state === 'securing') { setSecure((v) => Math.min(0.9, v + 0.35)); if (step !== 3) go(3) }
     if (c.state === 'connected') { setSecure(1); if (step !== 3) go(3); return 'stop' as const }
-    if (c.state === 'dispute' || c.state === 'held') setError('In use by another shop')
+    if (c.state === 'dispute' || c.state === 'held') setError('In use by another store')
     if (c.state === 'paused') setChecked('Checking paused')
     return 'again' as const
   }, [claim, step]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -219,7 +219,7 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
 
   const connect = () => start(async () => {
     setError(null)
-    const r = await connectDomainAction(raw).catch(() => ({ ok: false as const, error: 'We could not connect it. Nothing was changed.' }))
+    const r = await connectDomainAction(raw).catch(() => ({ ok: false as const, error: 'We couldn’t connect it. Nothing was changed.' }))
     if (!r.ok) { setError(r.error); return }
     setClaim(r); stopAt.current = Date.now() + POLL_FOR_MS; go(2) // clock-ok: in a handler or timer, never at render
   })
@@ -317,7 +317,7 @@ function MainPopup({ host, onClose, onUndo }: { host: string; onClose: () => voi
       <p className="text-sm font-semibold"><span className="font-mono">{host}</span> is your main address</p>
       <div className="flex flex-wrap gap-1.5">
         <Button size="wrap" variant="secondary" onClick={() => { void navigator.clipboard?.writeText(`https://${host}`).then(() => toast({ text: 'Copied' }), () => {}) }}>Copy</Button>
-        <a className={button({ variant: 'secondary', size: 'wrap' })} href={`https://${host}`} target="_blank" rel="noopener noreferrer">View your shop</a>
+        <a className={button({ variant: 'secondary', size: 'wrap' })} href={`https://${host}`} target="_blank" rel="noopener noreferrer">View your store</a>
         {undo && onUndo && (
           <Button size="wrap" variant="secondary" className="relative overflow-hidden" onClick={onUndo}>
             Undo<span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 animate-undo-window bg-thread motion-reduce:hidden" />

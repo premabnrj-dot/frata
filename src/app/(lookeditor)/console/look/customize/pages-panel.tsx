@@ -130,7 +130,7 @@ export function PagePanel({ page, c, answers, address, onSaved, onRemoved, regis
           ? <p className="font-mono text-xs text-muted-foreground">{address}/pages/{draft.handle}</p>
           : <label className="flex items-center gap-1 font-mono text-xs text-muted-foreground">{address}/pages/<input aria-label="Address" value={draft.handle} maxLength={60} onChange={(e) => set({ ...draft, handle: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} className="min-w-0 flex-1 rounded border border-input bg-card px-1.5 py-0.5" /></label>}
       </div>
-      <Switch label="Hide from the shop" on={draft.hidden} onChange={(hidden) => set({ ...draft, hidden })} />
+      <Switch label="Hide from the store" on={draft.hidden} onChange={(hidden) => set({ ...draft, hidden })} />
       <DesignForm s={asSection} c={{ ...c, labels: false }} d={TEMPLATES[t]} set={(s) => set({ ...draft, fill: { ...(s.fill as Record<string, PageFill>), ...(t === 'faq' ? { [FAQ_ID]: { kind: 'faq' as const, items: faq } } : {}) } })} />
       {t === 'faq' && <Questions items={faq} answers={answers} set={(items) => set({ ...draft, fill: { ...draft.fill, [FAQ_ID]: { kind: 'faq', items } } })} />}
       <button type="button" onClick={remove} className="min-h-9 text-sm text-danger-text underline underline-offset-4">Remove page</button>

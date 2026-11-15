@@ -12,7 +12,7 @@ import { MODULES, type ModuleKey } from './registry'
 
 /** The gallery's filters (All is every app). */
 export type OfferFilter = 'included' | 'addon' | 'plan' | 'next'
-export const FILTERS: readonly [OfferFilter | 'all', string][] = [['all', 'All'], ['included', 'In your plan'], ['addon', 'Add-ons'], ['plan', 'On a higher plan'], ['next', 'Coming next']]
+export const FILTERS: readonly [OfferFilter | 'all', string][] = [['all', 'All'], ['included', 'In your plan'], ['addon', 'Paid apps'], ['plan', 'On a higher plan'], ['next', 'Coming next']]
 
 export type OfferAction =
   /** Built and granted: on or off. */
@@ -66,7 +66,7 @@ export function offerFor(key: ModuleKey, a: ModuleAccess, addonPrice: number | n
   if (def.status === 'next') {
     const footer = def.billing === 'add_on' && monthly ? monthly : def.billing === 'core' ? 'Included' : 'On Growth'
     return {
-      price: def.billing === 'add_on' && monthly ? `Add-on · ${monthly}` : def.billing === 'core' ? 'In every plan' : 'In Growth and up',
+      price: def.billing === 'add_on' && monthly ? `Paid app · ${monthly}` : def.billing === 'core' ? 'In every plan' : 'In Growth and up',
       footer, locked: false, state: { label: 'Coming next', tone: 'neutral' }, filter: 'next', action: { kind: 'interest', asked }, selfTrial: null,
     }
   }

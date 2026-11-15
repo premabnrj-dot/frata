@@ -11,7 +11,7 @@ import type { ActionResult } from '@/components/ui/action-form'
 // application. A refusal goes back to the form as a toast (frata-design-language § Feedback).
 
 const SENTENCES: Record<string, string> = {
-  email_unconfirmed: 'Confirm your email first: use the link or code we sent.',
+  email_unconfirmed: 'Confirm your email first. Use the link or code we sent.',
   no_invite: 'This invite has ended. Ask the partner to send it again.',
   bad_role: 'This invite can’t be accepted yet. Ask the partner to send it again.',
   in_team: 'You’re already in a partner’s team. Ask them to remove you first.',
@@ -24,7 +24,7 @@ export async function acceptTeamInviteAction(form: FormData): Promise<ActionResu
   const id = z.uuid().safeParse(form.get('memberId'))
   if (!id.success) return { error: SENTENCES.no_invite }
   const r = await acceptPartnerInvite(auth.userId, id.data)
-  if (!r.ok) return { error: SENTENCES[r.error] ?? 'We could not join the team. Nothing was changed.' }
+  if (!r.ok) return { error: SENTENCES[r.error] ?? 'We couldn’t join the team. Nothing was changed.' }
   return r.skipped.length
     ? { ok: `Joined. You already work on ${r.skipped.join(', ')}, so it stays as it is.`, go: '/partner' }
     : { ok: 'Joined the team.', go: '/partner' }

@@ -35,7 +35,7 @@ export async function connectWhatsAppAction(input: unknown): Promise<Result> {
   if (!isMessagesConfigured()) return { ok: false, error: 'WhatsApp is not switched on for Frrata yet. Nothing was saved.' }
   const gate = await moduleGate('communication', CAN_MANAGE)
   if (!gate.ok) return gate
-  if (!canManageWhatsApp(gate.auth.membership)) return { ok: false, error: 'Only the shop’s owner or an admin can connect WhatsApp, not Frrata support.' }
+  if (!canManageWhatsApp(gate.auth.membership)) return { ok: false, error: 'Only the store’s owner or a manager can connect WhatsApp.' }
 
   const ex = await exchangeCode(p.data.code)
   if (!ex.ok) return { ok: false, error: 'Meta did not accept the sign-in. It lasts 30 seconds: try again.' }
@@ -70,10 +70,10 @@ export async function connectWhatsAppAction(input: unknown): Promise<Result> {
   } catch (err) {
     // The number or account is open on another shop (the partial unique indexes).
     const e = err as { code?: string; constraint_name?: string }
-    if (e?.code === '23505' && e.constraint_name !== 'wa_connections_one_open') return { ok: false, error: 'This number is connected to another Frrata shop. Disconnect it there first.' }
-    if (e?.code === '23505') return { ok: false, error: 'Another connect for this shop finished first. Reload the page.' }
+    if (e?.code === '23505' && e.constraint_name !== 'wa_connections_one_open') return { ok: false, error: 'This number is connected to another Frrata store. Disconnect it there first.' }
+    if (e?.code === '23505') return { ok: false, error: 'Someone else connected a number first. Reload the page.' }
     console.error('[connectWhatsApp]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not save the connection. Try again.' }
+    return { ok: false, error: 'We couldn’t save the connection. Try again.' }
   }
 }
 
@@ -82,7 +82,7 @@ export async function disconnectWhatsAppAction(): Promise<Result> {
     const read = await asMember(CAN_MANAGE, { action: 'messages.disconnect.read' }, async (tx, auth) =>
       !canManageWhatsApp(auth.membership) ? 'support' as const : tokenFor(tx, auth.membership.tenantId))
     if (!read.ok) return read
-    if (read.value === 'support') return { ok: false, error: 'Only the shop’s owner or an admin can disconnect WhatsApp.' }
+    if (read.value === 'support') return { ok: false, error: 'Only the store’s owner or a manager can disconnect WhatsApp.' }
     // Best effort: Frrata stops receiving this account's webhooks. The row is closed either way.
     if (read.value) await unsubscribeApp(read.value.token, read.value.row.wabaId)
     const r = await asMember(CAN_MANAGE, { action: 'messages.disconnect' }, async (tx, auth) => {
@@ -94,14 +94,14 @@ export async function disconnectWhatsAppAction(): Promise<Result> {
     return { ok: true }
   } catch (err) {
     console.error('[disconnectWhatsApp]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not disconnect. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t disconnect. Nothing was changed.' }
   }
 }
 
 export async function checkWhatsAppAction(): Promise<Result> {
   const gate = await moduleGate('communication', CAN_MANAGE)
   if (!gate.ok) return gate
-  if (!canManageWhatsApp(gate.auth.membership)) return { ok: false, error: 'Only the shop’s owner or an admin can check WhatsApp.' }
+  if (!canManageWhatsApp(gate.auth.membership)) return { ok: false, error: 'Only the store’s owner or a manager can check WhatsApp.' }
   const r = await refreshHealth(gate.auth.membership.tenantId, new Date())
   revalidatePath('/console/apps/communication')
   if (r === 'unreachable') return { ok: false, error: 'Meta did not answer. Try again in a minute.' }

@@ -22,7 +22,7 @@ export default async function JoinPage() {
   const auth = await requireUser()
   if (!auth.ok) return <PartnerFrame><h1 className="font-display text-title font-semibold">Sign in to see your invite</h1><Link href="/partner/sign-in" className={button({ size: 'lg' })}>Sign in</Link></PartnerFrame>
   const invites = await myPartnerInvites(auth.userId).catch(() => null)
-  if (!invites) return <PartnerFrame><Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel></PartnerFrame>
+  if (!invites) return <PartnerFrame><Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel></PartnerFrame>
   if (!invites.length) {
     // Screen 12: signed in with another address than the invite's (the invite is found by this person's email).
     return (

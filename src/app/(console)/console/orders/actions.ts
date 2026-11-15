@@ -53,7 +53,7 @@ async function run<T extends object>(action: OrderAction, target: string, detail
   } catch (err) {
     if (err instanceof CreditSeriesFull) return { ok: false, error: CREDIT_SERIES_FULL }
     console.error(`[order.${action}]`, err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not save that. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t save that. Nothing was changed.' }
   }
 }
 
@@ -175,7 +175,7 @@ export async function confirmMany(orderIds: string[]): Promise<BulkResult> {
     return { ok: true, done, skippedHigh: high.length, failed }
   } catch (err) {
     console.error('[order.confirmMany]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not confirm those. Nothing more was changed.' }
+    return { ok: false, error: 'We couldn’t confirm those. Nothing more was changed.' }
   }
 }
 
@@ -189,7 +189,7 @@ export async function holdMany(orderIds: string[]): Promise<BulkResult> {
     return { ok: true, done, skippedHigh: 0, failed }
   } catch (err) {
     console.error('[order.holdMany]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not hold those. Nothing more was changed.' }
+    return { ok: false, error: 'We couldn’t hold those. Nothing more was changed.' }
   }
 }
 
@@ -229,7 +229,7 @@ export async function undoOutcomeAction(eventId: string): Promise<ActionResult> 
     return r.value
   } catch (err) {
     console.error('[order.undo_outcome]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not undo that. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t undo that. Nothing was changed.' }
   }
 }
 
@@ -247,6 +247,6 @@ export async function deliverMany(orderIds: string[]): Promise<BulkResult> {
     return { ok: true, done, skippedHigh: 0, failed }
   } catch (err) {
     console.error('[order.deliverMany]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not mark those. Nothing more was changed.' }
+    return { ok: false, error: 'We couldn’t mark those. Nothing more was changed.' }
   }
 }

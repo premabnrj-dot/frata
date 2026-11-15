@@ -66,7 +66,7 @@ export default {
 
       await t.step('Pincodes: 302012 with its COD orders; one-order PIN codes never show', async () => {
         await o.goto(CONSOLE + '/console/apps/true_profit?tab=pincodes', { waitUntil: 'domcontentloaded' })
-        const table = o.getByRole('table', { name: 'Pincodes' })
+        const table = o.getByRole('table', { name: 'PIN codes' })
         await table.getByText('302012').waitFor()
         assert.equal(await table.getByText('845401').count(), 0)
         await o.screenshot({ path: t.out('pincodes'), fullPage: true })

@@ -42,7 +42,7 @@ export async function startProductVideoAction(input: unknown): Promise<R<{ video
   if (!p.success) return { ok: false, error: 'Choose an MP4 or MOV video.' }
   const why = uploadProblem(p.data.contentType, p.data.size, 'product')
   if (why) return { ok: false, error: why }
-  if (!isVideoConfigured()) return { ok: false, error: 'Video isn’t switched on for shops yet.' }
+  if (!isVideoConfigured()) return { ok: false, error: 'Video isn’t switched on for stores yet.' }
   const now = new Date()
   // Who, and the limits, before the transaction (a limit is its own connection; speed review P4).
   const me = await requireMember(ANY_MEMBER)
@@ -52,7 +52,7 @@ export async function startProductVideoAction(input: unknown): Promise<R<{ video
   const r = await asModule('product_video', ANY_MEMBER, { action: 'product.video.start', target: p.data.productId }, async (tx, auth) => {
     const tenantId = auth.membership.tenantId
     const product = await productOfShop(tx, tenantId, p.data.productId)
-    if (!product) return { error: 'That product isn’t in your shop.' }
+    if (!product) return { error: 'That product isn’t in your store.' }
     // One per product, the caps, the row and its link: all under the shop's lock, refusals before the insert.
     const s0 = await startVideo(tx, tenantId, auth.userId, MUX_ENVIRONMENT_ID, now, 'product', { productId: product.id, replaces: p.data.replaces })
     if (!s0.ok) return { error: s0.error }

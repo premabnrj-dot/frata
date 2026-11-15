@@ -29,7 +29,7 @@ export default async function EkcodePage({ searchParams }: { searchParams: Promi
   const now = new Date()
   // One read for the state, the price and the about page (A1 impact review: never the facts twice).
   const d = await appsPage(tenantId, auth.userId, now.toISOString()).catch((err) => { console.error('[ekcode apps]', err instanceof Error ? err.name : 'error'); return null })
-  if (!d) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!d) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const about = aboutProps('ekcode', d, now, mayTurnOff(auth.membership), auth.membership.tenantName)
   if (!d.access.ekcode.usable) {
     return <AppAbout {...about}
@@ -41,7 +41,7 @@ export default async function EkcodePage({ searchParams }: { searchParams: Promi
     <AppHome k="ekcode" tab={tab} tabs={[{ key: 'shoppers', label: 'Shoppers' }]} offer={about.offer} worksWith={about.worksWith}
       badge={live ? undefined : <Badge tone="warn">Not live yet</Badge>} billing canTurnOff={mayTurnOff(auth.membership)}>{body}</AppHome>
   )
-  const failed = <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  const failed = <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   if (tab === 'billing') return home()
 
   if (tab === 'overview') {
