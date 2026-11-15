@@ -14,6 +14,7 @@ import { billState } from '@/domains/partners/bills'
 import { STAGE_LABEL } from '@/domains/partners/stage'
 import { partnerCan } from '@/domains/partners/team'
 import { PARTNER_TERMS } from '@/domains/partners/terms'
+import { SHARE_IN_RUPEES } from '@/domains/partners/share'
 import { istDayKey } from '@/domains/time/day'
 import { switchStoreAction } from '@/app/choose/actions'
 import { requirePartner } from '@/lib/auth/require-partner'
@@ -46,7 +47,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   const row = rows.find((r) => r.linkId === link)
   if (!row) return gone
   const [billing, shares, bills] = owner
-    ? await Promise.all([billSummary(auth).catch(failed('client.summary')), clientShares(auth).catch(failed('client.shares')), clientBills(auth, link).catch(failed('client.bills'))])
+    ? await Promise.all([billSummary(auth).catch(failed('client.summary')), (SHARE_IN_RUPEES ? clientShares(auth).catch(failed('client.shares')) : Promise.resolve([])), clientBills(auth, link).catch(failed('client.bills'))])
     : [[], [], []]
   const now = new Date(), today = istDayKey(now)
   // Built over every row, so a relinked store's book sits on one link only (its live one).
@@ -83,8 +84,9 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
     ...(row.ownerSince ? [['Owner joined', dayWords(istDayKey(row.ownerSince), today)] as [string, string]] : []),
     ...(row.firstOpenedAt ? [['Opened', dayWords(istDayKey(row.firstOpenedAt), today)] as [string, string]] : []),
     ...(row.removedAt ? [['Removed', dayWords(istDayKey(row.removedAt), today)] as [string, string]] : []),
-    ...(owner && row.shareMonths !== null ? [['Your share', shareWords(c, lastMonth)] as [string, React.ReactNode]] : []),
-    ...(owner && c.shareEnds ? [['Share ends', dayWords(istDayKey(c.shareEnds), today)] as [string, string]] : []),
+    ...(owner && row.shareMonths !== null ? [['Your share', shareWords(c, lastMonth, c.shareEnds ? dayWords(istDayKey(c.shareEnds), today) : null)] as [string, React.ReactNode]] : []),
+    // With rupees on, the end gets its own line; without them it reads "20% · ends 12 Apr 2028" (owner, 2026-11-15).
+    ...(owner && SHARE_IN_RUPEES && c.shareEnds ? [['Share ends', dayWords(istDayKey(c.shareEnds), today)] as [string, string]] : []),
   ]
   return (
     <>
@@ -130,9 +132,9 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   )
 }
 
-function shareWords(c: ReturnType<typeof buildClients>[number], lastMonth: string): React.ReactNode {
+function shareWords(c: ReturnType<typeof buildClients>[number], lastMonth: string, ends: string | null): React.ReactNode {
   const pct = `${(c.shareBps ?? PARTNER_TERMS.shareBps) / 100}%`
   if (!c.shareStarted) return `${pct} from opening`
   if (c.share?.kind === 'paid') return <>{pct} · <Money paise={c.share.amount} decimals={c.share.amount % 100 !== 0} /> in {lastMonth}</>
-  return pct
+  return !SHARE_IN_RUPEES && ends ? `${pct} · ends ${ends}` : pct
 }

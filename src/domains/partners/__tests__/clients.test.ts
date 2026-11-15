@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { paise } from '@/domains/money/paise'
 import { billState, isDay, parseRupees, summarise, unpaidTotal, type Deal } from '../bills'
 import { clientNext, type NextFacts } from '../next'
-import { monthShare, shareOf, shareTotal, type ShareMonth } from '../share'
+import { monthShare, SHARE_IN_RUPEES, shareOf, shareTotal, visibleShare, type ShareMonth } from '../share'
 import { clean, remindText } from '../remind'
 import { waText } from '@/domains/settings/whatsapp'
 
@@ -95,6 +95,14 @@ describe('the share (golden months)', () => {
   })
   it('reads the link snapshot rate, not today’s terms', () => {
     expect(monthShare(m({}), 1500)).toEqual({ kind: 'paid', amount: 343_800 })
+  })
+  it('shows rupees only when SHARE_IN_RUPEES is on (owner, 2026-11-15: off until the merchant terms carry it)', () => {
+    expect(SHARE_IN_RUPEES).toBe(false)
+    const paid = monthShare(m({}), 2000)
+    expect(visibleShare(paid, true)).toEqual({ kind: 'paid', amount: 458_400 })
+    expect(visibleShare(paid, false)).toEqual({ kind: 'none' })
+    expect(shareTotal([visibleShare(paid, false)])).toBe(0)
+    expect(shareTotal([visibleShare(paid, true)])).toBe(458_400)
   })
   it('totals paid months only', () => {
     expect(shareTotal([{ kind: 'paid', amount: p(70_480) }, { kind: 'due' }, { kind: 'none' }, { kind: 'paid', amount: p(387_980) }])).toBe(458_460)

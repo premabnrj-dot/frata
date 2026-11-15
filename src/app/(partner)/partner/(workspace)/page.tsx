@@ -13,7 +13,7 @@ import { Money } from '@/components/data/numeric'
 import { STAGE_LABEL } from '@/domains/partners/stage'
 import { paise } from '@/domains/money/paise'
 import { partnerCan } from '@/domains/partners/team'
-import { shareTotal } from '@/domains/partners/share'
+import { SHARE_IN_RUPEES, shareTotal } from '@/domains/partners/share'
 import { unpaidTotal } from '@/domains/partners/bills'
 import { istDayKey } from '@/domains/time/day'
 import { switchStoreAction } from '@/app/choose/actions'
@@ -43,7 +43,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const [rows, billing, shares] = await Promise.all([
     partnerClients(auth).catch(failed('clients')),
     owner ? billSummary(auth).catch(failed('clients.bills')) : Promise.resolve([]),
-    owner ? clientShares(auth).catch(failed('clients.shares')) : Promise.resolve([]),
+    owner && SHARE_IN_RUPEES ? clientShares(auth).catch(failed('clients.shares')) : Promise.resolve([]),
   ])
   const canCreate = partnerCan(role, 'createShop')
   const newStore = canCreate ? <Link href="/partner/new" className={button()}><Plus aria-hidden="true" className="size-4" />New client store</Link> : undefined

@@ -339,7 +339,7 @@ from it).
   only from 9 clients; below that, one list ordered by who acts. A Lead sees Client · Stage · Next, no money; a Builder
   Client · Stage · Open store. A client is a PAGE (`/partner/clients/<link>`), not a drawer: back to Clients, the next
   step as the header's primary, More (Edit content, Website keys), tabs Your billing · Store (dates and the share as
-  `Facts`). Remind opens WhatsApp on the partner's phone with the drafted words and no number; Frrata sends nothing.
+  `Facts`; the share reads "20% · ends <date>" while `SHARE_IN_RUPEES` is off). Remind opens WhatsApp on the partner's phone with the drafted words and no number; Frrata sends nothing.
   The partner's billing carries one line, "Your client never sees this". A removed client stays last in All, dimmed,
   and its page keeps billing (a final bill may be owed).
 - **F3 store switcher**: in the account block at every width and in More on

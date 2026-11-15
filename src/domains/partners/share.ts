@@ -12,6 +12,14 @@ import { applyBpsFloor, paise, type Paise } from '@/domains/money/paise'
 /** The month's invoice as the shares definer returns it: only what `invoiceState` takes, and the net taxable. */
 export type ShareMonth = { issuedAt: Date | null; hasNumber: boolean; total: number; paid: number; credited: number; netTaxable: number }
 
+/**
+ * The share in RUPEES reaches the partner owner only once the merchant terms carry the disclosure (owner, 2026-11-15:
+ * "Your partner sees what Frrata earns from your store." is on the handover page; the lawyer updates the terms). Until
+ * the owner confirms the terms are updated it stays false: Clients shows "20% · ends <date>" and no rupee figure, and the
+ * pages don't read the share's month at all. Turning it on is this one line.
+ */
+export const SHARE_IN_RUPEES = false
+
 export type ShareFigure = { kind: 'paid'; amount: Paise } | { kind: 'due' } | { kind: 'none' }
 
 /** The share of a net taxable value at the link's own rate, floored to the paisa (never more than Frrata collected). */
@@ -31,4 +39,9 @@ export function monthShare(m: ShareMonth | null, bps: number): ShareFigure {
 /** The header's "Your share ₹X last month": paid months only. */
 export function shareTotal(figures: readonly ShareFigure[]): Paise {
   return paise(figures.reduce((a, f) => a + (f.kind === 'paid' ? f.amount : 0), 0))
+}
+
+/** What a partner may be shown of a month's figure: nothing in rupees until SHARE_IN_RUPEES (passed in, so tests read both). */
+export function visibleShare(f: ShareFigure, inRupees: boolean): ShareFigure {
+  return inRupees ? f : { kind: 'none' }
 }

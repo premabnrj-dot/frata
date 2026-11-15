@@ -2,7 +2,7 @@ import 'server-only'
 import { clientStage, shareWindow, type ClientStage } from '@/domains/partners/stage'
 import { summarise, type BillSummary, type Deal, type OpenBill } from '@/domains/partners/bills'
 import { clientNext, type ClientNext } from '@/domains/partners/next'
-import { monthShare, type ShareFigure } from '@/domains/partners/share'
+import { monthShare, SHARE_IN_RUPEES, visibleShare, type ShareFigure } from '@/domains/partners/share'
 import { remindText } from '@/domains/partners/remind'
 import { waText } from '@/domains/settings/whatsapp'
 import { istDayKey } from '@/domains/time/day'
@@ -57,7 +57,7 @@ export function buildClients(rows: ClientRow[], billing: ClientBilling[], shares
     const w = row.shareMonths !== null && row.noticeDays !== null ? shareWindow({ shareMonths: row.shareMonths, noticeDays: row.noticeDays }, row.firstOpenedAt, row.removedAt) : null
     return {
       row, stage, next, deal, bills, holdsBook,
-      share: role === 'owner' ? monthShare(s?.month ?? null, s?.bps ?? 0) : null, shareBps: s?.bps ?? null,
+      share: role === 'owner' ? visibleShare(monthShare(s?.month ?? null, s?.bps ?? 0), SHARE_IN_RUPEES) : null, shareBps: s?.bps ?? null,
       shareEnds: w && w !== 'not_started' ? w.endsAt : null, shareStarted: !!w && w !== 'not_started',
     }
   })

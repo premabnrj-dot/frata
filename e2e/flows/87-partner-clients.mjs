@@ -3,7 +3,7 @@
 // https://claude.ai/artifact/5ieqhb31Prax22Xe2UTtPX). The partner's owner opens Clients (one client: no tabs, no
 // search), opens Kesar Studio's page, sets billing (a retainer), records an overdue bill (the list then says "₹12,000
 // overdue · 11 days" with a Remind link that opens WhatsApp with no number), marks it paid and undoes, deletes it with a
-// confirm; the share's month shows in rupees from a paid Frrata invoice. A Lead sees stages and next steps, never money;
+// confirm; the share reads "20% · ends <date>" with no rupees until the merchant terms carry the disclosure (SHARE_IN_RUPEES). A Lead sees stages and next steps, never money;
 // another partner's link is "not in your list". Phone and desktop.
 // Guards: a Lead or Builder reaching bills or the share; Remind sending through Frrata; a write without the owner.
 // =============================================================================
@@ -44,7 +44,8 @@ export default {
       await row.getByText('Open', { exact: true }).waitFor()
       assert.equal(await pia.getByRole('navigation', { name: 'Client views' }).count(), 0, 'one client shows no tabs')
       assert.equal(await pia.getByRole('searchbox').count(), 0, 'one client shows no search')
-      await pia.getByText(/Your share ₹4,584 in [A-Z][a-z]{2}/).waitFor()
+      // Rupees stay hidden until the merchant terms carry the disclosure (SHARE_IN_RUPEES, owner 2026-11-15).
+      assert.equal(await pia.getByText('Your share').count(), 0, 'the header shows no share in rupees')
     })
 
     await t.step('the client page: set billing, record an overdue bill', async () => {
@@ -106,7 +107,8 @@ export default {
       await expectToast(pia, 'Bill deleted', 'ok')
       assert.equal((await db`select count(*)::int as n from partner_client_bills where partner_id = ${link.partner_id}`)[0].n, 0)
       await pia.getByRole('link', { name: 'Store' }).click()
-      await pia.getByText(/20% · ₹4,584 in [A-Z][a-z]{2}/).waitFor()
+      await pia.getByText(/^20% · ends \d{1,2} [A-Z][a-z]{2}( \d{4})?$/).waitFor()
+      assert.equal(await pia.getByText('₹4,584').count(), 0, 'no rupee share on the Store tab')
     })
 
     await t.step('More › Edit content opens the store on Content (the switch lands only on named pages)', async () => {

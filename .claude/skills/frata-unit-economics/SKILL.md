@@ -268,7 +268,8 @@ its non-test credit notes' taxable, at the LINK's snapshotted bps, floored to th
 included; no pro-rating), so a 24-month window spans 24 or 25 invoices. A rolled month is never counted (its taxable is
 in the next month's carry-in); a credited or ₹0 month is "nothing billed"; an unpaid one is "Due" and left out of totals.
 The window is decided per link in SQL (a store relinked to another partner never shows the old partner its new months).
-The partner OWNER sees it in rupees; the brand is told at handover ("Your partner sees what Frrata earns from your
+The partner OWNER sees it in rupees only once `SHARE_IN_RUPEES` is on (off until the merchant terms carry the line, owner
+2026-11-15; until then "20% · ends <date>"); the brand is told at handover ("Your partner sees what Frrata earns from your
 store."), because ₹ ÷ 20% gives the brand's bill and, with its plan, its delivered sales.
 
 Tiers (decided): Launch ₹1,499/mo (~150 orders) + 2% of delivered order value,
