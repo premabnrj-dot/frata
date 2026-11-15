@@ -1,0 +1,475 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Builders</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a reference page of every screen T1c changes, grouped by who sees it (the partner owner · the Builder · the
+   brand). Each screen is drawn in the console's Neel: warm grey, neel 600 the one action colour, Inter, e1/e2/e3.
+   Desktop frames at the top of each group, the phone frame beside them. Plan: docs/plans/2026-11-15-t1c-builders.md. */
+:root {
+  --paper:#F7F6F4; --card:#FFFFFF; --side:#F2F1EE; --ink:#1C1917; --sub:#5F5A55; --line:#E3E1DD; --edge:#D6D3CE; --field:#8C857F; --muted:#F2F1EF; --sunk:#F5F4F2;
+  --neel:#3A44C2; --neel-50:#EEF0FD; --neel-text:#2F37A3; --rani:#D61F69;
+  --ok:#E7F5EC; --ok-fg:#1A6B43; --warn:#FDF3DC; --warn-fg:#85500B; --bad:#FDECEC; --bad-fg:#A82828; --info:#EEF0FD; --info-fg:#2F37A3;
+  --bar:#1C1917; --bar-fg:#FAFAF9; --bar-link:#A9B1FF;
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  --fast:120ms; --base:200ms; --e-std:cubic-bezier(.2,0,0,1); --e-snap:linear(0,.16 6%,.55 16%,.88 30%,.98 46%,1);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper:#141312; --card:#1C1A18; --side:#181716; --ink:#F3F1EE; --sub:#A9A29B; --line:#38342F; --edge:#45403A; --field:#8A837C; --muted:#262320; --sunk:#201E1C;
+  --neel:#7C86EE; --neel-50:#1C1F3D; --neel-text:#A3ABF5;
+  --ok:#12291C; --ok-fg:#7FD3A6; --warn:#33270B; --warn-fg:#F2C14E; --bad:#3A1617; --bad-fg:#F59A9C; --info:#1C1F3D; --info-fg:#A3ABF5;
+  --bar:#F3F1EE; --bar-fg:#141312; --bar-link:#2F37A3; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --paper:#141312; --card:#1C1A18; --side:#181716; --ink:#F3F1EE; --sub:#A9A29B; --line:#38342F; --edge:#45403A; --field:#8A837C; --muted:#262320; --sunk:#201E1C;
+  --neel:#7C86EE; --neel-50:#1C1F3D; --neel-text:#A3ABF5;
+  --ok:#12291C; --ok-fg:#7FD3A6; --warn:#33270B; --warn-fg:#F2C14E; --bad:#3A1617; --bad-fg:#F59A9C; --info:#1C1F3D; --info-fg:#A3ABF5;
+  --bar:#F3F1EE; --bar-fg:#141312; --bar-link:#2F37A3; color-scheme:dark }
+* { box-sizing:border-box }
+body { margin:0; background:var(--paper); color:var(--ink); font:400 14px/20px var(--font);
+  padding:0 max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px)) }
+h1,h2,h3,h4,p { margin:0 } h1,h2,h3 { text-wrap:balance }
+button, select { font:inherit; color:inherit }
+:focus-visible { outline:2px solid var(--neel); outline-offset:2px }
+.i { width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round }
+.i.sm { width:16px; height:16px }
+.doc { max-width:1320px; margin:0 auto }
+.doc-top { padding:24px 0 6px }
+.doc-top h1 { font:600 26px/32px var(--font) }
+.toc { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px }
+.toc a { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12.5px; color:var(--ink); text-decoration:none; background:var(--card); min-height:24px; display:inline-flex; align-items:center }
+.part { margin-top:40px; scroll-margin-top:16px }
+.part > h2 { font:600 18px/24px var(--font); margin-bottom:14px }
+.lab { font-size:12px; color:var(--sub); margin:0 0 8px; display:flex; gap:8px; align-items:center }
+.lab b { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%; background:var(--ink); color:var(--paper); font-size:11px; flex:none }
+.pair { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:22px; align-items:start }
+.pair + .pair { margin-top:28px }
+.pair.solo { grid-template-columns:minmax(0,1fr) }
+@media (max-width:1100px) { .pair { grid-template-columns:minmax(0,1fr) } }
+
+/* The shell (AppShell in Neel): a 232 px sidebar and the page */
+.app { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--paper); box-shadow:var(--e1); display:grid; grid-template-columns:232px minmax(0,1fr); min-height:520px }
+.side { background:var(--side); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:14px }
+.store { display:flex; align-items:center; gap:10px; padding:4px 6px }
+.store .mono-t { width:30px; height:30px; border-radius:8px; background:var(--ink); color:var(--paper); display:grid; place-items:center; font-weight:600; font-size:13px; position:relative; flex:none }
+.store .mono-t::after { content:""; position:absolute; left:7px; right:7px; bottom:5px; height:2px; border-radius:2px; background:var(--rani) }
+.store b { display:block; font-size:13.5px; font-weight:600 } .store small { display:block; color:var(--sub); font:500 11px var(--mono) }
+.tag { font-size:10.5px; font-weight:600; letter-spacing:.06em; border-radius:6px; padding:1px 6px; background:var(--info); color:var(--info-fg) }
+.grp { display:grid; gap:2px }
+.grp > span { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--sub); padding:0 8px 4px }
+.nav { display:flex; align-items:center; gap:10px; min-height:34px; padding:0 8px; border-radius:8px; color:var(--sub); text-decoration:none; font-weight:500; border:1px solid transparent }
+.nav[aria-current="page"] { background:var(--card); color:var(--ink); box-shadow:var(--e1); border-color:var(--line) }
+.nav[aria-current="page"] .i { color:var(--neel) }
+.side .foot { margin-top:auto; display:grid; gap:2px; border-top:1px solid var(--line); padding-top:10px }
+.who { display:flex; align-items:center; gap:8px; padding:6px 8px; font-size:12.5px; color:var(--sub) }
+.main { padding:24px 28px; display:grid; gap:14px; align-content:start; min-width:0 }
+.ph { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap }
+.ph h3 { font:600 22px/28px var(--font) }
+.ph .meta { color:var(--sub); font-size:13px; margin-top:2px }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--edge); background:var(--card); box-shadow:var(--e1); font-weight:500; font-size:14px; cursor:pointer; white-space:nowrap; text-decoration:none; color:var(--ink) }
+.btn.primary { background:var(--neel); border-color:var(--neel); color:#fff; box-shadow:none }
+.btn.ghost { background:none; border-color:transparent; box-shadow:none; color:var(--sub) }
+.btn.danger { background:var(--bad-fg); border-color:var(--bad-fg); color:#fff; box-shadow:none }
+.btn.sm { min-height:30px; padding:0 10px; font-size:13px }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--e1); min-width:0 }
+.card.pad { padding:20px }
+.card h4 { font-size:16px; font-weight:600 }
+.chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font-size:12px; font-weight:500; white-space:nowrap }
+.chip::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor }
+.chip.ok { background:var(--ok); color:var(--ok-fg) } .chip.warn { background:var(--warn); color:var(--warn-fg) } .chip.neu { background:var(--muted); color:var(--sub) } .chip.info { background:var(--info); color:var(--info-fg) }
+.tg { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:6px; padding:1px 7px; font-size:12px; color:var(--sub); white-space:nowrap }
+.muted { color:var(--sub); font-size:13px }
+.mono { font:500 12.5px var(--mono) }
+.num { font-variant-numeric:tabular-nums }
+/* view tabs */
+.tabs { display:flex; gap:18px; border-bottom:1px solid var(--line); overflow-x:auto; scrollbar-width:none }
+.tabs a { display:inline-flex; align-items:center; gap:6px; padding:8px 0; color:var(--sub); text-decoration:none; font-weight:500; white-space:nowrap; border-bottom:2px solid transparent; margin-bottom:-1px }
+.tabs a[aria-current="page"] { color:var(--ink); border-color:var(--neel) }
+.tabs a span { font-size:11.5px; background:var(--muted); border-radius:999px; padding:0 6px; color:var(--sub) }
+.tools { display:flex; gap:8px; flex-wrap:wrap }
+.search { flex:1; min-width:180px; max-width:360px; display:flex; align-items:center; gap:8px; min-height:36px; border:1px solid var(--field); border-radius:8px; background:var(--card); padding:0 10px; color:var(--sub) }
+.select { min-height:36px; border:1px solid var(--field); border-radius:8px; background:var(--card); padding:0 10px; display:inline-flex; align-items:center; gap:6px }
+/* tables */
+.tbl { width:100%; border-collapse:collapse }
+.tbl th { background:var(--sunk); height:36px; text-align:left; font-size:12px; font-weight:500; color:var(--sub); padding:0 12px; border-bottom:1px solid var(--line) }
+.tbl td { height:56px; padding:0 12px; border-bottom:1px solid var(--line); vertical-align:middle }
+.tbl tr:last-child td { border-bottom:0 }
+.tbl .r { text-align:right }
+.thumb { width:36px; height:44px; border-radius:6px; flex:none; background:linear-gradient(160deg, #E9C9A8, #B56D4B) }
+.thumb.b { background:linear-gradient(160deg, #C9D6E8, #4C6A93) } .thumb.c { background:linear-gradient(160deg, #EAD9A0, #A3791F) } .thumb.d { background:linear-gradient(160deg, #D9C7DE, #7A4E86) }
+.pcell { display:flex; align-items:center; gap:10px; min-width:0 }
+.pcell b { display:block; font-weight:500 } .pcell small { display:block; color:var(--sub); font-size:12px }
+.pcell a { color:inherit; text-decoration:none }
+.pager { display:flex; justify-content:space-between; align-items:center; color:var(--sub); font-size:13px }
+/* panel */
+.panel { display:grid; justify-items:center; text-align:center; gap:14px; padding:56px 20px }
+.panel .tile { width:64px; height:64px; border-radius:12px; background:var(--muted); display:grid; place-items:center; color:var(--sub) }
+.panel .tile svg { width:28px; height:28px }
+.panel h4 { font-size:16px; font-weight:600 }
+/* team */
+.team { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; align-items:start }
+@media (max-width:1280px) { .team { grid-template-columns:minmax(0,1fr) } }
+.person { display:grid; grid-template-columns:36px minmax(0,1.2fr) minmax(0,1fr) auto; gap:12px; align-items:center; padding:12px 16px; border-top:1px solid var(--line) }
+.person:first-child { border-top:0 }
+.av { width:36px; height:36px; border-radius:50%; background:var(--info); color:var(--info-fg); display:grid; place-items:center; font-weight:600; font-size:13px }
+.person b { font-weight:500; display:flex; gap:8px; align-items:center; flex-wrap:wrap; overflow-wrap:anywhere }
+.person > div { min-width:0 }
+.person .muted { font-size:12.5px }
+.stores { display:flex; flex-wrap:wrap; gap:6px }
+.st { border:1px solid var(--field); border-radius:999px; padding:3px 10px; font-size:12px; background:var(--card) }
+.st[aria-pressed="true"] { background:var(--ink); color:var(--paper); border-color:var(--ink) }
+.acts { display:flex; gap:6px; align-items:center; justify-content:flex-end; flex-wrap:wrap }
+.role-sel { min-height:30px; border:1px solid var(--field); border-radius:8px; background:var(--card); padding:0 8px; font-size:13px }
+.matrix { width:100%; border-collapse:collapse; font-size:13px }
+.matrix th { font-size:12px; font-weight:500; color:var(--sub); padding:6px 4px; text-align:center }
+.matrix th:first-child, .matrix td:first-child { text-align:left; padding-left:0 }
+.matrix td { padding:8px 4px; border-top:1px solid var(--line); text-align:center; white-space:nowrap }
+.matrix td:first-child { white-space:normal }
+.y { color:var(--ok-fg) } .no { color:var(--field) } .w { font-size:12px; color:var(--sub) }
+/* dialog */
+.dialog { border:1px solid var(--line); border-radius:16px; background:var(--card); box-shadow:var(--e3); padding:20px; display:grid; gap:16px }
+.dialog h4 { font-size:18px; font-weight:600 }
+.field { display:grid; gap:6px }
+.field > label, .field > .lbl { font-size:13px; font-weight:500 }
+.input { min-height:36px; border:1px solid var(--field); border-radius:8px; background:var(--card); padding:0 10px; display:flex; align-items:center; font-size:14px }
+.seg { display:inline-flex; background:var(--muted); border-radius:10px; padding:3px; gap:2px; justify-self:start }
+.seg button { border:0; background:none; padding:0 14px; border-radius:7px; font-size:13.5px; font-weight:500; min-height:30px; cursor:pointer; color:var(--sub); transition:background var(--base) var(--e-snap), color var(--fast) var(--e-std) }
+.seg button[aria-checked="true"] { background:var(--card); color:var(--ink); box-shadow:var(--e1) }
+.can { display:grid; gap:6px; font-size:13px }
+.can span { display:flex; align-items:center; gap:8px }
+.can .off { color:var(--sub) }
+.dfoot { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap }
+.toast { display:flex; align-items:center; gap:10px; background:var(--bar); color:var(--bar-fg); border-radius:10px; padding:10px 12px; box-shadow:var(--e3); font-size:13.5px; max-width:440px }
+.toast .mk { width:20px; height:20px; border-radius:50%; background:#2F9E62; display:grid; place-items:center; color:#fff; flex:none }
+.toast .x { margin-left:auto; background:none; border:0; color:inherit; opacity:.7; cursor:pointer; min-width:24px; min-height:24px }
+/* clients */
+.client { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto; gap:12px; align-items:center; padding:12px 16px; border-top:1px solid var(--line) }
+.client:first-child { border-top:0 }
+.client b { font-weight:500; display:block }
+.head-row { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto; gap:12px; padding:8px 16px; background:var(--sunk); font-size:12px; font-weight:500; color:var(--sub); border-bottom:1px solid var(--line); border-radius:12px 12px 0 0 }
+/* brand surface (join) */
+.bs { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--paper); box-shadow:var(--e1) }
+.stage { background:#171615; color:#FAFAF9; padding:14px 16px; display:flex; align-items:center; justify-content:space-between }
+.markw { font-weight:600; font-size:17px; display:flex; align-items:center; gap:8px }
+.markw i { width:22px; height:22px; border-radius:6px; background:var(--rani); display:grid; place-items:center; font-style:normal; color:#fff; font-size:13px }
+.ptag { font-size:10.5px; font-weight:600; letter-spacing:.08em; border:1px solid rgba(250,250,249,.35); border-radius:999px; padding:2px 8px }
+.selv { height:6px; background:repeating-linear-gradient(90deg, #E8A317 0 6px, transparent 6px 10px); opacity:.85 }
+.bs .body { padding:22px 20px; display:grid; gap:14px }
+.bs h4 { font-size:22px; line-height:28px; font-weight:600 }
+.bigbtn { display:flex; align-items:center; justify-content:center; min-height:44px; border-radius:8px; background:var(--ink); color:var(--paper); font-weight:500; border:0; position:relative }
+.bigbtn::after { content:""; position:absolute; left:33%; right:33%; bottom:0; height:2px; border-radius:2px; background:var(--rani) }
+/* phone frames */
+.phone { border:1px solid var(--line); border-radius:28px; overflow:hidden; background:var(--paper); box-shadow:var(--e2); display:flex; flex-direction:column; min-height:640px; max-width:360px; width:100% }
+.phone .pt { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line); background:var(--card) }
+.phone .pt b { font-size:14px; font-weight:600 } .phone .pt small { display:block; font:500 11px var(--mono); color:var(--sub) }
+.phone .pm { padding:16px; display:grid; gap:12px; flex:1; align-content:start }
+.phone .pm h3 { font:600 20px/26px var(--font) }
+.prow { display:grid; grid-template-columns:36px minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px 12px; border-top:1px solid var(--line) }
+.prow:first-child { border-top:0 }
+.prow b { font-weight:500; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.prow small { color:var(--sub); font-size:12px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:2px }
+.bbar { display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid var(--line); background:var(--card) }
+.bbar a { display:grid; justify-items:center; gap:2px; padding:8px 0 10px; min-height:56px; font-size:11.5px; color:var(--sub); text-decoration:none; font-weight:500 }
+.bbar a .i { width:22px; height:22px }
+.bbar a[aria-current="page"] { color:var(--ink) } .bbar a[aria-current="page"] .i { color:var(--neel) }
+.sheet-wrap { position:relative; flex:1; display:flex; flex-direction:column; justify-content:flex-end; background:rgba(28,25,23,.45) }
+.sheet { background:var(--card); border-radius:16px 16px 0 0; padding:18px 16px 20px; display:grid; gap:14px }
+.sheet .grab { width:36px; height:4px; border-radius:4px; background:var(--edge); justify-self:center }
+.sheet .dfoot { flex-direction:column-reverse } .sheet .dfoot .btn { width:100%; min-height:44px }
+.people { display:grid }
+.prsn { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:12px 16px; border-top:1px solid var(--line) }
+.prsn:first-child { border-top:0 }
+.prsn .grow { flex:1; min-width:0 } .prsn b { font-weight:500; display:block }
+.prsn .since { width:160px; color:var(--sub); font-size:13px }
+@media (max-width:760px) {
+  .app { grid-template-columns:minmax(0,1fr) } .side { display:none } .main { padding:16px }
+  .person { grid-template-columns:36px minmax(0,1fr) } .person .stores, .person .acts { grid-column:2 } .person .acts { justify-content:flex-start }
+  .tbl .hide { display:none } .prsn .since { width:auto }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-products" viewBox="0 0 24 24"><path d="M20 7 12 3 4 7v10l8 4 8-4V7Z"/><path d="m4 7 8 4 8-4M12 11v10"/></symbol>
+  <symbol id="i-coll" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="8" height="6" rx="1.5"/><rect x="13" y="14" width="8" height="6" rx="1.5"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4-4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></symbol>
+  <symbol id="i-dash" viewBox="0 0 24 24"><path d="M7 12h10"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 6.1A9.7 9.7 0 0 1 12 6c5 0 8.5 4.5 9 6-.3.9-1.3 2.5-2.9 3.8M6.6 7.6C4.6 8.9 3.4 10.9 3 12c.5 1.5 4 6 9 6 1.6 0 3-.4 4.2-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-clients" viewBox="0 0 24 24"><path d="M4 20V8l8-4 8 4v12"/><path d="M9 20v-6h6v6"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M21 12v2"/></symbol>
+  <symbol id="i-team" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c.6-3.4 3-5.5 6-5.5s5.4 2.1 6 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.5c2.3.3 4 2 4.5 4.5"/></symbol>
+  <symbol id="i-details" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-store" viewBox="0 0 24 24"><path d="M4 9 5.5 4h13L20 9"/><path d="M4 9h16v2a3 3 0 0 1-5.3 1.9A3 3 0 0 1 12 14a3 3 0 0 1-2.7-1.1A3 3 0 0 1 4 11V9Z"/><path d="M5 14v6h14v-6"/></symbol>
+</svg>
+
+<div class="doc">
+  <header class="doc-top">
+    <h1>Builders</h1>
+    <nav class="toc" aria-label="On this page"><a href="#owner">Partner owner</a><a href="#builder">Builder</a><a href="#refused">Refused</a><a href="#brand">The brand</a></nav>
+  </header>
+
+  <!-- ═══ THE PARTNER OWNER ═══ -->
+  <section class="part" id="owner">
+    <h2>Partner owner · Team</h2>
+    <div class="pair solo">
+      <div>
+        <p class="lab"><b>1</b>Team, with a Builder and the Roles card</p>
+        <div class="app">
+          <aside class="side" aria-label="Partner workspace">
+            <div class="store"><span class="mono-t">P</span><div><b>Pixel &amp; Thread</b><span class="tag">PARTNER</span></div></div>
+            <div class="grp"><a class="nav" href="#owner"><svg class="i"><use href="#i-clients"/></svg>Clients</a><a class="nav" aria-current="page" href="#owner"><svg class="i"><use href="#i-team"/></svg>Team</a><a class="nav" href="#owner"><svg class="i"><use href="#i-key"/></svg>Passkeys</a><a class="nav" href="#owner"><svg class="i"><use href="#i-details"/></svg>Your details</a></div>
+            <div class="foot"><span class="who">ananya@pixelthread.in</span></div>
+          </aside>
+          <div class="main">
+            <div class="ph"><h3>Team</h3><button class="btn primary" id="open-invite">Invite</button></div>
+            <div class="team">
+              <div class="card" role="list" aria-label="People">
+                <div class="person" role="listitem"><span class="av">Y</span><div><b>You <span class="chip info">Owner</span></b></div><div class="muted">Every store</div><div></div></div>
+                <div class="person" role="listitem"><span class="av">R</span><div><b>rohan@pixelthread.in</b><span class="muted">Lead · 1 passkey</span></div>
+                  <div class="stores" role="group" aria-label="Stores"><span class="st" aria-pressed="true">Kesar Studio</span><span class="st" aria-pressed="true">Noor Threads</span><span class="st">Bandhej Co.</span></div>
+                  <div class="acts"><span class="chip ok">Active</span><select class="role-sel" aria-label="Role for rohan@pixelthread.in" data-who="Rohan"><option selected>Lead</option><option>Builder</option></select><button class="btn ghost sm">Remove</button></div></div>
+                <div class="person" role="listitem"><span class="av">M</span><div><b>meera@pixelthread.in</b><span class="muted">Builder · 1 passkey</span></div>
+                  <div class="stores" role="group" aria-label="Stores"><span class="st" aria-pressed="true">Kesar Studio</span><span class="st">Noor Threads</span><span class="st">Bandhej Co.</span></div>
+                  <div class="acts"><span class="chip ok">Active</span><select class="role-sel" aria-label="Role for meera@pixelthread.in" data-who="Meera"><option>Lead</option><option selected>Builder</option></select><button class="btn ghost sm">Remove</button></div></div>
+                <div class="person" role="listitem"><span class="av">D</span><div><b>dev@pixelthread.in</b><span class="muted">Builder · invited · 6 days left</span></div>
+                  <div class="stores" role="group" aria-label="Stores"><span class="st">Kesar Studio</span><span class="st">Noor Threads</span><span class="st" aria-pressed="true">Bandhej Co.</span></div>
+                  <div class="acts"><button class="btn sm">Send invite again</button><select class="role-sel" aria-label="Role for dev@pixelthread.in" data-who="Dev"><option>Lead</option><option selected>Builder</option></select><button class="btn ghost sm">Withdraw</button></div></div>
+              </div>
+              <aside class="card pad" style="display:grid;gap:10px" aria-label="Roles">
+                <h4>Roles</h4>
+                <table class="matrix">
+                  <thead><tr><th scope="col"><span class="sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">In a store</span></th><th scope="col">Owner</th><th scope="col">Lead</th><th scope="col">Builder</th></tr></thead>
+                  <tbody>
+                    <tr><td>Orders and shoppers</td><td><svg class="i sm y" aria-label="Yes"><use href="#i-check"/></svg></td><td><svg class="i sm y" aria-label="Yes"><use href="#i-check"/></svg></td><td><svg class="i sm no" aria-label="No"><use href="#i-dash"/></svg></td></tr>
+                    <tr><td>Costs and profit</td><td class="w">Until handover</td><td class="w">Until handover</td><td><svg class="i sm no" aria-label="No"><use href="#i-dash"/></svg></td></tr>
+                    <tr><td>Products</td><td class="w">Edit</td><td class="w">Edit</td><td class="w">View</td></tr>
+                    <tr><td>Look and settings</td><td><svg class="i sm y" aria-label="Yes"><use href="#i-check"/></svg></td><td><svg class="i sm y" aria-label="Yes"><use href="#i-check"/></svg></td><td><svg class="i sm no" aria-label="No"><use href="#i-dash"/></svg></td></tr>
+                    <tr><td>Hand over</td><td><svg class="i sm y" aria-label="Yes"><use href="#i-check"/></svg></td><td><svg class="i sm no" aria-label="No"><use href="#i-dash"/></svg></td><td><svg class="i sm no" aria-label="No"><use href="#i-dash"/></svg></td></tr>
+                    <tr><td>Team</td><td><svg class="i sm y" aria-label="Yes"><use href="#i-check"/></svg></td><td><svg class="i sm no" aria-label="No"><use href="#i-dash"/></svg></td><td><svg class="i sm no" aria-label="No"><use href="#i-dash"/></svg></td></tr>
+                  </tbody>
+                </table>
+              </aside>
+            </div>
+            <div class="toast" role="status" id="role-toast"><span class="mk"><svg class="i sm"><use href="#i-check"/></svg></span><span id="role-toast-t">Meera is now a Builder.</span><button class="x" aria-label="Close">×</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="pair">
+      <div>
+        <p class="lab"><b>2</b>Invite, Role: Builder</p>
+        <div class="dialog" role="dialog" aria-labelledby="inv-t" id="invite" style="max-width:440px">
+          <h4 id="inv-t">Invite to your team</h4>
+          <div class="field"><label for="inv-e">Work email</label><div class="input" id="inv-e">meera@pixelthread.in</div></div>
+          <div class="field"><span class="lbl" id="role-l">Role</span>
+            <div class="seg" role="radiogroup" aria-labelledby="role-l" id="role-seg"><button role="radio" aria-checked="false" data-r="lead">Lead</button><button role="radio" aria-checked="true" data-r="builder">Builder</button></div>
+            <div class="can" id="can"></div>
+          </div>
+          <fieldset class="field" style="border:0;padding:0;margin:0"><legend class="lbl" style="font-size:13px;font-weight:500;margin-bottom:6px">Stores they’ll work on</legend>
+            <div class="stores"><span class="st" aria-pressed="true">Kesar Studio</span><span class="st">Noor Threads</span><span class="st">Bandhej Co.</span></div>
+          </fieldset>
+          <div class="dfoot"><button class="btn">Cancel</button><button class="btn primary">Send invite</button></div>
+        </div>
+      </div>
+      <div>
+        <p class="lab"><b>3</b>Phone · Invite as a sheet</p>
+        <div class="phone">
+          <div class="pt"><div><b>Team</b><small>Pixel &amp; Thread</small></div></div>
+          <div class="sheet-wrap"><div class="sheet" role="dialog" aria-labelledby="inv-t2">
+            <span class="grab"></span>
+            <h4 id="inv-t2" style="font-size:18px;font-weight:600">Invite to your team</h4>
+            <div class="field"><label>Work email</label><div class="input" style="min-height:44px">dev@pixelthread.in</div></div>
+            <div class="field"><span class="lbl">Role</span><div class="seg" role="radiogroup" aria-label="Role"><button role="radio" aria-checked="false">Lead</button><button role="radio" aria-checked="true">Builder</button></div>
+              <div class="can"><span><svg class="i sm y"><use href="#i-check"/></svg>Products and the store preview</span><span class="off"><svg class="i sm no"><use href="#i-eyeoff"/></svg>No orders, shoppers or costs</span></div></div>
+            <div class="field"><span class="lbl">Stores they’ll work on</span><div class="stores"><span class="st">Kesar Studio</span><span class="st">Noor Threads</span><span class="st" aria-pressed="true">Bandhej Co.</span></div></div>
+            <div class="dfoot"><button class="btn">Cancel</button><button class="btn primary">Send invite</button></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ THE BUILDER ═══ -->
+  <section class="part" id="builder">
+    <h2>Builder · workspace and console</h2>
+    <div class="pair">
+      <div>
+        <p class="lab"><b>4</b>Joining, from the invite</p>
+        <div class="bs" style="max-width:420px">
+          <div class="stage"><span class="markw"><i>f</i>frrata</span><span class="ptag">PARTNER</span></div><div class="selv"></div>
+          <div class="body">
+            <h4>Join Pixel &amp; Thread as a Builder</h4>
+            <div class="stores"><span class="tg">Kesar Studio</span></div>
+            <button class="bigbtn">Join Pixel &amp; Thread</button>
+          </div>
+        </div>
+        <p class="lab" style="margin-top:22px"><b>5</b>Clients, a Builder’s view</p>
+        <div class="app" style="min-height:360px">
+          <aside class="side" aria-label="Partner workspace">
+            <div class="store"><span class="mono-t">P</span><div><b>Pixel &amp; Thread</b><span class="tag">PARTNER</span></div></div>
+            <div class="grp"><a class="nav" aria-current="page" href="#builder"><svg class="i"><use href="#i-clients"/></svg>Clients</a><a class="nav" href="#builder"><svg class="i"><use href="#i-key"/></svg>Passkeys</a></div>
+            <div class="foot"><span class="who">meera@pixelthread.in</span></div>
+          </aside>
+          <div class="main">
+            <div class="ph"><h3>Clients</h3></div>
+            <div class="card">
+              <div class="head-row" aria-hidden="true"><span>Store</span><span>Stage</span><span></span></div>
+              <div class="client"><div><b>Kesar Studio</b><span class="mono muted">kesar-studio.frrata.shop</span></div><div><span class="chip warn">Building</span></div><div><button class="btn">Open store</button></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="lab"><b>6</b>Phone · Clients</p>
+        <div class="phone" style="min-height:420px">
+          <div class="pt"><div><b>Clients</b><small>Pixel &amp; Thread</small></div></div>
+          <div class="pm"><h3>Clients</h3>
+            <div class="card"><div class="client" style="grid-template-columns:minmax(0,1fr) auto"><div><b>Kesar Studio</b><span class="chip warn" style="margin-top:4px">Building</span></div><button class="btn">Open store</button></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pair">
+      <div>
+        <p class="lab"><b>7</b>Console · Products, view only</p>
+        <div class="app">
+          <aside class="side" aria-label="Console">
+            <div class="store"><span class="mono-t">K</span><div><b>Kesar Studio</b><small>kesar-studio.frrata.shop</small></div></div>
+            <div class="grp"><span>Catalogue</span><a class="nav" aria-current="page" href="#builder"><svg class="i"><use href="#i-products"/></svg>Products</a><a class="nav" href="#builder"><svg class="i"><use href="#i-coll"/></svg>Collections</a></div>
+            <div class="foot"><a class="nav" href="#builder"><svg class="i"><use href="#i-ext"/></svg>Preview store</a><a class="nav" href="#builder"><svg class="i"><use href="#i-clients"/></svg>Partner workspace</a><span class="who">meera@pixelthread.in · Builder</span></div>
+          </aside>
+          <div class="main">
+            <div class="ph"><h3>Products</h3></div>
+            <nav class="tabs" aria-label="Filter products"><a aria-current="page" href="#builder">All <span>42</span></a><a href="#builder">Active <span>31</span></a><a href="#builder">Draft <span>8</span></a><a href="#builder">Unlisted <span>2</span></a><a href="#builder">Archived <span>1</span></a><a href="#builder">Low stock <span>4</span></a></nav>
+            <div class="tools"><div class="search"><svg class="i sm"><use href="#i-search"/></svg>Search name, SKU or tag</div><span class="select">Sort: Last edited<svg class="i sm"><use href="#i-down"/></svg></span></div>
+            <div class="card">
+              <table class="tbl">
+                <thead><tr><th>Product</th><th>Status</th><th class="hide">Sizes</th><th class="r hide">Stock</th><th class="r">Price</th><th aria-label="Open"></th></tr></thead>
+                <tbody>
+                  <tr><td><div class="pcell"><span class="thumb"></span><a href="#builder"><b>Gulabi linen kurta set</b><small>Kurta set · edited 2 h ago</small></a></div></td><td><span class="chip ok">Active</span></td><td class="hide">6 sizes</td><td class="r num hide">32</td><td class="r num">₹2,490</td><td><svg class="i sm" style="color:var(--sub)"><use href="#i-ext"/></svg></td></tr>
+                  <tr><td><div class="pcell"><span class="thumb b"></span><a href="#builder"><b>Neel bandhani dupatta</b><small>Dupatta · edited yesterday</small></a></div></td><td><span class="chip ok">Active</span></td><td class="hide">One size</td><td class="r num hide">3</td><td class="r num">₹1,290</td><td><svg class="i sm" style="color:var(--sub)"><use href="#i-ext"/></svg></td></tr>
+                  <tr><td><div class="pcell"><span class="thumb c"></span><a href="#builder"><b>Haldi chanderi saree</b><small>Saree · edited 12 Nov</small></a></div></td><td><span class="chip neu">Draft</span></td><td class="hide">One size</td><td class="r num hide">Made to order</td><td class="r num">₹6,800</td><td><svg class="i sm" style="color:var(--sub)"><use href="#i-ext"/></svg></td></tr>
+                  <tr><td><div class="pcell"><span class="thumb d"></span><a href="#builder"><b>Jamuni co-ord set</b><small>Co-ord · edited 10 Nov</small></a></div></td><td><span class="chip ok">Active</span></td><td class="hide">5 sizes</td><td class="r num hide">Sold out</td><td class="r num">₹3,150</td><td><svg class="i sm" style="color:var(--sub)"><use href="#i-ext"/></svg></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pager"><span>Showing 1–4 of 42</span><span class="tools"><button class="btn sm">Previous</button><button class="btn sm">Next</button></span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="lab"><b>8</b>Phone · Products</p>
+        <div class="phone">
+          <div class="pt"><span class="store" style="padding:0"><span class="mono-t">K</span></span><div><b>Kesar Studio</b><small>kesar-studio.frrata.shop</small></div></div>
+          <div class="pm"><h3>Products</h3>
+            <nav class="tabs" aria-label="Filter products"><a aria-current="page" href="#builder">All <span>42</span></a><a href="#builder">Active <span>31</span></a><a href="#builder">Draft <span>8</span></a><a href="#builder">Unlisted <span>2</span></a></nav>
+            <div class="search" style="max-width:none;min-height:44px"><svg class="i sm"><use href="#i-search"/></svg>Search name, SKU or tag</div>
+            <div class="card">
+              <div class="prow"><span class="thumb"></span><div><b>Gulabi linen kurta set</b><small><span class="chip ok">Active</span>32 in stock</small></div><span class="num">₹2,490</span></div>
+              <div class="prow"><span class="thumb b"></span><div><b>Neel bandhani dupatta</b><small><span class="chip ok">Active</span>3 in stock</small></div><span class="num">₹1,290</span></div>
+              <div class="prow"><span class="thumb c"></span><div><b>Haldi chanderi saree</b><small><span class="chip neu">Draft</span>Made to order</small></div><span class="num">₹6,800</span></div>
+            </div>
+          </div>
+          <nav class="bbar" aria-label="Console"><a aria-current="page" href="#builder"><svg class="i"><use href="#i-products"/></svg>Products</a><a href="#builder"><svg class="i"><use href="#i-coll"/></svg>Collections</a><a href="#builder"><svg class="i"><use href="#i-ext"/></svg>Preview</a></nav>
+        </div>
+      </div>
+    </div>
+
+    <div class="pair">
+      <div>
+        <p class="lab"><b>9</b>Console · Collections, view only</p>
+        <div class="app" style="min-height:340px">
+          <aside class="side" aria-label="Console">
+            <div class="store"><span class="mono-t">K</span><div><b>Kesar Studio</b><small>kesar-studio.frrata.shop</small></div></div>
+            <div class="grp"><span>Catalogue</span><a class="nav" href="#builder"><svg class="i"><use href="#i-products"/></svg>Products</a><a class="nav" aria-current="page" href="#builder"><svg class="i"><use href="#i-coll"/></svg>Collections</a></div>
+            <div class="foot"><a class="nav" href="#builder"><svg class="i"><use href="#i-ext"/></svg>Preview store</a></div>
+          </aside>
+          <div class="main">
+            <div class="ph"><h3>Collections</h3></div>
+            <div class="card">
+              <table class="tbl">
+                <thead><tr><th>Collection</th><th>Made by</th><th class="r">Products</th><th aria-label="Open"></th></tr></thead>
+                <tbody>
+                  <tr><td><a href="#builder" style="color:inherit;text-decoration:none"><b style="font-weight:500">Festive edit</b></a></td><td class="muted">Hand-picked</td><td class="r num">18</td><td><svg class="i sm" style="color:var(--sub)"><use href="#i-ext"/></svg></td></tr>
+                  <tr><td><a href="#builder" style="color:inherit;text-decoration:none"><b style="font-weight:500">Under ₹2,000</b></a></td><td class="muted">Rules</td><td class="r num">11</td><td><svg class="i sm" style="color:var(--sub)"><use href="#i-ext"/></svg></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div></div>
+    </div>
+  </section>
+
+  <!-- ═══ REFUSED ═══ -->
+  <section class="part" id="refused">
+    <h2>Builder · a page that isn’t theirs</h2>
+    <div class="pair">
+      <div>
+        <p class="lab"><b>10</b>/console/orders opened from a link</p>
+        <div class="app" style="min-height:380px">
+          <aside class="side" aria-label="Console">
+            <div class="store"><span class="mono-t">K</span><div><b>Kesar Studio</b><small>kesar-studio.frrata.shop</small></div></div>
+            <div class="grp"><span>Catalogue</span><a class="nav" href="#refused"><svg class="i"><use href="#i-products"/></svg>Products</a><a class="nav" href="#refused"><svg class="i"><use href="#i-coll"/></svg>Collections</a></div>
+            <div class="foot"><a class="nav" href="#refused"><svg class="i"><use href="#i-ext"/></svg>Preview store</a></div>
+          </aside>
+          <div class="main">
+            <div class="panel"><span class="tile"><svg class="i"><use href="#i-lock"/></svg></span><h4>Builders don’t open this page</h4><a class="btn primary" href="#builder">Open products</a></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="lab"><b>11</b>Phone · the same</p>
+        <div class="phone" style="min-height:480px">
+          <div class="pt"><span class="store" style="padding:0"><span class="mono-t">K</span></span><div><b>Kesar Studio</b><small>kesar-studio.frrata.shop</small></div></div>
+          <div class="pm"><div class="panel" style="padding:48px 8px"><span class="tile"><svg class="i"><use href="#i-lock"/></svg></span><h4>Builders don’t open this page</h4><a class="btn primary" style="min-height:44px" href="#builder">Open products</a></div></div>
+          <nav class="bbar" aria-label="Console"><a href="#builder"><svg class="i"><use href="#i-products"/></svg>Products</a><a href="#builder"><svg class="i"><use href="#i-coll"/></svg>Collections</a><a href="#builder"><svg class="i"><use href="#i-ext"/></svg>Preview</a></nav>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ THE BRAND ═══ -->
+  <section class="part" id="brand">
+    <h2>The brand · Settings › People</h2>
+    <div class="pair">
+      <div>
+        <p class="lab"><b>12</b>People, with the partner’s Builder</p>
+        <div class="card people" style="max-width:760px">
+          <div class="prsn"><div class="grow"><b>Asha Kapoor</b><span class="mono muted">asha@kesarstudio.in</span></div><span class="chip neu">Owner</span><span class="since">You</span></div>
+          <div class="prsn"><div class="grow"><b>Pixel &amp; Thread</b><span class="mono muted">ananya@pixelthread.in</span></div><span class="chip info">Partner</span><span class="since">Built this store · 2 Nov</span><button class="btn ghost sm">Remove</button></div>
+          <div class="prsn"><div class="grow"><b>rohan@pixelthread.in · Pixel &amp; Thread</b><span class="mono muted">rohan@pixelthread.in</span></div><span class="chip info">Partner · Lead</span><span class="since">Since 4 Nov</span></div>
+          <div class="prsn"><div class="grow"><b>meera@pixelthread.in · Pixel &amp; Thread</b><span class="mono muted">meera@pixelthread.in</span></div><span class="chip info">Partner · Builder</span><span class="since">Since 15 Nov</span></div>
+        </div>
+      </div>
+      <div></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const CAN = {
+  builder: [[1, 'Products and the store preview'], [0, 'No orders, shoppers or costs']],
+  lead: [[1, 'Orders, products, look and settings'], [0, 'No hand over or team']],
+}
+const can = document.getElementById('can')
+const draw = (r) => { can.innerHTML = CAN[r].map(([ok, t]) => `<span class="${ok ? '' : 'off'}"><svg class="i sm ${ok ? 'y' : 'no'}"><use href="#${ok ? 'i-check' : 'i-eyeoff'}"/></svg>${t}</span>`).join('') }
+draw('builder')
+document.getElementById('role-seg').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-r]'); if (!b) return
+  for (const x of e.currentTarget.querySelectorAll('[data-r]')) x.setAttribute('aria-checked', String(x === b))
+  draw(b.dataset.r)
+})
+for (const s of document.querySelectorAll('.role-sel')) s.addEventListener('change', () => {
+  document.getElementById('role-toast-t').textContent = `${s.dataset.who} is now a ${s.value}.`
+})
+</script>
