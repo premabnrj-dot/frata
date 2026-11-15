@@ -4,7 +4,7 @@ Status: draft (plan; architecture, tenancy, security and words reviews folded in
 "builders approved") · Spec: `docs/specs/2026-11-12-studio-intake-and-team.md` § Partner teams · Row: T1c in
 `docs/plans/2026-11-12-studio-build.md` · Builds on T1a (teams, 0123–0124) and T1b (partner passkeys, 0128–0129) ·
 Approved source mockup: Studio v2.4 Team (https://claude.ai/artifact/KiqKqrFCx4enB8KUrnh5Du) · **Final mockup of this
-phase:** (link added when published)
+phase:** https://claude.ai/artifact/LnwWWrV37oQgbnfmc5bvFP (`docs/mockups/2026-11-15-t1c-builders.html`)
 
 ## Goal
 Ranked problem 5 (a premium storefront, built as code by partners; partners get the builder first). An agency puts its
