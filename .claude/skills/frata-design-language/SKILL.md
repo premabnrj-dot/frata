@@ -489,8 +489,8 @@ The nine rules (board Rules), binding on every Admin screen and mockup:
 - **Support mode** is a full-width banner above every console page: whose
   store, the reason, time left, "Back to Admin", "End now". It cannot be
   dismissed and uses a solid dark amber with white text (≥ 4.5:1).
-- **A button that acts on a merchant names them** ("Open Kesar Studio's
-  console", "Move Kesar Studio to Scale"); cancel names the safe outcome
+- **A button that acts on a merchant names them** ("Move Kesar Studio to Scale"), except **"Open console"**, which
+  sits on the merchant's own page or row and stays short (owner, 2026-11-15); cancel names the safe outcome
   ("Stay in Frrata Admin", "Keep Growth"). Never "Continue" or "OK".
 - **A plan price is shown with its version**, and a change says what moves
   ("orders included go from 1,500 to 5,000") before it is confirmed.

@@ -1,5 +1,5 @@
 # Neel N4 — Frrata Admin, one job in view at a time
-Status: active · Date: 2026-11-15 · Mockup: https://claude.ai/artifact/YPGo8SV7vqNu9vyCp5vCSQ (source
+Status: done · Date: 2026-11-15 · Mockup: https://claude.ai/artifact/YPGo8SV7vqNu9vyCp5vCSQ (source
 `docs/mockups/2026-11-15-neel-admin/`) · Approved: owner, 2026-11-15 ("mockup approved. please finishup. keep master admin
 for frrata admin … It'll be Apps. across the whole ecosystem. remove inconsistencies.") · Hand-over: the orchestrator's
 Partners and Staff pass (branch claude/amazing-wright-7irwn3, `docs/mockups/2026-11-15-admin-partners-staff/`), folded in.
@@ -197,23 +197,24 @@ merchant's band and tabs, a dialog, Record refund, Activity filter, phone) writt
 ## Deviations (proposed; owner sees them before ship)
 | Mockup element | Built | Reason | Owner seen |
 |---|---|---|---|
-| Today's "Outbox has 214 waiting" row, and EkCode's paused codes | Not on Today or in the nav counts; each keeps its own "Needs you" on its page | Their reads take seconds (pg_stat_statements, table sizes, a per-store aggregate); on every Admin page they would slow all of Admin | — |
+| Today's "Outbox has 214 waiting" row, and EkCode's paused codes | Not on Today or in the nav counts; each keeps its own "Needs you" on its page | Their reads take seconds (pg_stat_statements, table sizes, a per-store aggregate); on every Admin page they would slow all of Admin | Yes, 2026-11-15 ("ship") |
 | "Modules" in the nav, Merchant, Merchants and Reference boards | "Apps" | Owner, 2026-11-15: "It'll be Apps. across the whole ecosystem." | Yes, 2026-11-15 |
 | Staff role "Admin" | "Master admin" | Owner, 2026-11-15: "keep master admin for frrata admin" | Yes, 2026-11-15 |
-| Record refund (no dialog drawn) | A dialog: the amount fixed at what was over-paid, UTR, date sent; Keep / Record refund; a fresh passkey first | The board drew the band's button only; the fields are what a refund record needs | — |
-| Names tab "Recently released" | "Held" | The list is names a store's past still holds (released only when a master admin releases one); "Recently released" would say the opposite | — |
-| A claim band: "Studio Kaaru uses it as its main address" | "Another store uses it as its main address" | Admin's domain read names the claimant only; naming the holder needs a second read per claim | — |
-| Apps row "· in Growth" | "· in plans" | The registry says a plan app is in some plans, not which; naming them needs the plan versions' features per app | — |
-| Billing month as a select that changes the page | A select and Show | No client script on Admin's server page for one control | — |
-| A partner's passkey band: Approve passkey in the band | Approve passkey opens the Passkeys tab, where the code is typed | The approval needs the owner's code read aloud and a passkey check (the existing panel); the band names the call to make | — |
-| Plans as rows (the feature matrix gone) | As drawn: one row a plan, Edit opens its page | Built as drawn; which apps a plan includes is on the plan's own page | — |
-| Activity filter chips | Two selects (Person, Kind) and Show; a store chip when a merchant's Activity tab opened it | No client script for the filters | — |
-| Trial card "no autopay yet" on a merchant's Plan tab | Not shown | The plan page reads the trial's facts; autopay is on Trials and Today | — |
-| Change plan's primary "Move to Growth" | "Move {store}" | The button would have to follow the radio chosen; a server form has no script to rename it | — |
-| "Keep with Studio Kaaru" on a claim's dialog | "Keep where it is" | As the claim band: the holder's name needs a second read per claim | — |
-| Theme's "Add pilot store" as one button; pilot rows "Since 12 Nov" | A store search with Add pilot store; rows without a date | Adding needs the store's name typed; the staging date is not stored | — |
-| Billing's GST export in More | In the Collect step | More here holds dialogs; the export is a download, shown once invoices are issued | — |
-| Plans' "Prices exclude GST" and the version | Kept | A price without GST said is a wrong price to a reader; the version says what a store is on | — |
-| Dialogs on a phone: handle, buttons stacked full width | The shared Dialog, as on the console | The console's dialog primitive (Neel N0/N1, approved); changing it moves every dialog in Frrata | — |
-| Plain tables; a white phone bar with blue "Today · 7"; a plain sidebar | Neel's DataTable (framed, tinted head), Admin's ink sidebar and phone bar with logo, icons and STAFF | The shared shell and table from Neel N0/N1 (approved); Admin keeps its ink frame (§ Frrata Admin) | — |
-| EkCode and Infrastructure figures as grey tiles; EkCode's period as a segmented track | One bordered strip; pills | The existing figure strip both pages share | — |
+| Record refund (no dialog drawn) | A dialog: the amount fixed at what was over-paid, UTR, date sent; Keep / Record refund; a fresh passkey first | The board drew the band's button only; the fields are what a refund record needs | Yes, 2026-11-15 ("ship") |
+| Names tab "Recently released" | "Held" | The list is names a store's past still holds (released only when a master admin releases one); "Recently released" would say the opposite | Yes, 2026-11-15 ("ship") |
+| A claim band: "Studio Kaaru uses it as its main address" | "Another store uses it as its main address" | Admin's domain read names the claimant only; naming the holder needs a second read per claim | Yes, 2026-11-15 ("ship") |
+| Apps row "· in Growth" | "· in plans" | The registry says a plan app is in some plans, not which; naming them needs the plan versions' features per app | Yes, 2026-11-15 ("ship") |
+| Billing month as a select that changes the page | A select and Show | No client script on Admin's server page for one control | Yes, 2026-11-15 ("ship") |
+| A partner's passkey band: Approve passkey in the band | Approve passkey opens the Passkeys tab, where the code is typed | The approval needs the owner's code read aloud and a passkey check (the existing panel); the band names the call to make | Yes, 2026-11-15 ("ship") |
+| Plans as rows (the feature matrix gone) | As drawn: one row a plan, Edit opens its page | Built as drawn; which apps a plan includes is on the plan's own page | Yes, 2026-11-15 ("ship") |
+| Activity filter chips | Two selects (Person, Kind) and Show; a store chip when a merchant's Activity tab opened it | No client script for the filters | Yes, 2026-11-15 ("ship") |
+| Trial card "no autopay yet" on a merchant's Plan tab | Not shown | The plan page reads the trial's facts; autopay is on Trials and Today | Yes, 2026-11-15 ("ship") |
+| Change plan's primary "Move to Growth" | "Move {store}" | The button would have to follow the radio chosen; a server form has no script to rename it | Yes, 2026-11-15 ("ship") |
+| "Keep with Studio Kaaru" on a claim's dialog | "Keep where it is" | As the claim band: the holder's name needs a second read per claim | Yes, 2026-11-15 ("ship") |
+| Theme's "Add pilot store" as one button; pilot rows "Since 12 Nov" | A store search with Add pilot store; rows without a date | Adding needs the store's name typed; the staging date is not stored | Yes, 2026-11-15 ("ship") |
+| Billing's GST export in More | In the Collect step | More here holds dialogs; the export is a download, shown once invoices are issued | Yes, 2026-11-15 ("ship") |
+| Plans' "Prices exclude GST" and the version | Kept | A price without GST said is a wrong price to a reader; the version says what a store is on | Yes, 2026-11-15 ("ship") |
+| Dialogs on a phone: handle, buttons stacked full width | The shared Dialog, as on the console | The console's dialog primitive (Neel N0/N1, approved); changing it moves every dialog in Frrata | Yes, 2026-11-15 ("ship") |
+| Plain tables; a white phone bar with blue "Today · 7"; a plain sidebar | Neel's DataTable (framed, tinted head), Admin's ink sidebar and phone bar with logo, icons and STAFF | The shared shell and table from Neel N0/N1 (approved); Admin keeps its ink frame (§ Frrata Admin) | Yes, 2026-11-15 ("ship") |
+| EkCode and Infrastructure figures as grey tiles; EkCode's period as a segmented track | One bordered strip; pills | The existing figure strip both pages share | Yes, 2026-11-15 ("ship") |
+| "Open {store}'s console" (the 2026-11-06 Admin rule) | "Open console", as drawn | Owner, 2026-11-15: "open console is better" | Yes, 2026-11-15 |
