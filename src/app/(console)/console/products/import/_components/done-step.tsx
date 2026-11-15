@@ -29,7 +29,7 @@ export function DoneStep({ jobId, added, leftOut, inShop, outcome, onFix }: {
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <b className="text-base">{added === 1 ? '1 product added as a draft' : `${added.toLocaleString('en-IN')} products added as drafts`}</b>
           <span className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
-            {inShop > 0 && <span><span className="font-num">{inShop}</span> already in your shop</span>}
+            {inShop > 0 && <span><span className="font-num">{inShop}</span> already in your store</span>}
             {leftOut > 0 && <span><span className="font-num">{leftOut}</span> left out</span>}
             {leftOut > 0 && onFix && <Button variant="ghost" onClick={onFix}>Download rows to fix</Button>}
           </span>

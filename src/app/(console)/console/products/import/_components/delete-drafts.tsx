@@ -15,7 +15,7 @@ export function DeleteDrafts({ jobId, fileName }: { jobId: string; fileName: str
   const go = () => start(async () => {
     const r = await deleteImportDrafts(jobId)
     setOpen(false)
-    setSaid(r.ok ? (r.kept ? `${r.deleted} deleted · ${r.kept} kept: live or ordered` : `${r.deleted} deleted`) : r.error)
+    setSaid(r.ok ? (r.kept ? `${r.deleted} deleted · ${r.kept} kept, live or ordered` : `${r.deleted} deleted`) : r.error)
     router.refresh()
   })
   return (

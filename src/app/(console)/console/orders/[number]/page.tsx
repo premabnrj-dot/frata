@@ -13,7 +13,7 @@ import { paise } from '@/domains/money/paise'
 import { formatInr } from '@/lib/format'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { ModuleSlot } from '@/components/modules/slots'
-import { dateTimeIN, dayMonthIN } from '@/lib/format-date'
+import { dateTimeIN, dayMonthIN, momentIN } from '@/lib/format-date'
 import { orderDetail } from '@/lib/queries/order-detail'
 import { orderPrefixFor } from '@/lib/queries/orders'
 import { EmailsCard } from '../_components/emails-card'
@@ -66,13 +66,13 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const [d, prefix] = await Promise.all([orderDetail(tenantId, n, now).catch((err) => { console.error('[order]', err instanceof Error ? err.name : err); return undefined }), orderPrefixFor(tenantId)])
   if (d === undefined) return <Panel title="We could not load this order">Nothing was changed. Try again in a minute.</Panel>
   // Another shop's order is the same "not found" as one that does not exist.
-  if (d === null) return <Panel title="No such order in your shop">Check the number, or find it from <a href="/console/orders?tab=all" className="underline">all orders</a>.</Panel>
+  if (d === null) return <Panel title="No such order in your store">Check the number, or find it from <a href="/console/orders?tab=all" className="underline">all orders</a>.</Panel>
 
   const { o, lines, events, notes, facts, offers, shipment, source, emails } = d
   const label = `${prefix}-${o.number}`
   const state = orderState(o, now)
   const method = currentMethod(o)
-  const r = state === 'unconfirmed' || state === 'held' ? (facts ? risk(facts) : { level: 'unknown' as const, reasons: [], next: 'The risk checks could not be read: look at the order before confirming.' }) : null
+  const r = state === 'unconfirmed' || state === 'held' ? (facts ? risk(facts) : { level: 'unknown' as const, reasons: [], next: 'We couldn’t read the risk checks. Look at the order before confirming.' }) : null
   const s = STATE[state]
   const pay = PAYMENT[paymentKind(o)] // the one rule the list, the filter and quick look read (N1c)
   const owed = collect(o)
@@ -124,7 +124,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
     <>
       <PageHeader title={label} back={{ href: '/console/orders', label: 'Orders' }}
         badges={<><Badge tone={pay.tone}><Icon name={pay.icon} className="mr-1 inline size-3.5 align-[-2px]" />{pay.label}</Badge><Badge tone={s.tone}>{s.label}</Badge></>}
-        meta={<>Placed {dateTimeIN(o.placedAt)}{o.invoiceNumber ? <> · Invoice <span className="font-num">{o.invoiceNumber}</span></> : null}{d.credits.length ? <> · Credit {d.credits.length === 1 ? 'note' : 'notes'} {d.credits.map((c, i) => <span key={c.number}>{i ? ', ' : ''}<span className="font-num">{c.number}</span></span>)}</> : null}</>}
+        meta={<>Placed <time dateTime={o.placedAt.toISOString()}>{momentIN(o.placedAt, now)}</time>{o.invoiceNumber ? <> · Invoice <span className="font-num">{o.invoiceNumber}</span></> : null}{d.credits.length ? <> · Credit {d.credits.length === 1 ? 'note' : 'notes'} {d.credits.map((c, i) => <span key={c.number}>{i ? ', ' : ''}<span className="font-num">{c.number}</span></span>)}</> : null}</>}
         actions={<OrderActions orderId={o.id} number={label} primary={primary} waiting={waiting ? `Waiting for ${inr(waiting.asked)} from the shopper` : null}
           print={{ slip: may('print', state, role) ? printHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? printHref('invoice', [o.number]) : null }}
           pdf={{ slip: may('print', state, role) ? pdfHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? pdfHref('invoice', [o.number]) : null, credit: d.credits.length ? pdfHref('credit', [o.number]) : null }}
@@ -190,16 +190,16 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
             <RefundRows rows={refundRows} canAct={can.edit && !auth.membership.supportSessionId} />
             {/* The line the courier and the packer need, in words: never only a colour. */}
             <p className="border-t border-border pt-3 text-sm font-medium">
-              {paidAfterPacking(o) && state !== 'cancelled' ? <span className="text-danger-text">Paid online after it was packed for Pay on delivery. Tell the courier not to collect cash; if cash was collected too, refund the online payment in Razorpay. The invoice stays as issued: ask your CA whether it needs a credit note.</span>
-                : state === 'cancelled' ? (refund ? <>Paid online, then cancelled: refund <Money paise={paise(refund)} /> in Razorpay.</> : 'Cancelled: nothing to collect.')
-                : state === 'refund_due' ? <>Paid after it sold out: cancel it, then refund <Money paise={paise(refund)} /> in Razorpay.{can.cancel ? null : ' Ask an owner or admin to cancel it.'}</>
+              {paidAfterPacking(o) && state !== 'cancelled' ? <span className="text-danger-text">Paid online after it was packed for Pay on delivery. Tell the courier not to collect cash. If cash was collected too, refund the online payment in Razorpay. The invoice stays as issued. Ask your CA if it needs a credit note.</span>
+                : state === 'cancelled' ? (refund ? <>Paid online, then cancelled. Refund <Money paise={paise(refund)} /> in Razorpay.</> : 'Cancelled. Nothing to collect.')
+                : state === 'refund_due' ? <>Paid after it sold out. Cancel it, then refund <Money paise={paise(refund)} /> in Razorpay.{can.cancel ? null : ' Ask the owner or a manager to cancel it.'}</>
                 : state === 'delivered' ? (method === 'cod' && !o.paidAt ? <>Delivered: <Money paise={paise(Number(o.total))} /> collected by the courier.</> : 'Delivered.')
-                : (state === 'rto' || state === 'rto_received') && o.paidAt ? 'Came back to you after it was paid online: refund the shopper in Razorpay.'
-                : state === 'rto' || state === 'rto_received' ? 'Came back to you: nothing was collected.'
-                : state === 'lost' && o.paidAt ? 'Lost by the courier after it was paid online: refund the shopper in Razorpay, and claim it with the courier.'
-                : state === 'lost' ? 'Lost by the courier: nothing was collected. Claim it with the courier.'
-                : paidAfterSwitch(o) ? 'Paid online — do not collect cash.'
-                : owed ? <>Collect <Money paise={paise(owed)} /> on delivery.</> : o.paidAt ? 'Paid online — collect nothing.' : 'Not paid yet.'}
+                : (state === 'rto' || state === 'rto_received') && o.paidAt ? 'Came back after it was paid online. Refund the shopper in Razorpay.'
+                : state === 'rto' || state === 'rto_received' ? 'Came back. Nothing was collected.'
+                : state === 'lost' && o.paidAt ? 'Lost by the courier after it was paid online. Refund the shopper in Razorpay. Claim it with the courier.'
+                : state === 'lost' ? 'Lost by the courier. Nothing was collected. Claim it with the courier.'
+                : paidAfterSwitch(o) ? 'Paid online. Don’t collect cash.'
+                : owed ? <>Collect <Money paise={paise(owed)} /> on delivery.</> : o.paidAt ? 'Paid online. Collect nothing.' : 'Not paid yet.'}
             </p>
           </Section>
           </ItemsArea>
@@ -208,7 +208,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
         <div className="min-w-0 space-y-6">
           <ModuleSlot name="order.side" ctx={{ tenantId: auth.membership.tenantId, orderId: o.id }} at={now.toISOString()} />
           <Section id="customer" title="Customer" action={can.edit && !o.erasedAt ? <EditContact orderId={o.id} number={label} contact={{ customerName: o.customerName, phone: o.phone, addressLine: o.addressLine, area: o.area, landmark: o.landmark, pincode: o.pincode, city: o.city, state: o.state }} /> : undefined}>
-            {o.erasedAt ? <p className="text-sm text-muted-foreground">Removed after 90 days: this online order was never paid.</p> : (
+            {o.erasedAt ? <p className="text-sm text-muted-foreground">Removed after 90 days. This online order was never paid.</p> : (
               <div className="space-y-1 text-sm">
                 <p className="font-medium">{o.customerName ? <Name>{o.customerName}</Name> : '—'}</p>
                 {[o.area ? `${o.addressLine}, ${o.area}` : o.addressLine, o.landmark, `${o.city} ${o.pincode}`, o.state].filter((x) => x && x.trim()).map((x) => <p key={x}>{x}</p>)}

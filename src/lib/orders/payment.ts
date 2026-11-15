@@ -116,7 +116,7 @@ export async function confirmPayment(tenantId: string, hash: string, reply: { pa
   })
   const o = pre.o
   if (!o || !o.rzp) return { ok: false, status: 404, error: 'Not found' }
-  if (!pre.keys || !checkoutSignatureOk(o.rzp, reply.paymentId, reply.signature, pre.keys.keySecret)) return { ok: false, status: 400, error: 'We could not confirm this payment. If money left your account, the shop will see it within minutes.' }
+  if (!pre.keys || !checkoutSignatureOk(o.rzp, reply.paymentId, reply.signature, pre.keys.keySecret)) return { ok: false, status: 400, error: 'We could not confirm this payment. If money left your account, the store will see it within minutes.' }
   const asked = Number((o.checkout as { onlineTotal?: number } | null)?.onlineTotal ?? -1)
   await storeRazorpayEvent(tenantId, `razorpay:checkout.signed:${reply.paymentId}`, { event: 'payment.captured',
     payload: { payment: { entity: { id: reply.paymentId, order_id: o.rzp, amount: asked, currency: 'INR', status: 'captured' } } } })
@@ -220,7 +220,7 @@ export async function switchToCod(tenantId: string, hash: string, expectedTotal:
     const o = await byHash(tx, tenantId, hash)
     if (!o || o.paidAt || o.switchedAt || o.cancelledAt) return { kind: 'refused', status: 409, error: 'This order changed. Reload the page.' }
     const shop = await checkoutShop(tx, tenantId, null)
-    if (!shop?.published) return { kind: 'refused', status: 404, error: 'This shop is not taking orders right now.' }
+    if (!shop?.published) return { kind: 'refused', status: 404, error: 'This store isn’t taking orders right now.' }
     // A lapsed hold gave its offers' uses back: they must still fit, exactly as a retry online checks (security review
     // 2026-11-11 MED-1: "Pay on delivery instead" on a lapsed order re-applied a stopped, used-up or first-order offer).
     if ((!o.payBy || o.payBy <= now) && !(await offersStillFit(tx, tenantId, o.id, o.phone, now, 'cod'))) {
@@ -281,7 +281,7 @@ export async function retryPayment(tenantId: string, hash: string, now = new Dat
   })
   if (id === null) return { ok: false, status: 503, error: 'So many orders right now. Nothing was charged. Try again in a moment.' }
   if (id === 'none') return { ok: false, status: 404, error: 'This order is not waiting for an online payment.' }
-  if (id === 'closed') return { ok: false, status: 404, error: 'This shop is not taking orders right now.' }
+  if (id === 'closed') return { ok: false, status: 404, error: 'This store isn’t taking orders right now.' }
   if (id === 'gone') return { ok: false, status: 409, error: 'Something in this order sold out or changed price while you were away. Go back to your bag.' }
   if (id === 'offer') return { ok: false, status: 409, error: 'An offer on this order changed or ran out while you were away. Go back to your bag.' }
   const pay = await startPayment(tenantId, id)

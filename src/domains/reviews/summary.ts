@@ -48,5 +48,5 @@ export function sizeLine(bySize: readonly { size: string; fit: Fit }[]): string 
       if (pct >= 40 && (!best || pct > best.pct)) best = { size, way, pct }
     }
   }
-  return best ? `Size ${best.size} runs ${best.way} for ${best.pct}% of buyers` : null
+  return best ? `Size ${best.size} runs ${best.way} for ${best.pct}% of shoppers` : null
 }

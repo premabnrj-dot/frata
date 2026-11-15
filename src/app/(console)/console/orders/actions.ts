@@ -53,7 +53,7 @@ async function run<T extends object>(action: OrderAction, target: string, detail
   } catch (err) {
     if (err instanceof CreditSeriesFull) return { ok: false, error: CREDIT_SERIES_FULL }
     console.error(`[order.${action}]`, err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not save that. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t save that. Nothing was changed.' }
   }
 }
 

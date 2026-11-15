@@ -15,9 +15,9 @@ import { useNow } from '@/components/time/now'
 
 const CHOICES: { v: Status; label: string; says: string }[] = [
   { v: 'draft', label: 'Draft', says: 'Only your team sees it.' },
-  { v: 'active', label: 'Active', says: 'On your shop, in collections and search, and sent to Google and Meta.' },
-  { v: 'unlisted', label: 'Unlisted', says: 'Opens from its link only: not in menus, search or Google. For a private drop or a DM.' },
-  { v: 'archived', label: 'Archived', says: 'Gone from your shop. Its page says it is no longer available, with your newest pieces below.' },
+  { v: 'active', label: 'Active', says: 'In your store, its collections and search. Sent to Google and Meta.' },
+  { v: 'unlisted', label: 'Unlisted', says: 'Only people with the link can see it.' },
+  { v: 'archived', label: 'Archived', says: 'Hidden from your store. Its orders stay.' },
 ]
 
 /** "2026-12-01T10:00" in India time ↔ an ISO moment. */
@@ -71,7 +71,7 @@ export function StatusCard({ productId, status, publishAt, ready, dirty, saveFir
           <label className="flex min-h-6 items-center gap-2"><input type="checkbox" checked={later} onChange={(e) => setLater(e.target.checked)} /> Go live later (a scheduled drop)</label>
           {later && <div className="space-y-1"><label htmlFor="publish-at" className="block text-xs font-medium">From, India time</label>
             <input id="publish-at" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-2 text-sm" />
-            <p className="text-xs text-muted-foreground">Hidden until then; it appears by itself.</p></div>}
+            <p className="text-xs text-muted-foreground">Hidden until then. It appears by itself.</p></div>}
         </div>
       )}
       {needsReady && (

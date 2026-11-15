@@ -125,7 +125,7 @@ export function OrdersList({ tab, tabs, q: initialQ, filters, page, rows, more, 
         <Panel title={searching ? `No order matches “${qShown}”` : none.title}>{none.body ?? null}</Panel>} />
       </div>
       {shown.length > 0 ? (
-        <Pager first={first} shown={shown.length} total={pagerTotal} suffix="newest first" prevLabel="Newer" nextLabel="Older"
+        <Pager first={first} shown={shown.length} total={pagerTotal}
           prevHref={shownPage > 1 ? href({ q: qShown, page: shownPage - 1 }) : undefined}
           nextHref={(searching ? shownMore : shownPage * PAGE < total) ? href({ q: qShown, page: shownPage + 1 }) : undefined} />
       ) : null}

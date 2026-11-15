@@ -24,23 +24,23 @@ export const SKIP_CODES = ['suppressed', 'off', 'undone', 'cancelled', 'supersed
 export type SkipCode = (typeof SKIP_CODES)[number]
 
 const SKIP_WORDS: Record<SkipCode, string> = {
-  suppressed: 'Not sent: this address bounced or marked you as spam',
-  off: 'Not sent: switched off in Settings',
-  undone: 'Not sent: the step was undone',
-  cancelled: 'Not sent: the order was cancelled',
-  superseded: 'Not sent: a later email said it',
-  not_due: 'Not sent: no longer true',
-  paid: 'Not sent: already paid',
-  no_support_email: 'Not sent: add a support email in Settings',
-  shop_closed: 'Not sent: the shop is not open yet',
-  capped: 'Not sent: daily limit reached',
+  suppressed: 'Not sent · this address bounced or marked you as spam',
+  off: 'Not sent · switched off in Settings',
+  undone: 'Not sent · the step was undone',
+  cancelled: 'Not sent · the order was cancelled',
+  superseded: 'Not sent · a later email said it',
+  not_due: 'Not sent · no longer true',
+  paid: 'Not sent · already paid',
+  no_support_email: 'Not sent · add a support email in Settings',
+  shop_closed: 'Not sent · the store is not open yet',
+  capped: 'Not sent · daily limit reached',
   no_email: 'No email',
-  not_set_up: 'Not sent: Frrata’s email was not set up yet',
+  not_set_up: 'Not sent · Frrata’s email was not set up yet',
 }
 
 export function stateWords(m: MessageMoments): string {
   const s = messageState(m)
   if (s === 'skipped') return SKIP_WORDS[(m.skipCode ?? 'off') as SkipCode] ?? 'Not sent'
-  if (s === 'bounced') return m.bounceKind === 'permanent' ? 'Bounced: no such address' : 'Bounced'
-  return { queued: 'Waiting to send', sending: 'Sending', sent: 'Sent', delivered: 'Delivered', complained: 'Marked spam · stopped for this shop', failed: 'Could not send' }[s]
+  if (s === 'bounced') return m.bounceKind === 'permanent' ? 'Bounced · no such address' : 'Bounced'
+  return { queued: 'Waiting to send', sending: 'Sending', sent: 'Sent', delivered: 'Delivered', complained: 'Marked spam · stopped for this store', failed: 'Could not send' }[s]
 }

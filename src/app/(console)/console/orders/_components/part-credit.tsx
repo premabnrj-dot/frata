@@ -35,7 +35,7 @@ export function PartCreditDialog({ open, number, lines, inclusive, busy, onClose
       className={`min-h-9 flex-1 rounded-md px-3 text-sm font-medium transition-[background-color,color] duration-fast ${kind === k ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{label}</button>
   )
   return (
-    <Dialog open={open} onClose={onClose} title={`Credit note for ${number}`} description="Final once issued: it can’t be changed or taken back."
+    <Dialog open={open} onClose={onClose} title={`Credit note for ${number}`} description="Final once issued. It can’t be changed or taken back."
       actions={<><Button variant="secondary" data-autofocus onClick={onClose}>Not now</Button><Button onClick={issue} disabled={!can || busy}>{busy ? 'Issuing…' : 'Issue credit note'}</Button></>}>
       <div className="space-y-4">
         <div role="radiogroup" aria-label="What it credits" className="flex gap-0.5 rounded-lg bg-muted p-0.5">{seg('return', 'Returned items')}{seg('discount', 'Discount after the sale')}</div>
@@ -61,7 +61,7 @@ export function PartCreditDialog({ open, number, lines, inclusive, busy, onClose
           </ul>
           {stocked ? (
             <label className="flex min-h-10 items-center gap-3 text-sm">
-              <input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} />Put these pieces back in stock
+              <input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} />Put these items back in stock
             </label>
           ) : null}
         </> : (

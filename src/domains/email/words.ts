@@ -26,7 +26,7 @@ export const DEFAULT_WORDS: Record<OrderMessage, EmailWords> = {
   },
   shipped: {
     subject: 'Order [Order number] is on its way',
-    preview: 'Shipped with [Courier]',
+    preview: 'On its way with [Courier]',
     heading: "It's on its way",
     message: 'Your order has left us.\nTracking: [Tracking number]',
     button: 'Track your order',
@@ -40,7 +40,7 @@ export const DEFAULT_WORDS: Record<OrderMessage, EmailWords> = {
   },
   cancelled: {
     subject: 'Order [Order number] is cancelled',
-    preview: "We're sorry",
+    preview: 'Any online payment is refunded',
     heading: 'Your order is cancelled',
     message: "If you paid online, the refund reaches you in 5–7 working days. Reply to this email if anything looks wrong.",
     button: 'See your order',
@@ -55,5 +55,5 @@ export const DEFAULT_WORDS: Record<OrderMessage, EmailWords> = {
 }
 
 export const EMAIL_NAMES: Record<OrderMessage, string> = {
-  confirmed: 'Order confirmed', finish_paying: 'Finish paying', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled', edited: 'Items changed',
+  confirmed: 'Order confirmed', finish_paying: 'Finish paying', shipped: 'On the way', delivered: 'Delivered', cancelled: 'Cancelled', edited: 'Items changed',
 }

@@ -17,7 +17,7 @@ export function aboutProps(k: ModuleKey, d: Page, now: Date, canManage: boolean,
   return {
     k, offer: offerOf(k, d, now), canManage,
     worksWith: MODULES[k].dependsOn.map((x) => ({ key: x, name: MODULES[x].name, on: d.access[x].usable })),
-    askHref: frataWhatsappLink(`Hi Frrata, please add ${MODULES[k].name} to ${shopName}.`),
+    askHref: frataWhatsappLink(`Hi Frrata. I'd like ${MODULES[k].name} on ${shopName}.`),
   }
 }
 

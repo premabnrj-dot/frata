@@ -104,6 +104,10 @@ d08bdd4). 45 of 50 flows read a word this sweep may change; each task moves its 
 45-modules, 46-messages, 47-look, 47-offers, 49-ship, 79-products-list, 82-neel-shell, 90-ux. `momentIN` gets unit
 tests (today, yesterday across IST midnight, this year, last year, a UTC clock at 23:30). The gate gets unit tests.
 
+Baseline (2026-11-15, d08bdd4 untouched): 339 steps passed, 3 failed before any N3 change — offers O·4 (Admin stops
+an offer), neel-finding "save the view", ux "support mode" pill count. They are rerun alone before ship to tell flaky
+from broken; N3 is not the cause.
+
 ## Order of work (each step: npm test · typecheck · the flows it touches · impact-reviewer on its diff · commit)
 **N3·1 — The gate.** `check-words.mjs`, its allow file, its test, `check:words` in `package.json` and `npm test`;
 `check:voice` folded in and removed. It lands with the burn-down file (§ The gate). The `words-reviewer` agent's rule 11
@@ -130,7 +134,7 @@ script cannot hold) and a new § Glossary (surfaces, roles, words, order states,
 |---|---|---|---|
 | "Store", never "shop", on every surface (owner call 2) | Console, partner workspace, emails and shared code; not the storefront's own pages and themes, not Admin's screens | Store pages stay 0 px and themes are retiring (ADR-0014); Admin is N4 | Not yet |
 | Orders column "Customer" | Kept as drawn | The glossary says "shopper, never customer"; the mockup draws "Customer". Owner's call | Not yet (question) |
-| Orders pager "Showing 1–50 of 43" | The real range ("Showing 1–43 of 43") | The drawing's numbers cannot happen together (a fact the mockup got wrong) | Not yet |
+| Orders pager "Showing 1–50 of 43" | The pager as drawn ("Showing 1–50 of 300", Previous, Next) on a list of more than one page; none on one page (as today) | The drawing's numbers cannot happen together (a fact the mockup got wrong) | Not yet |
 | Placed: only Today and Yesterday drawn | Older rows "13 Nov, 10:06 pm", the year when not this year | The rulebook's "12 Nov" with the time a list needs | Not yet |
 | Shopper emails "On the way" (owner call 3) | "On its way" in the body and state name, the subject "Order KS-5012 is on the way" as drawn | The glossary's "Shopper sees" column | Not yet (question) |
 
@@ -176,7 +180,7 @@ banned word (they are not read), and its unit test proves each rule fires on a f
 
 ## Practices recorded in skills
 frata-design-language § Words (replaces § Voice) and § Glossary; § Numbers, dates: `momentIN` for a moment in a list.
-frata-verify: `check:words` in the gate list.
+(frata-verify lists no gates by name: nothing to add there.)
 
 ## Repetitive work → agents and scripts
 | Chore | Becomes |

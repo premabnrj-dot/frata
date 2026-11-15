@@ -82,7 +82,7 @@ const rate = (bps: number) => `${bps / 100}%`
 function Invoice({ o, lines, shop, frozen }: { o: DocOrder; lines: DocLine[]; shop: DocShop; frozen: Paper }) {
   // An invoice or bill of supply only: credit notes are PDF-only (their kind never reaches these ternaries).
   const inv = invoice(o, lines, shop)
-  if (!inv) return <article className="break-after-page p-6"><p className="font-mono">{o.number}</p><p>Not packed yet: its invoice is issued when it is marked packed.</p></article>
+  if (!inv) return <article className="break-after-page p-6"><p className="font-mono">{o.number}</p><p>Not packed yet. Its invoice is issued when it is marked packed.</p></article>
   const intra = inv.supply === 'intra'
   // Value and Discount columns only when an offer touched the order: an order without one prints as before.
   const offs = inv.totals.discount > 0
@@ -131,7 +131,7 @@ function Invoice({ o, lines, shop, frozen }: { o: DocOrder; lines: DocLine[]; sh
       <div className="space-y-1 text-xs text-muted-foreground">
         {inv.charges.delivery || inv.charges.cod ? <p>Delivery{inv.charges.cod ? ' and the pay-on-delivery fee' : ''} ({[inv.charges.delivery ? formatInr(paise(inv.charges.delivery), { decimals: true }) : null, inv.charges.cod ? formatInr(paise(inv.charges.cod), { decimals: true }) : null].filter(Boolean).join(' + ')}) are part of the supply and included in each item&apos;s value above.</p> : null}
         {inv.pricesIncludeGst && inv.kind === 'tax_invoice' ? <p>Prices include GST.</p> : null}
-        {inv.kind === 'bill_of_supply' ? <p>{inv.composition ? 'Composition taxable person, not eligible to collect tax on supplies.' : 'The seller is not registered for GST; no GST is charged.'}</p> : null}
+        {inv.kind === 'bill_of_supply' ? <p>{inv.composition ? 'Composition taxable person, not eligible to collect tax on supplies.' : 'The seller is not registered for GST. No GST is charged.'}</p> : null}
       </div>
       {/* As the invoice froze them at packing (Documents D2), the same as its PDF. */}
       <div className="flex items-end justify-between gap-6 pt-4 text-xs">
@@ -165,7 +165,7 @@ export default async function PrintPage({ searchParams }: { searchParams: Promis
       </div>
       {r.value.skipped.length ? <p role="status" className="text-sm print:hidden">Not printed: {r.value.skipped.map((x) => `${x.number} (${STATE[x.state].label.toLowerCase()})`).join(', ')}. A packing slip is for an order from confirmed until it is delivered.</p> : null}
       {asked.length > numbers.length ? <p role="status" className="text-sm print:hidden">The first {MAX_DOCUMENTS} of the {asked.length} orders asked for. Print these, then the rest.</p> : null}
-      {docs.length === 0 ? <Panel title="Nothing to print">{r.value.skipped.length ? 'None of these orders has a packing slip now.' : 'None of these orders is in your shop.'}</Panel>
+      {docs.length === 0 ? <Panel title="Nothing to print">{r.value.skipped.length ? 'None of these orders has a packing slip now.' : 'None of these orders is in your store.'}</Panel>
         : docs.map(({ o, lines, frozen }) => kind === 'invoice' ? <Invoice key={o.number} o={o} lines={lines} shop={r.value.shop} frozen={frozen} /> : <Slip key={o.number} o={o} lines={lines} shop={r.value.shop} />)}
     </>
   )

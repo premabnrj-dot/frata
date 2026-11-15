@@ -20,7 +20,7 @@ export default async function CollectionsPage() {
     <>
       <PageHeader title="Collections" back={{ href: '/console/products', label: 'Products' }} actions={add} />
       {!rows.length ? (
-        <Panel title="No collections yet">Group products for your shop’s menus: hand-pick a Festive edit, or let rules fill one (Kurtas in chanderi under ₹2,000) so new products join by themselves.</Panel>
+        <Panel title="No collections yet">Group products for your store’s menus. Pick them by hand, or let rules add new products.</Panel>
       ) : (
         <DataTable>
           <DataTableHead><th>Collection</th><th>Filled by</th><th className="text-right">Products</th></DataTableHead>

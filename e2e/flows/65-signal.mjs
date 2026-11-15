@@ -8,7 +8,7 @@ import assert from 'node:assert/strict'
 import { CONSOLE, expectToast, signedIn } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
-const FRAME = 'iframe[title="Your shop with this look"]'
+const FRAME = 'iframe[title="Your store with this look"]'
 
 export default {
   name: 'signal',
@@ -145,7 +145,7 @@ export default {
           await p.setViewportSize({ width: 1440, height: 900 })
           await p.goto(CONSOLE + `/console/products/${a.handle}`)
           await p.getByRole('heading', { name: 'Stories' }).waitFor()
-          await p.getByText('Pick up to 2 pieces shoppers can add from this page.').waitFor()
+          await p.getByText('Pick up to 2 products shoppers can add from this page.').waitFor()
           await p.getByRole('button', { name: 'Add a story' }).click()
           await p.locator('#st-0').fill('A pocket for everything')
           await p.locator('#sx-0').fill('The main compartment opens flat, with room for three days of clothes.')

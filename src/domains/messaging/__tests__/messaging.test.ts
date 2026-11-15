@@ -52,6 +52,11 @@ describe('placeholders', () => {
     expect(fill('[Nope] here', {})).toBe('')
     expect(unknownPlaceholders('Hi [First name] [Nope]')).toEqual(['Nope'])
   })
+  it('[Store name] fills, and a saved [Shop name] still fills with the same value (no migration)', () => {
+    expect(fill('From [Store name]', { 'Store name': 'Kesar Studio' })).toBe('From Kesar Studio')
+    expect(fill('From [Shop name]', { 'Store name': 'Kesar Studio' })).toBe('From Kesar Studio')
+    expect(unknownPlaceholders('[Store name] and [Shop name]')).toEqual([])
+  })
   it('first name only, capped', () => {
     expect(firstName('  Asha Rao ')).toBe('Asha')
     expect(firstName('x'.repeat(50))).toHaveLength(30)

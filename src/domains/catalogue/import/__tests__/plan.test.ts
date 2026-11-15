@@ -22,8 +22,8 @@ describe('planning the stress sheet', () => {
   })
   it('refuses past the shop caps', () => {
     expect(capRefusal({ products: 9, variants: 20 }, { products: MAX_PRODUCTS - 9, variants: 0 })).toBeNull()
-    expect(capRefusal({ products: 10, variants: 20 }, { products: MAX_PRODUCTS - 9, variants: 0 })).toBe('Your shop holds up to 600 products: this adds 10 to your 591. Split the file.')
-    expect(capRefusal({ products: 1, variants: 20 }, { products: 0, variants: 1790 })).toBe('Your shop holds up to 1,800 sizes and colours: this adds 20 to your 1790. Split the file.')
+    expect(capRefusal({ products: 10, variants: 20 }, { products: MAX_PRODUCTS - 9, variants: 0 })).toBe('Your store holds up to 600 products. This file adds 10 to your 591, so split it.')
+    expect(capRefusal({ products: 1, variants: 20 }, { products: 0, variants: 1790 })).toBe('Your store holds up to 1,800 sizes and colours. This file adds 20 to your 1790, so split it.')
   })
   it('chunks whole products, mapped cells only, and the server reads a chunk to the same products', () => {
     const chunks = chunkRows(m, s.rows, r.products)

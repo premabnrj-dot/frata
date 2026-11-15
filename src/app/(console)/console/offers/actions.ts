@@ -69,7 +69,7 @@ export async function saveOffer(id: string | null, values: OfferValues): Promise
     return { ok: true, id: r.value.id }
   } catch (err) {
     const c = codeOf(err)
-    if (c?.code === UNIQUE && c.constraint_name === 'discount_codes_tenant_code') return { ok: false, error: 'That code was used before in your shop. Codes are never reused.', errors: { code: 'Used before. Choose another.' } }
+    if (c?.code === UNIQUE && c.constraint_name === 'discount_codes_tenant_code') return { ok: false, error: 'That code was used before in your store. Codes are never reused.', errors: { code: 'Used before. Choose another.' } }
     console.error('[offers] save', c?.code ?? (err instanceof Error ? err.name : 'error'))
     return { ok: false, error: 'We could not save the offer. Try again.' }
   }
@@ -117,7 +117,7 @@ export async function addCreatorCode(id: string, label: string, code: string): P
     return { ok: true, id }
   } catch (err) {
     const k = codeOf(err)
-    if (k?.code === UNIQUE) return { ok: false, error: 'That code was used before in your shop. Codes are never reused.', errors: { code: 'Used before. Choose another.' } }
+    if (k?.code === UNIQUE) return { ok: false, error: 'That code was used before in your store. Codes are never reused.', errors: { code: 'Used before. Choose another.' } }
     console.error('[offers] creator code', k?.code ?? (err instanceof Error ? err.name : 'error'))
     return { ok: false, error: 'We could not add the code. Try again.' }
   }

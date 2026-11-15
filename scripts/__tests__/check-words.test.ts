@@ -82,6 +82,20 @@ describe('check:words', async () => {
     ].join('\n')
     expect(check(src, F).fails).toEqual([])
   })
+  it('reads what a person reads even where code is near: toasts, field errors, reasons, JSX words, nested tags', () => {
+    expect(rules("toast.error('We could not save. Check your connection; nothing was changed.')")).toEqual(['W2'])
+    expect(rules("fields.set({ price: 'Add a price; it is needed.' })")).toEqual(['W2'])
+    expect(rules("const r = { reason: 'This pincode is blocked.' }")).toEqual(['W4'])
+    expect(rules("const a = 'Select the products from your shop.'")).toEqual(['W5'])
+    expect(rules("const a = 'Delete this order from your shop?'")).toEqual(['W5'])
+    expect(rules('const a = <td>pincode</td>')).toEqual(['W4'])
+    expect(rules('const a = <p>Your <b>shop</b> is open</p>')).toEqual(['W5'])
+    expect(rules('const a = <input type="submit" value="Save your shop" />')).toEqual(['W5'])
+  })
+  it('filler is read in every string, code-shaped or not, as check:voice did', () => {
+    expect(rules("const a = 'hassle-free returns'")).toEqual(['filler'])
+    expect(rules("throw new Error('Simply retry')")).toEqual(['filler'])
+  })
   it('splits sentences but keeps M.R.P. and incl. whole', () => {
     expect(sentences('M.R.P. incl. taxes is ₹2,490. Save it.')).toEqual(['M.R.P. incl. taxes is ₹2,490.', 'Save it.'])
   })

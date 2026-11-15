@@ -87,13 +87,13 @@ export default function ItemsEditor({ orderId, number, onClose }: { orderId: str
       }
       const eventId = r.eventId
       // A change asking the shopper to pay changed nothing yet: no Undo (its way out is "Ship without the change").
-      if (r.asked) { toast({ text: `${number}: waiting for ${formatInr(paise(r.asked))} from the shopper` }); onClose(); router.refresh(); return }
+      if (r.asked) { toast({ text: `${number} is waiting for ${formatInr(paise(r.asked))} from the shopper` }); onClose(); router.refresh(); return }
       const said = r.refund ? `refund ${formatInr(paise(r.refund))} in 10 minutes` : data!.facts.order.way === 'prepaid' ? `new total ${formatInr(paise(r.total))}` : `collect ${formatInr(paise(r.total))}`
       toast({ text: `${number} saved · ${said}`, undo: async () => { const u = await undoItemsEdit(eventId); router.refresh(); return u.ok ? { ok: true } : { ok: false, error: u.error } } })
       onClose()
       router.refresh()
     } catch {
-      toast.error('We could not save that. Check your connection; nothing was changed.')
+      toast.error('We couldn’t save that. Check your connection. Nothing was changed.')
     } finally { setBusy(false) }
   }
 

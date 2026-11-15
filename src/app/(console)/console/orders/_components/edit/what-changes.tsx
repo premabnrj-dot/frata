@@ -37,7 +37,7 @@ export function WhatChanges({ number, plan, problem, before, to, notify, onNotif
   kept: { kept: number; fee: number } | null
 }) {
   const changes = plan ? changesOf(plan) : []
-  const said = problem && problem.kind !== 'nothing' ? problemWords(problem, inr) : settle?.kind === 'too_old' ? 'Paid over 6 months ago: Razorpay can\'t refund it.' : null
+  const said = problem && problem.kind !== 'nothing' ? problemWords(problem, inr) : settle?.kind === 'too_old' ? 'Paid over 6 months ago. Razorpay can’t refund it.' : null
   const online = settle !== null
   const save = settle?.kind === 'refund' ? `Save and refund ${inr(settle.amount)}` : settle?.kind === 'ask' ? `Save and ask for ${inr(settle.amount)}` : `Save ${number}`
   const mail = settle?.kind === 'refund' ? 'the refund' : settle?.kind === 'ask' ? 'the payment link' : 'the new total'

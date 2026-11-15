@@ -81,6 +81,6 @@ export const GSP_ERROR_WORDS: Record<GspError, string> = {
   session_expired: 'The GST portal signed you out. Connect again.',
   not_saved: 'The portal holds nothing for this period yet. Push it first.',
   already_filed: 'This period is already filed on the portal. A change goes in next period’s return.',
-  portal_down: 'The GST portal isn’t answering. Nothing was filed; try again in a while.',
+  portal_down: 'The GST portal isn’t answering. Nothing was filed. Try again in a while.',
   rejected: 'The portal refused the return. Download the file and check it in the offline tool.',
 }

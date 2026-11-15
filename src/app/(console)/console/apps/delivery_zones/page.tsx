@@ -32,7 +32,7 @@ export default async function DeliveryZonesPage({ searchParams }: { searchParams
   const apps = await appsPage(auth.membership.tenantId, auth.userId, now.toISOString()).catch((err) => { console.error('[zones apps]', errName(err)); return null })
   if (!apps) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   // The accountant's console is GST and documents (roles): PIN code rules carry the brand's own notes (security DZ7 M1).
-  if (auth.membership.role === 'accountant') return <Panel title="Only the owner, an admin or staff see Delivery Zones" />
+  if (auth.membership.role === 'accountant') return <Panel title="Only the owner, a manager or staff see Delivery Zones" />
   const gate = apps.access.delivery_zones
   const about = aboutProps('delivery_zones', apps, now, mayTurnOff(auth.membership), auth.membership.tenantName)
   if (!gate.usable) {
@@ -70,7 +70,7 @@ export default async function DeliveryZonesPage({ searchParams }: { searchParams
     <>
       <ZonesTab canEdit={canEdit} zones={d.zones.map((z) => ({ ...z, count: dir.length ? counts.get(z.id) ?? 0 : null }))}
         floor={{ charge: d.settings.shippingFlat, freeAbove: d.settings.freeShippingAbove || null, codOn: d.settings.codOn, codCharge: d.settings.codCharge }} />
-      {!canEdit && <p className="mt-3 text-sm text-muted-foreground">Only the owner, an admin or the shop’s partner changes zones.</p>}
+      {!canEdit && <p className="mt-3 text-sm text-muted-foreground">Only the owner, a manager or the store’s partner changes zones.</p>}
     </>,
   )
 }

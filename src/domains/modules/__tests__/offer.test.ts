@@ -12,7 +12,7 @@ const built = (k: keyof typeof MODULES, s: 'now' | 'next') => { (MODULES[k] as {
 
 describe('offerFor', () => {
   it('a module still coming is "Next": its price shown, the one action is the interest toggle (asked or not)', () => {
-    expect(offerFor('reviews', moduleAccess(none, now).reviews, 49900, now)).toMatchObject({ price: 'Add-on · ₹499/mo', footer: '₹499/mo', filter: 'next', state: { label: 'Coming next' }, action: { kind: 'interest', asked: false } })
+    expect(offerFor('reviews', moduleAccess(none, now).reviews, 49900, now)).toMatchObject({ price: 'Paid app · ₹499/mo', footer: '₹499/mo', filter: 'next', state: { label: 'Coming next' }, action: { kind: 'interest', asked: false } })
     expect(offerFor('reviews', moduleAccess(none, now).reviews, 49900, now, true, true).action).toEqual({ kind: 'interest', asked: true })
   })
   it('an add-on not bought: the price, and the one action names it', () => {

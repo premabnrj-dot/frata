@@ -167,7 +167,7 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
               <p role="status" className="rounded-md bg-accent px-3 py-2 text-sm">{preview ? <><span className="font-num font-semibold">{preview.count}</span> product{preview.count === 1 ? '' : 's'} match now{preview.sample.length ? `: ${preview.sample.join(', ')}${preview.count > preview.sample.length ? '…' : ''}` : ''}</> : 'Counting…'}</p>
             </div>
           )}
-          <div className="space-y-1"><label htmlFor="c-sort" className="block text-sm font-medium">Order on your shop</label>
+          <div className="space-y-1"><label htmlFor="c-sort" className="block text-sm font-medium">Order in your store</label>
             <select id="c-sort" value={d.sort} onChange={(e) => set({ sort: e.target.value })} {...mark('sort')} className={field}>{SORTS.filter(([k]) => d.kind === 'manual' || k !== 'manual').map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
             <FieldError name="sort" message={errors.sort} /></div>
         </Section>
@@ -177,7 +177,7 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
         {initial.id && (
           <Section className="text-sm">
             {confirmDelete
-              ? <div className="flex flex-wrap items-center gap-3"><span>Delete {saved.title}? Products stay; only the group goes.</span><Button variant="secondary" className="after:hidden" /* undoes something: no thread (brand rule 37) */ disabled={pending} onClick={remove}>Delete</Button><button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => setConfirmDelete(false)}>Keep it</button></div>
+              ? <div className="flex flex-wrap items-center gap-3"><span>Delete {saved.title}? Its products stay.</span><Button variant="secondary" className="after:hidden" /* undoes something: no thread (brand rule 37) */ disabled={pending} onClick={remove}>Delete</Button><button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => setConfirmDelete(false)}>Keep it</button></div>
               : <button type="button" className="inline-flex min-h-6 items-center text-danger-text underline" onClick={() => setConfirmDelete(true)}>Delete this collection</button>}
           </Section>
         )}

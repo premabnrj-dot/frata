@@ -20,7 +20,7 @@ describe('readRulesCsv', () => {
   })
   it('names each bad line; a wrong header refuses the file; the last row for a PIN code wins', () => {
     const r = readRulesCsv('pincode,rule\n12345,no_delivery\n302001,maybe\n302002,cod_max,\n302003,no_delivery\n302003,prepaid_only')
-    expect(r.errors).toEqual(['Line 2: "12345" is not a 6-digit PIN code.', 'Line 3: the rule must be no_delivery, prepaid_only or cod_max.', 'Line 4: cod_max needs an amount in rupees.'])
+    expect(r.errors).toEqual(['Line 2: "12345" is not a 6-digit PIN code.', 'Line 3 needs no_delivery, prepaid_only or cod_max as its rule.', 'Line 4 needs an amount in rupees for cod_max.'])
     expect(r.rows).toEqual([{ pincode: '302003', rule: 'prepaid_only', codMax: null, note: null }])
     expect(readRulesCsv('pin,what\n302001,no_delivery').errors).toEqual(['The first line must be: pincode,rule,cod_max,note'])
   })

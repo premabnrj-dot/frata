@@ -68,7 +68,7 @@ export function ProductTable({ rows, collections }: { rows: Row[]; collections: 
     const r = await duplicateProduct(ids[0])
     if (!r.ok) return toast.error(r.error)
     after()
-    toast.ok('Duplicated as a draft.', { undo: async () => { const d = await bulkDelete([r.id]); if (d.ok) router.refresh(); return d.ok && d.deleted ? { ok: true } : { ok: false, error: d.ok ? 'The copy has changed: delete it from the list.' : d.error } } })
+    toast.ok('Duplicated as a draft.', { undo: async () => { const d = await bulkDelete([r.id]); if (d.ok) router.refresh(); return d.ok && d.deleted ? { ok: true } : { ok: false, error: d.ok ? 'The copy has changed. Delete it from the list.' : d.error } } })
   })
 
   const collect = (c: { id: string; title: string }) => start(async () => {
@@ -152,8 +152,8 @@ export function ProductTable({ rows, collections }: { rows: Row[]; collections: 
 
       <Dialog open={asking?.step === 'kept'} onClose={() => { close(); after() }} error={dialogError}
         title={asking?.step === 'kept' && asking.out.deleted ? `Deleted ${n(asking.out.deleted, 'product')}. ${n(kept.length, 'wasn’t', 'weren’t')} deleted` : `${n(kept.length, 'product')} can’t be deleted`}
-        description={toArchive.length ? <>{names(toArchive)} {toArchive.length === 1 ? 'has' : 'have'} been live, ordered or filmed. Archive keeps {toArchive.length === 1 ? 'its' : 'their'} orders as they are and takes {toArchive.length === 1 ? 'it' : 'them'} out of the shop.</>
-          : <>{names(kept)} {kept.length === 1 ? 'is' : 'are'} archived already: out of the shop, with {kept.length === 1 ? 'its' : 'their'} orders kept.</>}
+        description={toArchive.length ? <>{names(toArchive)} {toArchive.length === 1 ? 'has' : 'have'} been live, ordered or filmed. Archive keeps {toArchive.length === 1 ? 'its' : 'their'} orders as they are and hides {toArchive.length === 1 ? 'it' : 'them'} from your store.</>
+          : <>{names(kept)} {kept.length === 1 ? 'is' : 'are'} archived already. {kept.length === 1 ? 'Its' : 'Their'} orders stay.</>}
         actions={<>
           <Button variant="secondary" data-autofocus onClick={() => { close(); after() }}>{toArchive.length ? 'Cancel' : 'Close'}</Button>
           {toArchive.length > 0 && <Button disabled={pending} onClick={() => { const which = toArchive.map((k) => k.id); close(); setStatus('archived', which) }}>{`Archive ${n(toArchive.length, 'product')}`}</Button>}

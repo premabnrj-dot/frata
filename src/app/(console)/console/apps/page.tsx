@@ -45,7 +45,7 @@ function Featured({ n }: { n: FeaturedNudge }) {
   const on = dayMonthIN(n.periodStart)
   return (
     <FeaturedCard id={n.invoiceId} action={<Link href="/console/settings/billing?from=featured" prefetch={false} className={button()}>See {n.planName}</Link>}>
-      <Badge tone="warn">For your shop</Badge>
+      <Badge tone="warn">For your store</Badge>
       <h2 className="text-section font-semibold">On {n.planName} your {on} invoice would have been {formatInr(paise(n.saving))} less</h2>
       <p className="font-num text-sm text-muted-foreground">{formatInr(paise(n.billed))} on Launch · {formatInr(paise(n.would))} on {n.planName} · both + 18% GST</p>
     </FeaturedCard>

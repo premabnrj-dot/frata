@@ -25,7 +25,7 @@ export async function saveSizeChart(typeId: string, chart: Chart): Promise<Resul
       const tenantId = auth.membership.tenantId
       const [row] = await tx.update(productTypes).set({ sizeChart: c.chart, updatedAt: new Date() })
         .where(and(eq(productTypes.tenantId, tenantId), eq(productTypes.id, typeId))).returning({ name: productTypes.name })
-      if (!row) throw new Stop({ ok: false, error: 'That product type is not in your shop.' })
+      if (!row) throw new Stop({ ok: false, error: 'That product type isn’t in your store.' })
       await memberAudit(tx, auth, 'size_chart.save', row.name)
     })
     if (!r.ok) return { ok: false, error: r.error }

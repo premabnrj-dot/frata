@@ -42,6 +42,22 @@ export const dayMonthLongIN = (d: Date) =>
 export const dateTimeIN = (d: Date) =>
   d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: IST })
 
+/** An IST calendar day key, "2026-11-15". */
+const dayKeyIN = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: IST })
+
+/** A moment in a list (Neel § Words): "Today, 10:06 pm", "Yesterday, 1:36 am", "13 Nov, 10:06 pm", the year only when
+ *  not this year ("13 Nov 2025, 10:06 pm"). Today and Yesterday are IST calendar days, never now − 24 h. For live
+ *  screens only: print, PDFs, CSVs and emails keep dateTimeIN, and a wait keeps sinceIN. */
+export function momentIN(at: Date | string, now: Date): string {
+  const d = typeof at === 'string' ? new Date(at) : at
+  const time = timeIN(d).replace(/\s?([ap])\.?m\.?$/i, (_, x: string) => ` ${x.toLowerCase()}m`)
+  const key = dayKeyIN(d), today = dayKeyIN(now)
+  const yesterday = dayKeyIN(new Date(new Date(`${today}T12:00:00+05:30`).getTime() - 86_400_000))
+  if (key === today) return `Today, ${time}`
+  if (key === yesterday) return `Yesterday, ${time}`
+  return `${key.slice(0, 4) === today.slice(0, 4) ? dayMonthIN(d) : dayIN(d)}, ${time}`
+}
+
 /** "7:42 pm" (IST): a time later today, as a wait says it (EkCode's "Try again at"). */
 export const timeIN = (d: Date) =>
   d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: IST })

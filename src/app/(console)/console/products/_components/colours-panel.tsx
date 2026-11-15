@@ -58,7 +58,7 @@ function SwatchEditor({ c, photos, onChange }: { c: ColourInput; photos: Photo[]
       </div>
       {photos.length === 0 ? <p className="text-xs text-muted-foreground">Add a photo of this colour to cut a swatch from it.</p> : (
         <div className="space-y-2">
-          <p className="text-xs font-medium">Or cut it from a photo: pick one, then click (or use the arrow keys) where the swatch should be.</p>
+          <p className="text-xs font-medium">Or cut it from a photo. Pick one, then click where the swatch goes.</p>
           <div className="flex flex-wrap gap-2">
             {photos.map((p) => <button key={p.id} type="button" aria-pressed={img?.id === p.id} aria-label="Use this photo" onClick={() => setCrop(p, c.crop && img?.id === p.id ? c.crop : { x: 0.5, y: 0.45, r: 0.08 })}
               className={`overflow-hidden rounded-sm border-2 ${img?.id === p.id ? 'border-ring' : 'border-transparent'}`}><img src={urlFor(p.base, pick(p.widths, 160))} alt="" width={40} height={50} className="h-[50px] w-10 object-cover" /></button>)}

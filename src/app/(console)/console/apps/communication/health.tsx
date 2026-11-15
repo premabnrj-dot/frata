@@ -28,7 +28,7 @@ export function NumberHealth({ c, needs, canManage }: { c: View; needs: Need[]; 
   const run = (f: () => Promise<{ ok: boolean; error?: string }>, inDialog = false) => start(async () => {
     setError(null)
     const r = await f()
-    if (!r.ok) { if (inDialog) setError(r.error ?? 'Something went wrong.'); else toast.error(r.error ?? 'Something went wrong.'); return }
+    if (!r.ok) { if (inDialog) setError(r.error ?? 'We couldn’t do that. Nothing was changed.'); else toast.error(r.error ?? 'We couldn’t do that. Nothing was changed.'); return }
     setConfirm(false); settle(router)
   })
   const limit = limitWords(c.limitTier)
@@ -73,7 +73,7 @@ export function NumberHealth({ c, needs, canManage }: { c: View; needs: Need[]; 
       <p className="text-sm text-muted-foreground">Chats that arrive now are kept for the team inbox, coming next.</p>
 
       <Dialog open={!!confirm} onClose={() => { setConfirm(false); setError(null) }} error={error} title={confirm === 'reconnect' ? `Reconnect ${c.displayPhone}` : `Disconnect ${c.displayPhone}?`}
-        description={confirm === 'reconnect' ? 'Frrata lost access to this number. Disconnect it here, then connect it again in Meta’s window.' : 'Frrata stops sending and receiving on this number. The number stays yours; connect it again any time.'}
+        description={confirm === 'reconnect' ? 'This number is disconnected. Connect it again.' : 'Frrata stops sending and receiving on this number. The number stays yours. Connect it again any time.'}
         actions={<><Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setConfirm(false)}>{confirm === 'reconnect' ? 'Not now' : 'Keep it connected'}</Button><Button variant={confirm === 'reconnect' ? 'primary' : 'destructive'} disabled={pending} onClick={() => run(disconnectWhatsAppAction, true)}>{confirm === 'reconnect' ? 'Disconnect and start again' : 'Disconnect'}</Button></>} />
     </div>
   )

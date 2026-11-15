@@ -64,7 +64,7 @@ export function SectionLibrary({ open, onClose, onAdd, allowed, made, themeName,
         </nav>
         {shown.length || dShown.length ? (
           <ul className="grid content-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {dShown.map((d) => { const why = dFull ? `At most ${MAX_PER_PAGE.design} designs on a page` : d.commerce && commerce >= MAX_COMMERCE_DESIGNS ? `At most ${MAX_COMMERCE_DESIGNS} designs with pieces or collections on a page` : null; return (
+            {dShown.map((d) => { const why = dFull ? `At most ${MAX_PER_PAGE.design} designs on a page` : d.commerce && commerce >= MAX_COMMERCE_DESIGNS ? `At most ${MAX_COMMERCE_DESIGNS} designs with products or collections on a page` : null; return (
               <li key={`d-${d.id}`}>
                 <button type="button" disabled={!!why} onClick={() => onAdd('design', d.id)} title={why ?? undefined}
                   className="group w-full overflow-hidden rounded-xl border border-border bg-card text-left transition-[translate,border-color] duration-base ease-standard hover:border-input disabled:opacity-50 [@media(hover:hover)]:enabled:hover:-translate-y-0.5">

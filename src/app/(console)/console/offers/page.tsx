@@ -35,7 +35,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
   if (!rows.length) return (
     <>
       <PageHeader title="Offers" actions={add} />
-      <Panel title="No offers yet">Run a festive sale, give a saving for paying online, or free shipping above a bag value. Shoppers see the best offer applied for them, and you see what each one kept on delivered orders.
+      <Panel title="No offers yet">Run a festive sale, a saving for paying online, or free shipping. Shoppers get the best offer. You see what each kept on delivered orders.
         {canBuild ? <div className="mt-3"><Link href="/console/offers/new?style=pay_online" className={button({ variant: 'secondary' })}>Start with “Pay online, save”</Link></div> : null}</Panel>
     </>
   )
@@ -48,7 +48,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
       <ViewTabs label="Offers by status" tabs={order.map((s) => ({ href: `/console/offers?tab=${s}`, label: STATUS[s].label, count: count(s), current: s === current }))} />
       {!shown.length ? <Panel title={`No ${STATUS[current].label.toLowerCase()} offers`}>{current === 'live' ? 'Start a draft, or make a new offer.' : 'Nothing here right now.'}</Panel> : (
         <>
-        {costs ? <p className="text-xs text-muted-foreground">₹ kept per order: delivered, came back or lost, after returns · before ads and packaging.</p> : null}
+        {costs ? <p className="text-xs text-muted-foreground">₹ kept per order · delivered, came back or lost · after returns · before ads and packaging</p> : null}
         <DataTable>
           <DataTableHead><th>Offer</th><th>How</th><th className="text-right">Uses</th><th className="text-right">₹ given</th><th className="text-right">Delivered · 30 days</th>{costs ? <th className="text-right">₹ kept per order, after returns · 30 days</th> : null}</DataTableHead>
           <DataTableBody>
@@ -60,7 +60,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
                 <Td cell="b" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Uses </span><Numeric>{r.useCount}</Numeric>{r.limitTotal ? <span className="text-muted-foreground"> / {r.limitTotal}</span> : null}</Td>
                 <Td cell="c" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Given </span><Money paise={paise(r.given)} /></Td>
                 <Td cell="e" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Delivered </span><Numeric>{x?.delivered ?? 0}</Numeric></Td>
-                {costs ? <Td cell="f" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Kept each </span>{x?.keptPerOrder == null ? <span className="text-muted-foreground" title="Shows once orders with this offer are delivered or come back, and their costs are known">—</span> : <><Money paise={paise(x.keptPerOrder)} />{keptNote(x.keptBasis) ? <span className="block text-xs text-muted-foreground">{keptNote(x.keptBasis)}</span> : null}</>}</Td> : null}
+                {costs ? <Td cell="f" className="text-right"><span className="text-xs text-muted-foreground md:hidden">Kept each </span>{x?.keptPerOrder == null ? <span className="text-muted-foreground" title="Shows once its orders are delivered or come back">—</span> : <><Money paise={paise(x.keptPerOrder)} />{keptNote(x.keptBasis) ? <span className="block text-xs text-muted-foreground">{keptNote(x.keptBasis)}</span> : null}</>}</Td> : null}
               </DataTableRow>
             ) })}
           </DataTableBody>

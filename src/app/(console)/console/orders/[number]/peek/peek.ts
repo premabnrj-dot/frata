@@ -3,7 +3,7 @@ import { orderState, paymentKind } from '@/domains/orders/order-state'
 import { CANCEL_LABEL, type CancelReason } from '@/domains/orders/work'
 import { paise } from '@/domains/money/paise'
 import { formatInr, formatPhone } from '@/lib/format'
-import { dateTimeIN } from '@/lib/format-date'
+import { momentIN } from '@/lib/format-date'
 import type { peekOrder } from '@/lib/queries/orders'
 import { eventLabel, PAYMENT, STATE } from '../../_components/labels'
 import type { Peek } from '../../_components/peek-types'
@@ -16,8 +16,8 @@ export function toPeek(r: NonNullable<Awaited<ReturnType<typeof peekOrder>>>, pr
     number: `${prefix}-${o.number}`, href: `/console/orders/${o.number}`, state: STATE[orderState(o, now)], payment: PAYMENT[paymentKind(o)].label,
     customer: erased ? 'Erased' : o.customerName, phone: erased || !o.phone ? '' : formatPhone(o.phone),
     address: erased ? '' : [o.addressLine, o.area, o.landmark, o.city, [o.state, o.pincode].filter(Boolean).join(' ')].filter(Boolean).join(', '),
-    erased, total: formatInr(paise(Number(o.total))), placed: dateTimeIN(o.placedAt),
+    erased, total: formatInr(paise(Number(o.total))), placed: momentIN(o.placedAt, now),
     lines: r.lines.map((l) => ({ title: l.title, options: l.options.join(' · '), qty: l.qty, price: formatInr(paise(Number(l.unitPrice))) })),
-    events: r.events.map((e) => ({ text: eventLabel(e, (x) => CANCEL_LABEL[x as CancelReason] ?? x), at: dateTimeIN(e.at) })),
+    events: r.events.map((e) => ({ text: eventLabel(e, (x) => CANCEL_LABEL[x as CancelReason] ?? x), at: momentIN(e.at, now) })),
   }
 }

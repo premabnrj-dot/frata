@@ -54,7 +54,7 @@ export default {
       assert.ok(!/Shop tabs/.test(await shopHtml()), 'shoppers see no draft')
       // The preview opens on a computer (Look v3); Bazaar's tab bar is a phone's.
       await riya.getByRole('group', { name: 'Preview size' }).getByRole('button', { name: 'Phone' }).click()
-      await riya.frameLocator('iframe[title="Your shop with this look"]').getByRole('navigation', { name: 'Shop tabs' }).waitFor()
+      await riya.frameLocator('iframe[title="Your store with this look"]').getByRole('navigation', { name: 'Shop tabs' }).waitFor()
       await riya.getByRole('group', { name: 'Preview size' }).getByRole('button', { name: 'Computer' }).click()
       await riya.screenshot({ path: t.out('customizer') })
     })
@@ -85,7 +85,7 @@ export default {
       // T1·0: from the autosave landing to the preview showing it (budget 1 s p75 on a laptop; 2 s here, a busy CI box).
       await until(async () => { const [r] = await db`select settings from shop_theme_revisions where id = ${rev}`; return JSON.stringify(r.settings).includes('hand-finished in Jaipur') }, 10_000)
       const t0 = Date.now()
-      await riya.frameLocator('iframe[title="Your shop with this look"]').getByText('Every piece is hand-finished in Jaipur.').waitFor()
+      await riya.frameLocator('iframe[title="Your store with this look"]').getByText('Every piece is hand-finished in Jaipur.').waitFor()
       const ms = Date.now() - t0
       console.log(`     look › preview refreshed ${ms} ms after the save`)
       assert.ok(ms < 2000, `preview refresh took ${ms} ms`)
@@ -108,9 +108,9 @@ export default {
       await d.getByRole('button', { name: 'Publish', exact: true }).click()
       await riya.getByText('Going live').waitFor()
       await riya.screenshot({ path: t.out('going-live') })
-      const done = riya.getByRole('dialog', { name: 'Your shop has its new look' })
+      const done = riya.getByRole('dialog', { name: 'Your store has its new look' })
       await done.waitFor()
-      await done.getByRole('link', { name: 'View your shop' }).waitFor()
+      await done.getByRole('link', { name: 'View your store' }).waitFor()
       await riya.screenshot({ path: t.out('published') })
       // The first publish recorded the look before it (lazy baseline): two rows, the older one Classic.
       const pubs = await db`select r.theme_key from shop_theme_publishes p join shop_theme_revisions r on r.id = p.revision_id where p.tenant_id = ${KESAR} order by p.published_at, p.id`
@@ -139,7 +139,7 @@ export default {
       await riya.goto(CONSOLE + '/console/look')
       await riya.getByRole('button', { name: 'More' }).click()
       await riya.getByRole('menuitem', { name: 'Undo last publish' }).click()
-      await riya.getByRole('dialog', { name: /back on your shop\?$/ }).getByRole('button', { name: 'Put it back' }).click()
+      await riya.getByRole('dialog', { name: /back on your store\?$/ }).getByRole('button', { name: 'Put it back' }).click()
       await riya.getByRole('heading', { name: 'Classic · Oxide' }).waitFor()
       await shopSays(/Shop tabs/, false)
       await riya.getByText('You have unpublished changes').waitFor()
@@ -152,13 +152,13 @@ export default {
       await db`insert into members (tenant_id, user_id, role) values (${KESAR}, ${S.id}, 'staff') on conflict do nothing`
       const pia = await open('partner', { viewport: { width: 1280, height: 900 } })
       await pia.goto(CONSOLE + '/console/look')
-      await pia.getByText('You can edit the draft; the owner or an admin publishes it.').waitFor()
+      await pia.getByText('You can edit the draft. The owner or a manager publishes it.').waitFor()
       await pia.getByRole('button', { name: 'Customize' }).click()
       await pia.waitForURL(/\/console\/look\/customize$/)
       await pia.getByText('Ask the owner to publish').waitFor()
       const arjun = await open('staff')
       await arjun.goto(CONSOLE + '/console/look')
-      await arjun.getByText('Ask the owner to change the shop’s look.').waitFor()
+      await arjun.getByText('Ask the owner to change the store’s look.').waitFor()
       await db`delete from members where tenant_id = ${KESAR} and user_id in (${P.id}, ${S.id})`
     })
 

@@ -44,7 +44,7 @@ export async function GET(request: Request) {
     if (r.value === 'limited') return text(429, 'Too many exports in the last few minutes. Try again shortly.')
     const d = r.value
     if (!d) return text(404, 'Nothing to file for that period yet.')
-    if (!d.shop.gstin || d.shop.scheme !== 'regular') return text(404, 'GSTR-1 is for shops on the regular GST scheme.')
+    if (!d.shop.gstin || d.shop.scheme !== 'regular') return text(404, 'GSTR-1 is for stores on the regular GST scheme.')
     const notes = d.notes.map((n) => n.doc)
     const base = `${d.shop.gstin}_${d.period.key}`
     let body: string, name: string

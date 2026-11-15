@@ -11,7 +11,7 @@ import { CONSOLE, PORTS, signedIn, until } from '../lib.mjs'
 
 const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const shopHtml = (path = '/') => new Promise((res, rej) => http.get(`http://localhost:${PORTS.app}${path}`, { headers: { host: 'kesar-studio.frata.test' } }, (r) => { let b = ''; r.on('data', (c) => (b += c)); r.on('end', () => res(b)) }).on('error', rej))
-const FRAME = 'iframe[title="Your shop with this look"]'
+const FRAME = 'iframe[title="Your store with this look"]'
 
 export default {
   name: 'themes-three',
@@ -107,7 +107,7 @@ export default {
       await until(async () => { const [r] = await db`select settings from shop_theme_revisions where tenant_id = ${KESAR} and theme_key = 'minimal' order by updated_at desc limit 1`; return (r.settings.home ?? []).some((s) => s.key === 'hero' && s.hidden) }, 10_000)
       await riya.getByRole('button', { name: 'Publish', exact: true }).click()
       await d.getByRole('button', { name: 'Publish', exact: true }).click()
-      await riya.getByRole('dialog', { name: 'Your shop has its new look' }).waitFor()
+      await riya.getByRole('dialog', { name: 'Your store has its new look' }).waitFor()
       await until(async () => /data-entrance="rise"/.test(await shopHtml()), 15_000)
       const home = await shopHtml()
       assert.match(home, /data-button-motion="lift"/)
@@ -121,7 +121,7 @@ export default {
       await riya.goto(CONSOLE + '/console/look')
       await riya.getByRole('button', { name: 'More' }).click()
       await riya.getByRole('menuitem', { name: 'Undo last publish' }).click()
-      await riya.getByRole('dialog', { name: /back on your shop\?$/ }).getByRole('button', { name: 'Put it back' }).click()
+      await riya.getByRole('dialog', { name: /back on your store\?$/ }).getByRole('button', { name: 'Put it back' }).click()
       await until(async () => !/data-entrance="rise"/.test(await shopHtml()), 15_000)
     })
   },

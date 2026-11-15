@@ -33,7 +33,7 @@ export function WaitingChange({ orderId, asked, total, changes, link, canAct, la
       const r = await shipWithoutChange(orderId)
       if (r.ok) toast({ text: 'The change is dropped. Pack it as it was.' }); else toast.error(r.error)
       router.refresh()
-    } catch { toast.error('We could not do that. Check your connection; nothing was changed.') } finally { setBusy(false) }
+    } catch { toast.error('We couldn’t do that. Check your connection. Nothing was changed.') } finally { setBusy(false) }
   }
   return (
     <div className="space-y-3 rounded-md border border-warn bg-warn/40 p-3 text-sm" data-waiting-change>
@@ -66,7 +66,7 @@ export function RefundRows({ rows, canAct }: { rows: RefundView[]; canAct: boole
       const r = await retryOrderRefund(id)
       if (r.ok) toast({ text: 'Refund sent to Razorpay again.' }); else toast.error(r.error)
       router.refresh()
-    } catch { toast.error('We could not send that. Check your connection; nothing was changed.') } finally { setBusy(null) }
+    } catch { toast.error('We couldn’t send that. Check your connection. Nothing was changed.') } finally { setBusy(null) }
   }
   if (!rows.length) return null
   return (

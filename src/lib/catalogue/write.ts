@@ -110,7 +110,7 @@ async function write(tx: Tx, tenantId: string, drafts: readonly ProductDraft[], 
   if (gtinAt.size) {
     const [clash] = await tx.select({ gtin: variants.gtin }).from(variants)
       .where(and(eq(variants.tenantId, tenantId), sql`${variants.productId} <> all(${ownList})`, sql`${variants.gtin} = any(${arrayParam([...gtinAt.keys()], 'text')})`)).limit(1)
-    if (clash) { const i = gtinAt.get(clash.gtin!)!; return fail(i, `Barcode ${clash.gtin} is already on another product in your shop.`, { values: drafts[i]!.variants.find((v) => v.gtin === clash.gtin)!.values, field: 'gtin' }) }
+    if (clash) { const i = gtinAt.get(clash.gtin!)!; return fail(i, `Barcode ${clash.gtin} is already on another product in your store.`, { values: drafts[i]!.variants.find((v) => v.gtin === clash.gtin)!.values, field: 'gtin' }) }
   }
 
   // SKUs: typed ones checked, blank ones made, all unique in the shop in any case.
@@ -126,7 +126,7 @@ async function write(tx: Tx, tenantId: string, drafts: readonly ProductDraft[], 
   const keys = [...new Set([...typedAt.keys(), ...made.map((b) => b.toUpperCase())].map(undigit).concat(made.map((b) => `${b.slice(0, 32).toUpperCase()}-`)))]
   const others = new Set(keys.length ? (await takenSkus(tx, tenantId, own, keys)).map((r) => r.sku) : [])
   for (const [i, d] of drafts.entries()) for (const v of d.variants) {
-    if (v.sku && others.has(v.sku.toUpperCase())) return fail(i, `SKU ${v.sku} is already used by another product in your shop.`, { values: v.values, field: 'sku' })
+    if (v.sku && others.has(v.sku.toUpperCase())) return fail(i, `SKU ${v.sku} is already used by another product in your store.`, { values: v.values, field: 'sku' })
   }
   const taken = new Set([...others, ...typedAt.keys()])
   const skus = drafts.map((d, i) => d.variants.map((v, j) => {

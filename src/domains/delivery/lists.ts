@@ -57,13 +57,13 @@ export function readRulesCsv(text: string): { rows: RuleRow[]; errors: string[] 
   if (head[0] !== 'pincode' || head[1] !== 'rule') return { rows: [], errors: ['The first line must be: pincode,rule,cod_max,note'] }
   const errors: string[] = [], seen = new Map<string, RuleRow>()
   for (const [i, line] of lines.slice(1).entries()) {
-    if (seen.size >= MAX_RULES) { errors.push(`More than ${MAX_RULES.toLocaleString('en-IN')} rules: the rest were left out.`); break }
+    if (seen.size >= MAX_RULES) { errors.push(`Only the first ${MAX_RULES.toLocaleString('en-IN')} rules were kept.`); break }
     const [pin = '', rule = '', max = '', note = ''] = cells(line)
     const n = i + 2
     if (!PIN6.test(pin)) { errors.push(`Line ${n}: "${clean(pin).slice(0, 12)}" is not a 6-digit PIN code.`); continue }
-    if (!(RULES as readonly string[]).includes(rule)) { errors.push(`Line ${n}: the rule must be no_delivery, prepaid_only or cod_max.`); continue }
+    if (!(RULES as readonly string[]).includes(rule)) { errors.push(`Line ${n} needs no_delivery, prepaid_only or cod_max as its rule.`); continue }
     const rupees = Number(max.replace(/[₹,\s]/g, ''))
-    if (rule === 'cod_max' && !(rupees > 0 && rupees <= 1_00_000)) { errors.push(`Line ${n}: cod_max needs an amount in rupees.`); continue }
+    if (rule === 'cod_max' && !(rupees > 0 && rupees <= 1_00_000)) { errors.push(`Line ${n} needs an amount in rupees for cod_max.`); continue }
     seen.set(pin, { pincode: pin, rule: rule as RuleKind, codMax: rule === 'cod_max' ? Math.round(rupees * 100) : null, note: clean(note).slice(0, 120) || null })
   }
   return { rows: [...seen.values()], errors: errors.slice(0, 20) }

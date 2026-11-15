@@ -24,7 +24,7 @@ export type Contact = { customerName: string; phone: string; addressLine: string
 const FIELDS: { key: keyof Contact; label: string; type?: string; inputMode?: 'numeric' | 'tel' }[] = [
   { key: 'customerName', label: 'Full name' }, { key: 'phone', label: 'Mobile number', type: 'tel', inputMode: 'tel' },
   { key: 'addressLine', label: 'House, street' }, { key: 'area', label: 'Area, locality' }, { key: 'landmark', label: 'Landmark' },
-  { key: 'pincode', label: 'Pincode', inputMode: 'numeric' }, { key: 'city', label: 'City' },
+  { key: 'pincode', label: 'PIN code', inputMode: 'numeric' }, { key: 'city', label: 'City' },
 ]
 
 export function EditContact({ orderId, number, contact }: { orderId: string; number: string; contact: Contact }) {
@@ -46,7 +46,7 @@ export function EditContact({ orderId, number, contact }: { orderId: string; num
     const changed = Object.fromEntries(Object.entries(f).filter(([k, v]) => !same(k as keyof Contact, v)).map(([k, v]) => [k, v.trim()]))
     if (!Object.keys(changed).length) { setOpen(false); return }
     setBusy(true)
-    const r = await editOrderContact(orderId, changed).catch(() => ({ ok: false as const, error: 'We could not save that. Check your connection; nothing was changed.' }))
+    const r = await editOrderContact(orderId, changed).catch(() => ({ ok: false as const, error: 'We couldn’t save that. Check your connection. Nothing was changed.' }))
     setBusy(false)
     if (!r.ok) {
       const marked = ('fieldErrors' in r && r.fieldErrors) || {}

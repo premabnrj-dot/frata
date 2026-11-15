@@ -62,7 +62,7 @@ export function VideoField({ value, onChange, on }: { value: { id: string } | un
   }
   const input = <input id={id} type="file" accept="video/mp4,video/quicktime" className="sr-only" onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = '' }} />
 
-  if (!on) return <div className="space-y-1"><p className="text-sm font-medium">Video</p><p className="text-sm text-muted-foreground">Video isn’t switched on for shops yet.</p></div>
+  if (!on) return <div className="space-y-1"><p className="text-sm font-medium">Video</p><p className="text-sm text-muted-foreground">Video isn’t switched on for stores yet.</p></div>
   const k = progress !== null ? 'sending' : !value ? 'none' : status?.kind ?? 'uploading'
   return (
     <div className="space-y-2.5">
@@ -97,7 +97,7 @@ export function VideoField({ value, onChange, on }: { value: { id: string } | un
       ) : (
         // feedback-ok: the failed video's own state with Choose another is pinned at the field (rule 5)
         <div role="alert" className="space-y-2 rounded-xl border border-danger-text/40 bg-danger p-3 text-sm text-danger-text">
-          <p>{status?.tooLong ? `Didn’t work: it’s longer than ${MAX_LOOP_MS / 1000} seconds.` : 'Didn’t work.'}</p>
+          <p>{status?.tooLong ? `It’s longer than ${MAX_LOOP_MS / 1000} seconds. Trim it and try again.` : 'Didn’t work.'}</p>
           <label htmlFor={id} className="cursor-pointer font-medium underline underline-offset-4">Choose another</label>
         </div>
       )}

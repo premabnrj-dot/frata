@@ -76,7 +76,7 @@ export default {
       await riya.waitForURL(/\/console\/look\/customize$/)
       await riya.getByRole('button', { name: 'Publish', exact: true }).click()
       await riya.getByRole('dialog', { name: /^Publish Bazaar/ }).getByRole('button', { name: 'Publish', exact: true }).click()
-      await riya.getByRole('dialog', { name: 'Your shop has its new look' }).waitFor()
+      await riya.getByRole('dialog', { name: 'Your store has its new look' }).waitFor()
       // Bazaar has the phone tab bar; the look before it doesn't.
       await until(async () => /Shop tabs/.test(await shopHtml()), 15_000)
       await meera.goto(CONSOLE + '/admin/themes/bazaar/1.0.0')

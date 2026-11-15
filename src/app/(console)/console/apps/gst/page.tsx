@@ -25,10 +25,10 @@ const rs = (p: number) => `₹${(p / 100).toLocaleString('en-IN', { maximumFract
 const FIX_WORDS: Record<Fix['kind'], { title: string; href: string; action: string }> = {
   no_hsn: { title: 'Invoices with an item that has no HSN code', href: '/console/products/tax', action: 'Set HSN' },
   hsn_digits: { title: 'HSN codes with too few digits for your turnover', href: '/console/products/tax', action: 'Fix HSN' },
-  bad_gstin: { title: 'A business buyer’s GSTIN that doesn’t check out', href: '/console/orders', action: 'Open orders' },
+  bad_gstin: { title: 'GSTINs on business orders that don’t check out', href: '/console/orders', action: 'Open orders' },
   gap: { title: 'Invoice numbers missing from the series', href: '/console/orders', action: 'Open orders' },
   came_back: { title: 'Parcels that came back without a credit note', href: '/console/orders', action: 'Open orders' },
-  bad_note: { title: 'Credit notes left out: their figures no longer add up', href: '/console/orders', action: 'Open orders' },
+  bad_note: { title: 'Credit notes left out because their figures don’t add up', href: '/console/orders', action: 'Open orders' },
 }
 
 /** Console › GST (GST app G1; approved mockup "The month", "Review", "For your CA"). */
@@ -47,7 +47,7 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
     return <AppAbout {...about}
       notice={gate.why === 'paused' ? <p role="status" className="mb-4 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">GST is paused by Frrata. We’re on it.</p> : undefined} />
   }
-  if (!(CAN_SEE_GST as readonly string[]).includes(auth.membership.role)) return <Panel title="Only the owner, an admin or the accountant sees GST" />
+  if (!(CAN_SEE_GST as readonly string[]).includes(auth.membership.role)) return <Panel title="Only the owner, a manager or the accountant sees GST" />
   // Its home (Apps A2): Usage and billing is not the accountant's (GST and documents only); Turn off needs CAN_MANAGE.
   const accountant = auth.membership.role === 'accountant'
   const sp = await searchParams
@@ -65,9 +65,9 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
   if (!shop.gstin || shop.scheme !== 'regular') {
     return home(
       <>
-        <Panel title={!shop.gstin ? 'Your shop isn’t registered for GST' : 'Your shop is on the composition scheme'}
+        <Panel title={!shop.gstin ? 'Your store isn’t registered for GST' : 'Your store is on the composition scheme'}
           action={auth.membership.role !== 'accountant' ? <Link href="/console/settings/taxes" className={button({ variant: 'secondary' })}>Settings › Taxes</Link> : undefined}>
-          {!shop.gstin ? 'It issues bills of supply and delivers within its state. GSTR-1 is for registered shops.' : 'It issues bills of supply; your CA files CMP-08 each quarter. GSTR-1 is for the regular scheme.'}
+          {!shop.gstin ? 'It issues bills of supply and delivers within its state. GSTR-1 is for registered stores.' : 'It issues bills of supply. Your CA files CMP-08 each quarter. GSTR-1 is for the regular scheme.'}
         </Panel>
       </>
     )

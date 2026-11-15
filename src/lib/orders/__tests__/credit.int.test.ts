@@ -61,7 +61,7 @@ describe.skipIf(!host)('issueCredit on a real database', () => {
     const [cn2] = await withTenant(tenantId, (tx) => tx.select({ reason: creditNotes.reason }).from(creditNotes).where(eq(creditNotes.orderId, c)))
     expect(cn2!.reason).toBe('came_back')
     const undo = await withTenant(tenantId, (tx) => out.undoOutcome(tx, tenantId, owner, (back as { eventId: string }).eventId, new Date('2026-11-08T07:30:00Z')))
-    expect(undo).toMatchObject({ ok: false, error: 'This order changed since: open it to see what happened.' })
+    expect(undo).toMatchObject({ ok: false, error: 'This order changed since. Open it to see what happened.' })
     // A Frrata support visit cannot issue one (security review 2026-11-08).
     expect(await withTenant(tenantId, (tx) => issueCredit(tx, tenantId, { ...actor, kind: 'support' }, ids.a, now))).toMatchObject({ ok: false, error: expect.stringMatching(/owner or an admin/) })
     await expect(withTenant(tenantId, (tx) => tx.update(creditNotes).set({ total: 0 }).where(eq(creditNotes.orderId, ids.a)))).rejects.toThrow()

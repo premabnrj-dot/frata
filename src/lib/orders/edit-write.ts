@@ -64,7 +64,7 @@ export function grownUses(p: EditPlan, facts: EditFacts): { discountId: string; 
 
 /**
  * The plan for this request from facts read after every touched variant is locked. `adjust` lets a paid change plan
- * with the prices it was saved at and its own held pieces back (edit-capture.ts). Refused when it can't be made.
+ * with the prices it was saved at and its own held pieces back (edit-capture.ts). Refused when it can’t be made.
  */
 export async function planLocked(sp: Tx, tenantId: string, orderId: string, want: Want[], reasons: Record<string, EditReason | undefined>, now: Date,
   adjust?: (f: EditFacts) => EditFacts): Promise<{ read: EditRead; p: EditPlan }> {
@@ -118,7 +118,7 @@ export async function applyPlan(sp: Tx, tenantId: string, orderId: string, p: Ed
   }
   const soldOut: string[] = []
   const take = fresh.filter((x) => x.row.kind === 'in_stock').map((x) => idAt.get(x.i)!)
-  if ((await takeStockLines(sp, tenantId, take, soldOut)).short) throw new Refused('A piece sold out while you were editing. Reload the order.')
+  if ((await takeStockLines(sp, tenantId, take, soldOut)).short) throw new Refused('An item sold out while you were editing. Reload the order.')
 
   const lineIds = p.lines.map((l, i) => (l.change === 'kept' ? l.from!.id : idAt.get(i)!))
   const unitCost = (i: number) => { const l = p.lines[i]!; return l.change === 'kept' || l.change === 'qty' ? byId.get(l.from!.id)!.unitCost : fresh.find((x) => x.i === i)!.row.unitCost ?? null }

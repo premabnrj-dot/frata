@@ -112,7 +112,7 @@ export default {
         const o = await until(async () => { const x = await order(P); return x.cancelled_at && x })
         assert.equal(o.cancel_reason, 'customer_cancelled'); assert.ok(o.invoice_number, 'the invoice stays')
         assert.equal(await stock(), before + 1)
-        await p.getByText('Cancelled: nothing to collect.').waitFor()
+        await p.getByText('Cancelled. Nothing to collect.').waitFor()
         await p.getByRole('region', { name: 'Activity' }).getByText('Cancelled · Customer cancelled').waitFor()
       })
 
@@ -127,7 +127,7 @@ export default {
 
       await t.step('another shop\'s real order number is "not found" here', async () => {
         await p.goto(CONSOLE + `/console/orders/${top + 900}`)
-        await p.getByText('No such order in your shop').waitFor()
+        await p.getByText('No such order in your store').waitFor()
         assert.equal(await p.getByText('Someone Else').count(), 0)
       })
 
@@ -137,8 +137,8 @@ export default {
         await q.getByRole('button', { name: 'More' }).click()
         assert.equal(await q.getByRole('menuitem', { name: 'Cancel order…' }).count(), 0)
         assert.equal(await q.getByRole('region', { name: 'Customer' }).getByRole('button', { name: 'Edit' }).count(), 0)
-        await q.goto(CONSOLE + '/console/orders/999999999'); await q.getByText('No such order in your shop').waitFor()
-        await q.goto(CONSOLE + '/console/orders/not-a-number'); await q.getByText('No such order in your shop').waitFor()
+        await q.goto(CONSOLE + '/console/orders/999999999'); await q.getByText('No such order in your store').waitFor()
+        await q.goto(CONSOLE + '/console/orders/not-a-number'); await q.getByText('No such order in your store').waitFor()
         await staff.close()
       })
 

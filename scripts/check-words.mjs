@@ -49,9 +49,9 @@ export const inScope = (file) => ROOTS.some((r) => file.startsWith(r + '/')) && 
 // ---------------------------------------------------------------------------------------------------------------
 // Reading what a person reads
 // ---------------------------------------------------------------------------------------------------------------
-const CODE_CALL = /^(console\.\w+|Error|TypeError|RangeError|errName|cn|cva|twMerge|clsx|sql|sql\.raw|require|import|fetch|fetchWithTimeout|URL|URLSearchParams|RegExp|redirect|notFound|revalidatePath|revalidateTag|updateTag|refreshShop|refreshHosts|cacheTag|unstable_cache|Symbol|JSON\.parse|.*\.(get|set|has|delete|getAll|append|includes|startsWith|endsWith|indexOf|split|replace|replaceAll|match|matchAll|test|querySelector|querySelectorAll|getElementById|getItem|setItem|removeItem|addEventListener|removeEventListener|setAttribute|getAttribute|closest|cookies|header|headers|localeCompare|padStart|padEnd|join|toLocaleString|toLocaleDateString|enqueue|from|where|select|execute|insert|update|values|returning|innerJoin|leftJoin|orderBy|groupBy|on|emit|log|warn|error|info|debug))$/
-const CODE_ATTR = /^(className|class|id|href|src|srcSet|key|type|name|rel|target|method|action|role|htmlFor|style|autoComplete|inputMode|pattern|accept|form|lang|dir|as|tone|variant|size|icon|kind|mode|sizes|loading|decoding|fetchPriority|referrerPolicy|sandbox|allow|data-[\w-]+|aria-(controls|describedby|labelledby|haspopup|current|live|expanded|selected|hidden|invalid|owns|activedescendant)|enterKeyHint|spellCheck|wrap|step|min|max|minLength|maxLength|value|defaultValue|tab|section|path|prefetch|scroll|replace|align|side|shape|width|height|viewBox|d|fill|stroke|strokeWidth|strokeLinecap|strokeLinejoin|transform|points|x|y|cx|cy|r|x1|x2|y1|y2|offset|stopColor|preserveAspectRatio|xmlns|crossOrigin|integrity|media|charSet|httpEquiv|content|property|itemProp|nonce|hrefLang|download|encType|capture|list|cols|rows|span|colSpan|rowSpan|scope|headers|start|reversed|datetime|dateTime)$/
-const CODE_KEY = /^(className|class|href|path|key|id|tone|icon|kind|type|variant|section|tab|action|event|source|status|state|reason|code|slug|handle|field|column|table|route|url|tag|tags|cache|cacheTag|mime|contentType|format|unit|locale|timeZone|currency|style|css|selector|query|sql|regex|pattern|method|channel|template|templateName|scope|role|permission|cookie|header|headers|policy|flow|step|test|env|module|moduleKey|provider|resource|cron|schedule|ref|color|colour|font|weight|size|align|mode|layout|shape|grid|width|height|area|image|src|alt_key)$/
+const CODE_CALL = /^(console\.\w+|Error|TypeError|RangeError|errName|cn|cva|twMerge|clsx|sql|sql\.raw|require|import|fetch|fetchWithTimeout|URL|URLSearchParams|RegExp|redirect|notFound|revalidatePath|revalidateTag|updateTag|refreshShop|refreshHosts|cacheTag|unstable_cache|Symbol|JSON\.parse|.*\.(get|has|delete|getAll|append|includes|startsWith|endsWith|indexOf|split|replace|replaceAll|match|matchAll|test|querySelector|querySelectorAll|getElementById|getItem|setItem|removeItem|addEventListener|removeEventListener|setAttribute|getAttribute|closest|cookies|header|headers|localeCompare|padStart|padEnd|join|toLocaleString|toLocaleDateString|enqueue|from|where|select|execute|insert|update|values|returning|innerJoin|leftJoin|orderBy|groupBy))$/
+const CODE_ATTR = /^(className|class|id|href|src|srcSet|key|type|name|rel|target|method|action|role|htmlFor|style|autoComplete|inputMode|pattern|accept|form|lang|dir|as|tone|variant|size|icon|kind|mode|sizes|loading|decoding|fetchPriority|referrerPolicy|sandbox|allow|data-[\w-]+|aria-(controls|describedby|labelledby|haspopup|current|live|expanded|selected|hidden|invalid|owns|activedescendant)|enterKeyHint|spellCheck|wrap|step|min|max|minLength|maxLength|tab|section|path|prefetch|scroll|replace|align|side|shape|width|height|viewBox|d|fill|stroke|strokeWidth|strokeLinecap|strokeLinejoin|transform|points|x|y|cx|cy|r|x1|x2|y1|y2|offset|stopColor|preserveAspectRatio|xmlns|crossOrigin|integrity|media|charSet|httpEquiv|property|itemProp|nonce|hrefLang|download|encType|capture|list|cols|rows|span|colSpan|rowSpan|scope|headers|start|reversed|datetime|dateTime)$/
+const CODE_KEY = /^(className|class|href|path|key|id|tone|icon|kind|type|variant|tab|action|code|slug|handle|table|route|url|tag|tags|cache|cacheTag|mime|contentType|locale|timeZone|currency|style|css|selector|query|sql|regex|pattern|method|templateName|role|permission|cookie|header|headers|env|moduleKey|resource|cron|ref|color|colour|font|weight|align|mode|layout|shape|grid|width|height|src)$/
 const HEADER_KEY = /^[A-Z][a-z]+(-[A-Z][a-z]+)+$|^(content-type|cache-control|x-[\w-]+)$/i
 
 /** A string that is code, not words: no letters, a code-shaped token, a MIME type or CSP, or class names. */
@@ -67,7 +67,7 @@ export function isCode(text) {
   const tokens = t.split(/\s+/)
   const classy = tokens.filter((w) => /^(-?[a-z0-9]+(-[a-z0-9./[\]%#]+)+|[a-z0-9-]+:[\w[\]/.-]+|\[[^\]]+\]|[a-z]+\/[\d.]+|!?[a-z]+(-[a-z0-9]+)*)$/.test(w) && !/^[a-z]+$/.test(w)).length
   if (tokens.length >= 2 && classy / tokens.length >= 0.5) return true
-  if (/^(select|insert|update|delete|with|create|alter|drop)\b.*\b(from|into|set|table|where|values)\b/i.test(t)) return true
+  if (/^(SELECT|INSERT|UPDATE|DELETE|WITH)\b/.test(t) || /^(select|insert|update|delete|with)\b[\s\S]*\b(from|into|set|where)\b[\s\S]*[*(=]/.test(t)) return true
   if (/\b(is null|is not null|coalesce\(|::(int|text|jsonb|bigint|uuid))/i.test(t)) return true
   return false
 }
@@ -107,7 +107,8 @@ export function readable(source, fileName = 'x.tsx') {
   const out = []
   const line = (n) => sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1
   const prop = (n) => (n.parent && ts.isPropertyAssignment(n.parent) && n.parent.initializer === n ? n.parent.name.getText(sf).replace(/^['"]|['"]$/g, '') : null)
-  const push = (n, text) => { if (!isCode(text) && !codeContext(n, sf)) out.push({ text: text.replace(/\s+/g, ' ').trim(), line: line(n), prop: prop(n) }) }
+  // Code-shaped strings are kept, marked, for the filler list only (check:voice read every quoted string).
+  const push = (n, text) => out.push({ text: text.replace(/\s+/g, ' ').trim(), line: line(n), prop: prop(n), code: isCode(text) || codeContext(n, sf) })
   const visit = (n) => {
     if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) { if (!(n.parent && ts.isTaggedTemplateExpression(n.parent))) push(n, n.text); return }
     if (ts.isTemplateExpression(n)) {
@@ -119,9 +120,10 @@ export function readable(source, fileName = 'x.tsx') {
       // The element's own sentence: its text, an {expression} or a child element as one stand-in word.
       let text = '', first = null
       for (const c of n.children) {
-        if (ts.isJsxText(c)) { if (c.text.trim()) { text += c.text; first ??= c } } else if (text.trim()) text += 'X'
+        if (ts.isJsxText(c)) { if (c.text.trim()) { text += c.text; first ??= c } } else if (text.trim()) text += ' X '
       }
-      if (first && text.trim() && !isCode(text)) out.push({ text: text.replace(/(X\s*)+$/, '').replace(/\s+/g, ' ').trim(), line: line(first), prop: null, jsx: true })
+      // JSX text is never code: a single lower-case word between tags is still a word a person reads.
+      if (first && /\p{L}/u.test(text)) out.push({ text: text.replace(/(X\s*)+$/, '').replace(/\s+/g, ' ').trim(), line: line(first), prop: null, jsx: true, code: false })
       ts.forEachChild(n, (c) => { if (!ts.isJsxText(c)) visit(c) })
       return
     }
@@ -166,7 +168,7 @@ export function judgeText(s, file) {
   const t = s.text
   const fail = (rule, why) => fails.push({ rule, why })
   if (RE_FILLER.test(t)) fail('filler', `"${t.match(RE_FILLER)[1]}": say what it does instead`)
-  if (!inScope(file)) return { fails, warns }
+  if (s.code || !inScope(file)) return { fails, warns }
   for (const sent of sentences(t)) {
     const n = words(sent).length
     if (n >= 16) fail('W1', `${n} words in one sentence: cut it or make it two`)
@@ -178,7 +180,7 @@ export function judgeText(s, file) {
     }
     for (const m of sent.matchAll(/ [—–] /g)) {
       const before = sent.slice(0, m.index), after = sent.slice(m.index + 3)
-      if (words(before).length >= 2 && words(after).length >= 2 && !/\d\S*$/.test(before) && !/^\S*\d/.test(after)) { fail('W2', 'a dash joins two thoughts: make it two sentences'); break }
+      if (words(before).length >= 2 && words(after).length >= 2 && !/[\dX]\S*$/.test(before) && !/^\S*[\dX]/.test(after)) { fail('W2', 'a dash joins two thoughts: make it two sentences'); break }
     }
     if (/!\s*$/.test(sent) && words(sent).length > 0) fail('W9', 'no exclamation marks')
   }
@@ -235,7 +237,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const args = process.argv.slice(2)
   const allow = existsSync(ALLOW_FILE) ? JSON.parse(readFileSync(ALLOW_FILE, 'utf8')) : []
   const todo = new Map(existsSync(TODO_FILE) ? readFileSync(TODO_FILE, 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('#'))
-    .map((l) => { const m = l.match(/^(\d+) (.+ · \w+)$/); return [m[2], Number(m[1])] }) : [])
+    .map((l) => { const m = l.match(/^(\d+) (.+ · \w+)$/); if (!m) { console.error(`check:words — ${TODO_FILE}: "${l}" is not "count path · rule"`); process.exit(1) } return [m[2], Number(m[1])] }) : [])
   const fails = [], warns = []
   for (const f of walk('src')) {
     const file = relative('.', f).replaceAll('\\', '/')

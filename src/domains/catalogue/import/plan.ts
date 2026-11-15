@@ -32,8 +32,8 @@ export function planImport(products: readonly ImportProduct[], existing: Existin
 
 /** Why nothing can be imported: the shop's caps (null when it fits). */
 export function capRefusal(adds: { products: number; variants: number }, shop: { products: number; variants: number }): string | null {
-  if (shop.products + adds.products > MAX_PRODUCTS) return `Your shop holds up to ${MAX_PRODUCTS} products: this adds ${adds.products} to your ${shop.products}. Split the file.`
-  if (shop.variants + adds.variants > MAX_VARIANTS) return `Your shop holds up to ${MAX_VARIANTS.toLocaleString('en-IN')} sizes and colours: this adds ${adds.variants} to your ${shop.variants}. Split the file.`
+  if (shop.products + adds.products > MAX_PRODUCTS) return `Your store holds up to ${MAX_PRODUCTS} products. This file adds ${adds.products} to your ${shop.products}, so split it.`
+  if (shop.variants + adds.variants > MAX_VARIANTS) return `Your store holds up to ${MAX_VARIANTS.toLocaleString('en-IN')} sizes and colours. This file adds ${adds.variants} to your ${shop.variants}, so split it.`
   return null
 }
 

@@ -31,7 +31,7 @@ import { refreshSoldOut } from '@/lib/queries/storefront'
 // =============================================================================
 
 const Id = z.string().uuid()
-const SUPPORT = 'A support visit can\'t change an order\'s items.'
+const SUPPORT = 'A support visit can’t change an order\'s items.'
 const BUSY = 'Too many changes in a few minutes. Try again shortly.'
 const who = (a: { userId: string; membership: { tenantId: string } }) => `${a.membership.tenantId}:${a.userId}`
 
@@ -95,7 +95,7 @@ export async function saveItemsEdit(orderId: string, input: unknown): Promise<Sa
     return { ok: true, eventId: v.eventId, total: v.total, ...(v.asked ? { asked: v.asked } : {}), ...(v.refund ? { refund: v.refund } : {}) }
   } catch (err) {
     console.error('[order.items_edit]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not save that. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t save that. Nothing was changed.' }
   }
 }
 
@@ -136,7 +136,7 @@ export async function shipWithoutChange(orderId: string): Promise<{ ok: true } |
     return { ok: true }
   } catch (err) {
     console.error('[order.edit_drop]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not do that. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t do that. Nothing was changed.' }
   }
 }
 
@@ -146,7 +146,7 @@ export async function retryOrderRefund(refundId: string): Promise<{ ok: true } |
   try {
     const auth = await requireMember(ROLES.edit)
     if (!auth.ok) return { ok: false, error: auth.message }
-    if (auth.membership.supportSessionId) return { ok: false, error: 'A support visit can\'t send a refund.' }
+    if (auth.membership.supportSessionId) return { ok: false, error: 'A support visit can’t send a refund.' }
     if (!(await withinLimit(LIMITS.orderEditSave, who(auth), new Date(), true))) return { ok: false, error: BUSY }
     const r = await asMember(ROLES.edit, { action: 'order.refund_retry', target: refundId, detail: {} }, async (tx, a) => {
       const t = a.membership.tenantId
@@ -161,6 +161,6 @@ export async function retryOrderRefund(refundId: string): Promise<{ ok: true } |
     return { ok: true }
   } catch (err) {
     console.error('[order.refund_retry]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not send that. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t send that. Nothing was changed.' }
   }
 }

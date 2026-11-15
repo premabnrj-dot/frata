@@ -51,7 +51,7 @@ export async function sendNoticeEmail(row: OutboxRow): Promise<void> {
       tx.select({ userId: noticeReads.userId }).from(noticeReads).where(and(eq(noticeReads.tenantId, tenantId), eq(noticeReads.noticeId, n.id))),
       tx.select({ userId: emailMessages.userId, id: emailMessages.id, done: sql<boolean>`${emailMessages.sentAt} is not null or ${emailMessages.failedAt} is not null or ${emailMessages.skippedAt} is not null` })
         .from(emailMessages).where(and(eq(emailMessages.tenantId, tenantId), eq(emailMessages.noticeId, n.id))),
-      wordNotices(tx, [n], shop?.shopName ?? 'your shop'),
+      wordNotices(tx, [n], shop?.shopName ?? 'your store'),
     ])
     const pref = new Map(prefs.map((p) => [p.userId, p.email])), read = new Set(reads.map((r) => r.userId))
     const sent = new Set(done.filter((d) => d.done).map((d) => d.userId)), waiting = new Map(done.filter((d) => !d.done).map((d) => [d.userId, d.id]))
@@ -80,7 +80,7 @@ export async function sendNoticeEmail(row: OutboxRow): Promise<void> {
   let retry: string | null = null
   for (const r of plan.out) {
     const mail = frrataEmail({ preview: plan.words.title, heading: plan.words.title, message: plan.words.body, button: { label: 'Open in Frrata', href },
-      footer: plan.required ? 'Billing and security emails always reach owners and admins.' : 'Change which emails you get in Settings › Your notifications.' })
+      footer: plan.required ? 'Billing and security emails always reach owners and managers.' : 'Change which emails you get in Settings › Your notifications.' })
     const s = await sendEmail({ from: EMAIL_NOTICES_FROM, to: r.to, replyTo: null, subject: plan.words.title.slice(0, 150), html: mail.html, text: mail.text,
       configurationSet: SES_CONFIG_NOTICES, tenant: 'frrata', messageId: r.messageId, tenantTag: tenantId }, new Date())
     await withTenant(tenantId, (tx) => tx.update(emailMessages).set(s.ok ? { sentAt: new Date(), providerId: s.providerId }

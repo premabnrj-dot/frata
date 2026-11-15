@@ -65,7 +65,7 @@ describe('the rate table (GST 2.0)', () => {
     expect(searchHsn('4202', D)[0]!.code).toBe('4202')
     expect(searchHsn('saree', D).map((e) => e.code)).toContain('5007')
     expect(searchHsn('zzzz', D)).toEqual([])
-    expect(ruleWords(ruleOn('6204', D)!)).toBe('5% up to ₹2,500 a piece, 18% above')
+    expect(ruleWords(ruleOn('6204', D)!)).toBe('5% up to ₹2,500 an item, 18% above')
   })
   it('turnover band: HSN digits and business invoices', () => {
     expect(hsnDigitsFor('under_5cr')).toBe(4); expect(hsnDigitsFor('over_10cr')).toBe(6)
