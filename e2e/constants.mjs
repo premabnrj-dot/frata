@@ -33,6 +33,8 @@ export const USERS = {
   accountant: { id: 'cccccccc-0000-0000-0000-000000000013', email: 'ca@ledger.test' },
   // A partner's lead (partner teams T1a): invited by the partner's owner. Added by 80-partner-team.
   lead: { id: 'cccccccc-0000-0000-0000-000000000014', email: 'lead@studio.test' },
+  // A partner's Builder (T1c, ADR-0015): never sees orders, shoppers or costs. Added by 86-builders.
+  builder: { id: 'cccccccc-0000-0000-0000-000000000015', email: 'build@studio.test' },
 }
 export const RZP_KEYS = { id: 'rzp_live_FrataTest01', secret: 'testsecret12345678abcd' }
 /** Frrata's own billing account (billing B3), test keys: they may collect only test-mode invoices. */

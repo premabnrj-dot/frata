@@ -1,5 +1,5 @@
 # T1c · Builders: capabilities, and a Builder who never sees orders, shoppers or costs
-Status: active (owner approved the final mockup and questions 1–8 "all recommended", 2026-11-15, relayed by the orchestrator; reviews folded in) · Date: 2026-11-15 · Lane C
+Status: built on the branch, awaiting release (owner approved the final mockup and questions 1–8 "all recommended", 2026-11-15, relayed by the orchestrator; reviews folded in) · Date: 2026-11-15 · Lane C
 (`claude/lane-c-builders`, `docs/plans/2026-11-15-parallel-lanes.md`) · Decision: ADR-0015 accepted (owner 2026-11-15:
 "builders approved") · Spec: `docs/specs/2026-11-12-studio-intake-and-team.md` § Partner teams · Row: T1c in
 `docs/plans/2026-11-12-studio-build.md` · Builds on T1a (teams, 0123–0124) and T1b (partner passkeys, 0128–0129) ·
@@ -180,6 +180,15 @@ A Builder joins **no tuple** (ADR-0015 § 1). Read on 2026-11-15 (`grep -rlw`), 
 | e2e: "every route answers 404" | the page's own refusal `Panel` (HTTP 200) inside the Builder's shell | every page already refuses through `requireMember`; a 404 needs each of 55 pages edited |
 | "Audit: each refusal logged … repeated refusals alert" | logged (`[builder refused]` with capability, route and member id, never an email); the alert waits (owner question 2) | no alert channel to a partner owner exists before C1 |
 
+## As built: differences from the approved mockup (BUILT AS DRAWN; shown to the owner with the release report)
+| Mockup element | What was built | Reason | Owner seen |
+|---|---|---|---|
+| Screen 7, Products columns: Product · Status · Sizes · Stock · Price · ↗ | The owner list's own columns and order (Photo · Product · Status · Price · Stock · Sizes and colours) plus the preview mark | one row component (`ProductCells`) for the owner and the Builder: the drawing's order was the sketch's, the plan says "the list as owners see it" | no |
+| Screen 4, /join: a store tag and the button "Join Pixel & Thread" | T1b's approved /join kept (steps, work email, "Accept invite"); the heading names the role ("Join Pixel & Thread as a Builder") | the T1b partner sign-in mockup is approved and its flow (80-partner-team) holds it; T1c changes only the role's word | no |
+| Screen 5, a Builder's Clients: no view tabs | as drawn for a Builder; a Lead keeps the tabs and loses the Owner, Plan and Your share columns (owner question 6) | the Lead was not drawn; question 6 removed those columns for Leads | no |
+| Plan § Deviations, refusal log "with route pattern" | the log line carries the shop and person ids only | `requireMember` doesn't know the route, and a path can carry an order number or a phone | no |
+| Plan task 6, "e2e posts three actions" | every action's refusal is a unit test (`asMember`, every tuple; `requireCapability`), and the sweep GETs every page and route handler | server action ids are build-internal, so a flow can't post one without its form | no |
+
 ## Tasks (each ends with its verify command and `impact-reviewer` on its diff)
 1. **Capabilities, no one's access moves.** `capabilities.test.ts` (snapshot of today's tuples) first; then
    `CAPABILITIES`, the tuples as views, `builder` in `MEMBER_ROLES`, `ROLE_LABEL`, `seesCosts`. Typecheck finds every
@@ -273,7 +282,7 @@ the Look (themes are retiring, ADR-0014).
    every storefront loader on `frata_builder`).
 6. **Today a Lead receives the brand owner's email in Clients**, against the rule "a lead never gets the owner's contact
    details". Fix it in T1c (one line in the same definer), or leave it to its own change? Recommended: fix here.
-7. **Builders connect to the database with their own login** (approved: a missing `DATABASE_URL_BUILDER` fails closed with a
+7. **Builders connect to the database with their own login** (as built: `frata_builder` LOGIN, `DATABASE_URL_BUILDER`; approved: a missing `DATABASE_URL_BUILDER` fails closed with a
    clear panel; the orchestrator sets the password and the secret at release) (`frata_builder`, its own secret and a 2-connection pool),
    as Frrata Admin does. Recommended: no Builder query can ever run with the app's rights. You add one secret in Vercel.
 8. **A Builder sees each product's stock count** (the list's stock column), not only "In stock" or "Sold out".
