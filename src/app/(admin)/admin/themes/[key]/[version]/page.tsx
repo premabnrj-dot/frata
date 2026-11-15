@@ -1,27 +1,31 @@
 import { notFound } from 'next/navigation'
 import { PageHeader } from '@/components/layout/page-header'
-import { Section } from '@/components/layout/section'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
+import { ViewTabs } from '@/components/ui/view-tabs'
+import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { Submit } from '@/components/ui/submit'
+import { FIELD } from '@/components/ui/field'
 import { CATALOGUE } from '@/domains/themes/catalogue'
 import { cmpSemver } from '@/domains/themes/semver'
 import { isBaseline } from '@/domains/themes/release'
 import { SECTION_NAMES } from '@/domains/themes/sections'
 import { shopsNamed, themeVersionsForAdmin } from '@/lib/admin/themes'
 import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
-import { dayIN } from '@/lib/format-date'
+import { dayMonthIN } from '@/lib/format-date'
+import { DialogButton, MoreDialogs, type DialogSpec } from '../../../_components/form-dialog'
 import { pullAction, releaseAction, stageAction, unstageAction } from '../../actions'
 import { StateBadge } from '../../state-badge'
-import { Submit } from '@/components/ui/submit'
-import { Button } from '@/components/ui/button'
-import { ActionForm, FieldMessage } from '@/components/ui/action-form'
-import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Theme version' }
 
-const input = FIELD
+const TABS = [['pilot', 'Pilot stores'], ['inside', 'What’s in it'], ['history', 'History']] as const
+type Tab = (typeof TABS)[number][0]
+const stores = (n: number) => `${n} ${n === 1 ? 'store' : 'stores'}`
 
-/** One version (mockup "Admin › Themes"): what changed, who it's offered to, and the decisions (each final). */
-export default async function ThemeVersionPage({ params, searchParams }: { params: Promise<{ key: string; version: string }>; searchParams: Promise<{ q?: string }> }) {
+/** One version (Neel N4, board Theme): Release leads; Recall and Withdraw in More, each final and asking why. */
+export default async function ThemeVersionPage({ params, searchParams }: { params: Promise<{ key: string; version: string }>; searchParams: Promise<{ q?: string; tab?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
   const [{ key, version }, sp, adminRole] = await Promise.all([params, searchParams, requireStaff(ADMIN_ONLY)])
@@ -29,6 +33,7 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
   const v = all.find((x) => x.key === key && x.version === version)
   if (!v) notFound()
   const admin = adminRole.ok
+  const tab: Tab = TABS.find(([k]) => k === sp.tab)?.[0] ?? (v.state === 'staged' || v.state === 'deployed' || v.state === 'added' ? 'pilot' : 'inside')
   const prev = Object.values(CATALOGUE[key] ?? {}).filter((m) => cmpSemver(m.version, version) < 0).sort((a, b) => cmpSemver(b.version, a.version))[0] ?? null
   const now = CATALOGUE[key]?.[version] ?? null
   // TS0b: a new design is named by its own name (Size help), never the bare "Design" key.
@@ -38,72 +43,68 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
   const older = all.filter((x) => x.key === key && cmpSemver(x.version, version) < 0).reduce((n, x) => n + x.live, 0)
   const results = admin && sp.q ? await shopsNamed(staff, sp.q) : []
   const final = v.state === 'recalled' || v.state === 'withdrawn'
+  const name = `${v.name} ${v.version}`
   const hidden = <><input type="hidden" name="key" value={key} /><input type="hidden" name="version" value={version} /></>
+  const why = (label: string, err: string) => <label className="flex flex-col gap-1 text-sm"><span className="font-medium">{label}</span><input name="reason" required minLength={3} maxLength={300} data-error={err} className={FIELD} /><FieldMessage name="reason" /></label>
+  const base = `/admin/themes/${key}/${version}`
+
+  const more: DialogSpec[] = admin && v.inCode && !isBaseline(key, version) ? [
+    ...(!final ? [{ label: 'Recall…', title: `Recall ${name}?`, description: `No new looks on it. ${stores(v.live)} live on it keep showing it and are offered their previous look. Final.`, action: pullAction, keep: 'Keep it', go: `Recall ${name}`,
+      fields: <>{hidden}<input type="hidden" name="how" value="recall" />{why('Why recall it', 'Say why, in a few words.')}</> }] : []),
+    ...(v.state !== 'withdrawn' ? [{ label: 'Withdraw…', title: `Withdraw ${name}?`, danger: true, action: pullAction, keep: 'Keep it', go: `Withdraw ${name}`,
+      description: <>{stores(v.live)} show their previous look at once. Final.{v.liveShops.length > 0 && <> Moves back: {v.liveShops.slice(0, 20).map((s) => s.name).join(', ')}{v.liveShops.length > 20 ? `, and ${v.liveShops.length - 20} more` : ''}.</>}</>,
+      fields: <>{hidden}<input type="hidden" name="how" value="withdraw" />{why('Why withdraw it', 'Say what the problem is, in a few words.')}</> }] : []),
+  ] : []
+
   return (
     <>
-      <PageHeader title={`${v.name} ${v.version}`} back={{ href: '/admin/themes', label: 'Themes' }} meta={<span className="inline-flex items-center gap-2"><StateBadge state={v.state} /> {v.live} shop{v.live === 1 ? '' : 's'} live on it</span>} />
-      {!admin && <p className="mb-3 text-sm text-muted-foreground">Only a master admin can stage, release, recall or withdraw a theme version.</p>}
-      <Section title="What’s in it">
-        {/* feedback-ok: a state of the version (not in the deployed code), not the result of a button */}
-        {!v.inCode && <p className="text-sm text-danger-text">This version is no longer in the deployed code; shops on it render the nearest earlier version.</p>}
-        <ul className="list-disc space-y-1 pl-5 text-sm">{newFeatures.map((f) => <li key={f}>{f}</li>)}</ul>
-        {prev && <p className="mt-2 text-sm text-muted-foreground">Since {prev.version}: {added.length ? `new section${added.length > 1 ? 's' : ''} ${added.join(', ')}` : 'no new sections'}. Shops on {prev.version} keep everything they made when they move to it.</p>}
-        <p className="mt-2 text-sm text-muted-foreground">
-          {v.releasedAt && <>Released {dayIN(v.releasedAt)}. </>}
-          {v.recalledAt && <>Recalled {dayIN(v.recalledAt)}: {v.recalledReason}. </>}
-          {v.withdrawnAt && <>Withdrawn {dayIN(v.withdrawnAt)}: {v.withdrawnReason}.</>}
-        </p>
-      </Section>
+      <PageHeader title={name} back={{ href: '/admin/themes', label: 'Themes' }}
+        badges={v.state === 'staged' ? <Badge tone="info">Pilot · {stores(v.staged.length)}</Badge> : <StateBadge state={v.state} />}
+        meta={`${v.live ? `${stores(v.live)} live on it · ` : ''}${prev ? `New in ${v.version} · ${added.length ? `${added.length} ${added.length === 1 ? 'section' : 'sections'}` : 'no new sections'}` : 'First version'}`}
+        actions={<>
+          <MoreDialogs specs={more} />
+          {admin && v.inCode && !final && v.state !== 'released' && (
+            <DialogButton variant="primary" spec={{ label: 'Release to every store', title: `Release ${name} to every store?`, action: releaseAction, keep: 'Not yet', go: 'Release', fields: hidden,
+              description: older > 0 ? `${stores(older)} live on an older ${v.name} see that it’s ready; nothing changes until they publish.` : 'Every store can try it.' }} />
+          )}
+        </>} />
+      {/* feedback-ok: a state of the version (not in the deployed code), not the result of a button */}
+      {!v.inCode && <p className="text-sm text-danger-text">This version is no longer in the deployed code; stores on it show the nearest earlier version.</p>}
 
-      <Section title="Pilot shops">
-        {v.staged.length ? <ul className="space-y-2 text-sm">{v.staged.map((s) => (
-          <li key={s.tenantId} className="flex items-center gap-3"><span className="flex-1">{s.name}</span>
-            {admin && <ActionForm action={unstageAction}>{hidden}<input type="hidden" name="tenantId" value={s.tenantId} /><Submit variant="secondary">Unstage</Submit></ActionForm>}
-          </li>))}</ul> : <p className="text-sm text-muted-foreground">Not staged to any shop.</p>}
+      <ViewTabs label={name} tabs={TABS.map(([k, label]) => ({ href: `${base}?tab=${k}`, label, count: k === 'pilot' ? v.staged.length || undefined : undefined, current: tab === k }))} />
+
+      {tab === 'pilot' && <div className="space-y-3 text-sm">
         {admin && !final && v.state !== 'released' && v.inCode && <>
-          <form method="get" className="mt-3 flex flex-wrap gap-2">
-            <label className="sr-only" htmlFor="q">Find a shop</label>
-            <input id="q" name="q" defaultValue={sp.q ?? ''} placeholder="Shop name" className={`${input} w-56`} />
-            <Button type="submit" variant="secondary">Find</Button>
+          <form method="get" className="flex flex-wrap gap-2">
+            <input type="hidden" name="tab" value="pilot" />
+            <label className="sr-only" htmlFor="q">Find a store</label>
+            <input id="q" name="q" defaultValue={sp.q ?? ''} placeholder="Store name" className={`${FIELD} w-56`} />
+            <Button type="submit" variant="secondary">Add pilot store</Button>
           </form>
-          {results.length > 0 && <ul className="mt-2 space-y-2 text-sm">{results.map((s) => (
-            <li key={s.id} className="flex items-center gap-3"><span className="flex-1">{s.name} <span className="text-muted-foreground">{s.slug}</span></span>
-              <ActionForm action={stageAction}>{hidden}<input type="hidden" name="tenantId" value={s.id} /><Submit>Stage to {s.name}</Submit></ActionForm>
+          {results.length > 0 && <ul className="divide-y divide-line-soft">{results.map((s) => (
+            <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-2"><span>{s.name} <span className="text-muted-foreground">{s.slug}</span></span>
+              <ActionForm action={stageAction}>{hidden}<input type="hidden" name="tenantId" value={s.id} /><Submit>Add {s.name}</Submit></ActionForm>
             </li>))}</ul>}
         </>}
-      </Section>
+        {v.staged.length ? <ul className="divide-y divide-line-soft">{v.staged.map((s) => (
+          <li key={s.tenantId} className="flex flex-wrap items-center justify-between gap-2 py-2"><span>{s.name}</span>
+            {admin && <ActionForm action={unstageAction}>{hidden}<input type="hidden" name="tenantId" value={s.tenantId} /><Submit variant="secondary">Remove {s.name}</Submit></ActionForm>}
+          </li>))}</ul> : <Panel title="No pilot stores" />}
+      </div>}
 
-      {admin && v.inCode && <Section title="Decisions">
-        <div className="space-y-4">
-          {!final && v.state !== 'released' && (
-            <ActionForm action={releaseAction} className="space-y-2">{hidden}
-              <p className="text-sm">Every shop can try it. {older > 0 ? `${older} shop${older === 1 ? ' is' : 's are'} live on an older ${v.name}: they’ll see that it’s ready, and nothing changes until they publish.` : ''}</p>
-              <Submit>Release to everyone</Submit>
-            </ActionForm>
-          )}
-          {!final && !isBaseline(key, version) && (
-            <ActionForm action={pullAction} className="space-y-2">{hidden}<input type="hidden" name="how" value="recall" />
-              <p className="text-sm">Recall: no new looks on it. {v.live} shop{v.live === 1 ? '' : 's'} live on it keep showing it and are offered their previous look. Final.</p>
-              <label className="sr-only" htmlFor="recall-why">Why recall it</label>
-              <input id="recall-why" name="reason" required minLength={3} maxLength={300} placeholder="Why, in a few words" data-error="Say why, in a few words." className={`${input} w-full max-w-md`} />
-              <FieldMessage name="reason" />
-              <Submit variant="secondary">Recall {v.name} {v.version}</Submit>
-            </ActionForm>
-          )}
-          {v.state !== 'withdrawn' && !isBaseline(key, version) && (
-            <ActionForm action={pullAction} className="space-y-2">{hidden}<input type="hidden" name="how" value="withdraw" />
-              {/* feedback-ok: the withdraw's consequence, said before it is confirmed ("… Final."), not a result */}
-              <p className="text-sm text-danger-text">Withdraw, for a problem shoppers must not see: {v.live} shop{v.live === 1 ? '' : 's'} show their previous look at once. Final.</p>
-              {v.liveShops.length > 0 && <p className="text-sm">Moves back: {v.liveShops.slice(0, 20).map((s) => s.name).join(', ')}{v.liveShops.length > 20 ? `, and ${v.liveShops.length - 20} more` : ''}.</p>}
-              <label className="sr-only" htmlFor="withdraw-why">Why withdraw it</label>
-              <input id="withdraw-why" name="reason" required minLength={3} maxLength={300} placeholder="The problem, in a few words" data-error="Say what the problem is, in a few words." className={`${input} w-full max-w-md`} />
-              <FieldMessage name="reason" />
-              <Submit variant="destructive">Withdraw {v.name} {v.version}</Submit>
-            </ActionForm>
-          )}
-          {isBaseline(key, version) && <p className="text-sm text-muted-foreground">Classic 1.0.0 is every shop’s fallback look: it can’t be recalled or withdrawn.</p>}
-        </div>
-      </Section>}
+      {tab === 'inside' && <div className="space-y-2 text-sm">
+        <ul className="list-disc space-y-1 pl-5">{newFeatures.map((f) => <li key={f}>{f}</li>)}</ul>
+        {prev && <p className="text-muted-foreground">Since {prev.version}: {added.length ? added.join(', ') : 'no new sections'}. Stores on {prev.version} keep everything they made.</p>}
+        {isBaseline(key, version) && <p className="text-muted-foreground">Every store’s fallback look: it can’t be recalled or withdrawn.</p>}
+      </div>}
+
+      {tab === 'history' && (v.releasedAt || v.recalledAt || v.withdrawnAt ? (
+        <ul className="divide-y divide-line-soft text-sm">
+          {v.releasedAt && <li className="flex justify-between gap-3 py-2"><span>Released to every store</span><span className="text-muted-foreground">{dayMonthIN(v.releasedAt)}</span></li>}
+          {v.recalledAt && <li className="flex justify-between gap-3 py-2"><span>Recalled · {v.recalledReason}</span><span className="text-muted-foreground">{dayMonthIN(v.recalledAt)}</span></li>}
+          {v.withdrawnAt && <li className="flex justify-between gap-3 py-2"><span>Withdrawn · {v.withdrawnReason}</span><span className="text-muted-foreground">{dayMonthIN(v.withdrawnAt)}</span></li>}
+        </ul>
+      ) : <Panel title="Nothing decided yet" />)}
     </>
   )
 }

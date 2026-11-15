@@ -1,16 +1,17 @@
 import Link from 'next/link'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { PageHeader } from '@/components/layout/page-header'
-import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { RESERVED } from '@/domains/signup/slug'
 import { domainsNeedingFrrata, HELD_LIMIT, heldNames, listBlocked, type BlockedKind } from '@/lib/admin/addresses'
 import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
-import { dayIN } from '@/lib/format-date'
+import { dayMonthIN, sinceIN } from '@/lib/format-date'
 import { blockNameAction, releaseNameAction, settleDomainAction, unblockNameAction } from './actions'
-import { Submit } from '@/components/ui/submit'
-import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { FieldMessage } from '@/components/ui/action-form'
+import { ViewTabs } from '@/components/ui/view-tabs'
+import { DialogButton, type DialogSpec } from '../_components/form-dialog'
+import { NeedsBand } from '../_components/needs-band'
 import { FIELD } from '@/components/ui/field'
 
 export const metadata = { title: 'Names' }
@@ -18,115 +19,78 @@ export const metadata = { title: 'Names' }
 const field = FIELD
 const KIND: Record<BlockedKind, string> = { protected: 'Protected brand', offensive: 'Offensive', domain: 'Domain' }
 
-/** Shop addresses D1·7 (mockup § 8, Admin › Names): blocked names and domains, and names held by a shop's past. */
-export default async function NamesPage() {
+const TABS = [['blocked', 'Blocked'], ['held', 'Held'], ['reserved', 'Reserved']] as const
+type Tab = (typeof TABS)[number][0]
+const Why = () => <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Why</span><input name="reason" required minLength={3} maxLength={500} data-error="Add a reason, 3 to 500 characters." className={field} /><FieldMessage name="reason" /></label>
+
+/** Admin › Names (Neel N4, board Names; shop addresses D1·7): a domain that waits leads; the lists in tabs. */
+export default async function NamesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
-  const [blocked, held, admin, waiting] = await Promise.all([listBlocked(staff), heldNames(staff), requireStaff(ADMIN_ONLY), domainsNeedingFrrata(staff)])
+  const [sp, blocked, held, admin, waiting] = await Promise.all([searchParams, listBlocked(staff), heldNames(staff), requireStaff(ADMIN_ONLY), domainsNeedingFrrata(staff)])
   const can = admin.ok
+  const now = new Date()
+  const tab: Tab = TABS.find(([k]) => k === sp.tab)?.[0] ?? 'blocked'
+  const count: Record<Tab, number> = { blocked: blocked.length, held: held.length, reserved: RESERVED.size }
+  const block: DialogSpec = { label: 'Block a name', title: 'Block a name?', description: 'No store can take it until it is unblocked.', action: blockNameAction, keep: 'Not now', go: 'Block name', fields: <>
+    <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Name or domain</span><input name="name" required minLength={3} maxLength={253} autoComplete="off" data-error="Use letters, digits and single hyphens, or a domain." className={`${field} font-mono`} /><FieldMessage name="name" /></label>
+    <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Kind</span><select name="kind" required className={field}>{(Object.keys(KIND) as BlockedKind[]).map((k) => <option key={k} value={k}>{KIND[k]}</option>)}</select></label>
+    <Why /></> }
 
   return (
     <>
-      <PageHeader title="Names" />
-      {waiting.length > 0 && (
-        <Section title="Domains" flush>
-          <DataTable label="Domains waiting for Frrata" rows={can ? 'form' : 'list'}>
-            <DataTableHead><th>Domain</th><th>Shop</th><th>State</th><th>Since</th>{can && <th><span className="sr-only">Action</span></th>}</DataTableHead>
-            <DataTableBody>
-              {waiting.map((d) => (
-                <DataTableRow key={d.id}>
-                  <Td cell="a" className="font-mono">{d.host}</Td>
-                  <Td cell="c"><Link href={`/admin/merchants/${d.tenantId}/addresses`} className="underline-offset-2 hover:underline">{d.shop}</Link></Td>
-                  <Td cell="e">{d.contestAt ? <Badge tone="warn">Claimed · another shop&apos;s main</Badge> : <Badge tone="danger">Not working</Badge>}</Td>
-                  <Td cell="d">{dayIN(d.contestAt ?? d.failingSince ?? d.claimedAt)}</Td>
-                  {can && (
-                    <Td cell="f">
-                      {d.contestAt && (
-                        <ActionForm action={settleDomainAction} className="flex flex-wrap items-center gap-2">
-                          <input type="hidden" name="id" value={d.id} />
-                          <input name="reason" required minLength={3} maxLength={500} aria-label={`Why settle ${d.host}`} placeholder="Reason" data-error="Add a reason, 3 to 500 characters." className={`${field} min-w-0 flex-1`} />
-                          <Submit name="move" value="yes" variant="secondary" size="wrap">Move to {d.shop}</Submit>
-                          <Submit name="move" value="no" variant="secondary" size="wrap">Refuse</Submit>
-                          <span className="basis-full empty:hidden"><FieldMessage name="reason" /></span>
-                        </ActionForm>
-                      )}
-                    </Td>
-                  )}
-                </DataTableRow>
-              ))}
-            </DataTableBody>
-          </DataTable>
-        </Section>
-      )}
-      {can && (
-        <Section title="Block a name" className="text-sm">
-          <ActionForm action={blockNameAction} className="grid gap-3 md:grid-cols-[1fr_10rem_1fr_auto] md:items-end">
-            <label className="flex flex-col gap-1"><span className="font-medium">Name or domain</span>
-              <input name="name" required minLength={3} maxLength={253} autoComplete="off" data-error="Use letters, digits and single hyphens, or a domain." className={`${field} font-mono`} /><FieldMessage name="name" /></label>
-            <label className="flex flex-col gap-1"><span className="font-medium">Kind</span>
-              <select name="kind" required className={field}>{(Object.keys(KIND) as BlockedKind[]).map((k) => <option key={k} value={k}>{KIND[k]}</option>)}</select></label>
-            <label className="flex flex-col gap-1"><span className="font-medium">Reason</span>
-              <input name="reason" required minLength={3} maxLength={500} data-error="Add a reason, 3 to 500 characters." className={field} /><FieldMessage name="reason" /></label>
-            <Submit variant="secondary">Block name</Submit>
-          </ActionForm>
-        </Section>
-      )}
-      <Section title="Blocked" flush>
-        {blocked.length ? (
-          <DataTable label="Blocked names" rows={can ? 'form' : 'list'}>
-            <DataTableHead><th>Name or domain</th><th>Kind</th><th>Reason</th><th>Added</th>{can && <th><span className="sr-only">Action</span></th>}</DataTableHead>
-            <DataTableBody>
-              {blocked.map((b) => (
-                <DataTableRow key={b.name}>
-                  <Td cell="a" className="font-mono">{b.name}</Td>
-                  <Td cell="c">{KIND[b.kind]}</Td>
-                  <Td cell="e">{b.reason}</Td>
-                  <Td cell="d">{dayIN(b.createdAt)}</Td>
-                  {can && (
-                    <Td cell="f" className="text-right">
-                      <ActionForm action={unblockNameAction} className="flex flex-wrap items-center justify-end gap-2">
-                        <input type="hidden" name="name" value={b.name} />
-                        <input name="reason" required minLength={3} maxLength={500} aria-label={`Why unblock ${b.name}`} placeholder="Reason" data-error="Add a reason, 3 to 500 characters." className={`${field} min-w-0 flex-1`} />
-                        <Submit variant="secondary" size="wrap">Unblock {b.name}</Submit>
-                        <span className="basis-full text-left empty:hidden"><FieldMessage name="reason" /></span>
-                      </ActionForm>
-                    </Td>
-                  )}
-                </DataTableRow>
-              ))}
-            </DataTableBody>
-          </DataTable>
-        ) : <p className="p-4 text-sm text-muted-foreground">None.</p>}
-      </Section>
-      <Section title={`Frrata's words · ${RESERVED.size}`}>
-        <p className="font-mono text-sm leading-relaxed">{[...RESERVED].sort().join(' · ')}</p>
-      </Section>
-      <Section title={held.length >= HELD_LIMIT ? `Held · first ${HELD_LIMIT}` : 'Held'} flush>
-        {held.length ? (
-          <DataTable label="Held names" rows={can ? 'form' : 'list'}>
-            <DataTableHead><th>Name</th><th>Shop</th><th>Since</th>{can && <th>Release</th>}</DataTableHead>
-            <DataTableBody>
-              {held.map((h) => (
-                <DataTableRow key={h.name}>
-                  <Td cell="a" className="font-mono">{h.name}{h.retiredByFrrata && <> <Badge tone="warn">No redirect</Badge></>}</Td>
-                  <Td cell="c"><Link href={`/admin/merchants/${h.tenantId}/addresses`} className="underline-offset-2 hover:underline">{h.shop}</Link></Td>
-                  <Td cell="d">{dayIN(h.retiredAt)}</Td>
-                  {can && (
-                    <Td cell="f">
-                      <ActionForm action={releaseNameAction} className="flex flex-wrap items-center gap-2">
-                        <input type="hidden" name="name" value={h.name} />
-                        <input name="reason" required minLength={3} maxLength={500} aria-label={`Why release ${h.name}`} placeholder="Reason" data-error="Add a reason, 3 to 500 characters." className={`${field} min-w-0 flex-1`} />
-                        <Submit variant="secondary">Release {h.name}</Submit>
-                        <span className="basis-full empty:hidden"><FieldMessage name="reason" /></span>
-                      </ActionForm>
-                    </Td>
-                  )}
-                </DataTableRow>
-              ))}
-            </DataTableBody>
-          </DataTable>
-        ) : <p className="p-4 text-sm text-muted-foreground">None.</p>}
-      </Section>
+      <PageHeader title="Names" actions={can && <DialogButton spec={block} />} />
+      {waiting.map((d) => d.contestAt ? (
+        <NeedsBand key={d.id} title={`${d.shop} claims ${d.host}.`} line={`Another store uses it as its main address · ${sinceIN(d.contestAt, now)}`}
+          action={can ? <div className="flex flex-wrap gap-2">
+            <DialogButton spec={{ label: 'Keep where it is', title: `Keep ${d.host} where it is?`, description: `${d.shop} is told its claim was refused.`, action: settleDomainAction, keep: 'Not now', go: 'Keep where it is',
+              fields: <><input type="hidden" name="id" value={d.id} /><input type="hidden" name="move" value="no" /><Why /></> }} />
+            <DialogButton spec={{ label: `Move to ${d.shop}`, title: `Move ${d.host} to ${d.shop}?`, description: 'The other store loses it as its address at once.', action: settleDomainAction, keep: 'Not now', go: `Move to ${d.shop}`, danger: true,
+              fields: <><input type="hidden" name="id" value={d.id} /><input type="hidden" name="move" value="yes" /><Why /></> }} />
+          </div> : 'A master admin settles a claim.'} />
+      ) : (
+        <NeedsBand key={d.id} tone="bad" title={`${d.host} isn't working.`} line={`${d.shop}${d.failingSince ? ` · since ${dayMonthIN(d.failingSince)}` : ''}`}
+          action={<Link href={`/admin/merchants/${d.tenantId}/addresses`} className="text-sm underline-offset-2 hover:underline">Open {d.shop}</Link>} />
+      ))}
+
+      <ViewTabs label="Names" tabs={TABS.map(([k, label]) => ({ href: `/admin/names?tab=${k}`, label, count: count[k], current: tab === k }))} />
+
+      {tab === 'blocked' && (blocked.length === 0 ? <Panel title="Nothing is blocked" /> : (
+        <DataTable label="Blocked names" rows={can ? 'form' : 'list'}>
+          <DataTableHead><th>Name</th><th>Kind</th><th>Reason</th><th>Added</th>{can && <th><span className="sr-only">Action</span></th>}</DataTableHead>
+          <DataTableBody>
+            {blocked.map((b) => (
+              <DataTableRow key={b.name}>
+                <Td cell="a" className="font-mono">{b.name}</Td>
+                <Td cell="c">{KIND[b.kind]}</Td>
+                <Td cell="e">{b.reason}</Td>
+                <Td cell="d">{dayMonthIN(b.createdAt)}</Td>
+                {can && <Td cell="f" className="text-right"><DialogButton spec={{ label: `Unblock ${b.name}`, title: `Unblock ${b.name}?`, description: 'Any store can take it again.', action: unblockNameAction, keep: 'Keep blocked', go: 'Unblock',
+                  fields: <><input type="hidden" name="name" value={b.name} /><Why /></> }} /></Td>}
+              </DataTableRow>
+            ))}
+          </DataTableBody>
+        </DataTable>
+      ))}
+
+      {tab === 'held' && (held.length === 0 ? <Panel title="No name is held" /> : (
+        <DataTable label={held.length >= HELD_LIMIT ? `Held names, first ${HELD_LIMIT}` : 'Held names'} rows={can ? 'form' : 'list'}>
+          <DataTableHead><th>Name</th><th>Store</th><th>Since</th>{can && <th><span className="sr-only">Action</span></th>}</DataTableHead>
+          <DataTableBody>
+            {held.map((h) => (
+              <DataTableRow key={h.name}>
+                <Td cell="a" className="font-mono">{h.name}{h.retiredByFrrata && <> <Badge tone="warn">No redirect</Badge></>}</Td>
+                <Td cell="c"><Link href={`/admin/merchants/${h.tenantId}/addresses`} className="underline-offset-2 hover:underline">{h.shop}</Link></Td>
+                <Td cell="d">{dayMonthIN(h.retiredAt)}</Td>
+                {can && <Td cell="f" className="text-right"><DialogButton spec={{ label: `Release ${h.name}`, title: `Release ${h.name}?`, description: 'Any store can take it; it no longer leads to the old store.', action: releaseNameAction, keep: 'Keep held', go: 'Release',
+                  fields: <><input type="hidden" name="name" value={h.name} /><Why /></> }} /></Td>}
+              </DataTableRow>
+            ))}
+          </DataTableBody>
+        </DataTable>
+      ))}
+
+      {tab === 'reserved' && <p className="font-mono text-sm leading-relaxed">{[...RESERVED].sort().join(' · ')}</p>}
     </>
   )
 }

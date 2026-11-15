@@ -100,9 +100,11 @@ export default {
           await q.goto(at('kesar-two') + '/?utm_source=instagram')
           await q.waitForURL(at('kesar-frrata') + '/?utm_source=instagram')
           await s.close()
-          await a.goto(CONSOLE + '/admin/names')
-          await a.getByLabel('Why release kesar-studio').fill('Trademark cleared')
+          await a.goto(CONSOLE + '/admin/names?tab=held')
           await a.getByRole('button', { name: 'Release kesar-studio' }).click()
+          const rel = a.getByRole('dialog', { name: 'Release kesar-studio?' })
+          await rel.getByLabel('Why').fill('Trademark cleared')
+          await rel.getByRole('button', { name: 'Release', exact: true }).click()
           await expectToast(a, 'kesar-studio released.', 'ok')
         } finally { await staff.close() }
         // Not opened (the step before lifted it), so the change needs no confirm.

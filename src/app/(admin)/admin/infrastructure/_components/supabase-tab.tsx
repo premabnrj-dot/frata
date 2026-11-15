@@ -1,9 +1,8 @@
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
-import { Section } from '@/components/layout/section'
 import { Panel } from '@/components/ui/panel'
 import { LIMITS, type Alert, type DbHealth } from '@/domains/infra/alerts'
 import { RATES_CHECKED, SUPABASE } from '@/domains/infra/rates'
-import { bytes, Kpis, Meter, NeedsYou, Rules, Sources } from './parts'
+import { bytes, Kpis, Meter, NeedsYou, Rules, Sources, Fold } from './parts'
 
 const ROLE = { frata_app: 'The shop and console', frata_admin: 'Admin', other: 'Supabase’s own' } as Record<string, string>
 
@@ -14,15 +13,15 @@ export function SupabaseTab({ h, alerts }: { h: DbHealth | null; alerts: Alert[]
   const wait = h.outboxOldestS === null ? 'none waiting' : h.outboxOldestS < 120 ? `oldest ${h.outboxOldestS} s` : `oldest ${Math.round(h.outboxOldestS / 60)} min`
   return (
     <div className="grid gap-4">
+      <NeedsYou alerts={alerts} />
       <Kpis items={[
         { label: 'Plan', value: SUPABASE.plan === 'free' ? 'Free' : 'Pro', sub: 'Mumbai' },
         { label: 'Database', value: bytes(h.dbBytes), sub: `of ${bytes(disk)}` },
         { label: 'Connections', value: `${open} / ${h.maxConnections}`, sub: `${busy} busy now` },
         { label: 'Cache hits', value: h.cacheHit === null ? '—' : `${h.cacheHit}%`, sub: 'Reads served from memory' },
       ]} />
-      <NeedsYou alerts={alerts} />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Section flush title="Now">
+      <div className="grid gap-2">
+        <Fold title="Connections and queues">
           <DataTable label="Connections">
             <DataTableHead><th>Connections</th><th className="text-right">Open</th><th className="text-right">Busy</th></DataTableHead>
             <DataTableBody>
@@ -34,8 +33,8 @@ export function SupabaseTab({ h, alerts }: { h: DbHealth | null; alerts: Alert[]
             <Meter label="Outbox gave up today" value={h.outboxDeadToday} share={h.outboxDeadToday ? 1 : 0} tone={h.outboxDeadToday ? 'warn' : 'neutral'} />
             <Meter label="Webhooks not processed" value={h.webhooksWaiting} share={h.webhooksWaiting / LIMITS.webhooksWaiting} tone={h.webhooksWaiting > LIMITS.webhooksWaiting ? 'warn' : 'neutral'} />
           </div>
-        </Section>
-        <Section flush title="Slowest queries">
+        </Fold>
+        <Fold title="Slowest queries">
           {h.queries.length ? (
             <DataTable label="Slowest queries">
               <DataTableHead><th>Query</th><th className="text-right">Calls</th><th className="text-right">Mean</th><th className="text-right">Total</th></DataTableHead>
@@ -44,17 +43,17 @@ export function SupabaseTab({ h, alerts }: { h: DbHealth | null; alerts: Alert[]
               </DataTableBody>
             </DataTable>
           ) : <p className="px-4 pb-4 text-sm text-muted-foreground">No query statistics on this database.</p>}
-        </Section>
+        </Fold>
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Section flush title="Biggest tables">
+      <div className="grid gap-2">
+        <Fold title="Biggest tables">
           <DataTable label="Biggest tables">
             <DataTableHead><th>Table</th><th className="text-right">Rows</th><th className="text-right">Size</th></DataTableHead>
             <DataTableBody>
               {h.tables.map((t) => <DataTableRow key={t.name}><Td cell="a" className="font-num text-xs">{t.name}</Td><Td cell="b" className="text-right font-num">{t.rows.toLocaleString('en-IN')}</Td><Td cell="c" className="text-right font-num">{bytes(t.bytes)}</Td></DataTableRow>)}
             </DataTableBody>
           </DataTable>
-        </Section>
+        </Fold>
         <Rules rules={[
           ['Connections over 80%', `${Math.ceil(h.maxConnections * LIMITS.connectionsShare)} of ${h.maxConnections}`],
           ['Database over 80% of the plan', `${bytes(disk * LIMITS.diskShare)} of ${bytes(disk)}`],

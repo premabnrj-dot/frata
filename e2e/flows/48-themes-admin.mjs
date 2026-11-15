@@ -44,12 +44,13 @@ export default {
 
     await t.step('Staged to Kesar Studio, Kesar can try it; released, everyone can', async () => {
       await meera.goto(CONSOLE + '/admin/themes/editorial/1.1.0')
-      await meera.getByLabel('Find a shop').fill('Kesar')
-      await meera.getByRole('button', { name: 'Find' }).click()
-      await meera.getByRole('button', { name: /^Stage to Kesar/ }).click()
+      await meera.getByLabel('Find a store').fill('Kesar')
+      await meera.getByRole('button', { name: 'Add pilot store' }).click()
+      await meera.getByRole('button', { name: /^Add Kesar/ }).click()
       await expectToast(meera, 'Staged: that shop can try this version now.', 'ok')
       assert.equal(await editorialVersion(), '1.1.0')
-      await meera.getByRole('button', { name: 'Release to everyone' }).click()
+      await meera.getByRole('button', { name: 'Release to every store' }).click()
+      await meera.getByRole('dialog', { name: /^Release Editorial 1\.1\.0/ }).getByRole('button', { name: 'Release', exact: true }).click()
       await expectToast(meera, /Released: every shop can try it/, 'ok')
       const audit = await db`select action from audit_events where action in ('theme.stage', 'theme.release') and target = 'editorial@1.1.0'`
       assert.deepEqual(audit.map((a) => a.action).sort(), ['theme.release', 'theme.stage'])
@@ -57,8 +58,12 @@ export default {
     })
 
     await t.step('Recalled (with a reason): shops start on the version before', async () => {
-      await meera.getByLabel('Why recall it').fill('Shop the look dots overlap on small phones')
-      await meera.getByRole('button', { name: 'Recall Editorial 1.1.0' }).click()
+      // Recall and Withdraw are rare and final: More, a dialog asking why (Neel N4).
+      await meera.getByRole('button', { name: 'More' }).click()
+      await meera.getByRole('menuitem', { name: 'Recall…' }).click()
+      const rec = meera.getByRole('dialog', { name: 'Recall Editorial 1.1.0?' })
+      await rec.getByLabel('Why recall it').fill('Shop the look dots overlap on small phones')
+      await rec.getByRole('button', { name: 'Recall Editorial 1.1.0' }).click()
       await expectToast(meera, /Recalled\. No new looks on it/, 'ok')
       assert.equal(await editorialVersion(), '1.0.0')
       const [r] = await db`select recalled_reason from theme_versions where theme_key = 'editorial' and version = '1.1.0'`
@@ -80,8 +85,11 @@ export default {
       // Bazaar has the phone tab bar; the look before it doesn't.
       await until(async () => /Shop tabs/.test(await shopHtml()), 15_000)
       await meera.goto(CONSOLE + '/admin/themes/bazaar/1.0.0')
-      await meera.getByLabel('Why withdraw it').fill('Prices unreadable on the tint scheme')
-      await meera.getByRole('button', { name: 'Withdraw Bazaar 1.0.0' }).click()
+      await meera.getByRole('button', { name: 'More' }).click()
+      await meera.getByRole('menuitem', { name: 'Withdraw…' }).click()
+      const wd = meera.getByRole('dialog', { name: 'Withdraw Bazaar 1.0.0?' })
+      await wd.getByLabel('Why withdraw it').fill('Prices unreadable on the tint scheme')
+      await wd.getByRole('button', { name: 'Withdraw Bazaar 1.0.0' }).click()
       await expectToast(meera, 'Withdrawn. Shops on it show their previous look now.', 'ok')
       await until(async () => !/Shop tabs/.test(await shopHtml()), 15_000)
       await riya.goto(CONSOLE + '/console/look')
