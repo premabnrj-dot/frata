@@ -77,7 +77,7 @@ export function Funnel({ steps, drop, fullFrom }: { steps: FunnelStep[]; drop: {
             <span className="text-label text-muted-foreground">{s.name}</span>
             {s.n === null
               ? <span className="text-label text-muted-foreground">{fullFrom ? `Shows from ${dayMonthIN(fullFrom)}` : '—'}</span>
-              : <><Numeric className="text-title font-semibold">{formatCount(s.n)}</Numeric><ShareBar share={s.n / max} /></>}
+              : <><Numeric className="text-title font-semibold">{formatCount(s.n)}</Numeric><ShareBar share={s.n / max} track={false} /></>}
           </li>
         ))}
       </ol>

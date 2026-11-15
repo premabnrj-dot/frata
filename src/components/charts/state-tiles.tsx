@@ -32,7 +32,7 @@ export function StateTiles({ id, title, rows, min = 10 }: { id: string; title: s
   // The heading row on desktop ("See as a table"); under the sentence on a phone ("See every state"), as drawn.
   const toggle = (phone: boolean) => (
     <button type="button" aria-pressed={table} onClick={() => setTable((v) => !v)}
-      className={cn(button({ variant: 'link' }), phone ? 'min-h-11 self-start md:hidden' : 'min-h-6 max-md:hidden')}>
+      className={cn(button({ variant: 'link' }), 'underline underline-offset-2', phone ? 'min-h-11 self-start md:hidden' : 'min-h-6 max-md:hidden')}>
       {table ? (phone ? 'See the sentence' : 'See the map') : phone ? 'See every state' : 'See as a table'}
     </button>
   )

@@ -91,18 +91,18 @@ export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: 
       <div className="px-5 pb-4 max-md:hidden">
         <table className="w-full text-sm">
           <caption className="sr-only">Where orders came from</caption>
-          <thead><tr className="text-label text-muted-foreground [&>th]:py-2 [&>th]:font-medium [&>th]:whitespace-nowrap">
-            <th scope="col" className="text-left">Source</th><th scope="col" className="text-right" aria-sort="descending">Orders ↓</th><th scope="col" className="pl-6 text-left">Share</th>
-            {visits ? <><th scope="col" className="text-right">Visits</th><th scope="col" className="text-right">Per 100 visits</th></> : null}
+          <thead><tr className="text-label text-muted-foreground [&>th]:py-2 [&>th]:pl-4 [&>th]:align-bottom [&>th]:font-medium [&>th:first-child]:pl-0">
+            <th scope="col" className="text-left">Source</th><th scope="col" className="text-right whitespace-nowrap" aria-sort="descending">Orders ↓</th><th scope="col" className="pl-6 text-left">Share</th>
+            {visits ? <><th scope="col" className="text-right">Visits</th><th scope="col" className="text-right">Orders per 100 visits</th></> : null}
             <th scope="col" className="text-right">Came back</th>{a.costs ? <th scope="col" className="text-right">₹ kept an order</th> : null}<th scope="col" className="text-right">Change</th>
           </tr></thead>
           <tbody>
             {list.map((r) => {
               const c = ch(r), per = rate(r)
               return (
-                <tr key={r.key} className={`border-t border-line-soft [&>td]:py-2.5 ${r.muted ? 'text-muted-foreground' : ''}`}>
+                <tr key={r.key} className={`border-t border-line-soft [&>td]:py-2.5 [&>td]:pl-4 ${r.muted ? 'text-muted-foreground' : ''}`}>
                   <th scope="row" className="text-left font-normal">
-                    {r.href && !r.muted ? <Link href={r.href} prefetch={false} className="text-link underline underline-offset-2">{r.name}</Link> : r.href ? <Link href={r.href} prefetch={false} className="underline underline-offset-2">{r.name}</Link> : r.name}
+                    {r.href && !r.muted ? <Link href={r.href} prefetch={false} className="text-link underline underline-offset-2">{r.name}</Link> : r.name}
                     {r.sub ? <span className="block text-small text-muted-foreground">{r.sub}</span> : null}</th>
                   <td className="text-right"><Numeric>{r.cur.orders}</Numeric></td>
                   <td className="w-[22%] pl-6"><ShareBar share={r.cur.orders / top} tone={r.muted ? 'muted' : 'chart'} /></td>
@@ -112,7 +112,7 @@ export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: 
                   </> : null}
                   <td className={`text-right ${bad(r.cur) ? 'text-danger-text' : ''}`}>{back(r.cur)}</td>
                   {a.costs ? <td className="text-right">{kept(r.cur)}</td> : null}
-                  <td className={`text-right whitespace-nowrap ${toneText(c)}`}>{c?.words ?? '—'}</td>
+                  <td className={`pl-4 text-right whitespace-nowrap ${r.muted ? 'text-muted-foreground' : toneText(c)}`}>{c?.words ?? '—'}</td>
                 </tr>
               )
             })}
@@ -126,13 +126,13 @@ export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: 
           const body = (
             <>
               <span className="flex items-baseline justify-between gap-3"><span className={`min-w-0 truncate font-medium ${r.muted ? 'text-muted-foreground' : ''}`}>{r.name}</span><Numeric className="font-medium">{r.cur.orders}</Numeric></span>
-              <span className="flex items-center gap-3"><ShareBar share={r.cur.orders / top} tone={r.muted ? 'muted' : 'chart'} className="flex-1" /><span className={`text-small ${toneText(c)}`}>{c?.words ?? '—'}</span></span>
-              <span className={`text-small ${bad(r.cur) ? 'text-danger-text' : 'text-muted-foreground'}`}>{back(r.cur)} came back{a.costs && r.cur.kept && judgeable(r.cur.kept.counted) && keptPerOrder(r.cur.kept) !== null ? <> · {kept(r.cur)} kept an order</> : null}</span>
+              <span className="flex items-center gap-3"><ShareBar share={r.cur.orders / top} tone={r.muted ? 'muted' : 'chart'} className="flex-1" /><span className={`text-small ${r.muted ? 'text-muted-foreground' : toneText(c)}`}>{c?.words ?? '—'}</span></span>
+              {outcomes(r.cur) ? <span className={`text-small ${bad(r.cur) ? 'text-danger-text' : 'text-muted-foreground'}`}>{back(r.cur)} came back{a.costs && r.cur.kept && judgeable(r.cur.kept.counted) && keptPerOrder(r.cur.kept) !== null ? <> · {kept(r.cur)} kept an order</> : null}</span> : null}
             </>
           )
           return (
             <li key={r.key} className="border-t border-line-soft">
-              {r.href ? <Link href={r.href} prefetch={false} className="flex flex-col gap-1.5 px-4 py-3">{body}</Link> : <div className="flex flex-col gap-1.5 px-4 py-3">{body}</div>}
+              {r.href && !r.muted ? <Link href={r.href} prefetch={false} className="flex flex-col gap-1.5 px-4 py-3">{body}</Link> : <div className="flex flex-col gap-1.5 px-4 py-3">{body}</div>}
             </li>
           )
         })}

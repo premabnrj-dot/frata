@@ -70,7 +70,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   // The dates stay in the line, as drawn (design language 61); on a phone what they are against joins them.
   const lastDay = new Date(w.end.getTime() - 1)
   const range = `${dayMonthIN(a.window.start)} – ${dayMonthIN(lastDay)}${w.toNow ? ' (today so far)' : ''}`
-  const metaLine = () => <>{range}<span className="max-md:hidden"> · India time</span><span className="md:hidden">, {compare}</span></>
+  const metaLine = () => <>{range}<span className="max-md:hidden"> · India time</span><span className="md:hidden">, {w.toNow && w.days === 1 ? compare : `vs the ${w.days} days before`}</span></>
   const picker = <PeriodPicker path="/console/analytics" choice={w.choice} compare={compare} today={istDayKey(now)} />
   const actions = <>{picker}{make}</>
 
