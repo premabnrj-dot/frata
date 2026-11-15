@@ -268,18 +268,18 @@ rules cover the API trees.
 ## Deviations (mockup element · what was built · reason · owner seen)
 | Mockup element | Built | Reason | Owner seen |
 |---|---|---|---|
-| Page frame: "‹ Settings" back link, the page alone | Settings' group frame: breadcrumb to **Store**, the Store group's tabs (Details · Web address · Website · Contact · Policies), "View only" badge in the head | Settings in five groups landed on main after this mockup (owner 2026-11-15, Neel N2b·3); every settings page uses it | no |
-| Settings list: a "Website" row under the flat list | The row in the **Store** group (summary: the site's host in mono, or "Runs on Frrata"); the group's line gains "website" | Same: the groups are the list now | no |
-| Staff · view only | Staff never open the page (no row, no tab); a support visit and a partner after handover see it view only | `api.manage` is owner, admin, partner (lane C's CAPABILITIES, orchestrator 2026-11-15); Settings is closed to staff since N2b·3 | no |
-| "Deleted by Meera · 2 Nov" | "Deleted by Owner · 2 Nov" (the role); "Deleted by someone who left" when the person is gone | Who saved or deleted is said as a role, never a person's name or email (security review M2 on content, the same rule as Console › Content) | no |
-| "Arc Studio's access ended · 20 Nov"; "Made by Arc Studio" on a deleted partner key | "Your partner's access ended · 20 Nov"; "Made by …" only while the partner is on the store | Once the link ends the store can no longer read the partner's name (`app_shop_people` lists current people only); never a second copy of it | no |
-| Checkout: `checkout.kesarstudio.in` · Main · Approved by Razorpay | The same when the store's main address is its own domain; otherwise the platform address (`kesar-studio.frrata.shop` · Main), no badge | The mockup drew only a store with its own main domain | no |
-| A "Copied" toast after Copy (the key, the checkout address, OpenAPI) | "✓ Copied" in the button for 2 s, said once politely to a screen reader; no toast | The console's copy rule (`CopyField`): a toast for a copy would stack with the page's own toasts (design-system review 2) | no |
-| The unsaved bar as words ("1 unsaved change · Discard · Save") | The console's `SaveBar` primitive: the same words, Discard outlined and Save filled, above the first card | The one save bar every settings page uses | no |
-| A name error with a red "!" mark; a toast with a green tick | `FieldError` and the toast as the Neel primitives draw them (no mark, no tick) | Shared primitives, unchanged by this screen | no |
-| Small buttons 30 px tall on a phone | 44 px on a phone, 30 px from 768 px | The console's touch-target rule (`button.tsx` size `sm`) | no |
-| Partner banner "Hand over store" inside the page | The shell's own building bar, "Hand over" (`building-banner.tsx`, lane C's) | The shell draws it for every page; this lane doesn't change the shell | no |
-| Support banner "Support · Kesar Studio · 22 min · End visit" | The shell's support strip ("Frrata support in Kesar Studio's console … End now", `support-banner.tsx`) | The same: the shell's, on every page | no |
+| Page frame: "‹ Settings" back link, the page alone | Settings' group frame: breadcrumb to **Store**, the Store group's tabs (Details · Web address · Website · Contact · Policies), "View only" badge in the head | Settings in five groups landed on main after this mockup (owner 2026-11-15, Neel N2b·3); every settings page uses it | yes (2026-11-15, "ship with differences") |
+| Settings list: a "Website" row under the flat list | The row in the **Store** group (summary: the site's host in mono, or "Runs on Frrata"); the group's line gains "website" | Same: the groups are the list now | yes (2026-11-15, "ship with differences") |
+| Staff · view only | Staff never open the page (no row, no tab); a support visit and a partner after handover see it view only | `api.manage` is owner, admin, partner (lane C's CAPABILITIES, orchestrator 2026-11-15); Settings is closed to staff since N2b·3 | yes (2026-11-15, "ship with differences") |
+| "Deleted by Meera · 2 Nov" | "Deleted by Owner · 2 Nov" (the role); "Deleted by someone who left" when the person is gone | Who saved or deleted is said as a role, never a person's name or email (security review M2 on content, the same rule as Console › Content) | yes (2026-11-15, "ship with differences") |
+| "Arc Studio's access ended · 20 Nov"; "Made by Arc Studio" on a deleted partner key | "Your partner's access ended · 20 Nov"; "Made by …" only while the partner is on the store | Once the link ends the store can no longer read the partner's name (`app_shop_people` lists current people only); never a second copy of it | yes (2026-11-15, "ship with differences") |
+| Checkout: `checkout.kesarstudio.in` · Main · Approved by Razorpay | The same when the store's main address is its own domain; otherwise the platform address (`kesar-studio.frrata.shop` · Main), no badge | The mockup drew only a store with its own main domain | yes (2026-11-15, "ship with differences") |
+| A "Copied" toast after Copy (the key, the checkout address, OpenAPI) | "✓ Copied" in the button for 2 s, said once politely to a screen reader; no toast | The console's copy rule (`CopyField`): a toast for a copy would stack with the page's own toasts (design-system review 2) | yes (2026-11-15, "ship with differences") |
+| The unsaved bar as words ("1 unsaved change · Discard · Save") | The console's `SaveBar` primitive: the same words, Discard outlined and Save filled, above the first card | The one save bar every settings page uses | yes (2026-11-15, "ship with differences") |
+| A name error with a red "!" mark; a toast with a green tick | `FieldError` and the toast as the Neel primitives draw them (no mark, no tick) | Shared primitives, unchanged by this screen | yes (2026-11-15, "ship with differences") |
+| Small buttons 30 px tall on a phone | 44 px on a phone, 30 px from 768 px | The console's touch-target rule (`button.tsx` size `sm`) | yes (2026-11-15, "ship with differences") |
+| Partner banner "Hand over store" inside the page | The shell's own building bar, "Hand over" (`building-banner.tsx`, lane C's) | The shell draws it for every page; this lane doesn't change the shell | yes (2026-11-15, "ship with differences") |
+| Support banner "Support · Kesar Studio · 22 min · End visit" | The shell's support strip ("Frrata support in Kesar Studio's console … End now", `support-banner.tsx`) | The same: the shell's, on every page | yes (2026-11-15, "ship with differences") |
 
 ## Practices recorded in skills (same commit as each)
 `frata-architecture` § Tenancy (three sources) and § Speed (API rows; "a route handler under ISR never reads the
@@ -342,7 +342,7 @@ this branch first; SA1·1 (the Settings page and its actions) waits for C and B 
 | SA1·3 routes, boundary purge (0143), WAF | done | int test (A never reads B, no draft under a live key, no cost); proof 81; `waf.test.ts` |
 | SA1·4 skill, agent, planning heading | done | — |
 | e2e, mockup parity | done | `e2e/flows/91-storefront-api.mjs`; `mockup-parity-reviewer` |
-| Content resources (`content`, `pages/{handle}`, `faq`) | done, on B's seam (`apiContent` added beside `shopContent`; `shopPages`/`previewPages` read as they are) | `content-map.test.ts`; int test (A's own only, a draft page only under A's test key); `api-isr.mjs` (content a HIT, still the hour 65 s later); proof 81 |
+| Content resources (`content`, `pages/{handle}`, `faq`) | done, on B's seam (`apiContent` added beside `shopContent`; `shopPages`/`previewPages` read as they are) | `content-map.test.ts`; int test (A's own only, no draft page under either key (owner 2026-11-15)); `api-isr.mjs` (content a HIT, still the hour 65 s later); proof 81 |
 | Partner and domain stops, content freshness | done | drain sweeps `app_shops_with_key_stop` and `app_shops_with_content_change` (0143); proof 81 |
 
 **As built, differing from the plan text above** (the screen's differences are in the Deviations table):
@@ -378,7 +378,7 @@ this branch first; SA1·1 (the Settings page and its actions) waits for C and B 
   list), `pages/{handle}` (the store's page as a shopper sees it, `resolvePage` in shop mode, as a closed block union:
   heading, text, image, button, questions, group, columns; commerce blocks aren't in a page's templates), `faq` (the
   store's FAQ page, bound answers from Settings, or a `policy` pointer when the owner rewrote that policy). Links only
-  the store's own paths (`SHOP_PATH`); photos only from Frrata's store. Under a test key a draft page opens by handle.
+  the store's own paths (`SHOP_PATH`); photos only from Frrata's store. Under a test key a draft page or FAQ does not open until the signed preview token (ADR-0018 § 12; owner 2026-11-15).
 - The e2e stack now serves the API host (`NEXT_PUBLIC_API_HOST=api.localhost`), so a flow reads through the real door.
 
 ## Owner questions (as asked)

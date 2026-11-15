@@ -143,7 +143,7 @@ describe.skipIf(!host)('the Storefront API door', () => {
         expect(body).not.toContain('987654')
         for (const k of SENTINELS) expect(body).not.toContain(k)
       }
-      // Content and pages (V1 SA1, on lane B's seam): A's own only; a draft page opens only under A's test key.
+      // Content and pages (V1 SA1, on lane B's seam): A's own only; a draft page opens under no key until ADR-0018 § 12's signed preview token.
       for (const [i, t] of shops.entries()) await su.begin(async (tx) => {
         await tx`select set_config('app.tenant_id', ${t}, true)`
         await tx`insert into site_content (tenant_id, kind, key, value) values (${t}, 'contact', 'contact', ${tx.json({ line: `Call store ${i}` })})`
@@ -162,7 +162,8 @@ describe.skipIf(!host)('the Storefront API door', () => {
       expect(p0.body).toContain('Story of about-0')
       expect((await read(content('live', 'page', keys[0]!, { handle: 'about-1' }))).status).toBe(404)
       expect((await read(content('live', 'page', keys[0]!, { handle: 'soon-0' }))).status).toBe(404)
-      expect((await read(content('test', 'page', tests[0]!, { handle: 'soon-0' }))).body).toContain('Story of soon-0')
+      expect((await read(content('test', 'page', tests[0]!, { handle: 'soon-0' }))).status).toBe(404)
+      expect((await read(content('test', 'page', tests[0]!, { handle: 'about-0' }))).body).toContain('Story of about-0')
       expect((await read(content('test', 'page', tests[0]!, { handle: 'soon-1' }))).status).toBe(404)
       expect((await read(content('live', 'faq', keys[0]!))).status).toBe(404)
     } finally {

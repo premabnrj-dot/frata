@@ -11,7 +11,7 @@ import { contentOut, faqOut, storePageOut } from '@/domains/storefront-api/2026-
 import { resolvePage } from '@/domains/pages/page'
 import { HANDLE as PAGE_HANDLE } from '@/domains/pages/templates'
 import { apiContent, previewContent } from '@/lib/queries/content'
-import { previewPages, shopPages, type ShopPage } from '@/lib/queries/pages'
+import { shopPages, type ShopPage } from '@/lib/queries/pages'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 
@@ -19,7 +19,7 @@ import { paise } from '@/domains/money/paise'
 // FILE: src/lib/storefront-api/resources.ts — VERSION 2026-12's RESOURCES (spec § 3; V1 plan § SA1·3).
 //
 // One function per resource, shared by the cached tree (live keys: the shop's cached loaders) and the dynamic tree (test
-// keys: the uncached preview loaders: a draft opens by its handle; lists, collections and search stay listed-only; the
+// keys: the uncached preview loaders: a draft product opens by its handle, never a draft page or FAQ; lists, collections and search stay listed-only; the
 // offer bar is the shop's own live one under either key: a draft offer never shows). Every read takes the shop from ctx.tenantId, never anything
 // else, and never opens a withTenant around a cached loader (P4). The answer is a mapper's output; apiRequest parses it.
 // =============================================================================
@@ -28,12 +28,12 @@ const loaders = (ctx: ApiCtx) => ctx.keyKind === 'test'
   ? { shop: previewShop, catalogue: previewCatalogue, product: previewProduct, content: previewContent }
   : { shop: apiShop, catalogue: apiCatalogue, product: apiProduct, content: apiContent }
 
-/** One page by its address: a live page (the store's cached list), or under a test key also a draft that isn't hidden. */
+/** One page by its address: a live page only, under either key. A draft page or FAQ needs ADR-0018 § 12's signed
+ *  preview token (tenant, key id, entry, ≤ 10 minutes), which SA1b builds; until then a test key reads what is live
+ *  (owner, 2026-11-15: ship with drafts closed to test keys). */
 async function pageAt(ctx: ApiCtx, handle: string): Promise<Pick<ShopPage, 'handle' | 'title' | 'template' | 'fill'> | null> {
   if (!PAGE_HANDLE.test(handle)) return null
-  const live = (await shopPages(ctx.tenantId)).find((p) => p.handle === handle)
-  if (live || ctx.keyKind !== 'test') return live ?? null
-  return (await previewPages(ctx.tenantId)).find((p) => p.handle === handle && !p.hidden) ?? null
+  return (await shopPages(ctx.tenantId)).find((p) => p.handle === handle) ?? null
 }
 /** A page as the store shows a shopper (never a sample or an example), bound answers from the store's Settings. */
 async function pageNodes(ctx: ApiCtx, p: Pick<ShopPage, 'template' | 'fill'>) {
@@ -99,9 +99,8 @@ export const RESOURCES = {
     return page && nodes ? storePageOut(mapCtx(ctx), page, nodes) : null
   } },
   faq: { schema: S.Faq, run: async (ctx: ApiCtx) => {
-    // Under a test key the FAQ is its draft when it has one, as pages/{handle} opens it (api-contract review 3).
-    const live = (await shopPages(ctx.tenantId)).find((x) => x.template === 'faq')
-    const page = ctx.keyKind === 'test' ? (await previewPages(ctx.tenantId)).find((x) => x.template === 'faq' && !x.hidden) ?? live : live
+    // The live FAQ under either key, as pages/{handle}: its draft waits for the signed preview token (ADR-0018 § 12).
+    const page = (await shopPages(ctx.tenantId)).find((x) => x.template === 'faq')
     const nodes = page && await pageNodes(ctx, page)
     return page && nodes ? faqOut(page, nodes) : null
   } },
