@@ -53,7 +53,9 @@ A Builder joins **no tuple** (ADR-0015 § 1). Read on 2026-11-15 (`grep -rlw`), 
 | `app_partner_remove_member`, `app_remove_partner`, `admin_end_partner` | delete by `partner_member_id` | unchanged (role-blind, correct) |
 | `admin_reinstate_partner` | rebuilds `members` rows as `partner` | rebuilds each with the person's role |
 | `app_partner_clients` | owner all; lead assigned, **with the owner's email, the open invite and the plan** | builder: assigned only, those three `null` (a Builder never sees the brand's people or plan) |
-| `app_partner_create_shop`, `app_handover_invite` | owner or lead | unchanged: a Builder is refused |
+| `app_partner_create_shop` | owner or lead | unchanged: a Builder is refused |
+| `app_handover_invite` | owner only (0129) | unchanged |
+| `app_my_partner` | owner, lead | returns `builder`; `partners.ts` maps each role by name, an unknown role refuses (review H2) |
 | `app_my_handovers`, `app_accept_handover_v2` | refuse any active member of the linked partner | unchanged (role-blind) |
 | `app_partner_pk_approve` / `_decline` / `_remove_all` | `pm.role = 'lead'` | `pm.role in ('lead', 'builder')` |
 | `app_partner_team` | lists owner, lead, builder | unchanged |
@@ -262,7 +264,43 @@ the Look (themes are retiring, ADR-0014).
 4. **Changing Lead ↔ Builder keeps the person's stores** (they move with the role). Recommended.
 
 ## Reviews on this plan (2026-11-15)
-(folded in below once `architecture-reviewer`, `tenancy-auditor` and `security-reviewer` return)
+These override the text above where they differ.
+
+**security-reviewer (FIX BEFORE MERGE; gates clean):**
+- **H1 → the role is bound by the database, not by care.** A CHECK cannot read `partner_members`, so: a constraint
+  trigger on `members` (insert, update) and on `partner_members.role` (update) refuses a row whose `role` is not
+  `builder` exactly when its person's role is `builder`; `revoke update (role) on members from frata_app` (only definers
+  move a role); `app_partner_set_role` locks the person `FOR UPDATE` first (as accept and assign do); § 80 asserts no
+  row disagrees, and that a direct `update members set role` as `frata_app` raises.
+- **H2 → `app_my_partner` joins the definer table** (returns `builder`); `partners.ts` maps each role by name and an
+  unknown role REFUSES (today anything not `lead` reads as `owner`); `memberRole: PartnerRole`; a unit test per role.
+- **M3 → the lock on functions is PUBLIC's revoke on each definer**, so § 80 checks `has_function_privilege` for every
+  `prosecdef` function in every schema and `has_table_privilege`/`has_column_privilege` over all of `pg_class` (views
+  included) for `frata_builder` against the allow-list; the migration adds `alter default privileges revoke execute on
+  functions from public`.
+- **M4 →** `grant frata_builder to frata_app with inherit false, set true`; § 80 proves an owner and the storefront still
+  read products; task 2 reads production's `pg_roles`/`pg_auth_members` for `frata_app` (read only) and the report names
+  the result.
+- **M5 → the store switch is `src/app/choose/actions.ts` (`switchStoreAction`) and `/choose`**, not
+  `api/console/tenant` (which answers `{tenantId}` and stays as it is). Both move to `console.open` (they choose only
+  among the person's own stores) and join `BUILDER_DOORS`; e2e switches away from a Builder store.
+- **M6 → the refusal log carries the route PATTERN** (`/console/orders/[number]`), never the path or its query, the
+  capability and the member id; `errName` only; one line per request.
+- **M7 → the sweep enumerates every `page.tsx` AND `route.ts`** under `(console)`, `(lookeditor)`, `(lookpreview)` and
+  `api/console` (orders/pdf, rows, peek, filter-values, billing invoice, theme-preview included), expecting each one's
+  own refusal; a unit test that `requireMember`, `asMember`, `asModule` and `moduleGate` refuse a Builder for every
+  tuple; e2e posts three actions (an order write, a cost write, an export).
+- **M8 → the preview's cost-free claim gets its own proof:** a type test that `Store*` types carry no cost key, and e2e
+  asserting the Builder's preview HTML holds none of the seed's cost or fee values.
+- **L9 → `app_partner_set_role`** refuses any role but `lead`/`builder`, the owner row, the caller's own row and another
+  partner's person; covers invited people; Lead → Builder revokes the shop invites the person made (as assign-off
+  does); the person is told by the existing partner notice (`app_partner_notify`); § 80: a Builder setting its own role
+  and a role of `owner` are refused.
+- **L10 → `app_partner_clients` for a Builder** also nulls `share_months`, `notice_days`, `share_starts_at`, and returns
+  `has_owner` (boolean) so the stage stays right without the owner's email (the stage reads it, not the email).
+- **L11 →** set-role has its own limit (`partnerRole`, fail closed); the invite's role is `z.enum(['lead','builder'])`
+  (`partners.ts` hard-codes `'lead'` today); `builderProducts` takes `q` ≤ 100, enum sort and view, a bounded page.
+- **L12 →** corrected: `app_handover_invite` is owner-only (0129).
 
 ## Repetitive work → agents and scripts
 | Chore | Now |
