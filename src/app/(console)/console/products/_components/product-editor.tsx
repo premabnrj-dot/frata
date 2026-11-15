@@ -269,8 +269,9 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
             <VariantGrid options={opts} cells={d.cells} errors={errors} costs={shop.costs} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
               onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); fix(...Object.keys(patch).map((f) => `v:${k}:${f === 'leadMin' || f === 'leadMax' ? 'lead' : f}`)) }} />
           </Section>}
-          <FoldSection title="Details" start={Object.keys(start0.attributes).length > 0} action={Object.keys(d.attributes).length ? 'Edit' : 'Add'}
-            summary={d.category ? 'Fabric, work, occasion' : 'Pick a category first'} invalid={has('attributes')}>
+          {/* Folded as drawn, filled or not: its line names what is set ("Adults · Female · Cotton"). */}
+          <FoldSection title="Details" start={false} action={Object.keys(d.attributes).length ? 'Edit' : 'Add'}
+            summary={detailWords(d) || (d.category ? 'Fabric, work, occasion' : 'Pick a category first')} invalid={has('attributes')}>
             <DetailsPanel attributes={d.category?.attributes ?? []} values={d.attributes} onChange={(attributes) => set({ attributes })} />
           </FoldSection>
           {showSizes && <FoldSection title="Size chart" start={false} action={d.typeId ? 'Edit' : 'Add'} summary={sizedSummary} invalid={has('typeId')}>
@@ -311,6 +312,12 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
       <LeaveDialog open={!!guard.leaveTo} what={saved.title || 'this product'} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(d))} />
     </div>
   )
+}
+
+/** The chosen details' names, for the folded line. */
+function detailWords(d: Draft): string {
+  const names = (d.category?.attributes ?? []).flatMap((a) => (d.attributes[a.handle] ?? []).map((id) => a.values.find((v) => v.id === id)?.name).filter((x): x is string => !!x))
+  return names.slice(0, 4).join(' · ') + (names.length > 4 ? ` · ${names.length - 4} more` : '')
 }
 
 /** Details that still apply under a new category keep their values (a fabric stays a fabric); the rest go, and only
