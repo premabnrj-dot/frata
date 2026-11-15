@@ -71,10 +71,10 @@ Green before any change: e2e `01-signup`, `05-shop-look` (pixel), `13-paging`, `
   `hashHex(key)` is not here (I/O-free, but crypto lives in `src/lib`); `TEST_KEY_DAYS = 30`, `MAX_LIVE_KEYS = 20`,
   `KEY_NAME_MAX = 40`; `looksLikeKey(name)` (a pasted key refused as a name). `siteOriginProblem(origin, apex)`
   (`https://` + the apex or `www.` + apex exactly; no path, port or other subdomain).
-- **Who may manage keys is a capability in `src/domains/tenancy/roles.ts`** (ADR-0015, agreed with lane C through the
-  orchestrator): `api.manage` = owners and Managers; a partner only while the shop has **never had an owner** (ADR-0018
-  decision 5, the same fact `seesCosts` reads), never a support visit. `hasOwnerIn(tx)` is extracted from
-  `costsVisibleIn` so both read one rule.
+- **Who may manage keys is the capability `api.manage` in `src/domains/tenancy/roles.ts`, defined by lane C under ADR-0015
+  (orchestrator 2026-11-15); this lane reads it and never defines it.** Its meaning, as this plan needs it: `api.manage` = owners and Managers; a partner only while the shop has **never had an owner** (ADR-0018
+  decision 5, the same fact `seesCosts` reads), never a support visit. `hasOwnerIn(tx)` is lane B's extraction from `costsVisibleIn` (it lands
+  first); this lane uses it after merge.
 - Verify: `npx vitest run src/domains/storefront-api src/domains/tenancy` (a flipped char fails; 37/39 chars fail;
   `frs_live_` fails; base62 distribution within 1 % over 10⁶ draws; the capability table incl. staff, Accountant,
   partner with and without an owner ever).
@@ -102,7 +102,7 @@ Green before any change: e2e `01-signup`, `05-shop-look` (pixel), `13-paging`, `
   test keys stop; a partner is removed or suspended → its keys stop; reinstated → they answer again (owner note). No
   trigger touches `members` or lane C's definers. `security definer`, `search_path ''`, revoked from public, anon,
   authenticated, service_role, granted to `frata_app` only.
-- `scripts/verify/tenancy.sql` block **80** (next free; renumbered at merge): every line of ADR-0018 § Gates and proof
+- `scripts/verify/tenancy.sql` block **81** (orchestrator 2026-11-15: lane B takes 80; renumbered at merge): every line of ADR-0018 § Gates and proof
   (result exactly the columns above), plus: a key whose store opened answers 0 rows (test) / 1 (public); A opening
   leaves B's test keys answering; a partner person in A and B removed from A — B's partner key still answers; a removed
   partner link stops only that shop's partner keys; `site_domain_id` of another shop raises; a removed domain clears the
@@ -286,8 +286,7 @@ request"; "an `unstable_cache` tag must be known before the call: tag by the inp
 ## Shared files this lane touches (parallel-lanes rule 4)
 `CLAUDE.md` (the one tenancy line); `.claude/skills/frata-architecture/SKILL.md`, `frata-planning/SKILL.md`,
 `frata-gotchas/SKILL.md`; new `.claude/skills/frata-storefront-api/`, `.claude/agents/api-contract-reviewer.md`;
-**`src/domains/tenancy/roles.ts`** (`api.manage`, agreed with lane C); `src/lib/queries/settings.ts` (`hasOwnerIn`
-extracted); `next.config.ts` (rewrites); `src/middleware.ts` (the API branch); `src/domains/tenancy/host.ts` (+ tests);
+(`roles.ts` and `queries/settings.ts` are read only: `api.manage` is lane C's, `hasOwnerIn` lane B's); `next.config.ts` (rewrites); `src/middleware.ts` (the API branch); `src/domains/tenancy/host.ts` (+ tests);
 `src/lib/db/schema.ts`; `src/lib/db/platform.ts`; `src/lib/queries/storefront.ts`; `src/lib/storefront/refresh.ts`;
 `src/lib/db/rate-limit.ts` (`LIMITS`); `ops/firewall.json` (the API host's rules); `src/app/api/cron/drain/route.ts`
 (the boundary purge); `src/lib/public-env.ts`; `.env.example`; `scripts/check-tenant.mjs`,
@@ -296,9 +295,14 @@ extracted); `next.config.ts` (rewrites); `src/middleware.ts` (the API branch); `
 purge); `docs/decisions/0002-*.md`, `0018-*.md` (notes); `docs/setup.md` (WAF step).
 **Migrations:** `drizzle/01xx_storefront_keys.sql`, `drizzle/01xx_storefront_keys_access.sql` (+ journal, snapshot).
 **Not touched:** lane C's partner definers and `members` (partner keys stop by derivation), the console layout and shell.
-**Asked of lane C (through the orchestrator):** the partner-removal paths (`removePartner`, `removePartnerPerson`,
-`admin_end_partner`) call `refreshKeys(t)` for each shop they touch after commit, so a removed partner's keys stop at
-once rather than within the hour; until then the int test asserts the derived stop and the doc states the hour.
+**After C and B are merged, this branch adds** `refreshKeys(t)` after commit to the partner-removal paths
+(`removePartner`, `removePartnerPerson`, `admin_end_partner`) for each shop they touch, so a removed partner's keys stop
+at once (orchestrator 2026-11-15); the int test asserts it.
+
+## Release order and merges (orchestrator 2026-11-15)
+Lane C (builders, capabilities) ships first, then lane B (content), then this lane. Before building past SA0·2 this
+branch merges `main` with C's `api.manage` and B's `hasOwnerIn`; before release it merges both lanes' final state and
+takes the next free migration and proof numbers.
 
 ## Owner questions
 1. **Scope:** this lane builds SA0 + SA1 (catalogue reads and Settings › Website); the cart link, the 307s, "Your
