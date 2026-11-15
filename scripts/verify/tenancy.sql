@@ -3802,8 +3802,8 @@ do $$ declare r record; allowed jsonb := '{
      or (select count(*) from pg_policies where 'frata_builder' = any(roles)) <> 16
   then raise exception 'FAIL: frata_builder''s policies'; end if;
 end $$;
--- Billing rework R2: the system issuer (0138) never issues test invoices, never alongside a staff member, and its
--- audit row has no user (0137).
+-- Billing rework R2: the system issuer (0139) never issues test invoices, never alongside a staff member, and its
+-- audit row has no user (0138).
 do $$ begin
   begin perform app_issue_frrata_invoices(date_trunc('month', now()), 0, 0, null, 'X', '29ABCDE1234F1Z5', 'A', '998315', true, 'FRR/', '26-27', true);
     raise exception 'FAIL: a system run issued test invoices';
@@ -3912,4 +3912,53 @@ do $$ declare ra uuid; rb uuid; n int; begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 82 checks passed'
+-- 80b. A partner's save told to the owner (V1 content follow-up, 0137; owner 2026-11-15): the line goes to the saver's
+-- own store only, only for a partner's save on a store with an owner, once per place an hour; no store set writes
+-- nothing; the API roles can't run it.
+begin;
+insert into tenants (id, slug, name) values ('33333333-3333-3333-3333-3333333380b0', 'proof-80b-no-owner', 'Proof no owner');
+with p as (insert into partners (user_id, email, name, business_name, phone, city, services, work_url, brands_now, terms_version, agreed_at, approved_at)
+    values ('a0000000-0000-0000-0000-00000000c0a1', 'proof-partner@example.in', 'Proof', 'Proof Studio', '919845000000', 'Jaipur', '{}', '', '1-4', 1, now(), now()) returning id),
+  pm as (insert into partner_members (partner_id, user_id, email, role, accepted_at) select p.id, u.id, u.email, 'owner', now() from p,
+    (values ('a0000000-0000-0000-0000-00000000c0a1'::uuid, 'proof-partner@example.in')) u(id, email) returning id, user_id)
+insert into members (tenant_id, user_id, role, partner_member_id)
+  select t, pm.user_id, 'partner', pm.id from pm, (values ('11111111-1111-1111-1111-111111111111'::uuid), ('22222222-2222-2222-2222-222222222222'::uuid),
+    ('33333333-3333-3333-3333-3333333380b0'::uuid)) x(t);
+set local role frata_app;
+do $$ declare ca uuid; cb uuid; cc uuid; co uuid; c2 uuid; pb uuid; n int; begin
+  -- A store with no owner yet (a partner building it): its partner's save tells no one.
+  perform set_config('app.tenant_id', '33333333-3333-3333-3333-3333333380b0', true);
+  insert into site_content (tenant_id, kind, key, value, updated_by) values ('33333333-3333-3333-3333-3333333380b0', 'menu', 'footer', '[]', 'a0000000-0000-0000-0000-00000000c0a1') returning id into cc;
+  if app_content_partner_notice('site_content', cc, 'changed') then raise exception 'FAIL: a store with no owner got a partner notice'; end if;
+  perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
+  insert into site_content (tenant_id, kind, key, value, updated_by) values ('22222222-2222-2222-2222-222222222222', 'menu', 'footer', '[]', 'a0000000-0000-0000-0000-00000000c0a1') returning id into cb;
+  insert into shop_pages (tenant_id, template, draft, updated_by) values ('22222222-2222-2222-2222-222222222222', 'faq', '{"title":"Q","handle":"faq","fill":{},"hidden":true}', 'a0000000-0000-0000-0000-00000000c0a1') returning id into pb;
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  if app_content_partner_notice('site_content', cb, 'changed') then raise exception 'FAIL: A wrote a notice from B''s row'; end if;
+  if app_content_partner_notice('shop_pages', pb, 'changed') then raise exception 'FAIL: A wrote a notice from B''s page'; end if;
+  insert into site_content (tenant_id, kind, key, value, updated_by) values ('11111111-1111-1111-1111-111111111111', 'menu', 'footer', '[]', 'a0000000-0000-0000-0000-00000000c0a1') returning id into ca;
+  if not app_content_partner_notice('site_content', ca, 'changed') then raise exception 'FAIL: a partner''s save on a store with an owner wrote no notice'; end if;
+  if app_content_partner_notice('site_content', ca, 'changed') then raise exception 'FAIL: a second save within the hour wrote a second notice'; end if;
+  insert into site_content (tenant_id, kind, key, value, updated_by) values ('11111111-1111-1111-1111-111111111111', 'menu', 'main', '[]', 'a0000000-0000-0000-0000-00000000c0a1') returning id into c2;
+  if app_content_partner_notice('site_content', c2, 'added') then raise exception 'FAIL: a partner''s second place within the hour wrote a second notice (one per partner an hour)'; end if;
+  select count(*) into n from notices where tenant_id = '11111111-1111-1111-1111-111111111111' and source_kind = 'content' and source_id = ca;
+  if n <> 1 then raise exception 'FAIL: % partner notices for one place, not 1', n; end if;
+  if not exists (select 1 from notices where source_id = ca and title = 'Your partner changed the footer menu' and href = '/console/content?tab=menus' and type = 'needs_you' and not required and by = 'a0000000-0000-0000-0000-00000000c0a1')
+    then raise exception 'FAIL: the partner notice is not worded from its place'; end if;
+  insert into site_content (tenant_id, kind, key, value, updated_by) values ('11111111-1111-1111-1111-111111111111', 'contact', 'contact', '{"line":"x"}', '99999999-9999-9999-9999-999999999999') returning id into co;
+  if app_content_partner_notice('site_content', co, 'changed') then raise exception 'FAIL: the owner''s own save wrote a notice'; end if;
+  if exists (select 1 from notices where tenant_id = '22222222-2222-2222-2222-222222222222' and source_kind = 'content' and source_id is not null) then raise exception 'FAIL: B got a partner notice'; end if;
+  if exists (select 1 from notices where source_id = pb) then raise exception 'FAIL: B''s page made a notice'; end if;
+  perform set_config('app.tenant_id', '', true);
+  if app_content_partner_notice('site_content', ca, 'changed') then raise exception 'FAIL: no store set wrote a notice'; end if;
+end $$;
+rollback;
+begin;
+do $$ declare r text; begin
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder'] loop
+    if has_function_privilege(r, 'app_content_partner_notice(text, uuid, text)', 'execute') then raise exception 'FAIL: % can run app_content_partner_notice', r; end if;
+  end loop;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 83 checks passed'
