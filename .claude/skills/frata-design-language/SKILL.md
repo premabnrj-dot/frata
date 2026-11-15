@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.5.0
+  version: 7.6.0
   verified: 2026-11-15
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -63,6 +63,9 @@ The gate's scope: the console, the partner workspace and the shared code that sp
 
 - **Surfaces:** Console (the brand's team and its partner; never "dashboard", "admin"); Partner workspace (never
   "partner console"); Frrata Admin (never "Admin" alone); the store (shoppers; never shop, website, site).
+  **Website** is the one exception (owner, 2026-11-15, Storefront API mockup): the brand's own site built as code on the
+  Storefront API, as in Settings › Website ("Runs on Frrata" · "Your own website"). Never for the store itself. Its keys
+  are **Live** or **Test**, and are **deleted** (never "revoked" on screen).
 - **Roles:** Owner · **Manager** (was Admin; the stored value `admin` keeps its spelling) · Staff · Accountant ·
   Partner · Partner owner and Lead (the agency's) · Frrata support (on a **support visit**). "Admin" is never a person.
 - **Words:** store (never shop; "Shop all", "Shop now", "Shop the look" stay as the store's verbs) · shopper (never

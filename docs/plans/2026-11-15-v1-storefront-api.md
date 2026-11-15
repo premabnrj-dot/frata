@@ -1,12 +1,12 @@
 # V1 · Storefront API — SA0 (keys, the third tenant source) and SA1 (catalogue reads)
-Status: plan v2, reviews folded in (architecture, tenancy, security, speed, words, unit economics), awaiting
-the owner's approval of the final mockup · Date: 2026-11-15 · Lane A (`docs/plans/2026-11-15-parallel-lanes.md`),
+Status: approved 2026-11-15 (owner, through the orchestrator), building · reviews folded in (architecture, tenancy,
+security, speed, words, unit economics) · Date: 2026-11-15 · Lane A (`docs/plans/2026-11-15-parallel-lanes.md`),
 branch `claude/lane-a-storefront-api`
 Spec: `docs/specs/2026-11-11-storefront-api.md` (§ 1–3, 6–7, 9) · Decisions: ADR-0018 (accepted 2026-11-15, decisions
 1–6 yes), ADR-0014 (and amendment 8), ADR-0002, ADR-0003, ADR-0015 (capabilities, lane C) · Content:
 `docs/specs/2026-11-14-site-content-layer.md` § Storefront API additions, § API gaps for SA1 · Earlier mockup:
 https://claude.ai/artifact/SKpPx1rfBu48w18HMNUK7u (v2, 2026-11-11) · **Final mockup (this phase):**
-`docs/mockups/2026-11-15-storefront-keys.html`, https://claude.ai/artifact/P8rsPfrY53V7Ezq1e4cnVm · Approved: —
+`docs/mockups/2026-11-15-storefront-keys.html`, https://claude.ai/artifact/P8rsPfrY53V7Ezq1e4cnVm · Approved: owner, 2026-11-15
 
 ## Goal
 North star (5): a premium storefront built as code by developers, partners or the agent (partners first). No code site
@@ -304,7 +304,21 @@ Lane C (builders, capabilities) ships first, then lane B (content), then this la
 branch merges `main` with C's `api.manage` and B's `hasOwnerIn`; before release it merges both lanes' final state and
 takes the next free migration and proof numbers.
 
-## Owner questions
+## Owner decisions (2026-11-15, relayed by the orchestrator: "all recommended")
+The final mockup https://claude.ai/artifact/P8rsPfrY53V7Ezq1e4cnVm is **approved**.
+1. **Scope: yes.** SA0 + SA1 now; the cart link, the 307s, the order source, starter/skill/docs, the handover key list
+   and Frrata Admin › Storefront API move to SA1b.
+2. **Words: yes.** "Website" for the brand's own coded site (glossary line added), "Delete" a key, kinds "Live" and
+   "Test".
+3. **Before a domain: keep as accepted.** Keys answer only once the Website points at a connected domain; revisit at
+   the first partner site. No ADR change.
+4. **A partner's keys follow the partner: yes.**
+5. **The legal date: yes**, `integration-researcher` checks the gazette before SA1 ships.
+
+Status: building. SA0 and the SA1 parts that need neither lane C's `api.manage` nor lane B's `hasOwnerIn` are built on
+this branch first; SA1·1 (the Settings page and its actions) waits for C and B on `main`.
+
+## Owner questions (as asked)
 1. **Scope:** this lane builds SA0 + SA1 (catalogue reads and Settings › Website); the cart link, the 307s, "Your
    website" as a source, the starter, skill and docs, the Accept dialog's key list and Frrata Admin's page are SA1b,
    planned next. Yes or no.
