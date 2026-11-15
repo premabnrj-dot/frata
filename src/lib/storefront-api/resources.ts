@@ -99,7 +99,9 @@ export const RESOURCES = {
     return page && nodes ? storePageOut(mapCtx(ctx), page, nodes) : null
   } },
   faq: { schema: S.Faq, run: async (ctx: ApiCtx) => {
-    const page = (await shopPages(ctx.tenantId)).find((x) => x.template === 'faq')
+    // Under a test key the FAQ is its draft when it has one, as pages/{handle} opens it (api-contract review 3).
+    const live = (await shopPages(ctx.tenantId)).find((x) => x.template === 'faq')
+    const page = ctx.keyKind === 'test' ? (await previewPages(ctx.tenantId)).find((x) => x.template === 'faq' && !x.hidden) ?? live : live
     const nodes = page && await pageNodes(ctx, page)
     return page && nodes ? faqOut(page, nodes) : null
   } },

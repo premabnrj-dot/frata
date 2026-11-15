@@ -14,7 +14,7 @@ export type GroupKey = 'store' | 'checkout' | 'tax' | 'messages' | 'team'
 export type SettingsGroup = { key: GroupKey; name: string; sub: string; pages: readonly PageKey[] }
 
 export const GROUPS: readonly SettingsGroup[] = [
-  { key: 'store', name: 'Store', sub: 'Details, web address, contact, policies', pages: ['store', 'web-address', 'website', 'contact', 'policies'] },
+  { key: 'store', name: 'Store', sub: 'Details, web address, website, contact, policies', pages: ['store', 'web-address', 'website', 'contact', 'policies'] },
   { key: 'checkout', name: 'Checkout', sub: 'Online payments, Pay on delivery, shipping', pages: ['online-payments', 'payments', 'shipping'] },
   { key: 'tax', name: 'Business and tax', sub: 'GST, invoices and slips, your costs', pages: ['business', 'invoices', 'shipping-costs'] },
   { key: 'messages', name: 'Messages', sub: 'Emails to shoppers, your notifications', pages: ['emails', 'notifications'] },

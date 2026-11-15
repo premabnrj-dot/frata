@@ -122,7 +122,7 @@ export function productOut(m: MapCtx, p: ProductIn, now: Date): In<typeof S.Prod
       rows: p.sizeChart.rows.slice(0, 40).map((r) => ({ size: plain(r.size, 20), values: r.values.slice(0, 12) })),
       howToMeasure: plain(p.sizeChart.howToMeasure, 2000),
     } : null,
-    offers: liveLines(p.offers, now).map((o) => ({ label: plain(o.label, 200), ends: o.endsAt })),
+    offers: liveLines(p.offers, now).map((o) => ({ label: plain(o.label, 200), endsAt: o.endsAt })),
   }
 }
 
@@ -158,7 +158,7 @@ export function offersOut(a: (OfferWords & { code: string | null; startsAt: stri
   if (!a) return { bar: null }
   const d = (s: string | null) => (s ? new Date(s) : null)
   if (offerStatus({ startedAt: d(a.startedAt), pausedAt: d(a.pausedAt), endedAt: d(a.endedAt), stoppedAt: d(a.stoppedAt), startsAt: new Date(a.startsAt), endsAt: d(a.endsAt) }, now) !== 'live') return { bar: null }
-  return { bar: { text: plain(barText(a, { code: a.code, endsAt: d(a.endsAt) }), 300), ends: a.endsAt } }
+  return { bar: { text: plain(barText(a, { code: a.code, endsAt: d(a.endsAt) }), 300), endsAt: a.endsAt } }
 }
 
 export type ShopIn = {

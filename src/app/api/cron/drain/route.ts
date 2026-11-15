@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     if (due.length >= 500) console.error('[cron] drain boundaries: 500 shops, the rest next run')
     for (const t of due) refreshShop(t, 'catalogue')
   } catch (e) { console.error('[cron] drain boundaries', errName(e)) }
-  // Store content: a bar starting, or a save a burst of saves left to the backstop (the API's copies live an hour).
+  // Store content: a bar starting or ending, or a save a burst of saves left to the backstop (the API's copies live an hour).
   try {
     const changed = await shopsWithContentChange(new Date(started - 6 * 60_000), new Date(started))
     if (changed.length >= 500) console.error('[cron] drain content: 500 shops, the rest next run')

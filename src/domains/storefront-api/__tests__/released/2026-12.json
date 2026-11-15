@@ -432,7 +432,7 @@
       "type": "null"
      }
     ],
-    "description": "Your own address for the store, as it was set in Frrata."
+    "description": "The brand’s own address for the store, as set in Frrata. Null when it runs on Frrata."
    },
    "checkoutOrigin": {
     "type": "string",
@@ -1798,7 +1798,7 @@
        "type": "string",
        "maxLength": 200
       },
-      "ends": {
+      "endsAt": {
        "anyOf": [
         {
          "type": "string",
@@ -1809,12 +1809,12 @@
          "type": "null"
         }
        ],
-       "description": "A real end only. Null when the offer has none."
+       "description": "When the offer ends. Null when it has no end."
       }
      },
      "required": [
       "label",
-      "ends"
+      "endsAt"
      ],
      "additionalProperties": false
     }
@@ -2294,7 +2294,7 @@
         "type": "string",
         "maxLength": 300
        },
-       "ends": {
+       "endsAt": {
         "anyOf": [
          {
           "type": "string",
@@ -2309,7 +2309,7 @@
       },
       "required": [
        "text",
-       "ends"
+       "endsAt"
       ],
       "additionalProperties": false
      },
@@ -2682,7 +2682,7 @@
      ],
      "additionalProperties": false
     },
-    "description": "Live bars, the one to show first. A live offer (offers.bar) shows before any of them. A bar that starts later is not here yet."
+    "description": "Bars running now, in the order to show them. A live offer (offers.bar) shows before any of them. A bar that starts later is not here yet."
    },
    "menus": {
     "type": "object",
@@ -2709,13 +2709,55 @@
            "anyOf": [
             {
              "type": "string",
-             "pattern": "^[a-z]{1,20}$"
+             "enum": [
+              "bag",
+              "cart",
+              "search",
+              "user",
+              "heart",
+              "menu",
+              "close",
+              "home",
+              "grid",
+              "truck",
+              "return",
+              "cash",
+              "card",
+              "lock",
+              "shield",
+              "chat",
+              "phone",
+              "mail",
+              "pin",
+              "clock",
+              "tag",
+              "percent",
+              "sparkle",
+              "gift",
+              "star",
+              "flame",
+              "leaf",
+              "ruler",
+              "shirt",
+              "dress",
+              "package",
+              "store",
+              "check",
+              "arrow",
+              "chevron",
+              "camera",
+              "whatsapp",
+              "globe",
+              "sun",
+              "moon",
+              "crown"
+             ]
             },
             {
              "type": "null"
             }
            ],
-           "description": "An icon name Frrata's own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+           "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
           },
           "children": {
            "maxItems": 12,
@@ -2737,13 +2779,55 @@
               "anyOf": [
                {
                 "type": "string",
-                "pattern": "^[a-z]{1,20}$"
+                "enum": [
+                 "bag",
+                 "cart",
+                 "search",
+                 "user",
+                 "heart",
+                 "menu",
+                 "close",
+                 "home",
+                 "grid",
+                 "truck",
+                 "return",
+                 "cash",
+                 "card",
+                 "lock",
+                 "shield",
+                 "chat",
+                 "phone",
+                 "mail",
+                 "pin",
+                 "clock",
+                 "tag",
+                 "percent",
+                 "sparkle",
+                 "gift",
+                 "star",
+                 "flame",
+                 "leaf",
+                 "ruler",
+                 "shirt",
+                 "dress",
+                 "package",
+                 "store",
+                 "check",
+                 "arrow",
+                 "chevron",
+                 "camera",
+                 "whatsapp",
+                 "globe",
+                 "sun",
+                 "moon",
+                 "crown"
+                ]
                },
                {
                 "type": "null"
                }
               ],
-              "description": "An icon name Frrata's own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+              "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
              },
              "children": {
               "maxItems": 12,
@@ -2765,13 +2849,55 @@
                  "anyOf": [
                   {
                    "type": "string",
-                   "pattern": "^[a-z]{1,20}$"
+                   "enum": [
+                    "bag",
+                    "cart",
+                    "search",
+                    "user",
+                    "heart",
+                    "menu",
+                    "close",
+                    "home",
+                    "grid",
+                    "truck",
+                    "return",
+                    "cash",
+                    "card",
+                    "lock",
+                    "shield",
+                    "chat",
+                    "phone",
+                    "mail",
+                    "pin",
+                    "clock",
+                    "tag",
+                    "percent",
+                    "sparkle",
+                    "gift",
+                    "star",
+                    "flame",
+                    "leaf",
+                    "ruler",
+                    "shirt",
+                    "dress",
+                    "package",
+                    "store",
+                    "check",
+                    "arrow",
+                    "chevron",
+                    "camera",
+                    "whatsapp",
+                    "globe",
+                    "sun",
+                    "moon",
+                    "crown"
+                   ]
                   },
                   {
                    "type": "null"
                   }
                  ],
-                 "description": "An icon name Frrata's own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+                 "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
                 }
                },
                "required": [
@@ -2830,13 +2956,55 @@
            "anyOf": [
             {
              "type": "string",
-             "pattern": "^[a-z]{1,20}$"
+             "enum": [
+              "bag",
+              "cart",
+              "search",
+              "user",
+              "heart",
+              "menu",
+              "close",
+              "home",
+              "grid",
+              "truck",
+              "return",
+              "cash",
+              "card",
+              "lock",
+              "shield",
+              "chat",
+              "phone",
+              "mail",
+              "pin",
+              "clock",
+              "tag",
+              "percent",
+              "sparkle",
+              "gift",
+              "star",
+              "flame",
+              "leaf",
+              "ruler",
+              "shirt",
+              "dress",
+              "package",
+              "store",
+              "check",
+              "arrow",
+              "chevron",
+              "camera",
+              "whatsapp",
+              "globe",
+              "sun",
+              "moon",
+              "crown"
+             ]
             },
             {
              "type": "null"
             }
            ],
-           "description": "An icon name Frrata's own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+           "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
           },
           "children": {
            "maxItems": 12,
@@ -2858,13 +3026,55 @@
               "anyOf": [
                {
                 "type": "string",
-                "pattern": "^[a-z]{1,20}$"
+                "enum": [
+                 "bag",
+                 "cart",
+                 "search",
+                 "user",
+                 "heart",
+                 "menu",
+                 "close",
+                 "home",
+                 "grid",
+                 "truck",
+                 "return",
+                 "cash",
+                 "card",
+                 "lock",
+                 "shield",
+                 "chat",
+                 "phone",
+                 "mail",
+                 "pin",
+                 "clock",
+                 "tag",
+                 "percent",
+                 "sparkle",
+                 "gift",
+                 "star",
+                 "flame",
+                 "leaf",
+                 "ruler",
+                 "shirt",
+                 "dress",
+                 "package",
+                 "store",
+                 "check",
+                 "arrow",
+                 "chevron",
+                 "camera",
+                 "whatsapp",
+                 "globe",
+                 "sun",
+                 "moon",
+                 "crown"
+                ]
                },
                {
                 "type": "null"
                }
               ],
-              "description": "An icon name Frrata's own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+              "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
              },
              "children": {
               "maxItems": 12,
@@ -2886,13 +3096,55 @@
                  "anyOf": [
                   {
                    "type": "string",
-                   "pattern": "^[a-z]{1,20}$"
+                   "enum": [
+                    "bag",
+                    "cart",
+                    "search",
+                    "user",
+                    "heart",
+                    "menu",
+                    "close",
+                    "home",
+                    "grid",
+                    "truck",
+                    "return",
+                    "cash",
+                    "card",
+                    "lock",
+                    "shield",
+                    "chat",
+                    "phone",
+                    "mail",
+                    "pin",
+                    "clock",
+                    "tag",
+                    "percent",
+                    "sparkle",
+                    "gift",
+                    "star",
+                    "flame",
+                    "leaf",
+                    "ruler",
+                    "shirt",
+                    "dress",
+                    "package",
+                    "store",
+                    "check",
+                    "arrow",
+                    "chevron",
+                    "camera",
+                    "whatsapp",
+                    "globe",
+                    "sun",
+                    "moon",
+                    "crown"
+                   ]
                   },
                   {
                    "type": "null"
                   }
                  ],
-                 "description": "An icon name Frrata's own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+                 "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
                 }
                },
                "required": [
@@ -2951,13 +3203,55 @@
            "anyOf": [
             {
              "type": "string",
-             "pattern": "^[a-z]{1,20}$"
+             "enum": [
+              "bag",
+              "cart",
+              "search",
+              "user",
+              "heart",
+              "menu",
+              "close",
+              "home",
+              "grid",
+              "truck",
+              "return",
+              "cash",
+              "card",
+              "lock",
+              "shield",
+              "chat",
+              "phone",
+              "mail",
+              "pin",
+              "clock",
+              "tag",
+              "percent",
+              "sparkle",
+              "gift",
+              "star",
+              "flame",
+              "leaf",
+              "ruler",
+              "shirt",
+              "dress",
+              "package",
+              "store",
+              "check",
+              "arrow",
+              "chevron",
+              "camera",
+              "whatsapp",
+              "globe",
+              "sun",
+              "moon",
+              "crown"
+             ]
             },
             {
              "type": "null"
             }
            ],
-           "description": "An icon name Frrata's own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+           "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
           },
           "children": {
            "maxItems": 12,
@@ -2979,13 +3273,55 @@
               "anyOf": [
                {
                 "type": "string",
-                "pattern": "^[a-z]{1,20}$"
+                "enum": [
+                 "bag",
+                 "cart",
+                 "search",
+                 "user",
+                 "heart",
+                 "menu",
+                 "close",
+                 "home",
+                 "grid",
+                 "truck",
+                 "return",
+                 "cash",
+                 "card",
+                 "lock",
+                 "shield",
+                 "chat",
+                 "phone",
+                 "mail",
+                 "pin",
+                 "clock",
+                 "tag",
+                 "percent",
+                 "sparkle",
+                 "gift",
+                 "star",
+                 "flame",
+                 "leaf",
+                 "ruler",
+                 "shirt",
+                 "dress",
+                 "package",
+                 "store",
+                 "check",
+                 "arrow",
+                 "chevron",
+                 "camera",
+                 "whatsapp",
+                 "globe",
+                 "sun",
+                 "moon",
+                 "crown"
+                ]
                },
                {
                 "type": "null"
                }
               ],
-              "description": "An icon name Frrata's own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+              "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
              },
              "children": {
               "maxItems": 12,
@@ -3007,13 +3343,55 @@
                  "anyOf": [
                   {
                    "type": "string",
-                   "pattern": "^[a-z]{1,20}$"
+                   "enum": [
+                    "bag",
+                    "cart",
+                    "search",
+                    "user",
+                    "heart",
+                    "menu",
+                    "close",
+                    "home",
+                    "grid",
+                    "truck",
+                    "return",
+                    "cash",
+                    "card",
+                    "lock",
+                    "shield",
+                    "chat",
+                    "phone",
+                    "mail",
+                    "pin",
+                    "clock",
+                    "tag",
+                    "percent",
+                    "sparkle",
+                    "gift",
+                    "star",
+                    "flame",
+                    "leaf",
+                    "ruler",
+                    "shirt",
+                    "dress",
+                    "package",
+                    "store",
+                    "check",
+                    "arrow",
+                    "chevron",
+                    "camera",
+                    "whatsapp",
+                    "globe",
+                    "sun",
+                    "moon",
+                    "crown"
+                   ]
                   },
                   {
                    "type": "null"
                   }
                  ],
-                 "description": "An icon name Frrata's own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+                 "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
                 }
                },
                "required": [
@@ -3078,8 +3456,7 @@
      "properties": {
       "handle": {
        "type": "string",
-       "maxLength": 100,
-       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "pattern": "^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$",
        "description": "/pages/<handle>."
       },
       "title": {
@@ -3118,8 +3495,7 @@
   "properties": {
    "handle": {
     "type": "string",
-    "maxLength": 100,
-    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+    "pattern": "^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$",
     "description": "/pages/<handle>."
    },
    "title": {
@@ -3138,276 +3514,266 @@
     "maxItems": 100,
     "type": "array",
     "items": {
-     "anyOf": [
+     "oneOf": [
       {
-       "oneOf": [
-        {
-         "type": "object",
-         "properties": {
-          "kind": {
-           "type": "string",
-           "const": "heading"
-          },
-          "level": {
-           "anyOf": [
-            {
-             "type": "number",
-             "const": 2
-            },
-            {
-             "type": "number",
-             "const": 3
-            }
-           ]
-          },
-          "text": {
-           "type": "string",
-           "maxLength": 60
-          }
-         },
-         "required": [
-          "kind",
-          "level",
-          "text"
-         ],
-         "additionalProperties": false
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "heading"
         },
-        {
-         "type": "object",
-         "properties": {
-          "kind": {
-           "type": "string",
-           "const": "text"
-          },
-          "paragraphs": {
-           "maxItems": 12,
-           "type": "array",
-           "items": {
-            "maxItems": 40,
-            "type": "array",
-            "items": {
-             "type": "object",
-             "properties": {
-              "text": {
-               "type": "string",
-               "maxLength": 600
-              },
-              "bold": {
-               "type": "boolean"
-              },
-              "italic": {
-               "type": "boolean"
-              },
-              "link": {
-               "anyOf": [
-                {
-                 "type": "string",
-                 "maxLength": 200,
-                 "pattern": "^\\/[a-z0-9/-]*$",
-                 "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
-                },
-                {
-                 "type": "null"
-                }
-               ]
-              }
-             },
-             "required": [
-              "text",
-              "bold",
-              "italic",
-              "link"
-             ],
-             "additionalProperties": false
-            }
-           }
-          }
-         },
-         "required": [
-          "kind",
-          "paragraphs"
-         ],
-         "additionalProperties": false
+        "level": {
+         "type": "integer",
+         "minimum": 2,
+         "maximum": 6,
+         "description": "2 for the page’s first heading, 3 after. New values may appear. Show something sensible for one you don’t know."
         },
-        {
-         "type": "object",
-         "properties": {
-          "kind": {
-           "type": "string",
-           "const": "image"
-          },
-          "ratio": {
-           "type": "string",
-           "enum": [
-            "4:5",
-            "3:4",
-            "1:1",
-            "16:9"
-           ],
-           "description": "New values may appear. Show something sensible for one you don’t know."
-          },
-          "image": {
+        "text": {
+         "type": "string",
+         "maxLength": 60
+        }
+       },
+       "required": [
+        "kind",
+        "level",
+        "text"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "text"
+        },
+        "paragraphs": {
+         "maxItems": 12,
+         "type": "array",
+         "items": {
+          "maxItems": 40,
+          "type": "array",
+          "items": {
            "type": "object",
            "properties": {
-            "sizes": {
-             "minItems": 1,
-             "maxItems": 8,
-             "type": "array",
-             "items": {
-              "type": "object",
-              "properties": {
-               "width": {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 9007199254740991
-               },
-               "url": {
-                "type": "string",
-                "maxLength": 500,
-                "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
-               }
-              },
-              "required": [
-               "width",
-               "url"
-              ],
-              "additionalProperties": false
-             },
-             "description": "The same photo at each width, smallest first. Use them as srcset."
-            },
-            "width": {
-             "type": "integer",
-             "exclusiveMinimum": 0,
-             "maximum": 9007199254740991,
-             "description": "The original’s width in pixels (with height: the aspect ratio)."
-            },
-            "height": {
-             "type": "integer",
-             "exclusiveMinimum": 0,
-             "maximum": 9007199254740991
-            },
-            "alt": {
+            "text": {
              "type": "string",
-             "maxLength": 200
+             "maxLength": 600
             },
-            "colour": {
+            "bold": {
+             "type": "boolean"
+            },
+            "italic": {
+             "type": "boolean"
+            },
+            "link": {
              "anyOf": [
               {
                "type": "string",
-               "maxLength": 60
+               "maxLength": 200,
+               "pattern": "^\\/[a-z0-9/-]*$",
+               "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
               },
               {
                "type": "null"
               }
-             ],
-             "description": "The colour this photo shows (a value of the Colour option), or null."
+             ]
             }
            },
            "required": [
-            "sizes",
-            "width",
-            "height",
-            "alt",
-            "colour"
+            "text",
+            "bold",
+            "italic",
+            "link"
            ],
            "additionalProperties": false
           }
-         },
-         "required": [
-          "kind",
-          "ratio",
-          "image"
-         ],
-         "additionalProperties": false
+         }
+        }
+       },
+       "required": [
+        "kind",
+        "paragraphs"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "image"
         },
-        {
+        "ratio": {
+         "type": "string",
+         "enum": [
+          "4:5",
+          "3:4",
+          "1:1",
+          "16:9"
+         ],
+         "description": "New values may appear. Show something sensible for one you don’t know."
+        },
+        "image": {
          "type": "object",
          "properties": {
-          "kind": {
-           "type": "string",
-           "const": "button"
-          },
-          "label": {
-           "type": "string",
-           "maxLength": 24
-          },
-          "link": {
-           "type": "string",
-           "maxLength": 200,
-           "pattern": "^\\/[a-z0-9/-]*$",
-           "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
-          }
-         },
-         "required": [
-          "kind",
-          "label",
-          "link"
-         ],
-         "additionalProperties": false
-        },
-        {
-         "type": "object",
-         "properties": {
-          "kind": {
-           "type": "string",
-           "const": "questions"
-          },
-          "items": {
-           "maxItems": 12,
+          "sizes": {
+           "minItems": 1,
+           "maxItems": 8,
            "type": "array",
            "items": {
             "type": "object",
             "properties": {
-             "question": {
+             "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+             },
+             "url": {
               "type": "string",
-              "maxLength": 80
-             },
-             "answer": {
-              "anyOf": [
-               {
-                "type": "string",
-                "maxLength": 1200
-               },
-               {
-                "type": "null"
-               }
-              ]
-             },
-             "policy": {
-              "anyOf": [
-               {
-                "type": "string",
-                "enum": [
-                 "returns",
-                 "shipping",
-                 "privacy",
-                 "terms",
-                 "contact"
-                ]
-               },
-               {
-                "type": "null"
-               }
-              ],
-              "description": "Set when the answer is the store’s own policy page. Link that page instead of an answer. New values may appear. Show something sensible for one you don’t know."
+              "maxLength": 500,
+              "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
              }
             },
             "required": [
-             "question",
-             "answer",
-             "policy"
+             "width",
+             "url"
             ],
             "additionalProperties": false
-           }
+           },
+           "description": "The same photo at each width, smallest first. Use them as srcset."
+          },
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991,
+           "description": "The original’s width in pixels (with height: the aspect ratio)."
+          },
+          "height": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          },
+          "alt": {
+           "type": "string",
+           "maxLength": 200
+          },
+          "colour": {
+           "anyOf": [
+            {
+             "type": "string",
+             "maxLength": 60
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The colour this photo shows (a value of the Colour option), or null."
           }
          },
          "required": [
-          "kind",
-          "items"
+          "sizes",
+          "width",
+          "height",
+          "alt",
+          "colour"
          ],
          "additionalProperties": false
         }
-       ]
+       },
+       "required": [
+        "kind",
+        "ratio",
+        "image"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "button"
+        },
+        "label": {
+         "type": "string",
+         "maxLength": 24
+        },
+        "link": {
+         "type": "string",
+         "maxLength": 200,
+         "pattern": "^\\/[a-z0-9/-]*$",
+         "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+        }
+       },
+       "required": [
+        "kind",
+        "label",
+        "link"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "questions"
+        },
+        "items": {
+         "maxItems": 12,
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "question": {
+            "type": "string",
+            "maxLength": 80
+           },
+           "answer": {
+            "anyOf": [
+             {
+              "type": "string",
+              "maxLength": 1200
+             },
+             {
+              "type": "null"
+             }
+            ]
+           },
+           "policy": {
+            "anyOf": [
+             {
+              "type": "string",
+              "enum": [
+               "returns",
+               "shipping",
+               "privacy",
+               "terms",
+               "contact"
+              ]
+             },
+             {
+              "type": "null"
+             }
+            ],
+            "description": "Set when the answer is the store’s own policy page. Link to that page instead of showing an answer. New values may appear. Show something sensible for one you don’t know."
+           }
+          },
+          "required": [
+           "question",
+           "answer",
+           "policy"
+          ],
+          "additionalProperties": false
+         }
+        }
+       },
+       "required": [
+        "kind",
+        "items"
+       ],
+       "additionalProperties": false
       },
       {
        "type": "object",
@@ -3429,16 +3795,10 @@
               "const": "heading"
              },
              "level": {
-              "anyOf": [
-               {
-                "type": "number",
-                "const": 2
-               },
-               {
-                "type": "number",
-                "const": 3
-               }
-              ]
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 6,
+              "description": "2 for the page’s first heading, 3 after. New values may appear. Show something sensible for one you don’t know."
              },
              "text": {
               "type": "string",
@@ -3669,7 +4029,7 @@
                    "type": "null"
                   }
                  ],
-                 "description": "Set when the answer is the store’s own policy page. Link that page instead of an answer. New values may appear. Show something sensible for one you don’t know."
+                 "description": "Set when the answer is the store’s own policy page. Link to that page instead of showing an answer. New values may appear. Show something sensible for one you don’t know."
                 }
                },
                "required": [
@@ -3689,7 +4049,7 @@
            }
           ]
          },
-         "description": "Blocks that belong together, as one card."
+         "description": "Blocks that belong together, as one card. New block kinds may appear. Skip a kind you don’t know."
         }
        },
        "required": [
@@ -3717,276 +4077,266 @@
          "maxItems": 40,
          "type": "array",
          "items": {
-          "anyOf": [
+          "oneOf": [
            {
-            "oneOf": [
-             {
-              "type": "object",
-              "properties": {
-               "kind": {
-                "type": "string",
-                "const": "heading"
-               },
-               "level": {
-                "anyOf": [
-                 {
-                  "type": "number",
-                  "const": 2
-                 },
-                 {
-                  "type": "number",
-                  "const": 3
-                 }
-                ]
-               },
-               "text": {
-                "type": "string",
-                "maxLength": 60
-               }
-              },
-              "required": [
-               "kind",
-               "level",
-               "text"
-              ],
-              "additionalProperties": false
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "heading"
              },
-             {
-              "type": "object",
-              "properties": {
-               "kind": {
-                "type": "string",
-                "const": "text"
-               },
-               "paragraphs": {
-                "maxItems": 12,
-                "type": "array",
-                "items": {
-                 "maxItems": 40,
-                 "type": "array",
-                 "items": {
-                  "type": "object",
-                  "properties": {
-                   "text": {
-                    "type": "string",
-                    "maxLength": 600
-                   },
-                   "bold": {
-                    "type": "boolean"
-                   },
-                   "italic": {
-                    "type": "boolean"
-                   },
-                   "link": {
-                    "anyOf": [
-                     {
-                      "type": "string",
-                      "maxLength": 200,
-                      "pattern": "^\\/[a-z0-9/-]*$",
-                      "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
-                     },
-                     {
-                      "type": "null"
-                     }
-                    ]
-                   }
-                  },
-                  "required": [
-                   "text",
-                   "bold",
-                   "italic",
-                   "link"
-                  ],
-                  "additionalProperties": false
-                 }
-                }
-               }
-              },
-              "required": [
-               "kind",
-               "paragraphs"
-              ],
-              "additionalProperties": false
+             "level": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 6,
+              "description": "2 for the page’s first heading, 3 after. New values may appear. Show something sensible for one you don’t know."
              },
-             {
-              "type": "object",
-              "properties": {
-               "kind": {
-                "type": "string",
-                "const": "image"
-               },
-               "ratio": {
-                "type": "string",
-                "enum": [
-                 "4:5",
-                 "3:4",
-                 "1:1",
-                 "16:9"
-                ],
-                "description": "New values may appear. Show something sensible for one you don’t know."
-               },
-               "image": {
+             "text": {
+              "type": "string",
+              "maxLength": 60
+             }
+            },
+            "required": [
+             "kind",
+             "level",
+             "text"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "text"
+             },
+             "paragraphs": {
+              "maxItems": 12,
+              "type": "array",
+              "items": {
+               "maxItems": 40,
+               "type": "array",
+               "items": {
                 "type": "object",
                 "properties": {
-                 "sizes": {
-                  "minItems": 1,
-                  "maxItems": 8,
-                  "type": "array",
-                  "items": {
-                   "type": "object",
-                   "properties": {
-                    "width": {
-                     "type": "integer",
-                     "exclusiveMinimum": 0,
-                     "maximum": 9007199254740991
-                    },
-                    "url": {
-                     "type": "string",
-                     "maxLength": 500,
-                     "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
-                    }
-                   },
-                   "required": [
-                    "width",
-                    "url"
-                   ],
-                   "additionalProperties": false
-                  },
-                  "description": "The same photo at each width, smallest first. Use them as srcset."
-                 },
-                 "width": {
-                  "type": "integer",
-                  "exclusiveMinimum": 0,
-                  "maximum": 9007199254740991,
-                  "description": "The original’s width in pixels (with height: the aspect ratio)."
-                 },
-                 "height": {
-                  "type": "integer",
-                  "exclusiveMinimum": 0,
-                  "maximum": 9007199254740991
-                 },
-                 "alt": {
+                 "text": {
                   "type": "string",
-                  "maxLength": 200
+                  "maxLength": 600
                  },
-                 "colour": {
+                 "bold": {
+                  "type": "boolean"
+                 },
+                 "italic": {
+                  "type": "boolean"
+                 },
+                 "link": {
                   "anyOf": [
                    {
                     "type": "string",
-                    "maxLength": 60
+                    "maxLength": 200,
+                    "pattern": "^\\/[a-z0-9/-]*$",
+                    "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
                    },
                    {
                     "type": "null"
                    }
-                  ],
-                  "description": "The colour this photo shows (a value of the Colour option), or null."
+                  ]
                  }
                 },
                 "required": [
-                 "sizes",
-                 "width",
-                 "height",
-                 "alt",
-                 "colour"
+                 "text",
+                 "bold",
+                 "italic",
+                 "link"
                 ],
                 "additionalProperties": false
                }
-              },
-              "required": [
-               "kind",
-               "ratio",
-               "image"
-              ],
-              "additionalProperties": false
+              }
+             }
+            },
+            "required": [
+             "kind",
+             "paragraphs"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "image"
              },
-             {
+             "ratio": {
+              "type": "string",
+              "enum": [
+               "4:5",
+               "3:4",
+               "1:1",
+               "16:9"
+              ],
+              "description": "New values may appear. Show something sensible for one you don’t know."
+             },
+             "image": {
               "type": "object",
               "properties": {
-               "kind": {
-                "type": "string",
-                "const": "button"
-               },
-               "label": {
-                "type": "string",
-                "maxLength": 24
-               },
-               "link": {
-                "type": "string",
-                "maxLength": 200,
-                "pattern": "^\\/[a-z0-9/-]*$",
-                "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
-               }
-              },
-              "required": [
-               "kind",
-               "label",
-               "link"
-              ],
-              "additionalProperties": false
-             },
-             {
-              "type": "object",
-              "properties": {
-               "kind": {
-                "type": "string",
-                "const": "questions"
-               },
-               "items": {
-                "maxItems": 12,
+               "sizes": {
+                "minItems": 1,
+                "maxItems": 8,
                 "type": "array",
                 "items": {
                  "type": "object",
                  "properties": {
-                  "question": {
+                  "width": {
+                   "type": "integer",
+                   "exclusiveMinimum": 0,
+                   "maximum": 9007199254740991
+                  },
+                  "url": {
                    "type": "string",
-                   "maxLength": 80
-                  },
-                  "answer": {
-                   "anyOf": [
-                    {
-                     "type": "string",
-                     "maxLength": 1200
-                    },
-                    {
-                     "type": "null"
-                    }
-                   ]
-                  },
-                  "policy": {
-                   "anyOf": [
-                    {
-                     "type": "string",
-                     "enum": [
-                      "returns",
-                      "shipping",
-                      "privacy",
-                      "terms",
-                      "contact"
-                     ]
-                    },
-                    {
-                     "type": "null"
-                    }
-                   ],
-                   "description": "Set when the answer is the store’s own policy page. Link that page instead of an answer. New values may appear. Show something sensible for one you don’t know."
+                   "maxLength": 500,
+                   "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
                   }
                  },
                  "required": [
-                  "question",
-                  "answer",
-                  "policy"
+                  "width",
+                  "url"
                  ],
                  "additionalProperties": false
-                }
+                },
+                "description": "The same photo at each width, smallest first. Use them as srcset."
+               },
+               "width": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991,
+                "description": "The original’s width in pixels (with height: the aspect ratio)."
+               },
+               "height": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+               },
+               "alt": {
+                "type": "string",
+                "maxLength": 200
+               },
+               "colour": {
+                "anyOf": [
+                 {
+                  "type": "string",
+                  "maxLength": 60
+                 },
+                 {
+                  "type": "null"
+                 }
+                ],
+                "description": "The colour this photo shows (a value of the Colour option), or null."
                }
               },
               "required": [
-               "kind",
-               "items"
+               "sizes",
+               "width",
+               "height",
+               "alt",
+               "colour"
               ],
               "additionalProperties": false
              }
-            ]
+            },
+            "required": [
+             "kind",
+             "ratio",
+             "image"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "button"
+             },
+             "label": {
+              "type": "string",
+              "maxLength": 24
+             },
+             "link": {
+              "type": "string",
+              "maxLength": 200,
+              "pattern": "^\\/[a-z0-9/-]*$",
+              "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+             }
+            },
+            "required": [
+             "kind",
+             "label",
+             "link"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "questions"
+             },
+             "items": {
+              "maxItems": 12,
+              "type": "array",
+              "items": {
+               "type": "object",
+               "properties": {
+                "question": {
+                 "type": "string",
+                 "maxLength": 80
+                },
+                "answer": {
+                 "anyOf": [
+                  {
+                   "type": "string",
+                   "maxLength": 1200
+                  },
+                  {
+                   "type": "null"
+                  }
+                 ]
+                },
+                "policy": {
+                 "anyOf": [
+                  {
+                   "type": "string",
+                   "enum": [
+                    "returns",
+                    "shipping",
+                    "privacy",
+                    "terms",
+                    "contact"
+                   ]
+                  },
+                  {
+                   "type": "null"
+                  }
+                 ],
+                 "description": "Set when the answer is the store’s own policy page. Link to that page instead of showing an answer. New values may appear. Show something sensible for one you don’t know."
+                }
+               },
+               "required": [
+                "question",
+                "answer",
+                "policy"
+               ],
+               "additionalProperties": false
+              }
+             }
+            },
+            "required": [
+             "kind",
+             "items"
+            ],
+            "additionalProperties": false
            },
            {
             "type": "object",
@@ -4008,16 +4358,10 @@
                    "const": "heading"
                   },
                   "level": {
-                   "anyOf": [
-                    {
-                     "type": "number",
-                     "const": 2
-                    },
-                    {
-                     "type": "number",
-                     "const": 3
-                    }
-                   ]
+                   "type": "integer",
+                   "minimum": 2,
+                   "maximum": 6,
+                   "description": "2 for the page’s first heading, 3 after. New values may appear. Show something sensible for one you don’t know."
                   },
                   "text": {
                    "type": "string",
@@ -4248,7 +4592,7 @@
                         "type": "null"
                        }
                       ],
-                      "description": "Set when the answer is the store’s own policy page. Link that page instead of an answer. New values may appear. Show something sensible for one you don’t know."
+                      "description": "Set when the answer is the store’s own policy page. Link to that page instead of showing an answer. New values may appear. Show something sensible for one you don’t know."
                      }
                     },
                     "required": [
@@ -4268,7 +4612,7 @@
                 }
                ]
               },
-              "description": "Blocks that belong together, as one card."
+              "description": "Blocks that belong together, as one card. New block kinds may appear. Skip a kind you don’t know."
              }
             },
             "required": [
@@ -4278,7 +4622,8 @@
             "additionalProperties": false
            }
           ]
-         }
+         },
+         "description": "The columns, in order. New block kinds may appear. Skip a kind you don’t know."
         }
        },
        "required": [
@@ -4307,8 +4652,7 @@
   "properties": {
    "handle": {
     "type": "string",
-    "maxLength": 100,
-    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+    "pattern": "^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$",
     "description": "/pages/<handle>."
    },
    "title": {
@@ -4352,7 +4696,7 @@
          "type": "null"
         }
        ],
-       "description": "Set when the answer is the store’s own policy page. Link that page instead of an answer. New values may appear. Show something sensible for one you don’t know."
+       "description": "Set when the answer is the store’s own policy page. Link to that page instead of showing an answer. New values may appear. Show something sensible for one you don’t know."
       }
      },
      "required": [

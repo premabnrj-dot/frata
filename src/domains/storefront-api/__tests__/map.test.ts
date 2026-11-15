@@ -73,7 +73,7 @@ describe('version 2026-12 mappers (spec § 3, ADR-0003)', () => {
   })
   it('the bar only while its offer is live', () => {
     const a = { title: 'Diwali', style: 'percent_off', percentBps: 1500, amountOff: null, minSubtotal: 0, code: null, startsAt: '2026-11-01T00:00:00Z', endsAt: '2026-11-30T18:00:00Z', startedAt: '2026-11-01T00:00:00Z', pausedAt: null, endedAt: null, stoppedAt: null }
-    expect(S.Offers.parse(offersOut(a, now)).bar?.ends).toBe('2026-11-30T18:00:00Z')
+    expect(S.Offers.parse(offersOut(a, now)).bar?.endsAt).toBe('2026-11-30T18:00:00Z')
     expect(offersOut({ ...a, pausedAt: '2026-11-10T00:00:00Z' }, now)).toEqual({ bar: null })
     expect(offersOut(null, now)).toEqual({ bar: null })
   })

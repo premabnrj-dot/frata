@@ -59,6 +59,11 @@ describe('pages and the FAQ', () => {
     const out = storePageOut(m, { handle: 'x', title: 'x', template: 'about' }, nodes)
     expect(out.blocks).toEqual([{ kind: 'columns', phone: 'swipe', blocks: [{ kind: 'group', blocks: [{ kind: 'heading', level: 3, text: 'Handloom' }] }] }])
   })
+  it('a page address the owner typed with a double dash still answers (impact review BLOCKER)', () => {
+    const out = storePageOut(m, { handle: 'our--story', title: 'Our story', template: 'about' }, [])
+    expect(S.StorePage.parse(out).handle).toBe('our--story')
+    expect(S.Content.parse(contentOut(contentOf([]), [{ handle: 'our--story', title: 'x', template: 'about' }], now)).pages[0]!.handle).toBe('our--story')
+  })
   it('the FAQ: own answers as written, a rewritten policy as a pointer', () => {
     const nodes: PageNode[] = [{ kind: 'faq', id: 'questions', items: [{ q: 'Do you make to order?', a: 'Some pieces.' }, { q: 'Can I return?', a: 'Read our policy', href: '/policies/returns' }] }]
     const out = faqOut({ handle: 'faq', title: 'Questions' }, nodes)

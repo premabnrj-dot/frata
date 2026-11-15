@@ -13,11 +13,13 @@ import type { z } from 'zod'
 import { writtenOrder } from '../../content/bar'
 import type { StoreContent } from '../../content/kinds'
 import type { MenuItem } from '../../themes/site'
+import { ICON_NAMES } from '../../icons/names'
 import { SHOP_PATH } from '../../themes/sections'
 import type { PageNode } from '../../pages/page'
 import type { PageTemplate } from '../../pages/templates'
 import { imageOut, plain, type MapCtx } from './map'
 import type * as S from './schemas'
+import { POLICY_KINDS } from './schemas'
 
 type In<T extends z.ZodType> = z.input<T>
 type Link1 = In<typeof S.Content>['menus']['main'] extends (infer L)[] | null ? L : never
@@ -28,7 +30,7 @@ const iso = (d: Date | null) => (d ? d.toISOString() : null)
 /** A menu as the store keeps it, three levels at most, any link off the store's own paths dropped with its children. */
 function menuOut(items: MenuItem[] | undefined): Link1[] | null {
   if (!items) return null
-  const base = (x: MenuItem) => { const link = path(x.link); return link ? { label: plain(x.label, 40), link, icon: x.icon ?? null } : null }
+  const base = (x: MenuItem) => { const link = path(x.link); return link ? { label: plain(x.label, 40), link, icon: (ICON_NAMES as readonly string[]).includes(x.icon ?? '') ? x.icon : null } : null }
   return items.slice(0, 12).flatMap((a) => {
     const l1 = base(a)
     if (!l1) return []
@@ -56,11 +58,11 @@ export function contentOut(c: StoreContent, pages: PageListIn, now: Date): In<ty
 type Block = In<typeof S.StorePage>['blocks'][number]
 type Leaf = Extract<Block, { kind: 'heading' | 'text' | 'image' | 'button' | 'questions' }>
 type FaqItemOut = In<typeof S.FaqItem>
-const POLICY = /^\/policies\/(returns|shipping|privacy|terms|contact)$/
+const policyOf = (href: string) => { const k = /^\/policies\/([a-z]+)$/.exec(href)?.[1]; return (POLICY_KINDS as readonly string[]).includes(k ?? '') ? k as FaqItemOut['policy'] : undefined }
 
 /** One question as a page shows it: its words, or (a bound answer the owner rewrote) a pointer to the policy. */
 export function faqItemOut(i: { q: string; a: string; href?: string }): FaqItemOut {
-  const pol = i.href ? POLICY.exec(i.href)?.[1] as FaqItemOut['policy'] | undefined : undefined
+  const pol = i.href ? policyOf(i.href) : undefined
   return pol ? { question: plain(i.q, 80), answer: null, policy: pol } : { question: plain(i.q, 80), answer: plain(i.a, 1200), policy: null }
 }
 

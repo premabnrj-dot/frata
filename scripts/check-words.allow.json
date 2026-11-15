@@ -154,5 +154,17 @@
     "rule": "W4",
     "text": "website",
     "why": "Owner, 2026-11-15 (Storefront API mockup, glossary § Surfaces): Website names the brand's own site built as code on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/settings/website/actions.ts",
+    "rule": "W4",
+    "text": "website",
+    "why": "Owner, 2026-11-15 (Storefront API mockup, glossary § Surfaces): Website names the brand's own site built as code on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/domains/settings/groups.ts",
+    "rule": "W4",
+    "text": "website",
+    "why": "Owner, 2026-11-15 (Storefront API mockup, glossary § Surfaces): Website names the brand's own site built as code on the Storefront API, never the store itself"
   }
 ]

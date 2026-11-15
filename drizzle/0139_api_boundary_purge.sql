@@ -15,8 +15,9 @@
 --
 -- Store content (the bar, menus, the Contact line: lane B's site_content) reaches the API's hour-long copies through
 -- its save's purge, which a burst of saves may leave to the backstop, and a dated bar starts with no write at all. So
--- app_shops_with_content_change returns the shops whose content was saved, deleted or started in the window, and the
--- drain purges their content scope. Ids only, frata_app alone, three partial indexes.
+-- app_shops_with_content_change returns the shops whose content was saved, deleted, started or ended in the
+-- window (a later bar moves up when one ends), and the drain purges their content scope. Ids only, frata_app alone,
+-- one index on updated_at and three partial ones.
 -- =============================================================================
 create index if not exists products_publish_at on products (publish_at) where publish_at is not null;
 --> statement-breakpoint
@@ -45,10 +46,10 @@ create or replace function app_shops_with_key_stop(p_since timestamptz, p_until 
    where k.revoked_at is null and l.removed_at > p_since and l.removed_at <= p_until
   union
   select k.tenant_id from public.storefront_keys k join public.partners pa on pa.id = k.partner_id
-   where k.revoked_at is null and pa.suspended_at > p_since and pa.suspended_at <= p_until
+   where k.revoked_at is null and ((pa.suspended_at > p_since and pa.suspended_at <= p_until) or (pa.declined_at > p_since and pa.declined_at <= p_until))
   union
   select d.tenant_id from public.shop_domains d
-   where d.removed_at > p_since and d.removed_at <= p_until
+   where ((d.removed_at > p_since and d.removed_at <= p_until) or (d.parked_at > p_since and d.parked_at <= p_until))
      and exists (select 1 from public.storefront_keys k where k.tenant_id = d.tenant_id and k.revoked_at is null)
   limit 500
 $$;
@@ -63,6 +64,8 @@ create index if not exists site_content_starts_at on site_content (starts_at) wh
 --> statement-breakpoint
 create index if not exists site_content_deleted_at on site_content (deleted_at) where deleted_at is not null;
 --> statement-breakpoint
+create index if not exists site_content_ends_at on site_content (ends_at) where ends_at is not null;
+--> statement-breakpoint
 create or replace function app_shops_with_content_change(p_since timestamptz, p_until timestamptz) returns setof uuid
   language sql stable security definer set search_path = '' as $$
   select tenant_id from public.site_content where updated_at > p_since and updated_at <= p_until
@@ -70,6 +73,8 @@ create or replace function app_shops_with_content_change(p_since timestamptz, p_
   select tenant_id from public.site_content where starts_at > p_since and starts_at <= p_until
   union
   select tenant_id from public.site_content where deleted_at > p_since and deleted_at <= p_until
+  union
+  select tenant_id from public.site_content where ends_at > p_since and ends_at <= p_until
   limit 500
 $$;
 --> statement-breakpoint

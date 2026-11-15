@@ -268,7 +268,14 @@ rules cover the API trees.
 ## Deviations (mockup element · what was built · reason · owner seen)
 | Mockup element | Built | Reason | Owner seen |
 |---|---|---|---|
-| _(empty — the goal)_ | | | |
+| Page frame: "‹ Settings" back link, the page alone | Settings' group frame: breadcrumb to **Store**, the Store group's tabs (Details · Web address · Website · Contact · Policies), "View only" badge in the head | Settings in five groups landed on main after this mockup (owner 2026-11-15, Neel N2b·3); every settings page uses it | no |
+| Settings list: a "Website" row under the flat list | The row in the **Store** group (summary: the site's host in mono, or "Runs on Frrata"); the group's line gains "website" | Same: the groups are the list now | no |
+| Staff · view only | Staff never open the page (no row, no tab); a support visit and a partner after handover see it view only | `api.manage` is owner, admin, partner (lane C's CAPABILITIES, orchestrator 2026-11-15); Settings is closed to staff since N2b·3 | no |
+| "Deleted by Meera · 2 Nov" | "Deleted by Owner · 2 Nov" (the role); "Deleted by someone who left" when the person is gone | Who saved or deleted is said as a role, never a person's name or email (security review M2 on content, the same rule as Console › Content) | no |
+| "Arc Studio's access ended · 20 Nov"; "Made by Arc Studio" on a deleted partner key | "Your partner's access ended · 20 Nov"; "Made by …" only while the partner is on the store | Once the link ends the store can no longer read the partner's name (`app_shop_people` lists current people only); never a second copy of it | no |
+| Checkout: `checkout.kesarstudio.in` · Main · Approved by Razorpay | The same when the store's main address is its own domain; otherwise the platform address (`kesar-studio.frrata.shop` · Main), no badge | The mockup drew only a store with its own main domain | no |
+| The key's reveal: "Copy key"; a "Copied" toast | `CopyField` as everywhere: button "Copy" (named "Copy key" for a screen reader), "✓ Copied" in place, announced politely | The design language's one copy primitive (design-system review 2) | no |
+| 20 live keys: "Delete a key to make another." as a line below | The same words beside **Create key**, tied to it (`Button reason`), the button still focusable | A disabled button drops focus and its reason (design-system review 4) | no |
 
 ## Practices recorded in skills (same commit as each)
 `frata-architecture` § Tenancy (three sources) and § Speed (API rows; "a route handler under ISR never reads the
@@ -290,14 +297,14 @@ request"; "an `unstable_cache` tag must be known before the call: tag by the inp
 `src/lib/db/schema.ts`; `src/lib/db/platform.ts`; `src/lib/queries/storefront.ts`; `src/lib/storefront/refresh.ts`;
 `src/lib/db/rate-limit.ts` (`LIMITS`); `ops/firewall.json` (the API host's rules); `src/app/api/cron/drain/route.ts`
 (the boundary purge); `src/lib/public-env.ts`; `.env.example`; `scripts/check-tenant.mjs`,
-`scripts/check-actions.mjs`, new `scripts/check-api.mjs`; `package.json`; `scripts/verify/tenancy.sql` (block 80);
+`scripts/check-actions.mjs`, new `scripts/check-api.mjs`; `package.json`; `scripts/verify/tenancy.sql` (block 81);
 `src/app/(console)/console/settings/page.tsx` (one row); `src/app/(console)/console/shop-actions.ts` (`openShop`
 purge); `docs/decisions/0002-*.md`, `0018-*.md` (notes); `docs/setup.md` (WAF step).
-**Migrations:** `drizzle/01xx_storefront_keys.sql`, `drizzle/01xx_storefront_keys_access.sql` (+ journal, snapshot).
+**Migrations:** `drizzle/0137_storefront_keys.sql`, `0138_storefront_keys_access.sql`, `0139_api_boundary_purge.sql` (+ journal, snapshot).
 **Not touched:** lane C's partner definers and `members` (partner keys stop by derivation), the console layout and shell.
-**After C and B are merged, this branch adds** `refreshKeys(t)` after commit to the partner-removal paths
-(`removePartner`, `removePartnerPerson`, `admin_end_partner`) for each shop they touch, so a removed partner's keys stop
-at once (orchestrator 2026-11-15); the int test asserts it.
+**After C and B merged, this branch added:** `refreshKeys(t)` in Settings › People's partner removal; the drain's
+key-stop and content sweeps (0139); `apiContent` in lane B's `src/lib/queries/content.ts`; `e2e/stack.mjs` (the API
+host); `src/domains/settings/groups.ts` and its test (the Website page in the Store group); `scripts/check-words.allow.json`.
 
 ## Release order and merges (orchestrator 2026-11-15)
 Lane C (builders, capabilities) ships first, then lane B (content), then this lane. Before building past SA0·2 this
@@ -326,14 +333,15 @@ this branch first; SA1·1 (the Settings page and its actions) waits for C and B 
 | SA0·3 migration 0137–0138 (renumbered at merge) | done | `verify:tenancy` block 81 |
 | SA0·4 lookup, door, limits | done | `request.test.ts`; int test on a real Postgres |
 | SA0·5 gates, proof, docs | done | `check:tenant` § 9 and `check:api` each caught a planted bad file; `api-isr.mjs` under `next start` |
-| SA1·1 Settings › Website | **waits for lanes C (`api.manage`) and B (`hasOwnerIn`) on main** | — |
+| SA1·1 Settings › Website | done (after C and B on main) | `groups.test.ts`, `keys.test.ts` (`mayManageApi` on `holds`); e2e `91-storefront-api`; mockup parity |
 | SA1·2 mappers, schemas | done | `map.test.ts` (sentinels, drafts, media host, closed links), `released-api.test.ts` |
 | SA1·3 routes, boundary purge (0139), WAF | done | int test (A never reads B, no draft under a live key, no cost); proof 81; `waf.test.ts` |
 | SA1·4 skill, agent, planning heading | done | — |
-| e2e, mockup parity | after SA1·1 | — |
-| Content resources (`content`, `pages/{handle}`, `faq`) | **this lane, after lane B is on main** (orchestrator 2026-11-15), reading B's `src/lib/queries/content.ts` seam; B builds no API route | — |
+| e2e, mockup parity | done | `e2e/flows/91-storefront-api.mjs`; `mockup-parity-reviewer` |
+| Content resources (`content`, `pages/{handle}`, `faq`) | done, on B's seam (`apiContent` added beside `shopContent`; `shopPages`/`previewPages` read as they are) | `content-map.test.ts`; int test (A's own only, a draft page only under A's test key); `api-isr.mjs` (content a HIT, still the hour 65 s later); proof 81 |
+| Partner and domain stops, content freshness | done | drain sweeps `app_shops_with_key_stop` and `app_shops_with_content_change` (0139); proof 81 |
 
-**As built, differing from the plan text above** (none is a screen; the Deviations table stays empty):
+**As built, differing from the plan text above** (the screen's differences are in the Deviations table):
 - The hash is sha256 **hex text**, not bytea (one form for the column, the cache key and the tag); `revoked_by` beside
   `revoked_at`; the definer returns four columns (with `expires_at`). Noted on ADR-0018.
 - The key lookup lives in `src/lib/queries/storefront-keys.ts` (storefront.ts was at its size limit) with `revalidate:
@@ -351,9 +359,23 @@ this branch first; SA1·1 (the Settings page and its actions) waits for C and B 
 - Public search is a dynamic live route answered `public, s-maxage=60` (an ISR route can't vary by query); the slim
   search entry (speed review M2) is not built: search filters the cached catalogue in memory. Signal to build it: a
   search p95 over 50 ms in Observability.
-- Carried into SA1b's plan (orchestrator 2026-11-15): the slim search entry above, and Frrata Admin's domain-disconnect purge below.
-- Frrata Admin's domain disconnect does not purge keys' cached answers (Admin never opens a shop's transaction): the
-  definer stops them, cached copies can answer for up to the hour. Partner removal and suspension purge after lane C.
+- Carried into SA1b's plan (orchestrator 2026-11-15): the slim search entry above.
+- Stops that write nothing to a key's row purge through the 5-minute drain, never through Admin: a partner's link ending,
+  Frrata suspending a partner (`admin_end_partner`, across shops) and a domain going (Admin's disconnect included) are
+  found by `app_shops_with_key_stop` (shop ids only, frata_app alone), whose keys `refreshKeys` purges shop by shop. So
+  Admin never reads a key or its hash (0138), and a stopped key's cached copies answer for at most ~5 minutes, not the
+  hour. Settings › People's removal also purges at once. `removePartnerPerson` needs nothing: a key follows the
+  partner, not the person (owner decision 4). Reinstating a partner is not swept: a miss is held only on the instance (60 s), so its keys answer again within minutes.
+- Content (lane B) reaches the API's hour-long copies through B's throttled save purge, which may leave a burst to the
+  backstop, and a dated bar starts with no write. `app_shops_with_content_change` finds the shops whose content was
+  saved, deleted or started in the window; the drain purges their `content` scope. Future bars are never answered;
+  each carries `endsAt`, so a site hides it on time.
+- Content answers: `content` (live bars in the store's order, menus to three levels, the Contact line, the live page
+  list), `pages/{handle}` (the store's page as a shopper sees it, `resolvePage` in shop mode, as a closed block union:
+  heading, text, image, button, questions, group, columns; commerce blocks aren't in a page's templates), `faq` (the
+  store's FAQ page, bound answers from Settings, or a `policy` pointer when the owner rewrote that policy). Links only
+  the store's own paths (`SHOP_PATH`); photos only from Frrata's store. Under a test key a draft page opens by handle.
+- The e2e stack now serves the API host (`NEXT_PUBLIC_API_HOST=api.localhost`), so a flow reads through the real door.
 
 ## Owner questions (as asked)
 1. **Scope:** this lane builds SA0 + SA1 (catalogue reads and Settings › Website); the cart link, the 307s, "Your

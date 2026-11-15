@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { Section } from '@/components/layout/section'
 import { Badge, Tag } from '@/components/ui/badge'
 import { Banner } from '@/components/ui/banner'
-import { Button } from '@/components/ui/button'
+import { Button, button } from '@/components/ui/button'
 import { CopyField } from '@/components/ui/copy-field'
 import { Dialog } from '@/components/ui/dialog'
 import { FIELD } from '@/components/ui/field'
@@ -26,14 +26,21 @@ export type KeyView = { id: string; name: string; prefix: string; chip: string; 
 type Choice = { domainId: string; www: boolean }
 type Option = Choice & { label: string }
 
+// The chosen card keeps its frame when read only (design-system review 5); arrow keys move between the two (radio pattern).
 const radio = (on: boolean, off?: boolean) =>
-  `flex items-start gap-3 rounded-lg border p-3 text-left transition-[border-color,box-shadow] duration-fast ${off ? 'cursor-default border-border bg-sunk text-muted-foreground' : on ? 'border-foreground shadow-[inset_0_0_0_1px_var(--color-foreground)]' : 'border-border hover:border-input'}`
-const dot = (on: boolean) => `mt-0.5 size-4 shrink-0 rounded-full border-2 ${on ? 'border-[5px] border-foreground' : 'border-input'}`
+  `flex items-start gap-3 rounded-lg border p-3 text-left transition-[border-color,box-shadow] duration-fast ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${on ? 'border-foreground ring-1 ring-foreground' : 'border-border'} ${off ? 'cursor-default bg-sunk text-muted-foreground' : on ? '' : 'hover:border-input'}`
+const dot = (on: boolean) => `mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border-2 ${on ? 'border-foreground' : 'border-input'}`
+const arrows = (pick: () => void) => (e: React.KeyboardEvent<HTMLButtonElement>) => {
+  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return
+  e.preventDefault()
+  const other = [...(e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [])].find((x) => x !== e.currentTarget)
+  other?.focus(); other?.click(); void pick
+}
 
 function RadioCard({ on, disabled, onPick, title, note }: { on: boolean; disabled?: boolean; onPick: () => void; title: string; note: string }) {
   return (
-    <button type="button" role="radio" aria-checked={on} aria-disabled={disabled || undefined} onClick={disabled ? undefined : onPick} className={radio(on, disabled)}>
-      <span aria-hidden="true" className={dot(on)} />
+    <button type="button" role="radio" aria-checked={on} aria-disabled={disabled || undefined} tabIndex={on ? 0 : -1} onKeyDown={arrows(onPick)} onClick={disabled ? undefined : onPick} className={radio(on, disabled)}>
+      <span aria-hidden="true" className={dot(on)}>{on ? <span className="size-2 rounded-full bg-foreground" /> : null}</span>
       <span><span className="block text-sm font-medium">{title}</span><span className="block text-xs text-muted-foreground">{note}</span></span>
     </button>
   )
@@ -90,7 +97,7 @@ export function WebsiteView(p: {
             {p.options.length ? (
               <Banner tone="warn" title="Show your legal name, address, customer care and grievance officer."><Badge tone="warn">From 1 Jan 2027</Badge></Banner>
             ) : (
-              <div><Link href="/console/settings/web-address" className="btn btn-sm inline-flex h-11 items-center rounded-md border border-edge bg-card px-2.5 text-label font-medium shadow-sm hover:bg-accent md:h-7.5">Connect domain</Link></div>
+              <div><Link href="/console/settings/web-address" className={button({ variant: 'secondary', size: 'sm' })}>Connect domain</Link></div>
             )}
           </>
         ) : null}
@@ -103,7 +110,7 @@ export function WebsiteView(p: {
               <span className="flex min-w-0 flex-wrap items-center gap-2"><span className="font-mono text-small [overflow-wrap:anywhere]">{p.checkout.host}</span><Tag>Main</Tag></span>
               <span className="flex items-center gap-1">
                 <CopyButton value={p.checkout.host} label="checkout address" />
-                {p.canManage ? <Link href="/console/settings/web-address" className="btn btn-sm inline-flex h-11 items-center rounded-md border border-edge bg-card px-2.5 text-label font-medium shadow-sm hover:bg-accent md:h-7.5">Edit store address</Link> : null}
+                {p.canManage ? <Link href="/console/settings/web-address" className={button({ variant: 'secondary', size: 'sm' })}>Edit store address</Link> : null}
               </span>
             </div>
           </Section>
@@ -111,7 +118,7 @@ export function WebsiteView(p: {
           {p.openapi ? (
             <Section title="For developers">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="min-w-0"><b className="font-medium">OpenAPI</b> <span className="font-mono text-small text-muted-foreground [overflow-wrap:anywhere]">{p.openapi.replace(/^https:\/\//, '')}</span></span>
+                <span className="min-w-0"><span className="font-medium">OpenAPI</span> <span className="font-mono text-small text-muted-foreground [overflow-wrap:anywhere]">{p.openapi.replace(/^https:\/\//, '')}</span></span>
                 <CopyButton value={p.openapi} label="OpenAPI address" />
               </div>
             </Section>
@@ -130,10 +137,13 @@ export function WebsiteView(p: {
 function CopyButton({ value, label }: { value: string; label: string }) {
   const [done, setDone] = useState(false)
   return (
-    <Button size="sm" variant="ghost" aria-label={done ? `${label} copied` : `Copy ${label}`}
-      onClick={async () => { try { await navigator.clipboard.writeText(value); setDone(true); window.setTimeout(() => setDone(false), 2000) } catch { /* the address is on screen to select */ } }}>
-      {done ? '✓ Copied' : 'Copy'}
-    </Button>
+    <>
+      <Button size="sm" variant="ghost" aria-label={`Copy ${label}`}
+        onClick={async () => { try { await navigator.clipboard.writeText(value); setDone(true); window.setTimeout(() => setDone(false), 2000) } catch { /* the address is on screen to select */ } }}>
+        {done ? '✓ Copied' : 'Copy'}
+      </Button>
+      <span role="status" className="sr-only">{done ? 'Copied' : ''}</span>
+    </>
   )
 }
 
@@ -178,10 +188,9 @@ function Keys(p: { canManage: boolean; keys: KeyView[]; liveCount: number; testA
   return (
     <Section title="Keys" action={p.canManage ? (
       <span className="flex items-center gap-2">
-        {full ? <span className="rounded-full bg-neutral px-2 text-xs text-neutral-text tabular-nums">{p.liveCount} of {p.maxKeys}</span> : null}
-        <Button size="sm" onClick={start} disabled={full}>Create key</Button>
+        {full ? <Badge tone="neutral" className="tabular-nums">{p.liveCount} of {p.maxKeys}</Badge> : null}
+        <Button size="sm" onClick={start} reason={full ? 'Delete a key to make another.' : undefined}>Create key</Button>
       </span>) : undefined}>
-      {full && p.canManage ? <p className="text-label text-muted-foreground">Delete a key to make another.</p> : null}
       {p.keys.length === 0 ? <p className="text-muted-foreground">No keys yet</p> : (
         <ul className="divide-y divide-line-soft" data-list>
           {p.keys.map((k) => (
@@ -201,17 +210,17 @@ function Keys(p: { canManage: boolean; keys: KeyView[]; liveCount: number; testA
           ? <Button variant="secondary" data-autofocus onClick={close}>Done</Button>
           : <><Button variant="secondary" data-autofocus onClick={close}>Not now</Button><Button busy={busy} onClick={create}>Create key</Button></>}>
         {made ? (
-          <div className="space-y-2.5 rounded-lg border-[1.5px] border-dashed border-input bg-sunk p-3.5">
+          <div className="space-y-2.5 rounded-lg border-2 border-dashed border-input bg-sunk p-3.5">
             <p className="font-medium">Copy this key now. We show it once.</p>
             <CopyField value={made} label="key" />
           </div>
         ) : (
           <div className="space-y-3.5">
-            <label className="block space-y-1.5">
-              <span className="flex justify-between text-label font-medium">Name <span className="font-normal text-muted-foreground tabular-nums">{name.length}/40</span></span>
-              <input className={`${FIELD} w-full`} value={name} maxLength={40} onChange={(e) => { setName(e.target.value); setErr(null) }} {...fieldProps('key-name', err)} />
+            <div className="space-y-1.5">
+              <span className="flex justify-between text-label font-medium"><label htmlFor="key-name-input">Name</label><span id="key-name-count" className="font-normal text-muted-foreground tabular-nums">{name.length}/40</span></span>
+              <input id="key-name-input" className={`${FIELD} w-full`} value={name} maxLength={40} onChange={(e) => { setName(e.target.value); setErr(null) }} {...fieldProps('key-name', err)} />
               <FieldError name="key-name" message={err} />
-            </label>
+            </div>
             <div role="radiogroup" aria-label="Key type" className="grid gap-2 sm:grid-cols-2">
               <RadioCard on={kind === 'public'} onPick={() => setKind('public')} title="Live" note="For your live website" />
               <RadioCard on={kind === 'test'} disabled={!p.testAllowed} onPick={() => setKind('test')} title="Test"

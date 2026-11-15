@@ -39,7 +39,7 @@ export default async function WebsitePageRoute() {
     const s = keyState(k, page, now)
     const maker = k.partnerId ? who(k.createdBy) : null
     const line: string[] = []
-    if (s.kind === 'deleted') line.push(`Deleted by ${who(k.revokedBy) ?? 'a former member'} · ${dayMonthIN(new Date(s.at))}`)
+    if (s.kind === 'deleted') line.push(`Deleted by ${who(k.revokedBy) ?? 'someone who left'} · ${dayMonthIN(new Date(s.at))}`)
     else if (s.kind === 'partner_gone') line.push(s.at ? `Your partner’s access ended · ${dayMonthIN(new Date(s.at))}` : 'Your partner’s access ended')
     else if (s.kind === 'ended' && s.why === 'opened' && s.at) line.push(`Store opened · ${dayMonthIN(new Date(s.at))}`)
     else if (s.kind === 'ended' && s.at) line.push(dayMonthIN(new Date(s.at)))
@@ -55,7 +55,7 @@ export default async function WebsitePageRoute() {
   return (
     <>
       <SettingsHead page="website" role={role} badges={canManage ? undefined : <Badge tone="neutral">View only</Badge>} />
-      <div className="mt-4" />
+      <div className="mt-4">
       <WebsiteView
         canManage={canManage}
         saved={page.siteOrigin && site ? { domainId: site.id, www: page.siteOrigin === `https://www.${site.apex}` } : null}
@@ -67,6 +67,7 @@ export default async function WebsitePageRoute() {
         testAllowed={!page.firstOpenedAt}
         openapi={API_HOST ? `https://${API_HOST}/${CURRENT_API_VERSION}/openapi.json` : null}
       />
+      </div>
     </>
   )
 }

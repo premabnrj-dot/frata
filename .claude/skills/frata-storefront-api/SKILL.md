@@ -2,7 +2,7 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 1.1.0
+  version: 1.2.0
   verified: 2026-11-15
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
 ---
@@ -39,7 +39,9 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    request), their pairs and collection members filtered the same way; never orders, shoppers, carts, drafts (live key),
    costs (ADR-0003: cost sentinels are grepped in the API's files, the answers and `openapi.json`), members or another
    shop's rows. Text is plain text; photos only from Frrata's media store under the shop's own folder; links closed
-   (Instagram handle shape, WhatsApp digits).
+   (Instagram handle shape, WhatsApp digits; a menu, bar, button or text link only on the store's own paths,
+   `SHOP_PATH`). Content and pages are what a shopper sees: `resolvePage` in **shop** mode (never a sample or an
+   example), live bars only (`writtenOrder`), a later bar never (each carries `endsAt`).
 6. **A released version only grows** (`released-api.test.ts` against `__tests__/released/<version>.json`): a new
    optional field or enum value passes; a removal, rename, narrowing or a field turning optional is a new dated version
    (`API_VERSIONS`, `src/domains/storefront-api/versions.ts`), kept ≥ 12 months after its successor.
@@ -50,8 +52,13 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    the shop's reads with `revalidate: 3600`, the same tags), never the 60 s `shop*` ones. `PERIOD=1
    node scripts/verify/api-isr.mjs` proves a copy is still a HIT 65 s later. Every copy carries `shop:<tenant>` (from the loaders) and `skey:<hex>`. A catalogue
    change purges through today's `refreshShop`/`refreshSoldOut`; a key deleted → `refreshKey(hex)`; any stop the definer
-   derives (the store opens, the Website moves or its domain goes, a partner is removed) → `refreshKeys(tenant)`; a
-   scheduled moment (a drop, an offer starting or ending) → the 5-minute drain's `app_shops_with_boundary` sweep.
+   derives (the store opens, the Website moves, Settings › People removes the partner) → `refreshKeys(tenant)`; a
+   scheduled moment (a drop, an offer starting or ending) → the 5-minute drain's `app_shops_with_boundary` sweep; a stop
+   with no write a console action sees (a partner's link ending, Frrata suspending a partner, a domain going, Admin's
+   included) → the drain's `app_shops_with_key_stop` (shop ids only: **Admin never reads a key or its hash**); store
+   content (a bar starting, a save B's throttle left to the backstop) → the drain's `app_shops_with_content_change`.
+   The live tree reads content through `apiContent` (`src/lib/queries/content.ts`, lane B's seam, the hour) and pages
+   through `shopPages` (a day, tag `pages`: a longer period doesn't shorten the hour).
 8. **Every stop is the definer's**, never a stored flag: deleted (`revoked_at`), expired, a test key once the store ever
    opened (`tenants.first_opened_at`), a key a partner made once its link is gone or it is suspended, a Website whose
    `site_domain_id` row is not live. Proof: `scripts/verify/tenancy.sql` § 81.

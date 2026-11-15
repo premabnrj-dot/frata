@@ -23,7 +23,7 @@
 //      src/app/api/storefront/**, src/lib/storefront-api/** and src/lib/modules/*/api.ts: every exported route method is
 //      apiRequest(…) (openapi.json, which has no key, is the one named entry point); no shop or tenant id from a host,
 //      a session, a header, a cookie, params or a body; storefrontKeyFor only in request.ts, storefrontKeyRow only in
-//      src/lib/queries/storefront.ts, app_storefront_key only in platform.ts and migrations.
+//      src/lib/queries/storefront-keys.ts (and platform.ts, its definition), app_storefront_key only in platform.ts and migrations.
 //   7. READS STAY IN src/lib/queries (plan U · T1, T2, 2026-11-07): src/app/**
 //      imports @/lib/db/tenant only from TENANT_IN_APP; the shell
 //      (src/components/shell/**) imports no data module — it is handed values,

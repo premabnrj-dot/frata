@@ -1,6 +1,7 @@
 'use server'
 
-import { randomBytes, createHash } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
+import { keyHash } from '@/lib/queries/storefront-keys'
 import { and, count, eq, isNull, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
@@ -51,7 +52,7 @@ const WebsiteInput = z.union([
 /** Where the store's website runs: on Frrata, or the store's own website at one of its live connected domains. */
 export async function setWebsiteAction(input: unknown): Promise<Done> {
   const p = WebsiteInput.safeParse(input)
-  if (!p.success) return { ok: false, error: 'Pick a connected domain.' }
+  if (!p.success) return { ok: false, error: 'Pick a website address.' }
   try {
     const r = await asMember(API, { action: 'website.set', target: 'website' }, async (tx, auth) => {
       const no = await mayManage(tx, auth)
@@ -64,7 +65,7 @@ export async function setWebsiteAction(input: unknown): Promise<Done> {
           .where(and(eq(shopDomains.id, p.data.domainId), eq(shopDomains.tenantId, t), sql`${shopDomains.provedAt} is not null`, isNull(shopDomains.removedAt), isNull(shopDomains.parkedAt)))
         if (!d) return 'That domain isn’t connected any more. Pick another.'
         const origin = `https://${p.data.www ? `www.${d.apex}` : d.apex}`
-        if (siteOriginProblem(origin, d.apex)) return 'Pick a connected domain.'
+        if (siteOriginProblem(origin, d.apex)) return 'Pick a website address.'
         await tx.update(shopSettings).set({ siteOrigin: origin, siteDomainId: p.data.domainId }).where(eq(shopSettings.tenantId, t))
       }
       await audit(tx, auth, 'website.set', 'website', { fields: ['site_origin', 'site_domain_id'] })
@@ -101,7 +102,7 @@ export async function createKeyAction(input: unknown): Promise<CreateKeyResult> 
       // opening (security review 4); the count below is under the same lock.
       await tx.select({ t: shopSettings.tenantId }).from(shopSettings).where(eq(shopSettings.tenantId, t)).for('update')
       const [s] = await tx.select({ opened: tenants.firstOpenedAt }).from(tenants).where(eq(tenants.id, t))
-      if (p.data.kind === 'test' && s?.opened) return 'Test keys are only for before the store opens.'
+      if (p.data.kind === 'test' && s?.opened) return 'The store is open. Make a Live key.'
       const [n] = await tx.select({ n: count() }).from(storefrontKeys).where(and(eq(storefrontKeys.tenantId, t), isNull(storefrontKeys.revokedAt)))
       if ((n?.n ?? 0) >= MAX_LIVE_KEYS) return 'Delete a key to make another.'
       if (!(await withinLimit(LIMITS.apiKeyCreateShop, t, new Date(), true))) {
@@ -111,11 +112,13 @@ export async function createKeyAction(input: unknown): Promise<CreateKeyResult> 
       // The partner whose person made it (a key follows its partner), never from input: a partner member of this store
       // belongs to the store's one active partner link (partner_links_one_active).
       const [m] = await tx.select({ pm: members.partnerMemberId }).from(members).where(and(eq(members.tenantId, t), eq(members.userId, auth.userId)))
+      // (partner_members is Frrata's own table, no frata_app grant: the one active link is the member's partner because
+      // app_remove_partner ends the link and the partner's memberships together. Tenancy audit 2026-11-15, LOW.)
       const partnerId = m?.pm
         ? (await tx.select({ id: partnerLinks.partnerId }).from(partnerLinks).where(and(eq(partnerLinks.tenantId, t), isNull(partnerLinks.removedAt))))[0]?.id ?? null
         : null
       const [row] = await tx.insert(storefrontKeys).values({
-        tenantId: t, kind: p.data.kind, name: p.data.name, hash: createHash('sha256').update(key).digest('hex'), prefix: shownPrefix(key),
+        tenantId: t, kind: p.data.kind, name: p.data.name, hash: keyHash(key), prefix: shownPrefix(key),
         partnerId, createdBy: auth.userId,
         expiresAt: p.data.kind === 'test' ? sql`now() + ${`${TEST_KEY_DAYS} days`}::interval` : null,
       }).returning({ id: storefrontKeys.id, name: storefrontKeys.name, kind: storefrontKeys.kind, prefix: storefrontKeys.prefix, createdAt: storefrontKeys.createdAt, expiresAt: storefrontKeys.expiresAt })
