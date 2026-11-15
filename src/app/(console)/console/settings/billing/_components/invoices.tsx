@@ -31,13 +31,13 @@ export function Invoices({ invoices, show, canPay, testGateway }: { invoices: In
         <DataTableBody>
           {keep.map((i) => (
             <DataTableRow key={i.id}>
-              <td>{monthYearIN(i.periodStart)}</td>
-              <td className="font-mono text-label">{i.number}{i.credits.map((c) => <Link key={c.number} href={`/console/settings/billing/invoice/${i.id}?credit=${encodeURIComponent(c.number)}`} className="ml-2"><Tag>Credit note {c.number}</Tag></Link>)}</td>
-              <td className="text-right"><Money paise={paise(i.total)} decimals /></td>
-              <td>{i.testMode ? <Badge tone="neutral">Test · {STATE_LABEL[i.state].toLowerCase()}</Badge>
+              <td data-cell="a">{monthYearIN(i.periodStart)}</td>
+              <td data-cell="c" className="font-mono text-label">{i.number}{i.credits.map((c) => <Link key={c.number} href={`/console/settings/billing/invoice/${i.id}?credit=${encodeURIComponent(c.number)}`} className="ml-2"><Tag>Credit note {c.number}</Tag></Link>)}</td>
+              <td data-cell="b" className="text-right"><Money paise={paise(i.total)} decimals /></td>
+              <td data-cell="d">{i.testMode ? <Badge tone="neutral">Test · {STATE_LABEL[i.state].toLowerCase()}</Badge>
                 : i.state === 'due' ? <Badge tone="warn">Due <Money paise={paise(i.due)} decimals /></Badge> : <Badge tone={i.state === 'paid' ? 'ok' : 'neutral'}>{STATE_LABEL[i.state]}</Badge>}</td>
-              <td className="text-right">
-                <span className="inline-flex flex-wrap items-center justify-end gap-1.5">
+              <td data-cell="e" className="text-right">
+                <span className="inline-flex flex-wrap items-center gap-1.5 md:justify-end">
                   {canPay && i.state === 'due' && i.testMode === testGateway ? <PayNow invoiceId={i.id} /> : null}
                   <Link href={billingHref('charges', { bill: i.id })} className={button({ variant: 'ghost', size: 'sm' })}>Charges</Link>
                   <a href={`/console/settings/billing/invoice/${i.id}`} className={button({ variant: 'ghost', size: 'sm' })}>PDF</a>
@@ -45,7 +45,7 @@ export function Invoices({ invoices, show, canPay, testGateway }: { invoices: In
               </td>
             </DataTableRow>
           ))}
-          {!keep.length ? <DataTableRow><td colSpan={5} className="text-muted-foreground">{invoices.length ? 'No invoices here.' : 'No invoices yet. The first comes on the 1st.'}</td></DataTableRow> : null}
+          {!keep.length ? <DataTableRow><td data-cell="e" colSpan={5} className="text-muted-foreground">{invoices.length ? 'No invoices here.' : 'No invoices yet. The first comes on the 1st.'}</td></DataTableRow> : null}
         </DataTableBody>
       </DataTable>
     </Section>

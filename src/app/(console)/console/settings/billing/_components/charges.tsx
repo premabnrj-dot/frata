@@ -50,16 +50,16 @@ export function Charges({ picks, bill, view, prefix }: { picks: BillPick[]; bill
           <DataTableBody>
             {s.rows.map((r) => (
               <DataTableRow key={r.group}>
-                <td>{r.group === 'fees' || r.group === 'plan' || r.group === 'apps' ? <Link className="text-link underline-offset-2 hover:underline" href={at(r.group === 'fees' ? 'orders' : 'items')}>{GROUP_LABEL[r.group]}</Link> : GROUP_LABEL[r.group]}</td>
-                <td className="text-muted-foreground">{how(r.group)}</td>
-                <td className="text-right"><Money paise={r.taxable} decimals /></td>
+                <td data-cell="a">{r.group === 'fees' || r.group === 'plan' || r.group === 'apps' ? <Link className="text-link underline-offset-2 hover:underline" href={at(r.group === 'fees' ? 'orders' : 'items')}>{GROUP_LABEL[r.group]}</Link> : GROUP_LABEL[r.group]}</td>
+                <td data-cell="c" className="text-muted-foreground">{how(r.group)}</td>
+                <td data-cell="b" className="text-right"><Money paise={r.taxable} decimals /></td>
               </DataTableRow>
             ))}
-            <DataTableRow><td className="font-semibold">Before GST</td><td /><td className="text-right font-semibold"><Money paise={s.beforeGst} decimals /></td></DataTableRow>
-            {s.cgst ? <DataTableRow><td>CGST 9%</td><td /><td className="text-right"><Money paise={s.cgst} decimals /></td></DataTableRow> : null}
-            {s.sgst ? <DataTableRow><td>SGST 9%</td><td /><td className="text-right"><Money paise={s.sgst} decimals /></td></DataTableRow> : null}
-            {s.igst ? <DataTableRow><td>IGST 18%</td><td /><td className="text-right"><Money paise={s.igst} decimals /></td></DataTableRow> : null}
-            <DataTableRow><td className="font-semibold">Total</td><td /><td className="text-right font-semibold"><Money paise={s.total} decimals /></td></DataTableRow>
+            <DataTableRow><td data-cell="a" className="font-semibold">Before GST</td><td data-cell="hide" /><td data-cell="b" className="text-right font-semibold"><Money paise={s.beforeGst} decimals /></td></DataTableRow>
+            {s.cgst ? <DataTableRow><td data-cell="a">CGST 9%</td><td data-cell="hide" /><td data-cell="b" className="text-right"><Money paise={s.cgst} decimals /></td></DataTableRow> : null}
+            {s.sgst ? <DataTableRow><td data-cell="a">SGST 9%</td><td data-cell="hide" /><td data-cell="b" className="text-right"><Money paise={s.sgst} decimals /></td></DataTableRow> : null}
+            {s.igst ? <DataTableRow><td data-cell="a">IGST 18%</td><td data-cell="hide" /><td data-cell="b" className="text-right"><Money paise={s.igst} decimals /></td></DataTableRow> : null}
+            <DataTableRow><td data-cell="a" className="font-semibold">Total</td><td data-cell="hide" /><td data-cell="b" className="text-right font-semibold"><Money paise={s.total} decimals /></td></DataTableRow>
           </DataTableBody>
         </DataTable>
       </Section>
@@ -81,16 +81,16 @@ export function Charges({ picks, bill, view, prefix }: { picks: BillPick[]; bill
               <DataTableBody>
                 {[...bill.orders, ...bill.credits.map((c) => ({ ...c, credit: true as const }))].map((o, i) => (
                   <DataTableRow key={`${o.number}-${i}`}>
-                    <td><Link className="text-link underline-offset-2 hover:underline" href={`/console/orders/${o.number}`}>{prefix}-{o.number}</Link></td>
-                    <td>{o.shippedAt ? dayMonthIN(o.shippedAt) : '—'}</td>
-                    <td><Badge tone={'credit' in o ? 'neutral' : 'ok'}>{OUTCOME[o.outcome]}{o.outcomeAt ? ` ${dayMonthIN(o.outcomeAt)}` : ''}</Badge>{'credit' in o ? <Tag className="ml-1.5">Credit</Tag> : null}</td>
-                    <td className="text-right"><Money paise={paise(o.total)} decimals /></td>
-                    <td className="text-right"><Money paise={paise(o.base)} decimals /></td>
-                    <td className="text-right text-muted-foreground">{pct(o.feeBps)}</td>
-                    <td className="text-right font-medium"><Money paise={paise(o.fee)} decimals /></td>
+                    <td data-cell="a"><Link className="text-link underline-offset-2 hover:underline" href={`/console/orders/${o.number}`}>{prefix}-{o.number}</Link></td>
+                    <td data-cell="e" className="text-muted-foreground"><span className="md:hidden">Shipped </span>{o.shippedAt ? dayMonthIN(o.shippedAt) : '—'}</td>
+                    <td data-cell="c"><Badge tone={'credit' in o ? 'neutral' : 'ok'}>{OUTCOME[o.outcome]}{o.outcomeAt ? ` ${dayMonthIN(o.outcomeAt)}` : ''}</Badge>{'credit' in o ? <Tag className="ml-1.5">Credit</Tag> : null}</td>
+                    <td data-cell="hide" className="text-right"><Money paise={paise(o.total)} decimals /></td>
+                    <td data-cell="d" className="text-right"><Money paise={paise(o.base)} decimals /></td>
+                    <td data-cell="hide" className="text-right text-muted-foreground">{pct(o.feeBps)}</td>
+                    <td data-cell="b" className="text-right font-medium"><Money paise={paise(o.fee)} decimals /></td>
                   </DataTableRow>
                 ))}
-                {bill.orderCount === 0 && !bill.credits.length ? <DataTableRow><td colSpan={7} className="text-muted-foreground">No delivered orders on this bill.</td></DataTableRow> : null}
+                {bill.orderCount === 0 && !bill.credits.length ? <DataTableRow><td data-cell="e" colSpan={7} className="text-muted-foreground">No delivered orders on this bill.</td></DataTableRow> : null}
               </DataTableBody>
             </DataTable>
             {pages > 1 ? (
@@ -106,14 +106,14 @@ export function Charges({ picks, bill, view, prefix }: { picks: BillPick[]; bill
             <DataTableBody>
               {items.map((l, i) => (
                 <DataTableRow key={i}>
-                  <td>{l.description}</td>
-                  <td>{l.periodStart && l.periodEnd ? `${dayMonthIN(l.periodStart)} – ${dayMonthLongIN(new Date(l.periodEnd.getTime() - DAY))}` : '—'}</td>
-                  <td className="text-right">{l.periodStart && l.periodEnd ? Math.round((l.periodEnd.getTime() - l.periodStart.getTime()) / DAY) : '—'}</td>
-                  <td className="text-right font-medium"><Money paise={paise(l.taxable)} decimals /></td>
+                  <td data-cell="a">{l.description}</td>
+                  <td data-cell="c" className="text-muted-foreground">{l.periodStart && l.periodEnd ? `${dayMonthIN(l.periodStart)} – ${dayMonthLongIN(new Date(l.periodEnd.getTime() - DAY))}` : '—'}</td>
+                  <td data-cell="d" className="text-right text-muted-foreground"><span className="md:hidden">Days </span>{l.periodStart && l.periodEnd ? Math.round((l.periodEnd.getTime() - l.periodStart.getTime()) / DAY) : '—'}</td>
+                  <td data-cell="b" className="text-right font-medium"><Money paise={paise(l.taxable)} decimals /></td>
                 </DataTableRow>
               ))}
-              {!items.length ? <DataTableRow><td colSpan={4} className="text-muted-foreground">No plan or apps on this bill.</td></DataTableRow> : null}
-              <DataTableRow><td className="font-semibold" colSpan={3}>Plan and apps</td><td className="text-right font-semibold"><Money paise={paise(items.reduce((t, l) => t + l.taxable, 0))} decimals /></td></DataTableRow>
+              {!items.length ? <DataTableRow><td data-cell="e" colSpan={4} className="text-muted-foreground">No plan or apps on this bill.</td></DataTableRow> : null}
+              <DataTableRow><td data-cell="a" className="font-semibold" colSpan={3}>Plan and apps</td><td data-cell="b" className="text-right font-semibold"><Money paise={paise(items.reduce((t, l) => t + l.taxable, 0))} decimals /></td></DataTableRow>
             </DataTableBody>
           </DataTable>
         )}

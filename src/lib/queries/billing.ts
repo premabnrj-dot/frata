@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, gt, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm'
 import { GST_BPS, type Bill, type PlanRow } from '@/domains/billing/bill'
 import { daysUntil, lastDay, mayExtend, pausesAt, trialEndsAt, trialState, type TrialState } from '@/domains/plans/trial'
 import { cache } from 'react'
@@ -370,7 +370,7 @@ export async function addonsFor(m: Pick<Membership, 'tenantId' | 'role'>, now = 
   return withTenant(m.tenantId, async (tx) => {
     const [prices, on] = await Promise.all([
       tx.execute<{ module: string; monthly_price: string }>(sql`select distinct on (module) module, monthly_price from ${addonPrices} order by module, version desc`),
-      tx.select({ module: tenantAddons.module }).from(tenantAddons).where(and(eq(tenantAddons.tenantId, m.tenantId), sql`${tenantAddons.startsAt} <= ${now} and (${tenantAddons.endsAt} is null or ${tenantAddons.endsAt} > ${now})`)),
+      tx.select({ module: tenantAddons.module }).from(tenantAddons).where(and(eq(tenantAddons.tenantId, m.tenantId), lte(tenantAddons.startsAt, now), or(isNull(tenantAddons.endsAt), gt(tenantAddons.endsAt, now)))),
     ])
     return { prices: Object.fromEntries(prices.map((r) => [r.module, Number(r.monthly_price)])), on: on.map((r) => r.module) }
   })

@@ -92,7 +92,7 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
     }
     body = bill ? <Charges picks={picks} bill={bill} view={q.view === 'items' ? 'items' : 'orders'} prefix={prefix} /> : <Panel title="That bill isn’t here">Pick a bill above, or go back to Overview.</Panel>
   } else if (tab === 'plans') {
-    const addons = await addonsFor(m, now).catch(() => ({ prices: {}, on: [] as string[] }))
+    const addons = await addonsFor(m, now).catch((err) => { console.error('[billing page] add-ons', errName(err)); return { prices: {}, on: [] as string[] } })
     const cur = o.plan
     const names = (keys: string[]) => keys.filter(isModuleKey).map((k) => MODULES[k].name)
     const curFeatures = plans.find((p) => p.code === cur?.code)?.features ?? []
