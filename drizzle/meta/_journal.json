@@ -890,6 +890,20 @@
       "when": 1794573129211,
       "tag": "0126_saved_views_access",
       "breakpoints": true
+    },
+    {
+      "idx": 127,
+      "version": "7",
+      "when": 1794713247452,
+      "tag": "0127_partner_passkeys",
+      "breakpoints": true
+    },
+    {
+      "idx": 128,
+      "version": "7",
+      "when": 1794713249447,
+      "tag": "0128_partner_passkeys_access",
+      "breakpoints": true
     }
   ]
 }

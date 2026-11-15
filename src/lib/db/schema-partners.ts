@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
-import { check, index, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { bigint, check, index, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { BRANDS_NOW, PARTNER_SERVICES } from '@/domains/partners/terms'
 import { PARTNER_ROLES } from '@/domains/partners/team'
 import { sqlList } from '@/domains/tenancy/roles'
@@ -104,4 +104,89 @@ export const partnerAssignments = pgTable('partner_assignments', {
 }, (t) => [
   primaryKey({ columns: [t.partnerMemberId, t.tenantId] }),
   index('partner_assignments_tenant').on(t.tenantId),
+])
+
+
+// ════════ Partner passkeys (T1b; docs/plans/2026-11-12-studio-build.md § T1b, reviews folded in). The staff design
+// (drizzle/0109) for a partner's people, every row bound to ONE membership (partner_member_id): a person removed from
+// one partner never carries a passkey, request or check into another. Platform rows: no role holds any privilege; a
+// restrictive deny-all policy; every read and write through the app_partner_pk_* definers (drizzle/0128). ════════
+
+/** A partner person's passkey. Never returned by any definer: only its name and dates. */
+export const partnerPasskeys = pgTable('partner_passkeys', {
+  id: id(),
+  partnerMemberId: uuid('partner_member_id').notNull().references(() => partnerMembers.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull(),
+  credentialId: text('credential_id').notNull(),
+  publicKey: text('public_key').notNull(),
+  counter: bigint('counter', { mode: 'number' }).notNull().default(0),
+  transports: text('transports').array().notNull().default(sql`'{}'::text[]`),
+  name: text('name').notNull(),
+  createdAt: createdAt(),
+  lastUsedAt: at('last_used_at'),
+}, (t) => [
+  uniqueIndex('partner_passkeys_credential').on(t.credentialId),
+  index('partner_passkeys_member').on(t.partnerMemberId),
+  check('partner_passkeys_name', sql`char_length(${t.name}) between 1 and 40`),
+])
+
+/** "Let me add a passkey": the 6-digit code's hash, this browser session, who approved (the partner's owner for a
+ *  Lead; a Frrata admin for the owner). `opens_at`: an owner who already has a passkey waits 24 hours (review H2). */
+export const partnerPasskeyRequests = pgTable('partner_passkey_requests', {
+  id: id(),
+  partnerMemberId: uuid('partner_member_id').notNull().references(() => partnerMembers.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull(),
+  sessionId: uuid('session_id').notNull(),
+  codeHash: text('code_hash').notNull(),
+  createdAt: createdAt(),
+  expiresAt: at('expires_at').notNull(),
+  opensAt: at('opens_at'),
+  approvedBy: uuid('approved_by'),
+  approvedKind: text('approved_kind'),
+  approvedAt: at('approved_at'),
+  usedAt: at('used_at'),
+}, (t) => [
+  index('partner_passkey_requests_member').on(t.partnerMemberId, t.createdAt),
+  check('partner_passkey_requests_kind', sql`${t.approvedKind} is null or ${t.approvedKind} in ('owner','staff')`),
+])
+
+export const partnerWebauthnChallenges = pgTable('partner_webauthn_challenges', {
+  id: id(),
+  partnerMemberId: uuid('partner_member_id').notNull().references(() => partnerMembers.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull(),
+  sessionId: uuid('session_id').notNull(),
+  purpose: text('purpose').notNull(),
+  challenge: text('challenge').notNull(),
+  createdAt: createdAt(),
+  expiresAt: at('expires_at').notNull(),
+  usedAt: at('used_at'),
+}, (t) => [
+  index('partner_webauthn_challenges_user').on(t.userId, t.sessionId),
+  check('partner_webauthn_challenges_purpose', sql`${t.purpose} in ('confirm','add')`),
+])
+
+/** A passkey check on this browser session: 12 hours, the cookie's token kept only as a hash (prefix `partner:`). */
+export const partnerStepups = pgTable('partner_stepups', {
+  id: id(),
+  partnerMemberId: uuid('partner_member_id').notNull().references(() => partnerMembers.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull(),
+  sessionId: uuid('session_id').notNull(),
+  passkeyId: uuid('passkey_id').notNull().references(() => partnerPasskeys.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull(),
+  createdAt: createdAt(),
+  expiresAt: at('expires_at').notNull(),
+}, (t) => [
+  uniqueIndex('partner_stepups_token').on(t.tokenHash),
+  index('partner_stepups_user').on(t.userId, t.sessionId),
+])
+
+export const partnerPasskeyTries = pgTable('partner_passkey_tries', {
+  id: id(),
+  userId: uuid('user_id').notNull(),
+  sessionId: uuid('session_id').notNull(),
+  kind: text('kind').notNull(),
+  at: at('at').notNull().default(sql`now()`),
+}, (t) => [
+  index('partner_passkey_tries_user').on(t.userId, t.kind, t.at),
+  check('partner_passkey_tries_kind', sql`${t.kind} in ('check','request','approve')`),
 ])
