@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.8.0
+  version: 7.9.0
   verified: 2026-11-15
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -332,6 +332,16 @@ from it).
   that page's own panel, "Builders can’t see this page." with a lock tile and Open products. Team's invite asks the
   Role (Lead · Builder) with two lines of what it reaches; each person has a Role select; a Roles card (Partner owner ·
   Lead · Builder) says what each sees in a store. The brand's People shows "Partner · Builder" with an (i).
+- **Clients** (P2, owner-approved mockup v2 2026-11-15, https://claude.ai/artifact/5ieqhb31Prax22Xe2UTtPX): one job in view.
+  The list is Client (a link to its page, the address under it) · Stage · Next (words: "₹12,000 overdue · 11 days",
+  "Waiting 4 days", "Next bill 28 Nov") · the next step's one button beside the link (Hand over, Remind, Record bill) ·
+  Your billing (the deal's amount). Tabs (Needs you, only while it holds rows · Waiting on the client · All) and search
+  only from 9 clients; below that, one list ordered by who acts. A Lead sees Client · Stage · Next, no money; a Builder
+  Client · Stage · Open store. A client is a PAGE (`/partner/clients/<link>`), not a drawer: back to Clients, the next
+  step as the header's primary, More (Edit content, Website keys), tabs Your billing · Store (dates and the share as
+  `Facts`). Remind opens WhatsApp on the partner's phone with the drafted words and no number; Frrata sends nothing.
+  The partner's billing carries one line, "Your client never sees this". A removed client stays last in All, dimmed,
+  and its page keeps billing (a final bill may be owed).
 - **F3 store switcher**: in the account block at every width and in More on
   phones, only with two or more places to go; it lists what app_access_for
   returned, current one marked.

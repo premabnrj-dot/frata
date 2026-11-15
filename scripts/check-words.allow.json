@@ -166,5 +166,11 @@
     "rule": "W4",
     "text": "website",
     "why": "Owner, 2026-11-15 (Storefront API mockup, glossary § Surfaces): Website names the brand's own site built as code on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(partner)/partner/(workspace)/_components/bills.tsx",
+    "rule": "W4",
+    "text": "Website",
+    "why": "Owner, 2026-11-15 (P2 Clients mockup v2): \"Website keys\" opens Console › Settings › Website, the brand's own site built as code on the Storefront API"
   }
 ]

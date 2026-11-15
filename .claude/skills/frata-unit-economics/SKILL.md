@@ -2,7 +2,7 @@
 name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
-  version: 2.16.3
+  version: 2.17.0
   verified: 2026-11-12
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---
@@ -260,6 +260,16 @@ order profit; zero in a month Frata collects nothing:
 
 Snapshotting 2000 bps per link locks every store opened before contribution is
 measured; changing PARTNER_TERMS changes only later stores.
+
+**How a month's share is counted** (P2 Clients, owner 2026-11-15 Q6; `src/domains/partners/share.ts`, drizzle/0145
+`app_partner_client_shares`; Phase 6 statements read the same rule): an issued, non-test Frrata invoice's taxable less
+its non-test credit notes' taxable, at the LINK's snapshotted bps, floored to the paisa, counted only once
+`invoiceState` says paid. A month counts WHOLE when its period overlaps the link's window (opening and closing months
+included; no pro-rating), so a 24-month window spans 24 or 25 invoices. A rolled month is never counted (its taxable is
+in the next month's carry-in); a credited or ₹0 month is "nothing billed"; an unpaid one is "Due" and left out of totals.
+The window is decided per link in SQL (a store relinked to another partner never shows the old partner its new months).
+The partner OWNER sees it in rupees; the brand is told at handover ("Your partner sees what Frrata earns from your
+store."), because ₹ ÷ 20% gives the brand's bill and, with its plan, its delivered sales.
 
 Tiers (decided): Launch ₹1,499/mo (~150 orders) + 2% of delivered order value,
 Growth ₹4,999/mo (~1,500) + 1%, Scale ₹14,999/mo (~5,000) + 0.5%; all channels
