@@ -170,7 +170,8 @@ A Builder joins **no tuple** (ADR-0015 § 1). Read on 2026-11-15 (`grep -rlw`), 
 |---|---|---|
 | "`withTenant` takes an actor" | `withActor(actor)` is the Builder's (and new code's) door; the 176 `withTenant(tenantId)` calls in 63 files stay for owner, admin, staff, partner, accountant, shop and system, and move file by file (gate ratchet) | the Builder can never hold a tenant string, so no legacy call can run for one; a 63-file change now would collide with lanes A and B for no added lock |
 | "role policies on sensitive tables" | `frata_builder` holds no grant on them at all, and its five tables carry a restrictive role policy | a grant refuses before any policy; a restrictive policy on every frata_app table would also refuse today's raw platform paths |
-| "every sensitive definer checks `app_member_role()`" | `frata_builder` may execute no definer (§ 80 asserts it); the definers reachable through a partner's uid (`app_partner_*`) check the person's role themselves | one revoke covers all 34, and every new one by default |
+| "every sensitive definer checks `app_member_role()`" | `frata_builder` may execute no definer (§ 80 asserts it); the definers reachable through a partner's uid (`app_partner_*`) check the person's role themselves | every one of the ~194 definers already revokes PUBLIC, and `frata_builder` holds no direct grant; § 80 checks every schema |
+| "For a Builder it runs `set local role frata_builder`" (§ 3, § 5) | the store preview runs as `frata_app`, reached only through `previewTenantOf` | its loaders read orders for held pieces and best sellers and return only what shoppers see; owner question 5 |
 | e2e: "every route answers 404" | the page's own refusal `Panel` (HTTP 200) inside the Builder's shell | every page already refuses through `requireMember`; a 404 needs each of 55 pages edited |
 | "Audit: each refusal logged … repeated refusals alert" | logged (`[builder refused]` with capability, route and member id, never an email); the alert waits (owner question 2) | no alert channel to a partner owner exists before C1 |
 
@@ -262,9 +263,59 @@ the Look (themes are retiring, ADR-0014).
 2. **Refusals: logged now, an alert to the partner owner later** (when C1 brings partner notices). Recommended.
 3. **A refused page answers with the page's own panel, not a 404** (Deviations). Recommended.
 4. **Changing Lead ↔ Builder keeps the person's stores** (they move with the role). Recommended.
+5. **A Builder's store preview runs on the shopper read path** (as `frata_app`): it shows drafts, availability after held
+   pieces and the best-seller order, exactly as the live store would. Recommended (the alternative is a second copy of
+   every storefront loader on `frata_builder`).
+6. **Today a Lead receives the brand owner's email in Clients**, against the rule "a lead never gets the owner's contact
+   details". Fix it in T1c (one line in the same definer), or leave it to its own change? Recommended: fix here.
 
 ## Reviews on this plan (2026-11-15)
 These override the text above where they differ.
+
+**architecture-reviewer (CHANGES NEEDED):**
+- **Blocker → the grant list comes from the readers, not from memory.** `products.category` is `taxonomy_category`;
+  sizes and colours are `options`/`option_values`; images carry `option_value`, `widths`. The allow-list is derived in
+  task 2 from `listProducts` and `productFactsIn` (`src/lib/queries/catalogue.ts`) against `schema-catalogue.ts`:
+  products (adds `options, option_values, type_id, publish_at, taxonomy_category`), variants (adds `sku, lead_min_days,
+  lead_max_days, preorder_cap, option_values`; never `unit_cost`), product_images (`widths, option_value`), collections
+  (`match_all`), collection_products, **product_types (`name`)**, **product_colours (`hex, value, family`)**,
+  **product_attributes** (rule collections' counts): eight tables, each with the two policies. `builderProducts` and
+  `builderCollections` call the page's own `listProductsWith(tx, …)` / `listCollectionsWith(tx, …)` (extracted from
+  today's readers), never a copy of the SQL. § 80, the `check:tenant` allow-list and KISS say eight.
+- **High → the store switch** is `switchStoreAction` (`src/app/choose/actions.ts`) and `/choose` (also Clients' "Open
+  store"): on `console.open`, in `BUILDER_DOORS` (same as security M5). `api/console/tenant` is TenantCheck's read, not a
+  switch; it stays.
+- **High → the refusal is structural, not a branch.** `app_access_for` keeps returning Builder rows, but `accessOf` puts
+  them in a separate list, `builds`, never in `memberships`. **`MEMBER_ROLES` and `MemberRole` stay as they are**;
+  `SHOP_ROLES = [...MEMBER_ROLES, 'builder']` builds the members CHECK. So `requireMember` cannot carry a Builder's
+  membership at all (no `Record<MemberRole>`, `seesCosts` or `ROLE_LABEL` change; a Builder's label is `Builder` in
+  `BUILDER_LABEL`), and every legacy page has the same answer for a Builder-only store as for a stranger, plus the
+  Builder's panel when the cookie names a `builds` store. The store choice reads both lists, so the cookie can never fall
+  through to another store.
+- **High → a Builder's pages live apart**: `_builder/*.tsx` beside each door (layout, products, collections, preview,
+  `/console` redirect). `check:capabilities` lets those files import only `src/lib/queries/builder.ts`, the preview's
+  loaders through `previewTenantOf`, and UI. `places` (the person's own stores, with ids, for the switcher and
+  TenantCheck) is the one tenant id a Builder page holds; it never reaches a reader (the gate).
+- **High → the preview runs as `frata_app`**, which is a deviation from ADR-0015 § 3 and § 5. It is now a row in Deviations
+  and owner question 5. It shows what shoppers see: drafts, a product's availability (stock less held pieces) and the
+  best-seller order, the last two derived from orders, as on the live store.
+- **Medium →** an import allow-list gate for the preview page and `preview-body.tsx` (lanes A and B change what they
+  import); the partner CHECK moves to the custom migration (hand-written in 0124, unknown to drizzle-kit); **deploy order:
+  migrations first** (old code on the new database is safe: no tuple holds `builder`; new code on the old database fails
+  closed on `role "frata_builder" does not exist`); task 2 reads `select version()` and writes `with inherit false, set
+  true` on PG16+; `has_owner` for the Builder's stage (security L10); the sweep enumerates `route.ts` and `(lookpreview)`
+  and `/choose` (security M7). **Today's Lead already gets the brand owner's email** from `app_partner_clients` (0129),
+  against frata-architecture § Partners: reported to the orchestrator as a separate finding, outside T1c's scope unless
+  the owner says fix it here (question 6).
+- **Medium → merge order with lane B:** lane B's spec names `content.write` in `CAPABILITIES`; T1c lands first and lane B
+  adds its line to the table (the snapshot test makes the addition explicit).
+- **Low →** the definer count is about 194, all already revoked from PUBLIC (the deviation's reason now says that); the
+  frozen `===` list adds `settings/people/page.tsx` (30, 39, 42, 51, 52, 58: the Builder's row), `settings/page.tsx:77`,
+  `notifications/page.tsx:17`, `apps/gst/page.tsx` (52, 69, 115), `delivery_zones/page.tsx:35`, and the `accessOf`
+  callers outside `requireMember` (the workspace layout, `start/page.tsx`, the console layout); `app_pm_live` needs no
+  change; `PARTNER_CAN.createShop: ['owner', 'lead']` hides "New client store"; the refusal log runs once per request
+  from a `cache()`d function that the page names its route pattern to; `orders.work` is renamed `shop.work` (ANY_MEMBER
+  covers orders and the catalogue).
 
 **security-reviewer (FIX BEFORE MERGE; gates clean):**
 - **H1 → the role is bound by the database, not by care.** A CHECK cannot read `partner_members`, so: a constraint
