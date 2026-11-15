@@ -38,7 +38,7 @@ export default async function ApplyPage() {
     body = (<>
       <PictoTile name="clients" tone="haldi" />
       <h1 className="font-display text-2xl font-semibold tracking-tight">You’re a Frrata partner</h1>
-      <Link href="/partner" className={button({ size: 'lg' })}>Open your workspace</Link>
+      <a href="/partner" className={button({ size: 'lg' })}>Open your workspace</a>
     </>)
   } else if (partner.declinedAt) {
     body = (<>

@@ -7,13 +7,13 @@ import { Dialog } from '@/components/ui/dialog'
 import { FieldError, useFieldErrors } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
 import { FingerprintIcon } from '@/components/passkeys/partner-frame'
-import { partnerPasskeys } from '@/components/passkeys/fresh'
+import { freshly } from '@/components/passkeys/fresh'
 import { settle } from '@/lib/settle'
 import { handOverAction } from './handover-actions'
 
 /**
  * Hand a client store to its owner (partner sign-in mockup screen 17): the owner's email, then the partner's passkey
- * again (never an email code), then the invite. A mistake in the email stays at the field; a refusal is the dialog's
+ * again when the last check is older than 5 minutes (never an email code), then the invite. A mistake in the email stays at the field; a refusal is the dialog's
  * error line (§ Feedback 3, 4). Opened from the row, or by the console's building line (`?handover=<store>`).
  */
 export function HandOver({ tenantId, store, again, startOpen = false }: { tenantId: string; store: string; again: boolean; startOpen?: boolean }) {
@@ -28,11 +28,9 @@ export function HandOver({ tenantId, store, again, startOpen = false }: { tenant
   const send = async (e?: React.FormEvent) => {
     e?.preventDefault()
     setBusy(true); setError(null)
-    const c = await partnerPasskeys.confirmPasskey()
-    if (!c.ok) { setBusy(false); return setError(c.error) }
-    const r = await handOverAction({ tenantId, email })
+    const r = await freshly(() => handOverAction({ tenantId, email }))
     setBusy(false)
-    if (!r.ok) { if (r.field) fields.set({ 'owner-email': r.error }); else setError(r.error); return }
+    if (!r.ok) { if ('field' in r && r.field) fields.set({ 'owner-email': r.error }); else setError(r.error); return }
     setOpen(false)
     toast.ok(r.emailed ? `Invite sent to ${r.email}.` : `Invite made for ${r.email}. The email didn’t send: ask them to sign in with that address.`)
     settle(router)

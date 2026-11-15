@@ -28,9 +28,11 @@ const config: NextConfig = {
       // Admin on the console host may ask for a passkey (a later entry replaces the same header key).
       { source: '/admin/:path*', has: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: ADMIN_PASSKEY_HEADERS },
       { source: '/admin', has: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: ADMIN_PASSKEY_HEADERS },
-      // Partner people's passkeys (T1b): the workspace and its sign-in, on the console host only.
-      { source: '/partner/:path*', has: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: ADMIN_PASSKEY_HEADERS },
-      { source: '/partner', has: [{ type: 'host', value: hostValue(CONSOLE_HOST) }], headers: ADMIN_PASSKEY_HEADERS },
+      // Partner people's passkeys (T1b): the workspace, and the first-party pages that lead into it without a full page
+      // load (join, the email link): a document keeps the policy it loaded with, so a gate reached from /join by in-app
+      // navigation would otherwise be refused. None of them shows merchant content. /login and the console stay denied:
+      // /login sends a partner on with a full page load (sign-in-flow.tsx).
+      ...['/partner/:path*', '/partner', '/join', '/auth/confirm'].map((source) => ({ source, has: [{ type: 'host' as const, value: hostValue(CONSOLE_HOST) }], headers: ADMIN_PASSKEY_HEADERS })),
       // The visit beacon: its URL carries its content hash (?v=, scripts/build-beacon.mjs), so it is cached for good.
       { source: '/fe.js', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }] },
       // Last, so it replaces the own-domain HSTS above on our own hosts (D2·1).

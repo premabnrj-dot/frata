@@ -1,12 +1,14 @@
 // =============================================================================
-// FLOW: partner-team — partner teams T1a (docs/plans/2026-11-12-studio-build.md § T1a). The partner's owner invites a
-// lead to one store; the lead signs in, joins and sees only that store; the owner gives another, then removes them;
-// Frrata suspends the partner and reinstates it. Screen and database at each step.
+// FLOW: partner-team — partner teams T1a and passkeys T1b (docs/plans/2026-11-12-studio-build.md; partner sign-in
+// mockup). The partner's owner invites a lead to one store; the lead signs in and joins; their first passkey needs the
+// owner: a code the lead reads out, declined once ("Did you start this call yourself?" No), then approved; the lead
+// creates the passkey with Chromium's virtual authenticator and sees only that store; the owner gives another, then
+// removes them; Frrata suspends the partner and reinstates it. Screen and database at each step.
 // Guards: a lead seeing every store, a lead running the team, a removed lead keeping access, a suspended partner
 // keeping access, an invite field mistake leaving the dialog.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, PORTS, USERS, expectToast, partnerOn, signedIn } from '../lib.mjs'
+import { CONSOLE, PORTS, USERS, expectToast, partnerOn, signedIn, withAuthenticator } from '../lib.mjs'
 
 const A = 'dddddddd-0000-4000-8000-0000000000a1', B = 'dddddddd-0000-4000-8000-0000000000b1' // RFC 4122 shape: the form's z.uuid() checks it
 
@@ -35,24 +37,71 @@ export default {
       await dialog.getByLabel('Amber Looms').check()
       await dialog.getByRole('button', { name: 'Send invite' }).click()
       await expectToast(pia, `Invited ${L.email}. We emailed them a sign-in link.`, 'ok')
-      await pia.getByText('Invited', { exact: true }).first().waitFor()
+      await pia.getByText(/^Invited · \d+ days? left$/).first().waitFor()
       const asked = async () => (await (await fetch(`http://localhost:${PORTS.auth}/_test/otp`)).json()).filter((e) => e === L.email).length
       assert.equal(await asked(), 1, 'the invite emails a sign-in link')
-      await pia.getByRole('listitem').filter({ hasText: L.email }).getByRole('button', { name: 'Send again' }).click()
+      await pia.getByRole('listitem').filter({ hasText: L.email }).getByRole('button', { name: 'Send invite again' }).click()
       await expectToast(pia, `Sent again to ${L.email}.`, 'ok')
       assert.equal(await asked(), 2, 'Send again emails it again')
       await pia.screenshot({ path: t.out('team-invited') })
     })
 
     const lead = await open('lead', { viewport: { width: 1280, height: 900 } })
-    await t.step('the lead joins and sees only that store; the team is not theirs', async () => {
+    await withAuthenticator(lead)
+    const readCode = async () => (await lead.getByLabel(/^Code \d/).getAttribute('aria-label')).replace(/\D/g, '')
+    const leadRow = () => pia.getByRole('listitem').filter({ hasText: L.email })
+    await t.step('the lead joins: step 1, then a code to read to the owner (step 2)', async () => {
       await lead.goto(CONSOLE + '/join')
       await lead.getByRole('heading', { name: `Join ${partnerName}` }).waitFor()
-      await lead.getByText('Amber Looms').waitFor()
-      await lead.getByRole('button', { name: `Join ${partnerName}` }).click()
+      await lead.getByText('Clients: Amber Looms').waitFor()
+      assert.equal(await lead.getByLabel('Work email').inputValue(), L.email)
+      await lead.screenshot({ path: t.out('join') })
+      await lead.getByRole('button', { name: 'Accept invite' }).click()
       await expectToast(lead, 'Joined the team.', 'ok')
       await lead.waitForURL(/\/partner$/)
-      await lead.getByRole('region', { name: 'Client stores' }).getByText('Amber Looms').waitFor()
+      await lead.getByRole('heading', { name: /^Ask .+ to call you$/ }).waitFor()
+      assert.equal((await readCode()).length, 6)
+      const [m] = await db`select count(*)::int as n from members where user_id = ${L.id} and role = 'partner' and partner_member_id is not null`
+      assert.equal(m.n, 1)
+      const [acc] = await db`select app_access_for(${L.id}::uuid, ${lead.context().frrataSession}::uuid, null, null) as a`
+      assert.equal(acc.a.memberships.length, 0, 'no store opens before a passkey')
+      assert.equal(acc.a.partnerHeld.length, 1, 'the store waits for the check')
+      await lead.screenshot({ path: t.out('ask-owner') })
+    })
+
+    await t.step('the owner declines a call they did not start; the lead asks again', async () => {
+      await pia.goto(CONSOLE + '/partner/team')
+      await leadRow().getByText('Waiting for your approval').waitFor()
+      await leadRow().getByRole('button', { name: /^Approve / }).click()
+      const card = pia.getByRole('dialog', { name: 'Approve a passkey' })
+      await card.getByText('Chrome on Linux').waitFor()
+      await card.getByRole('radio', { name: 'No' }).click()
+      await card.getByText(/^Hang up and call .+ on a number you know\.$/).waitFor()
+      await card.getByRole('button', { name: 'Decline request' }).click()
+      await expectToast(pia, 'Request declined.', 'ok')
+      await lead.getByRole('heading', { name: /declined the request$/ }).waitFor({ timeout: 15_000 })
+      await lead.getByRole('button', { name: 'Get a new code' }).click()
+      await lead.getByRole('heading', { name: /^Ask .+ to call you$/ }).waitFor()
+    })
+
+    await t.step('the owner approves; the lead creates a passkey and sees only that store', async () => {
+      const code = await readCode()
+      await pia.goto(CONSOLE + '/partner/team')
+      await leadRow().getByRole('button', { name: /^Approve / }).click()
+      const card = pia.getByRole('dialog', { name: 'Approve a passkey' })
+      await card.getByRole('radio', { name: 'Yes' }).click()
+      await card.getByLabel(/^Code .+ reads out$/).fill(code)
+      await pia.screenshot({ path: t.out('approve-card') })
+      await card.getByRole('button', { name: /^Approve / }).click()
+      await expectToast(pia, /^Approved\./, 'ok')
+      await lead.getByRole('heading', { name: 'Sign in faster next time' }).waitFor({ timeout: 15_000 })
+      await lead.getByRole('button', { name: 'Create a passkey' }).click()
+      await lead.getByRole('heading', { name: 'You’re in' }).waitFor()
+      await lead.screenshot({ path: t.out('youre-in') })
+      await lead.getByRole('button', { name: 'Open your clients' }).click()
+      await lead.getByRole('region', { name: 'Client stores' }).getByText('Amber Looms', { exact: true }).waitFor()
+      assert.equal((await db`select count(*)::int n from partner_passkeys k join partner_members pm on pm.id = k.partner_member_id where pm.user_id = ${L.id}`)[0].n, 1)
+      assert.equal((await db`select count(*)::int n from staff_notices where kind = 'partner_passkey_added' and about = ${L.email}`)[0].n >= 1, true, 'the owner and the lead are emailed')
       assert.equal(await lead.getByText('Basil Prints').count(), 0, 'a lead sees only the stores given')
       await lead.goto(CONSOLE + '/partner/team')
       await lead.getByText('Only the partner’s owner manages the team').waitFor()
@@ -66,7 +115,7 @@ export default {
       await row.getByRole('button', { name: 'Basil Prints' }).click()
       await expectToast(pia, 'Added to Basil Prints.', 'ok')
       await lead.goto(CONSOLE + '/partner')
-      await lead.getByRole('region', { name: 'Client stores' }).getByText('Basil Prints').waitFor()
+      await lead.getByRole('region', { name: 'Client stores' }).getByText('Basil Prints', { exact: true }).waitFor()
       await row.getByRole('button', { name: 'Remove' }).click()
       const dialog = pia.getByRole('dialog', { name: `Remove ${L.email}?` })
       await dialog.getByText('Their access to every store ends now.').waitFor()
@@ -94,7 +143,7 @@ export default {
       await meera.getByRole('button', { name: 'Reinstate' }).click()
       await expectToast(meera, 'Reinstated.', 'ok')
       await pia.goto(CONSOLE + '/partner')
-      await pia.getByRole('region', { name: 'Client stores' }).getByText('Amber Looms').waitFor()
+      await pia.getByRole('region', { name: 'Client stores' }).getByText('Amber Looms', { exact: true }).waitFor()
     })
 
     await t.step('the team on a phone', async () => {

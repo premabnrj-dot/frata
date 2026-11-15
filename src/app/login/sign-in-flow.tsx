@@ -70,6 +70,9 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
       }
       // Applying as a partner: stay on the application unless a workspace or a waiting store comes first.
       if (intent === 'partner' && r.to !== '/partner' && r.to !== '/handover' && r.to !== '/join' && r.to !== '/admin' && r.to !== '/choose') { router.refresh(); return }
+      // The partner workspace and a team invite may ask for a passkey, which this page's policy refuses: a full page load
+      // gives them their own (next.config.ts, T1b).
+      if (r.to === '/partner' || r.to === '/join') { window.location.assign(r.to); return }
       router.replace(r.to)
       router.refresh()
     })

@@ -41,7 +41,32 @@ export async function signedIn(browser, who = 'owner', opts = {}) {
   await ctx.addCookies([{ name: 'sb-localhost-auth-token', value: 'base64-' + Buffer.from(JSON.stringify(session)).toString('base64url'), domain: 'localhost', path: '/' }])
   ctx.frrataSession = sessionId
   if (passkey && stackDb && (await stackDb`select 1 from platform_staff where user_id = ${u.id}`).length) await seedStaffStepup(ctx, who)
+  // Partner passkeys (T1b): a live partner person gets a partner check for this session the same way. A flow that makes
+  // the person a partner after signing in calls seedPartnerStepup itself; 80-partner-team drives the real enrolment.
+  if (passkey && stackDb && (await stackDb`select 1 from app_pm_live(${u.id}::uuid)`).length) await seedPartnerStepup(ctx, who)
   return ctx
+}
+
+/** A partner passkey on the person's live membership and a 12-hour check for this context's session (test seeding). */
+export async function seedPartnerStepup(ctx, who) {
+  const u = USERS[who]
+  const [me] = await stackDb`select member_id from app_pm_live(${u.id}::uuid)`
+  if (!me) throw new Error(`${who} is not a live partner person`)
+  const credential = `e2e-seed-partner-${me.member_id}`
+  await stackDb`insert into partner_passkeys (partner_member_id, user_id, credential_id, public_key, name) values (${me.member_id}, ${u.id}, ${credential}, 'e2e', 'e2e seed') on conflict (credential_id) do nothing`
+  const [k] = await stackDb`select id from partner_passkeys where credential_id = ${credential}`
+  const token = randomBytes(32).toString('base64url')
+  await stackDb`insert into partner_stepups (partner_member_id, user_id, session_id, passkey_id, token_hash, expires_at)
+    values (${me.member_id}, ${u.id}, ${ctx.frrataSession}, ${k.id}, ${createHash('sha256').update(token).digest('hex')}, now() + interval '12 hours')`
+  await ctx.addCookies([{ name: 'frrata_partner', value: token, domain: 'localhost', path: '/' }])
+}
+
+/** A page with its own virtual platform authenticator (user verification on, resident keys, auto presence). */
+export async function withAuthenticator(page) {
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('WebAuthn.enable')
+  const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } })
+  return { cdp, authenticatorId }
 }
 
 /** Writes a passkey and a 12-hour step-up for this context's session and sets the cookie (test seeding only). */

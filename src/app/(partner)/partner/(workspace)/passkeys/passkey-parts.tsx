@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { FingerprintIcon } from '@/components/passkeys/partner-frame'
-import { partnerPasskeys } from '@/components/passkeys/fresh'
+import { freshly, partnerPasskeys } from '@/components/passkeys/fresh'
 import { deviceLabel } from '@/domains/partners/passkeys'
 import { settle } from '@/lib/settle'
 
@@ -34,7 +34,7 @@ export function DeleteOne({ id, name }: { id: string; name: string }) {
   const [busy, setBusy] = useState(false)
   const go = async () => {
     setBusy(true); setError(null)
-    const r = await partnerPasskeys.confirmThen('remove', { passkeyId: id })
+    const r = await freshly(() => partnerPasskeys.call('remove', { passkeyId: id }))
     setBusy(false)
     if (!r.ok) return setError(r.error)
     setOpen(false); toast.ok('Passkey deleted.'); settle(router)

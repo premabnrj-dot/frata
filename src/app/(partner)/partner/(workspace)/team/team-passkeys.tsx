@@ -7,14 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { FingerprintIcon } from '@/components/passkeys/partner-frame'
-import { partnerPasskeys } from '@/components/passkeys/fresh'
+import { freshly, partnerPasskeys } from '@/components/passkeys/fresh'
 import { settle } from '@/lib/settle'
 
 // =============================================================================
 // Team's passkey actions (T1b; partner sign-in mockup screens 10, 20, 22). The owner approves a Lead's first or new
 // passkey with the code the Lead reads out — on a call the OWNER made ("Did you start this call yourself?": No turns
-// Approve off and offers Decline); approving and deleting ask for the owner's passkey first (the database wants a
-// check in the last 5 minutes). Context comes from the request itself: the device and the city it was asked from.
+// Approve off and offers Decline); approving and deleting ask for the owner's passkey when their last check is older
+// than 5 minutes (the database's rule; freshly). Context comes from the request itself: the device and the city it was asked from.
 // =============================================================================
 
 export type Waiting = { memberId: string; email: string; name: string; device: string | null; city: string | null; askedMinutes: number }
@@ -30,7 +30,7 @@ export function ApprovePasskey({ w }: { w: Waiting }) {
   const reset = () => { setStarted(null); setCode(''); setError(null) }
   const approve = async () => {
     setBusy(true); setError(null)
-    const r = await partnerPasskeys.confirmThen('approve', { memberId: w.memberId, code })
+    const r = await freshly(() => partnerPasskeys.call('approve', { memberId: w.memberId, code }))
     setBusy(false)
     if (!r.ok) return setError(r.error)
     setOpen(false); reset(); toast.ok(`Approved. ${w.name} can create a passkey now.`); settle(router)
@@ -100,7 +100,7 @@ export function DeletePasskeys({ memberId, name, count }: { memberId: string; na
   const words = count === 1 ? 'passkey' : `${count} passkeys`
   const go = async () => {
     setBusy(true); setError(null)
-    const r = await partnerPasskeys.confirmThen('remove-all', { memberId })
+    const r = await freshly(() => partnerPasskeys.call('remove-all', { memberId }))
     setBusy(false)
     if (!r.ok) return setError(r.error)
     setOpen(false); toast.ok(`Deleted. ${name} is signed out everywhere.`); settle(router)

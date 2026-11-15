@@ -133,6 +133,10 @@ export default {
         assert.match(await h('/admin'), /publickey-credentials-get=\(self\)/)
         assert.match(await h('/console'), /publickey-credentials-get=\(\)/)
         assert.match(await h('/login'), /publickey-credentials-create=\(\)/)
+        // Partner people (T1b): the workspace, its sign-in and the join page allow this origin; the console never.
+        assert.match(await h('/partner'), /publickey-credentials-get=\(self\)/)
+        assert.match(await h('/partner/sign-in'), /publickey-credentials-create=\(self\)/)
+        assert.match(await h('/join'), /publickey-credentials-create=\(self\)/)
       })
 
       await t.step('Removing her passkey sends her back to the gate', async () => {

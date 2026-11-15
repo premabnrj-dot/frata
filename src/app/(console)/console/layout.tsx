@@ -70,7 +70,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     if (held > 0) {
       return (
         <main data-shell data-neel="" className="p-6">
-          <Panel title="Confirm it’s you first" action={<Link href="/partner" className={button()}>Go to the partner workspace</Link>} />
+          <Panel title="Confirm it’s you first" action={<a href="/partner" className={button()}>Go to the partner workspace</a>} />
         </main>
       )
     }

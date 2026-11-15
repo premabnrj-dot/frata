@@ -1,4 +1,3 @@
-import Link from 'next/link'
 
 /**
  * A partner building a store with no owner yet (approved mockup screen 7): one line above every console page. Hand over
@@ -11,9 +10,10 @@ export function BuildingBanner({ shop, tenantId, inviteEmail }: { shop: string; 
       <span className="min-w-0 truncate font-semibold">Building for {shop}</span>
       <span className="hidden min-w-0 truncate md:inline">{inviteEmail ? `Invite sent to ${inviteEmail}` : 'No owner yet'}</span>
       <span className="ml-auto" />
-      <Link href={`/partner?handover=${tenantId}`} className="inline-flex min-h-6 shrink-0 items-center font-semibold underline">
+      {/* A full page load: the workspace may ask for a passkey, which the console's own page policy refuses. */}
+      <a href={`/partner?handover=${tenantId}`} className="inline-flex min-h-6 shrink-0 items-center font-semibold underline">
         {inviteEmail ? 'Send again' : 'Hand over'}
-      </Link>
+      </a>
     </div>
   )
 }
