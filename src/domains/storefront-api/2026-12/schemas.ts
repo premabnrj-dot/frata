@@ -86,6 +86,20 @@ export const Page = z.strictObject({
   truncated: z.boolean().describe('True when the catalogue has more than 600 listed products. Later ones are in no page yet.'),
 })
 export const CollectionPage = z.strictObject({ collection: Collection, ...Page.shape })
+// D2 (SA1b): a filtered list and its menu. A value is sent exactly as `facets` gives it; an id or value may grow.
+export const FilterPage = z.strictObject({
+  products: z.array(Card).max(48), page: z.number().int().positive(), pages: z.number().int().positive(),
+  total: z.number().int().nonnegative().describe('Products matching the filter, among the first 600 listed.'),
+  truncated: z.boolean().describe('True when the store has more than 600 listed products. Later ones are in no filter yet.'),
+})
+const facet = z.strictObject({ value: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(40).describe('Send this exact value.'), label: text(60), count: z.number().int().nonnegative() })
+export const Facets = z.strictObject({
+  sizes: z.array(facet).max(100).describe('Values of the option the store calls Size. Send one as size=.'),
+  colours: z.array(facet).max(100).describe('Colour families. Send one as colour=.'),
+  prices: z.array(z.strictObject({ id: z.string().regex(/^[a-z0-9]{1,10}$/).describe(MAY_GROW), min: paise, max: paise.nullable().describe('Up to, not including. Null: no top.'), count: z.number().int().nonnegative() }))
+    .max(10).describe('Bands over each product’s lowest price before offers. Send an id as price=.'),
+  inStock: z.number().int().nonnegative().describe('Listed products in stock now (stock=in).'),
+})
 export const Search = z.strictObject({ q: text(60), products: z.array(Card).max(48) })
 export const Offers = z.strictObject({ bar: z.strictObject({ text: text(300), endsAt: moment.nullable() }).nullable().describe('The offer in the store’s bar, while it runs.') })
 
@@ -113,7 +127,9 @@ export const Shop = z.strictObject({
   social: z.strictObject({ instagram: z.string().regex(/^[A-Za-z0-9._]{1,30}$/).nullable(), whatsapp: z.string().regex(/^91\d{10}$/).nullable() }),
   seo: Seo,
   siteOrigin: https.nullable().describe('The brand’s own address for the store, as set in Frrata. Null when it runs on Frrata.'),
-  checkoutOrigin: https.describe('Where checkout, orders and policies live. The cart link (coming next) starts here.'),
+  checkoutOrigin: https.describe('Where checkout, orders and policies live. The bag link starts here: <checkoutOrigin>/cart?l=<size id>:<qty>,….'),
+  cart: z.strictObject({ url: https.describe('<checkoutOrigin>/cart. Add ?l=<size id>:<qty>,… and, if you like, code= and the shopper’s utm_ tags.'), maxLines: z.number().int().positive(), maxQty: z.number().int().positive().describe('A larger quantity is lowered to this.') })
+    .optional().describe('The bag link. It sends your shopper’s bag to the store’s checkout in one URL.'),
 })
 
 // ── Store content and pages (V1 SA1, on lane B's content layer: src/lib/queries/content.ts, queries/pages.ts) ──────────

@@ -34,6 +34,11 @@ import { errName } from '@/lib/log'
 // can't be probed. Logs carry the key id, never the key or the path.
 // =============================================================================
 
+/** A filter's grammar error (SA1b D·5; api-contract review M1): `params` returns this to answer 400 naming the
+ *  parameter. Only after the key checks out, so it tells nothing about keys. The one exception to "every refusal is
+ *  the one 404". */
+export class BadParam { constructor(readonly param: string) {} }
+
 export type ApiCtx = { tenantId: string; keyId: string; keyKind: KeyKind; version: ApiVersion; now: Date }
 export type ApiTree = 'live' | 'test'
 export type ApiMode = 'isr' | 'dynamic' | 'preview'
@@ -59,7 +64,7 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
   mode: ApiMode
   resource: string
   schema: S
-  params?: (raw: Record<string, string | string[] | undefined>, search: URLSearchParams | null) => P | null
+  params?: (raw: Record<string, string | string[] | undefined>, search: URLSearchParams | null) => P | BadParam | null
   /** The dynamic tree's per-network limit for this resource beyond the test key's own (search). */
   limit?: 'search'
   /** mode 'preview' only: the one entry these params name (the token must name it too). */
@@ -115,6 +120,7 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
     const search = dynamic ? new URL(req.url).searchParams : null
     const parsed = opts.params ? opts.params(raw, search) : ({} as P)
     if (parsed === null) return refuse(404, NOT_FOUND, cors)
+    if (parsed instanceof BadParam) return refuse(400, JSON.stringify({ error: 'bad_filter', param: parsed.param.replace(/[^a-z_]/g, '').slice(0, 20) || 'query' }), cors)
     if (preview) {
       const entry = opts.entry!(parsed)
       if (!entry || !previewOk(req.headers.get(PREVIEW_HEADER), { tenantId: ctx.tenantId, keyId: ctx.keyId }, entry, ctx.now)) {

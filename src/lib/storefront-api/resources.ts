@@ -2,7 +2,8 @@ import 'server-only'
 import * as S from '@/domains/storefront-api/2026-12/schemas'
 import { collectionOut, collectionPageOut, MAX_PAGE, offersOut, pageOut, productOut, searchOut, shopOut } from '@/domains/storefront-api/2026-12/map'
 import { apiAnnouncement, apiCatalogue, apiProduct, apiShop, previewCatalogue, previewProduct, previewShop, shopAnnouncement, type Lookup } from '@/lib/queries/storefront'
-import type { ApiCtx } from './request'
+import { BadParam, type ApiCtx } from './request'
+import { facetsOut, filterPageOut, parseFilter, type FilterQuery } from '@/domains/storefront-api/2026-12/filter'
 import { visibility, type Status } from '@/domains/catalogue/availability'
 import { storeHost } from '@/domains/media/sizes'
 import { BLOB_STORE_ID } from '@/lib/env'
@@ -59,6 +60,14 @@ export const handlePageParam = (raw: Record<string, string | string[] | undefine
 export const searchParam = (_raw: unknown, search: URLSearchParams | null) => {
   const q = (search?.get('q') ?? '').trim().replace(/\s+/g, ' ')
   return q.length >= 1 && q.length <= 60 ? { q } : null
+}
+
+/** A filtered page: its number from the path, its filter from the query (SA1b D·5); a grammar error is a 400. */
+export const filterParam = (raw: Record<string, string | string[] | undefined>, search: URLSearchParams | null) => {
+  const n = pageParam(raw)
+  if (!n) return null
+  const q = parseFilter(search)
+  return 'bad' in q ? new BadParam(q.bad) : { ...n, filter: q }
 }
 
 export const RESOURCES = {
@@ -118,6 +127,11 @@ export const RESOURCES = {
     const nodes = page && await pageNodes(ctx, page)
     return page && nodes ? faqOut(page, nodes) : null
   } },
+  // D2 (SA1b D·5): the filter menu (a cached copy on the live tree) and a filtered page (dynamic, by its query). Listed
+  // only under either key, like lists and search: a facet never counts a draft's sizes or colours.
+  facets: { schema: S.Facets, run: async (ctx: ApiCtx) => facetsOut((await loaders(ctx).catalogue(ctx.tenantId)).products, ctx.now) },
+  filter: { schema: S.FilterPage, run: async (ctx: ApiCtx, p: { page: number; filter: FilterQuery }) =>
+    filterPageOut(mapCtx(ctx), await loaders(ctx).catalogue(ctx.tenantId), p.filter, p.page, ctx.now) },
   search: { schema: S.Search, run: async (ctx: ApiCtx, p: { q: string }) =>
     searchOut(mapCtx(ctx), (await loaders(ctx).catalogue(ctx.tenantId)).products, p.q, ctx.now) },
 } as const

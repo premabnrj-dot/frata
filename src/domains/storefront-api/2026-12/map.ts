@@ -22,6 +22,7 @@ import { pausedAt } from '../../plans/pause'
 import { POLICY_PAGES } from '../../policies/render'
 import type { PublicZone } from '../../delivery/public'
 import { normaliseMobile } from '../../settings/mobile'
+import { MAX_LINES, MAX_QTY } from '../../checkout/quote'
 import type * as S from './schemas'
 
 /** The most products the API reads from a catalogue (the cached entry's cap; past it: D3, later). */
@@ -195,6 +196,6 @@ export function shopOut(m: MapCtx, s: ShopIn, origins: { site: string | null; ch
       grievanceOfficer: { name: plain(s.grievanceName, 120), role: plain(s.grievanceRole, 80), email: plain(s.grievanceEmail, 200), phone: plain(s.grievancePhone, 20) },
     },
     social: { instagram: instagramHandle(s.instagram), whatsapp: wa ? `91${wa}` : null },
-    siteOrigin: origins.site, checkoutOrigin: origins.checkout,
+    siteOrigin: origins.site, checkoutOrigin: origins.checkout, cart: { url: `${origins.checkout}/cart`, maxLines: MAX_LINES, maxQty: MAX_QTY },
   }
 }

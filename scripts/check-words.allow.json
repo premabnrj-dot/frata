@@ -208,5 +208,23 @@
     "rule": "W4",
     "text": "Pick the key your website uses.",
     "why": "Owner, 2026-11-15 (SA1b mockup § Preview, glossary § Surfaces): Website names the brand's own site built on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/domains/storefront-api/2026-12/openapi.ts",
+    "rule": "W4",
+    "text": "The preview token from the store’s console. It opens one page, under one key, for 10 minutes. A missing or old one gets the same 404.",
+    "why": "The Storefront API's published description (developers read it): a preview token is the developers' term for what the console signs (ADR-0018 § 12)"
+  },
+  {
+    "file": "src/domains/storefront-api/2026-12/openapi.ts",
+    "rule": "W4",
+    "text": "A hidden page as it stands, under a preview token",
+    "why": "The Storefront API's published description (developers read it): a preview token is the developers' term for what the console signs (ADR-0018 § 12)"
+  },
+  {
+    "file": "src/domains/storefront-api/2026-12/openapi.ts",
+    "rule": "W4",
+    "text": "The FAQ as it stands, under a preview token",
+    "why": "The Storefront API's published description (developers read it): a preview token is the developers' term for what the console signs (ADR-0018 § 12)"
   }
 ]

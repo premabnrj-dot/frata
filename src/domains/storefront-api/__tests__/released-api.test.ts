@@ -11,7 +11,7 @@ import { openApi } from '../2026-12/openapi'
 import { SENTINELS } from '../../../../scripts/cost-sentinels.mjs'
 
 type J = Record<string, unknown>
-const RESOURCES = { Shop: S.Shop, Page: S.Page, Product: S.Product, Collections: S.Collections, CollectionPage: S.CollectionPage, Offers: S.Offers, Search: S.Search, Content: S.Content, StorePage: S.StorePage, Faq: S.Faq }
+const RESOURCES = { Shop: S.Shop, Page: S.Page, Product: S.Product, Collections: S.Collections, CollectionPage: S.CollectionPage, Offers: S.Offers, Search: S.Search, Content: S.Content, StorePage: S.StorePage, Faq: S.Faq, Facets: S.Facets, FilterPage: S.FilterPage }
 const now = () => Object.fromEntries(Object.entries(RESOURCES).map(([k, s]) => [k, z.toJSONSchema(s, { io: 'output' }) as J]))
 const FILE = join(__dirname, 'released', '2026-12.json')
 
@@ -53,8 +53,14 @@ export function narrowed(old: J, next: J, at = '$'): string[] {
 describe('released version 2026-12 only grows (spec § 7)', () => {
   it('every field it answered is still answered, the same', () => {
     const current = now()
-    // A missing snapshot fails (api-contract review 8): it is written only on purpose.
-    if (process.env.UPDATE_API === '1') writeFileSync(FILE, JSON.stringify(current, null, 1) + '\n')
+    // A missing snapshot fails (api-contract review 8): it is written only on purpose, and never over a narrowing
+    // (api-contract review 2026-11-16 B3: writing first and comparing after proved nothing).
+    if (process.env.UPDATE_API === '1') {
+      const before = existsSync(FILE) ? JSON.parse(readFileSync(FILE, 'utf8')) as Record<string, J> : {}
+      const lost = Object.entries(before).flatMap(([k, s]) => (current[k] ? narrowed(s, current[k]!, k) : [`${k}: resource removed`]))
+      expect(lost, 'UPDATE_API refuses to write a snapshot that narrows the released one').toEqual([])
+      writeFileSync(FILE, JSON.stringify(current, null, 1) + '\n')
+    }
     expect(existsSync(FILE), 'the released snapshot is missing: UPDATE_API=1 writes it, on purpose').toBe(true)
     const released = JSON.parse(readFileSync(FILE, 'utf8')) as Record<string, J>
     const problems = Object.entries(released).flatMap(([k, s]) => (current[k] ? narrowed(s, current[k]!, k) : [`${k}: resource removed`]))

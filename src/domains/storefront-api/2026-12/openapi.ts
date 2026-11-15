@@ -19,6 +19,7 @@ const ok = (schema: z.ZodType, description: string) => ({
   description, content: { 'application/json': { schema: json(schema) } },
 })
 const err = (code: string) => ({ type: 'object', properties: { error: { const: code } }, required: ['error'], additionalProperties: false })
+const badFilter = { description: 'The query broke a rule. The answer names the parameter. Send each once, in this order, and leave out defaults. The order is collection, size, colour, price, stock, sort.', content: { 'application/json': { schema: { type: 'object', properties: { error: { const: 'bad_filter' }, param: { type: 'string' } }, required: ['error', 'param'] } } } }
 const notFound = { description: 'Unknown key, product or page. All three get this same answer.', content: { 'application/json': { schema: err('not_found') } } }
 const busy = { description: 'Too many requests from your network. Wait as long as Retry-After says.', headers: { 'Retry-After': { schema: { type: 'integer' } } }, content: { 'application/json': { schema: err('busy') } } }
 const unavailable = { description: 'We couldn’t answer just now. Try again in a minute.', content: { 'application/json': { schema: err('unavailable') } } }
@@ -26,12 +27,13 @@ const key = { name: 'key', in: 'path', required: true, description: 'Your store�
 const n = { name: 'n', in: 'path', required: true, schema: { type: 'integer', minimum: 1, maximum: MAX_PAGE } }
 const handle = { name: 'handle', in: 'path', required: true, schema: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$', maxLength: 100 } }
 const pageHandle = { name: 'handle', in: 'path', required: true, schema: { type: 'string', pattern: '^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$', maxLength: 60 } }
+const preview = { name: 'Frrata-Preview', in: 'header', required: true, description: 'The preview token from the store’s console. It opens one page, under one key, for 10 minutes. A missing or old one gets the same 404.', schema: { type: 'string' } }
 const get = (summary: string, schema: z.ZodType, params: object[] = []) => ({ get: { summary, parameters: [key, ...params], responses: { 200: ok(schema, summary), 404: notFound, 429: busy, 500: unavailable } } })
 
 export function openApi() {
   return {
     openapi: '3.1.0',
-    info: { title: 'Frrata Storefront', version: '2026-12', description: 'Read a store’s public catalogue, content and pages. Prices are in paise. Render text as text, never as HTML. Objects may gain fields, lists of values may grow and new block kinds may appear. Ignore what you don’t know. A test key also opens a draft by its handle. Checkout stays on the store’s checkout address. The cart link comes in the next release.' },
+    info: { title: 'Frrata Storefront', version: '2026-12', description: 'Read a store’s public catalogue, content and pages. Prices are in paise. Render text as text, never as HTML. Objects may gain fields. Lists of values may grow. New block kinds may appear. Ignore what you don’t know. A test key also opens a draft product by its handle. A hidden page opens only under preview/, with the Frrata-Preview header. Checkout stays on the store’s checkout address. The bag link in the store’s cart field sends a shopper’s bag there.' },
     servers: [{ url: 'https://api.frrata.shop/2026-12' }],
     paths: {
       '/k/{key}/shop': get('The store, with the legal details every page must show', S.Shop),
@@ -43,6 +45,15 @@ export function openApi() {
       '/k/{key}/content': get('The store’s bars, menus, Contact line and pages', S.Content),
       '/k/{key}/pages/{handle}': get('One of the store’s pages, block by block', S.StorePage, [pageHandle]),
       '/k/{key}/faq': get('The store’s questions, answered from its Settings', S.Faq),
+      '/k/{key}/facets': get('The store’s filter menu. Sizes, colour families and price bands, with counts.', S.Facets),
+      '/k/{key}/filter/page/{n}': { get: { ...get('Listed products by size, colour, price or stock, 48 a page. A value the store doesn’t have now gives an empty page.', S.FilterPage, [n,
+        ...(['collection', 'size', 'colour'] as const).map((name) => ({ name, in: 'query', required: false, schema: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$', maxLength: name === 'collection' ? 100 : 40 } })),
+        { name: 'price', in: 'query', required: false, schema: { type: 'string', description: 'A band id from facets.' } },
+        { name: 'stock', in: 'query', required: false, schema: { type: 'string', enum: ['in'] } },
+        { name: 'sort', in: 'query', required: false, schema: { type: 'string', enum: ['new', 'price_asc', 'price_desc'], description: 'Leave it out for the store’s own order (a collection’s, with collection=).' } }]).get,
+        responses: { ...get('', S.FilterPage).get.responses, 200: ok(S.FilterPage, 'A filtered page'), 400: badFilter } } },
+      '/k/{key}/preview/pages/{handle}': { get: { ...get('A hidden page as it stands, under a preview token', S.StorePage, [pageHandle, preview]).get } },
+      '/k/{key}/preview/faq': { get: { ...get('The FAQ as it stands, under a preview token', S.Faq, [preview]).get } },
       '/k/{key}/search': get('Listed products matching every word of q', S.Search, [{ name: 'q', in: 'query', required: true, schema: { type: 'string', minLength: 1, maxLength: 60 } }]),
     },
   }
