@@ -63,6 +63,11 @@ try {
   expect(tags.includes(`skey:${hex(live)}`), `the cached copy lacks skey:<hex> (tags: ${tags || 'none'})`)
   expect(tags.includes(`shop:${tenant}`), `the cached copy lacks shop:<tenant> (tags: ${tags || 'none'})`)
 
+  // Store content (lane B's seam): the same cached tree, the same hour.
+  const ca = await get(`/2026-12/k/${live}/content`), cb = await get(`/2026-12/k/${live}/content`)
+  expect(ca.status === 200 && Array.isArray(JSON.parse(ca.body).announcements), `content answered ${ca.status} ${ca.body.slice(0, 120)}`)
+  expect(cb.headers['x-nextjs-cache'] === 'HIT', `second content read was ${cb.headers['x-nextjs-cache']}, not a HIT`)
+
   const t1 = await get(`/2026-12/k/${test}/shop`), t2 = await get(`/2026-12/k/${test}/shop`)
   expect(t1.status === 200 && t2.status === 200, `test key answered ${t1.status}/${t2.status}`)
   expect(t2.headers['x-nextjs-cache'] !== 'HIT' && /private, no-store/.test(String(t2.headers['cache-control'])), `a test answer was cached (${t2.headers['x-nextjs-cache']}, ${t2.headers['cache-control']})`)
@@ -78,6 +83,8 @@ try {
     await new Promise((r) => setTimeout(r, 65_000))
     const c = await get(`/2026-12/k/${live}/shop`)
     expect(c.headers['x-nextjs-cache'] === 'HIT', `65 s later the live copy was ${c.headers['x-nextjs-cache']}: its period is not the hour`)
+    const cc = await get(`/2026-12/k/${live}/content`)
+    expect(cc.headers['x-nextjs-cache'] === 'HIT', `65 s later the content copy was ${cc.headers['x-nextjs-cache']}: its period is not the hour`)
   }
   const o = await get('/2026-12/openapi.json')
   expect(o.status === 200 && JSON.parse(o.body).openapi === '3.1.0', 'openapi.json')
