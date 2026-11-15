@@ -44,6 +44,8 @@ const ENTRY_POINTS = {
   // Public, read-only, cached per shop: the shop comes from the host the middleware wrote (shopFor checks its shape).
   'src/app/s/[host]/sitemap.xml/route.ts': ['a shop\'s sitemap: public, read-only', 'shopForRoute('],
   'src/app/s/[host]/robots.txt/route.ts': ['a shop\'s robots.txt: public, read-only', 'shopForRoute('],
+  // The Storefront API's published description (V1 SA1): no key, no shop data, generated from the closed schemas.
+  'src/app/api/storefront/2026-12/openapi.json/route.ts': ['the Storefront API description: public, read-only, no shop', 'openApi('],
   'src/app/s/[host]/og/[...card]/route.ts': ['a shop\'s share card: public, read-only, canonical ids looked up inside the host\'s shop', 'shopForRoute('],
 }
 
