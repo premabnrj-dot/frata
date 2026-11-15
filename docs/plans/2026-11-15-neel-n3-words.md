@@ -132,11 +132,15 @@ script cannot hold) and a new § Glossary (surfaces, roles, words, order states,
 ## Deviations (mockup element · built · reason · owner seen)
 | Mockup element | Built | Reason | Owner seen |
 |---|---|---|---|
-| "Store", never "shop", on every surface (owner call 2) | Console, partner workspace, emails and shared code; not the storefront's own pages and themes, not Admin's screens | Store pages stay 0 px and themes are retiring (ADR-0014); Admin is N4 | Not yet |
-| Orders column "Customer" | Kept as drawn | The glossary says "shopper, never customer"; the mockup draws "Customer". Owner's call | Not yet (question) |
+| "Store", never "shop", on every surface (owner call 2) | Console, partner workspace, emails and shared code (checkout's refusals included); not the storefront's own pages and themes, not Admin's screens | Store pages stay 0 px and themes are retiring (ADR-0014); Admin is N4 | Owner's call, 2026-11-15: "take your call" (storefront keeps "shop" until it moves to code) |
+| Orders column "Customer" | "Shopper" (the column, the quick look, the order page's section, the cancel and edit reasons) | The glossary's one word for each thing; the drawing and the glossary disagreed | Owner's call, 2026-11-15: "take your call" |
 | Orders pager "Showing 1–50 of 43" | The pager as drawn ("Showing 1–50 of 300", Previous, Next) on a list of more than one page; none on one page (as today) | The drawing's numbers cannot happen together (a fact the mockup got wrong) | Not yet |
 | Placed: only Today and Yesterday drawn | Older rows "13 Nov, 10:06 pm", the year when not this year | The rulebook's "12 Nov" with the time a list needs | Not yet |
-| Shopper emails "On the way" (owner call 3) | "On its way" in the body and state name, the subject "Order KS-5012 is on the way" as drawn | The glossary's "Shopper sees" column | Not yet (question) |
+| Shopper emails "On the way" (owner call 3) | "On its way" to shoppers (subject, heading, preview); the console's email list says "On the way" | The glossary's "Shopper sees" column | Owner's call, 2026-11-15: "take your call" |
+| Store details "legal name · city" | The legal name only | No city is stored (the address is free text); a city field is its own change | Not yet |
+| Orders: no shortcuts line under the table | A quiet "Keyboard shortcuts" button there (no "· press ?") | The sheet holds the switch that turns single-key shortcuts off; WCAG 2.1.4 needs it reachable by pointer and touch (design-system review) | Not yet |
+| The free gift's tax note in an (i) (§ Words, rewritten line) | As drawn | The design-system review asked for it visible (InfoTip's contract: no tax wording in a tip); the approved mockup puts it in the (i) | Not yet (a question of rule against drawing) |
+| Settings "Ready for live payments" chip beside "Not connected" | As built in N1 | The chip counts what blocks live payments; Online payments is its own row | Not yet |
 
 ## Design review
 - **UI/UX:** words only; no layout change before step 6. Each changed line is checked against the drawn screen where
@@ -189,7 +193,7 @@ frata-design-language § Words (replaces § Voice) and § Glossary; § Numbers, 
 | Judging a rewrite (tone by moment, Rule 0, the glossary beyond a grep) | `words-reviewer` (fixed, rule 11) |
 | A temporary burn-down for a sweep across many files | `scripts/check-words.todo`, deleted when empty (pattern noted in frata-verify) |
 
-## Questions for the owner
+## Questions for the owner (answered 2026-11-15: "for questions — take your call"; the calls are in Deviations)
 1. Orders' "Customer" column: keep as drawn, or "Shopper" by the glossary?
 2. Storefront and themes keep "shop" until each store moves to code: agreed?
 3. Shopper emails: "On its way" (the glossary's shopper column) rather than the console's "On the way"?
