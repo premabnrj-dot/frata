@@ -338,6 +338,10 @@ this branch first; SA1·1 (the Settings page and its actions) waits for C and B 
   `revoked_at`; the definer returns four columns (with `expires_at`). Noted on ADR-0018.
 - The key lookup lives in `src/lib/queries/storefront-keys.ts` (storefront.ts was at its size limit) with `revalidate:
   3600`: a 30 s lookup lowered every cached API copy to 30 s (impact review). Stops purge by `refreshKeys`.
+- The live tree reads its own hour-long loader entries (`apiShop`, `apiCatalogue`, `apiProduct`, `apiAnnouncement`):
+  the shop's 60 s entries made every API copy stale after a minute (impact review; measured under `next start`, then
+  fixed and proved: still a HIT 65 s later). Cost: a second copy of each shop's catalogue entry in the data cache,
+  refilled only on a purge or once an hour.
 - Public search is a dynamic live route answered `public, s-maxage=60` (an ISR route can't vary by query); the slim
   search entry (speed review M2) is not built: search filters the cached catalogue in memory. Signal to build it: a
   search p95 over 50 ms in Observability.

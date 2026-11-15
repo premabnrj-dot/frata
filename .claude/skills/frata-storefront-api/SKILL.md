@@ -2,7 +2,7 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 1.0.0
+  version: 1.1.0
   verified: 2026-11-15
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
 ---
@@ -44,8 +44,11 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    optional field or enum value passes; a removal, rename, narrowing or a field turning optional is a new dated version
    (`API_VERSIONS`, `src/domains/storefront-api/versions.ts`), kept ≥ 12 months after its successor.
 7. **Freshness is by purge, not the clock.** The key lookup is cached and tagged by the key's sha256 hex
-   (`skey:<hex>`: an `unstable_cache` tag must be known before the call), with the routes' own hour (a shorter period on a
-   lookup lowers every cached copy's). Every copy carries `shop:<tenant>` (from the loaders) and `skey:<hex>`. A catalogue
+   (`skey:<hex>`: an `unstable_cache` tag must be known before the call), with the routes' own hour. **A cached route
+   takes the shortest period of every cache it reads** (measured under `next start`, 2026-11-15): the live tree reads
+   only the `api*` loaders (`apiShop`, `apiCatalogue`, `apiProduct`, `apiAnnouncement` in `src/lib/queries/storefront.ts`:
+   the shop's reads with `revalidate: 3600`, the same tags), never the 60 s `shop*` ones. `PERIOD=1
+   node scripts/verify/api-isr.mjs` proves a copy is still a HIT 65 s later. Every copy carries `shop:<tenant>` (from the loaders) and `skey:<hex>`. A catalogue
    change purges through today's `refreshShop`/`refreshSoldOut`; a key deleted → `refreshKey(hex)`; any stop the definer
    derives (the store opens, the Website moves or its domain goes, a partner is removed) → `refreshKeys(tenant)`; a
    scheduled moment (a drop, an offer starting or ending) → the 5-minute drain's `app_shops_with_boundary` sweep.
