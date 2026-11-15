@@ -134,12 +134,13 @@ script cannot hold) and a new § Glossary (surfaces, roles, words, order states,
 |---|---|---|---|
 | "Store", never "shop", on every surface (owner call 2) | Console, partner workspace, emails and shared code (checkout's refusals included); not the storefront's own pages and themes, not Admin's screens | Store pages stay 0 px and themes are retiring (ADR-0014); Admin is N4 | Owner's call, 2026-11-15: "take your call" (storefront keeps "shop" until it moves to code) |
 | Orders column "Customer" | "Shopper" (the column, the quick look, the order page's section, the cancel and edit reasons) | The glossary's one word for each thing; the drawing and the glossary disagreed | Owner's call, 2026-11-15: "take your call" |
-| Orders pager "Showing 1–50 of 43" | The pager as drawn ("Showing 1–50 of 300", Previous, Next) on a list of more than one page; none on one page (as today) | The drawing's numbers cannot happen together (a fact the mockup got wrong) | Not yet |
+| Orders pager "Showing 1–50 of 43" | The pager as drawn ("Showing 1–50 of 300", Previous and Next, the side with no page shown but not pressable) on a list of more than one page; none on one page (as today) | The drawing's numbers cannot happen together (a fact the mockup got wrong) | Not yet |
 | Placed: only Today and Yesterday drawn | Older rows "13 Nov, 10:06 pm", the year when not this year | The rulebook's "12 Nov" with the time a list needs | Not yet |
 | Shopper emails "On the way" (owner call 3) | "On its way" to shoppers (subject, heading, preview); the console's email list says "On the way" | The glossary's "Shopper sees" column | Owner's call, 2026-11-15: "take your call" |
 | Store details "legal name · city" | The legal name only | No city is stored (the address is free text); a city field is its own change | Not yet |
 | Orders: no shortcuts line under the table | A quiet "Keyboard shortcuts" button there (no "· press ?") | The sheet holds the switch that turns single-key shortcuts off; WCAG 2.1.4 needs it reachable by pointer and touch (design-system review) | Not yet |
 | The free gift's tax note in an (i) (§ Words, rewritten line) | As drawn | The design-system review asked for it visible (InfoTip's contract: no tax wording in a tip); the approved mockup puts it in the (i) | Not yet (a question of rule against drawing) |
+| Orders tabs: all seven drawn with counts, "Couldn't deliver 15" first | "Couldn't deliver" and "Coming back" appear only when they hold orders (Couldn't deliver then first) | Older than N3 (1D queue), not a words change, missed by N1's Deviations (found by N3's parity review); a change to the queue's tabs is its own step | Not yet |
 | Settings "Ready for live payments" chip beside "Not connected" | As built in N1 | The chip counts what blocks live payments; Online payments is its own row | Not yet |
 
 ## Design review
