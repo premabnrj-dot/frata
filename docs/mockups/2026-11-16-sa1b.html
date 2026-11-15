@@ -512,7 +512,7 @@ pre.cb { margin:0; background:var(--g950); color:#E8E5E1; border-radius:10px; pa
             <dt>Website</dt><dd><span class="code">kesarstudio.in</span>
               <div class="klist" style="margin-top:8px">
                 <div class="krow"><span>Website key</span><span class="chip info">Live</span></div>
-                <div class="krow"><span>Arc Studio preview</span><span class="chip neu">Test · ends when the store opens</span></div>
+                <div class="krow"><span>Arc Studio preview</span><span class="chip neu">Test</span><span class="s">Ends when the store opens</span></div>
               </div></dd>
           </dl>
           <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button class="btn primary" style="min-height:44px">Accept Kesar Studio</button><a style="font-size:14px;text-decoration:underline">Not now</a></div>
@@ -686,7 +686,7 @@ pre.cb { margin:0; background:var(--g950); color:#E8E5E1; border-radius:10px; pa
           <div class="grp">Guides</div>
           <a class="on">Start</a><a>Keys</a><a>Bag link</a><a>Caching</a><a>Preview</a>
           <div class="grp">Reference</div>
-          <a><code>shop</code></a><a><code>products/page/{n}</code></a><a><code>products/{handle}</code></a><a><code>collections</code></a><a><code>collections/{handle}/page/{n}</code></a><a><code>filters</code></a><a><code>filter/page/{n}</code></a><a><code>search</code></a><a><code>offers</code></a><a><code>content</code></a><a><code>pages/{handle}</code></a><a><code>faq</code></a>
+          <a><code>shop</code></a><a><code>products/page/{n}</code></a><a><code>products/{handle}</code></a><a><code>collections</code></a><a><code>collections/{handle}/page/{n}</code></a><a><code>facets</code></a><a><code>filter/page/{n}</code></a><a><code>search</code></a><a><code>offers</code></a><a><code>content</code></a><a><code>pages/{handle}</code></a><a><code>faq</code></a>
         </nav>
         <div class="docs-main">
           <h1>Start</h1>
@@ -741,7 +741,7 @@ pre.cb { margin:0; background:var(--g950); color:#E8E5E1; border-radius:10px; pa
           <div class="grp">Guides</div>
           <a>Start</a><a>Keys</a><a>Bag link</a>
           <div class="grp">Reference</div>
-          <a><code>products/page/{n}</code></a><a class="on"><code>products/{handle}</code></a><a><code>filters</code></a><a><code>filter/page/{n}</code></a>
+          <a><code>products/page/{n}</code></a><a class="on"><code>products/{handle}</code></a><a><code>facets</code></a><a><code>filter/page/{n}</code></a>
         </nav>
         <div class="docs-main">
           <h1 class="code" style="font:600 22px/30px var(--mono)">products/{handle}</h1>
@@ -787,16 +787,16 @@ pre.cb { margin:0; background:var(--g950); color:#E8E5E1; border-radius:10px; pa
         <div class="docs-top" style="padding:12px 16px"><span class="mono-mark rani">f</span><b>Storefront API</b><span class="sp"></span><button class="ib" aria-label="Menu"><svg><use href="#i-more"/></svg></button></div>
         <div class="docs-main" style="padding:16px">
           <h1 class="code" style="font:600 18px/26px var(--mono)">filter/page/{n}</h1>
-          <div class="ep"><span class="m">GET</span><span>/2026-12/k/{key}/filter/page/{n}?size=M&amp;price=1000-1999</span></div>
+          <div class="ep"><span class="m">GET</span><span>/2026-12/k/{key}/filter/page/{n}?size=m&amp;price=p2</span></div>
           <div class="wrap-x"><table class="fields">
             <thead><tr><th>Query</th><th>Values</th></tr></thead>
             <tbody>
               <tr><td>collection</td><td>A handle</td></tr>
-              <tr><td>size</td><td>From <span class="code">filters</span></td></tr>
-              <tr><td>colour</td><td>From <span class="code">filters</span></td></tr>
-              <tr><td>price</td><td><span class="code">0-999</span>, <span class="code">1000-1999</span>, <span class="code">2000-4999</span>, <span class="code">5000-</span></td></tr>
-              <tr><td>stock</td><td><span class="code">1</span> shows in-stock products only</td></tr>
-              <tr><td>sort</td><td><span class="code">featured</span>, <span class="code">new</span>, <span class="code">price-asc</span>, <span class="code">price-desc</span></td></tr>
+              <tr><td>size</td><td>A <span class="code">value</span> from <span class="code">facets</span></td></tr>
+              <tr><td>colour</td><td>A <span class="code">value</span> from <span class="code">facets</span></td></tr>
+              <tr><td>price</td><td>A band <span class="code">id</span> from <span class="code">facets</span></td></tr>
+              <tr><td>stock</td><td><span class="code">in</span> shows in-stock products only</td></tr>
+              <tr><td>sort</td><td><span class="code">featured</span>, <span class="code">new</span>, <span class="code">price_asc</span>, <span class="code">price_desc</span></td></tr>
             </tbody>
           </table></div>
         </div>
