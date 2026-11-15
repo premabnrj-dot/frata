@@ -69,6 +69,7 @@ export default async function WebsitePageRoute() {
         liveCount={keys.filter((k) => k.live).length}
         testAllowed={!page.firstOpenedAt}
         openapi={API_HOST ? `https://${API_HOST}/${CURRENT_API_VERSION}/openapi.json` : null}
+        docs={`https://${API_HOST || 'api.frrata.shop'}/docs`}
       />
       </div>
     </>

@@ -76,6 +76,8 @@ function ekcodeResponse(request: NextRequest) {
 // Versioned paths (/2026-12/…) are skipped on every host (V1 Storefront API, unit-economics review 2026-11-15): on the
 // API host next.config's apiRewrites serve them and a middleware run would be a paid call on every CDN hit; on any
 // other host they are a 404 page anyway. /api/storefront/* is NOT skipped: routeFor refuses it off the API host.
+// The docs (/docs…, /llms.txt; SA1b) are skipped too: static pages, served only by the API host's rewrite; on any other
+// host they are a shop's or the console's 404. Their internal path /api-docs is NOT skipped: routeFor refuses it.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|fe\\.js$|api/shop/e$|[0-9]{4}-[0-9]{2}/).*)'],
+  matcher: ['/((?!_next/static|_next/image|fe\\.js$|api/shop/e$|[0-9]{4}-[0-9]{2}/|docs(?:/|$)|llms\\.txt$).*)'],
 }

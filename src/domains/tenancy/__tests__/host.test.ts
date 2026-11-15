@@ -147,7 +147,6 @@ describe('the Storefront API host (ADR-0018; V1 plan § SA0·1)', () => {
   it('answers versioned paths only on the API host', () => {
     expect(routeFor(A, '/2026-12/k/frs_pub_x/shop', C, false, D, E, A)).toEqual({ kind: 'api' })
     expect(routeFor(A, '/2026-12/openapi.json', C, false, D, E, A)).toEqual({ kind: 'api' })
-    expect(routeFor(A, '/', C, false, D, E, A)).toEqual({ kind: 'not_found' })
     expect(routeFor(A, '/console', C, false, D, E, A)).toEqual({ kind: 'not_found' })
     expect(routeFor(A, '/api/storefront/2026-12/k/x/shop', C, false, D, E, A)).toEqual({ kind: 'not_found' })
     expect(routeFor(A, '/2025-01/k/x/shop', C, false, D, E, A)).toEqual({ kind: 'not_found' })
@@ -168,6 +167,19 @@ describe('the Storefront API host (ADR-0018; V1 plan § SA0·1)', () => {
     expect(test.destination).toBe('/api/storefront/2026-12/t/:key/:rest*')
     expect(pub.destination).toBe('/api/storefront/2026-12/k/:key/:rest*')
     expect(KEY_BODY).toBe('[0-9A-Za-z]{38}')
+  })
+  it('serves its docs on the API host only, by their public paths (SA1b D·9; security review M1)', async () => {
+    const { apiRewrites, apiRedirects } = await import('../host')
+    for (const p of ['/docs', '/docs/bag-link', '/docs/reference/products-handle', '/llms.txt', '/_next/static/chunks/x.js'])
+      expect(routeFor(A, p, C, false, D, E, A), p).toEqual({ kind: 'api' })
+    for (const p of ['/docs/a/b/c', '/docs/Bad', '/api-docs', '/api-docs/bag-link', '/docs.txt']) expect(routeFor(A, p, C, false, D, E, A), p).toEqual({ kind: 'not_found' })
+    // the internal path answers nowhere by name
+    for (const host of [C, 'kesar.frrata.shop', 'shop.brand.in', 'frata-git-x.vercel.app', E, 'localhost:3000'])
+      expect(routeFor(host, '/api-docs/bag-link', C, true, D, E, A), host).toEqual({ kind: 'not_found' })
+    const r = apiRewrites('api.frrata.shop')
+    expect(r.slice(0, 3).map((x) => [x.source, x.destination])).toEqual([['/docs', '/api-docs'], ['/docs/:rest*', '/api-docs/:rest*'], ['/llms.txt', '/api-docs/llms.txt']])
+    expect(apiRedirects('api.frrata.shop')).toEqual([{ source: '/', destination: '/docs', permanent: false, has: [{ type: 'host', value: 'api\\.frrata\\.shop' }] }])
+    expect(apiRedirects('')).toEqual([])
   })
   it('keeps the API host out of the shop rewrite', () => {
     const shop = shopRewrites(C, E, A)

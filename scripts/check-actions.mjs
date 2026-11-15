@@ -49,6 +49,7 @@ const ENTRY_POINTS = {
   'src/app/s/[host]/robots.txt/route.ts': ['a shop\'s robots.txt: public, read-only', 'shopForRoute('],
   // The Storefront API's published description (V1 SA1): no key, no shop data, generated from the closed schemas.
   'src/app/api/storefront/2026-12/openapi.json/route.ts': ['the Storefront API description: public, read-only, no shop', 'openApi('],
+  'src/app/api-docs/llms.txt/route.ts': ['the Storefront API docs for agents (SA1b D·9): public, static, no shop', 'llmsTxt('],
   'src/app/s/[host]/og/[...card]/route.ts': ['a shop\'s share card: public, read-only, canonical ids looked up inside the host\'s shop', 'shopForRoute('],
 }
 

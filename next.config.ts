@@ -1,6 +1,6 @@
 import type { NextConfig } from 'next'
 import { ADMIN_PASSKEY_HEADERS, FRAMEABLE_HEADERS, HSTS_PLATFORM, hostValue, platformHostPattern, SECURITY_HEADERS } from './src/lib/security-headers'
-import { apiRewrites, shopRewrites } from './src/domains/tenancy/host'
+import { apiRedirects, apiRewrites, shopRewrites } from './src/domains/tenancy/host'
 import { API_HOST, CONSOLE_HOST, EKCODE_HOST, SHOP_DOMAIN } from './src/lib/public-env'
 
 const config: NextConfig = {
@@ -15,6 +15,10 @@ const config: NextConfig = {
   outputFileTracingIncludes: { '/**': ['./src/lib/documents/fonts/**', './node_modules/pdfkit/js/standard-fonts/**/*.cjs', './node_modules/pdfkit/package.json'] },
   // The Storefront API's host first (ADR-0018), then every other host is a shop, served from /s/<host>/…
   // (src/domains/tenancy/host.ts).
+  // The API host's root goes to its docs (SA1b D·9).
+  async redirects() {
+    return apiRedirects(API_HOST)
+  },
   async rewrites() {
     return { beforeFiles: [...apiRewrites(API_HOST), ...shopRewrites(CONSOLE_HOST, SHOP_DOMAIN, EKCODE_HOST, API_HOST)], afterFiles: [], fallback: [] }
   },

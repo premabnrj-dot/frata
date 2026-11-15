@@ -80,8 +80,10 @@ export const PLATFORM_SITE_PATHS = new Set(['/', '/privacy-policy'])
  */
 export function routeFor(rawHost: string | null, pathname: string, consoleHost: string, dev: boolean, shopDomain: string, ekcodeHost = '', apiHost = ''): Route {
   const surface = surfaceFor(rawHost, consoleHost, ekcodeHost, apiHost)
-  // The API host answers its versioned paths only (the middleware never sees them: its matcher skips them).
-  if (surface.kind === 'api') return isVersionPath(pathname) ? { kind: 'api' } : { kind: 'not_found' }
+  // The API host answers its versioned paths and its docs only (SA1b D·9; the middleware never sees the versioned ones:
+  // its matcher skips them). The docs' internal path (/api-docs) is reached only through apiRewrites, never by name.
+  if (surface.kind === 'api') return isVersionPath(pathname) || isDocsPath(pathname) ? { kind: 'api' } : { kind: 'not_found' }
+  if (pathname === DOCS_INTERNAL || pathname.startsWith(`${DOCS_INTERNAL}/`)) return { kind: 'not_found' }
   // The API's handlers answer through the API host's rewrite only (spec § 1, security H4): never on a shop, the console
   // or a preview alias.
   if (pathname === '/api/storefront' || pathname.startsWith('/api/storefront/')) return { kind: 'not_found' }
@@ -96,6 +98,11 @@ export function routeFor(rawHost: string | null, pathname: string, consoleHost: 
   if (pathname === '/s' || pathname.startsWith('/s/')) return surface.kind === 'local' && dev ? { kind: 'console' } : { kind: 'not_found' }
   return { kind: 'console' }
 }
+
+/** The docs' internal page path (src/app/api-docs), served only as the API host's /docs, /docs/… and /llms.txt. */
+export const DOCS_INTERNAL = '/api-docs'
+/** A docs path on the API host: /docs, a guide, a reference page, llms.txt, or Next's own static files for them. */
+export const isDocsPath = (pathname: string) => /^\/(?:docs(?:\/[a-z0-9-]+(?:\/[a-z0-9-]+)?)?|llms\.txt|_next\/static\/.+)$/.test(pathname)
 
 /** Every path EkCode's host serves (besides /api/ek/* and Next's own /_next/*). */
 export const EKCODE_PATHS = new Set(['/', '/privacy', '/terms', '/contact', '/continue'])
@@ -158,9 +165,20 @@ export function apiRewrites(apiHost: string): Rewrite[] {
   const api = apiHost.toLowerCase()
   if (!api) return []
   const has = [{ type: 'host' as const, value: esc(api) }]
-  return API_VERSIONS.flatMap((v) => [
+  return [
+    // The docs (SA1b D·9): static pages under an internal path that routeFor refuses on every other host.
+    { source: '/docs', destination: DOCS_INTERNAL, has, missing: [] },
+    { source: '/docs/:rest*', destination: `${DOCS_INTERNAL}/:rest*`, has, missing: [] },
+    { source: '/llms.txt', destination: `${DOCS_INTERNAL}/llms.txt`, has, missing: [] },
+    ...API_VERSIONS.flatMap((v) => [
     { source: `/${v}/k/:key(frs_test_${KEY_BODY})/:rest*`, destination: `/api/storefront/${v}/t/:key/:rest*`, has, missing: [] },
     { source: `/${v}/k/:key(frs_pub_${KEY_BODY})/:rest*`, destination: `/api/storefront/${v}/k/:key/:rest*`, has, missing: [] },
     { source: `/${v}/openapi.json`, destination: `/api/storefront/${v}/openapi.json`, has, missing: [] },
-  ])
+  ])]
+}
+
+/** The API host's root goes to its docs (next.config redirects run before the middleware; a 307, so it may change). */
+export function apiRedirects(apiHost: string): { source: string; destination: string; permanent: false; has: { type: 'host'; value: string }[] }[] {
+  const api = apiHost.toLowerCase()
+  return api ? [{ source: '/', destination: '/docs', permanent: false, has: [{ type: 'host', value: esc(api) }] }] : []
 }

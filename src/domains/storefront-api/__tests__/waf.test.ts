@@ -25,10 +25,14 @@ describe('the API host’s path rule', () => {
       .replace(/^(\d{4}-\d{2})\/[kt]\//, '$1/k/').replace('[key]', key).replace('[handle]', 'linen-kurta-set').replace('[n]', '13')
     for (const r of walk('src/app/api/storefront')) for (const key of [k, t]) expect(re.test(fill(r, key)), fill(r, key)).toBe(true)
   })
+  it('lets the docs through (SA1b D·9)', () => {
+    for (const p of ['/', '/docs', '/docs/bag-link', '/docs/reference/products-handle', '/llms.txt', '/_next/static/chunks/app-1a2b.js', '/_next/static/css/x.css']) expect(re.test(p), p).toBe(true)
+    for (const p of ['/api-docs', '/docs/a/b/c', '/docs/Bad', '/admin', '/console', '/_next/image', '/llms.txt.bak']) expect(re.test(p), p).toBe(false)
+  })
   it('refuses a bad shape, page or handle', () => {
     const k = newKey('public', rnd)
     for (const p of [`/2026-12/k/frs_pub_short/shop`, `/2026-12/k/${k}/products/page/14`, `/2026-12/k/${k}/products/page/0`, `/2026-12/k/${k}/products/Bad_Handle`,
-      `/2026-12/k/${k}/orders`, `/2026-12/k/${k}/pages/Bad_Page`, `/2026-12/k/${k}/pages/${'a'.repeat(61)}`, `/2026-12/k/${k}/faq/x`, `/2026-12/k/${k}/shop/x`, `/2025-01/k/${k}/shop`, '/', '/2026-12/openapi.json/x',
+      `/2026-12/k/${k}/orders`, `/2026-12/k/${k}/pages/Bad_Page`, `/2026-12/k/${k}/pages/${'a'.repeat(61)}`, `/2026-12/k/${k}/faq/x`, `/2026-12/k/${k}/shop/x`, `/2025-01/k/${k}/shop`, '/2026-12/openapi.json/x',
       `/2026-12/k/${k}/preview`, `/2026-12/k/${k}/preview/products/x`, `/2026-12/k/${k}/preview/v1.abc.def/faq`, `/2026-12/k/${k}/preview/pages/${'a'.repeat(61)}`]) expect(re.test(p), p).toBe(false)
   })
 })

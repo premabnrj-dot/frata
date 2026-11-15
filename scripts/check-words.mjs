@@ -40,6 +40,7 @@ export const NOT = [
   'src/lib/storefront/', 'src/lib/ekcode/', 'src/lib/seo/', 'src/lib/documents/', // shoppers, search engines, PDFs
   'src/domains/themes/', 'src/domains/checkout/', 'src/domains/storefront/', 'src/domains/ekcode-core/',
   'src/domains/pages/', 'src/domains/policies/', 'src/domains/seo/', 'src/domains/documents/', // shopper-facing, legal
+  'src/domains/storefront-api/docs.ts', // the API's developer docs (SA1b D·9): developers' words (key, token, API), words-reviewer reads them
 ]
 export const inScope = (file) => ROOTS.some((r) => file.startsWith(r + '/')) && !NOT.some((n) => file.startsWith(n))
 

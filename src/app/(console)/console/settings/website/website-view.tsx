@@ -14,6 +14,8 @@ import { FieldError, fieldProps } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast-context'
 import { SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import { createKeyAction, deleteKeyAction, setWebsiteAction } from './actions'
+import { ExternalLink } from 'lucide-react'
+import { STARTER_URL } from '@/domains/storefront-api/kit'
 
 // =============================================================================
 // Settings › Website, the parts a person works (mockup https://claude.ai/artifact/P8rsPfrY53V7Ezq1e4cnVm, as drawn):
@@ -49,6 +51,8 @@ function RadioCard({ on, disabled, onPick, title, note }: { on: boolean; disable
 export function WebsiteView(p: {
   canManage: boolean; canEditAddress: boolean; saved: Choice | null; options: Option[]; checkout: { host: string; razorpayOk: boolean; custom: boolean }
   keys: KeyView[]; liveCount: number; testAllowed: boolean; openapi: string | null; maxKeys: number
+  /** The docs on the API host (SA1b): beside the OpenAPI address. */
+  docs: string
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -121,6 +125,13 @@ export function WebsiteView(p: {
           <Keys {...p} />
           {p.openapi ? (
             <Section title="For developers">
+              {/* The docs and the starter (SA1b mockup § Console): beside the OpenAPI address. */}
+              {[{ name: 'Docs', at: p.docs }, { name: 'Starter code', at: STARTER_URL }].map((x) => (
+                <div key={x.name} className="mb-2 flex items-center justify-between gap-2 border-b border-line-soft pb-2">
+                  <span className="min-w-0"><span className="font-medium">{x.name}</span> <span className="hidden font-mono text-small text-muted-foreground [overflow-wrap:anywhere] md:inline">{x.at.replace(/^https:\/\//, '')}</span></span>
+                  <a href={x.at} target="_blank" rel="noopener noreferrer" aria-label={`Open ${x.name.toLowerCase()}`} className={button({ variant: 'ghost', size: 'sm' })}><ExternalLink aria-hidden="true" className="size-4" />Open</a>
+                </div>
+              ))}
               <div className="flex items-center justify-between gap-2">
                 <span className="min-w-0"><span className="font-medium">OpenAPI</span> <span className="hidden font-mono text-small text-muted-foreground [overflow-wrap:anywhere] md:inline">{p.openapi.replace(/^https:\/\//, '')}</span></span>
                 <CopyButton value={p.openapi} label="OpenAPI address" />
