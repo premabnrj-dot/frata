@@ -28,6 +28,10 @@ export const ADMIN_DATABASE_URL = secret(process.env.ADMIN_DATABASE_URL)
 /** The analytics database (A·2, its own Supabase project), as frata_app: the visit beacon's inserts and the console's
  *  Traffic reads (both from A2·2). Production only. */
 export const ANALYTICS_DATABASE_URL = secret(process.env.ANALYTICS_DATABASE_URL)
+/** frata_builder (T1c, ADR-0015; owner 2026-11-15, question 7): a partner's Builder reads the catalogue through its own
+ *  login, which holds column grants on eight catalogue tables and nothing else. Production only; without it a Builder's
+ *  pages say so and read nothing (fail closed). */
+export const DATABASE_URL_BUILDER = secret(process.env.DATABASE_URL_BUILDER)
 /** Counting visits on (A·2): '1' mounts the beacon on shop pages and opens /api/shop/e; anything else, the route answers
  *  404 before reading a byte (security review 2026-11-11 HIGH-1). Production only, set by the owner after the Firewall
  *  rate rule on /api/shop/e and the privacy sentence. */
@@ -88,6 +92,7 @@ export const RAZORPAY_BILLING_WEBHOOK_SECRET_PREVIOUS = secret(process.env.RAZOR
 export const isDatabaseConfigured = () => DATABASE_URL !== ''
 export const isAdminDatabaseConfigured = () => ADMIN_DATABASE_URL !== ''
 export const isAnalyticsConfigured = () => ANALYTICS_DATABASE_URL !== ''
+export const isBuilderDatabaseConfigured = () => DATABASE_URL_BUILDER !== ''
 export const isCountingVisits = () => ANALYTICS_INGEST_ON && isAnalyticsConfigured()
 /** frata-blob's id (store_…): pins which Blob host a photo may come from. Set by connecting the store. */
 export const BLOB_STORE_ID = secret(process.env.BLOB_STORE_ID)

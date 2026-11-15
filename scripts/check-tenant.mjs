@@ -143,7 +143,8 @@ for (const file of walk('src')) {
   }
   if (file.startsWith('src/lib/queries/')) {
     if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  query file without import 'server-only'`)
-    if (!/\bwith(Analytics)?Tenant\(/.test(text)) failures.push(`${file}  query file that never calls withTenant( or withAnalyticsTenant(`)
+    // A Builder's reads (T1c) open their transaction through withActor (frata_builder, src/lib/db/actor.ts).
+    if (!/\bwith(Analytics)?Tenant\(|\bwithActor\(/.test(text)) failures.push(`${file}  query file that never calls withTenant(, withAnalyticsTenant( or withActor(`)
   }
 }
 

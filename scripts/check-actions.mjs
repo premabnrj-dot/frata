@@ -19,7 +19,9 @@ import { join } from 'node:path'
 // shopRequest (src/lib/http/shop-api.ts) is requireShop plus a Zod body and a per-shop limit, for /api/shop/*.
 // moduleGate (src/lib/auth/as-module.ts) is requireMember plus the module's on/off check, for reads and non-writing actions.
 // requireEk (src/lib/ekcode/require-ek.ts) is EkCode's host check: Host = EKCODE_HOST, same-origin JSON POSTs, a per-network limit.
-const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk']
+// requireCapability (T1c): requireMember's store choice answered by capability; a Builder's only way in (check:capabilities
+// holds which files may call it).
+const CHOKEPOINTS = ['requireMember', 'requireCapability', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
@@ -125,8 +127,8 @@ for (const file of walk('src/app/(console)')) {
 // page in parallel, so the layout's requireMember protects nothing below it.
 for (const file of ['src/app/(console)', 'src/app/(lookeditor)', 'src/app/(lookpreview)'].flatMap((d) => (existsSync(d) ? walk(d) : []))) {
   if (!file.endsWith('/page.tsx')) continue
-  if (!/\brequireMember\(/.test(code(readFileSync(file, 'utf8')))) {
-    failures.push(`${file}  console page that does not call requireMember( itself — the layout's check does not cover it`)
+  if (!/\brequire(Member|Capability)\(/.test(code(readFileSync(file, 'utf8')))) {
+    failures.push(`${file}  console page that does not call requireMember( or requireCapability( itself — the layout's check does not cover it`)
   }
 }
 

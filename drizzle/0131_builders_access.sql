@@ -135,13 +135,14 @@ $$;
 --> statement-breakpoint
 
 -- ── Clients: the owner sees everything; a Lead or a Builder only its live assigned stores, with no owner email,
---    invite, plan or the partner's share terms (owner question 6: a Lead too) and has_owner instead. ──
+--    invite email, plan or the partner's share terms (owner question 6: a Lead too). The stage's facts stay (the first
+--    opening, an open invite's end, has_owner) so the stage reads the same for everyone. ──
 drop function if exists app_partner_clients(uuid, uuid, text);
 --> statement-breakpoint
 create function app_partner_clients(p_uid uuid, p_session uuid, p_stepup text) returns table (
   tenant_id uuid, name text, slug text, linked_at timestamptz, share_starts_at timestamptz, removed_at timestamptz,
   share_months integer, notice_days integer, owner_email text, invite_email text, invite_expires_at timestamptz, plan_name text,
-  has_owner boolean, invited boolean)
+  has_owner boolean)
   language plpgsql stable security definer set search_path = '' as $$
 begin
   if not exists (select 1 from public.app_pm_live(p_uid)) then return; end if;
@@ -150,19 +151,18 @@ begin
   select l.tenant_id, t.name,
     case when l.removed_at is null then t.slug end,
     l.created_at,
-    case when me.role = 'owner' then l.share_starts_at end, l.removed_at,
+    l.share_starts_at, l.removed_at,
     case when me.role = 'owner' then l.share_months end, case when me.role = 'owner' then l.notice_days end,
     case when me.role = 'owner' and l.removed_at is null then (select u.email::text from public.members m join auth.users u on u.id = m.user_id
                                           where m.tenant_id = l.tenant_id and m.role = 'owner' order by m.created_at limit 1) end,
     case when me.role = 'owner' and l.removed_at is null then i.email end,
-    case when me.role = 'owner' and l.removed_at is null then i.expires_at end,
+    case when l.removed_at is null then i.expires_at end,
     case when me.role = 'owner' and l.removed_at is null then (select p.name from public.tenant_plans tp
                                            join public.plan_versions pv on pv.id = tp.plan_version_id
                                            join public.plans p on p.id = pv.plan_id
                                           where tp.tenant_id = l.tenant_id and tp.starts_at <= now()
                                           order by tp.starts_at desc limit 1) end,
-    exists (select 1 from public.members m where m.tenant_id = l.tenant_id and m.role = 'owner'),
-    i.email is not null and l.removed_at is null
+    exists (select 1 from public.members m where m.tenant_id = l.tenant_id and m.role = 'owner')
   from public.app_pm_live(p_uid) me
   join public.partner_links l on l.partner_id = me.partner_id
   join public.tenants t on t.id = l.tenant_id

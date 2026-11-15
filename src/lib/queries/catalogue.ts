@@ -33,6 +33,13 @@ const lowStock = (tenantId: string) => sql`exists (select 1 from ${variants} v w
  * or Low stock; searched by name, SKU or a whole tag; sorted by last edit, name or stock; with the counts of every chip,
  * read in the same transaction so they agree with the rows. */
 export async function listProducts(tenantId: string, query: ListQuery) {
+  return withTenant(tenantId, (tx) => listProductsWith(tx, tenantId, query))
+}
+
+/** The list's reads in the caller's transaction: the owner's (withTenant) and a Builder's (withActor, as frata_builder,
+ *  src/lib/queries/builder.ts) run this same SQL. Every column it names is in frata_builder's grant (drizzle/0131): a new
+ *  column here needs a migration that grants it, or a Builder's list fails closed with permission denied. */
+export async function listProductsWith(tx: Tx, tenantId: string, query: ListQuery) {
   const term = query.q
   const like = `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
   const searched = term ? sql`(${products.title} ilike ${like}
@@ -45,7 +52,7 @@ export async function listProducts(tenantId: string, query: ListQuery) {
   const stockSum = sql<number>`(select coalesce(sum(v.stock), 0)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`
   const order = query.sort === 'name' ? [asc(sql`lower(${products.title})`), asc(products.id)]
     : query.sort === 'stock' ? [asc(stockSum), desc(products.updatedAt), asc(products.id)] : [desc(products.updatedAt), asc(products.id)]
-  return withTenant(tenantId, async (tx) => {
+  {
     // Speed review 2026-11-13: the stock sort with a term crossed the JIT threshold (~80 ms compiling for a 50-row page);
     // off for this transaction only.
     await tx.execute(sql`select set_config('jit', 'off', true)`)
@@ -85,10 +92,11 @@ export async function listProducts(tenantId: string, query: ListQuery) {
       counts: { all: all - (by.archived ?? 0), active: by.active ?? 0, draft: by.draft ?? 0, unlisted: by.unlisted ?? 0, archived: by.archived ?? 0, low: low?.n ?? 0, any: all },
       rows: rows.map((r) => ({ ...r, minPrice: r.minPrice === null ? null : Number(r.minPrice), maxPrice: r.maxPrice === null ? null : Number(r.maxPrice) })),
     }
-  })
+  }
 }
 
-export type ProductListRow = Awaited<ReturnType<typeof listProducts>>['rows'][number]
+export type ProductList = Awaited<ReturnType<typeof listProductsWith>>
+export type ProductListRow = ProductList['rows'][number]
 
 /** Every product's tax (Products › HSN codes): its code, unit, own rate and lowest price; the shop's GST facts. Up to 2,000. */
 export async function productsTax(tenantId: string) {
@@ -199,7 +207,7 @@ export async function productFactsIn(tx: Tx, tenantId: string, now = new Date())
     const [vs, attrs, cols] = await Promise.all([
       tx.select({ productId: variants.productId, price: variants.price, stock: variants.stock, whenOut: variants.whenOut, shipsBy: variants.shipsBy, leadMinDays: variants.leadMinDays, leadMaxDays: variants.leadMaxDays, preorderCap: variants.preorderCap })
         .from(variants).where(and(eq(variants.tenantId, tenantId), isNull(variants.archivedAt))),
-      tx.select().from(productAttributes).where(eq(productAttributes.tenantId, tenantId)),
+      tx.select({ productId: productAttributes.productId, attribute: productAttributes.attribute, values: productAttributes.values }).from(productAttributes).where(eq(productAttributes.tenantId, tenantId)),
       tx.select({ productId: productColours.productId, family: productColours.family }).from(productColours).where(eq(productColours.tenantId, tenantId)),
     ])
     return ps.map((p) => {
@@ -226,10 +234,16 @@ export async function manualCollections(tenantId: string) {
 
 /** The collections list, each with how many products are in it now. */
 export async function listCollections(tenantId: string) {
+  return withTenant(tenantId, (tx) => listCollectionsWith(tx, tenantId))
+}
+
+/** In the caller's transaction: the owner's and a Builder's (frata_builder: named columns only, drizzle/0131). */
+export async function listCollectionsWith(tx: Tx, tenantId: string) {
   const [cols, members, facts] = await Promise.all([
-    withTenant(tenantId, (tx) => tx.select().from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title))),
-    withTenant(tenantId, (tx) => tx.select({ collectionId: collectionProducts.collectionId, n: count() }).from(collectionProducts).where(eq(collectionProducts.tenantId, tenantId)).groupBy(collectionProducts.collectionId)),
-    productFacts(tenantId),
+    tx.select({ id: collections.id, title: collections.title, handle: collections.handle, kind: collections.kind, rules: collections.rules, matchAll: collections.matchAll })
+      .from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)),
+    tx.select({ collectionId: collectionProducts.collectionId, n: count() }).from(collectionProducts).where(eq(collectionProducts.tenantId, tenantId)).groupBy(collectionProducts.collectionId),
+    productFactsIn(tx, tenantId),
   ])
   return cols.map((c) => ({
     id: c.id, title: c.title, handle: c.handle, kind: c.kind as 'manual' | 'auto',

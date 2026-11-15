@@ -1,18 +1,21 @@
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
-import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
-import { Numeric } from '@/components/data/numeric'
-import { Badge } from '@/components/ui/badge'
+import { CollectionsTable } from './_components/collections-table'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
-import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
+import { requireCapability } from '@/lib/auth/require-capability'
+import { BuilderCollections } from './_builder/collections'
 import { listCollections } from '@/lib/queries/catalogue'
 
 export const metadata = { title: 'Collections' }
 
 export default async function CollectionsPage() {
-  const auth = await requireMember(ANY_MEMBER)
-  if (!auth.ok) return <Panel title={auth.message} />
+  // catalogue.read (T1c): a Builder gets the list view only, as frata_builder, in its own file; each write still asks
+  // asMember(ANY_MEMBER) itself.
+  const cap = await requireCapability('catalogue.read')
+  if (!cap.ok) return <Panel title={cap.message} />
+  if (cap.kind === 'builder') return <BuilderCollections actor={cap.actor} />
+  const auth = cap.auth
   const rows = await listCollections(auth.membership.tenantId).catch((err) => { console.error('[collections]', err instanceof Error ? err.name : err); return null })
   if (!rows) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const add = <><Link href="/console/collections/new?kind=auto" className={button({ variant: 'secondary' })}>Rule-based</Link><Link href="/console/collections/new" className={button()}>Add collection</Link></>
@@ -22,18 +25,7 @@ export default async function CollectionsPage() {
       {!rows.length ? (
         <Panel title="No collections yet">Group products for your store’s menus. Pick them by hand, or let rules add new products.</Panel>
       ) : (
-        <DataTable>
-          <DataTableHead><th>Collection</th><th>Filled by</th><th className="text-right">Products</th></DataTableHead>
-          <DataTableBody>
-            {rows.map((r) => (
-              <DataTableRow key={r.id}>
-                <Td cell="a"><Link href={`/console/collections/${r.handle}`} data-row-link prefetch={false} className="font-medium hover:underline">{r.title}</Link><span className="block font-mono text-xs text-muted-foreground">/collections/{r.handle}</span></Td>
-                <Td cell="d"><Badge tone={r.kind === 'auto' ? 'info' : 'neutral'}>{r.kind === 'auto' ? 'Rules' : 'Hand-picked'}</Badge></Td>
-                <Td cell="b" className="text-right"><Numeric>{r.count}</Numeric></Td>
-              </DataTableRow>
-            ))}
-          </DataTableBody>
-        </DataTable>
+        <CollectionsTable rows={rows} href={(h) => `/console/collections/${h}`} />
       )}
     </>
   )

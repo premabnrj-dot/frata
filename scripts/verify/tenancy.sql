@@ -3661,7 +3661,7 @@ begin
   -- clients: assigned only, no owner email, invite, plan or terms; has_owner says the stage
   select * into c from app_partner_clients(D, proof.sess(D), proof.h(D)) x;
   if (select count(*) from app_partner_clients(D, proof.sess(D), proof.h(D))) <> 1 or c.tenant_id <> n1 or c.owner_email is not null or c.invite_email is not null
-     or c.plan_name is not null or c.share_months is not null or c.notice_days is not null or c.share_starts_at is not null or c.has_owner is not false
+     or c.plan_name is not null or c.share_months is not null or c.notice_days is not null or c.has_owner is not false
   then raise exception 'FAIL: a Builder''s clients (%)', c; end if;
   -- owner question 6: a Lead gets no owner contact details either; the owner still does
   if exists (select 1 from app_partner_clients(G, proof.sess(G), proof.h(G)) x where x.share_months is null) then raise exception 'FAIL: the owner lost the terms'; end if;

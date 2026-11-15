@@ -9,7 +9,7 @@ import { Panel } from '@/components/ui/panel'
 import { partnerCan } from '@/domains/partners/team'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { accessOf } from '@/lib/auth/session'
-import { ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
+import { BUILDER_LABEL, ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
 import { Toaster } from '@/components/ui/toast'
 import { Submit } from '@/components/ui/submit'
 import { PartnerFrame } from '@/components/passkeys/partner-frame'
@@ -59,10 +59,11 @@ export default async function PartnerLayout({ children }: { children: React.Reac
       </main>
     )
   }
-  const access = await accessOf(auth.userId).catch(() => ({ memberships: [] as { tenantId: string; tenantName: string; role: string; supportSessionId: string | null }[] }))
+  const access = await accessOf(auth.userId).catch(() => ({ memberships: [] as { tenantId: string; tenantName: string; role: string; supportSessionId: string | null }[], builds: [] as { tenantId: string; tenantName: string }[] }))
   const places: Place[] = [
     { href: '/partner', name: 'Partner workspace', role: '', current: true },
     ...access.memberships.filter((m) => !m.supportSessionId).map((m) => ({ href: '/console', name: m.tenantName, role: ROLE_LABEL[m.role as MemberRole] ?? m.role, current: false, tenantId: m.tenantId })),
+    ...access.builds.map((b) => ({ href: '/console', name: b.tenantName, role: BUILDER_LABEL, current: false, tenantId: b.tenantId })),
   ]
   const clients: NavItem = { href: '/partner', label: 'Clients', icon: 'merchants', exact: true }
   const details: NavItem = { href: '/partner/details', label: 'Your details', icon: 'details' }
