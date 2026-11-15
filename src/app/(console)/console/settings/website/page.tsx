@@ -7,7 +7,7 @@ import { keyAnswers, keyState, lastUsed, mayManageApi, MAX_LIVE_KEYS } from '@/d
 import { dayMonthIN } from '@/lib/format-date'
 import { API_HOST, shopHost } from '@/lib/public-env'
 import { CURRENT_API_VERSION } from '@/domains/storefront-api/versions'
-import { ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
+import { holds, ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
 import { errName } from '@/lib/log'
 import { SettingsHead } from '../_components/settings-head'
 import { WebsiteView, type KeyView } from './website-view'
@@ -38,14 +38,16 @@ export default async function WebsitePageRoute() {
   const keys: KeyView[] = page.keys.map((k) => {
     const s = keyState(k, page, now)
     const maker = k.partnerId ? who(k.createdBy) : null
-    const line: string[] = []
-    if (s.kind === 'deleted') line.push(`Deleted by ${who(k.revokedBy) ?? 'someone who left'} · ${dayMonthIN(new Date(s.at))}`)
-    else if (s.kind === 'partner_gone') line.push(s.at ? `Your partner’s access ended · ${dayMonthIN(new Date(s.at))}` : 'Your partner’s access ended')
-    else if (s.kind === 'ended' && s.why === 'opened' && s.at) line.push(`Store opened · ${dayMonthIN(new Date(s.at))}`)
-    else if (s.kind === 'ended' && s.at) line.push(dayMonthIN(new Date(s.at)))
+    // Each line as the computer shows it, and as a phone does (`phone` null: left out there; mockup § Phone).
+    const line: KeyView['line'] = []
+    const when = (at: string) => (now.getTime() - new Date(at).getTime() < 60_000 ? 'Just now' : dayMonthIN(new Date(at))) // clock-ok: server render
+    if (s.kind === 'deleted') line.push({ text: `Deleted by ${who(k.revokedBy) ?? 'someone who left'} · ${when(s.at)}`, phone: when(s.at) })
+    else if (s.kind === 'partner_gone') { const t = s.at ? `Your partner’s access ended · ${dayMonthIN(new Date(s.at))}` : 'Your partner’s access ended'; line.push({ text: t, phone: t }) }
+    else if (s.kind === 'ended' && s.why === 'opened' && s.at) { const t = `Store opened · ${dayMonthIN(new Date(s.at))}`; line.push({ text: t, phone: t }) }
+    else if (s.kind === 'ended' && s.at) { const t = dayMonthIN(new Date(s.at)); line.push({ text: t, phone: t }) }
     else {
-      if (maker) line.push(`Made by ${maker}`)
-      line.push(lastUsed(k.lastSeenOn, now, dayMonthIN))
+      if (maker) line.push({ text: `Made by ${maker}`, phone: null })
+      const u = lastUsed(k.lastSeenOn, now, dayMonthIN); line.push({ text: u, phone: u })
     }
     const chip = s.kind === 'live' ? 'Live' : s.kind === 'test' ? `Test · ends ${dayMonthIN(new Date(s.endsAt))}` : s.kind === 'ended' ? 'Test · ended' : 'Deleted'
     return { id: k.id, name: k.name, prefix: `${k.prefix}…`, chip, live: keyAnswers(s), isPublic: k.kind === 'public', line }
@@ -58,6 +60,7 @@ export default async function WebsitePageRoute() {
       <div className="mt-4">
       <WebsiteView
         canManage={canManage}
+        canEditAddress={!auth.membership.supportSessionId && holds(role, 'shop.manage')}
         saved={page.siteOrigin && site ? { domainId: site.id, www: page.siteOrigin === `https://www.${site.apex}` } : null}
         options={page.domains.flatMap((d) => [{ domainId: d.id, www: false, label: `https://${d.apex}` }, ...(d.withWww ? [{ domainId: d.id, www: true, label: `https://www.${d.apex}` }] : [])])}
         checkout={main ? { host: main.host, razorpayOk: main.razorpayOk, custom: true } : { host: shopHost(page.slug), razorpayOk: false, custom: false }}

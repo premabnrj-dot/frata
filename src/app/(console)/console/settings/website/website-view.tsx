@@ -7,7 +7,6 @@ import { Section } from '@/components/layout/section'
 import { Badge, Tag } from '@/components/ui/badge'
 import { Banner } from '@/components/ui/banner'
 import { Button, button } from '@/components/ui/button'
-import { CopyField } from '@/components/ui/copy-field'
 import { Dialog } from '@/components/ui/dialog'
 import { FIELD } from '@/components/ui/field'
 import { FieldError, fieldProps } from '@/components/ui/field-error'
@@ -22,14 +21,14 @@ import { createKeyAction, deleteKeyAction, setWebsiteAction } from './actions'
 // action's reply and lives in this component's state until the dialog closes: never a URL, a toast or a later render.
 // =============================================================================
 
-export type KeyView = { id: string; name: string; prefix: string; chip: string; live: boolean; isPublic: boolean; line: string[] }
+export type KeyView = { id: string; name: string; prefix: string; chip: string; live: boolean; isPublic: boolean; line: { text: string; phone: string | null }[] }
 type Choice = { domainId: string; www: boolean }
 type Option = Choice & { label: string }
 
 // The chosen card keeps its frame when read only (design-system review 5); arrow keys move between the two (radio pattern).
 const radio = (on: boolean, off?: boolean) =>
-  `flex items-start gap-3 rounded-lg border p-3 text-left transition-[border-color,box-shadow] duration-fast ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${on ? 'border-foreground ring-1 ring-foreground' : 'border-border'} ${off ? 'cursor-default bg-sunk text-muted-foreground' : on ? '' : 'hover:border-input'}`
-const dot = (on: boolean) => `mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border-2 ${on ? 'border-foreground' : 'border-input'}`
+  `flex items-start gap-3 rounded-lg border p-3 text-left transition-[border-color,box-shadow] duration-fast ease-standard focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${on ? 'border-primary ring-1 ring-primary bg-select' : 'border-border'} ${off ? 'cursor-default text-muted-foreground' : on ? '' : 'hover:border-input'} ${off && !on ? 'bg-sunk' : ''}`
+const dot = (on: boolean) => `mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border-2 ${on ? 'border-primary' : 'border-input'}`
 const arrows = (pick: () => void) => (e: React.KeyboardEvent<HTMLButtonElement>) => {
   if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return
   e.preventDefault()
@@ -40,14 +39,14 @@ const arrows = (pick: () => void) => (e: React.KeyboardEvent<HTMLButtonElement>)
 function RadioCard({ on, disabled, onPick, title, note }: { on: boolean; disabled?: boolean; onPick: () => void; title: string; note: string }) {
   return (
     <button type="button" role="radio" aria-checked={on} aria-disabled={disabled || undefined} tabIndex={on ? 0 : -1} onKeyDown={arrows(onPick)} onClick={disabled ? undefined : onPick} className={radio(on, disabled)}>
-      <span aria-hidden="true" className={dot(on)}>{on ? <span className="size-2 rounded-full bg-foreground" /> : null}</span>
+      <span aria-hidden="true" className={dot(on)}>{on ? <span className="size-2 rounded-full bg-primary" /> : null}</span>
       <span><span className="block text-sm font-medium">{title}</span><span className="block text-xs text-muted-foreground">{note}</span></span>
     </button>
   )
 }
 
 export function WebsiteView(p: {
-  canManage: boolean; saved: Choice | null; options: Option[]; checkout: { host: string; razorpayOk: boolean; custom: boolean }
+  canManage: boolean; canEditAddress: boolean; saved: Choice | null; options: Option[]; checkout: { host: string; razorpayOk: boolean; custom: boolean }
   keys: KeyView[]; liveCount: number; testAllowed: boolean; openapi: string | null; maxKeys: number
 }) {
   const router = useRouter()
@@ -77,6 +76,10 @@ export function WebsiteView(p: {
       {dirty && p.canManage ? <SaveBar onSave={save} onDiscard={discard} pending={saving} count={1} /> : null}
 
       <Section title="Website">
+        {!p.canManage ? (
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1"><span className="font-medium">{p.saved ? 'Your own website' : 'Runs on Frrata'}</span>
+            {p.saved ? <span className="font-mono text-small [overflow-wrap:anywhere]">{p.options.find((o) => o.domainId === p.saved!.domainId && o.www === p.saved!.www)?.label}</span> : null}</p>
+        ) : <>
         <div role="radiogroup" aria-label="Where your website runs" className="grid gap-2 sm:grid-cols-2">
           <RadioCard on={!elsewhere} disabled={!p.canManage} onPick={() => setElsewhere(false)} title="Runs on Frrata" note="Designed in Look" />
           <RadioCard on={elsewhere} disabled={!p.canManage} onPick={() => setElsewhere(true)} title="Your own website" note="Built by your developer or partner" />
@@ -95,30 +98,30 @@ export function WebsiteView(p: {
               )}
             </label>
             {p.options.length ? (
-              <Banner tone="warn" title="Show your legal name, address, customer care and grievance officer."><Badge tone="warn">From 1 Jan 2027</Badge></Banner>
+              <Banner tone="warn" title={<span className="font-medium">Show your legal name, address, customer care and grievance officer.</span>} action={<Badge tone="warn">From 1 Jan 2027</Badge>} />
             ) : (
               <div><Link href="/console/settings/web-address" className={button({ variant: 'secondary', size: 'sm' })}>Connect domain</Link></div>
             )}
           </>
         ) : null}
+        </>}
       </Section>
 
       {p.saved ? (
         <>
           <Section title="Checkout" action={p.checkout.custom && p.checkout.razorpayOk ? <Badge tone="ok">Approved by Razorpay</Badge> : undefined}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="flex min-w-0 flex-wrap items-center gap-2"><span className="font-mono text-small [overflow-wrap:anywhere]">{p.checkout.host}</span><Tag>Main</Tag></span>
-              <span className="flex items-center gap-1">
-                <CopyButton value={p.checkout.host} label="checkout address" />
-                {p.canManage ? <Link href="/console/settings/web-address" className={button({ variant: 'secondary', size: 'sm' })}>Edit store address</Link> : null}
-              </span>
+            <div className="flex items-center gap-2">
+              <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2"><span className="font-mono text-small [overflow-wrap:anywhere]">{p.checkout.host}</span><Tag>Main</Tag></span>
+              <CopyButton value={p.checkout.host} label="checkout address" />
+              {/* The address is Settings › Web address's, which only the owner and managers open; a computer only (mockup § Phone). */}
+              {p.canEditAddress ? <Link href="/console/settings/web-address" className={`${button({ variant: 'secondary', size: 'sm' })} hidden md:inline-flex`}>Edit store address</Link> : null}
             </div>
           </Section>
           <Keys {...p} />
           {p.openapi ? (
             <Section title="For developers">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="min-w-0"><span className="font-medium">OpenAPI</span> <span className="font-mono text-small text-muted-foreground [overflow-wrap:anywhere]">{p.openapi.replace(/^https:\/\//, '')}</span></span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="min-w-0"><span className="font-medium">OpenAPI</span> <span className="hidden font-mono text-small text-muted-foreground [overflow-wrap:anywhere] md:inline">{p.openapi.replace(/^https:\/\//, '')}</span></span>
                 <CopyButton value={p.openapi} label="OpenAPI address" />
               </div>
             </Section>
@@ -186,10 +189,12 @@ function Keys(p: { canManage: boolean; keys: KeyView[]; liveCount: number; testA
   }
 
   return (
+    <>
     <Section title="Keys" action={p.canManage ? (
       <span className="flex items-center gap-2">
-        {full ? <Badge tone="neutral" className="tabular-nums">{p.liveCount} of {p.maxKeys}</Badge> : null}
-        <Button size="sm" onClick={start} reason={full ? 'Delete a key to make another.' : undefined}>Create key</Button>
+        {/* The drawn pill: a count, no dot (mockup § States, 20 live keys). */}
+        {full ? <span className="rounded-full bg-neutral px-2 text-xs text-neutral-text tabular-nums">{p.liveCount} of {p.maxKeys}</span> : null}
+        <Button size="sm" variant={full ? 'secondary' : undefined} onClick={start} reason={full ? 'Delete a key to make another.' : undefined}>Create key</Button>
       </span>) : undefined}>
       {p.keys.length === 0 ? <p className="text-muted-foreground">No keys yet</p> : (
         <ul className="divide-y divide-line-soft" data-list>
@@ -198,21 +203,28 @@ function Keys(p: { canManage: boolean; keys: KeyView[]; liveCount: number; testA
               <span className="flex min-w-0 flex-wrap items-center gap-2 font-medium">{k.name}<Badge tone={k.live && k.isPublic ? 'info' : 'neutral'}>{k.chip}</Badge></span>
               <span>{k.live && p.canManage ? <Button size="sm" variant="danger" onClick={() => setDel(k)}>Delete</Button> : null}</span>
               <span className="col-span-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-muted-foreground">
-                <span className="font-mono text-small">{k.prefix}</span>{k.line.map((l) => <span key={l}>{l}</span>)}
+                <span className="font-mono text-small">{k.prefix}</span>
+                {k.line.map((l) => <span key={l.text}>{l.phone === l.text ? l.text : <><span className="hidden md:inline">{l.text}</span>{l.phone ? <span className="md:hidden">{l.phone}</span> : null}</>}</span>)}
               </span>
             </li>
           ))}
         </ul>
       )}
 
+    </Section>
+
       <Dialog open={open} onClose={close} title="Create key"
         actions={made
           ? <Button variant="secondary" data-autofocus onClick={close}>Done</Button>
           : <><Button variant="secondary" data-autofocus onClick={close}>Not now</Button><Button busy={busy} onClick={create}>Create key</Button></>}>
         {made ? (
-          <div className="space-y-2.5 rounded-lg border-2 border-dashed border-input bg-sunk p-3.5">
+          <div className="min-w-0 space-y-2.5 rounded-lg border-2 border-dashed border-input bg-sunk p-3.5">
             <p className="font-medium">Copy this key now. We show it once.</p>
-            <CopyField value={made} label="key" />
+            {/* The whole key, wrapped, and Copy key under it on a phone (mockup § Phone). */}
+            <div className="flex flex-col gap-2 md:flex-row md:items-center">
+              <code id="new-key" className="min-w-0 flex-1 font-mono text-small break-all select-all">{made}</code>
+              <CopyKey value={made} />
+            </div>
           </div>
         ) : (
           <div className="space-y-3.5">
@@ -234,6 +246,21 @@ function Keys(p: { canManage: boolean; keys: KeyView[]; liveCount: number; testA
         actions={<><Button variant="secondary" data-autofocus onClick={() => setDel(null)}>Keep key</Button><Button variant="destructive" busy={busy} onClick={remove}>Delete key</Button></>}>
         <p>Websites using it stop working within a minute. This can’t be undone.</p>
       </Dialog>
-    </Section>
+    </>
+  )
+}
+
+/** The new key's copy: the whole button on a phone, the text selected when the clipboard refuses, said once politely. */
+function CopyKey({ value }: { value: string }) {
+  const [done, setDone] = useState(false)
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(value); setDone(true); window.setTimeout(() => setDone(false), 2000) }
+    catch { const el = document.getElementById('new-key'); if (el) { const r = document.createRange(); r.selectNodeContents(el); const sel = window.getSelection(); sel?.removeAllRanges(); sel?.addRange(r) } }
+  }
+  return (
+    <>
+      <Button size="sm" variant="secondary" className="w-full md:w-auto" onClick={copy}>{done ? '✓ Copied' : 'Copy key'}</Button>
+      <span role="status" className="sr-only">{done ? 'Copied' : ''}</span>
+    </>
   )
 }

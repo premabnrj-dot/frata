@@ -274,7 +274,12 @@ rules cover the API trees.
 | "Deleted by Meera · 2 Nov" | "Deleted by Owner · 2 Nov" (the role); "Deleted by someone who left" when the person is gone | Who saved or deleted is said as a role, never a person's name or email (security review M2 on content, the same rule as Console › Content) | no |
 | "Arc Studio's access ended · 20 Nov"; "Made by Arc Studio" on a deleted partner key | "Your partner's access ended · 20 Nov"; "Made by …" only while the partner is on the store | Once the link ends the store can no longer read the partner's name (`app_shop_people` lists current people only); never a second copy of it | no |
 | Checkout: `checkout.kesarstudio.in` · Main · Approved by Razorpay | The same when the store's main address is its own domain; otherwise the platform address (`kesar-studio.frrata.shop` · Main), no badge | The mockup drew only a store with its own main domain | no |
-| The key's reveal: "Copy key"; a "Copied" toast | `CopyField` as everywhere: button "Copy" (named "Copy key" for a screen reader), "✓ Copied" in place, announced politely | The design language's one copy primitive (design-system review 2) | no |
+| A "Copied" toast after Copy (the key, the checkout address, OpenAPI) | "✓ Copied" in the button for 2 s, said once politely to a screen reader; no toast | The console's copy rule (`CopyField`): a toast for a copy would stack with the page's own toasts (design-system review 2) | no |
+| The unsaved bar as words ("1 unsaved change · Discard · Save") | The console's `SaveBar` primitive: the same words, Discard outlined and Save filled, above the first card | The one save bar every settings page uses | no |
+| A name error with a red "!" mark; a toast with a green tick | `FieldError` and the toast as the Neel primitives draw them (no mark, no tick) | Shared primitives, unchanged by this screen | no |
+| Small buttons 30 px tall on a phone | 44 px on a phone, 30 px from 768 px | The console's touch-target rule (`button.tsx` size `sm`) | no |
+| Partner banner "Hand over store" inside the page | The shell's own building bar, "Hand over" (`building-banner.tsx`, lane C's) | The shell draws it for every page; this lane doesn't change the shell | no |
+| Support banner "Support · Kesar Studio · 22 min · End visit" | The shell's support strip ("Frrata support in Kesar Studio's console … End now", `support-banner.tsx`) | The same: the shell's, on every page | no |
 | 20 live keys: "Delete a key to make another." as a line below | The same words beside **Create key**, tied to it (`Button reason`), the button still focusable | A disabled button drops focus and its reason (design-system review 4) | no |
 
 ## Practices recorded in skills (same commit as each)
