@@ -3,6 +3,7 @@ import { and, eq, isNull, or, sql } from 'drizzle-orm'
 import { shopSettings } from '@/lib/db/schema'
 import { storefrontKeys } from '@/lib/db/schema-storefront-api'
 import { withTenant } from '@/lib/db/tenant'
+import type { Tx } from '@/lib/db'
 import { refreshKey } from '@/lib/storefront/refresh'
 import { errName } from '@/lib/log'
 
@@ -18,6 +19,13 @@ import { errName } from '@/lib/log'
 export async function siteOriginFor(tenantId: string): Promise<string | null> {
   const [r] = await withTenant(tenantId, (tx) => tx.select({ o: shopSettings.siteOrigin }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)))
   return r?.o ?? null
+}
+
+/** The shop's website host for the source rule (classifySource's `site`), inside the caller's transaction: lower case,
+ *  no scheme; null when the shop runs on Frrata. Explicit tenant filter beside the policy (tenancy audit SA1b). */
+export async function siteHostIn(tx: Tx, tenantId: string): Promise<string | null> {
+  const [r] = await tx.select({ o: shopSettings.siteOrigin }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
+  return r?.o ? r.o.replace(/^https:\/\//, '') : null
 }
 
 /** Today in India, as the date a key was last seen on. */

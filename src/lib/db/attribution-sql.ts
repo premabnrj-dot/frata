@@ -12,7 +12,7 @@ import { GOOGLE_ADS_KEYS, GOOGLE_FREE_KEYS, META_CLICK_KEYS, type SourceInputs }
 // the alias `orders` has in the query.
 // =============================================================================
 
-type Inputs = { [K in Exclude<keyof SourceInputs, 'cl' | 'cc'>]: SQL }
+type Inputs = { [K in Exclude<keyof SourceInputs, 'cl' | 'cc'>]-?: SQL }
 
 /** The key lists are the classifier's constants (never input), so they are written into the statement. */
 const anyOf = (a: SQL, keys: readonly string[]) => sql`coalesce(jsonb_exists_any(${a}, ${sql.raw(`array[${keys.map((k) => `'${k}'`).join(', ')}]`)}), false)`
@@ -23,5 +23,7 @@ export function attributionInputsSql(o = 'o'): Inputs {
   return {
     us: sql`lower(${text('utm_source')})`, um: sql`lower(${text('utm_medium')})`, uc: text('utm_campaign'), rh: text('ref_host'),
     gads: anyOf(a, GOOGLE_ADS_KEYS), srs: anyOf(a, GOOGLE_FREE_KEYS), fb: anyOf(a, META_CLICK_KEYS),
+    // The bag link's marker (Storefront API SA1b): only ever '1' (cleanAttribution).
+    ws: sql`coalesce((${a} ->> 'via_site') = '1', false)`,
   }
 }

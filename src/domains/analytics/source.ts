@@ -12,22 +12,31 @@
 import { cleanValue, type Attribution } from './attribution'
 
 /** Bumped whenever the rule changes; the page says so with the date (spec: numbers never jump without a word). */
-export const CLASSIFIER_VERSION = 2
-/** v2 (2026-11-09): the Share button's copied link and QR code read "Shared link" and "QR code" (were "Other · …"). */
-export const CLASSIFIER_SINCE = '2026-11-09'
+export const CLASSIFIER_VERSION = 3
+/** v2 (2026-11-09): the Share button's copied link and QR code read "Shared link" and "QR code" (were "Other · …").
+ *  v3 (2026-11-16, Storefront API SA1b): an order sent by the brand's own website (its bag link, or a referrer equal
+ *  to the site's host) reads "Your website" (was "Another website · <host>" or "Direct or unknown"). */
+export const CLASSIFIER_SINCE = '2026-11-16'
+/** How long the page says the rule changed (owner, 2026-11-15: the date shows while the version is new). */
+export const CLASSIFIER_NOTICE_DAYS = 90
+/** The day the rule last changed while that is recent (the page's date line), else null. */
+export const classifierNotice = (now: Date): Date | null => {
+  const since = new Date(`${CLASSIFIER_SINCE}T00:00:00+05:30`)
+  return now.getTime() - since.getTime() < CLASSIFIER_NOTICE_DAYS * 86_400_000 && now >= since ? since : null
+}
 
 /** The click ids that decide a source, by what they mean: SQL readers test these same lists (attribution-sql.ts). */
 export const GOOGLE_ADS_KEYS = ['gclid', 'gbraid', 'wbraid', 'gad_source'] as const
 export const GOOGLE_FREE_KEYS = ['srsltid'] as const
 export const META_CLICK_KEYS = ['fbclid'] as const
 
-export const CHANNELS = ['creator', 'instagram', 'facebook', 'meta', 'whatsapp', 'google_ads', 'google', 'youtube', 'email', 'website', 'other', 'direct'] as const
+export const CHANNELS = ['creator', 'instagram', 'facebook', 'meta', 'whatsapp', 'google_ads', 'google', 'youtube', 'email', 'site', 'website', 'other', 'direct'] as const
 export type Channel = (typeof CHANNELS)[number]
 
 /** How a channel is said (the merchant's words). */
 export const CHANNEL_LABEL: Record<Channel, string> = {
   creator: 'Creator', instagram: 'Instagram', facebook: 'Facebook', meta: 'Instagram or Facebook', whatsapp: 'WhatsApp',
-  google_ads: 'Google ads', google: 'Google', youtube: 'YouTube', email: 'Email', website: 'Another website', other: 'Other',
+  google_ads: 'Google ads', google: 'Google', youtube: 'YouTube', email: 'Email', site: 'Your website', website: 'Another website', other: 'Other',
   direct: 'Direct or unknown',
 }
 
@@ -81,11 +90,18 @@ function make(channel: Channel, label: string, campaign: string | null, slug = s
   return { channel, label, slug, campaign: campaign ? campaign.slice(0, 200) : null }
 }
 
+/** A site host as the classifier compares it: lower case, no `www.`, no trailing dot. */
+export const siteHostKey = (h: string | null | undefined): string | null => (h ? h.toLowerCase().replace(/\.$/, '').replace(/^www\./, '') || null : null)
+
 /**
  * The order's source. `creator`: the creator code the order uses now (useOfRowSql), its label and code, or null. A
  * creator's slug is built from the code (ASCII, one per shop), so creators with names in any script stay apart.
+ * `site`: the shop's own website host (Settings › Website, `shop_settings.site_origin`), or null when it runs on
+ * Frrata. Stronger evidence wins over the site (a creator, the link's tags, a click id): the site is where the shopper
+ * was handed over, not where they came from. Then the bag link's marker (`via_site`) or a referrer equal to the site
+ * reads "Your website".
  */
-export function classifySource(a: Attribution, creator: { label: string; code: string } | null): Source {
+export function classifySource(a: Attribution, creator: { label: string; code: string } | null, site: string | null = null): Source {
   const campaign = a.utm_campaign ?? null
   if (creator) return make('creator', `Creator · ${creator.label}`, campaign, `creator-${creator.code.toLowerCase().replace(/[^a-z0-9]/g, '')}`)
 
@@ -113,6 +129,8 @@ export function classifySource(a: Attribution, creator: { label: string; code: s
   if (GOOGLE_ADS_KEYS.some((k) => a[k])) return make('google_ads', 'Google ads', campaign)
   if (GOOGLE_FREE_KEYS.some((k) => a[k])) return make('google', 'Google', campaign)
   if (META_CLICK_KEYS.some((k) => a[k])) return make('meta', 'Instagram or Facebook', campaign)
+  const own = siteHostKey(site)
+  if (a.via_site || (own && a.ref_host && siteHostKey(a.ref_host) === own)) return make('site', CHANNEL_LABEL.site, campaign)
   if (a.ref_host) {
     const host = a.ref_host.replace(/^www\./, '')
     const hit = HOST_CHANNEL.find(([re]) => re.test(host))
@@ -129,13 +147,15 @@ export type SourceInputs = {
   us: string | null; um: string | null; uc: string | null; rh: string | null
   gads: boolean; srs: boolean; fb: boolean
   cl: string | null; cc: string | null
+  /** The bag link's marker (visits never carry it). */
+  ws?: boolean
 }
 
-export function sourceOfInputs(r: SourceInputs): Source {
+export function sourceOfInputs(r: SourceInputs, site: string | null = null): Source {
   const v = (x: string | null) => cleanValue(x) ?? undefined
   const label = cleanValue(r.cl), code = cleanValue(r.cc)
   return classifySource({
     utm_source: v(r.us), utm_medium: v(r.um), utm_campaign: v(r.uc), ref_host: v(r.rh),
-    gclid: r.gads ? '1' : undefined, srsltid: r.srs ? '1' : undefined, fbclid: r.fb ? '1' : undefined,
-  }, label && code ? { label, code } : null)
+    gclid: r.gads ? '1' : undefined, srsltid: r.srs ? '1' : undefined, fbclid: r.fb ? '1' : undefined, via_site: r.ws ? '1' : undefined,
+  }, label && code ? { label, code } : null, site)
 }
