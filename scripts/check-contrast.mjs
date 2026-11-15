@@ -68,6 +68,9 @@ export function pairs() {
     ['foreground', 'side', TEXT], ['muted-foreground', 'side', TEXT], ['bar-btn-text', 'bar-btn', TEXT], ['bar-link', 'bar', TEXT],
     ['text-3', 'card', NONTEXT] /* icons; never a sentence */, ['off', 'card', NONTEXT], ['neutral-mark', 'card', NONTEXT],
     ['chart', 'card', NONTEXT], ['ring', 'select', NONTEXT], ['input', 'sunk', NONTEXT], ['field-hover', 'card', NONTEXT])
+  // Neel N1b: words on a heat or a tile map cell (a cohort's %, a state's code), dark on the light half, white on the dark.
+  for (const i of [0, 1, 2, 3]) p.push(['foreground', `heat-${i}`, TEXT], ['risk-text', `risk-${i}`, TEXT])
+  for (const i of [4, 5]) p.push(['heat-on', `heat-${i}`, TEXT], ['risk-on', `risk-${i}`, TEXT])
   return p
 }
 
