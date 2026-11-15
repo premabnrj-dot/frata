@@ -311,6 +311,8 @@ main { min-width: 0; position: relative; overflow-x: clip }
 
 /* ── Build workspace ── */
 .build { max-width: none; padding-block: 0; padding-left: 0; padding-right: 0; height: calc(100vh - 57px); display: grid; grid-template-rows: auto 1fr }
+.onescreen { max-width: none; padding: 0; height: calc(100vh - 57px) } .onescreen iframe { width: 100%; height: 100%; border: 0; display: block }
+@supports (height: 100dvh) { .onescreen { height: calc(100dvh - 57px) } }
 @supports (height: 100dvh) { .build { height: calc(100dvh - 57px) } }
 .bbar { display: flex; align-items: center; gap: 10px; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); background: var(--card); flex-wrap: wrap }
 .bbar h1 { font: 600 16px var(--f-display); margin: 0; display: flex; gap: 8px; align-items: center; min-width: 0 }
@@ -898,7 +900,7 @@ details.more[open] { padding-bottom: 12px }
     <a href="#team" data-nav="team"><i data-lucide="users" class="i"></i><span class="t">Team</span></a>
     <a href="#settings" data-nav="settings"><i data-lucide="settings" class="i"></i><span class="t">Settings</span></a>
     <span class="grp">Working on</span>
-    <a href="#build" data-nav="site"><span class="ava" style="background:#7A1F2B;width:20px;height:20px;font-size:10px">K</span><span class="t">Kesar Studio</span></a>
+    <a href="#site" data-nav="site"><span class="ava" style="background:#7A1F2B;width:20px;height:20px;font-size:10px">K</span><span class="t">Kesar Studio</span></a>
     <a href="#clients" data-nav="x" data-proto-client="noor"><span class="ava" style="background:#2F5D50;width:20px;height:20px;font-size:10px">N</span><span class="t">Noor Threads</span></a>
   </nav>
   <main id="main">
@@ -1182,6 +1184,10 @@ details.more[open] { padding-bottom: 12px }
           <div class="rbody" id="rbody"></div>
         </section>
       </div>
+    </section>
+    <!-- ═══ SITE · one screen (owner-approved 2026-11-15): the chat runs brand, look, pages, build, review, hand over ═══ -->
+    <section class="view onescreen" data-view="site" hidden>
+      <iframe src="studio-one-screen.html#embed" title="Kesar Studio · one screen" loading="lazy"></iframe>
     </section>
     <!-- ═══ INTAKE · what the brand sees on her phone ═══ -->
     <section class="view" data-view="intake" hidden>
@@ -2695,14 +2701,16 @@ async function sessionTurn(v) {
 mountSession()
 
 /* ── Routing between steps, with direction ── */
-const ORDER = ['home', 'clients', 'intake', 'brand', 'design', 'pages', 'build', 'billing', 'team', 'settings']
+const ORDER = ['home', 'clients', 'intake', 'brand', 'design', 'pages', 'build', 'site', 'billing', 'team', 'settings']
 const doneSteps = new Set()
 function markDone(s) { if (s === 'design') doneSteps.add('brand').add('design'); if (s === 'pages') doneSteps.add('brand').add('design').add('pages'); paintSteps() }
 function paintSteps() { const cur = (location.hash || '#home').slice(1); $$('.steps a').forEach((a) => { a.toggleAttribute('aria-current', a.dataset.step === cur); if (a.dataset.step === cur) a.setAttribute('aria-current', 'step'); a.classList.toggle('done', doneSteps.has(a.dataset.step) && a.dataset.step !== cur) }); const cur2 = ['brand', 'design', 'pages', 'build'].includes(cur) ? 'site' : cur; $$('.side a, .tabbar a').forEach((a) => a.dataset.nav === cur2 ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')) }
 let last = 'home'
 function show() {
   let v = (location.hash || '#home').slice(1); if (!ORDER.includes(v)) v = 'home'
-  if (['brand', 'design', 'pages'].includes(v)) { location.replace('#build'); setTimeout(() => { if (stIdx(v) > stIdx(S.stage || 'brand')) { for (const st of STAGES.slice(0, stIdx(v))) markDone(st); setStage(v) } else setP(v) }, 30); return }
+  // One screen (owner, 2026-11-15): the brand's site is the chat-run screen; the old stage panels are not reached.
+  if (['brand', 'design', 'pages', 'build'].includes(v)) { location.replace('#site'); return }
+  if (false) { location.replace('#build'); setTimeout(() => { if (stIdx(v) > stIdx(S.stage || 'brand')) { for (const st of STAGES.slice(0, stIdx(v))) markDone(st); setStage(v) } else setP(v) }, 30); return }
   const back = ORDER.indexOf(v) < ORDER.indexOf(last)
   $$('section[data-view]').forEach((s) => { const on = s.dataset.view === v; s.hidden = !on; if (on) { s.classList.toggle('back', back); s.style.animation = 'none'; void s.offsetWidth; s.style.animation = '' } })
   if (v !== 'home' && last === 'home' && v !== 'brand') {}
@@ -2712,7 +2720,7 @@ function show() {
   if (v === 'team') { renderTeam(); renderMatrix() }
   if (v === 'home') renderInbox()
   if (v === 'clients') renderClients(); if (v === 'billing') renderBilling(); if (v === 'settings') renderSettings(); if (v === 'build') setTimeout(capCheck, 50)
-  $('.app').classList.toggle('ws', ['brand', 'design', 'pages', 'build'].includes(v)); $('.app').classList.toggle('bare', v === 'intake')
+  $('.app').classList.toggle('ws', ['brand', 'design', 'pages', 'build', 'site'].includes(v)); $('.proto').hidden = v === 'site'; $('.app').classList.toggle('bare', v === 'intake')
   if (v === 'brand') { const b = $('#brand-src'); b.innerHTML = S.intakeIn ? `${ico('check', 'i i-sm')}From Riya’s intake: check before it goes into brand.md` : `${ico('check', 'i i-sm')}Read from the console: 212 products, policies`; icons(b) }
   last = v; paintSteps(); requestAnimationFrame(() => segPlacers.forEach((p) => p())); scrollTo(0, 0)
 }

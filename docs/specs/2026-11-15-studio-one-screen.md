@@ -1,5 +1,5 @@
 # Studio · one screen: the chat runs the whole flow
-Status: draft (mockup for the owner's sign-off; nothing built) · Date: 2026-11-15 · Mockup: https://claude.ai/artifact/LdA5saPkzt36W1zJsxF1QZ
+Status: active (owner 2026-11-15: "approved. yes to phone. draw the no-logo part too."; the Studio mockup's site view now IS this screen: "frrata mockup still use multi screens"); nothing built · Date: 2026-11-15 · Mockup: https://claude.ai/artifact/LdA5saPkzt36W1zJsxF1QZ
 `docs/mockups/2026-11-15-studio-one-screen.html` · Approved: — · Owner (2026-11-15): "we have screens for setting up
 brand identity, could all of this be as one screen, a flow completely handled by the chat. each and every part of it,
 I want a mockup first. cleaner, simpler, most userfriendly, understandable ux." · Replaces: the Build view's stage
@@ -52,7 +52,7 @@ site change beside the chat, and sends it to the brand, without learning a tool.
 No current source: Squarespace Blueprint, Durable, Shopify's 2025 AI store builder, ChatGPT canvas, NN/g's 2024–25
 prompt-control articles (all older than 12 months or undated).
 
-**Phone (a choice, owner decision):** Shopify Canvas and v0 leave editing off phones; Lovable keeps a prompt-only phone
+**Phone (owner, 2026-11-15: yes):** Shopify Canvas and v0 leave editing off phones; Lovable keeps a prompt-only phone
 app. The mockup keeps the chat on the phone with the site as a sheet, so a partner can answer Riya and make a small
 change away from a computer; the full build is meant for a computer.
 
@@ -64,5 +64,12 @@ change away from a computer; the full build is meant for a computer.
 - **Blast radius:** the Studio shell spec's Build view; the v2.5 mockup's rail tabs move into the drawer.
 
 ## Out of scope
-Clients, Billing, Team, Settings (unchanged) · the brand's own chat (later, ADR-0014) · logo design from scratch
-(signal: brands arrive without one; a "three wordmarks" card is the next part to draw).
+Clients, Billing, Team, Settings (unchanged) · the brand's own chat (later, ADR-0014).
+
+## No logo (owner, 2026-11-15: "draw the no-logo part too"; "use some good logo designing skills")
+When the console, the link and Instagram hold no logo, the chat offers three directions, each from a reason in the
+brand (Kesar: **Saffron threads**, kesar is saffron; **Woven K**, warp and weft over and under; **Zari border**, the
+sari's edge), drawn as one-colour marks plus the brand accent. Each card shows the logo on paper and on ink and the
+icon at 32 and 16 px; hovering previews it in the site's header; choosing it puts it in brand data (site, checkout,
+emails, share cards). Upload a logo, Ask Riya for hers, Write my own stay one tap away. The agent's logo skill and
+checks: § Logo skill (after the research pass).

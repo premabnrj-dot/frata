@@ -1,3 +1,6 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Studio one screen</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -101,6 +104,16 @@ button { font:inherit; color:inherit; cursor:pointer }
 .opt .k { font-size:12px; color:var(--text-2) }
 .opt .s { font-size:16px; line-height:22px }
 .looks { display:grid; grid-template-columns:repeat(3,1fr); gap:8px }
+.wms { display:grid; gap:8px }
+.wm { border:1px solid var(--line); border-radius:10px; background:var(--surface); padding:0; overflow:hidden; display:grid; grid-template-columns:1fr 1fr 56px; text-align:left; min-height:76px }
+.wm[aria-pressed="true"] { border-color:var(--action); box-shadow:0 0 0 3px var(--select) }
+.wm .on-paper, .wm .on-ink { display:grid; place-items:center; padding:10px 8px }
+.wm .on-paper { background:#F7F1EA; color:#2A1D14 } .wm .on-ink { background:#2A1D14; color:#F7F1EA }
+.wm .ic { display:grid; place-items:center; background:var(--sunk); border-left:1px solid var(--line) }
+.wm .ic { gap:4px; padding:6px 0; grid-auto-flow:row }
+.wm .ic i { width:32px; height:32px; border-radius:8px; background:#2A1D14; display:grid; place-items:center; padding:4px }
+.wm .ic em { width:16px; height:16px; display:block }
+.wm-name { font-size:12px; color:var(--text-2); margin-top:-2px }
 .look { border:1px solid var(--line); border-radius:10px; background:var(--surface); padding:0; overflow:hidden; text-align:left; display:grid }
 .look[aria-pressed="true"] { border-color:var(--action); box-shadow:0 0 0 3px var(--select) }
 .look .sw { height:44px; display:grid; grid-template-columns:2fr 1fr 1fr }
@@ -202,6 +215,15 @@ button { font:inherit; color:inherit; cursor:pointer }
 @media (max-width:1100px) { .body { grid-template-columns:380px minmax(0,1fr) } .steps .st:not(.now):not(.done) { display:none } }
 @media (max-width:860px) { .app:not(.phone) .body { grid-template-columns:1fr } .app:not(.phone) .pv { display:none } .steps { display:none } }
 @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important } }
+/* Embedded in the Studio mockup (#embed): the screen alone, filling the frame */
+body.embed { padding:0 } body.embed .doc { max-width:none } body.embed .doc-top { display:none }
+body.embed .app { height:100dvh; border:0; border-radius:0; box-shadow:none }
+body.embed .app.phone { width:100%; height:100dvh; border:0; border-radius:0 }
+body.embed .top .back, body.embed .top .client, body.embed .credits { display:none }
+.mock-ctl { display:none }
+body.embed .mock-ctl { display:flex; position:fixed; left:12px; bottom:12px; z-index:9; gap:6px; align-items:center; background:var(--surface); border:1px dashed var(--g400); border-radius:999px; padding:4px 6px 4px 12px; font-size:12px; color:var(--text-2); box-shadow:var(--e1) }
+body.embed .mock-ctl select { font:inherit; border:0; background:transparent; color:var(--text); min-height:28px }
+body.embed .app:not(.phone) .composer { padding-bottom:48px }
 </style>
 
 <div class="doc">
@@ -215,13 +237,13 @@ button { font:inherit; color:inherit; cursor:pointer }
     <div class="ctrl" role="group" aria-label="View and state"><span class="lab">View</span>
       <button data-view="desk" aria-pressed="true">Computer</button><button data-view="phone">Phone</button>
       <span class="lab" style="margin-left:12px">State</span>
-      <button data-state="normal" aria-pressed="true">Normal</button><button data-state="low">Low credits</button><button data-state="fail">Couldn't read</button>
+      <button data-state="normal" aria-pressed="true">Normal</button><button data-state="low">Low credits</button><button data-state="nologo">No logo</button><button data-state="fail">Couldn't read</button>
     </div>
   </header>
 
   <div class="app" id="app">
     <header class="top">
-      <button class="back" aria-label="Back to Clients"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m15 6-6 6 6 6"/></svg><span>Clients</span></button>
+      <button class="back" id="backBtn" aria-label="Back to Clients"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m15 6-6 6 6 6"/></svg><span>Clients</span></button>
       <span class="client">Kesar Studio</span>
       <nav class="steps" id="steps" aria-label="Progress"></nav>
       <span class="credits" id="credits"><b class="num" id="cr">142</b><span>credits</span></span>
@@ -266,6 +288,26 @@ const VOICES = [
   { id:'clear', k:'Clear', s:'Handwoven Chanderi, made to last' },
   { id:'festive', k:'Festive', s:'Diwali, woven in Chanderi' },
 ]
+// Three logo directions, each from a reason (kesar is saffron; the cloth is woven; zari edges the sari). Every mark is
+// drawn in one colour (currentColor) plus the brand accent, checked on paper and on ink and at 32 and 16 px.
+const SAFFRON = (c, acc) => `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true">${[-26,0,26].map(r=>`<path transform="rotate(${r} 12 22)" fill="${acc}" d="M12 22C11.7 16 11.3 10 10.5 5.2C11.3 4.3 12.7 4.3 13.5 5.2C12.7 10 12.3 16 12 22Z"/>`).join('')}<circle cx="12" cy="22" r="1.3" fill="${c}"/></svg>`
+const WOVEN = (c, acc, bg) => `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true" fill="none" stroke-linecap="square">
+  <path d="M7 3v6M7 11.5v3M7 17v4" stroke="${c}" stroke-width="3"/>
+  <path d="M18.5 3 7 13.2" stroke="${bg}" stroke-width="5.4"/><path d="M18.5 3 7 13.2" stroke="${acc}" stroke-width="2.6"/>
+  <path d="M10.4 11 19 21" stroke="${c}" stroke-width="3"/></svg>`
+const ZARI = (acc, n=9) => `<svg viewBox="0 0 ${n*8} 8" width="${n*8}" height="8" aria-hidden="true">${Array.from({length:n},(_,i)=>`<path d="M${i*8+4} 0.6 ${i*8+7.4} 4 ${i*8+4} 7.4 ${i*8+0.6} 4Z" fill="none" stroke="${acc}" stroke-width="1.1"/><circle cx="${i*8+4}" cy="4" r="1" fill="${acc}"/>`).join('')}</svg>`
+const WMS = [
+  { id:'saffron', name:'Saffron threads',
+    html:(c, bg, acc='#D9822B') => `<span style="display:inline-flex;align-items:center;gap:8px;color:${c}"><span style="width:22px;height:22px;display:inline-block">${SAFFRON(c, acc)}</span><span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:25px;font-weight:600;letter-spacing:.01em;line-height:1">kesar</span></span>`,
+    icon:(c, bg, acc='#D9822B') => SAFFRON(c, acc) },
+  { id:'woven', name:'Woven K',
+    html:(c, bg, acc='#C9A227') => `<span style="display:inline-flex;align-items:center;gap:8px;color:${c}"><span style="width:22px;height:22px;display:inline-block">${WOVEN(c, acc, bg)}</span><span style="font-family:'Inter',sans-serif;font-size:17px;font-weight:600;letter-spacing:.22em;line-height:1">KESAR</span></span>`,
+    icon:(c, bg, acc='#C9A227') => WOVEN(c, acc, bg) },
+  { id:'zari', name:'Zari border',
+    html:(c, bg, acc='#C9A227') => `<span style="display:inline-grid;justify-items:center;gap:3px;color:${c}"><span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:21px;font-weight:600;letter-spacing:.34em;line-height:1;margin-right:-.34em">KESAR</span>${ZARI(acc)}</span>`,
+    icon:(c, bg, acc='#C9A227') => `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><path d="M12 2.5 21.5 12 12 21.5 2.5 12Z" fill="none" stroke="${acc}" stroke-width="1.6"/><text x="12" y="16.2" text-anchor="middle" font-family="Cormorant Garamond, Georgia, serif" font-weight="600" font-size="12" fill="${c}">K</text></svg>` },
+]
+const wm = () => WMS.find(w => w.id === S.wm)
 const LOOKS = [
   { id:'zari', name:'Zari night', p:'#F7F1EA', i:'#2A1D14', a:'#C9A227', f:"'Cormorant Garamond',Georgia,serif", r:'4px' },
   { id:'haldi', name:'Haldi morning', p:'#FFF8E7', i:'#3B2A12', a:'#E0A100', f:"'Fraunces',Georgia,serif", r:'10px' },
@@ -307,7 +349,7 @@ function renderLog() {
   }
   out.push(agent(p === 1 ? `<div class="prog"><i style="transform:scaleX(.62)"></i></div>` : '',
     p === 1 ? [{t:'Read 212 products · 24 photos'},{t:'Read logo.svg'},{t:'Reading policies and about page', run:true}]
-            : [{t:'Read 212 products · 24 photos · logo · policies'}]))
+            : [{t: S.state === 'nologo' ? 'Read 212 products · 24 photos · policies · no logo found' : 'Read 212 products · 24 photos · logo · policies'}]))
   if (p === 1) return out.join('')
   // 2 · Brand
   out.push(agent(`<div class="card"><h4>Kesar, in one line</h4><div class="line-edit"><span>Handwoven Chanderi and Maheshwari, made with weavers in Madhya Pradesh.</span><button class="btn ghost sm" aria-label="Edit the line">Edit</button></div></div>
@@ -318,7 +360,14 @@ function renderLog() {
   if (p === 2) return out.join('')
   out.push(me(voice().k))
   // 3 · Look
-  out.push(agent(`<div class="txt">Three looks from the logo and photos.</div>
+  if (S.state === 'nologo') {
+    out.push(agent(`<div class="txt">No logo yet. Three wordmarks from the name.</div>
+      <div class="wms">${WMS.map(w=>`<button class="wm" data-act="wm" data-w="${w.id}" data-peek="wm" aria-pressed="${S.wm===w.id}" aria-label="${w.name}"><span class="on-paper">${w.html('#2A1D14','#F7F1EA')}</span><span class="on-ink">${w.html('#F7F1EA','#2A1D14')}</span><span class="ic"><i aria-hidden="true">${w.icon('#F7F1EA','#2A1D14')}</i><em aria-hidden="true">${w.icon('#2A1D14','#F7F1EA')}</em></span></button><div class="wm-name">${w.name}</div>`).join('')}</div>
+      <div class="row"><button class="btn sm">Upload a logo</button><button class="btn sm">Ask Riya for hers</button><span class="sp"></span><button class="btn ghost sm">Write my own</button></div>`))
+    if (!S.wm) return out.join('')
+    out.push(me(wm().name))
+  }
+  out.push(agent(`<div class="txt">Three looks from the ${S.state === 'nologo' ? 'wordmark' : 'logo'} and photos.</div>
     <div class="looks">${LOOKS.map(l=>`<button class="look" data-act="look" data-l="${l.id}" data-peek="look" aria-pressed="${S.look===l.id && p>3}"><span class="sw"><span style="background:${l.p}"></span><span style="background:${l.a}"></span><span style="background:${l.i}"></span></span><span class="nm"><span style="font-family:${l.f}">Aa</span><b>${l.name}</b></span></button>`).join('')}</div>
     <div class="row"><button class="chip-b" aria-pressed="true">Keep Kesar's gold</button><button class="chip-b">Shuffle colours</button><span class="sp"></span><button class="btn ghost sm">Write my own</button></div>`,
     [{t:'Made 3 looks from logo.svg and 24 photos'}]))
@@ -371,7 +420,7 @@ function renderSite() {
   const warm = p >= 8 ? ';background:linear-gradient(160deg,#F2C46D,#A3471C)' : ''
   site.innerHTML = `
     <div class="s-bar">Free shipping above ₹1,499 · Pay on delivery</div>
-    <div class="s-hd"><span class="s-logo">KESAR</span><span>Bag</span></div>
+    <div class="s-hd"><span class="s-logo">${S.state === 'nologo' && (S.peekWm || S.wm) && !skel ? WMS.find(w=>w.id===(S.peekWm||S.wm)).html('var(--si)','var(--sp)') : (S.state === 'nologo' && !skel ? '<span style="opacity:.45;letter-spacing:.12em">KESAR STUDIO</span>' : 'KESAR')}</span><span>Bag</span></div>
     <div class="s-hero" style="position:relative${warm}"><h2>${esc(head)}</h2>${p===3?'<button class="hit" aria-label="Edit the hero colour" data-act="pop"></button>':''}</div>
     ${p >= 4 ? `<div class="s-band"><span>Diwali dispatch till 28 Oct</span><span>→</span></div>` : ''}
     <div class="s-sec"><h3>New in</h3><div class="s-grid">
@@ -431,6 +480,7 @@ function renderBB() {
     <div><div class="k">Who buys</div>${S.audience.join(' · ')}</div>
     <div><div class="k">Words we use</div>handwoven · weavers · Chanderi · made to last</div>
     <div><div class="k">Never</div>cheap · hurry · trendy</div>
+    <div><div class="k">Logo</div>${S.state === 'nologo' ? (S.wm ? `<div style="background:#F7F1EA;border-radius:8px;padding:12px;display:inline-block">${wm().html('#2A1D14','#F7F1EA')}</div>` : 'Not chosen') : 'logo.svg · from the console'}</div>
     <div><div class="k">Look · ${l.name}</div><div class="pal"><span style="background:${l.p}"></span><span style="background:${S.accent||l.a}"></span><span style="background:${l.i}"></span></div></div>
     <div><div class="k">Type</div><span style="font-family:${l.f};font-size:24px">Woven slowly</span></div>`
 }
@@ -440,15 +490,16 @@ function render() { $('#log').innerHTML = renderLog(); renderSite(); renderPop()
 document.addEventListener('click', (e) => {
   const t = e.target.closest('[data-act],[data-go],[data-view],[data-state],[data-dev]')
   if (!t) return
-  if (t.dataset.go) { S.part = +t.dataset.go; S.pop = false; S.handed = false; if (S.part < 3) { S.accent = null; S.edits = [] } return render() }
+  if (t.dataset.go) { S.part = +t.dataset.go; if (S.state === 'nologo') S.wm = S.part > 3 ? (S.wm || 'spaced') : null; S.pop = false; S.handed = false; if (S.part < 3) { S.accent = null; S.edits = [] } return render() }
   if (t.dataset.view) { S.view = t.dataset.view; $('#app').classList.toggle('phone', S.view === 'phone'); document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed', String(b===t))); $('#pv').classList.remove('open'); return }
-  if (t.dataset.state) { S.state = t.dataset.state; document.querySelectorAll('[data-state]').forEach(b=>b.setAttribute('aria-pressed', String(b===t))); if (S.state==='fail') S.part = 1; if (S.state==='low') S.part = 4; return render() }
+  if (t.dataset.state) { S.state = t.dataset.state; if (S.state === 'nologo') { S.part = 3; S.wm = null } document.querySelectorAll('[data-state]').forEach(b=>b.setAttribute('aria-pressed', String(b===t))); if (S.state==='fail') S.part = 1; if (S.state==='low') S.part = 4; return render() }
   if (t.dataset.dev) { $('#device').classList.toggle('desk', t.dataset.dev === 'desk'); document.querySelectorAll('[data-dev]').forEach(b=>b.setAttribute('aria-pressed', String(b===t))); return }
   const a = t.dataset.act
   if (a === 'start') { S.part = 1; render(); setTimeout(() => { if (S.part === 1 && S.state !== 'fail') { S.part = 2; render() } }, 1600) }
   if (a === 'read') { S.state = 'normal'; S.part = 2; render() }
   if (a === 'voice') { S.voice = t.dataset.v; S.part = 3; S.credits -= 1; render() }
   if (a === 'aud') { const x = t.dataset.a; S.audience = S.audience.includes(x) ? S.audience.filter(y=>y!==x) : [...S.audience, x]; render() }
+  if (a === 'wm') { S.wm = t.dataset.w; S.peekWm = null; S.credits -= 1; render() }
   if (a === 'look') { S.look = t.dataset.l; S.accent = null; S.pop = false; S.part = 4; S.credits -= 3; render() }
   if (a === 'pop') { S.pop = !S.pop; render() }
   if (a === 'accent') { S.accent = t.dataset.c; S.edits.push(`You changed Accent to ${t.dataset.c}`); S.pop = false; render() }
@@ -463,12 +514,24 @@ $('#vOpen').addEventListener('click', () => { $('#bb').classList.remove('open');
 $('#vClose').addEventListener('click', () => $('#vd').classList.remove('open'))
 // Preview a choice before committing: hovering or focusing a voice or a look shows it on the site.
 const peekOn = (t) => { const o = t.closest('[data-peek]'); if (!o) return; const keep = { v:S.voice, l:S.look, part:S.part }
-  if (o.dataset.peek === 'voice') S.voice = o.dataset.v; else { S.look = o.dataset.l; if (S.part < 3) S.part = 3 }
-  renderSite(); S.voice = keep.v; S.look = keep.l; S.part = keep.part }
+  if (o.dataset.peek === 'voice') S.voice = o.dataset.v; else if (o.dataset.peek === 'wm') S.peekWm = o.dataset.w; else { S.look = o.dataset.l; if (S.part < 3) S.part = 3 }
+  renderSite(); S.voice = keep.v; S.look = keep.l; S.part = keep.part; S.peekWm = null }
 document.addEventListener('mouseover', (e) => peekOn(e.target))
 document.addEventListener('focusin', (e) => peekOn(e.target))
 document.addEventListener('mouseout', (e) => { if (e.target.closest('[data-peek]')) renderSite() })
 $('#bbClose').addEventListener('click', () => $('#bb').classList.remove('open'))
 $('#peek').addEventListener('click', () => { const o = $('#pv').classList.toggle('open'); $('#peek').lastChild.textContent = o ? 'Chat' : 'Site' })
+// Embedded in the Studio mockup: no reference strip; a narrow frame is the phone view; Back goes to Clients there.
+if (location.hash === '#embed') {
+  document.body.classList.add('embed')
+  const fit = () => { const ph = innerWidth < 760; $('#app').classList.toggle('phone', ph); S.view = ph ? 'phone' : 'desk' }
+  fit(); addEventListener('resize', fit)
+  $('#backBtn').addEventListener('click', () => { try { parent.location.hash = '#clients' } catch {} })
+  // One small mockup control (outside the product): jump to a part or a state.
+  const ctl = document.createElement('label'); ctl.className = 'mock-ctl'
+  ctl.innerHTML = `Mockup <select aria-label="Mockup part or state">${['0 Start','1 Reading','2 Brand','3 Look','4 Pages','5 Building','6 Ready',"7 Riya's review",'8 Hand over'].map((t,i)=>`<option value="go:${i}">${t}</option>`).join('')}<option value="state:nologo">No logo</option><option value="state:low">Low credits</option><option value="state:fail">Couldn't read</option></select>`
+  document.body.appendChild(ctl)
+  ctl.querySelector('select').addEventListener('change', (e) => { const [k, v] = e.target.value.split(':'); const b = document.querySelector(k === 'go' ? `[data-go="${v}"]` : `[data-state="${v}"]`); if (k === 'go') { const n = document.querySelector('[data-state="normal"]'); if (S.state !== 'normal' && S.state !== 'nologo') n.click() } b.click() })
+}
 render()
 </script>
