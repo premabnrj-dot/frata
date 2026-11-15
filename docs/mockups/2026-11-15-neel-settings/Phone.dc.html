@@ -14,60 +14,57 @@ body{margin:0}
 a{color:#171615;text-decoration:none}
 </style>
 </helmet>
-<div style="width: 390px; height: 1300px; box-sizing: border-box; padding: 16px; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 15px; line-height: 20px; display: flex; flex-direction: column; gap: 18px;">
-  <header style="display: flex; flex-direction: column; gap: 8px;">
-    <h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">Settings</h1>
-    <span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; padding: 2px 8px; background: #E3F4E8; color: #1F5F33; font-size: 13px; font-weight: 500;"><i style="width: 6px; height: 6px; border-radius: 3px; background: #2E8B4E;"></i>Ready for live payments</span>
-  </header>
-
-  <section aria-labelledby="p1" style="display: flex; flex-direction: column; gap: 8px;">
-    <h2 id="p1" style="margin: 0; font-size: 13px; font-weight: 500; color: #67625C;">Store</h2>
-    <nav style="border: 1px solid #E3E1DD; border-radius: 12px; overflow: hidden;">
-      <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; min-height: 44px; box-sizing: border-box;"><b style="font-weight: 500;">Store details</b><span style="font-size: 13px; color: #67625C;">Kesar Studio · logo · “Handloom for every day”</span></a>
-      <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-top: 1px solid #EEEDEA;"><b style="font-weight: 500;">Web address</b><span style="font-size: 13px; color: #67625C; font-family: ui-monospace, monospace;">kesarstudio.in</span></a>
-      <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-top: 1px solid #EEEDEA;"><b style="font-weight: 500;">Contact and grievance officer</b><span style="font-size: 13px; color: #67625C;">care@kesarstudio.in · Riya Shah</span></a>
-      <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-top: 1px solid #EEEDEA;"><b style="font-weight: 500;">Policies</b><span style="font-size: 13px; color: #67625C;">7-day returns · 5 pages</span></a>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 16px; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 15px; line-height: 20px; display: flex; flex-direction: column; gap: 16px;">
+  <sc-if value="{{list}}" hint-placeholder-val="{{true}}">
+    <header style="display: flex; flex-direction: column; gap: 8px;">
+      <h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">Settings</h1>
+      <span style="align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; padding: 2px 8px; background: #E3F4E8; color: #1F5F33; font-size: 13px; font-weight: 500;"><i style="width: 6px; height: 6px; border-radius: 3px; background: #2E8B4E;"></i>Ready for live payments</span>
+    </header>
+    <nav aria-label="Settings groups" style="border: 1px solid #E3E1DD; border-radius: 12px; overflow: hidden;">
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="5">
+        <button type="button" onClick="{{g.pick}}" style="{{g.style}}">
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><b style="font-weight: 500;">{{g.name}}</b><span style="font-size: 13px; color: #67625C;">{{g.sub}}</span></span>
+          <span style="display: flex; align-items: center; gap: 8px;"><sc-if value="{{g.fix}}" hint-placeholder-val="{{false}}"><span style="border-radius: 6px; padding: 1px 7px; background: #FDF1DC; color: #7A4A00; font-size: 12px; font-weight: 500;">{{g.fix}}</span></sc-if><span aria-hidden="true" style="color: #67625C;">›</span></span>
+        </button>
+      </sc-for>
     </nav>
-  </section>
-
-  <section aria-labelledby="p2" style="display: flex; flex-direction: column; gap: 8px;">
-    <h2 id="p2" style="margin: 0; font-size: 13px; font-weight: 500; color: #67625C;">Checkout</h2>
-    <nav style="border: 1px solid #E3E1DD; border-radius: 12px; overflow: hidden;">
-      <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 16px;"><b style="font-weight: 500;">Online payments</b><span style="font-size: 13px; color: #67625C;">Live · UPI, cards, netbanking</span></a>
-      <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-top: 1px solid #EEEDEA;"><b style="font-weight: 500;">Pay on delivery</b><span style="font-size: 13px; color: #67625C;">On · up to ₹3,000 · fee ₹49</span></a>
-      <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-top: 1px solid #EEEDEA;"><b style="font-weight: 500;">Shipping and delivery</b><span style="font-size: 13px; color: #67625C;">₹79 · free above ₹1,499 · 2 days</span></a>
+  </sc-if>
+  <sc-if value="{{open}}" hint-placeholder-val="{{false}}">
+    <button type="button" onClick="{{back}}" style="align-self: flex-start; border: 0; background: transparent; padding: 10px 0; font: inherit; font-size: 14px; color: #67625C; cursor: pointer;">‹ Settings</button>
+    <h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">{{group.name}}</h1>
+    <nav aria-label="{{group.name}}" style="border: 1px solid #E3E1DD; border-radius: 12px; overflow: hidden;">
+      <sc-for list="{{group.rows}}" as="r" hint-placeholder-count="3">
+        <a href="#" style="{{r.style}}"><span style="display: flex; flex-direction: column; gap: 4px; min-width: 0;"><b style="font-weight: 500;">{{r.title}}</b><span style="{{r.valueStyle}}">{{r.value}}</span></span><span aria-hidden="true" style="color: #67625C;">›</span></a>
+      </sc-for>
     </nav>
-  </section>
-
-  <section aria-labelledby="p3" style="display: flex; flex-direction: column; gap: 8px;">
-    <h2 id="p3" style="margin: 0; font-size: 13px; font-weight: 500; color: #67625C;">Business and tax</h2>
-    <nav style="border: 1px solid #E3E1DD; border-radius: 12px; overflow: hidden;">
-      <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 16px;"><b style="font-weight: 500;">Business and GST</b><span style="font-size: 13px; color: #67625C;">Kesar Crafts LLP · 27ABCDE1234F1Z5</span></a>
-      <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-top: 1px solid #EEEDEA;"><b style="font-weight: 500;">Invoices and slips</b><span style="font-size: 13px; color: #67625C;">KS/ series · A4 slips · signed Riya Shah</span></a>
-      <a href="#" style="display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border-top: 1px solid #EEEDEA;"><b style="font-weight: 500;">Your shipping costs</b><span style="align-self: flex-start; border-radius: 6px; padding: 2px 8px; background: #FDF1DC; color: #7A4A00; font-size: 13px; font-weight: 500;">Not confirmed</span></a>
-    </nav>
-  </section>
-
-  <section aria-labelledby="p4" style="display: flex; flex-direction: column; gap: 8px;">
-    <h2 id="p4" style="margin: 0; font-size: 13px; font-weight: 500; color: #67625C;">Messages</h2>
-    <nav style="border: 1px solid #E3E1DD; border-radius: 12px; overflow: hidden;">
-      <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 16px;"><b style="font-weight: 500;">Emails to shoppers</b><span style="font-size: 13px; color: #67625C;">4 on</span></a>
-      <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-top: 1px solid #EEEDEA;"><b style="font-weight: 500;">Your notifications</b><span style="font-size: 13px; color: #67625C;">Email</span></a>
-    </nav>
-  </section>
-
-  <section aria-labelledby="p5" style="display: flex; flex-direction: column; gap: 8px;">
-    <h2 id="p5" style="margin: 0; font-size: 13px; font-weight: 500; color: #67625C;">Team and plan</h2>
-    <nav style="border: 1px solid #E3E1DD; border-radius: 12px; overflow: hidden;">
-      <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 16px;"><b style="font-weight: 500;">People</b><span style="font-size: 13px; color: #67625C;">3 people</span></a>
-      <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-top: 1px solid #EEEDEA;"><b style="font-weight: 500;">Plan and billing</b><span style="font-size: 13px; color: #67625C;">Growth · ₹4,999 a month</span></a>
-    </nav>
-  </section>
+  </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1300}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const GROUPS = [
+  { key: 'store', name: 'Store', sub: 'Details, web address, contact, policies', rows: [
+    ['Store details', 'Kesar Studio · logo'], ['Web address', 'kesarstudio.in'], ['Contact and grievance officer', 'care@kesarstudio.in · Riya Shah'], ['Policies', '7-day returns · 5 pages']] },
+  { key: 'checkout', name: 'Checkout', sub: 'Online payments, Pay on delivery, shipping', rows: [
+    ['Online payments', 'Live · UPI, cards, netbanking'], ['Pay on delivery', 'On · up to ₹3,000 · fee ₹49'], ['Shipping and delivery', '₹79 · free above ₹1,499 · 2 days']] },
+  { key: 'tax', name: 'Business and tax', sub: 'GST, invoices and slips, your costs', fix: '1', rows: [
+    ['Business and GST', 'Kesar Crafts LLP · 27ABCDE1234F1Z5'], ['Invoices and slips', 'KS/ series · A4 slips'], ['Your shipping costs', 'Not confirmed', true]] },
+  { key: 'messages', name: 'Messages', sub: 'Emails to shoppers, your notifications', rows: [['Emails to shoppers', '4 on'], ['Your notifications', 'Email']] },
+  { key: 'team', name: 'Team and plan', sub: 'People, plan and billing', rows: [['People', '3 people'], ['Plan and billing', 'Growth · ₹4,999 a month']] },
+];
+const ROW = 'display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 60px; box-sizing: border-box; padding: 12px 16px; text-align: left; background: transparent; border: 0; font: inherit; color: #171615; cursor: pointer;';
 class Component extends DCLogic {
-  renderVals() { return {}; }
+  state = { at: null };
+  renderVals() {
+    const at = this.state.at;
+    const g = GROUPS.find((x) => x.key === at);
+    return {
+      list: !g, open: !!g,
+      back: () => this.setState({ at: null }),
+      groups: GROUPS.map((x, i) => ({ name: x.name, sub: x.sub, fix: x.fix || '', style: ROW + (i ? ' border-top: 1px solid #EEEDEA;' : ''), pick: () => this.setState({ at: x.key }) })),
+      group: g ? { name: g.name, rows: g.rows.map((r, i) => ({ title: r[0], value: r[1], style: ROW + (i ? ' border-top: 1px solid #EEEDEA;' : ''),
+        valueStyle: r[2] ? 'align-self: flex-start; border-radius: 6px; padding: 2px 8px; background: #FDF1DC; color: #7A4A00; font-size: 13px; font-weight: 500;' : 'font-size: 13px; color: #67625C;' })) } : { name: '', rows: [] },
+    };
+  }
 }
 </script>
 </body>
