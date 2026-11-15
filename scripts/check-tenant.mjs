@@ -205,7 +205,7 @@ for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|referen
   failures.push(`grant on ${m[1]}  — staff passkey tables have no table grants; the app_staff_* definers are the only door (ADR-0007)`)
 }
 // Partner teams (T1a, drizzle/0124): definers are the only door for the app; frata_admin may only read.
-// Partner passkeys (T1b, drizzle/0128): no table grant to any role; the app_partner_pk_* definers are the only door. A
+// Partner passkeys (T1b, drizzle/0129): no table grant to any role; the app_partner_pk_* definers are the only door. A
 // proof-only helper (schema `proof`, scripts/verify/tenancy.sql) never appears in a migration.
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?"?(partner_(?:passkeys|passkey_requests|webauthn_challenges|stepups|passkey_tries))\b/g)) {
   failures.push(`grant on ${m[1]}  — partner passkey tables have no table grants; the app_partner_pk_* definers are the only door (T1b)`)

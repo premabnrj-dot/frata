@@ -11,7 +11,7 @@ import { CONFIRM_AGAIN, CONFIRM_FIRST } from '@/domains/partners/passkeys'
 
 // Hand over from Clients (T1b; partner sign-in mockup screen 17; approved mockup screen 7 before it). Who may: the
 // partner's owner (PARTNER_CAN.handOver), and the definer re-checks the link, the owner and a passkey check in the last
-// 5 minutes (app_handover_invite, drizzle/0128); the store id comes from the form but only the partner's own store is
+// 5 minutes (app_handover_invite, drizzle/0129); the store id comes from the form but only the partner's own store is
 // accepted. The browser confirms the passkey first; the owner-to-be gets the usual sign-in email and accepts at /handover.
 
 const SENTENCES: Record<string, string> = {

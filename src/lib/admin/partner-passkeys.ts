@@ -6,7 +6,7 @@ import { enrolCodeHash, dbCodeOf } from '@/lib/auth/webauthn'
 import { errName } from '@/lib/log'
 
 // =============================================================================
-// FILE: src/lib/admin/partner-passkeys.ts — Admin's side of partner passkeys (T1b; drizzle/0128): a partner OWNER's
+// FILE: src/lib/admin/partner-passkeys.ts — Admin's side of partner passkeys (T1b; drizzle/0129): a partner OWNER's
 // first or lost passkey is approved by a Frrata admin who called the phone on the partner's record and heard the code;
 // a lost device ends with deleting every passkey of the owner. Admins only, with a staff passkey check in the last 5
 // minutes (the definers re-check both). Nothing here returns a key or a code hash.

@@ -6,20 +6,24 @@ import { expect, it } from 'vitest'
 it.skipIf(!process.env.SPEED)('analytics at 10×', { timeout: 60_000 }, async () => {
   process.env.DATABASE_URL = `postgresql://frata_app:x@${process.env.INT_DB_HOST}/frata_speed`
   const q = await import('@/lib/queries/analytics')
+  const { parsePeriod, windowFor } = await import('@/domains/analytics/period')
+  // The presets, and the longest window allowed (Custom, 92 days: speed review N1b).
+  const win = (period: string) => windowFor(parsePeriod({ period }, new Date()), new Date())
+  const longest = windowFor({ kind: 'custom', from: new Date(Date.now() - 91 * 86_400_000).toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) }, new Date())
   const T = 'aaaaaaaa-0000-0000-0000-000000000001'
-  for (const p of [7, 30, 90] as const) {
+  for (const p of ['today', '7', '30', 'month', 'longest'] as const) {
     for (let i = 0; i < 3; i++) {
       const t0 = performance.now()
-      const { a } = await q.analyticsPage(T, 'owner', p)
+      const { a } = await q.analyticsPage(T, 'owner', p === 'longest' ? longest : win(p))
       const ms = Math.round(performance.now() - t0)
       if (i === 2) { console.log(`period ${p}: ${ms} ms · ${a.cur.orders} orders · ${a.sources.length} sources · ${a.pincodes.length} pincodes`); expect(ms).toBeLessThan(1000) }
     }
   }
-  const { a: s } = await q.analyticsPage(T, 'owner', 30)
+  const { a: s } = await q.analyticsPage(T, 'owner', win('30'))
   // The biggest source, and a creator (the review saw a creator's page the slowest).
   for (const slug of [s.sources[0]!.slug, s.sources.find((x) => x.channel === 'creator')?.slug].filter((x): x is string => !!x)) {
     for (let i = 0; i < 3; i++) {
-      const t0 = performance.now(); const sp = await q.sourcePage(T, 'owner', 30, slug)
+      const t0 = performance.now(); const sp = await q.sourcePage(T, 'owner', win('30'), slug)
       const ms = Math.round(performance.now() - t0)
       if (i === 2) { console.log(`source page ${slug}: ${ms} ms · ${sp?.orders.length} orders`); expect(ms).toBeLessThan(1000) }
     }

@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.2.0
+  version: 7.3.0
   verified: 2026-11-13
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -625,13 +625,16 @@ Rules every products screen keeps (PR·0 built; PR·1–4 follow the mockup):
 ## Analytics (owner-approved 2026-11-08; spec `docs/specs/2026-11-08-analytics-a1.md`, mockup https://claude.ai/artifact/5PRMG996toWDUsnAuMTSJt; A·1 built)
 
 61. **One question first:** "Where did this period's orders come from, and what did each keep after returns?" The
-    period (7 · 30 · 90 IST days, today "so far") is always read against the one before, and the meta line names both.
+    period is the kit's picker (Today · 7 days · 30 days · This month · Custom up to 92 days; Neel N1b, owner 2026-11-15:
+    the 90-day preset became Custom), always read against the same span just before it, at the same moment when it runs
+    to now ("vs yesterday at this time"), and the header names both.
 62. **Pending is never zero and never a return.** Orders not sent yet or on the way are counted as such; a share of
     returns names its denominator ("6% of 54 with an outcome"), and an order joins it only once it has an outcome.
 63. **Under 30, counts:** below `JUDGE_MIN` a share is "3 of 12" and a per-order ₹ says "too few to judge"; under 30
-    orders on the whole page, the tally pictogram and a count to go replace the four numbers.
-64. **"Source known %"** sits in the strip; under half, one info line points to Make a link. A source is what the link
-    said: the (i) on "Where orders came from" says how it is decided, once.
+    orders on the whole page, one line says so ("Too few to judge: N orders so far") above the figures, which stay, each
+    in counts (Neel N1b: the figures are the page's frame; hiding them hid Sales too).
+64. **"Source known for N%"** sits beside "Where orders came from"'s heading (Neel N1b); under half, one info line points
+    to Make a link. A source is what the link said: the (i) on "Where orders came from" says how it is decided, once.
 65. **₹ kept only where `seesCosts`:** staff (and a partner after handover) see the same page with orders leading and
     no ₹ kept anywhere (column, headline, caption); sales and order totals stay, as on Orders.
 66. **Make a link** is the page's one primary action: where it will be shared (lowercase presets; "A creator" goes to
@@ -1158,6 +1161,19 @@ values, keyboard and axe at phone and desktop. A new primitive or state joins th
 - **Settings**: one list, a plain 20 px icon per row, its current value at the right, a chevron; up to 860 wide;
   "Ready for live payments" a chip in the header, and what is missing a warn banner above the list.
 - **Not yet**: ⌘K (N1b).
+
+## Neel analytics (N1b, 2026-11-15; plan `docs/plans/2026-11-15-neel-n1b-analytics.md`, screen mockup
+`docs/mockups/2026-11-15-analytics-n1b/`)
+
+- **One period picker per page** (`PeriodPicker`, `src/components/charts/`), top right of the header: the presets as
+  links, Custom as a dialog of two days; what every figure is against said beside it in words ("vs previous 30 days").
+- **A figure answers "is this good?"** (`Figure`): its change in words from `kit.ts change`, coloured by MEANING (returns
+  up is red, "↑ 2.1 points — worse"), what it is against once per row, a sparkline; too little says how much is needed.
+- **Every chart has its numbers in words or a table**: the trend's sentence and hidden table (and ← → on it), the
+  heat's busiest cell in words, the state tiles' "See as a table", the cohort's table. Colour never alone.
+- **One colour per chart**, light to dark (`--heat-*`; `--risk-*` where darker is worse), levels from `kit.ts levels`;
+  a month that has not come yet is empty ("not yet"), never 0. Shares as a bar beside the number (`ShareBar`).
+- **No chart library**: SVG drawn by hand; a client chart takes plain numbers and a unit, never a function.
 
 ## Neel finding (N1c, 2026-11-13; plan `docs/plans/2026-11-13-neel-n1c.md`)
 

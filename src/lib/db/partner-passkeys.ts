@@ -12,7 +12,7 @@ import { passkeyProvider } from '@/domains/auth/passkey-providers'
 
 // =============================================================================
 // FILE: src/lib/db/partner-passkeys.ts — PARTNER PEOPLE'S PASSKEYS (T1b; docs/specs/2026-11-15-partner-login.md). The
-// one module that calls the app_partner_pk_* definers (drizzle/0128) as frata_app. The ceremony is the shared one in
+// one module that calls the app_partner_pk_* definers (drizzle/0129) as frata_app. The ceremony is the shared one in
 // src/lib/auth/webauthn.ts; this is its partner store and the partner-only steps (request, approve, decline, remove,
 // list). Before a check the caller holds a PartnerIdentity (never a PartnerOk); after it, a PartnerOk.
 // =============================================================================

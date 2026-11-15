@@ -31,7 +31,7 @@ export type MyPartner = {
 const d = (v: string | Date | null) => (v ? new Date(v) : null)
 
 /** Who is asking in the workspace (a PartnerOk from requirePartner): the user, this browser's session and the partner
- *  step-up's hash. Every workspace definer re-checks the step-up (app_partner_need, drizzle/0128, T1b). */
+ *  step-up's hash. Every workspace definer re-checks the step-up (app_partner_need, drizzle/0129, T1b). */
 export type Caller = { userId: string; sessionId: string; stepup: string }
 /** The two refusals any workspace write can give: no live check, or none in the last 5 minutes. */
 const CHECKS = ['confirm_first', 'confirm_again'] as const

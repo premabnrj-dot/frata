@@ -3,7 +3,7 @@
 import { CONFIRM_AGAIN } from '@/domains/partners/passkeys'
 import { passkeyClient } from './passkey-client'
 
-// A workspace write that needs a passkey check in the last 5 minutes (invite, stores, remove; drizzle/0128) answers
+// A workspace write that needs a passkey check in the last 5 minutes (invite, stores, remove; drizzle/0129) answers
 // CONFIRM_AGAIN when the check is older: the device confirms once, then the same write is sent again. Nothing typed is lost.
 const { confirmPasskey } = passkeyClient('/partner/passkey')
 

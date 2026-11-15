@@ -2,7 +2,10 @@
 // orders come back by hand (markCameBack), one with its stock put back and one without; keptSql (Offers) and
 // Analytics read the came-back event the same way (rtoRestockedSql) and agree. Tenant A of the proof, rolled back.
 // A delivered order with pieces returned: the fee follows what was kept in both. Skipped unless INT_DB_HOST is set (CI).
+import { windowFor } from '@/domains/analytics/period'
 import { describe, expect, it } from 'vitest'
+
+const thirty = (now: Date) => windowFor({ kind: 'preset', preset: '30' }, now)
 
 const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
@@ -31,7 +34,7 @@ describe.skipIf(!host)('₹ kept: a return keeps its cost only when its stock we
 
     await withTenant(A, async (tx) => {
       await tx.update(shopSettings).set({ shipCostDelivery: est.delivery, shipCostReturn: est.ret, shipCostCod: est.codFee, shipCostsConfirmedAt: now }).where(eq(shopSettings.tenantId, A))
-      const base = await q.analyticsIn(tx, A, 'owner', 30, now)
+      const base = await q.analyticsIn(tx, A, 'owner', thirty(now), now)
       const [p] = await tx.insert(products).values({ tenantId: A, handle: `int-kept-${Date.now()}`, title: 'Int kurta', options: ['Size'], status: 'active' }).returning({ id: products.id })
       const [v] = await tx.insert(variants).values({ tenantId: A, productId: p!.id, optionValues: ['M'], price: 100000, stock: 0 }).returning({ id: variants.id })
       const cameBack = async (restock: boolean, cogs: number | null) => {
@@ -63,7 +66,7 @@ describe.skipIf(!host)('₹ kept: a return keeps its cost only when its stock we
       expect(kept.leftOut).toBe(1)
 
       // Analytics reads the same rule: its window changed by exactly these orders.
-      const after = await q.analyticsIn(tx, A, 'owner', 30, now)
+      const after = await q.analyticsIn(tx, A, 'owner', thirty(now), now)
       expect(after.cur.kept!.rto.kept - (base.cur.kept?.rto.kept ?? 0)).toBe(kept.rto.kept)
       expect(after.cur.kept!.leftOut - (base.cur.kept?.leftOut ?? 0)).toBe(1)
       throw ROLLBACK
@@ -89,13 +92,13 @@ describe.skipIf(!host)('₹ kept: a return keeps its cost only when its stock we
         const [r] = await tx.execute<{ base: string }>(sql`select ${k.columns} from orders o where o.tenant_id = ${A} and o.id = ${o!.id} and ${k.where} group by ${k.groupBy()}`)
         return Number(r!.base)
       }
-      const before = await q.analyticsIn(tx, A, 'owner', 30, now)
+      const before = await q.analyticsIn(tx, A, 'owner', thirty(now), now)
       expect(await base()).toBe(95238)
       // Half came back on a return note, inside the window.
       await tx.insert(creditNotes).values({ tenantId: A, orderId: o!.id, number: `KR/CN/${n}`, againstInvoice: `KR/${n}`, reason: 'returned', kind: 'return',
         taxable: 47619, cgst: 0, sgst: 0, igst: 0, total: 47619, issuedAt: at(3), issuedBy: riya.userId })
       expect(await base()).toBe(47619)
-      const after = await q.analyticsIn(tx, A, 'owner', 30, now)
+      const after = await q.analyticsIn(tx, A, 'owner', thirty(now), now)
       // ₹ kept fell by the ₹476.19 credited, less the fee no longer charged on it: 2% of ₹952.38 → 2% of ₹476.19 (₹9.52
       // back). Before the fix Analytics kept charging the fee on the returned half: the drop was the whole ₹476.19.
       // Tenant A of the proof is on a 2% plan.

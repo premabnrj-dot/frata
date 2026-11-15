@@ -6,7 +6,7 @@
 
 export type StaffNoticeKind = 'staff_added' | 'staff_removed' | 'request_approved' | 'passkey_added' | 'passkey_removed'
   | 'partner_passkey_added' | 'partner_passkey_removed' | 'partner_request_made' | 'partner_request_approved'
-/** The partner side's kinds (T1b, drizzle/0128): sent to the person and the partner's owner (an owner's own recovery:
+/** The partner side's kinds (T1b, drizzle/0129): sent to the person and the partner's owner (an owner's own recovery:
  *  every Frrata admin too). The email's button opens the workspace, not Admin. */
 export const isPartnerNotice = (k: StaffNoticeKind) => k.startsWith('partner_')
 

@@ -67,7 +67,7 @@ who knows them, without a password and without a way round it.
 | all gates | — | "Sign out" under each gate screen | A shared device must be able to leave the gate |
 | 24 | Dates without a year | Dates without a year on Join; with it on the owner's 24-hour line | The opening time can cross a year |
 
-## Changes this needs in T1b's database layer (before 0128 reaches production)
+## Changes this needs in T1b's database layer (before 0129 reaches production)
 1. **Decline:** `app_partner_pk_decline(uid, session, stepup, member)`: the owner ends a member's open request; the
    member's screen says it was declined. Proof in § 79.
 2. **Context on the request:** `partner_passkey_requests.device` (text, ≤ 60, from the user agent, e.g. "Chrome on

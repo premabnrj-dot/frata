@@ -119,7 +119,7 @@ staff passkeys (docs/specs/2026-11-12-staff-passkeys.md, ADR-0007 amended), the 
 5. **Emails** (SES, the staff security-email pipe): a passkey added or removed, and a request approved, email the
    person and the partner's owner.
 
-### Data (migration 0127 generated + 0128 custom; as built: one 4-argument `app_access_for`, the 3-argument one dropped; requests carry `declined_at`, `device`, `city`; `app_partner_pk_decline`)
+### Data (migration 0128 generated + 0129 custom; as built: one 4-argument `app_access_for`, the 3-argument one dropped; requests carry `declined_at`, `device`, `city`; `app_partner_pk_decline`)
 - `partner_passkeys (id, partner_member_id → partner_members on delete cascade, user_id, credential_id unique,
   public_key, counter, transports, name 1–40, created_at, last_used_at)`; `partner_passkey_requests (id,
   partner_member_id → cascade, user_id, session_id, code_hash, created_at, expires_at, approved_by, approved_kind ∈
@@ -259,17 +259,17 @@ staff passkeys (docs/specs/2026-11-12-staff-passkeys.md, ADR-0007 amended), the 
     re-enrol when the console host moves, as staff do.
 
 ### Tasks (T1b)
-**Progress (2026-11-15):** tasks 1–4 done on branch `claude/amazing-wright-7irwn3` (migrations 0127/0128, proof § 79,
+**Progress (2026-11-15):** tasks 1–4 done on branch `claude/amazing-wright-7irwn3` (migrations 0128/0129, proof § 79,
 the screens as drawn in the partner sign-in mockup, flows 40, 71, 75, 80 green, reviews folded in). Task 5 (production)
 is next.
 1. Shared WebAuthn module and gate component; Admin on them (flow 75 green before and after). Commit.
-2. Migration 0127 (tables, generated) + 0128 (custom: access, definers, rewritten partner definers, hand over,
+2. Migration 0128 (tables, generated) + 0129 (custom: access, definers, rewritten partner definers, hand over,
    emails), proof § 78 and § 77 helper, `check:tenant` rules. `verify:tenancy`.
 3. Partner side: cookie, `session.ts`, `requireMember`/`requirePartner`, route, gate, Team (approve, remove passkeys),
    `/partner/passkeys`, Clients hand over, console and `/start` panels, sign-out, headers. Admin › Partners approve and
    remove. Emails' words.
 4. e2e helpers and flows 40, 75, 80; unit tests. `impact-reviewer` and `security-reviewer` on the diff.
-5. Apply 0127/0128 to production and push at once; an admin approves the live owner's code.
+5. Apply 0128/0129 to production and push at once; an admin approves the live owner's code.
 
 ### Regression net and verify
 Before: flows 40, 75, 80 and `verify:tenancy` green on main. Each task: `npm test`, `npm run typecheck`,

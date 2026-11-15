@@ -1,4 +1,5 @@
 import 'server-only'
+import type { Window } from '@/domains/analytics/period'
 import { sql } from 'drizzle-orm'
 import { OTHER_PRODUCTS, emptyTotals, type TrafficRead, type TrafficTotals } from '@/domains/analytics/traffic'
 import { istDayKey } from '@/domains/time/day'
@@ -24,9 +25,11 @@ const n = (v: unknown) => Number(v ?? 0)
 
 /** The window's rollups (IST days from `start`, and the window before from `prevStart`); 'off' when the shop has no
  * analytics database to read (a preview, or before it is connected). */
-export async function trafficRead(tenantId: string, start: Date, prevStart: Date, now: Date): Promise<TrafficRead | 'off'> {
+/** Visits over the analytics window (src/domains/analytics/period.ts). Visits are daily rollups, so the comparison is
+ * the window's whole days before it ([prevStart, start) by day), never a moment within a day. */
+export async function trafficRead(tenantId: string, w: Window): Promise<TrafficRead | 'off'> {
   if (!isAnalyticsConfigured()) return 'off'
-  const from = istDayKey(start), prevFrom = istDayKey(prevStart), to = istDayKey(now)
+  const from = istDayKey(w.start), prevFrom = istDayKey(w.prevStart), to = istDayKey(new Date(w.end.getTime() - 1))
   return withAnalyticsTenant(tenantId, async (tx) => {
     // Reads only the rollups (tenant first in every key); each statement is the shop's own rows by policy too.
     const q = <T>(s: ReturnType<typeof sql>) => tx.execute(s) as unknown as Promise<T[]>
@@ -80,7 +83,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** The shop's own words for the visits: creator labels by code, its products' names and orders in the window (only ids
  * it has: a forged one is never named), and returns by city. */
-export async function trafficNames(tenantId: string, productIds: readonly string[], start: Date) {
+export async function trafficNames(tenantId: string, productIds: readonly string[], w: Window) {
+  const start = w.start
   const ids = [...new Set(productIds.filter((id) => UUID.test(id)))].slice(0, 120)
   return withTenant(tenantId, async (tx) => {
     const [labels, named, cities] = await Promise.all([
@@ -88,7 +92,7 @@ export async function trafficNames(tenantId: string, productIds: readonly string
       // One grouped join driven by the window's standing orders (order_lines_product_live, drizzle/0118: live lines only), never a count per
       // product (speed review 2026-11-11: 40 scans of order_lines, 1.8 s at 10×).
       ids.length ? tx.execute<{ id: string; title: string; handle: string; ordered: number }>(sql`
-        with w as (select o.id from ${orders} o where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and ${standingSql('o')}),
+        with w as (select o.id from ${orders} o where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and o.placed_at < ${w.end.toISOString()}::timestamptz and ${standingSql('o')}),
              n as (select ol.product_id, count(distinct ol.order_id)::int ordered from ${orderLines} ol join w on w.id = ol.order_id
                     where ol.tenant_id = ${tenantId} and ol.removed_at is null and ol.product_id = any(${`{${ids.join(',')}}`}::uuid[]) group by ol.product_id)
         select p.id, p.title, p.handle, coalesce(n.ordered, 0) ordered
@@ -97,7 +101,7 @@ export async function trafficNames(tenantId: string, productIds: readonly string
       tx.execute<{ city: string; rto: number; outcomes: number }>(sql`
         select lower(o.city) city, (count(*) filter (where o.rto_initiated_at is not null))::int rto, count(*)::int outcomes
           from ${orders} o
-         where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and o.cancelled_at is null and o.city <> ''
+         where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and o.placed_at < ${w.end.toISOString()}::timestamptz and o.cancelled_at is null and o.city <> ''
            and (o.rto_initiated_at is not null or o.delivered_at is not null or o.lost_at is not null)
          group by 1 order by 3 desc limit 60`),
     ])

@@ -1098,7 +1098,7 @@ create function proof.key(p_uid uuid) returns void language sql security definer
   select null, p_uid, me.email, 'member', 'partner.passkey.add', me.member_id::text, '{"name":"Proof key","via":"proof"}'::jsonb
     from (select x.member_id, (select pm.email from public.partner_members pm where pm.id = x.member_id) as email from public.app_pm_live(p_uid) x) me
    where not exists (select 1 from public.partner_passkeys k where k.partner_member_id = me.member_id);
-  -- as a real add: the passkey, and its audit row (an owner who ever had one waits 24 hours to recover, 0128)
+  -- as a real add: the passkey, and its audit row (an owner who ever had one waits 24 hours to recover, 0129)
   insert into public.partner_passkeys (partner_member_id, user_id, credential_id, public_key, name)
   select me.member_id, p_uid, 'proof-' || me.member_id, 'proof', 'Proof key' from public.app_pm_live(p_uid) me
    where not exists (select 1 from public.partner_passkeys k where k.partner_member_id = me.member_id) $$;
@@ -3447,7 +3447,7 @@ do $$ begin
   if (select name from saved_views where id = '5a7e0000-0000-0000-0000-00000000000b') is distinct from 'Bihar COD' then raise exception 'FAIL: B''s view changed'; end if;
 end $$;
 
--- 79. Partner passkeys T1b (0127–0128; plan docs/plans/2026-11-12-studio-build.md § T1b, reviews folded in). Q owns
+-- 79. Partner passkeys T1b (0128–0129; plan docs/plans/2026-11-12-studio-build.md § T1b, reviews folded in). Q owns
 -- Kiln, M is Kiln's lead, Z owns another partner (§ 77), S is an admin and U support. Every row is bound to ONE
 -- membership; the tables have no grant; the check is inside every workspace definer and inside app_access_for.
 insert into auth.users (id, email, email_confirmed_at) values

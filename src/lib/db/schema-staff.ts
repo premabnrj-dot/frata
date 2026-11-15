@@ -101,6 +101,6 @@ export const staffNotices = pgTable('staff_notices', {
   lastError: text('last_error'),
 }, (t) => [
   index('staff_notices_due').on(t.createdAt).where(sql`${t.sentAt} is null`),
-  // T1b: the same pipe sends partner security emails (to the person and the partner's owner; drizzle/0128).
+  // T1b: the same pipe sends partner security emails (to the person and the partner's owner; drizzle/0129).
   check('staff_notices_kind', sql`${t.kind} in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved')`),
 ])

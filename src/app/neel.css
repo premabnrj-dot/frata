@@ -52,8 +52,14 @@
   --text-3: #8F8A84;              /* g500 icons and placeholders' hint colour, never a sentence */
   --off: #8F8A84;                 /* g500 a switch that is off */
   --neutral-mark: #8F8A84;
-  --chart: #6E79E3;               /* neel 400 */
+  --chart: #3A44C2;               /* neel 600, as drawn: lines, sparklines, share bars, Paid online */
   --chart-now: #C3C9F6;           /* neel 200: the period still running */
+  /* A heat or a tile map, light to dark (Neel N1b, kit § When orders come, § By state): nothing, then neel 50 → 800;
+     and the same six for returns, where darker is worse (warn to bad). One colour per chart, levels from kit.ts. */
+  --heat-0: #F6F5F3; --heat-1: #EEF0FD; --heat-2: #E0E3FB; --heat-3: #C3C9F6; --heat-4: #4C57D6; --heat-5: #272D82;
+  --heat-on: #FFFFFF;             /* text on heat 4 and 5 */
+  --risk-0: #F6F5F3; --risk-1: #FBE9D0; --risk-2: #F6CFA6; --risk-3: #EDAA8A; --risk-4: #C24A3A; --risk-5: #8A2020; /* even steps (design review N1b) */
+  --risk-text: #7A1C1C; --risk-on: #FFFFFF;
   --bar-btn: #FFFFFF;
   --bar-btn-text: #171615;
   --bar-link: #A3ABF5;
@@ -78,7 +84,8 @@
 [data-neel] [data-store-theme] {
   --primary-hover: initial; --link: initial; --select: initial; --select-foreground: initial; --halo: initial; --side: initial;
   --sunk: initial; --line-soft: initial; --edge: initial; --text-3: initial; --off: initial; --neutral-mark: initial;
-  --chart: initial; --chart-now: initial; --bar-btn: initial; --bar-btn-text: initial; --bar-link: initial;
+  --chart: initial; --chart-now: initial; --heat-0: initial; --heat-1: initial; --heat-2: initial; --heat-3: initial; --heat-4: initial; --heat-5: initial; --heat-on: initial;
+  --risk-0: initial; --risk-1: initial; --risk-2: initial; --risk-3: initial; --risk-4: initial; --risk-5: initial; --risk-text: initial; --risk-on: initial; --bar-btn: initial; --bar-btn-text: initial; --bar-link: initial;
   --font-num: initial; --btn-h: initial; --field-hover: initial;
 }
 

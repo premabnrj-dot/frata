@@ -7,14 +7,15 @@ import { sourceOfInputs, type Channel } from '@/domains/analytics/source'
 import { keptOf, type KeptGroup } from '@/domains/orders/kept'
 import { estimateOf } from '@/domains/settings/ship-costs'
 import type { MemberRole } from '@/domains/tenancy/roles'
-import { istDayStart } from '@/domains/time/day'
+import type { Window } from '@/domains/analytics/period'
+import { seriesIn } from './analytics-series'
 import type { Totals } from '@/domains/analytics/totals'
 import type { Tx } from '@/lib/db'
 import { orders, shipments } from '@/lib/db/schema-orders'
 import { collections, products } from '@/lib/db/schema-catalogue'
 import { attributionInputsSql } from '@/lib/db/attribution-sql'
 import { creatorCodeJoinSql } from '@/lib/db/discount-predicates'
-import { cogsSql, creditedSql, currentMethodSql, feeBaseSql, feeBucketSql, holdingSql, rtoRestockedSql, stageSql, standingSql } from '@/lib/db/order-predicates'
+import { cogsSql, creditedSql, currentMethodSql, feeBaseSql, feeBucketSql, rtoRestockedSql, stageSql, salesOrderSql } from '@/lib/db/order-predicates'
 import { withTenant } from '@/lib/db/tenant'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { orderPrefix } from '@/domains/signup/slug'
@@ -31,19 +32,13 @@ import { costsVisibleIn, planHistoryIn, shipCostsIn } from './settings'
 // "Orders" are standing or holding orders (as Offers counts them); sales are their totals.
 // =============================================================================
 
-export const PERIODS = [7, 30, 90] as const
-export type Period = (typeof PERIODS)[number]
-export const isPeriod = (n: number): n is Period => (PERIODS as readonly number[]).includes(n)
-/** A period's first moment and the period before's, as IST days (today included): one copy for orders and visits. */
-export const windowOf = (period: Period, now: Date) => ({ start: istDayStart(now, -(period - 1)), prevStart: istDayStart(now, -(2 * period - 1)) })
 
 export type Stage = 'delivered' | 'rto' | 'lost' | 'on_the_way' | 'not_sent'
 export type { Totals }
 export type SourceStat = { slug: string; label: string; channel: Channel; cur: Totals; prev: Totals; campaigns: { name: string; cur: Totals }[] }
 export type Analytics = {
-  period: Period
-  /** The first moment of the period, and of the period before (IST days). */
-  start: Date; prevStart: Date
+  /** The window every read used (src/domains/analytics/period.ts): `[start, end)` against `[prevStart, prevEnd)`. */
+  window: Window
   costs: boolean
   /** Whether a confirmed shipping-cost estimate exists (else ₹ kept is "before shipping costs"). */
   estimate: boolean
@@ -66,9 +61,9 @@ const num = (v: string | null) => (v === null ? null : Number(v))
 const STAGE_KEY: Record<Stage, 'delivered' | 'rto' | 'lost' | 'onTheWay' | 'notSent'> = { delivered: 'delivered', rto: 'rto', lost: 'lost', on_the_way: 'onTheWay', not_sent: 'notSent' }
 
 /** The grouped read: the period and the one before, standing or holding orders, by raw inputs and what decides ₹ kept. */
-function windowSql(tenantId: string, now: Date, start: Date, prevStart: Date, feeChanges: readonly Date[], only?: SQL) {
+function windowSql(tenantId: string, now: Date, w: Window, feeChanges: readonly Date[], only?: SQL) {
   const i = attributionInputsSql('o')
-  const cur = sql`(o.placed_at >= ${start.toISOString()}::timestamptz)`
+  const cur = sql`(o.placed_at >= ${w.start.toISOString()}::timestamptz)`
   // An order with an outcome, by its own columns (cheap): only these carry the keys that decide ₹ kept, so the others
   // fold into fewer groups (measured at 10×: the groups' transfer to Node, not the scan, was the cost).
   const outcome = sql`(o.delivered_at is not null or o.rto_initiated_at is not null or o.lost_at is not null)`
@@ -83,8 +78,10 @@ function windowSql(tenantId: string, now: Date, start: Date, prevStart: Date, fe
       from ${orders} o
       left join ${shipments} s on s.tenant_id = o.tenant_id and s.order_id = o.id and s.ended_at is null
       ${creatorCodeJoinSql(now)}
-     where o.tenant_id = ${tenantId} and o.placed_at >= ${prevStart.toISOString()}::timestamptz and o.placed_at < ${now.toISOString()}::timestamptz
-       and (${standingSql('o')} or ${holdingSql(now, 'o')}) ${only ? sql`and ${only}` : sql``}
+     where o.tenant_id = ${tenantId} and o.placed_at >= ${w.prevStart.toISOString()}::timestamptz and o.placed_at < ${w.end.toISOString()}::timestamptz
+       -- the comparison ends at the same moment (prevEnd), not at the window's start: today so far vs yesterday so far
+       and (o.placed_at >= ${w.start.toISOString()}::timestamptz or o.placed_at < ${w.prevEnd.toISOString()}::timestamptz)
+       and ${salesOrderSql(now, 'o')} ${only ? sql`and ${only}` : sql``}
      group by 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, (${outcome} and o.cogs is null), (${outcome} and o.forward_shipping is null),
               (${outcome} and o.rto_shipping is null), (${outcome} and o.courier_cod_fee is null)`
 }
@@ -93,35 +90,33 @@ function windowSql(tenantId: string, now: Date, start: Date, prevStart: Date, fe
 /** Reads the analytics transaction needs first (who sees ₹, plan history, the estimate), with its limits set. */
 async function setUp(tx: Tx, tenantId: string, role: MemberRole) {
   // JIT added 535–590 ms to every window read at 10× (speed review); 3 s is the most a page may hold a connection.
-  await tx.execute(sql`set local jit = off`)
-  await tx.execute(sql`set local statement_timeout = '3s'`)
-  // The grouping sorts 150k rows at 10×: in memory, not spilled to disk (a 15 MB external merge cost ~600 ms).
-  await tx.execute(sql`set local work_mem = '64MB'`)
+  // One round trip (speed review N1b): jit off, the 3 s ceiling, and the grouping's 150k rows at 10× sorted in memory,
+  // not spilled to disk (a 15 MB external merge cost ~600 ms).
+  await tx.execute(sql`select set_config('jit', 'off', true), set_config('statement_timeout', '3s', true), set_config('work_mem', '64MB', true)`)
   const [costs, history, shipCosts] = await Promise.all([costsVisibleIn(tx, tenantId, role), planHistoryIn(tx, tenantId), shipCostsIn(tx, tenantId)])
   return { costs, history, est: estimateOf(shipCosts) }
 }
 
-/** The page's numbers for `period` IST days (today included) against the period before, inside the caller's tenant
- * transaction (analyticsPage; the int test reads rows it will roll back). */
-export async function analyticsIn(tx: Tx, tenantId: string, role: MemberRole, period: Period, now: Date): Promise<Analytics> {
-  return (await windowIn(tx, tenantId, role, period, now)).analytics
+/** The page's numbers for the window against the one before it, inside the caller's tenant transaction (analyticsPage;
+ * the int test reads rows it will roll back). */
+export async function analyticsIn(tx: Tx, tenantId: string, role: MemberRole, w: Window, now: Date): Promise<Analytics> {
+  return (await windowIn(tx, tenantId, role, w, now)).analytics
 }
 
 /** The page's numbers and the grouped rows they came from (a source's page matches its orders on those rows' inputs). */
-async function windowIn(tx: Tx, tenantId: string, role: MemberRole, period: Period, now: Date, opts: { pincodes: boolean } = { pincodes: true }): Promise<{ analytics: Analytics; rows: Row[] }> {
+async function windowIn(tx: Tx, tenantId: string, role: MemberRole, w: Window, now: Date, opts: { pincodes: boolean } = { pincodes: true }): Promise<{ analytics: Analytics; rows: Row[] }> {
   {
     const { costs, history, est } = await setUp(tx, tenantId, role)
-    const { start, prevStart } = windowOf(period, now)
-    const rows = await tx.execute<Row>(windowSql(tenantId, now, start, prevStart, history.map((h) => h.startsAt)))
+    const { start, end } = w
     // Returns by pincode, counts only (₹ by pincode is True Profit's): the covering partial index makes it index-only.
-    // (Not on a source's page, which never shows them: speed review A1·7.)
-    const pins = !opts.pincodes ? [] : await tx.execute<{ pincode: string; rto: number; outcomes: number }>(sql`
+    // (Not on a source's page, which never shows them: speed review A1·7.) Beside the window read (speed review N1b).
+    const [rows, pins] = await Promise.all([tx.execute<Row>(windowSql(tenantId, now, w, history.map((h) => h.startsAt))), !opts.pincodes ? [] : tx.execute<{ pincode: string; rto: number; outcomes: number }>(sql`
       select o.pincode, (count(*) filter (where o.rto_initiated_at is not null))::int rto, count(*)::int outcomes
         from ${orders} o
-       where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and o.cancelled_at is null
+       where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and o.placed_at < ${end.toISOString()}::timestamptz and o.cancelled_at is null
          and (o.rto_initiated_at is not null or o.delivered_at is not null or o.lost_at is not null) and o.pincode is not null and o.pincode <> ''
        group by o.pincode having count(*) filter (where o.rto_initiated_at is not null) > 0
-       order by 2 desc, 3 desc limit 10`)
+       order by 2 desc, 3 desc limit 10`)])
 
     const cur = blank(), prev = blank()
     const bySource = new Map<string, { slug: string; label: string; channel: Channel; cur: ReturnType<typeof blank>; prev: ReturnType<typeof blank>; campaigns: Map<string, ReturnType<typeof blank>> }>()
@@ -155,10 +150,10 @@ async function windowIn(tx: Tx, tenantId: string, role: MemberRole, period: Peri
       slug: s.slug, label: s.label, channel: s.channel, cur: done(s.cur), prev: done(s.prev),
       campaigns: [...s.campaigns.entries()].map(([name, c]) => ({ name, cur: done(c) })).sort((a, b) => b.cur.orders - a.cur.orders),
     }))
-    // Most ₹ kept after returns first; by orders until any outcome is known (or for a viewer who does not see costs).
-    sources.sort((a, b) => ((b.cur.kept?.counted ?? 0) > 0 || (a.cur.kept?.counted ?? 0) > 0 ? (b.cur.kept?.kept ?? 0) - (a.cur.kept?.kept ?? 0) : 0) || b.cur.orders - a.cur.orders)
+    // Most orders first, as drawn ("Orders ↓", Neel N1b); ₹ kept per order sits in its own column to judge each by.
+    sources.sort((a, b) => b.cur.orders - a.cur.orders || a.label.localeCompare(b.label))
     const analytics: Analytics = {
-      period, start, prevStart, costs, estimate: est !== null, cur: done(cur), prev: done(prev), known, sources,
+      window: w, costs, estimate: est !== null, cur: done(cur), prev: done(prev), known, sources,
       pincodes: pins.map((p) => ({ pincode: p.pincode, rto: p.rto, outcomes: p.outcomes })),
     }
     return { analytics, rows: [...rows] }
@@ -170,11 +165,11 @@ async function windowIn(tx: Tx, tenantId: string, role: MemberRole, period: Peri
  * output from the URL, matched in TypeScript against the grouped read's raw tuples, which then filter one LIMIT 50 read
  * (speed review 4): the URL's value never reaches SQL. Null for a slug no order in the period has.
  */
-export async function sourcePage(tenantId: string, role: MemberRole, period: Period, slug: string, now = new Date()) {
+export async function sourcePage(tenantId: string, role: MemberRole, w: Window, slug: string, now = new Date()) {
   if (!/^[a-z0-9-]{1,64}$/.test(slug)) return null
   // One transaction for the page (P8): its numbers, its orders and the shop's order prefix.
   return withTenant(tenantId, async (tx) => {
-    const page = await sourcePageIn(tx, tenantId, role, period, slug, now)
+    const page = await sourcePageIn(tx, tenantId, role, w, slug, now)
     return page ? { ...page, prefix: (await shopFactsIn(tx, tenantId)).prefix } : null
   }, { snapshot: true })
 }
@@ -190,22 +185,25 @@ async function shopFactsIn(tx: Tx, tenantId: string) {
 
 /** The Analytics page in ONE snapshot transaction (speed review A1·7, P8): the numbers, Make a link's targets and the
  * shop's address, instead of three transactions on three connections. */
-export async function analyticsPage(tenantId: string, role: MemberRole, period: Period, now = new Date()) {
+export async function analyticsPage(tenantId: string, role: MemberRole, w: Window, now = new Date()) {
   return withTenant(tenantId, async (tx) => {
-    const a = await analyticsIn(tx, tenantId, role, period, now)
+    const a = await analyticsIn(tx, tenantId, role, w, now)
     const [targets, shop] = await Promise.all([linkTargetsIn(tx, tenantId), shopFactsIn(tx, tenantId)])
-    return { a, targets, shop }
+    // The charts LAST, in their own savepoint: its 800 ms ceiling is a SET LOCAL that outlives the savepoint, so nothing
+    // may run after it (speed review N1b); null hides the chart sections, never the page.
+    const series = await seriesIn(tx, tenantId, w, now)
+    return { a, targets, shop, series }
   }, { snapshot: true })
 }
 
 /** sourcePage inside the caller's tenant transaction: the list's numbers and the source's orders in one snapshot. */
-export async function sourcePageIn(tx: Tx, tenantId: string, role: MemberRole, period: Period, slug: string, now: Date) {
+export async function sourcePageIn(tx: Tx, tenantId: string, role: MemberRole, w: Window, slug: string, now: Date) {
   if (!/^[a-z0-9-]{1,64}$/.test(slug)) return null
-  const { analytics: all, rows } = await windowIn(tx, tenantId, role, period, now, { pincodes: false })
+  const { analytics: all, rows } = await windowIn(tx, tenantId, role, w, now, { pincodes: false })
   const stat = all.sources.find((s) => s.slug === slug)
   if (!stat) return null
   {
-    const start = all.start
+    const start = all.window.start
     const i = attributionInputsSql('o')
     // The source's raw tuples in this period, from the grouped read itself (no second scan of the window: speed, A1·7).
     const seen = new Set<string>()
@@ -226,7 +224,8 @@ export async function sourcePageIn(tx: Tx, tenantId: string, role: MemberRole, p
         select o.number, o.placed_at, o.total, ${stageSql('o')} stage, ${i.uc} campaign,
                ${i.us} us, ${i.um} um, ${i.rh} rh, ${i.gads} gads, ${i.srs} srs, ${i.fb} fb, dc.code cc
           from ${orders} o ${creatorCodeJoinSql(now)}
-         where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and (${standingSql('o')} or ${holdingSql(now, 'o')})
+         where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and o.placed_at < ${w.end.toISOString()}::timestamptz
+           and ${salesOrderSql(now, 'o')}
         offset 0) x
       join jsonb_to_recordset(${keys}::jsonb) m(us text, um text, rh text, gads boolean, srs boolean, fb boolean, cc text)
         on ${k(sql`x.us`)} = ${k(sql`m.us`)} and ${k(sql`x.um`)} = ${k(sql`m.um`)} and ${k(sql`x.rh`)} = ${k(sql`m.rh`)} and ${k(sql`x.cc`)} = ${k(sql`m.cc`)}

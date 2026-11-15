@@ -122,7 +122,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   page. Adding or removing staff, approving a request and removing a passkey need `confirmedRecently` (5 minutes).
   The `staff_*` tables have no grant to any role (definers only, `check:tenant`); the session id comes from
   `getClaims()` with `sub` matched; the cookie is `__Host-frrata_staff` (plain `frrata_staff` on the local e2e stack).
-- **Partner passkeys** (T1b, 2026-11-15; `docs/specs/2026-11-15-partner-login.md`, drizzle/0127–0128): the same design
+- **Partner passkeys** (T1b, 2026-11-15; `docs/specs/2026-11-15-partner-login.md`, drizzle/0128–0129): the same design
   for partner people. `app_access_for(user, session, staff hash, partner hash)` counts a `members` row with a
   `partner_member_id` only with a live partner step-up (answers `partnerConfirmedAt` and `partnerHeld`). `requirePartner`
   returns `PartnerOk` (`sessionId`, `stepup`, `confirmedAt`) or `needs_passkey` with a `PartnerIdentity` (only
@@ -738,6 +738,13 @@ Rules:
   string, building rows with the page's own builder (`orders/_components/rows.ts`), one transaction (list ‖ prefix,
   then risk), no counts, `statement_timeout` on a name scan, rate-limited per member, `private, no-store`, logs
   `errName` only. Fetch one row past the page ("50+") instead of a window count.
+- **One analytics window for every read** (Neel N1b): `src/domains/analytics/period.ts` parses the address and gives
+  `[start, end)` against `[prevStart, prevEnd)`; orders, visits and the charts all take it, and every read bounds by
+  `end` (a custom range ends in the past). Custom is at most 92 days (a year and its comparison timed out at 3 s).
+- **Charts in one savepoint, last** (`src/lib/queries/analytics-series.ts`): savepoints cannot nest under `Promise.all`
+  on one connection, and its `SET LOCAL statement_timeout` outlives the savepoint, so it runs after every other read; a
+  failure hides the charts, never the page. Fold related series into ONE statement at the finest grain (a 3-hour IST slot
+  × kind) and derive days, weeks and the heat in TypeScript (speed review: half the time of three statements).
 - **A named exception to the 100 ms query budget**: "+ Filter"'s values with counts (`filterValues`) and saved views'
   counts (`viewCounts`) run in their own transaction with `jit = off` and an 800 ms ceiling, streamed or on demand, and
   show no count when they time out; never inside another read's transaction.

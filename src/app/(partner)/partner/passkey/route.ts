@@ -14,7 +14,7 @@ import { cityLabel, CONFIRM_FIRST, deviceLabel } from '@/domains/partners/passke
 // docs/specs/2026-11-15-partner-login.md). Each request: the console host and its exact origin only, 16 kB at most, Zod
 // before anything is read. requirePartner decides who: a PartnerIdentity (an approved, live partner person with no check
 // on this session) may only confirm, ask and add; approving, declining and deleting need a PartnerOk (approving and
-// deleting a check in the last 5 minutes). The database holds every other rule (drizzle/0128). The security emails these
+// deleting a check in the last 5 minutes). The database holds every other rule (drizzle/0129). The security emails these
 // queue go with the next drain (5 minutes): sending them needs frata_admin, which the workspace never holds.
 // =============================================================================
 

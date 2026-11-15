@@ -110,7 +110,7 @@ export const partnerAssignments = pgTable('partner_assignments', {
 // ════════ Partner passkeys (T1b; docs/plans/2026-11-12-studio-build.md § T1b, reviews folded in). The staff design
 // (drizzle/0109) for a partner's people, every row bound to ONE membership (partner_member_id): a person removed from
 // one partner never carries a passkey, request or check into another. Platform rows: no role holds any privilege; a
-// restrictive deny-all policy; every read and write through the app_partner_pk_* definers (drizzle/0128). ════════
+// restrictive deny-all policy; every read and write through the app_partner_pk_* definers (drizzle/0129). ════════
 
 /** A partner person's passkey. Never returned by any definer: only its name and dates. */
 export const partnerPasskeys = pgTable('partner_passkeys', {
