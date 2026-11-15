@@ -1,0 +1,16 @@
+{
+  "name": "frrata-starter",
+  "private": true,
+  "version": "2026.12.0",
+  "description": "A brand's own website on its Frrata store, through the Storefront API (version 2026-12).",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build && node scripts/scan-bundle.mjs",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "15.5.29",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  }
+}
