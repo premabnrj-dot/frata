@@ -66,14 +66,14 @@ const READERS: Record<TodayKind, Reader> = {
     .where(and(isNull(shopTrials.endedAt), or(isNull(billingAccounts.mandateAt), isNotNull(billingAccounts.mandateRevokedAt)))))
     .map(({ f, name }) => { const endsAt = trialEndsAt(f); return { tenantId: f.tenantId, name, endsAt, lastDay: lastDay(endsAt), daysLeft: daysUntil(now, endsAt), state: trialState(now, f, { mandateActive: false, exposedAt: null }) } })
     .filter((t) => (t.state === 'ending' || t.state === 'grace') && t.daysLeft <= 3)
-    .map((t) => ({ kind: 'trial_ending' as const, key: t.tenantId,
+    .map((t) => ({ kind: 'trial_ending' as const, key: t.tenantId, tenantId: t.tenantId,
       title: t.daysLeft <= 0 ? `${t.name}'s trial has ended. No autopay yet.` : `${t.name}'s trial ends in ${t.daysLeft} ${t.daysLeft === 1 ? 'day' : 'days'}. No autopay yet.`,
       line: 'Trial', action: `Open ${t.name}`, href: `/admin/merchants/${t.tenantId}/plan`, since: new Date(t.lastDay.getTime() - 3 * DAY) })),
   owner_waiting: async (_staff, now) => {
     const rows = await adminDb().select({ tenantId: invites.tenantId, name: tenants.name, at: invites.createdAt }).from(invites).innerJoin(tenants, eq(tenants.id, invites.tenantId))
       .where(and(eq(invites.role, 'owner'), isNull(invites.acceptedAt), isNull(invites.revokedAt), lt(invites.createdAt, new Date(now.getTime() - 3 * DAY))))
       .orderBy(asc(invites.createdAt)).limit(20)
-    return rows.map((r) => ({ kind: 'owner_waiting' as const, key: r.tenantId, title: `${r.name}'s owner hasn't signed in`, line: `Added ${ago(r.at, now)}`,
+    return rows.map((r) => ({ kind: 'owner_waiting' as const, key: r.tenantId, tenantId: r.tenantId, title: `${r.name}'s owner hasn't signed in`, line: `Added ${ago(r.at, now)}`,
       action: `Open ${r.name}`, href: `/admin/merchants/${r.tenantId}`, since: r.at }))
   },
   // A version in this build with no row yet is new in this deploy (versionState 'deployed'): the small table only,

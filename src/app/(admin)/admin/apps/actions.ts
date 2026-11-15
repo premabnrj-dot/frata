@@ -14,7 +14,7 @@ export async function pauseModuleAction(form: FormData): Promise<ActionResult> {
   const p = z.object({ module: z.enum(MODULE_KEYS), reason: z.string().trim().min(3).max(200) }).safeParse(Object.fromEntries(form))
   if (!p.success) return { fields: { reason: 'Say why, in a few words.' } }
   const ok = await pauseModule(staff, p.data.module, p.data.reason)
-  return ok ? { ok: `${moduleName(p.data.module)} paused for every shop.` } : { error: 'It is already paused.' }
+  return ok ? { ok: `${moduleName(p.data.module)} paused for every store.` } : { error: 'It is already paused.' }
 }
 
 export async function resumeModuleAction(form: FormData): Promise<ActionResult> {

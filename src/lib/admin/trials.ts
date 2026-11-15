@@ -1,5 +1,5 @@
 import 'server-only'
-import { eq, inArray, sql } from 'drizzle-orm'
+import { eq, inArray, isNull, sql } from 'drizzle-orm'
 import { trialState, trialEndsAt, daysUntil, lastDay, type TrialFacts, type TrialState } from '@/domains/plans/trial'
 import { adminDb } from '@/lib/db/admin'
 import { billingAccounts } from '@/lib/db/schema-billing'
@@ -59,6 +59,13 @@ export async function endShopTrial(staff: StaffOk, tenantId: string, reason: str
 export function trialError(e: unknown): string {
   const m = /trial: (.{1,160})/.exec(e instanceof Error ? (e.cause instanceof Error ? e.cause.message : e.message) : '')?.[1]
   return m ? `${m.charAt(0).toUpperCase()}${m.slice(1)}.` : 'Nothing was changed. Try again, or check the logs.'
+}
+
+/** Shops whose trial has not ended (Merchants › In trial): ids only, one indexed read. */
+export async function openTrialIds(staff: StaffOk): Promise<Set<string>> {
+  void staff
+  const rows = await adminDb().select({ id: shopTrials.tenantId }).from(shopTrials).where(isNull(shopTrials.endedAt))
+  return new Set(rows.map((r) => r.id))
 }
 
 export type TrialRow = ShopTrialView & { tenantId: string; name: string; autopay: boolean }

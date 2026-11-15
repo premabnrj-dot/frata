@@ -36,6 +36,8 @@ export type TodayItem = {
   kind: TodayKind
   /** Unique within its kind (a row's key). */
   key: string
+  /** The store it is about, when it is about one (Merchants' Needs column reads it). */
+  tenantId?: string
   /** The fact, said first: "Pia Mehta asks for a first passkey". */
   title: string
   line: string

@@ -54,19 +54,24 @@ export async function merchantName(staff: StaffOk, id: string): Promise<string |
   return t?.name ?? null
 }
 
-export async function listMerchants(staff: StaffOk, opts: { page: number; q?: string; now: Date }): Promise<{ rows: MerchantRow[]; total: number }> {
+/** `views` (Neel N4 Merchants): named tests on a shop's id; `view` keeps one, and every view's count comes back. */
+export async function listMerchants<V extends string = never>(staff: StaffOk, opts: { page: number; q?: string; now: Date; views?: Record<V, (id: string) => boolean>; view?: V }): Promise<{ rows: MerchantRow[]; total: number; counts: Partial<Record<V, number>> }> {
   void staff
   const db = adminDb()
   const where = opts.q ? sql`(${tenants.name} ilike ${'%' + opts.q + '%'} or ${tenants.slug} ilike ${'%' + opts.q + '%'})` : undefined
   // Names sort naturally ("Brand 2" before "Brand 12", UX foundation rule 16): Postgres's text order can't, so every
   // matching name is read (ids and names only), sorted with a numeric collator, and the page's rows read by id. The
   // count is that whole list's (rule 17).
-  const all = await db.select({ id: tenants.id, name: tenants.name }).from(tenants).where(where)
+  const found = await db.select({ id: tenants.id, name: tenants.name }).from(tenants).where(where)
+  const viewCounts: Partial<Record<V, number>> = {}
+  for (const [k, test] of Object.entries(opts.views ?? {}) as [V, (id: string) => boolean][]) viewCounts[k] = found.filter((t) => test(t.id)).length
+  const keep = opts.view && opts.views ? opts.views[opts.view] : null
+  const all = keep ? found.filter((t) => keep(t.id)) : found
   all.sort((a, b) => NATURAL.compare(a.name, b.name) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
   const total = all.length
   const from = (Math.max(1, opts.page) - 1) * PAGE_SIZE
   const ids = all.slice(from, from + PAGE_SIZE).map((t) => t.id)
-  if (ids.length === 0) return { rows: [], total }
+  if (ids.length === 0) return { rows: [], total, counts: viewCounts }
   const at = new Map(ids.map((x, i) => [x, i]))
   const ts = (await db.select().from(tenants).where(inArray(tenants.id, ids))).sort((a, b) => at.get(a.id)! - at.get(b.id)!)
 
@@ -92,7 +97,7 @@ export async function listMerchants(staff: StaffOk, opts: { page: number; q?: st
       pendingInvite: owner ? null : open?.email ?? null,
     }
   })
-  return { rows, total }
+  return { rows, total, counts: viewCounts }
 }
 
 export async function getMerchant(staff: StaffOk, id: string, now: Date) {

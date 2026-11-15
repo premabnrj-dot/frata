@@ -109,11 +109,11 @@ export default {
 
       await t.step('a phone row is one target, and its other link still works (Open console over the row link)', async () => {
         const ctx = await signedIn(t.browser, 'frata', { viewport: { width: 390, height: 844 } })
-        const p = await ctx.newPage(); await p.goto(CONSOLE + '/admin/merchants')
+        const p = await ctx.newPage(); await p.goto(CONSOLE + '/admin/merchants?view=all')
         const row = p.locator('tbody tr').first()
         await row.getByRole('link', { name: 'Open console' }).click()
         await p.waitForURL(/\/support$/)
-        await p.goBack(); await p.waitForURL(/\/admin\/merchants$/)
+        await p.goBack(); await p.waitForURL(/\/admin\/merchants\?view=all$/)
         // A tap on the row's empty part opens the merchant.
         const box = await p.locator('tbody tr').first().boundingBox()
         await p.mouse.click(box.x + box.width / 2, box.y + box.height - 6)

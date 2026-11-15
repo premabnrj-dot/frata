@@ -5,6 +5,7 @@ import { Dialog } from '@/components/ui/dialog'
 import { ActionForm, type ActionResult } from '@/components/ui/action-form'
 import { Button } from '@/components/ui/button'
 import { Submit } from '@/components/ui/submit'
+import { MoreHorizontal } from 'lucide-react'
 import { Menu } from '@/components/ui/menu'
 
 // =============================================================================
@@ -56,7 +57,8 @@ export function DialogButton({ spec, variant = 'secondary' }: { spec: DialogSpec
 }
 
 /** More: rare and final actions, each opening its dialog. */
-export function MoreDialogs({ specs }: { specs: DialogSpec[] }) {
+/** `label` given: a ⋯ on a row, named for it ("More for GST"); absent: the page's More. */
+export function MoreDialogs({ specs, label }: { specs: DialogSpec[]; label?: string }) {
   const [open, setOpen] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const close = () => { setOpen(null); setError(null) }
@@ -64,7 +66,7 @@ export function MoreDialogs({ specs }: { specs: DialogSpec[] }) {
   const spec = open === null ? null : specs[open]
   return (
     <>
-      <Menu items={specs.map((s, i) => ({ label: s.label, danger: s.danger, onSelect: () => setOpen(i) }))} />
+      <Menu {...(label ? { label, size: 'sm' as const, icon: <MoreHorizontal aria-hidden="true" className="size-4" /> } : {})} items={specs.map((s, i) => ({ label: s.label, danger: s.danger, onSelect: () => setOpen(i) }))} />
       <Dialog open={spec !== null} onClose={close} title={spec?.title ?? ''} description={spec?.description} actions={null} error={error}>
         {spec ? <Body spec={spec} onClose={close} onError={setError} /> : null}
       </Dialog>

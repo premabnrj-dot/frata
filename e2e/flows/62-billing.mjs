@@ -76,7 +76,7 @@ export default {
         await expectToast(meera, /drafted/, 'ok')
         const [d] = await until(async () => { const r = await db`select orders_billed from frrata_invoices where tenant_id = ${KESAR} order by period_start desc limit 1`; return r.length && r })
         assert.ok(d.orders_billed >= 1, 'the delivered order is counted')
-        await meera.goto(CONSOLE + '/admin/merchants')
+        await meera.goto(CONSOLE + '/admin/merchants?view=all')
         const row = meera.getByRole('row').filter({ hasText: 'Kesar' })
         await row.getByText(String(d.orders_billed), { exact: true }).first().waitFor()
         assert.equal(await row.getByText('—', { exact: true }).count(), 0, 'a drafted shop shows its count, not a dash')
