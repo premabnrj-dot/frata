@@ -183,24 +183,24 @@ A Builder joins **no tuple** (ADR-0015 § 1). Read on 2026-11-15 (`grep -rlw`), 
 ## As built: differences from the approved mockup (BUILT AS DRAWN; shown to the owner with the release report)
 | Mockup element | What was built | Reason | Owner seen |
 |---|---|---|---|
-| Screen 7, Products columns: Product · Status · Sizes · Stock · Price · ↗ | The owner list's own columns and order (Photo · Product · Status · Price · Stock · Sizes and colours) plus the preview mark | one row component (`ProductCells`) for the owner and the Builder: the drawing's order was the sketch's, the plan says "the list as owners see it" | no |
-| Screen 4, /join: a store tag and the button "Join Pixel & Thread" | T1b's approved /join kept (steps, work email, "Accept invite"); the heading names the role ("Join Pixel & Thread as a Builder") | the T1b partner sign-in mockup is approved and its flow (80-partner-team) holds it; T1c changes only the role's word | no |
-| Screen 5, a Builder's Clients: no view tabs | as drawn for a Builder; a Lead keeps the tabs and loses the Owner, Plan and Your share columns (owner question 6) | the Lead was not drawn; question 6 removed those columns for Leads | no |
-| Plan § Deviations, refusal log "with route pattern" | the log line carries the shop and person ids only | `requireMember` doesn't know the route, and a path can carry an order number or a phone | no |
-| Security L10, "null share_starts_at for a Lead or Builder" | the first opening's date and an open invite's end reach them (the store's stage); its terms, email, invite email and plan do not | a stage that reads the same for everyone; a store's first opening is public | no |
-| Plan, set-role limit "counted after the check" | counted on each call, so a `freshly` retry costs two of the 30 an hour | accepted (security review L7): the owner's budget is generous and the limit fails closed | no |
-| Screen 1, the toast's check mark and × | the console's one Toaster as built (§ Feedback), unchanged | a shared primitive; the mockup sketched it | no |
-| Screen 2, the invite's stores as pressed chips | T1a's approved store checkboxes, kept | the T1a invite (approved) and 80-partner-team hold it; T1c adds the Role only | no |
-| Screen 3, the phone sheet's stacked buttons and handle | the Dialog primitive's phone sheet as built (Neel) | a shared primitive; changing it changes every dialog | no |
-| Screens 5–6, "Building" amber | neutral, as the partner workspace's approved stage colours | one stage, one colour on the owner's and the Builder's Clients | no |
-| Screens 7–11, the store's address under its name | the name only | the address is read by the owner shell's nav counts (frata_app); a Builder's shell reads nothing but its Actor | no |
-| Screen 7, "Sort: Last edited" | the owner list's Sort select ("Sort", "Recently edited") | the same list component for both | no |
-| Screen 8, phone rows (thumb, chip, "32 in stock") | the owner list's phone rows (DataTable reflow), with its Sort | the same rows component for both; the drawing was the sketch's | no |
-| Screens 8 and 11, three phone tabs | three tabs and More (Partner workspace, the store switcher, Sign out) | the phone needs a way to sign out and switch; More is the shell's place for them | no |
-| Screen 9, "Filled by" as muted text, no address line | the owner's collections table (chips, the address in mono) | the same table component for both | no |
-| Screens 10–11, the refusal unboxed | the Panel primitive's card, with the lock tile and Open products | a shared primitive (every page's refusal is a Panel) | no |
-| Screen 12, Remove partner ghost; dates "2 Nov"; mono emails | People as built (secondary button, `dayIN` dates, sans emails); T1c adds the Builder row and its (i) | the rest of People is T1a's approved screen | no |
-| Plan task 6, "e2e posts three actions" | every action's refusal is a unit test (`asMember`, every tuple; `requireCapability`), and the sweep GETs every page and route handler | server action ids are build-internal, so a flow can't post one without its form | no |
+| Screen 7, Products columns: Product · Status · Sizes · Stock · Price · ↗ | The owner list's own columns and order (Photo · Product · Status · Price · Stock · Sizes and colours) plus the preview mark | one row component (`ProductCells`) for the owner and the Builder: the drawing's order was the sketch's, the plan says "the list as owners see it" | yes (2026-11-15, "ship it") |
+| Screen 4, /join: a store tag and the button "Join Pixel & Thread" | T1b's approved /join kept (steps, work email, "Accept invite"); the heading names the role ("Join Pixel & Thread as a Builder") | the T1b partner sign-in mockup is approved and its flow (80-partner-team) holds it; T1c changes only the role's word | yes (2026-11-15, "ship it") |
+| Screen 5, a Builder's Clients: no view tabs | as drawn for a Builder; a Lead keeps the tabs and loses the Owner, Plan and Your share columns (owner question 6) | the Lead was not drawn; question 6 removed those columns for Leads | yes (2026-11-15, "ship it") |
+| Plan § Deviations, refusal log "with route pattern" | the log line carries the shop and person ids only | `requireMember` doesn't know the route, and a path can carry an order number or a phone | yes (2026-11-15, "ship it") |
+| Security L10, "null share_starts_at for a Lead or Builder" | the first opening's date and an open invite's end reach them (the store's stage); its terms, email, invite email and plan do not | a stage that reads the same for everyone; a store's first opening is public | yes (2026-11-15, "ship it") |
+| Plan, set-role limit "counted after the check" | counted on each call, so a `freshly` retry costs two of the 30 an hour | accepted (security review L7): the owner's budget is generous and the limit fails closed | yes (2026-11-15, "ship it") |
+| Screen 1, the toast's check mark and × | the console's one Toaster as built (§ Feedback), unchanged | a shared primitive; the mockup sketched it | yes (2026-11-15, "ship it") |
+| Screen 2, the invite's stores as pressed chips | T1a's approved store checkboxes, kept | the T1a invite (approved) and 80-partner-team hold it; T1c adds the Role only | yes (2026-11-15, "ship it") |
+| Screen 3, the phone sheet's stacked buttons and handle | the Dialog primitive's phone sheet as built (Neel) | a shared primitive; changing it changes every dialog | yes (2026-11-15, "ship it") |
+| Screens 5–6, "Building" amber | neutral, as the partner workspace's approved stage colours | one stage, one colour on the owner's and the Builder's Clients | yes (2026-11-15, "ship it") |
+| Screens 7–11, the store's address under its name | the name only | the address is read by the owner shell's nav counts (frata_app); a Builder's shell reads nothing but its Actor | yes (2026-11-15, "ship it") |
+| Screen 7, "Sort: Last edited" | the owner list's Sort select ("Sort", "Recently edited") | the same list component for both | yes (2026-11-15, "ship it") |
+| Screen 8, phone rows (thumb, chip, "32 in stock") | the owner list's phone rows (DataTable reflow), with its Sort | the same rows component for both; the drawing was the sketch's | yes (2026-11-15, "ship it") |
+| Screens 8 and 11, three phone tabs | three tabs and More (Partner workspace, the store switcher, Sign out) | the phone needs a way to sign out and switch; More is the shell's place for them | yes (2026-11-15, "ship it") |
+| Screen 9, "Filled by" as muted text, no address line | the owner's collections table (chips, the address in mono) | the same table component for both | yes (2026-11-15, "ship it") |
+| Screens 10–11, the refusal unboxed | the Panel primitive's card, with the lock tile and Open products | a shared primitive (every page's refusal is a Panel) | yes (2026-11-15, "ship it") |
+| Screen 12, Remove partner ghost; dates "2 Nov"; mono emails | People as built (secondary button, `dayIN` dates, sans emails); T1c adds the Builder row and its (i) | the rest of People is T1a's approved screen | yes (2026-11-15, "ship it") |
+| Plan task 6, "e2e posts three actions" | every action's refusal is a unit test (`asMember`, every tuple; `requireCapability`), and the sweep GETs every page and route handler | server action ids are build-internal, so a flow can't post one without its form | yes (2026-11-15, "ship it") |
 
 ## Tasks (each ends with its verify command and `impact-reviewer` on its diff)
 1. **Capabilities, no one's access moves.** `capabilities.test.ts` (snapshot of today's tuples) first; then
