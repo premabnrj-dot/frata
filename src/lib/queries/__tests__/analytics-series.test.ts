@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 vi.mock('server-only', () => ({}))
 import { windowFor } from '@/domains/analytics/period'
-import { shape } from '../analytics-series'
+import { seriesIn, shape } from '../analytics-series'
 
 const now = new Date('2026-11-13T06:00:00Z') // Fri 13 Nov, 11:30 IST
 const w = windowFor({ kind: 'preset', preset: '30' }, now)
@@ -30,5 +30,15 @@ describe('series shape', () => {
   it('cohorts: oldest first, a month not begun yet is null, never 0', () => {
     const s = shape(w, [], [], [{ k: 0, shoppers: 310, m1: 99, m2: 65, m3: 46 }, { k: 3, shoppers: 455, m1: 160, m2: 0, m3: 0 }], [], months)
     expect(s.cohort.map((c) => [c.shoppers, c.again])).toEqual([[310, [99, 65, 46]], [0, [0, 0, 0]], [0, [0, 0, null]], [455, [160, null, null]]])
+  })
+})
+
+describe('series read failing', () => {
+  it('returns null (the chart sections hide; the page stays) when the savepoint throws, e.g. past its 800 ms', async () => {
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const tx = { transaction: async () => { throw Object.assign(new Error('canceling statement due to statement timeout'), { code: '57014' }) } }
+    expect(await seriesIn(tx as never, 'tenant', w, now)).toBeNull()
+    expect(err).toHaveBeenCalledOnce()
+    err.mockRestore()
   })
 })

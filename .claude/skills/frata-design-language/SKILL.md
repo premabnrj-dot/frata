@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.2.0
+  version: 7.3.0
   verified: 2026-11-13
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -620,7 +620,8 @@ Rules every products screen keeps (PR·0 built; PR·1–4 follow the mockup):
 62. **Pending is never zero and never a return.** Orders not sent yet or on the way are counted as such; a share of
     returns names its denominator ("6% of 54 with an outcome"), and an order joins it only once it has an outcome.
 63. **Under 30, counts:** below `JUDGE_MIN` a share is "3 of 12" and a per-order ₹ says "too few to judge"; under 30
-    orders on the whole page, the tally pictogram and a count to go replace the four numbers.
+    orders on the whole page, one line says so ("Too few to judge: N orders so far") above the figures, which stay, each
+    in counts (Neel N1b: the figures are the page's frame; hiding them hid Sales too).
 64. **"Source known for N%"** sits beside "Where orders came from"'s heading (Neel N1b); under half, one info line points
     to Make a link. A source is what the link said: the (i) on "Where orders came from" says how it is decided, once.
 65. **₹ kept only where `seesCosts`:** staff (and a partner after handover) see the same page with orders leading and

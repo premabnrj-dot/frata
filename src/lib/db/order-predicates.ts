@@ -113,6 +113,10 @@ export const paymentKindSql = (a = '"orders"'): SQL<'cod' | 'paid' | 'unpaid'> =
 export const holdingSql = (now: Date, a = '"orders"'): SQL =>
   sql`(${c(a, 'payment_method')} = 'prepaid' and ${c(a, 'paid_at')} is null and ${c(a, 'switched_to_cod_at')} is null and ${c(a, 'cancelled_at')} is null and ${c(a, 'pay_by')} > ${ts(now)})`
 
+/** The orders Analytics counts as sales (its Sales figure, the source pages and the charts alike, Neel N1b): standing,
+ * or an unpaid online order still holding its stock. ONE copy; every analytics read uses it. */
+export const salesOrderSql = (now: Date, a = '"orders"'): SQL => sql`(${standingSql(a)} or ${holdingSql(now, a)})`
+
 /** isStanding(): placed and not cancelled — its lines still count against stock and pre-order caps. */
 export const standingSql = (a = '"orders"'): SQL => sql`(${c(a, 'cancelled_at')} is null and ${placedSql(a)})`
 

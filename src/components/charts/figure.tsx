@@ -21,9 +21,9 @@ export function Figure({ label, value, change, against, note, spark, empty }: {
       <span className="text-label text-muted-foreground">{label}</span>
       <b className={cn('font-num text-stat font-semibold tabular-nums max-md:text-title', empty && 'text-muted-foreground')}>{empty ? '—' : value}</b>
       {empty ? <span className="text-label text-muted-foreground">{empty}</span> : change ? (
-        <span className={cn('text-label', TONE[change.tone])}>{change.words}{against && change.tone !== 'none' ? <span className="text-muted-foreground"> {against}</span> : null}</span>
+        <span className={cn('text-label', TONE[change.tone])}>{change.words}{against && change.tone !== 'none' ? <span className="max-md:hidden"> {against}</span> : null}</span>
       ) : null}
-      {note ? <span className="text-label text-muted-foreground">{note}</span> : null}
+      {note ? <span className="text-label text-muted-foreground max-md:hidden">{note}</span> : null}
       {spark && spark.length > 1 && !empty ? <Sparkline values={spark} className="max-md:hidden" /> : null}
     </div>
   )

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ALL_STATES, bucketOf, busiest, change, levels, splitWords, STATE_TILES, ticks } from '../kit'
+import { ALL_STATES, bucketOf, busiest, change, levels, shortValue, splitWords, STATE_TILES, ticks } from '../kit'
 
 describe('change: coloured by meaning, not direction', () => {
   it('counts and money in percent', () => {
@@ -38,8 +38,7 @@ describe('the rest', () => {
 })
 
 describe('shortValue', () => {
-  it('rupees short, counts grouped', async () => {
-    const { shortValue } = await import('../kit')
+  it('rupees short, counts grouped', () => {
     expect([shortValue(9_000_000, 'money'), shortValue(12_00_000_00, 'money'), shortValue(42_000, 'money'), shortValue(12345, 'count')]).toEqual(['₹90k', '₹12L', '₹420', '12,345'])
   })
 })

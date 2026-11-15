@@ -7,7 +7,7 @@ import { dayMonthIN } from '@/lib/format-date'
 import { monthStartIST } from '@/domains/time/month'
 import type { Tx } from '@/lib/db'
 import { withTenant } from '@/lib/db/tenant'
-import { holdingSql, paymentKindSql, stageSql, standingSql } from '@/lib/db/order-predicates'
+import { paymentKindSql, stageSql, standingSql, salesOrderSql } from '@/lib/db/order-predicates'
 import { discounts } from '@/lib/db/schema-discounts'
 import { orders } from '@/lib/db/schema-orders'
 import { errName } from '@/lib/log'
@@ -67,7 +67,7 @@ export async function seriesIn(tx: Tx, tenantId: string, w: Window, now: Date): 
             from ${orders} o
            where o.tenant_id = ${tenantId} and o.placed_at >= ${iso(w.prevStart)} and o.placed_at < ${iso(w.end)}
              and (o.placed_at >= ${iso(w.start)} or o.placed_at < ${iso(w.prevEnd)})
-             and (${standingSql('o')} or ${holdingSql(now, 'o')})
+             and ${salesOrderSql(now, 'o')}
            group by 1, 2, 3, 4`),
         sp.execute<{ state: string; outcomes: number; rto: number }>(sql`
           select o.state, count(*)::int outcomes, (count(*) filter (where o.rto_initiated_at is not null))::int rto

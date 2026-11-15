@@ -3,8 +3,9 @@
 // source page's last orders, staff without ₹, and shop B's orders never counted. Skipped unless INT_DB_HOST is set.
 // Rolled back.
 import { windowFor } from '@/domains/analytics/period'
-const thirty = (now: Date) => windowFor({ kind: 'preset', preset: '30' }, now)
 import { describe, expect, it } from 'vitest'
+
+const thirty = (now: Date) => windowFor({ kind: 'preset', preset: '30' }, now)
 
 const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'

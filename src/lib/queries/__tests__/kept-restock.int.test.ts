@@ -3,8 +3,9 @@
 // Analytics read the came-back event the same way (rtoRestockedSql) and agree. Tenant A of the proof, rolled back.
 // A delivered order with pieces returned: the fee follows what was kept in both. Skipped unless INT_DB_HOST is set (CI).
 import { windowFor } from '@/domains/analytics/period'
-const thirty = (now: Date) => windowFor({ kind: 'preset', preset: '30' }, now)
 import { describe, expect, it } from 'vitest'
+
+const thirty = (now: Date) => windowFor({ kind: 'preset', preset: '30' }, now)
 
 const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'

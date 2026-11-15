@@ -32,7 +32,7 @@ export const monthLongYearIN = (d: Date) =>
 
 /** "Aug" — a month in a table of recent months (Analytics' returning shoppers; the heading says which year). */
 export const monthShortIN = (d: Date) =>
-  d.toLocaleDateString('en-IN', { month: 'short', timeZone: IST })
+  d.toLocaleDateString('en-IN', { month: 'short', timeZone: IST }).slice(0, 3) // en-IN writes "Sept"; three letters, as drawn
 
 /** "Aug 2028" — a month a window ends in. */
 export const monthYearIN = (d: Date) =>

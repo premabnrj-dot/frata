@@ -13,7 +13,7 @@ export function Heatmap({ grid }: { grid: number[][] }) {
   const words = busiest(grid)
   return (
     <div className="flex flex-col gap-3">
-      <table className="w-full table-fixed border-separate border-spacing-1 text-[11px] text-muted-foreground">
+      <table className="w-full table-fixed border-separate border-spacing-1 text-kbd text-muted-foreground">
         <caption className="sr-only">Orders by day of the week and time of day</caption>
         <thead><tr><td className="w-9" />{HOUR_BUCKETS.map((h) => <th key={h} scope="col" className="text-left font-normal">{h}</th>)}</tr></thead>
         <tbody>

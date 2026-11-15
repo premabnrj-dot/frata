@@ -141,7 +141,6 @@ export default {
         const { c, pg } = await open()
         await pg.goto(CONSOLE + '/console/analytics?period=30')
         await pg.getByText('Visits count from today').waitFor()
-        await pg.getByText('from today').first().waitFor()
         await c.close()
       } finally { await adb`select analytics_rollup(${today}::date)` }
     })
@@ -182,12 +181,12 @@ export default {
       await t.step('Console › Analytics, partly counted: visits and the funnel show, no rate divides a month of orders by a day of visits', async () => {
         const { c, pg } = await open()
         await pg.goto(CONSOLE + '/console/analytics?period=30')
-        await pg.getByRole('heading', { name: /From visit to delivered/ }).waitFor()
+        await pg.getByRole('heading', { name: /From visit to order/ }).waitFor()
         // Visits began yesterday: the 30 days aren't all counted, so orders per visit wait for their date.
         await pg.getByText(/Biggest drop: saw a product → added to bag/).waitFor()
-        const strip = await pg.locator('dl').first().innerText()
+        const strip = await pg.getByRole('region', { name: 'Visits' }).innerText()
         assert.match(strip, /Orders per 100 visits\s*—/, 'no rate yet')
-        assert.match(strip, /from \d{1,2} [A-Z][a-z]{2}/, 'the date the rates start')
+        assert.match(strip, /Counting since \d{1,2} [A-Z][a-z]{2}/, 'the date the rates start')
         await c.close()
       })
 
@@ -197,10 +196,10 @@ export default {
       await t.step('Console › Analytics, ready: the funnel, sources with visits, where they browse, cities, products, speed', async () => {
         const { c, pg } = await open()
         await pg.goto(CONSOLE + '/console/analytics?period=30')
-        await pg.getByRole('heading', { name: /From visit to delivered/ }).waitFor()
+        await pg.getByRole('heading', { name: /From visit to order/ }).waitFor()
         await pg.getByText('Saw a product').waitFor()
         // Fully counted: orders per 100 visits is a number, and the funnel's order steps are counted (grouped as India does).
-        assert.match(await pg.locator('dl').first().innerText(), /Orders per 100 visits\s*\d+\.\d\d/)
+        assert.match(await pg.getByRole('region', { name: 'Visits' }).innerText(), /Orders per 100 visits\s*\d+\.\d\d/)
         await pg.getByText(/Biggest drop: /).waitFor()
         await pg.getByText('9,901').waitFor()
         await pg.getByText('Instagram’s in-app browser').waitFor()
@@ -211,7 +210,7 @@ export default {
         await pg.getByText('Good', { exact: true }).waitFor()
         await pg.getByText(new RegExp(`Slowest page: ${prod.title}`)).waitFor()
         // Kesar's own visits (18,400 + today's), never the other shop's seeded twin.
-        const tile = await pg.locator('dl').first().innerText()
+        const tile = await pg.getByRole('region', { name: 'Visits' }).innerText()
         assert.ok(/18,4\d\d/.test(tile) && !/36,8\d\d/.test(tile), 'Kesar\'s visits, and not another shop\'s added in')
         await pg.screenshot({ path: t.out('console-analytics'), fullPage: true })
         await c.close()
@@ -220,7 +219,7 @@ export default {
       await t.step('Phone: the page has no sideways scroll', async () => {
         const { c, pg } = await open({ viewport: { width: 390, height: 844 } })
         await pg.goto(CONSOLE + '/console/analytics?period=30')
-        await pg.getByRole('heading', { name: /From visit to delivered/ }).waitFor()
+        await pg.getByRole('heading', { name: /From visit to order/ }).waitFor()
         assert.ok(await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no sideways scroll')
         await pg.screenshot({ path: t.out('console-analytics-phone'), fullPage: true })
         await c.close()

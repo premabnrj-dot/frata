@@ -83,7 +83,7 @@ export default {
           await c.goto(CONSOLE + '/console/analytics')
           await c.getByRole('heading', { name: 'Analytics' }).waitFor()
           const table = c.getByRole('table', { name: 'Where orders came from' })
-          assert.ok(await table.getByRole('columnheader', { name: '₹ kept after returns' }).count(), 'the owner sees ₹ kept')
+          assert.ok(await table.getByRole('columnheader', { name: '₹ kept an order' }).count(), 'the owner sees ₹ kept')
           await table.getByRole('link', { name: 'Creator · Riya' }).click()
           await c.waitForURL(/\/console\/analytics\/creator-riya51/)
           await c.getByRole('heading', { name: 'Creator · Riya' }).waitFor()

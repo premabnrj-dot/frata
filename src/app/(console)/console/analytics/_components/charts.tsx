@@ -3,15 +3,16 @@ import { Section } from '@/components/layout/section'
 import { CohortTable } from '@/components/charts/cohort-table'
 import { Figure } from '@/components/charts/figure'
 import { Heatmap } from '@/components/charts/heatmap'
-import { SplitBars } from '@/components/charts/split-bars'
+import { SplitBars, SplitLegend } from '@/components/charts/split-bars'
 import { StateTiles } from '@/components/charts/state-tiles'
 import { TrendChart } from '@/components/charts/trend-chart'
+import { TrendLegend } from '@/components/charts/trend-legend'
 import { Money, Numeric } from '@/components/data/numeric'
 import { change, shortValue } from '@/domains/analytics/kit'
 import { JUDGE_MIN } from '@/domains/analytics/judge'
 import { paise } from '@/domains/money/paise'
 import { formatPercent } from '@/lib/format'
-import { dayMonthIN, monthShortIN } from '@/lib/format-date'
+import { dayMonthIN } from '@/lib/format-date'
 import type { Series } from '@/lib/queries/analytics-series'
 import type { Analytics, Totals } from '@/lib/queries/analytics'
 
@@ -49,13 +50,12 @@ export function Figures({ a, compare, series, keptNote }: { a: Pick<Analytics, '
 
 /** "512 orders → 388 delivered · 61 came back · 3 lost · 41 on the way · 19 not sent yet" (as drawn). */
 export function FlowLine({ c }: { c: Totals }) {
+  const n = (v: number) => <Numeric className="font-medium text-foreground">{v}</Numeric>
   return (
-    <p aria-label="Where this period's orders are" className="text-sm text-muted-foreground">
-      <b className="font-num font-medium text-foreground tabular-nums">{c.orders}</b> orders → <b className="font-num font-medium text-foreground tabular-nums">{c.delivered}</b> delivered
-      {' · '}<b className="font-num font-medium text-foreground tabular-nums">{c.rto}</b> came back
-      {c.lost ? <>{' · '}<b className="font-num font-medium text-foreground tabular-nums">{c.lost}</b> lost</> : null}
-      {' · '}<b className="font-num font-medium text-foreground tabular-nums">{c.onTheWay}</b> on the way
-      {' · '}<b className="font-num font-medium text-foreground tabular-nums">{c.notSent}</b> not sent yet
+    <p className="text-sm text-muted-foreground">
+      {n(c.orders)} orders → {n(c.delivered)} delivered{' · '}{n(c.rto)} came back
+      {c.lost ? <>{' · '}{n(c.lost)} lost</> : null}
+      {' · '}{n(c.onTheWay)} on the way{' · '}{n(c.notSent)} not sent yet
     </p>
   )
 }
@@ -63,39 +63,36 @@ export function FlowLine({ c }: { c: Totals }) {
 /** Sales by day, this period against the one before; came back marked on the day those orders were placed. */
 export function SalesByDay({ s, compareName }: { s: Series; compareName: string }) {
   const points = s.days.map((d) => ({ key: d.key, label: dayMonthIN(new Date(`${d.key}T06:30:00Z`)), value: d.sales, prev: d.prevSales, marks: d.rto }))
-  if (points.length < 2) return null
+  if (points.length < 2) return <Section id="sales-by-day" title="Sales by day" flatOnPhone><p className="text-sm text-muted-foreground">One day so far: the trend draws from two.</p></Section>
   const first = points[0]!, last = points.at(-1)!
   const summary = `Sales a day, ${first.label} to ${last.label}: from ${inrShort(first.value)} to ${inrShort(last.value)}${s.notes.length ? `; ${s.notes.map((n) => `${n.title} from ${dayMonthIN(new Date(`${n.key}T06:30:00Z`))}`).join('; ')}` : ''}`
   return (
-    <Section id="sales-by-day" title="Sales by day">
-      <TrendChart points={points} summary={summary} unit="money" seriesNames={['This period', compareName]} notes={s.notes} marksName="came back (of orders placed that day)" />
+    <Section id="sales-by-day" title="Sales by day" flatOnPhone action={<TrendLegend names={['This period', compareName]} marks="Came back" />}>
+      <TrendChart points={points} summary={summary} unit="money" seriesNames={['This period', compareName]} notes={s.notes} marksName="came back" />
     </Section>
   )
 }
 
 export function PaidAndCod({ s }: { s: Series }) {
   if (!s.weeks.some((w) => w.a + w.b > 0)) return null
-  return <Section id="paid-cod" title={s.weeks.length && s.weeks[0]!.label.startsWith('Week') ? 'Paid online and COD, by week' : 'Paid online and COD, by day'}><SplitBars rows={s.weeks} a="Paid online" b="COD" /></Section>
+  return <Section id="paid-cod" flatOnPhone action={<SplitLegend a="Paid online" b="COD" />} title={s.weeks.length && s.weeks[0]!.label.startsWith('Week') ? 'Paid online and COD, by week' : 'Paid online and COD, by day'}><SplitBars rows={s.weeks} a="Paid online" b="COD" /></Section>
 }
 
 export function WhenOrdersCome({ s }: { s: Series }) {
   if (!s.heat.flat().some((n) => n > 0)) return null
-  return <Section id="when" title="When orders come"><Heatmap grid={s.heat} /></Section>
+  return <Section id="when" title="When orders come" flatOnPhone><Heatmap grid={s.heat} /></Section>
 }
 
 export function ByState({ s }: { s: Series }) {
   if (!s.states.length) return null
-  return <Section id="by-state" title="Came back, by state"><StateTiles rows={s.states} /></Section>
+  return <StateTiles id="by-state" title="Came back, by state" rows={s.states} />
 }
 
 export function ComeBack({ s }: { s: Series }) {
-  if (!s.cohort.some((c) => c.shoppers > 0)) return null
-  const first = s.cohort[0]!.month, last = s.cohort.at(-1)!.month
-  return (
-    <Section id="come-back" title="Shoppers who come back" action={<span className="text-label text-muted-foreground">First orders {monthShortIN(first)}–{monthShortIN(last)}</span>}>
-      <CohortTable rows={s.cohort} />
-    </Section>
-  )
+  // As drawn: the three whole months before this one (the oldest month read only feeds the mask).
+  const rows = s.cohort.slice(-3)
+  if (!rows.some((c) => c.shoppers > 0)) return null
+  return <Section id="come-back" title="Shoppers who come back" flatOnPhone><CohortTable rows={rows} /></Section>
 }
 
 /** The under-30 state (rule 63): the tally and a count to go, in place of the figures' shares. */

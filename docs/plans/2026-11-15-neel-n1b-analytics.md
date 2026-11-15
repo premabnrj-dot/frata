@@ -61,8 +61,8 @@ by keyboard, each new section against seeded orders, staff without ₹ kept, the
    Sales figure counts (standing or holding: one predicate, shared with `windowSql`); TypeScript derives the days,
    the weeks × paid/COD and the weekday × bucket. Came back is counted on the day the order was PLACED (as the figure
    is: architecture review), so the trend and the figure agree; the tooltip says "of orders placed that day".
-   (d) by state: orders with an outcome and came back, index-only on `orders_outcome_place` recreated with `state` in
-   its INCLUDE (create new, drop old, as 0101 did).
+   (d) by state: orders with an outcome and came back, index-only on `orders_outcome_state` (0127: `orders_outcome_place` recreated with `state`
+   in its INCLUDE, created new then the old dropped, as 0101 did).
    (e) returning shoppers: one aggregate per phone over all history — `min(placed_at)` and a `bit_or` month mask over
    the four whole IST months before this one (t0…t4 passed as timestamptz) — first orders in those months, and whether
    each ordered again in months 1–3; standing orders, `phone <> ''` (erasure blanks it). A covering partial index
@@ -86,8 +86,14 @@ by keyboard, each new section against seeded orders, staff without ₹ kept, the
 |---|---|---|---|
 | Custom: any dates | At most 92 days | A year and its comparison timed out at the page's 3 s (speed review, 600 k orders); 92 covers the old 90-day view; longer waits for a daily rollup | Asked in the N1b report |
 | "vs previous 30 days ▾" as a menu | The comparison as words beside the picker | One comparison exists (the period before); a menu with one choice is a control that does nothing | Asked in the N1b report |
-| A source's page (not drawn) | The same header, picker, figures and trend as Analytics, then its orders | Built from the drawn parts; nothing new | Asked in the N1b report |
-| Browsers, Cities, Products, Speed on phones (not drawn) | Kept below the funnel, redrawn with ShareBar and Figure | Owner call 3 (2026-11-15) | Yes, 2026-11-15 |
+| A source's page (not drawn) | The same header, picker, figures and flow line as Analytics, then its orders; no trend yet | Built from the drawn parts; a trend per source needs the series read filtered by source, left for the next step | Asked in the N1b report |
+| Browsers, Cities, Products, Speed on phones (not drawn) | Kept below the funnel as they are (their A·2 look) | Owner call 3 (2026-11-15); redrawing them is N3/N4 work | Yes, 2026-11-15 (kept); look asked in the N1b report |
+| Where orders came from, with visits counted (drawn without) | The drawn table plus two columns, Visits and Orders per 100 visits; ₹ kept per visit dropped | The A·2 numbers the owner approved stay, inside the drawn table | Asked in the N1b report |
+| Visits and Orders per 100 visits (drawn in the funnel's head) | Two figures above the funnel; on Today no change (visits compare whole days) | Visits are counted by day: a change against yesterday-at-this-time cannot be read | Asked in the N1b report |
+| When orders come: seven hour bands | Seven rows Monday first × seven three-hour bands | As drawn in the kit; the board's sample shows four rows | Asked in the N1b report |
+| No (i) on headings | The (i) kept on Where orders came from and on Visits | How a source is decided and how visits are counted are the two facts a merchant asks; Rule 0 allows a limit | Asked in the N1b report |
+| Phone header: title, then the picker on its own line | PageHeader's shared phone layout (title and Make a link, picker under) | PageHeader is shared by every page; one page's header is not changed alone | Asked in the N1b report |
+| Too few orders (not drawn) | One line above the figures; the figures stay, in counts | Rule 63 amended (design language 7.3.0) | Asked in the N1b report |
 | Phone: the funnel and Pincodes (not drawn) | Stacked as on desktop, one column | The phone board stops at the cohort; the rest follows the same rule | Asked in the N1b report |
 
 ## Design review

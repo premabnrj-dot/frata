@@ -17,8 +17,8 @@ export function CohortTable({ rows }: { rows: { month: Date; shoppers: number; a
     <table className="w-full border-separate border-spacing-1 text-sm">
       <caption className="sr-only">Share of each month&apos;s first-time shoppers who ordered again</caption>
       <thead><tr className="text-label text-muted-foreground">
-        <th scope="col" className="text-left font-medium">First order</th><th scope="col" className="text-right font-medium">Shoppers</th>
-        <th scope="col" className="text-left font-medium">1 month</th><th scope="col" className="text-left font-medium">2 months</th><th scope="col" className="text-left font-medium">3 months</th>
+        <th scope="col" className="text-left font-medium"><span className="max-md:hidden">First order</span><span className="md:hidden">First</span></th><th scope="col" className="text-right font-medium">Shoppers</th>
+        <th scope="col" className="text-left font-medium"><span className="max-md:hidden">1 month</span><span className="md:hidden">1 mo</span></th><th scope="col" className="text-left font-medium"><span className="max-md:hidden">2 months</span><span className="md:hidden">2 mo</span></th><th scope="col" className="text-left font-medium"><span className="max-md:hidden">3 months</span><span className="md:hidden">3 mo</span></th>
       </tr></thead>
       <tbody>
         {rows.map((r, i) => (

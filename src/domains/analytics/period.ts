@@ -47,7 +47,7 @@ export function parsePeriod(p: Record<string, string | string[] | undefined>, no
     if (from > to) [from, to] = [to, from]
     if (to > today) to = today
     if (from > today) from = today
-    // At most a year: a longer range keeps its end and moves its start.
+    // At most MAX_CUSTOM_DAYS: a longer range keeps its end and moves its start.
     const span = Math.round((dayStart(to).getTime() - dayStart(from).getTime()) / DAY) + 1
     if (span > MAX_CUSTOM_DAYS) from = istDayKey(new Date(dayStart(to).getTime() - (MAX_CUSTOM_DAYS - 1) * DAY))
     return { kind: 'custom', from, to }

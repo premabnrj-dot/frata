@@ -35,10 +35,34 @@ describe.skipIf(!host)('analytics series', () => {
       // The chart's days add up to exactly what the Sales figure grew by.
       expect(sum(s1) - sum(s0!)).toBe(after.cur.sales - before.cur.sales)
       expect(s1.days.reduce((x, d) => x + d.rto, 0) - s0!.days.reduce((x, d) => x + d.rto, 0)).toBe(1)
+      // Came back sits on the day the order was PLACED (two days ago), not the day it came back.
+      const { istDayKey } = await import('@/domains/time/day')
+      const rtoDay = (s: typeof s1) => s.days.find((d) => d.key === istDayKey(ago(2)))?.rto ?? 0
+      expect(rtoDay(s1) - rtoDay(s0!)).toBe(1)
       const sk = (s: typeof s1) => s.states.find((x) => x.state === 'Sikkim') ?? { outcomes: 0, rto: 0 }
       expect([sk(s1).outcomes - sk(s0!).outcomes, sk(s1).rto - sk(s0!).rto]).toEqual([2, 1])
       expect(s1.heat.flat().reduce((x, y) => x + y, 0) - s0!.heat.flat().reduce((x, y) => x + y, 0)).toBe(2)
       tx.rollback()
     }).catch((e) => { if (!String(e).includes('Rollback')) throw e })
+  })
+
+  it('a past custom window, read on its own transaction (seriesFor): days cover it exactly, the orders in it are counted', async () => {
+    process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
+    const { seriesFor } = await import('@/lib/queries/analytics-series')
+    const { analyticsIn } = await import('@/lib/queries/analytics')
+    const { withTenant } = await import('@/lib/db/tenant')
+    const { windowFor } = await import('@/domains/analytics/period')
+    const { istDayKey } = await import('@/domains/time/day')
+    const now = new Date()
+    const day = (d: number) => istDayKey(new Date(now.getTime() - d * 86_400_000))
+    const w = windowFor({ kind: 'custom', from: day(40), to: day(31) }, now)
+    expect(w.days).toBe(10)
+    expect(w.toNow).toBe(false)
+    const s = await seriesFor(A, w, now)
+    expect(s).not.toBeNull()
+    expect(s!.days.map((d) => d.key)).toEqual(Array.from({ length: 10 }, (_, i) => day(40 - i)))
+    const a = await withTenant(A, (tx) => analyticsIn(tx, A, 'owner', w, now))
+    expect(s!.days.reduce((x, d) => x + d.sales, 0)).toBe(a.cur.sales)
+    expect(s!.days.reduce((x, d) => x + d.orders, 0)).toBe(a.cur.orders)
   })
 })

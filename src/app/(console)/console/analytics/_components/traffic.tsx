@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import { InfoTip } from '@/components/ui/info-tip'
 import { Panel } from '@/components/ui/panel'
 import { Pictogram } from '@/components/brand/pictogram'
-import { Icon } from '@/components/icons/icon'
 import { judgeable, VISITS_MIN } from '@/domains/analytics/judge'
 import type { FunnelStep, ProductLine, Share, Speed } from '@/domains/analytics/traffic'
 import { formatCount, formatPercent } from '@/lib/format'
@@ -33,7 +32,7 @@ const bar = (share: number) => (
 /** The first days: too few visits to judge any share yet, with how far to go. */
 export function TooFewVisits({ visits }: { visits: number }) {
   return (
-    <Section title="From visit to delivered">
+    <Section title="From visit to order">
       <div className="flex items-center gap-4">
         <Pictogram name="tally" size={48} className="shrink-0" />
         <div className="min-w-0 flex-1 space-y-2">
@@ -55,14 +54,14 @@ export function VisitsUnavailable() {
   return <Panel title="Visits unavailable">Your orders above are unchanged. Try again in a minute.</Panel>
 }
 
-/** From visit to delivered: each step as a share of the one above, and the biggest drop named. */
+/** From visit to order: each step as a share of the one above, and the biggest drop named. */
 export function Funnel({ steps, drop, fullFrom }: { steps: FunnelStep[]; drop: { from: string; to: string; leave: number } | null; fullFrom: Date | null }) {
   const max = steps[0]?.n || 1
   return (
-    <Section title={<span className="inline-flex items-center gap-1">From visit to delivered<InfoTip about="how visits and orders are joined">{HOW_FUNNEL}</InfoTip></span>}>
+    <Section title={<span className="inline-flex items-center gap-1">From visit to order<InfoTip about="how visits and orders are joined">{HOW_FUNNEL}</InfoTip></span>}>
       {/* In the body, not the header's action: it wraps on a phone. */}
       {drop ? <p className="mb-3 text-xs text-muted-foreground">Biggest drop: {drop.from.toLowerCase()} → {drop.to.toLowerCase()}, {formatPercent(drop.leave, 0)} leave</p> : null}
-      <ol className="grid gap-2" aria-label="From visit to delivered">
+      <ol className="grid gap-2" aria-label="From visit to order">
         {steps.map((s) => (
           <li key={s.name} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-center gap-3 text-sm">
             <span className="min-w-0">{s.name}{s.fromOrders ? <span className="block text-xs text-muted-foreground">from your orders</span> : null}</span>
@@ -158,19 +157,5 @@ export function SpeedOnPhones({ s, slowest }: { s: Speed; slowest: { title: stri
       </div>
       {slowest ? <p className="mt-3 text-xs text-muted-foreground">Slowest page: {slowest.title}, {secs(slowest.lcpMs)}</p> : null}
     </Section>
-  )
-}
-
-/** Under the Visits tile: the change against the window before, only when that window was counted in full; else since
- * when visits are counted ("from today" before the first). */
-export function visitChange(now: number, before: number, since: Date | null, start: Date, prevCovered: boolean) {
-  if (!since) return <span className="text-xs text-muted-foreground">from today</span>
-  if (since > start) return <span className="text-xs text-muted-foreground">from {dayMonthIN(since)}</span>
-  if (!prevCovered || !before) return null
-  return (
-    <span className="inline-flex items-center gap-1 text-xs">
-      <Icon name={now >= before ? 'up' : 'down'} className="size-3.5" />
-      <span className="text-muted-foreground">from <Numeric>{formatCount(before)}</Numeric></span>
-    </span>
   )
 }

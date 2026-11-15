@@ -10,14 +10,14 @@ import { compareWords, parsePeriod, periodQuery, windowFor } from '@/domains/ana
 import { istDayKey } from '@/domains/time/day'
 import { PeriodPicker } from '@/components/charts/period-picker'
 import { trafficNames, trafficRead } from '@/lib/queries/traffic'
-import { browserShares, cityShares, coverage, emptyTotals, enoughVisits, funnel, productLines, slowestPage, speedOf, visitOnly, visitsBySource, type SourceVisits } from '@/domains/analytics/traffic'
+import { browserShares, cityShares, coverage, enoughVisits, funnel, productLines, slowestPage, speedOf, visitOnly, visitsBySource, type SourceVisits } from '@/domains/analytics/traffic'
 import { EMPTY_TOTALS } from '@/domains/analytics/totals'
 import { errName } from '@/lib/log'
 import { urlProblem } from '@/lib/db/url'
 import { Browse, Cities, Funnel, NoVisitsYet, Products, SpeedOnPhones, TooFewVisits, VisitsUnavailable } from './_components/traffic'
 import { readFailed } from './_components/read-failed'
 import { MakeLink } from './_components/make-link'
-import { KeptNote, Pincodes, Sources, Strip } from './_components/parts'
+import { KeptNote, Pincodes, Sources, VisitFigures } from './_components/parts'
 import { ByState, ComeBack, Figures, FlowLine, PaidAndCod, SalesByDay, TooFew, WhenOrdersCome } from './_components/charts'
 import { JUDGE_MIN } from '@/domains/analytics/judge'
 
@@ -70,7 +70,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const make = <MakeLink origin={`https://${shop.host ?? ''}`} open={shop.open && !!shop.slug} products={targets.products} collections={targets.collections} showsAs={showsAs} />
   // The dates and what they are against stay in the line (design language 61); how they are counted is the (i) tip.
   const lastDay = new Date(w.end.getTime() - 1)
-  const range = `${dayMonthIN(a.start)} – ${w.toNow ? 'today (so far)' : dayMonthIN(lastDay)} · India time`
+  const range = `${dayMonthIN(a.window.start)} – ${w.toNow ? 'today (so far)' : dayMonthIN(lastDay)} · India time`
   const metaLine = (visitsSince: Date | null) => (
     <span className="inline-flex flex-wrap items-center gap-x-1">{range}
       <InfoTip about="these dates">Orders count on the day they were placed (IST); today&apos;s numbers still change.{visitsSince ? ` Visits counted since ${dayMonthIN(visitsSince)}.` : ''}</InfoTip>
@@ -93,7 +93,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const on = read !== 'off'
   const failed = read === 'failed' || (!!traffic && !names)
   const t = failed ? null : traffic
-  const cov = coverage(t?.firstDay ?? null, a.start, a.prevStart, w.days)
+  const cov = coverage(t?.firstDay ?? null, a.window.start, a.window.prevStart, w.days)
   const enough = !!t && enoughVisits(t.cur.visitors)
   const rates = enough && cov.cur
   const prevRates = cov.prev && !!t && enoughVisits(t.prev.visitors)
@@ -107,32 +107,37 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const visitsOn = on && !failed
   return (
     <>
-      <PageHeader title="Analytics" wideActions actions={actions} meta={metaLine(on && cov.since && cov.since > a.start ? cov.since : null)} />
-      {a.cur.orders < JUDGE_MIN ? <TooFew n={a.cur.orders} /> : null}
-      <Figures a={a} compare={compare} series={series} keptNote={a.cur.kept ? <KeptNote k={a.cur.kept} estimate={a.estimate} /> : undefined} />
-      <FlowLine c={a.cur} />
-      {series ? <SalesByDay s={series} compareName={compare.replace(/^vs /, '').replace(/^(.)/, (m) => m.toUpperCase())} /> : null}
-      {series ? <div className="grid gap-4 lg:grid-cols-2"><PaidAndCod s={series} /><WhenOrdersCome s={series} /></div> : null}
-      {a.cur.orders > 0 && a.known / a.cur.orders < 0.5 ? (
-        <p className="rounded-md bg-info px-3 py-2 text-sm text-info-text">Most orders came without a source. A link from Make a link tells an Instagram bio from a WhatsApp broadcast.</p>
-      ) : null}
-      <Sources a={visitsOn ? { ...a, sources: [...a.sources, ...extra] } : a} pq={pq} visits={visitsOn ? { by, rates } : undefined} />
-      {series ? <div className="grid gap-4 lg:grid-cols-2"><ByState s={series} /><ComeBack s={series} /></div> : null}
-      {visitsOn ? <Strip a={a} visits={{ cur: t?.cur ?? emptyTotals(), prev: t?.prev ?? emptyTotals(), since: cov.since, rates, prevRates, fullFrom: cov.fullFrom }} /> : null}
-      {!on ? null : failed ? <VisitsUnavailable /> : !t?.firstDay ? <NoVisitsYet /> : !enough ? <TooFewVisits visits={t.cur.visitors} /> : f ? <Funnel steps={f.steps} drop={f.drop} fullFrom={cov.fullFrom} /> : null}
-      {t && names && enough ? (
-        <>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Browse shares={browserShares(t.browsers)} devices={t.cur} />
-            <Cities shares={cityShares(t.cities)} returns={names.cityReturns} />
-          </div>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Products lines={productLines(t.products, names.products)} />
-            <SpeedOnPhones s={speedOf(t.vitals)} slowest={slow && names.products.get(slow.productId) ? { title: names.products.get(slow.productId)!.title, lcpMs: slow.lcpMs } : null} />
-          </div>
-        </>
-      ) : null}
-      <Pincodes a={a} />
+      <PageHeader title="Analytics" wideActions actions={actions} meta={metaLine(on && cov.since && cov.since > a.window.start ? cov.since : null)} />
+      {/* One column; on a phone the sections come in the drawn order (trend, sources, paid/COD, when, state, cohort). */}
+      <div className="flex flex-col gap-6">
+        {a.cur.orders < JUDGE_MIN ? <TooFew n={a.cur.orders} /> : null}
+        <Figures a={a} compare={compare} series={series} keptNote={a.cur.kept ? <KeptNote k={a.cur.kept} estimate={a.estimate} /> : undefined} />
+        <FlowLine c={a.cur} />
+        {series ? <SalesByDay s={series} compareName={compare.replace(/^vs /, '').replace(/^(.)/, (m) => m.toUpperCase())} /> : null}
+        {series ? <div className="grid gap-4 max-md:order-2 lg:grid-cols-2"><PaidAndCod s={series} /><WhenOrdersCome s={series} /></div> : null}
+        {a.cur.orders > 0 && a.known / a.cur.orders < 0.5 ? (
+          <p className="rounded-md bg-info px-3 py-2 text-sm text-info-text max-md:order-1">Most orders came without a source. A link from Make a link tells an Instagram bio from a WhatsApp broadcast.</p>
+        ) : null}
+        <div className="max-md:order-1"><Sources a={visitsOn ? { ...a, sources: [...a.sources, ...extra] } : a} pq={pq} visits={visitsOn ? { by, rates } : undefined} /></div>
+        {series ? <div className="grid gap-4 max-md:order-3 lg:grid-cols-2"><ByState s={series} /><ComeBack s={series} /></div> : null}
+        <div className="flex flex-col gap-6 max-md:order-4">
+          {visitsOn && t?.firstDay ? <VisitFigures a={a} visits={{ cur: t.cur, prev: t.prev, since: cov.since, rates, prevRates }} /> : null}
+          {!on ? null : failed ? <VisitsUnavailable /> : !t?.firstDay ? <NoVisitsYet /> : !enough ? <TooFewVisits visits={t.cur.visitors} /> : f ? <Funnel steps={f.steps} drop={f.drop} fullFrom={cov.fullFrom} /> : null}
+          {t && names && enough ? (
+            <>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Browse shares={browserShares(t.browsers)} devices={t.cur} />
+                <Cities shares={cityShares(t.cities)} returns={names.cityReturns} />
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Products lines={productLines(t.products, names.products)} />
+                <SpeedOnPhones s={speedOf(t.vitals)} slowest={slow && names.products.get(slow.productId) ? { title: names.products.get(slow.productId)!.title, lcpMs: slow.lcpMs } : null} />
+              </div>
+            </>
+          ) : null}
+          <Pincodes a={a} />
+        </div>
+      </div>
     </>
   )
 }
