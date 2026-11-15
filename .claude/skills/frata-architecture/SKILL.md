@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.54.1
+  version: 2.55.0
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -121,6 +121,16 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   page. Adding or removing staff, approving a request and removing a passkey need `confirmedRecently` (5 minutes).
   The `staff_*` tables have no grant to any role (definers only, `check:tenant`); the session id comes from
   `getClaims()` with `sub` matched; the cookie is `__Host-frrata_staff` (plain `frrata_staff` on the local e2e stack).
+- **Partner passkeys** (T1b, 2026-11-15; `docs/specs/2026-11-15-partner-login.md`, drizzle/0127–0128): the same design
+  for partner people. `app_access_for(user, session, staff hash, partner hash)` counts a `members` row with a
+  `partner_member_id` only with a live partner step-up (answers `partnerConfirmedAt` and `partnerHeld`). `requirePartner`
+  returns `PartnerOk` (`sessionId`, `stepup`, `confirmedAt`) or `needs_passkey` with a `PartnerIdentity` (only
+  `src/lib/db/partner-passkeys.ts` takes it). **Every workspace definer takes `(session, stepup)` and re-checks it**
+  (`app_partner_need`): pass the `PartnerOk` as a `Caller` (`src/lib/db/partners.ts`), never a bare uid. Hand over,
+  invite, store changes, approving and deleting need a check in the last 5 minutes (the browser retries through
+  `freshly`). Cookie `__Host-frrata_partner`. A page keeps the Permissions-Policy it loaded with: passkeys are allowed on
+  `/partner`, `/join` and `/auth/confirm` only, so a link from the console or `/login` into the workspace is a full page
+  load (`<a>`, `window.location`), never a client navigation.
 - **Secrets only in Production** (previews off production, 2026-11-12): every secret in `src/lib/env.ts` is read through
   `secret()` (`src/domains/infra/stage.ts`): on Vercel, Production only; off Vercel, as given. `check:config` fails an
   unwrapped read. Sign-in is off in the browser on a preview.

@@ -42,6 +42,19 @@ who knows them, without a password and without a way round it.
 | Flow 4: the locked-out person calls | The approver calls | Lesson 12: "never act on a call you didn't start" |
 | Lesson 9: WhatsApp codes | None | Vendor claims only; EkCode's number is not for this |
 
+## Deviations in the build (BUILT AS DRAWN; shown to the owner before it ships)
+| Screen | Drawn | Built | Why |
+|---|---|---|---|
+| 4 (email) | Subject "482913 is your Frrata code" | "482913 is your Frrata sign-in code", body unchanged | One email template for every sign-in (brands too); its words are the brand sign-in's |
+| 4 (link page) | Partner frame with the PARTNER tag | The public frame, no tag | /auth/confirm serves every sign-in's link, so it can't say PARTNER |
+| 9 | "Amber Looms · Basil Prints" under "You're in" | Left out | The stores are read only after the check; "Open your clients" shows them one tap later |
+| 12 | "This invite is for arjun@…" | "No invite for this email" + the signed-in address | The page finds an invite by the signed-in email; another account can't learn which address an invite was for |
+| 16 | "Back to Clients › Kesar Studio" | "Back to Team" (the page's name only) | The path is known, the store a page was showing is not |
+| 17 | "Hand Kesar Studio to Riya?" · "Hand over to Riya" | "Hand Kesar Studio to its owner?" · "Hand over" | The owner's name isn't known before the invite; the body reads "It's theirs once the invite is accepted." |
+| 10, 17, 22 | The passkey icon on Approve, Hand over, Delete | The passkey is asked for when the last check is older than 5 minutes | The database's rule (5 minutes); asking every time added a prompt with no gain |
+| 20 | "Invite ended" with "Invite again" | "Invite ended" with Withdraw | An ended invite can't be sent again until it's withdrawn (one row per address) |
+| — | (not drawn) | "Pia declined the request" + "Get a new code" on the Lead's gate | The state after Decline (screen 10) needs a screen |
+
 ## Changes this needs in T1b's database layer (before 0128 reaches production)
 1. **Decline:** `app_partner_pk_decline(uid, session, stepup, member)`: the owner ends a member's open request; the
    member's screen says it was declined. Proof in § 79.
