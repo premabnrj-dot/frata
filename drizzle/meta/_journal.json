@@ -946,6 +946,13 @@
       "when": 1794755524327,
       "tag": "0134_billing_auto_issue",
       "breakpoints": true
+    },
+    {
+      "idx": 135,
+      "version": "7",
+      "when": 1794758195220,
+      "tag": "0135_billing_capture_checks",
+      "breakpoints": true
     }
   ]
 }

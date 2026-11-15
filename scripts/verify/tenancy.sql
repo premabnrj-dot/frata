@@ -1974,12 +1974,17 @@ do $$ declare ok boolean; begin
   select app_complete_mandate('order_proofA1', 'token_A') into ok;
   if not ok then raise exception 'FAIL: A could not complete its own autopay'; end if;
   if (select mandate_method from billing_accounts) is distinct from 'upi' then raise exception 'FAIL: A cannot see its own autopay status'; end if;
+  -- Billing R5: a bank mandate (eNACH) is pending until the bank confirms it, whatever the caller says.
+  perform app_begin_mandate('cust_proofA', 'order_proofA2', 'emandate', 10000000, '99999999-9999-9999-9999-999999999999');
+  select app_complete_mandate('order_proofA2', 'token_A2', true) into ok;
+  if not ok then raise exception 'FAIL: A could not complete its own eNACH set-up'; end if;
+  if (select mandate_at from billing_accounts) is not null then raise exception 'FAIL: an eNACH mandate counted before the bank confirmed it'; end if;
 end $$;
 rollback;
 do $$ begin
   if (select mandate_token_id from billing_accounts where tenant_id = '22222222-2222-2222-2222-222222222222') is not null then raise exception 'FAIL: B''s mandate was touched'; end if;
   if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r,
-               unnest(array['app_begin_mandate(text,text,text,bigint,uuid)', 'app_complete_mandate(text,text)', 'app_billing_due()', 'app_billing_begin_attempt(uuid,int)', 'app_billing_attempt_context(uuid)', 'app_billing_attempt_result(text,text,boolean,text)', 'app_store_billing_event(text,text,jsonb)', 'app_apply_billing_event(uuid)']) f
+               unnest(array['app_begin_mandate(text,text,text,bigint,uuid)', 'app_complete_mandate(text,text,boolean)', 'app_billing_due()', 'app_billing_begin_attempt(uuid,int)', 'app_billing_attempt_context(uuid)', 'app_billing_attempt_result(text,text,boolean,text,bigint,text)', 'app_store_billing_event(text,text,jsonb)', 'app_apply_billing_event(uuid)']) f
              where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: an API role may run a billing B3 function'; end if;
   if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'anon', 'authenticated', 'service_role']) r where has_table_privilege(r, 'billing_events', 'select, insert, update, delete'))
   then raise exception 'FAIL: a role reaches billing_events directly'; end if;

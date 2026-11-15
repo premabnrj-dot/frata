@@ -177,6 +177,8 @@ export async function shopFrrataDocument(m: Pick<Membership, 'tenantId' | 'role'
 
 export type Paying = {
   mandate: { method: string; max: number; since: Date } | null
+  /** A bank mandate (eNACH) set up and waiting for the bank to confirm it (billing R5): never debited until then. */
+  pending: { method: string } | null
   /** The latest notice of a debit not yet taken (amount, when). */
   nextDebit: { amount: number; at: Date } | null
 }
@@ -186,12 +188,13 @@ export async function payingFor(m: Pick<Membership, 'tenantId' | 'role'>, now = 
   mayReadMoney(m)
   return withTenant(m.tenantId, async (tx) => {
     const [[a], [n]] = await Promise.all([
-      tx.select({ method: billingAccounts.mandateMethod, max: billingAccounts.mandateMax, at: billingAccounts.mandateAt, revoked: billingAccounts.mandateRevokedAt }).from(billingAccounts).where(eq(billingAccounts.tenantId, m.tenantId)),
+      tx.select({ method: billingAccounts.mandateMethod, max: billingAccounts.mandateMax, at: billingAccounts.mandateAt, revoked: billingAccounts.mandateRevokedAt, token: billingAccounts.mandateTokenId }).from(billingAccounts).where(eq(billingAccounts.tenantId, m.tenantId)),
       tx.select({ amount: billingNotices.amount, at: billingNotices.debitAt }).from(billingNotices)
         .where(and(eq(billingNotices.tenantId, m.tenantId), eq(billingNotices.kind, 'debit_notice'), gt(billingNotices.debitAt, new Date(now.getTime() - 86_400_000)))).orderBy(desc(billingNotices.createdAt)).limit(1),
     ])
     return {
       mandate: a?.method && a.at && !a.revoked ? { method: a.method, max: a.max ?? 0, since: a.at } : null,
+      pending: a?.method && a.token && !a.at && !a.revoked ? { method: a.method } : null,
       nextDebit: n?.at ? { amount: n.amount, at: n.at } : null,
     }
   })

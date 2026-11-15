@@ -77,8 +77,9 @@ export const FRRATA_GSTIN = process.env.FRRATA_GSTIN ?? ''
 export const FRRATA_LEGAL_NAME = process.env.FRRATA_LEGAL_NAME ?? ''
 export const FRRATA_ADDRESS = process.env.FRRATA_ADDRESS ?? ''
 export const FRRATA_SAC = process.env.FRRATA_SAC ?? ''
-/** Test databases only (e2e, int tests): lets Admin issue a month in test mode. NEVER in Production or a preview on
- *  the production database: a test-mode issue freezes the real drafts and their orders' fees for good. */
+/** '1' lets Admin issue a month in test mode: on test databases (e2e, int tests), and on Production only while the
+ *  billing key is a test key (owner's temporary testing switch, 2026-11-15; seller.ts testIssueAllowed). Remove it
+ *  before going live: a test-mode issue freezes that month's drafts and their orders' fees for good. */
 export const BILLING_TEST_ISSUE = secret(process.env.BILLING_TEST_ISSUE)
 
 /** Frrata's OWN Razorpay account, for billing merchants (billing B3; plan finding 15): Production only, Sensitive, read

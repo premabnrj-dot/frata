@@ -70,7 +70,9 @@ export function Payment({ paying, payments, canPay, configured, supportVisit }: 
   return (
     <div className="grid items-start gap-4 md:grid-cols-2">
       <Section title="Autopay" action={<Badge tone={m ? 'ok' : 'neutral'}>{m ? 'Autopay on' : 'Autopay off'}</Badge>}>
-        {!configured ? <p className="text-muted-foreground">Autopay isn’t ready yet. Pay from Invoices.</p> : m ? (
+        {!configured ? <p className="text-muted-foreground">Autopay isn’t ready yet. Pay from Invoices.</p> : !m && paying?.pending ? (
+          <div className="space-y-2"><Badge tone="info">Your bank is confirming · 1–2 days</Badge><p className="text-label text-muted-foreground">{methodName(paying.pending.method)}. Pay each bill from Invoices until it is confirmed.</p></div>
+        ) : m ? (
           <div className="space-y-3.5">
             <dl className="grid grid-cols-2 gap-3.5">
               <div><dt className="text-label text-muted-foreground">Method</dt><dd className="font-medium">{methodName(m.method)}</dd></div>

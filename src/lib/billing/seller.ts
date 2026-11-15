@@ -2,6 +2,7 @@ import 'server-only'
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { gstinValid } from '@/domains/tax/gstin'
 import { BILLING_TEST_ISSUE, FRRATA_ADDRESS, FRRATA_GSTIN, FRRATA_LEGAL_NAME, FRRATA_SAC, VERCEL_ENV } from '@/lib/env'
+import { billingGatewayIsTest } from './gateway'
 
 // =============================================================================
 // FILE: src/lib/billing/seller.ts — FRRATA AS THE SUPPLIER (billing B2). Real only when its GSTIN, legal name, address
@@ -26,5 +27,10 @@ export function frrataSeller(now = new Date()): Seller {
 /** Frrata's GSTIN when real (it decides CGST + SGST or IGST on the draft); null in test mode. */
 export const frrataGstin = () => FRRATA_GSTIN || null
 
-/** Whether a test-mode issue may run here: a test database only (security review 2026-11-08). */
-export const testIssueAllowed = () => BILLING_TEST_ISSUE === '1' && VERCEL_ENV !== 'production'
+/**
+ * Whether a test-mode issue may run here: BILLING_TEST_ISSUE=1, and either off Vercel Production (a test database) or
+ * — the owner's temporary testing switch (2026-11-15) — on Production while Frrata's billing key is a TEST key, so test
+ * bills are issued and paid with test money. Remove BILLING_TEST_ISSUE before live keys and the GSTIN: a test issue
+ * freezes that month's drafts as tests for good (their orders' fees are never billed again).
+ */
+export const testIssueAllowed = () => BILLING_TEST_ISSUE === '1' && (VERCEL_ENV !== 'production' || billingGatewayIsTest())
