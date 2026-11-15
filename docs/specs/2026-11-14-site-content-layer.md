@@ -1,6 +1,6 @@
 # Site content layer: what a brand edits itself, and how a site's code declares it
-Status: active, decisions taken (owner 2026-11-15; reviews folded in 2026-11-15); mockup next, nothing built · Date: 2026-11-14 · Mockup: none
-yet; Studio v2.5 and the brand's Content screen are drawn after the owner's decisions (§ Owner decisions) · Approved: —
+Status: active, decisions taken (owner 2026-11-15; reviews folded in 2026-11-15); mockup next, nothing built · Date: 2026-11-14 · Mockup: Console ›
+Content https://claude.ai/artifact/VXQsHh6h7DTNz8tmN37nN7 (`docs/mockups/2026-11-15-console-content.html`, for sign-off) · Approved: —
 · Evidence: `docs/research/2026-11-14-studio-findings-verified.md` · Amends: ADR-0014 amendment 8 (proposed, in the
 ADR) · Pairs with: `docs/decisions/0016-site-code-ownership-and-reuse.md` (proposed) · Reviews (2026-11-15):
 architecture, security, tenancy, speed, unit economics (§ Reviews folded in)
