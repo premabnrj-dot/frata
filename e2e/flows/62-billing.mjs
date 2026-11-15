@@ -44,6 +44,7 @@ export default {
         assert.equal(await riya.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'Charges fits a 390 px phone')
         await riya.screenshot({ path: t.out('charges'), fullPage: true })
         await riya.goto(CONSOLE + '/console/settings/billing')
+        await riya.getByRole('heading', { name: 'Next bill' }).waitFor()
         assert.equal(await riya.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'no sideways scroll at 390 px')
         await riya.screenshot({ path: t.out('plan-and-billing'), fullPage: true })
       })

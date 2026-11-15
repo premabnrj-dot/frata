@@ -73,7 +73,7 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
         <Badge tone={method ? 'ok' : 'neutral'}>{method ? 'Autopay on' : 'Autopay off'}</Badge>
         {test ? <Badge tone="info">Test payments</Badge> : null}
       </>}
-      actions={<>{trial?.mayExtend && !m.supportSessionId ? <TakeMoreDays /> : null}<Link href={billingHref('plans')} className={button({ variant: 'secondary' })}>Compare plans</Link></>} />
+      actions={<Link href={billingHref('plans')} className={button({ variant: 'secondary' })}>Compare plans</Link>} />
   )
 
   let body: React.ReactNode
@@ -131,6 +131,7 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
   return (
     <div className="max-w-5xl space-y-5">
       {head}
+      {trial?.mayExtend && !m.supportSessionId ? <Banner tone="info" title={`Your trial ends ${dayIN(trial.lastDay)}`} action={<TakeMoreDays />} /> : null}
       {due ? (
         <Banner tone="warn" title={<>{monthYearIN(due.periodStart)} bill of <Money paise={paise(due.due)} decimals /> is due</>}
           action={canPay ? <PayNow invoiceId={due.id} /> : <Link href={billingHref('invoices', { show: 'due' })}>See invoices</Link>} />
