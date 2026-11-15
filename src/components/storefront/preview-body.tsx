@@ -19,12 +19,14 @@ import type { Href } from './shell'
 /** One shop page for the merchant's previews (drafts and unlisted pieces included, never cached), and a note on what
  *  shoppers see instead. Shared by /console/preview and the customizer's look preview. */
 export async function previewPage(o: { tenantId: string; shop: StoreShop; path: string[]; href: Href; now: Date; theme: ResolvedTheme
+  /** The store's Contact line (V1 content: content, not the look's). */
+  contact?: { line: string }
   /** The customizer's look preview of a theme with samples (never /console/preview, which shows the shop as shoppers see it). */
   samples?: boolean
   /** TS0b: the customizer's look preview (never `?as=shop` or /console/preview): a design shows the theme's sample
    *  photos and example words, marked, whether or not the theme has sample pieces (impact review). */
   examples?: boolean }): Promise<{ body: React.ReactNode; note: string | null }> {
-  const { tenantId, shop, path, href, now, theme, samples = false, examples = false } = o
+  const { tenantId, shop, path, href, now, theme, contact, samples = false, examples = false } = o
   // Which sample set: by what the shop sells (theme Signal plan S0-1).
   const set = sampleSetFor(shop.sells)
   const [a, b, ...rest] = path
@@ -64,6 +66,6 @@ export async function previewPage(o: { tenantId: string; shop: StoreShop; path: 
     const note = p?.hidden ? 'Hidden: shoppers get "page not found" here.' : null
     return { body: p ? <PageView shop={shop} page={p} href={href} examples={examples} /> : <ShopNotFound href={href} lang={shop.shopLanguage} />, note }
   }
-  if (a === 'policies' && b && Object.hasOwn(POLICY_TITLE, b)) return { body: <PolicyView shop={shop} page={b as keyof typeof POLICY_TITLE} contact={theme.contact} />, note: null }
+  if (a === 'policies' && b && Object.hasOwn(POLICY_TITLE, b)) return { body: <PolicyView shop={shop} page={b as keyof typeof POLICY_TITLE} contact={contact} />, note: null }
   return { body: <ShopNotFound href={href} lang={shop.shopLanguage} />, note: null }
 }

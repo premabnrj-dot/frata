@@ -53,11 +53,12 @@ export const shopThemePublishes = pgTable('shop_theme_publishes', {
 ])
 
 /**
- * Theme Studio TS1a (plan docs/plans/2026-11-11-theme-studio-ts1.md): a shop's About and FAQ pages, made in Look.
- * Contact is not a row here: it is the Contact policy at /policies/contact, its line in the look's layer. `draft` and
- * `live` are each { title, handle, fill, hidden }; a change reaches the shop only by the look's Publish (live := draft,
- * previous := live, live_publish_id := that publish) and Undo swaps them back. The handle is fixed once live. Access:
- * drizzle/0100_shop_pages_access.sql.
+ * A store's About and FAQ pages (Theme Studio TS1a; since V1 content they save live from Console › Content,
+ * src/app/(console)/console/content/actions.ts). Contact is not a row here: it is the Contact policy at
+ * /policies/contact, its line the store's content (site_content). `draft` = the words { title, handle, fill, hidden },
+ * `live` = what shoppers see (null while hidden), `previous` = the entry before the last save (Undo), `updated_by` its
+ * saver. The handle is set when the page is added and never moves. `live_publish_id` is unused since 0136 (dropped
+ * later). Access: drizzle/0100_shop_pages_access.sql, 0136.
  */
 export const PAGE_TEMPLATES = ['about', 'faq'] as const
 export const shopPages = pgTable('shop_pages', {
@@ -72,9 +73,10 @@ export const shopPages = pgTable('shop_pages', {
   removedAt: at('removed_at'),
   createdAt: at('created_at').notNull().defaultNow(),
   updatedAt: at('updated_at').notNull().defaultNow(),
+  /** Who saved it last (V1 content: a page saves live; Undo is the saver's own, within a minute). */
+  updatedBy: uuid('updated_by'),
 }, (t) => [
   unique('shop_pages_tenant_id').on(t.tenantId, t.id),
-  foreignKey({ columns: [t.tenantId, t.livePublishId], foreignColumns: [shopThemePublishes.tenantId, shopThemePublishes.id], name: 'shop_pages_live_publish' }).onDelete('no action'),
   check('shop_pages_template', sql`${t.template} in ('about','faq')`),
   check('shop_pages_draft_size', sql`octet_length(${t.draft}::text) <= 32768`),
   check('shop_pages_live_size', sql`${t.live} is null or octet_length(${t.live}::text) <= 32768`),

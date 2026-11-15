@@ -109,7 +109,8 @@ export default {
         await p.getByLabel('Search orders').fill('Queue Aarti'); await p.getByLabel('Search orders').press('Enter')
         await p.waitForURL(/q=Queue/); assert.equal(await p.locator('tbody tr').count(), 3)
         await p.getByLabel('Search orders').fill('9811100001'); await p.getByLabel('Search orders').press('Enter')
-        await p.waitForFunction(() => document.querySelectorAll('tbody tr').length === 3); await row(A).waitFor() // a phone: that customer's orders
+        // The name search already showed 3 rows: wait for the phone's own URL, or its late landing resets the next search.
+        await p.waitForURL(/q=9811100001/); await p.waitForFunction(() => document.querySelectorAll('tbody tr').length === 3); await row(A).waitFor() // a phone: that customer's orders
         await p.getByLabel('Search orders').fill(label(B)); await p.getByLabel('Search orders').press('Enter')
         // Results follow the keys (N1c): wait for the list to become the one order, not for a row already on screen.
         await p.waitForFunction(() => document.querySelectorAll('tbody tr').length === 1); await row(B).waitFor() // the number, not D's phone that contains it

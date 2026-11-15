@@ -1,7 +1,7 @@
 -- Billing rework R2 (spec docs/specs/2026-11-15-billing-rework.md; plan § Review findings H1, H2, B1, M1): bills are
 -- issued on the 1st without a person. The issue definer takes p_system: exactly one of a staff member or the system;
 -- a system run never issues test invoices, needs a real GSTIN and SAC, and issues only this IST month on its 1st to
--- 3rd; it writes its own audit row (actor_kind 'system', no user, no email: 0133). Everything else is unchanged.
+-- 3rd; it writes its own audit row (actor_kind 'system', no user, no email: 0137). Everything else is unchanged.
 drop function app_issue_frrata_invoices(timestamptz, int, bigint, uuid, text, text, text, text, boolean, text, text);
 --> statement-breakpoint
 create function app_issue_frrata_invoices(p_period timestamptz, p_expected_count int, p_expected_total bigint, p_staff uuid,

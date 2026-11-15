@@ -35,7 +35,9 @@ const ROLE_EQ = new Set([
 /** The store preview runs as frata_app for a Builder (owner 2026-11-15, question 5): its data imports are pinned to the
  *  shopper read modules, so a new import there (lanes A and B change this path) is a decision, not a drift. */
 const PREVIEW_FILES = ['src/app/(console)/console/preview/[[...path]]/page.tsx', 'src/components/storefront/preview-body.tsx']
-const PREVIEW_DATA = new Set(['@/lib/queries/storefront', '@/lib/queries/pages', '@/lib/queries/videos', '@/lib/themes/manifests', '@/lib/themes/page-look', '@/lib/themes/sample', '@/lib/auth/require-capability', '@/lib/db/actor'])
+// '@/lib/queries/content' (lane B, V1): previewContent reads site_content only — the bars, menus and Contact line
+// shoppers see; no shopper, order or cost column.
+const PREVIEW_DATA = new Set(['@/lib/queries/storefront', '@/lib/queries/pages', '@/lib/queries/content', '@/lib/queries/videos', '@/lib/themes/manifests', '@/lib/themes/page-look', '@/lib/themes/sample', '@/lib/auth/require-capability', '@/lib/db/actor'])
 const ACTOR_IMPORTERS = new Set(['src/lib/auth/require-capability.ts', 'src/lib/queries/builder.ts', ...DOORS])
 
 function walk(dir, out = []) {

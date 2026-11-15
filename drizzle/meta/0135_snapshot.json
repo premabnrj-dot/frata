@@ -1,6 +1,6 @@
 {
-  "id": "395f816f-011b-4949-987f-4f0c9ebd4b46",
-  "prevId": "0c86d417-f352-4c09-b0c2-3c98c17edf91",
+  "id": "bd91f170-b242-4f2b-ad9a-6813e799e39e",
+  "prevId": "9af4a362-b729-464b-b4ea-e9ca8578bbc2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -32,7 +32,7 @@
           "name": "actor_user_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "actor_email": {
           "name": "actor_email",
@@ -158,11 +158,7 @@
       "checkConstraints": {
         "audit_events_kind": {
           "name": "audit_events_kind",
-          "value": "\"audit_events\".\"actor_kind\" in ('member','staff','support','system')"
-        },
-        "audit_events_who": {
-          "name": "audit_events_who",
-          "value": "(\"audit_events\".\"actor_kind\" = 'system') = (\"audit_events\".\"actor_user_id\" is null) and (\"audit_events\".\"actor_kind\" <> 'system' or \"audit_events\".\"actor_email\" is null)"
+          "value": "\"audit_events\".\"actor_kind\" in ('member','staff','support')"
         }
       },
       "isRLSEnabled": false
@@ -10039,6 +10035,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -10077,21 +10079,6 @@
           ],
           "onUpdate": "no action",
           "onDelete": "cascade"
-        },
-        "shop_pages_live_publish": {
-          "name": "shop_pages_live_publish",
-          "tableFrom": "shop_pages",
-          "columnsFrom": [
-            "tenant_id",
-            "live_publish_id"
-          ],
-          "tableTo": "shop_theme_publishes",
-          "columnsTo": [
-            "tenant_id",
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -16387,7 +16374,7 @@
         },
         "notices_source": {
           "name": "notices_source",
-          "value": "\"notices\".\"source_kind\" in ('billing_notice','support_session','handover','admin','addon_trial','edit_payment')"
+          "value": "\"notices\".\"source_kind\" in ('billing_notice','support_session','handover','admin','addon_trial','edit_payment','content')"
         },
         "notices_href": {
           "name": "notices_href",
@@ -18125,6 +18112,172 @@
         "import_rows_errors": {
           "name": "import_rows_errors",
           "value": "\"import_rows\".\"errors\" is null or (jsonb_typeof(\"import_rows\".\"errors\") = 'array' and octet_length(\"import_rows\".\"errors\"::text) <= 4096)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.site_content": {
+      "name": "site_content",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "previous": {
+          "name": "previous",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "starts_at": {
+          "name": "starts_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ends_at": {
+          "name": "ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stopped_at": {
+          "name": "stopped_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "site_content_tenant_id_tenants_id_fk": {
+          "name": "site_content_tenant_id_tenants_id_fk",
+          "tableFrom": "site_content",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenants",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "site_content_tenant_id": {
+          "name": "site_content_tenant_id",
+          "columns": [
+            "tenant_id",
+            "id"
+          ],
+          "nullsNotDistinct": false
+        },
+        "site_content_tenant_kind_key": {
+          "name": "site_content_tenant_kind_key",
+          "columns": [
+            "tenant_id",
+            "kind",
+            "key"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "site_content_kind": {
+          "name": "site_content_kind",
+          "value": "\"site_content\".\"kind\" in ('announcement','menu','contact')"
+        },
+        "site_content_key": {
+          "name": "site_content_key",
+          "value": "\"site_content\".\"key\" ~ '^[a-z0-9.-]{1,40}$'"
+        },
+        "site_content_menu_key": {
+          "name": "site_content_menu_key",
+          "value": "\"site_content\".\"kind\" <> 'menu' or \"site_content\".\"key\" in ('main','footer','tabs')"
+        },
+        "site_content_contact_key": {
+          "name": "site_content_contact_key",
+          "value": "\"site_content\".\"kind\" <> 'contact' or \"site_content\".\"key\" = 'contact'"
+        },
+        "site_content_dated": {
+          "name": "site_content_dated",
+          "value": "\"site_content\".\"kind\" = 'announcement' or (\"site_content\".\"starts_at\" is null and \"site_content\".\"ends_at\" is null and \"site_content\".\"stopped_at\" is null and \"site_content\".\"deleted_at\" is null)"
+        },
+        "site_content_ends": {
+          "name": "site_content_ends",
+          "value": "\"site_content\".\"ends_at\" is null or \"site_content\".\"starts_at\" is null or \"site_content\".\"ends_at\" > \"site_content\".\"starts_at\""
+        },
+        "site_content_value_size": {
+          "name": "site_content_value_size",
+          "value": "octet_length(\"site_content\".\"value\"::text) <= 32768"
+        },
+        "site_content_previous_size": {
+          "name": "site_content_previous_size",
+          "value": "\"site_content\".\"previous\" is null or octet_length(\"site_content\".\"previous\"::text) <= 34816"
         }
       },
       "isRLSEnabled": false

@@ -65,21 +65,12 @@ export default {
       await riya.getByRole('button', { name: '‹ Bazaar' }).click()
     })
 
-    await t.step('Menus: a link with an icon from the picker, nested; phone tabs of the merchant’s own', async () => {
+    await t.step('Menus are the store’s content (V1): the Look’s Menus tab opens Console › Content', async () => {
       await riya.getByRole('tab', { name: 'Menus' }).click()
-      await riya.getByRole('button', { name: 'Add a link' }).click()
-      await riya.getByLabel('Words').fill('Festive sale')
-      await riya.getByLabel('Opens').selectOption('/products')
-      await riya.getByLabel('Search icons').fill('sale')
-      await riya.getByRole('radio', { name: 'flame' }).click()
-      await saved((s) => (s.menus?.main ?? []).some((x) => x.label === 'Festive sale' && x.icon === 'flame' && x.link === '/products'))
-      await riya.getByRole('button', { name: 'Put Festive sale under the one above' }).click()
-      await saved((s) => (s.menus.main ?? []).some((x) => x.children.some((c) => c.label === 'Festive sale')))
-      await riya.screenshot({ path: t.out('menus-main') })
-      await riya.getByRole('button', { name: 'Phone tabs', exact: true }).click()
-      for (let i = 0; i < 3; i++) await riya.getByRole('button', { name: 'Add a link' }).click()
-      await saved((s) => s.menus?.tabs?.length === 3 && s.menus.tabs.every((x) => x.icon))
-      await riya.screenshot({ path: t.out('menus-tabs') })
+      const link = riya.getByRole('link', { name: /Edit in Content/ })
+      await link.waitFor()
+      assert.match(await link.getAttribute('href') ?? '', /\/console\/content\?tab=menus$/)
+      await riya.screenshot({ path: t.out('menus-link') })
     })
 
     await t.step('Each page opens in the preview: Shop all, Bag, Checkout; Style › Products opens a collection', async () => {
@@ -102,7 +93,7 @@ export default {
       await riya.waitForTimeout(300)
       await riya.screenshot({ path: t.out('folded') })
       await riya.getByRole('button', { name: 'Menus', exact: true }).click()
-      await riya.getByRole('button', { name: 'Add a link' }).waitFor()
+      await riya.getByRole('link', { name: /Edit in Content/ }).waitFor()
       // On a phone: the merchant's tabs, each an icon and words.
       await riya.getByLabel('Page').selectOption('home')
       await riya.getByRole('button', { name: 'Phone', exact: true }).click()
@@ -112,7 +103,7 @@ export default {
       await riya.getByRole('button', { name: 'Computer', exact: true }).click()
     })
 
-    await t.step('Published: the shop wears the text style, the duotone icons, the menu and the tabs; Undo puts it back', async () => {
+    await t.step('Published: the shop wears the text style and the duotone icons', async () => {
       await riya.getByRole('button', { name: 'Publish', exact: true }).click()
       const d = riya.getByRole('dialog', { name: 'Publish Bazaar?' })
       await d.waitFor()
@@ -129,14 +120,47 @@ export default {
       await until(async () => /data-t-h2/.test(await shopHtml()), 15_000)
       const home = await shopHtml()
       assert.match(home, /viewBox="0 0 256 256"/, 'duotone icons on the shop')
-      assert.match(home, /Festive sale/, 'the merchant’s menu')
-      assert.match(home, /aria-label="Shop tabs"/, 'the phone tabs')
       assert.ok(!/M3\.103 6\.034h17\.794/.test(home), 'no line icon paths once the shop is duotone')
+    })
+
+    await t.step('Content › Menus: a link with an icon, moved under the one above, saved live; phone tabs of the merchant’s own', async () => {
+      await riya.goto(CONSOLE + '/console/content?tab=menus')
+      const main = riya.getByRole('region', { name: /Main menu/ })
+      await main.getByRole('button', { name: 'Add a link' }).click()
+      const add = riya.getByRole('dialog', { name: 'Add a link' })
+      await add.getByLabel('Label').fill('Festive sale')
+      await add.getByLabel('Opens').selectOption('/products')
+      await add.getByLabel('Icon').selectOption('flame')
+      await add.getByRole('button', { name: 'Add link' }).click()
+      await main.getByRole('button', { name: 'More for Festive sale' }).click()
+      await riya.getByRole('menuitem', { name: /^Move under / }).click()
+      await main.getByRole('button', { name: 'Save main menu' }).click()
+      await riya.getByText('Main menu saved').first().waitFor()
+      const row = async () => (await db`select value from site_content where tenant_id = ${KESAR} and kind = 'menu' and key = 'main'`)[0]?.value ?? []
+      await until(async () => (await row()).some((x) => x.children.some((c) => c.label === 'Festive sale' && c.icon === 'flame' && c.link === '/products')), 10_000)
+      await riya.screenshot({ path: t.out('menus-main') })
+      const tabs = riya.getByRole('region', { name: /Phone tabs/ })
+      for (const [label, link, icon] of [['Home', '/', 'home'], ['Shop', '/products', 'grid'], ['Help', '/policies/contact', 'chat']]) {
+        await tabs.getByRole('button', { name: 'Add a tab' }).click()
+        const d = riya.getByRole('dialog', { name: 'Add a tab' })
+        await d.getByLabel('Label').fill(label); await d.getByLabel('Opens').selectOption(link); await d.getByLabel('Icon').selectOption(icon)
+        await d.getByRole('button', { name: 'Add tab' }).click()
+      }
+      await tabs.getByRole('button', { name: 'Save phone tabs' }).click()
+      await riya.getByText('Phone tabs saved').first().waitFor()
+      await riya.screenshot({ path: t.out('menus-tabs') })
+      await until(async () => /Festive sale/.test(await shopHtml()) && /Help/.test(await shopHtml()), 45_000)
+      assert.match(await shopHtml(), /aria-label="Shop tabs"/, 'the phone tabs')
+    })
+
+    await t.step('Undo last publish takes the look back; the menus stay (they are content)', async () => {
       await riya.goto(CONSOLE + '/console/look')
       await riya.getByRole('button', { name: 'More' }).click()
       await riya.getByRole('menuitem', { name: 'Undo last publish' }).click()
       await riya.getByRole('dialog', { name: /back on your store\?$/ }).getByRole('button', { name: 'Put it back' }).click()
       await until(async () => !/data-t-h2/.test(await shopHtml()), 15_000)
+      assert.match(await shopHtml(), /Festive sale/, 'menus are the store’s content, not the look’s')
+      await db`delete from site_content where tenant_id = ${KESAR} and kind = 'menu'`
     })
   },
 }

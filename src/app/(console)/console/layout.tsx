@@ -124,6 +124,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const settings: NavItem = { href: '/console/settings', label: 'Settings', icon: 'settings' }
   const offers: NavItem = { href: '/console/offers', label: 'Offers', icon: 'offers' }
   const look: NavItem = { href: '/console/look', label: 'Look', icon: 'look' }
+  // V1 content: what the store says (bars, menus, pages, FAQ, Contact line), saved live; every member reads it.
+  const content: NavItem = { href: '/console/content', label: 'Content', icon: 'policy' }
   // The shop's apps in use, under Apps (those with a page of their own); shopModules is per-request cached, and a
   // failure only leaves Apps without its list.
   const mods = await shopModules(tenantId, now.toISOString()).catch((err) => { console.error('[console layout] apps', err instanceof Error ? err.name : err); return null })
@@ -141,11 +143,11 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   // page), so the layout reads nothing more per page. The accountant's console is GST alone.
   const accountant = role === 'accountant'
   const groups: NavGroup[] = accountant ? [{ label: 'Taxes', items: [gst] }]
-    : [{ label: 'Today', items: [home, orders, noticesItem, analytics] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [offers, look, search, apps, settings, activity] }]
+    : [{ label: 'Today', items: [home, orders, noticesItem, analytics] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [offers, content, look, search, apps, settings, activity] }]
   const foot: NavItem[] = [{ href: '/console/preview', label: 'Preview store', icon: 'external' }]
   if (auth.staffRole !== null && !supportSessionId) foot.push({ href: '/admin', label: 'Frrata Admin', icon: 'admin' })
   return (
-    <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={accountant ? [gst] : [home, orders, products]} more={accountant ? [] : [noticesItem, analytics, collections, offers, look, search, apps, settings, activity]} foot={accountant ? [] : foot}
+    <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={accountant ? [gst] : [home, orders, products]} more={accountant ? [] : [noticesItem, analytics, collections, offers, content, look, search, apps, settings, activity]} foot={accountant ? [] : foot}
       email={auth.email} tenantId={tenantId} places={places} subtitle={address} rail={rail}
       banner={visit ? <SupportBanner storeName={tenantName} visit={visit} now={now} />
         : building ? <BuildingBanner shop={tenantName} tenantId={tenantId} inviteEmail={building.inviteEmail} /> : undefined}>

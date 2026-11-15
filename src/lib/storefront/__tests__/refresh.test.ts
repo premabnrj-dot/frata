@@ -6,10 +6,11 @@ vi.mock('next/server', () => ({ after: () => { throw new Error('outside a reques
 // The cross-instance limiters (one row per shop per 30 s window, per action), as another instance would see them.
 const windows = new Set<string>()
 vi.mock('@/lib/db/rate-limit', () => ({
-  LIMITS: { soldOutPurge: { action: 'sold_out_purge:shop', max: 1, windowSeconds: 30 }, soldOutTrail: { action: 'sold_out_trail:shop', max: 1, windowSeconds: 30 } },
+  LIMITS: { soldOutPurge: { action: 'sold_out_purge:shop', max: 1, windowSeconds: 30 }, soldOutTrail: { action: 'sold_out_trail:shop', max: 1, windowSeconds: 30 },
+    contentPurge: { action: 'content_purge:shop', max: 1, windowSeconds: 30 }, contentTrail: { action: 'content_trail:shop', max: 1, windowSeconds: 30 } },
   withinLimit: vi.fn(async (l: { action: string }, subject: string, now: Date) => { const k = `${l.action}:${subject}:${Math.floor(now.getTime() / 30_000)}`; if (windows.has(k)) return false; windows.add(k); return true }),
 }))
-const { refreshSoldOut } = await import('../refresh')
+const { refreshContent, refreshSoldOut } = await import('../refresh')
 
 /** A fake clock: `later` keeps the work, `wait` moves the clock, `run` fires what was queued. */
 function timing(start: number) {
@@ -70,5 +71,19 @@ describe('refreshSoldOut (speed review P11, 2026-11-11; trailing purge 2026-11-1
     windows.add(`sold_out_purge:shop:g:${Math.floor(3_062_000 / 30_000)}`)
     expect(await refreshSoldOut('g', 3_062_000, f.t)).toBe('covered')
     expect(windows.has(`sold_out_trail:shop:g:${Math.floor(3_062_000 / 30_000)}`)).toBe(false)
+  })
+})
+
+describe('refreshContent (V1 content): the same throttle, its own scope and limiter rows', () => {
+  it('the first save purges content at once, a sell-out in the same window still purges the catalogue, repeats trail once', async () => {
+    revalidateTag.mockClear()
+    const f = timing(9_000_000)
+    expect(await refreshContent('c', 9_000_000, f.t)).toBe('now')
+    expect(await refreshSoldOut('c', 9_001_000, f.t)).toBe('now')
+    expect(await refreshContent('c', 9_010_000, f.t)).toBe('trailing')
+    expect(await refreshContent('c', 9_011_000, f.t)).toBe('covered')
+    expect(purged()).toEqual(['shop:c:content', 'shop:c:catalogue'])
+    await f.run()
+    expect(purged()).toEqual(['shop:c:content', 'shop:c:catalogue', 'shop:c:content'])
   })
 })

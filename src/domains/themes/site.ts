@@ -8,8 +8,9 @@ import type { Hex, Scheme } from './types'
 // =============================================================================
 // FILE: src/domains/themes/site.ts — Site settings and menus (Look v4, owner-approved 2026-11-09). Pure.
 // Site settings are the shop's design system: a palette of six roles, eight text styles, the icon library and its
-// stroke. Menus are the shop's navigation. Both live in the look's layer (draft → publish → undo); a theme gives the
-// starting values (owner: a new theme brings its own palette, type and icons; menus are content and come across).
+// stroke, in the look's layer (draft → publish → undo); a theme gives the starting values (owner: a new theme brings its
+// own palette, type and icons). Menus are the store's navigation: their shape and limits live here, their rows in the
+// store's content since V1 (src/domains/content/kinds.ts reads and saves them).
 // Absent = the theme's look exactly, so no 1.x or 2.x look moves until a merchant sets something.
 // =============================================================================
 
@@ -141,44 +142,12 @@ export function readSite(raw: unknown): SiteSettings {
   const ic = Object.hasOwn(r, 'icons') ? SiteSchema.shape.icons.safeParse(r.icons) : null
   return { palette, text, icons: ic?.success && ic.data ? ic.data : SITE_DEFAULTS.icons }
 }
-/** A stored layer's menus, menu by menu (null: the shop's default for that menu). */
-/** Deeper or bigger than any menu can be (walked with a loop, before Zod's recursive parse: a deeply nested body
- *  must be refused, not overflow the stack; security review 2026-11-09). */
-function tooBig(raw: unknown): boolean {
-  const stack: [unknown, number][] = [[raw, 0]]
-  let n = 0
-  while (stack.length) {
-    const [x, d] = stack.pop()!
-    if (++n > 2000 || d > 2 * (MENU_LIMITS.depth + 2)) return true
-    if (Array.isArray(x)) { for (const y of x) stack.push([y, d + 1]) }
-    else if (x && typeof x === 'object') { for (const k of ['main', 'footer', 'tabs', 'children'] as const) if (Object.hasOwn(x, k)) stack.push([(x as Record<string, unknown>)[k], d + 1]) }
-  }
-  return false
-}
-export function readMenus(raw: unknown): Partial<Menus> {
-  if (!raw || typeof raw !== 'object' || tooBig(raw)) return {}
-  const out: Partial<Menus> = {}
-  for (const k of ['main', 'footer', 'tabs'] as const) {
-    if (!Object.hasOwn(raw, k)) continue
-    const p = MenusSchema.shape[k].safeParse((raw as Record<string, unknown>)[k]); if (p.success && p.data) out[k] = p.data
-  }
-  return out
-}
 /** Why a submitted site block can't be saved (null: it can). */
 export function siteProblem(raw: unknown): string | null {
   if (raw === undefined) return null
   const p = SiteSchema.safeParse(raw)
   if (!p.success) return 'Site settings: ' + (p.error.issues[0]?.message ?? 'not valid')
   return p.data.palette ? paletteProblem(p.data.palette as Palette) : null
-}
-/** Why submitted menus can't be saved (null: they can). */
-export function menusProblem(raw: unknown): string | null {
-  if (raw === undefined) return null
-  if (tooBig(raw)) return 'Main menu: At most 3 levels'
-  const p = MenusSchema.safeParse(raw)
-  if (!p.success) { const i = p.error.issues[0]; return `${i?.path[0] === 'tabs' ? 'Phone tabs' : i?.path[0] === 'footer' ? 'Footer menu' : 'Main menu'}: ${i?.message ?? 'not valid'}` }
-  const ids = [...(p.data.main ?? []), ...(p.data.footer ?? []), ...(p.data.tabs ?? [])].flatMap(function all(x: MenuItem): string[] { return [x.id, ...x.children.flatMap(all)] })
-  return new Set(ids).size === ids.length ? null : 'Two menu items share an id'
 }
 
 /** Site settings the merchant hasn't changed from the defaults: stored as absent, so trying another theme loses nothing. */

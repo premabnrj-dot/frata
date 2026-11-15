@@ -3,12 +3,13 @@ import { ShopShell } from '@/components/storefront/shell'
 
 import { shopTheme } from '@/lib/themes/page-look'
 import { shopFor, shopHref } from '../_shop'
+import { frameContent } from '../_frame'
 
 /** A shopper's order page: as the shop's pages, but open while the shop is paused (trials TR1·9) — an order already
  *  placed still finishes (pay again, switch to COD, track it). */
 export default async function OrderLayout({ children, params }: { children: React.ReactNode; params: Promise<{ host: string }> }) {
   const shop = await shopFor(params)
-  const theme = (await shopTheme(shop))
-  if (!shop.publishedAt) return <ShopShell shop={shop} href={shopHref} theme={theme} gated><OpeningSoon shop={shop} href={shopHref} /></ShopShell>
-  return <ShopShell shop={shop} href={shopHref} theme={theme} live capture>{children}</ShopShell>
+  const [theme, content] = await Promise.all([shopTheme(shop), frameContent(shop.id, new Date())])
+  if (!shop.publishedAt) return <ShopShell shop={shop} href={shopHref} theme={theme} content={content} gated><OpeningSoon shop={shop} href={shopHref} /></ShopShell>
+  return <ShopShell shop={shop} href={shopHref} theme={theme} content={content} live capture>{children}</ShopShell>
 }
