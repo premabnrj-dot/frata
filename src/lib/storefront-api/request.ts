@@ -74,9 +74,17 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
 
     // Only the dynamic tree reads the request: the network, for its limits, and the Origin, for CORS.
     const ip = dynamic ? ipFrom(req.headers) : ''
-    if (dynamic && await overLimit(LIMITS.apiMissIp, ip, new Date(), true)) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
-
-    const row = await storefrontKeyFor(key)
+    let row: Awaited<ReturnType<typeof storefrontKeyFor>>
+    try {
+      if (dynamic && await overLimit(LIMITS.apiMissIp, ip, new Date(), true)) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
+      row = await storefrontKeyFor(key)
+    } catch (err) {
+      // Never the raw error (its parameters carry the key's hash): security review LOW-4. A cached route rethrows, so
+      // Next keeps serving its last good copy rather than caching a failure for the hour (LOW-1).
+      console.error('[api]', opts.resource, 'lookup', errName(err))
+      if (!dynamic) throw new Error('storefront api: lookup failed')
+      return refuse(500, JSON.stringify({ error: 'unavailable' }))
+    }
     if (!row || row.kind !== shape.kind) {
       if (dynamic) await withinLimit(LIMITS.apiMissIp, ip, new Date(), true)
       return refuse()
@@ -88,7 +96,8 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
     if (dynamic && opts.limit === 'search' && !(await withinLimit(LIMITS.apiSearchIp, ip, ctx.now, true))) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
     if (test) {
       const origin = req.headers.get('origin')
-      if (origin && (LOCALHOST.test(origin) || origin === await siteOriginFor(ctx.tenantId))) cors = { 'Access-Control-Allow-Origin': origin }
+      const site = origin && !LOCALHOST.test(origin) ? await siteOriginFor(ctx.tenantId).catch((e) => { console.error('[api]', opts.resource, 'origin', errName(e)); return null }) : null
+      if (origin && (LOCALHOST.test(origin) || origin === site)) cors = { 'Access-Control-Allow-Origin': origin }
       cors.Vary = 'Origin'
     }
 
@@ -108,6 +117,7 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
       return answer(200, body, { ...base, ...cors })
     } catch (err) {
       console.error('[api]', opts.resource, errName(err), `key=${ctx.keyId}`)
+      if (!dynamic) throw new Error('storefront api: read failed') // keep the last good copy (LOW-1)
       return refuse(500, JSON.stringify({ error: 'unavailable' }), cors)
     }
   }

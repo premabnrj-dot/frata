@@ -22,11 +22,11 @@ export const cardBadge = (offers: readonly ShowOffer[] | undefined, now: Date): 
   return o ? { label: o.badge! } : null
 }
 
-/** The product page's lines: this product's live offers first, then the shop's; a real end only ("till 30 Nov"). */
 /** The live offers a product page shows, in its order (this product's first), at most 4: read by the page and the API. */
 export const liveLines = (offers: readonly ShowOffer[] | undefined, now: Date) =>
   [...(offers ?? [])].filter((o) => live(o, now)).sort((a, b) => Number(b.product) - Number(a.product)).slice(0, 4)
 
+/** The product page's lines: this product's live offers first, then the shop's; a real end only ("till 30 Nov"). */
 export const pdpLines = (offers: readonly ShowOffer[] | undefined, now: Date) =>
   liveLines(offers, now).map((o) => ({
     label: o.label,

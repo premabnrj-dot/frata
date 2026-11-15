@@ -4,18 +4,24 @@ import { collectionOut, collectionPageOut, offersOut, pageOut, productOut, searc
 import { previewCatalogue, previewProduct, previewShop, shopAnnouncement, shopCatalogue, shopProduct, shopSettingsFor, type Lookup } from '@/lib/queries/storefront'
 import { siteOriginFor } from '@/lib/queries/storefront-api'
 import type { ApiCtx } from './request'
+import { visibility, type Status } from '@/domains/catalogue/availability'
+import { storeHost } from '@/domains/media/sizes'
+import { BLOB_STORE_ID } from '@/lib/env'
 
 // =============================================================================
 // FILE: src/lib/storefront-api/resources.ts — VERSION 2026-12's RESOURCES (spec § 3; V1 plan § SA1·3).
 //
 // One function per resource, shared by the cached tree (live keys: the shop's cached loaders) and the dynamic tree (test
-// keys: the uncached preview loaders, drafts included). Every read takes the shop from ctx.tenantId, never anything
+// keys: the uncached preview loaders: a draft opens by its handle; lists, collections and search stay listed-only). Every read takes the shop from ctx.tenantId, never anything
 // else, and never opens a withTenant around a cached loader (P4). The answer is a mapper's output; apiRequest parses it.
 // =============================================================================
 
 const loaders = (ctx: ApiCtx) => ctx.keyKind === 'test'
   ? { shop: previewShop, catalogue: previewCatalogue, product: previewProduct }
   : { shop: shopSettingsFor, catalogue: shopCatalogue, product: shopProduct }
+
+/** The mappers' context: the shop from the key, and Frrata's one media store (photos from anywhere else are dropped). */
+const mapCtx = (ctx: ApiCtx) => ({ tenantId: ctx.tenantId, mediaHost: storeHost(BLOB_STORE_ID) })
 
 const HANDLE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 /** A page number 1–13 (600 ÷ 48) from the path, or null (a 404 before any read). */
@@ -38,28 +44,30 @@ export const RESOURCES = {
   shop: { schema: S.Shop, run: async (ctx: ApiCtx) => {
     const [s, site] = await Promise.all([loaders(ctx).shop(ctx.tenantId), siteOriginFor(ctx.tenantId)])
     if (!s) return null
-    return shopOut(ctx.tenantId, s, { site, checkout: `https://${s.host}` })
+    return shopOut(mapCtx(ctx), s, { site, checkout: `https://${s.host}` })
   } },
   products: { schema: S.Page, run: async (ctx: ApiCtx, p: { page: number }) =>
-    pageOut(ctx.tenantId, (await loaders(ctx).catalogue(ctx.tenantId)).products, p.page, ctx.now) },
+    pageOut(mapCtx(ctx), (await loaders(ctx).catalogue(ctx.tenantId)).products, p.page, ctx.now) },
   product: { schema: S.Product, run: async (ctx: ApiCtx, p: { handle: string }) => {
     const read = loaders(ctx).product
     let found: Lookup = await read(ctx.tenantId, p.handle)
     // A moved product answers with its current handle (spec § 3, architecture 8): one more read, never a redirect.
     if (found.kind === 'moved' && HANDLE.test(found.to)) found = await read(ctx.tenantId, found.to)
     if (found.kind !== 'current') return null
-    const out = productOut(ctx.tenantId, found.product, ctx.now)
-    // A draft is never served under a live key (the cached loader holds none, and this is the second lock).
-    return ctx.keyKind === 'public' && !(found.product.status === 'active' || found.product.status === 'unlisted') ? null : out
+    const out = productOut(mapCtx(ctx), found.product, ctx.now)
+    // Under a live key, only what the shop's own product page would open now (its rule, not a copy): no draft, and no
+    // scheduled product before its moment (security of the drop; impact review 2026-11-15 BLOCKER).
+    const got = found.product
+    return ctx.keyKind === 'public' && !visibility(got.status as Status, got.publishAt ? new Date(got.publishAt) : null, ctx.now).reachable ? null : out
   } },
   collections: { schema: S.Collections, run: async (ctx: ApiCtx) =>
     ({ collections: (await loaders(ctx).catalogue(ctx.tenantId)).collections.slice(0, 500).map(collectionOut) }) },
   collection: { schema: S.CollectionPage, run: async (ctx: ApiCtx, p: { handle: string; page: number }) => {
     const cat = await loaders(ctx).catalogue(ctx.tenantId)
     const c = cat.collections.find((x) => x.handle === p.handle) ?? cat.collections.find((x) => x.handle === cat.movedCollections?.[p.handle])
-    return c ? collectionPageOut(ctx.tenantId, c, cat.products, p.page, ctx.now) : null
+    return c ? collectionPageOut(mapCtx(ctx), c, cat.products, p.page, ctx.now) : null
   } },
   offers: { schema: S.Offers, run: async (ctx: ApiCtx) => offersOut(await shopAnnouncement(ctx.tenantId), ctx.now) },
   search: { schema: S.Search, run: async (ctx: ApiCtx, p: { q: string }) =>
-    searchOut(ctx.tenantId, (await loaders(ctx).catalogue(ctx.tenantId)).products, p.q, ctx.now) },
+    searchOut(mapCtx(ctx), (await loaders(ctx).catalogue(ctx.tenantId)).products, p.q, ctx.now) },
 } as const

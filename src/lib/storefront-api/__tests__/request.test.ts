@@ -59,9 +59,12 @@ describe('apiRequest (ADR-0018 § 5)', () => {
     rows.set(LIVE, { keyId: 'k1', tenantId: A, kind: 'test', expiresAt: null })
     expect((await live(untouchable(), at(LIVE))).status).toBe(404)
   })
-  it('never lets an answer leave unparsed: an extra field is a 500, not a leak', async () => {
+  it('never lets an answer leave unparsed: an extra field fails, never leaks', async () => {
     const leaky = apiRequest({ version: '2026-12', tree: 'live', mode: 'isr', resource: 'shop', schema: Shop, run: async () => ({ name: 'x', cogs: 1 } as never) })
-    const r = await leaky(untouchable(), at(LIVE))
+    // A cached route throws (Next keeps its last good copy, nothing is sent); a test route answers 500. Never the field.
+    await expect(leaky(untouchable(), at(LIVE))).rejects.toThrow()
+    const leakyTest = apiRequest({ version: '2026-12', tree: 'test', mode: 'dynamic', resource: 'shop', schema: Shop, run: async () => ({ name: 'x', cogs: 1 } as never) })
+    const r = await leakyTest(req(), at(TEST))
     expect(r.status).toBe(500)
     expect(await r.text()).not.toContain('cogs')
   })
