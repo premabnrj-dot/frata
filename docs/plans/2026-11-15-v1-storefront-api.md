@@ -6,7 +6,7 @@ Spec: `docs/specs/2026-11-11-storefront-api.md` (§ 1–3, 6–7, 9) · Decision
 1–6 yes), ADR-0014 (and amendment 8), ADR-0002, ADR-0003, ADR-0015 (capabilities, lane C) · Content:
 `docs/specs/2026-11-14-site-content-layer.md` § Storefront API additions, § API gaps for SA1 · Earlier mockup:
 https://claude.ai/artifact/SKpPx1rfBu48w18HMNUK7u (v2, 2026-11-11) · **Final mockup (this phase):**
-`docs/mockups/2026-11-15-storefront-keys.html`, artifact link in the report · Approved: —
+`docs/mockups/2026-11-15-storefront-keys.html`, https://claude.ai/artifact/P8rsPfrY53V7Ezq1e4cnVm · Approved: —
 
 ## Goal
 North star (5): a premium storefront built as code by developers, partners or the agent (partners first). No code site
