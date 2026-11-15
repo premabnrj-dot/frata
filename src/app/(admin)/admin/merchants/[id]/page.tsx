@@ -34,8 +34,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 const ROLE = (r: string) => r[0]!.toUpperCase() + r.slice(1)
-const Why = () => (
-  <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Why</span>
+const Why = ({ label = 'Why' }: { label?: string }) => (
+  <label className="flex flex-col gap-1 text-sm"><span className="font-medium">{label}</span>
     <input name="reason" required minLength={3} maxLength={500} data-error="Say why, in a few words." className={FIELD} /><FieldMessage name="reason" /></label>
 )
 
@@ -65,8 +65,8 @@ export default async function MerchantPage({ params }: { params: Promise<{ id: s
         <input name="slug" required minLength={3} maxLength={30} pattern="[a-z0-9][a-z0-9\-]{1,28}[a-z0-9]" autoComplete="off" data-error="Use 3–30 letters, digits and single hyphens." className={FIELD} /><FieldMessage name="slug" /></label><Why /></> },
     frozen
       ? { label: 'Allow address changes…', title: `Allow ${name} to change its address?`, action: freezeAddressAction, keep: 'Keep frozen', go: 'Allow changes', fields: <>{tenant}<input type="hidden" name="frozen" value="no" /><Why /></> }
-      : { label: 'Freeze address changes…', title: `Freeze ${name}'s address?`, description: `${name} can't rename its address until it's allowed again.`, action: freezeAddressAction, keep: 'Keep changes open', go: 'Freeze address', danger: true, fields: <>{tenant}<input type="hidden" name="frozen" value="yes" /><Why /></> },
-    ...(trialOpen ? [{ label: 'End trial…', title: `End ${name}'s trial?`, description: `${cur ? `${cur.name} is charged from today. ` : ''}The store keeps selling. This can’t be undone.`, action: endShopTrialAction, keep: 'Keep trial', go: 'End trial', danger: true, fields: <>{tenant}<Why /></> }] : []),
+      : { label: 'Freeze address changes…', title: `Freeze ${name}'s address?`, description: `${name} can't rename its address until it's allowed again.`, action: freezeAddressAction, keep: 'Keep changes open', go: 'Freeze address', fields: <>{tenant}<input type="hidden" name="frozen" value="yes" /><Why /></> },
+    ...(trialOpen ? [{ label: 'End trial…', title: `End ${name}'s trial?`, description: 'The plan’s monthly price starts today. The store keeps selling.', action: endShopTrialAction, keep: 'Keep trial', go: 'End trial', danger: true, fields: <>{tenant}<Why label="Reason the store reads" /></> }] : []),
   ] : []
 
   return (

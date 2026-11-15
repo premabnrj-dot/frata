@@ -28,7 +28,7 @@ export default async function EmailHealth({ searchParams }: { searchParams: Prom
     <>
       <PageHeader title="Email health" />
       {q.waiting > 0 && q.oldest && Date.now() - new Date(q.oldest).getTime() > 10 * 60_000 && (
-        <NeedsBand tone="bad" title={`${q.waiting.toLocaleString('en-IN')} ${q.waiting === 1 ? 'email' : 'emails'} waiting since ${dateTimeIN(q.oldest)}.`} line="Order emails are late." />
+        <NeedsBand title={`${q.waiting.toLocaleString('en-IN')} ${q.waiting === 1 ? 'email' : 'emails'} waiting since ${dateTimeIN(q.oldest)}.`} />
       )}
       <div className="mb-4 flex gap-1.5">{PERIODS.map(([d, label]) => <Link key={d} href={`/admin/email?days=${d}`} className={`rounded-full border border-border px-3 py-1 text-sm ${days === d ? 'bg-foreground text-background' : ''}`}>{label}</Link>)}</div>
       <dl className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-5">

@@ -7,7 +7,8 @@ describe('actionWords', () => {
     expect(actionWords('billing.refund')).toBe('recorded a refund')
   })
   it('never shows a raw code: unknown actions read as words, module as app', () => {
-    expect(actionWords('order.items_edit')).toBe('order items edit')
+    expect(actionWords('order.something_else')).toBe('order something else')
+    expect(actionWords('shop.new_thing')).toBe('store new thing')
     expect(actionWords('module.something_new')).toBe('app something new')
     expect(actionWords('addon.x')).toBe('paid app x')
   })

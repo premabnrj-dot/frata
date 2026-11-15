@@ -55,12 +55,12 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
         badges={<>{i.toRefund > 0 ? <Badge tone="danger">Paid {formatInr(paise(i.toRefund))} too much</Badge> : <Badge tone={i.state === 'due' ? 'warn' : i.state === 'paid' ? 'ok' : 'neutral'}>{i.state === 'due' ? `Due ${inr(i.due)}` : STATE_LABEL[i.state]}</Badge>}
           {i.testMode && <Badge tone="warn">Test</Badge>}</>}
         meta={`${i.shop} · ${monthYearIN(i.periodStart)} · ${inr(i.total)} with GST`}
-        actions={<><MoreDialogs specs={more} /><a href={`/admin/billing/invoice/${i.id}/pdf`} className={button()}>Download PDF</a></>} />
+        actions={<><MoreDialogs specs={more} /><a href={`/admin/billing/invoice/${i.id}/pdf`} className={button({ variant: 'secondary' })}>Download PDF</a></>} />
 
       {over && (
         <NeedsBand tone="bad" title={`${i.shop} paid ${formatInr(paise(over.overPaid))} too much by ${METHOD[over.method] ?? over.method} on ${dayMonthIN(over.capturedAt!)}.`}
           line="Refund it to the store, then record the refund."
-          action={<DialogButton spec={{ label: 'Record refund', title: `Record the ${formatInr(paise(over.overPaid))} refund to ${i.shop}?`, description: 'Record it once the money has left Frrata’s bank. It can’t be changed.', action: refundAction, confirm: true, keep: 'Not yet', go: 'Record refund',
+          action={<DialogButton spec={{ label: 'Record refund', title: `Record the ${formatInr(paise(over.overPaid))} refund to ${i.shop}?`, description: 'Record it once the money has left Frrata’s bank. It can’t be changed.', action: refundAction, confirm: true, keep: 'Keep', go: 'Record refund',
             fields: <>{inv}<input type="hidden" name="payment" value={over.id} />
               <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Bank reference (UTR)</span><input name="utr" required pattern="[A-Za-z0-9\-]{6,40}" autoComplete="off" data-error="6 to 40 letters and digits." className={`${FIELD} font-mono`} /><FieldMessage name="utr" /></label>
               <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Sent on</span><input name="sentOn" type="date" required max={todayIST()} defaultValue={todayIST()} className={FIELD} /></label></> }} />} />

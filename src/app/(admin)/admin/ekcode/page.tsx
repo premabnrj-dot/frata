@@ -64,7 +64,7 @@ export default async function EkcodeAdmin({ searchParams }: { searchParams: Prom
       </>} />
 
       {first && (
-        <NeedsBand tone="bad" title={`Codes are paused for ${first.shop}.`}
+        <NeedsBand title={`Codes are paused for ${first.shop}.`}
           line={`${n(first.codes)} asked · ${pct(first.verified, first.codes)} typed right${stopped.length > 1 ? ` · ${stopped.length - 1} more paused` : ''}`}
           action={<DialogButton spec={controlOf(first)} />} />
       )}

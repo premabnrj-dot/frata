@@ -230,9 +230,9 @@ export default {
         const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
         await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)
         await meera.getByRole('button', { name: 'Change plan' }).click()
-        const move = meera.getByRole('dialog', { name: /^Change .* plan\?$/ })
+        const move = meera.getByRole('dialog', { name: /^Change .* plan$/ })
         await move.getByRole('radio', { name: /^Scale/ }).check()
-        await move.getByLabel('Starts').selectOption('next_month')
+        await move.getByRole('group', { name: 'Starts' }).getByRole('radio').nth(1).check({ force: true }) // the 1st of next month
         await move.getByLabel(/^Monthly price/).fill('9999')
         await move.getByLabel(/^Reason/).fill('E2E move')
         await move.getByRole('button', { name: 'Move Kesar Studio' }).click()

@@ -40,7 +40,7 @@ const READERS: Record<TodayKind, Reader> = {
       .innerJoin(tenants, eq(tenants.id, frrataPayments.tenantId))
       .where(and(gt(frrataPayments.overPaid, 0), isNull(frrataPayments.refundedAt), isNotNull(frrataPayments.capturedAt), eq(frrataInvoices.testMode, false)))
       .orderBy(asc(frrataPayments.createdAt)).limit(20)
-    return rows.map((r) => ({ kind: 'overpaid' as const, key: r.id + (r.at?.toISOString() ?? ''), title: `${r.shop} paid ${inr(Number(r.over))} too much`,
+    return rows.map((r) => ({ kind: 'overpaid' as const, key: r.id + (r.at?.toISOString() ?? ''), title: `${r.shop} paid ${inr(Number(r.over))} more than due`,
       line: `${r.number ?? 'Invoice'}${r.at ? ` · paid ${ago(r.at, now)}` : ''}`, action: 'Record refund', href: `/admin/billing/invoice/${r.id}`, since: r.at }))
   },
   issue_run: async (_staff, now) => {

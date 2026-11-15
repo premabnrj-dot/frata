@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { listMerchants, PAGE_SIZE } from '@/lib/admin/merchants'
-import { shopTrialsFor, trialAndLiveIds } from '@/lib/admin/trials'
+import { trialAndLiveIds } from '@/lib/admin/trials'
 import { todayItems } from '@/lib/admin/today'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { ActionForm } from '@/components/ui/action-form'
@@ -17,7 +17,7 @@ import { Submit } from '@/components/ui/submit'
 import type { TodayItem } from '@/domains/admin/today'
 import { resendOwnerLinkAction } from './[id]/actions'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
-import { dateTimeIN, dayMonthIN } from '@/lib/format-date'
+import { dateTimeIN } from '@/lib/format-date'
 
 export const metadata = { title: 'Merchants' }
 
@@ -40,9 +40,6 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
   const view: View = asked ?? (sp.q ? 'all' : needs.size ? 'needs' : 'all')
   const { rows, total, counts } = await listMerchants(staff, { page, q: sp.q?.trim() || undefined, now, views, view })
   const qs = (extra: Record<string, string | number | undefined>) => { const u = new URLSearchParams(); for (const [k, v] of Object.entries({ view, q: sp.q, ...extra })) if (v !== undefined && v !== '') u.set(k, String(v)); return `?${u}` }
-  // Trials TR0·4: each shop's trial, derived (src/domains/plans/trial.ts); a shop without a trial row has none.
-  const trials = await shopTrialsFor(staff, rows.map((r) => r.id), now)
-  const TRIAL: Record<string, string> = { building: 'Trial · not live yet', trial: 'Trial', ending: 'Trial ending', grace: 'Trial ended · grace', paused: 'Paused · no autopay', paid: '' }
   const pages = Math.ceil(total / PAGE_SIZE)
 
   return (
@@ -76,12 +73,7 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
                 </Td>
                 <Td cell="c">{(() => { const it = needs.get(m.id); return it ? <Badge tone="warn">{it.need}</Badge> : null })()}</Td>
                 <Td cell="d">
-                  {m.plan ? <Badge tone="info">{m.plan.name}</Badge> : <Badge tone="danger">No plan</Badge>}
-                  {(() => {
-                    const t = trials.get(m.id)
-                    if (t) return TRIAL[t.state] ? <div className={`whitespace-nowrap text-xs ${t.state === 'paused' || t.state === 'grace' ? 'text-danger-text' : 'text-warn-text'}`}>{TRIAL[t.state]}{t.state === 'trial' || t.state === 'ending' ? ` · ${t.daysLeft} days left` : ''}</div> : null
-                    return m.plan?.trialEndsAt && m.plan.trialEndsAt > now ? <div className="whitespace-nowrap text-xs text-warn-text">Trial until {dayMonthIN(m.plan.trialEndsAt)}</div> : null
-                  })()}
+                  {m.plan ? <span>{m.plan.name}{inTrial.has(m.id) ? <span className="text-muted-foreground"> · trial</span> : null}</span> : <Badge tone="danger">No plan</Badge>}
                 </Td>
                 <Td cell="b" className="text-right">
                   {m.ordersThisMonth === null ? <span className="hidden text-muted-foreground md:inline" title="Not drafted yet">—</span> : <span title={m.countedAt ? `Counted ${dateTimeIN(m.countedAt)}` : undefined}><Numeric>{m.ordersThisMonth.toLocaleString('en-IN')}</Numeric><span className="text-xs text-muted-foreground md:hidden"> delivered</span></span>}

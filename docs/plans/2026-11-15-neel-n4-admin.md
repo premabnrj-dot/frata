@@ -209,3 +209,11 @@ merchant's band and tabs, a dialog, Record refund, Activity filter, phone) writt
 | Plans as rows (the feature matrix gone) | As drawn: one row a plan, Edit opens its page | Built as drawn; which apps a plan includes is on the plan's own page | — |
 | Activity filter chips | Two selects (Person, Kind) and Show; a store chip when a merchant's Activity tab opened it | No client script for the filters | — |
 | Trial card "no autopay yet" on a merchant's Plan tab | Not shown | The plan page reads the trial's facts; autopay is on Trials and Today | — |
+| Change plan's primary "Move to Growth" | "Move {store}" | The button would have to follow the radio chosen; a server form has no script to rename it | — |
+| "Keep with Studio Kaaru" on a claim's dialog | "Keep where it is" | As the claim band: the holder's name needs a second read per claim | — |
+| Theme's "Add pilot store" as one button; pilot rows "Since 12 Nov" | A store search with Add pilot store; rows without a date | Adding needs the store's name typed; the staging date is not stored | — |
+| Billing's GST export in More | In the Collect step | More here holds dialogs; the export is a download, shown once invoices are issued | — |
+| Plans' "Prices exclude GST" and the version | Kept | A price without GST said is a wrong price to a reader; the version says what a store is on | — |
+| Dialogs on a phone: handle, buttons stacked full width | The shared Dialog, as on the console | The console's dialog primitive (Neel N0/N1, approved); changing it moves every dialog in Frrata | — |
+| Plain tables; a white phone bar with blue "Today · 7"; a plain sidebar | Neel's DataTable (framed, tinted head), Admin's ink sidebar and phone bar with logo, icons and STAFF | The shared shell and table from Neel N0/N1 (approved); Admin keeps its ink frame (§ Frrata Admin) | — |
+| EkCode and Infrastructure figures as grey tiles; EkCode's period as a segmented track | One bordered strip; pills | The existing figure strip both pages share | — |

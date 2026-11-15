@@ -21,7 +21,7 @@ const KIND: Record<BlockedKind, string> = { protected: 'Protected brand', offens
 
 const TABS = [['blocked', 'Blocked'], ['held', 'Held'], ['reserved', 'Reserved']] as const
 type Tab = (typeof TABS)[number][0]
-const Why = () => <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Why</span><input name="reason" required minLength={3} maxLength={500} data-error="Add a reason, 3 to 500 characters." className={field} /><FieldMessage name="reason" /></label>
+const Why = ({ label = 'Why' }: { label?: string }) => <label className="flex flex-col gap-1 text-sm"><span className="font-medium">{label}</span><input name="reason" required minLength={3} maxLength={500} data-error="Add a reason, 3 to 500 characters." className={field} /><FieldMessage name="reason" /></label>
 
 /** Admin › Names (Neel N4, board Names; shop addresses D1·7): a domain that waits leads; the lists in tabs. */
 export default async function NamesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
@@ -44,9 +44,9 @@ export default async function NamesPage({ searchParams }: { searchParams: Promis
         <NeedsBand key={d.id} title={`${d.shop} claims ${d.host}.`} line={`Another store uses it as its main address · ${sinceIN(d.contestAt, now)}`}
           action={can ? <div className="flex flex-wrap gap-2">
             <DialogButton spec={{ label: 'Keep where it is', title: `Keep ${d.host} where it is?`, description: `${d.shop} is told its claim was refused.`, action: settleDomainAction, keep: 'Not now', go: 'Keep where it is',
-              fields: <><input type="hidden" name="id" value={d.id} /><input type="hidden" name="move" value="no" /><Why /></> }} />
-            <DialogButton spec={{ label: `Move to ${d.shop}`, title: `Move ${d.host} to ${d.shop}?`, description: 'The other store loses it as its address at once.', action: settleDomainAction, keep: 'Not now', go: `Move to ${d.shop}`, danger: true,
-              fields: <><input type="hidden" name="id" value={d.id} /><input type="hidden" name="move" value="yes" /><Why /></> }} />
+              fields: <><input type="hidden" name="id" value={d.id} /><input type="hidden" name="move" value="no" /><Why label="Reason both stores read" /></> }} />
+            <DialogButton spec={{ label: `Move to ${d.shop}`, title: `Move ${d.host} to ${d.shop}?`, description: 'The other store’s Frrata address keeps working.', action: settleDomainAction, keep: 'Keep where it is', go: `Move to ${d.shop}`,
+              fields: <><input type="hidden" name="id" value={d.id} /><input type="hidden" name="move" value="yes" /><Why label="Reason both stores read" /></> }} />
           </div> : 'A master admin settles a claim.'} />
       ) : (
         <NeedsBand key={d.id} tone="bad" title={`${d.host} isn't working.`} line={`${d.shop}${d.failingSince ? ` · since ${dayMonthIN(d.failingSince)}` : ''}`}

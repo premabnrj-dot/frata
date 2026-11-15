@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 // Someone who may not act sees the band and who decides instead of the button.
 // =============================================================================
 
-const TONE = { warn: 'bg-warn text-warn-text', bad: 'bg-danger text-danger-text', info: 'bg-info text-info-text' } as const
+const TONE = { warn: 'bg-warn text-warn-text', bad: 'bg-danger text-danger-text', info: 'bg-info text-info-text', neutral: 'bg-neutral text-foreground' } as const
 
 export function NeedsBand({ tone = 'warn', title, line, action, className }: {
   tone?: keyof typeof TONE

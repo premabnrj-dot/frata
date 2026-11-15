@@ -25,7 +25,7 @@ export function Kpis({ items }: { items: { label: string; value: ReactNode; sub?
 export function NeedsYou({ alerts }: { alerts: Alert[] }) {
   if (!alerts.length) return null
   return (
-    <section aria-label="Needs you" className="rounded-mid border border-border bg-warn">
+    <section aria-label="Needs you" className="rounded-mid border border-border bg-card">
       <h2 className="px-4 pt-3 text-sm font-semibold">Needs you</h2>
       <ul className="divide-y divide-line-soft">
         {alerts.map((a) => (

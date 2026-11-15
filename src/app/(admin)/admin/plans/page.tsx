@@ -33,7 +33,7 @@ export default async function PlansPage() {
           return (
             <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
               <span><b className="font-medium">{p.name}</b> <span className="text-muted-foreground">· <Money paise={paise(v.monthlyPrice)} /> · <Numeric>{v.includedOrders.toLocaleString('en-IN')}</Numeric> orders · <Numeric>{formatPercent(v.feeBps / 10_000, v.feeBps % 100 === 0 ? 0 : 1)}</Numeric> · <Numeric>{stores.toLocaleString('en-IN')}</Numeric> {stores === 1 ? 'merchant' : 'merchants'} · version {v.version}, {dayIN(v.createdAt)}</span></span>
-              {isAdmin && <Link href={`/admin/plans/${p.code}`} className={button({ variant: 'secondary' })}>Edit {p.name}</Link>}
+              {isAdmin && <Link href={`/admin/plans/${p.code}`} className={button({ variant: 'secondary' })} aria-label={`Edit ${p.name}`}>Edit</Link>}
             </li>
           )
         })}

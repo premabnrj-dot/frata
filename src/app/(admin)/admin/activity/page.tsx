@@ -10,7 +10,7 @@ import { ACTIVITY_KIND_KEYS, ACTIVITY_KINDS, actionWords } from '@/domains/admin
 import { activityPeople, listActivity } from '@/lib/admin/activity'
 import { merchantName } from '@/lib/admin/merchants'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
-import { dateTimeIN } from '@/lib/format-date'
+import { momentIN } from '@/lib/format-date'
 import { MerchantTabs } from '../merchants/[id]/tabs'
 import { isMasterAdmin } from '@/domains/tenancy/staff-words'
 
@@ -49,7 +49,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
         <label className="flex flex-col gap-1"><span className="text-muted-foreground">Person</span>
           <select name="who" defaultValue={q.who ?? ''} className={FIELD}><option value="">Everyone</option>{people.map((p) => <option key={p.userId} value={p.userId}>{p.email}</option>)}</select></label>
         <label className="flex flex-col gap-1"><span className="text-muted-foreground">Kind</span>
-          <select name="kind" defaultValue={q.kind ?? ''} className={FIELD}><option value="">Every kind</option>{ACTIVITY_KIND_KEYS.filter((k) => isMasterAdmin(staff.role) || k !== 'billing').map((k) => <option key={k} value={k}>{ACTIVITY_KINDS[k].label}</option>)}</select></label>
+          <select name="kind" defaultValue={q.kind ?? ''} className={FIELD}><option value="">Everything</option>{ACTIVITY_KIND_KEYS.filter((k) => isMasterAdmin(staff.role) || k !== 'billing').map((k) => <option key={k} value={k}>{ACTIVITY_KINDS[k].label}</option>)}</select></label>
         <Button type="submit" variant="secondary">Show</Button>
         {filtered && <Link href="/admin/activity" className="inline-flex h-9 items-center text-sm underline-offset-2 hover:underline">Clear filters</Link>}
       </form>
@@ -62,7 +62,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
                 <Td cell="a" className="font-num">{e.actorEmail ?? 'Someone'}{e.actorKind === 'support' && <span className="text-muted-foreground"> · support visit</span>}</Td>
                 <Td cell="c">{e.tenantId && e.store ? <Link href={link({ shop: e.tenantId, before: undefined })} className="underline-offset-2 hover:underline">{e.store}</Link> : <span className="text-muted-foreground">Frrata</span>}</Td>
                 <Td cell="e">{actionWords(e.action)}</Td>
-                <Td cell="f" className="whitespace-nowrap text-right text-muted-foreground">{dateTimeIN(e.at)}</Td>
+                <Td cell="f" className="whitespace-nowrap text-right text-muted-foreground">{momentIN(e.at, new Date())}</Td>
               </DataTableRow>
             ))}
           </DataTableBody>

@@ -28,7 +28,7 @@ export default async function AdminToday() {
   const { items, missed } = await todayItems(staff)
   return (
     <>
-      <PageHeader title="Today" meta={items.length ? `${items.length} to do · oldest first` : undefined} />
+      <PageHeader title="Today" actions={items.length ? <span className="text-sm text-muted-foreground">{items.length} to do · oldest first</span> : undefined} />
       {items.length === 0 ? <Panel title="Nothing waits." /> : (
         <section aria-label="Needs you" className="max-w-4xl overflow-hidden rounded-mid border border-border">
           {items.map((it, i) => {

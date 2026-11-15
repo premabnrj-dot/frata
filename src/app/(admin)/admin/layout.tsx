@@ -4,6 +4,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { AppShell } from '@/components/shell/app-shell'
 import type { NavItem } from '@/components/shell/nav'
+import { NavPill } from '@/components/shell/nav'
 import { todayCounts } from '@/lib/admin/today'
 import type { TodayArea } from '@/domains/admin/today'
 import { button } from '@/components/ui/button'
@@ -59,7 +60,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // The same shell as the console; Admin differs only in chrome (ink, reversed mark, STAFF). Neel N4 (owner-approved
   // mockup): Today first, then four groups, each item with the count of what waits in it (todayCounts, the same list
   // Today shows, filtered by this person's role; none when it can't be read).
-  const item = (href: string, label: string, icon: NavItem['icon'], key?: TodayArea): NavItem => ({ href, label, icon, ...(key && n?.[key] ? { badge: n[key] } : {}) })
+  const item = (href: string, label: string, icon: NavItem['icon'], key?: TodayArea): NavItem => ({ href, label, icon, ...(key && n?.[key] ? { badge: <NavPill n={n[key]!} label="waiting" /> } : {}) })
   const today = item('/admin', 'Today', 'home', 'today')
   const merchants = item('/admin/merchants', 'Merchants', 'merchants', 'merchants')
   const trialsItem = item('/admin/trials', 'Trials', 'activity', 'trials')

@@ -49,11 +49,11 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
   const base = `/admin/themes/${key}/${version}`
 
   const more: DialogSpec[] = admin && v.inCode && !isBaseline(key, version) ? [
-    ...(!final ? [{ label: 'Recall…', title: `Recall ${name}?`, description: `No new store can start on it. The ${stores(v.live)} live on it keep it. This can’t be undone.`, action: pullAction, keep: `Keep ${v.version}`, go: `Recall ${name}`,
-      fields: <>{hidden}<input type="hidden" name="how" value="recall" />{why('Why recall it', 'Say why, in a few words.')}</> }] : []),
-    ...(v.state !== 'withdrawn' ? [{ label: 'Withdraw…', title: `Withdraw ${name}?`, danger: true, action: pullAction, keep: `Keep ${v.version}`, go: `Withdraw ${name}`,
+    ...(!final ? [{ label: `Recall ${name}…`, title: `Recall ${name}?`, description: `No new store can start on it. The ${stores(v.live)} live on it keep it. This can’t be undone.`, action: pullAction, keep: `Keep ${v.version}`, go: `Recall ${name}`,
+      fields: <>{hidden}<input type="hidden" name="how" value="recall" />{why('Reason', 'Say why, in a few words.')}</> }] : []),
+    ...(v.state !== 'withdrawn' ? [{ label: `Withdraw ${name}…`, title: `Withdraw ${name}?`, danger: true, action: pullAction, keep: `Keep ${v.version}`, go: `Withdraw ${v.version}`,
       description: <>{stores(v.live)} go back to their previous look at once. This can’t be undone.{v.liveShops.length > 0 && <> Moves back: {v.liveShops.slice(0, 20).map((s) => s.name).join(', ')}{v.liveShops.length > 20 ? `, and ${v.liveShops.length - 20} more` : ''}.</>}</>,
-      fields: <>{hidden}<input type="hidden" name="how" value="withdraw" />{why('Why withdraw it', 'Say what the problem is, in a few words.')}</> }] : []),
+      fields: <>{hidden}<input type="hidden" name="how" value="withdraw" />{why('Reason', 'Say what the problem is, in a few words.')}</> }] : []),
   ] : []
 
   return (
@@ -88,7 +88,7 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
         </>}
         {v.staged.length ? <ul className="divide-y divide-line-soft">{v.staged.map((s) => (
           <li key={s.tenantId} className="flex flex-wrap items-center justify-between gap-2 py-2"><span>{s.name}</span>
-            {admin && <ActionForm action={unstageAction}>{hidden}<input type="hidden" name="tenantId" value={s.tenantId} /><Submit variant="secondary">Remove {s.name}</Submit></ActionForm>}
+            {admin && <ActionForm action={unstageAction}>{hidden}<input type="hidden" name="tenantId" value={s.tenantId} /><Submit variant="secondary" aria-label={`Remove ${s.name}`}>Remove</Submit></ActionForm>}
           </li>))}</ul> : <Panel title="No pilot stores" />}
       </div>}
 

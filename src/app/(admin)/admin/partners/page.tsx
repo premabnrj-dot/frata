@@ -102,7 +102,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                 </div> : 'A master admin decides applications.'} />
             )}
             {asking.has(open.id) && keys?.request && (
-              <NeedsBand title={`${keys.owner} asks for a passkey.`}
+              <NeedsBand title={`${keys.owner} asks for a first passkey.`}
                 line={[`call ${/^91\d{10}$/.test(keys.phone) ? `+91 ${keys.phone.slice(2, 7)} ${keys.phone.slice(7)}` : keys.phone}`, keys.request.device, keys.request.city].filter(Boolean).join(' · ')}
                 action={tab === 'passkeys' ? undefined : <Link href={`${base(open.id)}&tab=passkeys`} className={button()}>Approve passkey</Link>} />
             )}

@@ -13,6 +13,9 @@ import { shopTrialsFor } from '@/lib/admin/trials'
 import { ADMIN_ONLY, ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { formatPercent } from '@/lib/format'
 import { dayMonthIN } from '@/lib/format-date'
+import { nextMonthStartIST } from '@/domains/time/month'
+
+const DAY = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })
 import { DialogButton } from '../../../_components/form-dialog'
 import { MerchantTabs } from '../tabs'
 import { changePlanAction, extendShopTrialAction, setShopTrialAction } from './actions'
@@ -45,37 +48,45 @@ export default async function MerchantPlanPage({ params }: { params: Promise<{ i
     <>
       {tenant}
       <fieldset className="space-y-2">
-        <legend className="mb-1 text-sm font-medium">New plan</legend>
+        <legend className="mb-1 text-sm font-medium">Plan</legend>
         {ps.map((p) => {
           const v = p.versions[0]!
           const isCurrent = cur?.code === p.code && cur.v.id === v.id
           return (
             <label key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-input px-3 py-2.5 text-sm has-[:checked]:border-2 has-[:checked]:border-primary">
-              <span className="flex items-center gap-2"><input type="radio" name="code" value={p.code} required data-error="Choose a plan." disabled={isCurrent} />{p.name}{isCurrent && <span className="text-muted-foreground">· now</span>}</span>
-              <span className="text-muted-foreground"><Money paise={paise(v.monthlyPrice)} /> a month · {v.includedOrders.toLocaleString('en-IN')} orders · {pct(v.feeBps)}</span>
+              <span className="flex flex-wrap items-center gap-x-2"><input type="radio" name="code" value={p.code} required data-error="Choose a plan." disabled={isCurrent} /><span className="font-medium">{p.name}</span>
+                <span className="text-muted-foreground"><Money paise={paise(v.monthlyPrice)} /> · {v.includedOrders.toLocaleString('en-IN')} orders · {pct(v.feeBps)}{isCurrent && ' · current'}</span></span>
             </label>
           )
         })}
         <FieldMessage name="code" />
       </fieldset>
-      <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Starts</span>
-        <select name="when" className={FIELD}><option value="now">Today</option><option value="next_month">The 1st of next month</option></select></label>
-      <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Monthly price, ₹ <span className="font-normal text-muted-foreground">(optional)</span></span>
-        <input name="customPrice" inputMode="numeric" className={`${FIELD} font-num`} /></label>
-      <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Reason <span className="font-normal text-muted-foreground">(with a price of your own)</span></span>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <fieldset className="flex flex-col gap-1 text-sm"><legend className="mb-1 font-medium">Starts</legend>
+          {/* A two-way choice as drawn (a segmented track), plain radios so it needs no script. */}
+          <div className="flex h-11 rounded-mid border border-line-soft bg-side p-0.5 md:h-9">
+            {[['now', 'Today'], ['next_month', DAY.format(nextMonthStartIST(now))]].map(([v, l], i) => (
+              <label key={v} className="flex flex-1 cursor-pointer items-center justify-center rounded-md text-muted-foreground has-[:checked]:bg-card has-[:checked]:text-foreground has-[:checked]:shadow-sm has-[:focus-visible]:outline-2">
+                <input type="radio" name="when" value={v} defaultChecked={i === 0} className="sr-only" />{l}</label>
+            ))}
+          </div></fieldset>
+        <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Monthly price, ₹ <span className="font-normal text-muted-foreground">(optional)</span></span>
+          <input name="customPrice" inputMode="numeric" className={`${FIELD} font-num`} /></label>
+      </div>
+      <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Reason</span>
         <input name="reason" maxLength={200} className={FIELD} /><FieldMessage name="reason" /></label>
     </>
   )
 
   return (
     <>
-      <PageHeader title={name} back={{ href: `/admin/merchants/${id}`, label: name }}
+      <PageHeader title={name} back={{ href: '/admin/merchants', label: 'Merchants' }}
         badges={<>{cur ? <Badge>{cur.name}</Badge> : <Badge tone="danger">No plan</Badge>}
           {trialOpen && <Badge tone="info">Trial · {trial.daysLeft} {trial.daysLeft === 1 ? 'day' : 'days'} left</Badge>}</>} />
       <MerchantTabs id={id} on="plan" />
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <Section title={cur?.name ?? 'No plan'} className="text-sm"
-          action={admin.ok && <DialogButton spec={{ label: 'Change plan', title: `Change ${name}'s plan?`, action: changePlanAction, fields: changePlan, keep: `Keep ${cur?.name ?? 'as it is'}`, go: `Move ${name}` }} />}>
+          action={admin.ok && <DialogButton spec={{ label: 'Change plan', title: `Change ${name}'s plan`, action: changePlanAction, fields: changePlan, keep: `Keep ${cur?.name ?? 'as it is'}`, go: `Move ${name}` }} />}>
           {cur && <p><Money paise={paise(cur.tp.customMonthlyPrice ?? cur.v.monthlyPrice)} /> a month · <Numeric>{cur.v.includedOrders.toLocaleString('en-IN')}</Numeric> orders · {pct(cur.v.feeBps)} of each delivered order</p>}
           {cur && <p className="text-muted-foreground">Version {cur.v.version} · since {dayMonthIN(cur.tp.startsAt)}{cur.tp.customMonthlyPrice !== null ? ` · custom price: ${cur.tp.reason}` : ''}</p>}
           {next && <p className="text-warn-text">Moves to {next.name} on {dayMonthIN(next.tp.startsAt)}{next.tp.byShop ? ', the store’s own change' : ''}.</p>}

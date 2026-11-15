@@ -9,7 +9,7 @@ import { Submit } from '@/components/ui/submit'
 import { staffWithPasskeys } from '@/lib/admin/passkeys'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { staffProof } from '@/lib/auth/session'
-import { dayMonthIN, sinceIN } from '@/lib/format-date'
+import { sinceIN } from '@/lib/format-date'
 import { NeedsBand } from '../_components/needs-band'
 import { addStaffAction, removeStaffAction } from './actions'
 import { AddOwnPasskey, AddStaffDialog, ApproveRequest, ConfirmFirst, RemovePasskey } from './staff-passkeys'
@@ -64,7 +64,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
         {open && (
           <Section ariaLabel={open.email} title={<span className="flex flex-wrap items-center gap-2"><span className="font-num [overflow-wrap:anywhere]">{open.email}</span><Badge>{roleWord(open.role)}</Badge></span>} className="text-sm">
             {mine && open.request && !open.request.approved && (
-              <NeedsBand tone="info" title="Your passkey request" line="Another master admin approves it." />
+              <NeedsBand tone="neutral" title="Your passkey request" line="Another master admin approves it." />
             )}
             <h3 className="text-sm font-semibold">Passkeys</h3>
             {open.passkeys.length === 0 ? <p className="text-muted-foreground">None yet.</p> : (
@@ -72,7 +72,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
                 {open.passkeys.map((k) => (
                   <div key={k.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                     <span className="min-w-0">{k.name}</span>
-                    <span className="flex items-center gap-2"><span className="text-muted-foreground">{k.lastUsedAt ? `Used ${dayMonthIN(new Date(k.lastUsedAt))}` : `Added ${dayMonthIN(new Date(k.createdAt))}`}</span>
+                    <span className="flex items-center gap-2"><span className="text-muted-foreground">{k.lastUsedAt ? `Used ${sinceIN(new Date(k.lastUsedAt), now)}` : 'Not used yet'}</span>
                       {(isAdmin || mine) && <RemovePasskey id={k.id} name={k.name} owner={open.email} left={open.passkeys.length - 1} />}</span>
                   </div>
                 ))}

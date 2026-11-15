@@ -15,6 +15,7 @@ import { paise } from '@/domains/money/paise'
 import { STATE_LABEL } from '@/domains/billing/status'
 import { monthOfYM, monthStartIST, ymOf } from '@/domains/time/month'
 import { billingMonth, toIssue, type DraftRow } from '@/lib/admin/billing'
+import { todayItems } from '@/lib/admin/today'
 import { draftableMonths } from '@/lib/billing/run'
 import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import { formatInr } from '@/lib/format'
@@ -53,19 +54,22 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const now = new Date()
   const start = (sp.month && monthOfYM(sp.month)) || monthStartIST(now)
   const ym = ymOf(start)
-  const rows = await billingMonth(staff, start)
+  // Needs you is every month's (an over-payment from any month), the same items Today and the nav count.
+  const [rows, { items }] = await Promise.all([billingMonth(staff, start), todayItems(staff)])
+  const owed = items.filter((it) => it.kind === 'overpaid')
   const ready = toIssue(rows, start)
   const begun = start.getTime() <= now.getTime()
   const label = SHORT.format(start)
   const canDraft = draftableMonths(now).some((m) => m.getTime() === start.getTime())
-  const counts = Object.fromEntries(VIEWS.map(([k]) => [k, rows.filter(IN[k]).length])) as Record<View, number>
+  const counts = { ...Object.fromEntries(VIEWS.map(([k]) => [k, rows.filter(IN[k]).length])), needs: owed.length } as Record<View, number>
   const asked = VIEWS.find(([k]) => k === sp.view)?.[0]
   const view: View = asked ?? (counts.needs ? 'needs' : counts.due ? 'due' : counts.drafts && !counts.paid ? 'drafts' : 'paid')
   const shown = rows.filter(IN[view])
   const due = rows.filter(IN.due)
   // The run's step: drafts, then issue, then collect (one step in view, its one action).
   const step = rows.length === 0 ? 0 : ready.open > 0 ? 1 : 2
-  const months = Array.from({ length: 13 }, (_, i) => { const d = new Date(monthStartIST(now)); d.setUTCMonth(d.getUTCMonth() + 1 - i); return monthStartIST(new Date(d.getTime() + 15 * 86_400_000)) })
+  const listed = Array.from({ length: 13 }, (_, i) => { const d = new Date(monthStartIST(now)); d.setUTCMonth(d.getUTCMonth() + 1 - i); return monthStartIST(new Date(d.getTime() + 15 * 86_400_000)) })
+  const months = listed.some((m) => ymOf(m) === ym) ? listed : [start, ...listed]
   const monthField = <input type="hidden" name="month" value={ym} />
 
   return (
@@ -106,9 +110,22 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         )}
       </Section>
 
-      {rows.length > 0 && <>
+      {(rows.length > 0 || owed.length > 0) && <>
         <ViewTabs label="Invoices" tabs={VIEWS.map(([k, l]) => ({ href: `/admin/billing?month=${ym}&view=${k}`, label: l, count: counts[k], current: view === k }))} />
-        {shown.length === 0 ? <Panel title={view === 'needs' ? 'Nothing waits.' : `No ${VIEWS.find(([k]) => k === view)![1].toLowerCase()} invoices`} /> : (
+        {view === 'needs' ? (owed.length === 0 ? <Panel title="Nothing waits." /> : (
+          <DataTable label="Invoices that need you">
+            <DataTableHead><th>Invoice</th><th>What</th><th><span className="sr-only">Action</span></th></DataTableHead>
+            <DataTableBody>
+              {owed.map((it) => (
+                <DataTableRow key={it.key}>
+                  <Td cell="a"><Link href={it.href} data-row-link className="font-medium hover:underline">{it.line.split(' · ')[0]}</Link></Td>
+                  <Td cell="c"><Badge tone="danger">{it.title}</Badge></Td>
+                  <Td cell="f" className="text-right"><Link href={it.href} className={button({ variant: 'secondary' })}>{it.action}</Link></Td>
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTable>
+        )) : shown.length === 0 ? <Panel title={`No ${VIEWS.find(([k]) => k === view)![1].toLowerCase()} invoices`} /> : (
           <DataTable label={`Invoices for ${label}`}>
             <DataTableHead><th>Invoice</th><th>Merchant</th><th className="text-right">Total</th><th>State</th></DataTableHead>
             <DataTableBody>
