@@ -290,12 +290,20 @@ export const shopSettings = pgTable('shop_settings', {
   shipCostCod: money('ship_cost_cod'),
   shipCostsConfirmedAt: at('ship_costs_confirmed_at'),
   publishedAt: at('published_at'),
+  /**
+   * Where the brand's own website runs, when it isn't on Frrata (V1 Storefront API, ADR-0018): `https://<apex>` or
+   * `https://www.<apex>` of the connected domain `site_domain_id` names. Both null = Runs on Frrata. Set only by
+   * Settings › Website; app_site_origin_check holds the shape and the domain; removing the domain clears both.
+   */
+  siteOrigin: text('site_origin'),
+  siteDomainId: uuid('site_domain_id'),
   version: integer('version').notNull().default(1),
   updatedAt: at('updated_at').notNull().defaultNow(),
 }, (t) => [
   check('shop_settings_accent', sql`${t.accent} in ('oxide','indigo','moss','wine','ink')`),
   check('shop_settings_font', sql`${t.displayFont} in ('fraunces','cormorant','inter')`),
   check('shop_settings_language', sql`${t.shopLanguage} in ('en','hi')`),
+  check('shop_settings_site', sql`(${t.siteOrigin} is null) = (${t.siteDomainId} is null) and (${t.siteOrigin} is null or ${t.siteOrigin} ~ '^https://[a-z0-9.-]+$')`),
   check('shop_settings_seo', sql`length(${t.seoTitle}) <= 200 and length(${t.seoDescription}) <= 400`),
   check('shop_settings_return_kind', sql`${t.returnKind} in ('exchange_or_refund','exchange_only','refund_only','none')`),
   check('shop_settings_sells', sql`${t.sells} <@ array['women','men','kids','ethnic','accessories','footwear','jewellery','beauty','wellness']::text[]`),

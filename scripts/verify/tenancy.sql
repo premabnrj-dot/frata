@@ -3634,4 +3634,160 @@ end $$;
 drop schema proof cascade;
 do $$ begin if to_regnamespace('proof') is not null then raise exception 'FAIL: proof helpers left behind'; end if; end $$;
 
-\echo 'tenancy proof — all 79 checks passed'
+-- 81. Storefront keys (V1 Storefront API SA0, 0130–0131; ADR-0018; plan docs/plans/2026-11-15-v1-storefront-api.md
+-- § SA0·3). A key is its shop's own row both ways; frata_app never changes a hash, kind, shop or maker and never deletes;
+-- no other role reaches it. app_storefront_key is the one way from a key to a shop: it returns exactly four columns and
+-- derives every stop (deleted, expired, a test key once the store ever opened, a partner's key once that partner's link
+-- is gone or it is suspended, a Website not on a live connected domain). A website's address names a live domain of
+-- the same shop, its apex or www only; removing that domain clears it.
+insert into tenants (id, slug, name) values
+  ('c8100000-0000-0000-0000-000000000001', 'proof-c81', 'Proof C81'),
+  ('c8100000-0000-0000-0000-000000000002', 'proof-d81', 'Proof D81');
+insert into shop_settings (tenant_id, pickup_pincode) values
+  ('c8100000-0000-0000-0000-000000000001', '452009'), ('c8100000-0000-0000-0000-000000000002', '110017');
+insert into shop_domains (id, tenant_id, host, apex, with_www, claimed_by, proved_at, cert_ok_at) values
+  ('c8100000-0000-0000-0000-0000000000d1', 'c8100000-0000-0000-0000-000000000001', 'checkout.proof-c81.in', 'proof-c81.in', false, '99999999-9999-9999-9999-999999999999', now(), now()),
+  ('c8100000-0000-0000-0000-0000000000d2', 'c8100000-0000-0000-0000-000000000002', 'checkout.proof-d81.in', 'proof-d81.in', false, '99999999-9999-9999-9999-999999999999', now(), now());
+insert into partners (id, user_id, email, name, phone, city, brands_now, terms_version, agreed_at, approved_at) values
+  ('c8100000-0000-0000-0000-0000000000a1', 'c8100000-0000-0000-0000-0000000000f1', 'p81@proof.test', 'Proof Partner 81', '919876543210', 'Indore', '0', 1, now(), now());
+insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days) values
+  ('c8100000-0000-0000-0000-000000000001', 'c8100000-0000-0000-0000-0000000000a1', 2000, 24, 90),
+  ('c8100000-0000-0000-0000-000000000002', 'c8100000-0000-0000-0000-0000000000a1', 2000, 24, 90);
+update shop_settings set site_origin = 'https://proof-c81.in', site_domain_id = 'c8100000-0000-0000-0000-0000000000d1' where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+update shop_settings set site_origin = 'https://www.proof-d81.in', site_domain_id = 'c8100000-0000-0000-0000-0000000000d2' where tenant_id = 'c8100000-0000-0000-0000-000000000002';
+insert into storefront_keys (id, tenant_id, kind, name, hash, prefix, partner_id, created_by, expires_at) values
+  ('c8100000-0000-0000-0000-00000000000a', 'c8100000-0000-0000-0000-000000000001', 'public', 'Website', repeat('a', 64), 'frs_pub_aaaaaa', null, '99999999-9999-9999-9999-999999999999', null),
+  ('c8100000-0000-0000-0000-00000000000b', 'c8100000-0000-0000-0000-000000000001', 'test', 'Preview', repeat('b', 64), 'frs_test_bbbbbb', null, '99999999-9999-9999-9999-999999999999', now() + interval '30 days'),
+  ('c8100000-0000-0000-0000-00000000000c', 'c8100000-0000-0000-0000-000000000001', 'public', 'Partner site', repeat('c', 64), 'frs_pub_cccccc', 'c8100000-0000-0000-0000-0000000000a1', 'c8100000-0000-0000-0000-0000000000f1', null),
+  ('c8100000-0000-0000-0000-00000000000d', 'c8100000-0000-0000-0000-000000000002', 'public', 'Partner site', repeat('d', 64), 'frs_pub_dddddd', 'c8100000-0000-0000-0000-0000000000a1', 'c8100000-0000-0000-0000-0000000000f1', null),
+  ('c8100000-0000-0000-0000-00000000000e', 'c8100000-0000-0000-0000-000000000002', 'test', 'Old preview', repeat('e', 64), 'frs_test_eeeeee', null, '99999999-9999-9999-9999-999999999999', now() - interval '1 minute'),
+  ('c8100000-0000-0000-0000-00000000000f', 'c8100000-0000-0000-0000-000000000002', 'test', 'D preview', repeat('f', 64), 'frs_test_ffffff', null, '99999999-9999-9999-9999-999999999999', now() + interval '30 days');
+do $$ declare got text; begin
+  if exists (select 1 from pg_tables where tablename = 'storefront_keys' and not rowsecurity) then raise exception 'FAIL: storefront_keys without RLS'; end if;
+  if (select count(*) from pg_policies where tablename = 'storefront_keys') <> 1
+     or (select count(*) from pg_policies where tablename = 'storefront_keys' and policyname = 'tenant_rows' and roles = '{frata_app}'
+         and qual like '%app_current_tenant()%' and with_check like '%app_current_tenant()%' and qual not like '%is null%') <> 1
+  then raise exception 'FAIL: storefront_keys without its one tenant policy'; end if;
+  if not (has_table_privilege('frata_app', 'storefront_keys', 'select') and has_table_privilege('frata_app', 'storefront_keys', 'insert'))
+     or exists (select 1 from unnest(array['update', 'delete', 'truncate', 'references', 'trigger']) p where has_table_privilege('frata_app', 'storefront_keys', p))
+  then raise exception 'FAIL: frata_app holds other than select, insert and its columns on storefront_keys'; end if;
+  select string_agg(column_name, ',' order by column_name) into got from information_schema.column_privileges where grantee = 'frata_app' and table_name = 'storefront_keys' and privilege_type = 'UPDATE';
+  if got is distinct from 'last_seen_on,last_seen_version,name,revoked_at,revoked_by' then raise exception 'FAIL: frata_app updates storefront_keys columns %', got; end if;
+  if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r, unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p
+             where has_table_privilege(r, 'storefront_keys', p) or has_any_column_privilege(r, 'storefront_keys', 'select') or has_any_column_privilege(r, 'storefront_keys', 'update'))
+  then raise exception 'FAIL: another role reaches storefront_keys'; end if;
+  if has_column_privilege('frata_admin', 'storefront_keys', 'hash', 'select') then raise exception 'FAIL: frata_admin reads a key hash'; end if;
+  -- the definer: four columns, a definer pinned to an empty search_path, frata_app alone may run it
+  if pg_get_function_result('app_storefront_key(text)'::regprocedure) is distinct from 'TABLE(key_id uuid, tenant_id uuid, kind text, expires_at timestamp with time zone)'
+  then raise exception 'FAIL: app_storefront_key returns %', pg_get_function_result('app_storefront_key(text)'::regprocedure); end if;
+  if not (select prosecdef from pg_proc where oid = 'app_storefront_key(text)'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_storefront_key(text)'::regprocedure) is distinct from array['search_path=""']
+  then raise exception 'FAIL: app_storefront_key is not a pinned definer'; end if;
+  if exists (select 1 from unnest(array['public', 'anon', 'authenticated', 'service_role', 'frata_admin']) r
+             where r <> 'public' and has_function_privilege(r, 'app_storefront_key(text)', 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_storefront_key(text)'::regprocedure and a.grantee = 0)
+     or not has_function_privilege('frata_app', 'app_storefront_key(text)', 'execute')
+  then raise exception 'FAIL: app_storefront_key runs for a role other than frata_app'; end if;
+  if exists (select 1 from pg_proc p, unnest(array['app_site_origin_check', 'app_site_domain_gone', 'app_storefront_key_revoked_once']) f
+             where p.proname = f and (has_function_privilege('frata_app', p.oid, 'execute') or has_function_privilege('frata_admin', p.oid, 'execute')))
+  then raise exception 'FAIL: a storefront-key trigger function can be called'; end if;
+end $$;
+-- a website's address: the same shop's live domain, its apex or www only
+do $$ begin
+  begin update shop_settings set site_origin = 'https://proof-d81.in', site_domain_id = 'c8100000-0000-0000-0000-0000000000d2' where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: C named D''s domain'; exception when check_violation then null; end;
+  begin update shop_settings set site_origin = 'https://shop.proof-c81.in' where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: a subdomain other than www'; exception when check_violation then null; end;
+  begin update shop_settings set site_origin = 'https://evil.in' where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: an origin off its domain'; exception when check_violation then null; end;
+  begin update shop_settings set site_origin = 'https://proof-c81.in/x' where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: an origin with a path'; exception when check_violation then null; end;
+  begin update shop_settings set site_domain_id = null where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+    raise exception 'FAIL: an origin without its domain'; exception when check_violation then null; end;
+end $$;
+begin; set local role frata_app;
+select set_config('app.tenant_id', 'c8100000-0000-0000-0000-000000000001', true);
+do $$ declare n int; begin
+  if (select count(*) from storefront_keys) <> 3 or exists (select 1 from storefront_keys where tenant_id <> 'c8100000-0000-0000-0000-000000000001')
+  then raise exception 'FAIL: C sees other than its own keys'; end if;
+  insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values ('c8100000-0000-0000-0000-000000000001', 'public', 'Second', repeat('1', 64), 'frs_pub_111111', '99999999-9999-9999-9999-999999999999');
+  begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values ('c8100000-0000-0000-0000-000000000002', 'public', 'Forged', repeat('2', 64), 'frs_pub_222222', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: C wrote a key into D'; exception when insufficient_privilege then null; end;
+  update storefront_keys set name = 'Taken' where id = 'c8100000-0000-0000-0000-00000000000d'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: C renamed D''s key'; end if;
+  update storefront_keys set revoked_at = now(), revoked_by = '99999999-9999-9999-9999-999999999999' where id = 'c8100000-0000-0000-0000-00000000000f'; get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FAIL: C deleted D''s key'; end if;
+  begin update storefront_keys set hash = repeat('9', 64) where id = 'c8100000-0000-0000-0000-00000000000a'; raise exception 'FAIL: frata_app changes a hash'; exception when insufficient_privilege then null; end;
+  begin update storefront_keys set kind = 'test' where id = 'c8100000-0000-0000-0000-00000000000a'; raise exception 'FAIL: frata_app changes a kind'; exception when insufficient_privilege then null; end;
+  begin update storefront_keys set tenant_id = 'c8100000-0000-0000-0000-000000000002'; raise exception 'FAIL: C moved a key to D'; exception when insufficient_privilege then null; end;
+  begin update storefront_keys set partner_id = null; raise exception 'FAIL: frata_app changes a key''s partner'; exception when insufficient_privilege then null; end;
+  begin delete from storefront_keys where id = 'c8100000-0000-0000-0000-00000000000a'; raise exception 'FAIL: frata_app deletes keys'; exception when insufficient_privilege then null; end;
+  -- deleted once, for good
+  update storefront_keys set revoked_at = now(), revoked_by = '99999999-9999-9999-9999-999999999999' where hash = repeat('1', 64);
+  begin update storefront_keys set revoked_at = null, revoked_by = null where hash = repeat('1', 64); raise exception 'FAIL: a deleted key came back';
+  exception when check_violation then null; end;
+  -- the shape
+  begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values ('c8100000-0000-0000-0000-000000000001', 'test', 'No end', repeat('3', 64), 'frs_test_333333', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: a test key with no end'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values ('c8100000-0000-0000-0000-000000000001', 'public', 'Bad hash', 'ABC', 'frs_pub_444444', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: a hash that is not sha256 hex'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values ('c8100000-0000-0000-0000-000000000001', 'public', repeat('x', 41), repeat('5', 64), 'frs_pub_555555', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: a 41-character name'; exception when check_violation then null; end;
+  begin insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values ('c8100000-0000-0000-0000-000000000001', 'live', 'Kind', repeat('6', 64), 'frs_pub_666666', '99999999-9999-9999-9999-999999999999');
+    raise exception 'FAIL: an unknown kind'; exception when check_violation then null; end;
+end $$;
+commit;
+begin; set local role frata_app;
+select set_config('app.tenant_id', '', true);
+do $$ begin
+  if exists (select 1 from storefront_keys) then raise exception 'FAIL: keys read with no shop set'; end if;
+end $$;
+commit;
+-- the definer, as frata_app with no shop set (how apiRequest calls it)
+create or replace function pg_temp.skey(h text) returns uuid language sql as $$ select tenant_id from app_storefront_key(h) $$;
+begin; set local role frata_app;
+do $$ begin
+  if pg_temp.skey(repeat('a', 64)) is distinct from 'c8100000-0000-0000-0000-000000000001' then raise exception 'FAIL: C''s live key does not name C'; end if;
+  if pg_temp.skey(repeat('b', 64)) is distinct from 'c8100000-0000-0000-0000-000000000001' then raise exception 'FAIL: C''s test key before opening does not answer'; end if;
+  if pg_temp.skey(repeat('d', 64)) is distinct from 'c8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: D''s partner key does not name D'; end if;
+  if pg_temp.skey(repeat('e', 64)) is not null then raise exception 'FAIL: an expired test key answers'; end if;
+  if pg_temp.skey(repeat('1', 64)) is not null then raise exception 'FAIL: a deleted key answers'; end if;
+  if pg_temp.skey(repeat('7', 64)) is not null then raise exception 'FAIL: an unknown key answers'; end if;
+  if (select count(*) from app_storefront_key(repeat('a', 64))) <> 1 then raise exception 'FAIL: one key, more than one row'; end if;
+end $$;
+commit;
+-- every stop is derived: the store opens, the partner's link ends, the partner is suspended, the domain goes, back to Frrata
+insert into members (tenant_id, user_id, role) values ('c8100000-0000-0000-0000-000000000001', '99999999-9999-9999-9999-999999999999', 'owner');
+update shop_settings set published_at = now() where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+update shop_settings set published_at = null where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+update partner_links set removed_at = now() where tenant_id = 'c8100000-0000-0000-0000-000000000001' and partner_id = 'c8100000-0000-0000-0000-0000000000a1';
+begin; set local role frata_app;
+do $$ begin
+  if pg_temp.skey(repeat('b', 64)) is not null then raise exception 'FAIL: a test key answers after the store first opened (closed again since)'; end if;
+  if pg_temp.skey(repeat('a', 64)) is null then raise exception 'FAIL: opening stopped a live key'; end if;
+  if pg_temp.skey(repeat('f', 64)) is distinct from 'c8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: C opening stopped D''s test key'; end if;
+  if pg_temp.skey(repeat('c', 64)) is not null then raise exception 'FAIL: a removed partner''s key answers'; end if;
+  if pg_temp.skey(repeat('d', 64)) is null then raise exception 'FAIL: removing the partner from C stopped its key on D'; end if;
+end $$;
+commit;
+update partners set suspended_at = now() where id = 'c8100000-0000-0000-0000-0000000000a1';
+begin; set local role frata_app;
+do $$ begin
+  if pg_temp.skey(repeat('d', 64)) is not null then raise exception 'FAIL: a suspended partner''s key answers'; end if;
+end $$;
+commit;
+update partners set suspended_at = null where id = 'c8100000-0000-0000-0000-0000000000a1';
+update shop_domains set removed_at = now(), removed_reason = 'proof', removed_by = '99999999-9999-9999-9999-999999999999' where id = 'c8100000-0000-0000-0000-0000000000d2';
+do $$ begin
+  if (select site_origin from shop_settings where tenant_id = 'c8100000-0000-0000-0000-000000000002') is not null then raise exception 'FAIL: a removed domain kept its website address'; end if;
+  if (select site_origin from shop_settings where tenant_id = 'c8100000-0000-0000-0000-000000000001') is null then raise exception 'FAIL: D''s domain cleared C''s address'; end if;
+end $$;
+update shop_settings set site_origin = null, site_domain_id = null where tenant_id = 'c8100000-0000-0000-0000-000000000001';
+begin; set local role frata_app;
+do $$ begin
+  if pg_temp.skey(repeat('d', 64)) is not null then raise exception 'FAIL: a key answers once its domain is removed'; end if;
+  if pg_temp.skey(repeat('a', 64)) is not null then raise exception 'FAIL: a key answers while the store runs on Frrata'; end if;
+end $$;
+commit;
+
+\echo 'tenancy proof — all 81 checks passed'

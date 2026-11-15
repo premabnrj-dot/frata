@@ -911,6 +911,20 @@
       "when": 1794719314417,
       "tag": "0129_partner_passkeys_access",
       "breakpoints": true
+    },
+    {
+      "idx": 130,
+      "version": "7",
+      "when": 1794734046251,
+      "tag": "0130_storefront_keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 131,
+      "version": "7",
+      "when": 1794734086616,
+      "tag": "0131_storefront_keys_access",
+      "breakpoints": true
     }
   ]
 }
