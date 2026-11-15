@@ -6,6 +6,7 @@
 
 export type StaffNoticeKind = 'staff_added' | 'staff_removed' | 'request_approved' | 'passkey_added' | 'passkey_removed'
   | 'partner_passkey_added' | 'partner_passkey_removed' | 'partner_request_made' | 'partner_request_approved'
+  | 'partner_role_changed'
 /** The partner side's kinds (T1b, drizzle/0129): sent to the person and the partner's owner (an owner's own recovery:
  *  every Frrata admin too). The email's button opens the workspace, not Admin. */
 export const isPartnerNotice = (k: StaffNoticeKind) => k.startsWith('partner_')
@@ -25,6 +26,8 @@ export function staffSecurityWords(n: { kind: StaffNoticeKind; about: string; by
     case 'partner_request_made': return n.detail === 'first'
       ? { subject: `${n.about} asked Frrata for a first passkey`, body: `${n.about} asked Frrata to approve their first passkey. We'll call the phone on their record.` }
       : { subject: `${n.about} asked Frrata for a new passkey`, body: `${n.about} can't use their passkey. We'll call the phone on their record. We can approve a new one after 24 hours.` }
+    // T1c: the detail is the new role's word (Lead or Builder).
+    case 'partner_role_changed': return { subject: `${n.about} is now a ${n.detail ?? 'new role'}`, body: `${by} made ${n.about} a ${n.detail ?? 'new role'}. Their stores stay the same.` }
     case 'partner_request_approved': return { subject: `A new passkey was approved for ${n.about}`, body: `${by} approved a new passkey for ${n.about}. ${n.about} can create it on the same device within 10 minutes.` }
   }
 }

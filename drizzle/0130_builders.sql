@@ -1,0 +1,4 @@
+ALTER TABLE "members" DROP CONSTRAINT "members_role";--> statement-breakpoint
+ALTER TABLE "staff_notices" DROP CONSTRAINT "staff_notices_kind";--> statement-breakpoint
+ALTER TABLE "members" ADD CONSTRAINT "members_role" CHECK ("members"."role" in ('owner','admin','staff','partner','accountant','builder'));--> statement-breakpoint
+ALTER TABLE "staff_notices" ADD CONSTRAINT "staff_notices_kind" CHECK ("staff_notices"."kind" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved','partner_role_changed'));
