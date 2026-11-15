@@ -40,7 +40,7 @@ export function Plans({ plans, current, custom, options, downgradeOn, scheduled,
         ) : null}
         {/* A comparison keeps its columns on a phone (it scrolls sideways in its box): reflowed, the plans lose their names. */}
         <div className="overflow-x-auto rounded-lg border border-border">
-        <table aria-label="Plans side by side" className="w-full min-w-[600px] text-sm">
+        <table aria-label="Plans side by side" className="w-full min-w-[640px] text-sm [&_button]:whitespace-nowrap">
           <thead className="border-b border-border bg-sunk text-left text-small text-muted-foreground">
             <tr>
             <th className="w-1/3 px-3 py-2 font-medium">App</th>
