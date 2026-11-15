@@ -31,12 +31,10 @@ export default {
         await p.screenshot({ path: t.out('product-editor'), fullPage: true })
       })
 
-      await t.step('Settings → Pay on delivery: money and limits stay one visible line; the why is behind (i)', async () => {
+      await t.step('Settings → Pay on delivery: money and limits stay one visible line, nothing behind an (i)', async () => {
         await p.goto(CONSOLE + '/console/settings/payments')
-        await p.getByText('0 for none.').waitFor()
-        assert.equal(await p.getByText('never added later').isVisible(), false)
-        await p.getByRole('button', { name: 'About pay on delivery fee, ₹' }).click()
-        await p.getByText('Shown as its own line before the shopper orders, never added later.').waitFor()
+        await p.getByText('0 for none', { exact: true }).waitFor()
+        assert.equal(await p.getByRole('button', { name: /^About / }).count(), 0, 'Pay on delivery as drawn: no (i)')
         await p.screenshot({ path: t.out('settings-payments'), fullPage: true })
       })
 

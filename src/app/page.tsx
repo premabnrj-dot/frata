@@ -111,7 +111,7 @@ export default async function Home() {
           </section>
         </SiteStage>
       </main>
-      <SiteFooter links={[{ href: '/partners', label: 'For partners' }, { href: '/login', label: 'Sign in' }]} />
+      <SiteFooter links={[{ href: '/partners', label: 'For partners' }, { href: '/privacy-policy', label: 'Privacy' }, { href: '/login', label: 'Sign in' }]} />
     </div>
   )
 }

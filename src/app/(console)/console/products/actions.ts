@@ -48,7 +48,7 @@ export async function createProduct(input: { title: string; kind?: string }): Pr
       const tenantId = auth.membership.tenantId
       await ensureTypes(tx, tenantId)
       const types = await tx.select({ id: productTypes.id, name: productTypes.name }).from(productTypes).where(eq(productTypes.tenantId, tenantId))
-      // A new product starts with the shop's starting HSN (Settings › Taxes). Its name picks its kind and type (kind.ts):
+      // A new product starts with the shop's starting HSN (Settings › Business and GST). Its name picks its kind and type (kind.ts):
       // a kids' kurta gets the Kids type and its sizes, a saree one variant and no chart; no matching type, none (PR·0:
       // the shop's first type went to everything). Sizes only when the shop sells sized things (all-categories § 2).
       const [shop] = await tx.select({ hsn: shopSettings.defaultHsn, sells: shopSettings.sells }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))

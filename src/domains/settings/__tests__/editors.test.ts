@@ -11,6 +11,6 @@ describe('who edits each settings section', () => {
     }
   })
   it('the shop’s own settings are the partner’s to build (payments keys, address and people live elsewhere)', () => {
-    expect(SECTIONS.find((s) => s.key === 'brand')?.editors).toContain('partner')
+    expect(SECTIONS.find((s) => s.key === 'store')?.editors).toContain('partner')
   })
 })

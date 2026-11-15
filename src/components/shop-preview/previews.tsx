@@ -31,17 +31,17 @@ export type ShopFacts = PolicyFacts & {
   codMin: number
   codBlockedPincodes: string[]
   gstin: string | null
-  /** Settings › Taxes (GST core 1). */
+  /** Settings › Business and GST (GST core 1). */
   gstScheme: string; turnoverBand: string; gstFiling: string; homeState: string | null; b2bInvoices: boolean
   defaultHsn: string
   invoiceSeries: string
-  /** The shop's logo (Settings › Brand, S1·6): its 400-wide WebP in the brand folder. */
+  /** The shop's logo (Settings › Store details, S1·6): its 400-wide WebP in the brand folder. */
   logoUrl?: string | null
   docLogo: string | null
   docSignatory: string
   docNote: string
   slipSize: string
-  /** The published look's paper tokens and display face, for the brand and footer previews (Settings › Brand). */
+  /** The published look's paper tokens and display face, for the brand and footer previews (Settings › Store details). */
   look?: { vars: Record<string, string>; display: string }
 }
 

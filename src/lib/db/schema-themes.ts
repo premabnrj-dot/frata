@@ -57,8 +57,8 @@ export const shopThemePublishes = pgTable('shop_theme_publishes', {
  * src/app/(console)/console/content/actions.ts). Contact is not a row here: it is the Contact policy at
  * /policies/contact, its line the store's content (site_content). `draft` = the words { title, handle, fill, hidden },
  * `live` = what shoppers see (null while hidden), `previous` = the entry before the last save (Undo), `updated_by` its
- * saver. The handle is set when the page is added and never moves. `live_publish_id` is unused since 0135 (dropped
- * later). Access: drizzle/0100_shop_pages_access.sql, 0135.
+ * saver. The handle is set when the page is added and never moves. `live_publish_id` is unused since 0136 (dropped
+ * later). Access: drizzle/0100_shop_pages_access.sql, 0136.
  */
 export const PAGE_TEMPLATES = ['about', 'faq'] as const
 export const shopPages = pgTable('shop_pages', {

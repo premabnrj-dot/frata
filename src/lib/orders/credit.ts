@@ -7,7 +7,7 @@ import { gstHeads } from '@/domains/tax/gst'
 import { applies, invoiceNumber, InvoiceNumberTooLong, MAX_IN_YEAR, seriesFits } from '@/domains/orders/work'
 
 /** What a merchant reads when the year's credit series is full. */
-export const CREDIT_SERIES_FULL = `This year's credit notes are used up (${MAX_IN_YEAR.credit.toLocaleString('en-IN')}). Shorten the invoice series in Settings › Taxes and invoices to make room, or ask Frrata.`
+export const CREDIT_SERIES_FULL = `This year's credit notes are used up (${MAX_IN_YEAR.credit.toLocaleString('en-IN')}). Shorten the invoice series in Settings › Invoices and slips, or ask Frrata.`
 import { orderPrefix } from '@/domains/signup/slug'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenantCounters, tenants } from '@/lib/db/schema'
@@ -78,7 +78,7 @@ export async function issueCredit(tx: Tx, tenantId: string, actor: Actor, orderI
   const total = taxable + heads.cgst + heads.sgst + heads.igst
   const [s] = await tx.select({ series: shopSettings.invoiceSeries, prefix: shopSettings.orderPrefix, name: tenants.name }).from(tenants)
     .innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
-  if (s?.series && !seriesFits(s.series)) return { ok: false, error: 'The credit note number would be longer than GST allows (16 characters). Shorten the invoice series in Settings › Taxes and invoices.' }
+  if (s?.series && !seriesFits(s.series)) return { ok: false, error: 'The credit note number would be longer than GST allows (16 characters). Shorten the invoice series in Settings › Invoices and slips.' }
   const fy = fiscalYear(now)
   // A goodwill credit has its own series (G0001…), so the GST credit series and GSTR-1's documents table stay clean.
   const series = kind === 'goodwill' ? 'goodwill' : 'credit'

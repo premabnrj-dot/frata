@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Checkout · Pay on delivery</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F37A3}a:hover{color:#272D82}
+</style>
+</helmet>
+<div style="width: 1280px; height: 900px; box-sizing: border-box; padding: 28px 32px 28px 264px; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 20px; display: flex; flex-direction: column; gap: 16px; position: relative;">
+  <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 232px; background: #FBFAF9; border-right: 1px solid #E3E1DD;"></div>
+  <header style="display: flex; flex-direction: column; gap: 4px;">
+    <span style="font-size: 13px; color: #67625C;"><a href="Main.dc.html" style="color: #67625C; text-decoration: none;">Settings</a> › Checkout</span>
+    <h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">Pay on delivery</h1>
+  </header>
+  <nav aria-label="Checkout" style="display: flex; gap: 4px; border-bottom: 1px solid #E3E1DD;">
+    <a href="#" style="padding: 8px 12px; color: #67625C; text-decoration: none; font-weight: 500;">Online payments</a>
+    <a href="#" aria-current="page" style="padding: 8px 12px; color: #171615; text-decoration: none; font-weight: 500; box-shadow: inset 0 -2px 0 #171615;">Pay on delivery</a>
+    <a href="#" style="padding: 8px 12px; color: #67625C; text-decoration: none; font-weight: 500;">Shipping and delivery</a>
+  </nav>
+  <div style="display: grid; grid-template-columns: minmax(0, 640px) 320px; gap: 24px; align-items: start;">
+    <section aria-label="Pay on delivery" style="border: 1px solid #E3E1DD; border-radius: 12px; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 16px;">
+      <label style="display: flex; justify-content: space-between; align-items: center; gap: 12px;"><span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Offer Pay on delivery</b><span style="font-size: 13px; color: #67625C;">Cash or UPI to the courier</span></span>
+        <span role="switch" aria-checked="true" style="width: 34px; height: 20px; border-radius: 10px; background: #3A44C2; position: relative; display: inline-block;"><i style="position: absolute; right: 2px; top: 2px; width: 16px; height: 16px; border-radius: 8px; background: #FFFFFF;"></i></span></label>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; border-top: 1px solid #EEEDEA; padding-top: 16px;">
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Lowest order, ₹<input value="0" style="height: 36px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; font-weight: 400;"><span style="font-weight: 400; color: #67625C;">0 for none</span></label>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Highest order, ₹<input value="3,000" style="height: 36px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; font-weight: 400;"><span style="font-weight: 400; color: #67625C;">Above it, online only</span></label>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Fee, ₹<input value="49" style="height: 36px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; font-weight: 400;"><span style="font-weight: 400; color: #67625C;">Its own line at checkout</span></label>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #EEEDEA; padding-top: 16px;">
+        <span style="font-size: 13px; font-weight: 500;">PIN codes without Pay on delivery</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+          <span style="display: inline-flex; align-items: center; gap: 4px; border: 1px solid #8F8A84; border-radius: 8px; padding: 4px 8px;">800001 <button type="button" aria-label="Remove 800001" style="border: 0; background: transparent; color: #67625C; font: inherit;">×</button></span>
+          <input aria-label="Add a PIN code" placeholder="+ Add" style="width: 96px; height: 30px; border: 1px dashed #8F8A84; border-radius: 8px; padding: 0 8px; font: inherit;">
+        </div>
+        <span style="font-size: 13px; color: #67625C;">From your returns: <a href="#">add 302012</a> (3 of 12 came back)</span>
+      </div>
+    </section>
+    <aside style="border: 1px solid #E3E1DD; border-radius: 12px; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 10px;">
+      <h2 style="margin: 0; font-size: 15px; font-weight: 600;">At checkout</h2>
+      <div style="border: 1px solid #E3E1DD; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+        <span style="display: flex; justify-content: space-between;"><b style="font-weight: 500;">Pay on delivery</b><span>₹2,339</span></span>
+        <span style="font-size: 13px; color: #67625C;">Includes a ₹49 Pay on delivery fee.</span>
+      </div>
+    </aside>
+  </div>
+  <div style="border: 1px dashed #8F8A84; border-radius: 12px; padding: 12px 16px; color: #67625C; font-size: 13px; max-width: 640px;">The card and the side card stay as approved on the N2b board. What changes here: the breadcrumb names the group, and the group's other pages are one tab away.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,9 +1,10 @@
+import { pageRoles } from '@/domains/settings/groups'
 import Link from 'next/link'
-import { PageHeader } from '@/components/layout/page-header'
+import { SettingsHead } from '../_components/settings-head'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
-import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { requireMember } from '@/lib/auth/require-member'
 import { shopPeople } from '@/lib/db/partners'
 import { dayIN } from '@/lib/format-date'
 import { RemovePartner } from './remove-partner'
@@ -19,7 +20,7 @@ export const metadata = { title: 'People' }
 
 /** Settings › People: who works on this shop. Owners and admins see it; only the owner removes the partner. */
 export default async function PeoplePage() {
-  const auth = await requireMember(CAN_MANAGE)
+  const auth = await requireMember(pageRoles('people'))
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or a manager can see people' : auth.message} />
   const [people, invites, gstOn] = await Promise.all([
     shopPeople(auth.membership.tenantId).catch((err) => { console.error('[people]', err instanceof Error ? err.name : err); return null }),
@@ -32,7 +33,7 @@ export default async function PeoplePage() {
   return (
     <div className="max-w-3xl space-y-4">
       <Link href="/console/settings" className="text-sm text-muted-foreground hover:text-foreground">← Settings</Link>
-      <PageHeader title="People" />
+      <SettingsHead page="people" role={auth.membership.role} />
       <Section flush ariaLabel="People"><ul data-list className="divide-y divide-border">
         {people.map((p) => {
           // A partner's people are listed with their partner and their place in it (T1a, security review: the brand sees

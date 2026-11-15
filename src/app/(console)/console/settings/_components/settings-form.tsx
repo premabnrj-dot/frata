@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { button } from '@/components/ui/button'
-import { useMemo, useRef, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { InfoTip } from '@/components/ui/info-tip'
 import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
@@ -21,7 +21,11 @@ import { DocLogo } from './doc-logo'
 import { UnratedNotice } from './unrated'
 import type { Unrated } from '@/domains/tax/rates'
 import { Section } from '@/components/layout/section'
-import { PageHeader } from '@/components/layout/page-header'
+import { ChipInput } from '@/components/ui/chip-input'
+import { announce } from '@/components/shell/announce'
+import { PINCODE_SHAPE } from '@/domains/signup/slug'
+import type { PinSuggestion } from '@/domains/orders/pin-suggest'
+import { CodPreview } from './cod-preview'
 import { Switch } from '@/components/ui/switch'
 import { STATES, STATE_CODE } from '@/domains/checkout/states'
 
@@ -30,19 +34,23 @@ import { STATES, STATE_CODE } from '@/domains/checkout/states'
  * "Unsaved changes" bar on the first edit, a guard on leaving, and the shop
  * beside it as shoppers will see it (frata-design-language § Phase 1).
  */
-export function SettingsForm({ sectionKey, initial, version: startVersion, facts, fiscalYear, overrides, tenantId, unrated = null, held = [] }: {
+export function SettingsForm({ sectionKey, head, initial, version: startVersion, facts, fiscalYear, overrides, tenantId, unrated = null, held = [], suggest = null }: {
   sectionKey: string
+  /** The page's head (Settings › group, title, the group's tabs): drawn by the server page. */
+  head: React.ReactNode
   initial: Values
   version: number
   facts: ShopFacts
   fiscalYear: string
   overrides: Record<string, string>
-  /** For an upload's path (Settings › Documents' logo). */
+  /** For an upload's path (Settings › Invoices and slips' logo). */
   tenantId: string
   /** Taxes: live products checkout refuses for want of a GST rate (null: the shop charges no GST). */
   unrated?: Unrated | null
   /** Fields another app sets now (Delivery Zones while usable): left out here, with one link to where they are set. */
   held?: readonly string[]
+  /** Pay on delivery: one PIN code its returns suggest taking off (pin-suggest.ts), or none. */
+  suggest?: PinSuggestion | null
 }) {
   const section = sectionFor(sectionKey)!
   const router = useRouter()
@@ -61,6 +69,23 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
   const [unratedNow, setUnratedNow] = useState<Unrated | null | undefined>(undefined)
 
   const dirty = JSON.stringify(values) !== JSON.stringify(saved)
+  const changes = Object.keys(values).filter((k) => JSON.stringify(values[k]) !== JSON.stringify(saved[k])).length
+  // The suggested PIN code, once added here: recorded with the save that keeps it (saveSection's `took`).
+  const [took, setTook] = useState<string | null>(null)
+  const root = useRef<HTMLDivElement>(null)
+  // Ctrl/⌘+S presses the save bar's own button, as in the product editor (the one path a save takes).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's' || e.altKey || e.shiftKey) return
+      e.preventDefault()
+      if (e.isComposing || document.querySelector('dialog:modal')) return
+      root.current?.querySelector<HTMLButtonElement>('button[data-save-bar]:not(:disabled)')?.click()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  const [mac, setMac] = useState(false)
+  useEffect(() => { setMac(/Mac|iPhone|iPad/.test(navigator.platform)) }, [])
   const preview: ShopFacts = useMemo(() => {
     const p = draftPatch(section, values) as Partial<ShopFacts> & { name?: string }
     return { ...facts, ...p, shopName: typeof p.name === 'string' && p.name ? p.name : facts.shopName }
@@ -72,8 +97,8 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
 
   function save() {
     start(async () => {
-      const r = await saveSection(section.key, values, version)
-      if (r.ok) { setSaved(values); setVersion(r.version); setErrors({}); if (section.key === 'taxes') setUnratedNow(r.unrated ?? null); toast.ok(section.key === 'documents' ? 'Saved. New slips and invoices use it. Invoices already issued keep theirs.' : 'Saved. Your store shows it now.'); router.refresh(); return }
+      const r = await saveSection(section.key, values, version, took ?? undefined)
+      if (r.ok) { setSaved(values); setVersion(r.version); setErrors({}); if (section.key === 'business') setUnratedNow(r.unrated ?? null); setTook(null); toast.ok(section.key === 'invoices' ? 'Saved. New slips and invoices use it. Invoices already issued keep theirs.' : 'Saved. Your store shows it now.'); router.refresh(); return }
       const fields = r.errors ?? {}
       setErrors(fields)
       if (Object.keys(fields).length) { setAttempt((a) => a + 1); return }
@@ -85,31 +110,39 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
   const previewEl = section.preview === 'footer' ? <FooterPreview f={preview} />
     : section.preview === 'contact' ? <ContactPreview f={preview} />
     : section.preview === 'brand' ? <BrandPreview f={preview} />
+    : section.key === 'payments' ? <CodPreview f={preview} />
     : section.preview === 'checkout' ? <CheckoutPreview f={preview} />
     : section.preview === 'invoice' ? <InvoicePreview f={preview} fiscalYear={fiscalYear} />
     : <PolicyPreview f={preview} page={policyPage} override={overrides[policyPage]} />
 
   return (
-    <div className={STORE_FONT_VARS}>
-      {dirty && <SaveBar pending={pending} onSave={save} onDiscard={() => { setValues(saved); setErrors({}) }} />}
-      <PageHeader title={section.title} back={{ href: '/console/settings', label: 'Settings' }} />
-      <p className="text-sm text-muted-foreground">{section.intro}</p>
-      {section.key === 'taxes' && <UnratedNotice u={unratedNow !== undefined ? unratedNow : unrated} />}
+    <div ref={root} className={STORE_FONT_VARS}>
+      {head}
+      {section.key === 'business' && <UnratedNotice u={unratedNow !== undefined ? unratedNow : unrated} />}
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <form ref={formRef} className="space-y-4" noValidate onSubmit={(e) => { e.preventDefault(); if (dirty) save() }}>
-          {section.key === 'brand' && <ShopLogo tenantId={tenantId} current={facts.logoUrl ?? null} />}
-          {section.key === 'documents' && <DocLogo tenantId={tenantId} current={facts.docLogo} />}
+          {section.key === 'store' && <ShopLogo tenantId={tenantId} current={facts.logoUrl ?? null} />}
+          {section.key === 'invoices' && <DocLogo tenantId={tenantId} current={facts.docLogo} />}
           {section.blocks.some((b) => b.fields.some((f) => held.includes(f.key))) && (
             <Section title="Set in Delivery Zones" action={<Link href="/console/apps/delivery_zones" className={button({ variant: 'secondary' })}>Open Delivery Zones</Link>} />
           )}
           {section.blocks.map((b) => ({ b, shown: b.fields.filter((f) => !held.includes(f.key)).filter((f) => !f.showIf || f.showIf.in.includes(String(values[f.showIf.key] ?? ''))) })).filter(({ shown }) => shown.length).map(({ b, shown }) => (
             <Section key={b.title}>
-              <h2 className="flex items-center text-section font-semibold">{b.title}{b.tip ? <InfoTip about={b.title.toLowerCase()}>{b.tip}</InfoTip> : null}</h2>
+              {/* A page of one block named as the page: its name is the page's, said to a screen reader only (Settings board). */}
+              <h2 className={section.blocks.length === 1 && b.title === section.title ? 'sr-only' : 'flex items-center text-section font-semibold'}>{b.title}{b.tip ? <InfoTip about={b.title.toLowerCase()}>{b.tip}</InfoTip> : null}</h2>
               {b.hint && <p className="-mt-1 text-sm text-muted-foreground">{b.hint}</p>}
-              <div className="grid gap-3 sm:grid-cols-2">
-                {shown.map((f) => <FieldInput key={f.key} f={f} value={values[f.key]} error={errors[f.key]} onChange={(v) => set(f.key, v)}
-                  locked={f.key === 'b2bInvoices' && values.turnoverBand !== undefined && values.turnoverBand !== 'under_5cr' ? 'Off at ₹5 crore and above until e-invoicing is set up.' : undefined} />)}
-              </div>
+              {/* The drawn frame: switch rows, then the short fields side by side (three when there are three), then the wide
+                  ones, each group under a hairline. */}
+              {runs(shown).map((run, i) => (
+                <div key={i} className={`${i ? 'border-t border-line-soft pt-4 ' : ''}${run.kind === 'grid' ? `grid gap-3 sm:grid-cols-2 ${run.fields.length >= 3 ? 'lg:grid-cols-3' : ''}` : 'flex flex-col gap-3'}`}>
+                  {run.fields.map((f) => <FieldInput key={f.key} f={f} value={values[f.key]} error={errors[f.key]} onChange={(v) => set(f.key, v)}
+                    locked={f.key === 'b2bInvoices' && values.turnoverBand !== undefined && values.turnoverBand !== 'under_5cr' ? 'Off at ₹5 crore and above until e-invoicing is set up.' : undefined}
+                    after={f.key === 'codBlockedPincodes' && suggest && !String(values.codBlockedPincodes ?? '').split(/[\s,]+/).includes(suggest.pin) ? (
+                      <p className="text-label text-muted-foreground">From your returns: <button type="button" className="text-link underline underline-offset-2"
+                        onClick={() => { const list = String(values.codBlockedPincodes ?? '').split(/[\s,]+/).filter(Boolean); set('codBlockedPincodes', [...list, suggest.pin].join(', ')); setTook(suggest.pin); announce(`Added ${suggest.pin}`); document.getElementById('f-codBlockedPincodes')?.focus() }}>add {suggest.pin}</button> ({suggest.back} of {suggest.outcomes} came back)</p>
+                    ) : null} />)}
+                </div>
+              ))}
             </Section>
           ))}
           {section.key === 'policies' && <PolicyPages facts={preview} overrides={overrides} selected={policyPage} onSelect={setPolicyPage} pagesDirty={dirty} />}
@@ -128,15 +161,31 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
         </aside>
       </div>
 
+      {dirty && <SaveBar placement="bottom" keys={mac ? '⌘S' : 'Ctrl+S'} count={changes} pending={pending} onSave={save} onDiscard={() => { setValues(saved); setErrors({}); setTook(null) }} />}
       <LeaveDialog open={!!guard.leaveTo} what={section.title} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(values))} />
     </div>
   )
 }
 
+type Run = { kind: 'rows' | 'grid'; fields: Field[] }
+/** Consecutive fields of a kind together: switches and wide fields as rows, the rest as a grid. */
+function runs(fields: Field[]): Run[] {
+  const out: Run[] = []
+  for (const f of fields) {
+    const kind = f.kind === 'switch' || f.wide ? 'rows' : 'grid'
+    const last = out.at(-1)
+    if (last && last.kind === kind && !(kind === 'rows' && (f.kind === 'switch') !== (last.fields[0]?.kind === 'switch'))) last.fields.push(f)
+    else out.push({ kind, fields: [f] })
+  }
+  return out
+}
+
 /** "(optional)" only where a field can really be left empty; a dropdown or a number always holds a value. */
 const CAN_BE_BLANK = new Set(['text', 'textarea', 'email', 'phone', 'gstin', 'pincodes'])
 
-function FieldInput({ f, value, error, onChange, locked }: { f: Field; value: Values[string] | undefined; error?: string; onChange: (v: string | boolean) => void
+function FieldInput({ f, value, error, onChange, locked, after }: { f: Field; value: Values[string] | undefined; error?: string; onChange: (v: string | boolean) => void
+  /** A line under the field (the PIN suggestion). */
+  after?: React.ReactNode
   /** Held off for a reason another field gives (said under it). */
   locked?: string }) {
   const id = `f-${f.key}`
@@ -149,9 +198,9 @@ function FieldInput({ f, value, error, onChange, locked }: { f: Field; value: Va
   const tip = f.tip ? <InfoTip about={f.label.toLowerCase()}>{f.tip}</InfoTip> : null
   if (f.kind === 'switch') {
     return (
-      <div className="space-y-1 sm:col-span-2">
+      <div className="space-y-1">
         <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center"><label htmlFor={id} className="text-sm font-medium">{f.label}</label>{tip}</span>
+          <span className="flex flex-col"><span className="flex items-center"><label htmlFor={id} className="text-sm font-medium">{f.label}</label>{tip}</span>{f.hint ? <span className="text-label text-muted-foreground">{f.hint}</span> : null}</span>
           <Switch id={id} on={!locked && value === true} disabled={!!locked} onChange={(v) => onChange(v)} />
         </div>
         {locked && <p className="text-xs text-muted-foreground">{locked}</p>}
@@ -195,14 +244,26 @@ function FieldInput({ f, value, error, onChange, locked }: { f: Field; value: Va
   const common = { id, ...marks }
   const v = typeof value === 'string' ? value : ''
   let input: React.ReactNode
-  if (f.kind === 'textarea' || f.kind === 'pincodes') input = <textarea {...common} rows={3} maxLength={f.max} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} py-2 ${f.kind === 'pincodes' ? 'font-mono' : ''}`} />
+  if (f.kind === 'pincodes') {
+    const list = v.split(/[\s,]+/).filter(Boolean)
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center"><label htmlFor={id} className="text-sm font-medium">{f.label}</label>{tip}</div>
+        <ChipInput id={id} values={list} onChange={(next) => onChange(next.join(', '))} bad={(p) => !PINCODE_SHAPE.test(p)}
+          describedBy={marks['aria-describedby']} invalid={!!error} />
+        {help}
+        {after}
+      </div>
+    )
+  }
+  if (f.kind === 'textarea') input = <textarea {...common} rows={3} maxLength={f.max} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} py-2`} />
   else if (f.kind === 'state') input = <select {...common} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} h-11 md:h-9`}><option value="">Choose</option>{STATES.map((st) => <option key={st} value={STATE_CODE[st]}>{st}</option>)}</select>
   else if (f.kind === 'select') input = <select {...common} value={v} onChange={(e) => onChange(e.target.value)} className={`${base} h-11 md:h-9`}>{f.options!.map(([o, l]) => <option key={o} value={o}>{l}</option>)}</select>
   else {
     const numeric = f.kind === 'rupees' || f.kind === 'days' || f.kind === 'hsn'
     input = (
       <div className="flex items-center gap-1.5">
-        {f.kind === 'rupees' && <span className="text-sm text-muted-foreground">₹</span>}
+        {/* A rupee field's label ends ", ₹" (Settings board): no second ₹ beside the box. */}
         {f.kind === 'phone' && <span className="text-sm text-muted-foreground">+91</span>}
         <input {...common} value={v} maxLength={f.max} onChange={(e) => onChange(e.target.value)}
           type={f.kind === 'email' ? 'email' : 'text'} inputMode={numeric ? 'numeric' : f.kind === 'phone' ? 'tel' : f.kind === 'email' ? 'email' : undefined}

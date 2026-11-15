@@ -2738,7 +2738,7 @@ end $$;
 rollback;
 
 -- 70. Shop pages (Theme Studio TS1a, 0099–0100; tenancy-auditor 2026-11-11): own shop only; no delete or edit across
--- shops; tenant, id and template never change; a page names no publish (0135); at most 20 pages and
+-- shops; tenant, id and template never change; a page names no publish (0136); at most 20 pages and
 -- one FAQ a shop (B's don't count against A); no API role or frata_admin reaches the table.
 begin; set local role frata_app;
 do $$ declare n int; pa uuid; pb uuid; pubb uuid; rb uuid; i int; begin
@@ -2771,7 +2771,7 @@ do $$ declare n int; pa uuid; pb uuid; pubb uuid; rb uuid; i int; begin
   exception when insufficient_privilege then null; end;
   begin update shop_pages set template = 'about' where id = pa; raise exception 'FAIL: a page changed its template';
   exception when insufficient_privilege then null; end;
-  -- a page can't name a publish at all since pages save live (V1 content, 0135: the column is no longer writable)
+  -- a page can't name a publish at all since pages save live (V1 content, 0136: the column is no longer writable)
   begin update shop_pages set live_publish_id = pubb where id = pa; raise exception 'FAIL: A pointed a page at B''s publish';
   exception when insufficient_privilege then null; end;
   -- a live page can't be deleted outside Publish (the delete policy); once removed at a publish, it can
@@ -3801,12 +3801,15 @@ end $$;
 drop schema proof cascade;
 do $$ begin if to_regnamespace('proof') is not null then raise exception 'FAIL: proof helpers left behind'; end if; end $$;
 
--- 80. Store content (V1 content, 0132–0135; plan docs/plans/2026-11-15-v1-content.md; tenancy-auditor 2026-11-15): a
+-- 80. Store content (V1 content, 0133–0136; plan docs/plans/2026-11-15-v1-content.md; tenancy-auditor 2026-11-15): a
 -- store's bars, menus and Contact line are its own both ways; tenant, kind and key never change; at most 3 bars a store
 -- (B's don't count, and B is refused before any lock); no store set reads nothing and writes nothing; no API role or
 -- frata_admin reaches the table or runs its functions; the move copies each store's own live look into its own rows.
 begin; set local role frata_app;
 do $$ declare n int; ca uuid; cb uuid; i int; begin
+  -- The cap trigger refuses another store's insert first, so the policy's own with check is asserted directly.
+  if not exists (select 1 from pg_policies where tablename = 'site_content' and policyname = 'tenant_rows' and qual like '%app_current_tenant()%' and with_check like '%app_current_tenant()%')
+    then raise exception 'FAIL: site_content''s policy does not hold both ways'; end if;
   perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
   insert into site_content (tenant_id, kind, key, value) values ('22222222-2222-2222-2222-222222222222', 'contact', 'contact', '{"line":"B"}') returning id into cb;
   perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
@@ -3862,7 +3865,7 @@ do $$ begin
               where p.proname in ('app_site_content_cap', 'app_move_content') and r <> 'public' and has_function_privilege(r, p.oid, 'execute'))
   then raise exception 'FAIL: a role may run a content function'; end if;
 end $$;
--- The move (0134): each store's own live look into its own rows; B's rows and notice hold nothing of A's.
+-- The move (0135): each store's own live look into its own rows; B's rows and notice hold nothing of A's.
 begin;
 do $$ declare ra uuid; rb uuid; n int; begin
   delete from site_content where tenant_id in ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222');

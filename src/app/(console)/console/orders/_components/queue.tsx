@@ -183,7 +183,7 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
   const onWay = rows.some((r) => picked.has(r.id) && r.shipStep === 'deliver'), others = rows.some((r) => picked.has(r.id) && (r.canConfirm || r.canHold))
   // At most a print page's worth (a queue page is 50 rows today; the cap says so if that changes).
   const printable = rows.filter((r) => picked.has(r.id) && r.canPrint).map((r) => r.n).slice(0, MAX_DOCUMENTS)
-  // A4 or the 4×6 label: the shop's default (Settings › Documents), then this device's last choice (a printer belongs
+  // A4 or the 4×6 label: the shop's default (Settings › Invoices and slips), then this device's last choice (a printer belongs
   // to a desk, not to an account).
   const [slipSize, setSlipSize] = useState<'a4' | 'label'>(shopSize)
   useEffect(() => { try { const v = localStorage.getItem('frrata:slip-size'); if (v === 'label' || v === 'a4') setSlipSize(v) } catch { /* private mode */ } }, [])

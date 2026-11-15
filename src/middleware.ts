@@ -22,6 +22,9 @@ export async function middleware(request: NextRequest) {
   // The bare shop domain (frrata.shop) holds no shop: it goes to Frrata's own site (shop addresses spec, D·0). A 307
   // while that site is the stopgap console host: browsers cache a 308 for good. 308 to frrata.com once it is attached.
   if (route.kind === 'platform_apex') return NextResponse.redirect(`https://${CONSOLE_HOST}/`, 307)
+  // PLATFORM_SITE_PATHS only (owner, 2026-11-15, stopgap for Facebook app verification): served straight from the
+  // normal page tree, no tenant lookup, no session work — like a shop's own page.
+  if (route.kind === 'platform_site') return NextResponse.next()
   // A shop: the host rewrite in next.config (shopRewrites) serves it from /s/<host>/…; no session work here.
   if (route.kind === 'shop') return NextResponse.next()
   if (!isSignedInPath(request.nextUrl.pathname)) return updateSession(request, NextResponse.next({ request }))

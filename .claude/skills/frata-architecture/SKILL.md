@@ -571,7 +571,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   first in a window at once, repeats in one trailing purge); a page or FAQ save purges `pages` only.
 - **The plain-text rule** is `plainText` (`src/domains/content/plain-text.ts`): NFC; refuses control, format (but ZWNJ and
   ZWJ), private-use, unassigned, line and paragraph separators, and `< > { } \`. Save only; reads are tolerant.
-- **A backfill that restates a TS rule in SQL** (the move's `app_move_content`, drizzle/0134): run as the migration's owner,
+- **A backfill that restates a TS rule in SQL** (the move's `app_move_content`, drizzle/0135): run as the migration's owner,
   it sets `app.tenant_id` per store and names `tenant_id` in every statement; copies verbatim; re-runs reconcile (a row a
   person saved, `updated_by` set, is never touched); one parity int test against the TS rule
   (`site-content-move.int.test.ts`), and a two-store proof in tenancy.sql § 80.

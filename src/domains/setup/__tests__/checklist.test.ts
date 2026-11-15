@@ -16,6 +16,11 @@ describe('setupSteps', () => {
     expect(setupSteps(fresh, none, inr).every((x) => x.href === null)).toBe(true)
     expect(setupSteps(fresh, { products: true, settings: true, publish: true }, inr).find((x) => x.key === 'product')!.href).toBe('/console/products')
   })
+  it('details go where the missing field is: the legal name in Business and GST, then the grievance officer in Contact', () => {
+    const built = { products: true, settings: true, publish: true }
+    expect(setupSteps(fresh, built, inr).find((x) => x.key === 'details')!.href).toBe('/console/settings/business')
+    expect(setupSteps({ ...fresh, legalName: 'Kesar LLP' }, built, inr).find((x) => x.key === 'details')!.href).toBe('/console/settings/contact')
+  })
   it('publishing waits for a product and a way to pay', () => {
     const built = { products: true, settings: true, publish: true }
     expect(setupSteps(fresh, built, inr).find((x) => x.key === 'publish')!.href).toBeNull()

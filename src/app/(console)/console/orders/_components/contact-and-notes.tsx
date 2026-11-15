@@ -106,7 +106,7 @@ export function AddNote({ orderId }: { orderId: string }) {
   return (
     <form ref={formRef} onSubmit={add} noValidate className="grid gap-2">
       <label htmlFor="note" className="sr-only">A note for your team</label>
-      <textarea id="note" name="note" value={body} onChange={(e) => { setBody(e.target.value); fields.clear('note') }} maxLength={2000} rows={2} placeholder="Private note"
+      <textarea id="note" name="note" value={body} onChange={(e) => { setBody(e.target.value); fields.clear('note') }} maxLength={2000} rows={2} placeholder="Add a note for your team"
         {...fields.props('note')} className="rounded-md border border-input bg-card px-3 py-2 text-sm aria-invalid:border-danger-mark" />
       <FieldError name="note" message={fields.errors.note} />
       <div><Button type="submit" variant="secondary" aria-disabled={busy}>Add note</Button></div>

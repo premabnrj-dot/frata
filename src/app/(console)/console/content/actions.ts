@@ -57,23 +57,29 @@ const lockStore = (tx: Tx, t: string) => tx.execute(sql`select pg_advisory_xact_
 async function write<T extends object>(what: { action: string; scope: 'content' | 'pages'; limit?: 'save' | 'undo' }, work: (tx: Tx, auth: Auth) => Promise<Out<T>>): Promise<R<T>> {
   const who = await requireMember(CAPABILITIES['content.write'])
   if (!who.ok) return { ok: false, error: who.message }
-  const t = who.membership.tenantId
   const bucket = what.limit === 'undo' ? LIMITS.contentUndo : LIMITS.contentSave
-  if (!(await withinLimit(bucket, t, new Date(), true))) return { ok: false, error: FULL }
+  // Counted only once the saver may save (security review LOW-1), against the transaction's own store (tenancy LOW),
+  // and given back at the moment it was counted if the save goes no further.
+  let counted: { t: string; at: Date } | null = null
+  const giveBack = async () => { if (counted) await uncount(bucket, counted.t, counted.at) }
   let r: Awaited<ReturnType<typeof asMember<Out<T>>>>
   try {
     r = await asMember(CAPABILITIES['content.write'], { action: what.action }, async (tx, auth) => {
-      const saver = contentSaver(auth.membership.role, await hasOwnerIn(tx, auth.membership.tenantId), auth.membership.supportSessionId)
+      const t = auth.membership.tenantId
+      const saver = contentSaver(auth.membership.role, await hasOwnerIn(tx, t), auth.membership.supportSessionId)
       if (saver !== 'yes') return { error: SAVER_REFUSAL[saver] }
+      const now = new Date()
+      if (!(await withinLimit(bucket, t, now, true))) return { error: FULL }
+      counted = { t, at: now }
       return work(tx, auth)
     })
   } catch (e) {
     console.error(`[content ${what.action}]`, errName(e))
-    await uncount(bucket, t)
+    await giveBack()
     return { ok: false, error: NOTHING }
   }
-  if (!r.ok) { await uncount(bucket, t); return r }
-  if ('error' in r.value) { await uncount(bucket, t); return { ok: false, error: r.value.error, ...(r.value.field ? { field: r.value.field } : {}) } }
+  if (!r.ok) { await giveBack(); return r }
+  if ('error' in r.value) { if (r.value.error !== FULL) await giveBack(); return { ok: false, error: r.value.error, ...(r.value.field ? { field: r.value.field } : {}) } }
   if (what.scope === 'content') await refreshContent(r.tenantId).catch((e: unknown) => console.error('[content purge]', errName(e)))
   else refreshShop(r.tenantId, 'pages')
   revalidatePath('/console/content')
@@ -230,8 +236,12 @@ const MAX_DRAFT_BYTES = 30_000
 const pageText = (d: PageDraft): string | null => {
   if (refusedChar(d.title)) return 'Use plain words in the title.'
   for (const f of Object.values(d.fill)) if (f.kind === 'faq') for (const i of f.items) if (refusedChar(i.q) || ('a' in i && refusedChar(i.a, true))) return 'Use plain words in the questions and answers.'
+  // Every other word on the page (headings, text runs, buttons, accordions): the one plain-text rule (security review LOW-2).
+  if (Object.values(d.fill).some((f) => f.kind !== 'faq' && anyRefused(f))) return 'Use plain words on the page. Leave out < > { } \\ and hidden characters.'
   return null
 }
+const anyRefused = (x: unknown): boolean =>
+  typeof x === 'string' ? !!refusedChar(x, true) : Array.isArray(x) ? x.some(anyRefused) : !!x && typeof x === 'object' && Object.values(x).some(anyRefused)
 async function pageRow(tx: Tx, t: string, id: string) {
   const [row] = await tx.select().from(shopPages).where(and(eq(shopPages.tenantId, t), eq(shopPages.id, id), isNull(shopPages.removedAt))).for('update')
   return row ?? null

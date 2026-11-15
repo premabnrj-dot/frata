@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings · Pay on delivery</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F37A3}a:hover{color:#272D82}
+</style>
+</helmet>
+<div style="width: 1280px; height: 860px; box-sizing: border-box; padding: 28px 32px 28px 264px; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 20px; display: flex; flex-direction: column; gap: 20px; position: relative;">
+  <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 232px; background: #FBFAF9; border-right: 1px solid #E3E1DD;"></div>
+  <header style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; color: #67625C;">Settings › Pay on delivery</span><h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">Pay on delivery</h1></header>
+  <div style="display: grid; grid-template-columns: minmax(0, 640px) 320px; gap: 24px; align-items: start;">
+    <section aria-labelledby="cod-h" style="border: 1px solid #E3E1DD; border-radius: 12px; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 16px;">
+      <h2 id="cod-h" style="position: absolute; width: 1px; height: 1px; overflow: hidden;">Pay on delivery</h2>
+      <label style="display: flex; justify-content: space-between; align-items: center; gap: 12px;"><span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Offer Pay on delivery</b><span style="font-size: 13px; color: #67625C;">Cash or UPI to the courier</span></span>
+        <span role="switch" aria-checked="true" style="width: 40px; height: 24px; border-radius: 12px; background: #3A44C2; position: relative; display: inline-block;"><i style="position: absolute; right: 3px; top: 3px; width: 18px; height: 18px; border-radius: 9px; background: #FFFFFF;"></i></span></label>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; border-top: 1px solid #EEEDEA; padding-top: 16px;">
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Lowest order, ₹<input value="0" style="height: 36px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; font-weight: 400; font-variant-numeric: tabular-nums;"><span style="font-weight: 400; color: #67625C;">0 for none</span></label>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Highest order, ₹<input value="3,000" style="height: 36px; border: 1px solid #4C57D6; box-shadow: 0 0 0 3px #E0E3FB; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; font-weight: 400; font-variant-numeric: tabular-nums;"><span style="font-weight: 400; color: #67625C;">Above it, online only</span></label>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Fee, ₹<input value="49" style="height: 36px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; font-weight: 400; font-variant-numeric: tabular-nums;"><span style="font-weight: 400; color: #67625C;">Its own line at checkout</span></label>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #EEEDEA; padding-top: 16px;">
+        <span style="font-size: 13px; font-weight: 500;">PIN codes without Pay on delivery</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+          <span style="display: inline-flex; align-items: center; gap: 4px; border: 1px solid #8F8A84; border-radius: 8px; padding: 4px 8px; font-variant-numeric: tabular-nums;">800001 <button type="button" aria-label="Remove 800001" style="border: 0; background: transparent; color: #67625C; font: inherit;">×</button></span>
+          <span style="display: inline-flex; align-items: center; gap: 4px; border: 1px solid #8F8A84; border-radius: 8px; padding: 4px 8px; font-variant-numeric: tabular-nums;">226001 <button type="button" aria-label="Remove 226001" style="border: 0; background: transparent; color: #67625C; font: inherit;">×</button></span>
+          <input aria-label="Add a PIN code" placeholder="+ Add" style="width: 96px; height: 30px; border: 1px dashed #8F8A84; border-radius: 8px; padding: 0 8px; font: inherit;">
+        </div>
+        <span style="font-size: 13px; color: #67625C;">From your returns: <a href="#">add 302012</a> (3 of 12 came back)</span>
+      </div>
+    </section>
+    <aside style="border: 1px solid #E3E1DD; border-radius: 12px; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 10px;">
+      <h2 style="margin: 0; font-size: 15px; font-weight: 600;">At checkout</h2>
+      <div style="border: 1px solid #E3E1DD; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+        <span style="display: flex; justify-content: space-between;"><b style="font-weight: 500;">Pay on delivery</b><span style="font-variant-numeric: tabular-nums;">₹2,339</span></span>
+        <span style="font-size: 13px; color: #67625C;">Includes a ₹49 Pay on delivery fee. Cash or UPI to the courier.</span>
+      </div>
+      <div style="border: 1px solid #E3E1DD; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 4px; color: #67625C;">
+        <span style="display: flex; justify-content: space-between;"><b style="font-weight: 500; color: #171615;">A ₹3,400 bag</b></span>
+        <span style="font-size: 13px;">Pay on delivery is for orders up to ₹3,000. Pay online to order this.</span>
+      </div>
+    </aside>
+  </div>
+  <div role="region" aria-label="Unsaved changes" style="position: absolute; left: 264px; right: 352px; bottom: 28px; background: #171615; color: #FFFFFF; border-radius: 12px; padding: 10px 10px 10px 16px; display: flex; align-items: center; gap: 12px;">
+    <b style="font-weight: 500; flex: 1;">1 unsaved change</b>
+    <button type="button" style="height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid rgb(255 255 255 / 0.35); background: transparent; color: #FFFFFF; font: inherit; font-weight: 500;">Discard</button>
+    <button type="button" style="height: 30px; padding: 0 10px; border-radius: 8px; border: 0; background: #FFFFFF; color: #171615; font: inherit; font-weight: 500;">Save ⌘S</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

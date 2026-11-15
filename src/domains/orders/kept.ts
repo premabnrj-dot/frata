@@ -66,35 +66,65 @@ export type Kept = {
 
 const empty = (): Kept => ({ kept: 0, counted: 0, leftOut: 0, delivered: { n: 0, kept: 0 }, rto: { n: 0, kept: 0 }, lost: { n: 0, kept: 0 }, basis: null })
 
+/** One group's figure at its outcome, or why it is left out (unknown COGS, freight pending). The one place the
+ * freight, fee and restock rules are applied: keptOf over groups, orderKeep for one order before its outcome. */
+function groupValue(g: KeptGroup, est: ShipCostEstimate): { v: Paise; fee: Paise; source: FreightSource } | 'cogs' | 'freight' {
+  const restocked = g.outcome === 'rto' && g.restocked
+  if (!restocked && g.cogs === null) return 'cogs'
+  // Actual lines are already the group's sums; an estimate is per parcel, so it is scaled to the group first (a
+  // Shiprocket group can mix both: its missing lines take the estimate).
+  // A share of parcels (True Profit's lines) scales the estimate, rounded to the paisa.
+  const parcels = g.share ?? g.n
+  const groupEst = est ? { delivery: Math.round(est.delivery * parcels), ret: Math.round(est.ret * parcels), codFee: Math.round(est.codFee * parcels) } : null
+  const f = freightOf(g.provider, { forwardShipping: g.forward, rtoShipping: g.rto, courierCodFee: g.courierCodFee }, groupEst, { cod: g.cod, outcome: g.outcome })
+  if (f.source === 'pending') return 'freight'
+  const fee = g.outcome === 'delivered' && g.feeBps !== null ? deliveredFee(paise(g.base), g.feeBps) : paise(0)
+  const p = orderProfit({
+    netRevenue: paise(g.net), cogs: paise(g.cogs ?? 0),
+    forwardShipping: f.forwardShipping, rtoShipping: f.rtoShipping, codFee: f.codFee,
+    gatewayFee: paise(g.gateway), packaging: paise(0), adCost: paise(0),
+    platformFee: fee, restocked,
+  }, 1)
+  return { v: g.outcome === 'delivered' ? p.ifDelivered : g.outcome === 'rto' ? p.ifRto : p.ifLost, fee, source: f.source }
+}
+
 /** ₹ kept over the groups, with the shop's confirmed shipping-cost estimate (null: none confirmed). */
 export function keptOf(groups: readonly KeptGroup[], est: ShipCostEstimate): Kept {
   const out = empty()
   const sources = new Set<FreightSource>()
   for (const g of groups) {
     if (g.n <= 0) continue
-    const restocked = g.outcome === 'rto' && g.restocked
-    if (!restocked && g.cogs === null) { out.leftOut += g.n; continue }
-    // Actual lines are already the group's sums; an estimate is per parcel, so it is scaled to the group first (a
-    // Shiprocket group can mix both: its missing lines take the estimate).
-    // A share of parcels (True Profit's lines) scales the estimate, rounded to the paisa.
-    const parcels = g.share ?? g.n
-    const groupEst = est ? { delivery: Math.round(est.delivery * parcels), ret: Math.round(est.ret * parcels), codFee: Math.round(est.codFee * parcels) } : null
-    const f = freightOf(g.provider, { forwardShipping: g.forward, rtoShipping: g.rto, courierCodFee: g.courierCodFee }, groupEst, { cod: g.cod, outcome: g.outcome })
-    if (f.source === 'pending') { out.leftOut += g.n; continue }
-    const p = orderProfit({
-      netRevenue: paise(g.net), cogs: paise(g.cogs ?? 0),
-      forwardShipping: f.forwardShipping, rtoShipping: f.rtoShipping, codFee: f.codFee,
-      gatewayFee: paise(g.gateway), packaging: paise(0), adCost: paise(0),
-      platformFee: g.outcome === 'delivered' && g.feeBps !== null ? deliveredFee(paise(g.base), g.feeBps) : paise(0),
-      restocked,
-    }, 1)
-    const v: Paise = g.outcome === 'delivered' ? p.ifDelivered : g.outcome === 'rto' ? p.ifRto : p.ifLost
-    out[g.outcome].n += g.n; out[g.outcome].kept += v
-    out.kept += v; out.counted += g.n
-    sources.add(f.source)
+    const r = groupValue(g, est)
+    if (typeof r === 'string') { out.leftOut += g.n; continue }
+    out[g.outcome].n += g.n; out[g.outcome].kept += r.v
+    out.kept += r.v; out.counted += g.n
+    sources.add(r.source)
   }
   out.basis = out.counted === 0 ? null : sources.has('none') ? 'none' : sources.has('estimate') ? 'estimate' : 'actual'
   return out
+}
+
+export type OrderKeep = {
+  /** Known costs only (before ads and packaging); null when a cost it needs is unknown (`missing` says which). */
+  ifDelivered: Paise | null
+  /** Came back with its pieces put back in stock (what a return is before anyone knows). */
+  ifBack: Paise | null
+  /** Came back and the pieces cannot go back in stock: its goods are lost too. */
+  ifBackNotStocked: Paise | null
+  /** Frrata's fee, charged only if it is delivered. */
+  fee: Paise
+  missing: 'cogs' | 'freight' | null
+  basis: FreightSource | null
+}
+
+/** One order before its outcome (Neel N2b, the order page's "What you keep"): each outcome through the same rule
+ * `keptOf` applies to groups. `row` is the order as one group of one (its sums are its own lines). */
+export function orderKeep(row: Omit<KeptGroup, 'outcome' | 'n' | 'restocked' | 'share'>, est: ShipCostEstimate): OrderKeep {
+  const at = (outcome: Outcome, restocked: boolean) => groupValue({ ...row, outcome, n: 1, restocked }, est)
+  const d = at('delivered', false), back = at('rto', true), lost = at('rto', false)
+  const val = (r: ReturnType<typeof at>) => (typeof r === 'string' ? null : r.v)
+  const missing = typeof d === 'string' ? d : typeof back === 'string' ? back : null
+  return { ifDelivered: val(d), ifBack: val(back), ifBackNotStocked: val(lost), fee: typeof d === 'string' ? paise(0) : d.fee, missing, basis: typeof d === 'string' ? null : d.source }
 }
 
 /** ₹ kept per order with an outcome (the second figure a source is judged on; never per delivered order alone). */

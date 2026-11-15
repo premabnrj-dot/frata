@@ -316,7 +316,7 @@ it to `100000` after moving to Pro. Never Preview: a preview build must not add 
 
 **3. Redeploy:** Deployments → the latest Production deployment → ⋯ → Redeploy (or any push to `main`).
 
-**4. Check:** Settings › Shop address in the console shows **Connect a domain**. If it doesn't, the token or project id
+**4. Check:** Settings › Web address in the console shows **Connect a domain**. If it doesn't, the token or project id
 is missing or not in Production.
 
 On Vercel Pro (2026-11-12): the background check runs every 10 minutes (`vercel.json`); **owner step:** set

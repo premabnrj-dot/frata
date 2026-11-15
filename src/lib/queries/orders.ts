@@ -119,7 +119,7 @@ export async function ordersPage(tenantId: string, ask: ListAsk) {
   })
 }
 
-/** The queue's shop facts in one read: the order prefix and the default slip size (Settings › Documents, D2). */
+/** The queue's shop facts in one read: the order prefix and the default slip size (Settings › Invoices and slips, D2). */
 async function queueShopWith(tx: Tx, tenantId: string): Promise<{ prefix: string; slipSize: 'a4' | 'label' }> {
   const [r] = await (tx.select({ prefix: shopSettings.orderPrefix, name: tenants.name, slipSize: shopSettings.slipSize }).from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)))
   return { prefix: orderPrefix(r?.prefix ?? '', r?.name ?? ''), slipSize: r?.slipSize === 'label' ? 'label' : 'a4' }

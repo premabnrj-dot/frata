@@ -14,6 +14,8 @@ import { discountUses, useOfRowSql } from '@/lib/db/discount-predicates'
 import { currentMethodSql, holdingSql, keptSql, priorOrderSql, standingSql, stateSql, type KeptRow } from '@/lib/db/order-predicates'
 import { leakOf, type Leak } from '@/domains/checkout/leak'
 import { withTenant } from '@/lib/db/tenant'
+import { offerExample, type OfferExample } from '@/domains/orders/offer-cost'
+import { rateOn } from '@/domains/tax/rates'
 import type { Tx } from '@/lib/db'
 
 // =============================================================================
@@ -269,5 +271,36 @@ export async function offerPickers(tenantId: string) {
         .where(and(eq(variants.tenantId, tenantId), isNull(variants.archivedAt), sql`${products.status} <> 'archived'`)).orderBy(asc(products.title)).limit(2000),
     ])
     return { products: ps, collections: cs, pieces: vs.map((v) => ({ id: v.id, title: [v.title, ...(v.values ?? [])].join(' · ') })) }
+  })
+}
+
+/**
+ * The offer form's "What it costs you" (Neel N2b·2): one piece of the store's best seller (delivered units, 30 days),
+ * through offerExample. Read only for whoever sees costs (costsVisibleIn, failing closed); uncached, its own read (never
+ * the storefront's best-sellers cache). Returns the product's title and price and two derived figures; the goods' cost
+ * stays here. Null without a best seller, a price or a known goods cost.
+ */
+export async function offerExampleFor(tenantId: string, role: MemberRole, now = new Date()): Promise<{ title: string; price: number; example: OfferExample } | null> {
+  return withTenant(tenantId, async (tx) => {
+    const [costs, history, shipCosts] = await Promise.all([costsVisibleIn(tx, tenantId, role), planHistoryIn(tx, tenantId), shipCostsIn(tx, tenantId)])
+    if (!costs) return null
+    const since = sql`${new Date(now.getTime() - 30 * 86_400_000).toISOString()}::timestamptz`
+    const [best] = await tx.execute<{ id: string; title: string; hsn: string | null; own: number | null; price: string; cogs: string | null; inclusive: boolean }>(sql`
+      select p.id, p.title, p.hsn, p.gst_bps own,
+             c.price::bigint price, c.unit_cost::bigint cogs,
+             (select s.prices_include_gst from shop_settings s where s.tenant_id = p.tenant_id) inclusive
+        from ${products} p
+        join (select l.product_id, sum(l.qty) n from order_lines l join ${orders} o on o.tenant_id = l.tenant_id and o.id = l.order_id
+               where l.tenant_id = ${tenantId} and l.removed_at is null and o.delivered_at >= ${since} and o.rto_initiated_at is null and o.rto_delivered_at is null
+               group by l.product_id) b on b.product_id = p.id
+        -- One size, its price with its own cost: the cheapest priced size whose cost is known.
+        left join lateral (select v.price, v.unit_cost from ${variants} v where v.tenant_id = p.tenant_id and v.product_id = p.id and v.archived_at is null
+               and v.price > 0 and v.unit_cost is not null order by v.price, v.id limit 1) c on true
+       where p.tenant_id = ${tenantId} order by b.n desc, p.id limit 1`)
+    if (!best || best.price === null || best.cogs === null) return null
+    const price = Number(best.price)
+    const gstBps = rateOn(best.hsn, price, !!best.inclusive, now, best.own) ?? 0
+    const example = offerExample({ price, gstBps, inclusive: !!best.inclusive, cogs: Number(best.cogs), est: estimateOf(shipCosts), feeBps: history.filter((h) => h.startsAt <= now).at(-1)?.feeBps ?? null })
+    return example ? { title: best.title, price, example } : null
   })
 }

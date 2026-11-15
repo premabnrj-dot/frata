@@ -113,7 +113,7 @@ export async function productsTax(tenantId: string) {
 const UNRATED_NAMED = 3
 
 /** Live products (active or unlisted) a registered shop can't sell for want of a GST rate, in the caller's transaction
- * (Settings › Taxes' save, after its write). The rule is `withoutRate` (rates.ts), the test quote() refuses a line by;
+ * (Settings › Business and GST' save, after its write). The rule is `withoutRate` (rates.ts), the test quote() refuses a line by;
  * the rate table lives in code, so it filters here, never in SQL. */
 export async function liveWithoutRateIn(tx: Tx, tenantId: string, now: Date): Promise<Unrated> {
   const rows = await tx.select({ title: products.title, handle: products.handle, hsn: products.hsn, gstBps: products.gstBps }).from(products)

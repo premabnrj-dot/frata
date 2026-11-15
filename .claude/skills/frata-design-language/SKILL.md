@@ -191,7 +191,7 @@ from it).
   changes until they publish), Frrata recalled the version they're on (with one tap to restore the previous look),
   or withdrew it (their previous look is live, nothing lost). Admin › Themes says every decision is final and names
   the shops it touches; a destructive decision is a red-labelled form with a required reason, not a typed phrase.
-- Colours and type live in Look only; Settings › Brand keeps the logo and tagline and previews them in the published look.
+- Colours and type live in Look only; Settings › Store details keeps the logo and tagline and previews them in the published look.
 - **Three themes, each a job** (owner, 2026-11-08 night; plan `docs/plans/2026-11-09-themes-three.md`):
   **Editorial** — occasion and designer wear: photos stacked large beside a buy box that stays, Cormorant, square,
   a sheen on buttons, photos that grow, pages that fade in, sections that rise, statement footer in ink, focused
@@ -723,7 +723,7 @@ Rules every products screen keeps (PR·0 built; PR·1–4 follow the mockup):
 **Own domains v2** (owner-approved 2026-11-09, mockup https://claude.ai/artifact/XrDQj61tSBe4YKvUrH76xt; replaces the
 8 Nov mockup's § 5–7):
 
-72. **One address list, titled "Custom domain"** (owner 2026-11-09) on Settings › Shop address: every address a row (mono, its state chip, actions beside it);
+72. **One address list, titled "Custom domain"** (owner 2026-11-09) on Settings › Web address: every address a row (mono, its state chip, actions beside it);
     the main one carries a `Main` chip; rows change in place and never animate (rule 28).
 73. **Connect is a `Dialog`** (a sheet on a phone, rule 27) of three steps (Domain · Records · Securing) with step dots
     and the step slide; the domain is cleaned as typed (`https://www.KesarStudio.in/` → `kesarstudio.in`, www added),
@@ -1222,8 +1222,19 @@ values, keyboard and axe at phone and desktop. A new primitive or state joins th
 - **The header**: rule 13 above; one `PageHeader` for every page in Console, Admin and the partner workspace.
 - **Lists**: rows 48 px (56 with a photo: `DataTableRow tall`), the picked rows in neel 50 and `BulkBar`; Orders shows
   Payment as a Tag and Status (with risk) as chips, one status cell that reflows on a phone.
-- **Settings**: one list, a plain 20 px icon per row, its current value at the right, a chevron; up to 860 wide;
-  "Ready for live payments" a chip in the header, and what is missing a warn banner above the list.
+- **Settings, in five groups** (owner, 2026-11-15; mockup https://claude.ai/artifact/GGkvYuwqxL7YEoXxAjbYLD,
+  `src/domains/settings/groups.ts` is the one list): Store, Checkout, Business and tax, Messages, Team and plan. Pick a
+  group, its pages appear: on a wide screen the groups at the left (each with its one line and a count of what to fix),
+  the picked group's pages at the right (name, current value, chevron); on a phone the groups first, then the group's
+  pages with "‹ Settings". The group is in the address (`?group=`). A settings page opens "Settings › <group>", its title,
+  then its group's other pages as tabs (`SettingsHead`). A field lives where a merchant looks for it (the legal name
+  beside the GSTIN, order and invoice numbering together); a moved page keeps its old address as a redirect (`movedTo`).
+  "Ready for live payments" stays a chip in the header, what is missing a warn banner above the groups.
+- **A settings form** (Neel N2b·3): one card per block; a page of one block hides its block title (screen readers keep
+  it); switch rows carry their line under the label; short fields side by side (three across when there are three);
+  wide fields and groups of a kind under a hairline; no intro paragraph under the title (Rule 0); a list of codes is
+  chips (`ChipInput`), never a text box; the save bar at the foot with its count and Ctrl/⌘+S; a side card says what a
+  shopper meets (Pay on delivery: "At checkout", from checkout's own rule and words).
 - **Not yet**: ⌘K (N1b).
 
 ## Neel analytics (N1b, 2026-11-15; plan `docs/plans/2026-11-15-neel-n1b-analytics.md`, screen mockup

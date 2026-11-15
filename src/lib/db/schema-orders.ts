@@ -103,7 +103,7 @@ export const orders = pgTable('orders', {
   invoiceNumber: text('invoice_number'),
   /** The shop's logo as it was at packing (its Blob path, never overwritten): every copy of the invoice shows it (Documents D2). */
   invoiceLogo: text('invoice_logo'),
-  /** The signatory and invoice note as they were at packing (Settings › Documents): an issued invoice never changes. */
+  /** The signatory and invoice note as they were at packing (Settings › Invoices and slips): an issued invoice never changes. */
   invoiceSignatory: text('invoice_signatory'),
   invoiceNote: text('invoice_note'),
   cancelReason: text('cancel_reason'),
@@ -135,6 +135,8 @@ export const orders = pgTable('orders', {
   uniqueIndex('orders_tenant_idempotency').on(t.tenantId, t.idempotencyKey),
   uniqueIndex('orders_tenant_razorpay').on(t.tenantId, t.razorpayOrderId),
   index('orders_tenant_phone').on(t.tenantId, t.phone),
+  // A PIN code's came-back count (the order page's PIN line, pin-returns.ts; speed review 2026-11-15).
+  index('orders_tenant_pincode').on(t.tenantId, t.pincode, t.placedAt).where(sql`${t.cancelledAt} is null`),
   // The holds that count against stock: online, unpaid, not cancelled.
   index('orders_tenant_holds').on(t.tenantId, t.payBy).where(sql`${t.paidAt} is null and ${t.cancelledAt} is null and ${t.payBy} is not null`),
   // The shipping tabs (Ship S·0): packed, no outcome yet. inFlightSql (order-predicates.ts) says this first.

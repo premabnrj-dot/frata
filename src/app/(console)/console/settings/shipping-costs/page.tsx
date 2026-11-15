@@ -1,5 +1,7 @@
+import { pageRoles } from '@/domains/settings/groups'
+import { SettingsHead } from '../_components/settings-head'
 import { Panel } from '@/components/ui/panel'
-import { CAN_SET_COSTS, requireMember } from '@/lib/auth/require-member'
+import { requireMember } from '@/lib/auth/require-member'
 import { dayIN } from '@/lib/format-date'
 import { shipCostsSeenBy } from '@/lib/queries/settings'
 import { ShipCostsForm } from './ship-costs-form'
@@ -13,10 +15,10 @@ import { ShipCostsForm } from './ship-costs-form'
 // Until they are confirmed, profit on those orders says "before shipping costs"; after, "estimated".
 // =============================================================================
 
-export const metadata = { title: 'Shipping costs' }
+export const metadata = { title: 'Your shipping costs' }
 
 export default async function ShippingCostsPage() {
-  const auth = await requireMember(CAN_SET_COSTS)
+  const auth = await requireMember(pageRoles('shipping-costs'))
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or a manager can see shipping costs' : auth.message} />
   // The error's name only: a failed query's message carries its parameters (tenancy audit 2026-11-08).
   const r = await shipCostsSeenBy(auth.membership.tenantId, auth.membership.role).catch((err) => { console.error('[shipping-costs]', err instanceof Error ? err.name : 'error'); return undefined })
@@ -25,5 +27,5 @@ export default async function ShippingCostsPage() {
   if (!r.visible) return <Panel title="Only the owner or a manager can see shipping costs">The store’s owner sets these now.</Panel>
   const c = r.costs
   const rupees = (p: number | null | undefined) => (p == null ? null : String(Math.round(p / 100)))
-  return <ShipCostsForm current={{ delivery: rupees(c?.delivery), ret: rupees(c?.ret), cod: rupees(c?.cod) }} confirmedOn={c?.confirmedAt ? dayIN(c.confirmedAt) : null} />
+  return <><SettingsHead page="shipping-costs" role={auth.membership.role} /><div className="mt-4" /><ShipCostsForm current={{ delivery: rupees(c?.delivery), ret: rupees(c?.ret), cod: rupees(c?.cod) }} confirmedOn={c?.confirmedAt ? dayIN(c.confirmedAt) : null} /></>
 }

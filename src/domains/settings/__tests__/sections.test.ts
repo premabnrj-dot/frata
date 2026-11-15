@@ -36,25 +36,25 @@ describe('parseSection', () => {
   })
   it('normalises GSTIN, empty GSTIN is null, HSN shape', () => {
     const base = { turnoverBand: 'under_5cr', gstFiling: 'monthly', b2bInvoices: true, defaultHsn: '6211', invoiceSeries: 'KS/' }
-    const ok = parseSection(s('taxes'), { ...base, gstRegistration: 'regular', pricesIncludeGst: true, gstin: ' 27aapfu0939f1zv ' })
+    const ok = parseSection(s('business'), { ...base, gstRegistration: 'regular', pricesIncludeGst: true, gstin: ' 27aapfu0939f1zv ' })
     expect(ok.ok && ok.patch).toMatchObject({ gstin: '27AAPFU0939F1ZV', gstScheme: 'regular', homeState: '27', b2bInvoices: true })
     expect(ok.ok && 'gstRegistration' in ok.patch).toBe(false)
-    const none = parseSection(s('taxes'), { ...base, gstRegistration: 'none', pricesIncludeGst: false, gstin: '27AAPFU0939F1ZV', homeState: '08' })
+    const none = parseSection(s('business'), { ...base, gstRegistration: 'none', pricesIncludeGst: false, gstin: '27AAPFU0939F1ZV', homeState: '08' })
     expect(none.ok && none.patch).toMatchObject({ gstin: null, homeState: '08' })
-    expect(parseSection(s('taxes'), { ...base, gstRegistration: 'none', gstin: '' }).ok).toBe(false) // the state is needed
-    expect(parseSection(s('taxes'), { ...base, gstRegistration: 'regular', gstin: '' }).ok).toBe(false) // the GSTIN is needed
-    const comp = parseSection(s('taxes'), { ...base, gstRegistration: 'composition', gstin: '29AAGCB7383J1Z4', pricesIncludeGst: false })
+    expect(parseSection(s('business'), { ...base, gstRegistration: 'none', gstin: '' }).ok).toBe(false) // the state is needed
+    expect(parseSection(s('business'), { ...base, gstRegistration: 'regular', gstin: '' }).ok).toBe(false) // the GSTIN is needed
+    const comp = parseSection(s('business'), { ...base, gstRegistration: 'composition', gstin: '29AAGCB7383J1Z4', pricesIncludeGst: false })
     expect(comp.ok && comp.patch).toMatchObject({ gstScheme: 'composition', homeState: '29', b2bInvoices: false })
-    const big = parseSection(s('taxes'), { ...base, gstRegistration: 'regular', gstin: '29AAGCB7383J1Z4', turnoverBand: 'over_10cr', b2bInvoices: true })
+    const big = parseSection(s('business'), { ...base, gstRegistration: 'regular', gstin: '29AAGCB7383J1Z4', turnoverBand: 'over_10cr', b2bInvoices: true })
     expect(big.ok && big.patch.b2bInvoices).toBe(false) // business invoices wait for e-invoicing
-    expect(formValues(s('taxes'), { gstin: null, gstScheme: 'regular' }).gstRegistration).toBe('none')
-    expect(formValues(s('taxes'), { gstin: '29AAGCB7383J1Z4', gstScheme: 'composition' }).gstRegistration).toBe('composition')
-    const bad = parseSection(s('taxes'), { pricesIncludeGst: true, gstin: '', defaultHsn: '62', invoiceSeries: '' })
+    expect(formValues(s('business'), { gstin: null, gstScheme: 'regular' }).gstRegistration).toBe('none')
+    expect(formValues(s('business'), { gstin: '29AAGCB7383J1Z4', gstScheme: 'composition' }).gstRegistration).toBe('composition')
+    const bad = parseSection(s('business'), { pricesIncludeGst: true, gstin: '', defaultHsn: '62', invoiceSeries: '' })
     expect(bad.ok).toBe(false)
   })
   it('requires the shop name and customer care email; cleans prefix and handle', () => {
-    expect(parseSection(s('store'), { name: '', orderPrefix: '', legalName: '', originCountry: 'India', address: '' }).ok).toBe(false)
-    const r = parseSection(s('store'), { name: 'Kesar', orderPrefix: 'ks-', legalName: '', originCountry: 'India', address: '' })
+    expect(parseSection(s('store'), { name: '', tagline: '', shopLanguage: 'en' }).ok).toBe(false)
+    const r = parseSection(s('invoices'), { orderPrefix: 'ks-', invoiceSeries: 'KS/', docSignatory: '', docNote: '', slipSize: 'a4' })
     expect(r.ok && r.patch.orderPrefix).toBe('KS')
     const c = parseSection(s('contact'), { supportEmail: 'Hello@Kesar.in', supportPhone: '', whatsapp: '+91 98270 41000', instagram: '@kesar.studio', grievanceName: '', grievanceRole: '', grievanceEmail: '', grievancePhone: '' })
     expect(c.ok && [c.patch.supportEmail, c.patch.whatsapp, c.patch.instagram]).toEqual(['hello@kesar.in', '9827041000', 'kesar.studio'])
@@ -82,7 +82,7 @@ describe('missingForLivePayments', () => {
   it('is empty when everything the law and Razorpay ask is there', () => expect(missingForLivePayments(full)).toEqual([]))
   it('names what is missing and where it is fixed', () => {
     expect(missingForLivePayments({ ...full, grievancePhone: '', legalName: '' })).toEqual([
-      { label: 'Legal business name', section: 'store' }, { label: 'Grievance officer', section: 'contact' }])
+      { label: 'Legal business name', section: 'business' }, { label: 'Grievance officer', section: 'contact' }])
   })
 })
 
@@ -111,7 +111,7 @@ describe('an open shop keeps its grievance officer', () => {
 
 describe('documents (D2)', () => {
   it('refuses a web address in the words printed on documents', () => {
-    const sec = SECTIONS.find((x) => x.key === 'documents')!
+    const sec = SECTIONS.find((x) => x.key === 'invoices')!
     expect(parseSection(sec, { docSignatory: 'Riya', docNote: 'Pay at https://x.test', slipSize: 'a4' }).ok).toBe(false)
     expect(parseSection(sec, { docSignatory: 'www.riya.in', docNote: '', slipSize: 'a4' }).ok).toBe(false)
     expect(parseSection(sec, { docSignatory: 'Riya Mehta', docNote: 'Exchanges within 7 days.', slipSize: 'label' }).ok).toBe(true)

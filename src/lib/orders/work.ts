@@ -170,7 +170,7 @@ export async function pack(tx: Tx, tenantId: string, actor: Actor, orderId: stri
     .innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
   // Before the counter moves (a refusal after it would leave a gap in the numbers): a series saved before
   // settings checked it may not leave room for the year's numbers inside GST's 16 characters.
-  if (s?.series && !seriesFits(s.series)) return { ok: false, error: 'The invoice number would be longer than GST allows (16 characters). Shorten the invoice series in Settings › Taxes and invoices, then pack.' }
+  if (s?.series && !seriesFits(s.series)) return { ok: false, error: 'The invoice number would be longer than GST allows (16 characters). Shorten the invoice series in Settings › Invoices and slips, then pack.' }
   const [n] = await tx.insert(tenantCounters).values({ tenantId, kind, period: fy, next: 2 })
     .onConflictDoUpdate({ target: [tenantCounters.tenantId, tenantCounters.kind, tenantCounters.period], set: { next: sql`${tenantCounters.next} + 1` } })
     .returning({ next: tenantCounters.next })

@@ -1,6 +1,6 @@
 {
-  "id": "7cde403b-f16b-45a5-8901-5cbd27e24952",
-  "prevId": "efde12bb-f9a6-4082-8134-411a440cffc6",
+  "id": "bd91f170-b242-4f2b-ad9a-6813e799e39e",
+  "prevId": "9af4a362-b729-464b-b4ea-e9ca8578bbc2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -5455,6 +5455,34 @@
           "isUnique": false,
           "with": {},
           "method": "btree",
+          "concurrently": false
+        },
+        "orders_tenant_pincode": {
+          "name": "orders_tenant_pincode",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "pincode",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "placed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"orders\".\"cancelled_at\" is null",
           "concurrently": false
         },
         "orders_tenant_holds": {

@@ -116,6 +116,8 @@ describe.skipIf(!host)('Console › Content actions', () => {
     expect((await A.savePageAction({ id: p.id, version: p.version, draft })).ok).toBe(false) // the example words still stand
     const own = { ...draft, handle: 'moved', fill: { story: { kind: 'text', body: [[{ text: 'Two looms in 2019.' }]] }, 'makers-heading': { kind: 'heading', text: 'How we make it' },
       ...Object.fromEntries([1, 2, 3].flatMap((n) => [[`maker-heading-${n}`, { kind: 'heading', text: `Step ${n}` }], [`maker-words-${n}`, { kind: 'text', body: [[{ text: `Words ${n}` }]] }]])) } }
+    const spoofed = { ...own, fill: { ...own.fill, 'makers-heading': { kind: 'heading', text: 'How we\u202Emake it' } } }
+    expect((await A.savePageAction({ id: p.id, version: p.version, draft: spoofed })).ok).toBe(false) // a hidden character in a heading
     const saved = await A.savePageAction({ id: p.id, version: p.version, draft: own })
     expect(saved.ok).toBe(true)
     const [shown] = await su`select draft->>'handle' as handle, live from shop_pages where tenant_id = ${T} and id = ${p.id}`

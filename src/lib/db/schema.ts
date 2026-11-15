@@ -273,7 +273,7 @@ export const shopSettings = pgTable('shop_settings', {
   /** Business buyers may ask for a GST invoice at checkout (their GSTIN on it). Off above ₹5 cr until e-invoicing. */
   b2bInvoices: boolean('b2b_invoices').notNull().default(true),
   invoiceSeries: text('invoice_series').notNull().default(''),
-  /** Documents D2 (Settings › Documents): the signatory named on invoices, a footer note, the slip's default size. */
+  /** Documents D2 (Settings › Invoices and slips): the signatory named on invoices, a footer note, the slip's default size. */
   /** The logo for paper: a PNG in the shop's Blob folder (tenants/<t>/documents/<uuid>.png), byte-checked when set. */
   docLogo: text('doc_logo'),
   docSignatory: text('doc_signatory').notNull().default(''),
