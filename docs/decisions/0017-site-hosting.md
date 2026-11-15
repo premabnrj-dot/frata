@@ -159,8 +159,9 @@ cost measured, "yes".
   store's public key set as a Production variable, never in the repo. Before real shoppers pay on a site, its team is
   on a plan that allows commercial use; the separate `frrata-sites` team the test above names comes with V2. Its cost is absorbed as a pilot cost and measured per site (bytes, requests, build
   minutes, the team's base fee), and those numbers price hosting's allowances before V2 (owner questions 3 and 4 above).
-- **Where the code lives:** one repository per site in Frrata's GitHub organisation (ADR-0016 § 2), created from the
-  starter; the developer gets that repository only.
+- **Where the code lives:** for the test, one private repository per site under the owner's existing GitHub account
+  (owner, 2026-11-15: "same with github for testing"), created from the starter, beside `frata`; a developer is added
+  to that repository only. The Frrata organisation of ADR-0016 § 2 comes before partners build sites.
 
 ## What the owner sets up
 - A Cloudflare account in the company's name; Workers Paid with Workers for Platforms ($25 a month); billing by the
