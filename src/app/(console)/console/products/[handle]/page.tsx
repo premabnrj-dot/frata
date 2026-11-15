@@ -112,6 +112,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
         gst: { charges: chargesGst({ gstin: shop.gstin, scheme: shop.gstScheme as Scheme }), inclusive: shop.pricesIncludeGst },
         sized: sellsSized(shop.sells), label: labelAsked(shop.sells), maker: [shop.legalName || shop.name, shop.legalAddress].filter(Boolean).join(', '),
       }}
+      host={address.replace(/^https?:\/\//, '')}
       allCollections={collections}
       families={COLOUR_FAMILIES}
       photos={data.images.map((i) => ({ id: i.id, base: i.base, widths: i.widths, optionValue: i.optionValue, width: i.width, height: i.height, alt: i.alt ?? '' }))}
