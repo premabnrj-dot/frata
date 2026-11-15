@@ -14,7 +14,7 @@
 //     payments (a ledger per payment), the newest first;
 //  3. Ship without the change frees the held pieces and lets it pack; a capture after it is refunded at once;
 //  4. a payment on the ORIGINAL Razorpay order after an edit never marks the edited order paid at the old total;
-//  5. a difference under ₹1 is not asked for: the edit applies at once; a payment 6 months old can't be refunded.
+//  5. a difference under ₹1 is not asked for: the edit applies at once; a payment 6 months old can’t be refunded.
 import { createHmac } from 'node:crypto'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 import type { EditReason, Want } from '@/domains/orders/edit'
@@ -55,7 +55,7 @@ const rz = vi.hoisted(() => {
     m = p.match(/^\/v1\/payments\/(pay_\w+)$/)
     if (method === 'GET' && m) return s.payments.has(m[1]!) ? answer(200, s.payments.get(m[1]!)) : answer(404, { error: { description: 'no such payment' } })
     m = p.match(/^\/v1\/payments\/(pay_\w+)\/refunds$/)
-    // `hidden`: a refund Razorpay made but doesn't list yet (its list lags its create).
+    // `hidden`: a refund Razorpay made but doesn’t list yet (its list lags its create).
     if (method === 'GET' && m) return answer(200, { items: s.refunds.filter((r) => r.payment_id === m![1] && !s.hidden.has(r.receipt)) })
     m = p.match(/^\/v1\/payments\/(pay_\w+)\/refunds\/(rfnd_\w+)$/)
     if (method === 'GET' && m) { const r = s.refunds.find((x) => x.id === m![2]); return r ? answer(200, r) : answer(404, {}) }
@@ -248,7 +248,7 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
     expect(r2s.sentAt).not.toBeNull()
     expect(r2s.razorpayRefundId).toMatch(/^rfnd_/)
     // Sent: the edit has no Undo now, even inside its 10 minutes.
-    expect(await t.undo(again.eventId)).toEqual({ ok: false, error: 'The refund has gone to Razorpay: this change can\'t be undone.' })
+    expect(await t.undo(again.eventId)).toEqual({ ok: false, error: 'The refund has gone to Razorpay. This change can’t be undone.' })
     // A second run of the same row finds it by its receipt and sends nothing twice.
     await sendRefund((await t.outboxRow('refund.send', `refund.send:${r2.id}`))!)
     expect(refundCalls()).toHaveLength(1)
@@ -471,11 +471,11 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
     expect(await t.refunds(o.id)).toEqual([])
     expect((await t.edits(o.id))[0]!.asked).toBeNull()
 
-    // Paid seven months ago: a lower total can't be refunded through Razorpay, refused before Save.
+    // Paid seven months ago: a lower total can’t be refunded through Razorpay, refused before Save.
     const o2 = await t.paidOrder([{ variantId: s.coordM, qty: 2 }])
     await t.withTenant(s.A, (tx) => tx.update(orders).set({ paidAt: new Date(Date.now() - 214 * 86_400_000) }).where(and(eq(orders.tenantId, s.A), eq(orders.id, o2.id))))
     const l2 = await t.lineOf(o2.id, s.coordM)
-    expect(await t.edit(o2.id, [{ line: l2.id, variantId: s.coordM, qty: 1 }])).toEqual({ ok: false, error: 'Paid over 6 months ago: Razorpay can\'t refund it. Keep the order as it was.' })
+    expect(await t.edit(o2.id, [{ line: l2.id, variantId: s.coordM, qty: 1 }])).toEqual({ ok: false, error: 'Paid over 6 months ago. Razorpay can’t refund it. Keep the order as it was.' })
     expect((await t.live(o2.id))[0]!.qty).toBe(2)
   }, 120_000)
 
@@ -501,7 +501,7 @@ describe.skipIf(!host)('editing a paid-online order (OE·2)', () => {
     const second = (await t.edits(o.id))[1]!
     expect((await t.refunds(o.id)).find((r) => r.id === r1!.id)!.supersededBy).toBe(second.id)
     expect(await retry(r1!.id)).toEqual({ ok: false, error: 'A later change of this order settled it. Nothing to send.' })
-    expect(await t.undo(up.eventId)).toEqual({ ok: false, error: 'It settled a refund that wasn\'t sent: this change can\'t be undone. Edit the items instead.' })
+    expect(await t.undo(up.eventId)).toEqual({ ok: false, error: 'It settled a refund that wasn’t sent. This change can’t be undone. Edit the items instead.' })
     expect(refundCalls().filter((c) => c.body.receipt === r1!.id)).toHaveLength(1)
 
     // The other way: a failed refund, then a change asking for more. While it waits, the payment it asks for was worked

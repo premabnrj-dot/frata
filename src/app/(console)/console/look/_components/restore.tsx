@@ -17,7 +17,7 @@ export function RestoreButton({ revisionId, when, replacesDraft = false }: { rev
   return (
     <span className="flex items-center gap-2">
       <Button variant="secondary" disabled={pending} onClick={() => (replacesDraft ? setAsk(true) : go())}>Restore</Button>
-      <Dialog open={ask} onClose={() => setAsk(false)} title={when ? `Restore the look from ${when}?` : 'Restore this look?'} description="It opens as a draft and replaces the one you have. Your shop doesn’t change."
+      <Dialog open={ask} onClose={() => setAsk(false)} title={when ? `Restore the look from ${when}?` : 'Restore this look?'} description="It opens as a draft and replaces the one you have. Your store doesn’t change."
         actions={<><Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setAsk(false)}>Cancel</Button><Button disabled={pending} onClick={go}>Restore as draft</Button></>} />
     </span>
   )

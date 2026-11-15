@@ -39,7 +39,7 @@ export function InviteButton({ stores }: { stores: Store[] }) {
               </div>
             )}
           </fieldset>
-          <p className="text-xs text-muted-foreground">As a Lead: builds the stores you give them. Handing over and the team stay with you.</p>
+          <p className="text-xs text-muted-foreground">A Lead builds the stores you give them. Handover and the team stay with you.</p>
           <div className="flex flex-wrap justify-end gap-2">
             <Button type="button" variant="secondary" data-autofocus onClick={() => setOpen(false)}>Cancel</Button>
             <Submit>Send invite</Submit>

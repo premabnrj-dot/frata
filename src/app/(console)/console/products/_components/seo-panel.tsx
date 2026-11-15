@@ -63,7 +63,7 @@ export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescriptio
             <input id="handle" value={handle} maxLength={100} placeholder={defaults.handle} {...fieldProps('handle', errors.handle)} onChange={(e) => onHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} className="h-11 md:h-9 min-w-0 flex-1 bg-transparent pr-3 font-mono text-sm outline-none" />
           </div>
           {errors.handle ? <FieldError name="handle" message={errors.handle} />
-            : <p className="text-xs text-muted-foreground">{everLive ? 'It has been live: if you change it, the old address keeps working and sends shoppers here.' : 'Short words shoppers can read. Fixed once it has been live (a change then redirects).'}</p>}
+            : <p className="text-xs text-muted-foreground">{everLive ? 'It has been live. The old address still works and sends shoppers here.' : 'Short words shoppers can read. Fixed once it has been live (a change then redirects).'}</p>}
         </div>}
       </div>
   )

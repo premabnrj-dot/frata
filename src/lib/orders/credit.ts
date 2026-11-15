@@ -22,7 +22,7 @@ import { current, record, type Actor, type Done } from './work'
 // sale was then undone — cancelled after packing, or back at the shop — and only once. It reverses the invoice in
 // full: the figures are the invoice's own, from the frozen rows. Its number comes from the shop's credit series
 // (tenant_counters kind 'credit', per financial year), taken in the same transaction, so a refusal leaves no gap.
-// A return after delivery can put its pieces back in stock ("Put these pieces back in stock", as Came back's tick):
+// A return after delivery can put its pieces back in stock ("Put these items back in stock", as Came back's tick):
 // in the same transaction, once (with the note's own lines, which are final), never for a discount, goodwill or a
 // reversal (cancel and Came back restock on their own), never above what the line sold less earlier restocks
 // (restockOf). credit_note_lines.restocked_qty records it; ₹ kept takes those pieces' cost back off COGS.
@@ -41,7 +41,7 @@ export type CreditRequest =
 export async function issueCredit(tx: Tx, tenantId: string, actor: Actor, orderId: string, now = new Date(), req?: CreditRequest): Promise<Done<{ number: string; backInStock: string[] }>> {
   // A credit note is permanent and changes the shop's GST filings: the shop's own people only, never a Frrata support
   // visit (security review 2026-11-08; as the address, payment keys and logo).
-  if (actor.kind === 'support') return { ok: false, error: 'Only the shop’s owner or an admin can issue a credit note.' }
+  if (actor.kind === 'support') return { ok: false, error: 'Only the owner or a manager can issue a credit note.' }
   const c = await current(tx, tenantId, orderId, now)
   if (!c) return { ok: false, error: 'Order not found.' }
   if (!req && !applies('credit', c.state)) return { ok: false, error: 'A credit note is for an order cancelled after packing, or one that came back.' }
@@ -49,13 +49,13 @@ export async function issueCredit(tx: Tx, tenantId: string, actor: Actor, orderI
   const docs = await documentsFor(tx, tenantId, [c.o.number], 'credit', now)
   const d = docs.orders[0]
   const inv = d ? invoice(d.o, d.lines, docs.shop) : null
-  if (!d || !inv) return { ok: false, error: 'No invoice was issued for this order (it was cancelled before packing): there is nothing to credit.' }
+  if (!d || !inv) return { ok: false, error: 'It was cancelled before packing, so it has no invoice to credit.' }
   // The time limit: 30 November after the invoice's financial year (s.34(2)). A goodwill credit has none (not a GST document).
   const goodwill = req?.kind === 'discount' && !req.agreed
-  if (!goodwill && !creditOpen(inv.date, now)) return { ok: false, error: 'The time for a credit note against this invoice ended on 30 November after its financial year.' }
+  if (!goodwill && !creditOpen(inv.date, now)) return { ok: false, error: 'Credit notes for this invoice closed on 30 November after its financial year.' }
   // What earlier notes already took (a pre-0071 reversal took the whole invoice).
   const prior = d.credits.filter((x) => x.kind !== 'goodwill')
-  if (prior.some((x) => !x.lines)) return { ok: false, error: `Already credited in full: credit note ${prior.find((x) => !x.lines)!.number}.` }
+  if (prior.some((x) => !x.lines)) return { ok: false, error: `Already credited in full by credit note ${prior.find((x) => !x.lines)!.number}.` }
   const taken: Taken[] = prior.flatMap((x) => x.lines ?? [])
   const invoiced: InvoicedLine[] = d.lines.flatMap((l) => (l.id ? [{ lineId: l.id, qty: l.qty, taxable: l.taxableValue, gst: l.gst, chargeTaxable: l.chargeTaxable ?? 0, chargeGst: l.chargeGst ?? 0, bps: l.gstBps }] : []))
   const tax = inv.kind === 'tax_invoice'

@@ -26,12 +26,12 @@ export async function collectDue(now: Date, deadline = Infinity): Promise<Collec
       if (Date.now() > deadline) break
       try {
         // Never reached the gateway (the sender stopped before making an order): nothing was charged; close it.
-        if (!u.order) { if (await closeBillingAttempt(u.paymentId, 'Not sent; a fresh notice follows')) out.settled++; continue }
+        if (!u.order) { if (await closeBillingAttempt(u.paymentId, 'Not sent. A fresh notice follows')) out.settled++; continue }
         const items = (await orderPayments(u.order)).items
         const p = items.find((x) => x.status === 'captured') ?? items.find((x) => x.status === 'failed')
         if (p) { if (await billingAttemptResult(u.order, p.id, p.status === 'captured', p.error_description ?? null)) out.settled++ }
         // An order and no payment two hours on: the charge never started (a pending one is listed). Close it.
-        else if (items.length === 0 && (await closeBillingAttempt(u.paymentId, 'Not sent; a fresh notice follows'))) out.settled++
+        else if (items.length === 0 && (await closeBillingAttempt(u.paymentId, 'Not sent. A fresh notice follows'))) out.settled++
       } catch (e) { console.error('[billing] settle', u.paymentId, errName(e)) }
     }
   }

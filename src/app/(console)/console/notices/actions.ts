@@ -44,6 +44,6 @@ export async function setNoticePrefAction(input: { type: string; email: boolean 
     return { ok: true }
   } catch (err) {
     console.error('[notices] pref', errName(err))
-    return { ok: false, error: 'We could not save that. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t save that. Nothing was changed.' }
   }
 }

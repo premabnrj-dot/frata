@@ -52,7 +52,7 @@ export async function saveEmailAction(kind: string, words: EmailWords | null | u
     if (r.value) return { ok: false, error: r.value }
     revalidatePath('/console/settings/emails', 'layout')
     return { ok: true }
-  } catch (err) { console.error('[emails] save', errName(err)); return { ok: false, error: 'We could not save that. Nothing was changed.' } }
+  } catch (err) { console.error('[emails] save', errName(err)); return { ok: false, error: 'We couldn’t save that. Nothing was changed.' } }
 }
 
 export async function sendTestAction(kind: string, words: EmailWords): Promise<Result> {

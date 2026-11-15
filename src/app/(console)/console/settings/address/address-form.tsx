@@ -46,7 +46,7 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
   const run = async (fn: () => Promise<{ ok: true; text: string } | { ok: false; error: string }>) => {
     setPending(true)
     let r: { ok: true; text: string } | { ok: false; error: string }
-    try { r = await fn() } catch { r = { ok: false, error: 'We could not change it. Nothing was changed.' } } finally { setPending(false) }
+    try { r = await fn() } catch { r = { ok: false, error: 'We couldn’t change it. Nothing was changed.' } } finally { setPending(false) }
     if (!r.ok) { if (confirming) setRefused(r.error); else toast.error(r.error); return }
     closeConfirm(); toast.ok(r.text)
     settle(router)
@@ -85,7 +85,7 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
 
   return (
     <div className="max-w-xl space-y-4">
-      <PageHeader title="Shop address" back={{ href: '/console/settings', label: 'Settings' }} />
+      <PageHeader title="Store address" back={{ href: '/console/settings', label: 'Settings' }} />
       <Section>
         <label htmlFor="slug" className="flex items-center gap-1 text-sm font-medium">Frrata address
           {left !== null && <InfoTip about="old addresses">Old addresses keep working.</InfoTip>}

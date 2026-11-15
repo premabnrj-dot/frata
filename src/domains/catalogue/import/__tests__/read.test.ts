@@ -118,7 +118,7 @@ describe('what to fix, in words', () => {
   const problems = (rows: string[][]) => read(sheet(rows)).problems.map((p) => `${p.row} ${p.column}: ${p.message}`)
   it('a missing price, zero, a third decimal, the M.R.P. below the price, a bad stock', () => {
     expect(problems([['Name', 'Price', 'MRP', 'Stock'], ['A', '', '', '1'], ['B', '0', '', '1'], ['C', '999.999', '', '1'], ['D', '999', '899', '1'], ['E', '999', '', 'lots']])).toEqual([
-      '2 Price: Needs a price', '3 Price: More than ₹0.', '4 Price: "999.999" isn\'t a price', '5 MRP: The M.R.P. can’t be below the price: never sell above M.R.P.', '6 Stock: A whole number, or per size like S:4, M:6',
+      '2 Price: Needs a price', '3 Price: More than ₹0.', '4 Price: "999.999" isn\'t a price', '5 MRP: The M.R.P. can’t be below the price.', '6 Stock: A whole number, or per size like S:4, M:6',
     ])
   })
   it('a grid with a size missing, a size twice, a barcode for many sizes, a GST rate the law has not', () => {

@@ -226,7 +226,7 @@ export function Editor(p: EditorProps) {
       await flushPage.current?.()
       const [r] = await Promise.all([publishLookAction({ revisionId: p.revisionId, version: version.current, pages: Object.fromEntries(pagesNow.current.map((x) => [x.id, x.version])) }), new Promise((ok) => setTimeout(ok, GOING_LIVE_MS))])
       if (!r.ok) { setGoing(false); toast.error(r.error) }
-    } catch { setGoing(false); toast.error('We couldn’t publish.', { sub: 'Your draft is safe; try again.' }) }
+    } catch { setGoing(false); toast.error('We couldn’t publish.', { sub: 'Your draft is safe. Try again.' }) }
   })
 
   const setSettings = (s: Partial<ThemeSettings>) => change({ ...layer, settings: { ...layer.settings, ...s } })
@@ -313,7 +313,7 @@ export function Editor(p: EditorProps) {
             <Segmented label="Preview size" value={device} onChange={setDevice} options={(Object.keys(DEVICES) as Device[]).map((k) => ({ value: k, label: DEVICES[k].label }))} />
             <label className="sr-only" htmlFor="page-pick">Page</label>
             <select id="page-pick" value={page} onChange={(e) => { if (e.target.value === '+page') { setAdding(true); return } setPage(e.target.value as typeof page); setSelected(null); if (e.target.value === 'contact' || e.target.value.startsWith('page:')) setTab('sections') }} className="h-9 rounded-md border border-input bg-card px-2 text-sm">
-              <optgroup label="Shop"><option value="home">Home</option>{p.firstProduct && <option value="product">A product</option>}{p.firstCollection && <option value="collection">A collection</option>}
+              <optgroup label="Store"><option value="home">Home</option>{p.firstProduct && <option value="product">A product</option>}{p.firstCollection && <option value="collection">A collection</option>}
               <option value="all">Shop all</option><option value="bag">Bag</option><option value="checkout">Checkout</option></optgroup>
               <optgroup label="Pages"><option value="contact">Contact</option>{pages.filter((x) => !x.draft.removed).map((x) => <option key={x.id} value={`page:${x.id}`}>{x.draft.title}{x.draft.hidden ? ' (hidden)' : ''}</option>)}
               <option value="+page">Add a page…</option></optgroup>
@@ -330,7 +330,7 @@ export function Editor(p: EditorProps) {
                 <span className="min-w-0 flex-1 truncate rounded-md bg-card px-2 py-0.5 font-mono text-xs text-muted-foreground">{p.address}{path}</span>
               </div>
               <div className="relative overflow-hidden" style={{ height: frameH * scale }}>
-                <iframe ref={frame} title="Your shop with this look" src={`/console/theme-preview/${p.revisionId}${path}`}
+                <iframe ref={frame} title="Your store with this look" src={`/console/theme-preview/${p.revisionId}${path}`}
                   className={`origin-top-left bg-card transition-opacity duration-base ease-standard ${status === 'saving' ? 'opacity-70' : ''}`} style={{ width: d.w, height: frameH, transform: `scale(${scale})` }} />
                 {going && <div aria-hidden="true" className="pointer-events-none absolute inset-0 grid justify-items-center"><span className="absolute inset-0 animate-going-sweep bg-linear-to-r from-transparent via-brand/15 to-transparent bg-[length:300%_100%]" />
                   <span className="relative mt-6 flex items-center gap-2 self-start rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg"><span className="size-4 animate-spin rounded-full border-2 border-background/30 border-t-brand" />Going live</span></div>}

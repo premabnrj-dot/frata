@@ -181,7 +181,7 @@ export default {
         await p.goto(CONSOLE + `/console/orders/${A}`)
         await p.getByRole('button', { name: 'More' }).click(); await p.getByRole('menuitem', { name: 'Cancel order…' }).click()
         const d = p.getByRole('dialog', { name: `Cancel ${label(A)}?` }); await d.waitFor()
-        await d.getByLabel('Customer cancelled').check(); await d.getByRole('button', { name: 'Cancel order' }).click()
+        await d.getByLabel('Shopper cancelled').check(); await d.getByRole('button', { name: 'Cancel order' }).click()
         await until(async () => (await db`select cancelled_at from orders where tenant_id = ${T} and number = ${A}`)[0].cancelled_at)
         await p.getByRole('button', { name: 'More' }).click()
         assert.equal(await p.getByRole('menuitem', { name: 'Print packing slip' }).count(), 0, 'no slip for a cancelled order')

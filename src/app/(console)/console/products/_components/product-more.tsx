@@ -30,7 +30,7 @@ export function ProductMore({ id, title, handle, status, everLive, shopUrl, dirt
       if (!r.ok) { toast.error(r.error); return }
       toast.ok('Copied as a draft.'); router.push(`/console/products/${r.handle}`)
     }) },
-    ...(live ? [{ label: 'View in shop', href: shopUrl }] : []),
+    ...(live ? [{ label: 'View in store', href: shopUrl }] : []),
     ...(status === 'draft' && !everLive
       ? [{ label: 'Delete draft', danger: true, onSelect: () => { setError(null); setAsking(true) } }]
       : status !== 'archived' ? [{ label: 'Archive', danger: true, onSelect: () => start(async () => {

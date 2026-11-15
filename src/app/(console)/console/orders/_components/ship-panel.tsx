@@ -40,11 +40,11 @@ function Panel({ orderId, number, stage, may, shipment, stockTaken }: ShipPanelP
     if (busy) return
     setBusy(true)
     let r: { ok: true; eventId: string } | { ok: false; error: string }
-    try { r = await fn() } catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing was changed.' } }
+    try { r = await fn() } catch { r = { ok: false, error: 'We couldn’t save that. Check your connection. Nothing was changed.' } }
     setBusy(false); setAsk(null)
     if (!r.ok) { toast.error(r.error); return }
     const eventId = r.eventId
-    toast({ text: `${number} marked ${word}.`, undo: async () => { const u = await undoOutcomeAction(eventId); router.refresh(); return u.ok ? { ok: true } : { ok: false, error: u.error } } })
+    toast({ text: word === 'shipped' ? `${number} is on the way.` : `${number} marked ${word}.`, undo: async () => { const u = await undoOutcomeAction(eventId); router.refresh(); return u.ok ? { ok: true } : { ok: false, error: u.error } } })
     router.refresh()
   }
 
@@ -67,21 +67,21 @@ function Panel({ orderId, number, stage, may, shipment, stockTaken }: ShipPanelP
   return (
     <Section id="ship" title="On the way">
       {shipment ? <p className="text-sm">{shipment.courierName ?? 'Courier not named'}{shipment.trackingNumber ? <> · <span className="font-mono">{shipment.trackingNumber}</span></> : null}</p> : null}
-      {shipment?.byCourier ? <p className="text-sm text-muted-foreground">Shipped with Shiprocket: its tracking sets delivered or returned.</p>
+      {shipment?.byCourier ? <p className="text-sm text-muted-foreground">Shipped with Shiprocket. Its tracking sets delivered or came back.</p>
         : may.outcome ? (
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => void go('delivered', () => deliverOrder(orderId))} aria-disabled={busy}>Delivered</Button>
+            <Button onClick={() => void go('delivered', () => deliverOrder(orderId))} aria-disabled={busy}>Mark delivered</Button>
             <Button variant="secondary" onClick={() => { setRestock(stockTaken); setAsk('came_back') }} aria-disabled={busy}>Came back</Button>
             <Button variant="ghost" onClick={() => setAsk('lost')} aria-disabled={busy}>Lost by the courier</Button>
           </div>
-        ) : <p className="text-sm text-muted-foreground">An owner or admin marks it delivered or came back.</p>}
+        ) : <p className="text-sm text-muted-foreground">The owner or a manager marks it delivered or came back.</p>}
       <Dialog open={ask === 'came_back'} onClose={() => setAsk(null)} title={`${number} came back?`}
-        description="It came back to the shop without being delivered (RTO). Nothing was collected."
+        description="It came back to the store without being delivered. Nothing was collected."
         actions={<><Button variant="secondary" data-autofocus onClick={() => setAsk(null)}>Not yet</Button><Button onClick={() => void go('came back', () => cameBackOrder(orderId, restock))} aria-disabled={busy}>Came back</Button></>}>
-        {stockTaken ? <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} />Put the stock back (it can't be undone after)</label> : null}
+        {stockTaken ? <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" checked={restock} onChange={(e) => setRestock(e.target.checked)} />Put the stock back (it can’t be undone after)</label> : null}
       </Dialog>
       <Dialog open={ask === 'lost'} onClose={() => setAsk(null)} title={`Lost by the courier?`}
-        description="The courier lost or damaged the parcel. It is never billed as delivered; claim it with the courier."
+        description="The courier lost or damaged the parcel. It is never billed as delivered. Claim it with the courier."
         actions={<><Button variant="secondary" data-autofocus onClick={() => setAsk(null)}>Not yet</Button><Button variant="destructive" onClick={() => void go('lost', () => lostOrder(orderId))} aria-disabled={busy}>Mark lost</Button></>} />
     </Section>
   )

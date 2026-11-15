@@ -33,7 +33,7 @@ describe.skipIf(!host)('offer steps and a retry', () => {
       const D = await offer()
       expect(await edit(D, { manager: false })).toBeNull()
       expect(await S.stepOfferIn(tx, A, ME, D, 'start', now)).toBe('done')
-      expect(await edit(D, { manager: false })).toBe('Only an owner or admin can change an offer that has started.')
+      expect(await edit(D, { manager: false })).toBe('Only the owner or a manager can change an offer that has started.')
       expect(await edit(D, { style: 'free_shipping' })).toBe('The style of an offer does not change. Make a new one.')
       expect(await S.stepOfferIn(tx, A, ME, D, 'pause', now)).toBe('done')
       expect(await S.stepOfferIn(tx, A, ME, D, 'pause', now)).toBe('none')

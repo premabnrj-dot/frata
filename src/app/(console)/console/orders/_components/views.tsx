@@ -26,7 +26,7 @@ function NameDialog({ title, initial, cta, open, onClose, onSave }: { title: str
   const [busy, setBusy] = useState(false)
   const submit = async () => {
     setBusy(true); setError(null)
-    const e = await onSave(name).catch(() => 'We could not save that. Try again.')
+    const e = await onSave(name).catch(() => 'We couldn’t save that. Try again.')
     setBusy(false)
     if (e) setError(e); else onClose()
   }

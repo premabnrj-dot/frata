@@ -58,7 +58,7 @@ describe.skipIf(!host)('order work', () => {
       // order is never confirmed AND held (architecture review 2026-11-07).
       const off = await w.unhold(tx, A, riya, a, later(7.2))
       await w.confirm(tx, A, arjun, a, later(7.4))
-      expect(await w.undo(tx, A, riya, (off as { eventId: string }).eventId, later(7.6))).toMatchObject({ ok: false, error: 'This order changed since: open it to see what happened.' })
+      expect(await w.undo(tx, A, riya, (off as { eventId: string }).eventId, later(7.6))).toMatchObject({ ok: false, error: 'This order changed since. Open it to see what happened.' })
       expect(await state(a)).toBe('confirmed')
       await w.hold(tx, A, riya, a, later(7.8)) // back where the next step expects it: held
 
@@ -70,7 +70,7 @@ describe.skipIf(!host)('order work', () => {
       // The seller is stored as the invoice is issued (1D·7): a later change to Settings never rewrites it.
       const [seller] = await tx.select({ name: orders.sellerName, address: orders.sellerAddress }).from(orders).where(eq(orders.id, a))
       expect(seller!.name).toBeTruthy(); expect(seller!.address).not.toBeNull()
-      expect(await w.undo(tx, A, riya, (c2 as { eventId: string }).eventId, later(11))).toMatchObject({ ok: false, error: 'Already packed — cancel it instead.' })
+      expect(await w.undo(tx, A, riya, (c2 as { eventId: string }).eventId, later(11))).toMatchObject({ ok: false, error: 'Already packed. Cancel it instead.' })
       const b = await order(2, { sellerGstin: '08AAAAA0000A1Z5' })
       await w.confirm(tx, A, riya, b, later(12))
       // Documents D2: the logo, signatory and note are frozen at packing; changing Settings later leaves the invoice alone.

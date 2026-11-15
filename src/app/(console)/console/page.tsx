@@ -36,7 +36,7 @@ export default async function ConsoleHome() {
   const tenantId = auth.membership.tenantId, canManage = (CAN_MANAGE as readonly string[]).includes(auth.membership.role) // openShop's own tuple
   const now = new Date()
   const setup = await setupFor(tenantId).catch((err) => { console.error('[console home]', err instanceof Error ? err.name : 'error'); return null })
-  if (!setup) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!setup) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   // A failed summary is a page of "Couldn't count", never of zeros. The summary and the share card do not wait for each
   // other (speed review 2026-11-13); a failed share read only hides the button.
   const [s, share] = setup.open ? await Promise.all([
@@ -46,7 +46,7 @@ export default async function ConsoleHome() {
   // Neel § Screens · Home: "Today" and the day; Store open (a link to Setup, where the store closes for now) and Share
   // store at the right. The store's name and address live in the sidebar now.
   const actions = setup.open ? <>
-    <Link href="/console/setup" aria-label="Store open: setup, or close the store for now" className="inline-flex min-h-6 items-center rounded-full"><Badge tone="ok">Store open</Badge></Link>
+    <Link href="/console/setup" aria-label="Store open. Go to setup to close it." className="inline-flex min-h-6 items-center rounded-full"><Badge tone="ok">Store open</Badge></Link>
     {share ? <ShareSheet share={share} target={{ kind: 'shop' }} label="Share store" /> : null}
   </> : undefined
   return (

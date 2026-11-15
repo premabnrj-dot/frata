@@ -22,7 +22,7 @@ for (const path of changed) {
   // Home, the console's own components and every workspace's layout (the shell): the UX sweep walks them all.
   if (/^src\/app\/\((console|admin|partner)\)\/(console|admin|partner)\/(page\.tsx|layout\.tsx|_components\/)/.test(path)) { for (const f of byName('ux', 'neel-shell')) add(f, path); continue }
   if (path.startsWith('src/components/shell/')) for (const f of byName('neel-shell')) add(f, path)
-  const route = path.match(/^src\/app\/\((console|admin)\)\/(console|admin)\/([^/]+)/)
+  const route = path.match(/^src\/app\/\((console|admin|partner)\)\/(console|admin|partner)\/([^/]+)/)
   if (route) { for (const f of flows) if (f.src.includes(`/${route[2]}/${route[3]}`)) add(f, path); continue }
   if (path.startsWith('e2e/flows/')) { const f = flows.find((x) => x.file === basename(path)); if (f) add(f, path); continue }
   if (/^src\/(components|domains|lib)\//.test(path) || /src\/app\/(globals|base|shop|neel)\.css$/.test(path)) {

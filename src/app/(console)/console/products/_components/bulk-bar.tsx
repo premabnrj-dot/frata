@@ -38,7 +38,7 @@ export function BulkBar({ what, count, onSet, onClear }: {
         onClick={() => {
           const n = onSet({ price, stock, emptyOnly })
           const said = [n.price ? `Price set on ${n.price}` : '', n.stock ? `Stock set on ${n.stock}` : ''].filter(Boolean).join(', ')
-          announce(said ? `${said} ${Math.max(n.price, n.stock) === 1 ? 'variant' : 'variants'}.` : 'Nothing was empty: no row changed.')
+          announce(said ? `${said} ${Math.max(n.price, n.stock) === 1 ? 'variant' : 'variants'}.` : 'Nothing was empty. No row changed.')
         }}>Set</Button>
       <Button variant="ghost" size="sm" onClick={onClear}>Clear</Button>
     </div>

@@ -15,7 +15,7 @@ export type SupportReason = (typeof SUPPORT_REASONS)[number]
 export const SUPPORT_REASON_LABEL: Record<SupportReason, string> = {
   setup_help: 'Setup help',
   fix_problem: 'Fix a problem',
-  merchant_asked: 'The merchant asked',
+  merchant_asked: 'The store asked',
 }
 
 export type SessionTimes = { expiresAt: Date; endedAt: Date | null }

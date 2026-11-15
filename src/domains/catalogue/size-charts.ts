@@ -16,14 +16,14 @@ export type Preset = { name: string; chart: Chart }
 
 const rows = (sizes: string[], cols: number[][]) => sizes.map((size, i) => ({ size, values: cols.map((c) => c[i] ?? null) }))
 
-const HOW_TOP = 'Bust or chest: around the fullest part, tape level. Waist: around the narrowest part. Hip: around the fullest part. Measure over light clothing.'
+const HOW_TOP = 'Measure bust or chest around the fullest part, tape level. Measure the waist at its narrowest and the hips at their fullest. Measure over light clothing.'
 
 export const PRESETS: Record<string, Preset> = {
   womens_kurta: { name: 'Kurta set · Women', chart: { columns: ['Bust', 'Waist', 'Hip'], howToMeasure: HOW_TOP,
     rows: rows(['XS', 'S', 'M', 'L', 'XL', 'XXL'], [[81, 86, 91, 97, 102, 107], [66, 71, 76, 81, 86, 91], [89, 94, 99, 104, 109, 114]]) } },
-  mens_shirt: { name: 'Shirt · Men', chart: { columns: ['Chest', 'Waist', 'Shoulder'], howToMeasure: `${HOW_TOP} Shoulder: across the back, from one shoulder seam to the other.`,
+  mens_shirt: { name: 'Shirt · Men', chart: { columns: ['Chest', 'Waist', 'Shoulder'], howToMeasure: `${HOW_TOP} Measure the shoulder across the back, seam to seam.`,
     rows: rows(['S', 'M', 'L', 'XL', 'XXL'], [[97, 102, 107, 112, 117], [81, 86, 91, 97, 102], [43, 44.5, 46, 47.5, 49]]) } },
-  kids: { name: 'Kids', chart: { columns: ['Height', 'Chest'], howToMeasure: 'Height: standing straight, without shoes. Chest: around the fullest part, under the arms.',
+  kids: { name: 'Kids', chart: { columns: ['Height', 'Chest'], howToMeasure: 'Measure height standing straight, without shoes. Measure the chest around the fullest part, under the arms.',
     rows: rows(['2–3 Y', '3–4 Y', '4–5 Y', '5–6 Y', '6–7 Y', '7–8 Y'], [[95, 101, 107, 113, 119, 125], [53, 55, 57, 59, 61, 63]]) } },
   footwear: { name: 'Footwear', chart: { columns: ['Foot length'], howToMeasure: 'Stand on paper, mark the heel and the longest toe, measure between the marks. Between two sizes, take the larger.',
     rows: rows(['UK 4', 'UK 5', 'UK 6', 'UK 7', 'UK 8', 'UK 9', 'UK 10'], [[22.8, 23.5, 24.4, 25.2, 26.0, 26.8, 27.6]]) } },
@@ -70,7 +70,7 @@ export function cleanChart(c: Chart): { ok: true; chart: Chart } | { ok: false; 
     if (seen.has(size.toLowerCase())) return { ok: false, error: `Size ${size} is in the chart twice.` }
     seen.add(size.toLowerCase())
     const values = columns.map((_, i) => r.values[i] ?? null)
-    if (values.some((v) => v !== null && (!Number.isFinite(v) || v <= 0 || v > 300))) return { ok: false, error: `Size ${size}: measurements are in cm, between 1 and 300.` }
+    if (values.some((v) => v !== null && (!Number.isFinite(v) || v <= 0 || v > 300))) return { ok: false, error: `Size ${size} needs measurements in cm, from 1 to 300.` }
     out.push({ size, values })
   }
   if (out.length > 20) return { ok: false, error: 'Up to 20 sizes.' }

@@ -18,7 +18,7 @@ export default async function PhotosPage({ searchParams }: { searchParams: Promi
   const back = (await searchParams).from === 'import' ? { href: '/console/products/import', label: 'Import' } : { href: '/console/products', label: 'Products' }
   if (!isBlobConfigured()) return <><PageHeader title="Add photos" back={back} /><Panel title="Photo storage is not connected">Photos can be added once Frrata connects it on this deployment.</Panel></>
   const targets = await photoTargets(auth.membership.tenantId).catch((err) => { console.error('[photos page]', err instanceof Error ? err.name : 'error'); return null })
-  if (!targets) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!targets) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   if (!targets.length) {
     return (
       <>

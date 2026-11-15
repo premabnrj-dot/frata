@@ -40,7 +40,7 @@ function Rules({ rules, count, q, page, pages, fromSettings, canEdit }: Props) {
 
   const remove = async (pin: string) => {
     setBusy(pin)
-    const r = await removeRuleAction(pin).catch(() => ({ ok: false as const, error: 'We could not save that. Nothing was changed.' }))
+    const r = await removeRuleAction(pin).catch(() => ({ ok: false as const, error: 'We couldn’t save that. Nothing was changed.' }))
     setBusy(null)
     if (!r.ok) { toast({ text: r.error }); return }
     toast({ text: `Rule for ${pin} removed` })
@@ -115,7 +115,7 @@ function AddRule({ onClose, onDone }: { onClose: () => void; onDone: (pin: strin
   const save = async () => {
     setBusy(true); setError(null)
     const r = await addRuleAction({ pincode: pin, rule, codMax: rule === 'cod_max' ? Number(max.replace(/[₹,\s]/g, '')) || 0 : null, note: note.trim() || null })
-      .catch(() => ({ ok: false as const, error: 'We could not save that. Nothing was changed.' }))
+      .catch(() => ({ ok: false as const, error: 'We couldn’t save that. Nothing was changed.' }))
     setBusy(false)
     if (!r.ok) { setError(r.error); return }
     onDone(pin)
@@ -153,7 +153,7 @@ function ImportRules({ onClose, onDone }: { onClose: () => void; onDone: (n: num
     if (f.size > 256 * 1024) { setError('The file is over 256 KB. Split it into smaller files.'); return }
     const t = await f.text()
     setName(f.name); setBusy(true)
-    const r = await previewRulesAction(t).catch(() => ({ ok: false as const, error: 'We could not read the file.' }))
+    const r = await previewRulesAction(t).catch(() => ({ ok: false as const, error: 'We couldn’t read the file.' }))
     setBusy(false)
     if (!r.ok) { setError(r.error); return }
     setText(t); setPreview({ rows: r.rows, errors: r.errors })
@@ -161,7 +161,7 @@ function ImportRules({ onClose, onDone }: { onClose: () => void; onDone: (n: num
   const save = async () => {
     if (text === null) return
     setBusy(true)
-    const r = await importRulesAction(text).catch(() => ({ ok: false as const, error: 'We could not save that. Nothing was changed.' }))
+    const r = await importRulesAction(text).catch(() => ({ ok: false as const, error: 'We couldn’t save that. Nothing was changed.' }))
     setBusy(false)
     if (!r.ok) { setError(r.error); return }
     onDone(r.added ?? 0)

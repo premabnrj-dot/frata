@@ -204,10 +204,16 @@
 [data-shell-aside][data-rail="1"]:not([data-tip-off]) :is([data-nav], [data-rail-toggle]):is(:hover, :focus-visible) [data-nav-label] { opacity: 1; pointer-events: auto; }
 [data-shell-aside][data-rail="1"] [data-nav-count] { position: absolute; right: 5px; top: 5px; width: 7px; height: 7px; padding: 0; margin: 0; font-size: 0; line-height: 0; background: var(--warn-mark); }
 
-/* A phone (Neel § Screens · On a phone): body 15/22, titles 20/26. */
+/* Body text (Neel § Type: body 14/20; N3, the N1 Deviation closed): on a desktop, text a block sets no size for reads
+   14/20, as drawn; a phone reads 15/22 and titles 20/26 (§ On a phone). The store's preview keeps the store's own
+   size, as shoppers see it. */
+@media (min-width: 768px) {
+  [data-neel] { font-size: 14px; line-height: 20px; }
+}
 @media (max-width: 767px) {
   [data-neel] { font-size: 15px; line-height: 22px; --t-title: 20px; --t-title-lh: 26px; }
 }
+[data-neel] [data-store-theme] { font-size: 16px; line-height: 1.5; }
 
 /* Neel § Icons: one colour, the text's (neel on the current page). Rani is the mark's alone, so the nav's second stroke
    (globals.css [data-tinge]) is the text's colour here. */

@@ -4,6 +4,7 @@ import { and, desc, eq, gt, inArray, isNotNull, isNull, notInArray, sql } from '
 import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { refundDue, type StoredOrder } from '@/domains/orders/amounts'
 import { currentMethod, orderState, type OrderState } from '@/domains/orders/order-state'
+import { STATE_WORDS } from '@/domains/orders/state-words'
 import { resolveDelivery } from '@/domains/delivery/resolve'
 import { deliveryIn } from '@/lib/queries/delivery'
 import { applies, invoiceNumber, seriesFits, type CancelReason, type OrderAction } from '@/domains/orders/work'
@@ -57,14 +58,14 @@ async function lastBy(tx: Tx, tenantId: string, orderId: string, kinds: (typeof 
 }
 
 const NOT_NOW: Partial<Record<OrderState, string>> = {
-  confirmed: 'Already confirmed', paid: 'Paid online: it needs no confirming', packed: 'Already packed', cancelled: 'This order is cancelled',
-  refund_due: 'Its stock sold out before the payment: cancel it and refund in Razorpay', held: 'Already on hold',
-  awaiting_payment: 'Not an order yet: the online payment has not come in', payment_abandoned: 'Not an order: the online payment never came in',
+  confirmed: 'Already confirmed', paid: 'Paid online, so it needs no confirming', packed: 'Already packed', cancelled: 'This order is cancelled',
+  refund_due: 'Its stock sold out before the payment. Cancel it and refund in Razorpay', held: 'Already on hold',
+  awaiting_payment: 'Not an order yet. The online payment hasn’t come in', payment_abandoned: 'Not an order. The online payment never came in',
 }
 const refuse = async (tx: Tx, tenantId: string, orderId: string, action: OrderAction, state: OrderState): Promise<{ ok: false; error: string; by?: { email: string | null; at: Date } }> => {
   const kinds = state === 'confirmed' ? ['confirmed' as const] : state === 'held' ? ['held' as const] : state === 'packed' ? ['packed' as const] : state === 'cancelled' ? ['cancelled' as const] : []
   const by = kinds.length ? await lastBy(tx, tenantId, orderId, kinds) : undefined
-  return { ok: false, error: NOT_NOW[state] ?? `You cannot ${action} an order that is ${state.replace('_', ' ')}.`, ...(by ? { by } : {}) }
+  return { ok: false, error: NOT_NOW[state] ?? `You can’t ${action} an order that is “${STATE_WORDS[state]}”.`, ...(by ? { by } : {}) }
 }
 
 export async function confirm(tx: Tx, tenantId: string, actor: Actor, orderId: string, now = new Date()): Promise<Done> {
@@ -124,7 +125,7 @@ export async function undo(tx: Tx, tenantId: string, actor: Actor, eventId: stri
     .where(and(eq(orderEvents.tenantId, tenantId), eq(orderEvents.orderId, e.orderId), gt(orderEvents.at, e.at), notInArray(orderEvents.kind, ['note_added', 'edited']))).limit(1)
   const changed = async (): Promise<Done> => {
     const c = await current(tx, tenantId, e.orderId, now)
-    return { ok: false, error: c?.state === 'packed' ? 'Already packed — cancel it instead.' : 'This order changed since: open it to see what happened.' }
+    return { ok: false, error: c?.state === 'packed' ? 'Already packed. Cancel it instead.' : 'This order changed since. Open it to see what happened.' }
   }
   if (later) return changed()
   const at = moment(now)
@@ -143,7 +144,7 @@ export async function addNote(tx: Tx, tenantId: string, actor: Actor, orderId: s
   if (!text || text.length > 2000) return { ok: false, error: 'A note is 1 to 2,000 characters.' }
   const c = await current(tx, tenantId, orderId, now)
   if (!c) return { ok: false, error: 'Order not found.' }
-  if (!applies('note', c.state)) return { ok: false, error: 'Notes are for orders: this online payment never came in.' }
+  if (!applies('note', c.state)) return { ok: false, error: 'Notes are for orders. This online payment never came in.' }
   await tx.insert(orderNotes).values({ tenantId, orderId, body: text, authorUserId: actor.userId, authorEmail: actor.email, at: moment(now) })
   return { ok: true, eventId: await record(tx, tenantId, orderId, actor, 'note_added', moment(now)) }
 }
@@ -162,7 +163,7 @@ export async function pack(tx: Tx, tenantId: string, actor: Actor, orderId: stri
     .where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.orderId, orderId), editWaitingSql('"order_edits"', '"orders"'))).limit(1)
   if (waiting) return { ok: false, error: `Waiting for ${formatInr(Number(waiting.asked) as Paise)} from the shopper. Ship without the change to pack it as it was.` }
   const pre = await takeStock(tx, tenantId, orderId, 'preorder', soldOut)
-  if (pre.short) return { ok: false, error: 'The pre-ordered pieces are not in stock yet. Add the stock when they arrive, then pack.' }
+  if (pre.short) return { ok: false, error: 'The pre-ordered items aren’t in stock yet. Add the stock when they arrive, then pack.' }
   const kind = c.o.sellerGstin ? 'invoice' : 'bill'
   const fy = fiscalYear(now)
   const [s] = await tx.select({ series: shopSettings.invoiceSeries, prefix: shopSettings.orderPrefix, name: tenants.name, legalName: shopSettings.legalName, address: shopSettings.address, logo: shopSettings.docLogo, signatory: shopSettings.docSignatory, note: shopSettings.docNote }).from(tenants)
@@ -190,7 +191,7 @@ export type ContactEdit = Partial<{ customerName: string; phone: string; address
 export async function editContact(tx: Tx, tenantId: string, actor: Actor, orderId: string, edit: ContactEdit, now = new Date()): Promise<Done<{ fields: string[] }>> {
   const c = await current(tx, tenantId, orderId, now)
   if (!c) return { ok: false, error: 'Order not found.' }
-  if (!applies('edit', c.state)) return { ok: false, error: c.state === 'packed' ? 'Already packed: its slip and invoice keep this address.' : `This order is ${c.state.replace('_', ' ')}.` }
+  if (!applies('edit', c.state)) return { ok: false, error: c.state === 'packed' ? 'Already packed. Its slip and invoice keep this address.' : `This order is “${STATE_WORDS[c.state]}”. Its address can’t change now.` }
   const fields = Object.keys(edit).filter((k) => edit[k as keyof ContactEdit] !== undefined)
   if (!fields.length) return { ok: false, error: 'Nothing changed.' }
   // An unpaid pay-on-delivery order may not move to a pincode the shop turned pay on delivery off for: checkout refuses
@@ -204,7 +205,7 @@ export async function editContact(tx: Tx, tenantId: string, actor: Actor, orderI
     if (st) {
       const floor = { ...st, shippingFlat: Number(st.shippingFlat), freeShippingAbove: Number(st.freeShippingAbove), codMin: Number(st.codMin), codMax: Number(st.codMax), codCharge: Number(st.codCharge) }
       const t = resolveDelivery(edit.pincode, floor, (await deliveryIn(tx, tenantId, edit.pincode, now)).setup)
-      if (!t.deliverable) return { ok: false, error: `You don't deliver to ${edit.pincode}. Keep the address, or cancel.` }
+      if (!t.deliverable) return { ok: false, error: `You don’t deliver to ${edit.pincode}. Keep the address, or cancel.` }
       if (!t.cod.on) return { ok: false, error: `Pay on delivery is off for ${edit.pincode}. Ask them to pay online first, or cancel.` }
     }
   }
@@ -223,12 +224,12 @@ export async function cancel(tx: Tx, tenantId: string, actor: Actor, orderId: st
   Promise<Done<{ refund: number; backInStock: string[] }>> {
   const c = await current(tx, tenantId, orderId, now)
   if (!c) return { ok: false, error: 'Order not found.' }
-  if (!applies('cancel', c.state)) return c.state === 'cancelled' ? refuse(tx, tenantId, orderId, 'cancel', c.state) : { ok: false, error: applies('came_back', c.state) ? 'It has left the shop: when it comes back, mark it Came back.' : `This order is ${c.state.replace('_', ' ')}: it can no longer be cancelled.` }
+  if (!applies('cancel', c.state)) return c.state === 'cancelled' ? refuse(tx, tenantId, orderId, 'cancel', c.state) : { ok: false, error: applies('came_back', c.state) ? 'It has left the store. When it comes back, mark it Came back.' : `This order is “${STATE_WORDS[c.state]}”. It can’t be cancelled now.` }
   const note = c0.note?.trim().slice(0, 500) || null
   if (c0.reason === 'other' && !note) return { ok: false, error: 'Say why in a few words.' }
   // A shipment booked with the courier but not yet picked up (Ship S·1) is cancelled with the courier first.
   const [open] = await tx.select({ id: shipments.id }).from(shipments).where(and(eq(shipments.tenantId, tenantId), eq(shipments.orderId, orderId), isNull(shipments.endedAt))).limit(1)
-  if (open) return { ok: false, error: 'A shipment is booked for it: cancel the shipment first.' }
+  if (open) return { ok: false, error: 'A shipment is booked for it. Cancel the shipment first.' }
   const at = moment(now)
   // A change waiting for the shopper's payment (OE·2): read before the cancel ends it, so its held pieces go back on sale
   // (and the shop's sold-out marks with them) whatever "put the stock back" says (impact review 2026-11-12).

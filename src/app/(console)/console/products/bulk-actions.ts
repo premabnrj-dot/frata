@@ -48,7 +48,7 @@ export async function bulkStatus(input: unknown, statusInput: unknown): Promise<
     done(r.tenantId)
     return result(r.value)
   } catch (err) {
-    return failed('bulkStatus', err, 'We could not change them. Nothing was changed.')
+    return failed('bulkStatus', err, 'We couldn’t change them. Nothing was changed.')
   }
 }
 
@@ -86,7 +86,7 @@ export async function restoreStatus(input: unknown): Promise<{ ok: true; restore
     done(r.tenantId)
     return { ok: true, ...r.value }
   } catch (err) {
-    return failed('restoreStatus', err, 'We could not undo that. Nothing was changed.')
+    return failed('restoreStatus', err, 'We couldn’t undo that. Nothing was changed.')
   }
 }
 
@@ -112,7 +112,7 @@ export async function bulkDelete(input: unknown): Promise<BulkDelete | Fail> {
     done(r.tenantId)
     return { ok: true, deleted: r.value.deleted.length, kept: r.value.kept }
   } catch (err) {
-    return failed('bulkDelete', err, 'We could not delete them. Nothing was changed.')
+    return failed('bulkDelete', err, 'We couldn’t delete them. Nothing was changed.')
   }
 }
 
@@ -121,7 +121,7 @@ export async function bulkDelete(input: unknown): Promise<BulkDelete | Fail> {
  *  stock, SKUs or barcodes (made fresh on its first save), its address history or its status. */
 export async function duplicateProduct(input: unknown): Promise<{ ok: true; id: string; handle: string } | Fail> {
   const id = z.string().uuid().safeParse(input)
-  if (!id.success) return { ok: false, error: 'That product is not in your shop.' }
+  if (!id.success) return { ok: false, error: 'That product isn’t in your store.' }
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.duplicate', target: id.data }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
@@ -154,11 +154,11 @@ export async function duplicateProduct(input: unknown): Promise<{ ok: true; id: 
       return p!
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value) return { ok: false, error: 'That product is not in your shop.' }
+    if (!r.value) return { ok: false, error: 'That product isn’t in your store.' }
     done(r.tenantId)
     return { ok: true, id: r.value.id, handle: r.value.handle }
   } catch (err) {
-    return failed('duplicateProduct', err, 'We could not duplicate it. Nothing was changed.')
+    return failed('duplicateProduct', err, 'We couldn’t duplicate it. Nothing was changed.')
   }
 }
 
@@ -179,10 +179,10 @@ export async function addToCollection(input: unknown, collectionInput: unknown):
       return { added: added.length, name: c.name }
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value) return { ok: false, error: 'That collection is not in your shop.' }
+    if (!r.value) return { ok: false, error: 'That collection isn’t in your store.' }
     done(r.tenantId)
     return { ok: true, ...r.value }
   } catch (err) {
-    return failed('addToCollection', err, 'We could not add them. Nothing was changed.')
+    return failed('addToCollection', err, 'We couldn’t add them. Nothing was changed.')
   }
 }

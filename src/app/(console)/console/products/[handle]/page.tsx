@@ -50,12 +50,12 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
   }
   if (!/^[a-z0-9-]{1,100}$/.test(handle)) notFound()
   const found = await productIdByHandle(tenantId, handle).catch(() => undefined)
-  if (found === undefined) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (found === undefined) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   if (!found) notFound()
   if (found.handle !== handle) redirect(`/console/products/${found.handle}`)
 
   const data = await productForEdit(tenantId, found.id, auth.membership.role).catch((err) => { console.error('[product]', err instanceof Error ? err.name : err); return undefined })
-  if (data === undefined) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (data === undefined) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   if (!data || !data.shop) notFound()
   const { product: p, shop } = data
   // The editor gets rupees as text; the cost travels as `cost` (the merchant's own), and only to whoever seesCosts.
@@ -119,7 +119,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
       types={data.types}
       video={<VideoPanel productId={p.id} title={p.title} onShop={ON_SHOP} initial={video ? productVideoView(video, now) : null}
         // A failed read never offers "Add a video" (a start would only meet "One video per product").
-        blocked={video === undefined ? { words: 'We could not load the video. Reload the page.', apps: false } : va.usable ? null : { words: refusal('product_video', va), apps: va.why === 'off' }} />}
+        blocked={video === undefined ? { words: 'We couldn’t load the video. Reload the page.', apps: false } : va.usable ? null : { words: refusal('product_video', va), apps: va.why === 'off' }} />}
       share={share ? <ShareSheet share={share} target={{ kind: 'product', id: p.id }} /> : null}
     />
     </NowProvider>

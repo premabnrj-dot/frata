@@ -108,9 +108,9 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
   const head = (which: TabId, cols: React.ReactNode) => (
     <thead className="border-b border-border bg-sunk text-left text-small text-muted-foreground [&_th]:h-9 [&_th]:px-3 [&_th]:font-medium">
       <tr>
-        <th className="w-10"><input id={`${base}-all-${which}`} type="checkbox" aria-label="Select every variant" checked={picked.size === all.length && all.length > 0}
+        <th className="w-10"><input id={`${base}-all-${which}`} type="checkbox" aria-label="Select every size and colour" checked={picked.size === all.length && all.length > 0}
           ref={(el) => { if (el) el.indeterminate = picked.size > 0 && picked.size < all.length }} onChange={(e) => toggle(all, e.target.checked)} /></th>
-        <th>Variant</th>{cols}
+        <th>Size and colour</th>{cols}
       </tr>
     </thead>
   )

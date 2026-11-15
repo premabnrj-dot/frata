@@ -39,9 +39,9 @@ export type EditInput = { want: Want[]; reasons: Record<string, EditReason | und
 export type Edited = Done<{ total: number; soldOut: string[]; backInStock: string[]; asked?: number; refund?: number }> | { ok: false; error: string; total?: number }
 
 /** A support visit changes no order's items: the shop's own people do (it moves stock and the amount collected). */
-const SUPPORT = 'A support visit can\'t change an order\'s items.'
+const SUPPORT = 'A support visit can’t change an order\'s items.'
 
-/** Why this order's items can't change now (cannotEdit), with a change waiting for payment read under its lock. */
+/** Why this order's items can’t change now (cannotEdit), with a change waiting for payment read under its lock. */
 async function notEditable(tx: Tx, tenantId: string, orderId: string, c: NonNullable<Awaited<ReturnType<typeof current>>>): Promise<string | null> {
   return cannotEdit(c.state, { waiting: !!(await waitingEdit(tx, tenantId, orderId)) })
 }
@@ -66,7 +66,7 @@ export async function editItems(tx: Tx, tenantId: string, actor: Actor, orderId:
       // Paid online, Save must say what it showed (security review 2026-11-12 L1): never moved without it.
       if ((settle.kind === 'refund' || settle.kind === 'ask') && input.expectedDue === undefined) throw new Refused('What it refunds or asks for changed. Check it, then save again.', p.total.after)
       if (input.expectedDue !== undefined && dueOf(settle) !== input.expectedDue) throw new Refused('What it refunds or asks for changed. Check it, then save again.', p.total.after)
-      if (settle.kind === 'too_old') throw new Refused('Paid over 6 months ago: Razorpay can\'t refund it. Keep the order as it was.')
+      if (settle.kind === 'too_old') throw new Refused('Paid over 6 months ago. Razorpay can’t refund it. Keep the order as it was.')
       if (settle.kind === 'ask') return requestPayment(sp, tenantId, actor, orderId, p, read, settle.amount, input, now)
 
       const w = await applyPlan(sp, tenantId, orderId, p, read, now)
@@ -123,8 +123,8 @@ export async function undoEdit(tx: Tx, tenantId: string, actor: Actor, eventId: 
       // Its refund, not yet with Razorpay, is cancelled first; one already sent means the edit stands. One that settled an
       // earlier failed refund stands too: undone, that money would be owed with nothing to send it.
       const [settled] = await sp.select({ id: orderRefunds.id }).from(orderRefunds).where(and(eq(orderRefunds.tenantId, tenantId), eq(orderRefunds.supersededBy, e.id))).limit(1)
-      if (settled) throw new Refused('It settled a refund that wasn\'t sent: this change can\'t be undone. Edit the items instead.')
-      if (!(await cancelEditRefunds(sp, tenantId, e.id, now))) throw new Refused('The refund has gone to Razorpay: this change can\'t be undone.')
+      if (settled) throw new Refused('It settled a refund that wasn’t sent. This change can’t be undone. Edit the items instead.')
+      if (!(await cancelEditRefunds(sp, tenantId, e.id, now))) throw new Refused('The refund has gone to Razorpay. This change can’t be undone.')
       const sides = await sp.select().from(orderEditLines).where(and(eq(orderEditLines.tenantId, tenantId), eq(orderEditLines.editId, e.id)))
       // An edit that applied at once names every line it saw and left (only a waiting one leaves a line unnamed).
       const named = sides.map((s) => ({ ...s, orderLineId: s.orderLineId! }))
@@ -146,7 +146,7 @@ export async function undoEdit(tx: Tx, tenantId: string, actor: Actor, eventId: 
       const restored = await sp.select().from(orderLines).where(and(eq(orderLines.tenantId, tenantId), eq(orderLines.orderId, e.orderId), isNull(orderLines.removedAt)))
       const soldOut: string[] = []
       const take = restored.filter((l) => comes.includes(l.id) && l.kind === 'in_stock').map((l) => l.id)
-      if ((await takeStockLines(sp, tenantId, take, soldOut)).short) throw new Refused('A piece it had sold out since: Undo can\'t put it back. Edit the items instead.')
+      if ((await takeStockLines(sp, tenantId, take, soldOut)).short) throw new Refused('An item on it sold out since. Undo can’t put it back. Edit the items instead.')
 
       if (e.added.length) await sp.update(orderDiscounts).set({ removedAt: stamp }).where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, e.orderId), inArray(orderDiscounts.id, e.added)))
       if (e.removed.length) await sp.update(orderDiscounts).set({ removedAt: null }).where(and(eq(orderDiscounts.tenantId, tenantId), eq(orderDiscounts.orderId, e.orderId), inArray(orderDiscounts.id, e.removed)))
@@ -154,7 +154,7 @@ export async function undoEdit(tx: Tx, tenantId: string, actor: Actor, eventId: 
       const way = currentMethod(c.o)
       const back = offers.filter((o) => e.removed.includes(o.id) && usesOn(way)(o)).map((o) => ({ discountId: o.discountId, amount: Number(o.amount), title: o.title }))
       const gone = await stillFit(sp, tenantId, e.orderId, back, now)
-      if (gone) throw new Refused(`${gone} ran out since: Undo would give it again. Edit the items instead.`)
+      if (gone) throw new Refused(`${gone} ran out since. Undo would give it again. Edit the items instead.`)
 
       // The lines as they were (the before rows' product discounts), in position order, priced as they had been.
       const lines = [...restored].sort((a, b) => a.position - b.position || (a.id < b.id ? -1 : 1))

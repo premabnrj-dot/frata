@@ -80,7 +80,7 @@ describe('planEdit', () => {
     const tight = { ...f, room: { ...f.room, al: 1 } }
     const two = planEdit(tight, [{ line: 'line-am', variantId: 'al', qty: 2 }, { line: 'line-dh', variantId: 'dh', qty: 1 }, { line: 'line-lm', variantId: 'lm', qty: 1 }], {})
     expect(two).toEqual({ ok: false, problem: { kind: 'no_room', title: 'Tpa', values: ['L'], left: 1 } })
-    expect(problemWords((two as { problem: Parameters<typeof problemWords>[0] }).problem, inr)).toBe('Tpa · L: only 1 left.')
+    expect(problemWords((two as { problem: Parameters<typeof problemWords>[0] }).problem, inr)).toBe('Only 1 of Tpa · L left.')
     // Fewer of the same piece needs no room, even sold out.
     const none = { ...f, room: {} }
     expect(planEdit(none, [{ line: 'line-am', variantId: 'am', qty: 1 }, { line: 'line-dh', variantId: 'dh', qty: 1 }, { line: 'line-lm', variantId: 'lm', qty: 1 }].slice(0, 2), { 'line-lm': 'customer_asked' }).ok).toBe(true)
@@ -151,7 +151,7 @@ describe('planEdit', () => {
   it('paid online (OE·2): priced as paid online — no COD fee, its order offer — as checkout\'s online card; waiting refuses another edit', () => {
     const f = placed(bag, [festive])
     const online: EditFacts = { ...f, order: { ...f.order, way: 'prepaid' }, paid: { payments: [{ id: 'pay_A', amount: f.order.total, at: now }], refunds: [], now } }
-    // A paid order whose payment can't be read moves no money: refused.
+    // A paid order whose payment can’t be read moves no money: refused.
     expect(planEdit({ ...online, paid: null }, keep(f), {})).toEqual({ ok: false, problem: { kind: 'payment_unknown' } })
     const want: Want[] = [{ line: 'line-am', variantId: 'am', qty: 1 }, { line: 'line-lm', variantId: 'lm', qty: 1 }]
     const r = planEdit(online, want, { 'line-dh': 'customer_asked' })
@@ -162,7 +162,7 @@ describe('planEdit', () => {
     expect(planEdit({ ...online, rules: { ...online.rules, codMax: 1000 } }, [...want, { line: null, variantId: 'ax', qty: 1 }], { 'line-dh': 'other' }).ok).toBe(true)
     expect(cannotEdit('paid', { waiting: true })).toBe('Waiting for the shopper to pay for the last change. Wait, or ship without the change.')
     expect(cannotEdit('paid', { waiting: false })).toBeNull()
-    expect(cannotEdit('packed', { waiting: false })).toBe('Already packed: its slip and invoice keep these items.')
+    expect(cannotEdit('packed', { waiting: false })).toBe('Already packed. Its slip and invoice keep these items.')
   })
 
   it('names what changed between two pieces', () => {

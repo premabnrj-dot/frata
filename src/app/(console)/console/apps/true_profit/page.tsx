@@ -28,7 +28,7 @@ export const dynamic = 'force-dynamic'
 // owners and admins (and a partner before handover) only; everyone else reads a panel saying so. Rule 0: labels only.
 // =============================================================================
 
-const TABS = [{ key: 'products', label: 'Products' }, { key: 'pincodes', label: 'Pincodes' }]
+const TABS = [{ key: 'products', label: 'Products' }, { key: 'pincodes', label: 'PIN codes' }]
 const SORTS = { loses: 'Loses most', earns: 'Earns most', returns: 'Returns most' } as const
 type Sort = keyof typeof SORTS
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
@@ -67,7 +67,7 @@ export default async function TrueProfitPage({ searchParams }: { searchParams: P
     tab === 'products' && open ? variantsFor(auth.membership.tenantId, role, period, open, now) : Promise.resolve(null),
   ]).catch((err) => { console.error('[tp]', errName(err)); return [undefined, null] as const })
   if (d === undefined) return home(<Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>)
-  if (d === null) return home(<Panel title="Owners and admins see costs" />)
+  if (d === null) return home(<Panel title="Only owners and managers see costs" />)
 
   const q = (o: Record<string, string | number | null>) => {
     const p = new URLSearchParams({ ...(tab !== 'overview' ? { tab } : {}), ...(period !== 30 ? { days: String(period) } : {}) })
@@ -121,8 +121,8 @@ export default async function TrueProfitPage({ searchParams }: { searchParams: P
         {periods}
         <div className="flex flex-wrap gap-2"><Badge tone={losing ? 'warn' : 'neutral'}>COD loses money · {losing}</Badge><Badge tone="neutral">Top 50</Badge></div>
         {d.pincodes.length === 0 ? <Panel title="No PIN code with 5 orders yet" /> : (
-          <DataTable label="Pincodes">
-            <DataTableHead><th>Pincode</th><th>Place</th><th className="text-right">COD orders</th><th className="text-right">Returned</th><th className="text-right">₹ kept · COD</th><th className="text-right">₹ kept · prepaid</th></DataTableHead>
+          <DataTable label="PIN codes">
+            <DataTableHead><th>PIN code</th><th>Place</th><th className="text-right">COD orders</th><th className="text-right">Returned</th><th className="text-right">₹ kept · COD</th><th className="text-right">₹ kept · prepaid</th></DataTableHead>
             <DataTableBody>
               {d.pincodes.map((p) => (
                 <DataTableRow key={p.pincode}>
@@ -149,7 +149,7 @@ export default async function TrueProfitPage({ searchParams }: { searchParams: P
   const earns = [...d.products].filter((p) => p.kept > 0).sort((a, b) => b.kept - a.kept).slice(0, 3)
   const loses = [
     ...d.products.filter((p) => p.kept < 0).map((p) => ({ label: p.name, kept: p.kept, href: q({ tab: 'products', open: p.id }) })),
-    ...d.pincodes.filter((p) => p.codLoses).map((p) => ({ label: `Pincode ${p.pincode} · COD`, kept: p.codKept!, href: q({ tab: 'pincodes' }) })),
+    ...d.pincodes.filter((p) => p.codLoses).map((p) => ({ label: `PIN code ${p.pincode} · COD`, kept: p.codKept!, href: q({ tab: 'pincodes' }) })),
   ].sort((a, b) => a.kept - b.kept).slice(0, 3)
   const overall = rateOf(d.returned, d.delivered + k.rto.n)
   return home(

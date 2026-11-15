@@ -23,7 +23,7 @@ import { errName } from '@/lib/log'
 // =============================================================================
 
 type Result = { ok: true } | { ok: false; error: string }
-const FAILED = 'We could not save that. Nothing was changed.'
+const FAILED = 'We couldn’t save that. Nothing was changed.'
 const rupees = z.number().min(0).max(1_00_000)
 const paise = (r: number) => Math.round(r * 100)
 
@@ -92,7 +92,7 @@ export async function saveZoneAction(input: unknown): Promise<Result> {
       preset = z0.preset
     } else {
       const [c] = await tx.execute<{ n: number; next: number }>(sql`select count(*)::int as n, coalesce(max(position) + 1, 0)::int as next from ${deliveryZones} where tenant_id = ${t}`)
-      if ((c?.n ?? 0) >= MAX_ZONES) return `A shop can have up to ${MAX_ZONES} zones.`
+      if ((c?.n ?? 0) >= MAX_ZONES) return `A store can have up to ${MAX_ZONES} zones.`
       if ((c?.next ?? 0) > 49) return 'Remove a zone first.'
       const [z1] = await tx.insert(deliveryZones).values({ tenantId: t, position: c?.next ?? 0, preset: null, ...cols }).returning({ id: deliveryZones.id })
       id = z1!.id
@@ -101,7 +101,7 @@ export async function saveZoneAction(input: unknown): Promise<Result> {
       // The zone's own list replaces what it had; a PIN code can be in one zone only, and the shop holds ≤ 5,000.
       await tx.delete(deliveryZonePins).where(and(eq(deliveryZonePins.tenantId, t), eq(deliveryZonePins.zoneId, id!)))
       const [c] = await tx.execute<{ n: number }>(sql`select count(*)::int as n from ${deliveryZonePins} where tenant_id = ${t}`)
-      if ((c?.n ?? 0) + own.pins.length > MAX_PINS) return `A shop's zones can list up to ${MAX_PINS.toLocaleString('en-IN')} PIN codes.`
+      if ((c?.n ?? 0) + own.pins.length > MAX_PINS) return `A store’s zones can list up to ${MAX_PINS.toLocaleString('en-IN')} PIN codes.`
       if (own.pins.length) {
         const taken = await tx.execute<{ pin: string; name: string }>(sql`select p.pin, z.name from ${deliveryZonePins} p join ${deliveryZones} z on z.id = p.zone_id and z.tenant_id = p.tenant_id
           where p.tenant_id = ${t} and p.pin in (select jsonb_array_elements_text(${JSON.stringify(own.pins)}::jsonb)) limit 3`)
@@ -149,7 +149,7 @@ export async function addRuleAction(input: unknown): Promise<Result> {
   const v = p.data
   return write('delivery.rule.add', { pincode: v.pincode, rule: v.rule }, async (tx, t) => {
     const [c] = await tx.execute<{ n: number }>(sql`select count(*)::int as n from ${deliveryRules} where tenant_id = ${t} and pincode <> ${v.pincode}`)
-    if ((c?.n ?? 0) >= MAX_RULES) return `A shop can have up to ${MAX_RULES.toLocaleString('en-IN')} PIN code rules.`
+    if ((c?.n ?? 0) >= MAX_RULES) return `A store can have up to ${MAX_RULES.toLocaleString('en-IN')} PIN code rules.`
     const row = { tenantId: t, pincode: v.pincode, rule: v.rule, codMax: v.codMax ? paise(v.codMax) : null, note: v.note?.replace(/[\u0000-\u001f\u007f]/g, ' ') || null }
     await tx.insert(deliveryRules).values(row).onConflictDoUpdate({ target: [deliveryRules.tenantId, deliveryRules.pincode], set: { rule: row.rule, codMax: row.codMax, note: row.note } })
     return null
@@ -188,7 +188,7 @@ export async function importRulesAction(text: unknown): Promise<Result & { added
   if (!rows.length) return { ok: false, error: errors[0] ?? 'No rules in the file.', errors }
   const r = await write('delivery.rules.import', { rows: rows.length, errors: errors.length }, async (tx, t) => {
     const [c] = await tx.execute<{ n: number }>(sql`select count(*)::int as n from ${deliveryRules} where tenant_id = ${t} and pincode not in (select jsonb_array_elements_text(${JSON.stringify(rows.map((x) => x.pincode))}::jsonb))`)
-    if ((c?.n ?? 0) + rows.length > MAX_RULES) return `A shop can have up to ${MAX_RULES.toLocaleString('en-IN')} PIN code rules.`
+    if ((c?.n ?? 0) + rows.length > MAX_RULES) return `A store can have up to ${MAX_RULES.toLocaleString('en-IN')} PIN code rules.`
     await tx.execute(sql`insert into ${deliveryRules} (tenant_id, pincode, rule, cod_max, note)
       select ${t}::uuid, x.pincode, x.rule, x.cod_max, x.note
         from jsonb_to_recordset(${JSON.stringify(rows.map((x) => ({ pincode: x.pincode, rule: x.rule, cod_max: x.codMax, note: x.note })))}::jsonb) as x(pincode text, rule text, cod_max bigint, note text)
@@ -214,7 +214,7 @@ export async function addHolidayAction(input: unknown): Promise<Result> {
   if (!p.success) return { ok: false, error: 'Pick a day and name it.' }
   return write('delivery.holiday.add', { day: p.data.day }, async (tx, t) => {
     const [c] = await tx.execute<{ n: number }>(sql`select count(*)::int as n from ${shopHolidays} where tenant_id = ${t}`)
-    if ((c?.n ?? 0) >= MAX_HOLIDAYS) return `A shop can have up to ${MAX_HOLIDAYS} holidays.`
+    if ((c?.n ?? 0) >= MAX_HOLIDAYS) return `A store can have up to ${MAX_HOLIDAYS} holidays.`
     await tx.insert(shopHolidays).values({ tenantId: t, day: p.data.day, name: p.data.name }).onConflictDoUpdate({ target: [shopHolidays.tenantId, shopHolidays.day], set: { name: p.data.name } })
     return null
   })

@@ -31,7 +31,7 @@ type Out<T = object> = ({ ok: true } & T) | Fail
 type Started = { ok: true; attempt: string; tenantId: string; userId: string; prep: Record<string, unknown> }
 const FIELD = 'gsp_session'
 const OFF: Fail = { ok: false, error: 'Filing from Frrata isn’t switched on. Download the files for your CA.' }
-const SUPPORT: Fail = { ok: false, error: 'Frrata support can’t file a shop’s return.' }
+const SUPPORT: Fail = { ok: false, error: 'Frrata support can’t file a store’s return.' }
 /** A begin() that didn't start, as its failure; null when it started. */
 const failed = (b: { ok: true; value: Started | Fail } | Fail): Fail | null => (!b.ok ? b : !b.value.ok ? b.value : null)
 
@@ -76,7 +76,7 @@ export async function gstConnect(name: unknown): Promise<Out<{ txn: string }>> {
   const username = str(name, 60)
   const g = gsp()
   if (!g) return OFF
-  if (!USERNAME_SHAPE.test(username)) return { ok: false, error: 'Your GST portal username: letters, digits and . _ -' }
+  if (!USERNAME_SHAPE.test(username)) return { ok: false, error: 'Use letters, digits and . _ - in your GST portal username.' }
   const b = await begin('connect', null, async (tx, tenantId) => {
     if (!(await withinLimit(LIMITS.gstOtpShop, tenantId, new Date(), true))) return { ok: false, error: 'Too many OTPs this hour. Try again later.' }
     const [shop] = await tx.select({ gstin: shopSettings.gstin }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId))
@@ -129,7 +129,7 @@ type Ready = { gstin: string; fp: string; json: unknown; ours: Liability; sessio
 async function readyFor(tx: Tx, tenantId: string, key: string, now: Date): Promise<Out<Ready>> {
   const d = await gstPeriodIn(tx, tenantId, key, now)
   if (!d || d.period.key !== key) return { ok: false, error: 'That isn’t a period you can file yet.' }
-  if (!d.shop.gstin || d.shop.scheme !== 'regular') return { ok: false, error: 'GSTR-1 is for shops on the regular GST scheme.' }
+  if (!d.shop.gstin || d.shop.scheme !== 'regular') return { ok: false, error: 'GSTR-1 is for stores on the regular GST scheme.' }
   const s = await sessionOf(tx, tenantId, d.shop.gstin, now)
   if (!s) return { ok: false, error: words('session_expired') }
   const [f] = await tx.select().from(gstFilings).where(and(eq(gstFilings.tenantId, tenantId), eq(gstFilings.gstin, d.shop.gstin), eq(gstFilings.period, key)))

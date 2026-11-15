@@ -24,8 +24,8 @@ export function SupportBanner({ storeName, visit, now }: {
       </span>
       <span className="hidden min-w-0 truncate opacity-90 lg:inline">{why}</span>
       <span className="ml-auto shrink-0 font-num">{left} min<span className="hidden md:inline"> left</span></span>
-      <Link href={`/admin/merchants/${visit.tenantId}`} aria-label="Back to Admin" className="inline-flex min-h-6 shrink-0 items-center font-medium underline">
-        <span className="md:hidden">Admin</span><span className="hidden md:inline">Back to Admin</span>
+      <Link href={`/admin/merchants/${visit.tenantId}`} aria-label="Back to Frrata Admin" className="inline-flex min-h-6 shrink-0 items-center font-medium underline">
+        <span className="md:hidden">Frrata Admin</span><span className="hidden md:inline">Back to Frrata Admin</span>
       </Link>
       <form action={endSupportAction} className="shrink-0">
         <button type="submit" aria-label="End now" className="h-8 rounded-md bg-support-foreground px-3 font-semibold text-support">End<span className="hidden md:inline"> now</span></button>

@@ -40,6 +40,6 @@ export async function setProductsTax(ids: string[], input: { hsn: string; uqc: s
   } catch (err) {
     if (err instanceof Stop) return { ok: false, error: err.error }
     console.error('[setProductsTax]', errName(err))
-    return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
+    return { ok: false, error: 'We couldn’t save. Nothing was changed. Try again in a minute.' }
   }
 }

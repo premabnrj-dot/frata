@@ -95,7 +95,7 @@ describe.skipIf(!host)('saving a product (the editor)', () => {
     expect((await m.db.variantsOf(state.tenantId, b)).map((v) => v.sku)).toEqual(['KS-LINKUR-M-2'])
 
     // Another product's SKU, typed in lower case: refused, nothing changed.
-    expect(await m.save(b, 2, input('linen-kurta-2', ['M'], [cell(['M'], { sku: 'ks-linkur-l' })]))).toEqual({ ok: false, error: 'SKU ks-linkur-l is already used by another product in your shop.', errors: { 'v:M:sku': 'Used by another product.' } })
+    expect(await m.save(b, 2, input('linen-kurta-2', ['M'], [cell(['M'], { sku: 'ks-linkur-l' })]))).toEqual({ ok: false, error: 'SKU ks-linkur-l is already used by another product in your store.', errors: { 'v:M:sku': 'Used by another product.' } })
     expect((await m.db.variantsOf(state.tenantId, b)).map((v) => v.sku)).toEqual(['KS-LINKUR-M-2'])
     // Its own SKUs swapped in one save; a typed SKU is kept as typed.
     expect(await m.save(a, 2, input('linen-kurta', ['M', 'L'], [cell(['M'], { sku: 'KS-LINKUR-L' }), cell(['L'], { sku: 'KS-LINKUR-M' })]))).toMatchObject({ ok: true, version: 3 })
@@ -123,7 +123,7 @@ describe.skipIf(!host)('saving a product (the editor)', () => {
     expect(await m.save(a, 1, input('cotton-dupatta', [], [cell([], { gtin: EAN })]))).toMatchObject({ ok: true })
     expect(await m.save(a, 2, input('cotton-dupatta', [], [cell([], { gtin: EAN, price: '1499' })]))).toMatchObject({ ok: true })
     expect((await m.db.variantsOf(state.tenantId, a)).map((v) => [v.gtin, v.price])).toEqual([[EAN, 149900]])
-    expect(await m.save(b, 1, input('silk-dupatta', [], [cell([], { gtin: EAN })]))).toEqual({ ok: false, error: `Barcode ${EAN} is already on another product in your shop.`, errors: { 'v::gtin': 'On another product.' } })
+    expect(await m.save(b, 1, input('silk-dupatta', [], [cell([], { gtin: EAN })]))).toEqual({ ok: false, error: `Barcode ${EAN} is already on another product in your store.`, errors: { 'v::gtin': 'On another product.' } })
     expect((await m.db.variantsOf(state.tenantId, b)).map((v) => v.gtin)).toEqual([null])
   })
 

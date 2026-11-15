@@ -20,7 +20,7 @@ import { draftOf } from '@/lib/themes/pages'
 // =============================================================================
 
 type R<T = object> = ({ ok: true } & T) | { ok: false; error: string }
-const SUPPORT = 'Frrata support can look, not change the shop’s pages.'
+const SUPPORT = 'Frrata support can look, not change the store’s pages.'
 const lock = (tx: Parameters<Parameters<typeof asMember>[2]>[0], t: string) => tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`look:${t}`}))`)
 /** A draft as bytes, below the page's 32 kB check (words checked first, so the owner reads why). */
 const MAX_DRAFT_BYTES = 30_000
@@ -34,9 +34,9 @@ export async function addPageAction(input: unknown): Promise<R<{ id: string; ver
     const t = auth.membership.tenantId
     await lock(tx, t)
     const rows = await tx.select({ draft: shopPages.draft, template: shopPages.template, removedAt: shopPages.removedAt }).from(shopPages).where(eq(shopPages.tenantId, t))
-    if (rows.length >= 20) return { error: 'A shop has at most 20 pages. Remove one first.' }
+    if (rows.length >= 20) return { error: 'A store has at most 20 pages. Remove one first.' }
     // One FAQ (a FAQ removed at a publish no longer counts; one marked for removal does until that publish).
-    if (p.data.template === 'faq' && rows.some((x) => x.template === 'faq' && !x.removedAt)) return { error: 'Your shop has its FAQ already. Publish to finish removing it first.' }
+    if (p.data.template === 'faq' && rows.some((x) => x.template === 'faq' && !x.removedAt)) return { error: 'Your store has its FAQ already. Publish to finish removing it first.' }
     const title = p.data.template === 'faq' ? 'Questions, answered' : 'Our story'
     const taken = new Set(rows.map((x) => (x.draft as { handle?: string }).handle))
     const base = p.data.template === 'faq' ? 'faq' : handleOf(title)
@@ -68,7 +68,7 @@ export async function savePageAction(input: unknown): Promise<R<{ version: numbe
     const wanted = prunePage(row.template as PageTemplate, { ...p.data.draft, handle: fixed ?? p.data.draft.handle })
     // Every photo is this shop's own (its theme folder or its product photos: security review M3).
     const fill = cleanFill(wanted.fill, t, storeHost(BLOB_STORE_ID))
-    if (!fill) return { error: 'A photo didn’t come from this shop. Upload it again.' }
+    if (!fill) return { error: 'A photo didn’t come from this store. Upload it again.' }
     const draft = { ...wanted, fill }
     if (new TextEncoder().encode(JSON.stringify(draft)).length * 1.1 > MAX_DRAFT_BYTES) return { error: 'This page holds too many words. Shorten some.' }
     // Another page's address, checked inside the lock (so the reply is words, not a database error: security L1).

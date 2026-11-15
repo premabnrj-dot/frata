@@ -49,14 +49,14 @@ export function StatusCard({ productId, status, publishAt, ready, feed = [], dir
     if (dirty) { if (!saveFirst || !(await saveFirst())) return }
     const r = await setStatus(productId, to, to === 'active' ? at : null)
     if (!r.ok) { toast.error(r.error); return }
-    toast.ok(to === 'active' && !at ? 'Published. Your shop shows it now.' : 'Done.'); router.refresh()
+    toast.ok(to === 'active' && !at ? 'Published. Your store shows it now.' : 'Done.'); router.refresh()
   })
   const words = to === 'active' ? (later ? 'Schedule' : status === 'active' ? 'Go live now' : 'Publish') : to === 'unlisted' ? 'Make unlisted' : 'Move to draft'
 
   if (status === 'archived') {
     return (
       <Section ariaLabel="Status">
-        <p className="text-sm"><span className="font-medium">Archived.</span> <span className="text-muted-foreground">Gone from your shop.</span></p>
+        <p className="text-sm"><span className="font-medium">Archived.</span> <span className="text-muted-foreground">Gone from your store.</span></p>
         <Button variant="secondary" className="w-full" disabled={pending} onClick={() => apply('draft')}>Unarchive</Button>
       </Section>
     )

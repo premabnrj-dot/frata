@@ -15,5 +15,5 @@ export async function POST(request: Request) {
   try {
     const r = await consentToDrops(g.tenantId, g.body.o, g.body.t)
     return r === 'bad_link' ? reply({ error: 'This link has expired.' }, 404) : reply({ ok: true })
-  } catch (err) { console.error('[shop/email-drops]', errName(err)); return reply({ error: 'We could not save that. Try again.' }, 500) }
+  } catch (err) { console.error('[shop/email-drops]', errName(err)); return reply({ error: 'We couldn’t save that. Try again.' }, 500) }
 }

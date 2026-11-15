@@ -13,8 +13,8 @@ import { CAN_INVITE_ACCOUNTANT } from '@/domains/tenancy/roles'
 // visit has none, and the definer function refuses it too). The tenant is requireMember's, the uid getUser()'s.
 
 const SENTENCES: Record<string, string> = {
-  not_owner: 'Only the shop’s owner can remove its partner.',
-  no_partner: 'This shop has no partner now.',
+  not_owner: 'Only the store’s owner can remove its partner.',
+  no_partner: 'This store has no partner now.',
 }
 
 export async function removeShopPartner(): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -24,19 +24,19 @@ export async function removeShopPartner(): Promise<{ ok: true } | { ok: false; e
       return removePartner(tx, auth.membership.tenantId, auth.userId)
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value.ok) return { ok: false, error: SENTENCES[r.value.error] ?? 'We could not remove the partner. Nothing was changed.' }
+    if (!r.value.ok) return { ok: false, error: SENTENCES[r.value.error] ?? 'We couldn’t remove the partner. Nothing was changed.' }
     revalidatePath('/console/settings/people')
     return { ok: true }
   } catch (err) {
     console.error('[removeShopPartner]', errName(err))
-    return { ok: false, error: 'We could not remove the partner. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t remove the partner. Nothing was changed.' }
   }
 }
 
 // ── The accountant (GST plan phase 3): owners and admins invite and remove one; never a Frrata support visit. ──
 const ACCOUNTANT: Record<string, string> = {
-  not_manager: 'Only the shop’s owner or an admin can do that.', bad_email: 'Check the email address.',
-  already_member: 'That person already works on this shop.', no_accountant: 'That person isn’t this shop’s accountant now.', wrong_shop: 'Reload the page and try again.',
+  not_manager: 'Only the store’s owner or a manager can do that.', bad_email: 'Check the email address.',
+  already_member: 'That person already works on this store.', no_accountant: 'That person isn’t this store’s accountant now.', wrong_shop: 'Reload the page and try again.',
 }
 const UUID = /^[0-9a-f-]{36}$/
 
@@ -50,12 +50,12 @@ export async function inviteShopAccountant(email: string): Promise<{ ok: true } 
       return inviteAccountant(tx, auth.membership.tenantId, auth.userId, e)
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value.ok) return { ok: false, error: ACCOUNTANT[r.value.error] ?? 'We could not send the invite. Nothing was changed.' }
+    if (!r.value.ok) return { ok: false, error: ACCOUNTANT[r.value.error] ?? 'We couldn’t send the invite. Nothing was changed.' }
     revalidatePath('/console/settings/people')
     return { ok: true }
   } catch (err) {
     console.error('[inviteShopAccountant]', errName(err))
-    return { ok: false, error: 'We could not send the invite. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t send the invite. Nothing was changed.' }
   }
 }
 
@@ -67,12 +67,12 @@ export async function removeShopAccountant(member: string): Promise<{ ok: true }
       return removeAccountant(tx, auth.membership.tenantId, auth.userId, member)
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value.ok) return { ok: false, error: ACCOUNTANT[r.value.error] ?? 'We could not remove them. Nothing was changed.' }
+    if (!r.value.ok) return { ok: false, error: ACCOUNTANT[r.value.error] ?? 'We couldn’t remove them. Nothing was changed.' }
     revalidatePath('/console/settings/people')
     return { ok: true }
   } catch (err) {
     console.error('[removeShopAccountant]', errName(err))
-    return { ok: false, error: 'We could not remove them. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t remove them. Nothing was changed.' }
   }
 }
 
@@ -84,11 +84,11 @@ export async function revokeShopAccountantInvite(invite: string): Promise<{ ok: 
       return revokeAccountantInvite(tx, auth.membership.tenantId, auth.userId, invite)
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value.ok) return { ok: false, error: ACCOUNTANT[r.value.error] ?? 'We could not cancel the invite.' }
+    if (!r.value.ok) return { ok: false, error: ACCOUNTANT[r.value.error] ?? 'We couldn’t cancel the invite.' }
     revalidatePath('/console/settings/people')
     return { ok: true }
   } catch (err) {
     console.error('[revokeShopAccountantInvite]', errName(err))
-    return { ok: false, error: 'We could not cancel the invite.' }
+    return { ok: false, error: 'We couldn’t cancel the invite.' }
   }
 }

@@ -167,7 +167,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
       }, d.collections, renames)
       if (r.ok) {
         setSaved(d); setVersion(r.version); setErrors({}); setRenames([])
-        toast.ok(status === 'active' || status === 'unlisted' ? 'Saved. Your shop shows it now.' : 'Saved.')
+        toast.ok(status === 'active' || status === 'unlisted' ? 'Saved. Your store shows it now.' : 'Saved.')
         if (r.handle !== initial.handle) router.replace(`/console/products/${r.handle}`)
         else router.refresh()
         return true
@@ -267,7 +267,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
             <OptionsEditor options={d.options} onChange={(options) => set({ options })} error={errors.options} onRename={rename} />
             {colourOpt && colourOpt.values.length > 0 && <ColoursPanel values={colourOpt.values} colours={d.colours} onChange={(colours) => set({ colours })} photos={photos} families={families} />}
           </Section>
-          {combos.length > 0 && <Section title={<span className="inline-flex items-center gap-1">Stock and prices<InfoTip about="stock and prices">{shop.costs ? 'Your cost is never shown to shoppers: it is how Frrata works out profit on each order. ' : ''}When it runs out applies at 0 stock: stop selling, take pre-orders, or make to order. An empty SKU is made for you when you save.</InfoTip></span>}>
+          {combos.length > 0 && <Section title={<span className="inline-flex items-center gap-1">Stock and prices<InfoTip about="stock and prices">{shop.costs ? 'Shoppers never see your cost. Frrata uses it for profit on each order. ' : ''}At 0 stock a size can stop selling, take pre-orders or be made to order. An empty SKU is made when you save.</InfoTip></span>}>
             <VariantGrid options={opts} cells={d.cells} errors={errors} costs={shop.costs} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
               onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); fix(...Object.keys(patch).map((f) => `v:${k}:${f === 'leadMin' || f === 'leadMax' ? 'lead' : f}`)) }} />
           </Section>}

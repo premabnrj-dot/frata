@@ -25,7 +25,7 @@ export default async function LookPage() {
   if (!auth.ok) return <Panel title={auth.message} />
   const t = auth.membership.tenantId
   const [l, shop, src] = await Promise.all([lookPage(t), previewShop(t), manifestsFor(t)])
-  if (!shop) return <Panel title="We could not load your shop." />
+  if (!shop) return <Panel title="We couldn’t load your store. Reload the page." />
   const role = auth.membership.role
   const support = !!auth.membership.supportSessionId
   const canEdit = (CAN_BUILD as readonly string[]).includes(role) && !support
@@ -50,18 +50,18 @@ export default async function LookPage() {
   const draftName = l.draft ? `${manifestOf(src, l.draft.themeKey, l.draft.themeVersion)?.name ?? l.draft.themeKey}` : null
   return (
     <>
-      <PageHeader title="Look" meta="How your shop looks. Shoppers see the published theme." />
-      {withdrawn && <p role="status" className="mb-3 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">Frrata withdrew {withdrawn.name} {withdrawn.version} for a problem. Your previous look is live; nothing is lost.</p>}
-      {!liveOk && <p role="status" className="mb-3 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">Frrata recalled {liveM.name} {liveM.version}. Your shop still shows it, but it gets no fixes.{!canPublish ? ' Ask the owner to restore the previous look.' : l.previous ? ' Restore your previous look below, or try the theme again for its current version.' : ' Try the theme again for its current version: Customize opens a draft on it.'}</p>}
-      {!draftOk && l.draft && <p role="status" className="mb-3 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">Your draft is on a recalled version of {draftName}, so it can’t be published. Try the theme again: your changes come across.</p>}
-      {newest && liveOk && <p role="status" className="mb-3 rounded-md bg-info px-3 py-2 text-sm text-info-text">{newest.name} {newest.version} is ready: {newest.features.at(-1)}. Try it from the gallery below; your look comes across in a draft, and nothing changes until you publish.</p>}
+      <PageHeader title="Look" meta="How your store looks. Shoppers see the published theme." />
+      {withdrawn && <p role="status" className="mb-3 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">Frrata withdrew {withdrawn.name} {withdrawn.version} for a problem. Your previous look is live. Nothing is lost.</p>}
+      {!liveOk && <p role="status" className="mb-3 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">Frrata recalled {liveM.name} {liveM.version}. Your store still shows it, but it gets no fixes.{!canPublish ? ' Ask the owner to restore the previous look.' : l.previous ? ' Restore your previous look below, or try the theme again for its current version.' : ' Customize opens a draft on its current version.'}</p>}
+      {!draftOk && l.draft && <p role="status" className="mb-3 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">Your draft is on a recalled version of {draftName}, so it can’t be published. Try the theme again. Your changes come across.</p>}
+      {newest && liveOk && <p role="status" className="mb-3 rounded-md bg-info px-3 py-2 text-sm text-info-text">{newest.name} {newest.version} is ready. New: {newest.features.at(-1)}. Try it below in a draft. Nothing changes until you publish.</p>}
       <Section ariaLabel="Your theme">
         <div className="flex flex-wrap items-center gap-6">
           <ThemeThumb t={liveTheme} name={shop.shopName} />
           <div className="min-w-[14rem] flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-semibold">{liveM.name} · {styleName}</h2><Badge tone="ok">Published</Badge></div>
             <p className="text-sm text-muted-foreground">
-              {l.live ? <>Version {liveM.version} · published {dayIN(l.live.publishedAt)}{l.live.publishedByEmail ? ` by ${l.live.publishedByEmail}` : ''}</> : <>Your shop as it is today</>}
+              {l.live ? <>Version {liveM.version} · published {dayIN(l.live.publishedAt)}{l.live.publishedByEmail ? ` by ${l.live.publishedByEmail}` : ''}</> : <>Your store as it is today</>}
               {' · '}<Link href="/console/look/history" className="underline underline-offset-4">History</Link>
             </p>
             {l.draft && <p className="flex flex-wrap items-center gap-2 text-sm"><Badge tone="warn">Draft</Badge>{draftName !== liveM.name ? `${draftName}: ` : ''}You have unpublished changes · saved {dateTimeIN(l.draft.updatedAt)}</p>}

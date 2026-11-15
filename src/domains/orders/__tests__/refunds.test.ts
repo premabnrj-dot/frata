@@ -62,7 +62,7 @@ describe('a paid order\'s money after an edit (OE·2)', () => {
     expect(refundLine({ ...none, cause: 'edit', failure: null }, 'at 10:52', String)).toEqual({ words: 'refund · sends at 10:52', failed: null })
     expect(refundLine({ ...none, sendingAt: now, cause: 'edit', failure: null }, '', String).words).toBe('refund · with Razorpay')
     expect(refundLine({ ...none, sendingAt: now, sentAt: now, processedAt: now, cause: 'after_drop', failure: null }, '', String).words).toBe('refunded · 5–10 working days to reach the shopper · paid after the change was dropped')
-    expect(refundLine({ ...none, failedAt: now, cause: 'edit', failure: 'balance' }, '', String)).toEqual({ words: 'not sent', failed: 'Not enough balance in Razorpay: add funds, then try again.' })
+    expect(refundLine({ ...none, failedAt: now, cause: 'edit', failure: 'balance' }, '', String)).toEqual({ words: 'not sent', failed: 'Not enough balance in Razorpay. Add funds, then try again.' })
   })
 
   it('Try again: never for one a later change settled, a payment too old or one already refunded elsewhere', () => {

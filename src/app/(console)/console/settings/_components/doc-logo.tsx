@@ -50,7 +50,7 @@ export function DocLogo({ tenantId, current }: { tenantId: string; current: stri
   const remove = () => start(async () => {
     const r = await setDocLogo(null)
     if (!r.ok) toast.error(r.error)
-    else { toast.ok('Logo removed. Documents show your shop’s initial.'); router.refresh() }
+    else { toast.ok('Logo removed. Documents show your store’s initial.'); router.refresh() }
   })
 
   return (

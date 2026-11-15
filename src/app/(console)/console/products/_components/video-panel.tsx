@@ -161,7 +161,7 @@ export function VideoPanel({ productId, initial, blocked, title, onShop }: { pro
             <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
               <dt className="text-muted-foreground">Shape</dt><dd>{video.shape}{video.size && <span className="text-muted-foreground"> · {video.size}</span>}</dd>
               <dt className="text-muted-foreground">Length</dt><dd className="font-num">{video.length}</dd>
-              <dt className="text-muted-foreground">Shows</dt><dd>{onShop ? <>Second in the photos{video.button !== 'none' && ' · beside the sizes'}</> : 'Not on your shop yet'}</dd>
+              <dt className="text-muted-foreground">Shows</dt><dd>{onShop ? <>Second in the photos{video.button !== 'none' && ' · beside the sizes'}</> : 'Not in your store yet'}</dd>
             </dl>
             <div className="grid gap-1.5">
               <span className="text-sm font-medium" id={`${inputId}-frames`}>Cover frame</span>

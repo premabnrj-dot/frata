@@ -31,13 +31,13 @@ export async function connectRazorpay(input: { keyId: string; keySecret: string 
       return 'ok' as const
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (r.value === 'support') return { ok: false, error: 'Only the shop’s owner can connect Razorpay, not Frrata support.' }
+    if (r.value === 'support') return { ok: false, error: 'Only the store’s owner can connect Razorpay, not Frrata support.' }
     refreshShop(r.tenantId, 'shop')
     revalidatePath('/console', 'layout')
     return { ok: true }
   } catch (err) {
     console.error('[connectRazorpay]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not save the keys. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t save the keys. Nothing was changed.' }
   }
 }
 
@@ -50,12 +50,12 @@ export async function disconnectRazorpay(): Promise<Result> {
       return 'ok' as const
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (r.value === 'support') return { ok: false, error: 'Only the shop’s owner can disconnect Razorpay.' }
+    if (r.value === 'support') return { ok: false, error: 'Only the store’s owner can disconnect Razorpay.' }
     refreshShop(r.tenantId, 'shop')
     revalidatePath('/console', 'layout')
     return { ok: true }
   } catch (err) {
     console.error('[disconnectRazorpay]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not disconnect. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t disconnect. Nothing was changed.' }
   }
 }

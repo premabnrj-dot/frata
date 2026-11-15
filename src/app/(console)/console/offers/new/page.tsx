@@ -27,7 +27,7 @@ export default async function NewOfferPage({ searchParams }: { searchParams: Pro
   return (
     <div className="max-w-3xl">
       <PageHeader title="New offer" back={{ href: '/console/offers', label: 'Offers' }} />
-      <p className="mb-4 text-sm text-muted-foreground">Saved as a draft. {(CAN_MANAGE as readonly string[]).includes(auth.membership.role) ? 'Start it when you are ready.' : 'The shop’s owner starts it.'}</p>
+      <p className="mb-4 text-sm text-muted-foreground">Saved as a draft. {(CAN_MANAGE as readonly string[]).includes(auth.membership.role) ? 'Start it when you are ready.' : 'The owner or a manager starts it.'}</p>
       <nav aria-label="Start from" className="mb-4 flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted-foreground">Start from:</span>
         {OFFER_TEMPLATES.map((t) => <Link key={t.key} href={`/console/offers/new?from=${t.key}`} aria-current={from?.key === t.key ? 'true' : undefined}

@@ -36,14 +36,14 @@ export function OfferMore({ v, set, errors, pickers }: { v: OfferValues; set: (p
             <input id="o-get" inputMode="numeric" value={v.getQty ?? ''} {...fp('getQty')} onChange={(e) => set({ getQty: e.target.value })} className={field} />{err('getQty')}</div>
           <div className="space-y-1"><label htmlFor="o-getpct" className={lab}>% off them <span className="font-normal text-muted-foreground">(100 = free)</span></label>
             <input id="o-getpct" inputMode="numeric" value={v.getPct ?? ''} {...fp('getPct')} onChange={(e) => set({ getPct: e.target.value })} className={field} />{err('getPct')}</div>
-          <p className="col-span-3 text-xs text-muted-foreground">The cheapest pieces of each group are the ones discounted. On the invoice the saving is shared over the group&apos;s pieces.</p>
+          <p className="col-span-3 text-xs text-muted-foreground">The cheapest items in each group get the discount. The invoice shares the saving across the group.</p>
         </div>
       )}
       {style === 'free_gift' && (
-        <div className="space-y-1"><label htmlFor="o-gift" className={lab}>The free piece</label>
+        <div className="space-y-1"><div className="flex items-center"><label htmlFor="o-gift" className={lab}>The free product</label><InfoTip about="the free product">It is billed at ₹0. Your CA may ask you to reverse input credit on gifted stock.</InfoTip></div>
           <select id="o-gift" value={v.giftVariantId ?? ''} {...fp('giftVariantId')} aria-describedby={errors.giftVariantId ? errorId('o-giftVariantId') : 'o-gift-hint'} onChange={(e) => set({ giftVariantId: e.target.value })} className={field}>
             <option value="">Choose…</option>{pickers.pieces.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}</select>
-          {errors.giftVariantId ? err('giftVariantId') : <p id="o-gift-hint" className="text-xs text-muted-foreground">Shoppers add it themselves when the rest of the bag reaches the amount below. It is billed at ₹0; your CA may ask you to reverse input credit on gifted stock.</p>}
+          {errors.giftVariantId ? err('giftVariantId') : <p id="o-gift-hint" className="text-xs text-muted-foreground">Shoppers add it themselves when the bag reaches this amount.</p>}
         </div>
       )}
       {covers && (

@@ -14,13 +14,13 @@ export default async function CollectionsPage() {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
   const rows = await listCollections(auth.membership.tenantId).catch((err) => { console.error('[collections]', err instanceof Error ? err.name : err); return null })
-  if (!rows) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!rows) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const add = <><Link href="/console/collections/new?kind=auto" className={button({ variant: 'secondary' })}>Rule-based</Link><Link href="/console/collections/new" className={button()}>Add collection</Link></>
   return (
     <>
       <PageHeader title="Collections" back={{ href: '/console/products', label: 'Products' }} actions={add} />
       {!rows.length ? (
-        <Panel title="No collections yet">Group products for your shop’s menus: hand-pick a Festive edit, or let rules fill one (Kurtas in chanderi under ₹2,000) so new products join by themselves.</Panel>
+        <Panel title="No collections yet">Group products for your store’s menus. Pick them by hand, or let rules add new products.</Panel>
       ) : (
         <DataTable>
           <DataTableHead><th>Collection</th><th>Filled by</th><th className="text-right">Products</th></DataTableHead>

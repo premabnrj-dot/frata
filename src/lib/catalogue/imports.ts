@@ -40,7 +40,7 @@ export type Job = typeof importJobs.$inferSelect
 /** A refusal in the member's words; `mapping`: the running job's, when the file was matched otherwise. */
 export class Refused extends Error { constructor(public reason: string, public mapping?: Mapping) { super('refused') } }
 
-const COSTS_ONLY = 'An owner or admin started this import with costs: they can continue it, or stop it here.'
+const COSTS_ONLY = 'An owner or a manager started this import with costs. They can continue it, or stop it here.'
 const readsCost = (m: Mapping) => m.fields.includes('cost')
 const sameMapping = (a: Mapping, b: Mapping) => a.source === b.source && sameHeaders(a.headers, b.headers) && a.fields.every((f, i) => f === b.fields[i])
 
@@ -78,7 +78,7 @@ export async function startJob(tx: Tx, who: Who, input: StartInput, now: Date): 
   if (running) {
     if (running.fileHash !== input.hash) throw new Refused(`Finish or stop the import of ${running.fileName} first.`)
     if (readsCost(running.mapping) && !who.costs) throw new Refused(COSTS_ONLY)
-    if (!sameMapping(running.mapping, input.mapping)) throw new Refused('This import started with other column matches: it continues with those.', running.mapping)
+    if (!sameMapping(running.mapping, input.mapping)) throw new Refused('This import started with other column matches. It continues with those.', running.mapping)
     return { job: running, resumed: true }
   }
   const [done] = await tx.select({ at: importJobs.createdAt }).from(importJobs)
@@ -102,7 +102,7 @@ export type ChunkResult = { next: number; done: boolean; added: number; leftOut:
 /** The job's next chunk, read again and written as drafts. */
 export async function writeChunk(tx: Tx, tenantId: string, jobId: string, n: number, rows: SheetRow[], opts: { costs: boolean; now: Date }): Promise<ChunkResult> {
   const [job] = await tx.select().from(importJobs).where(and(eq(importJobs.tenantId, tenantId), eq(importJobs.id, jobId))).for('update')
-  if (!job) throw new Refused('This import is not in your shop.')
+  if (!job) throw new Refused('This import isn’t in your store.')
   const counts = (j: Job): ChunkResult => ({ next: j.nextChunk, done: !!j.finishedAt, added: j.added, leftOut: j.leftOut, inShop: j.inShop })
   if (n < job.nextChunk) return counts(job)
   if (job.finishedAt) throw new Refused('This import has ended.')

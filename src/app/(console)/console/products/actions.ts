@@ -70,7 +70,7 @@ export async function createProduct(input: { title: string; kind?: string }): Pr
     return { ok: true, id: r.value.id, handle: r.value.handle }
   } catch (err) {
     console.error('[createProduct]', reason(err))
-    return { ok: false, error: 'We could not create the product. Nothing was saved.' }
+    return { ok: false, error: 'We couldn’t create the product. Nothing was saved.' }
   }
 }
 
@@ -89,14 +89,14 @@ export async function saveProduct(productId: string, version: number, input: Pro
     const r = await asMember(ANY_MEMBER, { action: 'product.save', target: p.title }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
       const stories = p.stories ? checkStoryPhotos(p.stories, tenantId, storeHost(BLOB_STORE_ID)) : null
-      if (p.stories && !stories) throw new Stop({ ok: false, error: 'That photo didn’t come from this shop. Upload it again.' })
+      if (p.stories && !stories) throw new Stop({ ok: false, error: 'That photo didn’t come from this store. Upload it again.' })
       if (p.typeId) {
         const [t] = await tx.select({ id: productTypes.id }).from(productTypes).where(and(eq(productTypes.tenantId, tenantId), eq(productTypes.id, p.typeId)))
-        if (!t) throw new Stop({ ok: false, error: 'That product type is not in your shop.' })
+        if (!t) throw new Stop({ ok: false, error: 'That product type isn’t in your store.' })
       }
       // Locked: Publish (setStatus) locks it too, so a draft's blank prices can't land after Publish read the priced rows.
       const [cur] = await tx.select({ handle: products.handle, publishedAt: products.publishedAt, status: products.status }).from(products).where(and(eq(products.tenantId, tenantId), eq(products.id, productId))).for('update')
-      if (!cur) throw new Stop({ ok: false, error: 'This product is not in your shop.' })
+      if (!cur) throw new Stop({ ok: false, error: 'This product isn’t in your store.' })
       // A draft saves before every size is priced (PR·0); a live product keeps a price on every size it sells.
       if (cur.status === 'active' || cur.status === 'unlisted') {
         const unpriced = p.variants.filter((v) => v.price <= 0)
@@ -124,7 +124,7 @@ export async function saveProduct(productId: string, version: number, input: Pro
       }).where(and(eq(products.tenantId, tenantId), eq(products.id, productId), eq(products.version, version))).returning({ version: products.version })
       if (!row) throw new Stop({ ok: false, conflict: true, error: 'Someone saved this product while you were editing. Reload to see their changes.' })
       // Signal S3: pairings are this shop's products only (and the FKs agree), saved under the same version check.
-      if (p.pairs !== undefined && !(await savePairs(tx, tenantId, productId, cleanPairIds(p.pairs, productId)))) throw new Stop({ ok: false, error: 'A piece to pair isn’t in your shop. Pick it again.' })
+      if (p.pairs !== undefined && !(await savePairs(tx, tenantId, productId, cleanPairIds(p.pairs, productId)))) throw new Stop({ ok: false, error: 'A product to pair isn’t in your store. Pick it again.' })
 
       // Its sizes and colours: SKUs, barcodes, removed and returning sizes, the cost of goods only from whoever sees it
       // (seesCosts) — the one writer the import shares (src/lib/catalogue/write.ts).
@@ -175,12 +175,12 @@ export async function saveProduct(productId: string, version: number, input: Pro
   } catch (err) {
     if (err instanceof Stop) return err.result
     const why = reason(err)
-    if (skuTaken(err)) return { ok: false, error: 'A SKU is already used by another product in your shop.' }
+    if (skuTaken(err)) return { ok: false, error: 'Another product in your store already uses that SKU.' }
     if (why.includes('products_tenant_handle')) return { ok: false, error: 'Another product uses that address.', errors: { handle: 'Another product uses this address.' } }
     // A drop's checkout holds its sizes' rows for longer than writeProducts waits (1 s): expected, not an error.
     if (lockTimedOut(err)) return { ok: false, error: 'Someone is buying this product right now. Save again in a moment.' }
     console.error('[saveProduct]', why)
-    return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
+    return { ok: false, error: 'We couldn’t save. Nothing was changed. Try again in a minute.' }
   }
 }
 
@@ -190,7 +190,7 @@ export async function saveProduct(productId: string, version: number, input: Pro
  * time it goes live is recorded: from then on its address is kept on a change.
  */
 export async function setStatus(productId: string, status: Status, publishAt: string | null = null): Promise<Result> {
-  if (typeof productId !== 'string' || !UUID.test(productId)) return { ok: false, error: 'That product is not in your shop.' }
+  if (typeof productId !== 'string' || !UUID.test(productId)) return { ok: false, error: 'That product is not in your store.' }
   if (!['draft', 'active', 'unlisted', 'archived'].includes(status)) return { ok: false, error: 'That is not a status.' }
   const when = status === 'active' && publishAt ? new Date(publishAt) : null
   if (when && (Number.isNaN(when.getTime()) || when.getTime() > Date.now() + 366 * 86400000)) return { ok: false, error: 'Pick a date and time within a year.' }
@@ -202,7 +202,7 @@ export async function setStatus(productId: string, status: Status, publishAt: st
       // What it still needs (readiness.ts): a shop that charges GST can't sell a piece with no known rate (quote()
       // refuses it), so it can't go live without one.
       if (no) throw new Stop({ ok: false, error: `Before shoppers can see it: ${no.needs.join(', ')}.` })
-      if (!p) throw new Stop({ ok: false, error: 'This product is not in your shop.' })
+      if (!p) throw new Stop({ ok: false, error: 'This product isn’t in your store.' })
       await memberAudit(tx, auth, `product.status.${status}`, p.title)
     })
     if (!r.ok) return { ok: false, error: r.error }
@@ -212,7 +212,7 @@ export async function setStatus(productId: string, status: Status, publishAt: st
   } catch (err) {
     if (err instanceof Stop) return err.result
     console.error('[setStatus]', reason(err))
-    return { ok: false, error: 'We could not change that. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t change that. Nothing was changed.' }
   }
 }
 
@@ -255,13 +255,13 @@ export async function attachPhotos(productId: string, photos: NewPhoto[]): Promi
   } catch (err) {
     if (err instanceof Stop) return err.result
     console.error('[attachPhotos]', reason(err))
-    return { ok: false, error: 'We could not add the photos. Try again.' }
+    return { ok: false, error: 'We couldn’t add the photos. Try again.' }
   }
 }
 
 /** Move a photo, tag it with a colour, or remove it (its files are deleted after the row). */
 export async function editPhoto(imageId: string, change: { move?: PhotoMove; optionValue?: string | null; alt?: string; remove?: true }): Promise<Result> {
-  if (typeof imageId !== 'string' || !UUID.test(imageId)) return { ok: false, error: 'That photo is not in your shop.' }
+  if (typeof imageId !== 'string' || !UUID.test(imageId)) return { ok: false, error: 'That photo is not in your store.' }
   // From the browser: a step of one, or a place to drop it on (0–49: a product holds at most 50 photos).
   const move = change.move
   if (move !== undefined && move !== -1 && move !== 1 && !(typeof move === 'object' && move !== null && Number.isInteger(move.to) && move.to >= 0 && move.to <= 49)) {
@@ -271,7 +271,7 @@ export async function editPhoto(imageId: string, change: { move?: PhotoMove; opt
     const r = await asMember(ANY_MEMBER, { action: 'product.photo', target: imageId }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
       const [img] = await tx.select().from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.id, imageId)))
-      if (!img) throw new Stop({ ok: false, error: 'That photo is not in your shop.' })
+      if (!img) throw new Stop({ ok: false, error: 'That photo isn’t in your store.' })
       if (change.remove) {
         await tx.delete(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.id, imageId)))
         // A look, a story or a page may show this photo: then its files stay, so a published or restorable look never
@@ -301,6 +301,6 @@ export async function editPhoto(imageId: string, change: { move?: PhotoMove; opt
   } catch (err) {
     if (err instanceof Stop) return err.result
     console.error('[editPhoto]', reason(err))
-    return { ok: false, error: 'We could not change the photo.' }
+    return { ok: false, error: 'We couldn’t change the photo.' }
   }
 }

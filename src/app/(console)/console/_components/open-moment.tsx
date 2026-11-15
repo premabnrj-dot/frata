@@ -32,7 +32,7 @@ export function OpenMoment({ address, header, children }: { address: string; hea
               <circle cx="28" cy="28" r="24" stroke="currentColor" pathLength={1} className="animate-draw-circle" />
               <path d="M18 29l7 7 13-15" stroke="currentColor" pathLength={1} className="animate-draw-tick" />
             </svg>
-            <p className="text-sm"><b className="block font-display text-xl font-semibold tracking-tight">Your shop is open</b>Shoppers can order at <a href={`https://${address}`} target="_blank" rel="noreferrer" className="inline-flex min-h-6 items-center font-mono underline">{address}</a></p>
+            <p className="text-sm"><b className="block font-display text-xl font-semibold tracking-tight">Your store is open</b>Shoppers can order at <a href={`https://${address}`} target="_blank" rel="noreferrer" className="inline-flex min-h-6 items-center font-mono underline">{address}</a></p>
           </Section>
         )}
       </div>

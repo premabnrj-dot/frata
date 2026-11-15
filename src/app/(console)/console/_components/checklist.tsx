@@ -11,7 +11,7 @@ export function Checklist({ setup, canManage }: { setup: Setup; canManage: boole
     <Section flush labelledBy="setup-h" className="max-w-3xl">
       <div className="space-y-2.5 p-4">
         <div className="flex items-baseline justify-between gap-4">
-          <h2 id="setup-h" className="text-section font-semibold">{setup.open ? 'Your shop’s setup' : 'Get your shop ready to sell'}</h2>
+          <h2 id="setup-h" className="text-section font-semibold">{setup.open ? 'Your store’s setup' : 'Get your store ready to sell'}</h2>
           <span className="text-sm text-muted-foreground"><span className="font-num">{done} of {steps.length}</span> done</span>
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="img" aria-label={`${done} of ${steps.length} steps done`}>

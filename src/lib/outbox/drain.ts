@@ -78,7 +78,7 @@ export async function drainOutbox(deadline: number): Promise<{ claimed: number; 
         if (module) {
           const decision = outboxDecision((await shopAccess(row.tenantId))[module])
           if (decision === 'defer') { await deferRow(row.id); continue }
-          if (decision === 'drop') { await markDead(row.id, `${module} is off for this shop`); continue }
+          if (decision === 'drop') { await markDead(row.id, `${module} is off for this store`); continue }
         }
         if (!send) throw new Error(`no sender for ${row.kind}`)
         await send(row)

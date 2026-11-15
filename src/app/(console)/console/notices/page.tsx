@@ -18,7 +18,7 @@ export default async function NoticesPage() {
   if (!auth.ok) return <Panel title={auth.message} />
   const list = await listNotices(auth.membership.tenantId, auth.userId, auth.membership.tenantName)
     .catch(() => null)
-  if (!list) return <><PageHeader title="Notices" /><Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel></>
+  if (!list) return <><PageHeader title="Notices" /><Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel></>
   const unread = list.filter((n) => !n.read).map((n) => n.id)
   return (
     <>

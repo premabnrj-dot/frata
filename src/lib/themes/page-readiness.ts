@@ -33,5 +33,5 @@ export async function pagesReadiness(tx: Tx, tenantId: string, draftLayer: { con
     .from(shopSettings).where(eq(shopSettings.tenantId, tenantId)).limit(1)
   if (!s) return null
   const missing = missingFacts(renderPolicy('contact', { ...s, shopName: 'shop' } as unknown as PolicyFacts, (p) => formatInr(paise(p))))
-  return missing.length ? `Contact: add the ${missing[0]} in Settings` : null
+  return missing.length ? `Add the ${missing[0]} in Settings for the Contact page` : null
 }

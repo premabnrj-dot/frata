@@ -56,7 +56,7 @@ export function SiteForm({ site, set, presets, icons, theme }: {
           <Segmented label="Stroke" full value={site.icons.stroke} onChange={(stroke) => set({ ...site, icons: { ...site.icons, stroke } })} options={ICON_STROKES.map((s) => ({ value: s, label: STROKE_NAMES[s] }))} /></div>}
       </Group>
       <Group title="Brand" icon={ICONS.brand}>
-        <Link href="/console/settings" className="flex min-h-10 items-center justify-between rounded-md border border-input px-3 text-sm">Logo and shop name<span aria-hidden="true">›</span></Link>
+        <Link href="/console/settings" className="flex min-h-10 items-center justify-between rounded-md border border-input px-3 text-sm">Logo and store name<span aria-hidden="true">›</span></Link>
       </Group>
     </div>
   )

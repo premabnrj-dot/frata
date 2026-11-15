@@ -62,10 +62,10 @@ export default {
       await t.step('staff never see money: Settings is closed to them, and the billing page refuses a typed link', async () => {
         const arjun = await open('staff')
         await arjun.goto(CONSOLE + '/console/settings')
-        await arjun.getByText('You can’t change this shop’s settings').waitFor()
+        await arjun.getByText('You can’t change this store’s settings').waitFor()
         assert.equal(await arjun.getByRole('link', { name: /Plan and billing/ }).count(), 0)
         await arjun.goto(CONSOLE + '/console/settings/billing')
-        await arjun.getByText('Only the shop’s owner or an admin can see its plan and bills').waitFor()
+        await arjun.getByText('Only the store’s owner or a manager can see its plan and bills').waitFor()
         assert.equal(await arjun.getByText(/Estimated bill|Fee so far/).count(), 0)
       })
 

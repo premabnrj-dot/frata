@@ -26,7 +26,7 @@ describe('state', () => {
     expect(messageState(base)).toBe('queued')
     expect(messageState({ ...base, sentAt: new Date(), deliveredAt: new Date() })).toBe('delivered')
     expect(stateWords({ ...base, skippedAt: new Date(), skipCode: 'off' })).toMatch(/switched off/)
-    expect(stateWords({ ...base, bouncedAt: new Date(), bounceKind: 'permanent' })).toBe('Bounced: no such address')
+    expect(stateWords({ ...base, bouncedAt: new Date(), bounceKind: 'permanent' })).toBe('Bounced · no such address')
   })
 })
 
@@ -43,7 +43,7 @@ describe('layouts', () => {
   it('every order email renders under 60 kB, with a text part, and refuses markup in a shop\'s words', () => {
     for (const k of ORDER_MESSAGES) {
       const w = DEFAULT_WORDS[k]
-      const v = { 'First name': 'Asha', 'Order number': 'KS-1043', Total: '₹2,490', 'Shop name': 'Kesar Studio', Courier: 'Delhivery', 'Tracking number': '149022' } as const
+      const v = { 'First name': 'Asha', 'Order number': 'KS-1043', Total: '₹2,490', 'Store name': 'Kesar Studio', Courier: 'Delhivery', 'Tracking number': '149022' } as const
       const r = shopEmail({ preview: fill(w.preview, v), shop: { name: 'Kesar Studio', logoUrl: null, accent: '#A2462A' }, heading: fill(w.heading, v), message: fill(w.message, v) + '<img src=x onerror=alert(1)>',
         button: { label: w.button, href: 'https://kesar-studio.frrata.shop/orders' }, order: { number: 'KS-1043', date: '11 Nov', items: [{ title: 'Kurta <b>', detail: 'Rust · M · 1' }], total: '₹2,490', payLine: 'Pay ₹2,490 on delivery' }, footer })
       expect(Buffer.byteLength(r.html)).toBeLessThan(MAX_EMAIL_BYTES)

@@ -38,7 +38,7 @@ import { pdfHref, printHref, RISK_LABEL, type Tone } from './labels'
 export type QueueRow = {
   id: string; n: number; number: string; href: string; customer: string; place: string
   payment: { label: string; tone: Tone; icon: 'cod' | 'prepaid' }; state: { label: string; tone: Tone }; doNotCollect: boolean
-  risk: 'low' | 'medium' | 'high' | 'unknown'; canConfirm: boolean; canHold: boolean; canPrint: boolean; total: number; placed: string; dimmed: boolean
+  risk: 'low' | 'medium' | 'high' | 'unknown'; canConfirm: boolean; canHold: boolean; canPrint: boolean; total: number; placed: string; placedAt: string; dimmed: boolean
   /** Ship S·0: the row's one shipping step for THIS member (packed → Mark shipped; on its way → Delivered), or none. */
   shipStep: 'ship' | 'deliver' | null
   /** What a search matched, for the mark (N1c): the text shown and where it came from. */
@@ -79,7 +79,7 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
       const r = await (outcome
         ? (eventIds.length === 1 ? undoOutcomeAction(eventIds[0]!) : undoOutcomeMany(eventIds))
         : eventIds.length === 1 ? undoOrderAction(eventIds[0]!) : undoMany(eventIds))
-        .catch(() => ({ ok: false as const, error: 'We could not undo that. Open the order to see where it is.' }))
+        .catch(() => ({ ok: false as const, error: 'We couldn’t undo that. Open the order to see where it is.' }))
       unmark(ids); router.refresh()
       return r.ok ? { ok: true } : { ok: false, error: r.error }
     }
@@ -93,7 +93,7 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
     setBusy(true); setDone((d) => ({ ...d, [row.id]: what === 'confirm' ? 'Confirmed' : 'On hold' }))
     let r: Awaited<ReturnType<typeof confirmOrder>>
     try { r = what === 'confirm' ? await confirmOrder(row.id) : await holdOrder(row.id) }
-    catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing was changed.' } }
+    catch { r = { ok: false, error: 'We couldn’t save that. Check your connection. Nothing was changed.' } }
     finally { setBusy(false) }
     if (!r.ok) {
       unmark([row.id])
@@ -109,24 +109,24 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
   async function step(row: QueueRow) {
     if (busy && saving()) return
     if (done[row.id] || !row.shipStep) return
-    const word = row.shipStep === 'ship' ? 'Shipped' : 'Delivered'
+    const word = row.shipStep === 'ship' ? 'On the way' : 'Delivered'
     setBusy(true); setDone((d) => ({ ...d, [row.id]: word }))
     let r: { ok: true; eventId: string } | { ok: false; error: string }
     try { r = row.shipStep === 'ship' ? await shipOrder(row.id) : await deliverOrder(row.id) }
-    catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing was changed.' } }
+    catch { r = { ok: false, error: 'We couldn’t save that. Check your connection. Nothing was changed.' } }
     finally { setBusy(false) }
     if (!r.ok) { unmark([row.id]); toast.error(`${row.number}: ${r.error}`); return }
     const undo = undoable([r.eventId], [row.id], true); lastUndo.current = undo
-    toast({ text: `${row.number} marked ${word.toLowerCase()}.`, undo })
+    toast({ text: row.shipStep === 'ship' ? `${row.number} is on the way.` : `${row.number} marked delivered.`, undo })
   }
 
   async function bulkDelivered() {
     if (busy && saving()) return
     const ids = rows.filter((r) => picked.has(r.id) && r.shipStep === 'deliver').map((r) => r.id)
-    if (!ids.length) { toast.error('None of the selected orders is on its way.'); return }
+    if (!ids.length) { toast.error('None of the selected orders is On the way.'); return }
     setBusy(true)
     let r: BulkResult
-    try { r = await deliverMany(ids) } catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing more was changed.' } } finally { setBusy(false) }
+    try { r = await deliverMany(ids) } catch { r = { ok: false, error: 'We couldn’t save that. Check your connection. Nothing more was changed.' } } finally { setBusy(false) }
     if (!r.ok) { toast.error(r.error); return }
     setDone((d) => ({ ...d, ...Object.fromEntries(r.done.map((c) => [c.id, 'Delivered'])) }))
     setPicked(new Set())
@@ -145,13 +145,13 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
     setBusy(true)
     let r: BulkResult
     try { r = what === 'confirm' ? await confirmMany(ids) : await holdMany(ids) }
-    catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing more was changed.' } }
+    catch { r = { ok: false, error: 'We couldn’t save that. Check your connection. Nothing more was changed.' } }
     finally { setBusy(false) }
     if (!r.ok) { toast.error(r.error); return }
     setDone((d) => ({ ...d, ...Object.fromEntries(r.done.map((c) => [c.id, what === 'confirm' ? 'Confirmed' : 'On hold'])) }))
     setPicked(new Set())
     const parts = [`${what === 'confirm' ? 'Confirmed' : 'Put on hold'} ${r.done.length}.`]
-    if (r.skippedHigh) parts.push(`Skipped ${r.skippedHigh} high-risk order${r.skippedHigh === 1 ? '' : 's'} — open ${r.skippedHigh === 1 ? 'it' : 'them'} to decide.`)
+    if (r.skippedHigh) parts.push(`Skipped ${r.skippedHigh} high-risk order${r.skippedHigh === 1 ? '' : 's'}. Open ${r.skippedHigh === 1 ? 'it' : 'them'} to decide.`)
     // Each failure in its own words (the first one; the count for the rest), never a generic "changed".
     const label = (id: string) => rows.find((x) => x.id === id)?.number ?? 'One order'
     if (r.failed.length) parts.push(`${label(r.failed[0]!.id)}: ${r.failed[0]!.error}${r.failed.length > 1 ? ` (and ${r.failed.length - 1} more)` : ''}`)
@@ -174,7 +174,7 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
     confirm: () => { const r = here(); if (!r) return; if (confirmKey(r) === 'open') router.push(r.href); else void act(r, 'confirm') },
     hold: () => { const r = here(); if (r?.canHold) void act(r, 'hold') },
     print: () => { const r = here(); if (r?.canPrint) router.push(printHref('slip', [r.n])); else if (r) toast.error(`${r.number} has no packing slip yet.`) },
-    undo: () => { const u = lastUndo.current; if (u) void u().then((x) => (x.ok ? toast.ok('Undone.') : toast.error(x.error ?? 'We could not undo that.'))) },
+    undo: () => { const u = lastUndo.current; if (u) void u().then((x) => (x.ok ? toast.ok('Undone.') : toast.error(x.error ?? 'We couldn’t undo that.'))) },
     search: () => document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
     help: () => setKeys(true),
   })
@@ -193,7 +193,7 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
       {count > 0 ? (
         <BulkBar count={count} label="Selected orders">
           {/* What the picked rows can take: Delivered for those on their way; Confirm and Hold for the rest (a mixed pick on All). */}
-          {onWay ? <Button size="sm" onClick={() => bulkDelivered()} aria-disabled={busy}>Delivered</Button> : null}
+          {onWay ? <Button size="sm" onClick={() => bulkDelivered()} aria-disabled={busy}>Mark delivered</Button> : null}
           {others ? <><Button size="sm" variant={onWay ? 'secondary' : 'primary'} onClick={() => bulk('confirm')} aria-disabled={busy}>Confirm {count}</Button>
             <Button size="sm" variant="secondary" onClick={() => bulk('hold')} aria-disabled={busy}>Put on hold</Button></> : null}
           {/* Slips for the selected orders that have one, in the queue's order (the print page takes at most 50). */}
@@ -212,7 +212,7 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
       <div ref={wrap}>
       <DataTable label={label}>
         <DataTableHead>
-          <th className="w-10"><span className="sr-only">Select</span></th><th>Order</th><th>Customer</th><th>Payment</th><th>Status</th><th className="text-right">Total</th><th>Placed</th>
+          <th className="w-10"><span className="sr-only">Select</span></th><th>Order</th><th>Shopper</th><th>Payment</th><th>Status</th><th className="text-right">Total</th><th>Placed</th>
         </DataTableHead>
         <DataTableBody>
           {rows.map((r, i) => {
@@ -239,17 +239,18 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
                 </span></Td>
                 {/* One status cell at every width: on a phone it is line 2's badges (cell d), the ship step with it. */}
                 <Td cell="d"><span className="flex flex-wrap items-center gap-1.5">{status(r, now)}
-                  {r.shipStep && !now ? <Button size="sm" variant="secondary" onClick={() => void step(r)} aria-disabled={busy}>{r.shipStep === 'ship' ? 'Mark shipped' : 'Delivered'}<span className="sr-only"> {r.number}</span></Button> : null}
+                  {r.shipStep && !now ? <Button size="sm" variant="secondary" onClick={() => void step(r)} aria-disabled={busy}>{r.shipStep === 'ship' ? 'Mark shipped' : 'Mark delivered'}<span className="sr-only"> {r.number}</span></Button> : null}
                 </span></Td>
                 <Td cell="b" className="text-right"><Money paise={r.total as Paise} /></Td>
-                <Td cell="hide" className="whitespace-nowrap text-sm text-muted-foreground">{r.placed}</Td>
+                <Td cell="hide" className="whitespace-nowrap text-sm text-muted-foreground"><time dateTime={r.placedAt}>{r.placed}</time></Td>
               </tr>
             )
           })}
         </DataTableBody>
       </DataTable>
       </div>
-      <p className="text-xs text-muted-foreground"><button type="button" onClick={() => setKeys(true)} className="inline-flex min-h-6 items-center underline underline-offset-2">Keyboard shortcuts</button> · press ?</p>
+      {/* The sheet holds the switch that turns single-key shortcuts off (WCAG 2.1.4), so a pointer reaches it too. */}
+      <button type="button" onClick={() => setKeys(true)} aria-keyshortcuts="?" className="inline-flex min-h-6 items-center self-start text-xs text-muted-foreground underline underline-offset-2">Keyboard shortcuts</button>
       {peekAt !== null && rows[peekAt] ? <OrderPeek n={rows[peekAt]!.n} label={rows[peekAt]!.number} onClose={peekClose} onMove={peekMove} /> : null}
       <KeySheet open={keys} onClose={() => setKeys(false)} enabled={enabled} onEnabled={setEnabled} only={['next', 'previous', 'select', 'open', 'peek', 'confirm', 'hold', 'undo', 'search', 'help', 'rail']} />
     </>

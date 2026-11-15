@@ -41,7 +41,7 @@ export const MIN_FOR_MEDIAN = 10
 const TEST_NAME = /^(test|testing|abc|xyz|asdf|qwerty|na|n\/a|.)$/i
 
 const normal = (s: string) => s.toLowerCase().replace(/[^a-z]/g, '')
-/** A city with no Latin letter can't be compared with the directory's English one (shop stress test 2026-11-11: a
+/** A city with no Latin letter can’t be compared with the directory's English one (shop stress test 2026-11-11: a
  * genuine Hindi address read "the city typed is not the pincode's city"); one with any Latin letter still is. */
 const comparable = (s: string) => /\p{Script=Latin}/u.test(s)
 /** Old and new names of the same city, and a district's common city name (all `normal`ised). */
@@ -79,7 +79,7 @@ const HAS_NUMBER = /\p{Nd}/u
 export function risk(f: RiskFacts): Risk {
   if (!f.cod) return { level: 'low', reasons: [], next: null }
   const high: string[] = []
-  if (f.sameItemsWithin24h > 0) high.push('Possible duplicate: the same items from this phone in the last 24 hours')
+  if (f.sameItemsWithin24h > 0) high.push('Possible duplicate. Same items from this phone in 24 hours')
   if (f.codFromPhoneToday >= 3) high.push(`${f.codFromPhoneToday} pay-on-delivery orders from this phone today`)
   if (f.cancelledAsFake > 0) high.push('An earlier order from this phone was cancelled as fake')
   // Shop stress test 2026-11-11: a phone that refused before read Low (its refusals even counted as "not a first
@@ -91,7 +91,7 @@ export function risk(f: RiskFacts): Risk {
   if (f.earlierOrders === 0) medium.push('First order from this phone')
   const line = f.addressLine.trim()
   if (!HAS_NUMBER.test(line) || line.length < 15) medium.push('The address has no house or building number, or is very short')
-  if (f.pincodeCity && f.city && comparable(f.city) && !sameCity(f.city, f.pincodeCity) && !(f.pincodeDistrict && sameCity(f.city, f.pincodeDistrict))) medium.push(`The city typed is not the pincode's city (${f.pincodeCity})`)
+  if (f.pincodeCity && f.city && comparable(f.city) && !sameCity(f.city, f.pincodeCity) && !(f.pincodeDistrict && sameCity(f.city, f.pincodeDistrict))) medium.push(`The city typed isn’t the PIN code's city (${f.pincodeCity})`)
   if (f.medianCod !== null && f.total > 2 * f.medianCod) medium.push('Over twice your usual pay-on-delivery order')
   if (TEST_NAME.test(f.customerName.trim())) medium.push('The name looks like a test')
   if (medium.length >= 2) return { level: 'medium', reasons: medium.slice(0, 3), next: 'Call or WhatsApp to confirm.' }

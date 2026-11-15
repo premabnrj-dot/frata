@@ -65,7 +65,7 @@ function Bound({ label, value, max, shopField, onChange }: { label: string; valu
   const bound = !!value && 'from' in value
   return (
     <div className="space-y-2">
-      <Switch label={shopField === 'shopName' ? `${label}: your shop’s name` : `${label}: your tagline`} on={bound} onChange={(on) => onChange(on ? { from: shopField } : { text: '' })} />
+      <Switch label={shopField === 'shopName' ? `${label}, your store’s name` : `${label}, your tagline`} on={bound} onChange={(on) => onChange(on ? { from: shopField } : { text: '' })} />
       {!bound && <Text label={label} value={value && 'text' in value ? value.text : ''} max={max} onChange={(text) => onChange({ text })} />}
     </div>
   )
@@ -209,31 +209,31 @@ function Look({ s, set, c }: { s: SectionOf<'shop_the_look'>; set: Set<SectionOf
     <ImageField label="Photo" value={s.image} tenantId={c.tenantId} library={c.photos} suggest={[s.heading, c.shopName]} onChange={(image) => set({ ...s, image })} />
     {s.image && (
       <div className="space-y-1">
-        <button type="button" onClick={place} disabled={!piece} aria-label={piece ? `Put piece ${at + 1}’s dot where you tap` : 'Add a piece first'} className="relative block w-full overflow-hidden rounded-md">
+        <button type="button" onClick={place} disabled={!piece} aria-label={piece ? `Put product ${at + 1}’s dot where you tap` : 'Add a product first'} className="relative block w-full overflow-hidden rounded-md">
           <img src={urlFor(s.image.base, s.image.widths[0]!)} alt="" className="aspect-[4/5] w-full object-cover" />
           {s.pieces.map((p, i) => <span key={p.handle} aria-hidden="true" style={{ left: `${p.x}%`, top: `${p.y}%` }} className={`absolute grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-card text-xs font-semibold text-foreground ${i === at ? 'ring-2 ring-foreground' : ''}`}>{i + 1}</span>)}
         </button>
-        <p className="text-xs text-muted-foreground">Tap the photo to place the selected piece’s dot.</p>
+        <p className="text-xs text-muted-foreground">Tap the photo to place the selected product’s dot.</p>
       </div>
     )}
     <ol className="space-y-2">
       {s.pieces.map((p, i) => (
         <li key={p.handle} className={`flex items-center gap-2 rounded-md px-2 ${i === at ? 'border-2 border-foreground' : 'border border-input'}`}>
           <button type="button" onClick={() => setAt(i)} aria-pressed={i === at} className="min-h-11 flex-1 text-left text-sm">{i + 1} · {c.products.find((x) => x.handle === p.handle)?.title ?? p.handle}</button>
-          <button type="button" aria-label={`Remove piece ${i + 1}`} onClick={() => { set({ ...s, pieces: s.pieces.filter((_, j) => j !== i) }); setAt(0) }} className="grid size-9 place-items-center rounded-md"><Icon name="close" className="size-4" /></button>
+          <button type="button" aria-label={`Remove product ${i + 1}`} onClick={() => { set({ ...s, pieces: s.pieces.filter((_, j) => j !== i) }); setAt(0) }} className="grid size-9 place-items-center rounded-md"><Icon name="close" className="size-4" /></button>
         </li>
       ))}
     </ol>
     {piece && <>
-      <Field label={`Piece ${at + 1}: across`}>{(id) => <input id={id} type="range" min={0} max={100} value={piece.x} onChange={(e) => move('x', Number(e.target.value))} className="w-full" />}</Field>
-      <Field label={`Piece ${at + 1}: down`}>{(id) => <input id={id} type="range" min={0} max={100} value={piece.y} onChange={(e) => move('y', Number(e.target.value))} className="w-full" />}</Field>
+      <Field label={`Product ${at + 1}, across`}>{(id) => <input id={id} type="range" min={0} max={100} value={piece.x} onChange={(e) => move('x', Number(e.target.value))} className="w-full" />}</Field>
+      <Field label={`Product ${at + 1}, down`}>{(id) => <input id={id} type="range" min={0} max={100} value={piece.y} onChange={(e) => move('y', Number(e.target.value))} className="w-full" />}</Field>
     </>}
-    {s.pieces.length < 4 && unused.length > 0 && <Field label={`Add a piece (${s.pieces.length} of 4)`}>{(id) => (
+    {s.pieces.length < 4 && unused.length > 0 && <Field label={`Add a product (${s.pieces.length} of 4)`}>{(id) => (
       <select id={id} value="" onChange={(e) => { if (!e.target.value) return; set({ ...s, pieces: [...s.pieces, { handle: e.target.value, x: 50, y: 50 }] }); setAt(s.pieces.length) }} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm">
         <option value="">Pick a product…</option>
         {unused.map((p) => <option key={p.handle} value={p.handle}>{p.title}</option>)}
       </select>)}</Field>}
-    <p className="text-xs text-muted-foreground">A piece that’s hidden or not listed drops out of the look on the shop.</p>
+    <p className="text-xs text-muted-foreground">A hidden or unlisted product drops out of the look in your store.</p>
   </>)
 }
 

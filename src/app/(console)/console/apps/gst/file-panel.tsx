@@ -37,7 +37,7 @@ export function FilePanel({ period, step, ours, portal, username, pushedAt, file
     const r = await f()
     if (!r.ok) {
       shown.current = toast.next()
-      if (r.error) toast.error(r.error); else toast.error('Something went wrong.', { sub: 'Nothing was filed.' })
+      if (r.error) toast.error(r.error); else toast.error('We couldn’t file this return.', { sub: 'Nothing was filed. Try again.' })
       return
     }
     if (shown.current !== null) { toast.dismiss(shown.current); shown.current = null }
@@ -88,7 +88,7 @@ export function FilePanel({ period, step, ours, portal, username, pushedAt, file
       {step === 'file' && (
         <form className="space-y-3 rounded-lg border border-border p-4" onSubmit={(e) => { e.preventDefault(); run(fileOtp ? () => gstFile(period, otp) : async () => { const r = await gstFileOtp(period); if (r.ok) setFileOtp(true); return r }) }}>
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={sure} onChange={(e) => setSure(e.target.checked)} className="mt-0.5" />
-            <span>I’ve checked this return. A filed GSTR-1 can’t be changed; a mistake is corrected in a later period.</span></label>
+            <span>I’ve checked this return. A filed GSTR-1 can’t be changed. Mistakes are fixed in a later period.</span></label>
           <div className="flex flex-wrap items-center gap-2">
             {fileOtp && otpBox('EVC OTP')}
             <button type="submit" disabled={pending || !sure || (fileOtp && otp.length !== 6)} className={button({})}>{fileOtp ? 'File GSTR-1' : 'Send EVC OTP'}</button>
@@ -96,7 +96,7 @@ export function FilePanel({ period, step, ours, portal, username, pushedAt, file
         </form>
       )}
       {/* feedback-ok: a state of the return with what to do next (rule 5), not the result of a button */}
-      {step === 'check' && <p className="text-sm text-danger-text">The portal’s totals don’t match ours. Push again; if they still differ, send the files to your CA.</p>}
+      {step === 'check' && <p className="text-sm text-danger-text">The portal’s totals don’t match ours. Push again. If they still differ, send the files to your CA.</p>}
     </div>
   )
 }

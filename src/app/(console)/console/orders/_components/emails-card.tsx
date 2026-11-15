@@ -20,8 +20,8 @@ export function EmailsCard({ orderId, email, emails, canAct }: { orderId: string
   const last = emails[0]
   // The result is a toast (design-language § Feedback): ok after the save or the resend, the refusal as an error.
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>, done: string) => start(async () => {
-    const r = await fn().catch(() => ({ ok: false, error: 'We could not reach Frrata. Nothing was changed.' }))
-    if (!r.ok) { toast.error(r.error ?? 'Something went wrong.'); return }
+    const r = await fn().catch(() => ({ ok: false, error: 'We couldn’t reach Frrata. Nothing was changed.' }))
+    if (!r.ok) { toast.error(r.error ?? 'We couldn’t load the emails. Reload the page.'); return }
     toast.ok(done); setEditing(false); router.refresh()
   })
   return (

@@ -23,6 +23,7 @@
 //   pay-online saving, no COD fee (the order is priced the way it is paid: `way`).
 // =============================================================================
 
+import { STATE_WORDS } from './state-words'
 import { classOf, priceMethod, type MethodPrice, type PlanLine } from '@/domains/checkout/discounts'
 import { MAX_LINES, MAX_QTY } from '@/domains/checkout/quote'
 import { replanKept, type Kept } from '@/domains/checkout/replan'
@@ -32,17 +33,17 @@ import { applies } from './work'
 
 export const EDIT_REASONS = ['out_of_stock', 'customer_asked', 'other'] as const
 export type EditReason = (typeof EDIT_REASONS)[number]
-export const REASON_LABEL: Record<EditReason, string> = { out_of_stock: 'Out of stock', customer_asked: 'Customer asked', other: 'Other' }
+export const REASON_LABEL: Record<EditReason, string> = { out_of_stock: 'Out of stock', customer_asked: 'Shopper asked', other: 'Other' }
 
 /**
- * Why this order's items can't change now (null: they can), roles aside: the one rule for the order page's button and
+ * Why this order's items can’t change now (null: they can), roles aside: the one rule for the order page's button and
  * the save. Until packed (applies('edit')), and never while an earlier change waits for the shopper's payment (OE·2).
  * Paid online (OE·2): a lower total refunds the difference, a higher one asks for it first (refunds.ts). An order that
  * started as an online payment and was switched to pay on delivery: a payment on its first Razorpay order after an edit
  * is refunded in full and never marks it paid at the old total (lib/orders/edit-paid.ts strayCapture).
  */
 export function cannotEdit(state: OrderState, o: { waiting: boolean }): string | null {
-  if (!applies('edit', state)) return state === 'packed' || state === 'shipped' ? 'Already packed: its slip and invoice keep these items.' : `This order is ${state.replace('_', ' ')}.`
+  if (!applies('edit', state)) return state === 'packed' || state === 'shipped' ? 'Already packed. Its slip and invoice keep these items.' : `This order is “${STATE_WORDS[state]}”. Its items can’t change now.`
   if (o.waiting) return 'Waiting for the shopper to pay for the last change. Wait, or ship without the change.'
   return null
 }
@@ -283,13 +284,13 @@ export function problemWords(p: EditProblem, inr: (paise: number) => string): st
     case 'too_many': return `An order holds up to ${MAX_LINES} items.`
     case 'unknown': return 'This order changed. Reload the page.'
     case 'qty': return `Choose 1 to ${MAX_QTY} of each.`
-    case 'twice': return `${p.title} is on the order twice: change its quantity instead.`
-    case 'other_product': return `${p.title}: swap within the same product, or remove it and add the other.`
-    case 'gone': return `${p.title} is no longer sold: remove it.`
-    case 'no_room': return p.left > 0 ? `${[p.title, ...p.values].join(' · ')}: only ${p.left} left.` : `${[p.title, ...p.values].join(' · ')} is sold out.`
+    case 'twice': return `${p.title} is on the order twice. Change its quantity instead.`
+    case 'other_product': return `${p.title} is a different product. Swap sizes within one product, or remove it and add the other.`
+    case 'gone': return `${p.title} is no longer sold. Remove it.`
+    case 'no_room': return p.left > 0 ? `Only ${p.left} of ${[p.title, ...p.values].join(' · ')} left.` : `${[p.title, ...p.values].join(' · ')} is sold out.`
     case 'no_reason': return `Say why ${p.title} comes out.`
     case 'offers_unknown': return 'This order was placed before offers could be worked out again. Cancel it and place it again to change its items.'
     case 'cod_max': return `Pay on delivery is for orders up to ${inr(p.max)}. Ask them to pay online, or keep the order as it was.`
-    case 'payment_unknown': return 'Its online payment can\'t be read here, so the money can\'t follow. Keep the order as it was.'
+    case 'payment_unknown': return 'Its online payment can’t be read here, so the money can’t follow. Keep the order as it was.'
   }
 }

@@ -12,7 +12,7 @@ export function CopyLink({ address }: { address: string }) {
       <code id="shop-address" className="rounded-sm bg-muted px-2 py-1 font-mono text-sm">{address}</code>
       <Button variant="secondary" onClick={() => (navigator.clipboard?.writeText(url) ?? Promise.reject(new Error('no clipboard'))).then(() => toast.ok('Copied.'), () => {
         const r = document.createRange(); r.selectNodeContents(document.getElementById('shop-address')!); const sel = getSelection(); sel?.removeAllRanges(); sel?.addRange(r)
-        toast.error('Selected: copy it with your keyboard.')
+        toast.error('Selected. Copy it with your keyboard.')
       })}>Copy link</Button>
     </div>
   )

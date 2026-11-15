@@ -43,13 +43,13 @@ export async function GET(request: Request) {
     const { shop, paper, orders } = r.value.docs
     // An invoice carries what it froze at packing (logo, signatory, note); a slip shows today's.
     const [shopBrand, frozen] = await Promise.all([brandFor(r.value.tenantId, kind === 'slip' ? paper : null), kind !== 'slip' ? frozenPaper(r.value.tenantId, orders.map((o) => o.frozen)) : null])
-    if (!shopBrand) return text(404, 'This shop has no settings yet.')
+    if (!shopBrand) return text(404, 'This store has no settings yet.')
     const docs = orders.map(({ frozen: _f, ...o }, i) => ({ ...o, paper: frozen?.[i] }))
     const file = await documentFile(requestFor(kind, size, docs, shop), shopBrand.brand, shopBrand.contact)
-    if (!file) return text(404, kind === 'invoice' ? 'No invoice yet: an invoice is issued when the order is marked packed.' : kind === 'credit' ? 'No credit note has been issued for this order.' : 'None of these orders has a packing slip now.')
+    if (!file) return text(404, kind === 'invoice' ? 'No invoice yet. It is issued when the order is marked packed.' : kind === 'credit' ? 'No credit note has been issued for this order.' : 'None of these orders has a packing slip now.')
     return pdfResponse(file)
   } catch (err) {
     console.error('[orders/pdf]', errName(err))
-    return text(500, 'We could not make the PDF. Print it instead.')
+    return text(500, 'We couldn’t make the PDF. Print it instead.')
   }
 }

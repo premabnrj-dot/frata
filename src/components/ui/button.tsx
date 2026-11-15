@@ -50,6 +50,8 @@ type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof
   /** Why it cannot be pressed now (Neel § States: "Off"): the button stays reachable by keyboard (aria-disabled) and
    * the reason sits beside it, tied by aria-describedby. Prefer this to a bare `disabled`. */
   reason?: string
+  /** React 19: a ref is a prop (open-shop focuses its trigger again after a question is dismissed). */
+  ref?: React.Ref<HTMLButtonElement>
 }
 
 export function Button({ variant, size, className, busy, disabled, reason, children, onClick, ...props }: Props) {

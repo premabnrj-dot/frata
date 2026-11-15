@@ -37,7 +37,7 @@ export async function startVideoUploadAction(input: unknown): Promise<R<{ videoI
   if (!p.success) return { ok: false, error: 'Choose an MP4 or MOV video.' }
   const why = uploadProblem(p.data.contentType, p.data.size)
   if (why) return { ok: false, error: why }
-  if (!isVideoConfigured()) return { ok: false, error: 'Video isn’t switched on for shops yet.' }
+  if (!isVideoConfigured()) return { ok: false, error: 'Video isn’t switched on for stores yet.' }
   const now = new Date()
   // Who, and the limits, BEFORE the transaction: a limit is its own connection, never one taken while a transaction
   // holds another (speed review P4). Frrata's hourly limit is only checked here and counted once a start goes ahead,

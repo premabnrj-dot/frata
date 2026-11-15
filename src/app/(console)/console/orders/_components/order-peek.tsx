@@ -21,8 +21,8 @@ export function OrderPeek({ n, label, onClose, onMove }: { n: number; label: str
     const ctl = new AbortController()
     setPeek(null); setError(null)
     fetch(`/console/orders/${n}/peek`, { signal: ctl.signal })
-      .then(async (r) => { const b = await r.json(); if (r.ok) setPeek(b as Peek); else setError((b as { error?: string }).error ?? 'We could not open this order.') })
-      .catch((e: Error) => { if (e.name !== 'AbortError') setError('We could not open this order. Check your connection.') })
+      .then(async (r) => { const b = await r.json(); if (r.ok) setPeek(b as Peek); else setError((b as { error?: string }).error ?? 'We couldn’t open this order.') })
+      .catch((e: Error) => { if (e.name !== 'AbortError') setError('We couldn’t open this order. Check your connection.') })
     return () => ctl.abort()
   }, [n])
   const dt = 'text-label text-muted-foreground'
@@ -45,7 +45,7 @@ export function OrderPeek({ n, label, onClose, onMove }: { n: number; label: str
                 <p className="mt-2 flex justify-between border-t border-line-soft pt-2 font-medium"><span>Total</span><span className="font-num tabular-nums">{peek.total}</span></p>
               </section>
               <dl className="grid grid-cols-[88px_minmax(0,1fr)] gap-x-3 gap-y-2">
-                <dt className={dt}>Customer</dt><dd>{peek.customer}</dd>
+                <dt className={dt}>Shopper</dt><dd>{peek.customer}</dd>
                 {peek.phone ? <><dt className={dt}>Phone</dt><dd className="font-num">{peek.phone}</dd></> : null}
                 {peek.address ? <><dt className={dt}>Address</dt><dd>{peek.address}</dd></> : null}
               </dl>

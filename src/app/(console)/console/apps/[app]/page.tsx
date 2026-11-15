@@ -22,7 +22,7 @@ export default async function AppPage({ params }: { params: Promise<{ app: strin
   const now = new Date()
   const d = await appsPage(auth.membership.tenantId, auth.userId, now.toISOString())
     .catch((err) => { console.error('[app]', err instanceof Error ? err.name : 'error'); return null })
-  if (!d) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!d) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   // An app without a home of its own may be on here: its Turn off follows setModuleAction's rule (never a support visit).
   return <AppAbout {...aboutProps(app, d, now, mayTurnOff(auth.membership), auth.membership.tenantName)} />
 }

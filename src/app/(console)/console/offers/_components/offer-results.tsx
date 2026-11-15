@@ -65,7 +65,7 @@ export function OfferNumbers({ o, s, costs }: { o: OfferStat | undefined; s: Off
       ) : (
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div><dt className="text-xs text-muted-foreground">Orders</dt><dd className="font-num text-lg"><Numeric>{x.orders}</Numeric></dd>
-          <dd className="text-xs text-muted-foreground"><Numeric>{x.fresh}</Numeric> new · <Numeric>{x.repeat}</Numeric> repeat buyers</dd></div>
+          <dd className="text-xs text-muted-foreground"><Numeric>{x.fresh}</Numeric> new · <Numeric>{x.repeat}</Numeric> repeat shoppers</dd></div>
         <div><dt className="text-xs text-muted-foreground">₹ given</dt><dd className="font-num text-lg"><Money paise={paise(x.given)} /></dd>
           <dd className="text-xs text-muted-foreground">{rs(x.givenPerDelivered)} per delivered order</dd></div>
         <div><dt className="text-xs text-muted-foreground">Average order</dt><dd className="font-num text-lg">{rs(x.aov)}</dd>

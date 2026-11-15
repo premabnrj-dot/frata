@@ -40,14 +40,14 @@ export function AppAction({ k, name, action, canManage, askHref, block = false, 
     const r = await fn().catch(() => ({ ok: false, error: undefined }))
     setBusy(false)
     if (!r.ok) {
-      if (inDialog) setError(r.error ?? 'We could not change it. Nothing was changed.')
+      if (inDialog) setError(r.error ?? 'We couldn’t change it. Nothing was changed.')
       else if (r.error) toast.error(r.error)
-      else toast.error('We could not change it.', { sub: 'Nothing was changed.' })
+      else toast.error('We couldn’t change it.', { sub: 'Nothing was changed.' })
       return false
     }
     setConfirmOff(false); setConfirmTrial(false); settle(router); return true
   }
-  const owner = <p className="text-sm text-muted-foreground">Ask the shop’s owner to change this.</p>
+  const owner = <p className="text-sm text-muted-foreground">Ask the store’s owner to change this.</p>
 
   if (action.kind === 'interest') {
     return (
@@ -90,7 +90,7 @@ export function AppAction({ k, name, action, canManage, askHref, block = false, 
   if (action.kind === 'plans') {
     return canManage ? <Link href="/console/settings/billing" prefetch={false} className={`${button()} ${wide}`}>{action.label}</Link> : owner
   }
-  if (!canManage) return <p className="text-sm text-muted-foreground">{action.on ? 'On' : 'Off'} · ask the shop’s owner to change it.</p>
+  if (!canManage) return <p className="text-sm text-muted-foreground">{action.on ? 'On' : 'Off'} · ask the store’s owner to change it.</p>
   if (!action.on) {
     return <div><Button className={wide} disabled={busy} onClick={() => run(() => setModuleAction({ module: k, on: true }))}>Turn on {name}</Button></div>
   }
@@ -98,7 +98,7 @@ export function AppAction({ k, name, action, canManage, askHref, block = false, 
     <div>
       <Button variant="secondary" className={`${wide} after:hidden`} disabled={busy} onClick={() => { setError(null); setConfirmOff(true) }}>Turn off {name}</Button>
       <Dialog open={confirmOff} onClose={() => setConfirmOff(false)} title={`Turn off ${name}?`} error={error}
-        description={<ul className="list-disc space-y-1 pl-5">{OFF[k].map((l) => <li key={l}>{l}</li>)}{paid ? <li>Billing stops: it works to the end of this month and isn’t billed again.</li> : <li>Turn it back on any time.</li>}</ul>}
+        description={<ul className="list-disc space-y-1 pl-5">{OFF[k].map((l) => <li key={l}>{l}</li>)}{paid ? <li>It works to the end of this month. It isn’t billed again.</li> : <li>Turn it back on any time.</li>}</ul>}
         actions={<><Button variant="secondary" data-autofocus onClick={() => setConfirmOff(false)}>Keep {name}</Button><Button variant="destructive" disabled={busy} onClick={() => run(() => setModuleAction({ module: k, on: false }), true)}>Turn off {name}</Button></>} />
     </div>
   )
@@ -112,7 +112,7 @@ export function EndTrial({ k, name, paidFrom }: { k: ModuleKey; name: string; pa
   const [error, setError] = useState<string | null>(null)
   const end = async () => {
     setBusy(true); setError(null)
-    const r = await endAddonTrialAction({ module: k }).catch(() => ({ ok: false as const, error: 'We could not end the trial. Nothing was changed.' }))
+    const r = await endAddonTrialAction({ module: k }).catch(() => ({ ok: false as const, error: 'We couldn’t end the trial. Nothing was changed.' }))
     setBusy(false)
     if (!r.ok) { setError(r.error); return }
     setOpen(false); settle(router)

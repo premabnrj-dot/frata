@@ -19,9 +19,9 @@ const Store = z.object({ name: z.string().trim().min(1).max(60), slug: z.string(
 const SENTENCES: Record<string, string> = {
   not_partner: 'Your partner account is not approved yet.',
   too_many: `You have ${PARTNER_TERMS.maxUnopened} stores not handed over yet. Hand one over first.`,
-  bad_name: 'The shop needs a name of up to 60 letters.',
+  bad_name: 'The store needs a name of up to 60 letters.',
   bad_slug: 'Letters, digits and hyphens, at least 3.',
-  bad_pincode: 'A pincode is 6 digits and starts with 1 to 9.',
+  bad_pincode: 'A PIN code is 6 digits and starts with 1 to 9.',
   slug_taken: 'That address is taken. Try another.',
 }
 
@@ -32,11 +32,11 @@ export async function createClientStoreAction(input: unknown): Promise<{ ok: tru
   if (!parsed.success) return { ok: false, error: 'Check the highlighted fields.' }
   const { name, slug, pickup } = parsed.data
   if (slugProblem(slug)) return { ok: false, field: 'slug', error: SENTENCES.bad_slug! }
-  if (!(await withinLimit(LIMITS.createShopIp, await clientIp()))) return { ok: false, error: 'Too many shops made from here in the last hour. Try again later.' }
+  if (!(await withinLimit(LIMITS.createShopIp, await clientIp()))) return { ok: false, error: 'Too many stores made from here in the last hour. Try again later.' }
   const r = await createClientStore(auth.userId, { name, slug, pickup })
   if (!r.ok) {
     const field = r.error === 'slug_taken' || r.error === 'bad_slug' ? 'slug' : r.error === 'bad_name' ? 'name' : r.error === 'bad_pincode' ? 'pickup' : undefined
-    return { ok: false, field, error: SENTENCES[r.error] ?? 'We could not make the store. Nothing was changed.' }
+    return { ok: false, field, error: SENTENCES[r.error] ?? 'We couldn’t make the store. Nothing was changed.' }
   }
   refreshHosts(hostFor(slug))
   // Open the new store: it is one of this person's memberships now (app_access_for), so requireMember accepts it.

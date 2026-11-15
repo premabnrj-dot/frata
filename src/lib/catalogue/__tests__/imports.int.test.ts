@@ -63,10 +63,10 @@ describe.skipIf(!host)('importing a file (actions)', () => {
 
     // 600 now: one more is refused at the start (the file's own count) and, sent anyway, at the chunk.
     const one = file(HEAD + rowsOf(1, 50))
-    expect(await a.startImport(one.start)).toEqual({ ok: false, error: 'Your shop holds up to 600 products: this adds 1 to your 600. Split the file.' })
+    expect(await a.startImport(one.start)).toEqual({ ok: false, error: 'Your store holds up to 600 products. This file adds 1 to your 600, so split it.' })
     const lying = await a.startImport({ ...one.start, products: 0, variants: 0 })
     if (!lying.ok) throw new Error(lying.error)
-    expect(await a.importChunk({ jobId: lying.jobId, n: 0, rows: one.chunks[0] })).toEqual({ ok: false, error: 'Your shop holds up to 600 products: this adds 1 to your 600. Split the file.' })
+    expect(await a.importChunk({ jobId: lying.jobId, n: 0, rows: one.chunks[0] })).toEqual({ ok: false, error: 'Your store holds up to 600 products. This file adds 1 to your 600, so split it.' })
     expect((await su!`select count(*)::int n from products where tenant_id = ${state.tenantId}`)[0]!.n).toBe(600)
     expect((await su!`select count(*)::int n from import_rows where job_id = ${lying.jobId}`)[0]!.n).toBe(0)
   })
@@ -158,9 +158,9 @@ describe.skipIf(!host)('importing a file (actions)', () => {
     const before = await su!`select id, status, updated_at from products where tenant_id = ${mine} order by id`
     expect(before.length).toBeGreaterThan(0)
     state.tenantId = await shop('other')
-    expect(await a.importChunk({ jobId: s.jobId, n: 1, rows: f.chunks[1] })).toEqual({ ok: false, error: 'This import is not in your shop.' })
+    expect(await a.importChunk({ jobId: s.jobId, n: 1, rows: f.chunks[1] })).toEqual({ ok: false, error: 'This import isn’t in your store.' })
     expect(await a.stopImport(s.jobId)).toEqual({ ok: false, error: 'That import has already ended.' })
-    expect(await a.deleteImportDrafts(s.jobId)).toEqual({ ok: false, error: 'That import is not in your shop.' })
+    expect(await a.deleteImportDrafts(s.jobId)).toEqual({ ok: false, error: 'That import isn’t in your store.' })
     expect(await a.publishImportReady(s.jobId)).toEqual({ ok: true, published: 0 })
     const other = await page.importPage(state.tenantId, 'owner', new Date())
     expect([other.running, other.history]).toEqual([null, []])

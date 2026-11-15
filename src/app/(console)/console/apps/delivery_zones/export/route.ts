@@ -36,6 +36,6 @@ export async function GET() {
     } })
   } catch (err) {
     console.error('[delivery export]', errName(err))
-    return plain(500, 'We could not make the file. Try again in a minute.')
+    return plain(500, 'We couldn’t make the file. Try again in a minute.')
   }
 }

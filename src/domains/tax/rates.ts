@@ -130,9 +130,9 @@ export function inGap(hsn: string | null | undefined, unitPrice: number, inclusi
   return unitPrice > below && unitPrice <= above ? { below, above: above + 100 } : null
 }
 
-/** In words, for the Tax panel: "5% up to ₹2,500 a piece, 18% above" or "18%". */
+/** In words, for the Tax panel: "5% up to ₹2,500 an item, 18% above" or "18%". */
 export function ruleWords(rule: RateRule): string {
-  return rule.kind === 'flat' ? `${rule.bps / 100}%` : `${rule.low / 100}% up to ₹${(rule.limit / 100).toLocaleString('en-IN')} a piece, ${rule.high / 100}% above`
+  return rule.kind === 'flat' ? `${rule.bps / 100}%` : `${rule.low / 100}% up to ₹${(rule.limit / 100).toLocaleString('en-IN')} an item, ${rule.high / 100}% above`
 }
 
 /** Search the HSN list by code or words (4+ digit entries only), best first. */

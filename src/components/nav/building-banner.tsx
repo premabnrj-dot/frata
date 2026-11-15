@@ -26,7 +26,7 @@ export function BuildingBanner({ shop, inviteEmail }: { shop: string; inviteEmai
     start(async () => {
       const r = await handOverAction({ email })
       if (!r.ok) { if (r.field) fields.set({ 'owner-email': r.error }); else setError(r.error); return }
-      setSent(r.emailed ? r.email : `${r.email} (email not sent: they can sign in at /login)`); setOpen(false); router.refresh()
+      setSent(r.emailed ? r.email : `${r.email} (email not sent, they can sign in at /login)`); setOpen(false); router.refresh()
     })
   }
   return (
@@ -39,7 +39,7 @@ export function BuildingBanner({ shop, inviteEmail }: { shop: string; inviteEmai
         {sent ? 'Send again' : 'Hand over'}
       </button>
       <Dialog open={open} onClose={() => setOpen(false)} title={`Hand ${shop} to its owner`} error={error}
-        description={<ul className="list-disc space-y-1 pl-5"><li>They own the store and its data.</li><li>You stay on as partner. No billing, payment keys or people.</li><li>Your 20% starts when the shop opens.</li></ul>}
+        description={<ul className="list-disc space-y-1 pl-5"><li>They own the store and its data.</li><li>You stay on as partner. No billing, payment keys or people.</li><li>Your 20% starts when the store opens.</li></ul>}
         actions={<>
           <Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Keep building</Button>
           <Button type="submit" form="handover" disabled={pending}>{pending ? 'Sending…' : 'Send invite'}</Button>

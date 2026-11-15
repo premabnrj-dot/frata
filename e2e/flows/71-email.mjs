@@ -55,7 +55,7 @@ export default {
       const admin = await open('frata')
       try {
         await admin.p.goto(CONSOLE + '/admin/notices')
-        await admin.p.getByLabel('To').selectOption('shop')
+        await admin.p.locator('select[name="audience"]').selectOption('shop')
         await admin.p.getByLabel('Shop id').fill(shop.id)
         await admin.p.getByLabel('Kind').selectOption('security')
         await admin.p.getByLabel('Title').fill('We changed how support visits work')
@@ -148,7 +148,7 @@ export default {
           const c = await owner.newPage(); c.setDefaultTimeout(15_000); c.on('pageerror', (e) => t.errors.push(e.message))
           await c.goto(CONSOLE + `/console/orders/${o.number}`)
           const card = c.locator('#emails')
-          await card.getByText('Bounced: no such address').waitFor()
+          await card.getByText('Bounced · no such address').waitFor()
           await c.screenshot({ path: t.out('order-emails'), fullPage: true })
           // Switch Order confirmed off in Settings › Emails: the next order's email is skipped, with its reason, and the
           // shop's own words stay (the switch changes the switch only; impact review E·2).
@@ -162,7 +162,7 @@ export default {
           await drain()
           await until(async () => (await db`select skip_code from email_messages where tenant_id = ${shop.id} and order_id = ${o2.id} and kind = 'confirmed'`)[0]?.skip_code === 'off', 10_000)
           await c.goto(CONSOLE + `/console/orders/${o2.number}`)
-          await c.locator('#emails').getByText('Not sent: switched off in Settings').waitFor()
+          await c.locator('#emails').getByText('Not sent · switched off in Settings').waitFor()
           assert.ok(!(await sent()).some((m) => m.to === 'meera.j@example.in'), 'nothing was sent')
         } finally { await owner.close() }
       } finally { await ctx.close() }

@@ -76,7 +76,7 @@ export default {
       await riya.waitForURL(/\/console\/look\/customize$/)
       await riya.getByRole('button', { name: 'Publish', exact: true }).click()
       await riya.getByRole('dialog', { name: /^Publish Bazaar/ }).getByRole('button', { name: 'Publish', exact: true }).click()
-      await riya.getByRole('dialog', { name: 'Your shop has its new look' }).waitFor()
+      await riya.getByRole('dialog', { name: 'Your store has its new look' }).waitFor()
       // Bazaar has the phone tab bar; the look before it doesn't.
       await until(async () => /Shop tabs/.test(await shopHtml()), 15_000)
       await meera.goto(CONSOLE + '/admin/themes/bazaar/1.0.0')
@@ -85,7 +85,7 @@ export default {
       await expectToast(meera, 'Withdrawn. Shops on it show their previous look now.', 'ok')
       await until(async () => !/Shop tabs/.test(await shopHtml()), 15_000)
       await riya.goto(CONSOLE + '/console/look')
-      await riya.getByText('Frrata withdrew Bazaar 1.0.0 for a problem. Your previous look is live; nothing is lost.').waitFor()
+      await riya.getByText('Frrata withdrew Bazaar 1.0.0 for a problem. Your previous look is live. Nothing is lost.').waitFor()
       assert.equal(await riya.getByRole('button', { name: 'Bazaar', exact: true }).count(), 0, 'a withdrawn theme is not offered')
       await riya.screenshot({ path: t.out('look-withdrawn'), fullPage: true })
     })

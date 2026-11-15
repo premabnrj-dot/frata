@@ -226,7 +226,7 @@ describe.skipIf(!host)('editing an order\'s items', () => {
     expect(await t.edit(o.id, [{ line: two.id, variantId: s.xl, qty: 1 }, { line: (await t.lineOf(o.id, s.dupatta)).id, variantId: s.dupatta, qty: 1 }]))
       .toEqual({ ok: false, error: 'Anarkali kurta set · XL is sold out.' })
     expect(await t.edit(o.id, [{ line: two.id, variantId: s.l, qty: 3 }, { line: (await t.lineOf(o.id, s.dupatta)).id, variantId: s.dupatta, qty: 1 }]))
-      .toEqual({ ok: false, error: 'Anarkali kurta set · L: only 2 left.' })
+      .toEqual({ ok: false, error: 'Only 2 of Anarkali kurta set · L left.' })
     expect(await t.undo(r.eventId, new Date(Date.now() + 11 * 60_000))).toEqual({ ok: false, error: 'The 10 minutes to undo have passed. Edit the items instead.' })
   }, 60_000)
 
@@ -247,7 +247,7 @@ describe.skipIf(!host)('editing an order\'s items', () => {
     const editing = t.withTenant(s.A, (tx) => editItems(tx, s.A, ACTOR, o.id, { want, reasons: {}, notify: false, expectedTotal: expected.ok ? expected.plan.total.after : 0 }))
     const [p, r] = await Promise.all([packing, editing])
     expect(p.ok).toBe(true)
-    expect(r).toEqual({ ok: false, error: 'Already packed: its slip and invoice keep these items.' })
+    expect(r).toEqual({ ok: false, error: 'Already packed. Its slip and invoice keep these items.' })
     expect((await t.live(o.id)).map((x) => x.id).sort()).toEqual([m.id, c.id].sort())
     expect(await t.stock([s.m, s.l])).toEqual({ [s.m]: 4, [s.l]: 2 })
   }, 60_000)
@@ -277,7 +277,7 @@ describe.skipIf(!host)('editing an order\'s items', () => {
     // Its one use is free: another order takes it. Undo would give it twice: refused, and nothing changes.
     const y = await t.place([{ variantId: s.coord, qty: 2 }])
     expect((await t.offers(y.id)).map((o) => o.title)).toEqual(['Big bag ₹500 off'])
-    expect(await t.undo(r.eventId)).toEqual({ ok: false, error: 'Big bag ₹500 off ran out since: Undo would give it again. Edit the items instead.' })
+    expect(await t.undo(r.eventId)).toEqual({ ok: false, error: 'Big bag ₹500 off ran out since. Undo would give it again. Edit the items instead.' })
     expect(await t.money(x.id)).toEqual(after)
     expect(await uses()).toBe(1)
 
@@ -313,14 +313,14 @@ describe.skipIf(!host)('editing an order\'s items', () => {
     const o = await t.place([{ variantId: s.m, qty: 1 }])
     const m = await t.lineOf(o.id, s.m)
     const swap = [{ line: m.id, variantId: s.l, qty: 1 }]
-    expect(await t.edit(o.id, swap, {}, { actor: { kind: 'support', userId: ME, email: 'support@frata.test' } })).toEqual({ ok: false, error: 'A support visit can\'t change an order\'s items.' })
+    expect(await t.edit(o.id, swap, {}, { actor: { kind: 'support', userId: ME, email: 'support@frata.test' } })).toEqual({ ok: false, error: 'A support visit can’t change an order\'s items.' })
     expect(await t.edit(o.id, swap, {}, { expectedTotal: 1 })).toEqual({ ok: false, error: 'The new total is ₹2,598. Check it, then save again.', total: 259800 })
     expect(await t.edit(o.id, [{ line: m.id, variantId: s.m, qty: 3 }])).toEqual({ ok: false, error: 'Pay on delivery is for orders up to ₹6,000. Ask them to pay online, or keep the order as it was.' })
     // OE·2 lifted the refusals of a paid-online order and of one switched from an online payment: edit-paid.int.test.ts.
     expect((await t.live(o.id)).map((l) => l.id)).toEqual([m.id])
     const p = await t.place([{ variantId: s.coord, qty: 1 }])
     await t.withTenant(s.A, (tx) => tx.update(orders).set({ confirmedAt: new Date(), packedAt: new Date(), invoiceNumber: `ED/${String(s.stamp).slice(-6)}` }).where(and(eq(orders.tenantId, s.A), eq(orders.id, p.id))))
-    expect(await t.edit(p.id, [{ line: (await t.lineOf(p.id, s.coord)).id, variantId: s.coord, qty: 2 }], {}, { expectedTotal: 0 })).toEqual({ ok: false, error: 'Already packed: its slip and invoice keep these items.' })
+    expect(await t.edit(p.id, [{ line: (await t.lineOf(p.id, s.coord)).id, variantId: s.coord, qty: 2 }], {}, { expectedTotal: 0 })).toEqual({ ok: false, error: 'Already packed. Its slip and invoice keep these items.' })
   }, 60_000)
 
   it('two lines on one variant with too little for both: the lower line id is taken, whatever order they are named in', async () => {

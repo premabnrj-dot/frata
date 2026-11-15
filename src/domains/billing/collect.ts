@@ -29,7 +29,7 @@ export function nextStep(d: DueInvoice, now: Date, gatewayIsTest: boolean): Step
   if (d.pending > 0) return { kind: 'wait', why: 'an attempt is not settled yet' }
   if (d.attempts >= MAX_ATTEMPTS) return { kind: 'wait', why: 'retries spent' }
   if (d.mandateMax !== null && d.due > d.mandateMax) return { kind: 'wait', why: 'above the autopay limit' }
-  if (d.trialEndsAt && t + NOTICE_LEAD_MS < d.trialEndsAt.getTime()) return { kind: 'wait', why: 'in a trial: collected after it ends' }
+  if (d.trialEndsAt && t + NOTICE_LEAD_MS < d.trialEndsAt.getTime()) return { kind: 'wait', why: 'in a trial, collected after it ends' }
   // A failed attempt needs a fresh notice before the next debit, and a day's rest.
   const needsNotice = !d.noticeAt || (d.lastFailedAt !== null && d.noticeAt.getTime() < d.lastFailedAt.getTime())
   // After a failure the next notice goes at once, so the retry lands ≥ 25 h later: a day apart (T+1), as the rules ask.

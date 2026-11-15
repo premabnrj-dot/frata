@@ -99,7 +99,7 @@ export function cleanProduct(p: ProductInput, now: Date, hsnDigits = 4, how: { b
       if (price === null) errors[cell('price')] = priceRefusal(v?.price ?? '')
       const compareAt = v?.compareAt.trim() ? parseRupees(v.compareAt) : null
       if (v?.compareAt.trim() && compareAt === null) errors[cell('compareAt')] = priceRefusal(v.compareAt)
-      else if (compareAt !== null && price !== null && compareAt < price) errors[cell('compareAt')] = 'The M.R.P. can’t be below the price: never sell above M.R.P.'
+      else if (compareAt !== null && price !== null && compareAt < price) errors[cell('compareAt')] = 'The M.R.P. can’t be below the price.'
       const unitCost = v?.cost.trim() ? parseRupees(v.cost, { zero: true }) : null
       if (v?.cost.trim() && unitCost === null) errors[cell('cost')] = 'A cost in rupees, or empty.'
       const stockText = (v?.stock ?? '0').trim() || '0'

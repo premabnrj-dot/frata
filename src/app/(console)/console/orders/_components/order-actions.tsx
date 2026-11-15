@@ -76,7 +76,7 @@ function Actions(p: OrderActionsProps) {
     if (busy) { toast.error('Still saving the last change…'); return null }
     setBusy(true)
     let r: Awaited<ReturnType<typeof fn>>
-    try { r = await fn() } catch { r = { ok: false, error: 'We could not save that. Check your connection; nothing was changed.' } } finally { setBusy(false) }
+    try { r = await fn() } catch { r = { ok: false, error: 'We couldn’t save that. Check your connection. Nothing was changed.' } } finally { setBusy(false) }
     if (!r.ok) {
       const by = r.by ? ` by ${r.by.email ?? 'someone'} at ${new Date(r.by.at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' })}` : ''
       if (say) say(`${r.error}${by}.`); else toast.error(`${r.error}${by}.`)
@@ -142,11 +142,11 @@ function Actions(p: OrderActionsProps) {
         onIssue={(req) => void run('credited', async () => { const r = await issuePartCreditNote(p.orderId, req); return r.ok ? { ...r, ok: true } : r }).then((r) => { if (r) setPartOpen(false) })} /> : null}
 
       <Dialog open={creditOpen} onClose={() => { setCreditOpen(false); setCreditError(null) }} title={`Issue a credit note for ${p.number}?`} error={creditError}
-        description="It reverses what is left of the invoice, with its own number from your credit-note series. A credit note is final: it cannot be changed or taken back."
+        description="It reverses what is left of the invoice, with its own credit-note number. It can’t be changed or taken back."
         actions={<><Button variant="secondary" data-autofocus onClick={() => { setCreditOpen(false); setCreditError(null) }}>Not now</Button><Button onClick={() => { setCreditError(null); void run('credited', async () => { const r = await issueCreditNote(p.orderId); return r.ok ? { ...r, ok: true } : r }, false, setCreditError).then((r) => { if (r) setCreditOpen(false) }) }} aria-disabled={busy}>Issue credit note</Button></>} />
 
       <Dialog open={cancelOpen} onClose={closeCancel} title={`Cancel ${p.number}?`} error={cancelError}
-        description={p.refund ? <>It was paid online: refund <strong>{p.refundLabel}</strong> in your Razorpay dashboard after cancelling (cancelling sends no refund).{p.refunded ? <> {p.refunded} is already refunded or on its way.</> : null} We email the customer only if they gave an email: tell them on WhatsApp or by phone.</> : 'We email the customer only if they gave an email: tell them on WhatsApp or by phone.'}
+        description={p.refund ? <>It was paid online. Cancelling sends no refund. Refund <strong>{p.refundLabel}</strong> in Razorpay after cancelling.{p.refunded ? <> {p.refunded} is already refunded or on its way.</> : null} We email the shopper if they gave an email. If not, tell them on WhatsApp or by phone.</> : 'We email the shopper if they gave an email. If not, tell them on WhatsApp or by phone.'}
         actions={<><Button variant="secondary" data-autofocus onClick={closeCancel}>Keep the order</Button><Button variant="destructive" onClick={doCancel} aria-disabled={busy}>Cancel order</Button></>}>
         <div ref={cancelFields} className="grid gap-4">
           <fieldset className="grid gap-2">

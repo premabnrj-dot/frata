@@ -81,7 +81,7 @@ export function Photos({ productId, tenantId, photos, colours, enabled, title = 
               </span>
             </div>
             {/* What the photo shows, for screen readers, Google Images and AI search (S2·6); empty = the product's title. */}
-            <label htmlFor={`alt-${ph.id}`} className="sr-only">Photo {i + 1}: what it shows</label>
+            <label htmlFor={`alt-${ph.id}`} className="sr-only">What photo {i + 1} shows</label>
             <input id={`alt-${ph.id}`} defaultValue={ph.alt ?? ''} maxLength={200} disabled={pending} placeholder={`${title}${ph.optionValue ? `, ${ph.optionValue}` : ''}, photo ${i + 1}`}
               onBlur={(e) => { const v = e.target.value.trim(); if (v !== (ph.alt ?? '')) act(ph.id, { alt: v }) }}
               className="h-11 w-full rounded-md border border-input bg-card px-1.5 text-xs md:h-7" />
@@ -106,7 +106,7 @@ export function Photos({ productId, tenantId, photos, colours, enabled, title = 
         ) : <p className="text-sm text-muted-foreground">Photo storage is not connected on this deployment.</p>}
       </div>
       <ConfirmDelete open={!!removing} count={1} noun={['photo', 'photos']} verb="Remove" keep="Keep it" busy={pending}
-        consequence={<>It comes off this product and your shop.</>} onClose={() => setConfirm(null)} onConfirm={() => removing && act(removing.id, { remove: true })} />
+        consequence={<>It comes off this product and your store.</>} onClose={() => setConfirm(null)} onConfirm={() => removing && act(removing.id, { remove: true })} />
     </div>
   )
 }

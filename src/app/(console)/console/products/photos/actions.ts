@@ -52,6 +52,6 @@ export async function addPhotos(input: unknown): Promise<{ ok: true; added: numb
     return { ok: true, added: r.value.added }
   } catch (err) {
     console.error('[addPhotos]', errName(err))
-    return { ok: false, error: 'We could not add the photos. Try again.' }
+    return { ok: false, error: 'We couldn’t add the photos. Try again.' }
   }
 }

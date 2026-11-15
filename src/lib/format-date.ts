@@ -10,21 +10,24 @@
 
 export const IST = 'Asia/Kolkata'
 
+/** en-IN writes September as "Sept"; Neel writes every month in three letters ("12 Nov", "13 Sep"; owner, 2026-11-15). */
+const sep = (t: string) => t.replace(/\bSept\b/, 'Sep')
+
 /** "12 Oct 2026" */
 export const dayIN = (d: Date) =>
-  d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: IST })
+  sep(d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: IST }))
 
 /** "Sat 14 Nov, 7 pm" (minutes only when not on the hour) — a drop's moment (Theme Studio TS1b's date block; Drop
  *  teaser keeps dayIN, its own pixels). The word before it ("Drops") is the shop's language (words.ts). */
 export function dropLineIN(d: Date): string {
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: IST })
     .formatToParts(d).map((x) => [x.type, x.value]))
-  return `${p.weekday} ${p.day} ${p.month}, ${p.hour}${p.minute === '00' ? '' : `:${p.minute}`} ${String(p.dayPeriod).toLowerCase()}`
+  return `${p.weekday} ${p.day} ${sep(String(p.month))}, ${p.hour}${p.minute === '00' ? '' : `:${p.minute}`} ${String(p.dayPeriod).toLowerCase()}`
 }
 
 /** "12 Oct" — a date this year's reader needs no year on. */
 export const dayMonthIN = (d: Date) =>
-  d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: IST })
+  sep(d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: IST }))
 
 /** "November 2026" — a calendar's month (Neel's date field). */
 export const monthLongYearIN = (d: Date) =>
@@ -36,7 +39,7 @@ export const monthShortIN = (d: Date) =>
 
 /** "Aug 2028" — a month a window ends in. */
 export const monthYearIN = (d: Date) =>
-  d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: IST })
+  sep(d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: IST }))
 
 /** "12 October" — said in a sentence to a customer. */
 export const dayMonthLongIN = (d: Date) =>
@@ -44,7 +47,23 @@ export const dayMonthLongIN = (d: Date) =>
 
 /** "12 Oct 2026, 10:33 pm" */
 export const dateTimeIN = (d: Date) =>
-  d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: IST })
+  sep(d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: IST }))
+
+/** An IST calendar day key, "2026-11-15". */
+const dayKeyIN = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: IST })
+
+/** A moment in a list (Neel § Words): "Today, 10:06 pm", "Yesterday, 1:36 am", "13 Nov, 10:06 pm", the year only when
+ *  not this year ("13 Nov 2025, 10:06 pm"). Today and Yesterday are IST calendar days, never now − 24 h. For live
+ *  screens only: print, PDFs, CSVs and emails keep dateTimeIN, and a wait keeps sinceIN. */
+export function momentIN(at: Date | string, now: Date): string {
+  const d = typeof at === 'string' ? new Date(at) : at
+  const time = timeIN(d).replace(/\s?([ap])\.?m\.?$/i, (_, x: string) => ` ${x.toLowerCase()}m`)
+  const key = dayKeyIN(d), today = dayKeyIN(now)
+  const yesterday = dayKeyIN(new Date(new Date(`${today}T12:00:00+05:30`).getTime() - 86_400_000))
+  if (key === today) return `Today, ${time}`
+  if (key === yesterday) return `Yesterday, ${time}`
+  return `${key.slice(0, 4) === today.slice(0, 4) ? dayMonthIN(d) : dayIN(d)}, ${time}`
+}
 
 /** "7:42 pm" (IST): a time later today, as a wait says it (EkCode's "Try again at"). */
 export const timeIN = (d: Date) =>

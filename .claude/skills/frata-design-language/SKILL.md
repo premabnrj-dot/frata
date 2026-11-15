@@ -2,8 +2,8 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.4.0
-  verified: 2026-11-13
+  version: 7.5.0
+  verified: 2026-11-15
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
 
@@ -27,28 +27,58 @@ Pages are clean, the layout tight, space used for the work, not for words.
 - **Space:** one card per job, no cards that only hold text, dense rows over stacked paragraphs, actions beside what
   they act on.
 
-## Voice (owner, 2026-11-07) — every word on every surface
+## Words (Neel N3, owner-approved 2026-11-13; mockup § Voice, § Words; supersedes the 2026-11-07 Voice rules)
 
-Clear, effective, short. Frata talks like a good tool: it says what is true and
-what to do, then stops. Our readers know their work; partners know how a store
-is built. We never explain the obvious.
+A store owner reads the console on a phone, between orders: every line is clear in one read. Frrata sounds like a calm,
+sharp colleague who knows the trade. `npm run check:words` holds what a script can (marked **gate**); `words-reviewer`
+judges the rest.
 
-1. **Fewest words that are still true.** A headline is up to 8 words, a line up
-   to 15, a button 1–4 words naming the outcome ("Send invite", "Accept Kesar
-   Studio"). Sentence case. No exclamation marks, no emoji.
-2. **Lead with the verb or the number.** "Earn 20% for 24 months", not "You
-   can earn…". Numbers beat adjectives: ₹, %, days.
-3. **One idea per line.** Two ideas are two lines or a list.
-4. **Explanation goes in an (i) tip or a dialog, never a passage on the page**
-   (§ Labels, info tips). What stays visible: errors, a limit someone must meet,
-   money, legal wording, a risk reason.
-5. **Filler is banned** (`check:voice` holds the list: simply, easily,
-   seamless, powerful, unlock, leverage, robust, hassle-free, kindly…). Say
-   what the thing does instead.
-6. **The reader's words.** Merchant: order, delivery, payout, profit. Partner:
-   store, client, owner, share. Never ours: tenant, link, member row.
-7. **Second person, present tense, active.** "You", "we" for Frata. On a
-   partner's screens the merchant is "the brand"; on the merchant's, "you".
+1. **One idea, one sentence.** Aim for 12 words; the gate warns from 13 and fails at 16 (owner call 4). **gate**
+2. **No joining marks.** No colon, semicolon or dash gluing two thoughts; make two sentences. A label before a value
+   ("Delivery address: …", "₹85 · free above ₹1,999") is fine. **gate**
+3. **Everyday words**, never ours (tenant, sync, server, token, webhook, variant, readiness). **gate**
+4. **Say what to do, or what happened. Start with it.** "Add a price for Ivory." "Saved."
+5. **Buttons are a verb and a thing**: "Confirm 2 orders", "Mark delivered". Never OK, Submit, Proceed. **gate**
+6. **Errors: what's wrong, then the fix**, next to the field. No "invalid", "error occurred", blame. A refusal says
+   what's safe: "We couldn't save that. Nothing was changed." **gate** (the banned words)
+7. **Numbers, not adjectives.** ₹2,490, 8 days, 3 sizes. A moment in a list: `momentIN` (§ Numbers, dates).
+8. **Confirm with the consequence only.** Title asks with the thing ("Close your store?"); buttons name both outcomes
+   ("Keep it open", "Close store").
+9. **Law and tax words only where the law needs them**, then an (i) says it plainly. Legal text is never rewritten:
+   it goes in `scripts/check-words.allow.json` with its reason.
+10. **Calm and direct.** "You" for the brand, "we" for Frrata. No please, kindly, sorry, oops, emoji or "!". **gate**
+11. **Easy to translate.** No idioms or wordplay.
+12. **Filler is banned** in every string on every surface (simply, easily, seamless, powerful, unlock…). **gate**
+13. **Swap these** (**gate**): in order to → to · prior to → before · utilise → use · via → through · e.g. → like ·
+    commence → start · successfully → (cut) · please note → (cut) · at this time → now · in case of → if.
+
+Tone by moment: done → past tense, the thing ("Archived 2 products"); fixable → what, then how; refused → what
+happened, what's safe; money → exact amount and date; risk → the reason plainly; can't undo → the consequence, once;
+empty → the first step ("No products yet · Add product"); waiting → what's happening, when; celebration → once, short.
+
+The gate's scope: the console, the partner workspace and the shared code that speaks there (`ROOTS`/`NOT` in
+`scripts/check-words.mjs`). The storefront, themes, EkCode and Frrata Admin are outside it until their phases.
+
+## Glossary (Neel § Glossary, owner 2026-11-13) — one word for each thing, on every surface
+
+- **Surfaces:** Console (the brand's team and its partner; never "dashboard", "admin"); Partner workspace (never
+  "partner console"); Frrata Admin (never "Admin" alone); the store (shoppers; never shop, website, site).
+- **Roles:** Owner · **Manager** (was Admin; the stored value `admin` keeps its spelling) · Staff · Accountant ·
+  Partner · Partner owner and Lead (the agency's) · Frrata support (on a **support visit**). "Admin" is never a person.
+- **Words:** store (never shop; "Shop all", "Shop now", "Shop the look" stay as the store's verbs) · shopper (never
+  customer; the invoice says buyer by law) · product in the catalogue, item in an order or bag (never piece) · sizes
+  and colours (never variants) · offer · code · discount (never coupon, voucher) · payout (never settlement,
+  remittance) · app (never module, add-on) · Archive (hide and keep) · Delete (gone) · Remove · Disconnect · Turn off.
+- **Order states** (console · shopper sees): To confirm · Order placed; To pack · Confirmed; To ship · Packed;
+  **On the way** · On its way; Delivered; Couldn't deliver · Delivery attempt failed; Coming back · Came back
+  (Returning to / Returned to the store); Returned (a shopper's return); On hold; Cancelled. The action stays a verb
+  ("Mark shipped"; its toast "KS-5012 is on the way."). Shopper emails use the shopper column.
+- **Short forms:** COD in console tags (sentences and shoppers: "Pay on delivery"); RTO only in detail ("Coming back"
+  in headings); SKU, AWB in mono with an (i); GST terms as the law writes them; M.R.P. always dotted; **PIN code**
+  exactly; UPI, OTP, CSV, PDF, CA as is. Never in the UI: NDR, tenant, SKU combo, UQC (invoice only), API (except a
+  provider's own label).
+- A merchant's stored words never change with the glossary: the merge token `[Shop name]` still fills beside
+  `[Store name]`.
 
 ## Graphic language (owner, 2026-11-07)
 
@@ -312,7 +342,10 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   (`font-num`: Inter with tabular figures in Neel, mono outside it), right-aligned. A loss renders in `text-danger-text` with a
   real minus (−₹430).
 - Dates only through `src/lib/format-date.ts` (`dayIN`, `dateTimeIN`,
-  `sinceIN`) — always IST (`check:dates`).
+  `sinceIN`, `momentIN`) — always IST (`check:dates`). A moment in a live list or page: `momentIN(at, now)` → "Today,
+  10:06 pm", "Yesterday, 1:36 am", "13 Nov, 10:06 pm" (the year only when not this year; IST calendar days), in
+  `<time dateTime>`. Print, PDF, CSV and emails keep `dateTimeIN`; a wait or an edit time keeps `sinceIN`. Months are three letters
+  everywhere ("13 Sep", never en-IN's "Sept"; owner, 2026-11-15): every format-date helper does it, never a page.
 - Phones `formatPhone` → "+91 98450 12345".
 
 ## Console patterns

@@ -91,7 +91,7 @@ export type LibraryPhoto = { base: string; widths: number[]; width: number; heig
 
 /** A photo field's words for a failure, in the merchant's terms (Look v3: friendly fixes, never a code). */
 function uploadWhy(f: File, e: unknown): string {
-  if (/\.(heic|heif)$/i.test(f.name) || /hei[cf]/.test(f.type)) return 'This is an iPhone HEIC photo this browser can’t open. On the iPhone: Settings › Camera › Formats › Most Compatible, or share it as a JPEG, then try again.'
+  if (/\.(heic|heif)$/i.test(f.name) || /hei[cf]/.test(f.type)) return 'This browser can’t open iPhone HEIC photos. Share it as a JPEG and try again.'
   return e instanceof Error ? e.message : 'That photo could not be uploaded.'
 }
 
@@ -257,7 +257,7 @@ export function SourcePicker({ value: src, collections, onChange, label = 'Show'
       <Choice label="Over" value={src.days} onChange={(days) => onChange({ kind: 'best_sellers', days })} options={[{ value: 30, label: '30 days' }, { value: 90, label: '90 days' }]} />
       <p className="text-xs text-muted-foreground">Ranked by delivered orders. Shoppers see the order, never the numbers.</p>
     </>}
-    {src.kind === 'back_in_stock' && <p className="text-xs text-muted-foreground">Pieces that sold out for a day or more and came back in the last 30 days, latest first. Hides itself when there are none.</p>}
+    {src.kind === 'back_in_stock' && <p className="text-xs text-muted-foreground">Products back in stock in the last 30 days, latest first. Hidden when there are none.</p>}
     {src.kind === 'collection' && <Field label="Collection">{(id) => (
       <select id={id} value={src.handle} onChange={(e) => onChange({ kind: 'collection', handle: e.target.value })} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm">
         {collections.map((x) => <option key={x.handle} value={x.handle}>{x.title}</option>)}

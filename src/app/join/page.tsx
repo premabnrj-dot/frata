@@ -21,7 +21,7 @@ export default async function JoinPage() {
   const frame = (body: React.ReactNode) => <main data-shell className={`flex min-h-dvh items-start justify-center bg-background p-4 pt-16 ${SHELL_FONT_VARS}`}>{body}</main>
   if (!auth.ok) return frame(<Panel title="Sign in to see your invite" action={<Link href="/login" className={button()}>Sign in</Link>} />)
   const invites = await myPartnerInvites(auth.userId).catch(() => null)
-  if (!invites) return frame(<Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>)
+  if (!invites) return frame(<Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>)
   if (!invites.length) return frame(<Panel title="No invite is waiting for you" action={<Link href="/partner" className={button({ variant: 'secondary' })}>Go to the partner workspace</Link>} />)
   return frame(
     <div className="w-full max-w-lg space-y-4">
@@ -36,7 +36,7 @@ export default async function JoinPage() {
           </div>
           <dl className="grid grid-cols-[7rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
             <dt className="text-muted-foreground">You</dt>
-            <dd>{PARTNER_ROLE_LABEL[i.role as PartnerRole] ?? i.role}<InfoTip about="what a lead can do">You build the stores you’re given: products, orders, settings, the look. Handing a store to its owner and running the team stay with the partner’s owner.</InfoTip></dd>
+            <dd>{PARTNER_ROLE_LABEL[i.role as PartnerRole] ?? i.role}<InfoTip about="what a lead can do">You build the stores you’re given. That covers products, orders, settings and the look. The partner owner hands stores over and runs the team.</InfoTip></dd>
             <dt className="text-muted-foreground">Stores</dt>
             <dd>{i.stores.length ? i.stores.join(', ') : 'None yet'}</dd>
             <dt className="text-muted-foreground">Until</dt>

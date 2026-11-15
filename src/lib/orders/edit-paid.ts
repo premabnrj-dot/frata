@@ -85,7 +85,7 @@ export async function requestPayment(sp: Tx, tenantId: string, actor: Actor, ord
 
 /** "Ship without the change": the request is dropped, its held pieces go back on sale, the order packs as it was. */
 export async function dropRequest(tx: Tx, tenantId: string, actor: Actor, orderId: string, now = new Date()): Promise<Done<{ backInStock: string[] }>> {
-  if (actor.kind === 'support') return { ok: false, error: 'A support visit can\'t change an order\'s items.' }
+  if (actor.kind === 'support') return { ok: false, error: 'A support visit can’t change an order\'s items.' }
   const c = await current(tx, tenantId, orderId, now)
   if (!c) return { ok: false, error: 'Order not found.' }
   const w = await waitingEdit(tx, tenantId, orderId)
@@ -139,7 +139,7 @@ export async function startEditPayment(tenantId: string, hash: string): Promise<
   })
   if (!pre?.w) return { ok: false, status: 404, error: 'Nothing to pay for this order now.' }
   const { o, w, keys } = pre
-  if (!keys) return { ok: false, status: 422, error: 'Online payment is not working right now. Message the shop.' }
+  if (!keys) return { ok: false, status: 422, error: 'Online payment isn’t working right now. Message the store.' }
   let rzp = w.razorpayOrderId
   if (!rzp) {
     const receipt = `${o.number}-e${w.id.slice(0, 8)}`

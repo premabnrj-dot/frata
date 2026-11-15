@@ -47,7 +47,7 @@ export function CheckStep({ sheet, mapping, checked, costs, cap, busy, onRemap, 
     <>
       <Counts label="What this file does">
         <Count value={n} label={<>New products · <span className="font-num">{variants.toLocaleString('en-IN')}</span> sizes and colours</>} />
-        <Count value={count('in_shop')} label="Already in your shop" />
+        <Count value={count('in_shop')} label="Already in your store" />
         <Count value={count('left_out')} label="Left out until fixed" bad />
       </Counts>
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
@@ -124,7 +124,7 @@ export function CheckStep({ sheet, mapping, checked, costs, cap, busy, onRemap, 
         <div className="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-card px-4 py-2.5">
           {/* feedback-ok: a limit the file must meet, said where Import would be (§ Feedback 5, like Publish's blocking list) */}
           {cap && <p role="alert" className="mr-auto text-sm text-danger-text">{cap}</p>}
-          <Button variant="secondary" onClick={onKeep}>Keep my shop as it is</Button>
+          <Button variant="secondary" onClick={onKeep}>Keep my store as it is</Button>
           {n > 0 && !cap && <Button onClick={onImport} disabled={busy}>{n === 1 ? 'Import 1 as a draft' : `Import ${n.toLocaleString('en-IN')} as drafts`}</Button>}
         </div>
       </Section>

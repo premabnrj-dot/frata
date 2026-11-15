@@ -119,7 +119,7 @@ export function DesignForm({ s, set, c, d }: { s: SectionOf<'design'>; set: Set;
           const v = f?.kind === 'featured_product' ? f.handle : ''
           return <Field key={b.id} label={label}>{(id) => (
             <select id={id} value={v} onChange={(e) => { if (e.target.value) put(b.id, { kind: 'featured_product', handle: e.target.value }) }} className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm">
-              {!v && <option value="">Pick a piece</option>}
+              {!v && <option value="">Pick a product</option>}
               {c.products.map((p) => <option key={p.handle} value={p.handle}>{p.title}</option>)}
             </select>)}</Field>
         }
@@ -141,7 +141,7 @@ export function DesignForm({ s, set, c, d }: { s: SectionOf<'design'>; set: Set;
           return (
             <div key={b.id} className="space-y-3">
               {canLoop && <LoopField value={s.video} c={c} onChange={(video) => { if (video) set({ ...s, video }); else { const { video: _drop, ...rest } = s; set(rest as SectionOf<'design'>) } }} />}
-              <ImageField label={canLoop ? `${label}: photo before it plays` : label} value={poster} tenantId={c.tenantId} library={c.photos} suggest={[d.name, c.shopName]} onChange={(p) => put(b.id, { kind: 'video', poster: p })} />
+              <ImageField label={canLoop ? `${label}, photo before it plays` : label} value={poster} tenantId={c.tenantId} library={c.photos} suggest={[d.name, c.shopName]} onChange={(p) => put(b.id, { kind: 'video', poster: p })} />
             </div>
           )
         }

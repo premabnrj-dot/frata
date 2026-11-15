@@ -36,7 +36,7 @@ export async function setOrderEmailAction(orderId: string, email: string): Promi
     if (!r.value) return { ok: false, error: 'Order not found, or a support visit (which can’t change it).' }
     revalidatePath('/console/orders', 'layout')
     return { ok: true }
-  } catch (err) { console.error('[order.email]', errName(err)); return { ok: false, error: 'We could not save that. Nothing was changed.' } }
+  } catch (err) { console.error('[order.email]', errName(err)); return { ok: false, error: 'We couldn’t save that. Nothing was changed.' } }
 }
 
 export async function resendOrderEmailAction(orderId: string, kind: string): Promise<Result> {
@@ -60,5 +60,5 @@ export async function resendOrderEmailAction(orderId: string, kind: string): Pro
     drainSoon()
     revalidatePath('/console/orders', 'layout')
     return { ok: true }
-  } catch (err) { console.error('[order.email_resend]', errName(err)); return { ok: false, error: 'We could not send it. Nothing was sent.' } }
+  } catch (err) { console.error('[order.email_resend]', errName(err)); return { ok: false, error: 'We couldn’t send it. Nothing was sent.' } }
 }

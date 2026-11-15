@@ -25,7 +25,7 @@ export default async function AppsPage() {
   const mayBill = managesInPerson(auth.membership)
   const d = await appsPage(auth.membership.tenantId, auth.userId, now.toISOString(), mayBill ? auth.membership : undefined)
     .catch((err) => { console.error('[apps]', err instanceof Error ? err.name : 'error'); return null })
-  if (!d) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!d) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const cards: AppCard[] = MODULE_KEYS.map((k) => {
     const def = MODULES[k], offer = offerOf(k, d, now)
     return { key: k, name: def.name, job: def.job, group: def.group, href: `/console/apps/${k}`, footer: offer.footer, locked: offer.locked,
@@ -45,7 +45,7 @@ function Featured({ n }: { n: FeaturedNudge }) {
   const on = dayMonthIN(n.periodStart)
   return (
     <FeaturedCard id={n.invoiceId} action={<Link href="/console/settings/billing?from=featured" prefetch={false} className={button()}>See {n.planName}</Link>}>
-      <Badge tone="warn">For your shop</Badge>
+      <Badge tone="warn">For your store</Badge>
       <h2 className="text-section font-semibold">On {n.planName} your {on} invoice would have been {formatInr(paise(n.saving))} less</h2>
       <p className="font-num text-sm text-muted-foreground">{formatInr(paise(n.billed))} on Launch · {formatInr(paise(n.would))} on {n.planName} · both + 18% GST</p>
     </FeaturedCard>

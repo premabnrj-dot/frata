@@ -17,7 +17,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ han
   const handle = decodeURIComponent((await params).handle).toLowerCase()
   if (!/^[a-z0-9-]{1,80}$/.test(handle)) notFound()
   const [c, data] = await Promise.all([collectionForEdit(auth.membership.tenantId, handle), editorData(auth.membership.tenantId)]).catch(() => [undefined, null] as const)
-  if (c === undefined || !data) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (c === undefined || !data) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   if (!c) notFound()
   const rules = c.rules as Rule[]
   const share = await shareFor(auth.membership.tenantId, { kind: 'collection', id: c.id }).catch(() => null)

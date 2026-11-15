@@ -29,11 +29,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export async function attachIn(tx: Tx, tenantId: string, productId: string, photos: readonly NewPhoto[], opts: { max?: number } = {}): Promise<{ ok: true; added: number; live: boolean } | { ok: false; error: string }> {
   const host = storeHost(BLOB_STORE_ID)
   if (!host) return { ok: false, error: 'Photo storage is not connected.' }
-  if (typeof productId !== 'string' || !UUID.test(productId)) return { ok: false, error: 'This product is not in your shop.' }
+  if (typeof productId !== 'string' || !UUID.test(productId)) return { ok: false, error: 'This product isn’t in your store.' }
   const clean: (NewPhoto & { base: string })[] = []
   for (const ph of photos) {
     const base = acceptedBase(String(ph?.base ?? ''), host, tenantId, 'products')
-    if (!base) return { ok: false, error: 'That photo is not in your shop’s folder.' }
+    if (!base) return { ok: false, error: 'That photo isn’t in your store’s folder.' }
     const widths = Array.isArray(ph.widths) ? ph.widths : []
     if (!widths.length || widths.length > WIDTHS.length || widths.some((w) => !(WIDTHS as readonly number[]).includes(w)) || !(Number(ph.width) > 0 && Number(ph.height) > 0)) {
       return { ok: false, error: 'That photo’s sizes are not ones we make.' }
@@ -42,7 +42,7 @@ export async function attachIn(tx: Tx, tenantId: string, productId: string, phot
   }
   const [p] = await tx.select({ id: products.id, status: products.status, options: products.options, optionValues: products.optionValues }).from(products)
     .where(and(eq(products.tenantId, tenantId), eq(products.id, productId))).for('no key update')
-  if (!p) return { ok: false, error: 'This product is not in your shop.' }
+  if (!p) return { ok: false, error: 'This product isn’t in your store.' }
   const there = new Set((await tx.select({ base: productImages.base }).from(productImages)
     .where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, productId), inArray(productImages.base, clean.map((ph) => ph.base))))).map((r) => r.base))
   const fresh: typeof clean = []

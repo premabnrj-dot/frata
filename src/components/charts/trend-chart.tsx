@@ -107,7 +107,7 @@ export function TrendChart({ points, summary, unit, seriesNames, notes = [], mar
         </div>
       ) : null}
       <p role="status" className="sr-only">{said}</p>
-      <p id={`${id}-k`} className="sr-only">Left and right arrow keys move by day; Home and End go to the first and last day.</p>
+      <p id={`${id}-k`} className="sr-only">Left and right arrow keys move by day. Home and End go to the first and last day.</p>
       {/* A table ignores the 1 px of .sr-only (it grows to its content): the wrapper is what is hidden. */}
       <div className="sr-only"><table id={`${id}-t`}>
         <caption>{summary}</caption>

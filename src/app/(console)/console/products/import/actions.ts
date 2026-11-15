@@ -64,7 +64,7 @@ const encoder = new TextEncoder()
 const said = (where: string, err: unknown, fallback: string): Fail => {
   if (err instanceof Refused) return { ok: false, error: err.reason, ...(err.mapping ? { mapping: err.mapping } : {}) }
   const why = errName(err)
-  if (why.includes('import_jobs_one_running')) return { ok: false, error: 'Another import is running in your shop. Finish or stop it first.' }
+  if (why.includes('import_jobs_one_running')) return { ok: false, error: 'Another import is running in your store. Finish or stop it first.' }
   if (why.includes('import_jobs_file')) return { ok: false, error: 'You imported this file already.' }
   if (skuTaken(err)) return { ok: false, error: SKU_TAKEN }
   console.error(`[${where}]`, why)
@@ -85,7 +85,7 @@ export async function checkImport(input: unknown): Promise<({ ok: true; seen: Se
     const checked = await checkRows(auth.membership.tenantId, auth.membership.role, p.data.mapping, p.data.rows, seen, new Date())
     return { ok: true, ...checked, seen: { skus: [...seen.skus], gtins: [...seen.gtins] } }
   } catch (err) {
-    return said('checkImport', err, 'We could not check your file. Try again in a minute.')
+    return said('checkImport', err, 'We couldn’t check your file. Try again in a minute.')
   }
 }
 
@@ -103,7 +103,7 @@ export async function startImport(input: unknown): Promise<{ ok: true; jobId: st
     if (!r.ok) return { ok: false, error: r.error }
     return { ok: true, jobId: r.value.job.id, next: r.value.job.nextChunk, chunks: r.value.job.chunks, resumed: r.value.resumed }
   } catch (err) {
-    return said('startImport', err, 'We could not start the import. Nothing was changed.')
+    return said('startImport', err, 'We couldn’t start the import. Nothing was changed.')
   }
 }
 
@@ -125,13 +125,13 @@ export async function importChunk(input: unknown): Promise<({ ok: true } & Chunk
     revalidatePath('/console/products')
     return { ok: true, ...r.value }
   } catch (err) {
-    return said('importChunk', err, 'We could not import this part. Nothing from it was saved. Try again.')
+    return said('importChunk', err, 'We couldn’t import this part. Nothing from it was saved. Try again.')
   }
 }
 
 export async function stopImport(jobId: unknown): Promise<{ ok: true } | Fail> {
   const id = JobId.safeParse(jobId)
-  if (!id.success) return { ok: false, error: 'That import is not in your shop.' }
+  if (!id.success) return { ok: false, error: 'That import isn’t in your store.' }
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.import.stop', target: id.data }, async (tx, auth) => {
       const stopped = await stopJob(tx, auth.membership.tenantId, id.data, new Date())
@@ -142,13 +142,13 @@ export async function stopImport(jobId: unknown): Promise<{ ok: true } | Fail> {
     revalidatePath('/console/products/import')
     return r.value ? { ok: true } : { ok: false, error: 'That import has already ended.' }
   } catch (err) {
-    return said('stopImport', err, 'We could not stop the import. Try again.')
+    return said('stopImport', err, 'We couldn’t stop the import. Try again.')
   }
 }
 
 export async function deleteImportDrafts(jobId: unknown): Promise<{ ok: true; deleted: number; kept: number } | Fail> {
   const id = JobId.safeParse(jobId)
-  if (!id.success) return { ok: false, error: 'That import is not in your shop.' }
+  if (!id.success) return { ok: false, error: 'That import isn’t in your store.' }
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.import.delete_drafts', target: id.data }, async (tx, auth) => {
       const out = await deleteDrafts(tx, auth.membership.tenantId, id.data, new Date())
@@ -156,19 +156,19 @@ export async function deleteImportDrafts(jobId: unknown): Promise<{ ok: true; de
       return out
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value) return { ok: false, error: 'That import is not in your shop.' }
+    if (!r.value) return { ok: false, error: 'That import isn’t in your store.' }
     // The files go after the commit, only those exactly inside this shop's folder.
     await removePhotoFiles(r.tenantId, r.value.photos, 'deleteImportDrafts')
     revalidatePath('/console/products', 'layout')
     return { ok: true, deleted: r.value.deleted, kept: r.value.kept }
   } catch (err) {
-    return said('deleteImportDrafts', err, 'We could not delete the drafts. Nothing was changed.')
+    return said('deleteImportDrafts', err, 'We couldn’t delete the drafts. Nothing was changed.')
   }
 }
 
 export async function publishImportReady(jobId: unknown): Promise<{ ok: true; published: number } | Fail> {
   const id = JobId.safeParse(jobId)
-  if (!id.success) return { ok: false, error: 'That import is not in your shop.' }
+  if (!id.success) return { ok: false, error: 'That import isn’t in your store.' }
   try {
     const r = await asMember(ANY_MEMBER, { action: 'product.import.publish', target: id.data }, async (tx, auth) => {
       const n = await publishReady(tx, auth.membership.tenantId, id.data, new Date())
@@ -180,6 +180,6 @@ export async function publishImportReady(jobId: unknown): Promise<{ ok: true; pu
     revalidatePath('/console/products', 'layout')
     return { ok: true, published: r.value }
   } catch (err) {
-    return said('publishImportReady', err, 'We could not publish them. Nothing was changed.')
+    return said('publishImportReady', err, 'We couldn’t publish them. Nothing was changed.')
   }
 }

@@ -143,8 +143,8 @@ describe.skipIf(!host)('the products list acting on many', () => {
     const [theirs] = await su!<[{ id: string }]>`insert into collections (tenant_id, handle, title, kind) values (${other}, 'int-theirs', 'Theirs', 'manual') returning id`
     expect(await a.addToCollection([p], man.id)).toEqual({ ok: true, added: 1, name: 'Festive' })
     expect(await a.addToCollection([p], man.id)).toEqual({ ok: true, added: 0, name: 'Festive' })
-    expect(await a.addToCollection([p], auto.id)).toEqual({ ok: false, error: 'That collection is not in your shop.' })
-    expect(await a.addToCollection([p], theirs.id)).toEqual({ ok: false, error: 'That collection is not in your shop.' })
+    expect(await a.addToCollection([p], auto.id)).toEqual({ ok: false, error: 'That collection isn’t in your store.' })
+    expect(await a.addToCollection([p], theirs.id)).toEqual({ ok: false, error: 'That collection isn’t in your store.' })
   })
 
   it('does not find another shop’s products, whatever the action', async () => {
@@ -152,7 +152,7 @@ describe.skipIf(!host)('the products list acting on many', () => {
     expect(await a.bulkDelete([theirs])).toEqual({ ok: true, deleted: 0, kept: [] })
     expect(await a.bulkStatus([theirs], 'archived')).toMatchObject({ ok: true, changed: 0 })
     expect(await a.restoreStatus([{ id: theirs, status: 'draft', publishAt: null }])).toEqual({ ok: true, restored: 0, refused: [] })
-    expect(await a.duplicateProduct(theirs)).toEqual({ ok: false, error: 'That product is not in your shop.' })
+    expect(await a.duplicateProduct(theirs)).toEqual({ ok: false, error: 'That product isn’t in your store.' })
     const [mine] = await su!<[{ id: string }]>`insert into collections (tenant_id, handle, title, kind) values (${state.tenantId}, 'int-mine', 'Mine', 'manual') returning id`
     expect(await a.addToCollection([theirs], mine.id)).toEqual({ ok: true, added: 0, name: 'Mine' })
     expect((await statusOf(theirs)).status).toBe('active')

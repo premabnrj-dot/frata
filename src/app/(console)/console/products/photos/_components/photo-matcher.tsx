@@ -110,7 +110,7 @@ export function PhotoMatcher({ tenantId, targets, back }: { tenantId: string; ta
       },
       held: (key, made) => patch(new Set([key]), { state: 'ready', p: 0, made }),
       failed: (key, why, made) => { failed.set(key, why); patch(new Set([key]), { state: 'failed', p: 0, ...(made ? { made } : {}) }) },
-    }).catch((e) => { console.error('[photos page] send', e instanceof Error ? e.name : 'error'); for (const it of todo) if (!failed.has(it.key)) failed.set(it.key, 'We could not add the photos. Try again.') })
+    }).catch((e) => { console.error('[photos page] send', e instanceof Error ? e.name : 'error'); for (const it of todo) if (!failed.has(it.key)) failed.set(it.key, 'We couldn’t add the photos. Try again.') })
     setSending(false)
     router.refresh()
     if (failed.size) {

@@ -26,7 +26,7 @@ export async function acceptHandoverAction(form: FormData): Promise<ActionResult
   const id = z.uuid().safeParse(form.get('inviteId'))
   if (!id.success) return { error: 'This invite has ended. Ask your partner to send it again.' }
   const r = await acceptHandover(auth.userId, id.data, claimKey('email', auth.email))
-  if (!r.ok) return { error: SENTENCES[r.error] ?? 'We could not accept the store. Nothing was changed.' }
+  if (!r.ok) return { error: SENTENCES[r.error] ?? 'We couldn’t accept the store. Nothing was changed.' }
   ;(await cookies()).set(TENANT_COOKIE, r.tenantId, { httpOnly: true, sameSite: 'lax', path: '/', secure: process.env.NODE_ENV === 'production' })
   redirect('/console')
 }

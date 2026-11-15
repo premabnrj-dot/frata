@@ -44,7 +44,7 @@ export function MakeLink({ origin, open, products, collections, showsAs: shows }
         actions={<Button variant="secondary" data-autofocus onClick={() => setShown(false)}>Done</Button>}>
         {/* The body only while open: its page list is a third of the page's HTML otherwise (speed review A1·7). */}
         {!shown ? null : !open ? (
-          <p className="text-sm">Your shop opens to shoppers first; then a link brings them to it.</p>
+          <p className="text-sm">Open your store to shoppers first. Then make a link.</p>
         ) : (
           <div className="grid gap-4">
             <fieldset className="grid gap-2">
@@ -65,7 +65,7 @@ export function MakeLink({ origin, open, products, collections, showsAs: shows }
                 <div className="grid gap-1">
                   <label htmlFor="link-page" className="text-sm font-medium">Which page opens?</label>
                   <select id="link-page" value={page} onChange={(e) => { setPage(e.target.value); setCopied(null) }} className="h-11 rounded-md border border-input bg-card px-3 text-sm md:h-9">
-                    <option value="/">Your shop&apos;s home</option>
+                    <option value="/">Your store&apos;s home</option>
                     {collections.length ? <optgroup label="Collections">{collections.map((c) => <option key={c.handle} value={`/collections/${c.handle}`}>{c.title}</option>)}</optgroup> : null}
                     {products.length ? <optgroup label="Products">{products.map((p) => <option key={p.handle} value={`/products/${p.handle}`}>{p.title}</option>)}</optgroup> : null}
                   </select>
@@ -81,7 +81,7 @@ export function MakeLink({ origin, open, products, collections, showsAs: shows }
                     <div className="flex flex-wrap items-center gap-2">
                       <Button onClick={() => void copy()}>Copy link</Button>
                       <span role="status" className="text-sm text-muted-foreground">
-                        {copied === 'yes' ? 'Copied.' : copied === 'no' ? 'Copy it by hand: your browser did not allow it.' : <>Orders from it show as <b className="text-foreground">{showsAs}</b>.</>}
+                        {copied === 'yes' ? 'Copied.' : copied === 'no' ? 'Your browser didn’t allow copying. Copy it by hand.' : <>Orders from it show as <b className="text-foreground">{showsAs}</b>.</>}
                       </span>
                     </div>
                   </>

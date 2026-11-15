@@ -19,7 +19,7 @@ export default async function ImportPage() {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
   const data = await importPage(auth.membership.tenantId, auth.membership.role, new Date()).catch((err) => { console.error('[import page]', err instanceof Error ? err.name : 'error'); return null })
-  if (!data) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!data) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   return (
     <>
       <PageHeader title="Import products" back={{ href: '/console/products', label: 'Products' }} />

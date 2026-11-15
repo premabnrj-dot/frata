@@ -17,12 +17,12 @@ export const metadata = { title: 'Shipping costs' }
 
 export default async function ShippingCostsPage() {
   const auth = await requireMember(CAN_SET_COSTS)
-  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or an admin can see shipping costs' : auth.message} />
+  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or a manager can see shipping costs' : auth.message} />
   // The error's name only: a failed query's message carries its parameters (tenancy audit 2026-11-08).
   const r = await shipCostsSeenBy(auth.membership.tenantId, auth.membership.role).catch((err) => { console.error('[shipping-costs]', err instanceof Error ? err.name : 'error'); return undefined })
-  if (r === undefined) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (r === undefined) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   // A partner after handover (seesCosts): the shop's costs are its owner's now.
-  if (!r.visible) return <Panel title="Only the owner or an admin can see shipping costs">The shop’s owner sets these now.</Panel>
+  if (!r.visible) return <Panel title="Only the owner or a manager can see shipping costs">The store’s owner sets these now.</Panel>
   const c = r.costs
   const rupees = (p: number | null | undefined) => (p == null ? null : String(Math.round(p / 100)))
   return <ShipCostsForm current={{ delivery: rupees(c?.delivery), ret: rupees(c?.ret), cod: rupees(c?.cod) }} confirmedOn={c?.confirmedAt ? dayIN(c.confirmedAt) : null} />

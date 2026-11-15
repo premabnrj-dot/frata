@@ -131,7 +131,7 @@ export function readImport(m: Mapping, rows: readonly SheetRow[], ctx: ReadConte
       }
     }
     if (!g.variantRows.length) fail(mine, first.n, header('price'), 'Needs a price')
-    if (g.rows.reduce((n, r) => n + rowBytes(m, r), 0) > CHUNK_BYTES - CHUNK_ROOM) fail(mine, first.n, header('description'), 'Too long to import: shorten its description')
+    if (g.rows.reduce((n, r) => n + rowBytes(m, r), 0) > CHUNK_BYTES - CHUNK_ROOM) fail(mine, first.n, header('description'), 'Too long to import. Shorten its description')
 
     // The product's sizes and colours, a listed order first, then as they appear; every combination needs its row.
     const rank = (i: number, v: string) => { const at = listed[i]!.indexOf(v.toLowerCase()); return at < 0 ? Infinity : at }

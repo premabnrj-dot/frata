@@ -28,6 +28,6 @@ export async function sendSignInLink(email: string): Promise<{ sent: true } | { 
     const msg = err instanceof Error ? err.message : ''
     if (/only request this after|security purposes/i.test(msg)) return { sent: false, error: 'An email was sent less than a minute ago. Wait a moment, then ask again.' }
     if (/rate limit/i.test(msg)) return { sent: false, error: 'Too many sign-in emails in the last hour. Try again later.' }
-    return { sent: false, error: 'We could not send the email. Try again in a minute.' }
+    return { sent: false, error: 'We couldn’t send the email. Try again in a minute.' }
   }
 }
