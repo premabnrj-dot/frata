@@ -49,7 +49,21 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [chip, setChip] = useState<string | null>(null)
-  const collapse = combos.length > 12
+  // Past 12 rows, and always on a phone (as drawn: "Gulabi · 6 sizes · ₹2,490 · 32 in stock ›"), each colour folds to
+  // its summary until opened.
+  const [phone, setPhone] = useState(false)
+  useEffect(() => {
+    const m = window.matchMedia('(max-width: 767px)'); setPhone(m.matches)
+    const on = () => setPhone(m.matches); m.addEventListener('change', on); return () => m.removeEventListener('change', on)
+  }, [])
+  const collapse = combos.length > 12 || phone
+  const summary = (rows: string[][]) => {
+    const cs = rows.map((c) => cells[keyOf(c)] ?? EMPTY_CELL)
+    const priced = cs.filter((c) => !unpriced(c.price))
+    if (!priced.length) return 'No price yet'
+    const low = Math.min(...priced.map((c) => Number(c.price.replace(/[₹,\s]/g, '')) || 0))
+    return `₹${low.toLocaleString('en-IN')} · ${cs.reduce((n, c) => n + (Number(c.stock) || 0), 0)} in stock`
+  }
   const err = (k: string, f: string) => errors[`v:${k}:${f}`]
   // A save's mistake is shown where it is: the SKU tab for a SKU or barcode, the row's chip for its run-out fields.
   useEffect(() => {
@@ -110,9 +124,10 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
                     onChange={(e) => toggle(grp.rows.map(keyOf), e.target.checked)} /></td>
                   <td colSpan={6} data-cell="full" className="px-3 py-1.5">
                     {collapse ? (
-                      <button type="button" aria-expanded={!shut} onClick={() => setOpen({ ...open, [grp.label]: !!shut })} className="flex min-h-11 items-center gap-2 font-medium md:min-h-6">
-                        <Icon name="chevron" className={cn('size-3.5 transition-transform duration-fast', !shut && 'rotate-90')} />{grp.label}
-                        <span className="text-small font-normal text-muted-foreground tabular-nums">{grp.rows.length}</span>
+                      <button type="button" aria-expanded={!shut} onClick={() => setOpen({ ...open, [grp.label]: !!shut })} className="flex min-h-11 w-full items-center gap-2 text-left font-medium md:min-h-6">
+                        <span className="min-w-0 flex-1">{grp.label} · <span className="tabular-nums">{grp.rows.length}</span> {grp.rows.length === 1 ? 'size' : 'sizes'}
+                          <span className="block text-small font-normal text-muted-foreground tabular-nums md:inline md:pl-2">{summary(grp.rows)}</span></span>
+                        <Icon name="chevron" className={cn('size-3.5 shrink-0 transition-transform duration-fast', !shut && 'rotate-90')} />
                       </button>
                     ) : <span className="font-medium">{grp.label}</span>}
                   </td>

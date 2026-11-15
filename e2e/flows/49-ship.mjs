@@ -164,6 +164,8 @@ export default {
         assert.equal(await s.getByRole('columnheader', { name: 'Your cost, ₹' }).count(), 0)
         assert.ok(!(await s.content()).includes(String(Number(known.cost) / 100)), 'the cost is not anywhere in the page')
         // A staff save changes the stock and keeps every stored cost as it was.
+        // On a phone each colour starts as its summary row (Neel N2, as drawn): open Rust first.
+        await s.getByRole('table', { name: 'Price and stock' }).getByRole('button', { name: /^Rust · / }).click()
         await s.getByLabel('Stock for M Rust').fill('7')
         await s.getByRole('button', { name: 'Save', exact: true }).click()
         await until(async () => (await costs()).find((r) => r.values === 'M Rust')?.stock === 7)
