@@ -318,6 +318,31 @@ The final mockup https://claude.ai/artifact/P8rsPfrY53V7Ezq1e4cnVm is **approved
 Status: building. SA0 and the SA1 parts that need neither lane C's `api.manage` nor lane B's `hasOwnerIn` are built on
 this branch first; SA1·1 (the Settings page and its actions) waits for C and B on `main`.
 
+## Progress (2026-11-15)
+| Task | State | Proof |
+|---|---|---|
+| SA0·1 host, rewrites | done | host tests; `api-isr.mjs` (console and shop hosts 404 a versioned path) |
+| SA0·2 key shape | done | `keys.test.ts` (checksum, rejection sampling) |
+| SA0·3 migration 0130–0131 | done | `verify:tenancy` "all 81 checks passed" |
+| SA0·4 lookup, door, limits | done | `request.test.ts`; int test on a real Postgres |
+| SA0·5 gates, proof, docs | done | `check:tenant` § 9 and `check:api` each caught a planted bad file; `api-isr.mjs` under `next start` |
+| SA1·1 Settings › Website | **waits for lanes C (`api.manage`) and B (`hasOwnerIn`) on main** | — |
+| SA1·2 mappers, schemas | done | `map.test.ts` (sentinels, drafts, media host, closed links), `released-api.test.ts` |
+| SA1·3 routes, boundary purge (0132), WAF | done | int test (A never reads B, no draft under a live key, no cost); proof 81; `waf.test.ts` |
+| SA1·4 skill, agent, planning heading | done | — |
+| e2e, mockup parity | after SA1·1 | — |
+
+**As built, differing from the plan text above** (none is a screen; the Deviations table stays empty):
+- The hash is sha256 **hex text**, not bytea (one form for the column, the cache key and the tag); `revoked_by` beside
+  `revoked_at`; the definer returns four columns (with `expires_at`). Noted on ADR-0018.
+- The key lookup lives in `src/lib/queries/storefront-keys.ts` (storefront.ts was at its size limit) with `revalidate:
+  3600`: a 30 s lookup lowered every cached API copy to 30 s (impact review). Stops purge by `refreshKeys`.
+- Public search is a dynamic live route answered `public, s-maxage=60` (an ISR route can't vary by query); the slim
+  search entry (speed review M2) is not built: search filters the cached catalogue in memory. Signal to build it: a
+  search p95 over 50 ms in Observability.
+- Frrata Admin's domain disconnect does not purge keys' cached answers (Admin never opens a shop's transaction): the
+  definer stops them, cached copies can answer for up to the hour. Partner removal and suspension purge after lane C.
+
 ## Owner questions (as asked)
 1. **Scope:** this lane builds SA0 + SA1 (catalogue reads and Settings › Website); the cart link, the 307s, "Your
    website" as a source, the starter, skill and docs, the Accept dialog's key list and Frrata Admin's page are SA1b,
