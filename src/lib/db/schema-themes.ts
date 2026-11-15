@@ -74,7 +74,6 @@ export const shopPages = pgTable('shop_pages', {
   updatedAt: at('updated_at').notNull().defaultNow(),
 }, (t) => [
   unique('shop_pages_tenant_id').on(t.tenantId, t.id),
-  foreignKey({ columns: [t.tenantId, t.livePublishId], foreignColumns: [shopThemePublishes.tenantId, shopThemePublishes.id], name: 'shop_pages_live_publish' }).onDelete('no action'),
   check('shop_pages_template', sql`${t.template} in ('about','faq')`),
   check('shop_pages_draft_size', sql`octet_length(${t.draft}::text) <= 32768`),
   check('shop_pages_live_size', sql`${t.live} is null or octet_length(${t.live}::text) <= 32768`),

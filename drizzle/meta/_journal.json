@@ -911,6 +911,34 @@
       "when": 1794719314417,
       "tag": "0129_partner_passkeys_access",
       "breakpoints": true
+    },
+    {
+      "idx": 130,
+      "version": "7",
+      "when": 1794733927792,
+      "tag": "0130_site_content",
+      "breakpoints": true
+    },
+    {
+      "idx": 131,
+      "version": "7",
+      "when": 1794733938730,
+      "tag": "0131_site_content_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 132,
+      "version": "7",
+      "when": 1794734000803,
+      "tag": "0132_site_content_move",
+      "breakpoints": true
+    },
+    {
+      "idx": 133,
+      "version": "7",
+      "when": 1794734027114,
+      "tag": "0133_shop_pages_untie",
+      "breakpoints": true
     }
   ]
 }
