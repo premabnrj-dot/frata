@@ -2,7 +2,8 @@
 
 Status: **proposed, revised** (2026-11-15). The owner: "why not stick to vercel only for now? do not wish to have
 complexity". **Revised recommendation: Vercel only for now** (§ Revised recommendation below); the Cloudflare design
-stays drawn as the second adapter. Awaiting the owner's yes · amends ADR-0005 · Pairs with: ADR-0014
+stays drawn as the second adapter. Owner, 2026-11-15: "we can go ahead for the test then. If this is too much of work,
+we can plan testing later": **the test is planned as V2's first step** (§ The test, when) · amends ADR-0005 · Pairs with: ADR-0014
 amendments 4, 6, 7 and 8; `docs/specs/2026-11-12-kit-and-fleet.md` (§ 1 Domains, § 4 Controls, § 5 Lanes, § 6 Fleet,
 § 7 Security); `docs/specs/2026-11-11-agentic-storefront.md` (V2 and its kill signal); ADR-0016
 
@@ -38,6 +39,15 @@ amendments 4, 6, 7 and 8; `docs/specs/2026-11-12-kit-and-fleet.md` (§ 1 Domains
 4. **The adapter stays the only door to the host**, so moving to Cloudflare later changes the adapter, not the app.
    Move when: a plan's median hosted site costs more than a third of its hosting line for two months; or a site needs
    egress control we can't get; or Vercel declines the terms.
+
+## The test, when (owner, 2026-11-15)
+Only shop websites would ever move; the console, Admin, checkout, payments and orders stay on Vercel bom1 whatever the
+test says (rule 4 below: checkout is redirected, never proxied). The test runs as **V2's first step**, once lane A has
+built Starter 0 (V1): the same Starter 0 deployed to a Vercel `frrata-sites` project and to a Cloudflare Workers for
+Platforms namespace, one week, measuring bytes, requests, CPU and build minutes per page view, preview and domain
+set-up, and the time to patch 20 sites. Vercel stays the choice unless Cloudflare's measured cost per site is far lower
+and OpenNext passes the starter bar. Before then the owner opens a Cloudflare account in the company's name (Workers
+Paid, $25 a month), or the test runs on Vercel's numbers alone.
 
 ## Options compared (sources dated; checked 2026-11-15; ₹88/$; ex GST)
 | | Cloudflare Workers for Platforms | Vercel, a second team | Netlify | AWS Amplify |
