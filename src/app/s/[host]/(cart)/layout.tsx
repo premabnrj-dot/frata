@@ -8,9 +8,9 @@ import { shopFor } from '../_shop'
 export default async function CartLayout({ children, params }: { children: React.ReactNode; params: Promise<{ host: string }> }) {
   const shop = await shopFor(params)
   return (
-    <div data-store-theme="" lang={shop.shopLanguage === 'hi' ? 'hi' : undefined} className="flex min-h-dvh flex-col bg-store-paper text-store-ink">
-      <header className="border-b border-current/10 px-4 py-4 text-center text-lg font-semibold">{shop.shopName}</header>
-      <main className="grid flex-1 place-items-center px-6 py-10 text-center">{children}</main>
+    <div data-store-theme="" lang={shop.shopLanguage === 'hi' ? 'hi' : undefined} className="min-h-dvh bg-store-paper text-store-ink">
+      <main className="grid min-h-[50vh] place-items-center py-16 text-center"><div className="space-y-3">
+        <p className="text-4xl sm:text-5xl" style={{ fontFamily: 'var(--store-display)' }}>{shop.shopName}</p>{children}</div></main>
     </div>
   )
 }

@@ -26,17 +26,14 @@ export function CartLink({ site, words }: { site: string | null; words: { openin
     window.location.replace('/checkout')
   }, [site])
   if (broken) return (
-    <div className="grid justify-items-center gap-3">
-      <h1 className="text-xl font-semibold" style={{ fontFamily: 'var(--store-display)' }}>{words.broken}</h1>
-      <p className="opacity-80">{words.again}</p>
-      <a href={site ?? '/'} className="mt-1 inline-flex min-h-11 items-center rounded-md bg-[var(--store-accent)] px-5 text-[var(--store-on-accent)]">{words.goTo}</a>
+    <div className="space-y-3">
+      <h1 className="text-3xl" style={{ fontFamily: 'var(--store-display)' }}>{words.broken}</h1>
+      <p className="text-store-sub">{words.again}</p>
+      <p><a href={site ?? '/'} className="store-btn inline-flex min-h-11 items-center gap-2 rounded-[var(--store-radius)] bg-store-button px-5 text-sm font-medium text-store-on-button">{words.goTo}</a></p>
     </div>
   )
   return (
-    <div role="status" className="grid justify-items-center gap-3">
-      <span aria-hidden className="size-7 animate-spin rounded-full border-[3px] border-current/15 border-t-current motion-reduce:animate-none" />
-      <p>{words.opening}</p>
-    </div>
+    <div role="status" className="space-y-3"><p className="text-sm uppercase tracking-[0.2em] text-store-sub">{words.opening}</p></div>
   )
 }
 

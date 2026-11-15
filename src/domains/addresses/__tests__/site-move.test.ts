@@ -34,8 +34,8 @@ describe('siteMove (SA1b D·2): the store pages the site has move there, with th
     const run = (pathname: string, now: number) => {
       const env = { location: { host: 'checkout.kesarstudio.in', pathname, search: '?utm_source=ig', hash: '', replace: (u: string) => calls.push(u) },
         sessionStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => store.set(k, v) },
-        window: {} as Record<string, unknown>, Date: { now: () => now } }
-      new Function('location', 'sessionStorage', 'window', 'Date', siteMoveScript(O))(env.location, env.sessionStorage, env.window, env.Date)
+        window: {} as Record<string, unknown>, Date: { now: () => now }, history: { pushState: () => {} }, addEventListener: () => {} }
+      new Function('location', 'sessionStorage', 'window', 'Date', 'history', 'addEventListener', siteMoveScript(O))(env.location, env.sessionStorage, env.window, env.Date, env.history, env.addEventListener)
       return env.window
     }
     const w = run('/products/x', 1_000_000)
@@ -47,6 +47,15 @@ describe('siteMove (SA1b D·2): the store pages the site has move there, with th
     expect(calls).toHaveLength(2)
     run('/bag', 2_000_000)
     expect(calls).toHaveLength(2)
+  })
+  it('a soft navigation is checked too: after the router’s pushState', () => {
+    const calls: string[] = []
+    const loc = { host: 'checkout.kesarstudio.in', pathname: '/bag', search: '', hash: '', replace: (u: string) => calls.push(u) }
+    const hist = { pushState(_s: unknown, _t: string, url: string) { loc.pathname = url } }
+    new Function('location', 'sessionStorage', 'window', 'Date', 'history', 'addEventListener', siteMoveScript(O))(loc, { getItem: () => null, setItem: () => {} }, {}, { now: () => 1e12 }, hist, () => {})
+    expect(calls).toEqual([])
+    hist.pushState(null, '', '/products/x')
+    expect(calls).toEqual(['https://kesarstudio.in/products/x'])
   })
   it('the script embeds the origin as a JSON string', () => {
     expect(siteMoveScript('https://a.in")</script><script>x')).not.toContain('</script>')

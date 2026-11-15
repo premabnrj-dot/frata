@@ -59,7 +59,9 @@ export const SITE_MOVE_GUARD_MS = 10_000
 /** The shop head's inline script for `origin` (runs before the page paints, so the theme page never shows and the
  *  visit beacon is told not to count: `window.__fe`). */
 export function siteMoveScript(origin: string): string {
-  return `(function(){try{var to=(${siteMove.toString()})(${JSON.stringify(origin).replace(/</g, "\\u003c")},location);if(!to)return;var k='frrata.move',n=Date.now(),l=+(sessionStorage.getItem(k)||0);if(n-l<${SITE_MOVE_GUARD_MS})return;sessionStorage.setItem(k,String(n));window.__fe=1;location.replace(to)}catch(e){}})()` // clock-ok: the browser's one-hop guard, a string never rendered
+  // Soft navigations too (a layout's effect never runs again: architecture review 3), with no client bundle: the
+  // script re-checks after the router's pushState and on Back (speed: an island cost every shop page 0.4 kB).
+  return `(function(){var m=function(){try{var to=(${siteMove.toString()})(${JSON.stringify(origin).replace(/</g, "\\u003c")},location);if(!to)return;var k='frrata.move',n=Date.now(),l=+(sessionStorage.getItem(k)||0);if(n-l<${SITE_MOVE_GUARD_MS})return;sessionStorage.setItem(k,String(n));window.__fe=1;location.replace(to)}catch(e){}};m();try{var p=history.pushState;history.pushState=function(){var r=p.apply(this,arguments);m();return r};addEventListener('popstate',m)}catch(e){}})()` // clock-ok: the browser's one-hop guard, a string never rendered
 }
 
 /** The shop's old names that still lead to it (retired by the shop, not by Frrata), newest first. */
