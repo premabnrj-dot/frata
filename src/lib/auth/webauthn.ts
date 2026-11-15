@@ -104,7 +104,7 @@ export function passkeyCeremony(o: { rpName: string; tag: string; says: Record<s
     try { return { ok: true, value: await fn() } } catch (err) {
       const code = dbCodeOf(err)
       if (!says[code]) console.error(`[${o.tag}]`, what, errName(err))
-      return { ok: false, error: says[code] ?? 'Something went wrong. Try again.' }
+      return { ok: false, error: says[code] ?? 'We couldn’t finish that. Nothing was changed. Try again.' }
     }
   }
   return {

@@ -14,7 +14,7 @@ import type { GateState } from './types'
 // page until this browser session has passed a passkey check (mockup https://claude.ai/artifact/Xng3BV15YZpDQi9MoYLGsZ).
 // Confirm with a passkey; with none, ask for one (a code someone else types to approve) and, once approved, add it on
 // this browser. A failure is an error toast (§ Feedback 1): the layout wraps the gate in its own calm Toaster.
-// `readTo` names who approves ("an admin", "your team's owner", "Frrata"); `help` says how to reach them.
+// `readTo` names who approves ("another Frrata Admin user", "your team's owner", "Frrata"); `help` says how to reach them.
 // =============================================================================
 
 function Key() {
@@ -25,7 +25,7 @@ function Key() {
   )
 }
 
-export function PasskeyGate({ email, state, signOut, endpoint = '/admin/passkey', readTo = 'an admin', help = null }: {
+export function PasskeyGate({ email, state, signOut, endpoint = '/admin/passkey', readTo = 'another Frrata Admin user', help = null }: {
   email: string; state: GateState | null; signOut: React.ReactNode; endpoint?: PasskeyEndpoint; readTo?: string; help?: React.ReactNode
 }) {
   const { addPasskey, confirmPasskey, requestCode } = passkeyClient(endpoint)
@@ -48,7 +48,7 @@ export function PasskeyGate({ email, state, signOut, endpoint = '/admin/passkey'
     setBusy(true); toast.dismiss()
     const r = await fn()
     setBusy(false)
-    if (!r.ok) toast.error(r.error ?? 'Something went wrong. Try again.'); else router.refresh()
+    if (!r.ok) toast.error(r.error ?? 'We couldn’t finish that. Nothing was changed. Try again.'); else router.refresh()
   }
 
   let body: React.ReactNode

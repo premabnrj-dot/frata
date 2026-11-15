@@ -20,7 +20,7 @@ export function passkeyClient(endpoint: PasskeyEndpoint) {
     try {
       const r = await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ op, ...extra }) })
       const j = (await r.json().catch(() => ({}))) as { value?: T; error?: string }
-      return r.ok ? { ok: true, value: j.value } : { ok: false, error: j.error || 'Something went wrong. Try again.' }
+      return r.ok ? { ok: true, value: j.value } : { ok: false, error: j.error || 'We couldn’t finish that. Nothing was changed. Try again.' }
     } catch { return { ok: false, error: 'No connection. Try again.' } }
   }
   /** "Use passkey": the device signs this session's challenge; the server sets the step-up cookie. `crossDevice`: the

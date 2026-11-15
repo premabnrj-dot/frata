@@ -91,7 +91,7 @@ export function PartnerGate({ state, ownerName, phone, signOut }: GateProps) {
     setBusy(true); toast.dismiss()
     const r = await fn()
     setBusy(false)
-    if (!r.ok) toast.error(r.error ?? 'Something went wrong. Try again.'); else after ? after() : router.refresh()
+    if (!r.ok) toast.error(r.error ?? 'We couldn’t finish that. Nothing was changed. Try again.'); else after ? after() : router.refresh()
   }
   const create = () => run(async () => {
     const r = await addPasskey(deviceLabel(navigator.userAgent) ?? 'My passkey')
