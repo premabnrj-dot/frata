@@ -28,6 +28,7 @@ describe('the API host’s path rule', () => {
   it('refuses a bad shape, page or handle', () => {
     const k = newKey('public', rnd)
     for (const p of [`/2026-12/k/frs_pub_short/shop`, `/2026-12/k/${k}/products/page/14`, `/2026-12/k/${k}/products/page/0`, `/2026-12/k/${k}/products/Bad_Handle`,
-      `/2026-12/k/${k}/orders`, `/2026-12/k/${k}/pages/Bad_Page`, `/2026-12/k/${k}/pages/${'a'.repeat(61)}`, `/2026-12/k/${k}/faq/x`, `/2026-12/k/${k}/shop/x`, `/2025-01/k/${k}/shop`, '/', '/2026-12/openapi.json/x']) expect(re.test(p), p).toBe(false)
+      `/2026-12/k/${k}/orders`, `/2026-12/k/${k}/pages/Bad_Page`, `/2026-12/k/${k}/pages/${'a'.repeat(61)}`, `/2026-12/k/${k}/faq/x`, `/2026-12/k/${k}/shop/x`, `/2025-01/k/${k}/shop`, '/', '/2026-12/openapi.json/x',
+      `/2026-12/k/${k}/preview`, `/2026-12/k/${k}/preview/products/x`, `/2026-12/k/${k}/preview/v1.abc.def/faq`, `/2026-12/k/${k}/preview/pages/${'a'.repeat(61)}`]) expect(re.test(p), p).toBe(false)
   })
 })

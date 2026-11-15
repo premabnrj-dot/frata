@@ -15,7 +15,9 @@ import { LIMITS, uncount, withinLimit } from '@/lib/db/rate-limit'
 import { BLOB_STORE_ID } from '@/lib/env'
 import { errName } from '@/lib/log'
 import { byOf as whoSaved } from '@/lib/queries/content'
-import { members } from '@/lib/db/schema'
+import { members, shopSettings } from '@/lib/db/schema'
+import { previewsOn, signPreview } from '@/lib/storefront-api/preview-token'
+import type { PreviewEntry } from '@/domains/storefront-api/preview'
 import { momentIN } from '@/lib/format-date'
 import { refreshContent, refreshShop } from '@/lib/storefront/refresh'
 import { canon, draftOf, fixedHandle, MAX_LIVE_BYTES, targetOf } from '@/lib/themes/pages'
@@ -53,7 +55,7 @@ const lockStore = (tx: Tx, t: string) => tx.execute(sql`select pg_advisory_xact_
  * The one door for every content write: who, the limit, the transaction, the audit row. `scope` says what to purge.
  * `limit`: the save bucket, or Undo's own.
  */
-async function write<T extends object>(what: { action: string; scope: 'content' | 'pages'; limit?: 'save' | 'undo' }, work: (tx: Tx, auth: Auth) => Promise<Out<T>>): Promise<R<T>> {
+async function write<T extends object>(what: { action: string; scope: 'content' | 'pages' | 'none'; limit?: 'save' | 'undo' }, work: (tx: Tx, auth: Auth) => Promise<Out<T>>): Promise<R<T>> {
   const who = await requireMember(CAPABILITIES['content.write'])
   if (!who.ok) return { ok: false, error: who.message }
   const bucket = what.limit === 'undo' ? LIMITS.contentUndo : LIMITS.contentSave
@@ -80,8 +82,8 @@ async function write<T extends object>(what: { action: string; scope: 'content' 
   if (!r.ok) { await giveBack(); return r }
   if ('error' in r.value) { if (r.value.error !== FULL) await giveBack(); return { ok: false, error: r.value.error, ...(r.value.field ? { field: r.value.field } : {}) } }
   if (what.scope === 'content') await refreshContent(r.tenantId).catch((e: unknown) => console.error('[content purge]', errName(e)))
-  else refreshShop(r.tenantId, 'pages')
-  revalidatePath('/console/content')
+  else if (what.scope === 'pages') refreshShop(r.tenantId, 'pages')
+  if (what.scope !== 'none') revalidatePath('/console/content')
   const { done: _d, ...value } = r.value
   return { ok: true, ...(value as T) }
 }
@@ -364,3 +366,32 @@ export async function undoPageAction(input: unknown): Promise<R<{ id: string; ve
     return out
   })
 }
+
+// ── Preview on website (SA1b D·4; ADR-0018 § 12) ─────────────────────────────────────────────────────────────────────
+const PreviewInput = z.strictObject({ entry: z.string().regex(/^(?:faq|page:[a-z0-9]+(?:-[a-z0-9]+)*)$/).max(65), keyId: z.uuid().optional() })
+
+/** A link opening a hidden page on the store's own website for 10 minutes, signed for this store, one live key (picked
+ *  when several) and that entry; through content's own door, nothing purged, answered once (never stored or toasted). */
+export async function previewOnWebsiteAction(input: unknown): Promise<R<{ url: string; host: string }>> {
+  const p = PreviewInput.safeParse(input)
+  if (!p.success) return { ok: false, error: 'Pick a page to preview.' }
+  if (!previewsOn()) return { ok: false, error: 'Previews aren’t set up yet.' }
+  return write({ action: 'content.preview', scope: 'none' }, async (tx, auth): Promise<Out<{ url: string; host: string }>> => {
+    const t = auth.membership.tenantId
+    const [s] = await tx.select({ origin: shopSettings.siteOrigin }).from(shopSettings).where(eq(shopSettings.tenantId, t))
+    if (!s?.origin) return { error: 'Your website runs on Frrata. Preview it in the Look.' }
+    const keys = await tx.execute<{ id: string }>(sql`
+      select k.id from storefront_keys k join tenants x on x.id = k.tenant_id
+       where k.tenant_id = ${t} and k.revoked_at is null and (k.expires_at is null or k.expires_at > now())
+         and (k.kind = 'public' or x.first_opened_at is null)`)
+    if (!keys.length) return { error: 'Your website has no key. Create one in Settings › Website.' }
+    const key = p.data.keyId ? keys.find((k) => k.id === p.data.keyId) : keys.length === 1 ? keys[0] : undefined
+    if (!key) return { error: 'Pick the key your website uses.' }
+    const entry = p.data.entry as PreviewEntry
+    const token = signPreview({ tenantId: t, keyId: key.id }, entry, new Date())
+    if (!token) return { error: 'Previews aren’t set up yet.' }
+    const to = entry === 'faq' ? '/pages/faq' : `/pages/${entry.slice(5)}`
+    return { done: true, url: `${s.origin}/frrata-preview?token=${encodeURIComponent(token)}&to=${encodeURIComponent(to)}`, host: s.origin.slice(8) }
+  })
+}
+

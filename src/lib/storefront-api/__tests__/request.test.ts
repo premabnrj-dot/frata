@@ -5,10 +5,11 @@ import { newKey } from '@/domains/storefront-api/keys'
 
 const rows = new Map<string, { keyId: string; tenantId: string; kind: 'public' | 'test'; expiresAt: string | null }>()
 const limits = { over: false, within: true }
-vi.mock('@/lib/queries/storefront-keys', () => ({ storefrontKeyFor: vi.fn(async (k: string) => rows.get(k) ?? null) }))
+vi.mock('@/lib/queries/storefront-keys', () => ({ storefrontKeyFor: vi.fn(async (k: string) => rows.get(k) ?? null), storefrontKeyNow: vi.fn(async (k: string) => rows.get(k) ?? null) }))
+vi.mock('@/lib/env', async (orig) => ({ ...(await orig<object>()), STOREFRONT_PREVIEW_KEY: Buffer.alloc(32, 7) }))
 vi.mock('@/lib/queries/storefront-api', () => ({ markKeySeen: vi.fn(async () => {}), siteOriginFor: vi.fn(async () => 'https://kesarstudio.in') }))
 vi.mock('@/lib/db/rate-limit', () => ({
-  LIMITS: { apiMissIp: {}, apiTestIp: {}, apiSearchIp: {} },
+  LIMITS: { apiMissIp: {}, apiTestIp: {}, apiSearchIp: {}, apiPreviewIp: {} },
   overLimit: vi.fn(async () => limits.over),
   withinLimit: vi.fn(async () => limits.within),
 }))
@@ -120,5 +121,44 @@ describe('apiRequest (ADR-0018 § 5)', () => {
   it('refuses params that name a shop (the shop is ctx, from the key)', async () => {
     const bad = apiRequest({ version: '2026-12', tree: 'live', mode: 'isr', resource: 'shop', schema: Shop, params: () => ({ shopId: 'x' }), run: async () => ({ name: 'x' }) })
     expect((await bad(untouchable(), at(LIVE))).status).toBe(500)
+  })
+
+  describe('preview (ADR-0018 § 12; SA1b D·4)', () => {
+    const page = apiRequest({ version: '2026-12', tree: 'live', mode: 'preview', resource: 'preview_page', schema: Shop,
+      params: (raw) => (typeof raw.handle === 'string' ? { handle: raw.handle } : null), entry: (p: { handle: string }) => `page:${p.handle}` as const,
+      run: async () => ({ name: 'Draft about' }) })
+    const tok = async (scope: { tenantId: string; keyId: string }, entry: 'faq' | `page:${string}`, now = new Date()) =>
+      (await import('../preview-token')).signPreview(scope, entry, now)!
+    const pr = (token?: string) => req(token ? { 'frrata-preview': token } : {})
+    it('a live key with a token for this store, key and page reads the draft, never cached, no CORS', async () => {
+      vi.mocked(seenApi.markKeySeen).mockClear()
+      const r = await page(pr(await tok({ tenantId: A, keyId: 'k1' }, 'page:about')), at(LIVE, { handle: 'about' }))
+      expect(r.status).toBe(200)
+      expect(r.headers.get('cache-control')).toBe('private, no-store')
+      expect(r.headers.get('access-control-allow-origin')).toBeNull()
+      expect(seenApi.markKeySeen).not.toHaveBeenCalled()
+    })
+    it('no token, another page, another key, another store, an old or tampered token: the one 404', async () => {
+      const bodies = new Set<string>()
+      const past = new Date(Date.now() - 11 * 60_000)
+      for (const t of [undefined, await tok({ tenantId: A, keyId: 'k1' }, 'page:other'), await tok({ tenantId: A, keyId: 'k2' }, 'page:about'),
+        await tok({ tenantId: '22222222-2222-2222-2222-222222222222', keyId: 'k1' }, 'page:about'), await tok({ tenantId: A, keyId: 'k1' }, 'page:about', past), 'v1.abc.def']) {
+        const r = await page(pr(t), at(LIVE, { handle: 'about' }))
+        expect(r.status).toBe(404)
+        bodies.add(await r.text())
+      }
+      const good = await tok({ tenantId: A, keyId: 'k1' }, 'page:about')
+      const [v, p, sig] = good.split('.')
+      for (const bad of [`${v}.${p}.${sig!.slice(0, 42)}A`, `${v}.${p}x.${sig}`, `${v}.${p}.${sig}=`]) {
+        const r = await page(pr(bad), at(LIVE, { handle: 'about' }))
+        expect(r.status).toBe(404)
+        bodies.add(await r.text())
+      }
+      expect([...bodies]).toEqual(['{"error":"not_found"}'])
+    })
+    it('is limited per network and fails closed', async () => {
+      limits.within = false
+      expect((await page(pr(await tok({ tenantId: A, keyId: 'k1' }, 'page:about')), at(LIVE, { handle: 'about' }))).status).toBe(429)
+    })
   })
 })

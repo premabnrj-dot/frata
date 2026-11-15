@@ -172,5 +172,41 @@
     "rule": "W4",
     "text": "Your website",
     "why": "Owner, 2026-11-15 (SA1b mockup, classifier v3): the source of an order the brand's own website sent, the glossary's Website exception (Storefront API), never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/content/_components/pages.tsx",
+    "rule": "W4",
+    "text": "Preview on website",
+    "why": "Owner, 2026-11-15 (SA1b mockup § Preview, glossary § Surfaces): Website names the brand's own site built on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/content/_components/pages.tsx",
+    "rule": "W4",
+    "text": "Key your website uses",
+    "why": "Owner, 2026-11-15 (SA1b mockup § Preview, glossary § Surfaces): Website names the brand's own site built on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/content/_components/pages.tsx",
+    "rule": "W4",
+    "text": "Open Settings › Website",
+    "why": "Owner, 2026-11-15 (SA1b mockup § Preview, glossary § Surfaces): Website names the brand's own site built on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/content/actions.ts",
+    "rule": "W4",
+    "text": "Your website runs on Frrata. Preview it in the Look.",
+    "why": "Owner, 2026-11-15 (SA1b mockup § Preview, glossary § Surfaces): Website names the brand's own site built on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/content/actions.ts",
+    "rule": "W4",
+    "text": "Your website has no key. Create one in Settings › Website.",
+    "why": "Owner, 2026-11-15 (SA1b mockup § Preview, glossary § Surfaces): Website names the brand's own site built on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/content/actions.ts",
+    "rule": "W4",
+    "text": "Pick the key your website uses.",
+    "why": "Owner, 2026-11-15 (SA1b mockup § Preview, glossary § Surfaces): Website names the brand's own site built on the Storefront API, never the store itself"
   }
 ]

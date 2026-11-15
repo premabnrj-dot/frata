@@ -10,7 +10,8 @@ import { contentOut, faqOut, storePageOut } from '@/domains/storefront-api/2026-
 import { resolvePage } from '@/domains/pages/page'
 import { HANDLE as PAGE_HANDLE } from '@/domains/pages/templates'
 import { apiContent, previewContent } from '@/lib/queries/content'
-import { shopPages, type ShopPage } from '@/lib/queries/pages'
+import { previewPages, shopPages, type ShopPage } from '@/lib/queries/pages'
+import { previewEntry } from '@/domains/storefront-api/preview'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 
@@ -101,6 +102,19 @@ export const RESOURCES = {
   faq: { schema: S.Faq, run: async (ctx: ApiCtx) => {
     // The live FAQ under either key, as pages/{handle}: its draft waits for the signed preview token (ADR-0018 § 12).
     const page = (await shopPages(ctx.tenantId)).find((x) => x.template === 'faq')
+    const nodes = page && await pageNodes(ctx, page)
+    return page && nodes ? faqOut(page, nodes) : null
+  } },
+  // ADR-0018 § 12 (SA1b D·4): a page or the FAQ as it stands now, hidden or unpublished, under a token apiRequest has
+  // already checked for this store, key and entry. Read after previewPages' own transaction (P4).
+  previewPage: { schema: S.StorePage, entry: (p: { handle: string }) => previewEntry('page', p.handle), run: async (ctx: ApiCtx, p: { handle: string }) => {
+    if (!PAGE_HANDLE.test(p.handle)) return null
+    const page = (await previewPages(ctx.tenantId)).find((x) => x.handle === p.handle && x.template !== 'faq')
+    const nodes = page && await pageNodes(ctx, page)
+    return page && nodes ? storePageOut(mapCtx(ctx), page, nodes) : null
+  } },
+  previewFaq: { schema: S.Faq, entry: () => previewEntry('faq'), run: async (ctx: ApiCtx) => {
+    const page = (await previewPages(ctx.tenantId)).find((x) => x.template === 'faq')
     const nodes = page && await pageNodes(ctx, page)
     return page && nodes ? faqOut(page, nodes) : null
   } },

@@ -35,6 +35,16 @@ for (const file of walk(ROUTES)) {
   }
   const tree = rel.split('/')[1]
   const dynamicFile = /export const dynamic = 'force-dynamic'/.test(text)
+  // A preview route (SA1b D·4; ADR-0018 § 12): a token-bound draft, in either tree, only under preview/, never cached;
+  // and nothing outside preview/ may be one.
+  const previewPath = /\/preview\//.test(rel)
+  if (previewPath || /mode:\s*'preview'/.test(text)) {
+    if (!previewPath || !/mode:\s*'preview'/.test(text)) failures.push(`${file}  a preview route lives under preview/ with mode: 'preview', and only there`)
+    if (!dynamicFile || /export const revalidate\b/.test(text)) failures.push(`${file}  a preview is never cached: export const dynamic = 'force-dynamic' and no revalidate`)
+    if (!/\bentry:/.test(text)) failures.push(`${file}  a preview route names the entry its token must open (entry:)`)
+    if (!/tree:\s*'(live|test)'/.test(text) || (tree === 'k') !== /tree:\s*'live'/.test(text)) failures.push(`${file}  a preview route keeps its folder's tree`)
+    continue
+  }
   if (tree === 'k') {
     if (!/tree:\s*'live'/.test(text)) failures.push(`${file}  a k/ route serves live keys: tree: 'live'`)
     if (/mode:\s*'isr'/.test(text)) {
@@ -44,7 +54,7 @@ for (const file of walk(ROUTES)) {
       if (/\bpreview[A-Z]\w*\b/.test(text)) failures.push(`${file}  a cached live route reads a preview loader — drafts would enter the shared cache`)
       if (rel.includes('[') && !/export (const|function) generateStaticParams\b/.test(text)) failures.push(`${file}  a cached route with a dynamic segment needs generateStaticParams (empty) to be cached at all`)
     } else if (/mode:\s*'dynamic'/.test(text)) {
-      if (!/\/search\/route\.ts$/.test(file)) failures.push(`${file}  only search may be a dynamic live route`)
+      if (!/\/(search|filter\/page\/\[n\])\/route\.ts$/.test(file)) failures.push(`${file}  only search and filter may be dynamic live routes`)
       if (!dynamicFile || /export const revalidate\b/.test(text)) failures.push(`${file}  a dynamic live route: export const dynamic = 'force-dynamic' and no revalidate`)
     } else failures.push(`${file}  no mode: 'isr' or 'dynamic'`)
   } else if (tree === 't') {

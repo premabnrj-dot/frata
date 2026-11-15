@@ -172,7 +172,7 @@ for (const file of walk('src')) {
     if (/\[(shop|tenant)[^\]]*\]/i.test(file)) failures.push(`${file}  a route segment named for a shop or tenant — the shop comes only from the key (ADR-0018)`)
     if (file !== 'src/lib/storefront-api/request.ts' && /headers\.get\(/.test(text)) failures.push(`${file}  reads a request header — only request.ts reads the network and the Origin`)
   }
-  if (/\bstorefrontKeyFor\b/.test(text) && !['src/lib/storefront-api/request.ts', 'src/lib/queries/storefront-keys.ts'].includes(file)) failures.push(`${file}  calls storefrontKeyFor — only apiRequest resolves a key (ADR-0018)`)
+  if (/\bstorefrontKey(For|Now)\b/.test(text) && !['src/lib/storefront-api/request.ts', 'src/lib/queries/storefront-keys.ts'].includes(file)) failures.push(`${file}  calls storefrontKeyFor or storefrontKeyNow — only apiRequest resolves a key (ADR-0018)`)
   if (/\bstorefrontKeyRow\b/.test(text) && !['src/lib/queries/storefront-keys.ts', 'src/lib/db/platform.ts'].includes(file)) failures.push(`${file}  calls storefrontKeyRow — only the cached storefrontKeyFor does (ADR-0018)`)
   if (/\bapp_storefront_key\b/.test(text) && file !== 'src/lib/db/platform.ts') failures.push(`${file}  names app_storefront_key — only src/lib/db/platform.ts calls the definer (ADR-0018)`)
   if (file.startsWith('src/lib/queries/')) {

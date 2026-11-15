@@ -28,6 +28,20 @@ export async function siteHostIn(tx: Tx, tenantId: string): Promise<string | nul
   return r?.o ? r.o.replace(/^https:\/\//, '') : null
 }
 
+/** Content › Pages' Preview on website (SA1b D·4): the store's live keys a preview may name (not deleted, not expired, a
+ *  test key only while the store never opened), newest first. Names and shown prefixes only. */
+export type PreviewKey = { id: string; name: string; prefix: string; lastSeenOn: string | null }
+export async function previewKeysFor(tenantId: string): Promise<PreviewKey[]> {
+  return withTenant(tenantId, async (tx) => {
+    const rows = await tx.execute<{ id: string; name: string; prefix: string; last_seen_on: string | Date | null }>(sql`
+      select k.id, k.name, k.prefix, k.last_seen_on from storefront_keys k join tenants t on t.id = k.tenant_id
+       where k.tenant_id = ${tenantId} and k.revoked_at is null and (k.expires_at is null or k.expires_at > now())
+         and (k.kind = 'public' or t.first_opened_at is null)
+       order by k.last_seen_on desc nulls last, k.created_at desc limit 20`)
+    return rows.map((r) => ({ id: r.id, name: r.name, prefix: r.prefix, lastSeenOn: r.last_seen_on === null ? null : String(r.last_seen_on instanceof Date ? r.last_seen_on.toISOString() : r.last_seen_on).slice(0, 10) }))
+  })
+}
+
 /** Today in India, as the date a key was last seen on. */
 const istDay = (now: Date) => new Date(now.getTime() + 330 * 60_000).toISOString().slice(0, 10)
 const seen = new Map<string, string>()

@@ -19,6 +19,13 @@ export const SECRETS_ALLOWED = secretsAllowed(process.env.VERCEL, process.env.VE
 function secret(value: string | undefined): string { return SECRETS_ALLOWED ? value ?? '' : '' }
 
 export const DATABASE_URL = secret(process.env.DATABASE_URL)
+/** Storefront API previews (SA1b, ADR-0018 § 12): the key that signs a preview token, base64 of 32 random bytes or more
+ *  (`openssl rand -base64 32`). Production only, Sensitive. Unset or shorter: previews are refused and the console's
+ *  Preview on website is hidden; everything else works. Changing it ends every live token (they last 10 minutes). */
+export const STOREFRONT_PREVIEW_KEY: Buffer | null = (() => {
+  const b = Buffer.from(secret(process.env.STOREFRONT_PREVIEW_SECRET), 'base64')
+  return b.length >= 32 ? b : null
+})()
 /** Trials (TR1): the key of the one-trial-per-business HMACs (src/lib/trials/claims.ts). Production only. Without it a
  *  sign-up gets no trial (fail closed). Never change it once set: earlier claims would no longer match (bump
  *  TRIAL_CLAIM_KEY_VERSION with a new key instead). */

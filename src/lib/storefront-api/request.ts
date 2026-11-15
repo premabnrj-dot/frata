@@ -2,7 +2,9 @@ import 'server-only'
 import type { z } from 'zod'
 import { keyShape, type KeyKind } from '@/domains/storefront-api/keys'
 import { API_VERSIONS, type ApiVersion } from '@/domains/storefront-api/versions'
-import { storefrontKeyFor } from '@/lib/queries/storefront-keys'
+import { storefrontKeyFor, storefrontKeyNow } from '@/lib/queries/storefront-keys'
+import { PREVIEW_HEADER, type PreviewEntry } from '@/domains/storefront-api/preview'
+import { previewOk } from './preview-token'
 import { markKeySeen, siteOriginFor } from '@/lib/queries/storefront-api'
 import { LIMITS, overLimit, withinLimit } from '@/lib/db/rate-limit'
 import { ipFrom } from '@/lib/http/client-ip'
@@ -24,13 +26,17 @@ import { errName } from '@/lib/log'
 //            request, is limited per network, and answers `public, s-maxage=60` so repeats are CDN hits by URL.
 //   'test' — test keys, `t/`: never cached (`private, no-store`); drafts through the preview loaders; CORS only to the
 //            shop's own website or http://localhost:<port>; limits per network (ipBucket), failing closed.
+//   'preview' (either tree, SA1b D·4; ADR-0018 § 12): a hidden page or the FAQ's draft under a token Frrata signed in the
+//            console, read from the `Frrata-Preview` header. Its own branch, never the live one: `private, no-store`, no
+//            CORS (a site's server asks), the key looked up uncached (a stop applies at once), limited per network, no
+//            last-seen write. The token must name this store and key (in its MAC) and this entry, for ≤ 10 minutes.
 // Every refusal is the same 404 body, whatever the reason (bad shape, unknown, deleted, expired, wrong tree), so a key
 // can't be probed. Logs carry the key id, never the key or the path.
 // =============================================================================
 
 export type ApiCtx = { tenantId: string; keyId: string; keyKind: KeyKind; version: ApiVersion; now: Date }
 export type ApiTree = 'live' | 'test'
-export type ApiMode = 'isr' | 'dynamic'
+export type ApiMode = 'isr' | 'dynamic' | 'preview'
 type Params = Promise<Record<string, string | string[] | undefined>>
 
 const LOCALHOST = /^http:\/\/localhost(:\d{1,5})?$/
@@ -48,36 +54,40 @@ function answer(status: number, body: string, headers: Record<string, string>): 
 export function apiRequest<P, S extends z.ZodType>(opts: {
   version: ApiVersion
   tree: ApiTree
-  /** 'isr' (live tree only): a cached copy that never reads the request. 'dynamic': reads it (search, every test route). */
+  /** 'isr' (live tree only): a cached copy that never reads the request. 'dynamic': reads it (search, every test route).
+   *  'preview': a token-bound draft (either tree). */
   mode: ApiMode
   resource: string
   schema: S
   params?: (raw: Record<string, string | string[] | undefined>, search: URLSearchParams | null) => P | null
   /** The dynamic tree's per-network limit for this resource beyond the test key's own (search). */
   limit?: 'search'
+  /** mode 'preview' only: the one entry these params name (the token must name it too). */
+  entry?: (params: P) => PreviewEntry | null
   run: (ctx: ApiCtx, params: P) => Promise<z.input<S> | null>
 }) {
   return async function handle(req: Request, route: { params: Params }): Promise<Response> {
     const test = opts.tree === 'test'
-    const dynamic = opts.mode === 'dynamic' || test
+    const preview = opts.mode === 'preview'
+    const dynamic = opts.mode === 'dynamic' || test || preview
     const base: Record<string, string> = { 'Frrata-Api-Version': opts.version }
-    if (test) base['Cache-Control'] = 'private, no-store'
+    if (test || preview) base['Cache-Control'] = 'private, no-store'
     else base['Access-Control-Allow-Origin'] = '*'
-    if (!test && dynamic) base['Cache-Control'] = 'public, s-maxage=60'
+    if (!test && !preview && dynamic) base['Cache-Control'] = 'public, s-maxage=60'
     const refuse = (status = 404, body = NOT_FOUND, extra: Record<string, string> = {}) => answer(status, body, { ...base, ...extra })
 
     if (!(API_VERSIONS as readonly string[]).includes(opts.version)) return refuse()
     const raw = await route.params
     const key = typeof raw.key === 'string' ? raw.key : ''
     const shape = keyShape(key)
-    if (!shape || (shape.kind === 'test') !== test || (test && opts.mode !== 'dynamic')) return refuse()
+    if (!shape || (shape.kind === 'test') !== test || (test && opts.mode === 'isr') || (preview && !opts.entry)) return refuse()
 
     // Only the dynamic tree reads the request: the network, for its limits, and the Origin, for CORS.
     const ip = dynamic ? ipFrom(req.headers) : ''
     let row: Awaited<ReturnType<typeof storefrontKeyFor>>
     try {
       if (dynamic && await overLimit(LIMITS.apiMissIp, ip, new Date(), true)) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
-      row = await storefrontKeyFor(key)
+      row = preview ? await storefrontKeyNow(key) : await storefrontKeyFor(key)
     } catch (err) {
       // Never the raw error (its parameters carry the key's hash): security review LOW-4. A cached route rethrows, so
       // Next keeps serving its last good copy rather than caching a failure for the hour (LOW-1).
@@ -92,9 +102,10 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
     const ctx: ApiCtx = { tenantId: row.tenantId, keyId: row.keyId, keyKind: row.kind, version: opts.version, now: new Date() } // clock-ok: server
 
     let cors: Record<string, string> = {}
-    if (test && !(await withinLimit(LIMITS.apiTestIp, ip, ctx.now, true))) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
+    if (preview && !(await withinLimit(LIMITS.apiPreviewIp, ip, ctx.now, true))) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
+    if (test && !preview && !(await withinLimit(LIMITS.apiTestIp, ip, ctx.now, true))) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
     if (dynamic && opts.limit === 'search' && !(await withinLimit(LIMITS.apiSearchIp, ip, ctx.now, true))) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
-    if (test) {
+    if (test && !preview) {
       const origin = req.headers.get('origin')
       const site = origin && !LOCALHOST.test(origin) ? await siteOriginFor(ctx.tenantId).catch((e) => { console.error('[api]', opts.resource, 'origin', errName(e)); return null }) : null
       if (origin && (LOCALHOST.test(origin) || origin === site)) cors = { 'Access-Control-Allow-Origin': origin }
@@ -104,6 +115,13 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
     const search = dynamic ? new URL(req.url).searchParams : null
     const parsed = opts.params ? opts.params(raw, search) : ({} as P)
     if (parsed === null) return refuse(404, NOT_FOUND, cors)
+    if (preview) {
+      const entry = opts.entry!(parsed)
+      if (!entry || !previewOk(req.headers.get(PREVIEW_HEADER), { tenantId: ctx.tenantId, keyId: ctx.keyId }, entry, ctx.now)) {
+        console.error('[api] preview refused', `key=${ctx.keyId}`)
+        return refuse()
+      }
+    }
     // A handler's params never carry a shop (tenancy audit 2026-11-15 H1): the shop is ctx.tenantId, from the key.
     if (parsed && typeof parsed === 'object' && Object.keys(parsed).some((k) => /tenant|shop/i.test(k))) {
       console.error('[api]', opts.resource, 'params_name_a_shop', `key=${ctx.keyId}`)
@@ -113,7 +131,7 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
       const result = await opts.run(ctx, parsed)
       if (result === null) return refuse(404, NOT_FOUND, cors)
       const body = JSON.stringify(opts.schema.parse(result))
-      if (!test && !dynamic) await markKeySeen(ctx)
+      if (!test && !dynamic && !preview) await markKeySeen(ctx)
       return answer(200, body, { ...base, ...cors })
     } catch (err) {
       console.error('[api]', opts.resource, errName(err), `key=${ctx.keyId}`)

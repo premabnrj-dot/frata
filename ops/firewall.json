@@ -18,7 +18,7 @@
               "type": "path",
               "op": "re",
               "neg": true,
-              "value": "^/2026-12/(k/frs_(pub|test)_[0-9A-Za-z]{38}/(shop|offers|collections|search|content|faq|pages/[a-z0-9-]{1,60}|products/page/([1-9]|1[0-3])|products/[a-z0-9-]{1,100}|collections/[a-z0-9-]{1,100}/page/([1-9]|1[0-3]))|openapi\\.json)$"
+              "value": "^/2026-12/(k/frs_(pub|test)_[0-9A-Za-z]{38}/(shop|offers|collections|search|content|faq|pages/[a-z0-9-]{1,60}|preview/(faq|pages/[a-z0-9-]{1,60})|products/page/([1-9]|1[0-3])|products/[a-z0-9-]{1,100}|collections/[a-z0-9-]{1,100}/page/([1-9]|1[0-3]))|openapi\\.json)$"
             }
           ]
         }

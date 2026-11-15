@@ -43,3 +43,11 @@ export const storefrontKeyFor = cache(async (key: string): Promise<KeyRow | null
   }
   return row
 })
+
+/** The same answer read now, uncached: preview routes only (SA1b D·4, tenancy audit): a hidden page must stop the
+ *  moment its key or partner does, not at the next drain. Only apiRequest calls this (check:tenant § 9). */
+export async function storefrontKeyNow(key: string): Promise<KeyRow | null> {
+  if (!keyShape(key)) return null
+  const row = await storefrontKeyRow(keyHash(key))
+  return row && !(row.expiresAt && Date.parse(row.expiresAt) <= Date.now()) ? row : null // clock-ok: server
+}

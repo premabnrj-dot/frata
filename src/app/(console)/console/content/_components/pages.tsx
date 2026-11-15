@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Section } from '@/components/layout/section'
 import { Badge, Tag } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { FIELD } from '@/components/ui/field'
 import { FieldError, fieldProps } from '@/components/ui/field-error'
@@ -16,7 +16,11 @@ import type { SectionOf } from '@/domains/themes/sections'
 import { DesignForm } from '@/app/(lookeditor)/console/look/customize/design-form'
 import type { FormCtx } from '@/app/(lookeditor)/console/look/customize/section-form'
 import type { LibraryPhoto } from '@/app/(lookeditor)/console/look/customize/controls'
-import { addPageAction, savePageAction, undoPageAction } from '../actions'
+import { addPageAction, previewOnWebsiteAction, savePageAction, undoPageAction } from '../actions'
+import { CopyField } from '@/components/ui/copy-field'
+import { Eye, ExternalLink } from 'lucide-react'
+import Link from 'next/link'
+import type { PreviewKey } from '@/lib/queries/storefront-api'
 import type { Target } from './link-select'
 
 // =============================================================================
@@ -29,7 +33,11 @@ export type PageRowView = { id: string; version: number; template: PageTemplate;
 type Ctx = { tenantId: string; targets: Target[]; collections: { handle: string; title: string }[]; products: { handle: string; title: string }[]; photos: LibraryPhoto[]; shopName: string }
 const MAX_PAGES = 20
 
-export function Pages({ pages, canSave, lock, ctx, templates }: { pages: PageRowView[]; canSave: boolean; lock: string | null; ctx: Ctx; templates: Record<'about', Design> }) {
+/** Preview on website (SA1b D·4, mockup § Preview): the store's own website and the keys a preview may name; null when
+ *  the store runs on Frrata or previews aren't set up. */
+export type PreviewSetup = { keys: (PreviewKey & { used: string | null })[] } | null
+
+export function Pages({ pages, canSave, lock, ctx, templates, preview = null }: { pages: PageRowView[]; canSave: boolean; lock: string | null; ctx: Ctx; templates: Record<'about', Design>; preview?: PreviewSetup }) {
   const router = useRouter()
   const toast = useToast()
   const [edit, setEdit] = useState<PageRowView | null>(null)
@@ -58,7 +66,17 @@ export function Pages({ pages, canSave, lock, ctx, templates }: { pages: PageRow
     toast.ok(`${adding.title} added`)
     router.refresh()
   }
-  const close = () => { setEdit(null); setAdding(null); setError(null) }
+  // Preview on website: pick the key when there are several, then the link once (never stored, never a toast).
+  const [pv, setPv] = useState<{ page: PageRowView; step: 'pick' | 'link' | 'refused'; keyId: string | null; url?: string; host?: string; error?: string } | null>(null)
+  const openPreview = async (page: PageRowView, keyId: string | null) => {
+    if (!preview) return
+    if (!keyId && preview.keys.length > 1) { setPv({ page, step: 'pick', keyId: preview.keys[0]!.id }); return }
+    setBusy(true)
+    const r = await previewOnWebsiteAction({ entry: `page:${page.draft.handle}`, ...(keyId ? { keyId } : {}) })
+    setBusy(false)
+    setPv(r.ok ? { page, step: 'link', keyId, url: r.url, host: r.host } : { page, step: 'refused', keyId, error: r.error })
+  }
+  const close = () => { setEdit(null); setAdding(null); setError(null); setPv(null) }
   const err = (f: string) => (error?.field === f ? error.text : null)
   const asSection = (p: PageRowView) => ({ id: p.id, key: 'design', hidden: false, scheme: 'paper', label: '', design: p.template, fill: p.draft.fill }) as unknown as SectionOf<'design'>
 
@@ -70,6 +88,7 @@ export function Pages({ pages, canSave, lock, ctx, templates }: { pages: PageRow
           <li key={p.id} className="flex items-center gap-3 py-3">
             <div className="min-w-0 flex-1"><p className="truncate font-medium">{p.draft.title}</p>
               <p className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-label text-muted-foreground"><span className="font-mono text-small">/pages/{p.draft.handle}</span><Badge tone={p.shown ? 'ok' : 'neutral'}>{p.shown ? 'Shown' : 'Hidden'}</Badge></p></div>
+            {canSave && preview && !p.shown ? <Button size="sm" variant="ghost" busy={busy && pv === null} onClick={() => openPreview(p, null)}><Eye aria-hidden="true" className="size-4" /><span className="max-md:sr-only">Preview on website</span></Button> : null}
             <Button size="sm" variant="secondary" aria-label={`Edit ${p.draft.title}`} disabled={!canSave} onClick={() => setEdit(p)}>Edit</Button>
           </li>))}</ul>
         : <div className="grid justify-items-center gap-2 py-6 text-center"><p className="font-medium">No pages yet</p>{canSave && <Button onClick={() => setAdding({ title: '', handle: '', touched: false })}>Add a page</Button>}</div>}
@@ -86,6 +105,27 @@ export function Pages({ pages, canSave, lock, ctx, templates }: { pages: PageRow
           <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2.5"><span id={`show-${edit.id}`} className="text-sm">Show on your store</span>
             <Switch label="Show on your store" on={!edit.draft.hidden} onChange={(on) => setEdit({ ...edit, draft: { ...edit.draft, hidden: !on } })} /></div>
         </div>}
+      </Dialog>
+
+      {/* Preview on website (mockup § Preview: 1 the key, 2 the link, 3 refused). */}
+      <Dialog open={pv?.step === 'pick'} onClose={close} title={pv ? `Preview ${pv.page.draft.title}` : ''}
+        actions={<><Button variant="secondary" data-autofocus onClick={close}>Cancel</Button><Button busy={busy} onClick={() => pv && openPreview(pv.page, pv.keyId)}>Open preview</Button></>}>
+        {pv && preview ? <fieldset className="grid gap-2"><legend className="mb-2 text-label font-medium">Key your website uses</legend>
+          {preview.keys.map((k) => (
+            <label key={k.id} className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-0.5 rounded-md border border-field px-3 py-2.5 has-[:checked]:border-2 has-[:checked]:border-primary has-[:checked]:bg-select">
+              <input type="radio" name="preview-key" checked={pv.keyId === k.id} onChange={() => setPv({ ...pv, keyId: k.id })} className="mt-1 size-4 accent-[var(--action)]" />
+              <span className="font-medium">{k.name}</span>
+              <span className="col-start-2 text-small text-muted-foreground"><span className="font-mono">{k.prefix}…</span>{k.used ? ` · ${k.used}` : ''}</span>
+            </label>))}
+        </fieldset> : null}
+      </Dialog>
+      <Dialog open={pv?.step === 'link'} onClose={close} title={pv ? `Preview of ${pv.page.draft.title}` : ''}
+        actions={<><Button variant="secondary" onClick={close}>Close</Button>{pv?.url ? <a href={pv.url} target="_blank" rel="noopener noreferrer" data-autofocus className={button()}><ExternalLink aria-hidden="true" className="size-4" />Open {pv.host}</a> : null}</>}>
+        {pv?.url ? <div className="grid gap-2"><CopyField value={pv.url} label="preview link" /><p className="text-small text-muted-foreground">The link works for 10 minutes.</p></div> : null}
+      </Dialog>
+      <Dialog open={pv?.step === 'refused'} onClose={close} title="Couldn’t open the preview" error={pv?.error ?? null}
+        actions={<><Button variant="secondary" data-autofocus onClick={close}>Close</Button>{pv?.error?.includes('Settings › Website') ? <Link href="/console/settings/website" className={button()}>Open Settings › Website</Link> : null}</>}>
+        {null}
       </Dialog>
 
       <Dialog open={!!adding} onClose={close} title="Add a page" error={error && !error.field ? error.text : null}

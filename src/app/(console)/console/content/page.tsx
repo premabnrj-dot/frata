@@ -27,7 +27,10 @@ import { FAQ_ID, TEMPLATES, type FaqItem, type PageTemplate } from '@/domains/pa
 import { menusOf, type MenuItem } from '@/domains/themes/site'
 import { Bars, type BarRow } from './_components/bars'
 import { Menus } from './_components/menus'
-import { Pages, type PageRowView } from './_components/pages'
+import { Pages, type PageRowView, type PreviewSetup } from './_components/pages'
+import { previewKeysFor } from '@/lib/queries/storefront-api'
+import { previewsOn } from '@/lib/storefront-api/preview-token'
+import { istDayKey } from '@/domains/time/day'
 import { Faq } from './_components/faq'
 import { ContactLine } from './_components/contact'
 
@@ -109,6 +112,11 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
     return [k, { version: r?.version ?? null, items, id: r?.id ?? null }]
   })) as Record<MenuKey, { version: number | null; items: MenuItem[]; id: string | null }>
 
+  // ── Preview on website (SA1b D·4): only where the store's website runs elsewhere and previews are set up ──────
+  const preview: PreviewSetup = tab === 'pages' && canSave && shop.siteOrigin && previewsOn()
+    ? await previewKeysFor(t).then((keys) => ({ keys: keys.map((k) => ({ ...k, used: k.lastSeenOn ? (k.lastSeenOn === istDayKey(now) ? 'Used today' : `Used ${dayMonthIN(new Date(`${k.lastSeenOn}T12:00:00+05:30`))}`) : null })) })).catch(() => null)
+    : null
+
   // ── Pages and the FAQ ────────────────────────────────────────────────────────────────────────────────────────
   const pageRows: PageRowView[] = pages.flatMap((p) => (p.template !== 'faq' && p.d ? [{ id: p.id, version: p.version, template: p.template as PageTemplate, draft: p.d, shown: !!p.live }] : []))
   const faqRow = pages.find((p) => p.template === 'faq')
@@ -131,7 +139,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
       {saver === 'support' && <Banner tone="warn" title="Support visit · read only" />}
       {tab === 'announcement' && <Bars bars={bars} offer={offerRow} canSave={canSave} lock={lock} targets={targets} />}
       {tab === 'menus' && <Menus menus={menus} canSave={canSave} lock={lock} targets={targets} tabsOn={theme.settings.bottomTabs} splitHeader={theme.settings.header === 'split'} />}
-      {tab === 'pages' && <Pages pages={pageRows} canSave={canSave} lock={lock} ctx={ctx} templates={{ about: TEMPLATES.about }} />}
+      {tab === 'pages' && <Pages pages={pageRows} canSave={canSave} lock={lock} ctx={ctx} templates={{ about: TEMPLATES.about }} preview={preview} />}
       {tab === 'faq' && <Faq id={faqRow?.id ?? null} version={faqRow?.version ?? null} items={faqItems} answers={answers} canSave={canSave} lock={lock} />}
       {tab === 'contact' && <ContactLine id={contactRow?.id ?? null} version={contactRow?.version ?? null} line={(contactRow && readContactLine(contactRow.value)?.line) ?? ''} details={details} canSave={canSave} lock={lock} />}
     </div>
