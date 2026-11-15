@@ -331,6 +331,7 @@ this branch first; SA1·1 (the Settings page and its actions) waits for C and B 
 | SA1·3 routes, boundary purge (0132), WAF | done | int test (A never reads B, no draft under a live key, no cost); proof 81; `waf.test.ts` |
 | SA1·4 skill, agent, planning heading | done | — |
 | e2e, mockup parity | after SA1·1 | — |
+| Content resources (`content`, `pages/{handle}`, `faq`) | **this lane, after lane B is on main** (orchestrator 2026-11-15), reading B's `src/lib/queries/content.ts` seam; B builds no API route | — |
 
 **As built, differing from the plan text above** (none is a screen; the Deviations table stays empty):
 - The hash is sha256 **hex text**, not bytea (one form for the column, the cache key and the tag); `revoked_by` beside
@@ -340,6 +341,7 @@ this branch first; SA1·1 (the Settings page and its actions) waits for C and B 
 - Public search is a dynamic live route answered `public, s-maxage=60` (an ISR route can't vary by query); the slim
   search entry (speed review M2) is not built: search filters the cached catalogue in memory. Signal to build it: a
   search p95 over 50 ms in Observability.
+- Carried into SA1b's plan (orchestrator 2026-11-15): the slim search entry above, and Frrata Admin's domain-disconnect purge below.
 - Frrata Admin's domain disconnect does not purge keys' cached answers (Admin never opens a shop's transaction): the
   definer stops them, cached copies can answer for up to the hour. Partner removal and suspension purge after lane C.
 
