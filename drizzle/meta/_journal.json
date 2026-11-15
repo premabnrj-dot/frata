@@ -960,6 +960,13 @@
       "when": 1794750984301,
       "tag": "0136_shop_pages_untie",
       "breakpoints": true
+    },
+    {
+      "idx": 137,
+      "version": "7",
+      "when": 1794757201287,
+      "tag": "0137_content_partner_notice",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 // Console › Content's actions on a real Postgres, as frata_app (V1 content; impact review 2026-11-15): who may save
-// (the owner and a Manager; a partner on a store with an owner, staff, a support visit refused, and refused saves give
-// the limit back), a stale version refused with who saved it as a role, Undo only by its saver within a minute (a
+// (the owner, a Manager and the store's partner, before and after handover; staff and a support visit refused, and
+// refused saves give the limit back; a partner's save tells the owner in the Inbox, once per place an hour), a stale version refused with who saved it as a role, Undo only by its saver within a minute (a
 // deleted bar back only while there's room), editing an ended bar keeps it ended, a page shown only once its words are
 // its own and its address never moves, the FAQ made with its first question. Sign-in is mocked; everything else is
 // real. Skipped unless INT_DB_HOST is set. It uses a store of its own (a fresh id) and leaves it.
@@ -12,7 +12,7 @@ const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
 const pass = process.env.INT_DB_PASSWORD ?? 'x'
 const T = randomUUID()
-const OWNER = randomUUID(), ADMIN = randomUUID()
+const OWNER = randomUUID(), ADMIN = randomUUID(), PARTNER = randomUUID()
 let who: { userId: string; role: string; support: string | null } = { userId: OWNER, role: 'owner', support: null }
 
 vi.mock('server-only', () => ({}))
@@ -36,19 +36,22 @@ describe.skipIf(!host)('Console › Content actions', () => {
     su = postgres(process.env.INT_DB_SUPER_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
     await su`insert into tenants (id, slug, name) values (${T}, ${'content-' + T.slice(0, 8)}, 'Content test')`
     await su`insert into members (tenant_id, user_id, role) values (${T}, ${OWNER}, 'owner'), (${T}, ${ADMIN}, 'admin')`
+    const email = `p-${T.slice(0, 8)}@example.in`
+    const [p] = await su`insert into partners (user_id, email, name, business_name, phone, city, services, work_url, brands_now, terms_version, agreed_at, approved_at)
+      values (${PARTNER}, ${email}, 'Pia', 'Pia Studio', '919845012345', 'Jaipur', '{}', '', '1-4', 1, now(), now()) returning id`
+    const [pm] = await su`insert into partner_members (partner_id, user_id, email, role, accepted_at) values (${p!.id}, ${PARTNER}, ${email}, 'owner', now()) returning id`
+    await su`insert into members (tenant_id, user_id, role, partner_member_id) values (${T}, ${PARTNER}, 'partner', ${pm!.id})`
     A = await import('../actions')
   })
   const as = (userId: string, role: string, support: string | null = null) => { who = { userId, role, support } }
   const row = async (kind: string) => (await su`select * from site_content where tenant_id = ${T} and kind = ${kind} and deleted_at is null order by created_at`)
   const limit = async () => Number((await su`select coalesce(sum(n), 0)::int n from rate_limits where key = encode(sha256(convert_to(${'content_save:shop:' + T}, 'UTF8')), 'hex')`)[0]!.n)
 
-  it('who may save: owner and Manager yes; partner after handover, staff and a support visit no, and nothing counts', async () => {
+  it('who may save: owner and Manager yes; staff and a support visit no, and nothing counts', async () => {
     as(OWNER, 'owner')
     const r = await A.saveContactAction({ version: null, line: 'We reply within the day.' })
     expect(r).toMatchObject({ ok: true, version: 1 })
     const used = await limit()
-    as(randomUUID(), 'partner')
-    expect(await A.saveContactAction({ version: 1, line: 'Partner' })).toMatchObject({ ok: false, error: expect.stringMatching(/owner saves content now/) })
     as(randomUUID(), 'staff')
     expect((await A.saveContactAction({ version: 1, line: 'Staff' })).ok).toBe(false)
     as(OWNER, 'owner', randomUUID())
@@ -58,6 +61,21 @@ describe.skipIf(!host)('Console › Content actions', () => {
     const [a] = await su`select actor_kind, action, detail from audit_events where tenant_id = ${T} order by at desc limit 1`
     expect(a).toMatchObject({ actor_kind: 'member', action: 'content.add' })
     expect(JSON.stringify(a!.detail)).not.toMatch(/We reply/) // field names only, never the words
+  })
+
+  it('the partner saves after handover, and the owner is told in the Inbox once per place an hour; the owner\'s save tells no one', async () => {
+    const told = async () => (await su`select title, href, type from notices where tenant_id = ${T} and source_kind = 'content' and source_id is not null`)
+    as(PARTNER, 'partner')
+    const m = await A.saveMenuAction({ key: 'main', version: null, items: [{ id: 'a', label: 'Sarees', link: '/products', icon: null, children: [] }] })
+    if (!m.ok) throw new Error(m.error)
+    expect(await told()).toEqual([{ title: 'Your partner changed the main menu', href: '/console/content?tab=menus', type: 'needs_you' }])
+    expect((await A.saveMenuAction({ key: 'main', version: m.version, items: [] })).ok).toBe(true)
+    expect(await told()).toHaveLength(1) // the same place within the hour: one line
+    as(OWNER, 'owner')
+    expect((await A.saveMenuAction({ key: 'main', version: m.version + 1, items: [] })).ok).toBe(true)
+    expect(await told()).toHaveLength(1)
+    const [n] = await su`select body from notices where tenant_id = ${T} and source_kind = 'content' and source_id is not null`
+    expect(n!.body).not.toMatch(/Sarees/) // the place, never the words
   })
 
   it('a stale save is refused, naming who saved as a role; nothing changes', async () => {
@@ -79,10 +97,10 @@ describe.skipIf(!host)('Console › Content actions', () => {
     expect((await A.undoContentAction({ id: s2.id, version: s2.version })).ok).toBe(false)
     as(OWNER, 'owner')
     expect((await A.undoContentAction({ id: s2.id, version: s2.version })).ok).toBe(true)
-    expect((await row('menu'))[0]!.value).toEqual([{ id: 'a', label: 'Returns', link: '/policies/returns', icon: null, children: [] }])
+    expect((await row('menu')).find((x) => x.key === 'footer')!.value).toEqual([{ id: 'a', label: 'Returns', link: '/policies/returns', icon: null, children: [] }])
     expect((await A.undoContentAction({ id: s2.id, version: s2.version + 1 })).ok).toBe(false) // previous is spent
-    await su`update site_content set updated_at = now() - interval '2 minutes', previous = '{"value":[]}' where tenant_id = ${T} and kind = 'menu'`
-    const [m] = await row('menu')
+    await su`update site_content set updated_at = now() - interval '2 minutes', previous = '{"value":[]}' where tenant_id = ${T} and kind = 'menu' and key = 'footer'`
+    const m = (await row('menu')).find((x) => x.key === 'footer')
     expect((await A.undoContentAction({ id: m!.id, version: m!.version })).ok).toBe(false) // too late
   })
 

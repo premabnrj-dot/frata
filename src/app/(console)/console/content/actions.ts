@@ -14,7 +14,6 @@ import { shopPages } from '@/lib/db/schema-themes'
 import { LIMITS, uncount, withinLimit } from '@/lib/db/rate-limit'
 import { BLOB_STORE_ID } from '@/lib/env'
 import { errName } from '@/lib/log'
-import { hasOwnerIn } from '@/lib/queries/settings'
 import { byOf as whoSaved } from '@/lib/queries/content'
 import { members } from '@/lib/db/schema'
 import { momentIN } from '@/lib/format-date'
@@ -66,7 +65,7 @@ async function write<T extends object>(what: { action: string; scope: 'content' 
   try {
     r = await asMember(CAPABILITIES['content.write'], { action: what.action }, async (tx, auth) => {
       const t = auth.membership.tenantId
-      const saver = contentSaver(auth.membership.role, await hasOwnerIn(tx, t), auth.membership.supportSessionId)
+      const saver = contentSaver(auth.membership.role, auth.membership.supportSessionId)
       if (saver !== 'yes') return { error: SAVER_REFUSAL[saver] }
       const now = new Date()
       if (!(await withinLimit(bucket, t, now, true))) return { error: FULL }
@@ -99,8 +98,16 @@ async function byOf(tx: Tx, t: string, userId: string | null, me: string): Promi
   const rows = await tx.select({ userId: members.userId, role: members.role }).from(members).where(and(eq(members.tenantId, t), eq(members.userId, userId)))
   return whoSaved(userId, me, new Map(rows.map((x) => [x.userId, x.role])))
 }
-const audit = (tx: Tx, auth: Auth, action: string, id: string, kind: string, key: string, version: number, fields: string[]) =>
-  memberAudit(tx, auth, `content.${action}`, id, { kind, key, version, fields })
+/** A partner's save tells the owner in the Inbox (owner, 2026-11-15). Asked on every save: the definer decides from the
+ *  rows themselves (the store, the row's saver, whether that is the store's partner and whether there is an owner) and
+ *  writes one line per place an hour; anyone else's save writes none. */
+const toldOwner = async (tx: Tx, table: 'site_content' | 'shop_pages', id: string) => {
+  await tx.execute(sql`select app_content_partner_notice(${table}, ${id}::uuid)`)
+}
+const audit = async (tx: Tx, auth: Auth, action: string, id: string, kind: string, key: string, version: number, fields: string[]) => {
+  await memberAudit(tx, auth, `content.${action}`, id, { kind, key, version, fields })
+  await toldOwner(tx, 'site_content', id)
+}
 
 // ── Bars ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -274,6 +281,7 @@ async function putPage(tx: Tx, auth: Auth, row: typeof shopPages.$inferSelect, d
     throw e
   }
   await memberAudit(tx, auth, `content.${action}`, row.id, { kind: 'page', key: row.template, version, fields: ['title', 'handle', 'fill', 'hidden'] })
+  await toldOwner(tx, 'shop_pages', row.id)
   return { done: true, id: row.id, version }
 }
 
@@ -292,6 +300,7 @@ export async function addPageAction(input: unknown): Promise<R<{ id: string; ver
     if (rows.some((x) => (x.draft as { handle?: string }).handle === d.data.handle)) return { error: 'Another page has that address. Pick another.', field: 'handle' }
     const [row] = await tx.insert(shopPages).values({ tenantId: t, template: 'about', draft: d.data, updatedBy: auth.userId }).returning({ id: shopPages.id, version: shopPages.version })
     await memberAudit(tx, auth, 'content.page.add', row!.id, { kind: 'page', key: 'about', version: row!.version, fields: ['title', 'handle'] })
+    await toldOwner(tx, 'shop_pages', row!.id)
     return { done: true, id: row!.id, version: row!.version }
   })
 }

@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.58.0
+  version: 2.59.0
   verified: 2026-11-15
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -561,9 +561,12 @@ after it. A class a shop page uses from outside the shop's folders must be added
   failing quietly; the shell's `content` prop is required (`shellContentOf`). The Storefront API reads the same seam.
 - **One bar rule**: `barFor` (`src/domains/content/bar.ts`): a live offer first, else the live written bar that started
   last. The frame, the console's chips and later the API ask it.
-- **Who saves**: `contentSaver` (`src/domains/content/who.ts`), an allow-list: owners and Managers; a partner only while the
-  store has no owner (`hasOwnerIn(tx, …)`, failing closed; no row lock: `for share` needs an update grant frata_app lacks); staff
-  and everyone else read; a support visit never saves. ADR-0015's `content.write` maps onto it when lane C lands.
+- **Who saves**: `contentSaver(role, supportSessionId)` (`src/domains/content/who.ts`): whoever holds ADR-0015's
+  `content.write` (owner, Manager, the store's partner, before and after handover: owner 2026-11-15); staff, accountants,
+  Builders and any later role read; a support visit never saves. A partner's save tells the owner in the Inbox:
+  `app_content_partner_notice(table, id)` (drizzle/0137), asked on every save, decides from the rows (the row's
+  `updated_by` is a partner member, the store has an owner, no line for that row in the past hour) and words the line
+  from the place, never the content. Compare roles through `holds`, never by hand (check:capabilities).
 - **Writes**: only `src/app/(console)/console/content/actions.ts` (`write()`: the shop's limit `contentSave` counted first
   and given back on a refusal, fail closed; `asMember`; the saver check; a conditional update on `version`; one
   `memberAudit` row with field names only). Undo is the saver's own last save, within a minute, re-checked like a save,
