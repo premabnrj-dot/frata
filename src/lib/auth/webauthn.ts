@@ -97,7 +97,8 @@ export interface PasskeyStore {
 const refused = (code: string) => Object.assign(new Error(code), { cause: { message: code } })
 export const dbCodeOf = (err: unknown): string => (err as { cause?: { message?: string } })?.cause?.message ?? ''
 
-export function passkeyCeremony(o: { rpName: string; tag: string; says: Record<string, string>; tokenHash: (token: string) => string; store: PasskeyStore }) {
+/** `nameFor`: the name to store from the authenticator's AAGUID (a password manager's name), else the name typed. */
+export function passkeyCeremony(o: { rpName: string; tag: string; says: Record<string, string>; tokenHash: (token: string) => string; store: PasskeyStore; nameFor?: (aaguid: string) => string | null }) {
   const { store, says } = o
   async function run<T>(what: string, fn: () => Promise<T>): Promise<Result<T>> {
     try { return { ok: true, value: await fn() } } catch (err) {
@@ -147,7 +148,8 @@ export function passkeyCeremony(o: { rpName: string; tag: string; says: Record<s
       await store.challenge(w, 'add', stepupHash, options.challenge)
       return options as unknown
     }),
-    addVerify: async (w: Who, stepupHash: string | null, response: RegistrationResponseJSON, name: string, site: PasskeySite): Promise<Result<string>> => {
+    /** Returns the new passkey's id and the name it was stored under. */
+    addVerify: async (w: Who, stepupHash: string | null, response: RegistrationResponseJSON, name: string, site: PasskeySite): Promise<Result<{ id: string; name: string }>> => {
       const challenge = challengeOf(response.response.clientDataJSON)
       if (!challenge) return { ok: false, error: says.no_challenge ?? 'That took too long. Try again.' }
       return run('add verify', async () => {
@@ -156,7 +158,8 @@ export function passkeyCeremony(o: { rpName: string; tag: string; says: Record<s
         const v = await verifyRegistrationResponse({ response, expectedChallenge: challenge, expectedOrigin: site.origin, expectedRPID: site.rpID, requireUserVerification: true })
         if (!v.verified || !v.registrationInfo) throw refused('no_challenge')
         const c = v.registrationInfo.credential
-        return store.add(w, stepupHash, c.id, Buffer.from(c.publicKey).toString('base64url'), c.counter, transportsLiteral(c.transports), name)
+        const stored = o.nameFor?.(v.registrationInfo.aaguid) ?? name
+        return { id: await store.add(w, stepupHash, c.id, Buffer.from(c.publicKey).toString('base64url'), c.counter, transportsLiteral(c.transports), stored), name: stored }
       })
     },
   }

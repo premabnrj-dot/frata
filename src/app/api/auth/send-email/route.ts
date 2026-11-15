@@ -6,11 +6,13 @@ import { sendEmail } from '@/lib/email/ses'
 import { frrataEmail } from '@/domains/email/layouts'
 import { cleanEmail } from '@/domains/email/shape'
 import { EMAIL_NOTICES_FROM, SES_CONFIG_NOTICES } from '@/lib/env'
+import { CONSOLE_HOST } from '@/lib/public-env'
 
 // ENTRY POINT credential: Supabase's Send Email Hook, signed with SEND_EMAIL_HOOK_SECRET (Standard Webhooks;
 // src/lib/email/hook.ts; scripts/check-actions.mjs). Supabase hands us each sign-in email; we send it through SES in
-// Frrata's layout (ADR-0011: no SMTP key anywhere). The link goes to Supabase's verify endpoint, which returns to our
-// /auth/callback; the 6-digit code works in any browser.
+// Frrata's layout (ADR-0011: no SMTP key anywhere). The link opens our /auth/confirm, which signs in only when the
+// person presses "Sign in" (an email scanner that follows the link uses nothing; partner sign-in mockup screen 4), in
+// any browser; the 6-digit code works anywhere too.
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 const NO_TENANT = '00000000-0000-0000-0000-000000000000'
@@ -32,7 +34,8 @@ export async function POST(request: Request) {
   const hash = changing ? d.token_hash_new : d.token_hash
   const site = typeof d.site_url === 'string' && /^https:\/\/[a-z0-9.-]+(\/[A-Za-z0-9/_-]*)?$/i.test(d.site_url) ? d.site_url.replace(/\/$/, '') : null
   if (!to || !code || !/^\d{6,10}$/.test(code) || !hash || !site) return fail(400, 'Bad payload')
-  const link = `${site}/verify?${new URLSearchParams({ token: hash, type: String(d.email_action_type ?? 'magiclink'), redirect_to: String(d.redirect_to ?? '') })}`
+  const type = ['magiclink', 'signup', 'email', 'email_change', 'invite'].includes(String(d.email_action_type)) ? String(d.email_action_type) : 'magiclink'
+  const link = `https://${CONSOLE_HOST}/auth/confirm?${new URLSearchParams({ token_hash: hash, type })}`
   const r = frrataEmail({
     preview: `Your sign-in code is ${code}`,
     heading: `Your sign-in code: ${code}`,

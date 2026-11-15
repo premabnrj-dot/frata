@@ -9,6 +9,7 @@ import { Submit } from '@/components/ui/submit'
 import { useToast } from '@/components/ui/toast'
 import { settle } from '@/lib/settle'
 import { assignTeamAction, inviteTeamAction, removeTeamAction, resendTeamInviteAction } from './actions'
+import { freshly } from '@/components/passkeys/fresh'
 
 type Store = { tenantId: string; name: string }
 
@@ -20,7 +21,7 @@ export function InviteButton({ stores }: { stores: Store[] }) {
       <Button onClick={() => setOpen(true)}>Invite</Button>
       <Dialog open={open} onClose={() => setOpen(false)} title="Invite to your team"
         actions={null}>
-        <ActionForm action={async (f) => { const r = await inviteTeamAction(f); if (r && 'ok' in r && r.ok) setOpen(false); return r }} className="grid gap-4">
+        <ActionForm action={async (f) => { const r = await freshly(() => inviteTeamAction(f)); if (r && 'ok' in r && r.ok) setOpen(false); return r as Awaited<ReturnType<typeof inviteTeamAction>> }} className="grid gap-4">
           <div className="grid gap-1.5">
             <label htmlFor="team-email" className="text-sm font-medium">Work email</label>
             <input id="team-email" name="email" type="email" required maxLength={200} autoComplete="off" data-error="Enter their work email"
@@ -58,7 +59,7 @@ export function StoreToggles({ memberId, stores, given }: { memberId: string; st
   const flip = async (s: Store, on: boolean) => {
     if (busy) return
     setBusy(s.tenantId)
-    const r = await assignTeamAction({ memberId, tenantId: s.tenantId, on }).finally(() => setBusy(null))
+    const r = await freshly(() => assignTeamAction({ memberId, tenantId: s.tenantId, on })).finally(() => setBusy(null))
     if (!r.ok) return toast.error(r.error)
     toast.ok(on ? `Added to ${s.name}.` : `Taken off ${s.name}.`)
     settle(router)
@@ -88,7 +89,7 @@ export function RemovePerson({ memberId, label, invited }: { memberId: string; l
   const [pending, setPending] = useState(false)
   const remove = async () => {
     setPending(true)
-    const r = await removeTeamAction({ memberId }).finally(() => setPending(false))
+    const r = await freshly(() => removeTeamAction({ memberId })).finally(() => setPending(false))
     if (!r.ok) return setError(r.error)
     setOpen(false); setError(null); toast.ok(invited ? 'Invite withdrawn.' : `${label} removed.`); settle(router)
   }
@@ -114,5 +115,5 @@ export function ResendInvite({ memberId }: { memberId: string }) {
     const r = await resendTeamInviteAction({ memberId }).finally(() => setPending(false))
     if (r.ok) toast.ok(r.text); else toast.error(r.error)
   }
-  return <Button variant="ghost" disabled={pending} onClick={resend}>{pending ? 'Sending…' : 'Send again'}</Button>
+  return <Button variant="ghost" disabled={pending} onClick={resend}>{pending ? 'Sending…' : 'Send invite again'}</Button>
 }

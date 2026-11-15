@@ -1,5 +1,5 @@
 import { railFrom } from '@/components/shell/rail'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { AppShell, type Place } from '@/components/shell/app-shell'
@@ -10,6 +10,16 @@ import { partnerCan } from '@/domains/partners/team'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { accessOf } from '@/lib/auth/session'
 import { ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
+import { Toaster } from '@/components/ui/toast'
+import { PartnerFrame } from '@/components/passkeys/partner-frame'
+import { PartnerGate } from '@/components/passkeys/partner-gate'
+import { CheckTimer } from '@/components/passkeys/check-timer'
+import { gateState } from '@/lib/db/partner-passkeys'
+import { partnerReturnPath, returnLabel } from '@/domains/partners/passkeys'
+import { signOutAction } from '@/app/(admin)/admin/sign-out/actions'
+
+/** "+91 98450 •••21" (mockup screen 11): the number Frrata will call, its middle hidden. */
+const maskPhone = (phone: string) => { const d = phone.replace(/\D/g, '').slice(-10); return d.length === 10 ? `+91 ${d.slice(0, 5)} •••${d.slice(8)}` : null }
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: { template: '%s · Frrata Partners', default: 'Frrata Partners' } }
@@ -20,6 +30,26 @@ export const metadata: Metadata = { title: { template: '%s · Frrata Partners', 
  */
 export default async function PartnerLayout({ children }: { children: React.ReactNode }) {
   const auth = await requirePartner()
+  const signOut = <form action={signOutAction}><input type="hidden" name="to" value="partner" /><button type="submit" className="text-sm text-muted-foreground underline underline-offset-4">Sign out</button></form>
+  // Partner passkeys (T1b): no page renders until this browser session has passed the check.
+  if (!auth.ok && auth.reason === 'needs_passkey') {
+    const state = await gateState(auth.identity).catch(() => 'error' as const)
+    if (state === 'error') return <main data-shell data-neel="" className="p-6"><Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel></main>
+    const p = auth.identity.partner
+    return <Toaster calm><PartnerFrame><PartnerGate state={state} ownerName={(p.name || p.businessName).split(' ')[0] || 'your owner'} phone={maskPhone(p.phone)} signOut={signOut} /></PartnerFrame></Toaster>
+  }
+  // Signed out (mockup screen 16): back to the same page after signing in again.
+  if (!auth.ok && auth.reason === 'signed_out') {
+    const back = partnerReturnPath((await headers()).get('x-frrata-path'))
+    const hadSession = (await cookies()).getAll().some((c) => c.name.startsWith('sb-') && c.name.includes('auth-token'))
+    return (
+      <PartnerFrame>
+        <h1 className="font-display text-[1.375rem] font-semibold leading-7">{hadSession ? 'You’ve been signed out' : 'Sign in'}</h1>
+        {back !== '/partner' && <p className="text-sm text-muted-foreground">Back to {returnLabel(back)}</p>}
+        <Link href={`/partner/sign-in?next=${encodeURIComponent(back)}`} className={button({ size: 'lg' })}>{hadSession ? 'Sign in again' : 'Sign in'}</Link>
+      </PartnerFrame>
+    )
+  }
   if (!auth.ok) {
     return (
       <main data-shell data-neel="" className="p-6">
@@ -38,11 +68,14 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   // The team is the owner's (T1a); a lead sees Clients and their details only.
   const team: NavItem = { href: '/partner/team', label: 'Team', icon: 'staff' }
   const can = (what: Parameters<typeof partnerCan>[1]) => partnerCan(auth.partner.memberRole, what)
-  const items = [clients, ...(can('manageTeam') ? [team] : []), ...(can('seeDetails') ? [details] : [])]
+  // Everyone's own passkeys (T1b; mockup screen 18).
+  const passkeys: NavItem = { href: '/partner/passkeys', label: 'Passkeys', icon: 'key' }
+  const items = [clients, ...(can('manageTeam') ? [team] : []), passkeys, ...(can('seeDetails') ? [details] : [])]
   const name = auth.partner.businessName || auth.partner.name
   return (
     <AppShell rail={railFrom((await cookies()).get('rail')?.value)} title={name} tag="PARTNER" navLabel="Partner" groups={[{ label: '', items }]} tabs={items} more={[]} foot={[]}
-      email={auth.email} places={places}>
+      email={auth.email} places={places} signOutTo="partner">
+      <CheckTimer confirmedAt={auth.confirmedAt.toISOString()} />
       {children}
     </AppShell>
   )

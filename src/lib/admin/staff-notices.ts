@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { sql } from 'drizzle-orm'
 import { adminDb } from '@/lib/db/admin'
 import { frrataEmail } from '@/domains/email/layouts'
-import { staffSecurityWords } from '@/domains/email/staff-security'
+import { isPartnerNotice, staffSecurityWords, type StaffNoticeKind } from '@/domains/email/staff-security'
 import { EMAIL_NOTICES_FROM, SES_CONFIG_NOTICES, isEmailConfigured } from '@/lib/env'
 import { CONSOLE_HOST } from '@/lib/public-env'
 import { errName } from '@/lib/log'
@@ -18,7 +18,7 @@ import { sendEmail } from '@/lib/email/ses'
 // each passkey action). No notices sender configured: the rows wait, and Admin › Activity still shows every change.
 // =============================================================================
 
-type NoticeRow = { id: string; to_email: string; kind: 'staff_added' | 'staff_removed' | 'request_approved' | 'passkey_added' | 'passkey_removed'; about: string; by_email: string | null; detail: string | null }
+type NoticeRow = { id: string; to_email: string; kind: StaffNoticeKind; about: string; by_email: string | null; detail: string | null }
 const claim = async (limit: number): Promise<NoticeRow[]> => [...await adminDb().execute<NoticeRow>(sql`select * from app_staff_notices_claim(${limit})`)]
 const settle = async (id: string, ok: boolean, error: string | null) => { await adminDb().execute(sql`select app_staff_notices_settle(${id}::uuid, ${ok}, ${error})`) }
 
@@ -28,10 +28,13 @@ export async function sendStaffNotices(limit = 20): Promise<number> {
   let sent = 0
   for (const r of rows) {
     const w = staffSecurityWords({ kind: r.kind, about: r.about, by: r.by_email, detail: r.detail })
-    const mail = frrataEmail({ preview: w.subject, heading: w.subject, message: w.body, button: { label: 'Open Admin › Staff', href: `https://${CONSOLE_HOST}/admin/staff` },
-      footer: 'Security emails about Frrata staff always reach every admin. Not expected? Check Admin › Staff now.' })
+    const partner = isPartnerNotice(r.kind)
+    const mail = frrataEmail({ preview: w.subject, heading: w.subject, message: w.body,
+      button: partner ? { label: 'Open your passkeys', href: `https://${CONSOLE_HOST}/partner/passkeys` } : { label: 'Open Admin › Staff', href: `https://${CONSOLE_HOST}/admin/staff` },
+      footer: partner ? 'Security emails about a partner’s sign-in reach the person and the partner’s owner. Not expected? Tell your owner or Frrata now.'
+        : 'Security emails about Frrata staff always reach every admin. Not expected? Check Admin › Staff now.' })
     const s = await sendEmail({ from: EMAIL_NOTICES_FROM, to: r.to_email, replyTo: null, subject: w.subject.slice(0, 150), html: mail.html, text: mail.text,
-      configurationSet: SES_CONFIG_NOTICES, tenant: 'frrata', messageId: randomUUID(), tenantTag: 'staff' }, new Date())
+      configurationSet: SES_CONFIG_NOTICES, tenant: 'frrata', messageId: randomUUID(), tenantTag: partner ? 'partner' : 'staff' }, new Date())
       .catch((e) => { console.error('[staff-notices] send', errName(e)); return { ok: false as const, retry: true, code: 'network' } })
     await settle(r.id, s.ok, s.ok ? null : s.code)
     if (s.ok) sent++

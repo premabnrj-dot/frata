@@ -23,24 +23,30 @@ export function passkeyClient(endpoint: PasskeyEndpoint) {
       return r.ok ? { ok: true, value: j.value } : { ok: false, error: j.error || 'Something went wrong. Try again.' }
     } catch { return { ok: false, error: 'No connection. Try again.' } }
   }
-  /** "Use passkey": the device signs this session's challenge; the server sets the step-up cookie. */
-  async function confirmPasskey(): Promise<Done> {
+  /** "Use passkey": the device signs this session's challenge; the server sets the step-up cookie. `crossDevice`: the
+   *  passkey came from another device (a phone, by QR), so this one may be offered its own (partner mockup screen 14). */
+  async function confirmPasskey(): Promise<Done<{ crossDevice: boolean }>> {
     const o = await call<Parameters<typeof startAuthentication>[0]['optionsJSON']>('confirm-options')
     if (!o.ok || !o.value) return o.ok ? { ok: false, error: NOT_CONFIRMED } : o
     let response
     try { response = await startAuthentication({ optionsJSON: o.value }) } catch (e) { return { ok: false, error: (e as Error)?.name === 'NotAllowedError' ? NO_PASSKEY_HERE : NOT_CONFIRMED } }
-    return call('confirm-verify', { response })
+    const r = await call('confirm-verify', { response })
+    return r.ok ? { ok: true, value: { crossDevice: response.authenticatorAttachment === 'cross-platform' } } : r
   }
   /** "Add passkey", then confirm with it so the session is through. `confirmFirst`: a second device for someone already
    *  in (adding needs a passkey check in the last 5 minutes; security review M2). */
-  async function addPasskey(name: string, confirmFirst = false): Promise<Done> {
+  /** Returns the name the passkey was stored under (partners: its password manager's, when the device says). */
+  async function addPasskey(name: string, confirmFirst = false): Promise<Done<{ name: string }>> {
     if (confirmFirst) { const c = await confirmPasskey(); if (!c.ok) return c }
     const o = await call<Parameters<typeof startRegistration>[0]['optionsJSON']>('add-options')
     if (!o.ok || !o.value) return o.ok ? { ok: false, error: 'Not added. Try again.' } : o
     let response
     try { response = await startRegistration({ optionsJSON: o.value }) } catch { return { ok: false, error: 'Not added. Try again.' } }
-    const added = await call('add-verify', { response, name })
-    return added.ok ? confirmPasskey() : added
+    const added = await call<string | { name?: string }>('add-verify', { response, name })
+    if (!added.ok) return added
+    const c = await confirmPasskey()
+    const stored = typeof added.value === 'object' && added.value?.name ? added.value.name : name
+    return c.ok ? { ok: true, value: { name: stored } } : c
   }
   /** A sensitive step (approve, remove, hand over): a fresh passkey check first, then the step. */
   async function confirmThen<T = unknown>(op: string, extra: Record<string, unknown>): Promise<Done<T>> {

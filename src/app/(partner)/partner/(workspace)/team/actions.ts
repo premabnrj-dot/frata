@@ -8,6 +8,7 @@ import { assignPartnerPerson, invitePartnerPerson, partnerTeam, removePartnerPer
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import type { ActionResult } from '@/components/ui/action-form'
 import { MAX_PARTNER_PEOPLE, partnerCan } from '@/domains/partners/team'
+import { CONFIRM_AGAIN, CONFIRM_FIRST } from '@/domains/partners/passkeys'
 
 // =============================================================================
 // FILE: src/app/(partner)/partner/team/actions.ts — the partner's team (T1a). Who may: the partner's OWNER only, and
@@ -28,6 +29,8 @@ const SENTENCES = {
   no_person: 'That person isn’t in your team any more. Refresh and try again.',
   already_member: 'They already work on that store in another way (the brand’s own people). Ask the brand.',
   is_owner: 'The owner can’t be removed.',
+  confirm_again: CONFIRM_AGAIN,
+  confirm_first: CONFIRM_FIRST,
 } satisfies Record<string, string>
 const say = (code: string, fallback: string): string => (SENTENCES as Record<string, string | undefined>)[code] ?? fallback
 
@@ -46,7 +49,7 @@ export async function inviteTeamAction(form: FormData): Promise<ActionResult> {
     return emailBad ? { fields: { email: String(form.get('email') ?? '').trim() ? 'That email doesn’t look right' : 'Enter their work email' } } : { error: SENTENCES.bad_store }
   }
   if (!(await withinLimit(LIMITS.partnerInvite, auth.partner.memberId, new Date(), true))) return { error: 'Too many invites this hour. Try again later.' }
-  const r = await invitePartnerPerson(auth.userId, parsed.data.email, parsed.data.stores)
+  const r = await invitePartnerPerson(auth, parsed.data.email, parsed.data.stores)
   if (!r.ok) return r.error === 'bad_email' ? { fields: { email: SENTENCES.bad_email } } : { error: say(r.error, 'We could not send the invite. Nothing was changed.') }
   revalidatePath('/partner/team')
   const mail = await sendSignInLink(parsed.data.email).catch(() => ({ sent: false as const }))
@@ -62,7 +65,7 @@ export async function resendTeamInviteAction(input: { memberId: string }): Promi
   if (!id.success) return { ok: false, error: SENTENCES.no_person }
   // The person is read back from the owner's own team (the definer checks the caller is its owner): never an email
   // from the browser.
-  const team = await partnerTeam(auth.userId).catch(() => null)
+  const team = await partnerTeam(auth).catch(() => null)
   const p = team?.find((m) => m.memberId === id.data && !m.acceptedAt && m.inviteExpiresAt && m.inviteExpiresAt > new Date())
   if (!p) return { ok: false, error: 'That invite has ended. Invite them again.' }
   if (!(await withinLimit(LIMITS.partnerInvite, auth.partner.memberId, new Date(), true))) return { ok: false, error: 'Too many invites this hour. Try again later.' }
@@ -77,7 +80,7 @@ export async function assignTeamAction(input: { memberId: string; tenantId: stri
   if (!auth.ok) return { ok: false, error: auth.message }
   const p = Assign.safeParse(input)
   if (!p.success) return { ok: false, error: SENTENCES.no_person }
-  const r = await assignPartnerPerson(auth.userId, p.data.memberId, p.data.tenantId, p.data.on)
+  const r = await assignPartnerPerson(auth, p.data.memberId, p.data.tenantId, p.data.on)
   if (!r.ok) return { ok: false, error: say(r.error, 'We could not change their stores. Nothing was changed.') }
   revalidatePath('/partner/team')
   return { ok: true }
@@ -88,7 +91,7 @@ export async function removeTeamAction(input: { memberId: string }): Promise<{ o
   if (!auth.ok) return { ok: false, error: auth.message }
   const p = z.uuid().safeParse(input.memberId)
   if (!p.success) return { ok: false, error: SENTENCES.no_person }
-  const r = await removePartnerPerson(auth.userId, p.data)
+  const r = await removePartnerPerson(auth, p.data)
   if (!r.ok) return { ok: false, error: say(r.error, 'We could not remove them. Nothing was changed.') }
   revalidatePath('/partner/team')
   return { ok: true }

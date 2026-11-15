@@ -25,6 +25,7 @@ const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser',
 const ENTRY_POINTS = {
   'src/app/login/actions.ts': ['sign-in: emails a link and code to the address given (rate limited); the code proves the inbox', 'verifyOtp('],
   'src/app/auth/callback/route.ts': ['sign-in: trades the one-time code for a session', 'exchangeCodeForSession('],
+  'src/app/auth/confirm/actions.ts': ['sign-in: the email\'s one-time token hash, exchanged only when the person presses Sign in', 'verifyOtp('],
   'src/app/api/cron/outbox/route.ts': ['Vercel Cron', 'isCronRequest('],
   'src/app/api/cron/domains/route.ts': ['Vercel Cron', 'isCronRequest('],
   'src/app/api/webhooks/ses/route.ts': ['Amazon SES events through SNS, signed by AWS, our topic only (ADR-0011)', 'verifySns('],
@@ -103,9 +104,11 @@ for (const file of existsSync('src/app/(admin)') ? walk('src/app/(admin)') : [])
     failures.push(`${file}  Admin page that does not call requireStaff( itself`)
   }
 }
-// A partner workspace page is guarded by its own requirePartner (the layout guards nothing below).
+// A partner workspace page is guarded by its own requirePartner (the layout guards nothing below). The partner sign-in
+// page is the one page before it: it signs nobody in by itself (src/app/login/actions.ts is its entry point).
+const PARTNER_PUBLIC = ['src/app/(partner)/partner/sign-in/page.tsx']
 for (const file of existsSync('src/app/(partner)') ? walk('src/app/(partner)') : []) {
-  if (!file.endsWith('/page.tsx')) continue
+  if (!file.endsWith('/page.tsx') || PARTNER_PUBLIC.includes(file)) continue
   if (!/\brequirePartner\(/.test(readFileSync(file, 'utf8'))) {
     failures.push(`${file}  partner page that does not call requirePartner( itself`)
   }

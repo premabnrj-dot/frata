@@ -40,12 +40,13 @@ export const SECURITY_HEADERS: { key: string; value: string }[] = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   // Passkeys (staff passkeys spec, 2026-11-12): no page may ask for one — merchant content framed on the console
-  // host (the look preview) included — except Admin's own pages on the console host (ADMIN_PASSKEY_HEADERS).
+  // host (the look preview) included — except Admin's and the partner workspace's own pages on the console host
+  // (ADMIN_PASSKEY_HEADERS, T1b).
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), usb=(), publickey-credentials-get=(), publickey-credentials-create=()' },
   HSTS_OWN_DOMAIN,
 ]
 
-/** Admin's pages on the console host: the same policy, with passkeys allowed for this origin only. */
+/** Admin's and the partner workspace's pages on the console host: the same policy, with passkeys allowed for this origin only. */
 export const ADMIN_PASSKEY_HEADERS: { key: string; value: string }[] = [
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), usb=(), publickey-credentials-get=(self), publickey-credentials-create=(self)' },
 ]

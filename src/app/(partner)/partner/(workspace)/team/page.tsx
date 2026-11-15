@@ -8,6 +8,11 @@ import { requirePartner } from '@/lib/auth/require-partner'
 import { partnerClients, partnerTeam } from '@/lib/db/partners'
 import { dayIN } from '@/lib/format-date'
 import { InviteButton, RemovePerson, ResendInvite, StoreToggles } from './team-parts'
+import { ApprovePasskey, DeletePasskeys } from './team-passkeys'
+
+/** "arjun.k@pixelthread.in" → "Arjun": the name the approval card and its buttons use (mockup screen 10). */
+const firstName = (email: string) => { const n = email.split('@')[0]!.split(/[._+-]/)[0] ?? ''; return n ? n[0]!.toUpperCase() + n.slice(1) : email }
+const daysLeft = (until: Date, now: Date) => Math.max(1, Math.ceil((until.getTime() - now.getTime()) / 86_400_000))
 
 export const metadata = { title: 'Team' }
 
@@ -21,8 +26,8 @@ export default async function TeamPage() {
   if (!partnerCan(auth.partner.memberRole, 'manageTeam')) return <Panel title="Only the partner’s owner manages the team" />
   const now = new Date()
   const [team, clients] = await Promise.all([
-    partnerTeam(auth.userId).catch((err) => { console.error('[team]', err instanceof Error ? err.name : err); return null }),
-    partnerClients(auth.userId).catch(() => null),
+    partnerTeam(auth).catch((err) => { console.error('[team]', err instanceof Error ? err.name : err); return null }),
+    partnerClients(auth).catch(() => null),
   ])
   if (!team || !clients) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const stores = clients.filter((c) => !c.removedAt).map((c) => ({ tenantId: c.tenantId, name: c.name }))
@@ -49,16 +54,23 @@ export default async function TeamPage() {
                 <p className="flex flex-wrap items-center gap-2 font-medium">
                   <span className="truncate">{name}</span>
                   <Badge tone={p.role === 'owner' ? 'info' : 'neutral'}>{PARTNER_ROLE_LABEL[p.role]}</Badge>
-                  {state === 'invited' && <Badge tone="warn">Invited</Badge>}
-                  {state === 'expired' && <Badge tone="neutral">Invite ended</Badge>}
+                  {state === 'active' && p.role !== 'owner' && p.passkeys > 0 && !p.request && <Badge tone="ok">Active</Badge>}
                 </p>
-                {!p.isYou && <p className="truncate font-num text-xs text-muted-foreground">{state === 'active' ? `Since ${dayIN(p.acceptedAt!)}` : p.inviteExpiresAt ? `Invited · until ${dayIN(p.inviteExpiresAt)}` : ''}</p>}
+                {!p.isYou && <p className="truncate text-xs text-muted-foreground">{
+                  state === 'active' ? (p.request ? 'Waiting for your approval' : p.passkeys === 0 ? 'Joined, no passkey' : `${p.passkeys} ${p.passkeys === 1 ? 'passkey' : 'passkeys'} · since ${dayIN(p.acceptedAt!)}`)
+                    : state === 'invited' && p.inviteExpiresAt ? `Invited · ${daysLeft(p.inviteExpiresAt, now)} ${daysLeft(p.inviteExpiresAt, now) === 1 ? 'day' : 'days'} left` : state === 'expired' ? 'Invite ended' : ''}</p>}
               </div>
               <div className="min-w-0">
                 {p.role === 'owner' ? <span className="text-muted-foreground">Every store</span>
                   : <StoreToggles memberId={p.memberId} stores={stores} given={p.stores.map((s) => s.tenantId)} />}
               </div>
-              <div className="flex flex-wrap gap-1 md:justify-end">{state === 'invited' && <ResendInvite memberId={p.memberId} />}{p.role !== 'owner' && <RemovePerson memberId={p.memberId} label={p.email} invited={state !== 'active'} />}</div>
+              <div className="flex flex-wrap gap-1 md:justify-end">
+                {state === 'active' && p.request && !p.isYou && <ApprovePasskey w={{ memberId: p.memberId, email: p.email, name: firstName(p.email), device: p.request.device, city: p.request.city,
+                  askedMinutes: Math.max(0, Math.floor((now.getTime() - p.request.createdAt.getTime()) / 60_000)) }} />}
+                {state === 'active' && p.role !== 'owner' && p.passkeys > 0 && <DeletePasskeys memberId={p.memberId} name={firstName(p.email)} count={p.passkeys} />}
+                {state === 'invited' && <ResendInvite memberId={p.memberId} />}
+                {p.role !== 'owner' && <RemovePerson memberId={p.memberId} label={p.email} invited={state !== 'active'} />}
+              </div>
             </li>
           )
         })}

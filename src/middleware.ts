@@ -32,6 +32,10 @@ export async function middleware(request: NextRequest) {
   const headers = new Headers(request.headers)
   headers.set('x-nonce', nonce)
   headers.set('content-security-policy', csp)
+  // The partner workspace's "You've been signed out" returns to the same page (partner sign-in mockup screen 16): the
+  // path, never the query, and only a workspace path (read back through partnerReturnPath).
+  if (request.nextUrl.pathname.startsWith('/partner')) headers.set('x-frrata-path', request.nextUrl.pathname)
+  else headers.delete('x-frrata-path')
   const response = await updateSession(request, NextResponse.next({ request: { headers } }))
   response.headers.set('Content-Security-Policy', csp)
   // Set here too: once the middleware overrides the request's headers, next.config's host-matched entry no longer

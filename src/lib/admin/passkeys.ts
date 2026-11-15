@@ -79,7 +79,9 @@ export async function addOptions(identity: StaffIdentity | StaffOk, proof: Proof
 }
 export async function addVerify(identity: StaffIdentity | StaffOk, proof: Proof | null, response: RegistrationResponseJSON, name: string, site: PasskeySite): Promise<Result<string>> {
   const w = who(identity)
-  return w ? ceremony.addVerify(w, stepupOf(w, proof), response, name, site) : signInAgain
+  if (!w) return signInAgain
+  const r = await ceremony.addVerify(w, stepupOf(w, proof), response, name, site)
+  return r.ok ? { ok: true, value: r.value.id } : r
 }
 
 /** "Let me add a passkey": the code this session shows; another admin types it to approve (15 minutes). */

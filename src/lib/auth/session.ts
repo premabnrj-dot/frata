@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { accessFor } from '@/lib/db/platform'
 import { staffCookieName, tokenHash } from './staff-cookie'
+import { partnerCookieName } from './partner-cookie'
 
 // =============================================================================
 // FILE: src/lib/auth/session.ts — WHO IS SIGNED IN, AND WHAT THEY MAY REACH: once per request, shared by
@@ -37,9 +38,18 @@ export const staffProof = cache(async (userId: string): Promise<{ sessionId: str
   return sessionId ? { sessionId, hash: tokenHash(token) } : null
 })
 
-/** Keyed on the user id (a string: `cache` compares it by value). The step-up, when present, joins the same query:
- *  a support visit and staff access count only with a live one (ADR-0007 amended 2026-11-12). */
+/** The partner person's step-up this request carries (T1b): the same shape as the staff one, its own cookie. */
+export const partnerProof = cache(async (userId: string): Promise<{ sessionId: string; hash: string } | null> => {
+  const token = (await cookies()).get(partnerCookieName())?.value
+  if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null
+  const sessionId = await sessionIdOf(userId)
+  return sessionId ? { sessionId, hash: tokenHash(token) } : null
+})
+
+/** Keyed on the user id (a string: `cache` compares it by value). Both step-ups, when present, join the same query:
+ *  a support visit and staff access count only with a live staff one (ADR-0007 amended 2026-11-12); a store a person
+ *  works on as a partner only with a live partner one (T1b). */
 export const accessOf = cache(async (userId: string) => {
-  const proof = await staffProof(userId)
-  return accessFor(userId, proof?.sessionId ?? null, proof?.hash ?? null)
+  const [staff, partner] = await Promise.all([staffProof(userId), partnerProof(userId)])
+  return accessFor(userId, staff?.sessionId ?? partner?.sessionId ?? null, staff?.hash ?? null, partner?.hash ?? null)
 })

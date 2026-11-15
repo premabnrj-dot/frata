@@ -10,6 +10,9 @@ import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { formatPhone } from '@/lib/format'
 import { dateTimeIN, sinceIN } from '@/lib/format-date'
 import { decidePartnerAction, reinstatePartnerAction, suspendPartnerAction } from './actions'
+import { ownerPasskeys } from '@/lib/admin/partner-passkeys'
+import { staffProof } from '@/lib/auth/session'
+import { OwnerPasskeysPanel } from './owner-passkeys'
 import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
 
@@ -27,6 +30,9 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   const open = rows.find((r) => r.id === sp.id) ?? (view === 'review' ? rows[0] : undefined)
   // The open partner's team (T1a): who works for them and on how many stores.
   const team = open?.approvedAt ? await partnerTeamForAdmin(staff, open.id).catch(() => null) : null
+  // The owner's passkeys and an open request (T1b): Frrata approves an owner's.
+  const proof = open?.approvedAt ? await staffProof(staff.userId) : null
+  const keys = open?.approvedAt && proof ? await ownerPasskeys(staff, proof, open.id).catch(() => null) : null
   const href = (id: string) => `/admin/partners?${view === 'review' ? '' : `view=${view}&`}id=${id}`
   return (
     <>
@@ -92,6 +98,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
                       </ul>
                     </div>
                   )}
+                  {keys && <OwnerPasskeysPanel partnerId={open.id} s={keys} now={new Date().toISOString()} admin={staff.role === 'admin'} />}
                   {open.approvedAt && staff.role === 'admin' && (
                     <ActionForm action={open.suspendedAt ? reinstatePartnerAction : suspendPartnerAction} className="space-y-2 border-t border-border pt-4">
                       <input type="hidden" name="id" value={open.id} /><input type="hidden" name="name" value={open.businessName || open.name} />

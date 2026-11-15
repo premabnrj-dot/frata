@@ -9,6 +9,7 @@ import { NavPill, type NavGroup, type NavItem } from '@/components/shell/nav'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { requireMember } from '@/lib/auth/require-member'
+import { accessOf, signedInUser } from '@/lib/auth/session'
 import { BillingBanner } from './_components/billing-banner'
 import { DomainBanner } from './_components/domain-banner'
 import { navCounts } from '@/lib/queries/orders'
@@ -16,7 +17,8 @@ import { supportVisit } from '@/lib/queries/support'
 import { TenantCheck } from '@/components/shell/tenant-check'
 import type { Place } from '@/components/shell/app-shell'
 import { BuildingBanner } from '@/components/nav/building-banner'
-import { myPartner, partnerClients } from '@/lib/db/partners'
+import { partnerClients } from '@/lib/db/partners'
+import { requirePartner } from '@/lib/auth/require-partner'
 import { clientStage } from '@/domains/partners/stage'
 import { MODULE_KEYS, MODULES } from '@/domains/modules/registry'
 import { shopModules } from '@/lib/queries/modules'
@@ -60,6 +62,19 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       </main>
     )
   }
+  // A partner person whose stores open only after a passkey check on this session (T1b): send them to the check, which
+  // lives in the workspace (passkey prompts stay off console pages: the look preview frames merchant content here).
+  if (!auth.ok && auth.reason === 'no_access') {
+    const user = await signedInUser()
+    const held = user ? (await accessOf(user.id).catch(() => null))?.partnerHeld.length ?? 0 : 0
+    if (held > 0) {
+      return (
+        <main data-shell data-neel="" className="p-6">
+          <Panel title="Confirm it’s you first" action={<Link href="/partner" className={button()}>Go to the partner workspace</Link>} />
+        </main>
+      )
+    }
+  }
   if (!auth.ok) {
     return (
       <main data-shell data-neel="" className="p-6">
@@ -77,8 +92,11 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const visit = supportSessionId ? await supportVisit(tenantId, supportSessionId) : null
   // A partner in a store with no owner yet: the building banner and Hand over (approved mockup screen 7).
   const logged = <T,>(fallback: T) => (err: unknown) => { console.error('[console layout] partner', err instanceof Error ? err.name : err); return fallback }
-  const partner = role === 'partner' ? await myPartner(auth.userId).catch(logged(null)) : null
-  const client = partner ? (await partnerClients(auth.userId).catch(logged([]))).find((c) => c.tenantId === tenantId) : undefined
+  // A partner row opens only with a live partner check (T1b), so requirePartner answers ok here; its caller carries the
+  // session and step-up every workspace definer re-checks.
+  const partnerAuth = role === 'partner' ? await requirePartner().catch(logged(null)) : null
+  const partner = partnerAuth?.ok ? partnerAuth.partner : null
+  const client = partnerAuth?.ok ? (await partnerClients(partnerAuth).catch(logged([]))).find((c) => c.tenantId === tenantId) : undefined
   // The stage is clientStage's, the one home (src/domains/partners/stage.ts): the banner shows while there is no owner.
   const stage = client ? clientStage({ removedAt: client.removedAt, openInviteExpiresAt: client.inviteExpiresAt, hasOwner: !!client.ownerEmail, firstOpenedAt: client.firstOpenedAt }, now) : null
   // Hand over is the owner's (PARTNER_CAN.handOver): a lead builds the store and sees no banner.
@@ -122,7 +140,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={accountant ? [gst] : [home, orders, products]} more={accountant ? [] : [noticesItem, analytics, collections, offers, look, search, apps, settings, activity]} foot={accountant ? [] : foot}
       email={auth.email} tenantId={tenantId} places={places} subtitle={address} rail={rail}
       banner={visit ? <SupportBanner storeName={tenantName} visit={visit} now={now} />
-        : building ? <BuildingBanner shop={tenantName} inviteEmail={building.inviteEmail} /> : undefined}>
+        : building ? <BuildingBanner shop={tenantName} tenantId={tenantId} inviteEmail={building.inviteEmail} /> : undefined}>
       {/* Anyone who can be in two places checks which shop each page is for (tenancy audit 2026-11-07). */}
       <TenantCheck tenantId={tenantId} staff={auth.staffRole !== null || places.length > 1} />
       {/* Billing B3: a failed payment to Frrata, for owners and admins (never on a support visit, never a block). */}

@@ -30,6 +30,12 @@ export type MyPartner = {
 
 const d = (v: string | Date | null) => (v ? new Date(v) : null)
 
+/** Who is asking in the workspace (a PartnerOk from requirePartner): the user, this browser's session and the partner
+ *  step-up's hash. Every workspace definer re-checks the step-up (app_partner_need, drizzle/0128, T1b). */
+export type Caller = { userId: string; sessionId: string; stepup: string }
+/** The two refusals any workspace write can give: no live check, or none in the last 5 minutes. */
+const CHECKS = ['confirm_first', 'confirm_again'] as const
+
 export async function myPartner(uid: string): Promise<MyPartner | null> {
   const rows = await db().execute<Record<string, string | string[] | null>>(sql`select * from app_my_partner(${uid}::uuid)`)
   const r = rows[0]
@@ -56,15 +62,15 @@ export async function applyAsPartner(uid: string, a: Application): Promise<{ ok:
   }
 }
 
-export async function createClientStore(uid: string, p: { name: string; slug: string; pickup: string }):
+export async function createClientStore(c: Caller, p: { name: string; slug: string; pickup: string }):
   Promise<{ ok: true; tenantId: string } | { ok: false; error: string }> {
   try {
     const t = PARTNER_TERMS
-    const rows = await db().execute<{ id: string }>(sql`select app_partner_create_shop(${uid}::uuid, ${p.name}, ${p.slug}, ${p.pickup},
+    const rows = await db().execute<{ id: string }>(sql`select app_partner_create_shop(${c.userId}::uuid, ${c.sessionId}::uuid, ${c.stepup}, ${p.name}, ${p.slug}, ${p.pickup},
       ${t.shareBps}, ${t.shareMonths}, ${t.noticeDays}, ${t.maxUnopened}) as id`)
     return { ok: true, tenantId: rows[0]!.id }
   } catch (err) {
-    return { ok: false, error: dbCode(err, ['not_partner', 'too_many', 'bad_name', 'bad_slug', 'bad_pincode', 'slug_taken', 'no_launch_plan'], 'createClientStore') }
+    return { ok: false, error: dbCode(err, ['not_partner', 'too_many', 'bad_name', 'bad_slug', 'bad_pincode', 'slug_taken', 'no_launch_plan', ...CHECKS], 'createClientStore') }
   }
 }
 
@@ -73,8 +79,8 @@ export type ClientRow = {
   shareMonths: number; noticeDays: number; ownerEmail: string | null; inviteEmail: string | null; inviteExpiresAt: Date | null; planName: string | null
 }
 
-export async function partnerClients(uid: string): Promise<ClientRow[]> {
-  const rows = await db().execute<Record<string, string | number | null>>(sql`select * from app_partner_clients(${uid}::uuid)`)
+export async function partnerClients(c: Caller): Promise<ClientRow[]> {
+  const rows = await db().execute<Record<string, string | number | null>>(sql`select * from app_partner_clients(${c.userId}::uuid, ${c.sessionId}::uuid, ${c.stepup})`)
   return rows.map((r) => ({
     tenantId: r.tenant_id as string, name: r.name as string, slug: (r.slug as string | null) ?? null, linkedAt: new Date(r.linked_at as string),
     firstOpenedAt: d(r.share_starts_at as string | null), removedAt: d(r.removed_at as string | null),
@@ -83,15 +89,15 @@ export async function partnerClients(uid: string): Promise<ClientRow[]> {
   }))
 }
 
-/** Inside the console action's tenant transaction (asMember): the function re-checks the partner, the link and the owner. */
-export async function sendHandover(tx: Tx, tenantId: string, uid: string, email: string): Promise<{ ok: true } | { ok: false; error: string }> {
+/** Hand over from the workspace's Clients (T1b): the store id comes from the form, but the function accepts only a
+ *  store linked to the caller's own partner, from its owner (or a Lead given that store), with a passkey check in the
+ *  last 5 minutes. */
+export async function sendHandover(c: Caller, tenantId: string, email: string): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
-    await tx.execute(sql`savepoint handover`)
-    await tx.execute(sql`select app_handover_invite(${tenantId}::uuid, ${uid}::uuid, ${email})`)
+    await db().execute(sql`select app_handover_invite(${tenantId}::uuid, ${c.userId}::uuid, ${email}, ${c.sessionId}::uuid, ${c.stepup})`)
     return { ok: true }
   } catch (err) {
-    await tx.execute(sql`rollback to savepoint handover`)
-    return { ok: false, error: dbCode(err, ['not_partner', 'has_owner', 'bad_email', 'member_email'], 'sendHandover') }
+    return { ok: false, error: dbCode(err, ['not_partner', 'has_owner', 'bad_email', 'member_email', ...CHECKS], 'sendHandover') }
   }
 }
 
@@ -139,29 +145,36 @@ export async function shopPeople(tenantId: string): Promise<Person[]> {
 // ════════ The team (T1a; drizzle/0124). Every function re-checks the caller is the partner's owner (or the invitee). ════════
 
 export type TeamStore = { tenantId: string; name: string }
+/** An open passkey request waiting for the owner's approval, with its context (mockup screen 10). */
+export type OpenRequest = { createdAt: Date; expiresAt: Date; device: string | null; city: string | null }
 export type TeamPerson = {
   memberId: string; email: string; role: 'owner' | 'lead' | 'builder'; invitedAt: Date; inviteExpiresAt: Date | null
-  acceptedAt: Date | null; isYou: boolean; stores: TeamStore[]
+  acceptedAt: Date | null; isYou: boolean; stores: TeamStore[]; passkeys: number; request: OpenRequest | null
 }
 
-export async function partnerTeam(uid: string): Promise<TeamPerson[]> {
-  const rows = await db().execute<Record<string, unknown>>(sql`select * from app_partner_team(${uid}::uuid)`)
-  return rows.map((r) => ({
-    memberId: r.member_id as string, email: r.email as string, role: r.role as TeamPerson['role'], invitedAt: new Date(r.invited_at as string),
-    inviteExpiresAt: d(r.invite_expires_at as string | null), acceptedAt: d(r.accepted_at as string | null), isYou: r.is_you === true,
-    stores: ((r.stores as { tenantId: string; name: string }[]) ?? []).map((x) => ({ tenantId: x.tenantId, name: x.name })),
-  }))
+export async function partnerTeam(c: Caller): Promise<TeamPerson[]> {
+  const rows = await db().execute<Record<string, unknown>>(sql`select * from app_partner_team(${c.userId}::uuid, ${c.sessionId}::uuid, ${c.stepup})`)
+  return rows.map((r) => {
+    const q = r.request as { createdAt: string; expiresAt: string; device: string | null; city: string | null } | null
+    return {
+      memberId: r.member_id as string, email: r.email as string, role: r.role as TeamPerson['role'], invitedAt: new Date(r.invited_at as string),
+      inviteExpiresAt: d(r.invite_expires_at as string | null), acceptedAt: d(r.accepted_at as string | null), isYou: r.is_you === true,
+      stores: ((r.stores as { tenantId: string; name: string }[]) ?? []).map((x) => ({ tenantId: x.tenantId, name: x.name })),
+      passkeys: Number(r.passkeys ?? 0),
+      request: q ? { createdAt: new Date(q.createdAt), expiresAt: new Date(q.expiresAt), device: q.device ?? null, city: q.city ?? null } : null,
+    }
+  })
 }
 
 type Done = { ok: true } | { ok: false; error: string }
 
 /** `stores` are tenant ids the owner chose; the function accepts only the partner's own active links. */
-export async function invitePartnerPerson(uid: string, email: string, stores: string[]): Promise<Done> {
+export async function invitePartnerPerson(c: Caller, email: string, stores: string[]): Promise<Done> {
   try {
-    await db().execute(sql`select app_partner_invite(${uid}::uuid, ${email}, 'lead', ${`{${stores.join(',')}}`}::uuid[])`)
+    await db().execute(sql`select app_partner_invite(${c.userId}::uuid, ${c.sessionId}::uuid, ${c.stepup}, ${email}, 'lead', ${`{${stores.join(',')}}`}::uuid[])`)
     return { ok: true }
   } catch (err) {
-    return { ok: false, error: dbCode(err, ['not_owner', 'bad_role', 'bad_email', 'bad_store', 'too_many', 'already_invited'], 'invitePartnerPerson') }
+    return { ok: false, error: dbCode(err, ['not_owner', 'bad_role', 'bad_email', 'bad_store', 'too_many', 'already_invited', ...CHECKS], 'invitePartnerPerson') }
   }
 }
 
@@ -185,20 +198,20 @@ export async function acceptPartnerInvite(uid: string, memberId: string): Promis
   }
 }
 
-export async function assignPartnerPerson(uid: string, memberId: string, tenantId: string, on: boolean): Promise<Done> {
+export async function assignPartnerPerson(c: Caller, memberId: string, tenantId: string, on: boolean): Promise<Done> {
   try {
-    await db().execute(sql`select app_partner_assign(${uid}::uuid, ${memberId}::uuid, ${tenantId}::uuid, ${on})`)
+    await db().execute(sql`select app_partner_assign(${c.userId}::uuid, ${c.sessionId}::uuid, ${c.stepup}, ${memberId}::uuid, ${tenantId}::uuid, ${on})`)
     return { ok: true }
   } catch (err) {
-    return { ok: false, error: dbCode(err, ['not_owner', 'no_person', 'bad_store', 'already_member'], 'assignPartnerPerson') }
+    return { ok: false, error: dbCode(err, ['not_owner', 'no_person', 'bad_store', 'already_member', ...CHECKS], 'assignPartnerPerson') }
   }
 }
 
-export async function removePartnerPerson(uid: string, memberId: string): Promise<Done> {
+export async function removePartnerPerson(c: Caller, memberId: string): Promise<Done> {
   try {
-    await db().execute(sql`select app_partner_remove_member(${uid}::uuid, ${memberId}::uuid)`)
+    await db().execute(sql`select app_partner_remove_member(${c.userId}::uuid, ${c.sessionId}::uuid, ${c.stepup}, ${memberId}::uuid)`)
     return { ok: true }
   } catch (err) {
-    return { ok: false, error: dbCode(err, ['not_owner', 'no_person', 'is_owner'], 'removePartnerPerson') }
+    return { ok: false, error: dbCode(err, ['not_owner', 'no_person', 'is_owner', ...CHECKS], 'removePartnerPerson') }
   }
 }
