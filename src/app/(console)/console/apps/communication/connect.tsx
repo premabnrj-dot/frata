@@ -73,7 +73,7 @@ export function ConnectChoices({ ready, canManage, appId, configId, graphVersion
           if (!res.ok) { setBusy(null); toast.error(res.error); return }
           settle(router)
         } catch {
-          setBusy(null); toast.error('We could not reach Frrata.', { sub: 'Nothing was saved. Try again.' })
+          setBusy(null); toast.error('We couldn’t reach Frrata.', { sub: 'Nothing was saved. Try again.' })
         }
       }, 300)
     }, {

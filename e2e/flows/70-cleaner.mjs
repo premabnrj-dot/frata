@@ -25,9 +25,9 @@ export default {
           assert.equal(await p.getByText(gone).filter({ visible: true }).count(), 0, `"${gone}" is still on the page`)
         const tip = p.getByRole('button', { name: 'About sizes, colours and stock' })
         await tip.click()
-        await p.getByText('Your cost is never shown to shoppers').waitFor()
+        await p.getByText('Shoppers never see your cost').waitFor()
         await p.keyboard.press('Escape')
-        await p.getByText('Your cost is never shown to shoppers').waitFor({ state: 'hidden' })
+        await p.getByText('Shoppers never see your cost').waitFor({ state: 'hidden' })
         await p.screenshot({ path: t.out('product-editor'), fullPage: true })
       })
 

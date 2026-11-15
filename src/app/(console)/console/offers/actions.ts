@@ -71,7 +71,7 @@ export async function saveOffer(id: string | null, values: OfferValues): Promise
     const c = codeOf(err)
     if (c?.code === UNIQUE && c.constraint_name === 'discount_codes_tenant_code') return { ok: false, error: 'That code was used before in your store. Codes are never reused.', errors: { code: 'Used before. Choose another.' } }
     console.error('[offers] save', c?.code ?? (err instanceof Error ? err.name : 'error'))
-    return { ok: false, error: 'We could not save the offer. Try again.' }
+    return { ok: false, error: 'We couldn’t save the offer. Try again.' }
   }
 }
 
@@ -119,6 +119,6 @@ export async function addCreatorCode(id: string, label: string, code: string): P
     const k = codeOf(err)
     if (k?.code === UNIQUE) return { ok: false, error: 'That code was used before in your store. Codes are never reused.', errors: { code: 'Used before. Choose another.' } }
     console.error('[offers] creator code', k?.code ?? (err instanceof Error ? err.name : 'error'))
-    return { ok: false, error: 'We could not add the code. Try again.' }
+    return { ok: false, error: 'We couldn’t add the code. Try again.' }
   }
 }

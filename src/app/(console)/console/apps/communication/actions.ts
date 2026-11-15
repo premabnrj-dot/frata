@@ -73,7 +73,7 @@ export async function connectWhatsAppAction(input: unknown): Promise<Result> {
     if (e?.code === '23505' && e.constraint_name !== 'wa_connections_one_open') return { ok: false, error: 'This number is connected to another Frrata store. Disconnect it there first.' }
     if (e?.code === '23505') return { ok: false, error: 'Someone else connected a number first. Reload the page.' }
     console.error('[connectWhatsApp]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not save the connection. Try again.' }
+    return { ok: false, error: 'We couldn’t save the connection. Try again.' }
   }
 }
 
@@ -94,7 +94,7 @@ export async function disconnectWhatsAppAction(): Promise<Result> {
     return { ok: true }
   } catch (err) {
     console.error('[disconnectWhatsApp]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not disconnect. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t disconnect. Nothing was changed.' }
   }
 }
 

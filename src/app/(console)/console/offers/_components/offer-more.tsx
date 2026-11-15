@@ -43,7 +43,7 @@ export function OfferMore({ v, set, errors, pickers }: { v: OfferValues; set: (p
         <div className="space-y-1"><div className="flex items-center"><label htmlFor="o-gift" className={lab}>The free product</label><InfoTip about="the free product">It is billed at ₹0. Your CA may ask you to reverse input credit on gifted stock.</InfoTip></div>
           <select id="o-gift" value={v.giftVariantId ?? ''} {...fp('giftVariantId')} aria-describedby={errors.giftVariantId ? errorId('o-giftVariantId') : 'o-gift-hint'} onChange={(e) => set({ giftVariantId: e.target.value })} className={field}>
             <option value="">Choose…</option>{pickers.pieces.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}</select>
-          {errors.giftVariantId ? err('giftVariantId') : <p id="o-gift-hint" className="text-xs text-muted-foreground">Free when the bag reaches this amount.</p>}
+          {errors.giftVariantId ? err('giftVariantId') : <p id="o-gift-hint" className="text-xs text-muted-foreground">Shoppers add it themselves when the bag reaches this amount.</p>}
         </div>
       )}
       {covers && (

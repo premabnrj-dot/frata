@@ -47,7 +47,7 @@ export async function loadItemsEditor(orderId: string): Promise<{ ok: true; data
     return data ? { ok: true, data } : { ok: false, error: 'Order not found.' }
   } catch (err) {
     console.error('[order.items_editor]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not load its items. Try again.' }
+    return { ok: false, error: 'We couldn’t load its items. Try again.' }
   }
 }
 
@@ -115,7 +115,7 @@ export async function undoItemsEdit(eventId: string): Promise<{ ok: true } | { o
     return { ok: true }
   } catch (err) {
     console.error('[order.items_undo]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not undo that. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t undo that. Nothing was changed.' }
   }
 }
 

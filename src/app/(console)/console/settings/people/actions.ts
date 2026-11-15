@@ -24,12 +24,12 @@ export async function removeShopPartner(): Promise<{ ok: true } | { ok: false; e
       return removePartner(tx, auth.membership.tenantId, auth.userId)
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value.ok) return { ok: false, error: SENTENCES[r.value.error] ?? 'We could not remove the partner. Nothing was changed.' }
+    if (!r.value.ok) return { ok: false, error: SENTENCES[r.value.error] ?? 'We couldn’t remove the partner. Nothing was changed.' }
     revalidatePath('/console/settings/people')
     return { ok: true }
   } catch (err) {
     console.error('[removeShopPartner]', errName(err))
-    return { ok: false, error: 'We could not remove the partner. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t remove the partner. Nothing was changed.' }
   }
 }
 
@@ -50,12 +50,12 @@ export async function inviteShopAccountant(email: string): Promise<{ ok: true } 
       return inviteAccountant(tx, auth.membership.tenantId, auth.userId, e)
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value.ok) return { ok: false, error: ACCOUNTANT[r.value.error] ?? 'We could not send the invite. Nothing was changed.' }
+    if (!r.value.ok) return { ok: false, error: ACCOUNTANT[r.value.error] ?? 'We couldn’t send the invite. Nothing was changed.' }
     revalidatePath('/console/settings/people')
     return { ok: true }
   } catch (err) {
     console.error('[inviteShopAccountant]', errName(err))
-    return { ok: false, error: 'We could not send the invite. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t send the invite. Nothing was changed.' }
   }
 }
 
@@ -67,12 +67,12 @@ export async function removeShopAccountant(member: string): Promise<{ ok: true }
       return removeAccountant(tx, auth.membership.tenantId, auth.userId, member)
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value.ok) return { ok: false, error: ACCOUNTANT[r.value.error] ?? 'We could not remove them. Nothing was changed.' }
+    if (!r.value.ok) return { ok: false, error: ACCOUNTANT[r.value.error] ?? 'We couldn’t remove them. Nothing was changed.' }
     revalidatePath('/console/settings/people')
     return { ok: true }
   } catch (err) {
     console.error('[removeShopAccountant]', errName(err))
-    return { ok: false, error: 'We could not remove them. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t remove them. Nothing was changed.' }
   }
 }
 
@@ -84,11 +84,11 @@ export async function revokeShopAccountantInvite(invite: string): Promise<{ ok: 
       return revokeAccountantInvite(tx, auth.membership.tenantId, auth.userId, invite)
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value.ok) return { ok: false, error: ACCOUNTANT[r.value.error] ?? 'We could not cancel the invite.' }
+    if (!r.value.ok) return { ok: false, error: ACCOUNTANT[r.value.error] ?? 'We couldn’t cancel the invite.' }
     revalidatePath('/console/settings/people')
     return { ok: true }
   } catch (err) {
     console.error('[revokeShopAccountantInvite]', errName(err))
-    return { ok: false, error: 'We could not cancel the invite.' }
+    return { ok: false, error: 'We couldn’t cancel the invite.' }
   }
 }

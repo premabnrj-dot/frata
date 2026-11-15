@@ -48,7 +48,7 @@ export async function bulkStatus(input: unknown, statusInput: unknown): Promise<
     done(r.tenantId)
     return result(r.value)
   } catch (err) {
-    return failed('bulkStatus', err, 'We could not change them. Nothing was changed.')
+    return failed('bulkStatus', err, 'We couldn’t change them. Nothing was changed.')
   }
 }
 
@@ -86,7 +86,7 @@ export async function restoreStatus(input: unknown): Promise<{ ok: true; restore
     done(r.tenantId)
     return { ok: true, ...r.value }
   } catch (err) {
-    return failed('restoreStatus', err, 'We could not undo that. Nothing was changed.')
+    return failed('restoreStatus', err, 'We couldn’t undo that. Nothing was changed.')
   }
 }
 
@@ -112,7 +112,7 @@ export async function bulkDelete(input: unknown): Promise<BulkDelete | Fail> {
     done(r.tenantId)
     return { ok: true, deleted: r.value.deleted.length, kept: r.value.kept }
   } catch (err) {
-    return failed('bulkDelete', err, 'We could not delete them. Nothing was changed.')
+    return failed('bulkDelete', err, 'We couldn’t delete them. Nothing was changed.')
   }
 }
 
@@ -158,7 +158,7 @@ export async function duplicateProduct(input: unknown): Promise<{ ok: true; id: 
     done(r.tenantId)
     return { ok: true, id: r.value.id, handle: r.value.handle }
   } catch (err) {
-    return failed('duplicateProduct', err, 'We could not duplicate it. Nothing was changed.')
+    return failed('duplicateProduct', err, 'We couldn’t duplicate it. Nothing was changed.')
   }
 }
 
@@ -183,6 +183,6 @@ export async function addToCollection(input: unknown, collectionInput: unknown):
     done(r.tenantId)
     return { ok: true, ...r.value }
   } catch (err) {
-    return failed('addToCollection', err, 'We could not add them. Nothing was changed.')
+    return failed('addToCollection', err, 'We couldn’t add them. Nothing was changed.')
   }
 }

@@ -177,7 +177,7 @@ export function CollectionEditor({ initial, products, families, attrOptions, sha
         {initial.id && (
           <Section className="text-sm">
             {confirmDelete
-              ? <div className="flex flex-wrap items-center gap-3"><span>Delete {saved.title}? Its products stay.</span><Button variant="secondary" className="after:hidden" /* undoes something: no thread (brand rule 37) */ disabled={pending} onClick={remove}>Delete</Button><button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => setConfirmDelete(false)}>Keep it</button></div>
+              ? <div className="flex flex-wrap items-center gap-3"><span>Delete {saved.title}? Its products stay.</span><Button variant="secondary" className="after:hidden" /* undoes something: no thread (brand rule 37) */ disabled={pending} onClick={remove}>Delete collection</Button><button type="button" className="inline-flex min-h-6 items-center underline" onClick={() => setConfirmDelete(false)}>Keep it</button></div>
               : <button type="button" className="inline-flex min-h-6 items-center text-danger-text underline" onClick={() => setConfirmDelete(true)}>Delete this collection</button>}
           </Section>
         )}

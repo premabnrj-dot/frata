@@ -26,7 +26,7 @@ import { toRows } from './_components/rows'
 
 export const metadata = { title: 'Orders' }
 
-const fail = <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+const fail = <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
 type SP = Record<string, string | string[] | undefined>
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? ''
 

@@ -98,7 +98,7 @@ export function AddNote({ orderId }: { orderId: string }) {
     if (busy) return // a double click adds it once
     if (!body.trim()) { fields.set({ note: 'Write the note first.' }); return }
     setBusy(true)
-    const r = await addOrderNote(orderId, body).catch(() => ({ ok: false as const, error: 'We could not save that note. Check your connection.' }))
+    const r = await addOrderNote(orderId, body).catch(() => ({ ok: false as const, error: 'We couldn’t save that note. Check your connection.' }))
     setBusy(false)
     if (!r.ok) { toast.error(r.error); return }
     setBody(''); fields.set({}); router.refresh()

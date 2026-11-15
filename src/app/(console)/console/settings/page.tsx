@@ -33,7 +33,7 @@ function Row({ href, icon, title, summary, needs = false, mono = false }: { href
       <Icon name={icon} className="row-span-2 size-5 text-muted-foreground md:row-span-1" />
       <span className="font-medium">{title}</span>
       <Icon name="chevron" className="row-span-2 size-4 text-muted-foreground md:order-last md:row-span-1" />
-      <span className={`col-start-2 truncate text-label text-muted-foreground md:col-start-auto md:text-right ${mono ? 'font-mono' : ''}`}>{needs ? <Badge tone="warn" className="max-w-full overflow-hidden text-ellipsis">{summary}</Badge> : summary}</span>
+      <span className={`col-start-2 truncate text-label text-muted-foreground md:col-start-auto md:text-right`}>{needs ? <Badge tone="warn" className="max-w-full overflow-hidden text-ellipsis">{summary}</Badge> : <span className={mono ? 'font-mono' : undefined}>{summary}</span>}</span>
     </Link>
   )
 }
@@ -44,7 +44,7 @@ export default async function SettingsPage() {
   const auth = await requireMember(CAN_BUILD)
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this store’s settings' : auth.message} />
   const shop = await shopWithSettings(auth.membership.tenantId).catch((err) => { console.error('[settings]', errName(err)); return null })
-  if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!shop) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const f = shopFacts(shop, SHOP_DOMAIN)
   const manages = (CAN_MANAGE as readonly string[]).includes(auth.membership.role)
   const [pay, plan] = await Promise.all([
@@ -52,7 +52,7 @@ export default async function SettingsPage() {
     manages ? planLine(auth.membership).catch(() => undefined) : null,
   ])
   const mainHost = f.slug ? await mainHostFor(auth.membership.tenantId, f.slug).catch(() => shopHost(f.slug)) : ''
-  const online = !pay ? 'Could not load' : !pay.connected ? 'Not connected' : pay.problem ? 'Needs attention' : !pay.webhookSeenAt ? 'Connected · one step left in Razorpay' : pay.mode === 'test' ? 'Test mode' : 'Live · UPI, cards, netbanking'
+  const online = !pay ? 'Couldn’t load' : !pay.connected ? 'Not connected' : pay.problem ? 'Needs attention' : !pay.webhookSeenAt ? 'Connected · one step left in Razorpay' : pay.mode === 'test' ? 'Test mode' : 'Live · UPI, cards, netbanking'
   const onlineNeeds = !!pay && (!pay.connected || !!pay.problem || !pay.webhookSeenAt)
   // D1·8: Razorpay fails live payments from an address not registered on the shop's account — the main one must be
   // approved (the merchant's word; checkout offers online payment only on an approved address).
@@ -79,7 +79,7 @@ export default async function SettingsPage() {
   const seen = (CAN_SET_COSTS as readonly string[]).includes(auth.membership.role) ? await shipCostsSeenBy(auth.membership.tenantId, auth.membership.role).catch(() => undefined) : null
   const ship = seen?.visible ? seen.costs : seen === undefined ? undefined : null
   const est = ship === undefined ? null : estimateOf(ship)
-  const shipSummary = ship === undefined ? 'Could not load' : est ? `Delivery ${inr(est.delivery)} · return ${inr(est.ret)} · COD fee ${inr(est.codFee)}` : 'Not confirmed'
+  const shipSummary = ship === undefined ? 'Couldn’t load' : est ? `Delivery ${inr(est.delivery)} · return ${inr(est.ret)} · COD fee ${inr(est.codFee)}` : 'Not confirmed'
   const shipNeeds = ship !== undefined && !est
   const needs = (k: SectionKey) => missing.some((m) => m.section === k) || (k === 'policies' && policyGaps > 0)
 
@@ -98,7 +98,7 @@ export default async function SettingsPage() {
             <Row key={s.key} href={`/console/settings/${s.key}`} icon={SECTION_ICON[s.key]} title={s.title} summary={summary[s.key]} needs={needs(s.key)} mono={s.key === 'taxes' && !!f.gstin} />
           ))}
           {owner && <Row href="/console/settings/online-payments" icon="payments" title="Online payments" summary={online} needs={onlineNeeds} />}
-          {manages && <Row href="/console/settings/billing" icon="plans" title="Plan and billing" summary={plan ? `${plan.name} · ${formatInr(plan.monthlyPrice)} a month` : plan === null ? 'No plan yet' : 'Could not load'} />}
+          {manages && <Row href="/console/settings/billing" icon="plans" title="Plan and billing" summary={plan === 'not_allowed' ? '' : plan ? `${plan.name} · ${formatInr(plan.monthlyPrice)} a month` : plan === null ? 'No plan yet' : 'Couldn’t load'} />}
           {manages && <Row href="/console/settings/people" icon="people" title="People" summary="Who works on this store" />}
           <Row href="/console/settings/emails" icon="messages" title="Emails to shoppers" summary="Order emails in your store’s name" />
           <Row href="/console/settings/notifications" icon="bell" title="Your notifications" summary="What Frrata emails you" />

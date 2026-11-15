@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     from: EMAIL_NOTICES_FROM, to, replyTo: null, subject: `${code} is your Frrata sign-in code`, html: r.html, text: r.text,
     configurationSet: SES_CONFIG_NOTICES, tenant: 'frrata', messageId: randomUUID(), tenantTag: NO_TENANT,
   }, now)
-  if (!sent.ok) { console.error('[send-email hook]', sent.code); return fail(502, 'Could not send') }
+  if (!sent.ok) { console.error('[send-email hook]', sent.code); return fail(502, 'Couldn’t send') }
   return NextResponse.json({})
 }
 

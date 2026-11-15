@@ -70,6 +70,6 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error('[shop/orders] place', r.tenantId, err instanceof Error ? err.name : 'error')
     await giveBack()
-    return reply({ error: 'We could not place the order. Nothing was charged. Try again.' }, 500)
+    return reply({ error: 'We couldn’t place the order. Nothing was charged. Try again.' }, 500)
   }
 }

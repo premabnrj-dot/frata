@@ -23,7 +23,7 @@ import { errName } from '@/lib/log'
 // =============================================================================
 
 type Result = { ok: true } | { ok: false; error: string }
-const FAILED = 'We could not save that. Nothing was changed.'
+const FAILED = 'We couldn’t save that. Nothing was changed.'
 const rupees = z.number().min(0).max(1_00_000)
 const paise = (r: number) => Math.round(r * 100)
 

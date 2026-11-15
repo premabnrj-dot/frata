@@ -40,7 +40,7 @@ export default async function LookHistory() {
             <li key={`${h.revision.id}-${h.publishedAt.toISOString()}`} className="flex flex-wrap items-center gap-3 px-4 py-3">
               <span className={`min-w-[10rem] flex-1 ${i === 0 ? 'font-semibold' : ''}`}>{nameOf(src, h.revision)}</span>
               <span className="text-muted-foreground">{dateTimeIN(h.publishedAt)} · {by(h.publishedByEmail)}</span>
-              {h.publishId === l.live?.publishId ? <Badge tone="ok">Live</Badge> : !l.may(h.revision.themeKey, h.revision.themeVersion) ? <span className="text-xs text-muted-foreground">No longer offered by Frrata</span> : canEdit ? <RestoreButton revisionId={h.revision.id} when={dateTimeIN(h.publishedAt)} replacesDraft={!!l.draft} /> : null}
+              {h.publishId === l.live?.publishId ? <Badge tone="ok">Live</Badge> : !l.may(h.revision.themeKey, h.revision.themeVersion) ? <span className="text-xs text-muted-foreground">No longer offered, so it can’t be restored</span> : canEdit ? <RestoreButton revisionId={h.revision.id} when={dateTimeIN(h.publishedAt)} replacesDraft={!!l.draft} /> : null}
             </li>
           ))}
         </ul>

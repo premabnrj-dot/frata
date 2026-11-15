@@ -40,9 +40,9 @@ export function AppAction({ k, name, action, canManage, askHref, block = false, 
     const r = await fn().catch(() => ({ ok: false, error: undefined }))
     setBusy(false)
     if (!r.ok) {
-      if (inDialog) setError(r.error ?? 'We could not change it. Nothing was changed.')
+      if (inDialog) setError(r.error ?? 'We couldn’t change it. Nothing was changed.')
       else if (r.error) toast.error(r.error)
-      else toast.error('We could not change it.', { sub: 'Nothing was changed.' })
+      else toast.error('We couldn’t change it.', { sub: 'Nothing was changed.' })
       return false
     }
     setConfirmOff(false); setConfirmTrial(false); settle(router); return true
@@ -112,7 +112,7 @@ export function EndTrial({ k, name, paidFrom }: { k: ModuleKey; name: string; pa
   const [error, setError] = useState<string | null>(null)
   const end = async () => {
     setBusy(true); setError(null)
-    const r = await endAddonTrialAction({ module: k }).catch(() => ({ ok: false as const, error: 'We could not end the trial. Nothing was changed.' }))
+    const r = await endAddonTrialAction({ module: k }).catch(() => ({ ok: false as const, error: 'We couldn’t end the trial. Nothing was changed.' }))
     setBusy(false)
     if (!r.ok) { setError(r.error); return }
     setOpen(false); settle(router)

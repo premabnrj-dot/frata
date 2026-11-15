@@ -58,9 +58,9 @@ function DomainsInner({ nameHost, names, rows, livePayments, available, canManag
   // action carries back now and then never applied, and a transition around it then stayed pending (frata-gotchas).
   const act = async (id: string, run: () => Promise<{ ok: boolean; error?: string }>, ok?: string) => {
     setBusy(id)
-    const r = await run().catch(() => ({ ok: false, error: 'We could not change it. Nothing was changed.' }))
+    const r = await run().catch(() => ({ ok: false, error: 'We couldn’t change it. Nothing was changed.' }))
     setBusy(null)
-    if (!r.ok) { toast.error(r.error ?? 'We could not change it. Nothing was changed.'); return }
+    if (!r.ok) { toast.error(r.error ?? 'We couldn’t change it. Nothing was changed.'); return }
     if (ok) toast({ text: ok })
     settle(router)
   }
@@ -76,7 +76,7 @@ function DomainsInner({ nameHost, names, rows, livePayments, available, canManag
     const began = Date.now() // clock-ok: in a handler or timer, never at render
     void (async () => {
       const run = m.kind === 'domain' ? makeMainAction(m.d.id) : changeAddress(m.name)
-      const r = await run.catch(() => ({ ok: false as const, error: 'We could not change it. Nothing was changed.' }))
+      const r = await run.catch(() => ({ ok: false as const, error: 'We couldn’t change it. Nothing was changed.' }))
       await new Promise((res) => setTimeout(res, Math.max(0, 1300 - (Date.now() - began)))) // clock-ok: in a handler or timer, never at render
       setGoing(false)
       if (!r.ok) { toast.error(r.error); return }
@@ -219,7 +219,7 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
 
   const connect = () => start(async () => {
     setError(null)
-    const r = await connectDomainAction(raw).catch(() => ({ ok: false as const, error: 'We could not connect it. Nothing was changed.' }))
+    const r = await connectDomainAction(raw).catch(() => ({ ok: false as const, error: 'We couldn’t connect it. Nothing was changed.' }))
     if (!r.ok) { setError(r.error); return }
     setClaim(r); stopAt.current = Date.now() + POLL_FOR_MS; go(2) // clock-ok: in a handler or timer, never at render
   })

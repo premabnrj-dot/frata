@@ -88,7 +88,7 @@ export function ActionForm({ action, children, className, noun, refresh = true, 
       try { r = await action(data) } catch (err) {
         // A redirect from the action is Next's own navigation, not a failure.
         if (!(err && typeof err === 'object' && 'digest' in err && String((err as { digest?: unknown }).digest).startsWith('NEXT_REDIRECT'))) {
-          toast.error('We could not reach Frrata.', { sub: 'Nothing was changed. Try again.' })
+          toast.error('We couldn’t reach Frrata.', { sub: 'Nothing was changed. Try again.' })
         }
         return
       } finally { window.clearTimeout(giveBack); setPending(false) }

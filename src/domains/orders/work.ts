@@ -86,7 +86,7 @@ export function primaryAction(state: OrderState): 'confirm' | 'pack' | 'print_sl
 export const CANCEL_REASONS = ['fake', 'customer_cancelled', 'unreachable', 'out_of_stock', 'cant_deliver', 'other'] as const
 export type CancelReason = (typeof CANCEL_REASONS)[number]
 export const CANCEL_LABEL: Record<CancelReason, string> = {
-  fake: 'Fake order', customer_cancelled: 'Customer cancelled', unreachable: "Couldn't reach", out_of_stock: 'Out of stock',
+  fake: 'Fake order', customer_cancelled: 'Shopper cancelled', unreachable: "Couldn't reach", out_of_stock: 'Out of stock',
   cant_deliver: "Can't deliver there", other: 'Other',
 }
 

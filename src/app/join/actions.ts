@@ -24,7 +24,7 @@ export async function acceptTeamInviteAction(form: FormData): Promise<ActionResu
   const id = z.uuid().safeParse(form.get('memberId'))
   if (!id.success) return { error: SENTENCES.no_invite }
   const r = await acceptPartnerInvite(auth.userId, id.data)
-  if (!r.ok) return { error: SENTENCES[r.error] ?? 'We could not join the team. Nothing was changed.' }
+  if (!r.ok) return { error: SENTENCES[r.error] ?? 'We couldn’t join the team. Nothing was changed.' }
   return r.skipped.length
     ? { ok: `Joined. You already work on ${r.skipped.join(', ')}, so it stays as it is.`, go: '/partner' }
     : { ok: 'Joined the team.', go: '/partner' }

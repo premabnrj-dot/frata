@@ -32,7 +32,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   if (!auth.ok) return <Panel title={auth.message} />
   const now = new Date()
   const rows = await partnerClients(auth.userId).catch((err) => { console.error('[clients]', err instanceof Error ? err.name : err); return null })
-  if (!rows) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!rows) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const newStore = <Link href="/partner/new" className={button()}>New client store</Link>
   if (!rows.length) {
     return (

@@ -79,7 +79,7 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
       const r = await (outcome
         ? (eventIds.length === 1 ? undoOutcomeAction(eventIds[0]!) : undoOutcomeMany(eventIds))
         : eventIds.length === 1 ? undoOrderAction(eventIds[0]!) : undoMany(eventIds))
-        .catch(() => ({ ok: false as const, error: 'We could not undo that. Open the order to see where it is.' }))
+        .catch(() => ({ ok: false as const, error: 'We couldn’t undo that. Open the order to see where it is.' }))
       unmark(ids); router.refresh()
       return r.ok ? { ok: true } : { ok: false, error: r.error }
     }
@@ -123,7 +123,7 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
   async function bulkDelivered() {
     if (busy && saving()) return
     const ids = rows.filter((r) => picked.has(r.id) && r.shipStep === 'deliver').map((r) => r.id)
-    if (!ids.length) { toast.error('None of the selected orders is on its way.'); return }
+    if (!ids.length) { toast.error('None of the selected orders is On the way.'); return }
     setBusy(true)
     let r: BulkResult
     try { r = await deliverMany(ids) } catch { r = { ok: false, error: 'We couldn’t save that. Check your connection. Nothing more was changed.' } } finally { setBusy(false) }
@@ -151,7 +151,7 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
     setDone((d) => ({ ...d, ...Object.fromEntries(r.done.map((c) => [c.id, what === 'confirm' ? 'Confirmed' : 'On hold'])) }))
     setPicked(new Set())
     const parts = [`${what === 'confirm' ? 'Confirmed' : 'Put on hold'} ${r.done.length}.`]
-    if (r.skippedHigh) parts.push(`Skipped ${r.skippedHigh} high-risk order${r.skippedHigh === 1 ? '' : 's'} . Open ${r.skippedHigh === 1 ? 'it' : 'them'} to decide.`)
+    if (r.skippedHigh) parts.push(`Skipped ${r.skippedHigh} high-risk order${r.skippedHigh === 1 ? '' : 's'}. Open ${r.skippedHigh === 1 ? 'it' : 'them'} to decide.`)
     // Each failure in its own words (the first one; the count for the rest), never a generic "changed".
     const label = (id: string) => rows.find((x) => x.id === id)?.number ?? 'One order'
     if (r.failed.length) parts.push(`${label(r.failed[0]!.id)}: ${r.failed[0]!.error}${r.failed.length > 1 ? ` (and ${r.failed.length - 1} more)` : ''}`)
@@ -174,7 +174,7 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
     confirm: () => { const r = here(); if (!r) return; if (confirmKey(r) === 'open') router.push(r.href); else void act(r, 'confirm') },
     hold: () => { const r = here(); if (r?.canHold) void act(r, 'hold') },
     print: () => { const r = here(); if (r?.canPrint) router.push(printHref('slip', [r.n])); else if (r) toast.error(`${r.number} has no packing slip yet.`) },
-    undo: () => { const u = lastUndo.current; if (u) void u().then((x) => (x.ok ? toast.ok('Undone.') : toast.error(x.error ?? 'We could not undo that.'))) },
+    undo: () => { const u = lastUndo.current; if (u) void u().then((x) => (x.ok ? toast.ok('Undone.') : toast.error(x.error ?? 'We couldn’t undo that.'))) },
     search: () => document.querySelector<HTMLInputElement>('input[type="search"]')?.focus(),
     help: () => setKeys(true),
   })
@@ -212,7 +212,7 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
       <div ref={wrap}>
       <DataTable label={label}>
         <DataTableHead>
-          <th className="w-10"><span className="sr-only">Select</span></th><th>Order</th><th>Customer</th><th>Payment</th><th>Status</th><th className="text-right">Total</th><th>Placed</th>
+          <th className="w-10"><span className="sr-only">Select</span></th><th>Order</th><th>Shopper</th><th>Payment</th><th>Status</th><th className="text-right">Total</th><th>Placed</th>
         </DataTableHead>
         <DataTableBody>
           {rows.map((r, i) => {
@@ -249,6 +249,8 @@ function Rows({ rows, label, slipSize: shopSize, query }: { rows: QueueRow[]; la
         </DataTableBody>
       </DataTable>
       </div>
+      {/* The sheet holds the switch that turns single-key shortcuts off (WCAG 2.1.4), so a pointer reaches it too. */}
+      <button type="button" onClick={() => setKeys(true)} aria-keyshortcuts="?" className="inline-flex min-h-6 items-center self-start text-xs text-muted-foreground underline underline-offset-2">Keyboard shortcuts</button>
       {peekAt !== null && rows[peekAt] ? <OrderPeek n={rows[peekAt]!.n} label={rows[peekAt]!.number} onClose={peekClose} onMove={peekMove} /> : null}
       <KeySheet open={keys} onClose={() => setKeys(false)} enabled={enabled} onEnabled={setEnabled} only={['next', 'previous', 'select', 'open', 'peek', 'confirm', 'hold', 'undo', 'search', 'help', 'rail']} />
     </>

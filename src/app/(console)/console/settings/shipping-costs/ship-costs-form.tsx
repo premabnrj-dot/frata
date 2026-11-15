@@ -60,7 +60,7 @@ export function ShipCostsForm({ current, confirmedOn: confirmed0 }: { current: R
         <div>
           <Button type="button" disabled={!changed || pending} onClick={() => start(async () => {
             let r: Awaited<ReturnType<typeof saveShipCosts>>
-            try { r = await saveShipCosts(v) } catch { r = { ok: false, error: 'We could not save. Check your connection. Nothing was changed.' } }
+            try { r = await saveShipCosts(v) } catch { r = { ok: false, error: 'We couldn’t save. Check your connection. Nothing was changed.' } }
             if (r.ok) { toast.ok('Shipping costs confirmed.'); setConfirmedOn(r.confirmedOn); setSaved(v); router.refresh() }
             else {
               const fields = (r.errors ?? {}) as Partial<Record<Key, string>>

@@ -24,13 +24,13 @@ export async function handOverAction(input: { email: string }): Promise<{ ok: tr
   try {
     const r = await asMember(['partner'], { action: 'shop.handover_invited' }, async (tx, auth) => sendHandover(tx, auth.membership.tenantId, auth.userId, email.data))
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value.ok) return { ok: false, error: SENTENCES[r.value.error] ?? 'We could not send the invite. Nothing was changed.', ...(r.value.error === 'member_email' ? { field: 'email' as const } : {}) }
+    if (!r.value.ok) return { ok: false, error: SENTENCES[r.value.error] ?? 'We couldn’t send the invite. Nothing was changed.', ...(r.value.error === 'member_email' ? { field: 'email' as const } : {}) }
     // The invite stands without the email: the owner sees the store whenever they sign in with this address.
     const mail = await sendSignInLink(email.data).catch(() => ({ sent: false as const }))
     revalidatePath('/console', 'layout')
     return { ok: true, email: email.data, emailed: mail.sent }
   } catch (err) {
     console.error('[handOverAction]', err instanceof Error ? err.name : err)
-    return { ok: false, error: 'We could not send the invite. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t send the invite. Nothing was changed.' }
   }
 }

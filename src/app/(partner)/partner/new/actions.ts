@@ -36,7 +36,7 @@ export async function createClientStoreAction(input: unknown): Promise<{ ok: tru
   const r = await createClientStore(auth.userId, { name, slug, pickup })
   if (!r.ok) {
     const field = r.error === 'slug_taken' || r.error === 'bad_slug' ? 'slug' : r.error === 'bad_name' ? 'name' : r.error === 'bad_pincode' ? 'pickup' : undefined
-    return { ok: false, field, error: SENTENCES[r.error] ?? 'We could not make the store. Nothing was changed.' }
+    return { ok: false, field, error: SENTENCES[r.error] ?? 'We couldn’t make the store. Nothing was changed.' }
   }
   refreshHosts(hostFor(slug))
   // Open the new store: it is one of this person's memberships now (app_access_for), so requireMember accepts it.

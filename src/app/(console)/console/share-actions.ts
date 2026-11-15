@@ -27,6 +27,6 @@ export async function shareQr(kind: unknown, id: unknown): Promise<{ ok: true; p
     return { ok: true, png: await QRCode.toDataURL(r.value, { errorCorrectionLevel: 'M', margin: 2, width: 512 }) }
   } catch (err) {
     console.error('[shareQr]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not make the QR code. Try again.' }
+    return { ok: false, error: 'We couldn’t make the QR code. Try again.' }
   }
 }

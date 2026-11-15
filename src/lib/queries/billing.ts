@@ -210,8 +210,9 @@ async function planNowIn(tx: Tx, tenantId: string) {
 
 /** Settings' Plan and billing row (Neel § Screens · Settings: "Growth · ₹4,999 a month"). Owners and managers only,
  *  never a support visit (Frrata support does not see billing, § Glossary roles). Name and price only. */
-export async function planLine(m: Pick<Membership, 'tenantId' | 'role' | 'supportSessionId'>): Promise<{ name: string; monthlyPrice: Paise } | null> {
-  if (!(CAN_MANAGE as readonly string[]).includes(m.role) || m.supportSessionId) return null
+export async function planLine(m: Pick<Membership, 'tenantId' | 'role' | 'supportSessionId'>): Promise<{ name: string; monthlyPrice: Paise } | null | 'not_allowed'> {
+  // 'not_allowed' is never "no plan": the row must not say "No plan yet" to someone who may not see it.
+  if (!(CAN_MANAGE as readonly string[]).includes(m.role) || m.supportSessionId) return 'not_allowed'
   const plan = await withTenant(m.tenantId, (tx) => planNowIn(tx, m.tenantId))
   return plan ? { name: plan.name, monthlyPrice: paise(Number(plan.custom ?? plan.price)) } : null
 }

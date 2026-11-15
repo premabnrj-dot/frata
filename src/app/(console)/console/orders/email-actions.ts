@@ -60,5 +60,5 @@ export async function resendOrderEmailAction(orderId: string, kind: string): Pro
     drainSoon()
     revalidatePath('/console/orders', 'layout')
     return { ok: true }
-  } catch (err) { console.error('[order.email_resend]', errName(err)); return { ok: false, error: 'We could not send it. Nothing was sent.' } }
+  } catch (err) { console.error('[order.email_resend]', errName(err)); return { ok: false, error: 'We couldn’t send it. Nothing was sent.' } }
 }

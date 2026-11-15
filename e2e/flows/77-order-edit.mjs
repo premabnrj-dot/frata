@@ -194,7 +194,7 @@ export default {
         await p.getByRole('region', { name: 'Items' }).getByRole('button', { name: 'Edit items' }).click()
         const ed = p.getByRole('region', { name: 'Edit items' }); await ed.waitFor()
         await ed.getByRole('button', { name: 'Remove' }).nth(1).click()
-        await ed.getByRole('group', { name: /comes out/ }).getByRole('button', { name: 'Customer asked' }).click()
+        await ed.getByRole('group', { name: /comes out/ }).getByRole('button', { name: 'Shopper asked' }).click()
         const wc = p.getByRole('region', { name: 'What changes' })
         await wc.getByText('Paid online').waitFor()
         // Its fee in rupees: Razorpay keeps all of it (unit-economics review 2026-11-12).
@@ -225,11 +225,11 @@ export default {
         // Cancelling now: the dialog names what the payments still hold and what has gone back already.
         await p.getByRole('button', { name: 'More' }).click(); await p.getByRole('menuitem', { name: 'Cancel order…' }).click()
         const dlg = p.getByRole("dialog").filter({ hasText: `Cancel ${label(top + 4)}?` })
-        await dlg.getByText('refund ₹2,490 in your Razorpay dashboard').waitFor()
+        await dlg.getByText('Refund ₹2,490 in Razorpay after cancelling').waitFor()
         await dlg.getByText('₹2,490 is already refunded or on its way.').waitFor()
         await dlg.getByRole('button', { name: 'Keep the order' }).click()
         await p.getByRole('region', { name: 'Items' }).getByRole('button', { name: 'Undo the change' }).click()
-        await expectToast(p, 'The refund has gone to Razorpay: this change can\'t be undone.')
+        await expectToast(p, 'The refund has gone to Razorpay. This change can’t be undone.')
         assert.equal(await total(H.id), 249000)
         // The shopper's page: the refund is on its way.
         const s = await t.browser.newContext(); const q = await s.newPage()
@@ -247,7 +247,7 @@ export default {
         const wc = p.getByRole('region', { name: 'What changes' })
         await wc.locator('[data-settle="ask"]').filter({ hasText: 'Ask for ₹2,490' }).waitFor()
         await wc.getByRole('button', { name: 'Save and ask for ₹2,490' }).click()
-        await toast(`${label(top + 5)}: waiting for ₹2,490 from the shopper`)
+        await toast(`${label(top + 5)} is waiting for ₹2,490 from the shopper`)
         await p.locator('[data-waiting]').first().filter({ hasText: 'Waiting for ₹2,490 from the shopper' }).waitFor()
         assert.equal(await p.getByRole('button', { name: 'Mark packed' }).count(), 0)
         const box = p.locator('[data-waiting-change]')
@@ -285,7 +285,7 @@ export default {
         await p.getByRole('region', { name: 'Items' }).getByRole('button', { name: 'Edit items' }).click()
         await p.getByRole('region', { name: 'Edit items' }).getByRole('button', { name: 'One more' }).first().click()
         await p.getByRole('button', { name: 'Save and ask for ₹2,490' }).click()
-        await toast(`${label(top + 6)}: waiting for ₹2,490 from the shopper`)
+        await toast(`${label(top + 6)} is waiting for ₹2,490 from the shopper`)
         await p.locator('[data-waiting-change]').getByRole('button', { name: 'Ship without the change' }).click()
         await toast('The change is dropped. Pack it as it was.')
         await p.getByRole('button', { name: 'Mark packed' }).first().waitFor()
@@ -299,7 +299,7 @@ export default {
           values (${T}, ${K.id}, ${ke.id}, 'edit', ${K.payment.id}, 10000, now(), now(), now(), 'over')`
         await p.reload()
         const rows = p.locator('[data-refunds]')
-        await rows.getByText("Refund what's left from your Razorpay dashboard.").waitFor()
+        await rows.getByText("Refund what’s left in Razorpay.").waitFor()
         assert.equal(await rows.getByRole('button', { name: 'Try again' }).count(), 0)
       })
 

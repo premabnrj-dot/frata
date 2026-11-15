@@ -152,7 +152,7 @@ export default async function PrintPage({ searchParams }: { searchParams: Promis
   const r = await asMember(ROLES.print, { action: kind === 'invoice' ? 'order.print_invoice' : 'order.print_slip', detail: { count: numbers.length } }, async (tx, auth) =>
     documentsFor(tx, auth.membership.tenantId, numbers, kind))
     .catch((err) => { console.error('[print]', err instanceof Error ? err.name : err); return null })
-  if (!r) return <Panel title="We could not load these documents">Nothing was changed. Try again in a minute.</Panel>
+  if (!r) return <Panel title="We couldn’t load these documents">Nothing was changed. Try again in a minute.</Panel>
   if (!r.ok) return <Panel title={r.error} />
   const docs = r.value.orders
   const title = kind === 'invoice' ? (docs.length === 1 ? 'Invoice' : `${docs.length} invoices`) : docs.length === 1 ? 'Packing slip' : `${docs.length} packing slips`

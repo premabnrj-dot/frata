@@ -85,7 +85,7 @@ export async function checkImport(input: unknown): Promise<({ ok: true; seen: Se
     const checked = await checkRows(auth.membership.tenantId, auth.membership.role, p.data.mapping, p.data.rows, seen, new Date())
     return { ok: true, ...checked, seen: { skus: [...seen.skus], gtins: [...seen.gtins] } }
   } catch (err) {
-    return said('checkImport', err, 'We could not check your file. Try again in a minute.')
+    return said('checkImport', err, 'We couldn’t check your file. Try again in a minute.')
   }
 }
 
@@ -103,7 +103,7 @@ export async function startImport(input: unknown): Promise<{ ok: true; jobId: st
     if (!r.ok) return { ok: false, error: r.error }
     return { ok: true, jobId: r.value.job.id, next: r.value.job.nextChunk, chunks: r.value.job.chunks, resumed: r.value.resumed }
   } catch (err) {
-    return said('startImport', err, 'We could not start the import. Nothing was changed.')
+    return said('startImport', err, 'We couldn’t start the import. Nothing was changed.')
   }
 }
 
@@ -125,7 +125,7 @@ export async function importChunk(input: unknown): Promise<({ ok: true } & Chunk
     revalidatePath('/console/products')
     return { ok: true, ...r.value }
   } catch (err) {
-    return said('importChunk', err, 'We could not import this part. Nothing from it was saved. Try again.')
+    return said('importChunk', err, 'We couldn’t import this part. Nothing from it was saved. Try again.')
   }
 }
 
@@ -142,7 +142,7 @@ export async function stopImport(jobId: unknown): Promise<{ ok: true } | Fail> {
     revalidatePath('/console/products/import')
     return r.value ? { ok: true } : { ok: false, error: 'That import has already ended.' }
   } catch (err) {
-    return said('stopImport', err, 'We could not stop the import. Try again.')
+    return said('stopImport', err, 'We couldn’t stop the import. Try again.')
   }
 }
 
@@ -162,7 +162,7 @@ export async function deleteImportDrafts(jobId: unknown): Promise<{ ok: true; de
     revalidatePath('/console/products', 'layout')
     return { ok: true, deleted: r.value.deleted, kept: r.value.kept }
   } catch (err) {
-    return said('deleteImportDrafts', err, 'We could not delete the drafts. Nothing was changed.')
+    return said('deleteImportDrafts', err, 'We couldn’t delete the drafts. Nothing was changed.')
   }
 }
 
@@ -180,6 +180,6 @@ export async function publishImportReady(jobId: unknown): Promise<{ ok: true; pu
     revalidatePath('/console/products', 'layout')
     return { ok: true, published: r.value }
   } catch (err) {
-    return said('publishImportReady', err, 'We could not publish them. Nothing was changed.')
+    return said('publishImportReady', err, 'We couldn’t publish them. Nothing was changed.')
   }
 }

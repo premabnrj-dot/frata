@@ -38,7 +38,7 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
     manifestsFor(tenantId),
     zoned ? shopModules(tenantId, new Date().toISOString()) : Promise.resolve(null),
   ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null, codeSource, null] as const })
-  if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!shop) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   // The brand and footer previews wear the shop's published look (Look owns colours and type now).
   // Taxes: a shop that charges GST can't sell a live product with no rate (quote); say which, never block (best effort).
   const unrated = section.key === 'taxes' && chargesGst({ gstin: shop.settings.gstin, scheme: shop.settings.gstScheme as Scheme })

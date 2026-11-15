@@ -146,7 +146,7 @@ function Actions(p: OrderActionsProps) {
         actions={<><Button variant="secondary" data-autofocus onClick={() => { setCreditOpen(false); setCreditError(null) }}>Not now</Button><Button onClick={() => { setCreditError(null); void run('credited', async () => { const r = await issueCreditNote(p.orderId); return r.ok ? { ...r, ok: true } : r }, false, setCreditError).then((r) => { if (r) setCreditOpen(false) }) }} aria-disabled={busy}>Issue credit note</Button></>} />
 
       <Dialog open={cancelOpen} onClose={closeCancel} title={`Cancel ${p.number}?`} error={cancelError}
-        description={p.refund ? <>It was paid online. Cancelling sends no refund. Refund <strong>{p.refundLabel}</strong> in Razorpay after cancelling.{p.refunded ? <> {p.refunded} is already refunded or on its way.</> : null} We email the shopper only if they gave an email. Tell them on WhatsApp or by phone too.</> : 'We email the shopper only if they gave an email. Tell them on WhatsApp or by phone too.'}
+        description={p.refund ? <>It was paid online. Cancelling sends no refund. Refund <strong>{p.refundLabel}</strong> in Razorpay after cancelling.{p.refunded ? <> {p.refunded} is already refunded or on its way.</> : null} We email the shopper if they gave an email. If not, tell them on WhatsApp or by phone.</> : 'We email the shopper if they gave an email. If not, tell them on WhatsApp or by phone.'}
         actions={<><Button variant="secondary" data-autofocus onClick={closeCancel}>Keep the order</Button><Button variant="destructive" onClick={doCancel} aria-disabled={busy}>Cancel order</Button></>}>
         <div ref={cancelFields} className="grid gap-4">
           <fieldset className="grid gap-2">

@@ -36,7 +36,7 @@ export default async function ConsoleHome() {
   const tenantId = auth.membership.tenantId, canManage = (CAN_MANAGE as readonly string[]).includes(auth.membership.role) // openShop's own tuple
   const now = new Date()
   const setup = await setupFor(tenantId).catch((err) => { console.error('[console home]', err instanceof Error ? err.name : 'error'); return null })
-  if (!setup) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!setup) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   // A failed summary is a page of "Couldn't count", never of zeros. The summary and the share card do not wait for each
   // other (speed review 2026-11-13); a failed share read only hides the button.
   const [s, share] = setup.open ? await Promise.all([

@@ -28,7 +28,7 @@ describe('momentIN (Neel N3: a moment in a list)', () => {
     const { momentIN } = await import('../format-date')
     const now = new Date('2026-11-15T18:00:00Z') // 11:30 pm IST on 15 Nov
     expect(momentIN(new Date('2026-11-15T04:36:00Z'), now)).toBe('Today, 10:06 am')
-    expect(momentIN(new Date('2026-11-14T20:06:00Z'), now)).toBe('Yesterday, 1:36 am'.replace('Yesterday', 'Today'))
+    expect(momentIN(new Date('2026-11-14T20:06:00Z'), now)).toBe('Today, 1:36 am')
     expect(momentIN(new Date('2026-11-14T16:36:00Z'), now)).toBe('Yesterday, 10:06 pm')
     expect(momentIN(new Date('2026-11-13T16:36:00Z'), now)).toBe('13 Nov, 10:06 pm')
     expect(momentIN(new Date('2025-11-13T16:36:00Z'), now)).toBe('13 Nov 2025, 10:06 pm')
@@ -38,6 +38,6 @@ describe('momentIN (Neel N3: a moment in a list)', () => {
     const now = new Date('2026-11-15T19:00:00Z') // 12:30 am IST on 16 Nov; UTC still says 15 Nov
     expect(momentIN(new Date('2026-11-15T18:45:00Z'), now)).toBe('Today, 12:15 am')
     expect(momentIN(new Date('2026-11-15T16:36:00Z'), now)).toBe('Yesterday, 10:06 pm')
-    expect(momentIN('2026-11-14T16:36:00Z', now)).toBe('15 Nov, 10:06 pm'.replace('15', '14'))
+    expect(momentIN('2026-11-14T16:36:00Z', now)).toBe('14 Nov, 10:06 pm')
   })
 })

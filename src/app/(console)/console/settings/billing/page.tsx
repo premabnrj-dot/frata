@@ -46,7 +46,7 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
   // Autopay and Pay now: only with Frrata's gateway connected, never on a Frrata support visit (finding 10).
   const canPay = isBillingGatewayConfigured() && !auth.membership.supportSessionId
   const METHOD: Record<string, string> = { upi: 'UPI Autopay', card: 'Card', emandate: 'Bank mandate (eNACH)' }
-  if (!o) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!o) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const e = o.estimate === 'busy' ? null : o.estimate
   // This month's delivered orders only (a late order from last month is billed too, and listed, but not counted here),
   // so the value matches the count beside it.

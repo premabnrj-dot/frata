@@ -23,7 +23,7 @@ export default async function EmailPage({ params }: { params: Promise<{ kind: st
   const data = await shopEmailSettings(tenantId).catch(() => null)
   const row = data?.list.find((e) => e.kind === k)
   const back = { href: '/console/settings/emails', label: 'Emails to shoppers' }
-  if (!row) return <><PageHeader title={EMAIL_NAMES[k]} back={back} /><Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel></>
+  if (!row) return <><PageHeader title={EMAIL_NAMES[k]} back={back} /><Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel></>
   const preview = await previewOrderEmail(tenantId, k, row.words)
   const readOnly = !(CAN_MANAGE as readonly string[]).includes(auth.membership.role) || !!auth.membership.supportSessionId
   return (

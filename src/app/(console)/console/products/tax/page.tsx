@@ -13,7 +13,7 @@ export default async function ProductsTaxPage() {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
   const data = await productsTax(auth.membership.tenantId).catch((err) => { console.error('[products/tax]', err instanceof Error ? err.name : 'error'); return null })
-  if (!data || !data.shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!data || !data.shop) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const now = new Date()
   return (
     <NowProvider at={now.toISOString()}>

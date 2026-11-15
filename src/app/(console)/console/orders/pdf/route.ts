@@ -50,6 +50,6 @@ export async function GET(request: Request) {
     return pdfResponse(file)
   } catch (err) {
     console.error('[orders/pdf]', errName(err))
-    return text(500, 'We could not make the PDF. Print it instead.')
+    return text(500, 'We couldn’t make the PDF. Print it instead.')
   }
 }

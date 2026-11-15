@@ -42,5 +42,5 @@ export function stateWords(m: MessageMoments): string {
   const s = messageState(m)
   if (s === 'skipped') return SKIP_WORDS[(m.skipCode ?? 'off') as SkipCode] ?? 'Not sent'
   if (s === 'bounced') return m.bounceKind === 'permanent' ? 'Bounced · no such address' : 'Bounced'
-  return { queued: 'Waiting to send', sending: 'Sending', sent: 'Sent', delivered: 'Delivered', complained: 'Marked spam · stopped for this store', failed: 'Could not send' }[s]
+  return { queued: 'Waiting to send', sending: 'Sending', sent: 'Sent', delivered: 'Delivered', complained: 'Marked spam · stopped for this store', failed: 'Couldn’t send' }[s]
 }

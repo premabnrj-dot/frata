@@ -85,7 +85,7 @@ export default {
       await expectToast(meera, 'Withdrawn. Shops on it show their previous look now.', 'ok')
       await until(async () => !/Shop tabs/.test(await shopHtml()), 15_000)
       await riya.goto(CONSOLE + '/console/look')
-      await riya.getByText('Frrata withdrew Bazaar 1.0.0 for a problem. Your previous look is live; nothing is lost.').waitFor()
+      await riya.getByText('Frrata withdrew Bazaar 1.0.0 for a problem. Your previous look is live. Nothing is lost.').waitFor()
       assert.equal(await riya.getByRole('button', { name: 'Bazaar', exact: true }).count(), 0, 'a withdrawn theme is not offered')
       await riya.screenshot({ path: t.out('look-withdrawn'), fullPage: true })
     })

@@ -37,7 +37,7 @@ export async function connectRazorpay(input: { keyId: string; keySecret: string 
     return { ok: true }
   } catch (err) {
     console.error('[connectRazorpay]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not save the keys. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t save the keys. Nothing was changed.' }
   }
 }
 
@@ -56,6 +56,6 @@ export async function disconnectRazorpay(): Promise<Result> {
     return { ok: true }
   } catch (err) {
     console.error('[disconnectRazorpay]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not disconnect. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t disconnect. Nothing was changed.' }
   }
 }

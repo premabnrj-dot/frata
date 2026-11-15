@@ -36,6 +36,6 @@ export async function GET(request: Request) {
     return json(200, { rows: toRows(view, q, auth.membership.role, now), more: view.more })
   } catch (err) {
     console.error('[orders/rows]', errName(err))
-    return json(500, { error: 'We could not search just now. Press Enter to try again.' })
+    return json(500, { error: 'We couldn’t search just now. Press Enter to try again.' })
   }
 }

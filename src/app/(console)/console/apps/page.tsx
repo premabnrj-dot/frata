@@ -25,7 +25,7 @@ export default async function AppsPage() {
   const mayBill = managesInPerson(auth.membership)
   const d = await appsPage(auth.membership.tenantId, auth.userId, now.toISOString(), mayBill ? auth.membership : undefined)
     .catch((err) => { console.error('[apps]', err instanceof Error ? err.name : 'error'); return null })
-  if (!d) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!d) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const cards: AppCard[] = MODULE_KEYS.map((k) => {
     const def = MODULES[k], offer = offerOf(k, d, now)
     return { key: k, name: def.name, job: def.job, group: def.group, href: `/console/apps/${k}`, footer: offer.footer, locked: offer.locked,

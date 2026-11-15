@@ -92,7 +92,7 @@ export async function saveSection(sectionKey: string, values: Values, version: n
     if (err instanceof NeededWhenOpen) return { ok: false, error: 'Some fields need a look before saving.', errors: err.errors }
     if (err instanceof VersionConflict) return { ok: false, conflict: true, error: 'Someone saved this page while you were editing. Reload to see their changes, then make yours again.' }
     console.error('[saveSection]', section.key, dbReason(err))
-    return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
+    return { ok: false, error: 'We couldn’t save. Nothing was changed. Try again in a minute.' }
   }
 }
 
@@ -117,7 +117,7 @@ export async function savePolicyText(kind: string, body: string | null): Promise
     return { ok: true }
   } catch (err) {
     console.error('[savePolicyText]', dbReason(err))
-    return { ok: false, error: 'We could not save the page. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t save the page. Nothing was changed.' }
   }
 }
 
@@ -149,7 +149,7 @@ export async function changeAddress(slug: string): Promise<{ ok: true } | { ok: 
   if (problem) return { ok: false, error: problem === 'reserved' ? 'That address is reserved. Try another.' : ADDRESS_ERRORS.bad_slug! }
   const before = await addressFacts(auth.membership.tenantId).catch(() => null)
   const r = await changeShopAddress(auth.membership.tenantId, auth.userId, s)
-  if (!r.ok) return { ok: false, error: ADDRESS_ERRORS[r.error] ?? 'We could not change the address. Nothing was changed.' }
+  if (!r.ok) return { ok: false, error: ADDRESS_ERRORS[r.error] ?? 'We couldn’t change the address. Nothing was changed.' }
   // Every name the shop has had now leads to the new one: each host's lookup, and every page of the one it left
   // (storefront review 2026-11-07; shop addresses D·1, tenancy H5).
   const all = [...new Set([s, ...(before ? [before.slug, ...before.names.map((n) => n.name)] : [])])]
@@ -181,13 +181,13 @@ export async function saveShipCosts(input: ShipCostsInput): Promise<{ ok: true; 
     })
     if (!r.ok) return { ok: false, error: r.error }
     if (r.value === 'handed_over') return { ok: false, error: 'The store’s owner sets its shipping costs now.' }
-    if (!r.value) return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
+    if (!r.value) return { ok: false, error: 'We couldn’t save. Nothing was changed. Try again in a minute.' }
     revalidatePath('/console', 'layout')
     // The date as the page says it, so the form shows it at once (not only after the refresh).
     return { ok: true, confirmedOn: dayIN(new Date()) }
   } catch (err) {
     console.error('[saveShipCosts]', dbReason(err))
-    return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
+    return { ok: false, error: 'We couldn’t save. Nothing was changed. Try again in a minute.' }
   }
 }
 
@@ -215,7 +215,7 @@ export async function setDocLogo(url: string | null): Promise<{ ok: true } | { o
     return { ok: true }
   } catch (err) {
     console.error('[setDocLogo]', dbReason(err))
-    return { ok: false, error: 'We could not save the logo. Nothing was changed. Try again in a minute.' }
+    return { ok: false, error: 'We couldn’t save the logo. Nothing was changed. Try again in a minute.' }
   }
 }
 
@@ -248,6 +248,6 @@ export async function setShopLogo(base: string | null): Promise<{ ok: true } | {
     return { ok: true }
   } catch (err) {
     console.error('[setShopLogo]', errName(err))
-    return { ok: false, error: 'We could not save the logo. Nothing was changed. Try again in a minute.' }
+    return { ok: false, error: 'We couldn’t save the logo. Nothing was changed. Try again in a minute.' }
   }
 }

@@ -69,7 +69,7 @@ export async function setModuleAction(input: unknown): Promise<{ ok: true } | { 
     return { ok: true }
   } catch (err) {
     console.error('[setModuleAction]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: `We could not ${on ? 'turn on' : 'turn off'} ${def.name}. Nothing was changed.` }
+    return { ok: false, error: `We couldn’t ${on ? 'turn on' : 'turn off'} ${def.name}. Nothing was changed.` }
   }
 }
 
@@ -97,7 +97,7 @@ export async function setInterestAction(input: unknown): Promise<{ ok: true } | 
     return { ok: true }
   } catch (err) {
     console.error('[setInterestAction]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not save that. Try again.' }
+    return { ok: false, error: 'We couldn’t save that. Try again.' }
   }
 }
 
@@ -144,7 +144,7 @@ export async function startAddonTrialAction(input: unknown): Promise<{ ok: true 
     const code = definerError(err)
     if (code && TRIAL_ERRORS[code]) return { ok: false, error: TRIAL_ERRORS[code] }
     console.error('[startAddonTrialAction]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: `We could not start the trial. Nothing was changed.` }
+    return { ok: false, error: `We couldn’t start the trial. Nothing was changed.` }
   }
 }
 
@@ -176,7 +176,7 @@ export async function endAddonTrialAction(input: unknown): Promise<{ ok: true } 
     const code = definerError(err)
     if (code && TRIAL_ERRORS[code]) return { ok: false, error: TRIAL_ERRORS[code] }
     console.error('[endAddonTrialAction]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not end the trial. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t end the trial. Nothing was changed.' }
   }
 }
 

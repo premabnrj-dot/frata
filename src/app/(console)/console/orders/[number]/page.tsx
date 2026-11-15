@@ -64,7 +64,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   const n = /^\d{1,9}$/.test(raw) ? Number(raw) : NaN
   const now = new Date()
   const [d, prefix] = await Promise.all([orderDetail(tenantId, n, now).catch((err) => { console.error('[order]', err instanceof Error ? err.name : err); return undefined }), orderPrefixFor(tenantId)])
-  if (d === undefined) return <Panel title="We could not load this order">Nothing was changed. Try again in a minute.</Panel>
+  if (d === undefined) return <Panel title="We couldn’t load this order">Nothing was changed. Try again in a minute.</Panel>
   // Another shop's order is the same "not found" as one that does not exist.
   if (d === null) return <Panel title="No such order in your store">Check the number, or find it from <a href="/console/orders?tab=all" className="underline">all orders</a>.</Panel>
 
@@ -113,10 +113,10 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
       const text = edit?.asked ? `Asked for ${inr(edit.asked)} · ${words.replace(/^Items changed · /, '')}` : edit ? words : eventLabel(e, (x) => CANCEL_LABEL[x as CancelReason] ?? x)
       return { at: e.at, text, who: e.actorKind === 'support' ? `${e.actorEmail ?? ''} · Frrata support` : e.actorEmail ?? 'Frrata' }
     }),
-    { at: o.placedAt, text: method === 'cod' && !o.switchedToCodAt ? 'Placed · pay on delivery' : 'Placed · online', who: 'Customer' },
+    { at: o.placedAt, text: method === 'cod' && !o.switchedToCodAt ? 'Placed · pay on delivery' : 'Placed · online', who: 'Shopper' },
     ...(o.paidAt ? [{ at: o.paidAt, text: 'Paid online', who: 'Razorpay' }] : []),
-    ...(o.switchedToCodAt ? [{ at: o.switchedToCodAt, text: 'Switched to pay on delivery', who: 'Customer' }] : []),
-    ...[...d.edits.values()].flatMap((e) => (e.asked !== null && e.paidAt ? [{ at: e.paidAt, text: `Paid ${inr(e.asked)} for the change · items changed`, who: 'Customer' }]
+    ...(o.switchedToCodAt ? [{ at: o.switchedToCodAt, text: 'Switched to pay on delivery', who: 'Shopper' }] : []),
+    ...[...d.edits.values()].flatMap((e) => (e.asked !== null && e.paidAt ? [{ at: e.paidAt, text: `Paid ${inr(e.asked)} for the change · items changed`, who: 'Shopper' }]
       : e.droppedReason === 'cannot_apply' && e.droppedAt ? [{ at: e.droppedAt, text: 'Paid for a change that could no longer apply · refunded', who: 'Razorpay' }] : [])),
   ].sort((a, b) => b.at.getTime() - a.at.getTime())
 
@@ -207,7 +207,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
 
         <div className="min-w-0 space-y-6">
           <ModuleSlot name="order.side" ctx={{ tenantId: auth.membership.tenantId, orderId: o.id }} at={now.toISOString()} />
-          <Section id="customer" title="Customer" action={can.edit && !o.erasedAt ? <EditContact orderId={o.id} number={label} contact={{ customerName: o.customerName, phone: o.phone, addressLine: o.addressLine, area: o.area, landmark: o.landmark, pincode: o.pincode, city: o.city, state: o.state }} /> : undefined}>
+          <Section id="customer" title="Shopper" action={can.edit && !o.erasedAt ? <EditContact orderId={o.id} number={label} contact={{ customerName: o.customerName, phone: o.phone, addressLine: o.addressLine, area: o.area, landmark: o.landmark, pincode: o.pincode, city: o.city, state: o.state }} /> : undefined}>
             {o.erasedAt ? <p className="text-sm text-muted-foreground">Removed after 90 days. This online order was never paid.</p> : (
               <div className="space-y-1 text-sm">
                 <p className="font-medium">{o.customerName ? <Name>{o.customerName}</Name> : '—'}</p>

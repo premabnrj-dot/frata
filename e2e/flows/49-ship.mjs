@@ -97,7 +97,7 @@ export default {
         const d = p.getByRole('dialog', { name: 'Lost by the courier?' })
         await d.getByRole('button', { name: 'Mark lost' }).click()
         await p.locator('[data-toast]', { hasText: `${label(L)} marked lost.` }).waitFor()
-        await p.getByText(/Lost by the courier after it was paid online: refund the shopper in Razorpay/).waitFor()
+        await p.getByText(/Lost by the courier after it was paid online. Refund the shopper in Razorpay/).waitFor()
         assert.ok((await db`select lost_at from orders where id = ${id}`)[0].lost_at)
       })
 

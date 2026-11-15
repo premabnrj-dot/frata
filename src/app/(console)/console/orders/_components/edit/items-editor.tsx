@@ -41,7 +41,7 @@ export default function ItemsEditor({ orderId, number, onClose }: { orderId: str
   const [busy, setBusy] = useState(false)
 
   const load = async (keep: boolean) => {
-    const r = await loadItemsEditor(orderId).catch(() => ({ ok: false as const, error: 'We could not load its items. Try again.' }))
+    const r = await loadItemsEditor(orderId).catch(() => ({ ok: false as const, error: 'We couldn’t load its items. Try again.' }))
     if (!r.ok) { setFailed(r.error); return }
     setData(r.data)
     setRows((now) => (keep && now.every((x) => x.line === null || r.data.lines.some((l) => l.id === x.line)) ? now : rowsOf(r.data)))

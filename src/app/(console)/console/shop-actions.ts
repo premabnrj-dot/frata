@@ -18,7 +18,7 @@ type Result = { ok: true } | { ok: false; error: string }
 
 /** Trials T11: going live starts a shop's trial for good, so a Frrata support visit never opens or closes a shop with a
  * trial that has not ended — the owner does. */
-const SUPPORT_TRIAL = 'This store is on a free trial. Only its owner opens or closes it.'
+const SUPPORT_TRIAL = 'This store is on a free trial. Only its owner opens or closes it. Opening starts the trial.'
 async function trialBlocksSupport(tx: Parameters<Parameters<typeof asMember>[2]>[0], tenantId: string): Promise<boolean> {
   const [t] = await tx.select({ endedAt: shopTrials.endedAt }).from(shopTrials).where(eq(shopTrials.tenantId, tenantId))
   return !!t && !t.endedAt

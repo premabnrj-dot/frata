@@ -39,7 +39,7 @@ export async function applyAction(input: unknown): Promise<ApplyResult> {
   if (!(await withinLimit(LIMITS.createShopIp, await clientIp()))) return { ok: false, error: 'Too many tries from here. Try again later.' }
   const r = await applyAsPartner(auth.userId, { ...p.data, phone: `91${p.data.phone}` })
   if (!r.ok) {
-    return { ok: false, error: r.error === 'decided' ? 'Your application is already decided.' : r.error === 'email_unconfirmed' ? 'Confirm your email first.' : 'We could not send it. Nothing was changed.' }
+    return { ok: false, error: r.error === 'decided' ? 'Your application is already decided.' : r.error === 'email_unconfirmed' ? 'Confirm your email first.' : 'We couldn’t send it. Nothing was changed.' }
   }
   revalidatePath('/partners/apply')
   return { ok: true }

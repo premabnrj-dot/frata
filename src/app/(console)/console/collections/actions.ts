@@ -87,7 +87,7 @@ export async function saveCollection(id: string | null, input: CollectionInput):
   } catch (err) {
     if (err instanceof Stop) return err.result
     console.error('[saveCollection]', errName(err))
-    return { ok: false, error: 'We could not save the collection. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t save the collection. Nothing was changed.' }
   }
 }
 
@@ -106,7 +106,7 @@ export async function deleteCollection(id: string): Promise<Result> {
   } catch (err) {
     if (err instanceof Stop) return err.result
     console.error('[deleteCollection]', err instanceof Error ? err.name : err)
-    return { ok: false, error: 'We could not delete the collection.' }
+    return { ok: false, error: 'We couldn’t delete the collection.' }
   }
 }
 

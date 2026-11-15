@@ -9,26 +9,29 @@
 // =============================================================================
 import type { OrderState, QueueTab } from '@/domains/orders/order-state'
 import { PAY_WORDS } from '@/domains/orders/filters'
+import { STATE_WORDS } from '@/domains/orders/state-words'
 
 export type Tone = 'ok' | 'warn' | 'danger' | 'info' | 'neutral'
 
-export const STATE: Record<OrderState, { label: string; tone: Tone }> = {
-  awaiting_payment: { label: 'Paying now', tone: 'neutral' },
-  payment_abandoned: { label: 'Payment abandoned', tone: 'neutral' },
-  unconfirmed: { label: 'To confirm', tone: 'warn' },
-  held: { label: 'On hold', tone: 'warn' },
-  confirmed: { label: 'To pack', tone: 'info' },
-  paid: { label: 'To pack', tone: 'info' },
-  refund_due: { label: 'Refund due', tone: 'danger' },
-  packed: { label: 'Packed', tone: 'info' },
-  cancelled: { label: 'Cancelled', tone: 'neutral' },
-  shipped: { label: 'On the way', tone: 'info' },
-  ndr: { label: "Couldn’t deliver", tone: 'danger' },
-  delivered: { label: 'Delivered', tone: 'ok' },
-  rto: { label: 'Coming back', tone: 'danger' },
-  rto_received: { label: 'Came back', tone: 'neutral' },
-  lost: { label: 'Lost by the courier', tone: 'danger' },
+/** The state's words (src/domains/orders/state-words.ts) with the badge tone the queue shows. */
+const TONE: Record<OrderState, Tone> = {
+  awaiting_payment: 'neutral',
+  payment_abandoned: 'neutral',
+  unconfirmed: 'warn',
+  held: 'warn',
+  confirmed: 'info',
+  paid: 'info',
+  refund_due: 'danger',
+  packed: 'info',
+  cancelled: 'neutral',
+  shipped: 'info',
+  ndr: 'danger',
+  delivered: 'ok',
+  rto: 'danger',
+  rto_received: 'neutral',
+  lost: 'danger',
 }
+export const STATE = Object.fromEntries((Object.keys(TONE) as OrderState[]).map((k) => [k, { label: STATE_WORDS[k], tone: TONE[k] }])) as Record<OrderState, { label: string; tone: Tone }>
 
 /** How it is paid now (currentMethod), and whether the online payment came in. */
 // How it is paid is a neutral badge with its icon; only the order's STATE is coloured, so "COD" and "To confirm" no

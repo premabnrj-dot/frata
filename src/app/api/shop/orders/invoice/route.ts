@@ -34,6 +34,6 @@ export async function POST(request: Request) {
     return pdfResponse(file)
   } catch (err) {
     console.error('[shop/invoice]', errName(err))
-    return reply({ error: 'We could not make the invoice. Try again in a minute.' }, 500)
+    return reply({ error: 'We couldn’t make the invoice. Try again in a minute.' }, 500)
   }
 }

@@ -30,6 +30,6 @@ export async function saveHomeSeo(input: { seoTitle: string; seoDescription: str
     return { ok: true }
   } catch (err) {
     console.error('[saveHomeSeo]', errName(err))
-    return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
+    return { ok: false, error: 'We couldn’t save. Nothing was changed. Try again in a minute.' }
   }
 }

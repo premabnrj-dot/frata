@@ -55,7 +55,7 @@ export function setupSteps(f: SetupFacts, built: BuiltPages, formatInr: (paise: 
     {
       key: 'details', title: 'Business details and grievance officer', done: !!f.legalName.trim() && grievanceComplete(f),
       href: built.settings ? (f.legalName.trim() ? '/console/settings/contact' : '/console/settings/store') : null,
-      detail: 'The law asks your store to show these. Razorpay checks them too.',
+      detail: 'Your store must show your legal name, address and a grievance officer. Razorpay checks them too.',
     },
     {
       key: 'payments', title: 'How shoppers pay', done: canPay, href: built.settings ? '/console/settings/payments' : null,

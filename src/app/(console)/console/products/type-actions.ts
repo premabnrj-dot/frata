@@ -35,7 +35,7 @@ export async function saveSizeChart(typeId: string, chart: Chart): Promise<Resul
   } catch (err) {
     if (err instanceof Stop) return err.result
     console.error('[saveSizeChart]', reason(err))
-    return { ok: false, error: 'We could not save the size chart.' }
+    return { ok: false, error: 'We couldn’t save the size chart.' }
   }
 }
 
@@ -62,7 +62,7 @@ export async function createType(name: string, copyFrom: string | null): Promise
   } catch (err) {
     if (err instanceof Stop) return err.result
     console.error('[createType]', reason(err))
-    return { ok: false, error: 'We could not create the type.' }
+    return { ok: false, error: 'We couldn’t create the type.' }
   }
 }
 

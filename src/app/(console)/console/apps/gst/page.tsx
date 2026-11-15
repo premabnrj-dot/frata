@@ -40,7 +40,7 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
   // Not in use: the app's page, for any member (Apps gallery A1; review A4). In use: the owner, an admin or the accountant.
   // One read for the state, the price and the about page (A1 impact review: never the facts twice).
   const apps = await appsPage(auth.membership.tenantId, auth.userId, now.toISOString()).catch((err) => { console.error('[gst apps]', err instanceof Error ? err.name : 'error'); return null })
-  if (!apps) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!apps) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const gate = apps.access.gst
   const about = aboutProps('gst', apps, now, mayTurnOff(auth.membership), auth.membership.tenantName)
   if (!gate.usable) {
@@ -59,7 +59,7 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
   if (tab === 'billing') return home()
   const { p } = sp
   const d = await gstPeriod(auth.membership.tenantId, p ?? null, now).catch((err) => { console.error('[gst]', err instanceof Error ? err.name : 'error'); return undefined })
-  if (d === undefined) return home(<Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>)
+  if (d === undefined) return home(<Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>)
   if (!d) return home(<Panel title="Nothing to file for that period yet" action={<Link href="/console/apps/gst" className={button({ variant: 'secondary' })}>Last period</Link>} />)
   const { shop, period, gstr, fixes } = d
   if (!shop.gstin || shop.scheme !== 'regular') {

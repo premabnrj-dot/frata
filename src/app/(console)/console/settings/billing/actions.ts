@@ -41,7 +41,7 @@ export async function saveBillingDetails(input: Record<string, unknown>): Promis
     return { ok: true }
   } catch (err) {
     console.error('[billing.details]', errName(err))
-    return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
+    return { ok: false, error: 'We couldn’t save. Nothing was changed. Try again in a minute.' }
   }
 }
 
@@ -89,7 +89,7 @@ export async function startAutopay(method: string): Promise<Started> {
     return r.ok ? { ok: true, key: billingKeyId(), order: order.id, customer: customer.id, amount: order.amount } : { ok: false, error: r.error }
   } catch (e) {
     console.error('[billing.autopay.start]', errName(e))
-    return { ok: false, error: 'We could not start the set-up. Nothing was changed. Try again in a minute.' }
+    return { ok: false, error: 'We couldn’t start the set-up. Nothing was changed. Try again in a minute.' }
   }
 }
 
@@ -111,7 +111,7 @@ export async function completeAutopay(input: Checkout): Promise<{ ok: true } | {
     return { ok: true }
   } catch (e) {
     console.error('[billing.autopay.done]', errName(e))
-    return { ok: false, error: 'We could not confirm the mandate. Try again in a minute.' }
+    return { ok: false, error: 'We couldn’t confirm the mandate. Try again in a minute.' }
   }
 }
 
@@ -157,7 +157,7 @@ export async function startPayNow(invoiceId: string): Promise<Started> {
   } catch (e) {
     const shown = (e as { shown?: string }).shown ?? said(e)
     if (!shown) console.error('[billing.paynow.start]', errName(e))
-    return { ok: false, error: shown ? `${shown.charAt(0).toUpperCase()}${shown.slice(1)}.` : 'We could not open the payment. Try again in a minute.' }
+    return { ok: false, error: shown ? `${shown.charAt(0).toUpperCase()}${shown.slice(1)}.` : 'We couldn’t open the payment. Try again in a minute.' }
   }
 }
 
@@ -174,7 +174,7 @@ export async function completePayNow(input: Checkout): Promise<{ ok: true } | { 
     return { ok: true }
   } catch (e) {
     console.error('[billing.paynow.done]', errName(e))
-    return { ok: false, error: 'We could not confirm the payment yet. If money left your account, it will show here soon.' }
+    return { ok: false, error: 'We couldn’t confirm the payment yet. If money left your account, it will show here soon.' }
   }
 }
 
@@ -206,7 +206,7 @@ export async function changePlan(code: string, from?: unknown): Promise<{ ok: tr
     const m = /plan: (.{1,120})/.exec(e instanceof Error ? (e.cause instanceof Error ? e.cause.message : e.message) : '')
     console.error('[billing.plan.change]', errName(e))
     const t = m?.[1]
-    return { ok: false, error: t ? `${t.charAt(0).toUpperCase()}${t.slice(1)}.` : 'We could not change the plan. Nothing was changed.' }
+    return { ok: false, error: t ? `${t.charAt(0).toUpperCase()}${t.slice(1)}.` : 'We couldn’t change the plan. Nothing was changed.' }
   }
 }
 

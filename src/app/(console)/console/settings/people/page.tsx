@@ -26,7 +26,7 @@ export default async function PeoplePage() {
     // The accountant's login is part of the GST app: offered while GST is on; one already there can still be removed.
     shopModules(auth.membership.tenantId, new Date().toISOString()).then((m) => m.access.gst.usable).catch(() => false),
   ])
-  if (!people) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!people) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const canRemove = auth.membership.role === 'owner' && !auth.membership.supportSessionId
   return (
     <div className="max-w-3xl space-y-4">

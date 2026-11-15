@@ -72,8 +72,8 @@ export function NumberHealth({ c, needs, canManage }: { c: View; needs: Need[]; 
       ) : <p className="text-sm text-muted-foreground">Nothing needs you. Order messages come next.</p>}
       <p className="text-sm text-muted-foreground">Chats that arrive now are kept for the team inbox, coming next.</p>
 
-      <Dialog open={!!confirm} onClose={() => { setConfirm(false); setError(null) }} error={error} title={confirm === 'reconnect' ? `Reconnect ${c.displayPhone}` : `Disconnect ${c.displayPhone}?`}
-        description={confirm === 'reconnect' ? 'This number is disconnected. Connect it again.' : 'Frrata stops sending and receiving on this number. The number stays yours. Connect it again any time.'}
+      <Dialog open={!!confirm} onClose={() => { setConfirm(false); setError(null) }} error={error} title={confirm === 'reconnect' ? `Connect ${c.displayPhone} again?` : `Disconnect ${c.displayPhone}?`}
+        description={confirm === 'reconnect' ? 'Frrata lost access to this number. Disconnect it, then connect it again in Meta’s window.' : 'Frrata stops sending and receiving on this number. The number stays yours. Connect it again any time.'}
         actions={<><Button variant="secondary" className="after:hidden" data-autofocus onClick={() => setConfirm(false)}>{confirm === 'reconnect' ? 'Not now' : 'Keep it connected'}</Button><Button variant={confirm === 'reconnect' ? 'primary' : 'destructive'} disabled={pending} onClick={() => run(disconnectWhatsAppAction, true)}>{confirm === 'reconnect' ? 'Disconnect and start again' : 'Disconnect'}</Button></>} />
     </div>
   )

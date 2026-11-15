@@ -80,7 +80,7 @@ export default {
     await t.step('toast: a failed undo says why; an undo that finishes after a newer toast leaves the newer one alone', async () => {
       await p.getByRole('button', { name: 'Confirm slowly' }).click(); await p.getByText('KS-1002 confirmed.').waitFor()
       await p.getByRole('button', { name: 'Undo' }).click()
-      await expectToast(p, 'Already packed — cancel it instead.', 'error')
+      await expectToast(p, 'Already packed. Cancel it instead.', 'error')
       await p.getByRole('button', { name: 'Confirm slowly' }).click(); await p.getByRole('button', { name: 'Undo' }).click()
       await p.getByRole('button', { name: 'Hold', exact: true }).click() // a newer toast while the undo still runs
       await p.locator('[data-toast]', { hasText: 'KS-1003 on hold.' }).waitFor()

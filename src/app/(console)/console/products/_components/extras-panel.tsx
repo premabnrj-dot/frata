@@ -42,7 +42,7 @@ export function StoriesPanel({ stories, onChange, photos, tenantId, enabled, err
   return (
     <div className="space-y-2">
       <h2 className="text-section font-semibold">Stories{stories.length > 0 && <Count n={stories.length} of={MAX_STORIES} />}</h2>
-      {stories.length === 0 && <p className="text-sm text-muted-foreground">A story has a photo, a title, a few words and up to 3 notes.</p>}
+      {stories.length === 0 && <p className="text-sm text-muted-foreground">Add a story. It has a photo, a title, a few words and up to 3 notes.</p>}
       {/* The save's mistake in the stories: at the stories, each story's row marked so the summary's focus lands on one. */}
       <FieldError name="stories" message={error} />
       <ul className="space-y-2">

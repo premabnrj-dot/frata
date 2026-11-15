@@ -75,6 +75,6 @@ export async function GET(request: Request) {
     })
   } catch (err) {
     console.error('[gst/export]', errName(err))
-    return text(500, 'We could not make that file. Try again in a minute.')
+    return text(500, 'We couldn’t make that file. Try again in a minute.')
   }
 }

@@ -116,7 +116,7 @@ export async function confirmPayment(tenantId: string, hash: string, reply: { pa
   })
   const o = pre.o
   if (!o || !o.rzp) return { ok: false, status: 404, error: 'Not found' }
-  if (!pre.keys || !checkoutSignatureOk(o.rzp, reply.paymentId, reply.signature, pre.keys.keySecret)) return { ok: false, status: 400, error: 'We could not confirm this payment. If money left your account, the store will see it within minutes.' }
+  if (!pre.keys || !checkoutSignatureOk(o.rzp, reply.paymentId, reply.signature, pre.keys.keySecret)) return { ok: false, status: 400, error: 'We couldn’t confirm this payment. If money left your account, the store will see it within minutes.' }
   const asked = Number((o.checkout as { onlineTotal?: number } | null)?.onlineTotal ?? -1)
   await storeRazorpayEvent(tenantId, `razorpay:checkout.signed:${reply.paymentId}`, { event: 'payment.captured',
     payload: { payment: { entity: { id: reply.paymentId, order_id: o.rzp, amount: asked, currency: 'INR', status: 'captured' } } } })
@@ -198,7 +198,7 @@ export async function switchToCod(tenantId: string, hash: string, expectedTotal:
   if (pre.o.rzp && pre.keys) {
     const asked = await orderPayments(pre.keys, pre.o.rzp)
     await noteKeysAnswer(tenantId, pre.keys, asked)
-    if (!asked.ok) return { kind: 'refused', status: 409, error: 'We could not check with Razorpay whether your payment went through. Try again in a minute.' }
+    if (!asked.ok) return { kind: 'refused', status: 409, error: 'We couldn’t check with Razorpay whether your payment went through. Try again in a minute.' }
     const pays = asked.items
     const captured = pays.find((p) => p.status === 'captured' && capturedAsAsked(p, pre.o!.checkout, p.currency))
     if (captured) {

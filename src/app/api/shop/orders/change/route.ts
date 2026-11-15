@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     return out.ok ? reply({ pay: out.pay }) : reply({ error: out.error }, out.status)
   }
   const ev = await editReplyEvent(r.tenantId, hash, { paymentId: r.body.paymentId, signature: r.body.signature })
-  if (!ev) return reply({ error: 'We could not confirm this payment. If money left your account, the shop will see it within minutes.' }, 400)
+  if (!ev) return reply({ error: 'We couldn’t confirm this payment. If money left your account, the shop will see it within minutes.' }, 400)
   await storeRazorpayEvent(r.tenantId, ev.key, ev.payload)
   await processEvents(r.tenantId).catch(() => 0)
   drainSoon()

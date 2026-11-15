@@ -118,7 +118,7 @@ export function OrdersList({ tab, tabs, q: initialQ, filters, page, rows, more, 
       </div>
       {/* Said once the list has changed under the person's typing (or a filter): how many rows they now see. */}
       <p role="status" className="sr-only">{failed ? 'Search did not run' : `${shown.length}${shownMore ? ' or more' : ''} order${shown.length === 1 && !shownMore ? '' : 's'}`}</p>
-      {failed ? <Panel title="We could not search just now">Press Enter to try again.</Panel> : null}
+      {failed ? <Panel title="We couldn’t search just now">Press Enter to try again.</Panel> : null}
       {/* While a search is on its way the list dims (Neel § Motion: lists dim while a view loads) and says it is busy. */}
       <div aria-busy={loading || undefined} className={loading ? 'opacity-60 transition-opacity duration-fast' : 'transition-opacity duration-fast'}>
       <Queue rows={shown} label={label} slipSize={slipSize} query={qShown} empty={

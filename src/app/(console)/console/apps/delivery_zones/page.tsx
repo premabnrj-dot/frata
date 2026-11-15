@@ -30,7 +30,7 @@ export default async function DeliveryZonesPage({ searchParams }: { searchParams
   if (!auth.ok) return <Panel title={auth.message} />
   const now = new Date()
   const apps = await appsPage(auth.membership.tenantId, auth.userId, now.toISOString()).catch((err) => { console.error('[zones apps]', errName(err)); return null })
-  if (!apps) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!apps) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   // The accountant's console is GST and documents (roles): PIN code rules carry the brand's own notes (security DZ7 M1).
   if (auth.membership.role === 'accountant') return <Panel title="Only the owner, a manager or staff see Delivery Zones" />
   const gate = apps.access.delivery_zones
@@ -51,7 +51,7 @@ export default async function DeliveryZonesPage({ searchParams }: { searchParams
       badge={d && d.zones.length ? <Badge tone="neutral">{d.zones.length} zones</Badge> : undefined}>{body}</AppHome>
   )
   if (tab === 'billing') return home()
-  if (!d || !d.settings) return home(<Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>)
+  if (!d || !d.settings) return home(<Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>)
 
   if (tab === 'rules') {
     return home(<RulesTab rules={d.rules} count={d.ruleCount} q={q} page={page} pages={Math.max(1, Math.ceil(d.ruleCount / RULES_PAGE))}

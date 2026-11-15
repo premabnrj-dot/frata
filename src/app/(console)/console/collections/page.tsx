@@ -14,7 +14,7 @@ export default async function CollectionsPage() {
   const auth = await requireMember(ANY_MEMBER)
   if (!auth.ok) return <Panel title={auth.message} />
   const rows = await listCollections(auth.membership.tenantId).catch((err) => { console.error('[collections]', err instanceof Error ? err.name : err); return null })
-  if (!rows) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
+  if (!rows) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const add = <><Link href="/console/collections/new?kind=auto" className={button({ variant: 'secondary' })}>Rule-based</Link><Link href="/console/collections/new" className={button()}>Add collection</Link></>
   return (
     <>

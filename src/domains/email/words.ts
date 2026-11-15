@@ -40,7 +40,7 @@ export const DEFAULT_WORDS: Record<OrderMessage, EmailWords> = {
   },
   cancelled: {
     subject: 'Order [Order number] is cancelled',
-    preview: 'Any online payment is refunded',
+    preview: 'Your order is cancelled',
     heading: 'Your order is cancelled',
     message: "If you paid online, the refund reaches you in 5–7 working days. Reply to this email if anything looks wrong.",
     button: 'See your order',

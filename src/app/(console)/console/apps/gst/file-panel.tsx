@@ -37,7 +37,7 @@ export function FilePanel({ period, step, ours, portal, username, pushedAt, file
     const r = await f()
     if (!r.ok) {
       shown.current = toast.next()
-      if (r.error) toast.error(r.error); else toast.error('We couldn’t reach the GST portal.', { sub: 'Nothing was filed.' })
+      if (r.error) toast.error(r.error); else toast.error('We couldn’t file this return.', { sub: 'Nothing was filed. Try again.' })
       return
     }
     if (shown.current !== null) { toast.dismiss(shown.current); shown.current = null }
