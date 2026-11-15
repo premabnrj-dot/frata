@@ -13,23 +13,21 @@ import { STAGE_LABEL } from '@/domains/partners/stage'
 import { partnerCan } from '@/domains/partners/team'
 import { PARTNER_TERMS } from '@/domains/partners/terms'
 import { istDayKey } from '@/domains/time/day'
-import { monthStartIST } from '@/domains/time/month'
 import { switchStoreAction } from '@/app/choose/actions'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { partnerClients } from '@/lib/db/partners'
 import { billSummary, clientBills, clientShares } from '@/lib/db/partner-bills'
-import { dayMonthIN, monthShortIN } from '@/lib/format-date'
+import { dayMonthIN } from '@/lib/format-date'
 import { formatInr } from '@/lib/format'
 import { shopHost } from '@/lib/public-env'
-import { errName } from '@/lib/log'
+import { toRupees, type Paise } from '@/domains/money/paise'
 import { HandOver } from '../../hand-over'
-import { buildClients, dayWords, nextWords, remindHref, STAGE_TONE } from '../../_components/clients'
+import { buildClients, dayWords, failed, nextWords, remindHref, shareMonthLabel, signer, STAGE_TONE } from '../../_components/clients'
 import { BillMore, ChangeBilling, MarkPaid, RecordBill, StoreMore } from '../../_components/bills'
 
 export const metadata = { title: 'Client' }
 
-const failed = (tag: string) => (err: unknown) => { console.error(`[${tag}]`, errName(err)); return null }
-const rupees = (p: number) => (p / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })
+const rupees = (p: Paise) => toRupees(p).toLocaleString('en-IN', { maximumFractionDigits: 2 })
 
 /** A client's page (P2, mockup v2 frames 4–8, 18, 22–25). The link id only picks among the partner's own clients. */
 export default async function ClientPage({ params, searchParams }: { params: Promise<{ link: string }>; searchParams: Promise<{ tab?: string; record?: string }> }) {
@@ -49,15 +47,17 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
     ? await Promise.all([billSummary(auth).catch(failed('client.summary')), clientShares(auth).catch(failed('client.shares')), clientBills(auth, link).catch(failed('client.bills'))])
     : [[], [], []]
   const now = new Date(), today = istDayKey(now)
-  const [c] = buildClients([row], billing ?? [], shares ?? [], role, now)
+  // Built over every row, so a relinked store's book sits on one link only (its live one).
+  const c = buildClients(rows, billing ?? [], shares ?? [], role, now).find((x) => x.row.linkId === link)
   if (!c) return gone
   const ended = c.stage === 'ended'
   const words = nextWords(c, today, now)
-  const from = { person: auth.partner.name.split(' ')[0] || auth.partner.name, business: auth.partner.businessName || auth.partner.name }
+  const from = signer(auth.partner)
   const oldest = billing?.find((b) => b.tenantId === row.tenantId)?.open[0] ?? null
   const remind = owner ? remindHref(c, from, oldest, today) : null
   const { tab: t, record } = await searchParams
-  const tab = owner && t !== 'store' ? 'billing' : 'store'
+  const books = owner && c.holdsBook
+  const tab = books && t !== 'store' ? 'billing' : 'store'
   const deal = c.deal
   const nextBillDay = deal?.kind === 'retainer' && deal.renewsOn ? deal.renewsOn : today
   const fill = { label: deal?.kind === 'retainer' ? `${new Date(`${nextBillDay}T12:00:00+05:30`).toLocaleDateString('en-IN', { month: 'long', timeZone: 'Asia/Kolkata' })} retainer` : '', amount: deal ? rupees(deal.amount) : '', dueOn: nextBillDay }
@@ -74,7 +74,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
     <span>{ended && row.removedAt ? `Removed ${dayMonthIN(row.removedAt)}` : row.slug ? shopHost(row.slug) : null}</span>
     {words && <span className={c.next?.reason === 'overdue' ? 'text-danger-text' : undefined}>{words}</span>}
   </span>
-  const lastMonth = monthShortIN(new Date(monthStartIST(now).getTime() - 86_400_000))
+  const lastMonth = shareMonthLabel(now)
   const facts: [string, React.ReactNode][] = [
     ['Started', dayWords(istDayKey(row.linkedAt), today)],
     ...(row.inviteSentAt ? [['Invite sent', dayWords(istDayKey(row.inviteSentAt), today)] as [string, string]] : []),
@@ -87,7 +87,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   return (
     <>
       <PageHeader title={row.name} back={back} badges={<Badge tone={STAGE_TONE[c.stage]}>{STAGE_LABEL[c.stage]}</Badge>} meta={meta} actions={actions} />
-      {owner && <ViewTabs label={row.name} tabs={[{ href: `/partner/clients/${link}`, label: 'Your billing', current: tab === 'billing' }, { href: `/partner/clients/${link}?tab=store`, label: 'Store', current: tab === 'store' }]} />}
+      {books && <ViewTabs label={row.name} tabs={[{ href: `/partner/clients/${link}`, label: 'Your billing', current: tab === 'billing' }, { href: `/partner/clients/${link}?tab=store`, label: 'Store', current: tab === 'store' }]} />}
       {tab === 'store' ? <Section ariaLabel="Store"><Facts rows={facts} className="grid-cols-[120px_minmax(0,1fr)]" /></Section>
         : !bills || !billing ? <Panel title="We couldn’t load the bills" action={<Link href={`/partner/clients/${link}`} className={button({ variant: 'secondary', size: 'sm' })}>Try again</Link>}>Nothing was changed. Try again in a minute.</Panel>
         : (

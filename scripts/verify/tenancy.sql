@@ -3981,7 +3981,8 @@ do $$ declare r text; f text; begin
   if not has_function_privilege('frata_admin', 'admin_partner_bill_stats()', 'execute') then raise exception 'FAIL: frata_admin cannot count bills'; end if;
   foreach r in array array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role'] loop
     foreach f in array array['partner_client_bills', 'partner_client_deals', 'partner_bill_tries'] loop
-      if has_table_privilege(r, f, 'select') or has_table_privilege(r, f, 'insert') then raise exception 'FAIL: % reaches %', r, f; end if;
+      if has_table_privilege(r, f, 'select') or has_table_privilege(r, f, 'insert') or has_table_privilege(r, f, 'update')
+         or has_table_privilege(r, f, 'delete') or has_table_privilege(r, f, 'truncate') then raise exception 'FAIL: % reaches %', r, f; end if;
     end loop;
   end loop;
 end $$;

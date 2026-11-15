@@ -100,11 +100,18 @@ export default {
       await pia.getByRole('menuitem', { name: 'Delete bill' }).click()
       const d = pia.getByRole('dialog', { name: 'Delete 1 bill?' })
       await d.getByText('PT-0412 · ₹12,000. You can’t get it back.').waitFor()
-      await d.getByRole('button', { name: 'Delete bill' }).click()
+      await d.getByRole('button', { name: 'Delete 1 bill' }).click()
       await expectToast(pia, 'Bill deleted', 'ok')
       assert.equal((await db`select count(*)::int as n from partner_client_bills where partner_id = ${link.partner_id}`)[0].n, 0)
       await pia.getByRole('link', { name: 'Store' }).click()
       await pia.getByText(/20% · ₹4,584 in [A-Z][a-z]{2}/).waitFor()
+    })
+
+    await t.step('More › Edit content opens the store on Content (the switch lands only on named pages)', async () => {
+      await pia.getByRole('button', { name: 'More', exact: true }).click()
+      await pia.getByRole('menuitem', { name: 'Edit content' }).click()
+      await pia.waitForURL('**/console/content')
+      await pia.getByRole('heading', { name: 'Content', level: 1 }).waitFor()
     })
 
     await t.step('a Lead sees stages and next steps, never money', async () => {

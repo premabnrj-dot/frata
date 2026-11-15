@@ -3,7 +3,7 @@
 // The partner's private book: Frrata never sends, collects or reads it. Pure: a bill's state is derived from its due
 // day and paid time, never stored. Money is integer paise (ADR-0004); days are IST keys ("2026-11-16", day.ts).
 // =============================================================================
-import { paise, type Paise } from '@/domains/money/paise'
+import { fromRupees, paise, type Paise } from '@/domains/money/paise'
 
 export type DealKind = 'project' | 'retainer'
 export type Deal = { kind: DealKind; amount: Paise; renewsOn: string | null }
@@ -64,12 +64,22 @@ export function renewsIn(deal: Deal | null, today: string): number | null {
   return daysBetween(today, deal.renewsOn)
 }
 
-/** "Retainers ₹47,000 a month": retainer deals of clients not removed (a project is one-off; a removed client pays no more). */
-export function retainersMonthly(clients: readonly { deal: Deal | null; removed: boolean }[]): Paise {
-  return paise(clients.reduce((a, c) => a + (!c.removed && c.deal?.kind === 'retainer' ? c.deal.amount : 0), 0))
-}
-
 /** "Unpaid ₹40,500": every client's unpaid bills, removed ones too (a final bill is still owed). */
 export function unpaidTotal(summaries: readonly BillSummary[]): Paise {
   return paise(summaries.reduce((a, s) => a + s.unpaid, 0))
+}
+
+/** Rupees as a partner types them ("12,000", "₹1,00,000.50") → paise within ₹1 to ₹10 crore, or null. */
+export function parseRupees(typed: string): Paise | null {
+  const v = typed.trim().replace(/[,₹\s]/g, '')
+  if (!/^\d{1,9}(\.\d{1,2})?$/.test(v)) return null
+  const p = fromRupees(Number(v))
+  return p >= 100 && p <= MAX_BILL_PAISE ? p : null
+}
+
+/** A real calendar day "YYYY-MM-DD" from 2020 to 2100 (31 Feb is not one). */
+export function isDay(v: string): boolean {
+  if (!/^(20[2-9]\d|2100)-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(v)) return false
+  const d = new Date(`${v}T00:00:00Z`)
+  return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(v)
 }

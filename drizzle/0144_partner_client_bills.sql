@@ -46,4 +46,13 @@ ALTER TABLE "partner_client_deals" ADD CONSTRAINT "partner_client_deals_updated_
 CREATE INDEX "partner_bill_tries_user" ON "partner_bill_tries" USING btree ("user_id","at");--> statement-breakpoint
 CREATE INDEX "partner_bill_tries_at" ON "partner_bill_tries" USING btree ("at");--> statement-breakpoint
 CREATE INDEX "partner_client_bills_client" ON "partner_client_bills" USING btree ("partner_id","tenant_id","due_on");--> statement-breakpoint
-CREATE INDEX "partner_client_bills_unpaid" ON "partner_client_bills" USING btree ("partner_id","due_on") WHERE "partner_client_bills"."paid_at" is null;
+CREATE INDEX "partner_client_bills_unpaid" ON "partner_client_bills" USING btree ("partner_id","due_on") WHERE "partner_client_bills"."paid_at" is null;--> statement-breakpoint
+-- P2 Clients: a partner's own bills reach no Frrata role; the definers in 0145 are the only door (tenancy.sql § 85).
+alter table partner_client_deals enable row level security;--> statement-breakpoint
+alter table partner_client_bills enable row level security;--> statement-breakpoint
+alter table partner_bill_tries enable row level security;--> statement-breakpoint
+revoke all on partner_client_deals, partner_client_bills, partner_bill_tries
+  from public, anon, authenticated, service_role, frata_app, frata_admin, frata_builder;--> statement-breakpoint
+create policy definer_only on partner_client_deals as restrictive for all to public using (false) with check (false);--> statement-breakpoint
+create policy definer_only on partner_client_bills as restrictive for all to public using (false) with check (false);--> statement-breakpoint
+create policy definer_only on partner_bill_tries as restrictive for all to public using (false) with check (false);

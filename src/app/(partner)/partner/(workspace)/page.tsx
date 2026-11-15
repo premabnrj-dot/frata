@@ -15,16 +15,13 @@ import { partnerCan } from '@/domains/partners/team'
 import { shareTotal } from '@/domains/partners/share'
 import { unpaidTotal } from '@/domains/partners/bills'
 import { istDayKey } from '@/domains/time/day'
-import { monthStartIST } from '@/domains/time/month'
 import { switchStoreAction } from '@/app/choose/actions'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { partnerClients } from '@/lib/db/partners'
 import { billSummary, clientShares } from '@/lib/db/partner-bills'
-import { monthShortIN } from '@/lib/format-date'
 import { shopHost } from '@/lib/public-env'
-import { errName } from '@/lib/log'
 import { HandOver } from './hand-over'
-import { buildClients, byWho, nextWords, remindHref, STAGE_TONE, type Client } from './_components/clients'
+import { buildClients, byWho, failed, nextWords, remindHref, shareMonthLabel, signer, STAGE_TONE, type Client } from './_components/clients'
 
 export const metadata = { title: 'Clients' }
 
@@ -33,7 +30,6 @@ const VIEWS_FROM = 9
 const VIEWS = [['needs', 'Needs you'], ['waiting', 'Waiting on the client'], ['all', 'All']] as const
 type View = (typeof VIEWS)[number][0]
 
-const failed = (tag: string) => (err: unknown) => { console.error(`[${tag}]`, errName(err)); return null }
 
 /** Partner workspace › Clients (P2, mockup v2 https://claude.ai/artifact/5ieqhb31Prax22Xe2UTtPX). */
 export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ view?: string; q?: string; handover?: string }> }) {
@@ -71,13 +67,13 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     .sort(many && view === 'all' ? (a, b) => Number(a.stage === 'ended') - Number(b.stage === 'ended') || a.row.name.localeCompare(b.row.name, 'en-IN', { numeric: true }) : byWho)
   const unpaid = owner ? unpaidTotal(clients.flatMap((c) => (c.bills ? [c.bills] : []))) : paise(0)
   const share = owner ? shareTotal(clients.map((c) => c.share ?? { kind: 'none' as const })) : paise(0)
-  const lastMonth = monthShortIN(new Date(monthStartIST(now).getTime() - 86_400_000))
+  const lastMonth = shareMonthLabel(now)
   const meta = owner && (unpaid > 0 || share > 0) ? (
     <span className="flex flex-wrap gap-x-3.5">
       {unpaid > 0 && <span>Unpaid <Money paise={unpaid} className="text-danger-text" /></span>}
       {share > 0 && <span>Your share <Money paise={share} decimals={share % 100 !== 0} className="text-foreground" /> in {lastMonth}</span>}
     </span>) : undefined
-  const from = { person: auth.partner.name.split(' ')[0] || auth.partner.name, business: auth.partner.businessName || auth.partner.name }
+  const from = signer(auth.partner)
   const tabs = VIEWS.filter(([k]) => k !== 'needs' || counts.needs > 0 || view === 'needs')
     .map(([k, label]) => ({ href: k === 'all' && !counts.needs ? '/partner' : `/partner?view=${k}`, label, count: counts[k], current: k === view }))
   const builder = role === 'builder'

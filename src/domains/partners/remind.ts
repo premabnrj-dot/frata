@@ -5,10 +5,10 @@
 // capped (security review 2026-11-16). The link itself is `waText` in settings/whatsapp.ts. Pure.
 // =============================================================================
 
-/** Strips control characters and the bidi overrides and isolates (U+202A–202E, U+2066–2069), trims, caps. */
+/** Strips control characters and the bidi overrides and isolates (U+202A–202E, U+2066–2069), and the zero-width and direction marks (U+200B–200F, U+061C, U+FEFF), trims, caps. */
 export function clean(s: string, max = 60): string {
   // eslint-disable-next-line no-control-regex
-  return s.replace(/[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩‎‏]/g, '').replace(/\s+/g, ' ').trim().slice(0, max)
+  return s.replace(/[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩​-‏؜﻿]/g, '').replace(/\s+/g, ' ').trim().slice(0, max)
 }
 
 export type RemindAbout =

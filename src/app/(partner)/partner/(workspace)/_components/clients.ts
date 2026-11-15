@@ -10,6 +10,10 @@ import type { PartnerRole } from '@/domains/partners/team'
 import type { ClientRow } from '@/lib/db/partners'
 import type { ClientBilling, ClientShare } from '@/lib/db/partner-bills'
 import { formatInr } from '@/lib/format'
+import { errName } from '@/lib/log'
+import { monthStartIST } from '@/domains/time/month'
+import { monthShortIN } from '@/lib/format-date'
+import type { MyPartner } from '@/lib/db/partners'
 import { dayIN, dayMonthIN } from '@/lib/format-date'
 
 // =============================================================================
@@ -23,7 +27,9 @@ export const STAGE_TONE: Record<ClientStage, 'neutral' | 'warn' | 'ok'> = { buil
 
 export type Client = {
   row: ClientRow; stage: ClientStage; next: ClientNext | null
-  deal: Deal | null; bills: BillSummary | null; billCount: number
+  deal: Deal | null; bills: BillSummary | null
+  /** The store's book is shown on one row: its live link, else its latest (a store relinked to this partner has two). */
+  holdsBook: boolean
   share: ShareFigure | null; shareBps: number | null; shareEnds: Date | null; shareStarted: boolean
 }
 
@@ -37,16 +43,20 @@ export function buildClients(rows: ClientRow[], billing: ClientBilling[], shares
   const today = istDayKey(now)
   const byTenant = new Map(billing.map((b) => [b.tenantId, b]))
   const byLink = new Map(shares.map((s) => [s.linkId, s]))
+  // One row per store holds the partner's book (deals and bills are keyed by store, rows by link): never count it twice.
+  const book = new Map<string, ClientRow>()
+  for (const r of rows) { const b = book.get(r.tenantId); if (!b || (b.removedAt && (!r.removedAt || r.linkedAt > b.linkedAt))) book.set(r.tenantId, r) }
   return rows.map((row) => {
+    const holdsBook = book.get(row.tenantId) === row
     const stage = clientStage({ removedAt: row.removedAt, openInviteExpiresAt: row.inviteExpiresAt, hasOwner: row.hasOwner, firstOpenedAt: row.firstOpenedAt }, now)
-    const b = role === 'owner' ? byTenant.get(row.tenantId) : undefined
+    const b = role === 'owner' && holdsBook ? byTenant.get(row.tenantId) : undefined
     const bills = b ? summarise(b.open, today) : null
     const deal = b?.deal ?? null
     const next = clientNext({ stage, bills, deal, ownerSince: row.ownerSince ? istDayKey(row.ownerSince) : null, inviteSentOn: row.inviteSentAt ? istDayKey(row.inviteSentAt) : null }, role, today)
     const s = byLink.get(row.linkId)
     const w = row.shareMonths !== null && row.noticeDays !== null ? shareWindow({ shareMonths: row.shareMonths, noticeDays: row.noticeDays }, row.firstOpenedAt, row.removedAt) : null
     return {
-      row, stage, next, deal, bills, billCount: b?.bills ?? 0,
+      row, stage, next, deal, bills, holdsBook,
       share: role === 'owner' ? monthShare(s?.month ?? null, s?.bps ?? 0) : null, shareBps: s?.bps ?? null,
       shareEnds: w && w !== 'not_started' ? w.endsAt : null, shareStarted: !!w && w !== 'not_started',
     }
@@ -68,7 +78,7 @@ export function nextWords(c: Client, today: string, now: Date): string {
 }
 
 /** Who acts first: you, then the client, then nobody; removed last. The list's order below 9 clients. */
-export const WHO_ORDER = { you: 0, client: 1, nobody: 2 } as const
+const WHO_ORDER = { you: 0, client: 1, nobody: 2 } as const
 export function byWho(a: Client, b: Client): number {
   const ka = a.stage === 'ended' && a.next?.who !== 'you' ? 3 : WHO_ORDER[a.next?.who ?? 'nobody']
   const kb = b.stage === 'ended' && b.next?.who !== 'you' ? 3 : WHO_ORDER[b.next?.who ?? 'nobody']
@@ -83,3 +93,12 @@ export function remindHref(c: Client, from: { person: string; business: string }
   }
   return waText(remindText({ kind: c.next.reason === 'invited' ? 'invite' : 'open' }, c.row.name, from))
 }
+
+/** A read that failed: logged by name only (S10), and null so the page shows its couldn't-load panel. */
+export const failed = (tag: string) => (err: unknown) => { console.error(`[${tag}]`, errName(err)); return null }
+
+/** Who a Remind is signed by: the person's first name and the partner's business. */
+export const signer = (p: MyPartner) => ({ person: p.name.split(' ')[0] || p.name, business: p.businessName || p.name })
+
+/** "Oct": the share's month, the IST month before `now`. */
+export const shareMonthLabel = (now: Date) => monthShortIN(new Date(monthStartIST(now).getTime() - 86_400_000))

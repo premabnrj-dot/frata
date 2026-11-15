@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { paise } from '@/domains/money/paise'
-import { billState, retainersMonthly, summarise, unpaidTotal, type Deal } from '../bills'
+import { billState, isDay, parseRupees, summarise, unpaidTotal, type Deal } from '../bills'
 import { clientNext, type NextFacts } from '../next'
 import { monthShare, shareOf, shareTotal, type ShareMonth } from '../share'
 import { clean, remindText } from '../remind'
@@ -32,11 +32,19 @@ describe('summarise and totals', () => {
     expect(s.dueSoon).toBe(2_250_000)
     expect(s.nextDueOn).toBe('2026-11-20')
   })
-  it('counts retainers of clients still linked, and every unpaid bill', () => {
-    const r: Deal = { kind: 'retainer', amount: p(1_200_000), renewsOn: null }
-    const pr: Deal = { kind: 'project', amount: p(6_000_000), renewsOn: null }
-    expect(retainersMonthly([{ deal: r, removed: false }, { deal: r, removed: true }, { deal: pr, removed: false }, { deal: null, removed: false }])).toBe(1_200_000)
+  it('totals every unpaid bill', () => {
     expect(unpaidTotal([s, s])).toBe(8_100_200)
+  })
+  it('reads typed rupees and days', () => {
+    expect(parseRupees('12,000')).toBe(1_200_000)
+    expect(parseRupees('₹1,00,000.50')).toBe(10_000_050)
+    expect(parseRupees('0.99')).toBeNull()
+    expect(parseRupees('1')).toBe(100)
+    expect(parseRupees('100000001')).toBeNull() // over ₹10 crore
+    expect(parseRupees('12k')).toBeNull()
+    expect(isDay('2026-02-28')).toBe(true)
+    expect(isDay('2026-02-31')).toBe(false)
+    expect(isDay('2019-12-31')).toBe(false)
   })
 })
 

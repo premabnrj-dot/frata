@@ -99,7 +99,7 @@ export default {
       await lead.getByRole('heading', { name: 'You’re in' }).waitFor()
       await lead.screenshot({ path: t.out('youre-in') })
       await lead.getByRole('button', { name: 'Open your clients' }).click()
-      await lead.getByRole('region', { name: 'Client stores' }).getByText('Amber Looms', { exact: true }).waitFor()
+      await lead.getByRole('table', { name: 'Clients' }).getByText('Amber Looms', { exact: true }).waitFor()
       assert.equal((await db`select count(*)::int n from partner_passkeys k join partner_members pm on pm.id = k.partner_member_id where pm.user_id = ${L.id}`)[0].n, 1)
       assert.equal((await db`select count(*)::int n from staff_notices where kind = 'partner_passkey_added' and about = ${L.email}`)[0].n >= 1, true, 'the owner and the lead are emailed')
       assert.equal(await lead.getByText('Basil Prints').count(), 0, 'a lead sees only the stores given')
@@ -136,7 +136,7 @@ export default {
       await row.getByRole('button', { name: 'Basil Prints' }).click()
       await expectToast(pia, 'Added to Basil Prints.', 'ok')
       await lead.goto(CONSOLE + '/partner')
-      await lead.getByRole('region', { name: 'Client stores' }).getByText('Basil Prints', { exact: true }).waitFor()
+      await lead.getByRole('table', { name: 'Clients' }).getByText('Basil Prints', { exact: true }).waitFor()
       // A lost phone: every passkey goes and the lead is signed out of the workspace and the stores.
       await row.getByRole('button', { name: 'Delete passkeys' }).click()
       await pia.getByRole('dialog').getByRole('button', { name: /^Delete (passkey|\d+ passkeys)$/ }).click()
@@ -174,7 +174,7 @@ export default {
       await meera.getByRole('button', { name: 'Reinstate' }).click()
       await expectToast(meera, 'Reinstated.', 'ok')
       await pia.goto(CONSOLE + '/partner')
-      await pia.getByRole('region', { name: 'Client stores' }).getByText('Amber Looms', { exact: true }).waitFor()
+      await pia.getByRole('table', { name: 'Clients' }).getByText('Amber Looms', { exact: true }).waitFor()
     })
 
     await t.step('signed out: the partner sign-in, back to the same page; sign-out lands there too', async () => {

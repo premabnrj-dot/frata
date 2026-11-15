@@ -60,7 +60,7 @@ export function BillMore({ linkId, billId, name, amount, paid }: { linkId: strin
     <>
       <Menu label={`More for ${name}`} variant="ghost" size="sm" icon={<MoreHorizontal aria-hidden="true" className="size-4" />}
         items={[...(paid ? [{ label: 'Mark unpaid', onSelect: unpaid }] : []), { label: 'Delete bill', danger: true, onSelect: () => { setError(null); setAsk(true) } }]} />
-      <ConfirmDelete open={ask} count={1} noun={['bill', 'bills']} consequence={`${name} · ${amount}. You can’t get it back.`} keep="Keep the bill" verb="Delete bill"
+      <ConfirmDelete open={ask} count={1} noun={['bill', 'bills']} consequence={`${name} · ${amount}. You can’t get it back.`} keep="Keep the bill"
         onConfirm={remove} onClose={() => setAsk(false)} error={error} busy={busy} />
     </>
   )

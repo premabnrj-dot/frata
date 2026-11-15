@@ -8,14 +8,7 @@
 -- Proof: scripts/verify/tenancy.sql § 85.
 -- =============================================================================
 
-alter table partner_client_deals enable row level security;--> statement-breakpoint
-alter table partner_client_bills enable row level security;--> statement-breakpoint
-alter table partner_bill_tries enable row level security;--> statement-breakpoint
-revoke all on partner_client_deals, partner_client_bills, partner_bill_tries
-  from public, anon, authenticated, service_role, frata_app, frata_admin, frata_builder;--> statement-breakpoint
-create policy definer_only on partner_client_deals as restrictive for all to public using (false) with check (false);--> statement-breakpoint
-create policy definer_only on partner_client_bills as restrictive for all to public using (false) with check (false);--> statement-breakpoint
-create policy definer_only on partner_bill_tries as restrictive for all to public using (false) with check (false);--> statement-breakpoint
+-- The tables' locks (RLS, revokes, definer_only policies) ship with the tables in 0144.
 
 -- ── Clients: as 0131, plus the link's id (a client page's key: a store relinked to the same partner has two rows),
 --    the owner's join and the invite's day (the next step's "Waiting N days"). Both new columns are null for a Builder
@@ -80,8 +73,9 @@ begin
   select x.* into me from public.app_pm_live(p_uid) x where x.role = 'owner';
   if me.member_id is null then return; end if;
   perform public.app_partner_need(p_uid, p_session, p_stepup, false);
+  -- One link a store: a store that left and came back to this partner counts its month once (the latest opening).
   return query
-  select l.id, l.share_bps, f.issued_at, f.number is not null, f.total,
+  select distinct on (l.tenant_id) l.id, l.share_bps, f.issued_at, f.number is not null, f.total,
     coalesce((select sum(p.amount) from public.frrata_payments p where p.tenant_id = f.tenant_id and p.invoice_id = f.id and p.captured_at is not null), 0)::bigint,
     coalesce((select sum(c.total) from public.frrata_credit_notes c where c.tenant_id = f.tenant_id and c.invoice_id = f.id and not c.test_mode), 0)::bigint,
     (f.taxable - coalesce((select sum(c.taxable) from public.frrata_credit_notes c where c.tenant_id = f.tenant_id and c.invoice_id = f.id and not c.test_mode), 0))::bigint
@@ -93,12 +87,13 @@ begin
   where l.partner_id = me.partner_id
     and l.share_starts_at is not null and (l.removed_at is null or l.removed_at >= l.share_starts_at)
     and f.period_end > w.starts_at and f.period_start < w.ends_at
-    and f.issued_at is not null and not f.test_mode and not f.rolled;
+    and f.issued_at is not null and not f.test_mode and not f.rolled
+  order by l.tenant_id, l.share_starts_at desc;
 end $$;
 --> statement-breakpoint
 
--- ── The list's billing facts (owner only): every deal, and every UNPAID bill (amount and due day; at most 100 a
---    client, oldest due first). Paid bills and labels stay on the client's page. ──
+-- ── The list's billing facts (owner only): every deal, and every UNPAID bill (amount and due day; at most 500 a
+--    client, the most a client holds, oldest due first). Paid bills and labels stay on the client's page. ──
 create or replace function app_partner_bill_summary(p_uid uuid, p_session uuid, p_stepup text) returns table (
   tenant_id uuid, kind text, amount bigint, renews_on date, open_bills jsonb, bills integer)
   language plpgsql stable security definer set search_path = '' as $$
@@ -114,7 +109,7 @@ begin
     coalesce((select jsonb_agg(jsonb_build_array(o.amount, o.due_on) order by o.due_on)
                 from (select b.amount, b.due_on from public.partner_client_bills b
                        where b.partner_id = me.partner_id and b.tenant_id = t.tenant_id and b.paid_at is null
-                       order by b.due_on limit 100) o), '[]'::jsonb),
+                       order by b.due_on limit 500) o), '[]'::jsonb),
     (select count(*)::integer from public.partner_client_bills b where b.partner_id = me.partner_id and b.tenant_id = t.tenant_id)
   from t left join public.partner_client_deals d on d.partner_id = me.partner_id and d.tenant_id = t.tenant_id;
 end $$;
@@ -149,6 +144,7 @@ begin
   select x.* into me from public.app_pm_live(p_uid) x where x.role = 'owner';
   if me.member_id is null then raise exception 'not_owner' using errcode = 'P0001'; end if;
   perform public.app_partner_need(p_uid, p_session, p_stepup, false);
+  perform pg_advisory_xact_lock(hashtextextended(p_uid::text || ':bill-try', 0));
   delete from public.partner_bill_tries where at < now() - interval '1 minute';
   if (select count(*) from public.partner_bill_tries t where t.user_id = p_uid and t.at > now() - interval '1 minute') >= 60 then
     raise exception 'too_many' using errcode = 'P0001';

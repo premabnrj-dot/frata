@@ -7,7 +7,7 @@
 // Statements (Phase 6) read this same rule. Pure.
 // =============================================================================
 import { invoiceState } from '@/domains/billing/status'
-import { paise, type Paise } from '@/domains/money/paise'
+import { applyBpsFloor, paise, type Paise } from '@/domains/money/paise'
 
 /** The month's invoice as the shares definer returns it: only what `invoiceState` takes, and the net taxable. */
 export type ShareMonth = { issuedAt: Date | null; hasNumber: boolean; total: number; paid: number; credited: number; netTaxable: number }
@@ -16,7 +16,7 @@ export type ShareFigure = { kind: 'paid'; amount: Paise } | { kind: 'due' } | { 
 
 /** The share of a net taxable value at the link's own rate, floored to the paisa (never more than Frrata collected). */
 export function shareOf(netTaxable: number, bps: number): Paise {
-  return paise(Math.floor((Math.max(0, netTaxable) * bps) / 10_000))
+  return applyBpsFloor(paise(netTaxable), bps)
 }
 
 /** One month's figure: paid → its share; due → "Due" (left out of totals); closed, credited, draft or none → nothing. */

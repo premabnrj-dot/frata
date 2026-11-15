@@ -6,8 +6,8 @@ import { requirePartner } from '@/lib/auth/require-partner'
 import { addBill, deleteBill, markBill, setDeal, type BillError } from '@/lib/db/partner-bills'
 import { partnerCan } from '@/domains/partners/team'
 import { CONFIRM_AGAIN, CONFIRM_FIRST } from '@/domains/partners/passkeys'
-import { MAX_BILL_PAISE, MAX_BILLS_PER_CLIENT } from '@/domains/partners/bills'
-import { fromRupees, paise } from '@/domains/money/paise'
+import { isDay, MAX_BILLS_PER_CLIENT, parseRupees } from '@/domains/partners/bills'
+import { paise } from '@/domains/money/paise'
 import { formatInr } from '@/lib/format'
 
 // =============================================================================
@@ -30,9 +30,8 @@ const SENTENCES: Record<BillError, string> = {
 
 export type BillResult = { ok: true; text: string } | { ok: false; error?: string; fields?: Partial<Record<'label' | 'number' | 'amount' | 'dueOn', string>> }
 
-const Rupees = z.string().trim().transform((v) => v.replace(/[,₹\s]/g, '')).pipe(z.string().regex(/^\d{1,9}(\.\d{1,2})?$/))
-  .transform((v) => fromRupees(Number(v)) as number).pipe(z.number().int().min(100).max(MAX_BILL_PAISE))
-const Day = z.string().regex(/^(20[2-9]\d|2100)-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/).refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().startsWith(v))
+const Rupees = z.string().max(20).transform((v, ctx) => { const p = parseRupees(v); if (p === null) { ctx.addIssue({ code: 'custom', message: 'amount' }); return z.NEVER } return p as number })
+const Day = z.string().refine(isDay)
 const Id = z.uuid()
 
 async function owner() {
