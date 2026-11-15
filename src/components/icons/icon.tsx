@@ -64,6 +64,8 @@ const ICONS = {
   partners: ['M3 20c.8-3.3 3-5 5.5-5s4.7 1.7 5.5 5 M8.5 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M15 12.5a2.7 2.7 0 1 0 0-5.4 M16.5 15c2 .4 3.6 2 4.5 5'],
   // Your details: a card with a person on it.
   details: ['M3 5h18v14H3z M13.5 10h4.5 M13.5 13.5h3', 'M8 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M5 16.5c.6-1.6 1.7-2.5 3-2.5s2.4.9 3 2.5'],
+  // Storefront API (Admin, SA1b): code brackets, the slash the tinge.
+  code: ['M8 8l-4 4 4 4 M16 8l4 4-4 4', 'M13.5 6l-3 12'],
   // Passkeys (partner sign-in, T1b): a key.
   key: ['M8 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M12 12h9 M18 12v3 M21 12v2'],
   up: ['M12 19V5', 'M6 11l6-6 6 6'],

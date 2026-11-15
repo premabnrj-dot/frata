@@ -62,6 +62,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const themesItem: NavItem = { href: '/admin/themes', label: 'Themes', icon: 'themes' }
   const offersItem: NavItem = { href: '/admin/offers', label: 'Offers', icon: 'offers' }
   const partnersItem: NavItem = { href: '/admin/partners', label: 'Partners', icon: 'partners' }
+  const apiItem: NavItem = { href: '/admin/storefront-api', label: 'Storefront API', icon: 'code' }
   const namesItem: NavItem = { href: '/admin/names', label: 'Names', icon: 'address' }
   const trialsItem: NavItem = { href: '/admin/trials', label: 'Trials', icon: 'activity' }
   const noticesItem: NavItem = { href: '/admin/notices', label: 'Notices', icon: 'bell' }
@@ -71,7 +72,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const infraItem: NavItem = { href: '/admin/infrastructure', label: 'Infrastructure', icon: 'risk' }
   const foot: NavItem[] = ownStore ? [{ href: '/console', label: `${ownStore} console`, icon: 'external' }] : []
   return (
-    <AppShell rail={railFrom((await cookies()).get('rail')?.value)} ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, trialsItem, partnersItem, plans, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem] }, { label: 'Frrata', items: [noticesItem, emailItem, infraItem, staffItem, activity] }]}
+    <AppShell rail={railFrom((await cookies()).get('rail')?.value)} ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, trialsItem, partnersItem, apiItem, plans, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem] }, { label: 'Frrata', items: [noticesItem, emailItem, infraItem, staffItem, activity] }]}
       tabs={[merchants, plans, staffItem]} more={[trialsItem, partnersItem, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem, noticesItem, emailItem, infraItem, activity]} foot={foot} email={staff.email}>
       {children}
     </AppShell>
