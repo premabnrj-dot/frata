@@ -47,6 +47,9 @@ create trigger partner_members_role_sync after update of role on partner_members
 --> statement-breakpoint
 revoke all on function app_members_partner_role(), app_partner_members_role_sync() from public, anon, authenticated, service_role;
 --> statement-breakpoint
+-- Every existing partner person's row passes through the trigger once (tenancy audit: a hand-made row is derived now).
+update members set partner_member_id = partner_member_id where partner_member_id is not null;
+--> statement-breakpoint
 -- No app code updates members (grep 2026-11-15); a role moves only through the definers above.
 revoke update on members from frata_app;
 --> statement-breakpoint

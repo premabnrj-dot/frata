@@ -39,11 +39,10 @@ export default async function PeoplePage() {
           // each person, not only the partner). A Builder (T1c) the same, with what it reaches in an (i). Removing the
           // partner ends every one of them.
           const person = (p.role === 'partner' && p.partnerRole === 'lead') || p.role === 'builder'
-          const lead = person
           // A partner Frrata paused has no access; it is listed so the owner can still remove it (admin_end_partner's notice).
           const role = p.partnerPaused ? { label: 'Partner · Paused', tone: 'warn' as const }
             : p.role === 'builder' ? { label: `Partner · ${BUILDER_LABEL}`, tone: 'info' as const }
-            : { label: lead ? 'Partner · Lead' : ROLE_LABEL[p.role as MemberRole] ?? p.role, tone: p.role === 'partner' ? 'info' as const : 'neutral' as const }
+            : { label: person ? 'Partner · Lead' : ROLE_LABEL[p.role as MemberRole] ?? p.role, tone: p.role === 'partner' ? 'info' as const : 'neutral' as const }
           const you = p.userId === auth.userId
           return (
             <li key={p.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
@@ -55,8 +54,8 @@ export default async function PeoplePage() {
                 <Badge tone={role.tone}>{role.label}</Badge>
                 {p.role === 'builder' && <InfoTip about={`Partner · ${BUILDER_LABEL}`}>Sees products and the store preview. No orders, shoppers or costs.</InfoTip>}
               </span>
-              <span className="w-40 text-sm text-muted-foreground">{you ? 'You' : p.partnerPaused ? 'Paused by Frrata' : lead ? `Since ${dayIN(p.since)}` : p.role === 'partner' ? `Built this store · ${dayIN(p.since)}` : `Since ${dayIN(p.since)}`}</span>
-              {p.role === 'partner' && !lead && canRemove && <RemovePartner name={p.partnerName ?? 'the partner'} shop={auth.membership.tenantName} />}
+              <span className="w-40 text-sm text-muted-foreground">{you ? 'You' : p.partnerPaused ? 'Paused by Frrata' : person ? `Since ${dayIN(p.since)}` : p.role === 'partner' ? `Built this store · ${dayIN(p.since)}` : `Since ${dayIN(p.since)}`}</span>
+              {p.role === 'partner' && !person && canRemove && <RemovePartner name={p.partnerName ?? 'the partner'} shop={auth.membership.tenantName} />}
             </li>
           )
         })}

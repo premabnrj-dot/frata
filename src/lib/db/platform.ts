@@ -1,4 +1,5 @@
 import 'server-only'
+import { MEMBER_ROLES } from '@/domains/tenancy/roles'
 import { sql } from 'drizzle-orm'
 import { db, withFreshPool } from './index'
 import type { ClaimKey } from '@/lib/trials/claims'
@@ -68,7 +69,7 @@ export async function accessFor(userId: string, sessionId: string | null = null,
   // refusal is structural, never a branch in each page).
   return { staffRole: a?.staffRole ?? null, staffConfirmedAt: a?.staffConfirmedAt ?? null, partnerConfirmedAt: a?.partnerConfirmedAt ?? null,
     partnerHeld: a?.partnerHeld ?? [],
-    memberships: all.filter((m) => m.role !== 'builder') as Membership[],
+    memberships: all.filter((m) => (MEMBER_ROLES as readonly string[]).includes(m.role)) as Membership[],
     builds: all.filter((m) => m.role === 'builder' && !m.supportSessionId).map((m) => ({ tenantId: m.tenantId, tenantName: m.tenantName })) }
 }
 

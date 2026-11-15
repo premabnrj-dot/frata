@@ -52,46 +52,44 @@ export async function listProductsWith(tx: Tx, tenantId: string, query: ListQuer
   const stockSum = sql<number>`(select coalesce(sum(v.stock), 0)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`
   const order = query.sort === 'name' ? [asc(sql`lower(${products.title})`), asc(products.id)]
     : query.sort === 'stock' ? [asc(stockSum), desc(products.updatedAt), asc(products.id)] : [desc(products.updatedAt), asc(products.id)]
-  {
-    // Speed review 2026-11-13: the stock sort with a term crossed the JIT threshold (~80 ms compiling for a 50-row page);
-    // off for this transaction only.
-    await tx.execute(sql`select set_config('jit', 'off', true)`)
-    // The page's ids first, then the per-row facts for those 50 only: an OFFSET over the full select worked out every
-    // skipped row's subqueries (page 100: 286 ms → 6 ms).
-    const page = await tx.select({ id: products.id }).from(products).where(where).orderBy(...order).limit(PRODUCTS_PAGE).offset((query.page - 1) * PRODUCTS_PAGE)
-    const ids = page.map((r) => r.id)
-    const [found, [n], counts, [low]] = await Promise.all([
-      ids.length ? tx.select({
-        id: products.id, title: products.title, handle: products.handle, status: products.status, publishAt: products.publishAt, publishedAt: products.publishedAt, updatedAt: products.updatedAt,
-        typeName: productTypes.name, options: products.options, optionValues: products.optionValues,
-        variantCount: sql<number>`(select count(*)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
-        stock: stockSum,
-        minPrice: sql<number | null>`(select min(v.price)::bigint from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price > 0)`,
-        maxPrice: sql<number | null>`(select max(v.price)::bigint from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price > 0)`,
-        unpriced: sql<number>`(select count(*)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price <= 0)`,
-        offers: sql<VariantFacts[]>`(select coalesce(json_agg(json_build_object(
-          'stock', v.stock, 'whenOut', v.when_out, 'shipsBy', v.ships_by, 'leadMinDays', v.lead_min_days, 'leadMaxDays', v.lead_max_days, 'preorderCap', v.preorder_cap)), '[]'::json)
-          from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
-        swatches: sql<string[]>`(select coalesce(array_agg(c.hex order by c.value), '{}') from (select hex, value from ${productColours} c
-          where c.product_id = "products"."id" and c.tenant_id = ${tenantId} and c.hex is not null order by c.value limit 6) c)`,
-        cover: sql<{ base: string; widths: number[] } | null>`(select json_build_object('base', i.base, 'widths', i.widths) from ${productImages} i where i.product_id = "products"."id" and i.tenant_id = ${tenantId} order by i.position limit 1)`,
-      })
-        .from(products)
-        .leftJoin(productTypes, and(eq(productTypes.id, products.typeId), eq(productTypes.tenantId, tenantId)))
-        .where(and(eq(products.tenantId, tenantId), sql`${products.id} = any(${arrayParam(ids, 'uuid')})`)) : Promise.resolve([]),
-      tx.select({ n: count() }).from(products).where(where),
-      tx.select({ status: products.status, n: count() }).from(products).where(eq(products.tenantId, tenantId)).groupBy(products.status),
-      tx.select({ n: count() }).from(products).where(and(eq(products.tenantId, tenantId), sql`${products.status} <> 'archived'`, lowStock(tenantId))),
-    ])
-    const at = new Map(ids.map((id, i) => [id, i]))
-    const rows = [...found].sort((a, b) => at.get(a.id)! - at.get(b.id)!)
-    const by = Object.fromEntries(counts.map((r) => [r.status, r.n])) as Record<string, number>
-    const all = Object.values(by).reduce((a, b) => a + b, 0)
-    return {
-      total: n?.n ?? 0,
-      counts: { all: all - (by.archived ?? 0), active: by.active ?? 0, draft: by.draft ?? 0, unlisted: by.unlisted ?? 0, archived: by.archived ?? 0, low: low?.n ?? 0, any: all },
-      rows: rows.map((r) => ({ ...r, minPrice: r.minPrice === null ? null : Number(r.minPrice), maxPrice: r.maxPrice === null ? null : Number(r.maxPrice) })),
-    }
+  // Speed review 2026-11-13: the stock sort with a term crossed the JIT threshold (~80 ms compiling for a 50-row page);
+  // off for this transaction only.
+  await tx.execute(sql`select set_config('jit', 'off', true)`)
+  // The page's ids first, then the per-row facts for those 50 only: an OFFSET over the full select worked out every
+  // skipped row's subqueries (page 100: 286 ms → 6 ms).
+  const page = await tx.select({ id: products.id }).from(products).where(where).orderBy(...order).limit(PRODUCTS_PAGE).offset((query.page - 1) * PRODUCTS_PAGE)
+  const ids = page.map((r) => r.id)
+  const [found, [n], counts, [low]] = await Promise.all([
+    ids.length ? tx.select({
+      id: products.id, title: products.title, handle: products.handle, status: products.status, publishAt: products.publishAt, publishedAt: products.publishedAt, updatedAt: products.updatedAt,
+      typeName: productTypes.name, options: products.options, optionValues: products.optionValues,
+      variantCount: sql<number>`(select count(*)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
+      stock: stockSum,
+      minPrice: sql<number | null>`(select min(v.price)::bigint from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price > 0)`,
+      maxPrice: sql<number | null>`(select max(v.price)::bigint from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price > 0)`,
+      unpriced: sql<number>`(select count(*)::int from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null and v.price <= 0)`,
+      offers: sql<VariantFacts[]>`(select coalesce(json_agg(json_build_object(
+        'stock', v.stock, 'whenOut', v.when_out, 'shipsBy', v.ships_by, 'leadMinDays', v.lead_min_days, 'leadMaxDays', v.lead_max_days, 'preorderCap', v.preorder_cap)), '[]'::json)
+        from ${variants} v where v.product_id = "products"."id" and v.tenant_id = ${tenantId} and v.archived_at is null)`,
+      swatches: sql<string[]>`(select coalesce(array_agg(c.hex order by c.value), '{}') from (select hex, value from ${productColours} c
+        where c.product_id = "products"."id" and c.tenant_id = ${tenantId} and c.hex is not null order by c.value limit 6) c)`,
+      cover: sql<{ base: string; widths: number[] } | null>`(select json_build_object('base', i.base, 'widths', i.widths) from ${productImages} i where i.product_id = "products"."id" and i.tenant_id = ${tenantId} order by i.position limit 1)`,
+    })
+      .from(products)
+      .leftJoin(productTypes, and(eq(productTypes.id, products.typeId), eq(productTypes.tenantId, tenantId)))
+      .where(and(eq(products.tenantId, tenantId), sql`${products.id} = any(${arrayParam(ids, 'uuid')})`)) : Promise.resolve([]),
+    tx.select({ n: count() }).from(products).where(where),
+    tx.select({ status: products.status, n: count() }).from(products).where(eq(products.tenantId, tenantId)).groupBy(products.status),
+    tx.select({ n: count() }).from(products).where(and(eq(products.tenantId, tenantId), sql`${products.status} <> 'archived'`, lowStock(tenantId))),
+  ])
+  const at = new Map(ids.map((id, i) => [id, i]))
+  const rows = [...found].sort((a, b) => at.get(a.id)! - at.get(b.id)!)
+  const by = Object.fromEntries(counts.map((r) => [r.status, r.n])) as Record<string, number>
+  const all = Object.values(by).reduce((a, b) => a + b, 0)
+  return {
+    total: n?.n ?? 0,
+    counts: { all: all - (by.archived ?? 0), active: by.active ?? 0, draft: by.draft ?? 0, unlisted: by.unlisted ?? 0, archived: by.archived ?? 0, low: low?.n ?? 0, any: all },
+    rows: rows.map((r) => ({ ...r, minPrice: r.minPrice === null ? null : Number(r.minPrice), maxPrice: r.maxPrice === null ? null : Number(r.maxPrice) })),
   }
 }
 

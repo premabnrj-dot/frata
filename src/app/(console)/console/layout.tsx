@@ -57,7 +57,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   // below is read for it. Everyone else as before: the accountant sees GST only; every page still checks its own roles.
   const cap = await requireCapability('console.open')
   if (cap.ok && cap.kind === 'builder') {
-    return <BuilderShell store={cap.store} email={cap.email} all={cap.all} builds={cap.builds} rail={railFrom((await cookies()).get('rail')?.value)}>{children}</BuilderShell>
+    return <BuilderShell nav={cap.nav} email={cap.email} rail={railFrom((await cookies()).get('rail')?.value)}>{children}</BuilderShell>
   }
   const auth = await requireMember(CONSOLE_ROLES)
   if (!auth.ok && auth.reason === 'not_configured') {

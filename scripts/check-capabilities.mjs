@@ -5,7 +5,8 @@
 // ADR-0015 guardrails that a grep can hold (T1c, plan docs/plans/2026-11-15-t1c-builders.md § Tasks 5). A partner's
 // Builder never sees orders, shoppers or costs; these keep the code shaped so it can't:
 //   doors      requireCapability( only in the files of scripts/builder-doors.json (and its own module, tests)
-//   actor      the Actor's maker (builderActor) only in require-capability.ts; the one unwrap (previewTenantOf) only in
+//   actor      the Actor's maker (builderActor) only in require-capability.ts; withActor only in builder queries; navOf
+//              only in the Builder's shell; currentStore only in the access modules; the one unwrap (previewTenantOf) only in
 //              the console preview page; @/lib/db/actor imported only by the door, builder queries, doors and _builder files
 //   builder    a file under a _builder/ folder imports (types aside) from @/lib/queries only builder, from @/lib/db only actor
 //   asserts    every export of src/lib/queries/builder.ts opens its transaction through withActor( (which asserts the
@@ -13,6 +14,7 @@
 //   role-list  an array naming 'builder' beside a member role, outside roles.ts (and team.ts: the PARTNER's roles)
 //   set-role   SET ROLE, RESET ROLE or set_config('role' in src (a Builder connects as its own login, never switches)
 //   role-eq    a member-role === / !== outside the files frozen in ROLE_EQ (a ratchet: a new one is a capability)
+//   preview    the store preview's data imports are the shopper read modules (it runs as frata_app for a Builder)
 // Comment lines are skipped, so this header never trips the gate.
 // =============================================================================
 import { readFileSync, readdirSync, statSync } from 'node:fs'
@@ -30,6 +32,10 @@ const ROLE_EQ = new Set([
   'src/lib/admin/partner-passkeys.ts', 'src/lib/db/platform.ts', 'src/lib/email/notice-sender.ts', 'src/domains/tenancy/roles.ts',
   'src/app/(console)/console/layout.tsx', 'src/app/(console)/console/apps/true_profit/page.tsx', 'src/lib/queries/settings.ts',
 ])
+/** The store preview runs as frata_app for a Builder (owner 2026-11-15, question 5): its data imports are pinned to the
+ *  shopper read modules, so a new import there (lanes A and B change this path) is a decision, not a drift. */
+const PREVIEW_FILES = ['src/app/(console)/console/preview/[[...path]]/page.tsx', 'src/components/storefront/preview-body.tsx']
+const PREVIEW_DATA = new Set(['@/lib/queries/storefront', '@/lib/queries/pages', '@/lib/queries/videos', '@/lib/themes/manifests', '@/lib/themes/page-look', '@/lib/themes/sample', '@/lib/auth/require-capability', '@/lib/db/actor'])
 const ACTOR_IMPORTERS = new Set(['src/lib/auth/require-capability.ts', 'src/lib/queries/builder.ts', ...DOORS])
 
 function walk(dir, out = []) {
@@ -51,6 +57,9 @@ for (const abs of walk(join(ROOT, 'src'))) {
     failures.push(`${file}  doors: requireCapability( outside scripts/builder-doors.json — a new Builder door is a plan change, and the e2e sweep reads that list`)
   }
   if (/\bbuilderActor\(/.test(text) && !['src/lib/db/actor.ts', 'src/lib/auth/require-capability.ts'].includes(file)) failures.push(`${file}  actor: builderActor( outside require-capability.ts`)
+  if (/\bwithActor\(/.test(text) && !['src/lib/db/actor.ts', 'src/lib/queries/builder.ts'].includes(file)) failures.push(`${file}  actor: withActor( outside src/lib/queries/builder.ts — its callback holds the shop id`)
+  if (/\bnavOf\(/.test(text) && !['src/lib/auth/require-capability.ts', 'src/app/(console)/console/_builder/shell.tsx'].includes(file)) failures.push(`${file}  actor: navOf( outside the Builder's shell — it holds the person's shop ids`)
+  if (/\bcurrentStore\(/.test(text) && !['src/lib/auth/require-member.ts', 'src/lib/auth/require-capability.ts', 'src/app/choose/actions.ts', 'src/app/api/console/tenant/route.ts'].includes(file)) failures.push(`${file}  actor: currentStore( outside the access modules, the switch and the tenant check`)
   if (/\bpreviewTenantOf\(/.test(text) && !['src/lib/db/actor.ts', 'src/app/(console)/console/preview/[[...path]]/page.tsx'].includes(file)) failures.push(`${file}  actor: previewTenantOf( outside the console preview page`)
   if (/from\s+['"]@\/lib\/db\/actor['"]/.test(text) && !ACTOR_IMPORTERS.has(file) && !builderFile) failures.push(`${file}  actor: imports @/lib/db/actor`)
   if (builderFile) {
@@ -58,6 +67,11 @@ for (const abs of walk(join(ROOT, 'src'))) {
       const from = m[2]
       if (m[1] || !/^@\/lib\/(queries|db)\//.test(from)) continue
       if (from !== '@/lib/queries/builder' && from !== '@/lib/db/actor') failures.push(`${file}  builder: a Builder file imports ${from} (only @/lib/queries/builder and the Actor's type)`)
+    }
+  }
+  if (PREVIEW_FILES.includes(file)) {
+    for (const m of text.matchAll(/^import\s+(type\s+)?[\s\S]*?from\s+['"](@\/lib\/[^'"]+)['"]/gm)) {
+      if (!m[1] && !PREVIEW_DATA.has(m[2])) failures.push(`${file}  preview: imports ${m[2]} — a Builder sees this page as frata_app; read only through the shopper read modules`)
     }
   }
   if (file === 'src/lib/queries/builder.ts') {

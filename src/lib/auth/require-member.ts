@@ -63,9 +63,8 @@ export const currentStore = cache(async (): Promise<StoreChoice> => {
   // The cookie selects among BOTH lists, so a Builder's store never falls through to another store (architecture review).
   const build = access.builds.find((b) => b.tenantId === wanted)
   const member = access.memberships.find((m) => m.tenantId === wanted)
-  const first = [...access.memberships.map((m) => ({ name: m.tenantName, m })), ...access.builds.map((b) => ({ name: b.tenantName, b }))]
-    .sort((x, y) => x.name.localeCompare(y.name))[0]
-  const pickBuild = build ?? (!member && first && 'b' in first ? first.b : undefined)
+  // No cookie (or a stale one): a store the person belongs to first, as before T1c; a store they only build, last.
+  const pickBuild = build ?? (!member && !access.memberships.length ? access.builds[0] : undefined)
   const email = user.email ?? null
   if (pickBuild) return { kind: 'builder', userId: user.id, email, build: pickBuild, all: access.memberships, builds: access.builds, staffRole: access.staffRole }
   const membership = member ?? access.memberships[0]

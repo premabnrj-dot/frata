@@ -10,7 +10,7 @@ import { PRODUCTS_PAGE, type ProductList } from '@/lib/queries/catalogue'
 import { SortSelect } from './sort-select'
 import type { Row } from './product-table'
 
-export const FILTERS: [ListFilter, string][] = [['all', 'All'], ['active', 'Active'], ['draft', 'Draft'], ['unlisted', 'Unlisted'], ['archived', 'Archived'], ['low', 'Low stock']]
+const FILTERS: [ListFilter, string][] = [['all', 'All'], ['active', 'Active'], ['draft', 'Draft'], ['unlisted', 'Unlisted'], ['archived', 'Archived'], ['low', 'Low stock']]
 
 /** The products list's frame (products PR·1; Neel N1c): the tabs with counts, search, Sort, the table and the pager.
  *  The owner's page and a Builder's view-only page (T1c, approved mockup screen 7) both render it; only `actions` and

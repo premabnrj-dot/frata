@@ -42,6 +42,11 @@ describe('a Builder and requireMember', () => {
     const { requireMember, ANY_MEMBER } = await import('../require-member')
     expect(await requireMember(ANY_MEMBER)).toMatchObject({ ok: false, reason: 'builder' })
   })
+  it('no cookie: a store the person belongs to comes before one they only build (impact review)', async () => {
+    accessFor.mockResolvedValue({ memberships: [{ tenantId: 't-zinc', tenantName: 'Zinc', role: 'owner', supportSessionId: null }], builds: [{ tenantId: 't-amber', tenantName: 'Amber' }], staffRole: null })
+    const { requireMember, ANY_MEMBER } = await import('../require-member')
+    expect(await requireMember(ANY_MEMBER)).toMatchObject({ ok: true, membership: { tenantId: 't-zinc' } })
+  })
   it('the same person with the cookie on B is the owner of B', async () => {
     accessFor.mockResolvedValue({ memberships: [{ tenantId: 't-basil', tenantName: 'Basil', role: 'owner', supportSessionId: null }], builds: [{ tenantId: 't-amber', tenantName: 'Amber' }], staffRole: null })
     cookie = 't-basil'
@@ -56,8 +61,9 @@ describe('requireCapability', () => {
     const { requireCapability } = await import('../require-capability')
     for (const cap of ['catalogue.read', 'console.open', 'preview.read'] as const) {
       const r = await requireCapability(cap)
-      expect(r).toMatchObject({ ok: true, kind: 'builder', store: { tenantId: 't-amber' } })
-      if (r.ok && r.kind === 'builder') expect(Object.keys(r.actor)).toEqual(['kind', 'role'])
+      expect(r).toMatchObject({ ok: true, kind: 'builder', store: { tenantName: 'Amber' } })
+      // No shop id a page could hand to a (tenantId) reader: not on the Actor, not on the store, not on the nav.
+      if (r.ok && r.kind === 'builder') { expect(Object.keys(r.actor)).toEqual(['kind', 'role']); expect(Object.keys(r.store)).toEqual(['tenantName']); expect(Object.keys(r.nav)).toEqual(['kind']) }
     }
     for (const cap of ['shop.work', 'shop.build', 'shop.manage', 'costs.set', 'console.full', 'api.manage', 'content.write'] as const) {
       expect(await requireCapability(cap)).toMatchObject({ ok: false, reason: 'builder' })

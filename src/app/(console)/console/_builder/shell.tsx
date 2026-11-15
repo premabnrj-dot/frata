@@ -2,7 +2,7 @@ import { AppShell, type Place } from '@/components/shell/app-shell'
 import type { NavItem } from '@/components/shell/nav'
 import { TenantCheck } from '@/components/shell/tenant-check'
 import { BUILDER_LABEL, ROLE_LABEL } from '@/domains/tenancy/roles'
-import type { Build, Membership } from '@/lib/db/platform'
+import { navOf, type BuilderNav } from '@/lib/auth/require-capability'
 import type { RailChoice } from '@/components/shell/rail'
 
 /**
@@ -11,9 +11,8 @@ import type { RailChoice } from '@/components/shell/rail'
  * counts, apps, banners or notices are read for a Builder (each would read orders or settings). Hiding these is not the
  * lock: every page asks requireCapability or requireMember itself, and frata_builder holds no other grant.
  */
-export function BuilderShell({ store, email, all, builds, rail, children }: {
-  store: Build; email: string | null; all: Membership[]; builds: Build[]; rail: RailChoice; children: React.ReactNode
-}) {
+export function BuilderShell({ nav, email, rail, children }: { nav: BuilderNav; email: string | null; rail: RailChoice; children: React.ReactNode }) {
+  const { current: store, all, builds } = navOf(nav)
   const products: NavItem = { href: '/console/products', label: 'Products', icon: 'products' }
   const collections: NavItem = { href: '/console/collections', label: 'Collections', icon: 'collections' }
   const preview: NavItem = { href: '/console/preview', label: 'Preview store', icon: 'external' }

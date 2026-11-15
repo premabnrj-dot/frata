@@ -3717,6 +3717,11 @@ insert into products (id, tenant_id, handle, title, status) values
 insert into variants (tenant_id, product_id, option_values, price, unit_cost) values
   (current_setting('proof.nook1')::uuid, 'eeeeeeee-0000-0000-0000-0000000000c1', '{M}', 249000, 98000),
   (current_setting('proof.nook2')::uuid, 'eeeeeeee-0000-0000-0000-0000000000c2', '{M}', 349000, 128000);
+insert into collections (id, tenant_id, handle, title, kind, rules, match_all) values
+  ('eeeeeeee-0000-0000-0000-0000000000d1', current_setting('proof.nook1')::uuid, 'nook-picks', 'Nook picks', 'manual', '[]', 1),
+  ('eeeeeeee-0000-0000-0000-0000000000d2', current_setting('proof.nook1')::uuid, 'nook-all', 'Nook all', 'auto', '[{"field":"price_at_least","value":1}]', 1);
+insert into collection_products (tenant_id, collection_id, product_id) values
+  (current_setting('proof.nook1')::uuid, 'eeeeeeee-0000-0000-0000-0000000000d1', 'eeeeeeee-0000-0000-0000-0000000000c1');
 -- as frata_builder: its shop's named columns, nothing else
 begin; set local role frata_builder;
 select set_config('app.tenant_id', current_setting('proof.nook1'), true), set_config('app.member_role', 'builder', true);
@@ -3784,7 +3789,9 @@ do $$ declare r record; allowed jsonb := '{
   if (select rolsuper or rolbypassrls or rolinherit or rolcreaterole or rolcreatedb from pg_roles where rolname = 'frata_builder')
   then raise exception 'FAIL: frata_builder has a power it must not'; end if;
   if exists (select 1 from pg_auth_members m join pg_roles ro on ro.oid = m.member where ro.rolname = 'frata_builder')
-     or exists (select 1 from pg_auth_members m join pg_roles ro on ro.oid = m.roleid where ro.rolname = 'frata_builder')
+     -- the role's creator may hold ADMIN on it (Supabase, PG16+: a non-superuser postgres that ran create role); nobody else
+     or exists (select 1 from pg_auth_members m join pg_roles ro on ro.oid = m.roleid join pg_roles mem on mem.oid = m.member
+                 where ro.rolname = 'frata_builder' and not (mem.rolname = 'postgres' and m.admin_option))
   then raise exception 'FAIL: frata_builder is in a role, or a role is in it'; end if;
   if exists (select 1 from pg_policies where 'frata_builder' = any(roles) and policyname not in ('builder_rows','builder_only'))
      or (select count(*) from pg_policies where 'frata_builder' = any(roles)) <> 16

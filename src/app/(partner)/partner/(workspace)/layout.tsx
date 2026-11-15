@@ -1,4 +1,5 @@
 import { railFrom } from '@/components/shell/rail'
+import type { Build } from '@/lib/db/platform'
 import { cookies, headers } from 'next/headers'
 import Link from 'next/link'
 import type { Metadata } from 'next'
@@ -59,7 +60,7 @@ export default async function PartnerLayout({ children }: { children: React.Reac
       </main>
     )
   }
-  const access = await accessOf(auth.userId).catch(() => ({ memberships: [] as { tenantId: string; tenantName: string; role: string; supportSessionId: string | null }[], builds: [] as { tenantId: string; tenantName: string }[] }))
+  const access = await accessOf(auth.userId).catch(() => ({ memberships: [] as { tenantId: string; tenantName: string; role: string; supportSessionId: string | null }[], builds: [] as Build[] }))
   const places: Place[] = [
     { href: '/partner', name: 'Partner workspace', role: '', current: true },
     ...access.memberships.filter((m) => !m.supportSessionId).map((m) => ({ href: '/console', name: m.tenantName, role: ROLE_LABEL[m.role as MemberRole] ?? m.role, current: false, tenantId: m.tenantId })),

@@ -187,6 +187,8 @@ A Builder joins **no tuple** (ADR-0015 § 1). Read on 2026-11-15 (`grep -rlw`), 
 | Screen 4, /join: a store tag and the button "Join Pixel & Thread" | T1b's approved /join kept (steps, work email, "Accept invite"); the heading names the role ("Join Pixel & Thread as a Builder") | the T1b partner sign-in mockup is approved and its flow (80-partner-team) holds it; T1c changes only the role's word | no |
 | Screen 5, a Builder's Clients: no view tabs | as drawn for a Builder; a Lead keeps the tabs and loses the Owner, Plan and Your share columns (owner question 6) | the Lead was not drawn; question 6 removed those columns for Leads | no |
 | Plan § Deviations, refusal log "with route pattern" | the log line carries the shop and person ids only | `requireMember` doesn't know the route, and a path can carry an order number or a phone | no |
+| Security L10, "null share_starts_at for a Lead or Builder" | the first opening's date and an open invite's end reach them (the store's stage); its terms, email, invite email and plan do not | a stage that reads the same for everyone; a store's first opening is public | no |
+| Plan, set-role limit "counted after the check" | counted on each call, so a `freshly` retry costs two of the 30 an hour | accepted (security review L7): the owner's budget is generous and the limit fails closed | no |
 | Plan task 6, "e2e posts three actions" | every action's refusal is a unit test (`asMember`, every tuple; `requireCapability`), and the sweep GETs every page and route handler | server action ids are build-internal, so a flow can't post one without its form | no |
 
 ## Tasks (each ends with its verify command and `impact-reviewer` on its diff)
@@ -287,6 +289,14 @@ the Look (themes are retiring, ADR-0014).
    as Frrata Admin does. Recommended: no Builder query can ever run with the app's rights. You add one secret in Vercel.
 8. **A Builder sees each product's stock count** (the list's stock column), not only "In stock" or "Sold out".
    Recommended: yes, it is catalogue work, not orders.
+
+## Reviews on the built diff (2026-11-15: impact, tenancy, security)
+All folded in before release: the Builder's shop id is unreadable on every result (`store` holds the name, the switcher
+an opaque `nav`; `withActor`, `navOf` and `currentStore` pinned by check:capabilities); TenantCheck and the tenant route
+answer for a Builder's store; the store with no cookie is a membership first; `/partner/new` refuses a Builder; a missing
+Builder login says so; the Roles card is tested against CAPABILITIES and PARTNER_CAN; the role email is tested; § 82
+seeds collections and the int test counts them; members rows backfilled through the trigger; the preview's imports
+gated; e2e's private words include a seeded order's shopper; setup.md § 6a.
 
 ## Reviews on this plan (2026-11-15)
 These override the text above where they differ.

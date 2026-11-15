@@ -4,7 +4,7 @@ import { Icon } from '@/components/icons/icon'
 // What each partner role reaches in a store (approved T1c mockup, screen 1: the Roles card). Words, never colour alone:
 // each mark carries its meaning for a screen reader. The definers and CAPABILITIES are the lock; this only says it.
 type Cell = boolean | string
-const ROWS: readonly (readonly [string, Cell, Cell, Cell])[] = [
+export const ROWS: readonly (readonly [string, Cell, Cell, Cell])[] = [
   ['Orders and shoppers', true, true, false],
   ['Costs and profit', 'Until handover', 'Until handover', false],
   ['Products', 'Edit', 'Edit', 'View'],

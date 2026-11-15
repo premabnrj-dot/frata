@@ -17,7 +17,7 @@ const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 const ROOT = new URL('../../', import.meta.url).pathname
 const DOORS = JSON.parse(readFileSync(join(ROOT, 'scripts/builder-doors.json'), 'utf8')).routes
 /** Words that must never reach a Builder: a cost (seed unit_cost 4242421 paise), the owner's address, a page's money words. */
-const PRIVATE = ['42,424.21', '4242421', 'riya@kesarstudio.in', 'Cost of goods', '₹ kept']
+const PRIVATE = ['42,424.21', '4242421', 'riya@kesarstudio.in', 'Cost of goods', '₹ kept', 'Builderseen Shopper', '98450 86011', '9845086011', '7,77,777']
 const FIX = { handle: 'chanderi-kurta-set', number: 'KS-1001', id: '00000000-0000-4000-8000-000000000001', section: 'brand', app: 'gst', kind: 'order_confirmed', revision: '00000000-0000-4000-8000-000000000001', source: 'instagram' }
 
 /** Every page and route under the console's route groups, as an address with fixture params. */
@@ -47,6 +47,9 @@ export default {
     const P = USERS.partner, B = USERS.builder
     await db`insert into auth.users (id, email, email_confirmed_at) values (${P.id}, ${P.email}, now()), (${B.id}, ${B.email}, now()) on conflict (id) do nothing`
     await partnerOn(db, KESAR, P)
+    // An order with a shopper the Builder must never see (its number, name, phone and total are in PRIVATE).
+    await db`insert into orders (tenant_id, number, payment_method, placed_at, customer_name, phone, city, subtotal, total)
+      values (${KESAR}, 8601, 'cod', now(), 'Builderseen Shopper', '919845086011', 'Jaipur', 77777700, 77777700) on conflict do nothing`
     const open = async (who, opts) => { const ctx = await signedIn(t.browser, who, opts); const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message)); return p }
     const pia = await open('partner', { viewport: { width: 1280, height: 900 } })
 
@@ -75,7 +78,7 @@ export default {
       await bp.goto(CONSOLE + '/join')
       await bp.getByRole('heading', { name: /as a Builder$/ }).waitFor()
       await bp.getByRole('button', { name: 'Accept invite' }).click()
-      await expectToast(bp, 'Joined the team.', 'ok')
+      await bp.waitForURL(/\/partner$/)
       await seedPartnerStepup(bc, 'builder')
       const [m] = await db`select role from members where user_id = ${B.id} and tenant_id = ${KESAR}`
       assert.equal(m.role, 'builder')

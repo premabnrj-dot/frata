@@ -38,6 +38,8 @@ describe.skipIf(!host)('a Builder on a real database', () => {
     expect(list.rows[0]).not.toHaveProperty('unitCost')
     await expect(actorLib.withActor(a, 'catalogue.read', (tx) => tx.execute(sql`select unit_cost from variants`))).rejects.toThrow()
     await expect(actorLib.withActor(a, 'catalogue.read', (tx) => tx.execute(sql`select 1 from orders`))).rejects.toThrow()
-    expect(Array.isArray(await builder.builderCollections(a))).toBe(true)
+    // A hand-picked collection and a rule-based one: the counts read collection_products and productFactsIn's columns.
+    const cols = await builder.builderCollections(a)
+    expect(cols.map((c) => [c.title, c.kind, c.count])).toEqual([['Nook all', 'auto', 1], ['Nook picks', 'manual', 1]])
   })
 })

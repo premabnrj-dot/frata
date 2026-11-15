@@ -5,8 +5,12 @@
     "src/app/(console)/console/page.tsx",
     "src/app/(console)/console/products/page.tsx",
     "src/app/(console)/console/collections/page.tsx",
-    "src/app/(console)/console/preview/[[...path]]/page.tsx",
-    "src/app/choose/actions.ts"
+    "src/app/(console)/console/preview/[[...path]]/page.tsx"
   ],
-  "routes": ["/console", "/console/products", "/console/collections", "/console/preview"]
+  "routes": [
+    "/console",
+    "/console/products",
+    "/console/collections",
+    "/console/preview"
+  ]
 }

@@ -3,8 +3,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { TENANT_COOKIE } from '@/lib/auth/require-member'
-import { requireCapability } from '@/lib/auth/require-capability'
+import { currentStore, TENANT_COOKIE } from '@/lib/auth/require-member'
 
 /**
  * F3 · switch store. The id comes from the form, but it only SELECTS among the stores app_access_for returned for
@@ -14,11 +13,12 @@ import { requireCapability } from '@/lib/auth/require-capability'
  * store never strands its person (security review M5).
  */
 export async function switchStoreAction(form: FormData) {
-  const auth = await requireCapability('console.open')
+  // The person's own stores, both lists (currentStore: the same read requireMember and requireCapability make).
+  const c = await currentStore()
   const id = z.uuid().safeParse(form.get('tenantId'))
-  if (!auth.ok || !id.success) redirect('/console')
-  const all = auth.kind === 'member' ? auth.auth.all : auth.all
-  const builds = auth.kind === 'member' ? auth.auth.builds : auth.builds
+  if (c.kind === 'none' || !id.success) redirect('/console')
+  const all = c.kind === 'member' ? c.result.all : c.all
+  const builds = c.kind === 'member' ? c.result.builds : c.builds
   const target = all.find((m) => m.tenantId === id.data && !m.supportSessionId) ?? builds.find((b) => b.tenantId === id.data)
   if (target) (await cookies()).set(TENANT_COOKIE, target.tenantId, { httpOnly: true, sameSite: 'lax', path: '/', secure: process.env.NODE_ENV === 'production' })
   redirect('/console')

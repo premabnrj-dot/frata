@@ -19,9 +19,10 @@ import { join } from 'node:path'
 // shopRequest (src/lib/http/shop-api.ts) is requireShop plus a Zod body and a per-shop limit, for /api/shop/*.
 // moduleGate (src/lib/auth/as-module.ts) is requireMember plus the module's on/off check, for reads and non-writing actions.
 // requireEk (src/lib/ekcode/require-ek.ts) is EkCode's host check: Host = EKCODE_HOST, same-origin JSON POSTs, a per-network limit.
-// requireCapability (T1c): requireMember's store choice answered by capability; a Builder's only way in (check:capabilities
+// requireCapability (T1c): requireMember's store choice answered by capability; a Builder's only way in. currentStore: that
+// store choice itself (the switch and the tenant check; check:capabilities pins its callers
 // holds which files may call it).
-const CHOKEPOINTS = ['requireMember', 'requireCapability', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk']
+const CHOKEPOINTS = ['requireMember', 'requireCapability', 'currentStore', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
