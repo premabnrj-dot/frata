@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.5.0
+  version: 7.6.0
   verified: 2026-11-15
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -281,6 +281,26 @@ from it).
   pictures drawn from their blocks; the count of 20). What comes from Settings is a read-only box headed "From your
   Settings" with **Change in Settings**, never a field. An FAQ answer from Settings carries a "From your settings" chip.
   A page's address is set while it is a draft and fixed once published; Hide and Remove take effect at Publish.
+
+## Console › Content (owner-approved final mockup 2026-11-15, https://claude.ai/artifact/6WemLUPWd2z9rPXsVRzTv4; V1)
+
+- **What the store says, saved live**: tabs Announcement · Menus · Pages · FAQ · Contact line (`ViewTabs`, one row that
+  scrolls on a phone); "View store" the header's action. Placements (V2) and Season (V1.5) join as tabs when they exist.
+- **A dated entry's state is a chip, never a sentence**: Live now · Starts 1 Dec, 10:00 am · Shows after the offer ·
+  Shows after the newer bar · Ended · Ended early, from `barChip` on the server's `now`. A live offer heads the bars,
+  read-only, with Open Offers.
+- **Add and Edit open a dialog** (a sheet on a phone); a mistake stays at its field ("End is before the start. Pick a later
+  end."); a refusal is in the dialog. Cancel names the safe outcome ("Keep as it is", "Don't add").
+- **Menus save with one explicit Save per menu** (shoppers see it at once), an unsaved bar with "Discard change" and
+  "Save main menu"; moves are Up, Down, "Move under Kurtas", "Move out of Kurtas". Bars, questions, pages and the Contact
+  line save from their dialog or field.
+- **Every save is a toast with Undo** (the saver's own, a minute); End now and Delete too. A stale save is an error toast
+  naming who saved, as a role ("The owner changed this today, 10:42 pm. Reload to see it.").
+- **Read only says who can**, as a chip: "Only the owner can edit" (staff; a partner after handover); a support visit
+  sees "Support visit · read only". Edit is disabled, never hidden.
+- **What comes from Settings is read-only here** with "From Settings" and Change in Settings (an FAQ answer, the Contact
+  page's details).
+- **The Look links, never edits**: where Menus, the bar, the Contact line and a page were, one row "Edit in Content ›".
 
 ## Partner workspace (approved mockup 2026-11-07)
 
