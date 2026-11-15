@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ActionForm, type ActionResult } from '@/components/ui/action-form'
+import { ActionForm, FieldMessage, type ActionResult } from '@/components/ui/action-form'
+import { Dialog } from '@/components/ui/dialog'
+import { Submit } from '@/components/ui/submit'
 import { useToast } from '@/components/ui/toast'
 import { addPasskey, approve, confirmPasskey, removeOne } from '@/components/passkeys/passkey-client'
 
@@ -100,4 +102,36 @@ export function ConfirmFirst({ action, children, className }: { action: (form: F
     return r.ok ? action(form) : { error: r.error }
   }
   return <ActionForm action={confirmed} className={className}>{children}</ActionForm>
+}
+
+/** Add staff (Neel N4, board Staff): a button that opens the form in a dialog; it confirms with a passkey first. */
+export function AddStaffDialog({ action, support, master }: { action: (form: FormData) => Promise<ActionResult>; support: string; master: string }) {
+  const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const close = () => { setOpen(false); setError(null) }
+  const confirmed = async (form: FormData): Promise<ActionResult> => {
+    const r = await confirmPasskey()
+    return r.ok ? action(form) : { error: r.error }
+  }
+  const field = 'h-11 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9'
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Add staff</Button>
+      <Dialog open={open} onClose={close} title="Add staff" actions={null} error={error}>
+        {open && (
+          <ActionForm action={confirmed} onDone={close} onError={setError} className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Email</span>
+              <input name="email" type="email" required data-error="Enter an email." className={field} /><FieldMessage name="email" /></label>
+            <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Role</span>
+              <select name="role" className={field}><option value="support">{support}</option><option value="admin">{master}</option></select></label>
+            <p className="text-sm text-muted-foreground">They must have signed in to Frrata once with that email.</p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={close} data-autofocus="">Keep the team</Button>
+              <Submit>Add staff</Submit>
+            </div>
+          </ActionForm>
+        )}
+      </Dialog>
+    </>
+  )
 }

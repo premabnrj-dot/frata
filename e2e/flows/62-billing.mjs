@@ -106,9 +106,9 @@ export default {
         const dlg = meera.getByRole('dialog', { name: /^Issue \d+ invoices? for/ })
         await dlg.getByLabel(/Type ISSUE/).fill('ISSUE 999')
         await dlg.getByRole('button', { name: `Issue ${n}` }).click()
-        // A wrong confirmation is marked at its field (the summary toast is quiet); nothing is issued.
+        // A wrong confirmation is marked at its field, inside the dialog; nothing is issued.
         await meera.locator('[id$="-confirm-error"]').getByText(`Type ISSUE ${n} to issue.`).waitFor()
-        await expectToast(meera, '1 field needs fixing.', 'error', { quiet: true })
+        assert.equal((await db`select count(*)::int n from frrata_invoices where tenant_id = ${KESAR} and number is not null`)[0].n, 0)
         await dlg.getByLabel(/Type ISSUE/).fill(`ISSUE ${n}`)
         await dlg.getByRole('button', { name: `Issue ${n}` }).click()
         await expectToast(meera, /issued.*test mode/, 'ok')

@@ -2,123 +2,144 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
+import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
-import { BRANDS_NOW, PARTNER_SERVICES } from '@/domains/partners/terms'
-import { listPartners, partnerCounts, partnerTeamForAdmin, type PartnerView } from '@/lib/admin/partners'
-import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
-import { formatPhone } from '@/lib/format'
-import { dateTimeIN, sinceIN } from '@/lib/format-date'
-import { decidePartnerAction, reinstatePartnerAction, suspendPartnerAction } from './actions'
-import { ownerPasskeys } from '@/lib/admin/partner-passkeys'
-import { staffProof } from '@/lib/auth/session'
-import { OwnerPasskeysPanel } from './owner-passkeys'
-import { Submit } from '@/components/ui/submit'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { Submit } from '@/components/ui/submit'
+import { FIELD } from '@/components/ui/field'
+import { BRANDS_NOW, PARTNER_SERVICES } from '@/domains/partners/terms'
+import { listPartners, partnerCounts, partnerTeamForAdmin, type AdminPartner } from '@/lib/admin/partners'
+import { ownerPasskeys } from '@/lib/admin/partner-passkeys'
+import { todayItems } from '@/lib/admin/today'
+import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
+import { staffProof } from '@/lib/auth/session'
+import { formatPhone } from '@/lib/format'
+import { dateTimeIN, dayMonthIN, sinceIN } from '@/lib/format-date'
+import { DialogButton, MoreDialogs, type DialogSpec } from '../_components/form-dialog'
+import { NeedsBand } from '../_components/needs-band'
+import { decidePartnerAction, reinstatePartnerAction, suspendPartnerAction } from './actions'
+import { OwnerPasskeysPanel } from './owner-passkeys'
 
 export const metadata = { title: 'Partners' }
 
-const VIEWS: [PartnerView, string][] = [['review', 'To review'], ['approved', 'Approved'], ['declined', 'Declined']]
+type View = 'needs' | 'approved' | 'declined'
+const VIEWS: [View, string][] = [['needs', 'Needs you'], ['approved', 'Approved'], ['declined', 'Declined']]
+const TABS = [['overview', 'Overview'], ['team', 'Team'], ['passkeys', 'Passkeys']] as const
+type Tab = (typeof TABS)[number][0]
+const nameOf = (p: AdminPartner) => p.businessName || p.name
 
-/** Admin › Partners (approved mockup screen 4): the queue on the left, one application on the right. */
-export default async function PartnersPage({ searchParams }: { searchParams: Promise<{ view?: string; id?: string }> }) {
+/** Admin › Partners (Neel N4, board Partners; the partner pass kept): what needs you first, one partner beside the list. */
+export default async function PartnersPage({ searchParams }: { searchParams: Promise<{ view?: string; id?: string; tab?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
   const sp = await searchParams
-  const view: PartnerView = VIEWS.some(([k]) => k === sp.view) ? (sp.view as PartnerView) : 'review'
-  const [counts, rows] = await Promise.all([partnerCounts(staff), listPartners(staff, view)])
-  const open = rows.find((r) => r.id === sp.id) ?? (view === 'review' ? rows[0] : undefined)
-  // The open partner's team (T1a): who works for them and on how many stores.
-  const team = open?.approvedAt ? await partnerTeamForAdmin(staff, open.id).catch(() => null) : null
-  // The owner's passkeys and an open request (T1b): Frrata approves an owner's.
-  const proof = open?.approvedAt ? await staffProof(staff.userId) : null
-  const keys = open?.approvedAt && proof ? await ownerPasskeys(staff, proof, open.id).catch(() => null) : null
-  const href = (id: string) => `/admin/partners?${view === 'review' ? '' : `view=${view}&`}id=${id}`
+  const now = new Date()
+  // `review` (the old view name) still lands on Needs you.
+  const view: View = sp.view === 'approved' || sp.view === 'declined' ? sp.view : 'needs'
+  const [counts, review, approved, declined, { items }] = await Promise.all([
+    partnerCounts(staff), listPartners(staff, 'review'),
+    view === 'declined' ? Promise.resolve([]) : listPartners(staff, 'approved'),
+    view === 'declined' ? listPartners(staff, 'declined') : Promise.resolve([]),
+    todayItems(staff),
+  ])
+  // A partner owner's passkey request waits on a master admin: the same item Today shows (by partner id).
+  const asking = new Set(items.filter((i) => i.kind === 'partner_passkey').map((i) => i.key))
+  const needs = [...review, ...approved.filter((p) => asking.has(p.id))]
+  const rows = view === 'needs' ? needs : view === 'approved' ? approved : declined
+  const open = rows.find((r) => r.id === sp.id) ?? rows[0]
+  const tab: Tab = TABS.find(([k]) => k === sp.tab)?.[0] ?? 'overview'
+  const isAdmin = staff.role === 'admin'
+  const [team, keys] = open?.approvedAt ? await Promise.all([
+    partnerTeamForAdmin(staff, open.id).catch(() => null),
+    staffProof(staff.userId).then((proof) => (proof ? ownerPasskeys(staff, proof, open.id).catch(() => null) : null)),
+  ]) : [null, null]
+  const base = (id: string) => `/admin/partners?${view === 'needs' ? '' : `view=${view}&`}id=${id}`
+  const chip = (p: AdminPartner) => asking.has(p.id) ? <Badge tone="warn">Passkey</Badge> : !p.approvedAt && !p.declinedAt ? <Badge>To review</Badge>
+    : p.suspendedAt ? <Badge tone="warn">Suspended</Badge> : p.approvedAt ? <Badge tone="ok">Approved</Badge> : <Badge>Declined</Badge>
+
+  const more: DialogSpec[] = open?.approvedAt && isAdmin ? [open.suspendedAt
+    ? { label: 'Reinstate…', title: `Reinstate ${nameOf(open)}?`, description: 'Their team gets its stores back at once.', action: reinstatePartnerAction, keep: 'Keep suspended', go: 'Reinstate',
+        fields: <><input type="hidden" name="id" value={open.id} /><input type="hidden" name="name" value={nameOf(open)} />
+          <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Type {nameOf(open)} to confirm</span><input name="typed" maxLength={120} autoComplete="off" className={FIELD} /><FieldMessage name="typed" /></label></> }
+    : { label: 'Suspend…', title: `Suspend ${nameOf(open)}?`, description: 'Their team loses every store at once; each brand is told.', action: suspendPartnerAction, keep: 'Keep access', go: 'Suspend', danger: true,
+        fields: <><input type="hidden" name="id" value={open.id} /><input type="hidden" name="name" value={nameOf(open)} />
+          <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Reason to suspend</span><input name="reason" maxLength={300} className={FIELD} /><FieldMessage name="reason" /></label>
+          <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Type {nameOf(open)} to confirm</span><input name="typed" maxLength={120} autoComplete="off" className={FIELD} /><FieldMessage name="typed" /></label></> }] : []
+
   return (
     <>
       <PageHeader title="Partners" />
-      <ViewTabs label="Partner views" tabs={VIEWS.map(([k, label]) => ({ href: k === 'review' ? '/admin/partners' : `/admin/partners?view=${k}`, label, count: counts[k], current: k === view }))} />
-      {rows.length === 0 ? <Panel title={view === 'review' ? 'Nothing to review' : `No ${view} partners`} /> : (
-        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <Section flush ariaLabel="Applications"><ul data-list className="divide-y divide-border">
-            {rows.map((r) => (
-              <li key={r.id}>
-                <Link href={href(r.id)} aria-current={open?.id === r.id || undefined} className={`grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 px-4 py-3 text-sm hover:bg-accent ${open?.id === r.id ? 'bg-accent' : ''}`}>
-                  <span className="truncate font-medium">{r.businessName || r.name}</span>
-                  <span className="text-muted-foreground">{sinceIN(r.appliedAt, new Date())}</span>
-                  <span className="truncate text-muted-foreground">{r.name} · {r.city}</span>
-                  <span className="text-right font-num text-xs">{view === 'approved' ? `${r.stores} stores` : BRANDS_NOW.find(([k]) => k === r.brandsNow)?.[1]}</span>
-                </Link>
-              </li>
-            ))}
-          </ul></Section>
-          {open && (
-            <Section title={open.businessName || open.name}>
-              <p className="-mt-3 font-num text-xs text-muted-foreground">{open.email}</p>
-              <dl className="grid grid-cols-[7rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
-                <dt className="text-muted-foreground">Name</dt><dd>{open.name}</dd>
-                <dt className="text-muted-foreground">WhatsApp</dt><dd className="font-num">{formatPhone(open.phone)}</dd>
-                <dt className="text-muted-foreground">City</dt><dd>{open.city}</dd>
-                <dt className="text-muted-foreground">Does</dt><dd>{open.services.map((s) => PARTNER_SERVICES.find(([k]) => k === s)?.[1] ?? s).join(', ') || '—'}</dd>
-                <dt className="text-muted-foreground">Work</dt><dd className="break-all">{open.workUrl || '—'}</dd>
-                <dt className="text-muted-foreground">Brands now</dt><dd>{BRANDS_NOW.find(([k]) => k === open.brandsNow)?.[1]}</dd>
-                <dt className="text-muted-foreground">Terms</dt><dd>Version {open.termsVersion}, {dateTimeIN(open.agreedAt)}</dd>
-                {open.declineReason && <><dt className="text-muted-foreground">Declined</dt><dd>{open.declineReason}</dd></>}
-                {open.approvedAt && <><dt className="text-muted-foreground">Stores</dt><dd className="font-num">{open.stores}</dd></>}
-              </dl>
-              {view === 'review' && staff.role !== 'admin' ? <p className="text-sm text-muted-foreground">A master admin decides applications.</p> : view === 'review' ? (
-                <div className="space-y-3 border-t border-border pt-4">
-                  <ActionForm action={decidePartnerAction}>
-                    <input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="approve" />
-                    <Submit size="wrap" className="w-full justify-center text-center">Approve {open.businessName || open.name}</Submit>
-                  </ActionForm>
-                  <ActionForm action={decidePartnerAction} className="space-y-2">
-                    <input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="decline" />
-                    <label htmlFor="reason" className="block text-sm font-medium">Reason to decline</label>
-                    <input id="reason" name="reason" maxLength={300} className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9" />
-                    <FieldMessage name="reason" />
-                    <Submit variant="secondary" className="w-full">Decline</Submit>
-                  </ActionForm>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <Badge tone={open.suspendedAt ? 'warn' : open.approvedAt ? 'ok' : 'neutral'}>{open.suspendedAt ? `Suspended · ${dateTimeIN(open.suspendedAt)}` : open.approvedAt ? 'Approved' : 'Declined'}</Badge>
-                  {open.suspendedAt && open.suspendReason && <p className="text-sm text-muted-foreground">{open.suspendReason}</p>}
-                  {team && (
-                    <div className="space-y-2 border-t border-border pt-4">
-                      <h3 className="text-sm font-semibold">Team</h3>
-                      <ul className="space-y-1 text-sm">
-                        {team.map((m) => (
-                          <li key={m.id} className="flex flex-wrap items-center gap-2">
-                            <span className="min-w-0 flex-1 truncate font-num text-xs">{m.email}</span>
-                            <Badge tone={m.role === 'owner' ? 'info' : 'neutral'}>{m.role === 'owner' ? 'Owner' : 'Lead'}</Badge>
-                            <span className="text-xs text-muted-foreground">{m.role === 'owner' ? 'every store' : m.acceptedAt ? `${m.stores} ${m.stores === 1 ? 'store' : 'stores'}` : 'invited'}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {keys && <OwnerPasskeysPanel partnerId={open.id} s={keys} now={new Date().toISOString()} admin={staff.role === 'admin'} />}
-                  {open.approvedAt && staff.role === 'admin' && (
-                    <ActionForm action={open.suspendedAt ? reinstatePartnerAction : suspendPartnerAction} className="space-y-2 border-t border-border pt-4">
-                      <input type="hidden" name="id" value={open.id} /><input type="hidden" name="name" value={open.businessName || open.name} />
-                      {!open.suspendedAt && (<>
-                        <label htmlFor="suspend-reason" className="block text-sm font-medium">Reason to suspend</label>
-                        <input id="suspend-reason" name="reason" maxLength={300} className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
-                        <FieldMessage name="reason" />
-                      </>)}
-                      <label htmlFor="suspend-typed" className="block text-sm font-medium">Type {open.businessName || open.name} to confirm</label>
-                      <input id="suspend-typed" name="typed" maxLength={120} autoComplete="off" className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm md:h-9" />
-                      <FieldMessage name="typed" />
-                      <Submit variant={open.suspendedAt ? 'secondary' : 'destructive'} className="w-full">{open.suspendedAt ? 'Reinstate' : 'Suspend'}</Submit>
-                    </ActionForm>
-                  )}
-                </div>
-              )}
-            </Section>
+      <div className="grid items-start gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
+        <div className="min-w-0">
+          <ViewTabs label="Views" tabs={VIEWS.map(([k, label]) => ({ href: k === 'needs' ? '/admin/partners' : `/admin/partners?view=${k}`, label, count: k === 'needs' ? needs.length : counts[k], current: k === view }))} />
+          {rows.length === 0 ? <Panel title={view === 'needs' ? 'Nothing waits.' : `No ${view} partners`} /> : (
+            <ul data-list className="mt-2 divide-y divide-line-soft">
+              {rows.map((r) => (
+                <li key={r.id}>
+                  <Link href={base(r.id)} aria-current={open?.id === r.id || undefined} className={`flex flex-col gap-0.5 rounded-md px-3 py-2.5 text-sm hover:bg-accent ${open?.id === r.id ? 'bg-accent' : ''}`}>
+                    <span className="flex items-center justify-between gap-2"><b className="truncate font-medium">{nameOf(r)}</b>{chip(r)}</span>
+                    <span className="truncate text-muted-foreground">{r.name} · {r.city} · {r.approvedAt ? `${r.stores} ${r.stores === 1 ? 'store' : 'stores'}` : `applied ${sinceIN(r.appliedAt, now)}`}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
-      )}
+
+        {open && (
+          <Section ariaLabel={nameOf(open)} className="min-w-0 text-sm"
+            title={<span className="flex flex-wrap items-center gap-2">{nameOf(open)}{chip(open)}</span>}
+            action={<MoreDialogs specs={more} />}>
+            {!open.approvedAt && !open.declinedAt && (
+              <NeedsBand tone="info" title={`${nameOf(open)} applied to be a partner.`} line={`${open.name} · ${open.city} · ${sinceIN(open.appliedAt, now)}`}
+                action={isAdmin ? <div className="flex flex-wrap gap-2">
+                  <DialogButton spec={{ label: 'Decline…', title: `Decline ${nameOf(open)}?`, description: 'They read the reason in their email.', action: decidePartnerAction, keep: 'Keep in review', go: 'Decline', danger: true,
+                    fields: <><input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="decline" />
+                      <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Reason to decline</span><input name="reason" maxLength={300} className={FIELD} /><FieldMessage name="reason" /></label></> }} />
+                  <ActionForm action={decidePartnerAction}><input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="approve" /><Submit size="wrap">Approve {nameOf(open)}</Submit></ActionForm>
+                </div> : 'A master admin decides applications.'} />
+            )}
+            {asking.has(open.id) && keys?.request && (
+              <NeedsBand title={`${keys.owner} asks for a passkey.`}
+                line={[`call ${/^91\d{10}$/.test(keys.phone) ? `+91 ${keys.phone.slice(2, 7)} ${keys.phone.slice(7)}` : keys.phone}`, keys.request.device, keys.request.city].filter(Boolean).join(' · ')}
+                action={tab === 'passkeys' ? undefined : <Link href={`${base(open.id)}&tab=passkeys`} className={button()}>Approve passkey</Link>} />
+            )}
+            {open.approvedAt && <ViewTabs label={nameOf(open)} tabs={TABS.map(([k, label]) => ({ href: `${base(open.id)}${k === 'overview' ? '' : `&tab=${k}`}`, label, count: k === 'team' ? team?.length : undefined, current: tab === k }))} />}
+
+            {(tab === 'overview' || !open.approvedAt) && (
+              <dl className="grid grid-cols-[7rem_minmax(0,1fr)] gap-x-3 gap-y-2">
+                <dt className="text-muted-foreground">Owner</dt><dd>{open.name} <span className="font-num text-muted-foreground">· {open.email}</span></dd>
+                <dt className="text-muted-foreground">WhatsApp</dt><dd className="font-num">{formatPhone(open.phone)}</dd>
+                <dt className="text-muted-foreground">City</dt><dd>{open.city}</dd>
+                {open.approvedAt ? <>
+                  <dt className="text-muted-foreground">Stores</dt><dd className="font-num">{open.stores}</dd>
+                  <dt className="text-muted-foreground">Since</dt><dd>{dayMonthIN(open.approvedAt)}</dd>
+                </> : <>
+                  <dt className="text-muted-foreground">Does</dt><dd>{open.services.map((s) => PARTNER_SERVICES.find(([k]) => k === s)?.[1] ?? s).join(', ') || '—'}</dd>
+                  <dt className="text-muted-foreground">Work</dt><dd className="break-all">{open.workUrl || '—'}</dd>
+                  <dt className="text-muted-foreground">Brands now</dt><dd>{BRANDS_NOW.find(([k]) => k === open.brandsNow)?.[1]}</dd>
+                  <dt className="text-muted-foreground">Terms</dt><dd>Version {open.termsVersion}, {dateTimeIN(open.agreedAt)}</dd>
+                </>}
+                {open.declineReason && <><dt className="text-muted-foreground">Declined</dt><dd>{open.declineReason}</dd></>}
+                {open.suspendedAt && <><dt className="text-muted-foreground">Suspended</dt><dd>{dayMonthIN(open.suspendedAt)}{open.suspendReason ? ` · ${open.suspendReason}` : ''}</dd></>}
+              </dl>
+            )}
+            {tab === 'team' && open.approvedAt && (team ? (
+              <div className="divide-y divide-line-soft">
+                {team.map((m) => (
+                  <div key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <span className="min-w-0 truncate font-num">{m.email}</span>
+                    <span className="flex items-center gap-2"><Badge tone={m.role === 'owner' ? 'info' : 'neutral'}>{m.role === 'owner' ? 'Owner' : 'Lead'}</Badge>
+                      <span className="text-muted-foreground">{m.role === 'owner' ? 'every store' : m.acceptedAt ? `${m.stores} ${m.stores === 1 ? 'store' : 'stores'}` : 'invited'}</span></span>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="text-muted-foreground">The team couldn&apos;t be read. Reload to try again.</p>)}
+            {tab === 'passkeys' && open.approvedAt && (keys ? <OwnerPasskeysPanel partnerId={open.id} s={keys} now={now.toISOString()} admin={isAdmin} /> : <p className="text-muted-foreground">Confirm it&apos;s you to see passkeys.</p>)}
+          </Section>
+        )}
+      </div>
     </>
   )
 }
