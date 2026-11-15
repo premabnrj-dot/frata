@@ -221,7 +221,7 @@ export default {
         await meera.getByRole('button', { name: 'More' }).click()
         await meera.getByRole('menuitem', { name: 'End trial…' }).click()
         const end = meera.getByRole('dialog', { name: /^End .* trial\?$/ })
-        await end.getByLabel(/^Why$/).fill('Test over')
+        await end.getByLabel('Reason the store reads').fill('Test over')
         await end.getByRole('button', { name: 'End trial' }).click()
         await expectToast(meera, 'Trial ended.', 'ok')
         assert.equal((await db`select count(*)::int n from audit_events where tenant_id = ${KESAR} and action in ('trial.set', 'trial.end')`)[0].n, 2)
