@@ -76,13 +76,12 @@ export async function shipCostsIn(tx: Tx, tenantId: string): Promise<ShipCosts |
 /**
  * Whether the store has an owner, inside the caller's tenant transaction, FAILING CLOSED (tenancy review 2026-11-08): with
  * no tenant context the policy hides every member row, so a count of zero (the caller is always a member) means "no
- * context", read as "has an owner". An error propagates. `lock`: the member rows are held `for share` until the
- * transaction ends, so a handover can't land between this answer and the write it guards (V1 content, security L4).
+ * context", read as "has an owner". An error propagates. (No row lock: `for share` needs an update grant frata_app
+ * does not hold on members; a partner save in the same instant as a handover is accepted, V1 content plan § Reviews.)
  * The one read: costsVisibleIn, content saves (src/domains/content/who.ts) and, later, the Storefront API.
  */
-export async function hasOwnerIn(tx: Tx, tenantId: string, opts: { lock?: boolean } = {}): Promise<boolean> {
-  const q = tx.select({ role: members.role }).from(members).where(eq(members.tenantId, tenantId))
-  const rows = opts.lock ? await q.for('share') : await q
+export async function hasOwnerIn(tx: Tx, tenantId: string): Promise<boolean> {
+  const rows = await tx.select({ role: members.role }).from(members).where(eq(members.tenantId, tenantId))
   return rows.length === 0 || rows.some((r) => r.role === 'owner')
 }
 

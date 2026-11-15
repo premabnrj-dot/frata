@@ -546,7 +546,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
 - **One bar rule**: `barFor` (`src/domains/content/bar.ts`): a live offer first, else the live written bar that started
   last. The frame, the console's chips and later the API ask it.
 - **Who saves**: `contentSaver` (`src/domains/content/who.ts`), an allow-list: owners and Managers; a partner only while the
-  store has no owner (`hasOwnerIn(tx, …, { lock: true })`: the member rows are held `for share`, failing closed); staff
+  store has no owner (`hasOwnerIn(tx, …)`, failing closed; no row lock: `for share` needs an update grant frata_app lacks); staff
   and everyone else read; a support visit never saves. ADR-0015's `content.write` maps onto it when lane C lands.
 - **Writes**: only `src/app/(console)/console/content/actions.ts` (`write()`: the shop's limit `contentSave` counted first
   and given back on a refusal, fail closed; `asMember`; the saver check; a conditional update on `version`; one

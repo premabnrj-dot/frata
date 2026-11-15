@@ -31,8 +31,8 @@ import { FAQ_ID, FaqItemSchema, MAX_FAQ, PageDraftSchema, type FaqItem, type Pag
 
 // =============================================================================
 // Console › Content (V1, plan docs/plans/2026-11-15-v1-content.md; owner-approved mockup 2026-11-15). A save is LIVE.
-// Who (src/domains/content/who.ts): owners and Managers; a partner only while the store has no owner (read under a
-// share lock on the members, so a handover can't land mid-save); staff and everyone else read only; a Frrata support
+// Who (src/domains/content/who.ts): owners and Managers; a partner only while the store has no owner (read in the
+// save's transaction, failing closed); staff and everyone else read only; a Frrata support
 // visit never saves. Every write: the shop's save limit (counted first, given back when refused), the domain's schema,
 // the row found under the member's own store with the version the editor holds (a stale save is refused in words with
 // who saved last, as a role), `previous` := the entry before, one audit row (field names only, never the words). Undo
@@ -62,7 +62,7 @@ async function write<T extends object>(what: { action: string; scope: 'content' 
   let r: Awaited<ReturnType<typeof asMember<Out<T>>>>
   try {
     r = await asMember(CAN_BUILD, { action: what.action }, async (tx, auth) => {
-      const saver = contentSaver(auth.membership.role, await hasOwnerIn(tx, auth.membership.tenantId, { lock: true }), auth.membership.supportSessionId)
+      const saver = contentSaver(auth.membership.role, await hasOwnerIn(tx, auth.membership.tenantId), auth.membership.supportSessionId)
       if (saver !== 'yes') return { error: SAVER_REFUSAL[saver] }
       return work(tx, auth)
     })
