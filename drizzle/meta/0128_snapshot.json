@@ -7381,6 +7381,24 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "declined_at": {
+          "name": "declined_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "device": {
+          "name": "device",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -7425,6 +7443,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "partner_passkey_requests_context": {
+          "name": "partner_passkey_requests_context",
+          "value": "(\"partner_passkey_requests\".\"device\" is null or length(\"partner_passkey_requests\".\"device\") <= 60) and (\"partner_passkey_requests\".\"city\" is null or length(\"partner_passkey_requests\".\"city\") <= 60)"
+        },
         "partner_passkey_requests_kind": {
           "name": "partner_passkey_requests_kind",
           "value": "\"partner_passkey_requests\".\"approved_kind\" is null or \"partner_passkey_requests\".\"approved_kind\" in ('owner','staff')"

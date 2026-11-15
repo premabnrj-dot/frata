@@ -11,6 +11,10 @@ CREATE TABLE "partner_passkey_requests" (
 	"approved_kind" text,
 	"approved_at" timestamp with time zone,
 	"used_at" timestamp with time zone,
+	"declined_at" timestamp with time zone,
+	"device" text,
+	"city" text,
+	CONSTRAINT "partner_passkey_requests_context" CHECK (("partner_passkey_requests"."device" is null or length("partner_passkey_requests"."device") <= 60) and ("partner_passkey_requests"."city" is null or length("partner_passkey_requests"."city") <= 60)),
 	CONSTRAINT "partner_passkey_requests_kind" CHECK ("partner_passkey_requests"."approved_kind" is null or "partner_passkey_requests"."approved_kind" in ('owner','staff'))
 );
 --> statement-breakpoint

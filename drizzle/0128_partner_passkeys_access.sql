@@ -119,7 +119,7 @@ create or replace function app_partner_pk_state(p_uid uuid, p_session uuid) retu
   select case when me.member_id is null then null else jsonb_build_object(
     'role', me.role,
     'passkeys', (select count(*) from public.partner_passkeys k where k.partner_member_id = me.member_id),
-    'request', (select jsonb_build_object('expiresAt', r.expires_at, 'approved', r.approved_at is not null,
+    'request', (select jsonb_build_object('expiresAt', r.expires_at, 'approved', r.approved_at is not null, 'declined', r.declined_at is not null,
                          'approvedUntil', r.approved_at + interval '10 minutes', 'opensAt', r.opens_at,
                          'approvedBy', case when r.approved_kind = 'staff' then 'Frrata' else (select o.email from public.partner_members o where o.user_id = r.approved_by and o.partner_id = me.partner_id and o.removed_at is null limit 1) end)
                   from public.partner_passkey_requests r
@@ -240,9 +240,13 @@ end $$;--> statement-breakpoint
 
 -- "Let me add a passkey": this session's request with the hash of its 6-digit code. 15 minutes; an OWNER who already
 -- has a passkey (a recovery through Frrata) waits 24 hours, keeps it 48, and is emailed at once (review H2).
-create or replace function app_partner_pk_request(p_uid uuid, p_session uuid, p_code_hash text) returns jsonb
+-- `p_device` ("Chrome on Android") and `p_city` (Vercel's edge) are context for the approver only (partner sign-in
+-- mockup screen 10): printable characters, 60 at most, else nothing.
+create or replace function app_partner_pk_request(p_uid uuid, p_session uuid, p_code_hash text, p_device text, p_city text) returns jsonb
   language plpgsql security definer set search_path = '' as $$
 declare me record; v_wait boolean; v_exp timestamptz; v_opens timestamptz;
+  v_device text := nullif(left(btrim(regexp_replace(coalesce(p_device, ''), '[^[:print:]]', '', 'g')), 60), '');
+  v_city text := nullif(left(btrim(regexp_replace(coalesce(p_city, ''), '[^[:print:]]', '', 'g')), 60), '');
 begin
   select x.* into me from public.app_pm_live(p_uid) x;
   if me.member_id is null then raise exception 'not_partner' using errcode = 'P0001'; end if;
@@ -251,10 +255,10 @@ begin
   v_wait := me.role = 'owner' and exists (select 1 from public.partner_passkeys k where k.partner_member_id = me.member_id);
   delete from public.partner_passkey_requests r where r.partner_member_id = me.member_id and r.used_at is null and r.approved_at is null;
   delete from public.partner_passkey_requests r where r.expires_at < now() - interval '90 days';
-  insert into public.partner_passkey_requests (partner_member_id, user_id, session_id, code_hash, expires_at, opens_at)
+  insert into public.partner_passkey_requests (partner_member_id, user_id, session_id, code_hash, expires_at, opens_at, device, city)
     values (me.member_id, p_uid, p_session, p_code_hash,
             now() + case when v_wait then interval '48 hours' else interval '15 minutes' end,
-            case when v_wait then now() + interval '24 hours' end)
+            case when v_wait then now() + interval '24 hours' end, v_device, v_city)
   returning expires_at, opens_at into v_exp, v_opens;
   insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
     select null, p_uid, pm.email, 'member', 'partner.passkey.request', pm.id::text, jsonb_build_object('waits', v_wait)
@@ -280,7 +284,7 @@ begin
   perform public.app_partner_try(p_uid, p_session, 'approve');
   update public.partner_passkey_requests r set approved_by = p_uid, approved_kind = 'owner', approved_at = now()
    where r.id = (select r2.id from public.partner_passkey_requests r2 where r2.partner_member_id = t.id and r2.used_at is null
-                   and r2.approved_at is null and r2.expires_at > now() and (r2.opens_at is null or r2.opens_at <= now())
+                   and r2.approved_at is null and r2.declined_at is null and r2.expires_at > now() and (r2.opens_at is null or r2.opens_at <= now())
                    and r2.code_hash = p_code_hash order by r2.created_at desc limit 1)
   returning r.id into v_req;
   if v_req is null then return null; end if;
@@ -289,6 +293,26 @@ begin
     values (null, p_uid, v_by, 'member', 'partner.passkey.approve', t.id::text, null);
   perform public.app_partner_notify(t.id, 'partner_request_approved', v_by, null, false);
   return t.email;
+end $$;--> statement-breakpoint
+
+-- The owner says no ("Decline request": they did not start the call, or don't know the device). The Lead's screen says
+-- so; a new request starts again. A live check is enough (declining gives nothing away).
+create or replace function app_partner_pk_decline(p_uid uuid, p_session uuid, p_stepup text, p_member uuid) returns void
+  language plpgsql security definer set search_path = '' as $$
+declare me record; t record; n int;
+begin
+  select x.* into me from public.app_pm_live(p_uid) x where x.role = 'owner';
+  if me.member_id is null then raise exception 'not_owner' using errcode = 'P0001'; end if;
+  perform public.app_partner_need(p_uid, p_session, p_stepup, false);
+  select pm.id, pm.user_id into t from public.partner_members pm
+   where pm.id = p_member and pm.partner_id = me.partner_id and pm.role = 'lead' and pm.removed_at is null;
+  if t.id is null or t.user_id = p_uid then raise exception 'no_person' using errcode = 'P0001'; end if;
+  update public.partner_passkey_requests r set declined_at = now()
+   where r.partner_member_id = t.id and r.used_at is null and r.approved_at is null and r.declined_at is null and r.expires_at > now();
+  get diagnostics n = row_count;
+  if n = 0 then raise exception 'no_request' using errcode = 'P0001'; end if;
+  insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target, detail)
+    select null, p_uid, pm.email, 'member', 'partner.passkey.decline', t.id::text, null from public.partner_members pm where pm.id = me.member_id;
 end $$;--> statement-breakpoint
 
 -- The person's own passkeys (names and dates only; never a key, credential id or counter).
@@ -365,8 +389,9 @@ begin
   return jsonb_build_object('owner', o.email, 'phone', o.phone,
     'passkeys', (select count(*) from public.partner_passkeys k where k.partner_member_id = o.id),
     'lastUsedAt', (select max(k.last_used_at) from public.partner_passkeys k where k.partner_member_id = o.id),
-    'request', (select jsonb_build_object('createdAt', r.created_at, 'approved', r.approved_at is not null, 'opensAt', r.opens_at)
-                  from public.partner_passkey_requests r where r.partner_member_id = o.id and r.used_at is null
+    'request', (select jsonb_build_object('createdAt', r.created_at, 'approved', r.approved_at is not null, 'opensAt', r.opens_at,
+                         'expiresAt', r.expires_at, 'device', r.device, 'city', r.city)
+                  from public.partner_passkey_requests r where r.partner_member_id = o.id and r.used_at is null and r.declined_at is null
                    and (r.approved_at is null and r.expires_at > now() or r.approved_at > now() - interval '10 minutes')
                  order by r.created_at desc limit 1));
 end $$;--> statement-breakpoint
@@ -386,7 +411,7 @@ begin
   perform public.app_staff_try(p_staff, p_session, 'approve');
   update public.partner_passkey_requests r set approved_by = p_staff, approved_kind = 'staff', approved_at = now()
    where r.id = (select r2.id from public.partner_passkey_requests r2 where r2.partner_member_id = o.id and r2.used_at is null
-                   and r2.approved_at is null and r2.expires_at > now() and (r2.opens_at is null or r2.opens_at <= now())
+                   and r2.approved_at is null and r2.declined_at is null and r2.expires_at > now() and (r2.opens_at is null or r2.opens_at <= now())
                    and r2.code_hash = p_code_hash order by r2.created_at desc limit 1)
   returning r.id into v_req;
   if v_req is null then return null; end if;
@@ -529,11 +554,11 @@ begin
   return v_id;
 end $$;--> statement-breakpoint
 
--- The team, with each person's passkeys and an open request (for the owner's Approve).
+-- The team, with each person's passkeys and an open request with its context (the owner's approval card).
 drop function if exists app_partner_team(uuid);--> statement-breakpoint
 create function app_partner_team(p_uid uuid, p_session uuid, p_stepup text) returns table (
   member_id uuid, email text, role text, invited_at timestamptz, invite_expires_at timestamptz, accepted_at timestamptz,
-  is_you boolean, stores jsonb, passkeys integer, request_open boolean)
+  is_you boolean, stores jsonb, passkeys integer, request jsonb)
   language plpgsql stable security definer set search_path = '' as $$
 declare me record;
 begin
@@ -547,8 +572,10 @@ begin
                 join public.partner_links l on l.tenant_id = a.tenant_id and l.partner_id = me.partner_id and l.removed_at is null
                where a.partner_member_id = pm.id), '[]'::jsonb),
     (select count(*)::int from public.partner_passkeys k where k.partner_member_id = pm.id),
-    exists (select 1 from public.partner_passkey_requests r where r.partner_member_id = pm.id and r.used_at is null and r.approved_at is null
-              and r.expires_at > now() and (r.opens_at is null or r.opens_at <= now()))
+    (select jsonb_build_object('createdAt', r.created_at, 'expiresAt', r.expires_at, 'device', r.device, 'city', r.city)
+       from public.partner_passkey_requests r where r.partner_member_id = pm.id and r.used_at is null and r.approved_at is null
+        and r.declined_at is null and r.expires_at > now() and (r.opens_at is null or r.opens_at <= now())
+      order by r.created_at desc limit 1)
     from public.partner_members pm
    where pm.partner_id = me.partner_id and pm.removed_at is null
    order by array_position(array['owner','lead','builder'], pm.role), pm.accepted_at is null, pm.invited_at;
@@ -703,7 +730,7 @@ revoke all on function app_partner_live_stepup(uuid, uuid, text), app_partner_ne
   app_access_for(uuid, uuid, text, text), app_partner_pk_state(uuid, uuid), app_partner_pk_credentials(uuid),
   app_partner_pk_challenge(uuid, uuid, text, text, text), app_partner_pk_take_challenge(uuid, uuid, text, text, text),
   app_partner_pk_confirm(uuid, uuid, text, uuid, bigint, text), app_partner_pk_add(uuid, uuid, text, text, text, bigint, text[], text),
-  app_partner_pk_request(uuid, uuid, text), app_partner_pk_approve(uuid, uuid, text, uuid, text), app_partner_pk_list(uuid, uuid, text),
+  app_partner_pk_request(uuid, uuid, text, text, text), app_partner_pk_approve(uuid, uuid, text, uuid, text), app_partner_pk_decline(uuid, uuid, text, uuid), app_partner_pk_list(uuid, uuid, text),
   app_partner_pk_remove(uuid, uuid, text, uuid), app_partner_pk_remove_all(uuid, uuid, text, uuid), app_partner_pk_signout(text),
   admin_partner_pk_state(uuid, uuid, text, uuid), admin_partner_pk_approve(uuid, uuid, text, uuid, text), admin_partner_pk_remove_all(uuid, uuid, text, uuid),
   app_partner_clients(uuid, uuid, text), app_partner_create_shop(uuid, uuid, text, text, text, text, integer, integer, integer, integer),
@@ -713,7 +740,7 @@ revoke all on function app_partner_live_stepup(uuid, uuid, text), app_partner_ne
 grant execute on function app_access_for(uuid, uuid, text, text), app_partner_pk_state(uuid, uuid), app_partner_pk_credentials(uuid),
   app_partner_pk_challenge(uuid, uuid, text, text, text), app_partner_pk_take_challenge(uuid, uuid, text, text, text),
   app_partner_pk_confirm(uuid, uuid, text, uuid, bigint, text), app_partner_pk_add(uuid, uuid, text, text, text, bigint, text[], text),
-  app_partner_pk_request(uuid, uuid, text), app_partner_pk_approve(uuid, uuid, text, uuid, text), app_partner_pk_list(uuid, uuid, text),
+  app_partner_pk_request(uuid, uuid, text, text, text), app_partner_pk_approve(uuid, uuid, text, uuid, text), app_partner_pk_decline(uuid, uuid, text, uuid), app_partner_pk_list(uuid, uuid, text),
   app_partner_pk_remove(uuid, uuid, text, uuid), app_partner_pk_remove_all(uuid, uuid, text, uuid), app_partner_pk_signout(text),
   app_partner_clients(uuid, uuid, text), app_partner_create_shop(uuid, uuid, text, text, text, text, integer, integer, integer, integer),
   app_handover_invite(uuid, uuid, text, uuid, text), app_partner_team(uuid, uuid, text), app_partner_invite(uuid, uuid, text, text, text, uuid[]),

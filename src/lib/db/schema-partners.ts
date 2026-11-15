@@ -145,7 +145,14 @@ export const partnerPasskeyRequests = pgTable('partner_passkey_requests', {
   approvedKind: text('approved_kind'),
   approvedAt: at('approved_at'),
   usedAt: at('used_at'),
+  /** The owner said no ("Decline request", partner sign-in mockup screen 10). */
+  declinedAt: at('declined_at'),
+  /** Context for the approver only (mockup screen 10): "Chrome on Android" from the user agent, the city from Vercel's
+   *  edge. Each ≤ 60 characters; gone with the request (its member's removal cascades; a new request replaces it). */
+  device: text('device'),
+  city: text('city'),
 }, (t) => [
+  check('partner_passkey_requests_context', sql`(${t.device} is null or length(${t.device}) <= 60) and (${t.city} is null or length(${t.city}) <= 60)`),
   index('partner_passkey_requests_member').on(t.partnerMemberId, t.createdAt),
   check('partner_passkey_requests_kind', sql`${t.approvedKind} is null or ${t.approvedKind} in ('owner','staff')`),
 ])

@@ -3469,7 +3469,10 @@ do $$ declare r text; f text; begin
      or has_function_privilege('frata_app', 'app_partner_try(uuid, uuid, text)', 'execute') or has_function_privilege('frata_app', 'app_partner_notify(uuid, text, text, text, boolean)', 'execute')
      or has_function_privilege('frata_app', 'admin_partner_pk_approve(uuid, uuid, text, uuid, text)', 'execute') or has_function_privilege('frata_admin', 'app_partner_pk_approve(uuid, uuid, text, uuid, text)', 'execute')
      or has_function_privilege('anon', 'app_partner_pk_state(uuid, uuid)', 'execute') or not has_function_privilege('frata_app', 'app_partner_pk_state(uuid, uuid)', 'execute')
-     or not has_function_privilege('frata_admin', 'admin_partner_pk_state(uuid, uuid, text, uuid)', 'execute') then
+     or not has_function_privilege('frata_admin', 'admin_partner_pk_state(uuid, uuid, text, uuid)', 'execute')
+     or not has_function_privilege('frata_app', 'app_partner_pk_decline(uuid, uuid, text, uuid)', 'execute') or has_function_privilege('frata_admin', 'app_partner_pk_decline(uuid, uuid, text, uuid)', 'execute')
+     or has_function_privilege('authenticated', 'app_partner_pk_decline(uuid, uuid, text, uuid)', 'execute')
+     or to_regprocedure('app_partner_pk_request(uuid,uuid,text)') is not null then
     raise exception 'FAIL: the EXECUTE matrix'; end if;
   -- every new function is a definer with an empty search path
   if exists (select 1 from pg_proc p where (p.proname like 'app_partner_pk_%' or p.proname like 'admin_partner_pk_%' or p.proname in ('app_partner_live_stepup','app_partner_need','app_partner_try','app_partner_notify'))
@@ -3501,8 +3504,25 @@ begin
   begin perform app_partner_pk_challenge(M, proof.sess(M), 'confirm', null, ch); raise exception 'FAIL: a confirm with no passkey';
   exception when sqlstate 'P0001' then if sqlerrm <> 'no_passkey' then raise; end if; end;
   -- the request and who may approve it
-  r := app_partner_pk_request(M, proof.sess(M), code);
+  -- declined: the lead's gate says so, approving the declined request does nothing, a new request starts again
+  r := app_partner_pk_request(M, proof.sess(M), code, E'Chrome on Android\x07' || repeat('x', 80), 'Pune');
+  if (select (x.request->>'device') from app_partner_team(Q, proof.sess(Q), proof.h(Q)) x where x.email = 'm@kiln.test') <> 'Chrome on Android' || repeat('x', 43)
+     or (select (x.request->>'city') from app_partner_team(Q, proof.sess(Q), proof.h(Q)) x where x.email = 'm@kiln.test') <> 'Pune' then raise exception 'FAIL: request context not cleaned and capped'; end if;
+  begin perform app_partner_pk_decline(M, proof.sess(M), null, (select member_id from app_my_partner(M))); raise exception 'FAIL: a lead declined';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_partner_pk_decline(Z, proof.sess(Z), proof.h(Z), (select member_id from app_my_partner(M))); raise exception 'FAIL: another partner''s owner declined';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'no_person' then raise; end if; end;
+  begin perform app_partner_pk_decline(Q, proof.sess(Q), null, (select member_id from app_my_partner(M))); raise exception 'FAIL: declined without a check';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  perform app_partner_pk_decline(Q, proof.sess(Q), proof.h(Q), (select member_id from app_my_partner(M)));
+  if (app_partner_pk_state(M, proof.sess(M))->'request'->>'declined')::boolean is not true then raise exception 'FAIL: the lead is not told it was declined'; end if;
+  if (select x.request from app_partner_team(Q, proof.sess(Q), proof.h(Q)) x where x.email = 'm@kiln.test') is not null then raise exception 'FAIL: a declined request still shows Approve'; end if;
+  if app_partner_pk_approve(Q, proof.sess(Q), proof.h(Q), (select member_id from app_my_partner(M)), code) is not null then raise exception 'FAIL: a declined request was approved'; end if;
+  begin perform app_partner_pk_decline(Q, proof.sess(Q), proof.h(Q), (select member_id from app_my_partner(M))); raise exception 'FAIL: declined twice';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'no_request' then raise; end if; end;
+  r := app_partner_pk_request(M, proof.sess(M), code, null, null);
   if r->>'opensAt' is not null then raise exception 'FAIL: a lead''s request waits'; end if;
+  if (app_partner_pk_state(M, proof.sess(M))->'request'->>'declined')::boolean then raise exception 'FAIL: a new request still reads declined'; end if;
   begin perform app_partner_pk_approve(M, proof.sess(M), null, M, code); raise exception 'FAIL: a lead approved';
   exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
   begin perform app_partner_pk_approve(Z, proof.sess(Z), proof.h(Z), (select member_id from app_my_partner(M)), code); raise exception 'FAIL: another partner''s owner approved Kiln''s lead';
@@ -3561,7 +3581,7 @@ do $$ declare Q uuid := 'aaaaaaaa-0000-0000-0000-000000000090'; mm uuid; r jsonb
   perform set_config('proof.m79', mm::text, false);
   perform app_partner_remove_member(Q, proof.sess(Q), proof.h(Q), mm);
   -- the owner's own recovery through Frrata waits 24 hours (the owner has a passkey)
-  r := app_partner_pk_request(Q, proof.sess(Q), encode(sha256(convert_to('partner-enrol:111222', 'UTF8')), 'hex'));
+  r := app_partner_pk_request(Q, proof.sess(Q), encode(sha256(convert_to('partner-enrol:111222', 'UTF8')), 'hex'), 'Safari on iPhone', null);
   if r->>'opensAt' is null then raise exception 'FAIL: an owner''s recovery does not wait'; end if;
 end $$;
 commit;
