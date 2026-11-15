@@ -3702,10 +3702,13 @@ do $$ begin
   then raise exception 'FAIL: app_shops_with_boundary is not a pinned definer for frata_app alone'; end if;
 end $$;
 insert into products (tenant_id, handle, title, status, publish_at) values ('c8100000-0000-0000-0000-000000000002', 'drop-81', 'Drop', 'active', now() - interval '1 minute');
+insert into discounts (tenant_id, title, style, percent_bps, starts_at, ends_at, created_by) values
+  ('c8100000-0000-0000-0000-000000000001', 'Starts', 'order_off', 1000, now() - interval '2 minutes', null, '99999999-9999-9999-9999-999999999999');
 begin; set local role frata_app;
 do $$ begin
   if not exists (select 1 from app_shops_with_boundary(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: a drop in the window was missed'; end if;
-  if exists (select 1 from app_shops_with_boundary(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000001') then raise exception 'FAIL: a shop with no moment was swept'; end if;
+  if not exists (select 1 from app_shops_with_boundary(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000001') then raise exception 'FAIL: an offer starting in the window was missed'; end if;
+  if exists (select 1 from app_shops_with_boundary(now() - interval '1 hour', now() - interval '30 minutes') s where s = 'c8100000-0000-0000-0000-000000000001') then raise exception 'FAIL: an offer outside the window was swept'; end if;
   if exists (select 1 from app_shops_with_boundary(now() - interval '1 hour', now() - interval '30 minutes') s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: a moment outside the window was swept'; end if;
 end $$;
 commit;

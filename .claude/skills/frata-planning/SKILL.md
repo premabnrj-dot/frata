@@ -3,7 +3,7 @@ name: frata-planning
 description: Use when planning any Frata feature, enhancement, redesign or connector - before writing a spec or plan, before executing one, and when closing one - to run the spec, research, design review, mockup, sign-off, plan, execute and document loop, with the review headings (UI/UX, tenancy, modularity, SSOT/DRY, YAGNI, KISS, performance, reliability, security, motion and visuals, unit economics, blast radius).
 metadata:
   version: 2.8.0
-  verified: 2026-11-11
+  verified: 2026-11-15
   decisions: [ADR-0001]
 ---
 

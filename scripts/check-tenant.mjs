@@ -148,7 +148,7 @@ for (const file of walk('src')) {
   }
   // 6d. One cache helper: shopCached in src/lib/queries/storefront.ts puts the tenant in every key and tag.
   if (/\bunstable_cache\b/.test(text) && !/^src\/lib\/queries\/storefront(-keys)?\.ts$/.test(file)) {
-    failures.push(`${file}  unstable_cache outside src/lib/queries/storefront.ts — use shopCached (tenant in key and tags)`)
+    failures.push(`${file}  unstable_cache outside src/lib/queries/storefront.ts (or the key lookup, storefront-keys.ts) — use shopCached (tenant in key and tags)`)
   }
   // 9. The Storefront API's one door (ADR-0018 § Gates and proof).
   const apiFile = file.startsWith('src/app/api/storefront/') || file.startsWith('src/lib/storefront-api/') || /^src\/lib\/modules\/[^/]+\/api\.ts$/.test(file)

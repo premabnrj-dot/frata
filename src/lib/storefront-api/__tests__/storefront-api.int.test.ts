@@ -74,7 +74,7 @@ describe.skipIf(!host)('the Storefront API door', () => {
     const { newKey, shownPrefix } = await import('@/domains/storefront-api/keys')
     const { keyHash } = await import('@/lib/queries/storefront-keys')
     const { apiRequest } = await import('../request')
-    const { RESOURCES, pageParam, handleParam } = await import('../resources')
+    const { RESOURCES, pageParam, handleParam, handlePageParam, searchParam } = await import('../resources')
     const { SENTINELS } = await import('../../../../scripts/cost-sentinels.mjs')
     const postgres = (await import('postgres')).default
     const su = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
@@ -95,6 +95,10 @@ describe.skipIf(!host)('the Storefront API door', () => {
         ])} returning id`
         // Every cost a variant can carry is set: none may come out (ADR-0003).
         await su`insert into variants ${su([live!, draft!].map((p) => ({ tenant_id: t, product_id: p.id, price: 129900, stock: 5, unit_cost: 987654 })))}`
+        // A collection holding both (only the listed one shows), and an old handle for the live product.
+        const [c] = await su`insert into collections (tenant_id, handle, title, kind) values (${t}, ${`sarees-${i}`}, ${`Sarees ${i}`}, 'manual') returning id`
+        await su`insert into collection_products ${su([live!, draft!].map((p, n) => ({ tenant_id: t, collection_id: c!.id, product_id: p.id, position: n })))}`
+        await su`insert into product_handle_history (tenant_id, handle, product_id) values (${t}, ${`old-live-${i}`}, ${live!.id})`
         const k = newKey('public', rnd), tk = newKey('test', rnd)
         keys.push(k); tests.push(tk)
         await su`insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by, expires_at) values
@@ -119,6 +123,22 @@ describe.skipIf(!host)('the Storefront API door', () => {
       expect((await read(live('product')(r(), at(keys[0]!, { handle: 'draft-0' })))).status).toBe(404)
       expect((await read(test('product')(r(), at(tests[0]!, { handle: 'draft-0' })))).status).toBe(200)
       expect(JSON.parse((await read(test('products')(r(), at(tests[0]!, { n: '1' })))).body).products.map((x: { handle: string }) => x.handle)).toEqual(['live-0'])
+      // The rest of the resources, on A's live key: B's collection is not found, A's lists only what is listed.
+      const res = (name: 'collections' | 'collection' | 'offers' | 'search', more: Record<string, string> = {}, url?: string) => apiRequest({ version: '2026-12', tree: 'live',
+        mode: name === 'search' ? 'dynamic' : 'isr', resource: name, schema: RESOURCES[name].schema, limit: name === 'search' ? 'search' : undefined,
+        params: (name === 'collection' ? handlePageParam : name === 'search' ? searchParam : undefined) as never, run: RESOURCES[name].run as never })(new Request(url ?? 'https://api.frrata.shop/x'), at(keys[0]!, more))
+      expect(JSON.parse(await (await res('collections')).text()).collections.map((c: { handle: string }) => c.handle)).toEqual(['sarees-0'])
+      const col = JSON.parse(await (await res('collection', { handle: 'sarees-0', n: '1' })).text())
+      expect(col.products.map((x: { handle: string }) => x.handle)).toEqual(['live-0'])
+      expect((await res('collection', { handle: 'sarees-1', n: '1' })).status).toBe(404)
+      expect(JSON.parse(await (await res('offers')).text())).toEqual({ bar: null })
+      const found = JSON.parse(await (await res('search', {}, 'https://api.frrata.shop/x?q=kurta')).text())
+      expect(found.products.map((x: { handle: string }) => x.handle)).toEqual(['live-0'])
+      // A moved product answers with its current handle; another shop's old handle is not found.
+      const moved = await read(live('product')(r(), at(keys[0]!, { handle: 'old-live-0' })))
+      expect(moved.status).toBe(200)
+      expect(JSON.parse(moved.body).handle).toBe('live-0')
+      expect((await read(live('product')(r(), at(keys[0]!, { handle: 'old-live-1' })))).status).toBe(404)
       for (const body of [page.body, shop.body, (await read(live('product')(r(), at(keys[0]!, { handle: 'live-0' })))).body]) {
         expect(body).not.toContain('987654')
         for (const k of SENTINELS) expect(body).not.toContain(k)

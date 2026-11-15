@@ -33,7 +33,8 @@ import { showcase } from '@/lib/storefront/showcase'
 // - RAW rows, dates as ISO strings: visibility() and availability() run at render, because a cached `now` would hide
 //   a scheduled drop forever.
 // - shop* loaders are cached per tenant (shopCached: tenant first in the key and in every tag, 60 s backstop);
-//   preview* loaders are the same core, uncached, drafts included, for /console/preview only. None takes a preview flag.
+//   preview* loaders are the same core, uncached, drafts included, for /console/preview and the Storefront API's test
+//   keys only; api* loaders are the shop* reads with the API's hour (V1 SA1). None takes a preview flag.
 // =============================================================================
 
 type Loader<A extends unknown[], R> = (tenantId: string, ...a: A) => Promise<R>
@@ -348,6 +349,20 @@ const shopHandles = shopCached('handles', 'catalogue', (t) => coreHandles(t, fal
 const shopProductRow = shopCached('product-v2', 'catalogue:product', (t, handle: string) => coreProduct(t, handle, false))
 export async function shopProduct(tenantId: string, handle: string): Promise<Lookup> {
   return lookup(await shopHandles(tenantId), () => shopProductRow(tenantId, handle), handle)
+}
+
+// The Storefront API's own entries of the same reads, with its hour (V1 SA1; measured 2026-11-15 under next start: a
+// cached route takes the shortest period of the caches it reads, so the shop's 60 s entries made every API copy stale
+// after a minute). Same tags, so every purge that reaches the shop's pages reaches these; time boundaries are the drain's.
+const API_HOUR = 3600
+export const apiShop = shopCached('api-shop-v1', 'shop', (t) => coreShop(t), API_HOUR)
+export const apiAnnouncement = shopCached('api-announce-v1', 'catalogue', coreAnnouncement, API_HOUR)
+const apiCatalogueEntry = shopCached('api-catalogue-v1', 'catalogue', (t) => coreCatalogue(t, false), API_HOUR)
+export const apiCatalogue = cache(async (tenantId: string): Promise<StoreCatalogue> => expand(await apiCatalogueEntry(tenantId)))
+const apiHandles = shopCached('api-handles-v1', 'catalogue', (t) => coreHandles(t, false), API_HOUR)
+const apiProductRow = shopCached('api-product-v1', 'catalogue:product', (t, handle: string) => coreProduct(t, handle, false), API_HOUR)
+export async function apiProduct(tenantId: string, handle: string): Promise<Lookup> {
+  return lookup(await apiHandles(tenantId), () => apiProductRow(tenantId, handle), handle)
 }
 
 export const previewShop = (tenantId: string) => coreShop(tenantId)

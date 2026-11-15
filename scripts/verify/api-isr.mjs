@@ -6,7 +6,7 @@
 //     (`skey:<sha256 hex>` and `shop:<tenant>`);
 //   - a test key's answer is never cached (no HIT, `private, no-store`);
 //   - a key-shaped path for another host, a bad shape or an unknown key is a 404 with the one body.
-// Usage: ADMIN_URL=postgres://postgres@localhost:54330/frata_proof API_HOST=api.frrata.test node scripts/verify/api-isr.mjs
+// Usage (PERIOD=1 adds the 65 s period check): ADMIN_URL=postgres://postgres@localhost:54330/frata_proof API_HOST=api.frrata.test node scripts/verify/api-isr.mjs
 // (build first: NEXT_PUBLIC_API_HOST=api.frrata.test DATABASE_URL=… npm run build). Hosts go through node:http:
 // undici drops a Host header (frata-gotchas).
 // =============================================================================
@@ -71,6 +71,13 @@ try {
   expect((await get(`/2026-12/k/frs_pub_short/shop`)).status === 404, 'a bad shape did not 404')
   expect((await get(`/2026-12/k/${live}/shop`, 'app.frrata.test')).status === 404, 'the console host answered a versioned path')
   expect((await get(`/api/storefront/2026-12/k/${live}/shop`, `isr${tag}.in`)).status === 404, 'a shop host reached the API handlers')
+  // The hour holds (impact review 2026-11-15): a cache read inside a cached route lowers the route's period to that
+  // cache's own. 65 s later the copy must still be fresh (HIT), not stale (STALE: the 60 s shop loaders won).
+  if (process.env.PERIOD === '1') {
+    await new Promise((r) => setTimeout(r, 65_000))
+    const c = await get(`/2026-12/k/${live}/shop`)
+    expect(c.headers['x-nextjs-cache'] === 'HIT', `65 s later the live copy was ${c.headers['x-nextjs-cache']}: its period is not the hour`)
+  }
   const o = await get('/2026-12/openapi.json')
   expect(o.status === 200 && JSON.parse(o.body).openapi === '3.1.0', 'openapi.json')
 } finally {

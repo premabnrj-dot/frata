@@ -1,7 +1,7 @@
 import 'server-only'
 import * as S from '@/domains/storefront-api/2026-12/schemas'
-import { collectionOut, collectionPageOut, offersOut, pageOut, productOut, searchOut, shopOut } from '@/domains/storefront-api/2026-12/map'
-import { previewCatalogue, previewProduct, previewShop, shopAnnouncement, shopCatalogue, shopProduct, shopSettingsFor, type Lookup } from '@/lib/queries/storefront'
+import { collectionOut, collectionPageOut, MAX_PAGE, offersOut, pageOut, productOut, searchOut, shopOut } from '@/domains/storefront-api/2026-12/map'
+import { apiAnnouncement, apiCatalogue, apiProduct, apiShop, previewCatalogue, previewProduct, previewShop, shopAnnouncement, type Lookup } from '@/lib/queries/storefront'
 import { siteOriginFor } from '@/lib/queries/storefront-api'
 import type { ApiCtx } from './request'
 import { visibility, type Status } from '@/domains/catalogue/availability'
@@ -18,16 +18,16 @@ import { BLOB_STORE_ID } from '@/lib/env'
 
 const loaders = (ctx: ApiCtx) => ctx.keyKind === 'test'
   ? { shop: previewShop, catalogue: previewCatalogue, product: previewProduct }
-  : { shop: shopSettingsFor, catalogue: shopCatalogue, product: shopProduct }
+  : { shop: apiShop, catalogue: apiCatalogue, product: apiProduct }
 
 /** The mappers' context: the shop from the key, and Frrata's one media store (photos from anywhere else are dropped). */
 const mapCtx = (ctx: ApiCtx) => ({ tenantId: ctx.tenantId, mediaHost: storeHost(BLOB_STORE_ID) })
 
 const HANDLE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-/** A page number 1–13 (600 ÷ 48) from the path, or null (a 404 before any read). */
+/** A page number 1–MAX_PAGE from the path, or null (a 404 before any read). */
 export const pageParam = (raw: Record<string, string | string[] | undefined>) => {
-  const n = typeof raw.n === 'string' && /^(?:[1-9]|1[0-3])$/.test(raw.n) ? Number(raw.n) : null
-  return n === null ? null : { page: n }
+  const n = typeof raw.n === 'string' && /^[1-9]\d?$/.test(raw.n) ? Number(raw.n) : null
+  return n === null || n > MAX_PAGE ? null : { page: n }
 }
 export const handleParam = (raw: Record<string, string | string[] | undefined>) =>
   typeof raw.handle === 'string' && raw.handle.length <= 100 && HANDLE.test(raw.handle) ? { handle: raw.handle } : null
@@ -67,7 +67,7 @@ export const RESOURCES = {
     const c = cat.collections.find((x) => x.handle === p.handle) ?? cat.collections.find((x) => x.handle === cat.movedCollections?.[p.handle])
     return c ? collectionPageOut(mapCtx(ctx), c, cat.products, p.page, ctx.now) : null
   } },
-  offers: { schema: S.Offers, run: async (ctx: ApiCtx) => offersOut(await shopAnnouncement(ctx.tenantId), ctx.now) },
+  offers: { schema: S.Offers, run: async (ctx: ApiCtx) => offersOut(await (ctx.keyKind === 'test' ? shopAnnouncement : apiAnnouncement)(ctx.tenantId), ctx.now) },
   search: { schema: S.Search, run: async (ctx: ApiCtx, p: { q: string }) =>
     searchOut(mapCtx(ctx), (await loaders(ctx).catalogue(ctx.tenantId)).products, p.q, ctx.now) },
 } as const

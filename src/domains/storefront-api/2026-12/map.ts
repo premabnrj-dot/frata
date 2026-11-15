@@ -12,7 +12,7 @@ import { availability, bestOffer, type Availability as Avail } from '../../catal
 import { cardBadge, liveLines, type ShowOffer } from '../../checkout/offer-showcase'
 import { offerStatus } from '../../checkout/offer-status'
 import { barText, type OfferWords } from '../../checkout/offer-text'
-import { factsOf, inCollection, isListed, pageOf, priceOf, sortProducts, type ListCollection, type ListVariant } from '../../storefront/listing'
+import { factsOf, inCollection, isListed, PAGE_SIZE, pageOf, priceOf, sortProducts, type ListCollection, type ListVariant } from '../../storefront/listing'
 import type { z } from 'zod'
 import { instagramHandle } from '../../settings/instagram'
 import { normaliseMobile } from '../../settings/mobile'
@@ -20,6 +20,8 @@ import type * as S from './schemas'
 
 /** The most products the API reads from a catalogue (the cached entry's cap; past it: D3, later). */
 export const CATALOGUE_CAP = 600
+/** The last page a list can have: 600 ÷ 48, rounded up (13). The WAF path rule holds the same number (waf.test.ts). */
+export const MAX_PAGE = Math.ceil(CATALOGUE_CAP / PAGE_SIZE)
 
 type In<T extends z.ZodType> = z.input<T>
 export type ImageIn = { base: string; widths: number[]; alt: string }

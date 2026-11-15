@@ -33,7 +33,10 @@ export async function GET(request: Request) {
   // Time boundaries (V1 Storefront API SA1): a scheduled product going live or an offer starting or ending writes
   // nothing then, and the API's cached copies live an hour. The last 6 minutes (one run overlaps the next), ids only.
   try {
-    for (const t of await shopsWithBoundary(new Date(started - 6 * 60_000), new Date(started))) refreshShop(t, 'catalogue')
+    const due = await shopsWithBoundary(new Date(started - 6 * 60_000), new Date(started))
+    // The sweep returns at most 500: at the cap, shops past it wait for the next run or their own hour (logged, never silent).
+    if (due.length >= 500) console.error('[cron] drain boundaries: 500 shops, the rest next run')
+    for (const t of due) refreshShop(t, 'catalogue')
   } catch (e) { console.error('[cron] drain boundaries', errName(e)) }
   // Staff security emails (staff passkeys): a handful a day; their own queue, outside the shops' outbox.
   const staffMail = await sendStaffNotices().catch((e) => { console.error('[cron] staff notices', errName(e)); return 0 })
