@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Admin · Today</title>
+<title>Frrata Admin · Today</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -48,7 +48,7 @@ a{color:#2F37A3;text-decoration:none}a:hover{color:#272D82}
   <main style="flex: 1; min-width: 0; padding: 28px 32px; display: flex; flex-direction: column; gap: 20px;">
     <header style="display: flex; align-items: baseline; justify-content: space-between;">
       <h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">Today</h1>
-      <span style="font-size: 13px; color: #67625C;">7 need someone · oldest first</span>
+      <span style="font-size: 13px; color: #67625C;">7 to do · oldest first</span>
     </header>
     <section aria-label="Needs you" style="border: 1px solid #E3E1DD; border-radius: 12px; overflow: hidden; max-width: 900px;">
       <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px;">
@@ -59,22 +59,22 @@ a{color:#2F37A3;text-decoration:none}a:hover{color:#272D82}
       <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px; border-top: 1px solid #EEEDEA;">
         <span class="chip bad">Invoice</span>
         <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Kesar Studio paid ₹1,180 more than due</b><span style="font-size: 13px; color: #67625C;">FR/26-27/0041 · paid 2 days ago</span></span>
-        <a class="btn" href="Invoice.dc.html">Refund it</a>
+        <a class="btn" href="Invoice.dc.html">Record refund</a>
       </div>
       <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px; border-top: 1px solid #EEEDEA;">
-        <span class="chip warn">Domain</span>
-        <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">shop.kaaru.in is another store's main address</b><span style="font-size: 13px; color: #67625C;">Claimed by Loom Labs · since 9 Nov</span></span>
-        <a class="btn" href="Names.dc.html">Decide</a>
+        <span class="chip warn">Address</span>
+        <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Loom Labs claims shop.kaaru.in</b><span style="font-size: 13px; color: #67625C;">Studio Kaaru's main address · since 9 Nov</span></span>
+        <a class="btn" href="Names.dc.html">Review claim</a>
       </div>
       <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px; border-top: 1px solid #EEEDEA;">
         <span class="chip info">Partner</span>
         <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Weft Digital applied to be a partner</b><span style="font-size: 13px; color: #67625C;">Sana Qureshi · Hyderabad · 2 h ago</span></span>
-        <a class="btn" href="Partners.dc.html">Review</a>
+        <a class="btn" href="Partners.dc.html">Review application</a>
       </div>
       <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px; border-top: 1px solid #EEEDEA;">
         <span class="chip warn">Trial</span>
-        <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Gulmohar's trial ends in 2 days, no autopay</b><span style="font-size: 13px; color: #67625C;">Launch · 41 delivered orders</span></span>
-        <a class="btn" href="Merchant.dc.html">Open</a>
+        <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Gulmohar's trial ends in 2 days. No autopay yet.</b><span style="font-size: 13px; color: #67625C;">Launch · 41 delivered orders</span></span>
+        <a class="btn" href="Merchant.dc.html">Open Gulmohar</a>
       </div>
       <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px; border-top: 1px solid #EEEDEA;">
         <span class="chip warn">Merchant</span>
@@ -83,11 +83,11 @@ a{color:#2F37A3;text-decoration:none}a:hover{color:#272D82}
       </div>
       <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px; border-top: 1px solid #EEEDEA;">
         <span class="chip bad">Infrastructure</span>
-        <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Outbox has 214 waiting for 12 min</b><span style="font-size: 13px; color: #67625C;">Supabase · Now</span></span>
-        <a class="btn" href="Infrastructure.dc.html">Open</a>
+        <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">214 messages waiting for 12 min</b><span style="font-size: 13px; color: #67625C;">Supabase · Now</span></span>
+        <a class="btn" href="Infrastructure.dc.html">Open Supabase</a>
       </div>
     </section>
-    <p style="margin: 0; font-size: 13px; color: #67625C; max-width: 900px;">Billing's November run waits for 1 December.</p>
+    <p style="margin: 0; font-size: 13px; color: #67625C; max-width: 900px;">November's invoices go out on 1 Dec.</p>
   </main>
 </div>
 </x-dc>
