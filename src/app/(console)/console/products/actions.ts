@@ -38,6 +38,7 @@ type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string; error
 class Stop extends Error { constructor(public result: { ok: false; error: string; errors?: Record<string, string>; conflict?: boolean }) { super('stop') } }
 
 const reason = errName
+
 export async function createProduct(input: { title: string; kind?: string }): Promise<Result<{ id: string; handle: string }>> {
   const title = String(input?.title ?? '').trim().replace(/\s+/g, ' ')
   if (!title || title.length > 140) return { ok: false, error: 'Give your product a name of up to 140 characters.' }
@@ -188,6 +189,7 @@ export async function saveProduct(productId: string, version: number, input: Pro
  * time it goes live is recorded: from then on its address is kept on a change.
  */
 export async function setStatus(productId: string, status: Status, publishAt: string | null = null): Promise<Result> {
+  if (typeof productId !== 'string' || !UUID.test(productId)) return { ok: false, error: 'That product is not in your shop.' }
   if (!['draft', 'active', 'unlisted', 'archived'].includes(status)) return { ok: false, error: 'That is not a status.' }
   const when = status === 'active' && publishAt ? new Date(publishAt) : null
   if (when && (Number.isNaN(when.getTime()) || when.getTime() > Date.now() + 366 * 86400000)) return { ok: false, error: 'Pick a date and time within a year.' }
@@ -258,6 +260,7 @@ export async function attachPhotos(productId: string, photos: NewPhoto[]): Promi
 
 /** Move a photo, tag it with a colour, or remove it (its files are deleted after the row). */
 export async function editPhoto(imageId: string, change: { move?: -1 | 1 | { to: number }; optionValue?: string | null; alt?: string; remove?: true }): Promise<Result> {
+  if (typeof imageId !== 'string' || !UUID.test(imageId)) return { ok: false, error: 'That photo is not in your shop.' }
   // From the browser: a step of one, or a place to drop it on (0–49: a product holds at most 50 photos).
   const move = change.move
   if (move !== undefined && move !== -1 && move !== 1 && !(typeof move === 'object' && move !== null && Number.isInteger(move.to) && move.to >= 0 && move.to <= 49)) {
