@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.56.0
+  version: 2.57.0
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -32,7 +32,19 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - Console: `requireMember(roles)` (`src/lib/auth/require-member.ts`) gives the
   tenant id — a membership or an active support session, both from
   `app_access_for`. Storefront: `tenantForHost(host)` (`src/lib/db/platform.ts`).
-  **These are the only two sources of a tenant id.**
+  **The Storefront API's host** (ADR-0018, V1 SA0): `storefrontKeyFor(key)` (`src/lib/queries/storefront.ts`), called
+  only inside `apiRequest()` (`src/lib/storefront-api/request.ts`), from the key in the path through the definer
+  `app_storefront_key`. **These are the only three sources of a tenant id.**
+- **The Storefront API** (ADR-0018; plan `docs/plans/2026-11-15-v1-storefront-api.md`): its host `NEXT_PUBLIC_API_HOST`
+  is a `routeFor` kind of its own, rewritten by next.config (`apiRewrites`; never the middleware, whose matcher skips
+  versioned paths). Live keys (`frs_pub_`) reach the cached tree `api/storefront/<v>/k/`, test keys (`frs_test_`) the
+  dynamic tree `t/`. **A cached route handler never reads the request** (a header read is a runtime error there, and
+  anything per-caller would be served to everyone); CORS there is a static `*`. Every handler is
+  `export const GET = apiRequest({ version, tree, mode, resource, schema, run })`: `run` gets `ctx` (shop, key, kind,
+  version, now) and parsed path params, never the Request; its answer leaves as `schema.parse()` of a closed schema.
+  The key lookup is cached and tagged by the key's sha256 hex (`skey:<hex>`: an `unstable_cache` tag must be known
+  before the call); every stop (deleted, expired, store opened for test keys, partner gone, domain gone, back to
+  Frrata) is derived in the definer. `check:tenant` § 9 and `check:api` hold the shape; proof block 81 the database.
 - Console writes go through `asMember(roles, (tx, ctx) => …)`
   (`src/lib/auth/as-member.ts`): it opens the tenant transaction and, in support
   mode, writes the audit row in the same transaction (`check:actions`).

@@ -19,6 +19,11 @@
 //      drizzle-analytics/*.sql has RLS and a policy there, every frata_app policy is bound to app_current_tenant(),
 //      nothing is granted on the partitions' schema `ev`, and its connection (@/lib/db/analytics) is imported only by
 //      src/lib/queries/** (which then call withAnalyticsTenant) and the files in ANALYTICS_IN_APP.
+//   9. THE STOREFRONT API (ADR-0018): a key is the third source of a tenant id, resolved ONLY inside apiRequest. In
+//      src/app/api/storefront/**, src/lib/storefront-api/** and src/lib/modules/*/api.ts: every exported route method is
+//      apiRequest(…) (openapi.json, which has no key, is the one named entry point); no shop or tenant id from a host,
+//      a session, a header, a cookie, params or a body; storefrontKeyFor only in request.ts, storefrontKeyRow only in
+//      src/lib/queries/storefront.ts, app_storefront_key only in platform.ts and migrations.
 //   7. READS STAY IN src/lib/queries (plan U · T1, T2, 2026-11-07): src/app/**
 //      imports @/lib/db/tenant only from TENANT_IN_APP; the shell
 //      (src/components/shell/**) imports no data module — it is handed values,
@@ -54,6 +59,10 @@ const ANALYTICS_DB = /(?:from\s+|import\(\s*)['"]@\/lib\/db\/analytics['"]/
 const ANALYTICS_IN_APP = {
   'src/lib/analytics/ingest.ts': 'the visit beacon\'s ingest (A·2): one ingestBatch per beacon, the shop from requireShop (the host), never the body',
 }
+/** Storefront API routes with no key, and why (rule 9). */
+const API_ENTRY_POINTS = new Set([
+  'src/app/api/storefront/2026-12/openapi.json/route.ts', // the published schema: generated from the closed output schemas, no shop data
+])
 /** App files that may open withTenant themselves, with why. */
 const TENANT_IN_APP = {
   'src/app/api/shop/orders/view/route.ts': 'the shopper\'s order page: tenant from the host, order from a signed token',
@@ -116,9 +125,9 @@ for (const file of walk('src')) {
   }
   // 6. A MERCHANT'S COST NEVER REACHES A SHOPPER (ADR-0003): storefront code never names it.
   // Shopper-facing code: pages, views, shop API routes and their reads (checkout review 2026-11-07 adds the API and checkout reads).
-  const shopperRead = /^src\/lib\/(queries\/(storefront|checkout)|storefront\/)/.test(file) // lib/storefront: the shop's cached reads' helpers (showcase)
+  const shopperRead = /^src\/lib\/(queries\/(storefront|checkout)|storefront\/|storefront-api\/)|^src\/domains\/storefront-api\//.test(file) // lib/storefront: the shop's cached reads' helpers (showcase)
   const shopper = file.startsWith('src/app/s/') || shopperRead || file.startsWith('src/components/shop-preview/')
-    || file.startsWith('src/components/storefront/') || file.startsWith('src/app/(console)/console/preview/') || file.startsWith('src/app/api/shop/') || file === 'src/lib/http/shop-api.ts'
+    || file.startsWith('src/components/storefront/') || file.startsWith('src/app/(console)/console/preview/') || file.startsWith('src/app/api/shop/') || file === 'src/lib/http/shop-api.ts' || file.startsWith('src/app/api/storefront/')
   if (shopper) {
     // The team's side of an order (1D) never reaches a shopper: why it was cancelled, notes, who did what.
     const named = [...SENTINELS, 'keySecret', 'webhookSecret', 'key_secret', 'webhook_secret', 'cancelReason', 'cancel_reason', 'cancelNote', 'cancel_note', 'orderNotes', 'order_notes', 'orderEvents', 'order_events'].filter((x) => text.includes(x))
@@ -141,6 +150,28 @@ for (const file of walk('src')) {
   if (/\bunstable_cache\b/.test(text) && !/^src\/lib\/queries\/storefront\.ts$/.test(file)) {
     failures.push(`${file}  unstable_cache outside src/lib/queries/storefront.ts — use shopCached (tenant in key and tags)`)
   }
+  // 9. The Storefront API's one door (ADR-0018 § Gates and proof).
+  const apiFile = file.startsWith('src/app/api/storefront/') || file.startsWith('src/lib/storefront-api/') || /^src\/lib\/modules\/[^/]+\/api\.ts$/.test(file)
+  if (apiFile) {
+    if (file.startsWith('src/app/api/storefront/') && !API_ENTRY_POINTS.has(file)) {
+      for (const m of text.matchAll(/export\s+(?:const|async\s+function|function)\s+(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\b([^\n]*)/g)) {
+        if (!/^\s*=\s*apiRequest\(/.test(m[2])) failures.push(`${file}  ${m[1]} is not apiRequest(…) — every Storefront API handler goes through the one door (ADR-0018)`)
+      }
+      if (/export\s+default\b/.test(text)) failures.push(`${file}  a default export in an API route — export GET = apiRequest(…)`)
+    }
+    const banned = [
+      [/\b(shopIdForHost|shopMovedTo|tenantForHost|requireMember|requireShop|asMember|asModule)\b/, 'a host or session tenant source'],
+      [/\bcookies\(|\bheaders\(\)|from\s+['"]next\/headers['"]/, 'cookies() or headers()'],
+      [/params\??\.(tenant|shop)\w*/i, 'a tenant or shop id from params'],
+      [/searchParams[^\n]*\.get\(\s*['"](shop|tenant)/, 'a tenant or shop id from the query'],
+      [/\.json\(\)|\.formData\(\)/, 'a request body'],
+    ]
+    for (const [re, what] of banned) if (re.test(text)) failures.push(`${file}  ${what} in Storefront API code — the shop comes only from the key, through apiRequest (ADR-0018)`)
+    if (file !== 'src/lib/storefront-api/request.ts' && /headers\.get\(/.test(text)) failures.push(`${file}  reads a request header — only request.ts reads the network and the Origin`)
+  }
+  if (/\bstorefrontKeyFor\b/.test(text) && !['src/lib/storefront-api/request.ts', 'src/lib/queries/storefront.ts'].includes(file)) failures.push(`${file}  calls storefrontKeyFor — only apiRequest resolves a key (ADR-0018)`)
+  if (/\bstorefrontKeyRow\b/.test(text) && !['src/lib/queries/storefront.ts', 'src/lib/db/platform.ts'].includes(file)) failures.push(`${file}  calls storefrontKeyRow — only the cached storefrontKeyFor does (ADR-0018)`)
+  if (/\bapp_storefront_key\b/.test(text) && file !== 'src/lib/db/platform.ts') failures.push(`${file}  names app_storefront_key — only src/lib/db/platform.ts calls the definer (ADR-0018)`)
   if (file.startsWith('src/lib/queries/')) {
     if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  query file without import 'server-only'`)
     if (!/\bwith(Analytics)?Tenant\(/.test(text)) failures.push(`${file}  query file that never calls withTenant( or withAnalyticsTenant(`)

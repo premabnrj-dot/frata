@@ -115,3 +115,17 @@ Proposed:
 5. A partner may create and revoke keys only while the shop has never had an owner; after that, owners and admins
    only? Yes or no.
 6. No content (announcements, pages, FAQ) over the API until SA0 has passed its proof? Yes or no.
+
+## Notes as built (V1 SA0, 2026-11-15; plan docs/plans/2026-11-15-v1-storefront-api.md)
+- § 3: the hash is stored as sha256 **lowercase hex** (`text`, CHECK `^[0-9a-f]{64}$`), the same form as the cache key
+  and tag; `revoked_by` sits beside `revoked_at` (both written once). § 4: the definer returns four columns (adds
+  `expires_at`, checked again on each cached use) and derives every stop: a test key once the store **ever** opened
+  (`tenants.first_opened_at`), a key made by a partner whose link to the shop is gone or who is suspended (owner
+  decision 4, 2026-11-15), and a Website whose `site_domain_id` row is not live.
+- § 5: handlers read through the shop's cached loaders keyed by `ctx.tenantId` (each opens its own `withTenant`), never a
+  `withTenant` around a loader. § 7: the lookup is tagged `skey:<hex>`, not `skey:<id>` (a tag must be known before the
+  call); a delete purges that tag. § 9: limits per network fail closed (`apiMissIp`, `apiTestIp`, `apiSearchIp`,
+  `apiKeyCreateShop`); the WAF path and rate rules are on the API host.
+- § 2 "logs carry the key id": our logs do; a key is in the URL path, so Vercel's request logs hold it. A live key is
+  public by design; a test key is visible to anyone who sees the developer's browser.
+

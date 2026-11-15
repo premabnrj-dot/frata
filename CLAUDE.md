@@ -50,9 +50,9 @@ Scripts: `npm run release:check` (migration collisions + the e2e flows a change 
 **ONE MERCHANT NEVER SEES ANOTHER'S DATA** (ADR-0002). Two locks: the row
 policy in Postgres (`drizzle/0001_tenant_isolation.sql`) and `withTenant()` in
 `src/lib/db/tenant.ts`. Merchant rows are read only through `src/lib/queries/`.
-The tenant id comes from `requireMember()` or the storefront host — never from
-a URL, a form or a body (one named exception: starting a support session,
-ADR-0007). Cross-tenant reads only through `frata_admin` in `src/lib/admin/`. A new table ships with its grant, RLS and policy in
+The tenant id comes from `requireMember()`, the storefront host, or a storefront key resolved by
+`storefrontKeyFor()` inside `apiRequest()` on the API host (ADR-0018) — never from an id in a URL, a form or a body
+(one named exception: starting a support session, ADR-0007). A key reads only what the shop's public pages show. Cross-tenant reads only through `frata_admin` in `src/lib/admin/`. A new table ships with its grant, RLS and policy in
 the same migration. `npm run check:tenant` holds the shape;
 `npm run verify:tenancy` proves it on a real Postgres.
 
