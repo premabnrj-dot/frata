@@ -188,13 +188,15 @@ export async function payingFor(m: Pick<Membership, 'tenantId' | 'role'>, now = 
   mayReadMoney(m)
   return withTenant(m.tenantId, async (tx) => {
     const [[a], [n]] = await Promise.all([
-      tx.select({ method: billingAccounts.mandateMethod, max: billingAccounts.mandateMax, at: billingAccounts.mandateAt, revoked: billingAccounts.mandateRevokedAt, token: billingAccounts.mandateTokenId }).from(billingAccounts).where(eq(billingAccounts.tenantId, m.tenantId)),
+      tx.select({ method: billingAccounts.mandateMethod, max: billingAccounts.mandateMax, at: billingAccounts.mandateAt, revoked: billingAccounts.mandateRevokedAt }).from(billingAccounts).where(eq(billingAccounts.tenantId, m.tenantId)),
       tx.select({ amount: billingNotices.amount, at: billingNotices.debitAt }).from(billingNotices)
         .where(and(eq(billingNotices.tenantId, m.tenantId), eq(billingNotices.kind, 'debit_notice'), gt(billingNotices.debitAt, new Date(now.getTime() - 86_400_000)))).orderBy(desc(billingNotices.createdAt)).limit(1),
     ])
     return {
       mandate: a?.method && a.at && !a.revoked ? { method: a.method, max: a.max ?? 0, since: a.at } : null,
-      pending: a?.method && a.token && !a.at && !a.revoked ? { method: a.method } : null,
+      // Set up (a method recorded) but not yet confirmed: an eNACH waiting for the bank. The token column is never read here
+      // (frata_app holds no grant on the gateway's ids).
+      pending: a?.method && !a.at && !a.revoked ? { method: a.method } : null,
       nextDebit: n?.at ? { amount: n.amount, at: n.at } : null,
     }
   })
