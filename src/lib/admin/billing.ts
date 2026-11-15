@@ -20,6 +20,8 @@ export type DraftRow = {
   id: string; tenantId: string; shop: string; taxable: number; gst: number; total: number; rolled: boolean; carryOut: number
   ordersBilled: number; includedOrders: number; draftedAt: Date; number: string | null; issuedAt: Date | null
   paid: number; credited: number; state: InvoiceState; due: number
+  /** Paid over what was due and not yet sent back (Billing › Needs you; Record refund). */
+  toRefund: number
 }
 
 /** Money across every shop: Frrata admins only (plan finding 17), checked here as well as on the page. */
@@ -32,22 +34,23 @@ export async function billingMonth(staff: StaffOk, monthStart: Date): Promise<Dr
     total: frrataInvoices.total, rolled: frrataInvoices.rolled, carryOut: frrataInvoices.carryOut, ordersBilled: frrataInvoices.ordersBilled, includedOrders: frrataInvoices.includedOrders,
     draftedAt: frrataInvoices.draftedAt, number: frrataInvoices.number, issuedAt: frrataInvoices.issuedAt,
   }).from(frrataInvoices).innerJoin(tenants, eq(tenants.id, frrataInvoices.tenantId)).where(eq(frrataInvoices.periodStart, monthStart)).orderBy(asc(tenants.name))
-  const { paid, credited } = await moneyIn(rows.map((r) => r.id))
+  const { paid, credited, toRefund } = await moneyIn(rows.map((r) => r.id))
   return rows.map(({ cgst, sgst, igst, ...r }) => {
     const p = paid.get(r.id) ?? 0, c = credited.get(r.id) ?? 0
-    return { ...r, gst: cgst + sgst + igst, paid: p, credited: c, ...invoiceState(r, p, c) }
+    return { ...r, gst: cgst + sgst + igst, paid: p, credited: c, toRefund: toRefund.get(r.id) ?? 0, ...invoiceState(r, p, c) }
   })
 }
 
 /** Captured payments and credit-note totals per invoice. */
 async function moneyIn(ids: string[]) {
-  if (!ids.length) return { paid: new Map<string, number>(), credited: new Map<string, number>() }
+  if (!ids.length) return { paid: new Map<string, number>(), credited: new Map<string, number>(), toRefund: new Map<string, number>() }
   const db = adminDb()
   const [p, c] = await Promise.all([
-    db.select({ id: frrataPayments.invoiceId, n: sql<string>`sum(${frrataPayments.amount})` }).from(frrataPayments).where(and(inArray(frrataPayments.invoiceId, ids), isNotNull(frrataPayments.capturedAt))).groupBy(frrataPayments.invoiceId),
+    db.select({ id: frrataPayments.invoiceId, n: sql<string>`sum(${frrataPayments.amount})`, r: sql<string>`coalesce(sum(${frrataPayments.overPaid}) filter (where ${frrataPayments.overPaid} > 0 and ${frrataPayments.refundedAt} is null), 0)` })
+      .from(frrataPayments).where(and(inArray(frrataPayments.invoiceId, ids), isNotNull(frrataPayments.capturedAt))).groupBy(frrataPayments.invoiceId),
     db.select({ id: frrataCreditNotes.invoiceId, n: sql<string>`sum(${frrataCreditNotes.total})` }).from(frrataCreditNotes).where(inArray(frrataCreditNotes.invoiceId, ids)).groupBy(frrataCreditNotes.invoiceId),
   ])
-  return { paid: new Map(p.map((r) => [r.id, Number(r.n)])), credited: new Map(c.map((r) => [r.id, Number(r.n)])) }
+  return { paid: new Map(p.map((r) => [r.id, Number(r.n)])), credited: new Map(c.map((r) => [r.id, Number(r.n)])), toRefund: new Map(p.map((r) => [r.id, Number(r.r)])) }
 }
 
 /** What "Issue" would do now: the invoices to number (not rolled, total > 0) and their total — Admin confirms these. */
@@ -78,7 +81,7 @@ export async function issueMonth(staff: StaffOk, monthStart: Date, expected: { c
 export type InvoiceDetail = {
   invoice: DraftRow & { periodStart: Date; testMode: boolean; buyerName: string | null }
   lines: { description: string; quantity: number; taxable: number }[]
-  payments: { method: string; amount: number; utr: string | null; capturedAt: Date | null; failedAt: Date | null; failureReason: string | null; overPaid: number; createdAt: Date }[]
+  payments: { id: string; refundAmount: number | null; refundUtr: string | null; refundedAt: Date | null; method: string; amount: number; utr: string | null; capturedAt: Date | null; failedAt: Date | null; failureReason: string | null; overPaid: number; createdAt: Date }[]
   credits: { number: string; total: number; reason: string; issuedAt: Date }[]
 }
 
@@ -93,14 +96,14 @@ export async function invoiceDetail(staff: StaffOk, id: string): Promise<Invoice
   if (!i) return null
   const [lines, payments, credits, money] = await Promise.all([
     db.select({ description: frrataInvoiceLines.description, quantity: frrataInvoiceLines.quantity, taxable: frrataInvoiceLines.taxable }).from(frrataInvoiceLines).where(eq(frrataInvoiceLines.invoiceId, id)).orderBy(asc(frrataInvoiceLines.position)),
-    db.select({ method: frrataPayments.method, amount: frrataPayments.amount, utr: frrataPayments.utr, capturedAt: frrataPayments.capturedAt, failedAt: frrataPayments.failedAt, failureReason: frrataPayments.failureReason, overPaid: frrataPayments.overPaid, createdAt: frrataPayments.createdAt })
+    db.select({ id: frrataPayments.id, refundAmount: frrataPayments.refundAmount, refundUtr: frrataPayments.refundUtr, refundedAt: frrataPayments.refundedAt, method: frrataPayments.method, amount: frrataPayments.amount, utr: frrataPayments.utr, capturedAt: frrataPayments.capturedAt, failedAt: frrataPayments.failedAt, failureReason: frrataPayments.failureReason, overPaid: frrataPayments.overPaid, createdAt: frrataPayments.createdAt })
       .from(frrataPayments).where(eq(frrataPayments.invoiceId, id)).orderBy(asc(frrataPayments.createdAt)),
     db.select({ number: frrataCreditNotes.number, total: frrataCreditNotes.total, reason: frrataCreditNotes.reason, issuedAt: frrataCreditNotes.issuedAt }).from(frrataCreditNotes).where(eq(frrataCreditNotes.invoiceId, id)).orderBy(asc(frrataCreditNotes.issuedAt)),
     moneyIn([id]),
   ])
   const { cgst, sgst, igst, ...r } = i
   const p = money.paid.get(id) ?? 0, c = money.credited.get(id) ?? 0
-  return { invoice: { ...r, gst: cgst + sgst + igst, paid: p, credited: c, ...invoiceState(r, p, c) }, lines, payments, credits }
+  return { invoice: { ...r, gst: cgst + sgst + igst, paid: p, credited: c, toRefund: money.toRefund.get(id) ?? 0, ...invoiceState(r, p, c) }, lines, payments, credits }
 }
 
 /** A bank transfer, UPI or pay-link payment recorded by hand (ADMIN_ONLY), under its unique reference; audited. */
@@ -110,6 +113,17 @@ export async function recordPayment(staff: StaffOk, invoiceId: string, p: { amou
     const [r] = await tx.execute<{ id: string }>(sql`select app_record_frrata_payment(${invoiceId}::uuid, ${p.amount}, ${p.method}, ${p.utr}, ${staff.userId}::uuid) as id`)
     await auditStaff(tx, staff, { action: 'billing.payment', target: invoiceId, detail: { amount: p.amount, method: p.method } })
     return r!.id
+  })
+}
+
+/** An over-payment Frrata sent back from its bank, recorded once (ADMIN_ONLY): app_record_frrata_refund (0138) is the
+ *  one writer of the refund columns and checks the role again; audited in the same transaction. */
+export async function recordRefund(staff: StaffOk, paymentId: string, r: { utr: string; sentOn: string }) {
+  adminOnly(staff)
+  return adminDb().transaction(async (tx) => {
+    const [x] = await tx.execute<{ amount: string }>(sql`select app_record_frrata_refund(${paymentId}::uuid, ${r.utr}, ${r.sentOn}::date, ${staff.userId}::uuid) as amount`)
+    await auditStaff(tx, staff, { action: 'billing.refund', target: paymentId, detail: { amount: Number(x!.amount) } })
+    return Number(x!.amount)
   })
 }
 
