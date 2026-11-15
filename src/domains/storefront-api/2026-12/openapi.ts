@@ -13,7 +13,7 @@ const json = (schema: z.ZodType) => z.toJSONSchema(schema, { target: 'draft-2020
 const ok = (schema: z.ZodType, description: string) => ({
   description, content: { 'application/json': { schema: json(schema) } },
 })
-const notFound = { description: 'Unknown key, product or page; every refusal is this one body.', content: { 'application/json': { schema: { type: 'object', properties: { error: { const: 'not_found' } }, required: ['error'] } } } }
+const notFound = { description: 'Unknown key, product or page. Every refusal is this one body.', content: { 'application/json': { schema: { type: 'object', properties: { error: { const: 'not_found' } }, required: ['error'] } } } }
 const key = { name: 'key', in: 'path', required: true, description: 'Your store’s live key (frs_pub_…) or, before it opens, a test key (frs_test_…).', schema: { type: 'string', pattern: '^frs_(pub|test)_[0-9A-Za-z]{38}$' } }
 const n = { name: 'n', in: 'path', required: true, schema: { type: 'integer', minimum: 1, maximum: 13 } }
 const handle = { name: 'handle', in: 'path', required: true, schema: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$', maxLength: 100 } }
@@ -22,12 +22,12 @@ const get = (summary: string, schema: z.ZodType, params: object[] = []) => ({ ge
 export function openApi() {
   return {
     openapi: '3.1.0',
-    info: { title: 'Frrata Storefront API', version: '2026-12', description: 'Read a store’s public catalogue. Prices are in paise. Text is plain text: render it as text, never as HTML. availability.kind may gain values.' },
+    info: { title: 'Frrata Storefront', version: '2026-12', description: 'Read a store’s public catalogue. Prices are in paise. Render text as text, never as HTML. New availability kinds may appear.' },
     servers: [{ url: 'https://api.frrata.shop/2026-12' }],
     paths: {
-      '/k/{key}/shop': get('The store, with the legal details its website must show', S.Shop),
+      '/k/{key}/shop': get('The store, with the legal details every page must show', S.Shop),
       '/k/{key}/products/page/{n}': get('Listed products, 48 a page', S.Page, [n]),
-      '/k/{key}/products/{handle}': get('One product; handle in the answer is its current address', S.Product, [handle]),
+      '/k/{key}/products/{handle}': get('One product. Its handle in the answer is its current address.', S.Product, [handle]),
       '/k/{key}/collections': get('The store’s collections', S.Collections),
       '/k/{key}/collections/{handle}/page/{n}': get('A collection’s listed products, 48 a page', S.CollectionPage, [handle, n]),
       '/k/{key}/offers': get('The offer in the store’s bar, while it runs', S.Offers),
