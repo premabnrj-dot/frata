@@ -3,8 +3,9 @@ import { Money } from '@/components/data/numeric'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { PageHeader } from '@/components/layout/page-header'
 import { Badge } from '@/components/ui/badge'
-import { button } from '@/components/ui/button'
+import { Button, button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
+import { Section } from '@/components/layout/section'
 import { Steps } from '@/components/ui/steps'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
@@ -72,13 +73,13 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       <PageHeader title="Billing"
         badges={<form className="flex items-center gap-2"><label className="flex items-center gap-2 text-sm"><span className="text-muted-foreground">Month</span>
           <select name="month" defaultValue={ym} className={FIELD}>{months.map((m) => <option key={ymOf(m)} value={ymOf(m)}>{LONG.format(m)}</option>)}</select></label>
-          <button className={button({ variant: 'secondary', size: 'sm' })}>Show</button></form>}
+          <Button type="submit" variant="secondary" size="sm">Show</Button></form>}
         actions={<MoreDialogs specs={[
-          ...(canDraft ? [{ label: `Run drafts for ${label}…`, title: `Run drafts for ${label}?`, description: 'Every store on a plan gets its draft redone from today’s figures.', action: runDraftsAction, fields: monthField, keep: 'Not now', go: 'Run drafts' }] : []),
+          ...(canDraft ? [{ label: `Run drafts for ${label}…`, title: `Run drafts for ${label}?`, description: 'Every store on a plan gets its draft redone from today’s figures.', action: runDraftsAction, fields: monthField, keep: 'Keep the drafts', go: 'Run drafts' }] : []),
           { label: 'Run collection now…', title: 'Run collection now?', description: 'Autopay is tried on every due invoice that allows it.', action: collectAction, fields: monthField, keep: 'Not now', go: 'Run collection' },
         ]} />} />
 
-      <section aria-labelledby="run-h" className="space-y-3 rounded-lg border border-border p-4">
+      <Section labelledBy="run-h" className="space-y-3">
         <Steps label={`${label}'s run`} current={step} steps={[rows.length ? `Drafts · ${rows.length}` : 'Drafts', 'Issue', 'Collect']} />
         {step === 0 ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -92,7 +93,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             {!begun ? <span className="text-sm text-muted-foreground">Issued from 1 {label}</span>
               : ready.stale > 0 ? <ActionForm action={runDraftsAction}>{monthField}<Submit>Run drafts again</Submit></ActionForm>
               : ready.count > 0 && <DialogButton variant="primary" spec={{ label: `Issue ${ready.count} ${ready.count === 1 ? 'invoice' : 'invoices'}`, title: `Issue ${ready.count} ${ready.count === 1 ? 'invoice' : 'invoices'} for ${label}?`, danger: true,
-                  description: 'Each gets its number now. An issued invoice never changes. A correction is a credit note.', action: issueAction, keep: 'Not yet', go: `Issue ${ready.count}`,
+                  description: 'Each gets its number now. An issued invoice never changes. A correction is a credit note.', action: issueAction, confirm: true, keep: 'Not yet', go: `Issue ${ready.count}`,
                   fields: <>{monthField}<input type="hidden" name="count" value={ready.count} /><input type="hidden" name="total" value={ready.total} />
                     <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Type ISSUE {ready.count} to confirm</span><input name="confirm" autoComplete="off" className={FIELD} /><FieldMessage name="confirm" /></label></> }} />}
           </div>
@@ -103,7 +104,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             {rows.some((r) => r.number) && <a href={`/admin/billing/export?month=${ym}`} className={button({ variant: 'secondary' })}>Download GST export</a>}
           </div>
         )}
-      </section>
+      </Section>
 
       {rows.length > 0 && <>
         <ViewTabs label="Invoices" tabs={VIEWS.map(([k, l]) => ({ href: `/admin/billing?month=${ym}&view=${k}`, label: l, count: counts[k], current: view === k }))} />

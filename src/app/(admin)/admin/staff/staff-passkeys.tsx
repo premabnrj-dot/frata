@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ActionForm, FieldMessage, type ActionResult } from '@/components/ui/action-form'
-import { Dialog } from '@/components/ui/dialog'
+import { Dialog, DialogError } from '@/components/ui/dialog'
+import { FIELD } from '@/components/ui/field'
 import { Submit } from '@/components/ui/submit'
 import { useToast } from '@/components/ui/toast'
 import { addPasskey, approve, confirmPasskey, removeOne } from '@/components/passkeys/passkey-client'
@@ -113,11 +114,11 @@ export function AddStaffDialog({ action, support, master }: { action: (form: For
     const r = await confirmPasskey()
     return r.ok ? action(form) : { error: r.error }
   }
-  const field = 'h-11 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark md:h-9'
+  const field = `${FIELD} aria-invalid:border-danger-mark`
   return (
     <>
       <Button onClick={() => setOpen(true)}>Add staff</Button>
-      <Dialog open={open} onClose={close} title="Add staff" actions={null} error={error}>
+      <Dialog open={open} onClose={close} title="Add staff" actions={null}>
         {open && (
           <ActionForm action={confirmed} onDone={close} onError={setError} className="flex flex-col gap-3">
             <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Email</span>
@@ -125,8 +126,9 @@ export function AddStaffDialog({ action, support, master }: { action: (form: For
             <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Role</span>
               <select name="role" className={field}><option value="support">{support}</option><option value="admin">{master}</option></select></label>
             <p className="text-sm text-muted-foreground">They must have signed in to Frrata once with that email.</p>
+            <DialogError error={error} />
             <div className="flex flex-wrap justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={close} data-autofocus="">Keep the team</Button>
+              <Button type="button" variant="secondary" onClick={close} data-autofocus="">Not now</Button>
               <Submit>Add staff</Submit>
             </div>
           </ActionForm>

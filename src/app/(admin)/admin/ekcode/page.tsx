@@ -29,7 +29,7 @@ function controlOf(r: EkShop): DialogSpec {
   const act = r.paused_at ? 'resume' : r.breaker_at ? 'reset' : 'pause'
   const fields = <><input type="hidden" name="tenantId" value={r.tenant_id} /><input type="hidden" name="shop" value={r.shop} /><input type="hidden" name="action" value={act} /><Why /></>
   return act === 'resume' ? { label: 'Resume codes…', title: `Resume codes for ${r.shop}?`, action: shopControlAction, keep: 'Keep paused', go: 'Resume codes', fields }
-    : act === 'reset' ? { label: 'Resume codes…', title: `Reset ${r.shop}'s breaker?`, description: 'Codes go out again at once.', action: shopControlAction, keep: 'Keep paused', go: 'Resume codes', fields }
+    : act === 'reset' ? { label: 'Resume codes…', title: `Resume codes for ${r.shop}?`, description: 'Codes go out again at once.', action: shopControlAction, keep: 'Keep paused', go: 'Resume codes', fields }
     : { label: 'Pause codes…', title: `Pause codes for ${r.shop}?`, description: 'Its shoppers sign in without EkCode until you resume.', action: shopControlAction, keep: 'Keep running', go: 'Pause codes', danger: true, fields }
 }
 
@@ -46,19 +46,19 @@ export default async function EkcodeAdmin({ searchParams }: { searchParams: Prom
   const l = { ...DEFAULT_LIMITS, ...(settings?.limits as Partial<Limits> | undefined) }
   const rows: [keyof Limits, string][] = [['perNumber10m', 'Codes per number, 10 min'], ['perNumberDay', 'Codes per number, a day'], ['triesPerCode', 'Tries per code'],
     ['perNetworkHour', 'Codes per network, an hour'], ['perWideNetworkHour', 'Codes per wide network, an hour'], ['globalHour', 'Codes, every store, an hour'],
-    ['breakerAfter', 'Breaker after codes'], ['breakerMinRight', 'Breaker below share right']]
-  const small = `${FIELD} w-28 font-mono`
+    ['breakerAfter', 'Check after this many codes'], ['breakerMinRight', 'Pause below this share typed right']]
+  const small = `${FIELD} w-28 font-num`
 
   return (
     <>
       <PageHeader title="EkCode" actions={admin.ok && <>
-        <DialogButton spec={{ label: 'Block a number', title: 'Block or unblock a number?', action: blockAction, keep: 'Not now', go: 'Apply to this number', fields: <>
+        <DialogButton spec={{ label: 'Block a number', title: 'Block or unblock a number?', action: blockAction, keep: 'Don’t change it', go: 'Apply to this number', fields: <>
           <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Number</span><input name="phone" inputMode="numeric" maxLength={14} className={`${FIELD} font-num`} /><FieldMessage name="phone" /></label>
           <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Block or unblock</span><select name="lift" className={FIELD}><option value="0">Block</option><option value="1">Unblock</option></select></label>
           <Why /></> }} />
         <DialogButton spec={{ label: 'Edit limits', title: 'Edit limits for every store?', description: settings ? `Version ${settings.version} · ${dayMonthIN(new Date(settings.at))}` : undefined, action: limitsAction, keep: 'Keep limits', go: 'Save limits', fields: <>
-          <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" name="signIn" defaultChecked={settings?.sign_in ?? true} /> Sign-in with EkCode, every store</label>
-          {rows.map(([k, label]) => <label key={k} className="flex items-center justify-between gap-3 text-sm">{label}<input name={k} type="number" step={k === 'breakerMinRight' ? '0.05' : '1'} defaultValue={String(l[k])} className={small} /></label>)}
+          <label className="flex min-h-6 items-center gap-2 text-sm font-medium"><input type="checkbox" name="signIn" defaultChecked={settings?.sign_in ?? true} /> Sign-in with EkCode, every store</label>
+          {rows.map(([k, label]) => <label key={k} className="flex items-center justify-between gap-3 text-sm">{label}<input name={k} type="number" step={k === 'breakerMinRight' ? '0.05' : '1'} defaultValue={String(l[k])} className={small} /><FieldMessage name={k} /></label>)}
           {(['launch', 'growth', 'scale'] as const).map((p) => <label key={p} className="flex items-center justify-between gap-3 text-sm">Codes a day per store · {p[0]!.toUpperCase() + p.slice(1)}<input name={p} type="number" defaultValue={String(l.perShopDay[p])} className={small} /></label>)}
           <Why /></> }} />
       </>} />
@@ -84,7 +84,7 @@ export default async function EkcodeAdmin({ searchParams }: { searchParams: Prom
                 <Td cell="c" className="text-right font-num">{n(r.codes)}</Td>
                 <Td cell="c" className="text-right font-num">{pct(r.verified, r.codes)}</Td>
                 <Td cell="c" className="text-right font-num">{n(r.continued)}</Td>
-                <Td cell="d">{r.paused_at ? <Badge tone="warn">Paused</Badge> : r.breaker_at ? <Badge tone="danger">Breaker</Badge> : <Badge tone="ok">Running</Badge>}{r.raised_cap ? <span className="ml-2 text-xs text-muted-foreground">cap {r.raised_cap} a day</span> : null}</Td>
+                <Td cell="d">{r.paused_at ? <Badge tone="warn">Paused</Badge> : r.breaker_at ? <Badge tone="danger">Paused by limit</Badge> : <Badge tone="ok">Running</Badge>}{r.raised_cap ? <span className="ml-2 text-xs text-muted-foreground">cap {r.raised_cap} a day</span> : null}</Td>
                 <Td cell="f" className="text-right"><MoreDialogs label={`More for ${r.shop}`} specs={[controlOf(r)]} /></Td>
               </DataTableRow>
             ))}

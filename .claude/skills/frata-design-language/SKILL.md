@@ -111,7 +111,7 @@ from it).
   numbers strip; steps are pictogram + 1–3 words + one short line; rules and
   details are pictogram + a title + an (i) tip.
 
-## Apps and modules (approved mockup v2, 2026-11-07; the gallery and app pages: § Apps gallery below)
+## Apps (approved mockup v2, 2026-11-07; the gallery and app pages: § Apps gallery below)
 
 - **Console › Apps** (`/console/apps`, Store group; in More on a phone): the gallery in § Apps gallery. Every card and
   app page reads `offerFor()` (`src/domains/modules/offer.ts`) — footer, state chip, filter and the one action.

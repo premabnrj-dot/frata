@@ -98,7 +98,7 @@ export default {
       await meera.getByRole('link', { name: 'Kesar Studio' }).first().waitFor() // the owner asked for Reviews above
       await meera.getByRole('link', { name: /^Apps/ }).first().click()
       await meera.getByRole('button', { name: 'More for Messages' }).click()
-      await meera.getByRole('menuitem', { name: 'Pause for everyone…' }).click()
+      await meera.getByRole('menuitem', { name: 'Pause for every store…' }).click()
       const dlg = meera.getByRole('dialog', { name: 'Pause Messages for every store?' })
       await dlg.getByLabel('Why').fill('Meta outage')
       await dlg.getByRole('button', { name: 'Pause Messages' }).click()

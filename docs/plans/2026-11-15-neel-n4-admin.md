@@ -177,6 +177,23 @@ sources and the "uncounted" rule; money actions need a fresh passkey).
 Flows that open `/admin` (grep `/admin/` in e2e) run before any change; new `89-neel-admin.mjs` (Today, nav counts, a
 merchant's band and tabs, a dialog, Record refund, Activity filter, phone) written first.
 
+## Reviews on the diff (2026-11-15), folded in
+- **Security** (safe to merge): money dialogs now confirm a passkey when the server asks and send the same form again
+  (`confirm: true` on the dialog spec); the refund's audit row carries the store and the bank reference; a malformed
+  Activity page link is ignored, not a crash.
+- **Impact:** Merchants' In trial and Live come from the derived trial state and the store's first opening
+  (`trialAndLiveIds`, one `trialView` mapping for Merchants, Trials and Today); the refund refuses a day before the
+  payment arrived, and the proof (83) now holds every refusal; a vitest proves each money action refuses a stale passkey
+  check before any money moves; a test invoice is never "paid too much"; Today's items carry a short `need`, the IST
+  month comes from `src/domains/time/month.ts`, the counts are dropped when a source failed; a store's Activity keeps
+  its tabs; `isMasterAdmin` is the one role test in the pages this phase touched.
+- **Speed:** Activity's kind filter reads the stored `audit_events.action_word` (one ordered read per word, merged):
+  `split_part` is not leakproof, so its expression index was never used under frata_admin's policy (2.4–3.8 s at 10×).
+- **Design system:** a dialog's refusal sits above its buttons (`DialogError`); money and counts in `font-num`; a field
+  message under every dialog field; folds padded; Button and Tag primitives; 24 px targets; bands labelled by their own
+  fact, radius by role; literal sizes gone.
+- **Words:** confirms name what stays and what goes; buttons name their thing; "master admin" everywhere; Rule 0 cuts.
+
 ## Deviations (proposed; owner sees them before ship)
 | Mockup element | Built | Reason | Owner seen |
 |---|---|---|---|

@@ -57,7 +57,7 @@ export default async function AppsPage({ searchParams }: { searchParams: Promise
                   {admin.ok && def.status === 'now' && (p ? (
                     <DialogButton spec={{ label: 'Resume', title: `Resume ${def.name}?`, description: 'Held messages go out with the next send.', action: resumeModuleAction, fields: id, keep: 'Keep paused', go: `Resume ${def.name}` }} />
                   ) : (
-                    <MoreDialogs label={`More for ${def.name}`} specs={[{ label: 'Pause for everyone…', title: `Pause ${def.name} for every store?`, description: 'Its messages wait. Nothing is lost.', action: pauseModuleAction, danger: true, keep: 'Keep running', go: `Pause ${def.name}`,
+                    <MoreDialogs label={`More for ${def.name}`} specs={[{ label: 'Pause for every store…', title: `Pause ${def.name} for every store?`, description: 'Its messages wait. Nothing is lost.', action: pauseModuleAction, danger: true, keep: 'Keep running', go: `Pause ${def.name}`,
                       fields: <>{id}<label className="flex flex-col gap-1 text-sm"><span className="font-medium">Why</span><input name="reason" required minLength={3} maxLength={200} data-error="Say why, in a few words." className={FIELD} /><FieldMessage name="reason" /></label></> }]} />
                   ))}
                 </span>

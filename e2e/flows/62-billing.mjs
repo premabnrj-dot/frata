@@ -233,8 +233,8 @@ export default {
         const move = meera.getByRole('dialog', { name: /^Change .* plan\?$/ })
         await move.getByRole('radio', { name: /^Scale/ }).check()
         await move.getByLabel('Starts').selectOption('next_month')
-        await move.getByLabel(/^Custom monthly price/).fill('9999')
-        await move.getByLabel(/^Why/).fill('E2E move')
+        await move.getByLabel(/^Monthly price/).fill('9999')
+        await move.getByLabel(/^Reason/).fill('E2E move')
         await move.getByRole('button', { name: 'Move Kesar Studio' }).click()
         // The change lands on the merchant's page (`go`); its toast comes with it (the shell's Toaster outlives the move).
         await expectToast(meera, 'Plan changed.', 'ok')

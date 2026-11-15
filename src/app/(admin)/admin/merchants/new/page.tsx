@@ -52,7 +52,6 @@ export default async function NewMerchantPage() {
                 </label>
               ))}
             </div>
-            <span className="text-xs text-muted-foreground">Prices are each plan’s current version.</span>
           </fieldset>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="trialEndsAt" className="text-sm font-medium">Trial ends <span className="font-normal text-muted-foreground">(optional)</span></label>
@@ -65,7 +64,6 @@ export default async function NewMerchantPage() {
         </ActionForm></Section>
         <aside className="max-w-sm space-y-3 text-sm leading-relaxed text-muted-foreground">
           <h2 className="text-section font-semibold text-foreground">What happens</h2>
-          <p>The owner gets an email with a sign-in link.</p>
           <p>You can open the store&apos;s console straight away to set it up. That is a support visit, and the owner will see it.</p>
         </aside>
       </div>

@@ -1,5 +1,5 @@
 {
-  "id": "cb2b9fa7-9db5-4af9-8d62-9809107916b5",
+  "id": "342bdda2-6883-4a32-aaad-358f6d98916c",
   "prevId": "a28bacd2-84a4-4632-986c-923bd5601899",
   "version": "7",
   "dialect": "postgresql",
@@ -69,6 +69,16 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
+        },
+        "action_word": {
+          "name": "action_word",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "split_part(action, '.', 1)",
+            "type": "stored"
+          }
         }
       },
       "indexes": {
@@ -145,9 +155,9 @@
           "name": "audit_events_kind_at",
           "columns": [
             {
-              "expression": "split_part(\"action\", '.', 1)",
+              "expression": "action_word",
+              "isExpression": false,
               "asc": true,
-              "isExpression": true,
               "nulls": "last"
             },
             {

@@ -104,7 +104,7 @@ export default {
           await a.getByRole('button', { name: 'Release kesar-studio' }).click()
           const rel = a.getByRole('dialog', { name: 'Release kesar-studio?' })
           await rel.getByLabel('Why').fill('Trademark cleared')
-          await rel.getByRole('button', { name: 'Release', exact: true }).click()
+          await rel.getByRole('button', { name: 'Release kesar-studio' }).click()
           await expectToast(a, 'kesar-studio released.', 'ok')
         } finally { await staff.close() }
         // Not opened (the step before lifted it), so the change needs no confirm.

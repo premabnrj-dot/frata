@@ -49,10 +49,10 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
   const base = `/admin/themes/${key}/${version}`
 
   const more: DialogSpec[] = admin && v.inCode && !isBaseline(key, version) ? [
-    ...(!final ? [{ label: 'Recall…', title: `Recall ${name}?`, description: `No new looks on it. ${stores(v.live)} live on it keep showing it and are offered their previous look. Final.`, action: pullAction, keep: 'Keep it', go: `Recall ${name}`,
+    ...(!final ? [{ label: 'Recall…', title: `Recall ${name}?`, description: `No new store can start on it. The ${stores(v.live)} live on it keep it. This can’t be undone.`, action: pullAction, keep: `Keep ${v.version}`, go: `Recall ${name}`,
       fields: <>{hidden}<input type="hidden" name="how" value="recall" />{why('Why recall it', 'Say why, in a few words.')}</> }] : []),
-    ...(v.state !== 'withdrawn' ? [{ label: 'Withdraw…', title: `Withdraw ${name}?`, danger: true, action: pullAction, keep: 'Keep it', go: `Withdraw ${name}`,
-      description: <>{stores(v.live)} show their previous look at once. Final.{v.liveShops.length > 0 && <> Moves back: {v.liveShops.slice(0, 20).map((s) => s.name).join(', ')}{v.liveShops.length > 20 ? `, and ${v.liveShops.length - 20} more` : ''}.</>}</>,
+    ...(v.state !== 'withdrawn' ? [{ label: 'Withdraw…', title: `Withdraw ${name}?`, danger: true, action: pullAction, keep: `Keep ${v.version}`, go: `Withdraw ${name}`,
+      description: <>{stores(v.live)} go back to their previous look at once. This can’t be undone.{v.liveShops.length > 0 && <> Moves back: {v.liveShops.slice(0, 20).map((s) => s.name).join(', ')}{v.liveShops.length > 20 ? `, and ${v.liveShops.length - 20} more` : ''}.</>}</>,
       fields: <>{hidden}<input type="hidden" name="how" value="withdraw" />{why('Why withdraw it', 'Say what the problem is, in a few words.')}</> }] : []),
   ] : []
 
@@ -64,7 +64,7 @@ export default async function ThemeVersionPage({ params, searchParams }: { param
         actions={<>
           <MoreDialogs specs={more} />
           {admin && v.inCode && !final && v.state !== 'released' && (
-            <DialogButton variant="primary" spec={{ label: 'Release to every store', title: `Release ${name} to every store?`, action: releaseAction, keep: 'Not yet', go: 'Release', fields: hidden,
+            <DialogButton variant="primary" spec={{ label: 'Release to every store', title: `Release ${name} to every store?`, action: releaseAction, keep: 'Not yet', go: `Release ${name}`, fields: hidden,
               description: older > 0 ? `${stores(older)} live on an older ${v.name} see that it’s ready. Nothing changes until they publish.` : 'Every store can try it.' }} />
           )}
         </>} />

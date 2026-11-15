@@ -36,14 +36,14 @@ export default async function ShopOffersPage({ params }: { params: Promise<{ ten
   const ended = shop.offers.length - open.length
   return (
     <>
-      <PageHeader title={`${shop.name} · offers`} back={{ href: '/admin/offers', label: 'Offers' }} meta={`${open.length} not ended${ended ? `, ${ended} ended` : ''}`} />
+      <PageHeader title={`${shop.name} · offers`} back={{ href: '/admin/offers', label: 'Offers' }} meta={`${open.length} live${ended ? ` · ${ended} ended` : ''}`} />
       {!open.length ? <Panel title="Nothing to stop" /> : (
         <div className="space-y-3">
           {open.map((o) => {
             const hidden = <><input type="hidden" name="tenantId" value={tenantId} /><input type="hidden" name="id" value={o.id} /></>
             return (
               <Section key={o.id} title={o.title} id={`o-${o.id}`} action={<span className="flex items-center gap-2"><Badge tone={STATUS_WORDS[o.status].tone}>{STATUS_WORDS[o.status].label}</Badge>
-                {admin && o.status !== 'stopped' && <MoreDialogs label={`More for ${o.title}`} specs={[{ label: 'Stop…', title: `Stop ${o.title}?`, description: 'Shoppers lose it at once. The store reads your reason and can only end it.', action: stopAction, keep: 'Keep it running', go: `Stop ${o.title}`, danger: true,
+                {admin && o.status !== 'stopped' && <MoreDialogs label={`More for ${o.title}`} specs={[{ label: 'Stop…', title: `Stop ${o.title}?`, description: 'Shoppers lose it at once. The store sees your reason.', action: stopAction, keep: 'Keep it running', go: `Stop ${o.title}`, danger: true,
                   fields: <>{hidden}<label className="flex flex-col gap-1 text-sm"><span className="font-medium">Why stop it <span className="font-normal text-muted-foreground">(the store reads this)</span></span>
                     <input name="reason" required minLength={3} maxLength={300} placeholder="The struck price was never charged" data-error="Say why, in a few words." className={input} /><FieldMessage name="reason" /></label></> }]} />}</span>}>
                 <p className="text-sm text-muted-foreground">{STYLE_LABEL[o.style as DiscountStyle]?.name ?? o.style} · from {dayMonthIN(o.startsAt)}{o.endsAt ? ` till ${dayMonthIN(o.endsAt)}` : ''}</p>

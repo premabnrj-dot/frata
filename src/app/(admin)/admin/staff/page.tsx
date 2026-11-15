@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { STAFF_ROLE_WORDS } from '@/domains/tenancy/staff-words'
+import { STAFF_ROLE_WORDS, isMasterAdmin } from '@/domains/tenancy/staff-words'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
@@ -26,7 +26,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
   if (!proof) return <Panel title="Confirm it's you" />
   const rows = await staffWithPasskeys(staff, proof)
   const now = new Date()
-  const isAdmin = staff.role === 'admin'
+  const isAdmin = isMasterAdmin(staff.role)
   const asking = isAdmin ? rows.filter((r) => r.request && !r.request.approved && r.userId !== staff.userId) : []
   const open = rows.find((r) => r.userId === sp.id) ?? rows.find((r) => r.userId === staff.userId) ?? rows[0]
   const lastUsed = (r: (typeof rows)[number]) => r.passkeys.reduce<number | null>((t, k) => (k.lastUsedAt && (!t || +new Date(k.lastUsedAt) > t) ? +new Date(k.lastUsedAt) : t), null)
@@ -49,7 +49,7 @@ export default async function StaffPage({ searchParams }: { searchParams: Promis
               {rows.map((r) => {
                 const used = lastUsed(r)
                 return (
-                  <DataTableRow key={r.userId} aria-selected={open?.userId === r.userId || undefined}>
+                  <DataTableRow key={r.userId} selected={open?.userId === r.userId}>
                     <Td cell="a"><Link href={`/admin/staff?id=${r.userId}`} data-row-link className="font-num hover:underline">{r.email}</Link>{r.userId === staff.userId && <span className="text-muted-foreground"> · you</span>}</Td>
                     <Td cell="d">{roleWord(r.role)}</Td>
                     <Td cell="b" className="text-right font-num">{r.passkeys.length}</Td>

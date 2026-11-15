@@ -40,7 +40,7 @@ export default {
         await p.screenshot({ path: t.out('today') })
         await item.getByRole('link', { name: 'Record refund' }).click()
         await p.waitForURL(new RegExp(`/admin/billing/invoice/${inv.id}$`))
-        await p.getByRole('region', { name: 'Needs you' }).getByText('Kesar Studio paid ₹1,180 too much by UPI').waitFor()
+        await p.getByRole('region', { name: /^Kesar Studio paid ₹1,180 too much by UPI/ }).waitFor()
         await ctx.close()
       })
 
@@ -56,7 +56,7 @@ export default {
         assert.deepEqual([r.a, r.refund_utr, r.refunded_by], [118000, UTR, F.id])
         assert.equal((await db`select count(*)::int n from audit_events where action = 'billing.refund' and target = ${pay.id}`)[0].n, 1, 'the refund is audited')
         await p.reload()
-        assert.equal(await p.getByRole('region', { name: 'Needs you' }).count(), 0, 'the band goes once refunded')
+        assert.equal(await p.locator('[data-needs-band]').count(), 0, 'the band goes once refunded')
         await p.getByText(/₹1,180 refunded/).waitFor()
         await p.goto(CONSOLE + '/admin')
         assert.equal(await p.getByText('Kesar Studio paid ₹1,180 too much').count(), 0, 'and so does the Today item')

@@ -2,14 +2,16 @@ import Link from 'next/link'
 import { z } from 'zod'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { PageHeader } from '@/components/layout/page-header'
-import { button } from '@/components/ui/button'
+import { Button, button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
+import { Tag } from '@/components/ui/badge'
 import { FIELD } from '@/components/ui/field'
 import { ACTIVITY_KIND_KEYS, ACTIVITY_KINDS, actionWords } from '@/domains/admin/activity-words'
 import { activityPeople, listActivity } from '@/lib/admin/activity'
 import { merchantName } from '@/lib/admin/merchants'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dateTimeIN } from '@/lib/format-date'
+import { MerchantTabs } from '../merchants/[id]/tabs'
 import { isMasterAdmin } from '@/domains/tenancy/staff-words'
 
 export const metadata = { title: 'Activity' }
@@ -21,7 +23,7 @@ const Q = z.object({
   shop: z.uuid().optional().catch(undefined),
   who: z.uuid().optional().catch(undefined),
   kind: z.enum(ACTIVITY_KIND_KEYS as [string, ...string[]]).optional().catch(undefined),
-  before: z.string().regex(/^\d{4}-\d\d-\d\dT[\d:.]+Z_[0-9a-f-]{36}$/).optional().catch(undefined),
+  before: z.string().regex(/^\d{4}-\d\d-\d\dT[\d:.]+Z_[0-9a-f-]{36}$/).refine((s) => !Number.isNaN(Date.parse(s.split('_')[0]!))).optional().catch(undefined),
 })
 
 /** Admin › Activity (Neel N4, board Reference › Activity): newest first, by store, person and kind; 50 a page. */
@@ -40,16 +42,16 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PageHeader title="Activity" />
+      {q.shop && shopName ? <><PageHeader title={shopName} back={{ href: '/admin/merchants', label: 'Merchants' }} /><MerchantTabs id={q.shop} on="activity" /></> : <PageHeader title="Activity" />}
       <form className="flex flex-wrap items-end gap-2 text-sm" aria-label="Filters">
         {q.shop && <input type="hidden" name="shop" value={q.shop} />}
-        {shopName && <span className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3">{shopName}<Link href={link({ shop: undefined, before: undefined })} aria-label={`Show every store, not only ${shopName}`} className="text-muted-foreground hover:text-foreground">×</Link></span>}
+        {shopName && <Tag className="h-9 gap-1 text-sm">{shopName}<Link href={link({ shop: undefined, before: undefined })} aria-label={`Show every store, not only ${shopName}`} className="inline-grid min-h-6 min-w-6 place-items-center text-muted-foreground hover:text-foreground">×</Link></Tag>}
         <label className="flex flex-col gap-1"><span className="text-muted-foreground">Person</span>
           <select name="who" defaultValue={q.who ?? ''} className={FIELD}><option value="">Everyone</option>{people.map((p) => <option key={p.userId} value={p.userId}>{p.email}</option>)}</select></label>
         <label className="flex flex-col gap-1"><span className="text-muted-foreground">Kind</span>
           <select name="kind" defaultValue={q.kind ?? ''} className={FIELD}><option value="">Every kind</option>{ACTIVITY_KIND_KEYS.filter((k) => isMasterAdmin(staff.role) || k !== 'billing').map((k) => <option key={k} value={k}>{ACTIVITY_KINDS[k].label}</option>)}</select></label>
-        <button className={button({ variant: 'secondary' })}>Show</button>
-        {filtered && <Link href="/admin/activity" className="inline-flex h-9 items-center text-sm underline-offset-2 hover:underline">Clear</Link>}
+        <Button type="submit" variant="secondary">Show</Button>
+        {filtered && <Link href="/admin/activity" className="inline-flex h-9 items-center text-sm underline-offset-2 hover:underline">Clear filters</Link>}
       </form>
       {rows.length === 0 ? <Panel title={filtered ? 'Nothing matches these filters' : 'Nothing recorded yet'} /> : (
         <DataTable label="Activity">

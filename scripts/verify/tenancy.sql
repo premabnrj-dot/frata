@@ -3915,5 +3915,33 @@ do $$ declare got boolean; begin
   if not exists (select 1 from pg_constraint where conname = 'frrata_payments_refund_whole') then raise exception 'FAIL: the refund columns can be half set'; end if;
 end $$;
 rollback;
+-- The refund's refusals (impact review on the diff): a test invoice, nothing over-paid, a day outside the last 90 or
+-- before the payment arrived; the right one records the over-paid amount once.
+begin;
+set local session_replication_role = replica;
+do $$ declare got boolean; t uuid := gen_random_uuid(); live uuid := gen_random_uuid(); test uuid := gen_random_uuid();
+  p_ok uuid := gen_random_uuid(); p_test uuid := gen_random_uuid(); p_zero uuid := gen_random_uuid(); m uuid := '83838383-0000-8383-8383-838383838383'; n bigint;
+begin
+  insert into platform_staff (user_id, email, role) values (m, 'master83@frrata.test', 'admin');
+  insert into frrata_invoices (id, tenant_id, period_start, period_end, taxable, cgst, sgst, igst, total, test_mode) values
+    (live, t, '2024-01-01', '2024-02-01', 100, 0, 0, 0, 100, false), (test, t, '2024-02-01', '2024-03-01', 100, 0, 0, 0, 100, true);
+  insert into frrata_payments (id, tenant_id, invoice_id, method, amount, captured_at, over_paid) values
+    (p_ok, t, live, 'upi', 150, now() - interval '2 days', 50), (p_test, t, test, 'upi', 150, now() - interval '2 days', 50), (p_zero, t, live, 'upi', 100, now() - interval '2 days', 0);
+  got := false; begin perform app_record_frrata_refund(p_test, 'UTR83A', current_date, m); exception when check_violation then got := true; end;
+  if not got then raise exception 'FAIL: a test invoice was refunded by hand'; end if;
+  got := false; begin perform app_record_frrata_refund(p_zero, 'UTR83B', current_date, m); exception when check_violation then got := true; end;
+  if not got then raise exception 'FAIL: a refund was recorded with nothing over-paid'; end if;
+  got := false; begin perform app_record_frrata_refund(p_ok, 'UTR83C', current_date - 92, m); exception when invalid_parameter_value then got := true; end;
+  if not got then raise exception 'FAIL: a refund sent over 90 days ago was recorded'; end if;
+  got := false; begin perform app_record_frrata_refund(p_ok, 'UTR83D', current_date + 2, m); exception when invalid_parameter_value then got := true; end;
+  if not got then raise exception 'FAIL: a refund sent tomorrow was recorded'; end if;
+  got := false; begin perform app_record_frrata_refund(p_ok, 'UTR83E', current_date - 5, m); exception when invalid_parameter_value then got := true; end;
+  if not got then raise exception 'FAIL: a refund sent before the payment arrived was recorded'; end if;
+  n := app_record_frrata_refund(p_ok, ' utr83f ', current_date, m);
+  if n <> 50 or (select refund_utr from frrata_payments where id = p_ok) <> 'UTR83F' then raise exception 'FAIL: the refund is not the over-paid amount under its reference'; end if;
+  got := false; begin perform app_record_frrata_refund(p_ok, 'UTR83G', current_date, m); exception when check_violation then got := true; end;
+  if not got then raise exception 'FAIL: a payment was refunded twice'; end if;
+end $$;
+rollback;
 
 \echo 'tenancy proof — all 83 checks passed'

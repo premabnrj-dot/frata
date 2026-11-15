@@ -9,7 +9,7 @@ import { dateTimeIN } from '@/lib/format-date'
 import { sendNoticeAction } from './actions'
 import { FieldMessage } from '@/components/ui/action-form'
 import { DialogButton } from '../_components/form-dialog'
-import { FIELD } from '@/components/ui/field'
+import { FIELD, FIELD_BOX } from '@/components/ui/field'
 
 export const metadata = { title: 'Notices' }
 
@@ -22,7 +22,7 @@ export default async function AdminNoticesPage() {
   const [admin, batches] = await Promise.all([requireStaff(ADMIN_ONLY), noticeBatches(staff).catch(() => null)])
   return (
     <>
-      <PageHeader title="Notices" actions={admin.ok && <DialogButton variant="primary" spec={{ label: 'New notice', title: 'Send a notice?', action: sendNoticeAction, keep: 'Not now', go: 'Send', fields: <>
+      <PageHeader title="Notices" actions={admin.ok && <DialogButton variant="primary" spec={{ label: 'New notice', title: 'Send a notice?', action: sendNoticeAction, keep: 'Don’t send', go: 'Send notice', fields: <>
         <label className="grid gap-1 text-sm"><span className="font-medium">To</span>
           <select name="audience" className={field} defaultValue="all"><option value="all">Every store</option><option value="plan">Stores on a plan</option><option value="shop">One store</option></select></label>
         <label className="grid gap-1 text-sm"><span className="font-medium">Plan</span>
@@ -31,10 +31,10 @@ export default async function AdminNoticesPage() {
         <label className="grid gap-1 text-sm"><span className="font-medium">Kind</span>
           <select name="type" className={field} defaultValue="product_update">{NOTICE_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}</select></label>
         <label className="grid gap-1 text-sm"><span className="font-medium">Title</span><input name="title" required minLength={3} maxLength={120} data-error="A title of 3 to 120 characters." className={field} /><FieldMessage name="title" /></label>
-        <label className="grid gap-1 text-sm"><span className="font-medium">Message</span><textarea name="body" maxLength={1000} rows={4} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm" /></label>
+        <label className="grid gap-1 text-sm"><span className="font-medium">Message</span><textarea name="body" maxLength={1000} rows={4} className={`${FIELD_BOX} w-full py-2`} /></label>
         <label className="grid gap-1 text-sm"><span className="font-medium">Link</span><input name="href" className={`${field} font-mono`} placeholder="/console/settings/billing" /></label>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="email" defaultChecked />Also email</label>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="required" />Required (billing, security, Frrata acted)</label>
+        <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" name="email" defaultChecked />Also email</label>
+        <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" name="required" />Must read (billing, security, a Frrata change)</label>
       </> }} />} />
       {!batches ? <Panel title="What was sent couldn't be read. Reload to try again." /> : batches.length === 0 ? <Panel title="Nothing sent yet" /> : (
           <DataTable label="Sent notices">

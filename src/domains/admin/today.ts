@@ -38,6 +38,8 @@ export type TodayItem = {
   key: string
   /** The store it is about, when it is about one (Merchants' Needs column reads it). */
   tenantId?: string
+  /** The need in a few words, for a store's row ("Owner hasn't signed in"); set with tenantId. */
+  need?: string
   /** The fact, said first: "Pia Mehta asks for a first passkey". */
   title: string
   line: string

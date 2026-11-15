@@ -60,9 +60,9 @@ export default async function MerchantPlanPage({ params }: { params: Promise<{ i
       </fieldset>
       <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Starts</span>
         <select name="when" className={FIELD}><option value="now">Today</option><option value="next_month">The 1st of next month</option></select></label>
-      <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Custom monthly price, ₹ <span className="font-normal text-muted-foreground">(optional)</span></span>
-        <input name="customPrice" inputMode="numeric" className={`${FIELD} font-mono`} /></label>
-      <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Why <span className="font-normal text-muted-foreground">(needed with a custom price)</span></span>
+      <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Monthly price, ₹ <span className="font-normal text-muted-foreground">(optional)</span></span>
+        <input name="customPrice" inputMode="numeric" className={`${FIELD} font-num`} /></label>
+      <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Reason <span className="font-normal text-muted-foreground">(with a price of your own)</span></span>
         <input name="reason" maxLength={200} className={FIELD} /><FieldMessage name="reason" /></label>
     </>
   )
@@ -84,7 +84,7 @@ export default async function MerchantPlanPage({ params }: { params: Promise<{ i
         <Section title="Free trial" className="text-sm" id="trial"
           action={admin.ok && (!trial || !trial.facts.startedAt
             ? <DialogButton spec={{ label: trial ? 'Change length' : 'Give a trial', title: trial ? `Change ${name}'s trial?` : `Give ${name} a trial?`, action: setShopTrialAction, keep: 'Keep as it is', go: trial ? 'Change length' : 'Give a trial',
-                fields: <>{tenant}<label className="flex flex-col gap-1 text-sm"><span className="font-medium">Days, 7 to 90</span><input name="days" type="number" min={7} max={90} required data-error="7 to 90 days." defaultValue={trial?.facts.days ?? 30} className={`${FIELD} font-mono`} /><FieldMessage name="days" /></label><Why /></> }} />
+                fields: <>{tenant}<label className="flex flex-col gap-1 text-sm"><span className="font-medium">Days, 7 to 90</span><input name="days" type="number" min={7} max={90} required data-error="7 to 90 days." defaultValue={trial?.facts.days ?? 30} className={`${FIELD} font-num`} /><FieldMessage name="days" /></label><Why /></> }} />
             : trialOpen && !trial.facts.extendedAt && trial.state !== 'paused'
               ? <DialogButton spec={{ label: 'Extend 7 days', title: `Extend ${name}'s trial by 7 days?`, description: `It ends ${dayMonthIN(new Date(trial.lastDay.getTime() + 7 * 86_400_000))} instead. A trial is extended once.`, action: extendShopTrialAction, keep: 'Keep the end', go: 'Extend 7 days', fields: <>{tenant}<Why /></> }} />
               : null)}>

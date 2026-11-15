@@ -79,7 +79,7 @@ export default {
         await nd.getByLabel('Store id').fill(shop.id)
         await nd.getByLabel('Kind').selectOption('security')
         await nd.getByLabel('Title').fill('We changed how support visits work')
-        await nd.getByLabel('Required (billing, security, Frrata acted)').check()
+        await nd.getByLabel('Must read (billing, security, a Frrata change)').check()
         await nd.getByRole('button', { name: 'Send' }).click()
         await expectToast(admin.p, 'Sent to 1 store.', 'ok')
         await admin.p.getByRole('cell', { name: 'We changed how support visits work' }).waitFor()

@@ -32,14 +32,17 @@ export async function billingMonth(staff: StaffOk, monthStart: Date): Promise<Dr
   const rows = await adminDb().select({
     id: frrataInvoices.id, tenantId: frrataInvoices.tenantId, shop: tenants.name, taxable: frrataInvoices.taxable, cgst: frrataInvoices.cgst, sgst: frrataInvoices.sgst, igst: frrataInvoices.igst,
     total: frrataInvoices.total, rolled: frrataInvoices.rolled, carryOut: frrataInvoices.carryOut, ordersBilled: frrataInvoices.ordersBilled, includedOrders: frrataInvoices.includedOrders,
-    draftedAt: frrataInvoices.draftedAt, number: frrataInvoices.number, issuedAt: frrataInvoices.issuedAt,
+    draftedAt: frrataInvoices.draftedAt, number: frrataInvoices.number, issuedAt: frrataInvoices.issuedAt, testMode: frrataInvoices.testMode,
   }).from(frrataInvoices).innerJoin(tenants, eq(tenants.id, frrataInvoices.tenantId)).where(eq(frrataInvoices.periodStart, monthStart)).orderBy(asc(tenants.name))
   const { paid, credited, toRefund } = await moneyIn(rows.map((r) => r.id))
-  return rows.map(({ cgst, sgst, igst, ...r }) => {
+  return rows.map(({ cgst, sgst, igst, testMode, ...r }) => {
     const p = paid.get(r.id) ?? 0, c = credited.get(r.id) ?? 0
-    return { ...r, gst: cgst + sgst + igst, paid: p, credited: c, toRefund: toRefund.get(r.id) ?? 0, ...invoiceState(r, p, c) }
+    return { ...r, gst: cgst + sgst + igst, paid: p, credited: c, toRefund: refundable(testMode, toRefund.get(r.id)), ...invoiceState(r, p, c) }
   })
 }
+
+/** What waits to be refunded on an invoice: a test invoice never does (the definer refuses it; Today leaves it out). */
+const refundable = (testMode: boolean, over: number | undefined) => (testMode ? 0 : over ?? 0)
 
 /** Captured payments and credit-note totals per invoice. */
 async function moneyIn(ids: string[]) {
@@ -103,7 +106,7 @@ export async function invoiceDetail(staff: StaffOk, id: string): Promise<Invoice
   ])
   const { cgst, sgst, igst, ...r } = i
   const p = money.paid.get(id) ?? 0, c = money.credited.get(id) ?? 0
-  return { invoice: { ...r, gst: cgst + sgst + igst, paid: p, credited: c, toRefund: money.toRefund.get(id) ?? 0, ...invoiceState(r, p, c) }, lines, payments, credits }
+  return { invoice: { ...r, gst: cgst + sgst + igst, paid: p, credited: c, toRefund: refundable(r.testMode, money.toRefund.get(id)), ...invoiceState(r, p, c) }, lines, payments, credits }
 }
 
 /** A bank transfer, UPI or pay-link payment recorded by hand (ADMIN_ONLY), under its unique reference; audited. */
@@ -122,7 +125,9 @@ export async function recordRefund(staff: StaffOk, paymentId: string, r: { utr: 
   adminOnly(staff)
   return adminDb().transaction(async (tx) => {
     const [x] = await tx.execute<{ amount: string }>(sql`select app_record_frrata_refund(${paymentId}::uuid, ${r.utr}, ${r.sentOn}::date, ${staff.userId}::uuid) as amount`)
-    await auditStaff(tx, staff, { action: 'billing.refund', target: paymentId, detail: { amount: Number(x!.amount) } })
+    // The store and the bank's reference on the audit row (security review on the diff): its Activity shows the refund.
+    const [p] = await tx.select({ tenantId: frrataPayments.tenantId, utr: frrataPayments.refundUtr }).from(frrataPayments).where(eq(frrataPayments.id, paymentId))
+    await auditStaff(tx, staff, { tenantId: p?.tenantId, action: 'billing.refund', target: paymentId, detail: { amount: Number(x!.amount), utr: p?.utr } })
     return Number(x!.amount)
   })
 }

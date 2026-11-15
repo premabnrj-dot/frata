@@ -37,16 +37,16 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
   const i = d.invoice
   const num = d.invoice.number
   const tab: Tab = TABS.find(([k]) => k === sp.tab)?.[0] ?? 'payments'
-  const over = d.payments.find((p) => p.overPaid > 0 && !p.refundedAt && p.capturedAt)
+  const over = i.testMode ? undefined : d.payments.find((p) => p.overPaid > 0 && !p.refundedAt && p.capturedAt)
   const inv = <input type="hidden" name="invoice" value={i.id} />
 
-  const recordPayment: DialogSpec = { label: 'Record payment…', title: `Record a payment on ${i.number}?`, action: paymentAction, keep: 'Not now', go: 'Record payment', fields: <>{inv}
-    <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Amount, ₹</span><input name="rupees" inputMode="decimal" required defaultValue={(i.due / 100).toFixed(2)} className={`${FIELD} font-mono`} /></label>
+  const recordPayment: DialogSpec = { label: 'Record payment…', title: `Record a payment on ${i.number}?`, action: paymentAction, confirm: true, keep: 'Don’t record', go: 'Record payment', fields: <>{inv}
+    <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Amount, ₹</span><input name="rupees" inputMode="decimal" required defaultValue={(i.due / 100).toFixed(2)} className={`${FIELD} font-num`} /><FieldMessage name="rupees" /></label>
     <label className="flex flex-col gap-1 text-sm"><span className="font-medium">How</span><select name="method" className={FIELD}><option value="bank_transfer">Bank transfer</option><option value="upi">UPI</option><option value="paylink">Pay link</option><option value="card">Card</option></select></label>
     <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Reference (UTR)</span><input name="utr" required autoComplete="off" className={`${FIELD} font-mono`} /><FieldMessage name="utr" /></label></> }
-  const creditNote: DialogSpec = { label: 'Issue credit note…', title: `Issue a credit note on ${i.number}?`, description: 'GST is added at the invoice’s rate. A credit note is final.', action: creditAction, keep: 'Not now', go: 'Issue credit note', danger: true, fields: <>{inv}
-    <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Taxable value to credit, ₹</span><input name="rupees" inputMode="decimal" required className={`${FIELD} font-mono`} /></label>
-    <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Reason</span><input name="reason" required minLength={3} maxLength={240} className={FIELD} /></label></> }
+  const creditNote: DialogSpec = { label: 'Issue credit note…', title: `Issue a credit note on ${i.number}?`, description: 'GST is added at the invoice’s rate. A credit note is final.', action: creditAction, confirm: true, keep: 'Don’t issue', go: 'Issue credit note', danger: true, fields: <>{inv}
+    <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Taxable value to credit, ₹</span><input name="rupees" inputMode="decimal" required className={`${FIELD} font-num`} /><FieldMessage name="rupees" /></label>
+    <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Reason</span><input name="reason" required minLength={3} maxLength={240} className={FIELD} /><FieldMessage name="reason" /></label></> }
   const more = [...(!i.testMode && i.state === 'due' ? [recordPayment] : []), creditNote]
 
   return (
@@ -60,7 +60,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
       {over && (
         <NeedsBand tone="bad" title={`${i.shop} paid ${formatInr(paise(over.overPaid))} too much by ${METHOD[over.method] ?? over.method} on ${dayMonthIN(over.capturedAt!)}.`}
           line="Refund it to the store, then record the refund."
-          action={<DialogButton spec={{ label: 'Record refund', title: `Record the ${formatInr(paise(over.overPaid))} refund to ${i.shop}?`, description: 'Record it once the money has left Frrata’s bank. It can’t be changed.', action: refundAction, keep: 'Not yet', go: 'Record refund',
+          action={<DialogButton spec={{ label: 'Record refund', title: `Record the ${formatInr(paise(over.overPaid))} refund to ${i.shop}?`, description: 'Record it once the money has left Frrata’s bank. It can’t be changed.', action: refundAction, confirm: true, keep: 'Not yet', go: 'Record refund',
             fields: <>{inv}<input type="hidden" name="payment" value={over.id} />
               <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Bank reference (UTR)</span><input name="utr" required pattern="[A-Za-z0-9\-]{6,40}" autoComplete="off" data-error="6 to 40 letters and digits." className={`${FIELD} font-mono`} /><FieldMessage name="utr" /></label>
               <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Sent on</span><input name="sentOn" type="date" required max={todayIST()} defaultValue={todayIST()} className={FIELD} /></label></> }} />} />

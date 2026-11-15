@@ -152,6 +152,9 @@ export const auditEvents = pgTable('audit_events', {
   action: text('action').notNull(),
   target: text('target'),
   detail: jsonb('detail'),
+  /** The action's first word ("billing"), stored, for Admin › Activity's kind filter: an expression index is not used
+   *  under frata_admin's row policy (split_part is not leakproof; speed review on the N4 diff). */
+  actionWord: text('action_word').generatedAlwaysAs(sql`split_part(action, '.', 1)`),
 }, (t) => [
   index('audit_events_tenant_at').on(t.tenantId, t.at),
   // Admin › Activity (Neel N4): keyset pages on (at, id), newest first by a backward scan, with the row comparison
@@ -159,7 +162,7 @@ export const auditEvents = pgTable('audit_events', {
   // one supersedes audit_events_at). By person, and by kind (the action's first word).
   index('audit_events_at_id').on(t.at, t.id),
   index('audit_events_actor_at').on(t.actorUserId, t.at, t.id),
-  index('audit_events_kind_at').on(sql`split_part(${t.action}, '.', 1)`, t.at, t.id),
+  index('audit_events_kind_at').on(t.actionWord, t.at, t.id),
   index('audit_events_session').on(t.supportSessionId),
   check('audit_events_kind', sql`${t.actorKind} in ('member','staff','support')`),
 ])

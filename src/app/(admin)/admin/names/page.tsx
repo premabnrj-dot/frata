@@ -32,7 +32,7 @@ export default async function NamesPage({ searchParams }: { searchParams: Promis
   const now = new Date()
   const tab: Tab = TABS.find(([k]) => k === sp.tab)?.[0] ?? 'blocked'
   const count: Record<Tab, number> = { blocked: blocked.length, held: held.length, reserved: RESERVED.size }
-  const block: DialogSpec = { label: 'Block a name', title: 'Block a name?', description: 'No store can take it until it is unblocked.', action: blockNameAction, keep: 'Not now', go: 'Block name', fields: <>
+  const block: DialogSpec = { label: 'Block a name', title: 'Block a name?', description: 'No store can take it until it is unblocked.', action: blockNameAction, keep: 'Don’t block', go: 'Block name', fields: <>
     <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Name or domain</span><input name="name" required minLength={3} maxLength={253} autoComplete="off" data-error="Use letters, digits and single hyphens, or a domain." className={`${field} font-mono`} /><FieldMessage name="name" /></label>
     <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Kind</span><select name="kind" required className={field}>{(Object.keys(KIND) as BlockedKind[]).map((k) => <option key={k} value={k}>{KIND[k]}</option>)}</select></label>
     <Why /></> }
@@ -65,7 +65,7 @@ export default async function NamesPage({ searchParams }: { searchParams: Promis
                 <Td cell="c">{KIND[b.kind]}</Td>
                 <Td cell="e">{b.reason}</Td>
                 <Td cell="d">{dayMonthIN(b.createdAt)}</Td>
-                {can && <Td cell="f" className="text-right"><DialogButton spec={{ label: `Unblock ${b.name}`, title: `Unblock ${b.name}?`, description: 'Any store can take it again.', action: unblockNameAction, keep: 'Keep blocked', go: 'Unblock',
+                {can && <Td cell="f" className="text-right"><DialogButton spec={{ label: `Unblock ${b.name}`, title: `Unblock ${b.name}?`, description: 'Any store can take it again.', action: unblockNameAction, keep: 'Keep blocked', go: `Unblock ${b.name}`,
                   fields: <><input type="hidden" name="name" value={b.name} /><Why /></> }} /></Td>}
               </DataTableRow>
             ))}
@@ -82,7 +82,7 @@ export default async function NamesPage({ searchParams }: { searchParams: Promis
                 <Td cell="a" className="font-mono">{h.name}{h.retiredByFrrata && <> <Badge tone="warn">No redirect</Badge></>}</Td>
                 <Td cell="c"><Link href={`/admin/merchants/${h.tenantId}/addresses`} className="underline-offset-2 hover:underline">{h.shop}</Link></Td>
                 <Td cell="d">{dayMonthIN(h.retiredAt)}</Td>
-                {can && <Td cell="f" className="text-right"><DialogButton spec={{ label: `Release ${h.name}`, title: `Release ${h.name}?`, description: 'Any store can take it. It no longer leads to the old store.', action: releaseNameAction, keep: 'Keep held', go: 'Release',
+                {can && <Td cell="f" className="text-right"><DialogButton spec={{ label: `Release ${h.name}`, title: `Release ${h.name}?`, description: 'Any store can take it. It no longer leads to the old store.', action: releaseNameAction, keep: 'Keep held', go: `Release ${h.name}`,
                   fields: <><input type="hidden" name="name" value={h.name} /><Why /></> }} /></Td>}
               </DataTableRow>
             ))}

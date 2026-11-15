@@ -9,6 +9,7 @@ import { errName } from '@/lib/log'
 import { draftableMonths } from '@/lib/billing/run'
 import { ADMIN_ONLY, confirmedRecently, requireStaff } from '@/lib/auth/require-staff'
 import type { ActionResult } from '@/components/ui/action-form'
+import { STAFF_CONFIRM_FIRST } from '@/domains/tenancy/staff-words'
 
 const Month = z.object({ month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/) })
 
@@ -36,7 +37,7 @@ const reason = (e: unknown) => {
 }
 
 // Money moves only after a fresh passkey (security review on N4's plan, H2): issue, a payment, a credit note, a refund.
-const FRESH = 'Confirm with your passkey first.'
+const FRESH = STAFF_CONFIRM_FIRST
 
 export async function issueAction(form: FormData): Promise<ActionResult> {
   const staff = await requireStaff(ADMIN_ONLY)
@@ -49,7 +50,7 @@ export async function issueAction(form: FormData): Promise<ActionResult> {
   let msg: string
   try {
     const r = await issueMonth(staff, monthOfYM(p.data.month)!, { count: p.data.count, total: p.data.total })
-    msg = `${r.issued} invoice${r.issued === 1 ? '' : 's'} issued${r.closed ? `, ${r.closed} closed with nothing to pay` : ''}${r.test ? '. Test mode, so they are not tax invoices and are never collected' : ''}.`
+    msg = `${r.issued} invoice${r.issued === 1 ? '' : 's'} issued${r.closed ? `, ${r.closed} closed with nothing to pay` : ''}${r.test ? '. Test mode. These aren’t tax invoices and are never collected' : ''}.`
   } catch (e) {
     console.error('[billing.issue]', errName(e))
     return { error: reason(e) }

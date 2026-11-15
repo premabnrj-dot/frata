@@ -25,7 +25,7 @@ export function Kpis({ items }: { items: { label: string; value: ReactNode; sub?
 export function NeedsYou({ alerts }: { alerts: Alert[] }) {
   if (!alerts.length) return null
   return (
-    <section aria-label="Needs you" className="rounded-lg border border-border bg-warn/40">
+    <section aria-label="Needs you" className="rounded-mid border border-border bg-warn">
       <h2 className="px-4 pt-3 text-sm font-semibold">Needs you</h2>
       <ul className="divide-y divide-line-soft">
         {alerts.map((a) => (
@@ -46,7 +46,7 @@ export function Fold({ title, children }: { title: string; children: ReactNode }
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-medium md:min-h-10 [&::-webkit-details-marker]:hidden">
         {title}<span className="text-muted-foreground group-open:hidden">Show</span><span className="hidden text-muted-foreground group-open:inline">Hide</span>
       </summary>
-      <div className="border-t border-border">{children}</div>
+      <div className="border-t border-border p-4">{children}</div>
     </details>
   )
 }

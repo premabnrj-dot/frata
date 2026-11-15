@@ -5,6 +5,7 @@ import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { paise } from '@/domains/money/paise'
 import { listPlans, storesPerVersion } from '@/lib/admin/plans'
+import { isMasterAdmin } from '@/domains/tenancy/staff-words'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { dayIN } from '@/lib/format-date'
 import { formatPercent } from '@/lib/format'
@@ -20,7 +21,7 @@ export default async function PlansPage() {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
   const [ps, counts, terms] = await Promise.all([listPlans(staff), storesPerVersion(staff, new Date()), trialTerms(staff)])
-  const isAdmin = staff.role === 'admin'
+  const isAdmin = isMasterAdmin(staff.role)
   const num = 'h-11 rounded-md border border-input bg-card px-3 font-num aria-invalid:border-danger-mark md:h-9'
   return (
     <>

@@ -12,6 +12,7 @@ import { BRANDS_NOW, PARTNER_SERVICES } from '@/domains/partners/terms'
 import { listPartners, partnerCounts, partnerTeamForAdmin, type AdminPartner } from '@/lib/admin/partners'
 import { ownerPasskeys } from '@/lib/admin/partner-passkeys'
 import { todayItems } from '@/lib/admin/today'
+import { isMasterAdmin } from '@/domains/tenancy/staff-words'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { staffProof } from '@/lib/auth/session'
 import { formatPhone } from '@/lib/format'
@@ -49,7 +50,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
   const rows = view === 'needs' ? needs : view === 'approved' ? approved : declined
   const open = rows.find((r) => r.id === sp.id) ?? rows[0]
   const tab: Tab = TABS.find(([k]) => k === sp.tab)?.[0] ?? 'overview'
-  const isAdmin = staff.role === 'admin'
+  const isAdmin = isMasterAdmin(staff.role)
   const [team, keys] = open?.approvedAt ? await Promise.all([
     partnerTeamForAdmin(staff, open.id).catch(() => null),
     staffProof(staff.userId).then((proof) => (proof ? ownerPasskeys(staff, proof, open.id).catch(() => null) : null)),
@@ -59,10 +60,10 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
     : p.suspendedAt ? <Badge tone="warn">Suspended</Badge> : p.approvedAt ? <Badge tone="ok">Approved</Badge> : <Badge>Declined</Badge>
 
   const more: DialogSpec[] = open?.approvedAt && isAdmin ? [open.suspendedAt
-    ? { label: 'Reinstate…', title: `Reinstate ${nameOf(open)}?`, description: 'Their team gets its stores back at once.', action: reinstatePartnerAction, keep: 'Keep suspended', go: 'Reinstate',
+    ? { label: 'Reinstate…', title: `Reinstate ${nameOf(open)}?`, description: 'Their team gets its stores back at once.', action: reinstatePartnerAction, keep: 'Keep suspended', go: `Reinstate ${nameOf(open)}`,
         fields: <><input type="hidden" name="id" value={open.id} /><input type="hidden" name="name" value={nameOf(open)} />
           <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Type {nameOf(open)} to confirm</span><input name="typed" maxLength={120} autoComplete="off" className={FIELD} /><FieldMessage name="typed" /></label></> }
-    : { label: 'Suspend…', title: `Suspend ${nameOf(open)}?`, description: 'Their team loses every store at once. Each brand is told.', action: suspendPartnerAction, keep: 'Keep access', go: 'Suspend', danger: true,
+    : { label: 'Suspend…', title: `Suspend ${nameOf(open)}?`, description: 'Their team loses every store at once. Each brand is told.', action: suspendPartnerAction, keep: 'Keep access', go: `Suspend ${nameOf(open)}`, danger: true,
         fields: <><input type="hidden" name="id" value={open.id} /><input type="hidden" name="name" value={nameOf(open)} />
           <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Reason to suspend</span><input name="reason" maxLength={300} className={FIELD} /><FieldMessage name="reason" /></label>
           <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Type {nameOf(open)} to confirm</span><input name="typed" maxLength={120} autoComplete="off" className={FIELD} /><FieldMessage name="typed" /></label></> }] : []
@@ -94,7 +95,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
             {!open.approvedAt && !open.declinedAt && (
               <NeedsBand tone="info" title={`${nameOf(open)} applied to be a partner.`} line={`${open.name} · ${open.city} · ${sinceIN(open.appliedAt, now)}`}
                 action={isAdmin ? <div className="flex flex-wrap gap-2">
-                  <DialogButton spec={{ label: 'Decline…', title: `Decline ${nameOf(open)}?`, description: 'They read the reason in their email.', action: decidePartnerAction, keep: 'Keep in review', go: 'Decline', danger: true,
+                  <DialogButton spec={{ label: 'Decline…', title: `Decline ${nameOf(open)}?`, description: 'They read the reason in their email.', action: decidePartnerAction, keep: 'Keep in review', go: `Decline ${nameOf(open)}`, danger: true,
                     fields: <><input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="decline" />
                       <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Reason to decline</span><input name="reason" maxLength={300} className={FIELD} /><FieldMessage name="reason" /></label></> }} />
                   <ActionForm action={decidePartnerAction}><input type="hidden" name="id" value={open.id} /><input type="hidden" name="decision" value="approve" /><Submit size="wrap">Approve {nameOf(open)}</Submit></ActionForm>

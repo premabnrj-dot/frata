@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { listMerchants, PAGE_SIZE } from '@/lib/admin/merchants'
-import { openTrialIds, shopTrialsFor } from '@/lib/admin/trials'
+import { shopTrialsFor, trialAndLiveIds } from '@/lib/admin/trials'
 import { todayItems } from '@/lib/admin/today'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { ActionForm } from '@/components/ui/action-form'
@@ -23,11 +23,6 @@ export const metadata = { title: 'Merchants' }
 
 const VIEWS = [['needs', 'Needs you'], ['trial', 'In trial'], ['live', 'Live'], ['all', 'All']] as const
 type View = (typeof VIEWS)[number][0]
-/** A store's waiting item, as the Needs column says it (the same item Today shows). */
-const NEED: Partial<Record<TodayItem['kind'], (it: TodayItem) => string>> = {
-  owner_waiting: () => 'Owner hasn\'t signed in',
-  trial_ending: (it) => it.title.replace(/^.*?'s trial /, 'Trial ').replace(/\. No autopay yet\.$/, ' · no autopay'),
-}
 
 /** Admin › Merchants (Neel N4, board Merchants): a list that leads with what needs you. */
 export default async function MerchantsPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string; view?: string }> }) {
@@ -36,10 +31,10 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
   const sp = await searchParams
   const page = Math.max(1, Number(sp.page) || 1)
   const now = new Date()
-  const [{ items }, inTrial] = await Promise.all([todayItems(staff), openTrialIds(staff)])
+  const [{ items }, { inTrial, live }] = await Promise.all([todayItems(staff), trialAndLiveIds(staff, now)])
   const needs = new Map<string, TodayItem>()
-  for (const it of items) if (it.tenantId && NEED[it.kind] && !needs.has(it.tenantId)) needs.set(it.tenantId, it)
-  const views: Record<View, (id: string) => boolean> = { needs: (id) => needs.has(id), trial: (id) => inTrial.has(id), live: (id) => !inTrial.has(id), all: () => true }
+  for (const it of items) if (it.tenantId && it.need && !needs.has(it.tenantId)) needs.set(it.tenantId, it)
+  const views: Record<View, (id: string) => boolean> = { needs: (id) => needs.has(id), trial: (id) => inTrial.has(id), live: (id) => live.has(id), all: () => true }
   // Needs you first when something waits; All when nothing does (a search looks everywhere).
   const asked = VIEWS.find(([k]) => k === sp.view)?.[0]
   const view: View = asked ?? (sp.q ? 'all' : needs.size ? 'needs' : 'all')
@@ -79,7 +74,7 @@ export default async function MerchantsPage({ searchParams }: { searchParams: Pr
                   </div>
                   <div className="truncate font-mono text-xs text-muted-foreground">{m.host}</div>
                 </Td>
-                <Td cell="c">{(() => { const it = needs.get(m.id); return it ? <Badge tone="warn">{NEED[it.kind]!(it)}</Badge> : null })()}</Td>
+                <Td cell="c">{(() => { const it = needs.get(m.id); return it ? <Badge tone="warn">{it.need}</Badge> : null })()}</Td>
                 <Td cell="d">
                   {m.plan ? <Badge tone="info">{m.plan.name}</Badge> : <Badge tone="danger">No plan</Badge>}
                   {(() => {

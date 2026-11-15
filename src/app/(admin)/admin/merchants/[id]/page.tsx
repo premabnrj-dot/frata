@@ -65,8 +65,8 @@ export default async function MerchantPage({ params }: { params: Promise<{ id: s
         <input name="slug" required minLength={3} maxLength={30} pattern="[a-z0-9][a-z0-9\-]{1,28}[a-z0-9]" autoComplete="off" data-error="Use 3–30 letters, digits and single hyphens." className={FIELD} /><FieldMessage name="slug" /></label><Why /></> },
     frozen
       ? { label: 'Allow address changes…', title: `Allow ${name} to change its address?`, action: freezeAddressAction, keep: 'Keep frozen', go: 'Allow changes', fields: <>{tenant}<input type="hidden" name="frozen" value="no" /><Why /></> }
-      : { label: 'Freeze address changes…', title: `Freeze ${name}'s address?`, description: `${name} can't rename its address until it's allowed again.`, action: freezeAddressAction, keep: 'Keep as it is', go: 'Freeze address', danger: true, fields: <>{tenant}<input type="hidden" name="frozen" value="yes" /><Why /></> },
-    ...(trialOpen ? [{ label: 'End trial…', title: `End ${name}'s trial?`, description: 'The plan is charged from today. This can’t be undone.', action: endShopTrialAction, keep: 'Keep trial', go: 'End trial', danger: true, fields: <>{tenant}<Why /></> }] : []),
+      : { label: 'Freeze address changes…', title: `Freeze ${name}'s address?`, description: `${name} can't rename its address until it's allowed again.`, action: freezeAddressAction, keep: 'Keep changes open', go: 'Freeze address', danger: true, fields: <>{tenant}<input type="hidden" name="frozen" value="yes" /><Why /></> },
+    ...(trialOpen ? [{ label: 'End trial…', title: `End ${name}'s trial?`, description: `${cur ? `${cur.name} is charged from today. ` : ''}The store keeps selling. This can’t be undone.`, action: endShopTrialAction, keep: 'Keep trial', go: 'End trial', danger: true, fields: <>{tenant}<Why /></> }] : []),
   ] : []
 
   return (

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 // =============================================================================
@@ -18,9 +18,11 @@ export function NeedsBand({ tone = 'warn', title, line, action, className }: {
   action?: ReactNode
   className?: string
 }) {
+  // Labelled by its own fact, so two bands on a page are two different regions (design-system review).
+  const id = useId()
   return (
-    <section aria-label="Needs you" className={cn('flex flex-col gap-3 rounded-lg px-4 py-3 sm:flex-row sm:items-center sm:gap-4', TONE[tone], className)}>
-      <p className="min-w-0 flex-1 text-sm"><b className="font-semibold">{title}</b>{line ? <> {line}</> : null}</p>
+    <section aria-labelledby={id} data-needs-band="" className={cn('flex flex-col gap-3 rounded-mid px-4 py-3 sm:flex-row sm:items-center sm:gap-4', TONE[tone], className)}>
+      <p className="min-w-0 flex-1 text-sm"><b id={id} className="font-semibold">{title}</b>{line ? <> {line}</> : null}</p>
       {action ? <div className="flex shrink-0 flex-wrap gap-2">{action}</div> : null}
     </section>
   )

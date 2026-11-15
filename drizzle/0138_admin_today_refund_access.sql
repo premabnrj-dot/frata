@@ -40,6 +40,9 @@ begin
   end if;
   select p.id, p.invoice_id, p.captured_at, p.over_paid, p.refunded_at into pay from public.frrata_payments p where p.id = p_payment for update;
   if pay.id is null or pay.captured_at is null then raise exception 'refund: no such payment' using errcode = 'invalid_parameter_value'; end if;
+  if p_sent_on < (pay.captured_at at time zone 'Asia/Kolkata')::date then
+    raise exception 'refund: it can’t be sent before the payment arrived' using errcode = 'invalid_parameter_value';
+  end if;
   if pay.over_paid <= 0 then raise exception 'refund: nothing was over-paid' using errcode = 'check_violation'; end if;
   if pay.refunded_at is not null then raise exception 'refund: already recorded' using errcode = 'check_violation'; end if;
   select i.test_mode into inv_test from public.frrata_invoices i where i.id = pay.invoice_id;

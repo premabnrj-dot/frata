@@ -5,6 +5,7 @@ import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { todayItems } from '@/lib/admin/today'
+import { nextMonthStartIST } from '@/domains/time/month'
 import { sourceOf, sourcesFor, type TodayKind } from '@/domains/admin/today'
 
 export const metadata = { title: 'Today' }
@@ -16,8 +17,7 @@ const DAY = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', t
 
 /** When this month's invoices go out: the 1st of next month, IST. */
 function nextRun(now: Date): string {
-  const ist = new Date(now.getTime() + 5.5 * 3_600_000)
-  const first = new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth() + 1, 1, 6))
+  const first = nextMonthStartIST(now)
   return `${MONTH.format(now)}'s invoices go out on ${DAY.format(first)}.`
 }
 
@@ -30,7 +30,7 @@ export default async function AdminToday() {
     <>
       <PageHeader title="Today" meta={items.length ? `${items.length} to do · oldest first` : undefined} />
       {items.length === 0 ? <Panel title="Nothing waits." /> : (
-        <section aria-label="Needs you" className="max-w-[900px] overflow-hidden rounded-lg border border-border">
+        <section aria-label="Needs you" className="max-w-4xl overflow-hidden rounded-mid border border-border">
           {items.map((it, i) => {
             const src = sourceOf(it.kind)
             return (

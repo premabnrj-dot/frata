@@ -33,7 +33,7 @@ export async function sendStaffNotices(limit = 20): Promise<number> {
       // An owner's request goes to Frrata's admins too (they make the call): its button opens Admin › Partners.
       button: r.kind === 'partner_request_made' ? { label: 'Open Frrata Admin › Partners', href: `https://${CONSOLE_HOST}/admin/partners?view=approved` }
         : partner ? { label: 'Open the partner workspace', href: `https://${CONSOLE_HOST}/partner` } : { label: 'Open Frrata Admin › Staff', href: `https://${CONSOLE_HOST}/admin/staff` },
-      footer: r.kind === 'partner_request_made' ? 'Sent to the partner owner and every Frrata admin. Not expected? Tell Frrata now.'
+      footer: r.kind === 'partner_request_made' ? 'Sent to the partner owner and every master admin. Not expected? Tell Frrata now.'
         : partner ? 'Sent to you and your partner owner. Not expected? Tell them or Frrata now.'
         : 'Security emails about Frrata staff always reach every master admin. Not expected? Check Frrata Admin › Staff now.' })
     const s = await sendEmail({ from: EMAIL_NOTICES_FROM, to: r.to_email, replyTo: null, subject: w.subject.slice(0, 150), html: mail.html, text: mail.text,

@@ -11,7 +11,8 @@ import { errName } from '@/lib/log'
 import { countsOf, orderItems, sourcesFor, type TodayArea, type TodayItem, type TodayKind } from '@/domains/admin/today'
 import { shopTrials } from '@/lib/db/schema-trials'
 import { themeVersions } from '@/lib/db/schema-themes'
-import { daysUntil, lastDay, trialEndsAt, trialState } from '@/domains/plans/trial'
+import { trialView } from './trials'
+import { monthStartIST } from '@/domains/time/month'
 import { codeSource } from '@/domains/themes/source'
 import { listPartners } from './partners'
 import { domainsNeedingFrrata } from './addresses'
@@ -43,7 +44,7 @@ const READERS: Record<TodayKind, Reader> = {
       line: `${r.number ?? 'Invoice'}${r.at ? ` · paid ${ago(r.at, now)}` : ''}`, action: 'Record refund', href: `/admin/billing/invoice/${r.id}`, since: r.at }))
   },
   issue_run: async (_staff, now) => {
-    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1) - 5.5 * 3_600_000)
+    const monthStart = monthStartIST(now)
     const [r] = await adminDb().select({ n: sql<number>`count(*)::int`, first: sql<Date | null>`min(${frrataInvoices.periodStart})`, drafted: sql<Date | null>`min(${frrataInvoices.draftedAt})` })
       .from(frrataInvoices).where(and(isNull(frrataInvoices.number), eq(frrataInvoices.testMode, false), lt(frrataInvoices.periodStart, monthStart)))
     if (!r || !r.n || !r.first) return []
@@ -64,16 +65,16 @@ const READERS: Record<TodayKind, Reader> = {
   trial_ending: async (_staff, now) => (await adminDb().select({ f: shopTrials, name: tenants.name })
     .from(shopTrials).innerJoin(tenants, eq(tenants.id, shopTrials.tenantId)).leftJoin(billingAccounts, eq(billingAccounts.tenantId, shopTrials.tenantId))
     .where(and(isNull(shopTrials.endedAt), or(isNull(billingAccounts.mandateAt), isNotNull(billingAccounts.mandateRevokedAt)))))
-    .map(({ f, name }) => { const endsAt = trialEndsAt(f); return { tenantId: f.tenantId, name, endsAt, lastDay: lastDay(endsAt), daysLeft: daysUntil(now, endsAt), state: trialState(now, f, { mandateActive: false, exposedAt: null }) } })
+    .map(({ f, name }) => ({ tenantId: f.tenantId, name, ...trialView(f, now, false) }))
     .filter((t) => (t.state === 'ending' || t.state === 'grace') && t.daysLeft <= 3)
-    .map((t) => ({ kind: 'trial_ending' as const, key: t.tenantId, tenantId: t.tenantId,
+    .map((t) => ({ kind: 'trial_ending' as const, key: t.tenantId, tenantId: t.tenantId, need: `Trial ${t.daysLeft <= 0 ? 'ended' : `ends in ${t.daysLeft} ${t.daysLeft === 1 ? 'day' : 'days'}`} · no autopay`,
       title: t.daysLeft <= 0 ? `${t.name}'s trial has ended. No autopay yet.` : `${t.name}'s trial ends in ${t.daysLeft} ${t.daysLeft === 1 ? 'day' : 'days'}. No autopay yet.`,
       line: 'Trial', action: `Open ${t.name}`, href: `/admin/merchants/${t.tenantId}/plan`, since: new Date(t.lastDay.getTime() - 3 * DAY) })),
   owner_waiting: async (_staff, now) => {
     const rows = await adminDb().select({ tenantId: invites.tenantId, name: tenants.name, at: invites.createdAt }).from(invites).innerJoin(tenants, eq(tenants.id, invites.tenantId))
       .where(and(eq(invites.role, 'owner'), isNull(invites.acceptedAt), isNull(invites.revokedAt), lt(invites.createdAt, new Date(now.getTime() - 3 * DAY))))
       .orderBy(asc(invites.createdAt)).limit(20)
-    return rows.map((r) => ({ kind: 'owner_waiting' as const, key: r.tenantId, tenantId: r.tenantId, title: `${r.name}'s owner hasn't signed in`, line: `Added ${ago(r.at, now)}`,
+    return rows.map((r) => ({ kind: 'owner_waiting' as const, key: r.tenantId, tenantId: r.tenantId, need: 'Owner hasn’t signed in', title: `${r.name}'s owner hasn't signed in`, line: `Added ${ago(r.at, now)}`,
       action: `Open ${r.name}`, href: `/admin/merchants/${r.tenantId}`, since: r.at }))
   },
   // A version in this build with no row yet is new in this deploy (versionState 'deployed'): the small table only,
@@ -124,7 +125,10 @@ async function gather(staff: StaffOk): Promise<Gathered> {
 
 /** The nav's counts: the same items, counted by area. Late (over 1.5 s) or failed: no counts at all. */
 export async function todayCounts(staff: StaffOk): Promise<Partial<Record<TodayArea, number>> | null> {
-  const late = new Promise<null>((r) => setTimeout(() => r(null), 1_500))
-  const got = await Promise.race([todayItems(staff).then((t) => countsOf(t.items)), late])
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<null>((r) => { timer = setTimeout(() => r(null), 1_500) })
+  // A source that failed makes every count partial: no counts then, as when late (impact review on the diff).
+  const got = await Promise.race([todayItems(staff).then((t) => (t.missed.length ? null : countsOf(t.items))), late])
+  clearTimeout(timer)
   return got
 }

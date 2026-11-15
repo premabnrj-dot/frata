@@ -50,7 +50,7 @@ export default {
       await expectToast(meera, 'Staged. That store can try this version now.', 'ok')
       assert.equal(await editorialVersion(), '1.1.0')
       await meera.getByRole('button', { name: 'Release to every store' }).click()
-      await meera.getByRole('dialog', { name: /^Release Editorial 1\.1\.0/ }).getByRole('button', { name: 'Release', exact: true }).click()
+      await meera.getByRole('dialog', { name: /^Release Editorial 1\.1\.0/ }).getByRole('button', { name: 'Release Editorial 1.1.0' }).click()
       await expectToast(meera, /Released. Every store can try it/, 'ok')
       const audit = await db`select action from audit_events where action in ('theme.stage', 'theme.release') and target = 'editorial@1.1.0'`
       assert.deepEqual(audit.map((a) => a.action).sort(), ['theme.release', 'theme.stage'])
