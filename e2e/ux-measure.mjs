@@ -30,7 +30,8 @@ export const MEASURE = ({ phone }) => {
     : mainEl && mainEl.scrollWidth > mainEl.clientWidth + 1 && /(auto|scroll)/.test(getComputedStyle(mainEl).overflowX) ? [`main ${mainEl.scrollWidth}/${mainEl.clientWidth}`] : []
 
   // Tables on phones become rows (rule 15): no table may scroll sideways inside its frame under 768 px.
-  const tableScroll = phone ? [...document.querySelectorAll('table')].filter((t) => visible(t) && t.parentElement && t.parentElement.scrollWidth > t.parentElement.clientWidth + 1).map((t) => `table ${t.parentElement.clientWidth}/${t.parentElement.scrollWidth}`) : []
+  // A table only a screen reader reads (inside .sr-only: a chart's figures) scrolls for nobody.
+  const tableScroll = phone ? [...document.querySelectorAll('table')].filter((t) => visible(t) && !t.closest('.sr-only') && t.parentElement && t.parentElement.scrollWidth > t.parentElement.clientWidth + 1).map((t) => `table ${t.parentElement.clientWidth}/${t.parentElement.scrollWidth}`) : []
 
   // 2.5.8 target size: every visible control ≥ 24 × 24 (inline links in running text are exempt; disabled ones too).
   const INTER = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[role=button],[role=tab],[tabindex]:not([tabindex="-1"])'

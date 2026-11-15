@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Analytics, desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#2F37A3}a:hover{color:#272D82}
+.num{font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100%; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 20px; color: #22201E; background: #FFFFFF;">
+  <nav aria-label="Console" style="flex: 1 1 232px; max-width: 232px; box-sizing: border-box; background: #FBFAF9; border-right: 1px solid #E3E1DD; padding: 16px 10px; display: flex; flex-direction: column; gap: 2px;">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px;"><span style="display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; background: #171615; color: #FFFFFF; font-weight: 600; font-size: 12px;">rr</span><span style="display: flex; flex-direction: column; line-height: 16px;"><b style="font-weight: 600;">Kesar Studio</b><small style="color: #67625C; font-size: 12px;">kesarstudio.in</small></span></div>
+    <a href="#" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px; color: #4D4944; text-decoration: none;">Home</a>
+    <a href="#" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px; color: #4D4944; text-decoration: none;">Orders</a>
+    <a href="#" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px; color: #4D4944; text-decoration: none;">Notices</a>
+    <a href="#" aria-current="page" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px; color: #22201E; text-decoration: none; background: #FFFFFF; box-shadow: 0 1px 2px rgba(23,22,21,.06); outline: 1px solid #E3E1DD; outline-offset: -1px; font-weight: 500;">Analytics</a>
+    <span style="padding: 14px 10px 4px; font-size: 11px; line-height: 16px; letter-spacing: .06em; text-transform: uppercase; color: #67625C; font-weight: 500;">Catalogue</span>
+    <a href="#" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px; color: #4D4944; text-decoration: none;">Products</a>
+    <a href="#" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px; color: #4D4944; text-decoration: none;">Collections</a>
+  </nav>
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 24px;">
+    <header style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 16px;">
+      <div style="display: flex; flex-direction: column; gap: 2px; margin-right: auto;">
+        <h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">Analytics</h1>
+        <span style="color: #67625C;">14 Oct – 12 Nov (today so far) · India time</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+        <div role="group" aria-label="Period" style="display: inline-flex; padding: 2px; border-radius: 8px; background: #F6F5F3; border: 1px solid #E3E1DD;">
+          <button type="button" aria-pressed="false" style="height: 30px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; font: inherit; color: #4D4944;">Today</button>
+          <button type="button" aria-pressed="false" style="height: 30px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; font: inherit; color: #4D4944;">7 days</button>
+          <button type="button" aria-pressed="true" style="height: 30px; padding: 0 12px; border: 0; border-radius: 6px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(23,22,21,.08); font: inherit; font-weight: 500; color: #22201E;">30 days</button>
+          <button type="button" aria-pressed="false" style="height: 30px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; font: inherit; color: #4D4944;">This month</button>
+          <button type="button" aria-pressed="false" style="height: 30px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; font: inherit; color: #4D4944;">Custom</button>
+        </div>
+        <button type="button" style="height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #CFCCC7; background: #FFFFFF; font: inherit; color: #22201E;">vs previous 30 days ▾</button>
+        <button type="button" style="height: 36px; padding: 0 14px; border-radius: 8px; border: 0; background: #3A44C2; color: #FFFFFF; font: inherit; font-weight: 500;">Make a link</button>
+      </div>
+    </header>
+
+    <section aria-label="Figures" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px; border: 1px solid #E3E1DD; border-radius: 10px;">
+        <span style="font-size: 12px; color: #67625C;">Sales</span>
+        <b class="num" style="font-size: 26px; line-height: 32px; font-weight: 600;">₹18,42,300</b>
+        <span style="font-size: 12px; color: #1A6B43;">↑ 12% vs previous 30 days</span>
+        <svg viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true" style="width: 100%; height: 24px;"><path d="M2 18 L18 17 L34 15 L50 14 L66 10 L82 9 L98 6" fill="none" stroke="#3A44C2" stroke-width="1.5"></path></svg>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px; border: 1px solid #E3E1DD; border-radius: 10px;">
+        <span style="font-size: 12px; color: #67625C;">Orders</span>
+        <b class="num" style="font-size: 26px; line-height: 32px; font-weight: 600;">512</b>
+        <span style="font-size: 12px; color: #1A6B43;">↑ 8%</span>
+        <svg viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true" style="width: 100%; height: 24px;"><path d="M2 16 L18 15 L34 16 L50 12 L66 12 L82 9 L98 8" fill="none" stroke="#3A44C2" stroke-width="1.5"></path></svg>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px; border: 1px solid #E3E1DD; border-radius: 10px;">
+        <span style="font-size: 12px; color: #67625C;">Came back (RTO)</span>
+        <b class="num" style="font-size: 26px; line-height: 32px; font-weight: 600;">14.2%</b>
+        <span style="font-size: 12px; color: #A82828;">↑ 2.1 points — worse</span>
+        <span style="font-size: 12px; color: #67625C;">61 of 430 with an outcome</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px; border: 1px solid #E3E1DD; border-radius: 10px;">
+        <span style="font-size: 12px; color: #67625C;">₹ kept after returns</span>
+        <b class="num" style="font-size: 26px; line-height: 32px; font-weight: 600;">₹2,41,800</b>
+        <span style="font-size: 12px; color: #1A6B43;">↑ 6%</span>
+        <span style="font-size: 12px; color: #67625C;">Before shipping costs</span>
+      </div>
+    </section>
+
+    <p aria-label="Where this period's orders are" style="margin: -8px 0 0; color: #4D4944;"><b class="num">512</b> orders → <b class="num">388</b> delivered · <b class="num">61</b> came back · <b class="num">3</b> lost · <b class="num">41</b> on the way · <b class="num">19</b> not sent yet</p>
+
+    <section aria-labelledby="trend-h" style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid #E3E1DD; border-radius: 10px;">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;">
+        <h2 id="trend-h" style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; margin-right: auto;">Sales by day</h2>
+        <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #4D4944;"><i style="width: 12px; height: 3px; background: #3A44C2; display: inline-block;"></i>This period</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #4D4944;"><i style="width: 12px; height: 0; border-top: 2px dashed #A29D97; display: inline-block;"></i>Previous 30 days</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #4D4944;"><i style="width: 8px; height: 8px; border-radius: 99px; background: #D98E1A; display: inline-block;"></i>Came back</span>
+      </div>
+      <div style="position: relative;">
+        <svg viewBox="0 0 960 240" role="img" aria-label="Sales a day over 30 days, rising from ₹48,000 to ₹82,000; Diwali sale from 1 November" style="width: 100%; height: auto; display: block;">
+          <g stroke="#EEEDEA"><line x1="48" y1="30" x2="950" y2="30"></line><line x1="48" y1="100" x2="950" y2="100"></line><line x1="48" y1="170" x2="950" y2="170"></line></g>
+          <g fill="#67625C" font-size="11" text-anchor="end"><text x="40" y="34">₹90k</text><text x="40" y="104">₹60k</text><text x="40" y="174">₹30k</text></g>
+          <path d="M48 150 L155 148 L262 140 L369 144 L476 120 L583 80 L690 74 L797 88 L950 62 L950 210 L48 210Z" fill="#EEF0FD"></path>
+          <path d="M48 150 L155 148 L262 140 L369 144 L476 120 L583 80 L690 74 L797 88 L950 62" fill="none" stroke="#3A44C2" stroke-width="2"></path>
+          <path d="M48 160 L155 158 L262 154 L369 152 L476 150 L583 144 L690 146 L797 140 L950 136" fill="none" stroke="#A29D97" stroke-width="1.5" stroke-dasharray="4 4"></path>
+          <g fill="#D98E1A"><circle cx="155" cy="206" r="3"></circle><circle cx="369" cy="206" r="3"></circle><circle cx="583" cy="206" r="4"></circle><circle cx="690" cy="206" r="3"></circle><circle cx="797" cy="206" r="4"></circle></g>
+          <line x1="583" y1="20" x2="583" y2="210" stroke="#8F8A84" stroke-dasharray="2 3"></line><text x="589" y="18" font-size="11" fill="#4D4944">Diwali sale</text>
+          <line x1="690" y1="20" x2="690" y2="210" stroke="#22201E" stroke-width="1"></line><circle cx="690" cy="74" r="4" fill="#FFFFFF" stroke="#3A44C2" stroke-width="2"></circle>
+          <g fill="#67625C" font-size="11"><text x="48" y="232">14 Oct</text><text x="369" y="232">24 Oct</text><text x="690" y="232">3 Nov</text><text x="950" y="232" text-anchor="end">12 Nov</text></g>
+        </svg>
+        <div role="tooltip" style="position: absolute; left: 73%; top: 40px; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; background: #171615; color: #FFFFFF; font-size: 12px; line-height: 16px;">
+          <b style="font-weight: 600;">3 Nov</b><span class="num">This period ₹79,400</span><span class="num">Previous ₹54,100</span><span class="num">4 came back</span>
+        </div>
+      </div>
+    </section>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+      <section aria-labelledby="split-h" style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid #E3E1DD; border-radius: 10px;">
+        <div style="display: flex; align-items: center; gap: 16px;"><h2 id="split-h" style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; margin-right: auto;">Paid online and COD, by week</h2>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px;"><i style="width: 10px; height: 10px; border-radius: 2px; background: #3A44C2; display: inline-block;"></i>Paid online</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px;"><i style="width: 10px; height: 10px; border-radius: 2px; background: #C3C9F6; display: inline-block;"></i>COD</span></div>
+        <div style="display: grid; grid-template-columns: 64px minmax(0, 1fr) 40px; align-items: center; gap: 10px 12px;">
+          <span style="color: #67625C;">Week 1</span><span style="display: flex; height: 12px; border-radius: 3px; overflow: hidden;"><i style="width: 34%; background: #3A44C2;"></i><i style="width: 66%; background: #C3C9F6;"></i></span><b class="num" style="text-align: right; font-weight: 500;">118</b>
+          <span style="color: #67625C;">Week 2</span><span style="display: flex; height: 12px; border-radius: 3px; overflow: hidden;"><i style="width: 38%; background: #3A44C2;"></i><i style="width: 62%; background: #C3C9F6;"></i></span><b class="num" style="text-align: right; font-weight: 500;">126</b>
+          <span style="color: #67625C;">Week 3</span><span style="display: flex; height: 12px; border-radius: 3px; overflow: hidden;"><i style="width: 44%; background: #3A44C2;"></i><i style="width: 56%; background: #C3C9F6;"></i></span><b class="num" style="text-align: right; font-weight: 500;">131</b>
+          <span style="color: #67625C;">Week 4</span><span style="display: flex; height: 12px; border-radius: 3px; overflow: hidden;"><i style="width: 47%; background: #3A44C2;"></i><i style="width: 53%; background: #C3C9F6;"></i></span><b class="num" style="text-align: right; font-weight: 500;">137</b>
+        </div>
+        <p style="margin: 0; font-size: 12px; color: #67625C;">Paid online went from 34% to 47% of orders.</p>
+      </section>
+      <section aria-labelledby="heat-h" style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid #E3E1DD; border-radius: 10px;">
+        <h2 id="heat-h" style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600;">When orders come</h2>
+        <div role="img" aria-label="Most orders 9 to 11 pm; busiest Sunday" style="display: grid; grid-template-columns: 40px repeat(7, minmax(0, 1fr)); gap: 4px; font-size: 11px; color: #67625C;">
+          <span></span><span>6a</span><span>9a</span><span>12p</span><span>3p</span><span>6p</span><span>9p</span><span>12a</span>
+          <span>Mon</span><i style="height: 22px; border-radius: 3px; background: #EEF0FD;"></i><i style="border-radius: 3px; background: #E0E3FB;"></i><i style="border-radius: 3px; background: #C3C9F6;"></i><i style="border-radius: 3px; background: #E0E3FB;"></i><i style="border-radius: 3px; background: #C3C9F6;"></i><i style="border-radius: 3px; background: #4C57D6;"></i><i style="border-radius: 3px; background: #E0E3FB;"></i>
+          <span>Wed</span><i style="height: 22px; border-radius: 3px; background: #EEF0FD;"></i><i style="border-radius: 3px; background: #E0E3FB;"></i><i style="border-radius: 3px; background: #E0E3FB;"></i><i style="border-radius: 3px; background: #E0E3FB;"></i><i style="border-radius: 3px; background: #9AA3EE;"></i><i style="border-radius: 3px; background: #6E79E3;"></i><i style="border-radius: 3px; background: #E0E3FB;"></i>
+          <span>Fri</span><i style="height: 22px; border-radius: 3px; background: #EEF0FD;"></i><i style="border-radius: 3px; background: #E0E3FB;"></i><i style="border-radius: 3px; background: #C3C9F6;"></i><i style="border-radius: 3px; background: #E0E3FB;"></i><i style="border-radius: 3px; background: #9AA3EE;"></i><i style="border-radius: 3px; background: #3A44C2;"></i><i style="border-radius: 3px; background: #C3C9F6;"></i>
+          <span>Sun</span><i style="height: 22px; border-radius: 3px; background: #E0E3FB;"></i><i style="border-radius: 3px; background: #C3C9F6;"></i><i style="border-radius: 3px; background: #9AA3EE;"></i><i style="border-radius: 3px; background: #9AA3EE;"></i><i style="border-radius: 3px; background: #6E79E3;"></i><i style="border-radius: 3px; background: #272D82;"></i><i style="border-radius: 3px; background: #C3C9F6;"></i>
+        </div>
+        <p style="margin: 0; font-size: 12px; color: #67625C;">Busiest: Sundays, 9–11 pm.</p>
+      </section>
+    </div>
+
+    <section aria-labelledby="src-h" style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid #E3E1DD; border-radius: 10px;">
+      <div style="display: flex; align-items: center;"><h2 id="src-h" style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; margin-right: auto;">Where orders came from</h2><span style="font-size: 12px; color: #67625C;">Source known for 87%</span></div>
+      <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; min-width: 720px;">
+        <thead><tr style="font-size: 12px; color: #67625C; text-align: left;">
+          <th scope="col" style="font-weight: 500; padding: 8px 12px 8px 0;">Source</th><th scope="col" aria-sort="descending" style="font-weight: 500; padding: 8px 12px; text-align: right;">Orders ↓</th><th scope="col" style="font-weight: 500; padding: 8px 12px; width: 22%;">Share</th><th scope="col" style="font-weight: 500; padding: 8px 12px; text-align: right;">Came back</th><th scope="col" style="font-weight: 500; padding: 8px 12px; text-align: right;">₹ kept an order</th><th scope="col" style="font-weight: 500; padding: 8px 0 8px 12px; text-align: right;">Change</th></tr></thead>
+        <tbody>
+          <tr style="border-top: 1px solid #EEEDEA; height: 48px;"><td style="padding: 0 12px 0 0;"><a href="#">Instagram bio</a></td><td class="num" style="text-align: right; padding: 0 12px;">184</td><td style="padding: 0 12px;"><span style="display: block; height: 8px; border-radius: 99px; background: #EEEDEA;"><i style="display: block; width: 100%; height: 8px; border-radius: 99px; background: #3A44C2;"></i></span></td><td class="num" style="text-align: right; padding: 0 12px;">9%</td><td class="num" style="text-align: right; padding: 0 12px;">₹612</td><td style="text-align: right; padding: 0 0 0 12px; color: #1A6B43;">↑ 18%</td></tr>
+          <tr style="border-top: 1px solid #EEEDEA; height: 48px;"><td style="padding: 0 12px 0 0;"><a href="#">Instagram ads</a></td><td class="num" style="text-align: right; padding: 0 12px;">121</td><td style="padding: 0 12px;"><span style="display: block; height: 8px; border-radius: 99px; background: #EEEDEA;"><i style="display: block; width: 66%; height: 8px; border-radius: 99px; background: #3A44C2;"></i></span></td><td class="num" style="text-align: right; padding: 0 12px; color: #A82828;">24%</td><td class="num" style="text-align: right; padding: 0 12px;">₹318</td><td style="text-align: right; padding: 0 0 0 12px; color: #A82828;">↓ 9%</td></tr>
+          <tr style="border-top: 1px solid #EEEDEA; height: 48px;"><td style="padding: 0 12px 0 0;"><a href="#">WhatsApp broadcast</a></td><td class="num" style="text-align: right; padding: 0 12px;">88</td><td style="padding: 0 12px;"><span style="display: block; height: 8px; border-radius: 99px; background: #EEEDEA;"><i style="display: block; width: 48%; height: 8px; border-radius: 99px; background: #3A44C2;"></i></span></td><td class="num" style="text-align: right; padding: 0 12px;">7%</td><td class="num" style="text-align: right; padding: 0 12px;">₹704</td><td style="text-align: right; padding: 0 0 0 12px; color: #1A6B43;">↑ 31%</td></tr>
+          <tr style="border-top: 1px solid #EEEDEA; height: 48px;"><td style="padding: 0 12px 0 0;"><a href="#">Google</a></td><td class="num" style="text-align: right; padding: 0 12px;">54</td><td style="padding: 0 12px;"><span style="display: block; height: 8px; border-radius: 99px; background: #EEEDEA;"><i style="display: block; width: 29%; height: 8px; border-radius: 99px; background: #3A44C2;"></i></span></td><td class="num" style="text-align: right; padding: 0 12px;">11%</td><td class="num" style="text-align: right; padding: 0 12px;">₹540</td><td style="text-align: right; padding: 0 0 0 12px; color: #67625C;">—</td></tr>
+          <tr style="border-top: 1px solid #EEEDEA; height: 48px;"><td style="padding: 0 12px 0 0; color: #67625C;">Direct or unknown</td><td class="num" style="text-align: right; padding: 0 12px;">65</td><td style="padding: 0 12px;"><span style="display: block; height: 8px; border-radius: 99px; background: #EEEDEA;"><i style="display: block; width: 35%; height: 8px; border-radius: 99px; background: #A29D97;"></i></span></td><td class="num" style="text-align: right; padding: 0 12px;">16%</td><td class="num" style="text-align: right; padding: 0 12px;">₹402</td><td style="text-align: right; padding: 0 0 0 12px; color: #67625C;">↓ 3%</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+      <section aria-labelledby="state-h" style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid #E3E1DD; border-radius: 10px;">
+        <div style="display: flex; align-items: center;"><h2 id="state-h" style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; margin-right: auto;">Came back, by state</h2><a href="#" style="font-size: 13px;">See as a table</a></div>
+        <div role="img" aria-label="Came back by state: highest Bihar 31%, lowest Kerala 6%" style="display: grid; grid-template-columns: repeat(7, 40px); grid-auto-rows: 32px; gap: 4px; font-size: 11px; font-weight: 500;">
+          <span></span><span></span><i style="display: grid; place-items: center; border-radius: 4px; background: #FDF3DC; color: #85500B; font-style: normal;">PB</i><i style="display: grid; place-items: center; border-radius: 4px; background: #FDF3DC; color: #85500B; font-style: normal;">HR</i><i style="display: grid; place-items: center; border-radius: 4px; background: #FDECEC; color: #A82828; font-style: normal;">DL</i><span></span><span></span>
+          <span></span><i style="display: grid; place-items: center; border-radius: 4px; background: #FDECEC; color: #A82828; font-style: normal;">RJ</i><i style="display: grid; place-items: center; border-radius: 4px; background: #F5C6C6; color: #A82828; font-style: normal;">UP</i><i style="display: grid; place-items: center; border-radius: 4px; background: #E8A0A0; color: #4A1010; font-style: normal;">BR</i><i style="display: grid; place-items: center; border-radius: 4px; background: #FDECEC; color: #A82828; font-style: normal;">WB</i><span></span><span></span>
+          <i style="display: grid; place-items: center; border-radius: 4px; background: #FDF3DC; color: #85500B; font-style: normal;">GJ</i><span></span><i style="display: grid; place-items: center; border-radius: 4px; background: #FDECEC; color: #A82828; font-style: normal;">MP</i><i style="display: grid; place-items: center; border-radius: 4px; background: #FDECEC; color: #A82828; font-style: normal;">JH</i><i style="display: grid; place-items: center; border-radius: 4px; background: #FDF3DC; color: #85500B; font-style: normal;">OD</i><span></span><span></span>
+          <span></span><i style="display: grid; place-items: center; border-radius: 4px; background: #F6F5F3; color: #4D4944; font-style: normal;">MH</i><i style="display: grid; place-items: center; border-radius: 4px; background: #F6F5F3; color: #4D4944; font-style: normal;">TG</i><span></span><span></span><span></span><span></span>
+          <span></span><i style="display: grid; place-items: center; border-radius: 4px; background: #F6F5F3; color: #4D4944; font-style: normal;">KA</i><i style="display: grid; place-items: center; border-radius: 4px; background: #F6F5F3; color: #4D4944; font-style: normal;">TN</i><span></span><span></span><span></span><span></span>
+          <span></span><i style="display: grid; place-items: center; border-radius: 4px; background: #F6F5F3; color: #4D4944; font-style: normal;">KL</i><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #67625C;"><span>6%</span><i style="flex: 0 0 120px; height: 6px; border-radius: 99px; background: linear-gradient(90deg, #F6F5F3, #FDF3DC, #E8A0A0);"></i><span>31%</span><span style="margin-left: 8px;">States with 10+ orders with an outcome</span></div>
+      </section>
+      <section aria-labelledby="coh-h" style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid #E3E1DD; border-radius: 10px;">
+        <h2 id="coh-h" style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600;">Shoppers who come back</h2>
+        <table style="width: 100%; border-collapse: separate; border-spacing: 4px; font-size: 13px;">
+          <thead><tr style="font-size: 12px; color: #67625C; text-align: left;"><th scope="col" style="font-weight: 500;">First order</th><th scope="col" style="font-weight: 500; text-align: right;">Shoppers</th><th scope="col" style="font-weight: 500;">1 month</th><th scope="col" style="font-weight: 500;">2 months</th><th scope="col" style="font-weight: 500;">3 months</th></tr></thead>
+          <tbody>
+            <tr><th scope="row" style="font-weight: 400; text-align: left;">Aug</th><td class="num" style="text-align: right;">310</td><td class="num" style="padding: 6px 8px; border-radius: 4px; background: #C3C9F6;">32%</td><td class="num" style="padding: 6px 8px; border-radius: 4px; background: #E0E3FB;">21%</td><td class="num" style="padding: 6px 8px; border-radius: 4px; background: #EEF0FD;">15%</td></tr>
+            <tr><th scope="row" style="font-weight: 400; text-align: left;">Sep</th><td class="num" style="text-align: right;">402</td><td class="num" style="padding: 6px 8px; border-radius: 4px; background: #E0E3FB;">28%</td><td class="num" style="padding: 6px 8px; border-radius: 4px; background: #EEF0FD;">18%</td><td></td></tr>
+            <tr><th scope="row" style="font-weight: 400; text-align: left;">Oct</th><td class="num" style="text-align: right;">455</td><td class="num" style="padding: 6px 8px; border-radius: 4px; background: #C3C9F6;">35%</td><td></td><td></td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <section aria-labelledby="visits-h" style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid #E3E1DD; border-radius: 10px;">
+      <h2 id="visits-h" style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600;">From visit to order</h2>
+      <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 12px; color: #67625C;">Visitors</span><b class="num" style="font-size: 18px; font-weight: 600;">21,400</b><i style="height: 8px; border-radius: 3px; background: #3A44C2;"></i></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 12px; color: #67625C;">Viewed a product</span><b class="num" style="font-size: 18px; font-weight: 600;">9,800</b><i style="height: 8px; width: 46%; border-radius: 3px; background: #3A44C2;"></i></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 12px; color: #67625C;">Added to bag</span><b class="num" style="font-size: 18px; font-weight: 600;">1,950</b><i style="height: 8px; width: 9%; border-radius: 3px; background: #3A44C2;"></i></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 12px; color: #67625C;">Began checkout</span><b class="num" style="font-size: 18px; font-weight: 600;">980</b><i style="height: 8px; width: 5%; border-radius: 3px; background: #3A44C2;"></i></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 12px; color: #67625C;">Ordered</span><b class="num" style="font-size: 18px; font-weight: 600;">512</b><i style="height: 8px; width: 3%; border-radius: 3px; background: #3A44C2;"></i></div>
+      </div>
+      <p style="margin: 0; font-size: 12px; color: #67625C;">Most leave between the product and the bag: 8 in 10 who view a product don't add it.</p>
+    </section>
+
+    <section aria-labelledby="pin-h" style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid #E3E1DD; border-radius: 10px;">
+      <h2 id="pin-h" style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600;">Pincodes with the most returns</h2>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead><tr style="font-size: 12px; color: #67625C; text-align: left;"><th scope="col" style="font-weight: 500; padding: 8px 12px 8px 0;">Pincode</th><th scope="col" style="font-weight: 500; padding: 8px 12px; text-align: right;">Came back</th><th scope="col" style="font-weight: 500; padding: 8px 12px; width: 40%;">Of orders with an outcome</th></tr></thead>
+        <tbody>
+          <tr style="border-top: 1px solid #EEEDEA; height: 44px;"><td class="num" style="padding: 0 12px 0 0;">800001</td><td class="num" style="padding: 0 12px; text-align: right;">6 of 14</td><td style="padding: 0 12px;"><span style="display: block; height: 8px; border-radius: 99px; background: #EEEDEA;"><i style="display: block; width: 43%; height: 8px; border-radius: 99px; background: #DC3B3B;"></i></span></td></tr>
+          <tr style="border-top: 1px solid #EEEDEA; height: 44px;"><td class="num" style="padding: 0 12px 0 0;">226001</td><td class="num" style="padding: 0 12px; text-align: right;">4 of 11</td><td style="padding: 0 12px;"><span style="display: block; height: 8px; border-radius: 99px; background: #EEEDEA;"><i style="display: block; width: 36%; height: 8px; border-radius: 99px; background: #DC3B3B;"></i></span></td></tr>
+          <tr style="border-top: 1px solid #EEEDEA; height: 44px;"><td class="num" style="padding: 0 12px 0 0;">302012</td><td class="num" style="padding: 0 12px; text-align: right;">3 of 12</td><td style="padding: 0 12px;"><span style="display: block; height: 8px; border-radius: 99px; background: #EEEDEA;"><i style="display: block; width: 25%; height: 8px; border-radius: 99px; background: #DC3B3B;"></i></span></td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":2380}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

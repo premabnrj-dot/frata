@@ -130,8 +130,9 @@ export type FunnelStep = { name: string; fromOrders: boolean; n: number | null; 
 /** From visit to delivered: four steps counted by visits, then orders and deliveries from the shop's orders — null while
  * visits don't cover the window (coverage), so a step never divides one span's orders by another span's visits. */
 export function funnel(t: TrafficTotals, orders: number | null, delivered: number | null): { steps: FunnelStep[]; drop: { from: string; to: string; leave: number } | null } {
-  const raw: [string, boolean, number | null][] = [['Visits', false, t.visitors], ['Saw a product', false, t.productVisitors], ['Added to bag', false, t.bagVisitors],
-    ['Started checkout', false, t.checkoutVisitors], ['Ordered', true, orders], ['Delivered', true, delivered]]
+  // The step names as drawn (Neel N1b mockup); Delivered follows the order, outside the five drawn steps.
+  const raw: [string, boolean, number | null][] = [['Visitors', false, t.visitors], ['Viewed a product', false, t.productVisitors], ['Added to bag', false, t.bagVisitors],
+    ['Began checkout', false, t.checkoutVisitors], ['Ordered', true, orders], ['Delivered', true, delivered]]
   const steps = raw.map(([name, fromOrders, n], i) => {
     const above = i ? raw[i - 1]![2] : null
     return { name, fromOrders, n, ofAbove: n !== null && above ? n / above : null }

@@ -2,7 +2,10 @@
 // the grouped raw inputs, the period against the one before, ₹ kept after returns by source, a creator's code, the
 // source page's last orders, staff without ₹, and shop B's orders never counted. Skipped unless INT_DB_HOST is set.
 // Rolled back.
+import { windowFor } from '@/domains/analytics/period'
 import { describe, expect, it } from 'vitest'
+
+const thirty = (now: Date) => windowFor({ kind: 'preset', preset: '30' }, now)
 
 const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
@@ -34,7 +37,7 @@ describe.skipIf(!host)('analytics', () => {
 
     await withTenant(A, async (tx) => {
       // The work already in shop A's window (other tests' rows): read first, so the assertions below compare the change.
-      const base = await q.analyticsIn(tx, A, 'owner', 30, now)
+      const base = await q.analyticsIn(tx, A, 'owner', thirty(now), now)
       const before = (slug: string) => base?.sources.find((s) => s.slug === slug)?.cur.orders ?? 0
       await tx.update(shopSettings).set({ shipCostDelivery: 7000, shipCostReturn: 7000, shipCostCod: 3600, shipCostsConfirmedAt: now }).where(eq(shopSettings.tenantId, A))
       const order = async (o: { at: Date; checkout?: unknown; delivered?: boolean; rto?: boolean; method?: 'cod' | 'prepaid'; paid?: boolean; payBy?: Date; cogs?: number }) => {
@@ -59,7 +62,7 @@ describe.skipIf(!host)('analytics', () => {
       await order({ at: ago(1) })
       await order({ at: ago(1), method: 'prepaid', payBy: ago(1) })
 
-      const s = await q.analyticsIn(tx, A, 'owner', 30, now)
+      const s = await q.analyticsIn(tx, A, 'owner', thirty(now), now)
       const bio = s.sources.find((x) => x.slug === 'instagram-bio')!
       const riya = s.sources.find((x) => x.slug === `creator-${code!.code.toLowerCase()}`)!
       expect({ orders: bio.cur.orders - before('instagram-bio'), prev: bio.prev.orders >= 1, label: bio.label, campaign: bio.campaigns.some((c) => c.name === 'diwali-drop') })
@@ -74,14 +77,14 @@ describe.skipIf(!host)('analytics', () => {
       // Shop B's Instagram order is not here: A's Instagram rows are only its own (base + 2).
       expect(bio.cur.orders).toBe(before('instagram-bio') + 2)
       // Staff see the counts, never ₹.
-      const staff = await q.analyticsIn(tx, A, 'staff', 30, now)
+      const staff = await q.analyticsIn(tx, A, 'staff', thirty(now), now)
       expect(staff.costs).toBe(false)
       expect(staff.sources.every((x) => x.cur.kept === null)).toBe(true)
       // The source page: Riya's own last orders; an unknown or malformed slug is nothing.
-      const page = await q.sourcePageIn(tx, A, 'owner', 30, riya.slug, now)
+      const page = await q.sourcePageIn(tx, A, 'owner', thirty(now), riya.slug, now)
       expect(page?.orders.length).toBe(1)
-      expect(await q.sourcePageIn(tx, A, 'owner', 30, 'no-such-source', now)).toBeNull()
-      expect(await q.sourcePageIn(tx, A, 'owner', 30, "x' or 1=1 --", now)).toBeNull()
+      expect(await q.sourcePageIn(tx, A, 'owner', thirty(now), 'no-such-source', now)).toBeNull()
+      expect(await q.sourcePageIn(tx, A, 'owner', thirty(now), "x' or 1=1 --", now)).toBeNull()
       // The order page and Analytics classify by one route (impact review A1·7): each order's own source (orderSourceIn)
       // is a source whose page lists it — tags with spaces and capitals, a click id alone, an empty click id, a
       // referrer only, an empty tag beside a referrer, and a creator's code.
@@ -97,7 +100,7 @@ describe.skipIf(!host)('analytics', () => {
         const src = await orderSourceIn(tx, A, id, now)
         const [row] = await tx.execute<{ number: number }>(sql`select number from orders where id = ${id}`)
         const number = row!.number
-        const pageOf = await q.sourcePageIn(tx, A, 'owner', 30, src!.slug, now)
+        const pageOf = await q.sourcePageIn(tx, A, 'owner', thirty(now), src!.slug, now)
         expect({ slug: src!.slug, listed: pageOf?.orders.some((x) => x.number === number) }).toEqual({ slug: src!.slug, listed: true })
       }
       expect((await orderSourceIn(tx, A, ids[1]!, now))!.label).toBe('Instagram bio')
