@@ -143,7 +143,7 @@ describe('the Storefront API host (ADR-0018; V1 plan § SA0·1)', () => {
     const { apiRewrites, KEY_BODY } = await import('../host')
     expect(apiRewrites('')).toEqual([])
     const r = apiRewrites('API.frrata.shop')
-    expect(r.every((x) => x.has[0].value === 'api\\.frrata\\.shop')).toBe(true)
+    expect(r.every((x) => x.has[0]?.value === 'api\\.frrata\\.shop')).toBe(true)
     const test = r.find((x) => x.source.includes('frs_test_'))!, pub = r.find((x) => x.source.includes('frs_pub_'))!
     expect(test.destination).toBe('/api/storefront/2026-12/t/:key/:rest*')
     expect(pub.destination).toBe('/api/storefront/2026-12/k/:key/:rest*')
@@ -151,7 +151,7 @@ describe('the Storefront API host (ADR-0018; V1 plan § SA0·1)', () => {
   })
   it('keeps the API host out of the shop rewrite', () => {
     const shop = shopRewrites(C, E, A)
-    const miss = new RegExp(`^${shop[shop.length - 1].missing[0].value}$`)
+    const miss = new RegExp(`^${shop[shop.length - 1]?.missing[0]?.value}$`)
     expect(miss.test('api.frrata.shop')).toBe(true)
     expect(miss.test('kesar.frrata.shop')).toBe(false)
   })
