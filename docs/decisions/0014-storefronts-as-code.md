@@ -60,7 +60,7 @@ Claude builder was skipped "Claude never runs on Frrata's servers" (2026-11-11).
    and starters, set controls, release updates (three lanes) and keep every site safe. Code sites live on their own
    registrable domain, never checkout's; its name is a placeholder (`frrata.site`) until chosen.
 
-## Amendment 8 — PROPOSED, not in force (drafted 2026-11-14, reviews folded 2026-11-15; spec `docs/specs/2026-11-14-site-content-layer.md`)
+## Amendment 8 (owner, 2026-11-15: "1. yes. accept … go with rest of your suggestion"; spec `docs/specs/2026-11-14-site-content-layer.md`)
 **Content is declared by code and edited as data.** Widens amendment 3.
 1. **Three layers.** *Content* (announcements with dates, placements a site declares such as banners and featured
    collections or products, menus, page words, FAQ, size help, the Contact line) is edited in Console › Content, free,
@@ -79,4 +79,5 @@ Claude builder was skipped "Claude never runs on Frrata's servers" (2026-11-11).
 4. **One content source from V1.** Theme shops and code sites read the same content; the Look's announcement, menus
    and pages move to Console › Content (moving content out of themes, not new theme work).
 5. **A gate before handover.** No code site is handed to a brand before Console › Content edits what that site
-   declares.
+   declares. The editor follows what the builders put in the site: each section declares its editable fields as it
+   is built (owner, 2026-11-15).

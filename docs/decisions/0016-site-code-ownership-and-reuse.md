@@ -1,7 +1,7 @@
 # ADR-0016: Who owns a site's code, and what a partner may reuse
 
-Status: **proposed** (drafted 2026-11-14 for the owner; not in force) · Needs: the owner's decision, then the partner
-terms updated with counsel · Pairs with: `docs/specs/2026-11-14-site-content-layer.md`, ADR-0014, the kit and fleet
+Status: **accepted** (owner, 2026-11-15: "go with rest of your suggestion") · Next: the partner terms updated with
+counsel before V4 · Pairs with: `docs/specs/2026-11-14-site-content-layer.md`, ADR-0014, the kit and fleet
 spec (§ 3 Starters, § 7 retention and export)
 
 ## Context
@@ -17,7 +17,7 @@ spec (§ 3 Starters, § 7 retention and export)
 - Reuse is easy technically once products, content and tokens come from the API by key, but today a site also carries
   its brand's design system values, `brand.md`, drawn assets and the agent's learned facts.
 
-## Decision (proposed; reviews folded 2026-11-15)
+## Decision (reviews folded 2026-11-15)
 1. **Two layers in every site repository**, kept apart by the kit's layout and its checks:
    - **The partner's layer** (`starter/`, `skills/`, `frrata/fields.json` with no values): components, layouts, page
      patterns, the partner's own skills. Owned by the partner; licensed to each brand for its own site, perpetual and
@@ -39,8 +39,7 @@ spec (§ 3 Starters, § 7 retention and export)
    media URL or id, another brand's handles or titles, a phone number or an email, or a default other than text or a
    toggle. A person at Frrata reviews each partner's first starter. Private starters are visible only to the partner's
    team; the public gallery stays V4 with a review on every release.
-4. **Export:** one rule for both specs, chosen by the owner (any time, as the kit spec says; or later, as the intake
-   answer says). When it exists, it is the brand's layer plus the partner's layer under the licence, as a git bundle
+4. **Export: later** (owner, 2026-11-15, matching the intake answer; the kit spec now says the same). When it exists, it is the brand's layer plus the partner's layer under the licence, as a git bundle
    and the media, with `.claude/` and editor folders stripped.
 
 ## Consequences

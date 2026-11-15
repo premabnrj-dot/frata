@@ -208,8 +208,8 @@ guards the reviews asked for:
   third-party global router that would decrypt shopper data abroad; the analytics beacon goes to bom1. A site's router
   carries only page requests.
 - **Retention:** screenshots and build logs 90 days; logs never show keys. A site's repository is kept while the shop
-  is open and 90 days after it closes (closing = the owner closes the shop or it is removed for abuse); the owner can
-  export the code at any time.
+  is open and 90 days after it closes (closing = the owner closes the shop or it is removed for abuse). Code export
+  comes later (owner, 2026-11-12 and 2026-11-15; ADR-0016 § 4).
 
 ### 8. Frrata's agents (people own every release)
 | Agent | Does | May never |
@@ -267,8 +267,8 @@ release manager (rotating), the abuse queue part-time, partner success.
 - **Reliability:** rows before requests; rollback to kept deployments; break-glass on the router; smoke tests after
   this app's deploys.
 - **Security:** § 1, § 4–§ 7.
-- **Unit economics:** Frrata's patch builds are Frrata's cost, never counted against a shop's allowance; migrations
-  Frrata does for shops without a partner are priced in credits at 3× (owner rule) or absorbed for security —
+- **Unit economics:** Frrata's patch builds are Frrata's cost, never counted against a shop's allowance; moving a live
+  theme shop to a code site is free to the brand and done by Frrata (owner, 2026-11-15; content-layer spec decision 9) —
   `unit-economics-reviewer` before V2.
 - **Blast radius:** a bad kit release or policy change could reach every site; guards: staged publishing, policies
   apart, the hard floor, waves with smoke tests and rollback, the minimum version, kill switches, Report-Only first.

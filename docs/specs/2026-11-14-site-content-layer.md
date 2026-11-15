@@ -1,5 +1,5 @@
 # Site content layer: what a brand edits itself, and how a site's code declares it
-Status: draft v2 (reviews folded in 2026-11-15; for the owner; nothing is built) · Date: 2026-11-14 · Mockup: none
+Status: active, decisions taken (owner 2026-11-15; reviews folded in 2026-11-15); mockup next, nothing built · Date: 2026-11-14 · Mockup: none
 yet; Studio v2.5 and the brand's Content screen are drawn after the owner's decisions (§ Owner decisions) · Approved: —
 · Evidence: `docs/research/2026-11-14-studio-findings-verified.md` · Amends: ADR-0014 amendment 8 (proposed, in the
 ADR) · Pairs with: `docs/decisions/0016-site-code-ownership-and-reuse.md` (proposed) · Reviews (2026-11-15):
@@ -154,6 +154,9 @@ stays, with its publish tie cut. `readMenus` and `carryOver` stop reading the la
 10. **Agency starter:** "Atelier · Pixel & Thread · your agency starter · components and layouts only".
 11. **New screen:** Console › Content at phone width (announcement with dates, a placement with three entries, menus,
     FAQ with a bound answer, season dates, a partner save in the owner's Inbox).
+12. **Editable as it is built (owner, 2026-11-15):** when the agent adds or changes a section, the chat card says
+    which fields the brand will edit ("Riya will be able to edit: image, heading, link, dates") and the Editable tab
+    updates; a section with words in code is flagged before publish.
 
 ### Where each item falls
 | Phase | Items |
@@ -236,20 +239,28 @@ Rich text and HTML (signal: a brand cannot say what it needs in plain blocks) ·
 asked for) · a brand's chat (ADR-0014 rule 4) · third-party scripts (owner: later) · a cross-device wishlist (signal:
 EkCode sign-in on sites) · SA1's filters and large catalogues (its own plan).
 
-## Owner decisions
-1. **Adopt the three layers**, with design tokens and seasons as data (ADR-0014 amendment 8).
-2. **Console › Content as a gate** before the first code site is handed over; the move out of the Look in V1 or V2.
-3. **Partners bring their own agent before Studio:** V1 plus the kit first; Studio V3 once V1's signal is passed
-   comfortably (kill line < 3 external sites in 90 days).
-4. **Free direct edits** to tokens and seasons (data writes; no turn, sandbox or build).
-5. **Ownership and agency starters** as ADR-0016; partner terms with counsel.
-6. **Third-party scripts:** stay deferred, or a reviewed list (pinned, self-hosted, SRI, own CSP and consent, never on
-   checkout or sign-in). **Wishlist:** remove, or saved on this phone (product handles only).
-7. **The bar's order:** offer first (today) or written announcement first.
-8. **A partner's content scope after handover:** offered by default, or owner-granted only.
-9. **Themes' move to code free** for every live theme shop (today KF:271 prices shops with no partner in credits);
-   cost per shop above, total once the count is run.
-10. **Code export:** "any time" (KF:211-212) or "later" (IT:11), one wording for both specs and ADR-0016.
+## Owner decisions (2026-11-15)
+Owner: "1. yes. accept 3. yes to the rule. (while the builders build the theme, could the editing screens be decided
+based on what builders are puttin it in websites). go with rest of your suggestion." Read as: decision 1 accepted,
+decision 2 accepted ("yes to the rule" was decision 2's suggestion), the rest as suggested.
+1. **The three layers: adopted**, with design tokens and seasons as data. ADR-0014 amendment 8 accepted.
+2. **Console › Content is a gate** before the first code site is handed over: adopted. The move out of the Look in V1
+   if V1 has room, else V2 (before the first handover either way).
+   - **The owner's ask, answered by the contract:** the editing screens follow what the builders put in the site.
+     Each section the partner or the agent adds declares its editable fields; the brand's Content screen is drawn
+     from the live version's declaration, so it always matches what was built. Studio shows it as the section is
+     built ("Riya will be able to edit: image, heading, link, dates") (mockup v2.5 item 12).
+3. **Partners bring their own agent first:** V1 and the kit first; Studio V3 once V1's signal is passed comfortably.
+4. **Direct edits to tokens and seasons are free** (data writes).
+5. **Ownership and agency starters as ADR-0016: accepted;** partner terms go to counsel before V4.
+6. **Third-party scripts stay deferred** (revisit when brands ask). **Wishlist:** "Saved on this phone" (product
+   handles only), or removed if it costs more than that.
+7. **The bar:** offer first, as today.
+8. **A partner's content scope after handover:** only when the owner turns it on; the owner is told of every partner
+   save.
+9. **Theme shops move to code free**, done by Frrata (KF § Design review › Unit economics updated). First step: count
+   the live theme shops (free) to size the total.
+10. **Code export: "later"**, one wording (KF § 7 and ADR-0016 updated).
 
 ## Facts used
 ADR-0014 (amendments 1, 3, 4, 6, 7); Storefront API spec § 2–6, 8; kit and fleet § 2, 4, 7; Studio and intake specs
