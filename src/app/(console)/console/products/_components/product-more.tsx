@@ -42,7 +42,7 @@ export function ProductMore({ id, title, handle, status, everLive, shopUrl, dirt
   return (
     <>
       <Link href={`/console/preview/products/${handle}`} className={button({ variant: 'secondary' })}>Preview</Link>
-      <Menu items={items} variant="ghost" />
+      <Menu items={items} variant="ghost" chevron={false} />
       <ConfirmDelete open={asking} count={1} noun={['draft', 'drafts']} consequence={<>“{title}” goes for good, with its photos.</>} keep="Keep it" busy={pending} error={error}
         onClose={() => setAsking(false)}
         onConfirm={() => start(async () => {

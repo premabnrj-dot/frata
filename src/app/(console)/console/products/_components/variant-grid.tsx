@@ -80,7 +80,8 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
   useEffect(() => { setPicked((p) => { const live = new Set(all); const n = new Set([...p].filter((k) => live.has(k))); return n.size === p.size ? p : n }) }, [all.join('\u0001')]) // eslint-disable-line react-hooks/exhaustive-deps
   const rows = (f: 'compareAt') => combos.map((c) => ({ key: keyOf(c), text: (cells[keyOf(c)] ?? EMPTY_CELL)[f] ?? '' }))
   const ownMrp = targetsOf(rows('compareAt')).length < combos.length
-  const name = (c: string[]) => c.join(' · ') || 'This product'
+  // Colour first, as drawn ("Gulabi · XS").
+  const name = (c: string[]) => (g >= 0 ? [c[g]!, ...c.filter((_, i) => i !== g)] : c).join(' · ') || 'This product'
   const toggle = (ks: string[], on: boolean) => setPicked((p) => { const n = new Set(p); ks.forEach((k) => (on ? n.add(k) : n.delete(k))); return n })
   const pickedGroup = groups.find((x) => x.label && x.rows.length === picked.size && x.rows.every((c) => picked.has(keyOf(c))))
   const what = pickedGroup ? `${pickedGroup.label} · ${picked.size} ${options.filter((_, i) => i !== g).map((o) => o.name.toLowerCase())[0] ?? 'variant'}s` : `${picked.size} ${picked.size === 1 ? 'variant' : 'variants'}`
@@ -110,7 +111,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
       <tr>
         <th className="w-10"><input id={`${base}-all-${which}`} type="checkbox" aria-label="Select every size and colour" checked={picked.size === all.length && all.length > 0}
           ref={(el) => { if (el) el.indeterminate = picked.size > 0 && picked.size < all.length }} onChange={(e) => toggle(all, e.target.checked)} /></th>
-        <th>Size and colour</th>{cols}
+        <th className="whitespace-nowrap">Size and colour</th>{cols}
       </tr>
     </thead>
   )
@@ -124,7 +125,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
           const shut = collapse && grp.label && !open[grp.label] && !grp.rows.some((c) => Object.keys(errors).some((x) => x.startsWith(`v:${keyOf(c)}:`)))
           return (
             <tbody key={grp.label || 'all'}>
-              {grp.label ? (
+              {grp.label && collapse ? (
                 <tr className="border-b border-line-soft bg-side">
                   <td className="w-10 px-3"><input type="checkbox" aria-label={`Select ${grp.label}`} checked={grp.rows.every((c) => picked.has(keyOf(c)))}
                     onChange={(e) => toggle(grp.rows.map(keyOf), e.target.checked)} /></td>

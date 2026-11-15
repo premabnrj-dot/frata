@@ -15,16 +15,18 @@ import type { Cell } from './variant-grid'
  * published (rework board). Its price is the buy box's (`priceOf`), as the real card is, never the editor's common price.
  * Drawn in the console's own tokens, not WhatsApp's colours.
  */
-export function WhatsAppPreview({ title, description, cover, cells, host }: {
-  title: string; description: string; cover: Photo | undefined; cells: Cell[]; host: string
+export function WhatsAppPreview({ title, description, cover, cells, host, store }: {
+  title: string; description: string; cover: Photo | undefined; cells: Cell[]; host: string; store: string
 }) {
   const price = priceOf({ variants: cells.map((c) => ({ price: parseRupees(c.price) ?? 0, compareAt: parseRupees(c.compareAt) })) })
   const card = shareCard(title || 'Product', description)
   return (
     <Section title="Shared on WhatsApp">
-      <figure className="overflow-hidden rounded-md border border-border bg-sunk">
+      <figure className="relative overflow-hidden rounded-md border border-border bg-sunk">
         {cover ? <img src={urlFor(cover.base, pick(cover.widths, 640))} alt="" width={320} height={168} className="aspect-[1.91] w-full object-cover" />
           : <span aria-hidden="true" className="block aspect-[1.91] w-full bg-line-soft" />}
+        {/* As drawn: the store's name on the picture. */}
+        <span className="absolute left-2.5 top-2.5 rounded-sm bg-card px-1.5 py-0.5 text-small font-medium">{store}</span>
         <figcaption className="space-y-0.5 p-3 text-sm">
           <p className="line-clamp-2 font-medium">{card.title}{price ? <> · <Money paise={paise(price.min)} /></> : null}</p>
           <p className="line-clamp-2 text-small text-muted-foreground">{card.description}</p>

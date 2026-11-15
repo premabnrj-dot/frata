@@ -28,7 +28,7 @@ import { PairsPanel, StoriesPanel } from './extras-panel'
 import type { Piece, Story } from '@/domains/catalogue/stories'
 import { labelMissing, readLabel, type LabelInput } from '@/domains/catalogue/label'
 import type { TaxInput } from '@/domains/catalogue/product-form'
-import { inGap, ruleOn } from '@/domains/tax/rates'
+import { inGap, rateOn, ruleOn } from '@/domains/tax/rates'
 import { useNow } from '@/components/time/now'
 import { EMPTY_CELL, shopperSees, VariantGrid, type Cell } from './variant-grid'
 import { Section } from '@/components/layout/section'
@@ -225,6 +225,9 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   useEffect(() => { if (dirty && !wasDirty.current) announce('Unsaved changes.'); wasDirty.current = dirty }, [dirty])
   const has = (...prefixes: string[]) => Object.keys(errors).some((k) => prefixes.some((p) => k === p || k.startsWith(`${p}.`)))
   const priceWords = targetsWords(commonRows('price'))
+  // "HSN 6211 · 5%" as drawn: the rate at the lowest price (the one GST's slab is judged on).
+  const rate = d.tax.hsn ? rateOn(d.tax.hsn, prices.length ? Math.min(...prices) : 0, shop.gst.inclusive, now, Number(d.tax.ownBps) || null) : null
+  const taxWords = d.tax.hsn ? `HSN ${d.tax.hsn}${rate !== null ? ` · ${rate / 100}%` : ''}` : shop.gst.charges ? 'Needs an HSN code' : 'No GST charged'
   const field = 'flex flex-col gap-1.5 text-label font-medium'
   const sizedSummary = type ? `${type.name} · ${(type.sizeChart.rows ?? []).map((r) => r.size).filter(Boolean).slice(0, 1).concat((type.sizeChart.rows ?? []).slice(-1).map((r) => r.size)).join('–')}` : 'Pick a chart'
   return (
@@ -261,7 +264,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
               <textarea id="desc" rows={3} maxLength={5000} value={d.description} onChange={(e) => set({ description: e.target.value })} {...fieldProps('description', errors.description)} className="w-full rounded-md border border-input bg-card px-2.5 py-2 text-sm font-normal aria-invalid:border-danger-text" />
               <FieldError name="description" message={errors.description} />
             </label>
-            <p className="truncate text-small text-muted-foreground">{host}/products/<b className="font-medium text-foreground">{d.handle || defaults.handle}</b>{everLive ? null : ' · follows the name until it is live'}</p>
+            <p className="truncate text-small text-muted-foreground">{host}/products/<b className="font-medium text-foreground">{d.handle || defaults.handle}</b>{everLive ? null : ' · follows the name until it’s live'}</p>
           </Section>
           <Section title="Sizes and colours" action={combos.length ? <span className="text-small text-muted-foreground tabular-nums">{combos.length} of 100</span> : undefined}>
             <OptionsEditor options={d.options} onChange={(options) => set({ options })} error={errors.options} onRename={rename} />
@@ -283,7 +286,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
             <SeoPanel bare handle={d.handle} onHandle={(handle) => set({ handle })} seoTitle={d.seoTitle} onSeoTitle={(seoTitle) => set({ seoTitle })} seoDescription={d.seoDescription} onSeoDescription={(seoDescription) => set({ seoDescription })}
               defaults={defaults} address={shop.address} cover={photos[0]} everLive={everLive} errors={errors} />
           </FoldSection>
-          <FoldSection title="Tax" start={false} action={d.tax.hsn ? 'Edit' : 'Add'} summary={d.tax.hsn ? `HSN ${d.tax.hsn}` : shop.gst.charges ? 'Needs an HSN code' : 'No GST charged'} invalid={has('tax')}>
+          <FoldSection title="Tax" start={false} action={d.tax.hsn ? 'Edit' : 'Add'} summary={taxWords} invalid={has('tax')}>
             <TaxPanel tax={d.tax} onChange={(tax) => { fix(...changed('tax', d.tax, tax)); set({ tax }) }} price={prices.length ? Math.min(...prices) : null} inclusive={shop.gst.inclusive} charges={shop.gst.charges} now={now} errors={errors}
               onReprice={(to) => {
                 const hit = combos.map(keyOf).filter((k) => { const p = parseRupees((d.cells[k] ?? EMPTY_CELL).price); return p !== null && inGap(d.tax.hsn, p, shop.gst.inclusive, now) })
@@ -306,7 +309,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
         </div>
         <aside className="space-y-3 lg:sticky lg:top-[calc(var(--shell-top,0px)+1rem)] lg:max-h-[calc(100dvh-var(--shell-top,0px)-2rem)] lg:overflow-y-auto">
           <StatusCard productId={id} status={status} publishAt={publishAt} ready={ready} feed={feedMissing(d, photos.length)} dirty={dirty} saveFirst={saveNow} />
-          <WhatsAppPreview title={d.seoTitle.replace(/\s*\|[^|]*$/, '') || d.title} description={d.seoDescription || defaults.description} cover={photos[0]} cells={cells} host={host} />
+          <WhatsAppPreview title={d.seoTitle.replace(/\s*\|[^|]*$/, '') || d.title} description={d.seoDescription || defaults.description} cover={photos[0]} cells={cells} host={host} store={shop.name} />
           <OrganiseCard category={d.category} onCategory={(category) => set({ category, attributes: keepDetails(d.attributes, category) })} collections={allCollections} picked={d.collections} onPicked={(collections) => set({ collections })} tags={d.tags} onTags={(tags) => set({ tags })} />
         </aside>
       </div>

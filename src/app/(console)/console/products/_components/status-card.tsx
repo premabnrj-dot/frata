@@ -72,18 +72,19 @@ export function StatusCard({ productId, status, publishAt, ready, feed = [], dir
           <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="h-11 w-full rounded-md border border-input bg-card px-2 text-sm md:h-9" />
         </label>
       ) : null}
-      {needsReady && missing.length ? (
+      {(needsReady && missing.length) || feed.length ? (
         <p id={missingId} tabIndex={-1} className="flex items-start gap-2 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">
           <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 rounded-full bg-warn-mark" />
-          <span>Missing: {missing.map((m) => m.label.charAt(0).toLowerCase() + m.label.slice(1)).join(' · ')}</span>
+          <span>{needsReady && missing.length ? <>Missing: {missing.map((m) => m.label.charAt(0).toLowerCase() + m.label.slice(1)).join(' · ')}</> : null}
+            {feed.length ? <span className="block">For Google and Meta: {feed.join(' · ')}</span> : null}</span>
         </p>
       ) : null}
-      {feed.length ? <p className="text-small text-muted-foreground">Google and Meta also need: {feed.join(' · ')}</p> : null}
       {changed ? (
-        // Blocked: still focusable (aria-disabled), drawn as a quiet button, never faded; a press takes focus to what is missing.
-        <Button variant={blocked ? 'secondary' : 'primary'} className={cn('w-full', blocked && 'cursor-not-allowed')} aria-disabled={blocked || undefined}
+        // Blocked: drawn faded, as the mockup shows, but still focusable (aria-disabled); a press takes focus to what is missing.
+        // With unsaved changes it saves them first (one action), under the same word.
+        <Button className={cn('w-full', blocked && 'cursor-not-allowed opacity-45')} aria-disabled={blocked || undefined}
           aria-describedby={blocked && missing.length ? missingId : undefined} busy={pending} disabled={dirty && !saveFirst}
-          onClick={() => { if (blocked) document.getElementById(missingId)?.focus(); else if (to) apply(to) }}>{dirty ? `Save and ${words.toLowerCase()}` : words}</Button>
+          onClick={() => { if (blocked) document.getElementById(missingId)?.focus(); else if (to) apply(to) }}>{words}</Button>
       ) : null}
     </Section>
   )

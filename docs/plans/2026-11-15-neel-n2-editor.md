@@ -140,16 +140,23 @@ when none is priced. "Unpriced" is one test, `unpriced(c)` (`''` or 0 after `par
 ## Deviations (proposed; mockup element · built · reason · owner seen)
 | Mockup element | Built | Reason | Owner seen |
 |---|---|---|---|
-| Video, model, label, stories, pairs (not drawn) | Folded rows after Tax | Live features with data; dropping them loses what merchants set | — |
+| Video, model, label, stories, pairs (not drawn) | The model and the label as folded rows after Tax; Video, Stories and Pairs as their own cards | Live features with data; Video saves as it changes (outside Save) and holds its own states, so it is not folded | — |
 | Tags (not drawn) | Under Collections in the side card | Collections' automatic rules read tags | — |
 | Schedule a publish (not drawn) | "Go live later" under Active in the status card | Live feature (publish_at); where the old card had it, beside the choice it belongs to | — |
-| Ready for Google and Meta card (not drawn) | One line in the Missing chip | Same facts, the drawn place | — |
+| Ready for Google and Meta card (not drawn) | A second line inside the Missing chip ("For Google and Meta: …"), even while nothing blocks publishing | Same facts, the drawn place | — |
 | When it runs out, lead days, cap (not drawn) | Opened from a row's Shoppers see chip | Pre-orders and made-to-order are live | — |
 | The status choice as a change the save bar counts (plan) | The status is its own action (Publish, Make unlisted, Move to draft), not in the save bar's count | One press does what it says; a draft status a Discard could undo would leave the shop and the switch disagreeing | — |
 | Phone: Size chart · Details · Sharing · Tax as one row, Publish in the save bar | The folds stay one line each; Publish stays in the status card (after the main cards) | Each fold's line already says what is set; one shared sheet hides which has a mistake | — |
 | Stock and prices table | A plain table with row checkboxes (not the list's DataTable) | Two tabs over one set of rows with selection; the list primitive has no tabs or row selection | — |
 | A pop-up for the run-out choice on a phone | A sheet at the foot, without a backdrop | The native popover closes on a tap outside; no backdrop keeps the row visible above it | — |
 | The name field (drawn one line) | One line; a long name scrolls in its field | As drawn; the page heading above shows the whole name, wrapped | — |
+| A swatch dot in each colour chip, nothing under the chips | The chips, then each colour's family and swatch on its own row ("Colours") | The family is what Google and Meta filter on; picking it needs a list, which a chip cannot hold | — |
+| Sizes and colours: chips and "+ Add" only | Plus quick-add suggestions ("Add: XS · S …"), "Add another option", × on each chip | Live today; × is the one way to remove a value, the suggestions save typing known sizes | — |
+| Photo tiles only | Each photo keeps "what it shows" (alt text) and its colour under it | Alt text feeds Google Images and screen readers; the colour shows the right photo per colour on the store | — |
+| Collections: picked chips and "+ Add" | Plus "Also in, by their rules: …" and Tags under them | Automatic collections a product is in by its facts; tags drive those rules | — |
+| Bulk bar ending in Set | Set, then Clear | Design-system review: a pointer user needs a visible way to drop the selection (Esc for the keyboard) | — |
+| The column "Variant" | "Size and colour" | The N3 glossary (owner-approved 2026-11-15) bans "variant" in merchant words | — |
+| "‹ Products" back link | The breadcrumb "Products › <name>" on a wide screen, "‹ Products" on a phone | The shared page header from N1 (owner-approved); one page does not change it alone | — |
 | Status: Draft · Active · Unlisted | Archive and Unarchive in More; an archived product's switch reads "Archived · Unarchive" | Archived is a live status; the switch was drawn without it | — |
 | Price and stock columns: Variant · Price · Stock · Shoppers see | Plus Your cost (only who sees costs) and M.R.P. (only when a variant's differs) | Profit per order needs the cost; an own M.R.P. exists today | — |
 | More: Duplicate · View in shop · Delete draft | Plus Archive for a live product; Share stays its own button beside Preview | Archive needs a home off the switch; the share sheet is a dialog of its own | — |

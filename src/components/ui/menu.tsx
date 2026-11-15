@@ -20,7 +20,9 @@ export type MenuItem = { label: string; onSelect: () => void; danger?: boolean }
 
 /** `variant`: the trigger's look (secondary by default; ghost for a quiet "More", Neel). `icon`: the trigger shows only
  * this, `label` becoming its accessible name (a saved view's ⋯). */
-export function Menu({ label = 'More', items, align = 'end', size, variant = 'secondary', icon }: { label?: string; items: MenuItem[]; align?: 'start' | 'end'; size?: 'sm'; variant?: 'secondary' | 'ghost'; icon?: React.ReactNode }) {
+export function Menu({ label = 'More', items, align = 'end', size, variant = 'secondary', icon, chevron = true }: { label?: string; items: MenuItem[]; align?: 'start' | 'end'; size?: 'sm'; variant?: 'secondary' | 'ghost'; icon?: React.ReactNode
+  /** The ⌄ after the word; a plain "More" link drops it (Neel product editor, as drawn). */
+  chevron?: boolean }) {
   const id = useId()
   const trigger = useRef<HTMLButtonElement>(null)
   const pop = useRef<HTMLDivElement>(null)
@@ -41,7 +43,7 @@ export function Menu({ label = 'More', items, align = 'end', size, variant = 'se
     <>
       <button ref={trigger} type="button" popoverTarget={id} aria-haspopup="menu" aria-expanded={false} aria-controls={id}
         aria-label={icon ? label : undefined} className={icon ? 'relative inline-grid size-6 place-items-center rounded-sm text-muted-foreground after:absolute after:-inset-2.5 hover:bg-accent hover:text-foreground md:after:inset-0' : button({ variant, size })}>
-        {icon ?? <>{label}<ChevronDown aria-hidden className="size-4" /></>}
+        {icon ?? <>{label}{chevron ? <ChevronDown aria-hidden className="size-4" /> : null}</>}
       </button>
       <div ref={pop} id={id} popover="auto" data-pop="menu" role="menu" aria-label={label}
         // Said before it shows (beforetoggle is synchronous), so a screen reader never hears a stale state.
