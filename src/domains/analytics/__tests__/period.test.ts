@@ -12,9 +12,9 @@ describe('parsePeriod', () => {
     expect(parsePeriod({ period: 'all-time' }, now)).toEqual({ kind: 'preset', preset: '30' })
     expect(parsePeriod({ from: '2026-02-30', to: '2026-03-01' }, now)).toEqual({ kind: 'preset', preset: '30' })
   })
-  it('a range ends today at the latest and is at most a year', () => {
+  it('a range ends today at the latest and is at most 92 days', () => {
     expect(parsePeriod({ from: '2026-11-01', to: '2027-01-01' }, now)).toEqual({ kind: 'custom', from: '2026-11-01', to: '2026-11-13' })
-    expect(parsePeriod({ from: '2020-01-01', to: '2026-11-13' }, now)).toEqual({ kind: 'custom', from: '2025-11-13', to: '2026-11-13' })
+    expect(parsePeriod({ from: '2020-01-01', to: '2026-11-13' }, now)).toEqual({ kind: 'custom', from: '2026-08-14', to: '2026-11-13' }) // 92 days
   })
 })
 
@@ -27,7 +27,8 @@ describe('windowFor', () => {
   it('today against yesterday', () => {
     const w = windowFor({ kind: 'preset', preset: 'today' }, now)
     expect([iso(w.start), iso(w.prevStart), w.days]).toEqual(['2026-11-12T18:30:00.000Z', '2026-11-11T18:30:00.000Z', 1])
-    expect(compareWords(w)).toBe('vs yesterday')
+    expect(compareWords(w)).toBe('vs yesterday at this time')
+    expect(iso(w.prevEnd)).toBe('2026-11-12T06:00:00.000Z') // yesterday up to this moment
   })
   it('this month against the same number of days before it', () => {
     const w = windowFor({ kind: 'preset', preset: 'month' }, now)
@@ -36,7 +37,7 @@ describe('windowFor', () => {
   })
   it('a past custom range is whole days', () => {
     const w = windowFor({ kind: 'custom', from: '2026-10-01', to: '2026-10-31' }, now)
-    expect([iso(w.start), iso(w.end), w.days, w.toNow]).toEqual(['2026-09-30T18:30:00.000Z', '2026-10-31T18:30:00.000Z', 31, false])
+    expect([iso(w.start), iso(w.end), w.days, w.toNow, iso(w.prevEnd)]).toEqual(['2026-09-30T18:30:00.000Z', '2026-10-31T18:30:00.000Z', 31, false, '2026-09-30T18:30:00.000Z'])
   })
   it('a link per choice', () => {
     expect(periodQuery({ kind: 'preset', preset: '7' })).toBe('period=7')
