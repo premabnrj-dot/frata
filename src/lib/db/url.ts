@@ -8,7 +8,7 @@
 // at frata_admin would give the storefront every admin policy; this refuses it.
 // =============================================================================
 
-export type DbRole = 'frata_app' | 'frata_admin'
+export type DbRole = 'frata_app' | 'frata_admin' | 'frata_builder'
 
 /** parseDatabaseUrl's own refusal: its message names the setting and the rule, never the value. */
 export class DbUrlError extends Error { override name = 'DbUrlError' }

@@ -1,6 +1,6 @@
 # ADR-0015: Capabilities, and a Builder never sees orders, shoppers or costs
 
-Status: **accepted** (owner, 2026-11-15: "builders approved"); was proposed, revised after the architecture review 2026-11-12 (CHANGES NEEDED, folded in) (owner decision 2026-11-12: "builders don't see orders, shoppers or costs. Create a guardrail,
+Status: **accepted** (owner, 2026-11-15: "builders approved"); **built** (T1c, 2026-11-15; § As built below); was proposed, revised after the architecture review 2026-11-12 (CHANGES NEEDED, folded in) (owner decision 2026-11-12: "builders don't see orders, shoppers or costs. Create a guardrail,
 framework, safety, security to ensure we have proper system"; the framework below awaits the owner's sign-off and the
 architecture, security and tenancy reviews) · spec `docs/specs/2026-11-12-studio-intake-and-team.md` (T1) · amends
 ADR-0002 (tenant isolation) with a second axis: what a member may see inside one tenant.
@@ -79,3 +79,22 @@ shoppers' names, phones and addresses, or a merchant's costs, with nothing to ca
 - **Keep Builders as `partner` and gate only Studio.** Rejected: both reviews (2026-11-12) rank it a blocker.
 - **A separate Studio login with no shop membership.** Rejected for now: the catalogue read, previews and handover all
   ride on membership; a second access model doubles what must be audited (KISS).
+
+## As built (T1c, 2026-11-15; plan `docs/plans/2026-11-15-t1c-builders.md`, owner's answers 2026-11-15 "all recommended")
+- **Capabilities:** `CAPABILITIES` in `roles.ts` holds `console.open`, `catalogue.read`, `preview.read` (a Builder's three)
+  and one capability per old tuple (`shop.work` = ANY_MEMBER, `console.full` = CONSOLE_ROLES …), plus `api.manage` (lane
+  A) and `content.write` (lane B). The tuples are views of it; the snapshot pins it. `studio.*`, `exports`, `documents`
+  wait for the pages that need them (default deny).
+- **Postgres, by grant:** `frata_builder` is its own LOGIN (owner question 7; `DATABASE_URL_BUILDER`), not a role
+  `frata_app` sets, so a Builder transaction has no way back to `frata_app`'s rights. Column grants on eight catalogue
+  tables; `builder_rows` and restrictive `builder_only` policies (`app.member_role = 'builder'`).
+- **Departures from § 3 and § 5, approved by the owner (2026-11-15):** (1) the legacy `withTenant(tenantId)` calls stay
+  for every non-Builder actor: a Builder can never hold a tenant id, because its stores arrive in a separate list that
+  `requireMember` never carries, and its Actor keeps the id private. (2) Definers: frata_builder may execute none (every
+  definer revokes PUBLIC; § 82 checks every schema), so they need no role check of their own; the partner definers check
+  the person's role themselves. (3) **The store preview runs the shopper read path as `frata_app`** (question 5): its
+  output is what shoppers would see (drafts, availability after held pieces, best-seller order). (4) A refused page is
+  its own panel, not a 404 (question 3). (5) Refusals are logged with ids only; the alert waits for C1 (question 2).
+- **members.role** is derived from `partner_members.role` by trigger; `frata_app` holds no UPDATE on `members`.
+- **Gates and proofs:** `check:capabilities`, `check:tenant` § 7b, `verify:tenancy` § 82, e2e `86-builders` (the sweep
+  reads every page and route file).

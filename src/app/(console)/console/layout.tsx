@@ -23,15 +23,17 @@ import { clientStage } from '@/domains/partners/stage'
 import { MODULE_KEYS, MODULES } from '@/domains/modules/registry'
 import { shopModules } from '@/lib/queries/modules'
 import { MODULE_ICON } from '@/components/modules/icons'
-import { CONSOLE_ROLES, ROLE_LABEL } from '@/domains/tenancy/roles'
+import { BUILDER_LABEL, CONSOLE_ROLES, ROLE_LABEL } from '@/domains/tenancy/roles'
 import { partnerCan } from '@/domains/partners/team'
+import { requireCapability } from '@/lib/auth/require-capability'
+import { BuilderShell } from './_builder/shell'
 
 export const dynamic = 'force-dynamic'
 
 /** Tab titles "Orders · Kesar Studio" (rule 11): each page sets a plain title. */
 export async function generateMetadata(): Promise<Metadata> {
-  const auth = await requireMember(CONSOLE_ROLES)
-  const shop = auth.ok ? auth.membership.tenantName : 'Frrata'
+  const cap = await requireCapability('console.open')
+  const shop = !cap.ok ? 'Frrata' : cap.kind === 'builder' ? cap.store.tenantName : cap.auth.membership.tenantName
   return { title: { template: `%s · ${shop}`, default: shop } }
 }
 
@@ -51,7 +53,12 @@ async function NavCount({ tenantId, userId, which }: { tenantId: string; userId:
  * Every page calls requireMember itself.
  */
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
-  // The accountant opens the console too (GST plan phase 3) and sees GST only; every page still checks its own roles.
+  // console.open (T1c): a partner's Builder gets its own shell (Products, Collections, Preview store) and nothing here
+  // below is read for it. Everyone else as before: the accountant sees GST only; every page still checks its own roles.
+  const cap = await requireCapability('console.open')
+  if (cap.ok && cap.kind === 'builder') {
+    return <BuilderShell nav={cap.nav} email={cap.email} rail={railFrom((await cookies()).get('rail')?.value)}>{children}</BuilderShell>
+  }
   const auth = await requireMember(CONSOLE_ROLES)
   if (!auth.ok && auth.reason === 'not_configured') {
     return (
@@ -98,12 +105,13 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const partner = partnerAuth?.ok ? partnerAuth.partner : null
   const client = partnerAuth?.ok ? (await partnerClients(partnerAuth).catch(logged([]))).find((c) => c.tenantId === tenantId) : undefined
   // The stage is clientStage's, the one home (src/domains/partners/stage.ts): the banner shows while there is no owner.
-  const stage = client ? clientStage({ removedAt: client.removedAt, openInviteExpiresAt: client.inviteExpiresAt, hasOwner: !!client.ownerEmail, firstOpenedAt: client.firstOpenedAt }, now) : null
+  const stage = client ? clientStage({ removedAt: client.removedAt, openInviteExpiresAt: client.inviteExpiresAt, hasOwner: client.hasOwner, firstOpenedAt: client.firstOpenedAt }, now) : null
   // Hand over is the owner's (PARTNER_CAN.handOver): a lead builds the store and sees no banner.
   const building = client && partner && partnerCan(partner.memberRole, 'handOver') && (stage === 'building' || stage === 'invited') ? client : null
   const places: Place[] = [
     ...(partner?.approvedAt ? [{ href: '/partner', name: 'Partner workspace', role: '', current: false }] : []),
     ...auth.all.filter((m) => !m.supportSessionId).map((m) => ({ href: '/console', name: m.tenantName, role: ROLE_LABEL[m.role], current: m.tenantId === tenantId, tenantId: m.tenantId })),
+    ...auth.builds.map((b) => ({ href: '/console', name: b.tenantName, role: BUILDER_LABEL, current: false, tenantId: b.tenantId })),
   ]
   const pill = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="toConfirm" /></Suspense>
   const bell = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="unread" /></Suspense>

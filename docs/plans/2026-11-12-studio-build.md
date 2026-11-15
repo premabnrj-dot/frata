@@ -9,7 +9,7 @@ Mockups: https://claude.ai/artifact/KiqKqrFCx4enB8KUrnh5Du, https://claude.ai/ar
 |---|---|---|
 | **T1a Teams** (built 2026-11-12) | An agency owner invites Leads, gives each the brands they work on, removes them; Admin sees a partner's team and can suspend a partner | nothing (this plan) |
 | T1b Partner passkeys | Every partner person signs in with a passkey; publish and hand over ask again | T1a |
-| T1c Builders (ADR-0015) | Invite Builders who never see orders, shoppers or costs | T1a, T1b; ADR-0015 accepted |
+| T1c Builders (ADR-0015) | Invite Builders who never see orders, shoppers or costs — **built 2026-11-15** on `claude/lane-c-builders` (`docs/plans/2026-11-15-t1c-builders.md`) | T1a, T1b; ADR-0015 accepted |
 | P2 Clients | Clients view: stage, next, the partner's own billing records, share | T1a |
 | C1 Studio credits | Seat, top-ups by UPI with GST invoices, ledger, budgets, reserve and release | Frrata's own payment account for partners; the owner's sign-off on seat pricing |
 | A1 Admin credits and payouts | Admin's credits and payouts screens | C1; payouts also Phase 6 and the CA |

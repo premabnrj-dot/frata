@@ -30,6 +30,9 @@ const ICONS = {
   reviews: ['M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z', 'M10 12.2l1.5 1.5 2.7-2.7'],
   menu: ['M4 7h16 M4 17h16', 'M4 12h16'],
   close: ['M6 6l12 12', 'M18 6 6 18'],
+  // Yes / no in a matrix (T1c's Roles card): a tick and a dash, each beside words for a screen reader.
+  tick: ['M5 12.5l4.5 4.5L19 7', ''],
+  dash: ['M7 12h10', ''],
   // Neel N1: the sidebar as a rail (a panel and its left column).
   sidebar: ['M4 5h16v14H4z', 'M9.5 5v14'],
   // Neel N1: signing out (a door and the way out).

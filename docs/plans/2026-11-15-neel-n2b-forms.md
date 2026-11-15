@@ -1,5 +1,5 @@
 # Neel N2b — an order, an offer, a settings section, as drawn
-Status: shipped 2026-11-15 (owner: "ship with differences"; every Deviations row approved; index migration 0130_orders_pincode_index) · Date: 2026-11-15 · Spec: `docs/specs/2026-11-13-design-language-neel.md` § N2 ·
+Status: shipped 2026-11-15 (owner: "ship with differences"; every Deviations row approved; index migration 0132_orders_pincode_index) · Date: 2026-11-15 · Spec: `docs/specs/2026-11-13-design-language-neel.md` § N2 ·
 Mockup: https://claude.ai/artifact/GH5xX5ss5Xb9rLc5LwyVEC (source `docs/mockups/2026-11-15-neel-n2b/`) · Approved: owner,
 2026-11-15 ("approved, continue with the plan and build"; Notes and Activity as one timeline; the courier choice on the
 order page)

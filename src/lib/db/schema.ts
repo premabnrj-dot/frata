@@ -16,7 +16,7 @@ export const id = () => uuid('id').primaryKey().defaultRandom()
 export const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 export const money = (name: string) => bigint(name, { mode: 'number' })
 
-import { MEMBER_ROLES, sqlList, type MemberRole } from '@/domains/tenancy/roles'
+import { MEMBER_ROLES, SHOP_ROLES, sqlList, type MemberRole } from '@/domains/tenancy/roles'
 import { PLAN_GRANTABLE } from '@/domains/modules/registry'
 export { MEMBER_ROLES, type MemberRole }
 
@@ -47,7 +47,7 @@ export const members = pgTable('members', {
   primaryKey({ columns: [t.tenantId, t.userId] }),
   index('members_user').on(t.userId),
   index('members_partner_member').on(t.partnerMemberId),
-  check('members_role', sql`${t.role} in (${sql.raw(sqlList(MEMBER_ROLES))})`),
+  check('members_role', sql`${t.role} in (${sql.raw(sqlList(SHOP_ROLES))})`),
 ])
 
 // Orders, their lines and a shop's payment keys: src/lib/db/schema-orders.ts.

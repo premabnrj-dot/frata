@@ -1,5 +1,5 @@
 {
-  "id": "6d4cbf36-4428-43ea-9974-b564f7a0cc6a",
+  "id": "9eddc5d8-499d-4a02-90fa-d50b630a46bd",
   "prevId": "9b366944-22cf-442d-b7ba-8817d83f2ae5",
   "version": "7",
   "dialect": "postgresql",
@@ -385,7 +385,7 @@
       "checkConstraints": {
         "members_role": {
           "name": "members_role",
-          "value": "\"members\".\"role\" in ('owner','admin','staff','partner','accountant')"
+          "value": "\"members\".\"role\" in ('owner','admin','staff','partner','accountant','builder')"
         }
       },
       "isRLSEnabled": false
@@ -5453,34 +5453,6 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "orders_tenant_pincode": {
-          "name": "orders_tenant_pincode",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "pincode",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "placed_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"orders\".\"cancelled_at\" is null",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -16885,7 +16857,7 @@
       "checkConstraints": {
         "staff_notices_kind": {
           "name": "staff_notices_kind",
-          "value": "\"staff_notices\".\"kind\" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved')"
+          "value": "\"staff_notices\".\"kind\" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved','partner_role_changed')"
         }
       },
       "isRLSEnabled": false

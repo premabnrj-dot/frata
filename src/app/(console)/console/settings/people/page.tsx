@@ -12,7 +12,8 @@ import { AccountantCard } from './accountant'
 import { accountantInvites } from '@/lib/db/accountants'
 import { shopModules } from '@/lib/queries/modules'
 import { CONSOLE_HOST } from '@/lib/public-env'
-import { ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
+import { BUILDER_LABEL, ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
+import { InfoTip } from '@/components/ui/info-tip'
 
 export const metadata = { title: 'People' }
 
@@ -35,22 +36,27 @@ export default async function PeoplePage() {
       <SettingsHead page="people" role={auth.membership.role} />
       <Section flush ariaLabel="People"><ul data-list className="divide-y divide-border">
         {people.map((p) => {
-          // A partner's people are listed by name with their partner and their place in it (T1a, security review: the
-          // brand sees each person, not only the partner). Removing the partner ends every one of them.
-          const lead = p.role === 'partner' && p.partnerRole === 'lead'
+          // A partner's people are listed with their partner and their place in it (T1a, security review: the brand sees
+          // each person, not only the partner). A Builder (T1c) the same, with what it reaches in an (i). Removing the
+          // partner ends every one of them.
+          const person = (p.role === 'partner' && p.partnerRole === 'lead') || p.role === 'builder'
           // A partner Frrata paused has no access; it is listed so the owner can still remove it (admin_end_partner's notice).
           const role = p.partnerPaused ? { label: 'Partner · Paused', tone: 'warn' as const }
-            : { label: lead ? 'Partner · Lead' : ROLE_LABEL[p.role as MemberRole] ?? p.role, tone: p.role === 'partner' ? 'info' as const : 'neutral' as const }
+            : p.role === 'builder' ? { label: `Partner · ${BUILDER_LABEL}`, tone: 'info' as const }
+            : { label: person ? 'Partner · Lead' : ROLE_LABEL[p.role as MemberRole] ?? p.role, tone: p.role === 'partner' ? 'info' as const : 'neutral' as const }
           const you = p.userId === auth.userId
           return (
             <li key={p.userId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
               <div className="min-w-0 flex-1">
-                <p className="font-medium">{lead ? `${p.email ?? 'A partner person'} · ${p.partnerName ?? 'partner'}` : p.partnerName ?? p.email ?? 'Unknown'}</p>
+                <p className="font-medium">{person ? p.partnerName ?? 'A partner person' : p.partnerName ?? p.email ?? 'Unknown'}</p>
                 {p.email && <p className="truncate font-num text-xs text-muted-foreground">{p.email}</p>}
               </div>
-              <Badge tone={role.tone}>{role.label}</Badge>
-              <span className="w-40 text-sm text-muted-foreground">{you ? 'You' : p.partnerPaused ? 'Paused by Frrata' : lead ? `Since ${dayIN(p.since)}` : p.role === 'partner' ? `Built this store · ${dayIN(p.since)}` : `Since ${dayIN(p.since)}`}</span>
-              {p.role === 'partner' && !lead && canRemove && <RemovePartner name={p.partnerName ?? 'the partner'} shop={auth.membership.tenantName} />}
+              <span className="inline-flex items-center gap-1">
+                <Badge tone={role.tone}>{role.label}</Badge>
+                {p.role === 'builder' && <InfoTip about={`Partner · ${BUILDER_LABEL}`}>Sees products and the store preview. No orders, shoppers or costs.</InfoTip>}
+              </span>
+              <span className="w-40 text-sm text-muted-foreground">{you ? 'You' : p.partnerPaused ? 'Paused by Frrata' : person ? `Since ${dayIN(p.since)}` : p.role === 'partner' ? `Built this store · ${dayIN(p.since)}` : `Since ${dayIN(p.since)}`}</span>
+              {p.role === 'partner' && !person && canRemove && <RemovePartner name={p.partnerName ?? 'the partner'} shop={auth.membership.tenantName} />}
             </li>
           )
         })}

@@ -4,10 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { requirePartner } from '@/lib/auth/require-partner'
 import { sendSignInLink } from '@/lib/auth/send-link'
-import { assignPartnerPerson, invitePartnerPerson, partnerTeam, removePartnerPerson } from '@/lib/db/partners'
+import { assignPartnerPerson, invitePartnerPerson, partnerTeam, removePartnerPerson, setPartnerPersonRole } from '@/lib/db/partners'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import type { ActionResult } from '@/components/ui/action-form'
-import { MAX_PARTNER_PEOPLE, partnerCan } from '@/domains/partners/team'
+import { GIVEN_ROLES, MAX_PARTNER_PEOPLE, PARTNER_ROLE_LABEL, partnerCan } from '@/domains/partners/team'
 import { CONFIRM_AGAIN, CONFIRM_FIRST } from '@/domains/partners/passkeys'
 
 // =============================================================================
@@ -21,7 +21,7 @@ import { CONFIRM_AGAIN, CONFIRM_FIRST } from '@/domains/partners/passkeys'
 
 const SENTENCES = {
   not_owner: 'Only the partner’s owner manages the team.',
-  bad_role: 'Invite them as a Lead.',
+  bad_role: 'Choose Lead or Builder.',
   bad_email: 'That email doesn’t look right.',
   bad_store: 'One of those stores isn’t yours any more. Refresh and try again.',
   too_many: `A team has at most ${MAX_PARTNER_PEOPLE} people, invited or joined.`,
@@ -36,6 +36,7 @@ const say = (code: string, fallback: string): string => (SENTENCES as Record<str
 
 const Invite = z.object({
   email: z.string().trim().toLowerCase().min(3).max(200).regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/),
+  role: z.enum(GIVEN_ROLES),
   stores: z.array(z.uuid()).max(200),
 })
 
@@ -43,13 +44,13 @@ export async function inviteTeamAction(form: FormData): Promise<ActionResult> {
   const auth = await requirePartner()
   if (!auth.ok) return { error: auth.message }
   if (!partnerCan(auth.partner.memberRole, 'manageTeam')) return { error: SENTENCES.not_owner }
-  const parsed = Invite.safeParse({ email: form.get('email'), stores: [...new Set(form.getAll('stores').map(String))] })
+  const parsed = Invite.safeParse({ email: form.get('email'), role: form.get('role') ?? 'lead', stores: [...new Set(form.getAll('stores').map(String))] })
   if (!parsed.success) {
     const emailBad = parsed.error.issues.some((i) => i.path[0] === 'email')
     return emailBad ? { fields: { email: String(form.get('email') ?? '').trim() ? 'That email doesn’t look right' : 'Enter their work email' } } : { error: SENTENCES.bad_store }
   }
   if (!(await withinLimit(LIMITS.partnerInvite, auth.partner.memberId, new Date(), true))) return { error: 'Too many invites this hour. Try again later.' }
-  const r = await invitePartnerPerson(auth, parsed.data.email, parsed.data.stores)
+  const r = await invitePartnerPerson(auth, parsed.data.email, parsed.data.role, parsed.data.stores)
   if (!r.ok) return r.error === 'bad_email' ? { fields: { email: SENTENCES.bad_email } } : { error: say(r.error, 'We couldn’t send the invite. Nothing was changed.') }
   revalidatePath('/partner/team')
   const mail = await sendSignInLink(parsed.data.email).catch(() => ({ sent: false as const }))
@@ -84,6 +85,25 @@ export async function assignTeamAction(input: { memberId: string; tenantId: stri
   if (!r.ok) return { ok: false, error: say(r.error, 'We couldn’t change their stores. Nothing was changed.') }
   revalidatePath('/partner/team')
   return { ok: true }
+}
+
+const SetRole = z.object({ memberId: z.uuid(), role: z.enum(GIVEN_ROLES) })
+
+/** Lead ↔ Builder (T1c): the owner only, a fresh check (the browser retries through `freshly`); the person's stores stay
+ *  (owner question 4) and their access in each store follows in the same transaction (drizzle/0131). */
+export async function setTeamRoleAction(input: { memberId: string; role: string }): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  const auth = await requirePartner()
+  if (!auth.ok) return { ok: false, error: auth.message }
+  if (!partnerCan(auth.partner.memberRole, 'manageTeam')) return { ok: false, error: SENTENCES.not_owner }
+  const p = SetRole.safeParse(input)
+  if (!p.success) return { ok: false, error: SENTENCES.no_person }
+  if (!(await withinLimit(LIMITS.partnerRole, auth.partner.memberId, new Date(), true))) return { ok: false, error: 'Too many changes this hour. Try again later.' }
+  const team = await partnerTeam(auth).catch(() => null)
+  const who = team?.find((m) => m.memberId === p.data.memberId)
+  const r = await setPartnerPersonRole(auth, p.data.memberId, p.data.role)
+  if (!r.ok) return { ok: false, error: say(r.error, 'We couldn’t change their role. Nothing was changed.') }
+  revalidatePath('/partner/team')
+  return { ok: true, text: `${who?.email ?? 'They'} ${who ? 'is' : 'are'} now a ${PARTNER_ROLE_LABEL[p.data.role]}.` }
 }
 
 export async function removeTeamAction(input: { memberId: string }): Promise<{ ok: true } | { ok: false; error: string }> {
