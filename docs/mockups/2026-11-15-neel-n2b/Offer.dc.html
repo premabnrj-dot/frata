@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New offer</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F37A3}a:hover{color:#272D82}
+</style>
+</helmet>
+<div style="width: 1280px; height: 980px; box-sizing: border-box; padding: 28px 32px 28px 264px; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 20px; display: flex; flex-direction: column; gap: 20px; position: relative;">
+  <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 232px; background: #FBFAF9; border-right: 1px solid #E3E1DD;"></div>
+  <header style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; color: #67625C;">Offers › New offer</span><h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">New offer</h1></div>
+    <div style="display: flex; gap: 8px;"><button type="button" style="height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid #CFCCC7; background: #FFFFFF; font: inherit; font-weight: 500;">Save as draft</button><button type="button" style="height: 36px; padding: 0 14px; border-radius: 8px; border: 0; background: #3A44C2; color: #FFFFFF; font: inherit; font-weight: 500;">Start offer</button></div>
+  </header>
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start;">
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <section aria-labelledby="kind-h" style="border: 1px solid #E3E1DD; border-radius: 12px; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 12px;">
+        <h2 id="kind-h" style="margin: 0; font-size: 15px; font-weight: 600;">What kind</h2>
+        <div role="radiogroup" aria-label="What kind" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+          <label style="border: 1px solid #4C57D6; background: #EEF0FD; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px;"><span style="display: flex; gap: 8px;"><input type="radio" name="k" checked="checked"><b style="font-weight: 500;">Order offer</b></span><span style="font-size: 13px; color: #67625C;">Off the bag</span></label>
+          <label style="border: 1px solid #E3E1DD; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px;"><span style="display: flex; gap: 8px;"><input type="radio" name="k"><b style="font-weight: 500;">Pay online</b></span><span style="font-size: 13px; color: #67625C;">Less for paying now</span></label>
+          <label style="border: 1px solid #E3E1DD; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px;"><span style="display: flex; gap: 8px;"><input type="radio" name="k"><b style="font-weight: 500;">Free delivery</b></span><span style="font-size: 13px; color: #67625C;">Above a bag total</span></label>
+          <label style="border: 1px solid #E3E1DD; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px;"><span style="display: flex; gap: 8px;"><input type="radio" name="k"><b style="font-weight: 500;">Buy more</b></span><span style="font-size: 13px; color: #67625C;">Tiers by pieces</span></label>
+        </div>
+      </section>
+      <section aria-labelledby="set-h" style="border: 1px solid #E3E1DD; border-radius: 12px; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 14px;">
+        <h2 id="set-h" style="margin: 0; font-size: 15px; font-weight: 600;">The offer</h2>
+        <div style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px;">
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Name shoppers see<input value="Festive" style="height: 36px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; font-weight: 400;"></label>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Code (optional)<input value="" placeholder="FESTIVE10" style="height: 36px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; font-weight: 400;"></label>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 13px; font-weight: 500;">Take off</span>
+            <div style="display: flex; gap: 6px;"><span role="radiogroup" aria-label="Percent or rupees" style="display: inline-flex; gap: 2px; border: 1px solid #EEEDEA; background: #F6F5F3; border-radius: 10px; padding: 3px;"><button type="button" role="radio" aria-checked="true" style="height: 30px; padding: 0 10px; border: 0; border-radius: 7px; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 500;">%</button><button type="button" role="radio" aria-checked="false" style="height: 30px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; font: inherit; font-size: 13px; color: #67625C;">₹</button></span>
+            <input aria-label="How much" value="10" style="width: 72px; height: 36px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font: inherit; font-variant-numeric: tabular-nums;"></div></div>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">When the bag is at least, ₹<input value="1,500" style="height: 36px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; font-weight: 400; font-variant-numeric: tabular-nums;"></label>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Most off, ₹ (optional)<input value="300" style="height: 36px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; font-weight: 400; font-variant-numeric: tabular-nums;"></label>
+        </div>
+        <p style="margin: 0; display: flex; gap: 8px; align-items: flex-start; background: #FDF3DC; color: #85500B; border-radius: 8px; padding: 10px 12px;"><i style="flex-shrink: 0; margin-top: 7px; width: 6px; height: 6px; border-radius: 3px; background: #C98318;"></i><span>62% of last month’s orders were already over ₹1,500. They would get 10% off anyway.</span></p>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Starts<input value="Today, now" style="height: 36px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; font-weight: 400;"></label>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Ends (optional)<input value="24 Nov, 11:59 pm" style="height: 36px; border: 1px solid #8F8A84; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; font-weight: 400;"></label>
+        </div>
+      </section>
+      <section aria-labelledby="on-h" style="border: 1px dashed #EEEDEA; border-radius: 12px; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <h2 id="on-h" style="margin: 0; font-size: 15px; font-weight: 400;">On which products <span style="color: #67625C;">· Everything in the store</span></h2><a href="#">Edit</a>
+      </section>
+    </div>
+    <aside style="display: flex; flex-direction: column; gap: 16px;">
+      <section aria-labelledby="see-h" style="border: 1px solid #E3E1DD; border-radius: 12px; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 10px;">
+        <h2 id="see-h" style="margin: 0; font-size: 15px; font-weight: 600;">What shoppers see</h2>
+        <span style="font-size: 12px; color: #67625C;">The bar at the top of the store</span>
+        <div style="background: #171615; color: #FFFFFF; border-radius: 8px; padding: 8px 12px; text-align: center; font-size: 13px;">10% off over ₹1,500 · ends 24 Nov</div>
+        <span style="font-size: 12px; color: #67625C;">In the bag, under ₹1,500</span>
+        <div style="background: #F6F5F3; border-radius: 8px; padding: 8px 12px; font-size: 13px;">₹310 more for Festive</div>
+      </section>
+      <section aria-labelledby="cost-h" style="border: 1px solid #E3E1DD; border-radius: 12px; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 6px; font-variant-numeric: tabular-nums;">
+        <h2 id="cost-h" style="margin: 0; font-size: 15px; font-weight: 600;">What it costs you</h2>
+        <span>On a ₹2,490 kurta: ₹249 off. You keep ₹363 instead of ₹612.</span>
+        <span style="font-size: 13px; color: #67625C;">It pays back at 1.7× the delivered orders.</span>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":980}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
