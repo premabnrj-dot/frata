@@ -154,9 +154,10 @@ cost measured, "yes".
 - **What Frrata pays:** nothing for the model or the sandbox when a developer brings their own Claude Code (their
   plan, their machine or Claude's cloud); the API, checkout and orders as today, inside the plan and order fee; the
   pilot's hosting, below.
-- **Where the first 1–3 sites run:** a Vercel team owned by Frrata and kept apart from the `frata` app project (the
-  `frrata-sites` team the test above names), one project per site, the store's public key set as a Production
-  variable, never in the repo. Its cost is absorbed as a pilot cost and measured per site (bytes, requests, build
+- **Where the first 1–3 sites run:** for the test, the owner's existing Vercel team (owner, 2026-11-15: "since we
+  testing we can have normal vercel for now"), one project per site, separate from the `frata` app project, the
+  store's public key set as a Production variable, never in the repo. Before real shoppers pay on a site, its team is
+  on a plan that allows commercial use; the separate `frrata-sites` team the test above names comes with V2. Its cost is absorbed as a pilot cost and measured per site (bytes, requests, build
   minutes, the team's base fee), and those numbers price hosting's allowances before V2 (owner questions 3 and 4 above).
 - **Where the code lives:** one repository per site in Frrata's GitHub organisation (ADR-0016 § 2), created from the
   starter; the developer gets that repository only.
