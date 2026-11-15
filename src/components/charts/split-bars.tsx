@@ -6,9 +6,9 @@ import { splitWords } from '@/domains/analytics/kit'
 // =============================================================================
 
 /** The two parts' key, in the card's heading row (as drawn). */
-export function SplitLegend({ a, b }: { a: string; b: string }) {
+export function SplitLegend({ a, b, className }: { a: string; b: string; className?: string }) {
   return (
-    <span className="flex flex-wrap justify-end gap-x-4 gap-y-1 text-label text-muted-foreground" aria-hidden="true">
+    <span className={`flex flex-wrap gap-x-4 gap-y-1 text-label text-muted-foreground ${className ?? ''}`} aria-hidden="true">
       <span className="inline-flex items-center gap-1.5"><i className="size-2.5 rounded-xs bg-chart" />{a}</span>
       <span className="inline-flex items-center gap-1.5"><i className="size-2.5 rounded-xs bg-heat-3" />{b}</span>
     </span>

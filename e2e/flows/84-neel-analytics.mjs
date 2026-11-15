@@ -81,6 +81,7 @@ export default {
 
       await t.step('the phone: figures two by two, nothing scrolls sideways', async () => {
         await p.setViewportSize({ width: 390, height: 844 }); await p.goto(CONSOLE + '/console/analytics?period=30')
+        await p.getByRole('region', { name: 'Figures' }).waitFor(); await p.getByRole('heading', { name: 'Shoppers who come back' }).waitFor()
         const boxes = await p.locator('[data-figure]').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top))
         assert.equal(Math.round(boxes[0]), Math.round(boxes[1]), 'two figures a row'); assert.ok(boxes[2] > boxes[0])
         const wide = await p.evaluate(() => [...document.querySelectorAll('main *')].filter((e) => e.getBoundingClientRect().right > 391)

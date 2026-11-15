@@ -82,7 +82,7 @@ export default {
           const c = await owner.newPage(); c.setDefaultTimeout(10_000); c.on('pageerror', (e) => t.errors.push(e.message))
           await c.goto(CONSOLE + '/console/analytics')
           await c.getByRole('heading', { name: 'Analytics' }).waitFor()
-          const table = c.getByRole('table', { name: 'Where orders came from' })
+          const table = c.getByRole('table', { name: 'Where orders came from' }); await table.waitFor()
           assert.ok(await table.getByRole('columnheader', { name: '₹ kept an order' }).count(), 'the owner sees ₹ kept')
           await table.getByRole('link', { name: 'Creator · Riya' }).click()
           await c.waitForURL(/\/console\/analytics\/creator-riya51/)
@@ -127,7 +127,7 @@ export default {
         await t.step('staff see the counts on Analytics, never ₹', async () => {
           const c = await staff.newPage(); c.setDefaultTimeout(10_000); c.on('pageerror', (e) => t.errors.push(e.message))
           await c.goto(CONSOLE + '/console/analytics')
-          const table = c.getByRole('table', { name: 'Where orders came from' })
+          const table = c.getByRole('table', { name: 'Where orders came from' }); await table.waitFor()
           await table.getByRole('link', { name: 'Creator · Riya' }).waitFor()
           assert.equal(await c.getByText(/₹ kept/).count(), 0, 'no ₹ kept for staff')
           await c.goto(CONSOLE + '/console/analytics/creator-riya51')

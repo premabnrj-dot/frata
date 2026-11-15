@@ -67,7 +67,9 @@ export function SalesByDay({ s, compareName }: { s: Series; compareName: string 
   const first = points[0]!, last = points.at(-1)!
   const summary = `Sales a day, ${first.label} to ${last.label}: from ${inrShort(first.value)} to ${inrShort(last.value)}${s.notes.length ? `; ${s.notes.map((n) => `${n.title} from ${dayMonthIN(new Date(`${n.key}T06:30:00Z`))}`).join('; ')}` : ''}`
   return (
-    <Section id="sales-by-day" title="Sales by day" flatOnPhone action={<TrendLegend names={['This period', compareName]} marks="Came back" />}>
+    <Section id="sales-by-day" title="Sales by day" flatOnPhone action={<TrendLegend names={['This period', compareName]} marks="Came back" className="justify-end max-md:hidden" />}>
+      {/* A phone has no room beside the heading: the key goes under it. */}
+      <TrendLegend names={['This period', compareName]} marks="Came back" className="md:hidden" />
       <TrendChart points={points} summary={summary} unit="money" seriesNames={['This period', compareName]} notes={s.notes} marksName="came back" />
     </Section>
   )
@@ -75,7 +77,7 @@ export function SalesByDay({ s, compareName }: { s: Series; compareName: string 
 
 export function PaidAndCod({ s }: { s: Series }) {
   if (!s.weeks.some((w) => w.a + w.b > 0)) return null
-  return <Section id="paid-cod" flatOnPhone action={<SplitLegend a="Paid online" b="COD" />} title={s.weeks.length && s.weeks[0]!.label.startsWith('Week') ? 'Paid online and COD, by week' : 'Paid online and COD, by day'}><SplitBars rows={s.weeks} a="Paid online" b="COD" /></Section>
+  return <Section id="paid-cod" flatOnPhone action={<SplitLegend a="Paid online" b="COD" className="justify-end max-md:hidden" />} title={s.weeks.length && s.weeks[0]!.label.startsWith('Week') ? 'Paid online and COD, by week' : 'Paid online and COD, by day'}><SplitLegend a="Paid online" b="COD" className="md:hidden" /><SplitBars rows={s.weeks} a="Paid online" b="COD" /></Section>
 }
 
 export function WhenOrdersCome({ s }: { s: Series }) {

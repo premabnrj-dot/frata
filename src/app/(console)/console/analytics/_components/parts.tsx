@@ -90,7 +90,7 @@ export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: 
       <div className="max-md:hidden">
         <DataTable label="Where orders came from">
           <DataTableHead>
-            <th>Source</th><th className="text-right" aria-sort="descending">Orders ↓</th><th>Share</th>
+            <th>Source</th><th className="text-right whitespace-nowrap" aria-sort="descending">Orders ↓</th><th>Share</th>
             {visits ? <><th className="text-right">Visits</th><th className="text-right">Orders per 100 visits</th></> : null}
             <th className="text-right">Came back</th>{a.costs ? <th className="text-right">₹ kept an order</th> : null}<th className="text-right">Change</th>
           </DataTableHead>
@@ -109,7 +109,7 @@ export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: 
                   </> : null}
                   <Td className={`text-right ${bad(r.cur) ? 'text-danger-text' : ''}`}>{back(r.cur)}</Td>
                   {a.costs ? <Td className="text-right">{kept(r.cur)}</Td> : null}
-                  <Td className={`text-right ${toneText(c)}`}>{c?.words ?? '—'}</Td>
+                  <Td className={`text-right whitespace-nowrap ${toneText(c)}`}>{c?.words ?? '—'}</Td>
                 </DataTableRow>
               )
             })}
@@ -124,7 +124,7 @@ export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: 
             <>
               <span className="flex items-baseline justify-between gap-3"><span className="min-w-0 truncate font-medium">{r.name}</span><Numeric className="font-medium">{r.cur.orders}</Numeric></span>
               <span className="flex items-center gap-3"><ShareBar share={r.cur.orders / top} tone={r.href ? 'chart' : 'muted'} className="flex-1" /><span className={`text-small ${toneText(c)}`}>{c?.words ?? '—'}</span></span>
-              <span className={`text-small ${bad(r.cur) ? 'text-danger-text' : 'text-muted-foreground'}`}>{back(r.cur)} came back{a.costs ? <> · {kept(r.cur)} kept an order</> : null}</span>
+              <span className={`text-small ${bad(r.cur) ? 'text-danger-text' : 'text-muted-foreground'}`}>{back(r.cur)} came back{a.costs && r.cur.kept && judgeable(r.cur.kept.counted) && keptPerOrder(r.cur.kept) !== null ? <> · {kept(r.cur)} kept an order</> : null}</span>
             </>
           )
           return (
