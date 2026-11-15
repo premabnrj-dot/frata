@@ -34,7 +34,7 @@ function crc32(text: string): number {
     }
   }
   let crc = 0xffffffff
-  for (let i = 0; i < text.length; i++) crc = table[(crc ^ text.charCodeAt(i)) & 0xff] ^ (crc >>> 8)
+  for (let i = 0; i < text.length; i++) crc = (table[(crc ^ text.charCodeAt(i)) & 0xff] ?? 0) ^ (crc >>> 8)
   return (crc ^ 0xffffffff) >>> 0
 }
 

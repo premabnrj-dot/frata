@@ -8,7 +8,7 @@
 
 export const API_VERSIONS = ['2026-12'] as const
 export type ApiVersion = (typeof API_VERSIONS)[number]
-export const CURRENT_API_VERSION: ApiVersion = API_VERSIONS[API_VERSIONS.length - 1]
+export const CURRENT_API_VERSION: ApiVersion = '2026-12'
 
 /** A path on the API host that names a version this build serves: `/2026-12/…`. */
 export const isVersionPath = (pathname: string) => API_VERSIONS.some((v) => pathname.startsWith(`/${v}/`))
