@@ -2,8 +2,8 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a PDF download that saves as pdf.txt, MODULE_NOT_FOUND in production only, a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.24.0
-  verified: 2026-11-15
+  version: 1.25.0
+  verified: 2026-11-16
 ---
 
 # Frata gotchas
@@ -72,6 +72,13 @@ metadata:
 | A sender's `row.tenantId` (or any camelCase field) is `undefined`; `withTenant` fails with Postgres 42601 | `db().execute(sql…)` returns rows as Postgres names the columns (`tenant_id`), whatever type it is cast to | Map raw rows explicitly: `claimDue` returns `fromRaw(r)` (`src/lib/outbox/index.ts`; found by e2e 66-video, 2026-11-09 — every outbox sender had it) |
 | `permission denied for table` on an insert the role should be allowed | A column-level grant (`grant insert (a, b, c)`), and drizzle's insert names EVERY column, as `DEFAULT` — Postgres checks those too | Insert with `sql` naming only the granted columns (`startVideo`, `src/lib/queries/videos.ts`) |
 | A muted loop never plays in e2e | The suite's contexts use `reducedMotion: 'reduce'`, and the loop player rightly stays still then | Open that flow's context with `reducedMotion: 'no-preference'` (`e2e/flows/66-video.mjs`) |
+
+## A cached page's redirect loses the shopper's query (SA1b, 2026-11-16)
+A shop page is an ISR copy (`force-static`): it never sees the URL's query, so a `redirect()` in it would send
+`?utm_source=instagram&code=RIYA` nowhere, and every Instagram link would land on the brand's site untagged. Moving a
+shopper whose link carries tags is done in the browser (`MovedTo` for old names; `siteMoveScript`, an inline head script
+built from `siteMove`'s own source text, for the brand's website, plus `SiteMove` on soft navigations, which a layout's
+effect never sees again). The rejected alternative, a host lookup in the middleware, is a paid run on every CDN hit.
 
 ## e2e: a console baseline fails the day after it was taken (2026-11-11)
 The console home baseline (`e2e/baselines/console-home-desktop.png`, flow 05 shop-look) includes the date line

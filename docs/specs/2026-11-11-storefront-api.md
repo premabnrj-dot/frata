@@ -111,7 +111,7 @@ Handlers never open `withTenant` around a cached loader (P4).
   may appear"; the starter handles an unknown kind.
 
 ### 4. Cart link, Website, checkout host
-- **Cart link** (architecture 6): `<checkout host>/cart?l=<variant id>:<qty>,…` (≤ 50 lines) plus the shopper's
+- **Cart link** (architecture 6): `<checkout host>/cart?l=<variant id>:<qty>,…` (≤ 20 lines, the quote's own limit; a quantity over 10 lowered to 10: SA1b, api-contract review 2026-11-16) plus the shopper's
   `utm_*`; the page is an ISR shell whose client island validates the shape, writes the bag (`bag-store.ts`) and opens
   checkout; unknown or other shops' variant ids simply drop at checkout (the quote resolves variants inside the host's
   shop). No server write, nothing single-use, nothing for unfurlers to consume.

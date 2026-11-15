@@ -2,8 +2,8 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 1.2.0
-  verified: 2026-11-15
+  version: 1.3.0
+  verified: 2026-11-16
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
 ---
 
@@ -19,8 +19,9 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    run })` (`src/lib/storefront-api/request.ts`). The shop comes ONLY from the key in the path, through
    `storefrontKeyFor` (`src/lib/queries/storefront-keys.ts`) → `storefrontKeyRow` (`src/lib/db/platform.ts`) → the
    definer `app_storefront_key`. `run` gets `ctx` (shop, key, kind, version, now) and its parsed path params, never the
-   Request; params naming a shop are refused. `check:tenant` § 9 and `check:actions` hold it. `openapi.json` is the one
-   keyless entry point.
+   Request; params naming a shop are refused. `check:tenant` § 9 and `check:actions` hold it. `openapi.json` and the docs
+   (`/docs…`, `/llms.txt`, static pages at the internal `/api-docs`, reached only through `apiRewrites`; `/` redirects to
+   `/docs`) are the keyless entry points.
 2. **Two trees, never mixed.** next.config's `apiRewrites` (never the middleware: a middleware rewrite uncaches a route,
    and the matcher skips versioned paths so a CDN hit costs no middleware run) send `frs_test_` keys to `t/` (dynamic:
    drafts through the preview loaders, `private, no-store`, CORS only to the shop's website or `http://localhost:<port>`)
@@ -28,7 +29,8 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    never reads the request** (a header read is a runtime error, and anything per caller would be served to everyone):
    CORS there is a static `*`. Search is the one dynamic live route (varies by `q`; `public, s-maxage=60`). `check:api`
    holds it; `scripts/verify/api-isr.mjs` proves it under `next start`.
-3. **Every refusal is one 404 body** (`{"error":"not_found"}`): bad shape, unknown, deleted, expired, wrong tree, a
+3. **Every refusal is one 404 body** (one exception: a filter's grammar error, `400 {"error":"bad_filter","param"}`,
+   after the key checks out, through `BadParam`) (`{"error":"not_found"}`): bad shape, unknown, deleted, expired, wrong tree, a
    product of another shop, a draft under a live key. Limits fail closed (`apiMissIp`, `apiTestIp`, `apiSearchIp`,
    `apiKeyCreateShop`), with the WAF path rule and rate rule in front (`ops/firewall.json`, held by `waf.test.ts`).
 4. **Answers are closed.** Output schemas in `src/domains/storefront-api/<version>/schemas.ts` use `z.strictObject` and
@@ -64,6 +66,23 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    `site_domain_id` row is not live. Proof: `scripts/verify/tenancy.sql` § 81.
 9. **Keys are never stored, shown twice or logged by us.** Stored is the sha256 hex; the key is in the create action's
    reply once; our logs carry the key id. (Vercel's request logs hold the path: a live key is public by design.)
+
+10. **Previews (ADR-0018 § 12, SA1b).** A hidden page or the FAQ's draft opens only at `…/k/<key>/preview/…` (mode
+   `'preview'` in either tree: its own branch, `private, no-store`, no CORS, `apiPreviewIp`, the key looked up uncached
+   by `storefrontKeyNow`) with a token in the `Frrata-Preview` header: `v1.<{e,x}>.<mac>`, the store and key inside the
+   MAC (`src/lib/storefront-api/preview-token.ts`), ≤ 10 minutes, one entry. Signed only by Content's
+   `previewOnWebsiteAction`. `check:api` holds the preview routes; `STOREFRONT_PREVIEW_SECRET` unset = none.
+11. **The bag link is a frozen grammar** (`src/domains/storefront-api/cart-link.ts`): `<checkoutOrigin>/cart?l=<size
+   id>:<qty>,…`, the quote's limits (20 lines, 10 a line, lowered not refused), `code` and `utm_*` beside it. Anything
+   new is a new parameter. The page (`s/[host]/(cart)/cart`) fills the shopper's own bag (replace when the referrer is
+   the site or the bag is empty, else merge), marks `via_site`, opens checkout. The starter's copy is generated
+   (`node scripts/kit-sync.mjs`) and held equal by a test.
+12. **Filters (D2):** `facets` (cached) and `filter/page/{n}` (dynamic like search) over the same capped, listed set,
+   cards from `cardOut` only; one URL per filter (fixed parameter order, defaults left out); a value the store doesn't
+   have now is an empty page, never an error. No slim index: a card needs the catalogue entry (owner, 2026-11-15).
+13. **The kit** lives in `kit/starter` (outside the root's typecheck; its own Next app on the root's install). Its key
+   is server only; its build fails on any `frs_` in `.next/static`. e2e `92-storefront-sale` builds it and reads the
+   store through the API host. The partner skill is `kit/starter/.claude/skills/frrata-site/SKILL.md`.
 
 ## A change, step by step
 - A new field: add it to the schema (optional is additive), map it field by field, run

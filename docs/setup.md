@@ -470,3 +470,17 @@ Nothing answers until these are done; the migrations go first (the orchestrator 
    `curl -si https://api.frrata.shop/` is a 403 from the firewall.
 5. **Kill switch.** Turning the third rule on stops the whole API at once; partner sites keep their stale pages, shops
    and checkout are untouched.
+
+### Storefront API SA1b — the bag link, previews, the docs (plan `docs/plans/2026-11-16-sa1b.md`)
+After SA1b's migration is applied and the release is live:
+1. **The preview secret.** Run `openssl rand -base64 32` on your own computer and copy the line it prints. In Vercel →
+   frata → Settings → Environment Variables, add `STOREFRONT_PREVIEW_SECRET` with that value: **Production only**,
+   **Sensitive**. Redeploy. Until it is set, Preview on website is hidden and every preview is refused; everything else
+   works. Changing it later ends every preview link (they last 10 minutes anyway).
+2. **The firewall's path rule.** In Vercel → frata → Firewall, edit the first rule ("Storefront API: refuse any other
+   path") and paste the path value from `ops/firewall.json` again: it now also lets through `preview/…`, `facets`,
+   `filter/page/{n}`, the docs (`/`, `/docs…`, `/llms.txt`) and their `/_next/static/…` files. Publish.
+3. **Check.** `curl -si https://api.frrata.shop/` is a 307 to `/docs`; `https://api.frrata.shop/docs` shows the docs;
+   `curl -s https://api.frrata.shop/llms.txt | head -1` is `# Frrata Storefront API`.
+4. **The starter's public repo** (when the first partner needs it): create `frrata/starter` on GitHub (public) and ask
+   the agent to publish `kit/starter` into it. Settings › Website's "Starter code" link points there.

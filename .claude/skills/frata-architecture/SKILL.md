@@ -2,8 +2,8 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.59.0
-  verified: 2026-11-15
+  version: 2.60.0
+  verified: 2026-11-16
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
 ---
@@ -820,6 +820,11 @@ Rules:
   (`src/lib/db/attribution-sql.ts`) and the creator with `creatorCodeJoinSql`, and classifies with `sourceOfInputs`:
   one route, so they never disagree (an int test checks the order page against Analytics). A creator's code the order
   uses (a labelled `discount_codes` row) wins over tags.
+- **"Your website" (classifier v3, SA1b):** the bag link's page writes `via_site: '1'` into the tab's attribution (never
+  from a URL: `landingParams` skips it), and `classifySource(a, creator, site)` reads it, or a referrer equal to the
+  store's site host, as "Your website" after every stronger signal (creator, tags, click ids). Readers pass the site
+  host (`siteHostIn(tx, tenantId)`, or the order query's own subquery); visits never carry the marker. A change to the
+  rule bumps `CLASSIFIER_VERSION`/`CLASSIFIER_SINCE`, and Analytics says "Sources renamed on <date>" for 90 days.
 - **Read grouped, never per order:** Analytics groups orders by their raw inputs in SQL (`src/lib/queries/analytics.ts`)
   inside one transaction with `jit off`, `statement_timeout 3s`, `work_mem 64MB`; ₹ kept after returns is
   `keptOf` over the groups (`src/domains/orders/kept.ts`, the one ₹-kept helper for Offers, Analytics and True Profit).

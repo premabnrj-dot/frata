@@ -129,3 +129,15 @@ Proposed:
 - § 2 "logs carry the key id": our logs do; a key is in the URL path, so Vercel's request logs hold it. A live key is
   public by design; a test key is visible to anyone who sees the developer's browser.
 
+
+## Amendment (SA1b, owner 2026-11-15; plan docs/plans/2026-11-16-sa1b.md)
+- **§ 11 "drafts" → "drafts, except under § 12's token".** A key never reads a hidden page or the FAQ's draft on its
+  own. With a preview token the console signed for that store, that key and that one entry, it reads it for at most
+  10 minutes: `/2026-12/k/<key>/preview/{pages/<handle>,faq}`, either key kind (a store that has opened has no test key
+  left), the token in the `Frrata-Preview` header (never the URL, so never a request log), the store and key bound
+  inside the MAC (never in clear), `private, no-store`, no CORS, its own per-network limit, the key looked up uncached.
+  The secret is `STOREFRONT_PREVIEW_SECRET`, Production only; without it nothing is signed or accepted.
+- **§ 10 grows additively:** `facets` and `filter/page/{n}` (D2), and `shop.cart` (the bag link). A filter's grammar
+  error is a `400 {"error":"bad_filter","param"}` after the key checks out: the one answer that is not the 404.
+- **§ 6:** removing a partner purges its keys through the drain's key-stop sweep; so does reinstating one (its audit
+  row), so a reinstated partner's site reads again within minutes.
