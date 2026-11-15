@@ -5,6 +5,8 @@ import { z } from 'zod'
 import { decidePartner, reinstatePartner, suspendPartner } from '@/lib/admin/partners'
 import { ADMIN_ONLY, confirmedRecently, requireStaff } from '@/lib/auth/require-staff'
 import { sendSignInLink } from '@/lib/auth/send-link'
+import { staffProof } from '@/lib/auth/session'
+import { approveOwnerRequest, deleteOwnerPasskeys } from '@/lib/admin/partner-passkeys'
 import type { ActionResult } from '@/components/ui/action-form'
 
 const Decide = z.object({ id: z.uuid(), decision: z.enum(['approve', 'decline']), reason: z.string().trim().max(300).optional() })
@@ -62,4 +64,35 @@ export async function reinstatePartnerAction(form: FormData): Promise<ActionResu
   if (!r.ok) return { error: SAYS[r.error] ?? 'We could not reinstate the partner. Nothing was changed.' }
   revalidatePath('/admin/partners')
   return { ok: 'Reinstated. The owner and their leads have their stores back.' }
+}
+
+// A partner OWNER's passkey (T1b): an admin approves their request with the code the owner read out on a call the admin
+// made to the phone on the partner's record (never a number the caller gives), or deletes every passkey of the owner
+// for a lost device. Admins only; the browser confirms the staff passkey first (a check in the last 5 minutes).
+const Owner = z.object({ id: z.uuid(), code: z.string().regex(/^\d{6}$/).optional() })
+
+export async function approveOwnerPasskeyAction(input: { id: string; code: string }): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  const staff = await requireStaff(ADMIN_ONLY)
+  if (!staff.ok) return { ok: false, error: 'Only a Frrata admin can approve this.' }
+  const p = Owner.safeParse(input)
+  if (!p.success || !p.data.code) return { ok: false, error: 'Enter the 6-digit code the partner owner reads out.' }
+  const proof = await staffProof(staff.userId)
+  if (!proof) return { ok: false, error: 'Confirm with your passkey first.' }
+  const r = await approveOwnerRequest(staff, proof, p.data.id, p.data.code)
+  if (!r.ok) return r
+  revalidatePath('/admin/partners')
+  return { ok: true, text: `Approved. ${r.email} can create a passkey for 10 minutes.` }
+}
+
+export async function deleteOwnerPasskeysAction(input: { id: string }): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  const staff = await requireStaff(ADMIN_ONLY)
+  if (!staff.ok) return { ok: false, error: 'Only a Frrata admin can do this.' }
+  const p = Owner.safeParse(input)
+  if (!p.success) return { ok: false, error: 'Something went wrong. Try again.' }
+  const proof = await staffProof(staff.userId)
+  if (!proof) return { ok: false, error: 'Confirm with your passkey first.' }
+  const r = await deleteOwnerPasskeys(staff, proof, p.data.id)
+  if (!r.ok) return r
+  revalidatePath('/admin/partners')
+  return { ok: true, text: `Deleted ${r.count} ${r.count === 1 ? 'passkey' : 'passkeys'}. The partner owner is signed out everywhere.` }
 }

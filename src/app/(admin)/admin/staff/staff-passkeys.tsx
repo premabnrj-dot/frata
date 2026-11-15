@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ActionForm, type ActionResult } from '@/components/ui/action-form'
 import { useToast } from '@/components/ui/toast'
-import { addPasskey, approve, confirmPasskey, removeOne } from '../_components/passkey-client'
+import { addPasskey, approve, confirmPasskey, removeOne } from '@/components/passkeys/passkey-client'
 
 // =============================================================================
 // FILE: src/app/(admin)/admin/staff/staff-passkeys.tsx — Admin › Staff's passkey controls (staff passkeys spec;

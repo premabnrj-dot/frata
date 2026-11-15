@@ -5,6 +5,8 @@
 import http from 'node:http'
 import { USERS } from '../constants.mjs'
 const otps = []
+const usedHashes = new Set()
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url')
 http.createServer((req, res) => {
   if (req.method === 'POST' && req.url.startsWith('/auth/v1/otp')) {
     let body = ''
@@ -12,6 +14,26 @@ http.createServer((req, res) => {
     req.on('end', () => {
       try { otps.push(String(JSON.parse(body).email ?? '').toLowerCase()) } catch { /* not JSON */ }
       res.writeHead(200, { 'content-type': 'application/json' }); res.end('{}')
+    })
+    return
+  }
+  // POST /auth/v1/verify with a token hash (the email link, /auth/confirm): `e2e-<who>-<anything>` signs <who> in, once.
+  if (req.method === 'POST' && req.url.startsWith('/auth/v1/verify')) {
+    let body = ''
+    req.on('data', (c) => { body += c; if (body.length > 10_000) req.destroy() })
+    req.on('end', () => {
+      let hash = ''
+      try { hash = String(JSON.parse(body).token_hash ?? '') } catch { /* not JSON */ }
+      const who = /^e2e-([a-z]+)-/.exec(hash)?.[1]
+      const u = who && USERS[who]
+      if (!u || usedHashes.has(hash)) { res.writeHead(403, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ code: 403, error_code: 'otp_expired', msg: 'Email link is invalid or has expired' })) }
+      usedHashes.add(hash)
+      const exp = Math.floor(Date.now() / 1000) + 3600
+      const token = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: u.id, who, role: 'authenticated', aud: 'authenticated', exp, session_id: crypto.randomUUID() })}.sig`
+      const now = new Date().toISOString()
+      res.writeHead(200, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ access_token: token, refresh_token: 'r', token_type: 'bearer', expires_in: 3600, expires_at: exp,
+        user: { id: u.id, email: u.email, aud: 'authenticated', role: 'authenticated', email_confirmed_at: now, app_metadata: {}, user_metadata: {}, created_at: now } }))
     })
     return
   }

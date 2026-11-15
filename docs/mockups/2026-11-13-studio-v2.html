@@ -311,6 +311,8 @@ main { min-width: 0; position: relative; overflow-x: clip }
 
 /* ── Build workspace ── */
 .build { max-width: none; padding-block: 0; padding-left: 0; padding-right: 0; height: calc(100vh - 57px); display: grid; grid-template-rows: auto 1fr }
+.onescreen { max-width: none; padding: 0; height: calc(100vh - 57px) } .onescreen iframe { width: 100%; height: 100%; border: 0; display: block }
+@supports (height: 100dvh) { .onescreen { height: calc(100dvh - 57px) } }
 @supports (height: 100dvh) { .build { height: calc(100dvh - 57px) } }
 .bbar { display: flex; align-items: center; gap: 10px; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); background: var(--card); flex-wrap: wrap }
 .bbar h1 { font: 600 16px var(--f-display); margin: 0; display: flex; gap: 8px; align-items: center; min-width: 0 }
@@ -898,7 +900,7 @@ details.more[open] { padding-bottom: 12px }
     <a href="#team" data-nav="team"><i data-lucide="users" class="i"></i><span class="t">Team</span></a>
     <a href="#settings" data-nav="settings"><i data-lucide="settings" class="i"></i><span class="t">Settings</span></a>
     <span class="grp">Working on</span>
-    <a href="#build" data-nav="site"><span class="ava" style="background:#7A1F2B;width:20px;height:20px;font-size:10px">K</span><span class="t">Kesar Studio</span></a>
+    <a href="#site" data-nav="site"><span class="ava" style="background:#7A1F2B;width:20px;height:20px;font-size:10px">K</span><span class="t">Kesar Studio</span></a>
     <a href="#clients" data-nav="x" data-proto-client="noor"><span class="ava" style="background:#2F5D50;width:20px;height:20px;font-size:10px">N</span><span class="t">Noor Threads</span></a>
   </nav>
   <main id="main">
@@ -919,7 +921,7 @@ details.more[open] { padding-bottom: 12px }
             <div class="card task"><div class="who"><span class="ava" style="background:#23307A">B</span>Bandhej Co.</div><p>Writing the Lookbook page</p><div class="bar"><i id="work-bar" style="transform:scaleX(.42)"></i></div></div>
           </div>
           <div class="lane"><h3><i data-lucide="eye" class="i i-sm"></i>Ready to review<span class="cnt">1</span></h3>
-            <div class="card task"><div class="who"><span class="ava" style="background:#B7791F">H</span>Haldi House</div><p>Festive banner · 3 variants</p><span class="badge ok">Checks passed</span></div>
+            <div class="card task"><div class="who"><span class="ava" style="background:#B7791F">H</span>Haldi House</div><p>Festive banner design · 3 variants</p><span class="badge ok">Checks passed</span></div>
           </div>
           <div class="lane"><h3><i data-lucide="hourglass" class="i i-sm"></i>Waiting on client<span class="cnt">2</span></h3>
             <div class="card task"><div class="who"><span class="ava" style="background:#B7791F">H</span>Haldi House</div><p>v3a sent to Meher for approval · 2 days</p><button class="btn sm" data-remind="haldi"><i data-lucide="message-circle" class="i i-sm"></i>Remind</button></div>
@@ -939,6 +941,10 @@ details.more[open] { padding-bottom: 12px }
             <div style="display:flex;justify-content:space-between;font-size:13px"><span class="sub">Credits used</span><span class="mono">58 / 200</span></div>
             <div class="bar"><i style="transform:scaleX(.29)"></i></div>
             <div style="display:flex;justify-content:space-between;font-size:13px"><span class="sub">Sites live</span><span class="mono">4</span></div>
+          </div>
+          <div class="card" style="padding:14px;display:grid;gap:10px">
+            <b style="font-size:13px">Activity</b>
+            <div style="display:flex;gap:8px;align-items:center;font-size:13px"><span class="ava" style="background:#7A1F2B;width:20px;height:20px;font-size:10px;flex:none">K</span><span class="sub" style="flex:1;min-width:0">Riya changed the hero image and its end date · Content</span></div>
           </div>
         </aside>
       </div>
@@ -1017,7 +1023,7 @@ details.more[open] { padding-bottom: 12px }
         <section class="stage canvas" data-pane="canvas">
           <div class="sbar">
             <button class="btn sm icon ghost chat-toggle tip" data-tip="Hide chat  [" aria-label="Hide chat" aria-pressed="true"><i data-lucide="panel-left-close" class="i i-sm"></i></button>
-            <b style="font-size:13px">Edit by hand</b><span class="sub" style="font-size:12px">· every change is a new version</span>
+            <b style="font-size:13px">Edit by hand</b><span class="sub" style="font-size:12px">· saved as brand data</span>
           </div>
           <div class="cbody">
             <nav class="ds-index" id="ds-index" aria-label="Design system sections"></nav>
@@ -1173,10 +1179,15 @@ details.more[open] { padding-bottom: 12px }
             <button role="tab" aria-selected="false" data-rt="system"><i data-lucide="swatch-book" class="i i-sm"></i>System</button>
             <button role="tab" aria-selected="false" data-rt="apps"><i data-lucide="blocks" class="i i-sm"></i>Apps</button>
             <button role="tab" aria-selected="false" data-rt="data"><i data-lucide="database" class="i i-sm"></i>Data</button>
+            <button role="tab" aria-selected="false" data-rt="editable"><i data-lucide="pencil-line" class="i i-sm"></i>Editable</button>
           </div>
           <div class="rbody" id="rbody"></div>
         </section>
       </div>
+    </section>
+    <!-- ═══ SITE · one screen (owner-approved 2026-11-15): the chat runs brand, look, pages, build, review, hand over ═══ -->
+    <section class="view onescreen" data-view="site" hidden>
+      <iframe src="studio-one-screen.html#embed" title="Kesar Studio · one screen" loading="lazy"></iframe>
     </section>
     <!-- ═══ INTAKE · what the brand sees on her phone ═══ -->
     <section class="view" data-view="intake" hidden>
@@ -1267,7 +1278,7 @@ const S = {
   pages: { home: true, collection: true, product: true, about: false, lookbook: false, size: true, contact: false, faq: false },
   starter: 0, dial: 'plan', variants: 1, atts: [],
   built: false, pins: 0, credits: 142, route: 'home',
-  siteCredits: 0, dsVer: 1, brandIcons: false, motifs: [], season: null, seasonOn: false, aaa: false, hindiHeads: false,
+  siteCredits: 0, dsVer: 1, brandIcons: false, motifs: [], season: null, seasonOn: false, aaa: false, hindiHeads: false, qMoved: false,
 }
 
 /* ── Theme toggle (Studio itself) ── */
@@ -1417,7 +1428,7 @@ function renderMotionOpts() {
 function siteMarkup(route = 'home', opts = {}) {
   const ic = (n) => `<i data-lucide="${n}" class="s-ico"></i>`
   const [h, p, c1, c2] = voiceLines()
-  const nav = `<div class="s-nav blk" data-blk="nav"><span class="s-logo">kesar</span><span class="links"><span>New in</span><span>Kurta sets</span><span>Sarees</span><span>Weavers</span></span><span class="act">${ic('search')}${ic('heart')}${ic('shopping-bag')}</span></div>` + (S.motifs.length || (S.season && S.seasonOn) ? '<div class="motif-band"></div>' : '')
+  const nav = `<div class="s-nav blk" data-blk="nav"><span class="s-logo">kesar</span><span class="links"><span>New in</span><span>Kurta sets</span><span>Sarees</span><span>Weavers</span></span><span class="act">${ic('search')}<span role="img" aria-label="Saved on this phone" title="Saved on this phone" style="display:inline-flex">${ic('heart')}</span>${ic('shopping-bag')}</span></div>` + (S.motifs.length || (S.season && S.seasonOn) ? '<div class="motif-band"></div>' : '')
   const products = [['Chanderi kurta set · Rust', '₹2,490', 'pri'], ['Maheshwari saree · Gold', '₹6,800', 'acc'], ['Zari dupatta · Ink', '₹1,450', 'ink']]
   const row = `<div class="s-row blk" data-blk="row">${products.map(([t, pr, f]) => `<div class="s-card"><div class="fabric" data-f="${f}"><span class="zari"></span></div><span class="t">${t}</span><span class="p">${pr}</span></div>`).join('')}</div>`
   if (route === 'collection') return nav + `<div class="blk" data-blk="head" style="padding:22px 18px 8px"><h3 style="font:600 30px var(--s-display);margin:0">Kurta sets</h3><p style="margin:4px 0 0;color:var(--s-sub)">32 pieces · handwoven</p></div><div class="blk" data-blk="filters" style="padding:8px 18px 14px;display:flex;gap:8px;flex-wrap:wrap"><span class="s-badge">Chanderi</span><span class="s-badge">Maheshwari</span><span class="s-badge">Under ₹3,000</span><span class="s-badge acc">Diwali edit</span></div>` + row + row.replace('data-blk="row"', 'data-blk="row2"')
@@ -1437,13 +1448,20 @@ $('#logos').addEventListener('click', (e) => {
   renderLogos(); renderSwatches(true); applyTokens(true)
   toast(`${SW_NAMES.length} colours taken from the ${LOGOS[S.logo].name} logo.`)
 })
-$('#swatches').addEventListener('input', (e) => { const i = e.target.dataset.sw; if (i == null) return; S.palette[+i] = e.target.value; if (S.sources) S.sources[+i] = 'edited'; e.target.parentElement.style.background = e.target.value; e.target.closest('.sw').querySelector('.hex').textContent = e.target.value.toUpperCase(); applyTokens(true) })
-$('#fonts').addEventListener('click', (e) => { const b = e.target.closest('[data-font]'); if (!b) return; S.font = +b.dataset.font; renderFonts(); applyTokens(true) })
-$('#radius').addEventListener('input', (e) => { S.radius = +e.target.value; applyTokens(true) })
-segPlacers.push(seg($('#density'), (b) => { S.density = +b.dataset.d; applyTokens(true) }))
+function handLine(key, what, val) {
+  const box = $('#msgs'), last = box.lastElementChild
+  let el = last && last.dataset.hand === key ? last : null
+  if (!el) { el = document.createElement('div'); el.className = 'm me'; el.dataset.hand = key; el.innerHTML = `<div class="tools"><div class="tool"><span class="tst">${ico('pencil', 'i i-sm')}</span><span class="what"></span><span class="took"></span></div></div>`; box.append(el); icons(el) }
+  el.querySelector('.what').innerHTML = `You changed ${esc(what)} to <span class="mono">${esc(val)}</span>`; el.querySelector('.took').textContent = now()
+  box.scrollTop = box.scrollHeight
+}
+$('#swatches').addEventListener('input', (e) => { const i = e.target.dataset.sw; if (i == null) return; S.palette[+i] = e.target.value; if (S.sources) S.sources[+i] = 'edited'; e.target.parentElement.style.background = e.target.value; e.target.closest('.sw').querySelector('.hex').textContent = e.target.value.toUpperCase(); applyTokens(true); handLine('sw' + i, SW_NAMES[+i], e.target.value.toUpperCase()) })
+$('#fonts').addEventListener('click', (e) => { const b = e.target.closest('[data-font]'); if (!b) return; S.font = +b.dataset.font; renderFonts(); applyTokens(true); handLine('font', 'Type', FONTS[S.font].name) })
+$('#radius').addEventListener('input', (e) => { S.radius = +e.target.value; applyTokens(true); handLine('radius', 'Corners', S.radius + ' px') })
+segPlacers.push(seg($('#density'), (b) => { S.density = +b.dataset.d; applyTokens(true); handLine('density', 'Spacing', b.textContent.trim()) }))
 segPlacers.push(seg($('#icon-lib'), (b) => { if (b.dataset.lib !== 'lucide') { toast('Phosphor and Tabler are in the kit. This preview draws Lucide.', 'info'); $$('#icon-lib button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.lib === 'lucide'))); segPlacers.forEach((p) => p()) } }))
-$('#icon-weights').addEventListener('click', (e) => { const b = e.target.closest('[data-iw]'); if (!b) return; S.iconW = +b.dataset.iw; renderIconWeights(); renderKit(); applyTokens(true) })
-$('#motion-opts').addEventListener('click', (e) => { const b = e.target.closest('[data-mo]'); if (!b) return; S.motion = +b.dataset.mo; renderMotionOpts(); applyTokens(true); playMotion() })
+$('#icon-weights').addEventListener('click', (e) => { const b = e.target.closest('[data-iw]'); if (!b) return; S.iconW = +b.dataset.iw; renderIconWeights(); renderKit(); applyTokens(true); handLine('iconW', 'Icon weight', WEIGHTS[S.iconW].n) })
+$('#motion-opts').addEventListener('click', (e) => { const b = e.target.closest('[data-mo]'); if (!b) return; S.motion = +b.dataset.mo; renderMotionOpts(); applyTokens(true); playMotion(); handLine('motion', 'Motion', MOTION[S.motion].name) })
 function playMotion() {
   const blocks = $$('#kit-site .blk, #kit-site .s-card'); const m = MOTION[S.motion]
   blocks.forEach((el, i) => el.animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { duration: reduced ? 1 : m.dur * 1.6, easing: m.ease, delay: reduced ? 0 : i * (m.dur / 3), fill: 'both' }))
@@ -1487,9 +1505,10 @@ async function lockDesignSystem() {
 
 /* ════════ STEP 3 · PAGES AND BRIEF ════════ */
 const PAGES = [['home', 'Home', 'house'], ['collection', 'Collection', 'layout-grid'], ['product', 'Product', 'shirt'], ['size', 'Size help', 'ruler'], ['about', 'Our weavers', 'users'], ['lookbook', 'Lookbook', 'images'], ['contact', 'Contact', 'phone'], ['faq', 'Questions', 'circle-help']]
-const STARTERS = [['Starter 0', 'Frrata · every check passes', 'badge-check', 'ok'], ['Atelier', 'Pixel & Thread · your agency starter', 'gem', 'info'], ['Current look', 'Kesar’s live theme, as code', 'history', 'warn']]
+const WORDS_IN_CONTENT = { contact: 'contact', faq: 'questions' }
+const STARTERS = [['Starter 0', 'Frrata · every check passes', 'badge-check', 'ok'], ['Atelier', 'Pixel & Thread · your agency starter · components and layouts only', 'gem', 'info'], ['Current look', 'Kesar’s live theme, as code', 'history', 'warn']]
 function renderPages() {
-  $('#page-grid').innerHTML = PAGES.map(([k, n, ic]) => `<button class="pg" aria-pressed="${!!S.pages[k]}" data-pg="${k}"><span class="wire">${'<i></i>'.repeat(3)}<i style="width:60%"></i></span><span class="top-row">${ico(ic, 'i i-sm')}${n}<span class="tick">${S.pages[k] ? ico('check', 'i i-sm') : ''}</span></span></button>`).join('')
+  $('#page-grid').innerHTML = PAGES.map(([k, n, ic]) => `<button class="pg" aria-pressed="${!!S.pages[k]}" data-pg="${k}"><span class="wire">${'<i></i>'.repeat(3)}<i style="width:60%"></i></span><span class="top-row">${ico(ic, 'i i-sm')}${n}<span class="tick">${S.pages[k] ? ico('check', 'i i-sm') : ''}</span></span>${WORDS_IN_CONTENT[k] ? '<span class="sub" style="font-size:11.5px">Words: Content › Pages</span>' : ''}</button>`).join('')
   icons($('#page-grid')); estimate()
 }
 function renderStarters() {
@@ -1516,7 +1535,7 @@ $('#make-plan').addEventListener('click', () => {
   if (!chosen.length) { toast('Pick at least one page.', 'bad'); return }
   modal({
     title: 'The plan', pic: picEl('list-checks', 'var(--info)', 'var(--info-t)'), wide: false,
-    body: `<div class="todos">${chosen.map(([k, n], i) => `<div class="todo"><span class="bx"></span><b>${n}</b><span class="sub" style="margin-left:auto;font-size:12px" class="mono">${['app/page.tsx', 'app/collections/[handle]/page.tsx', 'app/products/[handle]/page.tsx', 'app/size/page.tsx', 'app/weavers/page.tsx', 'app/lookbook/page.tsx', 'app/contact/page.tsx', 'app/questions/page.tsx'][PAGES.findIndex((p) => p[0] === k)]}</span></div>`).join('')}<div class="todo"><span class="bx"></span>Run the checks: speed, accessibility, budget, brand voice</div></div>
+    body: `<div class="todos">${chosen.map(([k, n], i) => `<div class="todo"${WORDS_IN_CONTENT[k] ? ' style="flex-wrap:wrap"' : ''}><span class="bx"></span><b>${n}</b><span class="sub" style="margin-left:auto;font-size:12px" class="mono">${['app/page.tsx', 'app/collections/[handle]/page.tsx', 'app/products/[handle]/page.tsx', 'app/size/page.tsx', 'app/weavers/page.tsx', 'app/lookbook/page.tsx', 'app/contact/page.tsx', 'app/questions/page.tsx'][PAGES.findIndex((p) => p[0] === k)]}</span>${WORDS_IN_CONTENT[k] ? `<span class="sub mono" style="flex-basis:100%;padding-left:23px;font-size:11.5px">content.page('${WORDS_IN_CONTENT[k]}') · Words: Content › Pages</span>` : ''}</div>`).join('')}<div class="todo"><span class="bx"></span>Run the checks: speed, accessibility, budget, brand voice</div></div>
       <div class="card" style="padding:12px;display:grid;gap:8px;background:var(--bg)"><b style="font-size:13px;display:flex;gap:6px;align-items:center">${ico('circle-help', 'i i-sm')}One question</b><span style="font-size:13px">Show prices in the hero, or only on the cards?</span><div class="chips"><button class="chip" aria-pressed="true" data-ans>Only on the cards</button><button class="chip" aria-pressed="false" data-ans>In the hero too</button></div></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="badge info">${ico('coins', 'i i-sm')}${$('#est').textContent} credits · holds the top, keeps what it uses</span><span class="badge ok">${ico('wallet', 'i i-sm')}Kesar’s budget: ${300 - kesarUsed()} of 300 left</span><span class="badge ok">${ico('shield-check', 'i i-sm')}Preview data only</span><span class="badge ok">${ico('lock', 'i i-sm')}Prices, stock and orders: never touched</span></div>`,
     foot: `<button class="btn" data-x>Keep planning</button><button class="btn primary" id="approve-plan" data-autofocus>${ico('play')}Approve and build</button>`,
@@ -1595,12 +1614,18 @@ async function startBuild() {
   a.querySelector('.agent-ava').classList.remove('think')
   const b = addMsg('agent', '')
   await stream(b, 'Done. Home, Collection and Product are built on the Kesar design system. Speed 97, accessibility 100, script 86 kB of 120. One note: the hero headline is in English; say the word and I’ll set it in Hindi.')
+  editChips(b, [['Hero', 'image, heading, link, dates'], ['The edit', 'collection'], ['Size help', 'page words']])
   const acts = document.createElement('div'); acts.className = 'chips'; acts.style.marginTop = '6px'
   acts.innerHTML = `<button class="chip" data-quick="hindi">${ico('languages', 'i i-sm')}Set the hero in Hindi</button><button class="chip" data-quick="variants">${ico('columns-3', 'i i-sm')}Try 3 heroes</button><button class="chip" data-quick="client">${ico('message-circle', 'i i-sm')}Send to Kesar</button>`
   b.querySelector('.bubble').append(acts); icons(acts)
   setStatus('ready', 'Ready to review'); $('#b-stop').setAttribute('aria-disabled', 'true'); $('#b-publish').setAttribute('aria-disabled', 'false')
   S.built = true; running = false; markDone('build-run'); renderSuggest(); renderRail(currentRail)
   toast('Ready to review: 3 pages, every check passed.')
+}
+function editChips(msg, rows) {
+  const c = document.createElement('div'); c.className = 'chips'; c.style.marginTop = '6px'
+  c.innerHTML = rows.map(([n, f]) => `<span class="chip">${ico('pencil-line', 'i i-sm')}${n} · Riya will be able to edit: ${f}</span>`).join('')
+  msg.querySelector('.bubble').append(c); icons(c)
 }
 function halt(a) { running = false; setStatus('', 'Stopped'); $('#b-stop').setAttribute('aria-disabled', 'true'); $$('#device .scan').forEach((s) => s.remove()); stream(a, 'Stopped. Nothing was published; the draft keeps what was written so far.'); renderSuggest() }
 $('#b-stop').addEventListener('click', () => { stopped = true; toast('Stopping after this step.', 'info') })
@@ -1614,6 +1639,8 @@ function bumpCredits(n) {
 
 /* Rail: checks · files · system */
 let currentRail = 'checks'
+const EDITABLE = [['image', 'Home hero', 'up to 3 · image, heading, link · dated'], ['layout-grid', 'New in', 'collection'], ['sparkle', 'Festive band', 'text, link · dated'], ['ruler', 'Size help', 'page words']]
+document.addEventListener('click', (e) => { if (!e.target.closest('[data-move-q]')) return; S.qMoved = true; bumpCredits(2); renderRail(currentRail); toast('Questions page reads Content › Pages.') })
 const CHECKS = [['gauge', 'Speed', 'Lighthouse, phone, median of 3', '97'], ['accessibility', 'Accessibility', 'contrast, labels, focus', '100'], ['package', 'Script budget', '86 kB of 120 kB', 'ok'], ['message-square-quote', 'Brand voice', 'no words from the never list', 'ok'], ['link', 'Links and checkout', 'every Add to bag reaches checkout', 'ok'], ['shield-check', 'Outbound calls', 'Frrata, media, fonts only', 'ok']]
 function renderRail(tab, fresh) {
   currentRail = tab
@@ -1625,14 +1652,20 @@ function renderRail(tab, fresh) {
       ${CHECKS.map(([ic, n, s, v], i) => `<div class="check-row ${done ? 'pass' : ''}" data-ck="${i}"><span class="ic">${ico(done ? 'check' : ic, 'i i-sm')}</span><span class="grow">${n}<small>${s}</small></span>${done && /\d/.test(v) ? `<b class="mono">${v}</b>` : ''}</div>`).join('')}
       <div class="budget" style="display:grid;gap:6px"><span class="lbl" style="display:flex;justify-content:space-between">Script on the product page<span class="mono sub">${done ? '86 / 120 kB' : '—'}</span></span><div class="bar"><i style="transform:scaleX(${done ? .72 : 0})"></i></div></div>`
   } else if (tab === 'files') {
-    body.innerHTML = `<div class="tree"><div>${ico('folder-open', 'i i-sm')}app</div><div style="padding-left:20px">${ico('file-code', 'i i-sm')}page.tsx<span class="chg m">M</span></div><div style="padding-left:20px">${ico('file-code', 'i i-sm')}collections/[handle]/page.tsx<span class="chg a">A</span></div><div style="padding-left:20px">${ico('file-code', 'i i-sm')}products/[handle]/page.tsx<span class="chg a">A</span></div><div>${ico('folder-open', 'i i-sm')}components</div><div style="padding-left:20px">${ico('file-code', 'i i-sm')}edit-row.tsx<span class="chg a">A</span></div><div>${ico('file-json', 'i i-sm')}tokens.json</div><div>${ico('file-text', 'i i-sm')}brand.md</div></div>
-      <div class="diff" aria-label="app/page.tsx diff"><div class="d">-  &lt;Hero title="Welcome" /&gt;</div><div class="a">+  &lt;Hero</div><div class="a">+    eyebrow={t('edit.diwali')}</div><div class="a">+    title={voice.hero}</div><div class="a">+    product={edit[0]}</div><div class="a">+  /&gt;</div><div>   &lt;EditRow products={edit} /&gt;</div><div class="a">+  &lt;Weavers count={40} /&gt;</div></div>
+    body.innerHTML = `<div class="tree"><div>${ico('folder-open', 'i i-sm')}app</div><div style="padding-left:20px">${ico('file-code', 'i i-sm')}page.tsx<span class="chg m">M</span></div><div style="padding-left:20px">${ico('file-code', 'i i-sm')}collections/[handle]/page.tsx<span class="chg a">A</span></div><div style="padding-left:20px">${ico('file-code', 'i i-sm')}products/[handle]/page.tsx<span class="chg a">A</span></div><div style="padding-left:20px">${ico('file-code', 'i i-sm')}questions/page.tsx<span class="chg ${S.qMoved ? 'm' : 'a'}">${S.qMoved ? 'M' : 'A'}</span></div><div>${ico('folder-open', 'i i-sm')}components</div><div style="padding-left:20px">${ico('file-code', 'i i-sm')}edit-row.tsx<span class="chg a">A</span></div><div>${ico('file-json', 'i i-sm')}tokens.json</div><div>${ico('file-text', 'i i-sm')}brand.md</div></div>
+      <div class="diff" aria-label="app/page.tsx diff"><div class="d">-  &lt;Hero title="Welcome" /&gt;</div><div class="a">+  &lt;Hero</div><div class="a">+    title={placement('home.hero').heading}</div><div class="a">+    image={placement('home.hero').image}</div><div class="a">+    href={placement('home.hero').link}</div><div class="a">+  /&gt;</div><div>   &lt;EditRow products={edit} /&gt;</div><div class="a">+  &lt;Weavers count={40} /&gt;</div></div>
+      <div class="diff" aria-label="app/questions/page.tsx diff">${S.qMoved ? `<div class="d">-  &lt;h1&gt;Questions&lt;/h1&gt;</div><div class="d">-  &lt;Faq items={[{ q: 'Do you ship abroad?', … }]} /&gt;</div><div class="a">+  const page = await content.page('questions')</div><div class="a">+  &lt;h1&gt;{page.title}&lt;/h1&gt;</div><div class="a">+  &lt;Faq items={page.faq} /&gt;</div>` : `<div class="a">+  &lt;h1&gt;Questions&lt;/h1&gt;</div><div class="a">+  &lt;Faq items={[{ q: 'Do you ship abroad?', … }]} /&gt;</div>`}</div>
       <button class="btn sm"><i data-lucide="git-branch" class="i i-sm"></i>Open in a branch</button>`
   } else if (tab === 'apps') {
     const A = [['map-pin', 'Delivery Zones', 'on', 'PIN check on the product page; zone charge at checkout', 'Add the PIN check'], ['video', 'Product video', 'on', 'Video on the product page', 'Use on product pages'], ['message-circle', 'Messages', 'on', 'WhatsApp opt-in, inside Frrata’s checkout', null], ['fingerprint', 'EkCode', 'on', 'Sign-in, inside Frrata’s checkout', null], ['star', 'Reviews', 'off', 'Ratings and reviews on product pages', 'ask'], ['indian-rupee', 'True Profit', 'on', 'Console only: nothing on the site', null], ['shield', 'RTO Shield', 'next', 'COD rules at checkout', null], ['ruler', 'Size and fit', 'next', 'A fit widget', null]]
     body.innerHTML = `<span class="sub" style="font-size:12px">Kesar’s apps, read live. Riya turns them on in her console; Studio never does.</span>${A.map(([ic, n, st, s, act]) => `<div class="check-row ${st === 'on' ? 'pass' : ''}"><span class="ic">${ico(ic, 'i i-sm')}</span><span class="grow">${n} <span class="badge ${st === 'on' ? 'ok' : st === 'off' ? 'warn' : ''}">${st === 'on' ? 'On' : st === 'off' ? 'Off' : 'Coming'}</span><small>${s}</small>${act === 'ask' ? `<button class="btn sm" style="margin-top:6px" data-ask-app="${n}">${ico('send', 'i i-sm')}Ask Riya to turn it on</button>` : act ? `<button class="btn sm ghost" style="margin-top:6px" data-app-build="${act}">${ico('sparkles', 'i i-sm')}${act}</button>` : ''}</small></span></div>`).join('')}`
+  } else if (tab === 'editable') {
+    body.innerHTML = S.built ? `<span class="badge info" style="justify-self:start">Version 7f3a · frrata/fields.json</span>${EDITABLE.map(([ic, n, f, nw]) => `<div class="check-row pass"><span class="ic">${ico(ic, 'i i-sm')}</span><span class="grow">${n}${nw ? ' <span class="badge info">New</span>' : ''}<small>${f}</small></span></div>`).join('')}${S.qMoved
+      ? `<div class="check-row pass"><span class="ic">${ico('circle-help', 'i i-sm')}</span><span class="grow">Questions page<small>page words, FAQ</small></span></div>`
+      : `<div class="check-row"><span class="ic" style="background:var(--warn);color:var(--warn-t)">${ico('triangle-alert', 'i i-sm')}</span><span class="grow">Questions page <span class="badge warn">Words in code</span><button class="btn sm" style="margin-top:6px;display:flex" data-move-q>${ico('arrow-right-left', 'i i-sm')}Move to Content</button></span></div>`}`
+      : `<div class="empty-ask">${ico('pencil-line', 'i i-lg')}<span>None yet</span></div>`
   } else if (tab === 'data') {
-    const G = [['Your site can read', 'ok', ['Shop: policies, legal block, COD on/off, delivery promises', 'Products: variants, price, M.R.P., earlier price, availability (a count only at 3 or fewer), size chart, offer lines', 'Collections, search, offers']], ['Through apps that are on', 'info', ['Delivery Zones: the PIN check', 'Product video']], ['Handed to Frrata’s checkout', '', ['The bag (a link), payment, sign-in, WhatsApp opt-in']], ['Never', 'bad', ['Orders, shoppers, costs, stock counts above 3', 'Writing anything: prices, stock and products are changed in the console']]]
+    const G = [['Your site can read', 'ok', ['Shop: policies, legal block, COD on/off, delivery promises', 'Products: variants, price, M.R.P., earlier price, availability (a count only at 3 or fewer), size chart, offer lines', 'Collections, search, offers']], ['Content · edited in the console', 'ok', ['Announcements', 'Placements', 'Menus', 'Page words', 'FAQ', 'Size help', 'Contact line']], ['Brand tokens and seasons · data', 'info', ['Colours, type, logo, corners, spacing, buttons', 'Seasons: dates, accent, words']], ['Through apps that are on', 'info', ['Delivery Zones: the PIN check', 'Product video']], ['Handed to Frrata’s checkout', '', ['The bag (a link), payment, sign-in, WhatsApp opt-in']], ['Never', 'bad', ['Orders, shoppers, costs, stock counts above 3', 'Writing anything: prices, stock and products are changed in the console']]]
     body.innerHTML = `<span class="badge info" style="justify-self:start">Storefront API 2026-12 · specified, built in V1</span>${G.map(([t, k, items]) => `<div style="display:grid;gap:6px"><span class="lbl" style="display:flex;gap:6px;align-items:center"><span class="badge ${k}">${t}</span></span>${items.map((x) => `<span style="font-size:12.5px;display:flex;gap:6px">${ico(k === 'bad' ? 'x' : 'check', 'i i-sm')}${x}</span>`).join('')}</div>`).join('')}<span class="sub" style="font-size:12px">Builders design with a preview copy of this, without costs.</span>`
   } else {
     const p = S.palette, f = FONTS[S.font]
@@ -1642,9 +1675,9 @@ function renderRail(tab, fresh) {
   icons(body)
   const es = $('#edit-sys'); es && es.addEventListener('click', () => {
     modal({ title: 'Change the design system?', pic: picEl('swatch-book', 'var(--warn)', 'var(--warn-t)'),
-      body: `<span>Every page reads these tokens. The agent updates <b>6 files</b> and runs the checks again.</span><div class="field"><span class="lbl">Corners</span><input type="range" class="range" min="0" max="24" value="${S.radius}" id="sys-r" aria-label="Corners"></div>`,
-      foot: `<button class="btn" data-x>Keep v1</button><button class="btn primary" id="sys-ok">Make v2</button>`,
-      onOpen: (m, close) => { m.querySelector('#sys-ok').onclick = () => { S.radius = +m.querySelector('#sys-r').value; applyTokens(false); close(); toast('Design system v2: the pages follow it.') } } })
+      body: `<span>Every page reads these tokens. Saved as brand data.</span><div class="field"><span class="lbl">Corners</span><input type="range" class="range" min="0" max="24" value="${S.radius}" id="sys-r" aria-label="Corners"></div>`,
+      foot: `<button class="btn" data-x>Cancel</button><button class="btn primary" id="sys-ok">Save</button>`,
+      onOpen: (m, close) => { m.querySelector('#sys-ok').onclick = () => { S.radius = +m.querySelector('#sys-r').value; applyTokens(false); close(); handLine('radius', 'Corners', S.radius + ' px'); toast('Saved as brand data. The pages follow it.') } } })
   })
 }
 async function runChecks() {
@@ -1689,6 +1722,9 @@ async function send() {
   await tool(box, 'shield-check', 'Checks', 'all passed', 600)
   a.querySelector('.agent-ava').classList.remove('think')
   await stream(a, hindi ? 'The hero is in Hindi now, set in Tiro Devanagari Hindi from the design system. The button stays “कलेक्शन देखें”.' : 'Changed. Checks still pass; speed 97.')
+  if (hindi) editChips(a, [['Hero', 'image, heading, link, dates']])
+  else { editChips(a, [['Hero', 'image, heading, link, dates'], ['Weavers', 'photo, heading, words']]); if (!EDITABLE.some((x) => x[1] === 'Weavers')) EDITABLE.push(['users', 'Weavers', 'photo, heading, words', true]) }
+  if (currentRail === 'editable') renderRail('editable')
   setStatus('ready', 'Ready to review'); bumpCredits(3); toast('Updated. The preview shows it.')
 }
 $('#send').addEventListener('click', send)
@@ -1780,7 +1816,7 @@ function openNewSite() {
 }
 function openRoutines() {
   modal({ title: 'Routines', pic: picEl('repeat', 'var(--muted)', 'var(--fg)'),
-    body: `${[['Every Monday, 9:00', 'Refresh the New in row from the catalogue', 'Ask before publishing'], ['When a collection is created', 'Add it to the menu and make its page', 'Publish if checks pass']].map(([w, t, p]) => `<div class="check-row pass"><span class="ic">${ico('clock', 'i i-sm')}</span><span class="grow">${t}<small>${w} · ${p}</small></span><label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" checked> On</label></div>`).join('')}`,
+    body: `${[['First Monday of the month', 'Speed and accessibility pass', 'Ask before publishing'], ['When a kit update is out', 'Apply kit updates', 'Ask before publishing'], ['1 Oct', 'Seasonal redesign', 'Ask before publishing']].map(([w, t, p]) => `<div class="check-row pass"><span class="ic">${ico('clock', 'i i-sm')}</span><span class="grow">${t}<small>${w} · ${p}</small></span><label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" checked> On</label></div>`).join('')}`,
     foot: `<button class="btn" data-x>Close</button><button class="btn primary" data-x>${ico('plus')}New routine</button>` })
 }
 document.addEventListener('click', (e) => {
@@ -1878,7 +1914,7 @@ function renderMotifs() {
   icons($('#motifs'))
 }
 function renderComponents() {
-  $('#comp').innerHTML = `<span class="comp-lbl">Buttons</span><div class="comp-row"><button class="s-btn">Add to bag</button><button class="s-btn hover">Hover</button><button class="s-btn press">Pressed</button><button class="s-btn" disabled>Sold out</button><button class="s-btn alt">Wishlist</button><button class="s-btn link">Size help</button></div>
+  $('#comp').innerHTML = `<span class="comp-lbl">Buttons</span><div class="comp-row"><button class="s-btn">Add to bag</button><button class="s-btn hover">Hover</button><button class="s-btn press">Pressed</button><button class="s-btn" disabled>Sold out</button><button class="s-btn alt">Saved on this phone</button><button class="s-btn link">Size help</button></div>
     <span class="comp-lbl">Fields</span><div class="comp-row"><input class="s-input" value="302021" aria-label="Pincode"><input class="s-input err" value="3020" aria-label="Pincode with a mistake"></div><span style="font-size:12px;color:#C02A2F">Enter a 6-digit pincode</span>
     <span class="comp-lbl">Sizes</span><div class="sizes"><span>S</span><span class="on">M</span><span>L</span><span class="out">XL</span></div>
     <span class="comp-lbl">Product card</span><div style="display:grid;grid-template-columns:minmax(0,160px) minmax(0,1fr);gap:14px;align-items:center"><div class="s-card"><div class="fabric" data-f="pri"><span class="zari"></span></div><span class="t">Chanderi kurta set</span><span><span class="price-now">₹2,490</span> <s class="price-was">₹3,200</s></span></div><div style="display:grid;gap:10px;justify-items:start"><span class="s-toast">${ico('check', 'i i-sm')}Added to bag</span><span class="s-badge acc">22% off</span><button class="s-btn alt" data-site-modal>${ico('ruler', 'i i-sm')}Size guide</button></div></div>`
@@ -1893,7 +1929,7 @@ function renderVoiceSec() {
 function renderSeasons() {
   const on = !!S.season
   $('#seasons').innerHTML = `<div class="card season-card"><div class="hd">${picEl('layers', 'var(--muted)', 'var(--fg)')}<div style="flex:1"><b>Base</b><div class="when">all year</div></div><span class="badge ok">Always</span></div></div>
-    ${on ? `<div class="card season-card" style="animation:rise 320ms var(--e-spring) both"><div class="hd">${picEl('calendar-heart', '#FFF5D6', '#8A6400')}<div style="flex:1"><b>${SEASON.name}</b><div class="when">${SEASON.from} → ${SEASON.to} · accent ${SEASON.accent} · zari band · “Wedding edit”</div></div><label class="switch" aria-label="Preview the season"><input type="checkbox" id="season-on" ${S.seasonOn ? 'checked' : ''}><span></span></label></div><div class="motif-band" style="border-radius:4px"></div></div>`
+    ${on ? `<div class="card season-card" style="animation:rise 320ms var(--e-spring) both"><div class="hd">${picEl('calendar-heart', '#FFF5D6', '#8A6400')}<div style="flex:1"><b>${SEASON.name}</b><div class="when">${SEASON.from} → ${SEASON.to} · accent ${SEASON.accent} · zari band · “Wedding edit”</div><div class="when">Brand data · Riya can end it early in her console</div></div><label class="switch" aria-label="Preview the season"><input type="checkbox" id="season-on" ${S.seasonOn ? 'checked' : ''}><span></span></label></div><div class="motif-band" style="border-radius:4px"></div></div>`
       : `<div class="empty-ask">${ico('calendar-heart', 'i i-lg')}<span>Festivals and sales as layers over the base</span><button class="btn sm" data-ds-ask="season">${ico('sparkles', 'i i-sm')}Add a wedding season</button></div>`}`
   icons($('#seasons'))
   const sw = $('#season-on'); sw && sw.addEventListener('change', () => { S.seasonOn = sw.checked; applyTokens(true); renderKit() })
@@ -1915,7 +1951,7 @@ function restore(s) { Object.assign(S, s); afterDs(null) }
 const sw5 = (p) => `<span class="mini-sw">${p.map((c) => `<i style="background:${c}"></i>`).join('')}</span>`
 const DS_ACT = {
   season: { re: /season|wedding|festiv|diwali|shaadi|eid|sale/i, chip: 'Add a wedding season', sec: 'seasons',
-    tools: [['calendar', 'Read', 'festival calendar · 2026–27'], ['palette', 'Derived', 'gold from the zari'], ['file-pen-line', 'Wrote', 'seasons/wedding.json']],
+    tools: [['calendar', 'Read', 'festival calendar · 2026–27'], ['palette', 'Derived', 'gold from the zari'], ['database', 'Saved to brand data', 'wedding season']],
     say: () => 'A wedding-season layer, 15 Nov to 15 Feb: a gold accent, the zari band under the menu, “Wedding edit” on the hero. The base system stays as it is and comes back on 16 Feb.',
     card: () => ({ icon: 'calendar-heart', title: 'Wedding season', before: sw5([S.palette[1]]), after: `${sw5([SEASON.accent])}<span class="motif-band" style="width:70px;border-radius:3px"></span>`, diff: ['+ "seasons": {', '+   "wedding": { "from": "2026-11-15", "to": "2027-02-15",', '+     "accent": "#C9A227", "motif": "zari", "badge": "Wedding edit" } }'], apply: () => { S.season = SEASON; S.seasonOn = true; if (!S.motifs.length) S.motifs = ['zari', 'buti'] } }) },
   icons: { re: /icon/i, chip: 'Draw brand icons', sec: 'icons',
@@ -2010,7 +2046,7 @@ async function dsIntro() {
   const box = toolBox(a)
   await tool(box, 'image', 'Read', 'logo.svg', 420); await tool(box, 'images', 'Read', '212 product photos · 24 sampled', 620); await tool(box, 'book-open', 'Read', 'brand.md', 380); await tool(box, 'file-json', 'Wrote', 'tokens.json · v1', 420)
   a.querySelector('.agent-ava').classList.remove('think')
-  await stream(a, 'A first system for Kesar from the logo, the photos and brand.md. Ask for changes here, or edit by hand on the right; every change is a new version you can undo.')
+  await stream(a, 'A first system for Kesar from the logo, the photos and brand.md. Ask for changes here, or edit by hand on the right; changes save as brand data, and you can undo them.')
   const s = document.createElement('div'); s.className = 'change'; s.style.marginTop = '8px'
   s.innerHTML = `<div class="ch-ba site" style="background:var(--s-bg);grid-template-columns:repeat(2,minmax(0,1fr))"><div class="ba"><small style="color:var(--s-sub)">Colour</small>${sw5(S.palette)}</div><div class="ba"><small style="color:var(--s-sub)">Type</small><span style="font:600 17px var(--s-display)">${FONTS[S.font].dn}</span></div><div class="ba"><small style="color:var(--s-sub)">Icons</small><span style="display:flex;gap:6px"><i data-lucide="shopping-bag"></i><i data-lucide="heart"></i><i data-lucide="truck"></i></span></div><div class="ba"><small style="color:var(--s-sub)">Motion</small><span style="font-size:13px">${MOTION[S.motion].name} · ${MOTION[S.motion].dur} ms</span></div></div>`
   a.querySelector('.bubble').append(s); icons(s); renderDsSuggest()
@@ -2094,9 +2130,14 @@ function openHandover() {
   modal({ title: 'Hand over to Riya · Kesar Studio', pic: picEl('key-round', 'var(--ok)', 'var(--ok-t)'),
     body: `<div style="display:grid;gap:8px" id="ho-checks">${['Checks run again on version 7f3a', 'Riya sees this exact version, then accepts', 'Pixel & Thread stays linked to maintain it'].map((t) => `<div class="check-row"><span class="ic">${ico('loader-circle', 'i i-sm')}</span><span class="grow">${t}</span></div>`).join('')}</div>
       <div class="card" style="padding:12px;display:grid;gap:4px;background:var(--bg)"><div style="display:flex;justify-content:space-between;font-size:13px"><span>This site used</span><b class="mono">${46 + S.siteCredits} credits</b></div><span class="sub" style="font-size:12px">Paid as used · nothing due at handover</span></div>
+      <span class="lbl" style="display:flex;justify-content:space-between;align-items:center">Riya can change these herself<span class="badge ok">Free</span></span>
+      <div class="chips">${['Home hero', 'New in', 'Festive band', 'Menus', 'FAQ', 'Size help', 'Season dates'].map((t) => `<span class="chip">${t}</span>`).join('')}</div>
+      <span class="lbl">Riya accepts these partner files</span>
+      <div class="chips"><span class="chip"><span class="mono">starter/</span> · 42 files</span></div>
       <span class="lbl">Routines</span>
-      <div class="routine-pick"><span style="font-size:13px">Every Monday: refresh New in</span><div class="seg rp"><span class="thumb"></span><button aria-pressed="true">On my credits</button><button aria-pressed="false">Stop</button></div></div>
-      <div class="routine-pick"><span style="font-size:13px">New collection → menu and page</span><div class="seg rp"><span class="thumb"></span><button aria-pressed="false">On my credits</button><button aria-pressed="true">Stop</button></div></div>`,
+      <div class="routine-pick"><span style="font-size:13px">First Monday: speed and accessibility pass</span><div class="seg rp"><span class="thumb"></span><button aria-pressed="true">On my credits</button><button aria-pressed="false">Stop</button></div></div>
+      <div class="routine-pick"><span style="font-size:13px">Kit update out: apply it</span><div class="seg rp"><span class="thumb"></span><button aria-pressed="true">On · Frrata pays</button><button aria-pressed="false">Stop</button></div></div>
+      <div class="routine-pick"><span style="font-size:13px">1 Oct: seasonal redesign</span><div class="seg rp"><span class="thumb"></span><button aria-pressed="false">On my credits</button><button aria-pressed="true">Stop</button></div></div>`,
     foot: `<button class="btn" data-x>Not yet</button><button class="btn primary" id="ho-go" aria-disabled="true">${ico('send', 'i i-sm')}Send to Riya</button>`,
     onOpen: async (m, close) => {
       $$('.rp', m).forEach((s) => { const p = seg(s); setTimeout(p, 40) })
@@ -2653,21 +2694,23 @@ async function sessionTurn(v) {
     else if (/only home/i.test(v)) { Object.keys(S.pages).forEach((k) => { S.pages[k] = k === 'home' }); say = 'Just Home for now. Collection and Product can follow.' }
     else if (/variant|3 hero/i.test(v)) { $('#var-seg [data-v="3"]').click(); say = 'Three heroes to choose from: the estimate goes up about 2.4×.' }
     else say = 'Added to the brief. The estimate on the right follows the pages.'
-    renderPages(); setP('pages'); await stream(a, say); bumpCredits(1)
+    renderPages(); setP('pages'); await stream(a, say); if (/lookbook/i.test(v)) editChips(a, [['Lookbook', 'photos, captions, dates']]); bumpCredits(1)
   }
 }
 
 mountSession()
 
 /* ── Routing between steps, with direction ── */
-const ORDER = ['home', 'clients', 'intake', 'brand', 'design', 'pages', 'build', 'billing', 'team', 'settings']
+const ORDER = ['home', 'clients', 'intake', 'brand', 'design', 'pages', 'build', 'site', 'billing', 'team', 'settings']
 const doneSteps = new Set()
 function markDone(s) { if (s === 'design') doneSteps.add('brand').add('design'); if (s === 'pages') doneSteps.add('brand').add('design').add('pages'); paintSteps() }
 function paintSteps() { const cur = (location.hash || '#home').slice(1); $$('.steps a').forEach((a) => { a.toggleAttribute('aria-current', a.dataset.step === cur); if (a.dataset.step === cur) a.setAttribute('aria-current', 'step'); a.classList.toggle('done', doneSteps.has(a.dataset.step) && a.dataset.step !== cur) }); const cur2 = ['brand', 'design', 'pages', 'build'].includes(cur) ? 'site' : cur; $$('.side a, .tabbar a').forEach((a) => a.dataset.nav === cur2 ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')) }
 let last = 'home'
 function show() {
   let v = (location.hash || '#home').slice(1); if (!ORDER.includes(v)) v = 'home'
-  if (['brand', 'design', 'pages'].includes(v)) { location.replace('#build'); setTimeout(() => { if (stIdx(v) > stIdx(S.stage || 'brand')) { for (const st of STAGES.slice(0, stIdx(v))) markDone(st); setStage(v) } else setP(v) }, 30); return }
+  // One screen (owner, 2026-11-15): the brand's site is the chat-run screen; the old stage panels are not reached.
+  if (['brand', 'design', 'pages', 'build'].includes(v)) { location.replace('#site'); return }
+  if (false) { location.replace('#build'); setTimeout(() => { if (stIdx(v) > stIdx(S.stage || 'brand')) { for (const st of STAGES.slice(0, stIdx(v))) markDone(st); setStage(v) } else setP(v) }, 30); return }
   const back = ORDER.indexOf(v) < ORDER.indexOf(last)
   $$('section[data-view]').forEach((s) => { const on = s.dataset.view === v; s.hidden = !on; if (on) { s.classList.toggle('back', back); s.style.animation = 'none'; void s.offsetWidth; s.style.animation = '' } })
   if (v !== 'home' && last === 'home' && v !== 'brand') {}
@@ -2677,7 +2720,7 @@ function show() {
   if (v === 'team') { renderTeam(); renderMatrix() }
   if (v === 'home') renderInbox()
   if (v === 'clients') renderClients(); if (v === 'billing') renderBilling(); if (v === 'settings') renderSettings(); if (v === 'build') setTimeout(capCheck, 50)
-  $('.app').classList.toggle('ws', ['brand', 'design', 'pages', 'build'].includes(v)); $('.app').classList.toggle('bare', v === 'intake')
+  $('.app').classList.toggle('ws', ['brand', 'design', 'pages', 'build', 'site'].includes(v)); $('.proto').hidden = v === 'site'; $('.app').classList.toggle('bare', v === 'intake')
   if (v === 'brand') { const b = $('#brand-src'); b.innerHTML = S.intakeIn ? `${ico('check', 'i i-sm')}From Riya’s intake: check before it goes into brand.md` : `${ico('check', 'i i-sm')}Read from the console: 212 products, policies`; icons(b) }
   last = v; paintSteps(); requestAnimationFrame(() => segPlacers.forEach((p) => p())); scrollTo(0, 0)
 }

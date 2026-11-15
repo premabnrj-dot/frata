@@ -47,15 +47,18 @@ export type Membership = {
   supportSessionId: string | null
 }
 
-/** `staffConfirmedAt`: when this browser session's live passkey step-up was made (null without one). */
-export type Access = { staffRole: StaffRole | null; staffConfirmedAt: string | null; memberships: Membership[] }
+/** `staffConfirmedAt` / `partnerConfirmedAt`: when this browser session's live staff or partner passkey step-up was
+ *  made (null without one). `partnerHeld`: stores this person works on as a partner that open only after a partner
+ *  check (T1b, drizzle/0129) — the console says so instead of "no access". */
+export type Access = { staffRole: StaffRole | null; staffConfirmedAt: string | null; partnerConfirmedAt: string | null; partnerHeld: string[]; memberships: Membership[] }
 
-export async function accessFor(userId: string, sessionId: string | null = null, stepupHash: string | null = null): Promise<Access> {
+export async function accessFor(userId: string, sessionId: string | null = null, stepupHash: string | null = null, partnerHash: string | null = null): Promise<Access> {
   // The first query of every signed-in request: if its pooled connection is lost, a fresh pool answers instead of the
   // request waiting to Vercel's 60 s (src/lib/db/index.ts withFreshPool; 2026-11-11).
-  const rows = await withFreshPool(() => db().execute<{ a: Access }>(sql`select app_access_for(${userId}::uuid, ${sessionId}::uuid, ${stepupHash}::text) as a`))
+  const rows = await withFreshPool(() => db().execute<{ a: Access }>(sql`select app_access_for(${userId}::uuid, ${sessionId}::uuid, ${stepupHash}::text, ${partnerHash}::text) as a`))
   const a = rows[0]?.a
-  return { staffRole: a?.staffRole ?? null, staffConfirmedAt: a?.staffConfirmedAt ?? null, memberships: a?.memberships ?? [] }
+  return { staffRole: a?.staffRole ?? null, staffConfirmedAt: a?.staffConfirmedAt ?? null, partnerConfirmedAt: a?.partnerConfirmedAt ?? null,
+    partnerHeld: a?.partnerHeld ?? [], memberships: a?.memberships ?? [] }
 }
 
 /** Sign-out ends this browser's staff step-up first (by its cookie's hash). */

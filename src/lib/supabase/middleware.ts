@@ -36,10 +36,17 @@ export async function updateSession(request: NextRequest, response: NextResponse
   const user = data?.claims?.sub ? data.claims : null
   const path = request.nextUrl.pathname
   const guarded = ['/console', '/admin', '/choose', '/partner', '/handover', '/join'].some((r) => path === r || path.startsWith(`${r}/`))
+  // The partner workspace and a team invite have their own sign-in (T1b; partner sign-in mockup screens 1 and 16): a
+  // signed-out visit goes there with the workspace page to come back to; the sign-in page itself is open.
+  if (!user && (path === '/partner/sign-in' || path.startsWith('/partner/passkey'))) return response
   if (!user && guarded) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    url.search = ''
+    const partner = path === '/partner' || path.startsWith('/partner/') || path === '/join'
+    url.pathname = partner ? '/partner/sign-in' : '/login'
+    // A session cookie that no longer works: "You've been signed out" (screen 16), not a first sign-in.
+    const out = request.cookies.getAll().some((c) => c.name.startsWith('sb-') && c.name.includes('auth-token'))
+    const q = new URLSearchParams({ ...(path.startsWith('/partner') && path !== '/partner' ? { next: path } : {}), ...(out ? { out: '1' } : {}) }).toString()
+    url.search = partner && q ? `?${q}` : ''
     return NextResponse.redirect(url)
   }
   return response

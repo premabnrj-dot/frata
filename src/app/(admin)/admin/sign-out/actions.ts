@@ -22,10 +22,14 @@ import { TENANT_COOKIE } from '@/lib/auth/require-member'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { endStaffStepup } from '@/lib/db/platform'
 import { staffCookieName, staffCookieSecure, tokenHash } from '@/lib/auth/staff-cookie'
+import { partnerCookieName, partnerCookieOptions } from '@/lib/auth/partner-cookie'
+import { endPartnerStepup } from '@/lib/db/partner-passkeys'
 
-export async function signOutAction() {
+/** `to=partner` (a hidden field in the partner workspace and its sign-in screens): land on the partner sign-in. */
+export async function signOutAction(form?: FormData) {
+  const landing = form?.get('to') === 'partner' ? '/partner/sign-in' : '/login'
   const user = await requireUser()
-  if (!user.ok) redirect('/login')
+  if (!user.ok) redirect(landing)
   // Nothing below may stop the sign-out: a database error is logged (its name only) and the sign-out goes on.
   const staff = await requireStaff(ANY_STAFF).catch(() => null)
   const jar = await cookies()
@@ -41,8 +45,12 @@ export async function signOutAction() {
   if (stepup) await endStaffStepup(tokenHash(stepup)).catch((err) => console.error('[sign-out] step-up', err instanceof Error ? err.name : err))
   // Cleared with the same flags it was set with: a browser ignores a bare delete of a __Host- cookie (security re-review F1).
   jar.set(staffCookieName(), '', { path: '/', secure: staffCookieSecure(), httpOnly: true, sameSite: 'strict', maxAge: 0 })
+  // The partner check too (T1b), the same way.
+  const partnerStepup = jar.get(partnerCookieName())?.value
+  if (partnerStepup) await endPartnerStepup(tokenHash(partnerStepup)).catch((err) => console.error('[sign-out] partner step-up', err instanceof Error ? err.name : err))
+  jar.set(partnerCookieName(), '', partnerCookieOptions(0))
   jar.delete(TENANT_COOKIE)
   // This device only: signing out of a shared shop phone must not sign the person out everywhere.
   await (await createServerSupabase()).auth.signOut({ scope: 'local' }).catch((err) => console.error('[sign-out]', err instanceof Error ? err.name : err))
-  redirect('/login')
+  redirect(landing)
 }

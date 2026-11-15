@@ -33,7 +33,7 @@ export async function createClientStoreAction(input: unknown): Promise<{ ok: tru
   const { name, slug, pickup } = parsed.data
   if (slugProblem(slug)) return { ok: false, field: 'slug', error: SENTENCES.bad_slug! }
   if (!(await withinLimit(LIMITS.createShopIp, await clientIp()))) return { ok: false, error: 'Too many stores made from here in the last hour. Try again later.' }
-  const r = await createClientStore(auth.userId, { name, slug, pickup })
+  const r = await createClientStore(auth, { name, slug, pickup })
   if (!r.ok) {
     const field = r.error === 'slug_taken' || r.error === 'bad_slug' ? 'slug' : r.error === 'bad_name' ? 'name' : r.error === 'bad_pincode' ? 'pickup' : undefined
     return { ok: false, field, error: SENTENCES[r.error] ?? 'We couldn’t make the store. Nothing was changed.' }

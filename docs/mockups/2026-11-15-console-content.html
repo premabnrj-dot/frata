@@ -1,0 +1,454 @@
+<title>Console Content</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a reference page of frames. Desktop console at 1280 (scaled to fit), phone views at 390, then states.
+   Neel tokens copied from docs/mockups/2026-11-13-design-language-neel.html. */
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --rani:#D61F69;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62; --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B; --info-bg:#E8F1FD; --info-fg:#1F5BA8; --info-dot:#3B82E0;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --hover:var(--g50); --sunk:var(--g50);
+  --line:var(--g200); --line-soft:var(--g100); --field:var(--g500);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --bar:var(--g950); --bar-text:#fff; --bar-link:#A3ABF5;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; color-scheme:dark }
+* { box-sizing:border-box }
+body { background:var(--page); color:var(--text); font:400 14px/20px var(--font); margin:0;
+  padding:0 max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px)) }
+h1,h2,h3,h4 { margin:0; text-wrap:balance }
+.num { font-variant-numeric:tabular-nums }
+.code { font-family:var(--mono); font-size:12px }
+button { font:inherit; color:inherit }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+
+/* The reference page */
+.doc { max-width:1320px; margin:0 auto }
+.doc-top { padding:28px 0 8px; border-bottom:1px solid var(--line); margin-bottom:8px }
+.doc-top h1 { font:600 28px/34px var(--font); letter-spacing:-.01em }
+.doc-top p { color:var(--text-2); margin:6px 0 0 }
+.toc { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 4px }
+.toc a { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12.5px; color:var(--text); text-decoration:none; background:var(--surface) }
+.part { margin-top:44px; scroll-margin-top:16px }
+.part > h2 { font:600 18px/24px var(--font); margin-bottom:4px }
+.part > .cap { color:var(--text-2); font-size:13px; margin:0 0 14px; max-width:90ch }
+.row-frames { display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start }
+
+/* Neel primitives (as the gallery draws them) */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-weight:500; font-size:14px; box-shadow:var(--e1); cursor:pointer; white-space:nowrap }
+.btn.primary { background:var(--action); border-color:var(--action); color:var(--action-text); box-shadow:none }
+.btn.ghost { background:transparent; border-color:transparent; box-shadow:none; color:var(--text-2) }
+.btn.sm { min-height:30px; padding:0 10px; font-size:13px }
+.btn[aria-disabled="true"] { background:var(--sunk); color:var(--text-3); box-shadow:none; cursor:default }
+.btn.danger { color:var(--bad-fg) }
+.chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font-size:12px; font-weight:500; white-space:nowrap }
+.chip::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; flex:none }
+.chip.ok { background:var(--ok-bg); color:var(--ok-fg) } .chip.ok::before { background:var(--ok-dot) }
+.chip.info { background:var(--info-bg); color:var(--info-fg) } .chip.info::before { background:var(--info-dot) }
+.chip.warn { background:var(--warn-bg); color:var(--warn-fg) } .chip.warn::before { background:var(--warn-dot) }
+.chip.neu { background:var(--neu-bg); color:var(--neu-fg) } .chip.neu::before { background:var(--neu-dot) }
+.tag { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:6px; padding:1px 7px; font-size:12px; color:var(--text-2); white-space:nowrap }
+.overline { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3) }
+.tip { display:inline-grid; place-items:center; width:24px; height:24px; border:0; background:none; color:var(--text-3); cursor:pointer; vertical-align:middle }
+.tip svg { width:14px; height:14px }
+.sect { background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--e1); padding:16px 20px }
+.sect + .sect { margin-top:12px }
+.sect-h { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px }
+.sect-h h3 { font:600 16px/24px var(--font) }
+.sect-h .sp { flex:1 }
+.list { display:grid }
+.item { display:grid; grid-template-columns:56px minmax(0,1fr) auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line-soft) }
+.item:first-child { border-top:0 }
+.item.notext { grid-template-columns:minmax(0,1fr) auto }
+.item b { font-weight:500; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.item .meta { color:var(--text-2); font-size:13px; display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; margin-top:2px }
+.item .acts { display:flex; gap:4px; align-items:center }
+.thumb { width:56px; height:56px; border-radius:8px; background:linear-gradient(150deg,#E9C9A4,#B5703F); position:relative; overflow:hidden }
+.thumb.b { background:linear-gradient(150deg,#D7DEE8,#6E7F99) }
+.thumb::after { content:""; position:absolute; inset:auto 8px 8px 8px; height:6px; border-radius:3px; background:rgba(255,255,255,.75) }
+.value { font-weight:500 }
+.field { display:grid; gap:6px; margin-bottom:14px }
+.field label, .field .lab { font-size:13px; font-weight:500; display:flex; justify-content:space-between; gap:8px }
+.field .count { color:var(--text-3); font-weight:400 }
+.input { min-height:44px; border:1px solid var(--field); border-radius:8px; background:var(--surface); padding:0 12px; display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); min-width:0 }
+.input.sel::after { content:""; margin-left:auto; width:8px; height:8px; border-right:1.5px solid var(--text-2); border-bottom:1.5px solid var(--text-2); transform:rotate(45deg) translateY(-3px) }
+.input.bad { border-color:var(--bad-fg); box-shadow:0 0 0 3px var(--bad-bg) }
+.err { color:var(--bad-fg); font-size:13px; display:flex; gap:6px; align-items:center }
+.err::before { content:"!"; display:inline-grid; place-items:center; width:16px; height:16px; border-radius:50%; background:var(--bad-dot); color:#fff; font-size:11px; font-weight:600 }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:10px }
+.ro { background:var(--sunk); border:1px solid var(--line); border-radius:8px; padding:10px 12px; display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap }
+.ro .k { font-size:12px; color:var(--text-2) }
+.sw { width:34px; height:20px; border-radius:999px; background:var(--g300); position:relative; flex:none; border:0 }
+.sw::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:var(--e1) }
+.sw[aria-checked="true"] { background:var(--action) } .sw[aria-checked="true"]::after { left:16px }
+
+/* Desktop console frame */
+.desk { width:100%; max-width:1280px; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--page); box-shadow:var(--e2) }
+.desk-in { display:grid; grid-template-columns:232px minmax(0,1fr); min-height:760px }
+.sb { background:var(--side); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:2px }
+.sb .store { display:flex; gap:10px; align-items:center; padding:6px 8px 14px }
+.mono-mark { width:28px; height:28px; border-radius:8px; background:var(--g950); color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px }
+.sb .store b { display:block; font-size:14px } .sb .store span { font-size:12px; color:var(--text-2) }
+.sb .grp { margin:12px 8px 4px }
+.nav { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; color:var(--text-2); font-size:14px; text-decoration:none }
+.nav svg { width:18px; height:18px; flex:none }
+.nav.on { background:var(--surface); color:var(--text); box-shadow:var(--e1); border:1px solid var(--line); font-weight:500 }
+.nav.on svg { color:var(--action) }
+.main { padding:28px 32px; min-width:0 }
+.ph { display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap }
+.ph h1 { font:600 22px/28px var(--font) }
+.ph .meta { color:var(--text-2); font-size:13px; margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+.ph .sp { flex:1 }
+.tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); margin:18px 0 18px; overflow-x:auto; scrollbar-width:none }
+.tabs button { border:0; background:none; padding:10px 12px; font-size:14px; color:var(--text-2); border-bottom:2px solid transparent; white-space:nowrap; cursor:pointer; display:inline-flex; gap:6px; align-items:center }
+.tabs button[aria-selected="true"] { color:var(--text); font-weight:500; border-bottom-color:var(--action) }
+.pill { background:var(--neu-bg); color:var(--neu-fg); border-radius:999px; font-size:12px; padding:0 7px; font-variant-numeric:tabular-nums }
+.grid2 { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:20px; align-items:start }
+.preview { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--surface); box-shadow:var(--e1) }
+.preview .pv-top { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line); font-size:13px }
+.site { background:#F7F1EA; color:#2A1D14; padding:0 0 14px; font-family:Georgia,serif }
+.site .bar { background:#2A1D14; color:#F7F1EA; font:12px var(--font); text-align:center; padding:6px }
+.site .hd { display:flex; justify-content:space-between; padding:10px 14px; font:600 13px var(--font) }
+.site .hero { margin:0 14px; height:190px; border-radius:6px; background:linear-gradient(150deg,#E9C9A4,#9C5B32); position:relative; outline:2px solid var(--action); outline-offset:3px }
+.site .hero span { position:absolute; left:14px; bottom:14px; color:#fff; font-size:22px }
+.site .hero i { position:absolute; top:-26px; left:-3px; background:var(--action); color:var(--action-text); font:500 11px var(--font); font-style:normal; padding:2px 8px; border-radius:6px 6px 0 0 }
+.site .strip { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 14px 0 }
+.site .strip div { aspect-ratio:4/5; border-radius:4px; background:#E2D3C2 }
+.fold { display:flex; align-items:center; gap:8px; padding:12px 4px 2px; color:var(--text-2); font-size:13px }
+
+/* Phone frame */
+.phone { width:390px; max-width:100%; border:1px solid var(--line); border-radius:28px; padding:8px; background:var(--g950) }
+.scr { border-radius:22px; overflow:hidden; background:var(--page); min-height:760px; display:flex; flex-direction:column; position:relative }
+.p-top { padding:14px 16px 0 }
+.p-top .back { font-size:14px; color:var(--text-2) }
+.p-top h1 { font:600 20px/26px var(--font); margin-top:4px }
+.p-body { padding:12px 16px 16px; display:grid; gap:12px; flex:1; align-content:start }
+.p-body .sect { padding:14px 16px }
+.p-tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); margin:10px 0 0; overflow-x:auto; scrollbar-width:none; padding:0 12px }
+.p-tabs button { border:0; background:none; padding:10px 10px; font-size:14px; color:var(--text-2); border-bottom:2px solid transparent; white-space:nowrap }
+.p-tabs button[aria-selected="true"] { color:var(--text); font-weight:500; border-bottom-color:var(--action) }
+.bottom { border-top:1px solid var(--line); background:var(--side); display:grid; grid-template-columns:repeat(4,1fr); text-align:center; font-size:11px; color:var(--text-2) }
+.bottom div { padding:8px 0 10px; display:grid; gap:2px; justify-items:center }
+.bottom svg { width:22px; height:22px }
+.bottom .on { color:var(--action); font-weight:500 }
+.sheet-scrim { position:absolute; inset:0; background:rgba(23,22,21,.45); display:flex; align-items:flex-end }
+.sheet { background:var(--surface); width:100%; border-radius:16px 16px 0 0; padding:16px 16px 18px; box-shadow:var(--e3); max-height:85%; overflow:auto }
+.sheet h3 { font:600 17px/24px var(--font); margin-bottom:14px }
+.sheet .grab { width:36px; height:4px; border-radius:2px; background:var(--g300); margin:0 auto 12px }
+.acts-row { display:flex; gap:8px; justify-content:flex-end; margin-top:6px }
+.acts-row .btn { min-height:44px }
+.toast { position:absolute; left:16px; right:16px; bottom:72px; background:var(--bar); color:var(--bar-text); border-radius:10px; box-shadow:var(--e3); padding:12px 14px; display:flex; align-items:center; gap:10px; font-size:14px }
+.toast .ok { width:18px; height:18px; border-radius:50%; background:var(--ok-dot); display:grid; place-items:center; flex:none }
+.toast .ok::after { content:""; width:8px; height:4px; border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg) translate(1px,-1px) }
+.toast .sp { flex:1 }
+.toast a { color:var(--bar-link); font-weight:500; text-decoration:none }
+.q { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; padding:10px 0; border-top:1px solid var(--line-soft) }
+.q:first-child { border-top:0 }
+.q b { font-weight:500 }
+.q .a { color:var(--text-2); font-size:13px; grid-column:1 }
+.q .mv { grid-row:1 / span 2; grid-column:2; display:flex; gap:2px; align-self:center }
+.ib { width:32px; height:32px; border-radius:8px; border:1px solid var(--line); background:var(--surface); display:grid; place-items:center }
+.ib svg { width:16px; height:16px }
+
+/* Small frames */
+.mini { width:520px; max-width:100%; border:1px solid var(--line); border-radius:12px; background:var(--page); padding:18px; box-shadow:var(--e1) }
+.mini .lbl { font-size:12px; color:var(--text-3); margin-bottom:10px }
+.notice { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:10px; align-items:start; padding:12px 0; border-top:1px solid var(--line-soft) }
+.notice:first-of-type { border-top:0 }
+.av { width:32px; height:32px; border-radius:50%; background:var(--n50); color:var(--n700); display:grid; place-items:center; font-weight:600; font-size:12px }
+.notice .t { font-size:14px } .notice .s { font-size:12px; color:var(--text-2); margin-top:2px }
+.banner-ro { display:flex; gap:10px; align-items:center; background:var(--warn-bg); color:var(--warn-fg); border-radius:10px; padding:10px 12px; font-size:13px; font-weight:500 }
+
+@media (max-width:1100px) { .grid2 { grid-template-columns:1fr } }
+@media (max-width:900px) { .desk-in { grid-template-columns:1fr } .sb { display:none } .main { padding:20px 16px } }
+@media (max-width:480px) { .two { grid-template-columns:1fr } .item { grid-template-columns:48px minmax(0,1fr) } .item .acts { grid-column:1 / -1; justify-content:flex-end } .thumb { width:48px; height:48px } }
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/></symbol>
+  <symbol id="i-orders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></symbol>
+  <symbol id="i-products" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 4 7l2 3 2-1v11h8V9l2 1 2-3-4-3c-1 2-2.5 2.5-4 2.5S9 6 8 4z"/></symbol>
+  <symbol id="i-offers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V4h8l8 8-8 8z"/><circle cx="8.5" cy="8.5" r="1.2"/></symbol>
+  <symbol id="i-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-apps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6-6 6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 10 6 6 6-6"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></symbol>
+</svg>
+
+<div class="doc">
+  <header class="doc-top">
+    <h1>Console › Content</h1>
+    <p>Spec <span class="code">docs/specs/2026-11-14-site-content-layer.md</span> · owner decisions 2026-11-15 · Neel tokens · the brand Kesar Studio, site v7 built by Pixel &amp; Thread</p>
+    <nav class="toc" aria-label="On this page">
+      <a href="#desk">Placements · computer</a><a href="#phone">Phone</a><a href="#faq">FAQ and season</a><a href="#partner">A partner's change</a><a href="#states">States</a>
+    </nav>
+  </header>
+
+  <!-- ═══ 1 · Computer: Placements, from the site's code ═══ -->
+  <section class="part" id="desk">
+    <h2>Placements · computer</h2>
+    <p class="cap">What the site's code declares, drawn as the editor. Save is live, with Undo.</p>
+    <div class="desk" role="img" aria-label="The Content page on a computer: Placements tab">
+      <div class="desk-in">
+        <aside class="sb">
+          <div class="store"><span class="mono-mark">K</span><div><b>Kesar Studio</b><span>kesarstudio.in</span></div></div>
+          <a class="nav"><svg><use href="#i-home"/></svg>Home</a>
+          <a class="nav"><svg><use href="#i-orders"/></svg>Orders</a>
+          <div class="grp overline">Store</div>
+          <a class="nav"><svg><use href="#i-products"/></svg>Products</a>
+          <a class="nav"><svg><use href="#i-offers"/></svg>Offers</a>
+          <a class="nav on" aria-current="page"><svg><use href="#i-content"/></svg>Content</a>
+          <a class="nav"><svg><use href="#i-apps"/></svg>Apps</a>
+          <a class="nav"><svg><use href="#i-settings"/></svg>Settings</a>
+        </aside>
+        <div class="main">
+          <div class="ph">
+            <div>
+              <h1>Content</h1>
+              <div class="meta"><span class="code">kesarstudio.in</span><span>·</span><span>Site v7 · Pixel &amp; Thread</span></div>
+            </div>
+            <span class="sp"></span>
+            <button class="btn">View site</button>
+          </div>
+          <div class="tabs" role="tablist">
+            <button role="tab" aria-selected="true">Placements <span class="pill">3</span></button>
+            <button role="tab">Announcement</button><button role="tab">Menus</button><button role="tab">Pages</button>
+            <button role="tab">FAQ</button><button role="tab">Season</button><button role="tab">Contact line</button>
+          </div>
+          <div class="grid2">
+            <div>
+              <div class="overline" style="margin:0 0 8px">From your site's code <button class="tip" aria-label="About placements" aria-expanded="false"><svg><use href="#i-info"/></svg></button></div>
+              <div class="sect">
+                <div class="sect-h"><h3>Home hero</h3><span class="tag">Up to 3</span><span class="tag">Dated</span><span class="sp"></span><button class="btn sm">Add</button></div>
+                <div class="list">
+                  <div class="item"><span class="thumb" aria-hidden="true"></span>
+                    <div><b>The wedding edit</b><div class="meta"><span class="chip ok">Live now</span><span>Ends 30 Nov, 11:59 pm</span><span>→ Wedding edit</span></div></div>
+                    <div class="acts"><button class="btn sm">Edit</button><button class="btn ghost sm" aria-label="More for The wedding edit"><svg width="16" height="16"><use href="#i-more"/></svg></button></div></div>
+                  <div class="item"><span class="thumb b" aria-hidden="true"></span>
+                    <div><b>Winter linens</b><div class="meta"><span class="chip info">Starts 1 Dec, 10:00 am</span><span>→ Linen</span></div></div>
+                    <div class="acts"><button class="btn sm">Edit</button><button class="btn ghost sm" aria-label="More for Winter linens"><svg width="16" height="16"><use href="#i-more"/></svg></button></div></div>
+                </div>
+              </div>
+              <div class="sect">
+                <div class="sect-h"><h3>New in</h3><span class="tag">Collection</span><span class="sp"></span><button class="btn sm">Change</button></div>
+                <div class="list"><div class="item notext"><div><b>New arrivals</b><div class="meta"><span>24 products</span></div></div></div></div>
+              </div>
+              <div class="sect">
+                <div class="sect-h"><h3>Festive band</h3><span class="tag">Dated</span><span class="sp"></span><button class="btn sm" aria-disabled="true">Add</button></div>
+                <div class="list"><div class="item notext"><div><b>Free shipping above ₹1,499</b><div class="meta"><span class="chip ok">Live now</span><span>Ends 30 Nov, 11:59 pm</span><span>→ Shop all</span></div></div>
+                  <div class="acts"><button class="btn sm">Edit</button><button class="btn ghost sm" aria-label="More for Free shipping above ₹1,499"><svg width="16" height="16"><use href="#i-more"/></svg></button></div></div></div>
+              </div>
+              <div class="fold"><svg width="16" height="16"><use href="#i-chev"/></svg>Not on your site now <span class="pill">1</span></div>
+            </div>
+            <aside class="preview" aria-label="Preview">
+              <div class="pv-top"><span>Home · phone</span><span class="chip neu">Preview</span></div>
+              <div class="site">
+                <div class="bar">Free shipping above ₹1,499 · till 30 Nov</div>
+                <div class="hd"><span>KESAR STUDIO</span><span>Bag</span></div>
+                <div style="padding-top:22px"><div class="hero"><i>Home hero</i><span>The wedding edit</span></div></div>
+                <div class="strip"><div></div><div></div><div></div></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 2 · Phone ═══ -->
+  <section class="part" id="phone">
+    <h2>Phone</h2>
+    <p class="cap">The same page at 390. Edit opens a sheet; a mistake stays at its field; a save is a toast with Undo.</p>
+    <div class="row-frames">
+      <div class="phone" role="img" aria-label="Content on a phone, Placements tab">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-tabs" role="tablist"><button aria-selected="true">Placements</button><button>Announcement</button><button>Menus</button><button>Pages</button></div>
+          <div class="p-body">
+            <div class="sect">
+              <div class="sect-h"><h3>Home hero</h3><span class="tag">Up to 3</span><span class="sp"></span><button class="btn sm">Add</button></div>
+              <div class="list">
+                <div class="item"><span class="thumb" aria-hidden="true"></span><div><b>The wedding edit</b><div class="meta"><span class="chip ok">Live now</span><span>Ends 30 Nov</span></div></div><div class="acts"><button class="btn sm">Edit</button></div></div>
+                <div class="item"><span class="thumb b" aria-hidden="true"></span><div><b>Winter linens</b><div class="meta"><span class="chip info">Starts 1 Dec</span></div></div><div class="acts"><button class="btn sm">Edit</button></div></div>
+              </div>
+            </div>
+            <div class="sect">
+              <div class="sect-h"><h3>New in</h3><span class="sp"></span><button class="btn sm">Change</button></div>
+              <div class="value">New arrivals · 24 products</div>
+            </div>
+          </div>
+          <div class="toast" role="status"><span class="ok" aria-hidden="true"></span><span>Home hero saved</span><span class="sp"></span><a href="#phone">Undo</a></div>
+          <nav class="bottom" aria-label="Main"><div><svg><use href="#i-home"/></svg>Home</div><div><svg><use href="#i-orders"/></svg>Orders</div><div><svg><use href="#i-products"/></svg>Products</div><div class="on"><svg><use href="#i-more"/></svg>More</div></nav>
+        </div>
+      </div>
+
+      <div class="phone" role="img" aria-label="Editing a Home hero entry in a sheet, with a date mistake">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-body"></div>
+          <div class="sheet-scrim">
+            <div class="sheet" role="dialog" aria-label="Edit The wedding edit">
+              <div class="grab" aria-hidden="true"></div>
+              <h3>Home hero · The wedding edit</h3>
+              <div class="field"><span class="lab">Photo</span><div class="ro"><span class="thumb" aria-hidden="true" style="width:48px;height:48px"></span><span style="flex:1">wedding-edit-02.jpg</span><button class="btn sm">Change</button></div></div>
+              <div class="field"><label for="h">Heading <span class="count num">16/60</span></label><div class="input" id="h">The wedding edit</div></div>
+              <div class="field"><span class="lab">Link</span><div class="input sel">Collection · Wedding edit</div></div>
+              <div class="two">
+                <div class="field"><span class="lab">Starts</span><div class="input num">14 Nov, 10:00 am</div></div>
+                <div class="field"><span class="lab">Ends</span><div class="input bad num" aria-invalid="true">10 Nov, 11:59 pm</div><span class="err">Ends after it starts</span></div>
+              </div>
+              <div class="acts-row"><button class="btn">Keep as it is</button><button class="btn primary">Save</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phone" role="img" aria-label="Announcement tab on a phone">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-tabs" role="tablist"><button>Placements</button><button aria-selected="true">Announcement</button><button>Menus</button><button>Pages</button></div>
+          <div class="p-body">
+            <div class="sect">
+              <div class="sect-h"><h3>Bar</h3><span class="sp"></span><button class="btn sm">Add</button></div>
+              <div class="list">
+                <div class="item notext"><div><b>Pay online, save ₹50</b><div class="meta"><span class="chip ok">Live now</span><span>Offer · shows first</span></div></div><div class="acts"><button class="btn sm">Offers</button></div></div>
+                <div class="item notext"><div><b>New: the wedding edit</b><div class="meta"><span class="chip neu">Waiting for the offer</span><span>Ends 30 Nov</span></div></div><div class="acts"><button class="btn sm">Edit</button></div></div>
+                <div class="item notext"><div><b>Diwali dispatch: last order 28 Oct</b><div class="meta"><span class="chip neu">Ended</span></div></div><div class="acts"><button class="btn sm">Edit</button></div></div>
+              </div>
+            </div>
+          </div>
+          <nav class="bottom" aria-label="Main"><div><svg><use href="#i-home"/></svg>Home</div><div><svg><use href="#i-orders"/></svg>Orders</div><div><svg><use href="#i-products"/></svg>Products</div><div class="on"><svg><use href="#i-more"/></svg>More</div></nav>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 3 · FAQ and season ═══ -->
+  <section class="part" id="faq">
+    <h2>FAQ and season</h2>
+    <p class="cap">An answer bound to Settings is read-only here. The season's colours come from the design; its dates and words are the brand's.</p>
+    <div class="row-frames">
+      <div class="phone" role="img" aria-label="FAQ tab on a phone">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-tabs" role="tablist"><button>Pages</button><button aria-selected="true">FAQ</button><button>Season</button><button>Contact line</button></div>
+          <div class="p-body">
+            <div class="sect">
+              <div class="sect-h"><h3>Questions</h3><span class="tag num">9 of 12</span><span class="sp"></span><button class="btn sm">Add</button></div>
+              <div class="list">
+                <div class="q"><b>Can I pay on delivery?</b><span class="a">Yes, up to ₹10,000. <span class="chip neu">From your settings</span></span><span class="mv"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></span></div>
+                <div class="q"><b>How long does delivery take?</b><span class="a">3–6 days. <span class="chip neu">From your settings</span></span><span class="mv"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></span></div>
+                <div class="q"><b>Is the zari real?</b><span class="a">Tested silver zari on every wedding piece.</span><span class="mv"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></span></div>
+              </div>
+              <div style="margin-top:10px"><button class="btn sm">Change in Settings</button></div>
+            </div>
+          </div>
+          <nav class="bottom" aria-label="Main"><div><svg><use href="#i-home"/></svg>Home</div><div><svg><use href="#i-orders"/></svg>Orders</div><div><svg><use href="#i-products"/></svg>Products</div><div class="on"><svg><use href="#i-more"/></svg>More</div></nav>
+        </div>
+      </div>
+
+      <div class="phone" role="img" aria-label="Season tab on a phone">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-tabs" role="tablist"><button>FAQ</button><button aria-selected="true">Season</button><button>Contact line</button></div>
+          <div class="p-body">
+            <div class="sect">
+              <div class="sect-h"><h3>Wedding season</h3><span class="chip ok">Live now</span></div>
+              <div class="two">
+                <div class="field"><span class="lab">Starts</span><div class="input num">15 Nov</div></div>
+                <div class="field"><span class="lab">Ends</span><div class="input num">15 Feb</div></div>
+              </div>
+              <div class="field"><label for="bw">Badge <span class="count num">12/24</span></label><div class="input" id="bw">Wedding edit</div></div>
+              <div class="ro"><div><div class="k">Colours</div><div style="display:flex;gap:6px;margin-top:4px"><span style="width:18px;height:18px;border-radius:4px;background:#C9A227"></span><span style="width:18px;height:18px;border-radius:4px;background:#2A1D14"></span><span style="width:18px;height:18px;border-radius:4px;background:#F7F1EA;border:1px solid var(--line)"></span></div></div><span class="k">Pixel &amp; Thread's design</span></div>
+              <div class="acts-row" style="justify-content:space-between"><button class="btn danger">End now</button><button class="btn primary">Save</button></div>
+            </div>
+          </div>
+          <nav class="bottom" aria-label="Main"><div><svg><use href="#i-home"/></svg>Home</div><div><svg><use href="#i-orders"/></svg>Orders</div><div><svg><use href="#i-products"/></svg>Products</div><div class="on"><svg><use href="#i-more"/></svg>More</div></nav>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 4 · A partner's change ═══ -->
+  <section class="part" id="partner">
+    <h2>A partner's change</h2>
+    <p class="cap">After handover a partner saves live only when the owner turns it on; every partner save reaches the owner's Inbox with Undo.</p>
+    <div class="row-frames">
+      <div class="mini" role="img" aria-label="Settings › People, the partner's row with the content switch">
+        <div class="lbl">Settings › People</div>
+        <div class="sect">
+          <div class="sect-h"><h3>Pixel &amp; Thread</h3><span class="chip info">Partner</span></div>
+          <div class="ro" style="background:var(--surface)"><span>Edit content live</span><button class="sw" role="switch" aria-checked="true" aria-label="Edit content live"></button></div>
+        </div>
+      </div>
+      <div class="mini" role="img" aria-label="The owner's Inbox with a partner's content change">
+        <div class="lbl">Inbox</div>
+        <div class="sect">
+          <div class="notice"><span class="av">P</span><div><div class="t">Pixel &amp; Thread changed Home hero</div><div class="s">The wedding edit · photo and end date · 2 min ago</div></div><div style="display:flex;gap:6px"><button class="btn sm">View</button><button class="btn sm">Undo</button></div></div>
+          <div class="notice"><span class="av">P</span><div><div class="t">Pixel &amp; Thread changed FAQ</div><div class="s">Is the zari real? · yesterday</div></div><div style="display:flex;gap:6px"><button class="btn sm">View</button></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 5 · States ═══ -->
+  <section class="part" id="states">
+    <h2>States</h2>
+    <p class="cap">A partner without the switch; a support visit; a theme shop (no Placements tab until its site moves to code).</p>
+    <div class="row-frames">
+      <div class="mini" role="img" aria-label="A partner without the switch">
+        <div class="lbl">Partner · switch off</div>
+        <div class="sect">
+          <div class="sect-h"><h3>Home hero</h3><span class="chip neu">Riya saves this</span></div>
+          <div class="list"><div class="item"><span class="thumb" aria-hidden="true"></span><div><b>The wedding edit</b><div class="meta"><span class="chip ok">Live now</span><span>Ends 30 Nov</span></div></div><div class="acts"><button class="btn sm" aria-disabled="true">Edit</button></div></div></div>
+        </div>
+      </div>
+      <div class="mini" role="img" aria-label="A support visit">
+        <div class="lbl">Support visit</div>
+        <div class="banner-ro">Support visit · read only</div>
+        <div class="sect" style="margin-top:10px">
+          <div class="sect-h"><h3>Festive band</h3></div>
+          <div class="list"><div class="item notext"><div><b>Free shipping above ₹1,499</b><div class="meta"><span class="chip ok">Live now</span></div></div><div class="acts"><button class="btn sm" aria-disabled="true">Edit</button></div></div></div>
+        </div>
+      </div>
+      <div class="mini" role="img" aria-label="A theme shop's tabs">
+        <div class="lbl">Theme shop</div>
+        <div class="tabs" role="tablist" style="margin:0"><button aria-selected="true">Announcement</button><button>Menus</button><button>Pages</button><button>FAQ</button><button>Contact line</button></div>
+        <div class="sect" style="margin-top:12px">
+          <div class="sect-h"><h3>Main menu</h3><span class="tag num">6 of 12</span><span class="sp"></span><button class="btn sm">Add</button></div>
+          <div class="list">
+            <div class="item notext"><div><b>Wedding edit</b><div class="meta"><span>→ Collection</span></div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></div></div>
+            <div class="item notext"><div><b>Kurtas</b><div class="meta"><span>→ Collection · 3 under it</span></div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

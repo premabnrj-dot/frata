@@ -70,6 +70,9 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
       }
       // Applying as a partner: stay on the application unless a workspace or a waiting store comes first.
       if (intent === 'partner' && r.to !== '/partner' && r.to !== '/handover' && r.to !== '/join' && r.to !== '/admin' && r.to !== '/choose') { router.refresh(); return }
+      // The partner workspace and a team invite may ask for a passkey, which this page's policy refuses: a full page load
+      // gives them their own (next.config.ts, T1b).
+      if (r.to === '/partner' || r.to === '/join') { window.location.assign(r.to); return }
       router.replace(r.to)
       router.refresh()
     })
@@ -103,7 +106,7 @@ export function SignInFlow({ intent, linkFailed }: { intent: 'signin' | 'start' 
     <div ref={codeRef} className="space-y-4 animate-step-forward">
       {linkFailed && !sentAt && (
         <p role="status" className="rounded-md border border-info-text/30 bg-info px-3 py-2 text-sm text-info-text">
-          That link opened in a different browser or app. Type the 6-digit code from the same email here instead.
+          That link has been used or has ended. Type the 6-digit code from the same email here instead.
         </p>
       )}
       {sentAt ? (

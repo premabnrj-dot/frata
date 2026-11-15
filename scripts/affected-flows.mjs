@@ -20,7 +20,9 @@ const add = (f, why) => { if (!picked.has(f.name)) picked.set(f.name, why) }
 const byName = (...names) => names.map((n) => flows.find((x) => x.name === n)).filter(Boolean)
 for (const path of changed) {
   // Home, the console's own components and every workspace's layout (the shell): the UX sweep walks them all.
-  if (/^src\/app\/\((console|admin|partner)\)\/(console|admin|partner)\/(page\.tsx|layout\.tsx|_components\/)/.test(path)) { for (const f of byName('ux', 'neel-shell')) add(f, path); continue }
+  if (/^src\/app\/\((console|admin|partner)\)\/(console|admin|partner)\/(\([a-z-]+\)\/)?(page\.tsx|layout\.tsx|_components\/)/.test(path)) { for (const f of byName('ux', 'neel-shell', 'partner-team')) add(f, path); continue }
+  // Partner sign-in and passkeys (T1b): the workspace's routes, its sign-in, join and the email link.
+  if (/^src\/app\/(\(partner\)\/|join\/|auth\/)|^src\/components\/passkeys\//.test(path)) for (const f of byName('partners', 'partner-team', 'staff-passkeys', 'email')) add(f, path)
   if (path.startsWith('src/components/shell/')) for (const f of byName('neel-shell')) add(f, path)
   const route = path.match(/^src\/app\/\((console|admin|partner)\)\/(console|admin|partner)\/([^/]+)/)
   if (route) { for (const f of flows) if (f.src.includes(`/${route[2]}/${route[3]}`)) add(f, path); continue }

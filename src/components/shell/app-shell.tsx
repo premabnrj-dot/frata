@@ -28,6 +28,8 @@ import { Icon } from '@/components/icons/icon'
 
 export type ShellProps = {
   ink?: boolean
+  /** Sign-out lands on the partner sign-in (the partner workspace, T1b), not /login. */
+  signOutTo?: 'partner'
   /** Name in the sidebar and phone top bar (the shop, or "Frrata Admin"). */
   title: string
   /** STAFF on Admin, PARTNER on the partner workspace (frata-design-language § Partner workspace). */
@@ -100,17 +102,19 @@ function Mark({ ink }: { ink: boolean }) {
   )
 }
 
-function Account({ email, ink }: { email: string | null; ink: boolean }) {
+/** `to`: where sign-out lands ('partner': the partner sign-in, T1b). */
+function Account({ email, ink, to }: { email: string | null; ink: boolean; to?: 'partner' }) {
   if (!email) return null
   return (
     <form action={signOutAction} className="flex items-center gap-2 px-2 py-1.5">
+      {to && <input type="hidden" name="to" value={to} />}
       <span className={`min-w-0 flex-1 truncate font-num text-xs ${ink ? 'text-ink-foreground/70' : 'text-muted-foreground'}`} title={email}>{email}</span>
       <button type="submit" className={`inline-flex min-h-6 shrink-0 items-center rounded-md px-1.5 text-xs font-medium underline-offset-2 hover:underline ${ink ? '' : 'text-foreground'}`}>Sign out</button>
     </form>
   )
 }
 
-export function AppShell({ ink = false, title, tag, places = [], navLabel, groups, tabs, more, foot, email, tenantId, banner, subtitle, rail = null, children }: ShellProps) {
+export function AppShell({ ink = false, title, tag, places = [], navLabel, groups, tabs, more, foot, email, tenantId, banner, subtitle, rail = null, signOutTo, children }: ShellProps) {
   const surface = ink ? 'ink' : undefined
   return (
     <div data-shell data-neel="" data-tenant={tenantId} style={{ '--shell-top': banner ? '2.75rem' : '0px' } as CSSProperties /* the banner's own height reads this too */} className={`min-h-dvh bg-background [--toast-lift:3.5rem] md:[--toast-lift:0px] ${SHELL_FONT_VARS}`}>
@@ -135,11 +139,12 @@ export function AppShell({ ink = false, title, tag, places = [], navLabel, group
           <SidebarNav label={navLabel} groups={groups} ink={ink} />
           <div className={`mt-auto flex flex-col gap-0.5 border-t pt-2 ${ink ? 'border-ink-foreground/15' : 'border-border'}`}>
             {foot.length > 0 && <SidebarNav label={`${navLabel}: more`} groups={[{ label: '', items: foot }]} ink={ink} />}
-            <div data-nav-label=""><Switcher places={places} ink={ink} /><Account email={email} ink={ink} /></div>
+            <div data-nav-label=""><Switcher places={places} ink={ink} /><Account email={email} ink={ink} to={signOutTo} /></div>
             {/* On the rail the account keeps its two ways out, as icons with their names (design-system review N1). */}
             {places.length > 1 && <a href="/choose" data-nav="" data-rail-only="" className={`relative flex h-8.5 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium ${ink ? 'hover:bg-ink-foreground/10' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
               <Icon name="merchants" className="size-4.5 shrink-0" /><span data-nav-label="">Switch store</span></a>}
             {email && <form action={signOutAction} data-rail-only="" className="contents">
+              {signOutTo && <input type="hidden" name="to" value={signOutTo} />}
               <button type="submit" data-nav="" className={`relative flex h-8.5 items-center gap-2.5 rounded-md px-2.5 text-sm font-medium ${ink ? 'hover:bg-ink-foreground/10' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}>
                 <Icon name="signout" className="size-4.5 shrink-0" /><span data-nav-label="">Sign out</span></button></form>}
             <RailToggle choice={rail} ink={ink} />
@@ -152,7 +157,7 @@ export function AppShell({ ink = false, title, tag, places = [], navLabel, group
         </header>
         <main id="content" tabIndex={-1} className="min-w-0 flex-1 space-y-6 p-4 pb-24 outline-none md:p-6 xl:px-8 xl:pt-7">{children}</main>
       </div>
-      <BottomBar label={navLabel} tabs={tabs} more={[...more, ...foot]} ink={ink} moreFoot={<><Switcher places={places} ink={false} /><Account email={email} ink={false} /></>} />
+      <BottomBar label={navLabel} tabs={tabs} more={[...more, ...foot]} ink={ink} moreFoot={<><Switcher places={places} ink={false} /><Account email={email} ink={false} to={signOutTo} /></>} />
       <div id={ANNOUNCER_ID} aria-live="polite" aria-atomic="true" className="sr-only" />
       </Toaster>
     </div>

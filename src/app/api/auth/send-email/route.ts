@@ -6,11 +6,14 @@ import { sendEmail } from '@/lib/email/ses'
 import { frrataEmail } from '@/domains/email/layouts'
 import { cleanEmail } from '@/domains/email/shape'
 import { EMAIL_NOTICES_FROM, SES_CONFIG_NOTICES } from '@/lib/env'
+import { CONSOLE_HOST } from '@/lib/public-env'
+import { isEmailLinkType, signInLink } from '@/domains/auth/email-link'
 
 // ENTRY POINT credential: Supabase's Send Email Hook, signed with SEND_EMAIL_HOOK_SECRET (Standard Webhooks;
 // src/lib/email/hook.ts; scripts/check-actions.mjs). Supabase hands us each sign-in email; we send it through SES in
-// Frrata's layout (ADR-0011: no SMTP key anywhere). The link goes to Supabase's verify endpoint, which returns to our
-// /auth/callback; the 6-digit code works in any browser.
+// Frrata's layout (ADR-0011: no SMTP key anywhere). The link opens our /auth/confirm, which signs in only when the
+// person presses "Sign in" (an email scanner that follows the link uses nothing; partner sign-in mockup screen 4), in
+// any browser; the 6-digit code works anywhere too.
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 const NO_TENANT = '00000000-0000-0000-0000-000000000000'
@@ -26,13 +29,14 @@ export async function POST(request: Request) {
   let p: HookPayload
   try { p = JSON.parse(body) as HookPayload } catch { return fail(400, 'Bad payload') }
   const d = p.email_data ?? {}
-  const changing = d.email_action_type === 'email_change'
-  const to = cleanEmail(changing ? p.user?.new_email : p.user?.email)
-  const code = changing ? d.token_new : d.token
-  const hash = changing ? d.token_hash_new : d.token_hash
-  const site = typeof d.site_url === 'string' && /^https:\/\/[a-z0-9.-]+(\/[A-Za-z0-9/_-]*)?$/i.test(d.site_url) ? d.site_url.replace(/\/$/, '') : null
-  if (!to || !code || !/^\d{6,10}$/.test(code) || !hash || !site) return fail(400, 'Bad payload')
-  const link = `${site}/verify?${new URLSearchParams({ token: hash, type: String(d.email_action_type ?? 'magiclink'), redirect_to: String(d.redirect_to ?? '') })}`
+  const type = d.email_action_type ?? 'magiclink'
+  // Only sign-in emails: an address change (or any other kind) is refused, never sent as a sign-in (security review M2).
+  if (!isEmailLinkType(type)) return fail(400, 'Not a sign-in email')
+  const to = cleanEmail(p.user?.email)
+  const code = d.token
+  const hash = d.token_hash
+  if (!to || !code || !/^\d{6,10}$/.test(code) || !hash || !/^[A-Za-z0-9_-]{20,200}$/.test(hash)) return fail(400, 'Bad payload')
+  const link = signInLink(CONSOLE_HOST, hash, type)
   const r = frrataEmail({
     preview: `Your sign-in code is ${code}`,
     heading: `Your sign-in code: ${code}`,

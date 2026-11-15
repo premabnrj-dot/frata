@@ -92,19 +92,19 @@
   {
     "file": "src/app/(console)/console/settings/online-payments/actions.ts",
     "rule": "W4",
-    "text": "Account & Settings \u2192 API keys",
+    "text": "Account & Settings → API keys",
     "why": "Razorpay's own menu label, named so the owner can find it"
   },
   {
     "file": "src/app/(console)/console/settings/online-payments/online-payments.tsx",
     "rule": "W4",
-    "text": "Account & Settings \u2192 API keys",
+    "text": "Account & Settings → API keys",
     "why": "Razorpay's own menu label, named so the owner can find it"
   },
   {
     "file": "src/app/(console)/console/settings/online-payments/online-payments.tsx",
     "rule": "W4",
-    "text": "Webhooks \u2192 Add new webhook",
+    "text": "Webhooks → Add new webhook",
     "why": "Razorpay's own menu path, named so the owner can find it"
   },
   {
@@ -136,5 +136,11 @@
     "rule": "W4",
     "text": "Another website",
     "why": "Someone else's website a shopper came from, not the store (the glossary bans calling the store a website)"
+  },
+  {
+    "file": "src/components/passkeys/partner-gate.tsx",
+    "rule": "filler",
+    "text": "unlock this device",
+    "why": "A phone or laptop is literally unlocked: the passkey security line (partner sign-in research lesson 5; approved mockup screens 8 and 14)"
   }
 ]

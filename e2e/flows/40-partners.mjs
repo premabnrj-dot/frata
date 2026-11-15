@@ -6,7 +6,7 @@
 // partner keeping access, the worked example drifting from the plan prices.
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, USERS, expectToast, signedIn } from '../lib.mjs'
+import { CONSOLE, USERS, expectToast, seedPartnerStepup, signedIn } from '../lib.mjs'
 
 export default {
   name: 'partners',
@@ -63,6 +63,10 @@ export default {
       const [row] = await db`select approved_at from partners where user_id = ${P.id}`
       assert.ok(row.approved_at)
       await meera.screenshot({ path: t.out('admin') })
+      // Approved now: the workspace asks for the partner's passkey (T1b), seeded for this session (80 drives it for real).
+      await pia.goto(CONSOLE + '/partner')
+      await pia.getByRole('heading', { name: 'Frrata approves your first passkey' }).waitFor()
+      await seedPartnerStepup(pia.context(), 'partner')
     })
 
     let T
@@ -100,12 +104,13 @@ export default {
       assert.ok(c.ship_costs_confirmed_at, 'confirmed by the partner')
     })
 
-    await t.step('hand over: an invite, not claimed at sign-in', async () => {
+    await t.step('hand over: from the building line to Clients, an invite, not claimed at sign-in', async () => {
       await pia.goto(CONSOLE + '/console')
-      await pia.getByRole('button', { name: 'Hand over' }).click()
-      await pia.getByLabel('Owner’s email').fill(B.email)
-      await pia.getByRole('button', { name: 'Send invite' }).click()
-      await pia.getByText(`Invite sent to ${B.email}`).waitFor()
+      await pia.getByRole('link', { name: 'Hand over' }).click()
+      const dialog = pia.getByRole('dialog', { name: 'Hand Mitti Handloom to its owner?' })
+      await dialog.getByLabel('Owner’s email').fill(B.email)
+      await dialog.getByRole('button', { name: 'Hand over' }).click()
+      await expectToast(pia, `Invite sent to ${B.email}.`, 'ok')
       const inv = await db`select accepted_at from invites where tenant_id = ${T} and role = 'owner' and revoked_at is null`
       assert.equal(inv.length, 1); assert.equal(inv[0].accepted_at, null)
       const [{ n }] = await db`select app_claim_invites(${B.id}::uuid) n`
