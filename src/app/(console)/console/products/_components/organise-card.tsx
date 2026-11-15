@@ -1,11 +1,11 @@
 'use client'
 
-import { InfoTip } from '@/components/ui/info-tip'
 import { useEffect, useId, useRef, useState } from 'react'
 import Link from 'next/link'
 import type { Attribute } from '@/domains/catalogue/taxonomy'
 import { categoryDetails, findCategories } from '../actions'
 import { Section } from '@/components/layout/section'
+import { Menu } from '@/components/ui/menu'
 import { Icon } from '@/components/icons/icon'
 
 export type PickedCategory = { id: string; name: string; path: string; attributes: Attribute[] }
@@ -22,19 +22,23 @@ export function OrganiseCard({ category, onCategory, collections, picked, onPick
   const auto = collections.filter((c) => c.kind === 'auto' && c.in)
   const addTag = () => { const t = tag.trim().replace(/\s+/g, ' ').slice(0, 40); if (t && !tags.includes(t) && tags.length < 20) onTags([...tags, t]); setTag('') }
   return (
-    <Section labelledBy="org-h">
-      <h2 id="org-h" className="flex items-center text-section font-semibold">Organise<InfoTip about="the category">The category comes from the standard list Google and Meta read. It decides which details are asked for.</InfoTip></h2>
+    <Section ariaLabel="Category and collections">
       <CategoryPicker value={category} onChange={onCategory} />
       <div className="space-y-1.5">
         <p className="text-sm font-medium">Collections</p>
         {manual.length === 0 && auto.length === 0 && <p className="text-xs text-muted-foreground">None yet. <Link href="/console/collections/new" className="underline">Make a collection</Link> to group products for your menus.</p>}
+        {/* As drawn: the ones it is in as chips with ×, then "+ Add" for the rest. */}
         {manual.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {manual.map((c) => {
-              const on = picked.includes(c.id)
-              return <button key={c.id} type="button" aria-pressed={on} onClick={() => onPicked(on ? picked.filter((x) => x !== c.id) : [...picked, c.id])}
-                className={`rounded-full border px-2.5 py-1 text-xs transition-colors duration-fast ${on ? 'border-ring bg-accent font-medium' : 'border-border text-muted-foreground hover:bg-accent'}`}>{on ? '✓ ' : '+ '}{c.title}</button>
-            })}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {manual.filter((c) => picked.includes(c.id)).map((c) => (
+              <span key={c.id} className="inline-flex h-11 items-center gap-0.5 rounded-md border border-input bg-card pl-2.5 text-sm md:h-7">{c.title}
+                <button type="button" aria-label={`Take out of ${c.title}`} onClick={() => onPicked(picked.filter((x) => x !== c.id))}
+                  className="relative inline-grid size-6 place-items-center text-muted-foreground after:absolute after:-inset-2.5 hover:text-foreground md:after:inset-0"><Icon name="close" className="size-3.5" /></button>
+              </span>
+            ))}
+            {manual.some((c) => !picked.includes(c.id)) ? (
+              <Menu label="+ Add" chevron={false} size="sm" align="start" items={manual.filter((c) => !picked.includes(c.id)).map((c) => ({ label: c.title, onSelect: () => onPicked([...picked, c.id]) }))} />
+            ) : null}
           </div>
         )}
         {auto.length > 0 && <p className="text-xs text-muted-foreground">Also in, by their rules: {auto.map((c) => c.title).join(', ')}.</p>}

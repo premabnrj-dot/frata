@@ -20,7 +20,8 @@ export default {
         const p = await ctx.newPage(); const errs = []; p.on('pageerror', (e) => errs.push(e.message))
         await p.clock.install({ time: Date.now() + 2 * 60 * 60_000 })
         await p.goto(CONSOLE + '/console/products/secret-draft')
-        await p.getByText('Shoppers get "page not found" until it goes live.').waitFor()
+        // The server's render time decides (an hour before publish_at): Scheduled, though the browser's clock is past it.
+        await p.locator('header').getByText('Scheduled', { exact: true }).waitFor()
         await p.waitForLoadState('networkidle')
         assert.deepEqual(errs, [], `page errors: ${errs.join(' | ')}`)
         await ctx.close()

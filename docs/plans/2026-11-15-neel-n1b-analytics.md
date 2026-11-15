@@ -1,5 +1,5 @@
 # Neel N1b — the analytics kit, on Analytics
-Status: active (architecture and speed reviews folded in, 2026-11-15) · Date: 2026-11-15 ·
+Status: shipped 2026-11-15 (fab45bcb; migration 0127 on production; Deviations approved by the owner the same day) · Date: 2026-11-15 ·
 Spec: `docs/specs/2026-11-13-design-language-neel.md` (§ Analytics kit) · Kit mockup: `docs/mockups/2026-11-13-design-language-neel.html`
 § Analytics kit · Screen mockup: https://claude.ai/artifact/XtLc5wxpDaczJ6gqMQ2Js6 (source `docs/mockups/2026-11-15-analytics-n1b/`) ·
 Approved: owner, 2026-11-15 ("approved, continue with the plan and build"; calls: 90 days becomes Custom; returning
@@ -84,18 +84,18 @@ by keyboard, each new section against seeded orders, staff without ₹ kept, the
 ## Deviations (mockup element · built · reason · owner seen)
 | Mockup element | Built | Reason | Owner seen |
 |---|---|---|---|
-| Custom: any dates | At most 92 days | A year and its comparison timed out at the page's 3 s (speed review, 600 k orders); 92 covers the old 90-day view; longer waits for a daily rollup | Asked in the N1b report |
-| "vs previous 30 days ▾" as a menu | The comparison as words beside the picker | One comparison exists (the period before); a menu with one choice is a control that does nothing | Asked in the N1b report |
-| A source's page (not drawn) | The same header, picker, figures and flow line as Analytics, then its orders; no trend yet | Built from the drawn parts; a trend per source needs the series read filtered by source, left for the next step | Asked in the N1b report |
+| Custom: any dates | At most 92 days | A year and its comparison timed out at the page's 3 s (speed review, 600 k orders); 92 covers the old 90-day view; longer waits for a daily rollup | Yes, 2026-11-15 |
+| "vs previous 30 days ▾" as a menu | The comparison as words beside the picker | One comparison exists (the period before); a menu with one choice is a control that does nothing | Yes, 2026-11-15 |
+| A source's page (not drawn) | The same header, picker, figures and flow line as Analytics, then its orders; no trend yet | Built from the drawn parts; a trend per source needs the series read filtered by source, left for the next step | Yes, 2026-11-15 |
 | Browsers, Cities, Products, Speed on phones (not drawn) | Kept below the funnel as they are (their A·2 look) | Owner call 3 (2026-11-15); redrawing them is N3/N4 work | Yes, 2026-11-15 (kept); look asked in the N1b report |
-| Where orders came from, with visits counted (drawn without) | The drawn table plus two columns, Visits and Orders per 100 visits; ₹ kept per visit dropped | The A·2 numbers the owner approved stay, inside the drawn table | Asked in the N1b report |
-| Visits and Orders per 100 visits (drawn in the funnel's head) | Two figures above the funnel; on Today no change (visits compare whole days) | Visits are counted by day: a change against yesterday-at-this-time cannot be read | Asked in the N1b report |
-| When orders come: seven hour bands | Seven rows Monday first × seven three-hour bands | As drawn in the kit; the board's sample shows four rows | Asked in the N1b report |
-| No (i) on headings | The (i) kept on Where orders came from and on Visits | How a source is decided and how visits are counted are the two facts a merchant asks; Rule 0 allows a limit | Asked in the N1b report |
-| Phone header: title, then the picker on its own line | PageHeader's shared phone layout: title and dates, the picker (it scrolls sideways), then Make a link | PageHeader is shared by every page; one page's header is not changed alone | Asked in the N1b report |
-| Where orders came from: no Other row | An Other row (sources with few orders, and tags typed by hand), muted, after Direct or unknown | Only the top 12 sources get a row; without Other the rows would not add up to the orders above | Asked in the N1b report |
-| Too few orders (not drawn) | One line above the figures; the figures stay, in counts | Rule 63 amended (design language 7.3.0) | Asked in the N1b report |
-| Phone: the funnel and Pincodes (not drawn) | Stacked as on desktop, one column | The phone board stops at the cohort; the rest follows the same rule | Asked in the N1b report |
+| Where orders came from, with visits counted (drawn without) | The drawn table plus two columns, Visits and Orders per 100 visits; ₹ kept per visit dropped | The A·2 numbers the owner approved stay, inside the drawn table | Yes, 2026-11-15 |
+| Visits and Orders per 100 visits (drawn in the funnel's head) | Two figures above the funnel; on Today no change (visits compare whole days) | Visits are counted by day: a change against yesterday-at-this-time cannot be read | Yes, 2026-11-15 |
+| When orders come: seven hour bands | Seven rows Monday first × seven three-hour bands | As drawn in the kit; the board's sample shows four rows | Yes, 2026-11-15 |
+| No (i) on headings | The (i) kept on Where orders came from and on Visits | How a source is decided and how visits are counted are the two facts a merchant asks; Rule 0 allows a limit | Yes, 2026-11-15 |
+| Phone header: title, then the picker on its own line | PageHeader's shared phone layout: title and dates, the picker (it scrolls sideways), then Make a link | PageHeader is shared by every page; one page's header is not changed alone | Yes, 2026-11-15 |
+| Where orders came from: no Other row | An Other row (sources with few orders, and tags typed by hand), muted, after Direct or unknown | Only the top 12 sources get a row; without Other the rows would not add up to the orders above | Yes, 2026-11-15 |
+| Too few orders (not drawn) | One line above the figures; the figures stay, in counts | Rule 63 amended (design language 7.3.0) | Yes, 2026-11-15 |
+| Phone: the funnel and Pincodes (not drawn) | Stacked as on desktop, one column | The phone board stops at the cohort; the rest follows the same rule | Yes, 2026-11-15 |
 
 ## Design review
 - **UI/UX:** one question per section heading; every change names its comparison once per row; colour by meaning

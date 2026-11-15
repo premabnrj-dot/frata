@@ -19,11 +19,11 @@ export default {
     try {
       await t.step('the product editor: (i) tips, not passages; a tip opens on click and closes on Esc', async () => {
         await p.goto(CONSOLE + '/console/products/chanderi-kurta-set')
-        await p.getByRole('heading', { name: 'Sizes, colours and stock' }).waitFor()
+        await p.getByRole('heading', { name: /Stock and prices/ }).waitFor()
         for (const gone of ['Photos are resized on your phone', 'Price, stock and SKU live here', 'An empty SKU is made for you when you save (shown in grey); type', 'From the standard list Google and Meta read. It decides'])
           // Visible text only: a passage that moved into an (i) is still in the page, hidden until opened.
           assert.equal(await p.getByText(gone).filter({ visible: true }).count(), 0, `"${gone}" is still on the page`)
-        const tip = p.getByRole('button', { name: 'About sizes, colours and stock' })
+        const tip = p.getByRole('button', { name: 'About stock and prices' })
         await tip.click()
         await p.getByText('Shoppers never see your cost').waitFor()
         await p.keyboard.press('Escape')

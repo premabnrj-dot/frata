@@ -8,7 +8,9 @@ import { isSizeOption } from '@/domains/storefront/picker'
 import { FieldError, fieldProps } from '@/components/ui/field-error'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
-import { announce } from '@/components/shell/announce'
+import { moved, useReorder } from '@/components/ui/sortable'
+import { Menu } from '@/components/ui/menu'
+import { GripVertical, MoreHorizontal } from 'lucide-react'
 
 const SUGGEST: Record<string, string[]> = {
   size: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
@@ -42,15 +44,9 @@ export function OptionsEditor({ options, onChange, onRename, error }: { options:
   const [removing, setRemoving] = useState<number | null>(null)
   const remove = (i: number) => { onChange(options.filter((_, j) => j !== i)); setDrafts((d) => d.filter((_, j) => j !== i)); setRemoving(null) }
   const rows = (i: number) => options.reduce((n, o, j) => n * (j === i ? Math.max(1, o.values.length) : Math.max(1, o.values.length)), 1)
-  /** Moves a value one place (the order the shop's buttons, the table and the size chart follow); focus stays on it. */
-  const move = (i: number, k: number, by: -1 | 1) => {
-    const o = options[i]!, to = k + by
-    if (to < 0 || to >= o.values.length) return
-    const values = [...o.values]; [values[k], values[to]] = [values[to]!, values[k]!]
-    set(i, { ...o, values })
-    announce(`${o.values[k]} moved to ${to + 1} of ${values.length}`)
-    requestAnimationFrame(() => document.getElementById(`chip-${i}-${to}`)?.focus())
-  }
+  /** Moves a value (the order the shop's buttons, the table and the size chart follow): useReorder says it and keeps
+   *  focus on it; dragging by its handle does the same with a finger or a mouse. */
+  const moveTo = (i: number, from: number, to: number) => { const o = options[i]!; set(i, { ...o, values: moved(o.values, from, to) }) }
   const addValues = (i: number, raw: string) => {
     const vals = raw.split(',').map((v) => v.trim().replace(/\s+/g, ' ')).filter(Boolean)
     if (!vals.length) return
@@ -72,46 +68,18 @@ export function OptionsEditor({ options, onChange, onRename, error }: { options:
       {options.map((o, i) => {
         const suggest = (SUGGEST[o.name.trim().toLowerCase().replace(/^color$/, 'colour')] ?? []).filter((s) => !o.values.some((v) => v.toLowerCase() === s.toLowerCase()))
         return (
-          <div key={i} className="space-y-2 rounded-md border border-border p-3">
-            <div className="flex items-center gap-2">
-              <label htmlFor={`opt-${i}`} className="sr-only">Option name</label>
-              <input id={`opt-${i}`} value={o.name} maxLength={30} placeholder="Size" onChange={(e) => set(i, { ...o, name: e.target.value })}
-                {...fieldProps('options', error)} className="h-8 w-40 rounded-md border border-input bg-card px-2 text-sm font-medium aria-invalid:border-danger-text" />
-              <span className="flex-1" />
-              <button type="button" className="inline-flex min-h-6 items-center text-sm text-muted-foreground underline" onClick={() => (o.values.length ? setRemoving(i) : remove(i))}>Remove {o.name || 'option'}</button>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {o.values.map((v, k) => editing?.i === i && editing.k === k ? (
-                <span key={v} className="inline-flex flex-col">
-                  <label htmlFor={`ren-${i}-${k}`} className="sr-only">Rename {v}</label>
-                  <input id={`ren-${i}-${k}`} autoFocus value={editing.text} maxLength={40} aria-invalid={!!editing.error}
-                    onChange={(e) => setEditing({ ...editing, text: e.target.value, error: undefined })}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commit() } if (e.key === 'Escape') setEditing(null) }}
-                    onBlur={commit} className="h-7 w-28 rounded-full border border-foreground bg-card px-2.5 text-sm aria-invalid:border-danger-text" />
-                  {editing.error && <span className="text-xs text-danger-text">{editing.error}</span>}
-                </span>
-              ) : (
-                <span key={v} className="group inline-flex items-center gap-0.5 rounded-full border border-border bg-muted px-1.5 py-0.5 text-sm">
-                  {k > 0 && <button type="button" tabIndex={-1} aria-label={`Move ${v} earlier`} className="hidden min-h-6 min-w-6 place-items-center text-muted-foreground hover:text-foreground group-hover:inline-grid group-focus-within:inline-grid" onClick={() => move(i, k, -1)}>‹</button>}
-                  <button type="button" id={`chip-${i}-${k}`} aria-label={`Rename ${v}`} aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight" className="min-h-6 min-w-6 px-1" onClick={() => setEditing({ i, k, text: v })}
-                    onKeyDown={(e) => { if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); move(i, k, e.key === 'ArrowLeft' ? -1 : 1) } }}>{v}</button>
-                  {k < o.values.length - 1 && <button type="button" tabIndex={-1} aria-label={`Move ${v} later`} className="hidden min-h-6 min-w-6 place-items-center text-muted-foreground hover:text-foreground group-hover:inline-grid group-focus-within:inline-grid" onClick={() => move(i, k, 1)}>›</button>}<button type="button" aria-label={`Remove ${v}`} className="inline-grid min-h-6 min-w-6 place-items-center text-muted-foreground hover:text-foreground" onClick={() => set(i, { ...o, values: o.values.filter((_, j) => j !== k) })}><Icon name="close" className="size-3.5" /></button>
-                </span>
-              ))}
-              <label htmlFor={`val-${i}`} className="sr-only">Add a {o.name || 'value'}</label>
-              <input id={`val-${i}`} value={drafts[i] ?? ''} placeholder={`Add ${o.name.toLowerCase() || 'value'} ↵`}
-                onChange={(e) => setDrafts((d) => d.map((x, j) => (j === i ? e.target.value : x)))}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addValues(i, drafts[i] ?? '') } }}
-                onBlur={() => addValues(i, drafts[i] ?? '')}
-                className="h-7 w-36 rounded-full border border-dashed border-input bg-transparent px-2.5 text-sm" />
-            </div>
+          <OptionRow key={i} i={i} o={o} error={error} onName={(name) => set(i, { ...o, name })} onRemoveOption={() => (o.values.length ? setRemoving(i) : remove(i))}
+            onMove={(from, to) => moveTo(i, from, to)} onRemoveValue={(k) => set(i, { ...o, values: o.values.filter((_, j) => j !== k) })}
+            editing={editing?.i === i ? editing : null} onEdit={(k) => setEditing({ i, k, text: o.values[k]! })}
+            onEditing={(text) => editing && setEditing({ ...editing, text, error: undefined })} onCommit={commit} onCancel={() => setEditing(null)}
+            draft={drafts[i] ?? ''} onDraft={(text) => setDrafts((d) => d.map((x, j) => (j === i ? text : x)))} onAdd={() => addValues(i, drafts[i] ?? '')}>
             {suggest.length > 0 && (
               // Quick-add chips, 24 px each (rule 19): they were comma-separated words 16 px tall (stress test S4).
               <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">Add: {suggest.map((s) => (
                 <button key={s} type="button" aria-label={`Add ${s}`} className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border border-dashed border-input px-2 text-foreground hover:bg-accent" onClick={() => set(i, { ...o, values: addInOrder(o.values, [s]) })}>{s}</button>
               ))}</p>
             )}
-          </div>
+          </OptionRow>
         )
       })}
       <Dialog open={removing !== null} onClose={() => setRemoving(null)}
@@ -130,3 +98,57 @@ export function OptionsEditor({ options, onChange, onRename, error }: { options:
     </div>
   )
 }
+
+/** One option as drawn (Neel N2): its name at the left, then its values as chips — a handle to drag (or Alt+← →), the
+ *  value to rename, × to remove — then "+ Add". */
+function OptionRow({ i, o, error, onName, onRemoveOption, onMove, onRemoveValue, editing, onEdit, onEditing, onCommit, onCancel, draft, onDraft, onAdd, children }: {
+  i: number; o: Option; error?: string; onName: (name: string) => void; onRemoveOption: () => void
+  onMove: (from: number, to: number) => void; onRemoveValue: (k: number) => void
+  editing: { k: number; text: string; error?: string } | null; onEdit: (k: number) => void; onEditing: (text: string) => void; onCommit: () => void; onCancel: () => void
+  draft: string; onDraft: (text: string) => void; onAdd: () => void; children?: React.ReactNode
+}) {
+  const { itemProps } = useReorder(o.values.length, onMove)
+  return (
+    <div className="grid gap-x-4 gap-y-2 border-b border-line-soft pb-3 last:border-0 last:pb-0 sm:grid-cols-[7rem_minmax(0,1fr)]">
+      <div className="flex items-start justify-between gap-2 sm:flex-col sm:justify-start">
+        <input id={`opt-${i}`} aria-label="Option name" value={o.name} maxLength={30} placeholder="Size" onChange={(e) => onName(e.target.value)}
+          {...fieldProps('options', error)} className="h-11 w-full rounded-md border border-transparent bg-transparent px-1.5 text-sm font-medium hover:border-input focus:border-input aria-invalid:border-danger-text md:h-8" />
+        <button type="button" className="inline-flex min-h-11 items-center px-1.5 text-small text-muted-foreground underline md:min-h-6" onClick={onRemoveOption}>Remove</button>
+      </div>
+      <div className="min-w-0 space-y-2">
+        <div data-sortable="" className="flex flex-wrap items-center gap-1.5">
+          {o.values.map((v, k) => editing?.k === k ? (
+            <span key={v} className="inline-flex flex-col">
+              <input id={`ren-${i}-${k}`} aria-label={`Rename ${v}`} autoFocus value={editing.text} maxLength={40} aria-invalid={!!editing.error}
+                onChange={(e) => onEditing(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onCommit() } if (e.key === 'Escape') onCancel() }}
+                onBlur={onCommit} className="h-11 w-28 rounded-md border border-foreground bg-card px-2.5 text-sm aria-invalid:border-danger-text md:h-8" />
+              {editing.error && <span className="text-small text-danger-text">{editing.error}</span>}
+            </span>
+          ) : (
+            <span key={v} className="inline-flex h-11 items-center rounded-md border border-input bg-card pr-0.5 text-sm md:h-8">
+              <span aria-hidden="true" className="grid h-full w-6 cursor-grab touch-none place-items-center text-muted-foreground" {...dragOnly(itemProps(k, v))}><GripVertical className="size-3.5" /></span>
+              <button type="button" id={`chip-${i}-${k}`} aria-label={`Rename ${v}`} {...keysOnly(itemProps(k, v))} className="h-full px-1" onClick={() => onEdit(k)}>{v}</button>
+              {/* A phone has no Alt key and no hover: moving a value is its menu there. */}
+              <span className="md:hidden"><Menu label={`Move ${v}`} icon={<MoreHorizontal aria-hidden="true" className="size-4" />} items={[
+                ...(k > 0 ? [{ label: 'Move earlier', onSelect: () => onMove(k, k - 1) }] : []),
+                ...(k < o.values.length - 1 ? [{ label: 'Move later', onSelect: () => onMove(k, k + 1) }] : []),
+              ]} /></span>
+              <button type="button" aria-label={`Remove ${v}`} className="relative inline-grid size-6 place-items-center text-muted-foreground after:absolute after:-inset-2.5 hover:text-foreground md:after:inset-0" onClick={() => onRemoveValue(k)}><Icon name="close" className="size-3.5" /></button>
+            </span>
+          ))}
+          <input id={`val-${i}`} aria-label={`Add a ${o.name || 'value'}`} value={draft} placeholder="+ Add"
+            onChange={(e) => onDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); onAdd() } }}
+            onBlur={onAdd} className="h-11 w-24 rounded-md border border-dashed border-input bg-transparent px-2.5 text-sm md:h-8" />
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+type ItemProps = ReturnType<ReturnType<typeof useReorder>['itemProps']>
+/** The handle takes the pointer (drag); the value's button takes the keys (Alt+← →) and is the item focus returns to. */
+const dragOnly = ({ onPointerDown, onPointerMove, onPointerUp, onPointerCancel }: ItemProps) => ({ onPointerDown, onPointerMove, onPointerUp, onPointerCancel })
+const keysOnly = ({ onKeyDown, ...rest }: ItemProps) => ({ onKeyDown, 'data-sort-item': rest['data-sort-item'], 'aria-keyshortcuts': rest['aria-keyshortcuts'] })

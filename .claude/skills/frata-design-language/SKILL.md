@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.4.0
+  version: 7.5.0
   verified: 2026-11-15
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -495,13 +495,17 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   left (real stock, at 3 or fewer), Sold out, Pre-order · ships by <date>,
   Made to order · ships in N–M days. The merchant sets "When it runs out" per
   size and colour and reads "Shoppers see"; they never type an availability.
-- **Product page order**: description, photos, sizes colours and stock (with
-  each colour's family and swatch), details for its category, size chart, the
-  model, then **Search and sharing — collapsed by default**, its summary line
-  showing the address and "Made for you" or "Edited". Side: Status, Summary,
-  Organise (category, collections, tags), Ready for (what Google and Meta
-  still need, in words). Side cards are not sticky: they are taller than a
-  screen.
+- **Product page order (Neel N2, as drawn)**: Photos; Name, price, description (the address line under it); Sizes and
+  colours; Stock and prices (tabs: Price and stock · SKU and barcode; pick rows, then set); then one folded line each —
+  Details, Size chart, Search and sharing, Tax, then the live extras (Video, The model, On the pack, Stories, Pairs). A
+  folded line says what is set and ends in Add or Edit; a save's mistake inside opens it. Side, sticky on a wide screen:
+  Status (Draft · Active · Unlisted, "Missing: …", Publish; what Google and Meta still need in one line), Shared on
+  WhatsApp (from the draft, at the buy-box price), Category and Collections (tags under them). On a phone each colour is
+  one summary row ("Gulabi · 6 sizes · ₹2,490 · 32 in stock") until opened.
+- **The product's price is the one most sizes share** (`src/domains/catalogue/common-price.ts`), never a column: setting it
+  writes to the sizes on it and the unpriced ones, fixed at the first keystroke, never a size priced on its own ("Sets 5
+  of 6 · XXL has its own price"). Tax's gap check and the default description read the lowest price; the link card the
+  buy box's.
 - **Addresses are words** (`/console/products/linen-kurta-set`,
   `/products/linen-kurta-set` on the shop). Once a product has been live, a
   new address keeps the old one working as a redirect, and the field says so.
@@ -525,8 +529,8 @@ Rules every products screen keeps (PR·0 built; PR·1–4 follow the mockup):
 1. **A draft saves with what it has.** Blank prices save as none; only a live or Unlisted product refuses one, at its cell.
 2. **Editing never loses work.** A chip renames in place and carries its cells, swatch and photos. A category change keeps the
    details that still apply. A field never silently reverts what was typed: it keeps it and says what is wrong.
-3. **Fill, don't overwrite.** Bulk actions say how many rows they touch ("Apply to 2"), default to empty cells only, and
-   are off at 0.
+3. **Fill, don't overwrite.** Bulk actions default to empty cells only, are off at 0, and say what they did ("Price set
+   on 6 variants").
 4. **Order the way shoppers read.** Known sizes go to their place (XS before S).
 5. **A product starts from what it is.** Its kind and type come from its name (`src/domains/catalogue/kind.ts`) until PR·2's
    "What are you selling?" step. No match means no type, never the shop's first type.

@@ -12,26 +12,21 @@ import { Icon } from '@/components/icons/icon'
  * already has a title, description and address made for it; this is for the
  * merchant who wants to change them. Empty fields use the defaults shown.
  */
-export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescription, onSeoDescription, defaults, address, cover, everLive = false, errors, folder = 'products' }: {
+export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescription, onSeoDescription, defaults, address, cover, everLive = false, errors, folder = 'products', bare = false }: {
   /** onHandle absent: the address is edited elsewhere on the page (a collection's sits under its name). */
   handle: string; onHandle?: (v: string) => void; folder?: 'products' | 'collections'; seoTitle: string; onSeoTitle: (v: string) => void; seoDescription: string; onSeoDescription: (v: string) => void
   defaults: { title: string; description: string; handle: string }; address: string; cover: Photo | undefined; everLive?: boolean; errors: Record<string, string>
+  /** Inside the product editor's fold (Neel N2): no summary line of its own, and the WhatsApp preview is the side card's. */
+  bare?: boolean
 }) {
   const title = seoTitle.trim() || defaults.title
   const description = seoDescription.trim() || defaults.description
   const url = `${address}/${folder}/${handle || defaults.handle}`
   const share = shareCard(title.replace(/\s*\|[^|]*$/, ''), description)
   const count = (n: number, warn: number) => <span className={n > warn ? 'text-warn-text' : ''}>{n}{n > warn ? ` · phones may cut it after about ${warn}` : ''}</span>
-  return (
-    <details className="group rounded-md border border-border bg-card">
-      <summary className="flex cursor-pointer list-none items-center gap-2 p-4 [&::-webkit-details-marker]:hidden">
-        <span aria-hidden="true" className="inline-block transition-transform duration-fast group-open:rotate-90"><Icon name="chevron" className="size-3.5" /></span>
-        <span className="min-w-0 flex-1"><span className="block font-semibold">Search and sharing</span>
-          <span className="block truncate text-xs text-muted-foreground">{url}</span></span>
-        <span className="text-xs text-muted-foreground">{seoTitle || seoDescription ? 'Edited' : 'Made for you'}</span>
-      </summary>
-      <div className="space-y-4 border-t border-border p-4">
-        <div className="grid gap-4 lg:grid-cols-2">
+  const inner = (
+      <div className={bare ? 'space-y-4' : 'space-y-4 border-t border-border p-4'}>
+        <div className={bare ? undefined : 'grid gap-4 lg:grid-cols-2'}>
           <figure className="min-w-0 space-y-1">
             <figcaption className="text-xs font-medium text-muted-foreground">On Google</figcaption>
             <div className="rounded-md border border-border p-3">
@@ -40,13 +35,13 @@ export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescriptio
               <p className="line-clamp-2 text-sm text-muted-foreground">{description}</p>
             </div>
           </figure>
-          <figure className="min-w-0 space-y-1">
+          {bare ? null : <figure className="min-w-0 space-y-1">
             <figcaption className="text-xs font-medium text-muted-foreground">Shared on WhatsApp</figcaption>
             <div className="flex overflow-hidden rounded-md border border-border bg-muted/40">
               {cover ? <img src={urlFor(cover.base, pick(cover.widths, 160))} alt="" width={64} height={80} className="h-20 w-16 shrink-0 object-cover" /> : <span className="h-20 w-16 shrink-0 bg-muted" />}
               <div className="min-w-0 p-2 text-sm"><p className="line-clamp-1 font-medium">{share.title}</p><p className="line-clamp-2 text-xs text-muted-foreground">{share.description}</p><p className="truncate text-xs text-muted-foreground">{address}</p></div>
             </div>
-          </figure>
+          </figure>}
         </div>
         <div className="space-y-1">
           <label htmlFor="seo-title" className="block text-sm font-medium">Page title</label>
@@ -71,6 +66,17 @@ export function SeoPanel({ handle, onHandle, seoTitle, onSeoTitle, seoDescriptio
             : <p className="text-xs text-muted-foreground">{everLive ? 'It has been live. The old address still works and sends shoppers here.' : 'Short words shoppers can read. Fixed once it has been live (a change then redirects).'}</p>}
         </div>}
       </div>
+  )
+  if (bare) return inner
+  return (
+    <details className="group rounded-md border border-border bg-card">
+      <summary className="flex cursor-pointer list-none items-center gap-2 p-4 [&::-webkit-details-marker]:hidden">
+        <span aria-hidden="true" className="inline-block transition-transform duration-fast group-open:rotate-90"><Icon name="chevron" className="size-3.5" /></span>
+        <span className="min-w-0 flex-1"><span className="block font-semibold">Search and sharing</span>
+          <span className="block truncate text-xs text-muted-foreground">{url}</span></span>
+        <span className="text-xs text-muted-foreground">{seoTitle || seoDescription ? 'Edited' : 'Made for you'}</span>
+      </summary>
+      {inner}
     </details>
   )
 }

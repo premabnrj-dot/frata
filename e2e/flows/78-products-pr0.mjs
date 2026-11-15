@@ -30,7 +30,7 @@ export default {
     const save = async () => {
       await p.getByRole('button', { name: 'Discard' }).waitFor()
       await p.getByRole('button', { name: 'Save', exact: true }).click()
-      await p.getByText('Unsaved changes').waitFor({ state: 'detached', timeout: 8_000 }).catch(async (e) => {
+      await p.getByRole('region', { name: 'Unsaved changes' }).waitFor({ state: 'detached', timeout: 8_000 }).catch(async (e) => {
         await p.screenshot({ path: 'e2e/.out/78-save.png' })
         throw new Error(`Save stayed: ${(await p.locator('[role=alert],[role=status],[aria-invalid=true]').allInnerTexts()).join(' | ')} ${e.message}`)
       })
@@ -72,7 +72,7 @@ export default {
         // Ctrl+S presses Save; while the last save is still finishing the button is off, and so is the key.
         await p.waitForFunction(() => document.querySelector('button[data-save-bar]')?.disabled === false)
         await p.keyboard.press('Control+s')
-        await p.getByText('Unsaved changes').waitFor({ state: 'detached', timeout: 8_000 })
+        await p.getByRole('region', { name: 'Unsaved changes' }).waitFor({ state: 'detached', timeout: 8_000 })
         const [r] = await db`select description from products where tenant_id = ${KESAR} and title = ${TITLE}`
         assert.equal(r.description, 'Soft cotton, hand block printed.')
         const fold = p.getByRole('button', { name: /^Details/ })
@@ -89,7 +89,7 @@ export default {
         await p.goto(CONSOLE + '/console/products?q=nothing-matches-this')
         await p.getByText('No product matches “nothing-matches-this”').waitFor()
       })
-      await t.step('PR·2: a kind picked against the name wins; "Save and set to archived" saves, then archives', async () => {
+      await t.step('PR·2 / N2: a kind picked against the name wins; Ctrl+S saves; More › Delete draft deletes it', async () => {
         await p.goto(CONSOLE + '/console/products/new')
         await p.getByLabel('Name').fill('Linen kurta PR0')
         assert.equal(await p.getByRole('radio', { name: /^Clothing with sizes/ }).isChecked(), true)
@@ -100,11 +100,20 @@ export default {
         assert.equal(k.type_id, null, 'Kids chosen: never the women\'s kurta chart')
         assert.deepEqual(k.option_values, [['2–3 Y', '3–4 Y', '4–5 Y']])
         await p.locator('#desc').fill('For the little ones.')
-        await p.getByRole('radio', { name: 'Archived' }).check()
-        await p.getByRole('button', { name: 'Save and set to archived' }).click()
-        for (let i = 0; i < 40; i++) { const [r] = await db`select status from products where tenant_id = ${KESAR} and title = 'Linen kurta PR0'`; if (r.status === 'archived') break; await p.waitForTimeout(250) }
-        const [r] = await db`select description, status from products where tenant_id = ${KESAR} and title = 'Linen kurta PR0'`
-        assert.deepEqual([r.description, r.status], ['For the little ones.', 'archived'])
+        await p.screenshot({ path: 'e2e/.out/78-editor-1280.png', fullPage: true })
+        await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300)
+        assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= 391), 'the editor never scrolls sideways on a phone')
+        await p.screenshot({ path: 'e2e/.out/78-editor-390.png', fullPage: true })
+        await p.setViewportSize({ width: 1280, height: 900 })
+        await p.locator('#desc').press('Control+s')
+        await p.getByRole('region', { name: 'Unsaved changes' }).waitFor({ state: 'detached', timeout: 8_000 })
+        await p.getByRole('button', { name: 'More' }).click()
+        const [saved] = await db`select description from products where tenant_id = ${KESAR} and title = 'Linen kurta PR0'`
+        assert.equal(saved.description, 'For the little ones.', 'Ctrl+S saved the description')
+        await p.getByRole('menuitem', { name: 'Delete draft' }).click()
+        await p.getByRole('dialog').getByRole('button', { name: /^Delete/ }).click()
+        await p.waitForURL(/\/console\/products$/)
+        assert.equal((await db`select 1 from products where tenant_id = ${KESAR} and title = 'Linen kurta PR0'`).length, 0, 'the draft is gone')
       })
     } finally {
       await ctx.close()

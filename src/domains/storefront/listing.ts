@@ -30,7 +30,7 @@ export const factsOf = (v: ListVariant): VariantFacts => ({ stock: v.stock, when
 export const isListed = (p: Pick<ListProduct, 'status' | 'publishAt'>, now: Date) => visibility(p.status as Status, p.publishAt ? new Date(p.publishAt) : null, now).listed
 
 /** The lowest price, and what it is compared at (only if every variant at that price shows one). */
-export function priceOf(p: Pick<ListProduct, 'variants'>): { min: number; max: number; compareAt: number | null } | null {
+export function priceOf(p: { variants: readonly { price: number; compareAt: number | null }[] }): { min: number; max: number; compareAt: number | null } | null {
   const priced = p.variants.filter((v) => v.price > 0)
   if (!priced.length) return null
   const min = Math.min(...priced.map((v) => v.price)), max = Math.max(...priced.map((v) => v.price))

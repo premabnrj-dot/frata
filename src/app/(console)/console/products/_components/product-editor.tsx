@@ -2,24 +2,18 @@
 
 import { isSizeOption } from '@/domains/storefront/picker'
 import { colourIndex } from '@/domains/catalogue/option-kind'
-import { InfoTip } from '@/components/ui/info-tip'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
-import Link from 'next/link'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Badge } from '@/components/ui/badge'
 import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import { FieldError, fieldProps, useErrorSummary } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
-import { Money } from '@/components/data/numeric'
 import type { Status } from '@/domains/catalogue/availability'
 import { readiness, type ColourInput } from '@/domains/catalogue/product-form'
 import { parseRupees } from '@/domains/money/rupees'
 import { defaultDescription, defaultTitle } from '@/domains/seo/defaults'
 import { combinations, handleFor, keyOf, skuFor, type Option } from '@/domains/catalogue/variants'
-import { paise } from '@/domains/money/paise'
-import { pick, urlFor } from '@/domains/media/sizes'
 import { saveProduct } from '../actions'
-import { ColoursPanel, Swatch, type Family } from './colours-panel'
+import { ColoursPanel, type Family } from './colours-panel'
 import { DetailsPanel } from './details-panel'
 import { OptionsEditor } from './options-editor'
 import { OrganiseCard, type CollectionChip, type PickedCategory } from './organise-card'
@@ -39,7 +33,16 @@ import { useNow } from '@/components/time/now'
 import { EMPTY_CELL, shopperSees, VariantGrid, type Cell } from './variant-grid'
 import { Section } from '@/components/layout/section'
 import { FoldSection } from '@/components/layout/fold-section'
+import { InfoTip } from '@/components/ui/info-tip'
 import { PageHeader } from '@/components/layout/page-header'
+import { FIELD } from '@/components/ui/field'
+import { announce } from '@/components/shell/announce'
+import { commonPrice, targetsOf, targetsWords } from '@/domains/catalogue/common-price'
+import { rupeesText } from '@/domains/money/rupees'
+import { formatInr } from '@/lib/format'
+import { paise } from '@/domains/money/paise'
+import { WhatsAppPreview } from './editor-side'
+import { ProductMore } from './product-more'
 
 export type EditorProduct = {
   id: string; title: string; description: string; typeId: string | null; modelHeight: string; modelSize: string
@@ -70,12 +73,14 @@ type Draft = Omit<EditorProduct, 'id' | 'version' | 'status' | 'publishAt' | 'ev
  * model, then Search and sharing (closed). Side: Status, Summary, Organise,
  * Ready for. Photos save as added; Status is its own action; the rest is one Save.
  */
-export function ProductEditor({ initial, shop, photos, types, tenantId, blobReady, allCollections, families, share, video }: {
+export function ProductEditor({ initial, shop, photos, types, tenantId, blobReady, allCollections, families, share, video, host }: {
   initial: EditorProduct; shop: EditorShop; photos: Photo[]; types: TypeRow[]; tenantId: string; blobReady: boolean; allCollections: CollectionChip[]; families: Family[]
   /** The Share button (search and sharing S1·7), made on the server for this shop. */
   share?: React.ReactNode
   /** The Video card (PV·1), made on the server: it saves as it changes, outside the one Save. */
   video?: React.ReactNode
+  /** The shop's main host, for the WhatsApp card's last line. */
+  host: string
 }) {
   const router = useRouter()
   const now = useNow()
@@ -199,151 +204,144 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   }, [])
   const [mac, setMac] = useState(false)
   useEffect(() => { setMac(/Mac|iPhone|iPad/.test(navigator.platform)) }, [])
-  /** Grows the title field to its text where the browser lacks `field-sizing: content` (it then sizes itself), and
-   * again when the window changes width (a rotate wraps it to more lines). */
-  const titleRef = useRef<HTMLTextAreaElement>(null)
-  const fit = (el: HTMLTextAreaElement | null) => {
-    if (!el || (typeof CSS !== 'undefined' && CSS.supports('field-sizing', 'content'))) return
-    el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`
+  // The common price and M.R.P. (common-price.ts): what most sizes share, set on those sharing it and those with none.
+  // The variants it writes to are fixed at the first keystroke and kept until the field loses focus, so clearing it never
+  // takes a size priced on its own. Which price where: this card the common one; Tax's gap check and the default
+  // description the lowest; the WhatsApp card the buy box's (priceOf).
+  const commonRows = (f: 'price' | 'compareAt') => combos.map((c) => ({ key: keyOf(c), label: c.join(' · '), text: (d.cells[keyOf(c)] ?? EMPTY_CELL)[f] ?? '' }))
+  const [typing, setTyping] = useState<{ f: 'price' | 'compareAt'; keys: string[]; text: string } | null>(null)
+  const commonText = (f: 'price' | 'compareAt') => (typing?.f === f ? typing.text : rupeesText(commonPrice(commonRows(f).map((r) => r.text))))
+  const setCommon = (f: 'price' | 'compareAt', text: string) => {
+    const keys = typing?.f === f ? typing.keys : targetsOf(commonRows(f))
+    setTyping({ f, keys, text })
+    setD((x) => ({ ...x, cells: { ...x.cells, ...Object.fromEntries(keys.map((k) => [k, { ...(x.cells[k] ?? EMPTY_CELL), [f]: text }])) } }))
+    fix(...keys.map((k) => `v:${k}:${f}`))
   }
-  // After every change of the title (typing, a paste whose newline was just taken out, Discard), before paint.
-  useLayoutEffect(() => { fit(titleRef.current) }, [d.title])
-  useEffect(() => {
-    const again = () => fit(titleRef.current)
-    window.addEventListener('resize', again)
-    return () => window.removeEventListener('resize', again)
-  }, [])
+  // "3 unsaved changes": the top-level fields and the variant cells that differ from what was saved (Discard → 0).
+  const changes = useMemo(() => {
+    const top = (Object.keys(d) as (keyof Draft)[]).filter((k) => k !== 'cells' && JSON.stringify(d[k]) !== JSON.stringify(saved[k])).length
+    const ks = new Set([...Object.keys(d.cells), ...Object.keys(saved.cells)])
+    return top + [...ks].filter((k) => JSON.stringify(d.cells[k]) !== JSON.stringify(saved.cells[k])).length
+  }, [d, saved])
+  const wasDirty = useRef(false)
+  useEffect(() => { if (dirty && !wasDirty.current) announce('Unsaved changes.'); wasDirty.current = dirty }, [dirty])
+  const has = (...prefixes: string[]) => Object.keys(errors).some((k) => prefixes.some((p) => k === p || k.startsWith(`${p}.`)))
+  const priceWords = targetsWords(commonRows('price'))
+  // "HSN 6211 · 5% under ₹2,500" as drawn: a slab code names its band (the rate under the limit); a flat one its rate;
+  // a code the table lacks the merchant's own rate.
+  const rule = d.tax.hsn ? ruleOn(d.tax.hsn, now) : null
+  const own = Number(d.tax.ownBps) || null
+  const rateWords = rule?.kind === 'slab' ? `${rule.low / 100}% under ${formatInr(paise(rule.limit))}` : rule ? `${rule.bps / 100}%` : own ? `${own / 100}%` : ''
+  const taxWords = d.tax.hsn ? `HSN ${d.tax.hsn}${rateWords ? ` · ${rateWords}` : ''}` : shop.gst.charges ? 'Needs an HSN code' : 'No GST charged'
+  const field = 'flex flex-col gap-1.5 text-label font-medium'
+  const sizedSummary = type ? `${type.name} · ${(type.sizeChart.rows ?? []).map((r) => r.size).filter(Boolean).slice(0, 1).concat((type.sizeChart.rows ?? []).slice(-1).map((r) => r.size)).join('–')}` : 'Pick a chart'
   return (
-    <div ref={root} className={dirty ? 'pb-20 md:pb-0' : undefined}>
-      {/* PageHeader (rule 13) with the title as a field: the h1 names the product for a screen reader, the field
-          shows and edits it. A textarea, so a long title wraps to the next line instead of being cut mid-word
-          (stress test S7). One line of text: Enter does nothing, unless an input method is still composing a word. */}
+    // While there are changes the save bar sits at the foot: the page leaves room under it, so it never covers a field.
+    <div ref={root} className={dirty ? 'pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-4' : undefined}>
       <PageHeader title={d.title || 'New product'} back={{ href: '/console/products', label: 'Products' }}
         badges={<StatusBadge status={status} publishAt={publishAt} now={now} />}
-        actions={share}
-        titleSlot={<div className="min-w-0 flex-1">
-          <label htmlFor="title" className="sr-only">Product title</label>
-          <textarea id="title" rows={1} value={d.title} maxLength={140} {...fieldProps('title', errors.title)} placeholder="Product title"
-            onChange={(e) => set({ title: e.target.value.replace(/\s*\n\s*/g, ' ') })}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) e.preventDefault() }} ref={titleRef}
-            className="-mx-2 w-full rounded-md border border-transparent bg-transparent px-2 py-1 text-2xl font-semibold tracking-tight transition-colors duration-fast hover:border-input focus:border-input focus:bg-card aria-invalid:border-danger-text block resize-none overflow-hidden [field-sizing:content] [overflow-wrap:anywhere]" />
-        </div>} />
-      <FieldError name="title" message={errors.title} />
-      {/* The main column in the order a brand works (products PR·2, spec § 4): photos, words, sizes and stock, then what
-          describes it. A section with nothing saved in it yet folds to one line (FoldSection); the size chart and the
-          model show for a product with sizes. The side panel stays in view on a wide screen, Publish first. */}
+        actions={<>{share}<ProductMore id={id} title={saved.title} handle={saved.handle} status={status} everLive={everLive} shopUrl={`https://${host}/products/${saved.handle}`} dirty={dirty} /></>} />
+      {/* The main column in the order a brand works (Neel N2, as drawn): photos; name, price, description; sizes and
+          colours; stock and prices; then one line each for what describes it. The side panel stays in view on a wide
+          screen, Publish first. */}
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4">
-          <Section><h2 className="flex items-center text-section font-semibold">Photos<InfoTip about="photos">The first is the cover. Show the product on a person. Large photos are resized for you.</InfoTip></h2><Photos productId={id} tenantId={tenantId} photos={photos} colours={colourOpt?.values ?? []} enabled={blobReady} title={d.title} /></Section>
-          <Section>
-            <label htmlFor="desc" className="block font-semibold">Description <span className="text-sm font-normal text-muted-foreground">(optional)</span></label>
-            <textarea id="desc" rows={4} maxLength={5000} value={d.description} onChange={(e) => set({ description: e.target.value })} {...fieldProps('description', errors.description)} className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm aria-invalid:border-danger-text" placeholder="Fabric, fit, care. Shoppers read this before the size chart." />
-            <FieldError name="description" message={errors.description} />
+          <Section title="Photos" action={<span className="text-small text-muted-foreground">Drag to order · the first is the cover</span>}>
+            <Photos productId={id} tenantId={tenantId} photos={photos} colours={colourOpt?.values ?? []} enabled={blobReady} title={d.title} />
           </Section>
-          {video}
-          <Section>
-            <h2 className="flex items-center text-section font-semibold">Sizes, colours and stock<InfoTip about="sizes, colours and stock">{shop.costs ? 'Shoppers never see your cost. Frrata uses it to work out profit on each order. ' : ''}When it runs out applies at 0 stock. Stop selling, take pre-orders, or make to order. An empty SKU is made for you when you save.</InfoTip></h2>
+          <Section title="Name, price, description">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+              <label className={field}>Name
+                <input id="title" value={d.title} maxLength={140} {...fieldProps('title', errors.title)} onChange={(e) => set({ title: e.target.value })} className={`${FIELD} aria-invalid:border-danger-text`} />
+                <FieldError name="title" message={errors.title} />
+              </label>
+              <label className={field}>Price, ₹
+                <input id="price-common" inputMode="decimal" value={commonText('price')} onChange={(e) => setCommon('price', e.target.value)} onBlur={() => setTyping(null)}
+                  disabled={!combos.length} className={`${FIELD} font-num tabular-nums`} />
+              </label>
+              <label className={field}>M.R.P., ₹
+                <input id="mrp-common" inputMode="decimal" value={commonText('compareAt')} onChange={(e) => setCommon('compareAt', e.target.value)} onBlur={() => setTyping(null)}
+                  disabled={!combos.length} className={`${FIELD} font-num tabular-nums`} />
+              </label>
+            </div>
+            {priceWords ? <p className="text-small text-muted-foreground">{priceWords}</p> : null}
+            <label className={field}>Description
+              <textarea id="desc" rows={3} maxLength={5000} value={d.description} onChange={(e) => set({ description: e.target.value })} {...fieldProps('description', errors.description)} className="w-full rounded-md border border-input bg-card px-2.5 py-2 text-sm font-normal aria-invalid:border-danger-text" />
+              <FieldError name="description" message={errors.description} />
+            </label>
+            <p className="truncate text-small text-muted-foreground">{host}/products/<b className="font-medium text-foreground">{d.handle || defaults.handle}</b>{everLive ? null : ' · follows the name until it’s live'}</p>
+          </Section>
+          <Section title="Sizes and colours" action={combos.length ? <span className="text-small text-muted-foreground tabular-nums">{combos.length} of 100</span> : undefined}>
             <OptionsEditor options={d.options} onChange={(options) => set({ options })} error={errors.options} onRename={rename} />
             {colourOpt && colourOpt.values.length > 0 && <ColoursPanel values={colourOpt.values} colours={d.colours} onChange={(colours) => set({ colours })} photos={photos} families={families} />}
-            {combos.length > 0 && <VariantGrid options={opts} cells={d.cells} errors={errors} costs={shop.costs} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
-              onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); fix(...Object.keys(patch).map((f) => `v:${k}:${f === 'leadMin' || f === 'leadMax' ? 'lead' : f}`)) }} />}
           </Section>
-          <FoldSection title="Details" start={Object.keys(start0.attributes).length > 0} summary={d.category ? 'Fabric, work, occasion' : 'Pick a category first'}
-            side={<InfoTip about="details">Asked for by the product’s category. Shoppers filter by them, and Google and Meta read them. Values marked · are Frrata’s, for Indian crafts and fabrics. Google gets the nearest standard value.</InfoTip>}>
+          {combos.length > 0 && <Section title={<span className="inline-flex items-center gap-1">Stock and prices<InfoTip about="stock and prices">{shop.costs ? 'Shoppers never see your cost. Frrata uses it for profit on each order. ' : ''}At 0 stock a size can stop selling, take pre-orders or be made to order. An empty SKU is made when you save.</InfoTip></span>}>
+            <VariantGrid options={opts} cells={d.cells} errors={errors} costs={shop.costs} autoSku={(values) => skuFor(shop.skuPrefix, d.handle || defaults.handle, values)}
+              onChange={(k, patch) => { setD((x) => ({ ...x, cells: { ...x.cells, [k]: { ...(x.cells[k] ?? EMPTY_CELL), ...patch } } })); fix(...Object.keys(patch).map((f) => `v:${k}:${f === 'leadMin' || f === 'leadMax' ? 'lead' : f}`)) }} />
+          </Section>}
+          {/* Folded as drawn, filled or not: its line names what is set ("Adults · Female · Cotton"). */}
+          <FoldSection title="Details" start={false} action={Object.keys(d.attributes).length ? 'Edit' : 'Add'}
+            summary={detailWords(d) || (d.category ? 'Fabric, work, occasion' : 'Pick a category first')} invalid={has('attributes')}>
             <DetailsPanel attributes={d.category?.attributes ?? []} values={d.attributes} onChange={(attributes) => set({ attributes })} />
           </FoldSection>
-          {showSizes && <Section><h2 className="text-section font-semibold">Size chart</h2><SizeChartPanel types={types} typeId={d.typeId} onType={(typeId) => set({ typeId })} /></Section>}
-          {showSizes && <FoldSection title="The model in the photos" start={!!(start0.modelHeight || start0.modelSize)} summary="Height, size worn">
+          {showSizes && <FoldSection title="Size chart" start={false} action={d.typeId ? 'Edit' : 'Add'} summary={sizedSummary} invalid={has('typeId')}>
+            <SizeChartPanel types={types} typeId={d.typeId} onType={(typeId) => set({ typeId })} />
+          </FoldSection>}
+          <FoldSection title="Search and sharing" start={false} action="Edit" summary={`${d.seoTitle || defaults.title}`} invalid={has('handle', 'seoTitle', 'seoDescription')}>
+            <SeoPanel bare handle={d.handle} onHandle={(handle) => set({ handle })} seoTitle={d.seoTitle} onSeoTitle={(seoTitle) => set({ seoTitle })} seoDescription={d.seoDescription} onSeoDescription={(seoDescription) => set({ seoDescription })}
+              defaults={defaults} address={shop.address} cover={photos[0]} everLive={everLive} errors={errors} />
+          </FoldSection>
+          <FoldSection title="Tax" start={false} action={d.tax.hsn ? 'Edit' : 'Add'} summary={taxWords} invalid={has('tax')}>
+            <TaxPanel tax={d.tax} onChange={(tax) => { fix(...changed('tax', d.tax, tax)); set({ tax }) }} price={prices.length ? Math.min(...prices) : null} inclusive={shop.gst.inclusive} charges={shop.gst.charges} now={now} errors={errors}
+              onReprice={(to) => {
+                const hit = combos.map(keyOf).filter((k) => { const p = parseRupees((d.cells[k] ?? EMPTY_CELL).price); return p !== null && inGap(d.tax.hsn, p, shop.gst.inclusive, now) })
+                setD((x) => ({ ...x, cells: { ...x.cells, ...Object.fromEntries(hit.map((k) => [k, { ...(x.cells[k] ?? EMPTY_CELL), price: rupeesText(to) }])) } }))
+                fix(...hit.map((k) => `v:${k}:price`))
+              }} />
+          </FoldSection>
+          {video}
+          {showSizes && <FoldSection title="The model in the photos" start={!!(start0.modelHeight || start0.modelSize)} action={d.modelHeight || d.modelSize ? 'Edit' : 'Add'} summary="Height, size worn">
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1"><label htmlFor="mh" className="block text-sm font-medium">Height <span className="font-normal text-muted-foreground">(optional)</span></label><input id="mh" value={d.modelHeight} maxLength={30} placeholder="5 ft 6 in" onChange={(e) => set({ modelHeight: e.target.value })} className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
-              <div className="space-y-1"><label htmlFor="ms" className="block text-sm font-medium">Wears <span className="font-normal text-muted-foreground">(optional)</span></label><input id="ms" value={d.modelSize} maxLength={10} placeholder="S" onChange={(e) => set({ modelSize: e.target.value })} className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-3 text-sm" /></div>
+              <label className={field}>Height <input id="mh" value={d.modelHeight} maxLength={30} placeholder="5 ft 6 in" onChange={(e) => set({ modelHeight: e.target.value })} className={FIELD} /></label>
+              <label className={field}>Wears <input id="ms" value={d.modelSize} maxLength={10} placeholder="S" onChange={(e) => set({ modelSize: e.target.value })} className={FIELD} /></label>
             </div>
           </FoldSection>}
-          <SeoPanel handle={d.handle} onHandle={(handle) => set({ handle })} seoTitle={d.seoTitle} onSeoTitle={(seoTitle) => set({ seoTitle })} seoDescription={d.seoDescription} onSeoDescription={(seoDescription) => set({ seoDescription })}
-            defaults={defaults} address={shop.address} cover={photos[0]} everLive={everLive} errors={errors} />
-          <Section>
-            <h2 className="text-section font-semibold">Tax</h2>
-            <TaxPanel tax={d.tax} onChange={(tax) => { fix(...changed('tax', d.tax, tax)); set({ tax }) }} price={prices.length ? Math.min(...prices) : null} inclusive={shop.gst.inclusive} charges={shop.gst.charges} now={now} errors={errors}
-              onReprice={(to) => setD((x) => ({ ...x, cells: Object.fromEntries(Object.entries(x.cells).map(([k, c]) => {
-                const p = parseRupees(c.price)
-                return [k, p !== null && inGap(x.tax.hsn, p, shop.gst.inclusive, now) ? { ...c, price: String(to / 100) } : c]
-              })) }))} />
-          </Section>
-          {shop.label && <Section><h2 className="text-section font-semibold">On the pack</h2><LabelPanel label={d.label} onChange={(label) => { fix(...changed('label', d.label, label)); set({ label }) }} errors={errors} maker={shop.maker} /></Section>}
+          {shop.label && <FoldSection title="On the pack" start={false} action="Edit" summary={ready.find((r) => r.label.startsWith('Its label'))?.label ?? 'What the pack says'} invalid={has('label')}>
+            <LabelPanel label={d.label} onChange={(label) => { fix(...changed('label', d.label, label)); set({ label }) }} errors={errors} maker={shop.maker} />
+          </FoldSection>}
           {d.stories && <Section><StoriesPanel stories={d.stories} onChange={(stories) => set({ stories })} photos={photos} tenantId={tenantId} enabled={blobReady} error={errors.stories} /></Section>}
           {d.pairs && <Section><PairsPanel productId={id} pairs={d.pairs} onChange={(pairs) => set({ pairs })} /></Section>}
         </div>
         <aside className="space-y-3 lg:sticky lg:top-[calc(var(--shell-top,0px)+1rem)] lg:max-h-[calc(100dvh-var(--shell-top,0px)-2rem)] lg:overflow-y-auto">
-          <StatusCard productId={id} status={status} publishAt={publishAt} ready={ready} dirty={dirty} saveFirst={saveNow} />
-          <Summary d={d} cells={cells} photos={photos} typeName={type?.name ?? null} status={status} publishAt={publishAt} address={`${shop.address}/products/${d.handle || defaults.handle}`} />
+          <StatusCard productId={id} status={status} publishAt={publishAt} ready={ready} feed={feedMissing(d, photos.length)} dirty={dirty} saveFirst={saveNow} />
+          <WhatsAppPreview title={d.seoTitle.replace(/\s*\|[^|]*$/, '') || d.title} description={d.seoDescription || defaults.description} cover={photos[0]} cells={cells} host={host} store={shop.name} />
           <OrganiseCard category={d.category} onCategory={(category) => set({ category, attributes: keepDetails(d.attributes, category) })} collections={allCollections} picked={d.collections} onPicked={(collections) => set({ collections })} tags={d.tags} onTags={(tags) => set({ tags })} />
-          <ReadyFor d={d} photos={photos.length} priced={prices.length === cells.length && cells.length > 0} />
         </aside>
       </div>
-      {dirty && <SaveBar placement="bottom" keys={mac ? '⌘S' : 'Ctrl+S'} pending={pending || saving} onSave={save} onDiscard={() => { setD(saved); setErrors({}) }} />}
+      {dirty && <SaveBar placement="bottom" keys={mac ? '⌘S' : 'Ctrl+S'} count={changes} pending={pending || saving} onSave={save} onDiscard={() => { setD(saved); setErrors({}); setTyping(null); announce('Changes discarded.') }} />}
       <LeaveDialog open={!!guard.leaveTo} what={saved.title || 'this product'} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(d))} />
     </div>
   )
 }
 
-/** The product right now, following the draft: cover, status, price range, what can be bought. */
-function Summary({ d, cells, photos, typeName, status, publishAt, address }: { d: Draft; cells: Cell[]; photos: Photo[]; typeName: string | null; status: Status; publishAt: string | null; address: string }) {
-  const prices = cells.map((c) => parseRupees(c.price)).filter((x): x is number => x !== null && x > 0)
-  const total = cells.reduce((a, c) => a + (Number(c.stock) || 0), 0)
-  const now = useNow()
-  const sees = cells.map((c) => shopperSees(c, now))
-  const soldOut = sees.filter((s) => !s.canBuy).length
-  const later = sees.filter((s) => s.kind === 'preorder' || s.kind === 'made_to_order').length
-  const cover = photos[0]
-  const colourOpt = d.options[colourIndex(d.options.map((o) => o.name))]
-  return (
-    <Section flush ariaLabel="Summary">
-      <div className="flex gap-3 p-4">
-        {cover ? <img src={urlFor(cover.base, pick(cover.widths, 160))} alt="" width={64} height={80} className="h-20 w-16 shrink-0 rounded-sm bg-muted object-cover" />
-          : <div className="grid h-20 w-16 shrink-0 place-items-center rounded-sm bg-muted text-xs text-muted-foreground">No photo</div>}
-        <div className="min-w-0 space-y-1">
-          <p className="truncate font-semibold">{d.title || 'Untitled product'}</p>
-          <StatusBadge status={status} publishAt={publishAt} now={now} />
-          <p className="truncate text-xs text-muted-foreground">{[d.category?.name, typeName].filter(Boolean).join(' · ')}</p>
-          {colourOpt && colourOpt.values.length > 0 && (
-            <ul className="flex flex-wrap gap-1" aria-label="Colours">{colourOpt.values.map((v) => <li key={v} title={v}><Swatch c={d.colours.find((c) => c.value === v) ?? { value: v, family: null, hex: null, crop: null }} photos={photos} d={18} /><span className="sr-only">{v}</span></li>)}</ul>
-          )}
-        </div>
-      </div>
-      <dl className="grid grid-cols-2 gap-px border-t border-border bg-border text-sm">
-        <div className="bg-card p-3"><dt className="text-xs text-muted-foreground">Price</dt><dd>{prices.length ? (Math.min(...prices) === Math.max(...prices) ? <Money paise={paise(prices[0]!)} /> : <><Money paise={paise(Math.min(...prices))} />–<Money paise={paise(Math.max(...prices))} /></>) : <span className="text-muted-foreground">Not set</span>}</dd></div>
-        <div className="bg-card p-3"><dt className="text-xs text-muted-foreground">In stock</dt><dd className="font-num">{total}</dd></div>
-        <div className="bg-card p-3"><dt className="text-xs text-muted-foreground">Sold out</dt><dd className={soldOut ? 'font-num text-warn-text' : 'font-num'}>{soldOut} of {cells.length}</dd></div>
-        <div className="bg-card p-3"><dt className="text-xs text-muted-foreground">Pre-order or made to order</dt><dd className="font-num">{later}</dd></div>
-      </dl>
-      <div className="flex items-center gap-2 border-t border-border px-4 py-2 text-xs">
-        <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground" title={address}>{address}</span>
-        <Link href={`/console/preview/products/${address.split('/products/')[1] ?? ''}`} className="inline-flex min-h-6 shrink-0 items-center underline">Preview</Link>
-      </div>
-    </Section>
-  )
-}
-
-/** Whether Google and Meta will take it, in words: what their feeds need that is still missing. */
-function ReadyFor({ d, photos, priced }: { d: Draft; photos: number; priced: boolean }) {
+/** What Google and Meta's catalogues still need, in words (the old Ready for card's checks). */
+function feedMissing(d: Draft, photos: number): string[] {
   const has = (h: string) => (d.attributes[h]?.length ?? 0) > 0
   const asks = (h: string) => d.category?.attributes.some((a) => a.handle === h) ?? false
-  const needs = [
-    { label: 'A category', ok: !!d.category },
-    { label: 'Who it is for (gender)', ok: !asks('target-gender') || has('target-gender') },
-    { label: 'Age group', ok: !asks('age-group') || has('age-group') },
-    { label: 'A photo', ok: photos > 0 },
-    { label: 'Prices', ok: priced },
-    { label: 'A colour family for each colour', ok: (() => { const c = d.options[colourIndex(d.options.map((o) => o.name))]; return !c || c.values.every((v) => d.colours.some((x) => x.value === v && x.family)) })() },
-  ]
-  const missing = needs.filter((n) => !n.ok)
-  return (
-    <Section labelledBy="ready-h">
-      <div className="flex items-center justify-between gap-2"><h2 id="ready-h" className="text-section font-semibold">Ready for</h2><Badge tone={missing.length ? 'warn' : 'ok'}>{missing.length ? `${missing.length} to add` : 'Google and Meta'}</Badge></div>
-      {missing.length ? <ul className="space-y-0.5 text-sm text-warn-text">{missing.map((m) => <li key={m.label}><span aria-hidden="true">• </span>{m.label}</li>)}</ul>
-        : <p className="text-sm text-muted-foreground">Google Shopping and Meta catalogues will accept it once those channels are connected.</p>}
-    </Section>
-  )
+  const c = d.options[colourIndex(d.options.map((o) => o.name))]
+  return [
+    !d.category && 'a category',
+    asks('target-gender') && !has('target-gender') && 'who it is for',
+    asks('age-group') && !has('age-group') && 'an age group',
+    !photos && 'a photo',
+    c && !c.values.every((v) => d.colours.some((x) => x.value === v && x.family)) && 'a colour family for each colour',
+  ].filter((x): x is string => !!x)
+}
+
+/** The chosen details' names, for the folded line. */
+function detailWords(d: Draft): string {
+  const names = (d.category?.attributes ?? []).flatMap((a) => (d.attributes[a.handle] ?? []).map((id) => a.values.find((v) => v.id === id)?.name).filter((x): x is string => !!x))
+  return names.slice(0, 4).join(' · ') + (names.length > 4 ? ` · ${names.length - 4} more` : '')
 }
 
 /** Details that still apply under a new category keep their values (a fabric stays a fabric); the rest go, and only
