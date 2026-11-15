@@ -8,6 +8,7 @@ import { adminDb } from '@/lib/db/admin'
 import { tenants } from '@/lib/db/schema'
 import { frrataCreditNotes, frrataInvoiceLines, frrataInvoices, frrataPayments } from '@/lib/db/schema-billing'
 import { runDrafts, type RunResult } from '@/lib/billing/run'
+import { monthStartIST } from '@/domains/time/month'
 import { auditStaff } from './audit'
 
 // =============================================================================
@@ -68,10 +69,43 @@ export async function issueMonth(staff: StaffOk, monthStart: Date, expected: { c
   // Without Frrata's GSTIN this would issue the REAL drafts as tests and freeze their fees for good (security review).
   if (s.test && !testIssueAllowed()) throw new Error('issue: test-mode issuing is off here — set Frrata’s GSTIN, legal name, address and SAC first')
   return adminDb().transaction(async (tx) => {
-    const [r] = await tx.execute<{ issued: number; closed: number }>(sql`select * from app_issue_frrata_invoices(${monthStart.toISOString()}::timestamptz, ${expected.count}, ${expected.total}, ${staff.userId}::uuid,
-      ${s.name}, ${s.gstin ?? ''}, ${s.address}, ${s.sac}, ${s.test}, ${s.prefix}, ${s.fy})`)
-    await auditStaff(tx, staff, { action: 'billing.issue', target: monthStart.toISOString(), detail: { ...expected, issued: r!.issued, closed: r!.closed, test: s.test } })
-    return { issued: Number(r!.issued), closed: Number(r!.closed), test: s.test }
+    const r = await issueWith(tx, monthStart, expected, { staff: staff.userId })
+    await auditStaff(tx, staff, { action: 'billing.issue', target: monthStart.toISOString(), detail: { ...expected, issued: r.issued, closed: r.closed, test: s.test } })
+    return r
+  })
+}
+
+type AdminTx = Parameters<Parameters<ReturnType<typeof adminDb>['transaction']>[0]>[0]
+
+/** The one call to the issue definer, for Admin (a staff member) and the 1st's run (the system). */
+async function issueWith(tx: AdminTx, monthStart: Date, expected: { count: number; total: number }, by: { staff: string } | { system: true }) {
+  const s = frrataSeller()
+  const staff = 'staff' in by ? by.staff : null
+  const [r] = await tx.execute<{ issued: number; closed: number }>(sql`select * from app_issue_frrata_invoices(${monthStart.toISOString()}::timestamptz, ${expected.count}, ${expected.total}, ${staff}::uuid,
+    ${s.name}, ${s.gstin ?? ''}, ${s.address}, ${s.sac}, ${s.test}, ${s.prefix}, ${s.fy}, ${!('staff' in by)})`)
+  return { issued: Number(r!.issued), closed: Number(r!.closed), test: s.test }
+}
+
+/**
+ * Bills issued on the 1st without a person (billing rework R2; owner decision 3, 2026-11-15). Called by the daily cron
+ * only after the run drafted THIS month for every shop. Skips — never throws for these — unless Frrata's seller details
+ * are real (never test invoices), it is the 1st to 3rd IST, and the drafts are fresh. The count and total are read in
+ * the same transaction as the issue, with toIssue's rule; the definer recounts under its row locks and audits itself.
+ */
+export async function issueMonthAuto(now = new Date()): Promise<{ issued: number; closed: number } | { skipped: 'seller' | 'day' | 'nothing' | 'stale' }> {
+  const s = frrataSeller(now)
+  if (s.test) return { skipped: 'seller' }
+  const month = monthStartIST(now)
+  // The IST day of the month: days since the IST 1st, plus one.
+  if (Math.floor((now.getTime() - month.getTime()) / 86_400_000) + 1 > 3) return { skipped: 'day' }
+  return adminDb().transaction(async (tx) => {
+    const rows = await tx.select({ issuedAt: frrataInvoices.issuedAt, rolled: frrataInvoices.rolled, total: frrataInvoices.total, draftedAt: frrataInvoices.draftedAt })
+      .from(frrataInvoices).where(eq(frrataInvoices.periodStart, month))
+    const t = toIssue(rows as DraftRow[], month)
+    if (t.open === 0) return { skipped: 'nothing' as const }
+    if (t.stale > 0) return { skipped: 'stale' as const }
+    const r = await issueWith(tx, month, { count: t.count, total: t.total }, { system: true })
+    return { issued: r.issued, closed: r.closed }
   })
 }
 

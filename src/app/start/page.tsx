@@ -27,7 +27,7 @@ export default async function StartPage() {
   // Trials TR1: the plans and the trial length, read from the price list and Admin's setting (never a copy).
   const [planRows, trialDays] = auth.ok ? await Promise.all([publicPlans(), signupTrialDays()]) : [[], 30]
   const plans = planRows.map((p) => ({ code: p.code, name: p.name, price: formatInr(paise(p.monthlyPrice)),
-    included: p.includedOrders.toLocaleString('en-IN'), fee: formatPercent(p.feeBps / 10_000, p.feeBps % 100 === 0 ? 0 : 1) }))
+    fee: formatPercent(p.feeBps / 10_000, p.feeBps % 100 === 0 ? 0 : 1) }))
   return (
     <div data-shell className={`min-h-dvh bg-background ${SHELL_FONT_VARS}`}>
       <SiteStage><SiteHeader links={[]} action={auth.ok ? undefined : { href: '/login', label: 'Sign in' }} /></SiteStage>

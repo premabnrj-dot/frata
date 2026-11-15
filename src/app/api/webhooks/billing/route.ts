@@ -21,7 +21,7 @@ type Event = { event?: string; created_at?: number; payload?: { payment?: { enti
 function trimmed(e: Event) {
   const p = e.payload?.payment?.entity, t = e.payload?.token?.entity
   const pick = (o: Record<string, unknown> | undefined, keys: string[]) => (o ? Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, typeof o[k] === 'string' ? String(o[k]).slice(0, 160) : o[k]])) : undefined)
-  return { event: e.event, payload: { ...(p ? { payment: { entity: pick(p, ['id', 'order_id', 'status', 'amount', 'error_description']) } } : {}), ...(t ? { token: { entity: pick(t, ['id', 'status']) } } : {}) } }
+  return { event: e.event, payload: { ...(p ? { payment: { entity: pick(p, ['id', 'order_id', 'status', 'amount', 'currency', 'error_description']) } } : {}), ...(t ? { token: { entity: pick(t, ['id', 'status']) } } : {}) } }
 }
 
 /** The body, read with a byte count: a chunked body with no length stops at the cap, never read whole first. */

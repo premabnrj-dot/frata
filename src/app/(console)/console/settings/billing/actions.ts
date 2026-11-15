@@ -2,7 +2,7 @@
 
 import { sql } from 'drizzle-orm'
 import { z } from 'zod'
-import { billingGatewayIsTest, billingKeyId, checkoutSigned, createCustomer, createMandateOrder, createOrder, fetchPayment, isBillingGatewayConfigured, type Method } from '@/lib/billing/gateway'
+import { billingGatewayIsTest, billingKeyId, checkoutSigned, createCustomer, createMandateOrder, createOrder, fetchPayment, isBillingGatewayConfigured, type Method, moneyOf } from '@/lib/billing/gateway'
 import { billingAttemptResult } from '@/lib/db/platform'
 import { revalidatePath } from 'next/cache'
 import { parseBillingDetails } from '@/domains/billing/details'
@@ -99,9 +99,12 @@ export async function completeAutopay(input: Checkout): Promise<{ ok: true } | {
   if (!p.success || !checkoutSigned(p.data.order, p.data.payment, p.data.signature)) return { ok: false, error: 'That did not come from the payment page. Try again.' }
   try {
     const pay = await fetchPayment(p.data.payment)
-    if (pay.order_id !== p.data.order || !pay.token_id) return { ok: false, error: 'The bank did not confirm the mandate. Try again.' }
+    if (pay.order_id !== p.data.order || !pay.token_id || pay.status === 'failed') return { ok: false, error: 'The bank did not confirm the mandate. Try again.' }
+    // UPI and card: confirmed by their first payment (captured or authorised). eNACH waits for the bank (the definer
+    // keeps it pending until token.confirmed, whatever is passed here).
+    const confirmed = pay.status === 'captured' || pay.status === 'authorized'
     const r = await asMember(CAN_MANAGE, { action: 'billing.autopay.done' }, async (tx) => {
-      const [x] = await tx.execute<{ ok: boolean }>(sql`select app_complete_mandate(${p.data.order}, ${pay.token_id!}) as ok`)
+      const [x] = await tx.execute<{ ok: boolean }>(sql`select app_complete_mandate(${p.data.order}, ${pay.token_id!}, ${confirmed}) as ok`)
       return !!x?.ok
     })
     if (!r.ok) return { ok: false, error: r.error }
@@ -169,7 +172,7 @@ export async function completePayNow(input: Checkout): Promise<{ ok: true } | { 
     const pay = await fetchPayment(p.data.payment)
     if (pay.order_id !== p.data.order) return { ok: false, error: 'That payment is not for this invoice.' }
     // Captured now, or the webhook records it when the bank confirms.
-    if (pay.status === 'captured') await billingAttemptResult(p.data.order, p.data.payment, true, null)
+    if (pay.status === 'captured') await billingAttemptResult(p.data.order, p.data.payment, true, null, moneyOf(pay))
     revalidatePath('/console/settings/billing')
     return { ok: true }
   } catch (e) {

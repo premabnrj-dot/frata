@@ -1946,9 +1946,9 @@ do $$ begin
   begin update frrata_credit_notes set reason = 'changed' where number = 'PROOF/C00001'; raise exception 'FAIL: a Frrata credit note changed';
   exception when check_violation then null; end;
   if exists (select 1 from unnest(array['frata_app', 'anon', 'authenticated', 'service_role']) r,
-               unnest(array['app_issue_frrata_invoices(timestamptz,int,bigint,uuid,text,text,text,text,boolean,text,text)', 'app_record_frrata_payment(uuid,bigint,text,text,uuid)', 'app_issue_frrata_credit_note(uuid,bigint,text,uuid,text,text)']) f
+               unnest(array['app_issue_frrata_invoices(timestamptz,int,bigint,uuid,text,text,text,text,boolean,text,text,boolean)', 'app_record_frrata_payment(uuid,bigint,text,text,uuid)', 'app_issue_frrata_credit_note(uuid,bigint,text,uuid,text,text)']) f
              where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: a non-Admin role may issue, record or credit'; end if;
-  if not has_function_privilege('frata_admin', 'app_issue_frrata_invoices(timestamptz,int,bigint,uuid,text,text,text,text,boolean,text,text)', 'execute') then raise exception 'FAIL: Admin cannot issue'; end if;
+  if not has_function_privilege('frata_admin', 'app_issue_frrata_invoices(timestamptz,int,bigint,uuid,text,text,text,text,boolean,text,text,boolean)', 'execute') then raise exception 'FAIL: Admin cannot issue'; end if;
   if has_table_privilege('frata_admin', 'frrata_payments', 'insert, update, delete') or has_table_privilege('frata_admin', 'frrata_credit_notes', 'insert, update, delete')
      or has_table_privilege('frata_app', 'frrata_payments', 'insert, update, delete')
   then raise exception 'FAIL: a role writes payments or credit notes directly'; end if;
@@ -1974,12 +1974,17 @@ do $$ declare ok boolean; begin
   select app_complete_mandate('order_proofA1', 'token_A') into ok;
   if not ok then raise exception 'FAIL: A could not complete its own autopay'; end if;
   if (select mandate_method from billing_accounts) is distinct from 'upi' then raise exception 'FAIL: A cannot see its own autopay status'; end if;
+  -- Billing R5: a bank mandate (eNACH) is pending until the bank confirms it, whatever the caller says.
+  perform app_begin_mandate('cust_proofA', 'order_proofA2', 'emandate', 10000000, '99999999-9999-9999-9999-999999999999');
+  select app_complete_mandate('order_proofA2', 'token_A2', true) into ok;
+  if not ok then raise exception 'FAIL: A could not complete its own eNACH set-up'; end if;
+  if (select mandate_at from billing_accounts) is not null then raise exception 'FAIL: an eNACH mandate counted before the bank confirmed it'; end if;
 end $$;
 rollback;
 do $$ begin
   if (select mandate_token_id from billing_accounts where tenant_id = '22222222-2222-2222-2222-222222222222') is not null then raise exception 'FAIL: B''s mandate was touched'; end if;
   if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r,
-               unnest(array['app_begin_mandate(text,text,text,bigint,uuid)', 'app_complete_mandate(text,text)', 'app_billing_due()', 'app_billing_begin_attempt(uuid,int)', 'app_billing_attempt_context(uuid)', 'app_billing_attempt_result(text,text,boolean,text)', 'app_store_billing_event(text,text,jsonb)', 'app_apply_billing_event(uuid)']) f
+               unnest(array['app_begin_mandate(text,text,text,bigint,uuid)', 'app_complete_mandate(text,text,boolean)', 'app_billing_due()', 'app_billing_begin_attempt(uuid,int)', 'app_billing_attempt_context(uuid)', 'app_billing_attempt_result(text,text,boolean,text,bigint,text)', 'app_store_billing_event(text,text,jsonb)', 'app_apply_billing_event(uuid)']) f
              where has_function_privilege(r, f, 'execute')) then raise exception 'FAIL: an API role may run a billing B3 function'; end if;
   if exists (select 1 from unnest(array['frata_app', 'frata_admin', 'anon', 'authenticated', 'service_role']) r where has_table_privilege(r, 'billing_events', 'select, insert, update, delete'))
   then raise exception 'FAIL: a role reaches billing_events directly'; end if;
@@ -3797,11 +3802,28 @@ do $$ declare r record; allowed jsonb := '{
      or (select count(*) from pg_policies where 'frata_builder' = any(roles)) <> 16
   then raise exception 'FAIL: frata_builder''s policies'; end if;
 end $$;
+-- Billing rework R2: the system issuer (0139) never issues test invoices, never alongside a staff member, and its
+-- audit row has no user (0138).
+do $$ begin
+  begin perform app_issue_frrata_invoices(date_trunc('month', now()), 0, 0, null, 'X', '29ABCDE1234F1Z5', 'A', '998315', true, 'FRR/', '26-27', true);
+    raise exception 'FAIL: a system run issued test invoices';
+  exception when check_violation then null; end;
+  begin perform app_issue_frrata_invoices(date_trunc('month', now()), 0, 0, '99999999-9999-9999-9999-999999999999', 'X', '29ABCDE1234F1Z5', 'A', '998315', false, 'FRR/', '26-27', true);
+    raise exception 'FAIL: a run was both staff and system';
+  exception when invalid_parameter_value then null; end;
+  begin insert into audit_events (actor_user_id, actor_email, actor_kind, action) values ('99999999-9999-9999-9999-999999999999', null, 'system', 'x');
+    raise exception 'FAIL: a system audit row named a user';
+  exception when check_violation then null; end;
+  begin insert into audit_events (actor_user_id, actor_kind, action) values (null, 'staff', 'x');
+    raise exception 'FAIL: a staff audit row had no user';
+  exception when check_violation then null; end;
+end $$;
+
 -- the proof-only helpers go, and are gone
 drop schema proof cascade;
 do $$ begin if to_regnamespace('proof') is not null then raise exception 'FAIL: proof helpers left behind'; end if; end $$;
 
--- 81. Storefront keys (V1 Storefront API SA0, 0138–0140; ADR-0018; plan docs/plans/2026-11-15-v1-storefront-api.md
+-- 81. Storefront keys (V1 Storefront API SA0, 0141–0143; ADR-0018; plan docs/plans/2026-11-15-v1-storefront-api.md
 -- § SA0·3). A key is its shop's own row both ways; frata_app never changes a hash, kind, shop or maker and never deletes;
 -- no other role reaches it. app_storefront_key is the one way from a key to a shop: it returns exactly four columns and
 -- derives every stop (deleted, expired, a test key once the store ever opened, a partner's key once that partner's link

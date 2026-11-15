@@ -145,7 +145,8 @@ export const auditEvents = pgTable('audit_events', {
   id: id(),
   at: at('at').notNull().defaultNow(),
   tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'restrict' }),
-  actorUserId: uuid('actor_user_id').notNull(),
+  /** Null only for a system run (billing rework R2: bills issued on the 1st), and then the email is null too. */
+  actorUserId: uuid('actor_user_id'),
   actorEmail: text('actor_email'),
   actorKind: text('actor_kind').notNull(),
   supportSessionId: uuid('support_session_id').references(() => supportSessions.id, { onDelete: 'restrict' }),
@@ -156,7 +157,8 @@ export const auditEvents = pgTable('audit_events', {
   index('audit_events_tenant_at').on(t.tenantId, t.at),
   index('audit_events_at').on(t.at),
   index('audit_events_session').on(t.supportSessionId),
-  check('audit_events_kind', sql`${t.actorKind} in ('member','staff','support')`),
+  check('audit_events_kind', sql`${t.actorKind} in ('member','staff','support','system')`),
+  check('audit_events_who', sql`(${t.actorKind} = 'system') = (${t.actorUserId} is null) and (${t.actorKind} <> 'system' or ${t.actorEmail} is null)`),
 ])
 
 export const plans = pgTable('plans', {

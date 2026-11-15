@@ -1199,6 +1199,18 @@ What a link to a shop page shows in WhatsApp, Instagram DMs, Facebook, X, iMessa
 - **Few words, no Devanagari drawn** (Satori cannot shape it; Hindi goes in og:title and og:description). Apple: avoid
   text-heavy images. og:image:alt describes the photo, not a caption.
 
+## Plan and billing (billing rework R1, owner-approved 2026-11-15; spec `docs/specs/2026-11-15-billing-rework.md`, mockup https://claude.ai/artifact/Tp6T3A68mzNrYzVP8NhsxD)
+
+- **Tabs in the address** (`?tab=`): Overview, Charges, Plans, Invoices, Payment, Details; the Settings group's tabs stay
+  above them. Each tab loads only its own reads.
+- **A summary reconciles.** Every bill shows rows that add up to its total (plan, apps, fee on delivered orders,
+  credits, carry, before GST, the GST heads, total), and each row drills down to its orders or its plan lines.
+- **Money a merchant compares is worked out by one rule** (`src/domains/billing/charges.ts`): a plan's cost at a sales
+  figure, cost as a share of delivered sales, delivered sales less credited bases. "Orders included" never shows to a
+  merchant (owner, 2026-11-15); Admin keeps it.
+- **A row of link choices** (a bill, a view, a filter) is `BillPicks` (`settings/billing/_components/pills.tsx`): 44 px
+  on a phone, the picked one in the selection colours. A comparison table keeps its columns and scrolls on a phone.
+
 ## Neel primitives (N0, 2026-11-13)
 
 The gallery `/console/fixtures/neel` (test-only) shows each in its states; `e2e/flows/81-neel.mjs` holds the drawn

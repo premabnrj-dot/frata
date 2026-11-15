@@ -325,8 +325,10 @@ export async function billingUnapplied(olderMinutes: number): Promise<string[]> 
 export async function billingAttemptOrder(paymentId: string, order: string) {
   await db().execute(sql`select app_billing_attempt_order(${paymentId}::uuid, ${order})`)
 }
-export async function billingAttemptResult(order: string, paymentId: string | null, captured: boolean, reason: string | null): Promise<boolean> {
-  const [r] = await db().execute<{ ok: boolean }>(sql`select app_billing_attempt_result(${order}, ${paymentId}, ${captured}, ${reason}) as ok`)
+/** `money`: what the gateway says it took (amount in paise, currency) — required for a capture (billing R5: the definer
+ *  records the money that moved, in INR only, never the amount we asked for). */
+export async function billingAttemptResult(order: string, paymentId: string | null, captured: boolean, reason: string | null, money?: { amount: number; currency: string }): Promise<boolean> {
+  const [r] = await db().execute<{ ok: boolean }>(sql`select app_billing_attempt_result(${order}, ${paymentId}, ${captured}, ${reason}, ${money?.amount ?? null}::bigint, ${money?.currency ?? null}) as ok`)
   return !!r?.ok
 }
 /** Frrata's billing webhook: stored once under the gateway's event id (null: already stored), then applied from the row. */

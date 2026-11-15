@@ -13,7 +13,7 @@ export function TrialEnding({ lastDay, price, dismissKey }: { lastDay: string; p
     <div role="status" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-warn-text/30 bg-warn px-3 py-2 text-sm text-warn-text">
       <span>Trial ends {lastDay} · then {price}/mo incl. GST</span>
       <span className="flex gap-2">
-        <Link href="/console/settings/billing#paying" className={button({ variant: 'secondary' })}>Set up autopay</Link>
+        <Link href="/console/settings/billing?tab=payment" className={button({ variant: 'secondary' })}>Set up autopay</Link>
         <button type="button" className={button({ variant: 'secondary' })} onClick={() => { try { sessionStorage.setItem(dismissKey, '1') } catch { /* private window */ } setHidden(true) }}>Not now</button>
       </span>
     </div>

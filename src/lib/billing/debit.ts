@@ -2,7 +2,7 @@ import 'server-only'
 import { billingAttemptContext, billingAttemptOrder, billingAttemptResult, claimBillingAttempt, closeBillingAttempt } from '@/lib/db/platform'
 import { errName } from '@/lib/log'
 import type { OutboxRow } from '@/lib/outbox'
-import { billingGatewayIsTest, chargeRecurring, createOrder, fetchPayment, orderByReceipt, orderPayments } from './gateway'
+import { billingGatewayIsTest, chargeRecurring, createOrder, fetchPayment, moneyOf, orderByReceipt, orderPayments } from './gateway'
 
 // =============================================================================
 // FILE: src/lib/billing/debit.ts — THE OUTBOX SENDER FOR 'bill:attempt' (billing B3; plan finding 13; security review
@@ -29,11 +29,11 @@ export async function sendBillAttempt(row: OutboxRow): Promise<void> {
     // Already tried on this order? Record what the gateway says, charge nothing.
     const existing = (await orderPayments(order)).items
     const done = existing.find((p) => p.status === 'captured') ?? existing.find((p) => p.status === 'failed')
-    if (done) { await billingAttemptResult(order, done.id, done.status === 'captured', done.error_description ?? null); return }
+    if (done) { await billingAttemptResult(order, done.id, done.status === 'captured', done.error_description ?? null, moneyOf(done)); return }
     if (existing.length) return // in flight: the webhook settles it
     const charged = await chargeRecurring({ order, customer: ctx.customer, token: ctx.token, amount: ctx.amount, description: `Frrata ${ctx.receipt.split(':')[0]}` })
     const p = await fetchPayment(charged.razorpay_payment_id).catch(() => null)
-    if (p?.status === 'captured' || p?.status === 'failed') await billingAttemptResult(order, p.id, p.status === 'captured', p.error_description ?? null)
+    if (p?.status === 'captured' || p?.status === 'failed') await billingAttemptResult(order, p.id, p.status === 'captured', p.error_description ?? null, moneyOf(p))
   } catch (e) {
     // Unknown outcome: never retried from here. The webhook or the 2-hour settle records what happened.
     console.error('[billing] debit', paymentId, errName(e))

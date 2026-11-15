@@ -28,6 +28,17 @@ export function billableAt(o: Outcome): Date | null {
   return assumed
 }
 
+/** What a billed order's row on Plan and billing › Charges says happened (billing rework R1), with when: the same ranking
+ *  as billableAt (a return outranks delivered; delivered outranks lost). `assumed`: shipped ASSUME_DELIVERED_DAYS ago
+ *  with no outcome, so it counts as delivered. */
+export type OrderOutcome = 'delivered' | 'assumed' | 'came_back' | 'lost'
+export function billedOutcome(o: Outcome): { outcome: OrderOutcome; outcomeAt: Date | null } {
+  if (o.rtoInitiatedAt) return { outcome: 'came_back', outcomeAt: o.rtoInitiatedAt }
+  if (o.deliveredAt) return { outcome: 'delivered', outcomeAt: o.deliveredAt }
+  if (o.lostAt) return { outcome: 'lost', outcomeAt: o.lostAt }
+  return { outcome: 'assumed', outcomeAt: o.shippedAt ? new Date(o.shippedAt.getTime() + ASSUME_DELIVERED_DAYS * DAY) : null }
+}
+
 /** Whether an order counts as delivered for the fee at `now`: billableAt read at one moment (its tests hold the rule). */
 export function billableDelivered(o: Outcome, now: Date): boolean {
   const at = billableAt(o)
