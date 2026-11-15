@@ -35,13 +35,14 @@ a route, an action or a connector → `frata-architecture`. Any UI →
 Google → `frata-integrations`. Prices, fees, margins, the business model →
 `frata-unit-economics`. Before saying something works → `frata-verify`.
 Something failing that makes no sense → `frata-gotchas`.
+Anything the Storefront API answers (api.frrata.shop) → `frata-storefront-api`.
 Agents: `tenancy-auditor`, `architecture-reviewer`, `integration-researcher`,
 `unit-economics-reviewer`, `impact-reviewer` (every task's diff: callers, test
 gaps, debt), `speed-reviewer` (a plan or diff that touches a page, a query,
 a cache or background work), `security-reviewer` (an action, route, webhook,
 header, cookie or merchant content), `e2e-runner` (the browser flows in `e2e/`), `mockup-parity-reviewer` (a built screen against its approved mockup,
 before a phase closes), `words-reviewer` (every diff or mockup with words a person reads), `design-system-reviewer`
-(tokens, primitives, states and accessibility on every UI diff), `release-agent` (merge main, gates, flows, push, deploy).
+(tokens, primitives, states and accessibility on every UI diff), `release-agent` (merge main, gates, flows, push, deploy), `api-contract-reviewer` (a diff that changes what the Storefront API answers).
 Scripts: `npm run release:check` (migration collisions + the e2e flows a change touches), `scripts/prod-migrate.mjs`
 (prints a migration's production SQL and drizzle row).
 
