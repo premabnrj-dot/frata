@@ -1,5 +1,5 @@
 # Neel N2b — an order, an offer, a settings section, as drawn
-Status: draft (for the review agents) · Date: 2026-11-15 · Spec: `docs/specs/2026-11-13-design-language-neel.md` § N2 ·
+Status: active (architecture, tenancy and unit-economics reviews folded in, 2026-11-15) · Date: 2026-11-15 · Spec: `docs/specs/2026-11-13-design-language-neel.md` § N2 ·
 Mockup: https://claude.ai/artifact/GH5xX5ss5Xb9rLc5LwyVEC (source `docs/mockups/2026-11-15-neel-n2b/`) · Approved: owner,
 2026-11-15 ("approved, continue with the plan and build"; Notes and Activity as one timeline; the courier choice on the
 order page)
@@ -62,7 +62,53 @@ Unit: `orderTopLine` (every state the board draws), the courier came-back share,
 | Mockup element | Built | Reason | Owner seen |
 |---|---|---|---|
 | Money words on the order and the offer (drawn: "after cost, courier, fees", "both courier legs", "pays back at 1.7×", "4% came back here") | The words above (unit-economics review) | A fact the mockup got wrong: each drawn line said less or other than the engine computes | — |
+| Sub-lines "Confirmed on WhatsApp at 10:14 am", "No reply on WhatsApp yet", "Refused at the door", "Remitted by Delhivery on 23 Nov", an email "· opened" | Facts we record (confirmed time, risk reasons, cancel reason, delivered date); the rest left out | No row records a WhatsApp reply, an NDR reason, a remittance or an open | — |
+| Top line cases not drawn | Today's words for held-and-paid, delivered prepaid, came back after paying, lost, cancelled with a refund, not paid yet; and today's CA and "ask the owner" sentences on two drawn cases | An accounting step and a role step a merchant needs; the board drew nine of fourteen cases | — |
+| Notes and Activity (separate cards drawn) | One timeline | Owner, 2026-11-15 | Yes, 2026-11-15 |
 | Courier cards with price and days, "Book Delhivery · ₹78" | Cards for couriers the store has used, each with its came-back share; picking one fills the courier; booking stays "Ship another way" (name and AWB) | No Shiprocket connector exists (no rates, no booking). It is its own phase: current facts on Shiprocket's API and terms first (`frata-integrations`, 90-day rule) | — |
+
+## Architecture review on the plan (2026-11-15), folded in
+**The top line** — `orderTopLine(o, state, { owed, refund, canCancel })` in `src/domains/orders/top-line.ts`, pure, returns
+`{ tone, line, sub, money }` (words and paise, no JSX); the page and the phone read it; today's foot line goes. Every case
+today has a row; drawn cases take the drawn words, the rest keep today's:
+| Case (today) | Built line · sub |
+|---|---|
+| unconfirmed / held | drawn: "Confirm it before you pack" · the risk reasons' first line (not "No reply on WhatsApp", which no row records) |
+| held and paid | today's words |
+| COD, to pack or on the way | drawn: "Collect ₹N on delivery" · confirmed time if confirmed, else none |
+| paid online (not after a switch) | drawn: "Paid online. Collect nothing." · "Razorpay · paid at <time>" |
+| paid online after packing for COD | drawn line "Paid online after packing. Don't collect cash." · drawn sub, PLUS today's "The invoice stays as issued. Ask your CA if it needs a credit note." (kept: an accounting step) |
+| refund due | drawn: "Refund ₹N in Razorpay" · "Paid after it sold out. Cancel it first." + today's "Ask the owner or a manager to cancel it." when this person can't |
+| delivered COD | drawn: "₹N collected by the courier" · "Delivered <date>." (remittance: no row records it) |
+| delivered prepaid | today's "Delivered." |
+| came back (unpaid) | drawn: "Coming back. Nothing was collected." · the courier's word if the shipment has one, else none |
+| came back after paying online | today's words |
+| lost (paid / unpaid) | today's words |
+| cancelled (nothing / with refund) | drawn "Cancelled. Nothing to collect." · the cancel reason; with a refund, today's words |
+| not paid yet | today's words |
+- **What you keep** — one pure `orderKeep(row, estimate, feeBps)` in `src/domains/orders/kept.ts`; `keptOf` uses it (no second
+  copy of freight, fee and restock rules). Its inputs are read in `orderDetail`'s transaction only when `seesCosts`. Before
+  an outcome, "if it comes back" assumes the pieces go back in stock (says so); unknown goods cost or no courier estimate:
+  the card says which is missing.
+- **Shopper history** — from the RiskFacts `orderDetail` already loads (`earlierOrders`, `cameBack`): no new read.
+- **One primary action** — `primaryAction` (`src/domains/orders/work.ts`) decides it, as today; Print is not a second
+  button when the primary is the packing slip; shipping stays in the Shipping card (it needs a courier and an AWB). The
+  risk reasons, next step and Call/WhatsApp stay as a "High risk" region under the top line when high (flow 50).
+- **Courier shares** — a predicate `cameBackSql` moves to `order-predicates.ts` first (Analytics uses it too); couriers by
+  `lower(trim(courier_name))`, open shipments only, last 180 days, counts under 30 as "6 of 14"; no shipments yet: the
+  card shows "Ship another way" only. EXPLAIN at 10× (speed-reviewer).
+- **PIN line and suggestion** — one query module, one window (180 days), serves the order page and Settings; the
+  suggestion only when the PIN's came-back share is above the store's own by 10 points with 10+ outcomes; measured, or a
+  `(tenant_id, pincode)` partial index if slow. Accepting it is recorded (an event) so the measure means something.
+- **Timeline** — a note shows once (its text on its `note_added` event); support's notes marked through that event; the
+  email rows keep their actions (fix the address, send again) inside the timeline, gated as today (`canAct`).
+- **Reads** — `riskFactsFor` and `orderPrefixFor` fold into `orderDetail`'s one transaction.
+- **Offer cost line** — `coreBestSellers` limited to the offer's products; the client gets derived figures only (kept at 0
+  off, the change per ₹ off), never `unit_cost`.
+- **Settings chips** — a `ChipInput` primitive (the stored value stays a list); switch rows exist.
+- **Regression net (corrected):** 40-queue, 50-order-page (regions Activity, Notes, High risk; "Cancelled. Nothing to
+  collect."), 60-documents (`/^Collect ₹/`), 71-email (the Emails card), 77-order-edit (region Activity), 49-ship (label
+  Courier), 47-offers, the settings flows. Each locator that moves changes in the task that moves it.
 
 ## Unit-economics review on the plan (2026-11-15), folded in
 Every figure comes from the engines (`orderProfit`, `taxOrder`, `freightOf`, `deliveredFee`, `keptPerOrder`), never typed;
