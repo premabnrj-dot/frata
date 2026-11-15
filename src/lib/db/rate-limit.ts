@@ -128,6 +128,13 @@ export const LIMITS = {
   // A sell-out inside a window already purged queues ONE trailing purge at the window's end, across every instance
   // (shopper batch 2026-11-12: a second sell-out within 30 s was dropped until the 60 s backstop). Fails open too.
   soldOutTrail: { action: 'sold_out_trail:shop', max: 1, windowSeconds: 30 },
+  // The Storefront API (V1 SA0, security and unit-economics reviews 2026-11-15), all failing closed. Unknown keys per
+  // network (counted after a lookup misses, on the dynamic tree); test keys at 60 a minute per network; a test key's
+  // search; keys made per shop (each is a new set of cached copies).
+  apiMissIp: { action: 'api_miss:ip', max: 300, windowSeconds: 600 },
+  apiTestIp: { action: 'api_test:ip', max: 60, windowSeconds: 60 },
+  apiSearchIp: { action: 'api_search:ip', max: 300, windowSeconds: 600 },
+  apiKeyCreateShop: { action: 'api_key_create:shop', max: 10, windowSeconds: 3600 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */

@@ -19,6 +19,20 @@ import { errName } from '@/lib/log'
 // =============================================================================
 
 /**
+ * Which shop a storefront key names (ADR-0018): the definer's one row for the key's sha256 (lowercase hex), or null.
+ * Every stop is the definer's (deleted, expired, a test key once the store opened, a gone partner's key, a Website not
+ * on a live domain). Called only by storefrontKeyFor (src/lib/queries/storefront.ts; check:tenant § API).
+ */
+export async function storefrontKeyRow(hashHex: string): Promise<{ keyId: string; tenantId: string; kind: 'public' | 'test'; expiresAt: string | null } | null> {
+  if (!/^[0-9a-f]{64}$/.test(hashHex)) return null
+  const rows = await db().execute<{ key_id: string; tenant_id: string; kind: 'public' | 'test'; expires_at: Date | string | null }>(
+    sql`select key_id, tenant_id, kind, expires_at from app_storefront_key(${hashHex})`)
+  const r = rows[0]
+  if (!r) return null
+  return { keyId: r.key_id, tenantId: r.tenant_id, kind: r.kind, expiresAt: r.expires_at === null ? null : new Date(r.expires_at).toISOString() }
+}
+
+/**
  * Which shop a storefront host belongs to. A platform address (<slug>.<shop
  * domain>) is found by its slug, so changing the shop domain is an environment
  * change; any other host is a merchant's own domain (shop_domains; tenant_domains is retired, app_tenant_for_host
