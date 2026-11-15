@@ -4,6 +4,10 @@ import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import { siteContent } from '@/lib/db/schema-content'
 import { members } from '@/lib/db/schema'
+import { collections, productImages, products } from '@/lib/db/schema-catalogue'
+import { shopPages } from '@/lib/db/schema-themes'
+import { hasOwnerIn } from './settings'
+import { and as both, desc, sql } from 'drizzle-orm'
 import { contentOf, type ContentRow, type StoreContent } from '@/domains/content/kinds'
 import { ROLE_LABEL, type MemberRole } from '@/domains/tenancy/roles'
 import { shopCached } from './storefront'
@@ -50,4 +54,27 @@ export function byOf(updatedBy: string | null, userId: string, roles: Map<string
   if (updatedBy === userId) return 'You'
   const r = roles.get(updatedBy)
   return r ? (ROLE_LABEL[r as MemberRole] ?? 'A member') : 'A former member'
+}
+
+/**
+ * Console › Content's reads, in ONE transaction (speed review L7: never a cached loader inside it): the store's content
+ * rows with who saved each, whether it has an owner (who may save), its pages and FAQ, and what a link or a photo may
+ * point at. The look's settings and the offer in the bar are cached loaders the page reads beside it, outside.
+ */
+export async function contentEditorData(tenantId: string, userId: string) {
+  return withTenant(tenantId, async (tx) => {
+    const [rows, hasOwner, pages, cols, prods, photos] = await Promise.all([
+      contentRowsIn(tx, tenantId, userId),
+      hasOwnerIn(tx, tenantId),
+      tx.select({ id: shopPages.id, template: shopPages.template, version: shopPages.version, draft: shopPages.draft, live: shopPages.live, updatedAt: shopPages.updatedAt })
+        .from(shopPages).where(both(eq(shopPages.tenantId, tenantId), isNull(shopPages.removedAt))).orderBy(asc(shopPages.createdAt)),
+      tx.select({ handle: collections.handle, title: collections.title }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)).limit(200),
+      tx.select({ handle: products.handle, title: products.title }).from(products).where(both(eq(products.tenantId, tenantId), eq(products.status, 'active')))
+        .orderBy(desc(sql`coalesce(${products.publishAt}, ${products.publishedAt}, ${products.createdAt})`)).limit(60),
+      tx.select({ base: productImages.base, widths: productImages.widths, width: productImages.width, height: productImages.height, alt: productImages.alt, title: products.title })
+        .from(productImages).innerJoin(products, both(eq(products.id, productImages.productId), eq(products.tenantId, productImages.tenantId)))
+        .where(both(eq(productImages.tenantId, tenantId), eq(productImages.position, 0), eq(products.status, 'active'))).orderBy(desc(productImages.createdAt)).limit(24),
+    ])
+    return { rows, hasOwner, pages, collections: cols, products: prods, photos }
+  })
 }

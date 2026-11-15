@@ -72,6 +72,8 @@ export const shopPages = pgTable('shop_pages', {
   removedAt: at('removed_at'),
   createdAt: at('created_at').notNull().defaultNow(),
   updatedAt: at('updated_at').notNull().defaultNow(),
+  /** Who saved it last (V1 content: a page saves live; Undo is the saver's own, within a minute). */
+  updatedBy: uuid('updated_by'),
 }, (t) => [
   unique('shop_pages_tenant_id').on(t.tenantId, t.id),
   check('shop_pages_template', sql`${t.template} in ('about','faq')`),
