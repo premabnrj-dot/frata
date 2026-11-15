@@ -1,5 +1,5 @@
 # V1 · Storefront API — SA0 (keys, the third tenant source) and SA1 (catalogue reads)
-Status: plan v2, reviews folded in (architecture, tenancy, security, speed, words; unit economics running), awaiting
+Status: plan v2, reviews folded in (architecture, tenancy, security, speed, words, unit economics), awaiting
 the owner's approval of the final mockup · Date: 2026-11-15 · Lane A (`docs/plans/2026-11-15-parallel-lanes.md`),
 branch `claude/lane-a-storefront-api`
 Spec: `docs/specs/2026-11-11-storefront-api.md` (§ 1–3, 6–7, 9) · Decisions: ADR-0018 (accepted 2026-11-15, decisions
@@ -53,11 +53,16 @@ Green before any change: e2e `01-signup`, `05-shop-look` (pixel), `13-paging`, `
   `/2026-12/k/:key(frs_test_[0-9A-Za-z]{38})/:path*` → `/api/storefront/2026-12/t/:key/:path*` (the dynamic tree) and
   `/2026-12/k/:key/:path*` → `/api/storefront/2026-12/k/:key/:path*` (the ISR tree); `shopRewrites` adds the API host
   to its `missing` list.
-- `src/middleware.ts` on the API host: no Supabase client, no cookie, no nonce CSP; it runs `keyShape` (pure CRC32, no
-  I/O) and answers a bad shape, checksum, version or path with the one 404 body at the edge, so no function runs for a
-  minted-looking key that fails its checksum; otherwise it passes the request on untouched.
+- **The API host is out of the middleware's matcher** (unit economics: a middleware run on every CDN hit is a paid
+  invocation, and a middleware rewrite breaks ISR): no Supabase client, cookie or nonce CSP ever runs there.
+- **Two WAF rules on the API host** (`ops/firewall.json`, owner applies, `docs/setup.md`): (1) a free custom rule that
+  denies any path not matching `^/2026-12/(k/frs_(pub|test)_[0-9A-Za-z]{38}/(shop|offers|collections|search|products/page/([1-9]|1[0-3])|products/[a-z0-9-]{1,100}|collections/[a-z0-9-]{1,100}(/page/([1-9]|1[0-3]))?)|openapi\.json)$`,
+  so a bad shape starts no function; (2) the per-IP rate rule at ≥ 600 a minute (partner builds share outbound IPs).
+  Plus a pre-made, **inactive** rule that denies the whole API host: the kill switch (sites keep their stale pages,
+  shops and checkout stay up).
 - Verify: `npx vitest run src/domains/tenancy` (both directions, mixed case, trailing dot, `*.vercel.app`);
-  `next.config` rewrite unit test; `framing.test.ts`.
+  `next.config` rewrite unit test; `framing.test.ts`; a test that the WAF path regex accepts every route and refuses the gate's
+  bad-shape list.
 
 ### SA0·2 The key (pure)
 - `src/domains/storefront-api/keys.ts`: `KEY_KINDS`; `keyShape(s) → { kind, body } | null` (shape, then CRC32 of
@@ -124,10 +129,11 @@ Green before any change: e2e `01-signup`, `05-shop-look` (pixel), `13-paging`, `
     `Vary: Origin`; `private, no-store`.
   - Errors log `[api] <code> key=<keyId>` (never the key, never the path, never the raw error).
 - **Limits** (`src/lib/db/rate-limit.ts` `LIMITS`, every call `failClosed = true`, a test that a database error gives
-  429): `apiMissIp` (unknown keys per `ipBucket`, counted on each definer miss and checked before the lookup, dynamic
-  tree), `apiTestIp` (60 a minute), `apiSearchIp`, `apiKeyCreateShop` (10 an hour). `n` is 1–13 (600 ÷ 48) and a
+  429): `apiMissIp` (unknown keys per `ipBucket`, counted **after** a definer miss, never in front of a real read; a
+  60 s in-memory memo of missed hashes answers repeats without the definer), `apiTestIp` (60 a minute), `apiSearchIp`, `apiKeyCreateShop` (10 an hour). `n` is 1–13 (600 ÷ 48) and a
   handle must match the handle shape before any read. **One Vercel WAF per-IP rule on the API host is required, not
-  optional** (owner step in `docs/setup.md`; numbers re-verified by `integration-researcher` before SA1 ships).
+  optional** (above; numbers and Vercel unit prices re-verified by `integration-researcher` and dated in
+  `frata-integrations` before SA1 ships).
 - **`last_seen`**: written inline during a regeneration (no shopper waits; `after()` does not run on a background
   regeneration, measured), skipped when the definer's cached row already says today (IST), through
   `src/lib/queries/storefront-api.ts` `markKeySeen(ctx)` in `withTenant(ctx.tenantId)` with `where id and tenant_id`.
@@ -144,7 +150,7 @@ Green before any change: e2e `01-signup`, `05-shop-look` (pixel), `13-paging`, `
   `storefront-api/` and `api/storefront/`. Run against ADR-0018 and the gate's own file.
 - `scripts/check-api.mjs` (`npm run check:api`, in `npm test`): no `z.unknown|record|any|passthrough|catchall|loose`
   in `src/domains/storefront-api/**`; no cost sentinel name (`scripts/cost-sentinels.mjs`) in a mapper, schema or the
-  generated `openapi.json`; files under `k/` export `revalidate = 60` and never read `request.`, `headers()`,
+  generated `openapi.json`; files under `k/` export `revalidate = 3600` and never read `request.`, `headers()`,
   `cookies()`, `connection()` or import `preview*`; files under `t/` export `dynamic = 'force-dynamic'` and no
   `revalidate`; literal `2026-12/` folders; `generateStaticParams = () => []` on every dynamic segment.
 - `scripts/check-actions.mjs`: `apiRequest` joins the chokepoints; `openapi.json` is a named entry point.
@@ -190,13 +196,17 @@ Green before any change: e2e `01-signup`, `05-shop-look` (pixel), `13-paging`, `
 
 ### SA1·3 Route handlers
 - `src/app/api/storefront/2026-12/k/[key]/{shop,products/page/[n],products/[handle],collections,collections/[handle]/page/[n],offers,search}/route.ts`
-  (ISR: `revalidate = 60`, `generateStaticParams = () => []`) and the same names under `t/[key]/` (dynamic), both
+  (ISR: `revalidate = 3600`, `generateStaticParams = () => []`; freshness comes from tag purges, not the timer) and the same names under `t/[key]/` (dynamic), both
   calling one handler per resource.
 - ISR tree reads only cached loaders, never inside a `withTenant`: `shopSettingsFor`, `shopCatalogue`, `shopProduct`
   (moved handle → 200 with the current `handle`), `collectionMembers`, `shopAnnouncement`; `visibility(…, ctx.now)`;
   `pageOf` (48), `total`, `truncated` at 600. **Search**: a slim `shopCached('search-v1', 'catalogue')` entry (handle,
   title, tags, price range, first photo) filtered in memory; public search is ISR-cached per `q` (normalised, 1–60
   chars) so repeats are CDN hits; test-key search is on the dynamic tree with `apiSearchIp`.
+- **Time boundaries** (an offer starting or ending, a scheduled product going live) purge nothing today because shop
+  pages refresh every 60 s; the API's hour needs them: the existing 5-minute `/api/cron/drain` calls a definer
+  `app_shops_with_boundary(since, until)` (ids only, revoked from every role but `frata_app`, block 80) and runs
+  `refreshShop(t, 'catalogue')` for each, through the `refreshSoldOut` limiter. Batch: ≤ 500 shops a run.
 - Dynamic tree reads the uncached preview loaders (`previewShop`, `previewCatalogue`, `previewProduct`).
 - Verify: int test SA1 half (A's key never reads B; B's handle under A's key is `not_found`; sentinels seeded in every
   cost column never appear; a draft never under a public key, does under a test key; a test-key response is
@@ -226,7 +236,20 @@ or Delete → a partner before handover makes a test key → phone width. Screen
 - Purges: every API entry carries `shop:<t>` (from the loaders) and `skey:<hex>`; a catalogue purge (≤ 1 per 30 s per
   shop) now also makes ≤ 1 regeneration per path per 60 s **per live key** (~75 hot paths a key); `setWebsite` and
   `openShop` purge only key tags.
-- Cost: see § Unit economics (reviewer's numbers folded in when it reports); the WAF rule is required.
+- With `revalidate = 3600`, a regeneration happens on a purge or once an hour per path, not per minute.
+
+## Unit economics (unit-economics review, 2026-11-15; scratch model, ₹88/$, ex GST; prices dated, some hypotheses)
+- What Frrata pays a shop a month for API reads, typical traffic, at `revalidate` 60 s → 3,600 s with purges: Launch
+  ₹62–503 → ₹34–168; Growth ₹499–3,563 → ₹278–918; Scale ₹1,412–8,853 → ₹868–2,412 (₹0.21–1.49 a delivered order). At
+  60 s Growth and Scale fail rule 9a at the high end (3 × cost > the plan's price); at 3,600 s all pass. Hence the hour.
+- **Abuse:** a forged request costs ₹0.0007–0.0012; the real risk is the $50 on-demand budget pausing production for
+  every shop (3.6–6.1 M forged requests). Bounded by the WAF path rule (no function for a bad shape), the rate rule, the
+  miss memo and limiter, and the kill-switch rule; an API-host alert at 3× a normal day.
+- **Pricing:** reads are Core, in every plan, never metered (Shopify's Storefront API is free with the plan); a
+  fair-use line per plan, measured and alerted, not billed. One live key per site is the recommendation (each key is
+  its own set of cached copies).
+- **Before SA1 ships:** a ₹70–120 preview test (100 k reads + 100 k unknown keys at the 10× seed; usage page:
+  invocations, CPU, ISR units; `x-vercel-cache: HIT`).
 
 ## Security (security review folded in)
 Test keys never ISR (own tree); minted keys stop at the edge (checksum) or at `apiMissIp`; every limit fails closed;
@@ -266,12 +289,16 @@ request"; "an `unstable_cache` tag must be known before the call: tag by the inp
 **`src/domains/tenancy/roles.ts`** (`api.manage`, agreed with lane C); `src/lib/queries/settings.ts` (`hasOwnerIn`
 extracted); `next.config.ts` (rewrites); `src/middleware.ts` (the API branch); `src/domains/tenancy/host.ts` (+ tests);
 `src/lib/db/schema.ts`; `src/lib/db/platform.ts`; `src/lib/queries/storefront.ts`; `src/lib/storefront/refresh.ts`;
-`src/lib/db/rate-limit.ts` (`LIMITS`); `src/lib/public-env.ts`; `.env.example`; `scripts/check-tenant.mjs`,
+`src/lib/db/rate-limit.ts` (`LIMITS`); `ops/firewall.json` (the API host's rules); `src/app/api/cron/drain/route.ts`
+(the boundary purge); `src/lib/public-env.ts`; `.env.example`; `scripts/check-tenant.mjs`,
 `scripts/check-actions.mjs`, new `scripts/check-api.mjs`; `package.json`; `scripts/verify/tenancy.sql` (block 80);
 `src/app/(console)/console/settings/page.tsx` (one row); `src/app/(console)/console/shop-actions.ts` (`openShop`
 purge); `docs/decisions/0002-*.md`, `0018-*.md` (notes); `docs/setup.md` (WAF step).
 **Migrations:** `drizzle/01xx_storefront_keys.sql`, `drizzle/01xx_storefront_keys_access.sql` (+ journal, snapshot).
 **Not touched:** lane C's partner definers and `members` (partner keys stop by derivation), the console layout and shell.
+**Asked of lane C (through the orchestrator):** the partner-removal paths (`removePartner`, `removePartnerPerson`,
+`admin_end_partner`) call `refreshKeys(t)` for each shop they touch after commit, so a removed partner's keys stop at
+once rather than within the hour; until then the int test asserts the derived stop and the doc states the hour.
 
 ## Owner questions
 1. **Scope:** this lane builds SA0 + SA1 (catalogue reads and Settings › Website); the cart link, the 307s, "Your
