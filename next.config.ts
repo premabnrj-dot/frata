@@ -15,7 +15,7 @@ const config: NextConfig = {
   outputFileTracingIncludes: { '/**': ['./src/lib/documents/fonts/**', './node_modules/pdfkit/js/standard-fonts/**/*.cjs', './node_modules/pdfkit/package.json'] },
   // Every other host is a shop, served from /s/<host>/… (src/domains/tenancy/host.ts).
   async rewrites() {
-    return { beforeFiles: shopRewrites(CONSOLE_HOST, EKCODE_HOST), afterFiles: [], fallback: [] }
+    return { beforeFiles: shopRewrites(CONSOLE_HOST, SHOP_DOMAIN, EKCODE_HOST), afterFiles: [], fallback: [] }
   },
   // Every response may not be framed (DENY), except the customizer's look preview on the console host, which the
   // console itself frames (themes spec § Preview; a later entry can't remove X-Frame-Options, so the global entry

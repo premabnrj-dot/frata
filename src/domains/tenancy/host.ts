@@ -51,9 +51,15 @@ export type Route =
   | { kind: 'console' }
   /** The shop domain itself (`frrata.shop`): no shop lives there; it sends people to Frrata's own site. */
   | { kind: 'platform_apex' }
+  /** The shop domain's own stopgap site (owner, 2026-11-15): `PLATFORM_SITE_PATHS` only, served directly, until
+   *  frrata.com is attached and `platform_apex` goes back to redirecting every path. */
+  | { kind: 'platform_site' }
   /** EkCode's host: only its own pages and API; `www.` goes to the apex. */
   | { kind: 'ekcode' }
   | { kind: 'ekcode_www' }
+
+/** The one path, besides the home page, the bare shop domain answers itself while it stands in for frrata.com. */
+export const PLATFORM_SITE_PATHS = new Set(['/', '/privacy-policy'])
 
 /**
  * What the middleware does with one request (storefront spec § Review findings).
@@ -70,7 +76,7 @@ export function routeFor(rawHost: string | null, pathname: string, consoleHost: 
   }
   // EkCode's pages and API answer on its host only (security H1): never on a shop, the console or a preview alias.
   if (pathname === '/ek' || pathname.startsWith('/ek/') || pathname === '/api/ek' || pathname.startsWith('/api/ek/')) return { kind: 'not_found' }
-  if (surface.kind === 'storefront' && surface.host === shopDomain.toLowerCase()) return { kind: 'platform_apex' }
+  if (surface.kind === 'storefront' && surface.host === shopDomain.toLowerCase()) return PLATFORM_SITE_PATHS.has(pathname) ? { kind: 'platform_site' } : { kind: 'platform_apex' }
   if (surface.kind === 'storefront') return HOST_CHARS.test(surface.host) ? { kind: 'shop' } : { kind: 'not_found' }
   if (pathname === '/s' || pathname.startsWith('/s/')) return surface.kind === 'local' && dev ? { kind: 'console' } : { kind: 'not_found' }
   return { kind: 'console' }
@@ -89,12 +95,17 @@ type Rewrite = { source: string; destination: string; has: { type: 'host'; value
  * when the URL it matches is the rewritten one (a middleware rewrite left every
  * shop page rendering per request under next start; 2026-11-07). Root-level
  * files (favicon.ico), the visit beacon /fe.js (by that exact name: A·2) and /api, /_next are left alone.
+ *
+ * The bare shop domain is left out too (owner, 2026-11-15, stopgap): `PLATFORM_SITE_PATHS` must reach the normal
+ * page tree unrewritten to serve Frrata's own site there; routeFor still sends every other path on it to the
+ * console host, so excluding the whole host here changes nothing for those.
  */
-export function shopRewrites(consoleHost: string, ekcodeHost = ''): Rewrite[] {
+export function shopRewrites(consoleHost: string, shopDomain = '', ekcodeHost = ''): Rewrite[] {
   const has = [{ type: 'host' as const, value: '(?<shop>[a-z0-9][a-z0-9.-]*)' }]
   const ek = ekcodeHost.toLowerCase()
   const ekAlt = ek ? `|${esc(ek)}|www\\.${esc(ek)}` : ''
-  const missing = [{ type: 'host' as const, value: `(?:${esc(consoleHost.toLowerCase())}|localhost|127\\.0\\.0\\.1|.+\\.vercel\\.app${ekAlt})` }]
+  const shopAlt = shopDomain ? `|${esc(shopDomain.toLowerCase())}` : ''
+  const missing = [{ type: 'host' as const, value: `(?:${esc(consoleHost.toLowerCase())}|localhost|127\\.0\\.0\\.1|.+\\.vercel\\.app${ekAlt}${shopAlt})` }]
   // EkCode's host first: its pages live under /ek (src/app/ek), reached only through this rewrite.
   const ekHas = [{ type: 'host' as const, value: esc(ek) }]
   const ekRules: Rewrite[] = ek ? [
