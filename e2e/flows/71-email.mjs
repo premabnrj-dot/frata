@@ -55,7 +55,7 @@ export default {
       const admin = await open('frata')
       try {
         await admin.p.goto(CONSOLE + '/admin/notices')
-        await admin.p.getByLabel('To', { exact: true }).selectOption('shop')
+        await admin.p.locator('select[name="audience"]').selectOption('shop')
         await admin.p.getByLabel('Shop id').fill(shop.id)
         await admin.p.getByLabel('Kind').selectOption('security')
         await admin.p.getByLabel('Title').fill('We changed how support visits work')
