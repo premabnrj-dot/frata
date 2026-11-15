@@ -2,9 +2,9 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.57.0
+  version: 2.58.0
   verified: 2026-11-15
-  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
+  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
 ---
 
@@ -166,7 +166,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   creation and it cannot be published until it has an owner (trigger in 0066). A partner's cap counts its
   shops not yet handed over, and a shop with no owner is never billed (`app_shops_to_bill`).
 - **Partner teams** (T1a, 2026-11-12; plan `docs/plans/2026-11-12-studio-build.md`, drizzle/0123–0124): a partner is a
-  team in `partner_members` (owner | lead; `builder` waits for ADR-0015) with `partner_assignments` (which stores a lead
+  team in `partner_members` (owner | lead | builder, T1c; the owner moves Lead ↔ Builder with `app_partner_set_role`,
+  fresh check) with `partner_assignments` (which stores a lead
   works on). Both tables are definers-only for `frata_app` (check:tenant fails any grant but Admin's select). A partner
   person's shop access is still a `members` row with role `partner`, now pointing at its person
   (`members.partner_member_id`, CHECK `(role = 'partner') = (partner_member_id is not null)`); only definers write those rows
@@ -177,7 +178,22 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   20 invites an hour. Admin suspends with `admin_end_partner` (deletes every partner person's shop rows, audits, tells
   each shop) and reinstates from assignments (tells each shop again). While paused, `app_shop_people` lists the partner
   from its link (`partner_paused`) so the brand can still remove it. `app_partner_my_invites` lists only invites the
-  person could accept (sign-in sends anyone with one to `/join`). A lead never gets the owner's contact details. A fixture that makes someone a partner on a shop uses e2e `partnerOn`.
+  person could accept (sign-in sends anyone with one to `/join`). A lead or a Builder never gets the owner's contact details, the plan or the partner's terms (`app_partner_clients`, T1c). A fixture that makes someone a partner on a shop uses e2e `partnerOn`.
+- **Capabilities and Builders** (T1c, ADR-0015; plan `docs/plans/2026-11-15-t1c-builders.md`, drizzle/0130–0131, proof
+  § 82): who may do what in a shop is ONE table, `CAPABILITIES` in `src/domains/tenancy/roles.ts`; the tuples
+  (`ANY_MEMBER` …) are views of it, pinned by `capabilities.test.ts` (a change to who holds a capability reaching orders,
+  shoppers or costs carries the owner's name and date). A partner's **Builder** (`members.role = 'builder'`, from
+  `partner_members.role` by trigger; frata_app holds no UPDATE on `members`) is a SHOP role but never a `MemberRole`:
+  `accessFor` puts its stores in `builds`, so `requireMember`/`asMember` can never carry one and every tuple refuses it
+  in words (`BUILDER_REFUSED`, drawn once by `Panel`). A Builder enters only through `requireCapability(cap)` in the
+  files of `scripts/builder-doors.json`, which gives an **Actor** (`src/lib/db/actor.ts`) whose shop id no page can
+  read; `withActor` runs read-only as **frata_builder**, its own LOGIN (`DATABASE_URL_BUILDER`; missing → refused),
+  column grants on eight catalogue tables and nothing else, with `builder_rows` + restrictive `builder_only` policies.
+  Builder reads live in `src/lib/queries/builder.ts` and call the owner list's own SQL (`listProductsWith`,
+  `listCollectionsWith`): a column added there needs its grant in a migration, or the Builder's list fails closed. The
+  store preview is the one exception (owner 2026-11-15): it runs the shopper read path as frata_app through
+  `previewTenantOf`. `check:capabilities` and `check:tenant` § 7b hold all of it. Notices reach members through
+  allow-lists (`app_notice_members`, `app_member_email`), never a Builder.
 - A layout refuses with a panel, never a redirect (frata-gotchas) — and its
   check guards nothing below it: **every page and action calls
   `requireMember` itself.** It returns `not_configured` rather than throwing
@@ -555,7 +571,7 @@ after it. A class a shop page uses from outside the shop's folders must be added
   first in a window at once, repeats in one trailing purge); a page or FAQ save purges `pages` only.
 - **The plain-text rule** is `plainText` (`src/domains/content/plain-text.ts`): NFC; refuses control, format (but ZWNJ and
   ZWJ), private-use, unassigned, line and paragraph separators, and `< > { } \`. Save only; reads are tolerant.
-- **A backfill that restates a TS rule in SQL** (the move's `app_move_content`, drizzle/0132): run as the migration's owner,
+- **A backfill that restates a TS rule in SQL** (the move's `app_move_content`, drizzle/0134): run as the migration's owner,
   it sets `app.tenant_id` per store and names `tenant_id` in every statement; copies verbatim; re-runs reconcile (a row a
   person saved, `updated_by` set, is never touched); one parity int test against the TS rule
   (`site-content-move.int.test.ts`), and a two-store proof in tenancy.sql § 80.

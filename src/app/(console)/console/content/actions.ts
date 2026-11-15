@@ -7,7 +7,8 @@ import { z } from 'zod'
 import type { Tx } from '@/lib/db'
 import { asMember } from '@/lib/auth/as-member'
 import { memberAudit } from '@/lib/auth/member-audit'
-import { CAN_BUILD, requireMember } from '@/lib/auth/require-member'
+import { requireMember } from '@/lib/auth/require-member'
+import { CAPABILITIES } from '@/domains/tenancy/roles'
 import { siteContent } from '@/lib/db/schema-content'
 import { shopPages } from '@/lib/db/schema-themes'
 import { LIMITS, uncount, withinLimit } from '@/lib/db/rate-limit'
@@ -54,14 +55,14 @@ const lockStore = (tx: Tx, t: string) => tx.execute(sql`select pg_advisory_xact_
  * `limit`: the save bucket, or Undo's own.
  */
 async function write<T extends object>(what: { action: string; scope: 'content' | 'pages'; limit?: 'save' | 'undo' }, work: (tx: Tx, auth: Auth) => Promise<Out<T>>): Promise<R<T>> {
-  const who = await requireMember(CAN_BUILD)
+  const who = await requireMember(CAPABILITIES['content.write'])
   if (!who.ok) return { ok: false, error: who.message }
   const t = who.membership.tenantId
   const bucket = what.limit === 'undo' ? LIMITS.contentUndo : LIMITS.contentSave
   if (!(await withinLimit(bucket, t, new Date(), true))) return { ok: false, error: FULL }
   let r: Awaited<ReturnType<typeof asMember<Out<T>>>>
   try {
-    r = await asMember(CAN_BUILD, { action: what.action }, async (tx, auth) => {
+    r = await asMember(CAPABILITIES['content.write'], { action: what.action }, async (tx, auth) => {
       const saver = contentSaver(auth.membership.role, await hasOwnerIn(tx, auth.membership.tenantId), auth.membership.supportSessionId)
       if (saver !== 'yes') return { error: SAVER_REFUSAL[saver] }
       return work(tx, auth)

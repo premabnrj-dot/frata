@@ -23,7 +23,8 @@ const TONE: Record<ClientStage, 'neutral' | 'warn' | 'ok'> = { building: 'neutra
 const VIEWS = [['all', 'All'], ['building', 'Building'], ['invited', 'Invite sent'], ['with_owner', 'With the owner'], ['open', 'Open'], ['ended', 'Removed']] as const
 
 function Share({ c }: { c: ClientRow }) {
-  const w = shareWindow(c, c.firstOpenedAt, c.removedAt)
+  if (c.shareMonths === null || c.noticeDays === null) return null
+  const w = shareWindow({ shareMonths: c.shareMonths, noticeDays: c.noticeDays }, c.firstOpenedAt, c.removedAt)
   if (w === 'not_started') return <span className="text-muted-foreground">{c.removedAt ? '—' : 'Starts at opening'}</span>
   return <span><span className="font-num">{PARTNER_TERMS.shareBps / 100}%</span> until <span className="font-num">{c.removedAt ? dayIN(w.endsAt) : monthYearIN(w.endsAt)}</span></span>
 }
@@ -35,8 +36,13 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const now = new Date()
   const rows = await partnerClients(auth).catch((err) => { console.error('[clients]', err instanceof Error ? err.name : err); return null })
   if (!rows) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
-  const newStore = <Link href="/partner/new" className={button()}>New client store</Link>
+  // A Builder makes no store (app_partner_create_shop refuses it); the store's people, plan and the partner's share are
+  // the owner's (T1c, owner question 6): a Lead and a Builder see the store, its stage and Open store.
+  const canCreate = partnerCan(auth.partner.memberRole, 'createShop')
+  const terms = partnerCan(auth.partner.memberRole, 'seeClientTerms')
+  const newStore = canCreate ? <Link href="/partner/new" className={button()}>New client store</Link> : undefined
   if (!rows.length) {
+    if (!canCreate) return (<><PageHeader title="Clients" /><Panel title="No stores yet" /></>)
     return (
       <>
         <PageHeader title="Clients" />
@@ -51,7 +57,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       </>
     )
   }
-  const staged = rows.map((c) => ({ c, stage: clientStage({ removedAt: c.removedAt, openInviteExpiresAt: c.inviteExpiresAt, hasOwner: !!c.ownerEmail, firstOpenedAt: c.firstOpenedAt }, now) }))
+  const staged = rows.map((c) => ({ c, stage: clientStage({ removedAt: c.removedAt, openInviteExpiresAt: c.inviteExpiresAt, hasOwner: c.hasOwner, firstOpenedAt: c.firstOpenedAt }, now) }))
   const { view = 'all', handover } = await searchParams
   const canHandOver = partnerCan(auth.partner.memberRole, 'handOver')
   const current = VIEWS.some(([k]) => k === view) ? view : 'all'
@@ -61,14 +67,14 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   return (
     <>
       <PageHeader title="Clients" actions={newStore} />
-      <ViewTabs label="Client views" tabs={tabs} />
+      {canCreate && <ViewTabs label="Client views" tabs={tabs} />}
       {shown.length === 0 ? <Panel title="No store here yet" /> : (
         <Section flush ariaLabel="Client stores"><ul data-list className="divide-y divide-border">
-          <li aria-hidden="true" className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)_6rem_minmax(0,1fr)_15rem] gap-3 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground lg:grid">
-            <span>Store</span><span>Stage</span><span>Owner</span><span>Plan</span><span className="inline-flex items-center">Your share<InfoTip about="your share">{PARTNER_TERMS.shareBps / 100}% of what Frrata collects from the store, ex GST. It runs {PARTNER_TERMS.shareMonths} months from its first opening, while you are its partner. If you’re removed, {PARTNER_TERMS.noticeDays} more days. Paid when Frrata billing starts.</InfoTip></span><span />
+          <li aria-hidden="true" className={`hidden ${terms ? 'grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)_6rem_minmax(0,1fr)_15rem]' : 'grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto]'} gap-3 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground lg:grid`}>
+            <span>Store</span><span>Stage</span>{terms && <><span>Owner</span><span>Plan</span><span className="inline-flex items-center">Your share<InfoTip about="your share">{PARTNER_TERMS.shareBps / 100}% of what Frrata collects from the store, ex GST. It runs {PARTNER_TERMS.shareMonths} months from its first opening, while you are its partner. If you’re removed, {PARTNER_TERMS.noticeDays} more days. Paid when Frrata billing starts.</InfoTip></span></>}<span />
           </li>
           {shown.map(({ c, stage }) => (
-            <li key={c.tenantId} className={`grid gap-x-3 gap-y-1 px-4 py-3 text-sm lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)_6rem_minmax(0,1fr)_15rem] lg:items-center ${stage === 'ended' ? 'text-muted-foreground' : ''}`}>
+            <li key={c.tenantId} className={`grid gap-x-3 gap-y-1 px-4 py-3 text-sm ${terms ? 'lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)_6rem_minmax(0,1fr)_15rem]' : 'grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto]'} lg:items-center ${stage === 'ended' ? 'text-muted-foreground' : ''}`}>
               <div className="min-w-0">
                 <p className="truncate font-medium">{c.name}</p>
                 {c.slug && <p className="truncate font-mono text-xs text-muted-foreground">{shopHost(c.slug)}</p>}
@@ -77,12 +83,14 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                 <Badge tone={TONE[stage]}>{STAGE_LABEL[stage]}</Badge>
                 <span className="text-xs text-muted-foreground lg:hidden">{c.removedAt ? dayIN(c.removedAt) : null}</span>
               </div>
-              <div className="min-w-0 truncate font-num text-xs">
-                {stage === 'invited' ? c.inviteEmail : c.ownerEmail ?? (stage === 'ended' ? '' : <span className="font-sans text-muted-foreground">Not invited</span>)}
-              </div>
-              <div>{c.planName ?? <span className="text-muted-foreground">—</span>}</div>
-              <div><Share c={c} /></div>
-              <div className="flex flex-wrap gap-2 lg:justify-end">
+              {terms && <>
+                <div className="min-w-0 truncate font-num text-xs">
+                  {stage === 'invited' ? c.inviteEmail : c.ownerEmail ?? (stage === 'ended' ? '' : <span className="font-sans text-muted-foreground">Not invited</span>)}
+                </div>
+                <div>{c.planName ?? <span className="text-muted-foreground">—</span>}</div>
+                <div><Share c={c} /></div>
+              </>}
+              <div className={`flex flex-wrap gap-2 lg:justify-end ${terms ? '' : 'col-start-2 row-span-2 row-start-1 self-center lg:col-start-auto lg:row-span-1 lg:row-start-auto'}`}>
                 {canHandOver && (stage === 'building' || stage === 'invited') && (
                   <HandOver tenantId={c.tenantId} store={c.name} again={stage === 'invited'} startOpen={handover === c.tenantId} />
                 )}

@@ -1,6 +1,6 @@
 {
-  "id": "3683143d-e733-46c9-8130-c9852d12f86e",
-  "prevId": "2a5052ab-42b5-4d5a-ab65-457ddde1625d",
+  "id": "8b5c9308-a505-43ef-b362-8d1360ea3df7",
+  "prevId": "e71a78fa-53d9-48df-b437-bdf89945e8d2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -385,7 +385,7 @@
       "checkConstraints": {
         "members_role": {
           "name": "members_role",
-          "value": "\"members\".\"role\" in ('owner','admin','staff','partner','accountant')"
+          "value": "\"members\".\"role\" in ('owner','admin','staff','partner','accountant','builder')"
         }
       },
       "isRLSEnabled": false
@@ -16848,7 +16848,7 @@
       "checkConstraints": {
         "staff_notices_kind": {
           "name": "staff_notices_kind",
-          "value": "\"staff_notices\".\"kind\" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved')"
+          "value": "\"staff_notices\".\"kind\" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved','partner_role_changed')"
         }
       },
       "isRLSEnabled": false

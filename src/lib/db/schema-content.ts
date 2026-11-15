@@ -4,7 +4,7 @@
 // dated), a menu (main, footer, phone tabs), the Contact line. A save is live; `previous` keeps the entry before the
 // last save (Undo and forensics), `version` refuses a stale save. The schedule is in the columns (`starts_at`,
 // `ends_at`, `stopped_at`: state derived by src/domains/content/schedule.ts), never inside `value`. A deleted bar keeps
-// its row for Undo (`deleted_at`) until the next bar is added. Access: drizzle/<n>_site_content_access.sql
+// its row for Undo (`deleted_at`) until the next bar is added. Access: drizzle/0133_site_content_access.sql
 // (frata_app: select, insert, delete and the content columns only; no frata_admin; RLS; a per-store cap trigger).
 // =============================================================================
 

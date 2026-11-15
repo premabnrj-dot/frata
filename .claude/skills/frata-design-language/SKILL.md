@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.6.0
+  version: 7.7.0
   verified: 2026-11-15
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -322,6 +322,13 @@ from it).
 - Client stages are derived (`src/domains/partners/stage.ts`) and shown as
   badges with words: Building, Invite sent, With the owner, Open, Removed. A
   removed store is dimmed with colour and has no actions.
+- **Builders** (T1c, approved mockup https://claude.ai/artifact/LnwWWrV37oQgbnfmc5bvFP, owner 2026-11-15): a role's
+  console shows only what opens for it (nav drawn from its capabilities): a Builder's is Catalogue › Products,
+  Collections; Preview store and Partner workspace at the foot; the phone bar Products · Collections · Preview. Its lists
+  are the owner's, view only (no selection, Add, Import or More); a row opens the store preview. A page it can't open is
+  that page's own panel, "Builders can’t see this page." with a lock tile and Open products. Team's invite asks the
+  Role (Lead · Builder) with two lines of what it reaches; each person has a Role select; a Roles card (Partner owner ·
+  Lead · Builder) says what each sees in a store. The brand's People shows "Partner · Builder" with an (i).
 - **F3 store switcher**: in the account block at every width and in More on
   phones, only with two or more places to go; it lists what app_access_for
   returned, current one marked.

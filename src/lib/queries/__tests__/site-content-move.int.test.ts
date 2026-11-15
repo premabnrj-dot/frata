@@ -1,4 +1,4 @@
-// The move out of the look (drizzle/0132 app_move_content; plan docs/plans/2026-11-15-v1-content.md § The move) on a
+// The move out of the look (drizzle/0134 app_move_content; plan docs/plans/2026-11-15-v1-content.md § The move) on a
 // real Postgres: the SQL picks each store's live look exactly as liveOf does (src/domains/themes/release.ts, through
 // liveRevision), copies only its bar, menus and Contact line, verbatim; a never-published store is copied from its
 // draft; a re-run refreshes what nobody saved and leaves a person's save alone; one notice, once. Skipped unless

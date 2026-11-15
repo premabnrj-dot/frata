@@ -6,13 +6,16 @@
 // page, the actions and Undo. Pure: `hasOwner` is read by the caller inside its transaction, failing closed.
 // =============================================================================
 
+import { holds } from '../tenancy/roles'
+
 export type ContentSaver = 'yes' | 'support' | 'after_handover' | 'read_only'
 
 export function contentSaver(role: string, hasOwner: boolean, supportSessionId: string | null): ContentSaver {
   if (supportSessionId) return 'support'
-  if (role === 'owner' || role === 'admin') return 'yes'
+  // ADR-0015: who holds `content.write` (lane C's table); a partner only before handover, this lane's own rule (V1).
+  if (!holds(role, 'content.write')) return 'read_only'
   if (role === 'partner') return hasOwner ? 'after_handover' : 'yes'
-  return 'read_only'
+  return 'yes'
 }
 
 export const SAVER_REFUSAL: Record<Exclude<ContentSaver, 'yes'>, string> = {

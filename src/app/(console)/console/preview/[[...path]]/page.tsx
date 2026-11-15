@@ -5,7 +5,8 @@ import { OpeningSoon } from '@/components/storefront/pages'
 import { previewPage } from '@/components/storefront/preview-body'
 import { ShopShell } from '@/components/storefront/shell'
 import { Panel } from '@/components/ui/panel'
-import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
+import { requireCapability } from '@/lib/auth/require-capability'
+import { previewTenantOf } from '@/lib/db/actor'
 import { previewCatalogue, previewLook, previewShop } from '@/lib/queries/storefront'
 import { shellNeedsCatalogue, shellPictures, themeOf } from '@/lib/themes/page-look'
 import { manifestsFor } from '@/lib/themes/manifests'
@@ -14,7 +15,9 @@ import { shellContentOf } from '@/domains/content/bar'
 
 // The merchant's own shop, as shoppers will see it — drafts and unlisted
 // pieces included, never cached, never indexed (storefront spec § Preview).
-// Same views as the shop; the tenant is the member's, from requireMember.
+// Same views as the shop; the tenant is the member's, from requireCapability('preview.read'). A partner's Builder sees it
+// too (T1c; owner 2026-11-15, question 5): the shopper read path, whose output is what shoppers would see, so it runs as
+// frata_app through the one sanctioned unwrap, previewTenantOf (check:capabilities).
 export const metadata: Metadata = { title: 'Preview', robots: { index: false, follow: false } }
 export const dynamic = 'force-dynamic'
 
@@ -22,9 +25,9 @@ const BASE = '/console/preview'
 const href = (p: string) => (p === '/' ? BASE : `${BASE}${p}`)
 
 export default async function Preview({ params }: { params: Promise<{ path?: string[] }> }) {
-  const auth = await requireMember(ANY_MEMBER)
-  if (!auth.ok) return <Panel title={auth.message} />
-  const tenantId = auth.membership.tenantId
+  const cap = await requireCapability('preview.read')
+  if (!cap.ok) return <Panel title={cap.message} />
+  const tenantId = cap.kind === 'builder' ? previewTenantOf(cap.actor) : cap.auth.membership.tenantId
   const path = (await params).path ?? []
   const shop = await previewShop(tenantId)
   if (!shop) notFound()

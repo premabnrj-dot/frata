@@ -18,7 +18,7 @@ beforeEach(() => { vi.resetModules(); getUser.mockClear(); accessFor.mockReset()
 
 describe('requireMember', () => {
   it('one lookup per request; a staff member passes ANY_MEMBER and is refused CAN_MANAGE', async () => {
-    accessFor.mockResolvedValue({ memberships: [{ tenantId: 't1', role: 'staff', supportSessionId: null }], staffRole: null })
+    accessFor.mockResolvedValue({ memberships: [{ tenantId: 't1', tenantName: 'Kesar', role: 'staff', supportSessionId: null }], builds: [], staffRole: null })
     const { requireMember, ANY_MEMBER, CAN_MANAGE } = await import('../require-member')
     expect((await requireMember(ANY_MEMBER)).ok).toBe(true)
     expect(await requireMember(CAN_MANAGE)).toMatchObject({ ok: false, reason: 'no_access' })
@@ -29,20 +29,20 @@ describe('requireMember', () => {
 
 describe('requireStaff', () => {
   it('support passes ANY_STAFF and is refused ADMIN_ONLY, from one lookup', async () => {
-    accessFor.mockResolvedValue({ memberships: [], staffRole: 'support', staffConfirmedAt: new Date().toISOString() })
+    accessFor.mockResolvedValue({ memberships: [], builds: [], staffRole: 'support', staffConfirmedAt: new Date().toISOString() })
     const { requireStaff, ANY_STAFF, ADMIN_ONLY } = await import('../require-staff')
     expect((await requireStaff(ANY_STAFF)).ok).toBe(true)
     expect(await requireStaff(ADMIN_ONLY)).toMatchObject({ ok: false, reason: 'not_staff' })
     expect(accessFor).toHaveBeenCalledTimes(1)
   })
   it('staff without a passkey check on this session get needs_passkey, never staff access (ADR-0007 amended 2026-11-12)', async () => {
-    accessFor.mockResolvedValue({ memberships: [], staffRole: 'admin', staffConfirmedAt: null })
+    accessFor.mockResolvedValue({ memberships: [], builds: [], staffRole: 'admin', staffConfirmedAt: null })
     const { requireStaff, ANY_STAFF } = await import('../require-staff')
     const r = await requireStaff(ANY_STAFF)
     expect(r).toMatchObject({ ok: false, reason: 'needs_passkey', identity: { kind: 'staff-identity', userId: 'u1', role: 'admin', sessionId: '11111111-2222-4333-8444-555555555555' } })
   })
   it('someone who is not staff is refused', async () => {
-    accessFor.mockResolvedValue({ memberships: [], staffRole: null })
+    accessFor.mockResolvedValue({ memberships: [], builds: [], staffRole: null })
     const { requireStaff, ANY_STAFF } = await import('../require-staff')
     expect(await requireStaff(ANY_STAFF)).toMatchObject({ ok: false, reason: 'not_staff' })
   })
@@ -50,7 +50,7 @@ describe('requireStaff', () => {
 
 describe('Admin layout: requireStaff then requireMember', () => {
   it('one Auth call and one access query between them (speed review 2026-11-11 MED 2)', async () => {
-    accessFor.mockResolvedValue({ memberships: [{ tenantId: 't1', role: 'owner', supportSessionId: null }], staffRole: 'admin', staffConfirmedAt: new Date().toISOString() })
+    accessFor.mockResolvedValue({ memberships: [{ tenantId: 't1', tenantName: 'Kesar', role: 'owner', supportSessionId: null }], builds: [], staffRole: 'admin', staffConfirmedAt: new Date().toISOString() })
     const { requireStaff, ANY_STAFF } = await import('../require-staff')
     const { requireMember, ANY_MEMBER } = await import('../require-member')
     expect((await requireStaff(ANY_STAFF)).ok).toBe(true)

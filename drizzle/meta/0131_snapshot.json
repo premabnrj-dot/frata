@@ -1,6 +1,6 @@
 {
-  "id": "0fdd0118-1c0b-4f65-a810-4e5538e007a6",
-  "prevId": "f359c32d-4603-4d13-a240-d06f08271713",
+  "id": "289bb40e-48f2-4a1f-8954-f581d11607fe",
+  "prevId": "9eddc5d8-499d-4a02-90fa-d50b630a46bd",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -385,7 +385,7 @@
       "checkConstraints": {
         "members_role": {
           "name": "members_role",
-          "value": "\"members\".\"role\" in ('owner','admin','staff','partner','accountant')"
+          "value": "\"members\".\"role\" in ('owner','admin','staff','partner','accountant','builder')"
         }
       },
       "isRLSEnabled": false
@@ -16355,7 +16355,7 @@
         },
         "notices_source": {
           "name": "notices_source",
-          "value": "\"notices\".\"source_kind\" in ('billing_notice','support_session','handover','admin','addon_trial','edit_payment','content')"
+          "value": "\"notices\".\"source_kind\" in ('billing_notice','support_session','handover','admin','addon_trial','edit_payment')"
         },
         "notices_href": {
           "name": "notices_href",
@@ -16857,7 +16857,7 @@
       "checkConstraints": {
         "staff_notices_kind": {
           "name": "staff_notices_kind",
-          "value": "\"staff_notices\".\"kind\" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved')"
+          "value": "\"staff_notices\".\"kind\" in ('staff_added','staff_removed','request_approved','passkey_added','passkey_removed','partner_passkey_added','partner_passkey_removed','partner_request_made','partner_request_approved','partner_role_changed')"
         }
       },
       "isRLSEnabled": false
@@ -18093,172 +18093,6 @@
         "import_rows_errors": {
           "name": "import_rows_errors",
           "value": "\"import_rows\".\"errors\" is null or (jsonb_typeof(\"import_rows\".\"errors\") = 'array' and octet_length(\"import_rows\".\"errors\"::text) <= 4096)"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.site_content": {
-      "name": "site_content",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "value": {
-          "name": "value",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "previous": {
-          "name": "previous",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "starts_at": {
-          "name": "starts_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "ends_at": {
-          "name": "ends_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "stopped_at": {
-          "name": "stopped_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "deleted_at": {
-          "name": "deleted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_by": {
-          "name": "updated_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "site_content_tenant_id_tenants_id_fk": {
-          "name": "site_content_tenant_id_tenants_id_fk",
-          "tableFrom": "site_content",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "tableTo": "tenants",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "site_content_tenant_id": {
-          "name": "site_content_tenant_id",
-          "columns": [
-            "tenant_id",
-            "id"
-          ],
-          "nullsNotDistinct": false
-        },
-        "site_content_tenant_kind_key": {
-          "name": "site_content_tenant_kind_key",
-          "columns": [
-            "tenant_id",
-            "kind",
-            "key"
-          ],
-          "nullsNotDistinct": false
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "site_content_kind": {
-          "name": "site_content_kind",
-          "value": "\"site_content\".\"kind\" in ('announcement','menu','contact')"
-        },
-        "site_content_key": {
-          "name": "site_content_key",
-          "value": "\"site_content\".\"key\" ~ '^[a-z0-9.-]{1,40}$'"
-        },
-        "site_content_menu_key": {
-          "name": "site_content_menu_key",
-          "value": "\"site_content\".\"kind\" <> 'menu' or \"site_content\".\"key\" in ('main','footer','tabs')"
-        },
-        "site_content_contact_key": {
-          "name": "site_content_contact_key",
-          "value": "\"site_content\".\"kind\" <> 'contact' or \"site_content\".\"key\" = 'contact'"
-        },
-        "site_content_dated": {
-          "name": "site_content_dated",
-          "value": "\"site_content\".\"kind\" = 'announcement' or (\"site_content\".\"starts_at\" is null and \"site_content\".\"ends_at\" is null and \"site_content\".\"stopped_at\" is null and \"site_content\".\"deleted_at\" is null)"
-        },
-        "site_content_ends": {
-          "name": "site_content_ends",
-          "value": "\"site_content\".\"ends_at\" is null or \"site_content\".\"starts_at\" is null or \"site_content\".\"ends_at\" > \"site_content\".\"starts_at\""
-        },
-        "site_content_value_size": {
-          "name": "site_content_value_size",
-          "value": "octet_length(\"site_content\".\"value\"::text) <= 32768"
-        },
-        "site_content_previous_size": {
-          "name": "site_content_previous_size",
-          "value": "\"site_content\".\"previous\" is null or octet_length(\"site_content\".\"previous\"::text) <= 34816"
         }
       },
       "isRLSEnabled": false

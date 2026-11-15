@@ -5,6 +5,7 @@ import { Panel } from '@/components/ui/panel'
 import { redirect } from 'next/navigation'
 import { ANY_MEMBER, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { todayLongIN } from '@/lib/format-date'
+import { requireCapability } from '@/lib/auth/require-capability'
 import { setupFor } from '@/lib/queries/settings'
 import { todaySummary } from '@/lib/queries/today'
 import { Checklist } from './_components/checklist'
@@ -28,6 +29,9 @@ export async function generateMetadata() {
 }
 
 export default async function ConsoleHome() {
+  // A partner's Builder has no Home: its console opens on Products (T1c, approved mockup screen 7).
+  const cap = await requireCapability('console.open')
+  if (cap.ok && cap.kind === 'builder') redirect('/console/products')
   // The accountant's console is GST (GST plan phase 3): Home is the shop's day, not theirs.
   const who = await requireMember(['accountant'])
   if (who.ok) redirect('/console/apps/gst')
