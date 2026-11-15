@@ -145,6 +145,22 @@ the allowances are priced again on Vercel's numbers (they fail 3× as drafted).
 - More than one brand in five refuses `www.` and Enterprise apex proxying costs more than Vercel's difference.
 - Cloudflare changes the price of requests, scripts or hostnames by more than 50%.
 
+## The pilot, before V2 (owner, 2026-11-15)
+The owner: "let's use our own claude code first" and, on hosting the first sites in a Frrata-owned account with the
+cost measured, "yes".
+- **Who builds:** Frrata builds the first websites itself with Claude Code, on the starter (SA1b), before partners and
+  before Studio. Partners may bring their own Claude Code on the same repo, skills and checks; Studio (V3) comes later.
+  The guardrails live in the repo and its checks, never in the agent, so they hold whoever writes the code.
+- **What Frrata pays:** nothing for the model or the sandbox when a developer brings their own Claude Code (their
+  plan, their machine or Claude's cloud); the API, checkout and orders as today, inside the plan and order fee; the
+  pilot's hosting, below.
+- **Where the first 1–3 sites run:** a Vercel team owned by Frrata and kept apart from the `frata` app project (the
+  `frrata-sites` team the test above names), one project per site, the store's public key set as a Production
+  variable, never in the repo. Its cost is absorbed as a pilot cost and measured per site (bytes, requests, build
+  minutes, the team's base fee), and those numbers price hosting's allowances before V2 (owner questions 3 and 4 above).
+- **Where the code lives:** one repository per site in Frrata's GitHub organisation (ADR-0016 § 2), created from the
+  starter; the developer gets that repository only.
+
 ## What the owner sets up
 - A Cloudflare account in the company's name; Workers Paid with Workers for Platforms ($25 a month); billing by the
   company card; GST treatment of an imported service checked with the CA.
