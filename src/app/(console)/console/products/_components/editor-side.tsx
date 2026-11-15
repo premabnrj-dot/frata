@@ -15,10 +15,10 @@ import type { Cell } from './variant-grid'
  * published (rework board). Its price is the buy box's (`priceOf`), as the real card is, never the editor's common price.
  * Drawn in the console's own tokens, not WhatsApp's colours.
  */
-export function WhatsAppPreview({ title, description, cover, cells, shop, host }: {
-  title: string; description: string; cover: Photo | undefined; cells: Cell[]; shop: string; host: string
+export function WhatsAppPreview({ title, description, cover, cells, host }: {
+  title: string; description: string; cover: Photo | undefined; cells: Cell[]; host: string
 }) {
-  const price = priceOf({ variants: cells.map((c) => ({ price: parseRupees(c.price) ?? 0, compareAt: parseRupees(c.compareAt) })) } as Parameters<typeof priceOf>[0])
+  const price = priceOf({ variants: cells.map((c) => ({ price: parseRupees(c.price) ?? 0, compareAt: parseRupees(c.compareAt) })) })
   const card = shareCard(title || 'Product', description)
   return (
     <Section title="Shared on WhatsApp">
@@ -31,7 +31,6 @@ export function WhatsAppPreview({ title, description, cover, cells, shop, host }
           <p className="truncate text-small text-muted-foreground">{host}</p>
         </figcaption>
       </figure>
-      <span className="sr-only">{shop}</span>
     </Section>
   )
 }

@@ -9,6 +9,8 @@ import { FieldError, fieldProps } from '@/components/ui/field-error'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { moved, useReorder } from '@/components/ui/sortable'
+import { Menu } from '@/components/ui/menu'
+import { GripVertical, MoreHorizontal } from 'lucide-react'
 
 const SUGGEST: Record<string, string[]> = {
   size: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
@@ -125,8 +127,13 @@ function OptionRow({ i, o, error, onName, onRemoveOption, onMove, onRemoveValue,
             </span>
           ) : (
             <span key={v} className="inline-flex h-11 items-center rounded-md border border-input bg-card pr-0.5 text-sm md:h-8">
-              <span aria-hidden="true" className="grid h-full w-6 cursor-grab touch-none place-items-center text-muted-foreground" {...dragOnly(itemProps(k, v))}>⋮⋮</span>
-              <button type="button" id={`chip-${i}-${k}`} aria-label={`Rename ${v}`} {...keysOnly(itemProps(k, v))} className="min-h-6 px-1" onClick={() => onEdit(k)}>{v}</button>
+              <span aria-hidden="true" className="grid h-full w-6 cursor-grab touch-none place-items-center text-muted-foreground" {...dragOnly(itemProps(k, v))}><GripVertical className="size-3.5" /></span>
+              <button type="button" id={`chip-${i}-${k}`} aria-label={`Rename ${v}`} {...keysOnly(itemProps(k, v))} className="h-full px-1" onClick={() => onEdit(k)}>{v}</button>
+              {/* A phone has no Alt key and no hover: moving a value is its menu there. */}
+              <span className="md:hidden"><Menu label={`Move ${v}`} icon={<MoreHorizontal aria-hidden="true" className="size-4" />} items={[
+                ...(k > 0 ? [{ label: 'Move earlier', onSelect: () => onMove(k, k - 1) }] : []),
+                ...(k < o.values.length - 1 ? [{ label: 'Move later', onSelect: () => onMove(k, k + 1) }] : []),
+              ]} /></span>
               <button type="button" aria-label={`Remove ${v}`} className="relative inline-grid size-6 place-items-center text-muted-foreground after:absolute after:-inset-2.5 hover:text-foreground md:after:inset-0" onClick={() => onRemoveValue(k)}><Icon name="close" className="size-3.5" /></button>
             </span>
           ))}

@@ -31,7 +31,6 @@ export function FoldSection({ title, side, summary, start, action, invalid = fal
             <Icon name="chevron" className={cn('size-4 shrink-0 text-muted-foreground transition-transform duration-fast', shown && 'rotate-90')} />
             <span className={shown ? undefined : 'font-normal'}>{title}</span>
             {!shown && summary ? <span className="min-w-0 truncate text-sm font-normal text-muted-foreground">· {summary}</span> : null}
-            {!shown && invalid ? <span className="text-sm font-normal text-danger-text">· 1 to fix</span> : null}
             {!shown && action ? <span className="ml-auto shrink-0 text-sm font-medium text-link">{action}</span> : null}
           </button>
         </h2>

@@ -203,7 +203,9 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   const [mac, setMac] = useState(false)
   useEffect(() => { setMac(/Mac|iPhone|iPad/.test(navigator.platform)) }, [])
   // The common price and M.R.P. (common-price.ts): what most sizes share, set on those sharing it and those with none.
-  // The variants it writes to are fixed when the field gets focus, so clearing it never takes a size priced on its own.
+  // The variants it writes to are fixed at the first keystroke and kept until the field loses focus, so clearing it never
+  // takes a size priced on its own. Which price where: this card the common one; Tax's gap check and the default
+  // description the lowest; the WhatsApp card the buy box's (priceOf).
   const commonRows = (f: 'price' | 'compareAt') => combos.map((c) => ({ key: keyOf(c), label: c.join(' · '), text: (d.cells[keyOf(c)] ?? EMPTY_CELL)[f] ?? '' }))
   const [typing, setTyping] = useState<{ f: 'price' | 'compareAt'; keys: string[]; text: string } | null>(null)
   const commonText = (f: 'price' | 'compareAt') => (typing?.f === f ? typing.text : rupeesText(commonPrice(commonRows(f).map((r) => r.text))))
@@ -227,7 +229,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
   const sizedSummary = type ? `${type.name} · ${(type.sizeChart.rows ?? []).map((r) => r.size).filter(Boolean).slice(0, 1).concat((type.sizeChart.rows ?? []).slice(-1).map((r) => r.size)).join('–')}` : 'Pick a chart'
   return (
     // While there are changes the save bar sits at the foot: the page leaves room under it, so it never covers a field.
-    <div ref={root} className={dirty ? 'pb-24 [scroll-padding-bottom:7rem] md:pb-4' : undefined}>
+    <div ref={root} className={dirty ? 'pb-[calc(8rem+env(safe-area-inset-bottom))] md:pb-4' : undefined}>
       <PageHeader title={d.title || 'New product'} back={{ href: '/console/products', label: 'Products' }}
         badges={<StatusBadge status={status} publishAt={publishAt} now={now} />}
         actions={<>{share}<ProductMore id={id} title={saved.title} handle={saved.handle} status={status} everLive={everLive} shopUrl={`https://${host}/products/${saved.handle}`} dirty={dirty} /></>} />
@@ -282,7 +284,7 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
               defaults={defaults} address={shop.address} cover={photos[0]} everLive={everLive} errors={errors} />
           </FoldSection>
           <FoldSection title="Tax" start={false} action={d.tax.hsn ? 'Edit' : 'Add'} summary={d.tax.hsn ? `HSN ${d.tax.hsn}` : shop.gst.charges ? 'Needs an HSN code' : 'No GST charged'} invalid={has('tax')}>
-            <TaxPanel tax={d.tax} onChange={(tax) => { fix(...changed('tax', d.tax, tax)); set({ tax }) }} price={commonPrice(cells.map((c) => c.price))} inclusive={shop.gst.inclusive} charges={shop.gst.charges} now={now} errors={errors}
+            <TaxPanel tax={d.tax} onChange={(tax) => { fix(...changed('tax', d.tax, tax)); set({ tax }) }} price={prices.length ? Math.min(...prices) : null} inclusive={shop.gst.inclusive} charges={shop.gst.charges} now={now} errors={errors}
               onReprice={(to) => {
                 const hit = combos.map(keyOf).filter((k) => { const p = parseRupees((d.cells[k] ?? EMPTY_CELL).price); return p !== null && inGap(d.tax.hsn, p, shop.gst.inclusive, now) })
                 setD((x) => ({ ...x, cells: { ...x.cells, ...Object.fromEntries(hit.map((k) => [k, { ...(x.cells[k] ?? EMPTY_CELL), price: rupeesText(to) }])) } }))
@@ -303,8 +305,8 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
           {d.pairs && <Section><PairsPanel productId={id} pairs={d.pairs} onChange={(pairs) => set({ pairs })} /></Section>}
         </div>
         <aside className="space-y-3 lg:sticky lg:top-[calc(var(--shell-top,0px)+1rem)] lg:max-h-[calc(100dvh-var(--shell-top,0px)-2rem)] lg:overflow-y-auto">
-          <StatusCard productId={id} status={status} publishAt={publishAt} ready={ready} dirty={dirty} saveFirst={saveNow} />
-          <WhatsAppPreview title={d.seoTitle.replace(/\s*\|[^|]*$/, '') || d.title} description={d.seoDescription || defaults.description} cover={photos[0]} cells={cells} shop={shop.name} host={host} />
+          <StatusCard productId={id} status={status} publishAt={publishAt} ready={ready} feed={feedMissing(d, photos.length)} dirty={dirty} saveFirst={saveNow} />
+          <WhatsAppPreview title={d.seoTitle.replace(/\s*\|[^|]*$/, '') || d.title} description={d.seoDescription || defaults.description} cover={photos[0]} cells={cells} host={host} />
           <OrganiseCard category={d.category} onCategory={(category) => set({ category, attributes: keepDetails(d.attributes, category) })} collections={allCollections} picked={d.collections} onPicked={(collections) => set({ collections })} tags={d.tags} onTags={(tags) => set({ tags })} />
         </aside>
       </div>
@@ -312,6 +314,20 @@ export function ProductEditor({ initial, shop, photos, types, tenantId, blobRead
       <LeaveDialog open={!!guard.leaveTo} what={saved.title || 'this product'} onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(d))} />
     </div>
   )
+}
+
+/** What Google and Meta's catalogues still need, in words (the old Ready for card's checks). */
+function feedMissing(d: Draft, photos: number): string[] {
+  const has = (h: string) => (d.attributes[h]?.length ?? 0) > 0
+  const asks = (h: string) => d.category?.attributes.some((a) => a.handle === h) ?? false
+  const c = d.options[colourIndex(d.options.map((o) => o.name))]
+  return [
+    !d.category && 'a category',
+    asks('target-gender') && !has('target-gender') && 'who it is for',
+    asks('age-group') && !has('age-group') && 'an age group',
+    !photos && 'a photo',
+    c && !c.values.every((v) => d.colours.some((x) => x.value === v && x.family)) && 'a colour family for each colour',
+  ].filter((x): x is string => !!x)
 }
 
 /** The chosen details' names, for the folded line. */

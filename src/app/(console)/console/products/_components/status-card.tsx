@@ -26,7 +26,9 @@ const fromLocal = (v: string) => (v ? new Date(`${v}:00+05:30`).toISOString() : 
  * (aria-disabled), and the Missing line says what. Archived is not in the drawn switch: an archived product says so here
  * with Unarchive (Archive itself is in More). Going live later (a scheduled drop) stays under Active.
  */
-export function StatusCard({ productId, status, publishAt, ready, dirty, saveFirst }: { productId: string; status: Status; publishAt: string | null; ready: Readiness; dirty: boolean; saveFirst?: () => Promise<boolean> }) {
+export function StatusCard({ productId, status, publishAt, ready, feed = [], dirty, saveFirst }: { productId: string; status: Status; publishAt: string | null; ready: Readiness
+  /** What Google and Meta's feeds still need (never blocks publishing): said under the switch (was the Ready for card). */
+  feed?: string[]; dirty: boolean; saveFirst?: () => Promise<boolean> }) {
   const router = useRouter()
   const missingId = useId()
   const [pick, setPick] = useState<Pick>(status === 'archived' ? 'draft' : status)
@@ -36,7 +38,8 @@ export function StatusCard({ productId, status, publishAt, ready, dirty, saveFir
   const [pending, start] = useTransition()
   const missing = ready.filter((r) => !r.ok)
   // As drawn: a draft offers Publish while Draft is still picked; picking another state offers that change instead.
-  const to: Status | null = pick !== status ? pick : status === 'draft' ? 'active' : null
+  // An Active product stays Active with its schedule open to change (move, cancel or bring forward a drop).
+  const to: Status | null = pick !== status ? pick : status === 'draft' || status === 'active' ? 'active' : null
   const needsReady = to === 'active' || to === 'unlisted'
   const at = to === 'active' && later ? fromLocal(when) : null
   const changed = to !== null && (to !== status || at !== (publishAt ? new Date(publishAt).toISOString() : null))
@@ -48,7 +51,7 @@ export function StatusCard({ productId, status, publishAt, ready, dirty, saveFir
     if (!r.ok) { toast.error(r.error); return }
     toast.ok(to === 'active' && !at ? 'Published. Your shop shows it now.' : 'Done.'); router.refresh()
   })
-  const words = to === 'active' ? (later ? 'Schedule' : 'Publish') : to === 'unlisted' ? 'Make unlisted' : 'Move to draft'
+  const words = to === 'active' ? (later ? 'Schedule' : status === 'active' ? 'Go live now' : 'Publish') : to === 'unlisted' ? 'Make unlisted' : 'Move to draft'
 
   if (status === 'archived') {
     return (
@@ -70,14 +73,17 @@ export function StatusCard({ productId, status, publishAt, ready, dirty, saveFir
         </label>
       ) : null}
       {needsReady && missing.length ? (
-        <p id={missingId} className="flex items-start gap-2 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">
+        <p id={missingId} tabIndex={-1} className="flex items-start gap-2 rounded-md bg-warn px-3 py-2 text-sm text-warn-text">
           <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 rounded-full bg-warn-mark" />
           <span>Missing: {missing.map((m) => m.label.charAt(0).toLowerCase() + m.label.slice(1)).join(' · ')}</span>
         </p>
       ) : null}
+      {feed.length ? <p className="text-small text-muted-foreground">Google and Meta also need: {feed.join(' · ')}</p> : null}
       {changed ? (
-        <Button className={cn('w-full', blocked && 'opacity-45')} aria-disabled={blocked || undefined} aria-describedby={blocked && missing.length ? missingId : undefined}
-          disabled={pending || (dirty && !saveFirst)} onClick={() => { if (!blocked && to) apply(to) }}>{dirty ? `Save and ${words.toLowerCase()}` : words}</Button>
+        // Blocked: still focusable (aria-disabled), drawn as a quiet button, never faded; a press takes focus to what is missing.
+        <Button variant={blocked ? 'secondary' : 'primary'} className={cn('w-full', blocked && 'cursor-not-allowed')} aria-disabled={blocked || undefined}
+          aria-describedby={blocked && missing.length ? missingId : undefined} busy={pending} disabled={dirty && !saveFirst}
+          onClick={() => { if (blocked) document.getElementById(missingId)?.focus(); else if (to) apply(to) }}>{dirty ? `Save and ${words.toLowerCase()}` : words}</Button>
       ) : null}
     </Section>
   )

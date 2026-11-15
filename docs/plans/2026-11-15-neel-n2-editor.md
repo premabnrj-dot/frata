@@ -142,12 +142,17 @@ when none is priced. "Unpriced" is one test, `unpriced(c)` (`''` or 0 after `par
 |---|---|---|---|
 | Video, model, label, stories, pairs (not drawn) | Folded rows after Tax | Live features with data; dropping them loses what merchants set | — |
 | Tags (not drawn) | Under Collections in the side card | Collections' automatic rules read tags | — |
-| Schedule a publish (not drawn) | In More › Schedule | Live feature (publish_at) | — |
+| Schedule a publish (not drawn) | "Go live later" under Active in the status card | Live feature (publish_at); where the old card had it, beside the choice it belongs to | — |
 | Ready for Google and Meta card (not drawn) | One line in the Missing chip | Same facts, the drawn place | — |
 | When it runs out, lead days, cap (not drawn) | Opened from a row's Shoppers see chip | Pre-orders and made-to-order are live | — |
+| The status choice as a change the save bar counts (plan) | The status is its own action (Publish, Make unlisted, Move to draft), not in the save bar's count | One press does what it says; a draft status a Discard could undo would leave the shop and the switch disagreeing | — |
+| Phone: Size chart · Details · Sharing · Tax as one row, Publish in the save bar | The folds stay one line each; Publish stays in the status card (after the main cards) | Each fold's line already says what is set; one shared sheet hides which has a mistake | — |
+| Stock and prices table | A plain table with row checkboxes (not the list's DataTable) | Two tabs over one set of rows with selection; the list primitive has no tabs or row selection | — |
+| A pop-up for the run-out choice on a phone | A sheet at the foot, without a backdrop | The native popover closes on a tap outside; no backdrop keeps the row visible above it | — |
+| The name field (drawn one line) | One line; a long name scrolls in its field | As drawn; the page heading above shows the whole name, wrapped | — |
 | Status: Draft · Active · Unlisted | Archive and Unarchive in More; an archived product's switch reads "Archived · Unarchive" | Archived is a live status; the switch was drawn without it | — |
 | Price and stock columns: Variant · Price · Stock · Shoppers see | Plus Your cost (only who sees costs) and M.R.P. (only when a variant's differs) | Profit per order needs the cost; an own M.R.P. exists today | — |
-| More: Duplicate · View in shop · Delete draft | Plus Share and Schedule | Live features with nowhere else drawn | — |
+| More: Duplicate · View in shop · Delete draft | Plus Archive for a live product; Share stays its own button beside Preview | Archive needs a home off the switch; the share sheet is a dialog of its own | — |
 
 ## Design review
 - **UI/UX:** one primary action (Publish/Save); every state: empty product, no photos, one variant, 100 variants, a save

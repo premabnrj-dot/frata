@@ -34,7 +34,7 @@ export function Photos({ productId, tenantId, photos, colours, enabled, title = 
     setOrder((o) => moved(o, from, to))
     start(async () => { const r = await editPhoto(ph.id, { move: { to } }); if (!r.ok) { toast.error(r.error); setOrder(photos) } router.refresh() })
   }
-  const { itemProps } = useReorder(order.length, moveTo)
+  const { itemProps, move } = useReorder(order.length, moveTo)
 
   async function add(files: FileList | null) {
     if (!files?.length) return
@@ -68,14 +68,14 @@ export function Photos({ productId, tenantId, photos, colours, enabled, title = 
             <div className="relative">
               {/* The photo is the handle: drag it, or focus it and Alt+← →. */}
               <button type="button" aria-label={`Photo ${i + 1} of ${order.length}${i === 0 ? ', the cover' : ''}`} {...itemProps(i, `Photo ${i + 1}`)}
-                className="block cursor-grab touch-none rounded-md outline-offset-2 focus-visible:outline-2 focus-visible:outline-ring">
+                className="block cursor-grab touch-pan-y rounded-md outline-offset-2 focus-visible:outline-2 focus-visible:outline-ring">
                 <img src={urlFor(ph.base, pick(ph.widths, 256))} srcSet={srcSet(ph.base, ph.widths)} sizes="128px" alt="" width={128} height={160} draggable={false} className="h-40 w-32 rounded-md bg-sunk object-cover" />
               </button>
               {i === 0 && <Tag className="absolute top-1.5 left-1.5">Cover</Tag>}
               <span className="absolute top-1 right-1 rounded-sm bg-card/90">
                 <Menu label={`Photo ${i + 1} of ${order.length}`} icon={<MoreHorizontal aria-hidden="true" className="size-4" />} items={[
-                  ...(i > 0 ? [{ label: 'Make cover', onSelect: () => moveTo(i, 0) }, { label: 'Move earlier', onSelect: () => moveTo(i, i - 1) }] : []),
-                  ...(i < order.length - 1 ? [{ label: 'Move later', onSelect: () => moveTo(i, i + 1) }] : []),
+                  ...(i > 0 ? [{ label: 'Make cover', onSelect: () => move(i, 0, `Photo ${i + 1}`) }, { label: 'Move earlier', onSelect: () => move(i, i - 1, `Photo ${i + 1}`) }] : []),
+                  ...(i < order.length - 1 ? [{ label: 'Move later', onSelect: () => move(i, i + 1, `Photo ${i + 1}`) }] : []),
                   { label: 'Remove', danger: true, onSelect: () => setConfirm(ph.id) },
                 ]} />
               </span>

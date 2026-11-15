@@ -11,6 +11,7 @@ import { storeHost } from '@/domains/media/sizes'
 import { photosAreMade } from '@/lib/media/uploaded'
 import { checkStoryPhotos, savePairs } from '@/lib/catalogue/extras'
 import { cleanPairIds, UUID, type Piece } from '@/domains/catalogue/stories'
+import { reorderPhotos, type PhotoMove } from '@/domains/catalogue/photo-order'
 import { refreshShop } from '@/lib/queries/storefront'
 import { searchPieces } from '@/lib/queries/catalogue'
 import { asMember } from '@/lib/auth/as-member'
@@ -259,7 +260,7 @@ export async function attachPhotos(productId: string, photos: NewPhoto[]): Promi
 }
 
 /** Move a photo, tag it with a colour, or remove it (its files are deleted after the row). */
-export async function editPhoto(imageId: string, change: { move?: -1 | 1 | { to: number }; optionValue?: string | null; alt?: string; remove?: true }): Promise<Result> {
+export async function editPhoto(imageId: string, change: { move?: PhotoMove; optionValue?: string | null; alt?: string; remove?: true }): Promise<Result> {
   if (typeof imageId !== 'string' || !UUID.test(imageId)) return { ok: false, error: 'That photo is not in your shop.' }
   // From the browser: a step of one, or a place to drop it on (0–49: a product holds at most 50 photos).
   const move = change.move
@@ -279,12 +280,8 @@ export async function editPhoto(imageId: string, change: { move?: -1 | 1 | { to:
       }
       if (change.move) {
         const all = await tx.select({ id: productImages.id }).from(productImages).where(and(eq(productImages.tenantId, tenantId), eq(productImages.productId, img.productId))).orderBy(productImages.position)
-        const i = all.findIndex((x) => x.id === imageId)
-        const j = typeof change.move === 'object' ? Math.min(change.move.to, all.length - 1) : i + change.move
-        if (j >= 0 && j < all.length && j !== i) {
-          const [x] = all.splice(i, 1); all.splice(j, 0, x!)
-          for (const [pos, y] of all.entries()) await tx.update(productImages).set({ position: pos }).where(and(eq(productImages.tenantId, tenantId), eq(productImages.id, y.id)))
-        }
+        const next = reorderPhotos(all.map((x) => x.id), imageId, change.move)
+        if (next) for (const [pos, id] of next.entries()) await tx.update(productImages).set({ position: pos }).where(and(eq(productImages.tenantId, tenantId), eq(productImages.id, id)))
       }
       if (change.optionValue !== undefined || change.alt !== undefined) {
         await tx.update(productImages).set({

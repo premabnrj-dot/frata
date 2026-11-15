@@ -16,10 +16,8 @@ export function BackLink({ href, label }: { href: string; label: string }) {
  * a breadcrumb above when the page sits under a list ("Products › Gulabi kurta"; a phone shows "‹ Products"), the title
  * 22/28 (20/26 on a phone) wrapping to two lines then "…" with the full name on hover, its status chip, a meta line of
  * facts (never a sentence of help), then the actions at the right: More, secondaries, the one primary last.
- * `titleSlot` replaces the h1's visible text with an editor (the product title field) while the h1 still names the
- * record for a screen reader.
  */
-export function PageHeader({ title, actions, back, badges, meta, titleSlot, wideActions = false }: {
+export function PageHeader({ title, actions, back, badges, meta, wideActions = false }: {
   title: string
   actions?: ReactNode
   /** The actions may take more than half the row (Analytics' period picker with its words and Make a link, Neel N1b). */
@@ -28,7 +26,6 @@ export function PageHeader({ title, actions, back, badges, meta, titleSlot, wide
   back?: { href: string; label: string }
   badges?: ReactNode
   meta?: ReactNode
-  titleSlot?: ReactNode
 }) {
   return (
     <header className="space-y-1.5">
@@ -45,9 +42,7 @@ export function PageHeader({ title, actions, back, badges, meta, titleSlot, wide
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-            {titleSlot
-              ? <><h1 className="sr-only">{title}</h1>{titleSlot}</>
-              : <h1 title={title} className="line-clamp-2 min-w-0 font-display text-title font-semibold [overflow-wrap:anywhere]">{title}</h1>}
+            <h1 title={title} className="line-clamp-2 min-w-0 font-display text-title font-semibold [overflow-wrap:anywhere]">{title}</h1>
             {badges}
           </div>
           {meta && <div className="text-sm text-muted-foreground">{meta}</div>}

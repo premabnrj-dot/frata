@@ -4,7 +4,7 @@ import { parseRupees } from '@/domains/money/rupees'
 // FILE: src/domains/catalogue/common-price.ts — THE PRICE MOST SIZES SHARE (Neel N2, plan § SSOT).
 // A product has no price of its own; its variants do. The editor's "Price, ₹" (and "M.R.P., ₹") shows the price most of
 // the live variants share and sets it on those sharing it and those with none — never on a variant priced on its own
-// (the drawn XXL at ₹2,890). Which variants it writes to is fixed when the field gets focus (`targetsOf`), so clearing the
+// (the drawn XXL at ₹2,890). Which variants it writes to is fixed at the first keystroke (until the field loses focus) (`targetsOf`), so clearing the
 // field, or typing through a value equal to an own price, never takes that variant. Prices are compared in paise.
 // =============================================================================
 

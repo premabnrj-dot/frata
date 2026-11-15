@@ -11,7 +11,7 @@ import type { Photo } from './photos'
 export type Family = { id: string; name: string }
 
 /** The shop's own swatch (src/components/storefront/swatch.tsx), from the editor's draft. */
-export function Swatch({ c, photos, d = 28 }: { c: ColourInput; photos: Photo[]; d?: number }) {
+function Swatch({ c, photos, d = 28 }: { c: ColourInput; photos: Photo[]; d?: number }) {
   return <ShopSwatch c={{ value: c.value, hex: c.hex, cropImageId: c.crop?.imageId ?? null, crop: c.crop ? { x: c.crop.x, y: c.crop.y, r: c.crop.r } : null }} images={photos} d={d} />
 }
 

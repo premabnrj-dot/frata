@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { announce } from '@/components/shell/announce'
-import { button } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { FIELD } from '@/components/ui/field'
 import { cn } from '@/lib/utils'
 
@@ -34,12 +34,13 @@ export function BulkBar({ what, count, onSet, onClear }: {
         <input inputMode="numeric" value={stock} onChange={(e) => setStock(e.target.value)} className={cn(FIELD, 'w-20 font-num tabular-nums')} />
       </label>
       <label className="flex min-h-11 items-center gap-1.5 md:min-h-6"><input type="checkbox" checked={emptyOnly} onChange={(e) => setEmptyOnly(e.target.checked)} />Empty only</label>
-      <button type="button" className={button({ variant: 'secondary', size: 'sm' })} disabled={!count || (!price && !stock)}
+      <Button variant="secondary" size="sm" disabled={!count || (!price && !stock)}
         onClick={() => {
           const n = onSet({ price, stock, emptyOnly })
           const said = [n.price ? `Price set on ${n.price}` : '', n.stock ? `Stock set on ${n.stock}` : ''].filter(Boolean).join(', ')
           announce(said ? `${said} ${Math.max(n.price, n.stock) === 1 ? 'variant' : 'variants'}.` : 'Nothing was empty: no row changed.')
-        }}>Set</button>
+        }}>Set</Button>
+      <Button variant="ghost" size="sm" onClick={onClear}>Clear</Button>
     </div>
   )
 }

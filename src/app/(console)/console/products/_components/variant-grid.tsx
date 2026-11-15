@@ -4,6 +4,9 @@ import { useEffect, useId, useState } from 'react'
 import type { VariantInput } from '@/domains/catalogue/product-form'
 import { availability } from '@/domains/catalogue/availability'
 import { targetsOf, unpriced } from '@/domains/catalogue/common-price'
+import { parseRupees } from '@/domains/money/rupees'
+import { formatInr } from '@/lib/format'
+import { paise } from '@/domains/money/paise'
 import { combinations, groupOption, keyOf, type Option } from '@/domains/catalogue/variants'
 import { useNow } from '@/components/time/now'
 import { Icon } from '@/components/icons/icon'
@@ -61,8 +64,8 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
     const cs = rows.map((c) => cells[keyOf(c)] ?? EMPTY_CELL)
     const priced = cs.filter((c) => !unpriced(c.price))
     if (!priced.length) return 'No price yet'
-    const low = Math.min(...priced.map((c) => Number(c.price.replace(/[₹,\s]/g, '')) || 0))
-    return `₹${low.toLocaleString('en-IN')} · ${cs.reduce((n, c) => n + (Number(c.stock) || 0), 0)} in stock`
+    const low = Math.min(...priced.map((c) => parseRupees(c.price)!))
+    return `${formatInr(paise(low))} · ${cs.reduce((n, c) => n + (Number(c.stock) || 0), 0)} in stock`
   }
   const err = (k: string, f: string) => errors[`v:${k}:${f}`]
   // A save's mistake is shown where it is: the SKU tab for a SKU or barcode, the row's chip for its run-out fields.
@@ -73,6 +76,8 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
     if (run) setChip(run.slice(2, run.lastIndexOf(':')))
   }, [errors])
   const all = combos.map(keyOf)
+  // A size removed after it was picked leaves the pick (Set never writes to a row that is gone).
+  useEffect(() => { setPicked((p) => { const live = new Set(all); const n = new Set([...p].filter((k) => live.has(k))); return n.size === p.size ? p : n }) }, [all.join('\u0001')]) // eslint-disable-line react-hooks/exhaustive-deps
   const rows = (f: 'compareAt') => combos.map((c) => ({ key: keyOf(c), text: (cells[keyOf(c)] ?? EMPTY_CELL)[f] ?? '' }))
   const ownMrp = targetsOf(rows('compareAt')).length < combos.length
   const name = (c: string[]) => c.join(' · ') || 'This product'
@@ -82,6 +87,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
   const set = (v: { price: string; stock: string; emptyOnly: boolean }) => {
     const n = { price: 0, stock: 0 }
     for (const k of picked) {
+      if (!all.includes(k)) continue
       const c = cells[k] ?? EMPTY_CELL
       const patch: Partial<Cell> = {}
       if (v.price && (!v.emptyOnly || unpriced(c.price))) { patch.price = v.price; n.price++ }
@@ -99,10 +105,10 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
       <FieldError name={`v:${k}:${f}`} message={err(k, f)} />
     </>
   )
-  const head = (cols: React.ReactNode) => (
+  const head = (which: TabId, cols: React.ReactNode) => (
     <thead className="border-b border-border bg-sunk text-left text-small text-muted-foreground [&_th]:h-9 [&_th]:px-3 [&_th]:font-medium">
       <tr>
-        <th className="w-10"><input type="checkbox" aria-label="Select every variant" checked={picked.size === all.length && all.length > 0}
+        <th className="w-10"><input id={`${base}-all-${which}`} type="checkbox" aria-label="Select every variant" checked={picked.size === all.length && all.length > 0}
           ref={(el) => { if (el) el.indeterminate = picked.size > 0 && picked.size < all.length }} onChange={(e) => toggle(all, e.target.checked)} /></th>
         <th>Variant</th>{cols}
       </tr>
@@ -112,8 +118,8 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
     <div className="overflow-x-auto rounded-lg border border-border">
       <table data-rows="form" aria-label={which === 'price' ? 'Price and stock' : 'SKU and barcode'} className="w-full text-sm">
         {which === 'price'
-          ? head(<><th>Price, ₹</th>{ownMrp ? <th>M.R.P., ₹</th> : null}{costs ? <th>Your cost, ₹</th> : null}<th>Stock</th><th>Shoppers see</th></>)
-          : head(<><th>SKU</th><th>Barcode</th></>)}
+          ? head(which, <><th>Price, ₹</th>{ownMrp ? <th>M.R.P., ₹</th> : null}{costs ? <th>Your cost, ₹</th> : null}<th>Stock</th><th>Shoppers see</th></>)
+          : head(which, <><th>SKU</th><th>Barcode</th></>)}
         {groups.map((grp) => {
           const shut = collapse && grp.label && !open[grp.label] && !grp.rows.some((c) => Object.keys(errors).some((x) => x.startsWith(`v:${keyOf(c)}:`)))
           return (
@@ -122,7 +128,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
                 <tr className="border-b border-line-soft bg-side">
                   <td className="w-10 px-3"><input type="checkbox" aria-label={`Select ${grp.label}`} checked={grp.rows.every((c) => picked.has(keyOf(c)))}
                     onChange={(e) => toggle(grp.rows.map(keyOf), e.target.checked)} /></td>
-                  <td colSpan={6} data-cell="full" className="px-3 py-1.5">
+                  <td colSpan={which === 'price' ? 4 + (ownMrp ? 1 : 0) + (costs ? 1 : 0) : 3} data-cell="full" className="px-3 py-1.5">
                     {collapse ? (
                       <button type="button" aria-expanded={!shut} onClick={() => setOpen({ ...open, [grp.label]: !!shut })} className="flex min-h-11 w-full items-center gap-2 text-left font-medium md:min-h-6">
                         <span className="min-w-0 flex-1">{grp.label} · <span className="tabular-nums">{grp.rows.length}</span> {grp.rows.length === 1 ? 'size' : 'sizes'}
@@ -139,7 +145,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
                 const on = picked.has(k)
                 return (
                   <tr key={k} data-selected={on || undefined} className={cn('border-b border-line-soft last:border-0 [&>td]:px-3 [&>td]:py-1.5 md:[&>td]:h-12', on && 'bg-select')}>
-                    <td className="w-10"><input type="checkbox" aria-label={`Select ${name(c)}`} checked={on} onChange={(e) => toggle([k], e.target.checked)} /></td>
+                    <td className="w-10"><input type="checkbox" className="size-5 md:size-auto" aria-label={`Select ${name(c)}`} checked={on} onChange={(e) => toggle([k], e.target.checked)} /></td>
                     <td data-cell="full" className="md:whitespace-nowrap">{name(c)}</td>
                     {which === 'price' ? <>
                       <td data-label="Price, ₹">{input(k, 'price', `Price for ${c.join(' ')}`, 'w-24')}</td>
@@ -169,7 +175,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
         <Tabs base={base} label="Stock and prices" tabs={TABS} value={tab} onChange={setTab} />
         {picked.size ? null : <span className="text-small text-muted-foreground">Select rows, then set</span>}
       </div>
-      {picked.size ? <BulkBar what={what} count={picked.size} onSet={set} onClear={() => setPicked(new Set())} /> : null}
+      {picked.size ? <BulkBar what={what} count={picked.size} onSet={set} onClear={() => { setPicked(new Set()); requestAnimationFrame(() => document.getElementById(`${base}-all-${tab}`)?.focus()) }} /> : null}
       <TabPanel base={base} id="price" value={tab}>{table('price')}</TabPanel>
       <TabPanel base={base} id="sku" value={tab}>{table('sku')}</TabPanel>
     </div>
