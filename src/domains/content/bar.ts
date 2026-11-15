@@ -1,4 +1,6 @@
 import { entryState, type Dated } from './schedule'
+import type { BarValue, MenuKey, StoreContent } from './kinds'
+import type { MenuItem } from '../themes/site'
 
 // =============================================================================
 // FILE: src/domains/content/bar.ts — THE ONE ORDER RULE for the store's announcement bar (owner decision 7, spec
@@ -31,4 +33,14 @@ export function barChip<T extends WrittenBar>(entry: T, offerLive: boolean, writ
   if (s !== 'live') return s
   if (offerLive) return 'after_offer'
   return writtenOrder(written, now)[0]?.id === entry.id ? 'live' : 'behind'
+}
+
+/** What a store page's frame draws from its content: the menus and the written bar to show (none while a live offer
+ *  has the bar, before a dated bar starts, or after it ends). */
+export type ShellContent = { menus: Partial<Record<MenuKey, MenuItem[]>>; bar: BarValue | null }
+export const NO_SHELL_CONTENT: ShellContent = { menus: {}, bar: null }
+export function shellContentOf(c: StoreContent | null, offerLive: boolean, now: Date): ShellContent {
+  if (!c) return NO_SHELL_CONTENT
+  const b = barFor(offerLive, c.bars, now)
+  return { menus: c.menus, bar: b?.kind === 'written' ? { text: b.entry.text, link: b.entry.link, scheme: b.entry.scheme } : null }
 }

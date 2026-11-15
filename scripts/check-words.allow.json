@@ -42,12 +42,6 @@
     "why": "The GST law's UQC names (NOS, PCS) as the invoice prints them"
   },
   {
-    "file": "src/app/(lookeditor)/console/look/customize/menus-form.tsx",
-    "rule": "W5",
-    "text": "Shop",
-    "why": "The store's default bottom tabs as shoppers read them (Home, Shop, Search, Bag): 'Shop' is the store's verb"
-  },
-  {
     "file": "src/app/(lookeditor)/console/look/customize/sections-panel.tsx",
     "rule": "W5",
     "text": "Shop by budget",

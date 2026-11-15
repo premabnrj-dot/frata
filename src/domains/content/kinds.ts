@@ -91,7 +91,7 @@ export function readMenu(key: MenuKey, raw: unknown): MenuItem[] | null {
 export const ContactSave = z.object({ line: plainText(CONTACT_MAX) }).strict()
 export type ContactValue = z.infer<typeof ContactSave>
 const ContactRead = z.object({ line: z.string().max(CONTACT_MAX).regex(/^[^<>{}\\\u0000-\u001f\u007f‎‏‪-‮⁦-⁩]*$/) })
-export const readContact = (raw: unknown): ContactValue | null => { const r = ContactRead.safeParse(raw); return r.success && r.data.line.trim() ? { line: r.data.line } : null }
+export const readContactLine = (raw: unknown): ContactValue | null => { const r = ContactRead.safeParse(raw); return r.success && r.data.line.trim() ? { line: r.data.line } : null }
 
 // ── A store's content, as its pages read it ─────────────────────────────────────────────────────────────────────
 /** A row as read (dates may arrive as ISO strings from the data cache). */
@@ -109,7 +109,7 @@ export function contentOf(rows: readonly ContentRow[]): StoreContent {
   for (const r of rows) {
     if (r.kind === 'announcement') { const v = readBar(r.value); if (v) out.bars.push({ ...v, id: r.id, startsAt: atOr(r.startsAt), endsAt: atOr(r.endsAt), stoppedAt: atOr(r.stoppedAt), createdAt: at(r.createdAt), updatedAt: at(r.updatedAt) }) }
     else if (r.kind === 'menu' && (MENU_KEYS as readonly string[]).includes(r.key)) { const m = readMenu(r.key as MenuKey, r.value); if (m) out.menus[r.key as MenuKey] = m }
-    else if (r.kind === 'contact' && r.key === CONTACT_KEY) out.contact = readContact(r.value)
+    else if (r.kind === 'contact' && r.key === CONTACT_KEY) out.contact = readContactLine(r.value)
   }
   return out
 }

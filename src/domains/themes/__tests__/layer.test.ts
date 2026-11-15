@@ -28,7 +28,8 @@ describe('layerProblems (save tier)', () => {
     const two = [{ id: 'a', key: 'promises', show: ['cod'] }, { id: 'b', key: 'promises', show: ['cod'] }]
     expect(layerProblems({ home: two })[0]).toMatch(/Shop by promise: at most 1/)
     expect(layerProblems({ home: [{ id: 'x', key: 'hero', heading: { text: 'x'.repeat(61) } }] })[0]).toMatch(/Section 1/)
-    expect(layerProblems({ settings: { announcement: { text: 'Hi', link: 'https://evil.example', scheme: 'paper' } } })[0]).toMatch(/announcement/)
+    // V1: the bar is the store's content; a look's settings drop it (src/domains/content/kinds.ts BarSave checks it).
+    expect(layerProblems({ settings: { announcement: { text: 'Hi', link: 'https://evil.example', scheme: 'paper' } } })).toEqual([])
   })
 })
 

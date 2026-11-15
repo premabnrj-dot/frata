@@ -3,7 +3,7 @@ import { plainText, refusedChar } from '../plain-text'
 import { entryState, datesProblem } from '../schedule'
 import { barFor, barChip, type WrittenBar } from '../bar'
 import { contentSaver } from '../who'
-import { BarSave, contentOf, menuForSave, readBar, readContact, readMenu, MAX_MENU_ITEMS } from '../kinds'
+import { BarSave, contentOf, menuForSave, readBar, readContactLine, readMenu, MAX_MENU_ITEMS } from '../kinds'
 
 const now = new Date('2026-11-20T10:00:00Z')
 const h = (n: number) => new Date(now.getTime() + n * 3_600_000)
@@ -106,8 +106,8 @@ describe('kinds', () => {
     expect(readMenu('main', 'nope')).toBeNull()
   })
   it('reads the contact line only when it has words', () => {
-    expect(readContact({ line: '  ' })).toBeNull()
-    expect(readContact({ line: 'We reply within the day.' })).toEqual({ line: 'We reply within the day.' })
+    expect(readContactLine({ line: '  ' })).toBeNull()
+    expect(readContactLine({ line: 'We reply within the day.' })).toEqual({ line: 'We reply within the day.' })
   })
   it('turns rows into a page’s content, cached dates included', () => {
     const c = contentOf([

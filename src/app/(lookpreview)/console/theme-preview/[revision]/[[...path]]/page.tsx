@@ -1,3 +1,5 @@
+import { previewContent } from '@/lib/queries/content'
+import { shellContentOf } from '@/domains/content/bar'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { previewPage } from '@/components/storefront/preview-body'
@@ -25,7 +27,7 @@ export default async function LookPreview({ params, searchParams }: { params: Pr
   if (!auth.ok) notFound()
   const { revision, path = [] } = await params
   const tenantId = auth.membership.tenantId
-  const [shop, rev, src] = await Promise.all([previewShop(tenantId), previewRevision(tenantId, revision), manifestsFor(tenantId)])
+  const [shop, rev, src, content] = await Promise.all([previewShop(tenantId), previewRevision(tenantId, revision), manifestsFor(tenantId), previewContent(tenantId)])
   if (!shop || !rev) notFound()
   const base = `/console/theme-preview/${revision}`
   const href = (p: string) => (p === '/' ? base : `${base}${p}`)
@@ -41,11 +43,11 @@ export default async function LookPreview({ params, searchParams }: { params: Pr
   const focused = path[0] === 'checkout' && theme.settings.checkout === 'focused'
   const cat = shellNeedsCatalogue(theme) && !focused ? await previewCatalogue(tenantId) : null
   const { circles, strip } = shellPictures(theme, cat && samples ? withSamples(cat, now, sampleSetFor(shop.sells)) : cat, now)
-  const { body } = await previewPage({ tenantId, shop, path, href, now, theme, samples, examples: !asShop })
+  const { body } = await previewPage({ tenantId, shop, path, href, now, theme, contact: content.contact ?? undefined, samples, examples: !asShop })
   return (
     <>
       {/* The page entrance wrapper, as on the shop ((shop)/template.tsx), so "Pages arrive" shows here too. */}
-      <ShopShell shop={shop} href={href} theme={theme} circles={circles} strip={strip} live focused={focused}><div className="store-enter">{body}</div></ShopShell>
+      <ShopShell shop={shop} href={href} theme={theme} content={shellContentOf(content, false, now)} circles={circles} strip={strip} live focused={focused}><div className="store-enter">{body}</div></ShopShell>
       <PreviewBridge />
     </>
   )

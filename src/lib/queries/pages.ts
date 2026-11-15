@@ -41,7 +41,7 @@ export const pagesForEditor = (tenantId: string) => withTenant(tenantId, async (
   return rows.flatMap((r) => {
     const d = draftOf(r)
     if (!d) return []
-    const fixed = !!(r.live || r.previous || r.livePublishId)
+    const fixed = !!(r.live || r.previous)
     return [{ id: r.id, template: r.template as PageTemplate, version: r.version, draft: d, fixed, dirty: canon(targetOf(d)) !== canon(r.live) || !!d.removed }]
   })
 })

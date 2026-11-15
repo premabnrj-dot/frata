@@ -9,6 +9,8 @@ import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { previewCatalogue, previewLook, previewShop } from '@/lib/queries/storefront'
 import { shellNeedsCatalogue, shellPictures, themeOf } from '@/lib/themes/page-look'
 import { manifestsFor } from '@/lib/themes/manifests'
+import { previewContent } from '@/lib/queries/content'
+import { shellContentOf } from '@/domains/content/bar'
 
 // The merchant's own shop, as shoppers will see it — drafts and unlisted
 // pieces included, never cached, never indexed (storefront spec § Preview).
@@ -27,10 +29,10 @@ export default async function Preview({ params }: { params: Promise<{ path?: str
   const shop = await previewShop(tenantId)
   if (!shop) notFound()
   const now = new Date()
-  const [look, src] = await Promise.all([previewLook(tenantId), manifestsFor(tenantId)])
+  const [look, src, content] = await Promise.all([previewLook(tenantId), manifestsFor(tenantId), previewContent(tenantId)])
   const theme = themeOf(shop, look, src)
   const { circles, strip } = shellPictures(theme, shellNeedsCatalogue(theme) ? await previewCatalogue(tenantId) : null, now)
-  const { body, note } = await previewPage({ tenantId, shop, path, href, now, theme })
+  const { body, note } = await previewPage({ tenantId, shop, path, href, now, theme, contact: content.contact ?? undefined })
 
   const banner = (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 bg-store-ink px-4 py-2 text-sm text-store-paper">
@@ -42,7 +44,7 @@ export default async function Preview({ params }: { params: Promise<{ path?: str
   )
   return (
     <div className="-m-4 sm:-m-6">
-      <ShopShell shop={shop} href={href} banner={banner} theme={theme} circles={circles} strip={strip}>{body}</ShopShell>
+      <ShopShell shop={shop} href={href} banner={banner} theme={theme} content={shellContentOf(content, false, now)} circles={circles} strip={strip}>{body}</ShopShell>
       {!shop.publishedAt && <details className="mx-4 my-6 text-sm"><summary className="cursor-pointer">What shoppers see now</summary><OpeningSoon shop={shop} href={href} /></details>}
     </div>
   )

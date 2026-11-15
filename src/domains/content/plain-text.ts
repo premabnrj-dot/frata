@@ -27,4 +27,4 @@ export function refusedChar(s: string, lines = false): string | null {
 export const plainText = (max: number, opts: { lines?: boolean; min?: number } = {}) =>
   z.string()
     .transform((s) => (opts.lines ? s.replace(/\r\n?/g, '\n') : s).normalize('NFC').trim())
-    .pipe(z.string().min(opts.min ?? 1).max(max).refine((s) => refusedChar(s, !!opts.lines) === null, 'Use plain words: no < > { } \\ or hidden characters.'))
+    .pipe(z.string().min(opts.min ?? 1).max(max).refine((s) => refusedChar(s, !!opts.lines) === null, 'Use plain words. Leave out < > { } \\ and hidden characters.'))

@@ -128,6 +128,13 @@ export const LIMITS = {
   // A sell-out inside a window already purged queues ONE trailing purge at the window's end, across every instance
   // (shopper batch 2026-11-12: a second sell-out within 30 s was dropped until the 60 s backstop). Fails open too.
   soldOutTrail: { action: 'sold_out_trail:shop', max: 1, windowSeconds: 30 },
+  // V1 content (plan docs/plans/2026-11-15-v1-content.md): a store's content saves, counted after the who-may-save
+  // check (a refused partner never spends the owner's), failing closed; Undo has its own bucket so a store at its limit
+  // can still undo. The purge pair works as soldOutPurge/soldOutTrail do, for the `content` scope.
+  contentSave: { action: 'content_save:shop', max: 30, windowSeconds: 60 },
+  contentUndo: { action: 'content_undo:shop', max: 30, windowSeconds: 60 },
+  contentPurge: { action: 'content_purge:shop', max: 1, windowSeconds: 30 },
+  contentTrail: { action: 'content_trail:shop', max: 1, windowSeconds: 30 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */
