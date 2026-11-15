@@ -57,7 +57,7 @@ export function VisitFigures({ a, visits }: { a: Analytics; visits: VisitTotals 
   )
 }
 
-const HOW = 'A source is the tagged link the shopper arrived on. Without one, it is the site they came from. Without that, it is "Direct or unknown". WhatsApp chats and many apps hide where a tap came from. A link from Make a link fixes that. The last one before the order counts, in that browser tab. Anyone can type tags into an address, so a source is what the link said. Visits and orders use the same rule.'
+const HOW = 'A source is the tagged link a shopper came on. Without a tag, it is the site they came from. Without either, it is "Direct or unknown". WhatsApp and many apps hide this. Make a link fixes that. The last source before the order counts. Visits and orders use the same rule.'
 
 type Row = { key: string; muted?: boolean; cur: Totals; prev: Totals | null; name: string; href: string | null; sub: string; visitors: number | null }
 

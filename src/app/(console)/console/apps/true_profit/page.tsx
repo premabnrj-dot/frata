@@ -67,7 +67,7 @@ export default async function TrueProfitPage({ searchParams }: { searchParams: P
     tab === 'products' && open ? variantsFor(auth.membership.tenantId, role, period, open, now) : Promise.resolve(null),
   ]).catch((err) => { console.error('[tp]', errName(err)); return [undefined, null] as const })
   if (d === undefined) return home(<Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>)
-  if (d === null) return home(<Panel title="Owners and managers see costs" />)
+  if (d === null) return home(<Panel title="Only owners and managers see costs" />)
 
   const q = (o: Record<string, string | number | null>) => {
     const p = new URLSearchParams({ ...(tab !== 'overview' ? { tab } : {}), ...(period !== 30 ? { days: String(period) } : {}) })

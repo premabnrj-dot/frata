@@ -20,9 +20,9 @@ import { dayMonthIN } from '@/lib/format-date'
 // =============================================================================
 
 export const HOW_VISITS = 'Counted without cookies or stored IP addresses. A visitor counts once a day on a device. Bots are left out. Ad blockers and closed tabs mean a few percent go uncounted.'
-const HOW_CITY = 'A hint from the visitor’s network, often the nearest big city. The exact PIN code comes from checkout. Orders here are counted in the browser, so a few may be missing.'
+const HOW_CITY = 'The city comes from the visitor’s network. It is often the nearest big city. The exact PIN code comes from checkout. Orders here are counted in the browser, so a few may be missing.'
 const HOW_BROWSE = 'Orders here are counted in the browser. A few may be missing against your orders.'
-const HOW_SPEED = 'What 3 in 4 shoppers’ phones measured on your pages. Good is a page shown by 2.5 s and taps answered by 0.2 s. Nothing jumps.'
+const HOW_SPEED = '3 in 4 shoppers’ phones saw this or better. Good is a page shown by 2.5 s and taps answered by 0.2 s. Good pages don’t jump.'
 
 const per = (v: number | null) => (v === null ? <span className="text-xs text-muted-foreground">too few</span> : v.toFixed(1))
 const bar = (share: number) => (

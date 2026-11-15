@@ -78,7 +78,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
     return (
       <>
         <PageHeader title="Analytics" wideActions actions={actions} meta={metaLine()} />
-        <Panel title="No orders in these days">Share your store with a link that says where it was shared. Orders from it show here.</Panel>
+        <Panel title="No orders in these days">Share your store with a link from Make a link. Orders from it show here.</Panel>
       </>
     )
   }

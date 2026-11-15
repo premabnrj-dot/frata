@@ -44,7 +44,7 @@ export function MakeLink({ origin, open, products, collections, showsAs: shows }
         actions={<Button variant="secondary" data-autofocus onClick={() => setShown(false)}>Done</Button>}>
         {/* The body only while open: its page list is a third of the page's HTML otherwise (speed review A1·7). */}
         {!shown ? null : !open ? (
-          <p className="text-sm">Your store opens to shoppers first. Then a link brings them to it.</p>
+          <p className="text-sm">Open your store to shoppers first. Then make a link.</p>
         ) : (
           <div className="grid gap-4">
             <fieldset className="grid gap-2">
