@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { keptWithOff, type OfferExample } from '@/domains/orders/offer-cost'
 import { Section } from '@/components/layout/section'
 import { Button } from '@/components/ui/button'
 import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
@@ -36,7 +37,12 @@ function preview(v: OfferValues): { bar: string; bag: string } | null {
   return { bar, bag }
 }
 
-export function OfferEditor({ id, initial, locked, pickers }: { id: string | null; initial: OfferValues; locked: { style: boolean; code: boolean }; pickers: Pickers }) {
+/** One piece of the store's best seller, as the server worked it out (offer-cost.ts): never its goods' cost. */
+export type OfferCostExample = { title: string; price: number; example: OfferExample }
+
+export function OfferEditor({ id, initial, locked, pickers, example = null }: { id: string | null; initial: OfferValues; locked: { style: boolean; code: boolean }; pickers: Pickers
+  /** Only for whoever sees costs; null hides "What it costs you". */
+  example?: OfferCostExample | null }) {
   const router = useRouter()
   const [saved, setSaved] = useState(initial)
   const [v, setV] = useState(initial)
@@ -90,15 +96,21 @@ export function OfferEditor({ id, initial, locked, pickers }: { id: string | nul
   const lab = 'block text-sm font-medium'
   const share = qualify && qualify.orders >= 5 ? Math.round((qualify.qualify / qualify.orders) * 100) : null
 
+  // What it costs on the best seller: the off this offer gives one piece of it (a percent capped, or an amount).
+  const pct = v.kind === 'percent' ? Number(v.value) || 0 : 0
+  const amt = v.kind === 'amount' ? Math.round((Number(v.value) || 0) * 100) : 0
+  const capP = v.cap ? Math.round((Number(v.cap) || 0) * 100) : null
+  const off = example ? Math.min(example.price, v.kind === 'percent' ? Math.min(Math.round((example.price * pct) / 100), capP ?? Infinity) : amt) : 0
   return (
-    <div ref={form} className="space-y-4">
+    <div ref={form} className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="min-w-0 space-y-4">
       {dirty && id && <SaveBar pending={pending} onSave={save} onDiscard={() => { setV(saved); setErrors({}) }} />}
       {!locked.style && (
-        <Section title="Style">
+        <Section title="What kind">
           <fieldset><legend className="sr-only">Offer style</legend>
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {(Object.keys(STYLE_LABEL) as DiscountStyle[]).map((k) => (
-                <label key={k} className={`flex cursor-pointer gap-2 rounded-md border p-2 text-sm ${style === k ? 'border-ring bg-accent' : 'border-border'}`}>
+                <label key={k} className={`flex cursor-pointer gap-2 rounded-mid border p-3 text-sm ${style === k ? 'border-ring bg-select' : 'border-border hover:bg-accent'}`}>
                   <input type="radio" name="style" checked={style === k} onChange={() => set({ style: k, kind: k === 'pay_online' ? 'amount' : v.kind })} className="mt-0.5" />
                   <span><span className="font-medium">{STYLE_LABEL[k].name}</span><span className="block text-xs text-muted-foreground">{STYLE_LABEL[k].line}</span></span>
                 </label>
@@ -108,7 +120,7 @@ export function OfferEditor({ id, initial, locked, pickers }: { id: string | nul
         </Section>
       )}
 
-      <Section title={STYLE_LABEL[style]?.name ?? 'Offer'}>
+      <Section title="The offer">
         <div className="space-y-1"><label htmlFor="o-title" className={lab}>Name <span className="font-normal text-muted-foreground">(shown to shoppers)</span></label>
           <input id="o-title" value={v.title} maxLength={60} placeholder="Diwali sale" {...fp('title')} onChange={(e) => set({ title: e.target.value })} className={field} />{err('title')}</div>
         {(style === 'order_off' || style === 'product_off' || style === 'pay_online') && (
@@ -154,12 +166,28 @@ export function OfferEditor({ id, initial, locked, pickers }: { id: string | nul
         <p className="text-xs text-muted-foreground">Times are India time. Shoppers see an end date only if you set one.</p>
       </Section>
 
-      <Section title="Shoppers will see" ariaLabel="Preview">
-        {p ? <div className="space-y-2 text-sm"><p className="rounded-sm bg-foreground px-3 py-2 text-center text-xs text-background">{p.bar}</p><p className="text-muted-foreground">{p.bag}</p></div>
-          : <p className="text-sm text-muted-foreground">Fill in the offer to see it as shoppers will.</p>}
-      </Section>
 
       {!id && <div className="flex gap-2"><Button onClick={save} disabled={pending}>{pending ? 'Saving…' : 'Save as draft'}</Button></div>}
+    </div>
+    {/* The side, as drawn: what shoppers will see, then what it costs you (only for whoever sees costs). */}
+    <aside className="space-y-4 lg:sticky lg:top-[calc(var(--shell-top,0px)+1rem)]">
+      <Section title="What shoppers see" ariaLabel="Preview">
+        {p ? <div className="space-y-2 text-sm">
+          <span className="text-label text-muted-foreground">The bar at the top of the store</span>
+          <p className="rounded-md bg-bar px-3 py-2 text-center text-label text-bar-foreground">{p.bar}</p>
+          <span className="text-label text-muted-foreground">In the bag</span>
+          <p className="rounded-md bg-sunk px-3 py-2 text-label">{p.bag}</p></div>
+          : <p className="text-sm text-muted-foreground">Fill in the offer to see it as shoppers will.</p>}
+      </Section>
+      {example ? (
+        <Section title="What it costs you">
+          <p className="text-sm tabular-nums">{off > 0
+            ? <>On a {inr(example.price)} {example.title}: {inr(off)} off. You keep about {inr(keptWithOff(example.example, off))} instead of {inr(Math.round(example.example.keptAt0))}.</>
+            : <>On a {inr(example.price)} {example.title} you keep about {inr(Math.round(example.example.keptAt0))} today.</>}</p>
+          <p className="text-label text-muted-foreground">Delivered, after GST, goods, courier and Frrata’s fee. Before ads and packaging.</p>
+        </Section>
+      ) : null}
+    </aside>
       <LeaveDialog open={!!guard.leaveTo} what="this offer" onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(v))} />
     </div>
   )

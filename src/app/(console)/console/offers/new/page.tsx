@@ -5,7 +5,7 @@ import { OFFER_TEMPLATES, toIst, type OfferValues } from '@/domains/checkout/off
 import { DISCOUNT_STYLES } from '@/domains/checkout/discounts'
 import { CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
 import { OfferEditor } from '../_components/offer-editor'
-import { offerPickers } from '@/lib/queries/discounts'
+import { offerExampleFor, offerPickers } from '@/lib/queries/discounts'
 
 export const metadata = { title: 'New offer' }
 
@@ -25,7 +25,7 @@ export default async function NewOfferPage({ searchParams }: { searchParams: Pro
   }
   const pickers = await offerPickers(auth.membership.tenantId)
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-6xl">
       <PageHeader title="New offer" back={{ href: '/console/offers', label: 'Offers' }} />
       <p className="mb-4 text-sm text-muted-foreground">Saved as a draft. {(CAN_MANAGE as readonly string[]).includes(auth.membership.role) ? 'Start it when you are ready.' : 'The owner or a manager starts it.'}</p>
       <nav aria-label="Start from" className="mb-4 flex flex-wrap items-center gap-2 text-sm">
@@ -33,7 +33,8 @@ export default async function NewOfferPage({ searchParams }: { searchParams: Pro
         {OFFER_TEMPLATES.map((t) => <Link key={t.key} href={`/console/offers/new?from=${t.key}`} aria-current={from?.key === t.key ? 'true' : undefined}
           className="inline-flex min-h-9 items-center rounded-md border border-input px-3 hover:bg-accent aria-[current]:border-foreground">{t.name}</Link>)}
       </nav>
-      <OfferEditor key={from?.key ?? style} id={null} initial={initial} locked={{ style: false, code: false }} pickers={pickers} />
+      <OfferEditor key={from?.key ?? style} id={null} initial={initial} locked={{ style: false, code: false }} pickers={pickers}
+        example={await offerExampleFor(auth.membership.tenantId, auth.membership.role).catch(() => null)} />
     </div>
   )
 }

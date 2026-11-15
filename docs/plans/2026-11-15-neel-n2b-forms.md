@@ -67,6 +67,10 @@ Unit: `orderTopLine` (every state the board draws), the courier came-back share,
 | Notes and Activity (separate cards drawn) | One timeline | Owner, 2026-11-15 | Yes, 2026-11-15 |
 | Shipping on a To pack order (drawn beside Mark packed) | The Shipping card once the order is packed | An order is packed (its invoice issued, its stock taken) before it ships; marking it shipped first would skip both | — |
 | Courier cards with price and days, "Book Delhivery · ₹78" | Cards for couriers the store has used, each with its came-back share; picking one fills the courier; booking stays "Ship another way" (name and AWB) | No Shiprocket connector exists (no rates, no booking). It is its own phase: current facts on Shiprocket's API and terms first (`frata-integrations`, 90-day rule) | — |
+| Offer header buttons "Save as draft · Start offer" | "Save as draft" at the foot of the form; Start stays on the saved offer's page | Starting needs a saved offer (its codes, its budget) and the owner or a manager; the started-offer steps already live on that page | — |
+| "Needs about 1.2× the orders to pay back" under What it costs you | Left out | No engine computes a break-even multiple per offer yet; the line would be a guess. Back when `keptWithOff` is judged against delivered orders over time | — |
+| "On which products · Everything in the store" as a fold with Edit | The picker inline, under the offer's kind (product offers only) | It applies to one kind of offer; a fold for the others would show "Everything" with nothing to edit | — |
+| Phone: "Notes and activity ›" opening a sheet | The whole timeline in the page's one column | One list already (owner, 2026-11-15); a sheet adds a step to reach a note | — |
 
 ## Architecture review on the plan (2026-11-15), folded in
 **The top line** — `orderTopLine(o, state, { owed, refund, canCancel })` in `src/domains/orders/top-line.ts`, pure, returns
