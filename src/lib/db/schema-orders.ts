@@ -135,6 +135,8 @@ export const orders = pgTable('orders', {
   uniqueIndex('orders_tenant_idempotency').on(t.tenantId, t.idempotencyKey),
   uniqueIndex('orders_tenant_razorpay').on(t.tenantId, t.razorpayOrderId),
   index('orders_tenant_phone').on(t.tenantId, t.phone),
+  // A PIN code's came-back count (the order page's PIN line, pin-returns.ts; speed review 2026-11-15).
+  index('orders_tenant_pincode').on(t.tenantId, t.pincode, t.placedAt).where(sql`${t.cancelledAt} is null`),
   // The holds that count against stock: online, unpaid, not cancelled.
   index('orders_tenant_holds').on(t.tenantId, t.payBy).where(sql`${t.paidAt} is null and ${t.cancelledAt} is null and ${t.payBy} is not null`),
   // The shipping tabs (Ship S·0): packed, no outcome yet. inFlightSql (order-predicates.ts) says this first.

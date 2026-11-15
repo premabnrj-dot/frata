@@ -1,8 +1,8 @@
+import { pageRoles } from '@/domains/settings/groups'
 import { SettingsHead } from '../_components/settings-head'
 import { Section } from '@/components/layout/section'
 import { Panel } from '@/components/ui/panel'
 import { requireMember } from '@/lib/auth/require-member'
-import { CONSOLE_ROLES } from '@/domains/tenancy/roles'
 import { noticePrefsFor } from '@/lib/queries/notices'
 import { Prefs, type PrefRow } from './prefs'
 
@@ -10,7 +10,7 @@ export const metadata = { title: 'Your notifications' }
 
 /** Settings › Your notifications (mockup v2 screen 8): every notice lands in Notices; email per kind. */
 export default async function NotificationsPage() {
-  const auth = await requireMember(CONSOLE_ROLES)
+  const auth = await requireMember(pageRoles('notifications'))
   if (!auth.ok) return <Panel title={auth.message} />
   const prefs = await noticePrefsFor(auth.membership.tenantId, auth.userId).catch(() => null)
   if (!prefs) return <><SettingsHead page="notifications" role={auth.membership.role} /><Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel></>

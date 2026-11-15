@@ -30,7 +30,7 @@ type ShipPanelProps = {
 }
 
 /** "4 of 96 of your orders came back" (counts, never a share that reads as this PIN's: unit-economics review N2b). */
-const backWords = (c: { outcomes: number; back: number }) => (c.outcomes ? `${c.back} of ${c.outcomes} of your orders came back` : 'No outcomes yet')
+const backWords = (c: { outcomes: number; back: number }) => (c.outcomes ? `${c.back} of ${c.outcomes} of your orders came back` : 'No deliveries yet')
 
 function Panel({ orderId, number, stage, may, shipment, stockTaken, couriers = [] }: ShipPanelProps) {
   const router = useRouter()
@@ -63,7 +63,7 @@ function Panel({ orderId, number, stage, may, shipment, stockTaken, couriers = [
         {couriers.length ? (
           <fieldset className="grid gap-2 sm:grid-cols-3">
             <legend className="sr-only">Courier</legend>
-            {[...couriers.map((c) => ({ key: c.name, title: c.name, sub: backWords(c) })), { key: '', title: 'Ship another way', sub: 'Your own courier, an AWB by hand' }].map((c) => {
+            {[...couriers.map((c) => ({ key: c.name, title: c.name, sub: backWords(c) })), { key: '', title: 'Ship another way', sub: 'Your own courier and tracking number' }].map((c) => {
               const on = courier.trim().toLowerCase() === c.key.toLowerCase() && (c.key !== '' || !couriers.some((x) => x.name.toLowerCase() === courier.trim().toLowerCase()))
               return (
                 <label key={c.key || 'other'} className={`flex cursor-pointer flex-col gap-0.5 rounded-mid border p-3 text-sm ${on ? 'border-ring bg-select' : 'border-border hover:bg-accent'}`}>

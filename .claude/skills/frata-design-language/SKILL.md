@@ -1190,7 +1190,7 @@ values, keyboard and axe at phone and desktop. A new primitive or state joins th
   the picked group's pages at the right (name, current value, chevron); on a phone the groups first, then the group's
   pages with "‹ Settings". The group is in the address (`?group=`). A settings page opens "Settings › <group>", its title,
   then its group's other pages as tabs (`SettingsHead`). A field lives where a merchant looks for it (the legal name
-  beside the GSTIN, order and invoice numbering together); a moved page keeps its old address as a redirect (`MOVED`).
+  beside the GSTIN, order and invoice numbering together); a moved page keeps its old address as a redirect (`movedTo`).
   "Ready for live payments" stays a chip in the header, what is missing a warn banner above the groups.
 - **A settings form** (Neel N2b·3): one card per block; a page of one block hides its block title (screen readers keep
   it); switch rows carry their line under the label; short fields side by side (three across when there are three);

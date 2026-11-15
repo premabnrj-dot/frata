@@ -55,8 +55,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   // approved (the merchant's word; checkout offers online payment only on an approved address).
   const names = takesLivePayments(pay) ? await liveNamesFor(auth.membership.tenantId).catch(() => []) : []
   const current = names.find((n) => !n.added)
-  const missing: { label: string; section: string }[] = [...missingForLivePayments(f),
-    ...(current && !current.razorpayOk ? [{ label: `Add ${shopHost(current.name)} in Razorpay`, section: 'address' }] : [])]
+  const missing: { label: string; section: PageKey }[] = [...missingForLivePayments(f),
+    ...(current && !current.razorpayOk ? [{ label: `Add ${shopHost(current.name)} in Razorpay`, section: 'web-address' as const }] : [])]
   const policyGaps = POLICY_PAGES.filter(([k]) => missingFacts(renderPolicy(k, f, inr)).length).length
 
   // Neel § Screens · Settings: each row its current value, the parts joined by " · ".
@@ -81,7 +81,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   // Each page this person may open: its value, and whether it has something to fix (the group counts those).
   const rowOf = (k: PageKey): { summary: string; needs: boolean; mono?: boolean } | null => {
     switch (k) {
-      case 'web-address': return { summary: mainHost, needs: missing.some((m) => m.section === 'address'), mono: true }
+      case 'web-address': return { summary: mainHost, needs: missing.some((m) => m.section === 'web-address'), mono: true }
       case 'online-payments': return { summary: online, needs: onlineNeeds }
       case 'shipping-costs': return seen === null || (seen !== undefined && !seen.visible) ? null : { summary: shipSummary, needs: shipNeeds }
       case 'emails': return { summary: 'Order emails in your store’s name', needs: false }
@@ -109,7 +109,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         {missing.length ? (
           <div className={asked ? 'max-md:hidden' : undefined}>
             <Banner tone="warn" title="Before live payments">
-              <span className="inline-flex flex-wrap gap-x-3">{missing.map((m) => <Link key={m.label} href={`/console/settings/${m.section === 'address' ? 'web-address' : m.section}`} className="font-medium text-link hover:underline">{m.label}</Link>)}</span>
+              <span className="inline-flex flex-wrap gap-x-3">{missing.map((m) => <Link key={m.label} href={pageHref(m.section)} className="font-medium text-link hover:underline">{m.label}</Link>)}</span>
             </Banner>
           </div>
         ) : null}
@@ -124,7 +124,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                       className={`flex min-h-14 items-center justify-between gap-3 px-4 py-2.5 transition-colors duration-fast md:rounded-mid md:border md:px-3.5 ${current ? 'md:border-transparent md:bg-select' : 'md:border-transparent hover:bg-side'}`}>
                       <span className="flex min-w-0 flex-col gap-0.5"><span className="font-medium">{group.name}</span><span className="text-label text-muted-foreground md:truncate">{group.sub}</span></span>
                       <span className="flex shrink-0 items-center gap-2">
-                        {fix ? <Badge tone="warn" aria-label={`${fix} to fix`}>{fix}</Badge> : null}
+                        {fix ? <Badge tone="warn">{fix}<span className="sr-only"> to fix</span></Badge> : null}
                         <Icon name="chevron" className="size-4 text-muted-foreground md:hidden" />
                       </span>
                     </Link>
@@ -136,7 +136,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           {open ? (
             <section aria-labelledby="settings-group" className={`flex flex-col gap-2 ${asked ? '' : 'max-md:hidden'}`}>
               <span className="md:hidden"><BackLink href="/console/settings" label="Settings" /></span>
-              <h2 id="settings-group" className="text-title font-semibold md:text-section">{open.group.name}</h2>
+              {/* With a group asked for, a phone hides the page title: the group's name is its h1 there. */}
+              {asked ? <h1 id="settings-group" className="text-title font-semibold md:sr-only">{open.group.name}</h1> : null}
+              <h2 id={asked ? undefined : 'settings-group'} className={asked ? 'max-md:hidden text-section font-semibold' : 'text-title font-semibold md:text-section'}>{open.group.name}</h2>
               <Section as="nav" flush ariaLabel={open.group.name}>
                 {open.rows.map(({ k, r }) => <Row key={k} href={pageHref(k)} title={pageTitle(k)} summary={r.summary} needs={r.needs} mono={r.mono} />)}
               </Section>

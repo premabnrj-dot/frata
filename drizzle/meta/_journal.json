@@ -897,6 +897,13 @@
       "when": 1794712289936,
       "tag": "0127_analytics_series_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 128,
+      "version": "7",
+      "when": 1794735978401,
+      "tag": "0128_orders_pincode_index",
+      "breakpoints": true
     }
   ]
 }

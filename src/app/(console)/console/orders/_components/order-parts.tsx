@@ -4,6 +4,7 @@ import { paise } from '@/domains/money/paise'
 import type { OrderKeep } from '@/domains/orders/kept'
 import type { TopLine } from '@/domains/orders/top-line'
 import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 
 // =============================================================================
 // THE ORDER PAGE'S PARTS (Neel N2b·1, mockup https://claude.ai/artifact/GH5xX5ss5Xb9rLc5LwyVEC, as approved). Server
@@ -13,17 +14,17 @@ import { cn } from '@/lib/utils'
 
 const TONE = { calm: 'bg-sunk', warn: 'bg-warn', bad: 'bg-danger', ok: 'bg-ok' } as const
 const LINE = { calm: 'text-foreground', warn: 'text-warn-text', bad: 'text-danger-text', ok: 'text-ok-text' } as const
-const RISK = { low: { bg: 'bg-ok text-ok-text', dot: 'bg-ok-mark' }, medium: { bg: 'bg-warn text-warn-text', dot: 'bg-warn-mark' }, high: { bg: 'bg-danger text-danger-text', dot: 'bg-danger-mark' } } as const
+const RISK = { low: 'ok', medium: 'warn', high: 'danger' } as const
 
 /** "Collect ₹2,290 on delivery" and its one line under it; the COD risk as a chip beside it. */
 export function TopLineCard({ t, risk }: { t: TopLine; risk: 'low' | 'medium' | 'high' | null }) {
   return (
     <section aria-label="What to do" className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg px-4 py-3.5 md:px-5', TONE[t.tone])}>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <b className={cn('text-base font-semibold md:text-[length:var(--t-section)]', LINE[t.tone])}>{t.line}</b>
+        <b className={cn('text-base font-semibold md:text-section', LINE[t.tone])}>{t.line}</b>
         {t.sub ? <span className="text-sm text-muted-foreground">{t.sub}</span> : null}
       </div>
-      {risk ? <span className={cn('inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1 text-sm font-medium', RISK[risk].bg)}><i aria-hidden="true" className={cn('size-1.5 rounded-full', RISK[risk].dot)} />COD risk: {risk}</span> : null}
+      {risk ? <Badge tone={RISK[risk]}>COD risk: {risk}</Badge> : null}
     </section>
   )
 }
@@ -40,17 +41,17 @@ export function KeepCard({ k }: { k: OrderKeep }) {
         <div className="grid grid-cols-2 gap-2 md:gap-3">
           <div className="flex flex-col gap-0.5 rounded-mid bg-sunk p-3">
             <span className="text-label text-muted-foreground">If delivered</span>
-            {k.ifDelivered === null ? <b className="text-title font-semibold text-muted-foreground">—</b> : <b className="font-num text-title font-semibold tabular-nums"><Money paise={k.ifDelivered} /></b>}
+            {k.ifDelivered === null ? <b className="text-title font-semibold text-muted-foreground">—<span className="sr-only">Not known yet</span></b> : <b className="font-num text-title font-semibold tabular-nums"><Money paise={k.ifDelivered} /></b>}
             <span className="text-label text-muted-foreground">{k.basis === 'none' ? 'After GST, goods and Frrata’s fee. Before shipping, ads and packaging.' : 'After GST, goods, courier and Frrata’s fee. Before ads and packaging.'}</span>
           </div>
           {k.basis === 'none' ? (
             <div className="flex flex-col gap-1 rounded-mid bg-sunk p-3">
               <span className="text-label text-muted-foreground">If it comes back</span>
-              <span className="text-sm">{NO_SHIPPING} <a href="/console/settings/shipping-costs" className="text-link underline underline-offset-2">Shipping costs</a></span>
+              <span className="text-sm">{NO_SHIPPING} <a href="/console/settings/shipping-costs" className="text-link underline underline-offset-2">Your shipping costs</a></span>
             </div>
           ) : <div className="flex flex-col gap-0.5 rounded-mid bg-danger p-3 text-danger-text">
             <span className="text-label">If it comes back</span>
-            {k.ifBack === null ? <b className="text-title font-semibold">—</b> : <b className="font-num text-title font-semibold tabular-nums"><Money paise={k.ifBack} /></b>}
+            {k.ifBack === null ? <b className="text-title font-semibold">—<span className="sr-only">Not known yet</span></b> : <b className="font-num text-title font-semibold tabular-nums"><Money paise={k.ifBack} /></b>}
             <span className="text-label">Courier both ways.{k.ifBackNotStocked !== null && k.ifBackNotStocked !== k.ifBack ? <> <Money paise={k.ifBackNotStocked} /> if it can’t go back in stock.</> : null}</span>
           </div>}
         </div>
@@ -68,6 +69,7 @@ export function Timeline({ rows, head }: { rows: TimelineRow[]; head: React.Reac
   return (
     <Section id="activity" title="Activity">
       {head}
+      {rows.length ? null : <p className="text-sm text-muted-foreground">Nothing here yet.</p>}
       <ol className="flex flex-col gap-3 text-sm">
         {rows.map((r, i) => (
           <li key={i} className="flex flex-col">

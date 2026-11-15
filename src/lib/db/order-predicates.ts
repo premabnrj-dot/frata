@@ -51,6 +51,14 @@ export const stateSql = (now: Date, a = '"orders"'): SQL<OrderState> => sql<Orde
   when ${c(a, 'confirmed_at')} is not null then 'confirmed'
   else 'unconfirmed' end)`
 
+/**
+ * "Reached an outcome" and "came back", by timestamps (speed review 2026-11-15): exactly stateSql's first four cases, which
+ * outrank everything else in it, so `outcomeSql(a)` ≡ `stateSql in ('rto_received','rto','delivered','lost')` and
+ * `cameBackSql(a)` ≡ `stateSql in ('rto_received','rto')` (src/lib/db/__tests__/order-outcome-predicates.test.ts), without the CASE that defeats indexes.
+ */
+export const outcomeSql = (a = '"orders"'): SQL => sql`(${c(a, 'rto_delivered_at')} is not null or ${c(a, 'rto_initiated_at')} is not null or ${c(a, 'delivered_at')} is not null or ${c(a, 'lost_at')} is not null)`
+export const cameBackSql = (a = '"orders"'): SQL => sql`(${c(a, 'rto_delivered_at')} is not null or ${c(a, 'rto_initiated_at')} is not null)`
+
 /** enteredAt() in SQL: when an order entered its tab; null outside the work tabs and the four shipping tabs. */
 export const enteredAtSql = (now: Date, a = '"orders"'): SQL<Date | null> => sql<Date | null>`(case ${stateSql(now, a)}
   when 'unconfirmed' then coalesce(${c(a, 'switched_to_cod_at')}, ${c(a, 'placed_at')})

@@ -1,6 +1,7 @@
+import { pageRoles } from '@/domains/settings/groups'
 import { SettingsHead } from '../_components/settings-head'
 import { Panel } from '@/components/ui/panel'
-import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { requireMember } from '@/lib/auth/require-member'
 import { isOwnDomainsConfigured } from '@/lib/env'
 import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import { addressFacts, liveNamesFor, shopDomainRows } from '@/lib/queries/addresses'
@@ -14,7 +15,7 @@ import { Domains } from './domains'
 export const metadata = { title: 'Web address' }
 
 export default async function AddressPage() {
-  const auth = await requireMember(CAN_MANAGE)
+  const auth = await requireMember(pageRoles('web-address'))
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or a manager can change settings' : auth.message} />
   const t = auth.membership.tenantId
   const [f, rows, pay, liveNames] = await Promise.all([addressFacts(t).catch(() => null), shopDomainRows(t).catch(() => null), paymentStatusFor(t).catch(() => null), liveNamesFor(t).catch(() => [])])

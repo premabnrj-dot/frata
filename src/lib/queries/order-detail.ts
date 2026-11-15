@@ -5,7 +5,7 @@ import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm'
 import { sourceOfInputs, type Source, type SourceInputs } from '@/domains/analytics/source'
 import { attributionInputsSql } from '@/lib/db/attribution-sql'
 import { creatorCodeJoinSql } from '@/lib/db/discount-predicates'
-import { cogsSql, creditedSql, currentMethodSql, editWaitingSql, feeBaseSql, feeBucketSql, momentColumns, onlineTotalCol, openShipmentProviderSql, stateSql } from '@/lib/db/order-predicates'
+import { cogsSql, creditedSql, currentMethodSql, editWaitingSql, feeBaseSql, feeBucketSql, momentColumns, onlineTotalCol, openShipmentProviderSql } from '@/lib/db/order-predicates'
 import type { MemberRole } from '@/domains/tenancy/roles'
 import { orderKeep, type OrderKeep } from '@/domains/orders/kept'
 import { estimateOf } from '@/domains/settings/ship-costs'
@@ -17,7 +17,7 @@ import { products, variants } from '@/lib/db/schema-catalogue'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import { riskFactsFor } from './order-risk'
-import { pinIn } from './pin-returns'
+import { backIn, outcomeIn, pinIn, since } from './pin-returns'
 import type { RecordLine } from '@/domains/orders/edit'
 
 /** One items edit as the order page reads it (OE·2: a change that asked the shopper to pay, and how it ended). */
@@ -113,7 +113,8 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
       .where(and(eq(orderEdits.tenantId, tenantId), eq(orderEdits.orderId, o.id), editWaitingSql('"order_edits"', '"orders"'))).limit(1),
     // Around it (Neel N2b·1): what it keeps (only for whoever sees costs), the couriers' and its PIN code's came-back counts.
     role ? keepIn(tx, tenantId, o.id, role, now) : Promise.resolve(null),
-    couriersIn(tx, tenantId, now),
+    // Courier cards show only on a packed order still to ship (ShipPanel's to_ship): no window aggregate for any other.
+    o.packedAt && !o.shippedAt && !o.ndrAt && !o.deliveredAt && !o.lostAt && !o.cancelledAt && !o.rtoInitiatedAt && !o.rtoDeliveredAt ? couriersIn(tx, tenantId, now) : Promise.resolve([]),
     pinIn(tx, tenantId, o.pincode ?? '', now),
     ])
     const offers = offerRows.map((d) => ({ ...d, amount: Number(d.amount) }))
@@ -146,7 +147,6 @@ export async function orderDetail(tenantId: string, number: number, now = new Da
 //  - pinIn (pin-returns.ts, shared with Settings): the same counts for one PIN code. Counts only: never another order's name, address or ₹.
 // =============================================================================
 
-const WINDOW_DAYS = 180
 
 export type CourierCount = { name: string; outcomes: number; back: number }
 export type { PinCount } from './pin-returns'
@@ -168,9 +168,6 @@ export async function keepIn(tx: Tx, tenantId: string, orderId: string, role: Me
   }, estimateOf(shipCosts))
 }
 
-const outcomeIn = (now: Date) => sql`${stateSql(now, 'o')} in ('delivered', 'rto', 'rto_received', 'lost')`
-const backIn = (now: Date) => sql`${stateSql(now, 'o')} in ('rto', 'rto_received')`
-const since = (now: Date) => sql`${new Date(now.getTime() - WINDOW_DAYS * 86_400_000).toISOString()}::timestamptz`
 
 export async function couriersIn(tx: Tx, tenantId: string, now: Date): Promise<CourierCount[]> {
   const rows = await tx.execute<{ name: string; outcomes: number; back: number }>(sql`

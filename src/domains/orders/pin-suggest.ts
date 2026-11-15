@@ -10,6 +10,9 @@ export type PinSuggestion = PinOutcomes
 
 export const MIN_OUTCOMES = 10
 export const ABOVE_STORE = 0.1
+/** The order page's PIN line turns red at one in five came back, over enough orders to mean it (no store share there). */
+export const RISKY_SHARE = 0.2
+export const pinIsRisky = (c: { outcomes: number; back: number }) => c.outcomes >= MIN_OUTCOMES && c.back / c.outcomes >= RISKY_SHARE
 
 export function pickPinToBlock(pins: readonly PinOutcomes[], store: { outcomes: number; back: number }, blocked: readonly string[]): PinSuggestion | null {
   if (store.outcomes <= 0) return null

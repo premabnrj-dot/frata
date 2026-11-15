@@ -1,6 +1,7 @@
-import { paise } from '@/domains/money/paise'
+import type { OfferExample } from './offer-kept'
 import type { ShipCostEstimate } from './freight'
 import { orderKeep } from './kept'
+import { split } from '@/domains/tax/gst'
 
 // =============================================================================
 // FILE: src/domains/orders/offer-cost.ts — WHAT AN OFFER COSTS ON ONE PIECE (Neel N2b·2, the offer form's side card).
@@ -10,12 +11,12 @@ import { orderKeep } from './kept'
 // stays the same (a slab code can step across ₹2,500; the card says "about"). Before ads, packaging and gateway fees.
 // =============================================================================
 
-export type OfferExample = { keptAt0: number; perRupee: number }
+export type { OfferExample } from './offer-kept'
 
 export function offerExample(p: { price: number; gstBps: number; inclusive: boolean; cogs: number; est: ShipCostEstimate; feeBps: number | null }): OfferExample | null {
   const at = (off: number) => {
     const total = Math.max(0, p.price - off)
-    const taxable = p.inclusive ? Math.round((total * 10_000) / (10_000 + p.gstBps)) : total
+    const { taxable } = split(total, p.gstBps, p.inclusive)
     const k = orderKeep({ provider: null, cod: false, net: taxable, cogs: p.cogs, forward: null, rto: null, courierCodFee: null, gateway: 0, base: taxable, feeBps: p.feeBps }, p.est)
     return k.ifDelivered
   }
@@ -23,6 +24,3 @@ export function offerExample(p: { price: number; gstBps: number; inclusive: bool
   if (zero === null || hundred === null) return null
   return { keptAt0: zero, perRupee: (zero - hundred) / 10_000 }
 }
-
-/** What the piece keeps with `off` paise off it (the card's second figure). */
-export const keptWithOff = (x: OfferExample, off: number) => paise(Math.round(x.keptAt0 - off * x.perRupee))

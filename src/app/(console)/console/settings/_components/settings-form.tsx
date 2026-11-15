@@ -22,6 +22,7 @@ import { UnratedNotice } from './unrated'
 import type { Unrated } from '@/domains/tax/rates'
 import { Section } from '@/components/layout/section'
 import { ChipInput } from '@/components/ui/chip-input'
+import { announce } from '@/components/shell/announce'
 import { PINCODE_SHAPE } from '@/domains/signup/slug'
 import type { PinSuggestion } from '@/domains/orders/pin-suggest'
 import { CodPreview } from './cod-preview'
@@ -138,7 +139,7 @@ export function SettingsForm({ sectionKey, head, initial, version: startVersion,
                     locked={f.key === 'b2bInvoices' && values.turnoverBand !== undefined && values.turnoverBand !== 'under_5cr' ? 'Off at ₹5 crore and above until e-invoicing is set up.' : undefined}
                     after={f.key === 'codBlockedPincodes' && suggest && !String(values.codBlockedPincodes ?? '').split(/[\s,]+/).includes(suggest.pin) ? (
                       <p className="text-label text-muted-foreground">From your returns: <button type="button" className="text-link underline underline-offset-2"
-                        onClick={() => { const list = String(values.codBlockedPincodes ?? '').split(/[\s,]+/).filter(Boolean); set('codBlockedPincodes', [...list, suggest.pin].join(', ')); setTook(suggest.pin) }}>add {suggest.pin}</button> ({suggest.back} of {suggest.outcomes} came back)</p>
+                        onClick={() => { const list = String(values.codBlockedPincodes ?? '').split(/[\s,]+/).filter(Boolean); set('codBlockedPincodes', [...list, suggest.pin].join(', ')); setTook(suggest.pin); announce(`Added ${suggest.pin}`); document.getElementById('f-codBlockedPincodes')?.focus() }}>add {suggest.pin}</button> ({suggest.back} of {suggest.outcomes} came back)</p>
                     ) : null} />)}
                 </div>
               ))}
@@ -248,7 +249,7 @@ function FieldInput({ f, value, error, onChange, locked, after }: { f: Field; va
     return (
       <div className="space-y-2">
         <div className="flex items-center"><label htmlFor={id} className="text-sm font-medium">{f.label}</label>{tip}</div>
-        <ChipInput id={id} values={list} onChange={(next) => onChange(next.join(', '))} label="a PIN code" bad={(p) => !PINCODE_SHAPE.test(p)} mono
+        <ChipInput id={id} values={list} onChange={(next) => onChange(next.join(', '))} bad={(p) => !PINCODE_SHAPE.test(p)} mono
           describedBy={marks['aria-describedby']} invalid={!!error} />
         {help}
         {after}

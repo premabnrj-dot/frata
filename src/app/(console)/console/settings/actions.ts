@@ -57,9 +57,9 @@ export async function saveSection(sectionKey: string, values: Values, version: n
   const parsed = parseSection(section, values)
   if (!parsed.ok) return { ok: false, error: 'Some fields need a look before saving.', errors: parsed.errors }
   const { name, ...columns } = parsed.patch
-  // Only a PIN code this save really adds to the list counts as taken: the suggestion's measure, never trusted beyond that.
+  // Only a PIN code this save really adds to the list counts as taken (checked against the row below, in the transaction).
   const blocked = (parsed.patch as Record<string, unknown>).codBlockedPincodes
-  const suggested = section.key === 'payments' && typeof took === 'string' && /^[1-9]\d{5}$/.test(took) && Array.isArray(blocked) && blocked.includes(took) ? took : null
+  const candidate = section.key === 'payments' && typeof took === 'string' && /^[1-9]\d{5}$/.test(took) && Array.isArray(blocked) && blocked.includes(took) ? took : null
   try {
     const r = await asMember(section.editors, { action: `settings.${section.key}`, detail: { fields: Object.keys(parsed.patch) } }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
@@ -75,6 +75,8 @@ export async function saveSection(sectionKey: string, values: Values, version: n
       if ((section.key === 'shipping' || section.key === 'payments') && (await moduleAccessIn(tx, tenantId, new Date())).delivery_zones.usable) {
         for (const k of HELD_BY_ZONES) delete (columns as Record<string, unknown>)[k]
       }
+      const [was] = candidate ? await tx.select({ blocked: shopSettings.codBlockedPincodes }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)).for('update') : []
+      const suggested = candidate && was && !was.blocked.includes(candidate) ? candidate : null
       const [row] = await tx.update(shopSettings)
         .set({ ...(columns as Partial<typeof shopSettings.$inferInsert>), version: sql`${shopSettings.version} + 1`, updatedAt: new Date() })
         .where(and(eq(shopSettings.tenantId, tenantId), eq(shopSettings.version, version)))

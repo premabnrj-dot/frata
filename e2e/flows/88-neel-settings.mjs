@@ -56,7 +56,7 @@ export default {
       await t.step('Pay on delivery as drawn: chips, the suggestion taken and recorded, At checkout, the save bar', async () => {
         await p.getByRole('heading', { name: 'At checkout' }).waitFor()
         await p.getByText('Cash or UPI to the courier', { exact: true }).waitFor()
-        const box = p.getByRole('textbox', { name: 'Add a PIN code' })
+        const box = p.getByRole('textbox', { name: 'PIN codes without Pay on delivery' })
         await box.fill('800001'); await box.press('Enter')
         await p.getByRole('button', { name: 'Remove 800001' }).waitFor()
         await p.getByText(/\(8 of 12 came back\)/).waitFor()

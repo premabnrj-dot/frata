@@ -47,4 +47,6 @@ export const groupsFor = (role: MemberRole): { group: SettingsGroup; pages: Page
     : []
 
 /** Old addresses, kept working: bookmarks, emails, the live-payments checklist. */
-export const MOVED: Record<string, PageKey> = { brand: 'store', taxes: 'business', documents: 'invoices', address: 'web-address' }
+const MOVED_PAGES: Record<string, PageKey> = { brand: 'store', taxes: 'business', documents: 'invoices', address: 'web-address' }
+/** Own keys only: "constructor" is not an old address. */
+export const movedTo = (key: string): PageKey | null => (Object.hasOwn(MOVED_PAGES, key) ? MOVED_PAGES[key]! : null)

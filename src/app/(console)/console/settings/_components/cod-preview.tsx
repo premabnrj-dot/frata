@@ -1,3 +1,4 @@
+import { Section } from '@/components/layout/section'
 import { codFor, shippingFor } from '@/domains/checkout/delivery'
 import { codWhyNot } from '@/domains/checkout/cod-words'
 import type { ShopFacts } from '@/components/shop-preview/previews'
@@ -18,8 +19,7 @@ export function CodPreview({ f }: { f: ShopFacts }) {
   const big = f.codMax > 0 ? f.codMax + 40000 : null
   const bigWhy = big ? codWhyNot(codFor(big, f), inr) : null
   return (
-    <section aria-labelledby="at-checkout" className="flex flex-col gap-2.5 rounded-lg border border-border p-4 md:px-5">
-      <h2 id="at-checkout" className="text-section font-semibold">At checkout</h2>
+    <Section title="At checkout">
       {!f.codOn ? (
         <div className={card}><b className="font-medium">Pay on delivery is off</b><span className="text-label text-muted-foreground">Shoppers pay online.</span></div>
       ) : cod.offered ? (
@@ -33,6 +33,6 @@ export function CodPreview({ f }: { f: ShopFacts }) {
       {f.codOn && big && bigWhy ? (
         <div className={`${card} text-muted-foreground`}><b className="font-medium text-foreground">A {inr(big)} bag</b><span className="text-label">{bigWhy}</span></div>
       ) : null}
-    </section>
+    </Section>
   )
 }

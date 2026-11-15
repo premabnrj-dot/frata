@@ -1,3 +1,4 @@
+import { errName } from '@/lib/log'
 import { PageHeader } from '@/components/layout/page-header'
 import { Panel } from '@/components/ui/panel'
 import Link from 'next/link'
@@ -23,7 +24,9 @@ export default async function NewOfferPage({ searchParams }: { searchParams: Pro
     targets: 'all', targetIds: [], buyQty: '2', getQty: '1', getPct: '100', giftVariantId: '', tiers: [], firstOrder: false,
     ...from?.values,
   }
-  const pickers = await offerPickers(auth.membership.tenantId)
+  // Side by side (speed review: one after the other was the slow shape).
+  const [pickers, example] = await Promise.all([offerPickers(auth.membership.tenantId),
+    offerExampleFor(auth.membership.tenantId, auth.membership.role).catch((err) => { console.error('[offer example]', errName(err)); return null })])
   return (
     <div className="max-w-6xl">
       <PageHeader title="New offer" back={{ href: '/console/offers', label: 'Offers' }} />
@@ -34,7 +37,7 @@ export default async function NewOfferPage({ searchParams }: { searchParams: Pro
           className="inline-flex min-h-9 items-center rounded-md border border-input px-3 hover:bg-accent aria-[current]:border-foreground">{t.name}</Link>)}
       </nav>
       <OfferEditor key={from?.key ?? style} id={null} initial={initial} locked={{ style: false, code: false }} pickers={pickers}
-        example={await offerExampleFor(auth.membership.tenantId, auth.membership.role).catch(() => null)} />
+        example={example} />
     </div>
   )
 }

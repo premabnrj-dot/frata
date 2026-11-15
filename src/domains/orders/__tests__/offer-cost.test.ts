@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { keptWithOff, offerExample } from '../offer-cost'
+import { offerExample } from '../offer-cost'
+import { keptWithOff } from '../offer-kept'
 
 const est = { delivery: 7800, ret: 7800, codFee: 0 }
 describe('offerExample: one piece of the best seller, delivered', () => {

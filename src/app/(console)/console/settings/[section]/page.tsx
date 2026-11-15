@@ -15,7 +15,7 @@ import { displayFamily } from '@/components/shop-preview/fonts'
 import { shopFacts, storedValues } from '../_components/facts'
 import { SettingsForm } from '../_components/settings-form'
 import { SettingsHead } from '../_components/settings-head'
-import { MOVED } from '@/domains/settings/groups'
+import { movedTo } from '@/domains/settings/groups'
 import { pinSuggestionFor } from '@/lib/queries/pin-returns'
 import { errName } from '@/lib/log'
 import { HELD_BY_ZONES } from '@/domains/delivery/lists'
@@ -30,7 +30,8 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this store’s settings' : auth.message} />
   const { section: key } = await params
   // Settings regrouped (owner, 2026-11-15): an old address goes to the page that holds its fields now.
-  if (MOVED[key]) redirect(`/console/settings/${MOVED[key]}`)
+  const moved = movedTo(key)
+  if (moved) redirect(`/console/settings/${moved}`)
   const section = sectionFor(key)
   if (!section) notFound()
   if (!section.editors.includes(auth.membership.role)) return <Panel title="Only the owner or a manager can change this" />

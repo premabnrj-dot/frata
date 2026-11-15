@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { keptWithOff, type OfferExample } from '@/domains/orders/offer-cost'
+import { keptWithOff, type OfferExample } from '@/domains/orders/offer-kept'
 import { Section } from '@/components/layout/section'
 import { Button } from '@/components/ui/button'
 import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
@@ -173,9 +173,9 @@ export function OfferEditor({ id, initial, locked, pickers, example = null }: { 
     <aside className="space-y-4 lg:sticky lg:top-[calc(var(--shell-top,0px)+1rem)]">
       <Section title="What shoppers see" ariaLabel="Preview">
         {p ? <div className="space-y-2 text-sm">
-          <span className="text-label text-muted-foreground">The bar at the top of the store</span>
+          <p className="text-label text-muted-foreground">The bar at the top of the store</p>
           <p className="rounded-md bg-bar px-3 py-2 text-center text-label text-bar-foreground">{p.bar}</p>
-          <span className="text-label text-muted-foreground">In the bag</span>
+          <p className="text-label text-muted-foreground">In the bag</p>
           <p className="rounded-md bg-sunk px-3 py-2 text-label">{p.bag}</p></div>
           : <p className="text-sm text-muted-foreground">Fill in the offer to see it as shoppers will.</p>}
       </Section>

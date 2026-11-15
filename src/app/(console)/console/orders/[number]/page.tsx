@@ -1,3 +1,5 @@
+import { button } from '@/components/ui/button'
+import { pinIsRisky } from '@/domains/orders/pin-suggest'
 import { Money } from '@/components/data/numeric'
 import { Name } from '@/components/data/name'
 import { PageHeader } from '@/components/layout/page-header'
@@ -164,8 +166,8 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
       {/* On a phone, the two ways to reach the shopper sit right under it (as drawn). */}
       {o.phone && !o.erasedAt ? (
         <div className="grid grid-cols-2 gap-2 md:hidden">
-          <a href={`tel:+91${o.phone}`} className="grid h-11 place-items-center rounded-md border border-edge text-sm font-medium">Call</a>
-          <a href={wa(o.phone, `Hello, this is about your order ${label}.`)} target="_blank" rel="noopener" className="grid h-11 place-items-center rounded-md border border-edge text-sm font-medium">WhatsApp</a>
+          <a href={`tel:+91${o.phone}`} className={button({ variant: 'secondary' })}>Call</a>
+          <a href={wa(o.phone, `Hello, this is about your order ${label}.`)} target="_blank" rel="noopener" className={button({ variant: 'secondary' })}>WhatsApp</a>
         </div>
       ) : null}
 
@@ -242,7 +244,8 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
               </div>
             )}
             {facts && !o.erasedAt ? <p className="text-sm text-muted-foreground">{facts.earlierOrders === 0 ? 'First order from this phone' : `${ordinal(facts.earlierOrders + 1)} order${facts.cameBack ? ` · ${facts.cameBack === 1 ? 'one' : facts.cameBack} came back before` : ''}`}</p> : null}
-            {d.pin && d.pin.outcomes ? <p className={`text-sm ${d.pin.outcomes >= 10 && d.pin.back / d.pin.outcomes >= 0.2 ? 'text-danger-text' : 'text-muted-foreground'}`}>PIN {o.pincode}: {d.pin.back} of {d.pin.outcomes} came back</p> : null}
+            {/* feedback-ok: the PIN code's own record, red when many came back, not a failure after a button */}
+            {d.pin && d.pin.outcomes ? <p className={`text-sm ${pinIsRisky(d.pin) ? 'text-danger-text' : 'text-muted-foreground'}`}>PIN code {o.pincode} · {d.pin.back} of {d.pin.outcomes} came back</p> : null}
             {source ? <p className="text-sm text-muted-foreground">Came from: <span className="text-foreground">{source.label}{source.campaign ? ` · ${source.campaign}` : ''}</span></p> : null}
           </Section>
 

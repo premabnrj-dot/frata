@@ -1,3 +1,4 @@
+import { errName } from '@/lib/log'
 import { notFound } from 'next/navigation'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
@@ -35,6 +36,13 @@ export default async function OfferPage({ params }: { params: Promise<{ id: stri
   const st = STATUS[o.status]
   const mine = stats.offers.get(o.id)
   const rank = new Map((mine?.creators ?? []).map((c, i) => [c.id, i]))
+  // The three side reads at once (speed review: in turn was the slow shape); each only when its card shows.
+  const codes = o.style !== 'pay_online' && o.status !== 'ended' && o.status !== 'stopped'
+  const [setup, pickers, example] = await Promise.all([
+    codes ? setupFor(auth.membership.tenantId) : Promise.resolve(null),
+    canEdit ? offerPickers(auth.membership.tenantId) : Promise.resolve(null),
+    canEdit ? offerExampleFor(auth.membership.tenantId, auth.membership.role).catch((err) => { console.error('[offer example]', errName(err)); return null }) : Promise.resolve(null),
+  ])
   return (
     <div className="max-w-6xl space-y-4">
       <PageHeader title={o.title} back={{ href: '/console/offers', label: 'Offers' }} badges={<Badge tone={st.tone}>{st.label}</Badge>} actions={manager ? <OfferSteps id={o.id} status={o.status} title={o.title} /> : undefined} />
@@ -51,12 +59,12 @@ export default async function OfferPage({ params }: { params: Promise<{ id: stri
         </dl>)}
       </Section>
       {o.status !== 'draft' ? <OfferNumbers o={mine} s={stats} costs={stats.costs} /> : null}
-      {o.style !== 'pay_online' && o.status !== 'ended' && o.status !== 'stopped' ? <OfferCodes id={o.id} address={(await setupFor(auth.membership.tenantId))?.address ?? ''} canAdd={manager} publicCode={o.code}
+      {codes ? <OfferCodes id={o.id} address={setup?.address ?? ''} canAdd={manager} publicCode={o.code}
         creators={[...o.creators].sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9))
           .map((c) => ({ id: c.id, label: c.label, code: c.code, uses: String(c.useCount), given: formatInr(paise(c.given)), ...creatorLine(mine?.creators.find((x) => x.id === c.id)) }))} /> : null}
       </div>
-      {canEdit ? <OfferEditor id={o.id} initial={valuesOf(o)} locked={{ style: true, code: true }} pickers={await offerPickers(auth.membership.tenantId)}
-        example={await offerExampleFor(auth.membership.tenantId, auth.membership.role).catch(() => null)} />
+      {canEdit ? <OfferEditor id={o.id} initial={valuesOf(o)} locked={{ style: true, code: true }} pickers={pickers!}
+        example={example} />
         : <Panel title={o.status === 'ended' ? 'This offer has ended' : o.status === 'stopped' ? 'Stopped offers don’t change' : 'Only the owner or a manager can change a started offer'}>{o.status === 'ended' ? 'It no longer changes. Make a new offer to run it again.' : 'You can see its numbers here.'}</Panel>}
     </div>
   )

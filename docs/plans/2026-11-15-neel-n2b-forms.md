@@ -53,7 +53,7 @@ with the Pay on delivery form". Mockup https://claude.ai/artifact/GGkvYuwqxL7YEo
 (`docs/mockups/2026-11-15-neel-settings/`): five groups (`src/domains/settings/groups.ts`); a page opens "Settings ›
 <group>" with its group's tabs; fields moved (the logo and tagline into Store details; the legal name, registered address
 and country of origin into Business and GST; order and invoice numbering into Invoices and slips); Store address is Web
-address; old addresses redirect (`MOVED`). Flow 88.
+address; old addresses redirect (`movedTo`). Flow 88.
 
 ## Regression net first
 Flows that open these pages, run on main before any change: `41-orders` family (grep `/console/orders/` in e2e), `49-ship`,

@@ -1,10 +1,11 @@
+import { pageRoles } from '@/domains/settings/groups'
 import Link from 'next/link'
 import { SettingsHead } from '../_components/settings-head'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { requireMember } from '@/lib/auth/require-member'
-import { CAN_MANAGE, CONSOLE_ROLES } from '@/domains/tenancy/roles'
+import { CAN_MANAGE } from '@/domains/tenancy/roles'
 import { shopEmailSettings } from '@/lib/queries/emails'
 import { shopSettingsFor } from '@/lib/queries/storefront'
 import { EMAIL_NAMES } from '@/domains/email/words'
@@ -21,7 +22,7 @@ const WHEN: Record<string, string> = {
 
 /** Settings › Emails to shoppers (mockup v2 screen 3): the sender, the last 7 days, each email with its switch. */
 export default async function EmailsPage() {
-  const auth = await requireMember(CONSOLE_ROLES)
+  const auth = await requireMember(pageRoles('emails'))
   if (!auth.ok) return <Panel title={auth.message} />
   const tenantId = auth.membership.tenantId
   const [data, shop] = await Promise.all([shopEmailSettings(tenantId).catch(() => null), shopSettingsFor(tenantId)])

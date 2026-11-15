@@ -1,3 +1,4 @@
+import { pageRoles } from '@/domains/settings/groups'
 import { Money, Numeric } from '@/components/data/numeric'
 import { SettingsHead } from '../_components/settings-head'
 import { Section } from '@/components/layout/section'
@@ -12,7 +13,7 @@ import { monthStartIST, nextMonthStartIST } from '@/domains/time/month'
 import { formatInr, formatPercent } from '@/lib/format'
 import { publicPlans } from '@/lib/db/platform'
 import { PlanChoice } from './plan-choice'
-import { CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { requireMember } from '@/lib/auth/require-member'
 import { dayIN, dayMonthLongIN, monthYearIN } from '@/lib/format-date'
 import { errName } from '@/lib/log'
 import { billingOverview, payingFor, shopTrial } from '@/lib/queries/billing'
@@ -33,7 +34,7 @@ export const dynamic = 'force-dynamic'
 export default async function PlanAndBillingPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
   // Apps A2: where an upgrade came from, as a boolean only (never rendered, logged or stored raw).
   const fromFeatured = (await searchParams).from === 'featured'
-  const auth = await requireMember(CAN_MANAGE)
+  const auth = await requireMember(pageRoles('billing'))
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the store’s owner or a manager can see its plan and bills' : auth.message} />
   const now = new Date()
   const [o, prefix, paying] = await Promise.all([
