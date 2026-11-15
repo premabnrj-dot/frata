@@ -7,6 +7,7 @@ import { Section } from '@/components/layout/section'
 import { Badge, Tag } from '@/components/ui/badge'
 import { Banner } from '@/components/ui/banner'
 import { Button, button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { Dialog } from '@/components/ui/dialog'
 import { FIELD } from '@/components/ui/field'
 import { FieldError, fieldProps } from '@/components/ui/field-error'
@@ -77,8 +78,8 @@ export function WebsiteView(p: {
 
       <Section title="Website">
         {!p.canManage ? (
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1"><span className="font-medium">{p.saved ? 'Your own website' : 'Runs on Frrata'}</span>
-            {p.saved ? <span className="font-mono text-small [overflow-wrap:anywhere]">{p.options.find((o) => o.domainId === p.saved!.domainId && o.www === p.saved!.www)?.label}</span> : null}</p>
+          <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"><span>{p.saved ? 'Your own website' : 'Runs on Frrata'}</span>
+            {p.saved ? <span className="font-mono text-small text-muted-foreground [overflow-wrap:anywhere]">{p.options.find((o) => o.domainId === p.saved!.domainId && o.www === p.saved!.www)?.label}</span> : null}</p>
         ) : <>
         <div role="radiogroup" aria-label="Where your website runs" className="grid gap-2 sm:grid-cols-2">
           <RadioCard on={!elsewhere} disabled={!p.canManage} onPick={() => setElsewhere(false)} title="Runs on Frrata" note="Designed in Look" />
@@ -114,7 +115,7 @@ export function WebsiteView(p: {
               <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2"><span className="font-mono text-small [overflow-wrap:anywhere]">{p.checkout.host}</span><Tag>Main</Tag></span>
               <CopyButton value={p.checkout.host} label="checkout address" />
               {/* The address is Settings › Web address's, which only the owner and managers open; a computer only (mockup § Phone). */}
-              {p.canEditAddress ? <Link href="/console/settings/web-address" className={`${button({ variant: 'secondary', size: 'sm' })} hidden md:inline-flex`}>Edit store address</Link> : null}
+              {p.canEditAddress ? <Link href="/console/settings/web-address" className={cn(button({ variant: 'secondary', size: 'sm' }), 'hidden md:inline-flex')}>Edit store address</Link> : null}
             </div>
           </Section>
           <Keys {...p} />
@@ -191,11 +192,14 @@ function Keys(p: { canManage: boolean; keys: KeyView[]; liveCount: number; testA
   return (
     <>
     <Section title="Keys" action={p.canManage ? (
-      <span className="flex items-center gap-2">
+      <span className="flex flex-wrap items-center justify-end gap-2">
         {/* The drawn pill: a count, no dot (mockup § States, 20 live keys). */}
         {full ? <span className="rounded-full bg-neutral px-2 text-xs text-neutral-text tabular-nums">{p.liveCount} of {p.maxKeys}</span> : null}
-        <Button size="sm" variant={full ? 'secondary' : undefined} onClick={start} reason={full ? 'Delete a key to make another.' : undefined}>Create key</Button>
+        {/* At 20 the button stays focusable, its reason the line under the header (mockup § States; tied by aria-describedby). */}
+        {full ? <button type="button" aria-disabled="true" aria-describedby="keys-full" className={cn(button({ variant: 'secondary', size: 'sm' }), 'cursor-not-allowed text-muted-foreground')}>Create key</button>
+          : <Button size="sm" onClick={start}>Create key</Button>}
       </span>) : undefined}>
+      {full && p.canManage ? <p id="keys-full" className="text-label text-muted-foreground">Delete a key to make another.</p> : null}
       {p.keys.length === 0 ? <p className="text-muted-foreground">No keys yet</p> : (
         <ul className="divide-y divide-line-soft" data-list>
           {p.keys.map((k) => (
@@ -259,7 +263,7 @@ function CopyKey({ value }: { value: string }) {
   }
   return (
     <>
-      <Button size="sm" variant="secondary" className="w-full md:w-auto" onClick={copy}>{done ? '✓ Copied' : 'Copy key'}</Button>
+      <Button size="sm" variant="primary" className="w-full md:w-auto" onClick={copy}>{done ? '✓ Copied' : 'Copy key'}</Button>
       <span role="status" className="sr-only">{done ? 'Copied' : ''}</span>
     </>
   )

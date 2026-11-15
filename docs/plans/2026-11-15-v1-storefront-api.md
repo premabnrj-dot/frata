@@ -280,7 +280,6 @@ rules cover the API trees.
 | Small buttons 30 px tall on a phone | 44 px on a phone, 30 px from 768 px | The console's touch-target rule (`button.tsx` size `sm`) | no |
 | Partner banner "Hand over store" inside the page | The shell's own building bar, "Hand over" (`building-banner.tsx`, lane C's) | The shell draws it for every page; this lane doesn't change the shell | no |
 | Support banner "Support · Kesar Studio · 22 min · End visit" | The shell's support strip ("Frrata support in Kesar Studio's console … End now", `support-banner.tsx`) | The same: the shell's, on every page | no |
-| 20 live keys: "Delete a key to make another." as a line below | The same words beside **Create key**, tied to it (`Button reason`), the button still focusable | A disabled button drops focus and its reason (design-system review 4) | no |
 
 ## Practices recorded in skills (same commit as each)
 `frata-architecture` § Tenancy (three sources) and § Speed (API rows; "a route handler under ISR never reads the

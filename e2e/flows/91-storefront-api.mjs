@@ -90,6 +90,17 @@ export default {
         assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= 390), 'no sideways scroll on a phone')
         await p.screenshot({ path: t.out('website-390'), fullPage: true })
       })
+
+      await t.step('twenty live keys on a phone: the count, Create key held, its reason, still no sideways scroll', async () => {
+        for (let i = 0; i < 20; i++) await db`insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by) values
+          (${T}, 'public', ${'Site ' + i}, ${String(i).padStart(64, 'a')}, ${'frs_pub_' + String(i).padStart(6, '0')}, ${'cccccccc-0000-0000-0000-000000000001'})`
+        await p.reload()
+        await p.getByText('20 of 20').waitFor()
+        await p.getByText('Delete a key to make another.').waitFor()
+        assert.equal(await p.getByRole('button', { name: 'Create key' }).getAttribute('aria-disabled'), 'true')
+        assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= 390), 'no sideways scroll with 20 keys')
+        await p.screenshot({ path: t.out('website-20-390'), fullPage: true })
+      })
     } finally {
       await owner.close()
       await db`delete from storefront_keys where tenant_id = ${T}`
