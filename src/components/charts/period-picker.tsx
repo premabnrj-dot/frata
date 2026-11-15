@@ -56,7 +56,7 @@ export function PeriodPicker({ path, choice, compare, today, keep = {} }: {
             className={cn(seg, 'shrink-0', choice.kind === 'custom' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>Custom</button>
         </span>
       </nav>
-      <span className="text-sm whitespace-nowrap text-muted-foreground">{compare}</span>
+      <span className="text-sm whitespace-nowrap text-muted-foreground max-md:hidden">{compare}</span>
       <Dialog open={open} onClose={() => setOpen(false)} title="Custom dates"
         actions={<><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" form={formId}>Show</Button></>}>
         <form id={formId} ref={scope} noValidate onSubmit={(e) => { e.preventDefault(); apply() }} className="grid grid-cols-2 gap-3">

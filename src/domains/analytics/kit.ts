@@ -108,6 +108,7 @@ export function shortValue(v: number, unit: 'money' | 'count'): string {
   if (unit === 'count') return Math.round(v).toLocaleString('en-IN')
   const r = v / 100
   if (r >= 1_00_000) return `₹${(r / 1_00_000).toFixed(r >= 10_00_000 ? 0 : 1).replace(/\.0$/, '')}L`
-  if (r >= 1000) return `₹${Math.round(r / 1000)}k`
+  // Under ₹10k one decimal, so ticks of ₹1.6k and ₹2.4k never both read ₹2k.
+  if (r >= 1000) return `₹${(r / 1000).toFixed(r >= 10_000 ? 0 : 1).replace(/\.0$/, '')}k`
   return `₹${Math.round(r).toLocaleString('en-IN')}`
 }

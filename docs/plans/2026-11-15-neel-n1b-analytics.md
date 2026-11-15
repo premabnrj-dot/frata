@@ -92,7 +92,8 @@ by keyboard, each new section against seeded orders, staff without ₹ kept, the
 | Visits and Orders per 100 visits (drawn in the funnel's head) | Two figures above the funnel; on Today no change (visits compare whole days) | Visits are counted by day: a change against yesterday-at-this-time cannot be read | Asked in the N1b report |
 | When orders come: seven hour bands | Seven rows Monday first × seven three-hour bands | As drawn in the kit; the board's sample shows four rows | Asked in the N1b report |
 | No (i) on headings | The (i) kept on Where orders came from and on Visits | How a source is decided and how visits are counted are the two facts a merchant asks; Rule 0 allows a limit | Asked in the N1b report |
-| Phone header: title, then the picker on its own line | PageHeader's shared phone layout (title and Make a link, picker under) | PageHeader is shared by every page; one page's header is not changed alone | Asked in the N1b report |
+| Phone header: title, then the picker on its own line | PageHeader's shared phone layout: title and dates, the picker (it scrolls sideways), then Make a link | PageHeader is shared by every page; one page's header is not changed alone | Asked in the N1b report |
+| Where orders came from: no Other row | An Other row (sources with few orders, and tags typed by hand), muted, after Direct or unknown | Only the top 12 sources get a row; without Other the rows would not add up to the orders above | Asked in the N1b report |
 | Too few orders (not drawn) | One line above the figures; the figures stay, in counts | Rule 63 amended (design language 7.3.0) | Asked in the N1b report |
 | Phone: the funnel and Pincodes (not drawn) | Stacked as on desktop, one column | The phone board stops at the cohort; the rest follows the same rule | Asked in the N1b report |
 

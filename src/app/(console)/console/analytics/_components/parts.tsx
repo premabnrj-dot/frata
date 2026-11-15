@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { Section } from '@/components/layout/section'
-import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { Money, Numeric } from '@/components/data/numeric'
 import { Figure } from '@/components/charts/figure'
 import { ShareBar } from '@/components/charts/share-bar'
@@ -60,20 +59,22 @@ export function VisitFigures({ a, visits }: { a: Analytics; visits: VisitTotals 
 
 const HOW = 'A source is the tagged link the shopper arrived on, else the site they came from, else "Direct or unknown" (WhatsApp chats and many apps hide where a tap came from: a link from Make a link fixes that). The last one before the order, in that browser tab. Anyone can type tags into an address, so a source is what the link said. Visits and orders use the same rule.'
 
-type Row = { key: string; cur: Totals; prev: Totals | null; name: string; href: string | null; sub: string; visitors: number | null }
+type Row = { key: string; muted?: boolean; cur: Totals; prev: Totals | null; name: string; href: string | null; sub: string; visitors: number | null }
 
 /** Where orders came from, as drawn, most orders first. `visits` adds Visits and Orders per 100 visits (A·2). */
 export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: { by: ReadonlyMap<string, SourceVisits>; rates: boolean } }) {
   const { rows, other } = foldSources(a.sources)
   const rest = visits ? otherVisits(visits.by, new Set(rows.map((r) => r.slug))) : 0
-  const list: Row[] = rows.map((s) => ({
-    key: s.slug, cur: s.cur, prev: s.prev, name: s.label,
+  // As drawn: Direct or unknown sits last and muted, whatever its count (it is what no link told us).
+  const ordered = [...rows.filter((r) => r.channel !== 'direct'), ...rows.filter((r) => r.channel === 'direct')]
+  const list: Row[] = ordered.map((s) => ({
+    key: s.slug, muted: s.channel === 'direct', cur: s.cur, prev: s.prev, name: s.label,
     // A source with visits but no orders has no page of its own (its orders list would be empty: a 404).
     href: s.cur.orders ? `/console/analytics/${encodeURIComponent(s.slug)}?${pq}` : null,
     sub: s.campaigns.length ? `${s.campaigns[0]!.name}${s.campaigns.length > 1 ? ` and ${s.campaigns.length - 1} more` : ''}` : '',
     visitors: visits ? visits.by.get(s.slug)?.visitors ?? 0 : null,
   }))
-  if (other || rest) list.push({ key: 'other', cur: other ?? EMPTY_TOTALS, prev: null, name: 'Other', href: null, sub: 'sources with few orders, and tags typed by hand', visitors: visits ? rest : null })
+  if (other || rest) list.push({ key: 'other', muted: true, cur: other ?? EMPTY_TOTALS, prev: null, name: 'Other', href: null, sub: 'sources with few orders, and tags typed by hand', visitors: visits ? rest : null })
   if (!list.length) return null
   const top = Math.max(1, ...list.map((r) => r.cur.orders))
   const kept = (t: Totals) => {
@@ -85,36 +86,38 @@ export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: 
   const ch = (r: Row) => (r.prev && (r.prev.orders || r.cur.orders) ? change(r.cur.orders, r.prev.orders, { kind: 'count', good: 'up' }) : null)
   const rate = (r: Row) => (visits?.rates && r.visitors ? perHundred(r.cur.orders, r.visitors) : null)
   return (
-    <Section id="sources" flush title={<span className="inline-flex items-center gap-1">Where orders came from<InfoTip about="how a source is decided">{HOW}</InfoTip></span>}
+    <Section id="sources" flush flatOnPhone title={<span className="inline-flex items-center gap-1">Where orders came from<InfoTip about="how a source is decided">{HOW}</InfoTip></span>}
       action={a.cur.orders ? <span className="text-label text-muted-foreground">Source known for {formatPercent(a.known / a.cur.orders, 0)}</span> : undefined}>
-      <div className="max-md:hidden">
-        <DataTable label="Where orders came from">
-          <DataTableHead>
-            <th>Source</th><th className="text-right whitespace-nowrap" aria-sort="descending">Orders ↓</th><th>Share</th>
-            {visits ? <><th className="text-right">Visits</th><th className="text-right">Orders per 100 visits</th></> : null}
-            <th className="text-right">Came back</th>{a.costs ? <th className="text-right">₹ kept an order</th> : null}<th className="text-right">Change</th>
-          </DataTableHead>
-          <DataTableBody>
+      <div className="px-5 pb-4 max-md:hidden">
+        <table className="w-full text-sm">
+          <caption className="sr-only">Where orders came from</caption>
+          <thead><tr className="text-label text-muted-foreground [&>th]:py-2 [&>th]:font-medium [&>th]:whitespace-nowrap">
+            <th scope="col" className="text-left">Source</th><th scope="col" className="text-right" aria-sort="descending">Orders ↓</th><th scope="col" className="pl-6 text-left">Share</th>
+            {visits ? <><th scope="col" className="text-right">Visits</th><th scope="col" className="text-right">Per 100 visits</th></> : null}
+            <th scope="col" className="text-right">Came back</th>{a.costs ? <th scope="col" className="text-right">₹ kept an order</th> : null}<th scope="col" className="text-right">Change</th>
+          </tr></thead>
+          <tbody>
             {list.map((r) => {
               const c = ch(r), per = rate(r)
               return (
-                <DataTableRow key={r.key} tall>
-                  <Td>{r.href ? <Link href={r.href} data-row-link prefetch={false} className="font-medium hover:underline">{r.name}</Link> : <span className="font-medium text-muted-foreground">{r.name}</span>}
-                    {r.sub ? <span className="block text-small text-muted-foreground">{r.sub}</span> : null}</Td>
-                  <Td className="text-right"><Numeric>{r.cur.orders}</Numeric></Td>
-                  <Td className="w-[20%]"><ShareBar share={r.cur.orders / top} tone={r.href ? 'chart' : 'muted'} /></Td>
+                <tr key={r.key} className={`border-t border-line-soft [&>td]:py-2.5 ${r.muted ? 'text-muted-foreground' : ''}`}>
+                  <th scope="row" className="text-left font-normal">
+                    {r.href && !r.muted ? <Link href={r.href} prefetch={false} className="text-link underline underline-offset-2">{r.name}</Link> : r.href ? <Link href={r.href} prefetch={false} className="underline underline-offset-2">{r.name}</Link> : r.name}
+                    {r.sub ? <span className="block text-small text-muted-foreground">{r.sub}</span> : null}</th>
+                  <td className="text-right"><Numeric>{r.cur.orders}</Numeric></td>
+                  <td className="w-[22%] pl-6"><ShareBar share={r.cur.orders / top} tone={r.muted ? 'muted' : 'chart'} /></td>
                   {visits ? <>
-                    <Td className="text-right">{r.visitors !== null && r.visitors >= K_MIN ? <Numeric>{formatCount(r.visitors)}</Numeric> : '—'}</Td>
-                    <Td className="text-right">{per === null ? '—' : per.toFixed(1)}</Td>
+                    <td className="text-right">{r.visitors !== null && r.visitors >= K_MIN ? <Numeric>{formatCount(r.visitors)}</Numeric> : '—'}</td>
+                    <td className="text-right">{per === null ? '—' : per.toFixed(1)}</td>
                   </> : null}
-                  <Td className={`text-right ${bad(r.cur) ? 'text-danger-text' : ''}`}>{back(r.cur)}</Td>
-                  {a.costs ? <Td className="text-right">{kept(r.cur)}</Td> : null}
-                  <Td className={`text-right whitespace-nowrap ${toneText(c)}`}>{c?.words ?? '—'}</Td>
-                </DataTableRow>
+                  <td className={`text-right ${bad(r.cur) ? 'text-danger-text' : ''}`}>{back(r.cur)}</td>
+                  {a.costs ? <td className="text-right">{kept(r.cur)}</td> : null}
+                  <td className={`text-right whitespace-nowrap ${toneText(c)}`}>{c?.words ?? '—'}</td>
+                </tr>
               )
             })}
-          </DataTableBody>
-        </DataTable>
+          </tbody>
+        </table>
       </div>
       {/* A phone, as drawn: the name and its orders; the share and its change; came back and ₹ kept an order. */}
       <ul className="md:hidden" aria-label="Where orders came from">
@@ -122,8 +125,8 @@ export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: 
           const c = ch(r)
           const body = (
             <>
-              <span className="flex items-baseline justify-between gap-3"><span className="min-w-0 truncate font-medium">{r.name}</span><Numeric className="font-medium">{r.cur.orders}</Numeric></span>
-              <span className="flex items-center gap-3"><ShareBar share={r.cur.orders / top} tone={r.href ? 'chart' : 'muted'} className="flex-1" /><span className={`text-small ${toneText(c)}`}>{c?.words ?? '—'}</span></span>
+              <span className="flex items-baseline justify-between gap-3"><span className={`min-w-0 truncate font-medium ${r.muted ? 'text-muted-foreground' : ''}`}>{r.name}</span><Numeric className="font-medium">{r.cur.orders}</Numeric></span>
+              <span className="flex items-center gap-3"><ShareBar share={r.cur.orders / top} tone={r.muted ? 'muted' : 'chart'} className="flex-1" /><span className={`text-small ${toneText(c)}`}>{c?.words ?? '—'}</span></span>
               <span className={`text-small ${bad(r.cur) ? 'text-danger-text' : 'text-muted-foreground'}`}>{back(r.cur)} came back{a.costs && r.cur.kept && judgeable(r.cur.kept.counted) && keptPerOrder(r.cur.kept) !== null ? <> · {kept(r.cur)} kept an order</> : null}</span>
             </>
           )
@@ -138,23 +141,24 @@ export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: 
   )
 }
 
-/** Pincodes with the most returns, as drawn: counts, a share from 30, a bar in the bad colour (no ₹: True Profit's). */
+/** Pincodes with the most returns, as drawn: counts, a bar in the bad colour (no ₹: True Profit's). */
 export function Pincodes({ a }: { a: Analytics }) {
   if (!a.pincodes.length) return null
   return (
-    <Section id="pincodes" flush title="Pincodes with the most returns">
-      <DataTable label="Pincodes with the most returns">
-        <DataTableHead><th>Pincode</th><th className="text-right">Came back</th><th className="w-[45%]">Of orders with an outcome</th></DataTableHead>
-        <DataTableBody>
+    <Section id="pincodes" title="Pincodes with the most returns" flatOnPhone>
+      <table className="w-full text-sm">
+        <caption className="sr-only">Pincodes with the most returns</caption>
+        <thead><tr className="text-label text-muted-foreground [&>th]:py-2 [&>th]:font-medium"><th scope="col" className="text-left">Pincode</th><th scope="col" className="text-right">Came back</th><th scope="col" className="w-[45%] pl-6 text-left">Of orders with an outcome</th></tr></thead>
+        <tbody>
           {a.pincodes.map((p) => (
-            <DataTableRow key={p.pincode}>
-              <Td cell="a"><Numeric>{p.pincode}</Numeric></Td>
-              <Td cell="b" className="text-right">{p.rto} of {p.outcomes}</Td>
-              <Td cell="c"><ShareBar share={p.outcomes ? p.rto / p.outcomes : 0} tone="bad" /></Td>
-            </DataTableRow>
+            <tr key={p.pincode} className="border-t border-line-soft [&>*]:py-2.5">
+              <th scope="row" className="text-left font-normal"><Numeric>{p.pincode}</Numeric></th>
+              <td className="text-right whitespace-nowrap">{p.rto} of {p.outcomes}</td>
+              <td className="pl-6"><ShareBar share={p.outcomes ? p.rto / p.outcomes : 0} tone="bad" /></td>
+            </tr>
           ))}
-        </DataTableBody>
-      </DataTable>
+        </tbody>
+      </table>
     </Section>
   )
 }

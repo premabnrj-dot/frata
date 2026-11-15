@@ -39,6 +39,6 @@ describe('the rest', () => {
 
 describe('shortValue', () => {
   it('rupees short, counts grouped', () => {
-    expect([shortValue(9_000_000, 'money'), shortValue(12_00_000_00, 'money'), shortValue(42_000, 'money'), shortValue(12345, 'count')]).toEqual(['₹90k', '₹12L', '₹420', '12,345'])
+    expect([shortValue(9_000_000, 'money'), shortValue(12_00_000_00, 'money'), shortValue(42_000, 'money'), shortValue(12345, 'count'), shortValue(240_000, 'money'), shortValue(160_000, 'money')]).toEqual(['₹90k', '₹12L', '₹420', '12,345', '₹2.4k', '₹1.6k'])
   })
 })

@@ -5,6 +5,7 @@ import { Numeric } from '@/components/data/numeric'
 import { Badge } from '@/components/ui/badge'
 import { InfoTip } from '@/components/ui/info-tip'
 import { Panel } from '@/components/ui/panel'
+import { ShareBar } from '@/components/charts/share-bar'
 import { Pictogram } from '@/components/brand/pictogram'
 import { judgeable, VISITS_MIN } from '@/domains/analytics/judge'
 import type { FunnelStep, ProductLine, Share, Speed } from '@/domains/analytics/traffic'
@@ -19,7 +20,6 @@ import { dayMonthIN } from '@/lib/format-date'
 // =============================================================================
 
 export const HOW_VISITS = 'Counted without cookies or stored IP addresses: a visitor counts once a day on a device; bots are left out. Ad blockers and closed tabs mean a few percent go uncounted.'
-const HOW_FUNNEL = 'Visits come from Frrata’s counter; orders and deliveries from your orders, over the same days. They join by period and source, never by person.'
 const HOW_CITY = 'From the visitor’s network: a hint, often the nearest big city. The exact pincode comes from checkout. Orders here are counted in the browser, so a few may be missing.'
 const HOW_BROWSE = 'Orders here are counted in the browser, so a few may be missing against your orders.'
 const HOW_SPEED = 'What 3 in 4 shoppers’ phones measured on your pages, from the browser. Good: page shows by 2.5 s, taps answer by 0.2 s, nothing jumps.'
@@ -36,7 +36,7 @@ export function TooFewVisits({ visits }: { visits: number }) {
       <div className="flex items-center gap-4">
         <Pictogram name="tally" size={48} className="shrink-0" />
         <div className="min-w-0 flex-1 space-y-2">
-          <p className="text-sm">Too few to judge: <Numeric>{formatCount(visits)}</Numeric> visits so far. Shares mean something from <Numeric>{formatCount(VISITS_MIN)}</Numeric>.</p>
+          <p className="text-sm">Too few to judge: <Numeric>{formatCount(visits)}</Numeric> {visits === 1 ? 'visit' : 'visits'} so far. Shares mean something from <Numeric>{formatCount(VISITS_MIN)}</Numeric>.</p>
           {bar(visits / VISITS_MIN)}
         </div>
       </div>
@@ -54,22 +54,34 @@ export function VisitsUnavailable() {
   return <Panel title="Visits unavailable">Your orders above are unchanged. Try again in a minute.</Panel>
 }
 
-/** From visit to order: each step as a share of the one above, and the biggest drop named. */
+/** Where most leave, in the words drawn: keyed by the step they did not reach. */
+const LEAVE: Record<string, [string, string]> = {
+  'Viewed a product': ['the visit and the product', 'visit don’t view a product'],
+  'Added to bag': ['the product and the bag', 'view a product don’t add it'],
+  'Began checkout': ['the bag and checkout', 'add to bag don’t begin checkout'],
+  Ordered: ['checkout and the order', 'begin checkout don’t order'],
+}
+
+/** From visit to order, as drawn: five figures in a row, each with its bar, and where most leave in one sentence.
+ * Delivered is the figures' and the flow line's (above); the order step waits for full coverage (`fullFrom`). */
 export function Funnel({ steps, drop, fullFrom }: { steps: FunnelStep[]; drop: { from: string; to: string; leave: number } | null; fullFrom: Date | null }) {
-  const max = steps[0]?.n || 1
+  const five = steps.slice(0, 5)
+  const max = five[0]?.n || 1
+  const words = drop ? LEAVE[drop.to] : undefined
+  const inTen = drop ? Math.max(1, Math.round(drop.leave * 10)) : 0
   return (
-    <Section title={<span className="inline-flex items-center gap-1">From visit to order<InfoTip about="how visits and orders are joined">{HOW_FUNNEL}</InfoTip></span>}>
-      {/* In the body, not the header's action: it wraps on a phone. */}
-      {drop ? <p className="mb-3 text-xs text-muted-foreground">Biggest drop: {drop.from.toLowerCase()} → {drop.to.toLowerCase()}, {formatPercent(drop.leave, 0)} leave</p> : null}
-      <ol className="grid gap-2" aria-label="From visit to order">
-        {steps.map((s) => (
-          <li key={s.name} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_3rem] items-center gap-3 text-sm">
-            <span className="min-w-0">{s.name}{s.fromOrders ? <span className="block text-xs text-muted-foreground">from your orders</span> : null}</span>
-            <span className="grid gap-1">{s.n === null ? <span className="text-xs text-muted-foreground">{fullFrom ? `Shows from ${dayMonthIN(fullFrom)}` : '—'}</span> : <><Numeric className="font-semibold">{formatCount(s.n)}</Numeric>{bar(s.n / max)}</>}</span>
-            <span className="text-right text-xs text-muted-foreground">{s.ofAbove === null ? '' : formatPercent(Math.min(1, s.ofAbove), 0)}</span>
+    <Section id="funnel" title="From visit to order" flatOnPhone>
+      <ol className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-5" aria-label="From visit to order">
+        {five.map((s) => (
+          <li key={s.name} className="flex min-w-0 flex-col gap-1">
+            <span className="text-label text-muted-foreground">{s.name}</span>
+            {s.n === null
+              ? <span className="text-label text-muted-foreground">{fullFrom ? `Shows from ${dayMonthIN(fullFrom)}` : '—'}</span>
+              : <><Numeric className="text-title font-semibold">{formatCount(s.n)}</Numeric><ShareBar share={s.n / max} /></>}
           </li>
         ))}
       </ol>
+      {drop && words ? <p className="text-sm text-muted-foreground">Most leave between {words[0]}: {inTen >= 10 ? 'almost all' : `${inTen} in 10`} who {words[1]}.</p> : null}
     </Section>
   )
 }

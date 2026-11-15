@@ -25,7 +25,8 @@ export function Heatmap({ grid }: { grid: number[][] }) {
           ))}
         </tbody>
       </table>
-      {words ? <p className="text-label text-muted-foreground">Busiest: {words}.</p> : null}
+      {/* As drawn: under the grid on desktop, above it on a phone. */}
+      {words ? <p className="text-label text-muted-foreground max-md:order-first">Busiest: {words}.</p> : null}
     </div>
   )
 }

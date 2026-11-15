@@ -38,7 +38,7 @@ describe('traffic.ts', () => {
     const t = { ...emptyTotals(), visitors: 18400, productVisitors: 9900, bagVisitors: 1420, checkoutVisitors: 610 }
     const f = funnel(t, 212, 141)
     expect(f.steps.map((s) => s.n)).toEqual([18400, 9900, 1420, 610, 212, 141])
-    expect(f.drop?.from).toBe('Saw a product')
+    expect(f.drop?.from).toBe('Viewed a product')
     expect(f.steps[0]!.ofAbove).toBeNull()
   })
   it('p75 from the histogram is within its ±10% precision; speed is judged as Google does', () => {

@@ -29,13 +29,16 @@ export function StateTiles({ id, title, rows, min = 10 }: { id: string; title: s
   const pct = (r: Row) => `${Math.round(share(r) * 100)}%`
   const hi = sorted[0], lo = sorted.at(-1)
   const sentence = hi && lo ? `Came back by state: highest ${hi.state} ${pct(hi)}, lowest ${lo.state} ${pct(lo)}` : 'Too few orders with an outcome in any state yet'
-  const toggle = (
-    <button type="button" aria-pressed={table} onClick={() => setTable((v) => !v)} className={cn(button({ variant: 'link' }), 'min-h-11 md:min-h-6')}>
-      <span className="max-md:hidden">See as a table</span><span className="md:hidden">See every state</span>
+  // The heading row on desktop ("See as a table"); under the sentence on a phone ("See every state"), as drawn.
+  const toggle = (phone: boolean) => (
+    <button type="button" aria-pressed={table} onClick={() => setTable((v) => !v)}
+      className={cn(button({ variant: 'link' }), phone ? 'min-h-11 self-start md:hidden' : 'min-h-6 max-md:hidden')}>
+      {table ? (phone ? 'See the sentence' : 'See the map') : phone ? 'See every state' : 'See as a table'}
     </button>
   )
+  const most = sorted.slice(0, 2)
   return (
-    <Section id={id} title={title} flatOnPhone action={toggle}>
+    <Section id={id} title={title} flatOnPhone action={toggle(false)}>
       {table ? (
         <table className="w-full text-sm">
           <caption className="sr-only">{title}</caption>
@@ -47,7 +50,9 @@ export function StateTiles({ id, title, rows, min = 10 }: { id: string; title: s
         </table>
       ) : (
         <>
-          <p className="text-sm md:hidden">{hi && lo ? <>Most come back in <b className="font-medium">{hi.state}</b> ({pct(hi)}), fewest in <b className="font-medium">{lo.state}</b> ({pct(lo)}).</> : 'Too few orders with an outcome in any state yet.'}</p>
+          <p className="text-sm md:hidden">{hi && lo && sorted.length > 1
+            ? <>Most: <b className="font-semibold">{most[0]!.state} {pct(most[0]!)}</b>{most[1] && most[1] !== lo ? <>, {most[1].state} {pct(most[1])}</> : null}. Least: {lo.state} {pct(lo)}.</>
+            : 'Too few orders with an outcome in any state yet.'}</p>
           <div role="img" aria-label={sentence} className="grid w-full max-w-88 gap-1 max-md:hidden" style={{ gridTemplateColumns: `repeat(${TILE_COLS}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${TILE_ROWS}, 2rem)` }}>
             {(Object.entries(STATE_TILES) as [State, (typeof STATE_TILES)[State]][]).map(([state, t]) => {
               const l = lv.get(state)
@@ -60,6 +65,7 @@ export function StateTiles({ id, title, rows, min = 10 }: { id: string; title: s
           </div>
         </>
       )}
+      {toggle(true)}
     </Section>
   )
 }

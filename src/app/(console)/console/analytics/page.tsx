@@ -1,6 +1,5 @@
 import { PageHeader } from '@/components/layout/page-header'
 import { Panel } from '@/components/ui/panel'
-import { InfoTip } from '@/components/ui/info-tip'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dayMonthIN } from '@/lib/format-date'
 import { PRESETS, type Preset } from '@/domains/analytics/link'
@@ -68,21 +67,17 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   // What each preset's orders show as, said by the server (the classifier stays out of the browser bundle).
   const showsAs = Object.fromEntries((Object.keys(PRESETS) as Preset[]).map((k) => [k, classifySource({ utm_source: PRESETS[k].source, utm_medium: PRESETS[k].medium }, null).label])) as Record<Preset, string>
   const make = <MakeLink origin={`https://${shop.host ?? ''}`} open={shop.open && !!shop.slug} products={targets.products} collections={targets.collections} showsAs={showsAs} />
-  // The dates and what they are against stay in the line (design language 61); how they are counted is the (i) tip.
+  // The dates stay in the line, as drawn (design language 61); on a phone what they are against joins them.
   const lastDay = new Date(w.end.getTime() - 1)
-  const range = `${dayMonthIN(a.window.start)} – ${w.toNow ? 'today (so far)' : dayMonthIN(lastDay)} · India time`
-  const metaLine = (visitsSince: Date | null) => (
-    <span className="inline-flex flex-wrap items-center gap-x-1">{range}
-      <InfoTip about="these dates">Orders count on the day they were placed (IST); today&apos;s numbers still change.{visitsSince ? ` Visits counted since ${dayMonthIN(visitsSince)}.` : ''}</InfoTip>
-    </span>
-  )
+  const range = `${dayMonthIN(a.window.start)} – ${dayMonthIN(lastDay)}${w.toNow ? ' (today so far)' : ''}`
+  const metaLine = () => <>{range}<span className="max-md:hidden"> · India time</span><span className="md:hidden">, {compare}</span></>
   const picker = <PeriodPicker path="/console/analytics" choice={w.choice} compare={compare} today={istDayKey(now)} />
   const actions = <>{picker}{make}</>
 
   if (a.cur.orders === 0 && a.prev.orders === 0 && !traffic?.cur.visitors) {
     return (
       <>
-        <PageHeader title="Analytics" wideActions actions={actions} meta={metaLine(null)} />
+        <PageHeader title="Analytics" wideActions actions={actions} meta={metaLine()} />
         <Panel title="No orders in these days">Share your shop with a link that says where it was shared, and orders from it show here.</Panel>
       </>
     )
@@ -107,12 +102,12 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const visitsOn = on && !failed
   return (
     <>
-      <PageHeader title="Analytics" wideActions actions={actions} meta={metaLine(on && cov.since && cov.since > a.window.start ? cov.since : null)} />
+      <PageHeader title="Analytics" wideActions actions={actions} meta={metaLine()} />
       {/* One column; on a phone the sections come in the drawn order (trend, sources, paid/COD, when, state, cohort). */}
       <div className="flex flex-col gap-6">
         {a.cur.orders < JUDGE_MIN ? <TooFew n={a.cur.orders} /> : null}
         <Figures a={a} compare={compare} series={series} keptNote={a.cur.kept ? <KeptNote k={a.cur.kept} estimate={a.estimate} /> : undefined} />
-        <FlowLine c={a.cur} />
+        <div className="max-md:hidden"><FlowLine c={a.cur} /></div>
         {series ? <SalesByDay s={series} compareName={compare.replace(/^vs /, '').replace(/^(.)/, (m) => m.toUpperCase())} /> : null}
         {series ? <div className="grid gap-4 max-md:order-2 lg:grid-cols-2"><PaidAndCod s={series} /><WhenOrdersCome s={series} /></div> : null}
         {a.cur.orders > 0 && a.known / a.cur.orders < 0.5 ? (
