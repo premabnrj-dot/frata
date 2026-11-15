@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { isCronRequest } from '@/lib/auth/cron'
 import { drainOutbox, eachLimited } from '@/lib/outbox/drain'
-import { shopsWithPendingEvents } from '@/lib/db/platform'
+import { shopsWithBoundary, shopsWithPendingEvents } from '@/lib/db/platform'
+import { refreshShop } from '@/lib/storefront/refresh'
 import { processEvents } from '@/lib/orders/payment'
 import { sendStaffNotices } from '@/lib/admin/staff-notices'
 import { errName } from '@/lib/log'
@@ -29,6 +30,11 @@ export async function GET(request: Request) {
       events += n // read after the await: four shops run at once
     })
   } catch (e) { console.error('[cron] drain events list', errName(e)) }
+  // Time boundaries (V1 Storefront API SA1): a scheduled product going live or an offer starting or ending writes
+  // nothing then, and the API's cached copies live an hour. The last 6 minutes (one run overlaps the next), ids only.
+  try {
+    for (const t of await shopsWithBoundary(new Date(started - 6 * 60_000), new Date(started))) refreshShop(t, 'catalogue')
+  } catch (e) { console.error('[cron] drain boundaries', errName(e)) }
   // Staff security emails (staff passkeys): a handful a day; their own queue, outside the shops' outbox.
   const staffMail = await sendStaffNotices().catch((e) => { console.error('[cron] staff notices', errName(e)); return 0 })
   try {

@@ -34,6 +34,15 @@ export async function storefrontKeyRow(hashHex: string): Promise<{ keyId: string
 }
 
 /**
+ * Shops with a scheduled moment in (since, until]: a product going live, an offer starting or ending (V1 SA1). Ids only,
+ * at most 500; the 5-minute drain purges their catalogue, since the Storefront API's copies live an hour.
+ */
+export async function shopsWithBoundary(since: Date, until: Date): Promise<string[]> {
+  const rows = await db().execute<{ id: string }>(sql`select app_shops_with_boundary(${since.toISOString()}::timestamptz, ${until.toISOString()}::timestamptz) as id`)
+  return rows.map((r) => r.id)
+}
+
+/**
  * Which shop a storefront host belongs to. A platform address (<slug>.<shop
  * domain>) is found by its slug, so changing the shop domain is an environment
  * change; any other host is a merchant's own domain (shop_domains; tenant_domains is retired, app_tenant_for_host

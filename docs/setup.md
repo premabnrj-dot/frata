@@ -445,3 +445,17 @@ Nothing here passes through an agent: no AWS key exists anywhere (the app reache
    `https://frata.vercel.app/api/auth/send-email`; generate the secret → Vercel `SEND_EMAIL_HOOK_SECRET`; redeploy.
    Then Authentication → Rate limits → emails per hour: 300.
 3. Sign in once to check; tell the agent.
+
+### Storefront API — turning it on (V1, ADR-0018; plan `docs/plans/2026-11-15-v1-storefront-api.md`)
+Nothing answers until these are done; the migrations go first (the orchestrator applies them at release).
+1. **The host.** In Vercel → frata → Domains, add `api.frrata.shop` (a subdomain of the shop domain: it needs no new
+   DNS zone; `api` is a reserved store name, so no shop can take it).
+2. **The variable.** In Vercel → frata → Environment Variables, Production: `NEXT_PUBLIC_API_HOST=api.frrata.shop`.
+   Redeploy (a public value is built in).
+3. **The firewall.** In Vercel → frata → Firewall, add the first three rules of `ops/firewall.json` exactly, in that
+   order, above every other rule: the path rule (on), the per-IP rate rule (on, 600 a minute), the kill switch (OFF).
+   Publish. `src/domains/storefront-api/__tests__/waf.test.ts` keeps the path rule in step with the routes.
+4. **Check.** `curl -s https://api.frrata.shop/2026-12/openapi.json | head -c 80` answers `{"openapi":"3.1.0"…`;
+   `curl -si https://api.frrata.shop/` is a 403 from the firewall.
+5. **Kill switch.** Turning the third rule on stops the whole API at once; partner sites keep their stale pages, shops
+   and checkout are untouched.

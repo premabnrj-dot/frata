@@ -3692,6 +3692,23 @@ do $$ declare got text; begin
              where p.proname = f and (has_function_privilege('frata_app', p.oid, 'execute') or has_function_privilege('frata_admin', p.oid, 'execute')))
   then raise exception 'FAIL: a storefront-key trigger function can be called'; end if;
 end $$;
+-- the boundary sweep: shop ids only, for frata_app alone, inside its window
+do $$ begin
+  if pg_get_function_result('app_shops_with_boundary(timestamptz, timestamptz)'::regprocedure) <> 'SETOF uuid' then raise exception 'FAIL: app_shops_with_boundary returns more than ids'; end if;
+  if not (select prosecdef from pg_proc where oid = 'app_shops_with_boundary(timestamptz, timestamptz)'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_shops_with_boundary(timestamptz, timestamptz)'::regprocedure) is distinct from array['search_path=""']
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_shops_with_boundary(timestamptz, timestamptz)', 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_shops_with_boundary(timestamptz, timestamptz)'::regprocedure and a.grantee = 0)
+  then raise exception 'FAIL: app_shops_with_boundary is not a pinned definer for frata_app alone'; end if;
+end $$;
+insert into products (tenant_id, handle, title, status, publish_at) values ('c8100000-0000-0000-0000-000000000002', 'drop-81', 'Drop', 'active', now() - interval '1 minute');
+begin; set local role frata_app;
+do $$ begin
+  if not exists (select 1 from app_shops_with_boundary(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: a drop in the window was missed'; end if;
+  if exists (select 1 from app_shops_with_boundary(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000001') then raise exception 'FAIL: a shop with no moment was swept'; end if;
+  if exists (select 1 from app_shops_with_boundary(now() - interval '1 hour', now() - interval '30 minutes') s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: a moment outside the window was swept'; end if;
+end $$;
+commit;
 -- a website's address: the same shop's live domain, its apex or www only
 do $$ begin
   begin update shop_settings set site_origin = 'https://proof-d81.in', site_domain_id = 'c8100000-0000-0000-0000-0000000000d2' where tenant_id = 'c8100000-0000-0000-0000-000000000001';
