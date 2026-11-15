@@ -53,7 +53,7 @@ Storefront API move (a row in Deviations, owner told). Fixed legal words stay: P
 grievance officer page's statutory lines, consent lines. "Customer" → "shopper" as a column name is the owner's
 question; "your customer" in a sentence is gated.
 
-Until step 5, nothing under `src/app/(console)/console/analytics/**`, `src/lib/queries/analytics.ts`,
+Until step 6, nothing under `src/app/(console)/console/analytics/**`, `src/lib/queries/analytics.ts`,
 `src/lib/queries/traffic.ts`, `src/domains/analytics/**`, `src/components/charts/**`, neel.css heat/risk tokens,
 `e2e/flows/51-analytics.mjs`, `e2e/flows/72-traffic.mjs`, the True profit app (`apps/true_profit/**`,
 `e2e/flows/70-true-profit.mjs`: N1b shares its periods) or the N1b plan is touched (the N1b session is rewriting
