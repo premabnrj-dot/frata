@@ -63,6 +63,23 @@ Unit: `orderTopLine` (every state the board draws), the courier came-back share,
 |---|---|---|---|
 | Courier cards with price and days, "Book Delhivery · ₹78" | Cards for couriers the store has used, each with its came-back share; picking one fills the courier; booking stays "Ship another way" (name and AWB) | No Shiprocket connector exists (no rates, no booking). It is its own phase: current facts on Shiprocket's API and terms first (`frata-integrations`, 90-day rule) | — |
 
+## Tenancy review on the plan (2026-11-15), folded in
+- **Costs read only when shown.** "What you keep" and "What it costs you" call `costsVisibleIn(tx, tenantId, role)` inside
+  the same `withTenant`; when false, `unit_cost`, plan history and ship costs are never selected (not hidden at render).
+  Only totals travel (if delivered, if it comes back; off, keep before, keep after), never the breakdown (its fee line
+  shows the plan rate). A support visit runs as owner and sees costs today, as Analytics does (roles.ts); a change to that
+  is an owner rule in roles.ts, not this page's.
+- **The offer's best seller** is a new uncached read beside `offerStats` (src/lib/queries/discounts.ts), never the
+  storefront's `shopBestSellers` cache.
+- **Order page reads** (phone history, PIN came-back count, courier shares) join the `Promise.all` inside `orderDetail`'s
+  `withTenant`; phone and PIN come from the order row read there; every query names `tenant_id` (the courier read joins
+  `shipments` to `orders` on `tenant_id` and `id`); counts only, never another order's name, address or ₹; an erased
+  order (no phone) skips its history; the phone predicate stays `standingSql` (0127's index).
+- **Settings PIN suggestion** in the settings page's `withTenant`, counts only, the blocked list read in the same transaction.
+- **The timeline** merges what `orderDetail` already reads (notes, emails, events): no new read, no cache; a support
+  visit's entries keep "· Frrata support"; the note box keeps `addOrderNote`; no email send in a visit.
+- Nothing new uses `cache()` or `unstable_cache`; `courier_name` is merchant text, rendered as text.
+
 ## Design review
 - **UI/UX:** one primary action per state; the top line in money; risk in words; every state on the OrderStates board;
   phone first-class; Rule 0 (no helper text beyond the drawn lines).
