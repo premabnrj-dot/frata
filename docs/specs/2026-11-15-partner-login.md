@@ -1,5 +1,5 @@
 # Partner sign-in: email code, then a passkey, and a second person for the first one
-Status: active (owner 2026-11-15: "approved, go ahead and build T1b") · Date: 2026-11-15 · Mockup: https://claude.ai/artifact/Cway5SSahPgQeuCo2UmdTJ
+Status: built and live 2026-11-15 (owner: "approved, go ahead and build T1b"; migrations 0128/0129 in production) · Date: 2026-11-15 · Mockup: https://claude.ai/artifact/Cway5SSahPgQeuCo2UmdTJ
 `docs/mockups/2026-11-15-partner-login.html` · Approved: owner, 2026-11-15 · Owner (2026-11-15): "I would like to redesign the whole
 login ui/ux for the partner." · Research: `docs/research/2026-11-15-partner-login.md` · Database: T1b (drizzle/0127,
 0128; not applied to production).
