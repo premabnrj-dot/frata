@@ -259,7 +259,7 @@ staff passkeys (docs/specs/2026-11-12-staff-passkeys.md, ADR-0007 amended), the 
     re-enrol when the console host moves, as staff do.
 
 ### Tasks (T1b)
-**Progress (2026-11-15):** tasks 1–4 done on branch `claude/amazing-wright-7irwn3` (migrations 0128/0129, proof § 79,
+**Progress (2026-11-15):** done and live — 0128/0129 in production, code on main (af80f733); next, an admin approves the live owner's first passkey. Tasks 1–4 were built on branch `claude/amazing-wright-7irwn3` (migrations 0128/0129, proof § 79,
 the screens as drawn in the partner sign-in mockup, flows 40, 71, 75, 80 green, reviews folded in). Task 5 (production)
 is next.
 1. Shared WebAuthn module and gate component; Admin on them (flow 75 green before and after). Commit.
