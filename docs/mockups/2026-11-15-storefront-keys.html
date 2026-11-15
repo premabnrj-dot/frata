@@ -280,7 +280,7 @@ button { font:inherit; color:inherit }
         </aside>
         <main class="main">
           <div class="page-w">
-            <div class="bnr info" id="d-building" hidden><span>Building for Kesar Studio · No owner yet</span><a href="#who">Hand over</a></div>
+            <div class="bnr info" id="d-building" hidden><span>Building for Kesar Studio · No owner yet</span><a href="#who">Hand over store</a></div>
             <div class="ph">
               <div><a class="back" style="font-size:13px;color:var(--text-2);text-decoration:none">‹ Settings</a><h1>Website</h1></div>
               <span class="sp"></span><span class="chip neu" id="d-ro" hidden>View only</span>
@@ -289,31 +289,31 @@ button { font:inherit; color:inherit }
             <section class="sect" aria-labelledby="d-w">
               <div class="sect-h"><h3 id="d-w">Website</h3></div>
               <div class="radios" role="radiogroup" aria-label="Where your website runs">
-                <label class="rc"><input type="radio" name="d-site" id="d-site-f"><b>Runs on Frrata</b><small>Your look from Look</small></label>
-                <label class="rc"><input type="radio" name="d-site" id="d-site-e" checked><b>Runs elsewhere</b><small>Built by your developer or partner</small></label>
+                <label class="rc"><input type="radio" name="d-site" id="d-site-f"><b>Runs on Frrata</b><small>Designed in Look</small></label>
+                <label class="rc"><input type="radio" name="d-site" id="d-site-e" checked><b>Your own website</b><small>Built by your developer or partner</small></label>
               </div>
               <div class="field" style="margin:14px 0 0">
                 <label for="d-origin">Website address</label>
                 <select class="input" id="d-origin" style="font-family:var(--mono);font-size:13px"><option>https://kesarstudio.in</option><option>https://www.kesarstudio.in</option></select>
               </div>
-              <div class="bnr warn" style="margin-top:12px"><span>Your website must show your legal name, address, customer care and grievance officer.</span><span class="chip warn">From 1 Jan 2027</span></div>
+              <div class="bnr warn" style="margin-top:12px"><span>Show your legal name, address, customer care and grievance officer.</span><span class="chip warn">From 1 Jan 2027</span></div>
             </section>
 
             <section class="sect" aria-labelledby="d-c">
-              <div class="sect-h"><h3 id="d-c">Checkout</h3><span class="sp"></span><span class="chip ok">Razorpay approved it</span></div>
+              <div class="sect-h"><h3 id="d-c">Checkout</h3><span class="sp"></span><span class="chip ok">Approved by Razorpay</span></div>
               <div class="kit-row"><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="addr">checkout.kesarstudio.in</span><span class="tag">Main</span></span>
-                <span style="display:flex;gap:4px"><button type="button" class="btn sm ghost" data-copy="checkout.kesarstudio.in">Copy</button><a class="btn sm wo">Store address</a></span></div>
+                <span style="display:flex;gap:4px"><button type="button" class="btn sm ghost" data-copy="checkout.kesarstudio.in">Copy</button><a class="btn sm wo">Edit store address</a></span></div>
             </section>
 
             <section class="sect" aria-labelledby="d-k">
               <div class="sect-h"><h3 id="d-k">Keys</h3><span class="sp"></span><button type="button" class="btn sm primary wo" id="d-new">Create key</button></div>
               <div class="list" id="d-keys">
-                <div class="key-row"><span class="nm">Website <span class="chip info">Public</span></span><span class="acts wo"><button type="button" class="btn sm danger" data-revoke="Website">Revoke</button></span>
+                <div class="key-row"><span class="nm">Website <span class="chip info">Live</span></span><span class="acts wo"><button type="button" class="btn sm danger" data-revoke="Website">Delete</button></span>
                   <span class="meta"><span class="addr">frs_pub_7Hk2qa…</span><span>Made by Arc Studio</span><span>Used today</span></span></div>
-                <div class="key-row"><span class="nm">Arc Studio preview <span class="chip neu">Test · ends 9 Dec</span></span><span class="acts wo"><button type="button" class="btn sm danger" data-revoke="Arc Studio preview">Revoke</button></span>
+                <div class="key-row"><span class="nm">Arc Studio preview <span class="chip neu">Test · ends 9 Dec</span></span><span class="acts wo"><button type="button" class="btn sm danger" data-revoke="Arc Studio preview">Delete</button></span>
                   <span class="meta"><span class="addr">frs_test_Lm2xQ9…</span><span>Made by Arc Studio</span><span>Used yesterday</span></span></div>
-                <div class="key-row gone"><span class="nm">Old site <span class="chip neu">Revoked</span></span><span></span>
-                  <span class="meta"><span class="addr">frs_pub_c81Rbe…</span><span>Revoked by Meera · 2 Nov</span></span></div>
+                <div class="key-row gone"><span class="nm">Old website <span class="chip neu">Deleted</span></span><span></span>
+                  <span class="meta"><span class="addr">frs_pub_c81Rbe…</span><span>Deleted by Meera · 2 Nov</span></span></div>
               </div>
             </section>
 
@@ -330,25 +330,25 @@ button { font:inherit; color:inherit }
           <div class="dh"><h3 id="d-new-h">Create key</h3></div>
           <div class="db" id="d-new-form">
             <div class="field" style="margin:0"><label for="d-kname">Name <span class="count">7/40</span></label><input class="input" id="d-kname" value="Website" maxlength="40"></div>
-            <div class="radios" role="radiogroup" aria-label="Kind">
-              <label class="rc"><input type="radio" name="d-kind" id="d-kind-p" checked><b>Public</b><small>For your live website</small></label>
+            <div class="radios" role="radiogroup" aria-label="Key type">
+              <label class="rc"><input type="radio" name="d-kind" id="d-kind-p" checked><b>Live</b><small>For your live website</small></label>
               <label class="rc"><input type="radio" name="d-kind" id="d-kind-t" disabled><b>Test</b><small id="d-kind-t-s">Only before the store opens</small></label>
             </div>
           </div>
           <div class="db" id="d-new-done" hidden>
-            <div class="reveal"><span style="font-weight:500">Shown once. Copy it now.</span><span class="addr" id="d-keyval">frs_pub_9Tz4mW2qL8xVn3cR7bYk1JdE5hPaK0x2ZQw81</span><span><button type="button" class="btn sm primary" id="d-copykey">Copy key</button></span></div>
+            <div class="reveal"><span style="font-weight:500">Copy this key now. We show it once.</span><span class="addr" id="d-keyval">frs_pub_9Tz4mW2qL8xVn3cR7bYk1JdE5hPaK0x2ZQw81</span><span><button type="button" class="btn sm primary" id="d-copykey">Copy key</button></span></div>
           </div>
           <div class="df"><button type="button" class="btn" id="d-new-cancel">Not now</button><button type="button" class="btn primary" id="d-new-go">Create key</button></div>
         </div>
       </div>
       <div class="dlg-scrim" id="d-dlg-rev" hidden>
         <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="d-rev-h">
-          <div class="dh"><h3 id="d-rev-h">Revoke Website?</h3></div>
-          <div class="db"><p style="margin:0">Websites using it stop within a minute. This can’t be undone.</p></div>
-          <div class="df"><button type="button" class="btn" id="d-rev-keep">Keep key</button><button type="button" class="btn primary" style="background:var(--bad-fg);border-color:var(--bad-fg);color:#fff" id="d-rev-go">Revoke key</button></div>
+          <div class="dh"><h3 id="d-rev-h">Delete the key “Website”?</h3></div>
+          <div class="db"><p style="margin:0">Websites using it stop working within a minute. This can’t be undone.</p></div>
+          <div class="df"><button type="button" class="btn" id="d-rev-keep">Keep key</button><button type="button" class="btn primary" style="background:var(--bad-fg);border-color:var(--bad-fg);color:#fff" id="d-rev-go">Delete key</button></div>
         </div>
       </div>
-      <div class="toast" id="d-toast" role="status" aria-live="polite" hidden style="left:50%;right:auto;transform:translateX(-50%);bottom:20px;width:max-content;max-width:calc(100% - 32px)"><span class="ok"></span><span id="d-toast-t">Website revoked</span></div>
+      <div class="toast" id="d-toast" role="status" aria-live="polite" hidden style="left:50%;right:auto;transform:translateX(-50%);bottom:20px;width:max-content;max-width:calc(100% - 32px)"><span class="ok"></span><span id="d-toast-t">Key “Website” deleted</span></div>
     </div>
   </section>
 
@@ -360,16 +360,16 @@ button { font:inherit; color:inherit }
         <div class="p-top"><span class="back">‹ Settings</span><h1>Website</h1></div>
         <div class="p-body">
           <section class="sect"><div class="sect-h"><h3>Website</h3></div>
-            <div class="radios"><label class="rc"><input type="radio" name="p1-site" id="p1-f"><b>Runs on Frrata</b><small>Your look from Look</small></label><label class="rc"><input type="radio" name="p1-site" id="p1-e" checked><b>Runs elsewhere</b><small>Built by your developer or partner</small></label></div>
+            <div class="radios"><label class="rc"><input type="radio" name="p1-site" id="p1-f"><b>Runs on Frrata</b><small>Designed in Look</small></label><label class="rc"><input type="radio" name="p1-site" id="p1-e" checked><b>Your own website</b><small>Built by your developer or partner</small></label></div>
             <div class="field" style="margin:12px 0 0"><label for="p1-origin">Website address</label><select class="input" id="p1-origin" style="font-family:var(--mono);font-size:13px"><option>https://kesarstudio.in</option></select></div>
-            <div class="bnr warn" style="margin-top:10px"><span>Your website must show your legal name, address, customer care and grievance officer.</span><span class="chip warn">From 1 Jan 2027</span></div>
+            <div class="bnr warn" style="margin-top:10px"><span>Show your legal name, address, customer care and grievance officer.</span><span class="chip warn">From 1 Jan 2027</span></div>
           </section>
-          <section class="sect"><div class="sect-h"><h3>Checkout</h3><span class="sp"></span><span class="chip ok">Razorpay approved it</span></div>
+          <section class="sect"><div class="sect-h"><h3>Checkout</h3><span class="sp"></span><span class="chip ok">Approved by Razorpay</span></div>
             <div class="kit-row"><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="addr">checkout.kesarstudio.in</span><span class="tag">Main</span></span><button type="button" class="btn sm ghost">Copy</button></div></section>
           <section class="sect"><div class="sect-h"><h3>Keys</h3><span class="sp"></span><button type="button" class="btn sm primary">Create key</button></div>
             <div class="list">
-              <div class="key-row"><span class="nm">Website <span class="chip info">Public</span></span><span class="acts"><button type="button" class="btn sm danger">Revoke</button></span><span class="meta"><span class="addr">frs_pub_7Hk2qa…</span><span>Used today</span></span></div>
-              <div class="key-row gone"><span class="nm">Old site <span class="chip neu">Revoked</span></span><span></span><span class="meta"><span class="addr">frs_pub_c81Rbe…</span><span>2 Nov</span></span></div>
+              <div class="key-row"><span class="nm">Website <span class="chip info">Live</span></span><span class="acts"><button type="button" class="btn sm danger">Delete</button></span><span class="meta"><span class="addr">frs_pub_7Hk2qa…</span><span>Used today</span></span></div>
+              <div class="key-row gone"><span class="nm">Old website <span class="chip neu">Deleted</span></span><span></span><span class="meta"><span class="addr">frs_pub_c81Rbe…</span><span>2 Nov</span></span></div>
             </div></section>
           <section class="sect"><div class="sect-h"><h3>For developers</h3></div>
             <div class="kit-row"><span><b style="font-weight:500">OpenAPI</b></span><button type="button" class="btn sm ghost">Copy</button></div></section>
@@ -383,7 +383,7 @@ button { font:inherit; color:inherit }
         <div class="sheet-scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="p2-h"><div class="grab"></div>
           <h3 id="p2-h">Create key</h3>
           <div class="field"><label for="p2-name">Name <span class="count">7/40</span></label><input class="input" id="p2-name" value="Website"></div>
-          <div class="radios" style="grid-template-columns:1fr"><label class="rc"><input type="radio" name="p2-kind" id="p2-p" checked><b>Public</b><small>For your live website</small></label><label class="rc"><input type="radio" name="p2-kind" id="p2-t" disabled><b>Test</b><small>Only before the store opens</small></label></div>
+          <div class="radios" style="grid-template-columns:1fr"><label class="rc"><input type="radio" name="p2-kind" id="p2-p" checked><b>Live</b><small>For your live website</small></label><label class="rc"><input type="radio" name="p2-kind" id="p2-t" disabled><b>Test</b><small>Only before the store opens</small></label></div>
           <div class="acts-row"><button type="button" class="btn">Not now</button><button type="button" class="btn primary">Create key</button></div>
         </div></div>
       </div></div>
@@ -393,7 +393,7 @@ button { font:inherit; color:inherit }
         <div class="p-body"></div>
         <div class="sheet-scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="p3-h"><div class="grab"></div>
           <h3 id="p3-h">Create key</h3>
-          <div class="reveal"><span style="font-weight:500">Shown once. Copy it now.</span><span class="addr">frs_pub_9Tz4mW2qL8xVn3cR7bYk1JdE5hPaK0x2ZQw81</span><button type="button" class="btn primary" style="min-height:44px">Copy key</button></div>
+          <div class="reveal"><span style="font-weight:500">Copy this key now. We show it once.</span><span class="addr">frs_pub_9Tz4mW2qL8xVn3cR7bYk1JdE5hPaK0x2ZQw81</span><button type="button" class="btn primary" style="min-height:44px">Copy key</button></div>
           <div class="acts-row"><button type="button" class="btn">Done</button></div>
         </div></div>
       </div></div>
@@ -402,17 +402,17 @@ button { font:inherit; color:inherit }
         <div class="p-top"><span class="back">‹ Settings</span><h1>Website</h1></div>
         <div class="p-body"></div>
         <div class="sheet-scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="p4-h"><div class="grab"></div>
-          <h3 id="p4-h">Revoke Website?</h3>
-          <p style="margin:0 0 6px">Websites using it stop within a minute. This can’t be undone.</p>
-          <div class="acts-row"><button type="button" class="btn">Keep key</button><button type="button" class="btn primary" style="background:var(--bad-fg);border-color:var(--bad-fg);color:#fff">Revoke key</button></div>
+          <h3 id="p4-h">Delete the key “Website”?</h3>
+          <p style="margin:0 0 6px">Websites using it stop working within a minute. This can’t be undone.</p>
+          <div class="acts-row"><button type="button" class="btn">Keep key</button><button type="button" class="btn primary" style="background:var(--bad-fg);border-color:var(--bad-fg);color:#fff">Delete key</button></div>
         </div></div>
       </div></div>
 
       <div class="phone"><div class="scr">
         <div class="p-top"><span class="back">‹ Settings</span><h1>Website</h1></div>
         <div class="p-body"><section class="sect"><div class="sect-h"><h3>Keys</h3><span class="sp"></span><button type="button" class="btn sm primary">Create key</button></div>
-          <div class="list"><div class="key-row gone"><span class="nm">Website <span class="chip neu">Revoked</span></span><span></span><span class="meta"><span class="addr">frs_pub_7Hk2qa…</span><span>Just now</span></span></div></div></section></div>
-        <div class="toast"><span class="ok"></span><span>Website revoked</span></div>
+          <div class="list"><div class="key-row gone"><span class="nm">Website <span class="chip neu">Deleted</span></span><span></span><span class="meta"><span class="addr">frs_pub_7Hk2qa…</span><span>Just now</span></span></div></div></section></div>
+        <div class="toast"><span class="ok"></span><span>Key “Website” deleted</span></div>
         <div class="bottom"><div><svg><use href="#i-home"/></svg>Home</div><div><svg><use href="#i-orders"/></svg>Orders</div><div><svg><use href="#i-products"/></svg>Products</div><div class="on"><svg><use href="#i-more"/></svg>More</div></div>
       </div></div>
     </div>
@@ -424,23 +424,23 @@ button { font:inherit; color:inherit }
     <div class="states">
       <div class="mini"><div class="lbl">Default · runs on Frrata</div>
         <section class="sect"><div class="sect-h"><h3>Website</h3></div>
-          <div class="radios"><label class="rc"><input type="radio" name="s1" id="s1-f" checked><b>Runs on Frrata</b><small>Your look from Look</small></label><label class="rc"><input type="radio" name="s1" id="s1-e"><b>Runs elsewhere</b><small>Built by your developer or partner</small></label></div>
+          <div class="radios"><label class="rc"><input type="radio" name="s1" id="s1-f" checked><b>Runs on Frrata</b><small>Designed in Look</small></label><label class="rc"><input type="radio" name="s1" id="s1-e"><b>Your own website</b><small>Built by your developer or partner</small></label></div>
         </section></div>
 
       <div class="mini"><div class="lbl">Runs elsewhere · no domain connected</div>
         <section class="sect"><div class="sect-h"><h3>Website</h3></div>
           <div class="field" style="margin:0"><label for="s2-o">Website address</label><select class="input" id="s2-o" disabled><option>Connect a domain first</option></select></div>
-          <div style="margin-top:10px"><a class="btn sm">Custom domain</a></div>
+          <div style="margin-top:10px"><a class="btn sm">Connect domain</a></div>
         </section></div>
 
       <div class="mini"><div class="lbl">A change not saved yet</div>
         <section class="sect"><div class="sect-h"><h3>Website</h3></div>
-          <div class="radios"><label class="rc"><input type="radio" name="s3" id="s3-f"><b>Runs on Frrata</b><small>Your look from Look</small></label><label class="rc"><input type="radio" name="s3" id="s3-e" checked><b>Runs elsewhere</b><small>Built by your developer or partner</small></label></div></section>
+          <div class="radios"><label class="rc"><input type="radio" name="s3" id="s3-f"><b>Runs on Frrata</b><small>Designed in Look</small></label><label class="rc"><input type="radio" name="s3" id="s3-e" checked><b>Your own website</b><small>Built by your developer or partner</small></label></div></section>
         <div class="toast static-toast" style="justify-content:space-between"><span>1 unsaved change</span><span style="display:flex;gap:12px"><a>Discard</a><a>Save</a></span></div></div>
 
       <div class="mini"><div class="lbl">Back to Frrata · confirm</div>
         <div class="dlg" style="width:100%;box-shadow:var(--e2)"><div class="dh"><h3>Run your website on Frrata?</h3></div>
-          <div class="db"><p style="margin:0">Your keys stop working within a minute.</p></div>
+          <div class="db"><p style="margin:0">Your developer’s website stops working within a minute.</p></div>
           <div class="df"><button type="button" class="btn">Keep your own website</button><button type="button" class="btn primary">Run on Frrata</button></div></div></div>
 
       <div class="mini"><div class="lbl">Runs elsewhere · no keys yet</div>
@@ -448,12 +448,12 @@ button { font:inherit; color:inherit }
           <div class="empty">No keys yet</div></section></div>
 
       <div class="mini"><div class="lbl">Partner, before handover · test keys allowed</div>
-        <div class="bnr info" style="margin-bottom:10px"><span>Building for Kesar Studio · No owner yet</span><a>Hand over</a></div>
-        <div class="radios"><label class="rc"><input type="radio" name="s6" id="s6-p"><b>Public</b><small>For your live website</small></label><label class="rc"><input type="radio" name="s6" id="s6-t" checked><b>Test</b><small>Ends when the store opens · 30 days at most</small></label></div></div>
+        <div class="bnr info" style="margin-bottom:10px"><span>Building for Kesar Studio · No owner yet</span><a>Hand over store</a></div>
+        <div class="radios"><label class="rc"><input type="radio" name="s6" id="s6-p"><b>Live</b><small>For your live website</small></label><label class="rc"><input type="radio" name="s6" id="s6-t" checked><b>Test</b><small>Ends when the store opens · 30 days at most</small></label></div></div>
 
       <div class="mini"><div class="lbl">Test keys after opening and after 30 days</div>
         <section class="sect"><div class="sect-h"><h3>Keys</h3></div><div class="list">
-          <div class="key-row gone"><span class="nm">Arc Studio preview <span class="chip neu">Test · ended when you opened</span></span><span></span><span class="meta"><span class="addr">frs_test_Lm2xQ9…</span><span>14 Nov</span></span></div>
+          <div class="key-row gone"><span class="nm">Arc Studio preview <span class="chip neu">Test · ended</span></span><span></span><span class="meta"><span class="addr">frs_test_Lm2xQ9…</span><span>Store opened · 14 Nov</span></span></div>
           <div class="key-row gone"><span class="nm">Staging <span class="chip neu">Test · ended</span></span><span></span><span class="meta"><span class="addr">frs_test_aP0kz3…</span><span>8 Oct</span></span></div>
         </div></section></div>
 
@@ -463,13 +463,13 @@ button { font:inherit; color:inherit }
 
       <div class="mini"><div class="lbl">20 live keys</div>
         <section class="sect"><div class="sect-h"><h3>Keys</h3><span class="sp"></span><span class="pill">20 of 20</span><button type="button" class="btn sm" aria-disabled="true">Create key</button></div>
-          <p style="margin:0;color:var(--text-2);font-size:13px">Revoke a key to make another.</p></section></div>
+          <p style="margin:0;color:var(--text-2);font-size:13px">Delete a key to make another.</p></section></div>
 
       <div class="mini"><div class="lbl">A failure after Create key</div>
         <div class="toast static-toast"><span style="width:18px;height:18px;border-radius:50%;background:var(--bad-dot);display:grid;place-items:center;color:#fff;font-size:11px;font-weight:600;flex:none">!</span><span class="sp">We couldn’t make the key. Nothing was changed.</span><a>Try again</a></div></div>
 
       <div class="mini"><div class="lbl">Too many keys made this hour</div>
-        <div class="toast static-toast"><span style="width:18px;height:18px;border-radius:50%;background:var(--bad-dot);display:grid;place-items:center;color:#fff;font-size:11px;font-weight:600;flex:none">!</span><span class="sp">10 keys made this hour. Try again at 4:10 pm.</span></div></div>
+        <div class="toast static-toast"><span style="width:18px;height:18px;border-radius:50%;background:var(--bad-dot);display:grid;place-items:center;color:#fff;font-size:11px;font-weight:600;flex:none">!</span><span class="sp">You can make 10 keys an hour. Try again at 4:10 pm.</span></div></div>
 
       <div class="mini"><div class="lbl">Settings list · the new row</div>
         <section class="sect" style="padding:4px 16px"><div class="list">
@@ -487,21 +487,21 @@ button { font:inherit; color:inherit }
       <div class="mini"><div class="lbl">Staff, Accountant · view only</div>
         <div class="ph" style="margin-bottom:10px"><h1 style="font-size:20px">Website</h1><span class="sp"></span><span class="chip neu">View only</span></div>
         <section class="sect"><div class="sect-h"><h3>Keys</h3></div><div class="list">
-          <div class="key-row"><span class="nm">Website <span class="chip info">Public</span></span><span></span><span class="meta"><span class="addr">frs_pub_7Hk2qa…</span><span>Used today</span></span></div></div></section></div>
+          <div class="key-row"><span class="nm">Website <span class="chip info">Live</span></span><span></span><span class="meta"><span class="addr">frs_pub_7Hk2qa…</span><span>Used today</span></span></div></div></section></div>
 
       <div class="mini"><div class="lbl">Frrata support visit · view only</div>
-        <div class="bnr support" style="margin-bottom:10px"><span>Support · Kesar Studio · 22 min</span><a>End</a></div>
+        <div class="bnr support" style="margin-bottom:10px"><span>Support · Kesar Studio · 22 min</span><a>End visit</a></div>
         <div class="ph" style="margin-bottom:10px"><h1 style="font-size:20px">Website</h1><span class="sp"></span><span class="chip neu">View only</span></div>
-        <section class="sect"><div class="sect-h"><h3>Website</h3></div><div class="kit-row"><span>Runs elsewhere</span><span class="addr">https://kesarstudio.in</span></div></section></div>
+        <section class="sect"><div class="sect-h"><h3>Website</h3></div><div class="kit-row"><span>Your own website</span><span class="addr">https://kesarstudio.in</span></div></section></div>
 
       <div class="mini"><div class="lbl">Partner, after handover · view only</div>
         <div class="ph" style="margin-bottom:10px"><h1 style="font-size:20px">Website</h1><span class="sp"></span><span class="chip neu">View only</span></div>
         <section class="sect"><div class="sect-h"><h3>Keys</h3></div><div class="list">
-          <div class="key-row"><span class="nm">Website <span class="chip info">Public</span></span><span></span><span class="meta"><span class="addr">frs_pub_7Hk2qa…</span><span>Made by Arc Studio</span></span></div></div></section></div>
+          <div class="key-row"><span class="nm">Website <span class="chip info">Live</span></span><span></span><span class="meta"><span class="addr">frs_pub_7Hk2qa…</span><span>Made by Arc Studio</span></span></div></div></section></div>
 
       <div class="mini"><div class="lbl">Partner removed · its keys</div>
         <section class="sect"><div class="sect-h"><h3>Keys</h3></div><div class="list">
-          <div class="key-row gone"><span class="nm">Website <span class="chip neu">Revoked</span></span><span></span><span class="meta"><span class="addr">frs_pub_7Hk2qa…</span><span>Arc Studio removed · 20 Nov</span></span></div></div></section></div>
+          <div class="key-row gone"><span class="nm">Website <span class="chip neu">Deleted</span></span><span></span><span class="meta"><span class="addr">frs_pub_7Hk2qa…</span><span>Arc Studio’s access ended · 20 Nov</span></span></div></div></section></div>
     </div>
   </section>
 </div>
@@ -539,24 +539,24 @@ button { font:inherit; color:inherit }
     $('d-new-form').hidden = true; $('d-new-done').hidden = false; $('d-new-go').hidden = true; $('d-new-cancel').textContent = 'Done'
     const row = document.createElement('div'); row.className = 'key-row'
     const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = name + ' '
-    const chip = document.createElement('span'); chip.className = 'chip ' + (pub ? 'info' : 'neu'); chip.textContent = pub ? 'Public' : 'Test · ends 15 Dec'; nm.append(chip)
+    const chip = document.createElement('span'); chip.className = 'chip ' + (pub ? 'info' : 'neu'); chip.textContent = pub ? 'Live' : 'Test · ends 15 Dec'; nm.append(chip)
     const acts = document.createElement('span'); acts.className = 'acts wo'
-    const rb = document.createElement('button'); rb.type = 'button'; rb.className = 'btn sm danger'; rb.textContent = 'Revoke'; rb.addEventListener('click', () => ask(name, row)); acts.append(rb)
+    const rb = document.createElement('button'); rb.type = 'button'; rb.className = 'btn sm danger'; rb.textContent = 'Delete'; rb.addEventListener('click', () => ask(name, row)); acts.append(rb)
     const meta = document.createElement('span'); meta.className = 'meta'
     const p = document.createElement('span'); p.className = 'addr'; p.textContent = v.slice(0, pub ? 14 : 15) + '…'
     const n = document.createElement('span'); n.textContent = 'Never used'
     meta.append(p, n); row.append(nm, acts, meta); $('d-keys').prepend(row)
   })
   $('d-copykey').addEventListener('click', () => copy($('d-keyval').textContent))
-  const ask = (name, row) => { target = { name, row }; $('d-rev-h').textContent = 'Revoke ' + name + '?'; $('d-dlg-rev').hidden = false; $('d-rev-keep').focus() }
+  const ask = (name, row) => { target = { name, row }; $('d-rev-h').textContent = 'Delete the key “' + name + '”?'; $('d-dlg-rev').hidden = false; $('d-rev-keep').focus() }
   document.querySelectorAll('[data-revoke]').forEach((b) => b.addEventListener('click', () => ask(b.dataset.revoke, b.closest('.key-row'))))
   $('d-rev-keep').addEventListener('click', close)
   $('d-rev-go').addEventListener('click', () => {
     if (target) {
       const row = target.row; row.classList.add('gone')
       const a = row.querySelector('.acts'); if (a) a.replaceWith(document.createElement('span'))
-      const c = row.querySelector('.nm .chip'); if (c) { c.className = 'chip neu'; c.textContent = 'Revoked' }
-      say(target.name + ' revoked')
+      const c = row.querySelector('.nm .chip'); if (c) { c.className = 'chip neu'; c.textContent = 'Deleted' }
+      say('Key “' + target.name + '” deleted')
     }
     close()
   })
