@@ -82,7 +82,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   if (a.cur.orders === 0 && a.prev.orders === 0 && !traffic?.cur.visitors) {
     return (
       <>
-        <PageHeader title="Analytics" actions={actions} meta={metaLine(null)} />
+        <PageHeader title="Analytics" wideActions actions={actions} meta={metaLine(null)} />
         <Panel title="No orders in these days">Share your shop with a link that says where it was shared, and orders from it show here.</Panel>
       </>
     )
@@ -107,7 +107,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const visitsOn = on && !failed
   return (
     <>
-      <PageHeader title="Analytics" actions={actions} meta={metaLine(on && cov.since && cov.since > a.start ? cov.since : null)} />
+      <PageHeader title="Analytics" wideActions actions={actions} meta={metaLine(on && cov.since && cov.since > a.start ? cov.since : null)} />
       {a.cur.orders < JUDGE_MIN ? <TooFew n={a.cur.orders} /> : null}
       <Figures a={a} compare={compare} series={series} keptNote={a.cur.kept ? <KeptNote k={a.cur.kept} estimate={a.estimate} /> : undefined} />
       <FlowLine c={a.cur} />

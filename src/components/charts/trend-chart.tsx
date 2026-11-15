@@ -1,7 +1,7 @@
 'use client'
 
 import { useId, useState } from 'react'
-import { ticks } from '@/domains/analytics/kit'
+import { shortValue, ticks } from '@/domains/analytics/kit'
 
 // =============================================================================
 // FILE: src/components/charts/trend-chart.tsx — A VALUE BY DAY, THIS PERIOD AGAINST THE ONE BEFORE (Neel N1b, kit § Trend).
@@ -16,13 +16,16 @@ export type TrendPoint = { key: string; label: string; value: number; prev: numb
 
 const W = 960, H = 240, L = 52, R = 12, T = 24, B = 34
 
-export function TrendChart({ points, summary, format, seriesNames, notes = [], marksName }: {
-  points: TrendPoint[]; summary: string; format: (n: number) => string
+export function TrendChart({ points, summary, unit, seriesNames, notes = [], marksName }: {
+  points: TrendPoint[]; summary: string
+  /** What the values are (paise or a count): formatted here, as a server component cannot hand a function down. */
+  unit: 'money' | 'count'
   seriesNames: [string, string]; notes?: { key: string; title: string }[]
   /** What the baseline marks count ("came back"); none drawn when absent. */
   marksName?: string
 }) {
   const id = useId()
+  const format = (n: number) => shortValue(n, unit)
   const [at, setAt] = useState<number | null>(null)
   if (points.length < 2) return null
   const top = ticks(Math.max(...points.map((p) => Math.max(p.value, p.prev)), 1))
@@ -85,11 +88,12 @@ export function TrendChart({ points, summary, format, seriesNames, notes = [], m
           {marksName ? <span className="font-num tabular-nums">{p.marks} {marksName}</span> : null}
         </div>
       ) : null}
-      <table id={`${id}-t`} className="sr-only">
+      {/* A table ignores the 1 px of .sr-only (it grows to its content): the wrapper is what is hidden. */}
+      <div className="sr-only"><table id={`${id}-t`}>
         <caption>{summary}</caption>
         <thead><tr><th scope="col">Day</th><th scope="col">{seriesNames[0]}</th><th scope="col">{seriesNames[1]}</th>{marksName ? <th scope="col">{marksName}</th> : null}</tr></thead>
         <tbody>{points.map((q) => <tr key={q.key}><th scope="row">{q.label}</th><td>{format(q.value)}</td><td>{format(q.prev)}</td>{marksName ? <td>{q.marks}</td> : null}</tr>)}</tbody>
-      </table>
+      </table></div>
     </div>
   )
 }

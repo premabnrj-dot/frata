@@ -19,9 +19,11 @@ export function BackLink({ href, label }: { href: string; label: string }) {
  * `titleSlot` replaces the h1's visible text with an editor (the product title field) while the h1 still names the
  * record for a screen reader.
  */
-export function PageHeader({ title, actions, back, badges, meta, titleSlot }: {
+export function PageHeader({ title, actions, back, badges, meta, titleSlot, wideActions = false }: {
   title: string
   actions?: ReactNode
+  /** The actions may take more than half the row (Analytics' period picker with its words and Make a link, Neel N1b). */
+  wideActions?: boolean
   /** The list this page sits under: the breadcrumb's first step. */
   back?: { href: string; label: string }
   badges?: ReactNode
@@ -50,7 +52,7 @@ export function PageHeader({ title, actions, back, badges, meta, titleSlot }: {
           </div>
           {meta && <div className="text-sm text-muted-foreground">{meta}</div>}
         </div>
-        {actions && <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 sm:ml-auto sm:max-w-[50%] sm:justify-end">{actions}</div>}
+        {actions && <div className={`flex min-w-0 max-w-full flex-wrap items-center gap-2 sm:ml-auto sm:justify-end ${wideActions ? 'sm:max-w-[75%]' : 'sm:max-w-[50%]'}`}>{actions}</div>}
       </div>
     </header>
   )

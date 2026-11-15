@@ -36,3 +36,10 @@ describe('the rest', () => {
     expect(new Set(cells).size).toBe(cells.length)
   })
 })
+
+describe('shortValue', () => {
+  it('rupees short, counts grouped', async () => {
+    const { shortValue } = await import('../kit')
+    expect([shortValue(9_000_000, 'money'), shortValue(12_00_000_00, 'money'), shortValue(42_000, 'money'), shortValue(12345, 'count')]).toEqual(['₹90k', '₹12L', '₹420', '12,345'])
+  })
+})

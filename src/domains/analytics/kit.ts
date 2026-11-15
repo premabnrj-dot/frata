@@ -102,3 +102,12 @@ export const TILE_COLS = 8
 
 /** Every state on the list once (a test holds STATE_TILES to it: no state without a tile, no two on one cell). */
 export const ALL_STATES: readonly State[] = STATES
+
+/** A short amount for an axis or a tooltip: "₹90k", "₹1.2L", "₹420" (paise in). Counts: the number with Indian grouping. */
+export function shortValue(v: number, unit: 'money' | 'count'): string {
+  if (unit === 'count') return Math.round(v).toLocaleString('en-IN')
+  const r = v / 100
+  if (r >= 1_00_000) return `₹${(r / 1_00_000).toFixed(r >= 10_00_000 ? 0 : 1).replace(/\.0$/, '')}L`
+  if (r >= 1000) return `₹${Math.round(r / 1000)}k`
+  return `₹${Math.round(r).toLocaleString('en-IN')}`
+}

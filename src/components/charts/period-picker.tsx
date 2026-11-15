@@ -40,8 +40,8 @@ export function PeriodPicker({ path, choice, compare, today, keep = {} }: {
     setOpen(false); router.push(href({ from, to }))
   }
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <nav aria-label="Period" className="-mx-4 flex overflow-x-auto px-4 md:mx-0 md:px-0">
+    <div className="flex w-full min-w-0 flex-wrap items-center gap-2 md:w-auto md:flex-nowrap">
+      <nav aria-label="Period" className="flex min-w-0 max-w-full overflow-x-auto">
         <span className="inline-flex rounded-md border border-border bg-sunk p-0.5">
           {PERIOD_PRESETS.map((p) => {
             const current = choice.kind === 'preset' && choice.preset === p
@@ -52,7 +52,7 @@ export function PeriodPicker({ path, choice, compare, today, keep = {} }: {
             className={cn(seg, 'shrink-0', choice.kind === 'custom' ? 'bg-card font-medium text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>Custom</button>
         </span>
       </nav>
-      <span className="text-sm text-muted-foreground">{compare}</span>
+      <span className="text-sm whitespace-nowrap text-muted-foreground">{compare}</span>
       <Dialog open={open} onClose={() => setOpen(false)} title="Custom dates"
         actions={<><Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="button" onClick={apply}>Show</Button></>}>
         <form onSubmit={(e) => { e.preventDefault(); apply() }} className="grid grid-cols-2 gap-3">

@@ -48,7 +48,7 @@ export default async function SourcePage({ params, searchParams }: { params: Pro
   const back = { href: `/console/analytics?${pq}`, label: 'Analytics' }
   return (
     <>
-      <PageHeader title={stat.label} back={back}
+      <PageHeader title={stat.label} back={back} wideActions
         meta={<>{dayMonthIN(w.start)} – {w.toNow ? 'today (so far)' : dayMonthIN(new Date(w.end.getTime() - 1))} · India time</>}
         actions={<PeriodPicker path={`/console/analytics/${encodeURIComponent(slug)}`} choice={w.choice} compare={compareWords(w)} today={istDayKey(now)} />} />
       {/* The source's own figures, the kit's (Neel N1b): the same words and colours as Analytics. */}

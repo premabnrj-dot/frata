@@ -7,10 +7,10 @@ import { SplitBars } from '@/components/charts/split-bars'
 import { StateTiles } from '@/components/charts/state-tiles'
 import { TrendChart } from '@/components/charts/trend-chart'
 import { Money, Numeric } from '@/components/data/numeric'
-import { change } from '@/domains/analytics/kit'
+import { change, shortValue } from '@/domains/analytics/kit'
 import { JUDGE_MIN } from '@/domains/analytics/judge'
 import { paise } from '@/domains/money/paise'
-import { formatInr, formatPercent } from '@/lib/format'
+import { formatPercent } from '@/lib/format'
 import { dayMonthIN, monthShortIN } from '@/lib/format-date'
 import type { Series } from '@/lib/queries/analytics-series'
 import type { Analytics, Totals } from '@/lib/queries/analytics'
@@ -22,10 +22,7 @@ import type { Analytics, Totals } from '@/lib/queries/analytics'
 // =============================================================================
 
 const outcomes = (t: Totals) => t.delivered + t.rto + t.lost
-const inrShort = (p: number) => {
-  const r = p / 100
-  return r >= 1_00_000 ? `₹${(r / 1_00_000).toFixed(r >= 10_00_000 ? 0 : 1)}L` : r >= 1000 ? `₹${Math.round(r / 1000)}k` : formatInr(paise(Math.round(p)))
-}
+const inrShort = (p: number) => shortValue(p, 'money')
 
 /** The four figures as drawn: Sales, Orders, Came back, ₹ kept after returns (only for whoever sees costs). */
 export function Figures({ a, compare, series, keptNote }: { a: Pick<Analytics, 'cur' | 'prev' | 'costs'>; compare: string; series: Series | null; keptNote?: React.ReactNode }) {
@@ -70,32 +67,32 @@ export function SalesByDay({ s, compareName }: { s: Series; compareName: string 
   const first = points[0]!, last = points.at(-1)!
   const summary = `Sales a day, ${first.label} to ${last.label}: from ${inrShort(first.value)} to ${inrShort(last.value)}${s.notes.length ? `; ${s.notes.map((n) => `${n.title} from ${dayMonthIN(new Date(`${n.key}T06:30:00Z`))}`).join('; ')}` : ''}`
   return (
-    <Section title="Sales by day">
-      <TrendChart points={points} summary={summary} format={inrShort} seriesNames={['This period', compareName]} notes={s.notes} marksName="came back (of orders placed that day)" />
+    <Section id="sales-by-day" title="Sales by day">
+      <TrendChart points={points} summary={summary} unit="money" seriesNames={['This period', compareName]} notes={s.notes} marksName="came back (of orders placed that day)" />
     </Section>
   )
 }
 
 export function PaidAndCod({ s }: { s: Series }) {
   if (!s.weeks.some((w) => w.a + w.b > 0)) return null
-  return <Section title={s.weeks.length && s.weeks[0]!.label.startsWith('Week') ? 'Paid online and COD, by week' : 'Paid online and COD, by day'}><SplitBars rows={s.weeks} a="Paid online" b="COD" /></Section>
+  return <Section id="paid-cod" title={s.weeks.length && s.weeks[0]!.label.startsWith('Week') ? 'Paid online and COD, by week' : 'Paid online and COD, by day'}><SplitBars rows={s.weeks} a="Paid online" b="COD" /></Section>
 }
 
 export function WhenOrdersCome({ s }: { s: Series }) {
   if (!s.heat.flat().some((n) => n > 0)) return null
-  return <Section title="When orders come"><Heatmap grid={s.heat} /></Section>
+  return <Section id="when" title="When orders come"><Heatmap grid={s.heat} /></Section>
 }
 
 export function ByState({ s }: { s: Series }) {
   if (!s.states.length) return null
-  return <Section title="Came back, by state"><StateTiles rows={s.states} /></Section>
+  return <Section id="by-state" title="Came back, by state"><StateTiles rows={s.states} /></Section>
 }
 
 export function ComeBack({ s }: { s: Series }) {
   if (!s.cohort.some((c) => c.shoppers > 0)) return null
   const first = s.cohort[0]!.month, last = s.cohort.at(-1)!.month
   return (
-    <Section title="Shoppers who come back" action={<span className="text-label text-muted-foreground">First orders {monthShortIN(first)}–{monthShortIN(last)}</span>}>
+    <Section id="come-back" title="Shoppers who come back" action={<span className="text-label text-muted-foreground">First orders {monthShortIN(first)}–{monthShortIN(last)}</span>}>
       <CohortTable rows={s.cohort} />
     </Section>
   )
@@ -106,7 +103,7 @@ export function TooFew({ n }: { n: number }) {
   return (
     <p className="text-sm text-muted-foreground">
       Too few to judge: <Numeric>{n}</Numeric> {n === 1 ? 'order' : 'orders'} so far. Shares mean something from {JUDGE_MIN}.{' '}
-      <Link href="/console/orders?tab=all" className="text-link underline-offset-2 hover:underline">See the orders</Link>
+      <Link href="/console/orders?tab=all" className="text-link underline underline-offset-2">See the orders</Link>
     </p>
   )
 }

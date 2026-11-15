@@ -36,10 +36,10 @@ export function StateTiles({ rows, min = 10 }: { rows: { state: string; outcomes
           ))}</tbody>
         </table>
       ) : (
-        <div role="img" aria-label={sentence} className="grid w-fit gap-1" style={{ gridTemplateColumns: `repeat(${TILE_COLS}, 2.5rem)`, gridTemplateRows: `repeat(${TILE_ROWS}, 2rem)` }}>
+        <div role="img" aria-label={sentence} className="grid w-full max-w-88 gap-1" style={{ gridTemplateColumns: `repeat(${TILE_COLS}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${TILE_ROWS}, 2rem)` }}>
           {(Object.entries(STATE_TILES) as [State, (typeof STATE_TILES)[State]][]).map(([state, t]) => {
             const l = lv.get(state)
-            return <i key={state} aria-hidden="true" title={state} className={cn('grid place-items-center rounded-xs text-[11px] font-medium not-italic', l === undefined ? 'bg-sunk text-text-3' : `${SHADE[l]} ${TEXT[l]}`)} style={{ gridRow: t.row, gridColumn: t.col }}>{t.code}</i>
+            return <i key={state} aria-hidden="true" title={state} className={cn('grid place-items-center rounded-xs text-[11px] font-medium not-italic', l === undefined ? 'bg-sunk text-muted-foreground' : `${SHADE[l]} ${TEXT[l]}`)} style={{ gridRow: t.row, gridColumn: t.col }}>{t.code}</i>
           })}
         </div>
       )}

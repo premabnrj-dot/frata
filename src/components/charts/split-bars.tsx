@@ -23,7 +23,7 @@ export function SplitBars({ rows, a, b }: { rows: { label: string; a: number; b:
               <tr key={r.label}>
                 <th scope="row" className="w-16 pr-3 text-left font-normal text-muted-foreground">{r.label}</th>
                 <td className="w-full" colSpan={2}>
-                  <span className="flex h-3 overflow-hidden rounded-xs bg-line-soft" aria-label={`${r.a} ${a.toLowerCase()}, ${r.b} ${b}`}>
+                  <span role="img" className="flex h-3 overflow-hidden rounded-xs bg-line-soft" aria-label={`${r.a} ${a.toLowerCase()}, ${r.b} ${b}`}>
                     {t ? <><i className="bg-heat-4" style={{ width: `${(r.a / t) * 100}%` }} /><i className="bg-heat-3" style={{ width: `${(r.b / t) * 100}%` }} /></> : null}
                   </span>
                 </td>
