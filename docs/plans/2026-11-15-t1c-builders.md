@@ -1,5 +1,5 @@
 # T1c · Builders: capabilities, and a Builder who never sees orders, shoppers or costs
-Status: draft (plan; reviews folded in below; final mockup awaiting the owner) · Date: 2026-11-15 · Lane C
+Status: draft (plan; architecture, tenancy, security and words reviews folded in 2026-11-15; final mockup awaiting the owner) · Date: 2026-11-15 · Lane C
 (`claude/lane-c-builders`, `docs/plans/2026-11-15-parallel-lanes.md`) · Decision: ADR-0015 accepted (owner 2026-11-15:
 "builders approved") · Spec: `docs/specs/2026-11-12-studio-intake-and-team.md` § Partner teams · Row: T1c in
 `docs/plans/2026-11-12-studio-build.md` · Builds on T1a (teams, 0123–0124) and T1b (partner passkeys, 0128–0129) ·
@@ -268,6 +268,10 @@ the Look (themes are retiring, ADR-0014).
    every storefront loader on `frata_builder`).
 6. **Today a Lead receives the brand owner's email in Clients**, against the rule "a lead never gets the owner's contact
    details". Fix it in T1c (one line in the same definer), or leave it to its own change? Recommended: fix here.
+7. **Builders connect to the database with their own login** (`frata_builder`, its own secret and a 2-connection pool),
+   as Frrata Admin does. Recommended: no Builder query can ever run with the app's rights. You add one secret in Vercel.
+8. **A Builder sees each product's stock count** (the list's stock column), not only "In stock" or "Sold out".
+   Recommended: yes, it is catalogue work, not orders.
 
 ## Reviews on this plan (2026-11-15)
 These override the text above where they differ.
@@ -316,6 +320,37 @@ These override the text above where they differ.
   change; `PARTNER_CAN.createShop: ['owner', 'lead']` hides "New client store"; the refusal log runs once per request
   from a `cache()`d function that the page names its route pattern to; `orders.work` is renamed `shop.work` (ANY_MEMBER
   covers orders and the catalogue).
+
+**tenancy-auditor (FIX BEFORE MERGE; no reachable leak as drawn; check:tenant and check:actions clean; verify:tenancy
+green on a throwaway PG16; a fresh role there executes no function and reads no table):**
+- **High → a Builder's pages hold no usable tenant id**: `places` for a Builder carry an opaque store handle the
+  switcher posts back and `switchStoreAction` resolves against the person's own `accessOf` lists (never a trusted form
+  id); TenantCheck compares the handle. `check:capabilities` refuses any `src/lib/queries` import in Builder files but
+  `builder.ts` and the named preview set (as architecture's `_builder/` rule).
+- **High → every preview loader is named** and frozen by the import gate: `previewShop`, `previewCatalogue`,
+  `previewProduct`, `previewLook`, `previewBestSellers` (reads `orders`/`order_lines`, returns ids), `previewVideos`,
+  `previewPages` (hidden pages too: a Builder builds them), `coreProduct`'s `heldByVariant` and `showcase` (shopper-safe
+  offer fields). `previewPage` is shared with `(lookpreview)/theme-preview`, which stays CAN_BUILD. e2e checks the
+  Builder's preview HTML for no seed order number, phone, cost or order total. Best-seller order is in owner question 5.
+- **Medium → `app_notice_members` and `app_member_email` become allow-lists** (`role in ('owner','admin','staff',
+  'partner','accountant')` as each needs today; 0096 is a deny list, `role <> 'accountant'`), in the SAME migration that
+  first allows a `builder` row.
+- **Medium → `app_member_role()` revokes from `public, anon, authenticated, service_role`** and grants to `frata_app`,
+  `frata_builder`. § 80 asserts generically: `frata_builder` executes no function in any schema but its two, holds no
+  privilege on any relation but the eight, no column outside the allow-list, no CREATE on `public`, no sequence. The
+  same read-only probe runs against the project after the orchestrator applies the migrations (Supabase's own schemas:
+  auth, extensions, pgbouncer, vault), and its output goes in the release report.
+- **Medium → a separate login for Builders** (owner question 7). `frata_builder` becomes a LOGIN role with its own small
+  pool (`builderDb()`, as `adminDb()` for `frata_admin`), so a Builder transaction has no `frata_app` to `reset role`
+  back to, and `frata_app` holds no membership in it (M4's inheritance question goes away). Cost: one secret
+  (`DATABASE_URL_BUILDER`) and one pool of `max: 2`. If the owner says no, the plan falls back to `set_config('role')`
+  inside a `frata_app` transaction with the gate on `reset role`.
+- **Low → raw `stock` is shown to a Builder** (the list's stock column; shoppers see "Only N left" at 3 or fewer):
+  owner question 8. `hsn` and `gst_bps` are not granted.
+- **Low →** `requireCapability` and `requireMember` share `currentAccess`'s per-request cache, so the layout and the page
+  pick the same store; `app_shop_people`'s sort list gains `builder`; `app_my_partner` admits `builder` with the lead's
+  blanking (as security H2); `has_owner` (as above); the sweep is generated from every `page.tsx` and `route.ts`, the
+  partner workspace and `/choose` included.
 
 **security-reviewer (FIX BEFORE MERGE; gates clean):**
 - **H1 → the role is bound by the database, not by care.** A CHECK cannot read `partner_members`, so: a constraint
