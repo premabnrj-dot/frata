@@ -34,33 +34,32 @@ export async function storefrontKeyRow(hashHex: string): Promise<{ keyId: string
   return { keyId: r.key_id, tenantId: r.tenant_id, kind: r.kind, expiresAt: r.expires_at === null ? null : new Date(r.expires_at).toISOString() }
 }
 
-/**
- * Shops with a scheduled moment in (since, until]: a product going live, an offer starting or ending (V1 SA1). Ids only,
- * at most 500; the 5-minute drain purges their catalogue, since the Storefront API's copies live an hour.
- */
-export async function shopsWithBoundary(since: Date, until: Date): Promise<string[]> {
-  const rows = await db().execute<{ id: string }>(sql`select app_shops_with_boundary(${since.toISOString()}::timestamptz, ${until.toISOString()}::timestamptz) as id`)
-  return rows.map((r) => r.id)
-}
+/** A drain sweep's page: shop ids in (since, until] after `after` (null = the first page), at most SWEEP_PAGE, in id
+ *  order (SA1b D·6: a cursor, so a run reaches every shop instead of the first 500). */
+export const SWEEP_PAGE = 500
+export type Sweep = (since: Date, until: Date, after: string | null) => Promise<string[]>
+const sweep = (fn: 'app_shops_with_boundary' | 'app_shops_with_key_stop' | 'app_shops_with_content_change' | 'app_shops_with_domain_gone'): Sweep =>
+  async (since, until, after) => {
+    const rows = await db().execute<{ id: string }>(sql`select ${sql.raw(fn)}(${since.toISOString()}::timestamptz, ${until.toISOString()}::timestamptz, ${after}::uuid) as id`)
+    return rows.map((r) => r.id)
+  }
 
-/**
- * Shops holding a live storefront key that a moment in (since, until] stopped without touching the key's row: its
- * partner's link ended, the partner was suspended, or a domain went (V1 SA1). Ids only, at most 500; the drain purges
- * their keys, since a key's cached lookup lives an hour.
- */
-export async function shopsWithKeyStop(since: Date, until: Date): Promise<string[]> {
-  const rows = await db().execute<{ id: string }>(sql`select app_shops_with_key_stop(${since.toISOString()}::timestamptz, ${until.toISOString()}::timestamptz) as id`)
-  return rows.map((r) => r.id)
-}
+/** Shops with a scheduled moment: a product going live, an offer starting or ending (V1 SA1). The drain purges their
+ *  catalogue, since the Storefront API's copies live an hour. */
+export const shopsWithBoundary = sweep('app_shops_with_boundary')
 
-/**
- * Shops whose content (the bar, menus, the Contact line) was saved, deleted or started in (since, until] (V1 SA1). Ids
- * only, at most 500; the drain purges their content scope, since the Storefront API's copies live an hour.
- */
-export async function shopsWithContentChange(since: Date, until: Date): Promise<string[]> {
-  const rows = await db().execute<{ id: string }>(sql`select app_shops_with_content_change(${since.toISOString()}::timestamptz, ${until.toISOString()}::timestamptz) as id`)
-  return rows.map((r) => r.id)
-}
+/** Shops holding a live storefront key that a moment stopped or started again without touching the key's row: its
+ *  partner's link ended, the partner was suspended or reinstated, or a domain went (V1 SA1, SA1b). The drain purges
+ *  their keys, since a key's cached lookup and its cached "not found" copies live an hour. */
+export const shopsWithKeyStop = sweep('app_shops_with_key_stop')
+
+/** Shops whose content (the bar, menus, the Contact line) was saved, deleted or started (V1 SA1). The drain purges
+ *  their content scope, since the Storefront API's copies live an hour. */
+export const shopsWithContentChange = sweep('app_shops_with_content_change')
+
+/** Shops that lost a domain (removed or parked): the drain purges only their store entry (the `settings` tag: the main
+ *  address, the move to the brand's website), never the catalogue (SA1b, speed review 3). */
+export const shopsWithDomainGone = sweep('app_shops_with_domain_gone')
 
 /**
  * Which shop a storefront host belongs to. A platform address (<slug>.<shop

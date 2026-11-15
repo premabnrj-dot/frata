@@ -116,6 +116,21 @@ export async function myHandovers(uid: string): Promise<Handover[]> {
   return rows.map((r) => ({ inviteId: r.invite_id!, tenantId: r.tenant_id!, tenantName: r.tenant_name!, partnerName: r.partner_name!, expiresAt: new Date(r.expires_at!) }))
 }
 
+/** The Accept screen's key list (SA1b D·7): per invite the store's website and its live keys, names and kinds only,
+ *  through app_my_handover_keys (built over app_my_handovers, so exactly the invites this person sees). */
+export type HandoverSite = { host: string; keys: { name: string; kind: 'public' | 'test' }[] }
+export async function myHandoverKeys(uid: string): Promise<Map<string, HandoverSite>> {
+  const rows = await db().execute<{ invite_id: string; site_host: string; name: string; kind: 'public' | 'test' }>(
+    sql`select invite_id, site_host, name, kind from app_my_handover_keys(${uid}::uuid)`)
+  const out = new Map<string, HandoverSite>()
+  for (const r of rows) {
+    const s = out.get(r.invite_id) ?? { host: r.site_host, keys: [] }
+    s.keys.push({ name: r.name, kind: r.kind })
+    out.set(r.invite_id, s)
+  }
+  return out
+}
+
 /** The invite id comes from the form, but the function accepts only an invite to THIS user's confirmed email. */
 export async function acceptHandover(uid: string, inviteId: string, email: ClaimKey | null): Promise<{ ok: true; tenantId: string } | { ok: false; error: string }> {
   try {

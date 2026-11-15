@@ -3883,25 +3883,25 @@ do $$ declare got text; begin
 end $$;
 -- the boundary sweep: shop ids only, for frata_app alone, inside its window
 do $$ begin
-  if pg_get_function_result('app_shops_with_boundary(timestamptz, timestamptz)'::regprocedure) <> 'SETOF uuid' then raise exception 'FAIL: app_shops_with_boundary returns more than ids'; end if;
-  if not (select prosecdef from pg_proc where oid = 'app_shops_with_boundary(timestamptz, timestamptz)'::regprocedure)
-     or (select proconfig from pg_proc where oid = 'app_shops_with_boundary(timestamptz, timestamptz)'::regprocedure) is distinct from array['search_path=""']
-     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_shops_with_boundary(timestamptz, timestamptz)', 'execute'))
-     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_shops_with_boundary(timestamptz, timestamptz)'::regprocedure and a.grantee = 0)
+  if pg_get_function_result('app_shops_with_boundary(timestamptz, timestamptz, uuid)'::regprocedure) <> 'SETOF uuid' then raise exception 'FAIL: app_shops_with_boundary returns more than ids'; end if;
+  if not (select prosecdef from pg_proc where oid = 'app_shops_with_boundary(timestamptz, timestamptz, uuid)'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_shops_with_boundary(timestamptz, timestamptz, uuid)'::regprocedure) is distinct from array['search_path=""']
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_shops_with_boundary(timestamptz, timestamptz, uuid)', 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_shops_with_boundary(timestamptz, timestamptz, uuid)'::regprocedure and a.grantee = 0)
   then raise exception 'FAIL: app_shops_with_boundary is not a pinned definer for frata_app alone'; end if;
-  if pg_get_function_result('app_shops_with_key_stop(timestamptz, timestamptz)'::regprocedure) <> 'SETOF uuid' then raise exception 'FAIL: app_shops_with_key_stop returns more than ids'; end if;
-  if not (select prosecdef from pg_proc where oid = 'app_shops_with_key_stop(timestamptz, timestamptz)'::regprocedure)
-     or (select proconfig from pg_proc where oid = 'app_shops_with_key_stop(timestamptz, timestamptz)'::regprocedure) is distinct from array['search_path=""']
-     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_shops_with_key_stop(timestamptz, timestamptz)', 'execute'))
-     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_shops_with_key_stop(timestamptz, timestamptz)'::regprocedure and a.grantee = 0)
-     or not has_function_privilege('frata_app', 'app_shops_with_key_stop(timestamptz, timestamptz)', 'execute')
+  if pg_get_function_result('app_shops_with_key_stop(timestamptz, timestamptz, uuid)'::regprocedure) <> 'SETOF uuid' then raise exception 'FAIL: app_shops_with_key_stop returns more than ids'; end if;
+  if not (select prosecdef from pg_proc where oid = 'app_shops_with_key_stop(timestamptz, timestamptz, uuid)'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_shops_with_key_stop(timestamptz, timestamptz, uuid)'::regprocedure) is distinct from array['search_path=""']
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_shops_with_key_stop(timestamptz, timestamptz, uuid)', 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_shops_with_key_stop(timestamptz, timestamptz, uuid)'::regprocedure and a.grantee = 0)
+     or not has_function_privilege('frata_app', 'app_shops_with_key_stop(timestamptz, timestamptz, uuid)', 'execute')
   then raise exception 'FAIL: app_shops_with_key_stop is not a pinned definer for frata_app alone'; end if;
-  if pg_get_function_result('app_shops_with_content_change(timestamptz, timestamptz)'::regprocedure) <> 'SETOF uuid' then raise exception 'FAIL: app_shops_with_content_change returns more than ids'; end if;
-  if not (select prosecdef from pg_proc where oid = 'app_shops_with_content_change(timestamptz, timestamptz)'::regprocedure)
-     or (select proconfig from pg_proc where oid = 'app_shops_with_content_change(timestamptz, timestamptz)'::regprocedure) is distinct from array['search_path=""']
-     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_shops_with_content_change(timestamptz, timestamptz)', 'execute'))
-     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_shops_with_content_change(timestamptz, timestamptz)'::regprocedure and a.grantee = 0)
-     or not has_function_privilege('frata_app', 'app_shops_with_content_change(timestamptz, timestamptz)', 'execute')
+  if pg_get_function_result('app_shops_with_content_change(timestamptz, timestamptz, uuid)'::regprocedure) <> 'SETOF uuid' then raise exception 'FAIL: app_shops_with_content_change returns more than ids'; end if;
+  if not (select prosecdef from pg_proc where oid = 'app_shops_with_content_change(timestamptz, timestamptz, uuid)'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_shops_with_content_change(timestamptz, timestamptz, uuid)'::regprocedure) is distinct from array['search_path=""']
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, 'app_shops_with_content_change(timestamptz, timestamptz, uuid)', 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_shops_with_content_change(timestamptz, timestamptz, uuid)'::regprocedure and a.grantee = 0)
+     or not has_function_privilege('frata_app', 'app_shops_with_content_change(timestamptz, timestamptz, uuid)', 'execute')
   then raise exception 'FAIL: app_shops_with_content_change is not a pinned definer for frata_app alone'; end if;
 end $$;
 begin;
@@ -4186,4 +4186,170 @@ do $$ declare r text; begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 83 checks passed'
+-- 84. Storefront API SA1b (0144; plan docs/plans/2026-11-16-sa1b.md; tenancy audit 2026-11-16 folded in). The sweeps
+-- page by shop id (the two-argument versions gone; a null cursor is the first page) and find a reinstated partner's
+-- shops; the domain-gone sweep is ids only; the Accept screen's key list is the invitee's own, built over
+-- app_my_handovers, names and prefixes only; Frrata Admin's view is counts and dates for frata_admin alone, its listed
+-- count visibility()'s own rule.
+insert into tenants (id, slug, name) values
+  ('c8400000-0000-0000-0000-000000000001', 'proof-c84', 'Proof C84'),
+  ('c8400000-0000-0000-0000-000000000002', 'proof-d84', 'Proof D84');
+insert into shop_settings (tenant_id, pickup_pincode) values
+  ('c8400000-0000-0000-0000-000000000001', '452009'), ('c8400000-0000-0000-0000-000000000002', '110017');
+insert into shop_domains (id, tenant_id, host, apex, with_www, claimed_by, proved_at, cert_ok_at) values
+  ('c8400000-0000-0000-0000-0000000000d1', 'c8400000-0000-0000-0000-000000000001', 'checkout.proof-c84.in', 'proof-c84.in', false, '99999999-9999-9999-9999-999999999999', now(), now()),
+  ('c8400000-0000-0000-0000-0000000000d2', 'c8400000-0000-0000-0000-000000000002', 'checkout.proof-d84.in', 'proof-d84.in', false, '99999999-9999-9999-9999-999999999999', now(), now());
+update shop_settings set site_origin = 'https://proof-c84.in', site_domain_id = 'c8400000-0000-0000-0000-0000000000d1' where tenant_id = 'c8400000-0000-0000-0000-000000000001';
+update shop_settings set site_origin = 'https://proof-d84.in', site_domain_id = 'c8400000-0000-0000-0000-0000000000d2' where tenant_id = 'c8400000-0000-0000-0000-000000000002';
+insert into auth.users (id, email, email_confirmed_at) values
+  ('c8400000-0000-0000-0000-0000000000e1', 'owner@proof-c84.test', now()),
+  ('c8400000-0000-0000-0000-0000000000e2', 'unconfirmed@proof-c84.test', null),
+  ('c8400000-0000-0000-0000-0000000000e3', 'dev@studio84.test', now()),
+  ('c8400000-0000-0000-0000-0000000000e4', 'staffer@proof-c84.test', now()),
+  ('c8400000-0000-0000-0000-0000000000e5', 'owner@proof-d84.test', now());
+insert into partners (id, user_id, email, name, business_name, phone, city, brands_now, terms_version, agreed_at, approved_at) values
+  ('c8400000-0000-0000-0000-0000000000a1', 'c8400000-0000-0000-0000-0000000000e3', 'dev@studio84.test', 'Studio 84', 'Studio 84', '919876543284', 'Indore', '0', 1, now(), now());
+insert into partner_members (partner_id, user_id, email, role, accepted_at) values
+  ('c8400000-0000-0000-0000-0000000000a1', 'c8400000-0000-0000-0000-0000000000e3', 'dev@studio84.test', 'owner', now());
+insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days) values
+  ('c8400000-0000-0000-0000-000000000001', 'c8400000-0000-0000-0000-0000000000a1', 2000, 24, 90),
+  ('c8400000-0000-0000-0000-000000000002', 'c8400000-0000-0000-0000-0000000000a1', 2000, 24, 90);
+insert into invites (id, tenant_id, email, role, created_by) values
+  ('c8400000-0000-0000-0000-0000000000b1', 'c8400000-0000-0000-0000-000000000001', 'owner@proof-c84.test', 'owner', 'c8400000-0000-0000-0000-0000000000e3'),
+  ('c8400000-0000-0000-0000-0000000000b2', 'c8400000-0000-0000-0000-000000000001', 'unconfirmed@proof-c84.test', 'owner', 'c8400000-0000-0000-0000-0000000000e3'),
+  ('c8400000-0000-0000-0000-0000000000b3', 'c8400000-0000-0000-0000-000000000001', 'dev@studio84.test', 'owner', 'c8400000-0000-0000-0000-0000000000e3'),
+  ('c8400000-0000-0000-0000-0000000000b4', 'c8400000-0000-0000-0000-000000000001', 'staffer@proof-c84.test', 'staff', 'c8400000-0000-0000-0000-0000000000e3'),
+  ('c8400000-0000-0000-0000-0000000000b5', 'c8400000-0000-0000-0000-000000000002', 'owner@proof-d84.test', 'owner', 'c8400000-0000-0000-0000-0000000000e3');
+insert into storefront_keys (id, tenant_id, kind, name, hash, prefix, partner_id, created_by, expires_at, revoked_at, revoked_by, last_seen_on, last_seen_version) values
+  ('c8400000-0000-0000-0000-00000000000a', 'c8400000-0000-0000-0000-000000000001', 'public', 'Website', repeat('1', 63) || 'a', 'frs_pub_c84aaa', 'c8400000-0000-0000-0000-0000000000a1', 'c8400000-0000-0000-0000-0000000000e3', null, null, null, current_date, '2026-12'),
+  ('c8400000-0000-0000-0000-00000000000b', 'c8400000-0000-0000-0000-000000000001', 'test', 'Preview', repeat('1', 63) || 'b', 'frs_test_c84bbb', 'c8400000-0000-0000-0000-0000000000a1', 'c8400000-0000-0000-0000-0000000000e3', now() + interval '30 days', null, null, null, null),
+  ('c8400000-0000-0000-0000-00000000000c', 'c8400000-0000-0000-0000-000000000001', 'public', 'Old', repeat('1', 63) || 'c', 'frs_pub_c84ccc', null, '99999999-9999-9999-9999-999999999999', null, now(), '99999999-9999-9999-9999-999999999999', null, null),
+  ('c8400000-0000-0000-0000-00000000000d', 'c8400000-0000-0000-0000-000000000002', 'public', 'D site', repeat('1', 63) || 'd', 'frs_pub_d84ddd', null, '99999999-9999-9999-9999-999999999999', null, null, null, null, null),
+  ('c8400000-0000-0000-0000-00000000000e', 'c8400000-0000-0000-0000-000000000002', 'public', 'D second', repeat('1', 63) || 'e', 'frs_pub_d84eee', null, '99999999-9999-9999-9999-999999999999', null, null, null, null, null);
+insert into products (tenant_id, handle, title, status, publish_at) values
+  ('c8400000-0000-0000-0000-000000000001', 'l84-active', 'A', 'active', null),
+  ('c8400000-0000-0000-0000-000000000001', 'l84-past', 'B', 'active', now() - interval '1 day'),
+  ('c8400000-0000-0000-0000-000000000001', 'l84-later', 'C', 'active', now() + interval '1 day'),
+  ('c8400000-0000-0000-0000-000000000001', 'l84-draft', 'D', 'draft', null),
+  ('c8400000-0000-0000-0000-000000000001', 'l84-unlisted', 'E', 'unlisted', null),
+  ('c8400000-0000-0000-0000-000000000001', 'l84-archived', 'F', 'archived', null),
+  ('c8400000-0000-0000-0000-000000000002', 'l84-d', 'G', 'active', null);
+-- the shapes: one function per sweep name, paged, ids only, frata_app alone; the two new definers pinned
+do $$ declare f text; begin
+  foreach f in array array['app_shops_with_boundary', 'app_shops_with_key_stop', 'app_shops_with_content_change', 'app_shops_with_domain_gone'] loop
+    if (select count(*) from pg_proc where proname = f) <> 1 then raise exception 'FAIL: % has more than one version (the two-argument one must be gone)', f; end if;
+    if pg_get_function_result((f || '(timestamptz, timestamptz, uuid)')::regprocedure) <> 'SETOF uuid' then raise exception 'FAIL: % returns more than ids', f; end if;
+    if pg_get_function_arguments((f || '(timestamptz, timestamptz, uuid)')::regprocedure) not like '%p_after uuid DEFAULT NULL%' then raise exception 'FAIL: % has no default cursor (a release would break the running deployment)', f; end if;
+    if not (select prosecdef from pg_proc where oid = (f || '(timestamptz, timestamptz, uuid)')::regprocedure)
+       or (select proconfig from pg_proc where oid = (f || '(timestamptz, timestamptz, uuid)')::regprocedure) is distinct from array['search_path=""']
+       or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin']) r where has_function_privilege(r, (f || '(timestamptz, timestamptz, uuid)'), 'execute'))
+       or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = (f || '(timestamptz, timestamptz, uuid)')::regprocedure and a.grantee = 0)
+       or not has_function_privilege('frata_app', (f || '(timestamptz, timestamptz, uuid)'), 'execute')
+    then raise exception 'FAIL: % is not a pinned definer for frata_app alone', f; end if;
+  end loop;
+  if pg_get_function_result('app_my_handover_keys(uuid)'::regprocedure) is distinct from 'TABLE(invite_id uuid, site_host text, name text, kind text, prefix text)'
+  then raise exception 'FAIL: app_my_handover_keys returns %', pg_get_function_result('app_my_handover_keys(uuid)'::regprocedure); end if;
+  if not (select prosecdef from pg_proc where oid = 'app_my_handover_keys(uuid)'::regprocedure)
+     or (select proconfig from pg_proc where oid = 'app_my_handover_keys(uuid)'::regprocedure) is distinct from array['search_path=""']
+     or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder']) r where has_function_privilege(r, 'app_my_handover_keys(uuid)', 'execute'))
+     or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_my_handover_keys(uuid)'::regprocedure and a.grantee = 0)
+     or not has_function_privilege('frata_app', 'app_my_handover_keys(uuid)', 'execute')
+  then raise exception 'FAIL: app_my_handover_keys is not a pinned definer for frata_app alone'; end if;
+  if pg_get_function_result('admin_storefront_api_shops()'::regprocedure) is distinct from
+     'TABLE(tenant_id uuid, name text, slug text, site_host text, main_host text, published boolean, opened_at timestamp with time zone, live_keys integer, test_keys integer, last_read date, last_version text, partner text)'
+  then raise exception 'FAIL: admin_storefront_api_shops returns %', pg_get_function_result('admin_storefront_api_shops()'::regprocedure); end if;
+  foreach f in array array['admin_storefront_api_shops()', 'admin_storefront_api_listed(uuid)'] loop
+    if not (select prosecdef from pg_proc where oid = f::regprocedure)
+       or (select proconfig from pg_proc where oid = f::regprocedure) is distinct from array['search_path=""']
+       or exists (select 1 from unnest(array['anon', 'authenticated', 'service_role', 'frata_app', 'frata_builder']) r where has_function_privilege(r, f, 'execute'))
+       or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = f::regprocedure and a.grantee = 0)
+       or not has_function_privilege('frata_admin', f, 'execute')
+    then raise exception 'FAIL: % is not a pinned definer for frata_admin alone', f; end if;
+  end loop;
+  if pg_get_function_result('admin_storefront_api_shops()'::regprocedure) ~ '(hash|prefix|key_name)' then raise exception 'FAIL: Admin reads key material'; end if;
+  if not exists (select 1 from pg_indexes where indexname = 'audit_events_partner_reinstated') then raise exception 'FAIL: the reinstatement index is missing'; end if;
+  if has_table_privilege('frata_app', 'audit_events', 'update') or has_table_privilege('frata_app', 'audit_events', 'delete') then raise exception 'FAIL: audit_events grants changed'; end if;
+end $$;
+-- the Accept screen's key list: the invitee's own live store invite, its live keys, names and prefixes only
+begin; set local role frata_app;
+do $$ declare n int; begin
+  select count(*) into n from app_my_handover_keys('c8400000-0000-0000-0000-0000000000e1');
+  if n <> 2 then raise exception 'FAIL: the invitee sees % keys, not C''s live and test key', n; end if;
+  if exists (select 1 from app_my_handover_keys('c8400000-0000-0000-0000-0000000000e1') where invite_id <> 'c8400000-0000-0000-0000-0000000000b1' or prefix like 'frs_pub_d84%' or name = 'Old')
+  then raise exception 'FAIL: C''s invitee sees another invite, D''s keys or a deleted key'; end if;
+  if (select site_host from app_my_handover_keys('c8400000-0000-0000-0000-0000000000e1') limit 1) <> 'proof-c84.in' then raise exception 'FAIL: the site host'; end if;
+  if exists (select 1 from app_my_handover_keys('c8400000-0000-0000-0000-0000000000e2')) then raise exception 'FAIL: an unconfirmed email sees keys'; end if;
+  if exists (select 1 from app_my_handover_keys('c8400000-0000-0000-0000-0000000000e3')) then raise exception 'FAIL: a person in the partner''s team sees the keys'; end if;
+  if exists (select 1 from app_my_handover_keys('c8400000-0000-0000-0000-0000000000e4')) then raise exception 'FAIL: a staff invite sees the keys'; end if;
+  if exists (select 1 from app_my_handover_keys(gen_random_uuid())) then raise exception 'FAIL: a stranger sees keys'; end if;
+  if (select count(*) from app_my_handover_keys('c8400000-0000-0000-0000-0000000000e5')) <> 2 or exists (select 1 from app_my_handover_keys('c8400000-0000-0000-0000-0000000000e5') where prefix like 'frs_%c84%')
+  then raise exception 'FAIL: D''s invitee sees other than D''s keys'; end if;
+end $$;
+commit;
+update invites set revoked_at = now() where id = 'c8400000-0000-0000-0000-0000000000b5';
+update tenants set first_opened_at = now() where id = 'c8400000-0000-0000-0000-000000000001';
+begin; set local role frata_app;
+do $$ begin
+  if exists (select 1 from app_my_handover_keys('c8400000-0000-0000-0000-0000000000e5')) then raise exception 'FAIL: a revoked invite sees keys'; end if;
+  if exists (select 1 from app_my_handover_keys('c8400000-0000-0000-0000-0000000000e1') where kind = 'test') then raise exception 'FAIL: a test key listed after the store first opened'; end if;
+end $$;
+commit;
+insert into members (tenant_id, user_id, role) values ('c8400000-0000-0000-0000-000000000001', '99999999-9999-9999-9999-999999999999', 'owner');
+begin; set local role frata_app;
+do $$ begin
+  if exists (select 1 from app_my_handover_keys('c8400000-0000-0000-0000-0000000000e1')) then raise exception 'FAIL: keys listed for a store that already has an owner'; end if;
+end $$;
+commit;
+delete from members where tenant_id = 'c8400000-0000-0000-0000-000000000001';
+update tenants set first_opened_at = null where id = 'c8400000-0000-0000-0000-000000000001';
+-- Frrata Admin: counts and dates, each store its own; listed is visibility()'s rule (active, not scheduled)
+begin; set local role frata_admin;
+do $$ declare c record; d record; begin
+  select * into c from admin_storefront_api_shops() where tenant_id = 'c8400000-0000-0000-0000-000000000001';
+  select * into d from admin_storefront_api_shops() where tenant_id = 'c8400000-0000-0000-0000-000000000002';
+  if c.live_keys <> 1 or c.test_keys <> 1 or c.last_read <> current_date or c.last_version <> '2026-12' or c.site_host <> 'proof-c84.in' or c.partner <> 'Studio 84'
+  then raise exception 'FAIL: C''s row is % (a deleted key counted, or another store''s)', row_to_json(c); end if;
+  if d.live_keys <> 2 or d.test_keys <> 0 or d.last_read is not null then raise exception 'FAIL: D''s row is %', row_to_json(d); end if;
+  if admin_storefront_api_listed('c8400000-0000-0000-0000-000000000001') <> 2 then raise exception 'FAIL: listed is not active-and-not-scheduled (%)', admin_storefront_api_listed('c8400000-0000-0000-0000-000000000001'); end if;
+  if admin_storefront_api_listed('c8400000-0000-0000-0000-000000000002') <> 1 then raise exception 'FAIL: D''s listed count'; end if;
+end $$;
+commit;
+-- a partner reinstated: its shops with a live partner key are swept, in the window only; no key, no sweep
+insert into audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, detail, at) values
+  ('c8400000-0000-0000-0000-000000000001', '99999999-9999-9999-9999-999999999999', 'admin@frata.test', 'staff', 'shop.partner_reinstated', '{"partner":"Studio 84"}', now() - interval '1 minute'),
+  ('c8400000-0000-0000-0000-000000000002', '99999999-9999-9999-9999-999999999999', 'admin@frata.test', 'staff', 'shop.partner_reinstated', '{"partner":"Studio 84"}', now() - interval '1 minute'),
+  (null, '99999999-9999-9999-9999-999999999999', 'admin@frata.test', 'staff', 'shop.partner_reinstated', '{"partner":"Studio 84"}', now() - interval '1 minute');
+begin; set local role frata_app;
+do $$ begin
+  if not exists (select 1 from app_shops_with_key_stop(now() - interval '6 minutes', now()) s where s = 'c8400000-0000-0000-0000-000000000001') then raise exception 'FAIL: a reinstated partner''s shop was not swept'; end if;
+  if exists (select 1 from app_shops_with_key_stop(now() - interval '6 minutes', now()) s where s = 'c8400000-0000-0000-0000-000000000002') then raise exception 'FAIL: a shop with no partner key was swept for a reinstatement'; end if;
+  if exists (select 1 from app_shops_with_key_stop(now() - interval '6 minutes', now()) s where s is null) then raise exception 'FAIL: a null shop from an audit row with no tenant'; end if;
+  if exists (select 1 from app_shops_with_key_stop(now() - interval '1 hour', now() - interval '30 minutes') s where s in ('c8400000-0000-0000-0000-000000000001', 'c8400000-0000-0000-0000-000000000002')) then raise exception 'FAIL: a reinstatement outside the window was swept'; end if;
+end $$;
+commit;
+-- a domain gone: its shop's id, in the window only
+update shop_domains set removed_at = now(), removed_reason = 'proof', removed_by = '99999999-9999-9999-9999-999999999999' where id = 'c8400000-0000-0000-0000-0000000000d2';
+begin; set local role frata_app;
+do $$ begin
+  if not exists (select 1 from app_shops_with_domain_gone(now() - interval '6 minutes', now()) s where s = 'c8400000-0000-0000-0000-000000000002') then raise exception 'FAIL: a domain gone was not swept'; end if;
+  if exists (select 1 from app_shops_with_domain_gone(now() - interval '6 minutes', now()) s where s = 'c8400000-0000-0000-0000-000000000001') then raise exception 'FAIL: a shop that kept its domain was swept'; end if;
+  if exists (select 1 from app_shops_with_domain_gone(now() - interval '1 hour', now() - interval '30 minutes')) then raise exception 'FAIL: the domain sweep reached outside its window'; end if;
+end $$;
+commit;
+-- paging: 601 shops with a moment in the window are two pages, no repeats, each id after the cursor; null is page one
+begin;
+insert into tenants (id, slug, name) select ('c8410000-0000-0000-0000-' || lpad(i::text, 12, '0'))::uuid, 'proof-p84-' || i, 'P' || i from generate_series(1, 601) i;
+insert into products (tenant_id, handle, title, status, publish_at) select ('c8410000-0000-0000-0000-' || lpad(i::text, 12, '0'))::uuid, 'p', 'P', 'active', now() - interval '1 minute' from generate_series(1, 601) i;
+set local role frata_app;
+do $$ declare a uuid[]; b uuid[]; z uuid[]; last uuid; begin
+  select array_agg(s) into a from app_shops_with_boundary(now() - interval '6 minutes', now()) s;
+  select array_agg(s) into z from app_shops_with_boundary(now() - interval '6 minutes', now(), null) s;
+  if a is distinct from z then raise exception 'FAIL: a null cursor is not the first page'; end if;
+  if cardinality(a) <> 500 then raise exception 'FAIL: the first page holds %, not 500', cardinality(a); end if;
+  last := a[500];
+  select array_agg(s) into b from app_shops_with_boundary(now() - interval '6 minutes', now(), last) s;
+  if exists (select 1 from unnest(b) x where x <= last) then raise exception 'FAIL: the second page repeats or goes back'; end if;
+  if (select count(distinct x) from unnest(a || b) x where x::text like 'c8410000%') <> 601 then raise exception 'FAIL: two pages miss shops'; end if;
+end $$;
+rollback;
+\echo 'tenancy proof — all 84 checks passed'
