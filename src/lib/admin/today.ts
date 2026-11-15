@@ -119,7 +119,23 @@ async function gather(staff: StaffOk): Promise<Gathered> {
   const now = new Date()
   const sources = sourcesFor(staff.role)
   const missed: TodayKind[] = []
-  const lists = await Promise.all(sources.map((s) => READERS[s.kind](staff, now).catch((err) => { console.error('[admin today]', s.kind, errName(err)); missed.push(s.kind); return [] })))
+  // One source at a time, each with its own limit (production, 2026-11-15: nine reads at once on Admin's two pooled
+  // connections left one stuck mid-transaction and the page loading for ever). A late or failing source is left out
+  // and named ("Couldn't check"), never waited on: Today always renders. The whole gather stays under ~4 s.
+  const lists: TodayItem[][] = []
+  const until = Date.now() + 4_000
+  for (const s of sources) {
+    const left = until - Date.now()
+    if (left <= 0) { missed.push(s.kind); continue }
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const late = new Promise<'late'>((r) => { timer = setTimeout(() => r('late'), Math.min(1_500, left)) })
+    try {
+      const got = await Promise.race([READERS[s.kind](staff, now), late])
+      if (got === 'late') { console.error('[admin today]', s.kind, 'late'); missed.push(s.kind) } else lists.push(got)
+    } catch (err) {
+      console.error('[admin today]', s.kind, errName(err)); missed.push(s.kind)
+    } finally { clearTimeout(timer) }
+  }
   return { items: orderItems(lists.flat()), missed }
 }
 
