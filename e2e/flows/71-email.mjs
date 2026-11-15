@@ -80,7 +80,7 @@ export default {
         await nd.getByLabel('Kind').selectOption('security')
         await nd.getByLabel('Title').fill('We changed how support visits work')
         await nd.getByLabel('Must read (billing, security, a Frrata change)').check()
-        await nd.getByRole('button', { name: 'Send' }).click()
+        await nd.getByRole('button', { name: 'Send notice' }).click()
         await expectToast(admin.p, 'Sent to 1 store.', 'ok')
         await admin.p.getByRole('cell', { name: 'We changed how support visits work' }).waitFor()
       } finally { await admin.ctx.close() }
