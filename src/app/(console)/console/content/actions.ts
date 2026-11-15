@@ -31,8 +31,8 @@ import { FAQ_ID, FaqItemSchema, MAX_FAQ, PageDraftSchema, type FaqItem, type Pag
 
 // =============================================================================
 // Console › Content (V1, plan docs/plans/2026-11-15-v1-content.md; owner-approved mockup 2026-11-15). A save is LIVE.
-// Who (src/domains/content/who.ts): owners and Managers; a partner only while the store has no owner (read in the
-// save's transaction, failing closed); staff and everyone else read only; a Frrata support
+// Who (src/domains/content/who.ts): the owner, Managers and the store's partner, before and after handover (owner,
+// 2026-11-15; a partner's save is told in Notices: toldOwner); staff and everyone else read only; a Frrata support
 // visit never saves. Every write: the shop's save limit (counted first, given back when refused), the domain's schema,
 // the row found under the member's own store with the version the editor holds (a stale save is refused in words with
 // who saved last, as a role), `previous` := the entry before, one audit row (field names only, never the words). Undo
@@ -101,12 +101,14 @@ async function byOf(tx: Tx, t: string, userId: string | null, me: string): Promi
 /** A partner's save tells the owner in the Inbox (owner, 2026-11-15). Asked on every save: the definer decides from the
  *  rows themselves (the store, the row's saver, whether that is the store's partner and whether there is an owner) and
  *  writes one line per place an hour; anyone else's save writes none. */
-const toldOwner = async (tx: Tx, table: 'site_content' | 'shop_pages', id: string) => {
-  await tx.execute(sql`select app_content_partner_notice(${table}, ${id}::uuid)`)
+const toldOwner = async (tx: Tx, table: 'site_content' | 'shop_pages', id: string, action: string) => {
+  // The verb the line says (the definer words it from this fixed set; anything else reads "changed").
+  const verb = /(^|\.)add$/.test(action) ? 'added' : /(^|\.)end$/.test(action) ? 'ended' : /(^|\.)delete$/.test(action) ? 'deleted' : 'changed'
+  await tx.execute(sql`select app_content_partner_notice(${table}, ${id}::uuid, ${verb})`)
 }
 const audit = async (tx: Tx, auth: Auth, action: string, id: string, kind: string, key: string, version: number, fields: string[]) => {
   await memberAudit(tx, auth, `content.${action}`, id, { kind, key, version, fields })
-  await toldOwner(tx, 'site_content', id)
+  await toldOwner(tx, 'site_content', id, action)
 }
 
 // ── Bars ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -281,7 +283,7 @@ async function putPage(tx: Tx, auth: Auth, row: typeof shopPages.$inferSelect, d
     throw e
   }
   await memberAudit(tx, auth, `content.${action}`, row.id, { kind: 'page', key: row.template, version, fields: ['title', 'handle', 'fill', 'hidden'] })
-  await toldOwner(tx, 'shop_pages', row.id)
+  await toldOwner(tx, 'shop_pages', row.id, action)
   return { done: true, id: row.id, version }
 }
 
@@ -300,7 +302,7 @@ export async function addPageAction(input: unknown): Promise<R<{ id: string; ver
     if (rows.some((x) => (x.draft as { handle?: string }).handle === d.data.handle)) return { error: 'Another page has that address. Pick another.', field: 'handle' }
     const [row] = await tx.insert(shopPages).values({ tenantId: t, template: 'about', draft: d.data, updatedBy: auth.userId }).returning({ id: shopPages.id, version: shopPages.version })
     await memberAudit(tx, auth, 'content.page.add', row!.id, { kind: 'page', key: 'about', version: row!.version, fields: ['title', 'handle'] })
-    await toldOwner(tx, 'shop_pages', row!.id)
+    await toldOwner(tx, 'shop_pages', row!.id, 'page.add')
     return { done: true, id: row!.id, version: row!.version }
   })
 }

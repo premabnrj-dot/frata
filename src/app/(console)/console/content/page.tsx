@@ -68,7 +68,10 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
   const canSave = saver === 'yes'
   // Who can, said as roles (the console has no names): the owner, a Manager or the store's partner (owner, 2026-11-15).
   // A support visit says so once, in the banner (as drawn), not on every section.
-  const lock = canSave || saver === 'support' ? null : `Only the ${ROLE_LABEL.owner.toLowerCase()}, a ${ROLE_LABEL.admin.toLowerCase()} or the ${ROLE_LABEL.partner.toLowerCase()} can edit`
+  // Only roles this store has: the partner is named only where there is one (words review 2026-11-15).
+  const lock = canSave || saver === 'support' ? null : data.hasPartner
+    ? `Only the ${ROLE_LABEL.owner.toLowerCase()}, a ${ROLE_LABEL.admin} or the ${ROLE_LABEL.partner.toLowerCase()} can edit`
+    : `Only the ${ROLE_LABEL.owner.toLowerCase()} or a ${ROLE_LABEL.admin} can edit`
 
   // ── Announcement ─────────────────────────────────────────────────────────────────────────────────────────────
   const offerLive = offerBarLive(offer, now)

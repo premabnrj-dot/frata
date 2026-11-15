@@ -49,7 +49,7 @@ export default {
         try {
           await staff.p.goto(CONSOLE + '/console/content?tab=contact')
           await staff.p.screenshot({ path: t.out('content-staff-contact') })
-          await staff.p.getByText(/^Only the owner/).first().waitFor()
+          await staff.p.getByText('Only the owner or a Manager can edit', { exact: true }).first().waitFor() // no partner on the store yet: only roles it has
           assert.equal(await staff.p.getByRole('button', { name: 'Save' }).count(), 0, 'no Save for staff')
           assert.ok(await staff.p.getByLabel(/^Line/).isDisabled())
           await staff.p.goto(CONSOLE + '/console/content')

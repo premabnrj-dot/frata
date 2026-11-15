@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, desc, eq, inArray, notExists, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, ne, notExists, or, sql } from 'drizzle-orm'
 import { withTenant } from '@/lib/db/tenant'
 import { noticePrefs, noticeReads, notices } from '@/lib/db/schema-email'
 import { billingNotices, frrataInvoices } from '@/lib/db/schema-billing'
@@ -71,10 +71,13 @@ export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string): 
   return out
 }
 
+const notSelf = (userId: string) => or(isNull(notices.by), ne(notices.by, userId))
+
 /** The latest notices for this member, newest first, with whether they read each. */
 export async function listNotices(tenantId: string, userId: string, shopName: string, limit = 50): Promise<ShownNotice[]> {
   return withTenant(tenantId, async (tx) => {
-    const rows = await tx.select().from(notices).where(eq(notices.tenantId, tenantId)).orderBy(desc(notices.createdAt)).limit(limit)
+    // A person isn't shown a notice about their own change (a partner's Content save names its saver in `by`).
+    const rows = await tx.select().from(notices).where(and(eq(notices.tenantId, tenantId), notSelf(userId))).orderBy(desc(notices.createdAt)).limit(limit)
     if (!rows.length) return []
     const [reads, words] = await Promise.all([
       tx.select({ id: noticeReads.noticeId }).from(noticeReads).where(and(eq(noticeReads.tenantId, tenantId), eq(noticeReads.userId, userId), inArray(noticeReads.noticeId, rows.map((r) => r.id)))),
@@ -88,7 +91,7 @@ export async function listNotices(tenantId: string, userId: string, shopName: st
 /** Unread notices for this member, capped (the bell shows "9+"; speed review P8). Inside the caller's transaction. */
 export async function unreadNotices(tx: Tx, tenantId: string, userId: string): Promise<number> {
   const rows = await tx.select({ id: notices.id }).from(notices)
-    .where(and(eq(notices.tenantId, tenantId), notExists(tx.select({ x: sql`1` }).from(noticeReads).where(and(eq(noticeReads.noticeId, notices.id), eq(noticeReads.userId, userId))))))
+    .where(and(eq(notices.tenantId, tenantId), notSelf(userId), notExists(tx.select({ x: sql`1` }).from(noticeReads).where(and(eq(noticeReads.noticeId, notices.id), eq(noticeReads.userId, userId))))))
     .orderBy(desc(notices.createdAt)).limit(10)
   return rows.length
 }

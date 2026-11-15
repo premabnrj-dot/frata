@@ -296,7 +296,7 @@ from it).
   line save from their dialog or field.
 - **Every save is a toast with Undo** (the saver's own, a minute); End now and Delete too. A stale save is an error toast
   naming who saved, as a role ("The owner changed this today, 10:42 pm. Reload to see it.").
-- **Read only says who can**, as a chip: "Only the owner, a Manager or the partner can edit" (staff, accountants); a support visit
+- **Read only says who can**, as a chip: "Only the owner, a Manager or the partner can edit" (staff, accountants; the partner named only where the store has one); a support visit
   sees "Support visit · read only". Edit is disabled, never hidden.
 - **What comes from Settings is read-only here** with "From Settings" and Change in Settings (an FAQ answer, the Contact
   page's details).

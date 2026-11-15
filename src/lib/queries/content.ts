@@ -62,9 +62,11 @@ export function byOf(updatedBy: string | null, userId: string, roles: Map<string
  */
 export async function contentEditorData(tenantId: string, userId: string) {
   return withTenant(tenantId, async (tx) => {
-    const [rows, hasOwner, pages, cols, prods, photos] = await Promise.all([
+    const [rows, hasOwner, partner, pages, cols, prods, photos] = await Promise.all([
       contentRowsIn(tx, tenantId, userId),
       hasOwnerIn(tx, tenantId),
+      // Whether the store has a partner: the read-only chip names only roles the store has (words review 2026-11-15).
+      tx.select({ id: members.userId }).from(members).where(and(eq(members.tenantId, tenantId), eq(members.role, 'partner'))).limit(1),
       tx.select({ id: shopPages.id, template: shopPages.template, version: shopPages.version, draft: shopPages.draft, live: shopPages.live, updatedAt: shopPages.updatedAt })
         .from(shopPages).where(and(eq(shopPages.tenantId, tenantId), isNull(shopPages.removedAt))).orderBy(asc(shopPages.createdAt)),
       tx.select({ handle: collections.handle, title: collections.title }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)).limit(200),
@@ -74,6 +76,6 @@ export async function contentEditorData(tenantId: string, userId: string) {
         .from(productImages).innerJoin(products, and(eq(products.id, productImages.productId), eq(products.tenantId, productImages.tenantId)))
         .where(and(eq(productImages.tenantId, tenantId), eq(productImages.position, 0), eq(products.status, 'active'))).orderBy(desc(productImages.createdAt)).limit(24),
     ])
-    return { rows, hasOwner, pages, collections: cols, products: prods, photos }
+    return { rows, hasOwner, hasPartner: partner.length > 0, pages, collections: cols, products: prods, photos }
   })
 }

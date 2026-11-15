@@ -63,19 +63,30 @@ describe.skipIf(!host)('Console › Content actions', () => {
     expect(JSON.stringify(a!.detail)).not.toMatch(/We reply/) // field names only, never the words
   })
 
-  it('the partner saves after handover, and the owner is told in the Inbox once per place an hour; the owner\'s save tells no one', async () => {
-    const told = async () => (await su`select title, href, type from notices where tenant_id = ${T} and source_kind = 'content' and source_id is not null`)
+  it('the partner saves after handover; the store is told in Notices once per partner an hour, never the saver; the owner\'s save tells no one', async () => {
+    const told = async () => (await su`select title, href, type from notices where tenant_id = ${T} and source_kind = 'content' and source_id is not null order by created_at`)
     as(PARTNER, 'partner')
     const m = await A.saveMenuAction({ key: 'main', version: null, items: [{ id: 'a', label: 'Sarees', link: '/products', icon: null, children: [] }] })
     if (!m.ok) throw new Error(m.error)
-    expect(await told()).toEqual([{ title: 'Your partner changed the main menu', href: '/console/content?tab=menus', type: 'needs_you' }])
+    expect(await told()).toEqual([{ title: 'Your partner added the main menu', href: '/console/content?tab=menus', type: 'needs_you' }])
     expect((await A.saveMenuAction({ key: 'main', version: m.version, items: [] })).ok).toBe(true)
-    expect(await told()).toHaveLength(1) // the same place within the hour: one line
+    expect((await A.saveFaqAction({ id: null, version: null, items: [{ q: 'Do you ship abroad?', a: 'Not yet.' }] })).ok).toBe(true)
+    expect(await told()).toHaveLength(1) // one line per partner an hour, whatever they touch
+    // An hour on: the FAQ's own words, on its own tab.
+    await su`update notices set created_at = now() - interval '61 minutes' where tenant_id = ${T} and source_kind = 'content'`
+    const [faq] = await su`select id, version from shop_pages where tenant_id = ${T} and template = 'faq'`
+    expect((await A.saveFaqAction({ id: faq!.id, version: faq!.version, items: [{ q: 'Do you ship abroad?', a: 'From January.' }] })).ok).toBe(true)
+    expect((await told()).at(-1)).toEqual({ title: 'Your partner changed the FAQ', href: '/console/content?tab=faq', type: 'needs_you' })
     as(OWNER, 'owner')
     expect((await A.saveMenuAction({ key: 'main', version: m.version + 1, items: [] })).ok).toBe(true)
-    expect(await told()).toHaveLength(1)
-    const [n] = await su`select body from notices where tenant_id = ${T} and source_kind = 'content' and source_id is not null`
-    expect(n!.body).not.toMatch(/Sarees/) // the place, never the words
+    expect(await told()).toHaveLength(2)
+    const bodies = await su`select title, body from notices where tenant_id = ${T} and source_kind = 'content' and source_id is not null`
+    expect(JSON.stringify(bodies)).not.toMatch(/Sarees|abroad|January/) // the place, never the words
+    // The saver isn't shown their own line; the owner is.
+    const { listNotices } = await import('@/lib/queries/notices')
+    expect((await listNotices(T, PARTNER, 'Content test')).filter((n) => /Your partner/.test(n.title))).toHaveLength(0)
+    expect((await listNotices(T, OWNER, 'Content test')).filter((n) => /Your partner/.test(n.title))).toHaveLength(2)
+    await su`delete from shop_pages where tenant_id = ${T} and template = 'faq'` // the pages test makes its own FAQ
   })
 
   it('a stale save is refused, naming who saved as a role; nothing changes', async () => {

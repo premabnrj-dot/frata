@@ -18,5 +18,5 @@ export function contentSaver(role: string, supportSessionId: string | null): Con
 
 export const SAVER_REFUSAL: Record<Exclude<ContentSaver, 'yes'>, string> = {
   support: 'Frrata support can look, not change the store’s content.',
-  read_only: 'Only the owner, a Manager or the partner can change content.',
+  read_only: 'Only the owner, a Manager or the store’s partner can change content. Nothing was changed.',
 }
