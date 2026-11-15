@@ -116,7 +116,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                     {c.next?.action === 'recordBill' && <Link href={`/partner/clients/${c.row.linkId}?record=1`} prefetch={false} className={button({ variant: 'secondary', size: 'sm' })}>Record bill</Link>}
                   </Td>}
                   {owner && <Td cell="b" className="text-right">{c.deal ? <><Money paise={c.deal.amount} />{c.deal.kind === 'retainer' ? <span className="text-muted-foreground"> a month</span> : null}</> : <span className="text-muted-foreground">—</span>}</Td>}
-                  {builder && <Td cell="b" className="w-px whitespace-nowrap text-right">
+                  {builder && <Td cell="b" className="whitespace-nowrap text-right md:w-px">
                     <form action={switchStoreAction}><input type="hidden" name="tenantId" value={c.row.tenantId} /><button type="submit" className={button({ variant: 'secondary', size: 'sm', className: 'whitespace-nowrap' })}>Open store</button></form>
                   </Td>}
                 </DataTableRow>
