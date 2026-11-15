@@ -12,6 +12,9 @@ import assert from 'node:assert/strict'
 import { CONSOLE, FAKE_CHECKOUT, SHOP, USERS, expectToast, partnerOn, playwright, signedIn, until } from '../lib.mjs'
 const { devices } = playwright
 
+// The offer form folds what the board did not draw ("Limits and more", N2b): open it before ticking what is in it.
+const openMore = async (p) => { const b = p.getByRole('button', { name: /^Limits and more/ }); if ((await b.getAttribute('aria-expanded')) === 'false') await b.click() }
+
 export default {
   name: 'offers',
   async run(t) {
@@ -34,7 +37,7 @@ export default {
         await c.getByRole('link', { name: 'New offer' }).first().click()
         await c.waitForURL(/\/console\/offers\/new/)
         await c.fill('#o-title', 'Festive'); await c.fill('#o-value', '10'); await c.fill('#o-min', '2000')
-        await c.getByLabel(/Show it in the bar/).check()
+        await openMore(c); await c.getByLabel(/Show it in the bar/).check()
         await c.getByRole('button', { name: 'Save as draft' }).click()
         await c.waitForURL(/\/console\/offers\/[0-9a-f-]{36}$/)
         await c.getByText('Draft', { exact: true }).first().waitFor()
@@ -44,7 +47,7 @@ export default {
       })
       await t.step('and a "pay online, save ₹50", which takes over the bar', async () => {
         await c.goto(CONSOLE + '/console/offers/new?style=pay_online')
-        await c.getByLabel(/Show it in the bar/).check() // moves the bar from Festive: one offer in it at a time
+        await openMore(c); await c.getByLabel(/Show it in the bar/).check() // moves the bar from Festive: one offer in it at a time
         await c.getByRole('button', { name: 'Save as draft' }).click()
         await c.waitForURL(/\/console\/offers\/[0-9a-f-]{36}$/)
         await c.getByRole('button', { name: 'Start', exact: true }).click()

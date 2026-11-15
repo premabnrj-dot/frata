@@ -4,7 +4,7 @@ import { Panel } from '@/components/ui/panel'
 import Link from 'next/link'
 import { OFFER_TEMPLATES, toIst, type OfferValues } from '@/domains/checkout/offer-form'
 import { DISCOUNT_STYLES } from '@/domains/checkout/discounts'
-import { CAN_BUILD, CAN_MANAGE, requireMember } from '@/lib/auth/require-member'
+import { CAN_BUILD, requireMember } from '@/lib/auth/require-member'
 import { OfferEditor } from '../_components/offer-editor'
 import { offerExampleFor, offerPickers } from '@/lib/queries/discounts'
 
@@ -30,7 +30,6 @@ export default async function NewOfferPage({ searchParams }: { searchParams: Pro
   return (
     <div className="max-w-6xl">
       <PageHeader title="New offer" back={{ href: '/console/offers', label: 'Offers' }} />
-      <p className="mb-4 text-sm text-muted-foreground">Saved as a draft. {(CAN_MANAGE as readonly string[]).includes(auth.membership.role) ? 'Start it when you are ready.' : 'The owner or a manager starts it.'}</p>
       <nav aria-label="Start from" className="mb-4 flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted-foreground">Start from:</span>
         {OFFER_TEMPLATES.map((t) => <Link key={t.key} href={`/console/offers/new?from=${t.key}`} aria-current={from?.key === t.key ? 'true' : undefined}

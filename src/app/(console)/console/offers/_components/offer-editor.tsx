@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { keptWithOff, type OfferExample } from '@/domains/orders/offer-kept'
+import { FoldSection } from '@/components/layout/fold-section'
+import { Segmented } from '@/components/ui/segmented'
 import { Section } from '@/components/layout/section'
 import { Button } from '@/components/ui/button'
 import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import { FieldError, errorId, fieldProps, useErrorSummary } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
-import { STYLE_LABEL, parseOffer, type OfferValues } from '@/domains/checkout/offer-form'
+import { parseOffer, type OfferValues } from '@/domains/checkout/offer-form'
 import { barText } from '@/domains/checkout/offer-text'
 import type { DiscountStyle } from '@/domains/checkout/discounts'
 import { formatInr } from '@/lib/format'
@@ -27,6 +29,14 @@ import { FIELD } from '@/components/ui/field'
 const inr = (p: number) => formatInr(paise(p))
 const field = `${FIELD} w-full`
 
+
+// The kinds as drawn (Offer board: Order offer, Pay online, Free delivery, Buy more), then the two the board did not draw.
+const KIND_ORDER: DiscountStyle[] = ['order_off', 'pay_online', 'free_shipping', 'bxgy', 'product_off', 'free_gift']
+const KIND_CARD: Record<DiscountStyle, { name: string; line: string }> = {
+  order_off: { name: 'Order offer', line: 'Off the bag' }, pay_online: { name: 'Pay online', line: 'Less for paying now' },
+  free_shipping: { name: 'Free delivery', line: 'Above a bag total' }, bxgy: { name: 'Buy more', line: 'Buy 2, get 1 free' },
+  product_off: { name: 'Products off', line: 'On chosen products' }, free_gift: { name: 'Free gift', line: 'Above a bag total' },
+}
 /** What a shopper reads for these values: the bar's own words (offer-text.ts), from the same parse the action uses. */
 function preview(v: OfferValues): { bar: string; bag: string } | null {
   const p = parseOffer(v)
@@ -109,10 +119,10 @@ export function OfferEditor({ id, initial, locked, pickers, example = null }: { 
         <Section title="What kind">
           <fieldset><legend className="sr-only">Offer style</legend>
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {(Object.keys(STYLE_LABEL) as DiscountStyle[]).map((k) => (
+              {KIND_ORDER.map((k) => (
                 <label key={k} className={`flex cursor-pointer gap-2 rounded-mid border p-3 text-sm ${style === k ? 'border-ring bg-select' : 'border-border hover:bg-accent'}`}>
                   <input type="radio" name="style" checked={style === k} onChange={() => set({ style: k, kind: k === 'pay_online' ? 'amount' : v.kind })} className="mt-0.5" />
-                  <span><span className="font-medium">{STYLE_LABEL[k].name}</span><span className="block text-xs text-muted-foreground">{STYLE_LABEL[k].line}</span></span>
+                  <span><span className="font-medium">{KIND_CARD[k].name}</span><span className="block text-xs text-muted-foreground">{KIND_CARD[k].line}</span></span>
                 </label>
               ))}
             </div>
@@ -121,51 +131,58 @@ export function OfferEditor({ id, initial, locked, pickers, example = null }: { 
       )}
 
       <Section title="The offer">
-        <div className="space-y-1"><label htmlFor="o-title" className={lab}>Name <span className="font-normal text-muted-foreground">(shown to shoppers)</span></label>
-          <input id="o-title" value={v.title} maxLength={60} placeholder="Diwali sale" {...fp('title')} onChange={(e) => set({ title: e.target.value })} className={field} />{err('title')}</div>
-        {(style === 'order_off' || style === 'product_off' || style === 'pay_online') && (
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1"><label htmlFor="o-kind" className={lab}>Off</label>
-              <select id="o-kind" value={v.kind} onChange={(e) => set({ kind: e.target.value })} className={field}><option value="percent">a percentage</option><option value="amount">an amount (₹)</option></select></div>
-            <div className="space-y-1"><label htmlFor="o-value" className={lab}>{v.kind === 'percent' ? 'Percent' : 'Rupees'}</label>
-              <input id="o-value" inputMode="decimal" value={v.value} placeholder={v.kind === 'percent' ? '10' : '50'} {...fp('value')} onChange={(e) => set({ value: e.target.value })} className={field} />{err('value')}</div>
-            {v.kind === 'percent' && <div className="space-y-1"><label htmlFor="o-cap" className={lab}>At most ₹ <span className="font-normal text-muted-foreground">(optional)</span></label>
-              <input id="o-cap" inputMode="decimal" value={v.cap} {...fp('cap')} onChange={(e) => set({ cap: e.target.value })} className={field} />{err('cap')}</div>}
-          </div>
-        )}
-        <OfferMore v={v} set={set} errors={errors} pickers={pickers} />
-        <div className="space-y-1"><label htmlFor="o-min" className={lab}>{style === 'free_gift' ? 'Free when the rest of the bag reaches ₹' : 'Bag at least ₹'} <span className="font-normal text-muted-foreground">(optional)</span></label>
-          <input id="o-min" inputMode="decimal" value={v.min} placeholder="1999" {...fp('min')} onChange={(e) => set({ min: e.target.value })} className={`${field} sm:max-w-48`} />{err('min')}</div>
+        {/* As drawn: name and code, then what comes off with its floor and cap, the "already qualify" line, then when. */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1"><label htmlFor="o-title" className={lab}>Name shoppers see</label>
+            <input id="o-title" value={v.title} maxLength={60} placeholder="Diwali sale" {...fp('title')} onChange={(e) => set({ title: e.target.value })} className={field} />{err('title')}</div>
+          <div className="space-y-1"><label htmlFor="o-code" className={lab}>Code <span className="font-normal text-muted-foreground">(optional)</span></label>
+            <input id="o-code" value={v.code} maxLength={20} disabled={locked.code} placeholder="FESTIVE10" autoCapitalize="characters" {...fp('code')} aria-describedby={errors.code ? errorId('o-code') : locked.code ? 'o-code-hint' : undefined}
+              onChange={(e) => set({ code: e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase() })} className={`${field} font-mono`} />
+            {errors.code ? err('code') : locked.code ? <p id="o-code-hint" className="text-xs text-muted-foreground">A code never changes. End this offer and make a new one to use another.</p> : null}</div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {(style === 'order_off' || style === 'product_off' || style === 'pay_online') && (
+            <div className="space-y-1"><span id="o-take" className={lab}>Take off</span>
+              <div className="flex gap-2">
+                <Segmented label="Percent or rupees" value={v.kind === 'percent' ? 'percent' : 'amount'} options={[['percent', '%'], ['amount', '₹']] as const} onPick={(k) => set({ kind: k })} className="shrink-0 flex-nowrap" />
+                <input id="o-value" aria-label="How much" inputMode="decimal" value={v.value} placeholder={v.kind === 'percent' ? '10' : '50'} {...fp('value')} onChange={(e) => set({ value: e.target.value })} className={`${field} min-w-0`} />
+              </div>{err('value')}</div>
+          )}
+          <div className="space-y-1"><label htmlFor="o-min" className={lab}>{style === 'free_gift' ? 'Free when the rest of the bag reaches, ₹' : 'When the bag is at least, ₹'}</label>
+            <input id="o-min" inputMode="decimal" value={v.min} placeholder="1,999" {...fp('min')} onChange={(e) => set({ min: e.target.value })} className={field} />{err('min')}</div>
+          {v.kind === 'percent' && (style === 'order_off' || style === 'product_off') && <div className="space-y-1"><label htmlFor="o-cap" className={lab}>Most off, ₹ <span className="font-normal text-muted-foreground">(optional)</span></label>
+            <input id="o-cap" inputMode="decimal" value={v.cap} {...fp('cap')} onChange={(e) => set({ cap: e.target.value })} className={field} />{err('cap')}</div>}
+        </div>
         {share !== null && share >= 40 && qualify && (
           <p role="status" className="rounded-md bg-warn px-3 py-2 text-sm text-warn-text">
-            <b>{share}% of last month’s orders were already at this amount.</b> About {inr(qualify.would)} would go to them. A higher minimum rewards bigger bags instead.
+            {share}% of last month’s orders were already over {inr(Math.round((Number(v.min) || 0) * 100))}. They would get {v.kind === 'percent' ? `${Number(v.value) || 0}%` : inr(Math.round((Number(v.value) || 0) * 100))} off anyway.
           </p>
         )}
-        <div className="space-y-1"><div className="flex items-center"><label htmlFor="o-code" className={lab}>Code <span className="font-normal text-muted-foreground">(optional)</span></label><InfoTip about="the code">Without a code the offer applies by itself.</InfoTip></div>
-          <input id="o-code" value={v.code} maxLength={20} disabled={locked.code} placeholder="DIWALI15" autoCapitalize="characters" {...fp('code')} aria-describedby={errors.code ? errorId('o-code') : 'o-code-hint'}
-            onChange={(e) => set({ code: e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase() })} className={`${field} font-mono sm:max-w-60`} />
-          {errors.code ? err('code') : <p id="o-code-hint" className="text-xs text-muted-foreground">{locked.code ? 'A code never changes. End this offer and make a new one to use another.' : 'Codes are never reused in your store.'}</p>}</div>
-        {v.code && <div className="flex items-center"><label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="shrink-0" checked={v.listed} onChange={(e) => set({ listed: e.target.checked })} />Show it at checkout</label><InfoTip about="showing it at checkout">Unticked, only shoppers who type the code get it.</InfoTip></div>}
-        {style === 'order_off' && <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="shrink-0" checked={v.combinesWithPayment} onChange={(e) => set({ combinesWithPayment: e.target.checked })} />Shoppers who pay online also get your pay-online saving</label>}
-      </Section>
-
-      <Section title="When and how much">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1"><label htmlFor="o-starts" className={lab}>Starts</label>
             <input id="o-starts" type="datetime-local" value={v.startsAt} {...fp('startsAt')} onChange={(e) => set({ startsAt: e.target.value })} className={field} />{err('startsAt')}</div>
           <div className="space-y-1"><label htmlFor="o-ends" className={lab}>Ends <span className="font-normal text-muted-foreground">(optional)</span></label>
             <input id="o-ends" type="datetime-local" value={v.endsAt} {...fp('endsAt')} onChange={(e) => set({ endsAt: e.target.value })} className={field} />{err('endsAt')}</div>
+        </div>
+      </Section>
+
+      {/* What the board left out but an offer has: its products, steps and rules, limits and the bar, folded (Deviations). */}
+      <FoldSection title="Limits and more" start={!!(v.limitTotal || v.limitPerPhone || v.budget || v.announce || v.firstOrder || (v.targets && v.targets !== 'all') || v.tiers?.length) || ['limitTotal', 'limitPerPhone', 'budget', 'announce', 'targets', 'tiers'].some((k) => errors[k])}
+        invalid={['limitTotal', 'limitPerPhone', 'budget', 'announce', 'targets', 'tiers'].some((k) => errors[k])} action="Edit">
+        <OfferMore v={v} set={set} errors={errors} pickers={pickers} />
+        {v.code && <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="shrink-0" checked={v.listed} onChange={(e) => set({ listed: e.target.checked })} />Show the code at checkout</label>}
+        {style === 'order_off' && <label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="shrink-0" checked={v.combinesWithPayment} onChange={(e) => set({ combinesWithPayment: e.target.checked })} />Shoppers who pay online also get your pay-online saving</label>}
+        <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-1"><label htmlFor="o-total" className={lab}>Total uses <span className="font-normal text-muted-foreground">(optional)</span></label>
             <input id="o-total" inputMode="numeric" value={v.limitTotal} {...fp('limitTotal')} onChange={(e) => set({ limitTotal: e.target.value })} className={field} />{err('limitTotal')}</div>
           <div className="space-y-1"><label htmlFor="o-phone" className={lab}>Uses per phone <span className="font-normal text-muted-foreground">(optional)</span></label>
             <input id="o-phone" inputMode="numeric" value={v.limitPerPhone} {...fp('limitPerPhone')} onChange={(e) => set({ limitPerPhone: e.target.value })} className={field} />{err('limitPerPhone')}</div>
-          <div className="space-y-1 sm:col-span-2"><div className="flex items-center"><label htmlFor="o-budget" className={lab}>Budget ₹ <span className="font-normal text-muted-foreground">(optional)</span></label><InfoTip about="the budget">The offer stops giving once this much has been given.</InfoTip></div>
-            <input id="o-budget" inputMode="decimal" value={v.budget} {...fp('budget')} onChange={(e) => set({ budget: e.target.value })} className={`${field} sm:max-w-48`} />{err('budget')}</div>
+          <div className="space-y-1"><div className="flex items-center"><label htmlFor="o-budget" className={lab}>Budget, ₹ <span className="font-normal text-muted-foreground">(optional)</span></label><InfoTip about="the budget">The offer stops giving once this much has been given.</InfoTip></div>
+            <input id="o-budget" inputMode="decimal" value={v.budget} {...fp('budget')} onChange={(e) => set({ budget: e.target.value })} className={field} />{err('budget')}</div>
         </div>
         <div className="flex items-center"><label className="flex min-h-6 items-center gap-2 text-sm"><input type="checkbox" className="shrink-0" checked={v.announce} {...fp('announce')} onChange={(e) => set({ announce: e.target.checked })} />Show it in the bar at the top of your store</label><InfoTip about="the bar">One offer at a time. A draft takes the bar when it starts.</InfoTip></div>{err('announce')}
         <p className="text-xs text-muted-foreground">Times are India time. Shoppers see an end date only if you set one.</p>
-      </Section>
-
+      </FoldSection>
 
       {!id && <div className="flex gap-2"><Button onClick={save} disabled={pending}>{pending ? 'Saving…' : 'Save as draft'}</Button></div>}
     </div>
@@ -175,15 +192,15 @@ export function OfferEditor({ id, initial, locked, pickers, example = null }: { 
         {p ? <div className="space-y-2 text-sm">
           <p className="text-label text-muted-foreground">The bar at the top of the store</p>
           <p className="rounded-md bg-bar px-3 py-2 text-center text-label text-bar-foreground">{p.bar}</p>
-          <p className="text-label text-muted-foreground">In the bag</p>
+          <p className="text-label text-muted-foreground">In the bag{Number(v.min) > 0 ? `, under ${inr(Math.round(Number(v.min) * 100))}` : ''}</p>
           <p className="rounded-md bg-sunk px-3 py-2 text-label">{p.bag}</p></div>
           : <p className="text-sm text-muted-foreground">Fill in the offer to see it as shoppers will.</p>}
       </Section>
       {example ? (
         <Section title="What it costs you">
           <p className="text-sm tabular-nums">{off > 0
-            ? <>On a {inr(example.price)} {example.title}: {inr(off)} off. You keep about {inr(keptWithOff(example.example, off))} instead of {inr(Math.round(example.example.keptAt0))}.</>
-            : <>On a {inr(example.price)} {example.title} you keep about {inr(Math.round(example.example.keptAt0))} today.</>}</p>
+            ? <>On a {inr(example.price)} {example.title}: {inr(off)} off. You keep {inr(keptWithOff(example.example, off))} instead of {inr(Math.round(example.example.keptAt0))}.</>
+            : <>On a {inr(example.price)} {example.title} you keep {inr(Math.round(example.example.keptAt0))} today.</>}</p>
           <p className="text-label text-muted-foreground">Delivered, after GST, goods, courier and Frrata’s fee. Before ads and packaging.</p>
         </Section>
       ) : null}

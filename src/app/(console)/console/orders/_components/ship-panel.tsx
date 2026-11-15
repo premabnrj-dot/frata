@@ -59,7 +59,7 @@ function Panel({ orderId, number, stage, may, shipment, stockTaken, couriers = [
     return (
       // As drawn (Neel N2b): the couriers this store uses as cards, each with its own came-back count; picking one fills
       // the courier. Booking through a courier waits for a Shiprocket connection (Deviations).
-      <Section id="ship" title="Shipping">
+      <Section id="ship" flatOnPhone title="Shipping">
         {couriers.length ? (
           <fieldset className="grid gap-2 sm:grid-cols-3">
             <legend className="sr-only">Courier</legend>
@@ -85,7 +85,7 @@ function Panel({ orderId, number, stage, may, shipment, stockTaken, couriers = [
     )
   }
   return (
-    <Section id="ship" title="On the way">
+    <Section id="ship" flatOnPhone title="On the way">
       {shipment ? <p className="text-sm">{shipment.courierName ?? 'Courier not named'}{shipment.trackingNumber ? <> · <span className="font-mono">{shipment.trackingNumber}</span></> : null}</p> : null}
       {shipment?.byCourier ? <p className="text-sm text-muted-foreground">Shipped with Shiprocket. Its tracking sets delivered or came back.</p>
         : may.outcome ? (

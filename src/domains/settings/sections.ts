@@ -106,7 +106,7 @@ export const SECTIONS: readonly Section[] = [
         { key: 'codMin', label: 'Lowest order, ₹', kind: 'rupees', hint: '0 for none' },
         { key: 'codMax', label: 'Highest order, ₹', kind: 'rupees', hint: 'Above it, online only' },
         { key: 'codCharge', label: 'Fee, ₹', kind: 'rupees', hint: 'Its own line at checkout' },
-        { key: 'codBlockedPincodes', label: 'PIN codes without Pay on delivery', kind: 'pincodes', wide: true, tip: 'A shopper there sees why, and can still pay online.' },
+        { key: 'codBlockedPincodes', label: 'PIN codes without Pay on delivery', kind: 'pincodes', wide: true },
       ] },
     ],
   },
@@ -317,7 +317,7 @@ export function formValues(section: Section, stored: Record<string, unknown>): V
     const x = stored[f.key]
     if (f.key === 'gstRegistration') v[f.key] = stored.gstin ? String(stored.gstScheme ?? 'regular') : 'none'
     else if (f.kind === 'switch') v[f.key] = x === true
-    else if (f.kind === 'rupees') v[f.key] = String(Math.round(Number(x ?? 0) / 100))
+    else if (f.kind === 'rupees') v[f.key] = Math.round(Number(x ?? 0) / 100).toLocaleString('en-IN') // "3,000", as drawn; the parse takes the commas off
     else if (f.kind === 'pincodes') v[f.key] = (Array.isArray(x) ? x : []).join(', ')
     else v[f.key] = x == null ? '' : String(x)
   }

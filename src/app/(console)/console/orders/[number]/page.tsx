@@ -130,7 +130,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
       const text = edit?.asked ? `Asked for ${inr(edit.asked)} · ${words.replace(/^Items changed · /, '')}` : edit ? words : eventLabel(e, (x) => CANCEL_LABEL[x as CancelReason] ?? x)
       return { at: e.at, text, who: e.actorKind === 'support' ? `${e.actorEmail ?? ''} · Frrata support` : e.actorEmail ?? 'Frrata' }
     }),
-    { at: o.placedAt, text: method === 'cod' && !o.switchedToCodAt ? 'Placed · pay on delivery' : 'Placed · online', who: 'Shopper' },
+    { at: o.placedAt, text: source && source.channel !== 'direct' ? `Placed from ${source.label}` : method === 'cod' && !o.switchedToCodAt ? 'Placed · pay on delivery' : 'Placed · online', who: 'Shopper' },
     ...(o.paidAt ? [{ at: o.paidAt, text: 'Paid online', who: 'Razorpay' }] : []),
     ...(o.switchedToCodAt ? [{ at: o.switchedToCodAt, text: 'Switched to pay on delivery', who: 'Shopper' }] : []),
     ...[...d.edits.values()].flatMap((e) => (e.asked !== null && e.paidAt ? [{ at: e.paidAt, text: `Paid ${inr(e.asked)} for the change · items changed`, who: 'Shopper' }]
@@ -151,8 +151,9 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
   return (
     <>
       <PageHeader title={label} back={{ href: '/console/orders', label: 'Orders' }}
-        badges={<><Badge tone={pay.tone}><Icon name={pay.icon} className="mr-1 inline size-3.5 align-[-2px]" />{pay.label}</Badge><Badge tone={s.tone}>{s.label}</Badge></>}
-        meta={<>Placed <time dateTime={o.placedAt.toISOString()}>{momentIN(o.placedAt, now)}</time>{o.invoiceNumber ? <> · Invoice <span className="font-num">{o.invoiceNumber}</span></> : null}{d.credits.length ? <> · Credit {d.credits.length === 1 ? 'note' : 'notes'} {d.credits.map((c, i) => <span key={c.number}>{i ? ', ' : ''}<span className="font-num">{c.number}</span></span>)}</> : null}</>}
+        badges={<><Badge tone={s.tone}>{s.label}</Badge>{/* As drawn: the state, then how it is paid; a phone shows the state alone. */}
+          {paymentKind(o) === 'cod' ? <Badge tone="warn" className="max-md:hidden">Pay on delivery</Badge> : <Badge tone={pay.tone} className="max-md:hidden">{pay.label}</Badge>}</>}
+        meta={<><time dateTime={o.placedAt.toISOString()}>{momentIN(o.placedAt, now)}</time>{source && source.channel !== 'direct' ? <> · from {source.label}{source.campaign ? ` · ${source.campaign}` : ''}</> : null}{o.customerName && !o.erasedAt ? <> · <Name>{o.customerName}</Name></> : null}{o.invoiceNumber ? <> · Invoice <span className="font-num">{o.invoiceNumber}</span></> : null}{d.credits.length ? <> · Credit {d.credits.length === 1 ? 'note' : 'notes'} {d.credits.map((c, i) => <span key={c.number}>{i ? ', ' : ''}<span className="font-num">{c.number}</span></span>)}</> : null}</>}
         actions={<OrderActions orderId={o.id} number={label} primary={primary} waiting={waiting ? `Waiting for ${inr(waiting.asked)} from the shopper` : null}
           print={{ slip: may('print', state, role) ? printHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? printHref('invoice', [o.number]) : null }}
           pdf={{ slip: may('print', state, role) ? pdfHref('slip', [o.number]) : null, invoice: o.invoiceNumber ? pdfHref('invoice', [o.number]) : null, credit: d.credits.length ? pdfHref('credit', [o.number]) : null }}
@@ -194,7 +195,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
 
 
           <ItemsArea orderId={o.id} number={label} undoEvent={undoEvent}>
-          <Section id="items" title="Items" action={itemsEditable || undoEvent ? <EditItemsButton canEdit={itemsEditable} /> : undefined}>
+          <Section id="items" flatOnPhone title="Items" action={itemsEditable || undoEvent ? <EditItemsButton canEdit={itemsEditable} /> : undefined}>
             {lines.length === 0 ? <p className="text-sm text-muted-foreground">No items on this order.</p> : null}
             <ul className="divide-y divide-border empty:hidden">
               {lines.map((l) => (
@@ -203,7 +204,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
                   <span className="min-w-0 flex-1"><span className="font-medium">{l.title}</span>
                     <span className="block text-muted-foreground">{[...l.optionValues, l.sku].filter(Boolean).join(' · ')}</span>
                     {l.was ? <span className="block text-xs text-muted-foreground">Was {wasOf(l.was, l)}</span> : null}
-                    {l.kind === 'preorder' ? <span className="block text-xs text-warn-text">Pre-order{l.shipsBy ? ` · ships by ${dayMonthIN(new Date(`${l.shipsBy}T00:00:00+05:30`))}` : ''}</span> : null}
+                    {l.kind === 'preorder' ? <span className="block text-xs text-info-text">Pre-order{l.shipsBy ? ` · ships by ${dayMonthIN(new Date(`${l.shipsBy}T00:00:00+05:30`))}` : ''}</span> : null}
                     {l.kind === 'made_to_order' ? <span className="block text-xs text-muted-foreground">Made to order · {l.leadMinDays}–{l.leadMaxDays} days</span> : null}
                   </span>
                   <span className="text-right font-num">{l.qty} × <Money paise={paise(l.unitPrice)} /></span>
@@ -232,21 +233,21 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
 
         <div className="min-w-0 space-y-6">
           <ModuleSlot name="order.side" ctx={{ tenantId: auth.membership.tenantId, orderId: o.id }} at={now.toISOString()} />
-          <Section id="customer" title="Shopper" action={can.edit && !o.erasedAt ? <EditContact orderId={o.id} number={label} contact={{ customerName: o.customerName, phone: o.phone, addressLine: o.addressLine, area: o.area, landmark: o.landmark, pincode: o.pincode, city: o.city, state: o.state }} /> : undefined}>
+          <Section id="customer" flatOnPhone title="Shopper" action={can.edit && !o.erasedAt ? <EditContact orderId={o.id} number={label} contact={{ customerName: o.customerName, phone: o.phone, addressLine: o.addressLine, area: o.area, landmark: o.landmark, pincode: o.pincode, city: o.city, state: o.state }} /> : undefined}>
             {o.erasedAt ? <p className="text-sm text-muted-foreground">Removed after 90 days. This online order was never paid.</p> : (
               <div className="space-y-1 text-sm">
                 <p className="font-medium">{o.customerName ? <Name>{o.customerName}</Name> : '—'}</p>
-                {[o.area ? `${o.addressLine}, ${o.area}` : o.addressLine, o.landmark, `${o.city} ${o.pincode}`, o.state].filter((x) => x && x.trim()).map((x) => <p key={x}>{x}</p>)}
-                {o.phone ? <p className="flex flex-wrap items-center gap-x-3 pt-1"><span className="font-num">{o.phone}</span>
+                {/* Two lines, as drawn: the street, then city, PIN code and state. */}
+                {[[o.addressLine, o.area, o.landmark].filter((x) => x && x.trim()).join(', '), [`${o.city} ${o.pincode}`, o.state].filter((x) => x && x.trim()).join(', ')].filter(Boolean).map((x) => <p key={x}>{x}</p>)}
+                {o.phone ? <p className="flex flex-wrap items-center gap-x-3 pt-1 max-md:hidden"><span className="font-num">{o.phone}</span>
                   <a href={`tel:+91${o.phone}`} className="inline-flex min-h-6 items-center underline underline-offset-2">Call</a>
                   <a href={wa(o.phone, `Hello, this is about your order ${label}.`)} target="_blank" rel="noopener" className="inline-flex min-h-6 items-center underline underline-offset-2">WhatsApp</a></p> : null}
                 {o.cancelReason ? <p className="pt-2 text-muted-foreground">Cancelled: {CANCEL_LABEL[o.cancelReason as CancelReason] ?? o.cancelReason}{o.cancelNote ? ` — ${o.cancelNote}` : ''}</p> : null}
               </div>
             )}
-            {facts && !o.erasedAt ? <p className="text-sm text-muted-foreground">{facts.earlierOrders === 0 ? 'First order from this phone' : `${ordinal(facts.earlierOrders + 1)} order${facts.cameBack ? ` · ${facts.cameBack === 1 ? 'one' : facts.cameBack} came back before` : ''}`}</p> : null}
+            {facts && !o.erasedAt ? <p className="text-sm text-muted-foreground">{facts.earlierOrders === 0 ? 'First order from this phone' : `${ordinal(facts.earlierOrders + 1)} order${facts.cameBack ? (facts.earlierOrders === 1 ? ' · the first came back' : ` · ${facts.cameBack === 1 ? 'one' : facts.cameBack} came back before`) : ''}`}</p> : null}
             {/* feedback-ok: the PIN code's own record, red when many came back, not a failure after a button */}
             {d.pin && d.pin.outcomes ? <p className={`text-sm ${pinIsRisky(d.pin) ? 'text-danger-text' : 'text-muted-foreground'}`}>PIN code {o.pincode} · {d.pin.back} of {d.pin.outcomes} came back</p> : null}
-            {source ? <p className="text-sm text-muted-foreground">Came from: <span className="text-foreground">{source.label}{source.campaign ? ` · ${source.campaign}` : ''}</span></p> : null}
           </Section>
 
           <Timeline rows={timeline} head={<>

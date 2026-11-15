@@ -46,9 +46,9 @@ export default {
         await cost.waitFor()
         const card = cost.locator('xpath=ancestor::section[1]')
         const before = await card.innerText()
-        assert.match(before, /You keep about −?₹[\d,]+ instead of −?₹[\d,]+\./)
+        assert.match(before, /You keep −?₹[\d,]+ instead of −?₹[\d,]+\./)
         await p.locator('#o-value').fill('20')
-        await card.getByText(/You keep about/).filter({ hasNotText: before.match(/You keep about −?₹[\d,]+/)[0] }).waitFor()
+        await card.getByText(/You keep /).filter({ hasNotText: before.match(/You keep −?₹[\d,]+/)[0] }).waitFor()
         await p.screenshot({ path: 'e2e/.out/87-offer-1280.png', fullPage: true })
         const v = await audit(p); assert.deepEqual(v, [], `axe: ${v.join('; ')}`)
       })
@@ -58,7 +58,7 @@ export default {
           const q = await staff.newPage(); q.setDefaultTimeout(10_000)
           await q.goto(`${CONSOLE}/console/offers/new`, { waitUntil: 'networkidle' })
           assert.equal(await q.getByRole('heading', { name: 'What it costs you' }).count(), 0)
-          assert.equal(await q.getByText(/You keep about/).count(), 0)
+          assert.equal(await q.getByText(/You keep /).count(), 0)
         } finally { await staff.close() }
       })
       await t.step('the phone: nothing scrolls sideways', async () => {

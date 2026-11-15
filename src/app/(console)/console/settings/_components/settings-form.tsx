@@ -249,7 +249,7 @@ function FieldInput({ f, value, error, onChange, locked, after }: { f: Field; va
     return (
       <div className="space-y-2">
         <div className="flex items-center"><label htmlFor={id} className="text-sm font-medium">{f.label}</label>{tip}</div>
-        <ChipInput id={id} values={list} onChange={(next) => onChange(next.join(', '))} bad={(p) => !PINCODE_SHAPE.test(p)} mono
+        <ChipInput id={id} values={list} onChange={(next) => onChange(next.join(', '))} bad={(p) => !PINCODE_SHAPE.test(p)}
           describedBy={marks['aria-describedby']} invalid={!!error} />
         {help}
         {after}

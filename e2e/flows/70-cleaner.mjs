@@ -31,11 +31,10 @@ export default {
         await p.screenshot({ path: t.out('product-editor'), fullPage: true })
       })
 
-      await t.step('Settings → Pay on delivery: money and limits stay one visible line; the why is behind (i)', async () => {
+      await t.step('Settings → Pay on delivery: money and limits stay one visible line, nothing behind an (i)', async () => {
         await p.goto(CONSOLE + '/console/settings/payments')
         await p.getByText('0 for none', { exact: true }).waitFor()
-        await p.getByRole('button', { name: 'About pin codes without pay on delivery' }).click()
-        await p.getByText('A shopper there sees why, and can still pay online.').waitFor()
+        assert.equal(await p.getByRole('button', { name: /^About / }).count(), 0, 'Pay on delivery as drawn: no (i)')
         await p.screenshot({ path: t.out('settings-payments'), fullPage: true })
       })
 
