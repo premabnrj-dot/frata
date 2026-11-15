@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.54.1
+  version: 2.55.0
   verified: 2026-11-12
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -724,6 +724,13 @@ Rules:
   string, building rows with the page's own builder (`orders/_components/rows.ts`), one transaction (list ‖ prefix,
   then risk), no counts, `statement_timeout` on a name scan, rate-limited per member, `private, no-store`, logs
   `errName` only. Fetch one row past the page ("50+") instead of a window count.
+- **One analytics window for every read** (Neel N1b): `src/domains/analytics/period.ts` parses the address and gives
+  `[start, end)` against `[prevStart, prevEnd)`; orders, visits and the charts all take it, and every read bounds by
+  `end` (a custom range ends in the past). Custom is at most 92 days (a year and its comparison timed out at 3 s).
+- **Charts in one savepoint, last** (`src/lib/queries/analytics-series.ts`): savepoints cannot nest under `Promise.all`
+  on one connection, and its `SET LOCAL statement_timeout` outlives the savepoint, so it runs after every other read; a
+  failure hides the charts, never the page. Fold related series into ONE statement at the finest grain (a 3-hour IST slot
+  × kind) and derive days, weeks and the heat in TypeScript (speed review: half the time of three statements).
 - **A named exception to the 100 ms query budget**: "+ Filter"'s values with counts (`filterValues`) and saved views'
   counts (`viewCounts`) run in their own transaction with `jit = off` and an 800 ms ceiling, streamed or on demand, and
   show no count when they time out; never inside another read's transaction.
