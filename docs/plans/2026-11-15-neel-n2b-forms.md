@@ -47,6 +47,14 @@ PIN codes the store blocked after the suggestion (from `orders.pincode`); time o
 | At checkout preview | `preview: 'checkout'` exists | Side card as drawn |
 | Save bar at the foot | Save bar | `placement="bottom"`, count |
 
+**Settings regrouped (owner, 2026-11-15, after N2b's sign-off):** "rework its layout … better reorganised, categorized,
+more effective segmentation", then "if we click one group then options for it should appear", then "approved, build it
+with the Pay on delivery form". Mockup https://claude.ai/artifact/GGkvYuwqxL7YEoXxAjbYLD
+(`docs/mockups/2026-11-15-neel-settings/`): five groups (`src/domains/settings/groups.ts`); a page opens "Settings ›
+<group>" with its group's tabs; fields moved (the logo and tagline into Store details; the legal name, registered address
+and country of origin into Business and GST; order and invoice numbering into Invoices and slips); Store address is Web
+address; old addresses redirect (`MOVED`). Flow 88.
+
 ## Regression net first
 Flows that open these pages, run on main before any change: `41-orders` family (grep `/console/orders/` in e2e), `49-ship`,
 `47-offers`, settings flows (grep `/console/settings/`), `77-order-edit`, `90-ux`. New `86-neel-order.mjs`,
@@ -71,6 +79,11 @@ Unit: `orderTopLine` (every state the board draws), the courier came-back share,
 | "Needs about 1.2× the orders to pay back" under What it costs you | Left out | No engine computes a break-even multiple per offer yet; the line would be a guess. Back when `keptWithOff` is judged against delivered orders over time | — |
 | "On which products · Everything in the store" as a fold with Edit | The picker inline, under the offer's kind (product offers only) | It applies to one kind of offer; a fold for the others would show "Everything" with nothing to edit | — |
 | Phone: "Notes and activity ›" opening a sheet | The whole timeline in the page's one column | One list already (owner, 2026-11-15); a sheet adds a step to reach a note | — |
+| Settings board: a desktop opens on Checkout | It opens on the first group with something to fix, else Store; `?group=` opens any | The board showed one state; the merchant lands where work is waiting | — |
+| An intro line under each settings title (today's pages) | None, on every section | The board draws none (Rule 0); the group tabs say where you are | — |
+| Three (i) tips on Business and GST and Invoices and slips would have been 4 and 5 after the merge | Country of origin's, the invoice note's and Packing slips' tips dropped | The gate holds three a page (`sections.test.ts`); each dropped tip said what the label already says | — |
+| "At checkout": a ₹3,400 bag card | Shown when a highest order is set (at ₹400 above it); "Pay on delivery is off" when off | The board drew one setting; these are its other states | — |
+| Group tabs on Online payments, Web address, People, Plan and billing, Emails, Notifications, Your shipping costs | The head only; their bodies are unchanged | Not drawn; their forms take the frame in a later pass | — |
 
 ## Architecture review on the plan (2026-11-15), folded in
 **The top line** — `orderTopLine(o, state, { owed, refund, canCancel })` in `src/domains/orders/top-line.ts`, pure, returns

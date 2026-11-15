@@ -262,7 +262,7 @@ function FieldInput({ f, value, error, onChange, locked, after }: { f: Field; va
     const numeric = f.kind === 'rupees' || f.kind === 'days' || f.kind === 'hsn'
     input = (
       <div className="flex items-center gap-1.5">
-        {f.kind === 'rupees' && <span className="text-sm text-muted-foreground">₹</span>}
+        {/* A rupee field's label ends ", ₹" (Settings board): no second ₹ beside the box. */}
         {f.kind === 'phone' && <span className="text-sm text-muted-foreground">+91</span>}
         <input {...common} value={v} maxLength={f.max} onChange={(e) => onChange(e.target.value)}
           type={f.kind === 'email' ? 'email' : 'text'} inputMode={numeric ? 'numeric' : f.kind === 'phone' ? 'tel' : f.kind === 'email' ? 'email' : undefined}

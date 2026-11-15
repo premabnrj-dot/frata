@@ -122,7 +122,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   <li key={group.key} className="border-t border-line-soft first:border-t-0 md:border-0">
                     <Link href={`/console/settings?group=${group.key}`} aria-current={current ? 'true' : undefined}
                       className={`flex min-h-14 items-center justify-between gap-3 px-4 py-2.5 transition-colors duration-fast md:rounded-mid md:border md:px-3.5 ${current ? 'md:border-transparent md:bg-select' : 'md:border-transparent hover:bg-side'}`}>
-                      <span className="flex min-w-0 flex-col gap-0.5"><span className="font-medium">{group.name}</span><span className="truncate text-label text-muted-foreground">{group.sub}</span></span>
+                      <span className="flex min-w-0 flex-col gap-0.5"><span className="font-medium">{group.name}</span><span className="text-label text-muted-foreground md:truncate">{group.sub}</span></span>
                       <span className="flex shrink-0 items-center gap-2">
                         {fix ? <Badge tone="warn" aria-label={`${fix} to fix`}>{fix}</Badge> : null}
                         <Icon name="chevron" className="size-4 text-muted-foreground md:hidden" />

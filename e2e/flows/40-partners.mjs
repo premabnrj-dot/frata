@@ -88,8 +88,8 @@ export default {
       await pia.getByText('Only the store’s owner can connect online payments').waitFor()
       await pia.goto(CONSOLE + '/console/settings/people')
       await pia.getByText('Only the owner or a manager can see people').waitFor()
-      await pia.goto(CONSOLE + '/console/settings/brand')
-      await pia.getByRole('heading', { name: 'Brand', level: 1 }).waitFor() // the look is the partner's to build
+      await pia.goto(CONSOLE + '/console/settings/store')
+      await pia.getByRole('heading', { name: 'Store details', level: 1 }).waitFor() // the store's name and logo are the partner's to build
     })
 
     await t.step('while building, the partner sets the shop\'s shipping costs (seesCosts, owner 2026-11-08)', async () => {
