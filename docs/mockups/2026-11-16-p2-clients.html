@@ -6,8 +6,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
 <style>
-/* Layout: P2 Clients, every state the plan draws (docs/plans/2026-11-16-p2-clients.md). Neel tokens as T1c.
-   Desktop frames on the left of each group, the phone frame beside them. */
+/* Layout: P2 Clients v2, simplified after the design-system and UI/UX reviews (plan docs/plans/2026-11-16-p2-clients.md).
+   Neel tokens as T1c. Desktop frames first in each group, the phone frame beside or under them. */
 :root {
   --paper:#F7F6F4; --card:#FFFFFF; --side:#F2F1EE; --ink:#1C1917; --sub:#5F5A55; --line:#E3E1DD; --edge:#D6D3CE; --field:#8C857F; --muted:#F2F1EF; --sunk:#F5F4F2;
   --neel:#3A44C2; --neel-50:#EEF0FD; --neel-text:#2F37A3; --rani:#D61F69;
@@ -190,114 +190,74 @@ button, select { font:inherit; color:inherit }
   .person { grid-template-columns:36px minmax(0,1fr) } .person .stores, .person .acts { grid-column:2 } .person .acts { justify-content:flex-start }
   .tbl .hide { display:none } .prsn .since { width:auto }
 }
-/* ── P2 Clients additions ── */
+
+/* ── P2 Clients v2 (simplified after design-system and UI/UX review, 2026-11-16) ── */
 .doc { max-width:1280px; margin:0 auto }
 [hidden] { display:none !important }
-.acts2 { display:flex; gap:6px; align-items:center; justify-content:flex-end }
-.pair.solo > div > .phone { margin-top:6px }
 .i.sm { width:16px; height:16px }
 .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap }
+.card { box-shadow:none }
 .ph .meta { display:flex; flex-wrap:wrap; gap:4px 14px }
 .ph .meta b { color:var(--ink); font-weight:500 }
 .ph .meta .bad { color:var(--bad-fg) }
-/* the list */
-.cl { display:grid }
-.chd, .crow { display:grid; grid-template-columns:minmax(0,1.1fr) 132px minmax(0,1.9fr) 150px 110px; gap:14px; align-items:center; padding:0 16px }
-.chd { min-height:36px; background:var(--sunk); font-size:12px; font-weight:500; color:var(--sub); border-bottom:1px solid var(--line); border-radius:12px 12px 0 0 }
-.crow { min-height:56px; border-bottom:1px solid var(--line); text-decoration:none; color:var(--ink) }
-.crow:last-child { border-bottom:0 }
-.crow:hover { background:var(--sunk) }
-.crow .nm b { display:block; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-.crow .nm small { display:block; font:500 11.5px var(--mono); color:var(--sub); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-.r { text-align:right; justify-self:end }
-.chd .r { justify-self:end }
-.money { display:grid; justify-items:end; font-variant-numeric:tabular-nums }
-.money small { font-size:12px; color:var(--sub) }
-.money small.bad { color:var(--bad-fg) } .money small.warn { color:var(--warn-fg) }
-.nx { display:flex; align-items:center; gap:8px; min-width:0 }
-.nx .w2 { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-.nx .who-i { width:24px; height:24px; border-radius:50%; display:grid; place-items:center; flex:none }
-.nx.you .who-i { background:var(--neel-50); color:var(--neel-text) }
-.nx.theirs .who-i { background:var(--warn); color:var(--warn-fg) }
-.nx.none .who-i { background:var(--muted); color:var(--sub) } .nx.none .w2 { color:var(--sub) }
-.crow.gone .nm b, .crow.gone .money, .crow.gone .nx .w2 { color:var(--sub) }
+.ph .acts { display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+.back { display:inline-flex; align-items:center; gap:4px; color:var(--sub); text-decoration:none; font-size:13px; min-height:24px }
+.back .i { transform:rotate(180deg) }
+.tabs a span { font-size:12px }
+/* the list: DataTable */
+.tw { overflow:hidden }
+.tbl td { height:52px }
+.tbl .nm a { color:var(--ink); text-decoration:none; font-weight:500 }
+.tbl .nm a:hover { text-decoration:underline }
+.tbl .nm small { display:block; font-size:12px; color:var(--sub) }
+.tbl .nx { color:var(--ink) } .tbl .nx.bad { color:var(--bad-fg) } .tbl .nx.sub { color:var(--sub) }
+.tbl .act { width:1%; white-space:nowrap; text-align:right }
+.tbl tr.gone td, .tbl tr.gone .nm a { color:var(--sub) }
+.money { font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap }
 .chip.bad { background:var(--bad); color:var(--bad-fg) }
-.cl3 .chd, .cl3 .crow { grid-template-columns:minmax(0,1.3fr) 140px minmax(0,1.7fr) }
-.clb .chd, .clb .crow { grid-template-columns:minmax(0,1.3fr) 160px auto }
-/* drawer */
-.over { position:relative; display:grid; grid-template-columns:minmax(0,1fr) 440px; min-height:640px }
-.over .under { padding:24px 28px; display:grid; gap:14px; align-content:start; opacity:.5; pointer-events:none; min-width:0 }
-.over::before { content:""; position:absolute; inset:0; background:rgba(28,25,23,.28); pointer-events:none }
-.drawer { position:relative; z-index:1; background:var(--card); border-left:1px solid var(--line); box-shadow:var(--e3); display:flex; flex-direction:column; min-width:0 }
-.dh { display:flex; gap:12px; align-items:flex-start; padding:20px 20px 0 }
-.dh .t { flex:1; min-width:0 }
-.dh h4 { font-size:18px; line-height:24px; font-weight:600 }
-.dh small { display:block; font:500 12px var(--mono); color:var(--sub); margin-top:2px }
-.xbtn { width:32px; height:32px; border-radius:8px; border:0; background:none; color:var(--sub); display:grid; place-items:center; cursor:pointer }
-.nextbox { margin:14px 20px 0; padding:12px; border-radius:10px; background:var(--sunk); display:grid; gap:10px }
-.nextbox .nx { font-weight:500 }
-.dacts { display:flex; gap:8px; flex-wrap:wrap; padding:12px 20px 0 }
-.dtabs { margin:16px 20px 0 }
-.dbody { padding:16px 20px 20px; display:grid; gap:12px; align-content:start }
-.kv { display:flex; justify-content:space-between; gap:12px; align-items:baseline; font-size:14px }
-.kv > span { color:var(--sub) } .kv > b { font-weight:500; text-align:right; font-variant-numeric:tabular-nums }
-.deal { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:10px }
-.deal .grow { flex:1; min-width:0 } .deal b { font-weight:500; display:block } .deal small { color:var(--sub); font-size:12.5px }
-.bills { border:1px solid var(--line); border-radius:10px }
-.bill { display:grid; grid-template-columns:minmax(0,1fr) auto auto auto; gap:10px; align-items:center; padding:10px 12px; border-top:1px solid var(--line) }
-.bill:first-child { border-top:0 }
-.bill b { font-weight:500; display:block } .bill small { color:var(--sub); font-size:12px; display:block }
-.bill .amt { font-variant-numeric:tabular-nums }
-.icb { width:30px; height:30px; border-radius:8px; border:1px solid transparent; background:none; color:var(--sub); display:grid; place-items:center; cursor:pointer }
-.private { display:flex; gap:6px; align-items:center; color:var(--sub); font-size:12.5px }
-.tl { display:grid; gap:0 }
-.tl > div { display:grid; grid-template-columns:20px minmax(0,1fr) auto; gap:10px; align-items:center; min-height:36px; position:relative }
-.tl > div::before { content:""; position:absolute; left:9px; top:24px; bottom:-12px; width:2px; background:var(--line) }
-.tl > div:last-child::before { display:none }
-.tl .dot { width:12px; height:12px; border-radius:50%; background:var(--neel); justify-self:center; position:relative; z-index:1 }
-.tl .dot.todo { background:var(--card); border:2px solid var(--edge) }
-.tl .dot.end { background:var(--sub) }
-.tl time { color:var(--sub); font-size:13px; font-variant-numeric:tabular-nums }
-.tl .todo-t { color:var(--sub) }
-.menu { position:absolute; right:20px; top:150px; z-index:3; width:220px; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--e2); padding:6px; display:grid }
-.menu a { display:flex; gap:10px; align-items:center; min-height:34px; padding:0 10px; border-radius:8px; color:var(--ink); text-decoration:none; font-size:14px }
-.menu a:hover { background:var(--muted) }
-.menu hr { border:0; border-top:1px solid var(--line); margin:4px 0 }
-.menu a.del { color:var(--bad-fg) }
-/* wa bubble */
-.wa { background:#EFEAE2; border-radius:10px; padding:12px }
-.wa p { background:#D9FDD3; color:#111B21; border-radius:8px 0 8px 8px; padding:8px 10px; font-size:13.5px; margin-left:auto; max-width:90% }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .wa { background:#0B141A } :root:not([data-theme="light"]) .wa p { background:#005C4B; color:#E9EDEF } }
-:root[data-theme="dark"] .wa { background:#0B141A } :root[data-theme="dark"] .wa p { background:#005C4B; color:#E9EDEF }
-.err-line { display:flex; gap:6px; align-items:center; color:var(--bad-fg); font-size:13px }
-.input.bad { border-color:var(--bad-fg); box-shadow:0 0 0 3px var(--bad) }
-.row3 { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start }
-.dgrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:22px; align-items:start }
-.note-o { font-size:12.5px; color:var(--sub); border-left:2px solid var(--edge); padding-left:10px; margin-top:8px; max-width:760px }
-/* phone */
-.phone .tabs { gap:14px }
+/* phone rows (DataTable cells a b / c d) */
 .prow2 { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; padding:10px 12px; border-top:1px solid var(--line); text-decoration:none; color:var(--ink); min-height:56px }
 .prow2:first-child { border-top:0 }
 .prow2 b { font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-.prow2 .nx { grid-column:1 / -1; font-size:13px }
-.prow2 .nx .who-i { width:20px; height:20px }
+.prow2 .c { font-size:13px; color:var(--sub); overflow:hidden; text-overflow:ellipsis; white-space:nowrap } .prow2 .c.bad { color:var(--bad-fg) }
 .prow2.gone b, .prow2.gone .num { color:var(--sub) }
 .bbar.four { grid-template-columns:repeat(4,1fr) }
-.psheet { position:relative; flex:1; display:flex; flex-direction:column; justify-content:flex-end; background:rgba(28,25,23,.45) }
-.psheet .sheet { max-height:85%; overflow:auto; padding:14px 0 18px; gap:0 }
-.psheet .dh { padding:6px 16px 0 } .psheet .nextbox { margin:12px 16px 0 } .psheet .dacts { padding:10px 16px 0 } .psheet .dtabs { margin:12px 16px 0 } .psheet .dbody { padding:12px 16px 0 }
-.psheet .dacts .btn { flex:1; min-height:44px }
-.psheet .bill { grid-template-columns:minmax(0,1fr) auto; }
-.psheet .bill .acts2 { grid-column:1 / -1; display:flex; gap:6px; justify-content:flex-end }
+/* client page */
+.facts { display:grid; grid-template-columns:140px minmax(0,1fr); gap:10px 12px; font-size:14px }
+.facts dt { color:var(--sub) } .facts dd { margin:0; font-variant-numeric:tabular-nums }
+.deal { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line) }
+.deal .grow { flex:1; min-width:0 } .deal b { font-weight:500; display:block } .deal small { color:var(--sub); font-size:13px }
+.bill { display:grid; grid-template-columns:minmax(0,1fr) 110px 96px auto; gap:12px; align-items:center; padding:10px 16px; border-top:1px solid var(--line); min-height:52px }
+.bill b { font-weight:500; display:block } .bill small { color:var(--sub); font-size:12px; display:block }
+.bill .amt { font-variant-numeric:tabular-nums; text-align:right }
+.bill .acts2 { display:flex; gap:6px; align-items:center; justify-content:flex-end }
+.icb { width:30px; height:30px; border-radius:8px; border:1px solid transparent; background:none; color:var(--sub); display:grid; place-items:center; cursor:pointer }
+.cfoot { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; padding:12px 16px; border-top:1px solid var(--line) }
+.private { display:flex; gap:6px; align-items:center; color:var(--sub); font-size:12px }
+.menu { position:absolute; right:28px; top:92px; z-index:3; width:220px; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--e2); padding:6px; display:grid }
+.menu a { display:flex; gap:10px; align-items:center; min-height:34px; padding:0 10px; border-radius:8px; color:var(--ink); text-decoration:none; font-size:14px }
+.menu a:hover { background:var(--muted) }
+.rel { position:relative }
+.err-line { display:flex; gap:6px; align-items:center; color:var(--bad-fg); font-size:13px }
+.derr { display:flex; gap:8px; align-items:flex-start; background:var(--bad); color:var(--bad-fg); border-radius:10px; padding:10px 12px; font-size:13px }
+.input.bad { border-color:var(--bad-fg); box-shadow:0 0 0 3px var(--bad) }
+.row3 { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start }
+.dgrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:22px; align-items:start }
+.picto { width:64px; height:64px; border-radius:12px; background:var(--haldi-soft); display:grid; place-items:center; color:var(--ink) }
+.picto svg { width:40px; height:40px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round }
+.picto.neu { background:var(--muted) }
+.toast .mk { background:var(--ok-mark) }
+:root { --haldi-soft:#FCEFD3; --haldi:#E8A317; --ok-mark:#2F9E62 }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --haldi-soft:#3A2D10; --haldi:#F2B84B; --ok-mark:#3FB97A } }
+:root[data-theme="dark"] { --haldi-soft:#3A2D10; --haldi:#F2B84B; --ok-mark:#3FB97A }
+.pad-l { padding:16px 20px; display:grid; gap:14px }
+.phone .bill { grid-template-columns:minmax(0,1fr) auto } .phone .bill .chipc { grid-row:2; grid-column:1 } .phone .bill .acts2 { grid-row:2; grid-column:2 }
+.phone .deal { flex-wrap:wrap }
 @media (max-width:760px) {
-  .chd { display:none }
-  .crow, .cl3 .crow, .clb .crow { grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; padding:10px 12px }
-  .crow .nx { grid-column:1 / -1 } .crow .hide { display:none } .crow .stg { grid-row:1; grid-column:2; justify-self:end }
-  .crow .nm small { display:none }
-  .over { grid-template-columns:minmax(0,1fr) } .over .under { display:none } .drawer { border-left:0 }
-  .menu { position:static; width:auto; margin:8px 20px 0 }
-  .bill { grid-template-columns:minmax(0,1fr) auto } .bill .acts2 { grid-column:1 / -1; justify-self:end; display:flex; gap:6px }
-  .row3 { grid-template-columns:1fr }
+  .tbl thead { display:none } .tbl .hide { display:none }
+  .menu { position:static; width:auto; margin-top:8px }
+  .bill { grid-template-columns:minmax(0,1fr) auto } .bill .chipc { grid-row:2; grid-column:1 } .bill .acts2 { grid-row:2; grid-column:2 }
+  .row3 { grid-template-columns:1fr } .facts { grid-template-columns:120px minmax(0,1fr) }
 }
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -324,18 +284,18 @@ button, select { font:inherit; color:inherit }
   <symbol id="i-handover" viewBox="0 0 24 24"><path d="M4 14h4l3 2h4a2 2 0 0 0 0-4h-3"/><path d="M4 20h11l5-4"/><path d="M13 4l4 4-4 4"/><path d="M17 8H9"/></symbol>
   <symbol id="i-bill" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6"/></symbol>
   <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M7.5 18H17a4 4 0 0 0 1.6-7.7M14.6 6.6A6 6 0 0 0 6 10a4 4 0 0 0 1.5 8"/></symbol>
-  <symbol id="i-build" viewBox="0 0 48 48"><path d="M8 40V18l16-10 16 10v22Z"/><path d="M18 40V28h12v12"/><path d="M24 8v6" stroke="#E8A317" stroke-width="2.5"/></symbol>
+  <symbol id="i-build" viewBox="0 0 48 48"><path d="M8 40V18l16-10 16 10v22Z"/><path d="M18 40V28h12v12"/><path d="M24 8v6" stroke="var(--haldi)" stroke-width="2.5"/></symbol>
+  <symbol id="i-bill48" viewBox="0 0 48 48"><path d="M12 6h24v36l-6-4-6 4-6-4-6 4V6Z"/><path d="M18 16h12M18 24h12" /><path d="M18 32h6" stroke="var(--haldi)" stroke-width="2.5"/></symbol>
 </svg>
-
 <div class="doc">
   <header class="doc-top">
     <h1>Clients</h1>
-    <nav class="toc" aria-label="On this page"><a href="#many">Many</a><a href="#drawer">Drawer</a><a href="#dialogs">Dialogs</a><a href="#one">One</a><a href="#empty">Empty</a><a href="#lead">Lead</a><a href="#builder">Builder</a><a href="#removed">Removed</a><a href="#error">Couldn’t load</a></nav>
+    <nav class="toc" aria-label="On this page"><a href="#many">Many</a><a href="#client">A client</a><a href="#dialogs">Dialogs</a><a href="#one">One</a><a href="#empty">Empty</a><a href="#lead">Lead</a><a href="#builder">Builder</a><a href="#removed">Removed</a><a href="#error">Couldn’t load</a></nav>
   </header>
 
-  <!-- ═══ MANY · the partner owner ═══ -->
+  <!-- ═══ MANY ═══ -->
   <section class="part" id="many">
-    <h2>Partner owner · many clients</h2>
+    <h2>Partner owner · 9 clients</h2>
     <div class="pair solo">
       <div>
         <p class="lab"><b>1</b>Opens on Needs you</p>
@@ -346,44 +306,51 @@ button, select { font:inherit; color:inherit }
             <div class="foot"><span class="who">ananya@pixelthread.in</span></div>
           </aside>
           <div class="main">
-            <div class="ph"><div><h3>Clients</h3><p class="meta"><span>Retainers <b class="num">₹47,000</b> a month</span><span>Unpaid <b class="num bad">₹40,500</b></span><span>Your share <b class="num">₹9,169.20</b> last month</span></p></div><button class="btn primary"><svg class="i sm"><use href="#i-plus"/></svg>New client store</button></div>
-            <nav class="tabs" aria-label="Client views"><a aria-current="page" href="#many">Needs you <span>4</span></a><a href="#many">Waiting on the client <span>3</span></a><a href="#many">Unpaid <span>3</span></a><a href="#many">All <span>9</span></a><a href="#removed">Removed <span>1</span></a></nav>
-            <div class="tools"><label class="search"><svg class="i sm"><use href="#i-search"/></svg><span class="sr">Search clients</span><span>Search clients</span></label></div>
-            <div class="card cl" role="table" aria-label="Clients">
-              <div class="chd" role="row"><span role="columnheader">Client</span><span role="columnheader">Stage</span><span role="columnheader">Next</span><span role="columnheader" class="r">Your billing</span><span role="columnheader" class="r">Your share</span></div>
-              <a class="crow" role="row" href="#drawer"><span class="nm" role="cell"><b>Noor Threads</b><small>noor-threads.frrata.shop</small></span><span class="stg" role="cell"><span class="chip ok">Open</span></span><span class="nx you" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">₹12,000 overdue · 11 days</span><span class="btn sm">Remind</span></span><span class="money hide" role="cell">₹12,000 a month<small class="bad">₹12,000 overdue</small></span><span class="money hide" role="cell">₹704.80</span></a>
-              <a class="crow" role="row" href="#drawer"><span class="nm" role="cell"><b>Kesar Studio</b><small>kesar-studio.frrata.shop</small></span><span class="stg" role="cell"><span class="chip neu">Building</span></span><span class="nx you" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">Not handed over yet</span><span class="btn sm">Hand over</span></span><span class="money hide" role="cell">₹60,000<small>Advance paid</small></span><span class="money hide" role="cell">—</span></a>
-              <a class="crow" role="row" href="#drawer"><span class="nm" role="cell"><b>Mitti Ceramics</b><small>mitti.frrata.shop</small></span><span class="stg" role="cell"><span class="chip ok">Open</span></span><span class="nx you" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">Retainer renews 1 Dec</span><span class="btn sm">Record bill</span></span><span class="money hide" role="cell">₹15,000 a month<small>Paid</small></span><span class="money hide" role="cell">₹3,879.80</span></a>
-              <a class="crow gone" role="row" href="#removed"><span class="nm" role="cell"><b>Pahadi Pantry</b><small>Removed 2 Oct</small></span><span class="stg" role="cell"><span class="chip neu">Removed</span></span><span class="nx you" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">₹6,000 overdue · 45 days</span><span class="btn sm">Remind</span></span><span class="money hide" role="cell">₹6,000<small class="bad">₹6,000 overdue</small></span><span class="money hide" role="cell">₹704.80</span></a>
+            <div class="ph"><div><h3>Clients</h3><p class="meta"><span>Unpaid <b class="num bad">₹40,500</b></span><span>Your share <b class="num">₹9,169.20</b> in Oct</span></p></div><button class="btn primary"><svg class="i sm"><use href="#i-plus"/></svg>New client store</button></div>
+            <nav class="tabs" aria-label="Client views"><a aria-current="page" href="#many">Needs you <span>4</span></a><a href="#many">Waiting on the client <span>3</span></a><a href="#many">All <span>9</span></a></nav>
+            <div class="tools"><label class="search"><svg class="i sm"><use href="#i-search"/></svg><span>Search clients</span></label></div>
+            <div class="card tw">
+              <table class="tbl" aria-label="Clients">
+                <thead><tr><th>Client</th><th>Stage</th><th>Next</th><th><span class="sr">Action</span></th><th class="r">Your billing</th></tr></thead>
+                <tbody>
+                  <tr><td class="nm"><a href="#client">Noor Threads</a><small>noor-threads.frrata.shop</small></td><td><span class="chip ok">Open</span></td><td class="nx bad hide">₹12,000 overdue · 11 days</td><td class="act hide"><a class="btn sm" href="#many"><svg class="i sm"><use href="#i-wa"/></svg>Remind</a></td><td class="money hide">₹12,000 a month</td></tr>
+                  <tr><td class="nm"><a href="#client">Kesar Studio</a><small>kesar-studio.frrata.shop</small></td><td><span class="chip neu">Building</span></td><td class="nx hide"></td><td class="act hide"><button class="btn sm">Hand over</button></td><td class="money hide">₹60,000</td></tr>
+                  <tr><td class="nm"><a href="#client">Mitti Ceramics</a><small>mitti.frrata.shop</small></td><td><span class="chip ok">Open</span></td><td class="nx hide">Next bill 28 Nov</td><td class="act hide"><button class="btn sm">Record bill</button></td><td class="money hide">₹15,000 a month</td></tr>
+                  <tr class="gone"><td class="nm"><a href="#removed">Pahadi Pantry</a><small>Removed 2 Oct</small></td><td><span class="chip neu">Removed</span></td><td class="nx bad hide">₹6,000 overdue · 45 days</td><td class="act hide"><a class="btn sm" href="#many"><svg class="i sm"><use href="#i-wa"/></svg>Remind</a></td><td class="money hide">₹6,000</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
-        <p class="lab" style="margin-top:22px"><b>2</b>All</p>
-        <div class="card cl" role="table" aria-label="All clients">
-          <div class="chd" role="row"><span role="columnheader">Client</span><span role="columnheader">Stage</span><span role="columnheader">Next</span><span role="columnheader" class="r">Your billing</span><span role="columnheader" class="r">Your share</span></div>
-          <a class="crow" role="row" href="#drawer"><span class="nm" role="cell"><b>Bandhej Co.</b><small>bandhej.frrata.shop</small></span><span class="stg" role="cell"><span class="chip ok">Open</span></span><span class="nx theirs" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-wait"/></svg></span><span class="w2">₹22,500 due 20 Nov</span></span><span class="money hide" role="cell">₹45,000<small class="warn">₹22,500 due</small></span><span class="money hide" role="cell">—</span></a>
-          <a class="crow" role="row" href="#drawer"><span class="nm" role="cell"><b>Haldi House</b><small>haldi-house.frrata.shop</small></span><span class="stg" role="cell"><span class="chip neu">With the owner</span></span><span class="nx theirs" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-wait"/></svg></span><span class="w2">Store not open yet · 6 days</span><span class="btn sm">Remind</span></span><span class="money hide" role="cell">—</span><span class="money hide" role="cell">—</span></a>
-          <a class="crow" role="row" href="#drawer"><span class="nm" role="cell"><b>Kesar Studio</b><small>kesar-studio.frrata.shop</small></span><span class="stg" role="cell"><span class="chip neu">Building</span></span><span class="nx you" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">Not handed over yet</span><span class="btn sm">Hand over</span></span><span class="money hide" role="cell">₹60,000<small>Advance paid</small></span><span class="money hide" role="cell">—</span></a>
-          <a class="crow" role="row" href="#drawer"><span class="nm" role="cell"><b>Mitti Ceramics</b><small>mitti.frrata.shop</small></span><span class="stg" role="cell"><span class="chip ok">Open</span></span><span class="nx you" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">Retainer renews 1 Dec</span><span class="btn sm">Record bill</span></span><span class="money hide" role="cell">₹15,000 a month<small>Paid</small></span><span class="money hide" role="cell">₹3,879.80</span></a>
-          <a class="crow" role="row" href="#drawer"><span class="nm" role="cell"><b>Noor Threads</b><small>noor-threads.frrata.shop</small></span><span class="stg" role="cell"><span class="chip ok">Open</span></span><span class="nx you" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">₹12,000 overdue · 11 days</span><span class="btn sm">Remind</span></span><span class="money hide" role="cell">₹12,000 a month<small class="bad">₹12,000 overdue</small></span><span class="money hide" role="cell">₹704.80</span></a>
-          <a class="crow" role="row" href="#drawer"><span class="nm" role="cell"><b>Rangrez Prints</b><small>rangrez.frrata.shop</small></span><span class="stg" role="cell"><span class="chip warn">Invite sent</span></span><span class="nx theirs" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-wait"/></svg></span><span class="w2">Not accepted · 4 days</span><span class="btn sm">Remind</span></span><span class="money hide" role="cell">₹35,000<small>No bill yet</small></span><span class="money hide" role="cell">—</span></a>
-          <a class="crow" role="row" href="#drawer"><span class="nm" role="cell"><b>Vastra Loom</b><small>vastra-loom.frrata.shop</small></span><span class="stg" role="cell"><span class="chip ok">Open</span></span><span class="nx none" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-done"/></svg></span><span class="w2">Nothing pending</span></span><span class="money hide" role="cell">₹20,000 a month<small>Paid</small></span><span class="money hide" role="cell">₹3,879.80</span></a>
-          <a class="crow gone" role="row" href="#removed"><span class="nm" role="cell"><b>Pahadi Pantry</b><small>Removed 2 Oct</small></span><span class="stg" role="cell"><span class="chip neu">Removed</span></span><span class="nx you" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">₹6,000 overdue · 45 days</span><span class="btn sm">Remind</span></span><span class="money hide" role="cell">₹6,000<small class="bad">₹6,000 overdue</small></span><span class="money hide" role="cell">₹704.80</span></a>
+        <p class="lab" style="margin-top:22px"><b>2</b>All · removed last</p>
+        <div class="card tw">
+          <table class="tbl" aria-label="All clients">
+            <thead><tr><th>Client</th><th>Stage</th><th>Next</th><th><span class="sr">Action</span></th><th class="r">Your billing</th></tr></thead>
+            <tbody>
+              <tr><td class="nm"><a href="#client">Bandhej Co.</a><small>bandhej.frrata.shop</small></td><td><span class="chip ok">Open</span></td><td class="nx hide">₹22,500 due 20 Nov</td><td class="act hide"></td><td class="money hide">₹45,000</td></tr>
+              <tr><td class="nm"><a href="#client">Haldi House</a><small>haldi-house.frrata.shop</small></td><td><span class="chip neu">With the owner</span></td><td class="nx hide">Waiting 6 days</td><td class="act hide"><a class="btn sm" href="#many"><svg class="i sm"><use href="#i-wa"/></svg>Remind</a></td><td class="money hide">—</td></tr>
+              <tr><td class="nm"><a href="#client">Kesar Studio</a><small>kesar-studio.frrata.shop</small></td><td><span class="chip neu">Building</span></td><td class="nx hide"></td><td class="act hide"><button class="btn sm">Hand over</button></td><td class="money hide">₹60,000</td></tr>
+              <tr><td class="nm"><a href="#client">Mitti Ceramics</a><small>mitti.frrata.shop</small></td><td><span class="chip ok">Open</span></td><td class="nx hide">Next bill 28 Nov</td><td class="act hide"><button class="btn sm">Record bill</button></td><td class="money hide">₹15,000 a month</td></tr>
+              <tr><td class="nm"><a href="#client">Noor Threads</a><small>noor-threads.frrata.shop</small></td><td><span class="chip ok">Open</span></td><td class="nx bad hide">₹12,000 overdue · 11 days</td><td class="act hide"><a class="btn sm" href="#many"><svg class="i sm"><use href="#i-wa"/></svg>Remind</a></td><td class="money hide">₹12,000 a month</td></tr>
+              <tr><td class="nm"><a href="#client">Rangrez Prints</a><small>rangrez.frrata.shop</small></td><td><span class="chip warn">Invite sent</span></td><td class="nx hide">Waiting 4 days</td><td class="act hide"><a class="btn sm" href="#many"><svg class="i sm"><use href="#i-wa"/></svg>Remind</a></td><td class="money hide">₹35,000</td></tr>
+              <tr><td class="nm"><a href="#client">Saanjh Candles</a><small>saanjh.frrata.shop</small></td><td><span class="chip warn">Invite sent</span></td><td class="nx hide">Waiting 2 days</td><td class="act hide"><a class="btn sm" href="#many"><svg class="i sm"><use href="#i-wa"/></svg>Remind</a></td><td class="money hide">—</td></tr>
+              <tr><td class="nm"><a href="#client">Vastra Loom</a><small>vastra-loom.frrata.shop</small></td><td><span class="chip ok">Open</span></td><td class="nx sub hide">—</td><td class="act hide"></td><td class="money hide">₹20,000 a month</td></tr>
+              <tr class="gone"><td class="nm"><a href="#removed">Pahadi Pantry</a><small>Removed 2 Oct</small></td><td><span class="chip neu">Removed</span></td><td class="nx bad hide">₹6,000 overdue · 45 days</td><td class="act hide"><a class="btn sm" href="#many"><svg class="i sm"><use href="#i-wa"/></svg>Remind</a></td><td class="money hide">₹6,000</td></tr>
+            </tbody>
+          </table>
         </div>
-      </div>
-      <div>
-        <p class="lab"><b>3</b>Phone · 390</p>
+        <p class="lab" style="margin-top:22px"><b>3</b>Phone · a row opens the client</p>
         <div class="phone">
           <div class="pt"><span class="mono-t" style="width:28px;height:28px;border-radius:8px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-weight:600;font-size:12px">P</span><div><b>Pixel &amp; Thread</b><small>PARTNER</small></div></div>
           <div class="pm">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3>Clients</h3><button class="btn primary sm"><svg class="i sm"><use href="#i-plus"/></svg>New client store</button></div>
-            <p class="muted">Unpaid <b class="num" style="color:var(--bad-fg);font-weight:500">₹40,500</b> · Share <b class="num" style="color:var(--ink);font-weight:500">₹9,169.20</b> last month</p>
-            <nav class="tabs" aria-label="Client views"><a aria-current="page" href="#many">Needs you <span>4</span></a><a href="#many">Waiting <span>3</span></a><a href="#many">Unpaid <span>3</span></a><a href="#many">All <span>9</span></a></nav>
+            <p class="muted">Unpaid <b class="num" style="color:var(--bad-fg);font-weight:500">₹40,500</b> · Your share <b class="num" style="color:var(--ink);font-weight:500">₹9,169.20</b> in Oct</p>
+            <nav class="tabs" aria-label="Client views"><a aria-current="page" href="#many">Needs you <span>4</span></a><a href="#many">Waiting on the client <span>3</span></a><a href="#many">All <span>9</span></a></nav>
             <div class="card">
-              <a class="prow2" href="#drawer"><b>Noor Threads</b><span class="chip ok">Open</span><span class="nx you"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">₹12,000 overdue · 11 days</span></span></a>
-              <a class="prow2" href="#drawer"><b>Kesar Studio</b><span class="chip neu">Building</span><span class="nx you"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">Not handed over yet</span></span></a>
-              <a class="prow2" href="#drawer"><b>Mitti Ceramics</b><span class="chip ok">Open</span><span class="nx you"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">Retainer renews 1 Dec</span></span></a>
-              <a class="prow2 gone" href="#removed"><b>Pahadi Pantry</b><span class="chip neu">Removed</span><span class="nx you"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">₹6,000 overdue · 45 days</span></span></a>
+              <a class="prow2" href="#client"><b>Noor Threads</b><span class="num">₹12,000 a month</span><span class="c bad">₹12,000 overdue · 11 days</span><span class="chip ok">Open</span></a>
+              <a class="prow2" href="#client"><b>Kesar Studio</b><span class="num">₹60,000</span><span class="c">Hand over</span><span class="chip neu">Building</span></a>
+              <a class="prow2" href="#client"><b>Mitti Ceramics</b><span class="num">₹15,000 a month</span><span class="c">Next bill 28 Nov</span><span class="chip ok">Open</span></a>
+              <a class="prow2 gone" href="#removed"><b>Pahadi Pantry</b><span class="num">₹6,000</span><span class="c bad">₹6,000 overdue · 45 days</span><span class="chip neu">Removed</span></a>
             </div>
           </div>
           <nav class="bbar four" aria-label="Partner workspace"><a aria-current="page" href="#many"><svg class="i"><use href="#i-clients"/></svg>Clients</a><a href="#many"><svg class="i"><use href="#i-team"/></svg>Team</a><a href="#many"><svg class="i"><use href="#i-key"/></svg>Passkeys</a><a href="#many"><svg class="i"><use href="#i-details"/></svg>Your details</a></nav>
@@ -392,66 +359,53 @@ button, select { font:inherit; color:inherit }
     </div>
   </section>
 
-  <!-- ═══ DRAWER ═══ -->
-  <section class="part" id="drawer">
-    <h2>A client, opened</h2>
+  <!-- ═══ A CLIENT ═══ -->
+  <section class="part" id="client">
+    <h2>A client’s page · /partner/clients/…</h2>
     <div class="pair">
       <div>
-        <p class="lab"><b>4</b>Your billing · the next step leads</p>
+        <p class="lab"><b>4</b>Your billing · the next step is the header’s action</p>
         <div class="app" style="grid-template-columns:minmax(0,1fr)">
-          <div class="over">
-            <div class="under"><div class="ph"><h3>Clients</h3></div><div class="card" style="height:300px"></div></div>
-            <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="d1">
-              <div class="dh"><div class="t"><h4 id="d1">Noor Threads</h4><small>noor-threads.frrata.shop</small></div><span class="chip ok">Open</span><button class="xbtn" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
-              <div class="nextbox"><div class="nx you"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">₹12,000 overdue · 11 days</span><button class="btn sm primary" data-open="remind"><svg class="i sm"><use href="#i-wa"/></svg>Remind Sana</button></div></div>
-              <div class="dacts"><button class="btn sm"><svg class="i sm"><use href="#i-store"/></svg>Open store</button><button class="btn sm" id="more-b" aria-expanded="false" aria-haspopup="menu">More<svg class="i sm"><use href="#i-down"/></svg></button></div>
-              <div class="menu" id="more-m" role="menu" hidden><a role="menuitem" href="#drawer"><svg class="i sm"><use href="#i-content"/></svg>Edit content</a><a role="menuitem" href="#drawer"><svg class="i sm"><use href="#i-code"/></svg>Website keys</a><a role="menuitem" href="#drawer"><svg class="i sm"><use href="#i-copy"/></svg>Copy store address</a></div>
-              <nav class="tabs dtabs" aria-label="Noor Threads"><a href="#drawer" data-t="prog">Progress</a><a href="#drawer" data-t="bill" aria-current="page">Your billing</a><a href="#drawer" data-t="fr">Frrata</a></nav>
-              <div class="dbody" data-p="bill">
-                <div class="deal"><div class="grow"><b class="num">Retainer · ₹12,000 a month</b><small>Renews 1 Mar 2027</small></div><button class="btn sm ghost" data-open="deal">Change billing</button></div>
-                <div class="bills" role="list" aria-label="Bills">
-                  <div class="bill" role="listitem"><div><b>November retainer</b><small class="mono">PT-0412 · due 5 Nov</small></div><span class="amt">₹12,000</span><span class="chip bad">Overdue</span><span class="acts2"><button class="btn sm" data-toast>Mark paid</button><button class="icb" aria-label="More for PT-0412" data-open="del"><svg class="i sm"><use href="#i-dots"/></svg></button></span></div>
-                  <div class="bill" role="listitem"><div><b>October retainer</b><small class="mono">PT-0398 · paid 4 Oct</small></div><span class="amt">₹12,000</span><span class="chip ok">Paid</span><span class="acts2"><button class="icb" aria-label="More for PT-0398"><svg class="i sm"><use href="#i-dots"/></svg></button></span></div>
-                  <div class="bill" role="listitem"><div><b>September retainer</b><small class="mono">PT-0381 · paid 6 Sep</small></div><span class="amt">₹12,000</span><span class="chip ok">Paid</span><span class="acts2"><button class="icb" aria-label="More for PT-0381"><svg class="i sm"><use href="#i-dots"/></svg></button></span></div>
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><button class="btn sm" data-open="rec"><svg class="i sm"><use href="#i-plus"/></svg>Record bill</button><span class="private"><svg class="i sm"><use href="#i-eyeoff"/></svg>Your client never sees this</span></div>
-              </div>
-              <div class="dbody" data-p="prog" hidden>
-                <div class="tl"><div><span class="dot"></span><span>Started</span><time>12 Mar</time></div><div><span class="dot"></span><span>Invite sent</span><time>2 Apr</time></div><div><span class="dot"></span><span>Owner joined</span><time>3 Apr</time></div><div><span class="dot"></span><span>Opened</span><time>12 Apr</time></div></div>
-              </div>
-              <div class="dbody" data-p="fr" hidden>
-                <div class="kv"><span>Plan</span><b>Launch</b></div>
-                <div class="kv"><span>Your share · 20%</span><b class="num">₹704.80 in Oct</b></div>
-                <div class="kv"><span>Share ends</span><b class="num">12 Apr 2028</b></div>
-              </div>
-            </aside>
+          <div class="main rel">
+            <a class="back" href="#many"><svg class="i sm"><use href="#i-chev"/></svg>Clients</a>
+            <div class="ph"><div><h3>Noor Threads <span class="chip ok" style="vertical-align:middle">Open</span></h3><p class="meta"><span>noor-threads.frrata.shop</span><span style="color:var(--bad-fg)">₹12,000 overdue · 11 days</span></p></div>
+              <div class="acts"><button class="btn" id="more-b" aria-expanded="false" aria-haspopup="menu">More<svg class="i sm"><use href="#i-down"/></svg></button><button class="btn"><svg class="i sm"><use href="#i-store"/></svg>Open store</button><a class="btn primary" href="#client"><svg class="i sm"><use href="#i-wa"/></svg>Remind Sana</a></div></div>
+            <div class="menu" id="more-m" role="menu" hidden><a role="menuitem" href="#client"><svg class="i sm"><use href="#i-content"/></svg>Edit content</a><a role="menuitem" href="#client"><svg class="i sm"><use href="#i-code"/></svg>Website keys</a></div>
+            <nav class="tabs" aria-label="Noor Threads"><a href="#client" data-t="bill" aria-current="page">Your billing</a><a href="#client" data-t="store">Store</a></nav>
+            <div class="card" data-p="bill">
+              <div class="deal"><div class="grow"><b class="num">Retainer · ₹12,000 a month</b><small>Next bill 1 Dec</small></div><button class="btn sm ghost">Change billing</button></div>
+              <div class="bill" style="border-top:0"><div><b>November retainer</b><small><span class="mono">PT-0412</span> · due 5 Nov</small></div><span class="amt">₹12,000</span><span class="chipc"><span class="chip bad">Overdue</span></span><span class="acts2"><button class="btn sm">Mark paid</button><button class="icb" aria-label="More for PT-0412"><svg class="i sm"><use href="#i-dots"/></svg></button></span></div>
+              <div class="bill"><div><b>October retainer</b><small><span class="mono">PT-0398</span> · paid 4 Oct</small></div><span class="amt">₹12,000</span><span class="chipc"><span class="chip ok">Paid</span></span><span class="acts2"><button class="icb" aria-label="More for PT-0398"><svg class="i sm"><use href="#i-dots"/></svg></button></span></div>
+              <div class="bill"><div><b>September retainer</b><small><span class="mono">PT-0381</span> · paid 6 Sep</small></div><span class="amt">₹12,000</span><span class="chipc"><span class="chip ok">Paid</span></span><span class="acts2"><button class="icb" aria-label="More for PT-0381"><svg class="i sm"><use href="#i-dots"/></svg></button></span></div>
+              <div class="cfoot"><button class="btn sm"><svg class="i sm"><use href="#i-plus"/></svg>Record bill</button><span class="private"><svg class="i sm"><use href="#i-eyeoff"/></svg>Your client never sees this</span></div>
+            </div>
+            <div class="card pad-l" data-p="store" hidden>
+              <dl class="facts"><dt>Started</dt><dd>12 Mar</dd><dt>Invite sent</dt><dd>2 Apr</dd><dt>Owner joined</dt><dd>3 Apr</dd><dt>Opened</dt><dd>12 Apr</dd><dt>Your share</dt><dd>20% · ₹704.80 in Oct</dd><dt>Share ends</dt><dd>12 Apr 2028</dd></dl>
+            </div>
           </div>
         </div>
         <div class="dgrid" style="margin-top:22px">
-          <div><p class="lab"><b>5</b>Progress</p><div class="card pad"><div class="tl"><div><span class="dot"></span><span>Started</span><time>12 Mar</time></div><div><span class="dot"></span><span>Invite sent</span><time>2 Apr</time></div><div><span class="dot"></span><span>Owner joined</span><time>3 Apr</time></div><div><span class="dot"></span><span>Opened</span><time>12 Apr</time></div></div></div></div>
-          <div><p class="lab"><b>6</b>Frrata</p><div class="card pad" style="display:grid;gap:12px"><div class="kv"><span>Plan</span><b>Launch</b></div><div class="kv"><span>Your share · 20%</span><b class="num">₹704.80 in Oct</b></div><div class="kv"><span>Share ends</span><b class="num">12 Apr 2028</b></div></div></div>
-          <div><p class="lab"><b>7</b>Building · Kesar Studio</p><div class="card pad" style="display:grid;gap:12px"><div class="nx you" style="font-weight:500"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">Not handed over yet</span><button class="btn sm primary"><svg class="i sm"><use href="#i-handover"/></svg>Hand over</button></div><div class="tl"><div><span class="dot"></span><span>Started</span><time>12 Oct</time></div><div><span class="dot todo"></span><span class="todo-t">Invite sent</span><time></time></div><div><span class="dot todo"></span><span class="todo-t">Owner joined</span><time></time></div><div><span class="dot todo"></span><span class="todo-t">Opened</span><time></time></div></div></div></div>
+          <div><p class="lab"><b>5</b>Store tab</p><div class="card pad-l"><dl class="facts"><dt>Started</dt><dd>12 Mar</dd><dt>Invite sent</dt><dd>2 Apr</dd><dt>Owner joined</dt><dd>3 Apr</dd><dt>Opened</dt><dd>12 Apr</dd><dt>Your share</dt><dd>20% · ₹704.80 in Oct</dd><dt>Share ends</dt><dd>12 Apr 2028</dd></dl></div></div>
+          <div><p class="lab"><b>6</b>Building · Kesar Studio, Store tab</p><div class="card pad-l">
+            <div class="ph"><div><h3 style="font-size:18px">Kesar Studio <span class="chip neu" style="vertical-align:middle">Building</span></h3></div><button class="btn primary sm">Hand over</button></div>
+            <dl class="facts"><dt>Started</dt><dd>12 Oct</dd><dt>Your share</dt><dd>20% from opening</dd></dl></div></div>
+          <div><p class="lab"><b>7</b>A paid bill’s More</p><div class="card" style="padding:6px;max-width:220px"><div class="menu" style="position:static;box-shadow:none;border:0;width:auto;padding:0"><a href="#client">Mark unpaid</a><a href="#client" style="color:var(--bad-fg)">Delete bill</a></div></div></div>
         </div>
       </div>
       <div>
-        <p class="lab"><b>8</b>Phone · a sheet</p>
+        <p class="lab"><b>8</b>Phone</p>
         <div class="phone">
-          <div class="psheet">
-            <div class="sheet">
-              <span class="grab"></span>
-              <div class="dh"><div class="t"><h4>Noor Threads</h4><small>noor-threads.frrata.shop</small></div><span class="chip ok">Open</span></div>
-              <div class="nextbox"><div class="nx you"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">₹12,000 overdue · 11 days</span></div><button class="btn primary" style="min-height:44px"><svg class="i sm"><use href="#i-wa"/></svg>Remind Sana</button></div>
-              <div class="dacts"><button class="btn"><svg class="i sm"><use href="#i-store"/></svg>Open store</button><button class="btn">More<svg class="i sm"><use href="#i-down"/></svg></button></div>
-              <nav class="tabs dtabs" aria-label="Noor Threads on a phone"><a href="#drawer">Progress</a><a href="#drawer" aria-current="page">Your billing</a><a href="#drawer">Frrata</a></nav>
-              <div class="dbody">
-                <div class="deal"><div class="grow"><b class="num">Retainer · ₹12,000 a month</b><small>Renews 1 Mar 2027</small></div><button class="btn sm ghost">Change billing</button></div>
-                <div class="bills">
-                  <div class="bill"><div><b>November retainer</b><small class="mono">PT-0412 · due 5 Nov</small></div><span class="amt">₹12,000</span><span class="acts2"><span class="chip bad">Overdue</span><button class="btn sm">Mark paid</button><button class="icb" aria-label="More for PT-0412"><svg class="i sm"><use href="#i-dots"/></svg></button></span></div>
-                  <div class="bill"><div><b>October retainer</b><small class="mono">PT-0398 · paid 4 Oct</small></div><span class="amt">₹12,000</span><span class="acts2"><span class="chip ok">Paid</span></span></div>
-                </div>
-                <button class="btn" style="min-height:44px"><svg class="i sm"><use href="#i-plus"/></svg>Record bill</button>
-                <span class="private"><svg class="i sm"><use href="#i-eyeoff"/></svg>Your client never sees this</span>
-              </div>
+          <div class="pm">
+            <a class="back" href="#many"><svg class="i sm"><use href="#i-chev"/></svg>Clients</a>
+            <div><h3>Noor Threads <span class="chip ok" style="vertical-align:middle">Open</span></h3><p class="muted" style="color:var(--bad-fg)">₹12,000 overdue · 11 days</p></div>
+            <a class="btn primary" style="min-height:44px" href="#client"><svg class="i sm"><use href="#i-wa"/></svg>Remind Sana</a>
+            <div style="display:flex;gap:8px"><button class="btn" style="flex:1;min-height:44px"><svg class="i sm"><use href="#i-store"/></svg>Open store</button><button class="btn" style="min-height:44px">More<svg class="i sm"><use href="#i-down"/></svg></button></div>
+            <nav class="tabs" aria-label="Noor Threads on a phone"><a href="#client" aria-current="page">Your billing</a><a href="#client">Store</a></nav>
+            <div class="card">
+              <div class="deal"><div class="grow"><b class="num">Retainer · ₹12,000 a month</b><small>Next bill 1 Dec</small></div><button class="btn sm ghost">Change billing</button></div>
+              <div class="bill" style="border-top:0"><div><b>November retainer</b><small><span class="mono">PT-0412</span> · due 5 Nov</small></div><span class="amt">₹12,000</span><span class="chipc"><span class="chip bad">Overdue</span></span><span class="acts2"><button class="btn sm">Mark paid</button><button class="icb" aria-label="More for PT-0412 on a phone"><svg class="i sm"><use href="#i-dots"/></svg></button></span></div>
+              <div class="bill"><div><b>October retainer</b><small><span class="mono">PT-0398</span> · paid 4 Oct</small></div><span class="amt">₹12,000</span><span class="chipc"><span class="chip ok">Paid</span></span><span class="acts2"><button class="icb" aria-label="More for PT-0398 on a phone"><svg class="i sm"><use href="#i-dots"/></svg></button></span></div>
+              <div class="cfoot"><button class="btn sm"><svg class="i sm"><use href="#i-plus"/></svg>Record bill</button><span class="private"><svg class="i sm"><use href="#i-eyeoff"/></svg>Your client never sees this</span></div>
             </div>
           </div>
         </div>
@@ -463,75 +417,76 @@ button, select { font:inherit; color:inherit }
   <section class="part" id="dialogs">
     <h2>Dialogs and the toast</h2>
     <div class="dgrid">
-      <div><p class="lab"><b>9</b>Record bill</p>
+      <div><p class="lab"><b>9</b>Record bill · filled from the billing</p>
         <div class="dialog" role="dialog" aria-labelledby="rb">
           <h4 id="rb">Record bill · Noor Threads</h4>
           <div class="field"><label>Bill for</label><div class="input">December retainer</div></div>
-          <div class="row3"><div class="field"><label>Amount (₹)</label><div class="input bad num">&nbsp;</div><span class="err-line"><svg class="i sm"><use href="#i-x"/></svg>Enter the amount.</span></div><div class="field"><label>Due</label><div class="input num">5 Dec 2026</div></div></div>
-          <div class="field"><label>Bill number (optional)</label><div class="input mono">PT-0425</div></div>
+          <div class="row3"><div class="field"><label>Amount (₹)</label><div class="input num">12,000</div></div><div class="field"><label>Due</label><div class="input num">1 Dec 2026</div></div></div>
+          <div class="field"><label>Bill number (optional)</label><div class="input bad mono">PT-04 12</div><span class="err-line"><svg class="i sm"><use href="#i-x"/></svg>Use letters, digits, / or -.</span></div>
           <div class="dfoot"><button class="btn">Don’t record</button><button class="btn primary">Record bill</button></div>
         </div>
       </div>
-      <div><p class="lab"><b>10</b>Change your billing</p>
+      <div><p class="lab"><b>10</b>Change billing · retainer, then project</p>
         <div class="dialog" role="dialog" aria-labelledby="cb">
           <h4 id="cb">Change billing · Noor Threads</h4>
           <div class="field"><span class="lbl">Billed as</span><div class="seg" role="radiogroup" aria-label="Billed as"><button role="radio" aria-checked="true">Retainer</button><button role="radio" aria-checked="false">Project</button></div></div>
-          <div class="row3"><div class="field"><label>Amount a month (₹)</label><div class="input num">12,000</div></div><div class="field"><label>Renews</label><div class="input num">1 Mar 2027</div></div></div>
+          <div class="row3"><div class="field"><label>Amount a month (₹)</label><div class="input num">12,000</div></div><div class="field"><label>Next bill</label><div class="input num">1 Dec 2026</div></div></div>
+          <div class="dfoot"><button class="btn">Keep billing</button><button class="btn primary">Save billing</button></div>
+        </div>
+        <div class="dialog" role="dialog" aria-labelledby="cb2" style="margin-top:16px">
+          <h4 id="cb2">Change billing · Kesar Studio</h4>
+          <div class="field"><span class="lbl">Billed as</span><div class="seg" role="radiogroup" aria-label="Billed as, project"><button role="radio" aria-checked="false">Retainer</button><button role="radio" aria-checked="true">Project</button></div></div>
+          <div class="field"><label>Amount (₹)</label><div class="input num">60,000</div></div>
           <div class="dfoot"><button class="btn">Keep billing</button><button class="btn primary">Save billing</button></div>
         </div>
       </div>
-      <div><p class="lab"><b>11</b>Remind · opens WhatsApp</p>
-        <div class="dialog" role="dialog" aria-labelledby="rm">
-          <h4 id="rm">Remind Sana</h4>
-          <div class="wa"><p>Hi Sana, bill PT-0412 for ₹12,000 was due on 5 Nov. Thank you. Ananya, Pixel &amp; Thread</p></div>
-          <div class="dfoot"><button class="btn">Don’t send</button><button class="btn primary"><svg class="i sm"><use href="#i-wa"/></svg>Open WhatsApp</button></div>
-        </div>
-      </div>
-      <div><p class="lab"><b>12</b>A bill’s More · Delete</p>
+      <div><p class="lab"><b>11</b>Delete · ConfirmDelete</p>
         <div class="dialog" role="dialog" aria-labelledby="dl">
-          <h4 id="dl">Delete bill PT-0412?</h4>
-          <p>You can’t get this bill back.</p>
+          <span class="picto neu"><svg viewBox="0 0 48 48"><use href="#i-bill48"/></svg></span>
+          <h4 id="dl">Delete 1 bill?</h4>
+          <p>PT-0412 · ₹12,000. You can’t get it back.</p>
           <div class="dfoot"><button class="btn">Keep the bill</button><button class="btn danger">Delete bill</button></div>
         </div>
-        <p class="lab" style="margin-top:22px"><b>13</b>Mark paid</p>
+        <p class="lab" style="margin-top:22px"><b>12</b>Mark paid</p>
         <div class="toast" role="status"><span class="mk"><svg class="i sm"><use href="#i-check"/></svg></span><span>Marked PT-0412 paid · ₹12,000</span><button class="btn sm ghost" style="color:var(--bar-link)">Undo</button><button class="x" aria-label="Close"><svg class="i sm"><use href="#i-x"/></svg></button></div>
+        <p class="lab" style="margin-top:22px"><b>13</b>A refusal stays in the dialog</p>
+        <div class="dialog" role="dialog" aria-labelledby="er">
+          <h4 id="er">Record bill · Noor Threads</h4>
+          <div class="derr"><svg class="i sm"><use href="#i-x"/></svg><span>Your passkey check ran out. Confirm it and record again. Nothing was changed.</span></div>
+          <div class="dfoot"><button class="btn">Don’t record</button><button class="btn primary">Record bill</button></div>
+        </div>
       </div>
     </div>
   </section>
 
   <!-- ═══ ONE ═══ -->
   <section class="part" id="one">
-    <h2>One client</h2>
-    <div class="pair">
-      <div><p class="lab"><b>14</b>Nothing waits on you, so it opens on All</p>
-        <div class="card pad" style="display:grid;gap:14px">
-          <div class="ph"><div><h3>Clients</h3></div><button class="btn primary"><svg class="i sm"><use href="#i-plus"/></svg>New client store</button></div>
-          <nav class="tabs" aria-label="Client views"><a href="#one">Needs you <span>0</span></a><a href="#one">Waiting on the client <span>1</span></a><a aria-current="page" href="#one">All <span>1</span></a></nav>
-          <div class="card cl" role="table" aria-label="Clients">
-            <div class="chd" role="row"><span role="columnheader">Client</span><span role="columnheader">Stage</span><span role="columnheader">Next</span><span role="columnheader" class="r">Your billing</span><span role="columnheader" class="r">Your share</span></div>
-            <a class="crow" role="row" href="#drawer"><span class="nm" role="cell"><b>Rangrez Prints</b><small>rangrez.frrata.shop</small></span><span class="stg" role="cell"><span class="chip warn">Invite sent</span></span><span class="nx theirs" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-wait"/></svg></span><span class="w2">Not accepted · 4 days</span><span class="btn sm">Remind</span></span><span class="money hide" role="cell">—</span><span class="money hide" role="cell">—</span></a>
-          </div>
+    <h2>One client · no tabs, no search</h2>
+    <div class="pair solo"><div>
+      <div class="card pad-l">
+        <div class="ph"><div><h3>Clients</h3></div><button class="btn primary"><svg class="i sm"><use href="#i-plus"/></svg>New client store</button></div>
+        <div class="card tw">
+          <table class="tbl" aria-label="One client">
+            <thead><tr><th>Client</th><th>Stage</th><th>Next</th><th><span class="sr">Action</span></th><th class="r">Your billing</th></tr></thead>
+            <tbody><tr><td class="nm"><a href="#client">Rangrez Prints</a><small>rangrez.frrata.shop</small></td><td><span class="chip warn">Invite sent</span></td><td class="nx hide">Waiting 4 days</td><td class="act hide"><a class="btn sm" href="#one"><svg class="i sm"><use href="#i-wa"/></svg>Remind</a></td><td class="money hide">—</td></tr></tbody>
+          </table>
         </div>
       </div>
-      <div><p class="lab"><b>15</b>Needs you, empty</p>
-        <div class="card"><div class="panel"><span class="tile"><svg class="i"><use href="#i-done"/></svg></span><h4>Nothing needs you</h4><a class="btn sm" href="#many">See all clients</a></div></div>
-      </div>
-    </div>
+    </div></div>
   </section>
 
   <!-- ═══ EMPTY ═══ -->
   <section class="part" id="empty">
     <h2>Empty</h2>
     <div class="dgrid">
-      <div><p class="lab"><b>16</b>No stores yet · partner owner</p>
-        <div class="card"><div class="panel"><span class="tile" style="background:#FCEFD3;color:var(--ink)"><svg viewBox="0 0 48 48" style="width:40px;height:40px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><use href="#i-build"/></svg></span><h4>Make your first client store</h4><button class="btn primary"><svg class="i sm"><use href="#i-plus"/></svg>New client store</button></div></div>
+      <div><p class="lab"><b>14</b>No stores yet · partner owner or Lead</p>
+        <div class="card"><div class="panel"><span class="picto"><svg viewBox="0 0 48 48"><use href="#i-build"/></svg></span><h4>Make your first client store</h4><button class="btn primary"><svg class="i sm"><use href="#i-plus"/></svg>New client store</button></div></div>
       </div>
-      <div><p class="lab"><b>17</b>No stores yet · a Lead, then a Builder</p>
-        <div class="card"><div class="panel"><span class="tile"><svg class="i"><use href="#i-clients"/></svg></span><h4>Make your first client store</h4><button class="btn primary"><svg class="i sm"><use href="#i-plus"/></svg>New client store</button></div></div>
-        <div class="card" style="margin-top:12px"><div class="panel"><span class="tile"><svg class="i"><use href="#i-clients"/></svg></span><h4>No client stores yet</h4></div></div>
+      <div><p class="lab"><b>15</b>No stores yet · a Builder</p>
+        <div class="card"><div class="panel"><h4>No client stores yet</h4></div></div>
       </div>
-      <div><p class="lab"><b>18</b>Search found nothing</p>
-        <div class="card"><div class="panel"><span class="tile"><svg class="i"><use href="#i-search"/></svg></span><h4>No client matches “zari”</h4><button class="btn sm">Clear search</button></div></div>
+      <div><p class="lab"><b>16</b>Search found nothing</p>
+        <div class="card"><div class="panel"><h4>No client matches “zari”</h4><button class="btn sm">Clear search</button></div></div>
       </div>
     </div>
   </section>
@@ -539,8 +494,8 @@ button, select { font:inherit; color:inherit }
   <!-- ═══ LEAD ═══ -->
   <section class="part" id="lead">
     <h2>A Lead · Rohan, given Kesar Studio, Noor Threads and Bandhej Co.</h2>
-    <div class="pair solo">
-      <div><p class="lab"><b>19</b>No billing, no share</p>
+    <div class="pair">
+      <div><p class="lab"><b>17</b>No billing, no share, no tabs</p>
         <div class="app">
           <aside class="side" aria-label="Partner workspace for a Lead">
             <div class="store"><span class="mono-t">P</span><div><b>Pixel &amp; Thread</b><span class="tag">PARTNER</span></div></div>
@@ -549,31 +504,34 @@ button, select { font:inherit; color:inherit }
           </aside>
           <div class="main">
             <div class="ph"><h3>Clients</h3><button class="btn primary"><svg class="i sm"><use href="#i-plus"/></svg>New client store</button></div>
-            <nav class="tabs" aria-label="Client views"><a aria-current="page" href="#lead">Needs you <span>1</span></a><a href="#lead">Waiting on the client <span>0</span></a><a href="#lead">All <span>3</span></a></nav>
-            <div class="card cl cl3" role="table" aria-label="Clients">
-              <div class="chd" role="row"><span role="columnheader">Client</span><span role="columnheader">Stage</span><span role="columnheader">Next</span></div>
-              <a class="crow" role="row" href="#lead"><span class="nm" role="cell"><b>Kesar Studio</b><small>kesar-studio.frrata.shop</small></span><span class="stg" role="cell"><span class="chip neu">Building</span></span><span class="nx you" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">Not handed over yet</span></span></a>
+            <div class="card tw">
+              <table class="tbl" aria-label="Clients for a Lead">
+                <thead><tr><th>Client</th><th>Stage</th><th>Next</th></tr></thead>
+                <tbody>
+                  <tr><td class="nm"><a href="#lead">Kesar Studio</a><small>kesar-studio.frrata.shop</small></td><td><span class="chip neu">Building</span></td><td class="nx sub hide">—</td></tr>
+                  <tr><td class="nm"><a href="#lead">Bandhej Co.</a><small>bandhej.frrata.shop</small></td><td><span class="chip ok">Open</span></td><td class="nx sub hide">—</td></tr>
+                  <tr><td class="nm"><a href="#lead">Noor Threads</a><small>noor-threads.frrata.shop</small></td><td><span class="chip ok">Open</span></td><td class="nx sub hide">—</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
-        <p class="lab" style="margin-top:22px"><b>20</b>A Lead opens a client · Progress only</p>
-        <div class="card" style="max-width:440px">
-          <div class="dh"><div class="t"><h4>Kesar Studio</h4><small>kesar-studio.frrata.shop</small></div><span class="chip neu">Building</span><button class="xbtn" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
-          <div class="nextbox"><div class="nx you"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">Not handed over yet</span></div></div>
-          <div class="dacts"><button class="btn sm"><svg class="i sm"><use href="#i-store"/></svg>Open store</button><button class="btn sm">More<svg class="i sm"><use href="#i-down"/></svg></button></div>
-          <div class="dbody"><div class="tl"><div><span class="dot"></span><span>Started</span><time>12 Oct</time></div><div><span class="dot todo"></span><span class="todo-t">Invite sent</span><time></time></div><div><span class="dot todo"></span><span class="todo-t">Owner joined</span><time></time></div><div><span class="dot todo"></span><span class="todo-t">Opened</span><time></time></div></div></div>
+        <p class="lab" style="margin-top:22px"><b>18</b>A Lead opens a client · its facts only</p>
+        <div class="card pad-l" style="max-width:560px">
+          <a class="back" href="#lead"><svg class="i sm"><use href="#i-chev"/></svg>Clients</a>
+          <div class="ph"><div><h3>Kesar Studio <span class="chip neu" style="vertical-align:middle">Building</span></h3><p class="meta"><span>kesar-studio.frrata.shop</span></p></div><div class="acts"><button class="btn">More<svg class="i sm"><use href="#i-down"/></svg></button><button class="btn"><svg class="i sm"><use href="#i-store"/></svg>Open store</button></div></div>
+          <dl class="facts"><dt>Started</dt><dd>12 Oct</dd></dl>
         </div>
       </div>
-      <div><p class="lab"><b>21</b>Phone · All</p>
+      <div><p class="lab"><b>19</b>Phone</p>
         <div class="phone">
           <div class="pt"><span class="mono-t" style="width:28px;height:28px;border-radius:8px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-weight:600;font-size:12px">P</span><div><b>Pixel &amp; Thread</b><small>PARTNER</small></div></div>
           <div class="pm">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3>Clients</h3><button class="btn primary sm"><svg class="i sm"><use href="#i-plus"/></svg>New client store</button></div>
-            <nav class="tabs" aria-label="Client views"><a href="#lead">Needs you <span>1</span></a><a href="#lead">Waiting <span>0</span></a><a aria-current="page" href="#lead">All <span>3</span></a></nav>
             <div class="card">
-              <a class="prow2" href="#lead"><b>Bandhej Co.</b><span class="chip ok">Open</span><span class="nx none"><span class="who-i"><svg class="i sm"><use href="#i-done"/></svg></span><span class="w2">Nothing pending</span></span></a>
-              <a class="prow2" href="#lead"><b>Kesar Studio</b><span class="chip neu">Building</span><span class="nx you"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">Not handed over yet</span></span></a>
-              <a class="prow2" href="#lead"><b>Noor Threads</b><span class="chip ok">Open</span><span class="nx none"><span class="who-i"><svg class="i sm"><use href="#i-done"/></svg></span><span class="w2">Nothing pending</span></span></a>
+              <a class="prow2" href="#lead"><b>Kesar Studio</b><span class="chip neu">Building</span></a>
+              <a class="prow2" href="#lead"><b>Bandhej Co.</b><span class="chip ok">Open</span></a>
+              <a class="prow2" href="#lead"><b>Noor Threads</b><span class="chip ok">Open</span></a>
             </div>
           </div>
           <nav class="bbar" style="grid-template-columns:repeat(2,1fr)" aria-label="Partner workspace for a Lead"><a aria-current="page" href="#lead"><svg class="i"><use href="#i-clients"/></svg>Clients</a><a href="#lead"><svg class="i"><use href="#i-key"/></svg>Passkeys</a></nav>
@@ -585,8 +543,8 @@ button, select { font:inherit; color:inherit }
   <!-- ═══ BUILDER ═══ -->
   <section class="part" id="builder">
     <h2>A Builder · Meera, given Kesar Studio and Bandhej Co.</h2>
-    <div class="pair solo">
-      <div><p class="lab"><b>22</b>The store and its stage, nothing else</p>
+    <div class="pair">
+      <div><p class="lab"><b>20</b>The store and its stage</p>
         <div class="app">
           <aside class="side" aria-label="Partner workspace for a Builder">
             <div class="store"><span class="mono-t">P</span><div><b>Pixel &amp; Thread</b><span class="tag">PARTNER</span></div></div>
@@ -595,22 +553,26 @@ button, select { font:inherit; color:inherit }
           </aside>
           <div class="main">
             <div class="ph"><h3>Clients</h3></div>
-            <div class="card cl clb" role="table" aria-label="Clients">
-              <div class="chd" role="row"><span role="columnheader">Client</span><span role="columnheader">Stage</span><span role="columnheader"><span class="sr">Store link</span></span></div>
-              <div class="crow" role="row"><span class="nm" role="cell"><b>Bandhej Co.</b><small>bandhej.frrata.shop</small></span><span class="stg" role="cell"><span class="chip ok">Open</span></span><span role="cell" class="r"><button class="btn sm">Open store</button></span></div>
-              <div class="crow" role="row"><span class="nm" role="cell"><b>Kesar Studio</b><small>kesar-studio.frrata.shop</small></span><span class="stg" role="cell"><span class="chip neu">Building</span></span><span role="cell" class="r"><button class="btn sm">Open store</button></span></div>
+            <div class="card tw">
+              <table class="tbl" aria-label="Clients for a Builder">
+                <thead><tr><th>Client</th><th>Stage</th><th><span class="sr">Open</span></th></tr></thead>
+                <tbody>
+                  <tr><td class="nm"><b style="font-weight:500">Bandhej Co.</b><small>bandhej.frrata.shop</small></td><td><span class="chip ok">Open</span></td><td class="act"><button class="btn sm">Open store</button></td></tr>
+                  <tr><td class="nm"><b style="font-weight:500">Kesar Studio</b><small>kesar-studio.frrata.shop</small></td><td><span class="chip neu">Building</span></td><td class="act"><button class="btn sm">Open store</button></td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </div>
-      <div><p class="lab"><b>23</b>Phone</p>
+      <div><p class="lab"><b>21</b>Phone</p>
         <div class="phone">
           <div class="pt"><span class="mono-t" style="width:28px;height:28px;border-radius:8px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-weight:600;font-size:12px">P</span><div><b>Pixel &amp; Thread</b><small>PARTNER</small></div></div>
           <div class="pm">
             <h3>Clients</h3>
             <div class="card">
-              <div class="prow2"><b>Bandhej Co.</b><button class="btn sm">Open store</button><span class="nx"><span class="chip ok">Open</span></span></div>
-              <div class="prow2"><b>Kesar Studio</b><button class="btn sm">Open store</button><span class="nx"><span class="chip neu">Building</span></span></div>
+              <div class="prow2"><b>Bandhej Co.</b><button class="btn sm">Open store</button><span class="chip ok" style="justify-self:start">Open</span></div>
+              <div class="prow2"><b>Kesar Studio</b><button class="btn sm">Open store</button><span class="chip neu" style="justify-self:start">Building</span></div>
             </div>
           </div>
           <nav class="bbar" style="grid-template-columns:repeat(2,1fr)" aria-label="Partner workspace for a Builder"><a aria-current="page" href="#builder"><svg class="i"><use href="#i-clients"/></svg>Clients</a><a href="#builder"><svg class="i"><use href="#i-key"/></svg>Passkeys</a></nav>
@@ -622,28 +584,20 @@ button, select { font:inherit; color:inherit }
   <!-- ═══ REMOVED ═══ -->
   <section class="part" id="removed">
     <h2>A removed client · Pahadi Pantry</h2>
-    <div class="pair">
-      <div><p class="lab"><b>24</b>Removed tab, then opened</p>
-        <div class="card cl" role="table" aria-label="Removed clients">
-          <div class="chd" role="row"><span role="columnheader">Client</span><span role="columnheader">Stage</span><span role="columnheader">Next</span><span role="columnheader" class="r">Your billing</span><span role="columnheader" class="r">Your share</span></div>
-          <a class="crow gone" role="row" href="#removed"><span class="nm" role="cell"><b>Pahadi Pantry</b><small>Removed 2 Oct</small></span><span class="stg" role="cell"><span class="chip neu">Removed</span></span><span class="nx you" role="cell"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">₹6,000 overdue · 45 days</span><span class="btn sm">Remind</span></span><span class="money hide" role="cell">₹6,000<small class="bad">₹6,000 overdue</small></span><span class="money hide" role="cell">₹704.80</span></a>
-        </div>
-        <div class="card" style="max-width:440px;margin-top:16px">
-          <div class="dh"><div class="t"><h4>Pahadi Pantry</h4><small>Removed by its owner on 2 Oct</small></div><span class="chip neu">Removed</span><button class="xbtn" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></div>
-          <div class="nextbox"><div class="nx you"><span class="who-i"><svg class="i sm"><use href="#i-you"/></svg></span><span class="w2">₹6,000 overdue · 45 days</span><button class="btn sm primary"><svg class="i sm"><use href="#i-wa"/></svg>Remind Tara</button></div></div>
-          <nav class="tabs dtabs" aria-label="Pahadi Pantry"><a href="#removed">Progress</a><a href="#removed" aria-current="page">Your billing</a><a href="#removed">Frrata</a></nav>
-          <div class="dbody">
-            <div class="bills"><div class="bill"><div><b>Final month</b><small class="mono">PT-0401 · due 2 Oct</small></div><span class="amt">₹6,000</span><span class="chip bad">Overdue</span><span class="acts2"><button class="btn sm">Mark paid</button><button class="icb" aria-label="More for PT-0401"><svg class="i sm"><use href="#i-dots"/></svg></button></span></div></div>
-            <span class="private"><svg class="i sm"><use href="#i-eyeoff"/></svg>Your client never sees this</span>
+    <div class="dgrid">
+      <div><p class="lab"><b>22</b>Your billing · still owed</p>
+        <div class="card pad-l">
+          <a class="back" href="#many"><svg class="i sm"><use href="#i-chev"/></svg>Clients</a>
+          <div class="ph"><div><h3>Pahadi Pantry <span class="chip neu" style="vertical-align:middle">Removed</span></h3><p class="meta"><span>Removed 2 Oct</span><span style="color:var(--bad-fg)">₹6,000 overdue · 45 days</span></p></div><a class="btn primary" href="#removed"><svg class="i sm"><use href="#i-wa"/></svg>Remind</a></div>
+          <nav class="tabs" aria-label="Pahadi Pantry"><a href="#removed" aria-current="page">Your billing</a><a href="#removed">Store</a></nav>
+          <div class="card">
+            <div class="bill" style="border-top:0"><div><b>Final month</b><small><span class="mono">PT-0401</span> · due 2 Oct</small></div><span class="amt">₹6,000</span><span class="chipc"><span class="chip bad">Overdue</span></span><span class="acts2"><button class="btn sm">Mark paid</button><button class="icb" aria-label="More for PT-0401"><svg class="i sm"><use href="#i-dots"/></svg></button></span></div>
+            <div class="cfoot"><button class="btn sm"><svg class="i sm"><use href="#i-plus"/></svg>Record bill</button><span class="private"><svg class="i sm"><use href="#i-eyeoff"/></svg>Your client never sees this</span></div>
           </div>
         </div>
       </div>
-      <div><p class="lab"><b>25</b>Progress and Frrata, removed</p>
-        <div class="card pad" style="display:grid;gap:14px">
-          <div class="tl"><div><span class="dot"></span><span>Started</span><time>14 Jan</time></div><div><span class="dot"></span><span>Owner joined</span><time>20 Jan</time></div><div><span class="dot"></span><span>Opened</span><time>2 Feb</time></div><div><span class="dot end"></span><span>Removed</span><time>2 Oct</time></div></div>
-          <div class="kv"><span>Your share · 20%</span><b class="num">₹704.80 in Oct</b></div>
-          <div class="kv"><span>Share ends</span><b class="num">31 Dec 2026</b></div>
-        </div>
+      <div><p class="lab"><b>23</b>Store tab · removed</p>
+        <div class="card pad-l"><dl class="facts"><dt>Started</dt><dd>14 Jan</dd><dt>Owner joined</dt><dd>20 Jan</dd><dt>Opened</dt><dd>2 Feb</dd><dt>Removed</dt><dd>2 Oct</dd><dt>Your share</dt><dd>20% · ₹704.80 in Oct</dd><dt>Share ends</dt><dd>31 Dec</dd></dl></div>
       </div>
     </div>
   </section>
@@ -651,20 +605,17 @@ button, select { font:inherit; color:inherit }
   <!-- ═══ ERROR ═══ -->
   <section class="part" id="error">
     <h2>Couldn’t load</h2>
-    <div class="pair">
-      <div><p class="lab"><b>26</b>In place, the tabs and header kept</p>
-        <div class="card pad" style="display:grid;gap:14px">
+    <div class="dgrid">
+      <div><p class="lab"><b>24</b>The list</p>
+        <div class="card pad-l">
           <div class="ph"><h3>Clients</h3><button class="btn primary"><svg class="i sm"><use href="#i-plus"/></svg>New client store</button></div>
-          <div class="card"><div class="panel"><span class="tile"><svg class="i"><use href="#i-cloud"/></svg></span><h4>We couldn’t load your clients</h4><button class="btn sm">Try again</button></div></div>
+          <div class="card"><div class="panel"><h4>We couldn’t load your clients</h4><p class="muted">Nothing was changed. Try again in a minute.</p><button class="btn sm">Try again</button></div></div>
         </div>
       </div>
-      <div><p class="lab"><b>27</b>A bill that couldn’t save · in its dialog</p>
-        <div class="dialog" role="dialog" aria-labelledby="er">
-          <h4 id="er">Record bill · Noor Threads</h4>
-          <div class="field"><label>Bill for</label><div class="input">December retainer</div></div>
-          <div class="row3"><div class="field"><label>Amount (₹)</label><div class="input num">12,000</div></div><div class="field"><label>Due</label><div class="input num">5 Dec 2026</div></div></div>
-          <span class="err-line" role="alert"><svg class="i sm"><use href="#i-x"/></svg>We couldn’t record that. Nothing was changed.</span>
-          <div class="dfoot"><button class="btn">Don’t record</button><button class="btn primary">Record bill</button></div>
+      <div><p class="lab"><b>25</b>A client’s bills</p>
+        <div class="card pad-l">
+          <nav class="tabs" aria-label="Noor Threads, couldn’t load"><a href="#error" aria-current="page">Your billing</a><a href="#error">Store</a></nav>
+          <div class="card"><div class="panel"><h4>We couldn’t load the bills</h4><p class="muted">Nothing was changed. Try again in a minute.</p><button class="btn sm">Try again</button></div></div>
         </div>
       </div>
     </div>
@@ -672,12 +623,12 @@ button, select { font:inherit; color:inherit }
 </div>
 
 <script>
-// The drawer's tabs and More: one panel in view at a time.
-document.querySelectorAll('.drawer [data-t]').forEach((t) => t.addEventListener('click', (e) => {
+// Client page: one tab in view, and More.
+document.querySelectorAll('[data-t]').forEach((t) => t.addEventListener('click', (e) => {
   e.preventDefault()
-  const d = t.closest('.drawer')
-  d.querySelectorAll('[data-t]').forEach((x) => { if (x === t) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current') })
-  d.querySelectorAll('[data-p]').forEach((p) => { p.hidden = p.dataset.p !== t.dataset.t })
+  const box = t.closest('.main')
+  box.querySelectorAll('[data-t]').forEach((x) => { if (x === t) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current') })
+  box.querySelectorAll('[data-p]').forEach((p) => { p.hidden = p.dataset.p !== t.dataset.t })
 }))
 const mb = document.getElementById('more-b'), mm = document.getElementById('more-m')
 mb.addEventListener('click', () => { const o = mm.hidden; mm.hidden = !o; mb.setAttribute('aria-expanded', String(o)) })
