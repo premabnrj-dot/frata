@@ -155,6 +155,9 @@ export const auditEvents = pgTable('audit_events', {
 }, (t) => [
   index('audit_events_tenant_at').on(t.tenantId, t.at),
   index('audit_events_at').on(t.at),
+  // Admin › Activity (Neel N4): keyset pages on (at, id), and by person; rows in one transaction share `at`.
+  index('audit_events_at_id').on(t.at.desc(), t.id.desc()),
+  index('audit_events_actor_at').on(t.actorUserId, t.at.desc(), t.id.desc()),
   index('audit_events_session').on(t.supportSessionId),
   check('audit_events_kind', sql`${t.actorKind} in ('member','staff','support')`),
 ])

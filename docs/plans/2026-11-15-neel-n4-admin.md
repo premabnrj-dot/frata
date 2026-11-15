@@ -44,19 +44,108 @@ common case; the owner's "showing everything at once doesn't make sense" closed.
    to issue). Pure ranking in `src/domains/admin/today.ts` (kind, age → order), unit-tested. The nav counts read the same
    function (one fact, one place).
 2. **Record refund** — an over-paid payment gets `refunded_at`, `refund_utr`, `refunded_by` (migration, numbered after
-   main's next free one; lanes A/B hold 0133–0136). One definer-free update through `frata_admin` in `src/lib/admin/billing.ts`,
-   master admin only, the UTR unique, audited; the band goes when refunded. No money moves through Frrata: it records what
+   main's next free one; lanes A/B hold 0133–0136). Through a definer (see the security review below), master admin only, a fresh passkey, the UTR unique, audited; the band goes when refunded. No money moves through Frrata: it records what
    was sent from the bank.
 3. **Activity filters and pages** — `listActivity(staff, { tenant?, actor?, kind?, before? })`, keyset pages of 50 over
    `audit_events (at desc)`; an index if EXPLAIN asks.
-4. **Master admin / Apps words** — `src/lib/auth/staff-roles.ts` (or the existing label map) owns the role's words.
+4. **Master admin / Apps words** — `src/domains/tenancy/staff-words.ts` owns the role's words (done).
+
+## Security and tenancy review on the plan (2026-11-15), folded in
+- **H1 Record refund through a definer.** `frata_admin` only reads `frrata_payments` (0055); writes go through definers.
+  New `app_record_frrata_refund(p_payment uuid, p_utr text, p_staff uuid)`: `security definer set search_path = ''`, the
+  row `for update`; refuses unless captured, `over_paid > 0`, `refunded_at is null` and not test mode; records
+  `refund_amount = over_paid`, `refund_utr`, `refunded_at`, `refunded_by`; a partial unique index on
+  `upper(btrim(refund_utr))`; revoked from public, anon, authenticated, service_role; granted to `frata_admin`. Called from
+  `src/lib/admin/billing.ts` behind `adminOnly()`, `auditStaff` in the same transaction with `tenantId` and
+  `{payment, amount, utr}`.
+- **H2 Fresh passkey for money.** The refund action calls `confirmedRecently(staff)` on the server (as staff/actions.ts)
+  and its dialog runs the passkey step first; Record payment, Credit note and Issue get the same check.
+- **H3 Today filters by role at the source.** A source table `{kind, roles}` in `src/domains/admin/today.ts`, unit-tested
+  per role; a source the caller may not see is never queried (billing, paused codes, staff passkey requests are master
+  admin only; trials read through billing are master admin only); each source catches its own error (`errName`); support
+  rows link only to pages support can open; Today never lists the caller's own request. Nav counts come from the same
+  filtered list.
+- **M1 Partner passkey requests across partners** need a new definer (proof and master admin checked; returns partner id,
+  name, age only; revokes service_role). Today's list falls back to the Partners count until it exists.
+- **M2 Layout counts** only after `staff.ok` and the health check; a failure shows no counts, never throws; React `cache`
+  only (never `unstable_cache` or `'use cache'`). The Today page calls `requireStaff` itself.
+- **M3 Activity** selects named fields; `detail` rendered from a whitelist per kind; `billing.*` rows and other staff's
+  support reasons to master admins only (filtered on the server); inputs through zod (uuid, enum of kinds, an `(at, id)`
+  keyset, 50 a page, no `sql.raw`).
+- **L1** The refund audit carries `tenantId`. **L2** `STAFF_ROLE_WORDS` is the one label map; `StaffRole`, `ADMIN_ONLY` and
+  `value="admin"` do not change. **L3** Every reason a dialog sends is checked with zod on the server; hiding a button is
+  never the control.
+
+## Architecture review on the plan (2026-11-15), folded in
+- **Today reads only cheap sources; one function, two shapes.** `todayItems(staff)` (Today's list) and `todayCounts(staff)`
+  (the nav: count-only projections of the same sources) live in `src/lib/admin/today.ts`; the source table and ranking in
+  `src/domains/admin/today.ts` (pure, tested per role). Each source has its own `.catch` (logged with `errName`): a failed
+  source reads "uncounted", never 0, and never takes a page down; the layout's counts race a 1.5 s deadline and show none
+  when late. React `cache` only, per request. Counts refresh on a full load and after an action (settle); e2e checks a
+  count drops after an action. Sources and their reads:
+  | Source | Who | Read |
+  |---|---|---|
+  | Partner passkey requests | master admin | new definer `admin_waiting_passkeys()` (0138): partner id, name, age; never a code |
+  | Staff passkey requests (not your own) | master admin | the same definer: email, age |
+  | Partners to review | all staff | `partnerCounts` (exists) |
+  | Address claims waiting | all staff | `domainsNeedingFrrata` (exists) |
+  | Over-paid, not refunded | master admin | `frrata_payments where over_paid > 0 and refunded_at is null` (frata_admin reads it), partial index (0137) |
+  | A month's drafts not issued | master admin | `frrata_invoices` drafted for last month, not issued: one count |
+  | Trials ending in 3 days, no autopay | all staff (Trials is ANY_STAFF today) | `trialList` filtered |
+  | Owners not signed in after 3 days | all staff | `invites` (role owner, not accepted or revoked, older than 3 days) |
+  | A theme version new in this deploy | all staff | `themeVersionsForAdmin` (exists) |
+  EkCode's paused codes and Infrastructure's alerts stay on their pages (their reads take seconds: a per-store aggregate,
+  pg_stat_statements and table sizes); see Deviations.
+- **Record refund (0137 + 0138):** columns `refund_amount`, `refund_utr`, `refunded_at` (the bank's date, typed),
+  `refunded_by`; a CHECK that all four are null or all set; a partial unique index on `upper(btrim(refund_utr))`. Definer
+  `app_record_frrata_refund(p_payment, p_utr, p_sent_on, p_staff)` checks in the database that `p_staff` is an admin,
+  locks the row, requires captured, `over_paid > 0`, not refunded, not test; amount fixed at `over_paid`. `refunded_by`
+  copies the audit actor on purpose (as `recorded_by` does). `InvoiceDetail.payments` gains `id`. The dialog: "Record a
+  refund of ₹1,180" · UTR · date sent · Keep / Record refund; after: the band goes and the payment row says "refunded 14 Nov".
+- **Fresh passkey** on Record refund, Record payment, Credit note and Issue: `confirmedRecently(staff)` on the server; the
+  dialog runs the passkey step first (the staff page's `ConfirmFirst`).
+- **Activity:** keyset `(at, id) < ($at, $id)`, 50 a page; indexes `audit_events (at desc, id desc)` and
+  `(actor_user_id, at desc, id desc)` (0137); "kind" = the action's first word from a fixed list (plan, trial, address,
+  partner, billing, app, theme, support, staff, settings, order, offer); actions shown as words through one map in
+  `src/domains/admin/activity-words.ts` (no raw `module.on`).
+- **Apps:** `/admin/modules` → `/admin/apps`, `/admin/merchants/[id]/modules` → `/apps` (old paths redirect); "Asked to be
+  told" → "Waiting list"; Admin joins `check:words` with its own rule set (merchant stays an Admin word; module, add-on and
+  bare admin banned); e2e 45 follows.
+- **Themes:** only the existing actions move (Release primary, Recall and Withdraw in More); no new theme work (ADR-0014).
+- **Flow number:** `91-neel-admin.mjs` (89 is taken).
+
+## Scalability, reliability, motion
+- **Scalability:** Today's nine reads are counts or short lists over indexed columns; at 500 merchants each stays under
+  20 ms (speed-reviewer EXPLAINs them at 10×). Activity is keyset-paged on indexes.
+- **Reliability:** a failed source is "uncounted", never 0 and never a broken page; actions keep their own refusals; the
+  refund definer is idempotent on the UTR (a second try with the same UTR is refused at the field).
+- **Motion:** the Dialog and sheet primitives as they are; no new motion.
+
+## Out of scope (signal that brings it back)
+Assigning, snoozing or marking Today items done (two staff stepping on one task); EkCode and Infrastructure in Today (a
+cheap count of paused stores or Now alerts); moving money from Frrata (the CA and the owner).
+
+## Tasks (each ends with its verify)
+1. Shared parts, nav, Today (`npm test`, typecheck, flow 91 Today + counts). 2. Migration 0137/0138 (`verify:tenancy` with
+new proofs). 3. Records and lists as drawn, screen by screen (flow 91 per screen; the existing Admin flows). 4. Apps and
+Master admin words, check:words over Admin (`npm test`). 5. Phone (flow 91 at 390). 6. Reviews, parity, skill, ship.
+
+## Practices recorded in skills
+frata-design-language § Neel Admin (the nine rules), the glossary (Master admin; Apps everywhere); frata-architecture (Today
+sources and the "uncounted" rule; money actions need a fresh passkey).
+
+## Repetitive work → agents and scripts
+| Chore | Becomes |
+|---|---|
+| Keeping "module" out of every surface's words | check:words over Admin too |
+| A new waiting task reaching Today | one row in the source table, tested per role |
 
 ## Design review
 - **UI/UX:** one primary per header; the waiting task as a band; tabs; forms only in dialogs; destructive in More with a
   reason. States: empty Today ("Nothing waits."), a support person sees the band without the action ("A master admin
   decides"), phone (two pages, sheets), error (the shared error page).
-- **Tenancy:** Admin is the one cross-tenant surface (ADR-0007) and reads through `frata_admin` in `src/lib/admin/`; Today
-  adds no new reach, only gathers existing reads. The refund columns sit on `frrata_payments` (Frrata's own table, admin
+- **Tenancy:** Admin is the one cross-tenant surface (ADR-0007) and reads through `frata_admin` in `src/lib/admin/`; Today gathers existing reads, except partner
+  passkey requests across partners (a new definer, M1 below). The refund columns sit on `frrata_payments` (Frrata's own table, admin
   grants as today). `tenancy-auditor` on the plan and the diff.
 - **Modularity:** pages compose; reads in `src/lib/admin/`; the ranking pure; shared parts in `_components`.
 - **SSOT:** the Today list and the nav counts come from one function; each waiting fact is computed where it is today.
@@ -77,3 +166,7 @@ merchant's band and tabs, a dialog, Record refund, Activity filter, phone) writt
 ## Deviations (proposed; owner sees them before ship)
 | Mockup element | Built | Reason | Owner seen |
 |---|---|---|---|
+| Today's "Outbox has 214 waiting" row, and EkCode's paused codes | Not on Today or in the nav counts; each keeps its own "Needs you" on its page | Their reads take seconds (pg_stat_statements, table sizes, a per-store aggregate); on every Admin page they would slow all of Admin | — |
+| "Modules" in the nav, Merchant, Merchants and Reference boards | "Apps" | Owner, 2026-11-15: "It'll be Apps. across the whole ecosystem." | Yes, 2026-11-15 |
+| Staff role "Admin" | "Master admin" | Owner, 2026-11-15: "keep master admin for frrata admin" | Yes, 2026-11-15 |
+| Record refund (no dialog drawn) | A dialog: the amount fixed at what was over-paid, UTR, date sent; Keep / Record refund; a fresh passkey first | The board drew the band's button only; the fields are what a refund record needs | — |

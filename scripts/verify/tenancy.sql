@@ -3890,4 +3890,30 @@ do $$ declare ra uuid; rb uuid; n int; begin
 end $$;
 rollback;
 
-\echo 'tenancy proof — all 82 checks passed'
+-- 83. Admin N4 (0137–0138; plan docs/plans/2026-11-15-neel-n4-admin.md, reviews folded in): the waiting-passkeys read and
+-- the refund writer are definers with a fixed search_path that only frata_admin may run; support is refused by both; the
+-- refund columns are all or none; nobody but the definer writes frrata_payments.
+do $$ begin
+  if exists (select 1 from pg_proc where proname in ('admin_waiting_passkeys', 'app_record_frrata_refund') and (not prosecdef or proconfig is null or not ('search_path=""' = any (proconfig))))
+  then raise exception 'FAIL: an N4 function is not a definer with a fixed search_path'; end if;
+  if exists (select 1 from pg_proc p, unnest(array['anon', 'authenticated', 'service_role', 'frata_app']) r
+              where p.proname in ('admin_waiting_passkeys', 'app_record_frrata_refund') and has_function_privilege(r, p.oid, 'execute'))
+  then raise exception 'FAIL: a role other than frata_admin may run an N4 function'; end if;
+  if not has_function_privilege('frata_admin', 'admin_waiting_passkeys(uuid)', 'execute') or not has_function_privilege('frata_admin', 'app_record_frrata_refund(uuid, text, date, uuid)', 'execute')
+  then raise exception 'FAIL: frata_admin cannot run an N4 function'; end if;
+  if exists (select 1 from unnest(array['frata_admin', 'frata_app', 'anon', 'authenticated', 'service_role']) r, unnest(array['insert', 'update']) pr
+              where has_any_column_privilege(r, 'frrata_payments', pr))
+  then raise exception 'FAIL: a role writes frrata_payments directly'; end if;
+end $$;
+begin;
+do $$ declare got boolean; begin
+  insert into platform_staff (user_id, email, role) values ('83838383-8383-8383-8383-838383838383', 'support83@frrata.test', 'support');
+  got := false; begin perform * from admin_waiting_passkeys('83838383-8383-8383-8383-838383838383'); exception when others then got := true; end;
+  if not got then raise exception 'FAIL: support read the waiting passkeys'; end if;
+  got := false; begin perform app_record_frrata_refund(gen_random_uuid(), 'UTR83', current_date, '83838383-8383-8383-8383-838383838383'); exception when insufficient_privilege then got := true; end;
+  if not got then raise exception 'FAIL: support recorded a refund'; end if;
+  if not exists (select 1 from pg_constraint where conname = 'frrata_payments_refund_whole') then raise exception 'FAIL: the refund columns can be half set'; end if;
+end $$;
+rollback;
+
+\echo 'tenancy proof — all 83 checks passed'

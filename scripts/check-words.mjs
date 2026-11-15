@@ -36,7 +36,7 @@ export const NOT = [
   'src/components/ekcode/', // EkCode speaks to shoppers in its own brand (ADR-0009)
   'src/components/shop-preview/', // the shop's own words, drawn inside the console's preview
   'src/lib/db/', // schema and SQL
-  'src/lib/admin/', // Frrata Admin: N4
+  'src/lib/admin/', 'src/domains/admin/', // Frrata Admin: staff words (Merchant), its own rule set in N4
   'src/lib/storefront/', 'src/lib/ekcode/', 'src/lib/seo/', 'src/lib/documents/', // shoppers, search engines, PDFs
   'src/domains/themes/', 'src/domains/checkout/', 'src/domains/storefront/', 'src/domains/ekcode-core/',
   'src/domains/pages/', 'src/domains/policies/', 'src/domains/seo/', 'src/domains/documents/', // shopper-facing, legal

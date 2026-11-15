@@ -32,7 +32,7 @@ const Fields = createContext<{ errors: Record<string, string>; prefix: string }>
 /** True while the ActionForm around it is posting (read by <Submit>). */
 export const useActionPending = () => useContext(Pending)
 
-export function ActionForm({ action, children, className, noun, refresh = true, id, 'aria-label': ariaLabel }: {
+export function ActionForm({ action, children, className, noun, refresh = true, id, 'aria-label': ariaLabel, onDone, onError }: {
   action: (form: FormData) => Promise<ActionResult>
   children: React.ReactNode
   className?: string
@@ -42,6 +42,10 @@ export function ActionForm({ action, children, className, noun, refresh = true, 
   refresh?: boolean
   id?: string
   'aria-label'?: string
+  /** Inside a Dialog (§ Feedback 4): called after an ok result, so the dialog closes. */
+  onDone?: () => void
+  /** Inside a Dialog: a refusal is said in the dialog's own error slot, never a toast behind it. */
+  onError?: (message: string | null) => void
 }) {
   const toast = useToast()
   const router = useRouter()
@@ -97,8 +101,9 @@ export function ActionForm({ action, children, className, noun, refresh = true, 
       setAlso(bad ? r?.error : undefined)
       setErrors(fields)
       if (bad) setAttempt((a) => a + 1)
-      else if (r?.error) toast.error(r.error)
+      else if (r?.error) { if (onError) onError(r.error); else toast.error(r.error) }
       else if (r?.ok) toast.ok(r.ok)
+      if (!bad && !r?.error) { onError?.(null); onDone?.() }
       if (r?.go) router.push(r.go)
       else if (refresh && !r?.error && !bad) settle(router)
     })()

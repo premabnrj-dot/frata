@@ -4,6 +4,8 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { AppShell } from '@/components/shell/app-shell'
 import type { NavItem } from '@/components/shell/nav'
+import { todayCounts } from '@/lib/admin/today'
+import type { TodayArea } from '@/domains/admin/today'
 import { button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { adminHealth } from '@/lib/admin/health'
@@ -53,26 +55,38 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
   const own = await requireMember(ANY_MEMBER)
   const ownStore = own.ok && !own.membership.supportSessionId ? own.membership.tenantName : null
-  // The same shell as the console; Admin differs only in chrome (ink, reversed mark, STAFF). No count pill (plan U · A9).
-  const merchants: NavItem = { href: '/admin/merchants', label: 'Merchants', icon: 'merchants' }
-  const plans: NavItem = { href: '/admin/plans', label: 'Plans', icon: 'plans' }
-  const billingItem: NavItem = { href: '/admin/billing', label: 'Billing', icon: 'payments' }
-  const modulesItem: NavItem = { href: '/admin/modules', label: 'Modules', icon: 'apps' }
-  const ekcodeItem: NavItem = { href: '/admin/ekcode', label: 'EkCode', icon: 'people' }
-  const themesItem: NavItem = { href: '/admin/themes', label: 'Themes', icon: 'themes' }
-  const offersItem: NavItem = { href: '/admin/offers', label: 'Offers', icon: 'offers' }
-  const partnersItem: NavItem = { href: '/admin/partners', label: 'Partners', icon: 'partners' }
-  const namesItem: NavItem = { href: '/admin/names', label: 'Names', icon: 'address' }
-  const trialsItem: NavItem = { href: '/admin/trials', label: 'Trials', icon: 'activity' }
-  const noticesItem: NavItem = { href: '/admin/notices', label: 'Notices', icon: 'bell' }
-  const emailItem: NavItem = { href: '/admin/email', label: 'Email health', icon: 'messages' }
-  const staffItem: NavItem = { href: '/admin/staff', label: 'Staff', icon: 'staff' }
-  const activity: NavItem = { href: '/admin/activity', label: 'Activity', icon: 'activity' }
-  const infraItem: NavItem = { href: '/admin/infrastructure', label: 'Infrastructure', icon: 'risk' }
+  // The same shell as the console; Admin differs only in chrome (ink, reversed mark, STAFF). Neel N4 (owner-approved
+  // mockup): Today first, then four groups, each item with the count of what waits in it (todayCounts, the same list
+  // Today shows, filtered by this person's role; none when it can't be read).
+  const n = await todayCounts(staff).catch(() => null)
+  const item = (href: string, label: string, icon: NavItem['icon'], key?: TodayArea): NavItem => ({ href, label, icon, ...(key && n?.[key] ? { badge: n[key] } : {}) })
+  const today = item('/admin', 'Today', 'home', 'today')
+  const merchants = item('/admin/merchants', 'Merchants', 'merchants', 'merchants')
+  const trialsItem = item('/admin/trials', 'Trials', 'activity', 'trials')
+  const offersItem = item('/admin/offers', 'Offers', 'offers')
+  const namesItem = item('/admin/names', 'Names', 'address', 'names')
+  const partnersItem = item('/admin/partners', 'Partners', 'partners', 'partners')
+  const staffItem = item('/admin/staff', 'Staff', 'staff', 'staff')
+  const plans = item('/admin/plans', 'Plans', 'plans')
+  const billingItem = item('/admin/billing', 'Billing', 'payments', 'billing')
+  const appsItem = item('/admin/apps', 'Apps', 'apps')
+  const ekcodeItem = item('/admin/ekcode', 'EkCode', 'people', 'ekcode')
+  const themesItem = item('/admin/themes', 'Themes', 'themes', 'themes')
+  const noticesItem = item('/admin/notices', 'Notices', 'bell')
+  const emailItem = item('/admin/email', 'Email health', 'messages', 'email')
+  const infraItem = item('/admin/infrastructure', 'Infrastructure', 'risk', 'infrastructure')
+  const activity = item('/admin/activity', 'Activity', 'activity')
   const foot: NavItem[] = ownStore ? [{ href: '/console', label: `${ownStore} console`, icon: 'external' }] : []
+  const groups = [
+    { label: '', items: [today] },
+    { label: 'Merchants', items: [merchants, trialsItem, offersItem, namesItem] },
+    { label: 'People', items: [partnersItem, staffItem] },
+    { label: 'Money', items: [plans, billingItem] },
+    { label: 'Platform', items: [appsItem, ekcodeItem, themesItem, noticesItem, emailItem, infraItem, activity] },
+  ]
   return (
-    <AppShell rail={railFrom((await cookies()).get('rail')?.value)} ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={[{ label: 'Merchants', items: [merchants, trialsItem, partnersItem, plans, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem] }, { label: 'Frrata', items: [noticesItem, emailItem, infraItem, staffItem, activity] }]}
-      tabs={[merchants, plans, staffItem]} more={[trialsItem, partnersItem, billingItem, modulesItem, ekcodeItem, themesItem, offersItem, namesItem, noticesItem, emailItem, infraItem, activity]} foot={foot} email={staff.email}>
+    <AppShell rail={railFrom((await cookies()).get('rail')?.value)} ink title="Frrata Admin" tag="STAFF" navLabel="Admin" groups={groups}
+      tabs={[today, merchants, partnersItem]} more={[trialsItem, offersItem, namesItem, staffItem, plans, billingItem, appsItem, ekcodeItem, themesItem, noticesItem, emailItem, infraItem, activity]} foot={foot} email={staff.email}>
       {children}
     </AppShell>
   )
