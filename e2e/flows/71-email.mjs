@@ -73,13 +73,15 @@ export default {
       const admin = await open('frata')
       try {
         await admin.p.goto(CONSOLE + '/admin/notices')
-        await admin.p.locator('select[name="audience"]').selectOption('shop')
-        await admin.p.getByLabel('Shop id').fill(shop.id)
-        await admin.p.getByLabel('Kind').selectOption('security')
-        await admin.p.getByLabel('Title').fill('We changed how support visits work')
-        await admin.p.getByLabel('Required (billing, security, Frrata acted)').check()
-        await admin.p.getByRole('button', { name: 'Send' }).click()
-        await expectToast(admin.p, 'Sent to 1 shop.', 'ok')
+        await admin.p.getByRole('button', { name: 'New notice' }).click()
+        const nd = admin.p.getByRole('dialog', { name: 'Send a notice?' })
+        await nd.locator('select[name="audience"]').selectOption('shop')
+        await nd.getByLabel('Store id').fill(shop.id)
+        await nd.getByLabel('Kind').selectOption('security')
+        await nd.getByLabel('Title').fill('We changed how support visits work')
+        await nd.getByLabel('Required (billing, security, Frrata acted)').check()
+        await nd.getByRole('button', { name: 'Send' }).click()
+        await expectToast(admin.p, 'Sent to 1 store.', 'ok')
         await admin.p.getByRole('cell', { name: 'We changed how support visits work' }).waitFor()
       } finally { await admin.ctx.close() }
       // Earlier flows leave their own notices (support visits, billing): the owner has read those, so the pill counts this one.

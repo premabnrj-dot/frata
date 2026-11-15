@@ -38,5 +38,5 @@ export async function sendNoticeAction(form: FormData): Promise<ActionResult> {
     console.error('[admin notices]', errName(err))
     return { error: 'We could not send it. Nothing was sent.' }
   }
-  return { ok: shops ? `Sent to ${shops} shop${shops === 1 ? '' : 's'}.` : 'No shop matched.' }
+  return { ok: shops ? `Sent to ${shops} ${shops === 1 ? 'store' : 'stores'}.` : 'No store matched.' }
 }
