@@ -21,7 +21,7 @@ export async function BillingBanner({ membership }: { membership: Pick<Membershi
     // feedback-ok: the billing banner is pinned in place (rule 5), a state of the shop, not a button's result
     <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-danger-text/30 bg-danger px-3 py-2 text-sm text-danger-text">
       <span>{paused ? 'Store paused · no new orders' : `${t?.state === 'grace' ? 'Trial ended' : 'Autopay stopped'} · store pauses ${dayMonthIN(w.from)}`}</span>
-      <Link href="/console/settings/billing#paying" className="font-medium underline">Set up autopay</Link>
+      <Link href="/console/settings/billing?tab=payment" className="font-medium underline">Set up autopay</Link>
     </div>
   )
   if (t?.state === 'ending') return <TrialEnding lastDay={dayMonthIN(t.lastDay)} price={formatInr(paise(t.priceWithGst))} dismissKey={`trial-ending:${t.lastDay.toISOString()}`} />
@@ -34,7 +34,7 @@ function Due({ kind, amount, number }: { kind: 'failed' | 'acknowledge'; amount:
   return (
     <div role="status" className="mb-3 rounded-md border border-warn-text/30 bg-warn px-3 py-2 text-sm text-warn-text">
       {kind === 'failed' ? <>Payment of <Money paise={paise(amount)} decimals /> for invoice {number} failed. </> : <>Invoice {number}: <Money paise={paise(amount)} decimals /> due. </>}
-      <Link href="/console/settings/billing" className="font-medium underline">Pay now</Link>
+      <Link href="/console/settings/billing?tab=invoices&show=due" className="font-medium underline">Pay now</Link>
     </div>
   )
 }

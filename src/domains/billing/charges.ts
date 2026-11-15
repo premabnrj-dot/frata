@@ -53,6 +53,13 @@ export function deliveredSales(fees: readonly { base: number }[], credits: reado
   return Math.max(0, fees.reduce((t, f) => t + f.base, 0) - credits.reduce((t, c) => t + c.base, 0)) as Paise
 }
 
+/** The delivered sales a fee credit took back: the whole billed base when the order came back or was lost
+ *  ('outcome'); for returned items ('return') only their part, the credited fee at the order's rate. */
+export function creditedBase(c: { kind: string; fee: number; base: number; feeBps: number }): Paise {
+  if (c.kind !== 'return' || c.feeBps <= 0) return c.base as Paise
+  return Math.min(c.base, Math.round((c.fee * 10_000) / c.feeBps)) as Paise
+}
+
 /** What Frrata cost as a share of delivered sales, in basis points; null when there were no sales to divide by. */
 export function costShareBps(taxable: number, sales: number): number | null {
   return sales > 0 ? Math.round((taxable * 10_000) / sales) : null

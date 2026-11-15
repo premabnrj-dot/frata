@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { planCostAt } from '@/domains/billing/charges'
 import { paise } from '@/domains/money/paise'
 import { formatInr, formatPercent } from '@/lib/format'
@@ -23,14 +24,14 @@ export function PlanCalculator({ plans, mine }: { plans: P[]; mine: number | nul
         <input id="sales" type="range" min={MIN} max={MAX} step={STEP} value={sales} onChange={(e) => setSales(Number(e.target.value))} className="w-full accent-primary" />
         <div className="flex justify-between gap-2 text-small text-muted-foreground">
           <span>₹50,000</span>
-          {mine ? <button type="button" className="text-link underline-offset-2 hover:underline" onClick={() => setSales(start)}>Use my sales · {formatInr(paise(start))}</button> : null}
+          {mine ? <Button variant="link" onClick={() => setSales(start)}>Use my sales · {formatInr(paise(start))}</Button> : null}
           <span>₹30 lakh</span>
         </div>
       </div>
       <ul className="grid gap-3 sm:grid-cols-3">
         {plans.map((p, i) => (
-          <li key={p.code} className={`flex flex-col gap-1 rounded-lg border px-4 py-3.5 ${costs[i] === least ? 'border-chart-now bg-select' : 'border-border'}`}>
-            <span className="flex items-center justify-between gap-1.5"><b className="font-semibold">{p.name}</b>{costs[i] === least ? <Badge tone="ok">Costs least</Badge> : null}</span>
+          <li key={p.code} className={`flex flex-col gap-1 rounded-lg border px-4 py-3.5 ${costs[i] === least ? 'border-transparent bg-select text-select-foreground' : 'border-border'}`}>
+            <span className="flex items-center justify-between gap-1.5"><span className="font-semibold">{p.name}</span>{costs[i] === least ? <Badge tone="ok">Costs least</Badge> : null}</span>
             <span className="font-num text-title font-semibold">{formatInr(costs[i]!)} a month</span>
             <span className="text-label text-muted-foreground">{formatInr(paise(p.monthlyPrice))} plan + {formatInr(paise(costs[i]! - p.monthlyPrice))} fee · {formatPercent(costs[i]! / sales, 1)} of sales</span>
           </li>

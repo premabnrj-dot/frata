@@ -1,5 +1,6 @@
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
+import { Banner } from '@/components/ui/banner'
 import { isModuleKey, MODULE_KEYS, MODULES } from '@/domains/modules/registry'
 import { paise } from '@/domains/money/paise'
 import { formatInr } from '@/lib/format'
@@ -34,9 +35,7 @@ export function Plans({ plans, current, custom, options, downgradeOn, scheduled,
 
       <Section ariaLabel="Plans">
         {scheduled ? (
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-mid bg-neutral px-3.5 py-2.5 text-neutral-text">
-            <span>Moving to {scheduled.name} on {scheduled.on}.</span>{scheduled.byShop && !readOnly ? <KeepPlan /> : null}
-          </div>
+          <Banner tone="info" className="mb-3" title={`Moving to ${scheduled.name} on ${scheduled.on}`} action={scheduled.byShop && !readOnly ? <KeepPlan /> : undefined} />
         ) : null}
         {/* A comparison keeps its columns on a phone (it scrolls sideways in its box): reflowed, the plans lose their names. */}
         <div className="overflow-x-auto rounded-lg border border-border">
@@ -70,7 +69,7 @@ export function Plans({ plans, current, custom, options, downgradeOn, scheduled,
               <tr className="[&>td]:px-3 [&>td]:py-3">
                 <td />
                 {plans.map((p) => { const o = options.find((x) => x.code === p.code); return (
-                  <td key={p.code} className={p.code === current ? 'bg-select' : ''}>{o ? <PlanButton option={o} downgradeOn={downgradeOn} fromFeatured={fromFeatured} scheduled={!!scheduled} /> : null}</td>) })}
+                  <td key={p.code} className={p.code === current ? 'bg-select' : ''}>{o ? <PlanButton option={o} current={cur?.name ?? 'my plan'} downgradeOn={downgradeOn} fromFeatured={fromFeatured} scheduled={!!scheduled} /> : null}</td>) })}
               </tr>
             ) : null}
           </tbody>

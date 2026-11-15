@@ -88,7 +88,7 @@ export function AppAction({ k, name, action, canManage, askHref, block = false, 
     return canManage ? <a href={askHref} target="_blank" rel="noopener" className={`${button()} ${wide}`}>{action.label}</a> : owner
   }
   if (action.kind === 'plans') {
-    return canManage ? <Link href="/console/settings/billing" prefetch={false} className={`${button()} ${wide}`}>{action.label}</Link> : owner
+    return canManage ? <Link href="/console/settings/billing?tab=plans" prefetch={false} className={`${button()} ${wide}`}>{action.label}</Link> : owner
   }
   if (!canManage) return <p className="text-sm text-muted-foreground">{action.on ? 'On' : 'Off'} · ask the store’s owner to change it.</p>
   if (!action.on) {

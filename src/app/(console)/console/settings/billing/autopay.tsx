@@ -61,11 +61,10 @@ export function SetUpAutopay({ onStarted }: { onStarted?: () => void }) {
   return (
     <div role="group" aria-label="Pay with" className="flex flex-col gap-2">
       {METHODS.map((m) => (
-        <button key={m.key} type="button" onClick={() => go(m.key)} aria-disabled={busy || undefined}
-          className="flex min-h-15 items-center justify-between gap-2.5 rounded-mid border border-border bg-card px-3.5 py-2.5 text-left hover:bg-side">
-          <span className="flex flex-col"><b className="font-semibold">{m.name}</b><span className="text-label text-muted-foreground">{m.limit}</span></span>
+        <Button key={m.key} variant="secondary" size="wrap" busy={busy} onClick={() => go(m.key)} className="min-h-15 justify-between gap-2.5">
+          <span className="flex flex-col"><span className="font-semibold">{m.name}</span><span className="text-label font-normal text-muted-foreground">{m.limit}</span></span>
           {m.best ? <Badge tone="ok">Recommended</Badge> : null}
-        </button>
+        </Button>
       ))}
     </div>
   )
@@ -95,7 +94,7 @@ export function StopAutopay() {
     <>
       <Button variant="danger" onClick={() => { setRefused(null); setOpen(true) }}>Turn off autopay</Button>
       <Dialog open={open} onClose={() => setOpen(false)} error={refused} title="Turn off autopay?" description="Pay each bill yourself by its due date."
-        actions={<><Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Keep autopay</Button><Button variant="destructive" busy={busy} onClick={stop}>Turn off</Button></>} />
+        actions={<><Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Keep autopay</Button><Button variant="destructive" busy={busy} onClick={stop}>Turn off autopay</Button></>} />
     </>
   )
 }
@@ -103,8 +102,6 @@ export function StopAutopay() {
 export function PayNow({ invoiceId }: { invoiceId: string }) {
   const { busy, run } = useCheckout()
   return (
-    <span className="inline-flex flex-col items-end gap-1">
-      <Button variant="secondary" aria-disabled={busy} onClick={() => run(() => startPayNow(invoiceId), completePayNow, 'Paid. Thank you.', { description: 'Frrata invoice' })}>Pay now</Button>
-    </span>
+    <Button variant="secondary" busy={busy} onClick={() => run(() => startPayNow(invoiceId), completePayNow, 'Paid. Thank you.', { description: 'Frrata invoice' })}>Pay this bill</Button>
   )
 }

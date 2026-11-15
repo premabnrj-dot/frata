@@ -3,13 +3,16 @@ import { Section } from '@/components/layout/section'
 import { Money } from '@/components/data/numeric'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow } from '@/components/data/data-table'
 import { Badge, Tag } from '@/components/ui/badge'
-import { button } from '@/components/ui/button'
 import { summarize, type ChargeGroup, type ChargeLine } from '@/domains/billing/charges'
 import { paise } from '@/domains/money/paise'
 import { dayMonthIN, dayMonthLongIN } from '@/lib/format-date'
 import type { ChargeOrder } from '@/lib/queries/billing'
 import { billingHref } from './tabs'
 import { GROUP_LABEL, pct } from './overview'
+import { ASSUME_DELIVERED_DAYS } from '@/domains/orders/outcomes'
+import { Pager } from '@/components/data/pager'
+import { Empty } from '@/components/ui/empty'
+import { BillPicks } from './pills'
 
 export type BillPick = { id: string; label: string }
 export type ChargesBill = {
@@ -21,7 +24,7 @@ export type ChargesBill = {
   orders: ChargeOrder[]; orderCount: number; credits: ChargeOrder[]; page: number; pageSize: number
 }
 
-const OUTCOME: Record<ChargeOrder['outcome'], string> = { delivered: 'Delivered', assumed: 'Shipped 30+ days', came_back: 'Came back', lost: 'Lost' }
+const OUTCOME: Record<ChargeOrder['outcome'], string> = { delivered: 'Delivered', assumed: `Counted delivered after ${ASSUME_DELIVERED_DAYS} days`, came_back: 'Came back', lost: 'Lost', returned: 'Items returned' }
 const DAY = 86_400_000
 
 /** Charges (mockup § Charges): one bill at a time; the summary adds up to the bill; by order, or by plan and apps. */
@@ -39,14 +42,11 @@ export function Charges({ picks, bill, view, prefix }: { picks: BillPick[]; bill
   const items = bill.lines.filter((l) => l.kind === 'plan' || l.kind === 'change' || l.kind === 'addon')
   return (
     <div className="space-y-4">
-      <nav aria-label="Bill" className="flex flex-wrap gap-1.5">
-        {picks.map((p) => <Link key={p.id} href={billingHref('charges', { bill: p.id === 'open' ? undefined : p.id })} aria-current={p.id === bill.id ? 'page' : undefined}
-          className={`inline-flex h-7.5 items-center rounded-full border px-3 text-label font-medium ${p.id === bill.id ? 'border-chart-now bg-select text-select-foreground' : 'border-border bg-card'}`}>{p.label}</Link>)}
-      </nav>
+      <BillPicks label="Bill" items={picks.map((p) => ({ href: billingHref('charges', { bill: p.id === 'open' ? undefined : p.id }), label: p.label, current: p.id === bill.id }))} />
 
       <Section title={bill.title} action={<Badge tone={bill.status.tone}>{bill.status.label}</Badge>}>
         <DataTable label="What this bill is made of">
-          <DataTableHead><th>Charge</th><th>Worked out</th><th className="text-right">Amount</th></DataTableHead>
+          <DataTableHead><th>Charge</th><th>How</th><th className="text-right">Amount</th></DataTableHead>
           <DataTableBody>
             {s.rows.map((r) => (
               <DataTableRow key={r.group}>
@@ -66,18 +66,12 @@ export function Charges({ picks, bill, view, prefix }: { picks: BillPick[]; bill
 
       <Section ariaLabel="Charges in detail">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2.5">
-          <nav aria-label="View" className="inline-flex gap-0.5 rounded-mid bg-sunk p-0.5">
-            {([['orders', 'By order'], ['items', 'Plan and apps']] as const).map(([k, l]) => (
-              <Link key={k} href={at(k)} aria-current={view === k ? 'page' : undefined}
-                className={`inline-flex h-8 items-center rounded-md px-3 text-label font-medium ${view === k ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>{l}</Link>
-            ))}
-          </nav>
-          {view === 'orders' && pages > 1 ? <span className="text-label text-muted-foreground">Page {bill.page + 1} of {pages}</span> : null}
+          <BillPicks label="View" items={([['orders', 'By order'], ['items', 'Plan and apps']] as const).map(([k, l]) => ({ href: at(k), label: l, current: view === k }))} />
         </div>
         {view === 'orders' ? (
           <>
             <DataTable label="Orders on this bill">
-              <DataTableHead><th>Order</th><th>Shipped</th><th>Outcome</th><th className="text-right">Order total</th><th className="text-right">Fee is on</th><th className="text-right">Rate</th><th className="text-right">Fee</th></DataTableHead>
+              <DataTableHead><th>Order</th><th>Shipped</th><th>Outcome</th><th className="text-right">Order total</th><th className="text-right">Fee charged on</th><th className="text-right">Rate</th><th className="text-right">Fee</th></DataTableHead>
               <DataTableBody>
                 {[...bill.orders, ...bill.credits.map((c) => ({ ...c, credit: true as const }))].map((o, i) => (
                   <DataTableRow key={`${o.number}-${i}`}>
@@ -85,19 +79,17 @@ export function Charges({ picks, bill, view, prefix }: { picks: BillPick[]; bill
                     <td data-cell="e" className="text-muted-foreground"><span className="md:hidden">Shipped </span>{o.shippedAt ? dayMonthIN(o.shippedAt) : '—'}</td>
                     <td data-cell="c"><Badge tone={'credit' in o ? 'neutral' : 'ok'}>{OUTCOME[o.outcome]}{o.outcomeAt ? ` ${dayMonthIN(o.outcomeAt)}` : ''}</Badge>{'credit' in o ? <Tag className="ml-1.5">Credit</Tag> : null}</td>
                     <td data-cell="hide" className="text-right"><Money paise={paise(o.total)} decimals /></td>
-                    <td data-cell="d" className="text-right"><Money paise={paise(o.base)} decimals /></td>
+                    <td data-cell="d" className="text-right text-muted-foreground"><span className="md:hidden">On </span><Money paise={paise(o.base)} decimals /></td>
                     <td data-cell="hide" className="text-right text-muted-foreground">{pct(o.feeBps)}</td>
                     <td data-cell="b" className="text-right font-medium"><Money paise={paise(o.fee)} decimals /></td>
                   </DataTableRow>
                 ))}
-                {bill.orderCount === 0 && !bill.credits.length ? <DataTableRow><td data-cell="e" colSpan={7} className="text-muted-foreground">No delivered orders on this bill.</td></DataTableRow> : null}
               </DataTableBody>
             </DataTable>
+            {bill.orderCount === 0 && !bill.credits.length ? <Empty className="mt-3" title="No delivered orders on this bill" /> : null}
             {pages > 1 ? (
-              <div className="mt-3 flex justify-end gap-2">
-                {bill.page > 0 ? <Link href={at('orders', { page: bill.page - 1 })} className={button({ variant: 'secondary', size: 'sm' })}>Newer orders</Link> : null}
-                {bill.page + 1 < pages ? <Link href={at('orders', { page: bill.page + 1 })} className={button({ variant: 'secondary', size: 'sm' })}>Older orders</Link> : null}
-              </div>
+              <div className="mt-3"><Pager first={bill.page * bill.pageSize + 1} shown={bill.orders.length} total={bill.orderCount}
+                prevHref={bill.page > 0 ? at('orders', { page: bill.page - 1 }) : undefined} nextHref={bill.page + 1 < pages ? at('orders', { page: bill.page + 1 }) : undefined} /></div>
             ) : null}
           </>
         ) : (
@@ -112,7 +104,6 @@ export function Charges({ picks, bill, view, prefix }: { picks: BillPick[]; bill
                   <td data-cell="b" className="text-right font-medium"><Money paise={paise(l.taxable)} decimals /></td>
                 </DataTableRow>
               ))}
-              {!items.length ? <DataTableRow><td data-cell="e" colSpan={4} className="text-muted-foreground">No plan or apps on this bill.</td></DataTableRow> : null}
               <DataTableRow><td data-cell="a" className="font-semibold" colSpan={3}>Plan and apps</td><td data-cell="b" className="text-right font-semibold"><Money paise={paise(items.reduce((t, l) => t + l.taxable, 0))} decimals /></td></DataTableRow>
             </DataTableBody>
           </DataTable>

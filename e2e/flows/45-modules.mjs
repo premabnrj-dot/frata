@@ -153,9 +153,9 @@ export default {
         assert.equal(await arjun.getByText(/invoice would have been/).count(), 0, 'staff see no featured card')
         // See Growth: the billing page; an upgrade from there records where it came from.
         await own.getByRole('link', { name: 'See Growth' }).click()
-        await own.waitForURL(/\/console\/settings\/billing\?from=featured$/)
-        await own.getByRole('button', { name: 'Upgrade to Growth' }).click()
-        await own.getByRole('button', { name: 'Upgrade now' }).click()
+        await own.waitForURL(/\/console\/settings\/billing\?tab=plans&from=featured$/)
+        await own.getByRole('button', { name: 'Move to Growth' }).click()
+        await own.getByRole('dialog').getByRole('button', { name: 'Move to Growth' }).click()
         await expectToast(own, 'You are on Growth now.', 'ok')
         const src = await db`select detail->>'source' s from audit_events where tenant_id = ${KESAR} and action = 'billing.plan.source'`
         assert.deepEqual(src.map((r) => r.s), ['featured'])

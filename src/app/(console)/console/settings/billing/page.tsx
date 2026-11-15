@@ -66,9 +66,9 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
     <SettingsHead page="billing" role={m.role}
       badges={<>
         {o.plan ? <Tag>{o.plan.name} · {formatInr(paise(o.plan.monthlyPrice))} a month + {pct(o.plan.feeBps)}</Tag> : null}
-        {trial && trial.state !== 'paid' ? <Badge tone={trial.state === 'grace' || trial.state === 'paused' ? 'danger' : 'info'}>{trial.state === 'building' ? 'Trial starts when you go live' : trial.state === 'grace' || trial.state === 'paused' ? `Trial ended · ${trial.state === 'paused' ? 'paused' : `pauses ${dayIN(trial.pausesAt)}`}` : `Trial · ${trial.daysLeft} days left`}</Badge> : null}
+        {trial && trial.state !== 'paid' ? <Badge tone={trial.state === 'grace' || trial.state === 'paused' ? 'danger' : 'info'}>{trial.state === 'building' ? 'Trial starts when your store goes live' : trial.state === 'grace' || trial.state === 'paused' ? `Trial ended · ${trial.state === 'paused' ? 'paused' : `pauses ${dayIN(trial.pausesAt)}`}` : `Trial · ${trial.daysLeft} days left`}</Badge> : null}
         <Badge tone={method ? 'ok' : 'neutral'}>{method ? 'Autopay on' : 'Autopay off'}</Badge>
-        {test ? <Badge tone="info">Test gateway</Badge> : null}
+        {test ? <Badge tone="info">Test payments</Badge> : null}
       </>}
       actions={<>{trial?.mayExtend && !m.supportSessionId ? <TakeMoreDays /> : null}<Link href={billingHref('plans')} className={button({ variant: 'secondary' })}>Compare plans</Link></>} />
   )
@@ -81,8 +81,9 @@ export default async function PlanAndBillingPage({ searchParams }: { searchParam
     const picks = [...(e ? [{ id: 'open', label: `${dayMonthLongIN(e.invoiceOn)} · so far` }] : []), ...o.invoices.slice(0, 12).map((i) => ({ id: i.id, label: monthYearIN(i.periodStart) }))]
     let bill: ChargesBill | null = null
     if (id === 'open' && e) {
+      // The open bill holds at most a month of orders; the list stops at 2,000 (said in the count) and pages 50 at a time.
       const all = await openChargeOrders(m, e.bill.fees)
-      bill = { id: 'open', title: `Bill of ${dayMonthLongIN(e.invoiceOn)} · so far`, status: { tone: 'neutral', label: 'Still growing' }, lines: e.bill.lines, taxable: e.bill.taxable,
+      bill = { id: 'open', title: `Bill of ${dayMonthLongIN(e.invoiceOn)} · so far`, status: { tone: 'neutral', label: 'Not issued yet' }, lines: e.bill.lines, taxable: e.bill.taxable,
         cgst: e.bill.cgst, sgst: e.bill.sgst, igst: e.bill.igst, total: e.bill.total, orders: all.slice(page * CHARGE_PAGE, (page + 1) * CHARGE_PAGE), orderCount: all.length, credits: [], page, pageSize: CHARGE_PAGE }
     } else if (id !== 'open') {
       const c = await issuedCharges(m, id, page)

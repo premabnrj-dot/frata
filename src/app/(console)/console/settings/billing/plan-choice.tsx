@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { Facts } from '@/components/data/facts'
 import { useToast } from '@/components/ui/toast'
 import { cancelPlanChange, changePlan } from './actions'
 
@@ -15,7 +16,7 @@ export type PlanOption = {
   gains: string[]; loses: string[]
 }
 
-export function PlanButton({ option: o, downgradeOn, fromFeatured = false, scheduled }: { option: PlanOption; downgradeOn: string; fromFeatured?: boolean; scheduled: boolean }) {
+export function PlanButton({ option: o, current, downgradeOn, fromFeatured = false, scheduled }: { option: PlanOption; current: string; downgradeOn: string; fromFeatured?: boolean; scheduled: boolean }) {
   const [open, setOpen] = useState(false)
   const [busy, start] = useTransition()
   const [refused, setRefused] = useState<string | null>(null)
@@ -25,22 +26,21 @@ export function PlanButton({ option: o, downgradeOn, fromFeatured = false, sched
     const r = await changePlan(o.code, fromFeatured ? 'featured' : undefined)
     if (!r.ok) { setRefused(r.error); return }
     close()
-    toast.ok(r.upgrade ? (o.afterTrial ? `You move to ${o.name} when your trial ends, on ${o.afterTrial}.` : `You are on ${o.name} now.`) : `You move to ${o.name} on ${downgradeOn}.`)
+    toast.ok(r.upgrade ? (o.afterTrial ? `You move to ${o.name} on ${o.afterTrial}, when your trial ends.` : `You are on ${o.name} now.`) : `You move to ${o.name} on ${downgradeOn}.`)
   })
   if (!o.upgrade && scheduled) return <Button variant="secondary" disabled>Moving on {downgradeOn}</Button>
-  const title = o.upgrade ? (o.afterTrial ? `Move to ${o.name} on ${o.afterTrial}?` : `Move to ${o.name} now?`) : `Switch to ${o.name} on ${downgradeOn}?`
+  const on = o.upgrade ? o.afterTrial : downgradeOn
+  const title = on ? `Move to ${o.name} on ${on}?` : `Move to ${o.name} now?`
   const rows: [string, string][] = o.upgrade
-    ? [...(o.difference && !o.afterTrial ? [['Rest of this month', `${o.difference} + GST on the next bill`] as [string, string]] : []), [o.afterTrial ? `From ${o.afterTrial}` : 'Then', `${o.price} a month + ${o.fee}`], ...(o.gains.length ? [['You add', o.gains.join(', ')] as [string, string]] : [])]
+    ? [...(o.difference && !o.afterTrial ? [['Rest of this month', `${o.difference} + GST on the next bill`] as [string, string]] : []), [o.afterTrial ? `From ${o.afterTrial}` : 'From today', `${o.price} a month + ${o.fee}`], ...(o.gains.length ? [['You add', o.gains.join(', ')] as [string, string]] : [])]
     : [[`From ${downgradeOn}`, `${o.price} a month + ${o.fee}`]]
   return (
     <>
-      <Button variant="secondary" onClick={() => { setRefused(null); setOpen(true) }}>{o.upgrade ? `Move to ${o.name}` : `Switch to ${o.name}`}</Button>
+      <Button variant="secondary" onClick={() => { setRefused(null); setOpen(true) }}>Move to {o.name}</Button>
       <Dialog open={open} onClose={close} error={refused} title={title}
-        description={!o.upgrade ? `${o.loses.length ? `On ${downgradeOn} you lose ${o.loses.join(', ')}. ` : ''}No refund.` : undefined}
-        actions={<><Button variant="secondary" data-autofocus onClick={close}>Keep my plan</Button><Button onClick={go} busy={busy}>{o.upgrade ? (o.afterTrial ? 'Move after the trial' : `Move to ${o.name}`) : `Switch on ${downgradeOn}`}</Button></>}>
-        <table className="w-full text-sm"><tbody>
-          {rows.map(([k, v]) => <tr key={k} className="border-t border-line-soft"><td className="py-2.5 text-muted-foreground">{k}</td><td className="py-2.5 text-right font-medium">{v}</td></tr>)}
-        </tbody></table>
+        description={!o.upgrade ? `${o.loses.length ? `On ${downgradeOn} you lose ${o.loses.join(', ')}. ` : ''}This month’s charge stays.` : undefined}
+        actions={<><Button variant="secondary" data-autofocus onClick={close}>Keep {current}</Button><Button onClick={go} busy={busy}>{on ? `Move to ${o.name} on ${on}` : `Move to ${o.name}`}</Button></>}>
+        <Facts rows={rows} />
       </Dialog>
     </>
   )

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Paise } from '@/domains/money/paise'
 import { deliveredFee } from '@/domains/plans/entitlements'
-import { cheapestAt, costBar, costShareBps, deliveredSales, GROUP_OF, planCostAt, summarize } from '../charges'
+import { cheapestAt, costBar, creditedBase, costShareBps, deliveredSales, GROUP_OF, planCostAt, summarize } from '../charges'
 import { LINE_KINDS } from '../bill'
 
 const line = (kind: string, taxable: number) => ({ kind, description: kind, quantity: 1, rateBps: null, taxable })
@@ -36,6 +36,12 @@ describe('charges', () => {
   it('delivered sales are billed bases less credited bases, never negative', () => {
     expect(deliveredSales([{ base: 249000 }, { base: 129900 }], [{ base: 129900 }])).toBe(249000)
     expect(deliveredSales([], [{ base: 100 }])).toBe(0)
+  })
+
+  it('a credit takes back the whole base when the order came back, only the returned part for a return', () => {
+    expect(creditedBase({ kind: 'outcome', fee: 2490, base: 249000, feeBps: 100 })).toBe(249000)
+    expect(creditedBase({ kind: 'return', fee: 899, base: 249000, feeBps: 100 })).toBe(89900)
+    expect(creditedBase({ kind: 'return', fee: 99999, base: 249000, feeBps: 100 })).toBe(249000)
   })
 
   it('cost share in basis points; none without sales', () => {

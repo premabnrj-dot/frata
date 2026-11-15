@@ -1,10 +1,12 @@
 import Link from 'next/link'
 import { Section } from '@/components/layout/section'
+import { Empty } from '@/components/ui/empty'
 import { Money, Numeric } from '@/components/data/numeric'
 import { button } from '@/components/ui/button'
-import { costShareBps, planCostAt, summarize, type ChargeGroup } from '@/domains/billing/charges'
+import { cheapestAt, costBar, costShareBps, planCostAt, summarize, type ChargeGroup } from '@/domains/billing/charges'
+import { NUDGE_FLOOR } from '@/domains/billing/ladder'
 import { paise } from '@/domains/money/paise'
-import { formatPercent } from '@/lib/format'
+import { formatBps } from '@/lib/format'
 import { dayMonthIN, dayMonthLongIN, monthLongIN, monthShortIN } from '@/lib/format-date'
 import { monthStartIST } from '@/domains/time/month'
 import type { BillingOverview, Paying } from '@/lib/queries/billing'
@@ -13,15 +15,15 @@ import { SetUpAutopayDialog } from '../autopay'
 
 const DAY = 86_400_000
 export const GROUP_LABEL: Record<ChargeGroup, string> = { plan: 'Plan', apps: 'Apps', fees: 'Fee on delivered orders', credits: 'Credits', carry: 'Carried from last month' }
-export const pct = (bps: number) => formatPercent(bps / 10_000, bps % 100 === 0 ? 0 : 1)
+export const pct = formatBps
 
 type Plan = { code: string; name: string; monthlyPrice: number; feeBps: number }
 
 /** Overview (mockup § Overview): the next bill, the month so far, what Frrata cost each month, a cheaper plan, what's next. */
 export function Overview({ o, paying, plans, now, canPay, method }: { o: BillingOverview; paying: Paying | null; plans: Plan[]; now: Date; canPay: boolean; method: string | null }) {
   const e = o.estimate === 'busy' ? null : o.estimate
-  if (o.estimate === 'busy') return <Section><p className="text-sm text-muted-foreground">Frrata is updating this bill right now. Reload in a moment.</p></Section>
-  if (!o.plan || !e) return <Section><p className="text-sm text-muted-foreground">No plan yet. Frrata sets it when your store opens.</p></Section>
+  if (o.estimate === 'busy') return <Section><Empty title="We’re updating this bill. Reload in a minute." /></Section>
+  if (!o.plan || !e) return <Section><Empty title="No plan yet. We set it when your store opens." /></Section>
   const monthStart = monthStartIST(now)
   // This month's delivered orders only (a late one from last month is billed too, but not counted here).
   const fromThisMonth = e.orders.filter((x) => x.billableAt >= monthStart)
@@ -32,11 +34,12 @@ export function Overview({ o, paying, plans, now, canPay, method }: { o: Billing
   const done = Math.min(100, Math.max(0, Math.round(((now.getTime() - monthStart.getTime()) / (e.invoiceOn.getTime() - monthStart.getTime())) * 100)))
   const last = o.history.at(-1)
   const share = last ? costShareBps(last.taxable, last.sales) : null
-  // One verdict (charges.ts cheapestAt's rule): the plans at the last bill's delivered sales, against the plan on now.
+  // One verdict (charges.ts cheapestAt, the calculator's rule) at the last bill's delivered sales, against the plan on
+  // now; shown only above the ladder's floor (₹500 before GST), never for a price agreed with Frrata.
   const cur = plans.find((p) => p.code === o.plan!.code)
-  const cheaper = last && cur && !o.plan.custom && last.sales > 0
-    ? plans.map((p) => ({ p, save: planCostAt(paise(last.sales), cur) - planCostAt(paise(last.sales), p) })).filter((x) => x.save > 0).sort((a, b) => b.save - a.save)[0] ?? null
-    : null
+  const best = last && cur && !o.plan.custom && last.sales > 0 ? cheapestAt(paise(last.sales), plans) : null
+  const save = best && cur && last ? planCostAt(paise(last.sales), cur) - planCostAt(paise(last.sales), best) : 0
+  const cheaper = best && best.code !== cur?.code && save >= NUDGE_FLOOR ? { p: best, save } : null
   const coming = [
     paying?.nextDebit ? { when: paying.nextDebit.at, what: <>Debit of <Money paise={paise(paying.nextDebit.amount)} decimals /> by {method}</> } : null,
     { when: e.invoiceOn, what: e.bill.rolled ? <>The bill is under ₹100 and moves to next month</> : <>Bill of <Money paise={paise(e.bill.total)} decimals /> so far</> },
@@ -44,11 +47,11 @@ export function Overview({ o, paying, plans, now, canPay, method }: { o: Billing
   ].filter((x): x is NonNullable<typeof x> => x !== null)
   const max = Math.max(1, ...o.history.map((h) => h.plan + h.fees), s.beforeGst)
   const bars = [...o.history.map((h) => ({ key: h.id, label: monthShortIN(h.periodStart), plan: h.plan, fees: h.fees, sales: h.sales, open: false })),
-    { key: 'open', label: `${monthShortIN(monthStart)} so far`, plan: s.rows.filter((r) => r.group === 'plan' || r.group === 'apps').reduce((t, r) => t + r.taxable, 0), fees: fee, sales, open: true }]
+    { key: 'open', label: `${monthShortIN(e.invoiceOn)} bill so far`, ...costBar(e.bill.lines), sales: e.bill.fees.reduce((t, f) => t + f.base, 0), open: true }]
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
-        <Section title="Next bill" action={<span className="text-sm text-muted-foreground">{dayMonthLongIN(e.invoiceOn)} · in {daysLeft} days</span>}>
+        <Section title="Next bill" action={<span className="text-sm text-muted-foreground">{dayMonthLongIN(e.invoiceOn)} · {daysLeft === 0 ? 'today' : `in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`}</span>}>
           <p><span className="font-num text-display font-semibold tracking-tight"><Money paise={paise(e.bill.total)} decimals /></span> <span className="text-muted-foreground">so far, with GST</span></p>
           <div role="img" aria-label={`${done}% of the month gone`} className="mt-3 h-1.5 overflow-hidden rounded-full bg-sunk"><div className="h-full bg-chart" style={{ width: `${done}%` }} /></div>
           <table className="mt-2 w-full text-sm"><tbody>
@@ -56,7 +59,7 @@ export function Overview({ o, paying, plans, now, canPay, method }: { o: Billing
             <tr><td className="py-2.5">GST 18%</td><td className="py-2.5 text-right"><Money paise={paise(gst)} decimals /></td></tr>
           </tbody></table>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-muted-foreground">{method ? `Taken by ${method} on ${dayMonthLongIN(e.invoiceOn)}` : 'Pay it from Invoices once it is issued'}</span>
+            <span className="text-muted-foreground">{method ? `Taken by ${method} on ${dayMonthLongIN(e.invoiceOn)}` : `Pay it from Invoices after ${dayMonthLongIN(e.invoiceOn)}`}</span>
             <span className="flex flex-wrap gap-2">
               <Link href={billingHref('charges')} className={button({ variant: 'ghost' })}>See every charge</Link>
               {!method && canPay ? <SetUpAutopayDialog /> : null}
@@ -72,8 +75,8 @@ export function Overview({ o, paying, plans, now, canPay, method }: { o: Billing
           </dl>
           {last && share !== null ? (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line-soft pt-3.5">
-              <span className="text-muted-foreground">Bill of {dayMonthIN(last.periodStart)}, Frrata cost</span>
-              <span><b className="font-semibold">{pct(share)}</b> <span className="text-muted-foreground">of delivered sales</span></span>
+              <span className="text-muted-foreground">Your {dayMonthIN(last.periodStart)} bill was</span>
+              <span><span className="font-semibold">{pct(share)}</span> <span className="text-muted-foreground">of delivered sales</span></span>
             </div>
           ) : null}
         </Section>
@@ -88,7 +91,7 @@ export function Overview({ o, paying, plans, now, canPay, method }: { o: Billing
               const share = costShareBps(b.plan + b.fees, b.sales)
               return (
                 <div key={b.key} role="img" aria-label={`${b.label} · plan and apps ₹${(b.plan / 100).toLocaleString('en-IN')} · fee ₹${(b.fees / 100).toLocaleString('en-IN')}`} className="flex h-full flex-col items-center justify-end gap-1.5">
-                  <span className="text-small font-medium"><Money paise={paise(b.plan + b.fees)} /></span>
+                  <span className="font-num text-small font-medium"><Money paise={paise(b.plan + b.fees)} /></span>
                   <div className={`flex w-full max-w-14 flex-col overflow-hidden rounded-t-md ${b.open ? 'outline-1 outline-offset-2 outline-dashed outline-input' : ''}`}>
                     <div className="bg-chart-now" style={{ height: `${Math.round((b.fees / max) * 140)}px` }} />
                     <div className="bg-chart" style={{ height: `${Math.round((b.plan / max) * 140)}px` }} />
@@ -101,7 +104,7 @@ export function Overview({ o, paying, plans, now, canPay, method }: { o: Billing
           </div>
           <details className="mt-3 text-sm">
             <summary className="cursor-pointer text-link">See as a table</summary>
-            <table className="mt-2 w-full"><thead className="text-left text-small text-muted-foreground"><tr><th className="py-1 font-medium">Bill</th><th className="py-1 text-right font-medium">Delivered sales</th><th className="py-1 text-right font-medium">Plan and apps</th><th className="py-1 text-right font-medium">Fee</th><th className="py-1 text-right font-medium">Of sales</th></tr></thead>
+            <table aria-label="What Frrata cost each month" className="mt-2 w-full"><thead className="text-left text-small text-muted-foreground"><tr><th scope="col" className="py-1 font-medium">Bill</th><th scope="col" className="py-1 text-right font-medium">Delivered sales</th><th scope="col" className="py-1 text-right font-medium">Plan and apps</th><th scope="col" className="py-1 text-right font-medium">Fee</th><th scope="col" className="py-1 text-right font-medium">Of sales</th></tr></thead>
               <tbody>{bars.map((b) => { const sh = costShareBps(b.plan + b.fees, b.sales); return <tr key={b.key} className="border-t border-line-soft"><td className="py-1.5">{b.label}</td><td className="py-1.5 text-right"><Money paise={paise(b.sales)} /></td><td className="py-1.5 text-right"><Money paise={paise(b.plan)} /></td><td className="py-1.5 text-right"><Money paise={paise(b.fees)} /></td><td className="py-1.5 text-right">{sh === null ? '—' : pct(sh)}</td></tr> })}</tbody></table>
           </details>
         </Section>
