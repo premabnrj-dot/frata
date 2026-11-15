@@ -133,7 +133,7 @@ export default async function PartnersPage() {
           </section>
         </SiteStage>
       </main>
-      <SiteFooter links={[{ href: '/', label: 'For brands' }, { href: '/login', label: 'Sign in' }]} />
+      <SiteFooter links={[{ href: '/', label: 'For brands' }, { href: '/privacy-policy', label: 'Privacy' }, { href: '/login', label: 'Sign in' }]} />
     </div>
   )
 }
