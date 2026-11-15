@@ -1,0 +1,12 @@
+{
+  "_why": "T1c (ADR-0015): the only console files that call requireCapability for a capability a Builder holds, and the routes a Builder opens. check:capabilities fails any other caller; e2e 86-builders sweeps every other console page and route and expects the Builder's refusal.",
+  "files": [
+    "src/app/(console)/console/layout.tsx",
+    "src/app/(console)/console/page.tsx",
+    "src/app/(console)/console/products/page.tsx",
+    "src/app/(console)/console/collections/page.tsx",
+    "src/app/(console)/console/preview/[[...path]]/page.tsx",
+    "src/app/choose/actions.ts"
+  ],
+  "routes": ["/console", "/console/products", "/console/collections", "/console/preview"]
+}

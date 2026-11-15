@@ -215,6 +215,38 @@ if (/\bcreate\s+schema\s+proof\b|\bproof\.(?:key|check|sess|h)\s*\(/i.test(sql))
 for (const m of sql.matchAll(/grant\s+((?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?)\bon\s+(?:table\s+)?"?(partner_(?:members|assignments))\b([^;]*);/g)) {
   if (!/^select\s+$/.test(m[1]) || !/\bto\s+frata_admin\s*$/.test(m[3].replace(/,\s*partner_(?:members|assignments)/, ''))) failures.push(`grant on ${m[2]}  — partner team tables: only "grant select … to frata_admin"; the app_partner_* definers are the only door`)
 }
+// 7b. Builders (T1c, ADR-0015, drizzle/*_builders_access.sql): frata_builder's whole reach is named once. A grant to it
+// anywhere else, a privilege but SELECT on a table or EXECUTE on a function outside its two, or a policy for it but
+// builder_rows / builder_only fails. (scripts/verify/tenancy.sql § 82 proves the same on a real Postgres.)
+const BUILDER_COLUMNS = {
+  products: 'id tenant_id title handle status publish_at published_at updated_at type_id options option_values tags taxonomy_category',
+  product_types: 'id tenant_id name',
+  variants: 'id tenant_id product_id archived_at stock price when_out ships_by lead_min_days lead_max_days preorder_cap sku',
+  product_colours: 'tenant_id product_id hex value family',
+  product_images: 'tenant_id product_id base widths position',
+  collections: 'id tenant_id title handle kind rules match_all',
+  collection_products: 'tenant_id collection_id product_id',
+  product_attributes: 'tenant_id product_id attribute values',
+}
+const builderSelectOk = (what) => {
+  const m = what.match(/^select \(([a-z_, \n]+)\) on ([a-z_]+)$/)
+  const allowed = m && BUILDER_COLUMNS[m[2]]?.split(' ')
+  return !!allowed && m[1].split(',').map((c) => c.trim()).every((c) => allowed.includes(c))
+}
+for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql'))) {
+  const body = readFileSync(join('drizzle', f), 'utf8').split(/\r?\n/).filter(l => !l.trim().startsWith('--')).join('\n').toLowerCase()
+  for (const m of body.matchAll(/grant\s+([^;]*?)\bto\s+([^;]*\bfrata_builder\b[^;]*);/g)) {
+    const what = m[1].trim()
+    const ok = /_builders_access\.sql$/.test(f) && (
+      /^usage on schema public$/.test(what)
+      || /^execute on function (app_member_role\(\)|app_current_tenant\(\))$/.test(what)
+      || builderSelectOk(what))
+    if (!ok) failures.push(`${f}  grant ${what.replace(/\s+/g, ' ').slice(0, 80)} to frata_builder — its reach is the T1c allow-list only (ADR-0015)`)
+  }
+  for (const m of body.matchAll(/create policy\s+(\w+)[^;]*?\bto\s+frata_builder\b/g)) {
+    if (!['builder_rows', 'builder_only'].includes(m[1])) failures.push(`${f}  policy ${m[1]} for frata_builder — only builder_rows and builder_only (ADR-0015)`)
+  }
+}
 // 8. The analytics database (A·2): its own folder, the same rules, and no open tables at all.
 const aSql = readdirSync('drizzle-analytics').filter(f => f.endsWith('.sql'))
   .map(f => readFileSync(join('drizzle-analytics', f), 'utf8').split(/\r?\n/).filter(l => !l.trim().startsWith('--')).join('\n'))
