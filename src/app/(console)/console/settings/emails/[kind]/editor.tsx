@@ -30,7 +30,7 @@ export function Editor({ kind, words, defaults, on, readOnly }: { kind: string; 
   }
   const act = (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>, done: string) => start(async () => {
     const r = await fn()
-    if (r.ok) { toast.ok(r.message ?? done); router.refresh() } else toast.error(r.error ?? 'Something went wrong.')
+    if (r.ok) { toast.ok(r.message ?? done); router.refresh() } else toast.error(r.error ?? 'We couldn’t save that. Nothing was changed.')
   })
   return (
     <div className="grid gap-3 text-sm">

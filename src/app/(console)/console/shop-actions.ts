@@ -18,7 +18,7 @@ type Result = { ok: true } | { ok: false; error: string }
 
 /** Trials T11: going live starts a shop's trial for good, so a Frrata support visit never opens or closes a shop with a
  * trial that has not ended — the owner does. */
-const SUPPORT_TRIAL = 'This shop is on a free trial: its owner opens or closes it (going live starts the trial).'
+const SUPPORT_TRIAL = 'This store is on a free trial. Only its owner opens or closes it.'
 async function trialBlocksSupport(tx: Parameters<Parameters<typeof asMember>[2]>[0], tenantId: string): Promise<boolean> {
   const [t] = await tx.select({ endedAt: shopTrials.endedAt }).from(shopTrials).where(eq(shopTrials.tenantId, tenantId))
   return !!t && !t.endedAt
@@ -36,7 +36,7 @@ export async function openShop(): Promise<Result> {
       if (auth.membership.supportSessionId && await trialBlocksSupport(tx, t)) return SUPPORT_TRIAL
       const [s] = await tx.select({ name: tenants.name, slug: tenants.slug, legalName: shopSettings.legalName, grievanceName: shopSettings.grievanceName, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone, codOn: shopSettings.codOn, codMax: shopSettings.codMax, publishedAt: shopSettings.publishedAt })
         .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, t))
-      if (!s) return 'Your shop’s settings are missing.'
+      if (!s) return 'Your store’s settings are missing.'
       if (s.publishedAt) return null
       const [p] = await tx.select({ n: count() }).from(products).where(and(eq(products.tenantId, t), eq(products.status, 'active')))
       const steps = setupSteps({ shopName: s.name, address: hostFor(s.slug), productCount: p?.n ?? 0, legalName: s.legalName, grievanceName: s.grievanceName, grievanceEmail: s.grievanceEmail, grievancePhone: s.grievancePhone, codOn: s.codOn, codMaxPaise: Number(s.codMax), paymentsConnected: canTakeOnline(await keysFor(tx, t)), publishedAt: null },
@@ -53,9 +53,9 @@ export async function openShop(): Promise<Result> {
     return { ok: true }
   } catch (err) {
     // A partner-built shop opens once its owner accepts the handover (owner, 2026-11-08; the database refuses).
-    if (pgCode(err) === '23514') return { ok: false, error: 'The shop opens once its owner accepts the handover.' }
+    if (pgCode(err) === '23514') return { ok: false, error: 'The store opens once its owner accepts the handover.' }
     console.error('[openShop]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not open the shop. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t open the store. Nothing was changed.' }
   }
 }
 
@@ -74,6 +74,6 @@ export async function closeShop(): Promise<Result> {
     return { ok: true }
   } catch (err) {
     console.error('[closeShop]', err instanceof Error ? err.name : 'error')
-    return { ok: false, error: 'We could not close the shop. Nothing was changed.' }
+    return { ok: false, error: 'We couldn’t close the store. Nothing was changed.' }
   }
 }

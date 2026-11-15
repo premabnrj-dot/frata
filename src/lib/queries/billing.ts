@@ -185,10 +185,8 @@ export const shopTrial = cache(async (m: Pick<Membership, 'tenantId' | 'role'>, 
     const f = await trialFactsIn(tx, m.tenantId)
     if (!f) return null
     const t = f.facts
-    const [[plan], [delivered]] = await Promise.all([
-      tx.select({ name: plans.name, price: planVersions.monthlyPrice, custom: tenantPlans.customMonthlyPrice }).from(tenantPlans)
-        .innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
-        .where(and(eq(tenantPlans.tenantId, m.tenantId), sql`${tenantPlans.startsAt} <= now()`)).orderBy(desc(tenantPlans.startsAt)).limit(1),
+    const [plan, [delivered]] = await Promise.all([
+      planNowIn(tx, m.tenantId),
       tx.select({ n: sql<number>`count(*)::int` }).from(orders).where(and(eq(orders.tenantId, m.tenantId), isNotNull(orders.deliveredAt), sql`${orders.rtoInitiatedAt} is null and ${orders.rtoDeliveredAt} is null`)),
     ])
     const money = { mandateActive: !!f.mandateAt && !f.revokedAt, exposedAt: f.exposedAt }
@@ -201,6 +199,22 @@ export const shopTrial = cache(async (m: Pick<Membership, 'tenantId' | 'role'>, 
     }
   })
 })
+
+/** The plan in force now: its name and monthly price (a custom price wins). Shared by the trial and Settings' row. */
+async function planNowIn(tx: Tx, tenantId: string) {
+  const [plan] = await tx.select({ name: plans.name, price: planVersions.monthlyPrice, custom: tenantPlans.customMonthlyPrice }).from(tenantPlans)
+    .innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
+    .where(and(eq(tenantPlans.tenantId, tenantId), sql`${tenantPlans.startsAt} <= now()`)).orderBy(desc(tenantPlans.startsAt)).limit(1)
+  return plan
+}
+
+/** Settings' Plan and billing row (Neel § Screens · Settings: "Growth · ₹4,999 a month"). Owners and managers only,
+ *  never a support visit (Frrata support does not see billing, § Glossary roles). Name and price only. */
+export async function planLine(m: Pick<Membership, 'tenantId' | 'role' | 'supportSessionId'>): Promise<{ name: string; monthlyPrice: Paise } | null> {
+  if (!(CAN_MANAGE as readonly string[]).includes(m.role) || m.supportSessionId) return null
+  const plan = await withTenant(m.tenantId, (tx) => planNowIn(tx, m.tenantId))
+  return plan ? { name: plan.name, monthlyPrice: paise(Number(plan.custom ?? plan.price)) } : null
+}
 
 // ── Apps A2: the featured card (plan docs/plans/2026-11-11-apps-a2-homes.md § 4). Read inside the Apps page's one
 // transaction (appsPage), only for owners and admins outside a support visit; null on anything it cannot vouch for. ──

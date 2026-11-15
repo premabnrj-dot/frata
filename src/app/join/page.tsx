@@ -36,7 +36,7 @@ export default async function JoinPage() {
           </div>
           <dl className="grid grid-cols-[7rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
             <dt className="text-muted-foreground">You</dt>
-            <dd>{PARTNER_ROLE_LABEL[i.role as PartnerRole] ?? i.role}<InfoTip about="what a lead can do">You build the stores you’re given: products, orders, settings, the look. Handing a store to its owner and running the team stay with the partner’s owner.</InfoTip></dd>
+            <dd>{PARTNER_ROLE_LABEL[i.role as PartnerRole] ?? i.role}<InfoTip about="what a lead can do">You build the stores you’re given. That covers products, orders, settings and the look. The partner owner hands stores over and runs the team.</InfoTip></dd>
             <dt className="text-muted-foreground">Stores</dt>
             <dd>{i.stores.length ? i.stores.join(', ') : 'None yet'}</dd>
             <dt className="text-muted-foreground">Until</dt>

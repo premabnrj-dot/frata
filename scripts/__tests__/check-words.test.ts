@@ -96,6 +96,10 @@ describe('check:words', async () => {
     expect(rules("const a = 'hassle-free returns'")).toEqual(['filler'])
     expect(rules("throw new Error('Simply retry')")).toEqual(['filler'])
   })
+  it('reads HTML entities as the marks they are, and a semicolon after a curly quote', () => {
+    expect(rules('const a = <p>&ldquo;{x}&rdquo; is not in your list.</p>')).toEqual([])
+    expect(rules("const a = 'Shoppers see “Opening soon”; orders are kept.'")).toEqual(['W2'])
+  })
   it('splits sentences but keeps M.R.P. and incl. whole', () => {
     expect(sentences('M.R.P. incl. taxes is ₹2,490. Save it.')).toEqual(['M.R.P. incl. taxes is ₹2,490.', 'Save it.'])
   })

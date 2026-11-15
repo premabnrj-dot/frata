@@ -46,7 +46,7 @@ export default async function ConsoleHome() {
   // Neel § Screens · Home: "Today" and the day; Store open (a link to Setup, where the store closes for now) and Share
   // store at the right. The store's name and address live in the sidebar now.
   const actions = setup.open ? <>
-    <Link href="/console/setup" aria-label="Store open: setup, or close the store for now" className="inline-flex min-h-6 items-center rounded-full"><Badge tone="ok">Store open</Badge></Link>
+    <Link href="/console/setup" aria-label="Store open. Go to setup to close it." className="inline-flex min-h-6 items-center rounded-full"><Badge tone="ok">Store open</Badge></Link>
     {share ? <ShareSheet share={share} target={{ kind: 'shop' }} label="Share store" /> : null}
   </> : undefined
   return (

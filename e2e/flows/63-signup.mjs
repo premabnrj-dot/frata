@@ -71,7 +71,7 @@ export default {
       await t.step('TR1·7: the trial in the console — building; ending (banner, two equal choices); 7 more days once; grace', async () => {
         const [{ id }] = await db`select id from tenants where slug = ${SLUG}`
         await p.goto(CONSOLE + '/console/settings/billing')
-        await p.getByText('Trial starts when your shop goes live').waitFor()
+        await p.getByText('Trial starts when your store goes live').waitFor()
         // Live 25 days ago: 5 days left, so the banner asks — and declining is as visible as accepting.
         await db`update shop_trials set signed_up_at = now() - interval '26 days', started_at = now() - interval '25 days' where tenant_id = ${id}`
         await db`select app_trial_recompute(${id})`
@@ -88,7 +88,7 @@ export default {
         await db`update shop_trials set started_at = now() - interval '40 days', signed_up_at = now() - interval '41 days' where tenant_id = ${id}`
         await db`select app_trial_recompute(${id})`
         await p.goto(CONSOLE + '/console')
-        await p.getByText(/^Trial ended · shop pauses /).waitFor()
+        await p.getByText(/^Trial ended · store pauses /).waitFor()
         await p.screenshot({ path: t.out('trial-grace'), fullPage: false })
       })
 
@@ -113,7 +113,7 @@ export default {
         assert.match(quote.body, /not taking orders right now/)
         await shop.close()
         await p.goto(CONSOLE + '/console')
-        await p.getByText('Shop paused · no new orders').waitFor()
+        await p.getByText('Store paused · no new orders').waitFor()
       })
     } finally {
       await cleanup()

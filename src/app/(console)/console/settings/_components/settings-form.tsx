@@ -73,7 +73,7 @@ export function SettingsForm({ sectionKey, initial, version: startVersion, facts
   function save() {
     start(async () => {
       const r = await saveSection(section.key, values, version)
-      if (r.ok) { setSaved(values); setVersion(r.version); setErrors({}); if (section.key === 'taxes') setUnratedNow(r.unrated ?? null); toast.ok(section.key === 'documents' ? 'Saved. New slips and invoices use it; issued invoices keep theirs.' : 'Saved. Your shop shows it now.'); router.refresh(); return }
+      if (r.ok) { setSaved(values); setVersion(r.version); setErrors({}); if (section.key === 'taxes') setUnratedNow(r.unrated ?? null); toast.ok(section.key === 'documents' ? 'Saved. New slips and invoices use it. Sent invoices keep theirs.' : 'Saved. Your store shows it now.'); router.refresh(); return }
       const fields = r.errors ?? {}
       setErrors(fields)
       if (Object.keys(fields).length) { setAttempt((a) => a + 1); return }

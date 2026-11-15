@@ -10,11 +10,11 @@ import { canMakeMain, domainState } from '@/domains/addresses/domain-state'
 import { AddressForm } from './address-form'
 import { Domains } from './domains'
 
-export const metadata = { title: 'Shop address' }
+export const metadata = { title: 'Store address' }
 
 export default async function AddressPage() {
   const auth = await requireMember(CAN_MANAGE)
-  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or an admin can change settings' : auth.message} />
+  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or a manager can change settings' : auth.message} />
   const t = auth.membership.tenantId
   const [f, rows, pay, liveNames] = await Promise.all([addressFacts(t).catch(() => null), shopDomainRows(t).catch(() => null), paymentStatusFor(t).catch(() => null), liveNamesFor(t).catch(() => [])])
   if (!f || !rows) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>

@@ -45,8 +45,8 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
   return (
     <Section flush>
       <div className="space-y-1 p-4">
-        <h2 className="flex items-center text-section font-semibold">Your five pages<InfoTip about="your five pages">Written from your settings, and kept in step with them. Rewrite a page for other words; it then stops following your settings.</InfoTip></h2>
-        <p className="text-sm text-muted-foreground">Have a lawyer read your pages once: these are a starting point.</p>
+        <h2 className="flex items-center text-section font-semibold">Your five pages<InfoTip about="your five pages">Written from your settings, and kept in step with them. Rewrite a page to use your own words. It then stops following your settings.</InfoTip></h2>
+        <p className="text-sm text-muted-foreground">These pages are a starting point. Have a lawyer read them once.</p>
       </div>
       {POLICY_PAGES.map(([k, label]) => {
         const own = overrides[k]

@@ -42,7 +42,7 @@ export function seesCosts(role: MemberRole, hasOwner: boolean): boolean {
 }
 
 /** How a role is said, everywhere (People, the switcher, /choose). */
-export const ROLE_LABEL: Record<MemberRole, string> = { owner: 'Owner', admin: 'Admin', staff: 'Staff', partner: 'Partner', accountant: 'Accountant' }
+export const ROLE_LABEL: Record<MemberRole, string> = { owner: 'Owner', admin: 'Manager', staff: 'Staff', partner: 'Partner', accountant: 'Accountant' }
 /** The members_role CHECK's list, built from MEMBER_ROLES (schema.ts), so the two cannot drift. */
 export const sqlList = (xs: readonly string[]) => xs.map((x) => `'${x.replace(/'/g, "''")}'`).join(',')
 

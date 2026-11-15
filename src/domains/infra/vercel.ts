@@ -99,7 +99,7 @@ const usd = (m: number) => `$${(m / 1e6).toFixed(m >= 100e6 ? 0 : 2)}`
 export function vercelAlerts(f: VercelFacts): Alert[] {
   const out: Alert[] = []
   if (f.budgetMicros > 0 && f.onDemandMicros >= f.budgetMicros * 0.75) {
-    out.push({ key: 'vercel.budget', tab: 'vercel', level: 'now', title: `${usd(f.onDemandMicros)} of the ${usd(f.budgetMicros)} budget used`, why: 'At the budget, Vercel pauses every shop' })
+    out.push({ key: 'vercel.budget', tab: 'vercel', level: 'now', title: `${usd(f.onDemandMicros)} of the ${usd(f.budgetMicros)} budget used`, why: 'At the budget, Vercel pauses every store' })
   } else if (f.budgetMicros > 0 && f.projectedOnDemandMicros > f.budgetMicros) {
     out.push({ key: 'vercel.pace', tab: 'vercel', level: 'soon', title: `On pace for ${usd(f.projectedMicros)} this month`, why: `Past the $20 credit, ${usd(f.projectedOnDemandMicros)} against the ${usd(f.budgetMicros)} budget` })
   }

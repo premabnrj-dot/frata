@@ -101,6 +101,10 @@ function codeContext(n, sf) {
   return false
 }
 
+const ENTITY = { ldquo: '“', rdquo: '”', lsquo: '‘', rsquo: '’', apos: "'", quot: '"', amp: '&', nbsp: ' ', hellip: '…', mdash: '—', ndash: '–', middot: '·', rarr: '→', larr: '←', times: '×', rsaquo: '›', lsaquo: '‹', gt: '>', lt: '<' }
+/** JSX text as a person reads it: &ldquo; is a quote mark, not a semicolon. */
+const entities = (t) => t.replace(/&([a-z]+);/g, (m, k) => ENTITY[k] ?? m)
+
 /** Every string a person reads in one file: [{ text, line, prop }] (prop: the key it is the value of, if any). */
 export function readable(source, fileName = 'x.tsx') {
   const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, fileName.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
@@ -120,7 +124,7 @@ export function readable(source, fileName = 'x.tsx') {
       // The element's own sentence: its text, an {expression} or a child element as one stand-in word.
       let text = '', first = null
       for (const c of n.children) {
-        if (ts.isJsxText(c)) { if (c.text.trim()) { text += c.text; first ??= c } } else if (text.trim()) text += ' X '
+        if (ts.isJsxText(c)) { if (c.text.trim()) { text += entities(c.text); first ??= c } } else if (text.trim()) text += ' X '
       }
       // JSX text is never code: a single lower-case word between tags is still a word a person reads.
       if (first && /\p{L}/u.test(text)) out.push({ text: text.replace(/(X\s*)+$/, '').replace(/\s+/g, ' ').trim(), line: line(first), prop: null, jsx: true, code: false })
@@ -173,7 +177,7 @@ export function judgeText(s, file) {
     const n = words(sent).length
     if (n >= 16) fail('W1', `${n} words in one sentence: cut it or make it two`)
     else if (n >= 13) warns.push({ rule: 'W1', why: `${n} words` })
-    if (/[\p{L}\d)’'"]; +\p{L}/u.test(sent)) fail('W2', 'a semicolon joins two thoughts: make it two sentences')
+    if (/[\p{L}\d)’'"”»]; +\p{L}/u.test(sent)) fail('W2', 'a semicolon joins two thoughts: make it two sentences')
     for (const m of sent.matchAll(/: +/g)) {
       const after = sent.slice(m.index + m[0].length)
       if (!isValue(after) && words(after).length >= 3) { fail('W2', 'a colon joins two thoughts: make it two sentences'); break }

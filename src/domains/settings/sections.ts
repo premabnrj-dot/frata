@@ -53,19 +53,19 @@ export const RETURN_OPTIONS = [['exchange_or_refund', 'An exchange or a refund']
 export const SLIP_SIZE_OPTIONS = [['a4', 'A4 paper'], ['label', '4×6 label (thermal printer)']] as const
 export const RETURN_DAY_OPTIONS = [['3', '3 days'], ['7', '7 days'], ['10', '10 days'], ['15', '15 days'], ['30', '30 days']] as const
 
-const LAW = 'Shown on your shop’s Contact page and footer, as the Consumer Protection (E-Commerce) Rules ask.'
+const LAW = 'Shown on your store’s Contact page and footer, as the Consumer Protection (E-Commerce) Rules ask.'
 
 export const SECTIONS: readonly Section[] = [
   {
     editors: CAN_BUILD,
-    key: 'store', title: 'Store details', intro: 'Your shop’s name and the business behind it.', preview: 'footer',
+    key: 'store', title: 'Store details', intro: 'Your store’s name and the business behind it.', preview: 'footer',
     blocks: [
-      { title: 'Your shop', fields: [
-        { key: 'name', label: 'Shop name', kind: 'text', required: true, max: 60 },
-        { key: 'orderPrefix', label: 'Order number prefix', kind: 'text', max: 4, tip: 'Orders read KS-1043. Left empty, two letters of your shop’s name.' },
+      { title: 'Your store', fields: [
+        { key: 'name', label: 'Store name', kind: 'text', required: true, max: 60 },
+        { key: 'orderPrefix', label: 'Order number prefix', kind: 'text', max: 4, tip: 'Orders read KS-1043. Left empty, two letters of your store’s name.' },
       ] },
       { title: 'Your business', hint: LAW, fields: [
-        { key: 'legalName', label: 'Legal business name', kind: 'text', max: 120, tip: 'As registered: a sole proprietor’s name, an LLP or a company.' },
+        { key: 'legalName', label: 'Legal business name', kind: 'text', max: 120, tip: 'As registered. A sole proprietor’s name, an LLP or a company.' },
         { key: 'originCountry', label: 'Country of origin, for products', kind: 'text', max: 40, tip: 'Each product can say otherwise.' },
         { key: 'address', label: 'Registered address', kind: 'textarea', max: 400, wide: true },
       ] },
@@ -78,7 +78,7 @@ export const SECTIONS: readonly Section[] = [
       { title: 'How shoppers reach you', fields: [
         { key: 'supportEmail', label: 'Customer care email', kind: 'email', required: true },
         { key: 'supportPhone', label: 'Customer care phone', kind: 'phone' },
-        { key: 'whatsapp', label: 'WhatsApp number', kind: 'phone', tip: 'A “Message us” button on your shop and on every order page.' },
+        { key: 'whatsapp', label: 'WhatsApp number', kind: 'phone', tip: 'A “Message us” button on your store and on every order page.' },
         { key: 'instagram', label: 'Instagram handle', kind: 'text', max: 30 },
       ] },
       { title: 'Grievance officer', hint: 'Required by law and shown on your Contact page. A complaint is acknowledged within 48 hours and resolved within a month.', fields: [
@@ -96,7 +96,7 @@ export const SECTIONS: readonly Section[] = [
       { title: 'Look', fields: [
         { key: 'tagline', label: 'One line about your brand', kind: 'text', max: 150, wide: true, tip: 'Under your logo, and when your link is shared.' },
       ] },
-      { title: 'Shop words', hint: 'The words Frrata writes on your shop: menus, buttons, delivery and returns. What you type stays as you typed it. Checkout stays in English for now.', fields: [
+      { title: 'Store words', hint: 'Menus, buttons, delivery and returns. What you type stays as you typed it. Checkout stays in English for now.', fields: [
         { key: 'shopLanguage', label: 'Show them in', kind: 'select', options: LANGUAGE_OPTIONS },
       ] },
     ],
@@ -120,7 +120,7 @@ export const SECTIONS: readonly Section[] = [
         { key: 'codMin', label: 'Lowest order value, ₹', kind: 'rupees', hint: '0 for no lower limit.' },
         { key: 'codMax', label: 'Highest order value, ₹', kind: 'rupees', hint: 'Bigger orders must be paid online. 0 for no limit.' },
         { key: 'codCharge', label: 'Pay on delivery fee, ₹', kind: 'rupees', hint: '0 for none.', tip: 'Shown as its own line before the shopper orders, never added later.' },
-        { key: 'codBlockedPincodes', label: 'Pincodes without Pay on delivery', kind: 'pincodes', wide: true, hint: 'Separated by commas or spaces.', tip: 'A shopper there sees why, and can still pay online.' },
+        { key: 'codBlockedPincodes', label: 'PIN codes without Pay on delivery', kind: 'pincodes', wide: true, hint: 'Separated by commas or spaces.', tip: 'A shopper there sees why, and can still pay online.' },
       ] },
     ],
   },
@@ -147,12 +147,12 @@ export const SECTIONS: readonly Section[] = [
         { key: 'gstRegistration', label: 'Registration', kind: 'radio', wide: true, options: REGISTRATION_OPTIONS,
           notes: { regular: 'Tax invoices', composition: 'Bill of supply · within your state', none: 'Bill of supply · within your state' } },
         { key: 'gstin', label: 'GSTIN', kind: 'gstin', required: true, showIf: { key: 'gstRegistration', in: ['regular', 'composition'] } },
-        { key: 'homeState', label: 'Your business is in', kind: 'state', showIf: { key: 'gstRegistration', in: ['none'] }, hint: 'Your shop delivers within this state only: selling to another state needs a GSTIN.' },
+        { key: 'homeState', label: 'Your business is in', kind: 'state', showIf: { key: 'gstRegistration', in: ['none'] }, hint: 'Your store delivers within this state only. Selling to another state needs a GSTIN.' },
         { key: 'turnoverBand', label: 'Turnover last year', kind: 'segmented', wide: true, options: TURNOVER_OPTIONS, showIf: { key: 'gstRegistration', in: ['regular'] },
-          tip: 'All your GSTINs on one PAN, last financial year. It sets the HSN digits on invoices (4 under ₹5 crore, 6 above) and when e-invoicing applies.' },
+          tip: 'All your GSTINs on one PAN, last financial year. It sets the HSN digits on invoices (4 under ₹5 crore, 6 above). It also sets when e-invoicing applies.' },
         { key: 'gstFiling', label: 'GSTR-1', kind: 'segmented', wide: true, options: FILING_OPTIONS, showIf: { key: 'gstRegistration', in: ['regular'] } },
       ] },
-      { title: 'Prices and business buyers', fields: [
+      { title: 'Prices and sales to businesses', fields: [
         { key: 'pricesIncludeGst', label: 'My prices include GST', kind: 'switch', wide: true, showIf: { key: 'gstRegistration', in: ['regular'] } },
         { key: 'b2bInvoices', label: 'Businesses can ask for a GST invoice at checkout', kind: 'switch', wide: true, showIf: { key: 'gstRegistration', in: ['regular'] },
           tip: 'They enter their GSTIN and get an invoice they can claim input credit on. Turns itself off at ₹5 crore and above until e-invoicing is set up.' },
@@ -165,13 +165,13 @@ export const SECTIONS: readonly Section[] = [
   },
   {
     editors: CAN_BUILD,
-    key: 'documents', title: 'Documents', intro: 'Your packing slips and invoices as PDFs: in your logo and colour, with your words.', preview: 'invoice',
+    key: 'documents', title: 'Documents', intro: 'Your packing slips and invoices as PDFs, in your logo, colour and words.', preview: 'invoice',
     blocks: [
       { title: 'Invoices', fields: [
         { key: 'docSignatory', label: 'Authorised signatory', kind: 'text', max: 80, noLinks: true, tip: 'The name printed under “For <your business>” on each invoice, as GST asks.' },
         { key: 'docNote', label: 'Note at the foot of each invoice', kind: 'textarea', max: 240, wide: true, noLinks: true, tip: 'A return-policy line or a thank-you. Plain text: no links.' },
       ] },
-      { title: 'Packing slips', tip: 'Each person’s last choice in the order queue wins; this is where a new teammate starts.', fields: [
+      { title: 'Packing slips', tip: 'Where a new teammate starts. After that, each person’s last choice in the order queue wins.', fields: [
         { key: 'slipSize', label: 'Slip size', kind: 'select', options: SLIP_SIZE_OPTIONS },
       ] },
     ],
@@ -211,7 +211,7 @@ export const NEEDED_WHEN_OPEN: Partial<Record<SectionKey, readonly (readonly [st
 export function openShopErrors(section: Section, patch: Patch, saved: Record<string, unknown>): Record<string, string> {
   return Object.fromEntries((NEEDED_WHEN_OPEN[section.key] ?? [])
     .filter(([k]) => k in patch && !String(patch[k] ?? '').trim() && String(saved[k] ?? '').trim())
-    .map(([k, what]) => [k, `Your shop is open: keep the grievance officer’s ${what}. The law asks for it on your Contact page.`]))
+    .map(([k, what]) => [k, `Your store is open, so keep the grievance officer’s ${what}. The law asks for it on your Contact page.`]))
 }
 
 /** What the live preview shows while typing: every field that is already valid; the rest keep their saved value. */
@@ -230,18 +230,18 @@ function check(section: Section, values: Values): { patch: Patch; errors: Record
     if (f.kind === 'pincodes') {
       const list = (Array.isArray(raw) ? raw.join(' ') : String(raw ?? '')).split(/[\s,]+/).filter(Boolean)
       const bad = list.find((p) => !PINCODE_SHAPE.test(p))
-      if (bad) errors[f.key] = `${bad} is not a pincode: 6 digits starting with 1 to 9.`
-      else if (list.length > 500) errors[f.key] = 'Up to 500 pincodes.'
+      if (bad) errors[f.key] = `${bad} is not a PIN code. Use 6 digits starting with 1 to 9.`
+      else if (list.length > 500) errors[f.key] = 'Up to 500 PIN codes.'
       else patch[f.key] = [...new Set(list)].sort()
       continue
     }
     const s = String(raw ?? '').trim()
     if (f.required && !s) { errors[f.key] = 'Needed.'; continue }
     // The invoice series must leave room for a whole year of numbers inside GST's 16 characters (work.ts).
-    if (f.key === 'invoiceSeries' && s && !seriesFits(s)) { errors[f.key] = 'Too long: up to 4 characters, or 5 ending in / or -.'; continue }
+    if (f.key === 'invoiceSeries' && s && !seriesFits(s)) { errors[f.key] = 'Too long. Use up to 4 characters, or 5 ending in / or -.'; continue }
     if (f.max && s.length > f.max) { errors[f.key] = `Up to ${f.max} characters.`; continue }
     // Words printed on a document stay words: a PDF viewer turns a typed address into a live link (plan finding 5).
-    if (f.noLinks && /https?:\/\/|www\./i.test(s)) { errors[f.key] = 'No web addresses here: plain words only.'; continue }
+    if (f.noLinks && /https?:\/\/|www\./i.test(s)) { errors[f.key] = 'No web addresses here. Plain words only.'; continue }
     switch (f.kind) {
       case 'email':
         if (s && !EMAIL_SHAPE.test(s)) errors[f.key] = 'Check this email address.'

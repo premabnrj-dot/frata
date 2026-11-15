@@ -19,7 +19,7 @@ export const metadata = { title: 'People' }
 /** Settings › People: who works on this shop. Owners and admins see it; only the owner removes the partner. */
 export default async function PeoplePage() {
   const auth = await requireMember(CAN_MANAGE)
-  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or an admin can see people' : auth.message} />
+  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the owner or a manager can see people' : auth.message} />
   const [people, invites, gstOn] = await Promise.all([
     shopPeople(auth.membership.tenantId).catch((err) => { console.error('[people]', err instanceof Error ? err.name : err); return null }),
     accountantInvites(auth.membership.tenantId, auth.userId).catch(() => []),

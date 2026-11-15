@@ -17,9 +17,9 @@ export default {
 
     await t.step('info tip: opens on click, says so, closes on Esc with focus kept', async () => {
       const b = p.getByRole('button', { name: 'About bill of supply' })
-      await b.click(); await p.getByText('What a shop without a GSTIN').waitFor()
+      await b.click(); await p.getByText('What a store without a GSTIN').waitFor()
       assert.equal(await b.getAttribute('aria-expanded'), 'true')
-      await p.keyboard.press('Escape'); await p.getByText('What a shop without a GSTIN').waitFor({ state: 'hidden' })
+      await p.keyboard.press('Escape'); await p.getByText('What a store without a GSTIN').waitFor({ state: 'hidden' })
       assert.equal(await b.getAttribute('aria-expanded'), 'false')
       assert.equal(await p.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'About bill of supply')
     })
@@ -120,8 +120,8 @@ export default {
     })
 
     await t.step('ActionForm (§ Feedback F0·5): the browser rules as field errors, the action\'s fields, error and ok as toasts; nothing typed cleared', async () => {
-      const f = p.getByRole('form', { name: 'Rename shop' })
-      const name = f.getByLabel('Shop name')
+      const f = p.getByRole('form', { name: 'Rename store' })
+      const name = f.getByLabel('Store name')
       await f.getByRole('button', { name: 'Rename' }).click()
       await expectToast(p, '1 field needs fixing.', 'error', { quiet: true })
       assert.equal(await p.locator('[id$="-shop-error"]').textContent(), 'At least 3 letters.')
@@ -129,7 +129,7 @@ export default {
       await p.locator('[id$="-shop-error"]', { hasText: 'That name is taken.' }).waitFor()
       assert.equal(await name.inputValue(), 'taken', 'nothing typed is cleared')
       await name.fill('refuse'); await f.getByRole('button', { name: 'Rename' }).click()
-      await expectToast(p, 'Only an admin can rename a shop.')
+      await expectToast(p, 'Only a manager can rename a store.')
       assert.equal(await name.inputValue(), 'refuse')
       await name.fill('Kesar Studio'); await f.getByRole('button', { name: 'Rename' }).click()
       await expectToast(p, 'Renamed to Kesar Studio.', 'ok')
@@ -137,7 +137,7 @@ export default {
 
     await t.step('leaving with unsaved changes asks in the one Dialog; Keep editing keeps the words; Leave goes', async () => {
       await p.goto(CONSOLE + '/console/settings/store')
-      const name = p.getByLabel('Shop name')
+      const name = p.getByLabel('Store name')
       await name.fill('Kesar Studio Test')
       await p.getByRole('link', { name: 'Orders' }).first().click()
       const d = p.getByRole('dialog', { name: 'Leave without saving?' })

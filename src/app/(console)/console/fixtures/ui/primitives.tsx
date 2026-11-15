@@ -30,12 +30,12 @@ function Board({ save }: { save: (f: FormData) => Promise<ActionResult> }) {
   return (
     <div className="grid gap-6">
       <ViewTabs label="Views" tabs={[{ href: '?t=a', label: 'To confirm', count: 1043, current: true }, { href: '?t=b', label: 'To pack', count: 3, current: false }, { href: '?t=c', label: 'Not paid online', count: 2, current: false, apart: true }]} />
-      <p className="flex items-center gap-1">Bill of supply <InfoTip about="bill of supply">What a shop without a GSTIN gives instead of a tax invoice.</InfoTip></p>
+      <p className="flex items-center gap-1">Bill of supply <InfoTip about="bill of supply">What a store without a GSTIN gives instead of a tax invoice.</InfoTip></p>
       <div className="flex flex-wrap gap-2">
         <Button onClick={() => setCancel(true)}>Cancel order…</Button>
         <Menu items={[{ label: 'Hold', onSelect: () => say('hold') }, { label: 'Print invoice', onSelect: () => say('print') }, { label: 'Cancel order', onSelect: () => setCancel(true), danger: true }]} />
         <Button variant="secondary" onClick={() => toast({ text: 'KS-1001 confirmed.', undo: async () => { say('undo'); return { ok: true } } })}>Confirm</Button>
-        <Button variant="secondary" onClick={() => toast({ text: 'KS-1002 confirmed.', undo: async () => { await new Promise((r) => setTimeout(r, 800)); say('slow undo'); return { ok: false, error: 'Already packed — cancel it instead.' } } })}>Confirm slowly</Button>
+        <Button variant="secondary" onClick={() => toast({ text: 'KS-1002 confirmed.', undo: async () => { await new Promise((r) => setTimeout(r, 800)); say('slow undo'); return { ok: false, error: 'Already packed. Cancel it instead.' } } })}>Confirm slowly</Button>
         <Button variant="secondary" onClick={() => toast({ text: 'KS-1003 on hold.' })}>Hold</Button>
         <Button variant="secondary" onClick={() => toast.error('Not saved.', { sub: 'Nothing was changed.', action: { label: 'Try again', run: () => { say('retried') } } })}>Save fails</Button>
         <Button variant="secondary" onClick={() => setPublish(true)}>Publish…</Button>
@@ -51,8 +51,8 @@ function Board({ save }: { save: (f: FormData) => Promise<ActionResult> }) {
         <FieldError name="hsn" message={fields.errors.hsn} />
         <Button type="submit" variant="secondary">Save product</Button>
       </form>
-      <ActionForm action={save} className="grid max-w-sm gap-3" aria-label="Rename shop">
-        <label className="grid gap-1 text-sm">Shop name<input name="shop" required minLength={3} data-error="At least 3 letters." className="h-11 rounded-md border border-input px-3 aria-invalid:border-danger-mark md:h-9" /></label>
+      <ActionForm action={save} className="grid max-w-sm gap-3" aria-label="Rename store">
+        <label className="grid gap-1 text-sm">Store name<input name="shop" required minLength={3} data-error="At least 3 letters." className="h-11 rounded-md border border-input px-3 aria-invalid:border-danger-mark md:h-9" /></label>
         <FieldMessage name="shop" />
         <Submit variant="secondary">Rename</Submit>
       </ActionForm>

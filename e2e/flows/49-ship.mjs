@@ -169,7 +169,7 @@ export default {
         await until(async () => (await costs()).find((r) => r.values === 'M Rust')?.stock === 7)
         assert.deepEqual((await costs()).map((r) => [r.values, r.cost]), before.map((r) => [r.values, r.cost]))
         await s.goto(CONSOLE + '/console/settings/shipping-costs')
-        await s.getByText(/Only the owner or an admin|can’t change this shop’s settings/).first().waitFor()
+        await s.getByText(/Only the owner or a manager|can’t change this store’s settings/).first().waitFor()
         assert.equal(await s.getByLabel('A delivery').count(), 0)
       })
 

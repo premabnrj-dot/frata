@@ -36,7 +36,7 @@ export default {
       await c.getByText(/Uses (1 of 2 changes left|your last change)\. Bags in progress start empty\./).waitFor()
       await c.getByRole('button', { name: 'Make it main' }).click()
       const popup = p.getByRole('status').filter({ hasText: `${to}.${SHOP_DOMAIN} is your main address` })
-      await popup.getByRole('link', { name: 'View your shop' }).waitFor()
+      await popup.getByRole('link', { name: 'View your store' }).waitFor()
       assert.equal(await popup.getByRole('button', { name: 'Undo' }).count(), 0, 'a rename has no Undo (going back is another change)')
       await popup.getByRole('button', { name: 'Close' }).click()
       await p.waitForFunction((v) => document.querySelector('#slug')?.value === v, to)

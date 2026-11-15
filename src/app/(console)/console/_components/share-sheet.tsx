@@ -20,7 +20,7 @@ export function ShareSheet({ share, target, label = 'Share' }: { share: ShareDat
   const linkRef = useRef<HTMLInputElement>(null)
   const copy = (text: string, done: string) => (navigator.clipboard?.writeText(text) ?? Promise.reject(new Error('no clipboard'))).then(
     () => toast.ok(done),
-    () => { if (linkRef.current) { linkRef.current.value = text; linkRef.current.select() } toast.error('Selected: copy it with your keyboard.') },
+    () => { if (linkRef.current) { linkRef.current.value = text; linkRef.current.select() } toast.error('Selected. Copy it with your keyboard.') },
   )
   const makeQr = () => start(async () => {
     const r = await shareQr(target.kind, 'id' in target ? target.id : null)

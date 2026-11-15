@@ -26,19 +26,19 @@ export function parseBillingDetails(raw: Record<string, unknown>): { ok: true; v
   const legalName = text('legalName'), address = text('address'), email = text('email').toLowerCase()
   const gstin = text('gstin').toUpperCase() || null
   let stateCode = text('stateCode')
-  if (!legalName) errors.legalName = 'Needed: the name invoices are made out to.'
+  if (!legalName) errors.legalName = 'Needed. The name invoices are made out to.'
   else if (legalName.length > 200) errors.legalName = 'Up to 200 characters.'
-  else if (LINK.test(legalName)) errors.legalName = 'No web addresses here: plain words only.'
-  if (!address) errors.address = 'Needed: the address on your GST registration, or your business address.'
+  else if (LINK.test(legalName)) errors.legalName = 'No web addresses here. Plain words only.'
+  if (!address) errors.address = 'Needed. The address on your GST registration, or your business address.'
   else if (address.length > 400) errors.address = 'Up to 400 characters.'
-  else if (LINK.test(address)) errors.address = 'No web addresses here: plain words only.'
+  else if (LINK.test(address)) errors.address = 'No web addresses here. Plain words only.'
   if (!email || email.length > 254 || !EMAIL_SHAPE.test(email)) errors.email = 'An email address for invoices.'
   if (gstin && !gstinValid(gstin)) errors.gstin = 'Check the GSTIN: 15 characters, and the last one is a check digit.'
   if (gstin && gstinValid(gstin)) {
     const fromGstin = gstinState(gstin)!
-    if (stateCode && stateCode !== fromGstin) errors.stateCode = `Your GSTIN is registered in state ${fromGstin}: the State must match it.`
+    if (stateCode && stateCode !== fromGstin) errors.stateCode = `Your GSTIN is registered in state ${fromGstin}. Choose that State.`
     stateCode = fromGstin
   }
-  if (!CODES.has(stateCode) && !errors.stateCode) errors.stateCode = 'Choose your State: it decides CGST and SGST, or IGST.'
+  if (!CODES.has(stateCode) && !errors.stateCode) errors.stateCode = 'Choose your State. It decides CGST and SGST, or IGST.'
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true, value: { legalName, gstin, address, stateCode, email } }
 }

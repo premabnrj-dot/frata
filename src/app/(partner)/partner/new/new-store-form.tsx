@@ -15,7 +15,7 @@ const ADDRESS_WORDS: Record<AddressCheck['state'], string> = {
   ok: 'Free', taken: 'Taken. Try another.', too_short: 'At least 3 letters', shape: 'Letters, digits and hyphens only', reserved: 'Reserved. Try another.',
 }
 
-/** One screen, three fields (the same as /start): name, its address (derived, editable), pickup pincode. */
+/** One screen, three fields (the same as /start): name, its address (derived, editable), pickup PIN code. */
 export function NewStoreForm({ shopDomain }: { shopDomain: string }) {
   const router = useRouter()
   const [name, setName] = useState('')
@@ -49,9 +49,9 @@ export function NewStoreForm({ shopDomain }: { shopDomain: string }) {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) return fail({ field: 'name', text: 'The shop needs a name.' })
+    if (!name.trim()) return fail({ field: 'name', text: 'The store needs a name.' })
     if (address?.state !== 'ok') return fail({ field: 'slug', text: address ? ADDRESS_WORDS[address.state] : 'Choose an address.' })
-    if (!PINCODE_SHAPE.test(pickup)) return fail({ field: 'pickup', text: 'A pincode is 6 digits.' })
+    if (!PINCODE_SHAPE.test(pickup)) return fail({ field: 'pickup', text: 'A PIN code is 6 digits.' })
     setError(null)
     start(async () => {
       const r = await createClientStoreAction({ name, slug, pickup })
@@ -64,13 +64,13 @@ export function NewStoreForm({ shopDomain }: { shopDomain: string }) {
   return (
     <form ref={formRef} onSubmit={submit} noValidate className="space-y-4">
       <div className="space-y-1.5">
-        <label htmlFor="name" className="block text-sm font-medium">Brand’s shop name</label>
+        <label htmlFor="name" className="block text-sm font-medium">Brand’s store name</label>
         <input id="name" value={name} maxLength={60} autoFocus aria-invalid={error?.field === 'name' || undefined} aria-describedby={error?.field === 'name' ? errorId('name') : undefined}
           onChange={(e) => { setName(e.target.value); if (!edited) setSlug(slugFor(e.target.value)); setError(null) }} className={field} />
         {msg('name')}
       </div>
       <div className="space-y-1.5">
-        <label htmlFor="slug" className="block text-sm font-medium">Shop address</label>
+        <label htmlFor="slug" className="block text-sm font-medium">Store address</label>
         <div className="flex items-stretch overflow-hidden rounded-md border border-input bg-card">
           <input id="slug" value={slug} aria-invalid={error?.field === 'slug' || undefined} aria-describedby={error?.field === 'slug' ? `slug-state ${errorId('slug')}` : 'slug-state'}
             onChange={(e) => { setEdited(true); setSlug(e.target.value.toLowerCase()); setError(null) }} className="h-11 min-w-0 flex-1 bg-transparent px-3 font-mono text-sm outline-none md:h-9" />
@@ -80,10 +80,10 @@ export function NewStoreForm({ shopDomain }: { shopDomain: string }) {
         {msg('slug')}
       </div>
       <div className="space-y-1.5">
-        <div className="flex items-center"><label htmlFor="pickup" className="text-sm font-medium">Pickup pincode</label><InfoTip about="pickup pincode">Where the brand’s parcels are collected. Delivery days are counted from here.</InfoTip></div>
+        <div className="flex items-center"><label htmlFor="pickup" className="text-sm font-medium">Pickup PIN code</label><InfoTip about="pickup PIN code">Where the brand’s parcels are collected. Delivery days are counted from here.</InfoTip></div>
         <input id="pickup" value={pickup} inputMode="numeric" maxLength={6} aria-invalid={error?.field === 'pickup' || undefined} aria-describedby={error?.field === 'pickup' ? errorId('pickup') : undefined}
           onChange={(e) => { setPickup(e.target.value.replace(/\D/g, '')); setError(null) }} className={`${field} w-40 font-num`} />
-        {place && <p className="text-sm text-muted-foreground">{place === 'unknown' ? 'Pincode not found' : `${place.city}, ${place.state}`}</p>}
+        {place && <p className="text-sm text-muted-foreground">{place === 'unknown' ? 'PIN code not found' : `${place.city}, ${place.state}`}</p>}
         {msg('pickup')}
       </div>
       <Button type="submit" disabled={pending}>{pending ? 'Creating…' : name.trim() ? `Create ${name.trim()}` : 'Create store'}</Button>

@@ -23,7 +23,7 @@ export async function sendBillAttempt(row: OutboxRow): Promise<void> {
   if (!ctx.customer || !ctx.token) throw new Error('autopay is not set up for this shop')
   if (!(await claimBillingAttempt(paymentId))) return
   try {
-    if (ctx.due < ctx.amount) { await closeBillingAttempt(paymentId, 'The amount due changed; a fresh notice follows'); return }
+    if (ctx.due < ctx.amount) { await closeBillingAttempt(paymentId, 'The amount due changed. A fresh notice follows'); return }
     const order = ctx.gatewayOrderId ?? (await orderByReceipt(ctx.receipt))?.id ?? (await createOrder({ amount: ctx.amount, receipt: ctx.receipt })).id
     if (!ctx.gatewayOrderId) await billingAttemptOrder(paymentId, order)
     // Already tried on this order? Record what the gateway says, charge nothing.

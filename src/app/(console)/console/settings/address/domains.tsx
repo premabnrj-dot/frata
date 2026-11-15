@@ -196,7 +196,7 @@ function Connect({ resume, onClose }: { resume?: string; onClose: () => void }) 
     setStray(c.stray)
     if (c.state === 'securing') { setSecure((v) => Math.min(0.9, v + 0.35)); if (step !== 3) go(3) }
     if (c.state === 'connected') { setSecure(1); if (step !== 3) go(3); return 'stop' as const }
-    if (c.state === 'dispute' || c.state === 'held') setError('In use by another shop')
+    if (c.state === 'dispute' || c.state === 'held') setError('In use by another store')
     if (c.state === 'paused') setChecked('Checking paused')
     return 'again' as const
   }, [claim, step]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -317,7 +317,7 @@ function MainPopup({ host, onClose, onUndo }: { host: string; onClose: () => voi
       <p className="text-sm font-semibold"><span className="font-mono">{host}</span> is your main address</p>
       <div className="flex flex-wrap gap-1.5">
         <Button size="wrap" variant="secondary" onClick={() => { void navigator.clipboard?.writeText(`https://${host}`).then(() => toast({ text: 'Copied' }), () => {}) }}>Copy</Button>
-        <a className={button({ variant: 'secondary', size: 'wrap' })} href={`https://${host}`} target="_blank" rel="noopener noreferrer">View your shop</a>
+        <a className={button({ variant: 'secondary', size: 'wrap' })} href={`https://${host}`} target="_blank" rel="noopener noreferrer">View your store</a>
         {undo && onUndo && (
           <Button size="wrap" variant="secondary" className="relative overflow-hidden" onClick={onUndo}>
             Undo<span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 animate-undo-window bg-thread motion-reduce:hidden" />

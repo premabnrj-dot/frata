@@ -174,7 +174,7 @@ export function computeBill(i: BillInput): Bill {
   // it. A trial that ran on M−1's 1st means its invoice billed no plan: 0, even if that month had no invoice at all.
   const prevTrial = trialRunsAt(starts, i.prevMonthStart) || starts.some((p) => !!p.trialEndsAt && p.trialEndsAt > i.prevMonthStart && p.trialEndsAt < i.monthStart)
   const owed = planChangeOwed(starts, i.prevMonthStart, i.monthStart, i.prevPlanBilled ?? (prevTrial ? 0 : null), i.pause ?? null)
-  if (owed > 0) lines.push({ kind: 'change', description: prevTrial ? 'Your plan after the trial last month, by days' : 'Plan change last month: the difference, by days', periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: 1, rateBps: null, taxable: owed })
+  if (owed > 0) lines.push({ kind: 'change', description: prevTrial ? 'Your plan after the trial last month, by days' : 'Plan change last month, by days', periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: 1, rateBps: null, taxable: owed })
   // Add-ons, the plan's twin (A3 review Arch B1): a row in force on M's 1st is billed for M in advance; a row that
   // began during M−1 (after M−1's invoice, e.g. a self-serve trial's paid row from the trial's end) is made up by its
   // days on M's invoice. A row starting later in M is billed on M+1's. A trial row carries no price.
@@ -213,7 +213,7 @@ export function computeBill(i: BillInput): Bill {
   if (usage.over) lines.push({ kind: 'over', description: `Orders over the plan · ${lastMonth - included}`, periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: lastMonth - included, rateBps: null, taxable: 0 as Paise })
   // Credits: each reverses exactly what its order was billed.
   for (const c of i.credits) lines.push({ kind: 'credit', description: `${c.number} came back or was lost after billing${c.invoiceNumber ? ` (invoice ${c.invoiceNumber})` : ''}`, periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: 1, rateBps: null, taxable: -c.fee as Paise })
-  for (const c of i.returnCredits ?? []) if (c.fee > 0) lines.push({ kind: 'credit', description: `${c.number}: items returned after billing${c.invoiceNumber ? ` (invoice ${c.invoiceNumber})` : ''}`, periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: 1, rateBps: null, taxable: -c.fee as Paise })
+  for (const c of i.returnCredits ?? []) if (c.fee > 0) lines.push({ kind: 'credit', description: `Items returned from ${c.number} after billing${c.invoiceNumber ? ` (invoice ${c.invoiceNumber})` : ''}`, periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: 1, rateBps: null, taxable: -c.fee as Paise })
   if (i.carry) lines.push({ kind: 'carry', description: i.carry > 0 ? 'Carried from last month' : 'Balance from last month', periodStart: i.prevMonthStart, periodEnd: i.monthStart, quantity: 1, rateBps: null, taxable: i.carry as Paise })
 
   const sum = lines.reduce((t, l) => t + l.taxable, 0)

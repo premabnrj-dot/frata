@@ -41,7 +41,7 @@ export function supabaseAlerts(h: DbHealth, plan: 'free' | 'pro' = SUPABASE.plan
     out.push({ key: 'db.outbox', tab: 'supabase', level: 'now', title: `Outbox waiting ${Math.round(h.outboxOldestS / 60)} minutes`, why: `${h.outboxWaiting} messages, payments or courier calls behind` })
   }
   if (h.outboxDeadToday > 0) {
-    out.push({ key: 'db.outbox_dead', tab: 'supabase', level: 'soon', title: `${h.outboxDeadToday} outbox ${h.outboxDeadToday === 1 ? 'call' : 'calls'} gave up today`, why: 'Retried until their limit; each needs a look' })
+    out.push({ key: 'db.outbox_dead', tab: 'supabase', level: 'soon', title: `${h.outboxDeadToday} outbox ${h.outboxDeadToday === 1 ? 'call' : 'calls'} gave up today`, why: 'Retried until their limit. Each needs a look' })
   }
   if (h.webhooksWaiting > LIMITS.webhooksWaiting) {
     out.push({ key: 'db.webhooks', tab: 'supabase', level: 'soon', title: `${h.webhooksWaiting} webhooks not processed`, why: 'Payment and courier updates are behind' })
@@ -51,7 +51,7 @@ export function supabaseAlerts(h: DbHealth, plan: 'free' | 'pro' = SUPABASE.plan
     out.push({ key: 'db.slow_query', tab: 'supabase', level: 'soon', title: `A query takes ${(slow.meanMs / 1000).toFixed(1)} s on average`, why: `${slow.calls} calls · ${slow.shape}` })
   }
   if (plan === 'free') {
-    out.push({ key: 'db.free_plan', tab: 'supabase', level: 'soon', title: 'The database is on Supabase’s Free plan', why: `Free pauses after a week with no activity; past its limits, shops can turn read-only or offline · Pro from $${SUPABASE.proFromUsd}` })
+    out.push({ key: 'db.free_plan', tab: 'supabase', level: 'soon', title: 'The database is on Supabase’s Free plan', why: `Free pauses after a week with no activity. Past its limits, stores can turn read-only or offline · Pro from $${SUPABASE.proFromUsd}` })
   }
   return out
 }

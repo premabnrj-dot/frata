@@ -65,9 +65,9 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       <main data-shell data-neel="" className="p-6">
         <Panel title={auth.reason === 'signed_out' ? 'Sign in to continue' : 'No store on this account'}
           action={auth.reason === 'no_access'
-            ? <div className="flex flex-wrap justify-center gap-2"><Link href="/start" className={button()}>Start your shop</Link><Link href="/login" className={button({ variant: 'secondary' })}>Sign in with another email</Link></div>
+            ? <div className="flex flex-wrap justify-center gap-2"><Link href="/start" className={button()}>Start your store</Link><Link href="/login" className={button({ variant: 'secondary' })}>Sign in with another email</Link></div>
             : <Link href="/login" className={button({ variant: 'secondary' })}>Sign in</Link>}>
-          {auth.reason === 'no_access' && 'This email has no shop yet. Start one, or ask a shop’s owner to invite you.'}
+          {auth.reason === 'no_access' && 'This email has no store yet. Start one, or ask a store’s owner to invite you.'}
         </Panel>
       </main>
     )
@@ -116,7 +116,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const accountant = role === 'accountant'
   const groups: NavGroup[] = accountant ? [{ label: 'Taxes', items: [gst] }]
     : [{ label: 'Today', items: [home, orders, noticesItem, analytics] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [offers, look, search, apps, settings, activity] }]
-  const foot: NavItem[] = [{ href: '/console/preview', label: 'Preview shop', icon: 'external' }]
+  const foot: NavItem[] = [{ href: '/console/preview', label: 'Preview store', icon: 'external' }]
   if (auth.staffRole !== null && !supportSessionId) foot.push({ href: '/admin', label: 'Frrata Admin', icon: 'admin' })
   return (
     <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={accountant ? [gst] : [home, orders, products]} more={accountant ? [] : [noticesItem, analytics, collections, offers, look, search, apps, settings, activity]} foot={accountant ? [] : foot}

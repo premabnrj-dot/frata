@@ -19,7 +19,7 @@ export function FeaturedCard({ id, action, children }: { id: string; action: Rea
   }, [id])
   if (!shown) return null
   return (
-    <section aria-label="For your shop" className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+    <section aria-label="For your store" className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 space-y-1">{children}</div>
       <div className="flex shrink-0 flex-wrap gap-2">
         {action}

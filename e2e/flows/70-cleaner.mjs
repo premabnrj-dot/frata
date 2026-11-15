@@ -44,7 +44,7 @@ export default {
         await p.goto(CONSOLE + '/console/settings/contact')
         await p.locator('#f-grievanceName').fill('')
         await p.getByRole('button', { name: /^Save/ }).first().click()
-        await p.getByText('Your shop is open: keep the grievance officer’s name.').waitFor()
+        await p.getByText('Your store is open, so keep the grievance officer’s name.').waitFor()
         const [after] = await db`select grievance_name from shop_settings where tenant_id = ${T}`
         assert.equal(after.grievance_name, before.grievance_name)
       })

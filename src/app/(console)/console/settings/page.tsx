@@ -14,6 +14,7 @@ import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import { liveNamesFor, mainHostFor } from '@/lib/queries/addresses'
 import { shipCostsSeenBy, shopWithSettings } from '@/lib/queries/settings'
 import { paymentStatusFor } from '@/lib/queries/payments'
+import { planLine } from '@/lib/queries/billing'
 import { takesLivePayments } from '@/lib/payments/keys'
 import { shopFacts } from './_components/facts'
 import { Section } from '@/components/layout/section'
@@ -41,14 +42,18 @@ const inr = (p: number) => formatInr(paise(p))
 
 export default async function SettingsPage() {
   const auth = await requireMember(CAN_BUILD)
-  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this shop’s settings' : auth.message} />
+  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this store’s settings' : auth.message} />
   const shop = await shopWithSettings(auth.membership.tenantId).catch((err) => { console.error('[settings]', errName(err)); return null })
   if (!shop) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const f = shopFacts(shop, SHOP_DOMAIN)
-  const pay = await paymentStatusFor(auth.membership.tenantId).catch(() => null)
+  const manages = (CAN_MANAGE as readonly string[]).includes(auth.membership.role)
+  const [pay, plan] = await Promise.all([
+    paymentStatusFor(auth.membership.tenantId).catch(() => null),
+    manages ? planLine(auth.membership).catch(() => undefined) : null,
+  ])
   const mainHost = f.slug ? await mainHostFor(auth.membership.tenantId, f.slug).catch(() => shopHost(f.slug)) : ''
-  const online = !pay ? 'Could not load' : !pay.connected ? 'Not connected: shoppers can pay on delivery only' : pay.problem ? 'Needs attention' : !pay.webhookSeenAt ? 'Connected · one step left in Razorpay' : pay.mode === 'test' ? 'Test mode' : 'Live · UPI, cards, netbanking'
-  const onlineNeeds = !!pay && pay.connected && (!!pay.problem || !pay.webhookSeenAt)
+  const online = !pay ? 'Could not load' : !pay.connected ? 'Not connected' : pay.problem ? 'Needs attention' : !pay.webhookSeenAt ? 'Connected · one step left in Razorpay' : pay.mode === 'test' ? 'Test mode' : 'Live · UPI, cards, netbanking'
+  const onlineNeeds = !!pay && (!pay.connected || !!pay.problem || !pay.webhookSeenAt)
   // D1·8: Razorpay fails live payments from an address not registered on the shop's account — the main one must be
   // approved (the merchant's word; checkout offers online payment only on an approved address).
   const names = takesLivePayments(pay) ? await liveNamesFor(auth.membership.tenantId).catch(() => []) : []
@@ -57,23 +62,24 @@ export default async function SettingsPage() {
     ...(current && !current.razorpayOk ? [{ label: `Add ${shopHost(current.name)} in Razorpay`, section: 'address' }] : [])]
   const policyGaps = POLICY_PAGES.filter(([k]) => missingFacts(renderPolicy(k, f, inr)).length).length
 
+  // Neel § Screens · Settings: each row its current value, the parts joined by " · ".
+  const parts = (...p: (string | null | false)[]) => p.filter(Boolean).join(' · ')
   const summary: Record<SectionKey, string> = {
-    store: `${f.shopName} · ${f.legalName || 'legal name missing'}`,
-    contact: grievanceComplete(f) ? `${f.supportEmail} · grievance officer ${f.grievanceName}` : f.grievanceName ? 'Grievance officer’s email or phone missing' : 'Grievance officer missing',
+    store: f.legalName || 'Legal name missing',
+    contact: grievanceComplete(f) ? parts(f.supportEmail, f.grievanceName) : f.grievanceName ? 'Grievance officer’s email or phone missing' : 'Grievance officer missing',
     brand: f.tagline ? `“${f.tagline.slice(0, 40)}”` : 'Your logo and one line',
-    policies: policyGaps ? `${policyGaps} of 5 pages are missing details` : `${f.returnKind === 'none' ? 'No returns' : `${f.returnDays}-day returns`} · 5 pages from your details`,
-    payments: f.codOn ? `On, up to ${f.codMax ? inr(f.codMax) : 'any value'}${f.codCharge ? `, fee ${inr(f.codCharge)}` : ', no fee'}` : 'Off: shoppers pay online only',
-    shipping: `${f.shippingFlat ? inr(f.shippingFlat) : 'Free'}${f.shippingFlat && f.freeShippingAbove ? `, free above ${inr(f.freeShippingAbove)}` : ''} · dispatched within ${f.dispatchDays} days`,
-    taxes: f.gstin ? `GSTIN ${f.gstin} · tax invoices` : 'No GSTIN · bills of supply',
-    documents: `${f.slipSize === 'label' ? '4×6 slips' : 'A4 slips'}${f.docSignatory ? ` · signed ${f.docSignatory}` : ' · no signatory yet'}`,
+    policies: policyGaps ? `${policyGaps} of 5 pages need details` : parts(f.returnKind === 'none' ? 'No returns' : `${f.returnDays}-day returns`, '5 pages'),
+    payments: f.codOn ? parts('On', !!f.codMax && `up to ${inr(f.codMax)}`, !!f.codCharge && `fee ${inr(f.codCharge)}`) : 'Off',
+    shipping: parts(f.shippingFlat ? inr(f.shippingFlat) : 'Free', !!f.shippingFlat && !!f.freeShippingAbove && `free above ${inr(f.freeShippingAbove)}`, `${f.dispatchDays} ${f.dispatchDays === 1 ? 'day' : 'days'}`),
+    taxes: f.gstin || 'Not registered',
+    documents: parts(f.slipSize === 'label' ? '4×6 slips' : 'A4 slips', f.docSignatory ? `signed ${f.docSignatory}` : 'no signatory yet'),
   }
-  const manages = (CAN_MANAGE as readonly string[]).includes(auth.membership.role)
   const owner = auth.membership.role === 'owner'
   // Shipping costs: whoever seesCosts (owners and admins; a partner before handover). Staff never read them.
   const seen = (CAN_SET_COSTS as readonly string[]).includes(auth.membership.role) ? await shipCostsSeenBy(auth.membership.tenantId, auth.membership.role).catch(() => undefined) : null
   const ship = seen?.visible ? seen.costs : seen === undefined ? undefined : null
   const est = ship === undefined ? null : estimateOf(ship)
-  const shipSummary = ship === undefined ? 'Could not load' : est ? `Delivery ${inr(est.delivery)} · return ${inr(est.ret)} · COD fee ${inr(est.codFee)}` : 'Not confirmed: profit says “before shipping costs”'
+  const shipSummary = ship === undefined ? 'Could not load' : est ? `Delivery ${inr(est.delivery)} · return ${inr(est.ret)} · COD fee ${inr(est.codFee)}` : 'Not confirmed'
   const shipNeeds = ship !== undefined && !est
   const needs = (k: SectionKey) => missing.some((m) => m.section === k) || (k === 'policies' && policyGaps > 0)
 
@@ -89,14 +95,14 @@ export default async function SettingsPage() {
         ) : null}
         <Section as="nav" flush ariaLabel="Settings">
           {SECTIONS.filter((s) => s.editors.includes(auth.membership.role)).map((s) => (
-            <Row key={s.key} href={`/console/settings/${s.key}`} icon={SECTION_ICON[s.key]} title={s.title} summary={summary[s.key]} needs={needs(s.key)} />
+            <Row key={s.key} href={`/console/settings/${s.key}`} icon={SECTION_ICON[s.key]} title={s.title} summary={summary[s.key]} needs={needs(s.key)} mono={s.key === 'taxes' && !!f.gstin} />
           ))}
           {owner && <Row href="/console/settings/online-payments" icon="payments" title="Online payments" summary={online} needs={onlineNeeds} />}
-          {manages && <Row href="/console/settings/billing" icon="plans" title="Plan and billing" summary="Your plan, this month so far, invoices and billing details" />}
-          {manages && <Row href="/console/settings/people" icon="people" title="People" summary="Who works on this shop" />}
-          <Row href="/console/settings/emails" icon="messages" title="Emails to shoppers" summary="Order emails in your shop’s name" />
+          {manages && <Row href="/console/settings/billing" icon="plans" title="Plan and billing" summary={plan ? `${plan.name} · ${formatInr(plan.monthlyPrice)} a month` : plan === null ? 'No plan yet' : 'Could not load'} />}
+          {manages && <Row href="/console/settings/people" icon="people" title="People" summary="Who works on this store" />}
+          <Row href="/console/settings/emails" icon="messages" title="Emails to shoppers" summary="Order emails in your store’s name" />
           <Row href="/console/settings/notifications" icon="bell" title="Your notifications" summary="What Frrata emails you" />
-          {manages && <Row href="/console/settings/address" icon="address" title="Shop address" summary={mainHost} mono />}
+          {manages && <Row href="/console/settings/address" icon="address" title="Store address" summary={mainHost} mono />}
           {seen !== null && (seen === undefined || seen.visible) && <Row href="/console/settings/shipping-costs" icon="shipped" title="Shipping costs" summary={shipSummary} needs={shipNeeds} />}
         </Section>
       </div>

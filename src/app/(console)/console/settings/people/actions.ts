@@ -13,8 +13,8 @@ import { CAN_INVITE_ACCOUNTANT } from '@/domains/tenancy/roles'
 // visit has none, and the definer function refuses it too). The tenant is requireMember's, the uid getUser()'s.
 
 const SENTENCES: Record<string, string> = {
-  not_owner: 'Only the shop’s owner can remove its partner.',
-  no_partner: 'This shop has no partner now.',
+  not_owner: 'Only the store’s owner can remove its partner.',
+  no_partner: 'This store has no partner now.',
 }
 
 export async function removeShopPartner(): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -35,8 +35,8 @@ export async function removeShopPartner(): Promise<{ ok: true } | { ok: false; e
 
 // ── The accountant (GST plan phase 3): owners and admins invite and remove one; never a Frrata support visit. ──
 const ACCOUNTANT: Record<string, string> = {
-  not_manager: 'Only the shop’s owner or an admin can do that.', bad_email: 'Check the email address.',
-  already_member: 'That person already works on this shop.', no_accountant: 'That person isn’t this shop’s accountant now.', wrong_shop: 'Reload the page and try again.',
+  not_manager: 'Only the store’s owner or a manager can do that.', bad_email: 'Check the email address.',
+  already_member: 'That person already works on this store.', no_accountant: 'That person isn’t this store’s accountant now.', wrong_shop: 'Reload the page and try again.',
 }
 const UUID = /^[0-9a-f-]{36}$/
 

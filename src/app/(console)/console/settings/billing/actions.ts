@@ -80,7 +80,7 @@ export async function startAutopay(method: string): Promise<Started> {
     })
     if (!read.ok) return { ok: false, error: read.error }
     const { d, tenantId, userId } = read.value
-    const customer = await createCustomer({ name: d?.name || 'Shop', email: d?.email || `shop-${tenantId.slice(0, 8)}@frrata.app`, contact: d?.phone || '9000000000' })
+    const customer = await createCustomer({ name: d?.name || 'Store', email: d?.email || `shop-${tenantId.slice(0, 8)}@frrata.app`, contact: d?.phone || '9000000000' })
     const order = await createMandateOrder({ customer: customer.id, method, maxAmount: MAX[method], receipt: `mandate:${tenantId.slice(0, 8)}:${Date.now()}` })
     const r = await asMember(CAN_MANAGE, { action: 'billing.autopay.begin', detail: { method } }, async (tx) => {
       await tx.execute(sql`select app_begin_mandate(${customer.id}, ${order.id}, ${method}, ${MAX[method]}, ${userId}::uuid)`)
@@ -105,7 +105,7 @@ export async function completeAutopay(input: Checkout): Promise<{ ok: true } | {
       return !!x?.ok
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (!r.value) return { ok: false, error: 'That set-up is not this shop’s, or it is already done.' }
+    if (!r.value) return { ok: false, error: 'That set-up is not this store’s, or it is already done.' }
     revalidatePath('/console/settings/billing')
     refreshShop(o.me.membership.tenantId, 'shop') // trials TR1·9: autopay reopens a paused shop at once
     return { ok: true }
@@ -118,7 +118,7 @@ export async function completeAutopay(input: Checkout): Promise<{ ok: true } | {
 export async function stopAutopay(): Promise<{ ok: true } | { ok: false; error: string }> {
   const me = await requireMember(CAN_MANAGE)
   if (!me.ok) return { ok: false, error: me.message }
-  if (me.membership.supportSessionId) return { ok: false, error: 'A Frrata support visit cannot change how the shop pays.' }
+  if (me.membership.supportSessionId) return { ok: false, error: 'A Frrata support visit cannot change how the store pays.' }
   const r = await asMember(CAN_MANAGE, { action: 'billing.autopay.stop' }, async (tx) => { await tx.execute(sql`select app_revoke_mandate()`) })
   if (!r.ok) return { ok: false, error: r.error }
   revalidatePath('/console/settings/billing')
@@ -187,7 +187,7 @@ const From = z.enum(['featured']).optional()
 export async function changePlan(code: string, from?: unknown): Promise<{ ok: true; startsAt: string; upgrade: boolean } | { ok: false; error: string }> {
   const me = await requireMember(CAN_MANAGE)
   if (!me.ok) return { ok: false, error: me.message }
-  if (me.membership.supportSessionId) return { ok: false, error: 'A Frrata support visit cannot change the shop’s plan.' }
+  if (me.membership.supportSessionId) return { ok: false, error: 'A Frrata support visit cannot change the store’s plan.' }
   const p = PlanCode.safeParse(code)
   if (!p.success) return { ok: false, error: 'Choose a plan.' }
   // Apps A2's measure: a change that came from the featured card. Only this one value is ever stored.
@@ -213,7 +213,7 @@ export async function changePlan(code: string, from?: unknown): Promise<{ ok: tr
 export async function cancelPlanChange(): Promise<{ ok: true } | { ok: false; error: string }> {
   const me = await requireMember(CAN_MANAGE)
   if (!me.ok) return { ok: false, error: me.message }
-  if (me.membership.supportSessionId) return { ok: false, error: 'A Frrata support visit cannot change the shop’s plan.' }
+  if (me.membership.supportSessionId) return { ok: false, error: 'A Frrata support visit cannot change the store’s plan.' }
   const r = await asMember(CAN_MANAGE, { action: 'billing.plan.cancel' }, async (tx, auth) => { await tx.execute(sql`select app_cancel_plan_change(${auth.userId}::uuid)`) })
   if (!r.ok) return { ok: false, error: r.error }
   revalidatePath('/console', 'layout')

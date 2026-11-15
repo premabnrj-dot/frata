@@ -16,7 +16,7 @@ type Key = 'delivery' | 'ret' | 'cod'
 const FIELDS: { key: Key; label: string; hint: string; suggested: string }[] = [
   { key: 'delivery', label: 'A delivery', hint: 'Courier charge to deliver one parcel', suggested: '70' },
   { key: 'ret', label: 'A return', hint: 'Charged when a parcel comes back undelivered', suggested: '70' },
-  { key: 'cod', label: 'A COD fee', hint: 'The courier’s fee for collecting cash on a delivered COD order: about ₹50 (one flat figure)', suggested: '50' },
+  { key: 'cod', label: 'A COD fee', hint: 'What the courier charges to collect cash on a COD order. About ₹50.', suggested: '50' },
 ]
 
 export function ShipCostsForm({ current, confirmedOn: confirmed0 }: { current: Record<Key, string | null>; confirmedOn: string | null }) {
@@ -37,10 +37,10 @@ export function ShipCostsForm({ current, confirmedOn: confirmed0 }: { current: R
   return (
     <div className="max-w-xl space-y-4">
       <PageHeader title="Shipping costs" back={{ href: '/console/settings', label: 'Settings' }} />
-      <p className="text-sm text-muted-foreground">For orders you ship another way: a local courier, or your own Shiprocket panel. Profit on those orders uses these. Orders shipped with Shiprocket through Frrata use what was actually charged.</p>
+      <p className="text-sm text-muted-foreground">For orders you ship yourself, by a local courier or your own Shiprocket panel. Profit on those orders uses these. Orders shipped with Shiprocket through Frrata use what was actually charged.</p>
       <Section>
         <p className={`text-sm ${confirmedOn ? 'text-muted-foreground' : 'text-warn-text'}`} aria-live="polite">
-          {confirmedOn ? `Confirmed on ${confirmedOn}. Profit on those orders is estimated from these.` : 'Not confirmed yet: profit on those orders says “before shipping costs”. The figures below are what a 0.5 kg parcel usually costs.'}
+          {confirmedOn ? `Confirmed on ${confirmedOn}. Profit on those orders is estimated from these.` : 'Shipping costs aren’t confirmed yet. Profit leaves them out for now. The figures below are what a 0.5 kg parcel usually costs.'}
         </p>
         <div ref={box} className="grid gap-3 sm:grid-cols-3">
           {FIELDS.map((f) => (
@@ -60,7 +60,7 @@ export function ShipCostsForm({ current, confirmedOn: confirmed0 }: { current: R
         <div>
           <Button type="button" disabled={!changed || pending} onClick={() => start(async () => {
             let r: Awaited<ReturnType<typeof saveShipCosts>>
-            try { r = await saveShipCosts(v) } catch { r = { ok: false, error: 'We could not save. Check your connection; nothing was changed.' } }
+            try { r = await saveShipCosts(v) } catch { r = { ok: false, error: 'We could not save. Check your connection. Nothing was changed.' } }
             if (r.ok) { toast.ok('Shipping costs confirmed.'); setConfirmedOn(r.confirmedOn); setSaved(v); router.refresh() }
             else {
               const fields = (r.errors ?? {}) as Partial<Record<Key, string>>

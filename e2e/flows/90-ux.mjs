@@ -355,27 +355,27 @@ export default {
         const hc = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' })
         // Setup (and closing the shop) is reached from Home, by a tap, not by typing its address (impact review U·4).
         const h = await hc.newPage(); await h.goto(CONSOLE + '/console')
-        await h.getByRole('link', { name: 'Store open: setup, or close the store for now' }).click(); await h.waitForURL(/\/console\/setup$/)
-        const closeShop = async () => { await h.getByRole('button', { name: 'Close the shop for now' }).click(); await h.getByRole('button', { name: 'Close shop' }).click(); await expectToast(h, 'Closed. Shoppers see “Opening soon”.', 'ok') }
-        const openShop = async () => { await h.getByRole('button', { name: 'Open my shop' }).click(); await h.getByRole('button', { name: 'Open it' }).click() }
+        await h.getByRole('link', { name: 'Store open. Go to setup to close it.' }).click(); await h.waitForURL(/\/console\/setup$/)
+        const closeShop = async () => { await h.getByRole('button', { name: 'Close the store for now' }).click(); await h.getByRole('button', { name: 'Close store' }).click(); await expectToast(h, 'Closed. Shoppers see “Opening soon”.', 'ok') }
+        const openShop = async () => { await h.getByRole('button', { name: 'Open my store' }).click(); await h.getByRole('button', { name: 'Open it' }).click() }
         await closeShop(); await openShop()
         await h.locator('svg .animate-draw-circle').waitFor()
         assert.equal(await h.locator('svg .animate-draw-circle').count(), 1)
-        await h.getByText('Your shop is open', { exact: true }).waitFor()
+        await h.getByText('Your store is open', { exact: true }).waitFor()
         // Closing straight after: the check gives way to what just happened, it does not linger.
         await closeShop()
         // The first close's toast may still be up (8 s), so wait for the check itself to go.
         await h.locator('svg .animate-draw-circle').waitFor({ state: 'detached' })
         assert.equal(await h.locator('svg .animate-draw-circle').count(), 0, 'the check goes when the shop closes')
         // From Home: the checklist (the shop is closed), then Today with the check above it.
-        await h.goto(CONSOLE + '/console'); await h.getByRole('heading', { level: 2, name: 'Get your shop ready to sell' }).waitFor()
+        await h.goto(CONSOLE + '/console'); await h.getByRole('heading', { level: 2, name: 'Get your store ready to sell' }).waitFor()
         await openShop()
         await h.getByRole('heading', { level: 1, name: 'Today' }).waitFor()
         await h.locator('svg .animate-draw-circle').waitFor()
-        assert.equal(await h.getByText('Your shop is open', { exact: true }).count(), 1, 'the check outlives the checklist it was opened from')
+        assert.equal(await h.getByText('Your store is open', { exact: true }).count(), 1, 'the check outlives the checklist it was opened from')
         await h.reload(); await h.getByRole('heading', { level: 1, name: 'Today' }).waitFor()
         assert.equal(await h.locator('svg .animate-draw-circle').count(), 0, 'once: not on the next visit')
-        assert.equal(await h.getByText('Your shop is open', { exact: true }).count(), 0)
+        assert.equal(await h.getByText('Your store is open', { exact: true }).count(), 0)
         await hc.close()
       })
 

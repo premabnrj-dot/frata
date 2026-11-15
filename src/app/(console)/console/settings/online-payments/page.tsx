@@ -11,7 +11,7 @@ export const metadata = { title: 'Online payments' }
 /** Settings → Online payments: the merchant's own Razorpay account. Owner only (it moves their money). */
 export default async function OnlinePaymentsPage() {
   const auth = await requireMember(['owner'])
-  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the shop’s owner can connect online payments' : auth.message} />
+  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the store’s owner can connect online payments' : auth.message} />
   const status = await paymentStatusFor(auth.membership.tenantId).catch(() => null)
   if (!status) return <Panel title="We could not load this screen">Nothing was changed. Try again in a minute.</Panel>
   const webhookUrl = status.connected ? `https://${CONSOLE_HOST}/api/webhooks/razorpay/${status.webhookKey}` : null

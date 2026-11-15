@@ -70,9 +70,9 @@ export default {
       await pia.goto(CONSOLE + '/partner')
       await pia.getByText('Make your first client store').waitFor()
       await pia.getByRole('link', { name: 'New client store' }).first().click()
-      await pia.getByLabel('Brand’s shop name').fill('Mitti Handloom')
+      await pia.getByLabel('Brand’s store name').fill('Mitti Handloom')
       await pia.getByText('Free', { exact: true }).waitFor()
-      await pia.getByLabel('Pickup pincode', { exact: true }).fill('302001')
+      await pia.getByLabel('Pickup PIN code', { exact: true }).fill('302001')
       await pia.getByRole('button', { name: 'Create Mitti Handloom' }).click()
       await pia.getByText('Building for Mitti Handloom').waitFor()
       ;[{ id: T }] = await db`select id from tenants where slug = 'mitti-handloom'`
@@ -85,9 +85,9 @@ export default {
 
     await t.step('a partner never reaches payments or people', async () => {
       await pia.goto(CONSOLE + '/console/settings/online-payments')
-      await pia.getByText('Only the shop’s owner can connect online payments').waitFor()
+      await pia.getByText('Only the store’s owner can connect online payments').waitFor()
       await pia.goto(CONSOLE + '/console/settings/people')
-      await pia.getByText('Only the owner or an admin can see people').waitFor()
+      await pia.getByText('Only the owner or a manager can see people').waitFor()
       await pia.goto(CONSOLE + '/console/settings/brand')
       await pia.getByRole('heading', { name: 'Brand', level: 1 }).waitFor() // the look is the partner's to build
     })
@@ -130,7 +130,7 @@ export default {
       await pia.screenshot({ path: t.out('clients') })
       // Handed over: the shop's costs are its owner's now ("Once handed over, no").
       await pia.goto(CONSOLE + '/console/settings/shipping-costs')
-      await pia.getByText('Only the owner or an admin can see shipping costs').waitFor()
+      await pia.getByText('Only the owner or a manager can see shipping costs').waitFor()
       assert.equal(await pia.getByLabel('A delivery').count(), 0)
     })
 

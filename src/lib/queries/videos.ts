@@ -55,7 +55,7 @@ export async function startVideo(tx: Tx, tenantId: string, memberId: string, mux
   if (today >= (onTrial ? PER_DAY_TRIAL : PER_DAY)) return { ok: false, error: onTrial ? 'Three videos a day on a trial. Try again tomorrow.' : 'Ten videos a day. Try again tomorrow.' }
   if (recent.length >= PER_MONTH) return { ok: false, error: 'Thirty videos a month. Remove one you don’t use, or try again next month.' }
   const live = (await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), isNull(videos.removedAt), eq(videos.use, 'loop')))).map(asVideo)
-  if (live.filter((v) => isLive(v, now)).length >= MAX_LIVE) return { ok: false, error: 'Your shop holds 20 videos. Remove one first.' }
+  if (live.filter((v) => isLive(v, now)).length >= MAX_LIVE) return { ok: false, error: 'Your store holds 20 videos. Remove one first.' }
   // Only these three columns: the app may insert nothing else (drizzle/0081, tenancy audit H1), and drizzle's insert
   // would name every column (as DEFAULT), which Postgres checks too.
   const [r] = await tx.execute<{ id: string }>(sql`insert into videos (tenant_id, mux_env, created_by) values (${tenantId}, ${muxEnv}, ${memberId}) returning id`) as unknown as { id: string }[]
@@ -78,7 +78,7 @@ async function startProduct(tx: Tx, tenantId: string, memberId: string, muxEnv: 
   if (today.length >= C.perDay) return { ok: false, error: `${C.perDay} videos a day on your plan. Try again tomorrow.` }
   if (recent.length >= C.perMonth) return { ok: false, error: `${C.perMonth} videos a month on your plan.` }
   const live = (await tx.select(ROW).from(videos).where(and(eq(videos.tenantId, tenantId), isNull(videos.removedAt), eq(videos.use, 'product')))).map(asVideo)
-  if (live.filter((v) => isLive(v, now)).length >= C.live) return { ok: false, error: `Your shop holds ${C.live} product videos on its plan. Remove one first.` }
+  if (live.filter((v) => isLive(v, now)).length >= C.live) return { ok: false, error: `Your store holds ${C.live} product videos on its plan. Remove one first.` }
   if (current) await unlinkProductVideo(tx, tenantId, product.productId, now)
   const [r] = await tx.execute<{ id: string }>(sql`insert into videos (tenant_id, mux_env, created_by, use) values (${tenantId}, ${muxEnv}, ${memberId}, 'product') returning id`) as unknown as { id: string }[]
   await linkProductVideo(tx, tenantId, product.productId, r!.id)

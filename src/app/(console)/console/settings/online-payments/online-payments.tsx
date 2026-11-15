@@ -65,15 +65,15 @@ export function OnlinePayments({ status, support, available, now }: { status: St
 
       <Section>
         <h2 className="text-section font-semibold">1 · Your keys</h2>
-        {support ? <p className="text-sm text-muted-foreground">Only the shop’s owner can connect or change Razorpay keys — not Frrata support.</p> : !available ? <p className="text-sm text-muted-foreground">Online payments are not switched on for Frrata yet.</p> : (
+        {support ? <p className="text-sm text-muted-foreground">Only the store’s owner can connect or change Razorpay keys.</p> : !available ? <p className="text-sm text-muted-foreground">Online payments are not switched on for Frrata yet.</p> : (
           <div ref={keys} className="space-y-3">
             <div className="space-y-1"><label htmlFor="key-id" className="block text-sm font-medium">Key ID</label>
               <input id="key-id" value={keyId} onChange={(e) => { setKeyId(e.target.value); setErrors(({ keyId: _gone, ...rest }) => rest) }} autoComplete="off" spellCheck={false} placeholder="rzp_live_…" {...fieldProps('key-id', errors.keyId)}
                 className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /><FieldError name="key-id" message={errors.keyId} /></div>
-            <div className="space-y-1"><div className="flex items-center"><label htmlFor="key-secret" className="text-sm font-medium">Key secret</label><InfoTip about="the key secret">Checked with Razorpay before saving: wrong keys are refused and nothing changes. Saved keys are encrypted and never shown again.</InfoTip></div>
+            <div className="space-y-1"><div className="flex items-center"><label htmlFor="key-secret" className="text-sm font-medium">Key secret</label><InfoTip about="the key secret">We check the keys with Razorpay before saving them.</InfoTip></div>
               <input id="key-secret" type="password" value={secret} onChange={(e) => { setSecret(e.target.value); setErrors(({ keySecret: _gone, ...rest }) => rest) }} autoComplete="off" placeholder={status ? 'Saved · paste a new one' : ''} {...fieldProps('key-secret', errors.keySecret)}
                 className="h-11 md:h-9 w-full rounded-md border border-input bg-card px-3 font-mono text-sm aria-invalid:border-danger-text" /><FieldError name="key-secret" message={errors.keySecret} /></div>
-            <p className="text-xs text-muted-foreground">Razorpay → Account &amp; Settings → API keys. The secret is shown there once: generate a new pair if you do not have it.</p>
+            <p className="text-xs text-muted-foreground">Razorpay → Account & Settings → API keys. Razorpay shows the secret once. If you don’t have it, make a new pair.</p>
             <div className="flex flex-wrap items-center gap-3">
               <Button disabled={pending || !keyId || !secret} onClick={connect}>{pending ? 'Checking with Razorpay…' : status ? 'Test and save new keys' : 'Test and connect'}</Button>
               {status && <span className="text-sm text-muted-foreground">Connected: <span className="font-mono">{status.keyId}</span></span>}
@@ -84,8 +84,8 @@ export function OnlinePayments({ status, support, available, now }: { status: St
 
       {status && (
         <Section>
-          <div className="flex items-center"><h2 className="text-section font-semibold">2 · Tell Razorpay where to send payments</h2><InfoTip about="the webhook">Done once, in your Razorpay dashboard: Account &amp; Settings → Webhooks → Add new webhook. If a shopper pays and closes the page, this is how your shop learns the order is paid.</InfoTip></div>
-          <p className="text-sm text-muted-foreground">Razorpay → Account &amp; Settings → Webhooks → Add new webhook.</p>
+          <div className="flex items-center"><h2 className="text-section font-semibold">2 · Tell Razorpay where to send payments</h2><InfoTip about="this step">Do it once. It tells your store when an order is paid.</InfoTip></div>
+          <p className="text-sm text-muted-foreground">Razorpay → Account & Settings → Webhooks → Add new webhook.</p>
           <ol className="space-y-3 text-sm">
             <li><span className="font-medium">Webhook URL</span>
               <div className="mt-1 flex gap-2"><code className="min-w-0 flex-1 truncate rounded-md border border-input bg-muted px-2 py-2 text-xs">{status.webhookUrl}</code><Button variant="secondary" onClick={() => copy(status.webhookUrl)}>Copy</Button></div></li>
@@ -97,7 +97,7 @@ export function OnlinePayments({ status, support, available, now }: { status: St
               <ul className="mt-1 flex flex-wrap gap-1.5" aria-label="Events">{RZP_EVENTS.map((e) => <li key={e}><button type="button" onClick={() => copy(e)} className="inline-flex min-h-6 items-center rounded-sm bg-muted px-2 font-mono text-xs hover:bg-accent" aria-label={`Copy ${e}`}>{e}</button></li>)}</ul></li>
           </ol>
           <p className="text-sm">{status.webhookSeenAt ? <Badge tone="ok">Working · last event {sinceIN(status.lastEventAt ?? status.webhookSeenAt, new Date(now))}</Badge> : <Badge>Waiting for Razorpay’s first event…</Badge>}</p>
-          {status.mode === 'test' && <p className="text-xs text-muted-foreground">Test keys (rzp_test_) let you try Razorpay, but an open shop offers online payment only with live keys and a webhook that has worked.</p>}
+          {status.mode === 'test' && <p className="text-xs text-muted-foreground">Test keys (rzp_test_) are for trying Razorpay. Shoppers pay online only with live keys, after step 2 works.</p>}
         </Section>
       )}
 
@@ -131,7 +131,7 @@ function MoneyFlow() {
       </ol>
       <figcaption className="flex items-center gap-2 text-xs text-muted-foreground">
         <span aria-hidden="true" className="inline-block w-10 border-t-2 border-dashed border-thread" />
-        Razorpay tells your shop it&apos;s paid
+        Razorpay tells your store it&apos;s paid
         <InfoTip about="how a payment reaches you">Razorpay tells Frrata, so the order is marked paid. Frrata never holds your money.</InfoTip>
       </figcaption>
     </figure>

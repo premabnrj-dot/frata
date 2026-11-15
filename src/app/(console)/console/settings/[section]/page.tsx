@@ -24,11 +24,11 @@ export async function generateMetadata({ params }: { params: Promise<{ section: 
 
 export default async function SettingsSectionPage({ params }: { params: Promise<{ section: string }> }) {
   const auth = await requireMember(CAN_BUILD)
-  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this shop’s settings' : auth.message} />
+  if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'You can’t change this store’s settings' : auth.message} />
   const { section: key } = await params
   const section = sectionFor(key)
   if (!section) notFound()
-  if (!section.editors.includes(auth.membership.role)) return <Panel title="Only the owner or an admin can change this" />
+  if (!section.editors.includes(auth.membership.role)) return <Panel title="Only the owner or a manager can change this" />
   const tenantId = auth.membership.tenantId
   const zoned = section.key === 'shipping' || section.key === 'payments'
   const [shop, overrides, live, src, mods] = await Promise.all([

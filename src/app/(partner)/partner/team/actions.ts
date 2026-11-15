@@ -50,7 +50,7 @@ export async function inviteTeamAction(form: FormData): Promise<ActionResult> {
   if (!r.ok) return r.error === 'bad_email' ? { fields: { email: SENTENCES.bad_email } } : { error: say(r.error, 'We could not send the invite. Nothing was changed.') }
   revalidatePath('/partner/team')
   const mail = await sendSignInLink(parsed.data.email).catch(() => ({ sent: false as const }))
-  return { ok: mail.sent ? `Invited ${parsed.data.email}. We emailed them a sign-in link.` : `Invited ${parsed.data.email}. The email didn’t send: ask them to sign in at /login with that address.` }
+  return { ok: mail.sent ? `Invited ${parsed.data.email}. We emailed them a sign-in link.` : `Invited ${parsed.data.email}. The email didn’t send. Ask them to sign in at /login with that address.` }
 }
 
 /** "Send again" on an invited person's row: the same sign-in email, counted against the same hourly limit. */

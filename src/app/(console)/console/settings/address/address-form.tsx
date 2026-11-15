@@ -85,7 +85,7 @@ export function AddressForm({ current: first, shopDomain, left: firstLeft, old: 
 
   return (
     <div className="max-w-xl space-y-4">
-      <PageHeader title="Shop address" back={{ href: '/console/settings', label: 'Settings' }} />
+      <PageHeader title="Store address" back={{ href: '/console/settings', label: 'Settings' }} />
       <Section>
         <label htmlFor="slug" className="flex items-center gap-1 text-sm font-medium">Frrata address
           {left !== null && <InfoTip about="old addresses">Old addresses keep working.</InfoTip>}

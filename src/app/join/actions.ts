@@ -11,7 +11,7 @@ import type { ActionResult } from '@/components/ui/action-form'
 // application. A refusal goes back to the form as a toast (frata-design-language § Feedback).
 
 const SENTENCES: Record<string, string> = {
-  email_unconfirmed: 'Confirm your email first: use the link or code we sent.',
+  email_unconfirmed: 'Confirm your email first. Use the link or code we sent.',
   no_invite: 'This invite has ended. Ask the partner to send it again.',
   bad_role: 'This invite can’t be accepted yet. Ask the partner to send it again.',
   in_team: 'You’re already in a partner’s team. Ask them to remove you first.',

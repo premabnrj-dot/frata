@@ -122,8 +122,8 @@ export async function savePolicyText(kind: string, body: string | null): Promise
 }
 
 const ADDRESS_ERRORS: Record<string, string> = {
-  not_owner: 'Only the owner or an admin of this shop can change its address.',
-  frozen: 'Frrata has paused address changes for this shop.',
+  not_owner: 'Only the owner or a manager of this store can change its address.',
+  frozen: 'Frrata has paused address changes for this store.',
   no_renames_left: 'No changes left.',
   needs_razorpay: 'Razorpay must approve this address first.',
   bad_slug: 'Letters, digits and hyphens, at least 3.',
@@ -143,7 +143,7 @@ export async function checkShopAddress(slug: string): Promise<AddressCheck> {
 export async function changeAddress(slug: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const auth = await requireMember(CAN_MANAGE)
   if (!auth.ok) return { ok: false, error: auth.message }
-  if (auth.membership.supportSessionId) return { ok: false, error: 'Only the shop’s owner can change its address.' }
+  if (auth.membership.supportSessionId) return { ok: false, error: 'Only the store’s owner can change its address.' }
   const s = String(slug ?? '').toLowerCase()
   const problem = slugProblem(s)
   if (problem) return { ok: false, error: problem === 'reserved' ? 'That address is reserved. Try another.' : ADDRESS_ERRORS.bad_slug! }
@@ -180,7 +180,7 @@ export async function saveShipCosts(input: ShipCostsInput): Promise<{ ok: true; 
       return saved.length > 0
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (r.value === 'handed_over') return { ok: false, error: 'The shop’s owner sets its shipping costs now.' }
+    if (r.value === 'handed_over') return { ok: false, error: 'The store’s owner sets its shipping costs now.' }
     if (!r.value) return { ok: false, error: 'We could not save. Nothing was changed. Try again in a minute.' }
     revalidatePath('/console', 'layout')
     // The date as the page says it, so the form shows it at once (not only after the refresh).
@@ -200,10 +200,10 @@ export async function setDocLogo(url: string | null): Promise<{ ok: true } | { o
   const editors = sectionFor('documents')!.editors
   const me = await requireMember(editors)
   if (!me.ok) return { ok: false, error: me.message }
-  if (me.membership.supportSessionId) return { ok: false, error: 'A support visit cannot change the shop’s logo.' }
+  if (me.membership.supportSessionId) return { ok: false, error: 'A support visit cannot change the store’s logo.' }
   if (!(await withinLimit(LIMITS.uploadShop, me.membership.tenantId, new Date(), true))) return { ok: false, error: 'Too many changes in the last few minutes. Try again shortly.' }
   if (url !== null && (typeof url !== 'string' || !(await docImage(url, me.membership.tenantId)))) {
-    return { ok: false, error: 'That logo could not be used. Choose a PNG, JPEG or WebP image; it is saved as a PNG up to 1 MB.' }
+    return { ok: false, error: 'We couldn’t use that logo. Choose a PNG, JPEG or WebP image.' }
   }
   try {
     const r = await asMember(editors, { action: 'settings.documents.logo', detail: { set: url !== null } }, async (tx, auth) => {
@@ -228,7 +228,7 @@ export async function setShopLogo(base: string | null): Promise<{ ok: true } | {
   const editors = sectionFor('brand')!.editors
   const me = await requireMember(editors)
   if (!me.ok) return { ok: false, error: me.message }
-  if (me.membership.supportSessionId) return { ok: false, error: 'A support visit cannot change the shop’s logo.' }
+  if (me.membership.supportSessionId) return { ok: false, error: 'A support visit cannot change the store’s logo.' }
   if (!(await withinLimit(LIMITS.uploadShop, me.membership.tenantId, new Date(), true))) return { ok: false, error: 'Too many changes in the last few minutes. Try again shortly.' }
   let url: string | null = null
   if (base !== null) {

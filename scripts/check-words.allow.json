@@ -88,5 +88,41 @@
     "rule": "W4",
     "text": "Buyer",
     "why": "The tax invoice names the buyer by law (Glossary: shopper, but the invoice says buyer)"
+  },
+  {
+    "file": "src/app/(console)/console/settings/online-payments/actions.ts",
+    "rule": "W4",
+    "text": "Account & Settings → API keys",
+    "why": "Razorpay's own menu label, named so the owner can find it"
+  },
+  {
+    "file": "src/app/(console)/console/settings/online-payments/online-payments.tsx",
+    "rule": "W4",
+    "text": "Account & Settings → API keys",
+    "why": "Razorpay's own menu label, named so the owner can find it"
+  },
+  {
+    "file": "src/app/(console)/console/settings/online-payments/online-payments.tsx",
+    "rule": "W4",
+    "text": "Webhooks → Add new webhook",
+    "why": "Razorpay's own menu path, named so the owner can find it"
+  },
+  {
+    "file": "src/app/(console)/console/settings/online-payments/online-payments.tsx",
+    "rule": "W4",
+    "text": "Webhook URL",
+    "why": "Razorpay's own field name: the owner pastes this value into it"
+  },
+  {
+    "file": "src/domains/billing/document.ts",
+    "rule": "W4",
+    "text": "Buyer",
+    "why": "GST export columns for the CA: the invoice says buyer by law (glossary)"
+  },
+  {
+    "file": "src/domains/infra/alerts.ts",
+    "rule": "W4",
+    "text": "webhooks not processed",
+    "why": "Frrata Admin's infrastructure screen, read by Frrata's engineers only (N4)"
   }
 ]

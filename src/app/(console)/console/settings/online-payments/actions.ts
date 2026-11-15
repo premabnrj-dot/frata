@@ -31,7 +31,7 @@ export async function connectRazorpay(input: { keyId: string; keySecret: string 
       return 'ok' as const
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (r.value === 'support') return { ok: false, error: 'Only the shop’s owner can connect Razorpay, not Frrata support.' }
+    if (r.value === 'support') return { ok: false, error: 'Only the store’s owner can connect Razorpay, not Frrata support.' }
     refreshShop(r.tenantId, 'shop')
     revalidatePath('/console', 'layout')
     return { ok: true }
@@ -50,7 +50,7 @@ export async function disconnectRazorpay(): Promise<Result> {
       return 'ok' as const
     })
     if (!r.ok) return { ok: false, error: r.error }
-    if (r.value === 'support') return { ok: false, error: 'Only the shop’s owner can disconnect Razorpay.' }
+    if (r.value === 'support') return { ok: false, error: 'Only the store’s owner can disconnect Razorpay.' }
     refreshShop(r.tenantId, 'shop')
     revalidatePath('/console', 'layout')
     return { ok: true }

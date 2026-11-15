@@ -36,10 +36,10 @@ const Id = z.uuid()
 const ERR_WORDS: Record<ClaimError | 'busy' | 'support', string> = {
   shape: 'Use a domain like yourbrand.in', not_ascii: 'Use the domain in English letters', ip: 'Use a domain, not an IP address',
   suffix: 'Add your brand’s name: yourbrand.co.in', reserved: 'This domain can’t be connected', tld: 'Use a domain like yourbrand.in',
-  not_owner: 'Only the owner or an admin can connect a domain', frozen: 'Address changes are frozen', blocked: 'This domain can’t be connected',
+  not_owner: 'Only the owner or a manager can connect a domain', frozen: 'Address changes are frozen', blocked: 'This domain can’t be connected',
   same_apex: 'This domain is already connected', ten_today: 'Try again tomorrow', four_hosts: '4 of 4 addresses',
   capacity: 'Not available right now', off: 'Not available right now', unknown: 'We could not connect it. Nothing was changed.',
-  busy: 'Try again in a minute', support: 'Only the shop’s owner can do this',
+  busy: 'Try again in a minute', support: 'Only the store’s owner can do this',
 }
 
 /** All of a shop's hosts (names and domains), for refreshing every cached lookup after main or a removal. */
@@ -121,7 +121,7 @@ const WRITE_WORDS: Record<string, string> = {
   not_owner: ERR_WORDS.not_owner, no_domain: 'This domain is no longer connected', not_ready: 'Not connected yet',
   razorpay: 'Razorpay must approve this domain first', unknown: 'We could not change it. Nothing was changed.',
   frozen: 'Address changes are frozen', no_renames_left: 'No changes left', one_added: 'One new address at a time',
-  bad_slug: 'Letters, digits and hyphens only', slug_taken: 'Taken', no_name: 'This address is no longer the shop’s',
+  bad_slug: 'Letters, digits and hyphens only', slug_taken: 'Taken', no_name: 'This address is no longer the store’s',
 }
 type Done = { ok: true } | { ok: false; error: string }
 
