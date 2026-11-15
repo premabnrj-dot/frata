@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { routeFor } from '@/domains/tenancy/host'
-import { CONSOLE_HOST, EKCODE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
+import { API_HOST, CONSOLE_HOST, EKCODE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
 import { updateSession } from '@/lib/supabase/middleware'
 import { ekcodeCsp, isSignedInPath, signedInCsp } from '@/lib/security-headers'
 
@@ -13,8 +13,11 @@ import { ekcodeCsp, isSignedInPath, signedInCsp } from '@/lib/security-headers'
  * (routeFor decides).
  */
 export async function middleware(request: NextRequest) {
-  const route = routeFor(request.headers.get('host'), request.nextUrl.pathname, CONSOLE_HOST, process.env.NODE_ENV === 'development', SHOP_DOMAIN, EKCODE_HOST)
+  const route = routeFor(request.headers.get('host'), request.nextUrl.pathname, CONSOLE_HOST, process.env.NODE_ENV === 'development', SHOP_DOMAIN, EKCODE_HOST, API_HOST)
   if (route.kind === 'not_found') return new NextResponse(null, { status: 404 })
+  // The Storefront API's host (ADR-0018): no session, no cookie, no nonce. Its versioned paths never reach here (the
+  // matcher skips them, so a CDN hit costs no middleware run); this is the belt to that brace.
+  if (route.kind === 'api') return NextResponse.next()
   // EkCode's host (P1 task 6): www goes to the apex; its pages get their own headers here, set by this branch itself (a
   // middleware header replaces next.config's of the same name). No Supabase session work on this host.
   if (route.kind === 'ekcode_www') return NextResponse.redirect(`https://${EKCODE_HOST}${request.nextUrl.pathname}`, 308)
@@ -67,6 +70,9 @@ function ekcodeResponse(request: NextRequest) {
 // Image-looking paths are NOT skipped (tenancy audit 2026-11-07): /s/<other>/x.png must meet routeFor too.
 // Skipped by exact path (speed review 2026-11-11): the visit beacon /fe.js (a static file, the same on every host) and
 // its ingest /api/shop/e, whose route repeats routeFor's check itself (requireShop): a beacon is one invocation, not two.
+// Versioned paths (/2026-12/…) are skipped on every host (V1 Storefront API, unit-economics review 2026-11-15): on the
+// API host next.config's apiRewrites serve them and a middleware run would be a paid call on every CDN hit; on any
+// other host they are a 404 page anyway. /api/storefront/* is NOT skipped: routeFor refuses it off the API host.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|fe\\.js$|api/shop/e$).*)'],
+  matcher: ['/((?!_next/static|_next/image|fe\\.js$|api/shop/e$|[0-9]{4}-[0-9]{2}/).*)'],
 }
