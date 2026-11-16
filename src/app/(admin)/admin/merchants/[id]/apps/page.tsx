@@ -62,7 +62,7 @@ export default async function MerchantAppsPage({ params }: { params: Promise<{ i
               <DataTableRow key={k} dimmed={MODULES[k].status === 'next'}>
                 <Td cell="a" className="font-medium">{MODULES[k].name}</Td>
                 <Td cell="c">{grantedBy(a, m.planName)}</Td>
-                <Td cell="e">{on ? `On since ${dayIN(on)}` : a.granted ? 'Off' : '—'}</Td>
+                <Td cell="e">{on ? `On since ${dayIN(on)}` : a.on ? 'On (default)' : a.granted ? 'Off' : '—'}</Td>
                 <Td cell="d">{usable(a)}</Td>
                 <Td cell="f" className="text-right">
                   {trialable && (

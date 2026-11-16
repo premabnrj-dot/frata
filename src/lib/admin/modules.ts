@@ -4,7 +4,7 @@ import { adminDb, type AdminDb, type AdminTx } from '@/lib/db/admin'
 import { modulePauses, tenantAddons, tenantModules } from '@/lib/db/schema-modules'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import { currentPlan } from '@/domains/plans/entitlements'
-import { addOnAllowed, liveAddon, moduleAccess, type ModuleAccess, type ModuleFacts } from '@/domains/modules/access'
+import { addOnAllowed, liveAddon, moduleAccess, switchFacts, type ModuleAccess, type ModuleFacts } from '@/domains/modules/access'
 import { isModuleKey, MODULES, PLAN_GRANTABLE, type ModuleKey } from '@/domains/modules/registry'
 import { auditStaff } from './audit'
 import { tenantPlanHistory } from './plans'
@@ -38,7 +38,10 @@ async function modulesIn(db: AdminDb | AdminTx, tenantId: string, now: Date): Pr
   const [history, addons, switches, pauses] = await Promise.all([
     tenantPlanHistory(db, [tenantId]),
     db.select().from(tenantAddons).where(eq(tenantAddons.tenantId, tenantId)).orderBy(desc(tenantAddons.startsAt)),
-    db.select().from(tenantModules).where(and(eq(tenantModules.tenantId, tenantId), isNull(tenantModules.disabledAt))),
+    // The shop's own grouped read (src/lib/queries/modules.ts), plus when the open row began.
+    db.select({ module: tenantModules.module, open: sql<boolean>`bool_or(${tenantModules.disabledAt} is null)`,
+      enabledAt: sql<Date | null>`max(${tenantModules.enabledAt}) filter (where ${tenantModules.disabledAt} is null)`.mapWith(tenantModules.enabledAt) })
+      .from(tenantModules).where(eq(tenantModules.tenantId, tenantId)).groupBy(tenantModules.module),
     pausesIn(db),
   ])
   const plan = currentPlan(history.map((h) => ({ ...h, startsAt: h.tp.startsAt })), now)
@@ -46,12 +49,12 @@ async function modulesIn(db: AdminDb | AdminTx, tenantId: string, now: Date): Pr
     planCode: plan?.code ?? null,
     planFeatures: plan?.v.features ?? [],
     addons: addons.filter((a) => isModuleKey(a.module)).map((a) => ({ id: a.id, module: a.module as ModuleKey, startsAt: a.startsAt, endsAt: a.endsAt, trialEndsAt: a.trialEndsAt })),
-    switchedOn: switches.map((s) => s.module).filter(isModuleKey),
+    ...switchFacts(switches),
     paused: pauses.map((p) => p.module),
   }
   const access = moduleAccess(facts, now)
   const switchedOnAt: MerchantModules['switchedOnAt'] = {}
-  for (const s of switches) if (isModuleKey(s.module)) switchedOnAt[s.module] = s.enabledAt
+  for (const s of switches) if (isModuleKey(s.module) && s.open && s.enabledAt) switchedOnAt[s.module] = s.enabledAt
   const addonId: MerchantModules['addonId'] = {}
   for (const k of PLAN_GRANTABLE) { const a = liveAddon(facts.addons, k, now); if (a?.id) addonId[k] = a.id }
   return { access, planName: plan?.name ?? null, planCode: plan?.code ?? null, switchedOnAt, addonId }

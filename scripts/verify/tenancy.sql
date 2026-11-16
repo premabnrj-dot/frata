@@ -4803,4 +4803,72 @@ begin
       then raise exception 'FAIL: 88 a role can call %', fn; end if;
   end loop;
 end $$;
-\echo 'tenancy proof — all 88 checks passed'
+-- § 101 · EkCode on by default (drizzle/0152; docs/specs/2026-11-16-ekcode-default-on.md E3). The SQL mirror of
+-- `switchedOnNow` agrees with it on every case (no row, closed only, closed then open, each with and without the
+-- default); Admin's list shows an open store that never chose and leaves out one that turned it off and one not open;
+-- the reach count agrees; and only frata_admin calls the definers, nobody calls the predicate. Everything here is
+-- undone at the end (the block raises its own marker to roll back).
+reset role;
+do $$ declare a uuid := '11111111-1111-1111-1111-111111111111'; b uuid := '22222222-2222-2222-2222-222222222222'; st uuid := gen_random_uuid();
+  who uuid := gen_random_uuid(); fn text; r record; n bigint;
+begin
+  begin
+    insert into public.platform_staff (user_id, email, role) values (st, 'proof101@frata.test', 'support');
+    delete from public.tenant_modules where tenant_id in (a, b) and module = 'ekcode';
+    update public.tenants set first_opened_at = coalesce(first_opened_at, now()) where id in (a, b);
+    -- The truth table, one case at a time (the TS rule: on = open || (defaultOn && !touched)).
+    if not public.app_module_on(a, 'ekcode', true) then raise exception 'FAIL: 101 no row with the default did not read on'; end if;
+    if public.app_module_on(a, 'ekcode', false) then raise exception 'FAIL: 101 no row without the default read on'; end if;
+    insert into public.tenant_modules (tenant_id, module, enabled_at, enabled_by, disabled_at, disabled_by) values (b, 'ekcode', now(), who, now(), who);
+    if public.app_module_on(b, 'ekcode', true) or public.app_module_on(b, 'ekcode', false) then raise exception 'FAIL: 101 a store that turned it off read on'; end if;
+    -- Admin's list: the store that never chose is in it, the one that turned it off is not; without the default, neither.
+    if not exists (select 1 from public.app_admin_ekcode_shops(st, 7, true) x where x.tenant_id = a) then raise exception 'FAIL: 101 Admin left out a store on by default'; end if;
+    if exists (select 1 from public.app_admin_ekcode_shops(st, 7, true) x where x.tenant_id = b) then raise exception 'FAIL: 101 Admin listed a store that turned EkCode off'; end if;
+    if exists (select 1 from public.app_admin_ekcode_shops(st, 7, false) x where x.tenant_id in (a, b)) then raise exception 'FAIL: 101 Admin listed a store with no open row and no default'; end if;
+    select * into r from public.app_admin_ekcode_reach(st, true);
+    select count(*) into n from public.tenants t where t.first_opened_at is not null and public.app_module_on(t.id, 'ekcode', true);
+    if r.offering <> n or r.opened < r.offering then raise exception 'FAIL: 101 the reach count disagrees with the rule (% vs %)', r.offering, n; end if;
+    -- On again after off: an open row beside the closed one reads on, default or not.
+    insert into public.tenant_modules (tenant_id, module, enabled_by) values (b, 'ekcode', who);
+    if not public.app_module_on(b, 'ekcode', true) or not public.app_module_on(b, 'ekcode', false) then raise exception 'FAIL: 101 on again after off did not read on'; end if;
+    if not exists (select 1 from public.app_admin_ekcode_shops(st, 7, true) x where x.tenant_id = b) then raise exception 'FAIL: 101 Admin left out a store turned on again'; end if;
+    -- A store that has not opened is never listed, on or not.
+    update public.tenants set first_opened_at = null where id = a;
+    if exists (select 1 from public.app_admin_ekcode_shops(st, 7, true) x where x.tenant_id = a) then raise exception 'FAIL: 101 Admin listed a store that has not opened'; end if;
+    -- Staff only.
+    begin perform 1 from public.app_admin_ekcode_shops(gen_random_uuid(), 7, true); raise exception 'FAIL: 101 a non-staff id read the list';
+    exception when others then if sqlerrm <> 'not_staff' then raise; end if; end;
+    begin perform 1 from public.app_admin_ekcode_reach(gen_random_uuid(), true); raise exception 'FAIL: 101 a non-staff id read the reach';
+    exception when others then if sqlerrm <> 'not_staff' then raise; end if; end;
+    raise exception 'ok-101';
+  exception when others then if sqlerrm <> 'ok-101' then raise; end if;
+  end;
+  -- Grants: only frata_admin calls the definers; the predicate is no role's; the old signature is gone.
+  foreach fn in array array['app_admin_ekcode_shops(uuid, int, boolean)', 'app_admin_ekcode_reach(uuid, boolean)'] loop
+    if not has_function_privilege('frata_admin', 'public.' || fn, 'execute') then raise exception 'FAIL: 101 frata_admin cannot call %', fn; end if;
+    if has_function_privilege('frata_app', 'public.' || fn, 'execute') or has_function_privilege('frata_builder', 'public.' || fn, 'execute')
+       or has_function_privilege('anon', 'public.' || fn, 'execute') or has_function_privilege('authenticated', 'public.' || fn, 'execute')
+       or has_function_privilege('service_role', 'public.' || fn, 'execute') then raise exception 'FAIL: 101 a role other than frata_admin can call %', fn; end if;
+    if (select p.proconfig from pg_proc p where p.oid = ('public.' || fn)::regprocedure) is distinct from array['search_path=""']
+      then raise exception 'FAIL: 101 % lost its empty search_path', fn; end if;
+  end loop;
+  foreach fn in array array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role'] loop
+    if has_function_privilege(fn, 'public.app_module_on(uuid, text, boolean)', 'execute') then raise exception 'FAIL: 101 % can call app_module_on', fn; end if;
+  end loop;
+  if to_regprocedure('public.app_admin_ekcode_shops(uuid, int)') is not null then raise exception 'FAIL: 101 the old two-argument list is still there'; end if;
+end $$;
+-- § 101 (cont.) · The turn-off write: frata_app records its own store's choice as one closed row (both stamps, one
+-- person) and cannot write one for another store; rolled back.
+begin; set local role frata_app;
+do $$ declare who uuid := '99999999-9999-9999-9999-999999999999'; begin
+  perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
+  insert into tenant_modules (tenant_id, module, enabled_at, enabled_by, disabled_at, disabled_by) values ('11111111-1111-1111-1111-111111111111', 'ekcode', now(), who, now(), who);
+  begin insert into tenant_modules (tenant_id, module, enabled_at, enabled_by, disabled_at, disabled_by) values ('22222222-2222-2222-2222-222222222222', 'ekcode', now(), who, now(), who);
+    raise exception 'FAIL: 101 A wrote a closed EkCode row for B';
+  exception when insufficient_privilege then null; end;
+  begin insert into tenant_modules (tenant_id, module, enabled_at, enabled_by, disabled_at) values ('11111111-1111-1111-1111-111111111111', 'ekcode', now(), who, now());
+    raise exception 'FAIL: 101 a closed row with no one who closed it';
+  exception when check_violation then null; end;
+end $$;
+rollback;
+\echo 'tenancy proof — all checks passed (through § 101)'

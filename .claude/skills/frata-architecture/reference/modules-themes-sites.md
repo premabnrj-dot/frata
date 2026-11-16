@@ -20,7 +20,8 @@ shop can have or not (Messages, RTO Shield, Reviews…).
   under Apps in the console nav (`src/app/(console)/console/layout.tsx`, foldable; icons `src/components/modules/icons.ts`).
 - **"Usable" is decided once**: `moduleAccess(facts, now)` in
   `src/domains/modules/access.ts` (granted by core, plan, add-on or trial;
-  switched on; not paused; dependencies usable). Badges and buttons come from
+  switched on — an open switch row, or `defaultOn` in the registry and never switched (`touched`: no row at all; EkCode,
+  2026-11-16) —; not paused; dependencies usable). Badges and buttons come from
   `offerFor()` (the gallery card's footer, state and filter, the price box and the ONE action: switch, needs, ask,
   plans, interest). Never test a plan feature or an add-on row anywhere else.
 - **A money read outside Plan and billing** (Apps A2): it runs inside the page's one transaction (`featuredBillWith`
@@ -36,7 +37,9 @@ shop can have or not (Messages, RTO Shield, Reviews…).
 - **Facts**: `shopModules(tenantId, atIso)` (`src/lib/queries/modules.ts`),
   cached per request. Admin reads the same facts through `merchantModules()`
   (`src/lib/admin/modules.ts`) and still derives through `moduleAccess()`.
-- **Tables**: `tenant_modules` (the merchant's switch; app inserts and closes),
+- **Tables**: `tenant_modules` (the merchant's switch; app inserts and closes; turning off a `defaultOn` module with no row inserts
+  one closed row, so the default never comes back on its own; Admin's EkCode definers take the default as `p_default`
+  and test it through `app_module_on`, drizzle/0152, proof § 101),
   `tenant_addons` (app reads; admin inserts and may only set `ends_at`; the shop writes ONLY through the A3 definers
   `app_start_addon_trial` / `app_end_addon_trial` / `app_stop_addon` in `drizzle/0114_addon_trials_access.sql`:
   shop from `app_current_tenant()`, the caller an owner or admin, price the newest and the one shown, times from

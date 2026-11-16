@@ -49,10 +49,16 @@ export async function setModuleAction(input: unknown): Promise<{ ok: true } | { 
         const a = (await moduleAccessIn(tx, tenantId, new Date()))[module]
         if (a.paidFrom) await tx.execute(sql`select app_end_addon_trial(${auth.userId}::uuid, ${module})`)
         else if (a.how === 'add_on') await tx.execute(sql`select app_stop_addon(${auth.userId}::uuid, ${module})`)
-        const closed = await tx.update(tenantModules).set({ disabledAt: new Date(), disabledBy: auth.userId })
+        const at = new Date()
+        const closed = await tx.update(tenantModules).set({ disabledAt: at, disabledBy: auth.userId })
           .where(and(eq(tenantModules.tenantId, tenantId), eq(tenantModules.module, module), isNull(tenantModules.disabledAt)))
           .returning({ id: tenantModules.id })
-        if (!closed.length) return 'done'
+        if (!closed.length) {
+          // On by default and never switched (spec 2026-11-16, M5): one closed row records the store's choice, so
+          // the default never comes back on its own. Off a second time finds `a.on` false and writes nothing.
+          if (!a.on) return 'done'
+          await tx.insert(tenantModules).values({ tenantId, module, enabledAt: at, enabledBy: auth.userId, disabledAt: at, disabledBy: auth.userId })
+        }
         await cancelQueued(tx, tenantId, def.outboxKinds, `${def.name} was turned off`)
       }
       if (!auth.membership.supportSessionId) {
