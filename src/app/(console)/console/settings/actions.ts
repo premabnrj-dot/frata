@@ -2,9 +2,12 @@
 
 import { HELD_BY_ZONES } from '@/domains/delivery/lists'
 import { moduleAccessIn } from '@/lib/queries/modules'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
-import { openShopErrors, parseSection, sectionFor, editorsOf, type Values } from '@/domains/settings/sections'
+import { draftPatch, formValues, openShopErrors, parseSection, sectionFor, editorsOf, type Patch, type SectionKey, type Values } from '@/domains/settings/sections'
+import { ASK_PAGES, OWNER_ONLY_FIELDS, OWNER_ONLY_PAGES, lockOf, lockedFor, refusalFor } from '@/domains/settings/owner-only'
+import { z } from 'zod'
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { POLICY_PAGES } from '@/domains/policies/render'
 import { hostFor, refreshHosts, refreshShop } from '@/lib/queries/storefront'
 import { asMember } from '@/lib/auth/as-member'
@@ -17,7 +20,7 @@ import { auditEvents, shopPolicies, shopSettings, tenants } from '@/lib/db/schem
 import { slugProblem } from '@/domains/signup/slug'
 import { parseShipCosts, type ShipCostsInput } from '@/domains/settings/ship-costs'
 import { dayIN } from '@/lib/format-date'
-import { costsVisibleIn } from '@/lib/queries/settings'
+import { askedTodayIn, costsVisibleIn, hasOwnerHeldIn } from '@/lib/queries/settings'
 import { errName } from '@/lib/log'
 import { docImage } from '@/lib/documents/images'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
@@ -37,6 +40,13 @@ import { chargesGst, type Scheme } from '@/domains/tax/gst'
 /** Thrown inside the transaction so it rolls back — and no audit row records a change that never happened. */
 class VersionConflict extends Error {}
 class NeededWhenOpen extends Error { constructor(readonly errors: Record<string, string>) { super("needed when open") } }
+/** PP1: what only the owner or a Manager changes now. Thrown so the transaction (and a support visit's audit row) rolls back. */
+class OwnerOnly extends Error { constructor(readonly page: SectionKey) { super('owner only') } }
+
+/** The pages and blocks PP1 locks (src/domains/settings/owner-only.ts): only their saves hold the store's row. */
+const OWNER_ONLY_SECTIONS: readonly SectionKey[] = [...OWNER_ONLY_PAGES, ...(Object.keys(OWNER_ONLY_FIELDS) as SectionKey[])]
+/** A value as the save stores it, compared by its JSON (strings, numbers, booleans, lists). */
+const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 
 /**
  * What to log when a write fails: the database's code and reason only. drizzle's
@@ -48,7 +58,7 @@ const dbReason = errName
 export type SaveResult =
   /** `unrated`: Taxes only, once the shop charges GST: live products quote() now refuses for want of a rate (never blocks the save). */
   | { ok: true; version: number; unrated?: Unrated }
-  | { ok: false; error: string; errors?: Record<string, string>; conflict?: boolean }
+  | { ok: false; error: string; errors?: Record<string, string>; conflict?: boolean; locked?: true }
 
 /** `took`: the PIN code Settings › Pay on delivery suggested and the merchant added (recorded so the suggestion is measured). */
 export async function saveSection(sectionKey: string, values: Values, version: number, took?: string): Promise<SaveResult> {
@@ -60,15 +70,37 @@ export async function saveSection(sectionKey: string, values: Values, version: n
   // Only a PIN code this save really adds to the list counts as taken (checked against the row below, in the transaction).
   const blocked = (parsed.patch as Record<string, unknown>).codBlockedPincodes
   const candidate = section.key === 'payments' && typeof took === 'string' && /^[1-9]\d{5}$/.test(took) && Array.isArray(blocked) && blocked.includes(took) ? took : null
+  // The fields a support visit's audit row names: what is written (locked fields dropped below leave it).
+  const detail = { fields: Object.keys(parsed.patch) }
   try {
-    const r = await asMember(section.editors, { action: `settings.${section.key}`, detail: { fields: Object.keys(parsed.patch) } }, async (tx, auth) => {
+    const r = await asMember(section.editors, { action: `settings.${section.key}`, detail }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
+      // PP1: once the store has an owner, a partner (and a support visit, always) can't change what owner-only.ts lists.
+      // The store's row is held first, so a handover accepted at the same moment is seen (fails closed: no context reads
+      // as an owner). A whole page is refused; a locked field is never written (an omitted one can't blank it), and one
+      // sent changed is refused in words rather than dropped in silence.
+      const lock = OWNER_ONLY_SECTIONS.includes(section.key)
+        ? lockOf(lockedFor(auth.membership.role, await hasOwnerHeldIn(tx, tenantId), !!auth.membership.supportSessionId), section.key)
+        : null
+      if (lock?.whole) throw new OwnerOnly(section.key)
+      if (lock) {
+        const sent = lock.fields.filter((k) => Object.hasOwn(values, k))
+        if (sent.length) {
+          const all = getTableColumns(shopSettings) as Record<string, AnyPgColumn>
+          const [stored] = await tx.select(Object.fromEntries(sent.map((k) => [k, all[k]!]))).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)).for('update')
+          // The stored value through the same normalisation the save applies (a phone's digits, an email in lower case).
+          const now = draftPatch(section, formValues(section, stored ?? {}))
+          if (sent.some((k) => !same(parsed.patch[k], Object.hasOwn(now, k) ? now[k] : stored?.[k]))) throw new OwnerOnly(section.key)
+        }
+        for (const k of lock.fields) delete (columns as Record<string, unknown>)[k]
+        detail.fields = detail.fields.filter((k) => !lock.fields.includes(k))
+      }
       // An open shop keeps what the law asks it to show. Checked in the transaction that saves, the row locked so
       // opening the shop at the same moment cannot slip past it.
       if (section.key === 'contact') {
         const [shop] = await tx.select({ publishedAt: shopSettings.publishedAt, grievanceName: shopSettings.grievanceName, grievanceEmail: shopSettings.grievanceEmail, grievancePhone: shopSettings.grievancePhone })
           .from(shopSettings).where(eq(shopSettings.tenantId, tenantId)).for('update')
-        const needed = shop?.publishedAt ? openShopErrors(section, parsed.patch, shop) : {}
+        const needed = shop?.publishedAt ? openShopErrors(section, columns as Patch, shop) : {}
         if (Object.keys(needed).length) throw new NeededWhenOpen(needed)
       }
       // While Delivery Zones is usable it alone sets the delivery charges, days and pay-on-delivery limits (one editor).
@@ -84,7 +116,7 @@ export async function saveSection(sectionKey: string, values: Values, version: n
       if (!row) throw new VersionConflict()
       if (typeof name === 'string') await tx.update(tenants).set({ name }).where(eq(tenants.id, tenantId))
       if (!auth.membership.supportSessionId) {
-        await tx.insert(auditEvents).values({ tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: `settings.${section.key}`, detail: { fields: Object.keys(parsed.patch), ...(suggested ? { suggestedPin: suggested } : {}) } })
+        await tx.insert(auditEvents).values({ tenantId, actorUserId: auth.userId, actorEmail: auth.email, actorKind: 'member', action: `settings.${section.key}`, detail: { fields: detail.fields, ...(suggested ? { suggestedPin: suggested } : {}) } })
       }
       // A GSTIN saved: every live product without a rate is now 'gone' at checkout (quote). Said in the reply, not refused.
       const registered = section.key === 'business' && chargesGst({ gstin: (columns.gstin as string | null) ?? null, scheme: columns.gstScheme as Scheme })
@@ -96,6 +128,7 @@ export async function saveSection(sectionKey: string, values: Values, version: n
     return { ok: true, version: r.value.version, ...(r.value.unrated ? { unrated: r.value.unrated } : {}) }
   } catch (err) {
     if (err instanceof NeededWhenOpen) return { ok: false, error: 'Some fields need a look before saving.', errors: err.errors }
+    if (err instanceof OwnerOnly) return { ok: false, locked: true, error: refusalFor(err.page) }
     if (err instanceof VersionConflict) return { ok: false, conflict: true, error: 'Someone saved this page while you were editing. Reload to see their changes, then make yours again.' }
     console.error('[saveSection]', section.key, dbReason(err))
     return { ok: false, error: 'We couldn’t save. Nothing was changed. Try again in a minute.' }
@@ -103,13 +136,15 @@ export async function saveSection(sectionKey: string, values: Values, version: n
 }
 
 /** A policy page rewritten by hand, or `null` to follow the settings again. */
-export async function savePolicyText(kind: string, body: string | null): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function savePolicyText(kind: string, body: string | null): Promise<{ ok: true } | { ok: false; error: string; locked?: true }> {
   if (!POLICY_PAGES.some(([k]) => k === kind)) return { ok: false, error: 'Unknown page.' }
   const text = body?.trim() ?? null
   if (text !== null && (text.length < 1 || text.length > 20000)) return { ok: false, error: 'Between 1 and 20,000 characters.' }
   try {
     const r = await asMember(CAN_BUILD, { action: `policy.${text === null ? 'reset' : 'edit'}`, target: kind }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
+      // PP1: a policy page's own words are the Policies page's, owner-only once the store has an owner (edit and reset).
+      if (lockedFor(auth.membership.role, await hasOwnerHeldIn(tx, tenantId), !!auth.membership.supportSessionId).pages.includes('policies')) throw new OwnerOnly('policies')
       if (text === null) await tx.delete(shopPolicies).where(and(eq(shopPolicies.tenantId, tenantId), eq(shopPolicies.kind, kind)))
       else await tx.insert(shopPolicies).values({ tenantId, kind, body: text, updatedBy: auth.userId })
         .onConflictDoUpdate({ target: [shopPolicies.tenantId, shopPolicies.kind], set: { body: text, updatedAt: new Date(), updatedBy: auth.userId } })
@@ -122,8 +157,40 @@ export async function savePolicyText(kind: string, body: string | null): Promise
     revalidatePath('/console/settings/policies')
     return { ok: true }
   } catch (err) {
+    if (err instanceof OwnerOnly) return { ok: false, locked: true, error: refusalFor('policies') }
     console.error('[savePolicyText]', dbReason(err))
     return { ok: false, error: 'We couldn’t save the page. Nothing was changed.' }
+  }
+}
+
+const AskInput = z.enum(ASK_PAGES)
+
+/**
+ * Ask the owner (PP1): a partner on a store that has an owner tells its owners and Managers in Notices which locked page
+ * to update. Takes the page only; who asks is the session's, the store the membership's. The definer (app_ask_owner,
+ * drizzle/0150) is the lock: a live partner of this store, a store with an owner, at most one line a page an India day.
+ * Never a support visit. Counted per person first, failing closed.
+ */
+export async function askOwnerAction(page: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = AskInput.safeParse(page)
+  if (!parsed.success) return { ok: false, error: 'Unknown page.' }
+  const me = await requireMember(CAN_BUILD)
+  if (!me.ok) return { ok: false, error: me.message }
+  if (me.membership.supportSessionId) return { ok: false, error: 'A support visit can’t ask the owner.' }
+  if (!(await withinLimit(LIMITS.askOwner, `${me.membership.tenantId}:${me.userId}`, new Date(), true))) return { ok: false, error: 'Too many asks in the last hour. Try again later.' }
+  try {
+    const r = await asMember(CAN_BUILD, { action: 'settings.ask_owner', target: parsed.data }, async (tx, auth) => {
+      const [row] = await tx.execute<{ asked: boolean }>(sql`select app_ask_owner(${auth.userId}::uuid, ${parsed.data}) as asked`)
+      // Not written: already asked today (by anyone) is the same answer as a new line; anything else is a refusal.
+      return row?.asked === true || (await askedTodayIn(tx, auth.membership.tenantId, parsed.data, new Date()))
+    })
+    if (!r.ok) return { ok: false, error: r.error }
+    if (!r.value) return { ok: false, error: 'We couldn’t ask the owner. Nothing was sent.' }
+    revalidatePath(`/console/settings/${parsed.data}`)
+    return { ok: true }
+  } catch (err) {
+    console.error('[askOwnerAction]', errName(err))
+    return { ok: false, error: 'We couldn’t ask the owner. Nothing was sent. Try again in a minute.' }
   }
 }
 

@@ -147,6 +147,9 @@ export const LIMITS = {
   // previews never spend another's (security review 2026-11-16, LOW-2). Fails closed like every API limit.
   apiPreviewKey: { action: 'api_preview:key', max: 30, windowSeconds: 60 },
   apiKeyCreateShop: { action: 'api_key_create:shop', max: 10, windowSeconds: 3600 },
+  // Ask the owner (PP1): per person in a store ("<tenant>:<user>"), failing closed. The definer writes at most one line a
+  // page an India day, so this only bounds the calls (four pages, a few retries).
+  askOwner: { action: 'ask_owner:member', max: 20, windowSeconds: 3600 },
 } as const satisfies Record<string, Limit>
 
 /** Whether `subject` is already past the limit, WITHOUT counting an attempt. `failClosed`: true when the counter cannot be read. */

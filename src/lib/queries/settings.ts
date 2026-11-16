@@ -1,7 +1,10 @@
 import 'server-only'
 import { mainHostFor } from './addresses'
-import { eq, getTableColumns } from 'drizzle-orm'
+import { and, eq, getTableColumns, gte } from 'drizzle-orm'
 import { members, planVersions, shopPolicies, shopSettings, tenantPlans, tenants } from '@/lib/db/schema'
+import { notices } from '@/lib/db/schema-email'
+import { istDayStart } from '@/domains/time/day'
+import type { AskPage } from '@/domains/settings/owner-only'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
 import type { ShipCosts } from '@/domains/settings/ship-costs'
@@ -76,13 +79,44 @@ export async function shipCostsIn(tx: Tx, tenantId: string): Promise<ShipCosts |
 /**
  * Whether the store has an owner, inside the caller's tenant transaction, FAILING CLOSED (tenancy review 2026-11-08): with
  * no tenant context the policy hides every member row, so a count of zero (the caller is always a member) means "no
- * context", read as "has an owner". An error propagates. (No row lock: `for share` needs an update grant frata_app
- * does not hold on members; a partner save in the same instant as a handover is accepted, V1 content plan § Reviews.)
- * The one read: costsVisibleIn, content saves (src/domains/content/who.ts) and, later, the Storefront API.
+ * context", read as "has an owner". An error propagates. (No lock on members: `for share` needs an update grant frata_app
+ * does not hold there; a content save in the same instant as a handover is accepted, V1 content plan § Reviews. A save
+ * that must not race a handover asks `hasOwnerHeldIn`.)
+ * The one read: costsVisibleIn, content saves (src/domains/content/who.ts), the owner-only settings (PP1) and the
+ * Storefront API.
  */
 export async function hasOwnerIn(tx: Tx, tenantId: string): Promise<boolean> {
   const rows = await tx.select({ role: members.role }).from(members).where(eq(members.tenantId, tenantId))
   return rows.length === 0 || rows.some((r) => r.role === 'owner')
+}
+
+/**
+ * `hasOwnerIn`, after holding the store's own row FOR SHARE (PP1's saves of owner-only settings): accepting a handover
+ * (app_accept_handover_v2) holds that row FOR UPDATE before it adds the owner, so a save racing it either finishes first
+ * or waits and then sees the owner. frata_app's update grant on `tenants (name)` is what lets it take the share lock.
+ */
+export async function hasOwnerHeldIn(tx: Tx, tenantId: string): Promise<boolean> {
+  await tx.select({ id: tenants.id }).from(tenants).where(eq(tenants.id, tenantId)).for('share')
+  return hasOwnerIn(tx, tenantId)
+}
+
+/**
+ * What a Settings page needs to draw the owner-only lock (PP1): whether the store has an owner (hasOwnerIn, failing
+ * closed) and whether this page was already asked about this India day (app_ask_owner writes at most one a page a day,
+ * whoever asks), in one transaction. Only a locked caller's page asks for the second.
+ */
+export async function ownerOnlyFacts(tenantId: string, page: AskPage | null, now: Date): Promise<{ hasOwner: boolean; askedToday: boolean }> {
+  return withTenant(tenantId, async (tx) => {
+    const [hasOwner, askedToday] = await Promise.all([hasOwnerIn(tx, tenantId), page ? askedTodayIn(tx, tenantId, page, now) : Promise.resolve(false)])
+    return { hasOwner, askedToday }
+  })
+}
+
+/** Whether the owner was asked about this page since the India day began: the notice app_ask_owner wrote (its fixed href). */
+export async function askedTodayIn(tx: Tx, tenantId: string, page: AskPage, now: Date): Promise<boolean> {
+  const rows = await tx.select({ id: notices.id }).from(notices)
+    .where(and(eq(notices.tenantId, tenantId), eq(notices.sourceKind, 'ask_owner'), eq(notices.href, `/console/settings/${page}`), gte(notices.createdAt, istDayStart(now)))).limit(1)
+  return rows.length > 0
 }
 
 /**
