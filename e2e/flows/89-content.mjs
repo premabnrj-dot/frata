@@ -49,7 +49,9 @@ export default {
         try {
           await staff.p.goto(CONSOLE + '/console/content?tab=contact')
           await staff.p.screenshot({ path: t.out('content-staff-contact') })
-          await staff.p.getByText('Only the owner or a Manager can edit', { exact: true }).first().waitFor() // no partner on the store yet: only roles it has
+          // Only roles the store has: an earlier flow (86-builders) can leave a partner on it, so ask the database which.
+          const [{ n: partners }] = await db`select count(*)::int as n from members where tenant_id = ${KESAR} and role = 'partner'`
+          await staff.p.getByText(partners ? 'Only the owner, a Manager or the partner can edit' : 'Only the owner or a Manager can edit', { exact: true }).first().waitFor()
           assert.equal(await staff.p.getByRole('button', { name: 'Save' }).count(), 0, 'no Save for staff')
           assert.ok(await staff.p.getByLabel(/^Line/).isDisabled())
           await staff.p.goto(CONSOLE + '/console/content')
