@@ -134,7 +134,7 @@ next free numbers at build (93 and 95 are taken; the Studio plan's `93-site-host
 - **Regression net:** e2e `10-checkout`, `67-ekcode`, `12-security`, `52-addresses`, `53-domains`.
 | # | Task | Verify |
 |---|---|---|
-| P4a·1 | `check:cookies` (new gate) scoped to `src/app/s`, `src/app/secure`, `src/app/api/shop`, `src/app/api/secure`, `src/lib/ekcode`: host-only, `__Host-` names; `shop_in` allowed until P3·7; local e2e's plain names as today | `npm test` |
+| P4a·1 | `check:cookies` (new gate) scoped to `src/app/s`, `src/app/secure`, `src/app/api/shop`, `src/app/api/secure`, `src/lib/ekcode`: host-only, `__Host-` names; `shop_in` allowed until P3·7; local e2e's plain names as today; also `document.cookie` and `cookieStore` writes in the shop's client code (`src/components/storefront`, `modules`, `ekcode`; impact review) | `npm test` |
 | P4a·2 | `requireShop` and `requireSecure`: log a week, then refuse `Sec-Fetch-Site` present and not `same-origin` on personal and state-changing routes (absent passes: iOS before 16.4, `require-ek.ts:26`'s rule); exemptions named in the code: EkCode's return GET (a cross-site navigation), the beacon `/api/shop/e` | `npx vitest run src/lib/auth`; `npm run e2e -- --only checkout,ekcode,security` |
 | P4a·3 | e2e (new flow `cross-store`): store Y's page sets large and many `Domain=frrata.shop` cookies and posts to store X; X ignores them and refuses the post; the eviction case recorded as the residual | `npm run e2e -- --only cross-store` |
 - **Reviews:** `security-reviewer`, `impact-reviewer`.
