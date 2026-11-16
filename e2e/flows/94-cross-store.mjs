@@ -6,15 +6,17 @@
 //     prefix forbids Domain, and check:cookies keeps every name X reads __Host-: src/lib/ekcode/cookie-name.ts);
 //   - Y's forged session and EkCode state sign nobody in at X (src/lib/ekcode/handshake.ts). On plain http the stack's
 //     names are plain, so X does receive Y's planted shop_s: recorded as the local residual, not claimed as proof;
-//   - Y's requests reach X with Sec-Fetch-Site: same-site; X refuses Y's POSTs (Origin), and requireShop
-//     (src/lib/auth/require-shop.ts, fetch-site.ts) logs Y's GET while FETCH_SITE_MODE is 'log', refuses it once 'enforce';
+//   - X refuses Y's POSTs (Origin); a personal GET with Sec-Fetch-Site: same-site (sent straight to the app: Chromium
+//     sends the header only to https or localhost, not the stack's http shop host) is logged by requireShop
+//     (src/lib/auth/require-shop.ts, fetch-site.ts) while FETCH_SITE_MODE is 'log', refused once 'enforce';
 //   - the residuals, recorded not asserted: a cookie bomb from Y and the eviction of X's host-only cookies by Y's many
 //     Domain cookies (the per-site cookie cap). Only the listing (P4b) removes them. Printed, and in
 //     e2e/.out/cross-store-residual.txt.
 // =============================================================================
 import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { OUT, SHOP, SHOP_DOMAIN, until } from '../lib.mjs'
+import { request } from 'node:http'
+import { OUT, PORTS, SHOP, SHOP_DOMAIN, until } from '../lib.mjs'
 
 const X = SHOP
 const XHOST = new URL(SHOP).host
@@ -23,6 +25,11 @@ const Y = `http://another-store.${SHOP_DOMAIN}`
 const MODE = readFileSync(new URL('../../src/lib/auth/fetch-site.ts', import.meta.url), 'utf8').match(/FETCH_SITE_MODE: 'log' \| 'enforce' = '(log|enforce)'/)?.[1]
 const appLog = () => { try { return readFileSync(`${OUT}next.log`, 'utf8') } catch { return '' } }
 const TOKEN43 = 'A'.repeat(43)
+// A GET to X straight at the app, with the headers a browser would send (only the browser resolves the shop's host).
+const shopGet = (path, headers) => new Promise((resolve, reject) => {
+  const r = request({ host: '127.0.0.1', port: PORTS.app, path, method: 'GET', headers: { host: XHOST, ...headers } }, (res) => { res.resume(); resolve(res.statusCode) })
+  r.on('error', reject); r.end()
+})
 
 export default {
   name: 'cross-store',
@@ -87,23 +94,31 @@ export default {
         assert.equal(await x.evaluate(async () => (await (await fetch('/api/shop/ekcode/me', { cache: 'no-store' })).json()).signedIn), false)
       })
 
-      await step(`Y's requests reach X as same-site; X refuses Y's POSTs, and ${MODE === 'enforce' ? 'refuses' : 'logs'} Y's GET`, async () => {
-        const view = await fromY('/api/shop/orders/view', { method: 'POST', headers: { 'content-type': 'text/plain' }, body: JSON.stringify({ token: 'x'.repeat(22) }) })
-        assert.equal((await view.request().allHeaders())['sec-fetch-site'], 'same-site')
-        assert.equal(view.status(), 403, 'X answered a POST from a sibling store')
-        assert.equal((await fromY('/api/shop/ekcode/me', { method: 'POST' })).status(), 403, 'a sibling store signed the shopper out')
-        // A personal GET with the shopper's cookies. Only this flow sends one, and the server logs a kind once a minute
-        // (logOnce): a flow sending the same same-site GET before this one would hide the line.
+      await step(`X refuses Y's POSTs, and ${MODE === 'enforce' ? 'refuses' : 'logs'} a same-site GET; EkCode's return stays exempt`, async () => {
+        // Chromium sends Sec-Fetch-Site only to trustworthy origins (https, localhost): to the stack's http shop host it
+        // sends none, which passes (the absent rule). So the browser proves the Origin refusal here, and the built app's
+        // Sec-Fetch-Site rule is proven below with the header a browser sends in production.
+        const sent = await Promise.all([
+          fromY('/api/shop/orders/view', { method: 'POST', headers: { 'content-type': 'text/plain' }, body: JSON.stringify({ token: 'x'.repeat(22) }) }),
+          fromY('/api/shop/ekcode/me', { method: 'POST' }),
+        ])
+        assert.equal(sent[0].status(), 403, 'X answered a POST from a sibling store')
+        assert.equal(sent[1].status(), 403, 'a sibling store signed the shopper out')
+        const header = (await sent[0].request().allHeaders())['sec-fetch-site']
+        residual.push(`local stack: Chromium sent Sec-Fetch-Site ${header ? `'${header}'` : 'not at all'} to X over http (production is https: 'same-site')`)
+        // A personal GET as Y's page sends it in production: Sec-Fetch-Site same-site, the shopper's cookie, Y's origin.
         const before = appLog().length
-        const me = await fromY('/api/shop/ekcode/me')
-        assert.equal((await me.request().allHeaders())['sec-fetch-site'], 'same-site')
-        if (MODE === 'enforce') assert.equal(me.status(), 403, 'enforce: X answered a personal GET from a sibling store')
+        const me = await shopGet('/api/shop/ekcode/me', { 'sec-fetch-site': 'same-site', 'sec-fetch-mode': 'no-cors', cookie: 'shop_s=forged-session-from-y' })
+        if (MODE === 'enforce') assert.equal(me, 403, 'enforce: X answered a personal GET from a sibling store')
         else {
-          assert.equal(me.status(), 200, 'log mode answers as before')
-          await until(async () => /\[fetch-site\] would refuse same-site GET \/api\/shop\/ekcode\/me/.test(appLog().slice(before)), 10_000)
+          assert.equal(me, 200, 'log mode answers as before')
+          await until(async () => appLog().slice(before).includes('[fetch-site] would refuse same-site GET /api/shop/ekcode/me no-cors'), 10_000)
+            .catch(() => assert.fail(`X did not log the same-site GET: ${appLog().slice(before).split('\n').filter((l) => l.includes('[fetch-site]')).join(' | ') || 'no line'}`))
           const lines = appLog().slice(before).split('\n').filter((l) => l.includes('[fetch-site]'))
           assert.doesNotMatch(lines.join('\n'), new RegExp(XHOST.replace(/\./g, '\\.')), 'the log line names the host')
         }
+        // The exemption holds in the built app: EkCode's return is a cross-site navigation by design.
+        assert.equal(await shopGet(`/api/shop/ekcode/return?code=${TOKEN43}&state=${TOKEN43}`, { 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'navigate' }), 303)
         // X's own page: same-origin, answered.
         assert.equal(await x.evaluate(async () => (await fetch('/api/shop/ekcode/me', { cache: 'no-store' })).status), 200)
       })
