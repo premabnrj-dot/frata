@@ -13,6 +13,10 @@ MERGE, 2 high and 7 medium fixed · unit-economics-reviewer HURTS AS DRAFTED, 6 
 tenancy-auditor FIX BEFORE MERGE, 9 high and the medium and low gaps fixed · speed-reviewer OVER BUDGET as drafted, 5 high,
 5 medium and the low fixed
 
+**Pointer (2026-11-16):** V2a's `frrata.store` address, its checkout split and BT are re-planned in
+`docs/plans/2026-11-16-one-address-checkout.md` (draft; spec `docs/specs/2026-11-16-one-address-checkout.md`, whose last
+sections list the edits to make here once approved).
+
 ## Order (each phase ships alone, push to `main` after its gates)
 Revised 2026-11-16 for the owner ("revise the studio plan to keep it fully agentic and use our own claude api as planned
 and let's finishup the remaining of the partner/studio work"): `docs/specs/2026-11-16-studio-agent.md` (draft) holds the

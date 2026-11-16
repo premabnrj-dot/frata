@@ -7,6 +7,10 @@ deviations to redraw (§ 14); the states this spec adds are drawn per phase (pla
 (proposed, revised), ADR-0018, `docs/specs/2026-11-12-kit-and-fleet.md`, `docs/specs/2026-11-14-site-content-layer.md`,
 `docs/specs/2026-11-16-partner-publishing.md`
 
+**Pointer (2026-11-16):** the site address (`<slug>.frrata.store`, § 13), the checkout split (§ 12.1, § 12.5) and BT are
+re-planned in `docs/specs/2026-11-16-one-address-checkout.md` (draft): one address per store on `frrata.shop` or the
+brand's domain, with checkout. Its § "How this changes the Studio plan" lists the edits to make here once approved.
+
 Owner, 2026-11-16: "Now please revise the studio plan to keep it fully agentic and use our own claude api as planned and
 let's finishup the remaining of the partner/studio work." Earlier the same day: must partners deploy their websites on
 Vercel themselves, or does everything run on Frrata's account, managed from the console or Studio?
