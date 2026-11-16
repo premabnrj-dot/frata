@@ -57,8 +57,9 @@ publish gate (PP3, V2) checks the legal block and policy links on code sites, an
 **Locked for a partner once the store has an owner** (one pure list, `src/domains/settings/owner-only.ts`):
 the Policies page (return kind and days) and every policy page's own text; the whole Business and GST page; the
 Grievance officer block of Contact (name, designation, email, phone). Customer care, WhatsApp and Instagram on Contact
-stay the partner's. Before an owner exists, nothing is locked. Owners and Managers are never locked. A support visit
-acts as owner (unchanged).
+stay the partner's. Invoices and slips: the authorised signatory and the series prefix (decision 5). Before an owner exists, nothing is
+locked for a partner. Owners and Managers are never locked. A support visit sees every locked page and block
+read-only, whether or not the store has an owner (decision 5), with no Ask the owner.
 
 | # | Task | Verify |
 |---|---|---|
@@ -113,18 +114,18 @@ acts as owner (unchanged).
   `editors` (page, save, brand upload) is checked in its plan. Partners on stores already handed over lose those
   saves the day PP1 ships; no notice (decision 4).
 
-## Open for the owner (security review, 2026-11-16)
-5. Support visits: Frrata staff on a support visit act as owner today. Should they also be refused on these locked
-   fields? (Recommended: yes; staff are not the owner's yes. The Website page already refuses support visits.)
-6. Also lock for partners after handover: the authorised signatory and invoice series on GST invoices? (Recommended:
-   yes, the signatory is a legal detail.) Customer care, shipping settings and per-product HSN/GST stay the partner's
-   (operations, not the owner's legal word).
-
 ## Owner decisions (2026-11-16: "you can build PP1 now. * read only * legal * no. everything is test data as of now.")
 1. PP1 is read-only with **Ask the owner**; no queue of proposed text.
 2. The grievance officer's details are legal details: owner-only after handover.
 3. PP1 is built now, before V2.
 4. No notice to partners on stores already handed over: every store is test data today.
+
+5. (2026-11-16, "finish up pp1 as per your recommendation"; mockup https://claude.ai/artifact/Tu2ipYwMJYvM2THSKg5SMT
+   approved) Locked values read as `Facts`, not disabled inputs. A locked Policies page hides Rewrite, Edit and Follow my
+   settings again; the chip says the page is the owner's. Frrata staff on a support visit see the locked pages and
+   blocks read-only too, with no Ask the owner. On Invoices and slips, the authorised signatory and the invoice
+   series prefix are locked for a partner after handover; the order prefix, the invoice note, the slip size and the
+   invoice logo stay the partner's.
 
 ## Out of scope
 - Brands publishing with Frrata's agent themselves (ADR-0014 decision 4: later, once partner quality is measured).
