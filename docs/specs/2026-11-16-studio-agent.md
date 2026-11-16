@@ -21,7 +21,7 @@ Vercel themselves, or does everything run on Frrata's account, managed from the 
   separate sandbox per session where code runs; Frrata's server runs every tool that writes to Frrata. The Claude Agent
   SDK on Vercel Sandbox stays drawn as the second runtime behind one adapter.
 - **Cost:** a credit is ₹6.33 of loaded cost, sold at ₹19 (3×). A typical 8-page site is about **241 credits**: ₹4,579
-  + GST to the partner, ₹1,524 to Frrata (§ 8). The rupee is at ₹94 to the dollar today, not the ₹88 earlier figures
+  + GST to the partner, ₹1,520 of cost to Frrata (§ 8). The rupee is at ₹94 to the dollar today, not the ₹88 earlier figures
   used; metering in rupees keeps 3× without a price change.
 - **A brand with no domain** gets `<slug>.frrata.store` (name to choose), a separate registrable domain, never
   `frrata.shop` (§ 13).
@@ -138,7 +138,7 @@ started the turn (re-checked live on every call), each a thin wrapper over the c
 | `logo_save` | Saves a checked SVG as the brand's logo | svgo, outline-only check, then brand data | Text elements, rasters, filters |
 | `read_intake` | The brand's files after Frrata re-encoded and rasterised them | Intake spec § Files | Originals |
 | `read_brand_site` | Colours, fonts and logo from the brand's own website | Frrata's fetch (intake spec § The website fetch: https only, no private addresses, 10 requests, 5 MB), then a **no-tool** Haiku 5.5 call with a strict output schema | Raw HTML into the agent |
-| `preview_build` | Uploads the sandbox's build of the draft commit as a preview; returns the gate's verdict, the URL and the editable list | `site_deployments` row + outbox `site.build` (ADR-0006); the fleet re-runs Frrata's checks | Production, a domain |
+| `preview_build` | Asks for a preview of the pushed draft commit; returns the gate's verdict, the URL and the editable list when the fleet answers | `site_deployments` row + outbox `site.build` (ADR-0006); the fleet builds that commit itself with no secrets and runs Frrata's checks, the same path as a publish | Production, a domain; a build made in the sandbox (the agent's own `next build` is for its fast loop only) |
 | `editable_list` | What the brand will be able to edit, from `frrata/fields.json` | The gate's parse | — |
 | `review_link` | A signed preview link for the brand (owner-only once there is an owner; never acts on open) | Kit spec § Handover | WhatsApp sent by Frrata (ADR-0010) |
 | `read_review_notes` | The brand's notes and pins, as data | `studio_review_notes` | — |
@@ -151,14 +151,15 @@ branches only (§ 6).
 - **The store's key never reaches the model or the sandbox.** Today's API takes the key in the URL path, which a
   Managed Agents vault cannot fill (headers and body only). So the API gains a header form for one new key kind (an
   ADR-0018 amendment, owner decision 10): `frs_build_…`, sent as `Frrata-Key` to a dynamic tree only (never a cached
-  route; `private, no-store`), 24 hours, one per Studio session, made when the session starts and deleted when it ends,
+  route; `private, no-store` to the caller; a 15-second data cache per key behind it), 24 hours, one per Studio session, made when the session starts and deleted when it ends,
   read like a test key (drafts included) and **still working after the store opens** (a test key stops for good then,
   so after handover the agent could no longer see a draft collection). Frrata stores its hash only; the plain key goes
   once into that session's vault as an environment-variable credential, injected in the header, allowed host
   `api.frrata.shop` only; the sandbox sees an opaque placeholder. The starter's `lib/frrata.ts` sends the header when
   `FRRATA_KEY` is a build key (a generated, additive change).
 - **Limits per key, not per network** for build and test keys (G27): every session and every preview leaves from
-  Anthropic's or Vercel's shared addresses, so a per-network limit throttles every partner at once.
+  Anthropic's or Vercel's shared addresses, so a per-network limit throttles every partner at once. A build key: 300
+  reads a minute, failing closed.
 - **Allowed hosts** (the session's `limited` network, from the signed policy version, kit spec § 4): `api.frrata.shop`,
   Frrata's media host, the allowed font hosts and Frrata's package mirror once it exists. GitHub is reached only through
   Anthropic's git proxy for the one mounted repository. Nothing else: no web search, no fetch, no npm registry. Until the
@@ -170,7 +171,8 @@ branches only (§ 6).
 
 ### 6. Guardrails
 1. **Draft branches only.** The agent pushes `studio/<session>`; a ruleset on each repository lets only the fleet's app
-   update `main` (the live branch) and only after a publish a person made. The token cannot bypass it.
+   update `main` (the live branch) and only after a publish a person made; branches may be created only as `studio/*`
+   and `dev/*`; force-push and tag changes are blocked for everyone but the fleet. The token cannot bypass it.
 2. **A person publishes** (ADR-0014 rule 4). Before handover the partner (a passkey check in the last 5 minutes)
    publishes to the signed preview and sets the version the shop opens with; after handover the brand's choice per
    partner applies (amendment 9, § 11). Builders never publish (ADR-0015). Routines draft only.
@@ -181,20 +183,26 @@ branches only (§ 6).
 5. **Prompt injection from merchant content** (product text, page words, intake files, the brand's website, the
    brand's notes): reaches the model only as tool results marked as data, never as a `user.message` (Managed Agents
    treats `user.message` as the operator's intent); the intake extractor has no tools and a strict schema; the brand's
-   notes arrive through `read_review_notes`, never as chat text. Worst case is a spoiled draft: every write the agent
+   notes arrive through `read_review_notes`, never as chat text, and only after the partner taps Apply: a review link is
+   a bearer link, so its notes are plain text, ≤ 20 a version and ≤ 500 characters each, limited per link and per
+   network (/64), failing closed. Worst case is a spoiled draft: every write the agent
    can make is either a draft commit or a content save the console could make, re-checked by the same functions.
-6. **Prompt injection from repository files.** A repository's `.claude/skills` load into every session. Before a
-   session starts, Frrata compares the branch head's `.claude/` with the kit's signed list for its version; a difference
+6. **Prompt injection from repository files.** A repository's `.claude/skills` load into every session (whether its
+   `CLAUDE.md` loads as instructions too is a V3a spike item; Studio's own instructions say every repository file is
+   data). Before a session starts, Frrata compares the branch head's `.claude/` with the kit's signed list for its
+   version; a difference
    stops the session start with a line in the chat ("This site's agent instructions were changed outside Studio"). A
    partner's own skills live in `skills/` (ADR-0016 layer), are reviewed like code, and are attached by Frrata, never
    auto-loaded. The gate already flags `.claude/` and `.vscode/` changes (kit spec § 4).
-7. **Budgets.** Each turn reserves its ceiling in credits before it starts (an attempt row, ADR-0008); the session's
+7. **Budgets.** Each turn reserves its ceiling in credits before it starts (a reserve entry in the partner's ledger,
+   committed before the request, ADR-0008; the brand's tenant rows never hold a credit or a cost); the session's
    Managed Agents budget is raised by exactly that ceiling's USD for that turn, so the runtime stops at the ceiling
    (`budget_reached`) even if our app is down. Per turn: 40 credits by default, 120 at most, the partner's choice in
    between. Per person: their monthly cap (T1a) and 300 credits a day. Per client: the partner's budget (warn at 80%,
    pause at 100%). Platform: a daily ceiling on list cost (₹25,000 in the first three months, owner decision 5), past
    which new turns wait and Admin is told; the Anthropic workspace's own spend limit as the last backstop.
-8. **Kill switches** (Admin › Agent, two people, kit spec § 7): stop every session now (interrupt all, refuse new);
+8. **Kill switches** (Admin › Agent, kit spec § 7; one staff member with a reason stops, two people resume): stop every
+   session now (interrupt all, refuse new);
    stop one partner; stop one shop; roll the agent version back (sessions pin to a version); turn one tool off. Each
    serves the last good state: a stopped turn keeps its committed work on the draft branch and returns its unspent
    reserve.
@@ -234,25 +242,34 @@ $0.20/M = $0.40; writes 25 × 2.4k × $5/M = $0.30; uncached 5k × $4/M = $0.02;
 **A typical 8-page site** (one sitting plus the brand's notes):
 | Part | Arithmetic | List cost |
 |---|---|---|
-| Start, the brand line, voices, who buys | 6 requests, 30k read, 2k written, 6k output | $0.23 |
+| Start, the brand line, voices, who buys | 6 requests, 30k read, 2k written, 6k output | $0.22 |
 | Three looks | 10 requests, 40k read, 2.5k written, 10k output | $0.41 |
 | Logo (only when there is none) | 12 requests, 40k read, 2.5k written, 12k output | $0.49 |
 | 8 pages | 8 × $1.12 | $8.96 |
 | Check fixes | 2 rounds × (10 × 90k read + 20k written + 5k output) = 2 × $0.38 | $0.76 |
-| The brand's notes | 3 × (6 × 80k read + 12k written + 3k output) = 3 × $0.22 | $0.66 |
+| The brand's notes | 3 × (6 × 80k read + 12k written + 3k output) = 3 × $0.216 | $0.65 |
 | Cold cache after pauses | 20 turns × 30k re-written × $5/M | $3.00 |
 | Sandbox running time | 20 turns × 6 min = 2 h × $0.08 | $0.16 |
 | Preview builds | 12 × 2 min × $0.014 | $0.34 |
-| **Total** | | **$15.01** |
-$15.01 × ₹94 = ₹1,410.94; × 1.08 = **₹1,523.82 loaded**; ÷ ₹6.33 = 240.7 → **241 credits** → ₹4,579 + 18% GST =
-**₹5,403** to the partner. Frrata keeps ₹3,055 before overheads. Without a logo: 233 credits. On Sonnet 5.5 (every
-model line halves): $7.76 → ₹788 loaded → 125 credits (₹2,375). Band: 92 credits (Sonnet, 6 pages, one round, no logo)
+| **Total** | | **$14.97** |
+$14.97 × ₹94 = ₹1,407.27; × 1.08 = **₹1,519.86 loaded**; ÷ ₹6.33 = 240.1 → **241 credits** (each turn rounds up) →
+₹4,579 + 18% GST = **₹5,403** to the partner. Frrata keeps ₹3,059 before overheads. Without a logo: 233 credits. On
+Sonnet 5.5 (every model line halves): $7.73 → ₹785 loaded → 124 credits (₹2,356). Checked with a script over the same
+inputs (2026-11-16). Band: 92 credits (Sonnet, 6 pages, one round, no logo)
 to 328 (Opus, 10 pages, four rounds, a logo, six notes). The earlier estimate was 143–398 at ₹88.
 **What each sale covers at 3×:** a seat of ₹2,999 holds 150 credits (₹949.50 loaded: 3.16×), about 0.6 of a site;
 Studio Plus ₹9,999 holds 500 (₹3,165: 3.16×), about two sites; a pack ₹1,900 holds 100 (3.00×); 10 free credits
-(₹63.30) nearly buy the brand, voices and three looks (≈ $0.64 list, ≈ 11 credits): most of the first preview.
+(₹63.30) buy the brand, voices and three looks ($0.62 list, 10.0 credits): the first preview, with nothing to spare.
 **Before handover a preview build** made outside a turn (a developer's push, § 10) costs the partner 1 credit (cost ≈ ₹3,
 price ₹19); after handover it comes from the brand's plan's build minutes (ADR-0017 allowances).
+**Hosting moves onto Frrata's bill** (unit-economics review): on Vercel bom1 at $0.20/GB and $2.20 per million requests
+(ADR-0017's prices and page assumptions: 0.3 MB and 5 requests a page view) and ₹94: Launch 40k views = 12 GB ($2.40) +
+0.2M requests ($0.44) ≈ ₹267 a month; Growth 400k = 120 GB ($24) + 2M ($4.40) ≈ ₹2,670; Scale 1.33M = 400 GB ($80) +
+6.65M ($14.63) ≈ ₹8,895. Against Frrata's revenue from the illustrative shapes (Launch ₹1,499 + 2% of ₹1.35 L = ₹4,199;
+Growth ₹4,999 + 1% of ₹18 L = ₹22,999; Scale ₹14,999 + 0.5% of ₹75 L = ₹52,499) that is 6.4%, 11.6% and 16.9%. A theme
+shop already sends these bytes from the `frata` project, so a code site mostly moves the cost; the new part is the team's
+base fee, builds and previews. The pilot's measured bytes per view replace the 0.3 MB guess before hosting is priced
+(ADR-0017 revised 3); the kill signal stands.
 **Hypotheses** (figure · source · date · test):
 | Figure | Source · date | Test |
 |---|---|---|
@@ -295,8 +312,8 @@ design for tasks 1–3.
 | 20 | A preview build fails on Frrata's side mid-turn | Credits returned; the turn resumes on retry |
 **Opens V3b when:** tasks 1–13 and 18–20 pass in ≥ 90% of trials and all three trials of ≥ 80% of them; tasks 14–17 pass
 every trial; median credits for task 1 ≤ 260; no turn spends above its reserve; Frrata-side failures ≤ 5%; median
-change-to-preview ≤ 120 s; phone speed and accessibility ≥ Starter 0. **Cost of the proof:** tasks 1–3 at ≈ ₹1,524 × 3
-tasks × 3 trials = ₹13,716; tasks 4–20 at ≈ 20 credits (₹127) × 17 × 3 = ₹6,477; **≈ ₹20,200 (≈ $215)** on Frrata's
+change-to-preview ≤ 120 s; phone speed and accessibility ≥ Starter 0. **Cost of the proof:** tasks 1–3 at ≈ ₹1,520 × 3
+tasks × 3 trials = ₹13,680; tasks 4–20 at ≈ 20 credits (₹127) × 17 × 3 = ₹6,477; **≈ ₹20,200 (≈ $215)** on Frrata's
 `studio-eval` workspace (owner decision 12). The suite then becomes the gate for every model or agent-version change.
 
 ### 10. A partner's own Claude Code, beside Studio
@@ -330,14 +347,16 @@ tasks × 3 trials = ₹13,716; tasks 4–20 at ≈ 20 credits (₹127) × 17 × 
    project `site-<id8>` in `frrata-sites` (bom1, no Git auto-builds: builds only on preview and publish), and the Frrata
    address `<slug>.frrata.store`, whose production deployment is Frrata's own "Opening soon" page (noindex) until the
    shop opens.
-2. **Keys:** the fleet asks this app, by a signed request, for the site's keys; this app mints them inside the shop's
-   tenant and answers the plain key in that one response (never in a row, a payload or a log); the fleet sets it as a
-   sensitive environment variable on the project (a test key for previews before the shop opens; a public key for
-   production once the Website is set). Rotation and revocation go the same way.
-3. **Preview:** `preview_build` (or `npx frrata preview`) → the build output is uploaded as a preview deployment on the
-   preview domain, behind the signed preview; the fleet runs Frrata's pinned checks on it and answers through
-   `webhook_events`. **Publish** rebuilds the commit in the fleet's own sandbox with no secrets, runs the gate, deploys
-   the attested artifact and promotes it (ADR-0017 rule 2, kit spec § 6).
+2. **Keys** (security review: no inbound endpoint that hands out keys): the `site.key` outbox sender, inside the
+   outbox row's tenant, mints the key at send time and sends it in the body of one HMAC-signed HTTPS request to the
+   fleet (never in a row, a payload or a log); the fleet sets it as a sensitive environment variable on the project (a
+   test key for previews before the shop opens; a public key for production once the Website is set). If the call
+   fails, that key is deleted and the retry mints a new one. Rotation and revocation go the same way.
+3. **Preview and publish share one build path** (architecture review): `preview_build` (or `npx frrata preview`) makes
+   the fleet build the pushed commit in its own sandbox with no secrets, run Frrata's pinned checks on the output and
+   deploy it to the preview domain behind the signed preview; the answer comes back through `webhook_events`.
+   **Publish** promotes an attested artifact the same path built (ADR-0017 rule 2, kit spec § 6). Nothing built inside
+   an agent's sandbox is ever deployed.
 4. **Handover:** the owner accepts that deployment id (amendment 6), sees what they will edit and the partner-layer
    files (ADR-0016); **Open my shop** (CAN_MANAGE, as today) promotes the opening version to the Frrata address.
 5. **Connect my domain** (the console, CAN_MANAGE): the owner types `www.kesar.in` (or the apex); the console shows the
@@ -376,17 +395,30 @@ tasks × 3 trials = ₹13,716; tasks 4–20 at ≈ 20 credits (₹127) × 17 × 
   to do.
 - **Tenancy:** new tenant tables, each with grant, RLS and policy in its migration and a block in
   `scripts/verify/tenancy.sql` (87 onward, after PP1's): `sites`, `site_deployments` (kit spec § 6), `studio_sessions`,
-  `studio_turns`, `studio_review_notes`, `studio_messages`; `frata_builder` gets select and insert on its own session
-  rows only (ADR-0015 allow-list). Partner money stays platform-scope and definer-only: `partner_credit_entries` (the
-  ledger), `partner_client_budgets`. The tenant comes from `requireMember`/`requireCapability` for every page and
-  action; a tool call takes its tenant from the turn row (written under `asMember`) and re-checks the person live
-  through a definer (`app_turn_actor(turn)`: tenant and role, or nothing); the fleet's results take it from the
-  `site_deployments` row their outbox job names; the key mint takes it from the site row. No tenant id from the model,
-  a tool's input, a webhook body or a URL. The build key is ADR-0018's third source, unchanged in shape.
+  `studio_turns` (timestamps and the ledger entry's id only), `studio_review_notes`, `studio_messages`.
+  - **No credit or cost in a tenant row** (tenancy audit, and the 2026-11-11 finding "partner credits in a partner
+    ledger"): the brand's own people read their tenant's rows, and the brand never sees what its partner pays. Partner
+    money is platform-scope and definer-only: `partner_credit_entries` (the ledger, keyed by turn id),
+    `partner_client_budgets`.
+  - `frata_builder` (ADR-0015 allow-list): select and insert on its own partner's session rows for that shop, nothing
+    else.
+  - **Where each tenant id comes from:** `requireMember`/`requireCapability` for every page and action; a tool call
+    from the turn row, with the person re-checked live by `app_turn_actor(turn)` (tenant and role, or nothing) inside
+    the chokepoint `asTurn(turn, work)`, which opens `withTenant`, writes the member audit row (`via: studio`, the turn
+    id) and is listed in `check:actions` beside `asMember`; an Anthropic webhook from `app_studio_session_for(runtime
+    id)` (ids only, as `app_tenant_for_wa`), never from the event or the session's metadata; the fleet's results from
+    the `site_deployments` row their outbox job names; a key mint from the `site.key` outbox row's tenant.
+  - No tenant id from the model, a tool's input, a webhook body or a URL. The build key is ADR-0018's third source,
+    unchanged in shape; its data cache is keyed by the key's hash and tagged `shop:<t>` and `skey:<hex>`.
 - **Modularity:** pure rules in `src/domains/studio/` (credits from cost, reserve and settle, budget checks, the turn's
   state from timestamps, the tool allow-list); the runtime adapter `src/lib/studio/runtime.ts`; tool executors in
-  `src/lib/studio/tools/`, each calling an existing save; the content and token saves moved out of the console actions
-  into `src/lib/content/save.ts` so both doors run one function; the hosting adapter stays in the fleet service.
+  `src/lib/studio/tools/`, each calling an existing save through `asTurn`; the content and token saves moved out of the
+  console actions into `src/lib/content/save.ts` (taking a transaction and an actor) so both doors run one function, and
+  `frata-architecture` § A store's content says so; the hosting adapter stays in the fleet service.
+- **`studio_messages`, and why it is not a second copy:** Managed Agents keeps the session's events, but a session ends
+  and a runtime can change; the thread the partner sees must outlive both. It holds only the lines the screen draws
+  (the partner's words, the agent's one-line messages, cards and their answers), never tool inputs or outputs; it is
+  what the screen reads (below); kept while the partner is linked and 180 days after; no `frata_admin` grant.
 - **SSOT / DRY:** the credit rule once (`src/domains/studio/credits.ts`); measured cost once per turn (stored with its
   rate); site state derived from `site_deployments`; the editable list from the gate's parse of `fields.json`; the
   Frrata address from the slug; who may publish from PP's one pure function; who may save content from `contentSaver`.
@@ -396,12 +428,18 @@ tasks × 3 trials = ₹13,716; tasks 4–20 at ≈ 20 credits (₹127) × 17 × 
 - **KISS:** one runtime adapter, one tool per console function, one key kind added, one row per turn, one webhook route
   per vendor.
 - **Scalability:** at 100 partners × 3 sessions a day × 20 turns: 6,000 turns a day, each one `studio_turns` row and
-  ~10 custom-tool calls through the outbox (60,000 rows a day; the drain's batch already covers 10× peak orders);
+  ~10 custom-tool calls through the outbox (60,000 rows a day, drained right after `enqueue`, the 5-minute cron as the
+  net); Anthropic's webhook rows trimmed to ids once processed and deleted after 30 days;
   Managed Agents concurrency and rate limits per workspace are a V3a spike item; Vercel Pro allows 1,000 deployments an
   hour (ADR-0017), so preview builds queue per site and a global queue caps sessions at once (Studio spec finding).
-- **Performance:** Studio's pages read in one `withTenant` with `Promise.all`; the chat streams the session's events
-  through one route (reconnecting losslessly) and never blocks on a tool; custom tools answer within 2 s or say "working";
-  no Studio code reaches shop pages; previews live on their own domain.
+- **Performance** (speed review): Studio's pages read in one `withTenant` with `Promise.all`; while a turn runs the screen
+  reads new `studio_messages` rows by keyset every 1.5 s through a GET rows route (`private, no-store`, limited per
+  member, as Orders' rows route), so no function holds a stream for minutes; custom tools run in `after()` from the
+  webhook and answer within 2 s p95 for reads, else say "working"; the build-key tree reads the preview loaders through
+  a 15-second data cache per key (the pilot's 15 s), limited to 300 reads a minute a key, so a session's `next start`
+  smoke test can't load the database; Studio's screen gets a named first-load budget of 200 kB gz in
+  `check:storefront-build` (like the customizer's 208); no Studio code reaches shop pages; previews live on their own
+  domain.
 - **Reliability:** every call to Anthropic or the fleet is a row first (outbox; the partner's send is an attempt row,
   ADR-0008); webhooks from Anthropic (`/api/webhooks/anthropic`, Standard Webhooks HMAC, thin, so we fetch the session)
   and from the fleet are stored under our key and processed later; a turn whose runtime died returns its reserve; the
@@ -411,11 +449,13 @@ tasks × 3 trials = ₹13,716; tasks 4–20 at ≈ 20 credits (₹127) × 17 × 
   `security-reviewer` on each phase.
 - **Motion and visuals:** the one-screen's patterns only; a picture beats words for the turn's credits (a small bar).
 - **Unit economics:** § 8; `unit-economics-reviewer` on C1 and V3b.
-- **Storefront API:** adds the build key's header tree (dynamic, `private, no-store`), per-key limits for test and
-  build keys, and the gap fields in G-a (each additive to `2026-12`); `api-contract-reviewer` on each.
+- **Storefront API:** adds the build key's header tree (dynamic, `private, no-store`, a 15-second data cache per key),
+  per-key limits for test and build keys, and the gap fields in G-a (each additive to `2026-12`); `api-contract-reviewer` on each.
 - **Blast radius:** `app_storefront_key` (every API request), the API's rewrites, `apiRequest` limits, the content
   actions (moved, not changed), `app_remove_partner`, `shop_domains` readers (Settings › Address, the domain sweeps
-  D2·7, Razorpay's website check), the starter's `lib/frrata.ts` (generated), Admin's partner and sites pages.
+  D2·7, Razorpay's website check), the starter's `lib/frrata.ts` (generated), Admin's partner and sites pages, the
+  console's CSP (`frame-src` gains the preview domain for Studio's pane, set by the middleware's signed-in policy and
+  `next.config.ts`), `check:actions` (the `asTurn` chokepoint and two webhook entry points).
 
 ## Stress test
 | Severity | What | Where | Fix |
@@ -425,10 +465,33 @@ tasks × 3 trials = ₹13,716; tasks 4–20 at ≈ 20 credits (₹127) × 17 × 
 | High | A second shop's Frrata address would be refused: every address has apex `frrata.store` until the PSL lists it | `src/lib/db/schema-addresses.ts:95` (`shop_domains_live_apex`) | Frrata's own suffix entry in the apex reader, tested before V2a |
 | High | Per-network limits on test keys throttle every partner at once from shared egress | pilot G27; `apiTestIp` | Limit test and build keys per key |
 | High | A repository's `.claude/skills` load into every Managed Agents session: anyone with push could steer the agent | Managed Agents resources doc | The `.claude/` check before a session (§ 6.6) |
-| Medium | A tool executed minutes later by the drain has no browser session | outbox drain | `app_turn_actor(turn)` re-derives a live member; a new turn needs a live passkey step-up |
+| Medium | A tool executed minutes later by the drain has no browser session | outbox drain | `asTurn` with `app_turn_actor(turn)` re-derives a live member and audits; a new turn needs a live passkey step-up |
+| Medium | Credits and costs in a tenant table would be readable by the brand's own people | `studio_turns` as first drafted | The ledger only (platform, definers); the turn row holds ids and times |
+| Medium | An Anthropic webhook names a session, not a shop | `/api/webhooks/anthropic` | `app_studio_session_for(runtime id)` gives the tenant from our row |
 | Medium | Content saves live in a server action, so a tool can't call them | `src/app/(console)/console/content/actions.ts` | Move the core into `src/lib/content/save.ts`; the action and the tool call it |
 | Medium | `shop_domains` rows today all attach to the `frata` project | Settings › Address, the domain sweeps | The `serves` column; the sweeps skip `site` rows, the fleet owns them |
 | Low | Preview of a code change waits for a build | runtime A | Measured in the proof; switch signal § 2 |
+
+## Reviews folded in (2026-11-16)
+The five review agents' checklists (`.claude/agents/`) were run on this spec and the plan; every finding is fixed above
+or in the plan, or left for the owner below.
+- **Architecture** (CHANGES NEEDED → fixed): one build path for preview and publish, nothing built in a sandbox ever
+  deployed (§ 4, § 12.3); the tool chokepoint `asTurn` in `check:actions` (§ Design review › Tenancy); the content save
+  moved into a module both doors call, the skill updated (V3a·6); `studio_messages` justified as the screen's own record
+  (not a copy); the console CSP and `check:actions` in the blast radius; V2c given its own task table in the plan.
+- **Security** (FIX BEFORE MERGE → fixed): no inbound key-mint endpoint, the `site.key` sender pushes a key minted at
+  send time (§ 12.2); rulesets limit branch creation to `studio/*` and `dev/*`, block force-push and tags (§ 6.1); review
+  notes from a bearer link capped, limited, plain text and only applied after the partner taps (§ 6.5); `CLAUDE.md`
+  loading is a spike item and every repository file is data (§ 6.6); one person stops, two resume (§ 6.8); S1 still
+  closes before intake (V3c). Gates: `check:tenant`, `check:actions`, `check:config` clean (docs only).
+- **Unit economics** (Frrata HELPS if the proof holds; merchant NEUTRAL: nothing a brand pays moves): the arithmetic
+  re-run by script ($14.97, 241 credits, ₹3,059 kept); hosting on Frrata's bill shown per plan shape at ₹94 (§ 8); the
+  rupee move (₹88 → ₹94) absorbed by metering in rupees; the 1.08 loading and cold-cache share named as the hypotheses
+  most at risk, the proof as the cheapest test.
+- **Speed** (WITHIN BUDGET as designed; nothing on shop pages changes): rows polled instead of a held stream; the
+  build-key tree cached 15 s per key and limited; Studio's own JS budget; webhook rows trimmed and purged.
+- **Tenancy** (FIX BEFORE MERGE → fixed): money out of tenant rows; the webhook's tenant from a definer, never the
+  event; Builder grants limited to its own partner's sessions; the build key's cache keyed and tagged by key.
 
 ## Out of scope
 The brand's own chat with the agent (ADR-0014 rule 4: after partner quality is measured) · image generation · the agent

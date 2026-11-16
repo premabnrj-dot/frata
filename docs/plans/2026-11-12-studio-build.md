@@ -7,7 +7,9 @@ Status: active (owner, 2026-11-12: "build now") for T1a–P2, built; **the remai
 ADR-0014 to ADR-0018 · Mockups: https://claude.ai/artifact/KiqKqrFCx4enB8KUrnh5Du (Studio v2.4),
 https://claude.ai/artifact/PaRX2MLsw11JDH6dFdbMCv (Admin), https://claude.ai/artifact/LdA5saPkzt36W1zJsxF1QZ (the one
 screen), https://claude.ai/artifact/NfBB7SwJk8chukgJZVhDFr (kit and fleet); new ones per phase below
-**Review (remaining phases):** pending, 2026-11-16 (architecture, security, unit economics, speed, tenancy)
+**Review (remaining phases):** architecture-reviewer 6 findings fixed, 2026-11-16 · security-reviewer 6 findings fixed,
+2026-11-16 · unit-economics-reviewer 4 findings fixed, 2026-11-16 · speed-reviewer 4 findings fixed, 2026-11-16 ·
+tenancy-auditor 4 findings fixed, 2026-11-16 (each run as its agent's checklist; details in the spec § Reviews folded in)
 
 ## Order (each phase ships alone, push to `main` after its gates)
 Revised 2026-11-16 for the owner ("revise the studio plan to keep it fully agentic and use our own claude api as planned
@@ -315,7 +317,8 @@ Before: flows 40, 75, 80 and `verify:tenancy` green on main. Each task: `npm tes
 | V0·6 | `frata-integrations`: an Anthropic section (Managed Agents facts, Agent SDK terms, each dated), Vercel Sandbox, GitHub rulesets; version bump | `npm run check:skills` |
 | V0·7 | `frata-architecture`: § Studio (runtime adapter, tools through existing saves, tenant from the turn row, build key); version bump | `npm run check:skills` |
 - **The owner sets up:** an Anthropic Console organisation in the company's name with billing and workspaces `studio` and
-  `studio-eval`; the GitHub organisation `frrata-sites` on Team with passkeys required; the Vercel team `frrata-sites` on
+  `studio-eval`, and the Managed Agents webhook endpoint registered in its Console (no API for it) with its signing
+  secret set in Vercel Production; the GitHub organisation `frrata-sites` on Team with passkeys required; the Vercel team `frrata-sites` on
   Pro; the two domains bought for three years with Vercel nameservers, submitted to the Public Suffix List.
 - **Reviews:** `architecture-reviewer`, `security-reviewer`, `unit-economics-reviewer` on the ADR text.
 - **Owner decisions:** all sixteen; 1–5 unblock lanes A and D, 6–7 lane C, 8–9 and 14 lane A, 10 lane B.
@@ -359,8 +362,8 @@ grows, `frata-storefront-api` rule 6). G22 (Home placements) needs `site_deploym
 | V2a·1 | Migrations: `sites` (one per shop, site id), `site_deployments` (cause, commit, kit and policy versions, approval, checks verdict columns, the parsed `fields` declaration frozen, `live_from`, `rolled_back_at`; live and held derived), `shop_domains.by_frrata` and `serves`; grants, RLS, policies; proof § 87+ | `npm run verify:tenancy`; `npm test` |
 | V2a·2 | The apex reader treats Frrata's sites domain as a public suffix (the `shop_domains_live_apex` trap, spec § 13) | `npx vitest run src/domains/tenancy` |
 | V2a·3 | Outbox kinds `site.create`, `site.build`, `site.promote`, `site.domain`, `site.key`; `/api/webhooks/fleet` (raw-body HMAC, size cap, our key, answered at once) in ENTRY_POINTS; results processed under the deployment row's tenant | `npm test`; `npx vitest run src/lib/sites` |
-| V2a·4 | The key mint for the fleet: a signed request, the key made inside the site's tenant, the plain key in that response only, an audit row | `npx vitest run src/lib/sites`; `security-reviewer` on the diff |
-| V2a·5 | The fleet service (its own repository `frrata-fleet`, a project in the `frrata-sites` team, the only holder of the host and GitHub App tokens): repository from Starter 0 with its ruleset; project in bom1 without Git builds; the Frrata address with Frrata's Opening soon page; build in a Vercel Sandbox with no secrets → Frrata's pinned checks → prebuilt deploy → promote; rollback; domains; a site's kill switch (maintenance page) | its tests; `node scripts/verify/fleet-smoke.mjs` against a staging team (new) |
+| V2a·4 | Keys to the fleet with no inbound endpoint (security review): the `site.key` sender mints the key at send time inside the outbox row's tenant, sends it in one HMAC-signed request body, deletes it if the call fails, audits it | `npx vitest run src/lib/sites`; `security-reviewer` on the diff |
+| V2a·5 | The fleet service (its own repository `frrata-fleet`, a project in the `frrata-sites` team, the only holder of the host and GitHub App tokens): repository from Starter 0 with its ruleset; project in bom1 without Git builds; the Frrata address with Frrata's Opening soon page; one build path for preview and publish (architecture review): the pushed commit built in a Vercel Sandbox with no secrets → Frrata's pinned checks → prebuilt deploy to the preview domain, or promote for a publish; nothing built elsewhere is deployed; rulesets (`main` and tags by the fleet only, branches `studio/*` and `dev/*`, no force-push); rollback; domains; a site's kill switch (maintenance page) | its tests; `node scripts/verify/fleet-smoke.mjs` against a staging team (new) |
 | V2a·6 | The gate on build output: the hard floor (kit spec § 4), no key-shaped string, the legal block on every page, the bag link, `frrata/fields.json` parsed and capped, the outside-host classifier PP3 reads | `npx vitest run src/domains/sites` |
 | V2a·7 | G22 placements: the `placements` resource and Content › Placements drawn from the live deployment's declaration | `npm run check:api`; `npm run e2e -- --only content` |
 | V2a·8 | Console and workspace as drawn: Settings › Website, Connect my domain (`serves: site`; the D2·7 sweeps skip site rows), Open my shop promotes the opening version, Clients › New site and actions, the handover accepts a deployment id; build mode publishes to the signed preview only | `npm run e2e -- --only partners,domains,partner-clients,site-hosting` (new flow `93-site-hosting` on a fake fleet) |
@@ -409,9 +412,9 @@ grows, `frata-storefront-api` rule 6). G22 (Home placements) needs `site_deploym
 |---|---|---|
 | V3a·1 | The spike (one week, `studio-eval`): a Managed Agents session on Starter 0 for Kesar; a GitHub App token as the repository token; `limited` hosts; the build key in a vault header; `next build` time and memory in the sandbox; preview upload; concurrency and rate limits; cache shares; the processing region; Vercel OIDC to Anthropic. The answers go into `frata-integrations` with dates | the spike's report read; `npm run check:skills` |
 | V3a·2 | `src/domains/studio/` pure rules: a turn's state from timestamps, the budget raise per turn, the tool allow-list | `npx vitest run src/domains/studio` |
-| V3a·3 | Migrations: `studio_sessions`, `studio_turns` (the reserve written before the request, ADR-0008), `studio_messages`, `studio_review_notes`; `frata_builder` select and insert on its own sessions; `app_turn_actor(turn)`; proof block | `npm run verify:tenancy`; `npm run check:capabilities` |
+| V3a·3 | Migrations: `studio_sessions`, `studio_turns` (ids and times only; its reserve is a ledger entry written before the request, ADR-0008, so no credit or cost sits in a tenant row: tenancy review), `studio_messages` (the screen's lines only, 180 days after unlink), `studio_review_notes` (capped, plain text); `frata_builder` select and insert on its own partner's sessions; definers `app_turn_actor(turn)` and `app_studio_session_for(runtime id)` (ids only); proof block | `npm run verify:tenancy`; `npm run check:capabilities`; `npm run check:tenant` |
 | V3a·4 | `src/lib/studio/runtime.ts` with the Managed Agents implementation; the agent and environment as files synced by `ant apply` (pinned model, toolset, custom tools, web tools off, hosts from the policy version) | `npx vitest run src/lib/studio` |
-| V3a·5 | `/api/webhooks/anthropic` (the SDK's Standard Webhooks check, size cap, our key, 200 at once); outbox kinds `studio.send`, `studio.tool`, `studio.settle` and their senders | `npm test`; `npx vitest run src/lib/studio` |
+| V3a·5 | `/api/webhooks/anthropic` (the SDK's Standard Webhooks check on the raw body, size cap, our key from `webhook-id`, 200 at once, the tenant from `app_studio_session_for`; rows trimmed to ids once processed, deleted after 30 days); outbox kinds `studio.send`, `studio.tool`, `studio.settle`, `studio.stop`, drained in `after()`; the chokepoint `asTurn(turn, work)` (opens `withTenant`, re-checks the person, audits with `via: studio`) listed in `check:actions` | `npm test`; `npx vitest run src/lib/studio` |
 | V3a·6 | The content and token saves moved from the console's actions into `src/lib/content/save.ts`, both doors calling it; then the tool executors in `src/lib/studio/tools/` | `npm run e2e -- --only content,pages` green before and after |
 | V3a·7 | The `.claude/` check before a session; the repository token minted, rotated and revoked per session | `npx vitest run src/lib/studio` |
 | V3a·8 | Admin › Agent: sessions, today's spend, the agent version, the five kill switches (two people) | `npm run e2e -- --only neel-admin` |
@@ -476,8 +479,16 @@ agent may add a package the policy allows); kill switches for a partner, a start
 Controls, Rollouts; the festive freeze; the external pen test before V3b reaches partners.
 - **Needs first:** V2a. **Mockup:** approved (kit-and-fleet). **Regression net:** `93-site-hosting`, the fleet's smoke
   suite on every hosted site, `92-storefront-sale`.
-- **Tasks and verify:** one per item above, each verified by the fleet smoke suite on staging and `npm test`; the plan
-  for V2c is written when V2a ships (its sizes come from V2a's measured builds).
+| # | Task | Verify |
+|---|---|---|
+| V2c·1 | `frrata-policies` served as signed JSON by version; the gate, the fleet and Admin read one version; widening waits 24 h | the fleet's tests; `npm test` |
+| V2c·2 | Lane 1 patches: attested, per-site bill of materials, waves with bake times, smoke tests, automatic rollback never below the minimum | `node scripts/verify/fleet-smoke.mjs` on staging, 20 sites |
+| V2c·3 | Lanes 2 and 3 as drafts ("Update available" in Studio; a codemod and a migration skill) | `npm run e2e -- --only site-hosting` |
+| V2c·4 | The package mirror with the 7-day wait; then the agent's allowed hosts add it and the gate allows packages the policy lists | the fleet's tests; the proof's task 18 re-run |
+| V2c·5 | Kill switches for a partner, a starter and a kit version (two people); the festive freeze | `npm run e2e -- --only neel-admin` |
+| V2c·6 | Admin › Kit, Controls, Rollouts as drawn | `mockup-parity-reviewer` |
+| V2c·7 | The external pen test before V3b reaches partners | the report, findings fixed |
+Sizes and windows come from V2a's measured builds.
 - **Reviews:** `security-reviewer`, `architecture-reviewer`, `speed-reviewer`, `release-agent`.
 - **Owner decisions:** the security owner and the second approver named; the pen test's vendor.
 
@@ -493,7 +504,7 @@ Controls, Rollouts; the festive freeze; the external pen test before V3b reaches
   `93-site-hosting`; the proof's suite on every agent-version change.
 | # | Task | Verify |
 |---|---|---|
-| V3b·1 | The screen as drawn, Neel primitives only; the chat streams through one reconnecting route; each card's action calls one tool or one action | `npm run e2e -- --only studio` (new flow `94-studio` on a fake runtime) |
+| V3b·1 | The screen as drawn, Neel primitives only; while a turn runs it reads new `studio_messages` rows by keyset every 1.5 s (a GET rows route, `private, no-store`, limited per member: speed review), no held stream; each card's action calls one tool or one action; a named first-load budget of 200 kB gz in `check:storefront-build`; the console's `frame-src` gains the preview domain | `npm run e2e -- --only studio` (new flow `94-studio` on a fake runtime); `npm run build` |
 | V3b·2 | Credits on every card from C1's estimate; reserve before, settle after; budget and low-balance states in the chat | `npx vitest run src/lib/studio`; `npm run e2e -- --only studio` |
 | V3b·3 | Hand edits on the preview save as data (BT·5's save, content's save) and add a chat line and a version | `npm run e2e -- --only studio,content` |
 | V3b·4 | Publish and Hand over cards call V2a and V2b's actions (passkey within 5 minutes); Builders refused in words | `npm run e2e -- --only studio,builders` |
