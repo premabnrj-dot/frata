@@ -148,10 +148,10 @@ export function SettingsForm({ sectionKey, head, initial, version: startVersion,
               {/* A page of one block named as the page: its name is the page's, said to a screen reader only (Settings board). */}
               {blockLocked ? (
                 // As drawn: the title, the chip and Ask the owner in a row; on a phone the chip takes the line under them.
-                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 md:flex-nowrap">
                   {title}
                   <span className="order-3 w-full md:order-none md:w-auto"><Badge>{OWNER_ONLY_WORDS.chip}</Badge></span>
-                  {ask ? <span className="ml-auto"><AskOwner page={ask.page} asked={ask.asked} size="sm" /></span> : null}
+                  {ask ? <span className="ml-auto shrink-0"><AskOwner page={ask.page} asked={ask.asked} size="sm" /></span> : null}
                 </div>
               ) : title}
               {b.hint && <p className="-mt-1 text-sm text-muted-foreground">{b.hint}</p>}

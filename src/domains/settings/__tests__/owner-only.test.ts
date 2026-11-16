@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ASK_PAGES, OWNER_ONLY_FIELDS, OWNER_ONLY_PAGES, askPageOf, lockOf, lockedFor, mayAskOwner, refusalFor, seesAsks } from '../owner-only'
 import { SECTIONS } from '../sections'
-import { MEMBER_ROLES } from '../../tenancy/roles'
+import { CAPABILITIES, MEMBER_ROLES } from '../../tenancy/roles'
 
 // PP1 (docs/specs/2026-11-16-partner-publishing.md § PP1 plan, owner decisions 1–5): every role × hasOwner × support visit.
 const ALL = { pages: ['policies', 'business'], fields: { contact: ['grievanceName', 'grievanceRole', 'grievanceEmail', 'grievancePhone'], invoices: ['docSignatory', 'invoiceSeries'] } }
@@ -67,5 +67,12 @@ describe('owner-only settings (PP1)', () => {
     expect(refusalFor('invoices')).toBe('Only the owner or a Manager can change these invoice details now.')
     expect(refusalFor('business')).toBe('Only the owner or a Manager can change this now.')
     expect(refusalFor('policies')).toBe('Only the owner or a Manager can change this now.')
+  })
+
+  // drizzle/0150's app_notice_members hand-copies who sees an ask as ('owner','admin'); this pins that list to
+  // seesAsks' source, so the two can't drift apart (tenancy audit 2026-11-16 L4).
+  it('the roles that see an ask are exactly the SQL list in 0150', () => {
+    expect([...CAPABILITIES['shop.manage']].sort()).toEqual(['admin', 'owner'])
+    for (const r of MEMBER_ROLES) expect(seesAsks(r)).toBe(r === 'owner' || r === 'admin')
   })
 })

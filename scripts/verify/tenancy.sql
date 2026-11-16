@@ -4696,7 +4696,7 @@ end $$;
 -- The race itself, on two connections (dblink, a contrib module): a handover in flight holds the row, so a save's share
 -- lock waits (here: times out) and, once it commits, the save sees the owner; a save in flight makes the handover wait.
 do $$ begin
-  if not exists (select 1 from pg_available_extensions where name = 'dblink') then raise notice '87: dblink is not installed; the two-connection race proof is skipped'; end if;
+  if not exists (select 1 from pg_available_extensions where name = 'dblink') then raise exception 'FAIL: 87 needs dblink for the two-connection race proof'; end if;
 end $$;
 select exists (select 1 from pg_available_extensions where name = 'dblink') as has_dblink \gset
 \if :has_dblink
@@ -4713,7 +4713,7 @@ do $$ declare r text; begin
   perform dblink_exec('race87', 'set local role frata_app');
   perform dblink_exec('race87', $q$set local app.tenant_id = 'c8700000-0000-0000-0000-000000000005'$q$);
   perform dblink_exec('race87', $q$set local lock_timeout = '300ms'$q$);
-  perform x from dblink('race87', $q$select 1 from tenants where id = 'c8700000-0000-0000-0000-000000000005' for share$q$, false) as t(x int);
+  perform x from dblink('race87', $q$select 1 from tenants where id = 'c8700000-0000-0000-0000-000000000005' for key share$q$, false) as t(x int);
   r := dblink_error_message('race87');
   if r !~ 'lock timeout' then raise exception 'FAIL: a save took the store''s row while a handover held it (%)', r; end if;
   perform dblink_exec('race87', 'rollback');
@@ -4723,9 +4723,9 @@ do $$ declare owners int; begin
   perform dblink_exec('race87', 'begin');
   perform dblink_exec('race87', 'set local role frata_app');
   perform dblink_exec('race87', $q$set local app.tenant_id = 'c8700000-0000-0000-0000-000000000005'$q$);
-  select n into owners from dblink('race87', $q$with held as (select id from tenants where id = 'c8700000-0000-0000-0000-000000000005' for share)
+  select n into owners from dblink('race87', $q$with held as (select id from tenants where id = 'c8700000-0000-0000-0000-000000000005' for key share)
     select (select count(*)::int from members where role = 'owner') from held$q$) as t(n int);
-  if owners <> 1 then raise exception 'FAIL: the save after the handover saw % owners', owners; end if;
+  if owners is distinct from 1 then raise exception 'FAIL: the save after the handover saw % owners', owners; end if;
   -- That save still holds its share lock: a handover now waits for it.
   begin
     set local lock_timeout = '300ms';
@@ -4737,5 +4737,7 @@ end $$;
 select dblink_disconnect('race87') is not null as disconnected \gset
 delete from members where tenant_id = 'c8700000-0000-0000-0000-000000000005';
 delete from tenants where id = 'c8700000-0000-0000-0000-000000000005';
+\else
+do $$ begin raise exception 'FAIL: dblink is not installed, so § 87''s race proof cannot run'; end $$;
 \endif
 \echo 'tenancy proof — all 87 checks passed'

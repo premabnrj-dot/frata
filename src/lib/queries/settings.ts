@@ -91,12 +91,13 @@ export async function hasOwnerIn(tx: Tx, tenantId: string): Promise<boolean> {
 }
 
 /**
- * `hasOwnerIn`, after holding the store's own row FOR SHARE (PP1's saves of owner-only settings): accepting a handover
+ * `hasOwnerIn`, after holding the store's own row FOR KEY SHARE (PP1's saves of owner-only settings): accepting a handover
  * (app_accept_handover_v2) holds that row FOR UPDATE before it adds the owner, so a save racing it either finishes first
- * or waits and then sees the owner. frata_app's update grant on `tenants (name)` is what lets it take the share lock.
+ * or waits and then sees the owner. KEY SHARE, not SHARE, so a Store save renaming the store at the same moment
+ * (FOR NO KEY UPDATE) never deadlocks with it (tenancy audit 2026-11-16 L1). frata_app's update grant on `tenants (name)` is what lets it take the share lock.
  */
 export async function hasOwnerHeldIn(tx: Tx, tenantId: string): Promise<boolean> {
-  await tx.select({ id: tenants.id }).from(tenants).where(eq(tenants.id, tenantId)).for('share')
+  await tx.select({ id: tenants.id }).from(tenants).where(eq(tenants.id, tenantId)).for('key share')
   return hasOwnerIn(tx, tenantId)
 }
 

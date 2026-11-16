@@ -84,6 +84,9 @@ words); `saveSection`/`savePolicyText`/`askOwnerAction` in `src/app/(console)/co
 | Invoices and slips, partner after handover | Not drawn (decision 5 came with the approval) | The signatory and the series prefix as `Facts` under their block's own fields, the chip beside each value; Ask the owner the header's one action | Two blocks are locked in part: a chip by the block title would claim the order prefix and the note too, and two Ask buttons would break "one primary" |
 | The invoice refusal | Not drawn | "Only the owner or a Manager can change these invoice details now." · "Nothing was changed." · Reload | The Contact variant's shape, for decision 5's fields |
 | An empty locked value | Not drawn | "Not set" in text 2 | A fact needs a value; a blank cell reads as broken |
+| Ask the owner in a card header, phone | 30 px (`btn sm`) | 44 px | The Button primitive's phone size: the design language's 44 px touch target (mockup-parity review 2026-11-16, row 1) |
+| The ok and error toasts | Dark bar, a green ✓ or red ! disc, a close ×, Reload in the bar's link colour | The console's live toast: words only on ok; the error toast pale red, Reload underlined | The mockup drew an older toast; the built one is the console-wide primitive (`ui/toast.tsx`, `neel.css`), the same on every page (rows 4–5) |
+| A refused save on a short page, desktop | The toast lifts above the save bar | On Contact (a short page) the save bar sits in the page, not at the screen's foot, so the toast can overlap it | Existing console behaviour on any short settings page, not PP1's; a console-wide fix is a separate task (row 6) |
 
 ### PP2 — The choice per partner (lands with V2's publishing)
 - Settings › People, on a partner's row: **Publishing** — "Publishes freely" / "Ask me first". Owner or Manager

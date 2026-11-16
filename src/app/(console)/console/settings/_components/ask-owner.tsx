@@ -19,7 +19,7 @@ export function AskOwner({ page, asked: askedBefore, size }: { page: AskPage; as
   const off = useRef<HTMLButtonElement>(null)
   const [justAsked, setJustAsked] = useState(false)
   useEffect(() => { if (justAsked) off.current?.focus() }, [justAsked])
-  if (asked) return <Button ref={off} variant="secondary" size={size} reason={OWNER_ONLY_WORDS.askedToday}>{OWNER_ONLY_WORDS.ask}</Button>
+  if (asked) return <Button ref={off} variant="secondary" size={size} reason={OWNER_ONLY_WORDS.askedToday} reasonBelow={size === 'sm'}>{OWNER_ONLY_WORDS.ask}</Button>
   return (
     <Button variant="secondary" size={size} busy={busy} onClick={async () => {
       setBusy(true)
