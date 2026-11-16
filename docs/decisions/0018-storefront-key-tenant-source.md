@@ -141,3 +141,12 @@ Proposed:
   error is a `400 {"error":"bad_filter","param"}` after the key checks out: the one answer that is not the 404.
 - **§ 6:** removing a partner purges its keys through the drain's key-stop sweep; so does reinstating one (its audit
   row), so a reinstated partner's site reads again within minutes.
+
+## Amendment (test keys before a domain, owner 2026-11-16)
+The owner: "partners should be able to create a website without adding custom domain" (choosing option B for the first
+site). **§ 4 and § 5 change for test keys only:** a test key answers while the store has **no Website set**, on a store
+that has never opened, so a site is built from localhost or a preview before the brand owns or connects a domain.
+Unchanged: a public key needs the Website on a live connected domain (going live still needs one); a test key stops for
+good once the store opens, after 30 days, on deletion, and with its partner's link or suspension; a test key on a store
+whose Website is set still needs that domain live; CORS for a test key is still localhost or the Website's origin (a
+server-side render sends no Origin). Migration `0149_test_keys_before_domain`; proof in `tenancy.sql` § 81.

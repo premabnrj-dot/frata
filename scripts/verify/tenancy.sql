@@ -4214,6 +4214,12 @@ do $$ begin
   if pg_temp.skey(repeat('d', 64)) is not null then raise exception 'FAIL: a key answers once its domain is removed'; end if;
   if pg_temp.skey(repeat('a', 64)) is not null then raise exception 'FAIL: a key answers while the store runs on Frrata'; end if;
   if not exists (select 1 from app_shops_with_key_stop(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: the sweep missed a removed domain'; end if;
+  -- 0149 (owner, 2026-11-16): a test key answers with no Website at all, on a store never opened; never on an opened
+  -- one, never a public key, never another store's.
+  if pg_temp.skey(repeat('f', 64)) is distinct from 'c8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: D''s test key does not answer before a domain'; end if;
+  if pg_temp.skey(repeat('b', 64)) is not null then raise exception 'FAIL: a test key answers with no domain on a store that opened'; end if;
+  if pg_temp.skey(repeat('d', 64)) is not null then raise exception 'FAIL: a public key answers with no domain'; end if;
+  if pg_temp.skey(repeat('e', 64)) is not null then raise exception 'FAIL: an expired test key answers with no domain'; end if;
 end $$;
 commit;
 

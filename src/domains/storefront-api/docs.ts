@@ -34,7 +34,8 @@ export const GUIDES: Guide[] = [
   { slug: 'keys', title: 'Keys', lead: 'A key names one store. Put the live key in your site’s server settings, never in its code.', body: [
     { rows: [['frs_pub_…', 'Live. Reads what the store’s own pages show. Answers are cached copies.'], ['frs_test_…', 'Test. Before the store opens: drafts too, never cached, from your site or localhost. Ends after 30 days or when the store opens.']], head: ['Key', 'Reads'] },
     { p: 'Every refusal is the same 404: an unknown, deleted or expired key, a product of another store, a draft under a live key.' },
-    { p: 'Keys answer once the store’s Website points at one of its connected domains.' },
+    { p: 'A test key works before any domain is connected.' },
+    { p: 'A live key works once the Website points at a connected domain.' },
   ] },
   { slug: 'bag-link', title: 'Bag link', lead: 'Send the shopper’s bag to the store’s checkout with one link.', body: [
     { get: 'https://checkout.kesarstudio.in/cart?l=<size id>:<qty>,…' },
