@@ -4,6 +4,8 @@ import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { NeedsBand } from '../_components/needs-band'
 import { Panel } from '@/components/ui/panel'
+import { FieldError } from '@/components/ui/field-error'
+import { button } from '@/components/ui/button'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { Icon } from '@/components/icons/icon'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
@@ -34,12 +36,13 @@ export default async function StorefrontApiPage({ searchParams }: { searchParams
   const today = istDayKey(now)
   const rows = await apiShops(staff).catch(() => null)
   const header = <PageHeader title="Storefront API" />
-  if (!rows) return <>{header}<Panel title="We couldn't load the stores. Reload in a minute." /></>
+  // Error and empty as drawn: a card with one line (the error with its mark), not a centred panel.
+  if (!rows) return <>{header}<Section><FieldError message="We couldn't load the stores. Reload in a minute." className="!text-sm" /></Section></>
   const tabs = <ViewTabs label="Storefront API views" tabs={[
     { href: '/admin/storefront-api', label: 'Stores', count: rows.length, current: !versions },
     { href: '/admin/storefront-api?view=versions', label: 'Versions', current: versions },
   ]} />
-  if (!rows.length) return <>{header}{tabs}<Panel title="No store uses the Storefront API yet" /></>
+  if (!rows.length) return <>{header}{tabs}<Section><p className="text-sm font-medium">No store uses the Storefront API yet</p></Section></>
   if (versions) return (
     <>{header}{tabs}
       <Section flush ariaLabel="Versions"><div className="overflow-x-auto"><table className="w-full text-sm">
@@ -66,8 +69,10 @@ export default async function StorefrontApiPage({ searchParams }: { searchParams
   return (
     <>
       {/* On a phone a chosen store is its own page: the list hides, a way back shows (mockup § Admin phone). */}
-      <div className={chosen ? 'max-lg:hidden' : ''}>{header}{tabs}</div>
-      {chosen ? <Link href="/admin/storefront-api" className="mb-2 inline-flex min-h-11 items-center gap-1 text-sm text-muted-foreground lg:hidden"><Icon name="back" className="size-4" />Storefront API</Link> : null}
+      {/* display: contents, so the header and tabs keep the page's own spacing (as on Versions). */}
+      <div className={chosen ? 'contents max-lg:hidden' : 'contents'}>{header}{tabs}</div>
+      {chosen ? <div className="lg:hidden"><Link href="/admin/storefront-api" className="inline-flex min-h-11 items-center gap-1 text-sm text-muted-foreground"><Icon name="back" className="size-4" />Storefront API</Link>
+        <h1 className="font-display text-title font-semibold [overflow-wrap:anywhere]">{chosen.name}</h1></div> : null}
       {waiting ? <div className={chosen ? 'max-lg:hidden' : ''}><NeedsBand className="mb-4" title={`${waiting === 1 ? '1 website' : `${formatCount(waiting)} websites`} with no reads for 2 days`} /></div> : null}
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
         <div className={chosen ? 'max-lg:hidden' : ''}>
@@ -80,7 +85,9 @@ export default async function StorefrontApiPage({ searchParams }: { searchParams
             {page < pages ? <Link href={`/admin/storefront-api?page=${page + 1}`} className="underline">Next</Link> : null}
           </nav> : null}
         </div>
-        {open ? <div className={chosen ? '' : 'max-lg:hidden'}><StoreRecord r={open} today={today} listed={listed} /></div> : null}
+        {open ? <div className={chosen ? '' : 'max-lg:hidden'}><StoreRecord r={open} today={today} listed={listed} />
+          {/* On a phone the record is its own page: the name is its title (above) and Merchants a button (as drawn). */}
+          {chosen ? <Link href={`/admin/merchants/${chosen.tenantId}`} className={`${button({ variant: 'secondary' })} mt-4 lg:hidden`}>Open in Merchants</Link> : null}</div> : null}
       </div>
     </>
   )
@@ -97,14 +104,17 @@ const keysWord = (n: number) => (n === 1 ? '1 key' : `${formatCount(n)} keys`)
 const lastReadWord = (r: ApiShopRow, today: string) => r.lastRead === null ? 'Never read' : r.lastRead === today ? 'Today'
   : r.lastRead === new Date(Date.parse(`${today}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10) ? 'Yesterday' : `Last read ${dayMonthIN(new Date(`${r.lastRead}T12:00:00+05:30`))}`
 
+/** The phone list's shorter words (as drawn): "13 Nov", "Never". */
+const lastReadShort = (r: ApiShopRow, today: string) => lastReadWord(r, today).replace(/^Last read /, '').replace(/^Never read$/, 'Never')
+
 function StoreRow({ r, today, on, href }: { r: ApiShopRow; today: string; on: boolean; href: string }) {
   const chip = <StateChip r={r} today={today} />
   return (
-    <Link href={href} aria-current={on || undefined} className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-3 text-sm hover:bg-accent ${on ? 'bg-accent' : ''}`}>
+    <Link href={href} aria-current={on || undefined} className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-3 text-sm hover:bg-accent ${on ? 'bg-select' : ''}`}>
       <span className="truncate font-medium">{r.name}</span>
       <span className="text-right text-muted-foreground">{apiShopState(r, today) === 'reading' ? <span className="font-num">{keysWord(r.liveKeys + r.testKeys)}</span> : chip}</span>
       <span className="truncate font-mono text-small text-muted-foreground">{r.siteHost ?? '—'}</span>
-      <span className="text-right font-num text-small text-muted-foreground">{lastReadWord(r, today)}</span>
+      <span className="text-right font-num text-small text-muted-foreground"><span className="max-md:hidden">{lastReadWord(r, today)}</span><span className="md:hidden">{lastReadShort(r, today)}</span></span>
     </Link>
   )
 }
@@ -112,7 +122,7 @@ function StoreRow({ r, today, on, href }: { r: ApiShopRow; today: string; on: bo
 function StoreRecord({ r, today, listed }: { r: ApiShopRow; today: string; listed: number | null }) {
   const near = listed !== null && listed > 500
   return (
-    <Section title={<span className="flex min-w-0 flex-col"><span className="truncate">{r.name}</span><span className="truncate font-mono text-small font-normal text-muted-foreground">{r.siteHost ?? shopHost(r.slug)}</span></span>}
+    <Section className="max-lg:[&>div:first-child]:hidden" title={<span className="flex min-w-0 flex-col"><span className="truncate">{r.name}</span><span className="truncate font-mono text-small font-normal text-muted-foreground">{r.siteHost ?? shopHost(r.slug)}</span></span>}
       action={<span className="flex items-center gap-2"><StateChip r={r} today={today} /><MoreLinks label={`More for ${r.name}`} items={[{ label: `Open ${r.name} in Merchants`, href: `/admin/merchants/${r.tenantId}` }]} /></span>}>
       <dl className="grid grid-cols-[7rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
         <dt className="text-muted-foreground">Website</dt><dd className="font-mono text-small [overflow-wrap:anywhere]">{r.siteHost ? `https://${r.siteHost}` : '—'}</dd>

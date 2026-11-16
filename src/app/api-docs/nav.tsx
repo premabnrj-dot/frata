@@ -15,7 +15,7 @@ export function DocsNav({ groups, phone = false }: { groups: Group[]; phone?: bo
   return (
     <nav aria-label="Docs" className="grid gap-0.5 text-sm">
       {groups.map((g) => (
-        <div key={g.label} className="grid gap-0.5">
+        <div key={g.label} className="grid gap-0.5 [&+&]:mt-4">
           <p className="mx-2 mt-3 mb-1 text-[11px] font-semibold tracking-[.06em] text-muted-foreground uppercase first:mt-0">{g.label}</p>
           {g.items.map((i) => (
             <Link key={i.href} href={i.href} aria-current={path === i.href ? 'page' : undefined}

@@ -16,7 +16,7 @@ export default function DocsStart() {
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
         {STEPS.map(([t, s]) => <div key={t} className="grid gap-1 rounded-xl border border-border bg-card px-4 py-3.5"><b className="font-semibold">{t}</b><span className="text-small text-muted-foreground">{s}</span></div>)}
       </div>
-      <Blocks body={g.body.slice(0, 3)} />
+      <Blocks body={g.body} />
     </>
   )
 }

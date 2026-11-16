@@ -17,7 +17,6 @@ import { DesignForm } from '@/app/(lookeditor)/console/look/customize/design-for
 import type { FormCtx } from '@/app/(lookeditor)/console/look/customize/section-form'
 import type { LibraryPhoto } from '@/app/(lookeditor)/console/look/customize/controls'
 import { addPageAction, previewOnWebsiteAction, savePageAction, undoPageAction } from '../actions'
-import { CopyField } from '@/components/ui/copy-field'
 import { Eye, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import type { PreviewKey } from '@/lib/queries/storefront-api'
@@ -113,15 +112,18 @@ export function Pages({ pages, canSave, lock, ctx, templates, preview = null }: 
         {pv && preview ? <fieldset className="grid gap-2"><legend className="mb-2 text-label font-medium">Key your website uses</legend>
           {preview.keys.map((k) => (
             <label key={k.id} className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-0.5 rounded-md border border-field px-3 py-2.5 has-[:checked]:border-2 has-[:checked]:border-primary has-[:checked]:bg-select">
-              <input type="radio" name="preview-key" checked={pv.keyId === k.id} onChange={() => setPv({ ...pv, keyId: k.id })} className="mt-1 size-4 accent-[var(--action)]" />
+              <input type="radio" name="preview-key" checked={pv.keyId === k.id} onChange={() => setPv({ ...pv, keyId: k.id })} className="mt-0.5 size-4 shrink-0 appearance-none rounded-full border border-field bg-card checked:border-[5px] checked:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus" />
               <span className="font-medium">{k.name}</span>
               <span className="col-start-2 text-small text-muted-foreground"><span className="font-mono">{k.prefix}…</span>{k.used ? ` · ${k.used}` : ''}</span>
             </label>))}
         </fieldset> : null}
       </Dialog>
       <Dialog open={pv?.step === 'link'} onClose={close} title={pv ? `Preview of ${pv.page.draft.title}` : ''}
-        actions={<><Button variant="secondary" onClick={close}>Close</Button>{pv?.url ? <a href={pv.url} target="_blank" rel="noopener noreferrer" data-autofocus className={button()}><ExternalLink aria-hidden="true" className="size-4" />Open {pv.host}</a> : null}</>}>
-        {pv?.url ? <div className="grid gap-2"><CopyField value={pv.url} label="preview link" /><p className="text-small text-muted-foreground">The link works for 10 minutes.</p></div> : null}
+        actions={<><Button variant="secondary" onClick={close} className="max-md:hidden">Close</Button>{pv?.url ? <><CopyLink url={pv.url} className="md:hidden" /><a href={pv.url} target="_blank" rel="noopener noreferrer" data-autofocus className={button()}><ExternalLink aria-hidden="true" className="size-4 max-md:hidden" />Open {pv.host}</a></> : null}</>}>
+        {/* As drawn: the short address (the token stays out of sight), Copy link for a developer on their own computer. */}
+        {pv?.url ? <div className="grid gap-2"><div className="grid justify-items-start gap-1 rounded-md border border-border bg-sunk px-3 py-2.5">
+          <span className="w-full truncate font-mono text-small">{pv.host}/frrata-preview?…</span><CopyLink url={pv.url} ghost className="max-md:hidden" /></div>
+          <p className="text-small text-muted-foreground">The link works for 10 minutes.</p></div> : null}
       </Dialog>
       <Dialog open={pv?.step === 'refused'} onClose={close} title="Couldn’t open the preview" error={pv?.error ?? null}
         actions={<><Button variant="secondary" data-autofocus onClick={close}>Close</Button>{pv?.error?.includes('Settings › Website') ? <Link href="/console/settings/website" className={button()}>Open Settings › Website</Link> : null}</>}>
@@ -146,4 +148,12 @@ export function Pages({ pages, canSave, lock, ctx, templates, preview = null }: 
       </Dialog>
     </Section>
   )
+}
+
+/** Copy link (mockup § Preview 2): copies the whole link; says Copied for two seconds, to a screen reader too. */
+function CopyLink({ url, ghost = false, className }: { url: string; ghost?: boolean; className?: string }) {
+  const [done, setDone] = useState(false)
+  const copy = async () => { try { await navigator.clipboard.writeText(url); setDone(true); window.setTimeout(() => setDone(false), 2000) } catch { /* the clipboard refused: Open still works */ } }
+  return <><Button variant={ghost ? 'ghost' : 'secondary'} size={ghost ? 'sm' : undefined} onClick={copy} className={className}>{done ? '✓ Copied' : 'Copy link'}</Button>
+    <span role="status" className="sr-only">{done ? 'Copied' : ''}</span></>
 }
