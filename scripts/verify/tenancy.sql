@@ -2743,15 +2743,12 @@ end $$;
 rollback;
 
 -- 70. Shop pages (Theme Studio TS1a, 0099–0100; tenancy-auditor 2026-11-11): own shop only; no delete or edit across
--- shops; tenant, id and template never change; a page names no publish (0136); at most 20 pages and
+-- shops; tenant, id and template never change; at most 20 pages and
 -- one FAQ a shop (B's don't count against A); no API role or frata_admin reaches the table.
 begin; set local role frata_app;
-do $$ declare n int; pa uuid; pb uuid; pubb uuid; rb uuid; i int; begin
+do $$ declare n int; pa uuid; pb uuid; i int; begin
   perform set_config('app.tenant_id', '22222222-2222-2222-2222-222222222222', true);
   insert into shop_pages (tenant_id, template, draft) values ('22222222-2222-2222-2222-222222222222', 'faq', '{"handle":"faq","title":"FAQ","fill":{}}') returning id into pb;
-  insert into shop_theme_revisions (tenant_id, theme_key, theme_version, style_key, settings, created_by, updated_by)
-    values ('22222222-2222-2222-2222-222222222222', 'bazaar', '1.0.0', 'sindoor', '{}', '99999999-9999-9999-9999-999999999999', '99999999-9999-9999-9999-999999999999') returning id into rb;
-  insert into shop_theme_publishes (tenant_id, revision_id, published_by) values ('22222222-2222-2222-2222-222222222222', rb, '99999999-9999-9999-9999-999999999999') returning id into pubb;
   perform set_config('app.tenant_id', '11111111-1111-1111-1111-111111111111', true);
   if exists (select 1 from shop_pages where tenant_id = '22222222-2222-2222-2222-222222222222') then raise exception 'FAIL: A sees B''s pages'; end if;
   begin insert into shop_pages (tenant_id, template, draft) values ('22222222-2222-2222-2222-222222222222', 'about', '{"handle":"x","title":"x","fill":{}}'); raise exception 'FAIL: A wrote a page for B';

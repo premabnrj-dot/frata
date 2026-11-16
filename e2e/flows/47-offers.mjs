@@ -7,9 +7,10 @@
 // Guards: a discount the order does not record, a total that ignores the offer, a saving kept after a switch, a
 // code that leaks its existence, a console list that scrolls sideways on a phone. O·3: the 30-day strip. O·4: Admin
 // stops an offer with a reason; the shop's console says so and the bag loses it; the shop can only end it.
+// Covers checkout-offers.tsx, bag-quote.tsx, bag-contents.tsx and chunk.ts (a step cuts the offers' chunk).
 // =============================================================================
 import assert from 'node:assert/strict'
-import { CONSOLE, FAKE_CHECKOUT, SHOP, USERS, expectToast, partnerOn, playwright, signedIn, until } from '../lib.mjs'
+import { CONSOLE, FAKE_CHECKOUT, SHOP, USERS, expectToast, laterChunks, partnerOn, playwright, signedIn, until } from '../lib.mjs'
 const { devices } = playwright
 
 // The offer form folds what the board did not draw ("Limits and more", N2b): open it before ticking what is in it.
@@ -107,6 +108,33 @@ export default {
         assert.equal(ls.reduce((a, l) => a + Number(l.line_discount), 0), order, 'the lines carry the discount')
         assert.deepEqual((await db`select class, amount from order_discounts where order_id = ${o.id}`).map((r) => [r.class, Number(r.amount)]), [['order', order]])
         await c.goto(CONSOLE + `/console/orders/${o.number}`); await c.getByText('Offer · Festive').waitFor()
+      })
+      await t.step('the offers chunk unreachable: the totals still name the saving and the order is placed at its price; the next price brings the list back', async () => {
+        // Checkout's offers and code line load in their own chunk (checkout-offers.tsx: its code field's id marks it).
+        const offersChunk = laterChunks('offer-code', '/s/[host]/(checkout)/checkout/page')
+        const cut = (r) => r.abort()
+        await p.route(offersChunk, cut)
+        try {
+          await toBag(); await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout$/); await fill()
+          await p.fill('#phone', '98290 43219') // its own phone: the flow's other orders use the hour's five a phone may place
+          await p.getByText('Pay on delivery', { exact: true }).click()
+          await p.getByText('−₹249').waitFor() // the totals' offer line, drawn by the page itself
+          assert.equal(await p.getByText('Festive', { exact: true }).count(), 1, 'Festive named once, in the totals')
+          assert.equal(await p.getByRole('list', { name: 'Offers for this bag' }).count(), 0, 'no offers list without its chunk')
+          await p.getByRole('button', { name: new RegExp(`Place order · ${inr(cod).replace(/[₹,]/g, (m) => '\\' + m)}`) }).click()
+          await p.waitForURL(/\/orders(#t=|$)/); await p.getByText(`Keep ${inr(cod)} ready`).waitFor()
+          const o = await lastOrder()
+          assert.equal(Number(o.total), cod); assert.equal(Number(o.discount), order)
+          // Again with the chunk still cut, then let through: the next price (the PIN code typed) brings the list.
+          await toBag(); await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout$/)
+          await p.getByText('−₹249').waitFor()
+          await p.unroute(offersChunk, cut)
+          await fill()
+          await p.getByRole('list', { name: 'Offers for this bag' }).getByText('Festive').waitFor()
+          await p.getByRole('button', { name: 'Have a code?' }).waitFor()
+        } finally {
+          await p.unroute(offersChunk, cut)
+        }
       })
       await t.step('paid online: both offers recorded, the total Razorpay was asked for', async () => {
         await toBag(); await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout$/); await fill()

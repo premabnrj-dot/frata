@@ -12,6 +12,7 @@ import { fitKey, shownQuote } from '@/domains/checkout/fitted'
 import { api, dayRange, inr, type Pay, type PublicQuote } from './shop-client'
 import { PayBar, useQuoteToast } from './checkout-feedback'
 import { useStoreToast } from './store-toast'
+import { chunk } from './chunk'
 
 // =============================================================================
 // ONE-PAGE CHECKOUT (checkout spec § Design, mockup approved 2026-11-07).
@@ -34,9 +35,10 @@ const CheckoutBiz = lazy(() => import('./checkout-biz'))
 const summary = () => import('./checkout-summary').catch(() => ({ default: () => null }))
 const CheckoutSummary = lazy(summary)
 // And the offers and the code line (checkout-offers.tsx): they show once the bag is priced, and the chunk is asked for on
-// mount (it draws nothing until then), so it is in by then. One that cannot load leaves them out; the totals still carry
-// every offer the server applied.
-const CheckoutOffers = lazy(() => import('./checkout-offers').catch(() => ({ default: () => null })))
+// mount, so it is in by then. One that cannot load leaves them out and is asked for again with the next price; the
+// totals still carry every offer the server applied.
+type Offers = typeof import('./checkout-offers').default
+const loadOffers = chunk(() => import('./checkout-offers').then((m) => m.default))
 
 export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = { deliversWithin: null, b2b: false }, waOptIn = false, identity }: { shopName: string; legalName: string; privacyHref: string; returnLine: string | null
   /** GST (plan 2026-11-09-gst-core-and-categories): a shop without a regular GSTIN delivers within its state; business buyers may ask for a GST invoice. */
@@ -75,6 +77,13 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   const attempt = useRef<{ sig: string; key: string } | null>(null)
   useQuoteToast(toast, q ? quoteError : null, refresh)
   useEffect(() => { const t = setTimeout(() => void summary().catch(() => {}), 3000); return () => clearTimeout(t) }, [])
+  const [Offers, setOffers] = useState<{ C: Offers } | null>(null)
+  useEffect(() => {
+    if (Offers) return
+    let live = true
+    void loadOffers().then((C) => { if (live) setOffers({ C }) }, () => {})
+    return () => { live = false }
+  }, [Offers, q])
 
   // Restore what was typed (this tab only); a pending online order goes to its own page. It never did (the key was
   // written and never read): a reload in Instagram's browser after the switch to the UPI app, or Back then Forward,
@@ -303,7 +312,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
         </Suspense>
       ) : null}
 
-      <Suspense fallback={null}><CheckoutOffers q={q} code={code} typing={typing} setTyping={setTyping} draftCode={draftCode} setDraftCode={setDraftCode} field={field} sect={sect} /></Suspense>
+      {Offers ? <Offers.C q={q} code={code} typing={typing} setTyping={setTyping} draftCode={draftCode} setDraftCode={setDraftCode} field={field} sect={sect} /> : null}
 
       {waOptIn ? (
         <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 text-sm">

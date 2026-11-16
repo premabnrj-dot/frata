@@ -1,5 +1,7 @@
 'use client'
 
+import { NO_CONNECTION } from './bag-words'
+
 // The browser's calls to its own shop's API (same origin; the server takes the shop from the Host).
 export type PublicQuoteLine = {
   variantId: string; handle: string; title: string; options: string[]; values: string[]; image: { base: string; widths: number[] } | null
@@ -27,7 +29,7 @@ export async function api<T>(path: string, body: unknown): Promise<{ ok: true; s
     const data = await r.json().catch(() => ({}))
     return r.ok ? { ok: true, status: r.status, data: data as T } : { ok: false, status: r.status, data }
   } catch {
-    return { ok: false, status: 0, data: { error: 'No connection. Check your internet and try again.' } }
+    return { ok: false, status: 0, data: { error: NO_CONNECTION } }
   }
 }
 
@@ -51,6 +53,6 @@ export async function downloadInvoice(ref: OrderRef): Promise<{ ok: true } | { o
     setTimeout(() => URL.revokeObjectURL(url), 10_000)
     return { ok: true }
   } catch {
-    return { ok: false, error: 'No connection. Check your internet and try again.' }
+    return { ok: false, error: NO_CONNECTION }
   }
 }

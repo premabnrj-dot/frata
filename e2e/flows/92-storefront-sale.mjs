@@ -5,6 +5,7 @@
 // the store's product page moves the shopper to the site with the link's tags, the bag stays; a hidden page previews
 // on the site under a token and nowhere else; the Accept screen lists a partner's keys; Frrata Admin sees the store;
 // the starter builds and reads the store through the API host. Phone widths. Puts everything back.
+// Covers cart-link.tsx, capture-attribution.ts, landing.ts, bag-store.ts and bag-quote.tsx (the bag link's capture and bag).
 // =============================================================================
 import assert from 'node:assert/strict'
 import http from 'node:http'
