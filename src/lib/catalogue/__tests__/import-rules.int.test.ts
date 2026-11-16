@@ -157,7 +157,7 @@ describe.skipIf(!host)('importing a file: the harder edges', () => {
       const { saveProduct } = await import('@/app/(console)/console/products/actions')
       const cell = (values: string[], sku = '') => ({ values, price: '1299', compareAt: '', cost: '', stock: '1', sku, gtin: '' })
       expect(await saveProduct(mine!.id, 1, { title: 'Int mine', description: '', typeId: null, modelHeight: '', modelSize: '', handle: 'mine',
-        options: [{ name: 'Size', values: ['M', 'L'] }], variants: [cell(['M']), cell(['L'], 'RACE-1')] })).toEqual({ ok: false, error: 'A SKU is already used by another product in your store.' })
+        options: [{ name: 'Size', values: ['M', 'L'] }], variants: [cell(['M']), cell(['L'], 'RACE-1')] })).toEqual({ ok: false, error: 'Another product in your store already uses that SKU.' })
     } finally {
       await su!.unsafe(`drop trigger int_race_${t.replace(/-/g, '')} on variants`)
       await su!.unsafe(`drop function int_race_${t.replace(/-/g, '')}()`)

@@ -1,16 +1,21 @@
-// The risk facts query (src/lib/queries/order-risk.ts) on a real Postgres, tenant A of the proof, then the rules.
-// Skipped unless INT_DB_HOST is set (CI). It commits rows under a random phone so runs do not meet.
+// The risk facts query (src/lib/queries/order-risk.ts) on a real Postgres, then the rules. Skipped unless INT_DB_HOST
+// is set (CI). Its own throwaway shop: the shop's median COD order is read over all its orders, and the other int test
+// files place orders in proof shop A at the same time, so on A the first order's "usual order" was whatever they left
+// (CI, 2026-11-16: Medium, "over twice your usual"). Shop B of the proof is the other shop; rows there carry a random phone.
 import { describe, expect, it } from 'vitest'
 
 const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
 const pass = process.env.INT_DB_PASSWORD ?? 'x'
-const A = '11111111-1111-1111-1111-111111111111'
 const B = '22222222-2222-2222-2222-222222222222'
 
 describe.skipIf(!host)('risk facts', () => {
   it('counts per phone against each order’s own time: duplicate, today, fake, first order; another shop never counts', async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
+    const { default: postgres } = await import('postgres')
+    const su = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    const [{ id: A }] = await su<[{ id: string }]>`insert into tenants (slug, name) values (${'int-risk-' + Date.now()}, 'Int risk') returning id`
+    await su.end()
     const { withTenant } = await import('@/lib/db/tenant')
     const { orders, orderLines } = await import('@/lib/db/schema-orders')
     const { riskFactsFor } = await import('@/lib/queries/order-risk')
