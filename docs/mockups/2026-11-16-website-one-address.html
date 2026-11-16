@@ -1,0 +1,1046 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Website on one address</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Mukta:wght@400;600&family=Tiro+Devanagari+Hindi&display=swap">
+<style>
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --rani:#D61F69;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62; --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B; --info-bg:#E8F1FD; --info-fg:#1F5BA8; --info-dot:#3B82E0;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --hover:var(--g50); --sunk:var(--g50); --doc:var(--g50);
+  --line:var(--g200); --line-soft:var(--g100); --field:var(--g500);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --bar:var(--g950); --bar-text:#fff; --bar-link:#A3ABF5; --bezel:#171615;
+  --store-bg:#F7F1EA; --store-ink:#2A1D14; --store-sub:#6E5A4B; --store-btn:#2A1D14; --store-on-btn:#F7F1EA;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --doc:#0E0D0C;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; --bezel:#000; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --doc:#0E0D0C;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; --bezel:#000; color-scheme:dark }
+* { box-sizing:border-box }
+html { scroll-padding-top:12px }
+body { background:var(--doc); color:var(--text); font:400 14px/20px var(--font); margin:0;
+  padding:0 max(16px, env(safe-area-inset-right, 0px)) 72px max(16px, env(safe-area-inset-left, 0px)) }
+h1,h2,h3 { margin:0; text-wrap:balance }
+p { margin:0 }
+button { font:inherit; color:inherit }
+a { color:inherit }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+.mono { font-family:var(--mono); font-size:12.5px }
+.num { font-variant-numeric:tabular-nums }
+
+/* ── The reference page ─────────────────────────────────────────────────────────────────────────────── */
+.doc { max-width:1720px; margin:0 auto }
+.doc-top { padding:28px 0 10px }
+.doc-top h1 { font:600 26px/32px var(--font); letter-spacing:-.01em }
+.doc-top p { color:var(--text-2); margin-top:6px; max-width:90ch }
+.toc { display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 0 }
+.toc a { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12.5px; text-decoration:none; background:var(--surface) }
+.part { margin-top:48px; scroll-margin-top:12px }
+.part > h2 { font:600 18px/24px var(--font) }
+.part > .cap { color:var(--text-2); font-size:13px; margin:4px 0 16px; max-width:100ch }
+.pair { display:grid; grid-template-columns:390px minmax(0,1fr); gap:32px; align-items:start }
+.pair > * { min-width:0 }
+.lbl { font-size:12px; color:var(--text-3); margin:0 0 8px; font-weight:500 }
+@media (max-width:1100px) { .pair { grid-template-columns:minmax(0,1fr) } }
+
+/* ── Neel primitives ────────────────────────────────────────────────────────────────────────────────── */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-weight:500; font-size:14px; box-shadow:var(--e1); cursor:pointer; white-space:nowrap }
+.btn.sm { min-height:30px; padding:0 10px; font-size:13px }
+.btn[aria-disabled="true"] { opacity:.45; cursor:not-allowed }
+.off { display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px 10px; justify-content:flex-end }
+.off .why { font-size:13px; color:var(--text-2) }
+.chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font-size:12px; line-height:16px; font-weight:500; white-space:nowrap }
+.chip::before { content:""; width:6px; height:6px; border-radius:50%; flex:none }
+.chip.neu { background:var(--neu-bg); color:var(--neu-fg) } .chip.neu::before { background:var(--neu-dot) }
+.chip.ok { background:var(--ok-bg); color:var(--ok-fg) } .chip.ok::before { background:var(--ok-dot) }
+.chip.warn { background:var(--warn-bg); color:var(--warn-fg) } .chip.warn::before { background:var(--warn-dot) }
+.chip.info { background:var(--info-bg); color:var(--info-fg) } .chip.info::before { background:var(--info-dot) }
+.chip.wrap { white-space:normal }
+.tip { display:inline-grid; place-items:center; width:24px; height:24px; border:0; background:none; color:var(--text-3); cursor:pointer; vertical-align:middle; padding:0 }
+.tip svg { width:14px; height:14px }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 20px 20px; display:flex; flex-direction:column; gap:16px }
+.card.flush { padding:0; gap:0; overflow:hidden }
+.card h2 { font:600 16px/24px var(--font); display:flex; align-items:center }
+.ch { display:grid; grid-template-columns:auto minmax(0,1fr) auto; grid-template-areas:"h c b"; align-items:center; gap:6px 10px }
+.ch h2 { grid-area:h } .ch > .chip { grid-area:c; justify-self:start } .ch > .off { grid-area:b }
+.hint { font-size:14px; color:var(--text-2); margin-top:-8px }
+.facts { display:grid; grid-template-columns:180px minmax(0,1fr); gap:8px 12px; margin:0; font-size:14px }
+.facts dt { color:var(--text-2) } .facts dt .tip { margin:-2px 0 }
+.facts dd { margin:0; min-width:0; overflow-wrap:anywhere }
+.facts dd small { display:block; color:var(--text-2); font-size:13px }
+.grid3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px }
+.grid2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+.hair { border-top:1px solid var(--line-soft); padding-top:16px }
+.f { display:flex; flex-direction:column; gap:6px; min-width:0 }
+.f > label, .f > .l { font-size:13px; font-weight:500; display:block }
+.f .tip { margin:-4px 0 }
+.f .opt { font-weight:400; color:var(--text-2); margin-left:4px }
+.f .wide { grid-column:1 / -1 }
+.in { height:36px; border:1px solid var(--field); border-radius:8px; padding:0 10px; font:inherit; font-size:14px; background:var(--surface); color:var(--text); width:100%; min-width:0 }
+textarea.in { height:auto; padding:8px 10px; resize:none }
+.pfx { display:flex; align-items:center; gap:6px } .pfx span { color:var(--text-2) }
+.radios { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px }
+.rc { display:flex; gap:10px; align-items:flex-start; text-align:left; border:1px solid var(--line); border-radius:12px; padding:12px; background:var(--surface); cursor:pointer }
+.rc i { width:16px; height:16px; border-radius:50%; border:2px solid var(--field); flex:none; margin-top:2px }
+.rc[aria-checked="true"] { border-color:var(--text); box-shadow:inset 0 0 0 1px var(--text) } .rc[aria-checked="true"] i { border:5px solid var(--text) }
+.rc b { display:block; font-weight:500 } .rc small { display:block; font-size:12px; color:var(--text-2) }
+.seg { display:inline-flex; flex-wrap:wrap; gap:2px; background:var(--sunk); border-radius:10px; padding:2px; max-width:100% }
+.seg button { border:0; background:transparent; color:var(--text-2); min-height:32px; padding:0 12px; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer }
+.seg button[aria-checked="true"] { background:var(--surface); color:var(--text); box-shadow:var(--e1) }
+.swr { display:flex; justify-content:space-between; align-items:center; gap:12px }
+.swr span { font-weight:500; display:flex; align-items:center }
+.sw { width:34px; height:20px; border-radius:999px; background:var(--g300); position:relative; flex:none; border:0; padding:0 }
+.sw::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:var(--e1) }
+.sw[aria-checked="true"] { background:var(--action) } .sw[aria-checked="true"]::after { left:16px }
+
+/* The five pages (policy-pages.tsx), read only */
+.pp-h { padding:16px 20px 4px }
+.pp-row { border-top:1px solid var(--line); padding:12px 20px; display:flex; flex-wrap:wrap; align-items:center; gap:8px }
+.pp-row.sel { background:var(--hover) }
+.pp-row > button { border:0; background:none; padding:0; font-weight:500; cursor:pointer; min-height:24px }
+.pp-row .need { flex-basis:100%; font-size:12px; color:var(--warn-fg) }
+
+/* The store preview beside the form (shop-preview/previews.tsx Frame) */
+.pv { border:1px solid var(--line); border-radius:8px; overflow:hidden }
+.pv figcaption { display:flex; justify-content:space-between; gap:8px; border-bottom:1px solid var(--line); background:var(--surface); padding:6px 12px; font-size:12px; color:var(--text-2) }
+.pv figcaption > span:last-child { white-space:nowrap }
+.pv figcaption .mono { font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0 }
+.pv .shop { background:var(--store-bg); color:var(--store-ink); padding:16px; font-size:13px; line-height:1.6; display:grid; gap:10px }
+.pv .shop b.t { font:500 18px/1.3 Georgia,'Times New Roman',serif }
+.pv .shop .wa { justify-self:start; background:var(--store-btn); color:var(--store-on-btn); border-radius:4px; padding:6px 12px; font:500 12px var(--font) }
+.pv .inv { background:#fff; color:#2A1D14; padding:16px; font-size:13px; display:grid; gap:8px }
+.pv .inv .sub { color:#6E5A4B; font-size:12px }
+.pv .inv .foot { display:flex; justify-content:space-between; gap:12px; border-top:1px solid #E2D3C2; padding-top:8px; font-size:12px }
+.pv-tabs { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px }
+.pv-tabs button { border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:12px; background:var(--surface); cursor:pointer }
+.pv-tabs button[aria-selected="true"] { background:var(--action); border-color:var(--action); color:var(--action-text) }
+
+/* Toasts and the save bar (ui/toast.tsx, ui/unsaved.tsx) */
+.toast { background:var(--bar); color:var(--bar-text); border-radius:10px; box-shadow:var(--e3); padding:10px 8px 10px 14px; display:flex; align-items:center; gap:12px; font-weight:500; max-width:448px }
+.toast.err { box-shadow:var(--e3), 0 0 0 1px rgba(220,59,59,.6) }
+.toast .mk { width:22px; height:22px; border-radius:50%; display:grid; place-items:center; flex:none; color:#fff }
+.toast .mk.ok { background:var(--ok-dot) } .toast .mk.bad { background:var(--bad-dot) }
+.toast .w { flex:1; min-width:0 } .toast .w small { display:block; font-size:12px; font-weight:400; opacity:.8 }
+.toast .act { border:0; background:none; color:var(--bar-link); font-weight:500; min-height:36px; padding:0 8px; cursor:pointer }
+.toast .x { border:0; background:none; color:inherit; opacity:.8; width:36px; height:36px; display:grid; place-items:center; cursor:pointer; flex:none }
+.savebar { background:var(--bar); color:var(--bar-text); border-radius:12px; box-shadow:var(--e3); padding:10px 10px 10px 16px; display:flex; align-items:center; gap:12px }
+.savebar b { font-weight:500; flex:1 }
+.savebar button { border-radius:8px; min-height:30px; padding:0 10px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:6px }
+.savebar .dis { background:transparent; color:var(--bar-text); border:1px solid rgba(255,255,255,.35) }
+.savebar .sv { background:#fff; color:var(--g950); border:0 }
+.savebar kbd { font:500 11px var(--font); background:rgba(23,22,21,.1); border-radius:4px; padding:3px 5px }
+
+/* ── Desktop console frame, drawn at 1280 and scaled to the column ──────────────────────────────────── */
+.dk { position:relative; width:100%; overflow:hidden; border:1px solid var(--line); border-radius:12px; box-shadow:var(--e2); background:var(--page) }
+.dk-in { width:1280px; transform-origin:0 0; display:grid; grid-template-columns:232px minmax(0,1fr); min-height:820px; position:relative; background:var(--page) }
+.sb { background:var(--side); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:2px }
+.sb .store { display:flex; gap:10px; align-items:center; padding:6px 8px 10px }
+.mono-mark { width:28px; height:28px; border-radius:8px; background:#171615; color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px; flex:none }
+.sb .store > span:last-child { min-width:0 }
+.sb .store b { display:block; font-size:14px; font-weight:600 } .sb .store .mono { display:block; font-size:11px; color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.sb .ov { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); margin:14px 8px 4px }
+.nav { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; color:var(--text-2); font-size:14px; text-decoration:none; border:1px solid transparent }
+.nav svg { width:18px; height:18px; flex:none }
+.nav .pill { margin-left:auto; background:var(--warn-bg); color:var(--warn-fg); border-radius:999px; font-size:12px; padding:0 7px; font-weight:500 }
+.nav.on { background:var(--surface); color:var(--text); box-shadow:var(--e1); border-color:var(--line); font-weight:500 }
+.nav.on svg { color:var(--action) }
+.sb .sp { flex:1 }
+.acct { display:flex; gap:10px; align-items:center; padding:10px 8px 4px; border-top:1px solid var(--line); margin-top:8px }
+.av { width:28px; height:28px; border-radius:50%; background:var(--n50); color:var(--n700); display:grid; place-items:center; font-weight:600; font-size:12px; flex:none }
+.acct b { display:block; font-size:13px; font-weight:500 } .acct span { font-size:12px; color:var(--text-2) }
+.main { padding:28px 32px 96px; min-width:0; position:relative }
+.crumb { display:flex; gap:4px; list-style:none; margin:0 0 6px; padding:0; font-size:13px; font-weight:500; color:var(--text-2) }
+.crumb a { text-decoration:none }
+.ttl { display:flex; align-items:flex-start; gap:16px }
+.ttl .tw { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; flex:1; min-width:0 }
+.ttl h1 { font:600 22px/28px var(--font) }
+.vt { display:flex; gap:20px; border-bottom:1px solid var(--line); margin:16px 0 0; overflow-x:auto; scrollbar-width:none }
+.vt a { display:inline-flex; align-items:center; min-height:40px; border-bottom:2px solid transparent; margin-bottom:-1px; font-size:14px; font-weight:500; color:var(--text-2); text-decoration:none; white-space:nowrap }
+.vt a[aria-current="page"] { color:var(--text); border-bottom-color:var(--action) }
+.cols { display:grid; grid-template-columns:minmax(0,640px) 320px; gap:24px; align-items:start; margin-top:16px }
+.fcol { display:flex; flex-direction:column; gap:16px; min-width:0 }
+.dk .toast { position:absolute; left:50%; transform:translateX(-50%); bottom:24px; width:448px; z-index:5 }
+.dk .toast.lift { bottom:84px }
+.dk .savebar { position:absolute; left:264px; width:640px; bottom:20px; z-index:4 }
+
+/* Notices (console/notices/page.tsx) */
+.nl { list-style:none; margin:0; padding:0 }
+.nl li { display:flex; gap:12px; padding:12px 16px; border-top:1px solid var(--line) }
+.nl li:first-child { border-top:0 }
+.nl .dot { width:8px; height:8px; border-radius:50%; margin-top:6px; flex:none; border:1px solid var(--field) }
+.nl .dot.new { background:var(--rani); border-color:var(--rani) }
+.nl .t { min-width:0; flex:1 }
+.nl .t p.b { font-weight:600 }
+.nl .t p.s { font-size:14px; color:var(--text-2) }
+.nl .m { margin-top:4px; display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:var(--text-2) }
+.nl .m a { text-decoration:underline; text-underline-offset:4px; display:inline-flex; min-height:24px; align-items:center }
+.link { font-size:14px; text-decoration:underline; text-underline-offset:4px }
+
+/* ── Phone frame ─────────────────────────────────────────────────────────────────────────────────────── */
+.phone { width:390px; max-width:100%; border-radius:28px; padding:8px; background:var(--bezel); box-shadow:var(--e2) }
+.scr { border-radius:22px; overflow:hidden; background:var(--page); height:800px; display:flex; flex-direction:column; position:relative; font-size:15px; line-height:22px }
+.p-main { flex:1; overflow:hidden; padding:12px 16px 16px; display:flex; flex-direction:column; gap:12px; min-width:0 }
+.p-main > * { flex-shrink:0 }
+.back { display:inline-flex; align-items:center; min-height:24px; color:var(--text-2); font-size:14px; text-decoration:none; align-self:flex-start }
+.p-head { display:flex; flex-direction:column; align-items:flex-start; gap:10px }
+.p-head .tw { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px }
+.p-head h1 { font:600 20px/26px var(--font) }
+.scr .btn { min-height:44px }
+.scr .btn.sm { min-height:30px }
+.scr .vt { margin:0 -16px; padding:0 16px; gap:20px }
+.scr .vt a { min-height:44px }
+.scr .card { padding:16px; gap:14px }
+.scr .card.flush { padding:0; gap:0 }
+.scr .pp-h { padding:16px 16px 4px } .scr .pp-row { padding:12px 16px }
+.scr .facts { grid-template-columns:120px minmax(0,1fr); font-size:14px }
+.scr .in { height:44px; font-size:15px }
+.scr textarea.in { height:auto }
+.scr .grid3, .scr .grid2, .scr .radios { grid-template-columns:minmax(0,1fr) }
+.scr .hint { font-size:14px }
+.scr .ch { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"h b" "c c" }
+.scr .ch .off { flex-direction:column; align-items:flex-end; gap:2px }
+.bottom { border-top:1px solid var(--line); background:var(--side); display:grid; grid-template-columns:repeat(4,1fr); text-align:center; font-size:11px; color:var(--text-2); flex:none }
+.bottom div { min-height:56px; padding:8px 0; display:grid; gap:2px; justify-items:center; align-content:center }
+.bottom svg { width:22px; height:22px }
+.bottom .on { color:var(--action); font-weight:500 }
+.scr .toast { position:absolute; left:12px; right:12px; bottom:72px; max-width:none; z-index:5 }
+.scr .toast.lift { bottom:142px }
+.scr .savebar { position:absolute; left:12px; right:12px; bottom:68px; z-index:4 }
+.scr .nl li { padding:12px 0 }
+
+/* Small crops for states */
+.crops { display:grid; grid-template-columns:358px minmax(0,1fr); gap:32px; align-items:start }
+.crops > * { min-width:0 }
+.crop { background:var(--page); border:1px solid var(--line); border-radius:12px; padding:16px; box-shadow:var(--e1) }
+@media (max-width:1100px) { .crops { grid-template-columns:minmax(0,1fr) } }
+
+/* Words and roles tables */
+.tbl { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:12px; overflow:hidden; font-size:13px }
+.tbl th, .tbl td { text-align:left; padding:10px 12px; border-top:1px solid var(--line-soft); vertical-align:top }
+.tbl th { background:var(--sunk); font-weight:500; color:var(--text-2); border-top:0 }
+.tbl td:first-child { width:28%; color:var(--text-2) }
+@media (max-width:700px) {
+  .tbl, .tbl tbody, .tbl tr, .tbl td { display:block; width:auto }
+  .tbl thead { display:none }
+  .tbl tr { border-top:1px solid var(--line) } .tbl tr:first-child { border-top:0 }
+  .tbl td { border-top:0; padding:6px 12px } .tbl td:first-child { width:auto; padding-top:10px }
+}
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important } }
+
+/* ── Added for the 2026-11-16 mockups (same tokens as PP1) ─────────────────────────────────────────── */
+.doc-top .meta { font-size:13px; color:var(--text-3); margin-top:4px }
+.intro { display:grid; gap:12px; margin-top:12px }
+.short { list-style:none; margin:0; padding:0; display:grid; gap:8px; max-width:110ch }
+.short li { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 14px }
+.short li b { font-weight:600 }
+.take { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px }
+.take .tk { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px; display:grid; gap:6px; align-content:start; font-size:13px }
+.take .tk b { font-size:14px }
+.take .tk .src { color:var(--text-3); font-size:12px }
+.take .tk .t { color:var(--ok-fg) } .take .tk .s { color:var(--bad-fg) }
+.steps-l { margin:8px 0 0; padding-left:20px; font-size:13px; color:var(--text-2); max-width:100ch }
+.steps-l li { margin:2px 0 }
+.stl { font-size:12px; color:var(--text-3); margin:10px 0 0 } .stl b { color:var(--text-2); font-weight:500 }
+.tbl td.code { font-family:var(--mono); font-size:12px }
+
+/* Built toast (ui/toast.tsx in Neel): ok is the bar with words only; an error is the bad tint, its buttons underlined */
+.toast .mk { display:none }
+.toast.err { background:var(--bad-bg); color:var(--bad-fg); box-shadow:var(--e2) }
+.toast.err .act, .toast.err .x { color:inherit } .toast.err .act { text-decoration:underline; text-underline-offset:3px }
+.toast .undo-line { position:absolute; left:0; right:0; bottom:0; height:2px; background:currentColor; opacity:.6 }
+.toast { position:relative; overflow:hidden }
+.dk .toast, .scr .toast { position:absolute }
+
+/* Rows and records */
+.rows { list-style:none; margin:0; padding:0 }
+.rows > li { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 12px; padding:10px 20px; border-top:1px solid var(--line-soft) }
+.rows > li:first-child { border-top:0 }
+.rows .host { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; min-width:0; font-family:var(--mono); font-size:13px; overflow-wrap:anywhere }
+.rows .acts { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end }
+.rows .sub { grid-column:1 / -1; font-size:13px; color:var(--text-2) }
+.rows li.rec { padding-left:36px; background:var(--g25) }
+.rows li.rec .host { font-size:12.5px }
+.rows li.rec .host .ty { color:var(--text-3); font-weight:600 }
+.ghost { display:inline-flex; align-items:center; min-height:30px; padding:0 8px; border-radius:8px; border:0; background:none; color:var(--text-2); font-size:13px; font-weight:500; cursor:pointer; text-decoration:none }
+.btn.primary { background:var(--action); border-color:var(--action); color:var(--action-text); box-shadow:none }
+.btn.danger { color:var(--bad-fg) }
+.btn.destr { background:var(--bad-dot); border-color:var(--bad-dot); color:#fff; box-shadow:none }
+.chip.bad { background:var(--bad-bg); color:var(--bad-fg) } .chip.bad::before { background:var(--bad-dot) }
+.tag { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:6px; padding:0 7px; font-size:12px; line-height:18px; color:var(--text-2); background:var(--surface); font-family:var(--font) }
+.keys { list-style:none; margin:0; padding:0 }
+.keys li { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 12px; padding:12px 0; border-top:1px solid var(--line-soft) }
+.keys li:first-child { border-top:0; padding-top:0 }
+.keys .nm { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; font-weight:500 }
+.keys .ln { grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:4px 12px; font-size:13px; color:var(--text-2) }
+.keys .ln .mono { font-size:12px }
+.keys li.off { color:var(--text-2) }
+.dev { display:flex; justify-content:space-between; align-items:center; gap:8px; padding-bottom:8px; border-bottom:1px solid var(--line-soft) }
+.dev:last-child { border-bottom:0; padding-bottom:0 }
+.dev .mono { color:var(--text-2); font-size:12px }
+.scr .dev .mono, .scr .hide-p { display:none }
+.ph-only { display:none } .scr .ph-only { display:inline } .scr .dk-only { display:none }
+
+/* Dialog (Dialog primitive: 16 px, e3; a sheet on a phone) */
+.veil { position:absolute; inset:0; background:rgba(23,22,21,.36); z-index:6; display:grid; place-items:center }
+.dlg { background:var(--surface); border-radius:16px; box-shadow:var(--e3); width:480px; max-width:calc(100% - 32px); padding:20px; display:grid; gap:14px }
+.dlg h3 { font:600 18px/24px var(--font) }
+.dlg .ft { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap }
+.dlg .err-slot { background:var(--bad-bg); color:var(--bad-fg); border-radius:10px; padding:8px 12px; font-size:13px }
+.scr .veil { place-items:end stretch }
+.scr .dlg { width:auto; max-width:none; border-radius:16px 16px 0 0; padding:20px 16px 24px }
+.scr .dlg .ft { flex-direction:column-reverse } .scr .dlg .ft .btn { width:100% }
+.dots { display:flex; gap:6px } .dots i { width:24px; height:2px; border-radius:2px; background:var(--line) } .dots i.on { background:var(--text) }
+.prog { height:4px; border-radius:999px; background:var(--g100); overflow:hidden } .prog i { display:block; height:100%; background:var(--text); width:60% }
+.spin { width:14px; height:14px; border-radius:50%; border:2px solid var(--g300); border-top-color:var(--action); display:inline-block; flex:none; animation:spin .9s linear infinite }
+@keyframes spin { to { transform:rotate(360deg) } }
+.done-i { width:14px; height:14px; border-radius:50%; background:var(--ok-dot); display:inline-grid; place-items:center; color:#fff; flex:none }
+.wait-i { width:14px; height:14px; border-radius:50%; border:2px solid var(--g300); display:inline-block; flex:none }
+.stepl { list-style:none; margin:0; padding:0; display:grid; gap:8px }
+.stepl li { display:flex; gap:10px; align-items:center; font-size:14px }
+.stepl li .mono { color:var(--text-2) }
+
+/* Partner workspace tag */
+.ptag { font-size:10.5px; font-weight:600; letter-spacing:.08em; color:var(--n700); background:var(--n50); border-radius:4px; padding:1px 5px; margin-left:6px }
+.pagetitle { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px }
+
+/* Crops grid with labels for states */
+.crops3 { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:20px; align-items:start }
+.crops3 > * { min-width:0 }
+.scr .facts dd .link, .facts dd .link { font-size:13px }
+.facts dd .ln2 { display:block; color:var(--text-2); font-size:13px }
+.rsn { font-size:13px; color:var(--bad-fg) }
+.card, .crop > * { min-width:0 }
+a.btn { text-decoration:none }
+.cap .mono, .short .mono, p .mono { overflow-wrap:anywhere }
+@media (max-width:700px) {
+  .radios.two { grid-template-columns:minmax(0,1fr) }
+  .swr { flex-wrap:wrap }
+  .crop .facts, .crops3 .facts { grid-template-columns:110px minmax(0,1fr) }
+  .crop .ch { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"h b" "c c" }
+  .rows > li { padding-left:12px; padding-right:12px } .rows li.rec { padding-left:24px }
+  .dlg .ft { flex-direction:column-reverse } .dlg .ft .btn { width:100% }
+}
+
+/* V2a + P5: Settings › Website on one address; the partner's New website; the brand's accept; we'll be back */
+.radios.two { grid-template-columns:repeat(2,minmax(0,1fr)) }
+.main.narrow .fcol { max-width:860px }
+.pw-tabs { margin-top:12px }
+
+/* House of Ayuda's look (mokobara/docs/design/house-of-ayuda-design-system.md § 2–3), for the shopper's page only */
+.ha { --paper:#FBF7F1; --sand:#F2EADF; --sand2:#E8DCCB; --ink:#221A14; --muted:#665A4E; --stone:#9A8B7A; --hl:#DDD0BE; --sindoor:#8C1D2C;
+  background:var(--paper); color:var(--ink); font:400 16px/26px 'Mukta',system-ui,sans-serif; display:flex; flex-direction:column; min-height:100% }
+.ha .hdr { display:flex; align-items:center; justify-content:space-between; padding:0 16px; height:56px; border-bottom:1px solid var(--hl) }
+.ha .hdr .ib { width:44px; height:44px; display:grid; place-items:center; position:relative; color:var(--ink) }
+.ha .hdr .ib svg { width:24px; height:24px }
+.ha .hdr .cnt { position:absolute; top:6px; right:4px; background:var(--ink); color:var(--paper); border-radius:999px; font-size:11px; line-height:16px; min-width:16px; text-align:center; font-weight:600 }
+.ha .body { flex:1; display:grid; place-items:center; padding:48px 16px; text-align:center }
+.ha .body .inr { display:grid; gap:16px; justify-items:center; max-width:480px }
+.ha a { text-decoration:none } .ha .legal a { text-decoration:underline }
+.dk .ha { min-height:780px }
+.ha h1 { font:400 32px/38px 'Tiro Devanagari Hindi',Georgia,serif; margin:0 }
+.ha .lead { font-size:18px; line-height:28px; color:var(--muted) }
+.ha .acts { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; width:100% }
+.ha .p1 { background:var(--sindoor); color:var(--paper); border:0; border-radius:2px; min-height:48px; padding:0 24px; font:600 16px 'Mukta',sans-serif; display:inline-flex; align-items:center }
+.ha .p2 { background:transparent; color:var(--ink); border:1px solid var(--ink); border-radius:2px; min-height:48px; padding:0 24px; font:600 16px 'Mukta',sans-serif; display:inline-flex; align-items:center }
+.ha .legal { background:var(--sand); padding:24px 16px; font-size:14px; line-height:21px; display:grid; gap:12px }
+.ha .legal dl { margin:0; display:grid; gap:10px }
+.ha .legal dt { font-weight:600 } .ha .legal dd { margin:0 }
+.ha .legal .pol { display:flex; flex-wrap:wrap; gap:4px 16px } .ha .legal .pol a { text-decoration:underline; text-underline-offset:3px }
+.ha .legal .base { color:var(--muted); border-top:1px solid var(--hl); padding-top:12px }
+.dk .ha .hdr { height:72px; padding:0 40px }
+.dk .ha h1 { font-size:44px; line-height:50px }
+.dk .ha .legal { padding:32px 40px; grid-template-columns:2fr 1fr } .dk .ha .legal dl { grid-template-columns:repeat(3,minmax(0,1fr)) }
+.dk .ha .legal .base { grid-column:1 / -1 }
+.ha-full { min-height:820px; background:#FBF7F1 }
+.scr.ha-scr { background:#FBF7F1 }
+.urlbar { display:flex; align-items:center; gap:6px; height:36px; padding:0 12px; font:500 12px var(--mono); color:var(--text-2); background:var(--g50); border-bottom:1px solid var(--line) }
+.urlbar svg { width:12px; height:12px }
+.dk .urlbar { height:40px; padding:0 16px }
+.dk-in.plain { display:block; min-height:0 }
+
+/* The brand's accept page (src/app/handover/page.tsx) */
+.ho { display:grid; place-items:start center; padding:56px 16px 24px; background:var(--page); min-height:100% }
+.ho .box { width:100%; max-width:512px; border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:24px; display:grid; gap:20px }
+.ho .top { display:flex; gap:16px; align-items:center }
+.pict { width:64px; height:64px; border-radius:12px; background:#FBEFD0; display:grid; place-items:center; color:var(--g950); flex:none }
+.pict svg { width:48px; height:48px }
+.ho h1 { font:600 20px/26px var(--font) } .ho .by { color:var(--text-2); font-size:14px }
+.ho dl { display:grid; grid-template-columns:112px minmax(0,1fr); gap:8px 12px; margin:0; font-size:14px }
+.ho dt { color:var(--text-2) } .ho dd { margin:0; min-width:0 }
+.ho .kl { list-style:none; margin:8px 0 0; padding:0 } .ho .kl li { display:flex; justify-content:space-between; gap:8px; padding:8px 0; border-top:1px solid var(--line-soft) } .ho .kl li:first-child { border-top:0; padding-top:0 }
+.ho .go { display:flex; flex-wrap:wrap; align-items:center; gap:12px }
+.scr .ho { padding:32px 12px }
+.scr .ho .box { padding:20px 16px }
+.scr .ho dl { grid-template-columns:96px minmax(0,1fr) }
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/></symbol>
+  <symbol id="i-orders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20h4"/></symbol>
+  <symbol id="i-profit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 15v-4M12 15V7M17 15v-6"/></symbol>
+  <symbol id="i-products" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 4 7l2 3 2-1v11h8V9l2 1 2-3-4-3c-1 2-2.5 2.5-4 2.5S9 6 8 4z"/></symbol>
+  <symbol id="i-coll" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="12" height="13" rx="2"/><path d="M8 4h10a2 2 0 0 1 2 2v10"/></symbol>
+  <symbol id="i-offers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V4h8l8 8-8 8z"/><circle cx="8.5" cy="8.5" r="1.2"/></symbol>
+  <symbol id="i-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-look" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="9" cy="10" r="1"/><circle cx="14" cy="9" r="1"/><path d="M12 20a3 3 0 0 1 0-6h3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></symbol>
+  <symbol id="i-apps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5H5V6h5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.4l3 3 6-6.4"/></symbol>
+  <symbol id="i-bad" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 3.6v5.4M8 12v.4"/></symbol>
+  <symbol id="i-x"viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8.5h14l-1 11.5H6L5 8.5Z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H5M10.5 6.5 5 12l5.5 5.5"/></symbol>
+  <symbol id="i-build48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="10" width="32" height="26" rx="3"/><path d="M8 17h32M14 42h20M24 36v6"/><path d="M17 24l-3 3 3 3M31 24l3 3-3 3" /><path d="M26 22l-4 10" stroke="var(--haldi,#D9A21B)"/></symbol>
+</svg>
+
+<!-- ══════════ Shared pieces (cloned into every frame by the script) ══════════ -->
+
+<!-- Settings › Store › Website: the Website card, live on Frrata's account -->
+<template id="t-site">
+  <section class="card" aria-labelledby="ws-h">
+    <div class="ch"><h2 id="ws-h">Website</h2><span class="chip ok">Live</span><span class="off"><a class="btn sm" href="#v-site">Open website</a></span></div>
+    <div class="radios two" role="radiogroup" aria-label="Where your website runs">
+      <button type="button" class="rc" role="radio" aria-checked="false" tabindex="-1"><i></i><span><b>Runs on Frrata</b><small>Designed in Look</small></span></button>
+      <button type="button" class="rc" role="radio" aria-checked="true"><i></i><span><b>Your own website</b><small>Built by your developer or partner</small></span></button>
+    </div>
+    <dl class="facts">
+      <dt>Built by</dt><dd>Neel Studio</dd>
+      <dt>Live version</dt><dd>v8 · 14 Nov, 6:10 pm</dd>
+      <dt>Latest preview</dt><dd>v9 · Today, 10:06 am · <a class="link" href="#v-site">Open preview</a></dd>
+    </dl>
+  </section>
+</template>
+
+<!-- The Address card: one address on <store>.frrata.shop -->
+<template id="t-addr">
+  <section class="card flush" aria-labelledby="ad-h">
+    <div class="ch" style="padding:16px 20px 8px"><h2 id="ad-h">Address</h2><span></span><span class="off"><button type="button" class="btn sm">Connect my domain</button></span></div>
+    <ul class="rows">
+      <li><span class="host">house-of-ayuda.frrata.shop<span class="chip neu">Main</span></span><span class="acts"><button type="button" class="ghost">Copy</button><a class="ghost" href="#v-site">Open</a></span></li>
+      <li class="rec"><span class="host">secure.house-of-ayuda.frrata.shop<span class="chip ok">Connected</span><button type="button" class="tip" aria-label="About secure.house-of-ayuda.frrata.shop" aria-expanded="false"><svg><use href="#i-info"/></svg></button></span><span class="acts"></span></li>
+    </ul>
+  </section>
+</template>
+
+<!-- Keys, as the live screen draws them, with build keys (decision S11) -->
+<template id="t-keys">
+  <section class="card" aria-labelledby="ky-h">
+    <div class="ch"><h2 id="ky-h">Keys</h2><span></span><span class="off"><button type="button" class="btn sm">Create key</button></span></div>
+    <ul class="keys">
+      <li><span class="nm">Website<span class="chip info">Live</span></span><span><button type="button" class="btn sm danger">Delete</button></span>
+        <span class="ln"><span class="mono">frs_pub_7Hk2qa…</span><span class="hide-p">Made by Neel Studio</span><span>Used today</span></span></li>
+      <li><span class="nm">Studio session<span class="chip neu">Build · ends 17 Nov</span></span><span><button type="button" class="btn sm danger">Delete</button></span>
+        <span class="ln"><span class="mono">frs_build_q8Lm…</span><span>Made by Kabir Shah, Neel Studio</span><span class="hide-p">Used today</span></span></li>
+      <li><span class="nm">Preview v9<span class="chip neu">Build · ends 17 Nov</span></span><span><button type="button" class="btn sm danger">Delete</button></span>
+        <span class="ln"><span class="mono">frs_build_c81R…</span><span>Made by Neel Studio</span><span class="hide-p">Used 10:06 am</span></span></li>
+      <li><span class="nm">Kabir’s computer<span class="chip neu">Build · ends 17 Nov</span></span><span><button type="button" class="btn sm danger">Delete</button></span>
+        <span class="ln"><span class="mono">frs_build_Zt4w…</span><span>Made by Kabir Shah, Neel Studio</span><span class="hide-p">Used yesterday</span></span></li>
+      <li class="off"><span class="nm">Pilot test<span class="chip neu">Test · ended</span></span><span></span>
+        <span class="ln"><span class="mono">frs_test_Lm2xQ9…</span><span>Store opened · 15 Nov</span></span></li>
+    </ul>
+  </section>
+</template>
+
+<!-- For developers, as live -->
+<template id="t-devs">
+  <section class="card" aria-labelledby="dv-h">
+    <h2 id="dv-h">For developers</h2>
+    <div class="dev"><span><b style="font-weight:500">Docs</b> <span class="mono">api.frrata.shop/docs</span></span><a class="ghost" href="#v-site">Open</a></div>
+    <div class="dev"><span><b style="font-weight:500">Starter code</b> <span class="mono">github.com/frrata/starter</span></span><a class="ghost" href="#v-site">Open</a></div>
+    <div class="dev"><span><b style="font-weight:500">OpenAPI</b> <span class="mono">api.frrata.shop/2026-12/openapi.json</span></span><button type="button" class="ghost">Copy</button></div>
+  </section>
+</template>
+
+<!-- Page head, Settings › Store -->
+<template id="t-head-dk">
+  <ol class="crumb"><li><a href="#v-site">Settings</a></li><li aria-hidden="true">›</li><li><a href="#v-site">Store</a></li></ol>
+  <div class="ttl"><div class="tw"><h1>Website</h1></div></div>
+  <nav class="vt" aria-label="Store"><a href="#v-site">Store details</a><a href="#v-site" aria-current="page">Website</a><a href="#v-site">Contact and grievance officer</a><a href="#v-site">Policies</a></nav>
+</template>
+<template id="t-head-ph">
+  <a class="back" href="#v-site">‹ Store</a>
+  <div class="p-head"><div class="tw"><h1>Website</h1></div></div>
+  <nav class="vt" aria-label="Store"><a href="#v-site">Store details</a><a href="#v-site" aria-current="page">Website</a><a href="#v-site">Contact and grievance officer</a><a href="#v-site">Policies</a></nav>
+</template>
+
+<!-- House of Ayuda's logo (the pilot's doorway monogram and wordmark, docs/design/house-of-ayuda-design-system.md § 1.1) -->
+<template id="t-ha-logo">
+  <svg viewBox="0 0 168 52" height="34" width="110" role="img" aria-label="House of Ayuda"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 50V23.5C6 15 12.4 11 16.2 8.6 18.6 7.1 19.6 5.3 20 3 20.4 5.3 21.4 7.1 23.8 8.6 27.6 11 34 15 34 23.5V50"/><path d="M2 50h36"/><path d="M12.6 50 20 19l7.4 31"/><path d="M15.2 39h9.6"/></g><circle cx="20" cy="12.6" r="1.9" fill="#8C1D2C"/><text x="50" y="18.5" font-family="Mukta, sans-serif" font-weight="600" font-size="8.6" letter-spacing="2.45" fill="currentColor">HOUSE OF</text><text x="48.6" y="47" font-family="'Tiro Devanagari Hindi', Georgia, serif" font-size="34" fill="currentColor">Ayuda</text></svg>
+</template>
+
+<!-- The legal block, as the store's footer draws it -->
+<template id="t-ha-legal">
+  <footer class="legal">
+    <dl>
+      <div><dt>Sold by</dt><dd>Ayuda Crafts Private Limited, 14 Weavers Lane, Indiranagar, Bengaluru, Karnataka 560038</dd></div>
+      <div><dt>Customer care</dt><dd>care@example.com · +91 98000 00000</dd></div>
+      <div><dt>Grievance officer</dt><dd>Anita Rao, Founder · grievance@example.com · +91 98000 00002</dd></div>
+    </dl>
+    <nav class="pol" aria-label="Policies"><a href="#v-back">Returns and exchanges</a><a href="#v-back">Shipping</a><a href="#v-back">Privacy</a><a href="#v-back">Terms of sale</a><a href="#v-back">Contact</a></nav>
+    <p class="base">© 2026 Ayuda Crafts Private Limited. Prices include GST.</p>
+  </footer>
+</template>
+
+<div class="doc">
+  <header class="doc-top">
+    <h1>Website on one address</h1>
+    <p>Studio plan V2a and one-address plan P5 · mockup · 16 Nov 2026 · House of Ayuda, built by its partner Neel Studio. Phone (390) beside computer (1280) on every screen.</p>
+    <nav class="toc" aria-label="Screens">
+      <a href="#v-short">In short</a><a href="#v-audit">Audit</a><a href="#v-take">What to take</a><a href="#v-calls">Your calls</a>
+      <a href="#v-site">1 · Website</a><a href="#v-domain">2 · Own domain</a><a href="#v-states">3 · Website states</a><a href="#v-keys">4 · Build keys</a>
+      <a href="#v-new">5 · New website</a><a href="#v-accept">6 · Accept a version</a><a href="#v-back">7 · We’ll be back</a><a href="#v-words">Words</a>
+    </nav>
+  </header>
+
+  <!-- ═════════ IN SHORT ═════════ -->
+  <section class="part" id="v-short" aria-labelledby="h-short">
+    <h2 id="h-short">In short</h2>
+    <ul class="short" style="margin-top:12px">
+      <li><b>What to take.</b> Settings › Website for a code site on Frrata’s account. One address, the store’s own domain or <span class="mono">house-of-ayuda.frrata.shop</span>. Two records shown with their state. The live version and the latest preview. Build keys listed beside the live and test keys, each deletable by the owner.</li>
+      <li><b>For the partner.</b> New website on the client’s page makes the code, the preview and the address. Publish sets the version the store opens with. Hand over stays where it is.</li>
+      <li><b>For the brand.</b> The accept page names the version being accepted. Shoppers meet a “We’ll be back soon” page if the website stops answering, while checkout and orders keep working.</li>
+      <li><b>Why now.</b> V2a and P5 are approved (owner, 16 Nov: “approve all”). Nothing in either is built before this mockup is approved.</li>
+      <li><b>What it costs.</b> No new price on any screen. Hosting stays unpriced until the pilot’s 30 days are measured (decisions S18, O16).</li>
+      <li><b>What is needed from you.</b> A yes on the screens, and the calls below.</li>
+    </ul>
+  </section>
+
+  <!-- ═════════ AUDIT ═════════ -->
+  <section class="part" id="v-audit" aria-labelledby="h-audit">
+    <h2 id="h-audit">Audit · Settings › Website as it runs today</h2>
+    <p class="cap">Drawn from <span class="mono">src/app/(console)/console/settings/website/website-view.tsx</span> for a store whose website runs elsewhere (the pilot’s case). No running copy with this data was at hand, so this is a redraw, not a screenshot.</p>
+    <div class="pair">
+      <div>
+        <p class="lbl">Today · computer · the cards in order</p>
+        <div class="crop" style="display:grid;gap:12px">
+          <section class="card"><h2>Website</h2>
+            <div class="radios two"><button type="button" class="rc" role="radio" aria-checked="false"><i></i><span><b>Runs on Frrata</b><small>Designed in Look</small></span></button><button type="button" class="rc" role="radio" aria-checked="true"><i></i><span><b>Your own website</b><small>Built by your developer or partner</small></span></button></div>
+            <div class="f"><label>Website address</label><select class="in mono" aria-label="Website address"><option>https://www.houseofayuda.in</option></select></div>
+          </section>
+          <section class="card"><div class="ch"><h2>Checkout</h2><span></span><span class="off"><span class="chip ok">Approved by Razorpay</span></span></div>
+            <div class="swr"><span class="mono" style="font-weight:400">house-of-ayuda.frrata.shop <span class="tag">Main</span></span><span><button type="button" class="ghost">Copy</button><button type="button" class="btn sm">Edit store address</button></span></div></section>
+          <section class="card"><div class="ch"><h2>Keys</h2><span></span><span class="off"><button type="button" class="btn sm">Create key</button></span></div>
+            <ul class="keys"><li><span class="nm">Website<span class="chip info">Live</span></span><span><button type="button" class="btn sm danger">Delete</button></span><span class="ln"><span class="mono">frs_pub_7Hk2qa…</span><span>Made by Neel Studio</span><span>Used today</span></span></li></ul></section>
+          <section class="card"><h2>For developers</h2><p style="color:var(--text-2);font-size:13px">Docs · Starter code · OpenAPI</p></section>
+        </div>
+      </div>
+      <div>
+        <p class="lbl">What is there · why it gets in the way · proposed</p>
+        <table class="tbl">
+          <thead><tr><th>What is there</th><th>Why it gets in the way</th><th>Proposed</th></tr></thead>
+          <tbody>
+            <tr><td>Website address, a list of connected domains</td><td>On one address the website and checkout share the store’s host. A second choice of address would be a second copy of the main domain.</td><td>Gone. The Address card shows the one address.</td></tr>
+            <tr><td>Checkout card with its own host</td><td>Checkout is on the same host now (<span class="mono">siteOrigin</span> equals <span class="mono">checkoutOrigin</span>, P5).</td><td>Gone for one-address stores. Kept for a website still hosted elsewhere.</td></tr>
+            <tr><td>Connect a domain on Settings › Web address</td><td>A code site also needs the hidden <span class="mono">secure.</span> record. The owner looks for it beside the website.</td><td>Connect my domain on the Address card, the same dialog with one more record.</td></tr>
+            <tr><td>No version, no preview, no state</td><td>The owner can’t tell what is live or whether Frrata stopped it.</td><td>Live version, latest preview and a state chip on the Website card.</td></tr>
+            <tr><td>Keys: live and test only</td><td>Build keys (decision S11) would read drafts unseen.</td><td>Build keys in the same list, with maker and end, each deletable.</td></tr>
+            <tr><td>Radio cards and For developers</td><td>Nothing.</td><td>Kept as drawn.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ WHAT TO TAKE ═════════ -->
+  <section class="part" id="v-take" aria-labelledby="h-take">
+    <h2 id="h-take">What to take</h2>
+    <p class="cap">From the one-address spec’s research (sources dated there, read 16 Nov 2026) and the live console.</p>
+    <div class="take">
+      <div class="tk"><b>Shopify Hydrogen on Oxygen</b><span class="src">shopify.dev “Go live”, undated, read 16 Nov</span><span>The storefront on the main domain, checkout on <span class="mono">checkout.example.com</span>.</span><span class="s">Skip: the split (owner, 16 Nov).</span><span class="t">Take: checkout stays the platform’s code whatever runs in front.</span></div>
+      <div class="tk"><b>BigCommerce Embedded Checkout</b><span class="src">developer.bigcommerce.com, undated, read 16 Nov</span><span>Safari needs the checkout frame on the same site as the store.</span><span class="t">Take: one hidden <span class="mono">secure.</span> record beside the store’s host.</span></div>
+      <div class="tk"><b>Vercel, one domain over several projects</b><span class="src">KB guide, updated 2 Oct 2026; routing rules, 11 Aug 2026</span><span>Rewrites to another deployment by path, set before the deployment’s own routes.</span><span class="t">Take: Frrata at the door, reserved paths first, the rest to the website.</span></div>
+      <div class="tk"><b>Frrata’s own Connect a domain</b><span class="src">settings/web-address/domains.tsx, live</span><span>Three steps, a check every 15 s, chips Waiting for records, Securing, Connected.</span><span class="t">Take: the same dialog and the same chip words, one record more.</span></div>
+      <div class="tk"><b>Frrata’s keys list</b><span class="src">settings/website/website-view.tsx, live</span><span>Name, chip, prefix, maker, last used, Delete with its consequence.</span><span class="t">Take: build keys as rows of the same list.</span></div>
+    </div>
+  </section>
+
+  <!-- ═════════ YOUR CALLS ═════════ -->
+  <section class="part" id="v-calls" aria-labelledby="h-calls">
+    <h2 id="h-calls">Your calls</h2>
+    <table class="tbl" style="margin-top:12px">
+      <thead><tr><th>Call</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr><td>The three record states (waiting, proved, certified) on screen</td><td>The live chip words: <b>Waiting for record</b>, <b>Securing</b>, <b>Connected</b>. “Proved” and “certified” are our words.</td></tr>
+        <tr><td>The partner’s button</td><td><b>New website</b>, not “New site”: the glossary’s word for a code site is Website.</td></tr>
+        <tr><td>Where Connect my domain lives</td><td>On Settings › Website’s Address card for a one-address store. Settings › Web address keeps the store’s frrata name.</td></tr>
+        <tr><td>Who sees why Frrata stopped a website</td><td>The owner and the partner, one line in words. A risk reason has to be said.</td></tr>
+        <tr><td>Build keys a partner holds after opening</td><td>Listed and deletable by the owner; a deleted session key stops that Studio session’s reads (decision S11).</td></tr>
+        <tr><td>Not drawn here</td><td>Admin › Sites (approved in kit-and-fleet), Content › Placements (approved), a developer added to the code (V2a·9), Razorpay’s approval chip on a new domain (unchanged from today).</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ═════════ 1 · WEBSITE ═════════ -->
+  <section class="part" id="v-site" aria-labelledby="h1s">
+    <h2 id="h1s">1 · Owner · Settings › Store › Website, live on <span class="mono">house-of-ayuda.frrata.shop</span></h2>
+    <p class="cap">States: live (here), opening soon, building, paused, stopped by Frrata, partner removed, not answering (screen 3); no permission reads as today (View only); a support visit sees the same with no Delete.</p>
+    <div class="pair">
+      <div>
+        <p class="lbl">Phone · 390</p>
+        <div class="phone"><div class="scr">
+          <div class="p-main">
+            <div data-use="t-head-ph" style="display:contents"></div>
+            <div data-use="t-site"></div>
+            <div data-use="t-addr"></div>
+            <div data-use="t-keys"></div>
+          </div>
+          <div class="bottom" data-bottom></div>
+        </div></div>
+      </div>
+      <div>
+        <p class="lbl">Computer · 1280</p>
+        <div class="dk"><div class="dk-in">
+          <aside class="sb" data-sb="owner" data-on="settings"></aside>
+          <main class="main narrow">
+            <div data-use="t-head-dk"></div>
+            <div class="fcol" style="margin-top:16px"><div data-use="t-site"></div><div data-use="t-addr"></div><div data-use="t-keys"></div><div data-use="t-devs"></div></div>
+          </main>
+        </div></div>
+      </div>
+    </div>
+    <ol class="steps-l"><li>The owner opens Settings › Store › Website.</li><li>The Website card says what is live and what Neel Studio is previewing. Open preview opens the signed preview in a new tab.</li><li>The Address card is the one address. Copy and Open act on it.</li><li>Keys are as today, plus build keys. Delete asks first (screen 4).</li></ol>
+  </section>
+
+  <!-- ═════════ 2 · OWN DOMAIN ═════════ -->
+  <section class="part" id="v-domain" aria-labelledby="h2s">
+    <h2 id="h2s">2 · Owner · Connect my domain, the host and the <span class="mono">secure.</span> records</h2>
+    <p class="cap">The live Connect dialog, its step 2 with four records. Then the Address card while the records are found, secured, connected and made main. The website moves to the domain only once both records are Connected and the owner taps Make main.</p>
+    <div class="pair">
+      <div>
+        <p class="lbl">Phone · 390 · step 2 of Connect a domain (a sheet)</p>
+        <div class="phone"><div class="scr">
+          <div class="p-main">
+            <div data-use="t-head-ph" style="display:contents"></div>
+            <div data-use="t-site"></div>
+          </div>
+          <div class="bottom" data-bottom></div>
+          <div class="veil" data-use="t-connect"></div>
+        </div></div>
+      </div>
+      <div>
+        <p class="lbl">Computer · 1280 · step 2 of Connect a domain</p>
+        <div class="dk"><div class="dk-in">
+          <aside class="sb" data-sb="owner" data-on="settings"></aside>
+          <main class="main narrow">
+            <div data-use="t-head-dk"></div>
+            <div class="fcol" style="margin-top:16px"><div data-use="t-site"></div><div data-use="t-addr"></div></div>
+          </main>
+          <div class="veil" data-use="t-connect"></div>
+        </div></div>
+      </div>
+    </div>
+    <template id="t-connect">
+      <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="cn-h">
+        <h3 id="cn-h">Connect a domain</h3>
+        <div class="dots" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i></div>
+        <div class="swr"><span class="chip neu" style="font-weight:500">2 of 4 found</span><span style="font-size:12px;color:var(--text-2);font-weight:400">Checked just now</span></div>
+        <ul class="rows" style="border:1px solid var(--line);border-radius:8px">
+          <li style="padding:8px 12px"><span class="host" style="display:grid;gap:2px;font-size:12px"><span><b class="ty">TXT</b> _frrata.houseofayuda.in</span><span>frrata-proof=8f2c91</span></span><span class="acts"><button type="button" class="btn sm">Copy</button></span><span class="sub"><span class="chip ok">Found</span></span></li>
+          <li style="padding:8px 12px"><span class="host" style="display:grid;gap:2px;font-size:12px"><span><b class="ty">A</b> houseofayuda.in</span><span>76.76.21.21</span></span><span class="acts"><button type="button" class="btn sm">Copy</button></span><span class="sub"><span class="chip ok">Found</span></span></li>
+          <li style="padding:8px 12px"><span class="host" style="display:grid;gap:2px;font-size:12px"><span><b class="ty">CNAME</b> www.houseofayuda.in</span><span>cname.vercel-dns.com</span></span><span class="acts"><button type="button" class="btn sm">Copy</button></span><span class="sub"><span class="chip neu">Not found yet</span></span></li>
+          <li style="padding:8px 12px"><span class="host" style="display:grid;gap:2px;font-size:12px"><span><b class="ty">CNAME</b> secure.houseofayuda.in</span><span>cname.vercel-dns.com</span></span><span class="acts"><button type="button" class="btn sm">Copy</button></span><span class="sub"><span class="chip neu">Not found yet</span></span></li>
+        </ul>
+        <div class="off" style="justify-content:flex-start;gap:6px"><a class="btn sm" href="#v-domain">Open GoDaddy DNS</a><button type="button" class="btn sm">Copy all</button><button type="button" class="btn sm">Send on WhatsApp</button><button type="button" class="ghost">Check now</button></div>
+        <div class="ft"><button type="button" class="btn">Finish later</button></div>
+      </div>
+    </template>
+    <div class="crops3" style="margin-top:28px">
+      <div><p class="lbl">Address card · records waiting</p><div class="crop" style="padding:0"><section class="card flush" style="border:0">
+        <ul class="rows">
+          <li><span class="host">house-of-ayuda.frrata.shop<span class="chip neu">Main</span></span><span class="acts"><button type="button" class="ghost">Copy</button></span></li>
+          <li><span class="host">houseofayuda.in<span class="chip warn">Waiting for records</span></span><span class="acts"><button type="button" class="btn sm">Continue</button></span></li>
+          <li class="rec"><span class="host"><span class="ty">A</span> houseofayuda.in<span class="chip warn">Waiting for record</span></span><span></span></li>
+          <li class="rec"><span class="host"><span class="ty">CNAME</span> secure.houseofayuda.in<span class="chip warn">Waiting for record</span></span><span></span></li>
+        </ul></section></div></div>
+      <div><p class="lbl">Address card · host found, <span class="mono">secure.</span> securing</p><div class="crop" style="padding:0"><section class="card flush" style="border:0">
+        <ul class="rows">
+          <li><span class="host">house-of-ayuda.frrata.shop<span class="chip neu">Main</span></span><span class="acts"><button type="button" class="ghost">Copy</button></span></li>
+          <li><span class="host">houseofayuda.in<span class="chip info">Securing</span></span><span class="acts"><button type="button" class="btn sm">Check now</button></span></li>
+          <li class="rec"><span class="host"><span class="ty">A</span> houseofayuda.in<span class="chip ok">Connected</span></span><span></span></li>
+          <li class="rec"><span class="host"><span class="ty">CNAME</span> secure.houseofayuda.in<span class="chip info">Securing</span></span><span></span></li>
+        </ul></section></div></div>
+      <div><p class="lbl">Address card · both connected, ready to make main</p><div class="crop" style="padding:0"><section class="card flush" style="border:0">
+        <ul class="rows">
+          <li><span class="host">house-of-ayuda.frrata.shop<span class="chip neu">Main</span></span><span class="acts"><button type="button" class="ghost">Copy</button></span></li>
+          <li><span class="host">houseofayuda.in<span class="chip ok">Connected</span></span><span class="acts"><button type="button" class="btn sm">Make main</button><button type="button" class="ghost">Remove</button></span></li>
+          <li class="rec"><span class="host"><span class="ty">A</span> houseofayuda.in<span class="chip ok">Connected</span></span><span></span></li>
+          <li class="rec"><span class="host"><span class="ty">CNAME</span> secure.houseofayuda.in<span class="chip ok">Connected</span></span><span></span></li>
+        </ul></section></div></div>
+      <div><p class="lbl">Address card · main, the frrata name redirects</p><div class="crop" style="padding:0"><section class="card flush" style="border:0">
+        <ul class="rows">
+          <li><span class="host">houseofayuda.in<span class="chip neu">Main</span></span><span class="acts"><button type="button" class="ghost">Copy</button><a class="ghost" href="#v-domain">Open</a></span></li>
+          <li class="rec"><span class="host"><span class="ty">A</span> houseofayuda.in<span class="chip ok">Connected</span></span><span></span></li>
+          <li class="rec"><span class="host"><span class="ty">CNAME</span> secure.houseofayuda.in<span class="chip ok">Connected</span></span><span></span></li>
+          <li><span class="host">www.houseofayuda.in<span class="chip neu">Goes to houseofayuda.in</span></span><span></span></li>
+          <li><span class="host">house-of-ayuda.frrata.shop<span class="chip neu">Goes to houseofayuda.in</span></span><span></span></li>
+        </ul></section></div></div>
+      <div><p class="lbl">Make main · the live confirm, one line more for a bag on the old address (S20)</p><div class="crop"><div class="dlg" style="box-shadow:none;padding:0;width:auto;max-width:none">
+        <h3>Make houseofayuda.in your main address?</h3><p>Bags in progress start empty.</p>
+        <div class="ft"><button type="button" class="btn">Keep house-of-ayuda.frrata.shop</button><button type="button" class="btn primary">Make it main</button></div></div></div></div>
+      <div><p class="lbl">A record that stopped answering, the website falls back with checkout (S21)</p><div class="crop" style="padding:0"><section class="card flush" style="border:0">
+        <ul class="rows">
+          <li><span class="host">houseofayuda.in<span class="chip bad">Not working</span></span><span class="acts"><button type="button" class="btn sm">Check now</button></span><span class="sub" style="color:var(--bad-fg)">Shoppers go to house-of-ayuda.frrata.shop</span></li>
+          <li class="rec"><span class="host"><span class="ty">CNAME</span> secure.houseofayuda.in<span class="chip bad">Not working</span></span><span></span></li>
+        </ul></section></div></div>
+    </div>
+    <ol class="steps-l"><li>Connect my domain opens the live three-step dialog. Step 1 takes <span class="mono">houseofayuda.in</span>.</li><li>Step 2 lists four records, the fourth new. It checks every 15 s while open.</li><li>On the Address card each record keeps its own chip until it is Connected.</li><li>Make main moves the website and checkout together. The frrata name redirects for good.</li></ol>
+  </section>
+
+  <!-- ═════════ 3 · STATES ═════════ -->
+  <section class="part" id="v-states" aria-labelledby="h3s">
+    <h2 id="h3s">3 · The Website card in every state</h2>
+    <p class="cap">One chip, then facts. Checkout, orders and policies keep working in every state; the card says so as a fact. A reason shows only where Frrata stopped the website.</p>
+    <div class="crops3">
+      <div><p class="lbl">Opening soon (before the store opens, build mode)</p><div class="crop"><section class="card" style="border:0;padding:0">
+        <div class="ch"><h2>Website</h2><span class="chip neu">Opening soon</span><span class="off"></span></div>
+        <dl class="facts"><dt>Built by</dt><dd>Neel Studio</dd><dt>Opens with</dt><dd>v8 · 14 Nov, 6:10 pm</dd><dt>Latest preview</dt><dd>v9 · Today, 10:06 am · <a class="link" href="#v-states">Open preview</a></dd><dt>Shoppers see</dt><dd>Opening soon page</dd></dl></section></div></div>
+      <div><p class="lbl">Live, a newer preview building</p><div class="crop"><section class="card" style="border:0;padding:0">
+        <div class="ch"><h2>Website</h2><span class="chip ok">Live</span><span class="off"><a class="btn sm" href="#v-states">Open website</a></span></div>
+        <dl class="facts"><dt>Built by</dt><dd>Neel Studio</dd><dt>Live version</dt><dd>v8 · 14 Nov, 6:10 pm</dd><dt>Latest preview</dt><dd style="display:flex;gap:8px;align-items:center"><span class="spin" aria-hidden="true"></span>v10 · Building</dd></dl></section></div></div>
+      <div><p class="lbl">Paused (the store is paused)</p><div class="crop"><section class="card" style="border:0;padding:0">
+        <div class="ch"><h2>Website</h2><span class="chip warn">Paused till 20 Nov</span><span class="off"></span></div>
+        <dl class="facts"><dt>Live version</dt><dd>v8 · 14 Nov, 6:10 pm</dd><dt>Shoppers see</dt><dd>Back soon page</dd><dt>Checkout</dt><dd>Not taking orders</dd></dl></section></div></div>
+      <div><p class="lbl">Stopped by Frrata (a kill switch)</p><div class="crop"><section class="card" style="border:0;padding:0">
+        <div class="ch"><h2>Website</h2><span class="chip bad">Stopped by Frrata</span><span class="off"></span></div>
+        <p class="rsn">A script on the Lookbook page sent shoppers to another address.</p>
+        <dl class="facts"><dt>Since</dt><dd>Today, 9:40 am</dd><dt>Shoppers see</dt><dd>We’ll be back page</dd><dt>Checkout</dt><dd>Taking orders</dd></dl></section></div></div>
+      <div><p class="lbl">Partner removed (the owner removed Neel Studio)</p><div class="crop"><section class="card" style="border:0;padding:0">
+        <div class="ch"><h2>Website</h2><span class="chip warn">No partner</span><span class="off"></span></div>
+        <dl class="facts"><dt>Last version</dt><dd>v8 · 14 Nov, 6:10 pm</dd><dt>Shoppers see</dt><dd>We’ll be back page</dd><dt>Checkout</dt><dd>Taking orders</dd></dl></section></div></div>
+      <div><p class="lbl">Not answering (the website’s own code fails)</p><div class="crop"><section class="card" style="border:0;padding:0">
+        <div class="ch"><h2>Website</h2><span class="chip bad">Not answering</span><span class="off"></span></div>
+        <dl class="facts"><dt>Since</dt><dd>Today, 10:12 am</dd><dt>Shoppers see</dt><dd>We’ll be back page</dd><dt>Checkout</dt><dd>Taking orders</dd></dl></section></div></div>
+      <div><p class="lbl">Loading (the list dims, nothing moves) and couldn’t load (Panel, as today)</p><div class="crop" style="display:grid;gap:12px">
+        <section class="card" style="border:0;padding:0;opacity:.5"><div class="ch"><h2>Website</h2><span class="chip ok">Live</span><span class="off"></span></div><dl class="facts"><dt>Live version</dt><dd>v8 · 14 Nov, 6:10 pm</dd></dl></section>
+        <div style="border-top:1px solid var(--line);padding-top:12px"><b>We couldn’t load this screen</b><p style="color:var(--text-2)">Nothing was changed. Try again in a minute.</p></div></div></div>
+    </div>
+    <ol class="steps-l"><li>Every state is derived: a live deployment row, the store’s pause window, Frrata’s kill switch, the partner link, the router’s health check.</li><li>The partner’s client page shows the same chip.</li><li>No action on the card changes the state. Frrata support and the partner act on the stop.</li></ol>
+  </section>
+
+  <!-- ═════════ 4 · BUILD KEYS ═════════ -->
+  <section class="part" id="v-keys" aria-labelledby="h4s">
+    <h2 id="h4s">4 · Owner · deleting a build key</h2>
+    <p class="cap">The live Delete confirm, its words for a build key. After it, the live ok toast. A partner’s next read with that key stops within a minute.</p>
+    <div class="pair">
+      <div>
+        <p class="lbl">Phone · 390 · the sheet</p>
+        <div class="phone"><div class="scr">
+          <div class="p-main"><div data-use="t-head-ph" style="display:contents"></div><div data-use="t-keys"></div></div>
+          <div class="bottom" data-bottom></div>
+          <div class="veil" data-use="t-delkey"></div>
+        </div></div>
+      </div>
+      <div>
+        <p class="lbl">Computer · 1280 · after Delete key</p>
+        <div class="dk"><div class="dk-in">
+          <aside class="sb" data-sb="owner" data-on="settings"></aside>
+          <main class="main narrow"><div data-use="t-head-dk"></div><div class="fcol" style="margin-top:16px"><div data-use="t-keys-after"></div></div></main>
+          <div class="toast" role="status"><span class="w">Key “Kabir’s computer” deleted</span><button type="button" class="x" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button></div>
+        </div></div>
+      </div>
+    </div>
+    <template id="t-delkey">
+      <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dk-h">
+        <h3 id="dk-h">Delete the key “Kabir’s computer”?</h3>
+        <p>Neel Studio’s work with it stops within a minute. This can’t be undone.</p>
+        <div class="ft"><button type="button" class="btn">Keep key</button><button type="button" class="btn destr">Delete key</button></div>
+      </div>
+    </template>
+    <template id="t-keys-after">
+      <section class="card" aria-labelledby="ka-h">
+        <div class="ch"><h2 id="ka-h">Keys</h2><span></span><span class="off"><button type="button" class="btn sm">Create key</button></span></div>
+        <ul class="keys">
+          <li><span class="nm">Website<span class="chip info">Live</span></span><span><button type="button" class="btn sm danger">Delete</button></span><span class="ln"><span class="mono">frs_pub_7Hk2qa…</span><span>Made by Neel Studio</span><span>Used today</span></span></li>
+          <li><span class="nm">Studio session<span class="chip neu">Build · ends 17 Nov</span></span><span><button type="button" class="btn sm danger">Delete</button></span><span class="ln"><span class="mono">frs_build_q8Lm…</span><span>Made by Kabir Shah, Neel Studio</span><span>Used today</span></span></li>
+          <li><span class="nm">Preview v9<span class="chip neu">Build · ends 17 Nov</span></span><span><button type="button" class="btn sm danger">Delete</button></span><span class="ln"><span class="mono">frs_build_c81R…</span><span>Made by Neel Studio</span><span>Used 10:06 am</span></span></li>
+          <li class="off"><span class="nm">Kabir’s computer<span class="chip neu">Deleted</span></span><span></span><span class="ln"><span class="mono">frs_build_Zt4w…</span><span>Deleted by Anita Rao · Just now</span></span></li>
+        </ul>
+      </section>
+    </template>
+    <div class="crops" style="margin-top:28px">
+      <div><p class="lbl">A build key whose maker left Neel Studio (ends at once, decision S11)</p><div class="crop"><ul class="keys"><li class="off"><span class="nm">Studio session<span class="chip neu">Build · ended</span></span><span></span><span class="ln"><span class="mono">frs_build_q8Lm…</span><span>Kabir Shah’s access ended · 16 Nov</span></span></li></ul></div></div>
+      <div><p class="lbl">Manager, or the partner before handover: the same list. Support visit: no Delete.</p><div class="crop"><ul class="keys"><li><span class="nm">Preview v9<span class="chip neu">Build · ends 17 Nov</span></span><span></span><span class="ln"><span class="mono">frs_build_c81R…</span><span>Made by Neel Studio</span><span>Used 10:06 am</span></span></li></ul></div></div>
+    </div>
+  </section>
+
+  <!-- ═════════ 5 · NEW WEBSITE ═════════ -->
+  <section class="part" id="v-new" aria-labelledby="h5s">
+    <h2 id="h5s">5 · Partner · Clients › House of Ayuda › New website</h2>
+    <p class="cap">The live client page (Store tab). A Website card under the store’s facts. New website asks once, makes the code, the preview and the address, then shows the card the partner works from. Publish needs a passkey check in the last 5 minutes.</p>
+    <div class="pair">
+      <div>
+        <p class="lbl">Phone · 390 · the confirm</p>
+        <div class="phone"><div class="scr">
+          <div class="p-main">
+            <a class="back" href="#v-new">‹ Clients</a>
+            <div class="p-head"><div class="tw"><h1>House of Ayuda</h1><span class="chip neu">Building</span></div><span class="mono" style="font-size:13px;color:var(--text-2)">house-of-ayuda.frrata.shop</span></div>
+            <nav class="vt" aria-label="House of Ayuda"><a href="#v-new">Your billing</a><a href="#v-new" aria-current="page">Store</a></nav>
+            <div data-use="t-pw-empty"></div>
+          </div>
+          <div class="bottom" data-bottom data-pw data-on="clients"></div>
+          <div class="veil" data-use="t-newdlg"></div>
+        </div></div>
+      </div>
+      <div>
+        <p class="lbl">Computer · 1280 · the website made, before handover</p>
+        <div class="dk"><div class="dk-in">
+          <aside class="sb" data-sb="pw" data-on="clients"></aside>
+          <main class="main narrow">
+            <a class="back" href="#v-new" style="font-size:13px">‹ Clients</a>
+            <div class="ttl" style="margin-top:4px"><div class="tw"><h1>House of Ayuda</h1><span class="chip neu">Building</span></div><span class="off" style="gap:8px"><button type="button" class="btn">Open store</button><button type="button" class="btn primary">Hand over</button></span></div>
+            <p style="font-size:13px;color:var(--text-2);margin-top:4px"><span class="mono">house-of-ayuda.frrata.shop</span></p>
+            <nav class="vt" aria-label="House of Ayuda"><a href="#v-new">Your billing</a><a href="#v-new" aria-current="page">Store</a></nav>
+            <div class="fcol" style="margin-top:16px">
+              <section class="card"><dl class="facts"><dt>Started</dt><dd>2 Nov</dd><dt>Your share</dt><dd>20% from opening</dd></dl></section>
+              <div data-use="t-pw-site"></div>
+            </div>
+          </main>
+        </div></div>
+      </div>
+    </div>
+    <template id="t-pw-empty">
+      <section class="card"><dl class="facts"><dt>Started</dt><dd>2 Nov</dd><dt>Your share</dt><dd>20% from opening</dd></dl></section>
+      <section class="card" style="margin-top:12px" aria-labelledby="pe-h"><div class="ch"><h2 id="pe-h">Website</h2><span></span><span class="off"><button type="button" class="btn sm">New website</button></span></div><p style="color:var(--text-2)">No website yet</p></section>
+    </template>
+    <template id="t-newdlg">
+      <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="nw-h">
+        <h3 id="nw-h">New website for House of Ayuda?</h3>
+        <dl class="facts"><dt>Address</dt><dd class="mono" style="font-size:13px">house-of-ayuda.frrata.shop</dd><dt>Starts from</dt><dd>Frrata starter</dd></dl>
+        <div class="ft"><button type="button" class="btn">Not now</button><button type="button" class="btn primary">Make website</button></div>
+      </div>
+    </template>
+    <template id="t-pw-site">
+      <section class="card" aria-labelledby="pw-h">
+        <div class="ch"><h2 id="pw-h">Website</h2><span class="chip neu">Opening soon</span><span class="off" style="gap:6px"><button type="button" class="btn sm">Make preview</button><button type="button" class="btn sm">Publish v3</button></span></div>
+        <dl class="facts">
+          <dt>Address</dt><dd class="mono" style="font-size:13px">house-of-ayuda.frrata.shop</dd>
+          <dt>Opens with</dt><dd>Opening soon page</dd>
+          <dt>Latest preview</dt><dd>v3 · Today, 10:06 am · <a class="link" href="#v-new">Open preview</a></dd>
+          <dt>Checks</dt><dd><span class="chip ok">Pass</span></dd>
+          <dt>Previews today</dt><dd>3 of 20</dd>
+        </dl>
+      </section>
+    </template>
+    <div class="crops3" style="margin-top:28px">
+      <div><p class="lbl">Making it (about a minute; the page can be left)</p><div class="crop"><section class="card" style="border:0;padding:0">
+        <div class="ch"><h2>Website</h2><span class="chip info">Setting up</span><span class="off"></span></div>
+        <ul class="stepl"><li><span class="done-i" aria-hidden="true"><svg width="9" height="9"><use href="#i-ok"/></svg></span>Copied the starter</li><li><span class="done-i" aria-hidden="true"><svg width="9" height="9"><use href="#i-ok"/></svg></span>Made the preview</li><li><span class="spin" aria-hidden="true"></span><span>Setting up <span class="mono">house-of-ayuda.frrata.shop</span></span></li></ul></section></div></div>
+      <div><p class="lbl">Couldn’t make it (error toast, stays until closed)</p><div class="crop"><div class="toast err" role="alert" style="max-width:none"><span class="w">We couldn’t make the website.<small>Nothing was changed.</small></span><button type="button" class="act">Try again</button><button type="button" class="x" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button></div></div></div>
+      <div><p class="lbl">Publish v3 (before handover: the version the store opens with)</p><div class="crop"><div class="dlg" style="box-shadow:none;padding:0;width:auto;max-width:none">
+        <h3>Publish v3?</h3><p>House of Ayuda opens with v3.</p>
+        <div class="ft"><button type="button" class="btn">Keep Opening soon</button><button type="button" class="btn primary">Publish v3</button></div></div></div></div>
+      <div><p class="lbl">After Publish (ok toast)</p><div class="crop"><div class="toast" role="status" style="max-width:none"><span class="w">House of Ayuda opens with v3.</span><button type="button" class="x" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button></div></div></div>
+      <div><p class="lbl">A version that fails Frrata’s checks (no Publish)</p><div class="crop"><section class="card" style="border:0;padding:0">
+        <div class="ch"><h2>Website</h2><span class="chip neu">Opening soon</span><span class="off"><button type="button" class="btn sm">Make preview</button></span></div>
+        <dl class="facts"><dt>Latest preview</dt><dd>v4 · Today, 11:20 am</dd><dt>Checks</dt><dd><span class="chip bad">2 failed</span><span class="ln2">The legal block is missing on Lookbook.</span><span class="ln2">Product page script is 171 kB of 150 kB.</span></dd></dl></section></div></div>
+      <div><p class="lbl">Previews used up for today (until credits, V2a·9)</p><div class="crop"><section class="card" style="border:0;padding:0">
+        <div class="ch"><h2>Website</h2><span class="chip neu">Opening soon</span><span class="off off2"><button type="button" class="btn sm" aria-disabled="true" aria-describedby="pv-full">Make preview</button></span></div>
+        <dl class="facts"><dt>Previews today</dt><dd id="pv-full">20 of 20 · more tomorrow</dd></dl></section></div></div>
+    </div>
+    <ol class="steps-l"><li>On House of Ayuda’s page, Store tab, the partner taps New website.</li><li>The confirm names the address. Make website starts it; the card shows three lines as they finish.</li><li>A push to the code makes nothing by itself. Make preview builds the latest commit.</li><li>Publish v3 asks for a passkey if the last check is older than 5 minutes, then sets the opening version.</li><li>Hand over stays the header’s primary action, as today.</li></ol>
+  </section>
+
+  <!-- ═════════ 6 · ACCEPT ═════════ -->
+  <section class="part" id="v-accept" aria-labelledby="h6s">
+    <h2 id="h6s">6 · Brand · accepting the store with its website version</h2>
+    <p class="cap">The live accept page (<span class="mono">src/app/handover/page.tsx</span>) with one row more: the version the brand accepts, and a way to see it. Accept binds to that version.</p>
+    <div class="pair">
+      <div>
+        <p class="lbl">Phone · 390</p>
+        <div class="phone"><div class="scr"><div data-use="t-accept" style="height:100%;overflow:hidden"></div></div></div>
+      </div>
+      <div>
+        <p class="lbl">Computer · 1280</p>
+        <div class="dk"><div class="dk-in plain"><div data-use="t-accept" style="min-height:820px"></div></div></div>
+      </div>
+    </div>
+    <template id="t-accept">
+      <main class="ho">
+        <section class="box" aria-labelledby="ac-h">
+          <div class="top"><span class="pict" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="#171615" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 30h10l6 4h8a3 3 0 0 0 0-6h-6"/><path d="M6 38h22l12-8a3 3 0 0 0-3-5l-9 5"/><rect x="22" y="8" width="16" height="14" rx="2" fill="#F2C14E" stroke="#171615"/></svg></span>
+            <div><h1 id="ac-h">House of Ayuda is ready</h1><p class="by">Built by Neel Studio</p></div></div>
+          <dl>
+            <dt>You</dt><dd>Owner. The store and its data are yours.</dd>
+            <dt>Neel Studio</dt><dd>Partner: products, orders, settings, the look.<button type="button" class="tip" aria-label="About what a partner can do" aria-expanded="false"><svg><use href="#i-info"/></svg></button></dd>
+            <dt>Your price</dt><dd>Same as any Frrata store.<button type="button" class="tip" aria-label="About your price" aria-expanded="false"><svg><use href="#i-info"/></svg></button></dd>
+            <dt>Their share</dt><dd>Your partner sees what Frrata earns from your store.</dd>
+            <dt>Website</dt><dd><span class="mono" style="font-size:13px">house-of-ayuda.frrata.shop</span><span class="ln2" style="display:block;margin-top:4px">v8 · 14 Nov, 6:10 pm · <a class="link" href="#v-accept">See this version</a></span>
+              <ul class="kl" aria-label="Website keys"><li><span>Website</span><span class="chip info">Live</span></li></ul></dd>
+          </dl>
+          <div class="go"><button type="button" class="btn primary">Accept House of Ayuda</button><a class="link" href="#v-accept">Not now</a></div>
+        </section>
+      </main>
+    </template>
+    <div class="crops" style="margin-top:28px">
+      <div><p class="lbl">Neel Studio published again after sending it (error toast; Reload shows the new version)</p><div class="crop"><div class="toast err" role="alert" style="max-width:none"><span class="w">Neel Studio changed the website after sending this.<small>Nothing was changed.</small></span><button type="button" class="act">Reload</button><button type="button" class="x" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button></div></div></div>
+      <div><p class="lbl">After Accept · the owner’s Website card (screen 3, Opening soon) · Open my store promotes v8</p><div class="crop"><section class="card" style="border:0;padding:0"><div class="ch"><h2>Website</h2><span class="chip neu">Opening soon</span><span class="off"></span></div><dl class="facts"><dt>Opens with</dt><dd>v8 · 14 Nov, 6:10 pm</dd></dl></section></div></div>
+    </div>
+  </section>
+
+  <!-- ═════════ 7 · WE'LL BE BACK ═════════ -->
+  <section class="part" id="v-back" aria-labelledby="h7s">
+    <h2 id="h7s">7 · Shopper · “We’ll be back soon” on a website path</h2>
+    <p class="cap">Frrata’s page in the store’s brand record, served for every website path while the website is stopped, its partner removed or its code not answering. <span class="mono">/checkout</span>, <span class="mono">/orders</span> and <span class="mono">/policies</span> keep working. Go to checkout shows only with a bag. Opening soon and Back soon stay the pages they are today.</p>
+    <div class="pair">
+      <div>
+        <p class="lbl">Phone · 390 · a shopper with 2 items in the bag</p>
+        <div class="phone"><div class="scr ha-scr">
+          <div class="urlbar"><svg><use href="#i-lock"/></svg>house-of-ayuda.frrata.shop/collections/saris</div>
+          <div data-use="t-back" style="flex:1;display:flex;flex-direction:column;overflow:hidden"></div>
+        </div></div>
+      </div>
+      <div>
+        <p class="lbl">Computer · 1280</p>
+        <div class="dk"><div class="dk-in plain ha-full"><div class="urlbar"><svg><use href="#i-lock"/></svg>house-of-ayuda.frrata.shop/collections/saris</div><div data-use="t-back" style="min-height:780px;display:flex;flex-direction:column"></div></div></div>
+      </div>
+    </div>
+    <template id="t-back">
+      <div class="ha">
+        <header class="hdr"><span class="ib" aria-hidden="true"></span><a href="#v-back" style="color:inherit" data-use-logo>House of Ayuda</a><a class="ib" href="#v-back" aria-label="Bag, 2 items"><svg><use href="#i-bag"/></svg><span class="cnt">2</span></a></header>
+        <main class="body"><div class="inr">
+          <h1>We’ll be back soon</h1>
+          <p class="lead">Your bag is saved.</p>
+          <div class="acts"><a class="p1" href="#v-back">Go to checkout</a><a class="p2" href="#v-back">Your orders</a></div>
+        </div></main>
+        <div data-use="t-ha-legal"></div>
+      </div>
+    </template>
+    <div class="crops" style="margin-top:28px">
+      <div><p class="lbl">With an empty bag: one way on</p><div class="crop" style="background:#FBF7F1;color:#221A14;text-align:center;display:grid;gap:12px;font-family:Mukta,sans-serif"><b style="font:400 26px/32px 'Tiro Devanagari Hindi',Georgia,serif">We’ll be back soon</b><span><a href="#v-back" style="display:inline-flex;min-height:48px;align-items:center;border:1px solid #221A14;padding:0 24px;border-radius:2px;color:#221A14;text-decoration:none;font-weight:600">Your orders</a></span></div></div>
+      <div><p class="lbl">What the page sends</p><div class="crop" style="font-size:13px;display:grid;gap:4px"><span class="mono">503 · Retry-After: 300 · noindex</span><span>Frrata’s headers, no partner code, no cookie.</span></div></div>
+    </div>
+  </section>
+
+  <!-- ═════════ WORDS ═════════ -->
+  <section class="part" id="v-words" aria-labelledby="h8s">
+    <h2 id="h8s">Words</h2>
+    <p class="cap">Every new string on these screens. Everything else is the live screens’ own words.</p>
+    <table class="tbl">
+      <thead><tr><th>Where</th><th>Words</th></tr></thead>
+      <tbody>
+        <tr><td>Website card facts</td><td>Built by · Live version · Latest preview · Open preview · Opens with · Last version · Shoppers see · Since · Checkout</td></tr>
+        <tr><td>Website card button</td><td>Open website</td></tr>
+        <tr><td>Website state chips</td><td>Live · Opening soon · Paused till 20 Nov · Stopped by Frrata · No partner · Not answering</td></tr>
+        <tr><td>Fact values</td><td>Opening soon page · Back soon page · We’ll be back page · Taking orders · Not taking orders · v10 · Building</td></tr>
+        <tr><td>Stopped by Frrata, the reason (written by Frrata staff)</td><td>A script on the Lookbook page sent shoppers to another address.</td></tr>
+        <tr><td>Address card</td><td>Address · Connect my domain · Waiting for record</td></tr>
+        <tr><td>(i) on the <span class="mono">secure.</span> row</td><td>Holds the checkout form. Shoppers never see this address.</td></tr>
+        <tr><td>Connect a domain, step 2</td><td>2 of 4 found (the count now of four)</td></tr>
+        <tr><td>Key chips and lines</td><td>Build · ends 17 Nov · Build · ended · Made by Kabir Shah, Neel Studio · Kabir Shah’s access ended · 16 Nov</td></tr>
+        <tr><td>Build key names (set by Frrata)</td><td>Studio session · Preview v9 · Kabir’s computer</td></tr>
+        <tr><td>Delete a build key</td><td>Delete the key “Kabir’s computer”? · Neel Studio’s work with it stops within a minute. This can’t be undone.</td></tr>
+        <tr><td>Partner, client page</td><td>Website · No website yet · New website · New website for House of Ayuda? · Address · Starts from · Frrata starter · Make website · Not now</td></tr>
+        <tr><td>Partner, making it</td><td>Setting up · Copied the starter · Made the preview · Setting up house-of-ayuda.frrata.shop</td></tr>
+        <tr><td>Partner, the card</td><td>Make preview · Publish v3 · Checks · Pass · 2 failed · Previews today · 3 of 20 · 20 of 20 · more tomorrow</td></tr>
+        <tr><td>Partner, check lines (from the gate)</td><td>The legal block is missing on Lookbook. · Product page script is 171 kB of 150 kB.</td></tr>
+        <tr><td>Partner, refusal</td><td>We couldn’t make the website. · Nothing was changed. · Try again</td></tr>
+        <tr><td>Partner, Publish</td><td>Publish v3? · House of Ayuda opens with v3. · Keep Opening soon · Publish v3 · (toast) House of Ayuda opens with v3.</td></tr>
+        <tr><td>Brand, accept page</td><td>Website · v8 · 14 Nov, 6:10 pm · See this version</td></tr>
+        <tr><td>Brand, accept refused</td><td>Neel Studio changed the website after sending this. · Nothing was changed. · Reload</td></tr>
+        <tr><td>Shopper page</td><td>We’ll be back soon · Your bag is saved. · Go to checkout · Your orders</td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+(function () {
+  // Clone the shared pieces into their places (the same markup in every frame).
+  for (var pass = 0; pass < 4; pass++) {
+    document.querySelectorAll('[data-use]:not([data-used])').forEach(function (slot) {
+      slot.setAttribute('data-used', '')
+      var t = document.getElementById(slot.getAttribute('data-use'))
+      if (t) slot.appendChild(t.content.cloneNode(true))
+    })
+  }
+  // Ids inside clones stay unique: suffix every id and the references to it, frame by frame.
+  var n = 0
+  document.querySelectorAll('.phone, .dk, .crop').forEach(function (frame) {
+    n++
+    frame.querySelectorAll('[id]').forEach(function (el) {
+      var old = el.id, next = old + '-' + n
+      el.id = next
+      frame.querySelectorAll('[aria-labelledby="' + old + '"],[aria-describedby="' + old + '"],[for="' + old + '"]').forEach(function (r) {
+        ['aria-labelledby', 'aria-describedby', 'for'].forEach(function (a) { if (r.getAttribute(a) === old) r.setAttribute(a, next) })
+      })
+    })
+  })
+  document.addEventListener('click', function (e) { var x = e.target.closest('.toast .x'); if (x && !x.closest('.crop')) x.closest('.toast').remove() })
+
+  // The console's sidebar (console/layout.tsx groups), the partner workspace's (partner layout), the phone's bottom bar.
+  var item = function (icon, label, on, pill) { return '<a class="nav' + (on ? ' on' : '') + '"' + (on ? ' aria-current="page"' : '') + '><svg><use href="#i-' + icon + '"/></svg>' + label + (pill ? '<span class="pill">' + pill + '</span>' : '') + '</a>' }
+  var person = { owner: ['AR', 'Anita Rao', 'Owner'], manager: ['MK', 'Meera Kapoor', 'Manager'], partner: ['NS', 'Neel Studio', 'Partner'] }
+  document.querySelectorAll('[data-sb]').forEach(function (sb) {
+    var on = sb.getAttribute('data-on'), who = sb.getAttribute('data-sb')
+    if (who === 'pw') {
+      sb.innerHTML = '<div class="store"><span class="mono-mark" style="background:#3A44C2">N</span><span><b>Neel Studio<span class="ptag">PARTNER</span></b><span class="mono">Partner workspace</span></span></div>' +
+        '<div class="ov">Work</div>' + item('orders', 'Clients', on === 'clients') + item('apps', 'Team') + item('settings', 'Passkeys') + item('content', 'Your details') +
+        '<span class="sp"></span><div class="acct"><span class="av">KS</span><span><b>Kabir Shah</b><span>Partner owner</span></span></div>'
+      return
+    }
+    var p = person[who] || person.owner
+    sb.innerHTML = '<div class="store"><span class="mono-mark">H</span><span><b>House of Ayuda</b><span class="mono">house-of-ayuda.frrata.shop</span></span></div>' +
+      '<div class="ov">Today</div>' + item('home', 'Home') + item('orders', 'Orders', false, '3') + item('bell', 'Notices', on === 'notices', who === 'owner' ? '1' : '') + item('profit', 'Analytics') +
+      '<div class="ov">Catalogue</div>' + item('products', 'Products') + item('coll', 'Collections') +
+      '<div class="ov">Store</div>' + item('offers', 'Offers') + item('content', 'Content') + item('look', 'Look') + item('search', 'Search and sharing') + item('apps', 'Apps') + item('settings', 'Settings', on === 'settings') + item('activity', 'Activity') +
+      '<span class="sp"></span>' + item('external', 'Preview store') +
+      '<div class="acct"><span class="av">' + p[0] + '</span><span><b>' + p[1] + '</b><span>' + p[2] + '</span></span></div>'
+  })
+  document.querySelectorAll('[data-bottom]').forEach(function (bar) {
+    var cell = function (icon, label, on) { return '<div' + (on ? ' class="on"' : '') + '><svg><use href="#i-' + icon + '"/></svg>' + label + '</div>' }
+    var on = bar.getAttribute('data-on') || 'more'
+    bar.innerHTML = bar.hasAttribute('data-pw')
+      ? cell('orders', 'Clients', on === 'clients') + cell('apps', 'Team') + cell('settings', 'Passkeys') + cell('more', 'More', on === 'more')
+      : cell('home', 'Home') + cell('orders', 'Orders') + cell('products', 'Products') + cell('more', 'More', on === 'more')
+  })
+
+  // Desktop frames: drawn at 1280, scaled to the column they sit in.
+  function fit(dk) {
+    var inner = dk.firstElementChild, w = dk.clientWidth, s = Math.min(1, w / 1280)
+    if (dk._w === w && dk._h === inner.offsetHeight) return
+    dk._w = w; dk._h = inner.offsetHeight
+    inner.style.transform = 'scale(' + s + ')'
+    dk.style.height = Math.ceil(inner.offsetHeight * s) + 'px'
+  }
+  var dks = Array.prototype.slice.call(document.querySelectorAll('.dk'))
+  dks.forEach(fit)
+  if ('ResizeObserver' in window) { var ro = new ResizeObserver(function () { dks.forEach(fit) }); dks.forEach(function (d) { ro.observe(d) }) }
+  window.addEventListener('load', function () { dks.forEach(fit) })
+})()
+// The store's logo into each shopper page header.
+document.querySelectorAll('[data-use-logo]').forEach(function (a) { a.innerHTML = document.getElementById('t-ha-logo').innerHTML })
+
+</script>
+</body>
+</html>

@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Publishing after handover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Mukta:wght@400;600&family=Tiro+Devanagari+Hindi&display=swap">
+<style>
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --rani:#D61F69;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62; --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B; --info-bg:#E8F1FD; --info-fg:#1F5BA8; --info-dot:#3B82E0;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --hover:var(--g50); --sunk:var(--g50); --doc:var(--g50);
+  --line:var(--g200); --line-soft:var(--g100); --field:var(--g500);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --bar:var(--g950); --bar-text:#fff; --bar-link:#A3ABF5; --bezel:#171615;
+  --store-bg:#F7F1EA; --store-ink:#2A1D14; --store-sub:#6E5A4B; --store-btn:#2A1D14; --store-on-btn:#F7F1EA;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --doc:#0E0D0C;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; --bezel:#000; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --doc:#0E0D0C;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; --bezel:#000; color-scheme:dark }
+* { box-sizing:border-box }
+html { scroll-padding-top:12px }
+body { background:var(--doc); color:var(--text); font:400 14px/20px var(--font); margin:0;
+  padding:0 max(16px, env(safe-area-inset-right, 0px)) 72px max(16px, env(safe-area-inset-left, 0px)) }
+h1,h2,h3 { margin:0; text-wrap:balance }
+p { margin:0 }
+button { font:inherit; color:inherit }
+a { color:inherit }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+.mono { font-family:var(--mono); font-size:12.5px }
+.num { font-variant-numeric:tabular-nums }
+
+/* ── The reference page ─────────────────────────────────────────────────────────────────────────────── */
+.doc { max-width:1720px; margin:0 auto }
+.doc-top { padding:28px 0 10px }
+.doc-top h1 { font:600 26px/32px var(--font); letter-spacing:-.01em }
+.doc-top p { color:var(--text-2); margin-top:6px; max-width:90ch }
+.toc { display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 0 }
+.toc a { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12.5px; text-decoration:none; background:var(--surface) }
+.part { margin-top:48px; scroll-margin-top:12px }
+.part > h2 { font:600 18px/24px var(--font) }
+.part > .cap { color:var(--text-2); font-size:13px; margin:4px 0 16px; max-width:100ch }
+.pair { display:grid; grid-template-columns:390px minmax(0,1fr); gap:32px; align-items:start }
+.pair > * { min-width:0 }
+.lbl { font-size:12px; color:var(--text-3); margin:0 0 8px; font-weight:500 }
+@media (max-width:1100px) { .pair { grid-template-columns:minmax(0,1fr) } }
+
+/* ── Neel primitives ────────────────────────────────────────────────────────────────────────────────── */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-weight:500; font-size:14px; box-shadow:var(--e1); cursor:pointer; white-space:nowrap }
+.btn.sm { min-height:30px; padding:0 10px; font-size:13px }
+.btn[aria-disabled="true"] { opacity:.45; cursor:not-allowed }
+.off { display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px 10px; justify-content:flex-end }
+.off .why { font-size:13px; color:var(--text-2) }
+.chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font-size:12px; line-height:16px; font-weight:500; white-space:nowrap }
+.chip::before { content:""; width:6px; height:6px; border-radius:50%; flex:none }
+.chip.neu { background:var(--neu-bg); color:var(--neu-fg) } .chip.neu::before { background:var(--neu-dot) }
+.chip.ok { background:var(--ok-bg); color:var(--ok-fg) } .chip.ok::before { background:var(--ok-dot) }
+.chip.warn { background:var(--warn-bg); color:var(--warn-fg) } .chip.warn::before { background:var(--warn-dot) }
+.chip.info { background:var(--info-bg); color:var(--info-fg) } .chip.info::before { background:var(--info-dot) }
+.chip.wrap { white-space:normal }
+.tip { display:inline-grid; place-items:center; width:24px; height:24px; border:0; background:none; color:var(--text-3); cursor:pointer; vertical-align:middle; padding:0 }
+.tip svg { width:14px; height:14px }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 20px 20px; display:flex; flex-direction:column; gap:16px }
+.card.flush { padding:0; gap:0; overflow:hidden }
+.card h2 { font:600 16px/24px var(--font); display:flex; align-items:center }
+.ch { display:grid; grid-template-columns:auto minmax(0,1fr) auto; grid-template-areas:"h c b"; align-items:center; gap:6px 10px }
+.ch h2 { grid-area:h } .ch > .chip { grid-area:c; justify-self:start } .ch > .off { grid-area:b }
+.hint { font-size:14px; color:var(--text-2); margin-top:-8px }
+.facts { display:grid; grid-template-columns:180px minmax(0,1fr); gap:8px 12px; margin:0; font-size:14px }
+.facts dt { color:var(--text-2) } .facts dt .tip { margin:-2px 0 }
+.facts dd { margin:0; min-width:0; overflow-wrap:anywhere }
+.facts dd small { display:block; color:var(--text-2); font-size:13px }
+.grid3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px }
+.grid2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+.hair { border-top:1px solid var(--line-soft); padding-top:16px }
+.f { display:flex; flex-direction:column; gap:6px; min-width:0 }
+.f > label, .f > .l { font-size:13px; font-weight:500; display:block }
+.f .tip { margin:-4px 0 }
+.f .opt { font-weight:400; color:var(--text-2); margin-left:4px }
+.f .wide { grid-column:1 / -1 }
+.in { height:36px; border:1px solid var(--field); border-radius:8px; padding:0 10px; font:inherit; font-size:14px; background:var(--surface); color:var(--text); width:100%; min-width:0 }
+textarea.in { height:auto; padding:8px 10px; resize:none }
+.pfx { display:flex; align-items:center; gap:6px } .pfx span { color:var(--text-2) }
+.radios { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px }
+.rc { display:flex; gap:10px; align-items:flex-start; text-align:left; border:1px solid var(--line); border-radius:12px; padding:12px; background:var(--surface); cursor:pointer }
+.rc i { width:16px; height:16px; border-radius:50%; border:2px solid var(--field); flex:none; margin-top:2px }
+.rc[aria-checked="true"] { border-color:var(--text); box-shadow:inset 0 0 0 1px var(--text) } .rc[aria-checked="true"] i { border:5px solid var(--text) }
+.rc b { display:block; font-weight:500 } .rc small { display:block; font-size:12px; color:var(--text-2) }
+.seg { display:inline-flex; flex-wrap:wrap; gap:2px; background:var(--sunk); border-radius:10px; padding:2px; max-width:100% }
+.seg button { border:0; background:transparent; color:var(--text-2); min-height:32px; padding:0 12px; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer }
+.seg button[aria-checked="true"] { background:var(--surface); color:var(--text); box-shadow:var(--e1) }
+.swr { display:flex; justify-content:space-between; align-items:center; gap:12px }
+.swr span { font-weight:500; display:flex; align-items:center }
+.sw { width:34px; height:20px; border-radius:999px; background:var(--g300); position:relative; flex:none; border:0; padding:0 }
+.sw::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:var(--e1) }
+.sw[aria-checked="true"] { background:var(--action) } .sw[aria-checked="true"]::after { left:16px }
+
+/* The five pages (policy-pages.tsx), read only */
+.pp-h { padding:16px 20px 4px }
+.pp-row { border-top:1px solid var(--line); padding:12px 20px; display:flex; flex-wrap:wrap; align-items:center; gap:8px }
+.pp-row.sel { background:var(--hover) }
+.pp-row > button { border:0; background:none; padding:0; font-weight:500; cursor:pointer; min-height:24px }
+.pp-row .need { flex-basis:100%; font-size:12px; color:var(--warn-fg) }
+
+/* The store preview beside the form (shop-preview/previews.tsx Frame) */
+.pv { border:1px solid var(--line); border-radius:8px; overflow:hidden }
+.pv figcaption { display:flex; justify-content:space-between; gap:8px; border-bottom:1px solid var(--line); background:var(--surface); padding:6px 12px; font-size:12px; color:var(--text-2) }
+.pv figcaption > span:last-child { white-space:nowrap }
+.pv figcaption .mono { font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0 }
+.pv .shop { background:var(--store-bg); color:var(--store-ink); padding:16px; font-size:13px; line-height:1.6; display:grid; gap:10px }
+.pv .shop b.t { font:500 18px/1.3 Georgia,'Times New Roman',serif }
+.pv .shop .wa { justify-self:start; background:var(--store-btn); color:var(--store-on-btn); border-radius:4px; padding:6px 12px; font:500 12px var(--font) }
+.pv .inv { background:#fff; color:#2A1D14; padding:16px; font-size:13px; display:grid; gap:8px }
+.pv .inv .sub { color:#6E5A4B; font-size:12px }
+.pv .inv .foot { display:flex; justify-content:space-between; gap:12px; border-top:1px solid #E2D3C2; padding-top:8px; font-size:12px }
+.pv-tabs { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px }
+.pv-tabs button { border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:12px; background:var(--surface); cursor:pointer }
+.pv-tabs button[aria-selected="true"] { background:var(--action); border-color:var(--action); color:var(--action-text) }
+
+/* Toasts and the save bar (ui/toast.tsx, ui/unsaved.tsx) */
+.toast { background:var(--bar); color:var(--bar-text); border-radius:10px; box-shadow:var(--e3); padding:10px 8px 10px 14px; display:flex; align-items:center; gap:12px; font-weight:500; max-width:448px }
+.toast.err { box-shadow:var(--e3), 0 0 0 1px rgba(220,59,59,.6) }
+.toast .mk { width:22px; height:22px; border-radius:50%; display:grid; place-items:center; flex:none; color:#fff }
+.toast .mk.ok { background:var(--ok-dot) } .toast .mk.bad { background:var(--bad-dot) }
+.toast .w { flex:1; min-width:0 } .toast .w small { display:block; font-size:12px; font-weight:400; opacity:.8 }
+.toast .act { border:0; background:none; color:var(--bar-link); font-weight:500; min-height:36px; padding:0 8px; cursor:pointer }
+.toast .x { border:0; background:none; color:inherit; opacity:.8; width:36px; height:36px; display:grid; place-items:center; cursor:pointer; flex:none }
+.savebar { background:var(--bar); color:var(--bar-text); border-radius:12px; box-shadow:var(--e3); padding:10px 10px 10px 16px; display:flex; align-items:center; gap:12px }
+.savebar b { font-weight:500; flex:1 }
+.savebar button { border-radius:8px; min-height:30px; padding:0 10px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:6px }
+.savebar .dis { background:transparent; color:var(--bar-text); border:1px solid rgba(255,255,255,.35) }
+.savebar .sv { background:#fff; color:var(--g950); border:0 }
+.savebar kbd { font:500 11px var(--font); background:rgba(23,22,21,.1); border-radius:4px; padding:3px 5px }
+
+/* ── Desktop console frame, drawn at 1280 and scaled to the column ──────────────────────────────────── */
+.dk { position:relative; width:100%; overflow:hidden; border:1px solid var(--line); border-radius:12px; box-shadow:var(--e2); background:var(--page) }
+.dk-in { width:1280px; transform-origin:0 0; display:grid; grid-template-columns:232px minmax(0,1fr); min-height:820px; position:relative; background:var(--page) }
+.sb { background:var(--side); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:2px }
+.sb .store { display:flex; gap:10px; align-items:center; padding:6px 8px 10px }
+.mono-mark { width:28px; height:28px; border-radius:8px; background:#171615; color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px; flex:none }
+.sb .store > span:last-child { min-width:0 }
+.sb .store b { display:block; font-size:14px; font-weight:600 } .sb .store .mono { display:block; font-size:11px; color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.sb .ov { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); margin:14px 8px 4px }
+.nav { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; color:var(--text-2); font-size:14px; text-decoration:none; border:1px solid transparent }
+.nav svg { width:18px; height:18px; flex:none }
+.nav .pill { margin-left:auto; background:var(--warn-bg); color:var(--warn-fg); border-radius:999px; font-size:12px; padding:0 7px; font-weight:500 }
+.nav.on { background:var(--surface); color:var(--text); box-shadow:var(--e1); border-color:var(--line); font-weight:500 }
+.nav.on svg { color:var(--action) }
+.sb .sp { flex:1 }
+.acct { display:flex; gap:10px; align-items:center; padding:10px 8px 4px; border-top:1px solid var(--line); margin-top:8px }
+.av { width:28px; height:28px; border-radius:50%; background:var(--n50); color:var(--n700); display:grid; place-items:center; font-weight:600; font-size:12px; flex:none }
+.acct b { display:block; font-size:13px; font-weight:500 } .acct span { font-size:12px; color:var(--text-2) }
+.main { padding:28px 32px 96px; min-width:0; position:relative }
+.crumb { display:flex; gap:4px; list-style:none; margin:0 0 6px; padding:0; font-size:13px; font-weight:500; color:var(--text-2) }
+.crumb a { text-decoration:none }
+.ttl { display:flex; align-items:flex-start; gap:16px }
+.ttl .tw { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; flex:1; min-width:0 }
+.ttl h1 { font:600 22px/28px var(--font) }
+.vt { display:flex; gap:20px; border-bottom:1px solid var(--line); margin:16px 0 0; overflow-x:auto; scrollbar-width:none }
+.vt a { display:inline-flex; align-items:center; min-height:40px; border-bottom:2px solid transparent; margin-bottom:-1px; font-size:14px; font-weight:500; color:var(--text-2); text-decoration:none; white-space:nowrap }
+.vt a[aria-current="page"] { color:var(--text); border-bottom-color:var(--action) }
+.cols { display:grid; grid-template-columns:minmax(0,640px) 320px; gap:24px; align-items:start; margin-top:16px }
+.fcol { display:flex; flex-direction:column; gap:16px; min-width:0 }
+.dk .toast { position:absolute; left:50%; transform:translateX(-50%); bottom:24px; width:448px; z-index:5 }
+.dk .toast.lift { bottom:84px }
+.dk .savebar { position:absolute; left:264px; width:640px; bottom:20px; z-index:4 }
+
+/* Notices (console/notices/page.tsx) */
+.nl { list-style:none; margin:0; padding:0 }
+.nl li { display:flex; gap:12px; padding:12px 16px; border-top:1px solid var(--line) }
+.nl li:first-child { border-top:0 }
+.nl .dot { width:8px; height:8px; border-radius:50%; margin-top:6px; flex:none; border:1px solid var(--field) }
+.nl .dot.new { background:var(--rani); border-color:var(--rani) }
+.nl .t { min-width:0; flex:1 }
+.nl .t p.b { font-weight:600 }
+.nl .t p.s { font-size:14px; color:var(--text-2) }
+.nl .m { margin-top:4px; display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:var(--text-2) }
+.nl .m a { text-decoration:underline; text-underline-offset:4px; display:inline-flex; min-height:24px; align-items:center }
+.link { font-size:14px; text-decoration:underline; text-underline-offset:4px }
+
+/* ── Phone frame ─────────────────────────────────────────────────────────────────────────────────────── */
+.phone { width:390px; max-width:100%; border-radius:28px; padding:8px; background:var(--bezel); box-shadow:var(--e2) }
+.scr { border-radius:22px; overflow:hidden; background:var(--page); height:800px; display:flex; flex-direction:column; position:relative; font-size:15px; line-height:22px }
+.p-main { flex:1; overflow:hidden; padding:12px 16px 16px; display:flex; flex-direction:column; gap:12px; min-width:0 }
+.p-main > * { flex-shrink:0 }
+.back { display:inline-flex; align-items:center; min-height:24px; color:var(--text-2); font-size:14px; text-decoration:none; align-self:flex-start }
+.p-head { display:flex; flex-direction:column; align-items:flex-start; gap:10px }
+.p-head .tw { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px }
+.p-head h1 { font:600 20px/26px var(--font) }
+.scr .btn { min-height:44px }
+.scr .btn.sm { min-height:30px }
+.scr .vt { margin:0 -16px; padding:0 16px; gap:20px }
+.scr .vt a { min-height:44px }
+.scr .card { padding:16px; gap:14px }
+.scr .card.flush { padding:0; gap:0 }
+.scr .pp-h { padding:16px 16px 4px } .scr .pp-row { padding:12px 16px }
+.scr .facts { grid-template-columns:120px minmax(0,1fr); font-size:14px }
+.scr .in { height:44px; font-size:15px }
+.scr textarea.in { height:auto }
+.scr .grid3, .scr .grid2, .scr .radios { grid-template-columns:minmax(0,1fr) }
+.scr .hint { font-size:14px }
+.scr .ch { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"h b" "c c" }
+.scr .ch .off { flex-direction:column; align-items:flex-end; gap:2px }
+.bottom { border-top:1px solid var(--line); background:var(--side); display:grid; grid-template-columns:repeat(4,1fr); text-align:center; font-size:11px; color:var(--text-2); flex:none }
+.bottom div { min-height:56px; padding:8px 0; display:grid; gap:2px; justify-items:center; align-content:center }
+.bottom svg { width:22px; height:22px }
+.bottom .on { color:var(--action); font-weight:500 }
+.scr .toast { position:absolute; left:12px; right:12px; bottom:72px; max-width:none; z-index:5 }
+.scr .toast.lift { bottom:142px }
+.scr .savebar { position:absolute; left:12px; right:12px; bottom:68px; z-index:4 }
+.scr .nl li { padding:12px 0 }
+
+/* Small crops for states */
+.crops { display:grid; grid-template-columns:358px minmax(0,1fr); gap:32px; align-items:start }
+.crops > * { min-width:0 }
+.crop { background:var(--page); border:1px solid var(--line); border-radius:12px; padding:16px; box-shadow:var(--e1) }
+@media (max-width:1100px) { .crops { grid-template-columns:minmax(0,1fr) } }
+
+/* Words and roles tables */
+.tbl { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:12px; overflow:hidden; font-size:13px }
+.tbl th, .tbl td { text-align:left; padding:10px 12px; border-top:1px solid var(--line-soft); vertical-align:top }
+.tbl th { background:var(--sunk); font-weight:500; color:var(--text-2); border-top:0 }
+.tbl td:first-child { width:28%; color:var(--text-2) }
+@media (max-width:700px) {
+  .tbl, .tbl tbody, .tbl tr, .tbl td { display:block; width:auto }
+  .tbl thead { display:none }
+  .tbl tr { border-top:1px solid var(--line) } .tbl tr:first-child { border-top:0 }
+  .tbl td { border-top:0; padding:6px 12px } .tbl td:first-child { width:auto; padding-top:10px }
+}
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important } }
+
+/* ── Added for the 2026-11-16 mockups (same tokens as PP1) ─────────────────────────────────────────── */
+.doc-top .meta { font-size:13px; color:var(--text-3); margin-top:4px }
+.intro { display:grid; gap:12px; margin-top:12px }
+.short { list-style:none; margin:0; padding:0; display:grid; gap:8px; max-width:110ch }
+.short li { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 14px }
+.short li b { font-weight:600 }
+.take { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px }
+.take .tk { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px; display:grid; gap:6px; align-content:start; font-size:13px }
+.take .tk b { font-size:14px }
+.take .tk .src { color:var(--text-3); font-size:12px }
+.take .tk .t { color:var(--ok-fg) } .take .tk .s { color:var(--bad-fg) }
+.steps-l { margin:8px 0 0; padding-left:20px; font-size:13px; color:var(--text-2); max-width:100ch }
+.steps-l li { margin:2px 0 }
+.stl { font-size:12px; color:var(--text-3); margin:10px 0 0 } .stl b { color:var(--text-2); font-weight:500 }
+.tbl td.code { font-family:var(--mono); font-size:12px }
+
+/* Built toast (ui/toast.tsx in Neel): ok is the bar with words only; an error is the bad tint, its buttons underlined */
+.toast .mk { display:none }
+.toast.err { background:var(--bad-bg); color:var(--bad-fg); box-shadow:var(--e2) }
+.toast.err .act, .toast.err .x { color:inherit } .toast.err .act { text-decoration:underline; text-underline-offset:3px }
+.toast .undo-line { position:absolute; left:0; right:0; bottom:0; height:2px; background:currentColor; opacity:.6 }
+.toast { position:relative; overflow:hidden }
+.dk .toast, .scr .toast { position:absolute }
+
+/* Rows and records */
+.rows { list-style:none; margin:0; padding:0 }
+.rows > li { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 12px; padding:10px 20px; border-top:1px solid var(--line-soft) }
+.rows > li:first-child { border-top:0 }
+.rows .host { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; min-width:0; font-family:var(--mono); font-size:13px; overflow-wrap:anywhere }
+.rows .acts { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end }
+.rows .sub { grid-column:1 / -1; font-size:13px; color:var(--text-2) }
+.rows li.rec { padding-left:36px; background:var(--g25) }
+.rows li.rec .host { font-size:12.5px }
+.rows li.rec .host .ty { color:var(--text-3); font-weight:600 }
+.ghost { display:inline-flex; align-items:center; min-height:30px; padding:0 8px; border-radius:8px; border:0; background:none; color:var(--text-2); font-size:13px; font-weight:500; cursor:pointer; text-decoration:none }
+.btn.primary { background:var(--action); border-color:var(--action); color:var(--action-text); box-shadow:none }
+.btn.danger { color:var(--bad-fg) }
+.btn.destr { background:var(--bad-dot); border-color:var(--bad-dot); color:#fff; box-shadow:none }
+.chip.bad { background:var(--bad-bg); color:var(--bad-fg) } .chip.bad::before { background:var(--bad-dot) }
+.tag { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:6px; padding:0 7px; font-size:12px; line-height:18px; color:var(--text-2); background:var(--surface); font-family:var(--font) }
+.keys { list-style:none; margin:0; padding:0 }
+.keys li { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 12px; padding:12px 0; border-top:1px solid var(--line-soft) }
+.keys li:first-child { border-top:0; padding-top:0 }
+.keys .nm { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; font-weight:500 }
+.keys .ln { grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:4px 12px; font-size:13px; color:var(--text-2) }
+.keys .ln .mono { font-size:12px }
+.keys li.off { color:var(--text-2) }
+.dev { display:flex; justify-content:space-between; align-items:center; gap:8px; padding-bottom:8px; border-bottom:1px solid var(--line-soft) }
+.dev:last-child { border-bottom:0; padding-bottom:0 }
+.dev .mono { color:var(--text-2); font-size:12px }
+.scr .dev .mono, .scr .hide-p { display:none }
+.ph-only { display:none } .scr .ph-only { display:inline } .scr .dk-only { display:none }
+
+/* Dialog (Dialog primitive: 16 px, e3; a sheet on a phone) */
+.veil { position:absolute; inset:0; background:rgba(23,22,21,.36); z-index:6; display:grid; place-items:center }
+.dlg { background:var(--surface); border-radius:16px; box-shadow:var(--e3); width:480px; max-width:calc(100% - 32px); padding:20px; display:grid; gap:14px }
+.dlg h3 { font:600 18px/24px var(--font) }
+.dlg .ft { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap }
+.dlg .err-slot { background:var(--bad-bg); color:var(--bad-fg); border-radius:10px; padding:8px 12px; font-size:13px }
+.scr .veil { place-items:end stretch }
+.scr .dlg { width:auto; max-width:none; border-radius:16px 16px 0 0; padding:20px 16px 24px }
+.scr .dlg .ft { flex-direction:column-reverse } .scr .dlg .ft .btn { width:100% }
+.dots { display:flex; gap:6px } .dots i { width:24px; height:2px; border-radius:2px; background:var(--line) } .dots i.on { background:var(--text) }
+.prog { height:4px; border-radius:999px; background:var(--g100); overflow:hidden } .prog i { display:block; height:100%; background:var(--text); width:60% }
+.spin { width:14px; height:14px; border-radius:50%; border:2px solid var(--g300); border-top-color:var(--action); display:inline-block; flex:none; animation:spin .9s linear infinite }
+@keyframes spin { to { transform:rotate(360deg) } }
+.done-i { width:14px; height:14px; border-radius:50%; background:var(--ok-dot); display:inline-grid; place-items:center; color:#fff; flex:none }
+.wait-i { width:14px; height:14px; border-radius:50%; border:2px solid var(--g300); display:inline-block; flex:none }
+.stepl { list-style:none; margin:0; padding:0; display:grid; gap:8px }
+.stepl li { display:flex; gap:10px; align-items:center; font-size:14px }
+.stepl li .mono { color:var(--text-2) }
+
+/* Partner workspace tag */
+.ptag { font-size:10.5px; font-weight:600; letter-spacing:.08em; color:var(--n700); background:var(--n50); border-radius:4px; padding:1px 5px; margin-left:6px }
+.pagetitle { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px }
+
+/* Crops grid with labels for states */
+.crops3 { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:20px; align-items:start }
+.crops3 > * { min-width:0 }
+.scr .facts dd .link, .facts dd .link { font-size:13px }
+.facts dd .ln2 { display:block; color:var(--text-2); font-size:13px }
+.rsn { font-size:13px; color:var(--bad-fg) }
+.card, .crop > * { min-width:0 }
+a.btn { text-decoration:none }
+.cap .mono, .short .mono, p .mono { overflow-wrap:anywhere }
+@media (max-width:700px) {
+  .radios.two { grid-template-columns:minmax(0,1fr) }
+  .swr { flex-wrap:wrap }
+  .crop .facts, .crops3 .facts { grid-template-columns:110px minmax(0,1fr) }
+  .crop .ch { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"h b" "c c" }
+  .rows > li { padding-left:12px; padding-right:12px } .rows li.rec { padding-left:24px }
+  .dlg .ft { flex-direction:column-reverse } .dlg .ft .btn { width:100% }
+}
+
+/* V2b: PP2 Publishing per partner, PP3 told after with Undo, Review and publish, needs your yes */
+.people { list-style:none; margin:0; padding:0 }
+.people > li { display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; padding:12px 16px; border-top:1px solid var(--line) }
+.people > li:first-child { border-top:0 }
+.people .who { flex:1; min-width:0 } .people .who b { font-weight:500; display:block } .people .who small { display:block; font-size:12px; color:var(--text-2) }
+.people .since { width:170px; font-size:14px; color:var(--text-2) }
+.people .pub { flex-basis:100%; display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; padding:10px 0 0; margin-top:6px; border-top:1px dashed var(--line-soft) }
+.people .pub > span { font-size:13px; font-weight:500 }
+.scr .people .since { width:auto; flex-basis:100% }
+.scr .people .pub .seg { width:100% } .scr .people .pub .seg button { flex:1 }
+.nl .m a, .nl .m button.l { text-decoration:underline; text-underline-offset:4px; display:inline-flex; min-height:24px; align-items:center; background:none; border:0; padding:0; font:inherit; color:inherit; cursor:pointer }
+.chg { list-style:none; margin:0; padding:0; display:grid; gap:6px }
+.chg li { display:flex; gap:8px; align-items:center; font-size:14px }
+.chg .p { color:var(--ok-fg); font-weight:600; width:14px } .chg .m { color:var(--bad-fg); font-weight:600; width:14px }
+.ckl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px }
+.ckl div { display:flex; justify-content:space-between; gap:8px; font-size:13px; background:var(--sunk); border-radius:8px; padding:6px 10px }
+.scr .ckl { grid-template-columns:minmax(0,1fr) }
+.warnc { border-color:var(--warn-dot); background:var(--warn-bg) }
+.warnc .host { font-family:var(--mono); font-size:13px }
+.mini { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#FBF7F1; color:#221A14; font-family:Mukta,sans-serif; width:260px; max-width:100% }
+.mini .h { height:40px; display:flex; align-items:center; justify-content:center; border-bottom:1px solid #DDD0BE; font:400 18px 'Tiro Devanagari Hindi',Georgia,serif }
+.mini .hero { height:150px; background:linear-gradient(160deg,#E8C26A,#9C6A16); display:flex; align-items:flex-end; padding:12px; color:#fff; font:400 20px/24px 'Tiro Devanagari Hindi',Georgia,serif }
+.mini .g { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:10px } .mini .g i { aspect-ratio:2/3; background:linear-gradient(160deg,#E7B9B0,#8A3B32) } .mini .g i + i { background:linear-gradient(160deg,#F1DC8C,#A47E1B) }
+.mini .new { margin:0 10px 10px; padding:6px 8px; background:#F2EADF; font-size:12px }
+.rv { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; align-items:start; margin-top:16px; max-width:900px }
+.scr .rv { grid-template-columns:minmax(0,1fr) }
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/></symbol>
+  <symbol id="i-orders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20h4"/></symbol>
+  <symbol id="i-profit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 15v-4M12 15V7M17 15v-6"/></symbol>
+  <symbol id="i-products" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 4 7l2 3 2-1v11h8V9l2 1 2-3-4-3c-1 2-2.5 2.5-4 2.5S9 6 8 4z"/></symbol>
+  <symbol id="i-coll" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="12" height="13" rx="2"/><path d="M8 4h10a2 2 0 0 1 2 2v10"/></symbol>
+  <symbol id="i-offers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V4h8l8 8-8 8z"/><circle cx="8.5" cy="8.5" r="1.2"/></symbol>
+  <symbol id="i-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-look" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="9" cy="10" r="1"/><circle cx="14" cy="9" r="1"/><path d="M12 20a3 3 0 0 1 0-6h3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></symbol>
+  <symbol id="i-apps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5H5V6h5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.4l3 3 6-6.4"/></symbol>
+  <symbol id="i-bad" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 3.6v5.4M8 12v.4"/></symbol>
+  <symbol id="i-x"viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8.5h14l-1 11.5H6L5 8.5Z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H5M10.5 6.5 5 12l5.5 5.5"/></symbol>
+  <symbol id="i-build48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="10" width="32" height="26" rx="3"/><path d="M8 17h32M14 42h20M24 36v6"/><path d="M17 24l-3 3 3 3M31 24l3 3-3 3" /><path d="M26 22l-4 10" stroke="var(--haldi,#D9A21B)"/></symbol>
+</svg>
+
+<!-- Settings › Team and plan › People, the live list (settings/people/page.tsx) with Publishing on the partner's row -->
+<template id="t-people">
+  <section class="card flush" aria-label="People"><ul class="people">
+    <li><span class="who"><b>Anita Rao</b><small>anita@example.com</small></span><span class="chip neu">Owner</span><span class="since">You</span></li>
+    <li><span class="who"><b>Meera Kapoor</b><small>meera@example.com</small></span><span class="chip neu">Manager</span><span class="since">Since 3 Nov 2026</span></li>
+    <li><span class="who"><b>Neel Studio</b><small>hello@example.com</small></span><span class="chip info">Partner</span><span class="since">Built this store · 2 Nov 2026</span><button type="button" class="btn sm">Remove partner</button>
+      <span class="pub"><span id="pb-l">Publishing</span><span class="seg" role="radiogroup" aria-labelledby="pb-l"><button type="button" role="radio" aria-checked="true">Publishes freely</button><button type="button" role="radio" aria-checked="false">Ask me first</button></span><button type="button" class="tip" aria-label="About publishing" aria-expanded="false"><svg><use href="#i-info"/></svg></button></span></li>
+    <li><span class="who"><b>Kabir Shah</b><small>kabir@example.com</small></span><span class="chip info">Partner · Lead</span><span class="since">Since 2 Nov 2026</span></li>
+  </ul></section>
+</template>
+<template id="t-ppl-head-dk">
+  <ol class="crumb"><li><a href="#b-people">Settings</a></li><li aria-hidden="true">›</li><li><a href="#b-people">Team and plan</a></li></ol>
+  <div class="ttl"><div class="tw"><h1>People</h1></div></div>
+  <nav class="vt" aria-label="Team and plan"><a href="#b-people" aria-current="page">People</a><a href="#b-people">Plan and billing</a><a href="#b-people">Your notifications</a></nav>
+</template>
+<template id="t-ppl-head-ph">
+  <a class="back" href="#b-people">‹ Team and plan</a>
+  <div class="p-head"><div class="tw"><h1>People</h1></div></div>
+  <nav class="vt" aria-label="Team and plan"><a href="#b-people" aria-current="page">People</a><a href="#b-people">Plan and billing</a><a href="#b-people">Your notifications</a></nav>
+</template>
+
+<!-- Notices rows (console/notices/page.tsx), with the publish line -->
+<template id="t-notices">
+  <li><span class="dot new" aria-hidden="true"></span><div class="t"><p class="b">Neel Studio published v9<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"> (new)</span></p><p class="s">Added Lookbook and Our weavers.</p><p class="m"><span class="chip neu">Website</span>Today, 10:06 am<a href="#b-review">Open</a><a href="#b-notice">Preview</a><button type="button" class="l">Undo</button></p></div></li>
+  <li><span class="dot" aria-hidden="true"></span><div class="t"><p>Your partner changed the main menu</p><p class="s">See it in Content.</p><p class="m"><span class="chip neu">Needs you</span>15 Nov, 6:10 pm<a href="#b-notice">Open</a></p></div></li>
+  <li><span class="dot" aria-hidden="true"></span><div class="t"><p>Your Frrata bill: ₹4,999</p><p class="s">House of Ayuda's bill is ready in Plan and billing.</p><p class="m"><span class="chip warn">Billing</span>1 Nov, 9:00 am<a href="#b-notice">Open</a></p></div></li>
+</template>
+
+<!-- The review page: Settings › Website › a version -->
+<template id="t-review">
+  <div class="rv">
+    <div class="fcol">
+      <section class="card" aria-labelledby="cg-h"><h2 id="cg-h">What changed</h2>
+        <ul class="chg"><li><span class="p" aria-hidden="true">+</span>Lookbook <span class="mono" style="color:var(--text-2)">/pages/lookbook</span></li><li><span class="p" aria-hidden="true">+</span>Our weavers <span class="mono" style="color:var(--text-2)">/pages/our-weavers</span></li></ul>
+        <dl class="facts"><dt>Pages removed</dt><dd>None</dd><dt>Live now</dt><dd>v8 · 14 Nov, 6:10 pm</dd></dl>
+      </section>
+      <section class="card" aria-labelledby="ck-h"><div class="ch"><h2 id="ck-h">Frrata’s checks</h2><span class="chip ok">Pass</span><span class="off"></span></div>
+        <div class="ckl"><div>Phone speed<b class="num">94</b></div><div>Legal block<span class="chip ok">Pass</span></div><div>Bag link<span class="chip ok">Pass</span></div><div>Outside services<span class="chip ok">None new</span></div></div>
+      </section>
+    </div>
+    <section class="card" aria-labelledby="pv-h"><div class="ch"><h2 id="pv-h">Preview</h2><span></span><span class="off"><a class="btn sm" href="#b-review">Open preview</a></span></div>
+      <div class="mini" aria-hidden="true"><div class="h">House of Ayuda</div><div class="hero">For the days you’ll keep</div><div class="g"><i></i><i></i></div><div class="new">Lookbook · new</div></div>
+    </section>
+  </div>
+</template>
+<template id="t-rv-head-dk">
+  <ol class="crumb"><li><a href="#b-review">Settings</a></li><li aria-hidden="true">›</li><li><a href="#b-review">Website</a></li></ol>
+  <div class="ttl"><div class="tw"><h1>v9 from Neel Studio</h1><span class="chip warn">Waiting for you</span></div><span class="off" style="gap:8px"><button type="button" class="btn">Not now</button><button type="button" class="btn primary">Publish v9</button></span></div>
+  <p style="font-size:13px;color:var(--text-2);margin-top:4px">Sent today, 10:06 am</p>
+</template>
+
+<div class="doc">
+  <header class="doc-top">
+    <h1>Publishing after handover</h1>
+    <p>Studio plan V2b, partner publishing PP2 and PP3 · mockup · 16 Nov 2026 · House of Ayuda, handed over to Anita Rao, its partner Neel Studio. Phone (390) beside computer (1280).</p>
+    <nav class="toc" aria-label="Screens">
+      <a href="#b-short">In short</a><a href="#b-audit">Audit</a><a href="#b-take">What to take</a><a href="#b-calls">Your calls</a>
+      <a href="#b-people">1 · Publishing choice</a><a href="#b-notice">2 · Notices and Undo</a><a href="#b-review">3 · Review and publish</a><a href="#b-yes">4 · Needs your yes</a><a href="#b-partner">5 · What Neel Studio sees</a><a href="#b-words">Words</a>
+    </nav>
+  </header>
+
+  <section class="part" id="b-short" aria-labelledby="h-s">
+    <h2 id="h-s">In short</h2>
+    <ul class="short" style="margin-top:12px">
+      <li><b>What to take.</b> The owner picks, per partner, <b>Publishes freely</b> (the default) or <b>Ask me first</b>, on the partner’s row in Settings › People.</li>
+      <li><b>Publishes freely:</b> a version goes live and the owner gets one Notices line with what changed, Preview and Undo. Undo is one tap and a confirm.</li>
+      <li><b>Ask me first:</b> every version waits; the Notices line opens Review and publish for that exact version.</li>
+      <li><b>Needs your yes:</b> a version that adds an outside service or changes the domain waits whatever the choice.</li>
+      <li><b>Why now.</b> V2b is approved and follows V2a. <b>Cost:</b> none. <b>From you:</b> a yes on the screens and the calls.</li>
+    </ul>
+  </section>
+
+  <section class="part" id="b-audit" aria-labelledby="h-a">
+    <h2 id="h-a">Audit · what runs today</h2>
+    <table class="tbl" style="margin-top:12px">
+      <thead><tr><th>What is there</th><th>Why it gets in the way</th><th>Proposed</th></tr></thead>
+      <tbody>
+        <tr><td>Settings › People: the partner’s row with Remove partner (<span class="mono">settings/people/page.tsx</span>)</td><td>No say over the partner’s publishes after handover.</td><td>Publishing, two choices, on that row.</td></tr>
+        <tr><td>Notices rows: title, line, type chip, time, Open</td><td>A free publish needs Undo where the owner reads about it.</td><td>The same row with Preview and Undo.</td></tr>
+        <tr><td>No publish of a code site at all</td><td>Arrives with V2a.</td><td>A review page per waiting version.</td></tr>
+        <tr><td>PP1’s Ask the owner, the partner’s content notices</td><td>Nothing.</td><td>Kept as built.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="part" id="b-take" aria-labelledby="h-t">
+    <h2 id="h-t">What to take</h2>
+    <div class="take" style="margin-top:12px">
+      <div class="tk"><b>Frrata’s Make main</b><span class="src">settings/web-address/domains.tsx, live</span><span>A change that goes live at once, then Undo in a popup for 8 s.</span><span class="t">Take: act first, then Undo. Here Undo lives on the Notices line, with no 8 s limit.</span></div>
+      <div class="tk"><b>Frrata’s PP1 Ask the owner</b><span class="src">owner-approved 16 Nov, built</span><span>One Notices line per ask, the owner’s Open to the page.</span><span class="t">Take: the same Notices row, one line an hour per partner.</span></div>
+      <div class="tk"><b>Partner-publishing spec</b><span class="src">docs/specs/2026-11-16-partner-publishing.md</span><span>No research section; the rule is ADR-0014 amendment 9.</span><span class="t">Take: the rule table as drawn.</span></div>
+    </div>
+  </section>
+
+  <section class="part" id="b-calls" aria-labelledby="h-c">
+    <h2 id="h-c">Your calls</h2>
+    <table class="tbl" style="margin-top:12px">
+      <thead><tr><th>Call</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr><td>The chip on a told-after line</td><td>A new Notices type, <b>Website</b>. “Needs you” would cry wolf on every publish.</td></tr>
+        <tr><td>How long Undo is offered</td><td>Until the next version goes live. Undo goes back to the version before.</td></tr>
+        <tr><td>Turning a waiting version down</td><td>Not now leaves it waiting; a newer one from the partner replaces it. No Decline (YAGNI until owners ask).</td></tr>
+        <tr><td>Allowing an outside service</td><td>A confirm naming the host and what it can see, then publish.</td></tr>
+        <tr><td>Not drawn</td><td>A domain change that needs your yes (the domain is already the owner’s only, Settings › Website); Studio’s side is in the Studio redraw.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="part" id="b-people" aria-labelledby="h1b">
+    <h2 id="h1b">1 · Owner · Settings › Team and plan › People › Publishing</h2>
+    <p class="cap">Two short choices: the Segmented primitive. It saves on the tap, says so, and offers Undo. Owner or Manager; a support visit sees it as a fact. Before handover it isn’t shown.</p>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390</p><div class="phone"><div class="scr"><div class="p-main"><div data-use="t-ppl-head-ph" style="display:contents"></div><div data-use="t-people"></div></div><div class="bottom" data-bottom></div></div></div></div>
+      <div><p class="lbl">Computer · 1280 · just switched to Ask me first</p><div class="dk"><div class="dk-in"><aside class="sb" data-sb="owner" data-on="settings"></aside><main class="main narrow"><div data-use="t-ppl-head-dk"></div><div class="fcol" style="margin-top:16px;max-width:760px" data-use="t-people" data-ask></div></main>
+        <div class="toast" role="status"><span class="w">Neel Studio asks you first now.</span><button type="button" class="act">Undo</button><button type="button" class="x" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button><span class="undo-line" aria-hidden="true"></span></div></div></div></div>
+    </div>
+    <div class="crops" style="margin-top:28px">
+      <div><p class="lbl">Support visit (read only)</p><div class="crop"><dl class="facts"><dt>Publishing</dt><dd>Publishes freely</dd></dl></div></div>
+      <div><p class="lbl">Couldn’t save (error toast; the choice goes back)</p><div class="crop"><div class="toast err" role="alert" style="max-width:none"><span class="w">We couldn’t change publishing.<small>Nothing was changed.</small></span><button type="button" class="act">Try again</button><button type="button" class="x" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button></div></div></div>
+    </div>
+    <ol class="steps-l"><li>The owner opens People and finds Neel Studio’s row.</li><li>A tap on Ask me first saves it. The toast says what is true now and offers Undo for 8 s.</li><li>(i): “Publishes freely: changes go live and you can undo them. Ask me first: each version waits for you.”</li></ol>
+  </section>
+
+  <section class="part" id="b-notice" aria-labelledby="h2b">
+    <h2 id="h2b">2 · Owner · Notices after a free publish, and Undo</h2>
+    <p class="cap">One line per publish (collapsed to one an hour per partner). What changed comes from the two versions’ page lists. Undo asks once, then goes back to the version before.</p>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390 · Undo’s confirm</p><div class="phone"><div class="scr"><div class="p-main"><div class="p-head"><div class="tw"><h1>Notices</h1></div><a class="link" href="#b-notice">Your notifications</a></div><section class="card flush" aria-label="Notices" style="padding:0 16px"><ul class="nl" data-use="t-notices"></ul></section></div><div class="bottom" data-bottom></div>
+        <div class="veil" data-use="t-undo"></div></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in"><aside class="sb" data-sb="owner" data-on="notices"></aside><main class="main"><div class="ttl"><div class="tw"><h1>Notices</h1></div><a class="link" href="#b-notice" style="margin-top:4px">Your notifications</a></div><section class="card flush" aria-label="Notices" style="max-width:860px;margin-top:20px"><ul class="nl" data-use="t-notices"></ul></section></main></div></div></div>
+    </div>
+    <template id="t-undo">
+      <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="ud-h">
+        <h3 id="ud-h">Undo Neel Studio’s v9?</h3>
+        <p>Your website goes back to v8, from 14 Nov.</p>
+        <div class="ft"><button type="button" class="btn">Keep v9</button><button type="button" class="btn primary">Go back to v8</button></div>
+      </div>
+    </template>
+    <div class="crops3" style="margin-top:28px">
+      <div><p class="lbl">After Undo (ok toast)</p><div class="crop"><div class="toast" role="status" style="max-width:none"><span class="w">Your website is back to v8.</span><button type="button" class="x" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button></div></div></div>
+      <div><p class="lbl">The line, undone</p><div class="crop"><ul class="nl"><li><span class="dot" aria-hidden="true"></span><div class="t"><p>Neel Studio published v9</p><p class="s">Added Lookbook and Our weavers.</p><p class="m"><span class="chip neu">Undone</span>Today, 10:20 am · Anita Rao</p></div></li></ul></div></div>
+      <div><p class="lbl">Undo failed (error toast; v9 stays live)</p><div class="crop"><div class="toast err" role="alert" style="max-width:none"><span class="w">We couldn’t undo v9.<small>v9 is still live.</small></span><button type="button" class="act">Try again</button><button type="button" class="x" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button></div></div></div>
+      <div><p class="lbl">Several in an hour, collapsed</p><div class="crop"><ul class="nl"><li><span class="dot new" aria-hidden="true"></span><div class="t"><p class="b">Neel Studio published 3 versions</p><p class="s">Latest v11. Added Lookbook.</p><p class="m"><span class="chip neu">Website</span>Today, 11:40 am<a href="#b-notice">Open</a><button type="button" class="l">Undo</button></p></div></li></ul></div></div>
+      <div><p class="lbl">A newer version went live since (no Undo on the old line)</p><div class="crop"><ul class="nl"><li><span class="dot" aria-hidden="true"></span><div class="t"><p>Neel Studio published v9</p><p class="s">Added Lookbook and Our weavers.</p><p class="m"><span class="chip neu">Website</span>Today, 10:06 am<a href="#b-notice">Open</a></p></div></li></ul></div></div>
+    </div>
+  </section>
+
+  <section class="part" id="b-review" aria-labelledby="h3b">
+    <h2 id="h3b">3 · Owner · Ask me first: Review and publish</h2>
+    <p class="cap">The Notices line “Neel Studio asks you to publish v9” opens this page. Publish v9 publishes that exact version; Not now leaves it waiting.</p>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390</p><div class="phone"><div class="scr"><div class="p-main">
+        <a class="back" href="#b-review">‹ Website</a>
+        <div class="p-head"><div class="tw"><h1>v9 from Neel Studio</h1><span class="chip warn">Waiting for you</span></div><span style="font-size:13px;color:var(--text-2)">Sent today, 10:06 am</span><span class="off" style="gap:8px;justify-content:flex-start"><button type="button" class="btn primary">Publish v9</button><button type="button" class="btn">Not now</button></span></div>
+        <div data-use="t-review"></div></div><div class="bottom" data-bottom></div></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in"><aside class="sb" data-sb="owner" data-on="settings"></aside><main class="main"><div data-use="t-rv-head-dk"></div><div data-use="t-review"></div></main></div></div></div>
+    </div>
+    <div class="crops3" style="margin-top:28px">
+      <div><p class="lbl">The Notices line that leads here</p><div class="crop"><ul class="nl"><li><span class="dot new" aria-hidden="true"></span><div class="t"><p class="b">Neel Studio asks you to publish v9</p><p class="s">Added Lookbook and Our weavers.</p><p class="m"><span class="chip neu">Needs you</span>Today, 10:06 am<a href="#b-review">Review and publish</a></p></div></li></ul></div></div>
+      <div><p class="lbl">Published (ok toast, with Undo)</p><div class="crop"><div class="toast" role="status" style="max-width:none"><span class="w">v9 is live.</span><button type="button" class="act">Undo</button><button type="button" class="x" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button><span class="undo-line" aria-hidden="true"></span></div></div></div>
+      <div><p class="lbl">A newer version replaced it (Panel)</p><div class="crop"><b>v10 replaced this version</b><p style="color:var(--text-2)">Neel Studio sent it today, 11:20 am.</p><a class="btn sm" href="#b-review" style="margin-top:8px">Review v10</a></div></div>
+      <div><p class="lbl">The partner was removed meanwhile (Panel)</p><div class="crop"><b>Neel Studio is no longer your partner</b><p style="color:var(--text-2)">This version was dropped. v8 stays live.</p></div></div>
+      <div><p class="lbl">Couldn’t publish (error toast)</p><div class="crop"><div class="toast err" role="alert" style="max-width:none"><span class="w">We couldn’t publish v9.<small>v8 is still live.</small></span><button type="button" class="act">Try again</button><button type="button" class="x" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button></div></div></div>
+    </div>
+  </section>
+
+  <section class="part" id="b-yes" aria-labelledby="h4b">
+    <h2 id="h4b">4 · Owner · a version that needs your yes: an outside script</h2>
+    <p class="cap">Whatever the Publishing choice. The checks name the new host and what it loads; one line says what it can see (a risk reason). Allow and publish asks once more.</p>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390 · the confirm</p><div class="phone"><div class="scr"><div class="p-main">
+        <a class="back" href="#b-yes">‹ Website</a>
+        <div class="p-head"><div class="tw"><h1>v10 from Neel Studio</h1><span class="chip warn">Needs your yes</span></div></div>
+        <div data-use="t-yes-card"></div></div><div class="bottom" data-bottom></div><div class="veil" data-use="t-allow"></div></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in"><aside class="sb" data-sb="owner" data-on="settings"></aside><main class="main">
+        <ol class="crumb"><li><a href="#b-yes">Settings</a></li><li aria-hidden="true">›</li><li><a href="#b-yes">Website</a></li></ol>
+        <div class="ttl"><div class="tw"><h1>v10 from Neel Studio</h1><span class="chip warn">Needs your yes</span></div><span class="off" style="gap:8px"><button type="button" class="btn">Not now</button><button type="button" class="btn primary">Allow and publish v10</button></span></div>
+        <p style="font-size:13px;color:var(--text-2);margin-top:4px">Sent today, 11:20 am</p>
+        <div class="rv"><div class="fcol"><div data-use="t-yes-card"></div>
+          <section class="card"><h2>What changed</h2><ul class="chg"><li><span class="p" aria-hidden="true">+</span>Size help <span class="mono" style="color:var(--text-2)">/pages/size-help</span></li></ul><dl class="facts"><dt>Pages removed</dt><dd>None</dd><dt>Live now</dt><dd>v9 · Today, 10:06 am</dd></dl></section></div>
+          <section class="card"><div class="ch"><h2>Preview</h2><span></span><span class="off"><a class="btn sm" href="#b-yes">Open preview</a></span></div><div class="mini" aria-hidden="true"><div class="h">House of Ayuda</div><div class="hero">For the days you’ll keep</div><div class="g"><i></i><i></i></div></div></section></div>
+      </main></div></div></div>
+    </div>
+    <template id="t-yes-card">
+      <section class="card warnc" aria-labelledby="os-h"><h2 id="os-h">A new outside service</h2>
+        <dl class="facts"><dt>Address</dt><dd class="host">widgets.example.com</dd><dt>Loads</dt><dd>A script, on every page</dd></dl>
+        <p style="font-size:14px">It can see what shoppers do on your website’s pages.</p>
+      </section>
+    </template>
+    <template id="t-allow">
+      <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="al-h">
+        <h3 id="al-h">Allow widgets.example.com?</h3>
+        <p>It loads on every page of your website. Checkout and orders never load it.</p>
+        <div class="ft"><button type="button" class="btn">Keep it off</button><button type="button" class="btn primary">Allow and publish v10</button></div>
+      </div>
+    </template>
+    <div class="crops" style="margin-top:28px">
+      <div><p class="lbl">Its Notices line (under either choice)</p><div class="crop"><ul class="nl"><li><span class="dot new" aria-hidden="true"></span><div class="t"><p class="b">Neel Studio’s v10 needs your yes</p><p class="s">It adds widgets.example.com.</p><p class="m"><span class="chip neu">Needs you</span>Today, 11:20 am<a href="#b-yes">Review and publish</a></p></div></li></ul></div></div>
+      <div><p class="lbl">Not now: the version waits, v9 stays live; nothing is said to shoppers</p><div class="crop"><div class="ttl"><div class="tw"><h1 style="font-size:18px">v10 from Neel Studio</h1><span class="chip warn">Needs your yes</span></div></div></div></div>
+    </div>
+  </section>
+
+  <section class="part" id="b-partner" aria-labelledby="h5b">
+    <h2 id="h5b">5 · Partner · what Neel Studio sees after Publish</h2>
+    <p class="cap">On the client page’s Website card (V2a’s, screen 5 of the website mockup) and in Studio’s chat (the Studio redraw).</p>
+    <div class="crops3">
+      <div><p class="lbl">Publishes freely: published (ok toast)</p><div class="crop"><div class="toast" role="status" style="max-width:none"><span class="w">v9 is live. Anita Rao can undo it.</span><button type="button" class="x" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button></div></div></div>
+      <div><p class="lbl">Ask me first: the card while waiting</p><div class="crop"><section class="card" style="border:0;padding:0"><div class="ch"><h2>Website</h2><span class="chip ok">Live</span><span class="off"></span></div><dl class="facts"><dt>Live version</dt><dd>v8 · 14 Nov, 6:10 pm</dd><dt>Sent</dt><dd>v9 · <span class="chip warn">Waiting for Anita Rao</span></dd></dl></section></div></div>
+      <div><p class="lbl">Undone by the owner</p><div class="crop"><section class="card" style="border:0;padding:0"><div class="ch"><h2>Website</h2><span class="chip ok">Live</span><span class="off"></span></div><dl class="facts"><dt>Live version</dt><dd>v8 · 14 Nov, 6:10 pm</dd><dt>Last sent</dt><dd>v9 · <span class="chip neu">Undone by Anita Rao</span></dd></dl></section></div></div>
+      <div><p class="lbl">Needs the owner’s yes</p><div class="crop"><section class="card" style="border:0;padding:0"><dl class="facts"><dt>Sent</dt><dd>v10 · <span class="chip warn">Needs Anita Rao’s yes</span><span class="ln2">Adds widgets.example.com</span></dd></dl></section></div></div>
+    </div>
+  </section>
+
+  <section class="part" id="b-words" aria-labelledby="h6b">
+    <h2 id="h6b">Words</h2>
+    <table class="tbl">
+      <thead><tr><th>Where</th><th>Words</th></tr></thead>
+      <tbody>
+        <tr><td>People, partner row</td><td>Publishing · Publishes freely · Ask me first</td></tr>
+        <tr><td>(i) About publishing</td><td>Publishes freely: changes go live and you can undo them. Ask me first: each version waits for you.</td></tr>
+        <tr><td>Toasts, choice</td><td>Neel Studio asks you first now. · Neel Studio publishes freely now. · Undo · We couldn’t change publishing. · Nothing was changed. · Try again</td></tr>
+        <tr><td>Notices, told after</td><td>Neel Studio published v9 · Added Lookbook and Our weavers. · Website (type chip) · Preview · Undo · Undone · Neel Studio published 3 versions · Latest v11. Added Lookbook.</td></tr>
+        <tr><td>Undo</td><td>Undo Neel Studio’s v9? · Your website goes back to v8, from 14 Nov. · Keep v9 · Go back to v8 · Your website is back to v8. · We couldn’t undo v9. · v9 is still live.</td></tr>
+        <tr><td>Notices, waiting</td><td>Neel Studio asks you to publish v9 · Review and publish · Neel Studio’s v10 needs your yes · It adds widgets.example.com.</td></tr>
+        <tr><td>Review page</td><td>v9 from Neel Studio · Waiting for you · Sent today, 10:06 am · Publish v9 · Not now · What changed · Pages removed · None · Live now · Frrata’s checks · Phone speed · Legal block · Bag link · Outside services · None new · Preview · Open preview</td></tr>
+        <tr><td>Review results</td><td>v9 is live. · We couldn’t publish v9. · v8 is still live. · v10 replaced this version · Neel Studio sent it today, 11:20 am. · Review v10 · Neel Studio is no longer your partner · This version was dropped. v8 stays live.</td></tr>
+        <tr><td>Needs your yes</td><td>Needs your yes · A new outside service · Address · Loads · A script, on every page · It can see what shoppers do on your website’s pages. · Allow and publish v10 · Allow widgets.example.com? · It loads on every page of your website. Checkout and orders never load it. · Keep it off</td></tr>
+        <tr><td>Partner side</td><td>v9 is live. Anita Rao can undo it. · Sent · Last sent · Waiting for Anita Rao · Undone by Anita Rao · Needs Anita Rao’s yes · Adds widgets.example.com</td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+(function () {
+  // Clone the shared pieces into their places (the same markup in every frame).
+  for (var pass = 0; pass < 4; pass++) {
+    document.querySelectorAll('[data-use]:not([data-used])').forEach(function (slot) {
+      slot.setAttribute('data-used', '')
+      var t = document.getElementById(slot.getAttribute('data-use'))
+      if (t) slot.appendChild(t.content.cloneNode(true))
+    })
+  }
+  // Ids inside clones stay unique: suffix every id and the references to it, frame by frame.
+  var n = 0
+  document.querySelectorAll('.phone, .dk, .crop').forEach(function (frame) {
+    n++
+    frame.querySelectorAll('[id]').forEach(function (el) {
+      var old = el.id, next = old + '-' + n
+      el.id = next
+      frame.querySelectorAll('[aria-labelledby="' + old + '"],[aria-describedby="' + old + '"],[for="' + old + '"]').forEach(function (r) {
+        ['aria-labelledby', 'aria-describedby', 'for'].forEach(function (a) { if (r.getAttribute(a) === old) r.setAttribute(a, next) })
+      })
+    })
+  })
+  document.addEventListener('click', function (e) { var x = e.target.closest('.toast .x'); if (x && !x.closest('.crop')) x.closest('.toast').remove() })
+
+  // The console's sidebar (console/layout.tsx groups), the partner workspace's (partner layout), the phone's bottom bar.
+  var item = function (icon, label, on, pill) { return '<a class="nav' + (on ? ' on' : '') + '"' + (on ? ' aria-current="page"' : '') + '><svg><use href="#i-' + icon + '"/></svg>' + label + (pill ? '<span class="pill">' + pill + '</span>' : '') + '</a>' }
+  var person = { owner: ['AR', 'Anita Rao', 'Owner'], manager: ['MK', 'Meera Kapoor', 'Manager'], partner: ['NS', 'Neel Studio', 'Partner'] }
+  document.querySelectorAll('[data-sb]').forEach(function (sb) {
+    var on = sb.getAttribute('data-on'), who = sb.getAttribute('data-sb')
+    if (who === 'pw') {
+      sb.innerHTML = '<div class="store"><span class="mono-mark" style="background:#3A44C2">N</span><span><b>Neel Studio<span class="ptag">PARTNER</span></b><span class="mono">Partner workspace</span></span></div>' +
+        '<div class="ov">Work</div>' + item('orders', 'Clients', on === 'clients') + item('apps', 'Team') + item('settings', 'Passkeys') + item('content', 'Your details') +
+        '<span class="sp"></span><div class="acct"><span class="av">KS</span><span><b>Kabir Shah</b><span>Partner owner</span></span></div>'
+      return
+    }
+    var p = person[who] || person.owner
+    sb.innerHTML = '<div class="store"><span class="mono-mark">H</span><span><b>House of Ayuda</b><span class="mono">house-of-ayuda.frrata.shop</span></span></div>' +
+      '<div class="ov">Today</div>' + item('home', 'Home') + item('orders', 'Orders', false, '3') + item('bell', 'Notices', on === 'notices', who === 'owner' ? '1' : '') + item('profit', 'Analytics') +
+      '<div class="ov">Catalogue</div>' + item('products', 'Products') + item('coll', 'Collections') +
+      '<div class="ov">Store</div>' + item('offers', 'Offers') + item('content', 'Content') + item('look', 'Look') + item('search', 'Search and sharing') + item('apps', 'Apps') + item('settings', 'Settings', on === 'settings') + item('activity', 'Activity') +
+      '<span class="sp"></span>' + item('external', 'Preview store') +
+      '<div class="acct"><span class="av">' + p[0] + '</span><span><b>' + p[1] + '</b><span>' + p[2] + '</span></span></div>'
+  })
+  document.querySelectorAll('[data-bottom]').forEach(function (bar) {
+    var cell = function (icon, label, on) { return '<div' + (on ? ' class="on"' : '') + '><svg><use href="#i-' + icon + '"/></svg>' + label + '</div>' }
+    var on = bar.getAttribute('data-on') || 'more'
+    bar.innerHTML = bar.hasAttribute('data-pw')
+      ? cell('orders', 'Clients', on === 'clients') + cell('apps', 'Team') + cell('settings', 'Passkeys') + cell('more', 'More', on === 'more')
+      : cell('home', 'Home') + cell('orders', 'Orders') + cell('products', 'Products') + cell('more', 'More', on === 'more')
+  })
+
+  // Desktop frames: drawn at 1280, scaled to the column they sit in.
+  function fit(dk) {
+    var inner = dk.firstElementChild, w = dk.clientWidth, s = Math.min(1, w / 1280)
+    if (dk._w === w && dk._h === inner.offsetHeight) return
+    dk._w = w; dk._h = inner.offsetHeight
+    inner.style.transform = 'scale(' + s + ')'
+    dk.style.height = Math.ceil(inner.offsetHeight * s) + 'px'
+  }
+  var dks = Array.prototype.slice.call(document.querySelectorAll('.dk'))
+  dks.forEach(fit)
+  if ('ResizeObserver' in window) { var ro = new ResizeObserver(function () { dks.forEach(fit) }); dks.forEach(function (d) { ro.observe(d) }) }
+  window.addEventListener('load', function () { dks.forEach(fit) })
+})()
+
+// The desktop People frame shows the choice just switched to Ask me first; a tap on any choice moves it.
+document.querySelectorAll('[data-ask] .seg').forEach(function (s) { var b = s.querySelectorAll('button'); b[0].setAttribute('aria-checked', 'false'); b[1].setAttribute('aria-checked', 'true') })
+document.addEventListener('click', function (e) { var b = e.target.closest('.seg button'); if (!b) return; b.parentElement.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-checked', String(x === b)) }) })
+
+</script>
+</body>
+</html>

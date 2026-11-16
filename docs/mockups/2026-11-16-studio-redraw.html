@@ -1,0 +1,757 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio one screen redrawn</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@500&family=Tiro+Devanagari+Hindi&family=Mukta:wght@400;600&display=swap">
+<style>
+/* Layout: a reference strip (parts and states) above ONE interactive Studio screen: chat on the left runs the whole
+   flow, the live site on the right. Phone view: the chat fills the screen, the site opens as a sheet.
+   Neel tokens from docs/mockups/2026-11-13-design-language-neel.html; the site preview wears the brand's own look. */
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62; --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B; --info-bg:#E8F1FD; --info-fg:#1F5BA8; --info-dot:#3B82E0;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --sunk:var(--g50); --line:var(--g200); --line-soft:var(--g100);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --bar:var(--g950); --bar-text:#fff; --bar-link:#A3ABF5;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  --base:200ms; --ease:cubic-bezier(.2,0,0,1);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; color-scheme:dark }
+* { box-sizing:border-box }
+body { background:var(--page); color:var(--text); font:400 14px/20px var(--font); margin:0;
+  padding:0 max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)) }
+h1,h2,h3 { margin:0; text-wrap:balance }
+button { font:inherit; color:inherit; cursor:pointer }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+.num { font-variant-numeric:tabular-nums }
+
+/* Reference strip (outside the product) */
+.doc { max-width:1440px; margin:0 auto }
+.doc-top { padding:24px 0 12px; display:grid; gap:10px }
+.doc-top h1 { font:600 26px/32px var(--font) }
+.doc-top p { margin:0; color:var(--text-2) }
+.ctrl { display:flex; flex-wrap:wrap; gap:6px; align-items:center }
+.ctrl .lab { font-size:12px; color:var(--text-3); margin-right:4px }
+.ctrl button { border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:4px 11px; font-size:12.5px; min-height:30px }
+.ctrl button[aria-pressed="true"] { background:var(--text); color:var(--page); border-color:var(--text) }
+
+/* The one screen */
+.app { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--page); box-shadow:var(--e2); display:grid; grid-template-rows:56px minmax(0,1fr); height:860px; position:relative }
+.top { display:flex; align-items:center; gap:14px; padding:0 16px; border-bottom:1px solid var(--line); background:var(--side); min-width:0 }
+.top .back { border:0; background:none; color:var(--text-2); display:flex; align-items:center; gap:6px; padding:6px 4px; min-height:32px }
+.top .client { font-weight:600; white-space:nowrap }
+.steps { display:flex; gap:4px; align-items:center; margin:0 auto; min-width:0 }
+.st { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-3); white-space:nowrap }
+.st i { width:20px; height:20px; border-radius:50%; border:1.5px solid var(--g300); display:grid; place-items:center; font-style:normal; font-size:11px; font-weight:600 }
+.st.done { color:var(--text-2) } .st.done i { background:var(--ok-dot); border-color:var(--ok-dot); color:#fff }
+.st.done i::after { content:""; width:7px; height:4px; border-left:1.6px solid #fff; border-bottom:1.6px solid #fff; transform:rotate(-45deg) translate(1px,-1px) }
+.st.done i span { display:none }
+.st.now { color:var(--text); font-weight:500 } .st.now i { border-color:var(--action); color:var(--action) }
+.st + .st::before { content:""; width:18px; height:1px; background:var(--g300); margin-right:4px }
+.credits { display:flex; align-items:center; gap:6px; border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:13px; white-space:nowrap; background:var(--surface) }
+.credits b { font-weight:600 }
+.credits.low { border-color:var(--warn-dot); background:var(--warn-bg); color:var(--warn-fg) }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-weight:500; font-size:14px; box-shadow:var(--e1); white-space:nowrap }
+.btn.primary { background:var(--action); border-color:var(--action); color:var(--action-text); box-shadow:none }
+.btn.ghost { background:transparent; border-color:transparent; box-shadow:none; color:var(--text-2) }
+.btn.sm { min-height:30px; padding:0 10px; font-size:13px }
+.btn[aria-disabled="true"] { background:var(--sunk); color:var(--text-3); box-shadow:none; cursor:default }
+.body { display:grid; grid-template-columns:440px minmax(0,1fr); min-height:0 }
+
+/* Chat */
+.chat { border-right:1px solid var(--line); display:grid; grid-template-rows:minmax(0,1fr) auto; min-height:0; background:var(--page) }
+.log { overflow:auto; padding:18px 18px 8px; display:flex; flex-direction:column; gap:14px; scroll-behavior:smooth }
+.msg { display:grid; gap:8px; max-width:100% }
+.who { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-3) }
+.who .av { width:22px; height:22px; border-radius:6px; background:var(--g950); color:#fff; display:grid; place-items:center; font-size:11px; font-weight:600 }
+.who .av.riya { background:#C9A227; border-radius:50% }
+.txt { font-size:14px; line-height:21px }
+.work { font-size:12.5px; color:var(--text-2); display:flex; gap:8px; align-items:center }
+.work::before { content:""; width:12px; height:12px; border-radius:50%; background:var(--ok-dot); box-shadow:inset 0 0 0 3px var(--ok-bg) }
+.work.run::before { background:none; border:2px solid var(--g300); border-top-color:var(--action); animation:spin .9s linear infinite }
+@keyframes spin { to { transform:rotate(360deg) } }
+.me { align-self:flex-end; background:var(--select); color:var(--text); border-radius:12px 12px 4px 12px; padding:8px 12px; max-width:85% }
+.me.edit { background:var(--sunk); color:var(--text-2); font-size:13px; border-radius:10px }
+.card { border:1px solid var(--line); border-radius:12px; background:var(--surface); box-shadow:var(--e1); padding:12px; display:grid; gap:10px }
+.card h4 { margin:0; font-size:13px; font-weight:600 }
+.line-edit { display:flex; gap:8px; align-items:flex-start; font-size:15px; line-height:22px }
+.line-edit span { flex:1 }
+.opts { display:grid; gap:8px }
+.opt { text-align:left; border:1px solid var(--line); border-radius:10px; background:var(--surface); padding:10px 12px; display:grid; gap:4px; transition:border-color var(--base) var(--ease) }
+.opt:hover { border-color:var(--g400) }
+.opt[aria-pressed="true"] { border-color:var(--action); box-shadow:0 0 0 3px var(--select) }
+.opt .k { font-size:12px; color:var(--text-2) }
+.opt .s { font-size:16px; line-height:22px }
+.looks { display:grid; grid-template-columns:repeat(3,1fr); gap:8px }
+.wms { display:grid; gap:8px }
+.wm { border:1px solid var(--line); border-radius:10px; background:var(--surface); padding:0; overflow:hidden; display:grid; grid-template-columns:1fr 1fr 56px; text-align:left; min-height:76px }
+.wm[aria-pressed="true"] { border-color:var(--action); box-shadow:0 0 0 3px var(--select) }
+.wm .on-paper, .wm .on-ink { display:grid; place-items:center; padding:10px 8px }
+.wm .on-paper { background:#F7F1EA; color:#2A1D14 } .wm .on-ink { background:#2A1D14; color:#F7F1EA }
+.wm .ic { display:grid; place-items:center; background:var(--sunk); border-left:1px solid var(--line) }
+.wm .ic { gap:4px; padding:6px 0; grid-auto-flow:row }
+.wm .ic i { width:32px; height:32px; border-radius:8px; background:#2A1D14; display:grid; place-items:center; padding:4px }
+.wm .ic em { width:16px; height:16px; display:block }
+.wm-name { font-size:12px; color:var(--text-2); margin-top:-2px; display:flex; justify-content:space-between; gap:8px }
+.wm-checks { color:var(--ok-fg); display:inline-flex; gap:4px; align-items:center } .wm-checks::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--ok-dot) }
+.look { border:1px solid var(--line); border-radius:10px; background:var(--surface); padding:0; overflow:hidden; text-align:left; display:grid }
+.look[aria-pressed="true"] { border-color:var(--action); box-shadow:0 0 0 3px var(--select) }
+.look .sw { height:44px; display:grid; grid-template-columns:2fr 1fr 1fr }
+.look .nm { padding:8px 10px 10px; display:grid; gap:2px }
+.look .nm b { font-size:13px; font-weight:600 } .look .nm span { font-size:20px; line-height:24px }
+.chips { display:flex; flex-wrap:wrap; gap:6px }
+.chip-b { border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:4px 11px; font-size:13px; min-height:30px }
+.chip-b[aria-pressed="true"] { background:var(--select); border-color:var(--n200); color:var(--n700) }
+.ticks { display:grid; gap:2px }
+.tick { display:flex; align-items:center; gap:10px; padding:6px 2px; font-size:14px; border:0; background:none; text-align:left; min-height:32px }
+.tick i { width:16px; height:16px; border-radius:4px; border:1.5px solid var(--g500); display:grid; place-items:center; flex:none }
+.tick[aria-checked="true"] i { background:var(--action); border-color:var(--action) }
+.tick[aria-checked="true"] i::after { content:""; width:7px; height:4px; border-left:1.6px solid #fff; border-bottom:1.6px solid #fff; transform:rotate(-45deg) translate(1px,-1px) }
+.tick .c { margin-left:auto; font-size:12px; color:var(--text-3) }
+.row { display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+.row .sp { flex:1 }
+.cost { font-size:12.5px; color:var(--text-2) }
+.prog { height:4px; border-radius:999px; background:var(--g100); overflow:hidden }
+.prog i { display:block; height:100%; background:var(--action); transform-origin:left; transition:transform 400ms var(--ease) }
+.status { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font-size:12px; font-weight:500 }
+.status::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor }
+.status.ok { background:var(--ok-bg); color:var(--ok-fg) } .status.warn { background:var(--warn-bg); color:var(--warn-fg) } .status.neu { background:var(--neu-bg); color:var(--neu-fg) } .status.bad { background:var(--bad-bg); color:var(--bad-fg) }
+.checks { display:grid; grid-template-columns:1fr 1fr; gap:6px }
+.checks div { display:flex; justify-content:space-between; gap:8px; font-size:13px; background:var(--sunk); border-radius:8px; padding:6px 10px }
+.tagrow { display:flex; flex-wrap:wrap; gap:6px }
+.tag { border:1px solid var(--line); border-radius:6px; padding:1px 8px; font-size:12px; color:var(--text-2); background:var(--surface) }
+.composer { border-top:1px solid var(--line); padding:10px 14px 14px; display:grid; gap:8px; background:var(--page) }
+.sugg { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none }
+.input { display:flex; gap:8px; align-items:flex-end; border:1px solid var(--g500); border-radius:12px; padding:8px 8px 8px 12px; background:var(--surface) }
+.input span { flex:1; color:var(--text-3); padding:6px 0 }
+.send { width:32px; height:32px; border-radius:8px; border:0; background:var(--action); display:grid; place-items:center; color:var(--action-text) }
+.send.stop { background:var(--g950); color:#fff }
+
+/* Preview */
+.pv { display:grid; grid-template-rows:48px minmax(0,1fr); min-height:0; background:var(--sunk) }
+.pv-head { display:flex; align-items:center; gap:8px; padding:0 14px; border-bottom:1px solid var(--line); background:var(--page) }
+.seg { display:inline-flex; background:var(--g100); border-radius:8px; padding:2px }
+.seg button { border:0; background:none; padding:4px 10px; border-radius:6px; font-size:13px; min-height:28px; color:var(--text-2) }
+.seg button[aria-pressed="true"] { background:var(--surface); box-shadow:var(--e1); color:var(--text) }
+.pv-head .sp { flex:1 }
+.addr { font:500 12px var(--mono); color:var(--text-2) }
+.stage { overflow:auto; display:grid; place-items:start center; padding:22px; min-height:0 }
+.device { width:390px; max-width:100%; border-radius:22px; overflow:hidden; box-shadow:var(--e2); border:8px solid var(--g950); background:var(--sp); transition:background var(--base) var(--ease) }
+.device.desk { width:min(100%, 920px); border-radius:10px; border-width:1px; border-color:var(--line) }
+
+/* The brand's site (its own look) */
+.site { --sp:#FBF7F1; --si:#221A14; --sa:#8C1D2C; --sr:2px; --sf:'Tiro Devanagari Hindi',Georgia,serif;
+  background:var(--sp); color:var(--si); font-family:var(--font); position:relative; min-height:640px }
+.site.skel { --sp:#F2F1EF; --si:#A29D97; --sa:#CFCCC7 }
+.s-bar { background:var(--si); color:var(--sp); text-align:center; font-size:11.5px; padding:6px 10px }
+.s-hd { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; font-weight:600; font-size:13px; letter-spacing:.08em }
+.s-logo { font-family:var(--sf); font-size:20px; letter-spacing:.12em; position:relative }
+.s-hero { margin:4px 16px 0; border-radius:var(--sr); min-height:230px; background:linear-gradient(160deg, color-mix(in srgb, var(--sa) 55%, #fff), color-mix(in srgb, var(--si) 75%, var(--sa))); position:relative; display:flex; align-items:flex-end; padding:18px }
+.s-hero h2 { font-family:var(--sf); font-weight:600; font-size:30px; line-height:34px; color:#fff; max-width:14ch }
+.s-band { margin:12px 16px 0; background:var(--sa); color:var(--si); border-radius:var(--sr); padding:8px 12px; font-size:12px; font-weight:600; display:flex; justify-content:space-between }
+.s-sec { padding:16px 16px 0 }
+.s-sec h3 { font-family:var(--sf); font-size:20px; font-weight:600; margin-bottom:10px }
+.s-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px }
+.device.desk .s-grid { grid-template-columns:repeat(4,1fr) }
+.s-card { display:grid; gap:4px; font-size:11.5px }
+.s-card .im { aspect-ratio:4/5; border-radius:var(--sr); background:linear-gradient(160deg,#E9C9A4,#9C5B32) }
+.s-card:nth-child(2) .im { background:linear-gradient(160deg,#F1DC8C,#A47E1B) }
+.s-card:nth-child(3) .im { background:linear-gradient(160deg,#9AA0C2,#2B2F55) }
+.s-card:nth-child(4) .im { background:linear-gradient(160deg,#E7B9B0,#8A3B32) }
+.s-card b { font-weight:500 }
+.skel .s-hero, .skel .s-card .im, .skel .s-band { background:var(--g200) !important }
+.skel .s-hero h2, .skel .s-card b, .skel .s-card span, .skel .s-band span, .skel .s-logo, .skel .s-bar { color:transparent !important; background:var(--g200); border-radius:4px }
+.s-foot { margin-top:18px; padding:14px 16px 20px; border-top:1px solid color-mix(in srgb, var(--si) 15%, transparent); font-size:11px; display:grid; gap:4px; opacity:.85 }
+.hl { outline:2px solid var(--action); outline-offset:3px; border-radius:6px }
+.edit-pop { position:absolute; z-index:4; background:var(--surface); color:var(--text); border:1px solid var(--line); border-radius:12px; box-shadow:var(--e2); padding:10px; display:grid; gap:8px; font-family:var(--font); width:230px }
+.edit-pop .sws { display:flex; gap:6px }
+.edit-pop .sws button { width:28px; height:28px; border-radius:6px; border:2px solid transparent }
+.edit-pop .sws button[aria-pressed="true"] { border-color:var(--action) }
+.hit { position:absolute; inset:0; border:0; background:none; border-radius:inherit }
+.hit:hover { outline:2px dashed var(--n500); outline-offset:3px }
+.building { position:absolute; inset:0; background:linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent); background-size:200% 100%; animation:sweep 1.4s linear infinite; pointer-events:none }
+@keyframes sweep { from { background-position:200% 0 } to { background-position:-200% 0 } }
+
+/* Brand book drawer */
+.drawer { position:absolute; top:56px; right:0; bottom:0; width:380px; max-width:100%; background:var(--surface); border-left:1px solid var(--line); box-shadow:var(--e3); padding:18px; display:none; overflow:auto; z-index:6 }
+.drawer.open { display:block }
+.drawer h3 { font-size:17px; font-weight:600 }
+.bb { display:grid; gap:14px; margin-top:14px }
+.bb .k { font-size:12px; color:var(--text-3); margin-bottom:4px }
+.bb .pal { display:flex; gap:6px } .bb .pal span { width:36px; height:36px; border-radius:8px; border:1px solid var(--line) }
+
+/* Phone mode */
+.app.phone { width:390px; height:820px; margin:0 auto; border-radius:28px; border:8px solid var(--g950); grid-template-rows:52px minmax(0,1fr) }
+.app.phone .steps .st:not(.now) { display:none } .app.phone .st + .st::before { display:none }
+.app.phone .credits span { display:none } .app.phone .top .back span { display:none } .app.phone .top .btn.primary { display:none }
+.app.phone .body { grid-template-columns:1fr }
+.app.phone .pv { position:absolute; inset:52px 0 0; z-index:5; transform:translateY(100%); transition:transform 320ms var(--ease); border-radius:16px 16px 0 0; box-shadow:var(--e3) }
+.app.phone .pv.open { transform:none }
+.app.phone .stage { padding:12px }
+.app.phone .drawer { top:52px; width:100% }
+.peek { display:none }
+.app.phone .peek { display:flex; position:absolute; right:14px; bottom:132px; z-index:7; background:var(--g950); color:#fff; border:0; border-radius:999px; padding:8px 14px; font-size:13px; font-weight:500; box-shadow:var(--e2); align-items:center; gap:8px }
+.app.phone .looks { grid-template-columns:1fr 1fr 1fr }
+@media (max-width:1100px) { .body { grid-template-columns:380px minmax(0,1fr) } .steps .st:not(.now):not(.done) { display:none } }
+@media (max-width:860px) { .app:not(.phone) .body { grid-template-columns:1fr } .app:not(.phone) .pv { display:none } .steps { display:none } }
+@media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important } }
+/* Embedded in the Studio mockup (#embed): the screen alone, filling the frame */
+body.embed { padding:0 } body.embed .doc { max-width:none } body.embed .doc-top { display:none }
+body.embed .app { height:100dvh; border:0; border-radius:0; box-shadow:none }
+body.embed .app.phone { width:100%; height:100dvh; border:0; border-radius:0 }
+body.embed .top .back, body.embed .top .client, body.embed .credits { display:none }
+.mock-ctl { display:none }
+body.embed .mock-ctl { display:flex; position:fixed; left:12px; bottom:12px; z-index:9; gap:6px; align-items:center; background:var(--surface); border:1px dashed var(--g400); border-radius:999px; padding:4px 6px 4px 12px; font-size:12px; color:var(--text-2); box-shadow:var(--e1) }
+body.embed .mock-ctl select { font:inherit; border:0; background:transparent; color:var(--text); min-height:28px }
+body.embed .app:not(.phone) .composer { padding-bottom:48px }
+
+/* ── V3b redraw (16 Nov): added on top of the approved styles, none of them changed ─────────────────── */
+.toc { display:flex; flex-wrap:wrap; gap:6px }
+.toc a { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12.5px; text-decoration:none; color:var(--text); background:var(--surface) }
+.anchor { display:block; scroll-margin-top:12px }
+.mono { font-family:var(--mono); font-size:12px }
+button.credits { cursor:pointer; color:inherit; font:inherit; font-size:13px }
+.pvst { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--text-2); white-space:nowrap }
+.pvst:empty { display:none }
+.pvst .spin { width:12px; height:12px; border-radius:50%; border:2px solid var(--g300); border-top-color:var(--action); animation:spin .9s linear infinite; display:inline-block }
+.prop { display:grid; gap:4px; padding:8px 0; border-top:1px solid var(--line-soft) }
+.prop .k { font-size:12px; color:var(--text-2) } .prop .v { font-size:14px; line-height:20px }
+.pk { position:absolute; inset:0; background:rgba(23,22,21,.36); z-index:8; display:grid; place-items:center; padding:16px }
+.pk[hidden] { display:none }
+.pkd { background:var(--surface); border-radius:16px; box-shadow:var(--e3); padding:20px; width:380px; max-width:100%; display:grid; gap:12px }
+.pkd h3 { font-size:18px; font-weight:600 }
+.tuo { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 0; border-top:1px solid var(--line-soft) }
+.tuo b { display:block; font-weight:600 } .tuo span { font-size:13px; color:var(--text-2) }
+.tin { width:64px; min-height:30px; border:1px solid var(--g500); border-radius:8px; padding:0 8px; font:inherit; font-size:13px; text-align:right; background:var(--surface); color:var(--text) }
+.app.phone { max-width:100% }
+.send[aria-disabled="true"] { background:var(--g300); color:var(--g600) }
+/* The reference sections under the screen */
+.rp { margin-top:40px; scroll-margin-top:12px }
+.rp > h2 { font:600 18px/24px var(--font) }
+.rp > .cap { color:var(--text-2); font-size:13px; margin:4px 0 14px; max-width:100ch }
+.rshort { list-style:none; margin:0; padding:0; display:grid; gap:8px; max-width:110ch }
+.rshort li { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 14px }
+.rtbl { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:12px; overflow:hidden; font-size:13px }
+.rtbl th, .rtbl td { text-align:left; padding:10px 12px; border-top:1px solid var(--line-soft); vertical-align:top }
+.rtbl th { background:var(--sunk); font-weight:500; color:var(--text-2); border-top:0 }
+.rtbl td:first-child { width:28%; color:var(--text-2) }
+@media (max-width:700px) {
+  .rtbl, .rtbl tbody, .rtbl tr, .rtbl td { display:block; width:auto }
+  .rtbl thead { display:none } .rtbl tr { border-top:1px solid var(--line) } .rtbl tr:first-child { border-top:0 }
+  .rtbl td { border-top:0; padding:6px 12px } .rtbl td:first-child { width:auto; padding-top:10px }
+}
+.rtake { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px }
+.rtake > div { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px; display:grid; gap:6px; font-size:13px; align-content:start }
+.rtake .src { color:var(--text-3); font-size:12px } .rtake .t { color:var(--ok-fg) } .rtake .s2 { color:var(--bad-fg) }
+.rcrops { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:20px; align-items:start }
+.rcrops > div > p { font-size:12px; color:var(--text-3); margin:0 0 8px; font-weight:500 }
+.rcrop { background:var(--page); border:1px solid var(--line); border-radius:12px; padding:14px; box-shadow:var(--e1); display:grid; gap:10px; min-width:0 }
+
+</style>
+
+<div class="doc">
+  <header class="doc-top">
+    <h1>Studio · one screen, redrawn</h1>
+    <p>Studio plan V3b · the approved one screen (15 Nov) redrawn for the Studio spec’s § 14 deviations and decision S24 · 16 Nov 2026 · Neel Studio builds House of Ayuda’s website. Everything not listed under What changes is as approved.</p>
+    <nav class="toc" aria-label="Sections"><a href="#r-short">In short</a><a href="#r-changes">What changes</a><a href="#r-take">What to take</a><a href="#r-calls">Your calls</a><a href="#r-screen">The screen</a><a href="#r-crops">Added states</a><a href="#r-words">Words</a></nav>
+    <div class="ctrl" role="group" aria-label="Parts"><span class="lab">Part</span>
+      <button data-go="0">0 Start</button><button data-go="1">1 Reading</button><button data-go="2">2 Brand</button><button data-go="3">3 Look</button>
+      <button data-go="4">4 Pages</button><button data-go="5">5 Building</button><button data-go="6">6 Ready</button><button data-go="7">7 Anita's review</button><button data-go="8">8 Publish</button><button data-go="9">9 Hand over</button>
+    </div>
+    <div class="ctrl" role="group" aria-label="View and state"><span class="lab">View</span>
+      <button data-view="desk" aria-pressed="true">Computer</button><button data-view="phone">Phone</button>
+      <span class="lab" style="margin-left:12px">State</span>
+      <button data-state="normal" aria-pressed="true">Normal</button><button data-state="low">Low credits</button><button data-state="nologo">No logo</button><button data-state="fail">Couldn't read</button><button data-state="first">20 free credits</button><button data-state="budget">Budget used up</button><button data-state="returned">Returned turn</button><button data-state="stopped">Paused by Frrata</button><button data-state="instr">Instructions changed</button><button data-state="after">After handover</button>
+    </div>
+  </header>
+
+  <span id="r-screen" class="anchor"></span>
+  <div class="app" id="app">
+    <header class="top">
+      <button class="back" id="backBtn" aria-label="Back to Clients"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m15 6-6 6 6 6"/></svg><span>Clients</span></button>
+      <span class="client">House of Ayuda</span>
+      <nav class="steps" id="steps" aria-label="Progress"></nav>
+      <button type="button" class="credits" id="credits" data-act="topup" aria-label="Credits"><b class="num" id="cr">142</b><span id="crw">credits</span></button>
+      <button class="btn primary" id="primary">Hand over</button>
+    </header>
+    <div class="body">
+      <section class="chat" aria-label="Chat">
+        <div class="log" id="log" aria-live="polite"></div>
+        <div class="composer">
+          <div class="sugg" id="sugg"></div>
+          <div id="attach"></div>
+          <div class="input"><span id="ph">Ask for a change</span><button class="send" id="send" aria-label="Send"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button></div>
+        </div>
+      </section>
+      <section class="pv" id="pv" aria-label="Your site">
+        <div class="pv-head">
+          <div class="seg" role="group" aria-label="Page"><button aria-pressed="true">Home</button><button>Product</button><button>Size help</button></div>
+          <span class="sp"></span>
+          <span class="pvst" id="pvst" role="status"></span><span class="addr" id="addr">Preview · v1</span>
+          <div class="seg" role="group" aria-label="Device"><button data-dev="phone" aria-pressed="true">Phone</button><button data-dev="desk">Computer</button></div>
+          <button class="btn sm" id="vOpen">Versions</button>
+          <button class="btn sm" id="bbOpen">Brand book</button>
+        </div>
+        <div class="stage"><div class="device" id="device"><div class="site skel" id="site"></div></div></div>
+      </section>
+    </div>
+    <button class="peek" id="peek"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="3" width="10" height="18" rx="2"/></svg>Site</button>
+    <aside class="drawer" id="vd" aria-label="Versions">
+      <div class="row"><h3>Versions</h3><span class="sp"></span><button class="btn ghost sm" id="vClose">Close</button></div>
+      <div id="vBody" style="margin-top:10px"></div>
+    </aside>
+    <aside class="drawer" id="bb" aria-label="Brand book">
+      <div class="row"><h3>Brand book</h3><span class="sp"></span><button class="btn ghost sm" id="bbClose">Close</button></div>
+      <div class="bb" id="bbBody"></div>
+    </aside>
+    <aside class="drawer" id="tu" aria-label="Credits">
+      <div class="row"><h3>Credits</h3><span class="sp"></span><button class="btn ghost sm" data-act="tuclose">Close</button></div>
+      <div class="bb">
+        <div><div class="k">Balance</div><b class="num" id="tub" style="font-size:24px;font-weight:600">142</b> credits</div>
+        <div>
+          <div class="tuo"><div><b>100 credits</b><span>₹1,999 + GST</span></div><button class="btn primary sm">Buy 100 credits</button></div>
+          <div class="tuo"><div><b>Credits you choose</b><span>₹20 + GST a credit</span></div><span class="row"><input class="tin" value="50" inputmode="numeric" aria-label="Credits to buy"><button class="btn sm">Buy 50 credits</button></span></div>
+          <p class="cost" style="margin:6px 0 0">Pay ₹2,358.82 today by UPI, card or netbanking.</p>
+        </div>
+        <div><div class="k">Plans</div>
+          <div class="tuo"><div><b>Studio</b><span>₹2,999 + GST a month · 150 credits a month</span></div></div>
+          <div class="tuo"><div><b>Studio Plus</b><span>₹9,999 + GST a month · 500 credits a month</span></div></div>
+          <a class="btn sm" href="#r-screen" style="margin-top:6px">See plans</a></div>
+        <div><div class="k">Free</div>20 credits, once, when Frrata approves you</div>
+      </div>
+    </aside>
+    <div class="pk" id="pk" hidden><div class="pkd" role="dialog" aria-modal="true" aria-labelledby="pk-h">
+      <h3 id="pk-h">Apply to the live store?</h3><p style="margin:0">Shoppers see it within seconds.</p>
+      <div class="row" style="justify-content:flex-end"><button class="btn" data-act="pkno">Not now</button><button class="btn primary" data-act="pkok">Use passkey</button></div>
+    </div></div>
+
+  </div>
+
+  <section class="rp" id="r-short" aria-labelledby="rh-s">
+    <h2 id="rh-s">In short</h2>
+    <ul class="rshort" style="margin-top:12px">
+      <li><b>What to take.</b> The approved one screen, unchanged in layout, flow and parts, with the three deviations the Studio spec’s § 14 lists, approved as decision S24.</li>
+      <li><b>Pages cost about 19 credits each,</b> not 2–10. Six pages read “about 114 credits” before Build.</li>
+      <li><b>A Publish step</b> before Hand over, with a passkey check. The step bar gains Publish.</li>
+      <li><b>Words and colours show within seconds</b> (“Updating” in the preview bar). <b>A code change shows after a build</b>: “Building v8 · about 1–2 min”, the old version on screen meanwhile.</li>
+      <li><b>The agent proposes; a person applies</b> (S17). Content cards carry Apply and the exact words. After handover Apply asks for a passkey.</li>
+      <li><b>New prices and 20 free credits</b> (S7, S20) in the credits panel the pill opens. <b>Budget used up</b> stops new turns and keeps the draft.</li>
+      <li><b>Why now.</b> V3b’s first task is this redraw (V3b·1). <b>Cost:</b> the prices above. <b>From you:</b> a yes, and the calls below.</li>
+    </ul>
+  </section>
+
+  <section class="rp" id="r-changes" aria-labelledby="rh-c">
+    <h2 id="rh-c">What changes (the audit: the approved screen against this redraw)</h2>
+    <table class="rtbl">
+      <thead><tr><th>Approved (15 Nov)</th><th>Why it can’t stay</th><th>Redrawn</th></tr></thead>
+      <tbody>
+        <tr><td>Pages priced 2–10 credits each, a range total</td><td>The measured token profile puts a page turn near 19 credits at 3× (spec § 8). The old figures would mislead.</td><td>“≈ 19” per page; “6 pages · about 114 credits”</td></tr>
+        <tr><td>Send to Anita, then Hand over; no Publish</td><td>A person changes the store (ADR-0014 rule 4, amendment 8.1).</td><td>Part 8 Publish: a card with Publish v8 and a passkey check; the top button reads Publish v8 there</td></tr>
+        <tr><td>The site changes instantly with every choice</td><td>Data shows within seconds; a code change needs a build (runtime has no open port, spec § 2).</td><td>“Updating” for words and colours; “Building v7 · about 1–2 min” for code, the sweep over the old version</td></tr>
+        <tr><td>Content words written straight in</td><td>Agent changes are proposals a person applies (S17).</td><td>“Words for Content” with Apply, Not this, Apply all</td></tr>
+        <tr><td>Credits pill only; low credits with Top up</td><td>Prices changed (S7) and 20 free credits (S20).</td><td>The pill opens Credits: 100 for ₹1,999 + GST, ₹20 + GST a credit, Studio and Studio Plus, the amount taken today</td></tr>
+        <tr><td>House of Ayuda, Neel Studio, Anita</td><td>The brief’s test names.</td><td>House of Ayuda, Neel Studio, Anita; its look “Sindoor paper” from the pilot’s design system</td></tr>
+        <tr><td>Everything else</td><td>—</td><td>As approved: layout, steps, chat, cards, preview, drawers, phone sheet, peeks, hand edits</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="rp" id="r-take" aria-labelledby="rh-t">
+    <h2 id="rh-t">What to take</h2>
+    <div class="rtake">
+      <div><b>The approved one screen</b><span class="src">docs/mockups/2026-11-15-studio-one-screen.html, approved 15 Nov</span><span class="t">Take: all of it, but the rows above.</span></div>
+      <div><b>Studio v2.4 Credits and billing</b><span class="src">docs/mockups/2026-11-13-studio-v2.html, approved 12 Nov</span><span>Plans, packs, typed credits, client budgets with Raise by 50.</span><span class="t">Take: the same offers at the new prices; the budget card’s Raise by 50.</span></div>
+      <div><b>Lovable and similar builders</b><span class="src">Studio spec research, live 11 Nov; unit-economics review 16 Nov</span><span>A page costs ≈ ₹40–80 there against ₹380 here.</span><span class="t">Take: credits shown before every run, as approved.</span><span class="s2">Skip: hiding the price per page.</span></div>
+    </div>
+  </section>
+
+  <section class="rp" id="r-calls" aria-labelledby="rh-k">
+    <h2 id="rh-k">Your calls</h2>
+    <table class="rtbl">
+      <thead><tr><th>Call</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr><td>Per-page credits: one figure or each page its own</td><td>One figure, “≈ 19”, until the 20-task proof prices pages apart.</td></tr>
+        <tr><td>Publish’s place in the steps</td><td>Its own step between Site and Hand over.</td></tr>
+        <tr><td>Hand edits after handover</td><td>As content saves: live, the owner told (amendment 8), no passkey; Apply on the agent’s proposals asks for one.</td></tr>
+        <tr><td>Who raises a client’s budget</td><td>The partner owner (Raise by 50); a Lead reads “Ask Kabir to raise it”.</td></tr>
+        <tr><td>The preview bar’s address</td><td>“Preview · v8”, not a domain: the preview domain’s name isn’t chosen yet (decision O6).</td></tr>
+        <tr><td>Drawn here from the plan’s added states</td><td>A returned turn, Paused by Frrata, changed agent instructions, proposals waiting, publish outcomes after handover, a developer’s branch in Versions. Not drawn: a turn paused at its reserve mid-run (it reads as Budget used up).</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="rp" id="r-crops" aria-labelledby="rh-x">
+    <h2 id="rh-x">Added states, outside the clickable screen</h2>
+    <p class="cap">Each state is also on the State buttons above the screen.</p>
+    <div class="rcrops">
+      <div><p>After handover · Publishes freely</p><div class="rcrop"><div class="card"><h4>Publish v9</h4><div class="row"><span class="status ok">Published · Anita can undo</span></div></div></div></div>
+      <div><p>After handover · Ask me first</p><div class="rcrop"><div class="card"><h4>Publish v9</h4><div class="row"><span class="status warn">Waiting for Anita’s yes</span></div></div></div></div>
+      <div><p>After handover · a new outside service</p><div class="rcrop"><div class="card"><h4>Publish v10</h4><div class="row"><span class="status warn">Needs Anita’s yes</span><span class="cost">Adds widgets.example.com</span></div></div></div></div>
+      <div><p>Undone by the owner</p><div class="rcrop"><div class="card"><div class="row"><span class="status neu">Anita undid v9</span><span class="cost">v8 is live</span></div></div></div></div>
+      <div><p>Apply after handover: the passkey confirm</p><div class="rcrop"><div class="pkd" style="box-shadow:none;padding:0;width:auto"><h3>Apply to the live store?</h3><p style="margin:0">Shoppers see it within seconds.</p><div class="row" style="justify-content:flex-end"><button class="btn">Not now</button><button class="btn primary">Use passkey</button></div></div></div></div>
+      <div><p>Budget used up · a Lead’s card</p><div class="rcrop"><div class="card"><div class="row"><span class="status bad">Budget used up</span></div><div class="txt">House of Ayuda has used 300 of 300 credits. New turns wait. The draft stays.</div><div class="txt" style="color:var(--text-2)">Ask Kabir to raise it.</div></div></div></div>
+      <div><p>A Builder on Apply or Publish</p><div class="rcrop"><div class="card"><div class="row"><span class="status neu">Only an owner or Lead can apply this</span></div></div></div></div>
+      <div><p>Preview bar while words update, then while code builds</p><div class="rcrop"><span class="pvst"><span class="spin" aria-hidden="true"></span>Updating</span><span class="pvst"><span class="spin" aria-hidden="true"></span>Building v8 · about 1–2 min</span></div></div>
+    </div>
+  </section>
+
+  <section class="rp" id="r-words" aria-labelledby="rh-w">
+    <h2 id="rh-w">Words</h2>
+    <p class="cap">New strings only. The approved screen’s own words are unchanged but for the names.</p>
+    <table class="rtbl">
+      <thead><tr><th>Where</th><th>Words</th></tr></thead>
+      <tbody>
+        <tr><td>Pages card</td><td>≈ 19 · 6 pages · about 114 credits</td></tr>
+        <tr><td>Steps</td><td>Publish</td></tr>
+        <tr><td>Publish card</td><td>Publish v8 · Checks pass on v8 · House of Ayuda opens with v8 · Passkey check · Published v8</td></tr>
+        <tr><td>Preview bar</td><td>Preview · v8 · Updating · Building v8 · about 1–2 min · Built v8 · checks pass</td></tr>
+        <tr><td>Proposals</td><td>Words for Content · 3 to apply · Done · Apply · Not this · Apply all 3 · Applied · Not used</td></tr>
+        <tr><td>Credits panel</td><td>Credits · Balance · 100 credits · ₹1,999 + GST · Buy 100 credits · Credits you choose · ₹20 + GST a credit · Buy 50 credits · Pay ₹2,358.82 today by UPI, card or netbanking. · Plans · Studio · ₹2,999 + GST a month · 150 credits a month · Studio Plus · ₹9,999 + GST a month · 500 credits a month · See plans · Free · 20 credits, once, when Frrata approves you · free credits</td></tr>
+        <tr><td>Budget</td><td>Budget used up · House of Ayuda has used 300 of 300 credits. New turns wait. The draft stays. · Raise by 50 · Ask Kabir to raise it. · Stopped at Product</td></tr>
+        <tr><td>Returned turn</td><td>Stopped · 6 credits returned · We couldn’t finish Product. Frrata’s side failed. · Try again</td></tr>
+        <tr><td>Paused by Frrata</td><td>Paused by Frrata · Studio is paused for House of Ayuda. Your draft is kept.</td></tr>
+        <tr><td>Instructions changed (spec § 6.6’s line)</td><td>Stopped · This site’s agent instructions were changed outside Studio. · Open Versions</td></tr>
+        <tr><td>After handover</td><td>Apply to the live store? · Shoppers see it within seconds. · Not now · Use passkey · Publish v9 · Anita: Publishes freely · Published · Anita can undo · Waiting for Anita’s yes · Needs Anita’s yes · Adds widgets.example.com · Anita undid v9 · v8 is live · Only an owner or Lead can apply this</td></tr>
+        <tr><td>Versions</td><td>Kabir’s own work · dev/kabir · 3 changes · Today · Hand to the agent</td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+const VOICES = [
+  { id:'warm', k:'Warm', s:'For the days you’ll keep' },
+  { id:'clear', k:'Clear', s:'Kurtas, saris and lehengas, ready to wear' },
+  { id:'festive', k:'Festive', s:'Made for haldi, worn long after' },
+]
+// Three logo directions, each from a reason (three threads; the doorway of a house; zari edges the sari). Every mark is
+// drawn in one colour (currentColor) plus the brand accent, checked on paper and on ink and at 32 and 16 px.
+const SAFFRON = (c, acc) => `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true">${[-26,0,26].map(r=>`<path transform="rotate(${r} 12 22)" fill="${acc}" d="M12 22C11.7 16 11.3 10 10.5 5.2C11.3 4.3 12.7 4.3 13.5 5.2C12.7 10 12.3 16 12 22Z"/>`).join('')}<circle cx="12" cy="22" r="1.3" fill="${c}"/></svg>`
+const DOOR = (c, acc) => `<svg viewBox="0 0 40 52" width="100%" height="100%" aria-hidden="true"><g fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 50V23.5C6 15 12.4 11 16.2 8.6 18.6 7.1 19.6 5.3 20 3 20.4 5.3 21.4 7.1 23.8 8.6 27.6 11 34 15 34 23.5V50"/><path d="M2 50h36"/><path d="M12.6 50 20 19l7.4 31"/><path d="M15.2 39h9.6"/></g><circle cx="20" cy="12.6" r="2.4" fill="${acc}"/></svg>`
+const WOVEN = (c, acc, bg) => `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true" fill="none" stroke-linecap="square">
+  <path d="M7 3v6M7 11.5v3M7 17v4" stroke="${c}" stroke-width="3"/>
+  <path d="M18.5 3 7 13.2" stroke="${bg}" stroke-width="5.4"/><path d="M18.5 3 7 13.2" stroke="${acc}" stroke-width="2.6"/>
+  <path d="M10.4 11 19 21" stroke="${c}" stroke-width="3"/></svg>`
+const ZARI = (acc, n=9) => `<svg viewBox="0 0 ${n*8} 8" width="${n*8}" height="8" aria-hidden="true">${Array.from({length:n},(_,i)=>`<path d="M${i*8+4} 0.6 ${i*8+7.4} 4 ${i*8+4} 7.4 ${i*8+0.6} 4Z" fill="none" stroke="${acc}" stroke-width="1.1"/><circle cx="${i*8+4}" cy="4" r="1" fill="${acc}"/>`).join('')}</svg>`
+const WMS = [
+  { id:'saffron', name:'Three threads',
+    html:(c, bg, acc='#D9822B') => `<span style="display:inline-flex;align-items:center;gap:8px;color:${c}"><span style="width:22px;height:22px;display:inline-block">${SAFFRON(c, acc)}</span><span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:25px;font-weight:600;letter-spacing:.01em;line-height:1">ayuda</span></span>`,
+    icon:(c, bg, acc='#D9822B') => SAFFRON(c, acc) },
+  { id:'woven', name:'Doorway',
+    html:(c, bg, acc='#C9A227') => `<span style="display:inline-flex;align-items:center;gap:8px;color:${c}"><span style="width:22px;height:22px;display:inline-block">${DOOR(c, acc)}</span><span style="font-family:'Inter',sans-serif;font-size:17px;font-weight:600;letter-spacing:.22em;line-height:1">AYUDA</span></span>`,
+    icon:(c, bg, acc='#C9A227') => DOOR(c, acc) },
+  { id:'zari', name:'Zari border',
+    html:(c, bg, acc='#C9A227') => `<span style="display:inline-grid;justify-items:center;gap:3px;color:${c}"><span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:21px;font-weight:600;letter-spacing:.34em;line-height:1;margin-right:-.34em">AYUDA</span>${ZARI(acc)}</span>`,
+    icon:(c, bg, acc='#C9A227') => `<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><path d="M12 2.5 21.5 12 12 21.5 2.5 12Z" fill="none" stroke="${acc}" stroke-width="1.6"/><path fill="none" stroke="${c}" stroke-width="1.9" stroke-linejoin="round" d="M8.6 16.6 12 7.2l3.4 9.4M9.9 13.2h4.2"/></svg>` },
+]
+const wm = () => WMS.find(w => w.id === S.wm)
+const LOOKS = [
+  { id:'zari', name:'Sindoor paper', p:'#FBF7F1', i:'#221A14', a:'#8C1D2C', f:"'Tiro Devanagari Hindi',Georgia,serif", r:'2px' },
+  { id:'haldi', name:'Haldi morning', p:'#FFF8E7', i:'#3B2A12', a:'#E0A100', f:"'Fraunces',Georgia,serif", r:'10px' },
+  { id:'loom', name:'Indigo loom', p:'#F3F4F8', i:'#1E2340', a:'#5B66D6', f:"'Inter',sans-serif", r:'2px' },
+]
+const PAGES = [['Home',1,19],['Collection',1,19],['Product',1,19],['Size help',1,19],['Contact',1,19],['Questions',1,19],['Our weavers',0,19],['Lookbook',0,19]]
+const STEPS = ['Brand','Look','Pages','Site','Publish','Hand over']
+const S = { start:142, applied:[0,0,0], building:null, flash:false, part:0, voice:'warm', look:'zari', accent:null, audience:['Women 28–45','Gifting','Brides'], pages:PAGES.map(p=>p[1]), credits:142, built:0, edits:[], view:'desk', state:'normal', dev:'phone' }
+const $ = (s, r=document) => r.querySelector(s)
+const esc = (t) => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))
+const look = () => LOOKS.find(l => l.id === S.look)
+const voice = () => VOICES.find(v => v.id === S.voice)
+const pageCount = () => S.pages.filter(Boolean).length
+const total = () => PAGES.reduce((n,p,i) => n + (S.pages[i] ? p[2] : 0), 0)
+const used = () => 1 + 3 + total() + 4 // voice, look, the pages, the warmer hero, as drawn
+// V3b redraw: Content proposals a person applies (S17), the added states, the pane's building line (§ 14 row 3).
+const PROPS = [['Home hero · heading', 'For the days you’ll keep'], ['Size help · how to measure', 'Bust or chest: around the fullest part, tape level.'], ['Questions · delivery', 'Dispatched in 2 days. Delivered in 4–7 days.']]
+function proposals() {
+  const left = S.applied.filter((x) => !x).length
+  return `<div class="card"><div class="row"><h4>Words for Content</h4><span class="sp"></span><span class="cost">${left ? left + ' to apply' : 'Done'}</span></div>
+    ${PROPS.map((x, i) => `<div class="prop"><span class="k">${x[0]}</span><span class="v">${esc(x[1])}</span><span class="row">${S.applied[i] === 1 ? '<span class="status ok">Applied</span>' : S.applied[i] === 2 ? '<span class="status neu">Not used</span>' : `<button class="btn sm" data-act="apply" data-i="${i}">Apply</button><button class="btn ghost sm" data-act="skip" data-i="${i}">Not this</button>`}</span></div>`).join('')}
+    ${left > 1 ? `<div class="row"><span class="sp"></span><button class="btn primary sm" data-act="applyall">Apply all ${left}</button></div>` : ''}</div>`
+}
+const BUDGET = `<div class="work">Stopped at Product</div><div class="card"><div class="row"><span class="status bad">Budget used up</span></div><div class="txt">House of Ayuda has used 300 of 300 credits. New turns wait. The draft stays.</div><div class="row"><button class="btn sm" data-act="raise">Raise by 50</button></div></div>`
+const RETURNED = `<div class="card"><div class="row"><span class="status neu">Stopped</span><span class="sp"></span><span class="cost">6 credits returned</span></div><div class="txt">We couldn’t finish Product. Frrata’s side failed.</div><div class="row"><button class="btn sm" data-act="retry">Try again</button></div></div>`
+const STOPPED = `<div class="card"><div class="row"><span class="status bad">Paused by Frrata</span></div><div class="txt">Studio is paused for House of Ayuda. Your draft is kept.</div></div>`
+const INSTR = `<div class="card"><div class="row"><span class="status bad">Stopped</span></div><div class="txt">This site’s agent instructions were changed outside Studio.</div><div class="row"><button class="btn sm" data-act="versions">Open Versions</button></div></div>`
+function AFTER() {
+  return me('Add a Lookbook page') +
+    agent(`<div class="card"><div class="row"><h4>Lookbook · heading</h4><span class="sp"></span>${S.applied9 ? '<span class="status ok">Applied</span>' : '<span class="cost">Proposed</span>'}</div><div class="txt">The wedding edit</div>${S.applied9 ? '' : '<div class="row"><button class="btn sm" data-act="apply9">Apply</button><button class="btn ghost sm">Not this</button></div>'}</div>`, [{ t: 'Built Lookbook · v9' }]) +
+    agent(`<div class="card"><h4>Publish v9</h4><div class="tagrow"><span class="tag">Checks pass on v9</span><span class="tag">Anita: Publishes freely</span></div><div class="row"><span class="cost">Passkey check</span><span class="sp"></span>${S.pub9 ? '<span class="status ok">Published · Anita can undo</span>' : '<button class="btn primary sm" data-act="pub9">Publish v9</button>'}</div></div>`)
+}
+const DEV = `<div style="margin-top:14px;font-size:12px;color:var(--text-3)">Kabir’s own work</div><div class="row" style="padding:8px 0;border-top:1px solid var(--line-soft)"><span><span class="mono">dev/kabir</span> · 3 changes · Today</span><span class="sp"></span><button class="btn sm">Hand to the agent</button></div>`
+function flash() { S.flash = true; setTimeout(() => { S.flash = false; renderPane() }, 1300) }
+function renderPane() {
+  const n = S.state === 'after' && S.pub9 ? 9 : S.part >= 8 && !S.building ? 8 : S.part >= 5 ? 7 : S.part >= 3 ? S.part : 1
+  $('#addr').textContent = 'Preview · v' + n
+  const b = S.building || (S.part === 5 && S.state === 'normal' ? 'v7' : null)
+  $('#pvst').innerHTML = b ? `<span class="spin" aria-hidden="true"></span>Building ${b} · about 1–2 min` : S.flash ? '<span class="spin" aria-hidden="true"></span>Updating' : ''
+  const tub = $('#tub'); if (tub) tub.textContent = S.state === 'low' ? 12 : S.credits
+}
+function stateEnter() {
+  if (S.state === 'first') { S.part = 0; S.start = S.credits = 20 } else if (S.start === 20) { S.start = S.credits = 142 }
+  if (S.state === 'budget' || S.state === 'returned') S.part = 5
+  if (S.state === 'stopped') S.part = 4
+  if (S.state === 'instr') S.part = 0
+  if (S.state === 'after') { S.part = 9; S.handed = true; S.applied = [1, 1, 1] }
+}
+
+
+function agent(html, work=[]) {
+  return `<div class="msg"><div class="who"><span class="av">F</span>Frrata agent</div>${work.map(w=>`<div class="work${w.run?' run':''}">${esc(w.t)}</div>`).join('')}${html}</div>`
+}
+const me = (t, cls='') => `<div class="me ${cls}">${esc(t)}</div>`
+
+function stepState(i) { const at = [0,0,0,1,2,3,3,3,4,5][S.part]; return i < at ? 'done' : i === at ? 'now' : '' }
+
+function renderLog() {
+  const p = S.part, out = []
+  if (S.state === 'instr') out.push(agent(INSTR))
+  // 0 · Start
+  out.push(agent(`<div class="txt">House of Ayuda's site. Where do we start?</div>
+    <div class="opts">
+      <button class="opt" data-act="start" ${p>0?'aria-pressed="true"':''}><b>Use what's in House of Ayuda’s console</b><span class="k">212 products · logo · policies</span></button>
+      <button class="opt" data-act="start"><b>Ask Anita for her brand</b><span class="k">A link for her phone · logo, photos, Instagram</span></button>
+      <button class="opt" data-act="start"><b>Paste a website or Instagram</b><span class="k">Read in a minute</span></button>
+    </div>`))
+  if (p === 0) return out.join('')
+  out.push(me("Use what's in House of Ayuda’s console"))
+  // 1 · Reading
+  if (S.state === 'fail' && p === 1) {
+    out.push(agent(`<div class="card"><div class="row"><span class="status bad">Couldn't read</span></div><div class="txt">instagram.com/houseofayuda is private.</div><div class="row"><button class="btn sm">Try again</button><button class="btn sm" data-act="read">Skip it</button><button class="btn sm">Ask Anita</button></div></div>`,
+      [{t:'Read 212 products · 24 photos'},{t:'Read logo.svg · policies'}]))
+    return out.join('')
+  }
+  out.push(agent(p === 1 ? `<div class="prog"><i style="transform:scaleX(.62)"></i></div>` : '',
+    p === 1 ? [{t:'Read 212 products · 24 photos'},{t:'Read logo.svg'},{t:'Reading policies and about page', run:true}]
+            : [{t: S.state === 'nologo' ? 'Read 212 products · 24 photos · policies · no logo found' : 'Read 212 products · 24 photos · logo · policies'}]))
+  if (p === 1) return out.join('')
+  // 2 · Brand
+  out.push(agent(`<div class="card"><h4>House of Ayuda, in one line</h4><div class="line-edit"><span>Kurtas, saris and lehengas for haldi mornings, sangeet nights and every day after.</span><button class="btn ghost sm" aria-label="Edit the line">Edit</button></div></div>
+    <div class="txt">How should the site speak?</div>
+    <div class="opts">${VOICES.map(v=>`<button class="opt" data-act="voice" data-v="${v.id}" data-peek="voice" aria-pressed="${S.voice===v.id && p>2}"><span class="k">${v.k}</span><span class="s" style="font-family:${look().f}">${esc(v.s)}</span></button>`).join('')}</div>
+    <div class="row"><button class="btn ghost sm">Write my own</button><span class="sp"></span><button class="btn ghost sm">Skip</button></div>
+    <div class="card"><h4>Who buys</h4><div class="chips">${['Women 28–45','Gifting','Brides','NRI shoppers','Men'].map(a=>`<button class="chip-b" data-act="aud" data-a="${a}" aria-pressed="${S.audience.includes(a)}">${a}</button>`).join('')}</div></div>`))
+  if (p === 2) return out.join('')
+  out.push(me(voice().k))
+  // 3 · Look
+  if (S.state === 'nologo') {
+    out.push(agent(`<div class="txt">No logo yet. Three wordmarks from the name.</div>
+      <div class="wms">${WMS.map(w=>`<button class="wm" data-act="wm" data-w="${w.id}" data-peek="wm" aria-pressed="${S.wm===w.id}" aria-label="${w.name}"><span class="on-paper">${w.html('#2A1D14','#F7F1EA')}</span><span class="on-ink">${w.html('#F7F1EA','#2A1D14')}</span><span class="ic"><i aria-hidden="true">${w.icon('#F7F1EA','#2A1D14')}</i><em aria-hidden="true">${w.icon('#2A1D14','#F7F1EA')}</em></span></button><div class="wm-name"><span>${w.name}${w.id==='saffron'?' · House of Ayuda\'s choice':''}</span><span class="wm-checks">16 px · One colour · Reversed</span></div>`).join('')}</div>
+      <div class="row"><button class="btn sm">Upload a logo</button><button class="btn sm">Ask Anita for hers</button><span class="sp"></span><button class="btn ghost sm">Write my own</button></div>`))
+    if (!S.wm) return out.join('')
+    out.push(me(wm().name))
+  }
+  out.push(agent(`<div class="txt">Three looks from the ${S.state === 'nologo' ? 'wordmark' : 'logo'} and photos.</div>
+    <div class="looks">${LOOKS.map(l=>`<button class="look" data-act="look" data-l="${l.id}" data-peek="look" aria-pressed="${S.look===l.id && p>3}"><span class="sw"><span style="background:${l.p}"></span><span style="background:${l.a}"></span><span style="background:${l.i}"></span></span><span class="nm"><span style="font-family:${l.f}">Aa</span><b>${l.name}</b></span></button>`).join('')}</div>
+    <div class="row"><button class="chip-b" aria-pressed="true">Keep Ayuda’s sindoor</button><button class="chip-b">Shuffle colours</button><span class="sp"></span><button class="btn ghost sm">Write my own</button></div>`,
+    [{t:'Made 3 looks from logo.svg and 24 photos'}]))
+  S.edits.forEach((e,i) => out.push(me(`${e} · v${3+i}`, 'edit')))
+  if (p === 3) return out.join('')
+  out.push(me(look().name))
+  // 4 · Pages
+  out.push(agent(`<div class="txt">Pages to start with.</div>
+    <div class="card"><div class="ticks">${PAGES.map((pg,i)=>`<button class="tick" role="checkbox" data-act="page" data-i="${i}" aria-checked="${!!S.pages[i]}"><i></i>${pg[0]}<span class="c">≈ ${pg[2]}</span></button>`).join('')}</div>
+    <div class="row"><span class="cost num">${pageCount()} pages · about ${total()} credits</span><span class="sp"></span>${p===4?`<button class="btn primary sm" data-act="build" ${S.state==='low'?'aria-disabled="true"':''}>Build ${pageCount()} pages</button>`:''}</div>
+    ${S.state==='low' && p===4 ? `<div class="row"><span class="status warn">12 credits left</span><span class="sp"></span><button class="btn sm" data-act="topup">Top up</button></div>` : ''}</div>`))
+  if (S.state === 'stopped' && p === 4) out.push(agent(STOPPED))
+  if (p === 4) return out.join('')
+  out.push(me(`Build ${pageCount()} pages`))
+  // 5 · Building
+  const names = PAGES.filter((_,i)=>S.pages[i]).map(x=>x[0])
+  const done = p === 5 ? 2 : names.length
+  out.push(agent(p === 5 ? `<div class="prog"><i style="transform:scaleX(${(done+.5)/names.length})"></i></div>` : '',
+    names.map((n,i)=>({ t: i < done ? `Built ${n}` : i === done ? `Building ${n}` : `${n}`, run: i === done && p === 5 })).filter((w,i)=> p > 5 || i <= done)))
+  if (p === 5 && S.state === 'budget') out.push(agent(BUDGET))
+  if (p === 5 && S.state === 'returned') out.push(agent(RETURNED))
+  if (p >= 6 || (p === 5 && S.state === 'normal')) out.push(agent(proposals()))
+  if (p === 5) return out.join('')
+  // 6 · Ready
+  out.push(agent(`<div class="txt">${names.length} pages built. Checks pass.</div>
+    <div class="checks"><div>Phone speed<b class="num">96</b></div><div>Accessible<span class="status ok">Pass</span></div><div>Legal block<span class="status ok">Pass</span></div><div>Secrets<span class="status ok">None</span></div></div>
+    <div class="card"><h4>Anita will be able to edit</h4><div class="tagrow">${['Home hero · image, heading, link, dates','New in · collection','Festive band · words, dates','Menus','Questions','Size help','Season dates'].map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>
+    <div class="row"><button class="btn primary sm" data-act="send">Send to Anita</button><button class="btn sm">Change something</button></div>`))
+  if (p === 6) return out.join('')
+  out.push(me('Send to Anita'))
+  // 7 · Anita's review
+  out.push(`<div class="msg"><div class="who"><span class="av riya">A</span>Anita · House of Ayuda</div><div class="card"><div class="txt">Love it. Can the hero be warmer for Diwali?</div><div class="row"><span class="status neu">On v7 · Home</span></div></div></div>`)
+  out.push(agent(`<div class="txt">Warmer hero for Anita.</div><div class="row"><button class="btn sm" data-act="warmer" aria-pressed="${p>7}">Make it warmer</button><span class="cost">~4 credits</span></div>`))
+  if (p === 7) return out.join('')
+  out.push(me('Make it warmer'))
+  out.push(agent('', S.building ? [{t:'Building v8 · about 1–2 min', run:true}] : [{t:'Built v8 · checks pass'}]))
+  if (S.building) return out.join('')
+  out.push(`<div class="msg"><div class="who"><span class="av riya">A</span>Anita · House of Ayuda</div><div class="card"><div class="row"><span class="status ok">Approved v8</span></div></div></div>`)
+  // 8 · Publish (new, § 14 row 2: a person publishes the version the store opens with)
+  out.push(agent(`<div class="card"><h4>Publish v8</h4><div class="tagrow"><span class="tag">Checks pass on v8</span><span class="tag">House of Ayuda opens with v8</span></div>
+    <div class="row"><span class="cost">Passkey check</span><span class="sp"></span>${p === 8 ? `<button class="btn primary sm" data-act="publish">Publish v8</button>` : `<span class="status ok">Published v8</span>`}</div></div>`))
+  if (p === 8) return out.join('')
+  // 8 · Hand over
+  out.push(agent(`<div class="card"><h4>Hand over to Anita</h4>
+    <div class="tagrow"><span class="tag">Checks run again on v8</span><span class="tag">She accepts this version</span><span class="tag">${used()} credits used</span><span class="tag">starter/ · 42 files</span></div>
+    <div class="row"><span class="cost">Neel Studio stays on to maintain it</span><span class="sp"></span><button class="btn primary sm" data-act="hand">Send to Anita</button></div></div>`))
+  if (S.handed) out.push(`<div class="msg"><div class="who"><span class="av riya">A</span>Anita · House of Ayuda</div><div class="card"><div class="row"><span class="status ok">Accepted v8</span><span class="cost">House of Ayuda opens when she does</span></div></div></div>`)
+  if (S.state === 'after') out.push(AFTER())
+  return out.join('')
+}
+
+function renderSite() {
+  const site = $('#site'), p = S.part, l = look(), v = voice()
+  const skel = p < 2
+  site.className = 'site' + (skel ? ' skel' : '')
+  const accent = S.accent || l.a
+  if (!skel && p >= 3) { site.style.setProperty('--sp', l.p); site.style.setProperty('--si', l.i); site.style.setProperty('--sa', accent); site.style.setProperty('--sf', l.f); site.style.setProperty('--sr', l.r) }
+  else { ['--sp','--si','--sa','--sf','--sr'].forEach(k => site.style.removeProperty(k)) }
+  const head = p >= 2 ? v.s : 'For the days you’ll keep'
+  const warm = p >= 8 ? ';background:linear-gradient(160deg,#F2C46D,#A3471C)' : ''
+  site.innerHTML = `
+    <div class="s-bar">Free shipping above ₹1,499 · Pay on delivery</div>
+    <div class="s-hd"><span class="s-logo">${S.state === 'nologo' && (S.peekWm || S.wm) && !skel ? WMS.find(w=>w.id===(S.peekWm||S.wm)).html('var(--si)','var(--sp)') : (S.state === 'nologo' && !skel ? '<span style="opacity:.45;letter-spacing:.12em">HOUSE OF AYUDA</span>' : 'House of Ayuda')}</span><span>Bag</span></div>
+    <div class="s-hero" style="position:relative${warm}"><h2>${esc(head)}</h2>${p===3?'<button class="hit" aria-label="Edit the hero colour" data-act="pop"></button>':''}</div>
+    ${p >= 4 ? `<div class="s-band"><span>Diwali dispatch till 28 Oct</span><span>→</span></div>` : ''}
+    <div class="s-sec"><h3>New in</h3><div class="s-grid">
+      <div class="s-card"><div class="im"></div><b>Mustard Cotton Kurta</b><span class="num">₹2,190</span></div>
+      <div class="s-card"><div class="im"></div><b>Gold Tissue Sari</b><span class="num">₹7,490</span></div>
+      <div class="s-card"><div class="im"></div><b>Haldi Cotton Sari</b><span class="num">₹1,890</span></div>
+      <div class="s-card"><div class="im"></div><b>Ivory Embroidered Kurta</b><span class="num">₹2,990</span></div>
+    </div></div>
+    <div class="s-foot"><span>Ayuda Crafts Private Limited · 14 Weavers Lane, Bengaluru</span><span>Grievance officer: Anita Rao</span></div>
+    ${p === 5 || p === 1 || S.building ? '<div class="building" aria-hidden="true"></div>' : ''}`
+}
+
+function renderPop() {
+  document.querySelectorAll('.edit-pop').forEach(n => n.remove())
+  if (!S.pop) return
+  const pop = document.createElement('div')
+  pop.className = 'edit-pop'
+  pop.style.left = '24px'; pop.style.top = '150px'
+  const cur = S.accent || look().a
+  pop.innerHTML = `<div class="row"><b style="font-size:13px">Accent</b><span class="sp"></span><span class="addr">${cur}</span></div><div class="sws">${['#C9A227','#B5703F','#A3471C','#7A2E4A','#3A44C2'].map(c=>`<button data-act="accent" data-c="${c}" aria-pressed="${c===cur}" aria-label="Accent ${c}" style="background:${c}"></button>`).join('')}</div>`
+  $('#site').appendChild(pop)
+}
+
+function renderTop() {
+  $('#steps').innerHTML = STEPS.map((s,i)=>`<span class="st ${stepState(i)}"><i><span>${i+1}</span></i>${s}</span>`).join('')
+  const low = S.state === 'low'
+  $('#cr').textContent = low ? 12 : S.credits
+  $('#crw').textContent = S.state === 'first' ? 'free credits' : 'credits'
+  $('#credits').classList.toggle('low', low)
+  renderPane()
+  const prim = $('#primary')
+  prim.textContent = S.part >= 9 ? 'Hand over' : S.part === 8 ? 'Publish v8' : S.part >= 6 ? 'Send to Anita' : 'Hand over'
+  prim.setAttribute('aria-disabled', S.part >= 6 ? 'false' : 'true')
+  prim.className = 'btn ' + (S.part >= 6 ? 'primary' : '')
+  const sugg = [[],[],['Warmer','More formal','Hinglish headlines'],['Warmer','Softer corners','Bigger type','Three more'],['Add a Lookbook','Only Home for now'],[],['Try 3 heroes','Add a Lookbook'],['Show Anita both'],[],[]][S.part] || []
+  $('#sugg').innerHTML = sugg.map(s=>`<button class="chip-b">${s}</button>`).join('')
+  const run = (S.part === 1 || S.part === 5 || !!S.building) && !['budget','returned','stopped','instr'].includes(S.state)
+  const blocked = ['budget','stopped','instr'].includes(S.state)
+  $('#send').className = 'send' + (run ? ' stop' : '')
+  $('#send').setAttribute('aria-label', run ? 'Stop' : 'Send')
+  $('#send').innerHTML = run ? '<svg width="12" height="12" viewBox="0 0 12 12"><rect width="12" height="12" rx="2" fill="currentColor"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>'
+  $('#ph').textContent = blocked ? ({ budget:'Budget used up', stopped:'Paused by Frrata', instr:'Stopped' })[S.state] : run ? 'Working · you can still type' : 'Ask for a change'
+  $('#send').setAttribute('aria-disabled', String(blocked))
+  document.querySelectorAll('[data-go]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.go === S.part)))
+}
+
+function renderAttach() {
+  $('#attach').innerHTML = S.pop ? `<span class="chip-b" style="display:inline-flex;gap:6px;align-items:center" aria-pressed="true">Home hero <button class="btn ghost sm" data-act="pop" aria-label="Remove Home hero" style="min-height:20px;padding:0 4px">×</button></span>` : ''
+}
+function renderVersions() {
+  const v = ['v1 · From House of Ayuda\'s console','v2 · '+voice().k+' voice','v3 · '+look().name, ...S.edits.map((e,i)=>`v${4+i} · ${e.replace('You changed ','')}`)]
+  if (S.part >= 6) v.push(`v${v.length+1} · ${pageCount()} pages built`)
+  if (S.part >= 8 && !S.building) v.push(`v${v.length+1} · Warmer hero · Anita approved`)
+  $('#vBody').innerHTML = v.slice(0, Math.max(1, S.part >= 3 ? v.length : S.part)).reverse().map((t,i)=>`<div class="row" style="padding:8px 0;border-top:1px solid var(--line-soft)"><span>${esc(t)}</span><span class="sp"></span>${i===0?'<span class="status ok">Now</span>':'<button class="btn sm">Restore</button>'}</div>`).join('') + (S.part >= 3 ? DEV : '')
+}
+function renderBB() {
+  const l = look(), v = voice()
+  $('#bbBody').innerHTML = `
+    <div><div class="k">In one line</div>Kurtas, saris and lehengas for haldi mornings, sangeet nights and every day after.</div>
+    <div><div class="k">Voice</div>${v.k} · English</div>
+    <div><div class="k">Who buys</div>${S.audience.join(' · ')}</div>
+    <div><div class="k">Words we use</div>haldi · sangeet · ready to wear · kind prices</div>
+    <div><div class="k">Never</div>cheap · hurry · trendy</div>
+    <div><div class="k">Logo</div>${S.state === 'nologo' ? (S.wm ? `<div style="background:#F7F1EA;border-radius:8px;padding:12px;display:inline-block">${wm().html('#2A1D14','#F7F1EA')}</div>` : 'Not chosen') : 'logo.svg · from the console'}</div>
+    <div><div class="k">Look · ${l.name}</div><div class="pal"><span style="background:${l.p}"></span><span style="background:${S.accent||l.a}"></span><span style="background:${l.i}"></span></div></div>
+    <div><div class="k">Type</div><span style="font-family:${l.f};font-size:24px">For the days you’ll keep</span></div>`
+}
+
+function render() { $('#log').innerHTML = renderLog(); renderSite(); renderPop(); renderTop(); renderBB(); renderAttach(); renderVersions(); const lg = $('#log'); lg.scrollTop = lg.scrollHeight }
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-act],[data-go],[data-view],[data-state],[data-dev]')
+  if (!t) return
+  if (t.dataset.go) { S.part = +t.dataset.go; S.building = null; S.applied = [0,0,0]; S.pub9 = false; if (S.state === 'nologo') S.wm = S.part > 3 ? (S.wm || 'spaced') : null; S.pop = false; S.handed = false; if (S.part < 3) { S.accent = null; S.edits = [] } return render() }
+  if (t.dataset.view) { S.view = t.dataset.view; $('#app').classList.toggle('phone', S.view === 'phone'); document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed', String(b===t))); $('#pv').classList.remove('open'); return }
+  if (t.dataset.state) { S.state = t.dataset.state; if (S.state === 'nologo') { S.part = 3; S.wm = null } document.querySelectorAll('[data-state]').forEach(b=>b.setAttribute('aria-pressed', String(b===t))); if (S.state==='fail') S.part = 1; if (S.state==='low') S.part = 4; stateEnter(); return render() }
+  if (t.dataset.dev) { $('#device').classList.toggle('desk', t.dataset.dev === 'desk'); document.querySelectorAll('[data-dev]').forEach(b=>b.setAttribute('aria-pressed', String(b===t))); return }
+  const a = t.dataset.act
+  if (a === 'start') { S.part = 1; render(); setTimeout(() => { if (S.part === 1 && S.state !== 'fail') { S.part = 2; render() } }, 1600) }
+  if (a === 'read') { S.state = 'normal'; S.part = 2; render() }
+  if (a === 'voice') { S.voice = t.dataset.v; S.part = 3; S.credits -= 1; flash(); render() }
+  if (a === 'aud') { const x = t.dataset.a; S.audience = S.audience.includes(x) ? S.audience.filter(y=>y!==x) : [...S.audience, x]; render() }
+  if (a === 'wm') { S.wm = t.dataset.w; S.peekWm = null; S.credits -= 1; render() }
+  if (a === 'look') { S.look = t.dataset.l; S.accent = null; S.pop = false; S.part = 4; S.credits -= 3; flash(); render() }
+  if (a === 'pop') { S.pop = !S.pop; render() }
+  if (a === 'accent') { S.accent = t.dataset.c; S.edits.push(`You changed Accent to ${t.dataset.c}`); S.pop = false; flash(); render() }
+  if (a === 'page') { const i = +t.dataset.i; S.pages[i] = S.pages[i] ? 0 : 1; render() }
+  if (a === 'build' && t.getAttribute('aria-disabled') !== 'true') { S.part = 5; render(); setTimeout(() => { if (S.part === 5 && S.state === 'normal') { S.part = 6; S.credits -= total(); render() } }, 2200) }
+  if (a === 'send') { S.part = 7; render() }
+  if (a === 'warmer') { S.part = 8; S.credits -= 4; S.building = 'v8'; render(); setTimeout(() => { S.building = null; render() }, 2600) }
+  if (a === 'publish') { S.part = 9; render() }
+  if (a === 'apply') { S.applied[+t.dataset.i] = 1; flash(); render() }
+  if (a === 'skip') { S.applied[+t.dataset.i] = 2; render() }
+  if (a === 'applyall') { S.applied = S.applied.map((x) => x || 1); flash(); render() }
+  if (a === 'raise' || a === 'retry') { S.state = 'normal'; document.querySelectorAll('[data-state]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.state === 'normal'))); render() }
+  if (a === 'topup') { $('#vd').classList.remove('open'); $('#bb').classList.remove('open'); $('#tu').classList.add('open') }
+  if (a === 'tuclose') $('#tu').classList.remove('open')
+  if (a === 'versions') { $('#bb').classList.remove('open'); $('#vd').classList.add('open') }
+  if (a === 'apply9') $('#pk').hidden = false
+  if (a === 'pkno') $('#pk').hidden = true
+  if (a === 'pkok') { $('#pk').hidden = true; S.applied9 = true; flash(); render() }
+  if (a === 'pub9') { S.pub9 = true; render() }
+  if (a === 'hand') { S.handed = true; render() }
+})
+$('#bbOpen').addEventListener('click', () => { $('#vd').classList.remove('open'); $('#bb').classList.add('open') })
+$('#vOpen').addEventListener('click', () => { $('#bb').classList.remove('open'); $('#vd').classList.add('open') })
+$('#vClose').addEventListener('click', () => $('#vd').classList.remove('open'))
+// Preview a choice before committing: hovering or focusing a voice or a look shows it on the site.
+const peekOn = (t) => { const o = t.closest('[data-peek]'); if (!o) return; const keep = { v:S.voice, l:S.look, part:S.part }
+  if (o.dataset.peek === 'voice') S.voice = o.dataset.v; else if (o.dataset.peek === 'wm') S.peekWm = o.dataset.w; else { S.look = o.dataset.l; if (S.part < 3) S.part = 3 }
+  renderSite(); S.voice = keep.v; S.look = keep.l; S.part = keep.part; S.peekWm = null }
+document.addEventListener('mouseover', (e) => peekOn(e.target))
+document.addEventListener('focusin', (e) => peekOn(e.target))
+document.addEventListener('mouseout', (e) => { if (e.target.closest('[data-peek]')) renderSite() })
+$('#bbClose').addEventListener('click', () => $('#bb').classList.remove('open'))
+$('#peek').addEventListener('click', () => { const o = $('#pv').classList.toggle('open'); $('#peek').lastChild.textContent = o ? 'Chat' : 'Site' })
+// Embedded in the Studio mockup: no reference strip; a narrow frame is the phone view; Back goes to Clients there.
+if (location.hash === '#embed') {
+  document.body.classList.add('embed')
+  const fit = () => { const ph = innerWidth < 760; $('#app').classList.toggle('phone', ph); S.view = ph ? 'phone' : 'desk' }
+  fit(); addEventListener('resize', fit)
+  $('#backBtn').addEventListener('click', () => { try { parent.location.hash = '#clients' } catch {} })
+  // One small mockup control (outside the product): jump to a part or a state.
+  const ctl = document.createElement('label'); ctl.className = 'mock-ctl'
+  ctl.innerHTML = `Mockup <select aria-label="Mockup part or state">${['0 Start','1 Reading','2 Brand','3 Look','4 Pages','5 Building','6 Ready',"7 Anita's review",'8 Publish','9 Hand over'].map((t,i)=>`<option value="go:${i}">${t}</option>`).join('')}<option value="state:nologo">No logo</option><option value="state:low">Low credits</option><option value="state:fail">Couldn't read</option><option value="state:budget">Budget used up</option><option value="state:after">After handover</option></select>`
+  document.body.appendChild(ctl)
+  ctl.querySelector('select').addEventListener('change', (e) => { const [k, v] = e.target.value.split(':'); const b = document.querySelector(k === 'go' ? `[data-go="${v}"]` : `[data-state="${v}"]`); if (k === 'go') { const n = document.querySelector('[data-state="normal"]'); if (S.state !== 'normal' && S.state !== 'nologo') n.click() } b.click() })
+}
+render()
+</script>

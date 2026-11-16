@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout secure frame</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Mukta:wght@400;500;600&family=Tiro+Devanagari+Hindi&display=swap">
+<style>
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --rani:#D61F69;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62; --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B; --info-bg:#E8F1FD; --info-fg:#1F5BA8; --info-dot:#3B82E0;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --hover:var(--g50); --sunk:var(--g50); --doc:var(--g50);
+  --line:var(--g200); --line-soft:var(--g100); --field:var(--g500);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --bar:var(--g950); --bar-text:#fff; --bar-link:#A3ABF5; --bezel:#171615;
+  --store-bg:#F7F1EA; --store-ink:#2A1D14; --store-sub:#6E5A4B; --store-btn:#2A1D14; --store-on-btn:#F7F1EA;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --doc:#0E0D0C;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; --bezel:#000; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --doc:#0E0D0C;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; --bezel:#000; color-scheme:dark }
+* { box-sizing:border-box }
+html { scroll-padding-top:12px }
+body { background:var(--doc); color:var(--text); font:400 14px/20px var(--font); margin:0;
+  padding:0 max(16px, env(safe-area-inset-right, 0px)) 72px max(16px, env(safe-area-inset-left, 0px)) }
+h1,h2,h3 { margin:0; text-wrap:balance }
+p { margin:0 }
+button { font:inherit; color:inherit }
+a { color:inherit }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+.mono { font-family:var(--mono); font-size:12.5px }
+.num { font-variant-numeric:tabular-nums }
+
+/* ── The reference page ─────────────────────────────────────────────────────────────────────────────── */
+.doc { max-width:1720px; margin:0 auto }
+.doc-top { padding:28px 0 10px }
+.doc-top h1 { font:600 26px/32px var(--font); letter-spacing:-.01em }
+.doc-top p { color:var(--text-2); margin-top:6px; max-width:90ch }
+.toc { display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 0 }
+.toc a { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12.5px; text-decoration:none; background:var(--surface) }
+.part { margin-top:48px; scroll-margin-top:12px }
+.part > h2 { font:600 18px/24px var(--font) }
+.part > .cap { color:var(--text-2); font-size:13px; margin:4px 0 16px; max-width:100ch }
+.pair { display:grid; grid-template-columns:390px minmax(0,1fr); gap:32px; align-items:start }
+.pair > * { min-width:0 }
+.lbl { font-size:12px; color:var(--text-3); margin:0 0 8px; font-weight:500 }
+@media (max-width:1100px) { .pair { grid-template-columns:minmax(0,1fr) } }
+
+/* ── Neel primitives ────────────────────────────────────────────────────────────────────────────────── */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-weight:500; font-size:14px; box-shadow:var(--e1); cursor:pointer; white-space:nowrap }
+.btn.sm { min-height:30px; padding:0 10px; font-size:13px }
+.btn[aria-disabled="true"] { opacity:.45; cursor:not-allowed }
+.off { display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px 10px; justify-content:flex-end }
+.off .why { font-size:13px; color:var(--text-2) }
+.chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font-size:12px; line-height:16px; font-weight:500; white-space:nowrap }
+.chip::before { content:""; width:6px; height:6px; border-radius:50%; flex:none }
+.chip.neu { background:var(--neu-bg); color:var(--neu-fg) } .chip.neu::before { background:var(--neu-dot) }
+.chip.ok { background:var(--ok-bg); color:var(--ok-fg) } .chip.ok::before { background:var(--ok-dot) }
+.chip.warn { background:var(--warn-bg); color:var(--warn-fg) } .chip.warn::before { background:var(--warn-dot) }
+.chip.info { background:var(--info-bg); color:var(--info-fg) } .chip.info::before { background:var(--info-dot) }
+.chip.wrap { white-space:normal }
+.tip { display:inline-grid; place-items:center; width:24px; height:24px; border:0; background:none; color:var(--text-3); cursor:pointer; vertical-align:middle; padding:0 }
+.tip svg { width:14px; height:14px }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 20px 20px; display:flex; flex-direction:column; gap:16px }
+.card.flush { padding:0; gap:0; overflow:hidden }
+.card h2 { font:600 16px/24px var(--font); display:flex; align-items:center }
+.ch { display:grid; grid-template-columns:auto minmax(0,1fr) auto; grid-template-areas:"h c b"; align-items:center; gap:6px 10px }
+.ch h2 { grid-area:h } .ch > .chip { grid-area:c; justify-self:start } .ch > .off { grid-area:b }
+.hint { font-size:14px; color:var(--text-2); margin-top:-8px }
+.facts { display:grid; grid-template-columns:180px minmax(0,1fr); gap:8px 12px; margin:0; font-size:14px }
+.facts dt { color:var(--text-2) } .facts dt .tip { margin:-2px 0 }
+.facts dd { margin:0; min-width:0; overflow-wrap:anywhere }
+.facts dd small { display:block; color:var(--text-2); font-size:13px }
+.grid3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px }
+.grid2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+.hair { border-top:1px solid var(--line-soft); padding-top:16px }
+.f { display:flex; flex-direction:column; gap:6px; min-width:0 }
+.f > label, .f > .l { font-size:13px; font-weight:500; display:block }
+.f .tip { margin:-4px 0 }
+.f .opt { font-weight:400; color:var(--text-2); margin-left:4px }
+.f .wide { grid-column:1 / -1 }
+.in { height:36px; border:1px solid var(--field); border-radius:8px; padding:0 10px; font:inherit; font-size:14px; background:var(--surface); color:var(--text); width:100%; min-width:0 }
+textarea.in { height:auto; padding:8px 10px; resize:none }
+.pfx { display:flex; align-items:center; gap:6px } .pfx span { color:var(--text-2) }
+.radios { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px }
+.rc { display:flex; gap:10px; align-items:flex-start; text-align:left; border:1px solid var(--line); border-radius:12px; padding:12px; background:var(--surface); cursor:pointer }
+.rc i { width:16px; height:16px; border-radius:50%; border:2px solid var(--field); flex:none; margin-top:2px }
+.rc[aria-checked="true"] { border-color:var(--text); box-shadow:inset 0 0 0 1px var(--text) } .rc[aria-checked="true"] i { border:5px solid var(--text) }
+.rc b { display:block; font-weight:500 } .rc small { display:block; font-size:12px; color:var(--text-2) }
+.seg { display:inline-flex; flex-wrap:wrap; gap:2px; background:var(--sunk); border-radius:10px; padding:2px; max-width:100% }
+.seg button { border:0; background:transparent; color:var(--text-2); min-height:32px; padding:0 12px; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer }
+.seg button[aria-checked="true"] { background:var(--surface); color:var(--text); box-shadow:var(--e1) }
+.swr { display:flex; justify-content:space-between; align-items:center; gap:12px }
+.swr span { font-weight:500; display:flex; align-items:center }
+.sw { width:34px; height:20px; border-radius:999px; background:var(--g300); position:relative; flex:none; border:0; padding:0 }
+.sw::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:var(--e1) }
+.sw[aria-checked="true"] { background:var(--action) } .sw[aria-checked="true"]::after { left:16px }
+
+/* The five pages (policy-pages.tsx), read only */
+.pp-h { padding:16px 20px 4px }
+.pp-row { border-top:1px solid var(--line); padding:12px 20px; display:flex; flex-wrap:wrap; align-items:center; gap:8px }
+.pp-row.sel { background:var(--hover) }
+.pp-row > button { border:0; background:none; padding:0; font-weight:500; cursor:pointer; min-height:24px }
+.pp-row .need { flex-basis:100%; font-size:12px; color:var(--warn-fg) }
+
+/* The store preview beside the form (shop-preview/previews.tsx Frame) */
+.pv { border:1px solid var(--line); border-radius:8px; overflow:hidden }
+.pv figcaption { display:flex; justify-content:space-between; gap:8px; border-bottom:1px solid var(--line); background:var(--surface); padding:6px 12px; font-size:12px; color:var(--text-2) }
+.pv figcaption > span:last-child { white-space:nowrap }
+.pv figcaption .mono { font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0 }
+.pv .shop { background:var(--store-bg); color:var(--store-ink); padding:16px; font-size:13px; line-height:1.6; display:grid; gap:10px }
+.pv .shop b.t { font:500 18px/1.3 Georgia,'Times New Roman',serif }
+.pv .shop .wa { justify-self:start; background:var(--store-btn); color:var(--store-on-btn); border-radius:4px; padding:6px 12px; font:500 12px var(--font) }
+.pv .inv { background:#fff; color:#2A1D14; padding:16px; font-size:13px; display:grid; gap:8px }
+.pv .inv .sub { color:#6E5A4B; font-size:12px }
+.pv .inv .foot { display:flex; justify-content:space-between; gap:12px; border-top:1px solid #E2D3C2; padding-top:8px; font-size:12px }
+.pv-tabs { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px }
+.pv-tabs button { border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:12px; background:var(--surface); cursor:pointer }
+.pv-tabs button[aria-selected="true"] { background:var(--action); border-color:var(--action); color:var(--action-text) }
+
+/* Toasts and the save bar (ui/toast.tsx, ui/unsaved.tsx) */
+.toast { background:var(--bar); color:var(--bar-text); border-radius:10px; box-shadow:var(--e3); padding:10px 8px 10px 14px; display:flex; align-items:center; gap:12px; font-weight:500; max-width:448px }
+.toast.err { box-shadow:var(--e3), 0 0 0 1px rgba(220,59,59,.6) }
+.toast .mk { width:22px; height:22px; border-radius:50%; display:grid; place-items:center; flex:none; color:#fff }
+.toast .mk.ok { background:var(--ok-dot) } .toast .mk.bad { background:var(--bad-dot) }
+.toast .w { flex:1; min-width:0 } .toast .w small { display:block; font-size:12px; font-weight:400; opacity:.8 }
+.toast .act { border:0; background:none; color:var(--bar-link); font-weight:500; min-height:36px; padding:0 8px; cursor:pointer }
+.toast .x { border:0; background:none; color:inherit; opacity:.8; width:36px; height:36px; display:grid; place-items:center; cursor:pointer; flex:none }
+.savebar { background:var(--bar); color:var(--bar-text); border-radius:12px; box-shadow:var(--e3); padding:10px 10px 10px 16px; display:flex; align-items:center; gap:12px }
+.savebar b { font-weight:500; flex:1 }
+.savebar button { border-radius:8px; min-height:30px; padding:0 10px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:6px }
+.savebar .dis { background:transparent; color:var(--bar-text); border:1px solid rgba(255,255,255,.35) }
+.savebar .sv { background:#fff; color:var(--g950); border:0 }
+.savebar kbd { font:500 11px var(--font); background:rgba(23,22,21,.1); border-radius:4px; padding:3px 5px }
+
+/* ── Desktop console frame, drawn at 1280 and scaled to the column ──────────────────────────────────── */
+.dk { position:relative; width:100%; overflow:hidden; border:1px solid var(--line); border-radius:12px; box-shadow:var(--e2); background:var(--page) }
+.dk-in { width:1280px; transform-origin:0 0; display:grid; grid-template-columns:232px minmax(0,1fr); min-height:820px; position:relative; background:var(--page) }
+.sb { background:var(--side); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:2px }
+.sb .store { display:flex; gap:10px; align-items:center; padding:6px 8px 10px }
+.mono-mark { width:28px; height:28px; border-radius:8px; background:#171615; color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px; flex:none }
+.sb .store > span:last-child { min-width:0 }
+.sb .store b { display:block; font-size:14px; font-weight:600 } .sb .store .mono { display:block; font-size:11px; color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.sb .ov { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); margin:14px 8px 4px }
+.nav { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; color:var(--text-2); font-size:14px; text-decoration:none; border:1px solid transparent }
+.nav svg { width:18px; height:18px; flex:none }
+.nav .pill { margin-left:auto; background:var(--warn-bg); color:var(--warn-fg); border-radius:999px; font-size:12px; padding:0 7px; font-weight:500 }
+.nav.on { background:var(--surface); color:var(--text); box-shadow:var(--e1); border-color:var(--line); font-weight:500 }
+.nav.on svg { color:var(--action) }
+.sb .sp { flex:1 }
+.acct { display:flex; gap:10px; align-items:center; padding:10px 8px 4px; border-top:1px solid var(--line); margin-top:8px }
+.av { width:28px; height:28px; border-radius:50%; background:var(--n50); color:var(--n700); display:grid; place-items:center; font-weight:600; font-size:12px; flex:none }
+.acct b { display:block; font-size:13px; font-weight:500 } .acct span { font-size:12px; color:var(--text-2) }
+.main { padding:28px 32px 96px; min-width:0; position:relative }
+.crumb { display:flex; gap:4px; list-style:none; margin:0 0 6px; padding:0; font-size:13px; font-weight:500; color:var(--text-2) }
+.crumb a { text-decoration:none }
+.ttl { display:flex; align-items:flex-start; gap:16px }
+.ttl .tw { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; flex:1; min-width:0 }
+.ttl h1 { font:600 22px/28px var(--font) }
+.vt { display:flex; gap:20px; border-bottom:1px solid var(--line); margin:16px 0 0; overflow-x:auto; scrollbar-width:none }
+.vt a { display:inline-flex; align-items:center; min-height:40px; border-bottom:2px solid transparent; margin-bottom:-1px; font-size:14px; font-weight:500; color:var(--text-2); text-decoration:none; white-space:nowrap }
+.vt a[aria-current="page"] { color:var(--text); border-bottom-color:var(--action) }
+.cols { display:grid; grid-template-columns:minmax(0,640px) 320px; gap:24px; align-items:start; margin-top:16px }
+.fcol { display:flex; flex-direction:column; gap:16px; min-width:0 }
+.dk .toast { position:absolute; left:50%; transform:translateX(-50%); bottom:24px; width:448px; z-index:5 }
+.dk .toast.lift { bottom:84px }
+.dk .savebar { position:absolute; left:264px; width:640px; bottom:20px; z-index:4 }
+
+/* Notices (console/notices/page.tsx) */
+.nl { list-style:none; margin:0; padding:0 }
+.nl li { display:flex; gap:12px; padding:12px 16px; border-top:1px solid var(--line) }
+.nl li:first-child { border-top:0 }
+.nl .dot { width:8px; height:8px; border-radius:50%; margin-top:6px; flex:none; border:1px solid var(--field) }
+.nl .dot.new { background:var(--rani); border-color:var(--rani) }
+.nl .t { min-width:0; flex:1 }
+.nl .t p.b { font-weight:600 }
+.nl .t p.s { font-size:14px; color:var(--text-2) }
+.nl .m { margin-top:4px; display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:var(--text-2) }
+.nl .m a { text-decoration:underline; text-underline-offset:4px; display:inline-flex; min-height:24px; align-items:center }
+.link { font-size:14px; text-decoration:underline; text-underline-offset:4px }
+
+/* ── Phone frame ─────────────────────────────────────────────────────────────────────────────────────── */
+.phone { width:390px; max-width:100%; border-radius:28px; padding:8px; background:var(--bezel); box-shadow:var(--e2) }
+.scr { border-radius:22px; overflow:hidden; background:var(--page); height:800px; display:flex; flex-direction:column; position:relative; font-size:15px; line-height:22px }
+.p-main { flex:1; overflow:hidden; padding:12px 16px 16px; display:flex; flex-direction:column; gap:12px; min-width:0 }
+.p-main > * { flex-shrink:0 }
+.back { display:inline-flex; align-items:center; min-height:24px; color:var(--text-2); font-size:14px; text-decoration:none; align-self:flex-start }
+.p-head { display:flex; flex-direction:column; align-items:flex-start; gap:10px }
+.p-head .tw { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px }
+.p-head h1 { font:600 20px/26px var(--font) }
+.scr .btn { min-height:44px }
+.scr .btn.sm { min-height:30px }
+.scr .vt { margin:0 -16px; padding:0 16px; gap:20px }
+.scr .vt a { min-height:44px }
+.scr .card { padding:16px; gap:14px }
+.scr .card.flush { padding:0; gap:0 }
+.scr .pp-h { padding:16px 16px 4px } .scr .pp-row { padding:12px 16px }
+.scr .facts { grid-template-columns:120px minmax(0,1fr); font-size:14px }
+.scr .in { height:44px; font-size:15px }
+.scr textarea.in { height:auto }
+.scr .grid3, .scr .grid2, .scr .radios { grid-template-columns:minmax(0,1fr) }
+.scr .hint { font-size:14px }
+.scr .ch { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"h b" "c c" }
+.scr .ch .off { flex-direction:column; align-items:flex-end; gap:2px }
+.bottom { border-top:1px solid var(--line); background:var(--side); display:grid; grid-template-columns:repeat(4,1fr); text-align:center; font-size:11px; color:var(--text-2); flex:none }
+.bottom div { min-height:56px; padding:8px 0; display:grid; gap:2px; justify-items:center; align-content:center }
+.bottom svg { width:22px; height:22px }
+.bottom .on { color:var(--action); font-weight:500 }
+.scr .toast { position:absolute; left:12px; right:12px; bottom:72px; max-width:none; z-index:5 }
+.scr .toast.lift { bottom:142px }
+.scr .savebar { position:absolute; left:12px; right:12px; bottom:68px; z-index:4 }
+.scr .nl li { padding:12px 0 }
+
+/* Small crops for states */
+.crops { display:grid; grid-template-columns:358px minmax(0,1fr); gap:32px; align-items:start }
+.crops > * { min-width:0 }
+.crop { background:var(--page); border:1px solid var(--line); border-radius:12px; padding:16px; box-shadow:var(--e1) }
+@media (max-width:1100px) { .crops { grid-template-columns:minmax(0,1fr) } }
+
+/* Words and roles tables */
+.tbl { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:12px; overflow:hidden; font-size:13px }
+.tbl th, .tbl td { text-align:left; padding:10px 12px; border-top:1px solid var(--line-soft); vertical-align:top }
+.tbl th { background:var(--sunk); font-weight:500; color:var(--text-2); border-top:0 }
+.tbl td:first-child { width:28%; color:var(--text-2) }
+@media (max-width:700px) {
+  .tbl, .tbl tbody, .tbl tr, .tbl td { display:block; width:auto }
+  .tbl thead { display:none }
+  .tbl tr { border-top:1px solid var(--line) } .tbl tr:first-child { border-top:0 }
+  .tbl td { border-top:0; padding:6px 12px } .tbl td:first-child { width:auto; padding-top:10px }
+}
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important } }
+
+/* ── Added for the 2026-11-16 mockups (same tokens as PP1) ─────────────────────────────────────────── */
+.doc-top .meta { font-size:13px; color:var(--text-3); margin-top:4px }
+.intro { display:grid; gap:12px; margin-top:12px }
+.short { list-style:none; margin:0; padding:0; display:grid; gap:8px; max-width:110ch }
+.short li { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 14px }
+.short li b { font-weight:600 }
+.take { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px }
+.take .tk { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px; display:grid; gap:6px; align-content:start; font-size:13px }
+.take .tk b { font-size:14px }
+.take .tk .src { color:var(--text-3); font-size:12px }
+.take .tk .t { color:var(--ok-fg) } .take .tk .s { color:var(--bad-fg) }
+.steps-l { margin:8px 0 0; padding-left:20px; font-size:13px; color:var(--text-2); max-width:100ch }
+.steps-l li { margin:2px 0 }
+.stl { font-size:12px; color:var(--text-3); margin:10px 0 0 } .stl b { color:var(--text-2); font-weight:500 }
+.tbl td.code { font-family:var(--mono); font-size:12px }
+
+/* Built toast (ui/toast.tsx in Neel): ok is the bar with words only; an error is the bad tint, its buttons underlined */
+.toast .mk { display:none }
+.toast.err { background:var(--bad-bg); color:var(--bad-fg); box-shadow:var(--e2) }
+.toast.err .act, .toast.err .x { color:inherit } .toast.err .act { text-decoration:underline; text-underline-offset:3px }
+.toast .undo-line { position:absolute; left:0; right:0; bottom:0; height:2px; background:currentColor; opacity:.6 }
+.toast { position:relative; overflow:hidden }
+.dk .toast, .scr .toast { position:absolute }
+
+/* Rows and records */
+.rows { list-style:none; margin:0; padding:0 }
+.rows > li { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 12px; padding:10px 20px; border-top:1px solid var(--line-soft) }
+.rows > li:first-child { border-top:0 }
+.rows .host { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; min-width:0; font-family:var(--mono); font-size:13px; overflow-wrap:anywhere }
+.rows .acts { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end }
+.rows .sub { grid-column:1 / -1; font-size:13px; color:var(--text-2) }
+.rows li.rec { padding-left:36px; background:var(--g25) }
+.rows li.rec .host { font-size:12.5px }
+.rows li.rec .host .ty { color:var(--text-3); font-weight:600 }
+.ghost { display:inline-flex; align-items:center; min-height:30px; padding:0 8px; border-radius:8px; border:0; background:none; color:var(--text-2); font-size:13px; font-weight:500; cursor:pointer; text-decoration:none }
+.btn.primary { background:var(--action); border-color:var(--action); color:var(--action-text); box-shadow:none }
+.btn.danger { color:var(--bad-fg) }
+.btn.destr { background:var(--bad-dot); border-color:var(--bad-dot); color:#fff; box-shadow:none }
+.chip.bad { background:var(--bad-bg); color:var(--bad-fg) } .chip.bad::before { background:var(--bad-dot) }
+.tag { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:6px; padding:0 7px; font-size:12px; line-height:18px; color:var(--text-2); background:var(--surface); font-family:var(--font) }
+.keys { list-style:none; margin:0; padding:0 }
+.keys li { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 12px; padding:12px 0; border-top:1px solid var(--line-soft) }
+.keys li:first-child { border-top:0; padding-top:0 }
+.keys .nm { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; font-weight:500 }
+.keys .ln { grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:4px 12px; font-size:13px; color:var(--text-2) }
+.keys .ln .mono { font-size:12px }
+.keys li.off { color:var(--text-2) }
+.dev { display:flex; justify-content:space-between; align-items:center; gap:8px; padding-bottom:8px; border-bottom:1px solid var(--line-soft) }
+.dev:last-child { border-bottom:0; padding-bottom:0 }
+.dev .mono { color:var(--text-2); font-size:12px }
+.scr .dev .mono, .scr .hide-p { display:none }
+.ph-only { display:none } .scr .ph-only { display:inline } .scr .dk-only { display:none }
+
+/* Dialog (Dialog primitive: 16 px, e3; a sheet on a phone) */
+.veil { position:absolute; inset:0; background:rgba(23,22,21,.36); z-index:6; display:grid; place-items:center }
+.dlg { background:var(--surface); border-radius:16px; box-shadow:var(--e3); width:480px; max-width:calc(100% - 32px); padding:20px; display:grid; gap:14px }
+.dlg h3 { font:600 18px/24px var(--font) }
+.dlg .ft { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap }
+.dlg .err-slot { background:var(--bad-bg); color:var(--bad-fg); border-radius:10px; padding:8px 12px; font-size:13px }
+.scr .veil { place-items:end stretch }
+.scr .dlg { width:auto; max-width:none; border-radius:16px 16px 0 0; padding:20px 16px 24px }
+.scr .dlg .ft { flex-direction:column-reverse } .scr .dlg .ft .btn { width:100% }
+.dots { display:flex; gap:6px } .dots i { width:24px; height:2px; border-radius:2px; background:var(--line) } .dots i.on { background:var(--text) }
+.prog { height:4px; border-radius:999px; background:var(--g100); overflow:hidden } .prog i { display:block; height:100%; background:var(--text); width:60% }
+.spin { width:14px; height:14px; border-radius:50%; border:2px solid var(--g300); border-top-color:var(--action); display:inline-block; flex:none; animation:spin .9s linear infinite }
+@keyframes spin { to { transform:rotate(360deg) } }
+.done-i { width:14px; height:14px; border-radius:50%; background:var(--ok-dot); display:inline-grid; place-items:center; color:#fff; flex:none }
+.wait-i { width:14px; height:14px; border-radius:50%; border:2px solid var(--g300); display:inline-block; flex:none }
+.stepl { list-style:none; margin:0; padding:0; display:grid; gap:8px }
+.stepl li { display:flex; gap:10px; align-items:center; font-size:14px }
+.stepl li .mono { color:var(--text-2) }
+
+/* Partner workspace tag */
+.ptag { font-size:10.5px; font-weight:600; letter-spacing:.08em; color:var(--n700); background:var(--n50); border-radius:4px; padding:1px 5px; margin-left:6px }
+.pagetitle { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px }
+
+/* Crops grid with labels for states */
+.crops3 { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:20px; align-items:start }
+.crops3 > * { min-width:0 }
+.scr .facts dd .link, .facts dd .link { font-size:13px }
+.facts dd .ln2 { display:block; color:var(--text-2); font-size:13px }
+.rsn { font-size:13px; color:var(--bad-fg) }
+.card, .crop > * { min-width:0 }
+a.btn { text-decoration:none }
+.cap .mono, .short .mono, p .mono { overflow-wrap:anywhere }
+@media (max-width:700px) {
+  .radios.two { grid-template-columns:minmax(0,1fr) }
+  .swr { flex-wrap:wrap }
+  .crop .facts, .crops3 .facts { grid-template-columns:110px minmax(0,1fr) }
+  .crop .ch { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"h b" "c c" }
+  .rows > li { padding-left:12px; padding-right:12px } .rows li.rec { padding-left:24px }
+  .dlg .ft { flex-direction:column-reverse } .dlg .ft .btn { width:100% }
+}
+
+/* P3: House of Ayuda's checkout with the secure frame. The page is Frrata's code in the brand record; the frame is
+   Frrata's form on secure.<store host>, drawn with the same tokens so it reads as one page. */
+.co { --paper:#FBF7F1; --sand:#F2EADF; --sand2:#E8DCCB; --ink:#221A14; --muted:#665A4E; --stone:#9A8B7A; --hl:#DDD0BE; --sindoor:#8C1D2C; --good:#2F6B3B; --error:#A3261B;
+  background:var(--paper); color:var(--ink); font:400 16px/24px 'Mukta',system-ui,sans-serif; min-height:100% }
+.co a { color:inherit }
+.co .hdr { display:flex; align-items:center; justify-content:space-between; height:56px; padding:0 16px; border-bottom:1px solid var(--hl) }
+.co .hdr .bk { display:inline-flex; align-items:center; gap:6px; font-size:14px; min-height:44px; text-decoration:none; color:var(--ink) }
+.co .hdr .bk svg { width:20px; height:20px }
+.co .hdr .sp { width:96px }
+.scr .co .hdr .bk .w { display:none } .scr .co .hdr .sp { width:44px }
+.co .wrap { padding:20px 16px 24px; display:grid; gap:20px }
+.co h1 { font:400 32px/38px 'Tiro Devanagari Hindi',Georgia,serif; margin:0 }
+.co h2 { font:600 20px/28px 'Mukta',sans-serif; margin:0 }
+.co .blk { display:grid; gap:12px }
+.co .line { display:grid; grid-template-columns:56px minmax(0,1fr) auto; gap:12px; align-items:start }
+.co .line .ph { width:56px; height:84px; background:linear-gradient(160deg,#E8C26A,#9C6A16) }
+.co .line .t { display:grid; gap:2px; font-size:15px } .co .line .t small { color:var(--muted); font-size:14px }
+.co .line .pr { font-weight:600; font-variant-numeric:tabular-nums lining-nums }
+.co .ctl { display:flex; align-items:center; gap:12px; margin-top:6px }
+.co .step { display:inline-grid; grid-template-columns:44px 32px 44px; border:1px solid var(--stone); border-radius:2px; height:44px; align-items:center; text-align:center }
+.co .step span { font-variant-numeric:tabular-nums }
+.co .tx { font-size:14px; text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--stone); background:none; border:0; padding:0; min-height:44px; color:var(--ink) }
+.co .fld { display:grid; gap:6px } .co .fld label, .co .fld .l { font:600 14px 'Mukta',sans-serif }
+.co .fld .opt { font-weight:400; color:var(--muted) }
+.co .in2 { height:48px; border:1px solid var(--stone); border-radius:2px; background:var(--paper); padding:0 12px; font:400 16px 'Mukta',sans-serif; color:var(--ink); width:100%; min-width:0 }
+.co .pre { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; border:1px solid var(--stone); border-radius:2px; height:48px }
+.co .pre span { padding:0 10px 0 12px; color:var(--muted) } .co .pre input { border:0; height:46px; background:transparent; font:400 16px 'Mukta',sans-serif; min-width:0; color:var(--ink) }
+.co .two { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+.co .rad { display:grid; gap:8px }
+.co .rad label { display:flex; gap:12px; align-items:flex-start; border:1px solid var(--stone); border-radius:2px; padding:12px; min-height:56px }
+.co .rad label i { width:22px; height:22px; border-radius:50%; border:1px solid var(--stone); flex:none; margin-top:1px }
+.co .rad label.on { border-color:var(--ink); box-shadow:inset 0 0 0 1px var(--ink) } .co .rad label.on i { border:7px solid var(--ink) }
+.co .rad label b { font-weight:600; display:block } .co .rad label small { color:var(--muted); font-size:14px; display:block }
+.co .ek { display:flex; align-items:center; justify-content:center; gap:10px; height:52px; width:100%; background:#1C1917; color:#FAFAF9; border:0; border-radius:2px; font:500 16px 'Mukta',sans-serif }
+.co .or { display:grid; grid-template-columns:1fr auto 1fr; gap:12px; align-items:center; color:var(--muted); font-size:14px }
+.co .or::before, .co .or::after { content:""; height:1px; background:var(--hl) }
+.co .chk { display:flex; gap:12px; align-items:center; min-height:44px; font-size:15px }
+.co .chk i { width:22px; height:22px; border:1px solid var(--stone); border-radius:2px; flex:none }
+.co .sum { background:var(--sand); padding:16px; display:grid; gap:8px; font-size:15px }
+.co .sum .r { display:flex; justify-content:space-between; gap:12px } .co .sum .r b { font-variant-numeric:tabular-nums lining-nums; font-weight:600 }
+.co .sum .tot { border-top:1px solid var(--hl); padding-top:10px; font-size:17px }
+.co .sum small { color:var(--muted); font-size:14px }
+.co .place { width:100%; min-height:52px; background:var(--sindoor); color:var(--paper); border:0; border-radius:2px; font:600 17px 'Mukta',sans-serif; display:flex; align-items:center; justify-content:center; gap:10px }
+.co .place[aria-busy="true"] { opacity:.85 }
+.co .lockl { display:flex; align-items:center; gap:6px; justify-content:center; color:var(--muted); font-size:13px }
+.co .lockl svg { width:14px; height:14px }
+.co .signed { display:flex; justify-content:space-between; align-items:center; gap:8px; background:var(--sand); padding:10px 12px; font-size:15px }
+.co .addrpick { border:1px solid var(--ink); box-shadow:inset 0 0 0 1px var(--ink); border-radius:2px; padding:12px; font-size:15px; display:grid; gap:2px }
+.co .addrpick small { color:var(--muted) }
+.co .sk { background:var(--sand2); border-radius:2px; height:48px }
+.co .sk.s { height:16px; width:40% } .co .sk.b { height:52px }
+.co .loading { display:flex; align-items:center; gap:10px; color:var(--muted); font-size:15px }
+.co .loading .spin { border-color:var(--sand2); border-top-color:var(--ink) }
+.co .fail { border:1px solid var(--error); padding:16px; display:grid; gap:12px; justify-items:start }
+.co .fail p { color:var(--error); display:flex; gap:8px; align-items:center; font-weight:600 }
+.co .fail p svg { width:20px; height:20px }
+.co .fail .p1 { background:var(--sindoor); color:var(--paper); border:0; border-radius:2px; min-height:48px; padding:0 24px; font:600 16px 'Mukta',sans-serif }
+.co .legal { background:var(--sand); padding:20px 16px; font-size:14px; line-height:21px; display:grid; gap:10px }
+.co .legal dl { margin:0; display:grid; gap:8px } .co .legal dt { font-weight:600 } .co .legal dd { margin:0 }
+.co .legal .pol { display:flex; flex-wrap:wrap; gap:4px 16px } .co .legal .pol a { text-decoration:underline; text-underline-offset:3px }
+
+/* Where the frame sits: a mockup mark only, never drawn in the product */
+.fr { position:relative; outline:1.5px dashed #4C57D6; outline-offset:6px; display:grid; gap:20px }
+.fr::before { content:"secure frame · secure.house-of-ayuda.frrata.shop"; position:absolute; top:-26px; right:-6px; font:500 10.5px var(--mono); color:#2F37A3; background:#EEF0FD; padding:1px 6px; border-radius:4px; white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis }
+.nomark .fr { outline:0 } .nomark .fr::before { display:none }
+
+/* Desktop: the page's bag and choices at the right, the frame at the left */
+.dk .co .hdr { height:72px; padding:0 40px }
+.dk .co .wrap { grid-template-columns:minmax(0,1fr) 400px; gap:24px 56px; padding:32px 40px 40px; align-items:start; max-width:1200px; margin:0 auto }
+.dk .co .wrap > h1 { grid-column:1 / -1 }
+.dk .co .side { grid-column:2; grid-row:2 / span 3; display:grid; gap:20px; align-content:start }
+.dk .co .fr, .dk .co .main-col { grid-column:1; grid-row:2 }
+.dk .co .legal { padding:24px 40px; grid-template-columns:2fr 1fr } .dk .co .legal dl { grid-template-columns:repeat(3,minmax(0,1fr)) }
+.dk-in.plain { display:block; min-height:0 }
+.urlbar { display:flex; align-items:center; gap:6px; height:36px; padding:0 12px; font:500 12px var(--mono); color:var(--text-2); background:var(--g50); border-bottom:1px solid var(--line); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.urlbar svg { width:12px; height:12px; flex:none }
+.scr.co-scr { background:#FBF7F1 }
+.scr .co { overflow:hidden }
+
+/* EkCode's page in its popup (its own look: ink on paper, the store's name and initial top right) */
+.ekp { background:#FAFAF9; color:#1C1917; font:400 16px/24px 'Mukta',system-ui,sans-serif; display:grid; gap:20px; padding:20px 20px 28px; align-content:start }
+.ekp .top { display:flex; justify-content:space-between; align-items:center }
+.ekp .shop { display:flex; align-items:center; gap:8px; font-size:14px; color:#5F5A55 }
+.ekp .shop i { width:28px; height:28px; border-radius:50%; background:#F2EADF; color:#221A14; display:grid; place-items:center; font-style:normal; font-weight:600 }
+.ekp h3 { font:600 22px/28px 'Mukta',sans-serif; margin:0 }
+.ekp p { color:#5F5A55; margin:0 }
+.ekp .boxes { display:grid; grid-template-columns:repeat(6,minmax(0,44px)); gap:8px }
+.ekp .boxes span { height:52px; border:1px solid #8C857F; border-radius:8px; display:grid; place-items:center; font:600 22px 'Mukta',sans-serif }
+.ekp .boxes span.cur { border:2px solid #1C1917 }
+.ekp .wa { justify-self:start; min-height:44px; padding:0 16px; border:1px solid #1C1917; border-radius:8px; display:inline-flex; align-items:center; font-weight:500 }
+.ekp .foot { display:flex; gap:16px; font-size:13px; color:#5F5A55 } .ekp .foot a { color:inherit }
+.popwin { position:absolute; z-index:7; width:420px; border-radius:10px; overflow:hidden; box-shadow:0 24px 64px -12px rgba(23,22,21,.45); border:1px solid #CFCCC7; background:#FAFAF9 }
+.popwin .chrome { display:flex; align-items:center; gap:6px; height:32px; padding:0 10px; background:#EEEDEA; font:500 11.5px var(--mono); color:#4D4944 }
+.popwin .chrome i { width:10px; height:10px; border-radius:50%; background:#CFCCC7; display:inline-block }
+.dim { position:absolute; inset:0; background:rgba(23,22,21,.18); z-index:6 }
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/></symbol>
+  <symbol id="i-orders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20h4"/></symbol>
+  <symbol id="i-profit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 15v-4M12 15V7M17 15v-6"/></symbol>
+  <symbol id="i-products" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 4 7l2 3 2-1v11h8V9l2 1 2-3-4-3c-1 2-2.5 2.5-4 2.5S9 6 8 4z"/></symbol>
+  <symbol id="i-coll" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="12" height="13" rx="2"/><path d="M8 4h10a2 2 0 0 1 2 2v10"/></symbol>
+  <symbol id="i-offers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V4h8l8 8-8 8z"/><circle cx="8.5" cy="8.5" r="1.2"/></symbol>
+  <symbol id="i-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-look" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="9" cy="10" r="1"/><circle cx="14" cy="9" r="1"/><path d="M12 20a3 3 0 0 1 0-6h3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></symbol>
+  <symbol id="i-apps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5H5V6h5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.4l3 3 6-6.4"/></symbol>
+  <symbol id="i-bad" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 3.6v5.4M8 12v.4"/></symbol>
+  <symbol id="i-x"viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8.5h14l-1 11.5H6L5 8.5Z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H5M10.5 6.5 5 12l5.5 5.5"/></symbol>
+  <symbol id="i-build48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="10" width="32" height="26" rx="3"/><path d="M8 17h32M14 42h20M24 36v6"/><path d="M17 24l-3 3 3 3M31 24l3 3-3 3" /><path d="M26 22l-4 10" stroke="var(--haldi,#D9A21B)"/></symbol>
+</svg>
+<template id="t-ek-ink"><svg viewBox="0 0 330 100" height="22" width="72.6" role="img" aria-label="EkCode"><rect x="3" y="5" width="126" height="90" rx="16" fill="none" stroke="#1C1917" stroke-width="6"/><path d="M15.61 23.44L57.79 23.44L57.79 30.58L52.85 30.58L52.85 40.84Q52.85 47.15 50.23 51.14Q47.61 55.13 42.06 57.33L42.06 57.33L37.35 50.49Q40.39 49.20 41.95 46.69Q43.50 44.18 43.50 40.76L43.50 40.76L43.50 30.58L30.43 30.58L30.43 44.94Q30.43 49.88 31.61 53.30Q32.79 56.72 35.18 59.08Q37.58 61.44 41.22 62.96Q44.87 64.48 49.74 65.46L49.74 65.46L46.54 72.84Q21.08 68.81 21.08 45.17L21.08 45.17L21.08 30.58L15.61 30.58L15.61 23.44ZM81.73 51.10L81.73 46.31Q80.82 45.25 79.30 44.53Q77.78 43.80 75.80 43.80L75.80 43.80Q72.84 43.80 70.90 45.51Q68.96 47.22 68.96 50.42L68.96 50.42Q68.96 53.68 70.83 55.47Q72.69 57.26 75.58 57.26L75.58 57.26Q77.93 57.26 79.83 55.74Q81.73 54.22 81.73 51.10L81.73 51.10ZM90.85 51.48L90.85 72L81.66 72L81.66 62.20Q80.82 63.18 78.84 63.94Q76.87 64.70 74.13 64.70L74.13 64.70Q71.17 64.70 68.47 63.72Q65.77 62.73 63.80 60.87Q61.82 59.00 60.64 56.27Q59.46 53.53 59.46 49.96L59.46 49.96Q59.46 46.62 60.57 44.11Q61.67 41.60 63.57 39.89Q65.47 38.18 67.98 37.31Q70.48 36.43 73.30 36.43L73.30 36.43Q75.73 36.43 78.01 37.12Q80.29 37.80 81.66 39.09L81.66 39.09L81.66 30.58L56.27 30.58L56.27 23.44L117.00 23.44L117.00 30.58L90.85 30.58L90.85 39.47Q92.07 38.26 94.35 37.50Q96.63 36.74 99.52 36.74L99.52 36.74Q102.48 36.74 104.99 37.65Q107.50 38.56 109.32 40.31Q111.14 42.06 112.17 44.53Q113.20 47.00 113.20 50.19L113.20 50.19Q113.20 53.68 112.02 56.31Q110.84 58.93 108.79 60.68Q106.74 62.42 104 63.30Q101.26 64.17 98.22 64.17L98.22 64.17Q97.39 64.17 96.13 64.06Q94.88 63.94 94.27 63.72L94.27 63.72L95.11 56.57Q95.72 56.72 96.17 56.72Q96.63 56.72 97.31 56.72L97.31 56.72Q99.90 56.72 101.80 55.09Q103.70 53.46 103.70 50.19L103.70 50.19Q103.70 47.30 102.02 45.70Q100.35 44.11 97.39 44.11L97.39 44.11Q94.35 44.11 92.60 46.05Q90.85 47.98 90.85 51.48L90.85 51.48Z" fill="#1C1917"/><rect x="48" y="80" width="36" height="5" rx="2.5" fill="#D61F69"/><path d="M170.88 64.78L170.88 64.78Q174.38 64.78 176.81 64.17Q179.24 63.56 180.99 62.50L180.99 62.50L183.12 70.10Q181.29 71.16 177.95 72Q174.60 72.84 169.82 72.84L169.82 72.84Q164.42 72.84 159.86 71.13Q155.30 69.42 151.99 66.19Q148.69 62.96 146.86 58.36Q145.04 53.76 145.04 47.98L145.04 47.98Q145.04 42.36 146.83 37.80Q148.61 33.24 151.84 30.01Q155.07 26.78 159.71 25.03Q164.34 23.28 170.04 23.28L170.04 23.28Q174.91 23.28 178.06 24.20Q181.22 25.11 183.19 26.17L183.19 26.17L180.84 33.85Q178.86 32.78 176.47 32.06Q174.07 31.34 171.11 31.34L171.11 31.34Q167.99 31.34 165.26 32.25Q162.52 33.16 160.47 35.18Q158.42 37.19 157.24 40.35Q156.06 43.50 156.06 47.98L156.06 47.98Q156.06 52.32 157.20 55.47Q158.34 58.62 160.35 60.68Q162.37 62.73 165.07 63.75Q167.76 64.78 170.88 64.78ZM225.14 53.61L225.14 53.61Q225.14 58.09 223.70 61.66Q222.26 65.24 219.71 67.71Q217.16 70.18 213.74 71.51Q210.32 72.84 206.37 72.84L206.37 72.84Q202.42 72.84 199.04 71.62Q195.66 70.40 193.19 68.05Q190.72 65.69 189.31 62.23Q187.90 58.78 187.90 54.37L187.90 54.37Q187.90 49.73 189.35 46.12Q190.79 42.51 193.34 40.04Q195.88 37.57 199.30 36.28Q202.72 34.99 206.68 34.99L206.68 34.99Q210.63 34.99 214.01 36.20Q217.39 37.42 219.86 39.74Q222.33 42.06 223.74 45.55Q225.14 49.05 225.14 53.61ZM214.73 53.99L214.73 53.99Q214.73 50.87 214.05 48.67Q213.36 46.46 212.22 45.10Q211.08 43.73 209.56 43.08Q208.04 42.44 206.45 42.44L206.45 42.44Q204.85 42.44 203.41 43.01Q201.96 43.58 200.82 44.91Q199.68 46.24 199 48.44Q198.32 50.64 198.32 53.99L198.32 53.99Q198.32 56.95 199 59.12Q199.68 61.28 200.86 62.65Q202.04 64.02 203.52 64.70Q205.00 65.39 206.60 65.39L206.60 65.39Q208.20 65.39 209.64 64.82Q211.08 64.25 212.22 62.88Q213.36 61.51 214.05 59.35Q214.73 57.18 214.73 53.99ZM255.77 37.72L255.77 17.74L265.88 17.74L265.88 72L258.66 72L257.60 68.05L257.22 68.05Q255.85 69.95 253.30 71.39Q250.76 72.84 246.65 72.84L246.65 72.84Q243.23 72.84 240.27 71.54Q237.30 70.25 235.10 67.82Q232.90 65.39 231.64 61.89Q230.39 58.40 230.39 53.91L230.39 53.91Q230.39 49.58 231.53 46.08Q232.67 42.59 234.80 40.12Q236.92 37.65 240.04 36.32Q243.16 34.99 247.18 34.99L247.18 34.99Q249.77 34.99 252.09 35.75Q254.40 36.51 255.77 37.72L255.77 37.72ZM255.77 61.44L255.77 45.25Q254.78 44.03 253.19 43.20Q251.59 42.36 249.69 42.36L249.69 42.36Q247.87 42.36 246.23 42.97Q244.60 43.58 243.35 44.91Q242.09 46.24 241.33 48.40Q240.57 50.57 240.57 53.68L240.57 53.68Q240.57 56.72 241.26 58.93Q241.94 61.13 243.08 62.58Q244.22 64.02 245.78 64.70Q247.34 65.39 249.08 65.39L249.08 65.39Q251.52 65.39 253.23 64.21Q254.94 63.03 255.77 61.44L255.77 61.44ZM307.45 52.01L307.45 56.50L283.36 56.50L283.36 56.80Q283.36 61.13 286.40 63.26Q289.44 65.39 294.23 65.39L294.23 65.39Q297.27 65.39 299.59 64.78Q301.90 64.17 303.80 63.34L303.80 63.34L305.63 70.40Q303.58 71.39 300.46 72.11Q297.34 72.84 293.09 72.84L293.09 72.84Q288.98 72.84 285.37 71.73Q281.76 70.63 279.07 68.35Q276.37 66.07 274.77 62.58Q273.18 59.08 273.18 54.22L273.18 54.22Q273.18 49.88 274.47 46.35Q275.76 42.82 278.15 40.31Q280.55 37.80 283.89 36.39Q287.24 34.99 291.34 34.99L291.34 34.99Q298.71 34.99 303.08 39.47Q307.45 43.96 307.45 52.01L307.45 52.01ZM283.59 49.73L297.12 49.58Q297.12 48.14 296.77 46.77Q296.43 45.40 295.67 44.37Q294.91 43.35 293.77 42.74Q292.63 42.13 290.96 42.13L290.96 42.13Q287.92 42.13 285.94 44.18Q283.97 46.24 283.59 49.73L283.59 49.73Z" fill="#1C1917"/></svg></template>
+<template id="t-ek-paper"><svg viewBox="0 0 330 100" height="20" width="66.0" role="img" aria-label="EkCode"><rect x="3" y="5" width="126" height="90" rx="16" fill="none" stroke="#FAFAF9" stroke-width="6"/><path d="M15.61 23.44L57.79 23.44L57.79 30.58L52.85 30.58L52.85 40.84Q52.85 47.15 50.23 51.14Q47.61 55.13 42.06 57.33L42.06 57.33L37.35 50.49Q40.39 49.20 41.95 46.69Q43.50 44.18 43.50 40.76L43.50 40.76L43.50 30.58L30.43 30.58L30.43 44.94Q30.43 49.88 31.61 53.30Q32.79 56.72 35.18 59.08Q37.58 61.44 41.22 62.96Q44.87 64.48 49.74 65.46L49.74 65.46L46.54 72.84Q21.08 68.81 21.08 45.17L21.08 45.17L21.08 30.58L15.61 30.58L15.61 23.44ZM81.73 51.10L81.73 46.31Q80.82 45.25 79.30 44.53Q77.78 43.80 75.80 43.80L75.80 43.80Q72.84 43.80 70.90 45.51Q68.96 47.22 68.96 50.42L68.96 50.42Q68.96 53.68 70.83 55.47Q72.69 57.26 75.58 57.26L75.58 57.26Q77.93 57.26 79.83 55.74Q81.73 54.22 81.73 51.10L81.73 51.10ZM90.85 51.48L90.85 72L81.66 72L81.66 62.20Q80.82 63.18 78.84 63.94Q76.87 64.70 74.13 64.70L74.13 64.70Q71.17 64.70 68.47 63.72Q65.77 62.73 63.80 60.87Q61.82 59.00 60.64 56.27Q59.46 53.53 59.46 49.96L59.46 49.96Q59.46 46.62 60.57 44.11Q61.67 41.60 63.57 39.89Q65.47 38.18 67.98 37.31Q70.48 36.43 73.30 36.43L73.30 36.43Q75.73 36.43 78.01 37.12Q80.29 37.80 81.66 39.09L81.66 39.09L81.66 30.58L56.27 30.58L56.27 23.44L117.00 23.44L117.00 30.58L90.85 30.58L90.85 39.47Q92.07 38.26 94.35 37.50Q96.63 36.74 99.52 36.74L99.52 36.74Q102.48 36.74 104.99 37.65Q107.50 38.56 109.32 40.31Q111.14 42.06 112.17 44.53Q113.20 47.00 113.20 50.19L113.20 50.19Q113.20 53.68 112.02 56.31Q110.84 58.93 108.79 60.68Q106.74 62.42 104 63.30Q101.26 64.17 98.22 64.17L98.22 64.17Q97.39 64.17 96.13 64.06Q94.88 63.94 94.27 63.72L94.27 63.72L95.11 56.57Q95.72 56.72 96.17 56.72Q96.63 56.72 97.31 56.72L97.31 56.72Q99.90 56.72 101.80 55.09Q103.70 53.46 103.70 50.19L103.70 50.19Q103.70 47.30 102.02 45.70Q100.35 44.11 97.39 44.11L97.39 44.11Q94.35 44.11 92.60 46.05Q90.85 47.98 90.85 51.48L90.85 51.48Z" fill="#FAFAF9"/><rect x="48" y="80" width="36" height="5" rx="2.5" fill="#FF5C97"/><path d="M170.88 64.78L170.88 64.78Q174.38 64.78 176.81 64.17Q179.24 63.56 180.99 62.50L180.99 62.50L183.12 70.10Q181.29 71.16 177.95 72Q174.60 72.84 169.82 72.84L169.82 72.84Q164.42 72.84 159.86 71.13Q155.30 69.42 151.99 66.19Q148.69 62.96 146.86 58.36Q145.04 53.76 145.04 47.98L145.04 47.98Q145.04 42.36 146.83 37.80Q148.61 33.24 151.84 30.01Q155.07 26.78 159.71 25.03Q164.34 23.28 170.04 23.28L170.04 23.28Q174.91 23.28 178.06 24.20Q181.22 25.11 183.19 26.17L183.19 26.17L180.84 33.85Q178.86 32.78 176.47 32.06Q174.07 31.34 171.11 31.34L171.11 31.34Q167.99 31.34 165.26 32.25Q162.52 33.16 160.47 35.18Q158.42 37.19 157.24 40.35Q156.06 43.50 156.06 47.98L156.06 47.98Q156.06 52.32 157.20 55.47Q158.34 58.62 160.35 60.68Q162.37 62.73 165.07 63.75Q167.76 64.78 170.88 64.78ZM225.14 53.61L225.14 53.61Q225.14 58.09 223.70 61.66Q222.26 65.24 219.71 67.71Q217.16 70.18 213.74 71.51Q210.32 72.84 206.37 72.84L206.37 72.84Q202.42 72.84 199.04 71.62Q195.66 70.40 193.19 68.05Q190.72 65.69 189.31 62.23Q187.90 58.78 187.90 54.37L187.90 54.37Q187.90 49.73 189.35 46.12Q190.79 42.51 193.34 40.04Q195.88 37.57 199.30 36.28Q202.72 34.99 206.68 34.99L206.68 34.99Q210.63 34.99 214.01 36.20Q217.39 37.42 219.86 39.74Q222.33 42.06 223.74 45.55Q225.14 49.05 225.14 53.61ZM214.73 53.99L214.73 53.99Q214.73 50.87 214.05 48.67Q213.36 46.46 212.22 45.10Q211.08 43.73 209.56 43.08Q208.04 42.44 206.45 42.44L206.45 42.44Q204.85 42.44 203.41 43.01Q201.96 43.58 200.82 44.91Q199.68 46.24 199 48.44Q198.32 50.64 198.32 53.99L198.32 53.99Q198.32 56.95 199 59.12Q199.68 61.28 200.86 62.65Q202.04 64.02 203.52 64.70Q205.00 65.39 206.60 65.39L206.60 65.39Q208.20 65.39 209.64 64.82Q211.08 64.25 212.22 62.88Q213.36 61.51 214.05 59.35Q214.73 57.18 214.73 53.99ZM255.77 37.72L255.77 17.74L265.88 17.74L265.88 72L258.66 72L257.60 68.05L257.22 68.05Q255.85 69.95 253.30 71.39Q250.76 72.84 246.65 72.84L246.65 72.84Q243.23 72.84 240.27 71.54Q237.30 70.25 235.10 67.82Q232.90 65.39 231.64 61.89Q230.39 58.40 230.39 53.91L230.39 53.91Q230.39 49.58 231.53 46.08Q232.67 42.59 234.80 40.12Q236.92 37.65 240.04 36.32Q243.16 34.99 247.18 34.99L247.18 34.99Q249.77 34.99 252.09 35.75Q254.40 36.51 255.77 37.72L255.77 37.72ZM255.77 61.44L255.77 45.25Q254.78 44.03 253.19 43.20Q251.59 42.36 249.69 42.36L249.69 42.36Q247.87 42.36 246.23 42.97Q244.60 43.58 243.35 44.91Q242.09 46.24 241.33 48.40Q240.57 50.57 240.57 53.68L240.57 53.68Q240.57 56.72 241.26 58.93Q241.94 61.13 243.08 62.58Q244.22 64.02 245.78 64.70Q247.34 65.39 249.08 65.39L249.08 65.39Q251.52 65.39 253.23 64.21Q254.94 63.03 255.77 61.44L255.77 61.44ZM307.45 52.01L307.45 56.50L283.36 56.50L283.36 56.80Q283.36 61.13 286.40 63.26Q289.44 65.39 294.23 65.39L294.23 65.39Q297.27 65.39 299.59 64.78Q301.90 64.17 303.80 63.34L303.80 63.34L305.63 70.40Q303.58 71.39 300.46 72.11Q297.34 72.84 293.09 72.84L293.09 72.84Q288.98 72.84 285.37 71.73Q281.76 70.63 279.07 68.35Q276.37 66.07 274.77 62.58Q273.18 59.08 273.18 54.22L273.18 54.22Q273.18 49.88 274.47 46.35Q275.76 42.82 278.15 40.31Q280.55 37.80 283.89 36.39Q287.24 34.99 291.34 34.99L291.34 34.99Q298.71 34.99 303.08 39.47Q307.45 43.96 307.45 52.01L307.45 52.01ZM283.59 49.73L297.12 49.58Q297.12 48.14 296.77 46.77Q296.43 45.40 295.67 44.37Q294.91 43.35 293.77 42.74Q292.63 42.13 290.96 42.13L290.96 42.13Q287.92 42.13 285.94 44.18Q283.97 46.24 283.59 49.73L283.59 49.73Z" fill="#FAFAF9"/></svg></template>
+
+<template id="t-ha-logo">
+  <svg viewBox="0 0 168 52" height="34" width="110" role="img" aria-label="House of Ayuda"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 50V23.5C6 15 12.4 11 16.2 8.6 18.6 7.1 19.6 5.3 20 3 20.4 5.3 21.4 7.1 23.8 8.6 27.6 11 34 15 34 23.5V50"/><path d="M2 50h36"/><path d="M12.6 50 20 19l7.4 31"/><path d="M15.2 39h9.6"/></g><circle cx="20" cy="12.6" r="1.9" fill="#8C1D2C"/><text x="50" y="18.5" font-family="Mukta, sans-serif" font-weight="600" font-size="8.6" letter-spacing="2.45" fill="currentColor">HOUSE OF</text><text x="48.6" y="47" font-family="'Tiro Devanagari Hindi', Georgia, serif" font-size="34" fill="currentColor">Ayuda</text></svg>
+</template>
+
+<!-- The page's own parts (brand origin): header, the bag, the code, how to pay, the legal block -->
+<template id="t-hdr"><header class="hdr"><a class="bk" href="#p-summary" aria-label="Back to House of Ayuda"><svg><use href="#i-back"/></svg><span class="w">Back to House of Ayuda</span></a><span data-logo></span><span class="sp" aria-hidden="true"></span></header></template>
+<template id="t-side">
+  <div class="side">
+    <section class="blk" aria-labelledby="bag-h"><h2 id="bag-h">Your bag</h2>
+      <div class="line"><span class="ph" aria-hidden="true"></span><span class="t">Mustard Cotton Kurta<small>Size M</small>
+        <span class="ctl"><span class="step"><button type="button" class="tx" style="text-decoration:none" aria-label="One fewer Mustard Cotton Kurta">−</button><span>1</span><button type="button" class="tx" style="text-decoration:none" aria-label="One more Mustard Cotton Kurta">+</button></span><button type="button" class="tx">Remove</button></span></span><span class="pr">₹2,190</span></div>
+      <button type="button" class="tx" style="justify-self:start">Have a code?</button>
+    </section>
+    <section class="blk" aria-labelledby="pay-h"><h2 id="pay-h">How you’ll pay</h2>
+      <div class="rad" role="radiogroup" aria-label="How you’ll pay">
+        <label><i></i><span><b>Pay online</b><small>UPI, cards, netbanking</small></span></label>
+        <label class="on"><i></i><span><b>Pay on delivery</b><small>Orders up to ₹3,000</small></span></label>
+      </div>
+    </section>
+  </div>
+</template>
+<template id="t-legal">
+  <footer class="legal">
+    <dl>
+      <div><dt>Sold by</dt><dd>Ayuda Crafts Private Limited, 14 Weavers Lane, Indiranagar, Bengaluru, Karnataka 560038</dd></div>
+      <div><dt>Customer care</dt><dd>care@example.com · +91 98000 00000</dd></div>
+      <div><dt>Grievance officer</dt><dd>Anita Rao, Founder · grievance@example.com · +91 98000 00002</dd></div>
+    </dl>
+    <nav class="pol" aria-label="Policies"><a href="#p-summary">Returns and exchanges</a><a href="#p-summary">Shipping</a><a href="#p-summary">Privacy</a><a href="#p-summary">Terms of sale</a></nav>
+  </footer>
+</template>
+
+<!-- The frame's states (secure.<store host>: Frrata's form, the same tokens) -->
+<template id="t-fr-loading">
+  <div class="fr" aria-busy="true">
+    <p class="loading" role="status"><span class="spin" aria-hidden="true"></span>Loading the secure form</p>
+    <div class="blk"><span class="sk s"></span><span class="sk b"></span><span class="sk"></span></div>
+    <div class="blk"><span class="sk s"></span><span class="sk"></span><span class="sk"></span><span class="two"><span class="sk"></span><span class="sk"></span></span></div>
+    <div class="blk"><span class="sk" style="height:120px"></span></div>
+  </div>
+</template>
+<template id="t-fr-failed">
+  <div class="fr">
+    <div class="fail" role="alert">
+      <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16.2v.3"/></svg>We couldn’t load the secure form.</p>
+      <button type="button" class="p1">Try again</button>
+    </div>
+  </div>
+</template>
+<template id="t-fr-guest">
+  <div class="fr">
+    <section class="blk" aria-labelledby="ct-h"><h2 id="ct-h">Contact</h2>
+      <button type="button" class="ek" data-ek>Continue with</button>
+      <p class="or">or</p>
+      <div class="fld"><label>Mobile number</label><div class="pre"><span>+91</span><input value="98000 00000" aria-label="Mobile number" autocomplete="tel-national"></div></div>
+      <div class="fld"><label>Email <span class="opt">(optional)</span></label><input class="in2" value="divya@example.com" aria-label="Email"></div>
+    </section>
+    <section class="blk" aria-labelledby="ad-h"><h2 id="ad-h">Delivery address</h2>
+      <div class="fld"><label>Full name</label><input class="in2" value="Divya Menon" aria-label="Full name"></div>
+      <div class="fld"><label>House, street</label><input class="in2" value="22, 3rd Cross, HAL 2nd Stage" aria-label="House, street"></div>
+      <div class="fld"><label>Area, locality</label><input class="in2" value="Indiranagar" aria-label="Area, locality"></div>
+      <div class="two"><div class="fld"><label>PIN code</label><input class="in2" value="560038" aria-label="PIN code"></div><div class="fld"><label>City</label><input class="in2" value="Bengaluru" aria-label="City"></div></div>
+      <div class="fld"><label>State</label><input class="in2" value="Karnataka" aria-label="State"></div>
+      <label class="chk"><i></i>I need a GST invoice</label>
+    </section>
+    <div data-use="t-fr-sum"></div>
+  </div>
+</template>
+<template id="t-fr-signed">
+  <div class="fr">
+    <section class="blk" aria-labelledby="cs-h"><h2 id="cs-h">Contact</h2>
+      <div class="signed"><span>+91 98000 00000</span><button type="button" class="tx">Not you?</button></div>
+    </section>
+    <section class="blk" aria-labelledby="as-h"><h2 id="as-h">Deliver to</h2>
+      <div class="addrpick"><b>Divya Menon</b><span>22, 3rd Cross, HAL 2nd Stage, Indiranagar</span><small>Bengaluru, Karnataka 560038</small></div>
+      <button type="button" class="tx" style="justify-self:start">Use another address</button>
+      <label class="chk"><i></i>I need a GST invoice</label>
+    </section>
+    <div data-use="t-fr-sum"></div>
+  </div>
+</template>
+<template id="t-fr-sum">
+  <section class="blk" aria-labelledby="sm-h"><h2 id="sm-h">Your order</h2>
+    <div class="sum">
+      <div class="r"><span>Mustard Cotton Kurta · M × 1</span><b>₹2,190</b></div>
+      <div class="r"><span>Delivery to 560038</span><b>Free</b></div>
+      <div class="r tot"><span>Total</span><b>₹2,190</b></div>
+      <small>Pay ₹2,190 in cash or UPI on delivery. Prices include GST.</small>
+    </div>
+    <button type="button" class="place">Place order · ₹2,190</button>
+    <p class="lockl"><svg><use href="#i-lock"/></svg>Your details stay with House of Ayuda’s checkout.</p>
+  </section>
+</template>
+
+<!-- Whole checkouts, one per frame state -->
+<template id="t-co-loading"><div class="co"><div data-use="t-hdr"></div><div class="wrap"><h1>Checkout</h1><div data-use="t-side" style="display:contents"></div><div data-use="t-fr-loading" style="display:contents"></div></div><div data-use="t-legal"></div></div></template>
+<template id="t-co-failed"><div class="co"><div data-use="t-hdr"></div><div class="wrap"><h1>Checkout</h1><div data-use="t-side" style="display:contents"></div><div data-use="t-fr-failed" style="display:contents"></div></div><div data-use="t-legal"></div></div></template>
+<template id="t-co-guest"><div class="co"><div data-use="t-hdr"></div><div class="wrap"><h1>Checkout</h1><div data-use="t-side" style="display:contents"></div><div data-use="t-fr-guest" style="display:contents"></div></div><div data-use="t-legal"></div></div></template>
+<template id="t-co-signed"><div class="co"><div data-use="t-hdr"></div><div class="wrap"><h1>Checkout</h1><div data-use="t-side" style="display:contents"></div><div data-use="t-fr-signed" style="display:contents"></div></div><div data-use="t-legal"></div></div></template>
+
+<!-- EkCode's code step, in its popup -->
+<template id="t-ekp">
+  <div class="ekp">
+    <div class="top"><span data-ekmark></span><span class="shop">House of Ayuda<i>H</i></span></div>
+    <h3>Enter the code</h3>
+    <p>Sent on WhatsApp to +91 98000 00000</p>
+    <div class="boxes" aria-label="Code"><span>4</span><span>1</span><span>7</span><span class="cur"></span><span></span><span></span></div>
+    <a class="wa" href="#p-ekcode">Open WhatsApp</a>
+    <button type="button" class="tx" style="justify-self:start;background:none;border:0;text-decoration:underline;font:inherit;color:inherit;min-height:44px;padding:0">Not you?</button>
+    <p class="foot"><a href="#p-ekcode">Privacy</a><a href="#p-ekcode">Terms</a></p>
+  </div>
+</template>
+
+<div class="doc">
+  <header class="doc-top">
+    <h1>Checkout with the secure frame</h1>
+    <p>One-address plan P3 · mockup · 16 Nov 2026 · House of Ayuda’s checkout on <span class="mono">house-of-ayuda.frrata.shop</span>, its form in Frrata’s frame on <span class="mono">secure.house-of-ayuda.frrata.shop</span>. Phone (390) beside computer (1280). The dashed outline marks the frame in this mockup only.</p>
+    <nav class="toc" aria-label="Screens">
+      <a href="#p-short">In short</a><a href="#p-audit">Audit</a><a href="#p-take">What to take</a><a href="#p-calls">Your calls</a>
+      <a href="#p-loading">1 · Loading</a><a href="#p-failed">2 · Failed</a><a href="#p-ekcode">3 · EkCode</a><a href="#p-summary">4 · Place order</a><a href="#p-where">What lives where</a><a href="#p-words">Words</a>
+    </nav>
+  </header>
+
+  <section class="part" id="p-short" aria-labelledby="h-s">
+    <h2 id="h-s">In short</h2>
+    <ul class="short" style="margin-top:12px">
+      <li><b>What to take.</b> The checkout looks like one page. Its personal part, contact, address, EkCode, the priced summary and Place order, is a Frrata frame on <span class="mono">secure.</span> the store’s host.</li>
+      <li><b>The frame shows the lines and the server’s total itself</b> (decision O24, threats T12 and T13). Place order carries the amount, so a page around it can’t show another total on the button that places the order.</li>
+      <li><b>Four new states</b>: the frame loading, the frame failed with Try again, EkCode in a popup, the frame’s summary with Place order · ₹2,190. Everything else follows P2’s screens.</li>
+      <li><b>Why now.</b> P3 is approved. No store with real shoppers moves to one address before it ships (decision O7).</li>
+      <li><b>What it costs.</b> No new price. The frame’s script stays under 25 kB (decision O24).</li>
+      <li><b>What is needed from you.</b> A yes on the states, and the calls below.</li>
+    </ul>
+  </section>
+
+  <section class="part" id="p-audit" aria-labelledby="h-a">
+    <h2 id="h-a">Audit · checkout as it runs today</h2>
+    <p class="cap">From <span class="mono">src/components/storefront/checkout.tsx</span>: one document on the store’s host, in the old theme, phone then address then payment then review. A redraw from the code, not a screenshot.</p>
+    <table class="tbl">
+      <thead><tr><th>What is there</th><th>Why it gets in the way</th><th>Proposed</th></tr></thead>
+      <tbody>
+        <tr><td>Contact, address, GST fields in the page’s own document</td><td>On one address a partner’s script shares that origin and could read them (T3–T5).</td><td>In the frame, on its own origin.</td></tr>
+        <tr><td>The typed form kept in tab storage (<span class="mono">frata.checkout.v1</span>) for a reload</td><td>Same origin as partner code.</td><td>The frame keeps its own copy.</td></tr>
+        <tr><td>EkCode prefill read by the page (<span class="mono">/api/shop/ekcode/me</span>)</td><td>Answers name, phone and address to any script on the host (T4).</td><td>Only the frame asks, on the secure host.</td></tr>
+        <tr><td>The pay bar total drawn by the page</td><td>A page beside the frame could show a different total (T12).</td><td>The frame’s summary and Place order · ₹ are the frame’s.</td></tr>
+        <tr><td>The theme’s look</td><td>Not House of Ayuda’s (owner’s point 1).</td><td>The brand record (P2).</td></tr>
+        <tr><td>Labels, field order, Pay on delivery words</td><td>Nothing.</td><td>Kept, from one field list for both.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="part" id="p-take" aria-labelledby="h-t">
+    <h2 id="h-t">What to take</h2>
+    <p class="cap">From the one-address spec’s research table, each source dated there.</p>
+    <div class="take">
+      <div class="tk"><b>Stripe Elements</b><span class="src">docs.stripe.com security guide, undated, read 16 Nov</span><span>Card fields run in frames on Stripe’s own origin; the page stays the merchant’s.</span><span class="t">Take: personal inputs in a frame on Frrata’s origin.</span></div>
+      <div class="tk"><b>BigCommerce Embedded Checkout</b><span class="src">developer.bigcommerce.com, undated, read 16 Nov</span><span>Safari needs the frame on the same site as the page.</span><span class="t">Take: <span class="mono">secure.</span> the store’s host, first-party in Safari.</span><span class="s">Skip: the whole checkout framed inside a partner’s page.</span></div>
+      <div class="tk"><b>Shopify checkout UI extensions</b><span class="src">shopify.dev, api_version 2026-10, read 16 Nov</span><span>Partner code in a sandboxed worker, never in checkout’s document.</span><span class="t">Take: partner code never in the frame.</span><span class="s">Skip: extension slots (until a partner asks).</span></div>
+      <div class="tk"><b>GoKwik, Shiprocket Fastrr</b><span class="src">product pages, live 16 Nov; no dated source on isolation</span><span>A layer over the brand’s page on the platform’s origin.</span><span class="t">Take: shoppers in India already meet a checkout layer that looks like the store.</span></div>
+    </div>
+  </section>
+
+  <section class="part" id="p-calls" aria-labelledby="h-c">
+    <h2 id="h-c">Your calls</h2>
+    <table class="tbl" style="margin-top:12px">
+      <thead><tr><th>Call</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr><td>How to pay sits on the page, above the frame on a phone</td><td>Yes, as the spec’s message list has it (the page sends the method). The other way, the choice inside the frame, needs the schema changed.</td></tr>
+        <tr><td>The button’s words online</td><td>Keep today’s pair: <b>Place order · ₹</b> on delivery, <b>Pay · ₹</b> online (checkout.tsx). The plan’s line names only Place order.</td></tr>
+        <tr><td>EkCode in a popup</td><td>Yes, as P3 says. It changes the EkCode rule “a real page, never a pop-up or iframe”: the popup is a real top-level page on ekcode.in, so the rule should read “never an iframe”.</td></tr>
+        <tr><td>A visible edge round the frame</td><td>None. It reads as one page; the dashed line here is the mockup’s.</td></tr>
+        <tr><td>Razorpay’s screens</td><td>Not drawn: the spike (P3·1) decides whether they open from the frame or the page. Either way they are Razorpay’s own.</td></tr>
+        <tr><td>The line under Place order</td><td>“Your details stay with House of Ayuda’s checkout.” One line, a trust cue at the act. Cut it if you’d rather none.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="part" id="p-loading" aria-labelledby="h1p">
+    <h2 id="h1p">1 · The frame loading</h2>
+    <p class="cap">The page draws at once: the bag, how to pay, the legal block. The frame’s place holds its shape with one line saying what is happening. No Place order until the frame is ready.</p>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390</p><div class="phone"><div class="scr co-scr"><div class="urlbar"><svg><use href="#i-lock"/></svg>house-of-ayuda.frrata.shop/checkout</div><div data-use="t-co-loading" style="flex:1;overflow:hidden"></div></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in plain" style="background:#FBF7F1"><div class="urlbar"><svg><use href="#i-lock"/></svg>house-of-ayuda.frrata.shop/checkout</div><div data-use="t-co-loading"></div></div></div></div>
+    </div>
+    <ol class="steps-l"><li>The checkout’s HTML carries the frame with the bag in its address, so the frame prices on its first draw.</li><li>The frame posts its height; the page’s placeholder gives way to it.</li></ol>
+  </section>
+
+  <section class="part" id="p-failed" aria-labelledby="h2p">
+    <h2 id="h2p">2 · The frame failed</h2>
+    <p class="cap">Stays on the page (feedback rule 5: a state the shopper can’t act on without it). Try again reloads the frame only; the bag and the choice stay. No Place order (S32).</p>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390</p><div class="phone"><div class="scr co-scr"><div class="urlbar"><svg><use href="#i-lock"/></svg>house-of-ayuda.frrata.shop/checkout</div><div data-use="t-co-failed" style="flex:1;overflow:hidden"></div></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in plain" style="background:#FBF7F1"><div class="urlbar"><svg><use href="#i-lock"/></svg>house-of-ayuda.frrata.shop/checkout</div><div data-use="t-co-failed"></div></div></div></div>
+    </div>
+  </section>
+
+  <section class="part" id="p-ekcode" aria-labelledby="h3p">
+    <h2 id="h3p">3 · EkCode in a popup, back to the frame</h2>
+    <p class="cap">Continue with EkCode opens ekcode.in in its own look: a popup window on a computer, a new tab on a phone. It answers the frame only, by message to the exact secure origin; the page never sees the shopper.</p>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390 · the new tab</p><div class="phone"><div class="scr" style="background:#FAFAF9"><div class="urlbar"><svg><use href="#i-lock"/></svg>ekcode.in/sign-in</div><div data-use="t-ekp"></div></div></div></div>
+      <div><p class="lbl">Computer · 1280 · the popup over checkout</p><div class="dk"><div class="dk-in plain" style="background:#FBF7F1;position:relative"><div class="urlbar"><svg><use href="#i-lock"/></svg>house-of-ayuda.frrata.shop/checkout</div><div data-use="t-co-guest" class="nomark"></div><div class="dim"></div>
+        <div class="popwin" style="left:470px;top:140px"><div class="chrome"><i></i><i></i><i></i><span style="margin-left:6px">ekcode.in/sign-in</span></div><div data-use="t-ekp"></div></div></div></div></div>
+    </div>
+    <div class="pair" style="margin-top:28px">
+      <div><p class="lbl">Phone · 390 · back in the frame, signed in</p><div class="phone"><div class="scr co-scr"><div class="urlbar"><svg><use href="#i-lock"/></svg>house-of-ayuda.frrata.shop/checkout</div><div data-use="t-co-signed" style="flex:1;overflow:hidden"></div></div></div></div>
+      <div><p class="lbl">Popup closed by the shopper, or blocked</p><div class="crop" style="background:#FBF7F1;font-family:Mukta,sans-serif;color:#221A14;display:grid;gap:10px"><span>The frame stays as it was: guest fields filled, Continue with EkCode still there. Nothing is said; nothing was lost.</span><span style="color:#665A4E;font-size:14px">A blocked popup opens EkCode in the same tab and returns to <span class="mono">/checkout</span> (today’s path).</span></div></div>
+    </div>
+    <ol class="steps-l"><li>The shopper taps Continue with EkCode inside the frame.</li><li>EkCode’s number screen, then the code screen (drawn). The code fills itself from WhatsApp.</li><li>The shopper picks the address on ekcode.in; the popup closes; the frame shows it, with Not you?.</li></ol>
+  </section>
+
+  <section class="part" id="p-summary" aria-labelledby="h4p">
+    <h2 id="h4p">4 · The frame’s summary and Place order · ₹2,190</h2>
+    <p class="cap">A guest, every field filled. The frame prices the address itself: the line, delivery to 560038, the server’s total. Its button carries the same amount; a tap inside the frame is the only thing that places the order.</p>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390 · scrolled to the summary</p><div class="phone"><div class="scr co-scr"><div class="urlbar"><svg><use href="#i-lock"/></svg>house-of-ayuda.frrata.shop/checkout</div><div style="flex:1;overflow:hidden;position:relative"><div data-use="t-co-guest" style="position:absolute;left:0;right:0;top:-1310px"></div></div></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in plain" style="background:#FBF7F1"><div class="urlbar"><svg><use href="#i-lock"/></svg>house-of-ayuda.frrata.shop/checkout</div><div data-use="t-co-guest"></div></div></div></div>
+    </div>
+    <div class="crops3" style="margin-top:28px">
+      <div><p class="lbl">Placing (the button keeps its words, refuses a second tap)</p><div class="crop co" style="padding:16px"><button type="button" class="place" aria-busy="true"><span class="spin" aria-hidden="true" style="border-color:rgba(251,247,241,.4);border-top-color:#FBF7F1"></span>Place order · ₹2,190</button></div></div>
+      <div><p class="lbl">Pay online chosen (today’s words)</p><div class="crop co" style="padding:16px"><button type="button" class="place">Pay · ₹2,190</button></div></div>
+      <div><p class="lbl">A new PIN code, priced again in the frame (S13)</p><div class="crop co" style="padding:16px"><div class="sum"><div class="r"><span>Mustard Cotton Kurta · M × 1</span><b>₹2,190</b></div><div class="r"><span>Delivery to 110017</span><b>Free</b></div><div class="r tot"><span>Total</span><b>₹2,190</b></div></div></div></div>
+      <div><p class="lbl">After the order: the order page on the page’s side (P2), the frame gone</p><div class="crop co" style="padding:16px;display:grid;gap:6px"><b style="font:400 26px/32px 'Tiro Devanagari Hindi',Georgia,serif">Order placed</b><span class="mono" style="font-size:13px">HA-1042</span><span>₹2,190 · Pay on delivery</span></div></div>
+    </div>
+  </section>
+
+  <section class="part" id="p-where" aria-labelledby="h5p">
+    <h2 id="h5p">What lives where on these screens</h2>
+    <table class="tbl">
+      <thead><tr><th>Part</th><th>Origin</th></tr></thead>
+      <tbody>
+        <tr><td>Header, Back to House of Ayuda, Checkout heading</td><td>The page, <span class="mono">house-of-ayuda.frrata.shop</span></td></tr>
+        <tr><td>Your bag, the stepper, Remove, Have a code?</td><td>The page (the bag and the code only)</td></tr>
+        <tr><td>How you’ll pay, Pay on delivery’s limit</td><td>The page (public rules); the choice is sent to the frame</td></tr>
+        <tr><td>Contact, Continue with EkCode, address, PIN code, GST invoice</td><td>The frame, <span class="mono">secure.house-of-ayuda.frrata.shop</span></td></tr>
+        <tr><td>Your order: line, delivery, total; Place order · ₹2,190</td><td>The frame (the server’s numbers)</td></tr>
+        <tr><td>Loading and failed states</td><td>The page (the frame isn’t there yet)</td></tr>
+        <tr><td>Legal block, policy links</td><td>The page, drawn by checkout’s own layout</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="part" id="p-words" aria-labelledby="h6p">
+    <h2 id="h6p">Words</h2>
+    <p class="cap">New strings only; field labels, Pay on delivery and Remove are today’s checkout words.</p>
+    <table class="tbl">
+      <thead><tr><th>Where</th><th>Words</th></tr></thead>
+      <tbody>
+        <tr><td>Header back link (P2’s header variant)</td><td>Back to House of Ayuda</td></tr>
+        <tr><td>Page sections</td><td>Your bag · How you’ll pay · Orders up to ₹3,000</td></tr>
+        <tr><td>Frame loading</td><td>Loading the secure form</td></tr>
+        <tr><td>Frame failed</td><td>We couldn’t load the secure form. · Try again</td></tr>
+        <tr><td>Frame, signed in</td><td>Deliver to · Use another address · Not you?</td></tr>
+        <tr><td>Frame summary</td><td>Your order · Delivery to 560038 · Total · Pay ₹2,190 in cash or UPI on delivery. Prices include GST.</td></tr>
+        <tr><td>Frame button</td><td>Place order · ₹2,190 (Pay · ₹2,190 online)</td></tr>
+        <tr><td>Under the button</td><td>Your details stay with House of Ayuda’s checkout.</td></tr>
+        <tr><td>EkCode code screen (its own words)</td><td>Enter the code · Sent on WhatsApp to +91 98000 00000 · Open WhatsApp · Not you? · Privacy · Terms</td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+(function () {
+  // Clone the shared pieces into their places (the same markup in every frame).
+  for (var pass = 0; pass < 4; pass++) {
+    document.querySelectorAll('[data-use]:not([data-used])').forEach(function (slot) {
+      slot.setAttribute('data-used', '')
+      var t = document.getElementById(slot.getAttribute('data-use'))
+      if (t) slot.appendChild(t.content.cloneNode(true))
+    })
+  }
+  // Ids inside clones stay unique: suffix every id and the references to it, frame by frame.
+  var n = 0
+  document.querySelectorAll('.phone, .dk, .crop').forEach(function (frame) {
+    n++
+    frame.querySelectorAll('[id]').forEach(function (el) {
+      var old = el.id, next = old + '-' + n
+      el.id = next
+      frame.querySelectorAll('[aria-labelledby="' + old + '"],[aria-describedby="' + old + '"],[for="' + old + '"]').forEach(function (r) {
+        ['aria-labelledby', 'aria-describedby', 'for'].forEach(function (a) { if (r.getAttribute(a) === old) r.setAttribute(a, next) })
+      })
+    })
+  })
+  document.addEventListener('click', function (e) { var x = e.target.closest('.toast .x'); if (x && !x.closest('.crop')) x.closest('.toast').remove() })
+
+  // The console's sidebar (console/layout.tsx groups), the partner workspace's (partner layout), the phone's bottom bar.
+  var item = function (icon, label, on, pill) { return '<a class="nav' + (on ? ' on' : '') + '"' + (on ? ' aria-current="page"' : '') + '><svg><use href="#i-' + icon + '"/></svg>' + label + (pill ? '<span class="pill">' + pill + '</span>' : '') + '</a>' }
+  var person = { owner: ['AR', 'Anita Rao', 'Owner'], manager: ['MK', 'Meera Kapoor', 'Manager'], partner: ['NS', 'Neel Studio', 'Partner'] }
+  document.querySelectorAll('[data-sb]').forEach(function (sb) {
+    var on = sb.getAttribute('data-on'), who = sb.getAttribute('data-sb')
+    if (who === 'pw') {
+      sb.innerHTML = '<div class="store"><span class="mono-mark" style="background:#3A44C2">N</span><span><b>Neel Studio<span class="ptag">PARTNER</span></b><span class="mono">Partner workspace</span></span></div>' +
+        '<div class="ov">Work</div>' + item('orders', 'Clients', on === 'clients') + item('apps', 'Team') + item('settings', 'Passkeys') + item('content', 'Your details') +
+        '<span class="sp"></span><div class="acct"><span class="av">KS</span><span><b>Kabir Shah</b><span>Partner owner</span></span></div>'
+      return
+    }
+    var p = person[who] || person.owner
+    sb.innerHTML = '<div class="store"><span class="mono-mark">H</span><span><b>House of Ayuda</b><span class="mono">house-of-ayuda.frrata.shop</span></span></div>' +
+      '<div class="ov">Today</div>' + item('home', 'Home') + item('orders', 'Orders', false, '3') + item('bell', 'Notices', on === 'notices', who === 'owner' ? '1' : '') + item('profit', 'Analytics') +
+      '<div class="ov">Catalogue</div>' + item('products', 'Products') + item('coll', 'Collections') +
+      '<div class="ov">Store</div>' + item('offers', 'Offers') + item('content', 'Content') + item('look', 'Look') + item('search', 'Search and sharing') + item('apps', 'Apps') + item('settings', 'Settings', on === 'settings') + item('activity', 'Activity') +
+      '<span class="sp"></span>' + item('external', 'Preview store') +
+      '<div class="acct"><span class="av">' + p[0] + '</span><span><b>' + p[1] + '</b><span>' + p[2] + '</span></span></div>'
+  })
+  document.querySelectorAll('[data-bottom]').forEach(function (bar) {
+    var cell = function (icon, label, on) { return '<div' + (on ? ' class="on"' : '') + '><svg><use href="#i-' + icon + '"/></svg>' + label + '</div>' }
+    var on = bar.getAttribute('data-on') || 'more'
+    bar.innerHTML = bar.hasAttribute('data-pw')
+      ? cell('orders', 'Clients', on === 'clients') + cell('apps', 'Team') + cell('settings', 'Passkeys') + cell('more', 'More', on === 'more')
+      : cell('home', 'Home') + cell('orders', 'Orders') + cell('products', 'Products') + cell('more', 'More', on === 'more')
+  })
+
+  // Desktop frames: drawn at 1280, scaled to the column they sit in.
+  function fit(dk) {
+    var inner = dk.firstElementChild, w = dk.clientWidth, s = Math.min(1, w / 1280)
+    if (dk._w === w && dk._h === inner.offsetHeight) return
+    dk._w = w; dk._h = inner.offsetHeight
+    inner.style.transform = 'scale(' + s + ')'
+    dk.style.height = Math.ceil(inner.offsetHeight * s) + 'px'
+  }
+  var dks = Array.prototype.slice.call(document.querySelectorAll('.dk'))
+  dks.forEach(fit)
+  if ('ResizeObserver' in window) { var ro = new ResizeObserver(function () { dks.forEach(fit) }); dks.forEach(function (d) { ro.observe(d) }) }
+  window.addEventListener('load', function () { dks.forEach(fit) })
+})()
+
+// The store's logo into each header; EkCode's mark into its button (paper) and its page (ink).
+document.querySelectorAll('[data-logo]').forEach(function (a) { a.innerHTML = document.getElementById('t-ha-logo').innerHTML })
+document.querySelectorAll('[data-ek]').forEach(function (b) { b.insertAdjacentHTML('beforeend', document.getElementById('t-ek-paper').innerHTML) })
+document.querySelectorAll('[data-ekmark]').forEach(function (s) { s.innerHTML = document.getElementById('t-ek-ink').innerHTML })
+
+</script>
+</body>
+</html>
