@@ -79,3 +79,6 @@ jobs:
         with:
           name: e2e-out
           path: e2e/.out/
+          # .out is a hidden directory: upload-artifact v4 leaves hidden files out unless told (every failed run until
+          # 2026-11-16 uploaded nothing, so CI's screenshots were never seen).
+          include-hidden-files: true

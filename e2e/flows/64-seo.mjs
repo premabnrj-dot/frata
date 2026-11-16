@@ -194,11 +194,20 @@ export default {
 
     await t.step('S1·7: the owner shares a product — its card, WhatsApp and Facebook links tagged, a QR code, the link', async () => {
       const ctx = await signedIn(t.browser, 'owner', { viewport: { width: 390, height: 844 } })
+      // The card lives at https://<shop host>/og/…; the local app answers plain http only, so without this the image
+      // fails, the sheet rightly draws its placeholder in its place, and there is no card to check (CI, 2026-11-16).
+      // The card is served from the app as a phone's browser would fetch it.
+      await ctx.route(`https://${HOST}/og/**`, async (r) => {
+        const c = await getBytes(new URL(r.request().url()).pathname)
+        await r.fulfill({ status: c.status, contentType: c.headers['content-type'], body: c.body })
+      })
       const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
       await p.goto(`${CONSOLE}/console/products/${product.handle}`)
       await p.getByRole('button', { name: 'Share', exact: true }).click()
       const d = p.getByRole('dialog', { name: `Share ${product.title}` }); await d.waitFor()
-      assert.match(await d.locator('img').first().getAttribute('src'), /\/og\/product\/[0-9a-f-]{36}\/[0-9a-f]{16}\.jpg$/)
+      const card = d.locator('img').first()
+      assert.match(await card.getAttribute('src'), /\/og\/product\/[0-9a-f-]{36}\/[0-9a-f]{16}\.jpg$/)
+      await p.waitForFunction((el) => el.complete && el.naturalWidth === 1200, await card.elementHandle())
       const wa = new URL(await d.getByRole('link', { name: 'WhatsApp' }).getAttribute('href'))
       assert.equal(wa.host, 'wa.me')
       assert.match(wa.searchParams.get('text'), /utm_source=whatsapp&utm_medium=share/)

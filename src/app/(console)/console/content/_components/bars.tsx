@@ -47,14 +47,14 @@ export function Bars({ bars, offer, canSave, lock, targets }: { bars: BarRow[]; 
     setBusy(false)
     if (!r.ok) { setError({ text: r.error, field: r.field }); return }
     setEdit(null)
-    toast({ text: 'Bar saved', undo: edit.id ? async () => { const u = await undoContentAction({ id: r.id, version: r.version }); router.refresh(); return u } : async () => { const u = await deleteBarAction({ id: r.id, version: r.version }); router.refresh(); return u } })
-    router.refresh()
+    // Each action revalidates /console/content in its own response; a router.refresh() beside it raced that render and
+    // the stale one could land last (an Undo whose bar stayed Ended on screen, e2e 88, 2026-11-16; frata-gotchas).
+    toast({ text: 'Bar saved', undo: edit.id ? () => undoContentAction({ id: r.id, version: r.version }) : () => deleteBarAction({ id: r.id, version: r.version }) })
   }
   const mark = async (b: BarRow, how: 'end' | 'delete') => {
     const r = await (how === 'end' ? endBarAction : deleteBarAction)({ id: b.id, version: b.version })
     if (!r.ok) { refused(toast, router.refresh, r.error, () => void mark(b, how)); return }
-    toast({ text: how === 'end' ? 'Bar ended' : 'Bar deleted', undo: async () => { const u = await undoContentAction({ id: b.id, version: r.version }); router.refresh(); return u } })
-    router.refresh()
+    toast({ text: how === 'end' ? 'Bar ended' : 'Bar deleted', undo: () => undoContentAction({ id: b.id, version: r.version }) })
   }
   const full = bars.length >= MAX_BARS
   const fieldErr = (f: string) => (error?.field === f ? error.text : null)
