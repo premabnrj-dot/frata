@@ -15,6 +15,7 @@ import { stillTrue } from '@/domains/messaging/still'
 import { cleanEmail } from '@/domains/email/shape'
 import { fromHeader } from '@/domains/email/headers'
 import { composeOrderEmail } from './compose'
+import { emailBrand } from './brand'
 import { editEmailIn } from './edit-email'
 import { KEEP_ASKING_MS, settleWithRazorpay } from '@/lib/orders/payment-check'
 import type { SkipCode } from '@/domains/email/state'
@@ -69,7 +70,8 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
   const shop = await shopSettingsFor(tenantId)
   if (!shop) throw new GiveUp('no store')
   const [look, src] = await Promise.all([shopLook(tenantId).catch(() => null), manifestsFor(tenantId)])
-  const accent = paperAccent(themeOf(shop, look, src).schemes.paper.accent)
+  const look$ = await emailBrand(tenantId, paperAccent(themeOf(shop, look, src).schemes.paper.accent), shop.logoUrl, now)
+  const accent = look$.accent
 
   const job = await withTenant(tenantId, async (tx) => {
     const [prior] = await tx.select().from(emailMessages).where(and(eq(emailMessages.tenantId, tenantId), eq(emailMessages.id, messageId))).limit(1)
@@ -132,7 +134,7 @@ export async function sendOrderEmail(row: OutboxRow): Promise<void> {
   if ('wait' in job) throw new Later(job.wait === 'tenant' ? 'ses_tenant_not_ready' : 'awaiting_ses_event', job.wait === 'tenant' ? 1 : 15)
 
   const { o, to, replyTo, own, lines, ship, edit } = job.send
-  const { mail, subject } = composeOrderEmail({ kind, shop, accent, order: { ...o, stockShort: false }, lines, ship, own, to, replyTo, edit })
+  const { mail, subject } = composeOrderEmail({ kind, shop: { ...shop, logoUrl: look$.logoUrl }, accent, onAccent: look$.on, order: { ...o, stockShort: false }, lines, ship, own, to, replyTo, edit })
   const sent = await sendEmail({
     from: fromHeader(shop.shopName, `${shop.slug}@${EMAIL_SHOP_DOMAIN}`), to, replyTo, subject, html: mail.html, text: mail.text,
     configurationSet: SES_CONFIG_SHOPS, tenant: tenantName(tenantId), messageId, tenantTag: tenantId,

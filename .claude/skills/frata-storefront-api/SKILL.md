@@ -2,7 +2,7 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 1.3.1
+  version: 1.4.0
   owner: owner
   verified: 2026-11-16
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
@@ -87,6 +87,12 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
 13. **The kit** lives in `kit/starter` (outside the root's typecheck; its own Next app on the root's install). Its key
    is server only; its build fails on any `frs_` in `.next/static`. e2e `92-storefront-sale` builds it and reads the
    store through the API host. The partner skill is `kit/starter/.claude/skills/frrata-site/SKILL.md`.
+14. **`shop.brand`** (one-address P1·6, 2026-11-16): the code-site store's brand record, additive on `2026-12`, null for
+   a theme shop. The live tree reads `apiBrand` (the API's hour, tag `settings`), the test tree `previewBrand` (uncached);
+   never the 60 s `shopBrand`. The mapper gets a named pick of the live record (`BrandIn`): never `previous`, who saved,
+   or a waiting change; a test pins its keys. Logo files only from the shop's folder, described "through `<img>` only";
+   `shop.logo` stays raster (an SVG main logo answers its PNG rendition). A season still to come is never answered; a
+   live one is applied to `colours` and carries `until`; its start and end purge `settings` through the boundary sweep.
 
 ## A change, step by step
 - A new field: add it to the schema (optional is additive), map it field by field, run

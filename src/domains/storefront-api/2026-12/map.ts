@@ -8,6 +8,8 @@
 // links to them are dropped. Photos only from Frrata's media store, under this shop's own folder.
 // =============================================================================
 
+import { FONT_NAMES, type BrandRecord } from '@/domains/brand/record'
+import { liveSeason, withSeason, type Season } from '@/domains/brand/seasons'
 import { availability, bestOffer, type Availability as Avail } from '../../catalogue/availability'
 import { cardBadge, liveLines, type ShowOffer } from '../../checkout/offer-showcase'
 import { offerStatus } from '../../checkout/offer-status'
@@ -173,8 +175,28 @@ export type ShopIn = {
   instagram: string; whatsapp: string
 }
 
+/** What the brand mapper receives (M6): a named pick of the LIVE record and its seasons, never a stored previous record,
+ *  a waiting change or who saved it. */
+export type BrandIn = { record: Pick<BrandRecord, 'logos' | 'palette' | 'display' | 'body' | 'radius' | 'density'>; seasons: readonly Season[] }
+
+/** shop.brand (one-address P1·6): each logo file only from this shop's own folder of Frrata's media store; a live
+ *  season's accent applied and named with its end; a season still to come never answered. */
+export function brandOut(m: MapCtx, b: BrandIn | null, now: Date): In<typeof S.Brand> | null {
+  if (!b) return null
+  const file = (u: string | null) => (u && fromOurStore(m, u) ? u : null)
+  const season = liveSeason(b.seasons, now)
+  const p = withSeason(b.record, season).palette
+  return {
+    logos: { main: file(b.record.logos.main), mark: file(b.record.logos.mark), stacked: file(b.record.logos.stacked), reversed: file(b.record.logos.reversed) },
+    colours: { background: p.bg, panel: p.panel, text: p.text, secondaryText: p.muted, accent: p.accent, onAccent: p.on, controlEdge: p.edge, hairline: p.line, success: p.good, warning: p.warn, error: p.bad },
+    fonts: { headings: FONT_NAMES[b.record.display], body: FONT_NAMES[b.record.body] },
+    radius: b.record.radius, density: b.record.density,
+    season: season ? { name: plain(season.name, 40), until: season.endsAt } : null,
+  }
+}
+
 /** The shop, with the legal block its website must show (E-Commerce Rules: runtime data, never compiled in). */
-export function shopOut(m: MapCtx, s: ShopIn, origins: { site: string | null; checkout: string }, now: Date): In<typeof S.Shop> {
+export function shopOut(m: MapCtx, s: ShopIn, origins: { site: string | null; checkout: string }, now: Date, brand: BrandIn | null = null): In<typeof S.Shop> {
   const wa = normaliseMobile(s.whatsapp)
   const logo = s.logoUrl && fromOurStore(m, s.logoUrl) ? s.logoUrl : null
   return {
@@ -197,5 +219,6 @@ export function shopOut(m: MapCtx, s: ShopIn, origins: { site: string | null; ch
     },
     social: { instagram: instagramHandle(s.instagram), whatsapp: wa ? `91${wa}` : null },
     siteOrigin: origins.site, checkoutOrigin: origins.checkout, cart: { url: `${origins.checkout}/cart`, maxLines: MAX_LINES, maxQty: MAX_QTY },
+    brand: brandOut(m, brand, now),
   }
 }

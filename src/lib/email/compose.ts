@@ -22,6 +22,8 @@ export type ComposeInput = {
   kind: OrderMessage
   shop: { shopName: string; host: string; logoUrl?: string | null; orderPrefix?: string | null; legalName?: string | null; address?: string | null; grievanceName?: string | null; grievanceEmail?: string | null }
   accent: string
+  /** The text on the accent: a code-site store's brand record (one-address P1·5); white otherwise. */
+  onAccent?: string | null
   order: OrderMoments & { id: string; number: number; total: number | bigint | string; customerName: string }
   lines: { title: string; values: string[] | null; qty: number }[]
   ship: { courier: string | null; tracking: string | null } | null | undefined
@@ -52,7 +54,7 @@ export function composeOrderEmail(c: ComposeInput): { mail: Rendered; subject: s
   const drops = emailLinkToken('drops', o.id, c.to)
   const mail = shopEmail({
     preview: words.preview,
-    shop: { name: shop.shopName, logoUrl: shop.logoUrl ?? null, accent: c.accent },
+    shop: { name: shop.shopName, logoUrl: shop.logoUrl ?? null, accent: c.accent, on: c.onAccent ?? null },
     heading: words.heading, message: words.message,
     button: ask ? { label: `Pay ${ask} for the changes`, href: orderLink } : words.button ? { label: words.button, href: orderLink } : null,
     order: { number, date: dayMonthIN(o.placedAt), items: c.lines.map((l) => ({ title: l.title, detail: [...(l.values ?? []), `Qty ${l.qty}`].join(' · ') })), total,

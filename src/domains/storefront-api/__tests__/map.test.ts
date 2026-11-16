@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SENTINELS } from '../../../../scripts/cost-sentinels.mjs'
 import * as S from '../2026-12/schemas'
-import { cardOut, collectionPageOut, offersOut, pageOut, productOut, searchOut, shopOut, type CardIn, type ProductIn } from '../2026-12/map'
+import { brandOut, cardOut, collectionPageOut, offersOut, pageOut, productOut, searchOut, shopOut, type BrandIn, type CardIn, type ProductIn } from '../2026-12/map'
 
 const T = '11111111-1111-1111-1111-111111111111'
 const M = { tenantId: T, mediaHost: 'abc123.public.blob.vercel-storage.com' }
@@ -92,6 +92,29 @@ describe('version 2026-12 mappers (spec § 3, ADR-0003)', () => {
     const zoned = S.Shop.parse(shopOut(M, { ...s, zones: [{ name: 'Metro', charge: 5000, freeAbove: null, daysMin: 2, daysMax: 3, codOn: true, codCharge: 4900, codMax: 300000 }] }, { site: null, checkout: 'https://x.in' }, now))
     expect(zoned.delivery.zones).toEqual([{ name: 'Metro', charge: 5000, freeAbove: null, days: [2, 3], payOnDelivery: { on: true, charge: 4900, max: 300000 } }])
     expect(out.legal.grievanceOfficer.name).toBe('Meera')
+    for (const k of SENTINELS) expect(JSON.stringify(out)).not.toContain(k)
+  })
+  it('shop.brand (one-address P1·6): its keys pinned, files from this shop’s folder only, a live season applied, never a future one', () => {
+    const own = `https://${M.mediaHost}/tenants/${T}/brand`
+    const b: BrandIn = {
+      record: { logos: { main: `${own}/${'a'.repeat(64)}.svg`, mark: 'https://evil.in/m.svg', stacked: null, reversed: `${own}/${'b'.repeat(64)}.svg` },
+        palette: { bg: '#FBF7F1', panel: '#F2EADF', text: '#221A14', muted: '#665A4E', accent: '#8C1D2C', on: '#FBF7F1', edge: '#9A8B7A', line: '#DDD0BE', good: '#2F6B3B', warn: '#8A5300', bad: '#A3261B' },
+        display: 'tiro', body: 'mukta', radius: 4, density: 'standard' },
+      seasons: [{ id: 's1', name: 'Diwali', startsAt: '2026-11-01T00:00:00Z', endsAt: '2026-11-30T00:00:00Z', accent: '#7A1F2B', on: '#FFFFFF' },
+        { id: 's2', name: 'Wedding', startsAt: '2027-01-01T00:00:00Z', endsAt: null, accent: '#2E3A63', on: '#FFFFFF' }],
+    }
+    const out = S.Brand.parse(brandOut(M, b, now))
+    // M6: the answer's whole shape, so a field can only ever be added on purpose.
+    expect(Object.keys(out).sort()).toEqual(['colours', 'density', 'fonts', 'logos', 'radius', 'season'])
+    expect(Object.keys(out.logos).sort()).toEqual(['main', 'mark', 'reversed', 'stacked'])
+    expect(Object.keys(out.colours)).toHaveLength(11)
+    expect(out.logos).toEqual({ main: b.record.logos.main, mark: null, stacked: null, reversed: b.record.logos.reversed })
+    expect(out.fonts).toEqual({ headings: 'Tiro Devanagari Hindi', body: 'Mukta' })
+    const season = now.getTime() >= Date.parse('2026-11-01T00:00:00Z') && now.getTime() < Date.parse('2026-11-30T00:00:00Z')
+    expect(out.season).toEqual(season ? { name: 'Diwali', until: '2026-11-30T00:00:00Z' } : null)
+    expect(out.colours.accent).toBe(season ? '#7A1F2B' : '#8C1D2C')
+    expect(brandOut(M, { ...b, seasons: [b.seasons[1]!] }, now)?.season).toBeNull()
+    expect(brandOut(M, null, now)).toBeNull()
     for (const k of SENTINELS) expect(JSON.stringify(out)).not.toContain(k)
   })
   it('every schema refuses an extra field (closed)', () => {

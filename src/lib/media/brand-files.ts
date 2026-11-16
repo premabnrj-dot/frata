@@ -87,14 +87,17 @@ async function makeRendition(tenantId: string, mainUrl: string): Promise<boolean
 const made = new Set<string>()
 /** The rendition of this main logo, made if the store doesn't have it yet (a save's after() that failed, a raster logo
  *  from before the store had a website): looked for first, so a print or a pack costs one small read at most. */
-export async function ensureRendition(tenantId: string, mainUrl: string): Promise<void> {
+export async function ensureRendition(tenantId: string, mainUrl: string): Promise<boolean> {
   const url = renditionUrl(tenantId, mainUrl)
-  if (!url || made.has(url)) return
+  if (!url) return false
+  if (made.has(url)) return true
   try {
     const r = await fetchWithTimeout(url, { method: 'GET', headers: { Range: 'bytes=0-7' } }, 4000)
-    if (r.ok || r.status === 206) { made.add(url); return }
+    if (r.ok || r.status === 206) { made.add(url); return true }
   } catch { /* not reachable now: try to make it */ }
-  if (await makeRendition(tenantId, mainUrl)) made.add(url)
+  if (!(await makeRendition(tenantId, mainUrl))) return false
+  made.add(url)
+  return true
 }
 
 /** After the response (a save that changed the main logo, a pack, a print): its rendition, made once. A failure leaves
@@ -103,4 +106,14 @@ export function afterMainLogo(tenantId: string, mainUrl: string | null) {
   if (!mainUrl) return
   const work = async () => { await ensureRendition(tenantId, mainUrl) }
   try { after(work) } catch { void work() }
+}
+
+/**
+ * The main logo where only a raster file can go (the API's shop.logo, M7; the store's icon): a PNG or WebP main logo as
+ * it is, an SVG one as its PNG rendition, made after the response if it isn't yet. The one place this rule lives.
+ */
+export function rasterLogo(tenantId: string, mainUrl: string | null): string | null {
+  if (!mainUrl || !/\.svg$/.test(mainUrl)) return mainUrl
+  afterMainLogo(tenantId, mainUrl)
+  return renditionUrl(tenantId, mainUrl)
 }

@@ -20,7 +20,7 @@ export function liveSeason(seasons: readonly Season[], now: Date): Season | null
 }
 
 /** The record as shoppers see it at `now`: a live season's accent over the record's. */
-export function withSeason(b: BrandRecord, s: Season | null): BrandRecord {
+export function withSeason<B extends Pick<BrandRecord, 'palette'>>(b: B, s: Season | null): B {
   return s ? { ...b, palette: { ...b.palette, accent: s.accent, on: s.on } } : b
 }
 

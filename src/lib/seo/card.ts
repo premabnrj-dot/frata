@@ -91,10 +91,13 @@ export type CardSource =
   | { kind: 'collection'; collection: StoreCollection; cat: StoreCatalogue }
   | { kind: 'shop'; cat: StoreCatalogue }
 
-export function cardOf(shop: StoreShop, src: CardSource, theme: ResolvedTheme, now: Date): CardContent {
-  if (src.kind === 'product') return productCard(shop, src.product, theme, now)
-  if (src.kind === 'collection') return collectionCard(shop, src.collection, src.cat, theme, now)
-  return shopCard(shop, src.cat.products, theme, now)
+/** A code-site store's card wears its brand record (one-address P1·5, spec § 5): the panel behind, its text and secondary
+ *  text; a theme shop's keeps its look's tint. The colours are in the hash, so a new record is a new card address. */
+export function cardOf(shop: StoreShop, src: CardSource, theme: ResolvedTheme, now: Date, brand: { palette: { panel: string; text: string; muted: string } } | null = null): CardContent {
+  const c = src.kind === 'product' ? productCard(shop, src.product, theme, now)
+    : src.kind === 'collection' ? collectionCard(shop, src.collection, src.cat, theme, now)
+    : shopCard(shop, src.cat.products, theme, now)
+  return brand ? { ...c, colours: { bg: brand.palette.panel, text: brand.palette.text, sub: brand.palette.muted } } : c
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/

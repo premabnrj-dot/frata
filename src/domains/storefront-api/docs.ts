@@ -45,6 +45,13 @@ export const GUIDES: Guide[] = [
     { p: 'The checkout address is the `checkoutOrigin` field in `shop`. `shop.cart` gives the link and its limits.' },
     { p: 'The link never changes meaning. Anything new comes as a new part.' },
   ] },
+  { slug: 'brand', title: 'Brand', lead: 'Draw the site from the store’s brand record. Never keep its logo or colours in your code.', body: [
+    { p: '`shop.brand` holds the logo files, eleven colours, the two fonts, corners and spacing. The brand changes them in Console › Brand.' },
+    { p: 'Show every logo file through `<img>`. Never inline an SVG into your page.' },
+    { p: '`shop.logo` is always PNG or WebP. Use it where an SVG can’t go, like an email or a share card.' },
+    { p: 'A running season is already in `colours`. `season.until` says when it ends.' },
+    { p: '`brand` is null for a store without its own website.' },
+  ] },
   { slug: 'caching', title: 'Caching', lead: 'Live answers are cached copies, made fresh when the store changes.', body: [
     { p: 'A change in the console reaches the API within seconds. A drop or an offer starting reaches it within five minutes.' },
     { p: 'Search and filters are cached for 60 seconds per address. Send filter parameters in their order and leave out defaults.' },

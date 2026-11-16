@@ -1,4 +1,6 @@
 import 'server-only'
+import { apiBrand, previewBrand } from '@/lib/queries/brand'
+import { rasterLogo } from '@/lib/media/brand-files'
 import * as S from '@/domains/storefront-api/2026-12/schemas'
 import { collectionOut, collectionPageOut, MAX_PAGE, offersOut, pageOut, productOut, searchOut, shopOut } from '@/domains/storefront-api/2026-12/map'
 import { apiAnnouncement, apiCatalogue, apiProduct, apiShop, previewCatalogue, previewProduct, previewShop, shopAnnouncement, type Lookup } from '@/lib/queries/storefront'
@@ -26,8 +28,8 @@ import { paise } from '@/domains/money/paise'
 // =============================================================================
 
 const loaders = (ctx: ApiCtx) => ctx.keyKind === 'test'
-  ? { shop: previewShop, catalogue: previewCatalogue, product: previewProduct, content: previewContent }
-  : { shop: apiShop, catalogue: apiCatalogue, product: apiProduct, content: apiContent }
+  ? { shop: previewShop, catalogue: previewCatalogue, product: previewProduct, content: previewContent, brand: previewBrand }
+  : { shop: apiShop, catalogue: apiCatalogue, product: apiProduct, content: apiContent, brand: apiBrand }
 
 /** One page by its address: a live page only, under either key. A draft page or FAQ needs ADR-0018 § 12's signed
  *  preview token (tenant, key id, entry, ≤ 10 minutes), which SA1b builds; until then a test key reads what is live
@@ -73,9 +75,10 @@ export const filterParam = (raw: Record<string, string | string[] | undefined>, 
 export const RESOURCES = {
   shop: { schema: S.Shop, run: async (ctx: ApiCtx) => {
     // The site origin from the shop entry itself, read once, so this answer and the shop's move never disagree (SA1b).
-    const s = await loaders(ctx).shop(ctx.tenantId)
+    const [s, brand] = await Promise.all([loaders(ctx).shop(ctx.tenantId), loaders(ctx).brand(ctx.tenantId)])
     if (!s) return null
-    return shopOut(mapCtx(ctx), s, { site: s.siteOrigin, checkout: `https://${s.host}` }, ctx.now)
+    // M7: shop.logo stays raster; an SVG main logo is answered there as its PNG rendition (brand.logos carries the SVG).
+    return shopOut(mapCtx(ctx), { ...s, logoUrl: rasterLogo(ctx.tenantId, s.logoUrl) }, { site: s.siteOrigin, checkout: `https://${s.host}` }, ctx.now, brand)
   } },
   products: { schema: S.Page, run: async (ctx: ApiCtx, p: { page: number }) =>
     pageOut(mapCtx(ctx), (await loaders(ctx).catalogue(ctx.tenantId)).products, p.page, ctx.now) },

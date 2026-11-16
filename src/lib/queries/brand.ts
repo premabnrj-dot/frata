@@ -94,6 +94,8 @@ const coreBrand = (t: string): Promise<ShopBrand | null> => withTenant(t, async 
 
 /** Checkout, emails, documents, share cards: the live brand, 60 s or until `shop:<t>:settings` is purged. */
 export const shopBrand = shopCached('shop-brand-v1', 'settings', coreBrand)
+/** The Storefront API's test tree (dynamic): the same live read, uncached. A test key never sees a waiting change. */
+export const previewBrand = coreBrand
 /** The Storefront API's live tree: the same read at the API's hour (M5). */
 export const apiBrand = shopCached('api-brand-v1', 'settings', coreBrand, 3600)
 

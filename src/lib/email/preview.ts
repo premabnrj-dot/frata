@@ -6,6 +6,7 @@ import { paperAccent } from '@/domains/documents/paper'
 import type { OrderMessage } from '@/domains/messaging/events'
 import type { EmailWords } from '@/domains/email/words'
 import { composeOrderEmail } from './compose'
+import { emailBrand } from './brand'
 
 // =============================================================================
 // FILE: src/lib/email/preview.ts — WHAT AN ORDER EMAIL LOOKS LIKE FOR THIS SHOP, on a sample order (Settings › Emails
@@ -19,8 +20,9 @@ export async function previewOrderEmail(tenantId: string, kind: OrderMessage, wo
   const [look, src] = await Promise.all([shopLook(tenantId).catch(() => null), manifestsFor(tenantId)])
   const now = new Date()
   const cod = kind !== 'finish_paying'
+  const brand = await emailBrand(tenantId, paperAccent(themeOf(shop, look, src).schemes.paper.accent), shop.logoUrl, now, false)
   return composeOrderEmail({
-    kind, shop, accent: paperAccent(themeOf(shop, look, src).schemes.paper.accent),
+    kind, shop: { ...shop, logoUrl: brand.logoUrl }, accent: brand.accent, onAccent: brand.on,
     order: { id: '00000000-0000-0000-0000-000000000000', number: 1043, total: 249000, customerName: 'Asha Rao', placedAt: now, paymentMethod: cod ? 'cod' : 'prepaid',
       payBy: null, paidAt: null, switchedToCodAt: null, confirmedAt: null, heldAt: null, packedAt: null, cancelledAt: kind === 'cancelled' ? now : null,
       shippedAt: kind === 'shipped' || kind === 'delivered' ? now : null, ndrAt: null, deliveredAt: kind === 'delivered' ? now : null, lostAt: null,
