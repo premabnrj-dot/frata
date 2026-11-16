@@ -95,6 +95,15 @@ describe('apiRequest (ADR-0018 § 5)', () => {
     expect(r.headers.get('cache-control')).toBe('public, s-maxage=60')
     expect((await search(req({}, 'https://api.frrata.shop/2026-12/k/x/search?q='), at(LIVE))).status).toBe(404)
   })
+  it('a filter grammar error is a 400 naming the parameter, cleaned, only after the key checks out', async () => {
+    const { BadParam } = await import('../request')
+    const filter = apiRequest({ version: '2026-12', tree: 'live', mode: 'dynamic', resource: 'filter', schema: z.object({ n: z.number() }).strict(), limit: 'search',
+      params: (_r, s) => (s?.has('evil') ? new BadParam('ev<il>"x') : { n: 1 }), run: async (_c, p) => p })
+    const r = await filter(req({}, 'https://api.frrata.shop/2026-12/k/x/filter/page/1?evil=1'), at(LIVE))
+    expect(r.status).toBe(400)
+    expect(await r.json()).toEqual({ error: 'bad_filter', param: 'evilx' })
+    expect((await filter(req({}, 'https://api.frrata.shop/2026-12/k/x/filter/page/1?evil=1'), at(OTHER))).status).toBe(404)
+  })
   it('counts a miss and checks every limit failing closed', async () => {
     vi.mocked(limiter.withinLimit).mockClear(); vi.mocked(limiter.overLimit).mockClear()
     await test(req(), at(newKey('test', rnd)))
@@ -149,14 +158,14 @@ describe('apiRequest (ADR-0018 § 5)', () => {
       }
       const good = await tok({ tenantId: A, keyId: 'k1' }, 'page:about')
       const [v, p, sig] = good.split('.')
-      for (const bad of [`${v}.${p}.${sig!.slice(0, 42)}A`, `${v}.${p}x.${sig}`, `${v}.${p}.${sig}=`]) {
+      for (const bad of [`${v}.${p}.${sig!.slice(0, 42)}${sig!.at(-1) === "A" ? "E" : "A"}`, `${v}.${p}x.${sig}`, `${v}.${p}.${sig}=`]) {
         const r = await page(pr(bad), at(LIVE, { handle: 'about' }))
         expect(r.status).toBe(404)
         bodies.add(await r.text())
       }
       expect([...bodies]).toEqual(['{"error":"not_found"}'])
     })
-    it('is limited per network and fails closed', async () => {
+    it('is limited per key and fails closed', async () => {
       limits.within = false
       expect((await page(pr(await tok({ tenantId: A, keyId: 'k1' }, 'page:about')), at(LIVE, { handle: 'about' }))).status).toBe(429)
     })

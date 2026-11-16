@@ -17,7 +17,8 @@ import { errName } from '@/lib/log'
 import { byOf as whoSaved } from '@/lib/queries/content'
 import { members, shopSettings } from '@/lib/db/schema'
 import { previewsOn, signPreview } from '@/lib/storefront-api/preview-token'
-import type { PreviewEntry } from '@/domains/storefront-api/preview'
+import { previewEntry } from '@/domains/storefront-api/preview'
+import { previewKeysIn } from '@/lib/queries/storefront-api'
 import { momentIN } from '@/lib/format-date'
 import { refreshContent, refreshShop } from '@/lib/storefront/refresh'
 import { canon, draftOf, fixedHandle, MAX_LIVE_BYTES, targetOf } from '@/lib/themes/pages'
@@ -367,8 +368,8 @@ export async function undoPageAction(input: unknown): Promise<R<{ id: string; ve
   })
 }
 
-// ── Preview on website (SA1b D·4; ADR-0018 § 12) ─────────────────────────────────────────────────────────────────────
-const PreviewInput = z.strictObject({ entry: z.string().regex(/^(?:faq|page:[a-z0-9]+(?:-[a-z0-9]+)*)$/).max(65), keyId: z.uuid().optional() })
+// ── Preview on website (SA1b D·4; ADR-0018 § 12). Pages only: the FAQ saves live, so it has no hidden draft to preview.
+const PreviewInput = z.strictObject({ entry: z.string().max(65).transform((e, c) => (e.startsWith('page:') && previewEntry('page', e.slice(5))) || (c.addIssue({ code: 'custom', message: 'entry' }), z.NEVER)), keyId: z.uuid().optional() })
 
 /** A link opening a hidden page on the store's own website for 10 minutes, signed for this store, one live key (picked
  *  when several) and that entry; through content's own door, nothing purged, answered once (never stored or toasted). */
@@ -380,18 +381,13 @@ export async function previewOnWebsiteAction(input: unknown): Promise<R<{ url: s
     const t = auth.membership.tenantId
     const [s] = await tx.select({ origin: shopSettings.siteOrigin }).from(shopSettings).where(eq(shopSettings.tenantId, t))
     if (!s?.origin) return { error: 'Your website runs on Frrata. Preview it in the Look.' }
-    const keys = await tx.execute<{ id: string }>(sql`
-      select k.id from storefront_keys k join tenants x on x.id = k.tenant_id
-       where k.tenant_id = ${t} and k.revoked_at is null and (k.expires_at is null or k.expires_at > now())
-         and (k.kind = 'public' or x.first_opened_at is null)`)
+    const keys = await previewKeysIn(tx, t)
     if (!keys.length) return { error: 'Your website has no key. Create one in Settings › Website.' }
     const key = p.data.keyId ? keys.find((k) => k.id === p.data.keyId) : keys.length === 1 ? keys[0] : undefined
     if (!key) return { error: 'Pick the key your website uses.' }
-    const entry = p.data.entry as PreviewEntry
-    const token = signPreview({ tenantId: t, keyId: key.id }, entry, new Date())
+    const token = signPreview({ tenantId: t, keyId: key.id }, p.data.entry, new Date())
     if (!token) return { error: 'Previews aren’t set up yet.' }
-    const to = entry === 'faq' ? '/pages/faq' : `/pages/${entry.slice(5)}`
-    return { done: true, url: `${s.origin}/frrata-preview?token=${encodeURIComponent(token)}&to=${encodeURIComponent(to)}`, host: s.origin.slice(8) }
+    return { done: true, url: `${s.origin}/frrata-preview?token=${encodeURIComponent(token)}&to=${encodeURIComponent(`/pages/${p.data.entry.slice(5)}`)}`, host: s.origin.slice(8) }
   })
 }
 

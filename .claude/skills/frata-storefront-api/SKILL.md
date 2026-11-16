@@ -2,7 +2,7 @@
 name: frata-storefront-api
 description: Use when adding or changing anything the Storefront API answers (api.frrata.shop, src/app/api/storefront, src/lib/storefront-api, src/domains/storefront-api), a storefront key, a module's API resource, the API host's routing, caching or firewall, or a field a partner's website reads - to keep the one door, the two trees, closed schemas, no merchant cost, additive versions and purges by tag.
 metadata:
-  version: 1.3.0
+  version: 1.3.1
   verified: 2026-11-16
   decisions: [ADR-0002, ADR-0003, ADR-0014, ADR-0018]
 ---
@@ -54,11 +54,14 @@ on Frrata's host (ADR-0014). Spec `docs/specs/2026-11-11-storefront-api.md`; pla
    the shop's reads with `revalidate: 3600`, the same tags), never the 60 s `shop*` ones. `PERIOD=1
    node scripts/verify/api-isr.mjs` proves a copy is still a HIT 65 s later. Every copy carries `shop:<tenant>` (from the loaders) and `skey:<hex>`. A catalogue
    change purges through today's `refreshShop`/`refreshSoldOut`; a key deleted → `refreshKey(hex)`; any stop the definer
-   derives (the store opens, the Website moves, Settings › People removes the partner) → `refreshKeys(tenant)`; a
+   derives (the store opens, the Website moves, Settings › People removes the partner) → `refreshKeys(tenant)` (a Website
+   move also `refreshShop(tenant, 'settings')`: the `shop:<t>:settings` tag holds `siteOrigin` in `apiShop`); a
    scheduled moment (a drop, an offer starting or ending) → the 5-minute drain's `app_shops_with_boundary` sweep; a stop
    with no write a console action sees (a partner's link ending, Frrata suspending a partner, a domain going, Admin's
    included) → the drain's `app_shops_with_key_stop` (shop ids only: **Admin never reads a key or its hash**); store
-   content (a bar starting, a save B's throttle left to the backstop) → the drain's `app_shops_with_content_change`.
+   content (a bar starting, a save B's throttle left to the backstop) → the drain's `app_shops_with_content_change`; a
+   connected domain gone while it was the Website → `app_shops_with_domain_gone` (purges `settings`). Every sweep pages
+   by shop id (`p_after`, `SWEEP_PAGE` 500; `pagedSweep` stops at its deadline and the next run resumes).
    The live tree reads content through `apiContent` (`src/lib/queries/content.ts`, lane B's seam, the hour) and pages
    through `shopPages` (a day, tag `pages`: a longer period doesn't shorten the hour).
 8. **Every stop is the definer's**, never a stored flag: deleted (`revoked_at`), expired, a test key once the store ever

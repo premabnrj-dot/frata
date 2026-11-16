@@ -1,4 +1,5 @@
 import 'server-only'
+import { siteHostIn } from './storefront-api'
 import { orderEmailsIn } from './emails'
 import { orderDiscounts } from '@/lib/db/schema-discounts'
 import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm'
@@ -41,12 +42,11 @@ export type EditRecord = { id: string; totalBefore: number; totalAfter: number; 
  */
 export async function orderSourceIn(tx: Tx, tenantId: string, orderId: string, now: Date): Promise<Source | null> {
   const i = attributionInputsSql('o')
-  const [r] = await tx.execute<SourceInputs & { site: string | null }>(sql`
-    select ${i.us} us, ${i.um} um, ${i.uc} uc, ${i.rh} rh, ${i.gads} gads, ${i.srs} srs, ${i.fb} fb, ${i.ws} ws, dc.label cl, dc.code cc,
-           (select s.site_origin from shop_settings s where s.tenant_id = ${tenantId}) site
+  const [r] = await tx.execute<SourceInputs>(sql`
+    select ${i.us} us, ${i.um} um, ${i.uc} uc, ${i.rh} rh, ${i.gads} gads, ${i.srs} srs, ${i.fb} fb, ${i.ws} ws, dc.label cl, dc.code cc
       from ${orders} o ${creatorCodeJoinSql(now)}
      where o.tenant_id = ${tenantId} and o.id = ${orderId} order by od.created_at, dc.code limit 1`)
-  return r ? sourceOfInputs(r, r.site ? r.site.replace(/^https:\/\//, '') : null) : null
+  return r ? sourceOfInputs(r, await siteHostIn(tx, tenantId)) : null
 }
 
 export async function orderDetail(tenantId: string, number: number, now = new Date(), role: MemberRole | null = null) {

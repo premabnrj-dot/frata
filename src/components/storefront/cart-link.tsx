@@ -41,7 +41,8 @@ export function CartLink({ site, words }: { site: string | null; words: { openin
 function fromSite(referrer: string, site: string | null): boolean {
   if (!referrer || !site) return false
   try {
-    const bare = (h: string) => h.toLowerCase().replace(/^www\./, '')
+    // The same site, www on either side (siteHostKey's rule, copied: this island stays small).
+    const bare = (h: string) => h.toLowerCase().replace(/\.$/, '').replace(/^www\./, '')
     return bare(new URL(referrer).hostname) === bare(new URL(site).hostname)
   } catch { return false }
 }

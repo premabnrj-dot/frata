@@ -3,7 +3,7 @@
 -- Proof: scripts/verify/tenancy.sql § 85 (and § 81's sweep signatures).
 --
 -- 1. The three drain sweeps page by shop id (D·6): a third argument `p_after uuid default null`, so the running
---    deployment's two-argument calls still resolve during a release (architecture review 8). Ids only, 500 a page,
+--    deployment's two-argument calls still resolve during a release (architecture review 8). Ids only, 500 a page (`limit 500` = SWEEP_PAGE in src/lib/db/platform.ts: change both),
 --    frata_app alone, as 0143. `app_shops_with_key_stop` also finds a partner REINSTATED in the window (its audit row;
 --    the row names the partner, not its id, so the shop's keys are purged whole: harmless), so a reinstated partner's
 --    site reads again within minutes, not the hour.

@@ -14,8 +14,8 @@ import { errName } from '@/lib/log'
 // request. The catalogue itself is read through the shop's cached loaders (src/lib/queries/storefront.ts).
 // =============================================================================
 
-/** The shop's own website address: a test key's CORS answer, and `siteOrigin` in the shop resource (the cached copy
- *  takes it at render, so whatever sets it must purge the keys: refreshKeys). Uncached, its own transaction. */
+/** The shop's own website address, for a test key's CORS answer only (the shop resource reads `siteOrigin` from
+ *  apiShop, tagged `shop:<t>:settings`). Uncached, its own transaction. */
 export async function siteOriginFor(tenantId: string): Promise<string | null> {
   const [r] = await withTenant(tenantId, (tx) => tx.select({ o: shopSettings.siteOrigin }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)))
   return r?.o ?? null
@@ -32,14 +32,16 @@ export async function siteHostIn(tx: Tx, tenantId: string): Promise<string | nul
  *  test key only while the store never opened), newest first. Names and shown prefixes only. */
 export type PreviewKey = { id: string; name: string; prefix: string; lastSeenOn: string | null }
 export async function previewKeysFor(tenantId: string): Promise<PreviewKey[]> {
-  return withTenant(tenantId, async (tx) => {
+  return withTenant(tenantId, (tx) => previewKeysIn(tx, tenantId))
+}
+/** The same list inside the caller's transaction (the console's Preview on website action signs with one of these). */
+export async function previewKeysIn(tx: Tx, tenantId: string): Promise<PreviewKey[]> {
     const rows = await tx.execute<{ id: string; name: string; prefix: string; last_seen_on: string | Date | null }>(sql`
       select k.id, k.name, k.prefix, k.last_seen_on from storefront_keys k join tenants t on t.id = k.tenant_id
        where k.tenant_id = ${tenantId} and k.revoked_at is null and (k.expires_at is null or k.expires_at > now())
          and (k.kind = 'public' or t.first_opened_at is null)
        order by k.last_seen_on desc nulls last, k.created_at desc limit 20`)
     return rows.map((r) => ({ id: r.id, name: r.name, prefix: r.prefix, lastSeenOn: r.last_seen_on === null ? null : String(r.last_seen_on instanceof Date ? r.last_seen_on.toISOString() : r.last_seen_on).slice(0, 10) }))
-  })
 }
 
 /** Today in India, as the date a key was last seen on. */

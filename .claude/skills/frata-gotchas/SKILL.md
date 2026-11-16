@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a PDF download that saves as pdf.txt, MODULE_NOT_FOUND in production only, a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.25.0
+  version: 1.25.1
   verified: 2026-11-16
 ---
 
@@ -77,8 +77,8 @@ metadata:
 A shop page is an ISR copy (`force-static`): it never sees the URL's query, so a `redirect()` in it would send
 `?utm_source=instagram&code=RIYA` nowhere, and every Instagram link would land on the brand's site untagged. Moving a
 shopper whose link carries tags is done in the browser (`MovedTo` for old names; `siteMoveScript`, an inline head script
-built from `siteMove`'s own source text, for the brand's website, plus `SiteMove` on soft navigations, which a layout's
-effect never sees again). The rejected alternative, a host lookup in the middleware, is a paid run on every CDN hit.
+built from `siteMove`'s own source text, for the brand's website; the same script patches `history.pushState` and
+listens for `popstate`, since a soft navigation never runs a head script again). The rejected alternative, a host lookup in the middleware, is a paid run on every CDN hit.
 
 ## e2e: a console baseline fails the day after it was taken (2026-11-11)
 The console home baseline (`e2e/baselines/console-home-desktop.png`, flow 05 shop-look) includes the date line

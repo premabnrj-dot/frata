@@ -1,5 +1,5 @@
 import 'server-only'
-import type { Sweep } from '@/lib/db/platform'
+import { SWEEP_PAGE, type Sweep } from '@/lib/db/platform'
 import { errName } from '@/lib/log'
 
 /**
@@ -9,7 +9,7 @@ import { errName } from '@/lib/log'
  * overlaps this one by a minute, and every cached copy still has its hour: logged, never silent.
  */
 export async function pagedSweep(name: string, page: Sweep, since: Date, until: Date, deadline: number,
-  each: (ids: string[]) => Promise<void>, clock: () => number = Date.now, size = 500): Promise<{ shops: number; done: boolean }> {
+  each: (ids: string[]) => Promise<void>, clock: () => number = Date.now, size = SWEEP_PAGE): Promise<{ shops: number; done: boolean }> {
   let after: string | null = null, shops = 0
   for (;;) {
     if (clock() > deadline) { console.error(`[cron] drain ${name}: deadline, the rest next run (${shops} done)`); return { shops, done: false } }
