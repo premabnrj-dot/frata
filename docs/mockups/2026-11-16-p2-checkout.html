@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P2 Brand Checkout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Mukta:wght@400;500;600&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap">
+<style>
+/* One address P2 (plan docs/plans/2026-11-16-one-address-checkout.md § P2; spec § 3). House of Ayuda's checkout, bag-link,
+   order and policy pages drawn by Frrata's code from its brand record, and Console › Brand › Checkout. The console part
+   is the same Neel tokens and primitives as 2026-11-16-p1-brand.html (copied from the approved PP1 mockup). The store
+   part reads only the brand record's values (House of Ayuda design system v1, 2026-11-16). */
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --rani:#D61F69;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62; --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B; --info-bg:#E8F1FD; --info-fg:#1F5BA8; --info-dot:#3B82E0;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --hover:var(--g50); --sunk:var(--g50); --doc:var(--g50);
+  --line:var(--g200); --line-soft:var(--g100); --field:var(--g500);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --bar:var(--g950); --bar-text:#fff; --bar-link:#A3ABF5; --bezel:#171615;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --doc:#0E0D0C;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; --bezel:#000; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --doc:#0E0D0C;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; --bezel:#000; color-scheme:dark }
+* { box-sizing:border-box }
+html { scroll-padding-top:12px }
+body { background:var(--doc); color:var(--text); font:400 14px/20px var(--font); margin:0;
+  padding:0 max(16px, env(safe-area-inset-right, 0px)) 72px max(16px, env(safe-area-inset-left, 0px)) }
+h1,h2,h3 { margin:0; text-wrap:balance }
+p { margin:0 }
+button, select, input { font:inherit; color:inherit }
+a { color:inherit }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+.mono { font-family:var(--mono); font-size:12.5px }
+.num { font-variant-numeric:tabular-nums }
+[hidden] { display:none !important }
+.sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap }
+
+/* ── The reference page ─────────────────────────────────────────────────────────────────────────────── */
+.doc { max-width:1720px; margin:0 auto }
+.doc-top { padding:28px 0 10px }
+.doc-top h1 { font:600 26px/32px var(--font); letter-spacing:-.01em }
+.doc-top p { color:var(--text-2); margin-top:6px; max-width:90ch }
+.toc { display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 0 }
+.toc a { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12.5px; text-decoration:none; background:var(--surface) }
+.part { margin-top:48px; scroll-margin-top:12px }
+.part > h2 { font:600 18px/24px var(--font) }
+.part > .cap { color:var(--text-2); font-size:13px; margin:4px 0 16px; max-width:100ch }
+.steps { margin:0 0 16px; padding-left:20px; color:var(--text-2); font-size:13px; max-width:100ch }
+.steps li { margin:2px 0 }
+.states { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 12px }
+.pair { display:grid; grid-template-columns:390px minmax(0,1fr); gap:32px; align-items:start }
+.pair > * { min-width:0 }
+.lbl { font-size:12px; color:var(--text-3); margin:0 0 8px; font-weight:500 }
+@media (max-width:1100px) { .pair { grid-template-columns:minmax(0,1fr) } }
+.brief { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 20px; max-width:110ch }
+.brief ul { margin:0; padding-left:18px } .brief li { margin:4px 0 }
+.takes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px }
+.takes .brief b { display:block; margin-bottom:4px }
+.takes .brief p { color:var(--text-2); font-size:13px }
+@media (max-width:900px) { .takes { grid-template-columns:minmax(0,1fr) } }
+
+/* ── Neel primitives ────────────────────────────────────────────────────────────────────────────────── */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-weight:500; font-size:14px; box-shadow:var(--e1); cursor:pointer; white-space:nowrap }
+.btn.sm { min-height:30px; padding:0 10px; font-size:13px }
+.btn.pri { background:var(--action); border-color:var(--action); color:var(--action-text) }
+.btn.ghost { border-color:transparent; background:transparent; box-shadow:none; color:var(--text-2) }
+.btn[aria-disabled="true"] { opacity:.45; cursor:not-allowed }
+.spin { width:14px; height:14px; border-radius:50%; border:2px solid currentColor; border-right-color:transparent; animation:spin .8s linear infinite }
+@keyframes spin { to { transform:rotate(360deg) } }
+.chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font-size:12px; line-height:16px; font-weight:500; white-space:nowrap }
+.chip::before { content:""; width:6px; height:6px; border-radius:50%; flex:none }
+.chip.neu { background:var(--neu-bg); color:var(--neu-fg) } .chip.neu::before { background:var(--neu-dot) }
+.chip.ok { background:var(--ok-bg); color:var(--ok-fg) } .chip.ok::before { background:var(--ok-dot) }
+.chip.warn { background:var(--warn-bg); color:var(--warn-fg) } .chip.warn::before { background:var(--warn-dot) }
+.chip.bad { background:var(--bad-bg); color:var(--bad-fg) } .chip.bad::before { background:var(--bad-dot) }
+.chip.info { background:var(--info-bg); color:var(--info-fg) } .chip.info::before { background:var(--info-dot) }
+.tag { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:6px; padding:1px 7px; font-size:12px; color:var(--text-2); white-space:nowrap }
+.tip { display:inline-grid; place-items:center; width:24px; height:24px; border:0; background:none; color:var(--text-3); cursor:pointer; vertical-align:middle; padding:0 }
+.tip svg { width:14px; height:14px }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 20px 20px; display:flex; flex-direction:column; gap:16px; min-width:0 }
+.card.flush { padding:0; gap:0; overflow:hidden }
+.card h2 { font:600 16px/24px var(--font); display:flex; align-items:center; gap:8px }
+.ch { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px }
+.ch .sp { flex:1 }
+.limit { font-size:13px; color:var(--text-2); margin-top:-10px }
+.facts { display:grid; grid-template-columns:180px minmax(0,1fr); gap:8px 12px; margin:0; font-size:14px }
+.facts dt { color:var(--text-2) }
+.facts dd { margin:0; min-width:0; overflow-wrap:anywhere; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+.grid2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+.hair { border-top:1px solid var(--line-soft); padding-top:16px }
+.f { display:flex; flex-direction:column; gap:6px; min-width:0 }
+.f > label, .f > .l { font-size:13px; font-weight:500; display:block }
+.f .opt { font-weight:400; color:var(--text-2); margin-left:4px }
+.in { height:36px; border:1px solid var(--field); border-radius:8px; padding:0 10px; font:inherit; font-size:14px; background:var(--surface); color:var(--text); width:100%; min-width:0 }
+select.in { padding-right:28px }
+.in[aria-invalid="true"] { border-color:var(--bad-dot); box-shadow:0 0 0 3px var(--bad-bg) }
+.ferr { display:flex; gap:6px; align-items:flex-start; font-size:13px; line-height:18px; color:var(--bad-fg) }
+.ferr svg { width:16px; height:16px; flex:none; margin-top:1px }
+.seg { display:inline-flex; flex-wrap:wrap; gap:2px; background:var(--sunk); border-radius:10px; padding:2px; max-width:100% }
+.seg button { border:0; background:transparent; color:var(--text-2); min-height:32px; padding:0 12px; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer }
+.seg button[aria-checked="true"] { background:var(--surface); color:var(--text); box-shadow:var(--e1) }
+.f > .seg { align-self:flex-start }
+[data-brand] .p-main, [data-console] .p-main { padding-bottom:200px }
+[data-brand] .main, [data-console] .main { padding-bottom:180px }
+.notice-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center }
+
+/* Toasts and the save bar (ui/toast.tsx, ui/unsaved.tsx) */
+.toast { background:var(--bar); color:var(--bar-text); border-radius:10px; box-shadow:var(--e3); padding:10px 8px 10px 14px; display:flex; align-items:center; gap:12px; font-weight:500; max-width:448px }
+.toast.err { box-shadow:var(--e3), 0 0 0 1px rgba(220,59,59,.6) }
+.toast .mk { width:22px; height:22px; border-radius:50%; display:grid; place-items:center; flex:none; color:#fff }
+.toast .mk.ok { background:var(--ok-dot) } .toast .mk.bad { background:var(--bad-dot) }
+.toast .w { flex:1; min-width:0 } .toast .w small { display:block; font-size:12px; font-weight:400; opacity:.8 }
+.toast .act { border:0; background:none; color:var(--bar-link); font-weight:500; min-height:36px; padding:0 8px; cursor:pointer }
+.toast .x { border:0; background:none; color:inherit; opacity:.8; width:36px; height:36px; display:grid; place-items:center; cursor:pointer; flex:none }
+.savebar { background:var(--bar); color:var(--bar-text); border-radius:12px; box-shadow:var(--e3); padding:10px 10px 10px 16px; display:flex; align-items:center; gap:12px }
+.savebar b { font-weight:500; flex:1 }
+.savebar button { border-radius:8px; min-height:30px; padding:0 10px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:6px }
+.savebar .dis { background:transparent; color:var(--bar-text); border:1px solid rgba(255,255,255,.35) }
+.savebar .sv { background:#fff; color:var(--g950); border:0 }
+.savebar kbd { font:500 11px var(--font); background:rgba(23,22,21,.1); border-radius:4px; padding:3px 5px }
+
+/* ── Desktop console frame, drawn at 1280 and scaled to the column ──────────────────────────────────── */
+.dk { position:relative; width:100%; overflow:hidden; border:1px solid var(--line); border-radius:12px; box-shadow:var(--e2); background:var(--page) }
+.dk-in { width:1280px; transform-origin:0 0; display:grid; grid-template-columns:232px minmax(0,1fr); min-height:820px; position:relative; background:var(--page) }
+.sb { background:var(--side); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:2px }
+.sb .store { display:flex; gap:10px; align-items:center; padding:6px 8px 10px }
+.mono-mark { width:28px; height:28px; border-radius:8px; background:#171615; color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px; flex:none }
+.sb .store > span:last-child { min-width:0 }
+.sb .store b { display:block; font-size:14px; font-weight:600 } .sb .store .mono { display:block; font-size:11px; color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.sb .ov { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); margin:14px 8px 4px }
+.nav { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; color:var(--text-2); font-size:14px; text-decoration:none; border:1px solid transparent }
+.nav svg { width:18px; height:18px; flex:none }
+.nav .pill { margin-left:auto; background:var(--warn-bg); color:var(--warn-fg); border-radius:999px; font-size:12px; padding:0 7px; font-weight:500 }
+.nav.on { background:var(--surface); color:var(--text); box-shadow:var(--e1); border-color:var(--line); font-weight:500 }
+.nav.on svg { color:var(--action) }
+.sb .sp { flex:1 }
+.acct { display:flex; gap:10px; align-items:center; padding:10px 8px 4px; border-top:1px solid var(--line); margin-top:8px }
+.av { width:28px; height:28px; border-radius:50%; background:var(--n50); color:var(--n700); display:grid; place-items:center; font-weight:600; font-size:12px; flex:none }
+.acct b { display:block; font-size:13px; font-weight:500 } .acct span { font-size:12px; color:var(--text-2) }
+.main { padding:28px 32px 96px; min-width:0; position:relative }
+.ttl { display:flex; align-items:flex-start; gap:16px }
+.ttl .tw { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; flex:1; min-width:0 }
+.ttl h1 { font:600 22px/28px var(--font) }
+.vt { display:flex; gap:20px; border-bottom:1px solid var(--line); margin:16px 0 0; overflow-x:auto; scrollbar-width:none }
+.vt a { display:inline-flex; align-items:center; min-height:40px; border-bottom:2px solid transparent; margin-bottom:-1px; font-size:14px; font-weight:500; color:var(--text-2); text-decoration:none; white-space:nowrap }
+.vt a[aria-current="page"] { color:var(--text); border-bottom-color:var(--action) }
+.cols { display:grid; grid-template-columns:minmax(0,640px) 340px; gap:24px; align-items:start; margin-top:20px }
+.fcol { display:flex; flex-direction:column; gap:16px; min-width:0 }
+.side { position:sticky; top:16px; display:flex; flex-direction:column; gap:16px; min-width:0 }
+.dk .toast { position:absolute; left:50%; transform:translateX(-50%); bottom:24px; width:448px; z-index:5 }
+.dk .toast.lift { bottom:84px }
+.dk .savebar { position:absolute; left:264px; width:640px; bottom:20px; z-index:4 }
+
+/* Notices (console/notices/page.tsx) */
+.nl { list-style:none; margin:0; padding:0 }
+.nl li { display:flex; gap:12px; padding:12px 16px; border-top:1px solid var(--line) }
+.nl li:first-child { border-top:0 }
+.nl .dot { width:8px; height:8px; border-radius:50%; margin-top:6px; flex:none; border:1px solid var(--field) }
+.nl .dot.new { background:var(--rani); border-color:var(--rani) }
+.nl .t { min-width:0; flex:1 }
+.nl .t p.b { font-weight:600 }
+.nl .t p.s { font-size:14px; color:var(--text-2) }
+.nl .m { margin-top:6px; display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:var(--text-2) }
+.nl .m a { text-decoration:underline; text-underline-offset:4px; display:inline-flex; min-height:24px; align-items:center }
+
+/* ── Phone frame ─────────────────────────────────────────────────────────────────────────────────────── */
+.phone { width:390px; max-width:100%; border-radius:28px; padding:8px; background:var(--bezel); box-shadow:var(--e2) }
+.scr { border-radius:22px; overflow:hidden; background:var(--page); min-height:800px; display:flex; flex-direction:column; position:relative; font-size:15px; line-height:22px }
+.p-main { flex:1; padding:12px 16px 88px; display:flex; flex-direction:column; gap:12px; min-width:0 }
+.p-main > * { flex-shrink:0 }
+.p-head { display:flex; flex-direction:column; align-items:flex-start; gap:8px }
+.p-head .tw { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px }
+.p-head h1 { font:600 20px/26px var(--font) }
+.scr .btn { min-height:44px }
+.scr .btn.sm { min-height:36px }
+.scr .vt { margin:0 -16px; padding:0 16px; gap:20px }
+.scr .vt a { min-height:44px }
+.scr .card { padding:16px; gap:14px }
+.scr .facts { grid-template-columns:116px minmax(0,1fr) }
+.scr .in { height:44px; font-size:15px }
+.scr .grid2 { grid-template-columns:minmax(0,1fr) }
+.bottom { position:absolute; left:0; right:0; bottom:0; border-top:1px solid var(--line); background:var(--side); display:grid; grid-template-columns:repeat(4,1fr); text-align:center; font-size:11px; color:var(--text-2) }
+.bottom div { min-height:56px; padding:8px 0; display:grid; gap:2px; justify-items:center; align-content:center }
+.bottom svg { width:22px; height:22px }
+.bottom .on { color:var(--action); font-weight:500 }
+.scr .toast { position:absolute; left:12px; right:12px; bottom:72px; max-width:none; z-index:5 }
+.scr .toast.lift { bottom:142px }
+.scr .savebar { position:absolute; left:12px; right:12px; bottom:68px; z-index:4 }
+.scr .nl li { padding:12px 0 }
+
+/* Small crops for states */
+.crops { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; align-items:start; margin-top:28px }
+.crops > * { min-width:0 }
+.crop { background:var(--page); border:1px solid var(--line); border-radius:12px; padding:16px; box-shadow:var(--e1); display:flex; flex-direction:column; gap:12px }
+@media (max-width:1100px) { .crops { grid-template-columns:minmax(0,1fr) } }
+
+/* ── Brand page pieces ───────────────────────────────────────────────────────────────────────────────── */
+.logos { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+.lg { border:1px solid var(--line); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; min-width:0 }
+.lg-art { height:104px; display:grid; place-items:center; background:#FBF7F1; color:#221A14; border-bottom:1px solid var(--line) }
+.lg-art.dark { background:#221A14; color:#FBF7F1 }
+.lg.empty .lg-art { background:var(--sunk); border-bottom:1px dashed var(--g300) }
+.lg-art .name { font:400 28px/1 'Tiro Devanagari Hindi', Georgia, serif }
+.lg-meta { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; padding:8px 8px 8px 12px; min-height:46px }
+.lg-meta b { font-weight:500 } .lg-meta .sp { flex:1 }
+.lg-meta .btn.ghost { padding:0 6px }
+.scr .seg button { padding:0 9px; font-size:14px }
+.lg .ferr { padding:0 12px 10px }
+.crow { display:grid; grid-template-columns:32px minmax(0,1fr) 116px; gap:4px 12px; align-items:center; padding:10px 0; border-top:1px solid var(--line-soft) }
+.crow:first-of-type { border-top:0 }
+.crow .pick { width:32px; height:32px; border-radius:8px; border:1px solid var(--line); padding:0; cursor:pointer; position:relative; overflow:hidden }
+.crow .pick input { position:absolute; inset:-8px; width:48px; height:48px; opacity:0; cursor:pointer }
+.crow .cl { min-width:0; display:flex; flex-direction:column; gap:4px }
+.crow .cl label, .crow .cl b { font-weight:500; font-size:14px }
+.crow .cl .chips { display:flex; flex-wrap:wrap; gap:4px }
+.crow .ferr { grid-column:2 / -1 }
+.crow .hexv { font-family:var(--mono); font-size:12.5px; color:var(--text-2); text-align:right }
+.scr .crow { grid-template-columns:32px minmax(0,1fr) 104px }
+.typeline { display:flex; flex-direction:column; gap:2px; border:1px solid var(--line-soft); border-radius:8px; padding:10px 12px; background:#FBF7F1; color:#221A14 }
+.pv-card .seg { align-self:flex-start }
+.pv-cap { display:flex; justify-content:space-between; gap:8px; font-size:12px; color:var(--text-2); margin-bottom:6px }
+.pv-cap b { font-weight:500; color:var(--text) }
+.strip { display:flex; flex-direction:column; gap:14px }
+
+/* The store preview (the brand record drawn by Frrata's code; values from the record, never the console's tokens) */
+.st { --r:4px; background:var(--st-bg); color:var(--st-text); font-family:var(--st-body); border:1px solid var(--line); border-radius:8px; overflow:hidden; font-size:13px; line-height:1.45 }
+.st .disp { font-family:var(--st-display); font-weight:400 }
+.st .hd { display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--st-line); background:var(--st-bg); min-height:52px }
+.st .hd .sp { flex:1 }
+.st .hd .nw { display:flex; gap:10px; font-size:12px }
+.st .hd .bagw { display:inline-flex; align-items:center; gap:4px; font-size:12px }
+.st .hd svg.i { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round }
+.st .cardp { display:grid; grid-template-columns:64px minmax(0,1fr); gap:10px; padding:10px 12px; align-items:center }
+.st .ph { width:64px; height:96px; background:#E8DCCB; overflow:hidden; border-radius:0 }
+.st .ph img { width:100%; height:100%; object-fit:cover; object-position:50% 20%; display:block }
+.st .pr { font-weight:600; font-variant-numeric:tabular-nums }
+.st .mrp { color:var(--st-muted); font-size:11.5px }
+.st .co { padding:12px; display:flex; flex-direction:column; gap:8px }
+.st .co h3 { font-family:var(--st-display); font-weight:400; font-size:22px; line-height:1.15 }
+.st .lab { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--st-muted) }
+.st .fld { height:var(--st-field); border:1px solid var(--st-edge); border-radius:var(--st-r); background:var(--st-bg); display:flex; align-items:center; padding:0 10px; color:var(--st-muted); font-size:12px }
+.st .paybar { border-top:1px solid var(--st-line); padding:10px 12px; display:flex; flex-direction:column; gap:6px; background:var(--st-bg) }
+.st .paybar .row { display:flex; justify-content:space-between; font-size:12px }
+.st .paybar .row span { color:var(--st-muted) }
+.st .pbtn { height:var(--st-field); border-radius:var(--st-r); background:var(--st-accent); color:var(--st-on); display:grid; place-items:center; font-weight:600; font-size:13px; font-variant-numeric:tabular-nums }
+.st .em { background:var(--st-panel); padding:14px 12px; display:grid; justify-items:center; gap:6px; border-bottom:1px solid var(--st-line) }
+.st .em-b { padding:12px; display:flex; flex-direction:column; gap:6px }
+.st .em-b h4 { margin:0; font-family:var(--st-display); font-weight:400; font-size:19px }
+.st .em-b p { color:var(--st-muted) }
+.st .inv { background:#fff; color:#2A1D14; padding:12px; display:grid; gap:6px; font-family:var(--font); font-size:12px }
+.st .inv .top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px }
+.st .inv .sub { color:#6E5A4B; font-size:11px }
+.st.mini-name .hd .nm, .st .nm { font-family:var(--st-display); font-size:20px; line-height:1 }
+.pv-one > .st { display:none } .pv-one > .st.on { display:block }
+
+/* Tables */
+.tbl { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:12px; overflow:hidden; font-size:13px }
+.tbl th, .tbl td { text-align:left; padding:10px 12px; border-top:1px solid var(--line-soft); vertical-align:top }
+.tbl th { background:var(--sunk); font-weight:500; color:var(--text-2); border-top:0 }
+.tbl td:first-child { width:28%; color:var(--text-2) }
+@media (max-width:700px) {
+  .tbl, .tbl tbody, .tbl tr, .tbl td { display:block; width:auto }
+  .tbl thead { display:none }
+  .tbl tr { border-top:1px solid var(--line) } .tbl tr:first-child { border-top:0 }
+  .tbl td { border-top:0; padding:6px 12px } .tbl td:first-child { width:auto; padding-top:10px }
+}
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important } }
+
+/* ── The store's pages, drawn from the brand record (never the console's tokens) ───────────────────────────── */
+.store { --bg:#FBF7F1; --panel:#F2EADF; --ink:#221A14; --muted:#665A4E; --accent:#8C1D2C; --on:#FBF7F1; --edge:#9A8B7A; --hair:#DDD0BE; --good:#2F6B3B; --warn:#8A5300; --bad:#A3261B; --r:4px; --fh:48px;
+  --disp:'Tiro Devanagari Hindi', Georgia, serif; --body:Mukta, system-ui, sans-serif;
+  background:var(--bg); color:var(--ink); font:400 16px/26px var(--body); position:relative; display:flex; flex-direction:column }
+.store * { box-sizing:border-box }
+.store a { color:inherit }
+.store .ic { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; flex:none }
+.store .ic.sm { width:16px; height:16px }
+.s-hd { border-bottom:1px solid var(--hair); background:var(--bg) }
+.s-hd .s-w { height:56px; display:flex; align-items:center; gap:12px; padding:0 16px; max-width:1200px; margin:0 auto; position:relative }
+.s-hd .logo { display:flex; align-items:center; color:var(--ink); text-decoration:none }
+.s-hd .sp { flex:1 }
+.s-hd .back { display:inline-flex; align-items:center; gap:6px; min-height:44px; font-size:14px; text-decoration:underline; text-decoration-color:var(--edge); text-underline-offset:4px }
+.s-hd.c .s-w { justify-content:center } .s-hd.c .back { position:absolute; left:16px; text-decoration:none }
+.desk .s-hd .s-w { height:72px; padding:0 40px } .desk .s-hd.c .back { left:40px }
+.s-main { width:100%; max-width:560px; margin:0 auto; padding:24px 16px 48px; flex:1 }
+.desk .s-main { padding:40px 0 64px }
+.s-h1 { font:400 32px/38px var(--disp); letter-spacing:-.008em; margin:0 }
+.desk .s-h1 { font-size:44px; line-height:50px }
+.s-lab { font:600 13px/16px var(--body); letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:28px 0 12px }
+.s-f { display:flex; flex-direction:column; gap:6px; margin-top:14px }
+.s-f:first-of-type { margin-top:0 }
+.s-f > label { font:600 14px/20px var(--body) }
+.s-f .opt { font-weight:400; color:var(--muted) }
+.s-in { height:var(--fh); border:1px solid var(--edge); border-radius:var(--r); background:var(--bg); padding:0 12px; font:400 16px var(--body); color:var(--ink); width:100%; min-width:0; display:flex; align-items:center }
+.s-in.ph { color:var(--muted) }
+.s-in.inv { border-color:var(--bad); box-shadow:0 0 0 1px var(--bad) }
+.s-pre { display:flex } .s-pre > span:first-child { height:var(--fh); display:grid; place-items:center; padding:0 12px; border:1px solid var(--edge); border-right:0; border-radius:var(--r) 0 0 var(--r); background:var(--panel); color:var(--muted) }
+.s-pre .s-in { border-radius:0 var(--r) var(--r) 0 }
+.s-help { font-size:14px; line-height:20px; color:var(--muted) }
+.s-err { display:flex; gap:6px; font-size:14px; line-height:20px; color:var(--bad) } .s-err .ic { width:16px; height:16px; margin-top:2px }
+.s-two { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:14px } .s-two .s-f { margin-top:0 }
+.s-link { background:none; border:0; padding:0; font:inherit; font-size:14px; color:var(--ink); text-decoration:underline; text-decoration-color:var(--edge); text-underline-offset:4px; min-height:44px; cursor:pointer }
+.s-pay { display:block; border:1px solid var(--edge); border-radius:var(--r); padding:14px; margin-top:8px; background:var(--bg) }
+.s-pay.on { border-color:var(--ink); box-shadow:inset 0 0 0 1px var(--ink) }
+.s-pay.off { border-color:var(--hair); background:var(--panel) }
+.s-pay .top { display:flex; align-items:center; gap:10px } .s-pay b { font-weight:600 } .s-pay .amt { margin-left:auto; font-variant-numeric:tabular-nums lining-nums; font-weight:600 }
+.s-pay .rad { width:22px; height:22px; border-radius:50%; border:1px solid var(--edge); flex:none } .s-pay.on .rad { border:7px solid var(--ink) }
+.s-pay p { margin:4px 0 0 32px; font-size:14px; line-height:20px; color:var(--muted) }
+.s-pay.off p { margin-left:0; color:var(--bad) }
+.s-lines { list-style:none; margin:0; padding:0; border-top:1px solid var(--hair) }
+.s-line { display:grid; grid-template-columns:56px minmax(0,1fr) auto; gap:4px 12px; padding:14px 0; border-bottom:1px solid var(--hair); align-items:start }
+.s-line .ph { width:56px; height:84px; background:#E8DCCB; grid-row:span 2; overflow:hidden }
+.s-line .ph img { width:100%; height:100%; object-fit:cover; object-position:50% 20%; display:block }
+.s-line .tt { font-size:15px; line-height:21px } .s-line .tt small { display:block; color:var(--muted); font-size:14px; line-height:20px }
+.s-line .pr { font-weight:600; font-variant-numeric:tabular-nums lining-nums; text-align:right; white-space:nowrap }
+.s-line .ctl { grid-column:2 / -1; display:flex; align-items:center; gap:12px; flex-wrap:wrap }
+.s-line.dim .ph img { opacity:.5 } .s-line.dim .tt { color:var(--muted) }
+.s-step { display:inline-flex; align-items:center; border:1px solid var(--edge); border-radius:var(--r) }
+.s-step button { width:44px; height:44px; border:0; background:none; display:grid; place-items:center; color:var(--ink); cursor:pointer }
+.s-step button[disabled] { color:var(--edge); cursor:default }
+.s-step span { min-width:24px; text-align:center; font-variant-numeric:tabular-nums }
+.s-gone { display:flex; align-items:center; gap:10px; padding:14px 0; border-bottom:1px solid var(--hair); font-size:14px; color:var(--muted) }
+.s-rows { margin:10px 0 0; display:flex; flex-direction:column; gap:4px; font-size:15px }
+.s-rows div { display:flex; justify-content:space-between; gap:12px } .s-rows dd { margin:0; font-variant-numeric:tabular-nums; text-align:right } .s-rows dt { margin:0 }
+.s-rows .mut { color:var(--muted) } .s-rows .gd { color:var(--good) }
+.s-trust { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 16px; margin-top:24px; padding:16px; background:var(--panel); border-radius:var(--r); font-size:14px; line-height:20px }
+.desk .s-trust { grid-template-columns:repeat(4,minmax(0,1fr)) }
+.s-trust div { display:flex; gap:8px; align-items:flex-start }
+.s-priv { margin-top:20px; padding-top:14px; border-top:1px solid var(--hair); font-size:13px; line-height:20px; color:var(--muted) }
+.s-priv a { color:var(--accent) }
+.s-msg { display:flex; gap:10px; padding:12px 14px; background:var(--panel); border-left:3px solid var(--accent); border-radius:0 var(--r) var(--r) 0; font-size:15px; line-height:22px; margin-top:16px }
+.s-msg.bad { border-left-color:var(--bad) } .s-msg .ic { margin-top:1px }
+.s-msg.bad .ic { color:var(--bad) }
+.s-ft { background:var(--panel); border-top:1px solid var(--hair); font-size:14px; line-height:21px }
+.s-ft .s-w { max-width:1200px; margin:0 auto; padding:24px 16px 28px; display:flex; flex-direction:column; gap:16px }
+.desk .s-ft .s-w { padding:28px 40px 32px }
+.s-ft nav ul { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:4px 20px }
+.s-ft nav.two ul { display:grid; grid-template-columns:repeat(3,max-content); }
+.s-ft nav a { display:inline-flex; min-height:32px; align-items:center; text-decoration:none }
+.s-ft dl { margin:0; display:grid; gap:10px } .s-ft dt { font-weight:600 } .s-ft dd { margin:0 }
+.desk .s-ft dl { grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px }
+.s-bar { position:absolute; left:0; right:0; bottom:0; background:var(--bg); border-top:1px solid var(--hair); box-shadow:0 -6px 20px rgba(34,26,20,.08); padding:12px 16px 16px; z-index:3 }
+.s-bar .s-w { max-width:560px; margin:0 auto }
+.s-bar .row { display:flex; justify-content:space-between; font-size:14px } .s-bar .row span { color:var(--muted) } .s-bar .row b { font-variant-numeric:tabular-nums; font-weight:600 }
+.s-btn { display:grid; place-items:center; width:100%; height:52px; margin-top:8px; border:0; border-radius:var(--r); background:var(--accent); color:var(--on); font:600 16px var(--body); font-variant-numeric:tabular-nums; cursor:pointer }
+.s-btn.dis { background:#E8DCCB; color:var(--muted) }
+.s-btn.ink { background:var(--ink); color:var(--bg) }
+.s-btn.sec { background:none; color:var(--ink); border:1px solid var(--ink) }
+.s-toast { position:absolute; left:16px; right:16px; bottom:150px; z-index:4; background:var(--ink); color:var(--bg); border-radius:var(--r); padding:10px 8px 10px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 18px 48px rgba(34,26,20,.16); font-size:15px }
+.s-toast .w { flex:1 } .s-toast button { background:none; border:0; color:var(--bg); font:600 15px var(--body); min-height:44px; padding:0 8px; text-decoration:underline; text-underline-offset:4px; cursor:pointer }
+.desk .s-toast { left:50%; right:auto; width:448px; transform:translateX(-50%) }
+.s-center { display:grid; place-items:center; text-align:center; gap:12px; padding:96px 16px; flex:1 }
+.s-spin { width:24px; height:24px; border-radius:50%; border:2.5px solid var(--hair); border-top-color:var(--ink); animation:spin .9s linear infinite }
+.s-ok { display:flex; align-items:center; gap:8px; color:var(--good); font-weight:600 }
+.s-thanks { font:italic 400 20px/28px var(--disp); color:var(--ink); margin:8px 0 0 }
+.s-dl { margin:20px 0 0; display:flex; flex-direction:column; gap:4px; font-size:15px }
+.s-dl div { display:flex; justify-content:space-between; gap:16px } .s-dl dt { margin:0 } .s-dl dd { margin:0; text-align:right }
+.s-acts { display:flex; flex-direction:column; gap:10px; margin-top:20px }
+.s-prose p { margin:0 0 16px; max-width:68ch }
+.store.scr { border-radius:22px; overflow:hidden; min-height:800px }
+.store.pad { padding-bottom:140px }
+.dk-in.store { display:flex; grid-template-columns:none; font-size:16px }
+.dk-in.store.pad { padding-bottom:132px }
+
+/* The scaled store page inside the console preview */
+.fitw { position:relative; width:100%; overflow:hidden }
+.fitw > .fit-in { transform-origin:0 0 }
+.pvwin { max-height:620px; overflow:auto; border:1px solid var(--line); border-radius:8px; background:#FBF7F1 }
+.ctr { font-size:12px; color:var(--text-2); font-variant-numeric:tabular-nums; margin-left:auto }
+.ctr.bad { color:var(--bad-fg); font-weight:500 }
+.f .lrow { display:flex; align-items:center; gap:8px }
+.trow { display:grid; grid-template-columns:24px minmax(0,1fr) auto; gap:10px; align-items:center; padding:8px 0; border-top:1px solid var(--line-soft) }
+.trow:first-child { border-top:0 }
+.trow input[type=checkbox] { width:16px; height:16px; margin:4px; accent-color:var(--action) }
+.trow .mv { display:flex; gap:2px }
+.trow .mv button { width:30px; height:30px; border:1px solid var(--line); border-radius:8px; background:var(--surface); display:grid; place-items:center; cursor:pointer; color:var(--text-2) }
+.trow .mv button[aria-disabled="true"] { opacity:.4 }
+.trow.offr label { color:var(--text-2) }
+.swr { display:flex; justify-content:space-between; align-items:center; gap:12px }
+.swr span { font-weight:500 }
+.sw { width:34px; height:20px; border-radius:999px; background:var(--g300); position:relative; flex:none; border:0; padding:0; cursor:pointer }
+.sw::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:var(--e1) }
+.sw[aria-checked="true"] { background:var(--action) } .sw[aria-checked="true"]::after { left:16px }
+textarea.in { height:auto; padding:8px 10px; resize:none; line-height:20px }
+.scr textarea.in { font-size:15px }
+.pv-ctl { display:flex; flex-wrap:wrap; gap:8px; align-items:center }
+.pv-ctl select.in { width:auto; height:32px; font-size:13px }
+.scr .pv-ctl select.in { height:44px }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/></symbol>
+  <symbol id="i-orders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20h4"/></symbol>
+  <symbol id="i-profit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 15v-4M12 15V7M17 15v-6"/></symbol>
+  <symbol id="i-products" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 4 7l2 3 2-1v11h8V9l2 1 2-3-4-3c-1 2-2.5 2.5-4 2.5S9 6 8 4z"/></symbol>
+  <symbol id="i-coll" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="12" height="13" rx="2"/><path d="M8 4h10a2 2 0 0 1 2 2v10"/></symbol>
+  <symbol id="i-offers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V4h8l8 8-8 8z"/><circle cx="8.5" cy="8.5" r="1.2"/></symbol>
+  <symbol id="i-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-look" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="9" cy="10" r="1"/><circle cx="14" cy="9" r="1"/><path d="M12 20a3 3 0 0 1 0-6h3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></symbol>
+  <symbol id="i-apps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5H5V6h5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.4l3 3 6-6.4"/></symbol>
+  <symbol id="i-bad" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 3.6v5.4M8 12v.4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 4.8v3.6M8 11v.3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+</svg>
+
+<div class="doc">
+  <header class="doc-top">
+    <h1>House of Ayuda’s checkout, in its brand</h1>
+    <p>One address P2 · mockup · 16 Nov 2026 · House of Ayuda’s test store (<span class="mono">testing.frrata.shop</span>), drawn by Frrata’s checkout from the store’s brand record (P1). Phone (390) beside computer (1280). Plan <span class="mono">docs/plans/2026-11-16-one-address-checkout.md</span> § P2; spec § 3.</p>
+    <nav class="toc" aria-label="Screens">
+      <a href="#p2-short">In short</a><a href="#p2-audit">Audit</a><a href="#p2-take">What to take</a><a href="#p2-calls">Your calls</a>
+      <a href="#p2-baglink">1 · Bag link</a><a href="#p2-checkout">2 · Checkout</a><a href="#p2-more">3 · Two items, first visit</a><a href="#p2-states">4 · Line and code states</a><a href="#p2-failed">5 · Payment failed</a><a href="#p2-order">6 · Order page</a><a href="#p2-policy">7 · Policy page</a>
+      <a href="#p2-console">8 · Brand › Checkout</a><a href="#p2-refused">9 · Words refused</a><a href="#p2-waiting">10 · Waiting for the owner</a><a href="#p2-words">Words and roles</a>
+    </nav>
+  </header>
+
+  <section class="part" id="p2-short" aria-labelledby="h0">
+    <h2 id="h0">In short</h2>
+    <div class="brief" style="margin-top:12px"><ul>
+      <li><b>What:</b> checkout, the bag link, the order page and the policies of a code-site store wear its brand record: logo, colours, fonts, corners, spacing. Lines gain Remove and a stepper (O13).</li>
+      <li><b>What stays Frrata’s:</b> every field and its label, the steps, prices, payment, the pay button’s words, the privacy line and the legal block. No partner pixels or scripts (O12).</li>
+      <li><b>What a partner sets</b> (Console › Brand › Checkout): logo left or centred, the back link, one or two rows of policy links, which trust blocks show and their order, and two short lines (O14). Trust words come from the store’s settings.</li>
+      <li><b>Cost:</b> one table, one tab, the pages reading the record (plan P2·1–P2·6). Theme shops unchanged.</li>
+      <li><b>Needed from you:</b> approve these screens and the calls below.</li>
+    </ul></div>
+  </section>
+
+  <section class="part" id="p2-audit" aria-labelledby="ha">
+    <h2 id="ha">Audit: House of Ayuda’s checkout today</h2>
+    <p class="cap">Read in the code on 16 Nov 2026 (<span class="mono">(checkout)/layout.tsx</span>, <span class="mono">checkout.tsx</span>, <span class="mono">(cart)/layout.tsx</span>). Drawn from the code beside; no running copy was screenshotted.</p>
+    <table class="tbl">
+      <thead><tr><th>What is there</th><th>Why it gets in the way</th><th>Proposed</th></tr></thead>
+      <tbody>
+        <tr><td>Checkout in the store’s theme (<span class="mono">ShopFrame</span>), the theme’s fonts and colours</td><td>The shopper leaves a sindoor-and-sand site for a page in another look.</td><td>Frrata’s checkout code draws the brand record, never the theme.</td></tr>
+        <tr><td>Bag-link page: the store’s name as text, theme defaults</td><td>The first Frrata page a shopper sees has no logo.</td><td>The logo from the record, the same header as checkout.</td></tr>
+        <tr><td>Checkout lines: title, size × quantity, price</td><td>To change the bag the shopper goes back to the site.</td><td>A stepper and Remove on each line, re-priced at once (O13).</td></tr>
+        <tr><td>A sold-out line is dropped after Place order is refused</td><td>The shopper learns only after a tap.</td><td>The line shows Sold out with Remove, as the bag drawer does.</td></tr>
+        <tr><td>Order page: “Thank you, Priya” in the theme</td><td>No word from the brand.</td><td>The brand’s thank-you line, 120 characters at most.</td></tr>
+      </tbody>
+    </table>
+    <div class="crops">
+      <div><p class="lbl">Today · checkout top, theme look (drawn from the code)</p>
+        <div class="crop" style="padding:0;overflow:hidden"><div style="background:#fff;color:#171615;font:400 15px/22px Inter,system-ui">
+          <div style="border-bottom:1px solid #E3E1DD;padding:14px 16px;font:600 17px Georgia,serif">House of Ayuda</div>
+          <div style="padding:16px"><p style="font:400 24px Georgia,serif">Checkout</p><p style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#67625C;margin:18px 0 8px">Contact</p><p style="font-size:14px;font-weight:500">Mobile number</p><div style="display:flex;margin-top:4px"><span style="border:1px solid #CFCCC7;border-right:0;padding:10px 12px;background:#F6F5F3;color:#67625C">+91</span><span style="flex:1;border:1px solid #CFCCC7;height:44px"></span></div></div>
+        </div></div></div>
+    </div>
+  </section>
+
+  <section class="part" id="p2-take" aria-labelledby="ht">
+    <h2 id="ht">What to take</h2>
+    <div class="takes" style="margin-top:12px">
+      <div class="brief"><b>Shopify checkout branding API</b><p>shopify.dev “Styling”, read 16 Nov 2026 (spec § Research). Header alignment, colours, type and corners from a closed set; one style for every checkout page; no per-page styles.</p><p style="margin-top:6px"><b style="display:inline">Take:</b> a closed set, one style for every page. <b style="display:inline">Skip:</b> the Plus gate.</p></div>
+      <div class="brief"><b>GoKwik and Shiprocket Fastrr</b><p>Product pages live 16 Nov 2026 (spec § Research; no dated source on their styling). One-click checkout opens as a layer on the platform’s origin, carrying the brand’s logo.</p><p style="margin-top:6px"><b style="display:inline">Take:</b> shoppers in India know a platform checkout in the brand’s name. <b style="display:inline">Skip:</b> the layer; P3 brings the frame.</p></div>
+      <div class="brief"><b>House of Ayuda’s design system</b><p>v1, 16 Nov 2026. Fields 48 tall with a stone edge, sindoor only on the one primary, the legal block on sand, trust facts from the store’s numbers, “Removed · Undo” in the line’s place.</p><p style="margin-top:6px"><b style="display:inline">Take:</b> every rule here, as data. <b style="display:inline">Skip:</b> the 2 px corner (P1 call 3).</p></div>
+    </div>
+  </section>
+
+  <section class="part" id="p2-calls" aria-labelledby="hc">
+    <h2 id="hc">Your calls</h2>
+    <table class="tbl" style="margin-top:12px">
+      <thead><tr><th>Call</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr><td>1 · Computer layout</td><td><b>One column, 560 wide, as today.</b> Steps and their order stay fixed; a side summary would move the order step.</td></tr>
+        <tr><td>2 · Trust blocks</td><td><b>Up to four</b> from the five, in the partner’s order. House of Ayuda shows four; GST invoice is off.</td></tr>
+        <tr><td>3 · The stepper at 1</td><td><b>The drawer’s pattern:</b> − at 1 removes the line, with “Removed … Undo” in its place.</td></tr>
+        <tr><td>4 · Today’s checkout words</td><td><b>Keep them unchanged in P2.</b> Two join thoughts with a colon (the changed price, the failed payment); the storefront joins the words gate in its own phase.</td></tr>
+        <tr><td>5 · The legal block on the pilot</td><td><b>Enter the real values.</b> The test store says “Testing”; these screens draw PP1’s sample values (Ayuda Crafts Private Limited).</td></tr>
+        <tr><td>6 · An empty heading line</td><td><b>“Checkout”</b> is drawn. An empty thank-you line draws nothing.</td></tr>
+      </tbody>
+    </table>
+    <p class="cap" style="margin-top:12px">Not built: a delivery step (delivery stays in the summary, as today), partner pixels or scripts, per-page styles, a second payment button.</p>
+  </section>
+
+  <section class="part" id="p2-baglink" aria-labelledby="h1">
+    <h2 id="h1">1 · Bag link · opening checkout, and a link that doesn’t work</h2>
+    <div class="states"><span class="chip info">Opening</span><span class="chip bad">Broken link</span><span class="tag">Today’s words</span></div>
+    <ol class="steps"><li>The site’s Checkout sends the shopper to <span class="mono">/cart?l=…</span>. The page shows the logo and Opening checkout for under a second, then checkout.</li><li>A link that doesn’t read shows the second state. Go to House of Ayuda leads to the site.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390 · opening</p><div class="phone"><div class="store scr" data-page="baglink" data-o='{}'></div></div></div>
+      <div><p class="lbl">Computer · 1280 · opening</p><div class="dk"><div class="dk-in store desk" data-page="baglink" data-o='{"desk":true}'></div></div></div>
+    </div>
+    <div class="pair" style="margin-top:28px">
+      <div><p class="lbl">Phone · 390 · broken link</p><div class="phone"><div class="store scr" data-page="baglink" data-o='{"broken":true}'></div></div></div>
+      <div><p class="lbl">Computer · 1280 · broken link</p><div class="dk"><div class="dk-in store desk" data-page="baglink" data-o='{"broken":true,"desk":true}'></div></div></div>
+    </div>
+  </section>
+
+  <section class="part" id="p2-checkout" aria-labelledby="h2">
+    <h2 id="h2">2 · Checkout · filled, Pay on delivery chosen</h2>
+    <div class="states"><span class="chip ok">Ready to place</span><span class="tag">Brand heading</span><span class="tag">Stepper and Remove</span><span class="tag">Trust blocks from settings</span><span class="tag">Legal block</span></div>
+    <ol class="steps"><li>Contact, Delivery address, Payment, Your order: today’s fields, labels, steps and order.</li><li>Each line has − and + (1 to 10) and Remove. A change re-prices the bag through the quote.</li><li>Delivery and Arrives sit in the summary as today; the trust blocks repeat the store’s own rules.</li><li>The pay bar stays at the foot: the method, the server’s total, Place order · ₹2,790.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390 · whole page</p><div class="phone"><div class="store scr pad" data-page="checkout" data-o='{"filled":true,"method":"cod"}'></div></div></div>
+      <div><p class="lbl">Computer · 1280 · whole page</p><div class="dk"><div class="dk-in store desk pad" data-page="checkout" data-o='{"filled":true,"method":"cod","desk":true}'></div></div></div>
+    </div>
+  </section>
+
+  <section class="part" id="p2-more" aria-labelledby="h3">
+    <h2 id="h3">3 · Two items, Pay on delivery not offered · first visit, nothing chosen</h2>
+    <div class="states"><span class="chip warn">Pay on delivery not offered</span><span class="chip neu">Nothing chosen</span><span class="tag">Delivery charged below ₹1,999</span></div>
+    <ol class="steps"><li>Two items come to ₹4,480, over the ₹3,000 limit. The Pay on delivery card says why, in today’s words.</li><li>A first visit: empty fields, no method, the button reads Choose how to pay.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390 · two items, Pay online chosen</p><div class="phone"><div class="store scr pad" data-page="checkout" data-o='{"filled":true,"method":"prepaid","two":true}'></div></div></div>
+      <div><p class="lbl">Computer · 1280 · one item under ₹1,999, first visit</p><div class="dk"><div class="dk-in store desk pad" data-page="checkout" data-o='{"desk":true,"lemon":true}'></div></div></div>
+    </div>
+  </section>
+
+  <section class="part" id="p2-states" aria-labelledby="h4">
+    <h2 id="h4">4 · Line, price, code and field states</h2>
+    <p class="cap">Phone crops of the parts that change; everything around them is screen 2.</p>
+    <div class="crops" data-crops="states" style="grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),390px))"></div>
+  </section>
+
+  <section class="part" id="p2-failed" aria-labelledby="h5">
+    <h2 id="h5">5 · Payment failed</h2>
+    <div class="states"><span class="chip bad">Payment failed</span><span class="tag">Details kept</span><span class="tag">Today’s words</span></div>
+    <ol class="steps"><li>The shopper closed Razorpay. The order is kept and nothing was charged.</li><li>The details are kept and dimmed; the bar offers Try paying again · ₹2,790. Choosing Pay on delivery switches the same order.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390</p><div class="phone"><div class="store scr pad" data-page="checkout" data-o='{"filled":true,"method":"prepaid","failed":true}'></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in store desk pad" data-page="checkout" data-o='{"filled":true,"method":"prepaid","failed":true,"desk":true}'></div></div></div>
+    </div>
+  </section>
+
+  <section class="part" id="p2-order" aria-labelledby="h6">
+    <h2 id="h6">6 · Order page · placed with Pay on delivery; paid, waiting, on its way</h2>
+    <div class="states"><span class="chip ok">Placed</span><span class="chip ok">Paid</span><span class="chip warn">Waiting for payment</span><span class="chip info">On its way</span><span class="tag">Brand thank-you line</span></div>
+    <ol class="steps"><li>After Place order: Order placed, Thank you, Priya, then the brand’s thank-you line.</li><li>Order number, status and Arrives; the items; Keep ₹2,790 ready; WhatsApp, the receipt link and the returns line, as today.</li><li>The thank-you line shows only once the order is placed.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390 · placed</p><div class="phone"><div class="store scr" data-page="order" data-o='{"state":"placed"}'></div></div></div>
+      <div><p class="lbl">Computer · 1280 · placed</p><div class="dk"><div class="dk-in store desk" data-page="order" data-o='{"state":"placed","desk":true}'></div></div></div>
+    </div>
+    <div class="crops" data-crops="order" style="grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),390px))"></div>
+  </section>
+
+  <section class="part" id="p2-policy" aria-labelledby="h7">
+    <h2 id="h7">7 · Policy page · Returns and exchanges</h2>
+    <div class="states"><span class="tag">Written from settings</span><span class="tag">Same header and legal block</span><span class="tag">Logo centred, two rows of links (crop)</span></div>
+    <ol class="steps"><li>The five policy pages read the brand record too. The words come from settings, or the owner’s own text, as today.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390</p><div class="phone"><div class="store scr" data-page="policy" data-o='{}'></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in store desk" data-page="policy" data-o='{"desk":true}'></div></div></div>
+    </div>
+    <div class="crops"><div><p class="lbl">Header: logo centred, back link on · footer: policy links in two rows</p><div class="crop" style="padding:0;overflow:hidden"><div class="store" data-page="policy" data-o='{"header":"centre","rows":2,"short":true}'></div></div></div></div>
+  </section>
+
+  <section class="part" id="p2-console" aria-labelledby="h8">
+    <h2 id="h8">8 · Owner or partner · Console › Brand › Checkout</h2>
+    <div class="states"><span class="chip ok">Saved</span><span class="tag">Counters</span><span class="tag">Preview on sample data, every state</span><span class="tag">Live</span></div>
+    <ol class="steps"><li>Brand gains a second tab, Checkout. Header, Footer, Trust blocks and Your words, one card each; the preview beside them.</li><li>Pick a page and a state under Preview: the sample bag is the store’s own products. Every change redraws it at once.</li><li>Save; the toast says Saved. with Undo. Try the two lines: the counters and the refusals follow.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390</p><div class="phone"><div class="scr" data-console="saved" data-view="phone"></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in" data-console="saved" data-view="desk"></div></div></div>
+    </div>
+  </section>
+
+  <section class="part" id="p2-refused" aria-labelledby="h9">
+    <h2 id="h9">9 · Words refused at the field (T20)</h2>
+    <div class="states"><span class="chip bad">UPI ID</span><span class="chip bad">Phone number</span><span class="chip bad">Link</span><span class="chip bad">6 or more digits</span><span class="chip bad">Too long</span><span class="tag">One error toast with Show</span></div>
+    <ol class="steps"><li>The check runs as the partner types and again on Save, the same function the server runs.</li><li>A refused line keeps what was typed, its edge turns red, and one line under it says what to take out.</li><li>Save keeps the page; one error toast counts the lines that need fixing.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390 · a UPI ID in the thank-you line</p><div class="phone"><div class="scr" data-console="upi" data-view="phone"></div></div></div>
+      <div><p class="lbl">Computer · 1280 · a UPI ID in the thank-you line, the heading too long</p><div class="dk"><div class="dk-in" data-console="upi" data-view="desk"></div></div></div>
+    </div>
+    <div class="crops" data-crops="refusals"></div>
+  </section>
+
+  <section class="part" id="p2-waiting" aria-labelledby="h10">
+    <h2 id="h10">10 · Partner · waiting for the owner (O17); Builder · preview only (O9)</h2>
+    <div class="states"><span class="chip warn">Waiting for the owner</span><span class="chip neu">Preview only</span><span class="tag">Owner approves in Notices (P1 screen 5)</span></div>
+    <ol class="steps"><li>Neel Studio changes the heading on an open store and saves. The toast says Sent to the owner; checkout keeps the live words until the owner approves.</li><li>The owner’s Notices row reads “Your partner changed your checkout · The checkout heading.” with Approve change and Decline.</li><li>A Builder reads the tab as facts beside the preview.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390 · partner, waiting</p><div class="phone"><div class="scr" data-console="waiting" data-view="phone"></div></div></div>
+      <div><p class="lbl">Computer · 1280 · Builder, preview only</p><div class="dk"><div class="dk-in" data-console="builder" data-view="desk"></div></div></div>
+    </div>
+  </section>
+
+  <section class="part" id="p2-words" aria-labelledby="h11">
+    <h2 id="h11">Words and who sees what</h2>
+    <p class="cap">Every new string. Everything else on the store’s pages is today’s (<span class="mono">checkout.tsx</span>, <span class="mono">checkout-place.ts</span>, <span class="mono">checkout-pay.ts</span>, <span class="mono">cod-words.ts</span>, <span class="mono">order-view.tsx</span>, <span class="mono">words.ts</span>, <span class="mono">bag.tsx</span>). The brand’s two lines are the brand’s own; the ones drawn are samples.</p>
+    <table class="tbl">
+      <thead><tr><th>Where</th><th>Words</th></tr></thead>
+      <tbody>
+        <tr><td>Shopper · header</td><td>Back to House of Ayuda (Back to {store})</td></tr>
+        <tr><td>Shopper · a removed line</td><td>Removed Lemon Chikankari Kurti. · Undo</td></tr>
+        <tr><td>Shopper · trust blocks</td><td>Delivered in 4–7 days · 7-day exchange or returns (today’s) · Pay on delivery up to ₹3,000 · Secure payment by Razorpay · GST invoice on every order</td></tr>
+        <tr><td>Shopper · a reduced line</td><td>Only 2 left in XS.</td></tr>
+        <tr><td>Brand · samples drawn</td><td>Almost yours (heading) · We’re glad this one found you. For the days you’ll keep. (thank-you line)</td></tr>
+        <tr><td>Console · tabs</td><td>Logo, colours and type · Checkout</td></tr>
+        <tr><td>Console · cards</td><td>Header · Footer · Trust blocks · Your words · Preview</td></tr>
+        <tr><td>Console · Header</td><td>Logo · Left · Centred · “Back to House of Ayuda” link</td></tr>
+        <tr><td>Console · Footer</td><td>Policy links · One row · Two rows · Legal block · Always shown</td></tr>
+        <tr><td>Console · Trust blocks</td><td>Up to 4. (limit) · Move up · Move down (button names) · (i) Words from your delivery, returns and payment settings.</td></tr>
+        <tr><td>Console · Your words</td><td>Plain text. No phone numbers, UPI IDs or links. (limit) · Checkout heading · Thank-you line · 12/24 (counter)</td></tr>
+        <tr><td>Console · refusals at the field</td><td>This line has a UPI ID. Remove it to save. · This line has a phone number. Remove it to save. · This line has a link. Remove it to save. · This line has a long number. Remove it to save. · Up to 24 characters. · Up to 120 characters.</td></tr>
+        <tr><td>Console · error toast on Save</td><td>2 lines need fixing · Show</td></tr>
+        <tr><td>Console · Preview</td><td>Checkout · Order page · Bag link · Policy · Show · Ready to pay · Pay on delivery not offered · A sold-out line · A changed price · Payment failed · Sample data</td></tr>
+        <tr><td>Console · waiting, Builder</td><td>Waiting for the owner · Sent to the owner. · Preview only (P1’s)</td></tr>
+        <tr><td>Owner · Notices row</td><td>Your partner changed your checkout · The checkout heading. · Approve change · Decline</td></tr>
+      </tbody>
+    </table>
+    <table class="tbl" style="margin-top:16px">
+      <thead><tr><th>What</th><th>Who sets it</th></tr></thead>
+      <tbody>
+        <tr><td>Logo, colours, fonts, corners, spacing</td><td>Brand (P1), the same record.</td></tr>
+        <tr><td>Header, footer, trust blocks, the two lines</td><td>Owner and Manager; the partner’s owner and Leads (waiting for the owner on an open store); Builders preview only.</td></tr>
+        <tr><td>Fields, labels, steps, prices, payment, the pay button, consent and privacy words, the legal block</td><td>Frrata only. No setting.</td></tr>
+        <tr><td>Pixels and outside scripts on these pages</td><td>Nobody (O12).</td></tr>
+        <tr><td>Theme shops</td><td>Nothing new: checkout keeps the theme until the shop moves to code.</td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+(function () {
+  // ── The store's facts (House of Ayuda test store, 2026-11-16) and the sample shopper ─────────────────────
+  var IMG = 'https://q2ihwblncli6vdel.public.blob.vercel-storage.com/tenants/7e13d8c4-3c04-4ab2-b2d1-4bc3573a8ade/products/'
+  var P = {
+    sage: { t: 'Sage Floral Kurta Set', v: 'M', p: 279000, img: 'e65e761d-29c3-4d87-9bf3-2afece2e661f' },
+    lemon: { t: 'Lemon Chikankari Kurti', v: 'S', p: 169000, img: 'a758b210-f055-462e-a824-d2a0bff496c2' }
+  }
+  var SHOP = { charge: 7900, freeAbove: 199900, codMax: 300000, days: '4–7', returns: 7, arrives: '20–23 Nov' }
+  var LEGAL = { name: 'Ayuda Crafts Private Limited', address: '14 Weavers Lane, Indiranagar, Bengaluru, Karnataka 560038', care: 'care@example.com · +91 98000 00000', grievance: 'Anita Rao, grievance@example.com' }
+  var POLICIES = ['Shipping', 'Returns and exchanges', 'Privacy', 'Terms of sale', 'Contact us']
+  var rupees = function (p) { return '₹' + (p / 100).toLocaleString('en-IN') }
+
+  // ── Icons and the identity (House of Ayuda's own set) ───────────────────────────────────────────────────
+  var I = {
+    back: '<path d="M20 12H5M10.5 6.5 5 12l5.5 5.5"/>', minus: '<path d="M5 12h14"/>', plus: '<path d="M12 5v14M5 12h14"/>',
+    truck: '<path d="M2.5 6.5h11v10h-11z"/><path d="M13.5 9.5h4l3 3.5v3.5h-7"/><circle cx="6.5" cy="17.5" r="1.75"/><circle cx="17" cy="17.5" r="1.75"/>',
+    ret: '<path d="M4 9.5h11a5 5 0 0 1 0 10H9"/><path d="M8 5.5 4 9.5l4 4"/>',
+    cash: '<rect x="2.5" y="6" width="19" height="12" rx="1"/><path d="M9.5 9.5h5M9.5 12h5M11 9.5c2.2 0 2.2 2.5 0 2.5l3 3"/>',
+    lock: '<rect x="5" y="10.5" width="14" height="10" rx="1"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+    doc: '<path d="M6 3.5h8.5L18 7v13.5H6z"/><path d="M14 3.5V7h4M9 12h6M9 15.5h6"/>',
+    check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>', alert: '<path d="M12 3.5 21 19.5H3Z"/><path d="M12 10v4.5M12 17v.2"/>',
+    info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8v.2"/>', wa: '<path d="M4.5 19.5 5.6 16A7.6 7.6 0 1 1 8.2 18.6Z"/>'
+  }
+  var ic = function (n, c) { return '<svg class="ic ' + (c || '') + '" viewBox="0 0 24 24" aria-hidden="true">' + I[n] + '</svg>' }
+  var MONO = '<g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 50V23.5C6 15 12.4 11 16.2 8.6 18.6 7.1 19.6 5.3 20 3 20.4 5.3 21.4 7.1 23.8 8.6 27.6 11 34 15 34 23.5V50"/><path d="M2 50h36"/><path d="M12.6 50 20 19l7.4 31"/><path d="M15.2 39h9.6"/></g><circle cx="20" cy="12.6" r="1.9" fill="#8C1D2C"/>'
+  var logoH = function (h) { return '<svg viewBox="0 0 168 52" height="' + h + '" width="' + Math.round(h * 168 / 52) + '" role="img" aria-label="House of Ayuda">' + MONO + '<text x="50" y="18.5" font-family="Mukta, sans-serif" font-weight="600" font-size="8.6" letter-spacing="2.45" fill="currentColor">HOUSE OF</text><text x="48.6" y="47" font-family="\'Tiro Devanagari Hindi\', Georgia, serif" font-size="34" fill="currentColor">Ayuda</text></svg>' }
+
+  // ── The design (checkout_design) a partner sets; the defaults drawn here are House of Ayuda's ───────────
+  var DESIGN = { header: 'left', back: true, rows: 1, trust: ['delivery', 'returns', 'cod', 'secure'], heading: 'Almost yours', thanks: 'We’re glad this one found you. For the days you’ll keep.' }
+  var TRUST = {
+    delivery: ['truck', 'Delivered in ' + SHOP.days + ' days'], returns: ['ret', SHOP.returns + '-day exchange or returns'],
+    cod: ['cash', 'Pay on delivery up to ' + rupees(SHOP.codMax)], secure: ['lock', 'Secure payment by Razorpay'], gst: ['doc', 'GST invoice on every order']
+  }
+
+  // ── The pages ──────────────────────────────────────────────────────────────────────────────────────────
+  function head(o, d) {
+    var c = (o.header || d.header) === 'centre', back = o.back !== undefined ? o.back : d.back
+    var link = back ? (c ? '<a class="back" href="#p2-checkout" aria-label="Back to House of Ayuda">' + ic('back') + (o.desk ? 'Back to House of Ayuda' : '') + '</a>' : '<a class="back" href="#p2-checkout">Back to House of Ayuda</a>') : ''
+    return '<header class="s-hd' + (c ? ' c' : '') + '"><div class="s-w">' + (c ? link : '') + '<a class="logo" href="#p2-checkout">' + logoH(o.desk ? 40 : 34) + '</a>' + (c ? '' : '<span class="sp"></span>' + link) + '</div></header>'
+  }
+  function foot(o, d) {
+    var rows = o.rows || d.rows
+    return '<footer class="s-ft"><div class="s-w"><nav class="' + (rows === 2 ? 'two' : '') + '" aria-label="Policies"><ul>' + POLICIES.map(function (p) { return '<li><a href="#p2-policy">' + p + '</a></li>' }).join('') + '</ul></nav>' +
+      '<dl><div><dt>Sold by</dt><dd>' + LEGAL.name + '<br>' + LEGAL.address + '</dd></div><div><dt>Customer care</dt><dd>' + LEGAL.care + '</dd></div><div><dt>Grievance officer</dt><dd>' + LEGAL.grievance + '</dd></div></dl></div></footer>'
+  }
+  function field(id, label, value, o) {
+    o = o || {}
+    var box = '<span class="s-in' + (value ? '' : ' ph') + (o.err ? ' inv' : '') + '" role="textbox" aria-label="' + label + '">' + (value || '') + '</span>'
+    if (o.pre) box = '<span class="s-pre"><span>+91</span>' + box + '</span>'
+    return '<div class="s-f"><label>' + label + (o.opt ? ' <span class="opt">(optional)</span>' : '') + '</label>' + box + (o.help ? '<p class="s-help">' + o.help + '</p>' : '') + (o.err ? '<p class="s-err">' + ic('alert') + o.err + '</p>' : '') + '</div>'
+  }
+  function line(l, o) {
+    var q = l.qty || 1
+    if (l.removed) return '<li class="s-gone">Removed ' + l.t + '.<button type="button" class="s-link" style="min-height:24px">Undo</button></li>'
+    var sold = l.problem === 'sold_out'
+    var ctl = sold ? '<p class="s-err" style="margin:0">' + ic('alert') + 'Sold out since you added it.</p><button type="button" class="s-link">Remove</button>'
+      : '<span class="s-step"><button type="button" aria-label="One fewer ' + l.t + '">' + ic('minus', 'sm') + '</button><span aria-live="polite">' + q + '</span><button type="button" aria-label="One more ' + l.t + '"' + (l.max && q >= l.max ? ' disabled' : '') + '>' + ic('plus', 'sm') + '</button></span><button type="button" class="s-link">Remove</button>'
+    var note = l.problem === 'reduced' ? '<p class="s-help" style="grid-column:2 / -1;color:var(--warn)">Only 2 left in XS.</p>' : ''
+    return '<li class="s-line' + (sold ? ' dim' : '') + '"><span class="ph"><img src="' + IMG + l.img + '-400.webp" alt="" loading="lazy" width="56" height="84"></span><span class="tt">' + l.t + '<small>' + l.v + '</small></span><span class="pr">' + (sold ? '' : rupees(l.p * q)) + '</span>' + note + '<div class="ctl">' + ctl + '</div></li>'
+  }
+  function bag(o) {
+    if (o.lines) return o.lines
+    if (o.two) return [Object.assign({}, P.sage), Object.assign({}, P.lemon)]
+    if (o.lemon) return [Object.assign({}, P.lemon)]
+    return [Object.assign({}, P.sage)]
+  }
+  function checkout(o, d) {
+    d = d || DESIGN
+    var lines = bag(o), live = lines.filter(function (l) { return !l.removed && l.problem !== 'sold_out' })
+    var sub = live.reduce(function (s, l) { return s + l.p * (l.qty || 1) }, 0)
+    var ship = sub >= SHOP.freeAbove ? 0 : SHOP.charge, total = sub + ship, cod = total <= SHOP.codMax
+    var method = o.method || null, f = o.filled, E = o.errors || {}
+    var h = '<main class="s-main"><h1 class="s-h1">' + (d.heading || 'Checkout') + '</h1>'
+    if (o.msg) h += '<p class="s-msg ' + (o.msg[0] === 'bad' ? 'bad' : '') + '" role="alert">' + ic(o.msg[0] === 'bad' ? 'alert' : 'info') + '<span>' + o.msg[1] + '</span></p>'
+    if (o.failed) h += '<p class="s-msg bad" role="alert">' + ic('alert') + '<span>Payment did not go through. Nothing was charged. Try again, or pay on delivery instead: your details are kept.</span></p>'
+    h += '<div' + (o.failed ? ' style="opacity:.6"' : '') + '><p class="s-lab">Contact</p>' +
+      field('phone', 'Mobile number', f ? '98000 00000' : (E.phone ? '98000 000' : ''), { pre: true, help: 'The courier calls this number to deliver.', err: E.phone }) +
+      field('email', 'Email', f ? 'priya@example.com' : '', { opt: true, help: 'For your order updates and invoice.' }) +
+      '<p class="s-lab">Delivery address</p>' + field('name', 'Full name', f || E.phone ? 'Priya Sharma' : '') +
+      '<div class="s-two">' + field('pin', 'Pincode', f ? '560038' : (E.pincode ? '56003' : ''), { err: E.pincode }) + field('city', 'City', f ? 'Bengaluru' : '') + '</div>' +
+      field('house', 'House, street', f ? '12, 4th Cross' : '') + field('area', 'Area, locality', f ? 'Indiranagar' : '') + '<button type="button" class="s-link">Add a landmark</button>' +
+      field('state', 'State', f ? 'Karnataka' : 'Choose…') + '</div>'
+    if (o.code) h += '<p class="s-lab">Offers</p>' + (o.code === 'applied' ? '<p style="font-size:15px">Code <b style="font-family:var(--mono,monospace);font-size:14px">AYUDA10</b> applied. <button type="button" class="s-link">Remove</button></p>'
+      : '<p style="font-size:15px">Code <b style="font-family:monospace;font-size:14px">FESTIVE15</b><span style="color:var(--bad)"> — this code doesn’t work here.</span> <button type="button" class="s-link">Remove</button></p>')
+    else h += '<button type="button" class="s-link" style="margin-top:12px">Have a code?</button>'
+    h += '<p class="s-lab">Payment</p><div role="radiogroup" aria-label="How to pay">' +
+      '<div class="s-pay' + (method === 'prepaid' ? ' on' : '') + '" role="radio" aria-checked="' + (method === 'prepaid') + '"><div class="top"><span class="rad"></span><b>Pay online</b><span class="amt">' + rupees(total) + '</span></div><p>UPI, cards, netbanking. Opens Razorpay.</p></div>' +
+      (cod ? '<div class="s-pay' + (method === 'cod' ? ' on' : '') + '" role="radio" aria-checked="' + (method === 'cod') + '"><div class="top"><span class="rad"></span><b>Pay on delivery</b><span class="amt">' + rupees(total) + '</span></div><p>Cash or UPI to the courier.</p></div>'
+        : '<div class="s-pay off"><b>Pay on delivery</b><p>Pay on delivery is for orders up to ' + rupees(SHOP.codMax) + '. Pay online for this bag.</p></div>') + '</div>'
+    h += '<p class="s-lab">Your order</p><ul class="s-lines">' + lines.map(function (l) { return line(l, o) }).join('') + '</ul>'
+    if (o.code === 'applied') h += '<dl class="s-rows"><div class="gd"><dt>AYUDA10</dt><dd>−' + rupees(27900) + '</dd></div></dl>'
+    h += '<dl class="s-rows"><div><dt>Delivery</dt><dd>' + (ship ? rupees(ship) : 'Free') + '</dd></div>' + (o.nopin ? '' : '<div class="mut"><dt>Arrives</dt><dd>' + SHOP.arrives + '</dd></div>') + '<div class="mut"><dt>Returns</dt><dd>' + SHOP.returns + '-day returns and exchanges</dd></div></dl>'
+    if (o.nopin) h += '<p class="s-err" role="alert" style="margin-top:6px">' + ic('alert') + 'This shop does not deliver to this PIN code yet.</p>'
+    h += '<div class="s-trust">' + d.trust.map(function (k) { return '<div>' + ic(TRUST[k][0]) + '<span>' + TRUST[k][1] + '</span></div>' }).join('') + '</div>'
+    h += '<p class="s-priv">' + LEGAL.name + ' uses your name, phone and address only to deliver this order and to contact you about it. <a href="#p2-policy">Your data and how to ask for it to be deleted</a>.</p></main>'
+    var label = method === 'cod' ? 'Pay on delivery' : method === 'prepaid' ? 'Pay online' : 'Choose how to pay'
+    var btn = o.failed ? 'Try paying again · ' + rupees(total) : !method ? 'Choose how to pay' : method === 'cod' ? 'Place order · ' + rupees(total) : 'Pay · ' + rupees(total)
+    var bar = '<div class="s-bar"><div class="s-w"><p class="row"><span>' + label + '</span><b>' + rupees(total) + '</b></p><button type="submit" class="s-btn' + (method ? '' : ' dis') + '">' + btn + '</button></div></div>'
+    var toast = o.toast ? '<div class="s-toast" role="status"><span class="w">' + o.toast + '</span><button type="button">Show</button></div>' : ''
+    return head(o, d) + h + foot(o, d) + (o.crop ? '' : bar) + toast
+  }
+  function baglink(o) {
+    var body = o.broken ? '<div class="s-center"><h1 class="s-h1" style="font-size:28px;line-height:34px">This bag link doesn’t work</h1><p style="color:var(--muted)">Add your items to the bag again.</p><a class="s-btn" style="width:auto;padding:0 24px;text-decoration:none" href="#p2-baglink">Go to House of Ayuda</a></div>'
+      : '<div class="s-center" role="status"><span class="s-spin" aria-hidden="true"></span><p style="color:var(--muted)">Opening checkout</p></div>'
+    return '<header class="s-hd c"><div class="s-w"><span class="logo">' + logoH(o.desk ? 40 : 34) + '</span></div></header>' + body
+  }
+  var STATE = { placed: 'Placed · the shop confirms it soon', paid: 'Paid · being packed', waiting: 'Waiting for your payment', shipped: 'On its way' }
+  function order(o, d) {
+    d = d || DESIGN
+    var st = o.state, placed = st !== 'waiting'
+    var h = '<main class="s-main">' + (placed ? '<p class="s-ok">' + ic('check') + 'Order placed</p>' : '') +
+      '<h1 class="s-h1">' + (placed ? 'Thank you, Priya' : 'Your order') + '</h1>' + (placed && d.thanks ? '<p class="s-thanks">' + d.thanks + '</p>' : '') +
+      '<dl class="s-dl"><div><dt>Order</dt><dd style="font-family:monospace;font-weight:600">AY-1042</dd></div><div><dt>Status</dt><dd>' + STATE[st] + '</dd></div>' + (placed ? '<div><dt>Arrives</dt><dd>' + SHOP.arrives + '</dd></div>' : '') + '</dl>'
+    if (o.short) return head(o, d) + h + '</main>'
+    h += '<ul class="s-lines" style="margin-top:20px"><li class="s-line" style="grid-template-columns:48px minmax(0,1fr) auto"><span class="ph" style="width:48px;height:72px;grid-row:auto"><img src="' + IMG + P.sage.img + '-400.webp" alt="" loading="lazy" width="48" height="72"></span><span class="tt">' + P.sage.t + '<small>M · × 1</small></span><span class="pr">' + rupees(P.sage.p) + '</span></li></ul>'
+    var tot = st === 'placed' ? ['Keep ' + rupees(P.sage.p) + ' ready', 'cash or UPI'] : st === 'paid' || st === 'shipped' ? ['Paid online', rupees(P.sage.p)] : ['Total', rupees(P.sage.p)]
+    h += '<dl class="s-rows"><div><dt>Delivery</dt><dd>Free</dd></div><div style="font-size:17px;padding-top:4px"><dt style="font-weight:600">' + tot[0] + '</dt><dd>' + tot[1] + '</dd></div><div class="mut"><dt>To</dt><dd>Indiranagar, Bengaluru 560038 · phone 98••• ••000</dd></div><div class="mut"><dt>Updates to</dt><dd>priya@example.com</dd></div></dl>'
+    h += '<div class="s-acts">' + (st === 'waiting' ? '<button type="button" class="s-btn" style="margin:0">Pay ' + rupees(P.sage.p) + ' online</button><button type="button" class="s-btn sec" style="margin:0">Pay on delivery instead</button>' : '') +
+      '<a class="s-btn ink" style="margin:0;text-decoration:none" href="#p2-order">Message House of Ayuda on WhatsApp</a></div>' +
+      '<p class="s-help" style="margin-top:16px">Save this page: it is your receipt. <button type="button" class="s-link" style="min-height:24px">Copy link</button></p>' +
+      '<p class="s-help" style="margin-top:8px">7-day returns and exchanges. <a href="#p2-policy" style="color:var(--accent)">How returns work</a></p></main>'
+    return head(o, d) + h + foot(o, d)
+  }
+  function policy(o, d) {
+    d = d || DESIGN
+    var h = '<main class="s-main"><h1 class="s-h1">Returns and exchanges</h1><div class="s-prose" style="margin-top:20px">' +
+      '<p>You can ask for an exchange or a refund within 7 days of delivery. Clothes, footwear and accessories must be unused, unwashed and with their tags.</p>' +
+      (o.short ? '' : '<p>Write to care@example.com with your order number. We arrange the pickup where the courier serves your pincode.</p><p>Damaged, faulty or wrong items are always taken back, whatever the window.</p><p>A refund for an order paid online goes back to the same account within 5–7 working days of the pickup. A Pay on delivery order is refunded to a bank account or UPI ID you give us.</p>') +
+      '</div></main>'
+    return head(o, d) + h + foot(o, d)
+  }
+  var PAGES = { checkout: checkout, baglink: baglink, order: order, policy: policy }
+  document.querySelectorAll('[data-page]').forEach(function (el) { var o = JSON.parse(el.getAttribute('data-o') || '{}'); el.innerHTML = PAGES[el.getAttribute('data-page')](o) })
+
+  // ── Crops: the states that change one part of a page ───────────────────────────────────────────────────
+  var CROPS = {
+    states: [
+      ['A sold-out line and a reduced one (from the quote)', function () { return checkout({ lines: [Object.assign({}, P.sage, { v: 'XXL', problem: 'sold_out' }), Object.assign({}, P.sage, { v: 'XS', qty: 2, max: 2, problem: 'reduced' })], filled: true, method: 'cod', crop: true }) }, 'lines'],
+      ['A line removed, with Undo in its place', function () { return checkout({ lines: [Object.assign({}, P.sage), Object.assign({}, P.lemon, { removed: true })], filled: true, method: 'cod', crop: true }) }, 'lines'],
+      ['A changed price after Place order (today’s words)', function () { return checkout({ filled: true, method: 'cod', crop: true, lines: [Object.assign({}, P.sage, { p: 289000 })], msg: ['changed', 'Something changed since you looked: Sage Floral Kurta Set: ₹2,790 → ₹2,890. Check the total and place the order again.'] }) }, 'top'],
+      ['A code applied (sample code)', function () { return checkout({ filled: true, method: 'cod', code: 'applied', crop: true }) }, 'code'],
+      ['A code refused', function () { return checkout({ filled: true, method: 'cod', code: 'refused', crop: true }) }, 'code'],
+      ['Two fields need fixing (the shop’s toast)', function () { return checkout({ method: 'cod', errors: { phone: 'A 10-digit mobile number.', pincode: 'A 6-digit pincode.' }, toast: '2 details need fixing' }) }, 'top'],
+      ['Not delivered to this PIN code', function () { return checkout({ filled: true, method: null, crop: true, nopin: true }) }, 'lines'],
+      ['An empty bag (today’s words)', function () { return head({}, DESIGN) + '<main class="s-main"><p style="text-align:center;padding:40px 0">Your bag is empty. <a href="#p2-checkout" style="color:var(--accent)">See what is new</a></p></main>' }, 'all']
+    ],
+    order: [
+      ['Paid online', function () { return order({ state: 'paid', short: true }) }],
+      ['Waiting for your payment (Pay online, or Pay on delivery instead)', function () { return order({ state: 'waiting' }) }],
+      ['On its way', function () { return order({ state: 'shipped', short: true }) }]
+    ]
+  }
+  // A crop shows one part of the page through a window: its top, its order lines or its offers row.
+  var CUT = { top: [null, 620], lines: ['Your order', 400], code: ['Offers', 150], all: [null, 0] }
+  function crop(box, title, html, cut) {
+    var wrap = document.createElement('div')
+    wrap.innerHTML = '<p class="lbl">' + title + '</p><div class="crop" style="padding:0;overflow:hidden"><div class="store"><div class="cin">' + html + '</div></div></div>'
+    box.appendChild(wrap)
+    var st = wrap.querySelector('.store'), cin = st.firstElementChild, c = CUT[cut || 'all']
+    if (c[1]) { st.style.height = c[1] + 'px'; st.style.overflow = 'hidden' }
+    var place = function () {
+      if (c[0]) {
+        cin.style.transform = ''
+        var lab = Array.prototype.filter.call(st.querySelectorAll('.s-lab'), function (x) { return x.textContent === c[0] })[0]
+        if (lab) cin.style.transform = 'translateY(' + (-(lab.offsetTop - 16)) + 'px)'
+      }
+      // The shop's toast sits above the pay bar, never over it (frata-design-language Feedback 6).
+      var t = st.querySelector('.s-toast'), bar = st.querySelector('.s-bar')
+      if (t && c[1]) { t.style.bottom = 'auto'; t.style.top = (c[1] - (bar ? bar.offsetHeight : 0) - t.offsetHeight - 12) + 'px' }
+    }
+    place(); window.addEventListener('load', place); if (document.fonts && document.fonts.ready) document.fonts.ready.then(place)
+  }
+  document.querySelectorAll('[data-crops]').forEach(function (box) {
+    var k = box.getAttribute('data-crops'); if (!CROPS[k]) return
+    CROPS[k].forEach(function (c) { crop(box, c[0], c[1](), c[2]) })
+  })
+
+  // ── Console › Brand › Checkout ─────────────────────────────────────────────────────────────────────────
+  var esc = function (v) { return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;') }
+  var uid = 0, id = function (p) { return p + '-' + (++uid) }
+  var x18 = '<svg width="18" height="18"><use href="#i-x"/></svg>', alert16 = '<svg aria-hidden="true"><use href="#i-alert"/></svg>'
+  // The two lines' check (src/domains/brand/lines.ts, P1·1): lengths, then UPI IDs, phone numbers, links, runs of 6+ digits.
+  function lineProblem(v, max) {
+    if (/[a-z0-9._-]{2,}@[a-z]{2,}/i.test(v)) return 'This line has a UPI ID. Remove it to save.'
+    if (/(\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}/.test(v)) return 'This line has a phone number. Remove it to save.'
+    if (/(https?:\/\/|www\.|\b[a-z0-9-]+\.(com|in|shop|co|net|org|link|ly)\b)/i.test(v)) return 'This line has a link. Remove it to save.'
+    if (/\d[\d\s-]{4,}\d/.test(v.replace(/[^\d\s-]/g, ' ')) && (v.match(/\d/g) || []).length >= 6) return 'This line has a long number. Remove it to save.'
+    if (v.length > max) return 'Up to ' + max + ' characters.'
+    return null
+  }
+  var CSTATES = {
+    saved: function () { return { d: Object.assign({}, DESIGN, { trust: DESIGN.trust.slice() }), who: 'owner', toast: 'saved', edit: true } },
+    upi: function () { return { d: Object.assign({}, DESIGN, { trust: DESIGN.trust.slice(), heading: 'Almost yours, beautiful one', thanks: 'Thank you. For exchanges, pay the fee to ayuda@okicici.' }), who: 'partner', toast: 'fix', edit: true, unsaved: 2 } },
+    waiting: function () { return { d: Object.assign({}, DESIGN, { trust: DESIGN.trust.slice(), heading: 'Nearly yours' }), who: 'partner', chip: 'waiting', toast: 'sent', edit: true } },
+    builder: function () { return { d: Object.assign({}, DESIGN, { trust: DESIGN.trust.slice() }), who: 'builder', chip: 'preview', edit: false } }
+  }
+  function seg(label, key, opts, val) { var li = id('sg'); return '<div class="f"><span class="l" id="' + li + '">' + label + '</span><div class="seg" role="radiogroup" aria-labelledby="' + li + '" data-cseg="' + key + '">' + opts.map(function (o) { return '<button type="button" role="radio" aria-checked="' + (String(o[0]) === String(val)) + '" data-v="' + o[0] + '">' + o[1] + '</button>' }).join('') + '</div></div>' }
+  function lineField(key, label, val, max, area) {
+    var i = id(key), p = lineProblem(val, max), n = val.length
+    var input = area ? '<textarea id="' + i + '" class="in" rows="3" maxlength="200" data-line="' + key + '" data-max="' + max + '"' + (p ? ' aria-invalid="true"' : '') + ' aria-describedby="' + i + '-e ' + i + '-c">' + esc(val) + '</textarea>'
+      : '<input id="' + i + '" class="in" value="' + esc(val) + '" maxlength="60" data-line="' + key + '" data-max="' + max + '"' + (p ? ' aria-invalid="true"' : '') + ' aria-describedby="' + i + '-e ' + i + '-c">'
+    return '<div class="f"><div class="lrow"><label for="' + i + '">' + label + '</label><span class="ctr' + (n > max ? ' bad' : '') + '" id="' + i + '-c" data-ctr>' + n + '/' + max + '</span></div>' + input +
+      '<p class="ferr" id="' + i + '-e" data-err' + (p ? '' : ' hidden') + '>' + alert16 + '<span>' + (p || '') + '</span></p></div>'
+  }
+  function cards(s) {
+    var d = s.d
+    if (!s.edit) {
+      return '<section class="card"><h2>Header</h2><dl class="facts"><dt>Logo</dt><dd>Left</dd><dt>“Back to House of Ayuda” link</dt><dd>On</dd></dl></section>' +
+        '<section class="card"><h2>Footer</h2><dl class="facts"><dt>Policy links</dt><dd>One row</dd><dt>Legal block</dt><dd>Always shown</dd></dl></section>' +
+        '<section class="card"><h2>Trust blocks</h2><dl class="facts">' + d.trust.map(function (k, n) { return '<dt>' + (n + 1) + '</dt><dd>' + TRUST[k][1] + '</dd>' }).join('') + '</dl></section>' +
+        '<section class="card"><h2>Your words</h2><dl class="facts"><dt>Checkout heading</dt><dd>' + d.heading + '</dd><dt>Thank-you line</dt><dd>' + d.thanks + '</dd></dl></section>'
+    }
+    var sw = id('sw')
+    var order = d.trust.concat(Object.keys(TRUST).filter(function (k) { return d.trust.indexOf(k) < 0 }))
+    var trows = order.map(function (k, n) {
+      var on = d.trust.indexOf(k) >= 0, i = id('tb')
+      return '<div class="trow' + (on ? '' : ' offr') + '"><input type="checkbox" id="' + i + '"' + (on ? ' checked' : '') + (!on && d.trust.length >= 4 ? ' aria-disabled="true"' : '') + ' data-trust="' + k + '"><label for="' + i + '">' + TRUST[k][1] + '</label>' +
+        (on ? '<span class="mv"><button type="button" aria-label="Move up"' + (n === 0 ? ' aria-disabled="true"' : '') + ' data-mv="-1" data-k="' + k + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 14.5 6-6 6 6"/></svg></button><button type="button" aria-label="Move down"' + (n === d.trust.length - 1 ? ' aria-disabled="true"' : '') + ' data-mv="1" data-k="' + k + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9.5 6 6 6-6"/></svg></button></span>' : '<span></span>') + '</div>'
+    }).join('')
+    return '<section class="card"><h2>Header</h2>' + seg('Logo', 'header', [['left', 'Left'], ['centre', 'Centred']], d.header) +
+        '<div class="swr"><span id="' + sw + '">“Back to House of Ayuda” link</span><button type="button" class="sw" role="switch" aria-checked="' + d.back + '" aria-labelledby="' + sw + '" data-back></button></div></section>' +
+      '<section class="card"><h2>Footer</h2>' + seg('Policy links', 'rows', [[1, 'One row'], [2, 'Two rows']], d.rows) + '<dl class="facts"><dt>Legal block</dt><dd>Always shown</dd></dl></section>' +
+      '<section class="card"><h2>Trust blocks<button type="button" class="tip" aria-label="About trust blocks" aria-expanded="false"><svg><use href="#i-info"/></svg></button></h2><p class="limit">Up to 4.</p><div>' + trows + '</div></section>' +
+      '<section class="card"><h2>Your words</h2><p class="limit">Plain text. No phone numbers, UPI IDs or links.</p>' + lineField('heading', 'Checkout heading', d.heading, 24) + lineField('thanks', 'Thank-you line', d.thanks, 120, true) + '</section>'
+  }
+  var PVP = [['checkout', 'Checkout'], ['order', 'Order page'], ['baglink', 'Bag link'], ['policy', 'Policy']]
+  var PVS = [['ready', 'Ready to pay'], ['nocod', 'Pay on delivery not offered'], ['sold', 'A sold-out line'], ['changed', 'A changed price'], ['failed', 'Payment failed']]
+  function pvHtml(s, page, state) {
+    if (page === 'order') return order({ state: 'placed' }, s.d)
+    if (page === 'baglink') return baglink({})
+    if (page === 'policy') return policy({}, s.d)
+    var o = { filled: true, method: 'cod' }
+    if (state === 'nocod') o = { filled: true, method: 'prepaid', two: true }
+    if (state === 'sold') o.lines = [Object.assign({}, P.sage), Object.assign({}, P.sage, { v: 'XXL', problem: 'sold_out' })]
+    if (state === 'changed') { o.lines = [Object.assign({}, P.sage, { p: 289000 })]; o.msg = ['changed', 'Something changed since you looked: Sage Floral Kurta Set: ₹2,790 → ₹2,890. Check the total and place the order again.'] }
+    if (state === 'failed') o = { filled: true, method: 'prepaid', failed: true }
+    return checkout(o, s.d)
+  }
+  function preview(s) {
+    var a = id('pv'), b = id('pvs')
+    return '<section class="card pv-card"><div class="ch"><h2 id="' + a + '">Preview</h2><span class="sp"></span><span class="tag">Sample data</span></div>' +
+      '<div class="seg" role="radiogroup" aria-labelledby="' + a + '" data-pvpage>' + PVP.map(function (p, n) { return '<button type="button" role="radio" aria-checked="' + (n === 0) + '" data-v="' + p[0] + '">' + p[1] + '</button>' }).join('') + '</div>' +
+      '<div class="pv-ctl"><label for="' + b + '" style="font-size:13px;font-weight:500">Show</label><select id="' + b + '" class="in" data-pvstate>' + PVS.map(function (p) { return '<option value="' + p[0] + '">' + p[1] + '</option>' }).join('') + '</select></div>' +
+      '<div class="pvwin"><div class="fitw" data-w="390"><div class="fit-in" style="width:390px"><div class="store pad" data-pvbox style="min-height:700px"></div></div></div></div></section>'
+  }
+  function chipFor(s) { return s.chip === 'waiting' ? '<span class="chip warn">Waiting for the owner</span>' : s.chip === 'preview' ? '<span class="chip neu">Preview only</span>' : '' }
+  function toastFor(s) {
+    var ok = function (w, undo) { return '<div class="toast" role="status"><span class="mk ok" aria-hidden="true"><svg width="13" height="13"><use href="#i-ok"/></svg></span><span class="w">' + w + '</span>' + (undo ? '<button type="button" class="act">Undo</button>' : '') + '<button type="button" class="x" aria-label="Close">' + x18 + '</button></div>' }
+    if (s.toast === 'saved') return ok('Saved.', true)
+    if (s.toast === 'sent') return ok('Sent to the owner.')
+    if (s.toast === 'fix') return '<div class="toast err lift"><span class="mk bad" aria-hidden="true"><svg width="13" height="13"><use href="#i-bad"/></svg></span><span class="w">2 lines need fixing</span><button type="button" class="act">Show</button><button type="button" class="x" aria-label="Close">' + x18 + '</button></div>'
+    return ''
+  }
+  function saveBar(s, phone) {
+    if (!s.unsaved) return ''
+    return '<div class="savebar" role="region" aria-label="Unsaved changes"><b>' + s.unsaved + ' unsaved changes</b><button type="button" class="dis"' + (phone ? ' style="min-height:44px"' : '') + '>Discard</button><button type="button" class="sv"' + (phone ? ' style="min-height:44px"' : '') + '>Save' + (phone ? '' : ' <kbd>Ctrl+S</kbd>') + '</button></div>'
+  }
+  var item = function (icon, label, on, pill) { return '<a class="nav' + (on ? ' on' : '') + '"' + (on ? ' aria-current="page"' : '') + '><svg><use href="#i-' + icon + '"/></svg>' + label + (pill ? '<span class="pill">' + pill + '</span>' : '') + '</a>' }
+  function sidebar(who) {
+    var acct = { owner: ['AR', 'Anita Rao', 'Owner'], partner: ['NS', 'Neel Studio', 'Partner'], builder: ['RK', 'Ravi K.', 'Builder'] }[who]
+    return '<div class="store-x" style="display:flex;gap:10px;align-items:center;padding:6px 8px 10px"><span class="mono-mark">H</span><span style="min-width:0"><b style="display:block;font-size:14px;font-weight:600">House of Ayuda</b><span class="mono" style="display:block;font-size:11px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">house-of-ayuda.frrata.shop</span></span></div>' +
+      '<div class="ov">Today</div>' + item('home', 'Home') + item('orders', 'Orders', false, '3') + item('bell', 'Notices', false, who === 'owner' ? '1' : '') + item('profit', 'Analytics') +
+      '<div class="ov">Catalogue</div>' + item('products', 'Products') + item('coll', 'Collections') +
+      '<div class="ov">Store</div>' + item('offers', 'Offers') + item('content', 'Content') + item('look', 'Brand', true) + item('search', 'Search and sharing') + item('apps', 'Apps') + item('settings', 'Settings') + item('activity', 'Activity') +
+      '<span class="sp"></span>' + item('external', 'Preview store') + '<div class="acct"><span class="av">' + acct[0] + '</span><span><b>' + acct[1] + '</b><span>' + acct[2] + '</span></span></div>'
+  }
+  var bottom = function () { var c = function (i, l, on) { return '<div' + (on ? ' class="on"' : '') + '><svg><use href="#i-' + i + '"/></svg>' + l + '</div>' }; return c('home', 'Home') + c('orders', 'Orders') + c('products', 'Products') + c('more', 'More', true) }
+  var tabs = '<nav class="vt" aria-label="Brand"><a href="#p2-console">Logo, colours and type</a><a href="#p2-console" aria-current="page">Checkout</a></nav>'
+  function buildConsole(el) {
+    var s = CSTATES[el.getAttribute('data-console')](), phone = el.getAttribute('data-view') === 'phone'
+    if (phone) el.innerHTML = '<div class="p-main"><div class="p-head"><div class="tw"><h1>Brand</h1>' + chipFor(s) + '</div></div>' + tabs + preview(s) + cards(s) + '</div>' + toastFor(s) + saveBar(s, true) + '<div class="bottom">' + bottom() + '</div>'
+    else el.innerHTML = '<aside class="sb">' + sidebar(s.who) + '</aside><main class="main"><div class="ttl"><div class="tw"><h1>Brand</h1>' + chipFor(s) + '</div></div>' + tabs +
+      '<div class="cols"><form class="fcol" onsubmit="return false">' + cards(s) + '</form><aside class="side">' + preview(s) + '</aside></div></main>' + toastFor(s) + saveBar(s, false)
+    var page = 'checkout', state = 'ready'
+    var draw = function () { var b = el.querySelector('[data-pvbox]'); b.innerHTML = pvHtml(s, page, state); el.querySelector('[data-pvstate]').disabled = page !== 'checkout'; fitAll() }
+    draw()
+    el.addEventListener('input', function (e) {
+      var t = e.target, k = t.getAttribute('data-line'); if (!k) return
+      var max = Number(t.getAttribute('data-max')), v = t.value, p = lineProblem(v, max), f = t.closest('.f')
+      s.d[k] = v; var c = f.querySelector('[data-ctr]'); c.textContent = v.length + '/' + max; c.classList.toggle('bad', v.length > max)
+      var er = f.querySelector('[data-err]'); er.hidden = !p; er.querySelector('span').textContent = p || ''
+      if (p) t.setAttribute('aria-invalid', 'true'); else t.removeAttribute('aria-invalid')
+      draw()
+    })
+    el.addEventListener('change', function (e) {
+      if (e.target.hasAttribute('data-pvstate')) { state = e.target.value; draw(); return }
+      var k = e.target.getAttribute('data-trust'); if (!k) return
+      var i = s.d.trust.indexOf(k)
+      if (e.target.checked && i < 0) { if (s.d.trust.length >= 4) { e.target.checked = false; return } s.d.trust.push(k) } else if (!e.target.checked && i >= 0) s.d.trust.splice(i, 1)
+      rebuild()
+    })
+    el.addEventListener('click', function (e) {
+      var x = e.target.closest('.toast .x'); if (x) { x.closest('.toast').remove(); return }
+      var bk = e.target.closest('[data-back]'); if (bk) { s.d.back = !s.d.back; bk.setAttribute('aria-checked', String(s.d.back)); draw(); return }
+      var mv = e.target.closest('[data-mv]'); if (mv && mv.getAttribute('aria-disabled') !== 'true') { var k = mv.getAttribute('data-k'), i = s.d.trust.indexOf(k), j = i + Number(mv.getAttribute('data-mv')); s.d.trust.splice(i, 1); s.d.trust.splice(j, 0, k); rebuild(); return }
+      var r = e.target.closest('[role="radio"]'); if (!r || r.closest('.store')) return
+      var g = r.parentElement; g.querySelectorAll('[role="radio"]').forEach(function (b) { b.setAttribute('aria-checked', String(b === r)) })
+      if (g.hasAttribute('data-pvpage')) { page = r.getAttribute('data-v'); draw(); return }
+      var key = g.getAttribute('data-cseg'); if (key === 'header') s.d.header = r.getAttribute('data-v'); if (key === 'rows') s.d.rows = Number(r.getAttribute('data-v')); draw()
+    })
+    // Trust rows change shape (order, which are on): redraw the card in place, keep the rest.
+    function rebuild() {
+      var form = el.querySelector('.fcol, .p-main'), cardsNow = form.querySelectorAll(':scope > .card:not(.pv-card)')
+      var tmp = document.createElement('div'); tmp.innerHTML = cards(s)
+      var fresh = tmp.querySelectorAll('.card')[2]; cardsNow[2].replaceWith(fresh); draw()
+    }
+  }
+  document.querySelectorAll('[data-console]').forEach(buildConsole)
+
+  // Refusal crops: each line as the field shows it.
+  var rbox = document.querySelector('[data-crops="refusals"]')
+  if (rbox) [['Heading with a phone number', 'heading', 'Call 98000 00000', 24, false], ['Thank-you line with a link', 'thanks', 'Thank you. See our new edit at houseofayuda.com', 120, true], ['Thank-you line with a long number', 'thanks', 'Thank you. Your loyalty code is 4471 9021.', 120, true], ['Heading too long', 'heading', 'Almost yours, beautiful one', 24, false]].forEach(function (r) {
+    var w = document.createElement('div'); w.innerHTML = '<p class="lbl">' + r[0] + '</p><div class="crop">' + lineField(r[1], r[1] === 'heading' ? 'Checkout heading' : 'Thank-you line', r[2], r[3], r[4]) + '</div>'; rbox.appendChild(w)
+  })
+
+  // Frames: desktop drawn at 1280, previews at 390, each scaled to the column it sits in.
+  function fit(box) {
+    var inner = box.firstElementChild, W = Number(box.getAttribute('data-w') || 1280), w = box.clientWidth, sc = Math.min(1, w / W)
+    if (!w || (box._w === w && box._h === inner.offsetHeight)) return
+    box._w = w; box._h = inner.offsetHeight
+    inner.style.transform = 'scale(' + sc + ')'
+    box.style.height = Math.ceil(inner.offsetHeight * sc) + 'px'
+  }
+  function fitAll() { document.querySelectorAll('.dk, .fitw').forEach(function (b) { b._w = null; fit(b) }) }
+  fitAll()
+  if ('ResizeObserver' in window) { var ro = new ResizeObserver(function () { document.querySelectorAll('.dk, .fitw').forEach(fit) }); document.querySelectorAll('.dk, .fitw').forEach(function (d) { ro.observe(d); ro.observe(d.firstElementChild) }) }
+  window.addEventListener('load', fitAll)
+  document.addEventListener('click', function (e) { var x = e.target.closest('.toast .x'); if (x && x.closest('.toast')) x.closest('.toast').remove() })
+})()
+</script>
+</body>
+</html>

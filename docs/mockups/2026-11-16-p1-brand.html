@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P1 Console Brand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Mukta:wght@400;500;600&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap">
+<style>
+/* One address P1 (plan docs/plans/2026-11-16-one-address-checkout.md § P1; spec § 5). Console › Brand for a store with a
+   code site. Neel tokens and primitives copied unchanged from docs/mockups/2026-11-16-pp1-owner-only.html (the approved
+   console look). Desktop frames are drawn at 1280 and scaled to fit; phone frames at 390. */
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --rani:#D61F69;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62; --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B; --info-bg:#E8F1FD; --info-fg:#1F5BA8; --info-dot:#3B82E0;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --hover:var(--g50); --sunk:var(--g50); --doc:var(--g50);
+  --line:var(--g200); --line-soft:var(--g100); --field:var(--g500);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --bar:var(--g950); --bar-text:#fff; --bar-link:#A3ABF5; --bezel:#171615;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --doc:#0E0D0C;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; --bezel:#000; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7; --doc:#0E0D0C;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; --bezel:#000; color-scheme:dark }
+* { box-sizing:border-box }
+html { scroll-padding-top:12px }
+body { background:var(--doc); color:var(--text); font:400 14px/20px var(--font); margin:0;
+  padding:0 max(16px, env(safe-area-inset-right, 0px)) 72px max(16px, env(safe-area-inset-left, 0px)) }
+h1,h2,h3 { margin:0; text-wrap:balance }
+p { margin:0 }
+button, select, input { font:inherit; color:inherit }
+a { color:inherit }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+.mono { font-family:var(--mono); font-size:12.5px }
+.num { font-variant-numeric:tabular-nums }
+[hidden] { display:none !important }
+.sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap }
+
+/* ── The reference page ─────────────────────────────────────────────────────────────────────────────── */
+.doc { max-width:1720px; margin:0 auto }
+.doc-top { padding:28px 0 10px }
+.doc-top h1 { font:600 26px/32px var(--font); letter-spacing:-.01em }
+.doc-top p { color:var(--text-2); margin-top:6px; max-width:90ch }
+.toc { display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 0 }
+.toc a { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12.5px; text-decoration:none; background:var(--surface) }
+.part { margin-top:48px; scroll-margin-top:12px }
+.part > h2 { font:600 18px/24px var(--font) }
+.part > .cap { color:var(--text-2); font-size:13px; margin:4px 0 16px; max-width:100ch }
+.steps { margin:0 0 16px; padding-left:20px; color:var(--text-2); font-size:13px; max-width:100ch }
+.steps li { margin:2px 0 }
+.states { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 12px }
+.pair { display:grid; grid-template-columns:390px minmax(0,1fr); gap:32px; align-items:start }
+.pair > * { min-width:0 }
+.lbl { font-size:12px; color:var(--text-3); margin:0 0 8px; font-weight:500 }
+@media (max-width:1100px) { .pair { grid-template-columns:minmax(0,1fr) } }
+.brief { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 20px; max-width:110ch }
+.brief ul { margin:0; padding-left:18px } .brief li { margin:4px 0 }
+.takes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px }
+.takes .brief b { display:block; margin-bottom:4px }
+.takes .brief p { color:var(--text-2); font-size:13px }
+@media (max-width:900px) { .takes { grid-template-columns:minmax(0,1fr) } }
+
+/* ── Neel primitives ────────────────────────────────────────────────────────────────────────────────── */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-weight:500; font-size:14px; box-shadow:var(--e1); cursor:pointer; white-space:nowrap }
+.btn.sm { min-height:30px; padding:0 10px; font-size:13px }
+.btn.pri { background:var(--action); border-color:var(--action); color:var(--action-text) }
+.btn.ghost { border-color:transparent; background:transparent; box-shadow:none; color:var(--text-2) }
+.btn[aria-disabled="true"] { opacity:.45; cursor:not-allowed }
+.spin { width:14px; height:14px; border-radius:50%; border:2px solid currentColor; border-right-color:transparent; animation:spin .8s linear infinite }
+@keyframes spin { to { transform:rotate(360deg) } }
+.chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font-size:12px; line-height:16px; font-weight:500; white-space:nowrap }
+.chip::before { content:""; width:6px; height:6px; border-radius:50%; flex:none }
+.chip.neu { background:var(--neu-bg); color:var(--neu-fg) } .chip.neu::before { background:var(--neu-dot) }
+.chip.ok { background:var(--ok-bg); color:var(--ok-fg) } .chip.ok::before { background:var(--ok-dot) }
+.chip.warn { background:var(--warn-bg); color:var(--warn-fg) } .chip.warn::before { background:var(--warn-dot) }
+.chip.bad { background:var(--bad-bg); color:var(--bad-fg) } .chip.bad::before { background:var(--bad-dot) }
+.chip.info { background:var(--info-bg); color:var(--info-fg) } .chip.info::before { background:var(--info-dot) }
+.tag { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:6px; padding:1px 7px; font-size:12px; color:var(--text-2); white-space:nowrap }
+.tip { display:inline-grid; place-items:center; width:24px; height:24px; border:0; background:none; color:var(--text-3); cursor:pointer; vertical-align:middle; padding:0 }
+.tip svg { width:14px; height:14px }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 20px 20px; display:flex; flex-direction:column; gap:16px; min-width:0 }
+.card.flush { padding:0; gap:0; overflow:hidden }
+.card h2 { font:600 16px/24px var(--font); display:flex; align-items:center; gap:8px }
+.ch { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px }
+.ch .sp { flex:1 }
+.limit { font-size:13px; color:var(--text-2); margin-top:-10px }
+.facts { display:grid; grid-template-columns:180px minmax(0,1fr); gap:8px 12px; margin:0; font-size:14px }
+.facts dt { color:var(--text-2) }
+.facts dd { margin:0; min-width:0; overflow-wrap:anywhere; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+.grid2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+.hair { border-top:1px solid var(--line-soft); padding-top:16px }
+.f { display:flex; flex-direction:column; gap:6px; min-width:0 }
+.f > label, .f > .l { font-size:13px; font-weight:500; display:block }
+.f .opt { font-weight:400; color:var(--text-2); margin-left:4px }
+.in { height:36px; border:1px solid var(--field); border-radius:8px; padding:0 10px; font:inherit; font-size:14px; background:var(--surface); color:var(--text); width:100%; min-width:0 }
+select.in { padding-right:28px }
+.in[aria-invalid="true"] { border-color:var(--bad-dot); box-shadow:0 0 0 3px var(--bad-bg) }
+.ferr { display:flex; gap:6px; align-items:flex-start; font-size:13px; line-height:18px; color:var(--bad-fg) }
+.ferr svg { width:16px; height:16px; flex:none; margin-top:1px }
+.seg { display:inline-flex; flex-wrap:wrap; gap:2px; background:var(--sunk); border-radius:10px; padding:2px; max-width:100% }
+.seg button { border:0; background:transparent; color:var(--text-2); min-height:32px; padding:0 12px; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer }
+.seg button[aria-checked="true"] { background:var(--surface); color:var(--text); box-shadow:var(--e1) }
+.f > .seg { align-self:flex-start }
+[data-brand] .p-main, [data-console] .p-main { padding-bottom:200px }
+[data-brand] .main, [data-console] .main { padding-bottom:180px }
+.notice-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center }
+
+/* Toasts and the save bar (ui/toast.tsx, ui/unsaved.tsx) */
+.toast { background:var(--bar); color:var(--bar-text); border-radius:10px; box-shadow:var(--e3); padding:10px 8px 10px 14px; display:flex; align-items:center; gap:12px; font-weight:500; max-width:448px }
+.toast.err { box-shadow:var(--e3), 0 0 0 1px rgba(220,59,59,.6) }
+.toast .mk { width:22px; height:22px; border-radius:50%; display:grid; place-items:center; flex:none; color:#fff }
+.toast .mk.ok { background:var(--ok-dot) } .toast .mk.bad { background:var(--bad-dot) }
+.toast .w { flex:1; min-width:0 } .toast .w small { display:block; font-size:12px; font-weight:400; opacity:.8 }
+.toast .act { border:0; background:none; color:var(--bar-link); font-weight:500; min-height:36px; padding:0 8px; cursor:pointer }
+.toast .x { border:0; background:none; color:inherit; opacity:.8; width:36px; height:36px; display:grid; place-items:center; cursor:pointer; flex:none }
+.savebar { background:var(--bar); color:var(--bar-text); border-radius:12px; box-shadow:var(--e3); padding:10px 10px 10px 16px; display:flex; align-items:center; gap:12px }
+.savebar b { font-weight:500; flex:1 }
+.savebar button { border-radius:8px; min-height:30px; padding:0 10px; font-size:13px; font-weight:500; cursor:pointer; display:inline-flex; align-items:center; gap:6px }
+.savebar .dis { background:transparent; color:var(--bar-text); border:1px solid rgba(255,255,255,.35) }
+.savebar .sv { background:#fff; color:var(--g950); border:0 }
+.savebar kbd { font:500 11px var(--font); background:rgba(23,22,21,.1); border-radius:4px; padding:3px 5px }
+
+/* ── Desktop console frame, drawn at 1280 and scaled to the column ──────────────────────────────────── */
+.dk { position:relative; width:100%; overflow:hidden; border:1px solid var(--line); border-radius:12px; box-shadow:var(--e2); background:var(--page) }
+.dk-in { width:1280px; transform-origin:0 0; display:grid; grid-template-columns:232px minmax(0,1fr); min-height:820px; position:relative; background:var(--page) }
+.sb { background:var(--side); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:2px }
+.sb .store { display:flex; gap:10px; align-items:center; padding:6px 8px 10px }
+.mono-mark { width:28px; height:28px; border-radius:8px; background:#171615; color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px; flex:none }
+.sb .store > span:last-child { min-width:0 }
+.sb .store b { display:block; font-size:14px; font-weight:600 } .sb .store .mono { display:block; font-size:11px; color:var(--text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.sb .ov { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); margin:14px 8px 4px }
+.nav { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; color:var(--text-2); font-size:14px; text-decoration:none; border:1px solid transparent }
+.nav svg { width:18px; height:18px; flex:none }
+.nav .pill { margin-left:auto; background:var(--warn-bg); color:var(--warn-fg); border-radius:999px; font-size:12px; padding:0 7px; font-weight:500 }
+.nav.on { background:var(--surface); color:var(--text); box-shadow:var(--e1); border-color:var(--line); font-weight:500 }
+.nav.on svg { color:var(--action) }
+.sb .sp { flex:1 }
+.acct { display:flex; gap:10px; align-items:center; padding:10px 8px 4px; border-top:1px solid var(--line); margin-top:8px }
+.av { width:28px; height:28px; border-radius:50%; background:var(--n50); color:var(--n700); display:grid; place-items:center; font-weight:600; font-size:12px; flex:none }
+.acct b { display:block; font-size:13px; font-weight:500 } .acct span { font-size:12px; color:var(--text-2) }
+.main { padding:28px 32px 96px; min-width:0; position:relative }
+.ttl { display:flex; align-items:flex-start; gap:16px }
+.ttl .tw { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; flex:1; min-width:0 }
+.ttl h1 { font:600 22px/28px var(--font) }
+.vt { display:flex; gap:20px; border-bottom:1px solid var(--line); margin:16px 0 0; overflow-x:auto; scrollbar-width:none }
+.vt a { display:inline-flex; align-items:center; min-height:40px; border-bottom:2px solid transparent; margin-bottom:-1px; font-size:14px; font-weight:500; color:var(--text-2); text-decoration:none; white-space:nowrap }
+.vt a[aria-current="page"] { color:var(--text); border-bottom-color:var(--action) }
+.cols { display:grid; grid-template-columns:minmax(0,640px) 340px; gap:24px; align-items:start; margin-top:20px }
+.fcol { display:flex; flex-direction:column; gap:16px; min-width:0 }
+.side { position:sticky; top:16px; display:flex; flex-direction:column; gap:16px; min-width:0 }
+.dk .toast { position:absolute; left:50%; transform:translateX(-50%); bottom:24px; width:448px; z-index:5 }
+.dk .toast.lift { bottom:84px }
+.dk .savebar { position:absolute; left:264px; width:640px; bottom:20px; z-index:4 }
+
+/* Notices (console/notices/page.tsx) */
+.nl { list-style:none; margin:0; padding:0 }
+.nl li { display:flex; gap:12px; padding:12px 16px; border-top:1px solid var(--line) }
+.nl li:first-child { border-top:0 }
+.nl .dot { width:8px; height:8px; border-radius:50%; margin-top:6px; flex:none; border:1px solid var(--field) }
+.nl .dot.new { background:var(--rani); border-color:var(--rani) }
+.nl .t { min-width:0; flex:1 }
+.nl .t p.b { font-weight:600 }
+.nl .t p.s { font-size:14px; color:var(--text-2) }
+.nl .m { margin-top:6px; display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:var(--text-2) }
+.nl .m a { text-decoration:underline; text-underline-offset:4px; display:inline-flex; min-height:24px; align-items:center }
+
+/* ── Phone frame ─────────────────────────────────────────────────────────────────────────────────────── */
+.phone { width:390px; max-width:100%; border-radius:28px; padding:8px; background:var(--bezel); box-shadow:var(--e2) }
+.scr { border-radius:22px; overflow:hidden; background:var(--page); min-height:800px; display:flex; flex-direction:column; position:relative; font-size:15px; line-height:22px }
+.p-main { flex:1; padding:12px 16px 88px; display:flex; flex-direction:column; gap:12px; min-width:0 }
+.p-main > * { flex-shrink:0 }
+.p-head { display:flex; flex-direction:column; align-items:flex-start; gap:8px }
+.p-head .tw { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px }
+.p-head h1 { font:600 20px/26px var(--font) }
+.scr .btn { min-height:44px }
+.scr .btn.sm { min-height:36px }
+.scr .vt { margin:0 -16px; padding:0 16px; gap:20px }
+.scr .vt a { min-height:44px }
+.scr .card { padding:16px; gap:14px }
+.scr .facts { grid-template-columns:116px minmax(0,1fr) }
+.scr .in { height:44px; font-size:15px }
+.scr .grid2 { grid-template-columns:minmax(0,1fr) }
+.bottom { position:absolute; left:0; right:0; bottom:0; border-top:1px solid var(--line); background:var(--side); display:grid; grid-template-columns:repeat(4,1fr); text-align:center; font-size:11px; color:var(--text-2) }
+.bottom div { min-height:56px; padding:8px 0; display:grid; gap:2px; justify-items:center; align-content:center }
+.bottom svg { width:22px; height:22px }
+.bottom .on { color:var(--action); font-weight:500 }
+.scr .toast { position:absolute; left:12px; right:12px; bottom:72px; max-width:none; z-index:5 }
+.scr .toast.lift { bottom:142px }
+.scr .savebar { position:absolute; left:12px; right:12px; bottom:68px; z-index:4 }
+.scr .nl li { padding:12px 0 }
+
+/* Small crops for states */
+.crops { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; align-items:start; margin-top:28px }
+.crops > * { min-width:0 }
+.crop { background:var(--page); border:1px solid var(--line); border-radius:12px; padding:16px; box-shadow:var(--e1); display:flex; flex-direction:column; gap:12px }
+@media (max-width:1100px) { .crops { grid-template-columns:minmax(0,1fr) } }
+
+/* ── Brand page pieces ───────────────────────────────────────────────────────────────────────────────── */
+.logos { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+.lg { border:1px solid var(--line); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; min-width:0 }
+.lg-art { height:104px; display:grid; place-items:center; background:#FBF7F1; color:#221A14; border-bottom:1px solid var(--line) }
+.lg-art.dark { background:#221A14; color:#FBF7F1 }
+.lg.empty .lg-art { background:var(--sunk); border-bottom:1px dashed var(--g300) }
+.lg-art .name { font:400 28px/1 'Tiro Devanagari Hindi', Georgia, serif }
+.lg-meta { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; padding:8px 8px 8px 12px; min-height:46px }
+.lg-meta b { font-weight:500 } .lg-meta .sp { flex:1 }
+.lg-meta .btn.ghost { padding:0 6px }
+.scr .seg button { padding:0 9px; font-size:14px }
+.lg .ferr { padding:0 12px 10px }
+.crow { display:grid; grid-template-columns:32px minmax(0,1fr) 116px; gap:4px 12px; align-items:center; padding:10px 0; border-top:1px solid var(--line-soft) }
+.crow:first-of-type { border-top:0 }
+.crow .pick { width:32px; height:32px; border-radius:8px; border:1px solid var(--line); padding:0; cursor:pointer; position:relative; overflow:hidden }
+.crow .pick input { position:absolute; inset:-8px; width:48px; height:48px; opacity:0; cursor:pointer }
+.crow .cl { min-width:0; display:flex; flex-direction:column; gap:4px }
+.crow .cl label, .crow .cl b { font-weight:500; font-size:14px }
+.crow .cl .chips { display:flex; flex-wrap:wrap; gap:4px }
+.crow .ferr { grid-column:2 / -1 }
+.crow .hexv { font-family:var(--mono); font-size:12.5px; color:var(--text-2); text-align:right }
+.scr .crow { grid-template-columns:32px minmax(0,1fr) 104px }
+.typeline { display:flex; flex-direction:column; gap:2px; border:1px solid var(--line-soft); border-radius:8px; padding:10px 12px; background:#FBF7F1; color:#221A14 }
+.pv-card .seg { align-self:flex-start }
+.pv-cap { display:flex; justify-content:space-between; gap:8px; font-size:12px; color:var(--text-2); margin-bottom:6px }
+.pv-cap b { font-weight:500; color:var(--text) }
+.strip { display:flex; flex-direction:column; gap:14px }
+
+/* The store preview (the brand record drawn by Frrata's code; values from the record, never the console's tokens) */
+.st { --r:4px; background:var(--st-bg); color:var(--st-text); font-family:var(--st-body); border:1px solid var(--line); border-radius:8px; overflow:hidden; font-size:13px; line-height:1.45 }
+.st .disp { font-family:var(--st-display); font-weight:400 }
+.st .hd { display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--st-line); background:var(--st-bg); min-height:52px }
+.st .hd .sp { flex:1 }
+.st .hd .nw { display:flex; gap:10px; font-size:12px }
+.st .hd .bagw { display:inline-flex; align-items:center; gap:4px; font-size:12px }
+.st .hd svg.i { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round }
+.st .cardp { display:grid; grid-template-columns:64px minmax(0,1fr); gap:10px; padding:10px 12px; align-items:center }
+.st .ph { width:64px; height:96px; background:#E8DCCB; overflow:hidden; border-radius:0 }
+.st .ph img { width:100%; height:100%; object-fit:cover; object-position:50% 20%; display:block }
+.st .pr { font-weight:600; font-variant-numeric:tabular-nums }
+.st .mrp { color:var(--st-muted); font-size:11.5px }
+.st .co { padding:12px; display:flex; flex-direction:column; gap:8px }
+.st .co h3 { font-family:var(--st-display); font-weight:400; font-size:22px; line-height:1.15 }
+.st .lab { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--st-muted) }
+.st .fld { height:var(--st-field); border:1px solid var(--st-edge); border-radius:var(--st-r); background:var(--st-bg); display:flex; align-items:center; padding:0 10px; color:var(--st-muted); font-size:12px }
+.st .paybar { border-top:1px solid var(--st-line); padding:10px 12px; display:flex; flex-direction:column; gap:6px; background:var(--st-bg) }
+.st .paybar .row { display:flex; justify-content:space-between; font-size:12px }
+.st .paybar .row span { color:var(--st-muted) }
+.st .pbtn { height:var(--st-field); border-radius:var(--st-r); background:var(--st-accent); color:var(--st-on); display:grid; place-items:center; font-weight:600; font-size:13px; font-variant-numeric:tabular-nums }
+.st .em { background:var(--st-panel); padding:14px 12px; display:grid; justify-items:center; gap:6px; border-bottom:1px solid var(--st-line) }
+.st .em-b { padding:12px; display:flex; flex-direction:column; gap:6px }
+.st .em-b h4 { margin:0; font-family:var(--st-display); font-weight:400; font-size:19px }
+.st .em-b p { color:var(--st-muted) }
+.st .inv { background:#fff; color:#2A1D14; padding:12px; display:grid; gap:6px; font-family:var(--font); font-size:12px }
+.st .inv .top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px }
+.st .inv .sub { color:#6E5A4B; font-size:11px }
+.st.mini-name .hd .nm, .st .nm { font-family:var(--st-display); font-size:20px; line-height:1 }
+.pv-one > .st { display:none } .pv-one > .st.on { display:block }
+
+/* Tables */
+.tbl { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:12px; overflow:hidden; font-size:13px }
+.tbl th, .tbl td { text-align:left; padding:10px 12px; border-top:1px solid var(--line-soft); vertical-align:top }
+.tbl th { background:var(--sunk); font-weight:500; color:var(--text-2); border-top:0 }
+.tbl td:first-child { width:28%; color:var(--text-2) }
+@media (max-width:700px) {
+  .tbl, .tbl tbody, .tbl tr, .tbl td { display:block; width:auto }
+  .tbl thead { display:none }
+  .tbl tr { border-top:1px solid var(--line) } .tbl tr:first-child { border-top:0 }
+  .tbl td { border-top:0; padding:6px 12px } .tbl td:first-child { width:auto; padding-top:10px }
+}
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/></symbol>
+  <symbol id="i-orders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20h4"/></symbol>
+  <symbol id="i-profit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 15v-4M12 15V7M17 15v-6"/></symbol>
+  <symbol id="i-products" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 4 7l2 3 2-1v11h8V9l2 1 2-3-4-3c-1 2-2.5 2.5-4 2.5S9 6 8 4z"/></symbol>
+  <symbol id="i-coll" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="12" height="13" rx="2"/><path d="M8 4h10a2 2 0 0 1 2 2v10"/></symbol>
+  <symbol id="i-offers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V4h8l8 8-8 8z"/><circle cx="8.5" cy="8.5" r="1.2"/></symbol>
+  <symbol id="i-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-look" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="9" cy="10" r="1"/><circle cx="14" cy="9" r="1"/><path d="M12 20a3 3 0 0 1 0-6h3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></symbol>
+  <symbol id="i-apps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5H5V6h5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.4l3 3 6-6.4"/></symbol>
+  <symbol id="i-bad" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 3.6v5.4M8 12v.4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 4.8v3.6M8 11v.3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+</svg>
+
+<div class="doc">
+  <header class="doc-top">
+    <h1>Console › Brand</h1>
+    <p>One address P1 · mockup · 16 Nov 2026 · House of Ayuda (a store with a code site), its owner Anita Rao and its partner Neel Studio. Phone (390) beside computer (1280) on every screen. Plan <span class="mono">docs/plans/2026-11-16-one-address-checkout.md</span> § P1; spec § 5.</p>
+    <nav class="toc" aria-label="Screens">
+      <a href="#p1-short">In short</a><a href="#p1-audit">Audit</a><a href="#p1-take">What to take</a><a href="#p1-calls">Your calls</a>
+      <a href="#p1-saved">1 · Saved</a><a href="#p1-empty">2 · No logo</a><a href="#p1-edit">3 · Editing and refusals</a><a href="#p1-waiting">4 · Waiting for the owner</a><a href="#p1-owner">5 · The owner approves</a><a href="#p1-builder">6 · Preview only</a><a href="#p1-theme">7 · Theme shops</a><a href="#p1-words">Words and roles</a>
+    </nav>
+  </header>
+
+  <!-- ═════════ IN SHORT ═════════ -->
+  <section class="part" id="p1-short" aria-labelledby="s0">
+    <h2 id="s0">In short</h2>
+    <div class="brief" style="margin-top:12px">
+      <ul>
+        <li><b>What:</b> one page, Console › Brand, where a code-site store keeps its logo files, colours, fonts, corners and spacing. Checkout, emails, invoices, share images, the API and the website read it.</li>
+        <li><b>Why now:</b> House of Ayuda's logo lives in its website's code and nowhere in Frrata (<span class="mono">shop.logo</span> is null). P2 draws checkout from this record.</li>
+        <li><b>Cost:</b> two tables, one save, one page (plan P1·1–P1·9). Nothing changes for theme shops (O19).</li>
+        <li><b>Needed from you:</b> approve this page, and the six calls below.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ═════════ AUDIT ═════════ -->
+  <section class="part" id="p1-audit" aria-labelledby="sa">
+    <h2 id="sa">Audit: where the brand lives today</h2>
+    <p class="cap">Read in the code on 16 Nov 2026. The crop is drawn from <span class="mono">settings/_components/shop-logo.tsx</span>; no running copy was screenshotted.</p>
+    <table class="tbl">
+      <thead><tr><th>What is there</th><th>Why it gets in the way</th><th>Proposed</th></tr></thead>
+      <tbody>
+        <tr><td>Settings › Store details › Logo: one raster file (PNG, JPEG, WebP)</td><td>No mark, stacked or dark versions. No SVG. A partner's site draws its own logo instead.</td><td>Logo card on Brand with four files, SVG cleaned. The same save writes <span class="mono">logo_url</span>.</td></tr>
+        <tr><td>Settings › Invoices and slips › Logo (<span class="mono">doc_logo</span>)</td><td>A second upload for the same mark.</td><td>Stays the owner's own upload. When empty, invoices read a PNG made from the main logo.</td></tr>
+        <tr><td>Look › accent and display font (theme enums)</td><td>Six colours and six fonts for themes. A code site's palette has no home.</td><td>Colours and Type cards on Brand, for code-site stores only. Look stays for theme shops.</td></tr>
+        <tr><td>House of Ayuda's site: <span class="mono">lib/</span> logo files and hex colours</td><td>Console, emails and checkout show a different look from the site.</td><td>The site reads <span class="mono">shop.brand</span> through the kit (P1·7, P1·9).</td></tr>
+      </tbody>
+    </table>
+    <div class="crops">
+      <div>
+        <p class="lbl">Today · Settings › Store details › Logo (drawn from the code)</p>
+        <div class="crop">
+          <h2 style="font:600 16px/24px var(--font)">Logo</h2>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+            <span style="width:160px;height:64px;border:1px solid var(--line);border-radius:8px;background:var(--sunk);display:grid;place-items:center;font-size:12px;color:var(--text-2)">Your store’s name</span>
+            <button type="button" class="btn">Upload logo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ WHAT TO TAKE ═════════ -->
+  <section class="part" id="p1-take" aria-labelledby="st">
+    <h2 id="st">What to take</h2>
+    <div class="takes" style="margin-top:12px">
+      <div class="brief"><b>Shopify checkout branding API</b><p>shopify.dev “Styling”, read 16 Nov 2026 (spec § Research). Colours, typography, corner radius and header alignment from a closed set, one style for every checkout page. SVG not supported; Plus only.</p><p style="margin-top:6px"><b style="display:inline">Take:</b> design as data from closed sets. <b style="display:inline">Skip:</b> the Plus gate; SVG is taken, cleaned.</p></div>
+      <div class="brief"><b>House of Ayuda’s design system</b><p><span class="mono">mokobara/docs/design/house-of-ayuda-design-system.md</span> v1, 16 Nov 2026. Colour by role, each pair’s contrast computed, one failing pair named (stone on sand, 2.77:1).</p><p style="margin-top:6px"><b style="display:inline">Take:</b> roles, not swatches; every pair checked and shown. The record holds its eleven colours.</p></div>
+      <div class="brief"><b>Frrata’s own Look</b><p><span class="mono">src/domains/themes/types.ts</span> and <span class="mono">contrast.ts</span>, read 16 Nov 2026. Six fonts, six accents, the WCAG check.</p><p style="margin-top:6px"><b style="display:inline">Take:</b> the font list and the contrast rule, unchanged. <b style="display:inline">Skip:</b> the accent enum for code sites.</p></div>
+    </div>
+  </section>
+
+  <!-- ═════════ YOUR CALLS ═════════ -->
+  <section class="part" id="p1-calls" aria-labelledby="sc">
+    <h2 id="sc">Your calls</h2>
+    <table class="tbl" style="margin-top:12px">
+      <thead><tr><th>Call</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr><td>1 · Where Brand sits in the console</td><td><b>In Look’s place</b> in the Store group, for code-site stores. A theme shop keeps Look and never sees Brand.</td></tr>
+        <tr><td>2 · Fonts House of Ayuda uses</td><td><b>Add Tiro Devanagari Hindi and Mukta to Frrata’s font list</b> (both on Google Fonts). No font file uploads for now: the list stays closed.</td></tr>
+        <tr><td>3 · Corners</td><td><b>Keep the spec’s five steps (0, 4, 8, 12, 16 px)</b> and set House of Ayuda to 4 px. Its site draws 2 px today; it reads the record after P1·9, so both move together.</td></tr>
+        <tr><td>4 · Spacing steps</td><td><b>Compact, Standard, Roomy</b>: fields 44, 48 and 52 px tall. House of Ayuda is Standard (its design system draws 48).</td></tr>
+        <tr><td>5 · Where the owner says yes</td><td><b>Notices</b>, the console’s inbox, with Approve change and Decline on the row and on Brand itself.</td></tr>
+        <tr><td>6 · The eleven colours</td><td><b>Approve the roles as drawn</b>: Background, Panel, Text, Secondary text, Accent, Text on accent, Control edge, Hairline, Success, Warning, Error.</td></tr>
+      </tbody>
+    </table>
+    <p class="cap" style="margin-top:12px">Not built: seasons (the record holds them; no screen until a store asks), font uploads, a colour picker beyond the browser’s own.</p>
+  </section>
+
+  <!-- ═════════ 1 · SAVED ═════════ -->
+  <section class="part" id="p1-saved" aria-labelledby="s1">
+    <h2 id="s1">1 · Owner · Brand, just saved</h2>
+    <div class="states"><span class="chip ok">Saved</span><span class="tag">Undo in the toast</span><span class="tag">Preview from the record</span></div>
+    <ol class="steps"><li>Open Brand from the Store group.</li><li>Change a colour, a font, corners or spacing. The preview redraws at once and the save bar counts the changes.</li><li>Save. The toast says Saved. with Undo for 8 s. Checkout, emails and the website read the new record within a minute.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390</p><div class="phone"><div class="scr" data-brand="saved" data-view="phone"></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in" data-brand="saved" data-view="desk"></div></div></div>
+    </div>
+  </section>
+
+  <!-- ═════════ 2 · NO LOGO ═════════ -->
+  <section class="part" id="p1-empty" aria-labelledby="s2">
+    <h2 id="s2">2 · Owner · no logo yet (House of Ayuda today)</h2>
+    <div class="states"><span class="chip neu">Empty</span><span class="tag">Frrata’s colours until changed</span><span class="tag">Store name in the headings font</span></div>
+    <ol class="steps"><li>The Logo card has one Upload logo for the main logo and three optional slots.</li><li>The preview draws the store’s name in the headings font, as checkout and emails will. Invoices print the legal name only.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390</p><div class="phone"><div class="scr" data-brand="empty" data-view="phone"></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in" data-brand="empty" data-view="desk"></div></div></div>
+    </div>
+  </section>
+
+  <!-- ═════════ 3 · EDITING ═════════ -->
+  <section class="part" id="p1-edit" aria-labelledby="s3">
+    <h2 id="s3">3 · Owner · uploading, a file refused, a colour refused</h2>
+    <div class="states"><span class="chip info">Uploading</span><span class="chip bad">File refused at its slot</span><span class="chip bad">Contrast below the rule</span><span class="tag">Save bar</span><span class="tag">One error toast with Show</span></div>
+    <ol class="steps"><li>A file uploads in its own slot; the button keeps its place with a spinner.</li><li>An SVG with a script is refused at that slot. Nothing else changes.</li><li>A lighter accent drops two pairs below 4.5:1. The chips turn red at once; Save keeps the page and one error toast says 1 colour needs fixing, with Show.</li><li>Every chip is the rule in <span class="mono">src/domains/themes/contrast.ts</span>: 4.5:1 for text, 3:1 for a control’s edge. Try the hex fields: the chips and the preview follow.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390</p><div class="phone"><div class="scr" data-brand="edit" data-view="phone"></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in" data-brand="edit" data-view="desk"></div></div></div>
+    </div>
+  </section>
+
+  <!-- ═════════ 4 · WAITING ═════════ -->
+  <section class="part" id="p1-waiting" aria-labelledby="s4">
+    <h2 id="s4">4 · Partner · saved on an open store, waiting for the owner (O17)</h2>
+    <div class="states"><span class="chip warn">Waiting for the owner</span><span class="tag">The live record unchanged</span><span class="tag">A new save replaces the waiting one</span></div>
+    <ol class="steps"><li>Neel Studio uploads the four logo files and sets both fonts, then saves.</li><li>The store is open, so the save waits. The toast says Sent to the owner. The chip sits beside the title until the owner answers.</li><li>The form and the preview show the waiting change. Shoppers, emails and the API still read the live record.</li><li>Before the store opens, a partner’s save goes live as the owner’s does (screen 1).</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390</p><div class="phone"><div class="scr" data-brand="waiting" data-view="phone"></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in" data-brand="waiting" data-view="desk"></div></div></div>
+    </div>
+  </section>
+
+  <!-- ═════════ 5 · OWNER APPROVES ═════════ -->
+  <section class="part" id="p1-owner" aria-labelledby="s5">
+    <h2 id="s5">5 · Owner · Approve in Notices, or on Brand</h2>
+    <div class="states"><span class="chip neu">Needs you</span><span class="tag">Approve change</span><span class="tag">Decline</span><span class="tag">Undo after Approve</span></div>
+    <ol class="steps"><li>One Notices row for each waiting change. It names what changed.</li><li>Approve change on the row puts it live and the row reads Approved. Decline drops it; the partner’s form goes back to the live record.</li><li>Open goes to Brand, where the same change sits at the top with the same two buttons.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390 · Notices</p><div class="phone"><div class="scr">
+        <div class="p-main">
+          <div class="p-head"><div class="tw"><h1>Notices</h1></div></div>
+          <section class="card flush" aria-label="Notices" style="padding:0 16px"><ul class="nl" data-use="t-notices"></ul></section>
+        </div>
+        <div class="bottom" data-bottom></div>
+      </div></div></div>
+      <div><p class="lbl">Computer · 1280 · Brand, the waiting change at the top</p><div class="dk"><div class="dk-in" data-brand="review" data-view="desk"></div></div></div>
+    </div>
+    <template id="t-notices">
+      <li><span class="dot new" aria-hidden="true"></span><div class="t"><p class="b">Your partner changed your brand<span class="sr"> (new)</span></p><p class="s">4 logo files and 2 fonts.</p>
+        <div class="m"><span class="chip neu">Needs you</span>Today, 10:42 am<a href="#p1-owner">Open</a></div>
+        <div class="notice-row" style="margin-top:8px"><button type="button" class="btn sm pri" data-approve>Approve change</button><button type="button" class="btn sm">Decline</button></div></div></li>
+      <li><span class="dot" aria-hidden="true"></span><div class="t"><p>Your partner changed the main menu</p><p class="s">See it in Content.</p><div class="m"><span class="chip neu">Needs you</span>15 Nov, 6:10 pm<a href="#p1-owner">Open</a></div></div></li>
+    </template>
+    <div class="crops">
+      <div><p class="lbl">After Approve change (row and toast)</p>
+        <div class="crop">
+          <ul class="nl"><li style="padding:0"><span class="dot" aria-hidden="true"></span><div class="t"><p>Your partner changed your brand</p><p class="s">4 logo files and 2 fonts.</p><div class="m"><span class="chip ok">Approved</span>Today, 10:51 am<a href="#p1-owner">Open</a></div></div></li></ul>
+          <div class="toast" role="status" style="max-width:none"><span class="mk ok" aria-hidden="true"><svg width="13" height="13"><use href="#i-ok"/></svg></span><span class="w">Approved. It’s live.</span><button type="button" class="act">Undo</button><button type="button" class="x" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button></div>
+        </div></div>
+      <div><p class="lbl">After Decline</p>
+        <div class="crop">
+          <ul class="nl"><li style="padding:0"><span class="dot" aria-hidden="true"></span><div class="t"><p>Your partner changed your brand</p><p class="s">4 logo files and 2 fonts.</p><div class="m"><span class="chip neu">Declined</span>Today, 10:51 am</div></div></li></ul>
+          <div class="toast" role="status" style="max-width:none"><span class="mk ok" aria-hidden="true"><svg width="13" height="13"><use href="#i-ok"/></svg></span><span class="w">Declined. Nothing changed.</span><button type="button" class="x" aria-label="Close"><svg width="18" height="18"><use href="#i-x"/></svg></button></div>
+        </div></div>
+    </div>
+  </section>
+
+  <!-- ═════════ 6 · BUILDER ═════════ -->
+  <section class="part" id="p1-builder" aria-labelledby="s6">
+    <h2 id="s6">6 · Builder · preview only (O9); a support visit reads the same</h2>
+    <div class="states"><span class="chip neu">Preview only</span><span class="tag">Facts, never disabled fields</span><span class="tag">No save bar, no uploads</span></div>
+    <ol class="steps"><li>A partner’s Builder opens Brand and reads every value as a fact, with the preview.</li><li>Nothing on the page saves. A support visit sees the same page.</li></ol>
+    <div class="pair">
+      <div><p class="lbl">Phone · 390</p><div class="phone"><div class="scr" data-brand="builder" data-view="phone"></div></div></div>
+      <div><p class="lbl">Computer · 1280</p><div class="dk"><div class="dk-in" data-brand="builder" data-view="desk"></div></div></div>
+    </div>
+  </section>
+
+  <!-- ═════════ 7 · THEME SHOPS ═════════ -->
+  <section class="part" id="p1-theme" aria-labelledby="s7">
+    <h2 id="s7">7 · A theme shop sees nothing new (O19)</h2>
+    <p class="cap">The Store group, side by side. A theme shop’s console is exactly today’s.</p>
+    <div class="crops">
+      <div><p class="lbl">Theme shop · Store group (today, unchanged)</p><div class="crop" style="background:var(--side)"><div data-navcrop="theme"></div></div></div>
+      <div><p class="lbl">Code-site store · Store group</p><div class="crop" style="background:var(--side)"><div data-navcrop="code"></div></div></div>
+    </div>
+  </section>
+
+  <!-- ═════════ WORDS ═════════ -->
+  <section class="part" id="p1-words" aria-labelledby="s8">
+    <h2 id="s8">Words and who sees what</h2>
+    <p class="cap">Every new string on these screens. Saved., Discard, Save, Replace, Remove, Upload logo, Needs you, Open and “N unsaved changes” are today’s.</p>
+    <table class="tbl">
+      <thead><tr><th>Where</th><th>Words</th></tr></thead>
+      <tbody>
+        <tr><td>Nav item and page title</td><td>Brand</td></tr>
+        <tr><td>Card titles</td><td>Logo · Colours · Type · Shape · Preview</td></tr>
+        <tr><td>Logo slots</td><td>Main logo · Mark · Stacked · On dark · (optional) · Upload</td></tr>
+        <tr><td>Logo limit (stays visible)</td><td>SVG, PNG or WebP. PNG and WebP at least 120 px wide.</td></tr>
+        <tr><td>Uploading</td><td>Uploading…</td></tr>
+        <tr><td>File refused (at its slot)</td><td>This SVG has a script in it. Upload one without scripts.</td></tr>
+        <tr><td>Colour roles</td><td>Background · Panel · Text · Secondary text · Accent · Text on accent · Control edge · Hairline · Success · Warning · Error</td></tr>
+        <tr><td>Panel (i)</td><td>Bands, the footer and the legal block.</td></tr>
+        <tr><td>Contrast chip</td><td>16.05:1 on Background · 2.74:1 on Accent</td></tr>
+        <tr><td>Colour refused (at the field)</td><td>Text on this accent is 2.74:1. Use a darker one, 4.5:1 or more.</td></tr>
+        <tr><td>Error toast on Save</td><td>1 colour needs fixing · Show</td></tr>
+        <tr><td>Type</td><td>Headings font · Body font</td></tr>
+        <tr><td>Shape</td><td>Corners · Spacing · Compact · Standard · Roomy</td></tr>
+        <tr><td>Preview tabs and captions</td><td>Website · Checkout · Email · Invoice · Sample data</td></tr>
+        <tr><td>Partner’s save on an open store</td><td>Waiting for the owner (chip) · Sent to the owner. (toast)</td></tr>
+        <tr><td>Notices row</td><td>Your partner changed your brand · 4 logo files and 2 fonts.</td></tr>
+        <tr><td>Owner’s buttons</td><td>Approve change · Decline</td></tr>
+        <tr><td>Owner’s card on Brand</td><td>Your partner’s change · Sent today, 10:42 am</td></tr>
+        <tr><td>After Approve and Decline</td><td>Approved (chip) · Approved. It’s live. · Undo · Declined (chip) · Declined. Nothing changed.</td></tr>
+        <tr><td>Builder and support visit</td><td>Preview only</td></tr>
+      </tbody>
+    </table>
+    <table class="tbl" style="margin-top:16px">
+      <thead><tr><th>Who</th><th>Brand</th></tr></thead>
+      <tbody>
+        <tr><td>Owner, Manager</td><td>Edits; a save goes live. Approves or declines a partner’s waiting change.</td></tr>
+        <tr><td>Partner owner and Lead, store not open yet</td><td>Edits; a save goes live.</td></tr>
+        <tr><td>Partner owner and Lead, open store</td><td>Edits; a save waits for the owner (screen 4).</td></tr>
+        <tr><td>Builder</td><td>Preview only (screen 6).</td></tr>
+        <tr><td>Support visit (Frrata staff)</td><td>Preview only.</td></tr>
+        <tr><td>Staff, Accountant</td><td>Brand doesn’t open for them, as Look today.</td></tr>
+        <tr><td>Theme shop, anyone</td><td>No Brand page (screen 7).</td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+(function () {
+  // ── The contrast rule, as src/domains/themes/contrast.ts writes it ───────────────────────────────────────
+  var ch = function (c) { var s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4) }
+  var lum = function (h) { var n = parseInt(h.slice(1), 16); return 0.2126 * ch((n >> 16) & 255) + 0.7152 * ch((n >> 8) & 255) + 0.0722 * ch(n & 255) }
+  var contrast = function (a, b) { var x = lum(a), y = lum(b); if (y > x) { var t = x; x = y; y = t } return (x + 0.05) / (y + 0.05) }
+  var isHex = function (v) { return /^#[0-9a-f]{6}$/i.test(v) }
+
+  // ── The record: eleven roles; the pairs each role is checked against, and the ratio it needs ────────────
+  var ROLES = [
+    ['bg', 'Background', []], ['panel', 'Panel', []], ['text', 'Text', [['bg', 4.5], ['panel', 4.5]]],
+    ['muted', 'Secondary text', [['bg', 4.5], ['panel', 4.5]]], ['accent', 'Accent', [['bg', 4.5]]],
+    ['on', 'Text on accent', [['accent', 4.5]]], ['edge', 'Control edge', [['bg', 3]]], ['line', 'Hairline', []],
+    ['good', 'Success', [['bg', 4.5]]], ['warn', 'Warning', [['bg', 4.5]]], ['bad', 'Error', [['bg', 4.5]]]
+  ]
+  var NAME = {}; ROLES.forEach(function (r) { NAME[r[0]] = r[1] })
+  // House of Ayuda (its design system v1, 2026-11-16) and Frrata's defaults (a record never saved).
+  var AYUDA = { bg: '#FBF7F1', panel: '#F2EADF', text: '#221A14', muted: '#665A4E', accent: '#8C1D2C', on: '#FBF7F1', edge: '#9A8B7A', line: '#DDD0BE', good: '#2F6B3B', warn: '#8A5300', bad: '#A3261B' }
+  var DEFAULT = { bg: '#FFFFFF', panel: '#F6F5F3', text: '#171615', muted: '#67625C', accent: '#171615', on: '#FFFFFF', edge: '#8F8A84', line: '#E3E1DD', good: '#1A6B43', warn: '#85500B', bad: '#A82828' }
+  var FONTS = ['Cormorant', 'DM Serif Display', 'Fraunces', 'Inter', 'Mukta', 'Playfair Display', 'Schibsted Grotesk', 'Tiro Devanagari Hindi']
+  var STACK = { 'Tiro Devanagari Hindi': "'Tiro Devanagari Hindi', Georgia, serif", Mukta: "Mukta, system-ui, sans-serif", Inter: "Inter, system-ui, sans-serif" }
+  var stack = function (f) { return STACK[f] || ("'" + f + "', Georgia, serif") }
+
+  // ── The monogram and lockups (House of Ayuda's identity, drawn on a 40 × 52 grid) ───────────────────────
+  var MONO = function (sw) { return '<g fill="none" stroke="currentColor" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round"><path d="M6 50V23.5C6 15 12.4 11 16.2 8.6 18.6 7.1 19.6 5.3 20 3 20.4 5.3 21.4 7.1 23.8 8.6 27.6 11 34 15 34 23.5V50"/><path d="M2 50h36"/><path d="M12.6 50 20 19l7.4 31"/><path d="M15.2 39h9.6"/></g><circle cx="20" cy="12.6" r="1.9" fill="#8C1D2C"/>' }
+  var logoH = function (h) { h = h || 40; return '<svg viewBox="0 0 168 52" height="' + h + '" width="' + Math.round(h * 168 / 52) + '" role="img" aria-label="House of Ayuda">' + MONO(1.6) + '<text x="50" y="18.5" font-family="Mukta, sans-serif" font-weight="600" font-size="8.6" letter-spacing="2.45" fill="currentColor">HOUSE OF</text><text x="48.6" y="47" font-family="\'Tiro Devanagari Hindi\', Georgia, serif" font-size="34" fill="currentColor">Ayuda</text></svg>' }
+  var mono = function (h) { h = h || 56; return '<svg viewBox="0 0 40 52" height="' + h + '" width="' + Math.round(h * 40 / 52) + '" role="img" aria-label="House of Ayuda mark">' + MONO(1.6) + '</svg>' }
+  var logoS = function (h) { h = h || 84; return '<svg viewBox="0 0 120 112" height="' + h + '" width="' + Math.round(h * 120 / 112) + '" role="img" aria-label="House of Ayuda, stacked"><g transform="translate(40 0)">' + MONO(1.6) + '</g><text x="60" y="73" text-anchor="middle" font-family="Mukta, sans-serif" font-weight="600" font-size="8.6" letter-spacing="2.45" fill="currentColor">HOUSE OF</text><text x="60" y="104" text-anchor="middle" font-family="\'Tiro Devanagari Hindi\', Georgia, serif" font-size="34" fill="currentColor">Ayuda</text></svg>' }
+  var IMG = 'https://q2ihwblncli6vdel.public.blob.vercel-storage.com/tenants/7e13d8c4-3c04-4ab2-b2d1-4bc3573a8ade/products/e65e761d-29c3-4d87-9bf3-2afece2e661f-400.webp'
+
+  // ── The states ─────────────────────────────────────────────────────────────────────────────────────────
+  var BASE = function (o) { var s = { pal: Object.assign({}, AYUDA), logos: true, display: 'Tiro Devanagari Hindi', body: 'Mukta', radius: 4, density: 'Standard', edit: true, who: 'owner' }; return Object.assign(s, o || {}) }
+  var STATES = {
+    saved: function () { return BASE({ toast: 'saved' }) },
+    empty: function () { return BASE({ pal: Object.assign({}, DEFAULT), logos: false, display: 'Inter', body: 'Inter', radius: 8 }) },
+    edit: function () { var s = BASE({ uploading: 'stacked', refused: 'dark', unsaved: 3, toast: 'fix' }); s.pal.accent = '#D9822B'; return s },
+    waiting: function () { return BASE({ who: 'partner', chip: 'waiting', toast: 'sent' }) },
+    review: function () { return BASE({ review: true }) },
+    builder: function () { return BASE({ edit: false, who: 'builder', chip: 'preview' }) }
+  }
+
+  var esc = function (v) { return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;') }
+  var uid = 0, id = function (p) { return p + '-' + (++uid) }
+  var x18 = '<svg width="18" height="18"><use href="#i-x"/></svg>'
+  var alert16 = '<svg aria-hidden="true"><use href="#i-alert"/></svg>'
+
+  function chips(s, key) {
+    var r = ROLES.filter(function (x) { return x[0] === key })[0]
+    return r[2].map(function (p) {
+      var v = contrast(s.pal[key], s.pal[p[0]]), ok = v >= p[1]
+      return '<span class="chip ' + (ok ? 'ok' : 'bad') + '"><span class="num">' + v.toFixed(2) + ':1</span> on ' + NAME[p[0]] + '</span>'
+    }).join('')
+  }
+  function colourCard(s) {
+    var rows = ROLES.map(function (r) {
+      var k = r[0], v = s.pal[k], i = id('c-' + k)
+      var tip = k === 'panel' ? '<button type="button" class="tip" aria-label="About panel" aria-expanded="false"><svg><use href="#i-info"/></svg></button>' : ''
+      if (!s.edit) return '<div class="crow"><span class="pick" style="background:' + v + '" aria-hidden="true"></span><div class="cl"><b>' + r[1] + tip + '</b><span class="chips" data-chips="' + k + '">' + chips(s, k) + '</span></div><span class="hexv">' + v + '</span></div>'
+      var accentBad = k === 'accent' && contrast(s.pal.on, s.pal.accent) < 4.5
+      return '<div class="crow"><span class="pick" style="background:' + v + '" data-sw="' + k + '"><input type="color" value="' + v.toLowerCase() + '" data-pick="' + k + '" aria-label="' + r[1] + ' colour"></span>' +
+        '<div class="cl"><label for="' + i + '">' + r[1] + tip + '</label><span class="chips" data-chips="' + k + '">' + chips(s, k) + '</span></div>' +
+        '<input id="' + i + '" class="in mono" value="' + v + '" maxlength="7" data-hex="' + k + '"' + (accentBad ? ' aria-invalid="true" aria-describedby="' + i + '-e"' : '') + '>' +
+        (k === 'accent' ? '<p class="ferr" id="' + i + '-e" data-accent-err' + (accentBad ? '' : ' hidden') + '>' + alert16 + '<span>Text on this accent is <span data-accent-ratio>' + contrast(s.pal.on, s.pal.accent).toFixed(2) + '</span>:1. Use a darker one, 4.5:1 or more.</span></p>' : '') + '</div>'
+    }).join('')
+    return '<section class="card" aria-labelledby="' + id('col') + '"><h2 id="' + id('colh') + '">Colours</h2><div>' + rows + '</div></section>'
+  }
+  function logoCard(s) {
+    var slots = [['main', 'Main logo', function () { return logoH(40) }, ''], ['mark', 'Mark', function () { return mono(60) }, ''], ['stacked', 'Stacked', function () { return logoS(84) }, ''], ['dark', 'On dark', function () { return logoH(40) }, 'dark']]
+    var tiles = slots.map(function (t, n) {
+      var opt = n ? '<span class="opt" style="font-weight:400;color:var(--text-2)">(optional)</span>' : ''
+      if (!s.logos) {
+        var art = n === 0 ? '<span class="name" style="font-family:' + stack(s.display) + '">House of Ayuda</span>' : ''
+        return '<div class="lg empty"><div class="lg-art">' + art + '</div><div class="lg-meta"><b>' + t[1] + '</b>' + opt + '<span class="sp"></span>' + (s.edit ? '<button type="button" class="btn sm">' + (n ? 'Upload' : 'Upload logo') + '</button>' : '') + '</div></div>'
+      }
+      if (s.uploading === t[0]) return '<div class="lg empty"><div class="lg-art"></div><div class="lg-meta"><b>' + t[1] + '</b>' + opt + '<span class="sp"></span><button type="button" class="btn sm" aria-disabled="true"><span class="spin" aria-hidden="true"></span>Uploading…</button></div></div>'
+      if (s.refused === t[0]) { var e = id('lge'); return '<div class="lg empty"><div class="lg-art"></div><div class="lg-meta"><b>' + t[1] + '</b>' + opt + '<span class="sp"></span><button type="button" class="btn sm" aria-describedby="' + e + '">Upload</button></div><p class="ferr" id="' + e + '">' + alert16 + '<span>This SVG has a script in it. Upload one without scripts.</span></p></div>' }
+      var acts = s.edit ? '<span class="sp"></span><button type="button" class="btn sm ghost">Replace</button><button type="button" class="btn sm ghost">Remove</button>' : ''
+      return '<div class="lg"><div class="lg-art ' + t[3] + '">' + t[2]() + '</div><div class="lg-meta"><b>' + t[1] + '</b><span class="tag">SVG</span>' + acts + '</div></div>'
+    }).join('')
+    return '<section class="card"><h2>Logo</h2>' + (s.edit ? '<p class="limit">SVG, PNG or WebP. PNG and WebP at least 120 px wide.</p>' : '') + '<div class="logos">' + tiles + '</div></section>'
+  }
+  function typeCard(s) {
+    var sel = function (lab, val, key) { var i = id('f'); return '<div class="f"><label for="' + i + '">' + lab + '</label><select id="' + i + '" class="in" data-font="' + key + '">' + FONTS.map(function (f) { return '<option' + (f === val ? ' selected' : '') + '>' + f + '</option>' }).join('') + '</select></div>' }
+    var body = s.edit ? '<div class="grid2">' + sel('Headings font', s.display, 'display') + sel('Body font', s.body, 'body') + '</div>'
+      : '<dl class="facts"><dt>Headings font</dt><dd>' + s.display + '</dd><dt>Body font</dt><dd>' + s.body + '</dd></dl>'
+    return '<section class="card"><h2>Type</h2>' + body + '<div class="typeline" data-typeline style="background:' + s.pal.bg + ';color:' + s.pal.text + '"><span data-tl-d style="font:400 24px/1.2 ' + stack(s.display) + '">Sage Floral Kurta Set</span><span data-tl-b style="font:400 15px/1.5 ' + stack(s.body) + ';color:' + s.pal.muted + '">A daily kurta set that looks like you tried. ₹2,790</span></div></section>'
+  }
+  function shapeCard(s) {
+    if (!s.edit) return '<section class="card"><h2>Shape</h2><dl class="facts"><dt>Corners</dt><dd class="num">' + s.radius + ' px</dd><dt>Spacing</dt><dd>' + s.density + '</dd></dl></section>'
+    var a = id('cr'), b = id('sp')
+    var seg = function (lab, li, opts, val, key) { return '<div class="f"><span class="l" id="' + li + '">' + lab + '</span><div class="seg" role="radiogroup" aria-labelledby="' + li + '" data-seg="' + key + '">' + opts.map(function (o) { return '<button type="button" role="radio" aria-checked="' + (String(o) === String(val)) + '" data-v="' + o + '">' + o + (key === 'radius' ? ' px' : '') + '</button>' }).join('') + '</div></div>' }
+    return '<section class="card"><h2>Shape</h2>' + seg('Corners', a, [0, 4, 8, 12, 16], s.radius, 'radius') + seg('Spacing', b, ['Compact', 'Standard', 'Roomy'], s.density, 'density') + '</section>'
+  }
+  function reviewCard() {
+    return '<section class="card" style="border-color:var(--warn-dot)"><div class="ch"><h2>Your partner’s change</h2><span class="chip neu">Needs you</span></div>' +
+      '<dl class="facts"><dt>Sent</dt><dd>Neel Studio · today, 10:42 am</dd><dt>Logo</dt><dd>Main logo, Mark, Stacked and On dark added</dd><dt>Headings font</dt><dd>Inter → Tiro Devanagari Hindi</dd><dt>Body font</dt><dd>Inter → Mukta</dd></dl>' +
+      '<div class="notice-row"><button type="button" class="btn pri">Approve change</button><button type="button" class="btn">Decline</button></div></section>'
+  }
+
+  // ── The preview: the record drawn as the store's surfaces draw it (sample data) ─────────────────────────
+  function vars(s) {
+    var p = s.pal, fh = { Compact: 36, Standard: 40, Roomy: 44 }[s.density]
+    return '--st-bg:' + p.bg + ';--st-panel:' + p.panel + ';--st-text:' + p.text + ';--st-muted:' + p.muted + ';--st-accent:' + p.accent + ';--st-on:' + p.on + ';--st-edge:' + p.edge + ';--st-line:' + p.line + ';--st-r:' + s.radius + 'px;--st-display:' + stack(s.display) + ';--st-body:' + stack(s.body) + ';--st-field:' + fh + 'px'
+  }
+  function brandMark(s, h) { return s.logos ? logoH(h) : '<span class="nm">House of Ayuda</span>' }
+  function previews(s) {
+    var bag = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8.5h14l-1 11.5H6L5 8.5Z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/></svg>'
+    var site = '<div class="st" data-pv="Website" style="' + vars(s) + '"><div class="hd">' + brandMark(s, 30) + '<span class="sp"></span><span class="bagw">' + bag + 'Bag</span></div>' +
+      '<div class="cardp"><span class="ph"><img src="' + IMG + '" alt="" loading="lazy" width="64" height="96"></span><div><p class="disp" style="font-size:17px;line-height:1.2">Sage Floral Kurta Set</p><p class="pr">₹2,790</p><p class="mrp">M.R.P. ₹3,490 (inclusive of all taxes)</p></div></div></div>'
+    var co = '<div class="st" data-pv="Checkout" style="' + vars(s) + '"><div class="hd">' + brandMark(s, 28) + '<span class="sp"></span><span style="font-size:12px;text-decoration:underline;text-underline-offset:3px">Back to House of Ayuda</span></div>' +
+      '<div class="co"><h3>Checkout</h3><span class="lab">Contact</span><span class="fld">Mobile number</span></div>' +
+      '<div class="paybar"><div class="row"><span>Pay on delivery</span><b class="num">₹2,790</b></div><div class="pbtn">Place order · ₹2,790</div></div></div>'
+    var em = '<div class="st" data-pv="Email" style="' + vars(s) + '"><div class="em">' + (s.logos ? logoS(64) : '<span class="nm">House of Ayuda</span>') + '</div>' +
+      '<div class="em-b"><h4>Thank you, Priya</h4><p>Order AY-1042 is placed. Keep ₹2,790 ready.</p></div></div>'
+    var inv = '<div class="st" data-pv="Invoice" style="' + vars(s) + '"><div class="inv"><div class="top">' + (s.logos ? '<span style="color:#221A14">' + logoH(26) + '</span>' : '<b>Ayuda Crafts Private Limited</b>') + '<span style="text-align:right"><b style="font-size:13px">Tax invoice</b><br><span class="mono" style="font-size:11px">AY/26-27/0001</span></span></div>' +
+      '<p>Ayuda Crafts Private Limited<br><span class="sub">14 Weavers Lane, Indiranagar, Bengaluru, Karnataka 560038 · GSTIN <span class="mono" style="font-size:11px">29ABCDE1234F1Z5</span></span></p></div></div>'
+    return [site, co, em, inv]
+  }
+  function previewCard(s, phone) {
+    var p = previews(s), names = ['Website', 'Checkout', 'Email', 'Invoice']
+    if (phone) {
+      var li = id('pvl')
+      return '<section class="card pv-card"><div class="ch"><h2 id="' + li + '">Preview</h2><span class="sp"></span><span class="tag">Sample data</span></div>' +
+        '<div class="seg" role="radiogroup" aria-labelledby="' + li + '" data-pvseg>' + names.map(function (n, i) { return '<button type="button" role="radio" aria-checked="' + (i === 1) + '" data-v="' + n + '">' + n + '</button>' }).join('') + '</div>' +
+        '<div class="pv-one">' + p.map(function (h, i) { return i === 1 ? h.replace('class="st"', 'class="st on"') : h }).join('') + '</div></section>'
+    }
+    return '<section class="card pv-card"><div class="ch"><h2>Preview</h2><span class="sp"></span><span class="tag">Sample data</span></div><div class="strip">' +
+      p.map(function (h, i) { return '<div><p class="pv-cap"><b>' + names[i] + '</b></p>' + h + '</div>' }).join('') + '</div></section>'
+  }
+
+  // ── Header, chips, toasts and the save bar ──────────────────────────────────────────────────────────────
+  function chipFor(s) { return s.chip === 'waiting' ? '<span class="chip warn">Waiting for the owner</span>' : s.chip === 'preview' ? '<span class="chip neu">Preview only</span>' : '' }
+  function toastFor(s) {
+    if (s.toast === 'saved') return '<div class="toast" role="status"><span class="mk ok" aria-hidden="true"><svg width="13" height="13"><use href="#i-ok"/></svg></span><span class="w">Saved.</span><button type="button" class="act">Undo</button><button type="button" class="x" aria-label="Close">' + x18 + '</button></div>'
+    if (s.toast === 'sent') return '<div class="toast" role="status"><span class="mk ok" aria-hidden="true"><svg width="13" height="13"><use href="#i-ok"/></svg></span><span class="w">Sent to the owner.</span><button type="button" class="x" aria-label="Close">' + x18 + '</button></div>'
+    if (s.toast === 'fix') return '<div class="toast err lift"><span class="mk bad" aria-hidden="true"><svg width="13" height="13"><use href="#i-bad"/></svg></span><span class="w">1 colour needs fixing</span><button type="button" class="act">Show</button><button type="button" class="x" aria-label="Close">' + x18 + '</button></div>'
+    return ''
+  }
+  function saveBar(s, phone) {
+    if (!s.unsaved) return ''
+    return '<div class="savebar" role="region" aria-label="Unsaved changes"><b>' + s.unsaved + ' unsaved changes</b><button type="button" class="dis"' + (phone ? ' style="min-height:44px"' : '') + '>Discard</button><button type="button" class="sv"' + (phone ? ' style="min-height:44px"' : '') + '>Save' + (phone ? '' : ' <kbd>Ctrl+S</kbd>') + '</button></div>'
+  }
+  function cardsOf(s) { return (s.review ? reviewCard() : '') + logoCard(s) + colourCard(s) + typeCard(s) + shapeCard(s) }
+
+  // ── The console's sidebar and the phone's bottom bar (console/layout.tsx) ───────────────────────────────
+  var item = function (icon, label, on, pill) { return '<a class="nav' + (on ? ' on' : '') + '"' + (on ? ' aria-current="page"' : '') + '><svg><use href="#i-' + icon + '"/></svg>' + label + (pill ? '<span class="pill">' + pill + '</span>' : '') + '</a>' }
+  function storeGroup(code, on) { return '<div class="ov">Store</div>' + item('offers', 'Offers') + item('content', 'Content') + (code ? item('look', 'Brand', on === 'brand') : item('look', 'Look')) + item('search', 'Search and sharing') + item('apps', 'Apps') + item('settings', 'Settings') + item('activity', 'Activity') }
+  function sidebar(who, on) {
+    var acct = { owner: ['AR', 'Anita Rao', 'Owner'], partner: ['NS', 'Neel Studio', 'Partner'], builder: ['RK', 'Ravi K.', 'Builder'] }[who]
+    return '<div class="store"><span class="mono-mark">H</span><span><b>House of Ayuda</b><span class="mono">house-of-ayuda.frrata.shop</span></span></div>' +
+      '<div class="ov">Today</div>' + item('home', 'Home') + item('orders', 'Orders', false, '3') + item('bell', 'Notices', on === 'notices', who === 'owner' ? '1' : '') + item('profit', 'Analytics') +
+      '<div class="ov">Catalogue</div>' + item('products', 'Products') + item('coll', 'Collections') + storeGroup(true, on) +
+      '<span class="sp"></span>' + item('external', 'Preview store') +
+      '<div class="acct"><span class="av">' + acct[0] + '</span><span><b>' + acct[1] + '</b><span>' + acct[2] + '</span></span></div>'
+  }
+  var bottom = function () { var c = function (i, l, on) { return '<div' + (on ? ' class="on"' : '') + '><svg><use href="#i-' + i + '"/></svg>' + l + '</div>' }; return c('home', 'Home') + c('orders', 'Orders') + c('products', 'Products') + c('more', 'More', true) }
+
+  // ── Build each frame ────────────────────────────────────────────────────────────────────────────────────
+  function build(el) {
+    var s = STATES[el.getAttribute('data-brand')](), phone = el.getAttribute('data-view') === 'phone'
+    if (s.review) { s.pal = Object.assign({}, AYUDA) }
+    if (phone) {
+      el.innerHTML = '<div class="p-main"><div class="p-head"><div class="tw"><h1>Brand</h1>' + chipFor(s) + '</div></div>' + previewCard(s, true) + cardsOf(s) + '</div>' +
+        toastFor(s) + saveBar(s, true) + '<div class="bottom">' + bottom() + '</div>'
+    } else {
+      el.innerHTML = '<aside class="sb">' + sidebar(s.who, s.review ? 'brand' : 'brand') + '</aside><main class="main"><div class="ttl"><div class="tw"><h1>Brand</h1>' + chipFor(s) + '</div></div>' +
+        '<div class="cols"><form class="fcol" onsubmit="return false">' + cardsOf(s) + '</form><aside class="side">' + previewCard(s, false) + '</aside></div></main>' + toastFor(s) + saveBar(s, false)
+    }
+    wire(el, s)
+  }
+  // Live: a hex, a colour, a font or a step redraws the chips and the preview of that frame only.
+  function wire(el, s) {
+    var redraw = function () {
+      el.querySelectorAll('[data-chips]').forEach(function (c) { c.innerHTML = chips(s, c.getAttribute('data-chips')) })
+      el.querySelectorAll('[data-sw]').forEach(function (w) { w.style.background = s.pal[w.getAttribute('data-sw')] })
+      el.querySelectorAll('.st').forEach(function (st) { st.setAttribute('style', vars(s)) })
+      var bad = contrast(s.pal.on, s.pal.accent) < 4.5, e = el.querySelector('[data-accent-err]'), hx = el.querySelector('[data-hex="accent"]')
+      if (e) { e.hidden = !bad; e.querySelector('[data-accent-ratio]').textContent = contrast(s.pal.on, s.pal.accent).toFixed(2) }
+      if (hx) { if (bad) hx.setAttribute('aria-invalid', 'true'); else hx.removeAttribute('aria-invalid') }
+      var tl = el.querySelector('[data-typeline]')
+      if (tl) { tl.style.background = s.pal.bg; tl.style.color = s.pal.text; el.querySelector('[data-tl-d]').style.fontFamily = stack(s.display); var b = el.querySelector('[data-tl-b]'); b.style.fontFamily = stack(s.body); b.style.color = s.pal.muted }
+    }
+    el.addEventListener('input', function (e) {
+      var t = e.target, k = t.getAttribute('data-hex') || t.getAttribute('data-pick')
+      if (k) { var v = t.value.trim(); if (!isHex(v)) return; s.pal[k] = v.toUpperCase(); var other = el.querySelector(t.hasAttribute('data-hex') ? '[data-pick="' + k + '"]' : '[data-hex="' + k + '"]'); if (other) other.value = t.hasAttribute('data-hex') ? v.toLowerCase() : v.toUpperCase(); redraw() }
+    })
+    el.addEventListener('change', function (e) { var k = e.target.getAttribute('data-font'); if (k) { s[k] = e.target.value; redraw() } })
+    el.addEventListener('click', function (e) {
+      var b = e.target.closest('[role="radio"]'); if (!b) return
+      var g = b.parentElement; g.querySelectorAll('[role="radio"]').forEach(function (r) { r.setAttribute('aria-checked', String(r === b)) })
+      if (g.hasAttribute('data-pvseg')) { var i = Array.prototype.indexOf.call(g.children, b); el.querySelectorAll('.pv-one > .st').forEach(function (st, n) { st.classList.toggle('on', n === i) }); return }
+      var key = g.getAttribute('data-seg'); if (key === 'radius') s.radius = Number(b.getAttribute('data-v')); if (key === 'density') s.density = b.getAttribute('data-v'); redraw()
+    })
+    el.addEventListener('click', function (e) { var x = e.target.closest('.toast .x'); if (x) x.closest('.toast').remove() })
+  }
+  document.querySelectorAll('[data-brand]').forEach(build)
+
+  // Shared pieces cloned into their places; the nav crops; the bottom bars.
+  document.querySelectorAll('[data-use]').forEach(function (slot) { var t = document.getElementById(slot.getAttribute('data-use')); if (t) slot.appendChild(t.content.cloneNode(true)) })
+  document.querySelectorAll('[data-bottom]').forEach(function (b) { b.innerHTML = bottom() })
+  document.querySelectorAll('[data-navcrop]').forEach(function (c) { c.innerHTML = '<div class="sb" style="border:0;padding:0;background:none">' + storeGroup(c.getAttribute('data-navcrop') === 'code', 'brand') + '</div>' })
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-approve]'); if (!a || a.getAttribute('aria-disabled') === 'true') return
+    a.setAttribute('aria-disabled', 'true'); a.textContent = 'Approved'
+  })
+
+  // Desktop frames: drawn at 1280, scaled to the column they sit in.
+  function fit(dk) {
+    var inner = dk.firstElementChild, w = dk.clientWidth, sc = Math.min(1, w / 1280)
+    if (dk._w === w && dk._h === inner.offsetHeight) return
+    dk._w = w; dk._h = inner.offsetHeight
+    inner.style.transform = 'scale(' + sc + ')'
+    dk.style.height = Math.ceil(inner.offsetHeight * sc) + 'px'
+  }
+  var dks = Array.prototype.slice.call(document.querySelectorAll('.dk'))
+  dks.forEach(fit)
+  if ('ResizeObserver' in window) { var ro = new ResizeObserver(function () { dks.forEach(fit) }); dks.forEach(function (d) { ro.observe(d); ro.observe(d.firstElementChild) }) }
+  window.addEventListener('load', function () { dks.forEach(fit) })
+})()
+</script>
+</body>
+</html>
