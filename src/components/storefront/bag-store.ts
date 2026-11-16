@@ -27,17 +27,13 @@ function read(): BagItem[] {
 let snapshot: BagItem[] | null = null
 // Who last filled the bag (src/domains/checkout/bag-fill.ts): `link` (a bag link), `shop` (the shopper on the store's
 // own pages), or `keep` (checkout's corrections and its gift button: the marker stays as it was). `shop` stays until
-// the bag is cleared or a link from the store's own website replaces it. Every writer names its kind (no default). Page-only when storage is unavailable, as the bag is.
+// the bag is cleared or a link from the store's own website replaces it. Every writer names its kind (no default).
+// Without storage there is no marker, so a link joins (the safe direction); kept small, it ships on every shop page.
 const BY_KEY = 'frrata.bag.by.v1'
 export type BagWrite = BagBy | 'keep'
-let memoryBy: BagBy | null = null
-function readBy(): BagBy | null {
-  try { return readBagBy(localStorage.getItem(BY_KEY)) } catch { return memoryBy }
-}
 function write(items: BagItem[], by: BagWrite | 'clear') {
   memory = items
   snapshot = items
-  if (by !== 'keep') memoryBy = by === 'clear' ? null : by
   try {
     localStorage.setItem(KEY, JSON.stringify(items))
     if (by === 'clear') localStorage.removeItem(BY_KEY)
@@ -49,7 +45,7 @@ function write(items: BagItem[], by: BagWrite | 'clear') {
 export const bag = {
   get: (): BagItem[] => (snapshot ??= read()),
   /** Who last filled the bag: `link`, `shop`, or null (an empty bag, or one from before the marker). */
-  by: (): BagBy | null => readBy(),
+  by: (): BagBy | null => { try { return readBagBy(localStorage.getItem(BY_KEY)) } catch { return null } },
   add(variantId: string, qty: number, by: BagWrite) {
     const items = bag.get()
     const at = items.find((i) => i.variantId === variantId)
