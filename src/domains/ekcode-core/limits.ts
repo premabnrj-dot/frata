@@ -72,7 +72,9 @@ export function powBits(nthCodeThisHour: number, extra = 0): number {
   return Math.min(24, 16 + 2 * (nthCodeThisHour - 2) + extra)
 }
 
-/** The breaker trips when enough codes went out and too few were typed right. */
+/** The breaker trips when enough codes went out and too few were typed right. On Launch with no raised cap it never
+ *  applies while `perShopDay.launch` < `breakerAfter` (default-on E5; defaults 100 < 200): the daily cap stops codes
+ *  first. A sale-day raise to `breakerAfter` or more brings the breaker back for that store. */
 export function breakerTripped(sent: number, right: number, l: Pick<Limits, 'breakerAfter' | 'breakerMinRight'> = DEFAULT_LIMITS): boolean {
   return sent >= l.breakerAfter && right / sent < l.breakerMinRight
 }
@@ -90,4 +92,16 @@ export function leadingZeroBits(bytes: Uint8Array): number {
     return n + Math.clz32(b) - 24
   }
   return n
+}
+
+/**
+ * How close the busiest hour of the last 7 days came to `globalHour`, which counts every store's codes in an hour
+ * (default-on E5, unit-economics review 2026-11-16). Warn at 80%: raise `globalHour` (a new limits version) to about
+ * 3× the busiest hour before it binds; a store at the limit loses EkCode for that hour and guest checkout still works.
+ */
+const GLOBAL_HOUR_WARN = 0.8
+export function globalHourHeadroom(busiestHour: number, globalHour: number): { share: number; warn: boolean; raiseTo: number; atBound: boolean } {
+  const share = globalHour > 0 ? busiestHour / globalHour : 1
+  const raiseTo = Math.min(LIMIT_BOUNDS.globalHour[1], Math.max(globalHour, Math.ceil((busiestHour * 3) / 100) * 100))
+  return { share, warn: share >= GLOBAL_HOUR_WARN, raiseTo, atBound: raiseTo <= globalHour }
 }

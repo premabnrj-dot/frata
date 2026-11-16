@@ -13,7 +13,7 @@ export async function shopControlAction(form: FormData): Promise<ActionResult> {
   if (!staff.ok) return { error: staff.message }
   const p = z.object({ tenantId: z.string().uuid(), action: z.enum(['pause', 'resume', 'raise', 'reset']), value: z.coerce.number().int().optional(), reason: Reason, shop: z.string().max(80) })
     .safeParse(Object.fromEntries(form))
-  if (!p.success) return { fields: { reason: 'Say why, in a few words.' } }
+  if (!p.success) return { fields: p.error.issues.some((i) => i.path[0] === 'value') ? { value: 'A whole number of codes a day.' } : { reason: 'Say why, in a few words.' } }
   try { await ekShopControl(staff, p.data.tenantId, p.data.action, p.data.value ?? null, p.data.reason) }
   catch { return { error: 'That was refused. A raised cap is 20 to 20,000 a day.' } }
   const done = { pause: 'paused', resume: 'running again', raise: 'cap raised', reset: 'breaker reset' }[p.data.action]

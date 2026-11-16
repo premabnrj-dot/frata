@@ -37,8 +37,10 @@ begin
   order by coalesce(sum(d.codes), 0) desc
   limit 500;
 end $$;--> statement-breakpoint
--- How far EkCode reaches, counted whole: open stores offering it, open stores in all, and the busiest clock hour of
--- codes in the last 7 days (E5: Admin warns at 80% of `globalHour`, which counts every store's codes in an hour).
+-- How far EkCode reaches, counted whole: open stores offering it, open stores in all, and the busiest hour of codes in
+-- the last 7 days, as `globalHour` counts it (E5: Admin warns at 80%). `ekcode_issue_code` refuses on a ROLLING hour
+-- (codes since now() - 1 hour), so the peak here is the most codes in any 60 minutes, not in a clock hour (a burst
+-- across :00 would read half); `busiest_at` is the end of that window.
 create or replace function app_admin_ekcode_reach(p_uid uuid, p_default boolean)
   returns table (offering bigint, opened bigint, busiest_hour bigint, busiest_at timestamptz)
   language plpgsql stable security definer set search_path = '' as $$
@@ -49,8 +51,9 @@ begin
     (select count(*) from public.tenants t where t.first_opened_at is not null),
     coalesce(h.n, 0), h.at
   from (select 1) one
-  left join lateral (select count(*) n, date_trunc('hour', k.created_at) at from public.ekcode_codes k
-    where k.created_at > now() - interval '7 days' group by 2 order by 1 desc limit 1) h on true;
+  left join lateral (select w.n, w.at from (select k.created_at at,
+      count(*) over (order by k.created_at range between interval '1 hour' preceding and current row) n
+    from public.ekcode_codes k where k.created_at > now() - interval '7 days') w order by w.n desc, w.at desc limit 1) h on true;
 end $$;--> statement-breakpoint
 revoke all on function app_admin_ekcode_shops(uuid, int, boolean), app_admin_ekcode_reach(uuid, boolean)
   from public, anon, authenticated, service_role, frata_app, frata_builder;--> statement-breakpoint

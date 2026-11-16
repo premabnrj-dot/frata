@@ -4810,7 +4810,7 @@ end $$;
 -- undone at the end (the block raises its own marker to roll back).
 reset role;
 do $$ declare a uuid := '11111111-1111-1111-1111-111111111111'; b uuid := '22222222-2222-2222-2222-222222222222'; st uuid := gen_random_uuid();
-  who uuid := gen_random_uuid(); fn text; r record; n bigint;
+  who uuid := gen_random_uuid(); fn text; r record; n bigint; t0 timestamptz; m int;
 begin
   begin
     insert into public.platform_staff (user_id, email, role) values (st, 'proof101@frata.test', 'support');
@@ -4828,6 +4828,16 @@ begin
     select * into r from public.app_admin_ekcode_reach(st, true);
     select count(*) into n from public.tenants t where t.first_opened_at is not null and public.app_module_on(t.id, 'ekcode', true);
     if r.offering <> n or r.opened < r.offering then raise exception 'FAIL: 101 the reach count disagrees with the rule (% vs %)', r.offering, n; end if;
+    -- The busiest hour is a rolling 60 minutes, as the limit counts it: three codes across :00 read 3, not 2.
+    create temp table c101 as select * from public.ekcode_codes order by created_at desc limit 1;
+    if not exists (select 1 from c101) then raise exception 'FAIL: 101 needs an EkCode code from the vault proof to copy'; end if;
+    t0 := date_trunc('hour', now() - interval '3 days');
+    foreach m in array array[-10, -5, 5] loop
+      update c101 set id = gen_random_uuid(), created_at = t0 + make_interval(mins => m), wamid = null, proof_digest = null;
+      insert into public.ekcode_codes select * from c101;
+    end loop;
+    select * into r from public.app_admin_ekcode_reach(st, true);
+    if r.busiest_hour <> 3 or r.busiest_at <> t0 + interval '5 minutes' then raise exception 'FAIL: 101 the busiest hour is not a rolling 60 minutes (% at %)', r.busiest_hour, r.busiest_at; end if;
     -- On again after off: an open row beside the closed one reads on, default or not.
     insert into public.tenant_modules (tenant_id, module, enabled_by) values (b, 'ekcode', who);
     if not public.app_module_on(b, 'ekcode', true) or not public.app_module_on(b, 'ekcode', false) then raise exception 'FAIL: 101 on again after off did not read on'; end if;

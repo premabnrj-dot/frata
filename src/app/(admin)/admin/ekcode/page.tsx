@@ -7,9 +7,9 @@ import { ViewTabs } from '@/components/ui/view-tabs'
 import { FieldMessage } from '@/components/ui/action-form'
 import { FIELD } from '@/components/ui/field'
 import { ADMIN_ONLY, ANY_STAFF, requireStaff, type StaffOk } from '@/lib/auth/require-staff'
-import { ekBlocks, ekSettings, ekShops, ekStats, type EkShop } from '@/lib/admin/ekcode'
-import { DEFAULT_LIMITS, type Limits } from '@/domains/ekcode-core/limits'
-import { dayMonthIN } from '@/lib/format-date'
+import { ekBlocks, ekReach, ekSettings, ekShops, ekStats, type EkShop } from '@/lib/admin/ekcode'
+import { DEFAULT_LIMITS, globalHourHeadroom, shopDayCap, type Limits, type PlanKey } from '@/domains/ekcode-core/limits'
+import { dayMonthIN, timeIN } from '@/lib/format-date'
 import { DialogButton, MoreDialogs, type DialogSpec } from '../_components/form-dialog'
 import { NeedsBand } from '../_components/needs-band'
 import { blockAction, limitsAction, shopControlAction } from './actions'
@@ -33,6 +33,17 @@ function controlOf(r: EkShop): DialogSpec {
     : { label: 'Pause codes…', title: `Pause codes for ${r.shop}?`, description: 'Its shoppers sign in without EkCode until you resume.', action: shopControlAction, keep: 'Keep running', go: 'Pause codes', danger: true, fields }
 }
 
+/** A sale day (default-on E5): raise one store's daily cap above its plan's; set it back to the plan's number after. */
+function raiseOf(r: EkShop, l: Limits): DialogSpec {
+  const floor = shopDayCap(planOf(r), null, l) + 1
+  return { label: 'Raise daily cap…', title: `Raise the daily cap for ${r.shop}?`, action: shopControlAction, keep: 'Keep the cap', go: 'Raise cap', fields: <>
+    <input type="hidden" name="tenantId" value={r.tenant_id} /><input type="hidden" name="shop" value={r.shop} /><input type="hidden" name="action" value="raise" />
+    <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Codes a day</span><input name="value" type="number" required min={floor} max={20000} defaultValue={r.raised_cap && r.raised_cap >= floor ? r.raised_cap : undefined} className={`${FIELD} w-28 font-num`} /><FieldMessage name="value" /></label>
+    <Why /></> }
+}
+
+const planOf = (r: EkShop): PlanKey => (r.plan === 'growth' || r.plan === 'scale' ? r.plan : 'launch') // ekcode_plan_of's own default
+
 export default async function EkcodeAdmin({ searchParams }: { searchParams: Promise<{ tab?: string; days?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
@@ -40,7 +51,8 @@ export default async function EkcodeAdmin({ searchParams }: { searchParams: Prom
   const tab = admin.ok && (sp.tab === 'stores' || sp.tab === 'blocked') ? sp.tab : 'overview'
   const days = sp.days === '1' ? 1 : sp.days === '30' ? 30 : 7
   const href = (t: string, d = days) => `/admin/ekcode?tab=${t}&days=${d}`
-  const [shops, settings] = admin.ok ? await Promise.all([ekShops(admin, days).catch(() => null), ekSettings(admin).catch(() => null)]) : [null, null]
+  // Settings once, for every staff role (the overview's hourly limit reads them too); a failed read shows "—", never the defaults.
+  const [shops, settings] = await Promise.all([admin.ok ? ekShops(admin, days).catch(() => null) : null, ekSettings(staff).catch(() => null)])
   const stopped = (shops ?? []).filter((r) => r.paused_at || r.breaker_at)
   const first = stopped[0]
   const l = { ...DEFAULT_LIMITS, ...(settings?.limits as Partial<Limits> | undefined) }
@@ -73,9 +85,9 @@ export default async function EkcodeAdmin({ searchParams }: { searchParams: Prom
       {tab !== 'blocked' && (
         <nav aria-label="Period" className="flex gap-1.5">{PERIODS.map(([d, label]) => <Link key={d} href={href(tab, d)} aria-current={days === d ? 'page' : undefined} className={`inline-flex min-h-6 items-center rounded-full border border-border px-3 py-1 text-sm ${days === d ? 'bg-foreground text-background' : ''}`}>{label}</Link>)}</nav>
       )}
-      {tab === 'overview' && <Overview staff={staff} days={days} />}
-      {tab === 'stores' && shops !== null && (shops.length === 0 ? <Panel title="No store has EkCode on yet" /> : (
-        <DataTable label="Stores with EkCode">
+      {tab === 'overview' && <Overview staff={staff} days={days} globalHour={settings ? l.globalHour : null} />}
+      {tab === 'stores' && shops !== null && (shops.length === 0 ? <Panel title="No open store offers EkCode" /> : (
+        <DataTable label="Open stores offering EkCode">
           <DataTableHead><th>Store</th><th className="text-right">Codes</th><th className="text-right">Right</th><th className="text-right">Continued</th><th>State</th><th><span className="sr-only">More</span></th></DataTableHead>
           <DataTableBody>
             {shops.map((r) => (
@@ -84,8 +96,8 @@ export default async function EkcodeAdmin({ searchParams }: { searchParams: Prom
                 <Td cell="c" className="text-right font-num">{n(r.codes)}</Td>
                 <Td cell="c" className="text-right font-num">{pct(r.verified, r.codes)}</Td>
                 <Td cell="c" className="text-right font-num">{n(r.continued)}</Td>
-                <Td cell="d">{r.paused_at ? <Badge tone="warn">Paused</Badge> : r.breaker_at ? <Badge tone="danger">Paused by limit</Badge> : <Badge tone="ok">Running</Badge>}{r.raised_cap ? <span className="ml-2 text-xs text-muted-foreground">cap {r.raised_cap} a day</span> : null}</Td>
-                <Td cell="f" className="text-right"><MoreDialogs label={`More for ${r.shop}`} specs={[controlOf(r)]} /></Td>
+                <Td cell="d">{r.paused_at ? <Badge tone="warn">Paused</Badge> : r.breaker_at ? <Badge tone="danger">Paused by limit</Badge> : <Badge tone="ok">Running</Badge>}{r.raised_cap && r.raised_cap > shopDayCap(planOf(r), null, l) ? <span className="ml-2 text-xs text-muted-foreground">cap {shopDayCap(planOf(r), r.raised_cap, l).toLocaleString('en-IN')} a day</span> : null}</Td>
+                <Td cell="f" className="text-right"><MoreDialogs label={`More for ${r.shop}`} specs={[controlOf(r), raiseOf(r, l)]} /></Td>
               </DataTableRow>
             ))}
           </DataTableBody>
@@ -96,14 +108,23 @@ export default async function EkcodeAdmin({ searchParams }: { searchParams: Prom
   )
 }
 
-async function Overview({ staff, days }: { staff: StaffOk; days: 1 | 7 | 30 }) {
-  const s = await ekStats(staff, days)
+async function Overview({ staff, days, globalHour }: { staff: StaffOk; days: 1 | 7 | 30; globalHour: number | null }) {
+  const [s, reach] = await Promise.all([ekStats(staff, days), ekReach(staff).catch(() => null)])
   if (!s) return <Panel title="No EkCode numbers yet" />
+  // Every store offers EkCode unless it turned it off (default-on E5): the busiest 60 minutes against the hourly limit.
+  const room = reach && globalHour !== null ? globalHourHeadroom(reach.busiest_hour, globalHour) : null
   const kept = [['Asked for a code', s.codes, null], ['Typed it right', s.verified, s.codes], ['Continued to pay', s.continued, s.verified]] as const
   return (
     <div className="grid gap-4">
-      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-4">
-        {[['Accounts', n(s.accounts)], ['Signed in', n(s.active)], ['On 2 or more stores', n(s.multi_shop)], ['Meta cost', `₹${((s.codes_month * PER_MSG_PAISE) / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`]].map(([label, v]) => (
+      {reach && room?.warn && (
+        <NeedsBand title={`The busiest hour reached ${Math.round(room.share * 100)}% of the hourly limit.`}
+          line={`${reach.busiest_hour.toLocaleString('en-IN')} codes in the hour to ${reach.busiest_at ? `${timeIN(reach.busiest_at)}, ${dayMonthIN(reach.busiest_at)}` : '—'}. ${room.atBound
+            ? 'The limit is at its highest. Ask Meta for the next messaging tier.' : `Raise Codes, every store, an hour to ${room.raiseTo.toLocaleString('en-IN')}.`}`} />
+      )}
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-3">
+        {[['Accounts', n(s.accounts)], ['Signed in', n(s.active)], ['On 2 or more stores', n(s.multi_shop)], ['Meta cost', `₹${((s.codes_month * PER_MSG_PAISE) / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`],
+          ['Stores offering it', reach ? `${reach.offering.toLocaleString('en-IN')} of ${reach.opened.toLocaleString('en-IN')}` : '—'],
+          ['Busiest hour, 7 days', reach ? `${reach.busiest_hour.toLocaleString('en-IN')} of ${globalHour === null ? '—' : globalHour.toLocaleString('en-IN')}` : '—']].map(([label, v]) => (
           <div key={label} className="flex flex-col-reverse bg-card p-4"><dd className="font-num text-2xl">{v}</dd><dt className="text-xs text-muted-foreground">{label}</dt></div>
         ))}
       </dl>
