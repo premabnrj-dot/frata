@@ -253,7 +253,7 @@
   --text-kbd--line-height: 1;
 
   --font-sans: var(--font-inter);
-  --font-mono: var(--font-jetbrains);
+  --font-mono: var(--font-jetbrains), var(--font-inter-ext); /* ₹: JetBrains Mono has none; Inter's latin-ext file does */
   --font-display: var(--font-display-stack);
 
   --radius-xs: var(--r-xs);
@@ -290,7 +290,7 @@
 
 /* NUMBERS THAT LINE UP (<Money>, <Numeric>): mono with tabular figures outside Neel; Inter with tabular figures
    inside it (Neel N0 step 5: mono is for codes only, SKU, AWB, GSTIN, a domain being copied). */
-@utility font-num { font-family: var(--font-num, var(--font-jetbrains), ui-monospace, monospace); font-variant-numeric: tabular-nums; }
+@utility font-num { font-family: var(--font-num, var(--font-jetbrains), var(--font-inter-ext), ui-monospace, monospace); font-variant-numeric: tabular-nums; }
 
 /* THE BLOCK PRINT (brand spec, chapter 5): a repeat tile from the mark's quarter circle (the r's arm) and circle
    (the a's bowl), like a Bagru block. Brand surfaces only (sign-in, brand empty states), at 5%, never behind text
