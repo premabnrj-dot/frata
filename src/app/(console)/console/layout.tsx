@@ -39,8 +39,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** The nav's counts (U·2a; email E·1): orders to confirm and unread notices, from ONE cached read (navCounts),
  *  streamed so the shell never waits; no pill on failure. */
-async function NavCount({ tenantId, userId, which }: { tenantId: string; userId: string; which: 'toConfirm' | 'unread' | 'address' }) {
-  const c = await navCounts(tenantId, userId).catch((err) => { console.error('[nav count]', err instanceof Error ? err.name : err); return null })
+async function NavCount({ tenantId, userId, role, which }: { tenantId: string; userId: string; role: string; which: 'toConfirm' | 'unread' | 'address' }) {
+  const c = await navCounts(tenantId, userId, role).catch((err) => { console.error('[nav count]', err instanceof Error ? err.name : err); return null })
   if (which === 'address') return c?.address ?? null
   const n = c?.[which] ?? 0
   return which === 'toConfirm' ? <NavPill n={n} label="to confirm" /> : <NavPill n={n} label="unread notices" max={9} />
@@ -113,9 +113,9 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     ...auth.all.filter((m) => !m.supportSessionId).map((m) => ({ href: '/console', name: m.tenantName, role: ROLE_LABEL[m.role], current: m.tenantId === tenantId, tenantId: m.tenantId })),
     ...auth.builds.map((b) => ({ href: '/console', name: b.tenantName, role: BUILDER_LABEL, current: false, tenantId: b.tenantId })),
   ]
-  const pill = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="toConfirm" /></Suspense>
-  const bell = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="unread" /></Suspense>
-  const address = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="address" /></Suspense>
+  const pill = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} role={auth.membership.role} which="toConfirm" /></Suspense>
+  const bell = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} role={auth.membership.role} which="unread" /></Suspense>
+  const address = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} role={auth.membership.role} which="address" /></Suspense>
   const rail = railFrom((await cookies()).get('rail')?.value)
   const home: NavItem = { href: '/console', label: 'Home', icon: 'home', exact: true }
   const orders: NavItem = { href: '/console/orders', label: 'Orders', icon: 'orders', badge: pill }

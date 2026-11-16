@@ -134,12 +134,12 @@ async function queueShopWith(tx: Tx, tenantId: string): Promise<{ prefix: string
  *  Frrata notices (capped at 10: the pill shows 9+). Per request, shared by both pills. */
 /** What the shell shows on every page: the counts on Orders and Notices, and the store's address under its name (Neel
  * N1: the sidebar draws it; read here, in the same transaction, so the shell adds no request of its own). */
-export const navCounts = cache(async (tenantId: string, userId: string): Promise<{ toConfirm: number; unread: number; address: string | null }> => {
+export const navCounts = cache(async (tenantId: string, userId: string, role: string): Promise<{ toConfirm: number; unread: number; address: string | null }> => {
   const now = new Date()
   return withTenant(tenantId, async (tx) => {
     const [[r], unread, [shop], domain] = await Promise.all([
       tx.select({ n: sql<number>`count(*)::int` }).from(orders).where(and(eq(orders.tenantId, tenantId), inTabSql('to_confirm', now))),
-      unreadNotices(tx, tenantId, userId),
+      unreadNotices(tx, tenantId, userId, role),
       tx.select({ slug: tenants.slug }).from(tenants).where(eq(tenants.id, tenantId)).limit(1),
       mainDomainIn(tx, tenantId),
     ])

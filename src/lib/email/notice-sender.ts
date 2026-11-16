@@ -45,7 +45,7 @@ export async function sendNoticeEmail(row: OutboxRow): Promise<void> {
       if (!live.length) return null
     }
     const required = (REQUIRED_TYPES as readonly string[]).includes(n.type)
-    const members = await tx.execute<{ user_id: string; role: string }>(sql`select user_id, role from app_notice_members()`)
+    const members = await tx.execute<{ user_id: string; role: string }>(sql`select user_id, role from app_notice_members(${n.id}::uuid)`)
     const [prefs, reads, done, words] = await Promise.all([
       tx.select({ userId: noticePrefs.userId, email: noticePrefs.email }).from(noticePrefs).where(and(eq(noticePrefs.tenantId, tenantId), eq(noticePrefs.type, n.type))),
       tx.select({ userId: noticeReads.userId }).from(noticeReads).where(and(eq(noticeReads.tenantId, tenantId), eq(noticeReads.noticeId, n.id))),

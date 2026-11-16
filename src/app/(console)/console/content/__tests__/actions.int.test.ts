@@ -84,8 +84,8 @@ describe.skipIf(!host)('Console › Content actions', () => {
     expect(JSON.stringify(bodies)).not.toMatch(/Sarees|abroad|January/) // the place, never the words
     // The saver isn't shown their own line; the owner is.
     const { listNotices } = await import('@/lib/queries/notices')
-    expect((await listNotices(T, PARTNER, 'Content test')).filter((n) => /Your partner/.test(n.title))).toHaveLength(0)
-    expect((await listNotices(T, OWNER, 'Content test')).filter((n) => /Your partner/.test(n.title))).toHaveLength(2)
+    expect((await listNotices(T, PARTNER, 'partner', 'Content test')).filter((n) => /Your partner/.test(n.title))).toHaveLength(0)
+    expect((await listNotices(T, OWNER, 'owner', 'Content test')).filter((n) => /Your partner/.test(n.title))).toHaveLength(2)
     await su`delete from shop_pages where tenant_id = ${T} and template = 'faq'` // the pages test makes its own FAQ
   })
 

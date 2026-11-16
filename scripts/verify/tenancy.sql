@@ -2716,7 +2716,7 @@ do $$ begin
   if has_table_privilege('frata_app', 'notices', 'insert') or has_table_privilege('frata_app', 'email_daily', 'insert') then raise exception 'FAIL: the app writes notices or the roll-up'; end if;
   if exists (select 1 from unnest(array['anon', 'authenticated', 'service_role']) r,
                     unnest(array['app_outbox_claim(int)', 'app_outbox_settle(uuid, text, text, int, int)', 'app_store_ses_event(text, uuid, uuid, text, text, text, text, timestamptz)',
-                                 'app_member_email(uuid, boolean)', 'app_notice_members()', 'app_email_daily()', 'app_admin_email_health(uuid, int)', 'app_admin_email_queue(uuid)']) f
+                                 'app_member_email(uuid, boolean)', 'app_notice_members(uuid)', 'app_email_daily()', 'app_admin_email_health(uuid, int)', 'app_admin_email_queue(uuid)']) f
               where has_function_privilege(r, f, 'execute'))
   then raise exception 'FAIL: an API role runs an email definer'; end if;
   if has_function_privilege('frata_app', 'app_admin_email_health(uuid, int)', 'execute') then raise exception 'FAIL: the app reads every shop''s email health'; end if;
@@ -4609,4 +4609,133 @@ do $$ declare a uuid[]; b uuid[]; z uuid[]; last uuid; begin
   if (select count(distinct x) from unnest(a || b) x where x::text like 'c8410000%') <> 601 then raise exception 'FAIL: two pages miss shops'; end if;
 end $$;
 rollback;
-\echo 'tenancy proof — all 86 checks passed'
+-- 87. Owner-only settings after handover (partner publishing PP1, 0150; docs/specs/2026-11-16-partner-publishing.md
+-- § PP1 plan, tasks 2 and 4). Ask the owner: only the store's own live partner (never its owner, staff, a removed link or
+-- another store's partner), only on a store with an owner, at most one line a page an India day, no store set writes
+-- nothing; the line names no words, its page by its fixed address, its asker in `by`; app_notice_members gives it to
+-- owners and Managers only; frata_app still can't insert a notice; only frata_app runs the definer. Then the race the
+-- saves close: a save holds the store's row FOR SHARE, which a handover's FOR UPDATE waits on, and the other way round.
+begin;
+insert into tenants (id, slug, name) values
+  ('c8700000-0000-0000-0000-000000000001', 'proof-87-p', 'Proof 87 P'), ('c8700000-0000-0000-0000-000000000002', 'proof-87-q', 'Proof 87 Q (no owner)'),
+  ('c8700000-0000-0000-0000-000000000003', 'proof-87-z', 'Proof 87 Z'), ('c8700000-0000-0000-0000-000000000004', 'proof-87-w', 'Proof 87 W (link removed)');
+with p as (insert into partners (user_id, email, name, business_name, phone, city, services, work_url, brands_now, terms_version, agreed_at, approved_at)
+    values ('a8700000-0000-0000-0000-0000000000a1', 'proof-87@example.in', 'Pia87', 'Studio 87', '919845000087', 'Jaipur', '{}', '', '1-4', 1, now(), now()) returning id)
+insert into partner_members (partner_id, user_id, email, role, accepted_at) select p.id, 'a8700000-0000-0000-0000-0000000000a1', 'proof-87@example.in', 'owner', now() from p;
+insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days, removed_at)
+  select t.id, pa.id, 2000, 24, 90, case when t.id = 'c8700000-0000-0000-0000-000000000004'::uuid then now() end
+    from partners pa, (values ('c8700000-0000-0000-0000-000000000001'::uuid), ('c8700000-0000-0000-0000-000000000002'::uuid), ('c8700000-0000-0000-0000-000000000004'::uuid)) t(id)
+   where pa.user_id = 'a8700000-0000-0000-0000-0000000000a1';
+insert into members (tenant_id, user_id, role, partner_member_id)
+  select t.id, pm.user_id, 'partner', pm.id from partner_members pm,
+    (values ('c8700000-0000-0000-0000-000000000001'::uuid), ('c8700000-0000-0000-0000-000000000002'::uuid), ('c8700000-0000-0000-0000-000000000004'::uuid)) t(id)
+   where pm.user_id = 'a8700000-0000-0000-0000-0000000000a1';
+insert into members (tenant_id, user_id, role) values
+  ('c8700000-0000-0000-0000-000000000001', 'a8700000-0000-0000-0000-0000000000b1', 'owner'), ('c8700000-0000-0000-0000-000000000001', 'a8700000-0000-0000-0000-0000000000b2', 'admin'),
+  ('c8700000-0000-0000-0000-000000000001', 'a8700000-0000-0000-0000-0000000000b3', 'staff'), ('c8700000-0000-0000-0000-000000000003', 'a8700000-0000-0000-0000-0000000000b1', 'owner'),
+  ('c8700000-0000-0000-0000-000000000004', 'a8700000-0000-0000-0000-0000000000b1', 'owner');
+set local role frata_app;
+do $$ declare pia constant uuid := 'a8700000-0000-0000-0000-0000000000a1'; n int; ask uuid; begin
+  if app_ask_owner(pia, 'contact') then raise exception 'FAIL: an ask with no store set'; end if;
+  perform set_config('app.tenant_id', 'c8700000-0000-0000-0000-000000000001', true);
+  if app_ask_owner('a8700000-0000-0000-0000-0000000000b1', 'contact') then raise exception 'FAIL: the owner asked the owner'; end if;
+  if app_ask_owner('a8700000-0000-0000-0000-0000000000b3', 'contact') then raise exception 'FAIL: staff asked the owner'; end if;
+  if app_ask_owner(pia, 'store') or app_ask_owner(pia, null) or app_ask_owner(null, 'contact') then raise exception 'FAIL: an ask about a page that is not locked'; end if;
+  if not app_ask_owner(pia, 'contact') then raise exception 'FAIL: the store''s partner could not ask its owner'; end if;
+  if app_ask_owner(pia, 'contact') then raise exception 'FAIL: a second ask the same India day wrote a second line'; end if;
+  if not app_ask_owner(pia, 'policies') then raise exception 'FAIL: another page''s ask was refused'; end if;
+  select count(*) into n from notices where source_kind = 'ask_owner';
+  if n <> 2 then raise exception 'FAIL: % ask lines, not 2', n; end if;
+  if exists (select 1 from notices where source_kind = 'ask_owner' and (title is not null or body is not null or by <> pia or type <> 'needs_you' or required
+             or href not in ('/console/settings/contact', '/console/settings/policies'))) then raise exception 'FAIL: an ask line carries words or the wrong page, asker or type'; end if;
+  select id into ask from notices where source_kind = 'ask_owner' and href = '/console/settings/contact';
+  if (select array_agg(user_id::text order by user_id) from app_notice_members(ask)) is distinct from array['a8700000-0000-0000-0000-0000000000b1', 'a8700000-0000-0000-0000-0000000000b2']
+    then raise exception 'FAIL: an ask reaches % (owners and Managers only)', (select array_agg(role) from app_notice_members(ask)); end if;
+  if (select count(*) from app_notice_members(null)) <> 4 or (select count(*) from app_notice_members()) <> 4 then raise exception 'FAIL: other notices no longer reach staff and the partner'; end if;
+  if exists (select 1 from outbox where kind = 'email.notice' and payload->>'noticeId' = ask::text and next_attempt_at < now() + interval '9 minutes')
+     or not exists (select 1 from outbox where kind = 'email.notice' and payload->>'noticeId' = ask::text) then raise exception 'FAIL: the ask is not emailed after the 10 minutes'; end if;
+  begin insert into notices (tenant_id, type, source_kind, href) values ('c8700000-0000-0000-0000-000000000001', 'needs_you', 'ask_owner', '/console/settings/contact');
+    raise exception 'FAIL: frata_app inserted a notice itself'; exception when insufficient_privilege then null; end;
+  -- Another store: its partner is someone else (none), so this partner can't ask there; its notices hold nothing of P's.
+  perform set_config('app.tenant_id', 'c8700000-0000-0000-0000-000000000003', true);
+  if app_ask_owner(pia, 'contact') then raise exception 'FAIL: a partner asked the owner of a store it is not the partner of'; end if;
+  if exists (select 1 from notices) then raise exception 'FAIL: Z sees or got an ask'; end if;
+  perform set_config('app.tenant_id', 'c8700000-0000-0000-0000-000000000002', true);
+  if app_ask_owner(pia, 'contact') then raise exception 'FAIL: an ask on a store with no owner'; end if;
+  perform set_config('app.tenant_id', 'c8700000-0000-0000-0000-000000000004', true);
+  if app_ask_owner(pia, 'contact') then raise exception 'FAIL: an ask through a removed link'; end if;
+end $$;
+reset role;
+-- Yesterday's (India) ask doesn't stop today's; the same day's does.
+update notices set created_at = date_trunc('day', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata' - interval '1 second'
+ where tenant_id = 'c8700000-0000-0000-0000-000000000001' and href = '/console/settings/contact';
+set local role frata_app;
+do $$ begin
+  perform set_config('app.tenant_id', 'c8700000-0000-0000-0000-000000000001', true);
+  if not app_ask_owner('a8700000-0000-0000-0000-0000000000a1', 'contact') then raise exception 'FAIL: yesterday''s ask stopped today''s'; end if;
+end $$;
+rollback;
+do $$ declare r text; begin
+  if exists (select 1 from pg_proc where proname in ('app_ask_owner', 'app_notice_members') and (not prosecdef or proconfig is null or not ('search_path=""' = any (proconfig))))
+    then raise exception 'FAIL: an owner-only definer is not a definer with an empty search_path'; end if;
+  foreach r in array array['anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder'] loop
+    if has_function_privilege(r, 'app_ask_owner(uuid, text)', 'execute') then raise exception 'FAIL: % can run app_ask_owner', r; end if;
+    if has_function_privilege(r, 'app_notice_members(uuid)', 'execute') then raise exception 'FAIL: % can run app_notice_members', r; end if;
+  end loop;
+  if exists (select 1 from information_schema.routine_privileges where routine_name in ('app_ask_owner', 'app_notice_members') and grantee = 'PUBLIC')
+    then raise exception 'FAIL: PUBLIC can run an owner-only definer'; end if;
+  if not has_function_privilege('frata_app', 'app_ask_owner(uuid, text)', 'execute') or not has_function_privilege('frata_app', 'app_notice_members(uuid)', 'execute')
+    then raise exception 'FAIL: frata_app can''t run the owner-only definers'; end if;
+  if has_table_privilege('frata_app', 'notices', 'insert') then raise exception 'FAIL: frata_app holds insert on notices'; end if;
+  -- The saves' lock: frata_app may take FOR SHARE on its store's row (update on tenants (name)), and accepting a handover
+  -- holds that row FOR UPDATE before it adds the owner.
+  if not has_any_column_privilege('frata_app', 'tenants', 'update') then raise exception 'FAIL: frata_app can''t hold its store''s row'; end if;
+  if (select prosrc from pg_proc where proname = 'app_accept_handover_v2') !~ 'from public\.tenants t where t\.id = v_tenant for update'
+    then raise exception 'FAIL: accepting a handover no longer holds the store''s row'; end if;
+end $$;
+-- The race itself, on two connections (dblink, a contrib module): a handover in flight holds the row, so a save's share
+-- lock waits (here: times out) and, once it commits, the save sees the owner; a save in flight makes the handover wait.
+do $$ begin
+  if not exists (select 1 from pg_available_extensions where name = 'dblink') then raise notice '87: dblink is not installed; the two-connection race proof is skipped'; end if;
+end $$;
+select exists (select 1 from pg_available_extensions where name = 'dblink') as has_dblink \gset
+\if :has_dblink
+create extension if not exists dblink;
+insert into tenants (id, slug, name) values ('c8700000-0000-0000-0000-000000000005', 'proof-87-r', 'Proof 87 R (race)');
+insert into members (tenant_id, user_id, role) values ('c8700000-0000-0000-0000-000000000005', 'a8700000-0000-0000-0000-0000000000b2', 'admin');
+select dblink_connect('race87', format('dbname=%s host=%s port=%s user=%s', current_database(), split_part(current_setting('unix_socket_directories'), ',', 1), current_setting('port'), current_user)) is not null as connected \gset
+begin;
+-- This connection is the handover: the row held, the owner added, not yet committed.
+select 1 from tenants where id = 'c8700000-0000-0000-0000-000000000005' for update;
+insert into members (tenant_id, user_id, role) values ('c8700000-0000-0000-0000-000000000005', 'a8700000-0000-0000-0000-0000000000b1', 'owner');
+do $$ declare r text; begin
+  perform dblink_exec('race87', 'begin');
+  perform dblink_exec('race87', 'set local role frata_app');
+  perform dblink_exec('race87', $q$set local app.tenant_id = 'c8700000-0000-0000-0000-000000000005'$q$);
+  perform dblink_exec('race87', $q$set local lock_timeout = '300ms'$q$);
+  perform x from dblink('race87', $q$select 1 from tenants where id = 'c8700000-0000-0000-0000-000000000005' for share$q$, false) as t(x int);
+  r := dblink_error_message('race87');
+  if r !~ 'lock timeout' then raise exception 'FAIL: a save took the store''s row while a handover held it (%)', r; end if;
+  perform dblink_exec('race87', 'rollback');
+end $$;
+commit;
+do $$ declare owners int; begin
+  perform dblink_exec('race87', 'begin');
+  perform dblink_exec('race87', 'set local role frata_app');
+  perform dblink_exec('race87', $q$set local app.tenant_id = 'c8700000-0000-0000-0000-000000000005'$q$);
+  select n into owners from dblink('race87', $q$with held as (select id from tenants where id = 'c8700000-0000-0000-0000-000000000005' for share)
+    select (select count(*)::int from members where role = 'owner') from held$q$) as t(n int);
+  if owners <> 1 then raise exception 'FAIL: the save after the handover saw % owners', owners; end if;
+  -- That save still holds its share lock: a handover now waits for it.
+  begin
+    set local lock_timeout = '300ms';
+    perform 1 from tenants where id = 'c8700000-0000-0000-0000-000000000005' for update;
+    raise exception 'FAIL: a handover took the store''s row while a save held it';
+  exception when lock_not_available then null; end;
+  perform dblink_exec('race87', 'rollback');
+end $$;
+select dblink_disconnect('race87') is not null as disconnected \gset
+delete from members where tenant_id = 'c8700000-0000-0000-0000-000000000005';
+delete from tenants where id = 'c8700000-0000-0000-0000-000000000005';
+\endif
+\echo 'tenancy proof — all 87 checks passed'

@@ -1,4 +1,5 @@
 import { SUPPORT_REASON_LABEL, type SupportReason } from '@/domains/support/session'
+import type { AskPage } from '@/domains/settings/owner-only'
 
 // =============================================================================
 // FILE: src/domains/email/notices.ts — WHAT A FRRATA NOTICE SAYS (spec § E·1; mockup v2 screen 8). Pure. A notice is
@@ -27,8 +28,13 @@ export type NoticeSource =
   | { kind: 'addon_trial'; name: string; monthly: string; day: string }
   /** OE·2: an order's change still waiting 24 hours for the shopper's payment (its number as stored; money formatted). */
   | { kind: 'edit_payment'; number: string; amount: string }
+  /** PP1: the store's partner asks the owner to update a page only the owner or a Manager changes now (its fixed address). */
+  | { kind: 'ask_owner'; page: AskPage }
 
 export type NoticeWords = { title: string; body: string }
+
+/** What a partner's ask names (PP1 mockup § Words; the invoice line is ours, the mockup drew three). */
+const ASKED: Record<AskPage, string> = { contact: 'the grievance officer', policies: 'your policies', business: 'Business and GST', invoices: 'your invoice details' }
 
 export function noticeWords(s: NoticeSource, shopName: string): NoticeWords {
   switch (s.kind) {
@@ -47,6 +53,8 @@ export function noticeWords(s: NoticeSource, shopName: string): NoticeWords {
       return { title: `${s.name} starts at ${s.monthly}/month + GST on ${s.day}`, body: `End the trial before ${s.day} and nothing is charged.` }
     case 'edit_payment':
       return { title: `Order ${s.number} is waiting for ${s.amount}`, body: 'Send the payment link again, or ship without the change.' }
+    case 'ask_owner':
+      return { title: `Your partner asks you to update ${ASKED[s.page]}`, body: 'See it in Settings.' }
   }
 }
 
@@ -60,5 +68,6 @@ export function noticeFallback(n: { sourceKind: string; type: string; title: str
   if (n.sourceKind === 'addon_trial') return { title: 'Your app trial ends soon', body: 'See it in Apps.' }
   if (n.sourceKind === 'support_session') return { title: 'Frrata support opened your store', body: 'Every change they made is in Activity.' }
   if (n.sourceKind === 'edit_payment') return { title: 'An order is waiting for the shopper\'s payment', body: 'See it in Orders.' }
+  if (n.sourceKind === 'ask_owner') return { title: 'Your partner asks you to update a setting', body: 'See it in Settings.' }
   return { title: TYPE_LABEL[n.type as NoticeType] ?? 'Frrata update', body: n.body ?? '' }
 }

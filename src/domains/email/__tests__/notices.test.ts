@@ -20,6 +20,14 @@ describe('notice words', () => {
   it('a support visit says why and for how long', () => {
     expect(noticeWords({ kind: 'support_session', reason: 'fix_problem', minutes: 30 }, 'S').body).toBe('Fix a problem · for 30 minutes. Every change they make is in Activity.')
   })
+  it('a partner asks the owner (PP1): the page in words, the way to it, nothing the partner typed', () => {
+    const w = (page: 'policies' | 'business' | 'contact' | 'invoices') => noticeWords({ kind: 'ask_owner', page }, 'S')
+    expect(w('contact')).toEqual({ title: 'Your partner asks you to update the grievance officer', body: 'See it in Settings.' })
+    expect(w('policies')).toEqual({ title: 'Your partner asks you to update your policies', body: 'See it in Settings.' })
+    expect(w('business')).toEqual({ title: 'Your partner asks you to update Business and GST', body: 'See it in Settings.' })
+    expect(w('invoices')).toEqual({ title: 'Your partner asks you to update your invoice details', body: 'See it in Settings.' })
+    expect(noticeFallback({ sourceKind: 'ask_owner', type: 'needs_you', title: null, body: null })).toEqual({ title: 'Your partner asks you to update a setting', body: 'See it in Settings.' })
+  })
   it('required types and defaults', () => {
     expect(REQUIRED_TYPES).toEqual(['billing', 'security', 'frrata_action'])
     expect(DEFAULT_EMAIL.new_order).toBe(false)

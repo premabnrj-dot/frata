@@ -10,6 +10,7 @@ import { orders } from '@/lib/db/schema-orders'
 import { addonPrices, tenantAddons } from '@/lib/db/schema-modules'
 import { isModuleKey, MODULES } from '@/domains/modules/registry'
 import { noticeFallback, noticeWords, OPTIONAL_TYPES, DEFAULT_EMAIL, type NoticeSource, type NoticeType, type OptionalType } from '@/domains/email/notices'
+import { askPageOf, seesAsks } from '@/domains/settings/owner-only'
 import { formatInr } from '@/lib/format'
 import { dayMonthIN } from '@/lib/format-date'
 import type { Paise } from '@/domains/money/paise'
@@ -65,6 +66,10 @@ export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string): 
     } else if (n.sourceKind === 'edit_payment') {
       const e = n.sourceId ? edit.get(n.sourceId) : undefined
       if (e) src = { kind: 'edit_payment', number: `${orderPrefix(e.prefix ?? '', shopName)}-${e.number}`, amount: formatInr(Number(e.asked) as Paise) }
+    } else if (n.sourceKind === 'ask_owner') {
+      // PP1: worded from its fixed address alone (the definer stores no words).
+      const page = askPageOf(n.href)
+      if (page) src = { kind: 'ask_owner', page }
     } else if (n.title) src = { kind: 'admin', title: n.title, body: n.body }
     out.set(n.id, src ? noticeWords(src, shopName) : noticeFallback(n))
   }
@@ -72,12 +77,16 @@ export async function wordNotices(tx: Tx, rows: NoticeRow[], shopName: string): 
 }
 
 const notSelf = (userId: string) => or(isNull(notices.by), ne(notices.by, userId))
+/** What this member may be shown: everything but their own changes, and a partner's ask only for owners and Managers
+ *  (PP1; app_notice_members holds the same for email). */
+const shownTo = (userId: string, role: string) => (seesAsks(role) ? notSelf(userId) : and(notSelf(userId), ne(notices.sourceKind, 'ask_owner')))
 
-/** The latest notices for this member, newest first, with whether they read each. */
-export async function listNotices(tenantId: string, userId: string, shopName: string, limit = 50): Promise<ShownNotice[]> {
+/** The latest notices for this member, newest first, with whether they read each. `role` is the member's (a support
+ *  visit's is the owner's). */
+export async function listNotices(tenantId: string, userId: string, role: string, shopName: string, limit = 50): Promise<ShownNotice[]> {
   return withTenant(tenantId, async (tx) => {
     // A person isn't shown a notice about their own change (a partner's Content save names its saver in `by`).
-    const rows = await tx.select().from(notices).where(and(eq(notices.tenantId, tenantId), notSelf(userId))).orderBy(desc(notices.createdAt)).limit(limit)
+    const rows = await tx.select().from(notices).where(and(eq(notices.tenantId, tenantId), shownTo(userId, role))).orderBy(desc(notices.createdAt)).limit(limit)
     if (!rows.length) return []
     const [reads, words] = await Promise.all([
       tx.select({ id: noticeReads.noticeId }).from(noticeReads).where(and(eq(noticeReads.tenantId, tenantId), eq(noticeReads.userId, userId), inArray(noticeReads.noticeId, rows.map((r) => r.id)))),
@@ -89,9 +98,9 @@ export async function listNotices(tenantId: string, userId: string, shopName: st
 }
 
 /** Unread notices for this member, capped (the bell shows "9+"; speed review P8). Inside the caller's transaction. */
-export async function unreadNotices(tx: Tx, tenantId: string, userId: string): Promise<number> {
+export async function unreadNotices(tx: Tx, tenantId: string, userId: string, role: string): Promise<number> {
   const rows = await tx.select({ id: notices.id }).from(notices)
-    .where(and(eq(notices.tenantId, tenantId), notSelf(userId), notExists(tx.select({ x: sql`1` }).from(noticeReads).where(and(eq(noticeReads.noticeId, notices.id), eq(noticeReads.userId, userId))))))
+    .where(and(eq(notices.tenantId, tenantId), shownTo(userId, role), notExists(tx.select({ x: sql`1` }).from(noticeReads).where(and(eq(noticeReads.noticeId, notices.id), eq(noticeReads.userId, userId))))))
     .orderBy(desc(notices.createdAt)).limit(10)
   return rows.length
 }
