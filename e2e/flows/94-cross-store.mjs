@@ -49,9 +49,11 @@ export default {
       return res
     }
     const residual = []
+    // A step that stalls fails in a minute, naming itself, instead of holding the run.
+    const step = (name, fn) => t.step(name, () => Promise.race([fn(), new Promise((_, no) => setTimeout(() => no(new Error(`stalled: ${name}`)), 60_000).unref())]))
 
     try {
-      await t.step('Y plants Domain cookies, large and many; Y\'s __Host- ones are refused by the browser', async () => {
+      await step('Y plants Domain cookies, large and many; Y\'s __Host- ones are refused by the browser', async () => {
         await plant([
           `shop_s=forged-session-from-y; Domain=${SHOP_DOMAIN}; Path=/`,
           `ek_state=${TOKEN43}.forged-verifier; Domain=${SHOP_DOMAIN}; Path=/`,
@@ -65,14 +67,15 @@ export default {
         assert.ok(!(await ctx.cookies(X)).some((c) => c.name.startsWith('__Host-')), 'X holds a __Host- cookie Y planted')
       })
 
-      await t.step('Y\'s forged session and EkCode state sign nobody in at X (plain names reach X here: recorded)', async () => {
+      await step('Y\'s forged session and EkCode state sign nobody in at X (plain names reach X here: recorded)', async () => {
         await x.goto(X + '/', { waitUntil: 'domcontentloaded' })
-        const [meRes] = await Promise.all([
-          x.waitForResponse((r) => r.url() === `${X}/api/shop/ekcode/me`),
-          x.evaluate(() => fetch('/api/shop/ekcode/me', { cache: 'no-store' })),
+        // Status and body read in the page (never a Response handed back out, nor a body Playwright waits on).
+        const [meRes, me] = await Promise.all([
+          x.waitForResponse((r) => r.url() === `${X}/api/shop/ekcode/me`, { timeout: 15_000 }),
+          x.evaluate(async () => { const r = await fetch('/api/shop/ekcode/me', { cache: 'no-store' }); return { status: r.status, body: await r.json() } }),
         ])
-        assert.equal(meRes.status(), 200)
-        assert.equal((await meRes.json()).signedIn, false, 'X signed in a session Y forged')
+        assert.equal(me.status, 200)
+        assert.equal(me.body.signedIn, false, 'X signed in a session Y forged')
         const carried = /(^|;\s*)shop_s=forged-session-from-y/.test((await meRes.request().allHeaders()).cookie ?? '')
         residual.push(`local stack (plain http, plain names): X ${carried ? 'RECEIVED' : 'did not receive'} Y's planted shop_s; production reads __Host-shop_s, which Y cannot plant`)
         const [back] = await Promise.all([
@@ -84,7 +87,7 @@ export default {
         assert.equal(await x.evaluate(async () => (await (await fetch('/api/shop/ekcode/me', { cache: 'no-store' })).json()).signedIn), false)
       })
 
-      await t.step(`Y's requests reach X as same-site; X refuses Y's POSTs, and ${MODE === 'enforce' ? 'refuses' : 'logs'} Y's GET`, async () => {
+      await step(`Y's requests reach X as same-site; X refuses Y's POSTs, and ${MODE === 'enforce' ? 'refuses' : 'logs'} Y's GET`, async () => {
         const view = await fromY('/api/shop/orders/view', { method: 'POST', headers: { 'content-type': 'text/plain' }, body: JSON.stringify({ token: 'x'.repeat(22) }) })
         assert.equal((await view.request().allHeaders())['sec-fetch-site'], 'same-site')
         assert.equal(view.status(), 403, 'X answered a POST from a sibling store')
@@ -105,7 +108,7 @@ export default {
         assert.equal(await x.evaluate(async () => (await fetch('/api/shop/ekcode/me', { cache: 'no-store' })).status), 200)
       })
 
-      await t.step('the residuals, recorded: a cookie bomb from Y, and X\'s host-only cookie evicted by Y\'s many', async () => {
+      await step('the residuals, recorded: a cookie bomb from Y, and X\'s host-only cookie evicted by Y\'s many', async () => {
         await ctx.clearCookies()
         await ctx.addCookies([{ name: 'shop_s', value: 'x-own-session', domain: XHOST, path: '/', sameSite: 'Lax' }])
         await plant(Array.from({ length: 200 }, (_, i) => `evict${i}=1; Domain=${SHOP_DOMAIN}; Path=/`))
