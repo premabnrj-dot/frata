@@ -2776,9 +2776,6 @@ do $$ declare n int; pa uuid; pb uuid; pubb uuid; rb uuid; i int; begin
   exception when insufficient_privilege then null; end;
   begin update shop_pages set template = 'about' where id = pa; raise exception 'FAIL: a page changed its template';
   exception when insufficient_privilege then null; end;
-  -- a page can't name a publish at all since pages save live (V1 content, 0136: the column is no longer writable)
-  begin update shop_pages set live_publish_id = pubb where id = pa; raise exception 'FAIL: A pointed a page at B''s publish';
-  exception when insufficient_privilege then null; end;
   -- a live page can't be deleted outside Publish (the delete policy); once removed at a publish, it can
   update shop_pages set live = draft where id = pa;
   delete from shop_pages where id = pa; get diagnostics n = row_count;
@@ -3738,7 +3735,7 @@ do $$ declare n int; begin
   begin perform hsn from products; raise exception 'FAIL: a Builder read HSN'; exception when insufficient_privilege then null; end;
   begin perform 1 from orders; raise exception 'FAIL: a Builder read orders'; exception when insufficient_privilege then null; end;
   begin perform 1 from order_lines; raise exception 'FAIL: a Builder read order lines'; exception when insufficient_privilege then null; end;
-  -- P1·2 (0153): the store's logo (shop_settings.logo_url) for the brand preview (§ 98); everything else stays shut.
+  -- P1·2 (0154): the store's logo (shop_settings.logo_url) for the brand preview (§ 98); everything else stays shut.
   begin perform legal_name, gstin, support_phone from shop_settings; raise exception 'FAIL: a Builder read settings'; exception when insufficient_privilege then null; end;
   begin perform 1 from members; raise exception 'FAIL: a Builder read members'; exception when insufficient_privilege then null; end;
   begin perform 1 from discounts; raise exception 'FAIL: a Builder read offers'; exception when insufficient_privilege then null; end;
@@ -4302,36 +4299,13 @@ do $$ begin
   then raise exception 'FAIL: an API role or frata_admin reaches site_content'; end if;
   if exists (select 1 from unnest(array['tenant_id', 'id', 'kind', 'key', 'created_at']) c where has_column_privilege('frata_app', 'site_content', c, 'update'))
   then raise exception 'FAIL: frata_app can update a fixed column of site_content'; end if;
-  if exists (select 1 from pg_proc where proname in ('app_site_content_cap', 'app_move_content') and (prosecdef or proconfig is null or not ('search_path=""' = any (proconfig))))
+  if exists (select 1 from pg_proc where proname in ('app_site_content_cap') and (prosecdef or proconfig is null or not ('search_path=""' = any (proconfig))))
   then raise exception 'FAIL: a content function is a definer or has no fixed search_path'; end if;
   if exists (select 1 from pg_proc p, unnest(array['public', 'anon', 'authenticated', 'service_role', 'frata_app', 'frata_admin']) r
-              where p.proname in ('app_site_content_cap', 'app_move_content') and r <> 'public' and has_function_privilege(r, p.oid, 'execute'))
+              where p.proname in ('app_site_content_cap') and r <> 'public' and has_function_privilege(r, p.oid, 'execute'))
   then raise exception 'FAIL: a role may run a content function'; end if;
 end $$;
--- The move (0135): each store's own live look into its own rows; B's rows and notice hold nothing of A's.
-begin;
-do $$ declare ra uuid; rb uuid; n int; begin
-  delete from site_content where tenant_id in ('11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222');
-  delete from notices where source_kind = 'content';
-  insert into shop_theme_revisions (tenant_id, theme_key, theme_version, style_key, settings, created_by, updated_by)
-    values ('11111111-1111-1111-1111-111111111111', 'classic', '1.0.0', 'default', '{"settings":{"announcement":{"text":"A-bar","link":null,"scheme":"ink"}},"menus":{"main":[{"id":"a","label":"A-menu","link":"/products","icon":null,"children":[]}],"footer":null},"contact":{"line":"A-line"}}', '99999999-9999-9999-9999-999999999999', '99999999-9999-9999-9999-999999999999') returning id into ra;
-  insert into shop_theme_publishes (tenant_id, revision_id, published_by) values ('11111111-1111-1111-1111-111111111111', ra, '99999999-9999-9999-9999-999999999999');
-  insert into shop_theme_revisions (tenant_id, theme_key, theme_version, style_key, settings, created_by, updated_by)
-    values ('22222222-2222-2222-2222-222222222222', 'classic', '1.0.0', 'default', '{"menus":{"footer":[]}}', '99999999-9999-9999-9999-999999999999', '99999999-9999-9999-9999-999999999999') returning id into rb;
-  insert into shop_theme_publishes (tenant_id, revision_id, published_by) values ('22222222-2222-2222-2222-222222222222', rb, '99999999-9999-9999-9999-999999999999');
-  perform app_move_content();
-  if current_setting('app.tenant_id', true) <> '' then raise exception 'FAIL: the move left a store set'; end if;
-  select count(*) into n from site_content where tenant_id = '11111111-1111-1111-1111-111111111111';
-  if n <> 3 then raise exception 'FAIL: A has % moved rows, not 3 (bar, main menu, Contact line)', n; end if;
-  if exists (select 1 from site_content where tenant_id = '22222222-2222-2222-2222-222222222222' and value::text ~ 'A-') then raise exception 'FAIL: B got A''s content'; end if;
-  if (select count(*) from site_content where tenant_id = '22222222-2222-2222-2222-222222222222') <> 1
-     or not exists (select 1 from site_content where tenant_id = '22222222-2222-2222-2222-222222222222' and kind = 'menu' and key = 'footer' and value = '[]')
-  then raise exception 'FAIL: B''s own empty footer menu was not moved alone'; end if;
-  if exists (select 1 from notices where tenant_id = '22222222-2222-2222-2222-222222222222' and source_kind = 'content' and coalesce(body, '') ~ 'A-') then raise exception 'FAIL: B''s notice names A''s content'; end if;
-  perform app_move_content();
-  if (select count(*) from notices where source_kind = 'content' and tenant_id = '11111111-1111-1111-1111-111111111111') <> 1 then raise exception 'FAIL: the move''s notice was sent twice'; end if;
-end $$;
-rollback;
+-- The move (0135) ran in production 2026-11-15 and twice more; app_move_content() was dropped in 0153 with its proof.
 
 -- 80b. A partner's save told to the owner (V1 content follow-up, 0137; owner 2026-11-15): the line goes to the saver's
 -- own store only, only for a partner's save on a store with an owner, once per place an hour; no store set writes
@@ -4807,7 +4781,7 @@ begin
       then raise exception 'FAIL: 88 a role can call %', fn; end if;
   end loop;
 end $$;
--- § 98 · One brand record (one-address plan P1·2, drizzle/0153; spec § 5). Each store reads and writes only its own
+-- § 98 · One brand record (one-address plan P1·2, drizzle/0154; spec § 5). Each store reads and writes only its own
 -- brand_tokens, brand_seasons and brand_proposals; a logo file outside the store's own brand folder is refused, in
 -- brand_tokens and in shop_settings.logo_url; a Builder reads the live record's named columns only (never `previous`, a
 -- proposal or a season) and shop_settings' five; one open proposal a store, decided once; the owner's line is written
@@ -4856,7 +4830,7 @@ begin
     raise exception 'FAIL: 98 the store''s own path on another host'; exception when check_violation then null; end;
   begin update brand_tokens set logo_mark_url = 'https://evil.example/tenants/c9800000-0000-0000-0000-000000000001/brand/' || repeat('a', 64) || '.svg' where tenant_id = a;
     raise exception 'FAIL: 98 a mark on another host'; exception when check_violation then null; end;
-  -- 0153 (orders.invoice_logo): an invoice may freeze the store's own PNG rendition (documents/<sha256>.png), never another store's.
+  -- 0154 (orders.invoice_logo): an invoice may freeze the store's own PNG rendition (documents/<sha256>.png), never another store's.
   insert into orders (tenant_id, number, payment_method, placed_at, invoice_logo)
     values (a, 98001, 'cod', now(), replace(own, '/brand/', '/documents/') || repeat('b', 64) || '.png');
   begin insert into orders (tenant_id, number, payment_method, placed_at, invoice_logo)

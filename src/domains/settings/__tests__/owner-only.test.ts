@@ -71,7 +71,7 @@ describe('owner-only settings (PP1)', () => {
     expect(refusalFor('policies')).toBe('Only the owner or a Manager can change this now.')
   })
 
-  // app_notice_members (drizzle/0150, re-made in 0153 with brand lines) hand-copies who sees an ask as ('owner','admin'); this pins that list to
+  // app_notice_members (drizzle/0150, re-made in 0154 with brand lines) hand-copies who sees an ask as ('owner','admin'); this pins that list to
   // seesAsks' source, so the two can't drift apart (tenancy audit 2026-11-16 L4).
   it('the roles that see an ask are exactly the SQL list in app_notice_members', () => {
     expect([...CAPABILITIES['shop.manage']].sort()).toEqual(['admin', 'owner'])
