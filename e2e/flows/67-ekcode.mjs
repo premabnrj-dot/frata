@@ -159,6 +159,15 @@ export default {
           await q.getByRole('button', { name: 'Turn off EkCode' }).waitFor()
           assert.equal((await db`select count(*)::int n from tenant_modules where tenant_id = ${shop.id} and module = 'ekcode' and disabled_at is null`)[0].n, 1, 'on again is an open row')
           await until(offers, 90_000)
+          // A privacy page in the store's own words that never names EkCode: Settings asks for the line (precondition c).
+          const [owner] = await db`select user_id from members where tenant_id = ${shop.id} and role = 'owner' limit 1`
+          await db`insert into shop_policies (tenant_id, kind, body, updated_by) values (${shop.id}, 'privacy', 'We keep your details safe.', ${owner.user_id})
+            on conflict (tenant_id, kind) do update set body = excluded.body`
+          try {
+            await q.goto(CONSOLE + '/console/settings/policies')
+            await q.getByText('Add a line saying your checkout offers EkCode.').waitFor()
+            await q.screenshot({ path: t.out('console-privacy-notice'), fullPage: true })
+          } finally { await db`delete from shop_policies where tenant_id = ${shop.id} and kind = 'privacy'` }
         } finally { await ctx2.close() }
       })
 

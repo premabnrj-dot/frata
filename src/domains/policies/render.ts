@@ -56,7 +56,7 @@ export type PolicyFacts = {
  * What the privacy page says when the checkout offers EkCode. DRAFT FOR COUNSEL (docs/setup.md § EkCode A4(e)): the
  * wording is to be settled with counsel before a store with real shoppers offers EkCode. It names EkCode, what it fills
  * in and when a shop gets it, the address saved unless unticked, and the `ek_v` browser id and its daily beacon (the
- * holdout, src/components/modules/ekcode/island.tsx). Its version is read by `ekcodeLineMissing` through EKCODE_WORD.
+ * holdout, src/components/modules/ekcode/island.tsx). A rewritten page counts as saying it when it names EkCode.
  */
 export const EKCODE_PRIVACY = [
   'This checkout offers EkCode, Frrata’s sign-in for shoppers. If you continue with EkCode, it fills in your name, phone number and address, and this shop gets them only then. The address you deliver to is saved to your EkCode unless you untick “Save this address to EkCode”. EkCode’s own privacy policy is at ekcode.in/privacy.',
@@ -68,6 +68,15 @@ const EKCODE_WORD = /ekcode/i
  *  the merchant to add it. */
 export const ekcodeLineMissing = (f: Pick<PolicyFacts, 'offersEkcode'>, privacyOverride: string | null | undefined): boolean =>
   !!f.offersEkcode && !!privacyOverride?.trim() && !EKCODE_WORD.test(privacyOverride)
+
+/** One policy page as the console shows it (Settings home and Policies read this, never their own copy): the
+ *  merchant's own words or the settings', the facts it is missing, and whether it must say the checkout offers EkCode. */
+export function policyState(page: PolicyPage, f: PolicyFacts, override: string | null | undefined, inr: (paise: number) => string): { own: boolean; gaps: string[]; ekcodeMissing: boolean; needs: boolean } {
+  const own = !!override?.trim()
+  const gaps = own ? [] : missingFacts(renderPolicy(page, f, inr))
+  const ekcodeMissing = page === 'privacy' && ekcodeLineMissing(f, override)
+  return { own, gaps, ekcodeMissing, needs: gaps.length > 0 || ekcodeMissing }
+}
 
 /** A run of text, or a fact from settings — `value` null when the merchant has not filled it in. */
 export type Piece = { text: string } | { fact: string; value: string | null }

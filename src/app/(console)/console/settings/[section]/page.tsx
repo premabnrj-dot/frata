@@ -54,7 +54,10 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
     section.key === 'policies' ? policyOverrides(tenantId) : Promise.resolve({}),
     section.preview === 'brand' || section.preview === 'footer' ? previewLook(tenantId) : Promise.resolve(null),
     manifestsFor(tenantId),
-    zoned || section.key === 'policies' ? shopModules(tenantId, new Date().toISOString()) : Promise.resolve(null),
+    zoned ? shopModules(tenantId, new Date().toISOString())
+      // Policies reads it only for the privacy preview's EkCode paragraph: a failed read leaves it out, never the page.
+      : section.key === 'policies' ? shopModules(tenantId, new Date().toISOString()).catch((err) => { console.error('[settings modules]', errName(err)); return null })
+      : Promise.resolve(null),
     // Best effort: without it the page shows no suggestion, never an error.
     section.key === 'payments' ? pinSuggestionFor(tenantId, new Date()).catch((err) => { console.error('[settings pin]', errName(err)); return null }) : Promise.resolve(null),
     owned,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EKCODE_PRIVACY, ekcodeLineMissing, missingFacts, POLICY_PAGES, renderPolicy, type PolicyFacts } from '../render'
+import { EKCODE_PRIVACY, ekcodeLineMissing, missingFacts, policyState, POLICY_PAGES, renderPolicy, type PolicyFacts } from '../render'
 
 const inr = (p: number) => `₹${(p / 100).toLocaleString('en-IN')}`
 const full: PolicyFacts = {
@@ -64,5 +64,16 @@ describe('privacy while the checkout offers EkCode (default-on precondition b)',
     expect(ekcodeLineMissing({ offersEkcode: false }, 'We keep your details safe.')).toBe(false)
     expect(ekcodeLineMissing({ offersEkcode: true }, null)).toBe(false)
     expect(ekcodeLineMissing({ offersEkcode: true }, '   ')).toBe(false)
+  })
+})
+
+describe('policyState: one rule for Settings home and Policies', () => {
+  it('own words have no gaps; a privacy page of own words must name EkCode while the checkout offers it; blank is not own', () => {
+    expect(policyState('contact', { ...full, legalName: '' }, null, inr)).toMatchObject({ own: false, gaps: ['legal business name'], needs: true })
+    expect(policyState('contact', { ...full, legalName: '' }, 'Our own words.', inr)).toMatchObject({ own: true, gaps: [], needs: false })
+    expect(policyState('contact', { ...full, legalName: '' }, '   ', inr)).toMatchObject({ own: false, needs: true })
+    expect(policyState('privacy', { ...full, offersEkcode: true }, 'We keep details safe.', inr)).toMatchObject({ ekcodeMissing: true, needs: true })
+    expect(policyState('privacy', { ...full, offersEkcode: true }, null, inr)).toMatchObject({ ekcodeMissing: false, needs: false })
+    expect(policyState('terms', { ...full, offersEkcode: true }, 'No mention.', inr).ekcodeMissing).toBe(false)
   })
 })

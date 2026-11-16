@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import type { ShopFacts } from '@/components/shop-preview/previews'
-import { ekcodeLineMissing, missingFacts, POLICY_PAGES, renderPolicy, type PolicyPage } from '@/domains/policies/render'
+import { POLICY_PAGES, policyState, renderPolicy, type PolicyPage } from '@/domains/policies/render'
 import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { savePolicyText } from '../actions'
@@ -54,13 +54,13 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty, 
         {!locked && <p className="text-sm text-muted-foreground">These pages are a starting point. Have a lawyer read them once.</p>}
       </div>
       {POLICY_PAGES.map(([k, label]) => {
-        const own = overrides[k]
-        const gaps = own ? [] : missingFacts(renderPolicy(k, facts, inr))
+        const own = overrides[k]?.trim() ? overrides[k] : undefined
+        const { gaps, ekcodeMissing } = policyState(k, facts, own, inr)
         return (
           <div key={k} className={`border-t border-border px-4 py-3 ${selected === k ? 'bg-accent/50' : ''}`}>
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" className="font-medium hover:underline" onClick={() => onSelect(k)}>{label}</button>
-              <Badge tone={own ? (k === 'privacy' && ekcodeLineMissing(facts, own) ? 'warn' : 'info') : gaps.length ? 'warn' : 'ok'}>{own ? 'Your own words' : gaps.length ? 'Missing details' : 'From your settings'}</Badge>
+              <Badge tone={own ? (ekcodeMissing ? 'warn' : 'info') : gaps.length ? 'warn' : 'ok'}>{own ? 'Your own words' : gaps.length ? 'Missing details' : 'From your settings'}</Badge>
               <span className="flex-1" />
               {editing !== k && !locked && (
                 <button type="button" className="inline-flex min-h-6 items-center text-sm underline" disabled={pagesDirty}
@@ -71,7 +71,7 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty, 
               )}
             </div>
             {gaps.length > 0 && <p className="mt-1 text-xs text-warn-text">Needs: {gaps.join(', ')}</p>}
-            {k === 'privacy' && ekcodeLineMissing(facts, own) && <p className="mt-1 text-xs text-warn-text">Add a line saying your checkout offers EkCode.</p>}
+            {ekcodeMissing && <p className="mt-1 text-xs text-warn-text">Add a line saying your checkout offers EkCode.</p>}
             {own && editing !== k && !locked && (
               <button type="button" className="inline-flex min-h-6 items-center mt-1 text-xs text-muted-foreground underline" disabled={pending} onClick={() => save(k, null)}>Follow my settings again</button>
             )}
