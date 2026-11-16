@@ -19,7 +19,7 @@ export type OwnerPasskeys = {
 } | null
 
 const SAYS: Record<string, string> = {
-  not_admin: 'Only a Frrata admin can do that.',
+  not_admin: 'Only a master admin can do that.',
   confirm_first: 'Confirm with your passkey first.',
   no_person: 'This partner has no owner to approve.',
   own_request: 'Another Frrata admin must approve your request.',
@@ -29,7 +29,7 @@ const SAYS: Record<string, string> = {
 const fail = (err: unknown, what: string) => {
   const code = dbCodeOf(err)
   if (!SAYS[code]) console.error('[admin partner passkeys]', what, errName(err))
-  return { ok: false as const, error: SAYS[code] ?? 'Something went wrong. Try again.' }
+  return { ok: false as const, error: SAYS[code] ?? 'We couldn’t save that. Nothing changed. Try again.' }
 }
 
 export async function ownerPasskeys(staff: StaffOk, proof: Proof, partnerId: string): Promise<OwnerPasskeys> {

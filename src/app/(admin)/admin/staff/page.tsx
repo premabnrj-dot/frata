@@ -1,85 +1,90 @@
+import Link from 'next/link'
+import { STAFF_ROLE_WORDS, isMasterAdmin } from '@/domains/tenancy/staff-words'
 import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
 import { PageHeader } from '@/components/layout/page-header'
+import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
+import { Submit } from '@/components/ui/submit'
 import { staffWithPasskeys } from '@/lib/admin/passkeys'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { staffProof } from '@/lib/auth/session'
-import { dayIN } from '@/lib/format-date'
+import { sinceIN } from '@/lib/format-date'
+import { NeedsBand } from '../_components/needs-band'
 import { addStaffAction, removeStaffAction } from './actions'
-import { Section } from '@/components/layout/section'
-import { Submit } from '@/components/ui/submit'
-import { FieldMessage } from '@/components/ui/action-form'
-import { AddOwnPasskey, ApproveRequest, ConfirmFirst, RemovePasskey } from './staff-passkeys'
+import { AddOwnPasskey, AddStaffDialog, ApproveRequest, ConfirmFirst, RemovePasskey } from './staff-passkeys'
 
 export const metadata = { title: 'Staff' }
 
-export default async function StaffPage() {
+const roleWord = (r: string) => STAFF_ROLE_WORDS[r as 'admin' | 'support'] ?? r
+
+/** Admin › Staff (Neel N4, board Staff): the requests that wait lead; one person in view beside the list. */
+export default async function StaffPage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
-  const proof = await staffProof(staff.userId)
+  const [proof, sp] = await Promise.all([staffProof(staff.userId), searchParams])
   if (!proof) return <Panel title="Confirm it's you" />
   const rows = await staffWithPasskeys(staff, proof)
-  const isAdmin = staff.role === 'admin'
+  const now = new Date()
+  const isAdmin = isMasterAdmin(staff.role)
   const asking = isAdmin ? rows.filter((r) => r.request && !r.request.approved && r.userId !== staff.userId) : []
+  const open = rows.find((r) => r.userId === sp.id) ?? rows.find((r) => r.userId === staff.userId) ?? rows[0]
+  const lastUsed = (r: (typeof rows)[number]) => r.passkeys.reduce<number | null>((t, k) => (k.lastUsedAt && (!t || +new Date(k.lastUsedAt) > t) ? +new Date(k.lastUsedAt) : t), null)
+  const mine = open?.userId === staff.userId
+
   return (
     <>
-      <PageHeader title="Staff" />
-      {asking.length > 0 && (
-        <Section title={<span className="flex items-center gap-2">Asking to add a passkey <Badge tone="warn">{asking.length}</Badge></span>}>
+      <PageHeader title="Staff" actions={isAdmin && (
+        <AddStaffDialog action={addStaffAction} support={STAFF_ROLE_WORDS.support} master={STAFF_ROLE_WORDS.admin} />
+      )} />
+
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-4">
           {asking.map((r) => (
-            <div key={r.userId} className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-              <span className="font-num text-sm">{r.email}</span>
-              <ApproveRequest email={r.email} />
-            </div>
+            <NeedsBand key={r.userId} title={`${r.email} asks for a first passkey.`} line="Call before approving." action={<ApproveRequest email={r.email} />} />
           ))}
-        </Section>
-      )}
-      <DataTable>
-        <DataTableHead><th>Email</th><th>Role</th><th>Passkeys</th><th>Since</th><th></th></DataTableHead>
-        <DataTableBody>
-          {rows.map((r) => (
-            <DataTableRow key={r.userId}>
-              <Td cell="a" className="font-num">{r.email}</Td>
-              <Td cell="d"><Badge tone={r.role === 'admin' ? 'info' : 'neutral'}>{r.role === 'admin' ? 'Admin' : 'Support'}</Badge></Td>
-              <Td cell="c">
-                <div className="grid gap-2">
-                  <Badge tone={r.passkeys.length >= 2 ? 'ok' : r.passkeys.length === 1 ? 'warn' : 'danger'}>{r.passkeys.length}</Badge>
-                  {r.passkeys.map((k) => (
-                    <div key={k.id} className="grid gap-1 text-sm">
-                      <span>{k.name} <span className="text-muted-foreground">· added {dayIN(new Date(k.createdAt))}{k.lastUsedAt ? ` · used ${dayIN(new Date(k.lastUsedAt))}` : ''}</span></span>
-                      {(isAdmin || r.userId === staff.userId) && <RemovePasskey id={k.id} name={k.name} owner={r.email} left={r.passkeys.length - 1} />}
-                    </div>
-                  ))}
-                  {r.userId === staff.userId && <AddOwnPasskey />}
-                  {r.request && !r.request.approved && <Badge tone="warn">Asking</Badge>}
-                </div>
-              </Td>
-              <Td cell="c" className="text-muted-foreground">{dayIN(new Date(r.since))}</Td>
-              <Td cell="e" className="text-right">
-                {isAdmin && r.userId !== staff.userId && (
-                  <ConfirmFirst action={removeStaffAction}><input type="hidden" name="userId" value={r.userId} /><Submit variant="ghost">Remove {r.email}</Submit></ConfirmFirst>
-                )}
-              </Td>
-            </DataTableRow>
-          ))}
-        </DataTableBody>
-      </DataTable>
-      {isAdmin && (
-        <Section className="max-w-xl"><ConfirmFirst action={addStaffAction} className="flex flex-wrap items-end gap-2">
-          <div className="flex flex-1 flex-col gap-1.5">
-            <label htmlFor="email" className="text-sm font-medium">Add by email</label>
-            <input id="email" name="email" type="email" required data-error="Enter an email." className="h-11 md:h-9 rounded-md border border-input bg-card px-3 text-sm aria-invalid:border-danger-mark" />
-            <FieldMessage name="email" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="role" className="text-sm font-medium">Role</label>
-            <select id="role" name="role" className="h-11 md:h-9 rounded-md border border-input bg-card px-2 text-sm"><option value="support">Support</option><option value="admin">Admin</option></select>
-          </div>
-          <Submit>Add staff</Submit>
-          <p className="w-full text-xs text-muted-foreground">They must have signed in to Frrata once with that email. Support can open merchants&apos; consoles; Admin can also edit plans and staff.</p>
-        </ConfirmFirst></Section>
-      )}
+          <DataTable label="Staff">
+            <DataTableHead><th>Email</th><th>Role</th><th className="text-right">Passkeys</th><th>Last used</th></DataTableHead>
+            <DataTableBody>
+              {rows.map((r) => {
+                const used = lastUsed(r)
+                return (
+                  <DataTableRow key={r.userId} selected={open?.userId === r.userId}>
+                    <Td cell="a"><Link href={`/admin/staff?id=${r.userId}`} data-row-link className="font-num hover:underline">{r.email}</Link>{r.userId === staff.userId && <span className="text-muted-foreground"> · you</span>}</Td>
+                    <Td cell="d">{roleWord(r.role)}</Td>
+                    <Td cell="b" className="text-right font-num">{r.passkeys.length}</Td>
+                    <Td cell="c" className="text-muted-foreground">{used ? sinceIN(new Date(used), now) : '—'}</Td>
+                  </DataTableRow>
+                )
+              })}
+            </DataTableBody>
+          </DataTable>
+        </div>
+
+        {open && (
+          <Section ariaLabel={open.email} title={<span className="flex flex-wrap items-center gap-2"><span className="font-num [overflow-wrap:anywhere]">{open.email}</span><Badge>{roleWord(open.role)}</Badge></span>} className="text-sm">
+            {mine && open.request && !open.request.approved && (
+              <NeedsBand tone="neutral" title="Your passkey request" line="Another master admin approves it." />
+            )}
+            <h3 className="text-sm font-semibold">Passkeys</h3>
+            {open.passkeys.length === 0 ? <p className="text-muted-foreground">None yet.</p> : (
+              <div className="divide-y divide-line-soft">
+                {open.passkeys.map((k) => (
+                  <div key={k.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <span className="min-w-0">{k.name}</span>
+                    <span className="flex items-center gap-2"><span className="text-muted-foreground">{k.lastUsedAt ? `Used ${sinceIN(new Date(k.lastUsedAt), now)}` : 'Not used yet'}</span>
+                      {(isAdmin || mine) && <RemovePasskey id={k.id} name={k.name} owner={open.email} left={open.passkeys.length - 1} />}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {mine && <AddOwnPasskey />}
+            {isAdmin && !mine && (
+              <ConfirmFirst action={removeStaffAction} className="border-t border-border pt-3"><input type="hidden" name="userId" value={open.userId} /><Submit variant="secondary">Remove {open.email}</Submit></ConfirmFirst>
+            )}
+          </Section>
+        )}
+      </div>
     </>
   )
 }

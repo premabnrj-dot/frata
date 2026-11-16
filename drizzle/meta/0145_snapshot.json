@@ -1,6 +1,6 @@
 {
-  "id": "0d3233b5-ccb5-4f80-86fa-cbed8fb89977",
-  "prevId": "8d17e74a-0cb8-417a-b0ca-a6cd60fe32bd",
+  "id": "1af3b1bf-f4d3-4237-8991-43203988c83e",
+  "prevId": "8252cd5c-97e8-40aa-bc6f-9ec15a2d7e20",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -69,6 +69,16 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
+        },
+        "action_word": {
+          "name": "action_word",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "type": "stored",
+            "as": "split_part(action, '.', 1)"
+          }
         }
       },
       "indexes": {
@@ -93,11 +103,71 @@
           "method": "btree",
           "concurrently": false
         },
-        "audit_events_at": {
-          "name": "audit_events_at",
+        "audit_events_at_id": {
+          "name": "audit_events_at_id",
           "columns": [
             {
               "expression": "at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "audit_events_actor_at": {
+          "name": "audit_events_actor_at",
+          "columns": [
+            {
+              "expression": "actor_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "audit_events_kind_at": {
+          "name": "audit_events_kind_at",
+          "columns": [
+            {
+              "expression": "action_word",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7036,394 +7106,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.partner_bill_tries": {
-      "name": "partner_bill_tries",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "at": {
-          "name": "at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "partner_bill_tries_user": {
-          "name": "partner_bill_tries_user",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        },
-        "partner_bill_tries_at": {
-          "name": "partner_bill_tries_at",
-          "columns": [
-            {
-              "expression": "at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.partner_client_bills": {
-      "name": "partner_client_bills",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "partner_id": {
-          "name": "partner_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "label": {
-          "name": "label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "number": {
-          "name": "number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "amount": {
-          "name": "amount",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "due_on": {
-          "name": "due_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "paid_at": {
-          "name": "paid_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "paid_by": {
-          "name": "paid_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "partner_client_bills_client": {
-          "name": "partner_client_bills_client",
-          "columns": [
-            {
-              "expression": "partner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "due_on",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        },
-        "partner_client_bills_unpaid": {
-          "name": "partner_client_bills_unpaid",
-          "columns": [
-            {
-              "expression": "partner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "due_on",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "where": "\"partner_client_bills\".\"paid_at\" is null",
-          "concurrently": false
-        }
-      },
-      "foreignKeys": {
-        "partner_client_bills_partner_id_partners_id_fk": {
-          "name": "partner_client_bills_partner_id_partners_id_fk",
-          "tableFrom": "partner_client_bills",
-          "columnsFrom": [
-            "partner_id"
-          ],
-          "tableTo": "partners",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
-        },
-        "partner_client_bills_tenant_id_tenants_id_fk": {
-          "name": "partner_client_bills_tenant_id_tenants_id_fk",
-          "tableFrom": "partner_client_bills",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "tableTo": "tenants",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
-        },
-        "partner_client_bills_paid_by_partner_members_id_fk": {
-          "name": "partner_client_bills_paid_by_partner_members_id_fk",
-          "tableFrom": "partner_client_bills",
-          "columnsFrom": [
-            "paid_by"
-          ],
-          "tableTo": "partner_members",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
-        },
-        "partner_client_bills_created_by_partner_members_id_fk": {
-          "name": "partner_client_bills_created_by_partner_members_id_fk",
-          "tableFrom": "partner_client_bills",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "tableTo": "partner_members",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "partner_client_bills_label": {
-          "name": "partner_client_bills_label",
-          "value": "length(\"partner_client_bills\".\"label\") between 1 and 60"
-        },
-        "partner_client_bills_number": {
-          "name": "partner_client_bills_number",
-          "value": "\"partner_client_bills\".\"number\" is null or \"partner_client_bills\".\"number\" ~ '^[A-Za-z0-9/-]{1,20}$'"
-        },
-        "partner_client_bills_amount": {
-          "name": "partner_client_bills_amount",
-          "value": "\"partner_client_bills\".\"amount\" between 100 and 10000000000"
-        },
-        "partner_client_bills_paid": {
-          "name": "partner_client_bills_paid",
-          "value": "(\"partner_client_bills\".\"paid_at\" is null) = (\"partner_client_bills\".\"paid_by\" is null)"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.partner_client_deals": {
-      "name": "partner_client_deals",
-      "schema": "",
-      "columns": {
-        "partner_id": {
-          "name": "partner_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "amount": {
-          "name": "amount",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "renews_on": {
-          "name": "renews_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_by": {
-          "name": "updated_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "partner_client_deals_partner_id_partners_id_fk": {
-          "name": "partner_client_deals_partner_id_partners_id_fk",
-          "tableFrom": "partner_client_deals",
-          "columnsFrom": [
-            "partner_id"
-          ],
-          "tableTo": "partners",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
-        },
-        "partner_client_deals_tenant_id_tenants_id_fk": {
-          "name": "partner_client_deals_tenant_id_tenants_id_fk",
-          "tableFrom": "partner_client_deals",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "tableTo": "tenants",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
-        },
-        "partner_client_deals_updated_by_partner_members_id_fk": {
-          "name": "partner_client_deals_updated_by_partner_members_id_fk",
-          "tableFrom": "partner_client_deals",
-          "columnsFrom": [
-            "updated_by"
-          ],
-          "tableTo": "partner_members",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
-        }
-      },
-      "compositePrimaryKeys": {
-        "partner_client_deals_partner_id_tenant_id_pk": {
-          "name": "partner_client_deals_partner_id_tenant_id_pk",
-          "columns": [
-            "partner_id",
-            "tenant_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "partner_client_deals_kind": {
-          "name": "partner_client_deals_kind",
-          "value": "\"partner_client_deals\".\"kind\" in ('project','retainer')"
-        },
-        "partner_client_deals_amount": {
-          "name": "partner_client_deals_amount",
-          "value": "\"partner_client_deals\".\"amount\" between 100 and 10000000000"
-        },
-        "partner_client_deals_renews": {
-          "name": "partner_client_deals_renews",
-          "value": "\"partner_client_deals\".\"kind\" = 'retainer' or \"partner_client_deals\".\"renews_on\" is null"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.partner_links": {
       "name": "partner_links",
       "schema": "",
@@ -7857,6 +7539,22 @@
           "isUnique": false,
           "with": {},
           "method": "btree",
+          "concurrently": false
+        },
+        "partner_passkey_requests_open": {
+          "name": "partner_passkey_requests_open",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"partner_passkey_requests\".\"used_at\" is null and \"partner_passkey_requests\".\"declined_at\" is null and \"partner_passkey_requests\".\"approved_at\" is null",
           "concurrently": false
         }
       },
@@ -12543,6 +12241,30 @@
           "primaryKey": false,
           "notNull": false
         },
+        "refund_amount": {
+          "name": "refund_amount",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refund_utr": {
+          "name": "refund_utr",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refunded_at": {
+          "name": "refunded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refunded_by": {
+          "name": "refunded_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -12617,6 +12339,38 @@
           "with": {},
           "method": "btree",
           "concurrently": false
+        },
+        "frrata_payments_refund_utr": {
+          "name": "frrata_payments_refund_utr",
+          "columns": [
+            {
+              "expression": "upper(btrim(\"refund_utr\"))",
+              "isExpression": true,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"frrata_payments\".\"refund_utr\" is not null",
+          "concurrently": false
+        },
+        "frrata_payments_to_refund": {
+          "name": "frrata_payments_to_refund",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"frrata_payments\".\"over_paid\" > 0 and \"frrata_payments\".\"refunded_at\" is null",
+          "concurrently": false
         }
       },
       "foreignKeys": {
@@ -12651,6 +12405,10 @@
         "frrata_payments_outcome": {
           "name": "frrata_payments_outcome",
           "value": "not (\"frrata_payments\".\"captured_at\" is not null and \"frrata_payments\".\"failed_at\" is not null)"
+        },
+        "frrata_payments_refund_whole": {
+          "name": "frrata_payments_refund_whole",
+          "value": "(\"frrata_payments\".\"refund_amount\" is null) = (\"frrata_payments\".\"refund_utr\" is null) and (\"frrata_payments\".\"refund_utr\" is null) = (\"frrata_payments\".\"refunded_at\" is null) and (\"frrata_payments\".\"refunded_at\" is null) = (\"frrata_payments\".\"refunded_by\" is null)"
         }
       },
       "isRLSEnabled": false

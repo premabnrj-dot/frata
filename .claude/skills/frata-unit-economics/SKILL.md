@@ -261,7 +261,7 @@ order profit; zero in a month Frata collects nothing:
 Snapshotting 2000 bps per link locks every store opened before contribution is
 measured; changing PARTNER_TERMS changes only later stores.
 
-**How a month's share is counted** (P2 Clients, owner 2026-11-15 Q6; `src/domains/partners/share.ts`, drizzle/0145
+**How a month's share is counted** (P2 Clients, owner 2026-11-15 Q6; `src/domains/partners/share.ts`, drizzle/0147
 `app_partner_client_shares`; Phase 6 statements read the same rule): an issued, non-test Frrata invoice's taxable less
 its non-test credit notes' taxable, at the LINK's snapshotted bps, floored to the paisa, counted only once
 `invoiceState` says paid. A month counts WHOLE when its period overlaps the link's window (opening and closing months

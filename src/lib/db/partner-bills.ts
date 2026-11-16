@@ -9,7 +9,7 @@ import type { Caller } from './partners'
 
 // =============================================================================
 // FILE: src/lib/db/partner-bills.ts — a partner's OWN billing to its clients and the share's month (P2 Clients,
-// docs/plans/2026-11-16-p2-clients.md). Every call is a definer in drizzle/0145 that takes the partner from the
+// docs/plans/2026-11-16-p2-clients.md). Every call is a definer in drizzle/0147 that takes the partner from the
 // caller's own live membership and re-checks this session's passkey check; a link or bill id is matched on the caller's
 // partner ('not_found' otherwise). Only the partner's owner gets rows; a Lead or Builder gets none or 'not_owner'.
 // Errors are logged by name only (S10: a raw error carries its parameters, the step-up hash among them).

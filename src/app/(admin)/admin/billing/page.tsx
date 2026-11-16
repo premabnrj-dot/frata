@@ -1,93 +1,146 @@
-import { Money, Numeric } from '@/components/data/numeric'
-import { PageHeader } from '@/components/layout/page-header'
-import { button } from '@/components/ui/button'
-import { Panel } from '@/components/ui/panel'
-import { paise } from '@/domains/money/paise'
-import { monthOfYM, monthStartIST, ymOf } from '@/domains/time/month'
-import { billingMonth, toIssue } from '@/lib/admin/billing'
 import Link from 'next/link'
-import { STATE_LABEL } from '@/domains/billing/status'
-import { draftableMonths } from '@/lib/billing/run'
-import { usage } from '@/domains/plans/entitlements'
-import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
-import { dayIN } from '@/lib/format-date'
-import { collectAction, issueAction, runDraftsAction } from './actions'
-import { Submit } from '@/components/ui/submit'
+import { Money } from '@/components/data/numeric'
+import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
+import { PageHeader } from '@/components/layout/page-header'
+import { Badge } from '@/components/ui/badge'
+import { Button, button } from '@/components/ui/button'
+import { Panel } from '@/components/ui/panel'
+import { Section } from '@/components/layout/section'
+import { Steps } from '@/components/ui/steps'
+import { ViewTabs } from '@/components/ui/view-tabs'
 import { ActionForm, FieldMessage } from '@/components/ui/action-form'
+import { Submit } from '@/components/ui/submit'
 import { FIELD } from '@/components/ui/field'
+import { paise } from '@/domains/money/paise'
+import { STATE_LABEL } from '@/domains/billing/status'
+import { monthOfYM, monthStartIST, ymOf } from '@/domains/time/month'
+import { billingMonth, toIssue, type DraftRow } from '@/lib/admin/billing'
+import { todayItems } from '@/lib/admin/today'
+import { draftableMonths } from '@/lib/billing/run'
+import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
+import { formatInr } from '@/lib/format'
+import { DialogButton, MoreDialogs } from '../_components/form-dialog'
+import { collectAction, issueAction, runDraftsAction } from './actions'
 
 export const metadata = { title: 'Billing' }
+export const dynamic = 'force-dynamic'
 
-// Admin › Billing (billing B0): each shop's invoice for a month, read-only. Drafts are redrafted daily by the cron and
-// on "Run drafts"; nothing is issued, charged or sent until B2/B3 (test mode until Frrata's GSTIN and gateway exist).
-export default async function BillingPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
+const VIEWS = [['needs', 'Needs you'], ['due', 'Due'], ['paid', 'Paid'], ['drafts', 'Drafts']] as const
+type View = (typeof VIEWS)[number][0]
+const IN: Record<View, (r: DraftRow) => boolean> = {
+  needs: (r) => r.toRefund > 0,
+  due: (r) => r.state === 'due',
+  paid: (r) => r.state === 'paid' || r.state === 'credited',
+  drafts: (r) => !r.issuedAt,
+}
+const LONG = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' })
+const SHORT = new Intl.DateTimeFormat('en-IN', { month: 'long', timeZone: 'Asia/Kolkata' })
+const inr = (p: number) => formatInr(paise(p), { decimals: true })
+
+/** An invoice's state in words: what it needs first. */
+function stateOf(r: DraftRow) {
+  if (r.toRefund > 0) return <Badge tone="danger">Paid {formatInr(paise(r.toRefund))} too much</Badge>
+  if (!r.issuedAt) return <Badge>{r.rolled ? 'Rolls to next month' : r.carryOut < 0 ? 'Balance carried' : 'Draft'}</Badge>
+  if (!r.number) return <Badge>Nothing to pay</Badge>
+  if (r.state === 'due') return <Badge tone="warn">Due {inr(r.due)}</Badge>
+  return <Badge tone={r.state === 'paid' ? 'ok' : 'neutral'}>{STATE_LABEL[r.state]}</Badge>
+}
+
+/** Admin › Billing (Neel N4, board Billing): this month's run, one step in view; the invoices by what they need. */
+export default async function BillingPage({ searchParams }: { searchParams: Promise<{ month?: string; view?: string }> }) {
   const staff = await requireStaff(ADMIN_ONLY)
   if (!staff.ok) return <Panel title={staff.message} />
-  const { month } = await searchParams
-  const start = (month && monthOfYM(month)) || monthStartIST(new Date())
+  const sp = await searchParams
+  const now = new Date()
+  const start = (sp.month && monthOfYM(sp.month)) || monthStartIST(now)
   const ym = ymOf(start)
-  const rows = await billingMonth(staff, start)
+  // Needs you is every month's (an over-payment from any month), the same items Today and the nav count.
+  const [rows, { items }] = await Promise.all([billingMonth(staff, start), todayItems(staff)])
+  const owed = items.filter((it) => it.kind === 'overpaid')
   const ready = toIssue(rows, start)
-  const begun = start.getTime() <= Date.now()
-  const sum = (k: 'taxable' | 'gst' | 'total') => rows.reduce((t, r) => t + r[k], 0)
-  const label = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(start)
-  const field = FIELD
+  const begun = start.getTime() <= now.getTime()
+  const label = SHORT.format(start)
+  const canDraft = draftableMonths(now).some((m) => m.getTime() === start.getTime())
+  const counts = { ...Object.fromEntries(VIEWS.map(([k]) => [k, rows.filter(IN[k]).length])), needs: owed.length } as Record<View, number>
+  const asked = VIEWS.find(([k]) => k === sp.view)?.[0]
+  const view: View = asked ?? (counts.needs ? 'needs' : counts.due ? 'due' : counts.drafts && !counts.paid ? 'drafts' : 'paid')
+  const shown = rows.filter(IN[view])
+  const due = rows.filter(IN.due)
+  // The run's step: drafts, then issue, then collect (one step in view, its one action).
+  const step = rows.length === 0 ? 0 : ready.open > 0 ? 1 : 2
+  const listed = Array.from({ length: 13 }, (_, i) => { const d = new Date(monthStartIST(now)); d.setUTCMonth(d.getUTCMonth() + 1 - i); return monthStartIST(new Date(d.getTime() + 15 * 86_400_000)) })
+  const months = listed.some((m) => ymOf(m) === ym) ? listed : [start, ...listed]
+  const monthField = <input type="hidden" name="month" value={ym} />
+
   return (
     <>
-      <PageHeader title="Billing" meta={`Invoices dated 1 ${label}: the plan for ${label} in advance, the fee on last month's delivered orders. Without Frrata's GSTIN set, issuing is test mode: a TEST series, never collected.`} />
-      <div className="flex flex-wrap items-end gap-2">
-        <form className="flex items-end gap-2">
-          <label className="flex flex-col gap-1.5 text-sm font-medium">Month<input type="month" name="month" defaultValue={ym} className={field} /></label>
-          <button className={button({ variant: 'secondary' })}>Show</button>
-        </form>
-        {draftableMonths(new Date()).some((m) => m.getTime() === start.getTime()) && (
-          <ActionForm action={runDraftsAction}>
-            <input type="hidden" name="month" value={ym} />
-            <Submit>Run drafts for {label}</Submit>
-          </ActionForm>
+      <PageHeader title="Billing"
+        badges={<form className="flex items-center gap-2"><label className="flex items-center gap-2 text-sm"><span className="text-muted-foreground">Month</span>
+          <select name="month" defaultValue={ym} className={FIELD}>{months.map((m) => <option key={ymOf(m)} value={ymOf(m)}>{LONG.format(m)}</option>)}</select></label>
+          <Button type="submit" variant="secondary" size="sm">Show</Button></form>}
+        actions={<MoreDialogs specs={[
+          ...(canDraft ? [{ label: `Run drafts for ${label}…`, title: `Run drafts for ${label}?`, description: 'Every store on a plan gets its draft redone from today’s figures.', action: runDraftsAction, fields: monthField, keep: 'Keep the drafts', go: 'Run drafts' }] : []),
+          { label: 'Run collection now…', title: 'Run collection now?', description: 'Autopay is tried on every due invoice that allows it.', action: collectAction, fields: monthField, keep: 'Not now', go: 'Run collection' },
+        ]} />} />
+
+      <Section labelledBy="run-h" className="space-y-3">
+        <Steps label={`${label}'s run`} current={step} steps={[rows.length ? `Drafts · ${rows.length}` : 'Drafts', 'Issue', 'Collect']} />
+        {step === 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <b id="run-h" className="font-medium">No invoices for {label} yet</b>
+            {canDraft && <ActionForm action={runDraftsAction}>{monthField}<Submit>Run drafts for {label}</Submit></ActionForm>}
+          </div>
+        ) : step === 1 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="flex flex-col"><b id="run-h" className="font-medium">Issue {ready.count} {ready.count === 1 ? 'invoice' : 'invoices'} for {label}</b>
+              <span className="text-sm text-muted-foreground">{inr(ready.total)} with GST{ready.open > ready.count ? ` · ${ready.open - ready.count} with nothing to pay will close` : ''}</span></span>
+            {!begun ? <span className="text-sm text-muted-foreground">Issued from 1 {label}</span>
+              : ready.stale > 0 ? <ActionForm action={runDraftsAction}>{monthField}<Submit>Run drafts again</Submit></ActionForm>
+              : ready.count > 0 && <DialogButton variant="primary" spec={{ label: `Issue ${ready.count} ${ready.count === 1 ? 'invoice' : 'invoices'}`, title: `Issue ${ready.count} ${ready.count === 1 ? 'invoice' : 'invoices'} for ${label}?`, danger: true,
+                  description: 'Each gets its number now. An issued invoice never changes. A correction is a credit note.', action: issueAction, confirm: true, keep: 'Not yet', go: `Issue ${ready.count}`,
+                  fields: <>{monthField}<input type="hidden" name="count" value={ready.count} /><input type="hidden" name="total" value={ready.total} />
+                    <label className="flex flex-col gap-1 text-sm"><span className="font-medium">Type ISSUE {ready.count} to confirm</span><input name="confirm" autoComplete="off" className={FIELD} /><FieldMessage name="confirm" /></label></> }} />}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="flex flex-col"><b id="run-h" className="font-medium">{due.length ? `${due.length} ${due.length === 1 ? 'invoice' : 'invoices'} due` : `Every ${label} invoice is settled`}</b>
+              {due.length > 0 && <span className="text-sm text-muted-foreground">{inr(due.reduce((t, r) => t + r.due, 0))} to collect</span>}</span>
+            {rows.some((r) => r.number) && <a href={`/admin/billing/export?month=${ym}`} className={button({ variant: 'secondary' })}>Download GST export</a>}
+          </div>
         )}
-      </div>
-      {begun && ready.open > 0 && (
-        <Panel title={`Issue ${label}`}>
-          <p className="text-sm">{ready.count} invoice{ready.count === 1 ? '' : 's'} to issue, totalling <Money paise={paise(ready.total)} decimals /> with GST{ready.open > ready.count ? `; ${ready.open - ready.count} with nothing to pay will close` : ''}. Numbers are given now, in order; an issued invoice never changes (a correction is a credit note).</p>
-          {ready.stale > 0 ? <p className="text-sm text-warn-text">{ready.stale} draft{ready.stale === 1 ? ' was' : 's were'} made before the 1st: run drafts for {label} again first.</p> : ready.count > 0 && (
-            <ActionForm action={issueAction} className="mt-2 flex flex-wrap items-end gap-2">
-              <input type="hidden" name="month" value={ym} /><input type="hidden" name="count" value={ready.count} /><input type="hidden" name="total" value={ready.total} />
-              <label className="flex flex-col gap-1.5 text-sm font-medium">Type ISSUE {ready.count} to confirm<input name="confirm" autoComplete="off" className={field} /><FieldMessage name="confirm" /></label>
-              <Submit variant="destructive">Issue {ready.count} invoice{ready.count === 1 ? '' : 's'}</Submit>
-            </ActionForm>
-          )}
-        </Panel>
-      )}
-      <ActionForm action={collectAction}><input type="hidden" name="month" value={ym} /><Submit variant="secondary">Run collection now</Submit></ActionForm>
-      {rows.some((r) => r.number) && <p className="text-sm"><a href={`/admin/billing/export?month=${ym}`} className="underline">Download the GST export for {label} (CSV)</a></p>}
-      {rows.length === 0 ? (
-        <Panel title={`No invoices for ${label} yet`}>The daily run drafts this month and next for every shop on a plan. Run drafts to make them now.</Panel>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <caption className="sr-only">Invoices for {label}</caption>
-            <thead className="bg-muted text-left text-xs text-muted-foreground">
-              <tr><th className="px-4 py-2 font-medium">Shop</th><th className="px-4 py-2 text-right font-medium">Delivered orders</th><th className="px-4 py-2 text-right font-medium">Taxable</th><th className="px-4 py-2 text-right font-medium">GST</th><th className="px-4 py-2 text-right font-medium">Total</th><th className="px-4 py-2 font-medium">State</th></tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-t border-border">
-                  <td className="px-4 py-3 font-medium">{r.number ? <Link href={`/admin/billing/invoice/${r.id}`} className="underline">{r.shop}</Link> : r.shop}</td>
-                  <td className="px-4 py-3 text-right"><Numeric>{r.ordersBilled.toLocaleString('en-IN')}</Numeric> <span className="text-muted-foreground">of {r.includedOrders.toLocaleString('en-IN')}</span>{r.includedOrders > 0 && usage(r.ordersBilled, r.includedOrders).over && <span className="ml-1 text-warning-text">over</span>}</td>
-                  <td className="px-4 py-3 text-right"><Money paise={paise(r.taxable)} decimals /></td>
-                  <td className="px-4 py-3 text-right"><Money paise={paise(r.gst)} decimals /></td>
-                  <td className="px-4 py-3 text-right font-semibold"><Money paise={paise(r.total)} decimals /></td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.issuedAt ? (r.number ? <>{r.number} · {r.state === 'due' ? <span className="text-warn-text">due <Money paise={paise(r.due)} decimals /></span> : STATE_LABEL[r.state]}</> : 'Closed: nothing to pay') : r.rolled ? 'Rolls to next month (under ₹100)' : r.carryOut < 0 ? 'Balance carried forward' : `Draft · ${dayIN(r.draftedAt)}`}</td>
-                </tr>
+      </Section>
+
+      {(rows.length > 0 || owed.length > 0) && <>
+        <ViewTabs label="Invoices" tabs={VIEWS.map(([k, l]) => ({ href: `/admin/billing?month=${ym}&view=${k}`, label: l, count: counts[k], current: view === k }))} />
+        {view === 'needs' ? (owed.length === 0 ? <Panel title="Nothing waits." /> : (
+          <DataTable label="Invoices that need you">
+            <DataTableHead><th>Invoice</th><th>What</th><th><span className="sr-only">Action</span></th></DataTableHead>
+            <DataTableBody>
+              {owed.map((it) => (
+                <DataTableRow key={it.key}>
+                  <Td cell="a"><Link href={it.href} data-row-link className="font-medium hover:underline">{it.line.split(' · ')[0]}</Link></Td>
+                  <Td cell="c"><Badge tone="danger">{it.title}</Badge></Td>
+                  <Td cell="f" className="text-right"><Link href={it.href} className={button({ variant: 'secondary' })}>{it.action}</Link></Td>
+                </DataTableRow>
               ))}
-            </tbody>
-            <tfoot className="border-t border-border font-semibold">
-              <tr><td className="px-4 py-3">{rows.length} shop{rows.length === 1 ? '' : 's'}</td><td /><td className="px-4 py-3 text-right"><Money paise={paise(sum('taxable'))} decimals /></td><td className="px-4 py-3 text-right"><Money paise={paise(sum('gst'))} decimals /></td><td className="px-4 py-3 text-right"><Money paise={paise(sum('total'))} decimals /></td><td /></tr>
-            </tfoot>
-          </table>
-        </div>
-      )}
+            </DataTableBody>
+          </DataTable>
+        )) : shown.length === 0 ? <Panel title={`No ${VIEWS.find(([k]) => k === view)![1].toLowerCase()} invoices`} /> : (
+          <DataTable label={`Invoices for ${label}`}>
+            <DataTableHead><th>Invoice</th><th>Merchant</th><th className="text-right">Total</th><th>State</th></DataTableHead>
+            <DataTableBody>
+              {shown.map((r) => (
+                <DataTableRow key={r.id}>
+                  <Td cell="a">{r.number ? <Link href={`/admin/billing/invoice/${r.id}`} data-row-link className="font-medium hover:underline">{r.number}</Link> : <span className="text-muted-foreground">Draft</span>}</Td>
+                  <Td cell="c">{r.shop}</Td>
+                  <Td cell="b" className="text-right"><Money paise={paise(r.total)} decimals /></Td>
+                  <Td cell="d">{stateOf(r)}</Td>
+                </DataTableRow>
+              ))}
+            </DataTableBody>
+          </DataTable>
+        )}
+      </>}
     </>
   )
 }

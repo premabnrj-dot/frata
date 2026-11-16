@@ -1,5 +1,5 @@
 -- =============================================================================
--- 0145 · P2 Clients: who reaches the partner's own bills, and the share figures (plan docs/plans/2026-11-16-p2-clients.md;
+-- 0147 · P2 Clients: who reaches the partner's own bills, and the share figures (plan docs/plans/2026-11-16-p2-clients.md;
 -- tenancy-auditor, security-reviewer, architecture-reviewer, speed-reviewer, unit-economics-reviewer 2026-11-16).
 -- partner_client_deals / partner_client_bills / partner_bill_tries: platform scope, no Frrata role reads them
 -- (owner, 2026-11-15: Frrata Admin gets a count and a first-bill date only). Every definer takes the partner from the
@@ -8,7 +8,7 @@
 -- Proof: scripts/verify/tenancy.sql § 85.
 -- =============================================================================
 
--- The tables' locks (RLS, revokes, definer_only policies) ship with the tables in 0144.
+-- The tables' locks (RLS, revokes, definer_only policies) ship with the tables in 0146.
 
 -- ── Clients: as 0131, plus the link's id (a client page's key: a store relinked to the same partner has two rows),
 --    the owner's join and the invite's day (the next step's "Waiting N days"). Both new columns are null for a Builder

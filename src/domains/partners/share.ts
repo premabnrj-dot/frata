@@ -3,7 +3,7 @@
 // "What Frrata collects" is an issued, non-test invoice's taxable value less the taxable of its credit notes (ex GST),
 // counted only once the invoice is paid (billing's own `invoiceState`). The month is the previous IST month; whole
 // months count, the opening and closing ones included (owner, 2026-11-15, Q6; frata-unit-economics). Which months
-// fall inside a link's window is decided in SQL per link (drizzle 0145, app_partner_client_shares): the lock.
+// fall inside a link's window is decided in SQL per link (drizzle 0147, app_partner_client_shares): the lock.
 // Statements (Phase 6) read this same rule. Pure.
 // =============================================================================
 import { invoiceState } from '@/domains/billing/status'

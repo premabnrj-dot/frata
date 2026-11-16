@@ -3,12 +3,13 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { monthOfYM } from '@/domains/time/month'
-import { issueCreditNote, issueMonth, recordPayment, runCollectionNow, runDraftsNow } from '@/lib/admin/billing'
+import { issueCreditNote, issueMonth, recordPayment, recordRefund, runCollectionNow, runDraftsNow } from '@/lib/admin/billing'
 import { fromRupees } from '@/domains/money/paise'
 import { errName } from '@/lib/log'
 import { draftableMonths } from '@/lib/billing/run'
-import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
+import { ADMIN_ONLY, confirmedRecently, requireStaff } from '@/lib/auth/require-staff'
 import type { ActionResult } from '@/components/ui/action-form'
+import { STAFF_CONFIRM_FIRST } from '@/domains/tenancy/staff-words'
 
 const Month = z.object({ month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/) })
 
@@ -31,13 +32,17 @@ const Issue = z.object({ month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/), cou
 const reason = (e: unknown) => {
   const m = e instanceof Error ? (e.cause instanceof Error ? e.cause.message : e.message) : ''
   // The definer's own words (no data in them) are safe to show; anything else is generic.
-  const own = /^(issue|payment|credit): .{1,160}$/.exec(m)
+  const own = /^(issue|payment|credit|refund): .{1,160}$/.exec(m)
   return own ? own[0].replace(/^\w+: /, '') : 'Nothing was changed. Try again, or check the logs.'
 }
+
+// Money moves only after a fresh passkey (security review on N4's plan, H2): issue, a payment, a credit note, a refund.
+const FRESH = STAFF_CONFIRM_FIRST
 
 export async function issueAction(form: FormData): Promise<ActionResult> {
   const staff = await requireStaff(ADMIN_ONLY)
   if (!staff.ok) return { error: staff.message }
+  if (!confirmedRecently(staff)) return { error: FRESH }
   const p = Issue.safeParse(Object.fromEntries(form))
   if (!p.success) return { error: 'Check the month and the figures.' }
   // The typed confirmation is checked here, on the server (finding 17): it names the number of invoices.
@@ -45,7 +50,7 @@ export async function issueAction(form: FormData): Promise<ActionResult> {
   let msg: string
   try {
     const r = await issueMonth(staff, monthOfYM(p.data.month)!, { count: p.data.count, total: p.data.total })
-    msg = `${r.issued} invoice${r.issued === 1 ? '' : 's'} issued${r.closed ? `, ${r.closed} closed with nothing to pay` : ''}${r.test ? ' — test mode: not tax invoices, never collected' : ''}.`
+    msg = `${r.issued} invoice${r.issued === 1 ? '' : 's'} issued${r.closed ? `, ${r.closed} closed with nothing to pay` : ''}${r.test ? '. Test mode. These aren’t tax invoices and are never collected' : ''}.`
   } catch (e) {
     console.error('[billing.issue]', errName(e))
     return { error: reason(e) }
@@ -58,6 +63,7 @@ const Pay = z.object({ invoice: z.string().uuid(), rupees: z.coerce.number().pos
 export async function paymentAction(form: FormData): Promise<ActionResult> {
   const staff = await requireStaff(ADMIN_ONLY)
   if (!staff.ok) return { error: staff.message }
+  if (!confirmedRecently(staff)) return { error: FRESH }
   const p = Pay.safeParse(Object.fromEntries(form))
   const id = String(form.get('invoice') ?? '')
   const back = `/admin/billing/invoice/${/^[0-9a-f-]{36}$/.test(id) ? id : ''}`
@@ -74,6 +80,7 @@ const Credit = z.object({ invoice: z.string().uuid(), rupees: z.coerce.number().
 export async function creditAction(form: FormData): Promise<ActionResult> {
   const staff = await requireStaff(ADMIN_ONLY)
   if (!staff.ok) return { error: staff.message }
+  if (!confirmedRecently(staff)) return { error: FRESH }
   const p = Credit.safeParse(Object.fromEntries(form))
   const id = String(form.get('invoice') ?? '')
   const back = `/admin/billing/invoice/${/^[0-9a-f-]{36}$/.test(id) ? id : ''}`
@@ -87,6 +94,21 @@ export async function creditAction(form: FormData): Promise<ActionResult> {
   return { ok: `Credit note ${n} issued.` }
 }
 
+const Refund = z.object({ invoice: z.uuid(), payment: z.uuid(), utr: z.string().trim().regex(/^[A-Za-z0-9-]{6,40}$/), sentOn: z.iso.date() })
+export async function refundAction(form: FormData): Promise<ActionResult> {
+  const staff = await requireStaff(ADMIN_ONLY)
+  if (!staff.ok) return { error: staff.message }
+  if (!confirmedRecently(staff)) return { error: FRESH }
+  const p = Refund.safeParse(Object.fromEntries(form))
+  if (!p.success) return { error: 'Give the bank reference and the day it was sent.' }
+  try { await recordRefund(staff, p.data.payment, { utr: p.data.utr, sentOn: p.data.sentOn }) } catch (e) {
+    console.error('[billing.refund]', errName(e))
+    return /frrata_payments_refund_utr/.test(String((e as { cause?: unknown })?.cause ?? e)) ? { fields: { utr: 'That reference was already recorded.' } } : { error: reason(e) }
+  }
+  revalidatePath(`/admin/billing/invoice/${p.data.invoice}`)
+  return { ok: 'Refund recorded.' }
+}
+
 export async function collectAction(_form: FormData): Promise<ActionResult> {
   const staff = await requireStaff(ADMIN_ONLY)
   if (!staff.ok) return { error: staff.message }
@@ -96,7 +118,7 @@ export async function collectAction(_form: FormData): Promise<ActionResult> {
     msg = `${r.notices} notice${r.notices === 1 ? '' : 's'}, ${r.attempts} debit${r.attempts === 1 ? '' : 's'} started, ${r.sent} sent, ${r.settled} settled, ${r.acknowledged} day-14 note${r.acknowledged === 1 ? '' : 's'}.`
   } catch (e) {
     console.error('[billing.collect]', errName(e))
-    return { error: 'The collection run failed. Nothing was charged twice; check the logs.' }
+    return { error: 'The collection run failed. Nothing was charged twice. Check the logs.' }
   }
   revalidatePath('/admin/billing')
   return { ok: msg }

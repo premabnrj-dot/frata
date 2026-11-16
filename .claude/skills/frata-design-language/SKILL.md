@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.9.0
+  version: 8.1.0
   verified: 2026-11-15
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -57,7 +57,8 @@ happened, what's safe; money → exact amount and date; risk → the reason plai
 empty → the first step ("No products yet · Add product"); waiting → what's happening, when; celebration → once, short.
 
 The gate's scope: the console, the partner workspace and the shared code that speaks there (`ROOTS`/`NOT` in
-`scripts/check-words.mjs`). The storefront, themes, EkCode and Frrata Admin are outside it until their phases.
+`scripts/check-words.mjs`). The storefront, themes and EkCode are outside it until their phases. Frrata Admin joined in
+Neel N4 with every rule but the glossary below (merchant, token, API are staff words there); text inside `<code>` is code.
 
 ## Glossary (Neel § Glossary, owner 2026-11-13) — one word for each thing, on every surface
 
@@ -113,7 +114,7 @@ from it).
   numbers strip; steps are pictogram + 1–3 words + one short line; rules and
   details are pictogram + a title + an (i) tip.
 
-## Apps and modules (approved mockup v2, 2026-11-07; the gallery and app pages: § Apps gallery below)
+## Apps (approved mockup v2, 2026-11-07; the gallery and app pages: § Apps gallery below)
 
 - **Console › Apps** (`/console/apps`, Store group; in More on a phone): the gallery in § Apps gallery. Every card and
   app page reads `offerFor()` (`src/domains/modules/offer.ts`) — footer, state chip, filter and the one action.
@@ -123,13 +124,13 @@ from it).
   notes as (i) tips, and a muted "Next" band. Connected → the number card (mono phone, name · which apps, Quality,
   Limit, Chats from the app; More: Check again, Disconnect) and "Needs you" rows: a badge (Blocks messages / By 31
   Dec / Quality low / In review), the need in words, one action. Meta's raw values never show.
-- **Admin**: merchant tabs Overview · Modules · Plan · Addresses. The Modules tab is a table
-  (Module, Granted by, Merchant, Usable, action: "Give a 30-day trial of X",
-  "End trial"). Admin › Modules pauses a module "for everyone" with a reason;
-  the shop sees "Paused by Frrata". Admin writes are admin-role only.
-  The Addresses tab lists the shop's names (Current · Old · redirects · Old · no redirect), then "Rename <shop>'s
-  address" and "Freeze <shop>'s address", each with a reason. Admin › Names: block a name or domain, unblock or
-  release with a reason in the row; Frrata's own words listed, read-only.
+- **Apps, everywhere a person reads it** (owner, 2026-11-15: "It'll be Apps. across the whole ecosystem"): never
+  "module" or "add-on" in what anyone reads; a paid one is a **paid app**. Code names (`modules`, `tenant_addons`) keep
+  their spelling. Frrata Admin: `/admin/apps` (tabs Apps · Waiting list) and a merchant's Apps tab (Overview · Plan ·
+  Apps · Addresses · Activity); the old `/modules` addresses redirect. Pause for everyone sits in a row's More and asks
+  why; the store sees "Paused by Frrata". Admin writes are master-admin only.
+  The Addresses tab lists the store's names, then "Rename <store>'s address" and "Freeze <store>'s address", each with
+  a reason. Admin › Names: a claimed domain leads; Blocked · Held · Reserved as tabs; Block, Unblock, Release in dialogs.
 
 ## Apps gallery (owner-approved 2026-11-11, mockup https://claude.ai/artifact/6Th5A8X4YSXCcyozpzPLEg; plan `docs/plans/2026-11-11-apps-gallery.md`; supersedes the Apps list rows and the details dialog above)
 
@@ -473,6 +474,26 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   line** (the Hero's, the Statement's), tilted −4° / −6°, never for body or buttons. Section headings 22–34 px, 600,
   −0.02em, balanced. An empty story section shows nothing; it never stops a publish.
 
+## Frrata Admin, one job at a time (Neel N4, owner-approved 2026-11-15; mockup https://claude.ai/artifact/YPGo8SV7vqNu9vyCp5vCSQ, `docs/mockups/2026-11-15-neel-admin/`)
+
+The nine rules (board Rules), binding on every Admin screen and mockup:
+1. **Today first.** Admin opens on what needs someone, oldest first, one action each (`src/domains/admin/today.ts`,
+   filtered by role at the source). The nav counts the same items; a source that can't be read is left out, never 0.
+2. **A waiting task leads its page**: one band under the header (`_components/needs-band.tsx`), its one action; it goes
+   when the task is done.
+3. **One job in view**: a record's other parts are tabs; a list opens on "Needs you" when something waits.
+4. **One primary**: the header holds the title, at most one primary and More.
+5. **Forms open when asked**: add, edit and change open a dialog from a button (`_components/form-dialog.tsx`). No form
+   stands open on a page.
+6. **Rare or final actions go in More**, each asking in a dialog with the reason the other side reads.
+7. **Reference folds**: tables looked at now and then sit behind Show (Infrastructure's `Fold`); counts that matter stay open.
+8. **Your own request says who approves it** ("Another master admin approves it"); never a button that would fail.
+9. **On a phone** the list and the record are two pages and dialogs are sheets.
+
+- **The role is "Master admin"** (owner, 2026-11-15) wherever a person reads it; the stored role stays `admin`.
+  `STAFF_ROLE_WORDS` and `isMasterAdmin` (`src/domains/tenancy/staff-words.ts`) are the one place for both.
+- **Activity says actions in words** (`src/domains/admin/activity-words.ts`), never `module.trial`.
+
 ## Frata Admin (owner-approved, 2026-11-06)
 
 - **Admin looks unlike the console**: dark ink navigation with a "STAFF" tag
@@ -481,9 +502,9 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 - **Support mode** is a full-width banner above every console page: whose
   store, the reason, time left, "Back to Admin", "End now". It cannot be
   dismissed and uses a solid dark amber with white text (≥ 4.5:1).
-- **A button that acts on a merchant names them** ("Open Kesar Studio's
-  console", "Move Kesar Studio to Scale"); cancel names the safe outcome
-  ("Stay in Admin", "Keep Growth"). Never "Continue" or "OK".
+- **A button that acts on a merchant names them** ("Move Kesar Studio to Scale"), except **"Open console"**, which
+  sits on the merchant's own page or row and stays short (owner, 2026-11-15); cancel names the safe outcome
+  ("Stay in Frrata Admin", "Keep Growth"). Never "Continue" or "OK".
 - **A plan price is shown with its version**, and a change says what moves
   ("orders included go from 1,500 to 5,000") before it is confirmed.
 - People who are staff and store members choose where to go after sign-in;

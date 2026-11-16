@@ -155,6 +155,8 @@ export const partnerPasskeyRequests = pgTable('partner_passkey_requests', {
 }, (t) => [
   check('partner_passkey_requests_context', sql`(${t.device} is null or length(${t.device}) <= 60) and (${t.city} is null or length(${t.city}) <= 60)`),
   index('partner_passkey_requests_member').on(t.partnerMemberId, t.createdAt),
+  // Admin › Today's passkey source (0138 admin_waiting_passkeys): open requests only (speed review on N4's plan).
+  index('partner_passkey_requests_open').on(t.createdAt).where(sql`${t.usedAt} is null and ${t.declinedAt} is null and ${t.approvedAt} is null`),
   check('partner_passkey_requests_kind', sql`${t.approvedKind} is null or ${t.approvedKind} in ('owner','staff')`),
 ])
 
@@ -202,7 +204,7 @@ export const partnerPasskeyTries = pgTable('partner_passkey_tries', {
 // ── P2 Clients (docs/plans/2026-11-16-p2-clients.md): the partner's OWN billing to its clients ────────────────────────
 // A private book: Frrata never sends, collects or reads it. Platform scope with no grant to any Frrata role (frata_app,
 // frata_admin, frata_builder): RLS on, a restrictive definer_only policy, read and written only by the partner definers
-// in drizzle/0145, which take the partner from the caller's own partner_members row and re-check the link.
+// in drizzle/0147, which take the partner from the caller's own partner_members row and re-check the link.
 // Keyed by (partner, store): a store that leaves and comes back finds its book. Money in paise, ₹1 to ₹10 crore.
 
 /** How the partner bills a client: a project (one amount) or a retainer (an amount a month and the next bill's day). */

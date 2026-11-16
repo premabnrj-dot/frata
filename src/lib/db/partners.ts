@@ -86,7 +86,7 @@ export type ClientRow = {
   hasOwner: boolean
   /** The link's id: a client page's key (a store relinked to the same partner has two rows). */
   linkId: string
-  /** The store owner's join and the open invite's day: null for a Builder and once removed (P2, drizzle/0145). */
+  /** The store owner's join and the open invite's day: null for a Builder and once removed (P2, drizzle/0147). */
   ownerSince: Date | null; inviteSentAt: Date | null
 }
 

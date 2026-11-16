@@ -13,7 +13,7 @@ import { formatInr } from '@/lib/format'
 // =============================================================================
 // FILE: src/app/(partner)/partner/(workspace)/clients/actions.ts — the partner's own bills to its clients (P2 Clients).
 // Who may: the partner's OWNER (PARTNER_CAN.billing), checked here for the words and again inside every definer
-// (drizzle/0145), which takes the partner from the caller's own membership. The link and bill ids come from the form;
+// (drizzle/0147), which takes the partner from the caller's own membership. The link and bill ids come from the form;
 // the definers accept only the caller's partner's own ('not_found'). Each write is counted first (60 a minute).
 // =============================================================================
 

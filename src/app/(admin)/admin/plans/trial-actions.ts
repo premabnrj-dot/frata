@@ -15,7 +15,7 @@ export async function setTrialTermsAction(form: FormData): Promise<ActionResult>
   const staff = await requireStaff(ADMIN_ONLY)
   if (!staff.ok) return { error: staff.message }
   const p = Terms.safeParse(Object.fromEntries(form))
-  if (!p.success) return { error: 'A sign-up trial is 7 to 45 days, 0 to 30 days to go live, and a reason.' }
+  if (!p.success) return { error: 'A trial is 7 to 45 days. Going live takes 0 to 30 days. Give a reason.' }
   try { await setTrialTerms(staff, p.data) } catch (e) {
     console.error('[trial.settings]', errName(e))
     return { error: trialError(e) }

@@ -28,7 +28,7 @@ export default async function NewMerchantPage() {
             <FieldMessage name="name" />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="slug" className="text-sm font-medium">Shop address</label>
+            <label htmlFor="slug" className="text-sm font-medium">Store address</label>
             <div className="flex overflow-hidden rounded-md border border-input has-[[aria-invalid=true]]:border-danger-mark">
               <input id="slug" name="slug" required pattern="[a-z0-9-]+" data-error="Lower-case letters, digits and hyphens." className="h-10 flex-1 bg-card px-3 font-mono text-sm" />
               <span className="flex items-center border-l border-border bg-muted px-3 font-mono text-sm text-muted-foreground">.{SHOP_DOMAIN}</span>
@@ -52,7 +52,6 @@ export default async function NewMerchantPage() {
                 </label>
               ))}
             </div>
-            <span className="text-xs text-muted-foreground">Prices are the current version of each plan; see Plans.</span>
           </fieldset>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="trialEndsAt" className="text-sm font-medium">Trial ends <span className="font-normal text-muted-foreground">(optional)</span></label>
@@ -65,7 +64,6 @@ export default async function NewMerchantPage() {
         </ActionForm></Section>
         <aside className="max-w-sm space-y-3 text-sm leading-relaxed text-muted-foreground">
           <h2 className="text-section font-semibold text-foreground">What happens</h2>
-          <p>The store is created with its shop address and plan. The owner gets an email with a sign-in link; the store shows &quot;Owner not signed in yet&quot; until they use it.</p>
           <p>You can open the store&apos;s console straight away to set it up. That is a support visit, and the owner will see it.</p>
         </aside>
       </div>

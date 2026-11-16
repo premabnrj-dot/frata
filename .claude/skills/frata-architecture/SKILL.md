@@ -52,6 +52,16 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   `src/lib/admin/*` functions that take `StaffOk` and use `adminDb()` as
   `frata_admin`. Never `withTenant` in Admin. A new table states its
   `frata_admin` grants in the same migration (often: none).
+- **Admin › Today and the nav counts** (Neel N4): `TODAY_SOURCES` (`src/domains/admin/today.ts`) names each source,
+  its area and the roles that see it; a source is read only for those roles (filter before reading). Each source reads
+  a count or a short list on an index (never a page's whole list); one gather per person per request (`todayItems`,
+  React cache keyed by user id), shared by the layout and the page, as plain parallel reads, never a transaction
+  holding one of Admin's two connections. A source that fails is logged and left out ("uncounted", never 0); the nav
+  waits at most 1.5 s, then shows no counts. EkCode, Email and Infrastructure have no source (their reads take seconds).
+- **Money in Admin needs a fresh passkey** (`confirmedRecently`): Issue, Record payment, Credit note, Record refund.
+  `frata_admin` only reads `frrata_payments`; the refund is written by `app_record_frrata_refund` (0138), once.
+- **Activity** reads named columns only (never `detail`), 50 a page on the `(at, id)` keyset with the row comparison,
+  filters through zod, and hides `billing.*` rows from support staff on the server (`src/lib/admin/activity.ts`).
 - **Definer functions** always `set search_path = ''` and
   `revoke all on function … from public, anon, authenticated` — Postgres gives
   PUBLIC EXECUTE by default and Supabase exposes functions over RPC. Dropping and
@@ -147,7 +157,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   middleware sends people to `/partner/sign-in` (with `next`, and `out=1` when a dead session cookie was there), the one
   partner page open without a session (`PARTNER_PUBLIC` in check:actions). `signOutAction` takes `to=partner` to land
   there. An owner who ever had a passkey waits 24 hours to recover one, even after Admin deleted them all.
-- **A partner's own records** (P2 Clients, 2026-11-16; drizzle/0144–0145): a partner's bills to its clients are
+- **A partner's own records** (P2 Clients, 2026-11-16; drizzle/0146–0147): a partner's bills to its clients are
   platform-scope tables that NO Frrata role reads (`frata_app`, `frata_admin`, `frata_builder`: no grant, RLS on, a
   restrictive `definer_only` policy; `check:tenant` fails any table grant). Definers take the partner from the caller's
   live owner membership (`app_pm_live`), re-check the step-up, and match a link or bill id on the caller's partner

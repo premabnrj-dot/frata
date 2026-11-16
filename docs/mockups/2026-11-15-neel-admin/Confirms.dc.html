@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Frrata Admin · confirms</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;border-radius:8px;border:1px solid #E3E1DD;background:#FFFFFF;color:#171615;font:inherit;font-size:13px;font-weight:500;white-space:nowrap}
+.btn.p{background:#3A44C2;border-color:#3A44C2;color:#FFFFFF}
+.btn.d{background:#C93434;border-color:#C93434;color:#FFFFFF}
+.dlg{background:#FFFFFF;border-radius:12px;box-shadow:0 24px 48px -12px rgba(23,22,21,.24);padding:20px 24px;display:flex;flex-direction:column;gap:12px}
+.dlg h2{margin:0;font-size:18px;line-height:24px;font-weight:600}
+.lab{font-size:13px;color:#67625C}
+input{height:36px;border:1px solid #8F8A84;border-radius:8px;padding:0 10px;font:inherit;width:100%;box-sizing:border-box}
+</style>
+</helmet>
+<div style="width: 1280px; height: 520px; box-sizing: border-box; padding: 40px 32px; background: #6F6A64; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: start;">
+  <section class="dlg" role="dialog" aria-labelledby="c1">
+    <h2 id="c1">End Noor Threads' trial?</h2>
+    <span>The plan's monthly price starts today. The store keeps selling.</span>
+    <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Reason the store reads<input value="Ready to go live, asked to start billing"></label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px;"><button type="button" class="btn">Keep trial</button><button type="button" class="btn d">End trial</button></div>
+  </section>
+  <section class="dlg" role="dialog" aria-labelledby="c2">
+    <h2 id="c2">Move shop.kaaru.in to Loom Labs?</h2>
+    <span>Studio Kaaru loses it as its main address. Its Frrata address keeps working.</span>
+    <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Reason both stores read<input value="Loom Labs owns the domain"></label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px;"><button type="button" class="btn">Keep with Studio Kaaru</button><button type="button" class="btn p">Move to Loom Labs</button></div>
+  </section>
+  <section class="dlg" role="dialog" aria-labelledby="c3">
+    <h2 id="c3">Withdraw Saffron 1.3.0?</h2>
+    <span>3 pilot stores go back to 1.2.0. This can't be undone.</span>
+    <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500;">Reason<input value="Header breaks on small phones"></label>
+    <div style="display: flex; justify-content: flex-end; gap: 8px;"><button type="button" class="btn">Keep 1.3.0</button><button type="button" class="btn d">Withdraw 1.3.0</button></div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":520}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -68,7 +68,7 @@ export const MEASURE = ({ phone }) => {
 
   // Nav: exactly one current item in the visible nav (rule 9). Hidden navs (the other width's) do not count.
   // Only the shell's navs (sidebar, its foot, the bottom bar): a page's own view tabs also mark aria-current.
-  const current = [...document.querySelectorAll('nav:is([aria-label="Console"], [aria-label="Admin"], [aria-label$=": more"]) [aria-current="page"]')].filter(visible)
+  const current = [...document.querySelectorAll('nav:is([aria-label="Console"], [aria-label="Frrata Admin"], [aria-label$=": more"]) [aria-current="page"]')].filter(visible)
 
   // 2.4.1 bypass: the first focusable is a skip link to the content.
   const first = [...document.querySelectorAll(INTER)].find((el) => !disabled(el) && (visible(el) || el.matches('a[href^="#"]')))

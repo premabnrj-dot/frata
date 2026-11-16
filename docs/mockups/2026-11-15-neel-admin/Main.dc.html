@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Frrata Admin · Today</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F37A3;text-decoration:none}a:hover{color:#272D82}
+.sb a{color:#D9D5D0}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:30px;padding:0 10px;border-radius:8px;border:1px solid #E3E1DD;background:#FFFFFF;color:#171615;font:inherit;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer}
+.btn.p{background:#3A44C2;border-color:#3A44C2;color:#FFFFFF}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:500;white-space:nowrap}
+.chip::before{content:"";width:6px;height:6px;border-radius:3px;background:currentColor}
+.warn{background:#FDF3DC;color:#85500B}.bad{background:#FDECEC;color:#A82828}.info{background:#E8F1FD;color:#1F5BA8}.ok{background:#E7F5EC;color:#1A6B43}.neu{background:#F1F0EE;color:#57524D}
+.cnt{margin-left:auto;min-width:20px;height:20px;border-radius:10px;background:#3A44C2;color:#FFFFFF;font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;padding:0 6px}
+</style>
+</helmet>
+<div style="width: 1280px; height: 860px; box-sizing: border-box; display: flex; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 20px;">
+  <nav class="sb" aria-label="Admin" style="width: 232px; flex: none; background: #171615; color: #D9D5D0; padding: 18px 12px; display: flex; flex-direction: column; gap: 2px; font-size: 14px;">
+    <div style="display: flex; align-items: center; gap: 8px; padding: 0 8px 14px;"><b style="color: #FFFFFF; font-weight: 600;">Frrata Admin</b><span style="font-size: 11px; font-weight: 600; letter-spacing: .06em; color: #A29D97;">STAFF</span></div>
+    <a href="#" aria-current="page" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px; background: #34312E; color: #FFFFFF;">Today<span class="cnt">7</span></a>
+    <span style="padding: 14px 10px 4px; font-size: 11px; font-weight: 600; letter-spacing: .06em; color: #A29D97;">MERCHANTS</span>
+    <a href="Merchants.dc.html" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Merchants<span class="cnt">2</span></a>
+    <a href="#" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Trials<span class="cnt">1</span></a>
+    <a href="#" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Offers</a>
+    <a href="Names.dc.html" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Names<span class="cnt">1</span></a>
+    <span style="padding: 14px 10px 4px; font-size: 11px; font-weight: 600; letter-spacing: .06em; color: #A29D97;">PEOPLE</span>
+    <a href="Partners.dc.html" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Partners<span class="cnt">2</span></a>
+    <a href="Staff.dc.html" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Staff</a>
+    <span style="padding: 14px 10px 4px; font-size: 11px; font-weight: 600; letter-spacing: .06em; color: #A29D97;">MONEY</span>
+    <a href="#" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Plans</a>
+    <a href="Billing.dc.html" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Billing<span class="cnt">1</span></a>
+    <span style="padding: 14px 10px 4px; font-size: 11px; font-weight: 600; letter-spacing: .06em; color: #A29D97;">PLATFORM</span>
+    <a href="#" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Modules</a>
+    <a href="EkCode.dc.html" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">EkCode</a>
+    <a href="Theme.dc.html" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Themes</a>
+    <a href="#" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Notices</a>
+    <a href="#" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Email health</a>
+    <a href="Infrastructure.dc.html" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Infrastructure</a>
+    <a href="#" style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px;">Activity</a>
+  </nav>
+  <main style="flex: 1; min-width: 0; padding: 28px 32px; display: flex; flex-direction: column; gap: 20px;">
+    <header style="display: flex; align-items: baseline; justify-content: space-between;">
+      <h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">Today</h1>
+      <span style="font-size: 13px; color: #67625C;">7 to do · oldest first</span>
+    </header>
+    <section aria-label="Needs you" style="border: 1px solid #E3E1DD; border-radius: 12px; overflow: hidden; max-width: 900px;">
+      <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px;">
+        <span class="chip warn">Passkey</span>
+        <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Pia Mehta asks for a first passkey</b><span style="font-size: 13px; color: #67625C;">Pixel &amp; Thread · 11 min left · call +91 98450 12360</span></span>
+        <a class="btn p" href="Partners.dc.html">Approve passkey</a>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px; border-top: 1px solid #EEEDEA;">
+        <span class="chip bad">Invoice</span>
+        <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Kesar Studio paid ₹1,180 more than due</b><span style="font-size: 13px; color: #67625C;">FR/26-27/0041 · paid 2 days ago</span></span>
+        <a class="btn" href="Invoice.dc.html">Record refund</a>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px; border-top: 1px solid #EEEDEA;">
+        <span class="chip warn">Address</span>
+        <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Loom Labs claims shop.kaaru.in</b><span style="font-size: 13px; color: #67625C;">Studio Kaaru's main address · since 9 Nov</span></span>
+        <a class="btn" href="Names.dc.html">Review claim</a>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px; border-top: 1px solid #EEEDEA;">
+        <span class="chip info">Partner</span>
+        <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Weft Digital applied to be a partner</b><span style="font-size: 13px; color: #67625C;">Sana Qureshi · Hyderabad · 2 h ago</span></span>
+        <a class="btn" href="Partners.dc.html">Review application</a>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px; border-top: 1px solid #EEEDEA;">
+        <span class="chip warn">Trial</span>
+        <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Gulmohar's trial ends in 2 days. No autopay yet.</b><span style="font-size: 13px; color: #67625C;">Launch · 41 delivered orders</span></span>
+        <a class="btn" href="Merchant.dc.html">Open Gulmohar</a>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px; border-top: 1px solid #EEEDEA;">
+        <span class="chip warn">Merchant</span>
+        <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">Noor Threads' owner hasn't signed in</b><span style="font-size: 13px; color: #67625C;">Added 4 days ago · link sent once</span></span>
+        <a class="btn" href="Merchant.dc.html">Resend sign-in link</a>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 20px; border-top: 1px solid #EEEDEA;">
+        <span class="chip bad">Infrastructure</span>
+        <span style="display: flex; flex-direction: column;"><b style="font-weight: 500;">214 messages waiting for 12 min</b><span style="font-size: 13px; color: #67625C;">Supabase · Now</span></span>
+        <a class="btn" href="Infrastructure.dc.html">Open Supabase</a>
+      </div>
+    </section>
+    <p style="margin: 0; font-size: 13px; color: #67625C; max-width: 900px;">November's invoices go out on 1 Dec.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
