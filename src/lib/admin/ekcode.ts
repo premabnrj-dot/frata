@@ -21,7 +21,7 @@ export async function ekStats(staff: StaffOk, days: 1 | 7 | 30): Promise<EkStats
   const rows = (await adminDb().execute(sql`select * from app_admin_ekcode_stats(${staff.userId}::uuid, ${days}::int)`)) as unknown as EkStats[]
   return rows[0] ? num(rows[0]) : null
 }
-/** The registry's default, the one copy (drizzle/0153: the definers take it, never hold it). */
+/** The registry's default, the one copy (drizzle/0154: the definers take it, never hold it). */
 const EK_DEFAULT = !!MODULES.ekcode.defaultOn
 
 /** Open stores offering EkCode (on by default unless turned off), busiest first, at most 500. */
