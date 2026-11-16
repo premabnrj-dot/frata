@@ -53,7 +53,7 @@ policy in Postgres (`drizzle/0001_tenant_isolation.sql`) and `withTenant()` in
 `src/lib/db/tenant.ts`. Merchant rows are read only through `src/lib/queries/`.
 The tenant id comes from `requireMember()`, the storefront host, or a storefront key resolved by
 `storefrontKeyFor()` inside `apiRequest()` on the API host (ADR-0018) — never from an id in a URL, a form or a body
-(one named exception: starting a support session, ADR-0007). A key reads only what the shop's public pages show. Cross-tenant reads only through `frata_admin` in `src/lib/admin/`. A new table ships with its grant, RLS and policy in
+(one named exception: starting a support session, ADR-0007). A key reads only what the shop's public pages show; a build key (ADR-0018) also reads the shop's drafts, from a server only, and after the shop opens only while the partner person who made it is live, still a member of the shop and, for a Lead or a Builder, assigned to it. Cross-tenant reads only through `frata_admin` in `src/lib/admin/`. A new table ships with its grant, RLS and policy in
 the same migration. A partner's Builder (ADR-0015) never sees orders, shoppers or costs: who may do what is `CAPABILITIES`
 (`src/domains/tenancy/roles.ts`); a Builder enters only through `requireCapability` and reads only as `frata_builder`
 (`check:capabilities`). `npm run check:tenant` holds the shape;

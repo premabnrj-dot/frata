@@ -34,6 +34,10 @@ export default {
       await db`delete from shop_pages where id = ${page}`
     }
     await reset()
+    // This flow's orders need stock whatever earlier flows sold (10-checkout sells M/Rust out): it tops up the set's
+    // stocked sizes for itself and puts the counts back at the end.
+    const stockBefore = await db`select v.id, v.stock from variants v join products p on p.id = v.product_id where p.tenant_id = ${T} and p.handle = 'chanderi-kurta-set' and v.when_out = 'stop'`
+    for (const v of stockBefore) await db`update variants set stock = greatest(stock, 10) where id = ${v.id}`
     await db`insert into shop_domains (id, tenant_id, host, apex, with_www, claimed_by, proved_at, cert_ok_at) values (${domain}, ${T}, ${OWN_DOMAIN}, ${OWN_DOMAIN}, false, ${USERS.owner.id}, now(), now())`
     await db.begin(async (x) => { await x`select set_config('app.tenant_id', ${T}, true)`; await x`insert into shop_pages (id, tenant_id, template, draft, updated_by) values (${page}, ${T}, 'about', ${x.json({ title: 'Our weavers', handle: 'our-weavers', fill: {}, hidden: true })}, ${USERS.owner.id})` })
     const owner = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
@@ -104,8 +108,9 @@ export default {
       await t.step('a bag link replaces a bag only links filled and joins one the shopper built here (P0)', async () => {
         // Sizes with stock left after this flow's two orders (quantities stay at most 2, so checkout's reconcile never lowers them).
         const pick = await db`select v.id from variants v join products p on p.id = v.product_id where p.tenant_id = ${T} and p.handle = 'chanderi-kurta-set' and v.archived_at is null and v.stock >= 3 order by v.id`
-        const [gift] = await db`select v.id from variants v join products p on p.id = v.product_id where p.tenant_id = ${T} and p.handle <> 'chanderi-kurta-set' and p.status = 'active' and v.archived_at is null and v.stock >= 1 order by v.id limit 1`
-        assert.ok(pick.length >= 2 && gift, 'the seed has two stocked sizes of the kurta set and one other stocked piece')
+        // The free gift is a third size of the same set (the seed's one product with sizes).
+        const [gift] = await db`select v.id from variants v join products p on p.id = v.product_id where p.tenant_id = ${T} and p.handle = 'chanderi-kurta-set' and v.archived_at is null and v.stock >= 1 and not (v.id = any(${pick.slice(0, 2).map((r) => r.id)}::uuid[])) order by v.id limit 1`
+        assert.ok(pick.length >= 2 && gift, 'the seed has two sizes of the kurta set with 3 or more left and a third in stock')
         const [A, B] = [pick[0].id, pick[1].id]
         const bagNow = () => s.evaluate(() => ({ lines: JSON.parse(localStorage.getItem('frata.bag.v1') ?? '[]'), by: localStorage.getItem('frrata.bag.by.v1') }))
         const sort = (l) => [...l].sort((x, y) => x.variantId.localeCompare(y.variantId))
@@ -276,6 +281,7 @@ export default {
       } catch (e) { console.error('     storefront-sale › putting the Website back through the app failed:', e.message) }
       await owner.close()
       await reset()
+      for (const v of stockBefore) await db`update variants set stock = ${v.stock} where id = ${v.id}`
     }
   },
 }
