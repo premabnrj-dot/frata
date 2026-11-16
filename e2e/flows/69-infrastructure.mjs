@@ -80,6 +80,8 @@ export default {
           await p.getByText(/ekatanv2 is \d+% of this month’s usage/).waitFor()
           await p.getByText(/× a normal day/).waitFor()
         }
+        // Needs you first, the rest folded (Neel N4): open a fold to read its table.
+        await p.locator('summary', { hasText: 'By service' }).click()
         await p.getByRole('cell', { name: 'Fluid Provisioned Memory' }).waitFor()
         await ctx.close()
       })
@@ -108,6 +110,7 @@ export default {
         const { ctx, p } = await open('frata')
         await p.goto(CONSOLE + '/admin/infrastructure?tab=mux')
         await p.getByText('Delivered · to 12 h ago').waitFor()
+        for (const f of await p.locator('details > summary').all()) await f.click()
         await p.getByRole('cell', { name: prod.title }).first().waitFor()
         await p.getByText(/One video is \d+% of delivery/).waitFor()
         await p.getByRole('cell', { name: /\d+ \/ 1,000|\d+ \/ 300|\d+ \/ 50|\d+ \/ 3,000/ }).first().waitFor()

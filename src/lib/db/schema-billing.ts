@@ -184,6 +184,12 @@ export const frrataPayments = pgTable('frrata_payments', {
   /** Captured beyond what was due (a Pay now and a debit both landed): Frrata refunds this much. */
   overPaid: money('over_paid').notNull().default(0),
   recordedBy: uuid('recorded_by'),
+  /** Admin N4: an over-payment Frrata sent back from its bank, recorded once through app_record_frrata_refund (0138):
+   *  the amount is what was over-paid, the date is the bank's, the UTR is unique. All four or none. */
+  refundAmount: money('refund_amount'),
+  refundUtr: text('refund_utr'),
+  refundedAt: at('refunded_at'),
+  refundedBy: uuid('refunded_by'),
   createdAt: createdAt(),
 }, (t) => [
   foreignKey({ name: 'frrata_payments_invoice_fk', columns: [t.tenantId, t.invoiceId], foreignColumns: [frrataInvoices.tenantId, frrataInvoices.id] }).onDelete('restrict'),
@@ -194,6 +200,9 @@ export const frrataPayments = pgTable('frrata_payments', {
   check('frrata_payments_method', sql`${t.method} in ('bank_transfer','upi','card','emandate','paylink')`),
   check('frrata_payments_amount', sql`${t.amount} > 0`),
   check('frrata_payments_outcome', sql`not (${t.capturedAt} is not null and ${t.failedAt} is not null)`),
+  check('frrata_payments_refund_whole', sql`(${t.refundAmount} is null) = (${t.refundUtr} is null) and (${t.refundUtr} is null) = (${t.refundedAt} is null) and (${t.refundedAt} is null) = (${t.refundedBy} is null)`),
+  uniqueIndex('frrata_payments_refund_utr').on(sql`upper(btrim(${t.refundUtr}))`).where(sql`${t.refundUtr} is not null`),
+  index('frrata_payments_to_refund').on(t.createdAt).where(sql`${t.overPaid} > 0 and ${t.refundedAt} is null`),
 ])
 
 /** Frrata's credit note to a shop (B2): a waiver or correction against an issued invoice, its own series; final. */

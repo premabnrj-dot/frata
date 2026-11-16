@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Frrata Admin rules and changes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+th{font-weight:500;font-size:13px;color:#67625C;text-align:left;padding:8px 12px;border-bottom:1px solid #E3E1DD;vertical-align:top}
+td{padding:9px 12px;border-bottom:1px solid #EEEDEA;vertical-align:top;font-size:13px;line-height:18px}
+li{margin-bottom:6px}
+</style>
+</helmet>
+<div style="width: 1280px; height: 1100px; box-sizing: border-box; padding: 32px; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 20px; display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 32px; align-content: start;">
+  <section aria-labelledby="r-h">
+    <h1 id="r-h" style="margin: 0 0 12px; font-size: 22px; line-height: 28px; font-weight: 600;">The Frrata Admin rules</h1>
+    <ol style="margin: 0; padding-left: 20px;">
+      <li><b style="font-weight: 600;">Today first.</b> Frrata Admin opens on what needs someone, oldest first, one action each. The nav counts the same things.</li>
+      <li><b style="font-weight: 600;">A waiting task leads its page.</b> One band under the header, with its one action. It goes when the task is done.</li>
+      <li><b style="font-weight: 600;">One job in view.</b> A record's other parts sit in tabs. A list opens on "Needs you".</li>
+      <li><b style="font-weight: 600;">One primary.</b> The header holds the title, at most one primary and More.</li>
+      <li><b style="font-weight: 600;">Forms open when asked.</b> Add, edit and change open a dialog from a button. No form stands open on a page.</li>
+      <li><b style="font-weight: 600;">Rare or final actions go in More.</b> Each asks in a dialog, with the reason the other side reads.</li>
+      <li><b style="font-weight: 600;">Reference folds.</b> Tables you look at now and then are folded. Counts that matter stay open.</li>
+      <li><b style="font-weight: 600;">Your own request says who approves it.</b> No button that would fail.</li>
+      <li><b style="font-weight: 600;">On a phone,</b> the list and the record are two pages and dialogs are sheets.</li>
+    </ol>
+  </section>
+  <section aria-labelledby="c-h">
+    <h2 id="c-h" style="margin: 0 0 12px; font-size: 18px; font-weight: 600;">What changes against what's built</h2>
+    <table style="border-collapse: collapse; width: 100%;">
+      <thead><tr><th style="width: 140px;">Screen</th><th>Built today</th><th>Drawn here</th></tr></thead>
+      <tbody>
+        <tr><td>Home</td><td>Redirects to Merchants; no counts in the nav</td><td>Today: every waiting task with one action; counts in the nav</td></tr>
+        <tr><td>Merchants</td><td>One list; signals inside rows</td><td>Views: Needs you · In trial · Live · All; a Needs column</td></tr>
+        <tr><td>A merchant</td><td>Team, visits and plan stacked; plan and trial forms always open</td><td>A band for what waits; Overview · Plan · Modules · Addresses · Activity; Change plan, trial and address changes in dialogs</td></tr>
+        <tr><td>Partners, Staff</td><td>Everything stacked; code box inline</td><td>The orchestrator's pass: a band for the request, tabs, dialogs, "Another admin approves it"</td></tr>
+        <tr><td>Billing</td><td>Month picker, run, issue form, collect, export, table stacked</td><td>The run as three steps with the current one's action; invoices in views; export in More</td></tr>
+        <tr><td>An invoice</td><td>Three panels with their forms open</td><td>A band for over-paid or failed; Payments · Lines · Credit notes; Record and Credit note in dialogs</td></tr>
+        <tr><td>EkCode</td><td>Shops and Controls with forms open</td><td>A tripped breaker leads; Overview · Stores · Blocked; limits and blocking in dialogs</td></tr>
+        <tr><td>Infrastructure</td><td>Six blocks a tab</td><td>Needs you, then the four figures; the rest folded</td></tr>
+        <tr><td>Names</td><td>Five sections, block form open</td><td>Waiting domains lead with their two actions; lists in tabs; Block in a dialog</td></tr>
+        <tr><td>Themes</td><td>Decisions in a section</td><td>Release as the primary; Recall and Withdraw in More</td></tr>
+        <tr><td>Plans</td><td>Matrix, trial form and an explainer</td><td>One row a plan with Edit; trial terms behind Edit; the explainer goes</td></tr>
+        <tr><td>Modules, Offers, Notices</td><td>Forms and kill switches inline</td><td>Pause and Stop in a row's ⋯; New notice in a dialog</td></tr>
+        <tr><td>Activity</td><td>One table, no filters or pages</td><td>Filters by store, person and kind; pages</td></tr>
+        <tr><td>New</td><td>—</td><td>"Record refund" on an over-paid invoice; the Today list; nav counts; Activity filters</td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Frrata Admin · Partners</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2F37A3;text-decoration:none}a:hover{color:#272D82}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 10px;border-radius:8px;border:1px solid #E3E1DD;background:#FFFFFF;color:#171615;font:inherit;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer}
+.btn.p{background:#3A44C2;border-color:#3A44C2;color:#FFFFFF}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:500;white-space:nowrap}
+.chip::before{content:"";width:6px;height:6px;border-radius:3px;background:currentColor}
+.warn{background:#FDF3DC;color:#85500B}.ok{background:#E7F5EC;color:#1A6B43}.neu{background:#F1F0EE;color:#57524D}
+.tab{display:inline-flex;align-items:center;gap:6px;height:40px;color:#67625C;font-weight:500}
+.tab[aria-current]{color:#171615;box-shadow:inset 0 -2px 0 #3A44C2}
+.tn{border-radius:10px;padding:2px 6px;font-size:12px;background:#EEEDEA;color:#67625C}
+.li{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:10px}
+.li[aria-current]{background:#EEF0FD}
+.lab{font-size:13px;color:#67625C}
+.row{display:grid;grid-template-columns:140px minmax(0,1fr);gap:12px;padding:8px 0;border-top:1px solid #EEEDEA}
+</style>
+</helmet>
+<div style="width: 1280px; height: 860px; box-sizing: border-box; display: flex; background: #FFFFFF; color: #171615; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 20px;">
+  <div aria-hidden="true" style="width: 232px; flex: none; background: #171615;"></div>
+  <main style="flex: 1; min-width: 0; padding: 28px 32px; display: flex; flex-direction: column; gap: 16px;">
+    <h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600;">Partners</h1>
+    <div style="display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; align-items: start;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <nav aria-label="Views" style="display: flex; gap: 16px; border-bottom: 1px solid #E3E1DD;">
+          <a class="tab" href="#" aria-current="page">Needs you <span class="tn" style="background: #EEF0FD; color: #2F37A3;">2</span></a><a class="tab" href="#">Approved <span class="tn">3</span></a><a class="tab" href="#">Declined</a>
+        </nav>
+        <a class="li" href="#" aria-current="page" style="color: #171615;"><span style="display: flex; justify-content: space-between; gap: 8px;"><b style="font-weight: 500;">Pixel &amp; Thread</b><span class="chip warn">Passkey</span></span><span class="lab">Pia Mehta · Pune · 4 stores</span></a>
+        <a class="li" href="#" style="color: #171615;"><span style="display: flex; justify-content: space-between; gap: 8px;"><b style="font-weight: 500;">Weft Digital</b><span class="chip neu">To review</span></span><span class="lab">Sana Qureshi · Hyderabad · applied 2 h ago</span></a>
+      </div>
+      <section aria-labelledby="r-h" style="display: flex; flex-direction: column; gap: 14px;">
+        <header style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;"><h2 id="r-h" style="margin: 0; font-size: 20px; font-weight: 600;">Pixel &amp; Thread</h2><span class="chip ok">Approved</span></div>
+          <button type="button" class="btn">More ▾</button>
+        </header>
+        <section aria-label="Needs you" style="display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-radius: 12px; background: #FDF3DC; color: #85500B;">
+          <span style="flex: 1;"><b style="font-weight: 600;">Pia Mehta asks for a first passkey.</b> 11 min left · call +91 98450 12360 · Chrome on Android, Pune</span>
+          <button type="button" class="btn p">Approve passkey</button>
+        </section>
+        <nav aria-label="Pixel &amp; Thread" style="display: flex; gap: 20px; border-bottom: 1px solid #E3E1DD;">
+          <a class="tab" href="#" aria-current="page">Overview</a><a class="tab" href="#">Team <span class="tn">3</span></a><a class="tab" href="#">Passkeys</a>
+        </nav>
+        <div style="max-width: 560px;">
+          <div class="row" style="border-top: 0;"><span class="lab">Owner</span><span>Pia Mehta</span></div>
+          <div class="row"><span class="lab">WhatsApp</span><span style="font-variant-numeric: tabular-nums;">+91 98450 12360</span></div>
+          <div class="row"><span class="lab">Stores</span><span>4 · 1 handed over</span></div>
+          <div class="row"><span class="lab">Since</span><span>2 Nov</span></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

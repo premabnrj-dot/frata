@@ -1,5 +1,5 @@
 import 'server-only'
-import { eq, inArray, sql } from 'drizzle-orm'
+import { eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import { trialState, trialEndsAt, daysUntil, lastDay, type TrialFacts, type TrialState } from '@/domains/plans/trial'
 import { adminDb } from '@/lib/db/admin'
 import { billingAccounts } from '@/lib/db/schema-billing'
@@ -35,8 +35,7 @@ export async function shopTrialsFor(staff: StaffOk, tenantIds: string[], now: Da
   ])
   const mandate = new Map(accounts.map((a) => [a.tenantId, !!a.mandateAt && !a.revokedAt]))
   return new Map(rows.map((f) => {
-    const endsAt = trialEndsAt(f)
-    return [f.tenantId, { facts: f, state: trialState(now, f, { mandateActive: mandate.get(f.tenantId) ?? false, exposedAt: null }), endsAt, lastDay: lastDay(endsAt), daysLeft: daysUntil(now, endsAt) }]
+    return [f.tenantId, trialView(f, now, mandate.get(f.tenantId) ?? false)]
   }))
 }
 
@@ -59,6 +58,26 @@ export async function endShopTrial(staff: StaffOk, tenantId: string, reason: str
 export function trialError(e: unknown): string {
   const m = /trial: (.{1,160})/.exec(e instanceof Error ? (e.cause instanceof Error ? e.cause.message : e.message) : '')?.[1]
   return m ? `${m.charAt(0).toUpperCase()}${m.slice(1)}.` : 'Nothing was changed. Try again, or check the logs.'
+}
+
+/** One trial row, derived (state, end, days left): the one mapping Merchants, Trials and Today all read. */
+export function trialView(f: TrialFacts, now: Date, mandateActive: boolean): ShopTrialView {
+  const endsAt = trialEndsAt(f)
+  return { facts: f, state: trialState(now, f, { mandateActive, exposedAt: null }), endsAt, lastDay: lastDay(endsAt), daysLeft: daysUntil(now, endsAt) }
+}
+
+/** Merchants' views (impact review on the diff): in a trial = its derived state is building, trial, ending or grace
+ *  (never a paid or paused store whose row merely has no end); live = the store has opened and is not in a trial. */
+export async function trialAndLiveIds(staff: StaffOk, now: Date): Promise<{ inTrial: Set<string>; live: Set<string> }> {
+  void staff
+  const db = adminDb()
+  const [rows, opened] = await Promise.all([
+    db.select({ f: shopTrials, mandateAt: billingAccounts.mandateAt, revokedAt: billingAccounts.mandateRevokedAt }).from(shopTrials).leftJoin(billingAccounts, eq(billingAccounts.tenantId, shopTrials.tenantId)),
+    db.select({ id: tenants.id }).from(tenants).where(isNotNull(tenants.firstOpenedAt)),
+  ])
+  const IN = new Set(['building', 'trial', 'ending', 'grace'])
+  const inTrial = new Set(rows.filter((r) => IN.has(trialView(r.f, now, !!r.mandateAt && !r.revokedAt).state)).map((r) => r.f.tenantId))
+  return { inTrial, live: new Set(opened.map((r) => r.id).filter((id) => !inTrial.has(id))) }
 }
 
 export type TrialRow = ShopTrialView & { tenantId: string; name: string; autopay: boolean }

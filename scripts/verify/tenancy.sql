@@ -4186,7 +4186,61 @@ do $$ declare r text; begin
 end $$;
 rollback;
 
--- 84. Storefront API SA1b (0144; plan docs/plans/2026-11-16-sa1b.md; tenancy audit 2026-11-16 folded in). The sweeps
+-- 84. Admin N4 (0144–0145; plan docs/plans/2026-11-15-neel-n4-admin.md, reviews folded in): the waiting-passkeys read and
+-- the refund writer are definers with a fixed search_path that only frata_admin may run; support is refused by both; the
+-- refund columns are all or none; nobody but the definer writes frrata_payments.
+do $$ begin
+  if exists (select 1 from pg_proc where proname in ('admin_waiting_passkeys', 'app_record_frrata_refund') and (not prosecdef or proconfig is null or not ('search_path=""' = any (proconfig))))
+  then raise exception 'FAIL: an N4 function is not a definer with a fixed search_path'; end if;
+  if exists (select 1 from pg_proc p, unnest(array['anon', 'authenticated', 'service_role', 'frata_app']) r
+              where p.proname in ('admin_waiting_passkeys', 'app_record_frrata_refund') and has_function_privilege(r, p.oid, 'execute'))
+  then raise exception 'FAIL: a role other than frata_admin may run an N4 function'; end if;
+  if not has_function_privilege('frata_admin', 'admin_waiting_passkeys(uuid)', 'execute') or not has_function_privilege('frata_admin', 'app_record_frrata_refund(uuid, text, date, uuid)', 'execute')
+  then raise exception 'FAIL: frata_admin cannot run an N4 function'; end if;
+  if exists (select 1 from unnest(array['frata_admin', 'frata_app', 'anon', 'authenticated', 'service_role']) r, unnest(array['insert', 'update']) pr
+              where has_any_column_privilege(r, 'frrata_payments', pr))
+  then raise exception 'FAIL: a role writes frrata_payments directly'; end if;
+end $$;
+begin;
+do $$ declare got boolean; begin
+  insert into platform_staff (user_id, email, role) values ('84848484-8383-8383-8383-838383838383', 'support84@frrata.test', 'support');
+  got := false; begin perform * from admin_waiting_passkeys('84848484-8383-8383-8383-838383838383'); exception when others then got := true; end;
+  if not got then raise exception 'FAIL: support read the waiting passkeys'; end if;
+  got := false; begin perform app_record_frrata_refund(gen_random_uuid(), 'UTR83', current_date, '84848484-8383-8383-8383-838383838383'); exception when insufficient_privilege then got := true; end;
+  if not got then raise exception 'FAIL: support recorded a refund'; end if;
+  if not exists (select 1 from pg_constraint where conname = 'frrata_payments_refund_whole') then raise exception 'FAIL: the refund columns can be half set'; end if;
+end $$;
+rollback;
+-- The refund's refusals (impact review on the diff): a test invoice, nothing over-paid, a day outside the last 90 or
+-- before the payment arrived; the right one records the over-paid amount once.
+begin;
+set local session_replication_role = replica;
+do $$ declare got boolean; t uuid := gen_random_uuid(); live uuid := gen_random_uuid(); test uuid := gen_random_uuid();
+  p_ok uuid := gen_random_uuid(); p_test uuid := gen_random_uuid(); p_zero uuid := gen_random_uuid(); m uuid := '84848484-0000-8383-8383-838383838383'; n bigint;
+begin
+  insert into platform_staff (user_id, email, role) values (m, 'master84@frrata.test', 'admin');
+  insert into frrata_invoices (id, tenant_id, period_start, period_end, taxable, cgst, sgst, igst, total, test_mode) values
+    (live, t, '2024-01-01', '2024-02-01', 100, 0, 0, 0, 100, false), (test, t, '2024-02-01', '2024-03-01', 100, 0, 0, 0, 100, true);
+  insert into frrata_payments (id, tenant_id, invoice_id, method, amount, captured_at, over_paid) values
+    (p_ok, t, live, 'upi', 150, now() - interval '2 days', 50), (p_test, t, test, 'upi', 150, now() - interval '2 days', 50), (p_zero, t, live, 'upi', 100, now() - interval '2 days', 0);
+  got := false; begin perform app_record_frrata_refund(p_test, 'UTR83A', current_date, m); exception when check_violation then got := true; end;
+  if not got then raise exception 'FAIL: a test invoice was refunded by hand'; end if;
+  got := false; begin perform app_record_frrata_refund(p_zero, 'UTR83B', current_date, m); exception when check_violation then got := true; end;
+  if not got then raise exception 'FAIL: a refund was recorded with nothing over-paid'; end if;
+  got := false; begin perform app_record_frrata_refund(p_ok, 'UTR83C', current_date - 92, m); exception when invalid_parameter_value then got := true; end;
+  if not got then raise exception 'FAIL: a refund sent over 90 days ago was recorded'; end if;
+  got := false; begin perform app_record_frrata_refund(p_ok, 'UTR83D', current_date + 2, m); exception when invalid_parameter_value then got := true; end;
+  if not got then raise exception 'FAIL: a refund sent tomorrow was recorded'; end if;
+  got := false; begin perform app_record_frrata_refund(p_ok, 'UTR83E', current_date - 5, m); exception when invalid_parameter_value then got := true; end;
+  if not got then raise exception 'FAIL: a refund sent before the payment arrived was recorded'; end if;
+  n := app_record_frrata_refund(p_ok, ' utr83f ', current_date, m);
+  if n <> 50 or (select refund_utr from frrata_payments where id = p_ok) <> 'UTR83F' then raise exception 'FAIL: the refund is not the over-paid amount under its reference'; end if;
+  got := false; begin perform app_record_frrata_refund(p_ok, 'UTR83G', current_date, m); exception when check_violation then got := true; end;
+  if not got then raise exception 'FAIL: a payment was refunded twice'; end if;
+end $$;
+rollback;
+
+-- 85. Storefront API SA1b (0146; plan docs/plans/2026-11-16-sa1b.md; tenancy audit 2026-11-16 folded in). The sweeps
 -- page by shop id (the two-argument versions gone; a null cursor is the first page) and find a reinstated partner's
 -- shops; the domain-gone sweep is ids only; the Accept screen's key list is the invitee's own, built over
 -- app_my_handovers, names and prefixes only; Frrata Admin's view is counts and dates for frata_admin alone, its listed
@@ -4352,4 +4406,4 @@ do $$ declare a uuid[]; b uuid[]; z uuid[]; last uuid; begin
   if (select count(distinct x) from unnest(a || b) x where x::text like 'c8410000%') <> 601 then raise exception 'FAIL: two pages miss shops'; end if;
 end $$;
 rollback;
-\echo 'tenancy proof — all 84 checks passed'
+\echo 'tenancy proof — all 85 checks passed'

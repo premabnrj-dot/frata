@@ -85,5 +85,5 @@ export async function settleDomainAction(form: FormData): Promise<ActionResult> 
   if (claim) refreshHosts(claim.host, `www.${claim.host}`, ...waiting.filter((x) => x.host.endsWith(claim.host) || claim.host.endsWith(x.host)).map((x) => x.host))
   if (claim && d.move === 'yes') await checkDomainRow(claim.tenantId, claim.id, { forDialog: false })
   revalidatePath('/admin/names')
-  return { ok: d.move === 'yes' ? `${claim?.host ?? 'The domain'} moved to ${claim?.shop ?? 'the shop'}.` : 'Claim refused.' }
+  return { ok: d.move === 'yes' ? `${claim?.host ?? 'The domain'} moved to ${claim?.shop ?? 'the store'}.` : 'Claim refused.' }
 }

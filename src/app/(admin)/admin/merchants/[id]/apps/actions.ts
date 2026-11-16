@@ -7,7 +7,7 @@ import { ADMIN_ONLY, requireStaff } from '@/lib/auth/require-staff'
 import type { ActionResult } from '@/components/ui/action-form'
 
 // A refusal or a broken form says so, never a silent bounce to Merchants (UX audit 2026-11-11): in a toast, on the page.
-const NOT_ADMIN = 'Only an admin can change a shop’s modules.'
+const NOT_ADMIN = 'Only a master admin can change a store’s apps.'
 const refusal = (reason: string) => (reason === 'signed_out' ? 'Sign in again.' : reason === 'needs_passkey' ? 'Confirm it\'s you with your passkey first.' : NOT_ADMIN)
 
 /** "Growth and Scale", from the registry's addOnFor (never typed twice). */

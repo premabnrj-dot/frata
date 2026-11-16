@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
-import { Banner } from '@/components/ui/banner'
+import { NeedsBand } from '../_components/needs-band'
 import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
 import { Icon } from '@/components/icons/icon'
@@ -68,7 +68,7 @@ export default async function StorefrontApiPage({ searchParams }: { searchParams
       {/* On a phone a chosen store is its own page: the list hides, a way back shows (mockup § Admin phone). */}
       <div className={chosen ? 'max-lg:hidden' : ''}>{header}{tabs}</div>
       {chosen ? <Link href="/admin/storefront-api" className="mb-2 inline-flex min-h-11 items-center gap-1 text-sm text-muted-foreground lg:hidden"><Icon name="back" className="size-4" />Storefront API</Link> : null}
-      {waiting ? <div className={chosen ? 'max-lg:hidden' : ''}><Banner tone="warn" className="mb-4" title={<span className="inline-flex items-center gap-2"><Icon name="eye" className="size-4" />{waiting === 1 ? '1 website' : `${formatCount(waiting)} websites`} with no reads for 2 days</span>} /></div> : null}
+      {waiting ? <div className={chosen ? 'max-lg:hidden' : ''}><NeedsBand className="mb-4" title={`${waiting === 1 ? '1 website' : `${formatCount(waiting)} websites`} with no reads for 2 days`} /></div> : null}
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
         <div className={chosen ? 'max-lg:hidden' : ''}>
           <Section flush ariaLabel="Stores"><ul data-list className="divide-y divide-border">

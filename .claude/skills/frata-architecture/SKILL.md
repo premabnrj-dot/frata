@@ -52,6 +52,16 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   `src/lib/admin/*` functions that take `StaffOk` and use `adminDb()` as
   `frata_admin`. Never `withTenant` in Admin. A new table states its
   `frata_admin` grants in the same migration (often: none).
+- **Admin › Today and the nav counts** (Neel N4): `TODAY_SOURCES` (`src/domains/admin/today.ts`) names each source,
+  its area and the roles that see it; a source is read only for those roles (filter before reading). Each source reads
+  a count or a short list on an index (never a page's whole list); one gather per person per request (`todayItems`,
+  React cache keyed by user id), shared by the layout and the page, as plain parallel reads, never a transaction
+  holding one of Admin's two connections. A source that fails is logged and left out ("uncounted", never 0); the nav
+  waits at most 1.5 s, then shows no counts. EkCode, Email and Infrastructure have no source (their reads take seconds).
+- **Money in Admin needs a fresh passkey** (`confirmedRecently`): Issue, Record payment, Credit note, Record refund.
+  `frata_admin` only reads `frrata_payments`; the refund is written by `app_record_frrata_refund` (0138), once.
+- **Activity** reads named columns only (never `detail`), 50 a page on the `(at, id)` keyset with the row comparison,
+  filters through zod, and hides `billing.*` rows from support staff on the server (`src/lib/admin/activity.ts`).
 - **Definer functions** always `set search_path = ''` and
   `revoke all on function … from public, anon, authenticated` — Postgres gives
   PUBLIC EXECUTE by default and Supabase exposes functions over RPC. Dropping and

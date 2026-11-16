@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { Section } from '@/components/layout/section'
 import type { Alert } from '@/domains/infra/alerts'
 
 // Shared pieces of Admin › Infrastructure (mockup docs/mockups/2026-11-10-infra-usage.html).
@@ -22,21 +21,33 @@ export function Kpis({ items }: { items: { label: string; value: ReactNode; sub?
   )
 }
 
-/** What needs staff now or soon, one action at most per line. */
+/** What needs staff now or soon, first on the tab (Neel N4: Needs you first, the rest folded); nothing when nothing does. */
 export function NeedsYou({ alerts }: { alerts: Alert[] }) {
+  if (!alerts.length) return null
   return (
-    <Section flush title="Needs you" action={alerts.length ? <Badge tone="danger">{alerts.length}</Badge> : <Badge tone="ok">All clear</Badge>}>
-      {alerts.length ? (
-        <ul className="divide-y divide-border border-t border-border">
-          {alerts.map((a) => (
-            <li key={a.key} className="flex items-start gap-3 px-4 py-3">
-              <Badge tone={a.level === 'now' ? 'danger' : 'warn'}>{a.level === 'now' ? 'Now' : 'Soon'}</Badge>
-              <div className="min-w-0"><p className="text-sm font-medium">{a.title}</p><p className="text-sm text-muted-foreground">{a.why}</p></div>
-            </li>
-          ))}
-        </ul>
-      ) : <p className="px-4 pb-4 text-sm text-muted-foreground">Nothing needs you.</p>}
-    </Section>
+    <section aria-label="Needs you" className="rounded-mid border border-border bg-card">
+      <h2 className="px-4 pt-3 text-sm font-semibold">Needs you</h2>
+      <ul className="divide-y divide-line-soft">
+        {alerts.map((a) => (
+          <li key={a.key} className="flex items-start gap-3 px-4 py-3">
+            <Badge tone={a.level === 'now' ? 'danger' : 'warn'}>{a.level === 'now' ? 'Now' : 'Soon'}</Badge>
+            <p className="min-w-0 text-sm"><b className="font-medium">{a.title}</b> <span className="text-muted-foreground">{a.why}</span></p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** A folded part of a tab: its name and Show; opened, the table or list (Neel N4, board Infrastructure). */
+export function Fold({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <details className="group rounded-lg border border-border bg-card">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-medium md:min-h-10 [&::-webkit-details-marker]:hidden">
+        {title}<span className="text-muted-foreground group-open:hidden">Show</span><span className="hidden text-muted-foreground group-open:inline">Hide</span>
+      </summary>
+      <div className="border-t border-border p-4">{children}</div>
+    </details>
   )
 }
 
@@ -54,11 +65,11 @@ export function Meter({ label, value, share, tone = 'neutral' }: { label: string
 /** The rules a tab watches (fixed in code; per-rule switches cut as YAGNI). */
 export function Rules({ rules }: { rules: [string, string][] }) {
   return (
-    <Section title="Alerts">
-      <ul className="divide-y divide-border">
-        {rules.map(([t, d]) => <li key={t} className="py-2 first:pt-0 last:pb-0"><p className="text-sm font-medium">{t}</p><p className="text-sm text-muted-foreground">{d}</p></li>)}
+    <Fold title="Alert rules">
+      <ul className="divide-y divide-line-soft px-4">
+        {rules.map(([t, d]) => <li key={t} className="py-2"><p className="text-sm font-medium">{t}</p><p className="text-sm text-muted-foreground">{d}</p></li>)}
       </ul>
-    </Section>
+    </Fold>
   )
 }
 
