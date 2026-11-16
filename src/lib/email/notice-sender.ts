@@ -44,6 +44,11 @@ export async function sendNoticeEmail(row: OutboxRow): Promise<void> {
         where e.tenant_id = ${tenantId} and e.id = ${n.sourceId} and ${editWaitingSql('e', 'o')}`)
       if (!live.length) return null
     }
+    // One-address P1: a brand change answered (or replaced) in the 10 minutes before this sends is not emailed about.
+    if (n.sourceKind === 'brand') {
+      const live = await tx.execute(sql`select 1 from brand_proposals where tenant_id = ${tenantId} and id = ${n.sourceId} and decided_at is null`)
+      if (!live.length) return null
+    }
     const required = (REQUIRED_TYPES as readonly string[]).includes(n.type)
     const members = await tx.execute<{ user_id: string; role: string }>(sql`select user_id, role from app_notice_members(${n.id}::uuid)`)
     const [prefs, reads, done, words] = await Promise.all([

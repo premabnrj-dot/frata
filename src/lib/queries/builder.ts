@@ -2,6 +2,7 @@ import 'server-only'
 import type { ListQuery } from '@/domains/catalogue/list-query'
 import { withActor, type BuilderActor } from '@/lib/db/actor'
 import { listCollectionsWith, listProductsWith } from './catalogue'
+import { builderBrandWith } from './brand'
 
 // =============================================================================
 // FILE: src/lib/queries/builder.ts — what a partner's Builder reads (T1c, ADR-0015): the catalogue, as frata_builder,
@@ -17,4 +18,9 @@ export function builderProducts(actor: BuilderActor, query: ListQuery) {
 /** Collections, each with how many products are in it now. */
 export function builderCollections(actor: BuilderActor) {
   return withActor(actor, 'catalogue.read', (tx, tenantId) => listCollectionsWith(tx, tenantId))
+}
+
+/** Console › Brand, preview only (one-address P1·8, O9): the live record's named columns, as the Builder's grant allows. */
+export function builderBrand(actor: BuilderActor) {
+  return withActor(actor, 'preview.read', (tx, tenantId) => builderBrandWith(tx, tenantId))
 }

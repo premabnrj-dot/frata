@@ -4851,6 +4851,12 @@ begin
   update shop_settings set logo_url = own || '00000000-0000-0000-0000-000000000009-400.webp' where tenant_id = a;
   begin update shop_settings set logo_url = theirs || '00000000-0000-0000-0000-000000000009-400.webp' where tenant_id = a; raise exception 'FAIL: 98 logo_url from B''s folder'; exception when check_violation then null; end;
   begin update shop_settings set logo_url = 'https://evil.example/logo.png' where tenant_id = a; raise exception 'FAIL: 98 logo_url off our store'; exception when check_violation then null; end;
+  -- 0153: an invoice may freeze the store's own PNG rendition (documents/<sha256>.png), never another store's.
+  insert into orders (tenant_id, number, payment_method, placed_at, invoice_logo)
+    values (a, 98001, 'cod', now(), replace(own, '/brand/', '/documents/') || repeat('b', 64) || '.png');
+  begin insert into orders (tenant_id, number, payment_method, placed_at, invoice_logo)
+      values (a, 98002, 'cod', now(), replace(theirs, '/brand/', '/documents/') || repeat('b', 64) || '.png');
+    raise exception 'FAIL: 98 an invoice froze B''s rendition'; exception when check_violation then null; end;
   begin update brand_tokens set color_text = '#abcdef' where tenant_id = a; raise exception 'FAIL: 98 a lower-case hex'; exception when check_violation then null; end;
   begin update brand_tokens set font_display = 'comic' where tenant_id = a; raise exception 'FAIL: 98 a font off the list'; exception when check_violation then null; end;
   begin update brand_tokens set radius = 2 where tenant_id = a; raise exception 'FAIL: 98 a corner off the steps'; exception when check_violation then null; end;

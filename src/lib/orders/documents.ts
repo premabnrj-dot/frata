@@ -8,6 +8,7 @@ import { momentColumns } from '@/lib/db/order-predicates'
 import type { Tx } from '@/lib/db'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { creditNoteLines, creditNotes, orderLines, orders } from '@/lib/db/schema-orders'
+import { paperLogoWith } from '@/lib/queries/brand'
 import type { CreditKind } from '@/domains/orders/credits'
 
 // =============================================================================
@@ -35,7 +36,7 @@ export async function documentsFor(tx: Tx, tenantId: string, numbers: number[], 
     logo: shopSettings.docLogo, signatory: shopSettings.docSignatory, note: shopSettings.docNote })
     .from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
   const shop: DocShop = { name: s?.name ?? '', legalName: s?.legalName ?? '', address: s?.address ?? '', returnAddress: s?.address ?? '' }
-  const paper: Paper = { logo: s?.logo ?? null, signatory: s?.signatory ?? '', note: s?.note ?? '' }
+  const paper: Paper = { logo: await paperLogoWith(tx, tenantId, s?.logo ?? null, now), signatory: s?.signatory ?? '', note: s?.note ?? '' }
   const prefix = orderPrefix(s?.prefix ?? '', s?.name ?? '')
   if (!wanted.length) return { shop, paper, orders: [], skipped: [] }
   const os = await tx.select({

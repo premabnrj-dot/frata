@@ -20,7 +20,7 @@ let who: { userId: string; role: string; support: string | null } = { userId: PA
 vi.mock('server-only', () => ({}))
 vi.mock('next/cache', () => ({ revalidatePath: () => {}, revalidateTag: () => {}, unstable_cache: (f: () => unknown) => f }))
 vi.mock('next/server', () => ({ after: (f: () => void) => f() }))
-vi.mock('@/lib/queries/storefront', () => ({ refreshShop: () => {}, refreshHosts: () => {}, hostFor: (s: string) => `${s}.test` }))
+vi.mock('@/lib/queries/storefront', () => ({ refreshShop: () => {}, shopCached: (_n: string, _s: string, f: unknown) => f, refreshHosts: () => {}, hostFor: (s: string) => `${s}.test` }))
 vi.mock('@/lib/auth/require-member', async (orig) => ({
   ...(await orig<typeof import('@/lib/auth/require-member')>()),
   requireMember: async (allowed: readonly string[]) => {

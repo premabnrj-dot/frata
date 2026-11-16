@@ -139,7 +139,9 @@ export async function createKeyAction(input: unknown): Promise<CreateKeyResult> 
     })
     if (!r.ok) return { ok: false, error: r.error }
     if (typeof r.value === 'string') return { ok: false, error: r.value }
-    revalidatePath('/console/settings/website')
+    // A first key makes a code-site store (one-address P1: Brand in Look's place; its brand record is read).
+    refreshShop(r.tenantId, 'settings')
+    revalidatePath('/console', 'layout')
     const v = r.value
     return { ok: true, key, row: { id: v.id, name: v.name, kind: v.kind as 'public' | 'test', prefix: v.prefix, createdAt: new Date(v.createdAt).toISOString(), expiresAt: v.expiresAt ? new Date(v.expiresAt).toISOString() : null } }
   } catch (err) {
@@ -166,7 +168,8 @@ export async function deleteKeyAction(id: unknown): Promise<Done> {
     if (!r.ok) return { ok: false, error: r.error }
     if (r.value.error !== null || !r.value.hash) return { ok: false, error: r.value.error ?? FAILED }
     refreshKey(r.value.hash)
-    revalidatePath('/console/settings/website')
+    refreshShop(r.tenantId, 'settings') // the last key gone can end a code site in the making (one-address P1)
+    revalidatePath('/console', 'layout')
     return { ok: true }
   } catch (err) {
     console.error('[deleteKey]', errName(err))

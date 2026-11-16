@@ -111,6 +111,9 @@ export const isMessagesConfigured = () => META_APP_SECRET !== '' && PAYMENT_KEYS
 
 /** Test only: the e2e stack (e2e/stack.mjs) sets 1 so /console/fixtures/ui answers. Never set in Vercel. */
 export const E2E_FIXTURES = process.env.E2E_FIXTURES === '1'
+/** Test only: the e2e stack's stand-in media store (e2e/fakes/blob.mjs), where a file Frrata's server writes (a cleaned SVG
+ *  logo, its PNG rendition) goes in the local run. Read only beside E2E_FIXTURES. Never set in Vercel. */
+export const E2E_BLOB_PORT = E2E_FIXTURES ? (process.env.E2E_BLOB_PORT ?? '') : ''
 
 /** GST filing from Frrata (GST app G2): which GSP carries the calls. Unset = filing is off (the GST page offers the files
  *  for the CA only). "fake" = the in-process stand-in (src/lib/gst/gsp.ts), refused in Production. No real GSP is

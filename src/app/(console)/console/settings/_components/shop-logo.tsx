@@ -20,13 +20,13 @@ export function ShopLogo({ tenantId, current }: { tenantId: string; current: str
         const up = await uploadPhoto(file, tenantId, () => {}, 'brand')
         const r = await setShopLogo(up.base)
         if (!r.ok) { toast.error(r.error); return }
-        toast.ok('Saved.'); router.refresh()
+        toast.ok(r.waits ? 'Sent to the owner.' : 'Saved.'); router.refresh()
       } catch (e) { toast.error(e instanceof Error ? e.message : 'That upload was refused.') }
     })
   }
   const remove = () => start(async () => {
     const r = await setShopLogo(null)
-    if (!r.ok) toast.error(r.error); else { toast.ok('Removed.'); router.refresh() }
+    if (!r.ok) toast.error(r.error); else { toast.ok(r.waits ? 'Sent to the owner.' : 'Removed.'); router.refresh() }
   })
   return (
     <Section>

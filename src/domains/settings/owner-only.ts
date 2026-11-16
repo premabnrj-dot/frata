@@ -58,7 +58,8 @@ export function lockOf(locked: Locked, page: SectionKey, stored?: Readonly<Recor
 /** Whether this caller is offered Ask the owner: locked, and not a support visit (the definer is the lock: a live partner). */
 export const mayAskOwner = (role: MemberRole, hasOwner: boolean, support: boolean): boolean => !support && hasOwner && !holds(role, 'shop.manage')
 
-/** Who is shown, and emailed, a partner's ask (`ask_owner` notices): owners and Managers (app_notice_members is its SQL twin). */
+/** Who is shown, and emailed, a partner's ask (`ask_owner` notices) and a partner's waiting brand change (`brand`,
+ *  one-address P1): owners and Managers (app_notice_members is its SQL twin). */
 export const seesAsks = (role: string): boolean => holds(role, 'shop.manage')
 
 /** The page an `ask_owner` notice names, from its fixed address (`/console/settings/<page>`, written by app_ask_owner). */

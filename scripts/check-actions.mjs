@@ -23,7 +23,9 @@ import { join } from 'node:path'
 // store choice itself (the switch and the tenant check; check:capabilities pins its callers
 // holds which files may call it).
 // apiRequest (src/lib/storefront-api/request.ts) is the Storefront API's door: the shop from a key's definer row (ADR-0018).
-const CHOKEPOINTS = ['requireMember', 'requireCapability', 'currentStore', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk', 'apiRequest']
+// saveBrand, decideBrand, undoBrand (src/lib/content/save.ts, one-address P1·3): the brand record's one writer; each asks
+// requireMember and writes through asMember itself, so an action that calls one is behind both.
+const CHOKEPOINTS = ['saveBrand', 'decideBrand', 'undoBrand', 'requireMember', 'requireCapability', 'currentStore', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk', 'apiRequest']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
@@ -120,10 +122,17 @@ for (const file of existsSync('src/app/(partner)') ? walk('src/app/(partner)') :
     failures.push(`${file}  partner page that does not call requirePartner( itself`)
   }
 }
+// The brand record's writer is trusted as a chokepoint above only while it asks who is calling and writes through
+// asMember itself (one-address P1·3).
+{
+  const save = readFileSync('src/lib/content/save.ts', 'utf8')
+  if (!/\brequireMember\(/.test(save) || !/\basMember\(/.test(save)) failures.push('src/lib/content/save.ts  saveBrand is a chokepoint only while it calls requireMember( and asMember( itself')
+}
 // Every console write goes through asMember, which audits support visits in the same transaction.
 for (const file of walk('src/app/(console)')) {
   const text = readFileSync(file, 'utf8')
-  if (/^\s*['"]use server['"]/m.test(text) && !/\b(asMember|asModule)\(/.test(text)) {
+  // saveBrand, decideBrand and undoBrand write through asMember inside src/lib/content/save.ts (one-address P1·3).
+  if (/^\s*['"]use server['"]/m.test(text) && !/\b(asMember|asModule|saveBrand|decideBrand|undoBrand)\(/.test(text)) {
     failures.push(`${file}  console server actions must use asMember( or asModule( (support visits are audited there)`)
   }
 }

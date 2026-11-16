@@ -96,6 +96,9 @@ export const headIs = (format: PhotoFormat, head: Uint8Array): boolean => (forma
 
 /** The logo for paper (Documents D2): one PNG per upload in the shop's documents folder, at most 1 MB. */
 export const DOC_LOGO_SHAPE = /^tenants\/([0-9a-f-]{36})\/documents\/([0-9a-f-]{36})\.png$/
+/** A brand's main logo as PNG for paper and email (one-address P1·4): made by Frrata's server, never by an upload, named by
+ *  the sha256 of the main logo's URL (src/domains/brand/files.ts). Read wherever a logo for paper is. */
+export const RENDITION_SHAPE = /^tenants\/([0-9a-f-]{36})\/documents\/([0-9a-f]{64})\.png$/
 export const MAX_DOC_IMAGE_BYTES = 1024 * 1024
 /** Longest side of a logo for paper, in pixels (enough for 300 dpi at the masthead's size). */
 export const DOC_LOGO_PX = 600
@@ -122,6 +125,6 @@ export function acceptedDocLogo(raw: string, host: string, tenantId: string): st
   let u: URL
   try { u = new URL(raw) } catch { return null }
   if (u.protocol !== 'https:' || u.host !== host || `${u.origin}${u.pathname}` !== raw) return null
-  const m = DOC_LOGO_SHAPE.exec(u.pathname.slice(1))
+  const m = DOC_LOGO_SHAPE.exec(u.pathname.slice(1)) ?? RENDITION_SHAPE.exec(u.pathname.slice(1))
   return m && m[1] === tenantId ? raw : null
 }

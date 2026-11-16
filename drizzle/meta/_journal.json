@@ -1072,6 +1072,13 @@
       "when": 1794839922620,
       "tag": "0152_brand_record",
       "breakpoints": true
+    },
+    {
+      "idx": 153,
+      "version": "7",
+      "when": 1794840293602,
+      "tag": "0153_brand_paper_logo",
+      "breakpoints": true
     }
   ]
 }

@@ -28,6 +28,10 @@ describe('notice words', () => {
     expect(w('invoices')).toEqual({ title: 'Your partner asks you to update your invoice details', body: 'See it in Settings.' })
     expect(noticeFallback({ sourceKind: 'ask_owner', type: 'needs_you', title: null, body: null })).toEqual({ title: 'Your partner asks you to update a setting', body: 'See it in Settings.' })
   })
+  it('a partner’s waiting brand change (one-address P1): its own line, kept with it', () => {
+    expect(noticeWords({ kind: 'brand', summary: '4 logo files and 2 fonts.' }, 'S')).toEqual({ title: 'Your partner changed your brand', body: '4 logo files and 2 fonts.' })
+    expect(noticeFallback({ sourceKind: 'brand', type: 'needs_you', title: null, body: null })).toEqual({ title: 'Your partner changed your brand', body: 'See it in Brand.' })
+  })
   it('required types and defaults', () => {
     expect(REQUIRED_TYPES).toEqual(['billing', 'security', 'frrata_action'])
     expect(DEFAULT_EMAIL.new_order).toBe(false)

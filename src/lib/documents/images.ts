@@ -1,6 +1,6 @@
 import 'server-only'
 import { inflateSync } from 'node:zlib'
-import { acceptedDocLogo, imageKind, MAX_DOC_IMAGE_BYTES, MAX_DOC_IMAGE_PX as MAX_PX, pngSize, storeHost } from '@/domains/media/sizes'
+import { acceptedDocLogo, imageKind, RENDITION_SHAPE, MAX_DOC_IMAGE_BYTES, MAX_DOC_IMAGE_PX as MAX_PX, pngSize, storeHost } from '@/domains/media/sizes'
 import { BLOB_STORE_ID } from '@/lib/env'
 import { fetchWithTimeout } from '@/lib/http/timeout'
 import { errName } from '@/lib/log'
@@ -21,8 +21,9 @@ export async function docImage(url: string | null, tenantId: string): Promise<Ui
   if (!ok) return null
   if (cache.has(ok)) return cache.get(ok)!
   const { bytes, final } = await load(ok)
-  // Only a success or a definite refusal (missing, wrong bytes) is kept: a timeout or a 5xx is tried again next time.
-  if (final) {
+  // Only a success or a definite refusal (missing, wrong bytes) is kept: a timeout or a 5xx is tried again next time. A
+  // brand's rendition that is missing is not kept: Frrata's server may still be making it (one-address P1·4).
+  if (final && (bytes || !RENDITION_SHAPE.test(new URL(ok).pathname.slice(1)))) {
     if (cache.size > 64) cache.delete(cache.keys().next().value!)
     cache.set(ok, bytes)
   }

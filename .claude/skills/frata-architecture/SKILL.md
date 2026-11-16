@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.2.0
+  version: 3.3.0
   owner: owner
   verified: 2026-11-16
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018]
@@ -158,6 +158,14 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   middleware sends people to `/partner/sign-in` (with `next`, and `out=1` when a dead session cookie was there), the one
   partner page open without a session (`PARTNER_PUBLIC` in check:actions). `signOutAction` takes `to=partner` to land
   there. An owner who ever had a passkey waits 24 hours to recover one, even after Admin deleted them all.
+- **One brand record** (one-address P1, drizzle/0152–0153): a code-site store's logo files, colours, fonts, corners and
+  spacing are written ONLY by `saveBrand` / `decideBrand` / `undoBrand` (`src/lib/content/save.ts`; check:actions pins
+  that they call requireMember and asMember), the main logo too (`shop_settings.logo_url`). Who: `brandSaver`
+  (`src/domains/brand/who.ts`); a partner's save on an open store waits in `brand_proposals` for the owner (one
+  `brand` notice). Readers take the live record through `shopBrand` (60 s) or `apiBrand` (the API's hour), both on the
+  `settings` tag, never `previous` or a proposal. An SVG logo is stored only as the cleaner writes it again
+  (`src/domains/brand/svg.ts`) and shown only through `<img>`; paper and email read the PNG rendition
+  (`renditionUrl`, derived from the main logo's URL, made by `ensureRendition`).
 - **A partner's own records** (P2 Clients, 2026-11-16; drizzle/0146–0147): a partner's bills to its clients are
   platform-scope tables that NO Frrata role reads (`frata_app`, `frata_admin`, `frata_builder`: no grant, RLS on, a
   restrictive `definer_only` policy; `check:tenant` fails any table grant). Definers take the partner from the caller's
@@ -191,7 +199,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   in words, DROP locked fields from what is written (an omitted key can't blank them) and refuse one sent changed
   (compared after the save's own normalisation). Ask the owner is `app_ask_owner(uid, page)` (a live partner of this
   store, a store with an owner, one line a page an India day under an advisory lock, worded on read from its fixed href);
-  `ask_owner` notices reach owners and Managers only (`seesAsks` in `listNotices`/`unreadNotices`,
+  `ask_owner` notices, and a partner's waiting brand change (`brand`, one-address P1), reach owners and Managers only
+  (`seesAsks` in `listNotices`/`unreadNotices`,
   `app_notice_members(notice)` for email). A new writer of these columns asks the same list.
 - **Adding a role: read every caller of the tuple it joins** before it joins
   (2026-11-07). A settings section declares its own `editors`

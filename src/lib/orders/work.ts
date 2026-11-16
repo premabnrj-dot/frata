@@ -19,6 +19,7 @@ import type { Paise } from '@/domains/money/paise'
 import { shopSettings, tenantCounters, tenants } from '@/lib/db/schema'
 import { orderEvents, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
 import { putStockBack, takeStock } from './stock'
+import { paperLogoWith } from '@/lib/queries/brand'
 
 // =============================================================================
 // FILE: src/lib/orders/work.ts
@@ -178,7 +179,7 @@ export async function pack(tx: Tx, tenantId: string, actor: Actor, orderId: stri
   const at = moment(now)
   // The seller as the invoice is issued, and its logo, signatory and note (Documents D2): a later change to Settings
   // never rewrites any of them (architecture review 2026-11-07).
-  const r = await tx.update(orders).set({ packedAt: at, invoiceNumber: number, sellerName: s?.legalName || s?.name || '', sellerAddress: s?.address ?? '', invoiceLogo: s?.logo ?? null, invoiceSignatory: s?.signatory ?? '', invoiceNote: s?.note ?? '' })
+  const r = await tx.update(orders).set({ packedAt: at, invoiceNumber: number, sellerName: s?.legalName || s?.name || '', sellerAddress: s?.address ?? '', invoiceLogo: await paperLogoWith(tx, tenantId, s?.logo ?? null, now), invoiceSignatory: s?.signatory ?? '', invoiceNote: s?.note ?? '' })
     .where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId), isNull(orders.packedAt), isNull(orders.cancelledAt), isNull(orders.heldAt))).returning({ id: orders.id })
   // The row is locked (current: for update), so this cannot miss; if it ever does, the counter rolls back with it.
   if (!r.length) throw new Error('pack: order changed under its lock')

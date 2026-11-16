@@ -30,6 +30,8 @@ export type NoticeSource =
   | { kind: 'edit_payment'; number: string; amount: string }
   /** PP1: the store's partner asks the owner to update a page only the owner or a Manager changes now (its fixed address). */
   | { kind: 'ask_owner'; page: AskPage }
+  /** One-address P1: the store's partner changed the brand on an open store; it waits for the owner's yes (O17). */
+  | { kind: 'brand'; summary: string }
 
 export type NoticeWords = { title: string; body: string }
 
@@ -55,6 +57,8 @@ export function noticeWords(s: NoticeSource, shopName: string): NoticeWords {
       return { title: `Order ${s.number} is waiting for ${s.amount}`, body: 'Send the payment link again, or ship without the change.' }
     case 'ask_owner':
       return { title: `Your partner asks you to update ${ASKED[s.page]}`, body: 'See it in Settings.' }
+    case 'brand':
+      return { title: 'Your partner changed your brand', body: s.summary }
   }
 }
 
@@ -69,5 +73,6 @@ export function noticeFallback(n: { sourceKind: string; type: string; title: str
   if (n.sourceKind === 'support_session') return { title: 'Frrata support opened your store', body: 'Every change they made is in Activity.' }
   if (n.sourceKind === 'edit_payment') return { title: 'An order is waiting for the shopper\'s payment', body: 'See it in Orders.' }
   if (n.sourceKind === 'ask_owner') return { title: 'Your partner asks you to update a setting', body: 'See it in Settings.' }
+  if (n.sourceKind === 'brand') return { title: 'Your partner changed your brand', body: 'See it in Brand.' }
   return { title: TYPE_LABEL[n.type as NoticeType] ?? 'Frrata update', body: n.body ?? '' }
 }

@@ -123,7 +123,8 @@ export const orders = pgTable('orders', {
   createdAt: createdAt(),
 }, (t) => [
   unique('orders_tenant_id_key').on(t.tenantId, t.id),
-  check('orders_invoice_logo', sql`${t.invoiceLogo} is null or ${t.invoiceLogo} ~ ('^https://[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com/tenants/' || ${t.tenantId}::text || '/documents/[0-9a-f-]{36}\\.png$')`),
+  // One-address P1·4: or the brand's PNG rendition (documents/<sha256>.png), frozen at packing when doc_logo is empty.
+  check('orders_invoice_logo', sql`${t.invoiceLogo} is null or ${t.invoiceLogo} ~ ('^https://[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com/tenants/' || ${t.tenantId}::text || '/documents/([0-9a-f-]{36}|[0-9a-f]{64})\\.png$')`),
   uniqueIndex('orders_tenant_number').on(t.tenantId, t.number),
   index('orders_tenant_placed').on(t.tenantId, t.placedAt),
   // Best sellers by delivered units (themes T1·3): the shop's delivered orders in a window.
