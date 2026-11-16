@@ -150,6 +150,50 @@ begin
   perform public.app_partner_notify(t.id, 'partner_passkey_removed', (select pm.email from public.partner_members pm where pm.id = me.member_id), 'every passkey', false);
   return n;
 end $$;--> statement-breakpoint
+-- As 0129, its check the real one: a handover gives a store away for good (re-review 2026-11-16 M1).
+create or replace function app_handover_invite(p_tenant uuid, p_uid uuid, p_email text, p_session uuid, p_stepup text) returns uuid
+  language plpgsql volatile security definer set search_path = '' as $$
+declare v_email text := lower(btrim(p_email)); v_id uuid;
+begin
+  perform 1 from public.tenants t where t.id = p_tenant for update;
+  if not exists (select 1 from public.app_pm_live(p_uid) me
+                   join public.partner_links l on l.partner_id = me.partner_id and l.tenant_id = p_tenant and l.removed_at is null
+                   join public.members m on m.tenant_id = p_tenant and m.user_id = p_uid and m.role = 'partner' and m.partner_member_id = me.member_id
+                  where me.role = 'owner') then
+    raise exception 'not_partner' using errcode = 'P0001';
+  end if;
+  perform public.app_partner_need_real(p_uid, p_session, p_stepup, true);
+  if exists (select 1 from public.members m where m.tenant_id = p_tenant and m.role = 'owner') then
+    raise exception 'has_owner' using errcode = 'P0001';
+  end if;
+  if v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' or length(v_email) > 200 then raise exception 'bad_email' using errcode = 'P0001'; end if;
+  if exists (select 1 from public.members m join auth.users u on u.id = m.user_id
+              where m.tenant_id = p_tenant and lower(u.email) = v_email) then
+    raise exception 'member_email' using errcode = 'P0001';
+  end if;
+  update public.invites set revoked_at = now()
+   where tenant_id = p_tenant and role = 'owner' and accepted_at is null and revoked_at is null;
+  insert into public.invites (tenant_id, email, role, created_by) values (p_tenant, v_email, 'owner', p_uid) returning id into v_id;
+  insert into public.audit_events (tenant_id, actor_user_id, actor_email, actor_kind, action, target)
+    select p_tenant, p_uid, u.email, 'member', 'shop.handover_invited', null from auth.users u where u.id = p_uid;
+  return v_id;
+end $$;--> statement-breakpoint
+-- The switch's dates are the database's own (re-review L1): `created_at` is always now, so the 7-day cap holds; and the
+-- table can't be emptied without an audit row.
+create or replace function app_platform_switch_stamp() returns trigger
+  language plpgsql security definer set search_path = '' as $$
+begin new.created_at := now(); return new; end $$;--> statement-breakpoint
+create trigger platform_switches_stamp before insert or update on platform_switches
+  for each row execute function app_platform_switch_stamp();--> statement-breakpoint
+create or replace function app_platform_switch_truncated() returns trigger
+  language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.audit_events (tenant_id, actor_kind, action, target, detail)
+  values (null, 'system', 'platform.passkeys_on', 'passkeys_off', jsonb_build_object('via', 'truncate'));
+  return null;
+end $$;--> statement-breakpoint
+create trigger platform_switches_truncate after truncate on platform_switches
+  for each statement execute function app_platform_switch_truncated();--> statement-breakpoint
 -- As 0129, getting in follows the switch (staff: conf; partners: pconf).
 create or replace function app_access_for(p_user uuid, p_session uuid default null, p_stepup text default null, p_partner text default null) returns jsonb
   language sql stable security definer set search_path = '' as $$
@@ -200,5 +244,5 @@ create or replace function app_access_for(p_user uuid, p_session uuid default nu
         order by u.tenant_id, u.pref
       ) d), '[]'::jsonb))
 $$;--> statement-breakpoint
-revoke all on function app_passkeys_off(), app_platform_switch_audit(), app_partner_need_real(uuid, uuid, text, boolean), app_partner_need(uuid, uuid, text, boolean)
+revoke all on function app_passkeys_off(), app_platform_switch_audit(), app_platform_switch_stamp(), app_platform_switch_truncated(), app_partner_need_real(uuid, uuid, text, boolean), app_partner_need(uuid, uuid, text, boolean)
   from public, anon, authenticated, service_role, frata_app, frata_admin, frata_builder;

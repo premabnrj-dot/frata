@@ -4775,7 +4775,7 @@ begin
     then raise exception 'FAIL: 88 the switch reached the real passkey check'; end if;
   begin perform public.app_partner_need_real(p, s, '', false); raise exception 'FAIL: 88 the real partner check passed on the switch';
   exception when others then if sqlerrm <> 'confirm_first' then raise; end if; end;
-  foreach fn in array array['app_partner_pk_approve', 'app_partner_pk_decline', 'app_partner_pk_list', 'app_partner_pk_remove', 'app_partner_pk_remove_all'] loop
+  foreach fn in array array['app_partner_pk_approve', 'app_partner_pk_decline', 'app_partner_pk_list', 'app_partner_pk_remove', 'app_partner_pk_remove_all', 'app_handover_invite'] loop
     if (select prosrc from pg_proc where proname = fn) !~ 'app_partner_need_real\(' or (select prosrc from pg_proc where proname = fn) ~ 'app_partner_need\('
       then raise exception 'FAIL: 88 % no longer asks for a real passkey', fn; end if;
   end loop;
@@ -4783,8 +4783,11 @@ begin
                             'admin_partner_pk_approve', 'admin_partner_pk_remove_all', 'app_partner_pk_challenge', 'app_partner_pk_add'] loop
     if (select prosrc from pg_proc where proname = fn) ~ 'app_passkeys_off|app_partner_need\(' then raise exception 'FAIL: 88 % follows the switch', fn; end if;
   end loop;
-  -- At most 7 days, and it ends by itself.
-  begin update public.platform_switches set until = created_at + interval '8 days'; raise exception 'FAIL: 88 a switch was set for more than 7 days';
+  -- At most 7 days, counted from the database's own now (a hand-set start can't stretch it), and it ends by itself.
+  begin update public.platform_switches set until = now() + interval '8 days'; raise exception 'FAIL: 88 a switch was set for more than 7 days';
+  exception when check_violation then null; end;
+  begin update public.platform_switches set created_at = now() + interval '55 days', until = now() + interval '60 days';
+    raise exception 'FAIL: 88 a hand-set start stretched the switch';
   exception when check_violation then null; end;
   update public.platform_switches set until = now() - interval '1 second';
   if (public.app_access_for(staff, s, null, null)->>'staffConfirmedAt') is not null or (public.app_access_for(p, s, null, null)->>'partnerConfirmedAt') is not null
