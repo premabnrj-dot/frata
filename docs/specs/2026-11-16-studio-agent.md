@@ -9,7 +9,9 @@ deviations to redraw (§ 14); the states this spec adds are drawn per phase (pla
 
 **Pointer (2026-11-16):** the site address (`<slug>.frrata.store`, § 13), the checkout split (§ 12.1, § 12.5) and BT are
 re-planned in `docs/specs/2026-11-16-one-address-checkout.md` (draft): one address per store on `frrata.shop` or the
-brand's domain, with checkout. Its § "How this changes the Studio plan" lists the edits to make here once approved.
+brand's domain, with checkout (ADR-0019 "One address", proposed). Its last sections list the edits to make here once
+approved. This spec's runtime record (decision 27, drafted as ADR-0019) becomes **ADR-0020**; proof blocks § 88–96 here
+must be renumbered (§ 88 is now 0151's; the one-address plan takes § 98–100).
 
 Owner, 2026-11-16: "Now please revise the studio plan to keep it fully agentic and use our own claude api as planned and
 let's finishup the remaining of the partner/studio work." Earlier the same day: must partners deploy their websites on
