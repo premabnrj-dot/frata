@@ -169,10 +169,11 @@ export function BrandEditor({ tenantId, mode, live, version: startVersion, waiti
       <PageHeader title="Brand" badges={chip} />
       <div className="mt-5 grid items-start gap-6 lg:grid-cols-[minmax(0,640px)_340px]">
         <div className="lg:hidden"><PreviewCard b={draft} s={sample} phone /></div>
-        <form ref={form} className="flex min-w-0 flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void save() }}>{cards}</form>
+        <form ref={form} className="flex min-w-0 flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void save() }}>{cards}
+          {edit && dirty && <SaveBar placement="bottom" count={changes.length} pending={pending} keys="Ctrl+S" onSave={() => void save()} onDiscard={() => { setDraft(saved); setServerErrors({}); setSlots({}); setAttempt(0) }} />}
+        </form>
         <aside className="sticky top-4 hidden min-w-0 lg:block"><PreviewCard b={draft} s={sample} /></aside>
       </div>
-      {edit && dirty && <SaveBar placement="bottom" count={changes.length} pending={pending} keys="Ctrl+S" onSave={() => void save()} onDiscard={() => { setDraft(saved); setServerErrors({}); setSlots({}); setAttempt(0) }} />}
       <LeaveDialog open={!!guard.leaveTo} what="Brand" onStay={guard.stay} onLeave={() => guard.leave(() => setSaved(draft))} />
     </div>
   )

@@ -107,7 +107,7 @@ export function PreviewSurface({ which, b, s }: { which: PreviewName; b: BrandRe
 
 /** The store's name in its headings font, where no logo is yet (mockup screen 2). */
 export function BrandName({ b, name }: { b: BrandRecord; name: string }) {
-  return <span className="block max-w-[90%] truncate px-2 text-center text-[28px] leading-tight" style={{ fontFamily: brandFamily(b.display) }}>{name}</span>
+  return <span className="block max-w-[90%] px-2 text-center text-[28px] leading-tight [overflow-wrap:anywhere]" style={{ fontFamily: brandFamily(b.display) }}>{name}</span>
 }
 
 /** Type's sample line: a product's name in the headings font, a line in the body font, on the record's background. */

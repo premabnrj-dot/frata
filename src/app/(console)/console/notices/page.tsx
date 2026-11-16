@@ -7,7 +7,7 @@ import { requireMember } from '@/lib/auth/require-member'
 import { CONSOLE_ROLES } from '@/domains/tenancy/roles'
 import { listNotices } from '@/lib/queries/notices'
 import { TYPE_LABEL } from '@/domains/email/notices'
-import { dateTimeIN } from '@/lib/format-date'
+import { momentIN } from '@/lib/format-date'
 import { MarkRead } from './mark-read'
 import { BrandDecision } from './brand-decision'
 import { decidesBrand } from '@/domains/brand/who'
@@ -21,6 +21,7 @@ export default async function NoticesPage() {
   const list = await listNotices(auth.membership.tenantId, auth.userId, auth.membership.role, auth.membership.tenantName)
     .catch(() => null)
   if (!list) return <><PageHeader title="Notices" /><Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel></>
+  const now = new Date()
   const unread = list.filter((n) => !n.read).map((n) => n.id)
   const decides = decidesBrand(auth.membership.role, auth.membership.supportSessionId)
   // A partner's brand change (one-address P1): where it stands, and the owner's two buttons while it waits.
@@ -38,7 +39,7 @@ export default async function NoticesPage() {
                 {n.body ? <p className="text-sm text-muted-foreground">{n.body}</p> : null}
                 <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   {n.brand && n.brand.state !== 'open' ? <Badge tone={STATE[n.brand.state][0]}>{STATE[n.brand.state][1]}</Badge>
-                    : <Badge tone={n.required ? 'warn' : 'neutral'}>{TYPE_LABEL[n.type]}</Badge>}{dateTimeIN(n.at)}
+                    : <Badge tone={n.required ? 'warn' : 'neutral'}>{TYPE_LABEL[n.type]}</Badge>}{momentIN(n.at, now)}
                   {n.href && n.brand?.state !== 'declined' && n.brand?.state !== 'replaced' ? <Link href={n.href} className="inline-flex min-h-6 items-center underline underline-offset-4">Open</Link> : null}
                 </p>
                 {n.brand?.state === 'open' && decides ? <BrandDecision id={n.brand.id} /> : null}

@@ -3,6 +3,7 @@ import type { ListQuery } from '@/domains/catalogue/list-query'
 import { withActor, type BuilderActor } from '@/lib/db/actor'
 import { listCollectionsWith, listProductsWith } from './catalogue'
 import { builderBrandWith } from './brand'
+import { urlFor } from '@/domains/media/sizes'
 
 // =============================================================================
 // FILE: src/lib/queries/builder.ts — what a partner's Builder reads (T1c, ADR-0015): the catalogue, as frata_builder,
@@ -23,4 +24,12 @@ export function builderCollections(actor: BuilderActor) {
 /** Console › Brand, preview only (one-address P1·8, O9): the live record's named columns, as the Builder's grant allows. */
 export function builderBrand(actor: BuilderActor) {
   return withActor(actor, 'preview.read', (tx, tenantId) => builderBrandWith(tx, tenantId))
+}
+
+/** The preview's sample product for a Builder (mockup screen 6): the first active, priced product, through the owner list's
+ *  own SQL as frata_builder (a Builder already reads Products). Null when the store has none. */
+export async function builderBrandSample(actor: BuilderActor) {
+  const list = await withActor(actor, 'catalogue.read', (tx, tenantId) => listProductsWith(tx, tenantId, { filter: 'active', sort: 'edited', q: '', page: 1 }))
+  const p = list.rows.find((r) => r.minPrice !== null && r.cover) ?? list.rows.find((r) => r.minPrice !== null)
+  return p ? { title: p.title, price: p.minPrice!, mrp: null, photo: p.cover ? urlFor(p.cover.base, 400) : null } : null
 }
