@@ -1,5 +1,5 @@
 # Practices from Ekatan — G1 gates, G2 hooks, G3 evals, G4 split
-Status: active · Date: 2026-11-16
+Status: done 2026-11-16 · Date: 2026-11-16
 **Mockup:** none — no screen; proposal page https://claude.ai/artifact/7x3xUf5cnMgifDtVTMACWZ
 **Approved:** owner, 2026-11-16 (calls 1, 2, 4, 6 as recommended; 3 and 5 left to Claude: block, plans from 2026-11-17)
 **Review:** architecture-reviewer NOT READY → 12 findings fixed below, 2026-11-16
