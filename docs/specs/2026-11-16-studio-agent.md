@@ -29,7 +29,7 @@ Vercel themselves, or does everything run on Frrata's account, managed from the 
   until 30 days of the pilot's measured usage price it (owner decision 18).
 - **A brand with no domain** gets `<slug>.frrata.store` (name to choose), a separate registrable domain, never
   `frrata.shop` (§ 13).
-- **What the owner decides:** 27 calls at the end, each with a recommendation. 1–5 unblock everything; 18 and 20 gate
+- **What the owner decides:** 29 calls at the end, each with a recommendation. 1–5 unblock everything; 18 and 19 gate
   selling.
 
 ## Goal
@@ -110,7 +110,7 @@ on Frrata's server.** Four ways to get there:
 | Network out | `limited`, `allowed_hosts` | Vercel Sandbox network policy | Vercel Sandbox network policy | Same |
 | Secrets | Vault: a placeholder in the sandbox, the value added at egress (headers only); the git token never in the container | No vault (not supported self-hosted): every key through our tools; the worker's environment key must stay out of the sandbox | Our proxy | A model key reaches the sandbox, or our model proxy |
 | Spend cap | Session budget in USD, enforced before each model request | Same | Ours to build | Ours |
-| Preview of a code change | After a fleet build (≈ 1–2 min); tokens and words instantly as data | Open ports: `next dev` in seconds | Open ports | Open ports |
+| Preview of a code change | After a fleet build (≈ 1–2 min); tokens and words within a couple of seconds as data (§ 6.13) | Open ports: `next dev` in seconds | Open ports | Open ports |
 | Frrata runs | Webhook receiver, tool executor (both in this app) | A long-running worker | A container fleet, session store, the loop's hosting | A model proxy |
 | Maturity | Beta | Beta | GA SDK, our code | GA SDK |
 | Data leaves India | Code, public catalogue, drafts, brand words (no India region found) | Tool inputs and outputs only | Prompts only | Prompts only |
@@ -140,15 +140,18 @@ per site exceeds the Agent SDK path's by more than a third in the proof.
 
 ### 4. The tools the agent gets
 Built-in, inside the sandbox: `bash`, `read`, `write`, `edit`, `glob`, `grep` (`always_allow`: the sandbox is the
-boundary); `web_search` and `web_fetch` **off**. Custom tools run on Frrata's server inside `asTurn` (§ 6.10) as the
-person who started the turn, re-checked live on every call. **Nothing the agent writes reaches a store without a
+boundary); `web_search` and `web_fetch` **off**. Custom tools run on Frrata's server through `asTurn` (§ 6.10) for the
+person who started the turn, re-checked live on every call. **Every read tool runs as frata_builder** (the catalogue's
+public-page columns only, drafts included) **whatever the person's role** (tenancy 9), outside any transaction (speed 1:
+a cached loader inside a transaction deadlocks the pool, P4); every id in a tool's input is matched with
+`where tenant_id = turn.tenant` (`check:studio`). **Nothing the agent writes reaches a store without a
 person's tap** (ADR-0014 rule 4, amendment 8.1; security H1): content, brand words, tokens and logos are **proposals**,
 rows in `studio_proposals`, each drawn as a card with the exact value and **Apply**; Apply runs the console's own save as
 that person through `asMember`, with a passkey check in the last 5 minutes once the store has an owner (one check may
 apply a batch whose every value is on screen).
 | Tool | Does | Through | Never |
 |---|---|---|---|
-| `store_facts` | The shop's collections, product count, a sample of cards, content kinds, apps that are on | `src/lib/queries/` readers the API uses (a Builder: `withActor`) | Orders, shoppers, costs, members, the legal block's contact details |
+| `store_facts` | The shop's collections, product count, a sample of cards, content kinds, apps that are on | Builder readers through `withActor` (`src/lib/queries/builder.ts`), outside any transaction | Orders, shoppers, costs, members, the legal block's contact details |
 | `content_read` | Announcements, menus, page and FAQ words, Contact line, placements | Console › Content's readers | The legal block's emails and phones: the kit renders `shop.legal` itself, so the model never needs them |
 | `content_propose` | A proposed save for one content entry | `studio_proposals`; checked on proposal and again on Apply by `src/lib/content/save.ts` (`plainText`, version, limits, the owner's notice); refuses a UPI id, a phone number or a URL that is not a shop path or the legal block's own | A policy page or legal details after handover (PP1's `maySaveSensitive`); any Builder turn |
 | `brand_propose` / `tokens_propose` | brand.md lines; tokens and seasons (BT data) | `studio_proposals`; Apply runs BT's save | A colour pair under contrast (`src/domains/themes/contrast.ts`); any Builder turn |
@@ -156,7 +159,7 @@ apply a batch whose every value is on screen).
 | `logo_propose` | A checked SVG as the brand's logo | svgo, the outline-only check, then a proposal; Apply writes `shop_settings.logo_url` | Text elements, rasters, filters; any Builder turn |
 | `read_intake` | The brand's files after Frrata re-encoded and rasterised them | Intake spec § Files | Originals |
 | `read_brand_site` | Colours, fonts and logo from the brand's own website | Frrata's fetch (intake spec § The website fetch: https only, no private addresses, 10 requests, 5 MB), then a **no-tool** Haiku 5.5 call with a strict output schema, its cost metered into the turn | Raw HTML into the agent |
-| `preview_build` | A preview of the pushed draft commit; the gate's verdict, the URL and the editable list when the fleet answers | `site_deployments` row + outbox `site.build`; the fleet builds that commit SHA with no secrets and runs Frrata's checks, the same path as a publish | Production, a domain; anything built in the sandbox |
+| `preview_build` | A preview of the session branch's head; the gate's verdict, the URL and the editable list when the fleet answers | Frrata reads the branch head's SHA itself (never a SHA from the model) into a `site_deployments` row + outbox `site.build`; the fleet builds that SHA with no secrets and runs Frrata's checks, the same path as a publish; **at the end of a turn only**, one build in flight per site, a newer commit replacing a queued one | Production, a domain; anything built in the sandbox |
 | `editable_list` | What the brand will be able to edit, from `frrata/fields.json` | The gate's parse | — |
 | `review_link` | A signed preview link for the brand (owner-only once there is an owner; never acts on open) | Kit spec § Handover | WhatsApp sent by Frrata (ADR-0010) |
 | `read_review_notes` | The brand's notes and pins, as data | `studio_review_notes` | — |
@@ -169,8 +172,17 @@ A **Builder's** turn (ADR-0015) gets the read tools, the sandbox and `preview_bu
 - **The store's key never reaches the model or the sandbox.** Today's API takes the key in the URL path, which a vault
   cannot fill (headers and body only). So the API gains one key kind (an ADR-0018 amendment, owner decisions 10–11):
   `frs_build_…`, sent as a `Frrata-Key` header to a dynamic tree only (never a cached route; `private, no-store` to the
-  caller, no CORS headers at all; a 15-second data cache per key behind it), read like a test key (drafts included),
-  300 reads a minute a key, failing closed.
+  caller, no CORS headers at all), read like a test key (drafts included), 300 reads a minute a key, failing closed.
+  - **Its lookup is uncached** (`storefrontKeyNow`, as previews' tokens are), so a deleted key stops at once; the live
+    key lookup's one-hour cache (`src/lib/queries/storefront-keys.ts:34`) and `refreshKeys`, which purges only live keys,
+    never serve it (tenancy 5). Expired build keys are deleted daily.
+  - **The draft data behind it is one raw entry per shop** (speed 3): the draft catalogue at 600 products takes 200 ms
+    median and 370 ms at most uncached; its raw entry is 878 kB (the expanded one 1.46 MB, over the 1 MB rule). So the
+    raw entry is cached 15 s **per shop** (never per key, never shared with the `k/` tree), tagged with the shop's
+    catalogue and content tags, purged on every Apply, and expanded per request; `catalogue-size.int.test.ts` gains it.
+  - **After the store opens** `app_storefront_key` answers a build key only if its `partner_id` is set, its maker is live
+    (`app_pm_live`) and still holds a `members` row (and, for a Lead or Builder, an assignment) on that shop, so
+    unassigning or removing the person ends their keys at once (tenancy 6).
   - **Who holds one:** a Studio session (24 hours, made at start, deleted at end); a preview deployment (one key per
     preview, Preview environment only, deleted with the preview, ≤ 30 days); a developer's CLI (24 hours, § 10). Every
     build key is made by one minting path (G-a) inside the shop's tenant, stored as its hash only, listed in Settings ›
@@ -182,8 +194,10 @@ A **Builder's** turn (ADR-0015) gets the read tools, the sandbox and `preview_bu
     `injection_location: {header: true}` and the allowed host exactly `api.frrata.shop`; the sandbox sees an opaque
     placeholder; the API never echoes a request header. The starter sends the header only when
     `FRRATA_KEY_MODE=header` is set (a generated, additive change).
-- **Limits per key, not per network** for build and test keys (G27): every session and preview leaves from shared
-  addresses, so a per-network limit throttles every partner at once.
+- **Limits** (G27, speed 4): a build or test key's reads are limited per key only, because every session and preview
+  leaves from shared addresses and a per-network limit would throttle every partner at once. Misses (an unknown, deleted
+  or dead key) stay counted per network **and** per key hash, so one stale preview can't block every site. Live keys
+  keep today's per-network limits.
 - **Allowed hosts** (the session's `limited` network, from the signed policy version): `api.frrata.shop`, Frrata's media
   host, the allowed font hosts, and Frrata's package mirror once it exists. GitHub only through Anthropic's git proxy for
   the one mounted repository. No web search, no fetch, no npm registry. Until the mirror (V2c) a session installs
@@ -225,7 +239,8 @@ A **Builder's** turn (ADR-0015) gets the read tools, the sandbox and `preview_bu
    (architecture M5). Per turn: 40 credits by default, 120 at most. Per person: a monthly cap the partner owner sets (new
    in C1) and 300 credits a day. Per client: the partner's budget (warn 80%, pause 100%). Platform: a daily ceiling on
    list cost (₹25,000 for the first three months), past which new turns wait and Admin is told; the Anthropic
-   workspace's spend limit as the last backstop.
+   workspace's spend limit as the last backstop. At most **70 sessions at once** platform-wide (speed 5), the rest queued
+   with a line; 30% of Vercel's 1,000 deployments an hour is kept for publishes, rollbacks and patches.
 8. **Kill switches** (Admin › Agent, kit spec § 7; one staff member with a reason stops, two people resume): stop every
    session; one partner; one shop; roll the agent version back; turn one tool off. Stopping also deletes the sessions'
    build keys, archives their vault credentials and revokes their repository tokens. A stopped turn keeps its committed
@@ -233,13 +248,24 @@ A **Builder's** turn (ADR-0015) gets the read tools, the sandbox and `preview_bu
 9. **Removing a partner or a person** ends their sessions, routines, proposals, build keys and repository access in the
    same step (amendment 6): `app_remove_partner` gains these, the next tool call refuses, and a sweep interrupts the
    session.
-10. **`asTurn(turn, cap, work)`, the tool chokepoint** (architecture B1, security M4; ADR-0019): the turn id is never
-    taken from a webhook or a tool's input; it is our own open-turn row for the session that
-    `app_studio_session_for(runtime id)` names. `asTurn` re-checks the person live (`app_turn_actor`: tenant, partner,
-    role, or nothing), then runs `work` as frata_app for an Owner or Lead, or through `withActor` for a Builder: it is the
-    second sanctioned Actor maker beside `require-capability.ts`, pinned in `check:capabilities`, and listed in
-    `check:actions` beside `asMember`; `save.ts` asserts the capability itself. Studio's own rows and the ledger are
-    written by frata_app definers keyed on the turn, so a Builder's read-only role writes nothing.
+10. **`asTurn(turn, cap, work)`, the tool chokepoint** (architecture B1, security M4, tenancy 1–3; ADR-0019):
+    - The turn id is never taken from a webhook or a tool's input: it is our own open-turn row for the session that
+      `app_studio_session_for(runtime id)` names. **One open turn per session** (a unique partial index); a
+      `custom_tool_use` is accepted only after that turn's `user.message` event id and before the turn closes, and the
+      tool row's tenant must equal the session's.
+    - `asTurn` checks the person in **its own short transaction and closes it** (speed 1): `app_turn_actor` re-checks the
+      membership, the link, the assignment and the partner's passkey step-up, and returns tenant, partner and role or
+      nothing. Then read tools run outside any transaction through `withActor`; a write takes `*In(tx)` inside its own
+      `withTenant`. `check:studio` pins both shapes.
+    - It is the second sanctioned Actor maker beside `require-capability.ts`, pinned in `check:capabilities`, listed in
+      `check:actions` beside `asMember`; `save.ts` asserts the capability itself.
+    - **`app.partner_id`**: a third Postgres setting beside `app.tenant_id` and `app.member_role` (`src/lib/db/actor.ts:54`),
+      set only by `requireMember`/`requireCapability` from `app_access_for` and carried in the Actor; every `studio_*`
+      table has a restrictive policy `tenant_id = app_current_tenant() and partner_id = <the setting>`, and composite
+      foreign keys `(tenant_id, partner_id, session_id) → studio_sessions`.
+    - Studio's rows and the ledger are written by frata_app definers keyed on the turn: each checks
+      `turn.tenant_id = app_current_tenant()`, that the turn is open and `app_turn_actor` is live; settle caps at the
+      reserve; EXECUTE revoked from public, anon, authenticated, service_role, frata_builder and frata_admin.
 11. **Previews are gated** (security M1): Vercel Deployment Protection is on for the `frrata-sites` team; the brand's
     signed link reaches a preview through a per-deployment share link the fleet makes (how it passes protection is a
     spike item); previews carry `frame-ancestors` the console only, and Studio's pane frames them with
@@ -248,6 +274,12 @@ A **Builder's** turn (ADR-0015) gets the read tools, the sandbox and `preview_bu
     `frrata-sites` and closed by these rules.
 12. **Cookies before the PSL lists the sites domain:** sibling sites could set cookies on `frrata.store`; the gate refuses
     any `document.cookie` write that names a `Domain`, and sites have no route handlers that set cookies.
+13. **What "shows at once" means** (speed 10): Apply purges the shop's tagged draft entry; the pane's own reads skip the
+    cache; hand edits save when the pointer is released, at most one save every 2 seconds, under a `brand` tag; so data
+    shows in the pane within a couple of seconds, never the 30 s a stale entry would take.
+14. **Code sites' speed floor in the gate** (speed 9, LOW): first-load script ≤ 150 kB gz on the product page (the pilot
+    ships 143.3 kB, against shop pages' 120 kB: Next and React alone are ≈ 120 kB), at most 1 preloaded font and 2
+    high-priority images (the pilot preloads 3 fonts and must cut two before it moves: owner decision 28).
 
 ### 7. Model choice per task, and caching
 | Task | Model | Effort | Why |
@@ -325,6 +357,8 @@ and 23.9% after a partner's 20% share (review, at 1.08); all three cross ADR-001
 theme shop already sends these bytes from the `frata` project, so a code site mostly moves the cost, but rule 9a prices
 what Frrata meters. **So V2a hosts build-mode shops and the pilot only until 30 days of the pilot's measured Vercel usage
 price it** (owner decision 18); if measured bytes still fail 3×, ADR-0017's Cloudflare test runs before any paid site.
+The measurement splits first views from repeat views (a first view makes about 15 requests) and adds Frrata's Blob
+transfer for product images, a separate cost line today (speed review).
 **Hypotheses** (figure · source · date · test):
 | Figure | Source · date | Test |
 |---|---|---|
@@ -338,9 +372,10 @@ Seats and credits stay outside the partner share (amendment 1).
 
 ### 9. Evaluation: the spike, then the 20-task proof
 **The spike (one week, before the rest of V3a):** every "no current source" line in § Research, each answered with a dated
-note in `frata-integrations`, plus: whether each custom tool call raises a webhook (**fallback:** while a turn is open the
-drain reads the session's events every 5 seconds); `next build` time and memory in the sandbox; concurrency and rate
-limits per workspace.
+note in `frata-integrations`, plus: whether each custom tool call raises a webhook (**fallback:** while the partner's
+screen polls, it may trigger one read of its own session's events at most every 5 seconds; `/api/cron/studio` sweeps
+every minute; the shared 5-minute drain is never the path); whether the share link's cookie survives in a cross-site
+iframe in Safari; `next build` time and memory in the sandbox; concurrency and rate limits per workspace.
 **The proof:** on Frrata's demo shop (Kesar) and a copy of the pilot's store, each task k = 3 trials, graded first by
 deterministic checks (`frrata check`, typecheck, build, Frrata's gate on the fleet's build, a smoke test that pages load,
 the legal block shows and the bag reaches checkout, phone speed and accessibility against Starter 0), the owner's 5-point
@@ -408,7 +443,9 @@ every model or agent-version change.
 2. **Keys** (security review: no inbound endpoint hands out keys): the `site.key` sender, inside the outbox row's tenant,
    mints the key at send time and sends it in the body of one HMAC-signed HTTPS request to the fleet (never in a row, a
    payload or a log); the fleet sets it as a sensitive variable (Preview: a test or build key per preview; Production: the
-   public key once the Website is set). A failed call deletes that key; the retry mints a new one.
+   public key once the Website is set). A failed call deletes that key; the retry mints a new one. Every `site.*` sender
+   resolves the project with `sites where tenant_id = row.tenant and id = …`, and the fleet records each project's owning
+   shop and refuses a request whose shop doesn't match (tenancy 7).
 3. **Preview and publish share one build path:** the fleet builds the commit SHA the request names, in its own sandbox
    with no secrets, runs Frrata's pinned checks on the output, and deploys to the preview domain behind protection; the
    answer comes back through `webhook_events`. Publish promotes that attested artifact. Headers and CSP are overlaid by the
@@ -424,9 +461,14 @@ every model or agent-version change.
 6. **What each person clicks:** the partner: New site, the chat's choices and Apply, Send, Publish, Hand over. The brand:
    Accept, Open my store, optionally Connect my domain, Content edits, Undo, Publishing per partner, and deleting a key in
    Settings › Website. Neither sees GitHub, Vercel, Anthropic or a key's value.
-7. **Webhooks and the cron:** Anthropic's and the fleet's events are stored in `webhook_events` (keys
-   `anthropic:<session>:<event>` and `fleet:<deployment>:<event>`), processed in `after()`, and swept by `/api/cron/drain`
-   every 5 minutes like Razorpay's; a custom tool runs once per `custom_tool_use` id.
+7. **Webhooks and crons** (speed 2: the shared drain runs every 5 minutes, one row at a time, about 2,300 rows a day
+   against Studio's 60,000): Anthropic's events are stored in `webhook_events` (`anthropic:<session>:<event>`) and each
+   custom tool **runs in that webhook's `after()`**, once per `custom_tool_use` id, never through the shared outbox;
+   `/api/cron/studio` runs every minute with its own deadline and `eachLimited(8)` to pick up anything a webhook missed.
+   The fleet's events (`fleet:<deployment>:<event>`) are processed by a definer that takes the shop from the
+   `site_deployments` row and cross-checks the site, in `after()`, with `/api/cron/drain` as the net.
+8. **Repositories are made from the template, never forked**; a build commit is the branch head Frrata read, never the
+   model's input; partner skills come from a partner-level repository holding no brand content (ADR-0016).
 
 ### 13. A Frrata address for code sites
 - **The domain:** a registrable domain apart from `frrata.shop` (checkout, sign-in, theme shops), the console's, Admin's and
@@ -437,9 +479,12 @@ every model or agent-version change.
   (a new row, the old one redirecting for 90 days), never left stale.
 - **The row:** a `shop_domains` row with `serves = 'site'`; "made by Frrata" is derived from the host (it ends in the
   sites domain), not stored. Changes, each with a test per reader:
+  - only a definer writes a `serves = 'site'` row, its label taken from the shop's own slug or its name history, never a
+    typed value (tenancy 8); a trigger refuses a sites-domain host for any other shop; one sites-domain row per shop;
   - the host CHECK, which refuses any `frrata.` label today, is relaxed only for a row whose host is exactly
-    `<label>.<sites domain>` and `serves = 'site'`;
-  - a `site` row can never be Main (CHECK), because `mainDomainIn` sets the checkout origin;
+    `<label>.<sites domain>` and `serves = 'site'`; the preview domain never enters `shop_domains`;
+  - `check (serves <> 'site' or main_at is null)`: a site row is never Main, because `mainDomainIn` sets the checkout
+    origin;
   - `MAX_HOSTS_A_SHOP` does not count Frrata's own address;
   - the domain sweeps (D2·7) and Razorpay's website check read `serves`;
   - the apex reader in `src/domains/addresses` treats the sites domain as a public suffix from day one, because
@@ -453,7 +498,7 @@ every model or agent-version change.
 |---|---|---|---|
 | Pages priced 2–10 credits each (`docs/mockups/2026-11-15-studio-one-screen.html:317`) | ≈ 19 credits a page (§ 8) | The mockup's figures came before the token profile; showing them would mislead at 3× | no |
 | No Publish step: Send to Riya, then Hand over | A Publish card before handover (the version the store opens with) and Apply on each content card | ADR-0014 rule 4 and amendment 8.1: a person changes the store | no |
-| The site changes instantly with every choice | Tokens and words show at once (data); a code change shows after a build (≈ 1–2 min, "Building" line) | Runtime A has no open port (§ 2) | no |
+| The site changes instantly with every choice | Tokens and words show within a couple of seconds (data, § 6.13); a code change after a build (≈ 1–2 min, "Building" line) | Runtime A has no open port (§ 2); the pane's purge rules | no |
 The plan's V3b opens with a redraw of these three before any build.
 
 ## Design review
@@ -461,10 +506,19 @@ The plan's V3b opens with a redraw of these three before any build.
   its reserve, a returned turn, a kill switch, changed agent instructions, proposals waiting to apply, publish outcomes
   after handover, a developer's branch in Versions. Brand-facing (V2a, drawn new): Accept, Open my store, Connect my
   domain, the keys list. Rule 0; the agent's lines one sentence; a refusal says what to do.
-- **Tenancy:** new tenant tables, each with grant, RLS and policy in its migration and a proof block in
-  `scripts/verify/tenancy.sql` (PP1 takes § 87; these start at § 88): `sites`, `site_deployments`, `studio_sessions`
-  (with `partner_id` and `partner_member_id`), `studio_turns` (ids and times only), `studio_proposals`,
-  `studio_review_notes`, `studio_messages` (card kinds and ids only).
+- **Tenancy:** every table below ships with its grant, RLS and policy in its migration, states its `frata_admin` and
+  `frata_builder` grants (by default none), and has a proof block in `scripts/verify/tenancy.sql` (PP1 § 87; V2a § 88,
+  C1 § 89, BT § 90, V3a § 91, V2b § 92, A1a § 93, V2c § 94, V3c § 95, V3d § 96; G-a grows § 81):
+  - **Shop tables:** `sites`, `site_deployments`, `site_field_declarations`, `studio_sessions` (`partner_id`,
+    `partner_member_id`), `studio_turns` (ids and times only), `studio_proposals`, `studio_messages` (card kinds and ids
+    only), `studio_review_notes`, `studio_routines`, `brand_tokens`, `brand_seasons`, and V3c's intake tables.
+  - **Definer-only, no role grant:** `partner_credit_entries` (which also holds each turn's rupee rate),
+    `partner_seats`, `partner_credit_purchases`, `partner_client_budgets`, `partner_member_caps`, `partner_credit_events`,
+    `partner_credit_tries` (the try counts), `build_key_device_codes`, `studio_switches` (the kill switches).
+  - **Rewritten definers re-run their grants:** `app_storefront_key`, `app_remove_partner`, `app_partner_remove_member`,
+    `app_partner_unassign`, `admin_end_partner`, and `app_accept_handover_v2`, which now also matches the deployment's shop.
+  - Credit and budget definers match the caller's partner; a client budget naming a shop re-checks the link and, for a
+    Lead, the assignment. Device sign-in and Studio's URLs choose only among the caller's own access.
   - **No credit or cost in a tenant row** (architecture M4, tenancy): cards store their kind and ids; credits are drawn at
     read time from the partner-scope definer. Partner money is platform-scope and definer-only: `partner_credit_entries`,
     `partner_client_budgets`, `partner_credit_purchases`.
@@ -477,8 +531,11 @@ The plan's V3b opens with a redraw of these three before any build.
     fleet's results from the `site_deployments` row their outbox job names; a key mint from the `site.key` row's tenant.
     Never from the model, a tool's input, a webhook body or a URL.
   - **Partner purchases have no tenant** while `outbox.tenant_id` is not null (architecture M11): a purchase is an attempt
-    row in `partner_credit_purchases` committed before the Razorpay call (ADR-0008, a person waits on Pay); its webhook
-    lands in `webhook_events`, whose `tenant_id` may be null, and is processed by a partner-scope definer; no outbox row.
+    row in `partner_credit_purchases` committed before the Razorpay call (ADR-0008, a person waits on Pay). Its webhook
+    does **not** go into `webhook_events` (its insert policy since 0043 refuses a row with no tenant, and a "tenant is
+    null" branch would reopen S4): it goes into the definer-only `partner_credit_events` through one definer (the
+    `billing_events` / `app_store_billing_event` pattern), which matches the gateway's order to the attempt row and checks
+    the amount, never taking a partner id from the payload (tenancy 4).
 - **Modularity:** pure rules in `src/domains/studio/`; the runtime adapter `src/lib/studio/runtime.ts`; tool executors in
   `src/lib/studio/tools/` through `asTurn`; the content and token saves move from the console's actions into
   `src/lib/content/save.ts` (a transaction and an actor; it asserts the capability), called by the console action and by
@@ -494,14 +551,22 @@ The plan's V3b opens with a redraw of these three before any build.
 - **YAGNI:** no variants or routines until V3d; no package mirror until V2c; no Agent SDK runtime until a switch signal; no
   memory stores; no brand chat (ADR-0014 rule 4).
 - **KISS:** one runtime adapter, one tool per console function, one key kind, one build path, one row per turn.
-- **Scalability:** 100 partners × 3 sessions × 20 turns = 6,000 turns a day, ~60,000 tool rows, drained in `after()` with the
-  5-minute cron as the net; Anthropic's webhook rows trimmed to ids once processed and deleted after 30 days; Vercel Pro's
-  1,000 deployments an hour (ADR-0017), so builds queue per site and a global queue caps sessions at once.
-- **Performance:** Studio's pages read in one `withTenant` with `Promise.all`; while a turn runs the screen reads new
-  `studio_messages` rows by keyset every 1.5 s through a GET rows route (`private, no-store`, limited per member), never a
-  held stream; custom tools answer within 2 s p95 for reads; the build-key tree's 15-second cache and per-key limit; Studio
-  stays inside the partner surface's 150 kB first-load budget (`APP_BUDGET_KB` is not raised) by loading the preview pane,
-  drawers and cards with `next/dynamic`. Tenancy and speed reviews of this design are still to run (the orchestrator).
+- **Scalability** (speed review, OVER BUDGET as first drafted): 100 partners × 3 sessions × 20 turns = 6,000 turns and
+  ~60,000 tool calls a day, run in each webhook's `after()` with `/api/cron/studio` every minute as the net (the shared
+  drain carries about 2,300 rows a day). Builds: at 6,000 a day the peak hour is about 900 against Vercel's 1,000 an hour,
+  and 10× would be 9,000; so one build in flight per site (a newer commit replaces a queued one), builds at the end of a
+  turn only, at most 70 sessions at once, 30% of the cap kept for publishes, rollbacks and patches. Growth: `fields`
+  stored once per distinct declaration (`site_field_declarations`); previews that never went live deleted after 30 days;
+  `site_deployments (site_id, live_from desc)` where live, with EXPLAIN in § 88; webhook rows deleted in batches after
+  30 days; `studio_messages` capped at 5,000 lines a site beside its 180 days.
+- **Performance:** Studio's pages read in one `withTenant` with `Promise.all`. The screen polls new `studio_messages` rows
+  by keyset on `(session_id, id)` through a GET rows route (`private, no-store`, ≥ 40 a minute per member): every 1.5 s
+  for 20 s after any change, then every 3 s, then every 6 s, and not at all while the tab is hidden or no turn runs.
+  Custom tools answer within 2 s p95 for reads. The draft entry's 15 s per-shop cache (§ 5). **Studio's JS** (speed 6):
+  the `(workspace)` layouts already ship 136.1 kB of the 150 kB budget, so Studio lives under the bare `(partner)` layout
+  (101 kB) and loads only drawers, Versions and late cards with `next/dynamic`; flow `94-studio` measures the bytes before
+  the first card works, ≤ 150 kB (`APP_BUDGET_KB` is not raised). The console's `frame-src` is the fixed
+  `https://*.frrata-preview.site`.
 - **Reliability:** every call to the fleet is an outbox row; a partner's message is an attempt (the turn row, committed
   before the send; one call, no outbox kind for it); webhooks stored under our key and swept by the cron; a dead turn
   returns its reserve; a session can always restart from the branch.
@@ -532,7 +597,11 @@ The plan's V3b opens with a redraw of these three before any build.
 | Medium | A repository's instruction files steer the agent | Managed Agents resources | Mount by SHA; check `.claude/`, `CLAUDE.md`, `AGENTS.md`, `.mcp.json` |
 | Medium | The request that crosses a budget is not inside the ceiling | Managed Agents budget | The budget formula (§ 6.7) |
 | Medium | Credits in tenant rows would be readable by the brand | first draft | Ledger and definers only |
-| Medium | Partner purchases have no tenant for an outbox row | `outbox.tenant_id not null` | Attempt rows and a null-tenant webhook row |
+| Medium | Partner purchases have no tenant for an outbox row, and `webhook_events` refuses a row without one | `outbox.tenant_id not null`; 0043's insert policy | Attempt rows and the definer-only `partner_credit_events` |
+| High | A cached loader inside `asTurn`'s transaction deadlocks the pool (P4) | `asTurn` as first drafted | The check in its own transaction; reads outside any |
+| High | The shared drain carries about 2,300 rows a day against 60,000 | `/api/cron/drain` | Tools in the webhook's `after()`; `/api/cron/studio` every minute |
+| High | A deleted build key would keep working up to an hour | `src/lib/queries/storefront-keys.ts:34` | Uncached lookup for build keys |
+| High | `partner_id` matched only in code | `src/lib/db/actor.ts:54` | `app.partner_id`, restrictive policies, composite keys |
 | Medium | A site row as Main would move checkout | `mainDomainIn` | CHECK: a site row is never Main |
 | Low | Preview of a code change waits for a build | runtime A | Measured; § 14 deviation 3; switch signal § 2 |
 
@@ -561,8 +630,9 @@ fails · a package mirror before V2c · memory stores.
    Recommended: yes — available today, and a shop's name reads as a shop.
 10. **The build key** (`frs_build_`, header only, no CORS, per session, per preview and per developer). Recommended: yes —
     the only way the agent reads the store without ever holding a key.
-11. **Build keys after opening for linked partners**, amending ADR-0018 decision 5 and CLAUDE.md's key line as V0·3 shows,
-    each listed and deletable by the owner. Recommended: yes — partners keep building drafts; the owner keeps control.
+11. **Build keys after opening for linked partners**, amending ADR-0018 decision 5 and CLAUDE.md's key line as V0·3 shows:
+    only while the maker is live, still a member of that shop and (a Lead or Builder) assigned to it; each listed and
+    deletable by the owner. Recommended: yes — partners keep building drafts; the owner keeps control.
 12. **Spend ≈ ₹41,000 (twice the ≈ ₹20,400 measured) on the spike and the proof.** Recommended: yes — reruns and pauses are
     where the estimate breaks.
 13. **Data outside India:** site code, public catalogue, drafts and brand words processed by Anthropic; no shopper data, no
@@ -584,20 +654,26 @@ fails · a package mirror before V2c · memory stores.
     tests.** Recommended: yes — about $40 a month in seats; a site's code can never reach the fleet's tokens.
 23. **Deployment Protection on `frrata-sites`, the brand reaching previews by a per-deployment share link.** Recommended:
     yes, once the spike confirms the share link works.
-24. **The three mockup deviations (§ 14), redrawn before V3b.** Recommended: yes — each follows a rule or a measurement.
+24. **The three mockup deviations (§ 14), redrawn before V3b** (data shows within a couple of seconds, not instantly).
+    Recommended: yes — each follows a rule or a measurement.
 25. **ADR-0015 § 5 amended for Builder turns** (`asTurn` as the second Actor maker; Builders propose nothing).
     Recommended: yes — a Builder builds and previews, never changes the store.
 26. **ADR-0014 amendment 4's router replaced, for code sites on Vercel, by the fleet overlaying headers at build.**
     Recommended: yes — Vercel has no Frrata router; the policy still decides the headers.
-27. **ADR-0019 for the agent runtime and `asTurn`, held by a `check:studio` rule.** Recommended: yes — the chokepoint is a
-    gate, not a convention.
+27. **ADR-0019 for the agent runtime, `asTurn` and a third Postgres setting `app.partner_id`**, held by `check:studio`
+    and restrictive policies. Recommended: yes — the partner is then a lock in the database, not only in code.
+28. **The code-site gate's speed floor:** ≤ 150 kB gz first-load script, 1 preloaded font, 2 high-priority images; the
+    pilot cuts two font preloads before it moves. Recommended: yes — the pilot is at 143.3 kB and 3 fonts today.
+29. **Studio's capacity:** at most 70 sessions at once, builds at a turn's end, one in flight per site, 30% of Vercel's
+    deployment cap kept for publishes, rollbacks and patches. Recommended: yes — at 6,000 builds a day the peak hour
+    nears Vercel's 1,000.
 Still open from `docs/specs/2026-11-16-partner-publishing.md`: PP1's four decisions.
 
 ## Reviews folded in (2026-11-16)
 - **First pass (mine, before the agents could run):** I applied the five agents' checklists from `.claude/agents/`
   myself. That pass gave one build path, keys pushed by the outbox sender, rulesets, capped review notes, the ledger,
   rows polled instead of streams, and the per-key cache.
-- **Independent reviews, run as separate agents on 2026-11-16, all findings folded in above:**
+- **Independent reviews, each run as a separate agent on 2026-11-16, all findings folded in above:**
   - **Architecture (CHANGES NEEDED):** B1 Builder turns → § 6.10, decision 25; B2 the phase loop → V3a builds the fetch and
     the extractor, and its "needs first" lists BT, C1·2/5, V2a·5–7 and V2c·3 (plan); M3 → proposals (§ 4, decision 17);
     M4 → card kinds and ids only; M5 → the budget formula (§ 6.7); M6 → the minting path, device flow, `FRRATA_KEY_MODE`,
@@ -617,7 +693,20 @@ Still open from `docs/specs/2026-11-16-partner-publishing.md`: PP1's four decisi
     formula, the GST line (decisions 7, 19); 3 the token profile → the sensitivity table, $8 one-hour writes, Haiku
     metered, pauses in the proof; 4 rounding → 251, 137, edits 3–4, free credits (decision 20); 5 the baseline → § 8,
     decision 21; 6 the proof → twice the measured cost (decision 12) and the hypothesis tests in § 8.
-- **Still to run (the orchestrator):** `tenancy-auditor` and `speed-reviewer` as separate agents.
+  - **Tenancy (FIX BEFORE MERGE; no leak reachable as written, 9 HIGH gaps):** 1 `app.partner_id`, restrictive policies,
+    composite keys (§ 6.10); 2 turn-keyed definers' checks and revokes (§ 6.10); 3 one open turn, tools after its
+    `user.message` (§ 6.10); 4 `partner_credit_events` (§ Design review › Tenancy); 5 uncached build-key lookup (§ 5); 6
+    build keys need the maker's live membership and assignment (§ 5, decision 11); 7 senders resolve `sites` by tenant and
+    the fleet refuses a mismatch (§ 12.2); 8 definer-written site rows, the trigger, one per shop, the CHECK, no preview
+    domain (§ 13); 9 read tools as frata_builder (§ 4); medium and low → § 4, § 6.10, § 12.7–12.8, § Design review (the
+    table list, grants, proof numbers, rewritten definers, the rate in the ledger).
+  - **Speed (OVER BUDGET as drafted):** 1 `asTurn`'s own short transaction, reads outside (§ 6.10); 2 tools in `after()`,
+    `/api/cron/studio`, the 5 s / 5 min contradiction fixed (§ 9, § 12.7); 3 the raw draft entry cached per shop (§ 5); 4
+    the limits made one rule (§ 5, plan G·1); 5 build concurrency (§ 6.7, decision 29); 6 the bare `(partner)` layout and
+    the measured first card (§ Design review › Performance); 7 the poll's backoff, index and limit; 8 growth (§ Design
+    review › Scalability); 9 hosting's split and Blob line (§ 8), the gate's script budget (§ 6.14, decision 28); 10 data in
+    a couple of seconds (§ 6.13, decision 24); low → the fixed `frame-src`, the Safari spike item, the font and image floor.
+- **All five ran independently on 2026-11-16; nothing is left to run on this draft.**
 
 ## Facts used
 § Research, each dated; the claude-api skill bundle for every Claude price, model behaviour and Managed Agents fact;
