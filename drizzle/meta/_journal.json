@@ -1065,6 +1065,13 @@
       "when": 1794823926395,
       "tag": "0151_passkeys_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 152,
+      "version": "7",
+      "when": 1794842744377,
+      "tag": "0152_passkeys_switch_30_days",
+      "breakpoints": true
     }
   ]
 }

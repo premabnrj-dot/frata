@@ -122,6 +122,7 @@ export const platformSwitches = pgTable('platform_switches', {
 }, (t) => [
   check('platform_switches_key', sql`${t.key} in ('passkeys_off')`),
   check('platform_switches_reason', sql`length(${t.reason}) between 1 and 200`),
-  // At most 7 days a time: a switch can't be set to last for ever (security review 2026-11-16 M2).
-  check('platform_switches_until', sql`${t.until} <= ${t.setAt} + interval '7 days'`),
+  // At most 30 days a time (owner, 2026-11-16: "extend passkey for 30 days"; was 7, security review M2): a switch can't
+  // be set to last for ever.
+  check('platform_switches_until', sql`${t.until} <= ${t.setAt} + interval '30 days'`),
 ])
