@@ -77,7 +77,7 @@ words); `saveSection`/`savePolicyText`/`askOwnerAction` in `src/app/(console)/co
 `settings/__tests__/owner-only.int.test.ts`; e2e `93-owner-only`. The Ask the owner action takes `invoices` too (decision
 5), worded "Your partner asks you to update your invoice details".
 
-**Deviations from the approved mockup** (the owner sees them in the release report before it ships):
+**Deviations from the approved mockup**, all seen and accepted by the owner (2026-11-16: "ok on pp1's six small deviations"):
 
 | What | Mockup | Built | Why |
 |---|---|---|---|
