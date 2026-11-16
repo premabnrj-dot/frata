@@ -75,6 +75,8 @@ export default {
       await p.evaluate(() => { localStorage.clear(); sessionStorage.clear() }); await p.reload({ waitUntil: 'domcontentloaded' })
       await p.getByRole('button', { name: new RegExp('^' + colour) }).click(); await p.getByRole('button', { name: size, exact: true }).click()
       await p.getByRole('button', { name: /Add to bag|Pre-order/ }).click(); await p.getByRole('dialog', { name: 'Your bag' }).waitFor()
+      // The buy box names its writer (one-address plan P0): a bag built here is the shopper's own.
+      assert.equal(await p.evaluate(() => localStorage.getItem('frrata.bag.by.v1')), 'shop', 'Add to bag marks the bag the shopper’s')
       await p.getByRole('button', { name: 'Checkout' }).click(); await p.waitForURL(/\/checkout$/); if (filled) await fill()
     }
 

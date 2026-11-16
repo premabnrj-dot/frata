@@ -101,6 +101,53 @@ export default {
         await s.screenshot({ path: t.out('bag-link-broken-390') })
       })
 
+      await t.step('a bag link replaces a bag only links filled and joins one the shopper built here (P0)', async () => {
+        // Sizes with stock left after this flow's two orders (quantities stay at most 2, so checkout's reconcile never lowers them).
+        const pick = await db`select v.id from variants v join products p on p.id = v.product_id where p.tenant_id = ${T} and p.handle = 'chanderi-kurta-set' and v.archived_at is null and v.stock >= 3 order by v.id`
+        const [gift] = await db`select v.id from variants v join products p on p.id = v.product_id where p.tenant_id = ${T} and p.handle <> 'chanderi-kurta-set' and p.status = 'active' and v.archived_at is null and v.stock >= 1 order by v.id limit 1`
+        assert.ok(pick.length >= 2 && gift, 'the seed has two stocked sizes of the kurta set and one other stocked piece')
+        const [A, B] = [pick[0].id, pick[1].id]
+        const bagNow = () => s.evaluate(() => ({ lines: JSON.parse(localStorage.getItem('frata.bag.v1') ?? '[]'), by: localStorage.getItem('frrata.bag.by.v1') }))
+        const sort = (l) => [...l].sort((x, y) => x.variantId.localeCompare(y.variantId))
+        const link = async (lines, referer) => {
+          await s.goto(`${SHOP}/cart?l=${lines}`, referer ? { referer } : {}); await s.waitForURL(/\/checkout$/)
+          await s.waitForLoadState('networkidle') // the quote has answered and any reconcile is done
+        }
+        await s.goto(`${SHOP}/bag`); await s.evaluate(() => { localStorage.clear(); sessionStorage.clear() })
+        // The site hands off two lines, then the shopper removes one and changes the other there: the bag is the site's.
+        await link(`${A}:1,${B}:2`, `${SITE}/bag`)
+        assert.deepEqual(await bagNow(), { lines: [{ variantId: A, qty: 1 }, { variantId: B, qty: 2 }], by: 'link' })
+        await link(`${A}:2`, `${SITE}/bag`)
+        assert.deepEqual((await bagNow()).lines, [{ variantId: A, qty: 2 }], 'the site’s bag, not the old one')
+        // The same with no referrer at all (the pilot: its site isn't the store's recorded website).
+        await link(`${A}:1,${B}:1`, null)
+        await link(`${B}:2`, null)
+        assert.deepEqual(await bagNow(), { lines: [{ variantId: B, qty: 2 }], by: 'link' }, 'a link-made bag is replaced with no referrer')
+        // Checkout's own gift button writes `keep`: the bag stays link-made and the next link still replaces it.
+        const [offer] = await db`insert into discounts (tenant_id, title, style, gift_variant_id, starts_at, started_at, started_by, created_by, listed)
+          values (${T}, 'P0 gift', 'free_gift', ${gift.id}, now() - interval '1 minute', now(), ${USERS.owner.id}, ${USERS.owner.id}, true) returning id`
+        try {
+          await link(`${A}:1`, null)
+          await s.getByRole('button', { name: 'Add it' }).click()
+          await until(async () => (await bagNow()).lines.some((l) => l.variantId === gift.id), 10_000)
+          assert.equal((await bagNow()).by, 'link', 'the gift button keeps the marker')
+          await link(`${A}:2`, null)
+          assert.deepEqual((await bagNow()).lines, [{ variantId: A, qty: 2 }], 'checkout’s own additions don’t make the bag the shopper’s')
+        } finally { await db`delete from discounts where id = ${offer.id}` }
+        // The shopper changes a link-made bag on the store's own bag page: it becomes the shopper's, and a link from
+        // another site joins it; a link from the store's own website replaces it.
+        await s.goto(`${SHOP}/bag`)
+        await s.getByRole('button', { name: /^One fewer / }).first().click()
+        await until(async () => (await bagNow()).by === 'shop', 10_000)
+        assert.deepEqual((await bagNow()).lines, [{ variantId: A, qty: 1 }])
+        await link(`${B}:1`, 'https://elsewhere.example/')
+        assert.deepEqual(sort((await bagNow()).lines), sort([{ variantId: A, qty: 1 }, { variantId: B, qty: 1 }]), 'joined')
+        assert.equal((await bagNow()).by, 'shop', 'still the shopper’s bag')
+        await link(`${B}:1`, `${SITE}/bag`)
+        assert.deepEqual(await bagNow(), { lines: [{ variantId: B, qty: 1 }], by: 'link' }, 'the store’s own site replaces it')
+        await s.evaluate(() => { localStorage.clear(); sessionStorage.clear() })
+      })
+
       await t.step('the store’s product page moves to the site with its tags; the bag stays', async () => {
         await s.evaluate(() => sessionStorage.clear())
         await s.goto(`${SHOP}/products/chanderi-kurta-set?utm_source=ig&code=RIYA`, { waitUntil: 'commit' })

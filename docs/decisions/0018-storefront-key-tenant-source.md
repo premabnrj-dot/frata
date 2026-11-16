@@ -141,6 +141,10 @@ Proposed:
   error is a `400 {"error":"bad_filter","param"}` after the key checks out: the one answer that is not the 404.
 - **§ 6:** removing a partner purges its keys through the drain's key-stop sweep; so does reinstating one (its audit
   row), so a reinstated partner's site reads again within minutes.
+- **§ 11, the bag link's fill (one-address plan P0, decision 2, 2026-11-16):** a link also replaces a bag that only bag
+  links filled (the marker `frrata.bag.by.v1`); a bag the shopper built on the store's own pages is still only joined
+  by a link from another site. The residual (a hostile link replaces a link-made bag) is accepted in
+  `accepted-findings.md` row 3.
 
 ## Amendment (test keys before a domain, owner 2026-11-16)
 The owner: "partners should be able to create a website without adding custom domain" (choosing option B for the first

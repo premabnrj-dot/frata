@@ -241,7 +241,7 @@ depends on telling Frrata's document from the partner's: on one origin nothing c
 |---|---|
 | The bag lines and their prices, offers, the store's delivery and Pay on delivery rules, the legal block, the design | Mobile number, email, name, address, PIN code, GST invoice fields |
 | The order page's number, items and state | EkCode sign-in and its saved address, "Not you?", "Save this address" (EkCode keeps its own look) |
-| The bag (`frata.bag.v1`, `frata.bag.by.v1`) and the offer code | The typed form's reload copy, the pending order, the order token |
+| The bag (`frata.bag.v1`, `frrata.bag.by.v1`) and the offer code | The typed form's reload copy, the pending order, the order token |
 | `/api/shop/quote` without a PIN code, `/pincode`, `/delivery`, `/e` | `/api/secure/*`: price for the address, place, view, pay, retry, switch to Pay on delivery, change, invoice, EkCode, email opt-in |
 | — | The order's summary priced for the address (lines, delivery, the server's total) and **Place order · ₹<amount>**, the only button that places an order |
 The frame prices the address itself and sends the page back only a delivery fee or zone name to show (never the PIN code
@@ -365,10 +365,10 @@ dropped (`source.ts:133`), which is right: on a one-address store the website is
 landing page's own tags and the outside referrer, as for theme shops; "Your website" is not a channel there.
 
 **The bag link, a frozen contract** (`cart-link.ts`, ADR-0018 § 11), keeps working: on one address a same-origin referrer
-replaces the bag; any other joins it (L1). Links in Instagram DMs, WhatsApp, emails and split sites keep working.
+replaces the bag, and so does any link when only bag links filled it (P0's marker); any other joins it (L1). Links in Instagram DMs, WhatsApp, emails and split sites keep working.
 
 **P0, the pilot's fix now:**
-- The bag remembers who last filled it (`frata.bag.by.v1`), written inside `write()` itself: `link` when a bag link fills
+- The bag remembers who last filled it (`frrata.bag.by.v1`), written inside `write()` itself: `link` when a bag link fills
   it; `shop` when the shopper adds, sets or removes on the store's own Frrata pages (theme product pages, the bag drawer).
   `shop` stays until `clear`. Checkout's own changes leave it as it is: reconcile, the gift button and, from P2, checkout's
   Remove and stepper. `clear` empties it.

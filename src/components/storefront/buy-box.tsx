@@ -90,7 +90,7 @@ export function BuyBox(p: BuyBoxProps) {
     if (missing >= 0) { setNote(fill(p.w.pick, { option: p.options[missing]!.toLowerCase() })); sizesRef.current?.querySelector('button')?.focus(); return }
     if (a && !a.canBuy) { setNote(p.w.soldOutPick); return }
     if (!p.live || !v) { setNote(p.w.preview); return }
-    bag.add(v.id, 1)
+    bag.add(v.id, 1, 'shop')
     setNote(null)
     openBag(v.id)
   }

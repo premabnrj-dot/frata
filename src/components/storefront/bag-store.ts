@@ -1,6 +1,7 @@
 'use client'
 
 import { isTagged, landingParams } from '@/domains/analytics/attribution'
+import { readBagBy, type BagBy } from '@/domains/checkout/bag-fill'
 import { useSyncExternalStore } from 'react'
 
 // =============================================================================
@@ -24,32 +25,48 @@ function read(): BagItem[] {
   } catch { return memory }
 }
 let snapshot: BagItem[] | null = null
-function write(items: BagItem[]) {
+// Who last filled the bag (src/domains/checkout/bag-fill.ts): `link` (a bag link), `shop` (the shopper on the store's
+// own pages), or `keep` (checkout's corrections and its gift button: the marker stays as it was). `shop` stays until
+// the bag is cleared or a link from the store's own website replaces it. Every writer names its kind (no default). Page-only when storage is unavailable, as the bag is.
+const BY_KEY = 'frrata.bag.by.v1'
+export type BagWrite = BagBy | 'keep'
+let memoryBy: BagBy | null = null
+function readBy(): BagBy | null {
+  try { return readBagBy(localStorage.getItem(BY_KEY)) } catch { return memoryBy }
+}
+function write(items: BagItem[], by: BagWrite | 'clear') {
   memory = items
   snapshot = items
-  try { localStorage.setItem(KEY, JSON.stringify(items)) } catch { /* the page keeps it */ }
+  if (by !== 'keep') memoryBy = by === 'clear' ? null : by
+  try {
+    localStorage.setItem(KEY, JSON.stringify(items))
+    if (by === 'clear') localStorage.removeItem(BY_KEY)
+    else if (by !== 'keep') localStorage.setItem(BY_KEY, by)
+  } catch { /* the page keeps it */ }
   listeners.forEach((l) => l())
 }
 
 export const bag = {
   get: (): BagItem[] => (snapshot ??= read()),
-  add(variantId: string, qty = 1) {
+  /** Who last filled the bag: `link`, `shop`, or null (an empty bag, or one from before the marker). */
+  by: (): BagBy | null => readBy(),
+  add(variantId: string, qty: number, by: BagWrite) {
     const items = bag.get()
     const at = items.find((i) => i.variantId === variantId)
-    write(at ? items.map((i) => (i === at ? { ...i, qty: Math.min(MAX_QTY, i.qty + qty) } : i)) : [...items, { variantId, qty: Math.min(MAX_QTY, qty) }].slice(-MAX_LINES))
+    write(at ? items.map((i) => (i === at ? { ...i, qty: Math.min(MAX_QTY, i.qty + qty) } : i)) : [...items, { variantId, qty: Math.min(MAX_QTY, qty) }].slice(-MAX_LINES), by)
   },
-  set(variantId: string, qty: number) { write(qty <= 0 ? bag.get().filter((i) => i.variantId !== variantId) : bag.get().map((i) => (i.variantId === variantId ? { ...i, qty: Math.min(MAX_QTY, qty) } : i))) },
-  remove(variantId: string) { write(bag.get().filter((i) => i.variantId !== variantId)) },
+  set(variantId: string, qty: number, by: BagWrite) { write(qty <= 0 ? bag.get().filter((i) => i.variantId !== variantId) : bag.get().map((i) => (i.variantId === variantId ? { ...i, qty: Math.min(MAX_QTY, qty) } : i)), by) },
+  remove(variantId: string, by: BagWrite) { write(bag.get().filter((i) => i.variantId !== variantId), by) },
   /** Make the bag what the server says can be bought: missing ids out, each given line set to its quantity (0 takes it
    * out: sold out or gone). Lines not given are left as they are. */
   reconcile(lines: { variantId: string; qty: number }[], missing: string[]) {
     const keep = new Map(lines.map((l) => [l.variantId, l.qty]))
     write(bag.get().filter((i) => !missing.includes(i.variantId) && keep.get(i.variantId) !== 0)
-      .map((i) => (keep.has(i.variantId) ? { ...i, qty: keep.get(i.variantId)! } : i)))
+      .map((i) => (keep.has(i.variantId) ? { ...i, qty: keep.get(i.variantId)! } : i)), 'keep')
   },
-  clear() { write([]) },
+  clear() { write([], 'clear') },
   /** The bag a brand's website sent (the bag link, SA1b): its lines become the whole bag. */
-  replace(items: BagItem[]) { write(items.map((i) => ({ variantId: i.variantId, qty: Math.min(MAX_QTY, i.qty) })).slice(0, MAX_LINES)) },
+  replace(items: BagItem[]) { write(items.map((i) => ({ variantId: i.variantId, qty: Math.min(MAX_QTY, i.qty) })).slice(0, MAX_LINES), 'link') },
 }
 
 function subscribe(l: () => void) {
