@@ -1,5 +1,5 @@
 # EkCode on by default
-Status: active, reviews folded (architecture CHANGES NEEDED, unit economics NEUTRAL for merchants), owner's calls open (owner, 2026-11-16: "can we keep ekcode default order processing setup and by default it should remain
+Status: active, reviews folded (architecture CHANGES NEEDED, unit economics NEUTRAL for merchants), owner's calls answered 2026-11-16 (owner, 2026-11-16: "can we keep ekcode default order processing setup and by default it should remain
 active") · Date: 2026-11-16 · Mockup: none (no new screen: Apps › EkCode and checkout already draw On, Off and the
 sign-in step; approved earlier) · Plan: § Tasks below
 
@@ -23,9 +23,16 @@ can start now (every store is test data, owner 2026-11-15); **a store with real 
   configured) adds an EkCode paragraph worded with counsel (EkCode, the `ek_v` browser id and the daily exposure beacon);
   the text reaches the Storefront API's policies (`2026-12/map.ts`), so `api-contract-reviewer` runs on it;
 - (c) a store that rewrote its privacy page (`shop_policies`) gets a console notice to add the paragraph;
-- (d) the merchant terms version is bumped and every store's owners and Managers get a Notice (owner's call: an opt-out
-  window before an existing open store flips, or default-on only for stores created after the change; recommended: the
-  window, since every store today is test data).
+- (d) answered by the owner: no Notice (every store is a test store); the signup terms gain the line and their version.
+
+## Owner's answers (2026-11-16)
+1. **"yes, frrata switch on it's own shopper sign in service in merchant's checkout by default"**: A4(d) is the owner's
+   ruling. Counsel's A4(a)–(c) stay the gate for real shoppers, as for EkCode today.
+2. **"already stores are just test stores nothing needs notice"**: every store flips at release, with no Notice and no
+   opt-out window. The merchant terms a new store accepts at signup say EkCode is on by default and can be turned off in
+   Apps (one line; the terms version bumps with it).
+3. **Stores without a paid plan: "Yes."** They get the default, under the Launch cap (100 codes a day).
+Preconditions (b) and (c) stand: each store's privacy page says it offers EkCode before real shoppers reach it.
 
 ## Design
 - **The default is data in one place:** the registry gains `defaultOn: true` for `ekcode` (`src/domains/modules/registry.ts`).
@@ -82,7 +89,7 @@ can start now (every store is test data, owner 2026-11-15); **a store with real 
 | E2 | `readFactsIn` reads the latest row per module; the turn-off action writes a closed row when none is open | `npx vitest run src/lib`; `npm run typecheck` |
 | E3 | Migration: `app_admin_ekcode_shops` on the same rule (grants re-run); Admin's Apps reader; proof block | `npm run verify:tenancy` |
 | E4 | e2e `67-ekcode` starts from a store with no switch row (it offers EkCode), turns it off, on; the privacy page's paragraph; every flow that opens a checkout now draws EkCode (10, 69, 90, 95's budgets) | `npm run release:check`; the full `npm run e2e` |
-| E4b | `PolicyFacts.offersEkcode` and the privacy paragraph (draft, marked for counsel); the console notice for rewritten privacy pages; the terms version and the Notice (precondition d) | `npx vitest run src/domains/policies`; `npm run check:api` |
+| E4b | `PolicyFacts.offersEkcode` and the privacy paragraph (draft, marked for counsel); the console notice for rewritten privacy pages; the signup terms' line and version (precondition d) | `npx vitest run src/domains/policies`; `npm run check:api` |
 | E5 | **Limits for default-on** (unit-economics review 2026-11-16): Admin › EkCode shows the busiest hour of the last 7 days against `globalHour` and warns at 80% (the rule: `globalHour` ≈ 3× the measured busiest hour, raised by a new limits version before it binds; Meta's 100K tier before ~400 stores); a sale-day raise is Admin's existing `raised_cap` per store, written into the EkCode runbook; the breaker is written down as not applying on Launch (its daily cap of 100 stops codes before `breakerAfter` 200) | `npx vitest run src/domains/ekcode-core`; `npm run e2e -- --only ekcode` |
 | E6 | Measure for four weeks: delivered codes ÷ placed orders per store, sign-ins that end with no order, the busiest hour each week (from `ekcode_daily` and `app_admin_ekcode_shops`); the figures into `frata-unit-economics` | the dated lines |
 | E7 | Reviews on the diff: `architecture-reviewer`, `tenancy-auditor` (the definer's revokes and grants), `speed-reviewer`, `api-contract-reviewer`, `words-reviewer`, `impact-reviewer` | the reports |
