@@ -199,6 +199,7 @@ export default {
       // The card is served from the app as a phone's browser would fetch it.
       await ctx.route(`https://${HOST}/og/**`, async (r) => {
         const c = await getBytes(new URL(r.request().url()).pathname)
+        assert.equal(c.status, 200, `the card ${r.request().url()} answers ${c.status}`)
         await r.fulfill({ status: c.status, contentType: c.headers['content-type'], body: c.body })
       })
       const p = await ctx.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))

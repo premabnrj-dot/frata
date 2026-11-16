@@ -3,6 +3,7 @@
 import { MoreHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { settle } from '@/lib/settle'
 import { Section } from '@/components/layout/section'
 import { Badge, Tag } from '@/components/ui/badge'
 import { Button, button } from '@/components/ui/button'
@@ -40,21 +41,24 @@ export function Bars({ bars, offer, canSave, lock, targets }: { bars: BarRow[]; 
   const [busy, setBusy] = useState(false)
   const label = (l: string | null) => (l ? targets.find((x) => x.path === l)?.label.replace(/^\w+ · /, '') ?? l : null)
 
+  // After each write, settle(router) once the action has resolved: a lone router.refresh() raced the action's own
+  // render, and the action's render alone sometimes never landed (an Undo whose bar stayed Ended on screen, e2e 88,
+  // 2026-11-16; frata-gotchas, Next 15.5). A refused Undo is read again too, so the page shows what blocked it.
+  const reread = async (p: Promise<{ ok: boolean; error?: string }>) => { const u = await p; settle(router); return u }
   const save = async () => {
     if (!edit) return
     setBusy(true); setError(null)
     const r = await saveBarAction({ id: edit.id, version: edit.version, text: edit.text, link: edit.link, scheme: edit.scheme, startsAt: iso(edit.startsAt), endsAt: iso(edit.endsAt) })
     setBusy(false)
     if (!r.ok) { setError({ text: r.error, field: r.field }); return }
-    setEdit(null)
-    // Each action revalidates /console/content in its own response; a router.refresh() beside it raced that render and
-    // the stale one could land last (an Undo whose bar stayed Ended on screen, e2e 88, 2026-11-16; frata-gotchas).
-    toast({ text: 'Bar saved', undo: edit.id ? () => undoContentAction({ id: r.id, version: r.version }) : () => deleteBarAction({ id: r.id, version: r.version }) })
+    setEdit(null); settle(router)
+    toast({ text: 'Bar saved', undo: edit.id ? () => reread(undoContentAction({ id: r.id, version: r.version })) : () => reread(deleteBarAction({ id: r.id, version: r.version })) })
   }
   const mark = async (b: BarRow, how: 'end' | 'delete') => {
     const r = await (how === 'end' ? endBarAction : deleteBarAction)({ id: b.id, version: b.version })
     if (!r.ok) { refused(toast, router.refresh, r.error, () => void mark(b, how)); return }
-    toast({ text: how === 'end' ? 'Bar ended' : 'Bar deleted', undo: () => undoContentAction({ id: b.id, version: r.version }) })
+    settle(router)
+    toast({ text: how === 'end' ? 'Bar ended' : 'Bar deleted', undo: () => reread(undoContentAction({ id: b.id, version: r.version })) })
   }
   const full = bars.length >= MAX_BARS
   const fieldErr = (f: string) => (error?.field === f ? error.text : null)

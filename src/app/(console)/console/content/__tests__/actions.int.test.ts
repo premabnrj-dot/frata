@@ -33,7 +33,7 @@ describe.skipIf(!host)('Console › Content actions', () => {
   let A: typeof import('../actions')
   beforeAll(async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
-    su = postgres(process.env.INT_DB_SUPER_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    su = postgres(process.env.INT_DB_SUPER_URL ?? process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
     await su`insert into tenants (id, slug, name) values (${T}, ${'content-' + T.slice(0, 8)}, 'Content test')`
     await su`insert into members (tenant_id, user_id, role) values (${T}, ${OWNER}, 'owner'), (${T}, ${ADMIN}, 'admin')`
     const email = `p-${T.slice(0, 8)}@example.in`

@@ -21,7 +21,7 @@ describe.skipIf(!host)('plan changes on a real database', () => {
     tenantId = (await admin.createMerchant(staff, { name: 'B4 Store', slug, ownerEmail: 'o@b4.test', planCode: 'growth', trialEndsAt, now: new Date('2026-10-01T00:00:00Z') })).id
     // The owner as a member (an invite is not one): written as the database owner, as sign-up does.
     const postgres = (await import('postgres')).default
-    const su = postgres(process.env.INT_DB_SUPER_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1 })
+    const su = postgres(process.env.INT_DB_SUPER_URL ?? process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1 })
     owner = crypto.randomUUID()
     await su`insert into auth.users (id, email, email_confirmed_at) values (${owner}, ${`o-${slug}@b4.test`}, now())`
     await su`insert into members (tenant_id, user_id, role) values (${tenantId}, ${owner}, 'owner')`

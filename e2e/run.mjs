@@ -25,7 +25,10 @@ try {
   useStackDb(stack.db)
   for (const f of files) {
     const flow = (await import(`./flows/${f}`)).default
-    const browser = await chromium.launch({ args: [`--host-resolver-rules=MAP *.${SHOP_DOMAIN} 127.0.0.1:${PORTS.app}, MAP ${OWN_DOMAIN} 127.0.0.1:${PORTS.app}, MAP www.${OWN_DOMAIN} 127.0.0.1:${PORTS.app}, MAP ${EKCODE.host} 127.0.0.1:${PORTS.app}`] })
+    // --disable-lcd-text: text is drawn in grayscale on every machine. A stock Ubuntu runner's fontconfig turns subpixel
+    // (coloured-fringe) text on and this container's turns it off, and Chromium chose it per page: on CI the phone shop
+    // home alone came out in colour, 8727 pixels off its grayscale baseline on every run (2026-11-16).
+    const browser = await chromium.launch({ args: ['--disable-lcd-text', `--host-resolver-rules=MAP *.${SHOP_DOMAIN} 127.0.0.1:${PORTS.app}, MAP ${OWN_DOMAIN} 127.0.0.1:${PORTS.app}, MAP www.${OWN_DOMAIN} 127.0.0.1:${PORTS.app}, MAP ${EKCODE.host} 127.0.0.1:${PORTS.app}`] })
     // Screenshots are taken with reduced motion unless a flow asks otherwise: a dialog caught half faded in told
     // nothing (motion system 2026-11-08). A flow that tests motion passes reducedMotion: 'no-preference'.
     const newContext = browser.newContext.bind(browser)

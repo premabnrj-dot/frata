@@ -23,7 +23,7 @@ describe.skipIf(!host)('a return after billing gives the fee back once', () => {
     const { draftInvoice } = await import('../draft')
     const { eq, and } = await import('drizzle-orm')
     const postgres = (await import('postgres')).default
-    const su = postgres(process.env.INT_DB_SUPER_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1 })
+    const su = postgres(process.env.INT_DB_SUPER_URL ?? process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1 })
     // The billing run issues an invoice; here the superuser marks it issued (its trigger guards issued invoices).
     const issue = (id: string, n: string) => su.begin(async (x) => { await x`set local session_replication_role = replica`; await x`update frrata_invoices set issued_at = now(), number = ${n} where id = ${id}` })
     const credits = () => withTenant(tenantId, (tx) => tx.select({ kind: frrataFeeCredits.kind, fee: frrataFeeCredits.fee }).from(frrataFeeCredits).where(eq(frrataFeeCredits.tenantId, tenantId)))

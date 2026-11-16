@@ -15,7 +15,7 @@ describe.skipIf(!host)('risk facts', () => {
     const { default: postgres } = await import('postgres')
     const su = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
     const [{ id: A }] = await su<[{ id: string }]>`insert into tenants (slug, name) values (${'int-risk-' + Date.now()}, 'Int risk') returning id`
-    await su.end()
+    try {
     const { withTenant } = await import('@/lib/db/tenant')
     const { orders, orderLines } = await import('@/lib/db/schema-orders')
     const { riskFactsFor } = await import('@/lib/queries/order-risk')
@@ -52,5 +52,10 @@ describe.skipIf(!host)('risk facts', () => {
     const g = await riskFactsFor(A, [first, third], at(4))
     expect(g.get(first)).toMatchObject({ cameBack: 0 }) // placed before it came back
     expect(g.get(third)).toMatchObject({ cameBack: 1 })
+    } finally {
+      for (const table of ['order_lines', 'orders', 'variants', 'products', 'audit_events']) await su`delete from ${su(table)} where tenant_id = ${A}`
+      await su`delete from tenants where id = ${A}`
+      await su.end()
+    }
   })
 })

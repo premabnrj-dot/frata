@@ -81,6 +81,19 @@ export default {
         await bars.getByText('Ended early').waitFor()
       })
 
+      await t.step('Delete, then its Undo puts the waiting bar back on screen and in the database', async () => {
+        const deleted = async () => (await db`select deleted_at from site_content where tenant_id = ${KESAR} and kind = 'announcement' and value->>'text' = ${LATER}`)[0]?.deleted_at ?? null
+        await bars.getByRole('button', { name: `More for ${LATER}` }).click()
+        await p.getByRole('menuitem', { name: 'Delete' }).click()
+        await p.getByText('Bar deleted').first().waitFor()
+        await p.getByRole('button', { name: 'Undo' }).hover() // the Undo window pauses under the pointer, as for a person
+        await bars.getByText(LATER, { exact: true }).filter({ visible: true }).waitFor({ state: 'detached' })
+        assert.ok(await deleted(), 'Delete marks the bar deleted')
+        await p.getByRole('button', { name: 'Undo' }).click()
+        await until(async () => (await deleted()) === null, 10_000)
+        await bars.getByText(LATER, { exact: true }).filter({ visible: true }).waitFor()
+      })
+
       await t.step('On a phone: the bars and the edit sheet', async () => {
         await p.setViewportSize({ width: 390, height: 844 })
         await p.goto(CONSOLE + '/console/content')

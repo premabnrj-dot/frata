@@ -16,7 +16,7 @@ const menu = (label: string) => [{ id: label.toLowerCase(), label, link: '/produ
 describe.skipIf(!host)('the move out of the look', () => {
   it('copies each store’s live look, as liveOf picks it, and reconciles on a re-run', async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
-    const su = postgres(process.env.INT_DB_SUPER_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    const su = postgres(process.env.INT_DB_SUPER_URL ?? process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
     const { withTenant } = await import('@/lib/db/tenant')
     const { liveRevision } = await import('@/lib/themes/look')
     try {

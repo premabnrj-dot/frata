@@ -37,7 +37,7 @@ describe.skipIf(!host)('Settings: owner-only after handover (PP1)', () => {
   let read: () => Promise<Record<string, unknown>>
   beforeAll(async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
-    su = postgres(process.env.INT_DB_SUPER_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    su = postgres(process.env.INT_DB_SUPER_URL ?? process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
     await su`insert into tenants (id, slug, name) values (${T}, ${'owner-only-' + T.slice(0, 8)}, 'Owner-only test')`
     await su`insert into shop_settings (tenant_id, support_email, home_state, legal_name, grievance_name, grievance_role, grievance_email, grievance_phone, doc_signatory, invoice_series)
       values (${T}, 'care@example.in', '29', 'Ayuda Crafts', 'Anita Rao', 'Founder', 'grievance@example.in', '9800000002', 'Anita Rao', 'AY/')`

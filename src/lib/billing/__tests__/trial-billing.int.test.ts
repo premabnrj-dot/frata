@@ -19,7 +19,7 @@ describe.skipIf(!host)('a trial shop\'s invoices', () => {
     tenantId = (await admin.createMerchant(staff, { name: 'Trial Store', slug, ownerEmail: 'o@tr.test', planCode: 'growth', trialEndsAt: null, now: new Date('2026-10-01T00:00:00Z') })).id
     // A 30-day trial that went live on 3 November (IST): it ends at the end of 3 December.
     const postgres = (await import('postgres')).default
-    const su = postgres(process.env.INT_DB_SUPER_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1 })
+    const su = postgres(process.env.INT_DB_SUPER_URL ?? process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1 })
     await su`insert into shop_trials (tenant_id, days, open_window_days, signed_up_at, started_at) values (${tenantId}, 30, 15, '2026-11-02T12:00:00+05:30', '2026-11-03T12:00:00+05:30')`
     await su`select app_trial_recompute(${tenantId})`
     await su.end()
@@ -42,7 +42,7 @@ describe.skipIf(!host)('a trial shop\'s invoices', () => {
 
   it('with autopay set up before the pause: 4–31 December by days, and January in advance', async () => {
     const postgres = (await import('postgres')).default
-    const su = postgres(process.env.INT_DB_SUPER_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1 })
+    const su = postgres(process.env.INT_DB_SUPER_URL ?? process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1 })
     await su`insert into billing_accounts (tenant_id, mandate_token_id, mandate_method, mandate_max, mandate_at) values (${tenantId}, 'token_tr', 'upi', 1500000, '2026-12-01T10:00:00+05:30')
       on conflict (tenant_id) do update set mandate_token_id = excluded.mandate_token_id, mandate_at = excluded.mandate_at, mandate_revoked_at = null`
     await su.end()

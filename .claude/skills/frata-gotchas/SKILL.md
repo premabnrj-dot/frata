@@ -2,7 +2,7 @@
 name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a PDF download that saves as pdf.txt, MODULE_NOT_FOUND in production only, a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
-  version: 1.25.1
+  version: 1.26.0
   owner: owner
   verified: 2026-11-16
 ---
@@ -73,6 +73,9 @@ metadata:
 | A sender's `row.tenantId` (or any camelCase field) is `undefined`; `withTenant` fails with Postgres 42601 | `db().execute(sql…)` returns rows as Postgres names the columns (`tenant_id`), whatever type it is cast to | Map raw rows explicitly: `claimDue` returns `fromRaw(r)` (`src/lib/outbox/index.ts`; found by e2e 66-video, 2026-11-09 — every outbox sender had it) |
 | `permission denied for table` on an insert the role should be allowed | A column-level grant (`grant insert (a, b, c)`), and drizzle's insert names EVERY column, as `DEFAULT` — Postgres checks those too | Insert with `sql` naming only the granted columns (`startVideo`, `src/lib/queries/videos.ts`) |
 | A muted loop never plays in e2e | The suite's contexts use `reducedMotion: 'reduce'`, and the loop player rightly stays still then | Open that flow's context with `reducedMotion: 'no-preference'` (`e2e/flows/66-video.mjs`) |
+| A screenshot baseline fails on CI only, by the same pixel count every run, the diff covering every word and nothing else | CI's Chromium drew that page's text with subpixel (coloured-fringe) antialiasing, the baselines in grayscale: a stock Ubuntu runner's fontconfig turns subpixel on, this container's turns it off | `--disable-lcd-text` in `e2e/run.mjs`'s launch (2026-11-16, shop-home-phone 8727 px). CI's screenshots are in the run's `e2e-out` artifact (`include-hidden-files`: `.out` is hidden, so until 2026-11-16 nothing was uploaded) |
+| An int test passes here and fails on CI with `password authentication failed for user "postgres"` | This container's throwaway Postgres trusts every login; CI's needs the password in `ADMIN_URL` | Connect the superuser as `process.env.ADMIN_URL ?? …`, as every int test does; reproduce with scram in `pg_hba.conf` |
+| A shop-host image (`https://<shop>.frata.test/…`) shows in local e2e and is missing on CI | The e2e app answers plain http; here the request hangs behind the proxy, on CI it is refused at once and the page's onError draws its placeholder | Route that https address to the app in the flow (`e2e/flows/64-seo.mjs` S1·7, the share card) |
 
 ## A cached page's redirect loses the shopper's query (SA1b, 2026-11-16)
 A shop page is an ISR copy (`force-static`): it never sees the URL's query, so a `redirect()` in it would send
