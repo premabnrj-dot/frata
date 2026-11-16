@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { missingFacts, POLICY_PAGES, renderPolicy, type PolicyFacts } from '../render'
+import { EKCODE_PRIVACY, ekcodeLineMissing, missingFacts, policyState, POLICY_PAGES, renderPolicy, type PolicyFacts } from '../render'
 
 const inr = (p: number) => `₹${(p / 100).toLocaleString('en-IN')}`
 const full: PolicyFacts = {
@@ -45,5 +45,35 @@ describe('privacy while visits are counted (A·2)', () => {
     expect(counting).not.toContain('nothing else')
     expect(counting).toContain('We count visits to this shop')
     expect(counting).toContain('deleted after 90 days')
+  })
+})
+
+describe('privacy while the checkout offers EkCode (default-on precondition b)', () => {
+  it('says what EkCode does, the browser number and its beacon, and that EkCode gets details only when chosen', () => {
+    const on = text(renderPolicy('privacy', { ...full, offersEkcode: true }, inr))
+    for (const line of EKCODE_PRIVACY) expect(on).toContain(line)
+    expect(on).toContain('If you choose EkCode, we share them with EkCode too.')
+    const off = text(renderPolicy('privacy', full, inr))
+    expect(off).not.toMatch(/EkCode/)
+    expect(off).toContain('shared only with the courier that delivers your order.')
+    expect(missingFacts(renderPolicy('privacy', { ...full, offersEkcode: true }, inr))).toEqual([])
+  })
+  it('a rewritten privacy page that never mentions EkCode is flagged while the checkout offers it', () => {
+    expect(ekcodeLineMissing({ offersEkcode: true }, 'We keep your details safe.')).toBe(true)
+    expect(ekcodeLineMissing({ offersEkcode: true }, 'We use ekcode at checkout.')).toBe(false)
+    expect(ekcodeLineMissing({ offersEkcode: false }, 'We keep your details safe.')).toBe(false)
+    expect(ekcodeLineMissing({ offersEkcode: true }, null)).toBe(false)
+    expect(ekcodeLineMissing({ offersEkcode: true }, '   ')).toBe(false)
+  })
+})
+
+describe('policyState: one rule for Settings home and Policies', () => {
+  it('own words have no gaps; a privacy page of own words must name EkCode while the checkout offers it; blank is not own', () => {
+    expect(policyState('contact', { ...full, legalName: '' }, null, inr)).toMatchObject({ own: false, gaps: ['legal business name'], needs: true })
+    expect(policyState('contact', { ...full, legalName: '' }, 'Our own words.', inr)).toMatchObject({ own: true, gaps: [], needs: false })
+    expect(policyState('contact', { ...full, legalName: '' }, '   ', inr)).toMatchObject({ own: false, needs: true })
+    expect(policyState('privacy', { ...full, offersEkcode: true }, 'We keep details safe.', inr)).toMatchObject({ ekcodeMissing: true, needs: true })
+    expect(policyState('privacy', { ...full, offersEkcode: true }, null, inr)).toMatchObject({ ekcodeMissing: false, needs: false })
+    expect(policyState('terms', { ...full, offersEkcode: true }, 'No mention.', inr).ekcodeMissing).toBe(false)
   })
 })

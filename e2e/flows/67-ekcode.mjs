@@ -2,7 +2,9 @@
 // FLOW: EkCode P1 (docs/plans/2026-11-09-ekcode-p1.md § Regression net). A shopper at Kesar Studio's checkout taps
 // "Continue with EkCode", lands on ekcode.in, proves their WhatsApp number with a code (the fake Meta keeps it),
 // creates an EkCode, continues back and is filled in; "Not you?" signs out; a second sign-in skips Create; five wrong
-// codes lock; a forged return, another host's EkCode paths and the shop paths on EkCode's host are refused.
+// codes lock; a forged return, another host's EkCode paths and the shop paths on EkCode's host are refused. EkCode is on
+// by default (docs/specs/2026-11-16-ekcode-default-on.md E4): the shop starts with no switch row at all, its privacy
+// page says it offers EkCode, and in the console it is turned off (one closed row) and on again.
 // =============================================================================
 import assert from 'node:assert/strict'
 import http from 'node:http'
@@ -20,11 +22,10 @@ export default {
   async run(t) {
     const { db } = t
     const [shop] = await db`select id, name from tenants where slug = 'kesar-studio'`
-    const [owner] = await db`select user_id from members where tenant_id = ${shop.id} and role = 'owner' limit 1`
-    // A clean vault for the test phones (the e2e database is throwaway), and EkCode switched on for the shop.
+    // A clean vault for the test phones (the e2e database is throwaway), and no EkCode switch row: on by default.
     await db`delete from ekcode_accounts`; await db`delete from ekcode_flows`; await db`delete from shop_customers where tenant_id = ${shop.id}`
     await db`delete from rate_limits where key is not null`
-    await db`insert into tenant_modules (tenant_id, module, enabled_by) select ${shop.id}, 'ekcode', ${owner.user_id} where not exists (select 1 from tenant_modules where tenant_id = ${shop.id} and module = 'ekcode' and disabled_at is null)`
+    await db`delete from tenant_modules where tenant_id = ${shop.id} and module = 'ekcode'`
 
     const ctx = await t.browser.newContext({ viewport: { width: 390, height: 844 } })
     await ctx.addInitScript((id) => { try { localStorage.setItem('ek_v', id) } catch { /* */ } }, SHOWN)
@@ -52,11 +53,17 @@ export default {
       await p.getByLabel('Enter the code').fill(code)
     }
 
+    // A shop page's HTML straight from the app (pages are cached for 60 s: callers poll it).
+    const html = (path) => new Promise((res, rej) => http.get({ host: '127.0.0.1', port: PORTS.app, path, headers: { host: new URL(SHOP).host } }, (r) => { let b = ''; r.on('data', (c) => (b += c)); r.on('end', () => res(b)) }).on('error', rej))
+    const offers = async () => (await html('/checkout')).includes('/api/shop/ekcode/start')
     try {
+      await t.step('on by default: no switch row, the checkout offers EkCode and the privacy page says so', async () => {
+        assert.equal((await db`select count(*)::int n from tenant_modules where tenant_id = ${shop.id} and module = 'ekcode'`)[0].n, 0, 'the shop never switched EkCode')
+        await until(offers, 90_000)
+        await until(async () => (await html('/policies/privacy')).includes('This checkout offers EkCode'), 90_000)
+      })
+
       await t.step('a new shopper: phone → code → Create → Continue → filled in at the shop', async () => {
-        // The checkout page is cached for 60 s: read its HTML until it carries EkCode's button, then check out.
-        const html = () => new Promise((res, rej) => http.get({ host: '127.0.0.1', port: PORTS.app, path: '/checkout', headers: { host: new URL(SHOP).host } }, (r) => { let b = ''; r.on('data', (c) => (b += c)); r.on('end', () => res(b)) }).on('error', rej))
-        await until(async () => (await html()).includes('/api/shop/ekcode/start'), 90_000)
         await toCheckout()
         await p.getByRole('link', { name: /Continue with/ }).waitFor()
         await p.screenshot({ path: t.out('button'), fullPage: true })
@@ -139,6 +146,28 @@ export default {
           await q.getByText('Ananya Rao').waitFor()
           assert.equal((await q.getByRole('row', { name: /Ananya Rao/ }).getByRole('cell').last().innerText()).trim(), '1', 'her order is counted')
           await q.screenshot({ path: t.out('console-shoppers'), fullPage: true })
+          // Off: one closed row records the choice and the checkout stops offering EkCode; on again: an open row.
+          await q.goto(CONSOLE + '/console/apps/ekcode')
+          await q.getByRole('button', { name: 'Turn off EkCode' }).click()
+          await q.getByRole('dialog').getByRole('button', { name: 'Turn off EkCode' }).click()
+          await q.getByRole('button', { name: 'Turn on EkCode' }).first().waitFor()
+          const rows = await db`select disabled_at is null as open, enabled_at = disabled_at as same, enabled_by = disabled_by as one from tenant_modules where tenant_id = ${shop.id} and module = 'ekcode'`
+          assert.deepEqual(rows.map((r) => [r.open, r.same, r.one]), [[false, true, true]], 'turning off the default writes one closed row, by one person at one moment')
+          await until(async () => !(await offers()), 90_000)
+          await until(async () => !(await html('/policies/privacy')).includes('EkCode'), 90_000)
+          await q.getByRole('button', { name: 'Turn on EkCode' }).first().click()
+          await q.getByRole('button', { name: 'Turn off EkCode' }).waitFor()
+          assert.equal((await db`select count(*)::int n from tenant_modules where tenant_id = ${shop.id} and module = 'ekcode' and disabled_at is null`)[0].n, 1, 'on again is an open row')
+          await until(offers, 90_000)
+          // A privacy page in the store's own words that never names EkCode: Settings asks for the line (precondition c).
+          const [owner] = await db`select user_id from members where tenant_id = ${shop.id} and role = 'owner' limit 1`
+          await db`insert into shop_policies (tenant_id, kind, body, updated_by) values (${shop.id}, 'privacy', 'We keep your details safe.', ${owner.user_id})
+            on conflict (tenant_id, kind) do update set body = excluded.body`
+          try {
+            await q.goto(CONSOLE + '/console/settings/policies')
+            await q.getByText('Add a line saying your checkout offers EkCode.').waitFor()
+            await q.screenshot({ path: t.out('console-privacy-notice'), fullPage: true })
+          } finally { await db`delete from shop_policies where tenant_id = ${shop.id} and kind = 'privacy'` }
         } finally { await ctx2.close() }
       })
 
@@ -160,6 +189,8 @@ export default {
       throw e
     } finally {
       await ctx.close()
+      // Back to never switched, whatever failed: later flows (10, 69, 90, 95) expect EkCode on by default.
+      await db`delete from tenant_modules where tenant_id = ${shop.id} and module = 'ekcode'`
     }
   },
 }

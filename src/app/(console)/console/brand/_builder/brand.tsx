@@ -6,7 +6,7 @@ import { BrandEditor } from '../_components/brand-editor'
 
 /**
  * Console › Brand for a partner's Builder (O9, mockup screen 6): every value as a fact, the preview, nothing that saves.
- * Read as frata_builder: the live record's named columns and the store's logo (drizzle/0154), never a waiting change,
+ * Read as frata_builder: the live record's named columns and the store's logo (drizzle/0155), never a waiting change,
  * who saved or the store's legal details (the invoice preview shows the store's name only).
  */
 export async function BuilderBrand({ actor, shopName, at }: { actor: BuilderActor; shopName: string; at: string }) {

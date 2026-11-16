@@ -11,6 +11,7 @@ import { shopHost } from '@/lib/public-env'
 import { mainDomainIn } from './addresses'
 import { shopPauseIn } from './trial-pause'
 import { moduleAccessIn } from './modules'
+import { ekcodeOffered } from '@/lib/ekcode/offered'
 import { deliveryZones } from '@/lib/db/schema-delivery'
 import type { StoreShop } from './storefront'
 
@@ -35,7 +36,7 @@ export async function coreShop(tenantId: string): Promise<StoreShop | null> {
       gstin: shopSettings.gstin, gstScheme: shopSettings.gstScheme, homeState: shopSettings.homeState, b2bInvoices: shopSettings.b2bInvoices, turnoverBand: shopSettings.turnoverBand,
     }).from(tenants).innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId)).limit(1)
     if (!r) return null
-    const [pol, nav, pause, mainDomain, zoneRows] = await Promise.all([
+    const [pol, nav, pause, mainDomain, zoneRows, access] = await Promise.all([
       tx.select({ kind: shopPolicies.kind, body: shopPolicies.body }).from(shopPolicies).where(eq(shopPolicies.tenantId, tenantId)),
       // The header's collections: the first five by name (spec § Review findings).
       tx.select({ handle: collections.handle, title: collections.title }).from(collections).where(eq(collections.tenantId, tenantId)).orderBy(asc(collections.title)).limit(5),
@@ -45,8 +46,11 @@ export async function coreShop(tenantId: string): Promise<StoreShop | null> {
       // Delivery Zones: the zones (≤ 50), stated on the product page, the policy and the structured data while usable.
       tx.select({ name: deliveryZones.name, charge: deliveryZones.charge, freeAbove: deliveryZones.freeAbove, daysMin: deliveryZones.daysMin, daysMax: deliveryZones.daysMax,
         codOn: deliveryZones.codOn, codCharge: deliveryZones.codCharge, codMax: deliveryZones.codMax }).from(deliveryZones).where(eq(deliveryZones.tenantId, tenantId)).orderBy(asc(deliveryZones.position)),
+      // One access read for both: the zones (while usable) and whether the privacy page says the checkout offers EkCode.
+      // Best effort in a savepoint: a failed read leaves no zones and no EkCode paragraph, never the shop page down.
+      tx.transaction((sp) => moduleAccessIn(sp, tenantId, new Date())).catch((err) => { console.error('[store-shop modules]', err instanceof Error ? err.name : 'error'); return null }),
     ])
-    const zones = zoneRows.length && (await moduleAccessIn(tx, tenantId, new Date())).delivery_zones.usable
+    const zones = zoneRows.length && access?.delivery_zones.usable
       ? zoneRows.map((z) => ({ ...z, charge: Number(z.charge), freeAbove: z.freeAbove === null ? null : Number(z.freeAbove), codCharge: Number(z.codCharge), codMax: z.codMax === null ? null : Number(z.codMax) }))
       : null
     const { gstin, gstScheme, homeState, b2bInvoices, turnoverBand, ...facts } = r
@@ -58,6 +62,7 @@ export async function coreShop(tenantId: string): Promise<StoreShop | null> {
       overrides: Object.fromEntries(pol.map((p) => [p.kind, p.body])), nav,
       // Visits are counted (A·2): the privacy policy says so (src/domains/policies/render.ts).
       countsVisits: isCountingVisits(),
+      offersEkcode: !!access && ekcodeOffered(access),
       zones,
     }
   })

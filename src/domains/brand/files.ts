@@ -7,7 +7,7 @@
 //   PNG rendition tenants/<t>/documents/<sha256>.png       Frrata's server makes it from the main logo, for paper and
 //                                                          email; its name is the sha256 of the main logo's URL, so every
 //                                                          reader derives it and nothing stores it twice
-// The CHECKs in drizzle/0154 hold the first two in the database. Pure.
+// The CHECKs in drizzle/0155 hold the first two in the database. Pure.
 // =============================================================================
 
 import { PATH_SHAPE } from '@/domains/media/sizes'
