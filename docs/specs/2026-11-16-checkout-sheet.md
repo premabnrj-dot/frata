@@ -18,7 +18,7 @@ extremely creative, smooth, lightweight, effective."
   checkout design (P2) draw it in the brand's look. This spec changes **where the frame is shown**: in a sheet over the
   site's page instead of on a separate `/checkout` page. `/checkout` stays, as the full-page version of the same frame.
 - **Three parts with one contract:** a small **sheet host** served by Frrata at a reserved path on the brand's own host
-  (`/_frrata/sheet.js`, ≤ 6 kB gzipped, no framework), the **secure frame** (P3, ≤ 25 kB) in a sheet variant, and the
+  (`/_frrata/sheet.js`, ≤ 4 kB gzipped, no framework), the **secure frame** (P3, ≤ 25 kB) in a sheet variant, and the
   **frame messages** (P3·5's closed schema) gaining open, close, height, step, placed and focus. The kit's
   `<CheckoutButton>` loads the host; the site holds no checkout code.
 - **Lightweight by intent:** nothing loads until the shopper opens the bag; opening the bag preconnects and warms the
@@ -61,7 +61,7 @@ brand's look, as fast as opening the bag.
 1. **Bag.** The site's own drawer (unchanged). Opening it warms checkout (§ 4).
 2. **Checkout tap → the bag becomes checkout.** The Checkout button at the bag's foot stays where the thumb is and
    becomes checkout's pay bar (**Place order · ₹2,790**); the bag's lines slide up and fade as checkout's form rises
-   (`--d-morph`, 400 ms, glide); the bag's title gives way to the brand's logo and **Secure checkout**. On a computer
+   (`--d-sheet`, 320 ms, settle); the bag's title gives way to the brand's logo and **Secure checkout**. On a computer
    the 420 px panel widens to 560 px (P2's one column) over the dimmed page. The site stays visible and dimmed behind on
    a computer, and as an 8 px strip above the sheet on a phone. The bag's lines reappear in checkout's Your order, with
    the stepper and Remove, where P2 drew them.
@@ -92,7 +92,7 @@ full page. Theme shops (Frrata's own pages) keep today's checkout until themes r
 ### 3. The three parts and their contract
 | Part | Where | Owns | Never |
 |---|---|---|---|
-| **Sheet host** `sheet.js` | Frrata's reserved path on the store's host (`/_frrata/sheet.js`), versioned and cached by hash; built like `fe.js` (`src/sheet/`, `check:sheet-script` ≤ 6 kB gz) | The `<dialog>`, its motion, the top bar (logo from `shop.brand`, Close), the dimmed page, the back button (one history entry), focus return, the site bag's "placed" clear through the kit's bag hooks, the warm frame | A field, a price worked out, a payment, any personal data; any write to storage but the bag's own keys |
+| **Sheet host** `sheet.js` | Frrata's reserved path on the store's host (`/_frrata/sheet.js`), a fixed URL served fresh (§ 4); built like `fe.js` (`src/sheet/`, `check:sheet-script` ≤ 4 kB gz) | The `<dialog>`, its motion, the top bar (logo from `shop.brand`, Close), the dimmed page, the back button (one history entry), focus return, the site bag's "placed" clear through the kit's bag hooks, the warm frame | A field, a price worked out, a payment, any personal data; any write to storage but the bag's own keys |
 | **Secure frame**, sheet variant | `secure.<host>/checkout?view=sheet&l=…` (P3·6) | Every field, the price for the address, Place order, payment, the confirmation (it holds the order's personal details) | Drawing outside its box; trusting a message but the schema |
 | **Frame messages** | `src/domains/checkout/frame-messages.ts` (P3·5), one closed schema both sides import | page → frame: bag ids and quantities, method, code, `open`, `focus`; frame → page: `height`, `step`, delivery fee or zone name, `placed` {order number}, `failed` {code}, `close` | A personal field, a PIN code, a token; `'*'` as a target |
 The kit gains `<CheckoutButton>` (in `components/frrata/`, kit-synced like `cart-link.ts`): it renders a plain link to
@@ -100,23 +100,45 @@ The kit gains `<CheckoutButton>` (in `components/frrata/`, kit-synced like `cart
 loads `sheet.js` and opens the sheet instead. A site needs no other code. Because Frrata serves `sheet.js` itself, a
 fix reaches every site at once, without a partner rebuild.
 
-### 4. Speed (lightweight)
-- **Before the bag opens:** nothing. No checkout script, no frame, no preconnect on product or list pages.
-- **When the bag opens:** `sheet.js` (≤ 6 kB) loads, `<link rel=preconnect>` to `secure.<host>`, and a hidden frame
-  starts loading `?view=sheet&l=…` with the current bag; a bag change re-sends lines by message (no reload).
-- **On Checkout:** the warm frame is shown; no request is on the tap's path. Target: first field ready < 400 ms (p75,
-  mid-range Android, 4G), against today's page change of ≈ 1.5–2.5 s.
-- **Frame weight** (P3·6): server HTML plus one script ≤ 25 kB gz, the brand's two fonts from the shared Frrata media
-  URL (one download for page and frame). The sheet adds no font.
-- **Costs:** a warm frame prices the bag once per bag open (one quote, already rate-limited); a frame never prices on
-  each keystroke.
+### 4. Speed (lightweight; `speed-reviewer` 2026-11-16, OVER BUDGET as first drafted, folded in)
+- **Before the bag opens:** nothing on the path. On any page with a non-empty bag, `sheet.js` is prefetched when idle and
+  `dns-prefetch` names `secure.<host>`.
+- **When the bag opens:** `sheet.js` (≤ **4 kB** gz, `check:sheet-script`; a working prototype measured 2.2 kB) runs,
+  preconnects to `secure.<host>`, and creates the frame **inside the dialog where it will stay** (moving an iframe
+  reloads it), hidden. The warm frame renders **fields only, no price** (≈ 4 statements); one frame per page view,
+  kept across bag opens; bag changes arrive by message.
+- **On Checkout:** the dialog shows the warm frame and sends `open`; the frame then prices once through `/api/secure`
+  (under its own per-IP bucket, `frameIp`). The form rises on `--d-sheet` (320 ms) and the first field takes focus at
+  its end; the frame posts `ready` when the field is focusable. **Target: tap → `ready` < 400 ms p75** on phones, warm;
+  measured and reported separately for Android and iOS (iOS does not raise the keyboard on a focus that arrives by
+  message: the shopper's tap on the field does).
+- **Cold path** (Buy now, a fast tap): the frame's first field is a working server-rendered input, never waiting for
+  `frame.js`; `frame.js` at a hashed, immutable URL. Expected 1.0–1.3 s on a slow phone network, against ≈ 1.5–2.5 s for
+  today's page change.
+- **Fonts, one download:** `<BrandStyle>` loads the brand's two fonts from **Frrata media** (`@font-face`, `crossorigin`),
+  the same URLs the frame uses; `secure.<host>` is the same site, so the HTTP cache is shared. `font-display: swap`; a
+  font never blocks the first field. (Today's kit loads Google Fonts: changed in S·4.)
+- **No `zod` in `src/sheet` or `src/frame`:** the message schema is hand-written (≈ 235 B; `zod/mini` alone is 5.8 kB);
+  `frame-messages.ts` stays the one definition, with its tests.
+- **Served fresh:** `/_frrata/sheet.js` at a fixed URL with `max-age=300, stale-while-revalidate` (a fix reaches every
+  website within five minutes), never hashed into the site's build.
+- **Desktop widening** sets the final 560 px width at once and animates `clip-path`, so the frame never re-lays out on
+  every animation frame; the top bar's logo has a fixed width and height.
+- **Field data:** `sheet.js` records bag open, warm start, frame `ready`, tap and field ready (with the frame's
+  `responseStart` and `Server-Timing`), tagged warm, partial or cold with `effectiveType`, `deviceMemory` and the OS; and
+  frames warmed against frames shown. One sampled `sendBeacon` to `/e`, nothing personal. **Rule:** if more than 70 % of
+  warmed frames are never shown and fewer than half of the taps at p75 find the frame warm, warm after 600 ms in the open
+  bag instead.
+- **Costs at 10× festive peak** (one shop, 25k sessions an hour, the reviewer's model): warming fields-only adds ≈ 4
+  statements a bag open; pricing only on `open` keeps the quote work at ≈ one per Checkout tap (≈ 13k statements an hour
+  against ≈ 58k had the warm frame priced). The secure host's render routes get the `frameIp` limit (they had none).
 
 ### 5. Motion and visuals (creative, smooth)
 - **One surface, never a cut:** bag → checkout → paying → placed is one sheet changing shape, and **the button the
   shopper taps never moves**: Checkout → Place order · ₹ → a check → Continue shopping. The movements, all from the
-  design language (no new duration or easing): the sheet rises with `--d-sheet` 320 ms and `--e-settle` (a cold start);
-  the bag's lines slide up as the form rises with `--d-morph` 400 ms and `--e-glide`; the computer panel widens 420 → 560 px with
-  `--d-morph`; the check after placing draws over `--d-small` 200 ms; closing leaves with `--e-leave`.
+  design language (no new duration or easing): the sheet and the form rise with `--d-sheet` 320 ms and `--e-settle`;
+  the bag's lines slide up and fade over the same 320 ms; the computer panel widens 420 → 560 px with
+  `--d-morph` (by `clip-path`, never `width`); the check after placing draws over `--d-small` 200 ms; closing leaves with `--e-leave`.
 - **The brand's moment:** the confirmation opens on the brand's accent band behind the logo, for the thank-you line only;
   everything else stays the brand's background.
 - **Reduced motion:** crossfades only, same durations halved.
@@ -152,8 +174,8 @@ announced from inside the frame; targets 44 px; contrast from the brand record's
 - **YAGNI:** no sheet on theme shops; no partner styling of the sheet's chrome beyond the brand record; no second
   checkout layout. Signal to revisit: a partner asks for a different sheet edge, or theme shops outlive V5.
 - **KISS:** one script and one dialog on the site, one frame variant, five new message types.
-- **Scalability:** the warm frame adds one quote per bag open; at 10× festive traffic that is bounded by the quote's
-  existing per-IP and per-shop limits; the frame is never cached (P3) and is ≈ 4 statements a render (P3·2's ceiling).
+- **Scalability:** the warm frame renders fields only (≈ 4 statements) and prices once, on `open`, under a new
+  `frameIp` limit (the quote has no per-shop limit today: `shopRequest` keys tenant and IP only); § 4's costs.
 - **Performance:** § 4. `speed-reviewer` to measure the warm path and `sheet.js` bytes before build.
 - **Reliability:** every failure lands on the full-page checkout, which already works; the sheet never blocks Place
   order (it is inside the frame). `placed` is idempotent (order number), so a repeated message never clears a new bag.
@@ -162,8 +184,8 @@ announced from inside the frame; targets 44 px; contrast from the brand record's
   § 2): personal fields stay in the frame; the frame accepts only the closed schema from `window.parent` at the exact
   store origin and sends nothing personal. New for the sheet: (a) `sheet.js` is Frrata's code on the brand origin at a
   reserved path the partner cannot answer (§ 1b's negative match); (b) T10 (a fake form drawn over the frame) is the
-  same residual with the frame's own fields as the only real ones; the sheet's top bar shows the store's address and a
-  lock icon from Frrata's code; (c) `placed` carries only the order number; View reopens the frame, never a token in
+  same residual with the frame's own fields as the only real ones; the sheet's top bar shows the brand's logo, a lock and
+  **Secure checkout**, drawn by Frrata's code; (c) `placed` carries only the order number; View reopens the frame, never a token in
   the page.
 - **Motion and visuals:** § 5; no Unicode glyph as an icon; the check is an SVG path.
 - **Unit economics:** none for merchants; Frrata pays one quote per bag open (≈ statements, no outside call).
@@ -178,7 +200,7 @@ announced from inside the frame; targets 44 px; contrast from the brand record's
 | S·0 | Mockup approved (this spec's); `integration-researcher` facts folded; reviews: `architecture-reviewer`, `security-reviewer`, `speed-reviewer`, `api-contract-reviewer`, `design-system-reviewer`, `words-reviewer` | the reports |
 | S·1 | `frame-messages.ts`: `open`, `focus`, `height`, `step`, `placed`, `failed`, `close`; tests that every message is in the closed list and none carries a personal field | `npx vitest run src/domains/checkout` |
 | S·2 | The frame's sheet variant (`?view=sheet`): no header or footer, pay bar pinned, confirmation in place, `placed` sent once | `npm run e2e -- --only checkout-sheet` |
-| S·3 | `src/sheet/` → `public/sheet.js` (≤ 6 kB gz, `check:sheet-script`), served at `/_frrata/sheet.js` on one-address hosts (a reserved path); `<dialog>`, motion, history, focus, warm frame, fallbacks | `npm test`; `npm run e2e -- --only checkout-sheet,secure-frame` |
+| S·3 | `src/sheet/` → `public/sheet.js` (≤ 4 kB gz, `check:sheet-script`; no `zod`), served at `/_frrata/sheet.js` on one-address hosts (a reserved path); `<dialog>`, motion, history, focus, warm frame, fallbacks | `npm test`; `npm run e2e -- --only checkout-sheet,secure-frame` |
 | S·4 | `shop.cart.sheet` in `2026-12` (additive; docs § Bag link); the kit's `<CheckoutButton>`; `kit-sync` | `npm run check:api`; `cd kit/starter && npm run check && npm run build` |
 | S·5 | e2e `checkout-sheet`: phone and computer; open warm and cold; Place order (Pay on delivery); pay online (fake Razorpay); back closes; refresh lands on `/checkout`; frame fails → Try again → the page; the site's bag empties on `placed` | `npm run e2e -- --only checkout-sheet` |
 | S·6 | The pilot: House of Ayuda's Checkout through `<CheckoutButton>`; mockup-parity on the build | `mockup-parity-reviewer` |
@@ -196,7 +218,7 @@ sheet: one path); saved cards. Signals to revisit in § Design review YAGNI.
 5. **Where the host lives:** served by Frrata at `/_frrata/sheet.js` so fixes reach every site at once (recommended),
    or copied into each site by the kit.
 6. **When:** with P5 (recommended; the sheet needs the frame on the same site as the page). Until then the pilot keeps
-   the bag link to the brand-design checkout page (P2).
+   the bag link to the branded checkout page (P2).
 
 ## Facts used (read 2026-11-16 by `integration-researcher`)
 | Fact | Source | Date |
