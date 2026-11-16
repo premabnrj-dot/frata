@@ -5,8 +5,9 @@
   "description": "A brand's own website on its Frrata store, through the Storefront API (version 2026-12).",
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/scan-bundle.mjs",
-    "start": "next start"
+    "build": "node scripts/check.mjs && next build && node scripts/scan-bundle.mjs",
+    "start": "next start",
+    "check": "node scripts/check.mjs"
   },
   "dependencies": {
     "next": "15.5.29",

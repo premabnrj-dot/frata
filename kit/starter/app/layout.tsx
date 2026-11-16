@@ -3,7 +3,9 @@ import Link from 'next/link'
 import { api, type Shop } from '@/lib/frrata'
 import { Landing } from '@/components/landing'
 
-export const revalidate = 60
+// Every page reads the store when asked (the reads themselves are cached 60 s, lib/frrata.ts), so a build needs no key
+// and a preview deploy without one still builds.
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata() {
   const s = await api<Shop>('shop')

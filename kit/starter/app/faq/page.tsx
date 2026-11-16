@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 import { api, type Faq, type Shop } from '@/lib/frrata'
 import { Questions } from '@/components/blocks'
 
-export const revalidate = 60
 
 /** The store's questions, answered from its own Settings. */
 export default async function FaqPage() {

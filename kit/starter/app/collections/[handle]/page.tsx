@@ -2,8 +2,6 @@ import { notFound } from 'next/navigation'
 import { api, type Card } from '@/lib/frrata'
 import { ProductCard } from '@/components/card'
 
-export const revalidate = 60
-export const generateStaticParams = () => []
 
 /** A collection, in the store's own order. */
 export default async function CollectionPage({ params }: { params: Promise<{ handle: string }> }) {

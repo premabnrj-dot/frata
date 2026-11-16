@@ -3,8 +3,6 @@ import { api, rupees, type Product, type Shop } from '@/lib/frrata'
 import { Photo } from '@/components/photo'
 import { AddToBag } from '@/components/add-to-bag'
 
-export const revalidate = 60
-export const generateStaticParams = () => []
 
 /** One product. An old address answers with the current handle: send the shopper there. Never invent a fact. */
 export default async function ProductPage({ params }: { params: Promise<{ handle: string }> }) {

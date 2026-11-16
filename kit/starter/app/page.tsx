@@ -1,7 +1,6 @@
 import { api, type Card } from '@/lib/frrata'
 import { ProductCard } from '@/components/card'
 
-export const revalidate = 60
 
 /** Home: the store's listed products, newest first, 48 to a page. */
 export default async function Home() {

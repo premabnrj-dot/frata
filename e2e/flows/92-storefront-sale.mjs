@@ -198,6 +198,7 @@ export default {
         const run = (args) => { try { execFileSync(process.execPath, args, { cwd: dir, env, stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 }) } catch (e) { throw new Error(`${args.join(' ')}\n${String(e.stdout ?? '').slice(-2000)}\n${String(e.stderr ?? '').slice(-2000)}`) } }
         let srv
         try {
+          run(['scripts/check.mjs'])
           run([`${ROOT}node_modules/next/dist/bin/next`, 'build'])
           run(['scripts/scan-bundle.mjs'])
           srv = spawn(process.execPath, [`${ROOT}node_modules/next/dist/bin/next`, 'start', '-p', '4093'], { cwd: dir, env, stdio: 'ignore' })

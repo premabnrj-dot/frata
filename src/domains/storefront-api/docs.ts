@@ -25,6 +25,12 @@ export const GUIDES: Guide[] = [
     { p: 'Prices are in paise. Text has no HTML.' },
     { h: 'The steps' },
     { p: 'The brand creates a key in Settings › Website. Read the store with it. Send the shopper’s bag to checkout with the bag link.' },
+    { h: 'Build the first site with Claude Code' },
+    { p: 'The starter is a working site. Its CLAUDE.md gives Claude Code the rules, and npm run check enforces them.' },
+    { code: `git clone ${STARTER_URL} my-shop && cd my-shop\nnpm install\necho 'FRRATA_KEY=frs_test_…' > .env.local\nnpm run dev` },
+    { p: 'Use a test key from Settings › Website. It reads drafts too and works from localhost until the store opens.' },
+    { p: 'Open Claude Code in the folder and ask for the change. Work on a branch. Your host builds a preview of each branch.' },
+    { p: 'Merge to publish. Put the live key in the host’s production settings, never in the code.' },
   ] },
   { slug: 'keys', title: 'Keys', lead: 'A key names one store. Put the live key in your site’s server settings, never in its code.', body: [
     { rows: [['frs_pub_…', 'Live. Reads what the store’s own pages show. Answers are cached copies.'], ['frs_test_…', 'Test. Before the store opens: drafts too, never cached, from your site or localhost. Ends after 30 days or when the store opens.']], head: ['Key', 'Reads'] },

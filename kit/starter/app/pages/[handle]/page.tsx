@@ -2,8 +2,6 @@ import { notFound } from 'next/navigation'
 import { api, previewOr, type Shop, type StorePage } from '@/lib/frrata'
 import { Blocks } from '@/components/blocks'
 
-export const revalidate = 60
-export const generateStaticParams = () => []
 
 /** About, Contact and the store's other pages, block by block (a hidden one only while the brand previews it). */
 export default async function Page({ params }: { params: Promise<{ handle: string }> }) {

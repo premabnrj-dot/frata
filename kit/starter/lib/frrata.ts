@@ -6,6 +6,8 @@ import { cookies } from 'next/headers'
 const ORIGIN = process.env.FRRATA_API_ORIGIN || 'https://api.frrata.shop'
 const KEY = process.env.FRRATA_KEY || ''
 const VERSION = '2026-12'
+// A test key (frs_test_…, before the store opens) reads drafts too: never cached, so an edit shows at once.
+const READ: RequestInit = KEY.startsWith('frs_test_') ? { cache: 'no-store' } : { next: { revalidate: 60 } }
 export const PREVIEW_COOKIE = '__Host-frrata-preview'
 
 export type Image = { sizes: { width: number; url: string }[]; width: number; height: number; alt: string; colour: string | null }
@@ -27,7 +29,7 @@ export type Faq = { handle: string; title: string; items: FaqItem[] }
 /** One read. Null for any 404 (unknown, deleted, hidden: the API gives one answer for all). */
 export async function api<T>(path: string): Promise<T | null> {
   if (!KEY) throw new Error('FRRATA_KEY is not set')
-  const res = await fetch(`${ORIGIN}/${VERSION}/k/${KEY}/${path}`, { next: { revalidate: 60 } })
+  const res = await fetch(`${ORIGIN}/${VERSION}/k/${KEY}/${path}`, READ)
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`Frrata ${res.status}`)
   return res.json() as Promise<T>
@@ -41,5 +43,4 @@ export async function previewOr<T>(path: string): Promise<T | null> {
   return res.ok ? (res.json() as Promise<T>) : api<T>(path)
 }
 
-/** ₹ from paise, as Indian shoppers read it. */
-export const rupees = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: paise % 100 ? 2 : 0 })}`
+export { rupees } from './money'

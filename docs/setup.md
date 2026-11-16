@@ -484,3 +484,14 @@ After SA1b's migration is applied and the release is live:
    `curl -s https://api.frrata.shop/llms.txt | head -1` is `# Frrata Storefront API`.
 4. **The starter's public repo** (when the first partner needs it): create `frrata/starter` on GitHub (public) and ask
    the agent to publish `kit/starter` into it. Settings › Website's "Starter code" link points there.
+5. **Build the first site with Claude Code** (owner, 2026-11-15: "let's use our own claude code first"). The starter
+   ships a `CLAUDE.md` with its rules and `npm run check` (CI blocks on it), so the same mistakes are caught whoever
+   writes the code.
+   1. `git clone https://github.com/frrata/starter my-shop && cd my-shop && npm install` (until the public repo
+      exists, copy `kit/starter` from this repo).
+   2. In the brand's console, Settings › Website › Create key › **Test**. Put it in `.env.local` as
+      `FRRATA_KEY=frs_test_…`. Never in a file git tracks.
+   3. `npm run dev`, then open Claude Code in the folder and ask for the change.
+   4. Work on a branch and push it: Vercel builds a preview of the branch. `npm run check` and the build must pass.
+   5. Merge to `main` to publish. In the site's Vercel project, set `FRRATA_KEY` to the **live** key (Production,
+      Sensitive) once the store opens.

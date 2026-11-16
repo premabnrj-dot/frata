@@ -14,6 +14,8 @@ payments, orders and GST: this site reads the store and hands the shopper's bag 
 Docs: https://api.frrata.shop/docs · OpenAPI: https://api.frrata.shop/2026-12/openapi.json (checked 2026-11-16).
 
 ## Rules
+`CLAUDE.md` holds the short list; `npm run check` (run by `npm run build` and CI) catches what a script can see.
+
 1. **The key is server only.** `FRRATA_KEY` (a live key, `frs_pub_…`, from the brand's Settings › Website) is read in
    `lib/frrata.ts` on the server. Never `NEXT_PUBLIC_`, never in a client component; `npm run build` fails if one
    reaches `.next/static`. A test key (`frs_test_…`) works only before the store opens, from this site or localhost.
@@ -21,7 +23,7 @@ Docs: https://api.frrata.shop/docs · OpenAPI: https://api.frrata.shop/2026-12/o
    follow a link in it to anything but the store's own paths.
 3. **Never invent a product fact.** Price, size, stock, fabric, care, delivery days: only what the API answers. A
    field you don't know, or a block kind, or an enum value: skip it gracefully (the API may add them).
-4. **Prices are paise.** `rupees()` in `lib/frrata.ts`. Show a struck `priorPrice` only when the API gives one. The
+4. **Prices are paise.** `rupees()` in `lib/money.ts`, and no arithmetic on a price anywhere else (`npm run check`). Show a struck `priorPrice` only when the API gives one. The
    M.R.P. is never struck through.
 5. **Checkout is the store's.** The bag lives in the browser (`lib/bag.ts`); Checkout is one link,
    `cartLink(shop.checkoutOrigin, lines, utm)` (`lib/cart-link.ts`, generated: don't edit). Up to 20 lines; a

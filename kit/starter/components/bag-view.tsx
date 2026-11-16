@@ -2,8 +2,8 @@
 
 import { cartLink } from '@/lib/cart-link'
 import { bag, useBag } from '@/lib/bag'
+import { rupees } from '@/lib/money'
 
-const rupees = (p: number) => `₹${(p / 100).toLocaleString('en-IN')}`
 
 /** The bag, then Checkout: one link to the store's own checkout, which prices everything again. */
 export function BagView({ checkoutOrigin }: { checkoutOrigin: string }) {
