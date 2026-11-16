@@ -79,9 +79,14 @@ export async function saveSection(sectionKey: string, values: Values, version: n
       // The store's row is held first, so a handover accepted at the same moment is seen (fails closed: no context reads
       // as an owner). A whole page is refused; a locked field is never written (an omitted one can't blank it), and one
       // sent changed is refused in words rather than dropped in silence.
-      const lock = OWNER_ONLY_SECTIONS.includes(section.key)
-        ? lockOf(lockedFor(auth.membership.role, await hasOwnerHeldIn(tx, tenantId), !!auth.membership.supportSessionId), section.key)
+      const locked = OWNER_ONLY_SECTIONS.includes(section.key)
+        ? lockedFor(auth.membership.role, await hasOwnerHeldIn(tx, tenantId), !!auth.membership.supportSessionId)
         : null
+      // The series decides whether the order prefix stands in for it on invoices (owner-only.ts STANDS_IN).
+      const [series] = locked && section.key === 'invoices'
+        ? await tx.select({ invoiceSeries: shopSettings.invoiceSeries }).from(shopSettings).where(eq(shopSettings.tenantId, tenantId)).for('update')
+        : []
+      const lock = locked ? lockOf(locked, section.key, series) : null
       if (lock?.whole) throw new OwnerOnly(section.key)
       if (lock) {
         const sent = lock.fields.filter((k) => Object.hasOwn(values, k))

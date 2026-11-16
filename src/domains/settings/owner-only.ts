@@ -37,11 +37,22 @@ export function lockedFor(role: MemberRole, hasOwner: boolean, support: boolean)
   return hasOwner && !holds(role, 'shop.manage') ? ALL : NONE
 }
 
-/** How a page is locked for this caller: whole, by these fields, or not at all. */
-export function lockOf(locked: Locked, page: SectionKey): { whole: true } | { whole: false; fields: readonly string[] } | null {
+/**
+ * A field that stands in for a locked one while that one is blank: invoice numbers are built from the order prefix
+ * while the series is empty (`src/domains/orders/work.ts`), so the prefix is locked too until a series is set
+ * (security review 2026-11-16 MED-1).
+ */
+const STANDS_IN: Partial<Record<SectionKey, readonly { field: string; whileBlank: string }[]>> = {
+  invoices: [{ field: 'orderPrefix', whileBlank: 'invoiceSeries' }],
+}
+
+/** How a page is locked for this caller: whole, by these fields, or not at all. `stored` is the page's saved values. */
+export function lockOf(locked: Locked, page: SectionKey, stored?: Readonly<Record<string, unknown>>): { whole: true } | { whole: false; fields: readonly string[] } | null {
   if (locked.pages.includes(page)) return { whole: true }
-  const fields = locked.fields[page]
-  return fields?.length ? { whole: false, fields } : null
+  const own = locked.fields[page]
+  if (!own?.length) return null
+  const extra = (STANDS_IN[page] ?? []).filter((x) => !String(stored?.[x.whileBlank] ?? '').trim()).map((x) => x.field)
+  return { whole: false, fields: [...own, ...extra] }
 }
 
 /** Whether this caller is offered Ask the owner: locked, and not a support visit (the definer is the lock: a live partner). */

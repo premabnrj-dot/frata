@@ -66,7 +66,7 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
     : null
   const theme = resolveStored(live, shop.settings, src)
   const facts = { ...shopFacts(shop, SHOP_DOMAIN), look: { vars: schemeVars(theme, 'paper'), display: displayFamily(theme.settings.pairing) } }
-  const lock = ownerOnly ? lockOf(lockedFor(role, ownerOnly.hasOwner, support), section.key) : null
+  const lock = ownerOnly ? lockOf(lockedFor(role, ownerOnly.hasOwner, support), section.key, shop.settings as unknown as Record<string, unknown>) : null
   const ask = askPage && ownerOnly && lock && mayAskOwner(role, ownerOnly.hasOwner, support) ? { page: askPage, asked: ownerOnly.askedToday } : null
   // A page locked whole says so beside its title, with Ask the owner as the header's one action; a page locked in part
   // keeps its own header (Contact: the block holds them; Invoices and slips: Ask the owner in the header, a chip by each).

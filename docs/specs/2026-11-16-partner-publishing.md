@@ -87,6 +87,7 @@ words); `saveSection`/`savePolicyText`/`askOwnerAction` in `src/app/(console)/co
 | Ask the owner in a card header, phone | 30 px (`btn sm`) | 44 px | The Button primitive's phone size: the design language's 44 px touch target (mockup-parity review 2026-11-16, row 1) |
 | The ok and error toasts | Dark bar, a green ✓ or red ! disc, a close ×, Reload in the bar's link colour | The console's live toast: words only on ok; the error toast pale red, Reload underlined | The mockup drew an older toast; the built one is the console-wide primitive (`ui/toast.tsx`, `neel.css`), the same on every page (rows 4–5) |
 | A refused save on a short page, desktop | The toast lifts above the save bar | On Contact (a short page) the save bar sits in the page, not at the screen's foot, so the toast can overlap it | Existing console behaviour on any short settings page, not PP1's; a console-wide fix is a separate task (row 6) |
+| Invoices and slips while the invoice series is blank | Not drawn | The order prefix is locked too (shown as a fact) until the owner sets a series | Invoice numbers are built from the order prefix while the series is blank, so the prefix is the series then (security review 2026-11-16 MED-1). The seller name likewise falls back to the store name while the legal name is blank; live payments already need a legal name, so that gap closes when a store takes online payments |
 
 ### PP2 — The choice per partner (lands with V2's publishing)
 - Settings › People, on a partner's row: **Publishing** — "Publishes freely" / "Ask me first". Owner or Manager

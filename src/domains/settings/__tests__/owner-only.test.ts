@@ -75,4 +75,15 @@ describe('owner-only settings (PP1)', () => {
     expect([...CAPABILITIES['shop.manage']].sort()).toEqual(['admin', 'owner'])
     for (const r of MEMBER_ROLES) expect(seesAsks(r)).toBe(r === 'owner' || r === 'admin')
   })
+
+  // Security review 2026-11-16 MED-1: while the series is blank, invoice numbers come from the order prefix.
+  it('locks the order prefix too while the invoice series is blank', () => {
+    const partner = lockedFor('partner', true, false)
+    expect(lockOf(partner, 'invoices', { invoiceSeries: '' })).toEqual({ whole: false, fields: ['docSignatory', 'invoiceSeries', 'orderPrefix'] })
+    expect(lockOf(partner, 'invoices', { invoiceSeries: '  ' })).toEqual({ whole: false, fields: ['docSignatory', 'invoiceSeries', 'orderPrefix'] })
+    expect(lockOf(partner, 'invoices', { invoiceSeries: 'AY/' })).toEqual({ whole: false, fields: ['docSignatory', 'invoiceSeries'] })
+    expect(lockOf(lockedFor('owner', true, false), 'invoices', { invoiceSeries: '' })).toBeNull()
+    expect(lockOf(lockedFor('partner', false, false), 'invoices', { invoiceSeries: '' })).toBeNull()
+  })
 })
+
