@@ -37,6 +37,7 @@ const QUOTED_OK = [
   [/^src\/domains\/themes\/catalogue\//, 'theme manifests: a shop theme\'s colours are its data (check:theme holds their contrast)'],
   [/\/__tests__\//, 'tests state colours they assert'],
   [/^src\/domains\/seo\/card-paper\.ts$/, 'the share card palette: an image drawn by next/og, outside the CSS tokens (search and sharing S1·4)'],
+  [/^src\/domains\/brand\/defaults\.ts$/, 'a brand record\'s starting palette: a code-site store\'s colours are its data, checked by brandProblems (one-address P1·1)'],
   [/^src\/domains\/documents\/paper\.ts$/, 'the paper palette: a PDF is printed on white, outside the console\'s CSS tokens (Documents D0)'],
   [/^src\/domains\/email\/(layouts|html)\.ts$/, 'email layouts: mail clients read inline colours only, outside the CSS tokens (email plan 2026-11-11)'],
   [/^src\/components\/ekcode\/icon\.ts$/, 'EkCode\'s icon as a data URI (tab and home screen), where CSS tokens cannot reach'],
