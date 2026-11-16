@@ -1,11 +1,11 @@
 ---
 name: frata-integrations
-description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification) or email - and for which facts about them are verified, when, and where from.
+description: Use when building, planning or answering questions about a Frata connector - Razorpay (partner, sub-merchants, Route, webhooks), Shiprocket (API, rate shopping, NDR, COD remittance), Meta (Tech Provider, WhatsApp Cloud API, pricing, Conversions API, Instagram), Google (Merchant API, Ads, GA4, OAuth verification), email or Anthropic (Managed Agents, the Agent SDK's terms, model prices for Studio) - and for which facts about them are verified, when, and where from.
 metadata:
-  version: 2.0.0
+  version: 2.2.0
   owner: owner
   verified: 2026-11-16
-  decisions: [ADR-0006]
+  decisions: [ADR-0006, ADR-0020]
 ---
 
 # Frata integrations
@@ -43,4 +43,5 @@ G4, 2026-11-16); a "§ <name>" named elsewhere is in SKILL.md or in the file lis
 | [reference/email.md](reference/email.md) | sending email (SES), events, SNS, transactional and marketing mail | Email |
 | [reference/google-and-attribution.md](reference/google-and-attribution.md) | Google (Merchant API, Ads, GA4, OAuth, Search Console) and attribution signals (landing URL, referrer) | Google, Attribution signals |
 | [reference/platform.md](reference/platform.md) | shop domains (Vercel for Platforms), Mux video, infrastructure usage and costs, Vercel functions and firewall | Domains, Mux, Infrastructure usage, Vercel platform |
+| [reference/anthropic.md](reference/anthropic.md) | Studio's agent: Frrata's Claude account and its terms, model prices and caching, Managed Agents, Vercel Sandbox, what the spike must confirm | Anthropic |
 | [reference/law-and-market.md](reference/law-and-market.md) | offers and checkout law, DPDP privacy, trust and safety, the E-Commerce Rules and Legal Metrology, Shopify as the reference | Commerce law, Privacy, Trust and safety, Consumer protection, Shopify |

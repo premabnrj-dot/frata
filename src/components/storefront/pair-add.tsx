@@ -11,7 +11,7 @@ export function PairAdd({ variantId, productId, label, done, sr, live, preview }
   return (
     <>
       <button type="button" aria-label={sr} className="store-pair-btn min-h-11 shrink-0 rounded-[var(--store-radius)] bg-store-button px-3 text-xs font-bold uppercase tracking-wider text-store-on-button"
-        onClick={() => { if (!live) { setNote(true); return } bag.add(variantId, 1); setAdded(true); openBag(variantId, productId) }}>{added ? done : label}</button>
+        onClick={() => { if (!live) { setNote(true); return } bag.add(variantId, 1, 'shop'); setAdded(true); openBag(variantId, productId) }}>{added ? done : label}</button>
       {/* feedback-ok: a merchant-preview note beside the button (the console's preview, not a failure) */}
       {note && <span role="alert" className="col-span-full text-xs text-store-sub">{preview}</span>}
     </>

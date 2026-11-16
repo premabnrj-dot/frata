@@ -141,6 +141,10 @@ Proposed:
   error is a `400 {"error":"bad_filter","param"}` after the key checks out: the one answer that is not the 404.
 - **§ 6:** removing a partner purges its keys through the drain's key-stop sweep; so does reinstating one (its audit
   row), so a reinstated partner's site reads again within minutes.
+- **§ 11, the bag link's fill (one-address plan P0, decision 2, 2026-11-16):** a link also replaces a bag that only bag
+  links filled (the marker `frrata.bag.by.v1`); a bag the shopper built on the store's own pages is still only joined
+  by a link from another site. The residual (a hostile link replaces a link-made bag) is accepted in
+  `accepted-findings.md` row 3.
 
 ## Amendment (test keys before a domain, owner 2026-11-16)
 The owner: "partners should be able to create a website without adding custom domain" (choosing option B for the first
@@ -153,3 +157,49 @@ Frrata stops it at once" now holds by deleting:** Run on Frrata deletes the stor
 removed or parked clears the Website (0142), after which a test key on a store never opened answers again, so Settings ›
 Website lists the store's keys whenever it has any (security review 2026-11-16). The Accept screen lists keys with no
 Website too. Migration `0149_test_keys_before_domain`; proof in `tenancy.sql` § 81 and § 86.
+
+## Amendment (build keys, owner 2026-11-16: "approve all"; Studio spec § 5 and decisions 10–11; Studio plan V0·3 and G·2)
+Studio's agent and a partner's developer must read a store's drafts without ever holding a key: a vault fills a header
+or a body, never a URL path. So a third key kind.
+1. **Shape and table.** `frs_build_`, then § 2's 32 base62 characters and checksum. Kind `build` in `storefront_keys`,
+   with a CHECK on its end, its maker and its purpose: `session` (a Studio session, 24 hours, made at its start and
+   deleted at its end), `preview` (one key per preview deployment, Preview environment only, deleted with the preview,
+   ≤ 30 days) or `developer` (a partner's CLI, 24 hours, through the device sign-in: `requireCapability`, a passkey check
+   in the last 5 minutes, a single-use code good for 10 minutes bound to the device and the site). Production holds the
+   public key only. Stored as its hash only (§ 2).
+2. **One minting path**, `mintBuildKey`, inside the store's tenant: a person holding `api.manage`, or a partner under
+   point 7; audited; limited per store. No inbound endpoint hands out keys: the plain key goes once into the session's
+   vault, the preview's sensitive variable or the developer's CLI.
+3. **Header only, one dynamic tree.** The key travels in the `Frrata-Key` header, to its own route folder `h/`:
+   dynamic, `private, no-store`, `Vary: Frrata-Key`; `check:api` refuses `revalidate` and `generateStaticParams` there;
+   `apiRewrites` sends any request carrying `Frrata-Key` to `h/` only and never matches a header-tree path to a cached
+   route. **No CORS headers at all** (§ 8 does not apply): it is read from a server only. The API never echoes a request
+   header. The starter sends the header only with `FRRATA_KEY_MODE=header`.
+4. **What it reads:** what a test key reads, drafts included (§ 11's "drafts" gains this kind beside § 12's token).
+   Never orders, shoppers, carts, costs, members or a write (§ 11 otherwise unchanged).
+5. **Looked up uncached** (`storefrontKeyNow`, as preview tokens are), never through the live keys' one-hour cache
+   (`src/lib/queries/storefront-keys.ts`) or `refreshKeys`, so a deleted key stops at once. Expired build keys are
+   deleted daily. The draft data behind it is one raw entry per store, cached 15 s per store (never per key, never shared
+   with `k/`), tagged with the store's catalogue and content tags and purged on every Apply.
+6. **Limits** (§ 9 amended for test and build keys): per key only, 300 reads a minute a build key, failing closed,
+   because every session and preview leaves from shared addresses. Misses (an unknown, deleted or dead key) are counted
+   per network and per key hash. Live keys keep today's per-network limits.
+7. **After the store opens** (decision 5 amended): `app_storefront_key` answers a build key only while its `partner_id`
+   is set, its maker is live (`app_pm_live`), still holds a `members` row on that store and, for a Lead or a Builder, is
+   assigned to it. Unassigning or removing the person ends their keys at once. Before opening a build key answers as a
+   test key does (the test-key amendment above).
+8. **The owner sees and deletes them.** Settings › Website lists every build key with its maker and its end; the owner
+   or a Manager deletes one there. A kill switch, removing a partner or a person (ADR-0014 amendment 6), and a stopped
+   session delete their build keys.
+9. **Proof:** `scripts/verify/tenancy.sql` § 81 grows (a removed or unassigned maker's key stops; a build key on
+   another store reads nothing); `catalogue-size.int.test.ts` gains the raw draft entry.
+
+### CLAUDE.md line, for the owner's yes
+Not edited by this record; the CLAUDE.md edit is the owner's.
+
+Today: "A key reads only what the shop's public pages show."
+
+Proposed:
+> A key reads only what the shop's public pages show; a build key (ADR-0018) also reads the shop's drafts, from a
+> server only, and after the shop opens only while the partner person who made it is live, still a member of the shop
+> and, for a Lead or a Builder, assigned to it.
