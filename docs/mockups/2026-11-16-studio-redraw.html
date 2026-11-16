@@ -698,7 +698,7 @@ function render() { $('#log').innerHTML = renderLog(); renderSite(); renderPop()
 document.addEventListener('click', (e) => {
   const t = e.target.closest('[data-act],[data-go],[data-view],[data-state],[data-dev]')
   if (!t) return
-  if (t.dataset.go) { S.part = +t.dataset.go; S.building = null; S.applied = [0,0,0]; S.pub9 = false; if (S.state === 'nologo') S.wm = S.part > 3 ? (S.wm || 'spaced') : null; S.pop = false; S.handed = false; if (S.part < 3) { S.accent = null; S.edits = [] } return render() }
+  if (t.dataset.go) { S.part = +t.dataset.go; S.building = null; S.applied = [0,0,0]; S.pub9 = false; if (S.state === 'nologo') S.wm = S.part > 3 ? (S.wm || 'woven') : null; S.pop = false; S.handed = false; if (S.part < 3) { S.accent = null; S.edits = [] } return render() }
   if (t.dataset.view) { S.view = t.dataset.view; $('#app').classList.toggle('phone', S.view === 'phone'); document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed', String(b===t))); $('#pv').classList.remove('open'); return }
   if (t.dataset.state) { S.state = t.dataset.state; if (S.state === 'nologo') { S.part = 3; S.wm = null } document.querySelectorAll('[data-state]').forEach(b=>b.setAttribute('aria-pressed', String(b===t))); if (S.state==='fail') S.part = 1; if (S.state==='low') S.part = 4; stateEnter(); return render() }
   if (t.dataset.dev) { $('#device').classList.toggle('desk', t.dataset.dev === 'desk'); document.querySelectorAll('[data-dev]').forEach(b=>b.setAttribute('aria-pressed', String(b===t))); return }
