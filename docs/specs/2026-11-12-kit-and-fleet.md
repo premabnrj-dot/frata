@@ -34,8 +34,9 @@ guards the reviews asked for:
   so a partner cannot point a brand's domain at a build-mode site.
 - **At handover** the checks run again on the version the owner is shown; the owner accepts **that deployment** (the
   accept is bound to its id); a partner's first handover also gets a person's security review. The partner's routines
-  lose publish rights. From then on the approval rule applies (amendment 6), re-checked when a deployment is promoted,
-  not when it is queued.
+  lose publish rights. From then on the brand's choice per partner applies (ADR-0014 amendment 9: "Publishes freely"
+  by default, or "Ask me first"; an outside script, a policy change or a domain change always needs the owner),
+  re-checked when a deployment is promoted, not when it is queued (`docs/specs/2026-11-16-partner-publishing.md`).
 - **A partner removed before handover:** the site goes to maintenance and the shop stays unopened.
 
 ## Research (sources dated within 12 months unless marked)
@@ -239,7 +240,7 @@ release manager (rotating), the abuse queue part-time, partner success.
 |---|---|
 | V1 | `frrata-kit` (core, legal, ui, CLI with checks, skills) in one version; trusted + staged publishing; Starter 0 to the starter bar; budgets and the allow-list as the CLI's defaults (sites self-host; Frrata cannot enforce yet); staff phishing-resistant sign-in on GitHub and the registry |
 | V1.5 | Brand tokens as API data, one source with checkout, emails and cards |
-| V2 | The separate site domain; `frrata-policies` served as signed JSON; the package mirror; the gate on build output; the fleet service, `site_deployments`, rollouts and lanes 1–3; the router (Report-Only waves, break-glass); kill switches; Admin › Sites, Controls, Kit; build mode on the signed preview; staff passkeys in Admin; pen test |
+| V2 | The separate site domain; `frrata-policies` served as signed JSON; the package mirror; the gate on build output; the fleet service, `site_deployments`, rollouts and lanes 1–3; the router (Report-Only waves, break-glass); kill switches; Admin › Sites, Controls, Kit; build mode on the signed preview; partner publishing after handover (PP2–PP3, `docs/specs/2026-11-16-partner-publishing.md`); staff passkeys in Admin; pen test |
 | V3 | Starters built in Studio; the agent as a pinned, evaluated control; the sandbox image; Admin › Agent; pen test |
 | V4 | Partner starters reviewed and re-reviewed per release |
 | V5 | Theme shops moved to Starter 0 through parity checks |
