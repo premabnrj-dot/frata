@@ -96,8 +96,8 @@ are taken; the Studio plan's `93-site-hosting` is renamed `site-hosting`).
 |---|---|---|
 | P2·1 | Migration: `checkout_design` (one row a store: header variant, back link, footer variant, trust blocks text array CHECKed to a closed set, two lines with length CHECKs, `previous jsonb`, `updated_by`, `updated_at`); grants as P1·2 (`frata_builder` named-column select); proof § 99 | `npm run verify:tenancy` |
 | P2·2 | `src/domains/brand/checkout.ts`: closed sets, trust words derived from the store's facts, the render-time fallback | `npx vitest run src/domains/brand` |
-| P2·3 | Checkout, bag-link, order and policy pages read `shopBrand` and the design (props, never the theme) for code-site stores | `npm run e2e -- --only checkout,order-page,storefront-sale,shop-look` |
-| P2·4 | Checkout lines: Remove with Undo and a stepper (the drawer's pattern; `by` kind `keep`), re-priced by the quote | `npm run e2e -- --only checkout,offers` |
+| P2·3 | Checkout, bag-link, order and policy pages read `shopBrand` and the design (props, never the theme) for code-site stores; checkout's field label "Pincode" becomes "PIN code" (the glossary; `src/components/storefront/checkout.tsx:289`), its id and stored key unchanged; the bag-link page keeps no footer (P2 mockup, screen 1) | `npm run e2e -- --only checkout,order-page,storefront-sale,shop-look` |
+| P2·4 | Checkout lines: Remove with Undo and a stepper (the drawer's pattern; `by` kind `keep`), re-priced by the quote; a sold-out line is drawn from the quote's problem lines with Sold out and Remove (today checkout hides qty-0 lines, `checkout.tsx:146`, and the shopper learns only after Place order is refused) | `npm run e2e -- --only checkout,offers` |
 | P2·5 | The preview on sample data from pure fixtures, on the console host (the look preview's route pattern), every state; it is also where a site preview's Checkout lands | `npm run e2e -- --only brand` |
 | P2·6 | Console › Brand › Checkout as drawn; saves through P1·3 | `npm run e2e -- --only brand` (checkout tab steps); `mockup-parity-reviewer`; `npm run check:words` |
 - **Reviews:** `architecture-reviewer`, `tenancy-auditor`, `security-reviewer`, `speed-reviewer`, `design-system-reviewer`,
@@ -109,7 +109,10 @@ are taken; the Studio plan's `93-site-hosting` is renamed `site-hosting`).
   order, the reload copy, the pending order, the order token and the order's personal details live only in the frame on
   `secure.<store host>`. The brand origin keeps the bag, its `by`, the code and public data.
 - **Mockup:** **new (states):** the frame loading, failed ("We couldn't load the secure form." with Try again), EkCode in a
-  popup (EkCode's own look), the frame's summary with **Place order · ₹<amount>**; the rest as P2's.
+  popup (EkCode's own look), the frame's summary with **Place order · ₹<amount>**; the rest as P2's. Approved with
+  (owner, 2026-11-16, "all mockups approved"): the online button keeps today's **Pay · ₹<amount>** (Place order · ₹ on
+  delivery); the computer layout is P2's one 560 px column with the frame inside it, under Your bag and How you'll pay
+  (P3's drawing put the frame left and the bag right; P2 is the layout, P3 drew states).
 - **Regression net:** e2e `10-checkout`, `50-order-page`, `64-gst`, `67-ekcode`, `77-order-edit`, `12-security`.
 | # | Task | Verify |
 |---|---|---|
