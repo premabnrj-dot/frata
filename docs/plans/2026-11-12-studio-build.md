@@ -15,7 +15,8 @@ tenancy-auditor FIX BEFORE MERGE, 9 high and the medium and low gaps fixed · sp
 
 **Pointer (2026-11-16):** V2a's `frrata.store` address, its checkout split and BT are re-planned in
 `docs/plans/2026-11-16-one-address-checkout.md` (draft; spec `docs/specs/2026-11-16-one-address-checkout.md`, whose last
-sections list the edits to make here once approved).
+sections list the edits to make here once approved). V0·5's runtime record becomes **ADR-0020** (ADR-0019 is "One
+address"); proof blocks § 88–96 here must be renumbered (§ 88 is now 0151's; the one-address plan takes § 98–100).
 
 ## Order (each phase ships alone, push to `main` after its gates)
 Revised 2026-11-16 for the owner ("revise the studio plan to keep it fully agentic and use our own claude api as planned
