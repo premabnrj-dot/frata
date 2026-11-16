@@ -2,7 +2,7 @@
 name: frrata-site
 description: Use when building or changing an Indian D2C brand's website on its Frrata store with this starter - reading the store through the Frrata Storefront API (keys, products, collections, pages, filters), sending the shopper's bag to checkout with the bag link, caching, previews, the legal block, and Indian shopper conventions.
 metadata:
-  version: 2026.12.1
+  version: 2026.12.2
   api: '2026-12'
   verified: 2026-11-16
 ---
@@ -47,6 +47,8 @@ Docs: https://api.frrata.shop/docs · OpenAPI: https://api.frrata.shop/2026-12/o
    (never inline an SVG). Never keep logo files, hex colours, `rgb()` or font families in the site: `npm run check`
    fails them. A change to the brand is the brand's, in Console › Brand, never a commit. `shop.logo` is never an SVG
    (for places an SVG can't go). Until the brand saves its own, `brand` holds Frrata's neutral defaults.
+   A site with a Content Security Policy allows `https://fonts.googleapis.com` in `style-src`, `https://fonts.gstatic.com`
+   in `font-src` and Frrata's media store in `img-src`, or the brand's fonts and logos are blocked.
 
 ## Indian shoppers
 - Show **Pay on delivery** when `shop.payOnDelivery.on` (most first orders are COD).

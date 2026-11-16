@@ -31,10 +31,13 @@ for (const f of code.filter((x) => /\.tsx?$/.test(x) && !x.endsWith('lib/money.t
 }
 // 6. The brand record (one-address P1·7). The two files the kit ships (components/frrata/) set the variables and draw the
 // logo; every other file uses them.
-const BRAND_FILE = /(^|[\\/])(logos?[\\/][^\\/]+|(logo|monogram|brand[-_]?(logo|mark))[^\\/]*)\.(svg|png|webp|jpe?g|gif|avif|ico)$/i
+// A logo folder, a name with logo, monogram, wordmark or lockup as a word part (house-of-ayuda-wordmark.svg), or an SVG in
+// a brand folder (brand/house-stacked.svg). A photo named for the brand's story (brand-story-hero.jpg) is not one.
+const BRAND_FILE = /(^|[\\/])(logos?[\\/][^\\/]+|([^\\/]*[^a-z\\/])?(logo|monogram|wordmark|lockup|brand[-_]?(logo|mark))[^\\/]*)\.(svg|png|webp|jpe?g|gif|avif|ico)$|(^|[\\/])brand[\\/][^\\/]+\.svg$/i
 for (const f of walk('.')) if (BRAND_FILE.test(f)) problems.push(`${f}: a logo file in the site. The store's logo is in Console › Brand. Draw it with <Logo>.`)
+// The layout's own <header> draws <Logo>; a site whose header is a component passes it <Logo> from the layout.
 const header = /<header\b[\s\S]*?<\/header>/.exec(layout)?.[0] ?? ''
-if (!/<Logo\b/.test(header)) problems.push('app/layout.tsx: the header must draw the store\'s logo with <Logo> (components/frrata/logo.tsx).')
+if (!/<Logo\b/.test(header || layout)) problems.push('app/layout.tsx: the header must draw the store\'s logo with <Logo> (components/frrata/logo.tsx).')
 if (/<svg\b/i.test(header.replace(/<nav\b[\s\S]*?<\/nav>/g, ''))) problems.push('app/layout.tsx: an inline <svg> beside the header\'s logo. The logo comes from the store: use <Logo>.')
 if (!/<BrandStyle\b/.test(layout)) problems.push('app/layout.tsx: render <BrandStyle brand={shop.brand} /> once, so colours and fonts come from the store.')
 const KIT_OWN = new Set(['components/frrata/logo.tsx', 'components/frrata/brand-style.tsx'])
