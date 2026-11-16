@@ -45,6 +45,15 @@ pages and redesign whenever they like while the risky changes always reach the o
   words, owner saves); `check:capabilities` row.
 
 #### PP1 plan (2026-11-16)
+Security review on the plan (2026-11-16): FIX BEFORE MERGE, folded in below (M1 race, M2 Contact half-lock, L1–L3).
+**Writers held:** only `saveSection` and `savePolicyText` write these columns after a shop exists (sign-up, creation
+definers and Admin write them only at creation; the Storefront API and content layer only read; the upload route
+checks `invoices` and `store` only and needs no change). Postgres does not stop a missed writer (frata_app holds update
+on `shop_settings` and `shop_policies`), so the two actions are the lock.
+**What PP1 protects:** what Frrata stores and serves (checkout, order pages, invoices, the policy pages and legal block
+the Storefront API serves). It cannot stop a partner's own site code or a Content page from printing other words; the
+publish gate (PP3, V2) checks the legal block and policy links on code sites, and Content saves are told to the owner.
+
 **Locked for a partner once the store has an owner** (one pure list, `src/domains/settings/owner-only.ts`):
 the Policies page (return kind and days) and every policy page's own text; the whole Business and GST page; the
 Grievance officer block of Contact (name, designation, email, phone). Customer care, WhatsApp and Instagram on Contact
@@ -53,11 +62,11 @@ acts as owner (unchanged).
 
 | # | Task | Verify |
 |---|---|---|
-| 0 | Regression net first: e2e flow `92-owner-only` on a handed-over store (partner sees Policies, Business and GST, Grievance officer read-only; saves refused in words; customer care still saves; owner saves all); unit tests for the list | `npm run e2e -- 92`, `npx vitest run src/domains/settings` |
-| 1 | `owner-only.ts`: `lockedFor(role, hasOwner)` → pages and fields; `editors` unchanged so the pages still open | unit tests: every role × hasOwner |
-| 2 | Server: `saveSection` and the policy-text action read `hasOwnerIn(tx)` inside the `asMember` transaction (fails closed) and refuse a locked page, or a changed locked field, with "Only the store's owner can change this now."; every other writer of these fields found by grep and held the same way | e2e step; grep list in the plan's notes |
+| 0 | Regression net first: e2e flow `93-owner-only` (built on `89-content.mjs`'s partner-after-handover setup) on a handed-over store (partner sees Policies, Business and GST, Grievance officer read-only; saves refused in words; customer care still saves; owner saves all); unit tests for the list | `npm run e2e -- 93`, `npx vitest run src/domains/settings` |
+| 1 | `owner-only.ts`: `lockedFor(role, hasOwner, support)` → pages and fields, written as `hasOwner && !holds(role, 'shop.manage')` (no `role === 'partner'`, check:capabilities); `editors` unchanged so the pages still open | unit tests: every role × hasOwner × support |
+| 2 | Server: `saveSection` (`settings/actions.ts:54`) and `savePolicyText` (`:106`, both edit and reset) take `select 1 from tenants … for share` and then `hasOwnerIn(tx)` inside the `asMember` transaction (a handover holds the tenant row, so a save racing it sees the owner; fails closed). A locked whole page is refused in words; on Contact the grievance keys are **dropped** from the columns for a locked caller (as `HELD_BY_ZONES` is), never compared, so an omitted key cannot blank them | server tests: grievance keys omitted and changed; e2e step; race proof in `verify:tenancy` |
 | 3 | Page: the section renders read-only (fields disabled, no save bar) with one line and **Ask the owner** | mockup parity |
-| 4 | Ask the owner: definer `app_ask_owner(uid, page)` writes one `needs_you` notice (new source kind `ask_owner`, the partner and the page; words in `src/domains/email/notices.ts`), only when the caller is the store's partner and the store has an owner, at most once a page a day; frata_app keeps no insert on `notices` | `verify:tenancy` § new; e2e |
+| 4 | Ask the owner: the action takes only `page` (`z.enum(['policies','business','contact'])`), uid from `auth.userId`, a `withinLimit` that fails closed. Definer `app_ask_owner(uid, page)`: tenant from `app_current_tenant()` (null → false); caller a live partner (`members` role partner joined to a live `partner_members` and a live `partner_links`); the store has an owner; `pg_advisory_xact_lock` on store+page, then at most one a page a day; title, body and href fixed in SQL, the partner named only through `by`; `ask_owner` added to the `notices_source` CHECK in the same migration; revoked from public, anon, authenticated, service_role, frata_admin, frata_builder, granted to frata_app only. Shown and emailed to owners and admins only. frata_app keeps no insert on `notices`. Logs carry `errName` only | `verify:tenancy` § new; e2e |
 | 5 | Reviews on the diff (security, tenancy, impact, words, design system, mockup parity), docs, ship with the migration | release checklist |
 
 ### PP2 — The choice per partner (lands with V2's publishing)
@@ -103,6 +112,13 @@ acts as owner (unchanged).
 - **Blast radius:** PP1 changes four settings sections' editors for partners after handover; every caller of
   `editors` (page, save, brand upload) is checked in its plan. Partners on stores already handed over lose those
   saves the day PP1 ships; no notice (decision 4).
+
+## Open for the owner (security review, 2026-11-16)
+5. Support visits: Frrata staff on a support visit act as owner today. Should they also be refused on these locked
+   fields? (Recommended: yes; staff are not the owner's yes. The Website page already refuses support visits.)
+6. Also lock for partners after handover: the authorised signatory and invoice series on GST invoices? (Recommended:
+   yes, the signatory is a legal detail.) Customer care, shipping settings and per-product HSN/GST stay the partner's
+   (operations, not the owner's legal word).
 
 ## Owner decisions (2026-11-16: "you can build PP1 now. * read only * legal * no. everything is test data as of now.")
 1. PP1 is read-only with **Ask the owner**; no queue of proposed text.
