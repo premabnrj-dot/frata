@@ -138,7 +138,9 @@ removing a passkey still needs a real one. Afterwards, check `audit_events` for 
 **Domains (owner, 2026-11-16: "frrata.com will be the public domain. .shop will remain the subdomain, frratamail will
 remain the mailing email."):** `frrata.com` is Frrata's public domain (the homepage, `app.frrata.com` for the console
 when it moves); store addresses stay `<store>.frrata.shop`; Frrata's mail is sent from the frratamail domain. Any plan
-that proposes another domain (the Studio plan's `frrata.store`, `frrata-preview.site`) is re-checked against this.
+that proposes another domain is re-checked against this. Re-checked 2026-11-16 (ADR-0019, one address): code sites stay on
+`<store>.frrata.shop` or the brand's domain; the Studio plan's sites domain (`frrata.store`) was dropped, and only a
+preview domain is bought (O6 below).
 
 
 1. Supabase → Authentication → Emails: set the **sender name** to "Frrata" and the sign-in email's **subject** to
@@ -430,7 +432,9 @@ SNS `frrata-ses` (SignatureVersion 2) confirmed to `/api/webhooks/ses`; sets `sh
 OIDC role `frrata-ses`; sign-in codes through the Supabase Send Email hook from `Frrata <notices@notify.frrata.shop>`.
 **Production access granted (2026-11-11, case 179441775400698):** 50,000 a day, 14 a second; enforcement healthy. A send
 over 14 a second is throttled (429) and waits in the outbox (`Later`, no attempt spent). Ask for more in SES → Account
-dashboard before a festive sale nears either limit. **Open:** the notices domain moves to Frrata's main domain when the shop domain moves (owner's plan: frrata.shop main site, frrata.store shops).
+dashboard before a festive sale nears either limit. **Open:** before `frrata.shop` goes to the Public Suffix List, `_dmarc.notify.frrata.shop` exists or notices move to the
+frratamail domain (one-address plan P4b·1). Stores stay on `frrata.shop`; Frrata's public domain is `frrata.com` (owner,
+2026-11-16). *(Was: "the notices domain moves … frrata.shop main site, frrata.store shops", stale since that call.)*
 Nothing here passes through an agent: no AWS key exists anywhere (the app reaches SES through Vercel OIDC). Region
 **Asia Pacific (Mumbai) ap-south-1** for every step.
 

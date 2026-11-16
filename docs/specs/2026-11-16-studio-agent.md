@@ -7,11 +7,12 @@ deviations, redrawn and approved (owner, 2026-11-16: "all mockups approved": htt
 (proposed, revised), ADR-0018, `docs/specs/2026-11-12-kit-and-fleet.md`, `docs/specs/2026-11-14-site-content-layer.md`,
 `docs/specs/2026-11-16-partner-publishing.md`
 
-**Pointer (2026-11-16):** the site address (`<slug>.frrata.store`, § 13), the checkout split (§ 12.1, § 12.5) and BT are
-re-planned in `docs/specs/2026-11-16-one-address-checkout.md` (draft): one address per store on `frrata.shop` or the
-brand's domain, with checkout (ADR-0019 "One address", proposed). Its last sections list the edits to make here once
-approved. This spec's runtime record (decision 27, drafted as ADR-0019) becomes **ADR-0020**; proof blocks § 88–96 here
-must be renumbered (§ 88 is now 0151's; the one-address plan takes § 98–100).
+**One address (owner, 2026-11-16: "approve all"):** the site address, the checkout split and BT are replaced by ADR-0019
+"One address" (`docs/specs/2026-11-16-one-address-checkout.md`, plan `docs/plans/2026-11-16-one-address-checkout.md`):
+one address per store, the brand's domain or `<store>.frrata.shop`, shared with checkout; no sites domain and no
+`shop_domains.serves`; BT replaced by P1 (one brand record) and P2 (checkout in the brand's design). The edits are made
+below (§ 6.12, § 12.1, § 12.3–12.5, § 13, decisions 9, 26, 27), each keeping a line on what it replaced. This spec's runtime
+record (decision 27, drafted as ADR-0019) is **ADR-0020**; proof blocks renumbered after 0151's § 88 (V2a § 90).
 
 Owner, 2026-11-16: "Now please revise the studio plan to keep it fully agentic and use our own claude api as planned and
 let's finishup the remaining of the partner/studio work." Earlier the same day: must partners deploy their websites on
@@ -33,8 +34,8 @@ Vercel themselves, or does everything run on Frrata's account, managed from the 
   on Lovable; the value case and its test are in § 8.
 - **Hosting is not priced yet, and as guessed it fails 3×** (§ 8): code sites host build-mode shops and the pilot only
   until 30 days of the pilot's measured usage price it (owner decision 18).
-- **A brand with no domain** gets `<slug>.frrata.store` (name to choose), a separate registrable domain, never
-  `frrata.shop` (§ 13).
+- **A brand with no domain** opens on `<store>.frrata.shop`, one address with its checkout (ADR-0019, § 13). *(Was
+  `<slug>.frrata.store`, a separate sites domain: dropped 2026-11-16.)*
 - **What the owner decides:** 29 calls at the end, each with a recommendation. 1–5 unblock everything; 18 and 19 gate
   selling.
 
@@ -55,7 +56,7 @@ change, while Frrata keeps the code, the hosting, the keys and the money safe, a
 |---|---|---|---|---|
 | The site's code | Frrata's GitHub organisation `frrata-sites`, one private repository per site, named by site id (ADR-0016 § 2) | The agent (draft branches); a partner's own developer if they want (§ 10) | Nothing to set up | Nothing |
 | Builds, previews, hosting | Frrata's Vercel team `frrata-sites`, one project per site, bom1 (ADR-0017 revised) | Frrata's fleet service (its own team and repository, outside `frrata-sites`), through the hosting adapter | Taps Publish | Nothing |
-| The site's address | `<slug>.frrata.store` from Frrata, or the brand's domain | The fleet adds it to the project | Nothing | Optional: Connect my domain in the console |
+| The site's address | One address with checkout: `<store>.frrata.shop`, or the brand's domain (ADR-0019) | Frrata's app holds the host and sends its non-reserved paths to the site's deployment; the fleet only reports deployments | Nothing | Optional: Connect my domain in the console (the host and its `secure.` record) |
 | The storefront key | Frrata mints it and sets it on the project; nobody sees it | The fleet | Nothing | Sees and can delete it in Settings › Website |
 | The model | Frrata's Claude API account (§ 3) | Frrata's agent | Pays credits | Nothing |
 | Checkout, payments, orders | Frrata's app as today (bom1) | Frrata | Nothing | Runs the business in the console |
@@ -71,7 +72,7 @@ moves sites into `frrata-sites` and the organisation; the pilot site moves with 
 | code.claude.com Agent SDK hosting, read 2026-11-16 (undated page) | The SDK spawns a `claude` CLI subprocess that owns the shell and files: its built-in tools run where the subprocess runs; 1 GiB RAM, 5 GiB disk, 1 CPU per agent to start; no session timeout of its own | § 2 |
 | vercel.com/docs/sandbox/pricing, last updated 2026-09-10 | Pro: active CPU $0.128/hour, memory $0.0212/GB-hour (iad1; other regions differ), 24 h sessions, 10,000 at once; network policy by domain; open ports | § 2 |
 | GitHub docs, rulesets (undated, read 2026-11-16) | Rulesets on private organisation repositories need GitHub Team; organisation-wide rulesets need Enterprise | § 12 |
-| Vercel domain registry, read 2026-11-16 | `frrata.store`, `frrata.page`, `frrata.site`, `frrata-preview.site` available; first year $1.49–11.99, renewal $11.99–44 | § 13 |
+| Vercel domain registry, read 2026-11-16 | `frrata.store`, `frrata.page`, `frrata.site`, `frrata-preview.site` available; first year $1.49–11.99, renewal $11.99–44 (none bought for sites: ADR-0019; the preview domain is a low-renewal name, O6) | § 13 |
 | x-rates.com, 2026-11-16 08:51 UTC [secondary] | ₹93.93 to the dollar | § 8 (₹94) |
 | ADR-0017 § Options and § Cost per site (2026-11-15) | Vercel bom1 $0.20/GB, $2.20 per million requests; a build minute ≈ $0.014; 0.3 MB and 5 requests a page view (a guess); hosting lines and the kill line (rule 11) | § 8, § 12 |
 | Studio spec research (Lovable, Framer, Bolt, v0, Replit pricing, live 2026-11-11) and the unit-economics review (2026-11-16) | Lovable ≈ ₹40–80 a page | § 8 baseline |
@@ -160,7 +161,7 @@ apply a batch whose every value is on screen).
 | `store_facts` | The shop's collections, product count, a sample of cards, content kinds, apps that are on | Builder readers through `withActor` (`src/lib/queries/builder.ts`), outside any transaction | Orders, shoppers, costs, members, the legal block's contact details |
 | `content_read` | Announcements, menus, page and FAQ words, Contact line, placements | Console › Content's readers | The legal block's emails and phones: the kit renders `shop.legal` itself, so the model never needs them |
 | `content_propose` | A proposed save for one content entry | `studio_proposals`; checked on proposal and again on Apply by `src/lib/content/save.ts` (`plainText`, version, limits, the owner's notice); refuses a UPI id, a phone number or a URL that is not a shop path or the legal block's own | A policy page or legal details after handover (PP1's `maySaveSensitive`); any Builder turn |
-| `brand_propose` / `tokens_propose` | brand.md lines; tokens and seasons (BT data) | `studio_proposals`; Apply runs BT's save | A colour pair under contrast (`src/domains/themes/contrast.ts`); any Builder turn |
+| `brand_propose` / `tokens_propose` | brand.md lines; the brand record's tokens and seasons (P1, replacing BT) | `studio_proposals`; Apply runs P1's `saveBrand` | A colour pair under contrast (`src/domains/themes/contrast.ts`); any Builder turn |
 | `propose_looks`, `ask` | Choice cards; the person's pick is the apply | Studio's UI | — |
 | `logo_propose` | A checked SVG as the brand's logo | svgo, the outline-only check, then a proposal; Apply writes `shop_settings.logo_url` | Text elements, rasters, filters; any Builder turn |
 | `read_intake` | The brand's files after Frrata re-encoded and rasterised them | Intake spec § Files | Originals |
@@ -254,7 +255,7 @@ A **Builder's** turn (ADR-0015) gets the read tools, the sandbox and `preview_bu
 9. **Removing a partner or a person** ends their sessions, routines, proposals, build keys and repository access in the
    same step (amendment 6): `app_remove_partner` gains these, the next tool call refuses, and a sweep interrupts the
    session.
-10. **`asTurn(turn, cap, work)`, the tool chokepoint** (architecture B1, security M4, tenancy 1–3; ADR-0019):
+10. **`asTurn(turn, cap, work)`, the tool chokepoint** (architecture B1, security M4, tenancy 1–3; ADR-0020):
     - The turn id is never taken from a webhook or a tool's input: it is our own open-turn row for the session that
       `app_studio_session_for(runtime id)` names. **One open turn per session** (a unique partial index); a
       `custom_tool_use` is accepted only after that turn's `user.message` event id and before the turn closes, and the
@@ -278,8 +279,10 @@ A **Builder's** turn (ADR-0015) gets the read tools, the sandbox and `preview_bu
     `sandbox="allow-scripts allow-same-origin"` (no top navigation, no forms). Test and build keys exist on Preview
     deployments only; Production holds the public key only. S1 (previews holding production data) is re-opened for
     `frrata-sites` and closed by these rules.
-12. **Cookies before the PSL lists the sites domain:** sibling sites could set cookies on `frrata.store`; the gate refuses
-    any `document.cookie` write that names a `Domain`, and sites have no route handlers that set cookies.
+12. **Cookies before the PSL lists `frrata.shop`** (ADR-0019 point 9; one-address plan P4a): sibling stores could set
+    cookies on `frrata.shop`; the gate refuses any `document.cookie` write that names a `Domain`, Frrata's app drops every
+    `Set-Cookie` from a site's response, and sites have no route handlers that set cookies. *(Was the sites domain
+    `frrata.store`: dropped 2026-11-16.)*
 13. **What "shows at once" means** (speed 10): Apply purges the shop's tagged draft entry; the pane's own reads skip the
     cache; hand edits save when the pointer is released, at most one save every 2 seconds, under a `brand` tag; so data
     shows in the pane within a couple of seconds, never the 30 s a stale entry would take.
@@ -443,26 +446,33 @@ every model or agent-version change.
 ### 12. Hosting on Frrata's account, end to end
 1. **New site** (Studio or the workspace, the partner): this app writes a `sites` row (site id) and outbox `site.create`;
    the fleet makes the repository `frrata-sites/site-<id8>` from Starter 0 with its rulesets, the Vercel project
-   `site-<id8>` in `frrata-sites` (bom1, no Git builds, Deployment Protection on), and the Frrata address
-   `<slug>.frrata.store`, whose production deployment is Frrata's own Opening soon page (noindex), its words read from
-   `src/components/storefront/words.ts` at build, never copied.
+   `site-<id8>` in `frrata-sites` (bom1, no Git builds, Deployment Protection on). The Frrata address is the store's own
+   `<store>.frrata.shop` host, which Frrata's app already holds; nothing is added to the site's project for it. Until the
+   store opens, and whenever the site is not live, that address answers the site's paths with Frrata's own Opening soon
+   page at the edge (noindex), its words from `src/components/storefront/words.ts`, never copied (ADR-0019 point 2;
+   one-address spec § 1b). *(Was `<slug>.frrata.store`, with Opening soon as the project's production deployment:
+   replaced 2026-11-16.)*
 2. **Keys** (security review: no inbound endpoint hands out keys): the `site.key` sender, inside the outbox row's tenant,
    mints the key at send time and sends it in the body of one HMAC-signed HTTPS request to the fleet (never in a row, a
    payload or a log); the fleet sets it as a sensitive variable (Preview: a test or build key per preview; Production: the
-   public key once the Website is set). A failed call deletes that key; the retry mints a new one. Every `site.*` sender
-   resolves the project with `sites where tenant_id = row.tenant and id = …`, and the fleet records each project's owning
+   public key, which answers once the store's site is code at one address: ADR-0019 point 7). A failed call deletes that
+   key; the retry mints a new one. Every `site.*` sender resolves the project with `sites where tenant_id = row.tenant and id = …`, and the fleet records each project's owning
    shop and refuses a request whose shop doesn't match (tenancy 7).
 3. **Preview and publish share one build path:** the fleet builds the commit SHA the request names, in its own sandbox
    with no secrets, runs Frrata's pinned checks on the output, and deploys to the preview domain behind protection; the
-   answer comes back through `webhook_events`. Publish promotes that attested artifact. Headers and CSP are overlaid by the
-   fleet from the signed policy at build (on Vercel there is no Frrata router: this replaces ADR-0014 amendment 4's router
-   for code sites, V0·1).
+   answer comes back through `webhook_events`. Publish promotes that attested artifact. **Headers and CSP:** Frrata's app sets them on
+   every partner response at the edge on one address, from the signed policy (ADR-0019; one-address plan P5·5); the fleet
+   also overlays them at build as a second layer, so a preview or a deployment's own URL carries them too (ADR-0014
+   amendment 10). *(Was: the fleet's overlay in place of a Frrata router; ADR-0019 supersedes amendment 4.)*
 4. **Handover:** the owner accepts that deployment id (amendment 6), sees what they will edit and the partner-layer files
-   (ADR-0016); **Open my store** (CAN_MANAGE, as today) promotes the opening version to the Frrata address.
-5. **Connect my domain** (the console, CAN_MANAGE): the owner types `www.kesar.in` (or the apex); the console shows the DNS
-   records including the store's own TXT proof (the `shop_domains.token` flow, as today); the fleet adds the host to the
-   site's project only after that proof; once certified the Website moves to it, the Frrata address redirects there, and
-   checkout stays on Frrata's host. The owner also registers the site address on its Razorpay account (frata-integrations
+   (ADR-0016); **Open my store** (CAN_MANAGE, as today) promotes the opening version, and Frrata's app routes the store's
+   address to it.
+5. **Connect my domain** (the console, CAN_MANAGE): the owner types `www.kesar.in` (or the apex); the console shows two
+   records, the host and its hidden `secure.<host>` (each a CNAME to Vercel; Domain Connect does both where offered), and
+   the store's own TXT proof (the `shop_domains.token` flow, as today). Frrata's app adds both hosts to its own project
+   after that proof (never the fleet, never the site's project); once both are certified, **site and checkout move
+   together** and `<store>.frrata.shop` redirects there (ADR-0019 points 1 and 5). *(Was: the host on the site's project
+   and checkout left on Frrata's host: replaced 2026-11-16.)* The owner also registers the site address on its Razorpay account (frata-integrations
    § Registered websites); the console's existing check says so.
 6. **What each person clicks:** the partner: New site, the chat's choices and Apply, Send, Publish, Hand over. The brand:
    Accept, Open my store, optionally Connect my domain, Content edits, Undo, Publishing per partner, and deleting a key in
@@ -476,28 +486,22 @@ every model or agent-version change.
 8. **Repositories are made from the template, never forked**; a build commit is the branch head Frrata read, never the
    model's input; partner skills come from a partner-level repository holding no brand content (ADR-0016).
 
-### 13. A Frrata address for code sites
-- **The domain:** a registrable domain apart from `frrata.shop` (checkout, sign-in, theme shops), the console's, Admin's and
-  Studio's, on the Public Suffix List (kit spec § 1). Recommended `frrata.store` for sites and `frrata-preview.site` for
-  previews, each bought for 3 years (the PSL wants more than two left), nameservers at Vercel, submitted to the PSL at once.
-  Both go on the reserved list (`OURS`, `src/domains/addresses/domains.ts`) so no brand can claim them.
-- **The address is the store's slug** (`<slug>.frrata.store`); a store rename moves it the way `<slug>.frrata.shop` moves
-  (a new row, the old one redirecting for 90 days), never left stale.
-- **The row:** a `shop_domains` row with `serves = 'site'`; "made by Frrata" is derived from the host (it ends in the
-  sites domain), not stored. Changes, each with a test per reader:
-  - only a definer writes a `serves = 'site'` row, its label taken from the shop's own slug or its name history, never a
-    typed value (tenancy 8); a trigger refuses a sites-domain host for any other shop; one sites-domain row per shop;
-  - the host CHECK, which refuses any `frrata.` label today, is relaxed only for a row whose host is exactly
-    `<label>.<sites domain>` and `serves = 'site'`; the preview domain never enters `shop_domains`;
-  - `check (serves <> 'site' or main_at is null)`: a site row is never Main, because `mainDomainIn` sets the checkout
-    origin;
-  - `MAX_HOSTS_A_SHOP` does not count Frrata's own address;
-  - the domain sweeps (D2·7) and Razorpay's website check read `serves`;
-  - the apex reader in `src/domains/addresses` treats the sites domain as a public suffix from day one, because
-    `shop_domains_live_apex` is unique and every address would read as apex `frrata.store` until the PSL lists it.
-- **The live key it needs:** with the row proved by the fleet (DNS and certificate) and the Website set to it, the public
-  key answers with no change to `app_storefront_key`.
-- **Opening soon:** before the store opens the address serves Frrata's page, not the partner's code (§ 12.1).
+### 13. A Frrata address for code sites: the store's own `frrata.shop` host (ADR-0019)
+- **The address is the store's own:** `<store>.frrata.shop`, or the brand's domain once connected, one address shared with
+  checkout (ADR-0019 points 1–3). A store rename moves it as it moves today. No sites domain is bought, no `shop_domains`
+  row is added for a site, and there is no `shop_domains.serves`.
+- **Who writes routing:** only Frrata's app, from one predicate (`app_website_of`), through its own single-flight sender;
+  the fleet reports deployments and never writes routing (one-address spec § 1a–1b).
+- **Previews** live on one separate registrable domain (the preview domain: a low-renewal name to choose, O6 in
+  `docs/setup.md`; one-address decision 6), submitted to the PSL at purchase, where Frrata's app serves nothing. It goes on
+  the reserved list (`OURS`, `src/domains/addresses/domains.ts`) and never into `shop_domains`.
+- **The live key:** a public key answers for a code site at one address (ADR-0019 point 7; the one-address plan's API
+  contract review B1).
+- **Opening soon:** before the store opens the address answers the site's paths with Frrata's page at the edge, not the
+  partner's code (§ 12.1).
+*(Replaced 2026-11-16: `<slug>.frrata.store` as a sites domain on the PSL; a `shop_domains` row with `serves = 'site'`
+written by a definer, its trigger, the relaxed host CHECK and the never-Main CHECK; `MAX_HOSTS_A_SHOP` skipping it; the
+apex reader's suffix entry. None of it is built.)*
 
 ### 14. Deviations from the approved one-screen mockup (BUILT AS DRAWN; for the owner)
 | Mockup element | What this spec builds | Reason | Owner seen |
@@ -513,11 +517,12 @@ The plan's V3b opens with a redraw of these three before any build.
   after handover, a developer's branch in Versions. Brand-facing (V2a, drawn new): Accept, Open my store, Connect my
   domain, the keys list. Rule 0; the agent's lines one sentence; a refusal says what to do.
 - **Tenancy:** every table below ships with its grant, RLS and policy in its migration, states its `frata_admin` and
-  `frata_builder` grants (by default none), and has a proof block in `scripts/verify/tenancy.sql` (PP1 § 87; V2a § 88,
-  C1 § 89, BT § 90, V3a § 91, V2b § 92, A1a § 93, V2c § 94, V3c § 95, V3d § 96; G-a grows § 81):
+  `frata_builder` grants (by default none), and has a proof block in `scripts/verify/tenancy.sql` (PP1 § 87; § 88 is
+  0151's; C1 § 89, V2a § 90, V3a § 91, V2b § 92, A1a § 93, V2c § 94, V3c § 95, V3d § 96; G-a grows § 81; the one-address
+  plan's P1 § 98, P2 § 99, P5 § 100):
   - **Shop tables:** `sites`, `site_deployments`, `site_field_declarations`, `studio_sessions` (`partner_id`,
     `partner_member_id`), `studio_turns` (ids and times only), `studio_proposals`, `studio_messages` (card kinds and ids
-    only), `studio_review_notes`, `studio_routines`, `brand_tokens`, `brand_seasons`, and V3c's intake tables.
+    only), `studio_review_notes`, `studio_routines`, `brand_tokens` and `brand_seasons` (P1's), and V3c's intake tables.
   - **Definer-only, no role grant:** `partner_credit_entries` (which also holds each turn's rupee rate),
     `partner_seats`, `partner_credit_purchases`, `partner_client_budgets`, `partner_member_caps`, `partner_credit_events`,
     `partner_credit_tries` (the try counts), `build_key_device_codes`, `studio_switches` (the kill switches).
@@ -547,9 +552,9 @@ The plan's V3b opens with a redraw of these three before any build.
   `src/lib/content/save.ts` (a transaction and an actor; it asserts the capability), called by the console action and by
   Apply; the hosting adapter in the fleet.
 - **SSOT / DRY:** the credit rule once (`src/domains/studio/credits.ts`); measured cost once per turn; site state derived
-  from `site_deployments`; the editable list from the gate's parse; the Frrata address from the slug and "made by Frrata"
-  from the host; one logo (`shop_settings.logo_url`, `doc_logo` for documents) and one contrast rule
-  (`src/domains/themes/contrast.ts`) reused by BT; the accent read by one rule for theme shops and code sites; who may
+  from `site_deployments`; the editable list from the gate's parse; whether a store's site is code at one address
+  from ADR-0019's one predicate; one logo (`shop_settings.logo_url`, `doc_logo` for documents) and one contrast rule
+  (`src/domains/themes/contrast.ts`) reused by P1; the accent read by one rule for theme shops and code sites; who may
   publish from PP's one function; who may save content from `contentSaver`.
 - **`studio_messages` is the screen's own record, not a copy:** a Managed Agents session ends and a runtime can change; the
   thread must outlive both. It holds only drawn lines (the partner's words, the agent's one-line messages, card kinds and
@@ -563,7 +568,7 @@ The plan's V3b opens with a redraw of these three before any build.
   and 10× would be 9,000; so one build in flight per site (a newer commit replaces a queued one), builds at the end of a
   turn only, at most 70 sessions at once, 30% of the cap kept for publishes, rollbacks and patches. Growth: `fields`
   stored once per distinct declaration (`site_field_declarations`); previews that never went live deleted after 30 days;
-  `site_deployments (site_id, live_from desc)` where live, with EXPLAIN in § 88; webhook rows deleted in batches after
+  `site_deployments (site_id, live_from desc)` where live, with EXPLAIN in § 90; webhook rows deleted in batches after
   30 days; `studio_messages` capped at 5,000 lines a site beside its 180 days.
 - **Performance:** Studio's pages read in one `withTenant` with `Promise.all`. The screen polls new `studio_messages` rows
   by keyset on `(session_id, id)` through a GET rows route (`private, no-store`, ≥ 40 a minute per member): every 1.5 s
@@ -572,7 +577,7 @@ The plan's V3b opens with a redraw of these three before any build.
   the `(workspace)` layouts already ship 136.1 kB of the 150 kB budget, so Studio lives under the bare `(partner)` layout
   (101 kB) and loads only drawers, Versions and late cards with `next/dynamic`; flow `94-studio` measures the bytes before
   the first card works, ≤ 150 kB (`APP_BUDGET_KB` is not raised). The console's `frame-src` is the fixed
-  `https://*.frrata-preview.site`.
+  `https://*.<preview domain>` (O6).
 - **Reliability:** every call to the fleet is an outbox row; a partner's message is an attempt (the turn row, committed
   before the send; one call, no outbox kind for it); webhooks stored under our key and swept by the cron; a dead turn
   returns its reserve; a session can always restart from the branch.
@@ -583,11 +588,11 @@ The plan's V3b opens with a redraw of these three before any build.
 - **Storefront API:** the build key's header tree, per-key limits, G-a's fields (each additive to `2026-12`);
   `api-contract-reviewer` on each.
 - **Blast radius:** `app_storefront_key` (every API request), the API's rewrites, `apiRequest` limits, the content actions
-  (moved), `app_remove_partner`, `shop_domains` and every reader (Settings › Address, `mainDomainIn`, `MAX_HOSTS_A_SHOP`,
-  the D2·7 sweeps, Razorpay's check, the apex reader), the starter's `lib/frrata.ts` (generated), Admin's partner and
+  (moved), `app_remove_partner`, every reader of `site_origin`, moved to ADR-0019's
+  predicate in the one-address plan's P5·3 (no `shop_domains` change here: the sites domain is gone), the starter's `lib/frrata.ts` (generated), Admin's partner and
   sites pages, the console's CSP (`frame-src` gains the preview domain), `check:actions` and `check:capabilities` (the
   `asTurn` chokepoint, two webhook entry points), `/api/cron/drain`, CLAUDE.md's key line (owner decision 11), ADR-0014
-  amendment 4, ADR-0015 § 5, ADR-0017's Decision, ADR-0018 decision 5.
+  amendment 10 (amendment 4 superseded by ADR-0019), ADR-0015 § 5, ADR-0017's Decision, ADR-0018 decision 5.
 
 ## Stress test
 | Severity | What | Where | Fix |
@@ -598,7 +603,7 @@ The plan's V3b opens with a redraw of these three before any build.
 | High | A Builder's role is read-only and executes no definer, so a Builder's turn could write nothing | `src/lib/db/actor.ts` | `asTurn` as the second Actor maker; definers write Studio rows; propose tools refuse Builders |
 | High | One GitHub App for fleet and sessions would put the ruleset bypass in the agent's hands | — | Two Apps (§ 5) |
 | High | Hosting as guessed costs 7.6–19.1% of revenue and fails 3× | § 8 | Price on the pilot's measured usage before any paid site |
-| High | A second store's Frrata address would be refused (one live apex); the host CHECK refuses `frrata.` labels | `src/lib/db/schema-addresses.ts:95,99` | The suffix entry; the CHECK relaxed for site rows only |
+| High | A second store's Frrata address would be refused (one live apex); the host CHECK refuses `frrata.` labels | `src/lib/db/schema-addresses.ts:95,99` | Gone with the sites domain: each store keeps its own `frrata.shop` host (ADR-0019). *(Was: the suffix entry and a relaxed CHECK.)* |
 | High | Per-network limits throttle every partner at once | pilot G27; `apiTestIp` | Per-key limits |
 | Medium | A repository's instruction files steer the agent | Managed Agents resources | Mount by SHA; check `.claude/`, `CLAUDE.md`, `AGENTS.md`, `.mcp.json` |
 | Medium | The request that crosses a budget is not inside the ceiling | Managed Agents budget | The budget formula (§ 6.7) |
@@ -608,7 +613,7 @@ The plan's V3b opens with a redraw of these three before any build.
 | High | The shared drain carries about 2,300 rows a day against 60,000 | `/api/cron/drain` | Tools in the webhook's `after()`; `/api/cron/studio` every minute |
 | High | A deleted build key would keep working up to an hour | `src/lib/queries/storefront-keys.ts:34` | Uncached lookup for build keys |
 | High | `partner_id` matched only in code | `src/lib/db/actor.ts:54` | `app.partner_id`, restrictive policies, composite keys |
-| Medium | A site row as Main would move checkout | `mainDomainIn` | CHECK: a site row is never Main |
+| Medium | A site row as Main would move checkout | `mainDomainIn` | Gone: no site row (ADR-0019); `checkoutOrigin` never moves (one-address plan, API review M2). *(Was: a never-Main CHECK.)* |
 | Low | Preview of a code change waits for a build | runtime A | Measured; § 14 deviation 3; switch signal § 2 |
 
 ## Out of scope
@@ -633,7 +638,8 @@ fails · a package mirror before V2c · memory stores.
 8. **GitHub organisation `frrata-sites`** on Team, passkeys required, Actions off, two Apps (session, fleet).
    Recommended: yes — rulesets on private repositories need Team.
 9. **Domain names:** `frrata.store` for sites, `frrata-preview.site` for previews, three years each, on the reserved list.
-   Recommended: yes — available today, and a shop's name reads as a shop.
+   Recommended: yes — available today, and a shop's name reads as a shop. *(Replaced 2026-11-16 by ADR-0019: only the
+   preview domain is bought, a low-renewal name (O6); no sites domain.)*
 10. **The build key** (`frs_build_`, header only, no CORS, per session, per preview and per developer). Recommended: yes —
     the only way the agent reads the store without ever holding a key.
 11. **Build keys after opening for linked partners**, amending ADR-0018 decision 5 and CLAUDE.md's key line as V0·3 shows:
@@ -665,8 +671,11 @@ fails · a package mirror before V2c · memory stores.
 25. **ADR-0015 § 5 amended for Builder turns** (`asTurn` as the second Actor maker; Builders propose nothing).
     Recommended: yes — a Builder builds and previews, never changes the store.
 26. **ADR-0014 amendment 4's router replaced, for code sites on Vercel, by the fleet overlaying headers at build.**
-    Recommended: yes — Vercel has no Frrata router; the policy still decides the headers.
-27. **ADR-0019 for the agent runtime, `asTurn` and a third Postgres setting `app.partner_id`**, held by `check:studio`
+    Recommended: yes — Vercel has no Frrata router; the policy still decides the headers. *(Replaced 2026-11-16 by
+    ADR-0019: Frrata's app sets headers on partner responses at the edge on one address; the fleet's overlay is a second
+    layer, ADR-0014 amendment 10.)*
+27. **ADR-0020 (drafted as ADR-0019, renumbered: ADR-0019 is "One address") for the agent runtime, `asTurn` and a third
+    Postgres setting `app.partner_id`**, held by `check:studio`
     and restrictive policies. Recommended: yes — the partner is then a lock in the database, not only in code.
 28. **The code-site gate's speed floor:** ≤ 150 kB gz first-load script, 1 preloaded font, 2 high-priority images; the
     pilot cuts two font preloads before it moves. Recommended: yes — the pilot is at 143.3 kB and 3 fonts today.

@@ -33,8 +33,9 @@ checkout, new here. One lane released at a time; phases in different lanes may r
 | 5 | **P6 One bag** | B | the site uses Frrata's bag | P5 | the pilot's bag drawer |
 | 6 | **P7 Studio designs checkout** | D | checkout design in Studio's pane | P2; Studio V3b | approved one screen + Checkout tab |
 **Proof blocks** in `scripts/verify/tenancy.sql`: § 98 (P1), § 99 (P2), § 100 (P5's predicate and keys; § 81 and § 86
-rewritten). § 87 and § 88 are taken (0150, 0151); the Studio plan's § 88–96 must be renumbered. **New e2e flows** take the
-next free numbers at build (93 and 95 are taken; the Studio plan's `93-site-hosting` must be renamed).
+rewritten). § 87 and § 88 are taken (0150, 0151); the Studio plan's blocks are renumbered (2026-11-16: V2a § 90, BT's number, freed
+by P1's § 98; C1 § 89, V3a § 91 to V3d § 96 unchanged). **New e2e flows** take the next free numbers at build (93 and 95
+are taken; the Studio plan's `93-site-hosting` is renamed `site-hosting`).
 **Spikes have pass/fail lines,** written in each.
 
 ## P0 · Bag link fix (lane E)
