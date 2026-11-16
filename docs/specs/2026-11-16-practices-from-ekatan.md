@@ -1,6 +1,6 @@
 # Practices from Ekatan: which of its gates, hooks and evals Frrata takes
-Status: draft · Date: 2026-11-16 · Mockup: none — no screen; the proposal page stands in for it: https://claude.ai/artifact/7x3xUf5cnMgifDtVTMACWZ (`docs/mockups/2026-11-16-practices-from-ekatan.html`) ·
-Approved: pending (owner)
+Status: active · Date: 2026-11-16 · Mockup: none — no screen; the proposal page stands in for it: https://claude.ai/artifact/7x3xUf5cnMgifDtVTMACWZ (`docs/mockups/2026-11-16-practices-from-ekatan.html`) ·
+Approved: owner, 2026-11-16 (calls 1, 2, 4, 6 as recommended; 3 and 5 left to Claude: the drift hook blocks; plans from 2026-11-17) · Plan: `docs/plans/2026-11-16-practices-from-ekatan.md`
 
 The owner asked on 2026-11-16: "share best practices ekatan has that frrata can use … work/review those and implement."
 Ekatan (`premabnrj-dot/ekatanv2`) is built the same way as Frrata: CLAUDE.md of rules, skills, grep gates, ADRs and
