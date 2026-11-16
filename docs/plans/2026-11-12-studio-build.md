@@ -1,25 +1,50 @@
 # Studio and partners: the build
-Status: active (owner, 2026-11-12: "build now", after the v2.4 Studio and Admin mockups) · Specs:
+Status: active (owner, 2026-11-12: "build now") for T1a–P2, built; **the remaining phases are a draft for the owner**
+(revised 2026-11-16) · Specs: `docs/specs/2026-11-16-studio-agent.md` (the agent, hosting, credits; draft),
+`docs/specs/2026-11-16-partner-publishing.md`, `docs/specs/2026-11-15-studio-one-screen.md`,
 `docs/specs/2026-11-12-studio-intake-and-team.md`, `docs/specs/2026-11-12-studio-shell-clients-billing.md`,
-`docs/specs/2026-11-12-admin-partners.md`, `docs/specs/2026-11-11-frrata-studio.md`, ADR-0015 (proposed) ·
-Mockups: https://claude.ai/artifact/KiqKqrFCx4enB8KUrnh5Du, https://claude.ai/artifact/PaRX2MLsw11JDH6dFdbMCv
+`docs/specs/2026-11-12-admin-partners.md`, `docs/specs/2026-11-11-frrata-studio.md`, `docs/specs/2026-11-12-kit-and-fleet.md`,
+ADR-0014 to ADR-0018 · Mockups: https://claude.ai/artifact/KiqKqrFCx4enB8KUrnh5Du (Studio v2.4),
+https://claude.ai/artifact/PaRX2MLsw11JDH6dFdbMCv (Admin), https://claude.ai/artifact/LdA5saPkzt36W1zJsxF1QZ (the one
+screen), https://claude.ai/artifact/NfBB7SwJk8chukgJZVhDFr (kit and fleet); new ones per phase below
+**Review (remaining phases):** pending, 2026-11-16 (architecture, security, unit economics, speed, tenancy)
 
 ## Order (each phase ships alone, push to `main` after its gates)
-| Phase | What a partner can do after it | Needs first |
-|---|---|---|
-| **T1a Teams** (built 2026-11-12) | An agency owner invites Leads, gives each the brands they work on, removes them; Admin sees a partner's team and can suspend a partner | nothing (this plan) |
-| T1b Partner passkeys | Every partner person signs in with a passkey; publish and hand over ask again | T1a |
-| T1c Builders (ADR-0015) | Invite Builders who never see orders, shoppers or costs — **built 2026-11-15** on `claude/lane-c-builders` (`docs/plans/2026-11-15-t1c-builders.md`) | T1a, T1b; ADR-0015 accepted |
-| P2 Clients | Clients view: stage, next, the partner's own billing records, share | T1a |
-| C1 Studio credits | Seat, top-ups by UPI with GST invoices, ledger, budgets, reserve and release | Frrata's own payment account for partners; the owner's sign-off on seat pricing |
-| A1 Admin credits and payouts | Admin's credits and payouts screens | C1; payouts also Phase 6 and the CA |
-| V0 Decisions | Hosting ADR (amends ADR-0005); ADR-0002 storefront-key amendment | the owner |
-| V1 Storefront API SA1 + kit + Starter 0 | A developer builds a site on the API | V0 |
-| V2 Hosting | Sites deploy to their own domain; previews; handover | V0, V1 |
-| V3 Studio | The one-session chat: intake, brand, design system, pages, build, publish, hand over | V1, V2, C1, T1c |
+Revised 2026-11-16 for the owner ("revise the studio plan to keep it fully agentic and use our own claude api as planned
+and let's finishup the remaining of the partner/studio work"): `docs/specs/2026-11-16-studio-agent.md` (draft) holds the
+design; this section holds the order. Nothing below is built before its phase's mockup and the owner's decisions it names.
 
-Studio itself (V3) cannot be built before V1 and V2: a site has nothing to read and nowhere to run. The phases before
-it are real work a partner uses today.
+### Built
+| Phase | What it gave | Done |
+|---|---|---|
+| T1a Teams | Owner and Leads, assignments, Admin suspend and reinstate | 2026-11-12 |
+| T1b Partner passkeys | Every partner person on a passkey; hand over asks again | 2026-11-15 |
+| T1c Builders (ADR-0015) | Builders who never see orders, shoppers or costs | 2026-11-15 |
+| V1 Storefront API SA0, SA1, SA1b; content layer | Keys, catalogue reads, content, previews, the bag link, the starter | 2026-11-15/16 |
+| P2 Clients | The Clients view, the partner's own billing records, the share | 2026-11-16 |
+| PP1 Policies after handover | (being built now) a partner can't change policies or legal details after handover | — |
+
+### Remaining, with lanes
+Lanes: **A** hosting, **B** API and data, **C** money, **D** the agent. After V0, the first phase of each lane runs at once;
+the orchestrator releases one lane at a time (`docs/plans/2026-11-15-parallel-lanes.md` rules). Partners get value from
+G-a and V2a (sites on Frrata's account, built with their own Claude Code as the pilot was) weeks before Studio opens.
+| # | Phase | Lane | A partner or brand can, after it | Needs first | Mockup |
+|---|---|---|---|---|---|
+| 1 | **V0 Decisions** | all | — (every later phase knows its terms) | the owner | none — decisions and ADR text, no screen |
+| 2 | **G-a API gaps that block sites and the agent** | B | the pilot and every code site get Contact, About and FAQ templates that fit a drawn design, a product's collection, collection images, JSON-LD, the media host, the compliance link, previews that don't fail under load, the build key | V0 (10) | **new:** Console › Content's page templates (Contact, About blocks, FAQ topics, emphasis in titles) |
+| 2 | **V2a Sites on Frrata's account** | A | a partner never deploys: New site makes the repository, project and Frrata address; previews, publish and hand over from the workspace; the brand opens on `<slug>.frrata.store` and can connect its own domain in the console | V0 (1, 8, 9, 14); G-a's build key for developers after opening | **new:** Settings › Website, Clients › New site and site actions, the handover's version accept · **approved:** Admin › Sites (kit-and-fleet mockup), Content › Placements (content mockup) |
+| 2 | **C1 Studio credits** | C | a partner buys a seat or packs by UPI with GST invoices, sees the ledger, sets client budgets; credits pay V2a's preview builds before handover | V0 (6, 7); Frrata's seller real (billing R2) | **approved:** Studio v2.4 Credits & billing (owner's Q1–Q6, 2026-11-12); a final phase mockup as the lanes rule asks |
+| 2 | **V3a Agent runtime and the 20-task proof** | D | Frrata staff build sites with Frrata's agent; the proof prices credits on measurement | V0 (2, 3, 4, 5, 12, 13, 15) | **approved:** Admin › Agent (kit-and-fleet mockup) · the proof's report is a page for the owner |
+| 3 | **BT Brand tokens (V1.5)** | B | a brand's colours, type, logo and seasons are data: the partner edits them on the preview, the owner ends a season in the console; site, checkout, emails and cards read one source | G-a | **new:** Console › Brand (and Season); Studio's side is the approved one screen |
+| 4 | **V2b Publishing after handover (PP2, PP3)** | A | the owner picks Publishes freely or Ask me first per partner; partners publish after handover; the owner gets Undo | V2a, PP1 | **new:** partner-publishing spec § PP3's list |
+| 5 | **A1a Admin credits** | C | Frrata staff see every partner's ledger, grant or return credits, refund a purchase, see farming signals | C1 | **approved:** Admin mockup (2026-11-12) |
+| 6 | **V2c Fleet care** | A | every hosted site gets Frrata's security and legal fixes within 24 h; kit updates as drafts; kill switches; the package mirror (the agent may then add a package) | V2a | **approved:** kit-and-fleet mockup |
+| 7 | **V3b Studio, the one screen** | D | a partner builds and keeps a site end to end with Frrata's agent in chat, phone included | V3a passed; V2a; C1; BT; G-a | **approved:** the one screen (2026-11-15) · **new:** the states the agent spec adds (§ Design review › UI/UX) |
+| 8 | **V3c Intake link** | D | the brand sends its logo, guide, photos and words through one link | V3b | **approved:** Studio v2.2/v2.4 intake, checked against the one screen; the brand's link page re-drawn if it differs |
+| 9 | **V3d Routines** | D | a saved ask runs on a schedule and leaves a draft for a person | V3b, V2b | **new:** content-layer spec § Studio v2.5 item 1 |
+| later | **G-b API gaps that make sites better** | B | a bag that shows its total and delivery, live availability, a PIN check, multi-select filters, best sellers | G-a | none — API only |
+| later | **A1b Payouts** | C | the partner share paid monthly | A1a; Phase 6; the CA | **approved:** Admin mockup |
+Studio itself (V3b) cannot open before V2a and C1: a site would have nowhere to run and turns nothing to pay with.
 
 ## T1a · Teams: Owner and Leads
 As built: migrations 0123 (tables) and 0124 (access), proof §77, e2e `80-partner-team`. Review changes folded in before
@@ -275,11 +300,239 @@ is next.
 Before: flows 40, 75, 80 and `verify:tenancy` green on main. Each task: `npm test`, `npm run typecheck`,
 `verify:tenancy` (task 2 on), `npm run e2e -- --only partners,staff-passkeys,partner-team,look,offers,ship`.
 
+## V0 · Decisions (all lanes; documents only)
+- **After it:** every phase below has its terms; the owner's accounts exist.
+- **Needs first:** the owner's answers to `docs/specs/2026-11-16-studio-agent.md` § Owner decisions 1–16.
+- **Mockup:** none — decisions, no screen.
+- **Regression net:** none (no code); `npm run check:docs` and `npm run check:skills` stay green.
+| # | Task | Verify |
+|---|---|---|
+| V0·1 | ADR-0017 → accepted as revised, the owner's words and date; ADR-0005 gains its consequence line | `npm run check:docs` |
+| V0·2 | ADR-0019 "Studio's agent: Managed Agents, the runtime adapter, Frrata's Claude account" from the spec §§ 2–3 and the switch signals | `npm run check:docs` |
+| V0·3 | ADR-0018 amendment: the build key (`frs_build_`, header only, dynamic tree, 24 h, one per session, after opening) and per-key limits for test and build keys | `npm run check:docs` |
+| V0·4 | ADR-0016 § 2: the `frrata-sites` organisation, the GitHub App, rulesets per repository | `npm run check:docs` |
+| V0·5 | `frata-unit-economics`: the credit (loaded cost, ₹94, the 1.08 factor), the site-build figures and hypotheses; version bump | `npm run check:skills` |
+| V0·6 | `frata-integrations`: an Anthropic section (Managed Agents facts, Agent SDK terms, each dated), Vercel Sandbox, GitHub rulesets; version bump | `npm run check:skills` |
+| V0·7 | `frata-architecture`: § Studio (runtime adapter, tools through existing saves, tenant from the turn row, build key); version bump | `npm run check:skills` |
+- **The owner sets up:** an Anthropic Console organisation in the company's name with billing and workspaces `studio` and
+  `studio-eval`; the GitHub organisation `frrata-sites` on Team with passkeys required; the Vercel team `frrata-sites` on
+  Pro; the two domains bought for three years with Vercel nameservers, submitted to the Public Suffix List.
+- **Reviews:** `architecture-reviewer`, `security-reviewer`, `unit-economics-reviewer` on the ADR text.
+- **Owner decisions:** all sixteen; 1–5 unblock lanes A and D, 6–7 lane C, 8–9 and 14 lane A, 10 lane B.
+
+## G-a · API gaps that block sites and the agent (lane B)
+From the pilot (`mokobara/docs/design/api-gaps.md`, 2026-11-16). Each is additive to `2026-12` (a released version only
+grows, `frata-storefront-api` rule 6). G22 (Home placements) needs `site_deployments` and moves to V2a.
+- **After it:** the pilot's deviations 1–13 that wait on the API close as the site picks each up; previews and test-key
+  sites stop answering 500 under load; developers and the agent read drafts after the store opens.
+- **Needs first:** V0·3.
+- **Mockup:** new, for Console › Content's page templates (Contact, About blocks, FAQ topics, title emphasis), phone and
+  desktop; the API fields need none.
+- **Regression net:** e2e `91-storefront-api`, `92-storefront-sale`, `89-content`, `73-pages`, `88-announcement`;
+  `npx vitest run src/domains/storefront-api` (the released snapshot); `node scripts/verify/api-isr.mjs`; proof § 81, § 86.
+| # | Task | Verify |
+|---|---|---|
+| G·1 | G27: test keys limited per key as well as per network (`apiTestKey`), failing closed; the starter caches a test key's reads 15 s when deployed and doesn't prefetch nav links (the pilot's fix, through `node scripts/kit-sync.mjs`) | `npx vitest run src/lib/storefront-api`; `npm run e2e -- --only storefront-api,storefront-sale` |
+| G·2 | The build key: kind `build` in `storefront_keys` (CHECK 24 h, session id), the `Frrata-Key` header tree (dynamic, `private, no-store`, never `k/`), `app_storefront_key` answers it after opening; Studio-made and CLI-made only; the starter sends the header for a build key | `npm run verify:tenancy` (§ 81 grows); `npm run check:api`; `npm run check:tenant` |
+| G·3 | G26 `shop.mediaOrigin`; G11 `image` on a collection; G6 `collection` on a product (its first collection in the store's order); G14 the compliance certificate as a `policies` kind; G15 `jsonLd` on shop, product and collection (`<` escaped) | `npx vitest run src/domains/storefront-api`; `npm run check:api` |
+| G·4 | G20 a topic per FAQ question; G21 emphasis runs in page titles; G23 a Contact page template; G24 About as free blocks (text, image, quote, a button to a shop path); the console's editors as drawn | `npm test`; `npm run e2e -- --only content,pages` |
+| G·5 | The starter and the pilot read each new field; the pilot's deviations table updated | `cd kit/starter && npm run check && npm run build`; `npm run e2e -- --only storefront-sale` |
+- **Reviews:** `api-contract-reviewer`, `security-reviewer` (the header tree, JSON-LD, templates), `speed-reviewer`
+  (entry sizes, the header tree's uncached reads), `tenancy-auditor` (G·2), `words-reviewer`, `design-system-reviewer`,
+  `mockup-parity-reviewer`, `impact-reviewer` per task.
+- **Owner decisions:** 10 (the build key); a product's home collection = the first in the store's order (recommended);
+  JSON-LD now (the pilot's decision 2 was "wait for the API").
+
+## V2a · Sites on Frrata's account (lane A)
+- **After it:** a partner (with their own Claude Code, or a Frrata developer) never deploys: New site makes the
+  repository in `frrata-sites`, the Vercel project and the Frrata address; Preview, Publish and Hand over sit on the
+  client's row; the brand accepts that deployment, opens on `<slug>.frrata.store` and may connect its own domain in the
+  console. The pilot moves in.
+- **Needs first:** V0 (1, 8, 9, 14) and the owner's accounts; G·2 for developers after opening.
+- **Mockup:** new: Settings › Website (the Frrata address, Connect my domain, Opening soon), Clients › New site and the
+  site's actions (Preview, Publish, Hand over), the handover's accept of a version; approved: Admin › Sites (kit-and-fleet),
+  Content › Placements (content mockup).
+- **Regression net:** e2e `40-partners`, `53-domains`, `87-partner-clients`, `89-content`, `91-storefront-api`,
+  `92-storefront-sale`, `12-security`; `npm run verify:tenancy`; `node scripts/verify/api-isr.mjs`.
+| # | Task | Verify |
+|---|---|---|
+| V2a·1 | Migrations: `sites` (one per shop, site id), `site_deployments` (cause, commit, kit and policy versions, approval, checks verdict columns, the parsed `fields` declaration frozen, `live_from`, `rolled_back_at`; live and held derived), `shop_domains.by_frrata` and `serves`; grants, RLS, policies; proof § 87+ | `npm run verify:tenancy`; `npm test` |
+| V2a·2 | The apex reader treats Frrata's sites domain as a public suffix (the `shop_domains_live_apex` trap, spec § 13) | `npx vitest run src/domains/tenancy` |
+| V2a·3 | Outbox kinds `site.create`, `site.build`, `site.promote`, `site.domain`, `site.key`; `/api/webhooks/fleet` (raw-body HMAC, size cap, our key, answered at once) in ENTRY_POINTS; results processed under the deployment row's tenant | `npm test`; `npx vitest run src/lib/sites` |
+| V2a·4 | The key mint for the fleet: a signed request, the key made inside the site's tenant, the plain key in that response only, an audit row | `npx vitest run src/lib/sites`; `security-reviewer` on the diff |
+| V2a·5 | The fleet service (its own repository `frrata-fleet`, a project in the `frrata-sites` team, the only holder of the host and GitHub App tokens): repository from Starter 0 with its ruleset; project in bom1 without Git builds; the Frrata address with Frrata's Opening soon page; build in a Vercel Sandbox with no secrets → Frrata's pinned checks → prebuilt deploy → promote; rollback; domains; a site's kill switch (maintenance page) | its tests; `node scripts/verify/fleet-smoke.mjs` against a staging team (new) |
+| V2a·6 | The gate on build output: the hard floor (kit spec § 4), no key-shaped string, the legal block on every page, the bag link, `frrata/fields.json` parsed and capped, the outside-host classifier PP3 reads | `npx vitest run src/domains/sites` |
+| V2a·7 | G22 placements: the `placements` resource and Content › Placements drawn from the live deployment's declaration | `npm run check:api`; `npm run e2e -- --only content` |
+| V2a·8 | Console and workspace as drawn: Settings › Website, Connect my domain (`serves: site`; the D2·7 sweeps skip site rows), Open my shop promotes the opening version, Clients › New site and actions, the handover accepts a deployment id; build mode publishes to the signed preview only | `npm run e2e -- --only partners,domains,partner-clients,site-hosting` (new flow `93-site-hosting` on a fake fleet) |
+| V2a·9 | A partner's developer added to one repository (owner or assigned Lead), removed with the person or the partner (`app_remove_partner` gains it); previews before handover capped at 20 a site a day until C1 charges 1 credit | `npm run verify:tenancy`; `npm run e2e -- --only partner-team` |
+| V2a·10 | Admin › Sites (kit version, checks, build mode or owned, partner, kill switch) | `npm run e2e -- --only neel-admin` |
+| V2a·11 | The pilot moves: repository into the organisation, project into `frrata-sites`, its domain re-pointed, its key re-minted; the owner told; the old project removed after a week | the pilot's pages answer 200 on its domain; `npm run e2e -- --only storefront-sale` |
+- **Reviews:** `architecture-reviewer`, `tenancy-auditor`, `security-reviewer`, `speed-reviewer` (the build path, the key
+  lookup), `unit-economics-reviewer` (hosting priced on the pilot's measured bytes, requests and build minutes),
+  `api-contract-reviewer` (placements), `words-reviewer`, `design-system-reviewer`, `mockup-parity-reviewer`,
+  `e2e-runner`, `impact-reviewer` per task.
+- **Owner decisions:** 1, 8, 9, 14; hosting allowances priced on measured numbers before the first paid site (ADR-0017
+  revised 3); Vercel's written word on hosting sites inside Frrata's plans (revised 2); a person's security review of a
+  partner's first handover (kit spec § Handover).
+
+## C1 · Studio credits (lane C)
+- **After it:** a partner buys Studio (₹2,999, 150 credits), Studio Plus (₹9,999, 500) or packs (₹1,900, 100) by UPI,
+  card or netbanking, with GST invoices on its GSTIN; sees balance, usage by client and person, invoices; sets client
+  budgets (warn 80%, pause 100%). Credits pay V2a's previews before handover, then V3's turns.
+- **Needs first:** V0 (6, 7); Frrata's seller real for invoices (billing rework R2); Frrata's own Razorpay account
+  (exists for merchant billing: provider `frrata_razorpay`).
+- **Mockup:** approved (Studio v2.4 Credits & billing); one final phase mockup before build.
+- **Regression net:** e2e `62-billing`, `87-partner-clients`, `40-partners`; `npx vitest run src/lib/billing`;
+  `npm run verify:tenancy`.
+| # | Task | Verify |
+|---|---|---|
+| C1·1 | `src/domains/studio/credits.ts`: credits from loaded cost (⌈cost ÷ ₹6.33⌉), reserve and settle (never above the reserve), the expiry order (soonest first; seat 2 months, packs 12), budgets | `npx vitest run src/domains/studio` |
+| C1·2 | Platform tables, definers only, no role grant (P2's pattern): `partner_credit_entries` (append-only: grant, purchase, reserve, settle, release, return, expire), `partner_seats`, `partner_credit_purchases`, `partner_client_budgets`; every write counted first; proof block | `npm run verify:tenancy`; `npm run check:tenant` |
+| C1·3 | Purchases through Frrata's own Razorpay (an order per purchase, rows before requests; the seat on a UPI AutoPay mandate with the RBI pre-debit notice), GST invoices from billing's engine; webhook events through the existing route under their own purpose | `npx vitest run src/lib/billing`; `npm run e2e -- --only billing` |
+| C1·4 | The workspace's Credits & billing page as drawn (owner sees money; Leads see client budgets they are assigned) | `npm run e2e -- --only partner-clients`; `mockup-parity-reviewer` |
+| C1·5 | One reserve-and-settle door for V2a previews and V3 turns, with Frrata-side failures returned | `npx vitest run src/lib/studio` |
+| C1·6 | Emails at 80% of a budget and low balance (SES, the security-email pipe's pattern) | `npm run e2e -- --only email` |
+- **Reviews:** `unit-economics-reviewer`, `security-reviewer`, `tenancy-auditor`, `architecture-reviewer`,
+  `speed-reviewer`, `words-reviewer`, `design-system-reviewer`, `mockup-parity-reviewer`.
+- **Owner decisions:** 6, 7; Frrata's GSTIN on partner invoices; the CA on GST of Anthropic's imported service (the
+  loaded cost assumes the input credit).
+
+## V3a · Agent runtime and the 20-task proof (lane D)
+- **After it:** Frrata's staff build sites with Frrata's agent on the demo shop and the pilot's copy; the proof's report
+  gives the owner measured credits per page and per site, failure rates and the go or no-go for V3b.
+- **Needs first:** V0 (2, 3, 4, 5, 12, 13, 15); G·2 (the build key); V2a·5 for the full preview path (until then the
+  proof's graders run in the sandbox).
+- **Mockup:** approved: Admin › Agent (kit-and-fleet mockup); the report is a page for the owner.
+- **Regression net:** e2e `89-content`, `73-pages`, `86-builders`, `91-storefront-api` (the content save moves); proof
+  § 80, § 82.
+| # | Task | Verify |
+|---|---|---|
+| V3a·1 | The spike (one week, `studio-eval`): a Managed Agents session on Starter 0 for Kesar; a GitHub App token as the repository token; `limited` hosts; the build key in a vault header; `next build` time and memory in the sandbox; preview upload; concurrency and rate limits; cache shares; the processing region; Vercel OIDC to Anthropic. The answers go into `frata-integrations` with dates | the spike's report read; `npm run check:skills` |
+| V3a·2 | `src/domains/studio/` pure rules: a turn's state from timestamps, the budget raise per turn, the tool allow-list | `npx vitest run src/domains/studio` |
+| V3a·3 | Migrations: `studio_sessions`, `studio_turns` (the reserve written before the request, ADR-0008), `studio_messages`, `studio_review_notes`; `frata_builder` select and insert on its own sessions; `app_turn_actor(turn)`; proof block | `npm run verify:tenancy`; `npm run check:capabilities` |
+| V3a·4 | `src/lib/studio/runtime.ts` with the Managed Agents implementation; the agent and environment as files synced by `ant apply` (pinned model, toolset, custom tools, web tools off, hosts from the policy version) | `npx vitest run src/lib/studio` |
+| V3a·5 | `/api/webhooks/anthropic` (the SDK's Standard Webhooks check, size cap, our key, 200 at once); outbox kinds `studio.send`, `studio.tool`, `studio.settle` and their senders | `npm test`; `npx vitest run src/lib/studio` |
+| V3a·6 | The content and token saves moved from the console's actions into `src/lib/content/save.ts`, both doors calling it; then the tool executors in `src/lib/studio/tools/` | `npm run e2e -- --only content,pages` green before and after |
+| V3a·7 | The `.claude/` check before a session; the repository token minted, rotated and revoked per session | `npx vitest run src/lib/studio` |
+| V3a·8 | Admin › Agent: sessions, today's spend, the agent version, the five kill switches (two people) | `npm run e2e -- --only neel-admin` |
+| V3a·9 | `check:studio` (new gate): tool executors import only the allowed save and query modules, never `db()`; the agent file pins a model id, web tools off, hosts equal the policy | `npm test` (the gate run against its own description, CLAUDE.md) |
+| V3a·10 | The proof: `scripts/studio/eval.mjs` runs the 20 tasks × 3 trials on `studio-eval` and writes the report (credits, pass rates, failures, change-to-preview, speed and accessibility against Starter 0) | the report read; thresholds in the spec § 9 |
+- **Reviews:** `architecture-reviewer`, `security-reviewer`, `tenancy-auditor`, `unit-economics-reviewer` (on the report),
+  `speed-reviewer` (the webhook-to-tool round trip), `impact-reviewer` per task.
+- **Owner decisions:** 2, 3, 4, 5, 12, 13, 15; then go or no-go on the report.
+
+## BT · Brand tokens (V1.5, lane B)
+- **After it:** a brand's palette, type, radius, logo and seasons are data in the console, read by the site (API), checkout,
+  emails and share cards from one source; theme shops keep their look's `site` layer until V5.
+- **Needs first:** G-a.
+- **Mockup:** new: Console › Brand and Season (owner, phone first).
+- **Regression net:** e2e `05-shop-look` (baselines unchanged for theme shops), `10-checkout`, `71-email`, `64-seo`
+  (cards), `91-storefront-api`.
+| # | Task | Verify |
+|---|---|---|
+| BT·1 | `src/domains/brand/`: tokens (six palette roles, type, radius), seasons by dates with a stop time, the contrast floor, plain text | `npx vitest run src/domains/brand` |
+| BT·2 | `brand_tokens` (one row a shop, version, previous) and `brand_seasons`; grants, RLS, proof block | `npm run verify:tenancy` |
+| BT·3 | `shop.brand` in the API (additive; a future season never served), preview through the token | `npm run check:api`; `npx vitest run src/domains/storefront-api` |
+| BT·4 | Checkout, emails and cards read the logo and accent from tokens when set (else today's look) | `npm run e2e -- --only checkout,email,seo,shop-look` |
+| BT·5 | Console › Brand and Season as drawn; the one save Studio's hand edits will call | `npm run e2e -- --only content`; `mockup-parity-reviewer` |
+- **Reviews:** `architecture-reviewer`, `tenancy-auditor`, `security-reviewer`, `speed-reviewer`, `api-contract-reviewer`,
+  `design-system-reviewer`, `words-reviewer`, `mockup-parity-reviewer`.
+- **Owner decisions:** whether the owner may edit tokens after handover without the partner (recommended: yes, the
+  owner's brand; the partner is told).
+
+## V2b · Publishing after handover: PP2 and PP3 (lane A)
+As `docs/specs/2026-11-16-partner-publishing.md` § PP2–PP3.
+- **After it:** the owner sets Publishing per partner; a partner publishes after handover; ordinary versions go live with
+  an Inbox line and Undo; a new outside host or a domain change waits for the owner; under Ask me first every version waits.
+- **Needs first:** V2a, PP1.
+- **Mockup:** new (the spec's PP3 list: the control, the Inbox lines, the review screen, Undo, states).
+- **Regression net:** e2e `40-partners`, `87-partner-clients`, `93-site-hosting`; proof blocks for `partner_links` and
+  `site_deployments`.
+| # | Task | Verify |
+|---|---|---|
+| V2b·1 | The pure rule in `src/domains/partners/` (role, has an owner, the choice, the version's class) and its table test | `npx vitest run src/domains/partners` |
+| V2b·2 | `partner_links.publish_asks_since`, `publish_asks_by` (owner or Manager, audited, never a support visit) | `npm run verify:tenancy` |
+| V2b·3 | The gate's class on promote; a free publish's row, Inbox line (one an hour per partner, collapsed) and Undo as a rollback row; Ask me first's approval bound to the deployment id; removing a partner drops its waiting versions | `npm run e2e -- --only site-hosting,partners` |
+- **Reviews:** `security-reviewer`, `tenancy-auditor`, `architecture-reviewer`, `words-reviewer`, `mockup-parity-reviewer`.
+- **Owner decisions:** the partner-publishing spec's open ones.
+
+## A1a · Admin credits (lane C)
+- **After it:** Frrata staff see each partner's ledger and spend by client, grant credits (a reason, a fresh passkey;
+  two people above 500), return a turn, refund a purchase through Frrata's payments, and see farming signals (one free
+  grant per PAN or GSTIN, device and payout account).
+- **Needs first:** C1. **Mockup:** approved (Admin mockup 2026-11-12).
+- **Regression net:** e2e `91-neel-admin`, `75-staff-passkeys`; proof § 84.
+| # | Task | Verify |
+|---|---|---|
+| A1a·1 | `admin_partner_credits_*` definers (aggregates and the partner's own rows by partner id, staff only, `confirmedRecently` for money) | `npm run verify:tenancy` |
+| A1a·2 | Admin › Partners › Credits as drawn; grants, returns and refunds audited | `npm run e2e -- --only neel-admin` |
+- **Reviews:** `security-reviewer`, `tenancy-auditor`, `unit-economics-reviewer`, `mockup-parity-reviewer`.
+- **Owner decisions:** the grant threshold for two people (recommended 500 credits).
+
+## V2c · Fleet care (lane A)
+Kit spec §§ 4–7 beyond V2a: `frrata-policies` served as signed JSON by version; lane 1 patches (attested, waves, smoke
+tests, automatic rollback, 24 h); lanes 2 and 3 as drafts in Studio; the package mirror with the 7-day wait (then the
+agent may add a package the policy allows); kill switches for a partner, a starter and a kit version; Admin › Kit,
+Controls, Rollouts; the festive freeze; the external pen test before V3b reaches partners.
+- **Needs first:** V2a. **Mockup:** approved (kit-and-fleet). **Regression net:** `93-site-hosting`, the fleet's smoke
+  suite on every hosted site, `92-storefront-sale`.
+- **Tasks and verify:** one per item above, each verified by the fleet smoke suite on staging and `npm test`; the plan
+  for V2c is written when V2a ships (its sizes come from V2a's measured builds).
+- **Reviews:** `security-reviewer`, `architecture-reviewer`, `speed-reviewer`, `release-agent`.
+- **Owner decisions:** the security owner and the second approver named; the pen test's vendor.
+
+## V3b · Studio, the one screen (lane D)
+- **After it:** a partner builds a site in one sitting with Frrata's agent: start cards, voices, looks, logo, pages,
+  building, ready, send, the brand's notes, publish and hand over cards; the preview beside the chat (phone: a sheet);
+  versions and the brand book drawers; credits before every run. Builders build; only an Owner or Lead sends, publishes
+  or hands over.
+- **Needs first:** V3a's proof passed; V2a; C1; BT; G-a; T1c (built).
+- **Mockup:** approved (the one screen); new: the agent spec's added states (a turn paused at its reserve, a returned
+  turn, a kill switch, changed agent instructions, publish outcomes after handover, a developer's branch in Versions).
+- **Regression net:** e2e `80-partner-team`, `86-builders`, `87-partner-clients`, `40-partners`, `89-content`,
+  `93-site-hosting`; the proof's suite on every agent-version change.
+| # | Task | Verify |
+|---|---|---|
+| V3b·1 | The screen as drawn, Neel primitives only; the chat streams through one reconnecting route; each card's action calls one tool or one action | `npm run e2e -- --only studio` (new flow `94-studio` on a fake runtime) |
+| V3b·2 | Credits on every card from C1's estimate; reserve before, settle after; budget and low-balance states in the chat | `npx vitest run src/lib/studio`; `npm run e2e -- --only studio` |
+| V3b·3 | Hand edits on the preview save as data (BT·5's save, content's save) and add a chat line and a version | `npm run e2e -- --only studio,content` |
+| V3b·4 | Publish and Hand over cards call V2a and V2b's actions (passkey within 5 minutes); Builders refused in words | `npm run e2e -- --only studio,builders` |
+| V3b·5 | Sessions at once per seat and a global queue; open to five partners, then all approved partners | `npm run e2e -- --only studio`; Admin › Agent shows the queue |
+- **Reviews:** `architecture-reviewer`, `security-reviewer`, `tenancy-auditor`, `speed-reviewer`, `unit-economics-reviewer`,
+  `words-reviewer`, `design-system-reviewer`, `mockup-parity-reviewer`, `e2e-runner`.
+- **Owner decisions:** 16; what a seat includes beyond credits (sessions at once; shell spec Q7).
+
+## V3c · Intake link (lane D)
+`docs/specs/2026-11-12-studio-intake-and-team.md` § Intake: the link (token-only definer, ADR-0002 exception), files,
+the website fetch in Frrata's server, the no-tool extractor (Haiku 5.5, strict schema), sources on every token, questions
+for disagreements; Instagram after Meta's review (Q3). **Needs first:** V3b. **Mockup:** approved, checked against the
+one screen. **Regression net:** `94-studio`; S1 (previews holding production data) closed first. **Reviews:**
+`security-reviewer`, `tenancy-auditor`, `integration-researcher` (Instagram, older than 90 days). **Owner decisions:** Q3.
+
+## V3d · Routines (lane D)
+A saved ask on a schedule (hourly at most) or a Frrata event, leaving a draft and a line in the Inbox; never publishing
+after handover; stopped when the partner is removed. **Needs first:** V3b, V2b. **Mockup:** new. **Regression net:**
+`94-studio`. **Reviews:** `security-reviewer`, `unit-economics-reviewer`, `speed-reviewer`. **Owner decisions:** whether
+a routine may publish before handover (recommended: no; a person always publishes).
+
+## G-b · API gaps that make sites better (lane B, later)
+G1 a bag quote; G25 a keyless availability read by size id; G7 delivery by PIN code; G8 `arrivesBy`; G2 several values per
+filter; G3 facets per collection, fabric and occasion; G4 best sellers; G9 search suggestions; G10 sizes in the store's
+order; G16 renditions per ratio; G17 payment methods; G18 hours. Each additive, each with `api-contract-reviewer` and
+`speed-reviewer`; G1 and G25 also `security-reviewer` (a keyless read). Signal: a site asks, or the proof's task 8 shows it.
+
 ## Repetitive work → agents and scripts
 | Chore | Becomes |
 |---|---|
 | Proving each partner definer refuses the wrong caller | `verify:tenancy` § 28b |
 | Seeding a passkey step-up for a signed-in test person | e2e `signedIn` (staff and partner) |
+| Running the 20 tasks before every model or agent-version change | `scripts/studio/eval.mjs` (V3a·10), its report gating the switch |
+| Checking that a custom tool calls only an existing save and the agent file pins its model, hosts and web tools | `check:studio` (V3a·9) |
+| Proving a hosted site still loads, shows the legal block and reaches checkout after any deploy | `scripts/verify/fleet-smoke.mjs` (V2a·5), run by `release-agent` after each production push |
+| Pricing a turn and a site from measured usage | the proof's report (V3a·10), read by `unit-economics-reviewer` |
 
 ## Practices recorded in skills
-Architecture: `frata-architecture` § Partners (teams). Testing: the partner-team flow.
+Architecture: `frata-architecture` § Partners (teams); § Studio (V0·7: the runtime adapter, tools through existing saves,
+the tenant from the turn row, the build key). Unit economics: `frata-unit-economics` (V0·5: the loaded credit).
+Integrations: `frata-integrations` § Anthropic (V0·6, V3a·1). Testing: the partner-team flow; `93-site-hosting`,
+`94-studio`, the 20-task proof.
