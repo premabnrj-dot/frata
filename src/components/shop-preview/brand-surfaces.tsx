@@ -68,7 +68,7 @@ export function PreviewSurface({ which, b, s }: { which: PreviewName; b: BrandRe
         <Mark b={b} name={s.shopName} h={28} /><span className="flex-1" /><span className="text-[12px] underline underline-offset-3">Back to {s.shopName}</span>
       </div>
       <div className="flex flex-col gap-2 p-3">
-        <h3 className="font-[family-name:var(--st-display)] text-[22px]/[1.15] font-normal">Checkout</h3>
+        <p className="font-[family-name:var(--st-display)] text-[22px]/[1.15] font-normal">Checkout</p>
         <span className="text-[11px] font-semibold tracking-[.08em] text-[var(--st-muted)] uppercase">Contact</span>
         <span className="flex h-[var(--st-field)] items-center rounded-[var(--st-r)] border border-[var(--st-edge)] px-2.5 text-[12px] text-[var(--st-muted)]">Mobile number</span>
       </div>
@@ -85,7 +85,7 @@ export function PreviewSurface({ which, b, s }: { which: PreviewName; b: BrandRe
         {b.logos.stacked ?? b.logos.main ? <img src={(b.logos.stacked ?? b.logos.main)!} alt={s.shopName} className="h-16 w-auto max-w-[180px] object-contain" /> : <span className="font-[family-name:var(--st-display)] text-[20px] leading-none">{s.shopName}</span>}
       </div>
       <div className="flex flex-col gap-1.5 p-3">
-        <h4 className="font-[family-name:var(--st-display)] text-[19px] font-normal">Thank you, Priya</h4>
+        <p className="font-[family-name:var(--st-display)] text-[19px] font-normal">Thank you, Priya</p>
         <p className="text-[var(--st-muted)]">Order {orderCode(s)}-1042 is placed. Keep {amount ?? '₹0'} ready.</p>
       </div>
     </div>
@@ -107,7 +107,7 @@ export function PreviewSurface({ which, b, s }: { which: PreviewName; b: BrandRe
 
 /** The store's name in its headings font, where no logo is yet (mockup screen 2). */
 export function BrandName({ b, name }: { b: BrandRecord; name: string }) {
-  return <span className="text-[28px] leading-none" style={{ fontFamily: brandFamily(b.display) }}>{name}</span>
+  return <span className="block max-w-[90%] truncate px-2 text-center text-[28px] leading-tight" style={{ fontFamily: brandFamily(b.display) }}>{name}</span>
 }
 
 /** Type's sample line: a product's name in the headings font, a line in the body font, on the record's background. */

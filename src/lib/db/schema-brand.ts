@@ -96,6 +96,9 @@ export const brandSeasons = pgTable('brand_seasons', {
 }, (t) => [
   unique('brand_seasons_tenant_id').on(t.tenantId, t.id),
   index('brand_seasons_tenant_starts').on(t.tenantId, t.startsAt),
+  // The boundary sweep (app_shops_with_boundary) looks for any season starting or ending in a window, across stores.
+  index('brand_seasons_starts').on(t.startsAt),
+  index('brand_seasons_ends').on(t.endsAt),
   check('brand_seasons_name', sql`char_length(${t.name}) between 1 and 40`),
   check('brand_seasons_ends', sql`${t.endsAt} is null or ${t.endsAt} > ${t.startsAt}`),
   check('brand_seasons_colours', sql`${HEX(t.colorAccent)} and ${HEX(t.colorOn)}`),

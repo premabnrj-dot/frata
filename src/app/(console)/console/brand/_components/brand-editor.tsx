@@ -11,6 +11,7 @@ import { Segmented } from '@/components/ui/segmented'
 import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import { useToast } from '@/components/ui/toast'
 import { useErrorSummary } from '@/components/ui/field-error'
+import { announce } from '@/components/shell/announce'
 import { useNow } from '@/components/time/now'
 import { STORE_FONT_VARS } from '@/components/shop-preview/fonts'
 import { BRAND_FONT_VARS } from '@/components/shop-preview/brand-fonts'
@@ -85,9 +86,17 @@ export function BrandEditor({ tenantId, mode, live, version: startVersion, waiti
   }
   const colour = (role: keyof BrandRecord['palette'], v: string) => set((b) => ({ ...b, palette: { ...b.palette, [role]: (normalHex(v) ?? v) as `#${string}` } }), role)
 
+  // After a write the button that was pressed may be gone: focus goes to the page's heading, a target that stays.
+  const focusTop = () => window.setTimeout(() => { const h = document.querySelector<HTMLElement>('main h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }) } }, 0)
+
   async function pick(slot: LogoSlot, file: File) {
     setSlots((s) => ({ ...s, [slot]: { uploading: true } }))
-    const done = (st: SlotState, url?: string) => { setSlots((s) => ({ ...s, [slot]: st })); if (url) set((b) => ({ ...b, logos: { ...b.logos, [slot]: url } }), 'main') }
+    announce('Uploading…')
+    const done = (st: SlotState, url?: string) => {
+      setSlots((s) => ({ ...s, [slot]: st }))
+      if (url) set((b) => ({ ...b, logos: { ...b.logos, [slot]: url } }), 'main')
+      announce(st.error ?? 'Uploaded.')
+    }
     try {
       const head = new Uint8Array(await file.slice(0, 512).arrayBuffer())
       const kind = sniffLogo(head)
@@ -119,7 +128,7 @@ export function BrandEditor({ tenantId, mode, live, version: startVersion, waiti
       toast.error(r.error, /Reload/.test(r.error) ? { action: { label: 'Reload', run: () => window.location.reload() } } : undefined)
       return
     }
-    setSaved(draft); setServerErrors({}); setAttempt(0)
+    setSaved(draft); setServerErrors({}); setAttempt(0); focusTop()
     if (r.outcome === 'waits') { setSent(true); toast.ok('Sent to the owner.'); router.refresh(); return }
     setVersion(r.version)
     const v = r.version
@@ -127,12 +136,14 @@ export function BrandEditor({ tenantId, mode, live, version: startVersion, waiti
     router.refresh()
   }
 
+  const [deciding, setDeciding] = useState<'approve' | 'decline' | null>(null)
   async function decide(decision: 'approve' | 'decline') {
     if (!waiting) return
-    setPending(true)
+    setDeciding(decision)
     const r = await decideBrandAction({ id: waiting.id, decision })
-    setPending(false)
+    setDeciding(null)
     if (!r.ok) { toast.error(r.error, { action: { label: 'Reload', run: () => window.location.reload() } }); return }
+    focusTop()
     if (decision === 'approve' && r.version) {
       const v = r.version
       toast.ok('Approved. It’s live.', { undo: async () => { const u = await undoBrandAction({ version: v }); if (u.ok) router.refresh(); return u.ok ? { ok: true } : { ok: false, error: u.error } } })
@@ -143,11 +154,11 @@ export function BrandEditor({ tenantId, mode, live, version: startVersion, waiti
   const chip = mode === 'preview' ? <Badge tone="neutral">Preview only</Badge> : sent && mode === 'waits' ? <Badge tone="warn">Waiting for the owner</Badge> : null
   const line = [tagline, sample.product ? formatInr(sample.product.price as Paise) : ''].filter(Boolean).join(' ')
   const typeSample = { title: sample.product?.title ?? sample.shopName, line: line || sample.shopName }
-  const review = decides && waiting ? <ReviewCard live={live} waiting={waiting} now={now} pending={pending} onDecide={decide} /> : null
+  const review = decides && waiting ? <ReviewCard live={live} waiting={waiting} now={now} deciding={deciding} onDecide={decide} /> : null
   const cards = (
     <>
       {review}
-      <LogoCard b={draft} edit={edit} errors={shown} shopName={sample.shopName} slots={slots} onPick={pick} onRemove={(slot) => set((b) => ({ ...b, logos: { ...b.logos, [slot]: null } }), 'main')} />
+      <LogoCard b={draft} edit={edit} errors={shown} shopName={sample.shopName} slots={slots} onPick={pick} onRemove={(slot) => { set((b) => ({ ...b, logos: { ...b.logos, [slot]: null } }), 'main'); window.setTimeout(() => document.querySelector<HTMLElement>(`[data-logo="${slot}"] input[type=file]`)?.focus(), 0) }} />
       <ColoursCard b={draft} edit={edit} errors={shown} onColour={colour} />
       <TypeCard b={draft} edit={edit} errors={shown} sample={typeSample} onFont={(k, f) => set((b) => ({ ...b, [k]: f }), k)} />
       <ShapeCard b={draft} edit={edit} errors={shown} onRadius={(r) => set((b) => ({ ...b, radius: r }))} onDensity={(d) => set((b) => ({ ...b, density: d }))} />
@@ -169,23 +180,19 @@ export function BrandEditor({ tenantId, mode, live, version: startVersion, waiti
 
 function PreviewCard({ b, s, phone = false }: { b: BrandRecord; s: Sample; phone?: boolean }) {
   const [which, setWhich] = useState<PreviewName>('Checkout')
-  const head = <div className="flex items-center gap-2"><h2 className="text-section font-semibold">Preview</h2><span className="flex-1" /><Tag>Sample data</Tag></div>
   return (
-    <Section ariaLabel="Preview">
-      {head}
-      <div data-store-theme="" className="contents">
-        {phone ? <>
-          <Segmented label="Preview" value={which} options={PREVIEWS.map((p) => [p, p] as const)} onPick={setWhich} className="self-start" />
-          <PreviewSurface which={which} b={b} s={s} />
-        </> : <div className="flex flex-col gap-3.5">
-          {PREVIEWS.map((p) => <div key={p}><p className="mb-1.5 text-small font-medium text-foreground">{p}</p><PreviewSurface which={p} b={b} s={s} /></div>)}
-        </div>}
-      </div>
+    <Section title="Preview" action={<Tag>Sample data</Tag>}>
+      {phone ? <>
+        <Segmented label="Preview" value={which} options={PREVIEWS.map((p) => [p, p] as const)} onPick={setWhich} className="self-start" />
+        <div data-store-theme=""><PreviewSurface which={which} b={b} s={s} /></div>
+      </> : <div className="flex flex-col gap-3.5">
+        {PREVIEWS.map((p) => <div key={p}><p className="mb-1.5 text-small font-medium text-foreground">{p}</p><div data-store-theme=""><PreviewSurface which={p} b={b} s={s} /></div></div>)}
+      </div>}
     </Section>
   )
 }
 
-function ReviewCard({ live, waiting, now, pending, onDecide }: { live: BrandRecord; waiting: Waiting; now: Date; pending: boolean; onDecide: (d: 'approve' | 'decline') => void }) {
+function ReviewCard({ live, waiting, now, deciding, onDecide }: { live: BrandRecord; waiting: Waiting; now: Date; deciding: 'approve' | 'decline' | null; onDecide: (d: 'approve' | 'decline') => void }) {
   const cs = changesOf(live, waiting.record)
   const logos = cs.filter((c) => c.kind === 'logo')
   const added = logos.filter((c) => c.to).map((c) => c.label), gone = logos.filter((c) => !c.to).map((c) => c.label)
@@ -197,8 +204,8 @@ function ReviewCard({ live, waiting, now, pending, onDecide }: { live: BrandReco
     <Section className="border-warn-mark" title={<span className="flex items-center gap-2">Your partner’s change<Badge tone="neutral">Needs you</Badge></span>}>
       <Facts className="grid-cols-[116px_minmax(0,1fr)] md:grid-cols-[180px_minmax(0,1fr)]" rows={rows} />
       <div className="flex flex-wrap gap-2">
-        <Button busy={pending} onClick={() => onDecide('approve')}>Approve change</Button>
-        <Button variant="secondary" disabled={pending} onClick={() => onDecide('decline')}>Decline</Button>
+        <Button busy={deciding === 'approve'} disabled={deciding === 'decline'} onClick={() => onDecide('approve')}>Approve change</Button>
+        <Button variant="secondary" busy={deciding === 'decline'} disabled={deciding === 'approve'} onClick={() => onDecide('decline')}>Decline</Button>
       </div>
     </Section>
   )

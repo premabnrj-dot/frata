@@ -39,7 +39,7 @@ export default async function NoticesPage() {
                 <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   {n.brand && n.brand.state !== 'open' ? <Badge tone={STATE[n.brand.state][0]}>{STATE[n.brand.state][1]}</Badge>
                     : <Badge tone={n.required ? 'warn' : 'neutral'}>{TYPE_LABEL[n.type]}</Badge>}{dateTimeIN(n.at)}
-                  {n.href && n.brand?.state !== 'declined' && n.brand?.state !== 'replaced' ? <Link href={n.href} className="underline underline-offset-4">Open</Link> : null}
+                  {n.href && n.brand?.state !== 'declined' && n.brand?.state !== 'replaced' ? <Link href={n.href} className="inline-flex min-h-6 items-center underline underline-offset-4">Open</Link> : null}
                 </p>
                 {n.brand?.state === 'open' && decides ? <BrandDecision id={n.brand.id} /> : null}
               </div>

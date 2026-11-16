@@ -1,5 +1,5 @@
 {
-  "id": "cdda53b2-30dd-4683-a94c-f0ba5959e005",
+  "id": "2dae0f16-fc47-4dc5-bcd8-8f5adcab50dc",
   "prevId": "0ce9451b-a7e3-4644-a47f-98b6a27f8ef4",
   "version": "7",
   "dialect": "postgresql",
@@ -19290,6 +19290,36 @@
             },
             {
               "expression": "starts_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "brand_seasons_starts": {
+          "name": "brand_seasons_starts",
+          "columns": [
+            {
+              "expression": "starts_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "brand_seasons_ends": {
+          "name": "brand_seasons_ends",
+          "columns": [
+            {
+              "expression": "ends_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

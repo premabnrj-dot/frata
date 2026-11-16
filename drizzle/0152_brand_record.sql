@@ -76,6 +76,8 @@ ALTER TABLE "brand_seasons" ADD CONSTRAINT "brand_seasons_tenant_id_tenants_id_f
 ALTER TABLE "brand_tokens" ADD CONSTRAINT "brand_tokens_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "brand_proposals_one_open" ON "brand_proposals" USING btree ("tenant_id") WHERE "brand_proposals"."decided_at" is null;--> statement-breakpoint
 CREATE INDEX "brand_seasons_tenant_starts" ON "brand_seasons" USING btree ("tenant_id","starts_at");--> statement-breakpoint
+CREATE INDEX "brand_seasons_starts" ON "brand_seasons" USING btree ("starts_at");--> statement-breakpoint
+CREATE INDEX "brand_seasons_ends" ON "brand_seasons" USING btree ("ends_at");--> statement-breakpoint
 ALTER TABLE "shop_settings" ADD CONSTRAINT "shop_settings_logo" CHECK ("shop_settings"."logo_url" is null or "shop_settings"."logo_url" ~ ('^https://[a-z0-9]+\.public\.blob\.vercel-storage\.com/tenants/' || "shop_settings"."tenant_id"::text || '/brand/([0-9a-f-]{36}-400\.(webp|jpg)|[0-9a-f]{64}\.svg)$'));--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_invoice_logo" CHECK ("orders"."invoice_logo" is null or "orders"."invoice_logo" ~ ('^https://[a-z0-9]+\.public\.blob\.vercel-storage\.com/tenants/' || "orders"."tenant_id"::text || '/documents/([0-9a-f-]{36}|[0-9a-f]{64})\.png$')) NOT VALID;--> statement-breakpoint
 ALTER TABLE "orders" VALIDATE CONSTRAINT "orders_invoice_logo";--> statement-breakpoint

@@ -35,9 +35,11 @@ export function LogoCard({ b, edit, errors, shopName, slots, onPick, onRemove }:
           const url = b.logos[slot], st = slots[slot] ?? {}, dark = slot === 'reversed'
           const id = `logo-${slot}`
           const pick = (label: string, variant: 'secondary' | 'ghost') => (
-            <label className={cn(button({ variant, size: 'sm' }), variant === 'ghost' && 'px-1.5', st.uploading && 'pointer-events-none opacity-45')} aria-disabled={st.uploading || undefined}>
+            <label className={cn(button({ variant, size: 'sm' }), variant === 'ghost' && 'px-1.5', 'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring', st.uploading && 'pointer-events-none')} aria-busy={st.uploading || undefined}>
               {st.uploading ? <><Spinner />Uploading…</> : label}
-              <input type="file" accept="image/svg+xml,image/png,image/webp,.svg" className="sr-only" disabled={st.uploading} aria-describedby={st.error ? `${id}-error` : undefined}
+              <input type="file" accept="image/svg+xml,image/png,image/webp,.svg" className="sr-only" disabled={st.uploading}
+                aria-label={`${label === 'Upload logo' ? 'Upload' : label} ${LOGO_NAMES[slot]}`}
+                {...(slot === 'main' && !st.error ? fieldProps('main', errors.main) : { 'aria-describedby': st.error ? `${id}-error` : undefined, 'aria-invalid': st.error ? true : undefined })}
                 onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onPick(slot, f) }} />
             </label>
           )
@@ -54,7 +56,7 @@ export function LogoCard({ b, edit, errors, shopName, slots, onPick, onRemove }:
                 {n > 0 && !url && <span className="text-muted-foreground">(optional)</span>}
                 {url && <Tag>{KIND(url)}</Tag>}
                 <span className="flex-1" />
-                {edit && (url && !st.uploading ? <span className="flex">{pick('Replace', 'ghost')}<Button variant="ghost" size="sm" className="px-1.5" onClick={() => onRemove(slot)}>Remove</Button></span>
+                {edit && (url && !st.uploading ? <span className="flex">{pick('Replace', 'ghost')}<Button variant="ghost" size="sm" className="px-1.5" aria-label={`Remove ${LOGO_NAMES[slot]}`} onClick={() => onRemove(slot)}>Remove</Button></span>
                   : pick(n === 0 ? 'Upload logo' : 'Upload', 'secondary'))}
               </div>
               {st.error && <FieldError id={`${id}-error`} message={st.error} className="px-3 pb-2.5" />}
@@ -77,7 +79,7 @@ export function ColoursCard({ b, edit, errors, onColour }: Edit & { b: BrandReco
           const label = <>{ROLE_NAMES[role]}{role === 'panel' && <InfoTip about="Panel">Bands, the footer and the legal block.</InfoTip>}</>
           return (
             <div key={role} className={cn('grid grid-cols-[32px_minmax(0,1fr)_104px] items-center gap-x-3 gap-y-1 py-2.5 md:grid-cols-[32px_minmax(0,1fr)_116px]', i > 0 && 'border-t border-line-soft')} data-colour={role}>
-              <span className="relative size-8 overflow-hidden rounded-md border border-border" style={{ background: /^#[0-9A-Fa-f]{6}$/.test(v) ? v : undefined }}>
+              <span className="relative size-8 overflow-hidden rounded-md border border-border has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring" style={{ background: /^#[0-9A-Fa-f]{6}$/.test(v) ? v : undefined }}>
                 {edit && <input type="color" value={(/^#[0-9A-Fa-f]{6}$/.test(v) ? v : DEFAULT_PALETTE.text).toLowerCase()} aria-label={`${ROLE_NAMES[role]} colour`} onChange={(e) => onColour(role, e.target.value.toUpperCase())}
                   className="absolute -inset-2 size-12 cursor-pointer opacity-0" />}
               </span>
@@ -118,14 +120,16 @@ export function TypeCard({ b, edit, errors, sample, onFont }: Edit & { b: BrandR
   )
 }
 
-export function ShapeCard({ b, edit, onRadius, onDensity }: Edit & { b: BrandRecord; onRadius: (r: Radius) => void; onDensity: (d: Density) => void }) {
+export function ShapeCard({ b, edit, errors, onRadius, onDensity }: Edit & { b: BrandRecord; onRadius: (r: Radius) => void; onDensity: (d: Density) => void }) {
   if (!edit) return <Section title="Shape"><Facts className="grid-cols-[116px_minmax(0,1fr)] md:grid-cols-[180px_minmax(0,1fr)]" rows={[['Corners', <span key="r" className="font-num">{b.radius} px</span>], ['Spacing', DENSITY_NAMES[b.density]]]} /></Section>
   return (
     <Section title="Shape">
-      <div className="flex flex-col gap-1.5"><span className="text-label font-medium" id="shape-corners">Corners</span>
-        <Segmented label="Corners" value={String(b.radius)} options={RADII.map((r) => [String(r), `${r} px`] as const)} onPick={(v) => onRadius(Number(v) as Radius)} className="self-start" /></div>
-      <div className="flex flex-col gap-1.5"><span className="text-label font-medium" id="shape-spacing">Spacing</span>
-        <Segmented label="Spacing" value={b.density} options={DENSITIES.map((d) => [d, DENSITY_NAMES[d]] as const)} onPick={onDensity} className="self-start" /></div>
+      <div className="flex flex-col gap-1.5"><span className="text-label font-medium">Corners</span>
+        <Segmented label="Corners" value={String(b.radius)} options={RADII.map((r) => [String(r), `${r} px`] as const)} onPick={(v) => onRadius(Number(v) as Radius)} className="self-start" />
+        <FieldError name="radius" message={errors.radius} /></div>
+      <div className="flex flex-col gap-1.5"><span className="text-label font-medium">Spacing</span>
+        <Segmented label="Spacing" value={b.density} options={DENSITIES.map((d) => [d, DENSITY_NAMES[d]] as const)} onPick={onDensity} className="self-start" />
+        <FieldError name="density" message={errors.density} /></div>
     </Section>
   )
 }
