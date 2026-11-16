@@ -8,6 +8,8 @@ import assert from 'node:assert/strict'
 import http from 'node:http'
 import { createRequire } from 'node:module'
 import { readFileSync } from 'node:fs'
+import { createHash, randomInt } from 'node:crypto'
+import { crc32 } from 'node:zlib'
 import { CONSOLE, OWN_DOMAIN, PORTS, expectToast, signedIn } from '../lib.mjs'
 
 const API = 'api.localhost'
@@ -101,6 +103,49 @@ export default {
         assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= 390), 'no sideways scroll with 20 keys')
         await p.screenshot({ path: t.out('website-20-390'), fullPage: true })
       })
+
+      // Test keys before a domain (owner 2026-11-16; migration 0149; security review HIGH-1): Run on Frrata deletes the
+      // store's test keys, and with no Website at all a test key answers on a store never opened.
+      // A key as newKey makes one (src/domains/storefront-api/keys.ts): 32 base62 characters, then a 6-character CRC-32
+      // checksum in base62, so keyShape lets it through to the lookup.
+      const B62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+      const testKey = () => {
+        const head = 'frs_test_' + Array.from({ length: 32 }, () => B62[randomInt(62)]).join('')
+        let n = crc32(head), check = ''
+        for (let i = 0; i < 6; i++) { check = B62[n % 62] + check; n = Math.floor(n / 62) }
+        return head + check
+      }
+      const addTest = async (k) => db`insert into storefront_keys (tenant_id, kind, name, hash, prefix, created_by, expires_at) values
+        (${T}, 'test', ${'Preview ' + k.slice(9, 13)}, ${createHash('sha256').update(k).digest('hex')}, ${k.slice(0, 15)}, ${'cccccccc-0000-0000-0000-000000000001'}, now() + interval '30 days')`
+      const [{ first_opened_at: opened }] = await db`select first_opened_at from tenants where id = ${T}`
+      await db`delete from storefront_keys where tenant_id = ${T} and kind = 'public'`
+      await db`update tenants set first_opened_at = null where id = ${T}`
+      try {
+        await t.step('Run on Frrata deletes the test keys; with no Website a test key answers before the store opens', async () => {
+          const k1 = testKey(); await addTest(k1)
+          assert.equal((await get(`/2026-12/k/${k1}/shop`)).status, 200, 'a test key with the Website set')
+          await p.setViewportSize({ width: 1280, height: 900 })
+          await p.reload()
+          await p.getByRole('radio', { name: /Runs on Frrata/ }).click()
+          await p.getByLabel('Unsaved changes').getByRole('button', { name: /^Save/ }).click()
+          const confirm = p.getByRole('dialog', { name: 'Run your website on Frrata?' })
+          await confirm.getByText('Test keys are deleted.').waitFor()
+          await confirm.getByRole('button', { name: 'Run on Frrata' }).click()
+          await expectToast(p, 'Saved', 'ok')
+          const [r] = await db`select revoked_at, revoked_by from storefront_keys where hash = ${createHash('sha256').update(k1).digest('hex')}`
+          assert.ok(r.revoked_at && r.revoked_by, 'Run on Frrata deleted the test key')
+          let status = 0
+          for (let i = 0; i < 10 && status !== 404; i++) { status = (await get(`/2026-12/k/${k1}/shop`)).status; if (status !== 404) await new Promise((res) => setTimeout(res, 500)) }
+          assert.equal(status, 404, 'a test key deleted by Run on Frrata still answers')
+          const k2 = testKey(); await addTest(k2)
+          assert.equal((await get(`/2026-12/k/${k2}/shop`)).status, 200, 'a test key with no Website, store not open')
+          await p.reload()
+          await p.getByRole('heading', { name: 'Keys' }).waitFor()
+          await p.getByText(k2.slice(0, 14)).waitFor()
+        })
+      } finally {
+        await db`update tenants set first_opened_at = ${opened} where id = ${T}`
+      }
     } finally {
       await owner.close()
       await db`delete from storefront_keys where tenant_id = ${T}`
