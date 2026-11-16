@@ -213,6 +213,16 @@ export default {
       })
       await ctx.close()
     } finally {
+      // Back through the app first: its save purges the shop's cached settings (a bare database reset leaves the cached
+      // siteOrigin moving every later flow's shop pages to the site). The reset below is the backstop.
+      try {
+        await p.goto(`${CONSOLE}/console/settings/website`)
+        if (await p.getByRole('radio', { name: /Runs on Frrata/ }).getAttribute('aria-checked') !== 'true') {
+          await p.getByRole('radio', { name: /Runs on Frrata/ }).click()
+          await p.getByLabel('Unsaved changes').getByRole('button', { name: /^Save/ }).click()
+          await expectToast(p, 'Saved', 'ok')
+        }
+      } catch (e) { console.error('     storefront-sale › putting the Website back through the app failed:', e.message) }
       await owner.close()
       await reset()
     }
