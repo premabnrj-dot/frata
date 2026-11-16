@@ -4019,7 +4019,8 @@ insert into storefront_keys (id, tenant_id, kind, name, hash, prefix, partner_id
   ('c8100000-0000-0000-0000-00000000000c', 'c8100000-0000-0000-0000-000000000001', 'public', 'Partner site', repeat('c', 64), 'frs_pub_cccccc', 'c8100000-0000-0000-0000-0000000000a1', 'c8100000-0000-0000-0000-0000000000f1', null),
   ('c8100000-0000-0000-0000-00000000000d', 'c8100000-0000-0000-0000-000000000002', 'public', 'Partner site', repeat('d', 64), 'frs_pub_dddddd', 'c8100000-0000-0000-0000-0000000000a1', 'c8100000-0000-0000-0000-0000000000f1', null),
   ('c8100000-0000-0000-0000-00000000000e', 'c8100000-0000-0000-0000-000000000002', 'test', 'Old preview', repeat('e', 64), 'frs_test_eeeeee', null, '99999999-9999-9999-9999-999999999999', now() - interval '1 minute'),
-  ('c8100000-0000-0000-0000-00000000000f', 'c8100000-0000-0000-0000-000000000002', 'test', 'D preview', repeat('f', 64), 'frs_test_ffffff', null, '99999999-9999-9999-9999-999999999999', now() + interval '30 days');
+  ('c8100000-0000-0000-0000-00000000000f', 'c8100000-0000-0000-0000-000000000002', 'test', 'D preview', repeat('f', 64), 'frs_test_ffffff', null, '99999999-9999-9999-9999-999999999999', now() + interval '30 days'),
+  ('c8100000-0000-0000-0000-000000000010', 'c8100000-0000-0000-0000-000000000002', 'test', 'Partner preview', repeat('9', 64), 'frs_test_999999', 'c8100000-0000-0000-0000-0000000000a1', 'c8100000-0000-0000-0000-0000000000f1', now() + interval '30 days');
 do $$ declare got text; begin
   if exists (select 1 from pg_tables where tablename = 'storefront_keys' and not rowsecurity) then raise exception 'FAIL: storefront_keys without RLS'; end if;
   if (select count(*) from pg_policies where tablename = 'storefront_keys') <> 1
@@ -4041,7 +4042,7 @@ do $$ declare got text; begin
   if not (select prosecdef from pg_proc where oid = 'app_storefront_key(text)'::regprocedure)
      or (select proconfig from pg_proc where oid = 'app_storefront_key(text)'::regprocedure) is distinct from array['search_path=""']
   then raise exception 'FAIL: app_storefront_key is not a pinned definer'; end if;
-  if exists (select 1 from unnest(array['public', 'anon', 'authenticated', 'service_role', 'frata_admin']) r
+  if exists (select 1 from unnest(array['public', 'anon', 'authenticated', 'service_role', 'frata_admin', 'frata_builder']) r
              where r <> 'public' and has_function_privilege(r, 'app_storefront_key(text)', 'execute'))
      or exists (select 1 from pg_proc, aclexplode(proacl) a where oid = 'app_storefront_key(text)'::regprocedure and a.grantee = 0)
      or not has_function_privilege('frata_app', 'app_storefront_key(text)', 'execute')
@@ -4214,12 +4215,29 @@ do $$ begin
   if pg_temp.skey(repeat('d', 64)) is not null then raise exception 'FAIL: a key answers once its domain is removed'; end if;
   if pg_temp.skey(repeat('a', 64)) is not null then raise exception 'FAIL: a key answers while the store runs on Frrata'; end if;
   if not exists (select 1 from app_shops_with_key_stop(now() - interval '6 minutes', now()) s where s = 'c8100000-0000-0000-0000-000000000002') then raise exception 'FAIL: the sweep missed a removed domain'; end if;
-  -- 0149 (owner, 2026-11-16): a test key answers with no Website at all, on a store never opened; never on an opened
-  -- one, never a public key, never another store's.
-  if pg_temp.skey(repeat('f', 64)) is distinct from 'c8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: D''s test key does not answer before a domain'; end if;
-  if pg_temp.skey(repeat('b', 64)) is not null then raise exception 'FAIL: a test key answers with no domain on a store that opened'; end if;
-  if pg_temp.skey(repeat('d', 64)) is not null then raise exception 'FAIL: a public key answers with no domain'; end if;
-  if pg_temp.skey(repeat('e', 64)) is not null then raise exception 'FAIL: an expired test key answers with no domain'; end if;
+  -- 0149 (owner, 2026-11-16): with no Website at all (D's domain just went, which clears it), a test key on a store never
+  -- opened answers; never on an opened one (C), never a public key, never an expired one.
+  if pg_temp.skey(repeat('f', 64)) is distinct from 'c8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: D''s test key does not answer with no Website'; end if;
+  if pg_temp.skey(repeat('9', 64)) is distinct from 'c8100000-0000-0000-0000-000000000002' then raise exception 'FAIL: D''s partner test key does not answer with no Website'; end if;
+  if pg_temp.skey(repeat('b', 64)) is not null then raise exception 'FAIL: a test key answers with no Website on a store that opened'; end if;
+  if pg_temp.skey(repeat('e', 64)) is not null then raise exception 'FAIL: an expired test key answers with no Website'; end if;
+end $$;
+commit;
+-- and every other stop still holds with no Website: the partner suspended, its link ended, the key deleted
+update partners set suspended_at = now() where id = 'c8100000-0000-0000-0000-0000000000a1';
+begin; set local role frata_app;
+do $$ begin
+  if pg_temp.skey(repeat('9', 64)) is not null then raise exception 'FAIL: a suspended partner''s test key answers with no Website'; end if;
+  if pg_temp.skey(repeat('f', 64)) is null then raise exception 'FAIL: suspending the partner stopped the store''s own test key'; end if;
+end $$;
+commit;
+update partners set suspended_at = null where id = 'c8100000-0000-0000-0000-0000000000a1';
+update partner_links set removed_at = now() where tenant_id = 'c8100000-0000-0000-0000-000000000002' and partner_id = 'c8100000-0000-0000-0000-0000000000a1';
+update storefront_keys set revoked_at = now(), revoked_by = '99999999-9999-9999-9999-999999999999' where id = 'c8100000-0000-0000-0000-00000000000f';
+begin; set local role frata_app;
+do $$ begin
+  if pg_temp.skey(repeat('9', 64)) is not null then raise exception 'FAIL: a test key answers with no Website after its partner''s link ended'; end if;
+  if pg_temp.skey(repeat('f', 64)) is not null then raise exception 'FAIL: a deleted test key answers with no Website'; end if;
 end $$;
 commit;
 
@@ -4515,6 +4533,16 @@ do $$ declare n int; begin
   then raise exception 'FAIL: D''s invitee sees other than D''s keys'; end if;
 end $$;
 commit;
+-- 0149: with no Website the invitee still sees the store's keys (a test key answers then), with no site host
+update shop_settings set site_origin = null, site_domain_id = null where tenant_id = 'c8400000-0000-0000-0000-000000000001';
+begin; set local role frata_app;
+do $$ begin
+  if (select count(*) from app_my_handover_keys('c8400000-0000-0000-0000-0000000000e1')) <> 2
+     or exists (select 1 from app_my_handover_keys('c8400000-0000-0000-0000-0000000000e1') where site_host is not null)
+  then raise exception 'FAIL: with no Website the invitee does not see C''s keys'; end if;
+end $$;
+commit;
+update shop_settings set site_origin = 'https://proof-c84.in', site_domain_id = 'c8400000-0000-0000-0000-0000000000d1' where tenant_id = 'c8400000-0000-0000-0000-000000000001';
 update invites set revoked_at = now() where id = 'c8400000-0000-0000-0000-0000000000b5';
 update tenants set first_opened_at = now() where id = 'c8400000-0000-0000-0000-000000000001';
 begin; set local role frata_app;

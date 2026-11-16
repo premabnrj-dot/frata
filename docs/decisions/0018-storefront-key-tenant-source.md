@@ -147,6 +147,9 @@ The owner: "partners should be able to create a website without adding custom do
 site). **§ 4 and § 5 change for test keys only:** a test key answers while the store has **no Website set**, on a store
 that has never opened, so a site is built from localhost or a preview before the brand owns or connects a domain.
 Unchanged: a public key needs the Website on a live connected domain (going live still needs one); a test key stops for
-good once the store opens, after 30 days, on deletion, and with its partner's link or suspension; a test key on a store
-whose Website is set still needs that domain live; CORS for a test key is still localhost or the Website's origin (a
-server-side render sends no Origin). Migration `0149_test_keys_before_domain`; proof in `tenancy.sql` § 81.
+good once the store opens, after 30 days, on deletion, and with its partner's link or suspension; CORS for a test key
+is still localhost or the Website's origin (a server-side render sends no Origin). **§ 4's "switching Website back to
+Frrata stops it at once" now holds by deleting:** Run on Frrata deletes the store's test keys (audited); a domain
+removed or parked clears the Website (0142), after which a test key on a store never opened answers again, so Settings ›
+Website lists the store's keys whenever it has any (security review 2026-11-16). The Accept screen lists keys with no
+Website too. Migration `0149_test_keys_before_domain`; proof in `tenancy.sql` § 81 and § 86.

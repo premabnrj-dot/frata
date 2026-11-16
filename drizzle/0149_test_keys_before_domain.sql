@@ -8,10 +8,13 @@
 --   - a public key still needs the Website on a live connected domain (going live is unchanged);
 --   - a test key still stops for good once the store has ever opened, after 30 days, when deleted, and when its
 --     partner's link ends or the partner is suspended;
---   - a test key on a store whose Website IS set still needs that domain live (a set-but-dead Website stays a stop);
+--   - with a Website set, every key needs its domain live; a domain removed or parked clears the Website (0142), so a
+--     test key on a store never opened answers again then: Settings › Website now always lists keys, and Run on Frrata
+--     deletes the store's test keys (security review 2026-11-16 HIGH-1);
 --   - CORS is unchanged: a test key answers browsers only from http://localhost:<port> or the Website's origin; a
 --     preview or a server-side render calls without an Origin.
--- The returned columns, the security definer, search_path and the grants are as 0142 made them.
+-- The returned columns, the security definer, search_path and the grants are as 0142 made them. app_my_handover_keys
+-- (0148) lists the store's keys with no Website too, its site host null then (security review MED-2).
 -- =============================================================================
 create or replace function app_storefront_key(p_hash text) returns table (key_id uuid, tenant_id uuid, kind text, expires_at timestamptz)
   language sql stable security definer set search_path = '' as $$
@@ -37,3 +40,20 @@ $$;
 revoke all on function app_storefront_key(text) from public, anon, authenticated, service_role, frata_admin, frata_builder;
 --> statement-breakpoint
 grant execute on function app_storefront_key(text) to frata_app;
+--> statement-breakpoint
+create or replace function app_my_handover_keys(p_uid uuid) returns table (invite_id uuid, site_host text, name text, kind text, prefix text)
+  language sql stable security definer set search_path = '' as $$
+  select h.invite_id, substring(s.site_origin from 9), k.name, k.kind, k.prefix
+    from public.app_my_handovers(p_uid) h
+    join public.tenants t on t.id = h.tenant_id
+    join public.shop_settings s on s.tenant_id = h.tenant_id
+    join public.storefront_keys k on k.tenant_id = h.tenant_id
+   where k.revoked_at is null and (k.expires_at is null or k.expires_at > now())
+     and (k.kind = 'public' or t.first_opened_at is null)
+   order by h.invite_id, k.kind, k.created_at
+   limit 200
+$$;
+--> statement-breakpoint
+revoke all on function app_my_handover_keys(uuid) from public, anon, authenticated, service_role, frata_admin, frata_builder;
+--> statement-breakpoint
+grant execute on function app_my_handover_keys(uuid) to frata_app;

@@ -41,8 +41,8 @@ export default async function HandoverPage() {
             {/* P2 Clients, owner 2026-11-15 (Q1): the partner owner sees Frrata's share in rupees, so the brand is told here. */}
             <dt className="text-muted-foreground">Their share</dt><dd>Your partner sees what Frrata earns from your store.</dd>
             {/* The store's own website and the keys it reads with (SA1b mockup § Accept; managed in Settings › Website after Accept). */}
-            {sites.get(h.inviteId) ? <><dt className="text-muted-foreground">Website</dt><dd className="min-w-0"><span className="font-mono text-small [overflow-wrap:anywhere]">{sites.get(h.inviteId)!.host}</span>
-              <ul className="mt-2" aria-label="Website keys">
+            {sites.get(h.inviteId) ? <><dt className="text-muted-foreground">Website</dt><dd className="min-w-0">{sites.get(h.inviteId)!.host ? <span className="font-mono text-small [overflow-wrap:anywhere]">{sites.get(h.inviteId)!.host}</span> : null}
+              <ul className={sites.get(h.inviteId)!.host ? 'mt-2' : undefined} aria-label="Website keys">
                 {sites.get(h.inviteId)!.keys.map((k, i) => (
                   <li key={i} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-0.5 border-t border-line-soft py-2 first:border-t-0 first:pt-0">
                     <span className="min-w-0 truncate">{k.name}</span>

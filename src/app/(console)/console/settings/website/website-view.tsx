@@ -122,7 +122,13 @@ export function WebsiteView(p: {
               {p.canEditAddress ? <Link href="/console/settings/web-address" className={cn(button({ variant: 'secondary', size: 'sm' }), 'hidden md:inline-flex')}>Edit store address</Link> : null}
             </div>
           </Section>
-          <Keys {...p} />
+        </>
+      ) : null}
+      {/* Keys: with a Website, and before one while the store isn't open (a test key answers with no domain, owner
+          2026-11-16), and whenever the store holds keys, so none answers unseen (security review HIGH-1, LOW-4). */}
+      {p.saved || p.testAllowed || p.keys.length > 0 ? <Keys {...p} /> : null}
+      {p.saved || p.testAllowed || p.keys.length > 0 ? (
+        <>
           {p.openapi ? (
             <Section title="For developers">
               {/* The docs and the starter (SA1b mockup § Console): beside the OpenAPI address. */}

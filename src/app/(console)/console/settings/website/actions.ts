@@ -55,12 +55,20 @@ export async function setWebsiteAction(input: unknown): Promise<Done> {
   const p = WebsiteInput.safeParse(input)
   if (!p.success) return { ok: false, error: 'Pick a website address.' }
   try {
+    let hashes: string[] = []
     const r = await asMember(API, { action: 'website.set', target: 'website' }, async (tx, auth) => {
       const no = await mayManage(tx, auth)
       if (no) return no
       const t = auth.membership.tenantId
       if (p.data.runs === 'frrata') {
         await tx.update(shopSettings).set({ siteOrigin: null, siteDomainId: null }).where(eq(shopSettings.tenantId, t))
+        // A test key answers while no Website is set (0149), so going back to Frrata deletes them: the developer's site
+        // stops, as the confirm says (security review 2026-11-16 HIGH-1). Each is audited like a Delete.
+        const gone = await tx.update(storefrontKeys).set({ revokedAt: sql`now()`, revokedBy: auth.userId })
+          .where(and(eq(storefrontKeys.tenantId, t), eq(storefrontKeys.kind, 'test'), isNull(storefrontKeys.revokedAt)))
+          .returning({ id: storefrontKeys.id, hash: storefrontKeys.hash })
+        for (const k of gone) await audit(tx, auth, 'storefront_key.delete', k.id, { fields: ['revoked_at'] })
+        hashes = gone.map((k) => k.hash)
       } else {
         const [d] = await tx.select({ apex: shopDomains.apex, withWww: shopDomains.withWww }).from(shopDomains)
           .where(and(eq(shopDomains.id, p.data.domainId), eq(shopDomains.tenantId, t), sql`${shopDomains.provedAt} is not null`, isNull(shopDomains.removedAt), isNull(shopDomains.parkedAt)))
@@ -75,6 +83,7 @@ export async function setWebsiteAction(input: unknown): Promise<Done> {
     if (!r.ok) return { ok: false, error: r.error }
     if (r.value) return { ok: false, error: r.value }
     await refreshKeys(r.tenantId)
+    for (const h of hashes) refreshKey(h)
     // The store's pages move to the site (or stop moving) from the next copy: only the store entry's own tag (SA1b).
     refreshShop(r.tenantId, 'settings')
     revalidatePath('/console/settings/website')
