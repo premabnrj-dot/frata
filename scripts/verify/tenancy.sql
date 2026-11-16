@@ -3738,7 +3738,7 @@ do $$ declare n int; begin
   begin perform hsn from products; raise exception 'FAIL: a Builder read HSN'; exception when insufficient_privilege then null; end;
   begin perform 1 from orders; raise exception 'FAIL: a Builder read orders'; exception when insufficient_privilege then null; end;
   begin perform 1 from order_lines; raise exception 'FAIL: a Builder read order lines'; exception when insufficient_privilege then null; end;
-  -- P1·2 (0152): five shop_settings columns for the brand preview (§ 98); everything else stays shut.
+  -- P1·2 (0152): the store's logo (shop_settings.logo_url) for the brand preview (§ 98); everything else stays shut.
   begin perform legal_name, gstin, support_phone from shop_settings; raise exception 'FAIL: a Builder read settings'; exception when insufficient_privilege then null; end;
   begin perform 1 from members; raise exception 'FAIL: a Builder read members'; exception when insufficient_privilege then null; end;
   begin perform 1 from discounts; raise exception 'FAIL: a Builder read offers'; exception when insufficient_privilege then null; end;
@@ -3770,7 +3770,7 @@ do $$ declare r record; allowed jsonb := '{
   "collection_products": ["tenant_id","collection_id","product_id"],
   "product_attributes": ["tenant_id","product_id","attribute","values"],
   "brand_tokens": ["tenant_id","logo_mark_url","logo_stacked_url","logo_reversed_url","color_bg","color_panel","color_text","color_muted","color_accent","color_on","color_edge","color_line","color_good","color_warn","color_bad","font_display","font_body","radius","density"],
-  "shop_settings": ["tenant_id","logo_url","doc_logo","accent","display_font"]}'; begin
+  "shop_settings": ["tenant_id","logo_url"]}'; begin
   for r in select c.oid as rel, n.nspname, c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
             where c.relkind in ('r','v','m','p','f') and n.nspname not in ('pg_catalog','information_schema') loop
     if has_table_privilege('frata_builder', r.rel, 'insert') or has_table_privilege('frata_builder', r.rel, 'update')
@@ -4851,7 +4851,11 @@ begin
   update shop_settings set logo_url = own || '00000000-0000-0000-0000-000000000009-400.webp' where tenant_id = a;
   begin update shop_settings set logo_url = theirs || '00000000-0000-0000-0000-000000000009-400.webp' where tenant_id = a; raise exception 'FAIL: 98 logo_url from B''s folder'; exception when check_violation then null; end;
   begin update shop_settings set logo_url = 'https://evil.example/logo.png' where tenant_id = a; raise exception 'FAIL: 98 logo_url off our store'; exception when check_violation then null; end;
-  -- 0153: an invoice may freeze the store's own PNG rendition (documents/<sha256>.png), never another store's.
+  begin update shop_settings set logo_url = 'https://evil.example/tenants/c9800000-0000-0000-0000-000000000001/brand/' || repeat('a', 64) || '.svg' where tenant_id = a;
+    raise exception 'FAIL: 98 the store''s own path on another host'; exception when check_violation then null; end;
+  begin update brand_tokens set logo_mark_url = 'https://evil.example/tenants/c9800000-0000-0000-0000-000000000001/brand/' || repeat('a', 64) || '.svg' where tenant_id = a;
+    raise exception 'FAIL: 98 a mark on another host'; exception when check_violation then null; end;
+  -- 0152 (orders.invoice_logo): an invoice may freeze the store's own PNG rendition (documents/<sha256>.png), never another store's.
   insert into orders (tenant_id, number, payment_method, placed_at, invoice_logo)
     values (a, 98001, 'cod', now(), replace(own, '/brand/', '/documents/') || repeat('b', 64) || '.png');
   begin insert into orders (tenant_id, number, payment_method, placed_at, invoice_logo)
@@ -4894,13 +4898,14 @@ do $$ declare n int; begin
   perform set_config('app.member_role', 'builder', true);
   select count(*) into n from (select tenant_id, color_accent, font_display, radius, density, logo_mark_url from brand_tokens) x;
   if n <> 1 then raise exception 'FAIL: 98 the Builder sees % records', n; end if;
-  select count(*) into n from (select tenant_id, logo_url, doc_logo, accent, display_font from shop_settings) x;
+  select count(*) into n from (select tenant_id, logo_url from shop_settings) x;
   if n <> 1 then raise exception 'FAIL: 98 the Builder sees % settings rows', n; end if;
   begin perform previous from brand_tokens; raise exception 'FAIL: 98 the Builder read previous'; exception when insufficient_privilege then null; end;
   begin perform updated_by from brand_tokens; raise exception 'FAIL: 98 the Builder read updated_by'; exception when insufficient_privilege then null; end;
   begin perform 1 from brand_proposals; raise exception 'FAIL: 98 the Builder read a proposal'; exception when insufficient_privilege then null; end;
   begin perform 1 from brand_seasons; raise exception 'FAIL: 98 the Builder read a season'; exception when insufficient_privilege then null; end;
   begin perform legal_name from shop_settings; raise exception 'FAIL: 98 the Builder read the legal name'; exception when insufficient_privilege then null; end;
+  begin perform doc_logo from shop_settings; raise exception 'FAIL: 98 the Builder read the logo for paper'; exception when insufficient_privilege then null; end;
   begin update brand_tokens set color_accent = '#000000'; raise exception 'FAIL: 98 the Builder wrote'; exception when insufficient_privilege then null; end;
 end $$;
 rollback;

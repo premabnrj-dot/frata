@@ -158,7 +158,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   middleware sends people to `/partner/sign-in` (with `next`, and `out=1` when a dead session cookie was there), the one
   partner page open without a session (`PARTNER_PUBLIC` in check:actions). `signOutAction` takes `to=partner` to land
   there. An owner who ever had a passkey waits 24 hours to recover one, even after Admin deleted them all.
-- **One brand record** (one-address P1, drizzle/0152–0153): a code-site store's logo files, colours, fonts, corners and
+- **One brand record** (one-address P1, drizzle/0152): a code-site store's logo files, colours, fonts, corners and
   spacing are written ONLY by `saveBrand` / `decideBrand` / `undoBrand` (`src/lib/content/save.ts`; check:actions pins
   that they call requireMember and asMember), the main logo too (`shop_settings.logo_url`). Who: `brandSaver`
   (`src/domains/brand/who.ts`); a partner's save on an open store waits in `brand_proposals` for the owner (one
@@ -242,7 +242,7 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   files of `scripts/builder-doors.json`, which gives an **Actor** (`src/lib/db/actor.ts`) whose shop id no page can
   read; `withActor` runs read-only as **frata_builder**, its own LOGIN (`DATABASE_URL_BUILDER`; missing → refused),
   column grants on eight catalogue tables and, for Console › Brand's preview (one-address P1·2, drizzle/0152), the live
-  `brand_tokens` columns and five `shop_settings` columns, and nothing else, with `builder_rows` + restrictive `builder_only` policies.
+  `brand_tokens` columns and `shop_settings.logo_url`, and nothing else, with `builder_rows` + restrictive `builder_only` policies.
   Builder reads live in `src/lib/queries/builder.ts` and call the owner list's own SQL (`listProductsWith`,
   `listCollectionsWith`): a column added there needs its grant in a migration, or the Builder's list fails closed. The
   store preview is the one exception (owner 2026-11-15): it runs the shopper read path as frata_app through

@@ -125,8 +125,13 @@ for (const file of existsSync('src/app/(partner)') ? walk('src/app/(partner)') :
 // The brand record's writer is trusted as a chokepoint above only while it asks who is calling and writes through
 // asMember itself (one-address P1·3).
 {
-  const save = readFileSync('src/lib/content/save.ts', 'utf8')
-  if (!/\brequireMember\(/.test(save) || !/\basMember\(/.test(save)) failures.push('src/lib/content/save.ts  saveBrand is a chokepoint only while it calls requireMember( and asMember( itself')
+  // Code only (comments out), and each exported function: through write(), which asks requireMember and asMember.
+  const save = readFileSync('src/lib/content/save.ts', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const write = /async function write\([\s\S]*?\n\}/.exec(save)?.[0] ?? ''
+  if (!/\brequireMember\(/.test(write) || !/\basMember\(/.test(write)) failures.push('src/lib/content/save.ts  write() must call requireMember( and asMember( (saveBrand, decideBrand and undoBrand are trusted as chokepoints through it)')
+  for (const m of save.matchAll(/export async function (\w+)\([^)]*\)[^{]*\{([\s\S]*?)\n\}/g)) {
+    if (!/\breturn write\(/.test(m[2])) failures.push(`src/lib/content/save.ts  ${m[1]} must return write(…): only then is it a chokepoint`)
+  }
 }
 // Every console write goes through asMember, which audits support visits in the same transaction.
 for (const file of walk('src/app/(console)')) {

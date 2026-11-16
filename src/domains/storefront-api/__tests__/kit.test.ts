@@ -56,9 +56,9 @@ describe('the partner kit (SA1b D·9)', () => {
       expect(out).toContain('the header must draw the store\'s logo with <Logo>')
       expect(out).toContain('an inline <svg> beside the header')
       expect(out).toContain('render <BrandStyle')
-      expect(out).toContain('app/x.css:3: a colour of the site\'s own') // the line number counts the comment's lines
+      expect(out).toContain('app/x.css:3: a colour set in the site') // the line number counts the comment's lines
       expect(out).toContain('app/x.css:4: a font of the site\'s own')
-      expect(out).toContain('app/x.css:5: a colour of the site\'s own')
+      expect(out).toContain('app/x.css:5: a colour set in the site')
       expect(out).toContain('components/hero.tsx:1: a colour in code')
       expect(out).toContain('components/hero.tsx:1: a font in code')
       expect(out).toContain('components/frrata/mine.tsx:1: a colour in code') // only the kit's own two files are exempt

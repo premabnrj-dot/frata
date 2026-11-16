@@ -126,15 +126,17 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const collections: NavItem = { href: '/console/collections', label: 'Collections', icon: 'collections' }
   const settings: NavItem = { href: '/console/settings', label: 'Settings', icon: 'settings' }
   const offers: NavItem = { href: '/console/offers', label: 'Offers', icon: 'offers' }
+  // Started together (speed review M2): the brand (Brand or Look in the menu) and the store's apps.
+  const brand$ = accountantRole(role) ? Promise.resolve(false) : shopBrand(tenantId).then((b) => !!b, () => false)
+  const mods$ = shopModules(tenantId, now.toISOString()).catch((err: unknown) => { console.error('[console layout] apps', err instanceof Error ? err.name : err); return null })
   // One-address P1 (owner call 1): a code-site store has Brand in Look's place; a theme shop keeps Look (O19). The brand
   // loader is the store's cached `settings` read (no extra statement on a warm cache); a failure keeps Look.
-  const codeSite = !accountantRole(role) && !!(await shopBrand(tenantId).catch(() => null))
-  const look: NavItem = codeSite ? { href: '/console/brand', label: 'Brand', icon: 'look' } : { href: '/console/look', label: 'Look', icon: 'look' }
+  const look: NavItem = (await brand$) ? { href: '/console/brand', label: 'Brand', icon: 'look' } : { href: '/console/look', label: 'Look', icon: 'look' }
   // V1 content: what the store says (bars, menus, pages, FAQ, Contact line), saved live; every member reads it.
   const content: NavItem = { href: '/console/content', label: 'Content', icon: 'policy' }
   // The shop's apps in use, under Apps (those with a page of their own); shopModules is per-request cached, and a
   // failure only leaves Apps without its list.
-  const mods = await shopModules(tenantId, now.toISOString()).catch((err) => { console.error('[console layout] apps', err instanceof Error ? err.name : err); return null })
+  const mods = await mods$
   const inUse: NavItem[] = mods ? MODULE_KEYS.flatMap((k) => {
     const page = MODULES[k].setup
     return page && mods.access[k].on && mods.access[k].usable ? [{ href: page, label: MODULES[k].name, icon: MODULE_ICON[k] }] : []

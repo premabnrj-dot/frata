@@ -1,6 +1,6 @@
 import 'server-only'
 import { apiBrand, previewBrand } from '@/lib/queries/brand'
-import { rasterLogo } from '@/lib/media/brand-files'
+import { rasterLogoMade } from '@/lib/media/brand-files'
 import * as S from '@/domains/storefront-api/2026-12/schemas'
 import { collectionOut, collectionPageOut, MAX_PAGE, offersOut, pageOut, productOut, searchOut, shopOut } from '@/domains/storefront-api/2026-12/map'
 import { apiAnnouncement, apiCatalogue, apiProduct, apiShop, previewCatalogue, previewProduct, previewShop, shopAnnouncement, type Lookup } from '@/lib/queries/storefront'
@@ -77,8 +77,9 @@ export const RESOURCES = {
     // The site origin from the shop entry itself, read once, so this answer and the shop's move never disagree (SA1b).
     const [s, brand] = await Promise.all([loaders(ctx).shop(ctx.tenantId), loaders(ctx).brand(ctx.tenantId)])
     if (!s) return null
+    const logoUrl = await rasterLogoMade(ctx.tenantId, s.logoUrl)
     // M7: shop.logo stays raster; an SVG main logo is answered there as its PNG rendition (brand.logos carries the SVG).
-    return shopOut(mapCtx(ctx), { ...s, logoUrl: rasterLogo(ctx.tenantId, s.logoUrl) }, { site: s.siteOrigin, checkout: `https://${s.host}` }, ctx.now, brand)
+    return shopOut(mapCtx(ctx), { ...s, logoUrl }, { site: s.siteOrigin, checkout: `https://${s.host}` }, ctx.now, brand)
   } },
   products: { schema: S.Page, run: async (ctx: ApiCtx, p: { page: number }) =>
     pageOut(mapCtx(ctx), (await loaders(ctx).catalogue(ctx.tenantId)).products, p.page, ctx.now) },

@@ -1,5 +1,5 @@
 {
-  "id": "7b67ca06-03d7-473e-9fb3-bbeec0c74ad2",
+  "id": "cdda53b2-30dd-4683-a94c-f0ba5959e005",
   "prevId": "0ce9451b-a7e3-4644-a47f-98b6a27f8ef4",
   "version": "7",
   "dialect": "postgresql",
@@ -1430,7 +1430,7 @@
         },
         "shop_settings_logo": {
           "name": "shop_settings_logo",
-          "value": "\"shop_settings\".\"logo_url\" is null or \"shop_settings\".\"logo_url\" ~ ('^https://[a-z0-9.-]+/tenants/' || \"shop_settings\".\"tenant_id\"::text || '/brand/([0-9a-f-]{36}-400\\.(webp|jpg)|[0-9a-f]{64}\\.svg)$')"
+          "value": "\"shop_settings\".\"logo_url\" is null or \"shop_settings\".\"logo_url\" ~ ('^https://[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com/tenants/' || \"shop_settings\".\"tenant_id\"::text || '/brand/([0-9a-f-]{36}-400\\.(webp|jpg)|[0-9a-f]{64}\\.svg)$')"
         },
         "shop_settings_font": {
           "name": "shop_settings_font",
@@ -5675,7 +5675,7 @@
       "checkConstraints": {
         "orders_invoice_logo": {
           "name": "orders_invoice_logo",
-          "value": "\"orders\".\"invoice_logo\" is null or \"orders\".\"invoice_logo\" ~ ('^https://[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com/tenants/' || \"orders\".\"tenant_id\"::text || '/documents/[0-9a-f-]{36}\\.png$')"
+          "value": "\"orders\".\"invoice_logo\" is null or \"orders\".\"invoice_logo\" ~ ('^https://[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com/tenants/' || \"orders\".\"tenant_id\"::text || '/documents/([0-9a-f-]{36}|[0-9a-f]{64})\\.png$')"
         },
         "orders_freight": {
           "name": "orders_freight",
@@ -19533,15 +19533,15 @@
       "checkConstraints": {
         "brand_tokens_mark": {
           "name": "brand_tokens_mark",
-          "value": "\"brand_tokens\".\"logo_mark_url\" is null or \"brand_tokens\".\"logo_mark_url\" ~ ('^https://[a-z0-9.-]+/tenants/' || \"brand_tokens\".\"tenant_id\"::text || '/brand/([0-9a-f-]{36}-400\\.(webp|jpg)|[0-9a-f]{64}\\.svg)$')"
+          "value": "\"brand_tokens\".\"logo_mark_url\" is null or \"brand_tokens\".\"logo_mark_url\" ~ ('^https://[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com/tenants/' || \"brand_tokens\".\"tenant_id\"::text || '/brand/([0-9a-f-]{36}-400\\.(webp|jpg)|[0-9a-f]{64}\\.svg)$')"
         },
         "brand_tokens_stacked": {
           "name": "brand_tokens_stacked",
-          "value": "\"brand_tokens\".\"logo_stacked_url\" is null or \"brand_tokens\".\"logo_stacked_url\" ~ ('^https://[a-z0-9.-]+/tenants/' || \"brand_tokens\".\"tenant_id\"::text || '/brand/([0-9a-f-]{36}-400\\.(webp|jpg)|[0-9a-f]{64}\\.svg)$')"
+          "value": "\"brand_tokens\".\"logo_stacked_url\" is null or \"brand_tokens\".\"logo_stacked_url\" ~ ('^https://[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com/tenants/' || \"brand_tokens\".\"tenant_id\"::text || '/brand/([0-9a-f-]{36}-400\\.(webp|jpg)|[0-9a-f]{64}\\.svg)$')"
         },
         "brand_tokens_reversed": {
           "name": "brand_tokens_reversed",
-          "value": "\"brand_tokens\".\"logo_reversed_url\" is null or \"brand_tokens\".\"logo_reversed_url\" ~ ('^https://[a-z0-9.-]+/tenants/' || \"brand_tokens\".\"tenant_id\"::text || '/brand/([0-9a-f-]{36}-400\\.(webp|jpg)|[0-9a-f]{64}\\.svg)$')"
+          "value": "\"brand_tokens\".\"logo_reversed_url\" is null or \"brand_tokens\".\"logo_reversed_url\" ~ ('^https://[a-z0-9]+\\.public\\.blob\\.vercel-storage\\.com/tenants/' || \"brand_tokens\".\"tenant_id\"::text || '/brand/([0-9a-f-]{36}-400\\.(webp|jpg)|[0-9a-f]{64}\\.svg)$')"
         },
         "brand_tokens_colours": {
           "name": "brand_tokens_colours",

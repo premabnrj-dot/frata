@@ -35,6 +35,8 @@ function Mark({ b, name, h }: { b: BrandRecord; name: string; h: number }) {
     : <span className="font-[family-name:var(--st-display)] text-[20px] leading-none">{name}</span>
 }
 
+/** The store's order prefix, or its initials (never another store's code). */
+const orderCode = (s: Sample) => (s.paper.prefix || s.shopName.split(/\s+/).map((w) => w[0] ?? '').join('').slice(0, 3) || 'ORD').toUpperCase()
 const price = (s: Sample) => (s.product ? formatInr(s.product.price as Paise) : null)
 
 export function PreviewSurface({ which, b, s }: { which: PreviewName; b: BrandRecord; s: Sample }) {
@@ -84,7 +86,7 @@ export function PreviewSurface({ which, b, s }: { which: PreviewName; b: BrandRe
       </div>
       <div className="flex flex-col gap-1.5 p-3">
         <h4 className="font-[family-name:var(--st-display)] text-[19px] font-normal">Thank you, Priya</h4>
-        <p className="text-[var(--st-muted)]">Order {s.paper.prefix || 'AY'}-1042 is placed. Keep {amount ?? '₹0'} ready.</p>
+        <p className="text-[var(--st-muted)]">Order {orderCode(s)}-1042 is placed. Keep {amount ?? '₹0'} ready.</p>
       </div>
     </div>
   )
@@ -95,7 +97,7 @@ export function PreviewSurface({ which, b, s }: { which: PreviewName; b: BrandRe
         <div className="flex items-start justify-between gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- the store's own logo file, through <img> only */}
           {b.logos.main ? <img src={b.logos.main} alt={s.shopName} className="h-6.5 w-auto max-w-[140px] object-contain" /> : <b>{s.paper.legalName || s.shopName}</b>}
-          <span className="text-right"><b className="text-[13px]">Tax invoice</b><br /><span className="font-mono text-[11px]">{(s.paper.prefix || 'AY').toUpperCase()}/26-27/0001</span></span>
+          <span className="text-right"><b className="text-[13px]">Tax invoice</b><br /><span className="font-mono text-[11px]">{orderCode(s)}/26-27/0001</span></span>
         </div>
         <p>{s.paper.legalName || s.shopName}<br /><span className="text-[11px]" style={{ color: PAPER.sub }}>{s.paper.address}{s.paper.gstin && <> · GSTIN <span className="font-mono text-[11px]">{s.paper.gstin}</span></>}</span></p>
       </div>

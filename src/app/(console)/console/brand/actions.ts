@@ -25,6 +25,6 @@ export async function uploadSvgLogoAction(text: unknown): Promise<{ ok: true; ur
   if (!me.ok) return { ok: false, error: me.message }
   if (me.membership.supportSessionId) return { ok: false, error: BRAND_REFUSAL.support }
   if (typeof text !== 'string' || text.length > 200 * 1024) return { ok: false, error: 'This SVG is over 200 kB. Upload a smaller one.' }
-  if (!(await withinLimit(LIMITS.brandSvg, me.membership.tenantId, new Date(), true))) return { ok: false, error: 'Too many uploads in the last few minutes. Try again shortly.' }
+  if (!(await withinLimit(LIMITS.brandSvg, me.membership.tenantId, new Date(), true))) return { ok: false, error: 'Too many uploads. Try again in 10 minutes.' }
   return storeSvgLogo(me.membership.tenantId, text)
 }

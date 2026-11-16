@@ -24,7 +24,7 @@ export default async function BrandPage() {
   if (!cap.ok) return <Panel title={cap.message} />
   if (cap.kind === 'builder') return <BuilderBrand actor={cap.actor} shopName={cap.store.tenantName} at={new Date().toISOString()} />
   const { tenantId, role, supportSessionId } = cap.auth.membership
-  if (!holds(role, 'shop.build')) return <Panel title="Only the owner, a Manager or the store’s partner opens Brand" />
+  if (!holds(role, 'shop.build')) return <Panel title="Brand opens for the owner, a Manager or the store’s partner" action={<Link href="/console" className={button({ variant: 'secondary' })}>Back to Home</Link>} />
   const now = new Date()
   const [page, product, shop] = await Promise.all([
     brandPage(tenantId, now),

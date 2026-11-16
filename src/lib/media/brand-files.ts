@@ -9,6 +9,9 @@ import { storeHost } from '@/domains/media/sizes'
 import { acceptedBrandFile, svgPath } from '@/domains/brand/files'
 import { renditionPathFor, renditionUrl } from './rendition'
 import { cleanSvg, SVG_REFUSAL_WORDS } from '@/domains/brand/svg'
+import { sniffLogo } from '@/domains/brand/check'
+
+const isJpeg = (b: Buffer) => b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff
 
 // =============================================================================
 // FILE: src/lib/media/brand-files.ts — A BRAND'S FILES THAT FRRATA'S SERVER WRITES (one-address plan P1·4; spec § 5).
@@ -33,7 +36,7 @@ async function putFile(path: string, body: Buffer, contentType: string): Promise
     return
   }
   try {
-    await put(path, body, { access: 'public', token: BLOB_READ_WRITE_TOKEN, contentType, addRandomSuffix: false, allowOverwrite: false, cacheControlMaxAge: 31536000 })
+    await put(path, body, { access: 'public', token: BLOB_READ_WRITE_TOKEN, contentType, addRandomSuffix: false, allowOverwrite: false, cacheControlMaxAge: 31536000, abortSignal: AbortSignal.timeout(8000) })
   } catch (e) {
     // The same bytes under the same name are already there (a second upload of one file): nothing to do.
     if (!/already exists/i.test(e instanceof Error ? e.message : '')) throw e
@@ -42,13 +45,13 @@ async function putFile(path: string, body: Buffer, contentType: string): Promise
 
 /** Clean an SVG logo the person chose and store it in this store's brand folder. Its URL, or the reason in words. */
 export async function storeSvgLogo(tenantId: string, text: string): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  if (!isBlobConfigured()) return { ok: false, error: 'Photo storage is not connected.' }
+  if (!isBlobConfigured()) return { ok: false, error: 'Logo uploads are off right now. Nothing was changed.' }
   const r = cleanSvg(text)
   if (!r.ok) return { ok: false, error: SVG_REFUSAL_WORDS[r.reason] }
   const bytes = Buffer.from(r.svg, 'utf8')
   const path = svgPath(tenantId, sha256(bytes))
   const url = publicUrl(path)
-  if (!url) return { ok: false, error: 'Photo storage is not connected.' }
+  if (!url) return { ok: false, error: 'Logo uploads are off right now. Nothing was changed.' }
   try { await putFile(path, bytes, 'image/svg+xml') } catch (e) { console.error('[brand svg]', errName(e)); return { ok: false, error: 'That upload was refused. Try again in a minute.' } }
   return { ok: true, url }
 }
@@ -72,6 +75,10 @@ async function makeRendition(tenantId: string, mainUrl: string): Promise<boolean
     if (!r.ok) return false
     const src = Buffer.from(await r.arrayBuffer())
     if (src.length > 3 * 1024 * 1024) return false
+    // sharp picks its decoder from the bytes, never the name: only the kind the path says reaches it (security review
+    // MED-1: a raster path holding SVG bytes would reach librsvg uncleaned). An SVG is ours, cleaned (svgPath).
+    const kind = sniffLogo(new Uint8Array(src.subarray(0, 512)))
+    if (f.kind === 'svg' ? kind !== 'svg' : !(kind === 'webp' || isJpeg(src))) return false
     const { default: sharp } = await import('sharp')
     const png = await sharp(src, { density: f.kind === 'svg' ? 288 : 72, limitInputPixels: 4096 * 4096 })
       .resize({ width: MAX_RENDITION_W, height: MAX_RENDITION_H, fit: 'inside', withoutEnlargement: f.kind !== 'svg' }).png({ compressionLevel: 9 }).toBuffer()
@@ -85,17 +92,20 @@ async function makeRendition(tenantId: string, mainUrl: string): Promise<boolean
 
 /** Made already, by this process or found in the store: no second fetch for the same logo. */
 const made = new Set<string>()
+/** A logo whose rendition failed lately: not tried again for 10 minutes (a public read must not re-render it each time). */
+const failed = new Map<string, number>()
 /** The rendition of this main logo, made if the store doesn't have it yet (a save's after() that failed, a raster logo
  *  from before the store had a website): looked for first, so a print or a pack costs one small read at most. */
 export async function ensureRendition(tenantId: string, mainUrl: string): Promise<boolean> {
   const url = renditionUrl(tenantId, mainUrl)
   if (!url) return false
   if (made.has(url)) return true
+  if ((failed.get(url) ?? 0) > Date.now()) return false // clock-ok: a server memo, never rendered
   try {
     const r = await fetchWithTimeout(url, { method: 'GET', headers: { Range: 'bytes=0-7' } }, 4000)
     if (r.ok || r.status === 206) { made.add(url); return true }
   } catch { /* not reachable now: try to make it */ }
-  if (!(await makeRendition(tenantId, mainUrl))) return false
+  if (!(await makeRendition(tenantId, mainUrl))) { if (failed.size > 500) failed.clear(); failed.set(url, Date.now() + 10 * 60_000); return false } // clock-ok: server memo
   made.add(url)
   return true
 }
@@ -116,4 +126,11 @@ export function rasterLogo(tenantId: string, mainUrl: string | null): string | n
   if (!mainUrl || !/\.svg$/.test(mainUrl)) return mainUrl
   afterMainLogo(tenantId, mainUrl)
   return renditionUrl(tenantId, mainUrl)
+}
+
+/** The API's shop.logo (M7; contract review M-1): a raster main logo as it is; an SVG one as its PNG only once that file
+ *  is made, else null (the docs say to draw the name then). Never a URL to a file that isn't there. */
+export async function rasterLogoMade(tenantId: string, mainUrl: string | null): Promise<string | null> {
+  if (!mainUrl || !/\.svg$/.test(mainUrl)) return mainUrl
+  return (await ensureRendition(tenantId, mainUrl)) ? renditionUrl(tenantId, mainUrl) : null
 }

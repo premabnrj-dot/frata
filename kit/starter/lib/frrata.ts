@@ -19,7 +19,7 @@ export type Shop = {
   name: string; tagline: string; status: string; checkoutOrigin: string; cart?: { url: string; maxLines: number; maxQty: number }
   legal: { legalName: string; address: string; customerCare: { email: string; phone: string }; grievanceOfficer: { name: string; role: string; email: string; phone: string } }
   policies: { kind: string; title: string; url: string }[]; social: { instagram: string | null; whatsapp: string | null }; payOnDelivery: { on: boolean }
-  /** The main logo as PNG or WebP (an SVG logo comes here as its PNG). Every logo file is in brand. */
+  /** The main logo, never an SVG (an SVG logo comes here as its PNG once made, else null). Every logo file is in brand. */
   logo: string | null
   /** The store's brand record (Console › Brand). Draw the site from it: <BrandStyle> and <Logo>, never copies in code. */
   brand?: Brand | null

@@ -24,6 +24,6 @@ export function brandSaver(role: string, supportSessionId: string | null, storeO
 export const decidesBrand = (role: string, supportSessionId: string | null) => !supportSessionId && holds(role, 'shop.manage')
 
 export const BRAND_REFUSAL: Record<'support' | 'preview', string> = {
-  support: 'Frrata support can look, not change the store’s brand.',
+  support: 'A support visit can’t change the brand. Nothing was changed.',
   preview: 'Only the owner, a Manager or the store’s partner can change the brand. Nothing was changed.',
 }

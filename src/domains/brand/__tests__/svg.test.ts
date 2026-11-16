@@ -17,6 +17,10 @@ describe('cleanSvg', () => {
     expect(r.svg).not.toMatch(/Figma|<title|<\?xml/)
     expect(cleanSvg(r.svg)).toEqual(r) // cleaning twice changes nothing
   })
+  it('keeps only SVG’s and XLink’s namespaces', () => {
+    const r = cleanSvg('<svg xmlns="http://www.w3.org/1999/xhtml" xmlns:xlink="http://evil.example/x"><rect width="1"/></svg>')
+    expect(r.ok && r.svg).toBe('<svg xmlns="http://www.w3.org/2000/svg"><rect width="1"/></svg>')
+  })
   it('adds the namespace when it is missing', () => {
     const r = cleanSvg('<svg viewBox="0 0 1 1"><rect width="1" height="1"/></svg>')
     expect(r.ok && r.svg).toBe('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><rect width="1" height="1"/></svg>')

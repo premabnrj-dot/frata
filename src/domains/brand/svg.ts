@@ -15,7 +15,7 @@ export type SvgResult = { ok: true; svg: string } | { ok: false; reason: SvgRefu
 export const SVG_REFUSAL_WORDS: Record<SvgRefusal, string> = {
   script: 'This SVG has a script in it. Upload one without scripts.',
   external: 'This SVG links to files outside it. Upload one without links.',
-  doctype: 'This SVG declares its own entities. Export it again as plain SVG.',
+  doctype: 'This SVG has code we can’t read. Export it again as plain SVG.',
   markup: 'This SVG could not be read. Export it again as plain SVG.',
   too_big: 'This SVG is too detailed. Simplify it and upload it again.',
   not_svg: 'Upload an SVG, PNG or WebP file.',
@@ -32,6 +32,7 @@ const ATTRS = new Set(['id', 'class', 'd', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx
   'clip-path', 'mask', 'maskunits', 'clippathunits', 'preserveaspectratio', 'font-family', 'font-size', 'font-weight', 'font-style', 'letter-spacing',
   'text-anchor', 'dominant-baseline', 'dx', 'dy', 'xmlns', 'version', 'role', 'aria-label', 'aria-hidden', 'href', 'xlink:href', 'xmlns:xlink', 'vector-effect'])
 const MAX_ELEMENTS = 4000, MAX_DEPTH = 32
+const SVG_NS = 'http://www.w3.org/2000/svg', XLINK_NS = 'http://www.w3.org/1999/xlink'
 
 const NAME = /^[A-Za-z_][A-Za-z0-9_.:-]*$/
 const ENT: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
@@ -132,8 +133,9 @@ export function cleanSvg(input: string): SvgResult {
 
 function write(n: Node, top = false): string {
   if (DROP_WHOLE.has(n.tag) || !ELEMENTS.has(n.tag)) return ''
-  const attrs = n.attrs.filter(([a]) => ATTRS.has(a) && NAME.test(a))
-  if (top && !attrs.some(([a]) => a === 'xmlns')) attrs.unshift(['xmlns', 'http://www.w3.org/2000/svg'])
+  // The namespaces are SVG's and XLink's, never another (security review LOW-1: an XHTML root kept as written).
+  const attrs = n.attrs.filter(([a, v]) => ATTRS.has(a) && NAME.test(a) && (a !== 'xmlns' || v === SVG_NS) && (a !== 'xmlns:xlink' || v === XLINK_NS))
+  if (top && !attrs.some(([a]) => a === 'xmlns')) attrs.unshift(['xmlns', SVG_NS])
   const head = `<${tagCase(n.tag)}${attrs.map(([a, v]) => ` ${attrCase(a)}="${esc(v)}"`).join('')}`
   const body = n.kids.map((k) => (typeof k === 'string' ? (n.tag === 'text' || n.tag === 'tspan' ? esc(k) : k.trim() ? '' : '') : write(k))).join('')
   return body ? `${head}>${body}</${tagCase(n.tag)}>` : `${head}/>`

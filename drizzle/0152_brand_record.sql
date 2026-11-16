@@ -59,9 +59,9 @@ CREATE TABLE "brand_tokens" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_by" uuid,
 	CONSTRAINT "brand_tokens_tenant" UNIQUE("tenant_id"),
-	CONSTRAINT "brand_tokens_mark" CHECK ("brand_tokens"."logo_mark_url" is null or "brand_tokens"."logo_mark_url" ~ ('^https://[a-z0-9.-]+/tenants/' || "brand_tokens"."tenant_id"::text || '/brand/([0-9a-f-]{36}-400\.(webp|jpg)|[0-9a-f]{64}\.svg)$')),
-	CONSTRAINT "brand_tokens_stacked" CHECK ("brand_tokens"."logo_stacked_url" is null or "brand_tokens"."logo_stacked_url" ~ ('^https://[a-z0-9.-]+/tenants/' || "brand_tokens"."tenant_id"::text || '/brand/([0-9a-f-]{36}-400\.(webp|jpg)|[0-9a-f]{64}\.svg)$')),
-	CONSTRAINT "brand_tokens_reversed" CHECK ("brand_tokens"."logo_reversed_url" is null or "brand_tokens"."logo_reversed_url" ~ ('^https://[a-z0-9.-]+/tenants/' || "brand_tokens"."tenant_id"::text || '/brand/([0-9a-f-]{36}-400\.(webp|jpg)|[0-9a-f]{64}\.svg)$')),
+	CONSTRAINT "brand_tokens_mark" CHECK ("brand_tokens"."logo_mark_url" is null or "brand_tokens"."logo_mark_url" ~ ('^https://[a-z0-9]+\.public\.blob\.vercel-storage\.com/tenants/' || "brand_tokens"."tenant_id"::text || '/brand/([0-9a-f-]{36}-400\.(webp|jpg)|[0-9a-f]{64}\.svg)$')),
+	CONSTRAINT "brand_tokens_stacked" CHECK ("brand_tokens"."logo_stacked_url" is null or "brand_tokens"."logo_stacked_url" ~ ('^https://[a-z0-9]+\.public\.blob\.vercel-storage\.com/tenants/' || "brand_tokens"."tenant_id"::text || '/brand/([0-9a-f-]{36}-400\.(webp|jpg)|[0-9a-f]{64}\.svg)$')),
+	CONSTRAINT "brand_tokens_reversed" CHECK ("brand_tokens"."logo_reversed_url" is null or "brand_tokens"."logo_reversed_url" ~ ('^https://[a-z0-9]+\.public\.blob\.vercel-storage\.com/tenants/' || "brand_tokens"."tenant_id"::text || '/brand/([0-9a-f-]{36}-400\.(webp|jpg)|[0-9a-f]{64}\.svg)$')),
 	CONSTRAINT "brand_tokens_colours" CHECK ("brand_tokens"."color_bg" ~ '^#[0-9A-F]{6}$' and "brand_tokens"."color_panel" ~ '^#[0-9A-F]{6}$' and "brand_tokens"."color_text" ~ '^#[0-9A-F]{6}$' and "brand_tokens"."color_muted" ~ '^#[0-9A-F]{6}$' and "brand_tokens"."color_accent" ~ '^#[0-9A-F]{6}$' and "brand_tokens"."color_on" ~ '^#[0-9A-F]{6}$' and "brand_tokens"."color_edge" ~ '^#[0-9A-F]{6}$' and "brand_tokens"."color_line" ~ '^#[0-9A-F]{6}$' and "brand_tokens"."color_good" ~ '^#[0-9A-F]{6}$' and "brand_tokens"."color_warn" ~ '^#[0-9A-F]{6}$' and "brand_tokens"."color_bad" ~ '^#[0-9A-F]{6}$'),
 	CONSTRAINT "brand_tokens_fonts" CHECK ("brand_tokens"."font_display" in ('fraunces','cormorant','inter','playfair','dmserif','schibsted','mukta','tiro') and "brand_tokens"."font_body" in ('fraunces','cormorant','inter','playfair','dmserif','schibsted','mukta','tiro')),
 	CONSTRAINT "brand_tokens_radius" CHECK ("brand_tokens"."radius" in (0,4,8,12,16)),
@@ -69,13 +69,16 @@ CREATE TABLE "brand_tokens" (
 	CONSTRAINT "brand_tokens_previous_size" CHECK ("brand_tokens"."previous" is null or octet_length("brand_tokens"."previous"::text) <= 8192)
 );
 --> statement-breakpoint
+ALTER TABLE "orders" DROP CONSTRAINT "orders_invoice_logo";--> statement-breakpoint
 ALTER TABLE "notices" DROP CONSTRAINT "notices_source";--> statement-breakpoint
 ALTER TABLE "brand_proposals" ADD CONSTRAINT "brand_proposals_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "brand_seasons" ADD CONSTRAINT "brand_seasons_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "brand_tokens" ADD CONSTRAINT "brand_tokens_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "brand_proposals_one_open" ON "brand_proposals" USING btree ("tenant_id") WHERE "brand_proposals"."decided_at" is null;--> statement-breakpoint
 CREATE INDEX "brand_seasons_tenant_starts" ON "brand_seasons" USING btree ("tenant_id","starts_at");--> statement-breakpoint
-ALTER TABLE "shop_settings" ADD CONSTRAINT "shop_settings_logo" CHECK ("shop_settings"."logo_url" is null or "shop_settings"."logo_url" ~ ('^https://[a-z0-9.-]+/tenants/' || "shop_settings"."tenant_id"::text || '/brand/([0-9a-f-]{36}-400\.(webp|jpg)|[0-9a-f]{64}\.svg)$'));--> statement-breakpoint
+ALTER TABLE "shop_settings" ADD CONSTRAINT "shop_settings_logo" CHECK ("shop_settings"."logo_url" is null or "shop_settings"."logo_url" ~ ('^https://[a-z0-9]+\.public\.blob\.vercel-storage\.com/tenants/' || "shop_settings"."tenant_id"::text || '/brand/([0-9a-f-]{36}-400\.(webp|jpg)|[0-9a-f]{64}\.svg)$'));--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_invoice_logo" CHECK ("orders"."invoice_logo" is null or "orders"."invoice_logo" ~ ('^https://[a-z0-9]+\.public\.blob\.vercel-storage\.com/tenants/' || "orders"."tenant_id"::text || '/documents/([0-9a-f-]{36}|[0-9a-f]{64})\.png$')) NOT VALID;--> statement-breakpoint
+ALTER TABLE "orders" VALIDATE CONSTRAINT "orders_invoice_logo";--> statement-breakpoint
 ALTER TABLE "notices" ADD CONSTRAINT "notices_source" CHECK ("notices"."source_kind" in ('billing_notice','support_session','handover','admin','addon_trial','edit_payment','content','ask_owner','brand'));--> statement-breakpoint
 -- =============================================================================
 -- ONE BRAND RECORD — ACCESS (one-address plan P1·2; spec docs/specs/2026-11-16-one-address-checkout.md § 5; tenancy
@@ -87,9 +90,10 @@ ALTER TABLE "notices" ADD CONSTRAINT "notices_source" CHECK ("notices"."source_k
 --   frata_admin: none. anon, authenticated, service_role: none.
 -- frata_builder (a partner's Builder, preview only, ADR-0015): the live record's named columns under builder_rows and
 --   builder_only; never `previous`, `updated_by` or a proposal; nothing on seasons or proposals. shop_settings gains
---   builder select on (tenant_id, logo_url, doc_logo, accent, display_font) only.
--- shop_settings.logo_url: the generated CHECK above holds it to the store's own brand folder (production read
---   2026-11-16: 1 logo, 0 outside the shape).
+--   builder select on (tenant_id, logo_url) only: what the Builder's preview reads (tenancy audit; the plan named three more).
+-- shop_settings.logo_url: the generated CHECK above holds it to the store's own brand folder on Frrata's media store
+--   (production read 2026-11-16: 1 logo, 0 outside the shape). orders.invoice_logo also takes the brand's PNG rendition
+--   (documents/<sha256>.png), frozen at packing when doc_logo is empty: NOT VALID then VALIDATE, no lock that stops packing.
 -- The owner's line: app_brand_notice(proposal) writes one needs_you notice for an open proposal of THIS store (from
 --   app_current_tenant(), never an argument's store); app_notice_members gives it to owners and Managers only.
 -- =============================================================================
@@ -140,7 +144,7 @@ create trigger brand_proposals_once before insert or update on brand_proposals f
 grant select (tenant_id, logo_mark_url, logo_stacked_url, logo_reversed_url, color_bg, color_panel, color_text, color_muted, color_accent,
   color_on, color_edge, color_line, color_good, color_warn, color_bad, font_display, font_body, radius, density) on brand_tokens to frata_builder;
 --> statement-breakpoint
-grant select (tenant_id, logo_url, doc_logo, accent, display_font) on shop_settings to frata_builder;
+grant select (tenant_id, logo_url) on shop_settings to frata_builder;
 --> statement-breakpoint
 do $$ declare t text; begin
   foreach t in array array['brand_tokens', 'shop_settings'] loop

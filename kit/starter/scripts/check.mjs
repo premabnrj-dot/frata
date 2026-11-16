@@ -32,7 +32,7 @@ for (const f of code.filter((x) => /\.tsx?$/.test(x) && !x.endsWith('lib/money.t
 // 6. The brand record (one-address P1·7). The two files the kit ships (components/frrata/) set the variables and draw the
 // logo; every other file uses them.
 const BRAND_FILE = /(^|[\\/])(logos?[\\/][^\\/]+|(logo|monogram|brand[-_]?(logo|mark))[^\\/]*)\.(svg|png|webp|jpe?g|gif|avif|ico)$/i
-for (const f of walk('.')) if (BRAND_FILE.test(f)) problems.push(`${f}: a logo file in the site. The store's logo is in Console › Brand; draw it with <Logo>.`)
+for (const f of walk('.')) if (BRAND_FILE.test(f)) problems.push(`${f}: a logo file in the site. The store's logo is in Console › Brand. Draw it with <Logo>.`)
 const header = /<header\b[\s\S]*?<\/header>/.exec(layout)?.[0] ?? ''
 if (!/<Logo\b/.test(header)) problems.push('app/layout.tsx: the header must draw the store\'s logo with <Logo> (components/frrata/logo.tsx).')
 if (/<svg\b/i.test(header.replace(/<nav\b[\s\S]*?<\/nav>/g, ''))) problems.push('app/layout.tsx: an inline <svg> beside the header\'s logo. The logo comes from the store: use <Logo>.')
@@ -53,7 +53,7 @@ for (const f of code.filter((x) => /\.(css|jsx?|tsx?)$/.test(x) && !KIT_OWN.has(
       // Values only (after a colon), url(#…) references left out: an id selector or a mask isn't a colour.
       for (const decl of l.matchAll(/([-\w]+)\s*:\s*([^;{}]+)/g)) {
         const [, prop, raw] = decl, v = raw.replace(/url\([^)]*\)/g, '')
-        if (/#[0-9a-fA-F]{3,8}\b/.test(v) || COLOUR_FN.test(v)) problems.push(`${at}: a colour of the site's own. Use the store's: var(--brand-…) from <BrandStyle> (a shadow: color-mix(in srgb, var(--brand-text) 12%, transparent)).`)
+        if (/#[0-9a-fA-F]{3,8}\b/.test(v) || COLOUR_FN.test(v)) problems.push(`${at}: a colour set in the site. Use a var(--brand-…) from <BrandStyle>. For a shadow, use color-mix(in srgb, var(--brand-text) 12%, transparent).`)
         if (prop === 'font-family' && !fontOk(v)) problems.push(`${at}: a font of the site's own. Use var(--brand-headings) or var(--brand-body).`)
         if (prop === 'font' && !/^\s*(inherit|initial|unset|revert)\s*$/.test(v) && !/var\(--brand-(headings|body)\)/.test(v)) problems.push(`${at}: a font of the site's own. Use var(--brand-headings) or var(--brand-body).`)
       }

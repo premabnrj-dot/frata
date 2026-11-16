@@ -10,8 +10,6 @@ import { emptyRecord, type BrandRecord, type Density, type Font, type Hex, type 
 import { readRecord } from '@/domains/brand/schema'
 import type { Season } from '@/domains/brand/seasons'
 import { hasCodeSite } from '@/domains/brand/code-site'
-import { renditionUrl } from '@/lib/media/rendition'
-import { afterMainLogo } from '@/lib/media/brand-files'
 import { shopCached, shopCatalogue } from './storefront'
 import { isListed } from '@/domains/storefront/listing'
 import { urlFor } from '@/domains/media/sizes'
@@ -70,21 +68,6 @@ export async function shopBrandWith(tx: Tx, t: string, now: Date): Promise<(Shop
     record: record ?? emptyRecord(DEFAULT_PALETTE, s.logoUrl), saved: !!record, logoUrl: s.logoUrl,
     seasons: seasons.map((x) => ({ id: x.id, name: x.name, startsAt: x.startsAt.toISOString(), endsAt: x.endsAt?.toISOString() ?? null, accent: x.accent as Hex, on: x.on as Hex })),
   }
-}
-
-/**
- * The logo for paper (spec § 5: invoices and slips read `doc_logo`, else the PNG rendition): the owner's own upload
- * first; a code-site store with a main logo, its rendition; a theme shop, nothing new (O19). Inside the caller's
- * transaction (packing freezes it; slips read it).
- */
-export async function paperLogoWith(tx: Tx, t: string, docLogo: string | null, now: Date): Promise<string | null> {
-  if (docLogo) return docLogo
-  const b = await shopBrandWith(tx, t, now)
-  const main = b?.record.logos.main ?? null
-  // The file may not be made yet (its save's after() failed, or the logo is older than the store's website): make it
-  // after this response, so the next print has it. The frozen URL is right either way: it is derived from the logo.
-  if (main) afterMainLogo(t, main)
-  return main ? renditionUrl(t, main) : null
 }
 
 const coreBrand = (t: string): Promise<ShopBrand | null> => withTenant(t, async (tx) => {

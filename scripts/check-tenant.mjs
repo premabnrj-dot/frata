@@ -267,10 +267,10 @@ const BUILDER_COLUMNS = {
   collections: 'id tenant_id title handle kind rules match_all',
   collection_products: 'tenant_id collection_id product_id',
   product_attributes: 'tenant_id product_id attribute values',
-  // One brand record (one-address P1·2, drizzle/*_brand_record.sql): the live record a Builder previews, and the five
-  // shop_settings columns beside it. Never `previous`, `updated_by`, a proposal or a season.
+  // One brand record (one-address P1·2, drizzle/*_brand_record.sql): the live record a Builder previews, and the store's
+  // logo beside it. Never `previous`, `updated_by`, a proposal or a season.
   brand_tokens: 'tenant_id logo_mark_url logo_stacked_url logo_reversed_url color_bg color_panel color_text color_muted color_accent color_on color_edge color_line color_good color_warn color_bad font_display font_body radius density',
-  shop_settings: 'tenant_id logo_url doc_logo accent display_font',
+  shop_settings: 'tenant_id logo_url',
 }
 const builderSelectOk = (what) => {
   const m = what.match(/^select \(([a-z_, \n]+)\) on ([a-z_]+)$/)

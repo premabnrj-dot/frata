@@ -132,7 +132,7 @@ export default {
         const staff = await open('staff')
         try {
           await staff.p.goto(CONSOLE + '/console/brand')
-          await staff.p.getByText('Only the owner, a Manager or the store’s partner opens Brand').waitFor()
+          await staff.p.getByText('Brand opens for the owner, a Manager or the store’s partner').waitFor()
         } finally { await staff.ctx.close() }
       })
     } finally {

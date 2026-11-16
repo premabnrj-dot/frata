@@ -13,7 +13,7 @@ import { BLOB_STORE_ID } from '@/lib/env'
 import { errName } from '@/lib/log'
 import { photosAreMade } from '@/lib/media/uploaded'
 import { svgIsStored, afterMainLogo } from '@/lib/media/brand-files'
-import { shopBrandWith } from '@/lib/queries/brand'
+import { shopBrand, shopBrandWith } from '@/lib/queries/brand'
 import { refreshShop } from '@/lib/storefront/refresh'
 import { storeHost } from '@/domains/media/sizes'
 import { brandProblems, type BrandField } from '@/domains/brand/check'
@@ -42,7 +42,7 @@ type Auth = Extract<Awaited<ReturnType<typeof requireMember>>, { ok: true }>
 type Out = { error: string; fields?: Partial<Record<BrandField | LogoSlot, string>> } | { outcome: 'live' | 'waits' | 'unchanged'; version: number | null; main?: string | null }
 
 const NOTHING = 'We couldn’t save that. Nothing was changed.'
-const FULL = 'Too many saves this minute. Nothing was changed.'
+const FULL = 'Too many saves this minute. Nothing was changed. Try again in a minute.'
 const STALE = 'The brand changed since you opened it. Reload to see it.'
 // A theme shop's editor only ever sends its logo; anything else is a request no page makes.
 const THEME_ONLY = NOTHING
@@ -78,7 +78,7 @@ async function logoProblems(p: BrandPatch, tenantId: string): Promise<Partial<Re
     const v = p.logos?.[s]
     if (v === undefined || v === null) return
     const f = host ? acceptedBrandFile(v, host, tenantId) : null
-    const there = f && (f.kind === 'svg' ? await svgIsStored(f.url) : await photosAreMade([{ base: rasterBase(f.url), widths: [400] }]))
+    const there = f && (f.kind === 'svg' ? await svgIsStored(f.url) : await photosAreMade([{ base: rasterBase(f.url), widths: [400] }], undefined, 'brand'))
     if (!there) out[s] = 'That file could not be used. Upload it again.'
   }))
   return out
@@ -117,18 +117,24 @@ async function putLive(tx: Tx, t: string, userId: string, live: BrandRecord, nex
 }
 
 /** The one door for every brand write: who, the limit, the transaction, then the cache. */
-async function write(what: { action: string; roles: typeof CAN_BUILD | typeof CAN_MANAGE; limit: Limit }, work: (tx: Tx, auth: Auth) => Promise<Out>): Promise<BrandResult> {
+/** `pre`: the save was counted already, before its files were read (saveBrand); the transaction's own store must be it. */
+async function write(what: { action: string; roles: typeof CAN_BUILD | typeof CAN_MANAGE; limit: Limit; pre?: { t: string; at: Date } }, work: (tx: Tx, auth: Auth) => Promise<Out>): Promise<BrandResult> {
   const who = await requireMember(what.roles)
   if (!who.ok) return { ok: false, error: who.message }
-  let counted: { t: string; at: Date } | null = null
+  // Counted before the transaction opens (speed review H1: withinLimit takes its own connection, never one inside a
+  // transaction), against the member's store; the transaction checks it writes to that same store.
+  let counted: { t: string; at: Date } | null = what.pre ?? null
+  if (!counted) {
+    const at = new Date()
+    if (!(await withinLimit(what.limit, who.membership.tenantId, at, true))) return { ok: false, error: FULL }
+    counted = { t: who.membership.tenantId, at }
+  }
+  const pre = counted
   const giveBack = async () => { if (counted) await uncount(what.limit, counted.t, counted.at).catch(() => {}) }
   let r: Awaited<ReturnType<typeof asMember<Out>>>
   try {
     r = await asMember(what.roles, { action: what.action }, async (tx, auth) => {
-      const t = auth.membership.tenantId
-      const now = new Date()
-      if (!(await withinLimit(what.limit, t, now, true))) return { error: FULL }
-      counted = { t, at: now }
+      if (pre.t !== auth.membership.tenantId) return { error: NOTHING }
       return work(tx, auth)
     })
   } catch (e) {
@@ -136,8 +142,8 @@ async function write(what: { action: string; roles: typeof CAN_BUILD | typeof CA
     await giveBack()
     return { ok: false, error: NOTHING }
   }
-  if (!r.ok) return r
-  if ('error' in r.value) { if (r.value.error !== FULL) await giveBack(); return { ok: false, error: r.value.error, ...(r.value.fields ? { fields: r.value.fields } : {}) } }
+  if (!r.ok) { await giveBack(); return r }
+  if ('error' in r.value) { await giveBack(); return { ok: false, error: r.value.error, ...(r.value.fields ? { fields: r.value.fields } : {}) } }
   const { outcome, version } = r.value
   if (outcome === 'live') {
     refreshShop(r.tenantId, 'settings')
@@ -158,15 +164,24 @@ export async function saveBrand(input: unknown, action: 'brand.save' | 'settings
   const who = await requireMember(CAN_BUILD)
   if (!who.ok) return { ok: false, error: who.message }
   if (who.membership.supportSessionId) return { ok: false, error: BRAND_REFUSAL.support }
-  const files = await logoProblems(patch, who.membership.tenantId)
-  if (Object.keys(files).length) return { ok: false, error: Object.values(files)[0]!, fields: files }
-  return write({ action, roles: CAN_BUILD, limit: LIMITS.brandSave }, async (tx, auth) => {
+  // Counted before any file is read (security review LOW-2), and only the logo slots that change are read: the editor
+  // sends all four, and a colour change reads none (architecture review). The live record here is the cached one, used
+  // only to skip unchanged slots; the transaction below compares against the record it holds.
+  const t0 = who.membership.tenantId, at = new Date()
+  if (!(await withinLimit(LIMITS.brandSave, t0, at, true))) return { ok: false, error: FULL }
+  const cached = await shopBrand(t0).catch(() => null)
+  const changed: BrandPatch = { logos: Object.fromEntries(Object.entries(patch.logos ?? {}).filter(([s, v]) => v !== cached?.record.logos[s as LogoSlot])) }
+  const files = await logoProblems(changed, t0)
+  if (Object.keys(files).length) { await uncount(LIMITS.brandSave, t0, at).catch(() => {}); return { ok: false, error: Object.values(files)[0]!, fields: files } }
+  return write({ action, roles: CAN_BUILD, limit: LIMITS.brandSave, pre: { t: t0, at } }, async (tx, auth) => {
     const t = auth.membership.tenantId, me = auth.userId, now = new Date()
     const brand = await shopBrandWith(tx, t, now)
     if (!brand) {
       // A theme shop (O19): its logo only, live, as Settings always saved it.
       const keys = Object.keys(patch).filter((k) => k !== 'logos'), slots = Object.keys(patch.logos ?? {}).filter((s) => s !== 'main')
       if (keys.length || slots.length || patch.logos?.main === undefined) return { error: THEME_ONLY }
+      // A theme shop's logo stays raster: its emails, icon and markup read it as it is (architecture review).
+      if (patch.logos.main && /\.svg$/.test(patch.logos.main)) return { error: 'Upload a PNG or WebP logo.', fields: { main: 'Upload a PNG or WebP logo.' } }
       await tx.update(shopSettings).set({ logoUrl: patch.logos.main, updatedAt: now }).where(eq(shopSettings.tenantId, t))
       await memberAudit(tx, auth, action, undefined, { set: patch.logos.main !== null })
       return { outcome: 'live', version: null }
@@ -204,7 +219,7 @@ export async function decideBrand(input: unknown): Promise<BrandResult> {
   if (!parsed.success) return { ok: false, error: NOTHING }
   const { id, decision } = parsed.data
   return write({ action: `brand.${decision}`, roles: CAN_MANAGE, limit: LIMITS.brandSave }, async (tx, auth) => {
-    if (!decidesBrand(auth.membership.role, auth.membership.supportSessionId)) return { error: BRAND_REFUSAL.support }
+    if (!decidesBrand(auth.membership.role, auth.membership.supportSessionId)) return { error: auth.membership.supportSessionId ? BRAND_REFUSAL.support : 'Only the owner or a Manager can answer this change. Nothing was changed.' }
     const t = auth.membership.tenantId, me = auth.userId, now = new Date()
     const [p] = await tx.select({ id: brandProposals.id, record: brandProposals.record, base: brandProposals.baseVersion }).from(brandProposals)
       .where(and(eq(brandProposals.tenantId, t), eq(brandProposals.id, id), isNull(brandProposals.decidedAt))).for('update')

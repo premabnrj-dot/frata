@@ -1,7 +1,7 @@
 import 'server-only'
 import { accentOf } from '@/domains/brand/accent'
 import { shopBrand } from '@/lib/queries/brand'
-import { afterMainLogo, ensureRendition } from '@/lib/media/brand-files'
+import { afterMainLogo, ensureRendition, rasterLogoMade } from '@/lib/media/brand-files'
 import { renditionUrl } from '@/lib/media/rendition'
 import { errName } from '@/lib/log'
 
@@ -16,7 +16,9 @@ import { errName } from '@/lib/log'
  *  instead of linking a file that isn't there); the Settings preview never waits on file work and makes it after. */
 export async function emailBrand(tenantId: string, themeAccent: string, logoUrl: string | null, now: Date, wait = true): Promise<{ accent: string; on: string | null; logoUrl: string | null }> {
   const b = await shopBrand(tenantId).catch((e: unknown) => { console.error('[email brand]', errName(e)); return null })
-  if (!b) return { accent: themeAccent, on: null, logoUrl }
+  // A theme shop: as before. Its logo is raster, unless the store was a code site once (its last key deleted): then an
+  // SVG logo goes as its PNG only once made, else the name (architecture review).
+  if (!b) return { accent: themeAccent, on: null, logoUrl: logoUrl && /\.svg$/.test(logoUrl) ? (wait ? await rasterLogoMade(tenantId, logoUrl) : null) : logoUrl }
   const { accent, on } = accentOf(b.record, b.seasons, now, themeAccent)
   const main = b.record.logos.main
   if (!main) return { accent, on, logoUrl: null }

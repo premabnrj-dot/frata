@@ -19,7 +19,7 @@ import type { Paise } from '@/domains/money/paise'
 import { shopSettings, tenantCounters, tenants } from '@/lib/db/schema'
 import { orderEvents, orderNotes, orders, shipments } from '@/lib/db/schema-orders'
 import { putStockBack, takeStock } from './stock'
-import { paperLogoWith } from '@/lib/queries/brand'
+import { brandPaperLogoWith } from './paper-logo'
 
 // =============================================================================
 // FILE: src/lib/orders/work.ts
@@ -169,6 +169,8 @@ export async function pack(tx: Tx, tenantId: string, actor: Actor, orderId: stri
   const fy = fiscalYear(now)
   const [s] = await tx.select({ series: shopSettings.invoiceSeries, prefix: shopSettings.orderPrefix, name: tenants.name, legalName: shopSettings.legalName, address: shopSettings.address, logo: shopSettings.docLogo, signatory: shopSettings.docSignatory, note: shopSettings.docNote }).from(tenants)
     .innerJoin(shopSettings, eq(shopSettings.tenantId, tenants.id)).where(eq(tenants.id, tenantId))
+  // The logo for paper, resolved before the counter's row lock is taken (speed review L2).
+  const paperLogo = s?.logo ?? await brandPaperLogoWith(tx, tenantId)
   // Before the counter moves (a refusal after it would leave a gap in the numbers): a series saved before
   // settings checked it may not leave room for the year's numbers inside GST's 16 characters.
   if (s?.series && !seriesFits(s.series)) return { ok: false, error: 'The invoice number would be longer than GST allows (16 characters). Shorten the invoice series in Settings › Invoices and slips, then pack.' }
@@ -179,7 +181,7 @@ export async function pack(tx: Tx, tenantId: string, actor: Actor, orderId: stri
   const at = moment(now)
   // The seller as the invoice is issued, and its logo, signatory and note (Documents D2): a later change to Settings
   // never rewrites any of them (architecture review 2026-11-07).
-  const r = await tx.update(orders).set({ packedAt: at, invoiceNumber: number, sellerName: s?.legalName || s?.name || '', sellerAddress: s?.address ?? '', invoiceLogo: await paperLogoWith(tx, tenantId, s?.logo ?? null, now), invoiceSignatory: s?.signatory ?? '', invoiceNote: s?.note ?? '' })
+  const r = await tx.update(orders).set({ packedAt: at, invoiceNumber: number, sellerName: s?.legalName || s?.name || '', sellerAddress: s?.address ?? '', invoiceLogo: paperLogo, invoiceSignatory: s?.signatory ?? '', invoiceNote: s?.note ?? '' })
     .where(and(eq(orders.tenantId, tenantId), eq(orders.id, orderId), isNull(orders.packedAt), isNull(orders.cancelledAt), isNull(orders.heldAt))).returning({ id: orders.id })
   // The row is locked (current: for update), so this cannot miss; if it ever does, the counter rolls back with it.
   if (!r.length) throw new Error('pack: order changed under its lock')
