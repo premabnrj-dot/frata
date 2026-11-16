@@ -373,9 +373,9 @@ plan will use; the plan may rename one, and this list follows it.
    own, named "EkCode".
 4. **Counsel** (an Indian privacy/tech lawyer), with the spec and mockup: (a) EkCode's notice, privacy policy and terms;
    (b) the merchant terms' data-processing clause; (c) "Save this address to EkCode" starting ticked; (d) English only until the owner plans other languages.
-   (e) EkCode on by default in every store's checkout (the spec's A4(d)): ruled by the owner 2026-11-16 ("frrata switch on
-   it's own shopper sign in service in merchant's checkout by default"); counsel words the store privacy paragraph
-   (`src/domains/policies/render.ts`, marked as a draft) and the merchant terms' line before real shoppers.
+   (e) EkCode on by default in every store's checkout (the spec's A4(d)). The owner ruled it on 2026-11-16 ("frrata
+   switch on it's own shopper sign in service in merchant's checkout by default"). Before real shoppers, counsel words
+   the store privacy paragraph (`src/domains/policies/render.ts`, marked as a draft) and the merchant terms' line.
 5. **Grievance contact**: Priti Bag, `privacy@ekcode.in` (owner, 2026-11-09). Create the mailbox on ekcode.in.
 6. Optional: a trademark search and filing for "EkCode" (classes 9, 35, 42).
 
@@ -425,15 +425,19 @@ plan will use; the plan may rename one, and this list follows it.
 5. Your approval of the P1 build on a demo shop.
 
 **Running EkCode on by default (spec `docs/specs/2026-11-16-ekcode-default-on.md` E5)**
-- Admin › EkCode › Overview shows **Busiest hour, 7 days** against *Codes, every store, an hour* (`globalHour`) and a band
-  at 80%. Then Edit limits and raise it to the number the band gives (about 3× the busiest 60 minutes); a new limits version
-  takes effect at once. Ask Meta for the 100K-a-day tier before ~400 stores offer EkCode.
-- **A sale day for one store:** Admin › EkCode › Stores → the store → More → Raise daily cap (`raised_cap`, with a
-  reason). It stays until changed: after the sale, set it back to the plan's number.
-- The breaker does not apply on Launch while its cap is not raised: the daily cap (100) stops codes before the breaker's
+- Admin › EkCode › Overview shows **Busiest hour, 7 days** against *Codes, every store, an hour* (`globalHour`), and a
+  band at 80%. When the band shows, open Edit limits and set it to the number the band gives (about 3× the busiest 60
+  minutes). A new limits version takes effect at once. Ask Meta for the 100K-a-day tier before about 400 stores offer
+  EkCode.
+- **A sale day for one store:** Admin › EkCode › Stores → the store → More → Change daily cap (`raised_cap`, with a
+  reason). It stays until you change it. After the sale, set it back to the plan's number, which the dialog shows.
+- On Launch, the breaker never trips unless the cap is raised. The daily cap of 100 stops codes before the breaker's
   200. A raise to 200 or more brings the breaker back for that store.
-- A store at its cap loses EkCode until its codes in the last 24 hours fall under it; at the hourly limit, every store
-  until the last hour's do. Guest checkout still works.
+- A store at its daily cap loses EkCode until its last 24 hours fall under the cap. At the hourly limit, every store
+  loses it until the last hour falls under. Guest checkout still works.
+- **Before real shoppers** (security review 2026-11-16, MED): a store whose privacy page is in its own words still offers
+  EkCode; Settings only asks it to add the line, and the check passes any page that names EkCode. Before a store with
+  real shoppers, either keep EkCode off where a rewritten privacy page lacks the lines, or add them to it.
 
 **D. Later**
 - ~~Vercel Pro and the 5-minute outbox schedule~~ — done 2026-11-11 (`/api/cron/drain`).

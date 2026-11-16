@@ -189,6 +189,8 @@ export default {
       throw e
     } finally {
       await ctx.close()
+      // Back to never switched, whatever failed: later flows (10, 69, 90, 95) expect EkCode on by default.
+      await db`delete from tenant_modules where tenant_id = ${shop.id} and module = 'ekcode'`
     }
   },
 }

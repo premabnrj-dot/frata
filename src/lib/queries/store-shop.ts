@@ -47,9 +47,10 @@ export async function coreShop(tenantId: string): Promise<StoreShop | null> {
       tx.select({ name: deliveryZones.name, charge: deliveryZones.charge, freeAbove: deliveryZones.freeAbove, daysMin: deliveryZones.daysMin, daysMax: deliveryZones.daysMax,
         codOn: deliveryZones.codOn, codCharge: deliveryZones.codCharge, codMax: deliveryZones.codMax }).from(deliveryZones).where(eq(deliveryZones.tenantId, tenantId)).orderBy(asc(deliveryZones.position)),
       // One access read for both: the zones (while usable) and whether the privacy page says the checkout offers EkCode.
-      moduleAccessIn(tx, tenantId, new Date()),
+      // Best effort in a savepoint: a failed read leaves no zones and no EkCode paragraph, never the shop page down.
+      tx.transaction((sp) => moduleAccessIn(sp, tenantId, new Date())).catch((err) => { console.error('[store-shop modules]', err instanceof Error ? err.name : 'error'); return null }),
     ])
-    const zones = zoneRows.length && access.delivery_zones.usable
+    const zones = zoneRows.length && access?.delivery_zones.usable
       ? zoneRows.map((z) => ({ ...z, charge: Number(z.charge), freeAbove: z.freeAbove === null ? null : Number(z.freeAbove), codCharge: Number(z.codCharge), codMax: z.codMax === null ? null : Number(z.codMax) }))
       : null
     const { gstin, gstScheme, homeState, b2bInvoices, turnoverBand, ...facts } = r
@@ -61,7 +62,7 @@ export async function coreShop(tenantId: string): Promise<StoreShop | null> {
       overrides: Object.fromEntries(pol.map((p) => [p.kind, p.body])), nav,
       // Visits are counted (A·2): the privacy policy says so (src/domains/policies/render.ts).
       countsVisits: isCountingVisits(),
-      offersEkcode: ekcodeOffered(access),
+      offersEkcode: !!access && ekcodeOffered(access),
       zones,
     }
   })

@@ -59,8 +59,9 @@ export type PolicyFacts = {
  * holdout, src/components/modules/ekcode/island.tsx). A rewritten page counts as saying it when it names EkCode.
  */
 export const EKCODE_PRIVACY = [
-  'This checkout offers EkCode, Frrata’s sign-in for shoppers. If you continue with EkCode, it fills in your name, phone number and address, and this shop gets them only then. The address you deliver to is saved to your EkCode unless you untick “Save this address to EkCode”. EkCode’s own privacy policy is at ekcode.in/privacy.',
-  'To show EkCode to some shoppers and not others, so we can tell whether it helps, this browser keeps a random number that says nothing about you and sends it to Frrata once a day.',
+  'This checkout offers EkCode, Frrata’s sign-in for shoppers. If you continue with EkCode, it fills in your name, phone number and address. This store gets them only when you do. EkCode saves your delivery address; to stop this, untick “Save this address to EkCode”. EkCode’s own privacy policy is at ekcode.in/privacy.',
+  // Counsel: is a lasting random browser id personal data? "holds no name, phone or address" is the factual claim.
+  'Frrata shows EkCode to some shoppers and not others, to see if it helps. For this, your browser keeps a random number and sends it to Frrata once a day. The number holds no name, phone or address.',
 ] as const
 const EKCODE_WORD = /ekcode/i
 
@@ -134,7 +135,7 @@ export function renderPolicy(page: PolicyPage, f: PolicyFacts, inr: (paise: numb
         ...(f.countsVisits ? [[t('We count visits to this shop to see which pages and links work: the pages you open, your browser and an approximate city. We don\'t use cookies for this, don\'t store your IP address, and can\'t tell who you are from it. Visit records are deleted after 90 days.')]] : []),
         ...(f.offersEkcode ? EKCODE_PRIVACY.map((line) => [t(line)]) : []),
         [t(f.offersEkcode
-          ? 'Online payments are handled by Razorpay; we never see your card or UPI details. Your details are shared only with the courier that delivers your order, and with EkCode when you choose it.'
+          ? 'Online payments are handled by Razorpay; we never see your card or UPI details. We share your details with the courier that delivers your order. If you choose EkCode, we share them with EkCode too.'
           : 'Online payments are handled by Razorpay; we never see your card or UPI details. Your details are shared only with the courier that delivers your order.')],
         [t('To see, correct or delete what we hold about you, write to our grievance officer, '), fact('grievance officer', f.grievanceName), t(', at '), fact('grievance email', f.grievanceEmail), t('.')],
       ]

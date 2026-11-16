@@ -34,6 +34,8 @@ export async function setModuleAction(input: unknown): Promise<{ ok: true } | { 
   try {
     const r = await asMember(CAN_MANAGE, { action: on ? 'module.on' : 'module.off', target: module }, async (tx, auth) => {
       const tenantId = auth.membership.tenantId
+      // One switch at a time per store and app: an off racing an on can't miss its uncommitted row (tenancy audit L3).
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`module:${tenantId}:${module}`}))`)
       if (on) {
         const access = await moduleAccessIn(tx, tenantId, new Date())
         const a = access[module]

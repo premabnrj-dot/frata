@@ -54,13 +54,13 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty, 
         {!locked && <p className="text-sm text-muted-foreground">These pages are a starting point. Have a lawyer read them once.</p>}
       </div>
       {POLICY_PAGES.map(([k, label]) => {
-        const own = overrides[k]?.trim() ? overrides[k] : undefined
-        const { gaps, ekcodeMissing } = policyState(k, facts, own, inr)
+        const { own: isOwn, gaps, ekcodeMissing } = policyState(k, facts, overrides[k], inr)
+        const own = isOwn ? overrides[k] : undefined
         return (
           <div key={k} className={`border-t border-border px-4 py-3 ${selected === k ? 'bg-accent/50' : ''}`}>
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" className="font-medium hover:underline" onClick={() => onSelect(k)}>{label}</button>
-              <Badge tone={own ? (ekcodeMissing ? 'warn' : 'info') : gaps.length ? 'warn' : 'ok'}>{own ? 'Your own words' : gaps.length ? 'Missing details' : 'From your settings'}</Badge>
+              <Badge tone={own ? 'info' : gaps.length ? 'warn' : 'ok'}>{own ? 'Your own words' : gaps.length ? 'Missing details' : 'From your settings'}</Badge>
               <span className="flex-1" />
               {editing !== k && !locked && (
                 <button type="button" className="inline-flex min-h-6 items-center text-sm underline" disabled={pagesDirty}

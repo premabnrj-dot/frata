@@ -3,7 +3,8 @@
 -- A module is on when the store has an open switch row, or when it is on by default and the store has no row at all
 -- (it never chose). The default itself is NOT here: it is `MODULES.ekcode.defaultOn` in the registry, passed in as
 -- `p_default` by src/lib/admin/ekcode.ts, so there is no SQL copy of it (architecture review M3). `app_module_on` is the
--- one SQL mirror of `switchedOnNow` (src/domains/modules/access.ts); proof § 101 checks the two agree.
+-- one SQL mirror of `switchedOnNow` (src/domains/modules/access.ts); proof § 101 runs it over the same cases as the
+-- TS tests in src/domains/modules/__tests__/access.test.ts (no row, closed only, closed then open; with and without).
 -- Admin's store list now lists only stores that have opened, on the same rule; "stores offering it" and the busiest
 -- hour of the last 7 days (against `globalHour`, task E5) are counted on their own, never off the capped list.
 -- =============================================================================
@@ -40,7 +41,9 @@ end $$;--> statement-breakpoint
 -- How far EkCode reaches, counted whole: open stores offering it, open stores in all, and the busiest hour of codes in
 -- the last 7 days, as `globalHour` counts it (E5: Admin warns at 80%). `ekcode_issue_code` refuses on a ROLLING hour
 -- (codes since now() - 1 hour), so the peak here is the most codes in any 60 minutes, not in a clock hour (a burst
--- across :00 would read half); `busiest_at` is the end of that window.
+-- across :00 would read half); `busiest_at` is the end of that window. The window includes a code exactly 60 minutes
+-- back, which the limit does not: it can read one high, the safe side. Under 5 codes both are null (tenancy S1: a
+-- single shopper's moment is never readable).
 create or replace function app_admin_ekcode_reach(p_uid uuid, p_default boolean)
   returns table (offering bigint, opened bigint, busiest_hour bigint, busiest_at timestamptz)
   language plpgsql stable security definer set search_path = '' as $$
@@ -49,7 +52,7 @@ begin
   return query
   select (select count(*) from public.tenants t where t.first_opened_at is not null and public.app_module_on(t.id, 'ekcode', p_default)),
     (select count(*) from public.tenants t where t.first_opened_at is not null),
-    coalesce(h.n, 0), h.at
+    case when coalesce(h.n, 0) < 5 then null else h.n end, case when coalesce(h.n, 0) < 5 then null else h.at end
   from (select 1) one
   left join lateral (select w.n, w.at from (select k.created_at at,
       count(*) over (order by k.created_at range between interval '1 hour' preceding and current row) n

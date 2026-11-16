@@ -52,7 +52,7 @@ describe('privacy while the checkout offers EkCode (default-on precondition b)',
   it('says what EkCode does, the browser number and its beacon, and that EkCode gets details only when chosen', () => {
     const on = text(renderPolicy('privacy', { ...full, offersEkcode: true }, inr))
     for (const line of EKCODE_PRIVACY) expect(on).toContain(line)
-    expect(on).toContain('and with EkCode when you choose it.')
+    expect(on).toContain('If you choose EkCode, we share them with EkCode too.')
     const off = text(renderPolicy('privacy', full, inr))
     expect(off).not.toMatch(/EkCode/)
     expect(off).toContain('shared only with the courier that delivers your order.')

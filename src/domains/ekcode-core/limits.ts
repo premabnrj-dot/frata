@@ -79,6 +79,10 @@ export function breakerTripped(sent: number, right: number, l: Pick<Limits, 'bre
   return sent >= l.breakerAfter && right / sent < l.breakerMinRight
 }
 
+/** A plan code as EkCode's limits read it: no plan, or one EkCode doesn't know, is Launch (as `ekcode_plan_of`'s caller
+ *  `ekcode_issue_code` reads it: coalesce(…, 'launch')). The one TS copy. */
+export const planKeyOf = (code: string | null | undefined): PlanKey => (code === 'growth' || code === 'scale' ? code : 'launch')
+
 /** A shop's daily cap: its plan's, or the higher number Admin raised it to. */
 export function shopDayCap(plan: PlanKey, raisedTo: number | null, l: Pick<Limits, 'perShopDay'> = DEFAULT_LIMITS): number {
   return Math.max(l.perShopDay[plan], raisedTo ?? 0)

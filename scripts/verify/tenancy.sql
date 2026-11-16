@@ -4828,16 +4828,19 @@ begin
     select * into r from public.app_admin_ekcode_reach(st, true);
     select count(*) into n from public.tenants t where t.first_opened_at is not null and public.app_module_on(t.id, 'ekcode', true);
     if r.offering <> n or r.opened < r.offering then raise exception 'FAIL: 101 the reach count disagrees with the rule (% vs %)', r.offering, n; end if;
-    -- The busiest hour is a rolling 60 minutes, as the limit counts it: three codes across :00 read 3, not 2.
+    -- The busiest hour is a rolling 60 minutes, as the limit counts it: four codes before :00 and one after read 5, not
+    -- 4; under 5 it is not shown at all (tenancy S1).
     create temp table c101 as select * from public.ekcode_codes order by created_at desc limit 1;
     if not exists (select 1 from c101) then raise exception 'FAIL: 101 needs an EkCode code from the vault proof to copy'; end if;
     t0 := date_trunc('hour', now() - interval '3 days');
-    foreach m in array array[-10, -5, 5] loop
+    select * into r from public.app_admin_ekcode_reach(st, true);
+    if r.busiest_hour is not null or r.busiest_at is not null then raise exception 'FAIL: 101 a busiest hour under 5 codes was shown'; end if;
+    foreach m in array array[-20, -15, -10, -5, 5] loop
       update c101 set id = gen_random_uuid(), created_at = t0 + make_interval(mins => m), wamid = null, proof_digest = null;
       insert into public.ekcode_codes select * from c101;
     end loop;
     select * into r from public.app_admin_ekcode_reach(st, true);
-    if r.busiest_hour <> 3 or r.busiest_at <> t0 + interval '5 minutes' then raise exception 'FAIL: 101 the busiest hour is not a rolling 60 minutes (% at %)', r.busiest_hour, r.busiest_at; end if;
+    if r.busiest_hour is distinct from 5 or r.busiest_at is distinct from t0 + interval '5 minutes' then raise exception 'FAIL: 101 the busiest hour is not a rolling 60 minutes (% at %)', r.busiest_hour, r.busiest_at; end if;
     -- On again after off: an open row beside the closed one reads on, default or not.
     insert into public.tenant_modules (tenant_id, module, enabled_by) values (b, 'ekcode', who);
     if not public.app_module_on(b, 'ekcode', true) or not public.app_module_on(b, 'ekcode', false) then raise exception 'FAIL: 101 on again after off did not read on'; end if;
@@ -4845,6 +4848,12 @@ begin
     -- A store that has not opened is never listed, on or not.
     update public.tenants set first_opened_at = null where id = a;
     if exists (select 1 from public.app_admin_ekcode_shops(st, 7, true) x where x.tenant_id = a) then raise exception 'FAIL: 101 Admin listed a store that has not opened'; end if;
+    -- As frata_admin itself (the definer runs the revoked helper as its owner): the whole chain works for the one role.
+    set local role frata_admin;
+    perform 1 from public.app_admin_ekcode_shops(st, 7, true); perform 1 from public.app_admin_ekcode_reach(st, true);
+    begin perform public.app_module_on(a, 'ekcode', true); raise exception 'FAIL: 101 frata_admin called app_module_on';
+    exception when insufficient_privilege then null; end;
+    reset role;
     -- Staff only.
     begin perform 1 from public.app_admin_ekcode_shops(gen_random_uuid(), 7, true); raise exception 'FAIL: 101 a non-staff id read the list';
     exception when others then if sqlerrm <> 'not_staff' then raise; end if; end;
