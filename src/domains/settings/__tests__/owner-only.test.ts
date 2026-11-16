@@ -51,7 +51,9 @@ describe('owner-only settings (PP1)', () => {
     expect(lockOf(all, 'policies')).toEqual({ whole: true })
     expect(lockOf(all, 'business')).toEqual({ whole: true })
     expect(lockOf(all, 'contact')).toEqual({ whole: false, fields: OWNER_ONLY_FIELDS.contact })
-    expect(lockOf(all, 'invoices')).toEqual({ whole: false, fields: OWNER_ONLY_FIELDS.invoices })
+    expect(lockOf(all, 'invoices', { invoiceSeries: 'AY/' })).toEqual({ whole: false, fields: OWNER_ONLY_FIELDS.invoices })
+    // Saved values unknown: the prefix is locked too (fails closed).
+    expect(lockOf(all, 'invoices')).toEqual({ whole: false, fields: [...OWNER_ONLY_FIELDS.invoices, 'orderPrefix'] })
     for (const k of ['store', 'payments', 'shipping'] as const) expect(lockOf(all, k)).toBeNull()
     for (const k of ['policies', 'business', 'contact', 'invoices'] as const) expect(lockOf(lockedFor('owner', true, false), k)).toBeNull()
   })
