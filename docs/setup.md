@@ -125,6 +125,12 @@ adds passkeys again through steps 1–5.
 
 ### Rename day: Frrata (brand spec 2026-11-07)
 
+**Domains (owner, 2026-11-16: "frrata.com will be the public domain. .shop will remain the subdomain, frratamail will
+remain the mailing email."):** `frrata.com` is Frrata's public domain (the homepage, `app.frrata.com` for the console
+when it moves); store addresses stay `<store>.frrata.shop`; Frrata's mail is sent from the frratamail domain. Any plan
+that proposes another domain (the Studio plan's `frrata.store`, `frrata-preview.site`) is re-checked against this.
+
+
 1. Supabase → Authentication → Emails: set the **sender name** to "Frrata" and the sign-in email's **subject** to
    say "Frrata" (the sign-in page tells people to look for "Frrata" in their inbox).
 2. Vercel → frata → Domains: add **frrata.com** once bought. The app keeps working on its current hosts; moving shop
