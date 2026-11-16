@@ -44,6 +44,20 @@ const config: NextConfig = {
       { source: '/:path*', has: [{ type: 'host', value: platformHostPattern(CONSOLE_HOST, SHOP_DOMAIN, EKCODE_HOST) }], headers: [HSTS_PLATFORM] },
     ]
   },
+  // The shop's bag store, the small modules every shop island shares with the shell's bag button, and the rail counter
+  // (the shell's strip and a page's product rail), in ONE chunk: under webpack's 20 kB minSize each page's chunk carried
+  // its own copy beside the layouts' (speed review 2026-11-16: about 1.3 kB twice on checkout and the product page, the
+  // counter 0.5 kB twice on the product page). check:storefront-build holds the pages' weight.
+  webpack(config, { dev, isServer }) {
+    const split = config.optimization?.splitChunks
+    if (!dev && !isServer && split && split.cacheGroups) {
+      split.cacheGroups.shopShared = {
+        name: 'shop-shared', chunks: 'all', enforce: true, priority: 20,
+        test: /[\\/]src[\\/](components[\\/]storefront[\\/](bag-store|bag-words|close-mark|landing|chunk|sections[\\/]rail-counter)\.tsx?|domains[\\/]checkout[\\/]bag-fill\.ts)$/,
+      }
+    }
+    return config
+  },
   images: {
     // One quality: the optimiser otherwise takes q=1…100 from the URL, and every
     // photo × width × quality is a transformation Vercel bills (Ekatan abuse audit).

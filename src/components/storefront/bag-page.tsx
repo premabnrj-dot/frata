@@ -1,6 +1,6 @@
 'use client'
 
-import { BagContents } from './bag'
+import { BagContents } from './bag-contents'
 
 export function BagPage() {
   return (

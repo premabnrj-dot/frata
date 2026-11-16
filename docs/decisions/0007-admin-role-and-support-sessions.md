@@ -52,7 +52,7 @@ Order: GitHub and the package registry before the first kit release; Admin befor
 ## Amendment (owner, 2026-11-16): a switch that turns passkeys off for testing
 The owner: "offer me option to turn off pass key, currently I feel they are frictions … we should be able to turn it
 on when we want … I want to be able to test the system without any frictions." While a `passkeys_off` row in
-`platform_switches` is live (`until` in the future, at most 7 days from when it was set), getting in counts as
+`platform_switches` is live (`until` in the future, at most 30 days from when it was set (owner, 2026-11-16: "extend passkey for 30 days"; was 7)), getting in counts as
 checked for people who already qualify: staff, and live partner people (owners, leads and Builders). What still needs a
 real passkey: adding, approving, listing and removing passkeys, for staff and partners and from Admin (security review
 2026-11-16 H1: otherwise a passkey enrolled with an inbox alone would outlive the switch). Signing in still needs the

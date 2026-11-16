@@ -6,6 +6,7 @@
 // stand-in for Razorpay's checkout.js. Test-only; nothing here is deployed.
 // =============================================================================
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { readdirSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import postgres from 'postgres'
 
@@ -90,6 +91,26 @@ window.Razorpay.prototype.open = function () { var o = this.o;
     .then(function (r) { return r.json() }).then(function (p) { window.__lastPay = p; o.handler({ razorpay_payment_id: p.payment_id, razorpay_signature: p.signature, razorpay_order_id: o.order_id }) }) };`
 
 export const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+
+/**
+ * The built chunks a page loads later, found by `marker` (a non-word string only that module's script holds: a class name
+ * or a storage key, never a sentence a fallback may also say). Returns a matcher for page.route() over their URLs; throws
+ * when none holds it or one is in `page`'s first load (app-build-manifest: the page and each layout above it, as
+ * check:storefront-build counts it). For a step that cuts or slows a lazily loaded chunk.
+ */
+export function laterChunks(marker, page) {
+  const next = new URL('../.next/', import.meta.url), dir = new URL('static/chunks/', next)
+  const build = JSON.parse(readFileSync(new URL('app-build-manifest.json', next), 'utf8')).pages
+  const parts = page.split('/').slice(0, -1)
+  const keys = ['/layout', ...parts.map((_, i) => `${parts.slice(0, i + 1).join('/')}/layout`), page]
+  const first = new Set(keys.flatMap((k) => build[k] ?? []).map((f) => f.replace(/^static\/chunks\//, '')))
+  const held = readdirSync(dir, { recursive: true }).filter((f) => f.endsWith('.js') && readFileSync(new URL(f, dir), 'utf8').includes(marker))
+  if (!held.length) throw new Error(`no built chunk holds ${marker}`)
+  const early = held.filter((f) => first.has(f))
+  if (early.length) throw new Error(`${marker} is in ${page}'s first load: ${early.join(', ')}`)
+  const set = new Set(held), at = '/_next/static/chunks/'
+  return (u) => u.pathname.startsWith(at) && set.has(decodeURIComponent(u.pathname.slice(at.length)))
+}
 /** Poll until `fn` returns truthy (webhooks are processed after the response). */
 export async function until(fn, ms = 5000) {
   const end = Date.now() + ms

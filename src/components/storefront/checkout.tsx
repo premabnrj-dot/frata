@@ -4,15 +4,15 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { STATES } from '@/domains/checkout/state-names'
 import { announcePlaced, moduleArm, usePrefill } from './module-events'
 import { waOptInText } from '@/domains/checkout/opt-in'
-import { cleanGstin } from '@/domains/tax/gstin-clean'
 import type { Biz, BizCheck } from './checkout-biz'
 import { pick, urlFor } from '@/domains/media/sizes'
-import { OfferProgress, OfferRows, useQuote } from './bag'
+import { OfferRows, useQuote } from './bag-quote'
 import { ATTR_KEY, bag, offerCode, useBag, useOfferCode } from './bag-store'
 import { fitKey, shownQuote } from '@/domains/checkout/fitted'
-import { api, dayRange, inr, type Pay, type PublicListed, type PublicQuote } from './shop-client'
+import { api, dayRange, inr, type Pay, type PublicQuote } from './shop-client'
 import { PayBar, useQuoteToast } from './checkout-feedback'
 import { useStoreToast } from './store-toast'
+import { chunk } from './chunk'
 
 // =============================================================================
 // ONE-PAGE CHECKOUT (checkout spec § Design, mockup approved 2026-11-07).
@@ -34,17 +34,11 @@ const CheckoutBiz = lazy(() => import('./checkout-biz'))
 // A chunk that cannot load (no connection) draws nothing, never the page's error: the lines under the fields still say it.
 const summary = () => import('./checkout-summary').catch(() => ({ default: () => null }))
 const CheckoutSummary = lazy(summary)
-
-/** What a listed offer says it needs, in the shopper's words (the server decides; this only phrases it). */
-function needText(n: PublicListed['need']): string {
-  if (!n) return 'Applied'
-  if (n.kind === 'add') return `Add ${inr(n.amount)} more`
-  if (n.kind === 'add_items') return `Add ${n.n} more ${n.n === 1 ? 'piece' : 'pieces'}`
-  if (n.kind === 'gift') return 'Your free gift: add it to the bag'
-  if (n.kind === 'first_order') return 'For your first order'
-  if (n.kind === 'pay_on_delivery') return 'When you pay on delivery'
-  return 'When you pay online'
-}
+// And the offers and the code line (checkout-offers.tsx): they show once the bag is priced, and the chunk is asked for on
+// mount, so it is in by then. One that cannot load leaves them out and is asked for again with the next price; the
+// totals still carry every offer the server applied.
+type Offers = typeof import('./checkout-offers').default
+const loadOffers = chunk(() => import('./checkout-offers').then((m) => m.default))
 
 export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = { deliversWithin: null, b2b: false }, waOptIn = false, identity }: { shopName: string; legalName: string; privacyHref: string; returnLine: string | null
   /** GST (plan 2026-11-09-gst-core-and-categories): a shop without a regular GSTIN delivers within its state; business buyers may ask for a GST invoice. */
@@ -83,6 +77,13 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   const attempt = useRef<{ sig: string; key: string } | null>(null)
   useQuoteToast(toast, q ? quoteError : null, refresh)
   useEffect(() => { const t = setTimeout(() => void summary().catch(() => {}), 3000); return () => clearTimeout(t) }, [])
+  const [Offers, setOffers] = useState<{ C: Offers } | null>(null)
+  useEffect(() => {
+    if (Offers) return
+    let live = true
+    void loadOffers().then((C) => { if (live) setOffers({ C }) }, () => {})
+    return () => { live = false }
+  }, [Offers, q])
 
   // Restore what was typed (this tab only); a pending online order goes to its own page. It never did (the key was
   // written and never read): a reload in Instagram's browser after the switch to the UPI app, or Back then Forward,
@@ -166,6 +167,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
   async function place() {
     if (!q || !method || busy) return
     if (!(await check())) return
+    const { cleanGstin } = await import('./checkout-place')
     setBusy(true); setMsg(null)
     const items = bag.get()
     const sig = JSON.stringify([items, method, f.phone, code, biz.on ? cleanGstin(biz.gstin) : null])
@@ -310,31 +312,7 @@ export function Checkout({ shopName, legalName, privacyHref, returnLine, gst = {
         </Suspense>
       ) : null}
 
-      {q && (q.offers.listed.length > 0 || code || typing) ? <>
-        <h2 className={sect}>Offers</h2>
-        <ul className="space-y-2 text-sm" aria-label="Offers for this bag">
-          {q.offers.listed.map((l) => (
-            <li key={`${l.title}-${l.code ?? ''}`} className={`flex items-center gap-2 rounded-sm border p-2.5 ${l.applied ? 'border-store-good' : 'border-dashed border-store-line'}`}>
-              <span aria-hidden className={l.applied ? 'text-store-good' : 'text-store-sub'}>{l.applied ? '✓' : '○'}</span>
-              <span className="min-w-0 flex-1"><b className="font-medium">{l.title}</b>{l.code ? <span className="ml-1.5 rounded-sm border border-store-line px-1 font-mono text-xs">{l.code}</span> : null}
-                <span className="block text-store-sub">{needText(l.need)}</span></span>
-              {l.need?.kind === 'gift' ? <button type="button" className="min-h-11 shrink-0 rounded-sm border border-store-ink px-3 text-sm font-medium" onClick={() => bag.add((l.need as { variantId: string }).variantId, 1, 'keep')}>Add it</button> : null}
-            </li>
-          ))}
-        </ul>
-      </> : null}
-      {q && <OfferProgress q={q} />}
-      {q && (code ? ( // feedback-ok: rule 5 — a code that doesn't apply stays on its line
-        <p className="mt-2 text-sm" aria-live="polite">Code <b className="font-mono">{code}</b>{q.offers.code === 'applied' ? ' applied.' : q.offers.code === 'beaten' ? ' — a better offer is already applied.' : <span className="text-store-bad"> — this code doesn’t work here.</span>}
-          {' '}<button type="button" className="min-h-11 underline" onClick={() => { offerCode.set(''); setDraftCode('') }}>Remove</button></p>
-      ) : typing ? (
-        <div className="mt-2 flex gap-2">
-          <label htmlFor="offer-code" className="sr-only">Offer code</label>
-          <input id="offer-code" value={draftCode} maxLength={20} autoCapitalize="characters" placeholder="Code" onChange={(e) => setDraftCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase())}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (draftCode) offerCode.set(draftCode) } }} className={`${field} font-mono`} />
-          <button type="button" disabled={!draftCode} onClick={() => offerCode.set(draftCode)} className="h-11 shrink-0 rounded-sm border border-store-ink px-4 text-sm font-medium disabled:opacity-50">Apply</button>
-        </div>
-      ) : <button type="button" className="mt-1 min-h-11 text-sm underline" onClick={() => setTyping(true)}>Have a code?</button>)}
+      {Offers ? <Offers.C q={q} code={code} typing={typing} setTyping={setTyping} draftCode={draftCode} setDraftCode={setDraftCode} field={field} sect={sect} /> : null}
 
       {waOptIn ? (
         <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 text-sm">

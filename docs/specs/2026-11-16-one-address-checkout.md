@@ -353,12 +353,12 @@ write; no new capability, ADR-0015 unchanged. Every save is an Activity row; the
 
 **How the site uses it.** Frrata serves `/_frrata/v1/bag.js` (≤ 3 kB gzipped, measured 1.4 kB; the same bytes on every
 host; `Cache-Control: max-age=300, stale-while-revalidate=86400`, or a hashed name, never "immutable" on a fixed URL;
-loaded with `defer`; built from `bag-store.ts`'s core): `get`, `add`, `set`, `remove`, `subscribe`, and `quote()`, which calls the
+loaded with `defer`; built from two entry files, `bag-store.ts`'s core and `capture-attribution.ts`): `get`, `add`, `set`, `remove`, `subscribe`, and `quote()`, which calls the
 same-origin `/api/shop/quote` (no PIN code) for subtotal, offers and sold-out lines (the pilot's gaps G1 and G25, no key
 in the browser; measured 9 statements, 27 ms, 865 bytes a quote). The site never computes a total. The kit's bag button
 and drawer use it, and quote **only while the drawer is open**, one request in flight, never on `subscribe` or a `storage`
 event. `quoteIp` (300 per 10 minutes a network) is re-sized for many phones behind one Indian 4G address. On load it captures attribution
-(`captureAttribution`).
+(`captureAttribution(landingNow())`, `capture-attribution.ts` and `landing.ts`; since 2026-11-16 it is not in `bag-store.ts`).
 
 **Analytics on one address** (architecture 13): with no hand-off, `via_site` is never set and same-host referrers are
 dropped (`source.ts:133`), which is right: on a one-address store the website is the store. Sources are classified by the

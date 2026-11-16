@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ATTR_KEY, bag, captureAttribution } from './bag-store'
+import { ATTR_KEY, bag } from './bag-store'
+import { captureAttribution } from './capture-attribution'
+import { landingNow } from './landing'
 import { parseCartLink } from '@/domains/storefront-api/cart-link'
 import { fillMode, fromSite } from '@/domains/checkout/bag-fill'
 
@@ -17,7 +19,7 @@ export function CartLink({ site, words }: { site: string | null; words: { openin
   useEffect(() => {
     const lines = parseCartLink(window.location.search)
     if (!lines) { setBroken(true); return }
-    captureAttribution()
+    captureAttribution(landingNow())
     try {
       const a = JSON.parse(sessionStorage.getItem(ATTR_KEY) ?? '{}') as Record<string, string>
       sessionStorage.setItem(ATTR_KEY, JSON.stringify({ ...a, via_site: '1' }))
