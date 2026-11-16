@@ -1,0 +1,171 @@
+<title>Practices from Ekatan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column, a ledger of verdicts, calls as numbered decisions the owner answers in order. */
+:root {
+  --bg: #f7f7f5; --surface: #ffffff; --fg: #1b1d21; --muted: #5d636c; --line: #e2e3e0;
+  --accent: #1f5fbf; --adopt: #1d7a4c; --adapt: #8a5a00; --skip: #6b6f76;
+  --adopt-bg: #e6f3ec; --adapt-bg: #fbf0d9; --skip-bg: #eeeff0;
+  --display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141619; --surface: #1c1f23; --fg: #e8e9eb; --muted: #a0a6ae; --line: #2e3237;
+  --accent: #7fb0ff; --adopt: #6fd3a0; --adapt: #f0c060; --skip: #a4a9b0;
+  --adopt-bg: #183326; --adapt-bg: #3a2e12; --skip-bg: #262a2f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141619; --surface: #1c1f23; --fg: #e8e9eb; --muted: #a0a6ae; --line: #2e3237;
+  --accent: #7fb0ff; --adopt: #6fd3a0; --adapt: #f0c060; --skip: #a4a9b0;
+  --adopt-bg: #183326; --adapt-bg: #3a2e12; --skip-bg: #262a2f; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--body); }
+.wrap { max-width: 880px; margin: 0 auto; padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: 30px; line-height: 1.2; }
+h2 { font-size: 21px; margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--line); }
+h3 { font-size: 16px; }
+p { margin: 0; max-width: 68ch; }
+.meta { color: var(--muted); font-size: 13px; margin-top: 8px; }
+code { font-family: var(--mono); font-size: 12.5px; background: var(--skip-bg); padding: 1px 5px; border-radius: 4px; }
+.stack { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+ul.short { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; max-width: 70ch; }
+.tablebox { overflow-x: auto; margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; letter-spacing: .03em; text-transform: uppercase; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }
+.pill { display: inline-block; font-size: 11.5px; font-weight: 600; letter-spacing: .03em; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.adopt { color: var(--adopt); background: var(--adopt-bg); }
+.adapt { color: var(--adapt); background: var(--adapt-bg); }
+.skip { color: var(--skip); background: var(--skip-bg); }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card .head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.card p { font-size: 13.5px; }
+.taken { color: var(--muted); }
+.taken b { color: var(--fg); font-weight: 600; }
+ol.calls { margin: 14px 0 0; padding: 0; list-style: none; counter-reset: c; display: flex; flex-direction: column; gap: 10px; }
+ol.calls li { counter-increment: c; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 14px 14px 52px; position: relative; }
+ol.calls li::before { content: counter(c); position: absolute; left: 14px; top: 13px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--bg); font: 600 13px/26px var(--display); text-align: center; }
+.rec { margin-top: 6px; font-size: 13.5px; }
+.rec b { color: var(--accent); }
+.phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 14px; }
+.phase { border-top: 3px solid var(--accent); background: var(--surface); border-radius: 0 0 8px 8px; padding: 12px 14px; font-size: 13.5px; display: flex; flex-direction: column; gap: 6px; }
+.phase h3 { font-size: 15px; }
+.note { font-size: 13px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <h1>Practices from Ekatan</h1>
+  <p class="meta">For the owner's sign-off · 2026-11-16 · Spec: <code>docs/specs/2026-11-16-practices-from-ekatan.md</code> · Measured on Frrata <code>main</code> 83cb778, history from 2026-11-06</p>
+
+  <h2>In short</h2>
+  <div class="stack">
+    <ul class="short">
+      <li><b>What Frrata should take:</b> 9 of Ekatan's practices as they are or adapted, 4 skipped. Most of the value is turning three habits into scripts. These are skill version bumps, plan sign-off and review, and the gates before each commit.</li>
+      <li><b>Why now:</b> 56 of 344 skill edits (16%) changed a rule without a version bump. CLAUDE.md lists 17 of the 27 gates <code>npm test</code> runs. No plan's approval or review is in a form a script can read.</li>
+      <li><b>What it costs:</b> four phases of scripts and doc edits. No screen, table or merchant-facing change. The gates add under a second to <code>npm test</code>, which takes 6 s without vitest.</li>
+      <li><b>What I need from you:</b> the 6 calls below. Each has my recommendation. Nothing is built before you answer.</li>
+    </ul>
+  </div>
+
+  <h2>Audit: Frrata today</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>What</th><th>Today</th><th>Why it gets in the way</th><th>Proposed</th></tr></thead>
+    <tbody>
+      <tr><td>Skill version bumps</td><td class="num">56 of 344</td><td>Edits changed a rule and left the version. Agents can't tell an old rule from a new one. Today only <code>impact-reviewer</code> checks, and only by eye.</td><td><code>check:skills</code> fails it</td></tr>
+      <tr><td>Skills over 500 lines</td><td class="num">3</td><td>design-language 1,319, architecture 1,136, integrations 959. An agent reading half a skill misses the other half.</td><td>Held at size now, split later</td></tr>
+      <tr><td>Skill owner</td><td class="num">0 of 8</td><td>No one is named to answer for a skill.</td><td><code>metadata.owner</code></td></tr>
+      <tr><td>Agents with a version or eval</td><td class="num">0 of 13</td><td>If a reviewer stops catching a mistake, no one notices.</td><td>Metadata, and evals for 4</td></tr>
+      <tr><td>Gates named in CLAUDE.md</td><td class="num">17 of 27</td><td>The list is copied by hand and is already wrong.</td><td>Generated page</td></tr>
+      <tr><td>Plans with a fixed sign-off line</td><td class="num">0 of 63</td><td>38 have a mockup line and 41 an approval, each in its own words. "Nothing executed before sign-off" is held by memory.</td><td><code>check:plans</code></td></tr>
+      <tr><td>Hooks and deny rules</td><td class="num">none</td><td>"Never <code>vercel deploy</code>" and "run <code>npm test</code> before you commit" are prose.</td><td><code>.claude/settings.json</code></td></tr>
+      <tr><td>Living docs naming a missing file</td><td class="num">1</td><td><code>frata-architecture</code> names <code>src/domains/ekcode/</code>, which doesn't exist.</td><td><code>check:docs</code></td></tr>
+      <tr><td>Migration journal out of order</td><td class="num">1</td><td><code>0123</code>'s timestamp is before <code>0122</code>'s. Only <code>release:check</code> sees it, as a warning.</td><td>Into <code>npm test</code></td></tr>
+      <tr><td>Console JS budget</td><td class="num">no gate</td><td>The 150 kB budget is written in <code>frata-architecture</code> as "a gate to add". The store has one.</td><td>Added to the build gate</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>What to take</h2>
+  <div class="cards">
+    <div class="card"><div class="head"><h3>Skills gate</h3><span class="pill adopt">Adopt</span></div>
+      <p>Ekatan fails a skill without front-matter, over 500 lines, or with a changed body and the same version.</p>
+      <p class="taken"><b>Take:</b> all of it, extended to agents. The three long skills are held at today's length and may only shrink.</p></div>
+    <div class="card"><div class="head"><h3>Plans gate</h3><span class="pill adopt">Adopt</span></div>
+      <p>Ekatan fails a plan with no <code>**Mockup:**</code> line or no dated <code>**Approved:**</code> line.</p>
+      <p class="taken"><b>Take:</b> both, plus a <code>**Review:**</code> line for each agent the plan needs. Plans from 2026-11-17 on.</p></div>
+    <div class="card"><div class="head"><h3>Hooks and deny rules</h3><span class="pill adopt">Adopt</span></div>
+      <p>Rules that must never fail go in settings, not prose.</p>
+      <p class="taken"><b>Take:</b> deny <code>vercel deploy</code> and force-push to main. Run the 27 gates before every commit (6 s).</p></div>
+    <div class="card"><div class="head"><h3>Docs that name missing files</h3><span class="pill adopt">Adopt</span></div>
+      <p>Ekatan fails a doc that names a file that is gone, and CLAUDE.md over 200 lines.</p>
+      <p class="taken"><b>Take:</b> for living docs only. Specs and plans are history and stay as written.</p></div>
+    <div class="card"><div class="head"><h3>Doc-drift hook</h3><span class="pill adapt">Adapt</span></div>
+      <p>Ekatan blocks a commit that changes a file a doc covers unless the doc is in the commit or the message says why not.</p>
+      <p class="taken"><b>Take:</b> on files a doc names exactly. Tried on the last 300 commits, it would stop 39%. Frrata's broad doc patterns would make it 57%, so we narrow them.</p></div>
+    <div class="card"><div class="head"><h3>Evals</h3><span class="pill adapt">Adapt</span></div>
+      <p>Ekatan runs each skill's scenarios in a headless session and has a second session grade them.</p>
+      <p class="taken"><b>Take:</b> agents first. Test plans with a known mistake for the 4 reviewers of data isolation, security, money and architecture. Run before a big version change, not on every commit.</p></div>
+    <div class="card"><div class="head"><h3>Generated reference pages</h3><span class="pill adapt">Adapt</span></div>
+      <p>Ekatan regenerates six pages (gates, schema, routes …) from the code on every commit.</p>
+      <p class="taken"><b>Take:</b> the gates page only. It is the one Frrata copies by hand today.</p></div>
+    <div class="card"><div class="head"><h3>Migrations and JS budget</h3><span class="pill adapt">Adapt</span></div>
+      <p>Ekatan has a journal gate and a first-load JS budget per shopper page.</p>
+      <p class="taken"><b>Take:</b> Frrata has both halves already. The journal check moves into <code>npm test</code>; Console and Admin join the store's budget check.</p></div>
+    <div class="card"><div class="head"><h3>Planning headings</h3><span class="pill adopt">Adopt</span></div>
+      <p>The proposal opens with In short, Audit, What we took, Your calls. A spec has a Stress test and an After deploy check. A number on a mockup comes from the engine.</p>
+      <p class="taken"><b>Take:</b> into <code>frata-planning</code>. This page uses the opening.</p></div>
+    <div class="card"><div class="head"><h3>States table</h3><span class="pill adopt">Adopt</span></div>
+      <p>The seven states per surface, each with its named primitive.</p>
+      <p class="taken"><b>Take:</b> the first reference file of <code>frata-design-language</code> when it is split.</p></div>
+    <div class="card"><div class="head"><h3>Accepted rulings as data</h3><span class="pill adapt">Adapt</span></div>
+      <p>Ekatan lists findings the owner ruled acceptable, so reports stop raising them.</p>
+      <p class="taken"><b>Take:</b> one file of rulings every review agent reads first.</p></div>
+    <div class="card"><div class="head"><h3>Paired reviewers</h3><span class="pill skip">Skip</span></div>
+      <p>Two reviewers of one domain hand findings to each other.</p>
+      <p class="taken"><b>Skip:</b> each Frrata reviewer covers one topic, and they already run together. We revisit this if two disagree on one plan.</p></div>
+    <div class="card"><div class="head"><h3>Agent memory</h3><span class="pill skip">Skip</span></div>
+      <p>Review agents remember recurring patterns between runs.</p>
+      <p class="taken"><b>Skip:</b> each cloud session starts fresh, so memory would be a second, unreviewed copy of the rules. We revisit this if one finding comes back on 3 plans in a month.</p></div>
+    <div class="card"><div class="head"><h3>Weekly stale report</h3><span class="pill skip">Skip</span></div>
+      <p>A report each week of docs gone stale.</p>
+      <p class="taken"><b>Skip:</b> the docs gate already fails on every commit.</p></div>
+  </div>
+
+  <h2>Your calls</h2>
+  <ol class="calls">
+    <li><b>Approve the verdicts above?</b> 9 adopted or adapted, 4 skipped.
+      <p class="rec"><b>Recommend:</b> yes, as listed.</p></li>
+    <li><b>Run the gates before every commit, in a hook?</b> A failing gate stops the commit with its message. Vitest and typecheck stay manual.
+      <p class="rec"><b>Recommend:</b> yes. 6 s per commit.</p></li>
+    <li><b>The doc-drift hook: block, or warn?</b> On files a doc names exactly, it would have stopped 39% of the last 300 commits. Each stop costs one fix to the doc, or one line saying why the doc is still right.
+      <p class="rec"><b>Recommend:</b> block. I measure the rate after G2 and come back to you if it is over 25%.</p></li>
+    <li><b>Who owns each skill and agent?</b> The gate needs a name in <code>metadata.owner</code>.
+      <p class="rec"><b>Recommend:</b> "owner" on all of them for now. Name a person later if a partner or teammate takes one.</p></li>
+    <li><b>When do plans need the new header?</b> <code>**Mockup:**</code>, <code>**Approved:**</code> and <code>**Review:**</code>.
+      <p class="rec"><b>Recommend:</b> plans dated 2026-11-17 or later. Lanes already running keep their plans as written.</p></li>
+    <li><b>Split <code>frata-design-language</code> into reference files (G4)?</b> Text moves. No rule changes its meaning.
+      <p class="rec"><b>Recommend:</b> yes, after G1–G3. The other two long skills follow, one at a time.</p></li>
+  </ol>
+
+  <h2>Phases</h2>
+  <div class="phases">
+    <div class="phase"><h3>G1 · Gates</h3><span>Skills, plans, docs, migration journal and Console JS budget gates. Owner names on skills and agents. The new headings in <code>frata-planning</code>.</span></div>
+    <div class="phase"><h3>G2 · Hooks</h3><span>Deny rules, gates before commit, doc-drift hook, generated gates page.</span></div>
+    <div class="phase"><h3>G3 · Evals</h3><span>The eval runner. Two planted-flaw scenarios each for the 4 reviewers that guard money and data. The rulings file.</span></div>
+    <div class="phase"><h3>G4 · Split</h3><span><code>frata-design-language</code> under 500 lines, states table first. Then architecture and integrations.</span></div>
+  </div>
+
+  <h2>Step by step</h2>
+  <ul class="short">
+    <li>You answer the 6 calls.</li>
+    <li>The review agents run on the plan: <code>architecture-reviewer</code> and <code>impact-reviewer</code>, and <code>security-reviewer</code> on the hooks.</li>
+    <li>Each gate is run against its own documentation before it lands, then <code>npm test</code> and typecheck, then a push to <code>main</code>.</li>
+    <li>After G2, I send you the hook's measured stop rate.</li>
+  </ul>
+  <p class="note" style="margin-top:24px">Not changed by any phase: what merchants or shoppers see, the database, the Storefront API.</p>
+</div>
