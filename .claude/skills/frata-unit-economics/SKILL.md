@@ -237,8 +237,8 @@ higher caps, review of big sends, export/API.
   a credit. Every credit sells at ₹19.99–20.00: **3.16×** before payment fees (₹1,900 for 100 was 2.92× after a card fee).
   20 free credits once per verified partner (₹126.60 of cost): the first preview needs 11 warm, 16 cold. Seats and credits
   stay outside the partner share.
-- **GST on Anthropic's invoice** (an imported service): if the input credit is not recovered the multiple falls to
-  2.68× and the loading rises to 1.30. Credits sell nothing until the CA confirms.
+- **Costs are net of GST.** Frrata claims the GST input credit on every bill it pays (Anthropic, Vercel, GitHub and
+  the rest; owner, 2026-11-16), so list cost is the cost.
 - **Inputs:** Opus 5.5 $4 in, $20 out, cache read $0.20, 5-minute write $5, 1-hour write $8 per million; Managed Agents
   running time $0.08 an hour; a build 2 minutes × $0.014; ₹94 a dollar (x-rates, 2026-11-16).
 - **A page turn** (25 requests, 80k cached read, 2.4k written, 5k uncached, 20k output each): $1.156 with sandbox and its

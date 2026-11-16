@@ -54,14 +54,14 @@ change, while Frrata keeps the code, the hosting, the keys and the money safe, a
 ## Do partners deploy on Vercel themselves? No.
 | Thing | Whose account | Who acts | The partner's part | The brand's part |
 |---|---|---|---|---|
-| The site's code | Frrata's GitHub organisation `frrata-sites`, one private repository per site, named by site id (ADR-0016 § 2) | The agent (draft branches); a partner's own developer if they want (§ 10) | Nothing to set up | Nothing |
+| The site's code | Frrata's GitHub organisation `frrata` (owner, 2026-11-16; drafted as `frrata-sites`, the Vercel team's name), one private repository per site, named by site id (ADR-0016 § 2) | The agent (draft branches); a partner's own developer if they want (§ 10) | Nothing to set up | Nothing |
 | Builds, previews, hosting | Frrata's Vercel team `frrata-sites`, one project per site, bom1 (ADR-0017 revised) | Frrata's fleet service (its own team and repository, outside `frrata-sites`), through the hosting adapter | Taps Publish | Nothing |
 | The site's address | One address with checkout: `<store>.frrata.shop`, or the brand's domain (ADR-0019) | Frrata's app holds the host and sends its non-reserved paths to the site's deployment; the fleet only reports deployments | Nothing | Optional: Connect my domain in the console (the host and its `secure.` record) |
 | The storefront key | Frrata mints it and sets it on the project; nobody sees it | The fleet | Nothing | Sees and can delete it in Settings › Website |
 | The model | Frrata's Claude API account (§ 3) | Frrata's agent | Pays credits | Nothing |
 | Checkout, payments, orders | Frrata's app as today (bom1) | Frrata | Nothing | Runs the business in the console |
 The pilot (House of Ayuda) ran on the owner's own Vercel team and GitHub account by decision (ADR-0017 § The pilot). V2a
-moves sites into `frrata-sites` and the organisation; the pilot site moves with it.
+moves sites into the Vercel team `frrata-sites` and the GitHub organisation `frrata`; the pilot site moves with it.
 
 ## Research (current sources; each dated)
 | Source · date | Fact | Taken |
@@ -314,7 +314,8 @@ with each turn.
 economics review); Studio ₹2,999 with 150; Studio Plus ₹9,999 with 500; typed top-ups ₹20 a credit. Every credit is
 ₹19.99–20.00: 3.16× before payment fees. **If the GST Frrata pays on Anthropic's invoice (an imported service) is not
 recovered as input credit, the multiple falls to 2.68× (2.54× at the old ₹19 with a card fee): C1 sells nothing until the
-CA confirms** (owner decision 19).
+CA confirms** (owner decision 19). *(Answered, owner 2026-11-16: Frrata claims the input credit on every bill it pays, so
+costs are net of GST and 3.16× holds.)*
 **Inputs:** Opus 5.5 $4 in, $20 out, cache read $0.20, 5-minute write $5, 1-hour write $8 per million; Managed Agents
 running time $0.08 an hour; a build 2 minutes × $0.014; ₹94 to the dollar.
 **One page turn** (assumption: 25 requests, 80k tokens read from cache each, 2.4k written each, 5k uncached, 20k output;
@@ -445,7 +446,7 @@ every model or agent-version change.
 
 ### 12. Hosting on Frrata's account, end to end
 1. **New site** (Studio or the workspace, the partner): this app writes a `sites` row (site id) and outbox `site.create`;
-   the fleet makes the repository `frrata-sites/site-<id8>` from Starter 0 with its rulesets, the Vercel project
+   the fleet makes the repository `frrata/site-<id8>` from Starter 0 with its rulesets, the Vercel project
    `site-<id8>` in `frrata-sites` (bom1, no Git builds, Deployment Protection on). The Frrata address is the store's own
    `<store>.frrata.shop` host, which Frrata's app already holds; nothing is added to the site's project for it. Until the
    store opens, and whenever the site is not live, that address answers the site's paths with Frrata's own Opening soon
@@ -635,7 +636,9 @@ fails · a package mirror before V2c · memory stores.
 6. **The credit:** ₹6.33 of loaded cost at 1.10. Recommended: yes — it carries forex, returns and receiving fees.
 7. **Prices:** pack ₹1,999 for 100 (from ₹1,900), Studio ₹2,999 with 150, Plus ₹9,999 with 500, top-ups ₹20 a credit.
    Recommended: yes — every credit at ≥ 3× after payment fees, and seats no dearer than packs.
-8. **GitHub organisation `frrata-sites`** on Team, passkeys required, Actions off, two Apps (session, fleet).
+8. **GitHub organisation `frrata-sites`** on Team, passkeys required, Actions off, two Apps (session, fleet). *(Owner,
+   2026-11-16: the organisation is `frrata`, Free now with Actions off, Team before V2a's first partner site; ADR-0016
+   amendment.)*
    Recommended: yes — rulesets on private repositories need Team.
 9. **Domain names:** `frrata.store` for sites, `frrata-preview.site` for previews, three years each, on the reserved list.
    Recommended: yes — available today, and a shop's name reads as a shop. *(Replaced 2026-11-16 by ADR-0019: only the
@@ -658,7 +661,8 @@ fails · a package mirror before V2c · memory stores.
     allowances at 3×; if they still fail, run ADR-0017's Cloudflare test first. Recommended: yes — as guessed, all three
     plan shapes cross the kill line on day one.
 19. **GST on Anthropic's invoice:** C1 sells nothing until the CA confirms the input credit; if it isn't recoverable, the
-    loading rises to 1.30. Recommended: yes — otherwise credits sell at 2.68×.
+    loading rises to 1.30. Recommended: yes — otherwise credits sell at 2.68×. *(Answered, owner 2026-11-16: Frrata
+    claims the GST input credit on every bill it pays; costs are taken net of GST.)*
 20. **Free credits: 20, once per verified partner** (was 10). Recommended: yes — the first preview needs 11–16; cost ₹126.60.
 21. **Studio's price against Lovable** (₹380 against ₹40–80 a page): keep 3× and sell what Lovable can't do; keep the free
     own-Claude-Code path visible. Recommended: yes, judged on win/loss notes from the first 20 partners.
