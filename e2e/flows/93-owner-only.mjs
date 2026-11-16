@@ -88,10 +88,14 @@ export default {
         await p.screenshot({ path: t.out('owner-only-business-phone'), fullPage: true })
         await p.setViewportSize({ width: 1280, height: 900 })
         await p.goto(CONSOLE + '/console/settings/invoices')
-        await p.getByRole('textbox', { name: /^Order number prefix/ }).waitFor()
+        // The seed store's series is blank, so the order prefix stands in for it and is locked too (security review
+        // 2026-11-16 MED-1); the note at the foot of each invoice stays the partner's.
+        await p.getByRole('textbox', { name: /^Note at the foot of each invoice/ }).waitFor()
+        assert.equal(await p.getByRole('textbox', { name: /^Order number prefix/ }).count(), 0, 'the prefix is the series while the series is blank')
         assert.equal(await p.getByRole('textbox', { name: /^Series prefix/ }).count(), 0)
         assert.equal(await p.getByRole('textbox', { name: /^Authorised signatory/ }).count(), 0)
-        assert.equal(await p.locator('main#content form').getByText(CHIP, { exact: true }).count(), 2, 'the chip by the signatory and by the series')
+        // Numbers (prefix and series) is locked whole, so its chip sits once by the block's title; the signatory's beside it.
+        assert.equal(await p.locator('main#content form').getByText(CHIP, { exact: true }).count(), 2, 'one chip on Numbers, one by the signatory')
         await p.locator('header').getByRole('button', { name: 'Ask the owner' }).waitFor()
         await p.screenshot({ path: t.out('owner-only-invoices'), fullPage: true })
       })
