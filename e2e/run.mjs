@@ -25,10 +25,11 @@ try {
   useStackDb(stack.db)
   for (const f of files) {
     const flow = (await import(`./flows/${f}`)).default
-    // --disable-lcd-text: text is drawn in grayscale on every machine. A stock Ubuntu runner's fontconfig turns subpixel
-    // (coloured-fringe) text on and this container's turns it off, and Chromium chose it per page: on CI the phone shop
-    // home alone came out in colour, 8727 pixels off its grayscale baseline on every run (2026-11-16).
-    const browser = await chromium.launch({ args: ['--disable-lcd-text', `--host-resolver-rules=MAP *.${SHOP_DOMAIN} 127.0.0.1:${PORTS.app}, MAP ${OWN_DOMAIN} 127.0.0.1:${PORTS.app}, MAP www.${OWN_DOMAIN} 127.0.0.1:${PORTS.app}, MAP ${EKCODE.host} 127.0.0.1:${PORTS.app}`] })
+    // Text drawn the same on every machine, whatever its fontconfig says: grayscale (--disable-lcd-text) and unhinted
+    // (--font-render-hinting=none), as this container's fontconfig draws it and the baselines were taken. A stock Ubuntu
+    // runner turns subpixel colour and slight hinting on, and Chromium applied them to the phone shop home: 8727, then
+    // 5814 pixels off its baseline on every CI run (2026-11-16).
+    const browser = await chromium.launch({ args: ['--disable-lcd-text', '--font-render-hinting=none', `--host-resolver-rules=MAP *.${SHOP_DOMAIN} 127.0.0.1:${PORTS.app}, MAP ${OWN_DOMAIN} 127.0.0.1:${PORTS.app}, MAP www.${OWN_DOMAIN} 127.0.0.1:${PORTS.app}, MAP ${EKCODE.host} 127.0.0.1:${PORTS.app}`] })
     // Screenshots are taken with reduced motion unless a flow asks otherwise: a dialog caught half faded in told
     // nothing (motion system 2026-11-08). A flow that tests motion passes reducedMotion: 'no-preference'.
     const newContext = browser.newContext.bind(browser)
