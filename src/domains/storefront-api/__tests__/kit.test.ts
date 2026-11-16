@@ -23,7 +23,9 @@ describe('the partner kit (SA1b D·9)', () => {
       for (const d of ['app', 'components', 'lib', 'scripts']) cpSync(join('kit/starter', d), join(dir, d), { recursive: true })
       writeFileSync(join(dir, 'lib/bad.ts'), ["const k = 'frs_pub_" + "abcdef123456'", 'export const off = (p: { price: number }) => p.price * 0.9', 'export const html = <div dangerouslySetInnerHTML={{ __html: k }} />'].join('\n'))
       writeFileSync(join(dir, 'app/layout.tsx'), 'export default function L({ children }: { children: unknown }) { return children }')
+      writeFileSync(join(dir, '.env.local'), 'FRRATA_KEY=frs_test_' + 'abcdef123456')
       const out = check(dir)
+      expect(out.split('\n').filter((l) => l.startsWith('.env.local'))).toEqual([])
       for (const want of ['a Frrata key in source', 'arithmetic on a price', 'dangerouslySetInnerHTML', 'legal.grievanceOfficer']) expect(out).toContain(want)
     } finally { rmSync(dir, { recursive: true, force: true }) }
   })

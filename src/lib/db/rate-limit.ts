@@ -143,8 +143,9 @@ export const LIMITS = {
   apiMissIp: { action: 'api_miss:ip', max: 300, windowSeconds: 600 },
   apiTestIp: { action: 'api_test:ip', max: 60, windowSeconds: 60 },
   apiSearchIp: { action: 'api_search:ip', max: 300, windowSeconds: 600 },
-  // SA1b D·4: a preview (a token-bound draft), from a site's server; fails closed like every API limit.
-  apiPreviewIp: { action: 'api_preview:ip', max: 30, windowSeconds: 60 },
+  // SA1b D·4: a preview (a token-bound draft), per key: sites share their host's outbound addresses, so one store's
+  // previews never spend another's (security review 2026-11-16, LOW-2). Fails closed like every API limit.
+  apiPreviewKey: { action: 'api_preview:key', max: 30, windowSeconds: 60 },
   apiKeyCreateShop: { action: 'api_key_create:shop', max: 10, windowSeconds: 3600 },
 } as const satisfies Record<string, Limit>
 

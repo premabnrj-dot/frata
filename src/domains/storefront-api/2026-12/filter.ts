@@ -13,7 +13,7 @@
 
 import { bestOffer } from '../../catalogue/availability'
 import { factsOf, inCollection, isListed, pageOf, priceOf, sortProducts, type ListProduct } from '../../storefront/listing'
-import { CATALOGUE_CAP, cardOut, type CardIn, type CollectionIn, type MapCtx } from './map'
+import { CATALOGUE_CAP, cardOut, plain, type CardIn, type CollectionIn, type MapCtx } from './map'
 import type { z } from 'zod'
 import type * as S from './schemas'
 
@@ -28,7 +28,7 @@ export const PRICE_BANDS = [
 export type FilterQuery = { collection: string | null; size: string | null; colour: string | null; price: string | null; stock: boolean; sort: FilterSort }
 
 /** A value as a filter sends it: lower case, ASCII letters and digits joined by dashes ("Free size" → free-size). */
-export const facetValue = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
+export const facetValue = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+/, '').slice(0, 40).replace(/-+$/, '')
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 /** The query, or the parameter that broke the grammar. */
@@ -56,12 +56,13 @@ const coloursOf = (p: CardIn): string[] => [...new Set(p.colours.flatMap((c) => 
 const inStockNow = (vs: CardIn['variants'], now: Date) => { const a = bestOffer(vs.map(factsOf), now); return a?.kind === 'in_stock' || a?.kind === 'low_stock' }
 const band = (p: CardIn) => { const min = priceOf(p)?.min; return min === undefined ? null : PRICE_BANDS.find((b) => min >= b.min && (b.max === null || min < b.max))?.id ?? null }
 
-/** The listed, capped set a filter reads: the store's order, or a collection's (moved handles followed). Null: no such collection now. */
+/** The set a filter reads: the store's listed products (capped), or a collection's members in the collection's own
+ *  order, exactly as collections/{h}/page/{n} reads them (moved handles followed). Null: no such collection now. */
 function base<P extends CardIn>(all: P[], collections: CollectionIn[], moved: Record<string, string> | undefined, handle: string | null, now: Date): P[] | null {
-  const listed = all.filter((p) => isListed(p, now)).slice(0, CATALOGUE_CAP)
-  if (!handle) return listed
+  const listed = all.filter((p) => isListed(p, now))
+  if (!handle) return listed.slice(0, CATALOGUE_CAP)
   const c = collections.find((x) => x.handle === handle) ?? collections.find((x) => x.handle === moved?.[handle])
-  return c ? (inCollection(c, listed as unknown as ListProduct[], now) as unknown as P[]) : null
+  return c ? (sortProducts(inCollection(c, listed as unknown as ListProduct[], now), c.sort, c.productIds) as unknown as P[]) : null
 }
 
 export function filterPageOut<P extends CardIn>(m: MapCtx, cat: { products: P[]; collections: CollectionIn[]; movedCollections?: Record<string, string> }, q: FilterQuery, page: number, now: Date): z.input<typeof S.FilterPage> | null {
@@ -88,7 +89,7 @@ export function filterPageOut<P extends CardIn>(m: MapCtx, cat: { products: P[];
 /** The store's filter menu: each value with the exact `value` to send and how many listed products have it. */
 export function facetsOut<P extends CardIn>(all: P[], now: Date): z.input<typeof S.Facets> {
   const listed = all.filter((p) => isListed(p, now)).slice(0, CATALOGUE_CAP)
-  const count = (label: Map<string, { label: string; count: number }>, value: string, l: string) => { const e = label.get(value); if (e) e.count += 1; else label.set(value, { label: l.slice(0, 60), count: 1 }) }
+  const count = (label: Map<string, { label: string; count: number }>, value: string, l: string) => { const e = label.get(value); if (e) e.count += 1; else label.set(value, { label: plain(l, 60), count: 1 }) }
   const sizes = new Map<string, { label: string; count: number }>(), colours = new Map<string, { label: string; count: number }>()
   for (const p of listed) {
     const i = sizeAt(p)

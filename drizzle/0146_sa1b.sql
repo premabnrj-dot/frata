@@ -1,6 +1,6 @@
 -- =============================================================================
 -- V1 STOREFRONT API SA1b (plan docs/plans/2026-11-16-sa1b.md § Migration; reviews folded in). Hand-written. No new table.
--- Proof: scripts/verify/tenancy.sql § 84 (and § 81's sweep signatures).
+-- Proof: scripts/verify/tenancy.sql § 85 (and § 81's sweep signatures).
 --
 -- 1. The three drain sweeps page by shop id (D·6): a third argument `p_after uuid default null`, so the running
 --    deployment's two-argument calls still resolve during a release (architecture review 8). Ids only, 500 a page,
@@ -10,7 +10,8 @@
 -- 2. `app_shops_with_domain_gone`: shops that lost a domain in the window, so the drain purges only their store entry's
 --    `settings` tag (the move to the site, the main address), never the catalogue (speed review 3).
 -- 3. `app_my_handover_keys(p_uid)`: the Accept screen's key list, built OVER app_my_handovers (the same invites, no
---    copied predicate: architecture review 11), the keys alive by app_storefront_key's own conditions. Names, kinds and
+--    copied predicate: architecture review 11), the keys not revoked, not expired and (test keys) the store not yet open; the partner and domain
+--    stops are left to the read itself (a key the drain stopped refuses there). Names, kinds and
 --    shown prefixes only: never a hash, key id or shop id. frata_app alone.
 -- 4. `admin_storefront_api_shops()` and `admin_storefront_api_listed(p_tenant)`: Frrata Admin › Storefront API, counts
 --    and dates only (ADR-0018 § 3: Admin never reads a key, its name or its hash). frata_admin alone.

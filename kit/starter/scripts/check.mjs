@@ -8,8 +8,9 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
+// .env*.local holds the developer's own key and git ignores it: never scanned (the check keeps keys out of git).
 const SKIP = new Set(['node_modules', '.next', '.git'])
-const walk = (d) => readdirSync(d).flatMap((n) => { if (SKIP.has(n)) return []; const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : [p] })
+const walk = (d) => readdirSync(d).flatMap((n) => { if (SKIP.has(n) || /^\.env(\..+)?\.local$/.test(n)) return []; const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : [p] })
 const code = walk('.').filter((f) => /\.(tsx?|mjs|js|json|md|css|env\.example)$/.test(f) || f.endsWith('.env.example'))
 const problems = []
 const KEY = /frs_(pub|test)_[0-9A-Za-z]{6,}/

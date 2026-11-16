@@ -9,7 +9,7 @@ vi.mock('@/lib/queries/storefront-keys', () => ({ storefrontKeyFor: vi.fn(async 
 vi.mock('@/lib/env', async (orig) => ({ ...(await orig<object>()), STOREFRONT_PREVIEW_KEY: Buffer.alloc(32, 7) }))
 vi.mock('@/lib/queries/storefront-api', () => ({ markKeySeen: vi.fn(async () => {}), siteOriginFor: vi.fn(async () => 'https://kesarstudio.in') }))
 vi.mock('@/lib/db/rate-limit', () => ({
-  LIMITS: { apiMissIp: {}, apiTestIp: {}, apiSearchIp: {}, apiPreviewIp: {} },
+  LIMITS: { apiMissIp: {}, apiTestIp: {}, apiSearchIp: {}, apiPreviewKey: {} },
   overLimit: vi.fn(async () => limits.over),
   withinLimit: vi.fn(async () => limits.within),
 }))

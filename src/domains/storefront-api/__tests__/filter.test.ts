@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { SENTINELS } from '../../../../scripts/cost-sentinels.mjs'
 import * as S from '../2026-12/schemas'
 import { searchOut, type CardIn, type CollectionIn } from '../2026-12/map'
-import { facetsOut, filterPageOut, parseFilter, type FilterQuery } from '../2026-12/filter'
+import { facetValue, facetsOut, filterPageOut, parseFilter, type FilterQuery } from '../2026-12/filter'
 
 const T = '11111111-1111-1111-1111-111111111111'
 const M = { tenantId: T, mediaHost: 'abc123.public.blob.vercel-storage.com' }
@@ -61,6 +61,13 @@ describe('D2 filters (SA1b D·5; api-contract review M1–M4)', () => {
     expect(filterPageOut(M, cat, q(''), 2, now)).toBeNull()
     const json = JSON.stringify(S.FilterPage.parse(filterPageOut(M, cat, q(''), 1, now)))
     expect(json).not.toContain('987654321')
+  })
+  it('a long size name still gives a value the grammar accepts, and the menu still parses (api-contract review on the diff, MAJOR 1)', () => {
+    const long = `${'a'.repeat(39)} bcd`
+    expect(facetValue(long)).toBe('a'.repeat(39))
+    const f = facetsOut([card(9, { variants: [v('91', long)] })], now)
+    S.Facets.parse(f)
+    expect(parseFilter(new URLSearchParams(`size=${f.sizes[0]!.value}`))).not.toHaveProperty('bad')
   })
   it('facets: the exact value to send, counts over the listed set only', () => {
     const f = S.Facets.parse(facetsOut(all, now))

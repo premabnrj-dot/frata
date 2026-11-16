@@ -107,7 +107,7 @@ export function apiRequest<P, S extends z.ZodType>(opts: {
     const ctx: ApiCtx = { tenantId: row.tenantId, keyId: row.keyId, keyKind: row.kind, version: opts.version, now: new Date() } // clock-ok: server
 
     let cors: Record<string, string> = {}
-    if (preview && !(await withinLimit(LIMITS.apiPreviewIp, ip, ctx.now, true))) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
+    if (preview && !(await withinLimit(LIMITS.apiPreviewKey, ctx.keyId, ctx.now, true))) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
     if (test && !preview && !(await withinLimit(LIMITS.apiTestIp, ip, ctx.now, true))) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
     if (dynamic && opts.limit === 'search' && !(await withinLimit(LIMITS.apiSearchIp, ip, ctx.now, true))) return refuse(429, JSON.stringify({ error: 'busy' }), { 'Retry-After': '60' })
     if (test && !preview) {

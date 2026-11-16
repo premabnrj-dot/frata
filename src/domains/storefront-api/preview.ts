@@ -2,8 +2,10 @@
 // FILE: src/domains/storefront-api/preview.ts — THE PREVIEW TOKEN'S SHAPE (ADR-0018 § 12; SA1b plan D·4). Pure.
 //
 // A hidden page or the FAQ's draft opens on the brand's website only with a token Frrata signed in the console: bound
-// to the store and the key (inside the MAC, never in clear), to one entry and to ten minutes at most. It rides in a
-// request header (`Frrata-Preview`), never the URL, so it never reaches a request log. The signer and the verifier are
+// to the store and the key (inside the MAC, never in clear), to one entry and to ten minutes at most. The console hands it
+// to the site once, in /frrata-preview's query (it can reach that site's request log for its ten minutes: one hidden
+// page, no shopper data, no cost; security and tenancy reviews 2026-11-16, LOW); from there it rides only in a
+// request header (`Frrata-Preview`) from the site's server, kept in an HttpOnly cookie. The signer and the verifier are
 // src/lib/storefront-api/preview-token.ts.
 // =============================================================================
 

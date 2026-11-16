@@ -4,7 +4,7 @@ import { adminDb } from '@/lib/db/admin'
 import type { StaffOk } from '@/lib/auth/require-staff'
 import type { ApiShopRow } from '@/domains/storefront-api/admin-view'
 
-// Frrata Admin › Storefront API (SA1b D·8): through two definers that answer counts and dates only (drizzle/0144);
+// Frrata Admin › Storefront API (SA1b D·8): through two definers that answer counts and dates only (drizzle/0146);
 // frata_admin holds nothing on storefront_keys and never reads a key, its name or its hash (ADR-0018 § 3).
 
 type Raw = { tenant_id: string; name: string; slug: string; site_host: string | null; main_host: string | null; published: boolean
