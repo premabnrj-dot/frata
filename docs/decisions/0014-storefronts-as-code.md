@@ -106,3 +106,21 @@ version" for shops that have an owner. Before handover nothing changes (amendmen
    hands the bag to Frrata's checkout (decisions 2 and 3).
 6. **Removing a partner** cuts all their access at once (amendment 6); the site keeps serving its live version.
 
+
+## Amendment 10 (owner, 2026-11-16: "approve all"; Studio spec decision 26 as replaced by ADR-0019; Studio plan V0·2)
+**Headers and CSP on a code site's responses.** Amendment 4's Frrata-owned router and amendment 7's separate sites
+domain are superseded by ADR-0019 (one address). Decision 26 of `docs/specs/2026-11-16-studio-agent.md` (the fleet's
+overlay in place of a router) is replaced as follows.
+1. **Frrata's app sets them at the edge.** On one address Frrata's app holds the store's host and puts the headers on
+   every partner response from the signed policy (one version, read by the gate, the fleet and Admin): the CSP
+   (`default-src 'self'` and the one-address spec's T9 list), COOP `unsafe-none`, no COEP, the response headers
+   allowlisted and every `Set-Cookie` dropped. Frrata's own pages on that host carry COOP, `frame-ancestors 'none'` and
+   `X-Frame-Options: DENY`. Report-Only in waves first (kit spec § 4), then enforced (one-address plan P5·5).
+2. **The fleet's overlay is a second layer.** The fleet writes the same policy's headers into each build, so a preview
+   or a deployment's own URL carries them too. It never writes routing (ADR-0019 point 2).
+3. **If the edge can't allowlist a response header**, a filter runs at the edge, never a regional function in front of
+   every page (ADR-0019 point 2; one-address decision 21).
+4. **Outbound limits** are the CSP's script, connect, frame and image lists from the policy; a new outside host waits
+   for the owner (amendment 9.3).
+5. **Before one address** (a site seen only on its signed preview, or a split site hosted elsewhere) the fleet's overlay
+   is the only layer Frrata controls.

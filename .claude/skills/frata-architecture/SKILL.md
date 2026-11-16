@@ -2,10 +2,10 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 3.1.0
+  version: 3.2.0
   owner: owner
   verified: 2026-11-16
-  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018]
+  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018, ADR-0020]
   covers: ["src/middleware.ts", "src/lib/db/tenant.ts"]
 ---
 
@@ -405,6 +405,29 @@ Vercel `bom1` + Supabase ap-south-1. Storefront routes set `revalidate`;
 console routes are dynamic. Cron schedules in `vercel.json`: legacy `crons` are daily on Hobby,
 per minute on Pro; Vercel Schedules (public beta 2026-11-05) allow every 15 min on Hobby within 5,000 runs a billing
 period (frata-integrations § Domains). Build for daily; a beta schedule is an option, not a dependency. Migrations: see CLAUDE.md § Deploying.
+
+## Studio's agent (ADR-0020; spec docs/specs/2026-11-16-studio-agent.md; built from V3a)
+
+- **The loop runs outside the sandbox, code inside it, anything that touches Frrata on Frrata's server.** The runtime is
+  Managed Agents behind one adapter (runtime.ts under src/lib/studio, V3a·4): start, send, interrupt, stop, budget,
+  usage. Nothing else calls Anthropic for a session.
+- **Every custom tool runs through `asTurn(turn, cap, work)`**, the second Actor maker beside `require-capability.ts`.
+  The turn is Frrata's own open-turn row (one a session), never an id from a webhook or a tool's input. The person is
+  re-checked by `app_turn_actor` in its own short transaction, which closes; reads then run outside any transaction as
+  `frata_builder`, whatever the role; a write takes its `*In(tx)` form in its own `withTenant`. Every id in a tool's
+  input is matched with `where tenant_id = turn.tenant`.
+- **Tools call the console's own saves**, never a second writer: the agent's content, brand words, tokens and logos are
+  proposals a person applies; Apply runs that save as the person. No tool publishes, hands over, opens a store, touches
+  a domain or a key, or reads orders, shoppers, costs or members. A Builder's turn proposes nothing.
+- **`app.partner_id`** is a third setting beside `app.tenant_id` and `app.member_role`, set only by `requireMember` /
+  `requireCapability`; every `studio_*` table has a restrictive policy on tenant and partner and composite foreign keys
+  to its session. Credits and costs live in partner-scope definer-only tables, never a tenant row.
+- **The store's key never reaches the model or the sandbox:** a build key in the session's vault, sent as a header
+  (ADR-0018's build-key amendment), looked up uncached.
+- Anthropic's webhooks are stored in `webhook_events` (`anthropic:<session>:<event>`) and each tool runs in that webhook's
+  `after()`, once per tool-use id, with a per-minute Studio cron as the net; never the shared outbox drain.
+- **`check:studio`** (V3a·10, to be written) holds the shape: executors through `asTurn`, never `db()`; no cached loader
+  inside a transaction; the agent file pins its model, web tools off, hosts equal to the policy.
 
 ## Reference files — open the one for the work in hand
 

@@ -33,8 +33,9 @@ checkout, new here. One lane released at a time; phases in different lanes may r
 | 5 | **P6 One bag** | B | the site uses Frrata's bag | P5 | the pilot's bag drawer |
 | 6 | **P7 Studio designs checkout** | D | checkout design in Studio's pane | P2; Studio V3b | approved one screen + Checkout tab |
 **Proof blocks** in `scripts/verify/tenancy.sql`: § 98 (P1), § 99 (P2), § 100 (P5's predicate and keys; § 81 and § 86
-rewritten). § 87 and § 88 are taken (0150, 0151); the Studio plan's § 88–96 must be renumbered. **New e2e flows** take the
-next free numbers at build (93 and 95 are taken; the Studio plan's `93-site-hosting` must be renamed).
+rewritten). § 87 and § 88 are taken (0150, 0151); the Studio plan's blocks are renumbered (2026-11-16: V2a § 90, BT's number, freed
+by P1's § 98; C1 § 89, V3a § 91 to V3d § 96 unchanged). **New e2e flows** take the next free numbers at build (93 and 95
+are taken; the Studio plan's `93-site-hosting` is renamed `site-hosting`).
 **Spikes have pass/fail lines,** written in each.
 
 ## P0 · Bag link fix (lane E)
@@ -95,8 +96,8 @@ next free numbers at build (93 and 95 are taken; the Studio plan's `93-site-host
 |---|---|---|
 | P2·1 | Migration: `checkout_design` (one row a store: header variant, back link, footer variant, trust blocks text array CHECKed to a closed set, two lines with length CHECKs, `previous jsonb`, `updated_by`, `updated_at`); grants as P1·2 (`frata_builder` named-column select); proof § 99 | `npm run verify:tenancy` |
 | P2·2 | `src/domains/brand/checkout.ts`: closed sets, trust words derived from the store's facts, the render-time fallback | `npx vitest run src/domains/brand` |
-| P2·3 | Checkout, bag-link, order and policy pages read `shopBrand` and the design (props, never the theme) for code-site stores | `npm run e2e -- --only checkout,order-page,storefront-sale,shop-look` |
-| P2·4 | Checkout lines: Remove with Undo and a stepper (the drawer's pattern; `by` kind `keep`), re-priced by the quote. `checkout.tsx` is 398 of `check:size`'s 400 lines: split its lines block into its own component first | `npm run e2e -- --only checkout,offers` |
+| P2·3 | Checkout, bag-link, order and policy pages read `shopBrand` and the design (props, never the theme) for code-site stores; checkout's field label "Pincode" becomes "PIN code" (the glossary; `src/components/storefront/checkout.tsx:289`), its id and stored key unchanged; the bag-link page keeps no footer (P2 mockup, screen 1) | `npm run e2e -- --only checkout,order-page,storefront-sale,shop-look` |
+| P2·4 | Checkout lines: Remove with Undo and a stepper (the drawer's pattern; `by` kind `keep`), re-priced by the quote. `checkout.tsx` is 398 of `check:size`'s 400 lines: split its lines block into its own component first. A sold-out line is drawn from the quote's problem lines with Sold out and Remove (today checkout hides qty-0 lines, `checkout.tsx:146`, and the shopper learns only after Place order is refused) | `npm run e2e -- --only checkout,offers` |
 | P2·5 | The preview on sample data from pure fixtures, on the console host (the look preview's route pattern), every state; it is also where a site preview's Checkout lands | `npm run e2e -- --only brand` |
 | P2·6 | Console › Brand › Checkout as drawn; saves through P1·3 | `npm run e2e -- --only brand` (checkout tab steps); `mockup-parity-reviewer`; `npm run check:words` |
 - **Reviews:** `architecture-reviewer`, `tenancy-auditor`, `security-reviewer`, `speed-reviewer`, `design-system-reviewer`,
@@ -108,7 +109,10 @@ next free numbers at build (93 and 95 are taken; the Studio plan's `93-site-host
   order, the reload copy, the pending order, the order token and the order's personal details live only in the frame on
   `secure.<store host>`. The brand origin keeps the bag, its `by`, the code and public data.
 - **Mockup:** **new (states):** the frame loading, failed ("We couldn't load the secure form." with Try again), EkCode in a
-  popup (EkCode's own look), the frame's summary with **Place order · ₹<amount>**; the rest as P2's.
+  popup (EkCode's own look), the frame's summary with **Place order · ₹<amount>**; the rest as P2's. Approved with
+  (owner, 2026-11-16, "all mockups approved"): the online button keeps today's **Pay · ₹<amount>** (Place order · ₹ on
+  delivery); the computer layout is P2's one 560 px column with the frame inside it, under Your bag and How you'll pay
+  (P3's drawing put the frame left and the bag right; P2 is the layout, P3 drew states).
 - **Regression net:** e2e `10-checkout`, `50-order-page`, `64-gst`, `67-ekcode`, `77-order-edit`, `12-security`.
 | # | Task | Verify |
 |---|---|---|
