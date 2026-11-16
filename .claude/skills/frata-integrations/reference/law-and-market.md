@@ -54,6 +54,9 @@ data for another needs a separate decision (CLAUDE.md § deliberately absent).
   certificate; a copy of the complaint to the complainant; grievance 48 h / one month unchanged [V, gazette read 2026-11-11].
 - Hindware v Google (Delhi HC, 22 May 2026): safe harbour lost by a tool that aids infringement [S, Medianama].
 - Shopify: product-level enforcement first, account last; trademark notices shown to the merchant in admin [V-undated].
+- Shopify Checkout Kit for web opens checkout in a separate window on the checkout origin (a new tab by default, or a
+  600 × 600 popup), not a frame; Shop Pay needs Shopify Payments, which India lacks [V-undated shopify.dev checkout-kit/web,
+  help.shopify.com shop-pay; checked 2026-11-16].
 - Turnstile Free: 20 widgets, 10 hostnames each, no challenge cap; Siteverify mandatory, token 300 s, single use
   [V 2026-08-14, 2026-10-22]. hCaptcha Pro $139/month [V-undated].
 - Safe Browsing API non-commercial only (v4 deprecated) → **Web Risk** for our hosts (price [U]); v5 host checks from the

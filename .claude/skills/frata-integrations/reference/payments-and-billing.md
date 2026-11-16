@@ -94,6 +94,13 @@ rebuilds 2026-10-08 and 2026-11-12T08:15Z: a lastmod on those days is not proof 
   lastmod 2026-10-23]; blocklist phone/email/IP/6-digit ZIP, allowlist phone/email, CSV ≤ 1M rows, needs COD Intelligence,
   allowlisted orders get no RTO insurance [V, rto-reduction/allowlist-blocklist lastmod 2026-10-08]. Standard Checkout: the
   merchant decides COD by PIN code; `cod_fee` in paise, a negative is not rejected [V-undated, standard/cod.md].
+- Magic Checkout (web) is a modal (`rzp1.open()`); `handleback` defaults to true (Back closes it); success goes to
+  `handler` or `callback_url`; headless integrations then redirect to `order_status_url`; `theme.color` on request, no
+  logo option [V magic-checkout/web lastmod 2026-11-16; …/shopify/custom/web-integration-nextjs lastmod 2026-11-12;
+  checked 2026-11-16].
+- Standard Checkout's pop-up "does not appear in certain browsers, for example, on Facebook and Instagram browsers";
+  the fix is `callback_url` (a full-page redirect) [V standard/troubleshooting-faqs lastmod 2026-11-12; checked
+  2026-11-16]. Checkout inside a frame: no support statement and no ban found (P3·1 spike).
 - No RBI/NPCI rule on cash on delivery found [U, 2026-11-07].
 - **Registered websites (checked 2026-11-09):** live payments are accepted only from websites registered on the
   merchant's OWN account; "Razorpay fails the payments received on the unregistered websites" [V Custom Checkout page,
