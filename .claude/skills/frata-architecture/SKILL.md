@@ -6,7 +6,7 @@ metadata:
   owner: owner
   verified: 2026-11-16
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018]
-  covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
+  covers: ["src/middleware.ts", "src/lib/db/tenant.ts"]
 ---
 
 # Frata architecture

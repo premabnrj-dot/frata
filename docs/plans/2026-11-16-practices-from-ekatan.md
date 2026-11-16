@@ -81,3 +81,14 @@ new gates, the hook and `npm run eval`. CLAUDE.md: `gates:list`, the hook, the d
   (branches use the merge base); the Console budget is a pure function (`scripts/lib/app-budget.mjs`) with a test;
   `merge-main.mjs` reads the migration files once; `frata-architecture` bumped minor (a gate added). `npm test` (1,710
   tests) and typecheck green; `npm run build` postbuild clean.
+- **G2 built 2026-11-16.** Replay before switching on: 38% of the last 300 commits would have been stopped (code paths
+  only; 63% when a doc naming another doc counted), over 25%, so the doc drift ships as a **warning** to the agent
+  (`additionalContext`), and the commit goes ahead. Gates before commit and the force-push check **deny**. Verified in a
+  fresh headless session: `vercel deploy` refused by the deny rule despite an allow; a `--force` push to main refused by
+  the hook; the drift warning reaches the agent. `security-reviewer` READY as a guardrail (7 holes fixed: `+HEAD` on
+  main, push-option values, `command`/path-prefixed git, here-strings, worktree common dir, `-F` read capped, realpath;
+  `vercel:*` for every launcher; `check:config` allows only `permissions.deny`). `impact-reviewer` CLEAR (fixed: the deny
+  says the gates read the working tree; `cd ~`/`$VAR` no longer throw; tests for `-F`, `cd`, `--amend`, worktrees, a
+  plain push). Deviation from task 10: gates run from the worktree's own top (its committed package.json), not the
+  project dir, after confirming the worktree shares the project's git dir. Not caught and accepted (in the hook's
+  header): git aliases, a remote set to force, `bash -c`, backticks.

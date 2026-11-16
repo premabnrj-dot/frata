@@ -5,7 +5,7 @@ metadata:
   version: 8.1.0
   owner: owner
   verified: 2026-11-15
-  covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
+  covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css"]
 ---
 
 # Frata design language

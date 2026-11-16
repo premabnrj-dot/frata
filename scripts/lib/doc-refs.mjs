@@ -30,6 +30,9 @@ export function namedPaths(text) {
   return out
 }
 
+// What a doc can cover: code, not another doc (a doc naming a skill is a pointer, not a description of it).
+const CODE = /^(src|scripts|drizzle|drizzle-analytics|e2e)\//
+
 // A skill's or agent's metadata.covers globs as RegExps.
 export const globToRegExp = (g) =>
   new RegExp('^' + g.replace(/[.+^$()|[\]]/g, '\\$&').replace(/\*\*\/?/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\u0000/g, '.*') + '$')
@@ -43,7 +46,7 @@ export function coverage(tracked, read) {
     let text
     try { text = read(doc) } catch { continue }
     const hits = new Map()
-    for (const { path, line } of namedPaths(text)) if (files.has(path) && path !== doc) hits.set(path, [...(hits.get(path) ?? []), line])
+    for (const { path, line } of namedPaths(text)) if (files.has(path) && CODE.test(path)) hits.set(path, [...(hits.get(path) ?? []), line])
     const covers = text.match(/^\s*covers:\s*\[([^\]]*)\]/m)?.[1]
     if (covers) {
       const globs = [...covers.matchAll(/"([^"]+)"/g)].map((m) => globToRegExp(m[1]))

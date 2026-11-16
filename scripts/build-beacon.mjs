@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Fails (--check): public/fe.js or its version file stale, the beacon over its ceiling, or using what it must never use.
 // Builds the shop's visit beacon (src/beacon/fe.ts) into public/fe.js and writes its content hash to
 // src/lib/analytics/beacon-version.ts (the shell loads /fe.js?v=<hash>, cached as immutable: a change is a new URL).
 //   node scripts/build-beacon.mjs           build and write both files

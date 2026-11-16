@@ -105,17 +105,19 @@ run a new gate against the file that describes it.
 ## Before you commit
 
 ```bash
-npm test          # check:hex layers dates fetch config size tenant actions states contrast scale words motion clock modules name, then vitest
+npm test          # npm run gates (each gate and what it fails: npm run gates:list), then vitest
 npm run typecheck
 ```
 
-Both must pass. Changed `drizzle/` or a policy? Also `npm run verify:tenancy`
+Both must pass. A hook (`.claude/settings.json`, `scripts/hooks/pre-bash.mjs`) runs the gates before every `git commit`
+and stops the commit on a failure; it also names the living docs that cover a changed file. Changed `drizzle/` or a policy? Also `npm run verify:tenancy`
 against a throwaway Postgres (`frata-verify`). Changed a flow? `npm run e2e`.
 CI runs all of these.
 
 ## Deploying
 
-**Push to `main`. Never `vercel deploy`.** Vercel project `frata` (team
+**Push to `main`. Never `vercel deploy`** (deny rules in `.claude/settings.json` and the hook refusing a forced push
+to `main` catch mistakes; they are not the control). Vercel project `frata` (team
 `premabnrj-dots-projects`, production at frata.vercel.app) builds every push;
 `main` is production, every other branch a preview. Supabase project `frata`
 (ref `szqwveysvbbxpjhjlnwl`). Setup state and owner steps: `docs/setup.md`.

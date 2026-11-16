@@ -2,6 +2,8 @@
 // =============================================================================
 // FILE: scripts/check-capabilities.mjs — `node scripts/check-capabilities.mjs`
 //
+// Fails: a Builder door, actor, query or role check outside the files ADR-0015 allows (scripts/builder-doors.json).
+//
 // ADR-0015 guardrails that a grep can hold (T1c, plan docs/plans/2026-11-15-t1c-builders.md § Tasks 5). A partner's
 // Builder never sees orders, shoppers or costs; these keep the code shaped so it can't:
 //   doors      requireCapability( only in the files of scripts/builder-doors.json (and its own module, tests)

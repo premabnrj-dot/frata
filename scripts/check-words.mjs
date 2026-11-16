@@ -2,6 +2,8 @@
 // =============================================================================
 // FILE: scripts/check-words.mjs — `node scripts/check-words.mjs [--warn] [--write-todo]`
 //
+// Fails: a string a person reads that breaks the Words rulebook (filler, jargon, joined clauses), beyond its allow list and debts.
+//
 // The Words rulebook where a script can hold it (frata-design-language § Words and § Glossary; Neel mockup § Words).
 // A store owner reads the console on a phone, between orders: every line must be clear in one read.
 //
