@@ -8,14 +8,8 @@
 // by a lawyer once (Phase 1 owner call 13).
 // =============================================================================
 
-export const POLICY_PAGES = [
-  ['returns', 'Returns and exchanges'],
-  ['shipping', 'Shipping'],
-  ['privacy', 'Privacy'],
-  ['terms', 'Terms of sale'],
-  ['contact', 'Contact'],
-] as const
-export type PolicyPage = (typeof POLICY_PAGES)[number][0]
+import { POLICY_PAGES, type PolicyPage } from './pages'
+export { POLICY_PAGES, type PolicyPage }
 
 import type { PublicZone } from '@/domains/delivery/public'
 

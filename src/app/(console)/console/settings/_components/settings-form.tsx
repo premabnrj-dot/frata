@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { button } from '@/components/ui/button'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -9,13 +10,12 @@ import { LeaveDialog, SaveBar, useLeaveGuard } from '@/components/ui/unsaved'
 import { FieldError, errorId, useErrorSummary } from '@/components/ui/field-error'
 import { useToast } from '@/components/ui/toast'
 import {
-  BrandPreview, CheckoutPreview, ContactPreview, FooterPreview, InvoicePreview, PolicyPreview, type ShopFacts,
+  BrandPreview, CheckoutPreview, FooterPreview, InvoicePreview, type ShopFacts,
 } from '@/components/shop-preview/previews'
 import { STORE_FONT_VARS } from '@/components/shop-preview/fonts'
-import { POLICY_PAGES, type PolicyPage } from '@/domains/policies/render'
+import { POLICY_PAGES, type PolicyPage } from '@/domains/policies/pages'
 import { draftPatch, sectionFor, type Field, type Values } from '@/domains/settings/sections'
 import { saveSection } from '../actions'
-import { PolicyPages } from './policy-pages'
 import { ShopLogo } from './shop-logo'
 import { DocLogo } from './doc-logo'
 import { UnratedNotice } from './unrated'
@@ -32,6 +32,10 @@ import { Badge } from '@/components/ui/badge'
 import { OWNER_ONLY_WORDS, type AskPage } from '@/domains/settings/owner-only'
 import { LockedFacts } from './locked-facts'
 import { AskOwner } from './ask-owner'
+// Only the Policies section draws the five pages (their templates are the heaviest part of this page): loaded when shown.
+const PolicyPages = dynamic(() => import('./policy-pages').then((m) => m.PolicyPages))
+const PolicyPreview = dynamic(() => import('@/components/shop-preview/policy-preview').then((m) => m.PolicyPreview))
+const ContactPreview = dynamic(() => import('@/components/shop-preview/policy-preview').then((m) => m.ContactPreview))
 
 /**
  * One settings page: the fields its section defines, ONE explicit save, an

@@ -1,7 +1,6 @@
 import { codFor, shippingFor } from '@/domains/checkout/delivery'
 import { codWhyNot } from '@/domains/checkout/cod-words'
-import type { PolicyFacts, PolicyPage } from '@/domains/policies/render'
-import { PolicyBody, POLICY_TITLE } from '@/components/storefront/policy'
+import type { PolicyFacts } from '@/domains/policies/render'
 import { orderPrefix } from '@/domains/signup/slug'
 import { gstinValid } from '@/domains/settings/sections'
 import { formatInr } from '@/lib/format'
@@ -47,7 +46,7 @@ export type ShopFacts = PolicyFacts & {
 
 const inr = (p: number) => formatInr(paise(p))
 
-function Frame({ label, children }: { label: string; children: React.ReactNode }) {
+export function Frame({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <figure className="overflow-hidden rounded-md border border-border">
       <figcaption className="flex justify-between border-b border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
@@ -62,7 +61,6 @@ function Missing({ children }: { children: React.ReactNode }) {
   return <span className="rounded-sm bg-danger px-1 text-danger-text">{children}</span>
 }
 
-export { Pieces } from '@/components/storefront/policy'
 
 export function FooterPreview({ f }: { f: ShopFacts }) {
   return (
@@ -96,24 +94,6 @@ export function BrandPreview({ f }: { f: ShopFacts }) {
           {f.tagline && <p className="text-xs text-store-sub">{f.tagline}</p>}
           <p className="text-xs text-store-sub">The button stays ink so it always reads; your colour marks small details.</p>
         </div>
-      </div>
-    </Frame>
-  )
-}
-
-export function ContactPreview({ f }: { f: ShopFacts }) {
-  return <PolicyPreview f={f} page="contact" />
-}
-
-export function PolicyPreview({ f, page, override }: { f: ShopFacts; page: PolicyPage; override?: string | null }) {
-  const title = POLICY_TITLE[page]
-  return (
-    <Frame label={`${f.slug}.${f.shopDomain}/policies/${page}`}>
-      <div data-store-theme="" data-accent={f.accent} className="space-y-2.5 p-4 text-[13px] leading-relaxed">
-        <b className="block text-lg font-medium" style={{ fontFamily: f.look?.display ?? displayFamily(f.displayFont) }}>{title}</b>
-        {/* As the shop shows it (TS1a): Chat on WhatsApp above the details. */}
-        {page === 'contact' && f.whatsapp && <p><span className="inline-flex min-h-8 items-center rounded-[var(--store-radius)] bg-store-button px-3 text-xs font-medium text-store-on-button">Chat on WhatsApp</span></p>}
-        <PolicyBody page={page} facts={f} override={override} />
       </div>
     </Frame>
   )
