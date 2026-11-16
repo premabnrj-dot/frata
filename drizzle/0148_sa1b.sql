@@ -1,6 +1,6 @@
 -- =============================================================================
 -- V1 STOREFRONT API SA1b (plan docs/plans/2026-11-16-sa1b.md § Migration; reviews folded in). Hand-written. No new table.
--- Proof: scripts/verify/tenancy.sql § 85 (and § 81's sweep signatures).
+-- Proof: scripts/verify/tenancy.sql § 86 (and § 81's sweep signatures).
 --
 -- 1. The three drain sweeps page by shop id (D·6): a third argument `p_after uuid default null`, so the running
 --    deployment's two-argument calls still resolve during a release (architecture review 8). Ids only, 500 a page (`limit 500` = SWEEP_PAGE in src/lib/db/platform.ts: change both),
@@ -130,7 +130,7 @@ create or replace function admin_storefront_api_shops() returns table (
    limit 5000
 $$;
 --> statement-breakpoint
--- One store's listed products (visibility()'s `listed`: active and not scheduled; pinned by § 84 across every status).
+-- One store's listed products (visibility()'s `listed`: active and not scheduled; pinned by § 86 across every status).
 create or replace function admin_storefront_api_listed(p_tenant uuid) returns integer
   language sql stable security definer set search_path = '' as $$
   select count(*)::int from public.products p

@@ -226,5 +226,11 @@
     "rule": "W4",
     "text": "The FAQ as it stands, under a preview token",
     "why": "The Storefront API's published description (developers read it): a preview token is the developers' term for what the console signs (ADR-0018 § 12)"
+  },
+  {
+    "file": "src/app/(partner)/partner/(workspace)/_components/bills.tsx",
+    "rule": "W4",
+    "text": "Website",
+    "why": "Owner, 2026-11-15 (P2 Clients mockup v2): \"Website keys\" opens Console › Settings › Website, the brand's own site built as code on the Storefront API"
   }
 ]

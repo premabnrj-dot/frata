@@ -3819,6 +3819,175 @@ do $$ begin
   exception when check_violation then null; end;
 end $$;
 
+-- 85. P2 Clients (0146–0147; plan docs/plans/2026-11-16-p2-clients.md, reviews folded in). G owns partner Nook (§ 82)
+-- with stores n1 (opened) and n2; D is a Builder on n1; E is a Lead on n1; Y owns partner Yarn. The partner's own bills
+-- are definer-only and reach its owner alone; the share's month follows each link's own window; Frrata roles read no
+-- bill. Everything here rolls back.
+begin;
+insert into auth.users (id, email, email_confirmed_at) values
+  ('aaaaaaaa-0000-0000-0000-000000000094', 'e@nook.test', now()), ('aaaaaaaa-0000-0000-0000-000000000095', 'y@yarn.test', now());
+set local role frata_app;
+select app_partner_apply('aaaaaaaa-0000-0000-0000-000000000095', 'Yami', 'Yarn', '919845012361', 'Pune', '{}', '', '1-4', 1);
+reset role;
+update partners set approved_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000095';
+-- n1 opened in January; one issued, paid Frrata invoice for the previous IST month with a partial credit note
+update partner_links set share_starts_at = '2026-01-12' where tenant_id = current_setting('proof.nook1')::uuid and removed_at is null;
+do $$ declare m timestamptz := (date_trunc('month', now() at time zone 'Asia/Kolkata') - interval '1 month') at time zone 'Asia/Kolkata'; f uuid; f2 uuid;
+  n1 uuid := current_setting('proof.nook1')::uuid; n2 uuid := current_setting('proof.nook2')::uuid;
+begin
+  insert into frrata_invoices (tenant_id, period_start, period_end, taxable, cgst, sgst, igst, total, number, issued_at)
+    values (n1, m, m + interval '1 month', 2292000, 206280, 206280, 0, 2704560, 'PROOF85-1', now()) returning id into f;
+  insert into frrata_payments (tenant_id, invoice_id, method, amount, captured_at) values (n1, f, 'upi', 2468560, now());
+  insert into frrata_credit_notes (tenant_id, invoice_id, number, taxable, cgst, sgst, igst, total, reason, issued_by)
+    values (n1, f, 'PROOFCN85-1', 200000, 18000, 18000, 0, 236000, 'proof waiver', 'aaaaaaaa-0000-0000-0000-000000000092');
+  -- a test-mode invoice never counts; n2 (never opened) has one too
+  insert into frrata_invoices (tenant_id, period_start, period_end, taxable, cgst, sgst, igst, total, number, issued_at)
+    values (n2, m, m + interval '1 month', 1000000, 90000, 90000, 0, 1180000, 'PROOF85-2', now()) returning id into f2;
+  insert into frrata_payments (tenant_id, invoice_id, method, amount, captured_at) values (n2, f2, 'upi', 1180000, now());
+  perform set_config('proof.m85', m::text, true);
+end $$;
+set local role frata_app;
+select proof.check('aaaaaaaa-0000-0000-0000-000000000095');
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; D uuid := current_setting('proof.nookd')::uuid; E uuid := 'aaaaaaaa-0000-0000-0000-000000000094';
+  Y uuid := 'aaaaaaaa-0000-0000-0000-000000000095'; n1 uuid := current_setting('proof.nook1')::uuid; n2 uuid := current_setting('proof.nook2')::uuid;
+  inv uuid; l1 uuid; l2 uuid; b1 uuid; b2 uuid; r record; n int; today date := (now() at time zone 'Asia/Kolkata')::date;
+begin
+  perform proof.check(G); perform proof.check(D);
+  inv := app_partner_invite(G, proof.sess(G), proof.h(G), 'e@nook.test', 'lead', array[n1]);
+  perform app_partner_accept(E, inv); perform proof.check(E);
+  select x.link_id into l1 from app_partner_clients(G, proof.sess(G), proof.h(G)) x where x.tenant_id = n1;
+  select x.link_id into l2 from app_partner_clients(G, proof.sess(G), proof.h(G)) x where x.tenant_id = n2;
+  if l1 is null or l2 is null then raise exception 'FAIL: clients carry no link id'; end if;
+  -- the share's month: the owner gets n1's, net of the credit note; nothing for n2 (never opened); Lead and Builder nothing
+  select * into r from app_partner_client_shares(G, proof.sess(G), proof.h(G)) x where x.link_id = l1;
+  if r.link_id is null or r.share_bps <> 2000 or r.net_taxable <> 2092000 or r.total <> 2704560 or r.paid <> 2468560 or r.credited <> 236000 or not r.has_number
+  then raise exception 'FAIL: the owner''s share month (%)', r; end if;
+  if exists (select 1 from app_partner_client_shares(G, proof.sess(G), proof.h(G)) x where x.link_id = l2) then raise exception 'FAIL: a store never opened gave a share month'; end if;
+  if exists (select 1 from app_partner_client_shares(E, proof.sess(E), proof.h(E))) or exists (select 1 from app_partner_client_shares(D, proof.sess(D), proof.h(D)))
+  then raise exception 'FAIL: a Lead or a Builder got share figures'; end if;
+  -- new client columns: a Lead sees the invite's day and the owner's join; a Builder neither
+  if exists (select 1 from app_partner_clients(D, proof.sess(D), proof.h(D)) x where x.owner_since is not null or x.invite_sent_at is not null)
+  then raise exception 'FAIL: a Builder got the owner''s join or the invite''s day'; end if;
+  -- writes: the owner only, on the owner's own links and bills, with a live check and sane input
+  perform app_partner_deal_set(G, proof.sess(G), proof.h(G), l1, 'retainer', 1200000, today + 3);
+  b1 := app_partner_bill_add(G, proof.sess(G), proof.h(G), l1, 'November retainer', 'PT-0412', 1200000, today - 11);
+  if (select renews_on from app_partner_bill_summary(G, proof.sess(G), proof.h(G)) x where x.tenant_id = n1) <> today + 3 then raise exception 'FAIL: an earlier bill moved the next bill'; end if;
+  b2 := app_partner_bill_add(G, proof.sess(G), proof.h(G), l1, 'December retainer', null, 1200000, today + 3);
+  if (select renews_on from app_partner_bill_summary(G, proof.sess(G), proof.h(G)) x where x.tenant_id = n1) <> ((today + 3) + interval '1 month')::date then raise exception 'FAIL: the next bill did not move a month on'; end if;
+  begin perform app_partner_deal_set(E, proof.sess(E), proof.h(E), l1, 'project', 100000, null); raise exception 'FAIL: a Lead set billing';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_partner_bill_add(D, proof.sess(D), proof.h(D), l1, 'x', null, 100000, today); raise exception 'FAIL: a Builder recorded a bill';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_partner_bill_paid(E, proof.sess(E), proof.h(E), b1, true); raise exception 'FAIL: a Lead marked a bill paid';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_partner_bill_paid(Y, proof.sess(Y), proof.h(Y), b1, true); raise exception 'FAIL: another partner marked a bill paid';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  begin perform app_partner_bill_delete(Y, proof.sess(Y), proof.h(Y), b1); raise exception 'FAIL: another partner deleted a bill';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  begin perform app_partner_deal_set(Y, proof.sess(Y), proof.h(Y), l1, 'project', 100000, null); raise exception 'FAIL: another partner set billing on a link';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  begin perform app_partner_bill_add(Y, proof.sess(Y), proof.h(Y), l1, 'x', null, 100000, today); raise exception 'FAIL: another partner recorded a bill';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  begin perform app_partner_client_bills(Y, proof.sess(Y), proof.h(Y), l1); raise exception 'FAIL: another partner read a client''s bills';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_found' then raise; end if; end;
+  begin perform app_partner_client_bills(E, proof.sess(E), proof.h(E), l1); raise exception 'FAIL: a Lead read the bills';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  begin perform app_partner_bill_add(G, proof.sess(G), null, l1, 'x', null, 100000, today); raise exception 'FAIL: a bill without a check';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'confirm_first' then raise; end if; end;
+  begin perform app_partner_bill_add(G, proof.sess(G), proof.h(G), l1, 'x', null, 50, today); raise exception 'FAIL: a bill under ₹1';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  begin perform app_partner_bill_add(G, proof.sess(G), proof.h(G), l1, 'x', 'PT 1', 100000, today); raise exception 'FAIL: a bill number with a space';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  begin perform app_partner_deal_set(G, proof.sess(G), proof.h(G), l1, 'project', 100000, today); raise exception 'FAIL: a project with a next bill';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'bad_input' then raise; end if; end;
+  -- reads: the owner's summary (unpaid only) and the page's bills; nothing for a Lead, a Builder or another partner
+  if (select jsonb_array_length(open_bills) from app_partner_bill_summary(G, proof.sess(G), proof.h(G)) x where x.tenant_id = n1) <> 2 then raise exception 'FAIL: the summary''s unpaid bills'; end if;
+  if exists (select 1 from app_partner_bill_summary(E, proof.sess(E), proof.h(E))) or exists (select 1 from app_partner_bill_summary(D, proof.sess(D), proof.h(D)))
+     or exists (select 1 from app_partner_bill_summary(Y, proof.sess(Y), proof.h(Y))) then raise exception 'FAIL: someone else got the summary'; end if;
+  perform app_partner_bill_paid(G, proof.sess(G), proof.h(G), b1, true);
+  if (select jsonb_array_length(open_bills) from app_partner_bill_summary(G, proof.sess(G), proof.h(G)) x where x.tenant_id = n1) <> 1 then raise exception 'FAIL: mark paid'; end if;
+  perform app_partner_bill_paid(G, proof.sess(G), proof.h(G), b1, false);
+  if (select paid_at from app_partner_client_bills(G, proof.sess(G), proof.h(G), l1) x where x.id = b1) is not null then raise exception 'FAIL: mark unpaid'; end if;
+  perform app_partner_bill_delete(G, proof.sess(G), proof.h(G), b2);
+  if (select count(*) from app_partner_client_bills(G, proof.sess(G), proof.h(G), l1)) <> 1 then raise exception 'FAIL: delete'; end if;
+  -- the write counter: 60 a person a minute, failing closed
+  for n in 1..60 loop perform app_partner_bill_try(G, proof.sess(G), proof.h(G)); end loop;
+  begin perform app_partner_bill_try(G, proof.sess(G), proof.h(G)); raise exception 'FAIL: a 61st bill write in a minute';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'too_many' then raise; end if; end;
+  -- a lapsed check is refused
+  perform set_config('proof.l185', l1::text, true);
+end $$;
+reset role;
+update partner_stepups set expires_at = now() - interval '1 second' where user_id = 'aaaaaaaa-0000-0000-0000-000000000092';
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; begin
+  begin perform app_partner_bill_add(G, proof.sess(G), proof.h(G), current_setting('proof.l185')::uuid, 'x', null, 100000, current_date); raise exception 'FAIL: a lapsed check wrote a bill';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'confirm_first' then raise; end if; end;
+end $$;
+-- the app reads no bill table, nor does Frrata Admin or a Builder's login
+do $$ begin
+  begin perform 1 from partner_client_bills; raise exception 'FAIL: frata_app read partner_client_bills'; exception when insufficient_privilege then null; end;
+  begin perform 1 from partner_client_deals; raise exception 'FAIL: frata_app read partner_client_deals'; exception when insufficient_privilege then null; end;
+  begin perform 1 from partner_bill_tries; raise exception 'FAIL: frata_app read partner_bill_tries'; exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+-- relinked: n2 opened under Nook and left it long ago (its notice ran out before last month); now Yarn's. Nook gets no
+-- month for n2, Yarn gets it on its own link.
+do $$ declare m timestamptz := current_setting('proof.m85')::timestamptz; yp uuid := (select partner_id from partner_members where user_id = 'aaaaaaaa-0000-0000-0000-000000000095' and role = 'owner');
+  n2 uuid := current_setting('proof.nook2')::uuid; begin
+  update partner_links set share_starts_at = m - interval '300 days', removed_at = m - interval '200 days' where tenant_id = n2 and removed_at is null;
+  insert into partner_links (tenant_id, partner_id, share_bps, share_months, notice_days, share_starts_at) values (n2, yp, 1500, 24, 90, m - interval '100 days');
+end $$;
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; Y uuid := 'aaaaaaaa-0000-0000-0000-000000000095'; r record; begin
+  perform proof.check(G);
+  if (select count(*) from app_partner_client_shares(G, proof.sess(G), proof.h(G)) x where x.net_taxable = 1000000) <> 0 then raise exception 'FAIL: a store''s old partner saw its new partner''s month'; end if;
+  select * into r from app_partner_client_shares(Y, proof.sess(Y), proof.h(Y)) x;
+  if r.link_id is null or r.share_bps <> 1500 or r.net_taxable <> 1000000 then raise exception 'FAIL: the new partner''s month on its own terms (%)', r; end if;
+  if exists (select 1 from app_partner_clients(G, proof.sess(G), proof.h(G)) x where x.removed_at is not null and (x.owner_since is not null or x.invite_sent_at is not null))
+  then raise exception 'FAIL: a removed link still gives the owner''s join'; end if;
+end $$;
+reset role;
+-- a suspended partner and a removed owner are refused
+update partners set suspended_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000095';
+set local role frata_app;
+do $$ declare Y uuid := 'aaaaaaaa-0000-0000-0000-000000000095'; begin
+  begin perform app_partner_bill_try(Y, proof.sess(Y), proof.h(Y)); raise exception 'FAIL: a suspended partner wrote';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+  if exists (select 1 from app_partner_client_shares(Y, proof.sess(Y), proof.h(Y))) then raise exception 'FAIL: a suspended partner read its share'; end if;
+end $$;
+reset role;
+update partner_members set removed_at = now() where user_id = 'aaaaaaaa-0000-0000-0000-000000000092';
+set local role frata_app;
+do $$ declare G uuid := 'aaaaaaaa-0000-0000-0000-000000000092'; begin
+  begin perform app_partner_bill_paid(G, proof.sess(G), 'x', gen_random_uuid(), true); raise exception 'FAIL: a removed owner wrote';
+  exception when sqlstate 'P0001' then if sqlerrm <> 'not_owner' then raise; end if; end;
+end $$;
+reset role;
+rollback;
+begin;
+do $$ declare r text; f text; begin
+  foreach f in array array['app_partner_clients(uuid, uuid, text)', 'app_partner_client_shares(uuid, uuid, text)', 'app_partner_bill_summary(uuid, uuid, text)',
+    'app_partner_client_bills(uuid, uuid, text, uuid)', 'app_partner_bill_try(uuid, uuid, text)', 'app_partner_deal_set(uuid, uuid, text, uuid, text, bigint, date)',
+    'app_partner_bill_add(uuid, uuid, text, uuid, text, text, bigint, date)', 'app_partner_bill_paid(uuid, uuid, text, uuid, boolean)',
+    'app_partner_bill_delete(uuid, uuid, text, uuid)', 'app_partner_bill_owner(uuid, uuid, text, uuid)', 'admin_partner_bill_stats()'] loop
+    foreach r in array array['anon', 'authenticated', 'service_role', 'frata_builder'] loop
+      if has_function_privilege(r, f, 'execute') then raise exception 'FAIL: % can run %', r, f; end if;
+    end loop;
+    if f like 'app_%' and has_function_privilege('frata_admin', f, 'execute') then raise exception 'FAIL: frata_admin can run %', f; end if;
+  end loop;
+  if has_function_privilege('frata_app', 'app_partner_bill_owner(uuid, uuid, text, uuid)', 'execute') then raise exception 'FAIL: frata_app can run app_partner_bill_owner'; end if;
+  if has_function_privilege('frata_app', 'admin_partner_bill_stats()', 'execute') then raise exception 'FAIL: frata_app can run admin_partner_bill_stats'; end if;
+  if not has_function_privilege('frata_admin', 'admin_partner_bill_stats()', 'execute') then raise exception 'FAIL: frata_admin cannot count bills'; end if;
+  foreach r in array array['frata_app', 'frata_admin', 'frata_builder', 'anon', 'authenticated', 'service_role'] loop
+    foreach f in array array['partner_client_bills', 'partner_client_deals', 'partner_bill_tries'] loop
+      if has_table_privilege(r, f, 'select') or has_table_privilege(r, f, 'insert') or has_table_privilege(r, f, 'update')
+         or has_table_privilege(r, f, 'delete') or has_table_privilege(r, f, 'truncate') then raise exception 'FAIL: % reaches %', r, f; end if;
+    end loop;
+  end loop;
+end $$;
+rollback;
+
 -- the proof-only helpers go, and are gone
 drop schema proof cascade;
 do $$ begin if to_regnamespace('proof') is not null then raise exception 'FAIL: proof helpers left behind'; end if; end $$;
@@ -4240,7 +4409,7 @@ begin
 end $$;
 rollback;
 
--- 85. Storefront API SA1b (0146; plan docs/plans/2026-11-16-sa1b.md; tenancy audit 2026-11-16 folded in). The sweeps
+-- 86. Storefront API SA1b (0148; plan docs/plans/2026-11-16-sa1b.md; tenancy audit 2026-11-16 folded in). The sweeps
 -- page by shop id (the two-argument versions gone; a null cursor is the first page) and find a reinstated partner's
 -- shops; the domain-gone sweep is ids only; the Accept screen's key list is the invitee's own, built over
 -- app_my_handovers, names and prefixes only; Frrata Admin's view is counts and dates for frata_admin alone, its listed
@@ -4406,4 +4575,4 @@ do $$ declare a uuid[]; b uuid[]; z uuid[]; last uuid; begin
   if (select count(distinct x) from unnest(a || b) x where x::text like 'c8410000%') <> 601 then raise exception 'FAIL: two pages miss shops'; end if;
 end $$;
 rollback;
-\echo 'tenancy proof — all 85 checks passed'
+\echo 'tenancy proof — all 86 checks passed'

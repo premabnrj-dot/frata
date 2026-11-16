@@ -9,9 +9,11 @@ describe('partner roles (T1c)', () => {
     expect(partnerRoleOf(null)).toBeNull()
   })
   it('a Builder can do nothing the workspace offers but open its stores', () => {
-    for (const what of ['manageTeam', 'seeDetails', 'handOver', 'createShop', 'seeClientTerms'] as const) expect(partnerCan('builder', what)).toBe(false)
+    for (const what of ['manageTeam', 'seeDetails', 'handOver', 'createShop', 'seeClientTerms', 'billing'] as const) expect(partnerCan('builder', what)).toBe(false)
     expect(partnerCan('lead', 'createShop')).toBe(true)
     expect(partnerCan('lead', 'seeClientTerms')).toBe(false)
+    expect(partnerCan('lead', 'billing')).toBe(false)
+    expect(partnerCan('owner', 'billing')).toBe(true)
     expect(partnerCan('owner', 'seeClientTerms')).toBe(true)
   })
 })

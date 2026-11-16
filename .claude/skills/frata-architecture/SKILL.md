@@ -2,7 +2,7 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.60.0
+  version: 2.61.0
   verified: 2026-11-16
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -157,6 +157,14 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   middleware sends people to `/partner/sign-in` (with `next`, and `out=1` when a dead session cookie was there), the one
   partner page open without a session (`PARTNER_PUBLIC` in check:actions). `signOutAction` takes `to=partner` to land
   there. An owner who ever had a passkey waits 24 hours to recover one, even after Admin deleted them all.
+- **A partner's own records** (P2 Clients, 2026-11-16; drizzle/0146–0147): a partner's bills to its clients are
+  platform-scope tables that NO Frrata role reads (`frata_app`, `frata_admin`, `frata_builder`: no grant, RLS on, a
+  restrictive `definer_only` policy; `check:tenant` fails any table grant). Definers take the partner from the caller's
+  live owner membership (`app_pm_live`), re-check the step-up, and match a link or bill id on the caller's partner
+  (`not_found` otherwise). Frrata Admin gets a count and a first-bill date (`admin_partner_bill_stats`), never a row.
+  Writes are counted first in their own statement (`app_partner_bill_try`, its own table) so a refused write still
+  counts. Anything `partnerClients()` returns runs on every console page a partner opens (the building banner): heavy
+  reads go in a definer only `/partner` calls (`app_partner_client_shares`). Proof: `tenancy.sql` § 85.
 - **Secrets only in Production** (previews off production, 2026-11-12): every secret in `src/lib/env.ts` is read through
   `secret()` (`src/domains/infra/stage.ts`): on Vercel, Production only; off Vercel, as given. `check:config` fails an
   unwrapped read. Sign-in is off in the browser on a preview.

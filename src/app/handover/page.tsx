@@ -38,6 +38,8 @@ export default async function HandoverPage() {
             <dt className="text-muted-foreground">{h.partnerName}</dt>
             <dd>Partner: products, orders, settings, the look.<InfoTip about="what a partner can do">They can’t change billing, payment keys or people, or delete the store. Remove them any time in Settings › People.</InfoTip></dd>
             <dt className="text-muted-foreground">Your price</dt><dd>Same as any Frrata store.<InfoTip about="your price">Frrata pays the partner from its own fee. Nothing is added to yours.</InfoTip></dd>
+            {/* P2 Clients, owner 2026-11-15 (Q1): the partner owner sees Frrata's share in rupees, so the brand is told here. */}
+            <dt className="text-muted-foreground">Their share</dt><dd>Your partner sees what Frrata earns from your store.</dd>
             {/* The store's own website and the keys it reads with (SA1b mockup § Accept; managed in Settings › Website after Accept). */}
             {sites.get(h.inviteId) ? <><dt className="text-muted-foreground">Website</dt><dd className="min-w-0"><span className="font-mono text-small [overflow-wrap:anywhere]">{sites.get(h.inviteId)!.host}</span>
               <ul className="mt-2" aria-label="Website keys">

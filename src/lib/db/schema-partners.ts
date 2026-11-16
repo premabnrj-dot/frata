@@ -5,11 +5,12 @@
 // =============================================================================
 
 import { sql } from 'drizzle-orm'
-import { bigint, check, index, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { bigint, check, date, index, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { BRANDS_NOW, PARTNER_SERVICES } from '@/domains/partners/terms'
 import { PARTNER_ROLES } from '@/domains/partners/team'
 import { sqlList } from '@/domains/tenancy/roles'
-import { at, createdAt, id, tenants } from './schema'
+import { at, createdAt, id, money, tenants } from './schema'
+import { MAX_BILL_PAISE } from '@/domains/partners/bills'
 
 
 /**
@@ -198,4 +199,58 @@ export const partnerPasskeyTries = pgTable('partner_passkey_tries', {
 }, (t) => [
   index('partner_passkey_tries_user').on(t.userId, t.kind, t.at),
   check('partner_passkey_tries_kind', sql`${t.kind} in ('check','request','approve')`),
+])
+
+// ── P2 Clients (docs/plans/2026-11-16-p2-clients.md): the partner's OWN billing to its clients ────────────────────────
+// A private book: Frrata never sends, collects or reads it. Platform scope with no grant to any Frrata role (frata_app,
+// frata_admin, frata_builder): RLS on, a restrictive definer_only policy, read and written only by the partner definers
+// in drizzle/0147, which take the partner from the caller's own partner_members row and re-check the link.
+// Keyed by (partner, store): a store that leaves and comes back finds its book. Money in paise, ₹1 to ₹10 crore.
+
+/** How the partner bills a client: a project (one amount) or a retainer (an amount a month and the next bill's day). */
+export const partnerClientDeals = pgTable('partner_client_deals', {
+  partnerId: uuid('partner_id').notNull().references(() => partners.id, { onDelete: 'restrict' }),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(),
+  amount: money('amount').notNull(),
+  renewsOn: date('renews_on'),
+  updatedAt: at('updated_at').notNull().defaultNow(),
+  updatedBy: uuid('updated_by').notNull().references(() => partnerMembers.id, { onDelete: 'restrict' }),
+}, (t) => [
+  primaryKey({ columns: [t.partnerId, t.tenantId] }),
+  check('partner_client_deals_kind', sql`${t.kind} in ('project','retainer')`),
+  check('partner_client_deals_amount', sql`${t.amount} between 100 and ${sql.raw(String(MAX_BILL_PAISE))}`),
+  check('partner_client_deals_renews', sql`${t.kind} = 'retainer' or ${t.renewsOn} is null`),
+])
+
+/** A bill the partner recorded for a client. Its state (paid, overdue, due) is derived (`billState`), never stored. */
+export const partnerClientBills = pgTable('partner_client_bills', {
+  id: id(),
+  partnerId: uuid('partner_id').notNull().references(() => partners.id, { onDelete: 'restrict' }),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  label: text('label').notNull(),
+  number: text('number'),
+  amount: money('amount').notNull(),
+  dueOn: date('due_on').notNull(),
+  paidAt: at('paid_at'),
+  paidBy: uuid('paid_by').references(() => partnerMembers.id, { onDelete: 'restrict' }),
+  createdAt: createdAt(),
+  createdBy: uuid('created_by').notNull().references(() => partnerMembers.id, { onDelete: 'restrict' }),
+}, (t) => [
+  index('partner_client_bills_client').on(t.partnerId, t.tenantId, t.dueOn),
+  index('partner_client_bills_unpaid').on(t.partnerId, t.dueOn).where(sql`${t.paidAt} is null`),
+  check('partner_client_bills_label', sql`length(${t.label}) between 1 and 60`),
+  check('partner_client_bills_number', sql`${t.number} is null or ${t.number} ~ '^[A-Za-z0-9/-]{1,20}$'`),
+  check('partner_client_bills_amount', sql`${t.amount} between 100 and ${sql.raw(String(MAX_BILL_PAISE))}`),
+  check('partner_client_bills_paid', sql`(${t.paidAt} is null) = (${t.paidBy} is null)`),
+])
+
+/** Bill writes counted before they run (60 a person a minute, failing closed); its own table, so the passkey limits stay. */
+export const partnerBillTries = pgTable('partner_bill_tries', {
+  id: id(),
+  userId: uuid('user_id').notNull(),
+  at: at('at').notNull().default(sql`now()`),
+}, (t) => [
+  index('partner_bill_tries_user').on(t.userId, t.at),
+  index('partner_bill_tries_at').on(t.at),
 ])

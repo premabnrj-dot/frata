@@ -84,6 +84,10 @@ export type ClientRow = {
    *  question 6): null for a Lead or a Builder. The stage's facts (first opening, invite end, `hasOwner`) reach all. */
   shareMonths: number | null; noticeDays: number | null; ownerEmail: string | null; inviteEmail: string | null; inviteExpiresAt: Date | null; planName: string | null
   hasOwner: boolean
+  /** The link's id: a client page's key (a store relinked to the same partner has two rows). */
+  linkId: string
+  /** The store owner's join and the open invite's day: null for a Builder and once removed (P2, drizzle/0147). */
+  ownerSince: Date | null; inviteSentAt: Date | null
 }
 
 export async function partnerClients(c: Caller): Promise<ClientRow[]> {
@@ -94,6 +98,7 @@ export async function partnerClients(c: Caller): Promise<ClientRow[]> {
     shareMonths: r.share_months === null ? null : Number(r.share_months), noticeDays: r.notice_days === null ? null : Number(r.notice_days), ownerEmail: (r.owner_email as string | null) ?? null,
     inviteEmail: (r.invite_email as string | null) ?? null, inviteExpiresAt: d(r.invite_expires_at as string | null), planName: (r.plan_name as string | null) ?? null,
     hasOwner: (r.has_owner as unknown) === true,
+    linkId: r.link_id as string, ownerSince: d(r.owner_since as string | null), inviteSentAt: d(r.invite_sent_at as string | null),
   }))
 }
 

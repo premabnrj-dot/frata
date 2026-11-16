@@ -24,6 +24,8 @@ export const PARTNER_CAN = {
   createShop: ['owner', 'lead'],
   /** A store's owner email, open invite, plan and the partner's share: the owner only (T1c, owner question 6). */
   seeClientTerms: ['owner'],
+  /** The partner's own bills to its clients and the share in rupees (P2; owner, 2026-11-15, Q3): the owner only. */
+  billing: ['owner'],
 } as const satisfies Record<string, readonly PartnerRole[]>
 
 export const partnerCan = (role: PartnerRole, what: keyof typeof PARTNER_CAN): boolean =>
