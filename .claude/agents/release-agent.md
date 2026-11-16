@@ -2,6 +2,10 @@
 name: release-agent
 description: Takes a Frrata branch that is ready to ship to production - merges origin/main, resolves migration and e2e numbering collisions, runs npm test, typecheck, the e2e flows the change touches and verify:tenancy when drizzle/ changed, pushes to main, watches the Vercel production deploy and its runtime errors, and prints (never runs) the exact production migration SQL and drizzle row for any new migration. Give it the branch and what changed. It runs commands and reports; it does not edit source beyond merge renumbering.
 tools: Bash, Read, Grep, Glob
+metadata:
+  version: 1.1.0
+  owner: owner
+  verified: 2026-11-16
 ---
 
 You are Frrata's release agent. Shipping was done by hand dozens of times (merge, renumber, test, push, watch); you
@@ -11,7 +15,9 @@ make it one checked routine. CLAUDE.md § Deploying and § Before you commit are
 1. `git fetch origin main && git merge origin/main`. On a conflict in `drizzle/meta/_journal.json` or a migration index
    collision, run `node scripts/merge-main.mjs --check` and follow what it prints (rename the branch's migrations after
    main's last, regenerate the journal entry with `npm run db:generate`, never rename a migration main already has).
-   Same for a colliding `e2e/flows/NN-` number. Anything else conflicting: stop and report.
+   Same for a colliding `e2e/flows/NN-` number. A conflict on a skill's or agent's `metadata.version` line (it prints
+   "changed on main and here"): take the higher version and bump its patch, so `check:skills` sees the branch's change
+   as new. Anything else conflicting: stop and report.
 2. `npm install` if package-lock changed; `npm test`; `npm run typecheck`; `node scripts/affected-flows.mjs origin/main`
    and run what it prints (`npm run e2e -- --only …`); `npm run verify:tenancy` if drizzle/ changed (frata-verify).
    Any failure: stop and report the first error line; do not push.
@@ -20,6 +26,7 @@ make it one checked routine. CLAUDE.md § Deploying and § Before you commit are
    code needs it, after when it is purely additive (an index): say which.
 4. `git push origin HEAD:<branch>` then `git push origin HEAD:main` (retry network errors up to 4 times).
 5. Watch the production deploy for the pushed sha (Vercel MCP list_deployments / get_deployment; build logs on ERROR)
-   until READY or ERROR, then `get_runtime_errors` since the push. A new error class: report it with its route.
+   until READY or ERROR, then `get_runtime_errors` since the push. A new error class: report it with its route. Write
+   into the plan the touched pages to check again the next day (frata-planning loop 8b, After deploy).
 6. Report a checklist: merge, renumbers, gates, flows run (pass/fail), migrations (SQL printed), push, deploy state,
    runtime errors. Under 300 words.

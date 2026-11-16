@@ -2,7 +2,8 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.61.0
+  version: 2.62.0
+  owner: owner
   verified: 2026-11-16
   decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
@@ -710,7 +711,8 @@ after it. A class a shop page uses from outside the shop's folders must be added
   sealed value and keyed hash; new entries go in front, old values still open. Payment secrets stay on secret-box.
 - **A module never imported by core**: the checkout gains a slot (`checkout.identity`) and generic window events
   (`shop:prefill`, `shop:placed`); a brand mark ships as server-rendered SVG, never as path data in a client chunk.
-- `src/domains/ekcode/` belongs to the module (check:modules); shared rules are `src/domains/ekcode-core/`.
+- EkCode's own code lives in the module's folders (`src/lib/modules/ekcode/`, `src/components/modules/ekcode/`; an engine
+  of its own would go in `src/domains/<key>/`, check:modules); rules shared with core are `src/domains/ekcode-core/`.
 
 ## Outside world (ADR-0006)
 
@@ -753,7 +755,7 @@ Budgets. Each says whether a gate holds it yet:
 |---|---|
 | Shop first-load JS ≤ 120 kB gz | `check:storefront-build` |
 | Every shop route ISR; second visit HIT | build + `check:payload` |
-| Console/Admin first-load JS ≤ 150 kB gz (customize ≤ 190) | review (a gate to add) |
+| Console/Admin/partner first-load JS ≤ 150 kB gz (pages pinned at their 2026-11-16 size + 2 kB; customizer 208; sign-in, start, join and the look editor and preview groups not budgeted) | `check:storefront-build` |
 | Largest shop page HTML ≤ 300 kB raw, RSC ≤ 150 kB; lists paged | lists page at 48 (`PAGE_SIZE`, `/products/page/N`, e2e 13-paging); HTML bytes a review |
 | A cached loader entry ≤ 1 MB (Next refuses > 2 MB, silently) | `catalogue-size.int.test.ts` (880 kB at 600 products with an offer; `src/lib/storefront/catalogue-entry.ts`) |
 | A cold shop page ≤ 12 statements, none repeated | review (loaders are `cache()`d since P3) |

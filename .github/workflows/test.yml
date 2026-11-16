@@ -17,12 +17,17 @@ jobs:
           --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # check:skills compares each skill and agent with the base (a body changed needs a version bump)
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm test
+        env:
+          # A push to main is judged against main's previous tip; a branch or PR against its merge base with main.
+          SKILLS_BASE: ${{ github.ref == 'refs/heads/main' && github.event.before || '' }}
       - run: npm run typecheck
       - run: npm run build
       - name: Tenant isolation proof
