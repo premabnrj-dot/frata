@@ -12,6 +12,7 @@ import { formatInr } from '@/lib/format'
 import { paise } from '@/domains/money/paise'
 import { savePolicyText } from '../actions'
 import { Section } from '@/components/layout/section'
+import { OWNER_ONLY_WORDS } from '@/domains/settings/owner-only'
 
 const inr = (p: number) => formatInr(paise(p))
 const asText = (page: PolicyPage, f: ShopFacts) =>
@@ -22,12 +23,15 @@ const asText = (page: PolicyPage, f: ShopFacts) =>
  * and says which it is. Rewriting is its own save (it is not part of the
  * section's fields); "Follow my settings again" removes the rewrite.
  */
-export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }: {
+export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty, locked = false }: {
   facts: ShopFacts
   overrides: Record<string, string>
   selected: PolicyPage
   onSelect: (p: PolicyPage) => void
   pagesDirty: boolean
+  /** PP1: only the owner or a Manager changes them now. The pages keep their chips and still pick the preview; Rewrite,
+   *  Edit and Follow my settings again are gone (owner decision 5). */
+  locked?: boolean
 }) {
   const router = useRouter()
   const [editing, setEditing] = useState<PolicyPage | null>(null)
@@ -37,8 +41,9 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
 
   const save = (page: PolicyPage, body: string | null) => start(async () => {
     const r = await savePolicyText(page, body)
-    // A refusal is a toast: "Follow my settings again" has no editor open to hold a line (§ Feedback 1).
-    if (!r.ok) { toast.error(r.error); return }
+    // A refusal is a toast: "Follow my settings again" has no editor open to hold a line (§ Feedback 1). One opened
+    // before handover is refused in the owner-only words, with Reload (PP1 screen 6); what was typed stays until then.
+    if (!r.ok) { toast.error(r.error, r.locked ? { sub: OWNER_ONLY_WORDS.nothingChanged, action: { label: 'Reload', run: () => window.location.reload() } } : undefined); return }
     setEditing(null); router.refresh()
   })
 
@@ -46,7 +51,7 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
     <Section flush>
       <div className="space-y-1 p-4">
         <h2 className="flex items-center text-section font-semibold">Your five pages<InfoTip about="your five pages">Written from your settings, and kept in step with them. Rewrite a page to use your own words. It then stops following your settings.</InfoTip></h2>
-        <p className="text-sm text-muted-foreground">These pages are a starting point. Have a lawyer read them once.</p>
+        {!locked && <p className="text-sm text-muted-foreground">These pages are a starting point. Have a lawyer read them once.</p>}
       </div>
       {POLICY_PAGES.map(([k, label]) => {
         const own = overrides[k]
@@ -57,7 +62,7 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
               <button type="button" className="font-medium hover:underline" onClick={() => onSelect(k)}>{label}</button>
               <Badge tone={own ? 'info' : gaps.length ? 'warn' : 'ok'}>{own ? 'Your own words' : gaps.length ? 'Missing details' : 'From your settings'}</Badge>
               <span className="flex-1" />
-              {editing !== k && (
+              {editing !== k && !locked && (
                 <button type="button" className="inline-flex min-h-6 items-center text-sm underline" disabled={pagesDirty}
                   title={pagesDirty ? 'Save or discard your other changes first' : undefined}
                   onClick={() => { onSelect(k); setEditing(k); setText(own ?? asText(k, facts)) }}>
@@ -66,7 +71,7 @@ export function PolicyPages({ facts, overrides, selected, onSelect, pagesDirty }
               )}
             </div>
             {gaps.length > 0 && <p className="mt-1 text-xs text-warn-text">Needs: {gaps.join(', ')}</p>}
-            {own && editing !== k && (
+            {own && editing !== k && !locked && (
               <button type="button" className="inline-flex min-h-6 items-center mt-1 text-xs text-muted-foreground underline" disabled={pending} onClick={() => save(k, null)}>Follow my settings again</button>
             )}
             {editing === k && (

@@ -28,13 +28,17 @@ import type { PinSuggestion } from '@/domains/orders/pin-suggest'
 import { CodPreview } from './cod-preview'
 import { Switch } from '@/components/ui/switch'
 import { STATES, STATE_CODE } from '@/domains/checkout/states'
+import { Badge } from '@/components/ui/badge'
+import { OWNER_ONLY_WORDS, type AskPage } from '@/domains/settings/owner-only'
+import { LockedFacts } from './locked-facts'
+import { AskOwner } from './ask-owner'
 
 /**
  * One settings page: the fields its section defines, ONE explicit save, an
  * "Unsaved changes" bar on the first edit, a guard on leaving, and the shop
  * beside it as shoppers will see it (frata-design-language § Phase 1).
  */
-export function SettingsForm({ sectionKey, head, initial, version: startVersion, facts, fiscalYear, overrides, tenantId, unrated = null, held = [], suggest = null }: {
+export function SettingsForm({ sectionKey, head, initial, version: startVersion, facts, fiscalYear, overrides, tenantId, unrated = null, held = [], suggest = null, lock = null, ask = null }: {
   sectionKey: string
   /** The page's head (Settings › group, title, the group's tabs): drawn by the server page. */
   head: React.ReactNode
@@ -51,6 +55,10 @@ export function SettingsForm({ sectionKey, head, initial, version: startVersion,
   held?: readonly string[]
   /** Pay on delivery: one PIN code its returns suggest taking off (pin-suggest.ts), or none. */
   suggest?: PinSuggestion | null
+  /** PP1 (src/domains/settings/owner-only.ts): this page locked whole, or these fields, for this person; drawn as facts. */
+  lock?: { whole: true } | { whole: false; fields: readonly string[] } | null
+  /** Ask the owner, where a block holds it (Contact's grievance officer); a whole page's sits in the header. */
+  ask?: { page: AskPage; asked: boolean } | null
 }) {
   const section = sectionFor(sectionKey)!
   const router = useRouter()
@@ -102,8 +110,10 @@ export function SettingsForm({ sectionKey, head, initial, version: startVersion,
       const fields = r.errors ?? {}
       setErrors(fields)
       if (Object.keys(fields).length) { setAttempt((a) => a + 1); return }
-      // A conflict offers its one action: Reload (what is typed here is theirs to make again, the words say so).
-      toast.error(r.error, r.conflict ? { action: { label: 'Reload', run: () => window.location.reload() } } : undefined)
+      // A conflict offers its one action: Reload (what is typed here is theirs to make again, the words say so). A save
+      // from a tab opened before handover (PP1 screen 6) says nothing changed; Reload draws the page as it is now.
+      const reload = { label: 'Reload', run: () => window.location.reload() }
+      toast.error(r.error, r.locked ? { sub: OWNER_ONLY_WORDS.nothingChanged, action: reload } : r.conflict ? { action: reload } : undefined)
     })
   }
 
@@ -126,10 +136,24 @@ export function SettingsForm({ sectionKey, head, initial, version: startVersion,
           {section.blocks.some((b) => b.fields.some((f) => held.includes(f.key))) && (
             <Section title="Set in Delivery Zones" action={<Link href="/console/apps/delivery_zones" className={button({ variant: 'secondary' })}>Open Delivery Zones</Link>} />
           )}
-          {section.blocks.map((b) => ({ b, shown: b.fields.filter((f) => !held.includes(f.key)).filter((f) => !f.showIf || f.showIf.in.includes(String(values[f.showIf.key] ?? ''))) })).filter(({ shown }) => shown.length).map(({ b, shown }) => (
+          {section.blocks.map((b) => ({ b, all: b.fields.filter((f) => !held.includes(f.key)).filter((f) => !f.showIf || f.showIf.in.includes(String(values[f.showIf.key] ?? ''))) })).filter(({ all }) => all.length).map(({ b, all }) => {
+            // PP1: what this person may not change reads as facts; a block locked whole carries the chip (and Ask the
+            // owner) beside its title, unless the whole page is locked (the header says it once).
+            const locked = !lock ? [] : lock.whole ? all : all.filter((f) => lock.fields.includes(f.key))
+            const shown = all.filter((f) => !locked.includes(f))
+            const blockLocked = !!lock && !lock.whole && !shown.length
+            const title = <h2 className={section.blocks.length === 1 && b.title === section.title ? 'sr-only' : 'flex items-center text-section font-semibold'}>{b.title}{b.tip ? <InfoTip about={b.title.toLowerCase()}>{b.tip}</InfoTip> : null}</h2>
+            return (
             <Section key={b.title}>
               {/* A page of one block named as the page: its name is the page's, said to a screen reader only (Settings board). */}
-              <h2 className={section.blocks.length === 1 && b.title === section.title ? 'sr-only' : 'flex items-center text-section font-semibold'}>{b.title}{b.tip ? <InfoTip about={b.title.toLowerCase()}>{b.tip}</InfoTip> : null}</h2>
+              {blockLocked ? (
+                // As drawn: the title, the chip and Ask the owner in a row; on a phone the chip takes the line under them.
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+                  {title}
+                  <span className="order-3 w-full md:order-none md:w-auto"><Badge>{OWNER_ONLY_WORDS.chip}</Badge></span>
+                  {ask ? <span className="ml-auto"><AskOwner page={ask.page} asked={ask.asked} size="sm" /></span> : null}
+                </div>
+              ) : title}
               {b.hint && <p className="-mt-1 text-sm text-muted-foreground">{b.hint}</p>}
               {/* The drawn frame: switch rows, then the short fields side by side (three when there are three), then the wide
                   ones, each group under a hairline. */}
@@ -143,9 +167,15 @@ export function SettingsForm({ sectionKey, head, initial, version: startVersion,
                     ) : null} />)}
                 </div>
               ))}
+              {locked.length > 0 && (
+                <div className={shown.length ? 'border-t border-line-soft pt-4' : undefined}>
+                  <LockedFacts fields={locked} values={values} chip={shown.length > 0} />
+                </div>
+              )}
             </Section>
-          ))}
-          {section.key === 'policies' && <PolicyPages facts={preview} overrides={overrides} selected={policyPage} onSelect={setPolicyPage} pagesDirty={dirty} />}
+            )
+          })}
+          {section.key === 'policies' && <PolicyPages facts={preview} overrides={overrides} selected={policyPage} onSelect={setPolicyPage} pagesDirty={dirty} locked={!!lock?.whole} />}
           <button type="submit" hidden />
         </form>
         <aside className="lg:sticky lg:top-16">

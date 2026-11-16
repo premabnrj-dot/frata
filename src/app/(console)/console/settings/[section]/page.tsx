@@ -4,7 +4,10 @@ import { fiscalYear } from '@/domains/counters/fiscal-year'
 import { formValues, sectionFor } from '@/domains/settings/sections'
 import { CAN_BUILD, requireMember } from '@/lib/auth/require-member'
 import { SHOP_DOMAIN } from '@/lib/public-env'
-import { policyOverrides, shopWithSettings } from '@/lib/queries/settings'
+import { ownerOnlyFacts, policyOverrides, shopWithSettings } from '@/lib/queries/settings'
+import { ASK_PAGES, OWNER_ONLY_WORDS, lockOf, lockedFor, mayAskOwner, type AskPage } from '@/domains/settings/owner-only'
+import { Badge } from '@/components/ui/badge'
+import { AskOwner } from '../_components/ask-owner'
 import { liveWithoutRate } from '@/lib/queries/catalogue'
 import { chargesGst, type Scheme } from '@/domains/tax/gst'
 import { previewLook } from '@/lib/queries/storefront'
@@ -37,7 +40,15 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
   if (!section.editors.includes(auth.membership.role)) return <Panel title="Only the owner or a manager can change this" />
   const tenantId = auth.membership.tenantId
   const zoned = section.key === 'shipping' || section.key === 'payments'
-  const [shop, overrides, live, src, mods, suggest] = await Promise.all([
+  // PP1: the pages with owner-only settings ask whether the store has an owner, and, for a partner who may ask, whether
+  // this page was asked about today. A failed read fails closed: locked as if the store had an owner.
+  const role = auth.membership.role, support = !!auth.membership.supportSessionId
+  const askPage = (ASK_PAGES as readonly string[]).includes(section.key) ? (section.key as AskPage) : null
+  const now = new Date()
+  const owned = askPage
+    ? ownerOnlyFacts(tenantId, mayAskOwner(role, true, support) ? askPage : null, now).catch((err) => { console.error('[settings owner-only]', errName(err)); return { hasOwner: true, askedToday: false } })
+    : Promise.resolve(null)
+  const [shop, overrides, live, src, mods, suggest, ownerOnly] = await Promise.all([
     shopWithSettings(tenantId),
     section.key === 'policies' ? policyOverrides(tenantId) : Promise.resolve({}),
     section.preview === 'brand' || section.preview === 'footer' ? previewLook(tenantId) : Promise.resolve(null),
@@ -45,7 +56,8 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
     zoned ? shopModules(tenantId, new Date().toISOString()) : Promise.resolve(null),
     // Best effort: without it the page shows no suggestion, never an error.
     section.key === 'payments' ? pinSuggestionFor(tenantId, new Date()).catch((err) => { console.error('[settings pin]', errName(err)); return null }) : Promise.resolve(null),
-  ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null, codeSource, null, null] as const })
+    owned,
+  ]).catch((err) => { console.error('[settings section]', key, errName(err)); return [null, {}, null, codeSource, null, null, null] as const })
   if (!shop) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   // The brand and footer previews wear the shop's published look (Look owns colours and type now).
   // Taxes: a shop that charges GST can't sell a live product with no rate (quote); say which, never block (best effort).
@@ -54,10 +66,19 @@ export default async function SettingsSectionPage({ params }: { params: Promise<
     : null
   const theme = resolveStored(live, shop.settings, src)
   const facts = { ...shopFacts(shop, SHOP_DOMAIN), look: { vars: schemeVars(theme, 'paper'), display: displayFamily(theme.settings.pairing) } }
+  const lock = ownerOnly ? lockOf(lockedFor(role, ownerOnly.hasOwner, support), section.key) : null
+  const ask = askPage && ownerOnly && lock && mayAskOwner(role, ownerOnly.hasOwner, support) ? { page: askPage, asked: ownerOnly.askedToday } : null
+  // A page locked whole says so beside its title, with Ask the owner as the header's one action; a page locked in part
+  // keeps its own header (Contact: the block holds them; Invoices and slips: Ask the owner in the header, a chip by each).
+  const inBlock = section.key === 'contact'
   return (
     <SettingsForm
       sectionKey={section.key}
-      head={<SettingsHead page={section.key} role={auth.membership.role} />}
+      head={<SettingsHead page={section.key} role={auth.membership.role}
+        badges={lock?.whole ? <Badge>{OWNER_ONLY_WORDS.chip}</Badge> : undefined}
+        actions={ask && !inBlock ? <AskOwner page={ask.page} asked={ask.asked} /> : undefined} />}
+      lock={lock}
+      ask={ask && inBlock ? ask : null}
       suggest={suggest}
       initial={formValues(section, storedValues(facts))}
       version={shop.settings.version}
