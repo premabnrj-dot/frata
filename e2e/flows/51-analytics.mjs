@@ -2,7 +2,7 @@
 // FLOW: analytics (A·1, docs/plans/2026-11-08-analytics-a1.md) — where orders come from, judged on deliveries. Written
 // first (plan A1·0): step 1 pins capture (a tagged landing with a creator's ?code= is recorded on the order, the code
 // with via 'link'); then the console: the order, delivered, under its creator on Analytics and its source page, Make a
-// link with Copy, the order page's "Came from", and staff with counts but no ₹. Seeds its own creator offer, code-only,
+// link with Copy, the order page's meta line ("from …"), and staff with counts but no ₹. Seeds its own creator offer, code-only,
 // and ends it after.
 // Guards: a source lost when capture moves, a creator link that stops crediting its creator, ₹ shown to staff.
 // =============================================================================
@@ -114,7 +114,7 @@ export default {
         await t.step('the order page says where it came from', async () => {
           const c = await owner.newPage(); c.setDefaultTimeout(10_000); c.on('pageerror', (e) => t.errors.push(e.message))
           await c.goto(CONSOLE + `/console/orders/${number}`)
-          await c.getByText('Came from: Creator · Riya · diwali-drop').waitFor()
+          await c.getByText(/from Creator · Riya · diwali-drop/).first().waitFor() // the meta line under the title (N2b, as drawn)
           await c.close()
         })
       } finally {

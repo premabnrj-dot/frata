@@ -6,6 +6,7 @@ import { Panel } from '@/components/ui/panel'
 import { ANY_STAFF, requireStaff } from '@/lib/auth/require-staff'
 import { emailHealth, emailQueue } from '@/lib/admin/email'
 import { dateTimeIN } from '@/lib/format-date'
+import { NeedsBand } from '../_components/needs-band'
 
 export const metadata = { title: 'Email health' }
 
@@ -26,6 +27,9 @@ export default async function EmailHealth({ searchParams }: { searchParams: Prom
   return (
     <>
       <PageHeader title="Email health" />
+      {q.waiting > 0 && q.oldest && Date.now() - new Date(q.oldest).getTime() > 10 * 60_000 && (
+        <NeedsBand title={`${q.waiting.toLocaleString('en-IN')} ${q.waiting === 1 ? 'email' : 'emails'} waiting since ${dateTimeIN(q.oldest)}.`} />
+      )}
       <div className="mb-4 flex gap-1.5">{PERIODS.map(([d, label]) => <Link key={d} href={`/admin/email?days=${d}`} className={`rounded-full border border-border px-3 py-1 text-sm ${days === d ? 'bg-foreground text-background' : ''}`}>{label}</Link>)}</div>
       <dl className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border md:grid-cols-5">
         {[['Sent', total.sent.toLocaleString('en-IN')], ['Bounced', pct(total.bounced, total.sent)], ['Complaints', pct(total.complained, total.sent)],
@@ -34,8 +38,8 @@ export default async function EmailHealth({ searchParams }: { searchParams: Prom
         ))}
       </dl>
       {sorted.length ? (
-        <DataTable label="Shops' order emails">
-          <DataTableHead><th>Shop</th><th className="text-right">Sent</th><th className="text-right">Delivered</th><th className="text-right">Bounced</th><th className="text-right">Complaints</th><th className="text-right">Skipped</th></DataTableHead>
+        <DataTable label="Stores' order emails">
+          <DataTableHead><th>Store</th><th className="text-right">Sent</th><th className="text-right">Delivered</th><th className="text-right">Bounced</th><th className="text-right">Complaints</th><th className="text-right">Skipped</th></DataTableHead>
           <DataTableBody>
             {sorted.map((r) => (
               <DataTableRow key={r.tenant_id}>

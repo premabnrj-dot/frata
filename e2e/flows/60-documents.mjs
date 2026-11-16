@@ -124,8 +124,8 @@ export default {
         assert.match(none.headers()['content-type'], /text\/html/, 'a refusal is a page with a way back')
       })
 
-      await t.step('Settings › Documents (D2): the signatory, note and slip size save; the queue starts at that size', async () => {
-        await p.goto(CONSOLE + '/console/settings/documents')
+      await t.step('Settings › Invoices and slips (D2): the signatory, note and slip size save; the queue starts at that size', async () => {
+        await p.goto(CONSOLE + '/console/settings/invoices')
         await p.getByRole('heading', { name: 'Logo for paper' }).waitFor()
         await p.getByRole('textbox', { name: /^Authorised signatory/ }).fill('Riya Mehta')
         await p.getByRole('textbox', { name: /^Note at the foot/ }).fill('Exchanges within 7 days.')

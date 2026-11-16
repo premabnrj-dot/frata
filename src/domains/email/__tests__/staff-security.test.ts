@@ -13,4 +13,8 @@ describe('staff security emails', () => {
       expect(w.body.length).toBeGreaterThan(5)
     }
   })
+  it('a role change names the new role and that the stores stay (T1c)', () => {
+    expect(staffSecurityWords({ kind: 'partner_role_changed', about: 'meera@pixelthread.in', by: 'ananya@pixelthread.in', detail: 'Builder' }))
+      .toEqual({ subject: 'meera@pixelthread.in is now a Builder', body: 'ananya@pixelthread.in made meera@pixelthread.in a Builder. Their stores stay the same.' })
+  })
 })

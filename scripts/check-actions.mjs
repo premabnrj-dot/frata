@@ -19,7 +19,11 @@ import { join } from 'node:path'
 // shopRequest (src/lib/http/shop-api.ts) is requireShop plus a Zod body and a per-shop limit, for /api/shop/*.
 // moduleGate (src/lib/auth/as-module.ts) is requireMember plus the module's on/off check, for reads and non-writing actions.
 // requireEk (src/lib/ekcode/require-ek.ts) is EkCode's host check: Host = EKCODE_HOST, same-origin JSON POSTs, a per-network limit.
-const CHOKEPOINTS = ['requireMember', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk']
+// requireCapability (T1c): requireMember's store choice answered by capability; a Builder's only way in. currentStore: that
+// store choice itself (the switch and the tenant check; check:capabilities pins its callers
+// holds which files may call it).
+// apiRequest (src/lib/storefront-api/request.ts) is the Storefront API's door: the shop from a key's definer row (ADR-0018).
+const CHOKEPOINTS = ['requireMember', 'requireCapability', 'currentStore', 'requireStaff', 'asMember', 'requireUser', 'requirePartner', 'asModule', 'moduleGate', 'requireShop', 'shopRequest', 'requireEk', 'apiRequest']
 
 /** Entry points that check their own credential: file → [what it is, a token that must appear in it]. */
 const ENTRY_POINTS = {
@@ -43,6 +47,9 @@ const ENTRY_POINTS = {
   // Public, read-only, cached per shop: the shop comes from the host the middleware wrote (shopFor checks its shape).
   'src/app/s/[host]/sitemap.xml/route.ts': ['a shop\'s sitemap: public, read-only', 'shopForRoute('],
   'src/app/s/[host]/robots.txt/route.ts': ['a shop\'s robots.txt: public, read-only', 'shopForRoute('],
+  // The Storefront API's published description (V1 SA1): no key, no shop data, generated from the closed schemas.
+  'src/app/api/storefront/2026-12/openapi.json/route.ts': ['the Storefront API description: public, read-only, no shop', 'openApi('],
+  'src/app/api-docs/llms.txt/route.ts': ['the Storefront API docs for agents (SA1b D·9): public, static, no shop', 'llmsTxt('],
   'src/app/s/[host]/og/[...card]/route.ts': ['a shop\'s share card: public, read-only, canonical ids looked up inside the host\'s shop', 'shopForRoute('],
 }
 
@@ -125,8 +132,8 @@ for (const file of walk('src/app/(console)')) {
 // page in parallel, so the layout's requireMember protects nothing below it.
 for (const file of ['src/app/(console)', 'src/app/(lookeditor)', 'src/app/(lookpreview)'].flatMap((d) => (existsSync(d) ? walk(d) : []))) {
   if (!file.endsWith('/page.tsx')) continue
-  if (!/\brequireMember\(/.test(code(readFileSync(file, 'utf8')))) {
-    failures.push(`${file}  console page that does not call requireMember( itself — the layout's check does not cover it`)
+  if (!/\brequire(Member|Capability)\(/.test(code(readFileSync(file, 'utf8')))) {
+    failures.push(`${file}  console page that does not call requireMember( or requireCapability( itself — the layout's check does not cover it`)
   }
 }
 

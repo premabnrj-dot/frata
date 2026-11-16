@@ -52,7 +52,7 @@ export default async function SupportStartPage({ params }: { params: Promise<{ i
         <p className="text-xs text-muted-foreground">Starting this ends any other visit you have open.</p>
       </fieldset>
       <div className="flex justify-end gap-2 border-t border-border pt-4">
-        <Link href={`/admin/merchants/${id}`} className={button({ variant: 'secondary' })}>Stay in Admin</Link>
+        <Link href={`/admin/merchants/${id}`} className={button({ variant: 'secondary' })}>Stay in Frrata Admin</Link>
         <Submit>Open {m.tenant.name}&apos;s console</Submit>
       </div>
     </ActionForm></Section>

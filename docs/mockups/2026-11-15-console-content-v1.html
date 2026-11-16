@@ -1,0 +1,692 @@
+<title>Console Content V1</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a reference page of frames. Desktop console at 1280 (scaled to fit), phone views at 390, then states.
+   Neel tokens copied from docs/mockups/2026-11-13-design-language-neel.html. */
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --rani:#D61F69;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62; --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B; --info-bg:#E8F1FD; --info-fg:#1F5BA8; --info-dot:#3B82E0;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --hover:var(--g50); --sunk:var(--g50);
+  --line:var(--g200); --line-soft:var(--g100); --field:var(--g500);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --bar:var(--g950); --bar-text:#fff; --bar-link:#A3ABF5;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; color-scheme:dark }
+* { box-sizing:border-box }
+body { background:var(--page); color:var(--text); font:400 14px/20px var(--font); margin:0;
+  padding:0 max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px)) }
+h1,h2,h3,h4 { margin:0; text-wrap:balance }
+.num { font-variant-numeric:tabular-nums }
+.code { font-family:var(--mono); font-size:12px }
+button { font:inherit; color:inherit }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+
+/* The reference page */
+.doc { max-width:1320px; margin:0 auto }
+.doc-top { padding:28px 0 8px; border-bottom:1px solid var(--line); margin-bottom:8px }
+.doc-top h1 { font:600 28px/34px var(--font); letter-spacing:-.01em }
+.doc-top p { color:var(--text-2); margin:6px 0 0 }
+.toc { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 4px }
+.toc a { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12.5px; color:var(--text); text-decoration:none; background:var(--surface) }
+.part { margin-top:44px; scroll-margin-top:16px }
+.part > h2 { font:600 18px/24px var(--font); margin-bottom:4px }
+.part > .cap { color:var(--text-2); font-size:13px; margin:0 0 14px; max-width:90ch }
+.row-frames { display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start }
+
+/* Neel primitives (as the gallery draws them) */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-weight:500; font-size:14px; box-shadow:var(--e1); cursor:pointer; white-space:nowrap }
+.btn.primary { background:var(--action); border-color:var(--action); color:var(--action-text); box-shadow:none }
+.btn.ghost { background:transparent; border-color:transparent; box-shadow:none; color:var(--text-2) }
+.btn.sm { min-height:30px; padding:0 10px; font-size:13px }
+.btn[aria-disabled="true"] { background:var(--sunk); color:var(--text-3); box-shadow:none; cursor:default }
+.btn.danger { color:var(--bad-fg) }
+.chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font-size:12px; font-weight:500; white-space:nowrap }
+.chip::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; flex:none }
+.chip.ok { background:var(--ok-bg); color:var(--ok-fg) } .chip.ok::before { background:var(--ok-dot) }
+.chip.info { background:var(--info-bg); color:var(--info-fg) } .chip.info::before { background:var(--info-dot) }
+.chip.warn { background:var(--warn-bg); color:var(--warn-fg) } .chip.warn::before { background:var(--warn-dot) }
+.chip.neu { background:var(--neu-bg); color:var(--neu-fg) } .chip.neu::before { background:var(--neu-dot) }
+.tag { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:6px; padding:1px 7px; font-size:12px; color:var(--text-2); white-space:nowrap }
+.overline { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3) }
+.tip { display:inline-grid; place-items:center; width:24px; height:24px; border:0; background:none; color:var(--text-3); cursor:pointer; vertical-align:middle }
+.tip svg { width:14px; height:14px }
+.sect { background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--e1); padding:16px 20px }
+.sect + .sect { margin-top:12px }
+.sect-h { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px }
+.sect-h h3 { font:600 16px/24px var(--font) }
+.sect-h .sp { flex:1 }
+.list { display:grid }
+.item { display:grid; grid-template-columns:56px minmax(0,1fr) auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line-soft) }
+.item:first-child { border-top:0 }
+.item.notext { grid-template-columns:minmax(0,1fr) auto }
+.item b { font-weight:500; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.item .meta { color:var(--text-2); font-size:13px; display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; margin-top:2px }
+.item .acts { display:flex; gap:4px; align-items:center }
+.thumb { width:56px; height:56px; border-radius:8px; background:linear-gradient(150deg,#E9C9A4,#B5703F); position:relative; overflow:hidden }
+.thumb.b { background:linear-gradient(150deg,#D7DEE8,#6E7F99) }
+.thumb::after { content:""; position:absolute; inset:auto 8px 8px 8px; height:6px; border-radius:3px; background:rgba(255,255,255,.75) }
+.value { font-weight:500 }
+.field { display:grid; gap:6px; margin-bottom:14px }
+.field label, .field .lab { font-size:13px; font-weight:500; display:flex; justify-content:space-between; gap:8px }
+.field .count { color:var(--text-3); font-weight:400 }
+.input { min-height:44px; border:1px solid var(--field); border-radius:8px; background:var(--surface); padding:0 12px; display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); min-width:0 }
+.input.sel::after { content:""; margin-left:auto; width:8px; height:8px; border-right:1.5px solid var(--text-2); border-bottom:1.5px solid var(--text-2); transform:rotate(45deg) translateY(-3px) }
+.input.bad { border-color:var(--bad-fg); box-shadow:0 0 0 3px var(--bad-bg) }
+.err { color:var(--bad-fg); font-size:13px; display:flex; gap:6px; align-items:center }
+.err::before { content:"!"; display:inline-grid; place-items:center; width:16px; height:16px; border-radius:50%; background:var(--bad-dot); color:#fff; font-size:11px; font-weight:600 }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:10px }
+.ro { background:var(--sunk); border:1px solid var(--line); border-radius:8px; padding:10px 12px; display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap }
+.ro .k { font-size:12px; color:var(--text-2) }
+.sw { width:34px; height:20px; border-radius:999px; background:var(--g300); position:relative; flex:none; border:0 }
+.sw::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:var(--e1) }
+.sw[aria-checked="true"] { background:var(--action) } .sw[aria-checked="true"]::after { left:16px }
+
+/* Desktop console frame */
+.desk { width:100%; max-width:1280px; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--page); box-shadow:var(--e2) }
+.desk-in { display:grid; grid-template-columns:232px minmax(0,1fr); min-height:760px }
+.sb { background:var(--side); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:2px }
+.sb .store { display:flex; gap:10px; align-items:center; padding:6px 8px 14px }
+.mono-mark { width:28px; height:28px; border-radius:8px; background:var(--g950); color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px }
+.sb .store b { display:block; font-size:14px } .sb .store span { font-size:12px; color:var(--text-2) }
+.sb .grp { margin:12px 8px 4px }
+.nav { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; color:var(--text-2); font-size:14px; text-decoration:none }
+.nav svg { width:18px; height:18px; flex:none }
+.nav.on { background:var(--surface); color:var(--text); box-shadow:var(--e1); border:1px solid var(--line); font-weight:500 }
+.nav.on svg { color:var(--action) }
+.main { padding:28px 32px; min-width:0 }
+.ph { display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap }
+.ph h1 { font:600 22px/28px var(--font) }
+.ph .meta { color:var(--text-2); font-size:13px; margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+.ph .sp { flex:1 }
+.tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); margin:18px 0 18px; overflow-x:auto; scrollbar-width:none }
+.tabs button { border:0; background:none; padding:10px 12px; font-size:14px; color:var(--text-2); border-bottom:2px solid transparent; white-space:nowrap; cursor:pointer; display:inline-flex; gap:6px; align-items:center }
+.tabs button[aria-selected="true"] { color:var(--text); font-weight:500; border-bottom-color:var(--action) }
+.pill { background:var(--neu-bg); color:var(--neu-fg); border-radius:999px; font-size:12px; padding:0 7px; font-variant-numeric:tabular-nums }
+.grid2 { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:20px; align-items:start }
+.preview { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--surface); box-shadow:var(--e1) }
+.preview .pv-top { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line); font-size:13px }
+.site { background:#F7F1EA; color:#2A1D14; padding:0 0 14px; font-family:Georgia,serif }
+.site .bar { background:#2A1D14; color:#F7F1EA; font:12px var(--font); text-align:center; padding:6px }
+.site .hd { display:flex; justify-content:space-between; padding:10px 14px; font:600 13px var(--font) }
+.site .hero { margin:0 14px; height:190px; border-radius:6px; background:linear-gradient(150deg,#E9C9A4,#9C5B32); position:relative; outline:2px solid var(--action); outline-offset:3px }
+.site .hero span { position:absolute; left:14px; bottom:14px; color:#fff; font-size:22px }
+.site .hero i { position:absolute; top:-26px; left:-3px; background:var(--action); color:var(--action-text); font:500 11px var(--font); font-style:normal; padding:2px 8px; border-radius:6px 6px 0 0 }
+.site .strip { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 14px 0 }
+.site .strip div { aspect-ratio:4/5; border-radius:4px; background:#E2D3C2 }
+.fold { display:flex; align-items:center; gap:8px; padding:12px 4px 2px; color:var(--text-2); font-size:13px }
+
+/* Phone frame */
+.phone { width:390px; max-width:100%; border:1px solid var(--line); border-radius:28px; padding:8px; background:var(--g950) }
+.scr { border-radius:22px; overflow:hidden; background:var(--page); min-height:760px; display:flex; flex-direction:column; position:relative }
+.p-top { padding:14px 16px 0 }
+.p-top .back { font-size:14px; color:var(--text-2) }
+.p-top h1 { font:600 20px/26px var(--font); margin-top:4px }
+.p-body { padding:12px 16px 16px; display:grid; gap:12px; flex:1; align-content:start }
+.p-body .sect { padding:14px 16px }
+.p-tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); margin:10px 0 0; overflow-x:auto; scrollbar-width:none; padding:0 12px }
+.p-tabs button { border:0; background:none; padding:10px 10px; font-size:14px; color:var(--text-2); border-bottom:2px solid transparent; white-space:nowrap }
+.p-tabs button[aria-selected="true"] { color:var(--text); font-weight:500; border-bottom-color:var(--action) }
+.bottom { border-top:1px solid var(--line); background:var(--side); display:grid; grid-template-columns:repeat(4,1fr); text-align:center; font-size:11px; color:var(--text-2) }
+.bottom div { padding:8px 0 10px; display:grid; gap:2px; justify-items:center }
+.bottom svg { width:22px; height:22px }
+.bottom .on { color:var(--action); font-weight:500 }
+.sheet-scrim { position:absolute; inset:0; background:rgba(23,22,21,.45); display:flex; align-items:flex-end }
+.sheet { background:var(--surface); width:100%; border-radius:16px 16px 0 0; padding:16px 16px 18px; box-shadow:var(--e3); max-height:85%; overflow:auto }
+.sheet h3 { font:600 17px/24px var(--font); margin-bottom:14px }
+.sheet .grab { width:36px; height:4px; border-radius:2px; background:var(--g300); margin:0 auto 12px }
+.acts-row { display:flex; gap:8px; justify-content:flex-end; margin-top:6px }
+.acts-row .btn { min-height:44px }
+.toast { position:absolute; left:16px; right:16px; bottom:72px; background:var(--bar); color:var(--bar-text); border-radius:10px; box-shadow:var(--e3); padding:12px 14px; display:flex; align-items:center; gap:10px; font-size:14px }
+.toast .ok { width:18px; height:18px; border-radius:50%; background:var(--ok-dot); display:grid; place-items:center; flex:none }
+.toast .ok::after { content:""; width:8px; height:4px; border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg) translate(1px,-1px) }
+.toast .sp { flex:1 }
+.toast a { color:var(--bar-link); font-weight:500; text-decoration:none }
+.q { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; padding:10px 0; border-top:1px solid var(--line-soft) }
+.q:first-child { border-top:0 }
+.q b { font-weight:500 }
+.q .a { color:var(--text-2); font-size:13px; grid-column:1 }
+.q .mv { grid-row:1 / span 2; grid-column:2; display:flex; gap:2px; align-self:center }
+.ib { width:32px; height:32px; border-radius:8px; border:1px solid var(--line); background:var(--surface); display:grid; place-items:center }
+.ib svg { width:16px; height:16px }
+
+/* Small frames */
+.mini { width:520px; max-width:100%; border:1px solid var(--line); border-radius:12px; background:var(--page); padding:18px; box-shadow:var(--e1) }
+.mini .lbl { font-size:12px; color:var(--text-3); margin-bottom:10px }
+.notice { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:10px; align-items:start; padding:12px 0; border-top:1px solid var(--line-soft) }
+.notice:first-of-type { border-top:0 }
+.av { width:32px; height:32px; border-radius:50%; background:var(--n50); color:var(--n700); display:grid; place-items:center; font-weight:600; font-size:12px }
+.notice .t { font-size:14px } .notice .s { font-size:12px; color:var(--text-2); margin-top:2px }
+.banner-ro { display:flex; gap:10px; align-items:center; background:var(--warn-bg); color:var(--warn-fg); border-radius:10px; padding:10px 12px; font-size:13px; font-weight:500 }
+
+/* V1 additions: desktop dialog, save bar, the Look's customizer panel, menu rows, banners */
+.dlg { width:520px; max-width:100%; background:var(--surface); border-radius:16px; box-shadow:var(--e3); padding:20px 20px 18px; border:1px solid var(--line) }
+.dlg h3 { font:600 17px/24px var(--font); margin-bottom:14px }
+.seg { display:inline-flex; background:var(--sunk); border-radius:10px; padding:3px; gap:2px }
+.seg span { padding:6px 12px; border-radius:8px; font-size:13px; color:var(--text-2) }
+.seg span[aria-checked="true"] { background:var(--surface); color:var(--text); box-shadow:var(--e1); font-weight:500 }
+.savebar { display:flex; align-items:center; gap:10px; background:var(--bar); color:var(--bar-text); border-radius:10px; box-shadow:var(--e3); padding:10px 12px; font-size:14px; margin-top:14px }
+.savebar .sp { flex:1 }
+.savebar .btn { min-height:32px }
+.savebar .btn.ghost { color:var(--bar-text) }
+.mrow { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center; padding:9px 0; border-top:1px solid var(--line-soft) }
+.mrow:first-child { border-top:0 }
+.mrow.l2 { padding-left:22px } .mrow.l3 { padding-left:44px }
+.mrow b { font-weight:500 } .mrow .s { color:var(--text-2); font-size:13px }
+.mrow .acts { display:flex; gap:4px }
+.ib.txt { width:auto; padding:0 8px; font-size:12px; color:var(--text-2) }
+.toast.bad .ok { background:var(--bad-dot) } .toast.bad .ok::after { content:"!"; border:0; transform:none; width:auto; height:auto; font-size:11px; font-weight:600; color:#fff }
+.toast.static { position:static; margin-top:12px }
+.banner { display:flex; gap:10px; align-items:center; border-radius:10px; padding:10px 12px; font-size:13px; font-weight:500 }
+.banner.warn { background:var(--warn-bg); color:var(--warn-fg) }
+.banner .sp { flex:1 }
+.cz { display:grid; grid-template-columns:300px minmax(0,1fr); border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--page); box-shadow:var(--e2); max-width:860px }
+.cz-panel { border-right:1px solid var(--line); background:var(--side); padding:12px }
+.cz-tabs { display:grid; grid-template-columns:repeat(3,1fr); background:var(--sunk); border-radius:10px; padding:3px; margin-bottom:12px }
+.cz-tabs span { text-align:center; padding:6px; border-radius:8px; font-size:13px; color:var(--text-2) }
+.cz-tabs span.on { background:var(--surface); color:var(--text); box-shadow:var(--e1); font-weight:500 }
+.linkrow { display:flex; align-items:center; gap:10px; padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--surface); text-decoration:none; color:var(--text) }
+.linkrow + .linkrow { margin-top:8px }
+.linkrow .sp { flex:1 } .linkrow .s { font-size:12px; color:var(--text-2); display:block }
+.linkrow svg { width:16px; height:16px; color:var(--text-3) }
+.cz-pv { padding:16px; display:grid; place-items:start center; background:var(--sunk) }
+.cz-pv .site { width:300px; border-radius:8px; overflow:hidden; box-shadow:var(--e1) }
+.empty { text-align:center; padding:18px 8px; color:var(--text-2) }
+.empty b { display:block; color:var(--text); font-weight:500; margin-bottom:8px }
+.box { border:1px solid var(--line); border-radius:8px; background:var(--sunk); padding:10px 12px; font-size:13px }
+.box .k { font-size:12px; color:var(--text-2); margin-bottom:4px }
+.desk.narrow .desk-in { min-height:0 }
+@media (max-width:900px) { .cz { grid-template-columns:1fr } .cz-panel { border-right:0; border-bottom:1px solid var(--line) } }
+@media (max-width:1100px) { .grid2 { grid-template-columns:1fr } }
+@media (max-width:900px) { .desk-in { grid-template-columns:1fr } .sb { display:none } .main { padding:20px 16px } }
+@media (max-width:480px) { .two { grid-template-columns:1fr } .item { grid-template-columns:48px minmax(0,1fr) } .item .acts { grid-column:1 / -1; justify-content:flex-end } .thumb { width:48px; height:48px } }
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important } }
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/></symbol>
+  <symbol id="i-orders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></symbol>
+  <symbol id="i-products" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 4 7l2 3 2-1v11h8V9l2 1 2-3-4-3c-1 2-2.5 2.5-4 2.5S9 6 8 4z"/></symbol>
+  <symbol id="i-offers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V4h8l8 8-8 8z"/><circle cx="8.5" cy="8.5" r="1.2"/></symbol>
+  <symbol id="i-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-apps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6-6 6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 10 6 6 6-6"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-look" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4a8 8 0 1 0 0 16c1.5 0 2-1 2-2s-1-1.5-1-2.5 1-1.5 2.5-1.5H17a3 3 0 0 0 3-3c0-4-3.6-7-8-7z"/><circle cx="8" cy="10" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16" cy="10" r="1"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5M19 5l-8 8M17 14v5H5V7h5"/></symbol>
+</svg>
+
+<div class="doc">
+  <header class="doc-top">
+    <h1>Console › Content · V1 as it will be built</h1>
+    <p>Plan <span class="code">docs/plans/2026-11-15-v1-content.md</span> · updates the mockup approved 2026-11-15 to this phase only · a theme store, Kesar Studio · Neel tokens</p>
+    <nav class="toc" aria-label="On this page">
+      <a href="#bar">Announcement</a><a href="#menus">Menus</a><a href="#pages">Pages</a><a href="#faq">FAQ</a><a href="#contact">Contact line</a><a href="#look">The Look's links</a><a href="#states">States</a><a href="#changed">What changed</a>
+    </nav>
+  </header>
+
+  <!-- ═══ 1 · Announcement ═══ -->
+  <section class="part" id="bar">
+    <h2>Announcement · computer</h2>
+    <p class="cap">Up to 3 bars with dates. A live offer shows first. Edit opens a dialog; a save is live, with Undo for 8 seconds.</p>
+    <div class="desk" role="img" aria-label="The Content page on a computer, Announcement tab">
+      <div class="desk-in">
+        <aside class="sb">
+          <div class="store"><span class="mono-mark">K</span><div><b>Kesar Studio</b><span>kesar-studio.frrata.shop</span></div></div>
+          <a class="nav"><svg><use href="#i-home"/></svg>Home</a>
+          <a class="nav"><svg><use href="#i-orders"/></svg>Orders</a>
+          <div class="grp overline">Store</div>
+          <a class="nav"><svg><use href="#i-products"/></svg>Products</a>
+          <a class="nav"><svg><use href="#i-offers"/></svg>Offers</a>
+          <a class="nav on" aria-current="page"><svg><use href="#i-content"/></svg>Content</a>
+          <a class="nav"><svg><use href="#i-look"/></svg>Look</a>
+          <a class="nav"><svg><use href="#i-apps"/></svg>Apps</a>
+          <a class="nav"><svg><use href="#i-settings"/></svg>Settings</a>
+        </aside>
+        <div class="main">
+          <div class="ph">
+            <div>
+              <h1>Content</h1>
+              <div class="meta"><span class="code">kesar-studio.frrata.shop</span></div>
+            </div>
+            <span class="sp"></span>
+            <button class="btn"><svg width="16" height="16"><use href="#i-out"/></svg>View store</button>
+          </div>
+          <div class="tabs" role="tablist">
+            <button role="tab" aria-selected="true">Announcement</button><button role="tab">Menus</button><button role="tab">Pages</button><button role="tab">FAQ</button><button role="tab">Contact line</button>
+          </div>
+          <div class="grid2">
+            <div>
+              <div class="sect">
+                <div class="sect-h"><h3>Bars</h3><span class="tag num">2 of 3</span><span class="sp"></span><button class="btn sm">Add a bar</button></div>
+                <div class="list">
+                  <div class="item notext"><div><b>Pay online, save ₹50</b><div class="meta"><span class="chip ok">Live now</span><span>Offer</span><span>Ends 30 Nov</span></div></div><div class="acts"><button class="btn sm">Open Offers</button></div></div>
+                  <div class="item notext"><div><b>New: the wedding edit</b><div class="meta"><span class="chip neu">Shows after the offer</span><span>Ends 30 Nov, 11:59 pm</span><span>→ Wedding edit</span></div></div>
+                    <div class="acts"><button class="btn sm" aria-label="Edit New: the wedding edit">Edit</button><button class="btn ghost sm" aria-label="More for New: the wedding edit"><svg width="16" height="16"><use href="#i-more"/></svg></button></div></div>
+                  <div class="item notext"><div><b>Winter linens are here</b><div class="meta"><span class="chip info">Starts 1 Dec, 10:00 am</span><span>→ Linen</span></div></div>
+                    <div class="acts"><button class="btn sm">Edit</button><button class="btn ghost sm" aria-label="More for Winter linens are here"><svg width="16" height="16"><use href="#i-more"/></svg></button></div></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="dlg" role="img" aria-label="The edit dialog on a computer">
+                <h3>Edit a bar</h3>
+                <div class="field"><label>Text <span class="count num">22/120</span></label><div class="input">New: the wedding edit</div></div>
+                <div class="field"><span class="lab">Link</span><div class="input sel">Collection · Wedding edit</div></div>
+                <div class="field"><span class="lab">Colour</span><div class="seg" role="radiogroup"><span role="radio" aria-checked="false">Paper</span><span role="radio" aria-checked="false">Tint</span><span role="radio" aria-checked="true">Ink</span></div></div>
+                <div class="two">
+                  <div class="field"><span class="lab">Starts</span><div class="input num">Now</div></div>
+                  <div class="field"><span class="lab">Ends</span><div class="input num">30 Nov, 11:59 pm</div></div>
+                </div>
+                <div class="acts-row"><button class="btn">Keep as it is</button><button class="btn primary">Save</button></div>
+              </div>
+              <div class="mini" style="margin-top:14px;width:100%" role="img" aria-label="The More menu of a bar">
+                <div class="lbl">More</div>
+                <div class="list"><div class="mrow"><b>End now</b></div><div class="mrow"><b style="color:var(--bad-fg)">Delete</b></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 style="margin-top:32px">Announcement · phone</h2>
+    <p class="cap">A mistake stays at its field. A save is a toast with Undo.</p>
+    <div class="row-frames">
+      <div class="phone" role="img" aria-label="Announcement tab on a phone, after a save">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-tabs" role="tablist"><button aria-selected="true">Announcement</button><button>Menus</button><button>Pages</button><button>FAQ</button></div>
+          <div class="p-body">
+            <div class="sect">
+              <div class="sect-h"><h3>Bars</h3><span class="tag num">2 of 3</span><span class="sp"></span><button class="btn sm">Add a bar</button></div>
+              <div class="list">
+                <div class="item notext"><div><b>Pay online, save ₹50</b><div class="meta"><span class="chip ok">Live now</span><span>Offer</span></div></div><div class="acts"><button class="btn sm">Open Offers</button></div></div>
+                <div class="item notext"><div><b>New: the wedding edit</b><div class="meta"><span class="chip neu">Shows after the offer</span><span>Ends 30 Nov</span></div></div><div class="acts"><button class="btn sm">Edit</button></div></div>
+                <div class="item notext"><div><b>Winter linens are here</b><div class="meta"><span class="chip info">Starts 1 Dec</span></div></div><div class="acts"><button class="btn sm">Edit</button></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="toast" role="status"><span class="ok" aria-hidden="true"></span><span>Bar saved</span><span class="sp"></span><a href="#bar">Undo</a></div>
+          <nav class="bottom" aria-label="Main"><div><svg><use href="#i-home"/></svg>Home</div><div><svg><use href="#i-orders"/></svg>Orders</div><div><svg><use href="#i-products"/></svg>Products</div><div class="on"><svg><use href="#i-more"/></svg>More</div></nav>
+        </div>
+      </div>
+
+      <div class="phone" role="img" aria-label="Editing a bar in a sheet, with a date mistake">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-body"></div>
+          <div class="sheet-scrim">
+            <div class="sheet" role="dialog" aria-label="Edit a bar">
+              <div class="grab" aria-hidden="true"></div>
+              <h3>Edit a bar</h3>
+              <div class="field"><label>Text <span class="count num">22/120</span></label><div class="input">New: the wedding edit</div></div>
+              <div class="field"><span class="lab">Link</span><div class="input sel">Collection · Wedding edit</div></div>
+              <div class="field"><span class="lab">Colour</span><div class="seg" role="radiogroup"><span role="radio" aria-checked="false">Paper</span><span role="radio" aria-checked="false">Tint</span><span role="radio" aria-checked="true">Ink</span></div></div>
+              <div class="two">
+                <div class="field"><span class="lab">Starts</span><div class="input num">14 Nov, 10:00 am</div></div>
+                <div class="field"><span class="lab">Ends</span><div class="input bad num" aria-invalid="true">10 Nov, 11:59 pm</div><span class="err">End is before the start. Pick a later end.</span></div>
+              </div>
+              <div class="acts-row"><button class="btn">Keep as it is</button><button class="btn primary">Save</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phone" role="img" aria-label="Announcement tab with no bar yet">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-tabs" role="tablist"><button aria-selected="true">Announcement</button><button>Menus</button><button>Pages</button><button>FAQ</button></div>
+          <div class="p-body">
+            <div class="sect"><div class="sect-h"><h3>Bars</h3></div><div class="empty"><b>No bars yet</b><button class="btn primary">Add a bar</button></div></div>
+          </div>
+          <nav class="bottom" aria-label="Main"><div><svg><use href="#i-home"/></svg>Home</div><div><svg><use href="#i-orders"/></svg>Orders</div><div><svg><use href="#i-products"/></svg>Products</div><div class="on"><svg><use href="#i-more"/></svg>More</div></nav>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 2 · Menus ═══ -->
+  <section class="part" id="menus">
+    <h2>Menus</h2>
+    <p class="cap">Main (3 levels), Footer, Phone tabs. Moved by Up, Down, Under the one above, Out a level. One Save per menu.</p>
+    <div class="desk narrow" role="img" aria-label="Menus tab on a computer with unsaved changes">
+      <div class="desk-in">
+        <aside class="sb">
+          <div class="store"><span class="mono-mark">K</span><div><b>Kesar Studio</b><span>kesar-studio.frrata.shop</span></div></div>
+          <a class="nav"><svg><use href="#i-home"/></svg>Home</a><a class="nav"><svg><use href="#i-orders"/></svg>Orders</a>
+          <div class="grp overline">Store</div>
+          <a class="nav"><svg><use href="#i-products"/></svg>Products</a><a class="nav"><svg><use href="#i-offers"/></svg>Offers</a>
+          <a class="nav on" aria-current="page"><svg><use href="#i-content"/></svg>Content</a><a class="nav"><svg><use href="#i-look"/></svg>Look</a>
+        </aside>
+        <div class="main">
+          <div class="ph"><div><h1>Content</h1><div class="meta"><span class="code">kesar-studio.frrata.shop</span></div></div><span class="sp"></span><button class="btn"><svg width="16" height="16"><use href="#i-out"/></svg>View store</button></div>
+          <div class="tabs" role="tablist"><button role="tab">Announcement</button><button role="tab" aria-selected="true">Menus</button><button role="tab">Pages</button><button role="tab">FAQ</button><button role="tab">Contact line</button></div>
+          <div class="grid2">
+            <div>
+              <div class="sect">
+                <div class="sect-h"><h3>Main menu</h3><span class="tag num">4 of 12</span><span class="sp"></span><button class="btn sm">Add a link</button></div>
+                <div class="list">
+                  <div class="mrow"><div><b>Wedding edit</b><div class="s">→ Collection · Wedding edit</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span><button class="btn ghost sm" aria-label="More for Wedding edit"><svg width="16" height="16"><use href="#i-more"/></svg></button></div></div>
+                  <div class="mrow"><div><b>Kurtas</b><div class="s">→ Collection · Kurtas</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span><button class="btn ghost sm" aria-label="More for Kurtas"><svg width="16" height="16"><use href="#i-more"/></svg></button></div></div>
+                  <div class="mrow l2"><div><b>View all</b><div class="s">→ Collection · Kurtas</div></div><div class="acts"></div></div>
+                  <div class="mrow l2"><div><b>Cotton</b><div class="s">→ Collection · Cotton kurtas</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span><button class="btn ghost sm" aria-label="More for Cotton"><svg width="16" height="16"><use href="#i-more"/></svg></button></div></div>
+                  <div class="mrow"><div><b>About</b><div class="s">→ Page · About</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span><button class="btn ghost sm" aria-label="More for About"><svg width="16" height="16"><use href="#i-more"/></svg></button></div></div>
+                </div>
+                <div class="savebar" role="region" aria-label="Unsaved changes"><span>1 unsaved change</span><span class="sp"></span><button class="btn ghost sm">Discard change</button><button class="btn primary sm">Save main menu</button></div>
+              </div>
+              <div class="sect">
+                <div class="sect-h"><h3>Footer menu</h3><span class="tag num">3 of 12</span><span class="sp"></span><button class="btn sm">Add a link</button></div>
+                <div class="list">
+                  <div class="mrow"><div><b>Shipping</b><div class="s">→ Policy · Shipping</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></div></div>
+                  <div class="mrow"><div><b>Returns</b><div class="s">→ Policy · Returns</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></div></div>
+                  <div class="mrow"><div><b>Contact</b><div class="s">→ Contact</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></div></div>
+                </div>
+              </div>
+              <div class="sect">
+                <div class="sect-h"><h3>Phone tabs</h3><span class="chip neu">Off in Look</span><span class="sp"></span><button class="btn sm">Turn on in Look</button></div>
+              </div>
+            </div>
+            <div>
+              <div class="mini" style="width:100%" role="img" aria-label="A menu item's More menu">
+                <div class="lbl">More for Cotton</div>
+                <div class="list"><div class="mrow"><b>Edit</b></div><div class="mrow"><b>Move under Kurtas</b></div><div class="mrow"><b>Move out of Kurtas</b></div><div class="mrow"><b style="color:var(--bad-fg)">Remove</b></div></div>
+              </div>
+              <div class="dlg" style="margin-top:14px" role="img" aria-label="Add a link dialog">
+                <h3>Add a link</h3>
+                <div class="field"><label>Label <span class="count num">6/40</span></label><div class="input">Sarees</div></div>
+                <div class="field"><span class="lab">Opens</span><div class="input sel">Collection · Sarees</div></div>
+                <div class="acts-row"><button class="btn">Don’t add</button><button class="btn primary">Add link</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row-frames" style="margin-top:28px">
+      <div class="phone" role="img" aria-label="Menus on a phone">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-tabs" role="tablist"><button>Announcement</button><button aria-selected="true">Menus</button><button>Pages</button><button>FAQ</button></div>
+          <div class="p-body">
+            <div class="sect">
+              <div class="sect-h"><h3>Main menu</h3><span class="tag num">4 of 12</span><span class="sp"></span><button class="btn sm">Add a link</button></div>
+              <div class="list">
+                <div class="mrow"><div><b>Wedding edit</b><div class="s">→ Wedding edit</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-more"/></svg></span></div></div>
+                <div class="mrow"><div><b>Kurtas</b><div class="s">→ Kurtas · 2 links under it</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-more"/></svg></span></div></div>
+                <div class="mrow"><div><b>About</b><div class="s">→ About</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-more"/></svg></span></div></div>
+              </div>
+            </div>
+            <div class="sect"><div class="sect-h"><h3>Footer menu</h3><span class="tag num">3 of 12</span><span class="sp"></span><button class="btn sm">Add a link</button></div></div>
+          </div>
+          <div class="toast bad" role="alert"><span class="ok" aria-hidden="true"></span><span>Riya changed this menu today, 10:42 pm. Reload to see it.</span><span class="sp"></span><a href="#menus">Reload menu</a></div>
+          <nav class="bottom" aria-label="Main"><div><svg><use href="#i-home"/></svg>Home</div><div><svg><use href="#i-orders"/></svg>Orders</div><div><svg><use href="#i-products"/></svg>Products</div><div class="on"><svg><use href="#i-more"/></svg>More</div></nav>
+        </div>
+      </div>
+      <div class="phone" role="img" aria-label="Phone tabs on a phone, when the look has them">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-tabs" role="tablist"><button>Announcement</button><button aria-selected="true">Menus</button><button>Pages</button><button>FAQ</button></div>
+          <div class="p-body">
+            <div class="sect">
+              <div class="sect-h"><h3>Phone tabs</h3><span class="tag num">4 of 5</span><span class="sp"></span><button class="btn sm">Add a tab</button></div>
+              <div class="list">
+                <div class="mrow"><div><b>Home</b><div class="s">Icon · Home</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></div></div>
+                <div class="mrow"><div><b>Shop</b><div class="s">Icon · Bag</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></div></div>
+                <div class="mrow"><div><b>New</b><div class="s">Icon · Star</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></div></div>
+                <div class="mrow"><div><b>Help</b><div class="s">Icon · Chat</div></div><div class="acts"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></div></div>
+              </div>
+            </div>
+          </div>
+          <nav class="bottom" aria-label="Main"><div><svg><use href="#i-home"/></svg>Home</div><div><svg><use href="#i-orders"/></svg>Orders</div><div><svg><use href="#i-products"/></svg>Products</div><div class="on"><svg><use href="#i-more"/></svg>More</div></nav>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 3 · Pages ═══ -->
+  <section class="part" id="pages">
+    <h2>Pages</h2>
+    <p class="cap">About and the store's other pages. A page's words and photos save live. Its address is fixed once it has been shown.</p>
+    <div class="row-frames">
+      <div class="phone" role="img" aria-label="Pages tab on a phone">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-tabs" role="tablist"><button>Menus</button><button aria-selected="true">Pages</button><button>FAQ</button><button>Contact line</button></div>
+          <div class="p-body">
+            <div class="sect">
+              <div class="sect-h"><h3>Pages</h3><span class="tag num">2 of 20</span><span class="sp"></span><button class="btn sm">Add a page</button></div>
+              <div class="list">
+                <div class="item notext"><div><b>Our story</b><div class="meta"><span class="code">/pages/our-story</span><span class="chip ok">Shown</span></div></div><div class="acts"><button class="btn sm">Edit</button></div></div>
+                <div class="item notext"><div><b>The makers</b><div class="meta"><span class="code">/pages/the-makers</span><span class="chip neu">Hidden</span></div></div><div class="acts"><button class="btn sm">Edit</button></div></div>
+              </div>
+            </div>
+          </div>
+          <nav class="bottom" aria-label="Main"><div><svg><use href="#i-home"/></svg>Home</div><div><svg><use href="#i-orders"/></svg>Orders</div><div><svg><use href="#i-products"/></svg>Products</div><div class="on"><svg><use href="#i-more"/></svg>More</div></nav>
+        </div>
+      </div>
+      <div class="phone" role="img" aria-label="Editing a page in a sheet, with example words still to write">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-body"></div>
+          <div class="sheet-scrim">
+            <div class="sheet" role="dialog" aria-label="Edit Our story">
+              <div class="grab" aria-hidden="true"></div>
+              <h3>Our story</h3>
+              <div class="field"><label>Title <span class="count num">9/60</span></label><div class="input">Our story</div></div>
+              <div class="field"><span class="lab">Address</span><div class="ro"><span class="code">/pages/our-story</span><span class="k">Fixed</span></div></div>
+              <div class="field"><span class="lab">Photo</span><div class="ro"><span class="thumb" aria-hidden="true" style="width:48px;height:48px"></span><span style="flex:1">studio-jaipur.jpg</span><button class="btn sm">Change photo</button></div></div>
+              <div class="field"><label>Opening <span class="count num">142/400</span></label><div class="input">Kesar began in a Jaipur courtyard with four looms.</div></div>
+              <div class="field"><label>How it is made</label><div class="input bad" aria-invalid="true" style="color:var(--text-3)">Example · Each kurta is…</div><span class="err">This is still the example. Write your own.</span></div>
+              <div class="field"><div class="ro" style="background:var(--surface)"><span>Show on your store</span><button class="sw" role="switch" aria-checked="true" aria-label="Show on your store"></button></div></div>
+              <div class="acts-row"><button class="btn">Keep as it is</button><button class="btn primary">Save</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone" role="img" aria-label="Add a page sheet">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-body"></div>
+          <div class="sheet-scrim">
+            <div class="sheet" role="dialog" aria-label="Add a page">
+              <div class="grab" aria-hidden="true"></div>
+              <h3>Add a page</h3>
+              <div class="list">
+                <div class="item"><span class="thumb" aria-hidden="true" style="width:48px;height:48px"></span><div><b>About</b><div class="meta"><span>Story, makers, materials</span></div></div><div class="acts"><button class="btn sm">Add About</button></div></div>
+              </div>
+              <div class="field" style="margin-top:12px"><label>Title <span class="count num">0/60</span></label><div class="input" style="color:var(--text-3)">The makers</div></div>
+              <div class="field"><span class="lab">Address</span><div class="input"><span class="code" style="color:var(--text-3)">/pages/</span><span class="code">the-makers</span></div></div>
+              <div class="acts-row"><button class="btn">Don’t add</button><button class="btn primary">Add page</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 4 · FAQ ═══ -->
+  <section class="part" id="faq">
+    <h2>FAQ</h2>
+    <p class="cap">An answer from Settings is read-only here. Questions move with ↑ ↓. Remove is a toast with Undo.</p>
+    <div class="row-frames">
+      <div class="phone" role="img" aria-label="FAQ tab on a phone">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-tabs" role="tablist"><button>Pages</button><button aria-selected="true">FAQ</button><button>Contact line</button></div>
+          <div class="p-body">
+            <div class="sect">
+              <div class="sect-h"><h3>Questions</h3><span class="tag num">9 of 12</span><span class="sp"></span><button class="btn sm">Add a question</button></div>
+              <div class="list">
+                <div class="q"><b>Can I pay on delivery?</b><span class="a">Yes, up to ₹10,000. <span class="chip neu">From Settings</span></span><span class="mv"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></span></div>
+                <div class="q"><b>How long does delivery take?</b><span class="a">3–6 days. <span class="chip neu">From Settings</span></span><span class="mv"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></span></div>
+                <div class="q"><b>Is the zari real?</b><span class="a">Tested silver zari on every wedding piece.</span><span class="mv"><span class="ib" aria-hidden="true"><svg><use href="#i-up"/></svg></span><span class="ib" aria-hidden="true"><svg><use href="#i-down"/></svg></span></span></div>
+              </div>
+              <div style="margin-top:10px"><button class="btn sm">Change in Settings</button></div>
+            </div>
+          </div>
+          <div class="toast" role="status"><span class="ok" aria-hidden="true"></span><span>Question removed</span><span class="sp"></span><a href="#faq">Undo</a></div>
+          <nav class="bottom" aria-label="Main"><div><svg><use href="#i-home"/></svg>Home</div><div><svg><use href="#i-orders"/></svg>Orders</div><div><svg><use href="#i-products"/></svg>Products</div><div class="on"><svg><use href="#i-more"/></svg>More</div></nav>
+        </div>
+      </div>
+      <div class="phone" role="img" aria-label="Editing a question in a sheet">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-body"></div>
+          <div class="sheet-scrim">
+            <div class="sheet" role="dialog" aria-label="Edit question">
+              <div class="grab" aria-hidden="true"></div>
+              <h3>Edit question</h3>
+              <div class="field"><label>Question <span class="count num">17/120</span></label><div class="input">Is the zari real?</div></div>
+              <div class="field"><label>Answer <span class="count num">41/600</span></label><div class="input" style="min-height:88px;align-items:flex-start;padding-top:10px">Tested silver zari on every wedding piece.</div></div>
+              <div class="acts-row" style="justify-content:space-between"><button class="btn danger">Remove</button><span style="display:flex;gap:8px"><button class="btn">Keep as it is</button><button class="btn primary">Save</button></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone" role="img" aria-label="FAQ with no questions yet">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-tabs" role="tablist"><button>Pages</button><button aria-selected="true">FAQ</button><button>Contact line</button></div>
+          <div class="p-body">
+            <div class="sect"><div class="sect-h"><h3>Questions</h3></div><div class="empty"><b>No FAQ yet</b><button class="btn primary">Add a question</button></div></div>
+          </div>
+          <nav class="bottom" aria-label="Main"><div><svg><use href="#i-home"/></svg>Home</div><div><svg><use href="#i-orders"/></svg>Orders</div><div><svg><use href="#i-products"/></svg>Products</div><div class="on"><svg><use href="#i-more"/></svg>More</div></nav>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 5 · Contact line ═══ -->
+  <section class="part" id="contact">
+    <h2>Contact line</h2>
+    <p class="cap">One line above Chat on WhatsApp. The business details come from Settings.</p>
+    <div class="row-frames">
+      <div class="phone" role="img" aria-label="Contact line on a phone">
+        <div class="scr">
+          <div class="p-top"><h1>Content</h1></div>
+          <div class="p-tabs" role="tablist"><button>Pages</button><button>FAQ</button><button aria-selected="true">Contact line</button></div>
+          <div class="p-body">
+            <div class="sect">
+              <div class="field"><label>Line <span class="count num">38/160</span></label><div class="input">We reply on WhatsApp within the day.</div></div>
+              <div class="box"><div class="k">From Settings</div>Kesar Studio Pvt Ltd · 14 Haldiya Gate, Jaipur 302003 · +91 98450 12345</div>
+              <div class="acts-row" style="justify-content:space-between;margin-top:12px"><button class="btn sm">Change in Settings</button><button class="btn primary">Save</button></div>
+            </div>
+          </div>
+          <nav class="bottom" aria-label="Main"><div><svg><use href="#i-home"/></svg>Home</div><div><svg><use href="#i-orders"/></svg>Orders</div><div><svg><use href="#i-products"/></svg>Products</div><div class="on"><svg><use href="#i-more"/></svg>More</div></nav>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 6 · The Look's links ═══ -->
+  <section class="part" id="look">
+    <h2>The Look's links</h2>
+    <p class="cap">In the customizer, Menus, the bar, the Contact line and each page open Content. The preview still draws them.</p>
+    <div class="row-frames">
+      <div class="cz" role="img" aria-label="The Look customizer, Menus tab, as a link to Content">
+        <div class="cz-panel">
+          <div class="cz-tabs"><span>Sections</span><span class="on">Menus</span><span>Style</span></div>
+          <a class="linkrow"><span><b>Menus</b><span class="s">Main · Footer · Phone tabs</span></span><span class="sp"></span>Edit in Content<svg><use href="#i-chev"/></svg></a>
+        </div>
+        <div class="cz-pv"><div class="site"><div class="bar">New: the wedding edit</div><div class="hd"><span>KESAR STUDIO</span><span>Bag</span></div><div style="padding:0 14px;font:13px var(--font);display:flex;gap:12px"><span>Wedding edit</span><span>Kurtas</span><span>About</span></div><div class="strip"><div></div><div></div><div></div></div></div></div>
+      </div>
+      <div class="mini" role="img" aria-label="Style › Header with the bar as a link">
+        <div class="lbl">Style › Header</div>
+        <div class="list">
+          <div class="mrow"><b>Header</b><span class="tag">Centred</span></div>
+          <div class="mrow"><b>Stays on scroll</b><button class="sw" role="switch" aria-checked="true" aria-label="Stays on scroll"></button></div>
+        </div>
+        <a class="linkrow" style="margin-top:10px"><span><b>Announcement</b><span class="s">New: the wedding edit</span></span><span class="sp"></span>Edit in Content<svg><use href="#i-chev"/></svg></a>
+      </div>
+      <div class="mini" role="img" aria-label="A page and Contact in the customizer as links">
+        <div class="lbl">Pages · Contact, Our story</div>
+        <a class="linkrow"><span><b>Contact line</b><span class="s">We reply on WhatsApp within the day.</span></span><span class="sp"></span>Edit in Content<svg><use href="#i-chev"/></svg></a>
+        <a class="linkrow"><span><b>Our story</b><span class="s">/pages/our-story</span></span><span class="sp"></span>Edit in Content<svg><use href="#i-chev"/></svg></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 7 · States ═══ -->
+  <section class="part" id="states">
+    <h2>States</h2>
+    <p class="cap">Who reads, who saves, and what a move left behind.</p>
+    <div class="row-frames">
+      <div class="mini" role="img" aria-label="Staff, or a partner after handover: read only">
+        <div class="lbl">Staff · a partner after handover</div>
+        <div class="sect">
+          <div class="sect-h"><h3>Bars</h3><span class="chip neu">Only Riya can edit</span></div>
+          <div class="list"><div class="item notext"><div><b>New: the wedding edit</b><div class="meta"><span class="chip ok">Live now</span><span>Ends 30 Nov</span></div></div><div class="acts"><button class="btn sm" aria-disabled="true">Edit</button></div></div></div>
+        </div>
+      </div>
+      <div class="mini" role="img" aria-label="A support visit">
+        <div class="lbl">Support visit</div>
+        <div class="banner-ro">Support visit · read only</div>
+        <div class="sect" style="margin-top:10px">
+          <div class="sect-h"><h3>Main menu</h3></div>
+          <div class="list"><div class="item notext"><div><b>Wedding edit</b><div class="meta"><span>→ Wedding edit</span></div></div><div class="acts"><button class="btn sm" aria-disabled="true">Edit</button></div></div></div>
+        </div>
+      </div>
+      <div class="mini" role="img" aria-label="A partner before handover">
+        <div class="lbl">Partner · before handover</div>
+        <div class="banner" style="background:var(--info-bg);color:var(--info-fg)">Building for Kesar Studio · No owner yet</div>
+        <div class="sect" style="margin-top:10px">
+          <div class="sect-h"><h3>Bars</h3><span class="sp"></span><button class="btn sm">Add a bar</button></div>
+          <div class="list"><div class="item notext"><div><b>New: the wedding edit</b><div class="meta"><span class="chip ok">Live now</span></div></div><div class="acts"><button class="btn sm">Edit</button></div></div></div>
+        </div>
+      </div>
+      <div class="mini" role="img" aria-label="Refusals as error toasts">
+        <div class="lbl">Refused</div>
+        <div class="toast bad static" role="alert"><span class="ok" aria-hidden="true"></span><span>Too many saves this minute. Nothing was changed.</span><span class="sp"></span><a href="#states">Try in 1 minute</a></div>
+        <div class="toast bad static" role="alert"><span class="ok" aria-hidden="true"></span><span>We couldn't save that. Nothing was changed.</span><span class="sp"></span><a href="#states">Try again</a></div>
+        <div class="toast bad static" role="alert"><span class="ok" aria-hidden="true"></span><span>3 of 3 bars in use. End or delete one first.</span></div>
+      </div>
+      <div class="mini" role="img" aria-label="The owner's Inbox after the move">
+        <div class="lbl">Inbox · after the move</div>
+        <div class="sect">
+          <div class="notice"><span class="av">F</span><div><div class="t">Your menus, bars and Contact line are now in Content</div><div class="s">Unpublished menu changes were not moved · Today, 9:14 am</div></div><div><button class="btn sm">Open Content</button></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 8 · What changed ═══ -->
+  <section class="part" id="changed">
+    <h2>What changed from the approved mockup</h2>
+    <div class="sect" style="max-width:900px">
+      <div class="list">
+        <div class="mrow"><div><b>Placements tab</b><div class="s">Left out. It needs a site in code (V2).</div></div></div>
+        <div class="mrow"><div><b>Season tab</b><div class="s">Left out. Seasons come with brand colours as data (V1.5).</div></div></div>
+        <div class="mrow"><div><b>Preview pane</b><div class="s">Replaced by View store. The preview needs the Storefront API (V2).</div></div></div>
+        <div class="mrow"><div><b>Partner switch and the Inbox line</b><div class="s">Waiting for the Builder roles (lane C). V1: a partner saves before handover only.</div></div></div>
+        <div class="mrow"><div><b>Added</b><div class="s">Menus, Pages and Contact line drawn; the bar's colour; empty, refused and stale states; the Look's links; the move's notice.</div></div></div>
+      </div>
+    </div>
+  </section>
+</div>

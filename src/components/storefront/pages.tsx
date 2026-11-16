@@ -1,4 +1,5 @@
 import { waLink } from '@/domains/settings/whatsapp'
+import { instagramLink } from '@/domains/settings/instagram'
 import Link from 'next/link'
 import type { PolicyPage } from '@/domains/policies/render'
 import { shopJsonLd, websiteJsonLd } from '@/domains/seo/defaults'
@@ -23,7 +24,7 @@ export function HomeView({ shop, cat, href, now, theme, bestSellers, videos, pre
   return (
     <>
       <Sections list={t.home} ctx={{ shop, cat, theme: t, href, now, bestSellers, videos, preview, examples }} />
-      <JsonLd data={shopJsonLd({ name: shop.shopName, url: `https://${shop.host}`, logo: shop.logoUrl, sameAs: shop.instagram ? [`https://instagram.com/${shop.instagram.replace(/^@/, '')}`] : [],
+      <JsonLd data={shopJsonLd({ name: shop.shopName, url: `https://${shop.host}`, logo: shop.logoUrl, sameAs: instagramLink(shop.instagram) ? [instagramLink(shop.instagram)!] : [],
         returnDays: shop.returnDays, returnKind: shop.returnKind, shippingFlat: shop.shippingFlat, freeShippingAbove: shop.freeShippingAbove, metroDays: shop.metroDays, restDays: shop.restDays, dispatchDays: shop.dispatchDays, zones: shop.zones })} />
       {!preview && <JsonLd data={websiteJsonLd(shop.shopName, `https://${shop.host}/`)} />}
     </>
@@ -114,7 +115,7 @@ export function OpeningSoon({ shop, href, paused = false }: { shop: StoreShop; h
         <p className="text-sm uppercase tracking-[0.2em] text-store-sub">{paused ? w.opening.paused : w.opening.soon}</p>
         <h1 className="text-4xl sm:text-5xl" style={{ fontFamily: 'var(--store-display)' }}>{shop.shopName}</h1>
         {shop.tagline && <p className="text-lg text-store-sub">{shop.tagline}</p>}
-        {!paused && shop.instagram && <p><a className="underline underline-offset-4" href={`https://instagram.com/${shop.instagram.replace(/^@/, '')}`} rel="noopener">{w.opening.follow}</a></p>}
+        {!paused && instagramLink(shop.instagram) && <p><a className="underline underline-offset-4" href={instagramLink(shop.instagram)!} rel="noopener">{w.opening.follow}</a></p>}
         <p className="pt-4 text-sm"><Link href={href('/policies/contact')} className="underline underline-offset-4">{w.contact}</Link></p>
       </div>
     </section>

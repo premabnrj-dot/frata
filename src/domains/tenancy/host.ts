@@ -6,7 +6,11 @@
 // shop. A storefront is either a platform subdomain (`snitchy.frata.store`) or
 // a merchant's own domain (`shop.brand.in`); the tenant row is looked up by
 // that host on the server, never taken from a path, a query or a body.
+// The Storefront API has a host of its own (api.frrata.shop, ADR-0018): there the shop comes from a key in the path,
+// resolved only inside apiRequest (src/lib/storefront-api/request.ts), never from the host.
 // =============================================================================
+
+import { API_VERSIONS, isVersionPath } from '../storefront-api/versions'
 
 export type Surface =
   | { kind: 'console' }
@@ -14,12 +18,16 @@ export type Surface =
   | { kind: 'ekcode'; www: boolean }
   | { kind: 'storefront'; host: string }
   | { kind: 'local' }
+  /** The Storefront API's host (api.frrata.shop): never a shop, never the console (ADR-0018). */
+  | { kind: 'api' }
 
-export function surfaceFor(rawHost: string | null, consoleHost: string, ekcodeHost = ''): Surface {
+export function surfaceFor(rawHost: string | null, consoleHost: string, ekcodeHost = '', apiHost = ''): Surface {
   const host = (rawHost ?? '').toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '')
   if (!host || host === 'localhost' || host === '127.0.0.1') return { kind: 'local' }
   const ek = ekcodeHost.toLowerCase()
   if (ek && (host === ek || host === `www.${ek}`)) return { kind: 'ekcode', www: host !== ek }
+  const api = apiHost.toLowerCase()
+  if (api && host === api) return { kind: 'api' }
   if (host === consoleHost.toLowerCase()) return { kind: 'console' }
   // Vercel preview and production aliases serve the console.
   if (host.endsWith('.vercel.app')) return { kind: 'console' }
@@ -51,9 +59,17 @@ export type Route =
   | { kind: 'console' }
   /** The shop domain itself (`frrata.shop`): no shop lives there; it sends people to Frrata's own site. */
   | { kind: 'platform_apex' }
+  /** The shop domain's own stopgap site (owner, 2026-11-15): `PLATFORM_SITE_PATHS` only, served directly, until
+   *  frrata.com is attached and `platform_apex` goes back to redirecting every path. */
+  | { kind: 'platform_site' }
   /** EkCode's host: only its own pages and API; `www.` goes to the apex. */
   | { kind: 'ekcode' }
   | { kind: 'ekcode_www' }
+  /** A versioned path on the API host: next.config's apiRewrites serve it from /api/storefront/<version>/… */
+  | { kind: 'api' }
+
+/** The one path, besides the home page, the bare shop domain answers itself while it stands in for frrata.com. */
+export const PLATFORM_SITE_PATHS = new Set(['/', '/privacy-policy'])
 
 /**
  * What the middleware does with one request (storefront spec § Review findings).
@@ -62,19 +78,31 @@ export type Route =
  * `/s/this/s/other/…`, which matches no page. `/s/…` is internal: on every host
  * that is not a shop it is a 404, `localhost` included, except under `next dev`.
  */
-export function routeFor(rawHost: string | null, pathname: string, consoleHost: string, dev: boolean, shopDomain: string, ekcodeHost = ''): Route {
-  const surface = surfaceFor(rawHost, consoleHost, ekcodeHost)
+export function routeFor(rawHost: string | null, pathname: string, consoleHost: string, dev: boolean, shopDomain: string, ekcodeHost = '', apiHost = ''): Route {
+  const surface = surfaceFor(rawHost, consoleHost, ekcodeHost, apiHost)
+  // The API host answers its versioned paths and its docs only (SA1b D·9; the middleware never sees the versioned ones:
+  // its matcher skips them). The docs' internal path (/api-docs) is reached only through apiRewrites, never by name.
+  if (surface.kind === 'api') return isVersionPath(pathname) || isDocsPath(pathname) ? { kind: 'api' } : { kind: 'not_found' }
+  if (pathname === DOCS_INTERNAL || pathname.startsWith(`${DOCS_INTERNAL}/`)) return { kind: 'not_found' }
+  // The API's handlers answer through the API host's rewrite only (spec § 1, security H4): never on a shop, the console
+  // or a preview alias.
+  if (pathname === '/api/storefront' || pathname.startsWith('/api/storefront/')) return { kind: 'not_found' }
   if (surface.kind === 'ekcode') {
     if (surface.www) return { kind: 'ekcode_www' }
     return EKCODE_PATHS.has(pathname) || pathname.startsWith('/api/ek/') || pathname.startsWith('/_next/') ? { kind: 'ekcode' } : { kind: 'not_found' }
   }
   // EkCode's pages and API answer on its host only (security H1): never on a shop, the console or a preview alias.
   if (pathname === '/ek' || pathname.startsWith('/ek/') || pathname === '/api/ek' || pathname.startsWith('/api/ek/')) return { kind: 'not_found' }
-  if (surface.kind === 'storefront' && surface.host === shopDomain.toLowerCase()) return { kind: 'platform_apex' }
+  if (surface.kind === 'storefront' && surface.host === shopDomain.toLowerCase()) return PLATFORM_SITE_PATHS.has(pathname) ? { kind: 'platform_site' } : { kind: 'platform_apex' }
   if (surface.kind === 'storefront') return HOST_CHARS.test(surface.host) ? { kind: 'shop' } : { kind: 'not_found' }
   if (pathname === '/s' || pathname.startsWith('/s/')) return surface.kind === 'local' && dev ? { kind: 'console' } : { kind: 'not_found' }
   return { kind: 'console' }
 }
+
+/** The docs' internal page path (src/app/api-docs), served only as the API host's /docs, /docs/… and /llms.txt. */
+export const DOCS_INTERNAL = '/api-docs'
+/** A docs path on the API host: /docs, a guide, a reference page, llms.txt, or Next's own static files for them. */
+export const isDocsPath = (pathname: string) => /^\/(?:docs(?:\/[a-z0-9-]+(?:\/[a-z0-9-]+)?)?|llms\.txt|_next\/static\/.+)$/.test(pathname)
 
 /** Every path EkCode's host serves (besides /api/ek/* and Next's own /_next/*). */
 export const EKCODE_PATHS = new Set(['/', '/privacy', '/terms', '/contact', '/continue'])
@@ -89,12 +117,19 @@ type Rewrite = { source: string; destination: string; has: { type: 'host'; value
  * when the URL it matches is the rewritten one (a middleware rewrite left every
  * shop page rendering per request under next start; 2026-11-07). Root-level
  * files (favicon.ico), the visit beacon /fe.js (by that exact name: A·2) and /api, /_next are left alone.
+ *
+ * The bare shop domain is left out too (owner, 2026-11-15, stopgap): `PLATFORM_SITE_PATHS` must reach the normal
+ * page tree unrewritten to serve Frrata's own site there; routeFor still sends every other path on it to the
+ * console host, so excluding the whole host here changes nothing for those.
  */
-export function shopRewrites(consoleHost: string, ekcodeHost = ''): Rewrite[] {
+export function shopRewrites(consoleHost: string, shopDomain = '', ekcodeHost = '', apiHost = ''): Rewrite[] {
   const has = [{ type: 'host' as const, value: '(?<shop>[a-z0-9][a-z0-9.-]*)' }]
   const ek = ekcodeHost.toLowerCase()
   const ekAlt = ek ? `|${esc(ek)}|www\\.${esc(ek)}` : ''
-  const missing = [{ type: 'host' as const, value: `(?:${esc(consoleHost.toLowerCase())}|localhost|127\\.0\\.0\\.1|.+\\.vercel\\.app${ekAlt})` }]
+  const shopAlt = shopDomain ? `|${esc(shopDomain.toLowerCase())}` : ''
+  // The Storefront API's host is never a shop (ADR-0018): apiRewrites serve it.
+  const apiAlt = apiHost ? `|${esc(apiHost.toLowerCase())}` : ''
+  const missing = [{ type: 'host' as const, value: `(?:${esc(consoleHost.toLowerCase())}|localhost|127\\.0\\.0\\.1|.+\\.vercel\\.app${ekAlt}${shopAlt}${apiAlt})` }]
   // EkCode's host first: its pages live under /ek (src/app/ek), reached only through this rewrite.
   const ekHas = [{ type: 'host' as const, value: esc(ek) }]
   const ekRules: Rewrite[] = ek ? [
@@ -114,4 +149,36 @@ export function shopHostParam(param: string): string | null {
   try { h = decodeURIComponent(param) } catch { return null }
   const s = surfaceFor(h, '\u0000')
   return s.kind === 'storefront' && s.host === h && /^[a-z0-9.-]{1,253}$/.test(h) ? h : null
+}
+
+/** A key's characters after its kind: 32 random base62 and a 6-character checksum (src/domains/storefront-api/keys.ts). */
+export const KEY_BODY = '[0-9A-Za-z]{38}'
+
+/**
+ * The API host's rewrites (ADR-0018; plan docs/plans/2026-11-15-v1-storefront-api.md § SA0·1), first in `beforeFiles`.
+ * Done by the router, never the middleware: a middleware rewrite leaves a route uncached (frata-gotchas), and the
+ * middleware's matcher skips versioned paths, so a CDN hit costs no middleware run. A test key goes to its own tree
+ * (`t/`, dynamic: drafts, CORS to the shop's site, never cached); every other key-shaped path to the cached tree (`k/`).
+ * `openapi.json` has no key. Anything else on the API host matches no route: 404.
+ */
+export function apiRewrites(apiHost: string): Rewrite[] {
+  const api = apiHost.toLowerCase()
+  if (!api) return []
+  const has = [{ type: 'host' as const, value: esc(api) }]
+  return [
+    // The docs (SA1b D·9): static pages under an internal path that routeFor refuses on every other host.
+    { source: '/docs', destination: DOCS_INTERNAL, has, missing: [] },
+    { source: '/docs/:rest*', destination: `${DOCS_INTERNAL}/:rest*`, has, missing: [] },
+    { source: '/llms.txt', destination: `${DOCS_INTERNAL}/llms.txt`, has, missing: [] },
+    ...API_VERSIONS.flatMap((v) => [
+    { source: `/${v}/k/:key(frs_test_${KEY_BODY})/:rest*`, destination: `/api/storefront/${v}/t/:key/:rest*`, has, missing: [] },
+    { source: `/${v}/k/:key(frs_pub_${KEY_BODY})/:rest*`, destination: `/api/storefront/${v}/k/:key/:rest*`, has, missing: [] },
+    { source: `/${v}/openapi.json`, destination: `/api/storefront/${v}/openapi.json`, has, missing: [] },
+  ])]
+}
+
+/** The API host's root goes to its docs (next.config redirects run before the middleware; a 307, so it may change). */
+export function apiRedirects(apiHost: string): { source: string; destination: string; permanent: false; has: { type: 'host'; value: string }[] }[] {
+  const api = apiHost.toLowerCase()
+  return api ? [{ source: '/', destination: '/docs', permanent: false, has: [{ type: 'host', value: esc(api) }] }] : []
 }

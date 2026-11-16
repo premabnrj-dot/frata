@@ -1,101 +1,129 @@
 import Link from 'next/link'
+import { MessageCircle, Plus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
 import { Section } from '@/components/layout/section'
 import { PictoTile } from '@/components/brand/illustrations'
 import { Badge } from '@/components/ui/badge'
 import { button } from '@/components/ui/button'
-import { InfoTip } from '@/components/ui/info-tip'
 import { Panel } from '@/components/ui/panel'
 import { ViewTabs } from '@/components/ui/view-tabs'
-import { clientStage, shareWindow, STAGE_LABEL, type ClientStage } from '@/domains/partners/stage'
-import { PARTNER_TERMS } from '@/domains/partners/terms'
+import { DataTable, DataTableBody, DataTableHead, DataTableRow, Td } from '@/components/data/data-table'
+import { LiveSearchField } from '@/components/data/live-search-field'
+import { Money } from '@/components/data/numeric'
+import { STAGE_LABEL } from '@/domains/partners/stage'
+import { paise } from '@/domains/money/paise'
+import { partnerCan } from '@/domains/partners/team'
+import { SHARE_IN_RUPEES, shareTotal } from '@/domains/partners/share'
+import { unpaidTotal } from '@/domains/partners/bills'
+import { istDayKey } from '@/domains/time/day'
 import { switchStoreAction } from '@/app/choose/actions'
 import { requirePartner } from '@/lib/auth/require-partner'
-import { partnerClients, type ClientRow } from '@/lib/db/partners'
-import { dayIN, monthYearIN } from '@/lib/format-date'
+import { partnerClients } from '@/lib/db/partners'
+import { billSummary, clientShares } from '@/lib/db/partner-bills'
 import { shopHost } from '@/lib/public-env'
-import { partnerCan } from '@/domains/partners/team'
+import { dayMonthIN } from '@/lib/format-date'
 import { HandOver } from './hand-over'
+import { buildClients, byWho, failed, nextWords, remindHref, shareMonthLabel, signer, STAGE_TONE, type Client } from './_components/clients'
 
 export const metadata = { title: 'Clients' }
 
-const TONE: Record<ClientStage, 'neutral' | 'warn' | 'ok'> = { building: 'neutral', invited: 'warn', with_owner: 'neutral', open: 'ok', ended: 'neutral' }
-const VIEWS = [['all', 'All'], ['building', 'Building'], ['invited', 'Invite sent'], ['with_owner', 'With the owner'], ['open', 'Open'], ['ended', 'Removed']] as const
+/** Tabs and search from this many clients; below it, one list ordered by who acts (owner, 2026-11-15, mockup v2). */
+const VIEWS_FROM = 9
+const VIEWS = [['needs', 'Needs you'], ['waiting', 'Waiting on the client'], ['all', 'All']] as const
+type View = (typeof VIEWS)[number][0]
 
-function Share({ c }: { c: ClientRow }) {
-  const w = shareWindow(c, c.firstOpenedAt, c.removedAt)
-  if (w === 'not_started') return <span className="text-muted-foreground">{c.removedAt ? '—' : 'Starts at opening'}</span>
-  return <span><span className="font-num">{PARTNER_TERMS.shareBps / 100}%</span> until <span className="font-num">{c.removedAt ? dayIN(w.endsAt) : monthYearIN(w.endsAt)}</span></span>
-}
 
-/** Partner workspace › Clients (approved mockup screens 5, 5b, 5c). Frrata's facts per store, never its orders. */
-export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ view?: string; handover?: string }> }) {
+/** Partner workspace › Clients (P2, mockup v2 https://claude.ai/artifact/5ieqhb31Prax22Xe2UTtPX). */
+export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ view?: string; q?: string; handover?: string }> }) {
   const auth = await requirePartner()
   if (!auth.ok) return <Panel title={auth.message} />
+  const role = auth.partner.memberRole
+  const owner = partnerCan(role, 'billing')
   const now = new Date()
-  const rows = await partnerClients(auth).catch((err) => { console.error('[clients]', err instanceof Error ? err.name : err); return null })
-  if (!rows) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
-  const newStore = <Link href="/partner/new" className={button()}>New client store</Link>
-  if (!rows.length) {
-    return (
-      <>
-        <PageHeader title="Clients" />
-        <Section className="max-w-xl" ariaLabel="First client store">
-          <PictoTile name="build" tone="haldi" />
-          <div>
-            <h2 className="text-section font-semibold">Make your first client store</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Build it, then hand it to the owner.</p>
-          </div>
-          {newStore}
-        </Section>
-      </>
-    )
+  const [rows, billing, shares] = await Promise.all([
+    partnerClients(auth).catch(failed('clients')),
+    owner ? billSummary(auth).catch(failed('clients.bills')) : Promise.resolve([]),
+    owner && SHARE_IN_RUPEES ? clientShares(auth).catch(failed('clients.shares')) : Promise.resolve([]),
+  ])
+  const canCreate = partnerCan(role, 'createShop')
+  const newStore = canCreate ? <Link href="/partner/new" className={button()}><Plus aria-hidden="true" className="size-4" />New client store</Link> : undefined
+  if (!rows || !billing || !shares) {
+    return (<><PageHeader title="Clients" actions={newStore} />
+      <Panel title="We couldn’t load your clients" action={<Link href="/partner" className={button({ variant: 'secondary', size: 'sm' })}>Try again</Link>}>Nothing was changed. Try again in a minute.</Panel></>)
   }
-  const staged = rows.map((c) => ({ c, stage: clientStage({ removedAt: c.removedAt, openInviteExpiresAt: c.inviteExpiresAt, hasOwner: !!c.ownerEmail, firstOpenedAt: c.firstOpenedAt }, now) }))
-  const { view = 'all', handover } = await searchParams
-  const canHandOver = partnerCan(auth.partner.memberRole, 'handOver')
-  const current = VIEWS.some(([k]) => k === view) ? view : 'all'
-  const shown = current === 'all' ? staged : staged.filter((s) => s.stage === current)
-  const tabs = VIEWS.map(([k, label]) => ({ href: k === 'all' ? '/partner' : `/partner?view=${k}`, label, count: k === 'all' ? staged.length : staged.filter((s) => s.stage === k).length, current: k === current }))
-    .filter((t) => t.count > 0 || t.current || t.href === '/partner')
+  if (!rows.length) {
+    if (!canCreate) return (<><PageHeader title="Clients" /><Panel title="No client stores yet" /></>)
+    return (<><PageHeader title="Clients" />
+      <Section className="max-w-xl" ariaLabel="First client store"><PictoTile name="build" tone="haldi" />
+        <h2 className="text-section font-semibold">Make your first client store</h2>{newStore}</Section></>)
+  }
+  const today = istDayKey(now)
+  const clients = buildClients(rows, billing, shares, role, now)
+  const { view: v, q: rawQ = '', handover } = await searchParams
+  const many = clients.length >= VIEWS_FROM
+  const q = many ? rawQ.trim().toLowerCase().slice(0, 60) : ''
+  const counts: Record<View, number> = { needs: clients.filter((c) => c.next?.who === 'you').length, waiting: clients.filter((c) => c.next?.who === 'client').length, all: clients.length }
+  const view: View = handover ? 'all' : VIEWS.some(([k]) => k === v) ? v as View : counts.needs ? 'needs' : 'all'
+  const inView = (c: Client) => view === 'all' || (view === 'needs' ? c.next?.who === 'you' : c.next?.who === 'client')
+  const shown = clients.filter((c) => (!many || inView(c)) && (!q || c.row.name.toLowerCase().includes(q) || (c.row.slug ?? '').includes(q)))
+    .sort(many && view === 'all' ? (a, b) => Number(a.stage === 'ended') - Number(b.stage === 'ended') || a.row.name.localeCompare(b.row.name, 'en-IN', { numeric: true }) : byWho)
+  const unpaid = owner ? unpaidTotal(clients.flatMap((c) => (c.bills ? [c.bills] : []))) : paise(0)
+  const share = owner ? shareTotal(clients.map((c) => c.share ?? { kind: 'none' as const })) : paise(0)
+  const lastMonth = shareMonthLabel(now)
+  const meta = owner && (unpaid > 0 || share > 0) ? (
+    <span className="flex flex-wrap gap-x-3.5">
+      {unpaid > 0 && <span>Unpaid <Money paise={unpaid} className="text-danger-text" /></span>}
+      {share > 0 && <span>Your share <Money paise={share} decimals={share % 100 !== 0} className="text-foreground" /> in {lastMonth}</span>}
+    </span>) : undefined
+  const from = signer(auth.partner)
+  const tabs = VIEWS.filter(([k]) => k !== 'needs' || counts.needs > 0 || view === 'needs')
+    .map(([k, label]) => ({ href: k === 'all' && !counts.needs ? '/partner' : `/partner?view=${k}`, label, count: counts[k], current: k === view }))
+  const builder = role === 'builder'
   return (
     <>
-      <PageHeader title="Clients" actions={newStore} />
-      <ViewTabs label="Client views" tabs={tabs} />
-      {shown.length === 0 ? <Panel title="No store here yet" /> : (
-        <Section flush ariaLabel="Client stores"><ul data-list className="divide-y divide-border">
-          <li aria-hidden="true" className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)_6rem_minmax(0,1fr)_15rem] gap-3 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground lg:grid">
-            <span>Store</span><span>Stage</span><span>Owner</span><span>Plan</span><span className="inline-flex items-center">Your share<InfoTip about="your share">{PARTNER_TERMS.shareBps / 100}% of what Frrata collects from the store, ex GST. It runs {PARTNER_TERMS.shareMonths} months from its first opening, while you are its partner. If you’re removed, {PARTNER_TERMS.noticeDays} more days. Paid when Frrata billing starts.</InfoTip></span><span />
-          </li>
-          {shown.map(({ c, stage }) => (
-            <li key={c.tenantId} className={`grid gap-x-3 gap-y-1 px-4 py-3 text-sm lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)_6rem_minmax(0,1fr)_15rem] lg:items-center ${stage === 'ended' ? 'text-muted-foreground' : ''}`}>
-              <div className="min-w-0">
-                <p className="truncate font-medium">{c.name}</p>
-                {c.slug && <p className="truncate font-mono text-xs text-muted-foreground">{shopHost(c.slug)}</p>}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge tone={TONE[stage]}>{STAGE_LABEL[stage]}</Badge>
-                <span className="text-xs text-muted-foreground lg:hidden">{c.removedAt ? dayIN(c.removedAt) : null}</span>
-              </div>
-              <div className="min-w-0 truncate font-num text-xs">
-                {stage === 'invited' ? c.inviteEmail : c.ownerEmail ?? (stage === 'ended' ? '' : <span className="font-sans text-muted-foreground">Not invited</span>)}
-              </div>
-              <div>{c.planName ?? <span className="text-muted-foreground">—</span>}</div>
-              <div><Share c={c} /></div>
-              <div className="flex flex-wrap gap-2 lg:justify-end">
-                {canHandOver && (stage === 'building' || stage === 'invited') && (
-                  <HandOver tenantId={c.tenantId} store={c.name} again={stage === 'invited'} startOpen={handover === c.tenantId} />
-                )}
-                {stage !== 'ended' && (
-                  <form action={switchStoreAction}>
-                    <input type="hidden" name="tenantId" value={c.tenantId} />
-                    <button type="submit" className={button({ variant: 'secondary' })}>Open store</button>
-                  </form>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul></Section>
+      <PageHeader title="Clients" actions={newStore} meta={meta} />
+      {many && <ViewTabs label="Client views" tabs={tabs} scroll />}
+      {many && <LiveSearchField path="/partner" params={{ view }} label="Search clients" placeholder="Search clients" value={rawQ} />}
+      {!shown.length ? (q
+        ? <Panel title={`No client matches “${rawQ.trim().slice(0, 60)}”`} action={<Link href={`/partner?view=${view}`} className={button({ variant: 'secondary', size: 'sm' })}>Clear search</Link>} />
+        : <Panel title="No client here" action={<Link href="/partner?view=all" className={button({ variant: 'secondary', size: 'sm' })}>See all clients</Link>} />) : (
+        <DataTable label="Clients">
+          <DataTableHead>
+            <th>Client</th><th>Stage</th>
+            {!builder && <th>Next</th>}
+            {owner && <th><span className="sr-only">Next step</span></th>}
+            {owner && <th className="text-right">Your billing</th>}
+            {builder && <th><span className="sr-only">Open</span></th>}
+          </DataTableHead>
+          <DataTableBody>
+            {shown.map((c) => {
+              const ended = c.stage === 'ended'
+              const words = nextWords(c, today, now)
+              const remind = owner ? remindHref(c, from, c.bills?.oldestOverdueOn ? billing.find((b) => b.tenantId === c.row.tenantId)?.open[0] ?? null : null, today) : null
+              return (
+                <DataTableRow key={c.row.linkId} dimmed={ended}>
+                  <Td cell="a">
+                    {builder ? <span className="font-medium">{c.row.name}</span>
+                      : <Link href={`/partner/clients/${c.row.linkId}`} data-row-link prefetch={false} className="font-medium hover:underline">{c.row.name}</Link>}
+                    <span className="hidden text-small text-muted-foreground md:block">{ended ? (c.row.removedAt ? `Removed ${dayMonthIN(c.row.removedAt)}` : 'Removed') : c.row.slug ? shopHost(c.row.slug) : null}</span>
+                  </Td>
+                  <Td cell="d"><Badge tone={STAGE_TONE[c.stage]}>{STAGE_LABEL[c.stage]}</Badge></Td>
+                  {!builder && <Td cell="c" className={c.next?.reason === 'overdue' ? 'text-danger-text' : undefined}>
+                    {words || (c.next?.reason === 'building' ? (owner ? <span className="md:hidden">Hand over</span> : null) : <span className="hidden text-muted-foreground md:inline">—</span>)}</Td>}
+                  {owner && <Td cell="hide" className="w-px whitespace-nowrap text-right">
+                    {c.next?.action === 'handOver' && <HandOver tenantId={c.row.tenantId} store={c.row.name} again={false} size="sm" startOpen={handover === c.row.tenantId} />}
+                    {remind && <a href={remind} target="_blank" rel="noopener noreferrer" className={button({ variant: 'secondary', size: 'sm' })}><MessageCircle aria-hidden="true" className="size-4" />Remind</a>}
+                    {c.next?.action === 'recordBill' && <Link href={`/partner/clients/${c.row.linkId}?record=1`} prefetch={false} className={button({ variant: 'secondary', size: 'sm' })}>Record bill</Link>}
+                  </Td>}
+                  {owner && <Td cell="b" className="text-right">{c.deal ? <><Money paise={c.deal.amount} />{c.deal.kind === 'retainer' ? <span className="text-muted-foreground"> a month</span> : null}</> : <span className="text-muted-foreground">—</span>}</Td>}
+                  {builder && <Td cell="b" className="whitespace-nowrap text-right md:w-px">
+                    <form action={switchStoreAction}><input type="hidden" name="tenantId" value={c.row.tenantId} /><button type="submit" className={button({ variant: 'secondary', size: 'sm', className: 'whitespace-nowrap' })}>Open store</button></form>
+                  </Td>}
+                </DataTableRow>
+              )
+            })}
+          </DataTableBody>
+        </DataTable>
       )}
     </>
   )

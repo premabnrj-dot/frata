@@ -9,7 +9,7 @@ import { inCollection } from '@/domains/storefront/listing'
 import { shopCatalogue } from '@/lib/queries/storefront'
 import { shopTheme } from '@/lib/themes/page-look'
 import { shopFor, shopHref } from '../../../_shop'
-import { shopTags, toMetadata } from '../../../_meta'
+import { canonicalHost, shopTags, toMetadata } from '../../../_meta'
 
 export const revalidate = 60
 export const generateStaticParams = () => []
@@ -40,7 +40,8 @@ export default async function Collection({ params }: { params: Params }) {
   const { shop, cat, c } = await load(params)
   const theme = (await shopTheme(shop))
   const now = new Date()
-  const base = `https://${shop.host}`
+  // The brand's website when the store's pages move there (SA1b): structured data follows the canonical.
+  const base = `https://${canonicalHost(shop, `/collections/${c.handle}`)}`
   return (
     <>
       <CollectionView c={c} cat={cat} href={shopHref} now={now} top={theme.settings.collectionTop} lang={shop.shopLanguage} />

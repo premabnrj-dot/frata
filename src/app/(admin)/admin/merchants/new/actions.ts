@@ -22,7 +22,7 @@ export async function createMerchantAction(form: FormData): Promise<ActionResult
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return { error: staff.message }
   const parsed = NewMerchant.safeParse(Object.fromEntries(form))
-  if (!parsed.success) return { error: 'Check the brand name, shop address and email.' }
+  if (!parsed.success) return { error: 'Check the brand name, store address and email.' }
   const m = parsed.data
   // The same rule as sign-up and partners (shop addresses spec, D·0): shape, length, reserved words.
   const problem = slugProblem(m.slug)

@@ -19,6 +19,11 @@
 //      drizzle-analytics/*.sql has RLS and a policy there, every frata_app policy is bound to app_current_tenant(),
 //      nothing is granted on the partitions' schema `ev`, and its connection (@/lib/db/analytics) is imported only by
 //      src/lib/queries/** (which then call withAnalyticsTenant) and the files in ANALYTICS_IN_APP.
+//   9. THE STOREFRONT API (ADR-0018): a key is the third source of a tenant id, resolved ONLY inside apiRequest. In
+//      src/app/api/storefront/**, src/lib/storefront-api/** and src/lib/modules/*/api.ts: every exported route method is
+//      apiRequest(…) (openapi.json, which has no key, is the one named entry point); no shop or tenant id from a host,
+//      a session, a header, a cookie, params or a body; storefrontKeyFor only in request.ts, storefrontKeyRow only in
+//      src/lib/queries/storefront-keys.ts (and platform.ts, its definition), app_storefront_key only in platform.ts and migrations.
 //   7. READS STAY IN src/lib/queries (plan U · T1, T2, 2026-11-07): src/app/**
 //      imports @/lib/db/tenant only from TENANT_IN_APP; the shell
 //      (src/components/shell/**) imports no data module — it is handed values,
@@ -54,6 +59,10 @@ const ANALYTICS_DB = /(?:from\s+|import\(\s*)['"]@\/lib\/db\/analytics['"]/
 const ANALYTICS_IN_APP = {
   'src/lib/analytics/ingest.ts': 'the visit beacon\'s ingest (A·2): one ingestBatch per beacon, the shop from requireShop (the host), never the body',
 }
+/** Storefront API routes with no key, and why (rule 9). */
+const API_ENTRY_POINTS = new Set([
+  'src/app/api/storefront/2026-12/openapi.json/route.ts', // the published schema: generated from the closed output schemas, no shop data
+])
 /** App files that may open withTenant themselves, with why. */
 const TENANT_IN_APP = {
   'src/app/api/shop/orders/view/route.ts': 'the shopper\'s order page: tenant from the host, order from a signed token',
@@ -62,6 +71,7 @@ const DATA_MODULE = /(?:from\s+|import\(\s*)['"]@\/lib\/(?:queries|db|admin|auth
 /** App files outside Admin that may import src/lib/admin, with why (each checks its own credential). */
 const ADMIN_LIB_IN_APP = {
   'src/app/api/cron/drain/route.ts': 'The 5-minute drain sends the staff security emails through frata_admin (CRON_SECRET via isCronRequest; staff passkeys, security re-review F2)',
+  'src/app/api/cron/outbox/route.ts': 'The daily run issues this month\'s bills on the 1st to 3rd through frata_admin, issueMonthAuto only (CRON_SECRET via isCronRequest; billing rework R2, owner decision 3)',
   'src/app/api/cron/infra/route.ts': 'Admin › Infrastructure\'s hourly pull of vendor usage (CRON_SECRET via isCronRequest; writes platform rows only, plan 2026-11-11 I·1)',
 }
 /** Actions the shell may import from src/app (they are endpoints, not reads), with why. */
@@ -116,9 +126,9 @@ for (const file of walk('src')) {
   }
   // 6. A MERCHANT'S COST NEVER REACHES A SHOPPER (ADR-0003): storefront code never names it.
   // Shopper-facing code: pages, views, shop API routes and their reads (checkout review 2026-11-07 adds the API and checkout reads).
-  const shopperRead = /^src\/lib\/(queries\/(storefront|checkout)|storefront\/)/.test(file) // lib/storefront: the shop's cached reads' helpers (showcase)
+  const shopperRead = /^src\/lib\/(queries\/(storefront|checkout)|storefront\/|storefront-api\/)|^src\/domains\/storefront-api\//.test(file) // lib/storefront: the shop's cached reads' helpers (showcase)
   const shopper = file.startsWith('src/app/s/') || shopperRead || file.startsWith('src/components/shop-preview/')
-    || file.startsWith('src/components/storefront/') || file.startsWith('src/app/(console)/console/preview/') || file.startsWith('src/app/api/shop/') || file === 'src/lib/http/shop-api.ts'
+    || file.startsWith('src/components/storefront/') || file.startsWith('src/app/(console)/console/preview/') || file.startsWith('src/app/api/shop/') || file === 'src/lib/http/shop-api.ts' || file.startsWith('src/app/api/storefront/')
   if (shopper) {
     // The team's side of an order (1D) never reaches a shopper: why it was cancelled, notes, who did what.
     const named = [...SENTINELS, 'keySecret', 'webhookSecret', 'key_secret', 'webhook_secret', 'cancelReason', 'cancel_reason', 'cancelNote', 'cancel_note', 'orderNotes', 'order_notes', 'orderEvents', 'order_events'].filter((x) => text.includes(x))
@@ -138,12 +148,38 @@ for (const file of walk('src')) {
     failures.push(`${file}  a design block imports a loader or the db — blocks render what their section passes them`)
   }
   // 6d. One cache helper: shopCached in src/lib/queries/storefront.ts puts the tenant in every key and tag.
-  if (/\bunstable_cache\b/.test(text) && !/^src\/lib\/queries\/storefront\.ts$/.test(file)) {
-    failures.push(`${file}  unstable_cache outside src/lib/queries/storefront.ts — use shopCached (tenant in key and tags)`)
+  if (/\bunstable_cache\b/.test(text) && !/^src\/lib\/queries\/storefront(-keys)?\.ts$/.test(file)) {
+    failures.push(`${file}  unstable_cache outside src/lib/queries/storefront.ts (or the key lookup, storefront-keys.ts) — use shopCached (tenant in key and tags)`)
   }
+  // 9. The Storefront API's one door (ADR-0018 § Gates and proof).
+  const apiFile = file.startsWith('src/app/api/storefront/') || file.startsWith('src/lib/storefront-api/') || /^src\/lib\/modules\/[^/]+\/api\.ts$/.test(file)
+  if (apiFile) {
+    if (file.startsWith('src/app/api/storefront/') && !API_ENTRY_POINTS.has(file)) {
+      for (const m of text.matchAll(/export\s+(?:const|async\s+function|function)\s+(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\b([^\n]*)/g)) {
+        if (!/^\s*=\s*apiRequest\(/.test(m[2])) failures.push(`${file}  ${m[1]} is not apiRequest(…) — every Storefront API handler goes through the one door (ADR-0018)`)
+      }
+      if (/export\s+default\b/.test(text)) failures.push(`${file}  a default export in an API route — export GET = apiRequest(…)`)
+    }
+    const banned = [
+      [/\b(shopIdForHost|shopMovedTo|tenantForHost|requireMember|requireShop|asMember|asModule)\b/, 'a host or session tenant source'],
+      [/\bcookies\(|\bheaders\(\)|from\s+['"]next\/headers['"]/, 'cookies() or headers()'],
+      [/params\??\.(tenant|shop)\w*/i, 'a tenant or shop id from params'],
+      [/searchParams[^\n]*\.get\(\s*['"](shop|tenant)/, 'a tenant or shop id from the query'],
+      [/\b(raw|search|p|parsed|params)\??\.?\[?\s*['"]?(?:get\(\s*['"])?(shop|tenant)\w*/i, 'a tenant or shop id from params or the query'],
+      [/\.json\(\)|\.formData\(\)/, 'a request body'],
+    ]
+    for (const [re, what] of banned) if (re.test(text)) failures.push(`${file}  ${what} in Storefront API code — the shop comes only from the key, through apiRequest (ADR-0018)`)
+    if (/\[(shop|tenant)[^\]]*\]/i.test(file)) failures.push(`${file}  a route segment named for a shop or tenant — the shop comes only from the key (ADR-0018)`)
+    if (file !== 'src/lib/storefront-api/request.ts' && /headers\.get\(/.test(text)) failures.push(`${file}  reads a request header — only request.ts reads the network and the Origin`)
+  }
+  if (/\bstorefrontKey(For|Now)\b/.test(text) && !['src/lib/storefront-api/request.ts', 'src/lib/queries/storefront-keys.ts'].includes(file)) failures.push(`${file}  calls storefrontKeyFor or storefrontKeyNow — only apiRequest resolves a key (ADR-0018)`)
+  if (/\bstorefrontKeyRow\b/.test(text) && !['src/lib/queries/storefront-keys.ts', 'src/lib/db/platform.ts'].includes(file)) failures.push(`${file}  calls storefrontKeyRow — only the cached storefrontKeyFor does (ADR-0018)`)
+  if (/\bapp_storefront_key\b/.test(text) && file !== 'src/lib/db/platform.ts') failures.push(`${file}  names app_storefront_key — only src/lib/db/platform.ts calls the definer (ADR-0018)`)
   if (file.startsWith('src/lib/queries/')) {
     if (!/import\s+['"]server-only['"]/.test(text)) failures.push(`${file}  query file without import 'server-only'`)
-    if (!/\bwith(Analytics)?Tenant\(/.test(text)) failures.push(`${file}  query file that never calls withTenant( or withAnalyticsTenant(`)
+    // A Builder's reads (T1c) open their transaction through withActor (frata_builder, src/lib/db/actor.ts). The one
+    // pre-tenant query file: which shop a storefront key names (ADR-0018), through the definer, cached.
+    if (!/\bwith(Analytics)?Tenant\(|\bwithActor\(/.test(text) && file !== 'src/lib/queries/storefront-keys.ts') failures.push(`${file}  query file that never calls withTenant(, withAnalyticsTenant( or withActor(`)
   }
 }
 
@@ -210,9 +246,46 @@ for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|referen
 for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?"?(partner_(?:passkeys|passkey_requests|webauthn_challenges|stepups|passkey_tries))\b/g)) {
   failures.push(`grant on ${m[1]}  — partner passkey tables have no table grants; the app_partner_pk_* definers are the only door (T1b)`)
 }
+// P2 Clients (drizzle/0147): a partner's own bills reach no Frrata role at all, not even frata_admin (owner, 2026-11-15);
+// the app_partner_bill* / app_partner_client* definers are the only door, and Admin counts through admin_partner_bill_stats.
+for (const m of sql.matchAll(/grant\s+(?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?\bon\s+(?:table\s+)?[^;]*?\b(partner_(?:client_bills|client_deals|bill_tries))\b[^;]*?\bto\b/g)) {
+  failures.push(`grant on ${m[1]}  — a partner's own bills have no table grants; the partner definers are the only door (P2)`)
+}
 if (/\bcreate\s+schema\s+proof\b|\bproof\.(?:key|check|sess|h)\s*\(/i.test(sql)) failures.push('a proof-only helper (schema proof) in a migration  — it belongs in scripts/verify/tenancy.sql only')
 for (const m of sql.matchAll(/grant\s+((?:select|insert|update|delete|all|references|trigger|truncate)[^;]*?)\bon\s+(?:table\s+)?"?(partner_(?:members|assignments))\b([^;]*);/g)) {
   if (!/^select\s+$/.test(m[1]) || !/\bto\s+frata_admin\s*$/.test(m[3].replace(/,\s*partner_(?:members|assignments)/, ''))) failures.push(`grant on ${m[2]}  — partner team tables: only "grant select … to frata_admin"; the app_partner_* definers are the only door`)
+}
+// 7b. Builders (T1c, ADR-0015, drizzle/*_builders_access.sql): frata_builder's whole reach is named once. A grant to it
+// anywhere else, a privilege but SELECT on a table or EXECUTE on a function outside its two, or a policy for it but
+// builder_rows / builder_only fails. (scripts/verify/tenancy.sql § 82 proves the same on a real Postgres.)
+const BUILDER_COLUMNS = {
+  products: 'id tenant_id title handle status publish_at published_at updated_at type_id options option_values tags taxonomy_category',
+  product_types: 'id tenant_id name',
+  variants: 'id tenant_id product_id archived_at stock price when_out ships_by lead_min_days lead_max_days preorder_cap sku',
+  product_colours: 'tenant_id product_id hex value family',
+  product_images: 'tenant_id product_id base widths position',
+  collections: 'id tenant_id title handle kind rules match_all',
+  collection_products: 'tenant_id collection_id product_id',
+  product_attributes: 'tenant_id product_id attribute values',
+}
+const builderSelectOk = (what) => {
+  const m = what.match(/^select \(([a-z_, \n]+)\) on ([a-z_]+)$/)
+  const allowed = m && BUILDER_COLUMNS[m[2]]?.split(' ')
+  return !!allowed && m[1].split(',').map((c) => c.trim()).every((c) => allowed.includes(c))
+}
+for (const f of readdirSync('drizzle').filter(f => f.endsWith('.sql'))) {
+  const body = readFileSync(join('drizzle', f), 'utf8').split(/\r?\n/).filter(l => !l.trim().startsWith('--')).join('\n').toLowerCase()
+  for (const m of body.matchAll(/grant\s+([^;]*?)\bto\s+([^;]*\bfrata_builder\b[^;]*);/g)) {
+    const what = m[1].trim()
+    const ok = /_builders_access\.sql$/.test(f) && (
+      /^usage on schema public$/.test(what)
+      || /^execute on function (app_member_role\(\)|app_current_tenant\(\))$/.test(what)
+      || builderSelectOk(what))
+    if (!ok) failures.push(`${f}  grant ${what.replace(/\s+/g, ' ').slice(0, 80)} to frata_builder — its reach is the T1c allow-list only (ADR-0015)`)
+  }
+  for (const m of body.matchAll(/create policy\s+(\w+)[^;]*?\bto\s+frata_builder\b/g)) {
+    if (!['builder_rows', 'builder_only'].includes(m[1])) failures.push(`${f}  policy ${m[1]} for frata_builder — only builder_rows and builder_only (ADR-0015)`)
+  }
 }
 // 8. The analytics database (A·2): its own folder, the same rules, and no open tables at all.
 const aSql = readdirSync('drizzle-analytics').filter(f => f.endsWith('.sql'))

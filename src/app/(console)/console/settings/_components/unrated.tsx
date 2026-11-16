@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { Unrated } from '@/domains/tax/rates'
 
-/** Settings › Taxes, once the shop charges GST: the live products checkout refuses for want of a rate (a risk: Rule 0). */
+/** Settings › Business and GST, once the shop charges GST: the live products checkout refuses for want of a rate (a risk: Rule 0). */
 export function UnratedNotice({ u }: { u: Unrated | null }) {
   if (!u || u.count === 0) return null
   const more = u.count - u.products.length

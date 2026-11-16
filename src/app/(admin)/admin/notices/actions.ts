@@ -29,7 +29,7 @@ export async function sendNoticeAction(form: FormData): Promise<ActionResult> {
   const required = d.required === 'on'
   if (required && !(REQUIRED_TYPES as readonly string[]).includes(d.type)) return { error: 'Only billing, security and Frrata-action notices can be required.' }
   if (d.audience === 'plan' && !d.plan) return { fields: { plan: 'Choose a plan.' } }
-  if (d.audience === 'shop' && !d.tenantId) return { fields: { tenantId: 'Choose a shop.' } }
+  if (d.audience === 'shop' && !d.tenantId) return { fields: { tenantId: 'Choose a store.' } }
   let shops = 0
   try {
     shops = (await sendNotice(staff, { audience: d.audience, plan: d.audience === 'plan' ? d.plan! : null, tenantId: d.audience === 'shop' ? d.tenantId || null : null,
@@ -38,5 +38,5 @@ export async function sendNoticeAction(form: FormData): Promise<ActionResult> {
     console.error('[admin notices]', errName(err))
     return { error: 'We could not send it. Nothing was sent.' }
   }
-  return { ok: shops ? `Sent to ${shops} shop${shops === 1 ? '' : 's'}.` : 'No shop matched.' }
+  return { ok: shops ? `Sent to ${shops} ${shops === 1 ? 'store' : 'stores'}.` : 'No store matched.' }
 }

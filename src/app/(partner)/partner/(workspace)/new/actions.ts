@@ -6,6 +6,7 @@ import { PINCODE_SHAPE, slugProblem } from '@/domains/signup/slug'
 import { PARTNER_TERMS } from '@/domains/partners/terms'
 import { TENANT_COOKIE } from '@/lib/auth/require-member'
 import { requirePartner } from '@/lib/auth/require-partner'
+import { partnerCan } from '@/domains/partners/team'
 import { createClientStore } from '@/lib/db/partners'
 import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
 import { clientIp } from '@/lib/http/client-ip'
@@ -28,6 +29,7 @@ const SENTENCES: Record<string, string> = {
 export async function createClientStoreAction(input: unknown): Promise<{ ok: true } | { ok: false; error: string; field?: 'name' | 'slug' | 'pickup' }> {
   const auth = await requirePartner()
   if (!auth.ok) return { ok: false, error: auth.message }
+  if (!partnerCan(auth.partner.memberRole, 'createShop')) return { ok: false, error: 'Only your partner’s owner and Leads make client stores.' }
   const parsed = Store.safeParse(input)
   if (!parsed.success) return { ok: false, error: 'Check the highlighted fields.' }
   const { name, slug, pickup } = parsed.data

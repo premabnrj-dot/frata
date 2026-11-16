@@ -33,6 +33,10 @@ export const dayMonthIN = (d: Date) =>
 export const monthLongYearIN = (d: Date) =>
   d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: IST })
 
+/** "November" — a month named alone (Plan and billing's "November so far"). */
+export const monthLongIN = (d: Date) =>
+  d.toLocaleDateString('en-IN', { month: 'long', timeZone: IST })
+
 /** "Aug" — a month in a table of recent months (Analytics' returning shoppers; the heading says which year). */
 export const monthShortIN = (d: Date) =>
   d.toLocaleDateString('en-IN', { month: 'short', timeZone: IST }).slice(0, 3) // en-IN writes "Sept"; three letters, as drawn

@@ -12,7 +12,7 @@ export const metadata = { title: 'Offers' }
 
 const DAYS = 30
 
-/** Admin › Offers (offers O·4): every shop's offers in aggregate, by ₹ given; each links to its offers (the kill switch). */
+/** Admin › Offers (offers O·4; Neel N4 board Reference › Offers): every store's offers in total, by ₹ given; a store opens its offers. */
 export default async function AdminOffersPage() {
   const staff = await requireStaff(ANY_STAFF)
   if (!staff.ok) return <Panel title={staff.message} />
@@ -20,10 +20,10 @@ export default async function AdminOffersPage() {
   const shops = await offerTotalsForAdmin(staff, now, new Date(now.getTime() - DAYS * 86_400_000))
   return (
     <>
-      <PageHeader title="Offers" meta={`Across every shop, the last ${DAYS} days: orders using an offer and the ₹ given. Totals only; a shop’s offers are one click away, to stop one that misleads or breaks a rule.`} />
-      {!shops.length ? <Panel title="No offers yet">No shop has an offer running or used in the last {DAYS} days.</Panel> : (
-        <DataTable label="Shops by ₹ given">
-          <DataTableHead><th>Shop</th><th className="text-right">Live offers</th><th className="text-right">Orders with an offer</th><th className="text-right">₹ given</th></DataTableHead>
+      <PageHeader title="Offers" meta={`Last ${DAYS} days`} />
+      {!shops.length ? <Panel title="No offers yet" /> : (
+        <DataTable label="Stores by ₹ given">
+          <DataTableHead><th>Store</th><th className="text-right">Live offers</th><th className="text-right">Orders with an offer</th><th className="text-right">₹ given</th></DataTableHead>
           <DataTableBody>
             {shops.map((s) => (
               <DataTableRow key={s.tenantId}>

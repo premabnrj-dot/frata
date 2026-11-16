@@ -31,7 +31,7 @@ export function ShopperChip({ k, name, cell, sees, unpriced, onChange, errors, o
     <Popover title={`When ${name} runs out`} open={open} onOpenChange={onOpenChange}
       trigger={(w) => (
         <button type="button" {...w} aria-invalid={marked || undefined} aria-label={`Shoppers see: ${label}. Change when it runs out`}
-          className={cn(badge({ tone: marked ? 'danger' : tone }), 'relative cursor-pointer after:absolute after:-inset-3 hover:underline md:after:-inset-1')}>{label}</button>
+          className={cn(badge({ tone: marked ? 'danger' : tone }), 'relative min-h-6 cursor-pointer after:absolute after:-inset-3 hover:underline md:after:-inset-1')}>{label}</button>
       )}>
       <div className="flex flex-col gap-3">
         <label className="flex flex-col gap-1.5 text-label font-medium">When it runs out

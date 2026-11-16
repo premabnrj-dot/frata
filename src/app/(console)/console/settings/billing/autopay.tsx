@@ -1,6 +1,8 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Dialog } from '@/components/ui/dialog'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
@@ -46,37 +48,60 @@ function useCheckout() {
   return { busy, run }
 }
 
-export function SetUpAutopay() {
+const METHODS = [
+  { key: 'upi', name: 'UPI Autopay', limit: 'Up to ₹15,000 a debit · approve in your UPI app', best: true },
+  { key: 'card', name: 'Card', limit: 'Up to ₹15,000 a debit', best: false },
+  { key: 'emandate', name: 'Bank account (eNACH)', limit: 'Above ₹15,000 · ready in 1–2 days', best: false },
+] as const
+
+/** The three ways to pay automatically, UPI first (rework R1 mockup § Payment): each opens Razorpay Checkout. */
+export function SetUpAutopay({ onStarted }: { onStarted?: () => void }) {
   const { busy, run } = useCheckout()
-  const go = (method: 'upi' | 'card' | 'emandate') => run(() => startAutopay(method), completeAutopay, 'Autopay is on. Frrata tells you each amount a day before it is taken.', { description: 'Autopay for Frrata bills' })
+  const go = (method: 'upi' | 'card' | 'emandate') => { onStarted?.(); run(() => startAutopay(method), completeAutopay, 'Autopay is on. We tell you each amount a day before.', { description: 'Autopay for Frrata bills' }) }
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={() => go('upi')} aria-disabled={busy}>UPI Autopay</Button>
-        <Button variant="secondary" onClick={() => go('card')} aria-disabled={busy}>Card</Button>
-        <Button variant="secondary" onClick={() => go('emandate')} aria-disabled={busy}>Bank mandate (eNACH)</Button>
-      </div>
-      <p className="text-xs text-muted-foreground">UPI or card up to ₹15,000 · eNACH above it</p>
+    <div role="group" aria-label="Pay with" className="flex flex-col gap-2">
+      {METHODS.map((m) => (
+        <Button key={m.key} variant="secondary" size="wrap" busy={busy} onClick={() => go(m.key)} className="min-h-15 justify-between gap-2.5">
+          <span className="flex flex-col"><span className="font-semibold">{m.name}</span><span className="text-label font-normal text-muted-foreground">{m.limit}</span></span>
+          {m.best ? <Badge tone="ok">Recommended</Badge> : null}
+        </Button>
+      ))}
     </div>
+  )
+}
+
+/** Overview's "Turn on autopay": the same three ways, in a dialog. */
+export function SetUpAutopayDialog({ label = 'Turn on autopay', variant = 'primary' }: { label?: string; variant?: 'primary' | 'secondary' }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <Button variant={variant} onClick={() => setOpen(true)}>{label}</Button>
+      <Dialog open={open} onClose={() => setOpen(false)} title={label === 'Turn on autopay' ? 'Turn on autopay' : 'Change how autopay pays'} actions={<Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Not now</Button>}>
+        <SetUpAutopay onStarted={() => setOpen(false)} />
+      </Dialog>
+    </>
   )
 }
 
 export function StopAutopay() {
   const router = useRouter()
+  const [open, setOpen] = useState(false)
   const [busy, start] = useTransition()
+  const [refused, setRefused] = useState<string | null>(null)
   const toast = useToast()
+  const stop = () => start(async () => { const r = await stopAutopay(); if (r.ok) { setOpen(false); toast.ok('Autopay is off.'); router.refresh() } else setRefused(r.error) })
   return (
-    <span>
-      <Button variant="ghost" aria-disabled={busy} onClick={() => start(async () => { const r = await stopAutopay(); if (r.ok) router.refresh(); else toast.error(r.error) })}>Turn off autopay</Button>
-    </span>
+    <>
+      <Button variant="danger" onClick={() => { setRefused(null); setOpen(true) }}>Turn off autopay</Button>
+      <Dialog open={open} onClose={() => setOpen(false)} error={refused} title="Turn off autopay?" description="Pay each bill yourself by its due date."
+        actions={<><Button variant="secondary" data-autofocus onClick={() => setOpen(false)}>Keep autopay</Button><Button variant="destructive" busy={busy} onClick={stop}>Turn off autopay</Button></>} />
+    </>
   )
 }
 
 export function PayNow({ invoiceId }: { invoiceId: string }) {
   const { busy, run } = useCheckout()
   return (
-    <span className="inline-flex flex-col items-end gap-1">
-      <Button variant="secondary" aria-disabled={busy} onClick={() => run(() => startPayNow(invoiceId), completePayNow, 'Paid. Thank you.', { description: 'Frrata invoice' })}>Pay now</Button>
-    </span>
+    <Button variant="secondary" busy={busy} onClick={() => run(() => startPayNow(invoiceId), completePayNow, 'Paid. Thank you.', { description: 'Frrata invoice' })}>Pay this bill</Button>
   )
 }

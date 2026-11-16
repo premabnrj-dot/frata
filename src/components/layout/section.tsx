@@ -29,7 +29,7 @@ export function Section({ title, action, children, className, id, labelledBy, fl
       {(title || action) && (
         // A flush card's rows draw their own padding (px-4); its header lines up with them and centres its action.
         <div className={cn('flex justify-between gap-3', flush ? 'items-center px-4 pt-4 pb-1 md:px-5' : 'items-start', flush && flatOnPhone && 'max-md:px-0')}>
-          {title && <h2 id={h} className="text-section font-semibold">{title}</h2>}
+          {title && <h2 id={h} className="min-w-0 text-section font-semibold">{title}</h2>}
           {action && <div className="shrink-0">{action}</div>}
         </div>
       )}

@@ -1,12 +1,12 @@
 import 'server-only'
 import { revalidateTag } from 'next/cache'
 import { after } from 'next/server'
-import { LIMITS, withinLimit } from '@/lib/db/rate-limit'
+import { LIMITS, withinLimit, type Limit } from '@/lib/db/rate-limit'
 
 // What a shop's caches are told after a write (tags: shopCached in src/lib/queries/storefront.ts).
 
 /** After a console write commits: the shop's pages read fresh rows. */
-export function refreshShop(tenantId: string, scope: 'shop' | 'look' | 'catalogue' | 'videos' | 'pages') {
+export function refreshShop(tenantId: string, scope: 'shop' | 'settings' | 'look' | 'catalogue' | 'videos' | 'pages' | 'content') {
   revalidateTag(scope === 'shop' ? `shop:${tenantId}` : `shop:${tenantId}:${scope}`)
 }
 
@@ -34,37 +34,52 @@ const WINDOW_MS = LIMITS.soldOutPurge.windowSeconds * 1000
  * longer wait would be cut off while its limiter row still told every other instance a trailer was coming (impact
  * review 2026-11-12). A sell-out that would need longer is left to the 60 s backstop. */
 const TRAIL_BUDGET_MS = 25_000
-const lastSoldOut = new Map<string, number>()
+/** A purge held to once per store every 30 s across every instance, with one trailing purge, never dropped while it
+ * can fire in time: its two limiter rows and the cache scope it purges. Shared by sell-outs and content saves. */
+type Throttle = { scope: 'catalogue' | 'content'; purge: Limit; trail: Limit }
+const lastPurge = new Map<string, number>()
 /** Until when this instance knows the shared window is used (by another instance) or a trailer is queued: no limiter
  * write before then (impact review 2026-11-12: every sell-out wrote both rows while another instance held the window). */
 const usedUntil = new Map<string, number>()
 const coveredUntil = new Map<string, number>()
 const trailing = new Set<string>()
-export async function refreshSoldOut(tenantId: string, now = Date.now(), t: Timing = realTiming): Promise<'now' | 'trailing' | 'covered'> { // clock-ok: server
-  const last = lastSoldOut.get(tenantId) ?? Number.NEGATIVE_INFINITY
+async function throttledPurge(th: Throttle, tenantId: string, now: number, t: Timing): Promise<'now' | 'trailing' | 'covered'> {
+  const k = `${th.scope}:${tenantId}`
+  const last = lastPurge.get(k) ?? Number.NEGATIVE_INFINITY
   const windowEnd = (Math.floor(now / WINDOW_MS) + 1) * WINDOW_MS
-  if (now - last >= WINDOW_MS && now >= (usedUntil.get(tenantId) ?? 0)) {
-    if (await withinLimit(LIMITS.soldOutPurge, tenantId, new Date(now))) {
-      lastSoldOut.set(tenantId, now)
-      refreshShop(tenantId, 'catalogue')
+  if (now - last >= WINDOW_MS && now >= (usedUntil.get(k) ?? 0)) {
+    if (await withinLimit(th.purge, tenantId, new Date(now))) {
+      lastPurge.set(k, now)
+      refreshShop(tenantId, th.scope)
       return 'now'
     }
-    usedUntil.set(tenantId, windowEnd)
+    usedUntil.set(k, windowEnd)
   }
-  if (trailing.has(tenantId) || now < (coveredUntil.get(tenantId) ?? 0)) return 'covered'
+  if (trailing.has(k) || now < (coveredUntil.get(k) ?? 0)) return 'covered'
   // The later of this instance's 30 s and the shared window's end: both let a purge through then.
   const at = Math.max(last + WINDOW_MS, windowEnd)
   if (at - now > TRAIL_BUDGET_MS) return 'covered'
-  if (!(await withinLimit(LIMITS.soldOutTrail, tenantId, new Date(now)))) { coveredUntil.set(tenantId, windowEnd); return 'covered' }
-  trailing.add(tenantId)
+  if (!(await withinLimit(th.trail, tenantId, new Date(now)))) { coveredUntil.set(k, windowEnd); return 'covered' }
+  trailing.add(k)
   t.later(async () => {
     try {
       await t.wait(Math.max(0, at - t.clock()))
       const fire = t.clock()
-      if (await withinLimit(LIMITS.soldOutPurge, tenantId, new Date(fire))) { lastSoldOut.set(tenantId, fire); refreshShop(tenantId, 'catalogue') }
-    } finally { trailing.delete(tenantId) }
+      if (await withinLimit(th.purge, tenantId, new Date(fire))) { lastPurge.set(k, fire); refreshShop(tenantId, th.scope) }
+    } finally { trailing.delete(k) }
   })
   return 'trailing'
+}
+export function refreshSoldOut(tenantId: string, now = Date.now(), t: Timing = realTiming): Promise<'now' | 'trailing' | 'covered'> { // clock-ok: server
+  return throttledPurge({ scope: 'catalogue', purge: LIMITS.soldOutPurge, trail: LIMITS.soldOutTrail }, tenantId, now, t)
+}
+/**
+ * A content save (V1, plan docs/plans/2026-11-15-v1-content.md): the bar, a menu or the Contact line is on every page, so
+ * a save purges `shop:<t>:content` — the first in a window at once, repeats in one trailing purge. What a trailer can't
+ * cover in time is left to the entry's 60 s backstop. Page words purge `pages` only (refreshShop).
+ */
+export function refreshContent(tenantId: string, now = Date.now(), t: Timing = realTiming): Promise<'now' | 'trailing' | 'covered'> { // clock-ok: server
+  return throttledPurge({ scope: 'content', purge: LIMITS.contentPurge, trail: LIMITS.contentTrail }, tenantId, now, t)
 }
 /**
  * Reviews (R1, speed review 4): a shopper's published review purges its product only (card stars catch up on the 60 s
@@ -81,4 +96,12 @@ export function refreshProduct(tenantId: string, handle: string) {
 /** After an address change or a new shop: the host lookups for both addresses. */
 export function refreshHosts(...hosts: string[]) {
   for (const h of hosts) revalidateTag(`host:${h}`)
+}
+
+/**
+ * A storefront key changed (deleted, or its shop's Website moved): purge its cached lookup and every API copy read
+ * under it (tag `skey:<sha256 hex>`, V1 Storefront API; src/lib/queries/storefront.ts storefrontKeyFor).
+ */
+export function refreshKey(hashHex: string) {
+  if (/^[0-9a-f]{64}$/.test(hashHex)) revalidateTag(`skey:${hashHex}`)
 }

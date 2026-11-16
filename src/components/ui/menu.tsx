@@ -19,8 +19,9 @@ import { button } from './button'
 export type MenuItem = { label: string; onSelect: () => void; danger?: boolean } | { label: string; href: string; danger?: boolean; download?: boolean }
 
 /** `variant`: the trigger's look (secondary by default; ghost for a quiet "More", Neel). `icon`: the trigger shows only
- * this, `label` becoming its accessible name (a saved view's ⋯). */
-export function Menu({ label = 'More', items, align = 'end', size, variant = 'secondary', icon, chevron = true }: { label?: string; items: MenuItem[]; align?: 'start' | 'end'; size?: 'sm'; variant?: 'secondary' | 'ghost'; icon?: React.ReactNode
+ * this, `label` becoming its accessible name (a saved view's ⋯); `framed` draws that icon button with the field edge
+ * (a record's More, Admin SA1b as drawn). */
+export function Menu({ label = 'More', items, align = 'end', size, variant = 'secondary', icon, framed = false, chevron = true }: { label?: string; framed?: boolean; items: MenuItem[]; align?: 'start' | 'end'; size?: 'sm'; variant?: 'secondary' | 'ghost'; icon?: React.ReactNode
   /** The ⌄ after the word; a plain "More" link drops it (Neel product editor, as drawn). */
   chevron?: boolean }) {
   const id = useId()
@@ -42,7 +43,8 @@ export function Menu({ label = 'More', items, align = 'end', size, variant = 'se
   return (
     <>
       <button ref={trigger} type="button" popoverTarget={id} aria-haspopup="menu" aria-expanded={false} aria-controls={id}
-        aria-label={icon ? label : undefined} className={icon ? 'relative inline-grid size-6 place-items-center rounded-sm text-muted-foreground after:absolute after:-inset-2.5 hover:bg-accent hover:text-foreground md:after:inset-0' : button({ variant, size })}>
+        aria-label={icon ? label : undefined} className={icon ? (framed ? 'relative inline-grid size-8 place-items-center rounded-md border border-edge bg-card text-muted-foreground shadow-sm after:absolute after:-inset-1.5 hover:bg-accent hover:text-foreground md:after:inset-0'
+          : 'relative inline-grid size-6 place-items-center rounded-sm text-muted-foreground after:absolute after:-inset-2.5 hover:bg-accent hover:text-foreground md:after:inset-0') : button({ variant, size })}>
         {icon ?? <>{label}{chevron ? <ChevronDown aria-hidden className="size-4" /> : null}</>}
       </button>
       <div ref={pop} id={id} popover="auto" data-pop="menu" role="menu" aria-label={label}

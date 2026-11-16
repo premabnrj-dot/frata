@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { routeFor } from '@/domains/tenancy/host'
-import { CONSOLE_HOST, EKCODE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
+import { API_HOST, CONSOLE_HOST, EKCODE_HOST, SHOP_DOMAIN } from '@/lib/public-env'
 import { updateSession } from '@/lib/supabase/middleware'
 import { ekcodeCsp, isSignedInPath, signedInCsp } from '@/lib/security-headers'
 
@@ -13,8 +13,11 @@ import { ekcodeCsp, isSignedInPath, signedInCsp } from '@/lib/security-headers'
  * (routeFor decides).
  */
 export async function middleware(request: NextRequest) {
-  const route = routeFor(request.headers.get('host'), request.nextUrl.pathname, CONSOLE_HOST, process.env.NODE_ENV === 'development', SHOP_DOMAIN, EKCODE_HOST)
+  const route = routeFor(request.headers.get('host'), request.nextUrl.pathname, CONSOLE_HOST, process.env.NODE_ENV === 'development', SHOP_DOMAIN, EKCODE_HOST, API_HOST)
   if (route.kind === 'not_found') return new NextResponse(null, { status: 404 })
+  // The Storefront API's host (ADR-0018): no session, no cookie, no nonce. Its versioned paths never reach here (the
+  // matcher skips them, so a CDN hit costs no middleware run); this is the belt to that brace.
+  if (route.kind === 'api') return NextResponse.next()
   // EkCode's host (P1 task 6): www goes to the apex; its pages get their own headers here, set by this branch itself (a
   // middleware header replaces next.config's of the same name). No Supabase session work on this host.
   if (route.kind === 'ekcode_www') return NextResponse.redirect(`https://${EKCODE_HOST}${request.nextUrl.pathname}`, 308)
@@ -22,6 +25,9 @@ export async function middleware(request: NextRequest) {
   // The bare shop domain (frrata.shop) holds no shop: it goes to Frrata's own site (shop addresses spec, D·0). A 307
   // while that site is the stopgap console host: browsers cache a 308 for good. 308 to frrata.com once it is attached.
   if (route.kind === 'platform_apex') return NextResponse.redirect(`https://${CONSOLE_HOST}/`, 307)
+  // PLATFORM_SITE_PATHS only (owner, 2026-11-15, stopgap for Facebook app verification): served straight from the
+  // normal page tree, no tenant lookup, no session work — like a shop's own page.
+  if (route.kind === 'platform_site') return NextResponse.next()
   // A shop: the host rewrite in next.config (shopRewrites) serves it from /s/<host>/…; no session work here.
   if (route.kind === 'shop') return NextResponse.next()
   if (!isSignedInPath(request.nextUrl.pathname)) return updateSession(request, NextResponse.next({ request }))
@@ -67,6 +73,11 @@ function ekcodeResponse(request: NextRequest) {
 // Image-looking paths are NOT skipped (tenancy audit 2026-11-07): /s/<other>/x.png must meet routeFor too.
 // Skipped by exact path (speed review 2026-11-11): the visit beacon /fe.js (a static file, the same on every host) and
 // its ingest /api/shop/e, whose route repeats routeFor's check itself (requireShop): a beacon is one invocation, not two.
+// Versioned paths (/2026-12/…) are skipped on every host (V1 Storefront API, unit-economics review 2026-11-15): on the
+// API host next.config's apiRewrites serve them and a middleware run would be a paid call on every CDN hit; on any
+// other host they are a 404 page anyway. /api/storefront/* is NOT skipped: routeFor refuses it off the API host.
+// The docs (/docs…, /llms.txt; SA1b) are skipped too: static pages, served only by the API host's rewrite; on any other
+// host they are a shop's or the console's 404. Their internal path /api-docs is NOT skipped: routeFor refuses it.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|fe\\.js$|api/shop/e$).*)'],
+  matcher: ['/((?!_next/static|_next/image|fe\\.js$|api/shop/e$|[0-9]{4}-[0-9]{2}/|docs(?:/|$)|llms\\.txt$).*)'],
 }

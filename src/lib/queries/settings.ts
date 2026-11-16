@@ -1,6 +1,6 @@
 import 'server-only'
 import { mainHostFor } from './addresses'
-import { eq, getTableColumns, sql } from 'drizzle-orm'
+import { eq, getTableColumns } from 'drizzle-orm'
 import { members, planVersions, shopPolicies, shopSettings, tenantPlans, tenants } from '@/lib/db/schema'
 import { withTenant } from '@/lib/db/tenant'
 import type { Tx } from '@/lib/db'
@@ -74,17 +74,25 @@ export async function shipCostsIn(tx: Tx, tenantId: string): Promise<ShipCosts |
 }
 
 /**
+ * Whether the store has an owner, inside the caller's tenant transaction, FAILING CLOSED (tenancy review 2026-11-08): with
+ * no tenant context the policy hides every member row, so a count of zero (the caller is always a member) means "no
+ * context", read as "has an owner". An error propagates. (No row lock: `for share` needs an update grant frata_app
+ * does not hold on members; a partner save in the same instant as a handover is accepted, V1 content plan § Reviews.)
+ * The one read: costsVisibleIn, content saves (src/domains/content/who.ts) and, later, the Storefront API.
+ */
+export async function hasOwnerIn(tx: Tx, tenantId: string): Promise<boolean> {
+  const rows = await tx.select({ role: members.role }).from(members).where(eq(members.tenantId, tenantId))
+  return rows.length === 0 || rows.some((r) => r.role === 'owner')
+}
+
+/**
  * Whether this member sees the shop's costs and profit (`seesCosts`), inside the caller's tenant transaction. Owners,
- * admins and staff need no read. A partner's answer depends on whether the shop has an owner yet, and it FAILS CLOSED
- * (tenancy review 2026-11-08): with no tenant context the policy hides every member row, so a count of zero (a partner
- * is always a member) means "no context", read as "has an owner": no ₹. An error propagates; the page then fails.
+ * admins and staff need no read. A partner's answer depends on whether the shop has an owner yet (hasOwnerIn, failing
+ * closed: no ₹). An error propagates; the page then fails.
  */
 export async function costsVisibleIn(tx: Tx, tenantId: string, role: MemberRole): Promise<boolean> {
   if (role !== 'partner') return seesCosts(role, true)
-  const [r] = await tx.select({ all: sql<number>`count(*)::int`, owners: sql<number>`(count(*) filter (where ${members.role} = 'owner'))::int` })
-    .from(members).where(eq(members.tenantId, tenantId))
-  if (!r || r.all === 0) return false
-  return seesCosts(role, r.owners > 0)
+  return seesCosts(role, await hasOwnerIn(tx, tenantId))
 }
 
 /** The HSN digits the shop's invoices need for its turnover (rates.ts hsnDigitsFor), inside the caller's transaction:

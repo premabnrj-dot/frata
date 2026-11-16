@@ -1,5 +1,5 @@
 // =============================================================================
-// FLOW: GST (plan docs/plans/2026-11-09-gst-core-and-categories.md, phases 1, 3, 5). Settings › Taxes is radios and
+// FLOW: GST (plan docs/plans/2026-11-09-gst-core-and-categories.md, phases 1, 3, 5). Settings › Business and GST is radios and
 // segments; last month's invoices make a GSTR-1 on Console › GST with its CA files; the GSTR-1 JSON downloads,
 // uncached; filing from Frrata through the stack's fake GSP (GSP_PROVIDER=fake, OTP 575757): connect, push, the
 // portal's totals beside ours, file with the EVC OTP, the ARN kept and the period final. Seeds its own invoices in
@@ -47,8 +47,8 @@ export default {
     const owner = await signedIn(t.browser, 'owner', { viewport: { width: 1280, height: 900 } })
     const p = await owner.newPage(); p.setDefaultTimeout(10_000); p.on('pageerror', (e) => t.errors.push(e.message))
     try {
-      await t.step('Settings › Taxes: registration is a radio, turnover and filing are segments', async () => {
-        await p.goto(CONSOLE + '/console/settings/taxes')
+      await t.step('Settings › Business and GST: registration is a radio, turnover and filing are segments', async () => {
+        await p.goto(CONSOLE + '/console/settings/business')
         assert.equal(await p.getByRole('radio', { name: 'Regular' }).isChecked(), true)
         assert.equal(await p.getByRole('radio', { name: 'Under ₹5 crore' }).isChecked(), true)
         assert.equal(await p.getByRole('radio', { name: 'Monthly' }).isChecked(), true)

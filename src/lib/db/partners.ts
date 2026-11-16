@@ -5,6 +5,7 @@ import { db, type Tx } from './index'
 import { withTenant } from './tenant'
 import { PARTNER_TERMS } from '@/domains/partners/terms'
 import { errName } from '@/lib/log'
+import { partnerRoleOf, type GivenRole, type PartnerRole } from '@/domains/partners/team'
 
 // =============================================================================
 // FILE: src/lib/db/partners.ts — the partner questions, each a SECURITY DEFINER
@@ -25,7 +26,7 @@ export type MyPartner = {
   id: string; email: string; name: string; businessName: string; phone: string; city: string; services: string[]
   workUrl: string; brandsNow: string; appliedAt: Date; approvedAt: Date | null; declinedAt: Date | null; declineReason: string | null
   /** The caller's own place in the partner (T1a): their partner_members row and role, and a Frrata suspension. */
-  memberId: string; memberRole: 'owner' | 'lead'; suspendedAt: Date | null
+  memberId: string; memberRole: PartnerRole; suspendedAt: Date | null
 }
 
 const d = (v: string | Date | null) => (v ? new Date(v) : null)
@@ -40,12 +41,15 @@ export async function myPartner(uid: string): Promise<MyPartner | null> {
   const rows = await db().execute<Record<string, string | string[] | null>>(sql`select * from app_my_partner(${uid}::uuid)`)
   const r = rows[0]
   if (!r) return null
+  // A role read by name; an unknown one is no partner at all (security review H2: it once read as the owner).
+  const memberRole = partnerRoleOf(r.member_role)
+  if (!memberRole) return null
   return {
     id: r.id as string, email: r.email as string, name: r.name as string, businessName: r.business_name as string,
     phone: r.phone as string, city: r.city as string, services: (r.services as string[]) ?? [], workUrl: r.work_url as string,
     brandsNow: r.brands_now as string, appliedAt: new Date(r.applied_at as string), approvedAt: d(r.approved_at as string | null),
     declinedAt: d(r.declined_at as string | null), declineReason: (r.decline_reason as string | null) ?? null,
-    memberId: r.member_id as string, memberRole: r.member_role === 'lead' ? 'lead' : 'owner', suspendedAt: d(r.suspended_at as string | null),
+    memberId: r.member_id as string, memberRole, suspendedAt: d(r.suspended_at as string | null),
   }
 }
 
@@ -76,7 +80,14 @@ export async function createClientStore(c: Caller, p: { name: string; slug: stri
 
 export type ClientRow = {
   tenantId: string; name: string; slug: string | null; linkedAt: Date; firstOpenedAt: Date | null; removedAt: Date | null
-  shareMonths: number; noticeDays: number; ownerEmail: string | null; inviteEmail: string | null; inviteExpiresAt: Date | null; planName: string | null
+  /** The partner's terms, the owner's email, the invite's email and the plan reach the partner's OWNER only (T1c, owner
+   *  question 6): null for a Lead or a Builder. The stage's facts (first opening, invite end, `hasOwner`) reach all. */
+  shareMonths: number | null; noticeDays: number | null; ownerEmail: string | null; inviteEmail: string | null; inviteExpiresAt: Date | null; planName: string | null
+  hasOwner: boolean
+  /** The link's id: a client page's key (a store relinked to the same partner has two rows). */
+  linkId: string
+  /** The store owner's join and the open invite's day: null for a Builder and once removed (P2, drizzle/0147). */
+  ownerSince: Date | null; inviteSentAt: Date | null
 }
 
 export async function partnerClients(c: Caller): Promise<ClientRow[]> {
@@ -84,8 +95,10 @@ export async function partnerClients(c: Caller): Promise<ClientRow[]> {
   return rows.map((r) => ({
     tenantId: r.tenant_id as string, name: r.name as string, slug: (r.slug as string | null) ?? null, linkedAt: new Date(r.linked_at as string),
     firstOpenedAt: d(r.share_starts_at as string | null), removedAt: d(r.removed_at as string | null),
-    shareMonths: Number(r.share_months), noticeDays: Number(r.notice_days), ownerEmail: (r.owner_email as string | null) ?? null,
+    shareMonths: r.share_months === null ? null : Number(r.share_months), noticeDays: r.notice_days === null ? null : Number(r.notice_days), ownerEmail: (r.owner_email as string | null) ?? null,
     inviteEmail: (r.invite_email as string | null) ?? null, inviteExpiresAt: d(r.invite_expires_at as string | null), planName: (r.plan_name as string | null) ?? null,
+    hasOwner: (r.has_owner as unknown) === true,
+    linkId: r.link_id as string, ownerSince: d(r.owner_since as string | null), inviteSentAt: d(r.invite_sent_at as string | null),
   }))
 }
 
@@ -106,6 +119,21 @@ export type Handover = { inviteId: string; tenantId: string; tenantName: string;
 export async function myHandovers(uid: string): Promise<Handover[]> {
   const rows = await db().execute<Record<string, string>>(sql`select * from app_my_handovers(${uid}::uuid)`)
   return rows.map((r) => ({ inviteId: r.invite_id!, tenantId: r.tenant_id!, tenantName: r.tenant_name!, partnerName: r.partner_name!, expiresAt: new Date(r.expires_at!) }))
+}
+
+/** The Accept screen's key list (SA1b D·7): per invite the store's website and its live keys, names and kinds only,
+ *  through app_my_handover_keys (built over app_my_handovers, so exactly the invites this person sees). */
+export type HandoverSite = { host: string; keys: { name: string; kind: 'public' | 'test' }[] }
+export async function myHandoverKeys(uid: string): Promise<Map<string, HandoverSite>> {
+  const rows = await db().execute<{ invite_id: string; site_host: string; name: string; kind: 'public' | 'test' }>(
+    sql`select invite_id, site_host, name, kind from app_my_handover_keys(${uid}::uuid)`)
+  const out = new Map<string, HandoverSite>()
+  for (const r of rows) {
+    const s = out.get(r.invite_id) ?? { host: r.site_host, keys: [] }
+    s.keys.push({ name: r.name, kind: r.kind })
+    out.set(r.invite_id, s)
+  }
+  return out
 }
 
 /** The invite id comes from the form, but the function accepts only an invite to THIS user's confirmed email. */
@@ -169,9 +197,9 @@ export async function partnerTeam(c: Caller): Promise<TeamPerson[]> {
 type Done = { ok: true } | { ok: false; error: string }
 
 /** `stores` are tenant ids the owner chose; the function accepts only the partner's own active links. */
-export async function invitePartnerPerson(c: Caller, email: string, stores: string[]): Promise<Done> {
+export async function invitePartnerPerson(c: Caller, email: string, role: GivenRole, stores: string[]): Promise<Done> {
   try {
-    await db().execute(sql`select app_partner_invite(${c.userId}::uuid, ${c.sessionId}::uuid, ${c.stepup}, ${email}, 'lead', ${`{${stores.join(',')}}`}::uuid[])`)
+    await db().execute(sql`select app_partner_invite(${c.userId}::uuid, ${c.sessionId}::uuid, ${c.stepup}, ${email}, ${role}, ${`{${stores.join(',')}}`}::uuid[])`)
     return { ok: true }
   } catch (err) {
     return { ok: false, error: dbCode(err, ['not_owner', 'bad_role', 'bad_email', 'bad_store', 'too_many', 'already_invited', ...CHECKS], 'invitePartnerPerson') }
@@ -204,6 +232,17 @@ export async function assignPartnerPerson(c: Caller, memberId: string, tenantId:
     return { ok: true }
   } catch (err) {
     return { ok: false, error: dbCode(err, ['not_owner', 'no_person', 'bad_store', 'already_member', ...CHECKS], 'assignPartnerPerson') }
+  }
+}
+
+/** Lead ↔ Builder (T1c): the owner only, a check in the last 5 minutes, never the owner's row or one's own; the
+ *  person's store rows follow in the same transaction (drizzle/0131's trigger). */
+export async function setPartnerPersonRole(c: Caller, memberId: string, role: GivenRole): Promise<Done> {
+  try {
+    await db().execute(sql`select app_partner_set_role(${c.userId}::uuid, ${c.sessionId}::uuid, ${c.stepup}, ${memberId}::uuid, ${role})`)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: dbCode(err, ['not_owner', 'no_person', 'is_owner', 'bad_role', ...CHECKS], 'setPartnerPersonRole') }
   }
 }
 

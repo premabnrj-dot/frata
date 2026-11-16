@@ -17,7 +17,9 @@ import { handOverAction } from './handover-actions'
  * again when the last check is older than 5 minutes (never an email code), then the invite. A mistake in the email stays at the field; a refusal is the dialog's
  * error line (§ Feedback 3, 4). Opened from the row, or by the console's building line (`?handover=<store>`).
  */
-export function HandOver({ tenantId, store, again, startOpen = false }: { tenantId: string; store: string; again: boolean; startOpen?: boolean }) {
+export function HandOver({ tenantId, store, again, startOpen = false, size, primary = false }: { tenantId: string; store: string; again: boolean; startOpen?: boolean
+  /** A row's action is small; a client page's header carries it as the primary (P2). */
+  size?: 'sm'; primary?: boolean }) {
   const router = useRouter()
   const toast = useToast()
   const [open, setOpen] = useState(startOpen)
@@ -38,7 +40,7 @@ export function HandOver({ tenantId, store, again, startOpen = false }: { tenant
   }
   return (
     <>
-      <Button variant="secondary" onClick={() => { setError(null); fields.set({}); setEmail(''); setOpen(true) }}>{again ? 'Send invite again' : 'Hand over'}</Button>
+      <Button variant={primary ? 'primary' : 'secondary'} size={size} onClick={() => { setError(null); fields.set({}); setEmail(''); setOpen(true) }}>{again ? 'Send invite again' : 'Hand over'}</Button>
       <Dialog open={open} onClose={() => setOpen(false)} title={`Hand ${store} to its owner?`} error={error}
         description="It’s theirs once the invite is accepted."
         actions={<>

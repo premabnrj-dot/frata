@@ -30,6 +30,9 @@ const ICONS = {
   reviews: ['M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z', 'M10 12.2l1.5 1.5 2.7-2.7'],
   menu: ['M4 7h16 M4 17h16', 'M4 12h16'],
   close: ['M6 6l12 12', 'M18 6 6 18'],
+  // Yes / no in a matrix (T1c's Roles card): a tick and a dash, each beside words for a screen reader.
+  tick: ['M5 12.5l4.5 4.5L19 7', ''],
+  dash: ['M7 12h10', ''],
   // Neel N1: the sidebar as a rail (a panel and its left column).
   sidebar: ['M4 5h16v14H4z', 'M9.5 5v14'],
   // Neel N1: signing out (a door and the way out).
@@ -61,6 +64,8 @@ const ICONS = {
   partners: ['M3 20c.8-3.3 3-5 5.5-5s4.7 1.7 5.5 5 M8.5 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M15 12.5a2.7 2.7 0 1 0 0-5.4 M16.5 15c2 .4 3.6 2 4.5 5'],
   // Your details: a card with a person on it.
   details: ['M3 5h18v14H3z M13.5 10h4.5 M13.5 13.5h3', 'M8 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M5 16.5c.6-1.6 1.7-2.5 3-2.5s2.4.9 3 2.5'],
+  // Storefront API (Admin, SA1b): code brackets, the slash the tinge.
+  code: ['M8 8l-4 4 4 4 M16 8l4 4-4 4', 'M13.5 6l-3 12'],
   // Passkeys (partner sign-in, T1b): a key.
   key: ['M8 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M12 12h9 M18 12v3 M21 12v2'],
   up: ['M12 19V5', 'M6 11l6-6 6 6'],

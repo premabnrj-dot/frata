@@ -1,0 +1,5191 @@
+{
+ "Shop": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+   "name": {
+    "type": "string",
+    "maxLength": 120
+   },
+   "tagline": {
+    "type": "string",
+    "maxLength": 200
+   },
+   "language": {
+    "type": "string",
+    "enum": [
+     "en",
+     "hi"
+    ],
+    "description": "New values may appear. Show something sensible for one you don’t know."
+   },
+   "logo": {
+    "anyOf": [
+     {
+      "type": "string",
+      "maxLength": 500,
+      "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "status": {
+    "type": "string",
+    "enum": [
+     "open",
+     "opening_soon",
+     "paused"
+    ],
+    "description": "As of this answer. Show the store as closed unless it is \"open\". \"paused\" takes no new orders until pause.to. New values may appear. Show something sensible for one you don’t know."
+   },
+   "pause": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "from": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+       },
+       "to": {
+        "anyOf": [
+         {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       }
+      },
+      "required": [
+       "from",
+       "to"
+      ],
+      "additionalProperties": false
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "description": "A pause the store has or will have. Check it against the clock."
+   },
+   "pricesIncludeGst": {
+    "type": "boolean"
+   },
+   "payOnDelivery": {
+    "type": "object",
+    "properties": {
+     "on": {
+      "type": "boolean"
+     },
+     "min": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "max": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "charge": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "on",
+     "min",
+     "max",
+     "charge"
+    ],
+    "additionalProperties": false,
+    "description": "The store-wide rule. With zones, each zone’s own applies."
+   },
+   "delivery": {
+    "type": "object",
+    "properties": {
+     "charge": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "freeAbove": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "dispatchDays": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "metroDays": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "restDays": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "zones": {
+      "anyOf": [
+       {
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "name": {
+           "type": "string",
+           "maxLength": 60
+          },
+          "charge": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 9007199254740991
+          },
+          "freeAbove": {
+           "anyOf": [
+            {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            },
+            {
+             "type": "null"
+            }
+           ]
+          },
+          "days": {
+           "type": "array",
+           "prefixItems": [
+            {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            },
+            {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            }
+           ],
+           "items": false,
+           "minItems": 2,
+           "maxItems": 2
+          },
+          "payOnDelivery": {
+           "type": "object",
+           "properties": {
+            "on": {
+             "type": "boolean"
+            },
+            "charge": {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            },
+            "max": {
+             "anyOf": [
+              {
+               "type": "integer",
+               "minimum": 0,
+               "maximum": 9007199254740991
+              },
+              {
+               "type": "null"
+              }
+             ]
+            }
+           },
+           "required": [
+            "on",
+            "charge",
+            "max"
+           ],
+           "additionalProperties": false
+          }
+         },
+         "required": [
+          "name",
+          "charge",
+          "freeAbove",
+          "days",
+          "payOnDelivery"
+         ],
+         "additionalProperties": false
+        }
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Delivery by area. A shopper’s PIN code picks the zone. The flat fields are then only the fallback."
+     }
+    },
+    "required": [
+     "charge",
+     "freeAbove",
+     "dispatchDays",
+     "metroDays",
+     "restDays",
+     "zones"
+    ],
+    "additionalProperties": false
+   },
+   "returns": {
+    "type": "object",
+    "properties": {
+     "kind": {
+      "type": "string",
+      "enum": [
+       "exchange_or_refund",
+       "exchange_only",
+       "refund_only",
+       "none"
+      ],
+      "description": "New values may appear. Show something sensible for one you don’t know."
+     },
+     "days": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "kind",
+     "days"
+    ],
+    "additionalProperties": false
+   },
+   "legal": {
+    "type": "object",
+    "properties": {
+     "legalName": {
+      "type": "string",
+      "maxLength": 120
+     },
+     "address": {
+      "type": "string",
+      "maxLength": 400
+     },
+     "customerCare": {
+      "type": "object",
+      "properties": {
+       "email": {
+        "type": "string",
+        "maxLength": 200
+       },
+       "phone": {
+        "type": "string",
+        "maxLength": 20
+       }
+      },
+      "required": [
+       "email",
+       "phone"
+      ],
+      "additionalProperties": false
+     },
+     "grievanceOfficer": {
+      "type": "object",
+      "properties": {
+       "name": {
+        "type": "string",
+        "maxLength": 120
+       },
+       "role": {
+        "type": "string",
+        "maxLength": 80
+       },
+       "email": {
+        "type": "string",
+        "maxLength": 200
+       },
+       "phone": {
+        "type": "string",
+        "maxLength": 20
+       }
+      },
+      "required": [
+       "name",
+       "role",
+       "email",
+       "phone"
+      ],
+      "additionalProperties": false
+     }
+    },
+    "required": [
+     "legalName",
+     "address",
+     "customerCare",
+     "grievanceOfficer"
+    ],
+    "additionalProperties": false,
+    "description": "What India’s E-Commerce Rules ask every page of the store to show. Render it from here at runtime. Never copy it into code."
+   },
+   "policies": {
+    "maxItems": 10,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "kind": {
+       "type": "string",
+       "enum": [
+        "returns",
+        "shipping",
+        "privacy",
+        "terms",
+        "contact"
+       ],
+       "description": "New values may appear. Show something sensible for one you don’t know."
+      },
+      "title": {
+       "type": "string",
+       "maxLength": 80
+      },
+      "url": {
+       "type": "string",
+       "maxLength": 500,
+       "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+      }
+     },
+     "required": [
+      "kind",
+      "title",
+      "url"
+     ],
+     "additionalProperties": false
+    },
+    "description": "The store’s policy pages, on Frrata. Link them from every page."
+   },
+   "social": {
+    "type": "object",
+    "properties": {
+     "instagram": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._]{1,30}$"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "whatsapp": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^91\\d{10}$"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "required": [
+     "instagram",
+     "whatsapp"
+    ],
+    "additionalProperties": false
+   },
+   "seo": {
+    "type": "object",
+    "properties": {
+     "title": {
+      "type": "string",
+      "maxLength": 200
+     },
+     "description": {
+      "type": "string",
+      "maxLength": 400
+     }
+    },
+    "required": [
+     "title",
+     "description"
+    ],
+    "additionalProperties": false
+   },
+   "siteOrigin": {
+    "anyOf": [
+     {
+      "type": "string",
+      "maxLength": 500,
+      "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "description": "The brand’s own address for the store, as set in Frrata. Null when it runs on Frrata."
+   },
+   "checkoutOrigin": {
+    "type": "string",
+    "maxLength": 500,
+    "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$",
+    "description": "Where checkout, orders and policies live. The bag link starts here: <checkoutOrigin>/cart?l=<size id>:<qty>,…."
+   },
+   "cart": {
+    "description": "The bag link. It sends your shopper’s bag to the store’s checkout in one URL.",
+    "type": "object",
+    "properties": {
+     "url": {
+      "type": "string",
+      "maxLength": 500,
+      "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$",
+      "description": "<checkoutOrigin>/cart. Add ?l=<size id>:<qty>,… and, if you like, code= and the shopper’s utm_ tags."
+     },
+     "maxLines": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+     },
+     "maxQty": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991,
+      "description": "A larger quantity is lowered to this."
+     }
+    },
+    "required": [
+     "url",
+     "maxLines",
+     "maxQty"
+    ],
+    "additionalProperties": false
+   }
+  },
+  "required": [
+   "name",
+   "tagline",
+   "language",
+   "logo",
+   "status",
+   "pause",
+   "pricesIncludeGst",
+   "payOnDelivery",
+   "delivery",
+   "returns",
+   "legal",
+   "policies",
+   "social",
+   "seo",
+   "siteOrigin",
+   "checkoutOrigin"
+  ],
+  "additionalProperties": false
+ },
+ "Page": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+   "products": {
+    "maxItems": 48,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string",
+       "format": "uuid",
+       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      },
+      "handle": {
+       "type": "string",
+       "maxLength": 100,
+       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "description": "The product’s current address: /products/<handle>."
+      },
+      "title": {
+       "type": "string",
+       "maxLength": 200
+      },
+      "price": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "min": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 9007199254740991
+          },
+          "max": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 9007199254740991
+          },
+          "priorPrice": {
+           "anyOf": [
+            {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The lowest price in the 30 days before a recent cut. Show it struck through. Null when there was no cut."
+          }
+         },
+         "required": [
+          "min",
+          "max",
+          "priorPrice"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Null when no size has a price yet."
+      },
+      "availability": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "kind": {
+           "type": "string",
+           "enum": [
+            "in_stock",
+            "low_stock",
+            "sold_out",
+            "preorder",
+            "made_to_order"
+           ],
+           "description": "New values may appear. Show something sensible for one you don’t know."
+          },
+          "left": {
+           "anyOf": [
+            {
+             "type": "integer",
+             "exclusiveMinimum": 0,
+             "maximum": 3
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "How many are left, only when 3 or fewer."
+          },
+          "shipsBy": {
+           "anyOf": [
+            {
+             "type": "string",
+             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "For a pre-order, the day it ships by (India)."
+          },
+          "leadDays": {
+           "anyOf": [
+            {
+             "type": "array",
+             "prefixItems": [
+              {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991
+              },
+              {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991
+              }
+             ],
+             "items": false,
+             "minItems": 2,
+             "maxItems": 2
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "For made to order, days to ship, least and most."
+          }
+         },
+         "required": [
+          "kind",
+          "left",
+          "shipsBy",
+          "leadDays"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "colours": {
+       "maxItems": 40,
+       "type": "array",
+       "items": {
+        "type": "object",
+        "properties": {
+         "value": {
+          "type": "string",
+          "maxLength": 60
+         },
+         "family": {
+          "anyOf": [
+           {
+            "type": "string",
+            "maxLength": 40
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "hex": {
+          "anyOf": [
+           {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+           },
+           {
+            "type": "null"
+           }
+          ]
+         }
+        },
+        "required": [
+         "value",
+         "family",
+         "hex"
+        ],
+        "additionalProperties": false
+       }
+      },
+      "image": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "sizes": {
+           "minItems": 1,
+           "maxItems": 8,
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+             },
+             "url": {
+              "type": "string",
+              "maxLength": 500,
+              "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+             }
+            },
+            "required": [
+             "width",
+             "url"
+            ],
+            "additionalProperties": false
+           },
+           "description": "The same photo at each width, smallest first. Use them as srcset."
+          },
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991,
+           "description": "The original’s width in pixels (with height: the aspect ratio)."
+          },
+          "height": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          },
+          "alt": {
+           "type": "string",
+           "maxLength": 200
+          },
+          "colour": {
+           "anyOf": [
+            {
+             "type": "string",
+             "maxLength": 60
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The colour this photo shows (a value of the Colour option), or null."
+          }
+         },
+         "required": [
+          "sizes",
+          "width",
+          "height",
+          "alt",
+          "colour"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "badge": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 60
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "The one offer tag a card may carry, in the store’s words."
+      }
+     },
+     "required": [
+      "id",
+      "handle",
+      "title",
+      "price",
+      "availability",
+      "colours",
+      "image",
+      "badge"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "page": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "pages": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "total": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "truncated": {
+    "type": "boolean",
+    "description": "True when the catalogue has more than 600 listed products. Later ones are in no page yet."
+   }
+  },
+  "required": [
+   "products",
+   "page",
+   "pages",
+   "total",
+   "truncated"
+  ],
+  "additionalProperties": false
+ },
+ "Product": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+   "id": {
+    "type": "string",
+    "format": "uuid",
+    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+   },
+   "handle": {
+    "type": "string",
+    "maxLength": 100,
+    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+    "description": "The product’s current address: /products/<handle>."
+   },
+   "title": {
+    "type": "string",
+    "maxLength": 200
+   },
+   "price": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "min": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+       },
+       "max": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+       },
+       "priorPrice": {
+        "anyOf": [
+         {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "description": "The lowest price in the 30 days before a recent cut. Show it struck through. Null when there was no cut."
+       }
+      },
+      "required": [
+       "min",
+       "max",
+       "priorPrice"
+      ],
+      "additionalProperties": false
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "description": "Null when no size has a price yet."
+   },
+   "availability": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "kind": {
+        "type": "string",
+        "enum": [
+         "in_stock",
+         "low_stock",
+         "sold_out",
+         "preorder",
+         "made_to_order"
+        ],
+        "description": "New values may appear. Show something sensible for one you don’t know."
+       },
+       "left": {
+        "anyOf": [
+         {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 3
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "description": "How many are left, only when 3 or fewer."
+       },
+       "shipsBy": {
+        "anyOf": [
+         {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "description": "For a pre-order, the day it ships by (India)."
+       },
+       "leadDays": {
+        "anyOf": [
+         {
+          "type": "array",
+          "prefixItems": [
+           {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+           },
+           {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+           }
+          ],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "description": "For made to order, days to ship, least and most."
+       }
+      },
+      "required": [
+       "kind",
+       "left",
+       "shipsBy",
+       "leadDays"
+      ],
+      "additionalProperties": false
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "colours": {
+    "maxItems": 40,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "value": {
+       "type": "string",
+       "maxLength": 60
+      },
+      "family": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 40
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "hex": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^#[0-9A-Fa-f]{6}$"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      }
+     },
+     "required": [
+      "value",
+      "family",
+      "hex"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "image": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "sizes": {
+        "minItems": 1,
+        "maxItems": 8,
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          },
+          "url": {
+           "type": "string",
+           "maxLength": 500,
+           "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+          }
+         },
+         "required": [
+          "width",
+          "url"
+         ],
+         "additionalProperties": false
+        },
+        "description": "The same photo at each width, smallest first. Use them as srcset."
+       },
+       "width": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991,
+        "description": "The original’s width in pixels (with height: the aspect ratio)."
+       },
+       "height": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+       },
+       "alt": {
+        "type": "string",
+        "maxLength": 200
+       },
+       "colour": {
+        "anyOf": [
+         {
+          "type": "string",
+          "maxLength": 60
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "description": "The colour this photo shows (a value of the Colour option), or null."
+       }
+      },
+      "required": [
+       "sizes",
+       "width",
+       "height",
+       "alt",
+       "colour"
+      ],
+      "additionalProperties": false
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "badge": {
+    "anyOf": [
+     {
+      "type": "string",
+      "maxLength": 60
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "description": "The one offer tag a card may carry, in the store’s words."
+   },
+   "description": {
+    "type": "string",
+    "maxLength": 5000
+   },
+   "options": {
+    "maxItems": 3,
+    "type": "array",
+    "items": {
+     "type": "string",
+     "maxLength": 40
+    }
+   },
+   "variants": {
+    "maxItems": 300,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string",
+       "format": "uuid",
+       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+       "description": "Use it in the cart link."
+      },
+      "values": {
+       "maxItems": 3,
+       "type": "array",
+       "items": {
+        "type": "string",
+        "maxLength": 60
+       },
+       "description": "One value per option, in the options’ order."
+      },
+      "price": {
+       "type": "integer",
+       "exclusiveMinimum": 0,
+       "maximum": 9007199254740991
+      },
+      "priorPrice": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 9007199254740991
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "The lowest price in the 30 days before a recent cut. Show it struck through. Null when there was no cut."
+      },
+      "mrp": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 9007199254740991
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "The tag’s M.R.P., at or above the price. Never struck through."
+      },
+      "sku": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 64
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "gtin": {
+       "anyOf": [
+        {
+         "type": "string",
+         "pattern": "^\\d{8,14}$"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "availability": {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "enum": [
+          "in_stock",
+          "low_stock",
+          "sold_out",
+          "preorder",
+          "made_to_order"
+         ],
+         "description": "New values may appear. Show something sensible for one you don’t know."
+        },
+        "left": {
+         "anyOf": [
+          {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 3
+          },
+          {
+           "type": "null"
+          }
+         ],
+         "description": "How many are left, only when 3 or fewer."
+        },
+        "shipsBy": {
+         "anyOf": [
+          {
+           "type": "string",
+           "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          {
+           "type": "null"
+          }
+         ],
+         "description": "For a pre-order, the day it ships by (India)."
+        },
+        "leadDays": {
+         "anyOf": [
+          {
+           "type": "array",
+           "prefixItems": [
+            {
+             "type": "integer",
+             "exclusiveMinimum": 0,
+             "maximum": 9007199254740991
+            },
+            {
+             "type": "integer",
+             "exclusiveMinimum": 0,
+             "maximum": 9007199254740991
+            }
+           ],
+           "items": false,
+           "minItems": 2,
+           "maxItems": 2
+          },
+          {
+           "type": "null"
+          }
+         ],
+         "description": "For made to order, days to ship, least and most."
+        }
+       },
+       "required": [
+        "kind",
+        "left",
+        "shipsBy",
+        "leadDays"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "required": [
+      "id",
+      "values",
+      "price",
+      "priorPrice",
+      "mrp",
+      "sku",
+      "gtin",
+      "availability"
+     ],
+     "additionalProperties": false
+    },
+    "description": "Sizes and colours with a price."
+   },
+   "images": {
+    "maxItems": 20,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "sizes": {
+       "minItems": 1,
+       "maxItems": 8,
+       "type": "array",
+       "items": {
+        "type": "object",
+        "properties": {
+         "width": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+         },
+         "url": {
+          "type": "string",
+          "maxLength": 500,
+          "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+         }
+        },
+        "required": [
+         "width",
+         "url"
+        ],
+        "additionalProperties": false
+       },
+       "description": "The same photo at each width, smallest first. Use them as srcset."
+      },
+      "width": {
+       "type": "integer",
+       "exclusiveMinimum": 0,
+       "maximum": 9007199254740991,
+       "description": "The original’s width in pixels (with height: the aspect ratio)."
+      },
+      "height": {
+       "type": "integer",
+       "exclusiveMinimum": 0,
+       "maximum": 9007199254740991
+      },
+      "alt": {
+       "type": "string",
+       "maxLength": 200
+      },
+      "colour": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 60
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "The colour this photo shows (a value of the Colour option), or null."
+      }
+     },
+     "required": [
+      "sizes",
+      "width",
+      "height",
+      "alt",
+      "colour"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "details": {
+    "maxItems": 40,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "name": {
+       "type": "string",
+       "maxLength": 80
+      },
+      "value": {
+       "type": "string",
+       "maxLength": 400
+      }
+     },
+     "required": [
+      "name",
+      "value"
+     ],
+     "additionalProperties": false
+    },
+    "description": "The product page’s rows, like fabric and care. The pack’s legal declarations too. Show every row."
+   },
+   "model": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "height": {
+        "type": "string",
+        "maxLength": 40
+       },
+       "size": {
+        "type": "string",
+        "maxLength": 20
+       }
+      },
+      "required": [
+       "height",
+       "size"
+      ],
+      "additionalProperties": false
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "description": "The model in the photos."
+   },
+   "stories": {
+    "maxItems": 8,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "title": {
+       "type": "string",
+       "maxLength": 120
+      },
+      "text": {
+       "type": "string",
+       "maxLength": 1200
+      },
+      "notes": {
+       "maxItems": 10,
+       "type": "array",
+       "items": {
+        "type": "string",
+        "maxLength": 200
+       }
+      },
+      "image": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "sizes": {
+           "minItems": 1,
+           "maxItems": 8,
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+             },
+             "url": {
+              "type": "string",
+              "maxLength": 500,
+              "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+             }
+            },
+            "required": [
+             "width",
+             "url"
+            ],
+            "additionalProperties": false
+           },
+           "description": "The same photo at each width, smallest first. Use them as srcset."
+          },
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991,
+           "description": "The original’s width in pixels (with height: the aspect ratio)."
+          },
+          "height": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          },
+          "alt": {
+           "type": "string",
+           "maxLength": 200
+          },
+          "colour": {
+           "anyOf": [
+            {
+             "type": "string",
+             "maxLength": 60
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The colour this photo shows (a value of the Colour option), or null."
+          }
+         },
+         "required": [
+          "sizes",
+          "width",
+          "height",
+          "alt",
+          "colour"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ]
+      }
+     },
+     "required": [
+      "title",
+      "text",
+      "notes",
+      "image"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "pairs": {
+    "maxItems": 2,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string",
+       "format": "uuid",
+       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      },
+      "handle": {
+       "type": "string",
+       "maxLength": 100,
+       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "description": "The product’s current address: /products/<handle>."
+      },
+      "title": {
+       "type": "string",
+       "maxLength": 200
+      },
+      "price": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "min": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 9007199254740991
+          },
+          "max": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 9007199254740991
+          },
+          "priorPrice": {
+           "anyOf": [
+            {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The lowest price in the 30 days before a recent cut. Show it struck through. Null when there was no cut."
+          }
+         },
+         "required": [
+          "min",
+          "max",
+          "priorPrice"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Null when no size has a price yet."
+      },
+      "availability": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "kind": {
+           "type": "string",
+           "enum": [
+            "in_stock",
+            "low_stock",
+            "sold_out",
+            "preorder",
+            "made_to_order"
+           ],
+           "description": "New values may appear. Show something sensible for one you don’t know."
+          },
+          "left": {
+           "anyOf": [
+            {
+             "type": "integer",
+             "exclusiveMinimum": 0,
+             "maximum": 3
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "How many are left, only when 3 or fewer."
+          },
+          "shipsBy": {
+           "anyOf": [
+            {
+             "type": "string",
+             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "For a pre-order, the day it ships by (India)."
+          },
+          "leadDays": {
+           "anyOf": [
+            {
+             "type": "array",
+             "prefixItems": [
+              {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991
+              },
+              {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991
+              }
+             ],
+             "items": false,
+             "minItems": 2,
+             "maxItems": 2
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "For made to order, days to ship, least and most."
+          }
+         },
+         "required": [
+          "kind",
+          "left",
+          "shipsBy",
+          "leadDays"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "colours": {
+       "maxItems": 40,
+       "type": "array",
+       "items": {
+        "type": "object",
+        "properties": {
+         "value": {
+          "type": "string",
+          "maxLength": 60
+         },
+         "family": {
+          "anyOf": [
+           {
+            "type": "string",
+            "maxLength": 40
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "hex": {
+          "anyOf": [
+           {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+           },
+           {
+            "type": "null"
+           }
+          ]
+         }
+        },
+        "required": [
+         "value",
+         "family",
+         "hex"
+        ],
+        "additionalProperties": false
+       }
+      },
+      "image": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "sizes": {
+           "minItems": 1,
+           "maxItems": 8,
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+             },
+             "url": {
+              "type": "string",
+              "maxLength": 500,
+              "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+             }
+            },
+            "required": [
+             "width",
+             "url"
+            ],
+            "additionalProperties": false
+           },
+           "description": "The same photo at each width, smallest first. Use them as srcset."
+          },
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991,
+           "description": "The original’s width in pixels (with height: the aspect ratio)."
+          },
+          "height": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          },
+          "alt": {
+           "type": "string",
+           "maxLength": 200
+          },
+          "colour": {
+           "anyOf": [
+            {
+             "type": "string",
+             "maxLength": 60
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The colour this photo shows (a value of the Colour option), or null."
+          }
+         },
+         "required": [
+          "sizes",
+          "width",
+          "height",
+          "alt",
+          "colour"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "badge": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 60
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "The one offer tag a card may carry, in the store’s words."
+      }
+     },
+     "required": [
+      "id",
+      "handle",
+      "title",
+      "price",
+      "availability",
+      "colours",
+      "image",
+      "badge"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "sizeChart": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "columns": {
+        "maxItems": 12,
+        "type": "array",
+        "items": {
+         "type": "string",
+         "maxLength": 40
+        }
+       },
+       "rows": {
+        "maxItems": 40,
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "size": {
+           "type": "string",
+           "maxLength": 20
+          },
+          "values": {
+           "maxItems": 12,
+           "type": "array",
+           "items": {
+            "type": [
+             "number",
+             "null"
+            ]
+           }
+          }
+         },
+         "required": [
+          "size",
+          "values"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "howToMeasure": {
+        "type": "string",
+        "maxLength": 2000
+       }
+      },
+      "required": [
+       "columns",
+       "rows",
+       "howToMeasure"
+      ],
+      "additionalProperties": false,
+      "description": "Measurements in centimetres."
+     },
+     {
+      "type": "null"
+     }
+    ]
+   },
+   "offers": {
+    "maxItems": 4,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "label": {
+       "type": "string",
+       "maxLength": 200
+      },
+      "endsAt": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time",
+         "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "When the offer ends. Null when it has no end."
+      }
+     },
+     "required": [
+      "label",
+      "endsAt"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "seo": {
+    "type": "object",
+    "properties": {
+     "title": {
+      "type": "string",
+      "maxLength": 200
+     },
+     "description": {
+      "type": "string",
+      "maxLength": 400
+     }
+    },
+    "required": [
+     "title",
+     "description"
+    ],
+    "additionalProperties": false
+   }
+  },
+  "required": [
+   "id",
+   "handle",
+   "title",
+   "price",
+   "availability",
+   "colours",
+   "image",
+   "badge",
+   "description",
+   "options",
+   "variants",
+   "images",
+   "details",
+   "model",
+   "stories",
+   "pairs",
+   "sizeChart",
+   "offers",
+   "seo"
+  ],
+  "additionalProperties": false
+ },
+ "Collections": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+   "collections": {
+    "maxItems": 500,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "handle": {
+       "type": "string",
+       "maxLength": 100,
+       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "description": "/collections/<handle>."
+      },
+      "title": {
+       "type": "string",
+       "maxLength": 200
+      },
+      "description": {
+       "type": "string",
+       "maxLength": 2000
+      },
+      "seo": {
+       "type": "object",
+       "properties": {
+        "title": {
+         "type": "string",
+         "maxLength": 200
+        },
+        "description": {
+         "type": "string",
+         "maxLength": 400
+        }
+       },
+       "required": [
+        "title",
+        "description"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "required": [
+      "handle",
+      "title",
+      "description",
+      "seo"
+     ],
+     "additionalProperties": false
+    }
+   }
+  },
+  "required": [
+   "collections"
+  ],
+  "additionalProperties": false
+ },
+ "CollectionPage": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+   "collection": {
+    "type": "object",
+    "properties": {
+     "handle": {
+      "type": "string",
+      "maxLength": 100,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "/collections/<handle>."
+     },
+     "title": {
+      "type": "string",
+      "maxLength": 200
+     },
+     "description": {
+      "type": "string",
+      "maxLength": 2000
+     },
+     "seo": {
+      "type": "object",
+      "properties": {
+       "title": {
+        "type": "string",
+        "maxLength": 200
+       },
+       "description": {
+        "type": "string",
+        "maxLength": 400
+       }
+      },
+      "required": [
+       "title",
+       "description"
+      ],
+      "additionalProperties": false
+     }
+    },
+    "required": [
+     "handle",
+     "title",
+     "description",
+     "seo"
+    ],
+    "additionalProperties": false
+   },
+   "products": {
+    "maxItems": 48,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string",
+       "format": "uuid",
+       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      },
+      "handle": {
+       "type": "string",
+       "maxLength": 100,
+       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "description": "The product’s current address: /products/<handle>."
+      },
+      "title": {
+       "type": "string",
+       "maxLength": 200
+      },
+      "price": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "min": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 9007199254740991
+          },
+          "max": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 9007199254740991
+          },
+          "priorPrice": {
+           "anyOf": [
+            {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The lowest price in the 30 days before a recent cut. Show it struck through. Null when there was no cut."
+          }
+         },
+         "required": [
+          "min",
+          "max",
+          "priorPrice"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Null when no size has a price yet."
+      },
+      "availability": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "kind": {
+           "type": "string",
+           "enum": [
+            "in_stock",
+            "low_stock",
+            "sold_out",
+            "preorder",
+            "made_to_order"
+           ],
+           "description": "New values may appear. Show something sensible for one you don’t know."
+          },
+          "left": {
+           "anyOf": [
+            {
+             "type": "integer",
+             "exclusiveMinimum": 0,
+             "maximum": 3
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "How many are left, only when 3 or fewer."
+          },
+          "shipsBy": {
+           "anyOf": [
+            {
+             "type": "string",
+             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "For a pre-order, the day it ships by (India)."
+          },
+          "leadDays": {
+           "anyOf": [
+            {
+             "type": "array",
+             "prefixItems": [
+              {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991
+              },
+              {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991
+              }
+             ],
+             "items": false,
+             "minItems": 2,
+             "maxItems": 2
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "For made to order, days to ship, least and most."
+          }
+         },
+         "required": [
+          "kind",
+          "left",
+          "shipsBy",
+          "leadDays"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "colours": {
+       "maxItems": 40,
+       "type": "array",
+       "items": {
+        "type": "object",
+        "properties": {
+         "value": {
+          "type": "string",
+          "maxLength": 60
+         },
+         "family": {
+          "anyOf": [
+           {
+            "type": "string",
+            "maxLength": 40
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "hex": {
+          "anyOf": [
+           {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+           },
+           {
+            "type": "null"
+           }
+          ]
+         }
+        },
+        "required": [
+         "value",
+         "family",
+         "hex"
+        ],
+        "additionalProperties": false
+       }
+      },
+      "image": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "sizes": {
+           "minItems": 1,
+           "maxItems": 8,
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+             },
+             "url": {
+              "type": "string",
+              "maxLength": 500,
+              "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+             }
+            },
+            "required": [
+             "width",
+             "url"
+            ],
+            "additionalProperties": false
+           },
+           "description": "The same photo at each width, smallest first. Use them as srcset."
+          },
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991,
+           "description": "The original’s width in pixels (with height: the aspect ratio)."
+          },
+          "height": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          },
+          "alt": {
+           "type": "string",
+           "maxLength": 200
+          },
+          "colour": {
+           "anyOf": [
+            {
+             "type": "string",
+             "maxLength": 60
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The colour this photo shows (a value of the Colour option), or null."
+          }
+         },
+         "required": [
+          "sizes",
+          "width",
+          "height",
+          "alt",
+          "colour"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "badge": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 60
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "The one offer tag a card may carry, in the store’s words."
+      }
+     },
+     "required": [
+      "id",
+      "handle",
+      "title",
+      "price",
+      "availability",
+      "colours",
+      "image",
+      "badge"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "page": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "pages": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "total": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991
+   },
+   "truncated": {
+    "type": "boolean",
+    "description": "True when the catalogue has more than 600 listed products. Later ones are in no page yet."
+   }
+  },
+  "required": [
+   "collection",
+   "products",
+   "page",
+   "pages",
+   "total",
+   "truncated"
+  ],
+  "additionalProperties": false
+ },
+ "Offers": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+   "bar": {
+    "anyOf": [
+     {
+      "type": "object",
+      "properties": {
+       "text": {
+        "type": "string",
+        "maxLength": 300
+       },
+       "endsAt": {
+        "anyOf": [
+         {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       }
+      },
+      "required": [
+       "text",
+       "endsAt"
+      ],
+      "additionalProperties": false
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "description": "The offer in the store’s bar, while it runs."
+   }
+  },
+  "required": [
+   "bar"
+  ],
+  "additionalProperties": false
+ },
+ "Search": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+   "q": {
+    "type": "string",
+    "maxLength": 60
+   },
+   "products": {
+    "maxItems": 48,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string",
+       "format": "uuid",
+       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      },
+      "handle": {
+       "type": "string",
+       "maxLength": 100,
+       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "description": "The product’s current address: /products/<handle>."
+      },
+      "title": {
+       "type": "string",
+       "maxLength": 200
+      },
+      "price": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "min": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 9007199254740991
+          },
+          "max": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 9007199254740991
+          },
+          "priorPrice": {
+           "anyOf": [
+            {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The lowest price in the 30 days before a recent cut. Show it struck through. Null when there was no cut."
+          }
+         },
+         "required": [
+          "min",
+          "max",
+          "priorPrice"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Null when no size has a price yet."
+      },
+      "availability": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "kind": {
+           "type": "string",
+           "enum": [
+            "in_stock",
+            "low_stock",
+            "sold_out",
+            "preorder",
+            "made_to_order"
+           ],
+           "description": "New values may appear. Show something sensible for one you don’t know."
+          },
+          "left": {
+           "anyOf": [
+            {
+             "type": "integer",
+             "exclusiveMinimum": 0,
+             "maximum": 3
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "How many are left, only when 3 or fewer."
+          },
+          "shipsBy": {
+           "anyOf": [
+            {
+             "type": "string",
+             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "For a pre-order, the day it ships by (India)."
+          },
+          "leadDays": {
+           "anyOf": [
+            {
+             "type": "array",
+             "prefixItems": [
+              {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991
+              },
+              {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991
+              }
+             ],
+             "items": false,
+             "minItems": 2,
+             "maxItems": 2
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "For made to order, days to ship, least and most."
+          }
+         },
+         "required": [
+          "kind",
+          "left",
+          "shipsBy",
+          "leadDays"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "colours": {
+       "maxItems": 40,
+       "type": "array",
+       "items": {
+        "type": "object",
+        "properties": {
+         "value": {
+          "type": "string",
+          "maxLength": 60
+         },
+         "family": {
+          "anyOf": [
+           {
+            "type": "string",
+            "maxLength": 40
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "hex": {
+          "anyOf": [
+           {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+           },
+           {
+            "type": "null"
+           }
+          ]
+         }
+        },
+        "required": [
+         "value",
+         "family",
+         "hex"
+        ],
+        "additionalProperties": false
+       }
+      },
+      "image": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "sizes": {
+           "minItems": 1,
+           "maxItems": 8,
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+             },
+             "url": {
+              "type": "string",
+              "maxLength": 500,
+              "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+             }
+            },
+            "required": [
+             "width",
+             "url"
+            ],
+            "additionalProperties": false
+           },
+           "description": "The same photo at each width, smallest first. Use them as srcset."
+          },
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991,
+           "description": "The original’s width in pixels (with height: the aspect ratio)."
+          },
+          "height": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          },
+          "alt": {
+           "type": "string",
+           "maxLength": 200
+          },
+          "colour": {
+           "anyOf": [
+            {
+             "type": "string",
+             "maxLength": 60
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The colour this photo shows (a value of the Colour option), or null."
+          }
+         },
+         "required": [
+          "sizes",
+          "width",
+          "height",
+          "alt",
+          "colour"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "badge": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 60
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "The one offer tag a card may carry, in the store’s words."
+      }
+     },
+     "required": [
+      "id",
+      "handle",
+      "title",
+      "price",
+      "availability",
+      "colours",
+      "image",
+      "badge"
+     ],
+     "additionalProperties": false
+    }
+   }
+  },
+  "required": [
+   "q",
+   "products"
+  ],
+  "additionalProperties": false
+ },
+ "Content": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+   "announcements": {
+    "maxItems": 3,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "text": {
+       "type": "string",
+       "maxLength": 120
+      },
+      "link": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 200,
+         "pattern": "^\\/[a-z0-9/-]*$",
+         "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "scheme": {
+       "type": "string",
+       "enum": [
+        "paper",
+        "tint",
+        "ink"
+       ],
+       "description": "Light, tinted or dark. New values may appear. Show something sensible for one you don’t know."
+      },
+      "endsAt": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time",
+         "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Hide it once the clock passes this. Null when it has no end."
+      }
+     },
+     "required": [
+      "text",
+      "link",
+      "scheme",
+      "endsAt"
+     ],
+     "additionalProperties": false
+    },
+    "description": "Bars running now, in the order to show them. A live offer (offers.bar) shows before any of them. A bar that starts later is not here yet."
+   },
+   "menus": {
+    "type": "object",
+    "properties": {
+     "main": {
+      "anyOf": [
+       {
+        "maxItems": 12,
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "label": {
+           "type": "string",
+           "maxLength": 40
+          },
+          "link": {
+           "type": "string",
+           "maxLength": 200,
+           "pattern": "^\\/[a-z0-9/-]*$",
+           "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+          },
+          "icon": {
+           "anyOf": [
+            {
+             "type": "string",
+             "enum": [
+              "bag",
+              "cart",
+              "search",
+              "user",
+              "heart",
+              "menu",
+              "close",
+              "home",
+              "grid",
+              "truck",
+              "return",
+              "cash",
+              "card",
+              "lock",
+              "shield",
+              "chat",
+              "phone",
+              "mail",
+              "pin",
+              "clock",
+              "tag",
+              "percent",
+              "sparkle",
+              "gift",
+              "star",
+              "flame",
+              "leaf",
+              "ruler",
+              "shirt",
+              "dress",
+              "package",
+              "store",
+              "check",
+              "arrow",
+              "chevron",
+              "camera",
+              "whatsapp",
+              "globe",
+              "sun",
+              "moon",
+              "crown"
+             ]
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+          },
+          "children": {
+           "maxItems": 12,
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "label": {
+              "type": "string",
+              "maxLength": 40
+             },
+             "link": {
+              "type": "string",
+              "maxLength": 200,
+              "pattern": "^\\/[a-z0-9/-]*$",
+              "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+             },
+             "icon": {
+              "anyOf": [
+               {
+                "type": "string",
+                "enum": [
+                 "bag",
+                 "cart",
+                 "search",
+                 "user",
+                 "heart",
+                 "menu",
+                 "close",
+                 "home",
+                 "grid",
+                 "truck",
+                 "return",
+                 "cash",
+                 "card",
+                 "lock",
+                 "shield",
+                 "chat",
+                 "phone",
+                 "mail",
+                 "pin",
+                 "clock",
+                 "tag",
+                 "percent",
+                 "sparkle",
+                 "gift",
+                 "star",
+                 "flame",
+                 "leaf",
+                 "ruler",
+                 "shirt",
+                 "dress",
+                 "package",
+                 "store",
+                 "check",
+                 "arrow",
+                 "chevron",
+                 "camera",
+                 "whatsapp",
+                 "globe",
+                 "sun",
+                 "moon",
+                 "crown"
+                ]
+               },
+               {
+                "type": "null"
+               }
+              ],
+              "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+             },
+             "children": {
+              "maxItems": 12,
+              "type": "array",
+              "items": {
+               "type": "object",
+               "properties": {
+                "label": {
+                 "type": "string",
+                 "maxLength": 40
+                },
+                "link": {
+                 "type": "string",
+                 "maxLength": 200,
+                 "pattern": "^\\/[a-z0-9/-]*$",
+                 "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+                },
+                "icon": {
+                 "anyOf": [
+                  {
+                   "type": "string",
+                   "enum": [
+                    "bag",
+                    "cart",
+                    "search",
+                    "user",
+                    "heart",
+                    "menu",
+                    "close",
+                    "home",
+                    "grid",
+                    "truck",
+                    "return",
+                    "cash",
+                    "card",
+                    "lock",
+                    "shield",
+                    "chat",
+                    "phone",
+                    "mail",
+                    "pin",
+                    "clock",
+                    "tag",
+                    "percent",
+                    "sparkle",
+                    "gift",
+                    "star",
+                    "flame",
+                    "leaf",
+                    "ruler",
+                    "shirt",
+                    "dress",
+                    "package",
+                    "store",
+                    "check",
+                    "arrow",
+                    "chevron",
+                    "camera",
+                    "whatsapp",
+                    "globe",
+                    "sun",
+                    "moon",
+                    "crown"
+                   ]
+                  },
+                  {
+                   "type": "null"
+                  }
+                 ],
+                 "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+                }
+               },
+               "required": [
+                "label",
+                "link",
+                "icon"
+               ],
+               "additionalProperties": false
+              }
+             }
+            },
+            "required": [
+             "label",
+             "link",
+             "icon",
+             "children"
+            ],
+            "additionalProperties": false
+           }
+          }
+         },
+         "required": [
+          "label",
+          "link",
+          "icon",
+          "children"
+         ],
+         "additionalProperties": false
+        }
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Null when the store has not set this menu. Build your own then."
+     },
+     "footer": {
+      "anyOf": [
+       {
+        "maxItems": 12,
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "label": {
+           "type": "string",
+           "maxLength": 40
+          },
+          "link": {
+           "type": "string",
+           "maxLength": 200,
+           "pattern": "^\\/[a-z0-9/-]*$",
+           "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+          },
+          "icon": {
+           "anyOf": [
+            {
+             "type": "string",
+             "enum": [
+              "bag",
+              "cart",
+              "search",
+              "user",
+              "heart",
+              "menu",
+              "close",
+              "home",
+              "grid",
+              "truck",
+              "return",
+              "cash",
+              "card",
+              "lock",
+              "shield",
+              "chat",
+              "phone",
+              "mail",
+              "pin",
+              "clock",
+              "tag",
+              "percent",
+              "sparkle",
+              "gift",
+              "star",
+              "flame",
+              "leaf",
+              "ruler",
+              "shirt",
+              "dress",
+              "package",
+              "store",
+              "check",
+              "arrow",
+              "chevron",
+              "camera",
+              "whatsapp",
+              "globe",
+              "sun",
+              "moon",
+              "crown"
+             ]
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+          },
+          "children": {
+           "maxItems": 12,
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "label": {
+              "type": "string",
+              "maxLength": 40
+             },
+             "link": {
+              "type": "string",
+              "maxLength": 200,
+              "pattern": "^\\/[a-z0-9/-]*$",
+              "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+             },
+             "icon": {
+              "anyOf": [
+               {
+                "type": "string",
+                "enum": [
+                 "bag",
+                 "cart",
+                 "search",
+                 "user",
+                 "heart",
+                 "menu",
+                 "close",
+                 "home",
+                 "grid",
+                 "truck",
+                 "return",
+                 "cash",
+                 "card",
+                 "lock",
+                 "shield",
+                 "chat",
+                 "phone",
+                 "mail",
+                 "pin",
+                 "clock",
+                 "tag",
+                 "percent",
+                 "sparkle",
+                 "gift",
+                 "star",
+                 "flame",
+                 "leaf",
+                 "ruler",
+                 "shirt",
+                 "dress",
+                 "package",
+                 "store",
+                 "check",
+                 "arrow",
+                 "chevron",
+                 "camera",
+                 "whatsapp",
+                 "globe",
+                 "sun",
+                 "moon",
+                 "crown"
+                ]
+               },
+               {
+                "type": "null"
+               }
+              ],
+              "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+             },
+             "children": {
+              "maxItems": 12,
+              "type": "array",
+              "items": {
+               "type": "object",
+               "properties": {
+                "label": {
+                 "type": "string",
+                 "maxLength": 40
+                },
+                "link": {
+                 "type": "string",
+                 "maxLength": 200,
+                 "pattern": "^\\/[a-z0-9/-]*$",
+                 "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+                },
+                "icon": {
+                 "anyOf": [
+                  {
+                   "type": "string",
+                   "enum": [
+                    "bag",
+                    "cart",
+                    "search",
+                    "user",
+                    "heart",
+                    "menu",
+                    "close",
+                    "home",
+                    "grid",
+                    "truck",
+                    "return",
+                    "cash",
+                    "card",
+                    "lock",
+                    "shield",
+                    "chat",
+                    "phone",
+                    "mail",
+                    "pin",
+                    "clock",
+                    "tag",
+                    "percent",
+                    "sparkle",
+                    "gift",
+                    "star",
+                    "flame",
+                    "leaf",
+                    "ruler",
+                    "shirt",
+                    "dress",
+                    "package",
+                    "store",
+                    "check",
+                    "arrow",
+                    "chevron",
+                    "camera",
+                    "whatsapp",
+                    "globe",
+                    "sun",
+                    "moon",
+                    "crown"
+                   ]
+                  },
+                  {
+                   "type": "null"
+                  }
+                 ],
+                 "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+                }
+               },
+               "required": [
+                "label",
+                "link",
+                "icon"
+               ],
+               "additionalProperties": false
+              }
+             }
+            },
+            "required": [
+             "label",
+             "link",
+             "icon",
+             "children"
+            ],
+            "additionalProperties": false
+           }
+          }
+         },
+         "required": [
+          "label",
+          "link",
+          "icon",
+          "children"
+         ],
+         "additionalProperties": false
+        }
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Null when the store has not set this menu. Build your own then."
+     },
+     "tabs": {
+      "anyOf": [
+       {
+        "maxItems": 12,
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "label": {
+           "type": "string",
+           "maxLength": 40
+          },
+          "link": {
+           "type": "string",
+           "maxLength": 200,
+           "pattern": "^\\/[a-z0-9/-]*$",
+           "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+          },
+          "icon": {
+           "anyOf": [
+            {
+             "type": "string",
+             "enum": [
+              "bag",
+              "cart",
+              "search",
+              "user",
+              "heart",
+              "menu",
+              "close",
+              "home",
+              "grid",
+              "truck",
+              "return",
+              "cash",
+              "card",
+              "lock",
+              "shield",
+              "chat",
+              "phone",
+              "mail",
+              "pin",
+              "clock",
+              "tag",
+              "percent",
+              "sparkle",
+              "gift",
+              "star",
+              "flame",
+              "leaf",
+              "ruler",
+              "shirt",
+              "dress",
+              "package",
+              "store",
+              "check",
+              "arrow",
+              "chevron",
+              "camera",
+              "whatsapp",
+              "globe",
+              "sun",
+              "moon",
+              "crown"
+             ]
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+          },
+          "children": {
+           "maxItems": 12,
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "label": {
+              "type": "string",
+              "maxLength": 40
+             },
+             "link": {
+              "type": "string",
+              "maxLength": 200,
+              "pattern": "^\\/[a-z0-9/-]*$",
+              "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+             },
+             "icon": {
+              "anyOf": [
+               {
+                "type": "string",
+                "enum": [
+                 "bag",
+                 "cart",
+                 "search",
+                 "user",
+                 "heart",
+                 "menu",
+                 "close",
+                 "home",
+                 "grid",
+                 "truck",
+                 "return",
+                 "cash",
+                 "card",
+                 "lock",
+                 "shield",
+                 "chat",
+                 "phone",
+                 "mail",
+                 "pin",
+                 "clock",
+                 "tag",
+                 "percent",
+                 "sparkle",
+                 "gift",
+                 "star",
+                 "flame",
+                 "leaf",
+                 "ruler",
+                 "shirt",
+                 "dress",
+                 "package",
+                 "store",
+                 "check",
+                 "arrow",
+                 "chevron",
+                 "camera",
+                 "whatsapp",
+                 "globe",
+                 "sun",
+                 "moon",
+                 "crown"
+                ]
+               },
+               {
+                "type": "null"
+               }
+              ],
+              "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+             },
+             "children": {
+              "maxItems": 12,
+              "type": "array",
+              "items": {
+               "type": "object",
+               "properties": {
+                "label": {
+                 "type": "string",
+                 "maxLength": 40
+                },
+                "link": {
+                 "type": "string",
+                 "maxLength": 200,
+                 "pattern": "^\\/[a-z0-9/-]*$",
+                 "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+                },
+                "icon": {
+                 "anyOf": [
+                  {
+                   "type": "string",
+                   "enum": [
+                    "bag",
+                    "cart",
+                    "search",
+                    "user",
+                    "heart",
+                    "menu",
+                    "close",
+                    "home",
+                    "grid",
+                    "truck",
+                    "return",
+                    "cash",
+                    "card",
+                    "lock",
+                    "shield",
+                    "chat",
+                    "phone",
+                    "mail",
+                    "pin",
+                    "clock",
+                    "tag",
+                    "percent",
+                    "sparkle",
+                    "gift",
+                    "star",
+                    "flame",
+                    "leaf",
+                    "ruler",
+                    "shirt",
+                    "dress",
+                    "package",
+                    "store",
+                    "check",
+                    "arrow",
+                    "chevron",
+                    "camera",
+                    "whatsapp",
+                    "globe",
+                    "sun",
+                    "moon",
+                    "crown"
+                   ]
+                  },
+                  {
+                   "type": "null"
+                  }
+                 ],
+                 "description": "An icon Frrata’s own store draws, or null. New values may appear. Show something sensible for one you don’t know."
+                }
+               },
+               "required": [
+                "label",
+                "link",
+                "icon"
+               ],
+               "additionalProperties": false
+              }
+             }
+            },
+            "required": [
+             "label",
+             "link",
+             "icon",
+             "children"
+            ],
+            "additionalProperties": false
+           }
+          }
+         },
+         "required": [
+          "label",
+          "link",
+          "icon",
+          "children"
+         ],
+         "additionalProperties": false
+        }
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "The phone’s bottom tabs, each with an icon."
+     }
+    },
+    "required": [
+     "main",
+     "footer",
+     "tabs"
+    ],
+    "additionalProperties": false
+   },
+   "contact": {
+    "anyOf": [
+     {
+      "type": "string",
+      "maxLength": 160
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "description": "The store’s Contact line, or null."
+   },
+   "pages": {
+    "maxItems": 20,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "handle": {
+       "type": "string",
+       "pattern": "^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$",
+       "description": "/pages/<handle>."
+      },
+      "title": {
+       "type": "string",
+       "maxLength": 120
+      },
+      "kind": {
+       "type": "string",
+       "enum": [
+        "about",
+        "faq"
+       ],
+       "description": "New values may appear. Show something sensible for one you don’t know."
+      }
+     },
+     "required": [
+      "handle",
+      "title",
+      "kind"
+     ],
+     "additionalProperties": false
+    }
+   }
+  },
+  "required": [
+   "announcements",
+   "menus",
+   "contact",
+   "pages"
+  ],
+  "additionalProperties": false
+ },
+ "StorePage": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+   "handle": {
+    "type": "string",
+    "pattern": "^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$",
+    "description": "/pages/<handle>."
+   },
+   "title": {
+    "type": "string",
+    "maxLength": 120
+   },
+   "kind": {
+    "type": "string",
+    "enum": [
+     "about",
+     "faq"
+    ],
+    "description": "New values may appear. Show something sensible for one you don’t know."
+   },
+   "blocks": {
+    "maxItems": 100,
+    "type": "array",
+    "items": {
+     "oneOf": [
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "heading"
+        },
+        "level": {
+         "type": "integer",
+         "minimum": 2,
+         "maximum": 6,
+         "description": "2 for the page’s first heading, 3 after. New values may appear. Show something sensible for one you don’t know."
+        },
+        "text": {
+         "type": "string",
+         "maxLength": 60
+        }
+       },
+       "required": [
+        "kind",
+        "level",
+        "text"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "text"
+        },
+        "paragraphs": {
+         "maxItems": 12,
+         "type": "array",
+         "items": {
+          "maxItems": 40,
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "text": {
+             "type": "string",
+             "maxLength": 600
+            },
+            "bold": {
+             "type": "boolean"
+            },
+            "italic": {
+             "type": "boolean"
+            },
+            "link": {
+             "anyOf": [
+              {
+               "type": "string",
+               "maxLength": 200,
+               "pattern": "^\\/[a-z0-9/-]*$",
+               "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+              },
+              {
+               "type": "null"
+              }
+             ]
+            }
+           },
+           "required": [
+            "text",
+            "bold",
+            "italic",
+            "link"
+           ],
+           "additionalProperties": false
+          }
+         }
+        }
+       },
+       "required": [
+        "kind",
+        "paragraphs"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "image"
+        },
+        "ratio": {
+         "type": "string",
+         "enum": [
+          "4:5",
+          "3:4",
+          "1:1",
+          "16:9"
+         ],
+         "description": "New values may appear. Show something sensible for one you don’t know."
+        },
+        "image": {
+         "type": "object",
+         "properties": {
+          "sizes": {
+           "minItems": 1,
+           "maxItems": 8,
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+             },
+             "url": {
+              "type": "string",
+              "maxLength": 500,
+              "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+             }
+            },
+            "required": [
+             "width",
+             "url"
+            ],
+            "additionalProperties": false
+           },
+           "description": "The same photo at each width, smallest first. Use them as srcset."
+          },
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991,
+           "description": "The original’s width in pixels (with height: the aspect ratio)."
+          },
+          "height": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          },
+          "alt": {
+           "type": "string",
+           "maxLength": 200
+          },
+          "colour": {
+           "anyOf": [
+            {
+             "type": "string",
+             "maxLength": 60
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The colour this photo shows (a value of the Colour option), or null."
+          }
+         },
+         "required": [
+          "sizes",
+          "width",
+          "height",
+          "alt",
+          "colour"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "required": [
+        "kind",
+        "ratio",
+        "image"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "button"
+        },
+        "label": {
+         "type": "string",
+         "maxLength": 24
+        },
+        "link": {
+         "type": "string",
+         "maxLength": 200,
+         "pattern": "^\\/[a-z0-9/-]*$",
+         "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+        }
+       },
+       "required": [
+        "kind",
+        "label",
+        "link"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "questions"
+        },
+        "items": {
+         "maxItems": 12,
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "question": {
+            "type": "string",
+            "maxLength": 80
+           },
+           "answer": {
+            "anyOf": [
+             {
+              "type": "string",
+              "maxLength": 1200
+             },
+             {
+              "type": "null"
+             }
+            ]
+           },
+           "policy": {
+            "anyOf": [
+             {
+              "type": "string",
+              "enum": [
+               "returns",
+               "shipping",
+               "privacy",
+               "terms",
+               "contact"
+              ]
+             },
+             {
+              "type": "null"
+             }
+            ],
+            "description": "Set when the answer is the store’s own policy page. Link to that page instead of showing an answer. New values may appear. Show something sensible for one you don’t know."
+           }
+          },
+          "required": [
+           "question",
+           "answer",
+           "policy"
+          ],
+          "additionalProperties": false
+         }
+        }
+       },
+       "required": [
+        "kind",
+        "items"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "group"
+        },
+        "blocks": {
+         "maxItems": 40,
+         "type": "array",
+         "items": {
+          "oneOf": [
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "heading"
+             },
+             "level": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 6,
+              "description": "2 for the page’s first heading, 3 after. New values may appear. Show something sensible for one you don’t know."
+             },
+             "text": {
+              "type": "string",
+              "maxLength": 60
+             }
+            },
+            "required": [
+             "kind",
+             "level",
+             "text"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "text"
+             },
+             "paragraphs": {
+              "maxItems": 12,
+              "type": "array",
+              "items": {
+               "maxItems": 40,
+               "type": "array",
+               "items": {
+                "type": "object",
+                "properties": {
+                 "text": {
+                  "type": "string",
+                  "maxLength": 600
+                 },
+                 "bold": {
+                  "type": "boolean"
+                 },
+                 "italic": {
+                  "type": "boolean"
+                 },
+                 "link": {
+                  "anyOf": [
+                   {
+                    "type": "string",
+                    "maxLength": 200,
+                    "pattern": "^\\/[a-z0-9/-]*$",
+                    "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+                   },
+                   {
+                    "type": "null"
+                   }
+                  ]
+                 }
+                },
+                "required": [
+                 "text",
+                 "bold",
+                 "italic",
+                 "link"
+                ],
+                "additionalProperties": false
+               }
+              }
+             }
+            },
+            "required": [
+             "kind",
+             "paragraphs"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "image"
+             },
+             "ratio": {
+              "type": "string",
+              "enum": [
+               "4:5",
+               "3:4",
+               "1:1",
+               "16:9"
+              ],
+              "description": "New values may appear. Show something sensible for one you don’t know."
+             },
+             "image": {
+              "type": "object",
+              "properties": {
+               "sizes": {
+                "minItems": 1,
+                "maxItems": 8,
+                "type": "array",
+                "items": {
+                 "type": "object",
+                 "properties": {
+                  "width": {
+                   "type": "integer",
+                   "exclusiveMinimum": 0,
+                   "maximum": 9007199254740991
+                  },
+                  "url": {
+                   "type": "string",
+                   "maxLength": 500,
+                   "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+                  }
+                 },
+                 "required": [
+                  "width",
+                  "url"
+                 ],
+                 "additionalProperties": false
+                },
+                "description": "The same photo at each width, smallest first. Use them as srcset."
+               },
+               "width": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991,
+                "description": "The original’s width in pixels (with height: the aspect ratio)."
+               },
+               "height": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+               },
+               "alt": {
+                "type": "string",
+                "maxLength": 200
+               },
+               "colour": {
+                "anyOf": [
+                 {
+                  "type": "string",
+                  "maxLength": 60
+                 },
+                 {
+                  "type": "null"
+                 }
+                ],
+                "description": "The colour this photo shows (a value of the Colour option), or null."
+               }
+              },
+              "required": [
+               "sizes",
+               "width",
+               "height",
+               "alt",
+               "colour"
+              ],
+              "additionalProperties": false
+             }
+            },
+            "required": [
+             "kind",
+             "ratio",
+             "image"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "button"
+             },
+             "label": {
+              "type": "string",
+              "maxLength": 24
+             },
+             "link": {
+              "type": "string",
+              "maxLength": 200,
+              "pattern": "^\\/[a-z0-9/-]*$",
+              "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+             }
+            },
+            "required": [
+             "kind",
+             "label",
+             "link"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "questions"
+             },
+             "items": {
+              "maxItems": 12,
+              "type": "array",
+              "items": {
+               "type": "object",
+               "properties": {
+                "question": {
+                 "type": "string",
+                 "maxLength": 80
+                },
+                "answer": {
+                 "anyOf": [
+                  {
+                   "type": "string",
+                   "maxLength": 1200
+                  },
+                  {
+                   "type": "null"
+                  }
+                 ]
+                },
+                "policy": {
+                 "anyOf": [
+                  {
+                   "type": "string",
+                   "enum": [
+                    "returns",
+                    "shipping",
+                    "privacy",
+                    "terms",
+                    "contact"
+                   ]
+                  },
+                  {
+                   "type": "null"
+                  }
+                 ],
+                 "description": "Set when the answer is the store’s own policy page. Link to that page instead of showing an answer. New values may appear. Show something sensible for one you don’t know."
+                }
+               },
+               "required": [
+                "question",
+                "answer",
+                "policy"
+               ],
+               "additionalProperties": false
+              }
+             }
+            },
+            "required": [
+             "kind",
+             "items"
+            ],
+            "additionalProperties": false
+           }
+          ]
+         },
+         "description": "Blocks that belong together, as one card. New block kinds may appear. Skip a kind you don’t know."
+        }
+       },
+       "required": [
+        "kind",
+        "blocks"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "type": "object",
+       "properties": {
+        "kind": {
+         "type": "string",
+         "const": "columns"
+        },
+        "phone": {
+         "type": "string",
+         "enum": [
+          "stack",
+          "swipe"
+         ],
+         "description": "How it shows on a phone. New values may appear. Show something sensible for one you don’t know."
+        },
+        "blocks": {
+         "maxItems": 40,
+         "type": "array",
+         "items": {
+          "oneOf": [
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "heading"
+             },
+             "level": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 6,
+              "description": "2 for the page’s first heading, 3 after. New values may appear. Show something sensible for one you don’t know."
+             },
+             "text": {
+              "type": "string",
+              "maxLength": 60
+             }
+            },
+            "required": [
+             "kind",
+             "level",
+             "text"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "text"
+             },
+             "paragraphs": {
+              "maxItems": 12,
+              "type": "array",
+              "items": {
+               "maxItems": 40,
+               "type": "array",
+               "items": {
+                "type": "object",
+                "properties": {
+                 "text": {
+                  "type": "string",
+                  "maxLength": 600
+                 },
+                 "bold": {
+                  "type": "boolean"
+                 },
+                 "italic": {
+                  "type": "boolean"
+                 },
+                 "link": {
+                  "anyOf": [
+                   {
+                    "type": "string",
+                    "maxLength": 200,
+                    "pattern": "^\\/[a-z0-9/-]*$",
+                    "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+                   },
+                   {
+                    "type": "null"
+                   }
+                  ]
+                 }
+                },
+                "required": [
+                 "text",
+                 "bold",
+                 "italic",
+                 "link"
+                ],
+                "additionalProperties": false
+               }
+              }
+             }
+            },
+            "required": [
+             "kind",
+             "paragraphs"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "image"
+             },
+             "ratio": {
+              "type": "string",
+              "enum": [
+               "4:5",
+               "3:4",
+               "1:1",
+               "16:9"
+              ],
+              "description": "New values may appear. Show something sensible for one you don’t know."
+             },
+             "image": {
+              "type": "object",
+              "properties": {
+               "sizes": {
+                "minItems": 1,
+                "maxItems": 8,
+                "type": "array",
+                "items": {
+                 "type": "object",
+                 "properties": {
+                  "width": {
+                   "type": "integer",
+                   "exclusiveMinimum": 0,
+                   "maximum": 9007199254740991
+                  },
+                  "url": {
+                   "type": "string",
+                   "maxLength": 500,
+                   "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+                  }
+                 },
+                 "required": [
+                  "width",
+                  "url"
+                 ],
+                 "additionalProperties": false
+                },
+                "description": "The same photo at each width, smallest first. Use them as srcset."
+               },
+               "width": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991,
+                "description": "The original’s width in pixels (with height: the aspect ratio)."
+               },
+               "height": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+               },
+               "alt": {
+                "type": "string",
+                "maxLength": 200
+               },
+               "colour": {
+                "anyOf": [
+                 {
+                  "type": "string",
+                  "maxLength": 60
+                 },
+                 {
+                  "type": "null"
+                 }
+                ],
+                "description": "The colour this photo shows (a value of the Colour option), or null."
+               }
+              },
+              "required": [
+               "sizes",
+               "width",
+               "height",
+               "alt",
+               "colour"
+              ],
+              "additionalProperties": false
+             }
+            },
+            "required": [
+             "kind",
+             "ratio",
+             "image"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "button"
+             },
+             "label": {
+              "type": "string",
+              "maxLength": 24
+             },
+             "link": {
+              "type": "string",
+              "maxLength": 200,
+              "pattern": "^\\/[a-z0-9/-]*$",
+              "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+             }
+            },
+            "required": [
+             "kind",
+             "label",
+             "link"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "questions"
+             },
+             "items": {
+              "maxItems": 12,
+              "type": "array",
+              "items": {
+               "type": "object",
+               "properties": {
+                "question": {
+                 "type": "string",
+                 "maxLength": 80
+                },
+                "answer": {
+                 "anyOf": [
+                  {
+                   "type": "string",
+                   "maxLength": 1200
+                  },
+                  {
+                   "type": "null"
+                  }
+                 ]
+                },
+                "policy": {
+                 "anyOf": [
+                  {
+                   "type": "string",
+                   "enum": [
+                    "returns",
+                    "shipping",
+                    "privacy",
+                    "terms",
+                    "contact"
+                   ]
+                  },
+                  {
+                   "type": "null"
+                  }
+                 ],
+                 "description": "Set when the answer is the store’s own policy page. Link to that page instead of showing an answer. New values may appear. Show something sensible for one you don’t know."
+                }
+               },
+               "required": [
+                "question",
+                "answer",
+                "policy"
+               ],
+               "additionalProperties": false
+              }
+             }
+            },
+            "required": [
+             "kind",
+             "items"
+            ],
+            "additionalProperties": false
+           },
+           {
+            "type": "object",
+            "properties": {
+             "kind": {
+              "type": "string",
+              "const": "group"
+             },
+             "blocks": {
+              "maxItems": 40,
+              "type": "array",
+              "items": {
+               "oneOf": [
+                {
+                 "type": "object",
+                 "properties": {
+                  "kind": {
+                   "type": "string",
+                   "const": "heading"
+                  },
+                  "level": {
+                   "type": "integer",
+                   "minimum": 2,
+                   "maximum": 6,
+                   "description": "2 for the page’s first heading, 3 after. New values may appear. Show something sensible for one you don’t know."
+                  },
+                  "text": {
+                   "type": "string",
+                   "maxLength": 60
+                  }
+                 },
+                 "required": [
+                  "kind",
+                  "level",
+                  "text"
+                 ],
+                 "additionalProperties": false
+                },
+                {
+                 "type": "object",
+                 "properties": {
+                  "kind": {
+                   "type": "string",
+                   "const": "text"
+                  },
+                  "paragraphs": {
+                   "maxItems": 12,
+                   "type": "array",
+                   "items": {
+                    "maxItems": 40,
+                    "type": "array",
+                    "items": {
+                     "type": "object",
+                     "properties": {
+                      "text": {
+                       "type": "string",
+                       "maxLength": 600
+                      },
+                      "bold": {
+                       "type": "boolean"
+                      },
+                      "italic": {
+                       "type": "boolean"
+                      },
+                      "link": {
+                       "anyOf": [
+                        {
+                         "type": "string",
+                         "maxLength": 200,
+                         "pattern": "^\\/[a-z0-9/-]*$",
+                         "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+                        },
+                        {
+                         "type": "null"
+                        }
+                       ]
+                      }
+                     },
+                     "required": [
+                      "text",
+                      "bold",
+                      "italic",
+                      "link"
+                     ],
+                     "additionalProperties": false
+                    }
+                   }
+                  }
+                 },
+                 "required": [
+                  "kind",
+                  "paragraphs"
+                 ],
+                 "additionalProperties": false
+                },
+                {
+                 "type": "object",
+                 "properties": {
+                  "kind": {
+                   "type": "string",
+                   "const": "image"
+                  },
+                  "ratio": {
+                   "type": "string",
+                   "enum": [
+                    "4:5",
+                    "3:4",
+                    "1:1",
+                    "16:9"
+                   ],
+                   "description": "New values may appear. Show something sensible for one you don’t know."
+                  },
+                  "image": {
+                   "type": "object",
+                   "properties": {
+                    "sizes": {
+                     "minItems": 1,
+                     "maxItems": 8,
+                     "type": "array",
+                     "items": {
+                      "type": "object",
+                      "properties": {
+                       "width": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                       },
+                       "url": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+                       }
+                      },
+                      "required": [
+                       "width",
+                       "url"
+                      ],
+                      "additionalProperties": false
+                     },
+                     "description": "The same photo at each width, smallest first. Use them as srcset."
+                    },
+                    "width": {
+                     "type": "integer",
+                     "exclusiveMinimum": 0,
+                     "maximum": 9007199254740991,
+                     "description": "The original’s width in pixels (with height: the aspect ratio)."
+                    },
+                    "height": {
+                     "type": "integer",
+                     "exclusiveMinimum": 0,
+                     "maximum": 9007199254740991
+                    },
+                    "alt": {
+                     "type": "string",
+                     "maxLength": 200
+                    },
+                    "colour": {
+                     "anyOf": [
+                      {
+                       "type": "string",
+                       "maxLength": 60
+                      },
+                      {
+                       "type": "null"
+                      }
+                     ],
+                     "description": "The colour this photo shows (a value of the Colour option), or null."
+                    }
+                   },
+                   "required": [
+                    "sizes",
+                    "width",
+                    "height",
+                    "alt",
+                    "colour"
+                   ],
+                   "additionalProperties": false
+                  }
+                 },
+                 "required": [
+                  "kind",
+                  "ratio",
+                  "image"
+                 ],
+                 "additionalProperties": false
+                },
+                {
+                 "type": "object",
+                 "properties": {
+                  "kind": {
+                   "type": "string",
+                   "const": "button"
+                  },
+                  "label": {
+                   "type": "string",
+                   "maxLength": 24
+                  },
+                  "link": {
+                   "type": "string",
+                   "maxLength": 200,
+                   "pattern": "^\\/[a-z0-9/-]*$",
+                   "description": "A path on the store, such as /products/<handle>, /collections/<handle>, /pages/<handle> or /policies/<kind>. Map it to your own site."
+                  }
+                 },
+                 "required": [
+                  "kind",
+                  "label",
+                  "link"
+                 ],
+                 "additionalProperties": false
+                },
+                {
+                 "type": "object",
+                 "properties": {
+                  "kind": {
+                   "type": "string",
+                   "const": "questions"
+                  },
+                  "items": {
+                   "maxItems": 12,
+                   "type": "array",
+                   "items": {
+                    "type": "object",
+                    "properties": {
+                     "question": {
+                      "type": "string",
+                      "maxLength": 80
+                     },
+                     "answer": {
+                      "anyOf": [
+                       {
+                        "type": "string",
+                        "maxLength": 1200
+                       },
+                       {
+                        "type": "null"
+                       }
+                      ]
+                     },
+                     "policy": {
+                      "anyOf": [
+                       {
+                        "type": "string",
+                        "enum": [
+                         "returns",
+                         "shipping",
+                         "privacy",
+                         "terms",
+                         "contact"
+                        ]
+                       },
+                       {
+                        "type": "null"
+                       }
+                      ],
+                      "description": "Set when the answer is the store’s own policy page. Link to that page instead of showing an answer. New values may appear. Show something sensible for one you don’t know."
+                     }
+                    },
+                    "required": [
+                     "question",
+                     "answer",
+                     "policy"
+                    ],
+                    "additionalProperties": false
+                   }
+                  }
+                 },
+                 "required": [
+                  "kind",
+                  "items"
+                 ],
+                 "additionalProperties": false
+                }
+               ]
+              },
+              "description": "Blocks that belong together, as one card. New block kinds may appear. Skip a kind you don’t know."
+             }
+            },
+            "required": [
+             "kind",
+             "blocks"
+            ],
+            "additionalProperties": false
+           }
+          ]
+         },
+         "description": "The columns, in order. New block kinds may appear. Skip a kind you don’t know."
+        }
+       },
+       "required": [
+        "kind",
+        "phone",
+        "blocks"
+       ],
+       "additionalProperties": false
+      }
+     ]
+    },
+    "description": "The page, top to bottom. New block kinds may appear. Skip a kind you don’t know."
+   }
+  },
+  "required": [
+   "handle",
+   "title",
+   "kind",
+   "blocks"
+  ],
+  "additionalProperties": false
+ },
+ "Faq": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+   "handle": {
+    "type": "string",
+    "pattern": "^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$",
+    "description": "/pages/<handle>."
+   },
+   "title": {
+    "type": "string",
+    "maxLength": 120
+   },
+   "items": {
+    "maxItems": 12,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "question": {
+       "type": "string",
+       "maxLength": 80
+      },
+      "answer": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 1200
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "policy": {
+       "anyOf": [
+        {
+         "type": "string",
+         "enum": [
+          "returns",
+          "shipping",
+          "privacy",
+          "terms",
+          "contact"
+         ]
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Set when the answer is the store’s own policy page. Link to that page instead of showing an answer. New values may appear. Show something sensible for one you don’t know."
+      }
+     },
+     "required": [
+      "question",
+      "answer",
+      "policy"
+     ],
+     "additionalProperties": false
+    }
+   }
+  },
+  "required": [
+   "handle",
+   "title",
+   "items"
+  ],
+  "additionalProperties": false
+ },
+ "Facets": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+   "sizes": {
+    "maxItems": 100,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "value": {
+       "type": "string",
+       "maxLength": 40,
+       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "description": "Send this exact value."
+      },
+      "label": {
+       "type": "string",
+       "maxLength": 60
+      },
+      "count": {
+       "type": "integer",
+       "minimum": 0,
+       "maximum": 9007199254740991
+      }
+     },
+     "required": [
+      "value",
+      "label",
+      "count"
+     ],
+     "additionalProperties": false
+    },
+    "description": "Values of the option the store calls Size. Send one as size=."
+   },
+   "colours": {
+    "maxItems": 100,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "value": {
+       "type": "string",
+       "maxLength": 40,
+       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "description": "Send this exact value."
+      },
+      "label": {
+       "type": "string",
+       "maxLength": 60
+      },
+      "count": {
+       "type": "integer",
+       "minimum": 0,
+       "maximum": 9007199254740991
+      }
+     },
+     "required": [
+      "value",
+      "label",
+      "count"
+     ],
+     "additionalProperties": false
+    },
+    "description": "Colour families. Send one as colour=."
+   },
+   "prices": {
+    "maxItems": 10,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string",
+       "pattern": "^[a-z0-9]{1,10}$",
+       "description": "New values may appear. Show something sensible for one you don’t know."
+      },
+      "min": {
+       "type": "integer",
+       "minimum": 0,
+       "maximum": 9007199254740991
+      },
+      "max": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 9007199254740991
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Up to, not including. Null: no top."
+      },
+      "count": {
+       "type": "integer",
+       "minimum": 0,
+       "maximum": 9007199254740991
+      }
+     },
+     "required": [
+      "id",
+      "min",
+      "max",
+      "count"
+     ],
+     "additionalProperties": false
+    },
+    "description": "Bands over each product’s lowest price before offers. Send an id as price=."
+   },
+   "inStock": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991,
+    "description": "Listed products in stock now (stock=in)."
+   }
+  },
+  "required": [
+   "sizes",
+   "colours",
+   "prices",
+   "inStock"
+  ],
+  "additionalProperties": false
+ },
+ "FilterPage": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+   "products": {
+    "maxItems": 48,
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string",
+       "format": "uuid",
+       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      },
+      "handle": {
+       "type": "string",
+       "maxLength": 100,
+       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+       "description": "The product’s current address: /products/<handle>."
+      },
+      "title": {
+       "type": "string",
+       "maxLength": 200
+      },
+      "price": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "min": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 9007199254740991
+          },
+          "max": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 9007199254740991
+          },
+          "priorPrice": {
+           "anyOf": [
+            {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The lowest price in the 30 days before a recent cut. Show it struck through. Null when there was no cut."
+          }
+         },
+         "required": [
+          "min",
+          "max",
+          "priorPrice"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Null when no size has a price yet."
+      },
+      "availability": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "kind": {
+           "type": "string",
+           "enum": [
+            "in_stock",
+            "low_stock",
+            "sold_out",
+            "preorder",
+            "made_to_order"
+           ],
+           "description": "New values may appear. Show something sensible for one you don’t know."
+          },
+          "left": {
+           "anyOf": [
+            {
+             "type": "integer",
+             "exclusiveMinimum": 0,
+             "maximum": 3
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "How many are left, only when 3 or fewer."
+          },
+          "shipsBy": {
+           "anyOf": [
+            {
+             "type": "string",
+             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "For a pre-order, the day it ships by (India)."
+          },
+          "leadDays": {
+           "anyOf": [
+            {
+             "type": "array",
+             "prefixItems": [
+              {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991
+              },
+              {
+               "type": "integer",
+               "exclusiveMinimum": 0,
+               "maximum": 9007199254740991
+              }
+             ],
+             "items": false,
+             "minItems": 2,
+             "maxItems": 2
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "For made to order, days to ship, least and most."
+          }
+         },
+         "required": [
+          "kind",
+          "left",
+          "shipsBy",
+          "leadDays"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "colours": {
+       "maxItems": 40,
+       "type": "array",
+       "items": {
+        "type": "object",
+        "properties": {
+         "value": {
+          "type": "string",
+          "maxLength": 60
+         },
+         "family": {
+          "anyOf": [
+           {
+            "type": "string",
+            "maxLength": 40
+           },
+           {
+            "type": "null"
+           }
+          ]
+         },
+         "hex": {
+          "anyOf": [
+           {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+           },
+           {
+            "type": "null"
+           }
+          ]
+         }
+        },
+        "required": [
+         "value",
+         "family",
+         "hex"
+        ],
+        "additionalProperties": false
+       }
+      },
+      "image": {
+       "anyOf": [
+        {
+         "type": "object",
+         "properties": {
+          "sizes": {
+           "minItems": 1,
+           "maxItems": 8,
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+             },
+             "url": {
+              "type": "string",
+              "maxLength": 500,
+              "pattern": "^https:\\/\\/[a-z0-9.-]+(?:\\/[^\\s\"<>]*)?$"
+             }
+            },
+            "required": [
+             "width",
+             "url"
+            ],
+            "additionalProperties": false
+           },
+           "description": "The same photo at each width, smallest first. Use them as srcset."
+          },
+          "width": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991,
+           "description": "The original’s width in pixels (with height: the aspect ratio)."
+          },
+          "height": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          },
+          "alt": {
+           "type": "string",
+           "maxLength": 200
+          },
+          "colour": {
+           "anyOf": [
+            {
+             "type": "string",
+             "maxLength": 60
+            },
+            {
+             "type": "null"
+            }
+           ],
+           "description": "The colour this photo shows (a value of the Colour option), or null."
+          }
+         },
+         "required": [
+          "sizes",
+          "width",
+          "height",
+          "alt",
+          "colour"
+         ],
+         "additionalProperties": false
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "badge": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 60
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "The one offer tag a card may carry, in the store’s words."
+      }
+     },
+     "required": [
+      "id",
+      "handle",
+      "title",
+      "price",
+      "availability",
+      "colours",
+      "image",
+      "badge"
+     ],
+     "additionalProperties": false
+    }
+   },
+   "page": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "pages": {
+    "type": "integer",
+    "exclusiveMinimum": 0,
+    "maximum": 9007199254740991
+   },
+   "total": {
+    "type": "integer",
+    "minimum": 0,
+    "maximum": 9007199254740991,
+    "description": "Products matching the filter, among the first 600 listed."
+   },
+   "truncated": {
+    "type": "boolean",
+    "description": "True when the store has more than 600 listed products. Later ones are in no filter yet."
+   }
+  },
+  "required": [
+   "products",
+   "page",
+   "pages",
+   "total",
+   "truncated"
+  ],
+  "additionalProperties": false
+ }
+}

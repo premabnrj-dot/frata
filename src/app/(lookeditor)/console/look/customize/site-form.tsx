@@ -11,7 +11,7 @@ import { Field, Group, Segmented, Switch } from './controls'
 // =============================================================================
 // Site settings (Look v4, mockup board "Site settings"): the shop's design system behind the gear. A palette of six
 // roles (contrast checked as it is picked: an unreadable palette is never saved), eight text styles (a computer and
-// a phone size each), the icon library and its stroke, and where the brand lives (Settings › Brand). Absent = the
+// a phone size each), the icon library and its stroke, and where the brand lives (Settings › Store details). Absent = the
 // theme's own; every part has "Use the theme's".
 // =============================================================================
 

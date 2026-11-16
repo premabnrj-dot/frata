@@ -62,7 +62,7 @@ const HOW = 'A source is the tagged link a shopper came on. Without a tag, it is
 type Row = { key: string; muted?: boolean; cur: Totals; prev: Totals | null; name: string; href: string | null; sub: string; visitors: number | null }
 
 /** Where orders came from, as drawn, most orders first. `visits` adds Visits and Orders per 100 visits (A·2). */
-export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: { by: ReadonlyMap<string, SourceVisits>; rates: boolean } }) {
+export function Sources({ a, pq, visits, renamed }: { a: Analytics; pq: string; visits?: { by: ReadonlyMap<string, SourceVisits>; rates: boolean }; renamed?: Date | null }) {
   const { rows, other } = foldSources(a.sources)
   const rest = visits ? otherVisits(visits.by, new Set(rows.map((r) => r.slug))) : 0
   // As drawn: Direct or unknown sits last and muted, whatever its count (it is what no link told us).
@@ -137,6 +137,8 @@ export function Sources({ a, pq, visits }: { a: Analytics; pq: string; visits?: 
           )
         })}
       </ul>
+      {/* The rule's date (owner, 2026-11-15, SA1b mockup): numbers never jump without a word (CLASSIFIER_SINCE). */}
+      {renamed ? <p className="border-t border-line-soft px-5 py-2.5 text-small text-muted-foreground max-md:px-4">Sources renamed on {dayMonthIN(renamed)}</p> : null}
     </Section>
   )
 }

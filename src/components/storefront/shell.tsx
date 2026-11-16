@@ -5,6 +5,8 @@ import { classicFromSettings, schemeVars, settingAttrs, settingVars } from '@/do
 import type { ResolvedTheme } from '@/domains/themes/types'
 import type { SectionOf } from '@/domains/themes/sections'
 import type { MenuItem } from '@/domains/themes/site'
+import type { BarValue } from '@/domains/content/kinds'
+import type { ShellContent } from '@/domains/content/bar'
 import { ShopIcon, type IconSet } from './icon'
 import { FooterMenu } from './nav'
 import { CaptureAttribution } from './capture'
@@ -26,7 +28,9 @@ export type StripPiece = { handle: string; title: string; image: PhotoData }
 
 /** Every shop page: the theme's tokens, settings and display face, its header and footer. Props only.
  *  No theme passed: Classic from the shop's settings (the look every shop had before themes). */
-export function ShopShell({ shop, href, banner, children, gated = false, live = false, capture = false, theme, circles = [], strip = [], focused = false }: { shop: ShellShop; href: Href; banner?: React.ReactNode; children: React.ReactNode; gated?: boolean; live?: boolean
+export function ShopShell({ shop, href, banner, children, content, gated = false, live = false, capture = false, theme, circles = [], strip = [], focused = false }: { shop: ShellShop; href: Href; banner?: React.ReactNode; children: React.ReactNode; gated?: boolean; live?: boolean
+  /** The store's content (V1): its menus and the written bar to show (src/domains/content/bar.ts shellContentOf). */
+  content: ShellContent
   /** Record how the shopper arrived (Analytics A·1): the real shop only, never a console preview (which may be `live`). */
   capture?: boolean; theme?: ResolvedTheme; circles?: Circle[]
   /** The Instagram strip footer's pieces (newest first, ≤ 6): each its first photo and its page. */
@@ -40,13 +44,13 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
   const w = wordsFor(shop.shopLanguage)
   // Look v4: the shop's icon set, and the merchant's own main menu (none: the collections, exactly as before menus).
   const set = t.site.icons
-  const own = t.menus.main ?? null
+  const own = content.menus.main ?? null
   const hp = { shop, href, gated, live, w, set, own }
   return (
     <div data-store-theme="" lang={shop.shopLanguage === 'hi' ? 'hi' : undefined} {...settingAttrs(t)} className={`${STORE_FONT_VARS} flex min-h-dvh flex-col`} style={{ ...settingVars(t), '--store-display': displayFamily(s.pairing) } as React.CSSProperties}>
       {/* Search and sharing S2·7: the first Tab stop jumps past the header (WCAG 2.4.1). */}
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-md focus:bg-store-paper focus:px-3 focus:py-2 focus:text-sm focus:font-medium">{w.skip}</a>
-      {!focused && (banner ?? (s.announcement && !gated && <Announcement a={s.announcement} t={t} href={href} />))}
+      {!focused && (banner ?? (content.bar && !gated && <Announcement a={content.bar} t={t} href={href} />))}
       <header className={`border-b border-store-line ${s.sticky && !focused ? 'sticky top-0 z-30 bg-store-paper' : ''}`}>
         {focused ? <div className="mx-auto flex max-w-6xl justify-center px-4 py-4 sm:px-6"><Logo shop={shop} href={href} upper={s.header === 'minimal' || s.headings === 'upper'} className="text-lg font-semibold tracking-[0.12em]" /></div>
           : s.header === 'centred' || s.header === 'minimal' || s.header === 'overlay'
@@ -59,11 +63,11 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
       </header>
       <main id="main" tabIndex={-1} className={`flex-1 ${tabs ? 'pb-16 sm:pb-0' : ''}`}>{children}</main>
       <div style={s.footerScheme !== 'paper' ? schemeVars(t, s.footerScheme) as React.CSSProperties : undefined} className={s.footerScheme !== 'paper' ? 'contents' : undefined}>
-        {!bare && t.menus.footer && t.menus.footer.length > 0 && <FooterMenu items={t.menus.footer} href={href} set={set} w={w} />}
+        {!bare && content.menus.footer && content.menus.footer.length > 0 && <FooterMenu items={content.menus.footer} href={href} set={set} w={w} />}
         <ShopFooter f={shop} href={href} variant={focused ? 'compact' : s.footer} social={s.social && !focused} w={w} painted={s.footerScheme !== 'paper'} strip={strip}
           photo={s.footer === 'photo' && !focused ? t.home.find((x): x is SectionOf<'hero'> => x.key === 'hero' && !x.hidden && !!x.image)?.image ?? null : null} />
       </div>
-      {tabs && <BottomTabs href={href} live={live} w={w} set={set} own={t.menus.tabs ?? null} />}
+      {tabs && <BottomTabs href={href} live={live} w={w} set={set} own={content.menus.tabs ?? null} />}
       {/* How the shopper arrived: on every page of the real shop, never in a console preview (Analytics A·1). */}
       <CaptureAttribution capture={capture} />
       {/* The shop's one toast (§ Feedback): its box and polite region, on the real shop only, never in a console preview. */}
@@ -74,7 +78,7 @@ export function ShopShell({ shop, href, banner, children, gated = false, live = 
   )
 }
 
-function Announcement({ a, t, href }: { a: NonNullable<ResolvedTheme['settings']['announcement']>; t: ResolvedTheme; href: Href }) {
+function Announcement({ a, t, href }: { a: BarValue; t: ResolvedTheme; href: Href }) {
   const body = <span className="mx-auto block max-w-6xl px-4 py-2 text-center text-sm sm:px-6">{a.text}</span>
   return (
     <div className="bg-store-paper text-store-ink" style={(a.scheme === 'paper' ? { background: 'var(--store-accent)', color: 'var(--store-on-accent)' } : schemeVars(t, a.scheme)) as React.CSSProperties}>

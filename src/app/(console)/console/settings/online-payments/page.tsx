@@ -1,23 +1,24 @@
+import { pageRoles } from '@/domains/settings/groups'
 import { Panel } from '@/components/ui/panel'
 import { requireMember } from '@/lib/auth/require-member'
 import { isPaymentsConfigured } from '@/lib/env'
 import { CONSOLE_HOST } from '@/lib/public-env'
 import { paymentStatusFor } from '@/lib/queries/payments'
 import { OnlinePayments } from './online-payments'
-import { PageHeader } from '@/components/layout/page-header'
+import { SettingsHead } from '../_components/settings-head'
 
 export const metadata = { title: 'Online payments' }
 
 /** Settings → Online payments: the merchant's own Razorpay account. Owner only (it moves their money). */
 export default async function OnlinePaymentsPage() {
-  const auth = await requireMember(['owner'])
+  const auth = await requireMember(pageRoles('online-payments'))
   if (!auth.ok) return <Panel title={auth.reason === 'no_access' ? 'Only the store’s owner can connect online payments' : auth.message} />
   const status = await paymentStatusFor(auth.membership.tenantId).catch(() => null)
   if (!status) return <Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel>
   const webhookUrl = status.connected ? `https://${CONSOLE_HOST}/api/webhooks/razorpay/${status.webhookKey}` : null
   return (
     <div className="max-w-3xl space-y-4">
-      <PageHeader title={'Online payments'} back={{ href: '/console/settings', label: 'Settings' }} />
+      <SettingsHead page="online-payments" role={auth.membership.role} />
       <OnlinePayments
         status={status.connected ? { keyId: status.keyId, mode: status.mode, webhookSeenAt: status.webhookSeenAt?.toISOString() ?? null, lastEventAt: status.lastEventAt?.toISOString() ?? null, problem: status.problem, webhookUrl: webhookUrl!,
           // Never to a Frrata support visit (support acts as owner; with the secret it could sign a fake payment: audit 2026-11-07).

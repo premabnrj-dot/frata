@@ -1,0 +1,807 @@
+<title>Selling From Websites</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a reference page of frames. Desktop console at 1280 (scaled to fit), phone views at 390, then states.
+   Neel tokens copied from docs/mockups/2026-11-13-design-language-neel.html. */
+:root {
+  --g0:#FFFFFF; --g25:#FBFAF9; --g50:#F6F5F3; --g100:#EEEDEA; --g200:#E3E1DD; --g300:#CFCCC7; --g400:#A29D97;
+  --g500:#8F8A84; --g600:#67625C; --g700:#4D4944; --g800:#34312E; --g900:#22201E; --g950:#171615;
+  --n50:#EEF0FD; --n100:#E0E3FB; --n200:#C3C9F6; --n500:#4C57D6; --n600:#3A44C2; --n700:#2F37A3;
+  --rani:#D61F69;
+  --ok-bg:#E7F5EC; --ok-fg:#1A6B43; --ok-dot:#2F9E62; --warn-bg:#FDF3DC; --warn-fg:#85500B; --warn-dot:#D98E1A;
+  --bad-bg:#FDECEC; --bad-fg:#A82828; --bad-dot:#DC3B3B; --info-bg:#E8F1FD; --info-fg:#1F5BA8; --info-dot:#3B82E0;
+  --neu-bg:#F1F0EE; --neu-fg:#57524D; --neu-dot:#8F8A84;
+  --page:var(--g0); --side:var(--g25); --surface:var(--g0); --hover:var(--g50); --sunk:var(--g50);
+  --line:var(--g200); --line-soft:var(--g100); --field:var(--g500);
+  --text:var(--g950); --text-2:var(--g600); --text-3:var(--g500);
+  --action:var(--n600); --action-text:#fff; --link:var(--n700); --focus:var(--n500); --select:var(--n50);
+  --e1:0 1px 2px rgba(23,22,21,.06); --e2:0 8px 24px -6px rgba(23,22,21,.14); --e3:0 24px 48px -12px rgba(23,22,21,.24);
+  --bar:var(--g950); --bar-text:#fff; --bar-link:#A3ABF5;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; color-scheme:dark } }
+:root[data-theme="dark"] {
+  --g0:#141312; --g25:#191817; --g50:#1F1E1C; --g100:#272523; --g200:#302E2B; --g300:#3D3A37; --g400:#5A5652;
+  --g500:#7A756F; --g600:#A39E98; --g700:#C2BDB7; --g800:#D9D5D0; --g900:#E8E5E1; --g950:#F3F1EE;
+  --n50:#1C1F3D; --n100:#232854; --n200:#3A3F7A; --n500:#8A93F0; --n600:#7C86EE; --n700:#A3ABF5;
+  --ok-bg:#12291C; --ok-fg:#7FD3A6; --warn-bg:#33270B; --warn-fg:#F2C14E; --bad-bg:#3A1617; --bad-fg:#F59A9C;
+  --info-bg:#132341; --info-fg:#9DC0F7; --neu-bg:#272523; --neu-fg:#C2BDB7;
+  --action-text:#0E0F24; --bar:#F3F1EE; --bar-text:#141312; --bar-link:#2F37A3; color-scheme:dark }
+* { box-sizing:border-box }
+body { background:var(--page); color:var(--text); font:400 14px/20px var(--font); margin:0;
+  padding:0 max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px)) }
+h1,h2,h3,h4 { margin:0; text-wrap:balance }
+.num { font-variant-numeric:tabular-nums }
+.code { font-family:var(--mono); font-size:12px }
+button { font:inherit; color:inherit }
+:focus-visible { outline:2px solid var(--focus); outline-offset:2px }
+
+/* The reference page */
+.doc { max-width:1320px; margin:0 auto }
+.doc-top { padding:28px 0 8px; border-bottom:1px solid var(--line); margin-bottom:8px }
+.doc-top h1 { font:600 28px/34px var(--font); letter-spacing:-.01em }
+.doc-top p { color:var(--text-2); margin:6px 0 0 }
+.toc { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 4px }
+.toc a { border:1px solid var(--line); border-radius:999px; padding:3px 10px; font-size:12.5px; color:var(--text); text-decoration:none; background:var(--surface) }
+.part { margin-top:44px; scroll-margin-top:16px }
+.part > h2 { font:600 18px/24px var(--font); margin-bottom:4px }
+.part > .cap { color:var(--text-2); font-size:13px; margin:0 0 14px; max-width:90ch }
+.row-frames { display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start }
+
+/* Neel primitives (as the gallery draws them) */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:0 14px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--text); font-weight:500; font-size:14px; box-shadow:var(--e1); cursor:pointer; white-space:nowrap }
+.btn.primary { background:var(--action); border-color:var(--action); color:var(--action-text); box-shadow:none }
+.btn.ghost { background:transparent; border-color:transparent; box-shadow:none; color:var(--text-2) }
+.btn.sm { min-height:30px; padding:0 10px; font-size:13px }
+.btn[aria-disabled="true"] { background:var(--sunk); color:var(--text-3); box-shadow:none; cursor:default }
+.btn.danger { color:var(--bad-fg) }
+.chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font-size:12px; font-weight:500; white-space:nowrap }
+.chip::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; flex:none }
+.chip.ok { background:var(--ok-bg); color:var(--ok-fg) } .chip.ok::before { background:var(--ok-dot) }
+.chip.info { background:var(--info-bg); color:var(--info-fg) } .chip.info::before { background:var(--info-dot) }
+.chip.warn { background:var(--warn-bg); color:var(--warn-fg) } .chip.warn::before { background:var(--warn-dot) }
+.chip.neu { background:var(--neu-bg); color:var(--neu-fg) } .chip.neu::before { background:var(--neu-dot) }
+.tag { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:6px; padding:1px 7px; font-size:12px; color:var(--text-2); white-space:nowrap }
+.overline { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3) }
+.tip { display:inline-grid; place-items:center; width:24px; height:24px; border:0; background:none; color:var(--text-3); cursor:pointer; vertical-align:middle }
+.tip svg { width:14px; height:14px }
+.sect { background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--e1); padding:16px 20px }
+.sect + .sect { margin-top:12px }
+.sect-h { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px }
+.sect-h h3 { font:600 16px/24px var(--font) }
+.sect-h .sp { flex:1 }
+.list { display:grid }
+.item { display:grid; grid-template-columns:56px minmax(0,1fr) auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line-soft) }
+.item:first-child { border-top:0 }
+.item.notext { grid-template-columns:minmax(0,1fr) auto }
+.item b { font-weight:500; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.item .meta { color:var(--text-2); font-size:13px; display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center; margin-top:2px }
+.item .acts { display:flex; gap:4px; align-items:center }
+.thumb { width:56px; height:56px; border-radius:8px; background:linear-gradient(150deg,#E9C9A4,#B5703F); position:relative; overflow:hidden }
+.thumb.b { background:linear-gradient(150deg,#D7DEE8,#6E7F99) }
+.thumb::after { content:""; position:absolute; inset:auto 8px 8px 8px; height:6px; border-radius:3px; background:rgba(255,255,255,.75) }
+.value { font-weight:500 }
+.field { display:grid; gap:6px; margin-bottom:14px }
+.field label, .field .lab { font-size:13px; font-weight:500; display:flex; justify-content:space-between; gap:8px }
+.field .count { color:var(--text-3); font-weight:400 }
+.input { min-height:44px; border:1px solid var(--field); border-radius:8px; background:var(--surface); padding:0 12px; display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); min-width:0 }
+.input.sel::after { content:""; margin-left:auto; width:8px; height:8px; border-right:1.5px solid var(--text-2); border-bottom:1.5px solid var(--text-2); transform:rotate(45deg) translateY(-3px) }
+.input.bad { border-color:var(--bad-fg); box-shadow:0 0 0 3px var(--bad-bg) }
+.err { color:var(--bad-fg); font-size:13px; display:flex; gap:6px; align-items:center }
+.err::before { content:"!"; display:inline-grid; place-items:center; width:16px; height:16px; border-radius:50%; background:var(--bad-dot); color:#fff; font-size:11px; font-weight:600 }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:10px }
+.ro { background:var(--sunk); border:1px solid var(--line); border-radius:8px; padding:10px 12px; display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap }
+.ro .k { font-size:12px; color:var(--text-2) }
+.sw { width:34px; height:20px; border-radius:999px; background:var(--g300); position:relative; flex:none; border:0 }
+.sw::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:var(--e1) }
+.sw[aria-checked="true"] { background:var(--action) } .sw[aria-checked="true"]::after { left:16px }
+
+/* Desktop console frame */
+.desk { width:100%; max-width:1280px; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--page); box-shadow:var(--e2) }
+.desk-in { display:grid; grid-template-columns:232px minmax(0,1fr); min-height:760px }
+.sb { background:var(--side); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:2px }
+.sb .store { display:flex; gap:10px; align-items:center; padding:6px 8px 14px }
+.mono-mark { width:28px; height:28px; border-radius:8px; background:var(--g950); color:#fff; display:grid; place-items:center; font-weight:600; font-size:13px }
+.sb .store b { display:block; font-size:14px } .sb .store span { font-size:12px; color:var(--text-2) }
+.sb .grp { margin:12px 8px 4px }
+.nav { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px; color:var(--text-2); font-size:14px; text-decoration:none }
+.nav svg { width:18px; height:18px; flex:none }
+.nav.on { background:var(--surface); color:var(--text); box-shadow:var(--e1); border:1px solid var(--line); font-weight:500 }
+.nav.on svg { color:var(--action) }
+.main { padding:28px 32px; min-width:0 }
+.ph { display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap }
+.ph h1 { font:600 22px/28px var(--font) }
+.ph .meta { color:var(--text-2); font-size:13px; margin-top:2px; display:flex; gap:8px; flex-wrap:wrap; align-items:center }
+.ph .sp { flex:1 }
+.tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); margin:18px 0 18px; overflow-x:auto; scrollbar-width:none }
+.tabs button { border:0; background:none; padding:10px 12px; font-size:14px; color:var(--text-2); border-bottom:2px solid transparent; white-space:nowrap; cursor:pointer; display:inline-flex; gap:6px; align-items:center }
+.tabs button[aria-selected="true"] { color:var(--text); font-weight:500; border-bottom-color:var(--action) }
+.pill { background:var(--neu-bg); color:var(--neu-fg); border-radius:999px; font-size:12px; padding:0 7px; font-variant-numeric:tabular-nums }
+.grid2 { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:20px; align-items:start }
+.preview { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--surface); box-shadow:var(--e1) }
+.preview .pv-top { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line); font-size:13px }
+.site { background:#F7F1EA; color:#2A1D14; padding:0 0 14px; font-family:Georgia,serif }
+.site .bar { background:#2A1D14; color:#F7F1EA; font:12px var(--font); text-align:center; padding:6px }
+.site .hd { display:flex; justify-content:space-between; padding:10px 14px; font:600 13px var(--font) }
+.site .hero { margin:0 14px; height:190px; border-radius:6px; background:linear-gradient(150deg,#E9C9A4,#9C5B32); position:relative; outline:2px solid var(--action); outline-offset:3px }
+.site .hero span { position:absolute; left:14px; bottom:14px; color:#fff; font-size:22px }
+.site .hero i { position:absolute; top:-26px; left:-3px; background:var(--action); color:var(--action-text); font:500 11px var(--font); font-style:normal; padding:2px 8px; border-radius:6px 6px 0 0 }
+.site .strip { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 14px 0 }
+.site .strip div { aspect-ratio:4/5; border-radius:4px; background:#E2D3C2 }
+.fold { display:flex; align-items:center; gap:8px; padding:12px 4px 2px; color:var(--text-2); font-size:13px }
+
+/* Phone frame */
+.phone { width:390px; max-width:100%; border:1px solid var(--line); border-radius:28px; padding:8px; background:var(--g950) }
+.scr { border-radius:22px; overflow:hidden; background:var(--page); min-height:760px; display:flex; flex-direction:column; position:relative }
+.p-top { padding:14px 16px 0 }
+.p-top .back { font-size:14px; color:var(--text-2) }
+.p-top h1 { font:600 20px/26px var(--font); margin-top:4px }
+.p-body { padding:12px 16px 16px; display:grid; gap:12px; flex:1; align-content:start }
+.p-body .sect { padding:14px 16px }
+.p-tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); margin:10px 0 0; overflow-x:auto; scrollbar-width:none; padding:0 12px }
+.p-tabs button { border:0; background:none; padding:10px 10px; font-size:14px; color:var(--text-2); border-bottom:2px solid transparent; white-space:nowrap }
+.p-tabs button[aria-selected="true"] { color:var(--text); font-weight:500; border-bottom-color:var(--action) }
+.bottom { border-top:1px solid var(--line); background:var(--side); display:grid; grid-template-columns:repeat(4,1fr); text-align:center; font-size:11px; color:var(--text-2) }
+.bottom div { padding:8px 0 10px; display:grid; gap:2px; justify-items:center }
+.bottom svg { width:22px; height:22px }
+.bottom .on { color:var(--action); font-weight:500 }
+.sheet-scrim { position:absolute; inset:0; background:rgba(23,22,21,.45); display:flex; align-items:flex-end }
+.sheet { background:var(--surface); width:100%; border-radius:16px 16px 0 0; padding:16px 16px 18px; box-shadow:var(--e3); max-height:85%; overflow:auto }
+.sheet h3 { font:600 17px/24px var(--font); margin-bottom:14px }
+.sheet .grab { width:36px; height:4px; border-radius:2px; background:var(--g300); margin:0 auto 12px }
+.acts-row { display:flex; gap:8px; justify-content:flex-end; margin-top:6px }
+.acts-row .btn { min-height:44px }
+.toast { position:absolute; left:16px; right:16px; bottom:72px; background:var(--bar); color:var(--bar-text); border-radius:10px; box-shadow:var(--e3); padding:12px 14px; display:flex; align-items:center; gap:10px; font-size:14px }
+.toast .ok { width:18px; height:18px; border-radius:50%; background:var(--ok-dot); display:grid; place-items:center; flex:none }
+.toast .ok::after { content:""; width:8px; height:4px; border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg) translate(1px,-1px) }
+.toast .sp { flex:1 }
+.toast a { color:var(--bar-link); font-weight:500; text-decoration:none }
+.q { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; padding:10px 0; border-top:1px solid var(--line-soft) }
+.q:first-child { border-top:0 }
+.q b { font-weight:500 }
+.q .a { color:var(--text-2); font-size:13px; grid-column:1 }
+.q .mv { grid-row:1 / span 2; grid-column:2; display:flex; gap:2px; align-self:center }
+.ib { width:32px; height:32px; border-radius:8px; border:1px solid var(--line); background:var(--surface); display:grid; place-items:center }
+.ib svg { width:16px; height:16px }
+
+/* Small frames */
+.mini { width:520px; max-width:100%; border:1px solid var(--line); border-radius:12px; background:var(--page); padding:18px; box-shadow:var(--e1) }
+.mini .lbl { font-size:12px; color:var(--text-3); margin-bottom:10px }
+.notice { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:10px; align-items:start; padding:12px 0; border-top:1px solid var(--line-soft) }
+.notice:first-of-type { border-top:0 }
+.av { width:32px; height:32px; border-radius:50%; background:var(--n50); color:var(--n700); display:grid; place-items:center; font-weight:600; font-size:12px }
+.notice .t { font-size:14px } .notice .s { font-size:12px; color:var(--text-2); margin-top:2px }
+.banner-ro { display:flex; gap:10px; align-items:center; background:var(--warn-bg); color:var(--warn-fg); border-radius:10px; padding:10px 12px; font-size:13px; font-weight:500 }
+
+@media (max-width:1100px) { .grid2 { grid-template-columns:1fr } }
+@media (max-width:900px) { .desk-in { grid-template-columns:1fr } .sb { display:none } .main { padding:20px 16px } }
+@media (max-width:480px) { .two { grid-template-columns:1fr } .item { grid-template-columns:48px minmax(0,1fr) } .item .acts { grid-column:1 / -1; justify-content:flex-end } .thumb { width:48px; height:48px } }
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important } }
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/></symbol>
+  <symbol id="i-orders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h3"/></symbol>
+  <symbol id="i-products" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4 4 7l2 3 2-1v11h8V9l2 1 2-3-4-3c-1 2-2.5 2.5-4 2.5S9 6 8 4z"/></symbol>
+  <symbol id="i-offers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12V4h8l8 8-8 8z"/><circle cx="8.5" cy="8.5" r="1.2"/></symbol>
+  <symbol id="i-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-apps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6-6 6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 10 6 6 6-6"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></symbol>
+</svg>
+<style>
+/* Website (Settings): extra pieces on top of the Neel primitives above. */
+[hidden] { display:none !important }
+.radios { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px }
+.rc { border:1px solid var(--field); border-radius:8px; padding:10px 12px; display:grid; grid-template-columns:auto minmax(0,1fr); gap:2px 10px; background:var(--surface); cursor:pointer }
+.rc input { margin:3px 0 0; accent-color:var(--action); width:16px; height:16px }
+.rc b { font-weight:500 } .rc small { grid-column:2; color:var(--text-2); font-size:13px }
+.rc:has(input:checked) { border:2px solid var(--action); padding:9px 11px; background:var(--select) }
+.rc:has(input:disabled) { color:var(--text-3); border-color:var(--line); background:var(--sunk); cursor:default }
+.rc:has(input:disabled) small { color:var(--text-3) }
+.key-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 12px; align-items:center; padding:12px 0; border-top:1px solid var(--line-soft) }
+.key-row:first-child { border-top:0 }
+.key-row .nm { font-weight:500; display:flex; gap:8px; align-items:center; flex-wrap:wrap; min-width:0 }
+.key-row .meta { grid-column:1 / -1; color:var(--text-2); font-size:13px; display:flex; gap:4px 12px; flex-wrap:wrap; align-items:center }
+.key-row.gone .nm, .key-row.gone .meta { color:var(--text-3) }
+.key-row .acts { display:flex; gap:4px }
+.addr { font-family:var(--mono); font-size:13px; overflow-wrap:anywhere }
+.reveal { border:1.5px dashed var(--field); border-radius:10px; padding:14px; display:grid; gap:10px; background:var(--sunk) }
+.reveal .addr { font-size:14px; color:var(--text) }
+.bnr { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; border-radius:10px; padding:10px 12px; font-size:13px; font-weight:500 }
+.bnr.warn { background:var(--warn-bg); color:var(--warn-fg) }
+.bnr.info { background:var(--info-bg); color:var(--info-fg) }
+.bnr.support { background:#8A4B00; color:#fff }
+.bnr a { color:inherit }
+.dlg-scrim { position:absolute; inset:0; background:rgba(23,22,21,.45); display:grid; place-items:start center; padding-top:80px; z-index:5 }
+.dlg { width:min(480px, calc(100% - 32px)); background:var(--surface); border-radius:16px; box-shadow:var(--e3); overflow:hidden }
+.dlg .dh { padding:18px 20px 0 } .dlg .dh h3 { font:600 17px/24px var(--font) }
+.dlg .db { padding:16px 20px; display:grid; gap:14px }
+.dlg .df { padding:0 20px 18px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap }
+.desk { position:relative }
+.page-w { max-width:860px; display:grid; gap:12px }
+.ctl { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:0 0 12px }
+.seg { display:inline-flex; background:var(--sunk); border-radius:10px; padding:2px; box-shadow:inset 0 0 0 1px var(--line) }
+.seg button { border:0; background:transparent; color:var(--text-2); padding:5px 12px; border-radius:8px; min-height:30px; cursor:pointer; font-size:13px }
+.seg button[aria-checked="true"] { background:var(--surface); color:var(--text); box-shadow:var(--e1); font-weight:500 }
+.ro-mode .wo { display:none !important }
+.mini .sect { box-shadow:none }
+.states { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr)); gap:20px; align-items:start }
+.states .mini { width:auto }
+.kit-row { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap }
+.kit-row .addr { color:var(--text-2) }
+.scr .toast { bottom:72px }
+.static-toast { position:static; margin-top:4px }
+.empty { display:grid; justify-items:start; gap:8px; padding:4px 0 2px; color:var(--text-2) }
+@media (max-width:480px) { .dlg-scrim { padding-top:24px } }
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-merchants" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1-4H5z"/><path d="M5 9v10h14V9"/><path d="M10 19v-5h4v5"/></symbol>
+  <symbol id="i-plans" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 10h16M9 15h3"/></symbol>
+  <symbol id="i-partners" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="3"/><circle cx="16" cy="10" r="2.5"/><path d="M4 19c.6-3 2.6-4.5 5-4.5s4.4 1.5 5 4.5M14 15.2c2.4-.5 4.6.6 5.5 3.8"/></symbol>
+  <symbol id="i-staff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h4l2-6 4 12 2-6h4"/></symbol>
+  <symbol id="i-api" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 6l-3 12"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.5"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 0 1 6 0"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5M19 5l-8 8M18 14v5H5V6h5"/></symbol>
+</svg>
+<style>
+/* SA1b additions: Admin's ink frame and list-and-record (from the Admin partners and staff redraw), the handover card,
+   the shopper's bag-link page, and the docs pages. Same Neel tokens. */
+.sb.ink { background:#171615; border-right-color:#171615; color:#E8E5E1 }
+.sb.ink .store b { color:#fff }
+.staff-tag { background:#FDF3DC; color:#85500B; font-size:10px; font-weight:600; letter-spacing:.06em; border-radius:4px; padding:1px 5px; margin-left:6px }
+.mono-mark.rani { background:var(--rani); color:#fff }
+.sb.ink .nav { color:#C2BDB7 }
+.sb.ink .nav.on { background:#2A2826; color:#fff; border:0; box-shadow:inset 3px 0 0 #F2C14E }
+.sb.ink .nav.on svg { color:#fff }
+.sb.ink .grp { color:#7A756F; font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; margin:12px 8px 4px }
+.pill.warn { background:var(--warn-bg); color:var(--warn-fg) }
+.desk-in.admin { min-height:640px }
+.lr { display:grid; grid-template-columns:minmax(0,1fr) 400px; gap:20px; align-items:start }
+.qrow { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 12px; padding:11px 16px; border-top:1px solid var(--line-soft); align-items:center }
+.qrow:first-child { border-top:0 }
+.qrow b { font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.qrow .s { color:var(--text-2); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.qrow .r { text-align:right; font-size:13px; color:var(--text-2); display:flex; gap:6px; justify-content:flex-end; align-items:center }
+.qrow.on { background:var(--select) }
+.flush { padding:0; overflow:hidden }
+.rec-h { display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap }
+.rec-h h2 { font:600 18px/24px var(--font) }
+.rec-h .sp { flex:1 }
+.rec-h .meta { color:var(--text-2); font-size:13px; margin-top:2px }
+dl.facts { display:grid; grid-template-columns:8rem minmax(0,1fr); gap:8px 12px; margin:14px 0 0; font-size:14px }
+dl.facts dt { color:var(--text-2) } dl.facts dd { margin:0; min-width:0; overflow-wrap:anywhere }
+.band { display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--warn-bg); color:var(--warn-fg); border-radius:10px; padding:10px 14px; font-weight:500; margin-bottom:14px }
+.band .sp { flex:1 }
+.tbl { width:100%; border-collapse:collapse; font-size:14px }
+.tbl th { background:var(--sunk); color:var(--text-2); font-weight:500; font-size:13px; text-align:left; height:36px; padding:0 14px }
+.tbl td { height:48px; padding:0 14px; border-top:1px solid var(--line-soft) }
+.tbl td.r, .tbl th.r { text-align:right }
+.menu { width:240px; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--e2); padding:6px }
+.menu div { padding:8px 10px; border-radius:8px; font-size:14px }
+.menu div.hl { background:var(--hover) }
+.stage { background:var(--sunk); border-radius:12px; padding:24px; display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start }
+.stage > div { max-width:100%; min-width:0 }
+.ann { font-size:12px; color:var(--text-3); margin:8px 0 0 }
+.dlg.flat { box-shadow:var(--e3); border:1px solid var(--line) }
+.pick { display:grid; gap:8px }
+.pick label { border:1px solid var(--field); border-radius:8px; padding:10px 12px; display:grid; grid-template-columns:auto minmax(0,1fr); gap:2px 10px; cursor:pointer }
+.pick label:has(input:checked) { border:2px solid var(--action); padding:9px 11px; background:var(--select) }
+.pick input { margin:3px 0 0; accent-color:var(--action); width:16px; height:16px }
+.pick small { grid-column:2; color:var(--text-2); font-size:13px }
+/* The handover card (the /handover page's own frame) */
+.ho { width:520px; max-width:100%; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:24px; display:grid; gap:18px }
+.ho .top { display:flex; gap:14px; align-items:center }
+.picto { width:44px; height:44px; border-radius:12px; background:#FDF3DC; display:grid; place-items:center; color:#85500B; flex:none }
+.ho h3 { font:600 20px/26px var(--font) }
+.ho .by { color:var(--text-2); font-size:13px }
+.ho dl { display:grid; grid-template-columns:7rem minmax(0,1fr); gap:8px 12px; margin:0; font-size:14px }
+.ho dt { color:var(--text-2) } .ho dd { margin:0; min-width:0 }
+.klist { display:grid; gap:0 }
+.krow { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 10px; padding:8px 0; border-top:1px solid var(--line-soft); align-items:center; font-size:14px }
+.krow:first-child { border-top:0; padding-top:0 }
+.krow .s { grid-column:1 / -1; color:var(--text-2); font-size:13px }
+/* The shopper's bag-link page: the store's own frame, its look (Kesar Studio's) */
+.store-scr { background:#FBF7F2; color:#2B211A; font-family:Georgia,'Times New Roman',serif; min-height:520px; display:flex; flex-direction:column }
+.store-scr .sh { padding:16px; border-bottom:1px solid #E8DFD3; font:600 18px/24px Georgia,serif; text-align:center }
+.store-scr .sb2 { flex:1; display:grid; place-items:center; padding:24px; text-align:center; gap:12px; align-content:center }
+.store-scr .spin { width:28px; height:28px; border-radius:50%; border:3px solid #E8DFD3; border-top-color:#8B2E2E }
+.store-scr .sbtn { display:inline-flex; min-height:44px; align-items:center; padding:0 20px; background:#8B2E2E; color:#fff; border-radius:6px; font:500 15px/1 var(--font) }
+.store-scr p { margin:0; font:400 15px/22px var(--font); color:#5E5045 }
+.store-scr h3 { font:600 20px/26px Georgia,serif }
+/* The docs pages (api.frrata.shop): Neel tokens, a page for developers */
+.docs { width:100%; max-width:1280px; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--page); box-shadow:var(--e2) }
+.docs-top { display:flex; align-items:center; gap:14px; padding:12px 20px; border-bottom:1px solid var(--line); flex-wrap:wrap }
+.docs-top b { font-weight:600 } .docs-top .sp { flex:1 } .docs-top a { color:var(--text-2); text-decoration:none; font-size:14px }
+.docs-in { display:grid; grid-template-columns:220px minmax(0,1fr); min-height:620px }
+.docs-nav { border-right:1px solid var(--line); padding:16px 12px; background:var(--side); display:grid; align-content:start; gap:2px; font-size:14px }
+.docs-nav .grp { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); margin:12px 8px 4px }
+.docs-nav .grp:first-child { margin-top:0 }
+.docs-nav a { padding:6px 8px; border-radius:8px; color:var(--text-2); text-decoration:none }
+.docs-nav a.on { background:var(--surface); color:var(--text); box-shadow:var(--e1); border:1px solid var(--line); font-weight:500 }
+.docs-nav a code { font-family:var(--mono); font-size:12px }
+.docs-main { padding:28px 36px; min-width:0; display:grid; gap:16px; align-content:start; max-width:860px }
+.docs-main h1 { font:600 26px/32px var(--font); letter-spacing:-.01em }
+.docs-main h2 { font:600 17px/24px var(--font); margin-top:8px }
+.docs-main p { margin:0; max-width:68ch; color:var(--text) }
+.docs-main .lead { color:var(--text-2) }
+pre.cb { margin:0; background:var(--g950); color:#E8E5E1; border-radius:10px; padding:14px 16px; font:500 12.5px/19px var(--mono); overflow-x:auto; white-space:pre }
+:root[data-theme="dark"] pre.cb { background:var(--g50) }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) pre.cb { background:var(--g50) } }
+.ep { display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-family:var(--mono); font-size:13px; background:var(--sunk); border:1px solid var(--line); border-radius:8px; padding:10px 12px; overflow-wrap:anywhere; min-width:0 }
+.ep .m { background:var(--ok-bg); color:var(--ok-fg); border-radius:4px; padding:1px 6px; font-weight:600 }
+.fields { width:100%; border-collapse:collapse; font-size:14px }
+.fields th { text-align:left; color:var(--text-2); font-weight:500; font-size:13px; padding:8px 10px; background:var(--sunk) }
+.fields td { padding:9px 10px; border-top:1px solid var(--line-soft); vertical-align:top }
+.fields td:first-child { font-family:var(--mono); font-size:13px; white-space:nowrap }
+.cards3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px }
+.cards3 a { border:1px solid var(--line); border-radius:12px; padding:14px 16px; text-decoration:none; color:var(--text); display:grid; gap:4px; background:var(--surface) }
+.cards3 a b { font-weight:600 } .cards3 a span { color:var(--text-2); font-size:13px }
+.wrap-x { overflow-x:auto; max-width:100% }
+.src-tbl td:last-child, .src-tbl th:last-child { text-align:right }
+@media (max-width:1100px) { .lr { grid-template-columns:1fr } }
+@media (max-width:900px) { .docs-in { grid-template-columns:1fr } .docs-nav { display:none } .docs-main { padding:20px 16px } }
+@media (max-width:640px) { .stage { padding:12px } .tbl .hide { display:none } }
+</style>
+
+<div class="doc">
+  <header class="doc-top">
+    <h1>SA1b · Selling from the brand's website</h1>
+    <p>V1 · Storefront API SA1b · final mockup · 16 Nov 2026 · every screen this phase adds or changes, computer and phone.</p>
+    <nav class="toc" aria-label="Views">
+      <a href="#admin">Admin</a><a href="#admin-more">Admin states</a><a href="#admin-phone">Admin phone</a><a href="#handover">Accept</a><a href="#preview">Preview on website</a><a href="#console">Console changes</a><a href="#cart">Bag link</a><a href="#docs">Docs</a><a href="#docs-phone">Docs phone</a>
+    </nav>
+  </header>
+
+  <!-- ═══ ADMIN ═══ -->
+  <section class="part" id="admin">
+    <h2>Frrata Admin › Storefront API · websites with no reads waiting</h2>
+    <div class="desk" role="img" aria-label="Frrata Admin Storefront API on a computer, two websites with no reads">
+      <div class="desk-in admin">
+        <aside class="sb ink">
+          <div class="store"><span class="mono-mark rani">f</span><div><b>Frrata Admin<span class="staff-tag">STAFF</span></b></div></div>
+          <div class="grp">Merchants</div>
+          <a class="nav"><svg><use href="#i-merchants"/></svg>Merchants</a>
+          <a class="nav"><svg><use href="#i-plans"/></svg>Plans</a>
+          <a class="nav"><svg><use href="#i-partners"/></svg>Partners</a>
+          <a class="nav on" aria-current="page"><svg><use href="#i-api"/></svg>Storefront API <span class="pill warn" style="margin-left:auto">2</span></a>
+          <div class="grp">Frrata</div>
+          <a class="nav"><svg><use href="#i-staff"/></svg>Staff</a>
+          <a class="nav"><svg><use href="#i-activity"/></svg>Activity</a>
+        </aside>
+        <div class="main">
+          <div class="ph"><div><h1>Storefront API</h1></div></div>
+          <div class="tabs" role="tablist">
+            <button role="tab" aria-selected="true">Stores <span class="pill">14</span></button>
+            <button role="tab">Versions</button>
+          </div>
+          <div class="band"><svg width="16" height="16"><use href="#i-eye"/></svg>2 websites with no reads for 2 days</div>
+          <div class="lr">
+            <div class="sect flush">
+              <div class="qrow on"><b>Kesar Studio</b><span class="r"><span class="chip warn">No reads</span></span><span class="s code">kesarstudio.in</span><span class="r num">Last read 13 Nov</span></div>
+              <div class="qrow"><b>Neem &amp; Indigo</b><span class="r"><span class="chip warn">No reads</span></span><span class="s code">neemindigo.com</span><span class="r num">Never read</span></div>
+              <div class="qrow"><b>Bandhej House</b><span class="r num">3 keys</span><span class="s code">bandhejhouse.in</span><span class="r num">Today</span></div>
+              <div class="qrow"><b>Ilkal Weaves</b><span class="r"><span class="chip neu">Not open</span></span><span class="s code">ilkalweaves.in</span><span class="r num">Today</span></div>
+              <div class="qrow"><b>Mitti Ceramics</b><span class="r num">1 key</span><span class="s code">mitticeramics.co.in</span><span class="r num">Yesterday</span></div>
+            </div>
+            <div class="sect">
+              <div class="rec-h">
+                <div><h2>Kesar Studio</h2><div class="meta code">kesarstudio.in</div></div>
+                <span class="sp"></span><span class="chip warn">No reads</span>
+                <button class="ib" aria-label="More for Kesar Studio"><svg><use href="#i-more"/></svg></button>
+              </div>
+              <dl class="facts">
+                <dt>Website</dt><dd class="code">https://kesarstudio.in</dd>
+                <dt>Checkout</dt><dd class="code">checkout.kesarstudio.in</dd>
+                <dt>Live keys</dt><dd class="num">2</dd>
+                <dt>Test keys</dt><dd class="num">0</dd>
+                <dt>Last read</dt><dd class="num">13 Nov · version 2026-12</dd>
+                <dt>Partner</dt><dd>Arc Studio</dd>
+                <dt>Products</dt><dd class="num">212 listed</dd>
+                <dt>Store</dt><dd>Open since 4 Nov</dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="part" id="admin-more">
+    <h2>Admin · More, Versions, empty, error</h2>
+    <div class="stage">
+      <div>
+        <div class="menu" role="img" aria-label="More menu for a store">
+          <div class="hl">Open Kesar Studio in Merchants</div>
+        </div>
+        <p class="ann">More, on a store</p>
+      </div>
+      <div style="width:560px">
+        <div class="sect flush">
+          <div class="wrap-x"><table class="tbl">
+            <thead><tr><th>Version</th><th>Released</th><th class="r">Stores that read, last 7 days</th><th class="hide">Ends</th></tr></thead>
+            <tbody><tr><td class="code">2026-12</td><td class="num">15 Nov 2026</td><td class="r num">12</td><td class="hide">—</td></tr></tbody>
+          </table></div>
+        </div>
+        <p class="ann">Versions tab</p>
+      </div>
+      <div style="width:420px">
+        <div class="sect"><div class="empty"><b style="color:var(--text);font-weight:500">No store uses the Storefront API yet</b></div></div>
+        <p class="ann">Empty</p>
+      </div>
+      <div style="width:420px">
+        <div class="sect"><div class="err">We couldn't load the stores. Reload in a minute.</div></div>
+        <p class="ann">Error</p>
+      </div>
+      <div style="width:420px">
+        <div class="sect">
+          <div class="rec-h"><div><h2>Bandhej House</h2><div class="meta code">bandhejhouse.in</div></div><span class="sp"></span><button class="ib" aria-label="More for Bandhej House"><svg><use href="#i-more"/></svg></button></div>
+          <dl class="facts">
+            <dt>Website</dt><dd class="code">https://www.bandhejhouse.in</dd>
+            <dt>Checkout</dt><dd class="code">bandhej-house.frrata.shop</dd>
+            <dt>Live keys</dt><dd class="num">2</dd>
+            <dt>Test keys</dt><dd class="num">1</dd>
+            <dt>Last read</dt><dd class="num">Today · version 2026-12</dd>
+            <dt>Partner</dt><dd>—</dd>
+            <dt>Products</dt><dd class="num"><span style="display:inline-flex;gap:8px;align-items:center">588 listed <span class="chip warn">Near 600</span></span></dd>
+            <dt>Store</dt><dd>Open since 1 Nov</dd>
+          </dl>
+        </div>
+        <p class="ann">A store reading every day, near the 600 page limit</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="part" id="admin-phone">
+    <h2>Admin · phone</h2>
+    <div class="row-frames">
+      <div class="phone" role="img" aria-label="Storefront API list on a phone"><div class="scr">
+        <div class="p-top"><h1>Storefront API</h1></div>
+        <div class="p-tabs" role="tablist"><button role="tab" aria-selected="true">Stores <span class="pill">14</span></button><button role="tab">Versions</button></div>
+        <div class="p-body">
+          <div class="band" style="margin:0"><svg width="16" height="16"><use href="#i-eye"/></svg>2 websites with no reads for 2 days</div>
+          <div class="sect flush">
+            <div class="qrow"><b>Kesar Studio</b><span class="r"><span class="chip warn">No reads</span></span><span class="s code">kesarstudio.in</span><span class="r num">13 Nov</span></div>
+            <div class="qrow"><b>Neem &amp; Indigo</b><span class="r"><span class="chip warn">No reads</span></span><span class="s code">neemindigo.com</span><span class="r">Never</span></div>
+            <div class="qrow"><b>Bandhej House</b><span class="r num">3 keys</span><span class="s code">bandhejhouse.in</span><span class="r">Today</span></div>
+            <div class="qrow"><b>Ilkal Weaves</b><span class="r"><span class="chip neu">Not open</span></span><span class="s code">ilkalweaves.in</span><span class="r">Today</span></div>
+          </div>
+        </div>
+        <div class="bottom"><div><svg><use href="#i-merchants"/></svg>Merchants</div><div><svg><use href="#i-plans"/></svg>Plans</div><div><svg><use href="#i-staff"/></svg>Staff</div><div class="on"><svg><use href="#i-more"/></svg>More</div></div>
+      </div></div>
+      <div class="phone" role="img" aria-label="One store on a phone"><div class="scr">
+        <div class="p-top"><span class="back">‹ Storefront API</span><h1>Kesar Studio</h1></div>
+        <div class="p-body">
+          <div class="sect"><dl class="facts" style="grid-template-columns:6.5rem minmax(0,1fr);margin:0">
+            <dt>Website</dt><dd class="code">https://kesarstudio.in</dd><dt>Checkout</dt><dd class="code">checkout.kesarstudio.in</dd>
+            <dt>Live keys</dt><dd class="num">2</dd><dt>Test keys</dt><dd class="num">0</dd>
+            <dt>Last read</dt><dd class="num">13 Nov · version 2026-12</dd><dt>Partner</dt><dd>Arc Studio</dd>
+            <dt>Products</dt><dd class="num">212 listed</dd><dt>Store</dt><dd>Open since 4 Nov</dd>
+          </dl></div>
+          <button class="btn" style="justify-self:start;min-height:44px">Open in Merchants</button>
+        </div>
+        <div class="bottom"><div><svg><use href="#i-merchants"/></svg>Merchants</div><div><svg><use href="#i-plans"/></svg>Plans</div><div><svg><use href="#i-staff"/></svg>Staff</div><div class="on"><svg><use href="#i-more"/></svg>More</div></div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ═══ HANDOVER ═══ -->
+  <section class="part" id="handover">
+    <h2>Accept your store · the partner's website keys</h2>
+    <div class="stage">
+      <div>
+        <div class="ho" role="img" aria-label="Accept screen with the website block">
+          <div class="top"><span class="picto"><svg width="22" height="22"><use href="#i-bag"/></svg></span><div><h3>Kesar Studio is ready</h3><div class="by">Built by Arc Studio</div></div></div>
+          <dl>
+            <dt>You</dt><dd>Owner. The store and its data are yours.</dd>
+            <dt>Arc Studio</dt><dd>Partner: products, orders, settings, the look.</dd>
+            <dt>Your price</dt><dd>Same as any Frrata store.</dd>
+            <dt>Website</dt><dd><span class="code">kesarstudio.in</span>
+              <div class="klist" style="margin-top:8px">
+                <div class="krow"><span>Website key</span><span class="chip info">Live</span></div>
+                <div class="krow"><span>Arc Studio preview</span><span class="chip neu">Test</span><span class="s">Ends when the store opens</span></div>
+              </div></dd>
+          </dl>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button class="btn primary" style="min-height:44px">Accept Kesar Studio</button><a style="font-size:14px;text-decoration:underline">Not now</a></div>
+        </div>
+        <p class="ann">The store runs on its own website: the block lists the keys it reads with</p>
+      </div>
+      <div class="phone" role="img" aria-label="Accept screen on a phone"><div class="scr">
+        <div class="p-body" style="padding-top:40px">
+          <div class="ho" style="padding:18px;border:0;width:auto">
+            <div class="top"><span class="picto"><svg width="22" height="22"><use href="#i-bag"/></svg></span><div><h3>Kesar Studio is ready</h3><div class="by">Built by Arc Studio</div></div></div>
+            <dl style="grid-template-columns:6rem minmax(0,1fr)">
+              <dt>You</dt><dd>Owner. The store and its data are yours.</dd>
+              <dt>Arc Studio</dt><dd>Partner: products, orders, settings, the look.</dd>
+              <dt>Website</dt><dd><span class="code">kesarstudio.in</span>
+                <div class="klist" style="margin-top:8px">
+                  <div class="krow"><span>Website key</span><span class="chip info">Live</span></div>
+                  <div class="krow"><span>Arc Studio preview</span><span class="chip neu">Test</span><span class="s">Ends when the store opens</span></div>
+                </div></dd>
+            </dl>
+            <button class="btn primary" style="min-height:44px">Accept Kesar Studio</button>
+            <a style="font-size:14px;text-decoration:underline;justify-self:start">Not now</a>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ═══ PREVIEW ON WEBSITE ═══ -->
+  <section class="part" id="preview">
+    <h2>Console › Content › Pages · Preview on website</h2>
+    <div class="desk" role="img" aria-label="Content Pages with a hidden page and its Preview on website button">
+      <div class="desk-in">
+        <aside class="sb">
+          <div class="store"><span class="mono-mark">K</span><span><b>Kesar Studio</b><span class="code">kesarstudio.in</span></span></div>
+          <a class="nav"><svg><use href="#i-home"/></svg>Home</a>
+          <a class="nav"><svg><use href="#i-orders"/></svg>Orders</a>
+          <a class="nav"><svg><use href="#i-products"/></svg>Products</a>
+          <a class="nav"><svg><use href="#i-offers"/></svg>Offers</a>
+          <a class="nav on" aria-current="page"><svg><use href="#i-content"/></svg>Content</a>
+          <a class="nav"><svg><use href="#i-apps"/></svg>Apps</a>
+          <a class="nav"><svg><use href="#i-settings"/></svg>Settings</a>
+        </aside>
+        <main class="main">
+          <div class="page-w">
+            <div class="ph"><div><h1>Content</h1></div></div>
+            <div class="tabs" role="tablist" style="margin:4px 0 0"><button role="tab">Bars</button><button role="tab">Menus</button><button role="tab" aria-selected="true">Pages</button><button role="tab">Questions</button><button role="tab">Contact</button></div>
+            <section class="sect">
+              <div class="list">
+                <div class="item notext"><div><b>About us</b><div class="meta"><span class="code">/pages/about</span><span class="chip ok">Shown</span></div></div><div class="acts"><button class="btn sm">Edit</button></div></div>
+                <div class="item notext"><div><b>Our weavers</b><div class="meta"><span class="code">/pages/our-weavers</span><span class="chip neu">Hidden</span></div></div><div class="acts"><button class="btn sm ghost"><svg width="16" height="16"><use href="#i-eye"/></svg>Preview on website</button><button class="btn sm">Edit</button></div></div>
+                <div class="item notext"><div><b>Contact</b><div class="meta"><span class="code">/pages/contact</span><span class="chip ok">Shown</span></div></div><div class="acts"><button class="btn sm">Edit</button></div></div>
+              </div>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+    <div class="stage" style="margin-top:20px">
+      <div>
+        <div class="dlg flat" role="img" aria-label="Choose a key dialog">
+          <div class="dh"><h3>Preview Our weavers</h3></div>
+          <div class="db">
+            <span class="lab" style="font-size:13px;font-weight:500">Key your website uses</span>
+            <div class="pick" role="radiogroup" aria-label="Key your website uses">
+              <label><input type="radio" name="pk" checked><b style="font-weight:500">Website</b><small><span class="code">frs_pub_7Hk2qa…</span> · Used today</small></label>
+              <label><input type="radio" name="pk"><b style="font-weight:500">Arc Studio preview</b><small><span class="code">frs_test_Lm2xQ9…</span> · Used yesterday</small></label>
+            </div>
+          </div>
+          <div class="df"><button class="btn">Cancel</button><button class="btn primary">Open preview</button></div>
+        </div>
+        <p class="ann">1 · more than one key: pick the one the website uses. With one key, the preview opens at once</p>
+      </div>
+      <div>
+        <div class="dlg flat" role="img" aria-label="Preview ready dialog">
+          <div class="dh"><h3>Preview of Our weavers</h3></div>
+          <div class="db">
+            <div class="ro"><span class="addr">kesarstudio.in/frrata-preview?…</span><button class="btn sm ghost">Copy link</button></div>
+            <p style="margin:0;color:var(--text-2);font-size:13px">The link works for 10 minutes.</p>
+          </div>
+          <div class="df"><button class="btn">Close</button><button class="btn primary"><svg width="16" height="16"><use href="#i-ext"/></svg>Open kesarstudio.in</button></div>
+        </div>
+        <p class="ann">2 · the link, once; Copy link for a developer on their own computer</p>
+      </div>
+      <div>
+        <div class="dlg flat" role="img" aria-label="Preview refused">
+          <div class="dh"><h3>Couldn't open the preview</h3></div>
+          <div class="db"><div class="err">Your website has no key. Create one in Settings › Website.</div></div>
+          <div class="df"><button class="btn">Close</button><a class="btn primary">Open Settings › Website</a></div>
+        </div>
+        <p class="ann">3 · every key deleted since the page loaded</p>
+      </div>
+      <div class="phone" role="img" aria-label="Preview sheet on a phone"><div class="scr">
+        <div class="p-top"><h1>Content</h1></div>
+        <div class="p-tabs"><button>Bars</button><button>Menus</button><button aria-selected="true">Pages</button><button>Questions</button></div>
+        <div class="sheet-scrim"><div class="sheet">
+          <div class="grab"></div>
+          <h3>Preview of Our weavers</h3>
+          <div class="ro" style="margin-bottom:8px"><span class="addr">kesarstudio.in/frrata-preview?…</span></div>
+          <p style="margin:0 0 12px;color:var(--text-2);font-size:13px">The link works for 10 minutes.</p>
+          <div class="acts-row"><button class="btn">Copy link</button><button class="btn primary">Open kesarstudio.in</button></div>
+        </div></div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ═══ CONSOLE CHANGES ═══ -->
+  <section class="part" id="console">
+    <h2>Console · Settings › Website, Analytics, an order</h2>
+    <div class="stage">
+      <div style="width:560px">
+        <section class="sect">
+          <div class="sect-h"><h3>For developers</h3></div>
+          <div class="list">
+            <div class="kit-row" style="padding:8px 0"><span><b style="font-weight:500">Docs</b> <span class="addr">api.frrata.shop/docs</span></span><a class="btn sm ghost" aria-label="Open docs"><svg width="16" height="16"><use href="#i-ext"/></svg>Open</a></div>
+            <div class="kit-row" style="padding:8px 0;border-top:1px solid var(--line-soft)"><span><b style="font-weight:500">Starter code</b> <span class="addr">github.com/frrata/starter</span></span><a class="btn sm ghost" aria-label="Open starter code"><svg width="16" height="16"><use href="#i-ext"/></svg>Open</a></div>
+            <div class="kit-row" style="padding:8px 0;border-top:1px solid var(--line-soft)"><span><b style="font-weight:500">OpenAPI</b> <span class="addr">api.frrata.shop/2026-12/openapi.json</span></span><button class="btn sm ghost" aria-label="Copy OpenAPI link">Copy</button></div>
+          </div>
+        </section>
+        <p class="ann">Settings › Website · For developers gains Docs and Starter</p>
+      </div>
+      <div style="width:560px">
+        <section class="sect flush">
+          <div class="wrap-x"><table class="tbl src-tbl">
+            <thead><tr><th>Source</th><th class="r">Orders</th><th class="r">Delivered</th></tr></thead>
+            <tbody>
+              <tr><td>Instagram bio</td><td class="r num">64</td><td class="r num">51</td></tr>
+              <tr><td>Your website</td><td class="r num">38</td><td class="r num">33</td></tr>
+              <tr><td>WhatsApp broadcast</td><td class="r num">21</td><td class="r num">18</td></tr>
+              <tr><td>Direct or unknown</td><td class="r num">12</td><td class="r num">9</td></tr>
+            </tbody>
+          </table></div>
+          <p style="margin:0;padding:10px 14px;border-top:1px solid var(--line-soft);color:var(--text-2);font-size:13px">Sources renamed on 16 Nov</p>
+        </section>
+        <p class="ann">Analytics › Sources · the new row, and the date line for 90 days</p>
+      </div>
+      <div style="width:420px">
+        <section class="sect">
+          <div class="sect-h"><h3>KS-5104</h3><span class="sp"></span><span class="chip info">To confirm</span></div>
+          <dl class="facts" style="margin:0"><dt>Source</dt><dd>Your website</dd><dt>Payment</dt><dd>Pay on delivery</dd><dt>Total</dt><dd class="num">₹3,480</dd></dl>
+        </section>
+        <p class="ann">An order's source</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ BAG LINK (shopper) ═══ -->
+  <section class="part" id="cart">
+    <h2>The bag link · what a shopper sees on Frrata's checkout host</h2>
+    <div class="row-frames">
+      <div class="phone" role="img" aria-label="Opening checkout"><div class="scr">
+        <div class="store-scr">
+          <div class="sh">Kesar Studio</div>
+          <div class="sb2"><span class="spin" aria-hidden="true"></span><p>Opening checkout</p></div>
+        </div>
+      </div></div>
+      <div class="phone" role="img" aria-label="Bag link that doesn't work"><div class="scr">
+        <div class="store-scr">
+          <div class="sh">Kesar Studio</div>
+          <div class="sb2"><h3>This bag link doesn't work</h3><p>Add your items to the bag again.</p><span class="sbtn">Go to Kesar Studio</span></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ═══ DOCS ═══ -->
+  <section class="part" id="docs">
+    <h2>Docs · api.frrata.shop/docs</h2>
+    <div class="docs" role="img" aria-label="Docs home on a computer">
+      <div class="docs-top"><span class="mono-mark rani">f</span><b>Frrata Storefront API</b><span class="tag code">2026-12</span><span class="sp"></span><a>OpenAPI</a><a>Starter</a><a>llms.txt</a></div>
+      <div class="docs-in">
+        <nav class="docs-nav" aria-label="Docs">
+          <div class="grp">Guides</div>
+          <a class="on">Start</a><a>Keys</a><a>Bag link</a><a>Caching</a><a>Preview</a>
+          <div class="grp">Reference</div>
+          <a><code>shop</code></a><a><code>products/page/{n}</code></a><a><code>products/{handle}</code></a><a><code>collections</code></a><a><code>collections/{handle}/page/{n}</code></a><a><code>facets</code></a><a><code>filter/page/{n}</code></a><a><code>search</code></a><a><code>offers</code></a><a><code>content</code></a><a><code>pages/{handle}</code></a><a><code>faq</code></a>
+        </nav>
+        <div class="docs-main">
+          <h1>Start</h1>
+          <p class="lead">Build a brand's website on its Frrata store. Frrata keeps the catalogue, checkout, payments and orders.</p>
+          <div class="cards3">
+            <a><b>1 · Get a key</b><span>The brand creates it in Settings › Website.</span></a>
+            <a><b>2 · Read the store</b><span>Products, collections, pages.</span></a>
+            <a><b>3 · Send the bag</b><span>A link to the store's checkout.</span></a>
+          </div>
+          <h2>Your first read</h2>
+<pre class="cb">curl https://api.frrata.shop/2026-12/k/frs_pub_7Hk2qa…/products/page/1</pre>
+<pre class="cb">{
+  "page": 1, "total": 212, "truncated": false,
+  "products": [{ "handle": "ilkal-saree-maroon", "title": "Ilkal saree, maroon",
+    "price": { "from": 349000, "to": 349000 }, "availability": { "kind": "in_stock" } }]
+}</pre>
+          <p>Prices are in paise. Text has no HTML.</p>
+        </div>
+      </div>
+    </div>
+    <div class="docs" role="img" aria-label="Bag link guide on a computer" style="margin-top:24px">
+      <div class="docs-top"><span class="mono-mark rani">f</span><b>Frrata Storefront API</b><span class="tag code">2026-12</span><span class="sp"></span><a>OpenAPI</a><a>Starter</a><a>llms.txt</a></div>
+      <div class="docs-in">
+        <nav class="docs-nav" aria-label="Docs">
+          <div class="grp">Guides</div>
+          <a>Start</a><a>Keys</a><a class="on">Bag link</a><a>Caching</a><a>Preview</a>
+          <div class="grp">Reference</div>
+          <a><code>shop</code></a><a><code>products/{handle}</code></a><a><code>filter/page/{n}</code></a>
+        </nav>
+        <div class="docs-main">
+          <h1>Bag link</h1>
+          <p class="lead">Send the shopper's bag to the store's checkout with one link.</p>
+          <div class="ep"><span class="m">GET</span><span>https://checkout.kesarstudio.in/cart?l=&lt;size id&gt;:&lt;qty&gt;,…</span></div>
+          <div class="wrap-x"><table class="fields">
+            <thead><tr><th>Part</th><th>Rule</th></tr></thead>
+            <tbody>
+              <tr><td>l</td><td>Up to 20 lines. Each line is a size <span class="code">id</span> and a quantity, 1–10.</td></tr>
+              <tr><td>code</td><td>An offer code. Optional.</td></tr>
+              <tr><td>utm_*</td><td>Your campaign tags, passed through unchanged. Optional.</td></tr>
+            </tbody>
+          </table></div>
+<pre class="cb">https://checkout.kesarstudio.in/cart?l=8f2c…e1:1,41ab…09:2&amp;utm_source=instagram</pre>
+          <p>The store's checkout prices the bag again. Checkout removes sizes that sold out.</p>
+          <p>The checkout address is the <span class="code">checkout</span> field in <span class="code">shop</span>.</p>
+        </div>
+      </div>
+    </div>
+    <div class="docs" role="img" aria-label="Reference page for one product" style="margin-top:24px">
+      <div class="docs-top"><span class="mono-mark rani">f</span><b>Frrata Storefront API</b><span class="tag code">2026-12</span><span class="sp"></span><a>OpenAPI</a><a>Starter</a><a>llms.txt</a></div>
+      <div class="docs-in">
+        <nav class="docs-nav" aria-label="Docs">
+          <div class="grp">Guides</div>
+          <a>Start</a><a>Keys</a><a>Bag link</a>
+          <div class="grp">Reference</div>
+          <a><code>products/page/{n}</code></a><a class="on"><code>products/{handle}</code></a><a><code>facets</code></a><a><code>filter/page/{n}</code></a>
+        </nav>
+        <div class="docs-main">
+          <h1 class="code" style="font:600 22px/30px var(--mono)">products/{handle}</h1>
+          <div class="ep"><span class="m">GET</span><span>/2026-12/k/{key}/products/{handle}</span></div>
+          <div class="wrap-x"><table class="fields">
+            <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>handle</td><td>string</td><td>The current handle. An old handle still works and returns this one.</td></tr>
+              <tr><td>title</td><td>string</td><td>Plain text.</td></tr>
+              <tr><td>sizes[].id</td><td>string</td><td>For the bag link.</td></tr>
+              <tr><td>sizes[].price</td><td>integer</td><td>Paise, GST included.</td></tr>
+              <tr><td>sizes[].priorPrice</td><td>integer | null</td><td>The lowest price in the last 30 days.</td></tr>
+              <tr><td>availability.kind</td><td>enum</td><td><span class="code">in_stock</span>, <span class="code">low</span>, <span class="code">sold_out</span>, <span class="code">pre_order</span>. More values may be added.</td></tr>
+              <tr><td>photos[]</td><td>object</td><td>Image URLs, one per width.</td></tr>
+            </tbody>
+          </table></div>
+          <h2>Errors</h2>
+          <div class="wrap-x"><table class="fields">
+            <tbody>
+              <tr><td>404 not_found</td><td>The key or product doesn't exist, or the product is hidden.</td></tr>
+              <tr><td>429 busy</td><td>Too many reads from one network. Retry after 60 s.</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="part" id="docs-phone">
+    <h2>Docs · phone</h2>
+    <div class="row-frames">
+      <div class="phone" role="img" aria-label="Docs start on a phone"><div class="scr">
+        <div class="docs-top" style="padding:12px 16px"><span class="mono-mark rani">f</span><b>Storefront API</b><span class="sp"></span><button class="ib" aria-label="Menu"><svg><use href="#i-more"/></svg></button></div>
+        <div class="docs-main" style="padding:16px">
+          <h1>Start</h1>
+          <p class="lead">Build a brand's website on its Frrata store. Frrata keeps the catalogue, checkout, payments and orders.</p>
+          <div class="cards3"><a><b>1 · Get a key</b><span>The brand creates it in Settings › Website.</span></a><a><b>2 · Read the store</b><span>Products, collections, pages.</span></a></div>
+<pre class="cb">curl https://api.frrata.shop/2026-12/
+  k/frs_pub_7Hk2qa…/products/page/1</pre>
+        </div>
+      </div></div>
+      <div class="phone" role="img" aria-label="A reference page on a phone"><div class="scr">
+        <div class="docs-top" style="padding:12px 16px"><span class="mono-mark rani">f</span><b>Storefront API</b><span class="sp"></span><button class="ib" aria-label="Menu"><svg><use href="#i-more"/></svg></button></div>
+        <div class="docs-main" style="padding:16px">
+          <h1 class="code" style="font:600 18px/26px var(--mono)">filter/page/{n}</h1>
+          <div class="ep"><span class="m">GET</span><span>/2026-12/k/{key}/filter/page/{n}?size=m&amp;price=p2</span></div>
+          <div class="wrap-x"><table class="fields">
+            <thead><tr><th>Query</th><th>Values</th></tr></thead>
+            <tbody>
+              <tr><td>collection</td><td>A handle</td></tr>
+              <tr><td>size</td><td>A <span class="code">value</span> from <span class="code">facets</span></td></tr>
+              <tr><td>colour</td><td>A <span class="code">value</span> from <span class="code">facets</span></td></tr>
+              <tr><td>price</td><td>A band <span class="code">id</span> from <span class="code">facets</span></td></tr>
+              <tr><td>stock</td><td><span class="code">in</span> shows in-stock products only</td></tr>
+              <tr><td>sort</td><td><span class="code">featured</span>, <span class="code">new</span>, <span class="code">price_asc</span>, <span class="code">price_desc</span></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+</div>

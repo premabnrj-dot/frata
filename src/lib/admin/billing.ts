@@ -8,6 +8,7 @@ import { adminDb } from '@/lib/db/admin'
 import { tenants } from '@/lib/db/schema'
 import { frrataCreditNotes, frrataInvoiceLines, frrataInvoices, frrataPayments } from '@/lib/db/schema-billing'
 import { runDrafts, type RunResult } from '@/lib/billing/run'
+import { monthStartIST } from '@/domains/time/month'
 import { auditStaff } from './audit'
 
 // =============================================================================
@@ -20,6 +21,8 @@ export type DraftRow = {
   id: string; tenantId: string; shop: string; taxable: number; gst: number; total: number; rolled: boolean; carryOut: number
   ordersBilled: number; includedOrders: number; draftedAt: Date; number: string | null; issuedAt: Date | null
   paid: number; credited: number; state: InvoiceState; due: number
+  /** Paid over what was due and not yet sent back (Billing › Needs you; Record refund). */
+  toRefund: number
 }
 
 /** Money across every shop: Frrata admins only (plan finding 17), checked here as well as on the page. */
@@ -30,24 +33,28 @@ export async function billingMonth(staff: StaffOk, monthStart: Date): Promise<Dr
   const rows = await adminDb().select({
     id: frrataInvoices.id, tenantId: frrataInvoices.tenantId, shop: tenants.name, taxable: frrataInvoices.taxable, cgst: frrataInvoices.cgst, sgst: frrataInvoices.sgst, igst: frrataInvoices.igst,
     total: frrataInvoices.total, rolled: frrataInvoices.rolled, carryOut: frrataInvoices.carryOut, ordersBilled: frrataInvoices.ordersBilled, includedOrders: frrataInvoices.includedOrders,
-    draftedAt: frrataInvoices.draftedAt, number: frrataInvoices.number, issuedAt: frrataInvoices.issuedAt,
+    draftedAt: frrataInvoices.draftedAt, number: frrataInvoices.number, issuedAt: frrataInvoices.issuedAt, testMode: frrataInvoices.testMode,
   }).from(frrataInvoices).innerJoin(tenants, eq(tenants.id, frrataInvoices.tenantId)).where(eq(frrataInvoices.periodStart, monthStart)).orderBy(asc(tenants.name))
-  const { paid, credited } = await moneyIn(rows.map((r) => r.id))
-  return rows.map(({ cgst, sgst, igst, ...r }) => {
+  const { paid, credited, toRefund } = await moneyIn(rows.map((r) => r.id))
+  return rows.map(({ cgst, sgst, igst, testMode, ...r }) => {
     const p = paid.get(r.id) ?? 0, c = credited.get(r.id) ?? 0
-    return { ...r, gst: cgst + sgst + igst, paid: p, credited: c, ...invoiceState(r, p, c) }
+    return { ...r, gst: cgst + sgst + igst, paid: p, credited: c, toRefund: refundable(testMode, toRefund.get(r.id)), ...invoiceState(r, p, c) }
   })
 }
 
+/** What waits to be refunded on an invoice: a test invoice never does (the definer refuses it; Today leaves it out). */
+const refundable = (testMode: boolean, over: number | undefined) => (testMode ? 0 : over ?? 0)
+
 /** Captured payments and credit-note totals per invoice. */
 async function moneyIn(ids: string[]) {
-  if (!ids.length) return { paid: new Map<string, number>(), credited: new Map<string, number>() }
+  if (!ids.length) return { paid: new Map<string, number>(), credited: new Map<string, number>(), toRefund: new Map<string, number>() }
   const db = adminDb()
   const [p, c] = await Promise.all([
-    db.select({ id: frrataPayments.invoiceId, n: sql<string>`sum(${frrataPayments.amount})` }).from(frrataPayments).where(and(inArray(frrataPayments.invoiceId, ids), isNotNull(frrataPayments.capturedAt))).groupBy(frrataPayments.invoiceId),
+    db.select({ id: frrataPayments.invoiceId, n: sql<string>`sum(${frrataPayments.amount})`, r: sql<string>`coalesce(sum(${frrataPayments.overPaid}) filter (where ${frrataPayments.overPaid} > 0 and ${frrataPayments.refundedAt} is null), 0)` })
+      .from(frrataPayments).where(and(inArray(frrataPayments.invoiceId, ids), isNotNull(frrataPayments.capturedAt))).groupBy(frrataPayments.invoiceId),
     db.select({ id: frrataCreditNotes.invoiceId, n: sql<string>`sum(${frrataCreditNotes.total})` }).from(frrataCreditNotes).where(inArray(frrataCreditNotes.invoiceId, ids)).groupBy(frrataCreditNotes.invoiceId),
   ])
-  return { paid: new Map(p.map((r) => [r.id, Number(r.n)])), credited: new Map(c.map((r) => [r.id, Number(r.n)])) }
+  return { paid: new Map(p.map((r) => [r.id, Number(r.n)])), credited: new Map(c.map((r) => [r.id, Number(r.n)])), toRefund: new Map(p.map((r) => [r.id, Number(r.r)])) }
 }
 
 /** What "Issue" would do now: the invoices to number (not rolled, total > 0) and their total — Admin confirms these. */
@@ -68,17 +75,50 @@ export async function issueMonth(staff: StaffOk, monthStart: Date, expected: { c
   // Without Frrata's GSTIN this would issue the REAL drafts as tests and freeze their fees for good (security review).
   if (s.test && !testIssueAllowed()) throw new Error('issue: test-mode issuing is off here — set Frrata’s GSTIN, legal name, address and SAC first')
   return adminDb().transaction(async (tx) => {
-    const [r] = await tx.execute<{ issued: number; closed: number }>(sql`select * from app_issue_frrata_invoices(${monthStart.toISOString()}::timestamptz, ${expected.count}, ${expected.total}, ${staff.userId}::uuid,
-      ${s.name}, ${s.gstin ?? ''}, ${s.address}, ${s.sac}, ${s.test}, ${s.prefix}, ${s.fy})`)
-    await auditStaff(tx, staff, { action: 'billing.issue', target: monthStart.toISOString(), detail: { ...expected, issued: r!.issued, closed: r!.closed, test: s.test } })
-    return { issued: Number(r!.issued), closed: Number(r!.closed), test: s.test }
+    const r = await issueWith(tx, monthStart, expected, { staff: staff.userId })
+    await auditStaff(tx, staff, { action: 'billing.issue', target: monthStart.toISOString(), detail: { ...expected, issued: r.issued, closed: r.closed, test: s.test } })
+    return r
+  })
+}
+
+type AdminTx = Parameters<Parameters<ReturnType<typeof adminDb>['transaction']>[0]>[0]
+
+/** The one call to the issue definer, for Admin (a staff member) and the 1st's run (the system). */
+async function issueWith(tx: AdminTx, monthStart: Date, expected: { count: number; total: number }, by: { staff: string } | { system: true }) {
+  const s = frrataSeller()
+  const staff = 'staff' in by ? by.staff : null
+  const [r] = await tx.execute<{ issued: number; closed: number }>(sql`select * from app_issue_frrata_invoices(${monthStart.toISOString()}::timestamptz, ${expected.count}, ${expected.total}, ${staff}::uuid,
+    ${s.name}, ${s.gstin ?? ''}, ${s.address}, ${s.sac}, ${s.test}, ${s.prefix}, ${s.fy}, ${!('staff' in by)})`)
+  return { issued: Number(r!.issued), closed: Number(r!.closed), test: s.test }
+}
+
+/**
+ * Bills issued on the 1st without a person (billing rework R2; owner decision 3, 2026-11-15). Called by the daily cron
+ * only after the run drafted THIS month for every shop. Skips — never throws for these — unless Frrata's seller details
+ * are real (never test invoices), it is the 1st to 3rd IST, and the drafts are fresh. The count and total are read in
+ * the same transaction as the issue, with toIssue's rule; the definer recounts under its row locks and audits itself.
+ */
+export async function issueMonthAuto(now = new Date()): Promise<{ issued: number; closed: number } | { skipped: 'seller' | 'day' | 'nothing' | 'stale' }> {
+  const s = frrataSeller(now)
+  if (s.test) return { skipped: 'seller' }
+  const month = monthStartIST(now)
+  // The IST day of the month: days since the IST 1st, plus one.
+  if (Math.floor((now.getTime() - month.getTime()) / 86_400_000) + 1 > 3) return { skipped: 'day' }
+  return adminDb().transaction(async (tx) => {
+    const rows = await tx.select({ issuedAt: frrataInvoices.issuedAt, rolled: frrataInvoices.rolled, total: frrataInvoices.total, draftedAt: frrataInvoices.draftedAt })
+      .from(frrataInvoices).where(eq(frrataInvoices.periodStart, month))
+    const t = toIssue(rows as DraftRow[], month)
+    if (t.open === 0) return { skipped: 'nothing' as const }
+    if (t.stale > 0) return { skipped: 'stale' as const }
+    const r = await issueWith(tx, month, { count: t.count, total: t.total }, { system: true })
+    return { issued: r.issued, closed: r.closed }
   })
 }
 
 export type InvoiceDetail = {
   invoice: DraftRow & { periodStart: Date; testMode: boolean; buyerName: string | null }
   lines: { description: string; quantity: number; taxable: number }[]
-  payments: { method: string; amount: number; utr: string | null; capturedAt: Date | null; failedAt: Date | null; failureReason: string | null; overPaid: number; createdAt: Date }[]
+  payments: { id: string; refundAmount: number | null; refundUtr: string | null; refundedAt: Date | null; method: string; amount: number; utr: string | null; capturedAt: Date | null; failedAt: Date | null; failureReason: string | null; overPaid: number; createdAt: Date }[]
   credits: { number: string; total: number; reason: string; issuedAt: Date }[]
 }
 
@@ -93,14 +133,14 @@ export async function invoiceDetail(staff: StaffOk, id: string): Promise<Invoice
   if (!i) return null
   const [lines, payments, credits, money] = await Promise.all([
     db.select({ description: frrataInvoiceLines.description, quantity: frrataInvoiceLines.quantity, taxable: frrataInvoiceLines.taxable }).from(frrataInvoiceLines).where(eq(frrataInvoiceLines.invoiceId, id)).orderBy(asc(frrataInvoiceLines.position)),
-    db.select({ method: frrataPayments.method, amount: frrataPayments.amount, utr: frrataPayments.utr, capturedAt: frrataPayments.capturedAt, failedAt: frrataPayments.failedAt, failureReason: frrataPayments.failureReason, overPaid: frrataPayments.overPaid, createdAt: frrataPayments.createdAt })
+    db.select({ id: frrataPayments.id, refundAmount: frrataPayments.refundAmount, refundUtr: frrataPayments.refundUtr, refundedAt: frrataPayments.refundedAt, method: frrataPayments.method, amount: frrataPayments.amount, utr: frrataPayments.utr, capturedAt: frrataPayments.capturedAt, failedAt: frrataPayments.failedAt, failureReason: frrataPayments.failureReason, overPaid: frrataPayments.overPaid, createdAt: frrataPayments.createdAt })
       .from(frrataPayments).where(eq(frrataPayments.invoiceId, id)).orderBy(asc(frrataPayments.createdAt)),
     db.select({ number: frrataCreditNotes.number, total: frrataCreditNotes.total, reason: frrataCreditNotes.reason, issuedAt: frrataCreditNotes.issuedAt }).from(frrataCreditNotes).where(eq(frrataCreditNotes.invoiceId, id)).orderBy(asc(frrataCreditNotes.issuedAt)),
     moneyIn([id]),
   ])
   const { cgst, sgst, igst, ...r } = i
   const p = money.paid.get(id) ?? 0, c = money.credited.get(id) ?? 0
-  return { invoice: { ...r, gst: cgst + sgst + igst, paid: p, credited: c, ...invoiceState(r, p, c) }, lines, payments, credits }
+  return { invoice: { ...r, gst: cgst + sgst + igst, paid: p, credited: c, toRefund: refundable(r.testMode, money.toRefund.get(id)), ...invoiceState(r, p, c) }, lines, payments, credits }
 }
 
 /** A bank transfer, UPI or pay-link payment recorded by hand (ADMIN_ONLY), under its unique reference; audited. */
@@ -110,6 +150,19 @@ export async function recordPayment(staff: StaffOk, invoiceId: string, p: { amou
     const [r] = await tx.execute<{ id: string }>(sql`select app_record_frrata_payment(${invoiceId}::uuid, ${p.amount}, ${p.method}, ${p.utr}, ${staff.userId}::uuid) as id`)
     await auditStaff(tx, staff, { action: 'billing.payment', target: invoiceId, detail: { amount: p.amount, method: p.method } })
     return r!.id
+  })
+}
+
+/** An over-payment Frrata sent back from its bank, recorded once (ADMIN_ONLY): app_record_frrata_refund (0138) is the
+ *  one writer of the refund columns and checks the role again; audited in the same transaction. */
+export async function recordRefund(staff: StaffOk, paymentId: string, r: { utr: string; sentOn: string }) {
+  adminOnly(staff)
+  return adminDb().transaction(async (tx) => {
+    const [x] = await tx.execute<{ amount: string }>(sql`select app_record_frrata_refund(${paymentId}::uuid, ${r.utr}, ${r.sentOn}::date, ${staff.userId}::uuid) as amount`)
+    // The store and the bank's reference on the audit row (security review on the diff): its Activity shows the refund.
+    const [p] = await tx.select({ tenantId: frrataPayments.tenantId, utr: frrataPayments.refundUtr }).from(frrataPayments).where(eq(frrataPayments.id, paymentId))
+    await auditStaff(tx, staff, { tenantId: p?.tenantId, action: 'billing.refund', target: paymentId, detail: { amount: Number(x!.amount), utr: p?.utr } })
+    return Number(x!.amount)
   })
 }
 

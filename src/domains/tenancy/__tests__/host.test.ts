@@ -39,8 +39,9 @@ describe('routeFor and shopRewrites: /s/ is reachable only through the rewrite',
   it('passes a shop host to the rewrite, refuses a malformed one', async () => {
     const { routeFor } = await import('../host')
     expect(routeFor('kesar.frata.store', '/products/kurta', C, false, 'frata.store')).toEqual({ kind: 'shop' })
-    // The bare shop domain holds no shop: it is sent to Frrata's site; its subdomains stay shops.
-    expect(routeFor('frata.store', '/', C, false, 'frata.store')).toEqual({ kind: 'platform_apex' })
+    // The bare shop domain holds no shop: its home page is Frrata's own site, every other path is sent there
+    // instead; its subdomains stay shops.
+    expect(routeFor('frata.store', '/', C, false, 'frata.store')).toEqual({ kind: 'platform_site' })
     expect(routeFor('FRATA.STORE:443', '/x', C, false, 'frata.store')).toEqual({ kind: 'platform_apex' })
     expect(routeFor('kesar.frata.store', '/', C, false, 'frata.store')).toEqual({ kind: 'shop' })
     expect(routeFor('kesar.frata.store', '/s/b.frata.store/products/x.png', C, false, 'frata.store')).toEqual({ kind: 'shop' })
@@ -84,6 +85,25 @@ describe('routeFor and shopRewrites: /s/ is reachable only through the rewrite',
   })
 })
 
+describe('the bare shop domain serves Frrata\'s own site, stopgap (owner, 2026-11-15)', () => {
+  const C = 'app.frata.in'
+  it('only PLATFORM_SITE_PATHS; everything else still redirects, and a subdomain is still a shop', () => {
+    expect(routeFor('frrata.shop', '/', C, false, 'frrata.shop')).toEqual({ kind: 'platform_site' })
+    expect(routeFor('frrata.shop', '/privacy-policy', C, false, 'frrata.shop')).toEqual({ kind: 'platform_site' })
+    expect(routeFor('FRRATA.SHOP:443', '/privacy-policy', C, false, 'frrata.shop')).toEqual({ kind: 'platform_site' })
+    expect(routeFor('frrata.shop', '/login', C, false, 'frrata.shop')).toEqual({ kind: 'platform_apex' })
+    expect(routeFor('kesar-studio.frrata.shop', '/', C, false, 'frrata.shop')).toEqual({ kind: 'shop' })
+  })
+  it('is left out of the shop rewrite; a subdomain is not', () => {
+    const rules = shopRewrites(C, 'frrata.shop')
+    const shop = rules.find((x) => x.destination.startsWith('/s/'))!
+    const notShop = new RegExp(`^${shop.missing[0]!.value}$`)
+    expect(notShop.test('frrata.shop')).toBe(true)
+    expect(notShop.test('FRRATA.SHOP')).toBe(false) // the header is lower-cased by surfaceFor before this ever runs
+    expect(notShop.test('kesar-studio.frrata.shop')).toBe(false)
+  })
+})
+
 describe('EkCode host (P1 task 6)', () => {
   const EK = 'ekcode.test'
   const r = (host: string, path: string) => routeFor(host, path, 'app.frata.test', false, 'frata.store', EK).kind
@@ -104,12 +124,67 @@ describe('EkCode host (P1 task 6)', () => {
     expect(surfaceFor(EK, 'app.frata.test').kind).toBe('storefront')
   })
   it('rewrites its pages to /ek first, and leaves it out of the shop rewrite', () => {
-    const rules = shopRewrites('app.frata.test', EK)
+    const rules = shopRewrites('app.frata.test', '', EK)
     expect(rules[0]!.destination).toBe('/ek/:page')
     expect(rules[1]!.destination).toBe('/ek')
     const shop = rules.find((x) => x.destination.startsWith('/s/'))!
     expect(new RegExp(`^${shop.missing[0]!.value}$`).test(EK)).toBe(true)
     expect(new RegExp(`^${shop.missing[0]!.value}$`).test('www.ekcode.test')).toBe(true)
     expect(new RegExp(`^${shop.missing[0]!.value}$`).test('kesar.frata.store')).toBe(false)
+  })
+})
+
+describe('the Storefront API host (ADR-0018; V1 plan § SA0·1)', () => {
+  const C = 'app.frata.in', D = 'frrata.shop', E = 'ekcode.in', A = 'api.frrata.shop'
+  it('is its own surface, exact and normalised, and only when set', () => {
+    expect(surfaceFor('api.frrata.shop', C, E, A)).toEqual({ kind: 'api' })
+    expect(surfaceFor('API.frrata.shop.', C, E, A)).toEqual({ kind: 'api' })
+    expect(surfaceFor('api.frrata.shop:443', C, E, A)).toEqual({ kind: 'api' })
+    expect(surfaceFor('www.api.frrata.shop', C, E, A)).toEqual({ kind: 'storefront', host: 'www.api.frrata.shop' })
+    expect(surfaceFor('api.frrata.shop', C, E, '')).toEqual({ kind: 'storefront', host: 'api.frrata.shop' })
+    expect(surfaceFor('frata-git-x.vercel.app', C, E, A)).toEqual({ kind: 'console' })
+  })
+  it('answers versioned paths only on the API host', () => {
+    expect(routeFor(A, '/2026-12/k/frs_pub_x/shop', C, false, D, E, A)).toEqual({ kind: 'api' })
+    expect(routeFor(A, '/2026-12/openapi.json', C, false, D, E, A)).toEqual({ kind: 'api' })
+    expect(routeFor(A, '/console', C, false, D, E, A)).toEqual({ kind: 'not_found' })
+    expect(routeFor(A, '/api/storefront/2026-12/k/x/shop', C, false, D, E, A)).toEqual({ kind: 'not_found' })
+    expect(routeFor(A, '/2025-01/k/x/shop', C, false, D, E, A)).toEqual({ kind: 'not_found' })
+    expect(routeFor(A, '/s/kesar.frrata.shop/', C, false, D, E, A)).toEqual({ kind: 'not_found' })
+  })
+  it('refuses the API handlers on every other host', () => {
+    for (const host of [C, 'kesar.frrata.shop', 'shop.brand.in', 'frata-git-x.vercel.app', E, 'localhost:3000']) {
+      expect(routeFor(host, '/api/storefront/2026-12/k/frs_pub_x/shop', C, true, D, E, A)).toEqual({ kind: 'not_found' })
+      expect(routeFor(host, '/api/storefront', C, true, D, E, A)).toEqual({ kind: 'not_found' })
+    }
+  })
+  it('rewrites test keys to the dynamic tree, live keys to the cached tree, the API host only', async () => {
+    const { apiRewrites, KEY_BODY } = await import('../host')
+    expect(apiRewrites('')).toEqual([])
+    const r = apiRewrites('API.frrata.shop')
+    expect(r.every((x) => x.has[0]?.value === 'api\\.frrata\\.shop')).toBe(true)
+    const test = r.find((x) => x.source.includes('frs_test_'))!, pub = r.find((x) => x.source.includes('frs_pub_'))!
+    expect(test.destination).toBe('/api/storefront/2026-12/t/:key/:rest*')
+    expect(pub.destination).toBe('/api/storefront/2026-12/k/:key/:rest*')
+    expect(KEY_BODY).toBe('[0-9A-Za-z]{38}')
+  })
+  it('serves its docs on the API host only, by their public paths (SA1b D·9; security review M1)', async () => {
+    const { apiRewrites, apiRedirects } = await import('../host')
+    for (const p of ['/docs', '/docs/bag-link', '/docs/reference/products-handle', '/llms.txt', '/_next/static/chunks/x.js'])
+      expect(routeFor(A, p, C, false, D, E, A), p).toEqual({ kind: 'api' })
+    for (const p of ['/docs/a/b/c', '/docs/Bad', '/api-docs', '/api-docs/bag-link', '/docs.txt']) expect(routeFor(A, p, C, false, D, E, A), p).toEqual({ kind: 'not_found' })
+    // the internal path answers nowhere by name
+    for (const host of [C, 'kesar.frrata.shop', 'shop.brand.in', 'frata-git-x.vercel.app', E, 'localhost:3000'])
+      expect(routeFor(host, '/api-docs/bag-link', C, true, D, E, A), host).toEqual({ kind: 'not_found' })
+    const r = apiRewrites('api.frrata.shop')
+    expect(r.slice(0, 3).map((x) => [x.source, x.destination])).toEqual([['/docs', '/api-docs'], ['/docs/:rest*', '/api-docs/:rest*'], ['/llms.txt', '/api-docs/llms.txt']])
+    expect(apiRedirects('api.frrata.shop')).toEqual([{ source: '/', destination: '/docs', permanent: false, has: [{ type: 'host', value: 'api\\.frrata\\.shop' }] }])
+    expect(apiRedirects('')).toEqual([])
+  })
+  it('keeps the API host out of the shop rewrite', () => {
+    const shop = shopRewrites(C, E, A)
+    const miss = new RegExp(`^${shop[shop.length - 1]?.missing[0]?.value}$`)
+    expect(miss.test('api.frrata.shop')).toBe(true)
+    expect(miss.test('kesar.frrata.shop')).toBe(false)
   })
 })

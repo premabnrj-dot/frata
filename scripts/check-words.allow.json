@@ -42,12 +42,6 @@
     "why": "The GST law's UQC names (NOS, PCS) as the invoice prints them"
   },
   {
-    "file": "src/app/(lookeditor)/console/look/customize/menus-form.tsx",
-    "rule": "W5",
-    "text": "Shop",
-    "why": "The store's default bottom tabs as shoppers read them (Home, Shop, Search, Bag): 'Shop' is the store's verb"
-  },
-  {
     "file": "src/app/(lookeditor)/console/look/customize/sections-panel.tsx",
     "rule": "W5",
     "text": "Shop by budget",
@@ -142,5 +136,101 @@
     "rule": "filler",
     "text": "unlock this device",
     "why": "A phone or laptop is literally unlocked: the passkey security line (partner sign-in research lesson 5; approved mockup screens 8 and 14)"
+  },
+  {
+    "file": "src/app/(console)/console/settings/website/page.tsx",
+    "rule": "W4",
+    "text": "Website",
+    "why": "Owner, 2026-11-15 (Storefront API mockup, glossary § Surfaces): Website names the brand's own site built as code on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/settings/website/website-view.tsx",
+    "rule": "W4",
+    "text": "Website",
+    "why": "Owner, 2026-11-15 (Storefront API mockup, glossary § Surfaces): Website names the brand's own site built as code on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/settings/website/website-view.tsx",
+    "rule": "W4",
+    "text": "website",
+    "why": "Owner, 2026-11-15 (Storefront API mockup, glossary § Surfaces): Website names the brand's own site built as code on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/settings/website/actions.ts",
+    "rule": "W4",
+    "text": "website",
+    "why": "Owner, 2026-11-15 (Storefront API mockup, glossary § Surfaces): Website names the brand's own site built as code on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/domains/settings/groups.ts",
+    "rule": "W4",
+    "text": "website",
+    "why": "Owner, 2026-11-15 (Storefront API mockup, glossary § Surfaces): Website names the brand's own site built as code on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/domains/analytics/source.ts",
+    "rule": "W4",
+    "text": "Your website",
+    "why": "Owner, 2026-11-15 (SA1b mockup, classifier v3): the source of an order the brand's own website sent, the glossary's Website exception (Storefront API), never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/content/_components/pages.tsx",
+    "rule": "W4",
+    "text": "Preview on website",
+    "why": "Owner, 2026-11-15 (SA1b mockup § Preview, glossary § Surfaces): Website names the brand's own site built on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/content/_components/pages.tsx",
+    "rule": "W4",
+    "text": "Key your website uses",
+    "why": "Owner, 2026-11-15 (SA1b mockup § Preview, glossary § Surfaces): Website names the brand's own site built on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/content/_components/pages.tsx",
+    "rule": "W4",
+    "text": "Open Settings › Website",
+    "why": "Owner, 2026-11-15 (SA1b mockup § Preview, glossary § Surfaces): Website names the brand's own site built on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/content/actions.ts",
+    "rule": "W4",
+    "text": "Your website runs on Frrata. Preview it in the Look.",
+    "why": "Owner, 2026-11-15 (SA1b mockup § Preview, glossary § Surfaces): Website names the brand's own site built on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/content/actions.ts",
+    "rule": "W4",
+    "text": "Your website has no key. Create one in Settings › Website.",
+    "why": "Owner, 2026-11-15 (SA1b mockup § Preview, glossary § Surfaces): Website names the brand's own site built on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/app/(console)/console/content/actions.ts",
+    "rule": "W4",
+    "text": "Pick the key your website uses.",
+    "why": "Owner, 2026-11-15 (SA1b mockup § Preview, glossary § Surfaces): Website names the brand's own site built on the Storefront API, never the store itself"
+  },
+  {
+    "file": "src/domains/storefront-api/2026-12/openapi.ts",
+    "rule": "W4",
+    "text": "The preview token from the store’s console. It opens one page or the FAQ, under one key, for 10 minutes. A page’s token never opens the FAQ. A missing or old one gets the same 404.",
+    "why": "The Storefront API's published description (developers read it): a preview token is the developers' term for what the console signs (ADR-0018 § 12)"
+  },
+  {
+    "file": "src/domains/storefront-api/2026-12/openapi.ts",
+    "rule": "W4",
+    "text": "A hidden page as it stands, under a preview token",
+    "why": "The Storefront API's published description (developers read it): a preview token is the developers' term for what the console signs (ADR-0018 § 12)"
+  },
+  {
+    "file": "src/domains/storefront-api/2026-12/openapi.ts",
+    "rule": "W4",
+    "text": "The FAQ as it stands, under a preview token",
+    "why": "The Storefront API's published description (developers read it): a preview token is the developers' term for what the console signs (ADR-0018 § 12)"
+  },
+  {
+    "file": "src/app/(partner)/partner/(workspace)/_components/bills.tsx",
+    "rule": "W4",
+    "text": "Website",
+    "why": "Owner, 2026-11-15 (P2 Clients mockup v2): \"Website keys\" opens Console › Settings › Website, the brand's own site built as code on the Storefront API"
   }
 ]

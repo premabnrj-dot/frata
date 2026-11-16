@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { CATALOGUE } from '../catalogue'
 import { carryOver, layerProblems } from '../layer'
 import { resolveStored, resolveTheme, settingAttrs, settingVars } from '../resolve'
-import { menusOf, menusProblem, menuWarnings, paletteOf, paletteProblem, readMenus, readSite, siteIsDefault, siteProblem, textOf, SITE_DEFAULTS, TEXT_DEFAULTS, type MenuItem } from '../site'
+import { menusOf, menuWarnings, paletteOf, paletteProblem, readSite, siteIsDefault, siteProblem, textOf, SITE_DEFAULTS, TEXT_DEFAULTS, type MenuItem } from '../site'
 
 const ed = CATALOGUE.editorial!['2.1.0']!, ba = CATALOGUE.bazaar!['2.1.0']!
 const good = { primary: '#1F1A17', accent: '#7A1F2B', background: '#FFFFFF', surface: '#F4F1EC', text: '#1F1A17', muted: '#5E5650' }
@@ -58,49 +58,30 @@ describe('site settings', () => {
   })
   it('stored through resolveStored', () => {
     const r = resolveStored({ themeKey: 'editorial', themeVersion: '2.1.0', styleKey: ed.styles[0]!.key, settings: { site: { icons: { library: 'solid', stroke: 'thin' } }, menus: { tabs: [it_('a', [], 'home')] } } }, { accent: 'x', displayFont: 'fraunces' }, codeSource)
-    expect(r.site.icons.library).toBe('solid'); expect(r.menus.tabs?.[0]?.icon).toBe('home')
+    expect(r.site.icons.library).toBe('solid'); expect('menus' in r).toBe(false) // an old layer's menus are content now (V1)
   })
 })
 
-describe('menus', () => {
-  it('three levels at most; footer one level; tabs need icons, five at most', () => {
-    expect(menusProblem({ main: [it_('a', [it_('b', [it_('c')])])] })).toBeNull()
-    expect(menusProblem({ main: [it_('a', [it_('b', [it_('c', [it_('d')])])])] })).toMatch(/3 levels/)
-    expect(menusProblem({ footer: [it_('a', [it_('b')])] })).toMatch(/Footer menu/)
-    expect(menusProblem({ tabs: [it_('a')] })).toMatch(/icon/)
-    expect(menusProblem({ tabs: ['a', 'b', 'c', 'd', 'e', 'f'].map((x) => it_(x, [], 'home')) })).toMatch(/Phone tabs/)
-    expect(menusProblem({ main: [it_('a'), it_('a')] })).toMatch(/share an id/)
-  })
-  it('a menu nested far too deep is refused, not a stack overflow', () => {
-    let x: MenuItem = it_('z'); for (let i = 0; i < 5000; i++) x = { ...it_(`a${i}`), children: [x] }
-    expect(menusProblem({ main: [x] })).toMatch(/3 levels/); expect(readMenus({ main: [x] })).toEqual({})
-    expect(layerProblems({ settings: {}, menus: { main: [x] } })[0]).toMatch(/3 levels/)
-  })
-  it('links stay inside the shop', () => {
-    expect(menusProblem({ main: [{ ...it_('a'), link: 'https://evil.example' }] })).not.toBeNull()
-    expect(menusProblem({ main: [{ ...it_('a'), link: '//evil.example' }] })).not.toBeNull()
-  })
+describe('menus (their saving and reading moved to src/domains/content/kinds.ts, V1)', () => {
   it('default main menu from the collections; soft warnings past 7 and 10', () => {
     const m = menusOf(undefined, [{ handle: 'sarees', title: 'Sarees' }])
     expect(m.main!.map((x) => x.link)).toEqual(['/products', '/collections/sarees']); expect(m.footer).toBeNull()
     expect(menuWarnings(Array.from({ length: 8 }, (_, i) => it_(`x${i}`)))).toHaveLength(1)
-    expect(readMenus({ main: 'nope', footer: [it_('f')] })).toEqual({ footer: [it_('f')] })
   })
-  it('saved through layerProblems', () => {
-    expect(layerProblems({ settings: {}, menus: { tabs: [it_('a')] } })[0]).toMatch(/Phone tabs/)
+  it('an old layer\'s menus are no longer the look\'s: dropped on save', () => {
     expect(layerProblems({ settings: {}, site: { palette: good }, menus: { main: [it_('a')] } })).toEqual([])
   })
 })
 
 describe('switching themes', () => {
-  const layer = { style: ed.styles[0]!.key, site: { palette: good }, menus: { main: [it_('a')] } }
-  it('another theme brings its own site settings; menus come across', () => {
+  const layer = { style: ed.styles[0]!.key, site: { palette: good }, menus: { main: [it_('a')] } } as never as { style: string; site: { palette: typeof good } }
+  it('another theme brings its own site settings (menus are the store\'s content, never carried)', () => {
     const c = carryOver({ manifest: ed, layer }, ba)
-    expect(c.layer.site).toBeUndefined(); expect(c.layer.menus).toEqual(layer.menus)
+    expect(c.layer.site).toBeUndefined(); expect('menus' in c.layer).toBe(false)
     expect(c.lost.join()).toMatch(/site colours/)
   })
   it('another version of the same theme keeps both', () => {
     const c = carryOver({ manifest: CATALOGUE.editorial!['2.0.0']!, layer }, ed)
-    expect(c.layer.site).toEqual(layer.site); expect(c.layer.menus).toEqual(layer.menus)
+    expect(c.layer.site).toEqual(layer.site); expect('menus' in c.layer).toBe(false)
   })
 })

@@ -2,7 +2,7 @@ import 'server-only'
 import { nextStep } from '@/domains/billing/collect'
 import { applyBillingEvent, beginBillingAttempt, billingAttemptResult, billingDue, billingNotice, billingUnapplied, billingUnsettled, closeBillingAttempt } from '@/lib/db/platform'
 import { errName } from '@/lib/log'
-import { billingGatewayIsTest, isBillingGatewayConfigured, orderPayments } from './gateway'
+import { billingGatewayIsTest, isBillingGatewayConfigured, moneyOf, orderPayments } from './gateway'
 
 // =============================================================================
 // FILE: src/lib/billing/collect.ts — THE DAILY COLLECTION RUN (billing B3). For each issued invoice still due, the next
@@ -29,7 +29,7 @@ export async function collectDue(now: Date, deadline = Infinity): Promise<Collec
         if (!u.order) { if (await closeBillingAttempt(u.paymentId, 'Not sent. A fresh notice follows')) out.settled++; continue }
         const items = (await orderPayments(u.order)).items
         const p = items.find((x) => x.status === 'captured') ?? items.find((x) => x.status === 'failed')
-        if (p) { if (await billingAttemptResult(u.order, p.id, p.status === 'captured', p.error_description ?? null)) out.settled++ }
+        if (p) { if (await billingAttemptResult(u.order, p.id, p.status === 'captured', p.error_description ?? null, moneyOf(p))) out.settled++ }
         // An order and no payment two hours on: the charge never started (a pending one is listed). Close it.
         else if (items.length === 0 && (await closeBillingAttempt(u.paymentId, 'Not sent. A fresh notice follows'))) out.settled++
       } catch (e) { console.error('[billing] settle', u.paymentId, errName(e)) }

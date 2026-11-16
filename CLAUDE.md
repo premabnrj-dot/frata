@@ -35,13 +35,14 @@ a route, an action or a connector → `frata-architecture`. Any UI →
 Google → `frata-integrations`. Prices, fees, margins, the business model →
 `frata-unit-economics`. Before saying something works → `frata-verify`.
 Something failing that makes no sense → `frata-gotchas`.
+Anything the Storefront API answers (api.frrata.shop) → `frata-storefront-api`.
 Agents: `tenancy-auditor`, `architecture-reviewer`, `integration-researcher`,
 `unit-economics-reviewer`, `impact-reviewer` (every task's diff: callers, test
 gaps, debt), `speed-reviewer` (a plan or diff that touches a page, a query,
 a cache or background work), `security-reviewer` (an action, route, webhook,
 header, cookie or merchant content), `e2e-runner` (the browser flows in `e2e/`), `mockup-parity-reviewer` (a built screen against its approved mockup,
 before a phase closes), `words-reviewer` (every diff or mockup with words a person reads), `design-system-reviewer`
-(tokens, primitives, states and accessibility on every UI diff), `release-agent` (merge main, gates, flows, push, deploy).
+(tokens, primitives, states and accessibility on every UI diff), `release-agent` (merge main, gates, flows, push, deploy), `api-contract-reviewer` (a diff that changes what the Storefront API answers).
 Scripts: `npm run release:check` (migration collisions + the e2e flows a change touches), `scripts/prod-migrate.mjs`
 (prints a migration's production SQL and drizzle row).
 
@@ -50,10 +51,12 @@ Scripts: `npm run release:check` (migration collisions + the e2e flows a change 
 **ONE MERCHANT NEVER SEES ANOTHER'S DATA** (ADR-0002). Two locks: the row
 policy in Postgres (`drizzle/0001_tenant_isolation.sql`) and `withTenant()` in
 `src/lib/db/tenant.ts`. Merchant rows are read only through `src/lib/queries/`.
-The tenant id comes from `requireMember()` or the storefront host — never from
-a URL, a form or a body (one named exception: starting a support session,
-ADR-0007). Cross-tenant reads only through `frata_admin` in `src/lib/admin/`. A new table ships with its grant, RLS and policy in
-the same migration. `npm run check:tenant` holds the shape;
+The tenant id comes from `requireMember()`, the storefront host, or a storefront key resolved by
+`storefrontKeyFor()` inside `apiRequest()` on the API host (ADR-0018) — never from an id in a URL, a form or a body
+(one named exception: starting a support session, ADR-0007). A key reads only what the shop's public pages show. Cross-tenant reads only through `frata_admin` in `src/lib/admin/`. A new table ships with its grant, RLS and policy in
+the same migration. A partner's Builder (ADR-0015) never sees orders, shoppers or costs: who may do what is `CAPABILITIES`
+(`src/domains/tenancy/roles.ts`); a Builder enters only through `requireCapability` and reads only as `frata_builder`
+(`check:capabilities`). `npm run check:tenant` holds the shape;
 `npm run verify:tenancy` proves it on a real Postgres.
 
 **Engines are pure.** Nothing in `src/domains/**` imports React, Next, Drizzle,

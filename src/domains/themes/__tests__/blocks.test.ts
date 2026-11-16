@@ -201,12 +201,9 @@ describe('TS1a: cleanFill and Contact\'s line', () => {
     const productPhoto = { ...photo(), base: photo().base.replace('/theme/', '/products/') }
     expect(cleanFill({ photo: { kind: 'image', image: productPhoto } } as never, T, HOST)).not.toBeNull()
   })
-  it('Contact\'s line: kept across a theme change, plain words only, in words when refused', async () => {
-    const { readContact, ContactSchema } = await import('../layer')
-    expect(carryOver({ manifest: signal_1_4_0, layer: { style: 'cobalt', contact: { line: 'We reply on WhatsApp.' } } }, atelier_1_0_0).layer.contact).toEqual({ line: 'We reply on WhatsApp.' })
-    expect(resolveTheme(signal_1_4_0, { style: 'cobalt', contact: { line: 'Hello' } }).contact).toEqual({ line: 'Hello' })
-    expect(readContact({ line: '   ' })).toBeUndefined()
-    for (const line of ['<b>x</b>', 'a‮b', 'x{y}']) expect(ContactSchema.safeParse({ line }).success).toBe(false)
-    expect(layerProblems({ contact: { line: '<x>' } })[0]).toMatch(/^Contact’s line: plain words/)
+  it('Contact\'s line left the look (V1: the store\'s content): an old layer\'s line is never carried or resolved', () => {
+    const old = { style: 'cobalt', contact: { line: 'We reply on WhatsApp.' } } as never as { style: string }
+    expect('contact' in carryOver({ manifest: signal_1_4_0, layer: old }, atelier_1_0_0).layer).toBe(false)
+    expect('contact' in resolveTheme(signal_1_4_0, old)).toBe(false)
   })
 })

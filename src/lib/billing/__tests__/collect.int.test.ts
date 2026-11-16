@@ -64,7 +64,7 @@ describe.skipIf(!host)('collection on a real database', () => {
     expect([d.attempts, d.pending, !!d.lastFailedAt]).toEqual([1, 0, true])
     expect(nextStep(d, new Date(now.getTime() + 27 * H), true).kind).toBe('notice') // a fresh notice before the retry
     // …until captured, which is final.
-    expect(await p.billingAttemptResult(`${ORDER}_d1`, 'pay_b3late', true, null)).toBe(true)
+    expect(await p.billingAttemptResult(`${ORDER}_d1`, 'pay_b3late', true, null, { amount: ctx.amount, currency: 'INR' })).toBe(true)
     expect(await p.billingAttemptResult(`${ORDER}_d1`, 'pay_b3late', false, 'x')).toBe(false)
   })
 

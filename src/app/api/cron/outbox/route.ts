@@ -11,6 +11,8 @@ import { ERASE_AFTER_DAYS, eraseAbandoned } from '@/lib/orders/erase'
 import { errName } from '@/lib/log'
 import { runDrafts } from '@/lib/billing/run'
 import { collectDue } from '@/lib/billing/collect'
+import { issueMonthAuto } from '@/lib/admin/billing'
+import { monthStartIST } from '@/domains/time/month'
 
 // ENTRY POINT credential: CRON_SECRET via isCronRequest (scripts/check-actions.mjs).
 // The safety-net sweep; the outbox itself drains right after each enqueue (src/lib/outbox/drain.ts).
@@ -34,9 +36,19 @@ export async function GET(request: Request) {
   } catch (e) { console.error('[cron] erase list', errName(e)) }
   // Billing B0: redraft each shop's invoice (this month until issued, and the month so far). Shadow only: nothing is
   // charged or sent; a failure is logged per shop and never stops the sweeps below.
-  let billing = null
-  // At most 15 s, so the outbox keeps its time; shops not reached are drafted on the next run.
-  try { billing = await runDrafts(new Date(), undefined, started + 15_000) } catch (e) { console.error('[cron] billing', errName(e)) }
+  let billing = null, issue: Awaited<ReturnType<typeof issueMonthAuto>> | { skipped: 'drafts' } | null = null
+  // Billing rework R2 (owner decision 3, 2026-11-15): on the 1st to 3rd IST, THIS month's drafts first with their own
+  // budget, then the bills are issued — only when every shop was reached and drafted (one stale draft would refuse the
+  // whole month); otherwise the next day's run tries again, and Admin's "Issue all ready" stays.
+  const now = new Date(), month = monthStartIST(now)
+  if (now.getTime() - month.getTime() < 3 * 86_400_000) {
+    try {
+      const first = await runDrafts(now, [month], started + 20_000)
+      issue = first.failed === 0 && first.skipped === 0 ? await issueMonthAuto(now) : { skipped: 'drafts' }
+    } catch (e) { console.error('[cron] billing issue', errName(e)) }
+  }
+  // At most 15 s more, so the outbox keeps its time; shops not reached are drafted on the next run.
+  try { billing = await runDrafts(new Date(), undefined, Date.now() + 15_000) } catch (e) { console.error('[cron] billing', errName(e)) }
   // Billing B3: notices, debit attempts (queued in the outbox below), the day-14 note; settles a lost webhook's attempts.
   let collection = null
   try { collection = await collectDue(new Date(), started + 25_000) } catch (e) { console.error('[cron] collection', errName(e)) }
@@ -63,5 +75,5 @@ export async function GET(request: Request) {
   try { ekcode = await applyEkcodeEvents(1000); await dailyEkcode() } catch (e) { console.error('[cron] ekcode', errName(e)) }
   // Email (E·0): the day's counts into email_daily; messages after 180 days, sent outbox rows and SES events after 30.
   try { await emailDaily() } catch (e) { console.error('[cron] email', errName(e)) }
-  return NextResponse.json({ claimed, sent, events, erased, billing, collection, ekcode })
+  return NextResponse.json({ claimed, sent, events, erased, billing, issue, collection, ekcode })
 }

@@ -48,6 +48,8 @@ export const bag = {
       .map((i) => (keep.has(i.variantId) ? { ...i, qty: keep.get(i.variantId)! } : i)))
   },
   clear() { write([]) },
+  /** The bag a brand's website sent (the bag link, SA1b): its lines become the whole bag. */
+  replace(items: BagItem[]) { write(items.map((i) => ({ variantId: i.variantId, qty: Math.min(MAX_QTY, i.qty) })).slice(0, MAX_LINES)) },
 }
 
 function subscribe(l: () => void) {

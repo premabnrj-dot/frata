@@ -12,8 +12,11 @@
  * `igsh` is only on instagram.com links: neither is a key (integration-researcher, 2026-11-08). */
 export const ATTRIBUTION_KEYS = [
   'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
-  'fbclid', 'gclid', 'gbraid', 'wbraid', 'gad_source', 'srsltid', 'ref_host',
+  'fbclid', 'gclid', 'gbraid', 'wbraid', 'gad_source', 'srsltid', 'ref_host', 'via_site',
 ] as const
+/** Keys a landing URL never sets: the referrer (read from the browser) and the bag link's marker (written by the bag
+ *  link's own page, Storefront API SA1b), so a typed `?via_site=1` names no source. */
+const NOT_FROM_URL: readonly string[] = ['ref_host', 'via_site']
 export type AttributionKey = (typeof ATTRIBUTION_KEYS)[number]
 export type Attribution = Partial<Record<AttributionKey, string>>
 
@@ -80,7 +83,7 @@ export function cleanAttribution(raw: unknown, rules: HostRules): Attribution {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out
   for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
     if (!isKey(k)) continue
-    const clean = k === 'ref_host' ? reduceHost(v, rules) : cleanValue(v)
+    const clean = k === 'ref_host' ? reduceHost(v, rules) : k === 'via_site' ? (v === '1' ? '1' : null) : cleanValue(v)
     if (clean) out[k] = clean
   }
   return out
@@ -101,7 +104,7 @@ export function landingParams(search: string): Attribution {
   const p = new URLSearchParams(search)
   const out: Attribution = {}
   for (const k of ATTRIBUTION_KEYS) {
-    if (k === 'ref_host') continue
+    if (NOT_FROM_URL.includes(k)) continue
     const v = cleanValue(p.get(k))
     if (v) out[k] = v
   }
@@ -109,4 +112,4 @@ export function landingParams(search: string): Attribution {
 }
 
 /** Whether a landing carries a source of its own (a tagged link or a click id): such a landing replaces the last one. */
-export const isTagged = (a: Attribution) => ATTRIBUTION_KEYS.some((k) => k !== 'ref_host' && !!a[k])
+export const isTagged = (a: Attribution) => ATTRIBUTION_KEYS.some((k) => !NOT_FROM_URL.includes(k) && !!a[k])

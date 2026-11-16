@@ -33,3 +33,6 @@ On Supabase, `postgres` has BYPASSRLS (checked on project `frata`,
 
 `npm run check:tenant` (shape) and `npm run verify:tenancy` (behaviour, on a real
 Postgres; CI runs it on every push).
+
+**Amended by ADR-0018 (2026-11-15):** a third source of a tenant id, the storefront key on the API host, resolved only
+by `storefrontKeyFor()` inside `apiRequest()`. The two locks are unchanged.

@@ -20,6 +20,7 @@ import { withTenant } from '@/lib/db/tenant'
 import { shopSettings, tenants } from '@/lib/db/schema'
 import { orderPrefix } from '@/domains/signup/slug'
 import { costsVisibleIn, planHistoryIn, shipCostsIn } from './settings'
+import { siteHostIn } from './storefront-api'
 
 // =============================================================================
 // FILE: src/lib/queries/analytics.ts
@@ -46,12 +47,14 @@ export type Analytics = {
   /** Orders in the period whose source is known (not "Direct or unknown"). */
   known: number
   sources: SourceStat[]
+  /** The shop's website host (classifySource's `site`): visits are classified with it too. */
+  site: string | null
   /** Pincodes with the most returns in the period: returns and outcomes, counts only. */
   pincodes: { pincode: string; rto: number; outcomes: number }[]
 }
 
 type Row = {
-  cur: boolean; us: string | null; um: string | null; uc: string | null; rh: string | null; gads: boolean; srs: boolean; fb: boolean
+  cur: boolean; us: string | null; um: string | null; uc: string | null; rh: string | null; gads: boolean; srs: boolean; fb: boolean; ws: boolean
   cl: string | null; cc: string | null; stage: Stage; cod: boolean; provider: 'self' | 'shiprocket' | null; bucket: number; restocked: boolean
   n: number; sales: string; net: string; cogs: string | null; fwd: string | null; rto: string | null; codfee: string | null; gw: string; base: string
 }
@@ -69,7 +72,7 @@ function windowSql(tenantId: string, now: Date, w: Window, feeChanges: readonly 
   const outcome = sql`(o.delivered_at is not null or o.rto_initiated_at is not null or o.lost_at is not null)`
   return sql`
     select ${cur} cur,
-           ${i.us} us, ${i.um} um, case when ${cur} then ${i.uc} end uc, ${i.rh} rh, ${i.gads} gads, ${i.srs} srs, ${i.fb} fb,
+           ${i.us} us, ${i.um} um, case when ${cur} then ${i.uc} end uc, ${i.rh} rh, ${i.gads} gads, ${i.srs} srs, ${i.fb} fb, ${i.ws} ws,
            dc.label cl, dc.code cc, ${stageSql('o')} stage, (${currentMethodSql('o')} = 'cod') cod, case when ${outcome} then s.provider end provider,
            ${feeBucketSql('o', feeChanges)} bucket, ${rtoRestockedSql('o')} restocked,
            count(*)::int n, coalesce(sum(o.total), 0)::bigint sales, coalesce(sum(o.net_revenue - ${creditedSql('o')}), 0)::bigint net, sum(${cogsSql('o')})::bigint cogs,
@@ -82,7 +85,7 @@ function windowSql(tenantId: string, now: Date, w: Window, feeChanges: readonly 
        -- the comparison ends at the same moment (prevEnd), not at the window's start: today so far vs yesterday so far
        and (o.placed_at >= ${w.start.toISOString()}::timestamptz or o.placed_at < ${w.prevEnd.toISOString()}::timestamptz)
        and ${salesOrderSql(now, 'o')} ${only ? sql`and ${only}` : sql``}
-     group by 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, (${outcome} and o.cogs is null), (${outcome} and o.forward_shipping is null),
+     group by 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, (${outcome} and o.cogs is null), (${outcome} and o.forward_shipping is null),
               (${outcome} and o.rto_shipping is null), (${outcome} and o.courier_cod_fee is null)`
 }
 
@@ -93,8 +96,8 @@ async function setUp(tx: Tx, tenantId: string, role: MemberRole) {
   // One round trip (speed review N1b): jit off, the 3 s ceiling, and the grouping's 150k rows at 10× sorted in memory,
   // not spilled to disk (a 15 MB external merge cost ~600 ms).
   await tx.execute(sql`select set_config('jit', 'off', true), set_config('statement_timeout', '3s', true), set_config('work_mem', '64MB', true)`)
-  const [costs, history, shipCosts] = await Promise.all([costsVisibleIn(tx, tenantId, role), planHistoryIn(tx, tenantId), shipCostsIn(tx, tenantId)])
-  return { costs, history, est: estimateOf(shipCosts) }
+  const [costs, history, shipCosts, site] = await Promise.all([costsVisibleIn(tx, tenantId, role), planHistoryIn(tx, tenantId), shipCostsIn(tx, tenantId), siteHostIn(tx, tenantId)])
+  return { costs, history, est: estimateOf(shipCosts), site }
 }
 
 /** The page's numbers for the window against the one before it, inside the caller's tenant transaction (analyticsPage;
@@ -104,9 +107,9 @@ export async function analyticsIn(tx: Tx, tenantId: string, role: MemberRole, w:
 }
 
 /** The page's numbers and the grouped rows they came from (a source's page matches its orders on those rows' inputs). */
-async function windowIn(tx: Tx, tenantId: string, role: MemberRole, w: Window, now: Date, opts: { pincodes: boolean } = { pincodes: true }): Promise<{ analytics: Analytics; rows: Row[] }> {
+async function windowIn(tx: Tx, tenantId: string, role: MemberRole, w: Window, now: Date, opts: { pincodes: boolean } = { pincodes: true }): Promise<{ analytics: Analytics; rows: Row[]; site: string | null }> {
   {
-    const { costs, history, est } = await setUp(tx, tenantId, role)
+    const { costs, history, est, site } = await setUp(tx, tenantId, role)
     const { start, end } = w
     // Returns by pincode, counts only (₹ by pincode is True Profit's): the covering partial index makes it index-only.
     // (Not on a source's page, which never shows them: speed review A1·7.) Beside the window read (speed review N1b).
@@ -122,7 +125,7 @@ async function windowIn(tx: Tx, tenantId: string, role: MemberRole, w: Window, n
     const bySource = new Map<string, { slug: string; label: string; channel: Channel; cur: ReturnType<typeof blank>; prev: ReturnType<typeof blank>; campaigns: Map<string, ReturnType<typeof blank>> }>()
     let known = 0
     for (const r of rows) {
-      const src = sourceOfInputs(r)
+      const src = sourceOfInputs(r, site)
       let s = bySource.get(src.slug)
       if (!s) bySource.set(src.slug, (s = { slug: src.slug, label: src.label, channel: src.channel, cur: blank(), prev: blank(), campaigns: new Map() }))
       const targets = [r.cur ? cur : prev, r.cur ? s.cur : s.prev]
@@ -153,10 +156,10 @@ async function windowIn(tx: Tx, tenantId: string, role: MemberRole, w: Window, n
     // Most orders first, as drawn ("Orders ↓", Neel N1b); ₹ kept per order sits in its own column to judge each by.
     sources.sort((a, b) => b.cur.orders - a.cur.orders || a.label.localeCompare(b.label))
     const analytics: Analytics = {
-      window: w, costs, estimate: est !== null, cur: done(cur), prev: done(prev), known, sources,
+      window: w, costs, estimate: est !== null, cur: done(cur), prev: done(prev), known, sources, site,
       pincodes: pins.map((p) => ({ pincode: p.pincode, rto: p.rto, outcomes: p.outcomes })),
     }
-    return { analytics, rows: [...rows] }
+    return { analytics, rows: [...rows], site }
   }
 }
 
@@ -199,7 +202,7 @@ export async function analyticsPage(tenantId: string, role: MemberRole, w: Windo
 /** sourcePage inside the caller's tenant transaction: the list's numbers and the source's orders in one snapshot. */
 export async function sourcePageIn(tx: Tx, tenantId: string, role: MemberRole, w: Window, slug: string, now: Date) {
   if (!/^[a-z0-9-]{1,64}$/.test(slug)) return null
-  const { analytics: all, rows } = await windowIn(tx, tenantId, role, w, now, { pincodes: false })
+  const { analytics: all, rows, site } = await windowIn(tx, tenantId, role, w, now, { pincodes: false })
   const stat = all.sources.find((s) => s.slug === slug)
   if (!stat) return null
   {
@@ -207,29 +210,29 @@ export async function sourcePageIn(tx: Tx, tenantId: string, role: MemberRole, w
     const i = attributionInputsSql('o')
     // The source's raw tuples in this period, from the grouped read itself (no second scan of the window: speed, A1·7).
     const seen = new Set<string>()
-    const mine = rows.filter((r) => r.cur && sourceOfInputs(r).slug === slug).filter((r) => {
-      const key = JSON.stringify([r.us, r.um, r.rh, r.gads, r.srs, r.fb, r.cc])
+    const mine = rows.filter((r) => r.cur && sourceOfInputs(r, site).slug === slug).filter((r) => {
+      const key = JSON.stringify([r.us, r.um, r.rh, r.gads, r.srs, r.fb, r.ws, r.cc])
       return seen.has(key) ? false : (seen.add(key), true)
     })
     if (!mine.length) return { stat, orders: [] }
     // The source's raw tuples as ONE parameter, hash-joined (security review A1·7: an OR per tuple let a shopper typing
     // many tag variants push a real source's page past the timeout or Postgres's parameter limit). A null compares as
     // chr(1), which no stored value holds (cleanValue strips control characters), so the join stays an equality.
-    const keys = JSON.stringify(mine.map((t) => ({ us: t.us, um: t.um, rh: t.rh, gads: t.gads, srs: t.srs, fb: t.fb, cc: t.cc })))
+    const keys = JSON.stringify(mine.map((t) => ({ us: t.us, um: t.um, rh: t.rh, gads: t.gads, srs: t.srs, fb: t.fb, ws: t.ws, cc: t.cc })))
     const k = (col: SQL) => sql`coalesce(${col}, chr(1))`
     // The window's orders with their creator first, fenced (offset 0), then matched: unfenced, the planner expected one
     // tuple and probed order_discounts once per order (speed review A1·7: 415 -> 161 ms at 10x).
     const list = await tx.execute<{ number: number; placed_at: Date | string; total: string; stage: Stage; campaign: string | null }>(sql`
       select x.number, x.placed_at, x.total, x.stage, x.campaign from (
         select o.number, o.placed_at, o.total, ${stageSql('o')} stage, ${i.uc} campaign,
-               ${i.us} us, ${i.um} um, ${i.rh} rh, ${i.gads} gads, ${i.srs} srs, ${i.fb} fb, dc.code cc
+               ${i.us} us, ${i.um} um, ${i.rh} rh, ${i.gads} gads, ${i.srs} srs, ${i.fb} fb, ${i.ws} ws, dc.code cc
           from ${orders} o ${creatorCodeJoinSql(now)}
          where o.tenant_id = ${tenantId} and o.placed_at >= ${start.toISOString()}::timestamptz and o.placed_at < ${w.end.toISOString()}::timestamptz
            and ${salesOrderSql(now, 'o')}
         offset 0) x
-      join jsonb_to_recordset(${keys}::jsonb) m(us text, um text, rh text, gads boolean, srs boolean, fb boolean, cc text)
+      join jsonb_to_recordset(${keys}::jsonb) m(us text, um text, rh text, gads boolean, srs boolean, fb boolean, ws boolean, cc text)
         on ${k(sql`x.us`)} = ${k(sql`m.us`)} and ${k(sql`x.um`)} = ${k(sql`m.um`)} and ${k(sql`x.rh`)} = ${k(sql`m.rh`)} and ${k(sql`x.cc`)} = ${k(sql`m.cc`)}
-       and x.gads = m.gads and x.srs = m.srs and x.fb = m.fb
+       and x.gads = m.gads and x.srs = m.srs and x.fb = m.fb and x.ws = m.ws
       order by x.placed_at desc limit 50`)
     return { stat, orders: list.map((o) => ({ number: o.number, placedAt: new Date(o.placed_at), total: Number(o.total), stage: o.stage, campaign: o.campaign })) }
   }

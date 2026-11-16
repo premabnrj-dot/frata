@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next'
 import { ADMIN_PASSKEY_HEADERS, FRAMEABLE_HEADERS, HSTS_PLATFORM, hostValue, platformHostPattern, SECURITY_HEADERS } from './src/lib/security-headers'
-import { shopRewrites } from './src/domains/tenancy/host'
-import { CONSOLE_HOST, EKCODE_HOST, SHOP_DOMAIN } from './src/lib/public-env'
+import { apiRedirects, apiRewrites, shopRewrites } from './src/domains/tenancy/host'
+import { API_HOST, CONSOLE_HOST, EKCODE_HOST, SHOP_DOMAIN } from './src/lib/public-env'
 
 const config: NextConfig = {
   reactStrictMode: true,
@@ -13,9 +13,14 @@ const config: NextConfig = {
   // MODULE_NOT_FOUND Helvetica.cjs (2026-11-08). scripts/check-pdf-trace.mjs (postbuild) renders a PDF from the traced
   // files alone and fails the build if anything is missing.
   outputFileTracingIncludes: { '/**': ['./src/lib/documents/fonts/**', './node_modules/pdfkit/js/standard-fonts/**/*.cjs', './node_modules/pdfkit/package.json'] },
-  // Every other host is a shop, served from /s/<host>/… (src/domains/tenancy/host.ts).
+  // The Storefront API's host first (ADR-0018), then every other host is a shop, served from /s/<host>/…
+  // (src/domains/tenancy/host.ts).
+  // The API host's root goes to its docs (SA1b D·9).
+  async redirects() {
+    return apiRedirects(API_HOST)
+  },
   async rewrites() {
-    return { beforeFiles: shopRewrites(CONSOLE_HOST, EKCODE_HOST), afterFiles: [], fallback: [] }
+    return { beforeFiles: [...apiRewrites(API_HOST), ...shopRewrites(CONSOLE_HOST, SHOP_DOMAIN, EKCODE_HOST, API_HOST)], afterFiles: [], fallback: [] }
   },
   // Every response may not be framed (DENY), except the customizer's look preview on the console host, which the
   // console itself frames (themes spec § Preview; a later entry can't remove X-Frame-Options, so the global entry

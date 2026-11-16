@@ -62,8 +62,9 @@ export default {
 
     const meera = await open('frata')
     await t.step('Admin: no trial of a module not built yet; a trial shows and can be ended', async () => {
-      await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/modules`)
-      await meera.getByRole('link', { name: 'Modules', exact: true }).first().waitFor()
+      await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/modules`) // the old address lands on Apps (owner, 2026-11-15)
+      await meera.waitForURL(/\/admin\/merchants\/[^/]+\/apps$/)
+      await meera.getByRole('link', { name: 'Apps', exact: true }).first().waitFor()
       // Only a built module a plan or add-on grants can be trialled — GST, Delivery Zones and True Profit today; none for a
       // module not built yet (its days would run out unused) nor one off its plans (Reviews: Growth and Scale).
       assert.equal(await meera.getByRole('button', { name: /Give a 30-day trial/ }).count(), 3)
@@ -93,23 +94,27 @@ export default {
     })
 
     await t.step('Admin pauses a module for everyone, then resumes it', async () => {
-      await meera.goto(CONSOLE + '/admin/modules')
-      await meera.getByRole('heading', { name: 'Asked to be told' }).waitFor() // the owner asked for Reviews above
-      await meera.getByText('1 shop asked').first().waitFor()
-      await meera.getByLabel('Why pause Messages').fill('Meta outage')
-      await meera.getByRole('button', { name: 'Pause Messages for everyone' }).click()
-      await expectToast(meera, 'Messages paused for every shop.', 'ok')
+      await meera.goto(CONSOLE + '/admin/apps?view=waiting')
+      await meera.getByRole('link', { name: 'Kesar Studio' }).first().waitFor() // the owner asked for Reviews above
+      await meera.getByRole('link', { name: /^Apps/ }).first().click()
+      await meera.getByRole('button', { name: 'More for Messages' }).click()
+      await meera.getByRole('menuitem', { name: 'Pause for every store…' }).click()
+      const dlg = meera.getByRole('dialog', { name: 'Pause Messages for every store?' })
+      await dlg.getByLabel('Why').fill('Meta outage')
+      await dlg.getByRole('button', { name: 'Pause Messages' }).click()
+      await expectToast(meera, 'Messages paused for every store.', 'ok')
       const [p] = await db`select reason, resumed_at from module_pauses where module = 'communication'`
       assert.equal(p.reason, 'Meta outage'); assert.equal(p.resumed_at, null)
       await meera.screenshot({ path: t.out('admin-pause') })
-      await meera.getByRole('button', { name: 'Resume Messages' }).click()
+      await meera.getByRole('button', { name: 'Resume', exact: true }).click()
+      await meera.getByRole('dialog', { name: 'Resume Messages?' }).getByRole('button', { name: 'Resume Messages' }).click()
       await expectToast(meera, /Messages running again/, 'ok')
       const [r] = await db`select resumed_at from module_pauses where module = 'communication'`
       assert.ok(r.resumed_at)
     })
 
     await t.step('A result never comes from the URL: words in ?error= / ?ok= show nowhere on an Admin page (security review 2026-11-12)', async () => {
-      for (const [path, heading] of [['/admin/modules?error=Call+us+on+999', 'Modules'], [`/admin/merchants/${KESAR}?ok=Call+us+on+999`, 'Kesar Studio'], [`/admin/merchants/${KESAR}/modules?error=Call+us+on+999`, 'Kesar Studio']]) {
+      for (const [path, heading] of [['/admin/apps?error=Call+us+on+999', 'Apps'], [`/admin/merchants/${KESAR}?ok=Call+us+on+999`, 'Kesar Studio'], [`/admin/merchants/${KESAR}/apps?error=Call+us+on+999`, 'Kesar Studio']]) {
         await meera.goto(CONSOLE + path)
         await meera.getByRole('heading', { level: 1, name: heading }).waitFor()
         assert.ok(!(await meera.evaluate(() => document.body.innerText)).includes('Call us on 999'), `${path} shows the URL's words`)
@@ -153,9 +158,9 @@ export default {
         assert.equal(await arjun.getByText(/invoice would have been/).count(), 0, 'staff see no featured card')
         // See Growth: the billing page; an upgrade from there records where it came from.
         await own.getByRole('link', { name: 'See Growth' }).click()
-        await own.waitForURL(/\/console\/settings\/billing\?from=featured$/)
-        await own.getByRole('button', { name: 'Upgrade to Growth' }).click()
-        await own.getByRole('button', { name: 'Upgrade now' }).click()
+        await own.waitForURL(/\/console\/settings\/billing\?tab=plans&from=featured$/)
+        await own.getByRole('button', { name: 'Move to Growth' }).click()
+        await own.getByRole('dialog').getByRole('button', { name: 'Move to Growth' }).click()
         await expectToast(own, 'You are on Growth now.', 'ok')
         const src = await db`select detail->>'source' s from audit_events where tenant_id = ${KESAR} and action = 'billing.plan.source'`
         assert.deepEqual(src.map((r) => r.s), ['featured'])

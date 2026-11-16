@@ -16,12 +16,12 @@ export default async function ThemesPage() {
   const fresh = versions.filter((v) => v.state === 'deployed')
   return (
     <>
-      <PageHeader title="Themes" meta="Code ships a theme version; you decide who may use it. Recall and withdraw are final: the fix for a bad version is a new version." />
+      <PageHeader title="Themes" />
       {fresh.length > 0
-        ? <p role="status" className="mb-3 rounded-md bg-info px-3 py-2 text-sm text-info-text">New in this deploy: {fresh.map((v) => `${v.name} ${v.version}`).join(', ')}. Stage it to a few shops, then release it.</p>
+        ? <p role="status" className="mb-3 rounded-md bg-info px-3 py-2 text-sm text-info-text">New in this deploy: {fresh.map((v) => `${v.name} ${v.version}`).join(', ')}. Add pilot stores, then release it.</p>
         : <p className="mb-3 text-sm text-muted-foreground">Nothing new in this deploy.</p>}
       <DataTable label="Theme versions">
-        <DataTableHead><th>Theme</th><th>Version</th><th>State</th><th className="text-right">Shops live on it</th><th>Staged to</th></DataTableHead>
+        <DataTableHead><th>Theme</th><th>Version</th><th>State</th><th className="text-right">Stores live on it</th><th>Staged to</th></DataTableHead>
         <DataTableBody>
           {versions.map((v) => (
             <DataTableRow key={`${v.key}@${v.version}`} dimmed={!v.inCode}>

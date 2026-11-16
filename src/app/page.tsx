@@ -85,7 +85,6 @@ export default async function Home() {
                   <b className="font-display text-xl font-semibold">{p.name}</b>
                   <p><span className="font-mono text-3xl font-semibold">{formatInr(paise(p.monthlyPrice))}</span><span className="text-sm text-muted-foreground"> / month + 18% GST</span></p>
                   <p className="rounded-md bg-muted px-3 py-2 text-sm"><span className="font-mono font-semibold">{(p.feeBps / 100).toLocaleString('en-IN')}%</span> of each <b>delivered</b> order</p>
-                  <p className="text-sm text-muted-foreground">Up to <span className="font-mono">{p.includedOrders.toLocaleString('en-IN')}</span> orders a month</p>
                   {p.features.length > 0 && <p className="text-sm text-muted-foreground">{p.features.map((f) => FEATURE_NAMES[f as Feature] ?? f).join(' · ')}</p>}
                   <Link href="/start" className={button({ variant: p.code === 'growth' ? 'primary' : 'secondary', className: 'mt-auto' })}>Start free</Link>
                 </div>
@@ -111,7 +110,7 @@ export default async function Home() {
           </section>
         </SiteStage>
       </main>
-      <SiteFooter links={[{ href: '/partners', label: 'For partners' }, { href: '/login', label: 'Sign in' }]} />
+      <SiteFooter links={[{ href: '/partners', label: 'For partners' }, { href: '/privacy-policy', label: 'Privacy' }, { href: '/login', label: 'Sign in' }]} />
     </div>
   )
 }

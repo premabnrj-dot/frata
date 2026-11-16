@@ -23,7 +23,7 @@ export default {
     try {
       const p = await owner.newPage(); p.setDefaultTimeout(20_000); p.on('pageerror', (e) => t.errors.push(e.message))
       await t.step('Connect: the domain is tidied as typed, the records show at once with Open DNS, Copy all and WhatsApp', async () => {
-        await p.goto(CONSOLE + '/console/settings/address')
+        await p.goto(CONSOLE + '/console/settings/web-address')
         await p.getByRole('button', { name: 'Connect a domain' }).click()
         const dlg = p.getByRole('dialog', { name: 'Connect a domain' })
         await dlg.getByLabel('Domain').fill(`https://www.${OWN_DOMAIN.toUpperCase()}/`)

@@ -18,7 +18,7 @@ export async function stopAction(form: FormData): Promise<ActionResult> {
   if (!p.success) return T.safeParse(Object.fromEntries(form)).success ? { fields: { reason: 'Say why, in a few words.' } } : { error: BAD_FORM }
   const ok = await stopOffer(staff, p.data.tenantId, p.data.id, p.data.reason)
   if (ok) refreshShop(p.data.tenantId, 'shop')
-  return ok ? { ok: 'Stopped. Shoppers no longer get it; the shop sees your reason.' } : { error: 'That offer has ended or is already stopped.' }
+  return ok ? { ok: 'Stopped. Shoppers no longer get it. The store sees your reason.' } : { error: 'That offer has ended or is already stopped.' }
 }
 
 export async function resumeAction(form: FormData): Promise<ActionResult> {
@@ -28,5 +28,5 @@ export async function resumeAction(form: FormData): Promise<ActionResult> {
   if (!p.success) return { error: BAD_FORM }
   const r = await resumeOffer(staff, p.data.tenantId, p.data.id)
   if (r === 'resumed') refreshShop(p.data.tenantId, 'shop')
-  return r === 'resumed' ? { ok: 'Resumed. It runs again as the shop set it.' } : { error: r === 'full' ? 'The shop already runs as many offers as it may. It must end one first.' : 'That offer is not stopped, or has ended.' }
+  return r === 'resumed' ? { ok: 'Resumed. It runs again as the store set it.' } : { error: r === 'full' ? 'The store already runs as many offers as it may. It must end one first.' : 'That offer is not stopped, or has ended.' }
 }

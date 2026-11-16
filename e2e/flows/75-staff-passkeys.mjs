@@ -76,7 +76,7 @@ export default {
         await riya.p.getByRole('button', { name: 'Ask to add a passkey' }).click()
         const code = await codeOn(riya.p)
         await meera.p.goto(CONSOLE + '/admin/staff')
-        await meera.p.getByText('Asking to add a passkey').waitFor()
+        await meera.p.getByText(`${O.email} asks for a first passkey.`).waitFor()
         await meera.p.getByRole('button', { name: 'Approve' }).click()
         await meera.p.getByLabel(/Code .* reads to you/).fill('000000' === code ? '111111' : '000000')
         await meera.p.getByRole('button', { name: 'Confirm with passkey and approve' }).click()
@@ -119,9 +119,13 @@ export default {
         assert.match((await stale.json()).error, /Confirm with your passkey first/)
         await db`insert into auth.users (id, email, email_confirmed_at) values (${USERS.accountant.id}, ${USERS.accountant.email}, now()) on conflict (id) do nothing`.catch(() => {})
         await meera.p.goto(CONSOLE + '/admin/staff')
-        await meera.p.getByLabel('Add by email').fill(USERS.accountant.email)
         await meera.p.getByRole('button', { name: 'Add staff' }).click()
+        const add = meera.p.getByRole('dialog', { name: 'Add staff' })
+        await add.getByLabel('Email').fill(USERS.accountant.email)
+        await add.getByRole('button', { name: 'Add staff' }).click()
         await until(async () => (await db`select 1 from platform_staff where email = ${USERS.accountant.email}`).length > 0, 10_000)
+        // One person in view beside the list (Neel N4): open them, then Remove.
+        await meera.p.getByRole('link', { name: USERS.accountant.email }).click()
         await meera.p.getByRole('button', { name: `Remove ${USERS.accountant.email}` }).click()
         await until(async () => (await db`select 1 from platform_staff where email = ${USERS.accountant.email}`).length === 0, 10_000)
         const mail = await db`select kind from staff_notices where about = ${USERS.accountant.email}`
@@ -140,7 +144,7 @@ export default {
       })
 
       await t.step('Removing her passkey sends her back to the gate', async () => {
-        await meera.p.goto(CONSOLE + '/admin/staff')
+        await meera.p.goto(CONSOLE + `/admin/staff?id=${O.id}`)
         await meera.p.getByRole('button', { name: 'Remove Riya phone' }).click()
         await meera.p.getByRole('button', { name: 'Confirm with passkey and remove' }).click()
         await until(async () => (await db`select 1 from staff_passkeys where user_id = ${O.id}`).length === 0, 10_000)

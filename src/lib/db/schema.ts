@@ -16,7 +16,7 @@ export const id = () => uuid('id').primaryKey().defaultRandom()
 export const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 export const money = (name: string) => bigint(name, { mode: 'number' })
 
-import { MEMBER_ROLES, sqlList, type MemberRole } from '@/domains/tenancy/roles'
+import { MEMBER_ROLES, SHOP_ROLES, sqlList, type MemberRole } from '@/domains/tenancy/roles'
 import { PLAN_GRANTABLE } from '@/domains/modules/registry'
 export { MEMBER_ROLES, type MemberRole }
 
@@ -47,7 +47,7 @@ export const members = pgTable('members', {
   primaryKey({ columns: [t.tenantId, t.userId] }),
   index('members_user').on(t.userId),
   index('members_partner_member').on(t.partnerMemberId),
-  check('members_role', sql`${t.role} in (${sql.raw(sqlList(MEMBER_ROLES))})`),
+  check('members_role', sql`${t.role} in (${sql.raw(sqlList(SHOP_ROLES))})`),
 ])
 
 // Orders, their lines and a shop's payment keys: src/lib/db/schema-orders.ts.
@@ -145,18 +145,28 @@ export const auditEvents = pgTable('audit_events', {
   id: id(),
   at: at('at').notNull().defaultNow(),
   tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'restrict' }),
-  actorUserId: uuid('actor_user_id').notNull(),
+  /** Null only for a system run (billing rework R2: bills issued on the 1st), and then the email is null too. */
+  actorUserId: uuid('actor_user_id'),
   actorEmail: text('actor_email'),
   actorKind: text('actor_kind').notNull(),
   supportSessionId: uuid('support_session_id').references(() => supportSessions.id, { onDelete: 'restrict' }),
   action: text('action').notNull(),
   target: text('target'),
   detail: jsonb('detail'),
+  /** The action's first word ("billing"), stored, for Admin › Activity's kind filter: an expression index is not used
+   *  under frata_admin's row policy (split_part is not leakproof; speed review on the N4 diff). */
+  actionWord: text('action_word').generatedAlwaysAs(sql`split_part(action, '.', 1)`),
 }, (t) => [
   index('audit_events_tenant_at').on(t.tenantId, t.at),
-  index('audit_events_at').on(t.at),
+  // Admin › Activity (Neel N4): keyset pages on (at, id), newest first by a backward scan, with the row comparison
+  // (at, id) < (…) (speed review on the plan: ascending, so drizzle's desc() NULLS FIRST never misses the index; this
+  // one supersedes audit_events_at). By person, and by kind (the action's first word).
+  index('audit_events_at_id').on(t.at, t.id),
+  index('audit_events_actor_at').on(t.actorUserId, t.at, t.id),
+  index('audit_events_kind_at').on(t.actionWord, t.at, t.id),
   index('audit_events_session').on(t.supportSessionId),
-  check('audit_events_kind', sql`${t.actorKind} in ('member','staff','support')`),
+  check('audit_events_kind', sql`${t.actorKind} in ('member','staff','support','system')`),
+  check('audit_events_who', sql`(${t.actorKind} = 'system') = (${t.actorUserId} is null) and (${t.actorKind} <> 'system' or ${t.actorEmail} is null)`),
 ])
 
 export const plans = pgTable('plans', {
@@ -273,7 +283,7 @@ export const shopSettings = pgTable('shop_settings', {
   /** Business buyers may ask for a GST invoice at checkout (their GSTIN on it). Off above ₹5 cr until e-invoicing. */
   b2bInvoices: boolean('b2b_invoices').notNull().default(true),
   invoiceSeries: text('invoice_series').notNull().default(''),
-  /** Documents D2 (Settings › Documents): the signatory named on invoices, a footer note, the slip's default size. */
+  /** Documents D2 (Settings › Invoices and slips): the signatory named on invoices, a footer note, the slip's default size. */
   /** The logo for paper: a PNG in the shop's Blob folder (tenants/<t>/documents/<uuid>.png), byte-checked when set. */
   docLogo: text('doc_logo'),
   docSignatory: text('doc_signatory').notNull().default(''),
@@ -290,12 +300,20 @@ export const shopSettings = pgTable('shop_settings', {
   shipCostCod: money('ship_cost_cod'),
   shipCostsConfirmedAt: at('ship_costs_confirmed_at'),
   publishedAt: at('published_at'),
+  /**
+   * Where the brand's own website runs, when it isn't on Frrata (V1 Storefront API, ADR-0018): `https://<apex>` or
+   * `https://www.<apex>` of the connected domain `site_domain_id` names. Both null = Runs on Frrata. Set only by
+   * Settings › Website; app_site_origin_check holds the shape and the domain; removing the domain clears both.
+   */
+  siteOrigin: text('site_origin'),
+  siteDomainId: uuid('site_domain_id'),
   version: integer('version').notNull().default(1),
   updatedAt: at('updated_at').notNull().defaultNow(),
 }, (t) => [
   check('shop_settings_accent', sql`${t.accent} in ('oxide','indigo','moss','wine','ink')`),
   check('shop_settings_font', sql`${t.displayFont} in ('fraunces','cormorant','inter')`),
   check('shop_settings_language', sql`${t.shopLanguage} in ('en','hi')`),
+  check('shop_settings_site', sql`(${t.siteOrigin} is null) = (${t.siteDomainId} is null) and (${t.siteOrigin} is null or ${t.siteOrigin} ~ '^https://[a-z0-9.-]+$')`),
   check('shop_settings_seo', sql`length(${t.seoTitle}) <= 200 and length(${t.seoDescription}) <= 400`),
   check('shop_settings_return_kind', sql`${t.returnKind} in ('exchange_or_refund','exchange_only','refund_only','none')`),
   check('shop_settings_sells', sql`${t.sells} <@ array['women','men','kids','ethnic','accessories','footwear','jewellery','beauty','wellness']::text[]`),

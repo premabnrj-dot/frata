@@ -19,6 +19,13 @@ export const SECRETS_ALLOWED = secretsAllowed(process.env.VERCEL, process.env.VE
 function secret(value: string | undefined): string { return SECRETS_ALLOWED ? value ?? '' : '' }
 
 export const DATABASE_URL = secret(process.env.DATABASE_URL)
+/** Storefront API previews (SA1b, ADR-0018 § 12): the key that signs a preview token, base64 of 32 random bytes or more
+ *  (`openssl rand -base64 32`). Production only, Sensitive. Unset or shorter: previews are refused and the console's
+ *  Preview on website is hidden; everything else works. Changing it ends every live token (they last 10 minutes). */
+export const STOREFRONT_PREVIEW_KEY: Buffer | null = (() => {
+  const b = Buffer.from(secret(process.env.STOREFRONT_PREVIEW_SECRET), 'base64')
+  return b.length >= 32 ? b : null
+})()
 /** Trials (TR1): the key of the one-trial-per-business HMACs (src/lib/trials/claims.ts). Production only. Without it a
  *  sign-up gets no trial (fail closed). Never change it once set: earlier claims would no longer match (bump
  *  TRIAL_CLAIM_KEY_VERSION with a new key instead). */
@@ -28,6 +35,10 @@ export const ADMIN_DATABASE_URL = secret(process.env.ADMIN_DATABASE_URL)
 /** The analytics database (A·2, its own Supabase project), as frata_app: the visit beacon's inserts and the console's
  *  Traffic reads (both from A2·2). Production only. */
 export const ANALYTICS_DATABASE_URL = secret(process.env.ANALYTICS_DATABASE_URL)
+/** frata_builder (T1c, ADR-0015; owner 2026-11-15, question 7): a partner's Builder reads the catalogue through its own
+ *  login, which holds column grants on eight catalogue tables and nothing else. Production only; without it a Builder's
+ *  pages say so ("Builder access isn’t set up yet") and read nothing (fail closed). */
+export const DATABASE_URL_BUILDER = secret(process.env.DATABASE_URL_BUILDER)
 /** Counting visits on (A·2): '1' mounts the beacon on shop pages and opens /api/shop/e; anything else, the route answers
  *  404 before reading a byte (security review 2026-11-11 HIGH-1). Production only, set by the owner after the Firewall
  *  rate rule on /api/shop/e and the privacy sentence. */
@@ -73,8 +84,9 @@ export const FRRATA_GSTIN = process.env.FRRATA_GSTIN ?? ''
 export const FRRATA_LEGAL_NAME = process.env.FRRATA_LEGAL_NAME ?? ''
 export const FRRATA_ADDRESS = process.env.FRRATA_ADDRESS ?? ''
 export const FRRATA_SAC = process.env.FRRATA_SAC ?? ''
-/** Test databases only (e2e, int tests): lets Admin issue a month in test mode. NEVER in Production or a preview on
- *  the production database: a test-mode issue freezes the real drafts and their orders' fees for good. */
+/** '1' lets Admin issue a month in test mode: on test databases (e2e, int tests), and on Production only while the
+ *  billing key is a test key (owner's temporary testing switch, 2026-11-15; seller.ts testIssueAllowed). Remove it
+ *  before going live: a test-mode issue freezes that month's drafts and their orders' fees for good. */
 export const BILLING_TEST_ISSUE = secret(process.env.BILLING_TEST_ISSUE)
 
 /** Frrata's OWN Razorpay account, for billing merchants (billing B3; plan finding 15): Production only, Sensitive, read
@@ -88,6 +100,7 @@ export const RAZORPAY_BILLING_WEBHOOK_SECRET_PREVIOUS = secret(process.env.RAZOR
 export const isDatabaseConfigured = () => DATABASE_URL !== ''
 export const isAdminDatabaseConfigured = () => ADMIN_DATABASE_URL !== ''
 export const isAnalyticsConfigured = () => ANALYTICS_DATABASE_URL !== ''
+export const isBuilderDatabaseConfigured = () => DATABASE_URL_BUILDER !== ''
 export const isCountingVisits = () => ANALYTICS_INGEST_ON && isAnalyticsConfigured()
 /** frata-blob's id (store_…): pins which Blob host a photo may come from. Set by connecting the store. */
 export const BLOB_STORE_ID = secret(process.env.BLOB_STORE_ID)

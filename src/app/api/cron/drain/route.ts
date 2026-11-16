@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { isCronRequest } from '@/lib/auth/cron'
 import { drainOutbox, eachLimited } from '@/lib/outbox/drain'
-import { shopsWithPendingEvents } from '@/lib/db/platform'
+import { shopsWithBoundary, shopsWithContentChange, shopsWithDomainGone, shopsWithKeyStop, shopsWithPendingEvents } from '@/lib/db/platform'
+import { pagedSweep } from '@/lib/storefront/sweeps'
+import { refreshKeys } from '@/lib/queries/storefront-api'
+import { refreshShop } from '@/lib/storefront/refresh'
 import { processEvents } from '@/lib/orders/payment'
 import { sendStaffNotices } from '@/lib/admin/staff-notices'
 import { errName } from '@/lib/log'
@@ -29,6 +32,17 @@ export async function GET(request: Request) {
       events += n // read after the await: four shops run at once
     })
   } catch (e) { console.error('[cron] drain events list', errName(e)) }
+  // The Storefront API's sweeps (V1 SA1; paged in SA1b D·6): moments that write nothing then (a drop, an offer starting
+  // or ending, a bar starting), and stops or starts no console action sees (a partner removed, suspended or reinstated,
+  // a domain gone). The last 6 minutes (one run overlaps the next), ids only, page by page, all by a fixed moment that
+  // leaves the outbox at least 20 s of its 50 (architecture review 9).
+  const since = new Date(started - 6 * 60_000), until = new Date(started), sweepsBy = started + 25_000
+  await pagedSweep('boundaries', shopsWithBoundary, since, until, sweepsBy, async (ids) => { for (const t of ids) refreshShop(t, 'catalogue') })
+  await pagedSweep('content', shopsWithContentChange, since, until, sweepsBy, async (ids) => { for (const t of ids) refreshShop(t, 'content') })
+  // Keys: their cached lookups and "not found" copies live an hour, so each shop's keys are purged through its own withTenant.
+  await pagedSweep('key stops', shopsWithKeyStop, since, until, sweepsBy, (ids) => eachLimited(ids, 4, (t) => refreshKeys(t)))
+  // A domain gone: only the store entry (its main address, the move to the brand's website), never the catalogue.
+  await pagedSweep('domains', shopsWithDomainGone, since, until, sweepsBy, async (ids) => { for (const t of ids) refreshShop(t, 'settings') })
   // Staff security emails (staff passkeys): a handful a day; their own queue, outside the shops' outbox.
   const staffMail = await sendStaffNotices().catch((e) => { console.error('[cron] staff notices', errName(e)); return 0 })
   try {

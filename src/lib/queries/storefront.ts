@@ -33,7 +33,8 @@ import { showcase } from '@/lib/storefront/showcase'
 // - RAW rows, dates as ISO strings: visibility() and availability() run at render, because a cached `now` would hide
 //   a scheduled drop forever.
 // - shop* loaders are cached per tenant (shopCached: tenant first in the key and in every tag, 60 s backstop);
-//   preview* loaders are the same core, uncached, drafts included, for /console/preview only. None takes a preview flag.
+//   preview* loaders are the same core, uncached, drafts included, for /console/preview and the Storefront API's test
+//   keys only; api* loaders are the shop* reads with the API's hour (V1 SA1). None takes a preview flag.
 // =============================================================================
 
 type Loader<A extends unknown[], R> = (tenantId: string, ...a: A) => Promise<R>
@@ -46,10 +47,11 @@ type Loader<A extends unknown[], R> = (tenantId: string, ...a: A) => Promise<R>
 const productKey = (v: unknown) => { if (typeof v !== 'string' || !v) throw new Error('a product scope needs the product id or handle first'); return v }
 // 'catalogue:product' (PV·1, speed review): a product's own entry also carries its handle's tag, so its video turning
 // playable or going purges that one product, never the catalogue.
-// 'pages' (TS1a): a shop's live pages; Publish and Undo purge it with the look (queries/pages.ts).
-export function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'look' | 'catalogue' | 'catalogue:product' | 'reviews' | 'reviews:product' | 'videos' | 'pages', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
+// 'pages' (TS1a): a shop's live pages; a page or FAQ save purges it (queries/pages.ts).
+// 'content' (V1 content): the store's bars, menus and Contact line; a content save purges it (queries/content.ts).
+export function shopCached<A extends (string | number)[], R>(name: string, scope: 'shop' | 'settings' | 'look' | 'catalogue' | 'catalogue:product' | 'reviews' | 'reviews:product' | 'videos' | 'pages' | 'content', fn: Loader<A, R>, revalidate = 60): Loader<A, R> {
   return cache((tenantId: string, ...a: A) => unstable_cache(() => fn(tenantId, ...a), ['sf', name, tenantId, ...a.map(String)], {
-    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' || scope === 'videos' || scope === 'look' || scope === 'pages' ? [`shop:${tenantId}:${scope}`] : scope === 'catalogue:product' ? [`shop:${tenantId}:catalogue`, `shop:${tenantId}:product:${productKey(a[0])}`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
+    tags: [`shop:${tenantId}`, ...(scope === 'catalogue' || scope === 'videos' || scope === 'look' || scope === 'pages' || scope === 'content' || scope === 'settings' ? [`shop:${tenantId}:${scope}`] : scope === 'catalogue:product' ? [`shop:${tenantId}:catalogue`, `shop:${tenantId}:product:${productKey(a[0])}`] : scope === 'reviews' ? [`shop:${tenantId}:reviews`] : scope === 'reviews:product' ? [`shop:${tenantId}:reviews:${productKey(a[0])}`] : [])], revalidate,
   })())
 }
 
@@ -85,6 +87,8 @@ export type StoreShop = PolicyFacts & DeliveryRules & {
   /** The words Frrata writes on the shop (themes T2). */
   shopLanguage: Lang
   overrides: Record<string, string>; nav: { handle: string; title: string }[]
+  /** The brand's own website (Settings › Website), or null when the store runs on Frrata: its pages move there (SA1b). */
+  siteOrigin: string | null
   /** GST at checkout (public facts; tax/gstin.ts checkoutGst). */
   gst: { deliversWithin: string | null; b2b: boolean }
   /** Delivery Zones, while the app is usable: the zones in order (public prices); null on the floor. */
@@ -318,7 +322,8 @@ export const previewBestSellers = (tenantId: string, days: number) => coreBestSe
 export const shopVideos = shopCached('videos', 'videos', (t, key: string) => playableVideosFor(t, key), 3600)
 
 // v2: the shop gained seoTitle/seoDescription (S·3); an entry that survives a deploy must not meet the old shape.
-export const shopSettingsFor = shopCached('shop-v2', 'shop', (t) => coreShop(t))
+// v3 (SA1b): siteOrigin joined the entry, with its own `settings` tag (setWebsite purges only that).
+export const shopSettingsFor = shopCached('shop-v3', 'settings', (t) => coreShop(t))
 
 /**
  * The offer in the shop's announcement bar (one at most), as RAW terms and timestamps: whether it is live is decided
@@ -348,6 +353,20 @@ const shopHandles = shopCached('handles', 'catalogue', (t) => coreHandles(t, fal
 const shopProductRow = shopCached('product-v2', 'catalogue:product', (t, handle: string) => coreProduct(t, handle, false))
 export async function shopProduct(tenantId: string, handle: string): Promise<Lookup> {
   return lookup(await shopHandles(tenantId), () => shopProductRow(tenantId, handle), handle)
+}
+
+// The Storefront API's own entries of the same reads, with its hour (V1 SA1; measured 2026-11-15 under next start: a
+// cached route takes the shortest period of the caches it reads, so the shop's 60 s entries made every API copy stale
+// after a minute). Same tags, so every purge that reaches the shop's pages reaches these; time boundaries are the drain's.
+const API_HOUR = 3600
+export const apiShop = shopCached('api-shop-v2', 'settings', (t) => coreShop(t), API_HOUR)
+export const apiAnnouncement = shopCached('api-announce-v1', 'catalogue', coreAnnouncement, API_HOUR)
+const apiCatalogueEntry = shopCached('api-catalogue-v1', 'catalogue', (t) => coreCatalogue(t, false), API_HOUR)
+export const apiCatalogue = cache(async (tenantId: string): Promise<StoreCatalogue> => expand(await apiCatalogueEntry(tenantId)))
+const apiHandles = shopCached('api-handles-v1', 'catalogue', (t) => coreHandles(t, false), API_HOUR)
+const apiProductRow = shopCached('api-product-v1', 'catalogue:product', (t, handle: string) => coreProduct(t, handle, false), API_HOUR)
+export async function apiProduct(tenantId: string, handle: string): Promise<Lookup> {
+  return lookup(await apiHandles(tenantId), () => apiProductRow(tenantId, handle), handle)
 }
 
 export const previewShop = (tenantId: string) => coreShop(tenantId)

@@ -1,5 +1,5 @@
 import 'server-only'
-import { and, asc, desc, eq, gt, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm'
 import { GST_BPS, type Bill, type PlanRow } from '@/domains/billing/bill'
 import { daysUntil, lastDay, mayExtend, pausesAt, trialEndsAt, trialState, type TrialState } from '@/domains/plans/trial'
 import { cache } from 'react'
@@ -15,6 +15,10 @@ import type { Membership } from '@/lib/db/platform'
 import { planVersions, plans, shopSettings, tenantPlans } from '@/lib/db/schema'
 import { billingAccounts, billingNotices, frrataCreditNotes, frrataFeeCredits, frrataInvoiceFees, frrataInvoiceLines, frrataInvoices, frrataPayments } from '@/lib/db/schema-billing'
 import { cheapestPlan, type LadderInvoice, type LadderPlan } from '@/domains/billing/ladder'
+import { costBar, creditedBase, deliveredSales } from '@/domains/billing/charges'
+import { billedOutcome, type OrderOutcome } from '@/domains/orders/outcomes'
+import { billingGatewayIsTest } from '@/lib/billing/gateway'
+import { addonPrices, tenantAddons } from '@/lib/db/schema-modules'
 import { isModuleKey, MODULES } from '@/domains/modules/registry'
 import type { PlanCode } from '@/domains/plans/entitlements'
 import { invoiceState, type InvoiceState } from '@/domains/billing/status'
@@ -40,7 +44,7 @@ function mayReadMoney(m: Pick<Membership, 'role'>) {
 }
 
 /** Null: no plan (nothing to bill). 'busy': the billing run is redrafting it this moment. */
-export type Estimate = { invoiceOn: Date; bill: Bill; orders: { number: number; base: number; fee: number; feeBps: number; billableAt: Date }[] } | null | 'busy'
+export type Estimate = { invoiceOn: Date; bill: Bill; orders: { orderId: string; number: number; base: number; fee: number; feeBps: number; billableAt: Date }[] } | null | 'busy'
 
 export type BillingOverview = {
   plan: { code: string; name: string; monthlyPrice: number; includedOrders: number; feeBps: number; trialEndsAt: Date | null; custom: boolean } | null
@@ -51,6 +55,40 @@ export type BillingOverview = {
   estimate: Estimate
   invoices: { id: string; number: string; periodStart: Date; total: number; issuedAt: Date; testMode: boolean; state: InvoiceState; due: number; credits: { number: string; total: number }[] }[]
   details: { legalName: string; gstin: string; address: string; stateCode: string; email: string; saved: boolean }
+  /** The last six issued bills as the cost chart reads them (billing rework R1), newest last. */
+  history: HistoryBar[]
+  /** Payments that settled or failed, newest first (Payment tab). */
+  payments: PaymentRow[]
+}
+
+export type HistoryBar = { id: string; number: string; periodStart: Date; testMode: boolean; plan: number; fees: number; taxable: number; sales: number }
+export type PaymentRow = { at: Date; method: string; amount: number; number: string; ok: boolean; reason: string | null }
+
+/** The last six issued bills, each as plan + apps and fees less credits, with the delivered sales its fee was on. */
+/** `testMode`: real bills only, unless the gateway itself is a test one (then the test bills are all there is). */
+async function historyWith(tx: Tx, t: string, testMode: boolean): Promise<HistoryBar[]> {
+  const inv = await tx.select({ id: frrataInvoices.id, number: frrataInvoices.number, periodStart: frrataInvoices.periodStart, testMode: frrataInvoices.testMode, taxable: frrataInvoices.taxable })
+    .from(frrataInvoices).where(and(eq(frrataInvoices.tenantId, t), isNotNull(frrataInvoices.issuedAt), eq(frrataInvoices.testMode, testMode))).orderBy(desc(frrataInvoices.periodStart)).limit(6)
+  if (!inv.length) return []
+  const ids = inv.map((i) => i.id)
+  const [lines, fees, credits] = await Promise.all([
+    tx.select({ invoiceId: frrataInvoiceLines.invoiceId, kind: frrataInvoiceLines.kind, taxable: frrataInvoiceLines.taxable }).from(frrataInvoiceLines).where(and(eq(frrataInvoiceLines.tenantId, t), inArray(frrataInvoiceLines.invoiceId, ids))),
+    tx.select({ invoiceId: frrataInvoiceFees.invoiceId, base: frrataInvoiceFees.base }).from(frrataInvoiceFees).where(and(eq(frrataInvoiceFees.tenantId, t), inArray(frrataInvoiceFees.invoiceId, ids))),
+    tx.select({ invoiceId: frrataFeeCredits.invoiceId, kind: frrataFeeCredits.kind, fee: frrataFeeCredits.fee, base: frrataInvoiceFees.base, feeBps: frrataInvoiceFees.feeBps }).from(frrataFeeCredits)
+      .innerJoin(frrataInvoiceFees, and(eq(frrataInvoiceFees.tenantId, frrataFeeCredits.tenantId), eq(frrataInvoiceFees.orderId, frrataFeeCredits.orderId)))
+      .where(and(eq(frrataFeeCredits.tenantId, t), inArray(frrataFeeCredits.invoiceId, ids))),
+  ]).then(([l, f, c]) => [l, f, c.map((x) => ({ invoiceId: x.invoiceId, base: creditedBase(x) }))] as const)
+  const of = <R extends { invoiceId: string }>(rows: R[], id: string) => rows.filter((r) => r.invoiceId === id)
+  return inv.flatMap((i) => i.number ? [{ id: i.id, number: i.number, periodStart: i.periodStart, testMode: i.testMode, taxable: i.taxable,
+    ...costBar(of(lines, i.id)), sales: deliveredSales(of(fees, i.id), of(credits, i.id)) }] : []).reverse()
+}
+
+async function paymentsWith(tx: Tx, t: string): Promise<PaymentRow[]> {
+  const rows = await tx.select({ captured: frrataPayments.capturedAt, failed: frrataPayments.failedAt, method: frrataPayments.method, amount: frrataPayments.amount, reason: frrataPayments.failureReason, number: frrataInvoices.number })
+    .from(frrataPayments).innerJoin(frrataInvoices, and(eq(frrataInvoices.tenantId, frrataPayments.tenantId), eq(frrataInvoices.id, frrataPayments.invoiceId)))
+    .where(and(eq(frrataPayments.tenantId, t), sql`(${frrataPayments.capturedAt} is not null or ${frrataPayments.failedAt} is not null)`))
+    .orderBy(desc(sql`coalesce(${frrataPayments.capturedAt}, ${frrataPayments.failedAt})`)).limit(24)
+  return rows.map((r) => ({ at: (r.captured ?? r.failed)!, method: r.method, amount: r.amount, number: r.number ?? '', ok: !!r.captured, reason: r.captured ? null : r.reason }))
 }
 
 export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, now = new Date()): Promise<BillingOverview> {
@@ -59,7 +97,7 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
   const invoiceOn = nextMonthStartIST(now)
   const [base, estimate] = await Promise.all([
     withTenant(tenantId, async (tx) => {
-      const [history, invoices, [account], [shop], paidRows, creditRows, planBilled] = await Promise.all([
+      const [history, invoices, [account], [shop], paidRows, creditRows, planBilled, bars, payments] = await Promise.all([
         tx.select({ startsAt: tenantPlans.startsAt, trialEndsAt: tenantPlans.trialEndsAt, customMonthlyPrice: tenantPlans.customMonthlyPrice, name: plans.name, code: plans.code, byShop: tenantPlans.byShop,
           monthlyPrice: planVersions.monthlyPrice, includedOrders: planVersions.includedOrders, feeBps: planVersions.feeBps })
           .from(tenantPlans).innerJoin(planVersions, eq(planVersions.id, tenantPlans.planVersionId)).innerJoin(plans, eq(plans.id, planVersions.planId))
@@ -72,8 +110,10 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
         tx.select({ id: frrataPayments.invoiceId, n: sql<string>`sum(${frrataPayments.amount})` }).from(frrataPayments).where(and(eq(frrataPayments.tenantId, tenantId), isNotNull(frrataPayments.capturedAt))).groupBy(frrataPayments.invoiceId),
         tx.select({ id: frrataCreditNotes.invoiceId, number: frrataCreditNotes.number, total: frrataCreditNotes.total }).from(frrataCreditNotes).where(eq(frrataCreditNotes.tenantId, tenantId)).orderBy(asc(frrataCreditNotes.issuedAt)),
         planBilledIn(tx, tenantId, monthStartIST(now)),
+        historyWith(tx, tenantId, billingGatewayIsTest()),
+        paymentsWith(tx, tenantId),
       ])
-      return { history, invoices, account, shop, paidRows, creditRows, planBilled }
+      return { history, invoices, account, shop, paidRows, creditRows, planBilled, bars, payments }
     }),
     // The run, rolled back: nothing is written, whatever the page shows.
     (async (): Promise<Estimate> => {
@@ -83,7 +123,7 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
         // (impact review 2026-11-08): on a timeout the page says the estimate is being updated.
         await tx.execute(sql`set local lock_timeout = '1s'`)
         const r = await draftInvoiceIn(tx, tenantId, invoiceOn, now)
-        if (r.invoiceId) out = { invoiceOn, bill: r.bill, orders: r.bill.fees.map((f) => ({ number: r.numbers.get(f.orderId) ?? 0, base: f.base, fee: f.fee, feeBps: f.feeBps, billableAt: f.billableAt })).sort((a, b) => b.number - a.number) }
+        if (r.invoiceId) out = { invoiceOn, bill: r.bill, orders: r.bill.fees.map((f) => ({ orderId: f.orderId, number: r.numbers.get(f.orderId) ?? 0, base: f.base, fee: f.fee, feeBps: f.feeBps, billableAt: f.billableAt })).sort((a, b) => b.number - a.number) }
         throw ROLLBACK
       }).catch((e) => {
         if (e === ROLLBACK) return
@@ -115,6 +155,8 @@ export async function billingOverview(m: Pick<Membership, 'tenantId' | 'role'>, 
     details: a
       ? { legalName: a.legalName, gstin: a.gstin ?? '', address: a.address, stateCode: a.stateCode ?? '', email: a.email, saved: true }
       : { legalName: s?.legalName ?? '', gstin: s?.gstin ?? '', address: s?.address ?? '', stateCode: gstinState(s?.gstin ?? null) ?? '', email: s?.email ?? '', saved: false },
+    history: base.bars,
+    payments: base.payments,
   }
 }
 
@@ -135,6 +177,8 @@ export async function shopFrrataDocument(m: Pick<Membership, 'tenantId' | 'role'
 
 export type Paying = {
   mandate: { method: string; max: number; since: Date } | null
+  /** A bank mandate (eNACH) set up and waiting for the bank to confirm it (billing R5): never debited until then. */
+  pending: { method: string } | null
   /** The latest notice of a debit not yet taken (amount, when). */
   nextDebit: { amount: number; at: Date } | null
 }
@@ -150,6 +194,9 @@ export async function payingFor(m: Pick<Membership, 'tenantId' | 'role'>, now = 
     ])
     return {
       mandate: a?.method && a.at && !a.revoked ? { method: a.method, max: a.max ?? 0, since: a.at } : null,
+      // Set up (a method recorded) but not yet confirmed: an eNACH waiting for the bank. The token column is never read here
+      // (frata_app holds no grant on the gateway's ids).
+      pending: a?.method && !a.at && !a.revoked ? { method: a.method } : null,
       nextDebit: n?.at ? { amount: n.amount, at: n.at } : null,
     }
   })
@@ -269,4 +316,70 @@ export async function featuredBillWith(tx: Tx, m: Pick<Membership, 'tenantId' | 
   }))
   const n = cheapestPlan(ladder, launch, others)
   return n ? { invoiceId: n.invoiceId, periodStart: n.periodStart, planCode: n.plan.code, planName: n.plan.name, saving: n.saving, billed: n.billed, would: n.would } : null
+}
+
+// ── Billing rework R1: the Charges tab — one bill, every rupee traced to an order, a plan or an app. Issued bills read
+// their stored rows; the open bill is the Overview's estimate (the same rolled-back run), so the two never disagree. ──
+export type ChargeOrder = { number: number; total: number; shippedAt: Date | null; outcome: OrderOutcome | 'returned'; outcomeAt: Date | null; base: number; feeBps: number; fee: number }
+export type IssuedCharges = {
+  invoice: { id: string; number: string; periodStart: Date; testMode: boolean; taxable: number; cgst: number; sgst: number; igst: number; total: number }
+  lines: { kind: string; description: string; quantity: number; rateBps: number | null; taxable: number; periodStart: Date | null; periodEnd: Date | null }[]
+  orders: ChargeOrder[]; orderCount: number; credits: ChargeOrder[]
+  /** Every billed order on the bill, not just this page: the base the fee was on, and the fee. */
+  totals: { base: number; fee: number }
+}
+export const CHARGE_PAGE = 50
+
+type Facts = { id: string; number: number; total: number; shippedAt: Date | null; deliveredAt: Date | null; rtoInitiatedAt: Date | null; rtoDeliveredAt: Date | null; lostAt: Date | null }
+const FACTS = { id: orders.id, number: orders.number, total: orders.total, shippedAt: orders.shippedAt, deliveredAt: orders.deliveredAt, rtoInitiatedAt: orders.rtoInitiatedAt, rtoDeliveredAt: orders.rtoDeliveredAt, lostAt: orders.lostAt }
+
+/** An issued bill of this shop, its lines, one page of its billed orders (newest number first) and its credits. */
+export async function issuedCharges(m: Pick<Membership, 'tenantId' | 'role'>, invoiceId: string, page = 0): Promise<IssuedCharges | null> {
+  mayReadMoney(m)
+  const t = m.tenantId
+  return withTenant(t, async (tx) => {
+    const [i] = await tx.select({ id: frrataInvoices.id, number: frrataInvoices.number, periodStart: frrataInvoices.periodStart, testMode: frrataInvoices.testMode, taxable: frrataInvoices.taxable,
+      cgst: frrataInvoices.cgst, sgst: frrataInvoices.sgst, igst: frrataInvoices.igst, total: frrataInvoices.total, issuedAt: frrataInvoices.issuedAt })
+      .from(frrataInvoices).where(and(eq(frrataInvoices.tenantId, t), eq(frrataInvoices.id, invoiceId)))
+    if (!i || !i.issuedAt || !i.number) return null
+    const [lines, fees, [count], credits] = await Promise.all([
+      tx.select({ kind: frrataInvoiceLines.kind, description: frrataInvoiceLines.description, quantity: frrataInvoiceLines.quantity, rateBps: frrataInvoiceLines.rateBps, taxable: frrataInvoiceLines.taxable, periodStart: frrataInvoiceLines.periodStart, periodEnd: frrataInvoiceLines.periodEnd })
+        .from(frrataInvoiceLines).where(and(eq(frrataInvoiceLines.tenantId, t), eq(frrataInvoiceLines.invoiceId, i.id))).orderBy(asc(frrataInvoiceLines.position)),
+      tx.select({ ...FACTS, base: frrataInvoiceFees.base, feeBps: frrataInvoiceFees.feeBps, fee: frrataInvoiceFees.fee }).from(frrataInvoiceFees)
+        .innerJoin(orders, and(eq(orders.tenantId, frrataInvoiceFees.tenantId), eq(orders.id, frrataInvoiceFees.orderId)))
+        .where(and(eq(frrataInvoiceFees.tenantId, t), eq(frrataInvoiceFees.invoiceId, i.id))).orderBy(desc(orders.number)).limit(CHARGE_PAGE).offset(Math.max(0, page) * CHARGE_PAGE),
+      tx.select({ n: sql<number>`count(*)::int`, base: sql<string>`coalesce(sum(${frrataInvoiceFees.base}), 0)`, fee: sql<string>`coalesce(sum(${frrataInvoiceFees.fee}), 0)` }).from(frrataInvoiceFees).where(and(eq(frrataInvoiceFees.tenantId, t), eq(frrataInvoiceFees.invoiceId, i.id))),
+      tx.select({ ...FACTS, base: frrataInvoiceFees.base, feeBps: frrataInvoiceFees.feeBps, fee: frrataFeeCredits.fee, kind: frrataFeeCredits.kind }).from(frrataFeeCredits)
+        .innerJoin(frrataInvoiceFees, and(eq(frrataInvoiceFees.tenantId, frrataFeeCredits.tenantId), eq(frrataInvoiceFees.orderId, frrataFeeCredits.orderId)))
+        .innerJoin(orders, and(eq(orders.tenantId, frrataFeeCredits.tenantId), eq(orders.id, frrataFeeCredits.orderId)))
+        .where(and(eq(frrataFeeCredits.tenantId, t), eq(frrataFeeCredits.invoiceId, i.id))).orderBy(desc(orders.number)).limit(200),
+    ])
+    const row = (o: Facts & { base: number; feeBps: number; fee: number }): ChargeOrder => ({ number: o.number, total: o.total, shippedAt: o.shippedAt, ...billedOutcome(o), base: o.base, feeBps: o.feeBps, fee: o.fee })
+    // A credit: the fee given back, on the base it was given back on (a return credits only the returned items).
+    const credit = (c: Facts & { base: number; feeBps: number; fee: number; kind: string }): ChargeOrder => ({ ...row(c), ...(c.kind === 'return' ? { outcome: 'returned' as const, outcomeAt: null } : {}), base: creditedBase(c), fee: -c.fee })
+    return { invoice: { ...i, number: i.number }, lines, orders: fees.map(row), orderCount: count?.n ?? 0, credits: credits.map(credit), totals: { base: Number(count?.base ?? 0), fee: Number(count?.fee ?? 0) } }
+  })
+}
+
+/** The open bill's orders as Charges shows them: the estimate's fee rows with each order's total, ship date and outcome. */
+export async function openChargeOrders(m: Pick<Membership, 'tenantId' | 'role'>, fees: readonly { orderId: string; base: number; feeBps: number; fee: number }[]): Promise<ChargeOrder[]> {
+  mayReadMoney(m)
+  if (!fees.length) return []
+  const ids = fees.slice(0, 2000).map((f) => f.orderId)
+  const facts = await withTenant(m.tenantId, (tx) => tx.select(FACTS).from(orders).where(and(eq(orders.tenantId, m.tenantId), inArray(orders.id, ids))))
+  const by = new Map(facts.map((f) => [f.id, f]))
+  return fees.flatMap((f) => { const o = by.get(f.orderId); return o ? [{ number: o.number, total: o.total, shippedAt: o.shippedAt, ...billedOutcome(o), base: f.base, feeBps: f.feeBps, fee: f.fee }] : [] })
+    .sort((a, b) => b.number - a.number)
+}
+
+/** Plans tab: each add-on's current price, and which add-ons this shop has on now (Apps on your bill). */
+export async function addonsFor(m: Pick<Membership, 'tenantId' | 'role'>, now = new Date()): Promise<{ prices: Partial<Record<string, number>>; on: string[] }> {
+  mayReadMoney(m)
+  return withTenant(m.tenantId, async (tx) => {
+    const [prices, on] = await Promise.all([
+      tx.execute<{ module: string; monthly_price: string }>(sql`select distinct on (module) module, monthly_price from ${addonPrices} order by module, version desc`),
+      tx.select({ module: tenantAddons.module }).from(tenantAddons).where(and(eq(tenantAddons.tenantId, m.tenantId), lte(tenantAddons.startsAt, now), or(isNull(tenantAddons.endsAt), gt(tenantAddons.endsAt, now)))),
+    ])
+    return { prices: Object.fromEntries(prices.map((r) => [r.module, Number(r.monthly_price)])), on: on.map((r) => r.module) }
+  })
 }

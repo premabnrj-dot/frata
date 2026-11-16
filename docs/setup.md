@@ -85,6 +85,17 @@ create your tenant and owner membership (it is a plain insert; no secret).
    on. Invites are claimed only by confirmed emails.
 4. Redeploy. You are already in `platform_staff` as Admin.
 
+### 6a. Builders' login (T1c, ADR-0015; owner 2026-11-15, question 7)
+
+**Deploy order (agents):** apply the two T1c migrations (`*_builders.sql`, `*_builders_access.sql`) FIRST; old code is
+safe on them. Before step 2, run the generic block of `scripts/verify/tenancy.sql` § 82 (the `has_*_privilege` sweep,
+read-only) through `execute_sql` and paste its result in the release report: Supabase has schemas (`extensions`,
+`graphql`, `vault`, `pgbouncer`) a throwaway Postgres doesn't.
+1. SQL Editor: `alter role frata_builder with password '<hex>';` — a NEW hex value (`openssl rand -hex 24`).
+2. Vercel: `DATABASE_URL_BUILDER` = the Transaction pooler URI with user `frata_builder.szqwveysvbbxpjhjlnwl` and that
+   password. Type **Sensitive**, **Production only**. Without it a Builder's pages say "Builder access isn’t set up yet"
+   and read nothing.
+
 ### 6b. Staff passkeys — the first time (ADR-0007 amended 2026-11-12; spec `docs/specs/2026-11-12-staff-passkeys.md`)
 
 **Deploy order (agents):** apply `drizzle/0109_staff_passkeys.sql` to production FIRST, in one transaction (it drops
@@ -305,7 +316,7 @@ it to `100000` after moving to Pro. Never Preview: a preview build must not add 
 
 **3. Redeploy:** Deployments → the latest Production deployment → ⋯ → Redeploy (or any push to `main`).
 
-**4. Check:** Settings › Shop address in the console shows **Connect a domain**. If it doesn't, the token or project id
+**4. Check:** Settings › Web address in the console shows **Connect a domain**. If it doesn't, the token or project id
 is missing or not in Production.
 
 On Vercel Pro (2026-11-12): the background check runs every 10 minutes (`vercel.json`); **owner step:** set
@@ -445,3 +456,46 @@ Nothing here passes through an agent: no AWS key exists anywhere (the app reache
    `https://frata.vercel.app/api/auth/send-email`; generate the secret → Vercel `SEND_EMAIL_HOOK_SECRET`; redeploy.
    Then Authentication → Rate limits → emails per hour: 300.
 3. Sign in once to check; tell the agent.
+
+### Storefront API — turning it on (V1, ADR-0018; plan `docs/plans/2026-11-15-v1-storefront-api.md`)
+Nothing answers until these are done; the migrations go first (the orchestrator applies them at release).
+1. **The host.** In Vercel → frata → Domains, add `api.frrata.shop` (a subdomain of the shop domain: it needs no new
+   DNS zone; `api` is a reserved store name, so no shop can take it).
+2. **The variable.** In Vercel → frata → Environment Variables, Production: `NEXT_PUBLIC_API_HOST=api.frrata.shop`.
+   Redeploy (a public value is built in).
+3. **The firewall.** In Vercel → frata → Firewall, add the first three rules of `ops/firewall.json` exactly, in that
+   order, above every other rule: the path rule (on), the per-IP rate rule (on, 600 a minute), the kill switch (OFF).
+   Publish. `src/domains/storefront-api/__tests__/waf.test.ts` keeps the path rule in step with the routes.
+4. **Check.** `curl -s https://api.frrata.shop/2026-12/openapi.json | head -c 80` answers `{"openapi":"3.1.0"…`;
+   `curl -si https://api.frrata.shop/` is a 403 from the firewall.
+5. **Kill switch.** Turning the third rule on stops the whole API at once; partner sites keep their stale pages, shops
+   and checkout are untouched.
+
+### Storefront API SA1b — the bag link, previews, the docs (plan `docs/plans/2026-11-16-sa1b.md`)
+After SA1b's migration is applied and the release is live:
+1. **The preview secret.** Run `openssl rand -base64 32` on your own computer and copy the line it prints. In Vercel →
+   frata → Settings → Environment Variables, add `STOREFRONT_PREVIEW_SECRET` with that value: **Production only**,
+   **Sensitive**. Redeploy. Until it is set, Preview on website is hidden and every preview is refused; everything else
+   works. Changing it later ends every preview link (they last 10 minutes anyway).
+2. **The firewall's path rule.** In Vercel → frata → Firewall, edit the first rule ("Storefront API: refuse any other
+   path"). As entered on 2026-11-15 it is *Hostname equals api.frrata.shop* AND *Request Path does not start with
+   /2026-12/*, which would deny the docs. Add these conditions to the same group (AND), then Publish:
+   *Request Path does not start with /docs* · *Request Path does not equal /llms.txt* · *Request Path does not start
+   with /_next/static/* · *Request Path does not equal /*. The new API paths (`preview/…`, `facets`, `filter/page/{n}`)
+   are under /2026-12/ and need nothing. `ops/firewall.json` keeps the full regex as the target if the dashboard
+   later offers one.
+3. **Check.** `curl -si https://api.frrata.shop/` is a 307 to `/docs`; `https://api.frrata.shop/docs` shows the docs;
+   `curl -s https://api.frrata.shop/llms.txt | head -1` is `# Frrata Storefront API`.
+4. **The starter's public repo** (when the first partner needs it): create `frrata/starter` on GitHub (public) and ask
+   the agent to publish `kit/starter` into it. Settings › Website's "Starter code" link points there.
+5. **Build the first site with Claude Code** (owner, 2026-11-15: "let's use our own claude code first"). The starter
+   ships a `CLAUDE.md` with its rules and `npm run check` (CI blocks on it), so the same mistakes are caught whoever
+   writes the code.
+   1. `git clone https://github.com/frrata/starter my-shop && cd my-shop && npm install` (until the public repo
+      exists, copy `kit/starter` from this repo).
+   2. In the brand's console, Settings › Website › Create key › **Test**. Put it in `.env.local` as
+      `FRRATA_KEY=frs_test_…`. Never in a file git tracks.
+   3. `npm run dev`, then open Claude Code in the folder and ask for the change.
+   4. Work on a branch and push it: Vercel builds a preview of the branch. `npm run check` and the build must pass.
+   5. Merge to `main` to publish. In the site's Vercel project, set `FRRATA_KEY` to the **live** key (Production,
+      Sensitive) once the store opens.

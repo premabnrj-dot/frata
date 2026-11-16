@@ -34,6 +34,8 @@ const EN = {
   pageOf: 'Page {n} of {m}', prevPage: 'Previous', nextPage: 'Next', pages: 'Pages',
   emptyShop: 'New pieces are on their way.', emptyCollection: 'Nothing here right now. New pieces are on their way.',
   gone: '{title} is no longer available', goneSub: 'Here is what is new instead.', notHere: 'This page is not here', seeEverything: 'See everything in the shop',
+  // The bag link's page (Storefront API SA1b: a brand's own website sends its bag to checkout).
+  bagLink: { opening: 'Opening checkout', broken: 'This bag link doesn’t work', again: 'Add your items to the bag again.', goTo: 'Go to {name}' },
   promise: { label: 'Our promises', cod: 'Pay on delivery', freeShipping: 'Free shipping above {above}', exchange: '{d}-day exchange', returns: '{d}-day returns', exchangeOrReturns: '{d}-day exchange or returns', shipsDay: 'Ships in {d} day', shipsDays: 'Ships in {d} days' },
 }
 export type Words = typeof EN
@@ -57,6 +59,7 @@ const HI: Words = {
   pageOf: 'पेज {n} / {m}', prevPage: 'पिछला', nextPage: 'अगला', pages: 'पेज',
   emptyShop: 'नए पीस जल्द आ रहे हैं।', emptyCollection: 'अभी यहाँ कुछ नहीं है। नए पीस जल्द आ रहे हैं।',
   gone: '{title} अब उपलब्ध नहीं है', goneSub: 'इसकी जगह ये नए पीस देखें।', notHere: 'यह पेज यहाँ नहीं है', seeEverything: 'शॉप में सब देखें',
+  bagLink: { opening: 'चेकआउट खुल रहा है', broken: 'यह बैग लिंक काम नहीं कर रहा', again: 'अपने आइटम फिर से बैग में डालें।', goTo: '{name} पर जाएँ' },
   promise: { label: 'हमारे वादे', cod: 'कैश ऑन डिलीवरी', freeShipping: '{above} से ऊपर फ्री शिपिंग', exchange: '{d} दिन में एक्सचेंज', returns: '{d} दिन में वापसी', exchangeOrReturns: '{d} दिन में एक्सचेंज या वापसी', shipsDay: '{d} दिन में भेजा जाएगा', shipsDays: '{d} दिन में भेजा जाएगा' },
 }
 

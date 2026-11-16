@@ -75,7 +75,7 @@ export type SourceVisits = { slug: string; label: string; channel: Channel; visi
  * codes): the same slug on both sides, so a row's orders and visits are about the same links. A row the rollup folded
  * (rh '*', past its top 200) is "other".
  */
-export function visitsBySource(rows: readonly SourceVisitRow[], labels: ReadonlyMap<string, string>): Map<string, SourceVisits> {
+export function visitsBySource(rows: readonly SourceVisitRow[], labels: ReadonlyMap<string, string>, site: string | null = null): Map<string, SourceVisits> {
   const out = new Map<string, SourceVisits>()
   const add = (slug: string, label: string, channel: Channel, r: SourceVisitRow) => {
     const s = out.get(slug) ?? { slug, label, channel, visitors: 0, ordered: 0 }
@@ -86,7 +86,7 @@ export function visitsBySource(rows: readonly SourceVisitRow[], labels: Readonly
   for (const r of rows) {
     if (r.rh === '*') { add('other', 'Other', 'other', r); continue }
     const cl = r.cc ? labels.get(r.cc.toUpperCase()) ?? null : null
-    const s = sourceOfInputs({ us: or(r.us), um: or(r.um), uc: or(r.uc), rh: or(r.rh), gads: r.gads, srs: r.srs, fb: r.fb, cl, cc: cl ? r.cc : null })
+    const s = sourceOfInputs({ us: or(r.us), um: or(r.um), uc: or(r.uc), rh: or(r.rh), gads: r.gads, srs: r.srs, fb: r.fb, cl, cc: cl ? r.cc : null }, site)
     add(s.slug, s.label, s.channel, r)
   }
   return out

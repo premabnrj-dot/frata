@@ -1,0 +1,15 @@
+# Blocking on every push and pull request: the same checks whoever wrote the code (a person or Claude Code).
+name: check
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: npm run check
+      - run: npx tsc --noEmit
+      # Pages read the store at request time, so the build needs no key; scan-bundle fails if a key reached the browser.
+      - run: npm run build

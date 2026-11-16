@@ -73,13 +73,15 @@ export default {
       const admin = await open('frata')
       try {
         await admin.p.goto(CONSOLE + '/admin/notices')
-        await admin.p.locator('select[name="audience"]').selectOption('shop')
-        await admin.p.getByLabel('Shop id').fill(shop.id)
-        await admin.p.getByLabel('Kind').selectOption('security')
-        await admin.p.getByLabel('Title').fill('We changed how support visits work')
-        await admin.p.getByLabel('Required (billing, security, Frrata acted)').check()
-        await admin.p.getByRole('button', { name: 'Send' }).click()
-        await expectToast(admin.p, 'Sent to 1 shop.', 'ok')
+        await admin.p.getByRole('button', { name: 'New notice' }).click()
+        const nd = admin.p.getByRole('dialog', { name: 'Send a notice?' })
+        await nd.locator('select[name="audience"]').selectOption('shop')
+        await nd.getByLabel('Store id').fill(shop.id)
+        await nd.getByLabel('Kind').selectOption('security')
+        await nd.getByLabel('Title').fill('We changed how support visits work')
+        await nd.getByLabel('Must read (billing, security, a Frrata change)').check()
+        await nd.getByRole('button', { name: 'Send notice' }).click()
+        await expectToast(admin.p, 'Sent to 1 store.', 'ok')
         await admin.p.getByRole('cell', { name: 'We changed how support visits work' }).waitFor()
       } finally { await admin.ctx.close() }
       // Earlier flows leave their own notices (support visits, billing): the owner has read those, so the pill counts this one.
@@ -165,7 +167,7 @@ export default {
         try {
           const c = await owner.newPage(); c.setDefaultTimeout(15_000); c.on('pageerror', (e) => t.errors.push(e.message))
           await c.goto(CONSOLE + `/console/orders/${o.number}`)
-          const card = c.locator('#emails')
+          const card = c.locator('#activity')
           await card.getByText('Bounced · no such address').waitFor()
           await c.screenshot({ path: t.out('order-emails'), fullPage: true })
           // Switch Order confirmed off in Settings › Emails: the next order's email is skipped, with its reason, and the
@@ -180,7 +182,7 @@ export default {
           await drain()
           await until(async () => (await db`select skip_code from email_messages where tenant_id = ${shop.id} and order_id = ${o2.id} and kind = 'confirmed'`)[0]?.skip_code === 'off', 10_000)
           await c.goto(CONSOLE + `/console/orders/${o2.number}`)
-          await c.locator('#emails').getByText('Not sent · switched off in Settings').waitFor()
+          await c.locator('#activity').getByText('Not sent · switched off in Settings').waitFor()
           assert.ok(!(await sent()).some((m) => m.to === 'meera.j@example.in'), 'nothing was sent')
         } finally { await owner.close() }
       } finally { await ctx.close() }

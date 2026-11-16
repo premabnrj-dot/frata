@@ -66,7 +66,7 @@ export default async function GstPage({ searchParams }: { searchParams: Promise<
     return home(
       <>
         <Panel title={!shop.gstin ? 'Your store isn’t registered for GST' : 'Your store is on the composition scheme'}
-          action={auth.membership.role !== 'accountant' ? <Link href="/console/settings/taxes" className={button({ variant: 'secondary' })}>Settings › Taxes</Link> : undefined}>
+          action={auth.membership.role !== 'accountant' ? <Link href="/console/settings/business" className={button({ variant: 'secondary' })}>Settings › Business and GST</Link> : undefined}>
           {!shop.gstin ? 'It issues bills of supply and delivers within its state. GSTR-1 is for registered stores.' : 'It issues bills of supply. Your CA files CMP-08 each quarter. GSTR-1 is for the regular scheme.'}
         </Panel>
       </>

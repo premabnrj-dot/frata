@@ -12,6 +12,15 @@ const KESAR = 'd7342b03-4f9e-45db-b5e0-3760967cb3c7'
 // The IST month after the one `d` falls in, as "YYYY-MM" (month ends are IST, not UTC).
 const nextYm = (d) => { const i = new Date(d.getTime() + 330 * 60_000); const n = new Date(Date.UTC(i.getUTCFullYear(), i.getUTCMonth() + 1, 1)); return `${n.getUTCFullYear()}-${String(n.getUTCMonth() + 1).padStart(2, '0')}` }
 
+/** Run drafts: the run's own button when the month has none, else More › Run drafts (Neel N4: rare in More, a dialog). */
+async function runDrafts(p) {
+  const direct = p.getByRole('button', { name: /^Run drafts for/ })
+  if (await direct.count()) { await direct.first().click(); return }
+  await p.getByRole('button', { name: 'More' }).click()
+  await p.getByRole('menuitem', { name: /^Run drafts for/ }).click()
+  await p.getByRole('dialog').getByRole('button', { name: 'Run drafts' }).click()
+}
+
 export default {
   name: 'billing',
   async run(t) {
@@ -31,28 +40,36 @@ export default {
     try {
       const riya = await open('owner', { viewport: { width: 390, height: 844 } })
       await t.step('the owner: plan and this month so far, with the delivered order and its fee; no sideways scroll on a phone', async () => {
-        await riya.goto(CONSOLE + '/console/settings')
+        await riya.goto(CONSOLE + '/console/settings?group=team')
         await riya.getByRole('link', { name: /Plan and billing/ }).click()
         await riya.getByRole('heading', { level: 1, name: 'Plan and billing' }).waitFor()
-        await riya.locator('strong', { hasText: 'Launch' }).waitFor()
-        await riya.getByText(/Estimated bill on|rolls to the next month/).waitFor()
-        await riya.getByText('How it adds up').click()
-        await riya.getByText(new RegExp(`-${N}$`)).waitFor()
+        await riya.getByText(/^Launch · ₹/).waitFor()
+        await riya.getByRole('heading', { name: 'Next bill' }).waitFor()
+        await riya.getByText('so far, with GST').waitFor()
+        // Charges: the open bill, traced to the delivered order and its fee (billing rework R1).
+        await riya.getByRole('link', { name: 'See every charge' }).click()
+        await riya.getByRole('table', { name: 'What this bill is made of' }).getByText('Fee on delivered orders').waitFor()
+        await riya.getByRole('link', { name: new RegExp(`-${N}$`) }).waitFor()
+        assert.equal(await riya.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'Charges fits a 390 px phone')
+        await riya.screenshot({ path: t.out('charges'), fullPage: true })
+        await riya.goto(CONSOLE + '/console/settings/billing')
+        await riya.getByRole('heading', { name: 'Next bill' }).waitFor()
         assert.equal(await riya.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'no sideways scroll at 390 px')
         await riya.screenshot({ path: t.out('plan-and-billing'), fullPage: true })
       })
 
       await t.step('billing details: a GSTIN decides the State (a different one is refused), then they save', async () => {
+        await riya.getByRole('link', { name: 'Details' }).click()
         await riya.getByLabel('Legal name').fill('Kesar Studio LLP')
         await riya.getByLabel(/GSTIN/).fill('27AAPFU0939F1ZV')
         await riya.getByLabel('State').selectOption('08')
         await riya.getByLabel('Billing address').fill('12 MI Road, Jaipur 302001')
-        await riya.getByLabel('Billing email').fill('accounts@kesarstudio.in')
-        await riya.getByRole('button', { name: 'Save billing details' }).click()
+        await riya.getByLabel('Bills go to').fill('accounts@kesarstudio.in')
+        await riya.getByRole('button', { name: 'Save details' }).click()
         await riya.getByText(/registered in state 27/).waitFor()
         await riya.getByLabel('State').selectOption('27')
-        await riya.getByRole('button', { name: 'Save billing details' }).click()
-        await expectToast(riya, 'Saved.', 'ok')
+        await riya.getByRole('button', { name: 'Save details' }).click()
+        await expectToast(riya, 'Saved. New bills use these details.', 'ok')
         const [a] = await db`select legal_name, gstin, state_code, email from billing_accounts where tenant_id = ${KESAR}`
         assert.deepEqual([a.legal_name, a.gstin, a.state_code, a.email], ['Kesar Studio LLP', '27AAPFU0939F1ZV', '27', 'accounts@kesarstudio.in'])
         const audit = await db`select detail from audit_events where tenant_id = ${KESAR} and action = 'billing.details' order by at desc limit 1`
@@ -72,11 +89,11 @@ export default {
       await t.step("Admin: Run drafts for next month, then Merchants shows the drafted count as Delivered this month", async () => {
         const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
         await meera.goto(CONSOLE + `/admin/billing?month=${nextYm(new Date())}`)
-        await meera.getByRole('button', { name: /^Run drafts for/ }).click()
+        await runDrafts(meera)
         await expectToast(meera, /drafted/, 'ok')
         const [d] = await until(async () => { const r = await db`select orders_billed from frrata_invoices where tenant_id = ${KESAR} order by period_start desc limit 1`; return r.length && r })
         assert.ok(d.orders_billed >= 1, 'the delivered order is counted')
-        await meera.goto(CONSOLE + '/admin/merchants')
+        await meera.goto(CONSOLE + '/admin/merchants?view=all')
         const row = meera.getByRole('row').filter({ hasText: 'Kesar' })
         await row.getByText(String(d.orders_billed), { exact: true }).first().waitFor()
         assert.equal(await row.getByText('—', { exact: true }).count(), 0, 'a drafted shop shows its count, not a dash')
@@ -87,23 +104,26 @@ export default {
         const now = new Date(); const i = new Date(now.getTime() + 330 * 60_000)
         const thisYm = `${i.getUTCFullYear()}-${String(i.getUTCMonth() + 1).padStart(2, '0')}`
         await meera.goto(CONSOLE + `/admin/billing?month=${thisYm}`)
-        await meera.getByRole('button', { name: /^Run drafts for/ }).click()
+        await runDrafts(meera)
         await expectToast(meera, /drafted/, 'ok')
+        // The run's one step in view: Issue opens a dialog that asks for the typed confirmation (Neel N4).
         const issue = meera.getByRole('button', { name: /^Issue \d+ invoices?$/ })
         await issue.waitFor()
         const n = Number((await issue.textContent()).match(/\d+/)[0])
-        await meera.getByLabel(/Type ISSUE/).fill('ISSUE 999')
         await issue.click()
-        // A wrong confirmation is marked at its field (the summary toast is quiet); nothing is issued.
+        const dlg = meera.getByRole('dialog', { name: /^Issue \d+ invoices? for/ })
+        await dlg.getByLabel(/Type ISSUE/).fill('ISSUE 999')
+        await dlg.getByRole('button', { name: `Issue ${n}` }).click()
+        // A wrong confirmation is marked at its field, inside the dialog; nothing is issued.
         await meera.locator('[id$="-confirm-error"]').getByText(`Type ISSUE ${n} to issue.`).waitFor()
-        await expectToast(meera, '1 field needs fixing.', 'error', { quiet: true })
-        await meera.getByLabel(/Type ISSUE/).fill(`ISSUE ${n}`)
-        await meera.getByRole('button', { name: /^Issue \d+ invoices?$/ }).click()
-        await expectToast(meera, /issued.*test mode/, 'ok')
+        assert.equal((await db`select count(*)::int n from frrata_invoices where tenant_id = ${KESAR} and number is not null`)[0].n, 0)
+        await dlg.getByLabel(/Type ISSUE/).fill(`ISSUE ${n}`)
+        await dlg.getByRole('button', { name: `Issue ${n}` }).click()
+        await expectToast(meera, /issued.*Test mode/, 'ok')
         const [inv] = await db`select id, number, total from frrata_invoices where tenant_id = ${KESAR} and number is not null order by issued_at desc limit 1`
         assert.match(inv.number, /^FRR\/T\d\d-\d\d\/\d{6}$/)
         // The shop: the test invoice says so, with its PDF (named TEST).
-        await riya.goto(CONSOLE + '/console/settings/billing')
+        await riya.goto(CONSOLE + '/console/settings/billing?tab=invoices')
         await riya.getByText(inv.number).waitFor()
         await riya.getByText(/^Test · due/).first().waitFor()
         const pdf = await riya.context().request.get(CONSOLE + `/console/settings/billing/invoice/${inv.id}`)
@@ -111,13 +131,16 @@ export default {
         assert.match(pdf.headers()['content-disposition'], /Frrata TEST Tax invoice FRR-T/)
         // Admin: a test invoice is never collected by hand; a credit note is issued in the test series.
         await meera.goto(CONSOLE + `/admin/billing/invoice/${inv.id}`)
-        await meera.getByText('A test invoice is never collected by hand.').waitFor()
-        assert.equal(await meera.getByRole('button', { name: 'Record payment' }).count(), 0)
-        await meera.getByLabel(/Taxable value to credit/).fill('10')
-        await meera.getByLabel(/Reason/).fill('Goodwill for a slow week')
-        await meera.getByRole('button', { name: 'Issue credit note' }).click()
+        await meera.getByText('Test', { exact: true }).first().waitFor()
+        await meera.getByRole('button', { name: 'More' }).click()
+        assert.equal(await meera.getByRole('menuitem', { name: /^Record payment/ }).count(), 0, 'a test invoice is never collected by hand')
+        await meera.getByRole('menuitem', { name: /^Issue credit note/ }).click()
+        const cn = meera.getByRole('dialog', { name: /^Issue a credit note/ })
+        await cn.getByLabel(/Taxable value to credit/).fill('10')
+        await cn.getByLabel(/Reason/).fill('Goodwill for a slow week')
+        await cn.getByRole('button', { name: 'Issue credit note' }).click()
         await expectToast(meera, /Credit note FRR\/T\d\d-\d\d\/C\d{5} issued/, 'ok')
-        await riya.reload(); await riya.getByText(/^Credit note FRR\/T/).first().waitFor()
+        await riya.reload(); await riya.getByRole('link', { name: /^FRR\/T\d\d-\d\d\/C\d{5}$/ }).first().waitFor()
         assert.equal(await riya.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'the invoices table fits a 390 px phone')
         await riya.screenshot({ path: t.out('invoices-test'), fullPage: true })
         // The CA's export never lists a test document.
@@ -128,11 +151,11 @@ export default {
 
       await t.step('B3: UPI Autopay set up through Checkout (verified on the server); a notice, then a debit 25 h later; a failure shows the banner, the retry after a fresh notice settles it; a signed webhook turns autopay off', async () => {
         await riya.context().route('https://checkout.razorpay.com/v1/checkout.js', (r) => r.fulfill({ contentType: 'application/javascript', body: FAKE_CHECKOUT }))
-        await riya.goto(CONSOLE + '/console/settings/billing')
-        await riya.getByRole('button', { name: 'UPI Autopay' }).click()
-        await riya.getByText('Active', { exact: true }).waitFor()
+        await riya.goto(CONSOLE + '/console/settings/billing?tab=payment')
+        await riya.getByRole('button', { name: /^UPI Autopay/ }).click()
+        await riya.getByText('Autopay on', { exact: true }).first().waitFor()
         const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
-        const run = async () => { await meera.goto(CONSOLE + '/admin/billing'); await meera.getByRole('button', { name: 'Run collection now' }).click(); await expectToast(meera, /notices?, \d+ debits? started/, 'ok') }
+        const run = async () => { await meera.goto(CONSOLE + '/admin/billing'); await meera.getByRole('button', { name: 'More' }).click(); await meera.getByRole('menuitem', { name: /^Run collection now/ }).click(); await meera.getByRole('dialog').getByRole('button', { name: 'Run collection' }).click(); await expectToast(meera, /notices?, \d+ debits? started/, 'ok') }
         const [inv] = await db`select id from frrata_invoices where tenant_id = ${KESAR} and number is not null order by issued_at desc limit 1`
         // 26 hours pass: notices and failures move back together, so their order (a fresh notice after a failure) holds.
         const age = async () => {
@@ -159,56 +182,68 @@ export default {
         assert.equal((await fetch(CONSOLE + '/api/webhooks/billing', { method: 'POST', headers: { 'content-type': 'application/json', 'x-razorpay-signature': '0'.repeat(64) }, body })).status, 401)
         assert.equal((await fetch(CONSOLE + '/api/webhooks/billing', { method: 'POST', headers: { 'content-type': 'application/json', 'x-razorpay-signature': sig }, body })).status, 200)
         await until(async () => (await db`select mandate_revoked_at from billing_accounts where tenant_id = ${KESAR}`)[0].mandate_revoked_at)
-        await riya.goto(CONSOLE + '/console/settings/billing'); await riya.getByRole('button', { name: 'UPI Autopay' }).waitFor()
+        await riya.goto(CONSOLE + '/console/settings/billing?tab=payment'); await riya.getByRole('button', { name: /^UPI Autopay/ }).waitFor()
         await riya.screenshot({ path: t.out('autopay-off'), fullPage: true })
       })
       await t.step('B4: the owner upgrades to Growth now (the difference by days, in words); a switch back waits for the 1st, and Keep my plan cancels it', async () => {
-        await riya.goto(CONSOLE + '/console/settings/billing')
-        await riya.getByRole('button', { name: 'Upgrade to Growth' }).click()
-        await riya.getByRole('dialog').getByText(/\+ GST on your next bill/).waitFor()
-        await riya.getByRole('button', { name: 'Upgrade now' }).click()
+        await riya.goto(CONSOLE + '/console/settings/billing?tab=plans')
+        await riya.getByRole('button', { name: 'Move to Growth' }).click()
+        await riya.getByRole('dialog').getByText(/\+ GST on the next bill/).waitFor()
+        await riya.getByRole('dialog').getByRole('button', { name: 'Move to Growth' }).click()
         await expectToast(riya, 'You are on Growth now.', 'ok')
-        await riya.locator('strong', { hasText: 'Growth' }).first().waitFor()
-        await riya.getByRole('button', { name: /^Switch to Launch on / }).click()
-        await riya.getByRole('button', { name: 'Switch on the 1st' }).click()
-        await riya.getByText(/^Moving to/).waitFor()
+        await riya.getByText(/^Growth · ₹/).waitFor()
+        await riya.getByRole('button', { name: 'Move to Launch' }).click()
+        await riya.getByRole('dialog').getByRole('button', { name: /^Move to Launch on / }).click()
+        await riya.getByText(/^Moving to Launch on /).waitFor()
         await riya.screenshot({ path: t.out('plan-change'), fullPage: true })
-        await riya.getByRole('button', { name: 'Keep my plan' }).click()
-        await expectToast(riya, 'The change is cancelled.', 'ok')
+        await riya.getByRole('button', { name: 'Keep Growth' }).click()
+        await expectToast(riya, 'You keep your plan.', 'ok')
         await until(async () => (await db`select count(*)::int n from tenant_plans where tenant_id = ${KESAR} and starts_at > now()`)[0].n === 0)
       })
       await t.step('TR0: Admin sets the trial terms for new sign-ups (with a reason); gives a live shop a 14-day trial, sees it on Merchants, then ends it', async () => {
         const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
-        await meera.goto(CONSOLE + '/admin/plans#trials')
-        await meera.getByLabel(/^Length for new sign-ups/).fill('45')
-        await meera.locator('#trials').getByLabel(/^Why$/).fill('Festive campaign')
-        await meera.getByRole('button', { name: 'Save trial terms' }).click()
+        await meera.goto(CONSOLE + '/admin/plans')
+        await meera.getByRole('button', { name: 'Edit the trial' }).click()
+        const terms = meera.getByRole('dialog', { name: 'Change the trial for new sign-ups?' })
+        await terms.getByLabel(/^Length for new sign-ups/).fill('45')
+        await terms.getByLabel(/^Why$/).fill('Festive campaign')
+        await terms.getByRole('button', { name: 'Save trial terms' }).click()
         await expectToast(meera, 'New sign-ups get 45 days from going live.', 'ok')
         await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)
         await meera.getByText('No trial.').waitFor()
-        await meera.getByLabel(/^Days, 7 to 90/).fill('14')
-        await meera.locator('#trial').getByLabel(/^Why$/).fill('Partner deal')
         await meera.getByRole('button', { name: 'Give a trial' }).click()
-        await meera.getByText(/^\d+ days left · 14 days/).waitFor() // Kesar is live: the clock starts now
+        const give = meera.getByRole('dialog', { name: /^Give .* a trial\?$/ })
+        await give.getByLabel(/^Days, 7 to 90/).fill('14')
+        await give.getByLabel(/^Why$/).fill('Partner deal')
+        await give.getByRole('button', { name: 'Give a trial' }).click()
+        await meera.getByText(/^Ends .* · \d+ days? left$/).waitFor() // Kesar is live: the clock starts now
+        await meera.getByText('14 days', { exact: true }).waitFor()
         await meera.screenshot({ path: t.out('admin-trial'), fullPage: true })
         await meera.goto(CONSOLE + '/admin/trials')
         await meera.getByRole('link', { name: 'Kesar Studio' }).waitFor()
         await meera.goto(CONSOLE + '/admin/merchants?q=Kesar')
-        await meera.getByText(/Trial(?: ending)? · \d+ days left/).first().waitFor()
-        await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)
-        await meera.getByLabel('Why end the trial').fill('Test over')
-        await meera.getByRole('button', { name: 'End the trial now' }).click()
+        await meera.getByRole('link', { name: 'Kesar Studio' }).first().waitFor()
+        // End trial is rare and final: the merchant's More, with a reason (Neel N4).
+        await meera.goto(CONSOLE + `/admin/merchants/${KESAR}`)
+        await meera.getByText(/^Trial · \d+ days? left$/).waitFor()
+        await meera.getByRole('button', { name: 'More' }).click()
+        await meera.getByRole('menuitem', { name: 'End trial…' }).click()
+        const end = meera.getByRole('dialog', { name: /^End .* trial\?$/ })
+        await end.getByLabel('Reason the store reads').fill('Test over')
+        await end.getByRole('button', { name: 'End trial' }).click()
         await expectToast(meera, 'Trial ended.', 'ok')
         assert.equal((await db`select count(*)::int n from audit_events where tenant_id = ${KESAR} and action in ('trial.set', 'trial.end')`)[0].n, 2)
       })
       await t.step('AD·0: Admin moves Kesar to Scale from the 1st, at a custom price with a reason; support sees the plan and no form', async () => {
         const meera = await open('frata', { viewport: { width: 1280, height: 900 } })
         await meera.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)
-        await meera.getByRole('radio', { name: /^Scale/ }).check()
-        await meera.getByLabel('Starts').selectOption('next_month')
-        await meera.getByLabel(/^Custom monthly price/).fill('9999')
-        await meera.getByLabel(/^Reason/).fill('E2E move')
-        await meera.getByRole('button', { name: 'Move Kesar Studio' }).click()
+        await meera.getByRole('button', { name: 'Change plan' }).click()
+        const move = meera.getByRole('dialog', { name: /^Change .* plan$/ })
+        await move.getByRole('radio', { name: /^Scale/ }).check()
+        await move.getByRole('group', { name: 'Starts' }).getByRole('radio').nth(1).check({ force: true }) // the 1st of next month
+        await move.getByLabel(/^Monthly price/).fill('9999')
+        await move.getByLabel(/^Reason/).fill('E2E move')
+        await move.getByRole('button', { name: 'Move Kesar Studio' }).click()
         // The change lands on the merchant's page (`go`); its toast comes with it (the shell's Toaster outlives the move).
         await expectToast(meera, 'Plan changed.', 'ok')
         await meera.waitForURL(new RegExp(`/admin/merchants/${KESAR}$`))
@@ -218,8 +253,8 @@ export default {
         try {
           const arjun = await open('staff', { viewport: { width: 1280, height: 900 } })
           await arjun.goto(CONSOLE + `/admin/merchants/${KESAR}/plan`)
-          await arjun.getByText(/ · version \d+$/).first().waitFor()
-          assert.equal(await arjun.getByRole('button', { name: /^Move / }).count(), 0, 'support sees no plan form')
+          await arjun.getByText(/^Version \d+ · since/).first().waitFor()
+          assert.equal(await arjun.getByRole('button', { name: 'Change plan' }).count(), 0, 'support sees no plan form')
           assert.equal(await arjun.getByRole('button', { name: /Give a trial|Change length/ }).count(), 0, 'nor a trial form')
         } finally {
           await db`delete from platform_staff where user_id = ${USERS.staff.id}`

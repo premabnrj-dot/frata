@@ -127,8 +127,8 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
             <tbody key={grp.label || 'all'}>
               {grp.label && collapse ? (
                 <tr className="border-b border-line-soft bg-side">
-                  <td className="w-10 px-3"><input type="checkbox" aria-label={`Select ${grp.label}`} checked={grp.rows.every((c) => picked.has(keyOf(c)))}
-                    onChange={(e) => toggle(grp.rows.map(keyOf), e.target.checked)} /></td>
+                  <td className="w-10 px-2"><label className="inline-flex size-6 items-center justify-center"><input type="checkbox" aria-label={`Select ${grp.label}`} checked={grp.rows.every((c) => picked.has(keyOf(c)))}
+                    onChange={(e) => toggle(grp.rows.map(keyOf), e.target.checked)} /></label></td>
                   <td colSpan={which === 'price' ? 4 + (ownMrp ? 1 : 0) + (costs ? 1 : 0) : 3} data-cell="full" className="px-3 py-1.5">
                     {collapse ? (
                       <button type="button" aria-expanded={!shut} onClick={() => setOpen({ ...open, [grp.label]: !!shut })} className="flex min-h-11 w-full items-center gap-2 text-left font-medium md:min-h-6">
@@ -146,7 +146,7 @@ export function VariantGrid({ options, cells, onChange, errors, autoSku, costs }
                 const on = picked.has(k)
                 return (
                   <tr key={k} data-selected={on || undefined} className={cn('border-b border-line-soft last:border-0 [&>td]:px-3 [&>td]:py-1.5 md:[&>td]:h-12', on && 'bg-select')}>
-                    <td className="w-10"><input type="checkbox" className="size-5 md:size-auto" aria-label={`Select ${name(c)}`} checked={on} onChange={(e) => toggle([k], e.target.checked)} /></td>
+                    <td className="w-10"><label className="inline-flex size-6 items-center justify-center"><input type="checkbox" className="size-5 md:size-auto" aria-label={`Select ${name(c)}`} checked={on} onChange={(e) => toggle([k], e.target.checked)} /></label></td>
                     <td data-cell="full" className="md:whitespace-nowrap">{name(c)}</td>
                     {which === 'price' ? <>
                       <td data-label="Price, ₹">{input(k, 'price', `Price for ${c.join(' ')}`, 'w-24')}</td>

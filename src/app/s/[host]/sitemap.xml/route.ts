@@ -20,12 +20,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ host: s
   const base = `https://${shop.host}`
   const now = new Date()
   const urls: { loc: string; lastmod?: string; images?: string[] }[] = []
-  if (shop.publishedAt) {
+  // The brand's own website lists its home, products and collections in its own sitemap (SA1b): here, only what stays.
+  const elsewhere = !!shop.siteOrigin
+  if (shop.publishedAt && !elsewhere) {
     const cat = await shopCatalogue(shop.id)
     urls.push({ loc: `${base}/` }, { loc: `${base}/products` })
     // Products with up to three photos each (S2·4: Google Images); collections with nothing listed are left out.
     for (const p of cat.products) if (isListed(p, now)) urls.push({ loc: `${base}/products/${p.handle}`, lastmod: p.since.slice(0, 10), images: p.images.slice(0, 3).map((i) => urlFor(i.base, pick(i.widths, 1200))) })
     for (const c of cat.collections) if (inCollection(c, cat.products, now).length) urls.push({ loc: `${base}/collections/${c.handle}` })
+  }
+  if (shop.publishedAt) {
     for (const k of ['shipping', 'returns', 'privacy', 'terms', 'contact']) urls.push({ loc: `${base}/policies/${k}` })
     // TS1a: the shop's live pages (About, FAQ), from the cached list.
     for (const p of await shopPages(shop.id)) urls.push({ loc: `${base}/pages/${p.handle}` })

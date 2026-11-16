@@ -7,7 +7,7 @@
 
 import type { Design, DesignInput } from './blocks'
 import type { ProductLayout, SectionInput, SectionInstance, SectionKey, SectionScheme, VideoKey } from './sections'
-import type { Menus, SiteSettings } from './site'
+import type { SiteSettings } from './site'
 
 export type Hex = `#${string}`
 /** The colour roles a section can be painted in. Shown to merchants by the style's own names. */
@@ -50,7 +50,6 @@ export type ThemeSettings = {
   header: HeaderVariant
   sticky: boolean
   bottomTabs: boolean
-  announcement: Announcement | null
   footer: FooterVariant
   social: boolean
   motion: 'subtle' | 'none'
@@ -106,7 +105,7 @@ export type FeelSettings = {
 export const FEEL_DEFAULTS: FeelSettings = { buttonShape: 'theme', buttonMotion: 'press', cardHover: 'none', entrance: 'none', reveal: false, buyBoxSticky: false, buyBar: false, footerScheme: 'paper', checkout: 'standard', labels: 'none', railCounter: false }
 
 /** The settings a theme may narrow per key (allowed.choices). Header, footer and type have their own lists. */
-export type ChoiceKey = Exclude<keyof ThemeSettings, 'pairing' | 'header' | 'footer' | 'announcement' | 'brandColour'>
+export type ChoiceKey = Exclude<keyof ThemeSettings, 'pairing' | 'header' | 'footer' | 'brandColour'>
 export type Choices = Partial<{ [K in ChoiceKey]: ThemeSettings[K][] }>
 
 export type ThemeManifest = {
@@ -120,7 +119,9 @@ export type ThemeManifest = {
   features: string[]
   styles: Style[]
   /** Page settings (T2) may be left out: PAGE_DEFAULTS fills them. */
-  defaults: Omit<ThemeSettings, keyof PageSettings | keyof FeelSettings> & Partial<PageSettings & FeelSettings>
+  /** `announcement`: released manifests carry `null` (manifests never change); the bar is the store's content since V1
+   *  (src/domains/content/), never the theme's, and nothing reads this. */
+  defaults: Omit<ThemeSettings, keyof PageSettings | keyof FeelSettings> & Partial<PageSettings & FeelSettings> & { announcement?: Announcement | null }
   allowed: { pairings: Pairing[]; headers: HeaderVariant[]; footers: FooterVariant[]; sections: SectionKey[]; heroMasks?: ('none' | 'arch')[]
     /** The products section's layouts and the colour schemes a section may wear (Signal plan T1); absent = today's. */
     productLayouts?: ProductLayout[]; sectionSchemes?: SectionScheme[]
@@ -146,8 +147,9 @@ export type ThemeManifest = {
 }
 
 /** The merchant's layer. Content, never state (which revision is live is a publish row). */
-/** site and menus (Look v4): stored as parsed, read part by part (readSite, readMenus). */
-export type ThemeLayer = { style: string; settings?: Partial<ThemeSettings>; home?: unknown[]; site?: unknown; menus?: unknown; contact?: unknown }
+/** site (Look v4): stored as parsed, read part by part (readSite). The bar, menus and Contact line left the layer for the
+ *  store's content (V1, src/domains/content/); old layers still hold them, and nothing reads them. */
+export type ThemeLayer = { style: string; settings?: Partial<ThemeSettings>; home?: unknown[]; site?: unknown }
 
 export type ResolvedTheme = {
   key: string; version: string; style: string
@@ -162,10 +164,6 @@ export type ResolvedTheme = {
   product?: { stories: boolean; pairs: boolean }
   /** Site settings (Look v4): the merchant's palette (already painted into schemes), text styles and icons. */
   site: SiteSettings
-  /** The menus the merchant made (absent: the shop's default; menusOf). */
-  menus: Partial<Menus>
-  /** TS1a: the Contact page's line (absent: none). */
-  contact?: { line: string }
   /** TS0b: the designs this look's sections use (absent: none), by id; renderers and readiness merge the owner's
    *  words with resolveDesign. Never the theme's whole list: only what the page draws. */
   designs?: Record<string, Design>

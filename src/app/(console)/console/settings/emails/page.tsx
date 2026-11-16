@@ -1,10 +1,11 @@
+import { pageRoles } from '@/domains/settings/groups'
 import Link from 'next/link'
-import { PageHeader } from '@/components/layout/page-header'
+import { SettingsHead } from '../_components/settings-head'
 import { Section } from '@/components/layout/section'
 import { Badge } from '@/components/ui/badge'
 import { Panel } from '@/components/ui/panel'
 import { requireMember } from '@/lib/auth/require-member'
-import { CAN_MANAGE, CONSOLE_ROLES } from '@/domains/tenancy/roles'
+import { CAN_MANAGE } from '@/domains/tenancy/roles'
 import { shopEmailSettings } from '@/lib/queries/emails'
 import { shopSettingsFor } from '@/lib/queries/storefront'
 import { EMAIL_NAMES } from '@/domains/email/words'
@@ -21,19 +22,18 @@ const WHEN: Record<string, string> = {
 
 /** Settings › Emails to shoppers (mockup v2 screen 3): the sender, the last 7 days, each email with its switch. */
 export default async function EmailsPage() {
-  const auth = await requireMember(CONSOLE_ROLES)
+  const auth = await requireMember(pageRoles('emails'))
   if (!auth.ok) return <Panel title={auth.message} />
   const tenantId = auth.membership.tenantId
   const [data, shop] = await Promise.all([shopEmailSettings(tenantId).catch(() => null), shopSettingsFor(tenantId)])
-  const back = { href: '/console/settings', label: 'Settings' }
-  if (!data || !shop) return <><PageHeader title="Emails to shoppers" back={back} /><Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel></>
+  if (!data || !shop) return <><SettingsHead page="emails" role={auth.membership.role} /><Panel title="We couldn’t load this screen">Nothing was changed. Try again in a minute.</Panel></>
   const manage = (CAN_MANAGE as readonly string[]).includes(auth.membership.role) && !auth.membership.supportSessionId
   const reply = cleanEmail(shop.supportEmail)
   const from = EMAIL_SHOP_DOMAIN ? `${shop.slug}@${EMAIL_SHOP_DOMAIN}` : null
   const strip: [string, string][] = [['Sent', String(data.week.sent)], ['Delivered', data.week.sent ? `${Math.round((data.week.delivered / data.week.sent) * 1000) / 10}%` : '—'], ['Bounced', String(data.week.bounced)], ['Marked spam', String(data.week.complained)]]
   return (
     <>
-      <PageHeader title="Emails to shoppers" back={back} />
+      <SettingsHead page="emails" role={auth.membership.role} />
       {!reply ? <Panel title="Add a support email first" action={<Link href="/console/settings/contact" className="text-sm underline underline-offset-4">Settings › Contact</Link>}>Order emails can’t start without a reply address.</Panel> : null}
       <div className="grid gap-4 md:grid-cols-2">
         <Section title="Sender">

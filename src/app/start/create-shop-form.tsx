@@ -12,7 +12,7 @@ import { useToast } from '@/components/ui/toast'
 
 type Step = 'name' | 'pickup' | 'plan' | 'phone' | 'sells'
 /** A plan card as the sign-up shows it (prices with GST from the server; never a cost). */
-export type SignupPlan = { code: string; name: string; price: string; included: string; fee: string }
+export type SignupPlan = { code: string; name: string; price: string; fee: string }
 
 const ADDRESS_WORDS: Record<AddressCheck['state'], string> = {
   ok: 'Available', taken: 'Taken. Try another.', too_short: 'At least 3 letters', shape: 'Letters, digits and hyphens only', reserved: 'Reserved. Try another.',
@@ -160,7 +160,7 @@ export function CreateShopForm({ shopDomain, plans, trialDays, codeOn }: { shopD
                 <input type="radio" name="plan" value={p.code} checked={plan === p.code} onChange={() => setPlan(p.code)} className="mt-1" />
                 <span className="grid gap-0.5">
                   <span className="font-medium">{p.name}</span>
-                  <span><span className="font-mono">{p.price}</span><span className="text-muted-foreground">/mo + GST · {p.included} orders · {p.fee} per delivered order</span></span>
+                  <span><span className="font-mono">{p.price}</span><span className="text-muted-foreground">/mo + GST · {p.fee} per delivered order</span></span>
                 </span>
               </label>
             ))}

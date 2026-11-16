@@ -1,4 +1,5 @@
 import 'server-only'
+import { MEMBER_ROLES } from '@/domains/tenancy/roles'
 import { sql } from 'drizzle-orm'
 import { db, withFreshPool } from './index'
 import type { ClaimKey } from '@/lib/trials/claims'
@@ -6,6 +7,7 @@ import { shopSlugFromHost } from '@/domains/tenancy/host'
 import { SHOP_DOMAIN, shopHost } from '@/lib/public-env'
 import type { MemberRole, StaffRole } from './schema'
 import { errName } from '@/lib/log'
+import type { KeyKind } from '@/domains/storefront-api/keys'
 
 // =============================================================================
 // FILE: src/lib/db/platform.ts
@@ -17,6 +19,47 @@ import { errName } from '@/lib/log'
 //     support sessions) may they open?
 //   - claim this user's invites (confirmed email only).
 // =============================================================================
+
+/**
+ * Which shop a storefront key names (ADR-0018): the definer's one row for the key's sha256 (lowercase hex), or null.
+ * Every stop is the definer's (deleted, expired, a test key once the store opened, a gone partner's key, a Website not
+ * on a live domain). Called only by storefrontKeyFor (src/lib/queries/storefront-keys.ts; check:tenant § 9).
+ */
+export async function storefrontKeyRow(hashHex: string): Promise<{ keyId: string; tenantId: string; kind: KeyKind; expiresAt: string | null } | null> {
+  if (!/^[0-9a-f]{64}$/.test(hashHex)) return null
+  const rows = await db().execute<{ key_id: string; tenant_id: string; kind: KeyKind; expires_at: Date | string | null }>(
+    sql`select key_id, tenant_id, kind, expires_at from app_storefront_key(${hashHex})`)
+  const r = rows[0]
+  if (!r) return null
+  return { keyId: r.key_id, tenantId: r.tenant_id, kind: r.kind, expiresAt: r.expires_at === null ? null : new Date(r.expires_at).toISOString() }
+}
+
+/** A drain sweep's page: shop ids in (since, until] after `after` (null = the first page), at most SWEEP_PAGE, in id
+ *  order (SA1b D·6: a cursor, so a run reaches every shop instead of the first 500). */
+export const SWEEP_PAGE = 500
+export type Sweep = (since: Date, until: Date, after: string | null) => Promise<string[]>
+const sweep = (fn: 'app_shops_with_boundary' | 'app_shops_with_key_stop' | 'app_shops_with_content_change' | 'app_shops_with_domain_gone'): Sweep =>
+  async (since, until, after) => {
+    const rows = await db().execute<{ id: string }>(sql`select ${sql.raw(fn)}(${since.toISOString()}::timestamptz, ${until.toISOString()}::timestamptz, ${after}::uuid) as id`)
+    return rows.map((r) => r.id)
+  }
+
+/** Shops with a scheduled moment: a product going live, an offer starting or ending (V1 SA1). The drain purges their
+ *  catalogue, since the Storefront API's copies live an hour. */
+export const shopsWithBoundary = sweep('app_shops_with_boundary')
+
+/** Shops holding a live storefront key that a moment stopped or started again without touching the key's row: its
+ *  partner's link ended, the partner was suspended or reinstated, or a domain went (V1 SA1, SA1b). The drain purges
+ *  their keys, since a key's cached lookup and its cached "not found" copies live an hour. */
+export const shopsWithKeyStop = sweep('app_shops_with_key_stop')
+
+/** Shops whose content (the bar, menus, the Contact line) was saved, deleted or started (V1 SA1). The drain purges
+ *  their content scope, since the Storefront API's copies live an hour. */
+export const shopsWithContentChange = sweep('app_shops_with_content_change')
+
+/** Shops that lost a domain (removed or parked): the drain purges only their store entry (the `settings` tag: the main
+ *  address, the move to the brand's website), never the catalogue (SA1b, speed review 3). */
+export const shopsWithDomainGone = sweep('app_shops_with_domain_gone')
 
 /**
  * Which shop a storefront host belongs to. A platform address (<slug>.<shop
@@ -50,15 +93,26 @@ export type Membership = {
 /** `staffConfirmedAt` / `partnerConfirmedAt`: when this browser session's live staff or partner passkey step-up was
  *  made (null without one). `partnerHeld`: stores this person works on as a partner that open only after a partner
  *  check (T1b, drizzle/0129) — the console says so instead of "no access". */
-export type Access = { staffRole: StaffRole | null; staffConfirmedAt: string | null; partnerConfirmedAt: string | null; partnerHeld: string[]; memberships: Membership[] }
+/** A store this person works on as a partner's Builder (T1c, ADR-0015). Never a Membership: requireMember cannot carry
+ *  one, so no page or action written for members can receive a Builder. Only requireCapability reads these. */
+export type Build = { tenantId: string; tenantName: string }
+
+export type Access = { staffRole: StaffRole | null; staffConfirmedAt: string | null; partnerConfirmedAt: string | null; partnerHeld: string[]; memberships: Membership[]; builds: Build[] }
 
 export async function accessFor(userId: string, sessionId: string | null = null, stepupHash: string | null = null, partnerHash: string | null = null): Promise<Access> {
   // The first query of every signed-in request: if its pooled connection is lost, a fresh pool answers instead of the
   // request waiting to Vercel's 60 s (src/lib/db/index.ts withFreshPool; 2026-11-11).
   const rows = await withFreshPool(() => db().execute<{ a: Access }>(sql`select app_access_for(${userId}::uuid, ${sessionId}::uuid, ${stepupHash}::text, ${partnerHash}::text) as a`))
-  const a = rows[0]?.a
+  type Raw = { staffRole: StaffRole | null; staffConfirmedAt: string | null; partnerConfirmedAt: string | null; partnerHeld: string[]
+    memberships: { tenantId: string; tenantName: string; role: string; supportSessionId: string | null }[] }
+  const a = rows[0]?.a as unknown as Raw | undefined
+  const all = a?.memberships ?? []
+  // A Builder's row is split off here, the one place the role arrives from the database (architecture review: the
+  // refusal is structural, never a branch in each page).
   return { staffRole: a?.staffRole ?? null, staffConfirmedAt: a?.staffConfirmedAt ?? null, partnerConfirmedAt: a?.partnerConfirmedAt ?? null,
-    partnerHeld: a?.partnerHeld ?? [], memberships: a?.memberships ?? [] }
+    partnerHeld: a?.partnerHeld ?? [],
+    memberships: all.filter((m) => (MEMBER_ROLES as readonly string[]).includes(m.role)) as Membership[],
+    builds: all.filter((m) => m.role === 'builder' && !m.supportSessionId).map((m) => ({ tenantId: m.tenantId, tenantName: m.tenantName })) }
 }
 
 /** Sign-out ends this browser's staff step-up first (by its cookie's hash). */
@@ -270,8 +324,10 @@ export async function billingUnapplied(olderMinutes: number): Promise<string[]> 
 export async function billingAttemptOrder(paymentId: string, order: string) {
   await db().execute(sql`select app_billing_attempt_order(${paymentId}::uuid, ${order})`)
 }
-export async function billingAttemptResult(order: string, paymentId: string | null, captured: boolean, reason: string | null): Promise<boolean> {
-  const [r] = await db().execute<{ ok: boolean }>(sql`select app_billing_attempt_result(${order}, ${paymentId}, ${captured}, ${reason}) as ok`)
+/** `money`: what the gateway says it took (amount in paise, currency) — required for a capture (billing R5: the definer
+ *  records the money that moved, in INR only, never the amount we asked for). */
+export async function billingAttemptResult(order: string, paymentId: string | null, captured: boolean, reason: string | null, money?: { amount: number; currency: string }): Promise<boolean> {
+  const [r] = await db().execute<{ ok: boolean }>(sql`select app_billing_attempt_result(${order}, ${paymentId}, ${captured}, ${reason}, ${money?.amount ?? null}::bigint, ${money?.currency ?? null}) as ok`)
   return !!r?.ok
 }
 /** Frrata's billing webhook: stored once under the gateway's event id (null: already stored), then applied from the row. */

@@ -27,6 +27,11 @@ export function sum(values: readonly Paise[]): Paise {
   return paise(values.reduce((a, b) => a + b, 0))
 }
 
+/** A rate in basis points applied to an amount, rounded DOWN: what Frrata owes a partner never exceeds the rate (P2's share). */
+export function applyBpsFloor(amount: Paise, bps: number): Paise {
+  return paise(Math.floor((Math.max(0, amount) * bps) / 10_000))
+}
+
 /** A rate in basis points (1% = 100 bps) applied to an amount, rounded half up. */
 export function applyBps(amount: Paise, bps: number): Paise {
   return paise(Math.round((amount * bps) / 10_000))

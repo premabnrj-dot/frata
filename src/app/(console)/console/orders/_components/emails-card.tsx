@@ -11,7 +11,9 @@ export type CardEmail = { id: string; name: string; kind: string; at: string; st
 const TONE: Record<string, 'ok' | 'warn' | 'danger' | 'neutral' | 'info'> = { delivered: 'ok', sent: 'info', bounced: 'danger', complained: 'danger', failed: 'danger', skipped: 'neutral', queued: 'neutral', sending: 'neutral' }
 
 /** The order's emails to the shopper, each in words; fix the address; send the last one again. */
-export function EmailsCard({ orderId, email, emails, canAct }: { orderId: string; email: string | null; emails: CardEmail[]; canAct: boolean }) {
+export function EmailsCard({ orderId, email, emails, canAct, list = true }: { orderId: string; email: string | null; emails: CardEmail[]; canAct: boolean
+  /** False inside the order's one timeline (Neel N2b): the emails are its rows; this keeps the address and Send again. */
+  list?: boolean }) {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(email ?? '')
   const [pending, start] = useTransition()
@@ -37,7 +39,7 @@ export function EmailsCard({ orderId, email, emails, canAct }: { orderId: string
         <p className="flex flex-wrap items-center gap-2"><span className="font-num">{email ?? 'No email'}</span>
           {canAct ? <button type="button" onClick={() => setEditing(true)} className="underline underline-offset-2">{email ? 'Fix the address' : 'Add an email'}</button> : null}</p>
       )}
-      {emails.length ? (
+      {list && emails.length ? (
         <ul className="divide-y divide-border">
           {emails.map((e) => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5"><span>{e.name}<br /><span className="text-xs text-muted-foreground">{e.at}</span></span><Badge tone={TONE[e.state] ?? 'neutral'}>{e.words}</Badge></li>)}
         </ul>

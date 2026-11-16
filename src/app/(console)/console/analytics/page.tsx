@@ -3,7 +3,7 @@ import { Panel } from '@/components/ui/panel'
 import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
 import { dayMonthIN } from '@/lib/format-date'
 import { PRESETS, type Preset } from '@/domains/analytics/link'
-import { classifySource } from '@/domains/analytics/source'
+import { classifierNotice, classifySource } from '@/domains/analytics/source'
 import { analyticsPage, type SourceStat } from '@/lib/queries/analytics'
 import { compareWords, parsePeriod, periodQuery, windowFor } from '@/domains/analytics/period'
 import { istDayKey } from '@/domains/time/day'
@@ -92,7 +92,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const enough = !!t && enoughVisits(t.cur.visitors)
   const rates = enough && cov.cur
   const prevRates = cov.prev && !!t && enoughVisits(t.prev.visitors)
-  const by = t && names ? visitsBySource(t.sources, names.labels) : new Map<string, SourceVisits>()
+  const by = t && names ? visitsBySource(t.sources, names.labels, a.site) : new Map<string, SourceVisits>()
   // A source with visits but no orders in the window is a row too (from 5 visitors), after the ones with orders.
   const extra: SourceStat[] = visitOnly(by, new Set(a.sources.map((x) => x.slug)))
     .map((v) => ({ slug: v.slug, label: v.label, channel: v.channel, cur: EMPTY_TOTALS, prev: EMPTY_TOTALS, campaigns: [] }))
@@ -113,7 +113,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         {a.cur.orders > 0 && a.known / a.cur.orders < 0.5 ? (
           <p className="rounded-md bg-info px-3 py-2 text-sm text-info-text max-md:order-1">Most orders came without a source. A link from Make a link tells an Instagram bio from a WhatsApp broadcast.</p>
         ) : null}
-        <div className="max-md:order-1"><Sources a={visitsOn ? { ...a, sources: [...a.sources, ...extra] } : a} pq={pq} visits={visitsOn ? { by, rates } : undefined} /></div>
+        <div className="max-md:order-1"><Sources a={visitsOn ? { ...a, sources: [...a.sources, ...extra] } : a} pq={pq} visits={visitsOn ? { by, rates } : undefined} renamed={classifierNotice(now)} /></div>
         {series ? <div className="grid gap-4 max-md:order-3 lg:grid-cols-2"><ByState s={series} /><ComeBack s={series} /></div> : null}
         <div className="flex flex-col gap-6 max-md:order-4">
           {visitsOn && t?.firstDay ? <VisitFigures a={a} visits={{ cur: t.cur, prev: t.prev, since: cov.since, rates, prevRates }} /> : null}

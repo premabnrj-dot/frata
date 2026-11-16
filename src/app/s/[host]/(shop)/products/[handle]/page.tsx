@@ -12,7 +12,7 @@ import { visibility, type Status } from '@/domains/catalogue/availability'
 import { shopCatalogue, shopProduct } from '@/lib/queries/storefront'
 import { shopTheme } from '@/lib/themes/page-look'
 import { shopFor, shopHref } from '../../../_shop'
-import { shopTags, toMetadata } from '../../../_meta'
+import { canonicalHost, shopTags, toMetadata } from '../../../_meta'
 
 export const revalidate = 60
 export const generateStaticParams = () => []
@@ -56,7 +56,8 @@ export default async function ProductPage({ params }: { params: Params }) {
   // Archived: the shopper reads that it has gone, with new pieces below; noindex drops it from search (spec § Review findings).
   if (v.gone) return <GoneView title={p.title} cat={await shopCatalogue(shop.id)} href={shopHref} now={now} lang={shop.shopLanguage} />
   const theme = (await shopTheme(shop))
-  const base = `https://${shop.host}`
+  // The brand's website when the store's pages move there (SA1b): structured data follows the canonical.
+  const base = `https://${canonicalHost(shop, `/products/${p.handle}`)}`
   const extras = await productExtras({ tenantId: shop.id, productId: p.id, at: now.toISOString() })
   return (
     <>

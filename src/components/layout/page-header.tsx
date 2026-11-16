@@ -17,19 +17,29 @@ export function BackLink({ href, label }: { href: string; label: string }) {
  * 22/28 (20/26 on a phone) wrapping to two lines then "…" with the full name on hover, its status chip, a meta line of
  * facts (never a sentence of help), then the actions at the right: More, secondaries, the one primary last.
  */
-export function PageHeader({ title, actions, back, badges, meta, wideActions = false }: {
+export function PageHeader({ title, actions, back, trail, badges, meta, wideActions = false }: {
   title: string
   actions?: ReactNode
   /** The actions may take more than half the row (Analytics' period picker with its words and Make a link, Neel N1b). */
   wideActions?: boolean
   /** The list this page sits under: the breadcrumb's first step. */
   back?: { href: string; label: string }
+  /** In place of `back`: the steps above this page, the title left out ("Settings › Checkout"); a phone shows "‹ <the last>". */
+  trail?: { href: string; label: string }[]
   badges?: ReactNode
   meta?: ReactNode
 }) {
   return (
     <header className="space-y-1.5">
-      {back && <>
+      {trail?.length ? <>
+        <nav aria-label="Breadcrumb" className="hidden md:block">
+          <ol className="flex min-w-0 items-center gap-1 text-label font-medium text-muted-foreground">
+            {trail.map((c, i) => <li key={c.href} className="flex items-center gap-1">{i ? <span aria-hidden="true">›</span> : null}<Link href={c.href} className="inline-flex min-h-6 items-center rounded-sm hover:text-foreground hover:underline">{c.label}</Link></li>)}
+          </ol>
+        </nav>
+        <span className="md:hidden"><BackLink href={trail.at(-1)!.href} label={trail.at(-1)!.label} /></span>
+      </> : null}
+      {back && !trail?.length && <>
         <nav aria-label="Breadcrumb" className="hidden md:block">
           <ol className="flex min-w-0 items-center gap-1 text-label font-medium text-muted-foreground">
             <li><Link href={back.href} className="inline-flex min-h-6 items-center rounded-sm hover:text-foreground hover:underline">{back.label}</Link></li>

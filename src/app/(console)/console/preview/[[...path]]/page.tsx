@@ -5,14 +5,19 @@ import { OpeningSoon } from '@/components/storefront/pages'
 import { previewPage } from '@/components/storefront/preview-body'
 import { ShopShell } from '@/components/storefront/shell'
 import { Panel } from '@/components/ui/panel'
-import { ANY_MEMBER, requireMember } from '@/lib/auth/require-member'
+import { requireCapability } from '@/lib/auth/require-capability'
+import { previewTenantOf } from '@/lib/db/actor'
 import { previewCatalogue, previewLook, previewShop } from '@/lib/queries/storefront'
 import { shellNeedsCatalogue, shellPictures, themeOf } from '@/lib/themes/page-look'
 import { manifestsFor } from '@/lib/themes/manifests'
+import { previewContent } from '@/lib/queries/content'
+import { shellContentOf } from '@/domains/content/bar'
 
 // The merchant's own shop, as shoppers will see it — drafts and unlisted
 // pieces included, never cached, never indexed (storefront spec § Preview).
-// Same views as the shop; the tenant is the member's, from requireMember.
+// Same views as the shop; the tenant is the member's, from requireCapability('preview.read'). A partner's Builder sees it
+// too (T1c; owner 2026-11-15, question 5): the shopper read path, whose output is what shoppers would see, so it runs as
+// frata_app through the one sanctioned unwrap, previewTenantOf (check:capabilities).
 export const metadata: Metadata = { title: 'Preview', robots: { index: false, follow: false } }
 export const dynamic = 'force-dynamic'
 
@@ -20,17 +25,17 @@ const BASE = '/console/preview'
 const href = (p: string) => (p === '/' ? BASE : `${BASE}${p}`)
 
 export default async function Preview({ params }: { params: Promise<{ path?: string[] }> }) {
-  const auth = await requireMember(ANY_MEMBER)
-  if (!auth.ok) return <Panel title={auth.message} />
-  const tenantId = auth.membership.tenantId
+  const cap = await requireCapability('preview.read')
+  if (!cap.ok) return <Panel title={cap.message} />
+  const tenantId = cap.kind === 'builder' ? previewTenantOf(cap.actor) : cap.auth.membership.tenantId
   const path = (await params).path ?? []
   const shop = await previewShop(tenantId)
   if (!shop) notFound()
   const now = new Date()
-  const [look, src] = await Promise.all([previewLook(tenantId), manifestsFor(tenantId)])
+  const [look, src, content] = await Promise.all([previewLook(tenantId), manifestsFor(tenantId), previewContent(tenantId)])
   const theme = themeOf(shop, look, src)
   const { circles, strip } = shellPictures(theme, shellNeedsCatalogue(theme) ? await previewCatalogue(tenantId) : null, now)
-  const { body, note } = await previewPage({ tenantId, shop, path, href, now, theme })
+  const { body, note } = await previewPage({ tenantId, shop, path, href, now, theme, contact: content.contact ?? undefined })
 
   const banner = (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 bg-store-ink px-4 py-2 text-sm text-store-paper">
@@ -42,7 +47,7 @@ export default async function Preview({ params }: { params: Promise<{ path?: str
   )
   return (
     <div className="-m-4 sm:-m-6">
-      <ShopShell shop={shop} href={href} banner={banner} theme={theme} circles={circles} strip={strip}>{body}</ShopShell>
+      <ShopShell shop={shop} href={href} banner={banner} theme={theme} content={shellContentOf(content, false, now)} circles={circles} strip={strip}>{body}</ShopShell>
       {!shop.publishedAt && <details className="mx-4 my-6 text-sm"><summary className="cursor-pointer">What shoppers see now</summary><OpeningSoon shop={shop} href={href} /></details>}
     </div>
   )

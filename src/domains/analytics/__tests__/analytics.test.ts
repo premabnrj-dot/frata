@@ -127,6 +127,43 @@ describe('sourceOfInputs (the SQL readers\' one route to classifySource)', () =>
   })
 })
 
+describe('"Your website" (classifier v3, Storefront API SA1b)', () => {
+  const none = { us: null, um: null, uc: null, rh: null, gads: false, srs: false, fb: false, cl: null, cc: null }
+  it('the bag link marker reads Your website, with or without a known site', () => {
+    expect(sourceOfInputs({ ...none, ws: true }).label).toBe('Your website')
+    expect(sourceOfInputs({ ...none, ws: true }, 'kesarstudio.in').channel).toBe('site')
+  })
+  it('a referrer equal to the site host, www either side, reads Your website', () => {
+    expect(sourceOfInputs({ ...none, rh: 'kesarstudio.in' }, 'kesarstudio.in').channel).toBe('site')
+    expect(sourceOfInputs({ ...none, rh: 'www.kesarstudio.in' }, 'kesarstudio.in').channel).toBe('site')
+    expect(sourceOfInputs({ ...none, rh: 'kesarstudio.in' }, 'www.KesarStudio.in').channel).toBe('site')
+  })
+  it('stronger evidence wins over the site: the tags, a click id, a creator', () => {
+    expect(sourceOfInputs({ ...none, ws: true, us: 'instagram', um: 'bio' }, 'kesarstudio.in').label).toBe('Instagram bio')
+    expect(sourceOfInputs({ ...none, ws: true, fb: true }).channel).toBe('meta')
+    expect(sourceOfInputs({ ...none, ws: true, cl: 'Riya', cc: 'RIYA10' }).channel).toBe('creator')
+  })
+  it('another host stays Another website; no site changes nothing', () => {
+    expect(sourceOfInputs({ ...none, rh: 'blog.in' }, 'kesarstudio.in').label).toBe('blog.in')
+    expect(sourceOfInputs({ ...none, rh: 'kesarstudio.in' }).channel).toBe('website')
+    expect(sourceOfInputs({ ...none, rh: 'shop.kesarstudio.in' }, 'kesarstudio.in').channel).toBe('website')
+  })
+  it('the marker never comes from a landing URL, and is kept only as "1"', async () => {
+    const { landingParams, isTagged, cleanAttribution } = await import('../attribution')
+    expect(landingParams('?via_site=1&utm_source=ig')).toEqual({ utm_source: 'ig' })
+    expect(isTagged({ via_site: '1' })).toBe(false)
+    const rules = { ownHosts: [], shopDomain: 'frrata.shop' }
+    expect(cleanAttribution({ via_site: '1' }, rules)).toEqual({ via_site: '1' })
+    expect(cleanAttribution({ via_site: 'yes' }, rules)).toEqual({})
+  })
+  it('the page says when the rule changed, for 90 days', async () => {
+    const { classifierNotice } = await import('../source')
+    expect(classifierNotice(new Date('2026-11-20T10:00:00Z'))?.toISOString()).toBe('2026-11-15T18:30:00.000Z')
+    expect(classifierNotice(new Date('2027-03-01T10:00:00Z'))).toBeNull()
+    expect(classifierNotice(new Date('2026-11-01T10:00:00Z'))).toBeNull()
+  })
+})
+
 describe('foldSources', () => {
   const t = (orders: number): Totals => ({ orders, sales: orders * 100, cod: orders, delivered: orders, rto: 0, lost: 0, onTheWay: 0, notSent: 0, kept: null })
   const s = (slug: string, channel: Channel, orders: number) => ({ slug, channel, cur: t(orders) })

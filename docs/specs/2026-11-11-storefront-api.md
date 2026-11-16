@@ -77,9 +77,10 @@ partner site kesarstudio.in ── GET https://api.frrata.shop/2026-12/k/<public
   revoke all on function app_storefront_key(bytea) from public, anon, authenticated, service_role;
   grant execute on function app_storefront_key(bytea) to frata_app;
   ```
-- **Lookup is cached like `hostFacts`** (speed 6, tenancy H4): `unstable_cache(['skey-v1', hash], tags ['skey:<id>',
-  'shop:<tenant>'], revalidate 60)` inside `cache()`; a miss is never cached; revoke purges the tag. Revocation takes
-  effect within 60 s at most (CDN copies of read routes are purged by the same tag).
+- **Lookup is cached like `hostFacts`** (speed 6, tenancy H4). As built (2026-11-15): `unstable_cache(['skey-v1', hex],
+  tags ['skey:<sha256 hex>'], revalidate 3600)` inside `cache()` (a tag must be known before the call; a shorter period
+  would shorten every cached copy's); a miss is never cached; a delete purges the tag at once, and so does every stop the
+  definer derives (`refreshKeys`). CDN copies of read routes carry the same tag.
 - **Public key** (`frs_pub_`): may live in browser code; it reads only what the shop's own pages show. **Test key**
   (`frs_test_`, security M4): only while the shop isn't open; reads the uncached preview loaders at a low limit (60/min
   per IP); expires after 30 days; all test keys are revoked when the shop opens. Private keys: SA2.
@@ -91,7 +92,7 @@ partner site kesarstudio.in ── GET https://api.frrata.shop/2026-12/k/<public
   every Website change, is an `audit_events` row. Staff and support see the page read-only.
 
 ### 3. Resources (version `2026-12`)
-All under `/2026-12/k/<key>/…`, **ISR route handlers** (`revalidate 60`, tags `shop:<tenant>` + `skey:<id>`), so
+All under `/2026-12/k/<key>/…`, **ISR route handlers** (as built: `revalidate 3600` with purges, tags `shop:<tenant>` + `skey:<sha256 hex>`; plan `docs/plans/2026-11-15-v1-storefront-api.md`), so
 today's `refreshShop` / `refreshSoldOut` calls purge them (speed 1–2: cost is bounded by regenerations, not shoppers).
 Handlers never open `withTenant` around a cached loader (P4).
 | Resource | Notes |
@@ -110,7 +111,7 @@ Handlers never open `withTenant` around a cached loader (P4).
   may appear"; the starter handles an unknown kind.
 
 ### 4. Cart link, Website, checkout host
-- **Cart link** (architecture 6): `<checkout host>/cart?l=<variant id>:<qty>,…` (≤ 50 lines) plus the shopper's
+- **Cart link** (architecture 6): `<checkout host>/cart?l=<variant id>:<qty>,…` (≤ 20 lines, the quote's own limit; a quantity over 10 lowered to 10: SA1b, api-contract review 2026-11-16) plus the shopper's
   `utm_*`; the page is an ISR shell whose client island validates the shape, writes the bag (`bag-store.ts`) and opens
   checkout; unknown or other shops' variant ids simply drop at checkout (the quote resolves variants inside the host's
   shop). No server write, nothing single-use, nothing for unfurlers to consume.
@@ -138,6 +139,10 @@ Handlers never open `withTenant` around a cached loader (P4).
   `moduleAccess` for `ctx.tenantId` (tenancy M). `check-modules` gains these paths and the map as a hook.
 - Not usable (off, not in plan, paused) → `404 {"error":"not_available"}`, one answer for all.
 - **No module resource in SA1** (Reviews is still `next`); the contract and its gate ship so the first one follows it.
+- **The `shop` resource lists the site-facing apps that are usable** (owner, 2026-11-15), when the contract ships: an
+  open enum of module keys that offer an API resource and pass `moduleAccess` now, nothing else (no plan, price or
+  trial). A site and the starter show or hide each app's block from it instead of probing for `not_available`; the
+  resource still answers `not_available` on its own, so a stale list never breaks a page. Additive to 2026-12.
 
 ### 6. Limits and cost
 - Reads are CDN hits; misses regenerate at most once per path per 60 s. **One Vercel WAF rule** on the API host: per

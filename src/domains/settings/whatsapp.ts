@@ -12,3 +12,8 @@ export function waLink(stored: string | null | undefined, text?: string): string
   if (!d) return null
   return `https://wa.me/91${d}${text ? `?text=${encodeURIComponent(text)}` : ''}`
 }
+
+/** `https://wa.me/?text=…` with no number: the person picks the chat in their own WhatsApp (a partner's Remind, P2). */
+export function waText(text: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(text)}`
+}

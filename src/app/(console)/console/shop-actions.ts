@@ -1,5 +1,6 @@
 'use server'
 
+import { refreshKeys } from '@/lib/queries/storefront-api'
 import { and, count, eq, isNull, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { readyToOpen, setupSteps, BUILT_PAGES } from '@/domains/setup/checklist'
@@ -49,6 +50,8 @@ export async function openShop(): Promise<Result> {
     if (!r.ok) return { ok: false, error: r.error }
     if (r.value) return { ok: false, error: r.value }
     refreshShop(r.tenantId, 'shop')
+    // Opening ends every test key (the definer: first_opened_at): purge their cached lookups too (V1 SA0).
+    await refreshKeys(r.tenantId)
     revalidatePath('/console', 'layout')
     return { ok: true }
   } catch (err) {

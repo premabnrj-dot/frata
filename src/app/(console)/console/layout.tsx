@@ -23,15 +23,17 @@ import { clientStage } from '@/domains/partners/stage'
 import { MODULE_KEYS, MODULES } from '@/domains/modules/registry'
 import { shopModules } from '@/lib/queries/modules'
 import { MODULE_ICON } from '@/components/modules/icons'
-import { CONSOLE_ROLES, ROLE_LABEL } from '@/domains/tenancy/roles'
+import { BUILDER_LABEL, CONSOLE_ROLES, ROLE_LABEL } from '@/domains/tenancy/roles'
 import { partnerCan } from '@/domains/partners/team'
+import { requireCapability } from '@/lib/auth/require-capability'
+import { BuilderShell } from './_builder/shell'
 
 export const dynamic = 'force-dynamic'
 
 /** Tab titles "Orders · Kesar Studio" (rule 11): each page sets a plain title. */
 export async function generateMetadata(): Promise<Metadata> {
-  const auth = await requireMember(CONSOLE_ROLES)
-  const shop = auth.ok ? auth.membership.tenantName : 'Frrata'
+  const cap = await requireCapability('console.open')
+  const shop = !cap.ok ? 'Frrata' : cap.kind === 'builder' ? cap.store.tenantName : cap.auth.membership.tenantName
   return { title: { template: `%s · ${shop}`, default: shop } }
 }
 
@@ -51,7 +53,12 @@ async function NavCount({ tenantId, userId, which }: { tenantId: string; userId:
  * Every page calls requireMember itself.
  */
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
-  // The accountant opens the console too (GST plan phase 3) and sees GST only; every page still checks its own roles.
+  // console.open (T1c): a partner's Builder gets its own shell (Products, Collections, Preview store) and nothing here
+  // below is read for it. Everyone else as before: the accountant sees GST only; every page still checks its own roles.
+  const cap = await requireCapability('console.open')
+  if (cap.ok && cap.kind === 'builder') {
+    return <BuilderShell nav={cap.nav} email={cap.email} rail={railFrom((await cookies()).get('rail')?.value)}>{children}</BuilderShell>
+  }
   const auth = await requireMember(CONSOLE_ROLES)
   if (!auth.ok && auth.reason === 'not_configured') {
     return (
@@ -98,12 +105,13 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const partner = partnerAuth?.ok ? partnerAuth.partner : null
   const client = partnerAuth?.ok ? (await partnerClients(partnerAuth).catch(logged([]))).find((c) => c.tenantId === tenantId) : undefined
   // The stage is clientStage's, the one home (src/domains/partners/stage.ts): the banner shows while there is no owner.
-  const stage = client ? clientStage({ removedAt: client.removedAt, openInviteExpiresAt: client.inviteExpiresAt, hasOwner: !!client.ownerEmail, firstOpenedAt: client.firstOpenedAt }, now) : null
+  const stage = client ? clientStage({ removedAt: client.removedAt, openInviteExpiresAt: client.inviteExpiresAt, hasOwner: client.hasOwner, firstOpenedAt: client.firstOpenedAt }, now) : null
   // Hand over is the owner's (PARTNER_CAN.handOver): a lead builds the store and sees no banner.
   const building = client && partner && partnerCan(partner.memberRole, 'handOver') && (stage === 'building' || stage === 'invited') ? client : null
   const places: Place[] = [
     ...(partner?.approvedAt ? [{ href: '/partner', name: 'Partner workspace', role: '', current: false }] : []),
     ...auth.all.filter((m) => !m.supportSessionId).map((m) => ({ href: '/console', name: m.tenantName, role: ROLE_LABEL[m.role], current: m.tenantId === tenantId, tenantId: m.tenantId })),
+    ...auth.builds.map((b) => ({ href: '/console', name: b.tenantName, role: BUILDER_LABEL, current: false, tenantId: b.tenantId })),
   ]
   const pill = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="toConfirm" /></Suspense>
   const bell = <Suspense fallback={null}><NavCount tenantId={tenantId} userId={auth.userId} which="unread" /></Suspense>
@@ -116,6 +124,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const settings: NavItem = { href: '/console/settings', label: 'Settings', icon: 'settings' }
   const offers: NavItem = { href: '/console/offers', label: 'Offers', icon: 'offers' }
   const look: NavItem = { href: '/console/look', label: 'Look', icon: 'look' }
+  // V1 content: what the store says (bars, menus, pages, FAQ, Contact line), saved live; every member reads it.
+  const content: NavItem = { href: '/console/content', label: 'Content', icon: 'policy' }
   // The shop's apps in use, under Apps (those with a page of their own); shopModules is per-request cached, and a
   // failure only leaves Apps without its list.
   const mods = await shopModules(tenantId, now.toISOString()).catch((err) => { console.error('[console layout] apps', err instanceof Error ? err.name : err); return null })
@@ -133,11 +143,11 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   // page), so the layout reads nothing more per page. The accountant's console is GST alone.
   const accountant = role === 'accountant'
   const groups: NavGroup[] = accountant ? [{ label: 'Taxes', items: [gst] }]
-    : [{ label: 'Today', items: [home, orders, noticesItem, analytics] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [offers, look, search, apps, settings, activity] }]
+    : [{ label: 'Today', items: [home, orders, noticesItem, analytics] }, { label: 'Catalogue', items: [products, collections] }, { label: 'Store', items: [offers, content, look, search, apps, settings, activity] }]
   const foot: NavItem[] = [{ href: '/console/preview', label: 'Preview store', icon: 'external' }]
   if (auth.staffRole !== null && !supportSessionId) foot.push({ href: '/admin', label: 'Frrata Admin', icon: 'admin' })
   return (
-    <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={accountant ? [gst] : [home, orders, products]} more={accountant ? [] : [noticesItem, analytics, collections, offers, look, search, apps, settings, activity]} foot={accountant ? [] : foot}
+    <AppShell title={tenantName} navLabel="Console" groups={groups} tabs={accountant ? [gst] : [home, orders, products]} more={accountant ? [] : [noticesItem, analytics, collections, offers, content, look, search, apps, settings, activity]} foot={accountant ? [] : foot}
       email={auth.email} tenantId={tenantId} places={places} subtitle={address} rail={rail}
       banner={visit ? <SupportBanner storeName={tenantName} visit={visit} now={now} />
         : building ? <BuildingBanner shop={tenantName} tenantId={tenantId} inviteEmail={building.inviteEmail} /> : undefined}>

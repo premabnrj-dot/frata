@@ -35,3 +35,6 @@ export function formatUsd(micro: MicroUsd): string {
   const abs = Math.abs(d)
   return sign + '$' + abs.toLocaleString('en-US', { minimumFractionDigits: abs >= 100 ? 0 : 2, maximumFractionDigits: abs >= 100 ? 0 : 2 })
 }
+
+/** A rate in basis points as a percent: 200 → "2%", 50 → "0.5%" (fees and plan rates). */
+export const formatBps = (bps: number): string => formatPercent(bps / 10_000, bps % 100 === 0 ? 0 : 1)

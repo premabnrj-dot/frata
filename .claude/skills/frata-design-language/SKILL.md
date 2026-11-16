@@ -2,7 +2,7 @@
 name: frata-design-language
 description: Use when building or changing any Frata UI - a console page, table, filter, form, dialog, badge, empty or error state, the storefront, a theme - or when choosing a colour, font, spacing or motion, or how to show money, an order number, a date, a status or COD risk.
 metadata:
-  version: 7.5.0
+  version: 8.1.0
   verified: 2026-11-15
   covers: ["src/app/base.css", "src/app/globals.css", "src/app/shop.css", "src/components/**"]
 ---
@@ -57,12 +57,16 @@ happened, what's safe; money → exact amount and date; risk → the reason plai
 empty → the first step ("No products yet · Add product"); waiting → what's happening, when; celebration → once, short.
 
 The gate's scope: the console, the partner workspace and the shared code that speaks there (`ROOTS`/`NOT` in
-`scripts/check-words.mjs`). The storefront, themes, EkCode and Frrata Admin are outside it until their phases.
+`scripts/check-words.mjs`). The storefront, themes and EkCode are outside it until their phases. Frrata Admin joined in
+Neel N4 with every rule but the glossary below (merchant, token, API are staff words there); text inside `<code>` is code.
 
 ## Glossary (Neel § Glossary, owner 2026-11-13) — one word for each thing, on every surface
 
 - **Surfaces:** Console (the brand's team and its partner; never "dashboard", "admin"); Partner workspace (never
   "partner console"); Frrata Admin (never "Admin" alone); the store (shoppers; never shop, website, site).
+  **Website** is the one exception (owner, 2026-11-15, Storefront API mockup): the brand's own site built as code on the
+  Storefront API, as in Settings › Website ("Runs on Frrata" · "Your own website"). Never for the store itself. Its keys
+  are **Live** or **Test**, and are **deleted** (never "revoked" on screen).
 - **Roles:** Owner · **Manager** (was Admin; the stored value `admin` keeps its spelling) · Staff · Accountant ·
   Partner · Partner owner and Lead (the agency's) · Frrata support (on a **support visit**). "Admin" is never a person.
 - **Words:** store (never shop; "Shop all", "Shop now", "Shop the look" stay as the store's verbs) · shopper (never
@@ -110,7 +114,7 @@ from it).
   numbers strip; steps are pictogram + 1–3 words + one short line; rules and
   details are pictogram + a title + an (i) tip.
 
-## Apps and modules (approved mockup v2, 2026-11-07; the gallery and app pages: § Apps gallery below)
+## Apps (approved mockup v2, 2026-11-07; the gallery and app pages: § Apps gallery below)
 
 - **Console › Apps** (`/console/apps`, Store group; in More on a phone): the gallery in § Apps gallery. Every card and
   app page reads `offerFor()` (`src/domains/modules/offer.ts`) — footer, state chip, filter and the one action.
@@ -120,13 +124,13 @@ from it).
   notes as (i) tips, and a muted "Next" band. Connected → the number card (mono phone, name · which apps, Quality,
   Limit, Chats from the app; More: Check again, Disconnect) and "Needs you" rows: a badge (Blocks messages / By 31
   Dec / Quality low / In review), the need in words, one action. Meta's raw values never show.
-- **Admin**: merchant tabs Overview · Modules · Plan · Addresses. The Modules tab is a table
-  (Module, Granted by, Merchant, Usable, action: "Give a 30-day trial of X",
-  "End trial"). Admin › Modules pauses a module "for everyone" with a reason;
-  the shop sees "Paused by Frrata". Admin writes are admin-role only.
-  The Addresses tab lists the shop's names (Current · Old · redirects · Old · no redirect), then "Rename <shop>'s
-  address" and "Freeze <shop>'s address", each with a reason. Admin › Names: block a name or domain, unblock or
-  release with a reason in the row; Frrata's own words listed, read-only.
+- **Apps, everywhere a person reads it** (owner, 2026-11-15: "It'll be Apps. across the whole ecosystem"): never
+  "module" or "add-on" in what anyone reads; a paid one is a **paid app**. Code names (`modules`, `tenant_addons`) keep
+  their spelling. Frrata Admin: `/admin/apps` (tabs Apps · Waiting list) and a merchant's Apps tab (Overview · Plan ·
+  Apps · Addresses · Activity); the old `/modules` addresses redirect. Pause for everyone sits in a row's More and asks
+  why; the store sees "Paused by Frrata". Admin writes are master-admin only.
+  The Addresses tab lists the store's names, then "Rename <store>'s address" and "Freeze <store>'s address", each with
+  a reason. Admin › Names: a claimed domain leads; Blocked · Held · Reserved as tabs; Block, Unblock, Release in dialogs.
 
 ## Apps gallery (owner-approved 2026-11-11, mockup https://claude.ai/artifact/6Th5A8X4YSXCcyozpzPLEg; plan `docs/plans/2026-11-11-apps-gallery.md`; supersedes the Apps list rows and the details dialog above)
 
@@ -191,7 +195,7 @@ from it).
   changes until they publish), Frrata recalled the version they're on (with one tap to restore the previous look),
   or withdrew it (their previous look is live, nothing lost). Admin › Themes says every decision is final and names
   the shops it touches; a destructive decision is a red-labelled form with a required reason, not a typed phrase.
-- Colours and type live in Look only; Settings › Brand keeps the logo and tagline and previews them in the published look.
+- Colours and type live in Look only; Settings › Store details keeps the logo and tagline and previews them in the published look.
 - **Three themes, each a job** (owner, 2026-11-08 night; plan `docs/plans/2026-11-09-themes-three.md`):
   **Editorial** — occasion and designer wear: photos stacked large beside a buy box that stays, Cormorant, square,
   a sheen on buttons, photos that grow, pages that fade in, sections that rise, statement footer in ink, focused
@@ -282,6 +286,26 @@ from it).
   Settings" with **Change in Settings**, never a field. An FAQ answer from Settings carries a "From your settings" chip.
   A page's address is set while it is a draft and fixed once published; Hide and Remove take effect at Publish.
 
+## Console › Content (owner-approved final mockup 2026-11-15, https://claude.ai/artifact/6WemLUPWd2z9rPXsVRzTv4; V1)
+
+- **What the store says, saved live**: tabs Announcement · Menus · Pages · FAQ · Contact line (`ViewTabs`, one row that
+  scrolls on a phone); "View store" the header's action. Placements (V2) and Season (V1.5) join as tabs when they exist.
+- **A dated entry's state is a chip, never a sentence**: Live now · Starts 1 Dec, 10:00 am · Shows after the offer ·
+  Shows after the newer bar · Ended · Ended early, from `barChip` on the server's `now`. A live offer heads the bars,
+  read-only, with Open Offers.
+- **Add and Edit open a dialog** (a sheet on a phone); a mistake stays at its field ("End is before the start. Pick a later
+  end."); a refusal is in the dialog. Cancel names the safe outcome ("Keep as it is", "Don't add").
+- **Menus save with one explicit Save per menu** (shoppers see it at once), an unsaved bar with "Discard change" and
+  "Save main menu"; moves are Up, Down, "Move under Kurtas", "Move out of Kurtas". Bars, questions, pages and the Contact
+  line save from their dialog or field.
+- **Every save is a toast with Undo** (the saver's own, a minute); End now and Delete too. A stale save is an error toast
+  naming who saved, as a role ("The owner changed this today, 10:42 pm. Reload to see it.").
+- **Read only says who can**, as a chip: "Only the owner, a Manager or the partner can edit" (staff, accountants; the partner named only where the store has one); a support visit
+  sees "Support visit · read only". Edit is disabled, never hidden.
+- **What comes from Settings is read-only here** with "From Settings" and Change in Settings (an FAQ answer, the Contact
+  page's details).
+- **The Look links, never edits**: where Menus, the bar, the Contact line and a page were, one row "Edit in Content ›".
+
 ## Partner workspace (approved mockup 2026-11-07)
 
 - `/partner` uses the console's `AppShell` with `tag="PARTNER"` (info pair).
@@ -302,6 +326,23 @@ from it).
 - Client stages are derived (`src/domains/partners/stage.ts`) and shown as
   badges with words: Building, Invite sent, With the owner, Open, Removed. A
   removed store is dimmed with colour and has no actions.
+- **Builders** (T1c, approved mockup https://claude.ai/artifact/LnwWWrV37oQgbnfmc5bvFP, owner 2026-11-15): a role's
+  console shows only what opens for it (nav drawn from its capabilities): a Builder's is Catalogue › Products,
+  Collections; Preview store and Partner workspace at the foot; the phone bar Products · Collections · Preview. Its lists
+  are the owner's, view only (no selection, Add, Import or More); a row opens the store preview. A page it can't open is
+  that page's own panel, "Builders can’t see this page." with a lock tile and Open products. Team's invite asks the
+  Role (Lead · Builder) with two lines of what it reaches; each person has a Role select; a Roles card (Partner owner ·
+  Lead · Builder) says what each sees in a store. The brand's People shows "Partner · Builder" with an (i).
+- **Clients** (P2, owner-approved mockup v2 2026-11-15, https://claude.ai/artifact/5ieqhb31Prax22Xe2UTtPX): one job in view.
+  The list is Client (a link to its page, the address under it) · Stage · Next (words: "₹12,000 overdue · 11 days",
+  "Waiting 4 days", "Next bill 28 Nov") · the next step's one button beside the link (Hand over, Remind, Record bill) ·
+  Your billing (the deal's amount). Tabs (Needs you, only while it holds rows · Waiting on the client · All) and search
+  only from 9 clients; below that, one list ordered by who acts. A Lead sees Client · Stage · Next, no money; a Builder
+  Client · Stage · Open store. A client is a PAGE (`/partner/clients/<link>`), not a drawer: back to Clients, the next
+  step as the header's primary, More (Edit content, Website keys), tabs Your billing · Store (dates and the share as
+  `Facts`; the share reads "20% · ends <date>" while `SHARE_IN_RUPEES` is off). Remind opens WhatsApp on the partner's phone with the drafted words and no number; Frrata sends nothing.
+  The partner's billing carries one line, "Your client never sees this". A removed client stays last in All, dimmed,
+  and its page keeps billing (a final bill may be owed).
 - **F3 store switcher**: in the account block at every width and in More on
   phones, only with two or more places to go; it lists what app_access_for
   returned, current one marked.
@@ -433,6 +474,26 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
   line** (the Hero's, the Statement's), tilted −4° / −6°, never for body or buttons. Section headings 22–34 px, 600,
   −0.02em, balanced. An empty story section shows nothing; it never stops a publish.
 
+## Frrata Admin, one job at a time (Neel N4, owner-approved 2026-11-15; mockup https://claude.ai/artifact/YPGo8SV7vqNu9vyCp5vCSQ, `docs/mockups/2026-11-15-neel-admin/`)
+
+The nine rules (board Rules), binding on every Admin screen and mockup:
+1. **Today first.** Admin opens on what needs someone, oldest first, one action each (`src/domains/admin/today.ts`,
+   filtered by role at the source). The nav counts the same items; a source that can't be read is left out, never 0.
+2. **A waiting task leads its page**: one band under the header (`_components/needs-band.tsx`), its one action; it goes
+   when the task is done.
+3. **One job in view**: a record's other parts are tabs; a list opens on "Needs you" when something waits.
+4. **One primary**: the header holds the title, at most one primary and More.
+5. **Forms open when asked**: add, edit and change open a dialog from a button (`_components/form-dialog.tsx`). No form
+   stands open on a page.
+6. **Rare or final actions go in More**, each asking in a dialog with the reason the other side reads.
+7. **Reference folds**: tables looked at now and then sit behind Show (Infrastructure's `Fold`); counts that matter stay open.
+8. **Your own request says who approves it** ("Another master admin approves it"); never a button that would fail.
+9. **On a phone** the list and the record are two pages and dialogs are sheets.
+
+- **The role is "Master admin"** (owner, 2026-11-15) wherever a person reads it; the stored role stays `admin`.
+  `STAFF_ROLE_WORDS` and `isMasterAdmin` (`src/domains/tenancy/staff-words.ts`) are the one place for both.
+- **Activity says actions in words** (`src/domains/admin/activity-words.ts`), never `module.trial`.
+
 ## Frata Admin (owner-approved, 2026-11-06)
 
 - **Admin looks unlike the console**: dark ink navigation with a "STAFF" tag
@@ -441,9 +502,9 @@ No other size: `check:scale` fails `text-[Npx]` in app code.
 - **Support mode** is a full-width banner above every console page: whose
   store, the reason, time left, "Back to Admin", "End now". It cannot be
   dismissed and uses a solid dark amber with white text (≥ 4.5:1).
-- **A button that acts on a merchant names them** ("Open Kesar Studio's
-  console", "Move Kesar Studio to Scale"); cancel names the safe outcome
-  ("Stay in Admin", "Keep Growth"). Never "Continue" or "OK".
+- **A button that acts on a merchant names them** ("Move Kesar Studio to Scale"), except **"Open console"**, which
+  sits on the merchant's own page or row and stays short (owner, 2026-11-15); cancel names the safe outcome
+  ("Stay in Frrata Admin", "Keep Growth"). Never "Continue" or "OK".
 - **A plan price is shown with its version**, and a change says what moves
   ("orders included go from 1,500 to 5,000") before it is confirmed.
 - People who are staff and store members choose where to go after sign-in;
@@ -696,7 +757,7 @@ Rules every products screen keeps (PR·0 built; PR·1–4 follow the mockup):
 **Own domains v2** (owner-approved 2026-11-09, mockup https://claude.ai/artifact/XrDQj61tSBe4YKvUrH76xt; replaces the
 8 Nov mockup's § 5–7):
 
-72. **One address list, titled "Custom domain"** (owner 2026-11-09) on Settings › Shop address: every address a row (mono, its state chip, actions beside it);
+72. **One address list, titled "Custom domain"** (owner 2026-11-09) on Settings › Web address: every address a row (mono, its state chip, actions beside it);
     the main one carries a `Main` chip; rows change in place and never animate (rule 28).
 73. **Connect is a `Dialog`** (a sheet on a phone, rule 27) of three steps (Domain · Records · Securing) with step dots
     and the step slide; the domain is cleaned as typed (`https://www.KesarStudio.in/` → `kesarstudio.in`, www added),
@@ -1169,6 +1230,18 @@ What a link to a shop page shows in WhatsApp, Instagram DMs, Facebook, X, iMessa
 - **Few words, no Devanagari drawn** (Satori cannot shape it; Hindi goes in og:title and og:description). Apple: avoid
   text-heavy images. og:image:alt describes the photo, not a caption.
 
+## Plan and billing (billing rework R1, owner-approved 2026-11-15; spec `docs/specs/2026-11-15-billing-rework.md`, mockup https://claude.ai/artifact/Tp6T3A68mzNrYzVP8NhsxD)
+
+- **Tabs in the address** (`?tab=`): Overview, Charges, Plans, Invoices, Payment, Details; the Settings group's tabs stay
+  above them. Each tab loads only its own reads.
+- **A summary reconciles.** Every bill shows rows that add up to its total (plan, apps, fee on delivered orders,
+  credits, carry, before GST, the GST heads, total), and each row drills down to its orders or its plan lines.
+- **Money a merchant compares is worked out by one rule** (`src/domains/billing/charges.ts`): a plan's cost at a sales
+  figure, cost as a share of delivered sales, delivered sales less credited bases. "Orders included" never shows to a
+  merchant (owner, 2026-11-15); Admin keeps it.
+- **A row of link choices** (a bill, a view, a filter) is `BillPicks` (`settings/billing/_components/pills.tsx`): 44 px
+  on a phone, the picked one in the selection colours. A comparison table keeps its columns and scrolls on a phone.
+
 ## Neel primitives (N0, 2026-11-13)
 
 The gallery `/console/fixtures/neel` (test-only) shows each in its states; `e2e/flows/81-neel.mjs` holds the drawn
@@ -1195,8 +1268,19 @@ values, keyboard and axe at phone and desktop. A new primitive or state joins th
 - **The header**: rule 13 above; one `PageHeader` for every page in Console, Admin and the partner workspace.
 - **Lists**: rows 48 px (56 with a photo: `DataTableRow tall`), the picked rows in neel 50 and `BulkBar`; Orders shows
   Payment as a Tag and Status (with risk) as chips, one status cell that reflows on a phone.
-- **Settings**: one list, a plain 20 px icon per row, its current value at the right, a chevron; up to 860 wide;
-  "Ready for live payments" a chip in the header, and what is missing a warn banner above the list.
+- **Settings, in five groups** (owner, 2026-11-15; mockup https://claude.ai/artifact/GGkvYuwqxL7YEoXxAjbYLD,
+  `src/domains/settings/groups.ts` is the one list): Store, Checkout, Business and tax, Messages, Team and plan. Pick a
+  group, its pages appear: on a wide screen the groups at the left (each with its one line and a count of what to fix),
+  the picked group's pages at the right (name, current value, chevron); on a phone the groups first, then the group's
+  pages with "‹ Settings". The group is in the address (`?group=`). A settings page opens "Settings › <group>", its title,
+  then its group's other pages as tabs (`SettingsHead`). A field lives where a merchant looks for it (the legal name
+  beside the GSTIN, order and invoice numbering together); a moved page keeps its old address as a redirect (`movedTo`).
+  "Ready for live payments" stays a chip in the header, what is missing a warn banner above the groups.
+- **A settings form** (Neel N2b·3): one card per block; a page of one block hides its block title (screen readers keep
+  it); switch rows carry their line under the label; short fields side by side (three across when there are three);
+  wide fields and groups of a kind under a hairline; no intro paragraph under the title (Rule 0); a list of codes is
+  chips (`ChipInput`), never a text box; the save bar at the foot with its count and Ctrl/⌘+S; a side card says what a
+  shopper meets (Pay on delivery: "At checkout", from checkout's own rule and words).
 - **Not yet**: ⌘K (N1b).
 
 ## Neel analytics (N1b, 2026-11-15; plan `docs/plans/2026-11-15-neel-n1b-analytics.md`, screen mockup

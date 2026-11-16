@@ -2,9 +2,9 @@
 name: frata-architecture
 description: Use when adding a page, route, server action, query, database table, migration, webhook, cron or connector to Frata, or when deciding where code belongs, how tenant isolation and auth are enforced, how money is stored, or how data reaches a component.
 metadata:
-  version: 2.56.0
-  verified: 2026-11-12
-  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013]
+  version: 2.61.0
+  verified: 2026-11-16
+  decisions: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0012, ADR-0013, ADR-0015, ADR-0018]
   covers: ["src/lib/**", "src/middleware.ts", "drizzle/**", "drizzle-analytics/**"]
 ---
 
@@ -32,7 +32,19 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
 - Console: `requireMember(roles)` (`src/lib/auth/require-member.ts`) gives the
   tenant id — a membership or an active support session, both from
   `app_access_for`. Storefront: `tenantForHost(host)` (`src/lib/db/platform.ts`).
-  **These are the only two sources of a tenant id.**
+  **The Storefront API's host** (ADR-0018, V1 SA0): `storefrontKeyFor(key)` (`src/lib/queries/storefront-keys.ts`), called
+  only inside `apiRequest()` (`src/lib/storefront-api/request.ts`), from the key in the path through the definer
+  `app_storefront_key`. **These are the only three sources of a tenant id.**
+- **The Storefront API** (ADR-0018; plan `docs/plans/2026-11-15-v1-storefront-api.md`): its host `NEXT_PUBLIC_API_HOST`
+  is a `routeFor` kind of its own, rewritten by next.config (`apiRewrites`; never the middleware, whose matcher skips
+  versioned paths). Live keys (`frs_pub_`) reach the cached tree `api/storefront/<v>/k/`, test keys (`frs_test_`) the
+  dynamic tree `t/`. **A cached route handler never reads the request** (a header read is a runtime error there, and
+  anything per-caller would be served to everyone); CORS there is a static `*`. Every handler is
+  `export const GET = apiRequest({ version, tree, mode, resource, schema, run })`: `run` gets `ctx` (shop, key, kind,
+  version, now) and parsed path params, never the Request; its answer leaves as `schema.parse()` of a closed schema.
+  The key lookup is cached and tagged by the key's sha256 hex (`skey:<hex>`: an `unstable_cache` tag must be known
+  before the call); every stop (deleted, expired, store opened for test keys, partner gone, domain gone, back to
+  Frrata) is derived in the definer. `check:tenant` § 9 and `check:api` hold the shape; proof block 81 the database.
 - Console writes go through `asMember(roles, (tx, ctx) => …)`
   (`src/lib/auth/as-member.ts`): it opens the tenant transaction and, in support
   mode, writes the audit row in the same transaction (`check:actions`).
@@ -40,6 +52,16 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   `src/lib/admin/*` functions that take `StaffOk` and use `adminDb()` as
   `frata_admin`. Never `withTenant` in Admin. A new table states its
   `frata_admin` grants in the same migration (often: none).
+- **Admin › Today and the nav counts** (Neel N4): `TODAY_SOURCES` (`src/domains/admin/today.ts`) names each source,
+  its area and the roles that see it; a source is read only for those roles (filter before reading). Each source reads
+  a count or a short list on an index (never a page's whole list); one gather per person per request (`todayItems`,
+  React cache keyed by user id), shared by the layout and the page, as plain parallel reads, never a transaction
+  holding one of Admin's two connections. A source that fails is logged and left out ("uncounted", never 0); the nav
+  waits at most 1.5 s, then shows no counts. EkCode, Email and Infrastructure have no source (their reads take seconds).
+- **Money in Admin needs a fresh passkey** (`confirmedRecently`): Issue, Record payment, Credit note, Record refund.
+  `frata_admin` only reads `frrata_payments`; the refund is written by `app_record_frrata_refund` (0138), once.
+- **Activity** reads named columns only (never `detail`), 50 a page on the `(at, id)` keyset with the row comparison,
+  filters through zod, and hides `billing.*` rows from support staff on the server (`src/lib/admin/activity.ts`).
 - **Definer functions** always `set search_path = ''` and
   `revoke all on function … from public, anon, authenticated` — Postgres gives
   PUBLIC EXECUTE by default and Supabase exposes functions over RPC. Dropping and
@@ -135,6 +157,14 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   middleware sends people to `/partner/sign-in` (with `next`, and `out=1` when a dead session cookie was there), the one
   partner page open without a session (`PARTNER_PUBLIC` in check:actions). `signOutAction` takes `to=partner` to land
   there. An owner who ever had a passkey waits 24 hours to recover one, even after Admin deleted them all.
+- **A partner's own records** (P2 Clients, 2026-11-16; drizzle/0146–0147): a partner's bills to its clients are
+  platform-scope tables that NO Frrata role reads (`frata_app`, `frata_admin`, `frata_builder`: no grant, RLS on, a
+  restrictive `definer_only` policy; `check:tenant` fails any table grant). Definers take the partner from the caller's
+  live owner membership (`app_pm_live`), re-check the step-up, and match a link or bill id on the caller's partner
+  (`not_found` otherwise). Frrata Admin gets a count and a first-bill date (`admin_partner_bill_stats`), never a row.
+  Writes are counted first in their own statement (`app_partner_bill_try`, its own table) so a refused write still
+  counts. Anything `partnerClients()` returns runs on every console page a partner opens (the building banner): heavy
+  reads go in a definer only `/partner` calls (`app_partner_client_shares`). Proof: `tenancy.sql` § 85.
 - **Secrets only in Production** (previews off production, 2026-11-12): every secret in `src/lib/env.ts` is read through
   `secret()` (`src/domains/infra/stage.ts`): on Vercel, Production only; off Vercel, as given. `check:config` fails an
   unwrapped read. Sign-in is off in the browser on a preview.
@@ -166,7 +196,8 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   creation and it cannot be published until it has an owner (trigger in 0066). A partner's cap counts its
   shops not yet handed over, and a shop with no owner is never billed (`app_shops_to_bill`).
 - **Partner teams** (T1a, 2026-11-12; plan `docs/plans/2026-11-12-studio-build.md`, drizzle/0123–0124): a partner is a
-  team in `partner_members` (owner | lead; `builder` waits for ADR-0015) with `partner_assignments` (which stores a lead
+  team in `partner_members` (owner | lead | builder, T1c; the owner moves Lead ↔ Builder with `app_partner_set_role`,
+  fresh check) with `partner_assignments` (which stores a lead
   works on). Both tables are definers-only for `frata_app` (check:tenant fails any grant but Admin's select). A partner
   person's shop access is still a `members` row with role `partner`, now pointing at its person
   (`members.partner_member_id`, CHECK `(role = 'partner') = (partner_member_id is not null)`); only definers write those rows
@@ -177,7 +208,22 @@ src/components/  rendering primitives: data/, layout/, ui/, nav/
   20 invites an hour. Admin suspends with `admin_end_partner` (deletes every partner person's shop rows, audits, tells
   each shop) and reinstates from assignments (tells each shop again). While paused, `app_shop_people` lists the partner
   from its link (`partner_paused`) so the brand can still remove it. `app_partner_my_invites` lists only invites the
-  person could accept (sign-in sends anyone with one to `/join`). A lead never gets the owner's contact details. A fixture that makes someone a partner on a shop uses e2e `partnerOn`.
+  person could accept (sign-in sends anyone with one to `/join`). A lead or a Builder never gets the owner's contact details, the plan or the partner's terms (`app_partner_clients`, T1c). A fixture that makes someone a partner on a shop uses e2e `partnerOn`.
+- **Capabilities and Builders** (T1c, ADR-0015; plan `docs/plans/2026-11-15-t1c-builders.md`, drizzle/0130–0131, proof
+  § 82): who may do what in a shop is ONE table, `CAPABILITIES` in `src/domains/tenancy/roles.ts`; the tuples
+  (`ANY_MEMBER` …) are views of it, pinned by `capabilities.test.ts` (a change to who holds a capability reaching orders,
+  shoppers or costs carries the owner's name and date). A partner's **Builder** (`members.role = 'builder'`, from
+  `partner_members.role` by trigger; frata_app holds no UPDATE on `members`) is a SHOP role but never a `MemberRole`:
+  `accessFor` puts its stores in `builds`, so `requireMember`/`asMember` can never carry one and every tuple refuses it
+  in words (`BUILDER_REFUSED`, drawn once by `Panel`). A Builder enters only through `requireCapability(cap)` in the
+  files of `scripts/builder-doors.json`, which gives an **Actor** (`src/lib/db/actor.ts`) whose shop id no page can
+  read; `withActor` runs read-only as **frata_builder**, its own LOGIN (`DATABASE_URL_BUILDER`; missing → refused),
+  column grants on eight catalogue tables and nothing else, with `builder_rows` + restrictive `builder_only` policies.
+  Builder reads live in `src/lib/queries/builder.ts` and call the owner list's own SQL (`listProductsWith`,
+  `listCollectionsWith`): a column added there needs its grant in a migration, or the Builder's list fails closed. The
+  store preview is the one exception (owner 2026-11-15): it runs the shopper read path as frata_app through
+  `previewTenantOf`. `check:capabilities` and `check:tenant` § 7b hold all of it. Notices reach members through
+  allow-lists (`app_notice_members`, `app_member_email`), never a Builder.
 - A layout refuses with a panel, never a redirect (frata-gotchas) — and its
   check guards nothing below it: **every page and action calls
   `requireMember` itself.** It returns `not_configured` rather than throwing
@@ -436,14 +482,14 @@ after it. A class a shop page uses from outside the shop's folders must be added
   them on Home, Shop all and a collection). `shopCatalogue` is expanded once a request (`cache()`): never sort it in place.
 - **Pages (Theme Studio TS1a; plan `docs/plans/2026-11-11-theme-studio-ts1.md`).** About and FAQ live in `shop_pages`
   (0099–0100: RLS, column grants, ≤ 20 a shop and one FAQ, addresses unique per shop, the cap under the `look:<t>` lock);
-  their templates are Frrata's (`src/domains/pages/templates.ts`, TS0b blocks + the page-only FAQ block whose items may be
+  their templates are Frrata's (since V1 content they save live from Console › Content, never with the look: § A store's content) (`src/domains/pages/templates.ts`, TS0b blocks + the page-only FAQ block whose items may be
   **bound** to Settings: `boundAnswer` in `domains/policies/answers.ts` gives the policy's own paragraph, or a link when the
-  owner rewrote it). A page's `draft`/`live` are `{ title, handle, fill, hidden }`; **a change reaches the shop only by
-  the look's Publish** (`preparePages` in `src/lib/themes/pages.ts`, inside `publishRevision`: live := draft, previous :=
-  live, live_publish_id := that publish); Undo swaps them under its own publish row; Discard puts drafts back. The
-  handle is fixed once live. **Contact is not a page row**: it is `/policies/contact` (live before a shop opens, for KYC),
-  its line in the look's layer (`contact`). The shop reads `shopPages` (cached, tag `shop:<t>:pages`, purged with the look
-  at Publish and Undo); drafts only through the uncached `previewPages`. Page photos go through `cleanFill`.
+  owner rewrote it). A page's `draft` is its words `{ title, handle, fill, hidden }`, `live` what shoppers see (null while
+  hidden); a save is live from Console › Content (§ A store's content), never with the look's Publish, Undo or Discard.
+  The handle is set when the page is added and never moves (`fixedHandle`). **Contact is not a page row**: it is
+  `/policies/contact` (live before a shop opens, for KYC), its line the store's content (`site_content`, kind `contact`).
+  The shop reads `shopPages` (cached, tag `shop:<t>:pages`, purged by a page or FAQ save); drafts only through the
+  uncached `previewPages`. Page photos go through `cleanFill`.
 - **Manifests** are typed files `src/domains/themes/catalogue/<theme>/<semver>.ts`, listed in `catalogue/index.ts`.
   A released file never changes; a new version is a new file. Theme colours live there and nowhere else
   (`check:hex` QUOTED rule).
@@ -513,14 +559,15 @@ after it. A class a shop page uses from outside the shop's folders must be added
   `focus` is additive. Publish holds "Going live" inside the same transition as the action (≥ 1.3 s), so the
   customizer can't re-render under it; the re-render with no draft is the success popup (published.tsx), over the
   live revision's framed preview. Section search is pure (`searchSections` in sections.ts, tested).
-- **Look v4** (owner-approved 2026-11-09, research `docs/research/2026-11-09-look-v4.md`): the layer gains `site`
-  (palette of six roles, text styles, icon library + stroke) and `menus` (main / footer / tabs), both in
-  `src/domains/themes/site.ts` (pure). Saved through `layerProblems` (siteProblem, menusProblem first, in the
-  merchant's words; an unreadable palette is refused) and stored as parsed; read **part by part** (`readSite`,
-  `readMenus`: a bad part drops only itself; a stored palette that no longer reads is ignored). Absent = the theme
-  exactly: a text style sets CSS only when set (`data-t-<style>` + `--t-*`), the palette paints paper (and the tint's
-  accent and buttons) only when set, the default main menu is the collections (`menusOf`). **carryOver:** another
-  theme → menus come across, site does not (owner: "Theme's own"); another version of the same major → both.
+- **Look v4** (owner-approved 2026-11-09, research `docs/research/2026-11-09-look-v4.md`; menus moved to the store's content
+  in V1, § A store's content): the layer gains `site` (palette of six roles, text styles, icon library + stroke), in
+  `src/domains/themes/site.ts` (pure), with the menus' shape and limits (`MenusSchema`, `MENU_LIMITS`, `menusOf`; their
+  rows are the store's content). Saved through `layerProblems` (siteProblem first, in the merchant's words; an
+  unreadable palette is refused) and stored as parsed; read **part by part** (`readSite`: a bad part drops only itself;
+  a stored palette that no longer reads is ignored). Absent = the theme exactly: a text style sets CSS only when set
+  (`data-t-<style>` + `--t-*`), the palette paints paper (and the tint's accent and buttons) only when set, the default
+  main menu is the collections (`menusOf`). **carryOver:** another theme → site does not come across (owner: "Theme's
+  own"); another version of the same major → it does. A layer's old menus, bar and Contact line are dropped (V1).
   Menu links are `shopPath` only (the shop's own pages). **Icons** are data (`src/domains/icons/data.ts`, generated by
   `scripts/icons/build-icons.mjs` from lucide-static (ISC) and @phosphor-icons/core (MIT); NOTICE.md) drawn by the
   server-only `ShopIcon`; client code imports `icons/names.ts` only; a client island gets the rendered element as a
@@ -529,6 +576,38 @@ after it. A class a shop page uses from outside the shop's folders must be added
 - **Any storefront change** runs e2e `05-shop-look` (pixel diff against `e2e/baselines/`); an intended change
   regenerates them in the same commit: `UPDATE_BASELINES=1 npm run e2e -- --only shop-look`. Look's state changes:
   `look.int.test.ts` (real Postgres) and e2e `47-look`.
+
+## A store's content (V1, 2026-11-15; plan docs/plans/2026-11-15-v1-content.md; ADR-0014 amendment 8)
+
+- **The bar, menus and the Contact line are the store's content, not its look.** One row per fact in `site_content`
+  (`src/lib/db/schema-content.ts`; kinds `announcement` (≤ 3, dated), `menu` (main, footer, tabs), `contact`). The
+  schedule is in the row's columns (`starts_at`, `ends_at`, `stopped_at`), state derived (`src/domains/content/schedule.ts`);
+  `previous` keeps the entry before the last save, `version` refuses a stale save. Pages and the FAQ stay in `shop_pages`
+  and **save live** (draft = the words, live = what shoppers see, null while hidden); the look's Publish, Undo and Discard
+  never touch them. The look's layer, `ResolvedTheme` and `ThemeSettings` carry none of these (`no-layer-readers.test.ts`).
+- **One read seam**: `src/lib/queries/content.ts` — `shopContent` (cached, scope `content`, 60 s backstop; rows through
+  each kind's tolerant reader), `previewContent` (uncached, the console's previews), `contentEditorData` (Console ›
+  Content, one transaction). A store page's frame reads the look, the content and the offer in ONE `Promise.all`, each
+  failing quietly; the shell's `content` prop is required (`shellContentOf`). The Storefront API reads the same seam.
+- **One bar rule**: `barFor` (`src/domains/content/bar.ts`): a live offer first, else the live written bar that started
+  last. The frame, the console's chips and later the API ask it.
+- **Who saves**: `contentSaver(role, supportSessionId)` (`src/domains/content/who.ts`): whoever holds ADR-0015's
+  `content.write` (owner, Manager, the store's partner, before and after handover: owner 2026-11-15); staff, accountants,
+  Builders and any later role read; a support visit never saves. A partner's save tells the owner in the Inbox:
+  `app_content_partner_notice(table, id)` (drizzle/0137), asked on every save, decides from the rows (the row's
+  `updated_by` is a partner member, the store has an owner, no line for that row in the past hour) and words the line
+  from the place, never the content. Compare roles through `holds`, never by hand (check:capabilities).
+- **Writes**: only `src/app/(console)/console/content/actions.ts` (`write()`: the shop's limit `contentSave` counted first
+  and given back on a refusal, fail closed; `asMember`; the saver check; a conditional update on `version`; one
+  `memberAudit` row with field names only). Undo is the saver's own last save, within a minute, re-checked like a save,
+  with its own limit bucket. A save purges through `refreshContent` (`throttledPurge`, shared with `refreshSoldOut`: the
+  first in a window at once, repeats in one trailing purge); a page or FAQ save purges `pages` only.
+- **The plain-text rule** is `plainText` (`src/domains/content/plain-text.ts`): NFC; refuses control, format (but ZWNJ and
+  ZWJ), private-use, unassigned, line and paragraph separators, and `< > { } \`. Save only; reads are tolerant.
+- **A backfill that restates a TS rule in SQL** (the move's `app_move_content`, drizzle/0135): run as the migration's owner,
+  it sets `app.tenant_id` per store and names `tenant_id` in every statement; copies verbatim; re-runs reconcile (a row a
+  person saved, `updated_by` set, is never touched); one parity int test against the TS rule
+  (`site-content-move.int.test.ts`), and a two-store proof in tenancy.sql § 80.
 
 ## Writing products (PI·0, 2026-11-12; plan docs/plans/2026-11-12-product-import.md)
 
@@ -759,6 +838,11 @@ Rules:
   (`src/lib/db/attribution-sql.ts`) and the creator with `creatorCodeJoinSql`, and classifies with `sourceOfInputs`:
   one route, so they never disagree (an int test checks the order page against Analytics). A creator's code the order
   uses (a labelled `discount_codes` row) wins over tags.
+- **"Your website" (classifier v3, SA1b):** the bag link's page writes `via_site: '1'` into the tab's attribution (never
+  from a URL: `landingParams` skips it), and `classifySource(a, creator, site)` reads it, or a referrer equal to the
+  store's site host, as "Your website" after every stronger signal (creator, tags, click ids). Readers pass the site
+  host (`siteHostIn(tx, tenantId)`, or the order query's own subquery); visits never carry the marker. A change to the
+  rule bumps `CLASSIFIER_VERSION`/`CLASSIFIER_SINCE`, and Analytics says "Sources renamed on <date>" for 90 days.
 - **Read grouped, never per order:** Analytics groups orders by their raw inputs in SQL (`src/lib/queries/analytics.ts`)
   inside one transaction with `jit off`, `statement_timeout 3s`, `work_mem 64MB`; ₹ kept after returns is
   `keptOf` over the groups (`src/domains/orders/kept.ts`, the one ₹-kept helper for Offers, Analytics and True Profit).
