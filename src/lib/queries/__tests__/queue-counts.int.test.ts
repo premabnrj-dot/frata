@@ -1,17 +1,22 @@
 // The queue's tab COUNTS against the tab rule (order-state.ts queueTab) on a real Postgres (Ship plan review 3: the
 // parity test held the tabs' predicates, not the counts that read them through a partial-index filter). Every one of
 // shop A's orders is read, its tab decided in TypeScript, and the tallies must equal queueCountsWith's, after seeding
-// one order in each state. Skipped unless INT_DB_HOST is set. One transaction, rolled back.
+// one order in each state. Skipped unless INT_DB_HOST is set. One transaction, rolled back, in its own throwaway shop:
+// the read and the counts are two statements, and on proof shop A another int file's order committed between them
+// counted in one and not the other (CI, 2026-11-16).
 import { describe, expect, it } from 'vitest'
 
 const host = process.env.INT_DB_HOST
 const dbName = process.env.INT_DB_NAME ?? 'frata_proof'
 const pass = process.env.INT_DB_PASSWORD ?? 'x'
-const A = '11111111-1111-1111-1111-111111111111'
 
 describe.skipIf(!host)('queue counts', () => {
   it('every tab counts exactly the orders whose state belongs to it', async () => {
     process.env.DATABASE_URL = `postgresql://frata_app:${pass}@${host}/${dbName}`
+    const { default: postgres } = await import('postgres')
+    const su = postgres(process.env.ADMIN_URL ?? `postgresql://postgres@${host}/${dbName}`, { max: 1, onnotice: () => {} })
+    const [{ id: A }] = await su<[{ id: string }]>`insert into tenants (slug, name) values (${'int-queue-' + Date.now()}, 'Int queue') returning id`
+    try {
     const { withTenant } = await import('@/lib/db/tenant')
     const { orders } = await import('@/lib/db/schema-orders')
     const { queueCountsWith } = await import('@/lib/queries/orders')
@@ -46,5 +51,9 @@ describe.skipIf(!host)('queue counts', () => {
       expect(await queueCountsWith(tx, A, now)).toEqual(want)
       throw ROLLBACK
     }).catch((e) => { if (e !== ROLLBACK) throw e })
+    } finally {
+      await su`delete from tenants where id = ${A}`
+      await su.end()
+    }
   })
 })
