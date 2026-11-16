@@ -2,7 +2,8 @@
 name: frata-planning
 description: Use when planning any Frata feature, enhancement, redesign or connector - before writing a spec or plan, before executing one, and when closing one - to run the spec, research, design review, mockup, sign-off, plan, execute and document loop, with the review headings (UI/UX, tenancy, modularity, SSOT/DRY, YAGNI, KISS, performance, reliability, security, motion and visuals, unit economics, blast radius).
 metadata:
-  version: 2.8.0
+  version: 2.9.0
+  owner: owner
   verified: 2026-11-15
   decisions: [ADR-0001]
 ---
@@ -70,23 +71,34 @@ Copy into the conversation and tick as you go:
 - [ ] 0 GOAL      which ranked problem this moves, and the measure (North star)
 - [ ] 1 SPEC      docs/specs/YYYY-MM-DD-<topic>.md (template below), one per phase
 - [ ] 2 RESEARCH  how 2–3 strong products do this job; what the codebase already has
-- [ ] 3 REVIEW    every heading below, written into the spec
+- [ ] 3 REVIEW    every heading below, written into the spec, the Stress test last
 - [ ] 4 MOCKUP    HTML mockup published as an artifact, link in the spec — Rule 0 (frata-design-language):
                   no explanatory text on any screen; cut every sentence not required
-                  (node scripts/check-mockup.mjs <file> first: no overflow, no errors)
+                  (node scripts/check-mockup.mjs <file> first: no overflow, no errors); opens as § Step 4 says
 - [ ] 5 SIGN-OFF  owner approves → spec status: active; approved rules → frata-design-language
 - [ ] 5b REVIEW   agents run on the plan (rule 3); findings fixed or accepted
-- [ ] 6 PLAN      docs/plans/YYYY-MM-DD-<topic>.md: tasks, each with its verify command
+- [ ] 6 PLAN      docs/plans/YYYY-MM-DD-<topic>.md: tasks, each with its verify command; the header lines below
 - [ ] 7 EXECUTE   task by task; run and read each verify command (frata-verify);
                   impact-reviewer on each task's diff before its commit
 - [ ] 7b PARITY   BUILT AS DRAWN (CLAUDE.md): mockup-parity-reviewer screenshots the mockup and the build at
                   the same widths and checks every drawn element; each difference is fixed, or written
                   in the plan's Deviations table with its reason and shown to the owner before it ships
-- [ ] 8 DOCUMENT  skills/rules the change touched updated, version bumped
+- [ ] 8 DOCUMENT  skills/rules the change touched updated, version bumped (check:skills fails a body changed
+                  without a metadata.version bump)
+- [ ] 8b AFTER    production errors for every touched page within the hour and again the next day
+                  (get_runtime_errors); a regression found is fixed before the next feature
 - [ ] 9 CLOSE     spec status: built, plan status: done
 ```
 
 **Never start 7 before 5.** If the owner is away, stop at the mockup and say so.
+
+**A plan opens with three header lines** (`check:plans`, plans dated from 2026-11-17), among its first 15 lines:
+```
+**Mockup:** <artifact link>, or none — <why>
+**Approved:** <who>, <YYYY-MM-DD>
+**Review:** <agent> <READY, or "N findings fixed">, <YYYY-MM-DD>     one line per agent rule 3 calls for
+```
+While its `Status:` is draft a Review line may say `pending`; once it is active or done, each has its verdict and date.
 
 **Never close at 9 before 7b.** A plan for a phase with a mockup has a **Deviations** table (mockup element · what was
 built · reason · owner seen yes/no) — empty is the goal. Never:
@@ -183,6 +195,22 @@ Answer every heading. "n/a" says why. A review that says "yes" to each is not do
   Run `api-contract-reviewer` (frata-storefront-api).
 - **Blast radius** — every caller of what changes; shared resources (middleware,
   pool, layout, tokens); footguns written down before building.
+
+- **Stress test** (last, before sign-off) — read the code the screens will call, not only the screens, and measure on
+  real data: does each control's action refuse what the UI offers, does "saved" mean what a reader reads, what does
+  each failure path show, who else writes the rule's data. Write it as a table: severity · what · file · fix.
+
+## Step 4 — the mockup or proposal page
+
+It opens the same way every time, before any screen (after Ekatan's planning skill, 2026-11-16):
+- **In short** — the owner's questions answered first: what to take, why now, what it costs, what is needed from them.
+- **Audit** — the screen as it runs today, screenshotted, as a table: what is there · why it gets in the way · proposed.
+- **What to take** — one card per product researched: its pattern, then "Take:" (or "Skip:" and why).
+- **Your calls** — every owner decision, each with a recommendation; and what is deliberately not built.
+- Each screen lists its states and a plain **Step by step**.
+
+**A claim the mockup makes is measured, not judged.** "This saves ₹40 an order", "these two pages are one design":
+run the engine (`src/domains/orders/profit.ts`, the fee engine, the build's budgets) and put its figure on the page.
 
 ## Spec template
 

@@ -3,6 +3,7 @@ name: frata-gotchas
 description: Use when something in Frata fails in a way that makes no sense - a PDF download that saves as pdf.txt, MODULE_NOT_FOUND in production only, a page that runs behind a layout that refused, npm "Cannot read properties of null (reading 'edgesOut')", "invariant expected layout router to be mounted", a forged session accepted, rows missing or visible across tenants, a migration that drizzle skips, Meta CAPI rejecting a whole batch, a Razorpay signature that never matches, a Tailwind duration class that does nothing, a test that cannot import server-only.
 metadata:
   version: 1.25.1
+  owner: owner
   verified: 2026-11-16
 ---
 

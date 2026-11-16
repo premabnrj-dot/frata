@@ -3,6 +3,7 @@ name: frata-unit-economics
 description: Use when setting or changing Frata's pricing tiers, per-order fee, what a tier includes, or when computing profit per order, contribution per ₹100, RTO impact, ad savings, break-even tenants or funding need - to keep every number a dated hypothesis with its test, and to compare against the right baseline.
 metadata:
   version: 2.17.0
+  owner: owner
   verified: 2026-11-12
   covers: ["src/domains/orders/profit.ts", "src/domains/money/**"]
 ---

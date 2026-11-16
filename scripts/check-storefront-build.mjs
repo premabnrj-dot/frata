@@ -9,6 +9,7 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
+import { appBudgetProblems } from './lib/app-budget.mjs'
 
 // Next 15 + React 19's shared framework script is ~103 kB gzipped on its own; a shop page may add ~17 kB.
 const BUDGET_KB = 120
@@ -106,6 +107,8 @@ const CUSTOMIZER_KB = 208
     if (kb > CUSTOMIZER_KB) failures.push(`${k}  ships ${kb.toFixed(1)} kB of script gzipped (budget ${CUSTOMIZER_KB} kB) — load a form when it opens (next/dynamic)`)
   }
 }
+
+for (const p of appBudgetProblems(build, gz, process.env.SHOW_BUDGETS ? console.log : () => {})) failures.push(p)
 
 // TS0b: the block rules alone, gzipped (speed review 7): every .store-b- rule in the shop's sheets, @media included.
 {

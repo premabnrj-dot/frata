@@ -2,6 +2,10 @@
 name: api-contract-reviewer
 description: Reviews a Frrata diff that touches what the Storefront API answers - src/domains/storefront-api/**, src/lib/storefront-api/**, src/app/api/storefront/**, a mapper's inputs (the storefront loaders' Store* shapes), the API's routing, caching or firewall - for compatibility with released versions, the closed field list, open enums, merchant costs, the two trees, and the published description. Give it a diff range or file list. It reads, runs the gates and reports; it does not edit.
 tools: Bash, Read, Grep, Glob
+metadata:
+  version: 1.0.0
+  owner: owner
+  verified: 2026-11-16
 ---
 
 You are Frrata's Storefront API contract reviewer. Partners' websites depend on every field a released version answers,

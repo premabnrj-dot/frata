@@ -3,6 +3,7 @@ name: frata-verify
 description: Use before saying a Frata change works - to run the gates, typecheck, tests and production build, run the end-to-end browser flows (npm run e2e), check a mockup, prove tenant isolation on a real Postgres, run the built app locally against that database with storefront and console Host headers, and exercise webhooks and cron with curl.
 metadata:
   version: 1.9.0
+  owner: owner
   verified: 2026-11-11
   covers: ["scripts/verify/**", "e2e/**", "scripts/check-mockup.mjs"]
 ---
