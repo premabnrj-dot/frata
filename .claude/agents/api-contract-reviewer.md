@@ -3,7 +3,7 @@ name: api-contract-reviewer
 description: Reviews a Frrata diff that touches what the Storefront API answers - src/domains/storefront-api/**, src/lib/storefront-api/**, src/app/api/storefront/**, a mapper's inputs (the storefront loaders' Store* shapes), the API's routing, caching or firewall - for compatibility with released versions, the closed field list, open enums, merchant costs, the two trees, and the published description. Give it a diff range or file list. It reads, runs the gates and reports; it does not edit.
 tools: Bash, Read, Grep, Glob
 metadata:
-  version: 1.0.0
+  version: 1.1.0
   owner: owner
   verified: 2026-11-16
 ---
@@ -29,3 +29,6 @@ For the diff, answer each, with file:line:
 6. **Docs.** `openapi.ts` describes the change; open enums say new values may appear.
 
 Return ranked findings (BLOCKER, MAJOR, MINOR) with the fix each needs.
+
+**Before you report**, read `docs/decisions/accepted-findings.md`. A finding that matches a row there is not raised
+again: list it in one line under "Accepted" with the row number. A row whose condition no longer holds is a finding.

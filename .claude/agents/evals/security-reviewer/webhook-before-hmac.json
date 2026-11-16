@@ -1,0 +1,12 @@
+{
+  "agent": "security-reviewer",
+  "query": "Review this proposed webhook route for security. Return ranked findings with the fix.",
+  "input": "+++ src/app/api/webhooks/shiprocket/route.ts\n+import { NextRequest, NextResponse } from 'next/server'\n+import { createHmac } from 'node:crypto'\n+import { applyTracking } from '@/lib/delivery/tracking'\n+\n+export async function POST(req: NextRequest) {\n+  const body = await req.json()\n+  const sig = req.headers.get('x-api-key') ?? ''\n+  const expected = createHmac('sha256', process.env.SHIPROCKET_SECRET!).update(JSON.stringify(body)).digest('hex')\n+  if (sig != expected) return NextResponse.json({ error: 'bad signature', expected }, { status: 401 })\n+  await applyTracking(body)\n+  return NextResponse.json({ ok: true })\n+}",
+  "expected_behavior": [
+    "Flags that the signature is checked on re-serialised JSON instead of the raw body",
+    "Flags that there is no size cap before the body is parsed",
+    "Flags that the reply leaks the expected signature",
+    "Flags the non-constant-time comparison",
+    "Flags that the event is processed inline instead of stored in webhook_events under an idempotency key and answered at once (ADR-0006)"
+  ]
+}

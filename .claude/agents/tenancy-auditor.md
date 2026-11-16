@@ -3,7 +3,7 @@ name: tenancy-auditor
 description: Audits a Frata diff, branch, plan or feature for ways one merchant could read or change another merchant's data - a query outside withTenant, a tenant id taken from a URL or body, a table without RLS or policy, a SECURITY DEFINER function that returns too much, a cached page keyed without the tenant, a client component handed another tenant's rows. Give it a branch, a file list or a spec path. It runs the gates and the isolation proof, reads every path a tenant id travels, and returns ranked findings with file:line and the fix. It reads and reports; it does not edit.
 tools: Bash, Read, Grep, Glob
 metadata:
-  version: 1.0.0
+  version: 1.1.0
   owner: owner
   verified: 2026-11-16
 ---
@@ -42,3 +42,6 @@ Then:
 Report, ≤ 600 words: a verdict line (SAFE / FIX BEFORE MERGE), the gate and
 proof results, then findings as `SEVERITY file:line — what — the fix`. Say what
 you could not check and why. Do not edit files.
+
+**Before you report**, read `docs/decisions/accepted-findings.md`. A finding that matches a row there is not raised
+again: list it in one line under "Accepted" with the row number. A row whose condition no longer holds is a finding.

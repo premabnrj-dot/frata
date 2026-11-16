@@ -1,5 +1,5 @@
 # Practices from Ekatan — G1 gates, G2 hooks, G3 evals, G4 split
-Status: active · Date: 2026-11-16
+Status: done 2026-11-16 · Date: 2026-11-16
 **Mockup:** none — no screen; proposal page https://claude.ai/artifact/7x3xUf5cnMgifDtVTMACWZ
 **Approved:** owner, 2026-11-16 (calls 1, 2, 4, 6 as recommended; 3 and 5 left to Claude: block, plans from 2026-11-17)
 **Review:** architecture-reviewer NOT READY → 12 findings fixed below, 2026-11-16
@@ -62,6 +62,8 @@ on stdin.
 ## Deviations
 | Element | Built | Reason | Owner seen |
 |---|---|---|---|
+| Call 6: split design-language, "the other two follow, one at a time" | All three split in one phase, each its own script run and line check | The same mechanical move (sections moved unchanged, 0 lines lost in each); doing them together keeps parallel lanes from conflicting on three separate days | no: in the report |
+| Task 2: pins at today's length + 20 until G4 | Pins removed the same day | G4 ran in this session, so the pins held for hours, not weeks | no: in the report |
 
 ## Practices recorded in skills
 `frata-planning` (task 8): plan header, proposal opening, measured claims, Stress test, After deploy. `frata-verify`: the
@@ -81,3 +83,24 @@ new gates, the hook and `npm run eval`. CLAUDE.md: `gates:list`, the hook, the d
   (branches use the merge base); the Console budget is a pure function (`scripts/lib/app-budget.mjs`) with a test;
   `merge-main.mjs` reads the migration files once; `frata-architecture` bumped minor (a gate added). `npm test` (1,710
   tests) and typecheck green; `npm run build` postbuild clean.
+- **G2 built 2026-11-16.** Replay before switching on: 38% of the last 300 commits would have been stopped (code paths
+  only; 63% when a doc naming another doc counted), over 25%, so the doc drift ships as a **warning** to the agent
+  (`additionalContext`), and the commit goes ahead. Gates before commit and the force-push check **deny**. Verified in a
+  fresh headless session: `vercel deploy` refused by the deny rule despite an allow; a `--force` push to main refused by
+  the hook; the drift warning reaches the agent. `security-reviewer` READY as a guardrail (7 holes fixed: `+HEAD` on
+  main, push-option values, `command`/path-prefixed git, here-strings, worktree common dir, `-F` read capped, realpath;
+  `vercel:*` for every launcher; `check:config` allows only `permissions.deny`). `impact-reviewer` CLEAR (fixed: the deny
+  says the gates read the working tree; `cd ~`/`$VAR` no longer throw; tests for `-F`, `cd`, `--amend`, worktrees, a
+  plain push). Deviation from task 10: gates run from the worktree's own top (its committed package.json), not the
+  project dir, after confirming the worktree shares the project's git dir. Not caught and accepted (in the hook's
+  header): git aliases, a remote set to force, `bash -c`, backticks.
+- **G3 built 2026-11-16.** `npm run eval`; 8 planted-flaw scenarios; all pass (33/33 behaviours) after the judge was
+  told that raising a problem or giving its fix counts (the first, literal judge failed the security reviewer on
+  wording). Results in `docs/evals/`. `docs/decisions/accepted-findings.md`: two rulings the owner made; two **proposed**
+  rows (the hook's accepted gaps, the Console pins) wait for the owner. `impact-reviewer` FIX BEFORE COMMIT → fixed:
+  the proposed rows were first written as rulings (they were not the owner's); the judge's verdict must grade every
+  behaviour once; an unknown scenario fails; the deny names HOME's credential folders, not HOME; four agents point at
+  the reference files.
+- **G4 built 2026-11-16.** design-language 1,312 → 305 lines (7 reference files with `states.md`), architecture 1,128
+  → 396 (4), integrations 952 → 38 (7); sections moved unchanged (a line check found 0 missing in each); majors bumped;
+  pins removed; `check:skills` bumps cover reference files.

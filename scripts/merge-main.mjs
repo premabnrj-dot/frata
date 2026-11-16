@@ -1,6 +1,9 @@
 #!/usr/bin/env node
+// Fails (--journal): a journal entry out of idx or `when` order, or a migration file and its journal entry not matching.
+//
 // =============================================================================
 // FILE: scripts/merge-main.mjs --check — before or after merging origin/main, finds what collides (release-agent): a
+//
 // migration number main already uses (drizzle/NNNN_*.sql), a journal whose idx or `when` is out of order, and an e2e flow
 // number used twice. Prints each with the fix; exits 1 when something must be renumbered. It changes nothing.
 // Fix for a migration: delete the branch's .sql and snapshot, take main's journal and snapshots, `npm run db:generate`

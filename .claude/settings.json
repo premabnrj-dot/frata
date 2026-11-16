@@ -1,0 +1,59 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/hooks/pre-bash.mjs\"",
+            "timeout": 150,
+            "statusMessage": "Running the gates before this commit"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Bash(vercel)",
+      "Bash(vercel:*)",
+      "Bash(vercel@*)",
+      "Bash(npx vercel)",
+      "Bash(npx vercel:*)",
+      "Bash(npx vercel@*)",
+      "Bash(npx -y vercel)",
+      "Bash(npx -y vercel:*)",
+      "Bash(npx -y vercel@*)",
+      "Bash(npx --yes vercel)",
+      "Bash(npx --yes vercel:*)",
+      "Bash(npx --yes vercel@*)",
+      "Bash(npm exec vercel)",
+      "Bash(npm exec vercel:*)",
+      "Bash(npm exec vercel@*)",
+      "Bash(bunx vercel)",
+      "Bash(bunx vercel:*)",
+      "Bash(bunx vercel@*)",
+      "Bash(pnpm dlx vercel)",
+      "Bash(pnpm dlx vercel:*)",
+      "Bash(pnpm dlx vercel@*)",
+      "Bash(yarn dlx vercel)",
+      "Bash(yarn dlx vercel:*)",
+      "Bash(yarn dlx vercel@*)",
+      "Bash(./node_modules/.bin/vercel)",
+      "Bash(./node_modules/.bin/vercel:*)",
+      "Bash(./node_modules/.bin/vercel@*)",
+      "Bash(node_modules/.bin/vercel)",
+      "Bash(node_modules/.bin/vercel:*)",
+      "Bash(node_modules/.bin/vercel@*)",
+      "mcp__Vercel__create_deployment",
+      "mcp__Vercel__request_promote",
+      "mcp__Vercel__request_rollback",
+      "mcp__Vercel__start_rolling_release",
+      "mcp__Vercel__approve_rolling_release_stage",
+      "mcp__Vercel__complete_rolling_release",
+      "mcp__Vercel__assign_alias",
+      "mcp__Vercel__cancel_deployment"
+    ]
+  }
+}

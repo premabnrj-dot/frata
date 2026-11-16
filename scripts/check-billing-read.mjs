@@ -1,4 +1,5 @@
 // =============================================================================
+// Fails: a file outside the Plan and billing pages importing the shop's money reads (src/lib/queries/billing.ts).
 // GATE check:billing-read (billing B1; plan finding 9): only the Plan and billing pages may import the shop's money
 // reads (src/lib/queries/billing.ts). Its exports refuse anyone outside owner and admin, and this keeps every other
 // console page, the storefront and the shop API from reaching them at all. Comment lines are skipped.

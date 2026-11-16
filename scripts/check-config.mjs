@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Fails: a setting read in a second file, a client made outside its owner, or a setting the code reads that .env.example does not list.
+// Fails: a setting read in a second file, a client made outside its owner, a setting the code reads that .env.example does not list, or a .claude/settings.json with an allow rule or another hook.
 //
 // ⚠️ WHY. One setting, one owner ("derive, never duplicate"). Ekatan found its
 // Supabase address read in eight files, each with its own idea of what unset
@@ -67,6 +67,17 @@ const PLAIN = new Set(['VERCEL', 'VERCEL_ENV', 'RAZORPAY_API_BASE', 'META_GRAPH_
   }
   const cron = readFileSync('src/lib/auth/cron.ts', 'utf8')
   if (!/SECRETS_ALLOWED \? process\.env\.CRON_SECRET/.test(cron)) failures.push('CRON_SECRET  read in src/lib/auth/cron.ts without SECRETS_ALLOWED — Production only on Vercel')
+}
+
+// .claude/settings.json runs code in every session without a prompt: it holds only the pre-bash hook and deny rules
+// (practices plan, task 14; security review S9). An allow rule or another hook is a change of who may do what.
+{
+  const s = JSON.parse(readFileSync('.claude/settings.json', 'utf8'))
+  const hooks = Object.values(s.hooks ?? {}).flat().flatMap((m) => m.hooks ?? []).map((h) => h.command)
+  if (Object.keys(s.permissions ?? {}).some((k) => k !== 'deny')) failures.push('.claude/settings.json  sets permissions other than deny (allow, ask, defaultMode, additionalDirectories) — this file holds deny rules only')
+  for (const rule of ['Bash(vercel:*)', 'Bash(npx vercel:*)']) if (!s.permissions?.deny?.includes(rule)) failures.push(`.claude/settings.json  lost the deny rule ${rule} (CLAUDE.md "Deploying")`)
+  if (hooks.length !== 1 || hooks[0] !== 'node "$CLAUDE_PROJECT_DIR/scripts/hooks/pre-bash.mjs"') failures.push('.claude/settings.json  runs a hook other than scripts/hooks/pre-bash.mjs')
+  if (Object.keys(s).some((k) => !['hooks', 'permissions'].includes(k))) failures.push('.claude/settings.json  sets more than hooks and permissions')
 }
 
 if (failures.length) {

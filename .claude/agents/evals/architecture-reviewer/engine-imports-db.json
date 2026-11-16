@@ -1,0 +1,11 @@
+{
+  "agent": "architecture-reviewer",
+  "query": "Run the design review on this proposed change. Return ranked findings with the fix each needs.",
+  "input": "+++ src/domains/orders/cod-risk.ts\n+import { db } from '@/lib/db'\n+import { orders } from '@/lib/db/schema'\n+import { eq } from 'drizzle-orm'\n+\n+// COD risk of a phone: share of its past orders returned.\n+export async function codRisk(phone: string) {\n+  const past = await db.select().from(orders).where(eq(orders.phone, phone))\n+  const rto = past.filter((o) => o.rtoAt).length\n+  return past.length ? rto / past.length : 0\n+}",
+  "expected_behavior": [
+    "Flags that a src/domains engine imports the db and drizzle: engines are pure (check:layers)",
+    "Gives the fix: a pure function over rows in src/domains, the read in src/lib/queries through withTenant",
+    "Flags that reading orders by phone through the raw db crosses tenants",
+    "Flags reading every past order of a phone without a limit or index at festive volume"
+  ]
+}

@@ -2,6 +2,8 @@
 // =============================================================================
 // FILE: scripts/check-feedback.mjs — `node scripts/check-feedback.mjs [--write] [path]`
 //
+// Fails: a hand-written error line (Notice, Message, a result in the URL, an alert or danger line) instead of a toast, FieldError or the Dialog's slot.
+//
 // frata-design-language § Feedback (owner 2026-11-12): a failure after a button is a toast (toast.error), a field
 // mistake is <FieldError> at the field, a failure inside a popup is the Dialog's error slot. This gate refuses a
 // hand-written error line anywhere else in src/app and src/components:
